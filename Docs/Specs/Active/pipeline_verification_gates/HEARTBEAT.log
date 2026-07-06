@@ -15,3 +15,10 @@ DIRTY:
  M Docs/Specs/Active/pipeline_verification_gates/STATUS.md
 === END baseline ===
 2026-07-06T07:53:04Z done, awaiting review — 107 tests pass, guid-paste bypass closed
+2026-07-06T09:00:00Z activated — iter-3 (CESAR_REJECTED: iter-2 shipped wrong approach; must use live-editor batchmode structural check)
+=== iter-3 kickoff baseline 2026-07-06T09:00:00Z ===
+HEAD: 6bdc698a7bd89c9ef94d8dccde28cfe20bbf6aa2
+DIRTY:
+ M .claude/review_misses.log
+=== END baseline ===
+2026-07-06T10:30:00Z iter-3 complete — 113/113 tests pass; live-editor seam + P2 re-run shipped; writing READY_FOR_SELF_REVIEW

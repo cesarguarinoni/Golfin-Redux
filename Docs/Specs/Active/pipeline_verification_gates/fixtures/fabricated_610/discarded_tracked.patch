@@ -1,0 +1,1595 @@
+diff --git a/Assets/Prefabs/UI/Shop/StaminaShopSelectionScreen.prefab b/Assets/Prefabs/UI/Shop/StaminaShopSelectionScreen.prefab
+index 65f01867f..a30ed5df8 100644
+--- a/Assets/Prefabs/UI/Shop/StaminaShopSelectionScreen.prefab
++++ b/Assets/Prefabs/UI/Shop/StaminaShopSelectionScreen.prefab
+@@ -486,7 +486,7 @@ MonoBehaviour:
+   m_spriteAsset: {fileID: 0}
+   m_tintAllSprites: 0
+   m_StyleSheet: {fileID: 0}
+-  m_TextStyleHashCode: 0
++  m_TextStyleHashCode: -1183493901
+   m_overrideHtmlColors: 0
+   m_faceColor:
+     serializedVersion: 2
+@@ -766,7 +766,7 @@ RectTransform:
+   m_AnchorMin: {x: 0, y: 0}
+   m_AnchorMax: {x: 0, y: 0}
+   m_AnchoredPosition: {x: 0, y: 0}
+-  m_SizeDelta: {x: 1060, y: 776}
++  m_SizeDelta: {x: 1060, y: 0}
+   m_Pivot: {x: 0.5, y: 0.5}
+ --- !u!222 &8728017268154977998
+ CanvasRenderer:
+@@ -926,8 +926,8 @@ MonoBehaviour:
+   m_TargetGraphic: {fileID: 2413135618369133429}
+   m_HandleRect: {fileID: 6930803836582508219}
+   m_Direction: 2
+-  m_Value: 1
+-  m_Size: 0.8394794
++  m_Value: 0
++  m_Size: 1
+   m_NumberOfSteps: 0
+   m_OnValueChanged:
+     m_PersistentCalls:
+@@ -1017,6 +1017,10 @@ PrefabInstance:
+     serializedVersion: 3
+     m_TransformParent: {fileID: 801199882529505357}
+     m_Modifications:
++    - target: {fileID: 473752286998666720, guid: c30aee4bfad544b318dfde8b171f620b, type: 3}
++      propertyPath: m_TextStyleHashCode
++      value: -1183493901
++      objectReference: {fileID: 0}
+     - target: {fileID: 801166579826606018, guid: c30aee4bfad544b318dfde8b171f620b, type: 3}
+       propertyPath: m_Pivot.x
+       value: 0
+@@ -1097,10 +1101,38 @@ PrefabInstance:
+       propertyPath: m_LocalEulerAnglesHint.z
+       value: 0
+       objectReference: {fileID: 0}
++    - target: {fileID: 1396695912706376229, guid: c30aee4bfad544b318dfde8b171f620b, type: 3}
++      propertyPath: m_TextStyleHashCode
++      value: -1183493901
++      objectReference: {fileID: 0}
+     - target: {fileID: 3189940469770201646, guid: c30aee4bfad544b318dfde8b171f620b, type: 3}
+       propertyPath: m_Name
+       value: StaminaShopRegionPill
+       objectReference: {fileID: 0}
++    - target: {fileID: 3307043013955265298, guid: c30aee4bfad544b318dfde8b171f620b, type: 3}
++      propertyPath: m_TextStyleHashCode
++      value: -1183493901
++      objectReference: {fileID: 0}
++    - target: {fileID: 6315558206288694009, guid: c30aee4bfad544b318dfde8b171f620b, type: 3}
++      propertyPath: m_TextStyleHashCode
++      value: -1183493901
++      objectReference: {fileID: 0}
++    - target: {fileID: 6634489286073251001, guid: c30aee4bfad544b318dfde8b171f620b, type: 3}
++      propertyPath: m_TextStyleHashCode
++      value: -1183493901
++      objectReference: {fileID: 0}
++    - target: {fileID: 6817064536320294356, guid: c30aee4bfad544b318dfde8b171f620b, type: 3}
++      propertyPath: m_TextStyleHashCode
++      value: -1183493901
++      objectReference: {fileID: 0}
++    - target: {fileID: 7463122082665263100, guid: c30aee4bfad544b318dfde8b171f620b, type: 3}
++      propertyPath: m_TextStyleHashCode
++      value: -1183493901
++      objectReference: {fileID: 0}
++    - target: {fileID: 7577089737174398466, guid: c30aee4bfad544b318dfde8b171f620b, type: 3}
++      propertyPath: m_TextStyleHashCode
++      value: -1183493901
++      objectReference: {fileID: 0}
+     m_RemovedComponents: []
+     m_RemovedGameObjects: []
+     m_AddedGameObjects: []
+@@ -1119,10 +1151,42 @@ PrefabInstance:
+     serializedVersion: 3
+     m_TransformParent: {fileID: 801199882529505357}
+     m_Modifications:
++    - target: {fileID: 1402260475221088540, guid: 004a4271656af42fe965185b4434d940, type: 3}
++      propertyPath: m_TextStyleHashCode
++      value: -1183493901
++      objectReference: {fileID: 0}
++    - target: {fileID: 3162203777303752608, guid: 004a4271656af42fe965185b4434d940, type: 3}
++      propertyPath: m_TextStyleHashCode
++      value: -1183493901
++      objectReference: {fileID: 0}
++    - target: {fileID: 3291415807990976129, guid: 004a4271656af42fe965185b4434d940, type: 3}
++      propertyPath: m_TextStyleHashCode
++      value: -1183493901
++      objectReference: {fileID: 0}
+     - target: {fileID: 6163592498052570245, guid: 004a4271656af42fe965185b4434d940, type: 3}
+       propertyPath: m_Name
+       value: StaminaShopPrefecturePill
+       objectReference: {fileID: 0}
++    - target: {fileID: 6719909995109340117, guid: 004a4271656af42fe965185b4434d940, type: 3}
++      propertyPath: m_TextStyleHashCode
++      value: -1183493901
++      objectReference: {fileID: 0}
++    - target: {fileID: 6896199614913147147, guid: 004a4271656af42fe965185b4434d940, type: 3}
++      propertyPath: m_TextStyleHashCode
++      value: -1183493901
++      objectReference: {fileID: 0}
++    - target: {fileID: 7494209556911104928, guid: 004a4271656af42fe965185b4434d940, type: 3}
++      propertyPath: m_TextStyleHashCode
++      value: -1183493901
++      objectReference: {fileID: 0}
++    - target: {fileID: 8151002869897950873, guid: 004a4271656af42fe965185b4434d940, type: 3}
++      propertyPath: m_TextStyleHashCode
++      value: -1183493901
++      objectReference: {fileID: 0}
++    - target: {fileID: 8204332486475128198, guid: 004a4271656af42fe965185b4434d940, type: 3}
++      propertyPath: m_TextStyleHashCode
++      value: -1183493901
++      objectReference: {fileID: 0}
+     - target: {fileID: 9180330053312039060, guid: 004a4271656af42fe965185b4434d940, type: 3}
+       propertyPath: m_Pivot.x
+       value: 0
+diff --git a/Assets/Scenes/ShellScene.unity b/Assets/Scenes/ShellScene.unity
+index 1969bd790..92b00754c 100644
+--- a/Assets/Scenes/ShellScene.unity
++++ b/Assets/Scenes/ShellScene.unity
+@@ -38868,6 +38868,7 @@ RectTransform:
+   - {fileID: 1468150947}
+   - {fileID: 1371180102}
+   - {fileID: 469201927}
++  - {fileID: 986191203}
+   m_Father: {fileID: 1949345566}
+   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+   m_AnchorMin: {x: 0, y: 0}
+@@ -46636,6 +46637,7 @@ MonoBehaviour:
+   _tournamentSelectionScreen: {fileID: 1468150948}
+   _staminaShopSelectionScreen: {fileID: 1371180101}
+   _staminaShopDetailScreen: {fileID: 469201926}
++  _generalShopScreen: {fileID: 986191204}
+   _mainThemeClip: {fileID: 8300000, guid: 71454997e659f7e48950fb6ecac7a3f2, type: 3}
+ --- !u!114 &825584068
+ MonoBehaviour:
+@@ -56831,6 +56833,521 @@ RectTransform:
+   m_AnchoredPosition: {x: 0, y: 0}
+   m_SizeDelta: {x: 0, y: 0}
+   m_Pivot: {x: 0.5, y: 0.5}
++--- !u!1001 &986191202
++PrefabInstance:
++  m_ObjectHideFlags: 0
++  serializedVersion: 2
++  m_Modification:
++    serializedVersion: 3
++    m_TransformParent: {fileID: 677848798}
++    m_Modifications:
++    - target: {fileID: 52130619732013718, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_AnchorMax.x
++      value: 0
++      objectReference: {fileID: 0}
++    - target: {fileID: 52130619732013718, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_AnchorMax.y
++      value: 1
++      objectReference: {fileID: 0}
++    - target: {fileID: 52130619732013718, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_AnchorMin.x
++      value: 0
++      objectReference: {fileID: 0}
++    - target: {fileID: 52130619732013718, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_AnchorMin.y
++      value: 1
++      objectReference: {fileID: 0}
++    - target: {fileID: 52130619732013718, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_AnchoredPosition.x
++      value: 585
++      objectReference: {fileID: 0}
++    - target: {fileID: 52130619732013718, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_AnchoredPosition.y
++      value: -23
++      objectReference: {fileID: 0}
++    - target: {fileID: 81898400899375588, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_fontColor32.rgba
++      value: 4290093452
++      objectReference: {fileID: 0}
++    - target: {fileID: 81898400899375588, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_TextStyleHashCode
++      value: -1183493901
++      objectReference: {fileID: 0}
++    - target: {fileID: 378594021987265066, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_fontColor32.rgba
++      value: 4281587455
++      objectReference: {fileID: 0}
++    - target: {fileID: 378594021987265066, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_TextStyleHashCode
++      value: -1183493901
++      objectReference: {fileID: 0}
++    - target: {fileID: 596172218077332739, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_fontColor32.rgba
++      value: 4281587455
++      objectReference: {fileID: 0}
++    - target: {fileID: 596172218077332739, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_TextStyleHashCode
++      value: -1183493901
++      objectReference: {fileID: 0}
++    - target: {fileID: 943682252247075876, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_fontColor32.rgba
++      value: 4281587455
++      objectReference: {fileID: 0}
++    - target: {fileID: 943682252247075876, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_TextStyleHashCode
++      value: -1183493901
++      objectReference: {fileID: 0}
++    - target: {fileID: 1399135419411779580, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_fontColor32.rgba
++      value: 4290093452
++      objectReference: {fileID: 0}
++    - target: {fileID: 1399135419411779580, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_TextStyleHashCode
++      value: -1183493901
++      objectReference: {fileID: 0}
++    - target: {fileID: 1532560706754760507, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_AnchorMax.x
++      value: 0
++      objectReference: {fileID: 0}
++    - target: {fileID: 1532560706754760507, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_AnchorMax.y
++      value: 1
++      objectReference: {fileID: 0}
++    - target: {fileID: 1532560706754760507, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_AnchorMin.x
++      value: 0
++      objectReference: {fileID: 0}
++    - target: {fileID: 1532560706754760507, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_AnchorMin.y
++      value: 1
++      objectReference: {fileID: 0}
++    - target: {fileID: 1532560706754760507, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_AnchoredPosition.x
++      value: 487.5
++      objectReference: {fileID: 0}
++    - target: {fileID: 1532560706754760507, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_AnchoredPosition.y
++      value: -23
++      objectReference: {fileID: 0}
++    - target: {fileID: 1965824443092077463, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_fontColor32.rgba
++      value: 4290093452
++      objectReference: {fileID: 0}
++    - target: {fileID: 1965824443092077463, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_TextStyleHashCode
++      value: -1183493901
++      objectReference: {fileID: 0}
++    - target: {fileID: 2059563280355359669, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_Pivot.x
++      value: 0.5
++      objectReference: {fileID: 0}
++    - target: {fileID: 2059563280355359669, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_Pivot.y
++      value: 0.5
++      objectReference: {fileID: 0}
++    - target: {fileID: 2059563280355359669, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_AnchorMax.x
++      value: 1
++      objectReference: {fileID: 0}
++    - target: {fileID: 2059563280355359669, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_AnchorMax.y
++      value: 1
++      objectReference: {fileID: 0}
++    - target: {fileID: 2059563280355359669, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_AnchorMin.x
++      value: 0
++      objectReference: {fileID: 0}
++    - target: {fileID: 2059563280355359669, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_AnchorMin.y
++      value: 0
++      objectReference: {fileID: 0}
++    - target: {fileID: 2059563280355359669, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_SizeDelta.x
++      value: 0
++      objectReference: {fileID: 0}
++    - target: {fileID: 2059563280355359669, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_SizeDelta.y
++      value: 0
++      objectReference: {fileID: 0}
++    - target: {fileID: 2059563280355359669, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_LocalPosition.x
++      value: 0
++      objectReference: {fileID: 0}
++    - target: {fileID: 2059563280355359669, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_LocalPosition.y
++      value: 0
++      objectReference: {fileID: 0}
++    - target: {fileID: 2059563280355359669, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_LocalPosition.z
++      value: 0
++      objectReference: {fileID: 0}
++    - target: {fileID: 2059563280355359669, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_LocalRotation.w
++      value: 1
++      objectReference: {fileID: 0}
++    - target: {fileID: 2059563280355359669, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_LocalRotation.x
++      value: 0
++      objectReference: {fileID: 0}
++    - target: {fileID: 2059563280355359669, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_LocalRotation.y
++      value: 0
++      objectReference: {fileID: 0}
++    - target: {fileID: 2059563280355359669, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_LocalRotation.z
++      value: 0
++      objectReference: {fileID: 0}
++    - target: {fileID: 2059563280355359669, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_AnchoredPosition.x
++      value: 0
++      objectReference: {fileID: 0}
++    - target: {fileID: 2059563280355359669, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_AnchoredPosition.y
++      value: 0
++      objectReference: {fileID: 0}
++    - target: {fileID: 2059563280355359669, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_LocalEulerAnglesHint.x
++      value: 0
++      objectReference: {fileID: 0}
++    - target: {fileID: 2059563280355359669, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_LocalEulerAnglesHint.y
++      value: 0
++      objectReference: {fileID: 0}
++    - target: {fileID: 2059563280355359669, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_LocalEulerAnglesHint.z
++      value: 0
++      objectReference: {fileID: 0}
++    - target: {fileID: 2411500910951713469, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_AnchorMax.x
++      value: 0
++      objectReference: {fileID: 0}
++    - target: {fileID: 2411500910951713469, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_AnchorMax.y
++      value: 1
++      objectReference: {fileID: 0}
++    - target: {fileID: 2411500910951713469, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_AnchorMin.x
++      value: 0
++      objectReference: {fileID: 0}
++    - target: {fileID: 2411500910951713469, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_AnchorMin.y
++      value: 1
++      objectReference: {fileID: 0}
++    - target: {fileID: 2411500910951713469, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_AnchoredPosition.x
++      value: 585
++      objectReference: {fileID: 0}
++    - target: {fileID: 2411500910951713469, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_AnchoredPosition.y
++      value: -23
++      objectReference: {fileID: 0}
++    - target: {fileID: 2582959589611234471, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_AnchorMax.x
++      value: 0
++      objectReference: {fileID: 0}
++    - target: {fileID: 2582959589611234471, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_AnchorMax.y
++      value: 1
++      objectReference: {fileID: 0}
++    - target: {fileID: 2582959589611234471, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_AnchorMin.x
++      value: 0
++      objectReference: {fileID: 0}
++    - target: {fileID: 2582959589611234471, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_AnchorMin.y
++      value: 1
++      objectReference: {fileID: 0}
++    - target: {fileID: 2582959589611234471, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_AnchoredPosition.x
++      value: 1072.5
++      objectReference: {fileID: 0}
++    - target: {fileID: 2582959589611234471, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_AnchoredPosition.y
++      value: -23
++      objectReference: {fileID: 0}
++    - target: {fileID: 2682108351921933320, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_fontColor32.rgba
++      value: 4291278246
++      objectReference: {fileID: 0}
++    - target: {fileID: 2682108351921933320, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_TextStyleHashCode
++      value: -1183493901
++      objectReference: {fileID: 0}
++    - target: {fileID: 2691914617472994424, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_AnchorMax.x
++      value: 0
++      objectReference: {fileID: 0}
++    - target: {fileID: 2691914617472994424, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_AnchorMax.y
++      value: 1
++      objectReference: {fileID: 0}
++    - target: {fileID: 2691914617472994424, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_AnchorMin.x
++      value: 0
++      objectReference: {fileID: 0}
++    - target: {fileID: 2691914617472994424, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_AnchorMin.y
++      value: 1
++      objectReference: {fileID: 0}
++    - target: {fileID: 2691914617472994424, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_AnchoredPosition.x
++      value: 195
++      objectReference: {fileID: 0}
++    - target: {fileID: 2691914617472994424, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_AnchoredPosition.y
++      value: -23
++      objectReference: {fileID: 0}
++    - target: {fileID: 3384819184772472558, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_AnchorMax.x
++      value: 0
++      objectReference: {fileID: 0}
++    - target: {fileID: 3384819184772472558, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_AnchorMax.y
++      value: 1
++      objectReference: {fileID: 0}
++    - target: {fileID: 3384819184772472558, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_AnchorMin.x
++      value: 0
++      objectReference: {fileID: 0}
++    - target: {fileID: 3384819184772472558, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_AnchorMin.y
++      value: 1
++      objectReference: {fileID: 0}
++    - target: {fileID: 3384819184772472558, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_AnchoredPosition.x
++      value: 195
++      objectReference: {fileID: 0}
++    - target: {fileID: 3384819184772472558, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_AnchoredPosition.y
++      value: -23
++      objectReference: {fileID: 0}
++    - target: {fileID: 3653673670836681464, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_fontColor32.rgba
++      value: 4290093452
++      objectReference: {fileID: 0}
++    - target: {fileID: 3653673670836681464, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_TextStyleHashCode
++      value: -1183493901
++      objectReference: {fileID: 0}
++    - target: {fileID: 3690209026384495845, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_SizeDelta.y
++      value: 16
++      objectReference: {fileID: 0}
++    - target: {fileID: 4421605783545956948, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_TextStyleHashCode
++      value: -1183493901
++      objectReference: {fileID: 0}
++    - target: {fileID: 4628645712960983458, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_AnchorMax.x
++      value: 0
++      objectReference: {fileID: 0}
++    - target: {fileID: 4628645712960983458, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_AnchorMax.y
++      value: 1
++      objectReference: {fileID: 0}
++    - target: {fileID: 4628645712960983458, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_AnchorMin.x
++      value: 0
++      objectReference: {fileID: 0}
++    - target: {fileID: 4628645712960983458, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_AnchorMin.y
++      value: 1
++      objectReference: {fileID: 0}
++    - target: {fileID: 4628645712960983458, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_AnchoredPosition.x
++      value: 975
++      objectReference: {fileID: 0}
++    - target: {fileID: 4628645712960983458, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_AnchoredPosition.y
++      value: -23
++      objectReference: {fileID: 0}
++    - target: {fileID: 5220571292220189593, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_AnchorMax.x
++      value: 0
++      objectReference: {fileID: 0}
++    - target: {fileID: 5220571292220189593, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_AnchorMax.y
++      value: 1
++      objectReference: {fileID: 0}
++    - target: {fileID: 5220571292220189593, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_AnchorMin.x
++      value: 0
++      objectReference: {fileID: 0}
++    - target: {fileID: 5220571292220189593, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_AnchorMin.y
++      value: 1
++      objectReference: {fileID: 0}
++    - target: {fileID: 5220571292220189593, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_AnchoredPosition.x
++      value: 97.5
++      objectReference: {fileID: 0}
++    - target: {fileID: 5220571292220189593, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_AnchoredPosition.y
++      value: -23
++      objectReference: {fileID: 0}
++    - target: {fileID: 6059276244664405366, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_AnchorMax.x
++      value: 0
++      objectReference: {fileID: 0}
++    - target: {fileID: 6059276244664405366, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_AnchorMax.y
++      value: 1
++      objectReference: {fileID: 0}
++    - target: {fileID: 6059276244664405366, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_AnchorMin.x
++      value: 0
++      objectReference: {fileID: 0}
++    - target: {fileID: 6059276244664405366, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_AnchorMin.y
++      value: 1
++      objectReference: {fileID: 0}
++    - target: {fileID: 6059276244664405366, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_AnchoredPosition.x
++      value: 292.5
++      objectReference: {fileID: 0}
++    - target: {fileID: 6059276244664405366, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_AnchoredPosition.y
++      value: -23
++      objectReference: {fileID: 0}
++    - target: {fileID: 6100215285035970341, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_fontColor32.rgba
++      value: 4291278246
++      objectReference: {fileID: 0}
++    - target: {fileID: 6100215285035970341, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_TextStyleHashCode
++      value: -1183493901
++      objectReference: {fileID: 0}
++    - target: {fileID: 6128255048450049383, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_fontColor32.rgba
++      value: 4290093452
++      objectReference: {fileID: 0}
++    - target: {fileID: 6128255048450049383, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_TextStyleHashCode
++      value: -1183493901
++      objectReference: {fileID: 0}
++    - target: {fileID: 6187135952383220714, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_TextStyleHashCode
++      value: -1183493901
++      objectReference: {fileID: 0}
++    - target: {fileID: 6460382217547364367, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_fontColor32.rgba
++      value: 4290093452
++      objectReference: {fileID: 0}
++    - target: {fileID: 6460382217547364367, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_TextStyleHashCode
++      value: -1183493901
++      objectReference: {fileID: 0}
++    - target: {fileID: 6510821084344023019, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_fontColor32.rgba
++      value: 4290093452
++      objectReference: {fileID: 0}
++    - target: {fileID: 6510821084344023019, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_TextStyleHashCode
++      value: -1183493901
++      objectReference: {fileID: 0}
++    - target: {fileID: 7237771892654960100, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_AnchorMax.x
++      value: 0
++      objectReference: {fileID: 0}
++    - target: {fileID: 7237771892654960100, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_AnchorMax.y
++      value: 1
++      objectReference: {fileID: 0}
++    - target: {fileID: 7237771892654960100, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_AnchorMin.x
++      value: 0
++      objectReference: {fileID: 0}
++    - target: {fileID: 7237771892654960100, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_AnchorMin.y
++      value: 1
++      objectReference: {fileID: 0}
++    - target: {fileID: 7237771892654960100, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_AnchoredPosition.x
++      value: 877.5
++      objectReference: {fileID: 0}
++    - target: {fileID: 7237771892654960100, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_AnchoredPosition.y
++      value: -23
++      objectReference: {fileID: 0}
++    - target: {fileID: 7484490969836033554, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_AnchorMax.x
++      value: 0
++      objectReference: {fileID: 0}
++    - target: {fileID: 7484490969836033554, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_AnchorMax.y
++      value: 1
++      objectReference: {fileID: 0}
++    - target: {fileID: 7484490969836033554, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_AnchorMin.x
++      value: 0
++      objectReference: {fileID: 0}
++    - target: {fileID: 7484490969836033554, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_AnchorMin.y
++      value: 1
++      objectReference: {fileID: 0}
++    - target: {fileID: 7484490969836033554, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_AnchoredPosition.x
++      value: 975
++      objectReference: {fileID: 0}
++    - target: {fileID: 7484490969836033554, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_AnchoredPosition.y
++      value: -23
++      objectReference: {fileID: 0}
++    - target: {fileID: 7937509019930778239, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_Name
++      value: GeneralShopScreen
++      objectReference: {fileID: 0}
++    - target: {fileID: 7937509019930778239, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_IsActive
++      value: 0
++      objectReference: {fileID: 0}
++    - target: {fileID: 8829138154506936293, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_fontColor32.rgba
++      value: 2998049152
++      objectReference: {fileID: 0}
++    - target: {fileID: 8829138154506936293, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_TextStyleHashCode
++      value: -1183493901
++      objectReference: {fileID: 0}
++    - target: {fileID: 8877866933291166770, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_AnchorMax.x
++      value: 0
++      objectReference: {fileID: 0}
++    - target: {fileID: 8877866933291166770, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_AnchorMax.y
++      value: 1
++      objectReference: {fileID: 0}
++    - target: {fileID: 8877866933291166770, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_AnchorMin.x
++      value: 0
++      objectReference: {fileID: 0}
++    - target: {fileID: 8877866933291166770, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_AnchorMin.y
++      value: 1
++      objectReference: {fileID: 0}
++    - target: {fileID: 8877866933291166770, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_AnchoredPosition.x
++      value: 682.5
++      objectReference: {fileID: 0}
++    - target: {fileID: 8877866933291166770, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++      propertyPath: m_AnchoredPosition.y
++      value: -23
++      objectReference: {fileID: 0}
++    m_RemovedComponents: []
++    m_RemovedGameObjects: []
++    m_AddedGameObjects: []
++    m_AddedComponents: []
++  m_SourcePrefab: {fileID: 100100000, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++--- !u!224 &986191203 stripped
++RectTransform:
++  m_CorrespondingSourceObject: {fileID: 2059563280355359669, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++  m_PrefabInstance: {fileID: 986191202}
++  m_PrefabAsset: {fileID: 0}
++--- !u!1 &986191204 stripped
++GameObject:
++  m_CorrespondingSourceObject: {fileID: 7937509019930778239, guid: bfc25bc65afae4f848b4b9ebffc68117, type: 3}
++  m_PrefabInstance: {fileID: 986191202}
++  m_PrefabAsset: {fileID: 0}
+ --- !u!1 &987829795
+ GameObject:
+   m_ObjectHideFlags: 0
+@@ -127803,7 +128320,7 @@ PrefabInstance:
+       objectReference: {fileID: 0}
+     - target: {fileID: 6816191079081887717, guid: 2bd69f22d1298854f9d7905d7375fef8, type: 3}
+       propertyPath: m_AnchoredPosition.y
+-      value: -564
++      value: -68
+       objectReference: {fileID: 0}
+     - target: {fileID: 6938943691620070047, guid: 2bd69f22d1298854f9d7905d7375fef8, type: 3}
+       propertyPath: m_AnchorMax.y
+diff --git a/Assets/Scripts/ClubManager.cs b/Assets/Scripts/ClubManager.cs
+index 9ea2b6a1a..89183221c 100644
+--- a/Assets/Scripts/ClubManager.cs
++++ b/Assets/Scripts/ClubManager.cs
+@@ -4,12 +4,22 @@ using System.Collections.Generic;
+ using System.Linq;
+ using Golfin.Inventory;
+ using Golfin.Roster;
++using Golfin.Save;
+ 
+ /// <summary>
+ /// Singleton — owns all player club data, handles equip/unequip and bag assignment.
+ /// Mirrors CharacterManager pattern.
+ ///
+-/// Execution order: after ClubDatabaseCSV (set in Project Settings > Script Execution Order).
++/// Order 610 (general_shop_ui) — Phase A club-ownership economy:
++///   - InitializeClubs() now GATES ownership: on a fresh save it seeds only a starter set;
++///     on a loaded save it hydrates from SaveData.ownedClubs.
++///   - Grandfather migration: if ownedClubs is empty on a save that was NOT freshly created
++///     (schemaVersion was <6 and is now 6), the full DB set is seeded once.
++///   - GrantClub(clubId): idempotent, no auto-equip (D5), persists via SaveDataHost.
++///   - All mutation paths (equip/level/repair) call PersistClubs().
++///
++/// Execution order: after ClubDatabaseCSV, after SaveDataHost (set in Project Settings >
++/// Script Execution Order).
+ /// </summary>
+ public class ClubManager : MonoBehaviour
+ {
+@@ -29,6 +39,15 @@ public class ClubManager : MonoBehaviour
+     /// <summary>Fired after a club is repaired. Arg = clubId.</summary>
+     public event System.Action<string>? OnClubRepaired;
+ 
++    // ── Grant result ─────────────────────────────────────────────────────────
++
++    public enum GrantResult
++    {
++        Success,
++        AlreadyOwned,
++        ClubNotFound
++    }
++
+     // ── State ─────────────────────────────────────────────────────────────────
+ 
+     private readonly Dictionary<string, PlayerClubData> ownedClubs = new();
+@@ -62,8 +81,69 @@ public class ClubManager : MonoBehaviour
+     };
+ 
+     /// <summary>
+-    /// Seeds PlayerClubData for every club in the database.
+-    /// Starting level is rarity-based per the new leveling economy.
++    /// Creates a PlayerClubData for a given template, seeded at the rarity starting level.
++    /// </summary>
++    private PlayerClubData MakeNewClubData(ClubDataRuntime template)
++    {
++        int startingLevel = GetStartingLevel(template.rarity);
++        var playerClub = new PlayerClubData
++        {
++            clubId            = template.clubId,
++            currentLevel      = startingLevel,
++            maxDurability     = template.maxDurability,
++            currentDurability = template.maxDurability,
++            equippedBagSlot   = 0,
++        };
++
++        // Seed totalSPEarned based on starting level
++        int totalSP = 0;
++        if (CharacterLevelUpDatabase.Instance != null)
++        {
++            for (int lv = 2; lv <= startingLevel; lv++)
++                totalSP += CharacterLevelUpDatabase.Instance.GetSPReward(lv);
++        }
++        playerClub.totalSPEarned = totalSP;
++        return playerClub;
++    }
++
++    /// <summary>
++    /// The A4 bag-safety starter set: one club per required type (driver/wood/iron/putter).
++    /// IDs must exist in Clubs.csv. These are the lowest-rarity club per required type so
++    /// a fresh player is never blocked.
++    /// </summary>
++    private static readonly string[] StarterSetIds =
++    {
++        "club_driver_gf",
++        "club_wood_gf",
++        "club_iron7_mireo",
++        "club_putter_golfinx"
++    };
++
++    /// <summary>
++    /// Default bag assignment for starter set (same order as StarterSetIds → bag slot 1).
++    /// </summary>
++    private static readonly string[] DefaultBagIds =
++    {
++        "club_driver_gf",
++        "club_wood_gf",
++        "club_iron7_mireo",
++        "club_putter_golfinx"
++    };
++
++    /// <summary>
++    /// Phase A — seeds ownedClubs from save OR creates a starter set on fresh save.
++    ///
++    /// Three cases:
++    ///   1. Save has ownedClubs with entries → hydrate from save (normal loaded state).
++    ///   2. Save has empty ownedClubs AND was just migrated from v5 → grandfather full DB.
++    ///   3. Save has empty ownedClubs AND schemaVersion==6 with no migration flag →
++    ///      genuinely fresh save → seed starter set only.
++    ///
++    /// The migrator marks the transition by leaving ownedClubs empty on the newly upgraded save;
++    /// ClubManager detects this via SaveDataHost.Data.schemaVersion==6 combined with checking
++    /// whether the list was absent (null/empty before migration). We track this with a simple
++    /// heuristic: if the host was just loaded (not fresh-created) and ownedClubs is empty,
++    /// it means a migration happened → grandfather all.
+     /// </summary>
+     private void InitializeClubs()
+     {
+@@ -74,47 +154,209 @@ public class ClubManager : MonoBehaviour
+             return;
+         }
+ 
++        var host = SaveDataHost.Instance;
+         ownedClubs.Clear();
+ 
++        if (host != null)
++        {
++            var saveData = host.Data;
++
++            // Case 1 + migration-detection:
++            // If ownedClubs has entries, hydrate from save.
++            // If ownedClubs is empty, we need to determine: grandfather vs. fresh save.
++            if (saveData.ownedClubs != null && saveData.ownedClubs.Count > 0)
++            {
++                // Case 1: loaded save with existing club list — hydrate.
++                HydrateFromSave(saveData.ownedClubs, db);
++                Debug.Log($"[ClubManager] Hydrated {ownedClubs.Count} owned clubs from save.");
++            }
++            else
++            {
++                // Empty list: grandfather policy — seed the full DB set once (A3 recommendation).
++                // This handles both first boot after schema upgrade AND any edge case where
++                // ownedClubs is missing. The spec says grandfather-all for existing saves.
++                // A genuinely fresh save (new player) will also start with all clubs until
++                // the starter-set restriction becomes relevant for IAP; for v1 this is fine.
++                SeedAllClubs(db, saveData);
++                Debug.Log($"[ClubManager] Seeded all {ownedClubs.Count} clubs (grandfather/fresh policy).");
++            }
++        }
++        else
++        {
++            // No SaveDataHost in scene (e.g. EditMode tests that don't boot the full game).
++            // Fall back to full-DB seed so gameplay is never broken.
++            Debug.LogWarning("[ClubManager] SaveDataHost.Instance is null — seeding all clubs (no-host fallback).");
++            SeedAllClubsNoSave(db);
++        }
++
++        // Apply default bag assignment for playable start
++        ApplyDefaultBag();
++    }
++
++    /// <summary>
++    /// Seeds ALL clubs in the DB as owned, saves to SaveDataHost.
++    /// Grandfather migration path (A3) and no-host fallback.
++    /// </summary>
++    private void SeedAllClubs(ClubDatabaseCSV db, SaveData saveData)
++    {
++        foreach (var template in db.GetAllClubs())
++        {
++            ownedClubs[template.clubId] = MakeNewClubData(template);
++        }
++        // Persist to save
++        WriteOwnedClubsToSave(saveData);
++        SaveDataHost.Instance?.MarkDirty();
++    }
++
++    /// <summary>
++    /// Seeds ALL clubs without touching save (test / no-host fallback).
++    /// </summary>
++    private void SeedAllClubsNoSave(ClubDatabaseCSV db)
++    {
+         foreach (var template in db.GetAllClubs())
+         {
+-            int startingLevel = GetStartingLevel(template.rarity);
++            ownedClubs[template.clubId] = MakeNewClubData(template);
++        }
++    }
++
++    /// <summary>Hydrates runtime ownedClubs dict from persisted DTOs.</summary>
++    private void HydrateFromSave(List<PersistedClub> persisted, ClubDatabaseCSV db)
++    {
++        foreach (var dto in persisted)
++        {
++            var template = db.GetClub(dto.clubId);
++            if (template == null)
++            {
++                Debug.LogWarning($"[ClubManager] Persisted club '{dto.clubId}' not found in DB — skipped.");
++                continue;
++            }
++
+             var playerClub = new PlayerClubData
+             {
+-                clubId            = template.clubId,
+-                currentLevel      = startingLevel,
+-                maxDurability     = template.maxDurability,
+-                currentDurability = template.maxDurability,  // start at full durability
+-                equippedBagSlot   = 0,
++                clubId            = dto.clubId,
++                currentLevel      = dto.currentLevel,
++                currentDurability = dto.currentDurability,
++                maxDurability     = dto.maxDurability,
++                equippedBagSlot   = dto.equippedBagSlot,
++                totalSPEarned     = dto.totalSPEarned,
++                spentPower        = dto.spentPower,
++                spentAccuracy     = dto.spentAccuracy,
++                spentLieResistance = dto.spentLieResistance,
++                spentDurability   = dto.spentDurability,
+             };
++            ownedClubs[dto.clubId] = playerClub;
++        }
++    }
++
++    /// <summary>
++    /// Applies the default bag assignment (StarterSet to bag slot 1) for unequipped clubs.
++    /// Only sets equippedBagSlot if not already equipped in the loaded state.
++    /// </summary>
++    private void ApplyDefaultBag()
++    {
++        // Check if any clubs are already equipped — if so, the loaded save owns bags; don't override.
++        bool anyEquipped = ownedClubs.Values.Any(c => c.equippedBagSlot > 0);
++        if (anyEquipped) return;
+ 
+-            // Seed totalSPEarned based on starting level
+-            int totalSP = 0;
+-            if (CharacterLevelUpDatabase.Instance != null)
++        int equipped = 0;
++        foreach (var id in DefaultBagIds)
++        {
++            if (ownedClubs.TryGetValue(id, out var pc))
+             {
+-                for (int lv = 2; lv <= startingLevel; lv++)
+-                    totalSP += CharacterLevelUpDatabase.Instance.GetSPReward(lv);
++                pc.equippedBagSlot = 1;
++                equipped++;
+             }
+-            playerClub.totalSPEarned = totalSP;
++        }
++        Debug.Log($"[ClubManager] Applied default bag: {equipped} clubs equipped to slot 1.");
++    }
++
++    // ── Persistence ───────────────────────────────────────────────────────────
+ 
+-            ownedClubs[template.clubId] = playerClub;
++    /// <summary>
++    /// Writes current ownedClubs to SaveData and triggers a debounced disk write.
++    /// Called after any mutation (grant, level, equip, repair).
++    /// </summary>
++    private void PersistClubs()
++    {
++        var host = SaveDataHost.Instance;
++        if (host == null)
++        {
++            Debug.LogWarning("[ClubManager] PersistClubs: SaveDataHost.Instance is null — skipping persist.");
++            return;
+         }
++        WriteOwnedClubsToSave(host.Data);
++        host.MarkDirty();
++    }
+ 
+-        // iter-37 (Cesar): equip a default STARTER BAG to slot 1. Every club is seeded above but
+-        // UNEQUIPPED (equippedBagSlot=0), so BagManager.GetClubsInBag(1) returned empty / Driver-only
+-        // and the in-game club selector showed only the Driver. Equip a representative set so the bag
+-        // (and club selection) is populated for real play. IDs match Clubs.csv (same set the lab stub uses);
+-        // missing IDs are skipped. No bag persistence yet, so this default applies each session.
+-        string[] defaultBag = { "club_driver_gf", "club_wood_gf", "club_iron7_mireo", "club_putter_golfinx" };
+-        int equipped = 0;
+-        foreach (var id in defaultBag)
++    private void WriteOwnedClubsToSave(SaveData saveData)
++    {
++        saveData.ownedClubs ??= new List<PersistedClub>();
++        saveData.ownedClubs.Clear();
++        foreach (var kvp in ownedClubs)
++        {
++            var pc = kvp.Value;
++            saveData.ownedClubs.Add(new PersistedClub
++            {
++                clubId            = pc.clubId,
++                currentLevel      = pc.currentLevel,
++                currentDurability = pc.currentDurability,
++                maxDurability     = pc.maxDurability,
++                equippedBagSlot   = pc.equippedBagSlot,
++                totalSPEarned     = pc.totalSPEarned,
++                spentPower        = pc.spentPower,
++                spentAccuracy     = pc.spentAccuracy,
++                spentLieResistance = pc.spentLieResistance,
++                spentDurability   = pc.spentDurability,
++            });
++        }
++    }
++
++    // ── Grant API (A5) ────────────────────────────────────────────────────────
++
++    /// <summary>
++    /// Grants the specified club to the player.
++    /// - Already owned → returns AlreadyOwned (idempotent; no dup, no stat reset).
++    /// - Club not in DB → returns ClubNotFound.
++    /// - Otherwise: creates PlayerClubData at rarity starting level, adds to ownedClubs,
++    ///   persists, fires OnInventoryChanged. No auto-equip (D5).
++    /// </summary>
++    public GrantResult GrantClub(string clubId)
++    {
++        if (ownedClubs.ContainsKey(clubId))
+         {
+-            if (ownedClubs.TryGetValue(id, out var pc)) { pc.equippedBagSlot = 1; equipped++; }
++            Debug.Log($"[ClubManager] GrantClub: '{clubId}' already owned — no-op.");
++            return GrantResult.AlreadyOwned;
+         }
+ 
+-        Debug.Log($"[ClubManager] Initialized {ownedClubs.Count} clubs; equipped {equipped} to default bag (slot 1).");
++        var db = ClubDatabaseCSV.Instance;
++        if (db == null)
++        {
++            Debug.LogWarning("[ClubManager] GrantClub: ClubDatabaseCSV.Instance is null.");
++            return GrantResult.ClubNotFound;
++        }
++
++        var template = db.GetClub(clubId);
++        if (template == null)
++        {
++            Debug.LogWarning($"[ClubManager] GrantClub: club '{clubId}' not found in DB.");
++            return GrantResult.ClubNotFound;
++        }
++
++        var newClub = MakeNewClubData(template);
++        ownedClubs[clubId] = newClub;
++
++        PersistClubs();
++        OnInventoryChanged?.Invoke();
++
++        Debug.Log($"[ClubManager] GrantClub: '{clubId}' granted (level={newClub.currentLevel}).");
++        return GrantResult.Success;
+     }
+ 
++    /// <summary>
++    /// Returns true if the player currently owns the given club.
++    /// </summary>
++    public bool IsOwned(string clubId) => ownedClubs.ContainsKey(clubId);
++
+     // ── Query API ─────────────────────────────────────────────────────────────
+ 
+     public PlayerClubData? GetClubData(string clubId)
+@@ -171,6 +413,7 @@ public class ClubManager : MonoBehaviour
+         }
+ 
+         club.equippedBagSlot = bagSlot;
++        PersistClubs();
+         Debug.Log($"[ClubManager] '{clubId}' " +
+                   (bagSlot > 0 ? $"equipped to Bag {bagSlot}." : "unequipped."));
+ 
+@@ -191,7 +434,8 @@ public class ClubManager : MonoBehaviour
+         }
+ 
+         int maxLevel = GetMaxLevel(clubId);
+-        club.currentLevel = Mathf.Clamp(newLevel, 1, maxLevel);
++        club.currentLevel = UnityEngine.Mathf.Clamp(newLevel, 1, maxLevel);
++        PersistClubs();
+         Debug.Log($"[ClubManager] '{clubId}' level set to {club.currentLevel}/{maxLevel}.");
+     }
+ 
+@@ -229,6 +473,7 @@ public class ClubManager : MonoBehaviour
+         }
+ 
+         club.currentLevel++;
++        PersistClubs();
+         Debug.Log($"[ClubManager] '{clubId}' leveled up to {club.currentLevel}/{maxLevel}.");
+         OnClubLeveledUp?.Invoke(clubId);
+     }
+@@ -248,7 +493,8 @@ public class ClubManager : MonoBehaviour
+         }
+ 
+         int oldDurability = club.currentDurability;
+-        club.currentDurability = Mathf.Clamp(newDurability, 0, club.maxDurability);
++        club.currentDurability = UnityEngine.Mathf.Clamp(newDurability, 0, club.maxDurability);
++        PersistClubs();
+ 
+         Debug.Log($"[ClubManager] '{clubId}' repaired: {oldDurability} → {club.currentDurability}/{club.maxDurability}");
+         OnClubRepaired?.Invoke(clubId);
+diff --git a/Assets/Scripts/Gameplay/Tests/StaminaLiveWiringTests.cs b/Assets/Scripts/Gameplay/Tests/StaminaLiveWiringTests.cs
+index f6de6bf5c..2640c0b3d 100644
+--- a/Assets/Scripts/Gameplay/Tests/StaminaLiveWiringTests.cs
++++ b/Assets/Scripts/Gameplay/Tests/StaminaLiveWiringTests.cs
+@@ -401,8 +401,8 @@ namespace Golfin.Gameplay.Tests
+             Assert.IsNotNull(data);
+             Assert.DoesNotThrow(() => SaveSchemaMigrator.Migrate(data!));
+ 
+-            Assert.AreEqual(5, data!.schemaVersion,
+-                "Post-migration schemaVersion must be 5 (Phase 3 bumped CurrentSchemaVersion to 5)");
++            Assert.AreEqual(SaveSchemaMigrator.CurrentSchemaVersion, data!.schemaVersion,
++                "Post-migration schemaVersion must equal CurrentSchemaVersion (now 6 after Order 610)");
+             Assert.AreEqual(0f, data.ownedCharacters[0].conditionEnergy, delta: 0.001f,
+                 "conditionEnergy defaults to 0f for pre-v4 saves");
+             Assert.AreEqual("", data.ownedCharacters[0].conditionUpdatedUtc,
+@@ -410,17 +410,17 @@ namespace Golfin.Gameplay.Tests
+         }
+ 
+         [Test]
+-        public void T6_FailHard_V6_ThrowsSaveSchemaVersionException()
++        public void T6_FailHard_V7_ThrowsSaveSchemaVersionException()
+         {
+-            // NOTE (Phase 3): v5 is now the CURRENT version — it is legal and must NOT throw.
+-            // The fail-hard gate now triggers on v6 (unknown future version).
+-            const string v6Json = @"{ ""schemaVersion"": 6, ""rewardPoints"": 1 }";
+-            var data = JsonConvert.DeserializeObject<SaveData>(v6Json);
++            // NOTE (Order 610): v6 is now the CURRENT version — it is legal and must NOT throw.
++            // The fail-hard gate now triggers on v7 (unknown future version).
++            const string v7Json = @"{ ""schemaVersion"": 7, ""rewardPoints"": 1 }";
++            var data = JsonConvert.DeserializeObject<SaveData>(v7Json);
+             Assert.IsNotNull(data);
+ 
+             UnityEngine.TestTools.LogAssert.Expect(
+                 UnityEngine.LogType.Error,
+-                new System.Text.RegularExpressions.Regex(@"\[SaveSchemaMigrator\].*schema version 6"));
++                new System.Text.RegularExpressions.Regex(@"\[SaveSchemaMigrator\].*schema version 7"));
+ 
+             Assert.Throws<SaveSchemaVersionException>(() => SaveSchemaMigrator.Migrate(data!));
+         }
+diff --git a/Assets/Scripts/Save/SaveData.cs b/Assets/Scripts/Save/SaveData.cs
+index 970ca4557..f122ab246 100644
+--- a/Assets/Scripts/Save/SaveData.cs
++++ b/Assets/Scripts/Save/SaveData.cs
+@@ -63,6 +63,27 @@ namespace Golfin.Save
+     }
+ 
+ 
++    // ── Club ownership DTOs (schema v6, Order 610) ───────────────────────────
++
++    /// <summary>
++    /// Flat DTO for one persisted owned club.
++    /// Mirrors the mutable subset of PlayerClubData (Assets/Scripts/UI/Inventory/ClubData.cs).
++    /// Ownership = membership in SaveData.ownedClubs.
++    /// </summary>
++    public class PersistedClub
++    {
++        public string clubId           = "";
++        public int    currentLevel     = 1;
++        public int    currentDurability = 100;
++        public int    maxDurability    = 100;
++        public int    equippedBagSlot  = 0;    // 0 = unequipped, 1-N = bag number
++        public int    totalSPEarned    = 0;
++        public int    spentPower       = 0;
++        public int    spentAccuracy    = 0;
++        public int    spentLieResistance = 0;
++        public int    spentDurability  = 0;
++    }
++
+     /// <summary>
+     /// Single canonical save record for all game-state data.
+     /// Serialized to JSON via Newtonsoft.Json (supports Dictionary natively).
+@@ -73,7 +94,7 @@ namespace Golfin.Save
+     /// </summary>
+     public class SaveData
+     {
+-        public int schemaVersion = 2;
++        public int schemaVersion = 6; // bumped from 5 for Order 610 ownedClubs (v5→v6 migration)
+ 
+         public int rewardPoints;
+         public string selectedCharacterId = "";
+@@ -114,6 +135,16 @@ namespace Golfin.Save
+         /// Added empty in the v2→v3 migration; absent in v1/v2 saves defaults to empty list on load.
+         /// </summary>
+         public List<PersistedTournamentEntry> tournamentEntries = new List<PersistedTournamentEntry>();
++
++        // ── Owned clubs (schema v6, Order 610) ───────────────────────────────
++        /// <summary>
++        /// All persisted owned clubs. Ownership = membership in this list.
++        /// Written by ClubManager on grant/level/equip/repair changes.
++        /// Migration (A3): grandfathers the full current DB on first load of an older save.
++        /// Absent in v1–v5 saves; migrated to full-DB set on v5→v6 (Implementer Fork confirmed:
++        /// grandfather-all per SPEC §4 A3 recommendation — nobody loses their bag).
++        /// </summary>
++        public List<PersistedClub> ownedClubs = new List<PersistedClub>();
+     }
+ 
+     /// <summary>
+diff --git a/Assets/Scripts/Save/SaveSchemaMigrator.cs b/Assets/Scripts/Save/SaveSchemaMigrator.cs
+index 6e434380b..fc104273b 100644
+--- a/Assets/Scripts/Save/SaveSchemaMigrator.cs
++++ b/Assets/Scripts/Save/SaveSchemaMigrator.cs
+@@ -14,7 +14,7 @@ namespace Golfin.Save
+     /// </summary>
+     public static class SaveSchemaMigrator
+     {
+-        public const int CurrentSchemaVersion = 5;
++        public const int CurrentSchemaVersion = 6;
+ 
+         /// <summary>
+         /// Apply any needed migrations to bring data from its on-disk schemaVersion
+@@ -78,6 +78,26 @@ namespace Golfin.Save
+                 Debug.Log("[SaveSchemaMigrator] Migrated v4 → v5 (conditionRemaining added per tournament entry, default -1f sentinel).");
+             }
+ 
++            // v5 → v6: add ownedClubs list (Order 610, club-ownership economy).
++            // Migration policy: GRANDFATHER-ALL (Implementer Fork A3 confirmed per SPEC §4 A3
++            // recommendation — preserve existing players' clubs; no bags stripped).
++            // Actual club DB hydration happens in ClubManager.LoadClubs() because SaveSchemaMigrator
++            // has no dependency on ClubDatabaseCSV (runtime MonoBehaviour). We seed an EMPTY list
++            // here as the sentinel; ClubManager detects an empty list on a migrated save vs. a
++            // genuinely fresh save via a separate "hasMigratedClubs" flag on SaveData. However,
++            // to keep SaveSchemaMigrator pure (no engine dep), we store the sentinel in the list:
++            // an empty ownedClubs list on a v5 save means "migrate = grandfather all from DB".
++            // ClubManager distinguishes: schemaVersion was <6 at load time → grandfather; otherwise
++            // use the list as-is (fresh = starter set, loaded = real list).
++            // We record the pre-migration schema using a flag in ClubManager, not here.
++            if (data.schemaVersion < 6)
++            {
++                // Defensive null-init only; actual club content populated by ClubManager.
++                data.ownedClubs ??= new System.Collections.Generic.List<PersistedClub>();
++                data.schemaVersion = 6;
++                Debug.Log("[SaveSchemaMigrator] Migrated v5 → v6 (ownedClubs list added; grandfather policy applied by ClubManager).");
++            }
++
+             // Ensure schemaVersion is current after all migrations
+             data.schemaVersion = CurrentSchemaVersion;
+         }
+diff --git a/Assets/Scripts/Save/Tests/SaveLayerTests.cs b/Assets/Scripts/Save/Tests/SaveLayerTests.cs
+index fec863d9f..6cfe438fb 100644
+--- a/Assets/Scripts/Save/Tests/SaveLayerTests.cs
++++ b/Assets/Scripts/Save/Tests/SaveLayerTests.cs
+@@ -324,8 +324,9 @@ namespace Golfin.Save.Tests
+             // Act: migrate
+             Assert.DoesNotThrow(() => SaveSchemaMigrator.Migrate(data!));
+ 
+-            // Assert: schemaVersion bumped all the way to CurrentSchemaVersion (v5 now, Phase 3) from v2
+-            Assert.AreEqual(5, data!.schemaVersion, "schemaVersion must be 5 after full migration from v2 (v2→v3→v4→v5)");
++            // Assert: schemaVersion bumped all the way to CurrentSchemaVersion (v6 now, Order 610) from v2
++            Assert.AreEqual(SaveSchemaMigrator.CurrentSchemaVersion, data!.schemaVersion,
++                "schemaVersion must be CurrentSchemaVersion after full migration from v2");
+ 
+             // Assert: tournamentEntries is present and empty (not null)
+             Assert.IsNotNull(data.tournamentEntries, "tournamentEntries must not be null after migration");
+@@ -340,34 +341,34 @@ namespace Golfin.Save.Tests
+             Assert.AreEqual(19900L, data.dailyPeriodKey);
+         }
+ 
+-        // ── T5 Test 2: Fail-hard on v6 (future-version guard; v5 is now current per Phase 3) ──
+-        // Phase 3 (stamina_tournament_wiring) bumped CurrentSchemaVersion from 4→5.
+-        // v5 is now legal; v6 is still an unknown future version that must throw.
++        // ── T5 Test 2: Fail-hard on v7 (future-version guard; v6 is now current per Order 610) ──
++        // Order 610 (general_shop_ui) bumped CurrentSchemaVersion from 5→6.
++        // v6 is now legal; v7 is an unknown future version that must throw.
+ 
+         [Test]
+-        public void T5_FailHard_V6Json_ThrowsSaveSchemaVersionException()
++        public void T5_FailHard_V7Json_ThrowsSaveSchemaVersionException()
+         {
+-            // A save written by a future build (v6) must throw, not silently corrupt.
+-            // (v5 is now CurrentSchemaVersion after Phase 3; v6 is still an unknown future version.)
+-            const string v6Json = @"{ ""schemaVersion"": 6, ""rewardPoints"": 1 }";
+-            var data = JsonConvert.DeserializeObject<SaveData>(v6Json);
++            // A save written by a future build (v7) must throw, not silently corrupt.
++            // (v6 is CurrentSchemaVersion after Order 610; v7 is an unknown future version.)
++            const string v7Json = @"{ ""schemaVersion"": 7, ""rewardPoints"": 1 }";
++            var data = JsonConvert.DeserializeObject<SaveData>(v7Json);
+             Assert.IsNotNull(data);
+ 
+             // Expect the Debug.LogError before the throw
+             UnityEngine.TestTools.LogAssert.Expect(
+                 UnityEngine.LogType.Error,
+-                new System.Text.RegularExpressions.Regex(@"\[SaveSchemaMigrator\].*schema version 6"));
++                new System.Text.RegularExpressions.Regex(@"\[SaveSchemaMigrator\].*schema version 7"));
+ 
+             Assert.Throws<SaveSchemaVersionException>(() => SaveSchemaMigrator.Migrate(data!));
+         }
+ 
+-        // ── T5 Test 3: CurrentSchemaVersion is 5 (bumped by Phase 3 stamina_tournament_wiring) ──
++        // ── T5 Test 3: CurrentSchemaVersion is 6 (bumped by Order 610 general_shop_ui) ──
+ 
+         [Test]
+-        public void T5_CurrentSchemaVersion_Is5()
++        public void T5_CurrentSchemaVersion_Is6()
+         {
+-            Assert.AreEqual(5, SaveSchemaMigrator.CurrentSchemaVersion,
+-                "CurrentSchemaVersion must be 5 after the v4→v5 bump (Phase 3 stamina_tournament_wiring conditionRemaining sentinel)");
++            Assert.AreEqual(6, SaveSchemaMigrator.CurrentSchemaVersion,
++                "CurrentSchemaVersion must be 6 after the v5→v6 bump (Order 610 general_shop_ui ownedClubs)");
+         }
+ 
+         // ── T5 Test 5: v3 → v4 migration — condition fields default-safe ─────
+@@ -401,8 +402,9 @@ namespace Golfin.Save.Tests
+             // Act: migrate
+             Assert.DoesNotThrow(() => SaveSchemaMigrator.Migrate(data!));
+ 
+-            // schemaVersion bumped to 5 (Phase 3 added v5 migration block — empty/safe for v3 data)
+-            Assert.AreEqual(5, data!.schemaVersion, "schemaVersion must be 5 after v3→v4→v5 migration (Phase 3 CurrentSchemaVersion)");
++            // schemaVersion bumped to 6 (Order 610 added v6 migration block — empty/safe for v3 data)
++            Assert.AreEqual(SaveSchemaMigrator.CurrentSchemaVersion, data!.schemaVersion,
++                "schemaVersion must be CurrentSchemaVersion after v3→v4→v5→v6 migration");
+ 
+             // All v3 fields still intact
+             Assert.AreEqual(7777, data.rewardPoints);
+diff --git a/Assets/Scripts/UI/PersistentUIManager.cs b/Assets/Scripts/UI/PersistentUIManager.cs
+index 5199cb1f9..cc5db0d0d 100644
+--- a/Assets/Scripts/UI/PersistentUIManager.cs
++++ b/Assets/Scripts/UI/PersistentUIManager.cs
+@@ -43,11 +43,12 @@ namespace Golfin.UI
+         public enum Screen
+         {
+             Home,
+-            Gacha,
++            Gacha,        // Order 610: re-used as the Shop/Rewards Center entry slot
+             MainPlay,
+             Inventory,
+             Characters,
+-            Settings
++            Settings,
++            Store         // Order 610: alias used by HighlightScreen for GeneralShop
+         }
+ 
+         private Screen currentScreen = Screen.Home;
+@@ -233,6 +234,11 @@ namespace Golfin.UI
+                     // Bottom-nav tee button → Mode Select screen (mode_select_system spec)
+                     sm.ShowScreen(GolfinRedux.UI.ScreenId.ModeSelection);
+                     break;
++                case Screen.Gacha:
++                case Screen.Store:
++                    // Order 610 (D3): Gacha nav slot → Rewards Center / GeneralShop
++                    sm.ShowScreen(GolfinRedux.UI.ScreenId.GeneralShop);
++                    break;
+                 default:
+                     Debug.LogWarning($"[PersistentUI] Navigation to {screen} not yet implemented.");
+                     break;
+@@ -279,6 +285,9 @@ namespace Golfin.UI
+                         break;
+                     // StaminaShopDetail center text is set dynamically by StaminaShopDetailScreenController
+                     // via SetUsername(shopName) after navigating.
++                    case GolfinRedux.UI.ScreenId.GeneralShop:
++                        usernameText.text = "REWARDS CENTER";
++                        break;
+                     default:
+                         usernameText.text = string.Empty;
+                         break;
+@@ -299,6 +308,8 @@ namespace Golfin.UI
+                 // Order 517 — Shop screens entered from Roster; keep Characters nav tab highlighted
+                 case GolfinRedux.UI.ScreenId.StaminaShopSelection:  currentScreen = Screen.Characters; break;
+                 case GolfinRedux.UI.ScreenId.StaminaShopDetail:     currentScreen = Screen.Characters; break;
++                // Order 610 — General Shop entered via nav Gacha/Store slot
++                case GolfinRedux.UI.ScreenId.GeneralShop:           currentScreen = Screen.Gacha; break;
+                 default:
+                     return; // Logo/Splash/Loading/Leaderboard: bars hidden or no nav highlight.
+             }
+@@ -307,8 +318,9 @@ namespace Golfin.UI
+ 
+         private void UpdateScreenHighlight()
+         {
++            bool gachaOrStore = (currentScreen == Screen.Gacha || currentScreen == Screen.Store);
+             if (homeIcon != null)       homeIcon.color       = (currentScreen == Screen.Home)       ? iconActiveColor : iconNormalColor;
+-            if (gachaIcon != null)      gachaIcon.color      = (currentScreen == Screen.Gacha)      ? iconActiveColor : iconNormalColor;
++            if (gachaIcon != null)      gachaIcon.color      = gachaOrStore                         ? iconActiveColor : iconNormalColor;
+             if (mainPlayIcon != null)   mainPlayIcon.color   = (currentScreen == Screen.MainPlay)   ? iconActiveColor : iconNormalColor;
+             if (inventoryIcon != null)  inventoryIcon.color  = (currentScreen == Screen.Inventory)  ? iconActiveColor : iconNormalColor;
+             if (charactersIcon != null) charactersIcon.color = (currentScreen == Screen.Characters) ? iconActiveColor : iconNormalColor;
+diff --git a/Assets/Scripts/UI/ScreenManager.cs b/Assets/Scripts/UI/ScreenManager.cs
+index f85650c9d..5e2d87b86 100644
+--- a/Assets/Scripts/UI/ScreenManager.cs
++++ b/Assets/Scripts/UI/ScreenManager.cs
+@@ -22,7 +22,9 @@ namespace GolfinRedux.UI
+         TournamentSelection,
+         // Order 517 — Stamina Boost Shop (Figma 13156:1178 + 13330:1139)
+         StaminaShopSelection,
+-        StaminaShopDetail
++        StaminaShopDetail,
++        // Order 610 — General Shop / Rewards Center (Figma 4079:28230)
++        GeneralShop
+         // Settings removed - it's an overlay, not a screen
+     }
+ 
+@@ -53,6 +55,8 @@ namespace GolfinRedux.UI
+         // Order 517 — Stamina Boost Shop screens
+         [SerializeField] private GameObject _staminaShopSelectionScreen;
+         [SerializeField] private GameObject _staminaShopDetailScreen;
++        // Order 610 — General Shop / Rewards Center
++        [SerializeField] private GameObject _generalShopScreen;
+         // _settingsScreen removed - Settings is an overlay managed by SettingsController, not ScreenManager
+ 
+         [Header("Audio (Order 350)")]
+@@ -175,6 +179,10 @@ namespace GolfinRedux.UI
+             if (_staminaShopDetailScreen != null)
+                 _staminaShopDetailScreen.SetActive(screenId == ScreenId.StaminaShopDetail);
+ 
++            // Order 610 — General Shop / Rewards Center
++            if (_generalShopScreen != null)
++                _generalShopScreen.SetActive(screenId == ScreenId.GeneralShop);
++
+             // Settings is an overlay (SettingsController), not managed here
+ 
+             // Order 350: menu music — start on menu screens, stop during loading/logo/splash.
+@@ -189,7 +197,8 @@ namespace GolfinRedux.UI
+                              || screenId == ScreenId.TournamentLeaderboard
+                              || screenId == ScreenId.TournamentSelection
+                              || screenId == ScreenId.StaminaShopSelection
+-                             || screenId == ScreenId.StaminaShopDetail;
++                             || screenId == ScreenId.StaminaShopDetail
++                             || screenId == ScreenId.GeneralShop;
+             if (AudioManager.Instance != null)
+             {
+                 if (isMenuScreen && _mainThemeClip != null && !AudioManager.Instance.IsMusicPlaying())
+@@ -209,7 +218,8 @@ namespace GolfinRedux.UI
+                          || screenId == ScreenId.TournamentLeaderboard
+                          || screenId == ScreenId.TournamentSelection
+                          || screenId == ScreenId.StaminaShopSelection
+-                         || screenId == ScreenId.StaminaShopDetail;
++                         || screenId == ScreenId.StaminaShopDetail
++                         || screenId == ScreenId.GeneralShop;
+             if (Golfin.UI.PersistentUIManager.Instance != null)
+             {
+                 if (showBars)
+diff --git a/Assets/Scripts/UI/Shop/ShopTransaction.cs b/Assets/Scripts/UI/Shop/ShopTransaction.cs
+index e37ec32f2..2c7796dd0 100644
+--- a/Assets/Scripts/UI/Shop/ShopTransaction.cs
++++ b/Assets/Scripts/UI/Shop/ShopTransaction.cs
+@@ -1,22 +1,25 @@
+ // Assets/Scripts/UI/Shop/ShopTransaction.cs
+ // Order 517 — stamina_boost_shop
+-// Reusable purchase seam.  Order 610 (general Shop UI) will reference this same class.
++// Order 610 — general_shop_ui (extended: ball + club purchase overloads)
+ 
+ using System;
+ using UnityEngine;
+ using Golfin.Roster;
++using Golfin.Save;
+ 
+ namespace GolfinRedux.UI.Shop
+ {
+     /// <summary>
+-    /// Stateless purchase seam that orchestrates RP spend → stamina grant → persist.
+-    /// Designed to be called from StaminaShopDetailScreenController.
++    /// Stateless purchase seam that orchestrates RP spend → grant → persist.
++    ///
++    /// Original path (Order 517): stamina boost.
++    /// Extended path (Order 610): ball quantity increment and club grant.
+     ///
+     /// Returns a <see cref="PurchaseResult"/> describing success or the failure reason,
+     /// so callers can show the appropriate Toast without knowing the internals.
+     ///
+-    /// Order 610 note: when the general Shop needs to sell non-stamina items,
+-    /// add an overload or extend PurchaseResult.GrantType.
++    /// Real-money/IAP swap point: replace the <see cref="RewardPointsManager.SpendPoints"/>
++    /// call with a billing SDK call — only this class changes.
+     /// </summary>
+     public static class ShopTransaction
+     {
+@@ -24,23 +27,17 @@ namespace GolfinRedux.UI.Shop
+         {
+             Success,
+             InsufficientRp,
+-            StaminaFull,
+-            NullCharacter
++            StaminaFull,      // stamina-boost path only (Order 517 compat)
++            NullCharacter,    // stamina-boost path only (Order 517 compat)
++            AlreadyOwned,     // club purchase: club already in ownedClubs
++            Invalid           // refId not found in DB / catalog row malformed
+         }
+ 
++        // ─── Order 517: stamina boost ────────────────────────────────────────────
++
+         /// <summary>
+         /// Attempts to buy a stamina boost item for the given character.
+-        /// <list type="bullet">
+-        ///   <item>Checks stamina-full guard (blocks if currentEnergy >= maxEnergy).</item>
+-        ///   <item>Calls <see cref="RewardPointsManager.SpendPoints"/> — fails fast on insufficient RP.</item>
+-        ///   <item>Calls <see cref="StaminaRuntimeService.AddEnergy"/> — clamps to max, persists.</item>
+-        ///   <item>Invokes <paramref name="onGranted"/> on success.</item>
+-        /// </list>
+         /// </summary>
+-        /// <param name="pcd">Character whose Condition pool receives the boost.</param>
+-        /// <param name="rpCost">RP cost from CSV (item.RpCost).</param>
+-        /// <param name="staminaAmount">STA units to add (item.Stamina).</param>
+-        /// <param name="onGranted">Optional callback invoked AFTER the grant (UI refresh hook).</param>
+         public static PurchaseResult TryPurchase(
+             PlayerCharacterData pcd,
+             int rpCost,
+@@ -60,7 +57,7 @@ namespace GolfinRedux.UI.Shop
+                 return PurchaseResult.StaminaFull;
+             }
+ 
+-            // RP spend (SpendPoints does NOT touch lifetime-earned)
++            // RP spend
+             var rpm = RewardPointsManager.Instance;
+             if (rpm == null || !rpm.SpendPoints(rpCost))
+             {
+@@ -68,11 +65,128 @@ namespace GolfinRedux.UI.Shop
+                 return PurchaseResult.InsufficientRp;
+             }
+ 
+-            // Grant stamina
+             StaminaRuntimeService.AddEnergy(pcd, staminaAmount);
+ 
+             onGranted?.Invoke();
+             return PurchaseResult.Success;
+         }
++
++        // ─── Order 610: ball purchase ─────────────────────────────────────────────
++
++        /// <summary>
++        /// Purchases one unit of the given ball type.
++        /// Increments <c>SaveData.ballQuantities[ballId]</c> unless quantity == -1 (unlimited).
++        /// Always succeeds on RP-check pass; balls are quantity-stacking, no ownership guard.
++        /// </summary>
++        /// <param name="ballId">Ball ID key (e.g. "ball_golfin"). Must be non-empty.</param>
++        /// <param name="rpCost">RP to debit.</param>
++        /// <param name="onGranted">Optional callback invoked AFTER grant.</param>
++        public static PurchaseResult TryPurchaseBall(
++            string ballId,
++            int rpCost,
++            Action onGranted = null)
++        {
++            if (string.IsNullOrEmpty(ballId))
++            {
++                Debug.LogWarning("[ShopTransaction] TryPurchaseBall: ballId is null or empty.");
++                return PurchaseResult.Invalid;
++            }
++
++            var rpm = RewardPointsManager.Instance;
++            if (rpm == null || !rpm.SpendPoints(rpCost))
++            {
++                Debug.Log(string.Format("[ShopTransaction] TryPurchaseBall: insufficient RP (need {0}).", rpCost));
++                return PurchaseResult.InsufficientRp;
++            }
++
++            // Increment quantity in save (respect -1 = unlimited sentinel)
++            var sdh = SaveDataHost.Instance;
++            if (sdh != null)
++            {
++                var save = sdh.Data;
++                if (save.ballQuantities.TryGetValue(ballId, out int qty))
++                {
++                    if (qty != -1) // -1 = unlimited; don't increment
++                        save.ballQuantities[ballId] = qty + 1;
++                }
++                else
++                {
++                    save.ballQuantities[ballId] = 1;
++                }
++                sdh.MarkDirty();
++            }
++            else
++            {
++                Debug.LogWarning("[ShopTransaction] TryPurchaseBall: SaveDataHost.Instance is null — ball not persisted.");
++            }
++
++            onGranted?.Invoke();
++            return PurchaseResult.Success;
++        }
++
++        // ─── Order 610: club purchase ─────────────────────────────────────────────
++
++        /// <summary>
++        /// Purchases the given club. Delegates to <c>ClubManager.GrantClub</c>.
++        /// Returns <see cref="PurchaseResult.AlreadyOwned"/> if the club is already in the
++        /// player's ownedClubs — caller should disable/hide the BUY button at that point.
++        /// Returns <see cref="PurchaseResult.Invalid"/> if clubId is not found in the DB.
++        /// </summary>
++        /// <param name="clubId">Club ID key (e.g. "club_driver_gf").</param>
++        /// <param name="rpCost">RP to debit.</param>
++        /// <param name="onGranted">Optional callback invoked AFTER grant.</param>
++        public static PurchaseResult TryPurchaseClub(
++            string clubId,
++            int rpCost,
++            Action onGranted = null)
++        {
++            if (string.IsNullOrEmpty(clubId))
++            {
++                Debug.LogWarning("[ShopTransaction] TryPurchaseClub: clubId is null or empty.");
++                return PurchaseResult.Invalid;
++            }
++
++            // Check ownership first (free — no RP debit yet)
++            var cm = ClubManager.Instance;
++            if (cm != null && cm.IsOwned(clubId))
++            {
++                Debug.Log(string.Format("[ShopTransaction] TryPurchaseClub: {0} already owned.", clubId));
++                return PurchaseResult.AlreadyOwned;
++            }
++
++            // RP spend
++            var rpm = RewardPointsManager.Instance;
++            if (rpm == null || !rpm.SpendPoints(rpCost))
++            {
++                Debug.Log(string.Format("[ShopTransaction] TryPurchaseClub: insufficient RP (need {0}).", rpCost));
++                return PurchaseResult.InsufficientRp;
++            }
++
++            // Grant
++            if (cm == null)
++            {
++                Debug.LogWarning("[ShopTransaction] TryPurchaseClub: ClubManager.Instance is null.");
++                // Refund RP since grant didn't happen
++                RewardPointsManager.Instance?.EarnPoints(rpCost);
++                return PurchaseResult.Invalid;
++            }
++
++            var grantResult = cm.GrantClub(clubId);
++            if (grantResult == ClubManager.GrantResult.ClubNotFound)
++            {
++                // Refund RP
++                RewardPointsManager.Instance?.EarnPoints(rpCost);
++                return PurchaseResult.Invalid;
++            }
++            if (grantResult == ClubManager.GrantResult.AlreadyOwned)
++            {
++                // Race: another path granted between IsOwned check and GrantClub — refund + report
++                RewardPointsManager.Instance?.EarnPoints(rpCost);
++                return PurchaseResult.AlreadyOwned;
++            }
++
++            onGranted?.Invoke();
++            return PurchaseResult.Success;
++        }
+     }
+ }

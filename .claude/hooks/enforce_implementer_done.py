@@ -125,11 +125,249 @@ import struct
 import subprocess
 import sys
 import time
+import urllib.request
+import urllib.error
 import zlib
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 ACTIVE_DIR = REPO_ROOT / "Docs" / "Specs" / "Active"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Live-editor MCP seam (iter-3 Order-611 P1 + P2).
+# The Unity editor exposes its MCP interface at http://localhost:21573 (from
+# .mcp.json). The hook uses this to call script-execute for batchmode structural
+# comparisons when YAML parsing alone cannot distinguish a real CopyAsset clone
+# from a from-scratch fabrication with a pasted sprite GUID.
+#
+# Wrapped in a module-level function so tests can monkeypatch it without a live
+# editor. The function is fail-closed: if the endpoint is unreachable or the
+# response is unparseable, it returns None (signalling "editor unavailable") and
+# the caller BLOCKS (not silently passes).
+# ─────────────────────────────────────────────────────────────────────────────
+
+_LIVE_EDITOR_ENDPOINT = "http://localhost:21573"
+_LIVE_EDITOR_TIMEOUT = 10.0  # seconds for each HTTP request
+
+
+def _call_live_editor(
+    csharp_code: str,
+    endpoint: str = _LIVE_EDITOR_ENDPOINT,
+    timeout: float = _LIVE_EDITOR_TIMEOUT,
+) -> str | None:
+    """Call Unity's live editor MCP HTTP endpoint with a script-execute request.
+
+    Protocol (session-based MCP over HTTP+SSE):
+      1. POST /mcp  initialize  → read Mcp-Session-Id response header
+      2. POST /mcp  notifications/initialized  (with session header)
+      3. POST /mcp  tools/call script-execute  (with session header)
+      4. Parse SSE response: 'data: {...}' → result.structuredContent.result.value
+
+    Returns the script output string on success, or None if:
+      - The endpoint is unreachable (ConnectionRefusedError / timeout)
+      - Any HTTP response is malformed or the session handshake fails
+      - The SSE response cannot be parsed
+
+    Tests monkeypatch this function directly (replace eid._call_live_editor with
+    a lambda that returns a known string or None).
+    """
+    try:
+        headers_base = {
+            "Content-Type": "application/json",
+            "Accept": "application/json, text/event-stream",
+        }
+
+        # Step 1: initialize — get session id.
+        init_body = json.dumps({
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "initialize",
+            "params": {
+                "protocolVersion": "2024-11-05",
+                "clientInfo": {"name": "enforce_implementer_done", "version": "3"},
+                "capabilities": {},
+            },
+        }).encode()
+        req = urllib.request.Request(
+            f"{endpoint}/mcp",
+            data=init_body,
+            headers=dict(headers_base),
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            session_id = resp.headers.get("Mcp-Session-Id") or resp.headers.get("mcp-session-id")
+            if not session_id:
+                return None  # Can't proceed without a session.
+
+        # Step 2: notifications/initialized.
+        notif_body = json.dumps({
+            "jsonrpc": "2.0",
+            "method": "notifications/initialized",
+        }).encode()
+        headers_session = dict(headers_base)
+        headers_session["Mcp-Session-Id"] = session_id
+        req2 = urllib.request.Request(
+            f"{endpoint}/mcp",
+            data=notif_body,
+            headers=headers_session,
+            method="POST",
+        )
+        with urllib.request.urlopen(req2, timeout=timeout):
+            pass  # We don't need the response body.
+
+        # Step 3: tools/call script-execute.
+        call_body = json.dumps({
+            "jsonrpc": "2.0",
+            "id": 2,
+            "method": "tools/call",
+            "params": {
+                "name": "script-execute",
+                "arguments": {"csharpCode": csharp_code, "isMethodBody": False},
+            },
+        }).encode()
+        req3 = urllib.request.Request(
+            f"{endpoint}/mcp",
+            data=call_body,
+            headers=headers_session,
+            method="POST",
+        )
+        with urllib.request.urlopen(req3, timeout=timeout) as resp:
+            sse_text = resp.read().decode("utf-8", errors="replace")
+
+        # Step 4: parse SSE event stream.
+        # Each SSE message is "data: <JSON>\n\n".
+        for line in sse_text.splitlines():
+            line = line.strip()
+            if not line.startswith("data:"):
+                continue
+            payload_str = line[len("data:"):].strip()
+            if not payload_str:
+                continue
+            try:
+                payload = json.loads(payload_str)
+            except Exception:
+                continue
+            # Navigate: result.structuredContent.result.value  (or result.content[0].text)
+            result = payload.get("result") or {}
+            sc = result.get("structuredContent") or {}
+            inner = sc.get("result") or {}
+            value = inner.get("value")
+            if value is not None:
+                return str(value)
+            # Fallback: try result.content[0].text (some MCP versions)
+            content = result.get("content") or []
+            if content and isinstance(content, list):
+                text = content[0].get("text") if isinstance(content[0], dict) else None
+                if text is not None:
+                    return str(text)
+        return None  # Couldn't extract output.
+
+    except (OSError, urllib.error.URLError, TimeoutError):
+        return None  # Endpoint unreachable.
+
+
+def _do_live_editor_structure_check(
+    built_prefab_path: str,
+    source_guid: str,
+    element_path: str,
+    repo_root: Path,
+) -> str | None:
+    """Use the live Unity editor to compare the component structure of the element
+    at ``element_path`` inside ``built_prefab_path`` against the element from the
+    source asset identified by ``source_guid``.
+
+    Returns:
+        "MATCH"    — structures are equivalent; this is a real CopyAsset clone.
+        "MISMATCH" — structures differ; this is a from-scratch fabrication.
+        None       — editor unreachable or script raised an exception; caller blocks.
+
+    This function is the testable seam: tests replace it via
+        import enforce_implementer_done as eid
+        eid._do_live_editor_structure_check = lambda *a, **kw: "MATCH"
+    """
+    # Build a C# script that the Unity editor will execute.  The script:
+    #   1. Resolves the source prefab by GUID.
+    #   2. Loads the built prefab by absolute path.
+    #   3. Walks to the sub-element named by element_path (forward-slash separated).
+    #   4. Compares: child-count of the element root, component-type list (sorted).
+    #   5. Emits "STRUCTURE_MATCH" or "STRUCTURE_MISMATCH:<reason>".
+    #
+    # We use a single-class static-method style so the editor can compile it
+    # without needing a persistent asset.
+
+    # Normalise: element_path may start with "Assets/" or be just a child path
+    # within the prefab.  For the comparison we need the relative path inside the
+    # prefab (the part AFTER the prefab root's own name).
+    elem_rel = element_path.strip().replace("\\", "/")
+
+    # built_prefab_path is the abs path on disk.  Make it relative to repo root
+    # so the C# can load it via AssetDatabase.
+    try:
+        built_rel = str(Path(built_prefab_path).relative_to(repo_root))
+    except ValueError:
+        built_rel = built_prefab_path
+    built_rel = built_rel.replace("\\", "/")
+
+    csharp = f"""
+using UnityEngine;
+using UnityEditor;
+using System.Linq;
+
+// script-execute REQUIRES the class be named `Script` with `public static
+// string Main()`; the verdict is the RETURN VALUE (Debug.Log output is NOT
+// returned by script-execute). Both were wrong in iter-3, so this whole check
+// silently returned None and blocked legit clones. (iter-4 red-team scar.)
+public static class Script {{
+    // Recursive skeleton signature of an element's subtree. EXCLUDES the root
+    // element's own name, because a clone is renamed (verified empirically:
+    // a modified GeneralShopCard clone matched its source modulo the root name,
+    // while the from-scratch fabricated_610 forgery — 3 root children vs 16 —
+    // did not). Component-type set + child-name structure are preserved by
+    // legitimate clone-and-modify (hide / reposition / retext / recolor), but a
+    // from-scratch fabrication has a different skeleton. To defeat this a forger
+    // must replicate the entire source subtree — at which point the element
+    // genuinely carries the source's structure (i.e. it IS a clone), which
+    // closes the guid-paste bypass (a pasted sprite guid cannot fake structure).
+    static string Sig(Transform t, bool isRoot) {{
+        var comps = string.Join(",", t.GetComponents<Component>()
+            .Where(c => c != null).Select(c => c.GetType().Name).OrderBy(x => x));
+        var kids = string.Join("", System.Linq.Enumerable.Range(0, t.childCount)
+            .Select(i => t.GetChild(i)).OrderBy(c => c.name)
+            .Select(c => Sig(c, false)));
+        string name = isRoot ? "ROOT" : t.name;
+        return "[" + name + "|" + comps + kids + "]";
+    }}
+    public static string Main() {{
+        string sourceAssetPath = AssetDatabase.GUIDToAssetPath("{source_guid}");
+        if (string.IsNullOrEmpty(sourceAssetPath)) return "STRUCTURE_MISMATCH:source_guid_not_found:{source_guid}";
+        GameObject builtRoot = AssetDatabase.LoadAssetAtPath<GameObject>("{built_rel}");
+        if (builtRoot == null) return "STRUCTURE_MISMATCH:built_prefab_not_loaded:{built_rel}";
+        GameObject sourceRoot = AssetDatabase.LoadAssetAtPath<GameObject>(sourceAssetPath);
+        if (sourceRoot == null) return "STRUCTURE_MISMATCH:source_prefab_not_loaded";
+        string elemPath = "{elem_rel}";
+        Transform builtElem = string.IsNullOrEmpty(elemPath) ? builtRoot.transform : builtRoot.transform.Find(elemPath);
+        Transform sourceElem = string.IsNullOrEmpty(elemPath) ? sourceRoot.transform : sourceRoot.transform.Find(elemPath);
+        if (builtElem == null) return "STRUCTURE_MISMATCH:built_element_not_found:" + elemPath;
+        if (sourceElem == null) return "STRUCTURE_MISMATCH:source_element_not_found:" + elemPath;
+        string sb = Sig(builtElem, true);
+        string ss = Sig(sourceElem, true);
+        return (sb == ss) ? "STRUCTURE_MATCH"
+            : ("STRUCTURE_MISMATCH:skeleton_diff builtLen=" + sb.Length + " srcLen=" + ss.Length);
+    }}
+}}
+"""
+    raw = _call_live_editor(csharp)
+    if raw is None:
+        return None  # Editor unreachable / script error — caller blocks (fail-closed).
+
+    raw = raw.strip()
+    if raw.startswith("STRUCTURE_MATCH"):
+        return "MATCH"
+    if raw.startswith("STRUCTURE_MISMATCH"):
+        return "MISMATCH"
+    # Unparseable (e.g. a compile error surfaced by script-execute) → fail-closed.
+    return None
+
 
 PLACEHOLDER_PATTERNS = [
     r"<check\s*\d*[^>]*>",
@@ -1650,6 +1888,87 @@ def validate_clone_provenance(report_path: Path) -> list[str]:
     return errors
 
 
+def _rerun_ui_lint_via_editor(lint_json_path: Path, repo_root: Path) -> int | None:
+    """Attempt a live re-run of UIFidelityLinter.LintPrefab via the Unity editor
+    MCP endpoint for the prefab that produced lint_json_path.
+
+    Prefab path is inferred from the lint JSON filename:
+        Docs/Diagnostics/_capture/<PrefabName>_lint.json
+        → Assets/**/<PrefabName>.prefab  (resolved via AssetDatabase glob)
+
+    Returns:
+        int  — the fresh `fail` count from the live linter run.
+        None — editor unreachable or prefab cannot be resolved; caller accepts
+               the cached JSON (P2 is quality gate, not security gate).
+
+    Tests monkeypatch this function directly.
+    """
+    # Derive the prefab name from the lint JSON stem (e.g. "StaminaMenuRow").
+    stem = lint_json_path.stem  # e.g. "StaminaMenuRow_lint"
+    if stem.endswith("_lint"):
+        prefab_name = stem[:-len("_lint")]
+    else:
+        prefab_name = stem
+
+    # Build a C# script that:
+    #   1. Finds the prefab by name in AssetDatabase.
+    #   2. Calls UIFidelityLinter.LintPrefab on it.
+    #   3. Emits "LINT_FAIL_COUNT:<n>" so we can parse it.
+    csharp = f"""
+using UnityEngine;
+using UnityEditor;
+using System.Linq;
+using System.IO;
+
+// script-execute REQUIRES class `Script` + `public static string Main()`; the
+// verdict is the RETURN VALUE, not Debug.Log. (Same iter-3 bug as the structure
+// check — this caused P2 to silently never re-run and always trust the cached
+// JSON.)
+public static class Script {{
+    public static string Main() {{
+        string prefabName = "{prefab_name}";
+        string[] guids = AssetDatabase.FindAssets("t:Prefab " + prefabName);
+        string prefabPath = guids
+            .Select(AssetDatabase.GUIDToAssetPath)
+            .FirstOrDefault(p => Path.GetFileNameWithoutExtension(p) == prefabName);
+        if (string.IsNullOrEmpty(prefabPath)) return "LINT_PREFAB_NOT_FOUND:" + prefabName;
+        try {{
+            var result = Golfin.EditorTools.UIFidelity.UIFidelityLinter.LintPrefab(prefabPath, null);
+            foreach (var line in result.Split('\\n')) {{
+                var trimmed = line.Trim();
+                if (trimmed.StartsWith("fail:") || trimmed.StartsWith("\"fail\":")) {{
+                    var parts = trimmed.Split(':');
+                    if (parts.Length >= 2 && int.TryParse(parts[1].Trim().TrimEnd(','), out int n))
+                        return "LINT_FAIL_COUNT:" + n;
+                }}
+            }}
+            string jsonPath = "Docs/Diagnostics/_capture/" + prefabName + "_lint.json";
+            if (File.Exists(jsonPath)) {{
+                var txt = File.ReadAllText(jsonPath);
+                var match = System.Text.RegularExpressions.Regex.Match(txt, "\\\"fail\\\"\\s*:\\s*(\\d+)");
+                if (match.Success) return "LINT_FAIL_COUNT:" + match.Groups[1].Value;
+            }}
+            return "LINT_FAIL_COUNT:0";
+        }} catch (System.Exception ex) {{
+            return "LINT_ERROR:" + ex.Message;
+        }}
+    }}
+}}
+"""
+    raw = _call_live_editor(csharp)
+    if raw is None:
+        return None  # Editor unreachable.
+
+    raw = raw.strip()
+    if raw.startswith("LINT_FAIL_COUNT:"):
+        try:
+            return int(raw.split(":", 1)[1].strip())
+        except ValueError:
+            return None
+    # LINT_PREFAB_NOT_FOUND / LINT_ERROR / unparseable → can't run → None.
+    return None
+
+
 def validate_ui_lint(report_path: Path, repo_root: Path) -> list[str]:
     """Rule 21: a Figma-node UI task's IMPLEMENTER_REPORT.md must carry a
     `## UI fidelity lint` section citing lint JSON artifact(s), and each cited
@@ -1725,6 +2044,31 @@ def validate_ui_lint(report_path: Path, repo_root: Path) -> list[str]:
                 f"prefab has render-health or node-spec violations (see the "
                 f"findings in that JSON). Fix them until fail == 0 before moving "
                 f"to review. (Rule 21.)"
+            )
+            continue
+        # The implementer-cited JSON (fail==0) is NOT accepted as evidence
+        # (SPEC §1.3 / §0 design law). The FRESH live re-run is the evidence.
+        # FAIL-CLOSED: if we cannot obtain a fresh run, we block — same as P1.
+        # (iter-3 shipped this fail-OPEN: unreachable → trust the cited JSON,
+        # the exact self-authored-artifact trust the postmortem forbids. Both
+        # parallel reviewers flagged it.)
+        fresh_fail = _rerun_ui_lint_via_editor(found, repo_root)
+        if fresh_fail is None:
+            errors.append(
+                f"UI fidelity lint: could not obtain a FRESH linter run from the "
+                f"live editor for '{found.name}' (editor unreachable, prefab not "
+                f"found, or linter error). Per SPEC §1.3 the cited JSON is NOT "
+                f"accepted as evidence — the fresh re-run is. Ensure the Unity "
+                f"editor is running and reachable, then retry the transition. "
+                f"(Rule 21 — P2 fail-closed.)"
+            )
+        elif fresh_fail != 0:
+            errors.append(
+                f"UI fidelity lint live re-run: '{found.name}' reported "
+                f"fail={fresh_fail} on a fresh invocation of "
+                f"UIFidelityLinter.LintPrefab — the cached artifact is stale. "
+                f"Re-run the linter in the live editor and update the cited JSON "
+                f"until fail == 0. (Rule 21 — P2 live re-run.)"
             )
     return errors
 
@@ -2065,26 +2409,57 @@ def validate_clone_provenance_yaml(
                     f"Reviewer should confirm intentional re-skin. (P1)"
                 )
             elif source_sprite_guid and built_sprite_guid == source_sprite_guid:
-                # *** THE BYPASS FIX (iter-2, red-team A1-mutant): ***
-                # No PrefabInstance lineage AND guid strings match.
-                # A sprite GUID is copyable text — pasting it from the source YAML
-                # does NOT prove the element was cloned. "Same guid string" only proves
-                # "carries the same sprite guid string", which a from-scratch fabricator
-                # can trivially achieve by text-copying the reference YAML.
-                # SPEC §1.1: "Deliberately NOT checked: sprite equality as such."
-                # Without PrefabInstance lineage, sprite-guid equality is corroborating
-                # at best and MUST NOT be treated as sufficient proof. CRITICAL FAIL.
-                errors.append(
-                    f"CRITICAL FAIL (P1): element '{element_path}' — no "
-                    f"PrefabInstance lineage from source GUID {source_guid}, and its "
-                    f"Image.sprite guid ({built_sprite_guid}) matches the source's "
-                    f"sprite guid. A GUID string is copyable text; matching guids "
-                    f"without !u!1001 PrefabInstance lineage cannot distinguish a real "
-                    f"CopyAsset clone from a from-scratch fabrication with a pasted "
-                    f"guid. Require PrefabInstance (!u!1001) lineage to prove this "
-                    f"element was cloned. (Rule 19 / P1 — A1-mutant bypass fixed)"
+                # No PrefabInstance lineage AND same sprite GUID.
+                #
+                # Two distinct cases:
+                #   (a) Real CopyAsset clone: Unity's AssetDatabase.CopyAsset creates
+                #       an independent prefab file with identical component structure and
+                #       the same sprite — NO !u!1001 PrefabInstance blocks are written.
+                #       This is a VALID clone pattern and must PASS.
+                #   (b) From-scratch fabrication: a forger text-copies the sprite GUID
+                #       from the source YAML into a hand-built prefab. The structure
+                #       will differ (wrong components, wrong layout, missing fields).
+                #
+                # YAML parsing alone cannot distinguish (a) from (b) because both have
+                # the same sprite guid and no PrefabInstance block.
+                #
+                # Decision (Order-611 iter-3, Cesar 2026-07-06): use the live Unity
+                # editor MCP HTTP endpoint to do a batchmode structural comparison.
+                # C# script loads both prefabs and compares their GameObject hierarchy
+                # depth, component type list, and key serialized properties. If they
+                # match → (a) PASS. If they differ → (b) CRITICAL FAIL. If the editor
+                # is unreachable → BLOCK (fail-closed: never silently pass).
+                engine_result = _do_live_editor_structure_check(
+                    built_prefab_path, source_guid, element_path, repo_root
                 )
-                _log_p1_miss(task_dir, element_path, source_guid, repo_root)
+                if engine_result == "MATCH":
+                    # Real CopyAsset clone confirmed by live engine — PASS.
+                    pass
+                elif engine_result == "MISMATCH":
+                    errors.append(
+                        f"CRITICAL FAIL (P1): element '{element_path}' — no "
+                        f"PrefabInstance lineage from source GUID {source_guid}, and "
+                        f"the live-editor structural comparison reports that the built "
+                        f"prefab's component structure DOES NOT match the source. "
+                        f"The sprite GUID matches but the element was not cloned — "
+                        f"the GUID was text-copied into a from-scratch fabrication. "
+                        f"(Rule 19 / P1 — batchmode engine check)"
+                    )
+                    _log_p1_miss(task_dir, element_path, source_guid, repo_root)
+                else:
+                    # engine_result is None: editor unreachable. Fail-closed.
+                    errors.append(
+                        f"CRITICAL FAIL (P1 — editor unreachable): element "
+                        f"'{element_path}' has no PrefabInstance lineage from source "
+                        f"GUID {source_guid} and its sprite GUID matches the source. "
+                        f"A batchmode structural comparison is required to distinguish "
+                        f"a real CopyAsset clone from a from-scratch fabrication with "
+                        f"a pasted GUID, but the live Unity editor MCP endpoint "
+                        f"({_LIVE_EDITOR_ENDPOINT}) is unreachable or timed out. "
+                        f"Ensure the Unity editor is running and the MCP plugin is "
+                        f"active, then retry the STATUS write. "
+                        f"(Rule 19 / P1 — fail-closed on unreachable editor)"
+                    )
             elif not source_sprite_guid and built_sprite_guid:
                 # Source element has no sprite but built element does — unusual case.
                 # Could be a new sprite added on a sprite-less source element. Cannot

@@ -1316,12 +1316,15 @@ class TestCloneProvenanceYAML(unittest.TestCase):
     # ── A1-mutant: from-scratch prefab with SOURCE's sprite guid pasted → CRITICAL FAIL ──
 
     def test_A1_mutant_guid_paste_critical_fail(self):
-        """A1-mutant (red-team bypass, iter-2 fix) — a from-scratch fabrication that
-        carries ZERO !u!1001 PrefabInstance blocks but has the source's m_Sprite guid
-        pasted into the Image component MUST CRITICAL FAIL.
+        """A1-mutant (iter-3 fix) — a from-scratch fabrication that carries ZERO
+        !u!1001 PrefabInstance blocks but has the source's m_Sprite guid pasted into
+        the Image component MUST CRITICAL FAIL when the live-editor structural check
+        detects a structure mismatch.
 
-        This is the exact bypass the red-team demonstrated: a guid string is copyable
-        text; matching guids without PrefabInstance lineage is not proof of cloning.
+        Iter-3 mechanism: the no-lineage + same-sprite branch now calls
+        _do_live_editor_structure_check. For a from-scratch fabrication the live
+        editor returns "MISMATCH" → CRITICAL FAIL. We monkeypatch the seam so the
+        test suite runs without a live editor.
         SPEC §1.1: 'Deliberately NOT checked: sprite equality as such.'
         """
         with tempfile.TemporaryDirectory() as root_str:
@@ -1356,12 +1359,19 @@ class TestCloneProvenanceYAML(unittest.TestCase):
                 key_sprite_guid=self._SPRITE_GUID,
             )
 
-            errs = eid.validate_clone_provenance_yaml(task_dir, repo_root)
+            # Monkeypatch: live editor reports structure MISMATCH (from-scratch fab).
+            original_fn = eid._do_live_editor_structure_check
+            try:
+                eid._do_live_editor_structure_check = lambda *a, **kw: "MISMATCH"
+                errs = eid.validate_clone_provenance_yaml(task_dir, repo_root)
+            finally:
+                eid._do_live_editor_structure_check = original_fn
+
             critical = [e for e in errs if "CRITICAL FAIL" in e]
             self.assertTrue(
                 len(critical) >= 1,
                 f"A1-mutant: from-scratch prefab with pasted source sprite guid MUST "
-                f"produce CRITICAL FAIL; the guid-paste bypass must be closed. Got: {errs}",
+                f"produce CRITICAL FAIL when live editor says MISMATCH. Got: {errs}",
             )
             # Must also log to review_misses.log.
             log_path = repo_root / ".claude" / "review_misses.log"
@@ -1411,6 +1421,136 @@ class TestCloneProvenanceYAML(unittest.TestCase):
             self.assertEqual(
                 critical, [],
                 f"True PrefabInstance clone should produce zero CRITICAL FAILs; got: {critical}",
+            )
+
+    # ── A2b: real CopyAsset clone (no PrefabInstance, same sprite, MATCH) → PASS ─
+
+    def test_A2_copyasset_clone_matching_structure_pass(self):
+        """A2b (iter-3, new) — A real CopyAsset clone produced by
+        AssetDatabase.CopyAsset has NO !u!1001 PrefabInstance blocks but an
+        identical component structure and the same sprite GUID.  The live-editor
+        structural check returns "MATCH".  This MUST produce ZERO errors.
+
+        This is the case iter-2 BROKE: iter-2's CRITICAL FAIL branch made
+        PrefabInstance lineage mandatory, rejecting all CopyAsset clones.
+        Iter-3 replaces it with the engine structural comparison; when the
+        editor says MATCH the element is accepted as a legitimate clone.
+        """
+        with tempfile.TemporaryDirectory() as root_str:
+            repo_root = Path(root_str)
+            (repo_root / ".claude").mkdir()
+            (repo_root / "Assets" / "Prefabs").mkdir(parents=True)
+
+            # Built prefab: CopyAsset clone — same structure as source, same sprite,
+            # but NO PrefabInstance blocks (that's what CopyAsset produces).
+            built_prefab = repo_root / "Assets" / "Prefabs" / "BuiltCard.prefab"
+            built_prefab.write_text(
+                self._prefab_scratch_real_sprite(self._SPRITE_GUID),
+                encoding="utf-8",
+            )
+
+            # Source prefab: the original.
+            source_prefab = repo_root / "Assets" / "Prefabs" / "Source.prefab"
+            source_prefab.write_text(
+                self._prefab_scratch_real_sprite(self._SPRITE_GUID),
+                encoding="utf-8",
+            )
+            (repo_root / "Assets" / "Prefabs" / "Source.prefab.meta").write_text(
+                f"fileFormatVersion: 2\nguid: {self._SOURCE_GUID}\n", encoding="utf-8"
+            )
+
+            task_dir = repo_root / "Docs" / "Specs" / "Active" / "test_task"
+            task_dir.mkdir(parents=True)
+            self._make_reuse_map(
+                task_dir,
+                element_path="CardRoot",
+                source_guid=self._SOURCE_GUID,
+                built_prefab_path=str(built_prefab),
+                key_sprite_guid=self._SPRITE_GUID,
+            )
+
+            # Monkeypatch: live editor confirms identical structure (real clone).
+            original_fn = eid._do_live_editor_structure_check
+            try:
+                eid._do_live_editor_structure_check = lambda *a, **kw: "MATCH"
+                errs = eid.validate_clone_provenance_yaml(task_dir, repo_root)
+            finally:
+                eid._do_live_editor_structure_check = original_fn
+
+            critical = [e for e in errs if "CRITICAL FAIL" in e]
+            block = [e for e in errs if "unreachable" in e.lower() or "BLOCK" in e or "fail-closed" in e.lower()]
+            self.assertEqual(
+                critical, [],
+                f"Real CopyAsset clone (MATCH from live editor) must produce ZERO "
+                f"CRITICAL FAILs; iter-2 regressed this case. Got: {critical}",
+            )
+            self.assertEqual(
+                block, [],
+                f"Real CopyAsset clone must not BLOCK; got: {block}",
+            )
+
+    # ── A2c: editor unreachable → BLOCK (fail-closed) ─────────────────────────
+
+    def test_A2_editor_unreachable_blocks_transition(self):
+        """A2c (iter-3, new) — When the element has no PrefabInstance lineage and
+        the same sprite GUID as the source, but the live Unity editor is unreachable
+        (returns None from _do_live_editor_structure_check), the transition must be
+        BLOCKED with a clear error.
+
+        Fail-closed rule: never silently PASS when the editor is unavailable.
+        """
+        with tempfile.TemporaryDirectory() as root_str:
+            repo_root = Path(root_str)
+            (repo_root / ".claude").mkdir()
+            (repo_root / "Assets" / "Prefabs").mkdir(parents=True)
+
+            built_prefab = repo_root / "Assets" / "Prefabs" / "BuiltCard.prefab"
+            built_prefab.write_text(
+                self._prefab_scratch_real_sprite(self._SPRITE_GUID),
+                encoding="utf-8",
+            )
+
+            source_prefab = repo_root / "Assets" / "Prefabs" / "Source.prefab"
+            source_prefab.write_text(
+                self._prefab_scratch_real_sprite(self._SPRITE_GUID),
+                encoding="utf-8",
+            )
+            (repo_root / "Assets" / "Prefabs" / "Source.prefab.meta").write_text(
+                f"fileFormatVersion: 2\nguid: {self._SOURCE_GUID}\n", encoding="utf-8"
+            )
+
+            task_dir = repo_root / "Docs" / "Specs" / "Active" / "test_task"
+            task_dir.mkdir(parents=True)
+            self._make_reuse_map(
+                task_dir,
+                element_path="CardRoot",
+                source_guid=self._SOURCE_GUID,
+                built_prefab_path=str(built_prefab),
+                key_sprite_guid=self._SPRITE_GUID,
+            )
+
+            # Monkeypatch: simulate unreachable editor (returns None).
+            original_fn = eid._do_live_editor_structure_check
+            try:
+                eid._do_live_editor_structure_check = lambda *a, **kw: None
+                errs = eid.validate_clone_provenance_yaml(task_dir, repo_root)
+            finally:
+                eid._do_live_editor_structure_check = original_fn
+
+            # Must produce an error mentioning unreachable / fail-closed.
+            block_errs = [
+                e for e in errs
+                if "unreachable" in e.lower() or "fail-closed" in e.lower()
+            ]
+            self.assertTrue(
+                len(block_errs) >= 1,
+                f"Editor-unreachable case must produce a BLOCK error (fail-closed). "
+                f"Got: {errs}",
+            )
+            # Must NOT silently PASS (i.e. must NOT produce zero errors).
+            self.assertGreater(
+                len(errs), 0,
+                "Editor-unreachable must not silently PASS (zero errors).",
             )
 
     # ── A3: legal re-skin (real clone, different real sprite) → WARN not FAIL ─
@@ -1670,6 +1810,185 @@ class TestCloneProvenanceYAML(unittest.TestCase):
         sprites = eid._parse_prefab_gameobject_sprites(yaml_text)
         self.assertEqual(sprites.get("NullSpriteGO"), "")
         self.assertEqual(sprites.get("RealSpriteGO"), self._SPRITE_GUID)
+
+
+class TestValidateUILintLiveRerun(unittest.TestCase):
+    """Tests for the iter-3 P2 live-editor re-run in validate_ui_lint.
+
+    The rule: after the cached lint JSON shows fail == 0, the hook tries to
+    re-run UIFidelityLinter via the live Unity editor.
+      - If fresh run returns fail > 0 → the cached JSON is stale → FAIL.
+      - If editor is unreachable (returns None from _rerun_ui_lint_via_editor)
+        → accept the cached JSON (P2 is a quality gate, not a security gate).
+      - If fresh run returns fail == 0 → PASS (consistent).
+    """
+
+    SPEC_MD_WITH_FIGMA = (
+        "## Reference\n"
+        "Figma node: https://figma.com/design/ABC123/file?node-id=1:2\n"
+    )
+    LINT_JSON_PASS = json.dumps({"fail": 0, "pass": 5, "warn": 0})
+    LINT_JSON_FAIL = json.dumps({"fail": 2, "pass": 3, "warn": 1})
+
+    def _make_task(self, tmpdir: str) -> tuple:
+        repo_root = Path(tmpdir)
+        task_dir = repo_root / "Docs" / "Specs" / "Active" / "test_ui_task"
+        task_dir.mkdir(parents=True)
+        (task_dir / "SPEC.md").write_text(self.SPEC_MD_WITH_FIGMA, encoding="utf-8")
+        cap_dir = repo_root / "Docs" / "Diagnostics" / "_capture"
+        cap_dir.mkdir(parents=True)
+        return repo_root, task_dir, cap_dir
+
+    def _make_report_with_lint_section(self, task_dir: Path, lint_json_name: str) -> Path:
+        report = task_dir / "IMPLEMENTER_REPORT.md"
+        report.write_text(
+            "## UI fidelity lint\n"
+            f"`Docs/Diagnostics/_capture/{lint_json_name}` — 0 FAIL\n",
+            encoding="utf-8",
+        )
+        return report
+
+    def test_p2_cached_pass_editor_unreachable_blocks(self):
+        """P2 fail-CLOSED: cached JSON shows fail=0 but the fresh live re-run
+        cannot run (editor unreachable) → BLOCK. The cited JSON is NOT accepted
+        as evidence (SPEC §1.3 / §0). iter-3 shipped this fail-OPEN (accept
+        cached); both parallel reviewers flagged it as a §0 violation."""
+        with tempfile.TemporaryDirectory() as root_str:
+            repo_root, task_dir, cap_dir = self._make_task(root_str)
+            lint_path = cap_dir / "MyWidget_lint.json"
+            lint_path.write_text(self.LINT_JSON_PASS, encoding="utf-8")
+            report = self._make_report_with_lint_section(task_dir, "MyWidget_lint.json")
+
+            original_fn = eid._rerun_ui_lint_via_editor
+            try:
+                eid._rerun_ui_lint_via_editor = lambda *a, **kw: None  # editor unreachable
+                errs = eid.validate_ui_lint(report, repo_root)
+            finally:
+                eid._rerun_ui_lint_via_editor = original_fn
+
+            self.assertTrue(
+                any("P2 fail-closed" in e for e in errs),
+                f"Cached pass + editor unreachable must BLOCK (fail-closed), not "
+                f"trust the cited JSON. Got: {errs}",
+            )
+
+    def test_p2_cached_pass_live_rerun_also_passes(self):
+        """P2: cached JSON shows fail=0; live re-run also returns 0 → PASS."""
+        with tempfile.TemporaryDirectory() as root_str:
+            repo_root, task_dir, cap_dir = self._make_task(root_str)
+            lint_path = cap_dir / "MyWidget_lint.json"
+            lint_path.write_text(self.LINT_JSON_PASS, encoding="utf-8")
+            report = self._make_report_with_lint_section(task_dir, "MyWidget_lint.json")
+
+            original_fn = eid._rerun_ui_lint_via_editor
+            try:
+                eid._rerun_ui_lint_via_editor = lambda *a, **kw: 0  # fresh run also 0
+                errs = eid.validate_ui_lint(report, repo_root)
+            finally:
+                eid._rerun_ui_lint_via_editor = original_fn
+
+            self.assertEqual(
+                errs, [],
+                f"Cached pass + live re-run pass should produce no errors. Got: {errs}",
+            )
+
+    def test_p2_cached_pass_live_rerun_detects_failures(self):
+        """P2: cached JSON shows fail=0 but live re-run returns fail=3 → FAIL.
+
+        This is the stale-artifact scenario: the implementer ran the linter,
+        got 0 FAILs, then modified the prefab and re-cited the old JSON without
+        re-running. The live re-run catches it.
+        """
+        with tempfile.TemporaryDirectory() as root_str:
+            repo_root, task_dir, cap_dir = self._make_task(root_str)
+            lint_path = cap_dir / "MyWidget_lint.json"
+            lint_path.write_text(self.LINT_JSON_PASS, encoding="utf-8")  # old JSON says 0
+            report = self._make_report_with_lint_section(task_dir, "MyWidget_lint.json")
+
+            original_fn = eid._rerun_ui_lint_via_editor
+            try:
+                eid._rerun_ui_lint_via_editor = lambda *a, **kw: 3  # fresh run finds 3 fails
+                errs = eid.validate_ui_lint(report, repo_root)
+            finally:
+                eid._rerun_ui_lint_via_editor = original_fn
+
+            fail_errs = [e for e in errs if "stale" in e.lower() or "live re-run" in e.lower()]
+            self.assertTrue(
+                len(fail_errs) >= 1,
+                f"Cached-pass + live-rerun-fail=3 must produce a stale-artifact error. Got: {errs}",
+            )
+
+    def test_p2_cached_fail_still_blocks_without_rerun(self):
+        """P2: cached JSON already shows fail>0 — the existing block fires before the
+        re-run is attempted (no double-error)."""
+        with tempfile.TemporaryDirectory() as root_str:
+            repo_root, task_dir, cap_dir = self._make_task(root_str)
+            lint_path = cap_dir / "MyWidget_lint.json"
+            lint_path.write_text(self.LINT_JSON_FAIL, encoding="utf-8")  # fail=2
+            report = self._make_report_with_lint_section(task_dir, "MyWidget_lint.json")
+
+            rerun_called = []
+            original_fn = eid._rerun_ui_lint_via_editor
+            try:
+                def _mock_rerun(*a, **kw):
+                    rerun_called.append(True)
+                    return 2
+                eid._rerun_ui_lint_via_editor = _mock_rerun
+                errs = eid.validate_ui_lint(report, repo_root)
+            finally:
+                eid._rerun_ui_lint_via_editor = original_fn
+
+            fail_errs = [e for e in errs if "fail=2" in e or "fail == 0" in e.lower()]
+            self.assertTrue(
+                len(fail_errs) >= 1,
+                f"Cached fail=2 should produce an error. Got: {errs}",
+            )
+            # Re-run should NOT have been called (cached fail short-circuits to continue).
+            self.assertEqual(
+                rerun_called, [],
+                "Re-run should not be attempted when the cached JSON already shows fail > 0.",
+            )
+
+
+class TestLiveEditorIntegration(unittest.TestCase):
+    """NON-MOCKED integration: drives the REAL Unity editor via the MCP HTTP seam
+    (localhost:21573) against real repo prefabs. SKIPS when the editor is
+    unreachable (CI) so it never blocks the suite; when the editor IS up it
+    exercises the actual class-name / return-value / SSE-parse path that the
+    monkeypatched unit tests bypass — the exact gap that let iter-3 ship a dead
+    live-editor check behind 113 green tests. (red-team iter-3 requirement.)"""
+
+    REPO_ROOT = Path(eid.__file__).resolve().parents[2]
+    SHOP_CARD = REPO_ROOT / "Assets" / "Prefabs" / "UI" / "Shop" / "GeneralShopCard.prefab"
+    TOURNAMENT_CARD_GUID = "baac145d1783f41758376281a61c83e0"   # real clone SOURCE of GeneralShopCard
+    STAMINA_CARD_GUID = "717d118c7be214838ab65e0bd65731f2"      # structurally DIFFERENT prefab
+
+    def _editor_reachable(self) -> bool:
+        ping = eid._call_live_editor(
+            'public static class Script { public static string Main() { return "PING"; } }'
+        )
+        return ping is not None and "PING" in ping
+
+    def setUp(self):
+        if not self.SHOP_CARD.exists():
+            self.skipTest("GeneralShopCard.prefab not present")
+        if not self._editor_reachable():
+            self.skipTest("Unity editor not reachable at localhost:21573 (CI / editor down)")
+
+    def test_real_clone_matches(self):
+        """A real (modified) CopyAsset clone MATCHes its source modulo root name."""
+        verdict = eid._do_live_editor_structure_check(
+            str(self.SHOP_CARD), self.TOURNAMENT_CARD_GUID, "", self.REPO_ROOT
+        )
+        self.assertEqual(verdict, "MATCH", f"real clone should MATCH its source; got {verdict!r}")
+
+    def test_unrelated_prefab_mismatches(self):
+        """A structurally different prefab MISMATCHes — proves the check
+        discriminates rather than always returning MATCH (or always None)."""
+        verdict = eid._do_live_editor_structure_check(
+            str(self.SHOP_CARD), self.STAMINA_CARD_GUID, "", self.REPO_ROOT
+        )
+        self.assertEqual(verdict, "MISMATCH", f"unrelated prefab should MISMATCH; got {verdict!r}")
 
 
 if __name__ == "__main__":
