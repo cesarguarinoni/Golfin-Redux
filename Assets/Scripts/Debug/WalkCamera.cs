@@ -8,6 +8,12 @@ public class WalkCamera : MonoBehaviour
     public float height = 2f;
     public float aerialHeight = 300f;
 
+    [Header("Debug")]
+    [Tooltip("When OFF (default) this debug fly-cam NEVER locks/hides the OS cursor, so a course " +
+             "scene loaded in the shell or additively in the editor can't steal the pointer. Turn ON " +
+             "only when you want full mouse-look fly-cam control (then Esc releases the cursor).")]
+    [SerializeField] private bool grabCursor = false;
+
     private float yaw = 0f;
     private float pitch = 0f;
     private bool cursorLocked = false;
@@ -27,7 +33,7 @@ public class WalkCamera : MonoBehaviour
 
     void Start()
     {
-        LockCursor();
+        if (grabCursor) LockCursor();   // gated — default off, so it never steals the cursor on load
         CreatePlayerMarker();
     }
 
@@ -37,10 +43,10 @@ public class WalkCamera : MonoBehaviour
         var mouse = Mouse.current;
         if (keyboard == null || mouse == null) return;
 
-        // Toggle cursor lock
+        // Toggle cursor lock (only when the debug fly-cam is explicitly enabled)
         if (keyboard[Key.Escape].wasPressedThisFrame)
             UnlockCursor();
-        if (mouse.leftButton.wasPressedThisFrame && !cursorLocked)
+        if (grabCursor && mouse.leftButton.wasPressedThisFrame && !cursorLocked)
             LockCursor();
 
         // Toggle aerial view with Tab
