@@ -233,6 +233,12 @@ namespace Golfin.UI
                     // Bottom-nav tee button → Mode Select screen (mode_select_system spec)
                     sm.ShowScreen(GolfinRedux.UI.ScreenId.ModeSelection);
                     break;
+                case Screen.Gacha:
+                    // Order 610 — the (previously no-op) Gacha nav button opens the Rewards Center
+                    // hub (GACHA | STORE | GIFTS tabs; STORE live). Forward-compatible with the future
+                    // gacha pillar via the hub's GACHA tab. Nav-slot choice — see general_shop_ui fork #6.
+                    sm.ShowScreen(GolfinRedux.UI.ScreenId.GeneralShop);
+                    break;
                 default:
                     Debug.LogWarning($"[PersistentUI] Navigation to {screen} not yet implemented.");
                     break;
@@ -277,6 +283,9 @@ namespace Golfin.UI
                     case GolfinRedux.UI.ScreenId.StaminaShopSelection:
                         usernameText.text = "BOOST STAMINA";
                         break;
+                    case GolfinRedux.UI.ScreenId.GeneralShop:
+                        usernameText.text = "REWARDS CENTER";
+                        break;
                     // StaminaShopDetail center text is set dynamically by StaminaShopDetailScreenController
                     // via SetUsername(shopName) after navigating.
                     default:
@@ -299,6 +308,8 @@ namespace Golfin.UI
                 // Order 517 — Shop screens entered from Roster; keep Characters nav tab highlighted
                 case GolfinRedux.UI.ScreenId.StaminaShopSelection:  currentScreen = Screen.Characters; break;
                 case GolfinRedux.UI.ScreenId.StaminaShopDetail:     currentScreen = Screen.Characters; break;
+                // Order 610 — Rewards Center opened from the Gacha nav slot
+                case GolfinRedux.UI.ScreenId.GeneralShop:           currentScreen = Screen.Gacha; break;
                 default:
                     return; // Logo/Splash/Loading/Leaderboard: bars hidden or no nav highlight.
             }

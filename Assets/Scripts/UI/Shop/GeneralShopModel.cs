@@ -31,6 +31,7 @@ namespace GolfinRedux.UI.Shop
         public int          SortOrder  { get; set; }
         public bool         Popular    { get; set; }   // v1 unused (POPULAR curation grayed)
         public bool         Offer      { get; set; }   // v1 unused (OFFERS curation grayed)
+        public string       Rarity     { get; set; } = string.Empty; // ball display-rarity (clubs use DB rarity)
 
         /// <summary>True when a discounted sale price applies (strike-through affordance).</summary>
         public bool HasSale => SaleRpCost > 0 && SaleRpCost < RpCost;
@@ -97,6 +98,7 @@ namespace GolfinRedux.UI.Shop
                     SortOrder  = int.TryParse(cols[5], out var so)  ? so  : 0,
                     Popular    = string.Equals(cols[6].Trim(), "true", StringComparison.OrdinalIgnoreCase),
                     Offer      = string.Equals(cols[7].Trim(), "true", StringComparison.OrdinalIgnoreCase),
+                    Rarity     = cols.Length > 8 ? cols[8].Trim() : string.Empty,
                 });
             }
 

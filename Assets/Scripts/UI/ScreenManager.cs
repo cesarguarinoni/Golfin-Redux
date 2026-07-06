@@ -22,7 +22,9 @@ namespace GolfinRedux.UI
         TournamentSelection,
         // Order 517 — Stamina Boost Shop (Figma 13156:1178 + 13330:1139)
         StaminaShopSelection,
-        StaminaShopDetail
+        StaminaShopDetail,
+        // Order 610 — General Shop / Rewards Center (Figma 4079:28230)
+        GeneralShop
         // Settings removed - it's an overlay, not a screen
     }
 
@@ -53,6 +55,8 @@ namespace GolfinRedux.UI
         // Order 517 — Stamina Boost Shop screens
         [SerializeField] private GameObject _staminaShopSelectionScreen;
         [SerializeField] private GameObject _staminaShopDetailScreen;
+        // Order 610 — General Shop / Rewards Center
+        [SerializeField] private GameObject _generalShopScreen;
         // _settingsScreen removed - Settings is an overlay managed by SettingsController, not ScreenManager
 
         [Header("Audio (Order 350)")]
@@ -175,6 +179,10 @@ namespace GolfinRedux.UI
             if (_staminaShopDetailScreen != null)
                 _staminaShopDetailScreen.SetActive(screenId == ScreenId.StaminaShopDetail);
 
+            // Order 610 — General Shop / Rewards Center
+            if (_generalShopScreen != null)
+                _generalShopScreen.SetActive(screenId == ScreenId.GeneralShop);
+
             // Settings is an overlay (SettingsController), not managed here
 
             // Order 350: menu music — start on menu screens, stop during loading/logo/splash.
@@ -189,7 +197,8 @@ namespace GolfinRedux.UI
                              || screenId == ScreenId.TournamentLeaderboard
                              || screenId == ScreenId.TournamentSelection
                              || screenId == ScreenId.StaminaShopSelection
-                             || screenId == ScreenId.StaminaShopDetail;
+                             || screenId == ScreenId.StaminaShopDetail
+                             || screenId == ScreenId.GeneralShop;
             if (AudioManager.Instance != null)
             {
                 if (isMenuScreen && _mainThemeClip != null && !AudioManager.Instance.IsMusicPlaying())
@@ -209,7 +218,8 @@ namespace GolfinRedux.UI
                          || screenId == ScreenId.TournamentLeaderboard
                          || screenId == ScreenId.TournamentSelection
                          || screenId == ScreenId.StaminaShopSelection
-                         || screenId == ScreenId.StaminaShopDetail;
+                         || screenId == ScreenId.StaminaShopDetail
+                         || screenId == ScreenId.GeneralShop;
             if (Golfin.UI.PersistentUIManager.Instance != null)
             {
                 if (showBars)
