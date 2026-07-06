@@ -82,8 +82,6 @@ namespace GolfinRedux.UI.Shop
             SetRarityTile(rar);
             SetImage("tournament_image/Portrait", club.portraitSprite != null ? club.portraitSprite : club.portraitFull);
             SetText("NameLabel", club.name.ToUpperInvariant());
-            SetText("ClubLabel", $"{rar} · Lv {startLvl}/{club.maxLevel}");
-            SetText("DateLabel", Trim(club.info));
             SetText("DistRow/Txt", $"{club.baseDistance} yd");
 
             SetClubBar(0, club.basePower);
@@ -128,8 +126,6 @@ namespace GolfinRedux.UI.Shop
             SetRarityTile(rar);
             SetImage("tournament_image/Portrait", ball.thumbnailSprite != null ? ball.thumbnailSprite : ball.fullSprite);
             SetText("NameLabel", ball.name.ToUpperInvariant());
-            SetText("ClubLabel", rar);
-            SetText("DateLabel", Trim(ball.info));
 
             SetBallBar(0, ball.power);
             SetBallBar(1, ball.rebound);
@@ -263,12 +259,6 @@ namespace GolfinRedux.UI.Shop
                     var img = child.GetComponent<Image>();
                     if (img != null) img.sprite = sprite;
                 }
-        }
-
-        private static string Trim(string s)
-        {
-            if (string.IsNullOrEmpty(s)) return string.Empty;
-            return s.Length <= 60 ? s : s.Substring(0, 57) + "…";
         }
 
         private static string RarityLetter(CharacterRarity r) => r switch
