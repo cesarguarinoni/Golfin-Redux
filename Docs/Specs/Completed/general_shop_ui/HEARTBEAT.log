@@ -1,0 +1,13 @@
+2026-07-04T11:25:53Z activated — general_shop_ui iter-1 kickoff
+2026-07-04T12:15:00Z reading complete — starting Phase A implementation (SaveData + ClubManager changes)
+2026-07-04T13:42:20 Phase A tests confirmed clean (819/823 pass, 1 pre-existing fail). Starting Phase B - Figma Rule 9 pull.
+2026-07-04T11:46:03 Phase B started: extending ScreenManager + ShopTransaction + creating catalog model
+2026-07-04T14:05:00 Phase B continued: building GeneralShopScreenController + card scripts
+2026-07-04T12:02:08 prefabs built (GeneralShopCard + GeneralShopScreen), scene wired (ScreenManager._generalShopScreen)
+2026-07-04T12:16:50 layout fix applied: TabBar=-321, CurationRow=-391, CategoryRow=-461, CardsScrollView y=-134 sizeDelta.y=-794; entering play mode for screenshot
+2026-07-04T14:31:00 resumed after compaction: applying BackgroundTabs sprite, font fixes, dividers to GeneralShopScreen.prefab
+2026-07-04T12:47:46Z resuming after compaction — entering play mode for card visibility check
+2026-07-04T15:00:00 resuming from compaction - fixing TabBar HLG childControlWidth + card bg sprite
+2026-07-04T15:10:00 viewport Image color fixed white - cards now rendering. running gate checks.
+2026-07-04T15:22:00 fixing NameRarityColumn VLG childControlWidth=False->True in prefab
+2026-07-04T15:40:00Z done, awaiting review — canonical_iter7.png, all 820 tests PASS, 0 linter FAILs, IMPLEMENTER_REPORT.md complete
