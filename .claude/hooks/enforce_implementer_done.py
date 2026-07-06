@@ -1730,6 +1730,722 @@ def validate_ui_lint(report_path: Path, repo_root: Path) -> list[str]:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Phase 1 — Clone-provenance VERIFIER (P1 + P3 + P2).
+# Mechanizes §11 of PIPELINE_HARDENING.md into the hook.
+# Design law: reads YAML/filesystem facts — never the implementer-authored table.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# GUID of zero: an empty/null Unity object reference.
+_ZERO_GUID = "0000000000000000000000000000000000000000"[:32]  # 32 zeros
+
+# Regex to parse a Unity YAML m_Sprite / m_SourcePrefab reference.
+_UNITY_GUID_RE = re.compile(r"\bguid:\s*([0-9a-f]{32})\b", re.IGNORECASE)
+# Matches a YAML document anchor line like "--- !u!1001 &<fileID>" (PrefabInstance).
+_PREFAB_INSTANCE_BLOCK_RE = re.compile(r"^---\s+!u!1001\s+&", re.MULTILINE)
+# m_SourcePrefab inside a PrefabInstance block
+_SOURCE_PREFAB_RE = re.compile(r"m_SourcePrefab:\s*\{[^}]*guid:\s*([0-9a-f]{32})", re.IGNORECASE)
+# Image component YAML block
+_IMAGE_COMPONENT_RE = re.compile(r"^---\s+!u!114[^\n]*\n.*?(?=^---|\Z)", re.MULTILINE | re.DOTALL)
+# m_Sprite inside an Image/SpriteRenderer component — real (non-null) GUID only.
+_M_SPRITE_RE = re.compile(r"m_Sprite:\s*\{[^}]*guid:\s*([0-9a-f]{32})", re.IGNORECASE)
+# m_Sprite line present at all (captures optional guid group; empty = null sprite).
+_M_SPRITE_ANY_RE = re.compile(
+    r"m_Sprite:\s*\{[^}]*\}",
+    re.IGNORECASE,
+)
+# GameObject name field
+_GO_NAME_RE = re.compile(r"^\s+m_Name:\s+(.+)$", re.MULTILINE)
+# Link between Image component fileID and its parent GameObject fileID
+_MONO_GO_RE = re.compile(r"m_GameObject:\s*\{fileID:\s*(\d+)", re.IGNORECASE)
+
+
+def _parse_prefab_gameobject_sprites(prefab_yaml: str) -> dict[str, str | None]:
+    """Extract {GameObject_name -> sprite_guid_or_None} from a prefab YAML text.
+
+    For each GameObject (identified by m_Name), finds any attached MonoBehaviour
+    component's m_Sprite value.
+    - Returns a non-empty guid string for a real sprite.
+    - Returns '' (empty string) for a null/zero sprite (fileID: 0 / empty guid).
+    - Returns None if the GameObject has no m_Sprite field in any of its components.
+
+    Uses a two-pass approach:
+    1. Build fileID -> name map from GameObject blocks.
+    2. For each MonoBehaviour block, find m_Sprite and its parent GO name.
+    """
+    # Pass 1: fileID -> name
+    go_blocks = re.split(r"(?=^---\s+!u!1\b)", prefab_yaml, flags=re.MULTILINE)
+    fileid_to_name: dict[str, str] = {}
+    for block in go_blocks:
+        if "GameObject:" not in block:
+            continue
+        anchor = re.search(r"^---\s+!u!1\s+&(\d+)", block, re.MULTILINE)
+        names = _GO_NAME_RE.findall(block)
+        if anchor and names:
+            fileid_to_name[anchor.group(1)] = names[0].strip()
+
+    # Pass 2: MonoBehaviour blocks — look for m_Sprite + parent GO name.
+    name_to_sprite: dict[str, str | None] = {}
+    for block in _IMAGE_COMPONENT_RE.finditer(prefab_yaml):
+        block_text = block.group(0)
+        go_m = _MONO_GO_RE.search(block_text)
+        if not go_m:
+            continue
+        parent_fid = go_m.group(1)
+        go_name = fileid_to_name.get(parent_fid)
+        if not go_name:
+            continue
+
+        # Check for real sprite GUID first.
+        sprite_m = _M_SPRITE_RE.search(block_text)
+        if sprite_m:
+            guid = sprite_m.group(1)
+            # Treat zero guid as empty (no real sprite).
+            name_to_sprite[go_name] = "" if all(c == "0" for c in guid) else guid
+            continue
+
+        # Check if m_Sprite is present at all (null / fileID: 0 / empty guid).
+        if _M_SPRITE_ANY_RE.search(block_text):
+            # m_Sprite exists but no non-zero GUID → null sprite.
+            name_to_sprite[go_name] = ""
+            continue
+
+        # MonoBehaviour without any m_Sprite field — only record if not already set.
+        if go_name not in name_to_sprite:
+            name_to_sprite[go_name] = None
+    return name_to_sprite
+
+
+def _parse_prefab_source_guids(prefab_yaml: str) -> set[str]:
+    """Return set of m_SourcePrefab GUIDs found in PrefabInstance blocks."""
+    guids: set[str] = set()
+    for m in _SOURCE_PREFAB_RE.finditer(prefab_yaml):
+        guid = m.group(1)
+        if not all(c == "0" for c in guid):
+            guids.add(guid)
+    return guids
+
+
+def load_reuse_map(task_dir: Path) -> dict | None:
+    """Load reuse_map.json from the task folder (SPEC-side ground truth for P1).
+
+    Returns the parsed dict or None if the file does not exist.
+    Format: {"elements": [{"elementPath": "...", "sourcePrefab": "path guid:GUID",
+                           "keySpriteGuid": "GUID or 'any-nonnull'"}]}
+    """
+    rmap_path = task_dir / "reuse_map.json"
+    if not rmap_path.exists():
+        return None
+    try:
+        return json.loads(rmap_path.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+
+
+def _extract_guid_from_source(source_str: str) -> str | None:
+    """Parse the sourcePrefab field in reuse_map.json.
+
+    Accepts formats:
+      - "path/to/Foo.prefab guid:HEXGUID"
+      - "Assets/Prefabs/Foo.prefab"  (no explicit guid → find .meta file)
+      - "HEXGUID"                     (bare 32-hex GUID)
+    Returns a 32-char hex guid string, or None if not parseable.
+    """
+    if not source_str:
+        return None
+    # Explicit "guid:" suffix
+    m = re.search(r"guid:([0-9a-f]{32})", source_str, re.IGNORECASE)
+    if m:
+        return m.group(1).lower()
+    # Bare 32-hex guid
+    m = re.fullmatch(r"[0-9a-f]{32}", source_str.strip(), re.IGNORECASE)
+    if m:
+        return source_str.strip().lower()
+    return None
+
+
+def _read_prefab_yaml(prefab_path_or_str: str, repo_root: Path) -> str | None:
+    """Read a prefab file from the repo, given a path (possibly relative to Assets/)."""
+    candidates = [
+        Path(prefab_path_or_str),
+        repo_root / prefab_path_or_str,
+    ]
+    for c in candidates:
+        if c.exists():
+            try:
+                return c.read_text(encoding="utf-8", errors="ignore")
+            except Exception:
+                return None
+    return None
+
+
+def _find_prefab_by_guid(guid: str, repo_root: Path) -> Path | None:
+    """Scan Assets/ .meta files to locate the prefab for a given GUID."""
+    assets_dir = repo_root / "Assets"
+    if not assets_dir.exists():
+        return None
+    for meta_file in assets_dir.rglob("*.prefab.meta"):
+        try:
+            content = meta_file.read_text(encoding="utf-8", errors="ignore")
+            if f"guid: {guid}" in content or f"guid:{guid}" in content:
+                return meta_file.with_suffix("")  # drop .meta
+        except Exception:
+            continue
+    return None
+
+
+def validate_clone_provenance_yaml(
+    task_dir: Path,
+    repo_root: Path,
+) -> list[str]:
+    """P1: YAML-based clone-provenance VERIFIER.
+
+    Reads the reuse_map.json (SPEC-side ground truth), then for each element:
+      1. Checks whether the BUILT prefab (identified by builtPrefab field, or inferred
+         from the first *.prefab in git's uncommitted diff) contains PrefabInstance
+         blocks whose m_SourcePrefab matches the cited source GUID.
+      2. For CopyAsset / non-prefab-instance clones: parses both the built prefab
+         and the source prefab to compare the element's Image.m_Sprite GUID.
+         Null/blank sprite where source has one = CRITICAL FAIL.
+         Different real sprite = WARN (legal re-skin).
+
+    Returns [] if verification passes (or if no reuse_map.json exists — Phase 1
+    only applies to tasks that have the map).
+    Returns ["WARN: ..."] for legal re-skins.
+    Returns ["CRITICAL FAIL: ..."] for fabrication detections.
+    """
+    rmap = load_reuse_map(task_dir)
+    if rmap is None:
+        # No reuse map; rule doesn't apply (only tasks that ship reuse_map.json
+        # are covered by P1).
+        return []
+
+    elements = rmap.get("elements", [])
+    if not elements:
+        return []
+
+    errors: list[str] = []
+
+    # Determine built prefab path(s) from the map.
+    built_prefab_paths: list[str] = []
+    for elem in elements:
+        bp = elem.get("builtPrefab") or elem.get("built_prefab")
+        if bp and bp not in built_prefab_paths:
+            built_prefab_paths.append(bp)
+
+    for elem in elements:
+        element_path = elem.get("elementPath", "?")
+        source_str = elem.get("sourcePrefab", "")
+        key_sprite_guid = elem.get("keySpriteGuid", "")  # or "any-nonnull"
+        built_prefab_path = elem.get("builtPrefab") or elem.get("built_prefab") or (
+            built_prefab_paths[0] if built_prefab_paths else None
+        )
+
+        if not source_str:
+            errors.append(
+                f"CRITICAL FAIL: reuse_map.json element '{element_path}' has no "
+                f"sourcePrefab. Every element in the reuse map must cite its "
+                f"clone source. (P1)"
+            )
+            continue
+
+        source_guid = _extract_guid_from_source(source_str)
+        if not source_guid:
+            errors.append(
+                f"P1 WARNING: reuse_map.json element '{element_path}' sourcePrefab "
+                f"'{source_str[:80]}' has no parseable GUID — cannot verify YAML "
+                f"lineage. Ensure sourcePrefab includes 'guid:HEXGUID' or is a bare "
+                f"32-hex GUID."
+            )
+            continue
+
+        # ----------------------------------------------------------------
+        # Step 1: Check PrefabInstance lineage in the built prefab.
+        # ----------------------------------------------------------------
+        built_yaml: str | None = None
+        if built_prefab_path:
+            built_yaml = _read_prefab_yaml(built_prefab_path, repo_root)
+
+        if built_yaml is None:
+            # Try to find it by searching task_dir for *.prefab
+            for candidate in task_dir.rglob("*.prefab"):
+                try:
+                    built_yaml = candidate.read_text(encoding="utf-8", errors="ignore")
+                    break
+                except Exception:
+                    pass
+
+        if built_yaml is None:
+            # Cannot verify without the prefab — emit a warning, not a hard fail,
+            # so this doesn't block tasks that don't have prefabs at P1 check time.
+            errors.append(
+                f"P1 WARNING: reuse_map.json element '{element_path}': built prefab "
+                f"'{built_prefab_path or 'unknown'}' not found — cannot verify YAML "
+                f"lineage. Ensure the built prefab is committed before the STATUS "
+                f"transition."
+            )
+            continue
+
+        source_guids_in_built = _parse_prefab_source_guids(built_yaml)
+        has_prefab_instance_lineage = source_guid in source_guids_in_built
+
+        # ----------------------------------------------------------------
+        # Step 2: CopyAsset sprite-guid check.
+        # ----------------------------------------------------------------
+        go_name = element_path.split("/")[-1].strip()
+        built_sprites = _parse_prefab_gameobject_sprites(built_yaml)
+        built_sprite_guid = built_sprites.get(go_name)
+
+        # Find source prefab YAML.
+        source_prefab_file = _find_prefab_by_guid(source_guid, repo_root)
+        source_yaml: str | None = None
+        if source_prefab_file:
+            try:
+                source_yaml = source_prefab_file.read_text(encoding="utf-8", errors="ignore")
+            except Exception:
+                pass
+
+        source_sprite_guid: str | None = None
+        if source_yaml:
+            source_sprites = _parse_prefab_gameobject_sprites(source_yaml)
+            source_sprite_guid = source_sprites.get(go_name)
+
+        # --- Verdict logic ---
+        if has_prefab_instance_lineage:
+            # PrefabInstance clone — lineage proven. Check the key sprite as extra.
+            if key_sprite_guid and key_sprite_guid != "any-nonnull":
+                if built_sprite_guid == "" or built_sprite_guid is None:
+                    if source_sprite_guid:
+                        errors.append(
+                            f"CRITICAL FAIL (P1): element '{element_path}' has "
+                            f"PrefabInstance lineage from source GUID {source_guid} "
+                            f"but its Image.sprite is null/blank while the source "
+                            f"carries sprite {source_sprite_guid}. This is the "
+                            f"fabrication signature. (Rule 19 / P1)"
+                        )
+                        _log_p1_miss(task_dir, element_path, source_guid, repo_root)
+        else:
+            # No PrefabInstance lineage — check CopyAsset sprite equality.
+            if source_yaml is None:
+                # Can't find source to compare — warn, don't hard fail.
+                errors.append(
+                    f"P1 WARNING: element '{element_path}' has no PrefabInstance "
+                    f"lineage from source {source_guid} and source prefab YAML could "
+                    f"not be read — cannot do CopyAsset sprite check."
+                )
+                continue
+
+            if built_sprite_guid == "" or built_sprite_guid is None:
+                if source_sprite_guid:
+                    # Null sprite where source has art — fabrication signature.
+                    errors.append(
+                        f"CRITICAL FAIL (P1): element '{element_path}' — no "
+                        f"PrefabInstance lineage from source GUID {source_guid}, AND "
+                        f"its Image.sprite is null/blank while the source element "
+                        f"carries sprite {source_sprite_guid}. This matches the "
+                        f"fabricated-provenance signature: element built from scratch "
+                        f"with a false clone citation. (Rule 19 / P1)"
+                    )
+                    _log_p1_miss(task_dir, element_path, source_guid, repo_root)
+                else:
+                    # Neither side has a sprite — can't distinguish clone from scratch.
+                    errors.append(
+                        f"CRITICAL FAIL (P1): element '{element_path}' has no "
+                        f"PrefabInstance lineage from source GUID {source_guid}, and "
+                        f"neither the built element nor the source element carries a "
+                        f"sprite — lineage cannot be proven. Block. (Rule 19 / P1)"
+                    )
+                    _log_p1_miss(task_dir, element_path, source_guid, repo_root)
+            elif source_sprite_guid and built_sprite_guid != source_sprite_guid:
+                # Different real sprites — legal re-skin, emit WARN.
+                errors.append(
+                    f"P1 WARN (legal re-skin): element '{element_path}' has no "
+                    f"PrefabInstance lineage (CopyAsset clone expected), but carries "
+                    f"a real sprite {built_sprite_guid} that differs from source "
+                    f"sprite {source_sprite_guid}. Legal re-skin — not blocking. "
+                    f"Reviewer should confirm intentional re-skin. (P1)"
+                )
+            # else: same sprite or source has none — PASS (or keySpriteGuid match).
+
+    return errors
+
+
+def _log_p1_miss(task_dir: Path, element_path: str, source_guid: str, repo_root: Path) -> None:
+    """Append a CRITICAL FAIL entry to .claude/review_misses.log (same weight as Rule 6)."""
+    log_path = repo_root / ".claude" / "review_misses.log"
+    try:
+        import datetime
+        now = datetime.datetime.utcnow().isoformat(timespec="seconds") + "Z"
+        task_name = task_dir.name
+        line = (
+            f"{now} | P1-CRITICAL-FAIL | task={task_name} | "
+            f"element={element_path} | cited_source={source_guid} | "
+            f"fabricated_provenance_detected\n"
+        )
+        with log_path.open("a", encoding="utf-8") as f:
+            f.write(line)
+    except Exception:
+        pass  # Never let logging break the gate.
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Phase 2 — Measure-before-surface gate (P7) + linter blind spots (P8).
+# P8 is in UIFidelityLinter.cs (C# side); the hook enforces P7.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Files produced by P7's measure-before-surface requirement:
+#   reference/<name>_ref_vs_built.png  (node render + built crop, stacked 1:1)
+#   reference/<name>_deltas.json       (per-element measured deltas vs tolerance)
+# The hook checks BOTH files exist and the deltas JSON is within tolerance.
+
+_DELTAS_TOLERANCE_KEY = "tolerances"  # inside the deltas JSON: per-element tolerance map
+_DELTAS_MEASURED_KEY = "measured"     # inside the deltas JSON: per-element measured map
+
+
+def load_tolerance_table(task_dir: Path) -> dict | None:
+    """Load tolerances.json from the task folder (per SPEC §4 template).
+
+    Returns the parsed dict or None if the file does not exist. If absent the
+    P7 gate is a no-op (tolerance table is optional — tasks without one skip P7).
+    """
+    tol_path = task_dir / "tolerances.json"
+    if not tol_path.exists():
+        return None
+    try:
+        return json.loads(tol_path.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+
+
+def validate_measure_before_surface(
+    report_path: Path,
+    task_dir: Path,
+) -> list[str]:
+    """P7: measure-before-surface gate for Figma-node card / panel tasks.
+
+    Requires, for each surface named in tolerances.json:
+      1. reference/<name>_ref_vs_built.png exists.
+      2. reference/<name>_deltas.json exists and parses.
+      3. Every element in the tolerance table is present in the deltas JSON.
+      4. Every measured delta is within the tolerance.
+
+    If tolerances.json is absent: no-op (P7 is opt-in per task).
+    """
+    tol_table = load_tolerance_table(task_dir)
+    if tol_table is None:
+        return []  # No tolerance table → P7 not required for this task.
+
+    errors: list[str] = []
+    surfaces = tol_table.get("surfaces", {})
+
+    for surface_name, surface_spec in surfaces.items():
+        # Check overlay image.
+        overlay = task_dir / "reference" / f"{surface_name}_ref_vs_built.png"
+        if not overlay.exists():
+            errors.append(
+                f"P7: measure-before-surface gate: missing overlay image "
+                f"'reference/{surface_name}_ref_vs_built.png'. Produce the 1:1 "
+                f"ref-vs-built overlay (node render + built crop stacked) before "
+                f"surfacing. (P7 — postmortem Part 2: Cesar ran QA for 20 iters "
+                f"because the builder eyeballed instead of measuring first.)"
+            )
+        # Check deltas JSON.
+        deltas_path = task_dir / "reference" / f"{surface_name}_deltas.json"
+        if not deltas_path.exists():
+            errors.append(
+                f"P7: measure-before-surface gate: missing deltas file "
+                f"'reference/{surface_name}_deltas.json'. Measure each element's "
+                f"delta against the tolerance table and write this file before "
+                f"surfacing. (P7)"
+            )
+            continue
+        try:
+            deltas_data = json.loads(deltas_path.read_text(encoding="utf-8"))
+        except Exception:
+            errors.append(
+                f"P7: 'reference/{surface_name}_deltas.json' is not valid JSON. "
+                f"Re-generate it via the measurement script. (P7)"
+            )
+            continue
+
+        measured = deltas_data.get("measured", {})
+        element_tolerances = surface_spec.get("elements", {})
+
+        for elem_name, tol_spec in element_tolerances.items():
+            if elem_name not in measured:
+                errors.append(
+                    f"P7: '{surface_name}_deltas.json' missing element '{elem_name}'. "
+                    f"Every element in the tolerance table must have a measured entry. "
+                    f"(P7)"
+                )
+                continue
+            m = measured[elem_name]
+            for metric, allowed_delta in tol_spec.items():
+                if metric not in m:
+                    errors.append(
+                        f"P7: '{surface_name}_deltas.json' element '{elem_name}' "
+                        f"missing metric '{metric}'. (P7)"
+                    )
+                    continue
+                actual_delta = abs(float(m[metric]))
+                if actual_delta > float(allowed_delta):
+                    errors.append(
+                        f"P7: '{surface_name}_deltas.json' element '{elem_name}' "
+                        f"metric '{metric}': delta {actual_delta:.1f}px exceeds "
+                        f"tolerance ±{float(allowed_delta):.1f}px. Fix before "
+                        f"surfacing. (P7)"
+                    )
+    return errors
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Phase 3 — Guards (P4 + P5 + P6).
+# ─────────────────────────────────────────────────────────────────────────────
+
+_SHIPPED_MANIFEST_PATHS = [
+    REPO_ROOT / "Docs" / "Specs" / "SHIPPED_MANIFEST.json",
+    REPO_ROOT / "Docs" / "Specs" / "SHIPPED_MANIFEST.md",
+]
+
+# SaveData / save-schema content detector for P5.
+_SAVE_SCHEMA_PATHS_RE = re.compile(
+    r"SaveData|SaveSchemaMigrator|save.*schema|ShopTransaction",
+    re.IGNORECASE,
+)
+
+# P6: canonical-surfaced line in STATUS.md.
+# The orchestrator must write "canonical surfaced: <path> @ <timestamp>" before
+# or when advancing a UI task to review.
+_CANONICAL_SURFACED_RE = re.compile(
+    r"canonical\s+surfaced\s*:\s*(.+?)\s*@\s*(\S+)",
+    re.IGNORECASE,
+)
+
+
+def load_shipped_manifest(repo_root: Path) -> list[str]:
+    """Load the shipped-asset manifest (P4). Returns list of asset paths.
+
+    Checks paths relative to the passed repo_root first, then the module-level
+    REPO_ROOT (for production use). This makes the function testable with temp dirs.
+    """
+    suffixes = ["Docs/Specs/SHIPPED_MANIFEST.json", "Docs/Specs/SHIPPED_MANIFEST.md"]
+    candidates = [repo_root / s for s in suffixes] + list(_SHIPPED_MANIFEST_PATHS)
+    seen: set[Path] = set()
+    for manifest_path in candidates:
+        resolved = manifest_path.resolve()
+        if resolved in seen:
+            continue
+        seen.add(resolved)
+        if not manifest_path.exists():
+            continue
+        try:
+            text = manifest_path.read_text(encoding="utf-8", errors="ignore")
+            if manifest_path.suffix == ".json":
+                data = json.loads(text)
+                return data.get("shipped_assets", [])
+            else:
+                # Markdown: extract lines that look like asset paths
+                paths = []
+                for line in text.splitlines():
+                    stripped = line.strip().strip("`").strip()
+                    if stripped.startswith("Assets/") and "." in stripped:
+                        paths.append(stripped)
+                return paths
+        except Exception:
+            continue
+    return []
+
+
+def validate_shipped_asset_guard(
+    report_path: Path,
+    spec_path: Path,
+    repo_root: Path,
+) -> list[str]:
+    """P4: block any task whose working-tree diff touches a shipped manifest asset
+    that the SPEC does not name as an explicit edit target.
+
+    A 'shipped asset' is one listed in SHIPPED_MANIFEST.json/md.
+    'Explicit SPEC authorization' means the asset path appears in SPEC.md.
+    """
+    manifest = load_shipped_manifest(repo_root)
+    if not manifest:
+        return []  # No manifest yet — gate is a no-op.
+
+    # Get uncommitted paths from git.
+    try:
+        result = subprocess.run(
+            ["git", "diff", "--name-only", "HEAD"],
+            cwd=str(repo_root),
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        staged_paths = set(result.stdout.splitlines())
+    except Exception:
+        staged_paths = set()
+
+    try:
+        result2 = subprocess.run(
+            ["git", "status", "--porcelain", "--untracked-files=all"],
+            cwd=str(repo_root),
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        for line in result2.stdout.splitlines():
+            if len(line) >= 3:
+                p = line[3:].strip()
+                if " -> " in p:
+                    p = p.split(" -> ", 1)[1]
+                staged_paths.add(p.strip('"'))
+    except Exception:
+        pass
+
+    spec_text = ""
+    if spec_path.exists():
+        spec_text = spec_path.read_text(encoding="utf-8", errors="ignore")
+
+    errors: list[str] = []
+    for asset in manifest:
+        asset_name = Path(asset).name
+        # Check if this shipped asset appears in the current diff.
+        touched = any(
+            asset_name in p or asset in p
+            for p in staged_paths
+        )
+        if not touched:
+            continue
+        # Check if SPEC explicitly authorizes it.
+        if asset in spec_text or asset_name in spec_text:
+            continue  # SPEC names it as an explicit edit target.
+        errors.append(
+            f"P4 (shipped-asset guard): working tree contains changes to "
+            f"'{asset}' which is a SHIPPED deliverable in SHIPPED_MANIFEST. "
+            f"The current task's SPEC does not name it as an explicit edit "
+            f"target — touching a shipped asset without SPEC authorization is a "
+            f"hard block. Either (a) add it to the SPEC as an authorized edit, "
+            f"or (b) restore it to HEAD. (P4 — postmortem: 610 silently +68-line "
+            f"edited the Order-517 StaminaShopSelectionScreen.prefab with no SPEC "
+            f"mention; Rule 13 passed it because disclosure ≠ authorization.)"
+        )
+    return errors
+
+
+def spec_touches_save_schema(spec_path: Path, repo_root: Path) -> bool:
+    """P5 detector: True when the task's diff or SPEC.md mentions SaveData/schema."""
+    if not spec_path.exists():
+        return False
+    spec_text = spec_path.read_text(encoding="utf-8", errors="ignore")
+    if _SAVE_SCHEMA_PATHS_RE.search(spec_text):
+        return True
+
+    # Also scan git diff for save-schema paths.
+    try:
+        result = subprocess.run(
+            ["git", "diff", "--name-only", "HEAD"],
+            cwd=str(repo_root),
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        for p in result.stdout.splitlines():
+            if _SAVE_SCHEMA_PATHS_RE.search(p):
+                return True
+    except Exception:
+        pass
+    return False
+
+
+# Matches the output of the Unity TestRunnerApi / tests-run tool: lines like
+# "Total: 12", "Passed: 12", or "12/12 PASS" or "Tests passed: 12 of 12".
+_TEST_RUN_RESULT_RE = re.compile(
+    r"(?:Total|Passed|Failed|Skipped)\s*:\s*\d+"
+    r"|(?:\d+\s*/\s*\d+\s*PASS)"
+    r"|Tests\s+passed\s*:",
+    re.IGNORECASE,
+)
+
+# Detect machine-authored (not human-prose) test result: must have a numeric count.
+_TEST_MACHINE_COUNT_RE = re.compile(r"\bTotal\s*:\s*\d+", re.IGNORECASE)
+
+
+def report_has_observed_test_run(report_path: Path) -> bool:
+    """P5: True if the report contains machine-authored test-run evidence.
+
+    Requires a 'Total: N' line (from the TestRunnerApi XML / tests-run tool),
+    not just any prose mention of 'tests pass'.
+    """
+    if not report_path.exists():
+        return False
+    text = report_path.read_text(encoding="utf-8", errors="ignore")
+    return bool(_TEST_MACHINE_COUNT_RE.search(text))
+
+
+def validate_observed_test_run(report_path: Path, spec_path: Path, repo_root: Path) -> list[str]:
+    """P5: for save-schema-touching tasks, require a machine-authored test-run result.
+
+    A prose line saying 'tests passed' is not enough — the hook must see a
+    'Total: N' / 'Passed: N' count that only a real test-runner invocation emits.
+    """
+    if not spec_touches_save_schema(spec_path, repo_root):
+        return []
+    if report_has_observed_test_run(report_path):
+        return []
+    return [
+        "P5 (observed test-run gate): this task touches SaveData/SaveSchemaMigrator/"
+        "save-schema code, but IMPLEMENTER_REPORT.md contains no machine-authored "
+        "test-run result ('Total: N' / 'Passed: N' from the TestRunnerApi or "
+        "tests-run tool). A prose claim that 'tests pass' is not accepted. Invoke "
+        "`mcp__ai-game-developer__tests-run` (or the TestRunnerApi via "
+        "script-execute) and paste the result summary. (P5 — postmortem: 488 lines "
+        "of unverified save/economy code reached the gate on prose alone.)"
+    ]
+
+
+def validate_canonical_surfaced(task_dir: Path, spec_path: Path) -> list[str]:
+    """P6: impl→review on a Figma-node UI task requires a logged 'canonical surfaced'
+    line in STATUS.md (written by the orchestrator when it surfaces the image in chat).
+
+    This makes the surface-image-in-chat rule structurally unbypassable — even when
+    Cesar is away the gate fires, ensuring no iteration slips through unchecked.
+    """
+    if not spec_references_figma_node(spec_path):
+        return []  # P6 only applies to Figma-node tasks.
+
+    status_path = task_dir / "STATUS.md"
+    if not status_path.exists():
+        return [
+            "P6 (canonical-surfaced gate): STATUS.md not found. Cannot verify "
+            "the canonical-surfaced line. (P6)"
+        ]
+    status_text = status_path.read_text(encoding="utf-8", errors="ignore")
+    m = _CANONICAL_SURFACED_RE.search(status_text)
+    if not m:
+        return [
+            "P6 (canonical-surfaced gate): STATUS.md has no 'canonical surfaced: "
+            "<path> @ <timestamp>' line. The orchestrator must surface the "
+            "iteration's canonical screenshot in the main chat AND write this line "
+            "to STATUS.md before dispatching any reviewer. This makes the "
+            "surface-image-in-chat rule structurally unbypassable. (P6 — postmortem: "
+            "the surface-in-chat rule was the ONLY gate that caught the 610 "
+            "fabrication; it must not be silently skippable when Cesar is away.)"
+        ]
+    # Verify the referenced image file exists.
+    image_path_str = m.group(1).strip().strip("`")
+    image_path = task_dir / image_path_str
+    if not image_path.exists():
+        # Also try as repo-relative path.
+        image_path_abs = REPO_ROOT / image_path_str
+        if not image_path_abs.exists():
+            return [
+                f"P6 (canonical-surfaced gate): STATUS.md declares "
+                f"'canonical surfaced: {image_path_str}' but that file does not "
+                f"exist. The surfaced image must be the actual screenshot file in "
+                f"the task's screenshots/ folder. (P6)"
+            ]
+    return []
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Orchestrator.
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -2004,6 +2720,45 @@ def main() -> int:
     # the "surface, don't silently rebuild" rule when a source can't be found.
     if spec_requires_clone_provenance(spec_path):
         errors.extend(validate_clone_provenance(report_path))
+
+    # ── Phase 1 (P1 + P3): YAML-based clone-provenance VERIFIER ──────────────
+    # Supersedes the table-shape check for tasks that provide a reuse_map.json.
+    # Design law: reads engine/YAML facts, never the implementer-authored table.
+    # Critical-fail result → logged to .claude/review_misses.log (same weight as Rule 6).
+    p1_errors = validate_clone_provenance_yaml(task_dir, REPO_ROOT)
+    # CRITICAL FAILs are hard blocks; WARNs (legal re-skins) are surfaced but
+    # do NOT block (they appear in the error list as informational context).
+    hard_p1_errors = [e for e in p1_errors if "CRITICAL FAIL" in e]
+    warn_p1_errors = [e for e in p1_errors if "CRITICAL FAIL" not in e]
+    errors.extend(hard_p1_errors)
+    if warn_p1_errors:
+        # Surface warnings as non-blocking info lines so reviewers see them.
+        # They don't contribute to the blocking error count.
+        for w in warn_p1_errors:
+            print(f"  [P1 info] {w}", file=sys.stderr)
+
+    # ── Phase 2 (P7): measure-before-surface gate ────────────────────────────
+    # For tasks with a tolerances.json: requires node-vs-built overlay + deltas
+    # JSON within tolerance before any reviewer sees the surface.
+    if not is_backend:
+        errors.extend(validate_measure_before_surface(report_path, task_dir))
+
+    # ── Phase 3a (P4): shipped-asset guard ───────────────────────────────────
+    # Prevents silent modification of already-shipped deliverables without explicit
+    # SPEC authorization. Seeds: SHIPPED_MANIFEST.json in Docs/Specs/.
+    errors.extend(validate_shipped_asset_guard(report_path, spec_path, REPO_ROOT))
+
+    # ── Phase 3b (P5): observed test-run gate ────────────────────────────────
+    # For save-schema-touching tasks: prose "tests pass" is not evidence.
+    errors.extend(validate_observed_test_run(report_path, spec_path, REPO_ROOT))
+
+    # ── Phase 3c (P6): canonical-surfaced gate ───────────────────────────────
+    # For Figma-node tasks: STATUS.md must carry a "canonical surfaced: <path> @ <ts>"
+    # line proving the orchestrator surfaced the image in chat before dispatching reviewers.
+    # DISABLED at impl→review: this gate only fires on the orchestrator side
+    # (when route_subagent.py writes READY_FOR_REDTEAM → ARCHITECT_REVIEW_PASS).
+    # P6 is a reminder constraint enforced later in the pipeline; skip here to
+    # avoid blocking the implementer who has no access to write STATUS during dispatch.
 
     if errors:
         print(

@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$comment": "TEMPLATE — copy to Docs/Specs/Active/<task>/tolerances.json and fill in.",
+  "surfaces": {
+    "ExampleCardRow": {
+      "$comment": "Key = a short surface name. Used as prefix for reference/<name>_ref_vs_built.png and reference/<name>_deltas.json.",
+      "elements": {
+        "TitleText": {
+          "$comment": "Key = element name (matches Unity GO name or meaningful label). Values = allowed ± delta.",
+          "fontSize": 1.5,
+          "width": 4.0,
+          "height": 4.0
+        },
+        "SubtitleText": {
+          "fontSize": 1.5,
+          "width": 6.0
+        },
+        "PriceLabel": {
+          "fontSize": 1.0,
+          "posX": 3.0,
+          "posY": 3.0
+        }
+      }
+    },
+    "ExampleModal": {
+      "elements": {
+        "HeaderText": {
+          "fontSize": 2.0
+        },
+        "PanelHeight": {
+          "height": 8.0
+        }
+      }
+    }
+  }
+}

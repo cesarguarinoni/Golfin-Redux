@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$comment": "TEMPLATE — copy to Docs/Specs/Active/<task>/reuse_map.json and fill in each element.",
+  "elements": [
+    {
+      "$comment": "One entry per UI element that has a clone mandate in SPEC.md § Reuse Mandate.",
+      "elementPath": "RootGO/ChildGO/LeafGO",
+      "$comment2": "elementPath: the name (or hierarchical path) of the built prefab's GameObject.",
+
+      "sourcePrefab": "Assets/Prefabs/UI/SomePrefab.prefab guid:REPLACE_WITH_32HEX_GUID",
+      "$comment3": "sourcePrefab: path + ' guid:HEXGUID' (32 lowercase hex chars). If no real source exists, set IMPLEMENTER_BLOCKED — do NOT build from scratch.",
+
+      "keySpriteGuid": "REPLACE_WITH_32HEX_GUID_OR_any-nonnull",
+      "$comment4": "keySpriteGuid: the exact sprite GUID the source element carries, OR 'any-nonnull' if the element must have *some* sprite (re-skin allowed). Leave blank if the element has no Image component.",
+
+      "builtPrefab": "Assets/Prefabs/UI/MyTask/BuiltCard.prefab",
+      "$comment5": "builtPrefab: path to the prefab this implementation built. P1 reads its YAML to verify PrefabInstance lineage or sprite match."
+    }
+  ]
+}

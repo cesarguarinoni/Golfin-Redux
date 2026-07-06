@@ -1,0 +1,9 @@
+{
+  "$comment": "Shipped-asset manifest (P4 gate). Any working-tree change to these files requires explicit SPEC.md authorization naming them. Seed: Order-517 stamina shop deliverables.",
+  "shipped_assets": [
+    "Assets/Prefabs/UI/Shop/StaminaShopSelectionScreen.prefab",
+    "Assets/Prefabs/UI/Shop/StaminaShopCard.prefab",
+    "Assets/Prefabs/UI/Tournaments/TournamentSelectionScreen.prefab",
+    "Assets/Prefabs/UI/Tournaments/TournamentSelectionCard.prefab"
+  ]
+}

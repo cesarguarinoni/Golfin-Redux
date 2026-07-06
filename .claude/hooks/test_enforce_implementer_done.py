@@ -10,6 +10,7 @@ the dry-run-against-iter-4 integration check at the bottom.
 """
 from __future__ import annotations
 
+import json
 import os
 import struct
 import sys
@@ -1161,6 +1162,458 @@ class TestBackendExemption(unittest.TestCase):
     def test_require_screenshot_false_allows_missing(self):
         errs = eid.validate_report(self._report_without_screenshot(), require_screenshot=False)
         self.assertEqual(errs, [], f"backend task should not require a screenshot; got {errs}")
+
+
+class TestCloneProvenanceYAML(unittest.TestCase):
+    """Order-611 Phase 1 acceptance tests (A1-A5).
+
+    Design law §0: gates read engine/YAML facts, never implementer-authored prose.
+
+    All tests construct minimal synthetic .prefab YAML in tempfiles — no dependency
+    on real project assets or scratchpad/general_shop_ui_discarded_tracked.patch.
+    """
+
+    # ── Helpers ────────────────────────────────────────────────────────────────
+
+    _SOURCE_GUID = "aaaa0000bbbb1111cccc2222dddd3333"
+    _OTHER_GUID  = "ffff0000eeee1111dddd2222cccc3333"
+    _SPRITE_GUID = "1234567890abcdef1234567890abcdef"
+    _SPRITE_B_GUID = "fedcba0987654321fedcba0987654321"
+
+    def _make_temp_prefab(self, yaml_text: str, name: str = "TestPrefab.prefab") -> Path:
+        """Write a synthetic prefab YAML to a temp file and return the Path."""
+        d = Path(tempfile.mkdtemp(prefix="hook_yaml_"))
+        p = d / name
+        p.write_text(yaml_text, encoding="utf-8")
+        return p
+
+    def _prefab_with_prefab_instance(self, source_guid: str, sprite_guid: str | None = None) -> str:
+        """Build minimal prefab YAML containing a PrefabInstance + an Image."""
+        null_sprite = "m_Sprite: {fileID: 0, guid: , type: 0}"
+        real_sprite = (
+            f"m_Sprite: {{fileID: 21300000, guid: {sprite_guid}, type: 3}}"
+            if sprite_guid else null_sprite
+        )
+        return textwrap.dedent(f"""\
+            %YAML 1.1
+            %TAG !u! tag:unity3d.com,2011:
+            --- !u!1 &100
+            GameObject:
+              m_Name: CardRoot
+            --- !u!1001 &200
+            PrefabInstance:
+              m_SourcePrefab: {{fileID: 100100000, guid: {source_guid}, type: 3}}
+              m_Modification:
+                m_Modifications: []
+            --- !u!114 &300
+            MonoBehaviour:
+              m_GameObject: {{fileID: 100}}
+              m_Script: {{fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39edc, type: 3}}
+              {real_sprite}
+        """)
+
+    def _prefab_scratch_null_sprite(self) -> str:
+        """Fabricated prefab: no PrefabInstance, null sprite — the fabrication signature."""
+        return textwrap.dedent("""\
+            %YAML 1.1
+            %TAG !u! tag:unity3d.com,2011:
+            --- !u!1 &100
+            GameObject:
+              m_Name: CardRoot
+            --- !u!114 &300
+            MonoBehaviour:
+              m_GameObject: {fileID: 100}
+              m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39edc, type: 3}
+              m_Sprite: {fileID: 0, guid: , type: 0}
+        """)
+
+    def _prefab_scratch_real_sprite(self, sprite_guid: str) -> str:
+        """Built-from-scratch prefab that carries a real sprite (not a clone)."""
+        return textwrap.dedent(f"""\
+            %YAML 1.1
+            %TAG !u! tag:unity3d.com,2011:
+            --- !u!1 &100
+            GameObject:
+              m_Name: CardRoot
+            --- !u!114 &300
+            MonoBehaviour:
+              m_GameObject: {{fileID: 100}}
+              m_Script: {{fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39edc, type: 3}}
+              m_Sprite: {{fileID: 21300000, guid: {sprite_guid}, type: 3}}
+        """)
+
+    def _make_reuse_map(
+        self,
+        task_dir: Path,
+        element_path: str,
+        source_guid: str,
+        built_prefab_path: str,
+        key_sprite_guid: str = "",
+    ) -> None:
+        """Write a minimal reuse_map.json to task_dir."""
+        rmap = {
+            "elements": [
+                {
+                    "elementPath": element_path,
+                    "sourcePrefab": f"Assets/Prefabs/Source.prefab guid:{source_guid}",
+                    "keySpriteGuid": key_sprite_guid,
+                    "builtPrefab": built_prefab_path,
+                }
+            ]
+        }
+        (task_dir / "reuse_map.json").write_text(
+            json.dumps(rmap, indent=2), encoding="utf-8"
+        )
+
+    # ── A1: fabricated prefab (no PrefabInstance + null sprite) ───────────────
+
+    def test_A1_fabrication_null_sprite_critical_fail(self):
+        """A1 — A fabricated prefab (no PrefabInstance, null sprite where source has one)
+        must produce a CRITICAL FAIL and log to review_misses.log."""
+        with tempfile.TemporaryDirectory() as root_str:
+            repo_root = Path(root_str)
+            (repo_root / ".claude").mkdir()
+            (repo_root / "Assets" / "Prefabs").mkdir(parents=True)
+
+            # Built prefab: scratch + null sprite (fabrication).
+            built_prefab = repo_root / "Assets" / "Prefabs" / "BuiltCard.prefab"
+            built_prefab.write_text(self._prefab_scratch_null_sprite(), encoding="utf-8")
+
+            # Source prefab: has real sprite.
+            source_prefab = repo_root / "Assets" / "Prefabs" / "Source.prefab"
+            source_prefab.write_text(
+                self._prefab_with_prefab_instance(self._SOURCE_GUID, sprite_guid=self._SPRITE_GUID),
+                encoding="utf-8",
+            )
+            # Write source .meta so _find_prefab_by_guid can locate it.
+            (repo_root / "Assets" / "Prefabs" / "Source.prefab.meta").write_text(
+                f"fileFormatVersion: 2\nguid: {self._SOURCE_GUID}\n", encoding="utf-8"
+            )
+
+            task_dir = repo_root / "Docs" / "Specs" / "Active" / "test_task"
+            task_dir.mkdir(parents=True)
+            self._make_reuse_map(
+                task_dir,
+                element_path="CardRoot",
+                source_guid=self._SOURCE_GUID,
+                built_prefab_path=str(built_prefab),
+                key_sprite_guid=self._SPRITE_GUID,
+            )
+
+            errs = eid.validate_clone_provenance_yaml(task_dir, repo_root)
+            critical = [e for e in errs if "CRITICAL FAIL" in e]
+            self.assertTrue(
+                len(critical) >= 1,
+                f"Expected at least one CRITICAL FAIL for fabricated prefab; got: {errs}",
+            )
+            # A1b: verify logging to review_misses.log.
+            log_path = repo_root / ".claude" / "review_misses.log"
+            self.assertTrue(log_path.exists(), "review_misses.log must be created by _log_p1_miss")
+            log_text = log_path.read_text(encoding="utf-8")
+            self.assertIn("P1-CRITICAL-FAIL", log_text)
+            self.assertIn("test_task", log_text)
+
+    # ── A2: true PrefabInstance clone → PASS ──────────────────────────────────
+
+    def test_A2_true_clone_prefab_instance_pass(self):
+        """A2 — A built prefab with PrefabInstance.m_SourcePrefab matching the cited
+        source GUID and matching key sprite must produce zero errors."""
+        with tempfile.TemporaryDirectory() as root_str:
+            repo_root = Path(root_str)
+            (repo_root / ".claude").mkdir()
+            (repo_root / "Assets" / "Prefabs").mkdir(parents=True)
+
+            # Built prefab: has PrefabInstance from source + same sprite.
+            built_yaml = self._prefab_with_prefab_instance(
+                self._SOURCE_GUID, sprite_guid=self._SPRITE_GUID
+            )
+            built_prefab = repo_root / "Assets" / "Prefabs" / "BuiltCard.prefab"
+            built_prefab.write_text(built_yaml, encoding="utf-8")
+
+            # Source prefab: same sprite.
+            source_prefab = repo_root / "Assets" / "Prefabs" / "Source.prefab"
+            source_prefab.write_text(
+                self._prefab_with_prefab_instance(self._SOURCE_GUID, sprite_guid=self._SPRITE_GUID),
+                encoding="utf-8",
+            )
+            (repo_root / "Assets" / "Prefabs" / "Source.prefab.meta").write_text(
+                f"fileFormatVersion: 2\nguid: {self._SOURCE_GUID}\n", encoding="utf-8"
+            )
+
+            task_dir = repo_root / "Docs" / "Specs" / "Active" / "test_task"
+            task_dir.mkdir(parents=True)
+            self._make_reuse_map(
+                task_dir,
+                element_path="CardRoot",
+                source_guid=self._SOURCE_GUID,
+                built_prefab_path=str(built_prefab),
+                key_sprite_guid=self._SPRITE_GUID,
+            )
+
+            errs = eid.validate_clone_provenance_yaml(task_dir, repo_root)
+            critical = [e for e in errs if "CRITICAL FAIL" in e]
+            self.assertEqual(
+                critical, [],
+                f"True PrefabInstance clone should produce zero CRITICAL FAILs; got: {critical}",
+            )
+
+    # ── A3: legal re-skin (real clone, different real sprite) → WARN not FAIL ─
+
+    def test_A3_legal_reskin_warn_not_block(self):
+        """A3 — A prefab that has NO PrefabInstance lineage but carries a DIFFERENT
+        real sprite (a CopyAsset re-skin) should produce a WARN, not a CRITICAL FAIL,
+        and must NOT block the transition."""
+        with tempfile.TemporaryDirectory() as root_str:
+            repo_root = Path(root_str)
+            (repo_root / ".claude").mkdir()
+            (repo_root / "Assets" / "Prefabs").mkdir(parents=True)
+
+            # Built prefab: no PrefabInstance, but real (different) sprite.
+            built_prefab = repo_root / "Assets" / "Prefabs" / "BuiltCard.prefab"
+            built_prefab.write_text(
+                self._prefab_scratch_real_sprite(self._SPRITE_B_GUID), encoding="utf-8"
+            )
+
+            # Source prefab: has the original sprite.
+            source_prefab = repo_root / "Assets" / "Prefabs" / "Source.prefab"
+            source_prefab.write_text(
+                self._prefab_scratch_real_sprite(self._SPRITE_GUID), encoding="utf-8"
+            )
+            (repo_root / "Assets" / "Prefabs" / "Source.prefab.meta").write_text(
+                f"fileFormatVersion: 2\nguid: {self._SOURCE_GUID}\n", encoding="utf-8"
+            )
+
+            task_dir = repo_root / "Docs" / "Specs" / "Active" / "test_task"
+            task_dir.mkdir(parents=True)
+            self._make_reuse_map(
+                task_dir,
+                element_path="CardRoot",
+                source_guid=self._SOURCE_GUID,
+                built_prefab_path=str(built_prefab),
+                key_sprite_guid=self._SPRITE_GUID,
+            )
+
+            errs = eid.validate_clone_provenance_yaml(task_dir, repo_root)
+            critical = [e for e in errs if "CRITICAL FAIL" in e]
+            warns = [e for e in errs if "WARN" in e or "legal re-skin" in e.lower()]
+            # Legal re-skin must NOT produce a hard block.
+            self.assertEqual(
+                critical, [],
+                f"Legal re-skin must not produce CRITICAL FAIL; got: {critical}",
+            )
+            # But it should produce at least a WARN so reviewers see it.
+            self.assertTrue(
+                len(warns) >= 1,
+                f"Legal re-skin should produce a WARN for reviewer confirmation; got: {errs}",
+            )
+
+    # ── A4: P4 shipped-asset guard fires when touched without SPEC auth ────────
+
+    def test_A4_shipped_asset_guard_fires_without_spec_auth(self):
+        """A4 — validate_shipped_asset_guard must return an error when the working
+        tree contains a shipped manifest asset that the SPEC does not name."""
+        with tempfile.TemporaryDirectory() as root_str:
+            repo_root = Path(root_str)
+
+            # Create a minimal SHIPPED_MANIFEST.json.
+            spec_dir = repo_root / "Docs" / "Specs"
+            spec_dir.mkdir(parents=True)
+            manifest = {"shipped_assets": ["Assets/Prefabs/UI/Shop/StaminaShopSelectionScreen.prefab"]}
+            (spec_dir / "SHIPPED_MANIFEST.json").write_text(
+                json.dumps(manifest), encoding="utf-8"
+            )
+
+            # Simulate a git diff that touches the shipped asset (mock subprocess).
+            import unittest.mock as mock
+
+            task_dir = repo_root / "Docs" / "Specs" / "Active" / "test_task2"
+            task_dir.mkdir(parents=True)
+            report_path = task_dir / "IMPLEMENTER_REPORT.md"
+            report_path.write_text("# Report\n", encoding="utf-8")
+            spec_path = task_dir / "SPEC.md"
+            # SPEC does NOT mention the shipped asset.
+            spec_path.write_text("# Spec\n\nBuild the general shop UI.\n", encoding="utf-8")
+
+            # Patch subprocess.run to simulate git diff returning the shipped asset.
+            def fake_run(cmd, **kwargs):
+                result = mock.MagicMock()
+                result.returncode = 0
+                if "diff" in cmd and "--name-only" in cmd:
+                    result.stdout = "Assets/Prefabs/UI/Shop/StaminaShopSelectionScreen.prefab\n"
+                else:
+                    result.stdout = ""
+                return result
+
+            # Must patch the subprocess.run that enforce_implementer_done itself calls.
+            with mock.patch.object(eid.subprocess, "run", side_effect=fake_run):
+                errs = eid.validate_shipped_asset_guard(report_path, spec_path, repo_root)
+
+            self.assertTrue(
+                len(errs) >= 1,
+                f"P4 should block when shipped asset touched without SPEC auth; got: {errs}",
+            )
+            self.assertIn("P4", errs[0])
+
+    # ── A5: unit tests for new gate edge-cases ─────────────────────────────────
+
+    def test_A5a_reuse_map_missing_noops(self):
+        """A5a — validate_clone_provenance_yaml is a no-op when reuse_map.json absent."""
+        with tempfile.TemporaryDirectory() as root_str:
+            repo_root = Path(root_str)
+            task_dir = repo_root / "Docs" / "Specs" / "Active" / "task_no_map"
+            task_dir.mkdir(parents=True)
+            # No reuse_map.json written.
+            errs = eid.validate_clone_provenance_yaml(task_dir, repo_root)
+            self.assertEqual(errs, [], f"No reuse_map.json → must be no-op; got: {errs}")
+
+    def test_A5b_reuse_map_missing_source_guid_critical(self):
+        """A5b — A reuse_map.json element without a parseable sourcePrefab GUID
+        produces a CRITICAL FAIL (prevents untethered elements)."""
+        with tempfile.TemporaryDirectory() as root_str:
+            repo_root = Path(root_str)
+            task_dir = repo_root / "Docs" / "Specs" / "Active" / "task_no_guid"
+            task_dir.mkdir(parents=True)
+            rmap = {
+                "elements": [
+                    {
+                        "elementPath": "SomeElement",
+                        "sourcePrefab": "just a prose note, no GUID",
+                        "keySpriteGuid": "",
+                        "builtPrefab": "Assets/Prefabs/SomePrefab.prefab",
+                    }
+                ]
+            }
+            (task_dir / "reuse_map.json").write_text(json.dumps(rmap), encoding="utf-8")
+            errs = eid.validate_clone_provenance_yaml(task_dir, repo_root)
+            # Should produce a warning (not a hard CRITICAL FAIL — unparseable GUID
+            # is a config error, not a fabrication detection).
+            self.assertTrue(
+                len(errs) >= 1,
+                f"Unparseable sourcePrefab GUID should produce an error; got: {errs}",
+            )
+
+    def test_A5c_tolerance_deltas_out_of_range_blocks(self):
+        """A5c — validate_measure_before_surface returns an error when a measured
+        delta exceeds the tolerance bound."""
+        with tempfile.TemporaryDirectory() as root_str:
+            task_dir = Path(root_str)
+            ref_dir = task_dir / "reference"
+            ref_dir.mkdir()
+
+            # Write tolerances.json.
+            tol = {
+                "surfaces": {
+                    "CardRow": {
+                        "elements": {
+                            "TitleText": {"fontSize": 2.0, "width": 4.0}
+                        }
+                    }
+                }
+            }
+            (task_dir / "tolerances.json").write_text(json.dumps(tol), encoding="utf-8")
+
+            # Write the overlay PNG stub (just needs to exist).
+            (ref_dir / "CardRow_ref_vs_built.png").write_bytes(b"\x89PNG\r\n\x1a\n")
+
+            # Write deltas.json with an out-of-tolerance value.
+            deltas = {
+                "measured": {
+                    "TitleText": {"fontSize": 5.0, "width": 2.0}  # fontSize 5.0 > tolerance 2.0
+                }
+            }
+            (ref_dir / "CardRow_deltas.json").write_text(json.dumps(deltas), encoding="utf-8")
+
+            report_path = task_dir / "IMPLEMENTER_REPORT.md"
+            report_path.write_text("# Report\n", encoding="utf-8")
+
+            errs = eid.validate_measure_before_surface(report_path, task_dir)
+            self.assertTrue(
+                any("TitleText" in e and "fontSize" in e for e in errs),
+                f"Out-of-tolerance delta should block; got: {errs}",
+            )
+
+    def test_A5d_p5_save_schema_prose_claim_blocked(self):
+        """A5d — P5: a task touching SaveData/save-schema code with only a prose
+        'tests pass' claim in the report (no machine Total: N) must be blocked."""
+        with tempfile.TemporaryDirectory() as root_str:
+            task_dir = Path(root_str)
+
+            spec_path = task_dir / "SPEC.md"
+            spec_path.write_text(
+                "## Files\nEditSaveData.cs, SaveSchemaMigrator.cs — schema migration for new field.\n",
+                encoding="utf-8",
+            )
+            report_path = task_dir / "IMPLEMENTER_REPORT.md"
+            report_path.write_text(
+                "## Acceptance\n| 1. Tests pass | PASS | All tests pass (manually verified). |\n",
+                encoding="utf-8",
+            )
+            repo_root = task_dir  # git call will gracefully fail; that's OK for this test.
+
+            errs = eid.validate_observed_test_run(report_path, spec_path, repo_root)
+            self.assertTrue(
+                len(errs) >= 1,
+                f"P5 should block prose-only test claim for save-schema task; got: {errs}",
+            )
+            self.assertIn("P5", errs[0])
+
+    def test_A5e_p5_machine_total_line_passes(self):
+        """A5e — P5 gate passes when the report contains a 'Total: N' machine line."""
+        with tempfile.TemporaryDirectory() as root_str:
+            task_dir = Path(root_str)
+
+            spec_path = task_dir / "SPEC.md"
+            spec_path.write_text("## Files\nSaveData.cs — add field.\n", encoding="utf-8")
+            report_path = task_dir / "IMPLEMENTER_REPORT.md"
+            report_path.write_text(
+                "## Test results\nTotal: 42  Passed: 42  Failed: 0  Skipped: 0\n",
+                encoding="utf-8",
+            )
+            repo_root = task_dir  # git won't run; that's OK — spec text triggers
+
+            errs = eid.validate_observed_test_run(report_path, spec_path, repo_root)
+            self.assertEqual(
+                errs, [],
+                f"Machine Total: N line should satisfy P5; got: {errs}",
+            )
+
+    def test_A5f_parse_prefab_source_guids_extracts_correctly(self):
+        """A5f — _parse_prefab_source_guids pulls the source GUID out of a
+        PrefabInstance block and ignores zero-GUIDs."""
+        yaml_text = textwrap.dedent(f"""\
+            --- !u!1001 &200
+            PrefabInstance:
+              m_SourcePrefab: {{fileID: 100100000, guid: {self._SOURCE_GUID}, type: 3}}
+            --- !u!1001 &300
+            PrefabInstance:
+              m_SourcePrefab: {{fileID: 100100000, guid: 00000000000000000000000000000000, type: 3}}
+        """)
+        guids = eid._parse_prefab_source_guids(yaml_text)
+        self.assertIn(self._SOURCE_GUID, guids)
+        self.assertNotIn("00000000000000000000000000000000", guids)
+
+    def test_A5g_parse_prefab_gameobject_sprites_null_vs_real(self):
+        """A5g — _parse_prefab_gameobject_sprites returns '' (empty str) for a
+        null/zero sprite and a real guid string for a real sprite."""
+        yaml_text = textwrap.dedent(f"""\
+            --- !u!1 &100
+            GameObject:
+              m_Name: NullSpriteGO
+            --- !u!114 &200
+            MonoBehaviour:
+              m_GameObject: {{fileID: 100}}
+              m_Sprite: {{fileID: 0, guid: , type: 0}}
+            --- !u!1 &300
+            GameObject:
+              m_Name: RealSpriteGO
+            --- !u!114 &400
+            MonoBehaviour:
+              m_GameObject: {{fileID: 300}}
+              m_Sprite: {{fileID: 21300000, guid: {self._SPRITE_GUID}, type: 3}}
+        """)
+        sprites = eid._parse_prefab_gameobject_sprites(yaml_text)
+        self.assertEqual(sprites.get("NullSpriteGO"), "")
+        self.assertEqual(sprites.get("RealSpriteGO"), self._SPRITE_GUID)
 
 
 if __name__ == "__main__":

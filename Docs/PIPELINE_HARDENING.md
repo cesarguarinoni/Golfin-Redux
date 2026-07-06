@@ -92,3 +92,28 @@
 - **Created:** 2026-06-29, triggered by the `tournament_signup_modal` postmortem (§3.D1) — a render-isolation/probe script deactivated `ScreensRoot`, a buggy revert missed it, and the orchestrator **saved** the broken scene, booting the whole app to an empty menu.
 - **The guardrail (orchestrator-side, like CLAUDE.md Rule 12 for commits):** never `scene-save` after a render-isolation / probe / force-activate mutation without first **diffing GameObject active-state against HEAD** (`git show HEAD:<scene>` → compare `m_IsActive` of touched roots, or re-assert the boot-critical containers — `ScreensRoot`, `PersistentUI`, the active screen — are in their committed state). If any boot-critical container's active-state diverges from HEAD unintentionally, restore it before saving.
 - Probe mutations (canvas overrides, force-activations, deactivating screens to isolate a render) are **transient** — they must be reverted, not persisted. Prefer not saving at all after a probe; if a save is required, run the active-state diff first.
+
+## 15. Clone-provenance YAML verifier — P1 (Order-611, 2026-07-06)
+- **Created:** Order-611, triggered by `POSTMORTEM_general_shop_ui_fabricated_provenance.md` §P1 — the third instance of the fabricated-provenance scar. The existing §8 / Rule 19 gate only checked that `## Clone provenance` had table rows shaped like GUIDs; it never verified the built prefab's YAML lineage against the cited source. Cesar had to catch the fabrication by eye.
+- **Design law §0 (binding on every gate):** a gate may ONLY read engine/file-system-reported facts (YAML lineage, a fresh linter invocation, an observed test-run count). Any gate that parses an implementer-authored table/JSON/claim as its evidence is a DEFECT.
+- **The gate (HOOK-ENFORCED — `enforce_implementer_done.py` `validate_clone_provenance_yaml`):** for each element in `reuse_map.json` (the SPEC-side ground truth written by the implementer at start-of-task, not the prose table): verify via YAML that (a) the built prefab contains a `PrefabInstance` block whose `m_SourcePrefab` guid matches the cited source, OR (b) for CopyAsset clones, the built element's `Image.m_Sprite` guid is non-null AND matches (or legally differs from) the source element's sprite guid.
+  - Null/blank `Image.sprite` where the source has one = **CRITICAL FAIL** (fabrication signature), logged to `.claude/review_misses.log`.
+  - Different real sprite (legal re-skin) = WARN only — blocks reviewers' attention, does not block transition.
+  - No PrefabInstance lineage AND null sprite AND source has a sprite = **CRITICAL FAIL**.
+- **Deliverable:** implementers on reuse-mandate tasks must author `Docs/Specs/Active/<task>/reuse_map.json` (see `Docs/Specs/TEMPLATE_reuse_map.json`) at start-of-task.
+- **Tests:** `TestCloneProvenanceYAML` in `test_enforce_implementer_done.py` — A1-A5g, 13 tests.
+
+## 16. Shipped-asset guard — P4 (Order-611, 2026-07-06)
+- **Created:** Order-611 — the `general_shop_ui` task (610) silently +68-line edited `StaminaShopSelectionScreen.prefab` (Order-517 shipped deliverable) with no SPEC mention. Rule 13 (files-modified-coverage) passed it because disclosure ≠ authorization.
+- **The gate (HOOK-ENFORCED — `enforce_implementer_done.py` `validate_shipped_asset_guard`):** if the working-tree diff touches any asset listed in `Docs/Specs/SHIPPED_MANIFEST.json` AND that asset is not explicitly named in the current task's `SPEC.md`, **block the STATUS transition**.
+- **Authorization:** add the asset path to `SPEC.md` (e.g. `## Files touched\n- \`Assets/Prefabs/…/Foo.prefab\` — explicit edit target for this task`). Then the gate passes.
+- **Deliverable:** `Docs/Specs/SHIPPED_MANIFEST.json` (seeded with Order-517 shop+tournament deliverables). Add new shipped deliverables as tasks complete.
+
+## 17. Observed test-run gate — P5 (Order-611, 2026-07-06)
+- **Created:** Order-611 — 488 lines of unverified save/economy code reached the gate on prose alone ("tests pass" in the report without a machine-authored count).
+- **The gate (HOOK-ENFORCED — `enforce_implementer_done.py` `validate_observed_test_run`):** for tasks whose SPEC.md or working-tree diff mentions `SaveData` / `SaveSchemaMigrator` / save-schema paths, require a `Total: N` / `Passed: N` line in `IMPLEMENTER_REPORT.md` — the machine-authored output of `mcp__ai-game-developer__tests-run` or the TestRunnerApi. Prose claiming tests pass is not accepted.
+
+## 18. Measure-before-surface gate — P7 (Order-611, 2026-07-06)
+- **Created:** Order-611 — the `general_shop_ui` Part 2 saga: Cesar ran QA for 20+ iterations because the implementer eyeballed layout metrics instead of measuring them first.
+- **The gate (HOOK-ENFORCED — `enforce_implementer_done.py` `validate_measure_before_surface`):** for tasks that include `tolerances.json`, require `reference/<name>_ref_vs_built.png` + `reference/<name>_deltas.json` (per-element measured deltas vs tolerance) to exist before the STATUS transition. If any delta exceeds its tolerance, block.
+- **Deliverable:** implementers on Figma-node card/panel tasks should author `tolerances.json` (see `Docs/Specs/TEMPLATE_tolerances.json`) and produce the overlay + deltas via `Docs/Scripts/figma_diff.py` or equivalent measurement before surfacing.
