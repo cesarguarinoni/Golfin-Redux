@@ -12,7 +12,8 @@ node-exact geometry (1:1 Figma px on the shell canvas). Never ship a null-sprite
 shows a sprite/border/gradient — **Rule 21 hard-fails it**.
 
 **How to maintain.** When a task discovers or creates a new reusable atom, add its row here **in the
-same commit**. Paths + GUIDs below verified against the repo on **2026-07-03**.
+same commit**. Paths + GUIDs below verified against the repo on **2026-07-06** (shop-card atoms added
+from the Order-610 card rebuild — see `Docs/Reports/POSTMORTEM_general_shop_ui_fabricated_provenance.md` Part 2).
 
 ---
 
@@ -51,6 +52,8 @@ same commit**. Paths + GUIDs below verified against the repo on **2026-07-03**.
 |---|---|---|---|---|
 | Corner mask 20px | `Assets/Art/Original UI/Common/S_Common_BGCorner20.png` | `dd96a2f1280ec46459c4e10fbaf32c92` | rounded-corner mask, 20px radius | rounded panels / cards |
 | Corner mask 8px | `Assets/Art/Original UI/Common/S_Common_BGCorner8.png` | `b2ae6196bf901b54eaf57aea53472a8c` | rounded-corner mask, 8px radius | smaller rounded elements |
+| Corner mask 8px LEFT | `Assets/Art/Original UI/Common/S_Common_BGCorner8Left.png` | `48e7cea5350380b42bceb9a78035d7b7` | left-side-only rounding (e.g. rarity tile on a card's left edge) | shop card rarity tile |
+| Corner mask 8px BOTTOM | `Assets/Art/Original UI/Common/S_Common_BGCorner8Bottom.png` | `555dbbd195fecb0459818bc9066e6621` | bottom-only rounding (lower half of two-tone boxes) | shop card price box |
 
 ## Fonts (TMP SDF)
 | Atom | Path | GUID | Use for |
@@ -70,13 +73,52 @@ same commit**. Paths + GUIDs below verified against the repo on **2026-07-03**.
   `Assets/Prefabs/UI/Tournaments/TournamentSelectionCard.prefab` › `PaidEntryBadge`. Reused for the
   shop's HIGH/MEDIUM/LIGHT tier badges. **NOTE:** there is no standalone `PillFill.png` — the inner
   fill is a dark-tinted `Image` on the prefab node, not a separate asset (corrects the original seed list).
+- **Stat bar (continuous, clubs)** — added 2026-07-06, Order 610 card rebuild: `S_PillStadium.png`
+  (`bb07d102…`, 176×176, border 88 = half) as BOTH track and fill, with a tuned
+  `pixelsPerUnitMultiplier` (~13 for a 14px-tall bar) so the rounded caps stay full semicircles.
+  Do **NOT** 9-slice `LevelUpBlueFill` for proportional-width fills — its border (8,3,8,3) is smaller
+  than its ~10px cap radius, so the leading cap kinks to a point (PIPELINE_HARDENING C10). Verify by
+  zooming the fill's **leading edge**, not the whole bar.
+- **Two-tone price box (RP)** — added 2026-07-06, Order 610: upper tone `S_Common_BGCorner8` +
+  lower tone `S_Common_BGCorner8Bottom`; RP coin icon (`Reward Points Icon.png`, NOT an "R" text
+  prefix) tight to the number, **non-bold**, as a **centred group inside the box**. The Figma's
+  real-money `$` strike-through block re-tokens to this (D2, general_shop_ui).
+- **Rarity tile (card left edge)** — added 2026-07-06, Order 610: `Resources/Rarities/<Rarity>.png`
+  gradient masked to rounded-left via `S_Common_BGCorner8Left`.
+
+## Item art (Resources — path patterns, not single GUIDs)
+| Art | Path pattern | Use for |
+|---|---|---|
+| Club portraits | `Assets/Resources/Clubs/Portraits/<Club>.png` | shop/inventory club card image (same art as Club Selection) |
+| Rarity gradients | `Assets/Resources/Rarities/<Rarity>.png` | rarity tile backgrounds |
+
+## Type-specific stat displays (balls ≠ clubs — added 2026-07-06, Order 610)
+Clubs use a **continuous** fill bar (stat-bar composite above); balls use a **segmented bidirectional**
+bar — `Golfin.Inventory.BallSegmentedBar` (`Assets/Scripts/UI/Inventory/BallSegmentedBar.cs`): 20
+segments, centre divider, blue right / orange-red left / grey empty, value −10..+10. Ball stats are
+Power/Rebound/WindCut/Roll/Spin, NOT the club set. **Before building any item-type stat UI, open the
+real inventory/detail surface for that type** (`BagClubCard.prefab`, `BallDetailPanel.cs`) — never
+assume one stat display fits all. NOTE: `BallSegmentedBar` builds its segments via a runtime
+`HorizontalLayoutGroup` — it does NOT bake in edit mode (PIPELINE_HARDENING C11); static prefabs need
+explicitly built segment children.
 
 ## Clone bases (whole-screen / card — per the Reuse mandate)
 - **List screen** (scroll list of selection cards): `Assets/Prefabs/UI/Tournaments/TournamentSelectionScreen.prefab`
-  + `TournamentSelectionScreenController.cs` — the mandated clone base for list-style screens
-  (used by the stamina-shop Selection screen). Register in `ScreenManager` like `ScreenId.TournamentSelection`.
-- **Selection card:** `Assets/Prefabs/UI/Tournaments/TournamentSelectionCard.prefab` + `TournamentSelectionCard.cs`
-  — clone base for list cards (and the source of the two-layer badge pattern above).
+  (GUID `93756886e6c93413a815700517bd4b54`) + `TournamentSelectionScreenController.cs` — the mandated
+  clone base for list-style screens (used by the stamina-shop Selection screen). Carries the real
+  `TabBar` tab strip, `ScrollArea`/`ScrollRect`, `Scrollbar`+Handle, and `BG`. Register in
+  `ScreenManager` like `ScreenId.TournamentSelection`.
+- **Selection card:** `Assets/Prefabs/UI/Tournaments/TournamentSelectionCard.prefab`
+  (GUID `baac145d1783f41758376281a61c83e0`) + `TournamentSelectionCard.cs` — clone base for list cards
+  (source of the two-layer badge pattern above; already carries the gold `Play Button` CTA sprite +
+  `ButtonPressFeedback`).
+- **Segmented-filter list screen:** `Assets/Prefabs/UI/Shop/StaminaShopSelectionScreen.prefab`
+  (GUID `ff5fc45710513468fab1149f4aeaa252`) — two segmented filter pills + scroll list + scrollbar.
+  **SHIPPED Order-517 deliverable — clone from it, never edit it in place** (a task silently modified
+  it +68 lines during the 610 fabrication incident; see the shipped-asset guard, Order 611).
+- **Shop card:** `Assets/Prefabs/UI/Shop/StaminaShopCard.prefab` (GUID `717d118c7be214838ab65e0bd65731f2`).
+- **Club inventory card (stat rows):** `Assets/Prefabs/UI/Inventory/BagClubCard.prefab`
+  (GUID `5e39901a81c074c4aacbe5d27d1309fd`) — the real club stat-row display; source for club-card stat UI.
 
 ---
 
