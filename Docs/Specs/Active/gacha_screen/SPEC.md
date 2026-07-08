@@ -1,8 +1,9 @@
 # SPEC — gacha_screen (Gacha pillar, screen 1 of 3: Gacha main / pull screen)
 
 **Status:** SPEC_READY (decisions locked with Cesar 2026-07-08).
+**Notion:** Order 704 — "gacha_screen — Gacha tab UI" (Phase 07. Gacha, P1 — High, Queued).
 **Tier:** 3 — FULL PIPELINE (new tab content + carousel + real-time countdown + new currency + save-schema change).
-**Delivery:** STAGED, prefab-first — **Stage 0 is prefabs only** and gates on Cesar's visual review before any wiring (same flow as `general_shop_ui` / Stores). Cesar hand-tunes prefabs between stages; NEVER overwrite his manual prefab fixes on later stages — read the prefab state first, apply minimal diffs.
+**Delivery:** STAGED, prefab-first, HUMAN-GATED — exactly the Shop flow (`general_shop_ui` / `stamina_boost_shop`). **Stage 0 is prefabs only** (no controllers, no wiring). **After EVERY stage the implementer STOPS and surfaces the result to Cesar** (screenshot / short capture) and does NOT begin the next stage until Cesar says go — this is a hard gate, not a checkpoint to blow through. Cesar hand-tunes prefabs between stages; on any later stage **read the LIVE prefab state first and apply minimal diffs — NEVER overwrite or rebuild Cesar's manual prefab fixes.**
 
 **Kickoff (fenced, copy-ready):**
 
@@ -122,7 +123,7 @@ Only the backdrop art (promo copy + club renders) is the per-banner sprite.
   STORE-specific); STORE tab → inverse; GIFTS stays grayed/inert. Active-tab styling: reuse the
   gold/white treatment (`ChipGold`/`ChipWhite` pattern) already used for chips; match the Figma
   active-tab look at step 0.
-- **Default tab on nav open** — fork #1 (recommend GACHA: the bottom-nav slot IS the gacha icon).
+- **Default tab on nav open = GACHA** (Cesar 2026-07-08; the bottom-nav slot IS the gacha icon).
 
 ### 3c. BannerCard + carousel
 - **`GachaBannerCard.prefab`** (`Assets/Resources/Prefabs/Gacha/`) — the composed banner:
@@ -158,6 +159,8 @@ Only the backdrop art (promo copy + club renders) is the per-banner sprite.
 ---
 
 ## 4. Stages (each gates on Cesar)
+
+> **HARD STOP between every stage.** The implementer completes a stage, surfaces it to Cesar (screenshot / short capture + a one-line "here's what changed"), and WAITS. No stage begins until Cesar approves the prior one. Prefabs are Cesar-editable between stages; later stages read the LIVE prefab state and apply minimal diffs — they never re-generate or overwrite his hand-tuning. This mirrors how `general_shop_ui` / `stamina_boost_shop` were built.
 
 **Stage 0 — PREFABS ONLY (visual gate).** `GachaBannerCard.prefab` (art bound to the extracted
 sprite, all live overlays as editable nodes at node-exact geometry), `GachaTabContent` panel with
@@ -219,11 +222,10 @@ Verify the Figma→TMP divisor per Lesson AK — do NOT assume ÷1.4.
 
 ## 7. Implementer forks (surface to Cesar; do not resolve silently)
 
-1. **Default tab on nav open** — GACHA (recommended; nav slot is the gacha icon) vs STORE (status quo).
+1. ~~**Default tab on nav open**~~ — **RESOLVED (Cesar 2026-07-08): GACHA.** The bottom-nav slot is the gacha icon, so opening the Rewards Center via it lands on the GACHA tab.
 2. **Starter ticket balance** — migrated + fresh saves: 0 (recommended) vs a test grant (e.g. 10).
 3. **Empty-state copy** — "No active banners" placeholder final text/JP pending.
-4. **v1 CSV rows** — only one banner art exists (`STANDARD CLUB 1`). Ship 1 live row + N test rows
-   reusing the same art (recommended for carousel testing), or 1 row only?
+4. ~~**v1 CSV rows**~~ — **RESOLVED (Cesar 2026-07-08): 1 live banner (`STANDARD CLUB 1`, real art) + a few test rows reusing the same art** so the carousel has multiple cards to swipe and the falloff / snap / dots are demoable. Vary `nameKey` / `endUtc` / `sortOrder` across the test rows; include one `active=false` row to prove the catalog filter. (Near-expiry countdown-removal is exercised via a test fixture per §6, not a shipped row.)
 5. **Figma→TMP divisor** — verify per Lesson AK at step 0.
 6. **Pity numbers** — static "99 pulls" from the mock, or author per-banner in prefab? (CSV pity
    columns deliberately deferred to the rates order.)
