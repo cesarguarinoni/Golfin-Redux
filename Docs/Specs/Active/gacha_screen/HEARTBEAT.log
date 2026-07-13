@@ -318,3 +318,50 @@ DIRTY:
 ===
 2026-07-12T00:00:00 stage1 implementer activated
 2026-07-12T11:30:00 done, awaiting review — Stage 1 all 35 items PASS, IMPLEMENTER_REPORT written, STATUS→READY_FOR_SELF_REVIEW
+=== stage2 kickoff baseline ===
+HEAD: bdd3d78c0 feat(gacha_screen): Stage 1 — tab routing + Gacha Ticket currency + save v6→v7 [Cesar-approved]
+DIRTY:
+ M Docs/Scripts/DAILY_REPORT_SETUP.md
+ M Docs/Scripts/com.golfin.dailyreport.plist
+ M Docs/Specs/Active/gacha_screen/STATUS.md
+ M Packages/manifest.json
+ M Packages/packages-lock.json
+?? Docs/Specs/Active/gacha_screen/STAGE2_KICKOFF.md
+=== end baseline ===
+2026-07-13T09:00:00 stage2 activated - reading existing code and prefabs
+2026-07-13T00:56:58 15/15 EditMode tests PASS, entering play-mode for real-flow verify
+2026-07-13T10:45:00Z done, awaiting review — Stage 2 all items PASS, lint fail=0, 15/15 tests, screenshot 1170x2532, IMPLEMENTER_REPORT written, STATUS→READY_FOR_SELF_REVIEW
+
+=== stage2 iter-2 kickoff baseline ===
+HEAD SHA: bdd3d78c0f14598c01500ea6cd063f22bdcbac51
+DIRTY:
+ M Assets/Resources/Prefabs/Gacha/GachaBannerCard.prefab
+ D Assets/Resources/Prefabs/Gacha/_GachaCard_CesarTuned.prefab
+ D Assets/Resources/Prefabs/Gacha/_GachaCard_CesarTuned.prefab.meta
+ M Assets/Scenes/ShellScene.unity
+?? Assets/Resources/Data/gacha_banners.csv
+?? Assets/Scripts/UI/Gacha/GachaBannerCard.cs
+?? Assets/Scripts/UI/Gacha/GachaBannerModel.cs
+?? Assets/Scripts/UI/Gacha/GachaCarouselController.cs
+?? Assets/Tests/
+=== end baseline ===
+2026-07-13T09:00:00Z stage2 iter-2 activated — FIX1 CSV nameKey to display text; FIX2 CountdownPill navy fill
+2026-07-13T11:05:00Z done, awaiting review
+
+=== stage2 iter-3 kickoff baseline ===
+HEAD SHA: bdd3d78c0f14598c01500ea6cd063f22bdcbac51
+DIRTY:
+ M Assets/Resources/Prefabs/Gacha/GachaBannerCard.prefab
+ D Assets/Resources/Prefabs/Gacha/_GachaCard_CesarTuned.prefab
+ D Assets/Resources/Prefabs/Gacha/_GachaCard_CesarTuned.prefab.meta
+ M Assets/Scenes/ShellScene.unity
+ M Docs/Scripts/DAILY_REPORT_SETUP.md
+ M Docs/Scripts/com.golfin.dailyreport.plist
+?? Assets/Resources/Data/gacha_banners.csv
+?? Assets/Scripts/UI/Gacha/GachaBannerCard.cs
+?? Assets/Scripts/UI/Gacha/GachaBannerModel.cs
+?? Assets/Scripts/UI/Gacha/GachaCarouselController.cs
+?? Assets/Tests/
+=== end baseline ===
+2026-07-13T12:00:00Z stage2 iter-3 activated — test-coverage fix: rewrite 7 circular tests to target production GachaBannerCatalog
+2026-07-13T12:30:00Z done, awaiting review — stage2 iter-3: 15/15 tests PASS targeting production GachaBannerCatalog via reflection, local mirrors deleted

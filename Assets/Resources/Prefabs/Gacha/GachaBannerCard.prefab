@@ -10,6 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 961945491132824023}
   - component: {fileID: 4087804639205057136}
+  - component: {fileID: 870235964971176301}
   m_Layer: 0
   m_Name: GachaBannerCard
   m_TagString: Untagged
@@ -58,6 +59,26 @@ CanvasGroup:
   m_Interactable: 1
   m_BlocksRaycasts: 1
   m_IgnoreParentGroups: 0
+--- !u!114 &870235964971176301
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 147723804174646960}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ac2ab609ff17c4cefb0dcc414b6f5526, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GolfinRedux.UI.Gacha.GachaBannerCard
+  _artImage: {fileID: 7362249451183327736}
+  _titleText: {fileID: 7790449178095496042}
+  _countdownLabel: {fileID: 6778582700946127555}
+  _costX1Text: {fileID: 1306095671804379228}
+  _costX10Text: {fileID: 3814810825792712781}
+  _pullX1Button: {fileID: 8978773871188785926}
+  _pullX10Button: {fileID: 3971503019516812339}
+  _rulesButton: {fileID: 6825570499349008894}
 --- !u!1 &448264155321663694
 GameObject:
   m_ObjectHideFlags: 0
@@ -500,7 +521,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Color: {r: 0.078431375, g: 0.14117648, b: 0.28627452, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
