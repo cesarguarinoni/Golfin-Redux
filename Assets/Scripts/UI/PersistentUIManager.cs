@@ -127,6 +127,40 @@ namespace Golfin.UI
             {
                 Debug.LogWarning("[PersistentUI] GachaTicketManager not found — ticket display will not update.");
             }
+
+            EnsureTicketPill();
+        }
+
+        /// <summary>
+        /// Ensure an RP-style pill sits behind the top-bar ticket counter. Built at runtime because
+        /// the top bar is a plain scene object whose file reserializes wholesale on save — so we
+        /// avoid a massive scene diff. Idempotent; mirrors the RewardPointsBackground pill (#122C47).
+        /// </summary>
+        private void EnsureTicketPill()
+        {
+            if (ticketCountText == null) return;
+            var topbar = ticketCountText.transform.parent;
+            if (topbar == null || topbar.Find("TicketCountBackground") != null) return;
+
+            var rp   = topbar.Find("RewardPointsBackground");
+            var icon = topbar.Find("TicketIcon");
+            if (rp == null || icon == null) return;
+
+            var pill = Instantiate(rp.gameObject, topbar);
+            pill.name = "TicketCountBackground";
+            var prt = pill.GetComponent<RectTransform>();
+            prt.anchorMin = new Vector2(0f, 0.5f);
+            prt.anchorMax = new Vector2(0f, 0.5f);
+            prt.pivot     = new Vector2(0.5f, 0.5f);
+            prt.sizeDelta = new Vector2(138f, 54f);
+            prt.anchoredPosition = new Vector2(575f, 0f);   // left end tucks under the ticket, right ~8px from Shop+
+
+            // Render order: pill behind, then ticket icon + count + shop draw on top of it.
+            pill.transform.SetAsLastSibling();
+            icon.SetAsLastSibling();
+            ticketCountText.transform.SetAsLastSibling();
+            var shop = topbar.Find("ShopPlusButton");
+            if (shop != null) shop.SetAsLastSibling();
         }
 
         private void OnDisable()

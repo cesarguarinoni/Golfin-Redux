@@ -27,6 +27,7 @@ namespace GolfinRedux.UI.Gacha
         [SerializeField] private GameObject _cardPrefab;       // GachaBannerCard.prefab
         [SerializeField] private Transform  _dotContainer;     // DotRow
         [SerializeField] private GameObject _dotPrefab;        // reused dot child (cloned for each banner)
+        [SerializeField] private Sprite     _dotSprite;        // circular dot sprite (Dot Active.png) — applied to every spawned dot
         [SerializeField] private GameObject _emptyState;       // "No active banners" GO
 
         [Header("Card Layout")]
@@ -53,9 +54,10 @@ namespace GolfinRedux.UI.Gacha
         private readonly List<GachaBannerEntry> _entries  = new();
         private readonly List<GameObject>        _dots     = new();
         private int   _currentIndex  = 0;
-        private float _currentOffset = 0f;   // visual offset added during drag
-        private float _targetOffset  = 0f;   // snapped target offset
+        private float _currentOffset = 0f;   // continuous scroll position (canvas units)
+        private float _targetOffset  = 0f;   // snap target scroll (nearest card * spacing)
         private float _dragStartX    = 0f;
+        private float _dragStartScroll = 0f; // scroll position when the drag began
         private bool  _isDragging    = false;
 
         // ── Countdown update interval ──────────────────────────────────────────
@@ -72,8 +74,9 @@ namespace GolfinRedux.UI.Gacha
 
         private void Update()
         {
-            // Smooth snap / drag follow
-            _currentOffset = Mathf.Lerp(_currentOffset, _targetOffset, Time.deltaTime * _snapSpeed);
+            // Continuous scroll: ease to the snap target only when not actively dragging.
+            if (!_isDragging)
+                _currentOffset = Mathf.Lerp(_currentOffset, _targetOffset, Time.deltaTime * _snapSpeed);
             UpdateCardTransforms();
 
             // Countdown tick
@@ -91,29 +94,24 @@ namespace GolfinRedux.UI.Gacha
         {
             _isDragging = true;
             _dragStartX = eventData.position.x;
+            _dragStartScroll = _currentOffset;
         }
 
         public void OnDrag(PointerEventData eventData)
         {
             if (!_isDragging) return;
+            // Cards follow the finger 1:1 (drag right → scroll decreases → cards slide right).
             float delta = eventData.position.x - _dragStartX;
-            _targetOffset = delta;
+            _currentOffset = _dragStartScroll - delta;
         }
 
         public void OnEndDrag(PointerEventData eventData)
         {
             _isDragging = false;
-            float delta = eventData.position.x - _dragStartX;
-
-            if (Mathf.Abs(delta) >= _dragThreshold)
-            {
-                if (delta < 0f)
-                    _currentIndex = Mathf.Min(_currentIndex + 1, _cards.Count - 1);
-                else
-                    _currentIndex = Mathf.Max(_currentIndex - 1, 0);
-            }
-
-            _targetOffset = 0f;
+            // Snap to the nearest card from where the scroll landed — smooth ease, no binary index flip.
+            int idx = Mathf.Clamp(Mathf.RoundToInt(_currentOffset / _cardSpacing), 0, _cards.Count - 1);
+            _currentIndex = idx;
+            _targetOffset = idx * _cardSpacing;
             UpdateDots();
         }
 
@@ -151,8 +149,8 @@ namespace GolfinRedux.UI.Gacha
 
             // Clamp current index
             _currentIndex  = Mathf.Clamp(_currentIndex, 0, _cards.Count - 1);
-            _currentOffset = 0f;
-            _targetOffset  = 0f;
+            _currentOffset = _currentIndex * _cardSpacing;
+            _targetOffset  = _currentOffset;
 
             UpdateCardTransforms();
             UpdateDots();
@@ -185,8 +183,8 @@ namespace GolfinRedux.UI.Gacha
                 var cg = _cards[i].GetComponent<CanvasGroup>();
                 if (rt == null || cg == null) continue;
 
-                // Position: card i is at (i - currentIndex) * spacing + drag offset
-                float targetX = (i - _currentIndex) * _cardSpacing + _currentOffset;
+                // Position: continuous scroll — card i is at i*spacing minus the scroll position.
+                float targetX = i * _cardSpacing - _currentOffset;
                 rt.anchoredPosition = new Vector2(targetX, _cardYOffset);
 
                 // Falloff: normalised distance from centre (0 = centre, 1 = one card away)
@@ -240,12 +238,18 @@ namespace GolfinRedux.UI.Gacha
                 _dots.Add(dot);
             }
 
+            // Ensure we have the circular dot sprite (Resources fallback — the controller lives in
+            // the scene, so we avoid a serialized ref + scene save). Cached after first load.
+            if (_dotSprite == null)
+                _dotSprite = Resources.Load<Sprite>("Art/Gacha/GachaDot");
+
             // Style: active = white/full, inactive = dim
             for (int i = 0; i < _dots.Count; i++)
             {
                 if (_dots[i] == null) continue;
                 var img = _dots[i].GetComponent<Image>();
                 if (img == null) continue;
+                if (_dotSprite != null) { img.sprite = _dotSprite; img.enabled = true; }  // ensure circular, not a null-sprite square
                 bool active = (i == _currentIndex);
                 img.color = active
                     ? new Color(1f, 1f, 1f, 1f)
@@ -296,9 +300,10 @@ namespace GolfinRedux.UI.Gacha
                     ClearDots();
                     return;
                 }
-                // Clamp index to valid range and rebuild dots
+                // Clamp index to valid range, re-snap scroll to it, and rebuild dots
                 _currentIndex = Mathf.Clamp(_currentIndex, 0, _cards.Count - 1);
-                _targetOffset = 0f;
+                _targetOffset = _currentIndex * _cardSpacing;
+                _currentOffset = _targetOffset;
                 UpdateDots();
             }
         }

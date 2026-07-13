@@ -64,8 +64,10 @@ namespace GolfinRedux.UI.Gacha
             }
 
             // --- Costs ---
-            if (_costX1Text  != null) _costX1Text .text = entry.CostX1 .ToString("N0");
-            if (_costX10Text != null) _costX10Text.text = entry.CostX10.ToString("N0");
+            // Design (Figma 4065:6730 + Cesar tuning) shows the literal label "COST" next to the
+            // ticket icon and "x1"/"x10" — the numeric CostX1/CostX10 are NOT surfaced on the card in v1
+            // (reserved for the real-pull spend flow later). Leave the authored "COST" label untouched.
+            // (fields kept wired for a future numeric-cost variant.)
 
             // --- Pull stubs ---
             if (_pullX1Button != null)

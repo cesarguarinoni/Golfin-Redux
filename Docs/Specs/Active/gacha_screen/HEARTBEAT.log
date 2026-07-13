@@ -365,3 +365,52 @@ DIRTY:
 === end baseline ===
 2026-07-13T12:00:00Z stage2 iter-3 activated — test-coverage fix: rewrite 7 circular tests to target production GachaBannerCatalog
 2026-07-13T12:30:00Z done, awaiting review — stage2 iter-3: 15/15 tests PASS targeting production GachaBannerCatalog via reflection, local mirrors deleted
+
+=== stage3 kickoff baseline ===
+HEAD SHA: 70c8581bf
+DIRTY:
+ M Docs/Scripts/DAILY_REPORT_SETUP.md
+ M Docs/Scripts/com.golfin.dailyreport.plist
+ M Docs/Specs/Active/gacha_screen/STATUS.md
+ M Packages/manifest.json
+ M Packages/packages-lock.json
+?? Docs/Specs/Active/gacha_screen/STAGE3_KICKOFF.md
+=== end baseline ===
+2026-07-13T09:00:00Z stage3 activated — bot-video capture only, no production code changes
+2026-07-13T03:05:56 launching GachaDemoRecorder — recording 5-beat sequence
+2026-07-13T03:16:23 Toast GO activated in ShellScene; re-recording for Beat 5 toast visibility
+2026-07-13T03:29:15Z done, awaiting review
+
+=== stage3 re-record baseline ===
+HEAD SHA: 70c8581bff998a90923b3d93c63e2de8da8842b3
+DIRTY:
+ M Assets/Prefabs/UI/PersistentUI.prefab
+ M Assets/Prefabs/UI/Shop/GeneralShopScreen.prefab
+ M Assets/Resources/Prefabs/Gacha/GachaBannerCard.prefab
+ M Assets/Scripts/UI/Gacha/GachaBannerCard.cs
+ M Docs/Scripts/DAILY_REPORT_SETUP.md
+ M Docs/Scripts/com.golfin.dailyreport.plist
+ M Docs/Specs/Active/gacha_screen/HEARTBEAT.log
+ M Docs/Specs/Active/gacha_screen/IMPLEMENTER_REPORT.md
+ M Docs/Specs/Active/gacha_screen/STATUS.md
+ M Packages/manifest.json
+ M Packages/packages-lock.json
+=== end baseline ===
+2026-07-13T07:41:29Z stage3 re-record activated — re-recording demo with fixed card layout (7 fixes applied to GachaBannerCard.prefab/GeneralShopScreen.prefab/PersistentUI.prefab+GachaBannerCard.cs)
+2026-07-13T08:11:09Z stage3 re-record resumed — fixing Toast GO + glyph, then re-record
+2026-07-13T08:17:48Z done, awaiting review — toast fixed (in-memory activation), glyph fixed (' - '), re-recorded, 3 stills verified, IMPLEMENTER_REPORT updated
+
+=== stage3 final-record kickoff baseline ===
+HEAD SHA: 70c8581bf
+DIRTY:
+ M Assets/Prefabs/UI/Shop/GeneralShopScreen.prefab
+ M Assets/Resources/Prefabs/Gacha/GachaBannerCard.prefab
+ M Assets/Scripts/UI/Gacha/GachaBannerCard.cs
+ M Assets/Scripts/UI/Gacha/GachaCarouselController.cs
+ M Assets/Scripts/UI/PersistentUIManager.cs
+ M Docs/Scripts/DAILY_REPORT_SETUP.md
+ M Docs/Scripts/com.golfin.dailyreport.plist
+=== end baseline ===
+2026-07-13T08:30:00Z stage3 final-record activated — re-record with circle dots + 2-light-separator tabs; glyph fix via history.log sed-replace before build_bot_video.py
+2026-07-13T09:46:46 v3 recording complete — toast visible via FindObjectsOfTypeAll fix; captioned video done; writing report
+2026-07-13T09:55:00Z done, awaiting review — v3 report written, toast verified in 4 consecutive frames, all checklist items PASS
