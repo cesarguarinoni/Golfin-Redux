@@ -1,6 +1,8 @@
+#nullable enable
 using UnityEngine;
 using UnityEngine.UI;
 using Golfin.Roster;
+using GolfinRedux.UI.Gacha;
 
 namespace Golfin.UI
 {
@@ -17,6 +19,10 @@ namespace Golfin.UI
         public TMPro.TextMeshProUGUI rewardPointsText;
         public Button settingsButton;
         public TMPro.TextMeshProUGUI usernameText;
+
+        [Header("Top Bar — Gacha Ticket Counter (Stage 1)")]
+        [SerializeField] public TMPro.TextMeshProUGUI? ticketCountText;
+        [SerializeField] public Button? shopPlusButton;
 
         // Cached real username so HighlightScreen can restore it on Home.
         private string _username = string.Empty;
@@ -84,6 +90,13 @@ namespace Golfin.UI
                 RewardPointsManager.Instance.OnPointsChanged += SetRewardPoints;
                 SetRewardPoints(RewardPointsManager.Instance.GetPoints());
             }
+
+            // GachaTicketManager — same early-boot guard as RP.
+            if (GachaTicketManager.Instance != null)
+            {
+                GachaTicketManager.Instance.OnTicketsChanged += SetTickets;
+                SetTickets(GachaTicketManager.Instance.GetTickets());
+            }
         }
 
         private void Start()
@@ -102,12 +115,28 @@ namespace Golfin.UI
             {
                 Debug.LogWarning("[PersistentUI] RewardPointsManager not found — RP display will not update.");
             }
+
+            // GachaTicketManager — same double-subscribe guard.
+            if (GachaTicketManager.Instance != null)
+            {
+                GachaTicketManager.Instance.OnTicketsChanged -= SetTickets;
+                GachaTicketManager.Instance.OnTicketsChanged += SetTickets;
+                SetTickets(GachaTicketManager.Instance.GetTickets());
+            }
+            else
+            {
+                Debug.LogWarning("[PersistentUI] GachaTicketManager not found — ticket display will not update.");
+            }
         }
 
         private void OnDisable()
         {
             if (RewardPointsManager.Instance != null)
                 RewardPointsManager.Instance.OnPointsChanged -= SetRewardPoints;
+
+            // GachaTicketManager unsubscribe.
+            if (GachaTicketManager.Instance != null)
+                GachaTicketManager.Instance.OnTicketsChanged -= SetTickets;
         }
 
         /// <summary>
@@ -136,19 +165,23 @@ namespace Golfin.UI
                 settingsButton.onClick.AddListener(OnSettingsButtonClick);
             }
 
+            // Top-bar ShopPlus stub (Stage 1 — no action yet; Stage 2+ will open gacha top-up flow)
+            if (shopPlusButton != null)
+                shopPlusButton.onClick.AddListener(() => Debug.Log("[PersistentUI] ShopPlus tapped — stub (Stage 1)"));
+
             // Bottom nav buttons
             if (homeButton != null)
                 homeButton.onClick.AddListener(() => NavigateTo(Screen.Home));
-            
+
             if (gachaButton != null)
                 gachaButton.onClick.AddListener(() => NavigateTo(Screen.Gacha));
-            
+
             if (mainPlayButton != null)
                 mainPlayButton.onClick.AddListener(() => NavigateTo(Screen.MainPlay));
-            
+
             if (inventoryButton != null)
                 inventoryButton.onClick.AddListener(() => NavigateTo(Screen.Inventory));
-            
+
             if (charactersButton != null)
                 charactersButton.onClick.AddListener(() => NavigateTo(Screen.Characters));
         }
@@ -159,6 +192,15 @@ namespace Golfin.UI
             {
                 rewardPointsText.text = points.ToString("N0");
             }
+        }
+
+        /// <summary>
+        /// Update the top-bar ticket counter. Subscribed to GachaTicketManager.OnTicketsChanged.
+        /// </summary>
+        public void SetTickets(int count)
+        {
+            if (ticketCountText != null)
+                ticketCountText.text = count.ToString();
         }
 
         /// <summary>

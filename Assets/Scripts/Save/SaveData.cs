@@ -135,6 +135,12 @@ namespace Golfin.Save
         /// stays false → ClubManager seeds only the starter set. Consumed + cleared on first seed.
         /// </summary>
         public bool grandfatherClubs;
+
+        // ── Gacha tickets (schema v7, gacha_screen Stage 1) ──────────────────
+        // Currency for gacha pulls. Migration v6→v7 seeds 10 for test grant;
+        // TODO: revert migration grant to 0 before ship.
+        // GachaTicketManager is the runtime read-through facade.
+        public int gachaTickets;
     }
 
     /// <summary>

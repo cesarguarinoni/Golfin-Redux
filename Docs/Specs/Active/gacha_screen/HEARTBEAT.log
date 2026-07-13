@@ -308,3 +308,13 @@ DIRTY:
 ?? Docs/Specs/Active/gacha_screen/ (task folder — all task files)
 === end baseline ===
 2026-07-09T11:00:00Z iter-13 activated — banner:pity_collapse_and_white_bar — FIX A pity widths, FIX B white strip, FIX C disclaimer horizontal
+=== stage1 kickoff baseline ===
+HEAD: 2159f7956 wip(gacha_screen): Stage 0 banner card + carousel peeks, Cesar-tuned [WIP]
+DIRTY:
+ M Docs/Specs/Active/gacha_screen/STATUS.md
+ M Packages/manifest.json
+ M Packages/packages-lock.json
+?? Docs/Specs/Active/gacha_screen/STAGE1_KICKOFF.md
+===
+2026-07-12T00:00:00 stage1 implementer activated
+2026-07-12T11:30:00 done, awaiting review — Stage 1 all 35 items PASS, IMPLEMENTER_REPORT written, STATUS→READY_FOR_SELF_REVIEW

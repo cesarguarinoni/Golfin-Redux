@@ -15,7 +15,7 @@ namespace Golfin.Save
     /// </summary>
     public static class SaveSchemaMigrator
     {
-        public const int CurrentSchemaVersion = 6;
+        public const int CurrentSchemaVersion = 7;
 
         /// <summary>
         /// Apply any needed migrations to bring data from its on-disk schemaVersion
@@ -94,6 +94,22 @@ namespace Golfin.Save
                 data.schemaVersion = 6;
                 Debug.Log("[SaveSchemaMigrator] Migrated v5 → v6 (club ownership added; " +
                           $"grandfatherClubs={data.grandfatherClubs} for unseeded existing save).");
+            }
+
+            // v6 → v7: add gacha tickets (gacha_screen Stage 1).
+            // Test grant = 10 so dev can exercise the counter and pull stubs immediately.
+            // Applies to both existing saves (migration path) and effectively to fresh saves
+            // (GachaTicketManager.Awake seeds 10 if gachaTickets == 0 after first load).
+            // TODO: revert test grant to 0 before ship.
+            //       ALSO revert the paired seed in GachaTicketManager.Awake
+            //       (the `gachaTickets == 0 → DEFAULT_STARTING_TICKETS` guard, ~line 51).
+            //       Both sites must be reverted together — reverting only one leaves
+            //       emptied balances silently refilling to 10.
+            if (data.schemaVersion < 7)
+            {
+                data.gachaTickets = 10; // TODO: revert to 0 before ship (test grant only)
+                data.schemaVersion = 7;
+                Debug.Log("[SaveSchemaMigrator] Migrated v6 → v7 (gachaTickets seeded to 10 — test grant).");
             }
 
             // Ensure schemaVersion is current after all migrations

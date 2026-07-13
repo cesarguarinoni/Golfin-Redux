@@ -324,8 +324,8 @@ namespace Golfin.Save.Tests
             // Act: migrate
             Assert.DoesNotThrow(() => SaveSchemaMigrator.Migrate(data!));
 
-            // Assert: schemaVersion bumped all the way to CurrentSchemaVersion (v6 now, Order 610 Phase A) from v2
-            Assert.AreEqual(6, data!.schemaVersion, "schemaVersion must be 6 after full migration from v2 (v2→v3→v4→v5→v6)");
+            // Assert: schemaVersion bumped all the way to CurrentSchemaVersion (v7 now, gacha_screen Stage 1) from v2
+            Assert.AreEqual(7, data!.schemaVersion, "schemaVersion must be 7 after full migration from v2 (v2→v3→v4→v5→v6→v7)");
 
             // Assert: tournamentEntries is present and empty (not null)
             Assert.IsNotNull(data.tournamentEntries, "tournamentEntries must not be null after migration");
@@ -340,34 +340,34 @@ namespace Golfin.Save.Tests
             Assert.AreEqual(19900L, data.dailyPeriodKey);
         }
 
-        // ── T5 Test 2: Fail-hard on v7 (future-version guard; v6 is now current per Order 610 Phase A) ──
-        // Order 610 Phase A bumped CurrentSchemaVersion from 5→6 (club ownership).
-        // v6 is now legal; v7 is still an unknown future version that must throw.
+        // ── T5 Test 2: Fail-hard on v8 (future-version guard; v7 is now current per gacha_screen Stage 1) ──
+        // gacha_screen Stage 1 bumped CurrentSchemaVersion from 6→7 (gacha tickets).
+        // v7 is now legal; v8 is the next unknown future version that must throw.
 
         [Test]
-        public void T5_FailHard_V7Json_ThrowsSaveSchemaVersionException()
+        public void T5_FailHard_V8Json_ThrowsSaveSchemaVersionException()
         {
-            // A save written by a future build (v7) must throw, not silently corrupt.
-            // (v6 is now CurrentSchemaVersion after Order 610 Phase A; v7 is still an unknown future version.)
-            const string v7Json = @"{ ""schemaVersion"": 7, ""rewardPoints"": 1 }";
-            var data = JsonConvert.DeserializeObject<SaveData>(v7Json);
+            // A save written by a future build (v8) must throw, not silently corrupt.
+            // (v7 is now CurrentSchemaVersion after gacha_screen Stage 1; v8 is an unknown future version.)
+            const string v8Json = @"{ ""schemaVersion"": 8, ""rewardPoints"": 1 }";
+            var data = JsonConvert.DeserializeObject<SaveData>(v8Json);
             Assert.IsNotNull(data);
 
             // Expect the Debug.LogError before the throw
             UnityEngine.TestTools.LogAssert.Expect(
                 UnityEngine.LogType.Error,
-                new System.Text.RegularExpressions.Regex(@"\[SaveSchemaMigrator\].*schema version 7"));
+                new System.Text.RegularExpressions.Regex(@"\[SaveSchemaMigrator\].*schema version 8"));
 
             Assert.Throws<SaveSchemaVersionException>(() => SaveSchemaMigrator.Migrate(data!));
         }
 
-        // ── T5 Test 3: CurrentSchemaVersion is 6 (bumped by Order 610 Phase A club ownership) ──
+        // ── T5 Test 3: CurrentSchemaVersion is 7 (bumped by gacha_screen Stage 1) ──
 
         [Test]
-        public void T5_CurrentSchemaVersion_Is6()
+        public void T5_CurrentSchemaVersion_Is7()
         {
-            Assert.AreEqual(6, SaveSchemaMigrator.CurrentSchemaVersion,
-                "CurrentSchemaVersion must be 6 after the v5→v6 bump (Order 610 Phase A club ownership)");
+            Assert.AreEqual(7, SaveSchemaMigrator.CurrentSchemaVersion,
+                "CurrentSchemaVersion must be 7 after the v6→v7 bump (gacha_screen Stage 1 gacha tickets)");
         }
 
         // ── T5 Test 5: v3 → v4 migration — condition fields default-safe ─────
@@ -401,8 +401,8 @@ namespace Golfin.Save.Tests
             // Act: migrate
             Assert.DoesNotThrow(() => SaveSchemaMigrator.Migrate(data!));
 
-            // schemaVersion bumped to 6 (Order 610 Phase A added v6 migration block — empty/safe for v3 data)
-            Assert.AreEqual(6, data!.schemaVersion, "schemaVersion must be 6 after v3→v4→v5→v6 migration (Order 610 CurrentSchemaVersion)");
+            // schemaVersion bumped to 7 (gacha_screen Stage 1 added v7 migration block — empty/safe for v3 data)
+            Assert.AreEqual(7, data!.schemaVersion, "schemaVersion must be 7 after v3→v4→v5→v6→v7 migration (gacha_screen Stage 1)");
 
             // All v3 fields still intact
             Assert.AreEqual(7777, data.rewardPoints);

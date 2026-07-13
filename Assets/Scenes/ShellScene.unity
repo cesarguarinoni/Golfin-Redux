@@ -16246,6 +16246,7 @@ GameObject:
   - component: {fileID: 267667037}
   - component: {fileID: 267667036}
   - component: {fileID: 267667035}
+  - component: {fileID: 267667038}
   m_Layer: 0
   m_Name: PullX1Button
   m_TagString: Untagged
@@ -16355,6 +16356,20 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 267667033}
   m_CullTransparentMesh: 1
+--- !u!114 &267667038
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 267667033}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!1 &277874392
 GameObject:
   m_ObjectHideFlags: 0
@@ -41825,7 +41840,13 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 4487766104201317109, guid: 5c6429a6887854527a03d51117fe13a4, type: 3}
       insertIndex: 4
       addedObject: {fileID: 1989163368}
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 718255411783054159, guid: 5c6429a6887854527a03d51117fe13a4, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 674378743}
+    - targetCorrespondingSourceObject: {fileID: 1830253286563610517, guid: 5c6429a6887854527a03d51117fe13a4, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 674378742}
   m_SourcePrefab: {fileID: 100100000, guid: 5c6429a6887854527a03d51117fe13a4, type: 3}
 --- !u!224 &674378739 stripped
 RectTransform:
@@ -41837,6 +41858,37 @@ GameObject:
   m_CorrespondingSourceObject: {fileID: 718255411783054159, guid: 5c6429a6887854527a03d51117fe13a4, type: 3}
   m_PrefabInstance: {fileID: 674378738}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &674378741 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 1830253286563610517, guid: 5c6429a6887854527a03d51117fe13a4, type: 3}
+  m_PrefabInstance: {fileID: 674378738}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &674378742
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 674378741}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
+--- !u!114 &674378743
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 674378740}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fb486bd9b27464c10ad7a9de25aedc12, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GolfinRedux.UI.Gacha.GachaTabController
 --- !u!1 &676366844
 GameObject:
   m_ObjectHideFlags: 0
@@ -46373,6 +46425,50 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!1 &764337305
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 764337307}
+  - component: {fileID: 764337306}
+  m_Layer: 0
+  m_Name: GachaTicketManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &764337306
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 764337305}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ab172f182ae7c43769149ab01beab5a7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GolfinRedux.UI.Gacha.GachaTicketManager
+--- !u!4 &764337307
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 764337305}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &767239163
 GameObject:
   m_ObjectHideFlags: 0
@@ -75483,6 +75579,7 @@ GameObject:
   - component: {fileID: 1213784838}
   - component: {fileID: 1213784837}
   - component: {fileID: 1213784836}
+  - component: {fileID: 1213784839}
   m_Layer: 0
   m_Name: PullX10Button
   m_TagString: Untagged
@@ -75592,6 +75689,20 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1213784834}
   m_CullTransparentMesh: 1
+--- !u!114 &1213784839
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1213784834}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!1 &1214564317
 GameObject:
   m_ObjectHideFlags: 0
@@ -142833,6 +142944,8 @@ MonoBehaviour:
   rewardPointsText: {fileID: 7574226172779559416}
   settingsButton: {fileID: 7406069229650165988}
   usernameText: {fileID: 7151700373420156916}
+  ticketCountText: {fileID: 1341586714}
+  shopPlusButton: {fileID: 1559182357}
   bottomNavPanel: {fileID: 1803543816839453925}
   homeButton: {fileID: 8235811263572598204}
   gachaButton: {fileID: 2709620742506824120}
@@ -144495,3 +144608,4 @@ SceneRoots:
   - {fileID: 25155776}
   - {fileID: 2058687120}
   - {fileID: 970830638}
+  - {fileID: 764337307}
