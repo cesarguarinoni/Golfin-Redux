@@ -24,7 +24,9 @@ namespace GolfinRedux.UI
         StaminaShopSelection,
         StaminaShopDetail,
         // Order 610 — General Shop / Rewards Center (Figma 4079:28230)
-        GeneralShop
+        GeneralShop,
+        // Gacha pillar screen 2 — Gacha History / pull log (Figma 4079:18306)
+        GachaHistory
         // Settings removed - it's an overlay, not a screen
     }
 
@@ -57,6 +59,8 @@ namespace GolfinRedux.UI
         [SerializeField] private GameObject _staminaShopDetailScreen;
         // Order 610 — General Shop / Rewards Center
         [SerializeField] private GameObject _generalShopScreen;
+        // Gacha pillar screen 2 — Gacha History / pull log
+        [SerializeField] private GameObject _gachaHistoryScreen;
         // _settingsScreen removed - Settings is an overlay managed by SettingsController, not ScreenManager
 
         [Header("Audio (Order 350)")]
@@ -183,6 +187,10 @@ namespace GolfinRedux.UI
             if (_generalShopScreen != null)
                 _generalShopScreen.SetActive(screenId == ScreenId.GeneralShop);
 
+            // Gacha pillar screen 2 — Gacha History
+            if (_gachaHistoryScreen != null)
+                _gachaHistoryScreen.SetActive(screenId == ScreenId.GachaHistory);
+
             // Settings is an overlay (SettingsController), not managed here
 
             // Order 350: menu music — start on menu screens, stop during loading/logo/splash.
@@ -198,7 +206,8 @@ namespace GolfinRedux.UI
                              || screenId == ScreenId.TournamentSelection
                              || screenId == ScreenId.StaminaShopSelection
                              || screenId == ScreenId.StaminaShopDetail
-                             || screenId == ScreenId.GeneralShop;
+                             || screenId == ScreenId.GeneralShop
+                             || screenId == ScreenId.GachaHistory;
             if (AudioManager.Instance != null)
             {
                 if (isMenuScreen && _mainThemeClip != null && !AudioManager.Instance.IsMusicPlaying())

@@ -1,0 +1,114 @@
+=== GachaHistoryScreen Layout Audit ===
+
+[GachaHistoryScreen] sz=(0,0) anch=(0.0,0.0)-(1.0,1.0)
+  [Background] sz=(0,0) anch=(0.0,0.0)-(1.0,1.0) spr=Background - Blurred
+  [GameScreenContent] sz=(0,0) anch=(0.0,0.0)-(1.0,1.0) VLG spacing=24 pad=48/48/0/0
+    [TopUI] sz=(1074,313) anch=(0.5,0.5)-(0.5,0.5) spr=NULL col=#0A263DF2 LE(min=-1x313 pref=-1x313 flex=-1.0x0.0)
+    [ContentContainer] sz=(1074,1000) anch=(0.5,0.5)-(0.5,0.5) VLG spacing=24 pad=0/0/10/10 LE(min=-1x-1 pref=-1x-1 flex=-1.0x1.0)
+      [FiltersBlock] sz=(1074,112) anch=(0.5,0.5)-(0.5,0.5) VLG spacing=12 pad=0/0/0/0 LE(min=-1x112 pref=-1x112 flex=-1.0x0.0)
+        [CategoryRow] sz=(1074,44) anch=(0.0,0.0)-(0.0,0.0) spr=BackgroundTabs HLG spacing=0 pad=0/0/0/0 LE(min=-1x44 pref=-1x44 flex=-1.0x0.0)
+          [ALLChip] sz=(0,0) anch=(0.0,0.0)-(0.0,0.0) spr=NULL col=#00000000
+            [Label] sz=(0,0) anch=(0.0,0.1)-(1.0,1.0) TMP="ALL" sz=20.0 style=Normal col=#EBD170
+            [Divider] sz=(2,24) anch=(1.0,0.5)-(1.0,0.5) spr=DividerVertical
+          [TICKETSChip] sz=(0,0) anch=(0.0,0.0)-(0.0,0.0) spr=NULL col=#00000000
+            [Label] sz=(0,0) anch=(0.0,0.1)-(1.0,1.0) TMP="TICKETS" sz=20.0 style=Normal col=#818EA1
+            [Divider] sz=(2,24) anch=(1.0,0.5)-(1.0,0.5) spr=DividerVertical
+          [CLUBSChip] sz=(0,0) anch=(0.0,0.0)-(0.0,0.0) spr=NULL col=#00000000
+            [Label] sz=(0,0) anch=(0.0,0.1)-(1.0,1.0) TMP="CLUBS" sz=20.0 style=Normal col=#FFFFFF
+            [Divider] sz=(2,24) anch=(1.0,0.5)-(1.0,0.5) spr=DividerVertical
+          [CHARACTERSChip] sz=(0,0) anch=(0.0,0.0)-(0.0,0.0) spr=NULL col=#00000000
+            [Label] sz=(0,0) anch=(0.0,0.1)-(1.0,1.0) TMP="CHARACTERS" sz=20.0 style=Normal col=#818EA1
+            [Divider] sz=(2,24) anch=(1.0,0.5)-(1.0,0.5) spr=DividerVertical
+          [BALLSChip] sz=(0,0) anch=(0.0,0.0)-(0.0,0.0) spr=NULL col=#00000000
+            [Label] sz=(0,0) anch=(0.0,0.1)-(1.0,1.0) TMP="BALLS" sz=20.0 style=Normal col=#FFFFFF
+            [Divider] sz=(2,24) anch=(1.0,0.5)-(1.0,0.5) spr=DividerVertical
+          [ITEMSChip] sz=(0,0) anch=(0.0,0.0)-(0.0,0.0) spr=NULL col=#00000000
+            [Label] sz=(0,0) anch=(0.0,0.1)-(1.0,1.0) TMP="ITEMS" sz=20.0 style=Normal col=#818EA1
+            [Divider] (INACTIVE) sz=(215,56) anch=(0.0,1.0)-(0.0,1.0) spr=DividerVertical
+      [MainPanel] sz=(1074,1000) anch=(0.5,0.5)-(0.5,0.5) spr=Background - Container VLG spacing=24 pad=0/0/24/24 LE(min=-1x-1 pref=-1x-1 flex=-1.0x1.0)
+        [Header] sz=(1074,50) anch=(0.5,0.5)-(0.5,0.5) HLG spacing=6 pad=0/0/0/0 LE(min=-1x50 pref=-1x50 flex=-1.0x0.0)
+          [HistoryChip] sz=(50,50) anch=(0.5,0.5)-(0.5,0.5) spr=S_GachaHistoryChip VLG spacing=0 pad=7/7/7/7 LE(min=-1x-1 pref=50x50 flex=-1.0x-1.0)
+            [HistoryIcon] sz=(36,36) anch=(0.5,0.5)-(0.5,0.5) spr=History Icon LE(min=36x36 pref=36x36 flex=-1.0x-1.0)
+          [Title] sz=(500,50) anch=(0.5,0.5)-(0.5,0.5) TMP="GACHA HISTORY" sz=27.5 style=Bold col=#FFFFFF
+        [Separator] sz=(978,3) anch=(0.0,1.0)-(0.0,1.0) spr=Divider LE(min=-1x3 pref=-1x3 flex=-1.0x0.0)
+        [CardsContainer] sz=(1074,800) anch=(0.5,0.5)-(0.5,0.5) LE(min=-1x-1 pref=-1x-1 flex=-1.0x1.0)
+          [Viewport] sz=(0,0) anch=(0.0,0.0)-(1.0,1.0) spr=NULL col=#FFFFFFFF
+            [Content] sz=(0,0) anch=(0.0,1.0)-(1.0,1.0) VLG spacing=0 pad=0/0/0/0 CSF(h=Unconstrained,v=PreferredSize)
+              [GachaHistoryRow_1] sz=(1074,422) anch=(0.5,0.5)-(0.5,0.5) HLG spacing=24 pad=24/24/24/24
+                [Col1_ClubCard] sz=(181,374) anch=(0.5,0.5)-(0.5,0.5) spr=NULL col=#00000000 VLG spacing=0 pad=0/0/0/0 LE(min=181x-1 pref=181x374 flex=0.0x-1.0)
+                  [Mask] sz=(181,374) anch=(0.5,0.5)-(0.5,0.5) spr=BackgroundClub
+                    [Background] sz=(181,374) anch=(0.5,1.0)-(0.5,1.0) spr=BackgroundClub VLG spacing=6 pad=0/0/0/0
+                      [CardTop] sz=(181,206) anch=(0.0,1.0)-(0.0,1.0) spr=Rare LE(min=-1x-1 pref=-1x140 flex=1.0x-1.0)
+                        [Portrait] sz=(135,205) anch=(0.5,1.0)-(0.5,1.0) spr=Driver-G&F
+                        [RarityBadge] sz=(30,30) anch=(0.0,1.0)-(0.0,1.0) TMP="R" sz=20.0 style=Bold col=#50C878
+                        [LevelBadge] sz=(200,30) anch=(0.0,1.0)-(0.0,1.0) TMP="Lv10" sz=20.0 style=Normal col=#FFFFFF
+                        [NameText] sz=(150,40) anch=(0.0,1.0)-(0.0,1.0) TMP="GOLFIN G&F" sz=30.0 style=Italic col=#FFFFFF LE(min=-1x-1 pref=-1x32 flex=1.0x-1.0)
+                      [StatsPanel] sz=(157,131) anch=(0.5,0.5)-(0.5,0.5) VLG spacing=2 pad=0/0/0/0 LE(min=-1x-1 pref=-1x120 flex=1.0x-1.0)
+                        [DistanceRow] sz=(157,20) anch=(0.0,0.0)-(0.0,0.0) HLG spacing=4 pad=0/0/0/0 LE(min=-1x-1 pref=-1x18 flex=1.0x-1.0)
+                          [Image] sz=(20,20) anch=(0.0,0.0)-(0.0,0.0) spr=IconDistance
+                          [DistanceValue] sz=(74,24) anch=(0.0,0.0)-(0.0,0.0) TMP="150 yd" sz=20.0 style=Bold col=#FFFFFF LE(min=-1x-1 pref=-1x-1 flex=1.0x-1.0)
+                        [StatRow_Power] sz=(157,20) anch=(0.0,0.0)-(0.0,0.0) HLG spacing=3 pad=0/0/0/0 LE(min=-1x-1 pref=-1x18 flex=1.0x-1.0)
+                          [Image] sz=(20,20) anch=(0.0,0.0)-(0.0,0.0) spr=IconStrenght
+                          [Bar] sz=(87,10) anch=(0.0,0.0)-(0.0,0.0) spr=NULL col=#FFFFFFFF LE(min=-1x-1 pref=80x-1 flex=1.0x-1.0)
+                          [StatNum] sz=(40,24) anch=(0.0,0.0)-(0.0,0.0) TMP="100" sz=20.0 style=Bold col=#FFFFFF LE(min=-1x-1 pref=28x-1 flex=-1.0x-1.0)
+                        [StatRow_Accuracy] sz=(157,20) anch=(0.0,0.0)-(0.0,0.0) HLG spacing=3 pad=0/0/0/0 LE(min=-1x-1 pref=-1x18 flex=1.0x-1.0)
+                          [Image] sz=(20,20) anch=(0.0,0.0)-(0.0,0.0) spr=IconAccuracy
+                          [Bar] sz=(87,10) anch=(0.0,0.0)-(0.0,0.0) spr=NULL col=#FFFFFFFF LE(min=-1x-1 pref=80x-1 flex=1.0x-1.0)
+                          [StatNum] sz=(40,24) anch=(0.0,0.0)-(0.0,0.0) TMP="50" sz=20.0 style=Bold col=#FFFFFF LE(min=-1x-1 pref=28x-1 flex=-1.0x-1.0)
+                        [StatRow_LieRes] sz=(157,20) anch=(0.0,0.0)-(0.0,0.0) HLG spacing=3 pad=0/0/0/0 LE(min=-1x-1 pref=-1x18 flex=1.0x-1.0)
+                          [Image] sz=(20,20) anch=(0.0,0.0)-(0.0,0.0) spr=IconLie
+                          [Bar] sz=(87,10) anch=(0.0,0.0)-(0.0,0.0) spr=NULL col=#FFFFFFFF LE(min=-1x-1 pref=80x-1 flex=1.0x-1.0)
+                          [StatNum] sz=(40,24) anch=(0.0,0.0)-(0.0,0.0) TMP="50" sz=20.0 style=Bold col=#FFFFFF LE(min=-1x-1 pref=28x-1 flex=-1.0x-1.0)
+                        [StatRow_Loft] sz=(157,20) anch=(0.0,0.0)-(0.0,0.0) HLG spacing=3 pad=0/0/0/0 LE(min=-1x-1 pref=-1x18 flex=1.0x-1.0)
+                          [Image] sz=(20,20) anch=(0.0,0.0)-(0.0,0.0) spr=IconLoft
+                          [Bar] sz=(87,10) anch=(0.0,0.0)-(0.0,0.0) spr=NULL col=#FFFFFFFF LE(min=-1x-1 pref=80x-1 flex=1.0x-1.0)
+                          [StatNum] sz=(40,24) anch=(0.0,0.0)-(0.0,0.0) TMP="50" sz=20.0 style=Bold col=#FFFFFF LE(min=-1x-1 pref=28x-1 flex=-1.0x-1.0)
+                        [StatRow_Durability] sz=(157,20) anch=(0.0,0.0)-(0.0,0.0) HLG spacing=3 pad=0/0/0/0 LE(min=-1x-1 pref=-1x18 flex=1.0x-1.0)
+                          [Image] sz=(20,20) anch=(0.0,0.0)-(0.0,0.0) spr=IconDurability
+                          [Bar] sz=(87,10) anch=(0.0,0.0)-(0.0,0.0) spr=NULL col=#FFFFFFFF LE(min=-1x-1 pref=80x-1 flex=1.0x-1.0)
+                          [StatNum] sz=(40,24) anch=(0.0,0.0)-(0.0,0.0) TMP="50" sz=20.0 style=Bold col=#FFFFFF LE(min=-1x-1 pref=28x-1 flex=-1.0x-1.0)
+                  [Rim] sz=(181,374) anch=(0.5,0.5)-(0.5,0.5) spr=Rim
+                [Col2_Metadata] sz=(500,374) anch=(0.5,0.5)-(0.5,0.5) VLG spacing=0 pad=16/16/0/0 LE(min=100x-1 pref=-1x374 flex=1.0x-1.0)
+                  [MetaLines] sz=(400,270) anch=(0.5,0.5)-(0.5,0.5) VLG spacing=6 pad=0/0/0/0 LE(min=-1x-1 pref=-1x270 flex=1.0x-1.0)
+                    [Line_DRIVER_G_F] sz=(400,34) anch=(0.5,0.5)-(0.5,0.5) TMP="DRIVER G&F" sz=27.5 style=Normal col=#FFFFFF
+                    [Line_RARE___Lv_999] sz=(400,34) anch=(0.5,0.5)-(0.5,0.5) TMP="<color=#50C878>RARE<" sz=27.5 style=Normal col=#FFFFFF
+                    [Line_PULLED_2025_12_28] sz=(400,34) anch=(0.5,0.5)-(0.5,0.5) TMP="PULLED 2025/12/28" sz=27.5 style=Normal col=#FFFFFF
+                    [Line_04_12_49_AM] sz=(400,34) anch=(0.5,0.5)-(0.5,0.5) TMP="04:12:49 AM" sz=27.5 style=Normal col=#FFFFFF
+                    [Line_STANDARD_CLUBS_1] sz=(400,34) anch=(0.5,0.5)-(0.5,0.5) TMP="STANDARD CLUBS 1" sz=27.5 style=Normal col=#FFFFFF
+                    [Line_PULLS__1] sz=(400,34) anch=(0.5,0.5)-(0.5,0.5) TMP="PULLS: 1" sz=27.5 style=Normal col=#FFFFFF
+                [Col3_Currency] sz=(180,374) anch=(0.5,0.5)-(0.5,0.5) spr=NULL col=#0D2E4C00 VLG spacing=16 pad=0/0/4/4 LE(min=180x-1 pref=180x374 flex=0.0x-1.0)
+                  [TicketLabel] sz=(180,33) anch=(0.5,0.5)-(0.5,0.5) TMP="TICKET" sz=27.5 style=Normal col=#FFFFFF
+                  [TicketIcon] sz=(145,159) anch=(0.5,0.5)-(0.5,0.5) spr=S_Store_Ticket_02
+              [RowDivider] sz=(978,3) anch=(0.0,1.0)-(0.0,1.0) spr=Divider LE(min=-1x3 pref=-1x3 flex=-1.0x0.0)
+              [GachaHistoryRowBall_1] sz=(1074,422) anch=(0.5,0.5)-(0.5,0.5) HLG spacing=24 pad=24/24/24/24
+                [Col1_ClubCard] sz=(181,374) anch=(0.5,0.5)-(0.5,0.5) spr=NULL col=#00000000 VLG spacing=0 pad=0/0/0/0 LE(min=181x-1 pref=181x374 flex=0.0x-1.0)
+                  [BallCard] sz=(0,0) anch=(0.0,0.0)-(1.0,1.0) spr=NULL col=#FFFFFFFF LE(min=-1x-1 pref=170x343 flex=0.0x0.0)
+                    [Mask] sz=(170,343) anch=(0.5,0.5)-(0.5,0.5) spr=Mask
+                      [Background] sz=(170,343) anch=(0.5,0.5)-(0.5,0.5) spr=Common
+                    [Portrait] sz=(168,261) anch=(0.5,0.5)-(0.5,0.5) spr=S_Controls_Ball_GF
+                    [NameLabel] sz=(150,40) anch=(0.5,0.0)-(0.5,0.0) TMP="PRECISION+" sz=24.9 style=Bold, Italic col=#FFC007
+                    [AmountBadge] sz=(200,30) anch=(1.0,1.0)-(1.0,1.0) spr=NULL col=#00000000
+                      [Text] sz=(0,0) anch=(0.0,0.0)-(1.0,1.0) TMP="x99" sz=20.0 style=Normal col=#FFFFFF
+                    [DargkBottom] sz=(170,343) anch=(0.5,0.5)-(0.5,0.5) spr=DarkBottom
+                    [Outline] sz=(178,351) anch=(0.5,0.5)-(0.5,0.5) spr=Rim
+                    [SelectionHighlight] (INACTIVE) sz=(10,10) anch=(0.0,0.0)-(1.0,1.0) spr=NULL col=#00FFFFFF
+                [Col2_Metadata] sz=(500,374) anch=(0.5,0.5)-(0.5,0.5) VLG spacing=0 pad=16/16/0/0 LE(min=100x-1 pref=-1x374 flex=1.0x-1.0)
+                  [MetaLines] sz=(400,270) anch=(0.5,0.5)-(0.5,0.5) VLG spacing=6 pad=0/0/0/0 LE(min=-1x-1 pref=-1x270 flex=1.0x-1.0)
+                    [Line_DRIVER_G_F] sz=(400,34) anch=(0.5,0.5)-(0.5,0.5) TMP="PRECISION+ BALL" sz=27.5 style=Normal col=#FFFFFF
+                    [Line_RARE___Lv_999] sz=(400,34) anch=(0.5,0.5)-(0.5,0.5) TMP="<color=#ffc107>MYTHI" sz=27.5 style=Normal col=#FFFFFF
+                    [Line_PULLED_2025_12_28] sz=(400,34) anch=(0.5,0.5)-(0.5,0.5) TMP="PULLED 2025/12/28" sz=27.5 style=Normal col=#FFFFFF
+                    [Line_04_12_49_AM] sz=(400,34) anch=(0.5,0.5)-(0.5,0.5) TMP="04:13:00 AM" sz=27.5 style=Normal col=#FFFFFF
+                    [Line_STANDARD_CLUBS_1] sz=(400,34) anch=(0.5,0.5)-(0.5,0.5) TMP="PREMIUM BALLS  1" sz=27.5 style=Normal col=#FFFFFF
+                    [Line_PULLS__1] sz=(400,34) anch=(0.5,0.5)-(0.5,0.5) TMP="PULLS: 10" sz=27.5 style=Normal col=#FFFFFF
+                [Col3_Currency] sz=(180,374) anch=(0.5,0.5)-(0.5,0.5) spr=NULL col=#0D2E4C00 VLG spacing=16 pad=0/0/4/4 LE(min=180x-1 pref=180x374 flex=0.0x-1.0)
+                  [TicketLabel] sz=(180,33) anch=(0.5,0.5)-(0.5,0.5) TMP="TICKET" sz=27.5 style=Normal col=#FFFFFF
+                  [TicketIcon] sz=(145,159) anch=(0.5,0.5)-(0.5,0.5) spr=S_Store_Ticket_02
+        [CloseButtonArea] sz=(1074,120) anch=(0.5,0.5)-(0.5,0.5) HLG spacing=0 pad=96/96/0/0 LE(min=-1x120 pref=-1x120 flex=-1.0x0.0)
+          [CloseButton] sz=(360,120) anch=(0.5,0.5)-(0.5,0.5) spr=ButtonCancel LE(min=-1x-1 pref=360x-1 flex=0.0x-1.0)
+            [Label] sz=(0,0) anch=(0.0,0.0)-(1.0,1.0) TMP="CLOSE" sz=55.0 style=Bold col=#1E293B
+        [WrapBorder] sz=(0,0) anch=(0.0,0.0)-(1.0,1.0) spr=S_Common_BGCorner20_Outline LE(min=-1x-1 pref=-1x-1 flex=-1.0x-1.0)
+    [NavBarContainer] sz=(1170,263) anch=(0.5,0.5)-(0.5,0.5) spr=NULL col=#0A1A29E6 LE(min=-1x263 pref=-1x263 flex=-1.0x0.0)
+  [ScrollbarIndicator] sz=(19,1502) anch=(0.0,1.0)-(0.0,1.0) spr=NULL col=#FFFFFF40
+  [FiltersIconRow] sz=(1074,95) anch=(0.0,1.0)-(0.0,1.0) HLG spacing=0 pad=0/0/10/10
+    [HistoryIcon] sz=(75,75) anch=(0.5,0.5)-(0.5,0.5) spr=S_GachaHistoryChip VLG spacing=0 pad=8/8/8/8
+      [ClockIcon] sz=(60,60) anch=(0.5,0.5)-(0.5,0.5) spr=History Icon LE(min=60x60 pref=60x60 flex=-1.0x-1.0)
