@@ -19,3 +19,11 @@ one exists (Rule 19 — clone, don't fabricate) rather than hand-building a stat
 ## Why deferred
 Out of scope for gacha_history Stage 0 (static posing). Cesar explicitly deferred it. Pick this up either
 in a later gacha_history stage or as a follow-up order once the ball stat model is confirmed.
+
+---
+
+## SUPERSEDED — absorbed into gacha_history Stage 1 (2026-07-14)
+
+Cesar pulled this into Stage 1 rather than deferring it. The ball card's stat treatment is now
+specified in `Docs/Specs/Active/gacha_history/STAGE1_SPEC.md` §3 (5 signed stats via the shipped
+`BallSegmentedBar`, in the club card's stat-block geometry). Do not pick this up as a separate order.
