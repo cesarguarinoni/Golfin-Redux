@@ -86,3 +86,7 @@ DIRTY:
 2026-07-14T07:18:43 iter-3 activated — addressing all 14 Cesar defects + full reuse mandate
 2026-07-14T07:50:30 waiting for play mode to boot before screenshot capture
 === iter kickoff baseline ===
+2026-07-14 — Stage 1 implementer DISPATCHED then STOPPED by Cesar at step 0 (Unity MCP plugin
+updating). Agent had only recorded its git baseline; it made ZERO edits (working tree verified clean
+of task files). STATUS reset SPEC_READY. Re-dispatch Stage 1 unchanged once Unity is back —
+STAGE1_SPEC.md is committed (93e9022ce) and needs no revision.
