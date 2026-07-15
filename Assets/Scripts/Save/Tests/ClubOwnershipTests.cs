@@ -156,7 +156,7 @@ namespace Golfin.Save.Tests
 
             SaveSchemaMigrator.Migrate(data!);
 
-            Assert.AreEqual(7, data!.schemaVersion, "v5 save migrates through v6 and v7; must land at CurrentSchemaVersion 7");
+            Assert.AreEqual(8, data!.schemaVersion, "v5 save migrates through v6, v7, and v8; must land at CurrentSchemaVersion 8");
             Assert.IsTrue(data.grandfatherClubs, "unseeded pre-v6 save must be flagged for grandfather-all (D-A3)");
             Assert.IsFalse(data.clubOwnershipSeeded, "migrator does not seed — ClubManager does");
             Assert.IsNotNull(data.ownedClubs);
@@ -175,21 +175,23 @@ namespace Golfin.Save.Tests
 
             SaveSchemaMigrator.Migrate(data!);
 
-            Assert.AreEqual(7, data!.schemaVersion, "v2 save migrates through v6 and v7; must land at CurrentSchemaVersion 7");
+            Assert.AreEqual(8, data!.schemaVersion, "v2 save migrates through v6, v7, and v8; must land at CurrentSchemaVersion 8");
             Assert.IsFalse(data.grandfatherClubs, "an already-seeded save must never be grandfathered on migrate");
             Assert.AreEqual(1, data.ownedClubs.Count, "existing owned list preserved");
         }
 
         [Test]
-        public void Migrator_V6_MigratesToV7_NoGrandfather()
+        public void Migrator_V6_MigratesToV8_NoGrandfather()
         {
-            // v6 is no longer CurrentSchemaVersion (bumped to 7 by gacha_screen Stage 1).
-            // A v6 save gets migrated to v7 (gachaTickets seeded). grandfatherClubs must NOT be set.
+            // v6 is no longer CurrentSchemaVersion (bumped to 7 by gacha_screen Stage 1, then to 8 by gacha_history Stage 1).
+            // A v6 save gets migrated to v7 (gachaTickets seeded) then v8 (per-kind balances). grandfatherClubs must NOT be set.
             var data = new SaveData { schemaVersion = 6, clubOwnershipSeeded = true };
             SaveSchemaMigrator.Migrate(data);
-            Assert.AreEqual(7, data.schemaVersion, "v6 migrates to v7 (gacha_screen Stage 1)");
+            Assert.AreEqual(8, data.schemaVersion, "v6 migrates to v8 (gacha_screen Stage 1 + gacha_history Stage 1)");
             Assert.IsFalse(data.grandfatherClubs, "v5→v6 block does not run on a v6-start; no grandfather signal");
-            Assert.AreEqual(10, data.gachaTickets, "v6→v7 seeds gachaTickets=10 (test grant)");
+#pragma warning disable CS0618
+            Assert.AreEqual(10, data.gachaTickets, "v6→v7 seeds gachaTickets=10 (test grant); v8 reads it but does not clear it");
+#pragma warning restore CS0618
         }
     }
 }

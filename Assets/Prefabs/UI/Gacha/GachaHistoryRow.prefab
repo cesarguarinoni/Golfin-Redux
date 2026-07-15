@@ -111,7 +111,7 @@ MonoBehaviour:
   m_charWidthMaxAdj: 0
   m_TextWrappingMode: 0
   m_wordWrappingRatios: 0.4
-  m_overflowMode: 1
+  m_overflowMode: 0
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
@@ -222,6 +222,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1314460573038483460}
   - component: {fileID: 8647073777380776200}
+  - component: {fileID: 4585120520112408877}
   m_Layer: 0
   m_Name: GachaHistoryRow
   m_TagString: Untagged
@@ -277,6 +278,28 @@ MonoBehaviour:
   m_ChildScaleWidth: 0
   m_ChildScaleHeight: 0
   m_ReverseArrangement: 0
+--- !u!114 &4585120520112408877
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1393173179572488787}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f04d19dfd27934ae7993a67ea6f90d6d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GolfinRedux.UI.Gacha.GachaHistoryRow
+  _clubCard: {fileID: 4321522117777452433}
+  _metaLines:
+  - {fileID: 3048246404743736387}
+  - {fileID: 6751082115255646304}
+  - {fileID: 5580420788142865786}
+  - {fileID: 3826266630380079191}
+  - {fileID: 5216770187868316976}
+  - {fileID: 2946941200027506173}
+  _ticketLabel: {fileID: 7889774648432859969}
+  _ticketIcon: {fileID: 5975699108408822464}
 --- !u!1 &1413095914669306028
 GameObject:
   m_ObjectHideFlags: 0
@@ -388,7 +411,7 @@ MonoBehaviour:
   m_charWidthMaxAdj: 0
   m_TextWrappingMode: 0
   m_wordWrappingRatios: 0.4
-  m_overflowMode: 1
+  m_overflowMode: 0
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
@@ -525,7 +548,7 @@ MonoBehaviour:
   m_charWidthMaxAdj: 0
   m_TextWrappingMode: 0
   m_wordWrappingRatios: 0.4
-  m_overflowMode: 1
+  m_overflowMode: 0
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
@@ -871,7 +894,7 @@ MonoBehaviour:
   m_charWidthMaxAdj: 0
   m_TextWrappingMode: 0
   m_wordWrappingRatios: 0.4
-  m_overflowMode: 1
+  m_overflowMode: 0
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
@@ -1008,7 +1031,7 @@ MonoBehaviour:
   m_charWidthMaxAdj: 0
   m_TextWrappingMode: 0
   m_wordWrappingRatios: 0.4
-  m_overflowMode: 1
+  m_overflowMode: 0
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
@@ -1371,7 +1394,7 @@ MonoBehaviour:
   m_charWidthMaxAdj: 0
   m_TextWrappingMode: 0
   m_wordWrappingRatios: 0.4
-  m_overflowMode: 1
+  m_overflowMode: 0
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
@@ -1421,6 +1444,10 @@ PrefabInstance:
       propertyPath: actionButtonText
       value: 
       objectReference: {fileID: 0}
+    - target: {fileID: 574548142005313201, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 749727262008646853, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
       propertyPath: m_fontStyle
       value: 1
@@ -1459,39 +1486,43 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2039241288971013196, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
       propertyPath: m_Color.b
-      value: 0.9
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 2039241288971013196, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
       propertyPath: m_Color.g
-      value: 0.5
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 2039241288971013196, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
       propertyPath: m_Color.r
-      value: 0.2
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 2254076708679119394, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
       propertyPath: m_Color.b
-      value: 0.9
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 2254076708679119394, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
       propertyPath: m_Color.g
-      value: 0.5
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 2254076708679119394, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
       propertyPath: m_Color.r
-      value: 0.2
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 2305042642743739593, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
       propertyPath: m_Color.b
-      value: 0.9
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 2305042642743739593, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
       propertyPath: m_Color.g
-      value: 0.5
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 2305042642743739593, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
       propertyPath: m_Color.r
-      value: 0.2
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 2991632085475879784, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 3281395437910604315, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
       propertyPath: m_IsActive
@@ -1583,15 +1614,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6247798772238184861, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
       propertyPath: m_Color.b
-      value: 0.9
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 6247798772238184861, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
       propertyPath: m_Color.g
-      value: 0.5
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 6247798772238184861, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
       propertyPath: m_Color.r
-      value: 0.2
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 6361502689598475171, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
       propertyPath: m_MinWidth
@@ -1611,15 +1642,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7168467246637763029, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
       propertyPath: m_Color.b
-      value: 0.9
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 7168467246637763029, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
       propertyPath: m_Color.g
-      value: 0.5
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 7168467246637763029, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
       propertyPath: m_Color.r
-      value: 0.2
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 7844687729420141010, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
       propertyPath: m_text
@@ -1637,3 +1668,14 @@ RectTransform:
   m_CorrespondingSourceObject: {fileID: 3524977917752852041, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
   m_PrefabInstance: {fileID: 4547734035211122303}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &4321522117777452433 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: -8870422779931386898, guid: 5e39901a81c074c4aacbe5d27d1309fd, type: 3}
+  m_PrefabInstance: {fileID: 4547734035211122303}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: caa09c5427883e0489a42910af13961e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.Inventory.BagClubCard

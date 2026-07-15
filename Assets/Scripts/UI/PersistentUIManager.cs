@@ -94,8 +94,8 @@ namespace Golfin.UI
             // GachaTicketManager — same early-boot guard as RP.
             if (GachaTicketManager.Instance != null)
             {
-                GachaTicketManager.Instance.OnTicketsChanged += SetTickets;
-                SetTickets(GachaTicketManager.Instance.GetTickets());
+                GachaTicketManager.Instance.OnTicketsChanged += OnTicketCountChanged;
+                SetTickets(GachaTicketManager.Instance.GetTickets(TicketType.Standard));
             }
         }
 
@@ -119,9 +119,9 @@ namespace Golfin.UI
             // GachaTicketManager — same double-subscribe guard.
             if (GachaTicketManager.Instance != null)
             {
-                GachaTicketManager.Instance.OnTicketsChanged -= SetTickets;
-                GachaTicketManager.Instance.OnTicketsChanged += SetTickets;
-                SetTickets(GachaTicketManager.Instance.GetTickets());
+                GachaTicketManager.Instance.OnTicketsChanged -= OnTicketCountChanged;
+                GachaTicketManager.Instance.OnTicketsChanged += OnTicketCountChanged;
+                SetTickets(GachaTicketManager.Instance.GetTickets(TicketType.Standard));
             }
             else
             {
@@ -170,7 +170,7 @@ namespace Golfin.UI
 
             // GachaTicketManager unsubscribe.
             if (GachaTicketManager.Instance != null)
-                GachaTicketManager.Instance.OnTicketsChanged -= SetTickets;
+                GachaTicketManager.Instance.OnTicketsChanged -= OnTicketCountChanged;
         }
 
         /// <summary>
@@ -235,6 +235,16 @@ namespace Golfin.UI
         {
             if (ticketCountText != null)
                 ticketCountText.text = count.ToString();
+        }
+
+        /// <summary>
+        /// Adapter: receives the new per-kind (TicketType, int) event and forwards
+        /// the Standard balance to SetTickets (top bar shows Standard only).
+        /// </summary>
+        private void OnTicketCountChanged(TicketType kind, int newBalance)
+        {
+            if (kind == TicketType.Standard)
+                SetTickets(newBalance);
         }
 
         /// <summary>

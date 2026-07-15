@@ -15,7 +15,7 @@ namespace Golfin.Save
     /// </summary>
     public static class SaveSchemaMigrator
     {
-        public const int CurrentSchemaVersion = 7;
+        public const int CurrentSchemaVersion = 8;
 
         /// <summary>
         /// Apply any needed migrations to bring data from its on-disk schemaVersion
@@ -110,6 +110,28 @@ namespace Golfin.Save
                 data.gachaTickets = 10; // TODO: revert to 0 before ship (test grant only)
                 data.schemaVersion = 7;
                 Debug.Log("[SaveSchemaMigrator] Migrated v6 → v7 (gachaTickets seeded to 10 — test grant).");
+            }
+
+            // v7 → v8: per-kind ticket balances (gacha_history Stage 1).
+            // Moves the single gachaTickets int → ticketBalances List.
+            // gachaTickets is the v7 balance (Standard kind, int value 0).
+            // The v6→v7 test grant seeds 10 — carry that value forward.
+            // After migration, gachaTickets is ignored at runtime (marked [Obsolete]).
+            // TODO: revert the grant to 0 before ship — see paired TODO in GachaTicketManager.Awake.
+            if (data.schemaVersion < 8)
+            {
+                data.ticketBalances ??= new List<PersistedTicketBalance>();
+                // Only seed if the list is empty (idempotent guard).
+                bool hasStandard = false;
+#pragma warning disable CS0618 // gachaTickets is Obsolete — intentional migration read
+                int legacyBalance = data.gachaTickets;
+#pragma warning restore CS0618
+                foreach (var b in data.ticketBalances)
+                    if (b.ticketTypeInt == 0) { hasStandard = true; break; }
+                if (!hasStandard)
+                    data.ticketBalances.Add(new PersistedTicketBalance { ticketTypeInt = 0, balance = legacyBalance });
+                data.schemaVersion = 8;
+                Debug.Log($"[SaveSchemaMigrator] Migrated v7 → v8 (gachaTickets={legacyBalance} → ticketBalances[Standard]).");
             }
 
             // Ensure schemaVersion is current after all migrations

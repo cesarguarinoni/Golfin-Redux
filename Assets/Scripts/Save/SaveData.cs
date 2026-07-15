@@ -136,11 +136,37 @@ namespace Golfin.Save
         /// </summary>
         public bool grandfatherClubs;
 
-        // ── Gacha tickets (schema v7, gacha_screen Stage 1) ──────────────────
-        // Currency for gacha pulls. Migration v6→v7 seeds 10 for test grant;
-        // TODO: revert migration grant to 0 before ship.
+        // ── Gacha tickets (schema v7→v8) ─────────────────────────────────────
+        // v7: single int gachaTickets (gacha_screen Stage 1).
+        // v8: per-kind List<PersistedTicketBalance> ticketBalances (gacha_history Stage 1).
+        // gachaTickets is RETAINED (Obsolete) so v7 JSON can be deserialized for the v7→v8
+        // migration that reads it and moves the balance into ticketBalances.
+        // After migration, gachaTickets is ignored at runtime; ticketBalances is canonical.
         // GachaTicketManager is the runtime read-through facade.
+
+        [System.Obsolete("Use ticketBalances instead. Retained for v7→v8 migration read-through.")]
         public int gachaTickets;
+
+        /// <summary>
+        /// Per-kind ticket balances (schema v8, gacha_history Stage 1).
+        /// Indexed by TicketType int value. Use GachaTicketManager for all reads/writes.
+        /// Added empty in the v7→v8 migration; absent in pre-v8 saves defaults to empty list.
+        /// </summary>
+        public System.Collections.Generic.List<PersistedTicketBalance> ticketBalances
+            = new System.Collections.Generic.List<PersistedTicketBalance>();
+    }
+
+    /// <summary>
+    /// Flat DTO for one persisted ticket balance (schema v8, gacha_history Stage 1).
+    /// One entry per TicketType int value. ticketTypeInt mirrors (int)TicketType — enum order frozen,
+    /// append-only. Golfin.Save cannot reference GolfinRedux.UI.Gacha (asmdef one-way), so we
+    /// store the int and let GachaTicketManager cast at runtime.
+    /// </summary>
+    public class PersistedTicketBalance
+    {
+        /// <summary>Cast of TicketType enum value. Standard = 0.</summary>
+        public int ticketTypeInt;
+        public int balance;
     }
 
     /// <summary>

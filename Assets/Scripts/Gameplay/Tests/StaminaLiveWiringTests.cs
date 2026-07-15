@@ -401,8 +401,8 @@ namespace Golfin.Gameplay.Tests
             Assert.IsNotNull(data);
             Assert.DoesNotThrow(() => SaveSchemaMigrator.Migrate(data!));
 
-            Assert.AreEqual(6, data!.schemaVersion,
-                "Post-migration schemaVersion must be 6 (Order 610 Phase A bumped CurrentSchemaVersion to 6)");
+            Assert.AreEqual(8, data!.schemaVersion,
+                "Post-migration schemaVersion must be 8 (gacha_history Stage 1 bumped CurrentSchemaVersion to 8)");
             Assert.AreEqual(0f, data.ownedCharacters[0].conditionEnergy, delta: 0.001f,
                 "conditionEnergy defaults to 0f for pre-v4 saves");
             Assert.AreEqual("", data.ownedCharacters[0].conditionUpdatedUtc,
@@ -410,17 +410,17 @@ namespace Golfin.Gameplay.Tests
         }
 
         [Test]
-        public void T6_FailHard_V7_ThrowsSaveSchemaVersionException()
+        public void T6_FailHard_V9_ThrowsSaveSchemaVersionException()
         {
-            // NOTE (Order 610 Phase A): v6 is now the CURRENT version — it is legal and must NOT throw.
-            // The fail-hard gate now triggers on v7 (unknown future version).
-            const string v7Json = @"{ ""schemaVersion"": 7, ""rewardPoints"": 1 }";
-            var data = JsonConvert.DeserializeObject<SaveData>(v7Json);
+            // NOTE (gacha_history Stage 1): v8 is now the CURRENT version — v7 is also legal (migration chain).
+            // The fail-hard gate now triggers on v9 (unknown future version).
+            const string v9Json = @"{ ""schemaVersion"": 9, ""rewardPoints"": 1 }";
+            var data = JsonConvert.DeserializeObject<SaveData>(v9Json);
             Assert.IsNotNull(data);
 
             UnityEngine.TestTools.LogAssert.Expect(
                 UnityEngine.LogType.Error,
-                new System.Text.RegularExpressions.Regex(@"\[SaveSchemaMigrator\].*schema version 7"));
+                new System.Text.RegularExpressions.Regex(@"\[SaveSchemaMigrator\].*schema version 9"));
 
             Assert.Throws<SaveSchemaVersionException>(() => SaveSchemaMigrator.Migrate(data!));
         }
