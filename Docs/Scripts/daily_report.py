@@ -33,7 +33,7 @@ import subprocess
 import sys
 import tempfile
 import time
-from datetime import datetime, date
+from datetime import datetime, date, timedelta, time as dtime
 
 import anthropic
 import requests
@@ -70,6 +70,65 @@ REPO_PATH = os.environ.get("GOLFIN_REPO_PATH", DEFAULT_REPO_PATH)
 REPORT_MEDIA_DIR = os.environ.get(
     "GOLFIN_REPORT_MEDIA_DIR", os.path.join(REPO_PATH, "Docs", "Reports", "Media")
 )
+
+# Idempotency sentinel: the ISO timestamp of the last successful PRODUCTION send.
+# An automatic (non-manual) run skips if a send happened within DEDUPE_WINDOW.
+# This prevents launchd's "run-missed-job-on-next-wake" catch-up from firing a
+# duplicate a few hours after a send (the 2026-07-14 incident: the Mac slept
+# through the 20:30 trigger, launchd replayed it at 03:30, and combined with a
+# manual 22:19 send that double-posted 5h apart).
+#
+# The window is deliberately an INTERVAL, not a same-calendar-day check. A same-day
+# rule looks tempting but is wrong: a 03:30 catch-up and that evening's legitimate
+# 20:30 run fall on the same date but are 17h apart and are two *different* days'
+# reports — a same-day rule silently swallows the real 20:30 send. 12h cleanly
+# separates "a replay of the run I just did" (hours apart) from "the next daily
+# run" (>=17h apart in the worst case, 24h normally).
+#
+# --force / --test / an explicit --since bypass the guard; --test never writes it
+# (test sends go to the test channel, not production). Lives next to the .venv so
+# it's git-ignored and per-machine.
+SENT_MARKER = os.path.join(SCRIPT_DIR, ".last_sent")
+DEDUPE_WINDOW = timedelta(hours=12)
+
+# Poll model (2026-07-15): launchd's StartCalendarInterval trigger proved
+# unreliable on this Mac — it no-showed at 20:30 three weekday evenings running
+# even while awake and armed, only ever firing as a useless ~03:30 catch-up. So
+# the plist now uses StartInterval (poll every 30 min) and the SCRIPT decides when
+# to send: an automatic run only sends at/after SEND_AFTER, up to midnight. The
+# dedupe guard below makes repeated polls safe — the first poll in the window
+# sends, the rest skip. Before the window an automatic run is a no-op (so an
+# off-hours / 03:30 poll can never post). --force / --test / --since ignore the
+# window (manual sends fire whenever you run them).
+SEND_AFTER = dtime(20, 30)   # earliest auto-send each day; window is [20:30, 24:00)
+
+
+def read_last_sent():
+    """Return the datetime of the last successful production send, or None."""
+    try:
+        with open(SENT_MARKER, "r") as f:
+            return datetime.fromisoformat(f.read().strip())
+    except (FileNotFoundError, ValueError):
+        return None
+
+
+def write_last_sent():
+    """Record now() as the last successful production send timestamp."""
+    try:
+        with open(SENT_MARKER, "w") as f:
+            f.write(datetime.now().isoformat())
+    except OSError as e:
+        # Non-fatal: the report already sent; we just couldn't stamp the marker.
+        print(f"[WARN] Could not write send marker {SENT_MARKER}: {e}")
+
+
+def already_sent_recently():
+    """True if a production send happened within DEDUPE_WINDOW (see note above:
+    interval only — NOT a same-calendar-day check)."""
+    last = read_last_sent()
+    if last is None:
+        return False
+    return (datetime.now() - last) < DEDUPE_WINDOW
 
 # --- Notion config (optional — leave empty to skip) ---
 NOTION_TOKEN = os.environ.get("NOTION_TOKEN", "")
@@ -787,22 +846,47 @@ def main():
     parser.add_argument("--force", action="store_true", help="Send even on a weekend (bypass the Sat/Sun skip)")
     args = parser.parse_args()
 
+    weekday = date.today().weekday()          # Mon=0 .. Sun=6
+    manual_override = args.force or args.test or args.since is not None
+    automatic = not manual_override and not args.dry_run
+
+    # --- Silent poll gate (poll model, 2026-07-15) ---
+    # launchd POLLS this script on a short StartInterval instead of a single
+    # unreliable calendar trigger (which coalesced away when the Mac slept — see
+    # DAILY_REPORT_SETUP.md §4). Most polls should do nothing: weekend days, and
+    # any weekday poll before the 20:30 send time. Those return HERE, silently,
+    # before any logging — otherwise frequent polling would spam daily_report.log
+    # all day. Poll liveness stays observable via
+    #   launchctl print gui/$(id -u)/com.golfin.dailyreport | grep runs
+    # Manual runs (--force / --test / --since) and --dry-run skip this gate and
+    # always log; --dry-run also ignores the time window so it's a full diagnostics
+    # path at any hour.
+    if automatic and (weekday >= 5 or datetime.now().time() < SEND_AFTER):
+        return
+
     print(f"[{datetime.now().isoformat()}] Starting daily report...")
     print(f"[INFO] Repo: {REPO_PATH}")
 
     # --- Weekend handling (Cesar standing rule, 2026-06-13) ---
-    # No automatic report on Saturday or Sunday; Monday's report covers the whole
-    # weekend. A manual send overrides via --force / --test / an explicit --since.
-    weekday = date.today().weekday()          # Mon=0 .. Sun=6
-    manual_override = args.force or args.test or args.since is not None
+    # Automatic weekend runs already returned silently above; only --dry-run /
+    # manual runs reach here on a weekend. Sat/Sun fold into Monday's 72h report.
     if weekday >= 5 and not manual_override:
         day_name = "Saturday" if weekday == 5 else "Sunday"
-        if args.dry_run:
-            print(f"\n[DRY RUN] {day_name} — the scheduled run would SKIP; the weekend "
-                  f"folds into Monday's report. Use --force to send anyway.")
-        else:
-            print(f"[INFO] {day_name} — skipping the weekend run. These commits will be "
-                  f"included in Monday's report. (Use --force to send anyway.)")
+        print(f"\n[DRY RUN] {day_name} — the scheduled run would SKIP; the weekend "
+              f"folds into Monday's report. Use --force to send anyway.")
+        return
+
+    # --- Idempotency guard ---
+    # An automatic run skips if a production send happened within the last 12h. With
+    # short polling this is what makes repeated evening polls safe: the first poll
+    # at/after 20:30 sends, every later poll that evening skips. Also kills any late
+    # catch-up double-post. --force / --test / --since bypass. --dry-run is exempt.
+    if automatic and already_sent_recently():
+        last = read_last_sent()
+        hrs = (datetime.now() - last).total_seconds() / 3600
+        print(f"[INFO] Already sent at {last.isoformat()} ({hrs:.1f}h ago, within the "
+              f"{int(DEDUPE_WINDOW.total_seconds() // 3600)}h dedupe window) — skipping "
+              f"this run to avoid a duplicate. Use --force to send anyway.")
         return
 
     # Weekday-aware git window when --since wasn't given explicitly: Monday reaches
@@ -898,6 +982,12 @@ def main():
         )
 
     post_to_telegram(report)
+
+    # Stamp the idempotency marker only after a successful PRODUCTION send.
+    # --test targets the test channel, so it must not update the production marker
+    # (otherwise a test send would suppress the real scheduled report).
+    if not args.test:
+        write_last_sent()
 
     if not args.no_media:
         send_all_media(git_videos, drop_media)

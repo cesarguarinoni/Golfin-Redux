@@ -136,6 +136,7 @@ Docs/Diagnostics/_capture/*.flag.pre
 Docs/Scripts/.env
 Docs/Scripts/.venv/
 Docs/Scripts/daily_report.log
+Docs/Scripts/.last_sent
 # Python bytecode regenerated whenever the report runs.
 Docs/Scripts/__pycache__/
 # Media drop folder: contents are transient (auto-deleted after send).

@@ -2,11 +2,14 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <!--
   GOLFIN Daily Report launchd agent.
-  Fires Docs/Scripts/daily_report.py every day at 13:30 local time.
-  NOTE: the agent fires daily, but the script SKIPS the send on Saturday and
-  Sunday — weekend commits are folded into Monday's report (72h window). This
-  plist intentionally has no Weekday key; the weekend logic lives in the script
-  so it's testable and survives plist re-installs. See DAILY_REPORT_SETUP.md §4.
+  POLL MODEL (2026-07-15): runs daily_report.py every 30 min (StartInterval). The
+  SCRIPT decides when to actually send — only at/after 20:30 (SEND_AFTER), and it
+  dedupes so only the FIRST poll in the evening window posts; the rest are no-ops.
+  We moved off StartCalendarInterval because its 20:30 trigger no-showed three
+  weekday evenings running even while the Mac was awake and armed (only ever
+  firing as a useless ~03:30 catch-up). A 30-min poll has no single instant to
+  miss and needs no calendar re-arm. Weekend skip + send-window + dedupe all live
+  in the script, so this plist is dumb-on-purpose. See DAILY_REPORT_SETUP.md §4.
 
   Install (see DAILY_REPORT_SETUP.md):
     cp Docs/Scripts/com.golfin.dailyreport.plist ~/Library/LaunchAgents/
@@ -30,13 +33,12 @@
     <key>WorkingDirectory</key>
     <string>/Users/cesar/Documents/GolfinRedux</string>
 
-    <key>StartCalendarInterval</key>
-    <dict>
-        <key>Hour</key>
-        <integer>13</integer>
-        <key>Minute</key>
-        <integer>30</integer>
-    </dict>
+    <!-- Poll every 10 min (600s). The script gates the actual send to >= 20:30 and
+         dedupes so only the first evening poll posts (so the report lands within
+         ~10 min of 20:30). Daytime/weekend polls return silently — no log spam.
+         See the header note. -->
+    <key>StartInterval</key>
+    <integer>600</integer>
 
     <key>EnvironmentVariables</key>
     <dict>
