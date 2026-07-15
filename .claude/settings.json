@@ -19,6 +19,15 @@
             "command": "python .claude/hooks/enforce_implementer_done.py"
           }
         ]
+      },
+      {
+        "matcher": "mcp__ai-game-developer__script-execute",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python .claude/hooks/enforce_capture_tool.py"
+          }
+        ]
       }
     ],
     "SubagentStop": [

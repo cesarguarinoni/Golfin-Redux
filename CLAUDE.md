@@ -163,6 +163,8 @@ For a single task in flight, prefer the subagent chain. Only ping Cesar's claude
 
 Code's screenshot history is full of timing failures. These rules eliminate the common ones.
 
+> **‼️ CAPTURE RULE 0 (2026-07-16, hook-enforced) — when driving Unity over MCP, captures go through the `mcp__ai-game-developer__screenshot-game-view` tool, NEVER a hand-rolled `script-execute`.** A `PreToolUse` hook (`.claude/hooks/enforce_capture_tool.py`) HARD-BLOCKS any `script-execute` that reflects into `CaptureCore`/`CaptureHelper`/`SnapPlayModeSafe`/`SnapGameView`/`ScreenCapture.*`. If you need a saved file, `EditorApplication.ExecuteMenuItem("GOLFIN/Screenshot/Capture Game View")` is allowed. **And capture AS A REAL USER:** the app boots to a Title/PLAY/LOGIN gate that ScreenManager does NOT manage — `ShowScreen(target)` swaps screens *behind* the gate and `CurrentScreen==target` is a FALSE POSITIVE, so the frame stays on the title screen. Click PLAY, navigate via real widget `onClick`, then snap. **Always look at the PNG before surfacing it.** Full rationale: memory `reference_playmode_capture_runinbackground`. This exists because captures were repeatedly hand-rolled and kept returning the splash/title frame (gacha_history, 2026-07-16).
+
 **Hard rules:**
 
 1. **NEVER call `ScreenCapture.CaptureScreenshot(path)`.** It is async, unreliable, and silently fails when paused. Use `CaptureHelper.SnapGameView()` instead — it is synchronous and works in EditMode, paused playmode, and running playmode.
