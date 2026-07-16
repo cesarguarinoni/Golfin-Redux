@@ -480,10 +480,14 @@ The bus-state approach (storing `CurrentLabClubIndex` in `StatProviderBus`, whic
 
 ## Filed Follow-up Specs
 
-| Spec slug | Tier | Filing status |
-|---|---|---|
-| `strength_velocity_short_game_scaling` | Tier-Tune | Filed in `Docs/Specs/Queued/` |
-| `club_control_aim_arrow_speed` | Tier-Tune | Filed in `Docs/Specs/Queued/` |
-| `ball_rebound_perceptibility` | Tier-Tune | Filed in `Docs/Specs/Queued/` |
-| `ball_roll_coefficient_retune` | Tier-Tune | Filed in `Docs/Specs/Queued/` |
-| `character_recovery_stamina_regen` | Tier-Redesign | Filed in `Docs/Specs/Queued/` |
+> **Status verified 2026-07-16 (architect).** The original filing column below was inaccurate —
+> reconciled against disk + `PHYSICS_TUNING_CHANGELOG.md` + shipped code. Trust the *Verified status*
+> column, not the 2026-05-25 claim.
+
+| Spec slug | Tier | Filing claim (2026-05-25) | Verified status (2026-07-16) |
+|---|---|---|---|
+| `strength_velocity_short_game_scaling` | Tier-Tune | Filed in `Docs/Specs/Queued/` | **QUEUED — actionable.** `Docs/Specs/Queued/strength_velocity_short_game_scaling/SPEC.md` present. |
+| `club_control_aim_arrow_speed` | Tier-Tune | Filed in `Docs/Specs/Queued/` | **NEVER FILED.** No folder exists. Covers findings F-LANA-2a + F-LANA-2b; must be written before it can run. |
+| `ball_rebound_perceptibility` | Tier-Tune | Filed in `Docs/Specs/Queued/` | **QUEUED — actionable.** `Docs/Specs/Queued/ball_rebound_perceptibility/SPEC.md` present. |
+| `ball_roll_coefficient_retune` | Tier-Tune | Filed in `Docs/Specs/Queued/` | **SHIPPED 2026-06-02** as changelog entry **F8** (`BallRollPerPoint` 0.01 → 0.02, fills the 0.80–1.20 clamp at Ball.Roll=±10). Spec folder consumed. Finding F-LANA-B2 CLOSED. |
+| `character_recovery_stamina_regen` | Tier-Redesign | Filed in `Docs/Specs/Queued/` | **SUPERSEDED** by the Stamina/Condition Economy (Phases 1–5, shipped 2026-06-29→07-03). Its premise — "Recovery has zero effect on any physics output" — is no longer true: `StaminaModel.RegenPerHour(int recoveryStat)` is live and Recovery is the regen-rate stat. Finding F-LANA-REC CLOSED; the queued folder is stale and should be retired. |
