@@ -469,8 +469,8 @@ The bus-state approach (storing `CurrentLabClubIndex` in `StatProviderBus`, whic
 | Finding ID | Lane | Description | Tier | Follow-up Spec |
 |---|---|---|---|---|
 | F-LANA-1c | Lane 1c (Strength → velocity) | Coefficient weak on short-game clubs | Tier-Tune | `strength_velocity_short_game_scaling` |
-| F-LANA-2a | Lane 2a (Club.Accuracy → aim) | Low-tier clubs nearly identical aim cone | Tier-Tune | `club_control_aim_arrow_speed` |
-| F-LANA-2b | Lane 2b (ClubControl → aim) | Sub-threshold in isolation | Tier-Tune | `club_control_aim_arrow_speed` |
+| ~~F-LANA-2a~~ | Lane 2a (Club.Accuracy → aim) | ~~Low-tier clubs nearly identical aim cone~~ | **VOID 2026-07-16** | ~~`club_control_aim_arrow_speed`~~ — see § Findings 2a/2b VOID |
+| ~~F-LANA-2b~~ | Lane 2b (ClubControl → aim) | ~~Sub-threshold in isolation~~ | **VOID 2026-07-16** | ~~`club_control_aim_arrow_speed`~~ — see § Findings 2a/2b VOID |
 | F-LANA-B1 | Ball Rebound | ±10% bounce energy below 10m bar | Tier-Tune | `ball_rebound_perceptibility` |
 | F-LANA-B2 | Ball Roll | ±10% friction = 0.1m measured (Wedge approach, same-start; theoretical 4–8m on driver approach) | Tier-Tune | `ball_roll_coefficient_retune` |
 | F-LANA-REC | Character.Recovery | No-op stat (session regen not implemented) | Tier-Redesign | `character_recovery_stamina_regen` |
@@ -487,7 +487,70 @@ The bus-state approach (storing `CurrentLabClubIndex` in `StatProviderBus`, whic
 | Spec slug | Tier | Filing claim (2026-05-25) | Verified status (2026-07-16) |
 |---|---|---|---|
 | `strength_velocity_short_game_scaling` | Tier-Tune | Filed in `Docs/Specs/Queued/` | **QUEUED — actionable.** `Docs/Specs/Queued/strength_velocity_short_game_scaling/SPEC.md` present. |
-| `club_control_aim_arrow_speed` | Tier-Tune | Filed in `Docs/Specs/Queued/` | **NEVER FILED.** No folder exists. Covers findings F-LANA-2a + F-LANA-2b; must be written before it can run. |
+| `club_control_aim_arrow_speed` | Tier-Tune | Filed in `Docs/Specs/Queued/` | **VOID — NEVER WRITE IT.** (2026-07-16 pass 2.) The mechanic it proposes has been live since 2026-04. See § Findings 2a/2b VOID. Superseded by Orders **731** (`stat_lane_offdesign_retirement`) + **732** (`club_control_arrow_range_calibration`). |
 | `ball_rebound_perceptibility` | Tier-Tune | Filed in `Docs/Specs/Queued/` | **QUEUED — actionable.** `Docs/Specs/Queued/ball_rebound_perceptibility/SPEC.md` present. |
 | `ball_roll_coefficient_retune` | Tier-Tune | Filed in `Docs/Specs/Queued/` | **SHIPPED 2026-06-02** as changelog entry **F8** (`BallRollPerPoint` 0.01 → 0.02, fills the 0.80–1.20 clamp at Ball.Roll=±10). Spec folder consumed. Finding F-LANA-B2 CLOSED. |
-| `character_recovery_stamina_regen` | Tier-Redesign | Filed in `Docs/Specs/Queued/` | **SUPERSEDED** by the Stamina/Condition Economy (Phases 1–5, shipped 2026-06-29→07-03). Its premise — "Recovery has zero effect on any physics output" — is no longer true: `StaminaModel.RegenPerHour(int recoveryStat)` is live and Recovery is the regen-rate stat. Finding F-LANA-REC CLOSED; the queued folder is stale and should be retired. |
+| `character_recovery_stamina_regen` | Tier-Redesign | Filed in `Docs/Specs/Queued/` | **SUPERSEDED + RETIRED 2026-07-16** (commit `7f2c89096`). Stamina/Condition Economy Phases 1–5 (2026-06-29→07-03) delivered it. Premise — "Recovery has zero effect on any physics output" — is false: `StaminaModel.RegenPerHour(int recoveryStat)` is live. F-LANA-REC CLOSED. Folder moved to `Docs/Specs/Completed/character_recovery_stamina_regen/` with `RETIRED.md`. |
+
+---
+
+## Findings 2a/2b VOID — this audit missed the input layer (2026-07-16, pass 2)
+
+**Both F-LANA-2a and F-LANA-2b are void, and `club_control_aim_arrow_speed` must never be written.**
+
+The audit read only `StatModifierResolver.cs` and concluded ClubControl was sub-threshold, proposing as a
+Tier-Redesign "a secondary visible effect (e.g., aim-arrow oscillation speed)." **That mechanic had already
+shipped.** The audit never opened `Docs/Game Design/SHOT_CONTROLS_DESIGN.md` or `ShotController.cs`.
+
+**Design said so all along.** `SHOT_CONTROLS_DESIGN.md` (Status: *Active design (v1)*) §6, marked authoritative:
+
+| Stat | Design assigns |
+|---|---|
+| Character Club Control | Number of "clean" arrow passes; **arrow speed** |
+| Club Accuracy | **Cone width** |
+
+Echoed in `GAME_DESIGN_CHANGELOG.md` (2026-03-21): `| Club Control | Arrow/timing speed |`.
+
+**Code says so too.** `ShotController.TickArrow()`:
+
+```csharp
+float cc        = bundle.Character.ClubControl;
+float ccClamped = Mathf.Clamp(cc, 0f, 100f);
+float arrowHz   = _config.BaseArrowSpeedHzAtCC0 + ccClamped * _config.ArrowSpeedHzPerCC;
+...
+int cleanPasses = Mathf.RoundToInt(_config.MaxCleanPassesAtCC0 + cc * _config.CleanPassesPerCC);
+```
+
+Driven by `Assets/Resources/Gameplay/controls.csv`, populated and read via `ControlsConfigLoader`.
+
+### The real ClubControl finding — a range mismatch (Order 732)
+
+controls.csv coefficients are calibrated for **CC 0–100**. `RarityStatCaps.cs` caps ClubControl at **50**
+(Supreme). CC=100 is unreachable, so the designed dynamic range never materialises:
+
+| | Designed (0→100) | Actually reachable (Common 25 → Supreme 50) |
+|---|---|---|
+| Arrow speed | 3.0 → 0.5 Hz (**6×**) | 2.375 → 1.75 Hz (**1.36×**) |
+| Clean passes | 1 → 5 | **2 → 3** |
+
+The entire Common→Supreme ladder buys a 26% slower arrow and one extra pass. That — not the aim cone — is
+why ClubControl feels dead. Tier-Tune, filed as Order **732** `club_control_arrow_range_calibration`.
+
+### Doc drift noted
+
+`SHOT_CONTROLS_DESIGN.md` §3.4 still reads *"faster CC → faster arrows"*. The shipped sign is inverted
+(`ArrowSpeedHzPerCC,-0.025` — *higher CC = slower arrow*), which is the correct feel. **Code is right; §3.4
+is stale.** Fixed in the same pass as this reconcile.
+
+### Consequential defect found while verifying (Order 731)
+
+Ruling the cone lane off-design surfaced a live bug: **stamina is applied twice.**
+`LiveStatProviderHost.BuildCharacterStats` degrades Strength + ClubControl via `StaminaModel.EffectiveStat`
+(Option C, D1 LOCKED); `StatModifierResolver.cs:9–18` then scales the already-degraded stats by
+`staminaMultiplier = max(0.20, CurrentStamina/MaxStamina)` off the same pool. The resolver lane has no
+comfort threshold, no penalty curve and no `IsDegraded` gate, so at 90% condition the provider correctly
+applies nothing while the resolver silently applies ×0.90; below the threshold they compound.
+
+**This contaminates every measurement in the Tier-Tune track** taken at <100% condition — including any
+re-run of Lane 1c or B1. The audit's Lane 1c/2a/2b tables hold *only* at exactly 100% condition. Filed as
+Order **731** `stat_lane_offdesign_retirement`, which blocks 415 and 417.

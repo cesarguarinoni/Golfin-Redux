@@ -139,7 +139,9 @@ Arrows travel up the cone. The player flicks when an arrow reaches the apex (= "
 - Pass N+1 onward adds `DegradationYawDegPerPass` to the aim error each pass.
 - After `MaxTotalPasses` (e.g. 10), the shot resets and the cone hides — player must re-pull. No turn lost.
 
-Arrow speed scales with Club Control (faster CC → faster arrows, but also more passes; intentional that high-CC players have a busier window — they have margin to spare).
+Arrow speed scales with Club Control. **SIGN CORRECTED 2026-07-16 — higher CC = SLOWER arrows** (easier timing window), *and* more clean passes. This paragraph originally read "faster CC → faster arrows"; the shipped implementation deliberately inverted it (`ArrowSpeedHzPerCC,-0.025` — negative slope) and the inverted feel is correct. **Code is authoritative here; the original text was stale.** See `ShotController.TickArrow()` and `Docs/Physics/STAT_LANE_AUDIT.md` § "Findings 2a/2b VOID".
+
+> **NOTE (Order 732 — `club_control_arrow_range_calibration`):** the constants below are calibrated for CC 0–100, but `RarityStatCaps.cs` caps ClubControl at **50** (Supreme). The reachable ladder (Common 25 → Supreme 50) therefore yields only 2.375 → 1.75 Hz and 2 → 3 clean passes, instead of the designed 3.0 → 0.5 Hz and 1 → 5 passes. Retune pending.
 
 ### 3.5 Spin (Pre-stage modal — out of v1 scope, kept as-is)
 
