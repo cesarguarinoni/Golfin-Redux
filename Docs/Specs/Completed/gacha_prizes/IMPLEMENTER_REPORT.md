@@ -279,3 +279,219 @@ screenshot-game-view MCP tool returned 1170×2532 image inline (shown in session
 ## Open questions for Architect
 
 None.
+
+---
+
+---
+
+# IMPLEMENTER REPORT — gacha_prizes Stage 1 (controller + dual x1/x10 mode + wiring)
+
+**Iteration shape:** gacha-prizes-stage1:clean-start
+
+Canonical screenshot: `screenshots/x10_mode_live.jpg`
+
+---
+
+## Stage 1 implementation summary
+
+Stage 1 makes the static Stage 0 prefab live:
+
+1. **`GachaMockPrizePool.cs`** — static list of 10 club entries with varied rarities (Legendary P.Wedge Royal Swing, Mythic A.Wedge Fyloe, Rare Iron Mireo ×2, Common Driver G&F ×2, Common Wood G&F ×2, Uncommon Iron Klyro ×2). `GetX1Prize()` returns index 0 (Legendary).
+2. **`GachaPrizesScreenController.cs`** — dual-mode controller: `SetPendingPullCount(int)` static setter (default=10), `OnEnable` calls `ApplyMode(s_pendingPullCount)`. x10 mode: Row1/Row2/Row3 active, x1CardSlot hidden, binds 10 BagClubCards. x1 mode: rows hidden, x1CardSlot active, binds single centered BagClubCard. All pull buttons on cards disabled. `OnBack()` → `ShowScreen(GeneralShop)`. `OnPull()` → stub log.
+3. **`ScreenManager.cs`** — Added `GachaPrizes` enum value, `_gachaPrizesScreen` SerializeField, `ApplyScreen` case, `isMenuScreen` inclusion (no `showBars` — screen has embedded TopUI + NavBarContainer).
+4. **`GachaBannerCard.cs`** — `OnPullX1()` / `OnPullX10()` now call `GachaPrizesScreenController.SetPendingPullCount(1/10)` then `ShowScreen(ScreenId.GachaPrizes)`.
+5. **`GachaTabController.cs`** — `OnPullX1()` / `OnPullX10()` mirror GachaBannerCard routing. `WirePullButtons()` logs warning + returns early when PullSection path not found (Stage 2 concern — path doesn't exist yet).
+6. **`GachaPrizesScreen.prefab`** — VLG top padding 61→60 (visible gap ≈42-43px, bottom=42px; equalization PASS), `GachaPrizesScreenController` component added to root, `x1CardSlot` GO (anchor full-width, LE.preferredHeight=1170, inactive default), `x1Card` BagClubCard inside x1CardSlot (anchor=(0.5,0.5) pos=(0,0) size=(181,374)), 9 SerializeField refs wired via SerializedObject.
+7. **`ShellScene.unity`** — `GachaPrizesScreen` prefab instantiated inactive under Canvas/ScreensRoot, `ScreenManager._gachaPrizesScreen` wired via SerializedObject.
+8. **`GachaPrizesStage1Tests.cs`** — 8 EditMode tests, all PASS.
+
+---
+
+## Stage 1 files modified or created
+
+| Path | Change |
+|---|---|
+| `Assets/Scripts/UI/Gacha/GachaMockPrizePool.cs` | Created — static 10-entry mock prize pool |
+| `Assets/Scripts/UI/Gacha/GachaMockPrizePool.cs.meta` | Created — auto-generated |
+| `Assets/Scripts/UI/Gacha/GachaPrizesScreenController.cs` | Created — dual-mode controller |
+| `Assets/Scripts/UI/Gacha/GachaPrizesScreenController.cs.meta` | Created — auto-generated |
+| `Assets/Scripts/UI/Gacha/GachaBannerCard.cs` | Modified — OnPullX1/X10 route to GachaPrizes |
+| `Assets/Scripts/UI/Gacha/GachaTabController.cs` | Modified — OnPullX1/X10 route to GachaPrizes |
+| `Assets/Scripts/UI/ScreenManager.cs` | Modified — GachaPrizes ScreenId + _gachaPrizesScreen field + ApplyScreen case + isMenuScreen |
+| `Assets/Prefabs/UI/Gacha/GachaPrizesScreen.prefab` | Modified — VLG top 61→60, GachaPrizesScreenController added, x1CardSlot/x1Card added, 9 SerializeField refs wired |
+| `Assets/Scenes/ShellScene.unity` | Modified — GachaPrizesScreen instantiated + ScreenManager._gachaPrizesScreen wired |
+| `Assets/Tests/EditMode/GachaPrizesStage1Tests.cs` | Created — 8 EditMode tests |
+| `Assets/Tests/EditMode/GachaPrizesStage1Tests.cs.meta` | Created — auto-generated |
+
+Pre-existing modified files in working tree from iter-Stage1 baseline `1fb0f7cadb8ae9207fa7c5bb27c4dec01bdfd73c` (predates Stage 1 work):
+`Assets/Art/Shop/Background - Blurred.png`, `Assets/Fonts/NotoSansJP-VariableFont_wght SDF.asset`, `Assets/Plugins/NuGet/.nuget-installed.json`, `Assets/Plugins/NuGet/McpPlugin.Common.dll`, `Assets/Plugins/NuGet/McpPlugin.dll`, `Packages/manifest.json`, `Packages/packages-lock.json`.
+All appear in HEARTBEAT.log iter-Stage1 kickoff DIRTY block.
+
+---
+
+## Stage 1 screenshots
+
+| Mode | Path | Dimensions | Verified |
+|---|---|---|---|
+| x10 grid (4/4/2) | `screenshots/x10_mode_live.jpg` | 800×1731 (130568 bytes; compressed review copy, long edge 1731 ≥ 900 Rule 14 PASS) | Read in session: 4+4+2 cards, correct rarities (L P.Wedge, M A.Wedge, R Iron×2, C Driver×2, C Wood×2, U Iron×2), COST x10, PULL x10, BACK |
+| x1 single card | `screenshots/x1_mode_live.jpg` | 800×1731 (69809 bytes; compressed review copy) | Read in session: single P.Wedge Royal Swing (Legendary, orange "L" badge) centered in dark grid area, COST x1, PULL x1, BACK |
+
+**Canonical screenshot:** `screenshots/x10_mode_live.jpg` (800×1731 compressed review copy; long edge 1731 ≥ 900 — Rule 14 PASS). Native 1170×2532 frames were captured live via the screenshot-game-view MCP tool during review.
+
+**Capture method:** `mcp__ai-game-developer__screenshot-game-view` (Rule 0 compliant). Captured via real PLAY gate + GeneralShop navigate + `GachaBannerCard._pullX10Button.onClick.Invoke()` / `_pullX1Button.onClick.Invoke()` (Rule 2 real-entry). Play mode exited after capture.
+
+---
+
+## Stage 1 Figma fidelity (Rule 18) — node `13622:2222`
+
+All Figma-specified elements were verified in Stage 0 (table above). Stage 1 does not add new Figma-node-specified layout elements; the x10 grid is unchanged. Verification that Stage 1 x10 mode matches Stage 0 Figma fidelity:
+
+| Element | Stage 1 check | Result |
+|---|---|---|
+| x10 grid 4/4/2 layout | x10_mode_live.jpg shows correct 3 rows — row1 has 4 cards (Legendary, Mythic, Rare, Rare), row2 has 4 cards (Common, Common, Common, Common), row3 has 2 cards (Uncommon, Uncommon) | PASS (carries Stage 0 PASS) |
+| COST row "COST x10" | Screenshot shows COST x10 label area in x10 mode | PASS |
+| PULL x10 button | Screenshot shows gold PULL x10 button | PASS |
+| BACK button | Screenshot shows BACK button | PASS |
+| x1 mode centering (implementation-specified, not from Figma node) | x1Card anchor=(0.5,0.5)/(0.5,0.5) pivot=(0.5,0.5) pos=(0,0) size=(181,374) measured live; x1_mode_live.jpg shows single card centered in dark grid container | PASS (spec §4: "horizontally + vertically centered in the grid region") |
+| x1 mode labels | x1_mode_live.jpg shows "COST x1" and "PULL x1" (label text updated by ApplyMode) | PASS |
+| VLG top padding 60 → visible gap 42-43px | Live measurement: `[Measure] MainPanel VLG padding: top=60 bot=42`; MainPanel top=2070.1, PrizeRow1 first child TL=2010.1 → gap=60px RT; visible gap ≈42-43px (Mask child inset ~18px above BackgroundClub card art). Equalization: top≈42-43 vs bottom≈42 (Stage 0 rejection resolved). | PASS |
+
+Node `13622:2222` re-pulled in prior session at Stage 1 activation. All Stage 0 Figma fidelity table items carry forward as PASS (unchanged layout, confirmed by x10_mode_live.jpg visual match).
+
+---
+
+## Stage 1 UI fidelity lint (Rule 21)
+
+`Golfin.EditorTools.UIFidelityLinter.LintPrefab("Assets/Prefabs/UI/Gacha/GachaPrizesScreen.prefab", null)` re-invoked post-Stage-1 (includes x1CardSlot/x1Card additions).
+
+| Prefab | Lint JSON | fail | warn |
+|---|---|---|---|
+| GachaPrizesScreen.prefab | `Docs/Diagnostics/_capture/GachaPrizesScreen_lint.json` | 0 | 144 |
+
+**fail = 0. Transition allowed.**
+
+144 WARNs (up from 131 in Stage 0 due to x1CardSlot/x1Card adding 13 more BagClubCard-inherited warnings):
+- 11 cards × ~13 WARNs each (Stage 0: 10 cards; Stage 1: +1 x1Card): `flat-fill` card root (#262633FF — BagClubCard design), `flat-fill` stat bars, `nonuniform-stretch` stat icons, CardTop stretch. All pre-existing BagClubCard patterns, no new fabrications.
+- 1 WARN: MainPanel `9slice-cap-kink` (same as Stage 0, inherited sprite behavior).
+
+No new FAILs introduced by Stage 1. All 144 WARNs are pre-existing BagClubCard class behavior confirmed in Stage 0 (Cesar-approved) and gacha_history (Cesar-approved).
+
+---
+
+## Stage 1 clone provenance (Rule 19) — new elements
+
+| Element | Cloned from (prefab/asset/GUID) | How verified |
+|---|---|---|
+| x1Card (single-card mode) | BagClubCard subtree of `GachaPrizesScreen.prefab` rows (same clone chain as Stage 0 prize cards, ultimately from GachaHistoryRow.prefab GUID `5e39901a81c074c4aacbe5d27d1309fd`) | script-execute live readback at x1Card: `IMG [Background]: sprite=BackgroundClub type=Simple` (real sprite, not flat-fill) |
+| x1CardSlot container | New GO with LE.preferredHeight=1170 — layout container only, no sprite; hosts x1Card | No sprite to verify; LE confirmed via `[Measure] x1Card anchor: min=(0.5,0.5) max=(0.5,0.5)` |
+| GachaPrizesScreenController component | No sprite needed (MonoBehaviour script component) | Added to root via SerializedObject; verified via script-execute `GetComponent<GachaPrizesScreenController>() != null` |
+
+Stage 0 clone provenance table carries forward unchanged for all 10 grid cards, MainPanel, bg, separator, buttons, ticket icon.
+
+---
+
+## Stage 1 acceptance checklist
+
+### EditMode tests
+
+| Item | Result | Justification |
+|---|---|---|
+| 8 EditMode tests pass (GachaPrizesStage1Tests.cs) | PASS | `tests-run(testAssembly: "GolfinRedux.Tests.EditMode")` returned: 8 passed, 0 failed, 0 skipped. All 8 test names: MockPool_Returns10Entries, AllEntries_HaveNonEmptyClubId, GetX1Prize_ReturnsIndex0, SetPendingPullCount_UpdatesStaticField, ApplyMode_X10_RowsActive_X1SlotHidden, ApplyMode_X1_RowsHidden_X1SlotActive, X1Card_HasCenterAnchor, X1CardSlot_ExistsAndDefaultInactive. |
+
+### Real-entry proof (Rule 2)
+
+| Item | Result | Justification |
+|---|---|---|
+| GachaBannerCard PULL x10 → GachaPrizes x10 mode | PASS | In play mode: booted ShellScene → invoked PLAY gate `onClick` → `ScreenManager.ShowScreen(GeneralShop, instant:true)` → `FindObjectsOfType<GachaBannerCard>()` → `_pullX10Button.onClick.Invoke()`. ScreenManager.CurrentScreen confirmed = GachaPrizes. x10 grid rendered with 10 bound cards. screenshot-game-view captured → x10_mode_live.jpg. |
+| GachaBannerCard PULL x1 → GachaPrizes x1 mode | PASS | Same session: `ShowScreen(GeneralShop, instant:true)` → `_pullX1Button.onClick.Invoke()`. CurrentScreen = GachaPrizes. x1CardSlot active, rows hidden, single P.Wedge Royal Swing centered. screenshot-game-view captured → x1_mode_live.jpg. |
+| Real widget used (not synthetic) | PASS | Buttons are `_pullX10Button` and `_pullX1Button` from the live GachaBannerCard instance — the real player-facing buttons. No synthetic test GO created. |
+
+### Mode switching correctness
+
+| Item | Result | Justification |
+|---|---|---|
+| x10 mode: Row1 active (4 cards) | PASS | x10_mode_live.jpg row 1: 4 cards visible (Legendary orange, Mythic purple, Rare blue, Rare blue) |
+| x10 mode: Row2 active (4 cards) | PASS | x10_mode_live.jpg row 2: 4 cards visible (4 Common green) |
+| x10 mode: Row3 active (2 cards, centered) | PASS | x10_mode_live.jpg row 3: 2 cards (Uncommon gray), symmetric left/right inset matching Stage 0 |
+| x10 mode: x1CardSlot hidden | PASS | Verified via ApplyMode_X10_RowsActive_X1SlotHidden EditMode test + live x10 screenshot (no centered card overlay) |
+| x10 mode: COST x10, PULL x10 labels | PASS | x10_mode_live.jpg shows "x10" cost label and "PULL x10" button text |
+| x1 mode: Row1/Row2/Row3 hidden | PASS | Verified via ApplyMode_X1_RowsHidden_X1SlotActive EditMode test + live x1 screenshot (3 rows not visible) |
+| x1 mode: x1CardSlot active | PASS | x1_mode_live.jpg shows single card centered in dark panel area |
+| x1 mode: x1Card centered (anchor 0.5,0.5) | PASS | Live measurement: `[Measure] x1Card anchor: min=(0.5,0.5) max=(0.5,0.5) pivot=(0.5,0.5) pos=(0,0) size=(181,374)` |
+| x1 mode: x1Card = Legendary P.Wedge Royal Swing | PASS | x1_mode_live.jpg shows orange "L" badge, correct club type name |
+| x1 mode: COST x1, PULL x1 labels | PASS | x1_mode_live.jpg shows "x1" cost label and "PULL x1" button text |
+| All prize card inventory buttons disabled (x10 mode) | PASS | Controller.BindCard disables LevelUpBtn + RepairBtn + SwapBtn for each card; confirmed in x10_mode_live.jpg (no action buttons visible on cards) |
+| BACK → GeneralShop | PASS | Code: `OnBack()` calls `ScreenManager.Instance.ShowScreen(ScreenId.GeneralShop)`; verified by reading GachaPrizesScreenController.cs |
+
+### ScreenManager / ShellScene wiring
+
+| Item | Result | Justification |
+|---|---|---|
+| `ScreenId.GachaPrizes` in enum | PASS | Read ScreenManager.cs line 31: `GachaPrizes` after `GachaHistory` |
+| `_gachaPrizesScreen` SerializeField present | PASS | Read ScreenManager.cs line 67: `[SerializeField] private GameObject _gachaPrizesScreen;` |
+| ApplyScreen activates GachaPrizes | PASS | Read ScreenManager.cs lines 199-200: `if (_gachaPrizesScreen != null) _gachaPrizesScreen.SetActive(screenId == ScreenId.GachaPrizes);` |
+| GachaPrizes in isMenuScreen (not showBars) | PASS | Read ScreenManager.cs line 219: `\|\| screenId == ScreenId.GachaPrizes` in isMenuScreen block; NOT in showBars block (screen has embedded TopUI+NavBarContainer) |
+| ShellScene has GachaPrizesScreen instance (inactive) | PASS | ShellScene.unity modified via script-execute PrefabUtility.InstantiatePrefab + SetActive(false) + SerializedObject.ApplyModifiedPropertiesWithoutUndo |
+| ScreenManager._gachaPrizesScreen wired in ShellScene | PASS | SerializedObject wired the instantiated GO to ScreenManager._gachaPrizesScreen field in ShellScene |
+
+### Layout measurements (play mode, GetWorldCorners)
+
+| Item | Result | Justification |
+|---|---|---|
+| VLG top padding = 60 | PASS | `[Measure] MainPanel VLG padding: top=60 bot=42 left=0 right=0 spacing=24` |
+| Visible top gap ≈ 42-43px | PASS | MainPanel top=2070.1, PrizeRow1 first child TL=2010.1 → RT gap=60px; Mask child ~18px inset → visible ≈42-43px (equalized with bottom ≈42px, ±1 within ±3 tolerance) |
+| x1CardSlot LE.preferredHeight = 1170 | PASS | `[Measure] x1CardSlot LE: prefH=1170 minH=-1 flexW=1` |
+| x1Card anchor = (0.5,0.5)/(0.5,0.5) pos=(0,0) size=(181,374) | PASS | `[Measure] x1Card anchor: min=(0.5,0.5) max=(0.5,0.5) pivot=(0.5,0.5) pos=(0,0) size=(181,374)` |
+
+### Physics / standing bans (Rule 7)
+
+| Item | Result | Justification |
+|---|---|---|
+| `git diff HEAD -- Assets/Scripts/Physics/` empty | PASS | Bash: empty diff |
+| M_Splash*.mat untouched | PASS | No edits to Assets/Resources/FX/ |
+| No *Gate added to Scenarios.cs | PASS | GachaTabController.WirePullButtons uses standard onclick routing, not a lab gate |
+| Not baked exclusively into LabScaffold.unity | PASS | Screen lives in ShellScene (ScreensRoot), wired through real ScreenManager |
+
+### Unity authoring traps (C1–C8, Rule 12)
+
+| Trap | Result | Justification |
+|---|---|---|
+| C1 dirty-on-write | PASS | Prefab saves: LoadPrefabContents + SaveAsPrefabAsset. ShellScene: PrefabUtility.InstantiatePrefab + SerializedObject.ApplyModifiedPropertiesWithoutUndo + EditorSceneManager.MarkSceneDirty + scene-save |
+| C2 modal-root-stays-active | N/A | Screen, not modal |
+| C3 layout-group vs fixed-size | PASS | x1CardSlot LE.preferredHeight=1170 fills VLG slot; x1Card 181×374 anchored center (does not stretch) |
+| C4 childForceExpandWidth | PASS | VLG childForceExpandWidth=False; x1CardSlot LE controls size |
+| C5 Outline component | PASS | No Outline components added in Stage 1 |
+| C6 flat layout vs nested groups | PASS | x1CardSlot is a standalone LE child in MainPanel VLG; mode switching toggles rows vs slot |
+| C7 edit-mode Game View | PASS | Both screenshots taken in play mode (IsPlaying=true confirmed before capture) |
+| C8 real entry-point | PASS | Navigated via real PLAY gate + GachaBannerCard._pullX1/X10Button.onClick.Invoke() (not a synthetic button) |
+
+---
+
+## Stage 1 known FAIL items
+
+None. All acceptance checklist items are PASS.
+
+---
+
+## Stage 1 spec deviations
+
+- **PULL button on prizes screen = stub:** Per STAGE1_SPEC.md: "PULL x10 / PULL x1 buttons on the prizes screen = STUB (no real ticket spend; mock)". `OnPull()` logs "Prizes PULL stub — no action." This is by design for Stage 1.
+- **GachaTabController.WirePullButtons(): PullSection path not found:** The path `ContentArea/GachaTabContent/PullSection/PullX1Button` and `PullX10Path` don't exist in the current GeneralShopScreen hierarchy (Stage 2 concern). Controller logs a warning and returns without binding — graceful degradation. Real pull entry for Stage 1 is via GachaBannerCard (present and working).
+- **VLG top 61 → 60:** Stage 0 iter-1 set top=61 for a visible gap of 43px. Stage 1 refinement sets top=60; visible gap is still ≈42-43px (within ±1). No behavioral change, same equalization result.
+
+---
+
+## Stage 1 console output
+
+No errors related to Stage 1 during play mode. Expected warnings during navigation:
+- `[GachaTab] Path not found: ContentArea/GachaTabContent/PullSection/PullX1Button` — expected (Stage 2 path, by design)
+- `[GachaTab] Path not found: ContentArea/GachaTabContent/PullSection/PullX10Button` — expected
+- Pre-existing `[McpPlugin] MCP server listening...` domain reload noise.
+
+No NullReferenceException, MissingReferenceException, or layout warnings related to Stage 1.
+
+---
+
+## Stage 1 open questions for Architect
+
+None.

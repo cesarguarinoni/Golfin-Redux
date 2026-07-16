@@ -39333,6 +39333,7 @@ RectTransform:
   - {fileID: 469201927}
   - {fileID: 674378739}
   - {fileID: 1979538420}
+  - {fileID: 1084228994}
   m_Father: {fileID: 1949345566}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -47147,6 +47148,7 @@ MonoBehaviour:
   _staminaShopDetailScreen: {fileID: 469201926}
   _generalShopScreen: {fileID: 674378740}
   _gachaHistoryScreen: {fileID: 1979538421}
+  _gachaPrizesScreen: {fileID: 1084228995}
   _mainThemeClip: {fileID: 8300000, guid: 71454997e659f7e48950fb6ecac7a3f2, type: 3}
 --- !u!114 &825584068
 MonoBehaviour:
@@ -63181,6 +63183,117 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1001 &1084228993
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 677848798}
+    m_Modifications:
+    - target: {fileID: 6167436600897465467, guid: 5e39d007d65274fd19e1edb039a64d6d, type: 3}
+      propertyPath: m_Pivot.x
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 6167436600897465467, guid: 5e39d007d65274fd19e1edb039a64d6d, type: 3}
+      propertyPath: m_Pivot.y
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 6167436600897465467, guid: 5e39d007d65274fd19e1edb039a64d6d, type: 3}
+      propertyPath: m_AnchorMax.x
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6167436600897465467, guid: 5e39d007d65274fd19e1edb039a64d6d, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6167436600897465467, guid: 5e39d007d65274fd19e1edb039a64d6d, type: 3}
+      propertyPath: m_AnchorMin.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6167436600897465467, guid: 5e39d007d65274fd19e1edb039a64d6d, type: 3}
+      propertyPath: m_AnchorMin.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6167436600897465467, guid: 5e39d007d65274fd19e1edb039a64d6d, type: 3}
+      propertyPath: m_SizeDelta.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6167436600897465467, guid: 5e39d007d65274fd19e1edb039a64d6d, type: 3}
+      propertyPath: m_SizeDelta.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6167436600897465467, guid: 5e39d007d65274fd19e1edb039a64d6d, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6167436600897465467, guid: 5e39d007d65274fd19e1edb039a64d6d, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6167436600897465467, guid: 5e39d007d65274fd19e1edb039a64d6d, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6167436600897465467, guid: 5e39d007d65274fd19e1edb039a64d6d, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6167436600897465467, guid: 5e39d007d65274fd19e1edb039a64d6d, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6167436600897465467, guid: 5e39d007d65274fd19e1edb039a64d6d, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6167436600897465467, guid: 5e39d007d65274fd19e1edb039a64d6d, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6167436600897465467, guid: 5e39d007d65274fd19e1edb039a64d6d, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6167436600897465467, guid: 5e39d007d65274fd19e1edb039a64d6d, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6167436600897465467, guid: 5e39d007d65274fd19e1edb039a64d6d, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6167436600897465467, guid: 5e39d007d65274fd19e1edb039a64d6d, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6167436600897465467, guid: 5e39d007d65274fd19e1edb039a64d6d, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8162550510451404443, guid: 5e39d007d65274fd19e1edb039a64d6d, type: 3}
+      propertyPath: m_Name
+      value: GachaPrizesScreen
+      objectReference: {fileID: 0}
+    - target: {fileID: 8162550510451404443, guid: 5e39d007d65274fd19e1edb039a64d6d, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 5e39d007d65274fd19e1edb039a64d6d, type: 3}
+--- !u!224 &1084228994 stripped
+RectTransform:
+  m_CorrespondingSourceObject: {fileID: 6167436600897465467, guid: 5e39d007d65274fd19e1edb039a64d6d, type: 3}
+  m_PrefabInstance: {fileID: 1084228993}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &1084228995 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 8162550510451404443, guid: 5e39d007d65274fd19e1edb039a64d6d, type: 3}
+  m_PrefabInstance: {fileID: 1084228993}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1086233283
 GameObject:
   m_ObjectHideFlags: 0

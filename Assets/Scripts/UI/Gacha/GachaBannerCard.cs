@@ -6,6 +6,7 @@
 // CountdownLabel is updated each frame by GachaCarouselController (no coroutine here).
 
 using Golfin.UI.Toast;
+using GolfinRedux.UI;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -100,14 +101,28 @@ namespace GolfinRedux.UI.Gacha
 
         private void OnPullX1()
         {
-            Debug.Log($"[GachaBannerCard] Pull x1 tapped on {_entry?.BannerId} — stub (Stage 2)");
-            ToastController.Instance?.Show("Coming soon");
+            Debug.Log($"[GachaBannerCard] Pull x1 tapped on {_entry?.BannerId} — opening Prizes x1.");
+            GachaPrizesScreenController.SetPendingPullCount(1);
+            if (ScreenManager.Instance != null)
+                ScreenManager.Instance.ShowScreen(ScreenId.GachaPrizes);
+            else
+            {
+                Debug.LogWarning("[GachaBannerCard] ScreenManager not found — cannot open GachaPrizes.");
+                ToastController.Instance?.Show("Coming soon");
+            }
         }
 
         private void OnPullX10()
         {
-            Debug.Log($"[GachaBannerCard] Pull x10 tapped on {_entry?.BannerId} — stub (Stage 2)");
-            ToastController.Instance?.Show("Coming soon");
+            Debug.Log($"[GachaBannerCard] Pull x10 tapped on {_entry?.BannerId} — opening Prizes x10.");
+            GachaPrizesScreenController.SetPendingPullCount(10);
+            if (ScreenManager.Instance != null)
+                ScreenManager.Instance.ShowScreen(ScreenId.GachaPrizes);
+            else
+            {
+                Debug.LogWarning("[GachaBannerCard] ScreenManager not found — cannot open GachaPrizes.");
+                ToastController.Instance?.Show("Coming soon");
+            }
         }
 
         private void OnRules()

@@ -26,7 +26,9 @@ namespace GolfinRedux.UI
         // Order 610 — General Shop / Rewards Center (Figma 4079:28230)
         GeneralShop,
         // Gacha pillar screen 2 — Gacha History / pull log (Figma 4079:18306)
-        GachaHistory
+        GachaHistory,
+        // Gacha pillar screen 3 — Gacha Prizes / pool preview (Figma 13622:2222)
+        GachaPrizes
         // Settings removed - it's an overlay, not a screen
     }
 
@@ -61,6 +63,8 @@ namespace GolfinRedux.UI
         [SerializeField] private GameObject _generalShopScreen;
         // Gacha pillar screen 2 — Gacha History / pull log
         [SerializeField] private GameObject _gachaHistoryScreen;
+        // Gacha pillar screen 3 — Gacha Prizes / pool preview
+        [SerializeField] private GameObject _gachaPrizesScreen;
         // _settingsScreen removed - Settings is an overlay managed by SettingsController, not ScreenManager
 
         [Header("Audio (Order 350)")]
@@ -191,6 +195,10 @@ namespace GolfinRedux.UI
             if (_gachaHistoryScreen != null)
                 _gachaHistoryScreen.SetActive(screenId == ScreenId.GachaHistory);
 
+            // Gacha pillar screen 3 — Gacha Prizes
+            if (_gachaPrizesScreen != null)
+                _gachaPrizesScreen.SetActive(screenId == ScreenId.GachaPrizes);
+
             // Settings is an overlay (SettingsController), not managed here
 
             // Order 350: menu music — start on menu screens, stop during loading/logo/splash.
@@ -207,7 +215,8 @@ namespace GolfinRedux.UI
                              || screenId == ScreenId.StaminaShopSelection
                              || screenId == ScreenId.StaminaShopDetail
                              || screenId == ScreenId.GeneralShop
-                             || screenId == ScreenId.GachaHistory;
+                             || screenId == ScreenId.GachaHistory
+                             || screenId == ScreenId.GachaPrizes;
             if (AudioManager.Instance != null)
             {
                 if (isMenuScreen && _mainThemeClip != null && !AudioManager.Instance.IsMusicPlaying())

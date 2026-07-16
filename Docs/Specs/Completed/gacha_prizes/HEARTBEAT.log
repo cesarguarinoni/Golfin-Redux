@@ -1,0 +1,17 @@
+=== gacha_prizes spec authored 2026-07-16 (Cesar: static grid + PULL/BACK wired, mock pool) ===
+2026-07-16T00:00:00 activated — gacha_prizes Stage 0, reading spec + pulling Figma node
+=== iter-0 kickoff baseline — HEAD d49928998 DIRTY: M Assets/Fonts/NotoSansJP SDF.asset, M Plugins/NuGet/*dll, M Packages/*, ?? Docs/Specs/Active/gacha_prizes/ ===
+2026-07-16T05:00:00 building GachaPrizesScreen.prefab — found BagClubCard.prefab (GUID 5e39901a81c074c4aacbe5d27d1309fd) is Col1_ClubCard source
+2026-07-15T23:32:25 disabling LevelUpBtn+RepairBtn in all 10 prize cards; entering play for screenshot
+2026-07-16T08:49:00 DiagCostRow results: HLG.minH=100 bleeds through because LE.minH=-1; fix LE.minH=80
+2026-07-16T09:30:00 wrote IMPLEMENTER_REPORT.md — all checklist items PASS, fail=0 lint confirmed
+2026-07-16T09:31:00 done, awaiting review
+=== iter-1 gap-fix baseline — HEAD d4992899876279c2a8c9b31a7a499576b703d49b DIRTY: M Assets/Art/Shop/Background-Blurred.png M Assets/Editor/UIFidelity/UIFidelityLinter.cs M Assets/Fonts/NotoSansJP SDF.asset M Plugins/NuGet/*.dll M Packages/* ?? Assets/Prefabs/UI/Gacha/GachaPrizesScreen.prefab ?? Docs/Specs/Active/gacha_prizes/ ===
+2026-07-16T00:38:55 activated — gacha_prizes Stage 0 iter-1: fix visible top gap (19px→38px target)
+2026-07-16T09:58:00 gap fix verified (top=43 bottom=42 diff=1 PASS), report updated, play mode exited, TempPrizesPreview.unity deleted, done awaiting review
+2026-07-16T10:00:00 === iter-Stage1 kickoff baseline — HEAD 1fb0f7cadb8ae9207fa7c5bb27c4dec01bdfd73c DIRTY:  M "Assets/Art/Shop/Background - Blurred.png"  M "Assets/Fonts/NotoSansJP-VariableFont_wght SDF.asset"  M Assets/Plugins/NuGet/.nuget-installed.json  M Assets/Plugins/NuGet/McpPlugin.Common.dll  M Assets/Plugins/NuGet/McpPlugin.dll  M Docs/Specs/Active/gacha_prizes/STATUS.md  M Packages/manifest.json  M Packages/packages-lock.json ?? Docs/Specs/Active/gacha_prizes/STAGE1_SPEC.md  ===
+2026-07-16T10:30:00 Stage 1 activated — writing GachaMockPrizePool + GachaPrizesScreenController + ScreenManager/tab wiring
+2026-07-16T13:15:00 entering play mode for real-flow capture
+2026-07-16T14:00:00 Stage 1 IMPLEMENTER_REPORT.md written — all checklist items PASS — awaiting review
+2026-07-16 [ORCHESTRATOR] Full EditMode suite: 871 total, 868 PASS, 0 FAIL, 3 skipped (pre-existing HoleCompleteDriverTests). New GachaPrizesStage1Tests included; flaky AudioEmitterTests passed this run. Verified.
+2026-07-16T13:55:00 [golfin-reviewer] Stage 1 architect review complete → READY_FOR_REDTEAM. Node re-pulled 13622:2222; every Figma-fidelity row PASS (with Cesar-approved +2px separator/panel PASS*); Rule 21 lint fail=0 re-verified from JSON; clone provenance verified (BagClubCard/GoldPrimaryButton/TournamentCloseButton/Divider/S_Store_Ticket_02 all live sprites); ShellScene diff = 113 additive lines, 0 deletions, no m_IsActive:0/sizeDelta mutation; Physics/ empty; real-entry via GachaBannerCard.OnPullX1/X10 verified in code diff. Surfaced (not blocked) to red-team: x1 card visible art sits ~18px above RT center due to BagClubCard transparent-top inset — same trap as Stage-0 gap.

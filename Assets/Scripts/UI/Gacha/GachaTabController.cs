@@ -128,14 +128,28 @@ namespace GolfinRedux.UI.Gacha
 
         private void OnPullX1()
         {
-            Debug.Log("[GachaTab] PullX1 tapped — stub (Stage 2)");
-            ToastController.Instance?.Show("Coming soon!", 2f);
+            Debug.Log("[GachaTab] PullX1 tapped — opening Prizes x1.");
+            GachaPrizesScreenController.SetPendingPullCount(1);
+            if (ScreenManager.Instance != null)
+                ScreenManager.Instance.ShowScreen(ScreenId.GachaPrizes);
+            else
+            {
+                Debug.LogWarning("[GachaTab] ScreenManager not found — cannot open GachaPrizes.");
+                ToastController.Instance?.Show("Coming soon!", 2f);
+            }
         }
 
         private void OnPullX10()
         {
-            Debug.Log("[GachaTab] PullX10 tapped — stub (Stage 2)");
-            ToastController.Instance?.Show("Coming soon!", 2f);
+            Debug.Log("[GachaTab] PullX10 tapped — opening Prizes x10.");
+            GachaPrizesScreenController.SetPendingPullCount(10);
+            if (ScreenManager.Instance != null)
+                ScreenManager.Instance.ShowScreen(ScreenId.GachaPrizes);
+            else
+            {
+                Debug.LogWarning("[GachaTab] ScreenManager not found — cannot open GachaPrizes.");
+                ToastController.Instance?.Show("Coming soon!", 2f);
+            }
         }
 
         // ── Tab show/hide ─────────────────────────────────────────────────────
