@@ -356,60 +356,35 @@ namespace Golfin.EditorTools
             }
             yield return new WaitForSecondsRealtime(1.2f);
 
-            // ── Beat 5: Tap PULL x10 — "Coming soon" toast ────────────────────
-            LogStep("PULL x10 » Coming soon");
+            // ── Beat 5: PULL x10 → Prizes screen (10-card grid) → BACK ─────────
+            LogStep("PULL x10 » Prizes (10-card grid)");
+            var pullX10 = Resources.FindObjectsOfTypeAll<Button>().FirstOrDefault(b =>
+                b.gameObject.name == "PullX10Button" &&
+                !string.IsNullOrEmpty(b.gameObject.scene.name) && b.isActiveAndEnabled);
+            if (pullX10 != null) { Debug.Log("[GachaDemo] PullX10 → Prizes x10"); pullX10.onClick.Invoke(); }
+            else Debug.LogWarning("[GachaDemo] PullX10Button not found — skipping x10 beat.");
+            yield return new WaitForSecondsRealtime(3.5f);  // fade + 4/4/2 grid render + read
 
-            // Ensure ToastController is awake before the button tap.
-            // Toast GO has m_IsActive:0 in the scene — GameObject.Find() cannot find inactive objects.
-            // Resources.FindObjectsOfTypeAll<T>() finds ALL objects including inactive scene objects;
-            // filter by scene.name to exclude prefabs sitting in memory.
-            // Activate in play mode — Unity auto-reverts scene disk state on exit (no mutation saved).
-            var toastCtrl = Resources.FindObjectsOfTypeAll<Golfin.UI.Toast.ToastController>()
-                .FirstOrDefault(c => !string.IsNullOrEmpty(c.gameObject.scene.name));
-            if (toastCtrl != null && !toastCtrl.gameObject.activeInHierarchy)
-            {
-                Debug.Log("[GachaDemo] Activating Toast GO in play mode (reverts on exit).");
-                toastCtrl.gameObject.SetActive(true);
-                yield return null;  // Awake() is synchronous but yield one frame so Instance is set
-                yield return null;
-            }
-            else if (toastCtrl == null)
-                Debug.LogWarning("[GachaDemo] ToastController not found in scene — toast may not appear.");
-            else
-                Debug.Log("[GachaDemo] Toast GO already active.");
+            var backX10 = Resources.FindObjectsOfTypeAll<Button>().FirstOrDefault(b =>
+                b.gameObject.name == "BackButton" &&
+                !string.IsNullOrEmpty(b.gameObject.scene.name) && b.isActiveAndEnabled);
+            if (backX10 != null) { Debug.Log("[GachaDemo] BACK from x10"); backX10.onClick.Invoke(); }
+            yield return new WaitForSecondsRealtime(2.0f);  // fade back to gacha main
 
-            ctrl = FindCarousel();
-            centerCard = ctrl != null ? GetCenterCard(ctrl) : null;
-            var pullX10 = centerCard != null ? GetCardButton(centerCard, "_pullX10Button") : null;
+            // ── Beat 6: PULL x1 → Prizes screen (single centered card) → BACK ──
+            LogStep("PULL x1 » Prizes (single card)");
+            var pullX1 = Resources.FindObjectsOfTypeAll<Button>().FirstOrDefault(b =>
+                b.gameObject.name == "PullX1Button" &&
+                !string.IsNullOrEmpty(b.gameObject.scene.name) && b.isActiveAndEnabled);
+            if (pullX1 != null) { Debug.Log("[GachaDemo] PullX1 → Prizes x1"); pullX1.onClick.Invoke(); }
+            else Debug.LogWarning("[GachaDemo] PullX1Button not found — skipping x1 beat.");
+            yield return new WaitForSecondsRealtime(3.5f);  // fade + single card render + read
 
-            if (pullX10 != null)
-            {
-                Debug.Log($"[GachaDemo] Invoking _pullX10Button.onClick on {centerCard.Entry?.BannerId}");
-                pullX10.onClick.Invoke();
-            }
-            else
-            {
-                // Fallback: find by prefab name in scene
-                pullX10 = Resources.FindObjectsOfTypeAll<Button>().FirstOrDefault(b =>
-                    b.gameObject.name == "PullX10Button" &&
-                    !string.IsNullOrEmpty(b.gameObject.scene.name) &&
-                    b.isActiveAndEnabled);
-                if (pullX10 != null)
-                {
-                    Debug.Log("[GachaDemo] Fallback: invoking PullX10Button by name");
-                    pullX10.onClick.Invoke();
-                }
-                else
-                    Debug.LogWarning("[GachaDemo] PullX10Button not found — skipping beat 5.");
-            }
-            // Belt-and-suspenders: call Show() directly in case ToastController.Instance was null
-            // when the button handler ran (race between Awake and handler dispatch).
-            yield return null;
-            if (Golfin.UI.Toast.ToastController.Instance != null)
-                Golfin.UI.Toast.ToastController.Instance.Show("Coming soon");
-            else
-                Debug.LogWarning("[GachaDemo] ToastController.Instance still null after activation — toast not shown.");
-            yield return new WaitForSecondsRealtime(2.8f);  // toast visible + auto-dismiss
+            var backX1 = Resources.FindObjectsOfTypeAll<Button>().FirstOrDefault(b =>
+                b.gameObject.name == "BackButton" &&
+                !string.IsNullOrEmpty(b.gameObject.scene.name) && b.isActiveAndEnabled);
+            if (backX1 != null) { Debug.Log("[GachaDemo] BACK from x1"); backX1.onClick.Invoke(); }
+            yield return new WaitForSecondsRealtime(1.5f);
 
             // ── Wrap up ────────────────────────────────────────────────────────
             float recEnd = Time.realtimeSinceStartup;
