@@ -47,7 +47,11 @@ namespace Golfin.EditorTools.UIFidelity
             var cv = canvasGO.GetComponent<Canvas>(); cv.renderMode = RenderMode.WorldSpace;
             var crt = (RectTransform)canvasGO.transform;
             var prt = prefab.GetComponent<RectTransform>();
-            crt.sizeDelta = prt != null ? prt.sizeDelta : new Vector2(1170, 400);
+            // Full-screen stretch prefabs have root sizeDelta≈(0,0); fall back to iPhone-14 canvas
+            // so layout groups resolve correctly during lint (else all VLG-driven heights → 0).
+            var prtSize = prt != null ? prt.sizeDelta : Vector2.zero;
+            if (prtSize.x < 10f || prtSize.y < 10f) prtSize = new Vector2(1170, 2532);
+            crt.sizeDelta = prtSize;
             var inst = (GameObject)PrefabUtility.InstantiatePrefab(prefab, canvasGO.transform);
             Canvas.ForceUpdateCanvases();
 

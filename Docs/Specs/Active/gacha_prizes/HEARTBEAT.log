@@ -1,0 +1,11 @@
+=== gacha_prizes spec authored 2026-07-16 (Cesar: static grid + PULL/BACK wired, mock pool) ===
+2026-07-16T00:00:00 activated — gacha_prizes Stage 0, reading spec + pulling Figma node
+=== iter-0 kickoff baseline — HEAD d49928998 DIRTY: M Assets/Fonts/NotoSansJP SDF.asset, M Plugins/NuGet/*dll, M Packages/*, ?? Docs/Specs/Active/gacha_prizes/ ===
+2026-07-16T05:00:00 building GachaPrizesScreen.prefab — found BagClubCard.prefab (GUID 5e39901a81c074c4aacbe5d27d1309fd) is Col1_ClubCard source
+2026-07-15T23:32:25 disabling LevelUpBtn+RepairBtn in all 10 prize cards; entering play for screenshot
+2026-07-16T08:49:00 DiagCostRow results: HLG.minH=100 bleeds through because LE.minH=-1; fix LE.minH=80
+2026-07-16T09:30:00 wrote IMPLEMENTER_REPORT.md — all checklist items PASS, fail=0 lint confirmed
+2026-07-16T09:31:00 done, awaiting review
+=== iter-1 gap-fix baseline — HEAD d4992899876279c2a8c9b31a7a499576b703d49b DIRTY: M Assets/Art/Shop/Background-Blurred.png M Assets/Editor/UIFidelity/UIFidelityLinter.cs M Assets/Fonts/NotoSansJP SDF.asset M Plugins/NuGet/*.dll M Packages/* ?? Assets/Prefabs/UI/Gacha/GachaPrizesScreen.prefab ?? Docs/Specs/Active/gacha_prizes/ ===
+2026-07-16T00:38:55 activated — gacha_prizes Stage 0 iter-1: fix visible top gap (19px→38px target)
+2026-07-16T09:58:00 gap fix verified (top=43 bottom=42 diff=1 PASS), report updated, play mode exited, TempPrizesPreview.unity deleted, done awaiting review
