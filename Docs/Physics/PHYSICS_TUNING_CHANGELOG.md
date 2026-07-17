@@ -6,6 +6,41 @@ against the Hole 1 par-5 completability baseline (≤7 strokes with default char
 
 ---
 
+## F9 — Retired resolver-side stamina lane + ClubControl aim-cone term (2026-07-16)
+
+**Task:** `stat_lane_offdesign_retirement` (Order 731)  
+**Reason:** Two off-design lanes were deleted from `StatModifierResolver.Resolve`:
+
+1. **Stamina lane (Defect A):** `LiveStatProviderHost.BuildCharacterStats` already bakes stamina degradation via `StaminaModel.EffectiveStat` (with comfort threshold + curve + per-stat `IsDegraded` gate). The resolver was re-applying a cruder raw `current/max` multiplier with no threshold or gate, creating double-application. Deleted; `effStrength` now reads the already-provider-degraded value directly.
+
+2. **ClubControl aim-cone term (Defect B):** `SHOT_CONTROLS_DESIGN.md §6` assigns cone width to Club Accuracy and arrow speed to ClubControl. The resolver's `charControlReduction` was a second stat driving the cone, which is off-design. Deleted; `aimConeReduction` is now single-source from Club Accuracy (ruling 2026-07-16).
+
+### StatCoefficients changes
+
+None. No coefficient values changed.
+
+### Dead coefficients (fields retained, consumers removed)
+
+| Field | Old value | Status |
+|---|---|---|
+| `StaminaFloorFraction` | `0.20f` | DEAD — field kept for csv loader; consumer deleted |
+| `CharClubControlPerPoint` | `0.0035f` | DEAD — field kept for csv loader; consumer deleted |
+
+### FALLBACK path: bit-identical
+
+`DefaultStatProvider` uses `currentStamina=100f, maxStamina=100f` → `staminaFraction=1.0` → deleted stamina lane was a no-op. `CharacterStats.Neutral.ClubControl=0` → deleted `charControlReduction` was 0 × coeff = 0 → no-op. Terminal position proven bit-identical: `finalPosition=(x.raw=0, y.raw=1399, z.raw=13272238)` old = new.
+
+### Behavioural deltas (at condition < 100%)
+
+| Lane | Before | After |
+|---|---|---|
+| Strength velocity | Double-stamina penalty (resolver AND provider) | Single penalty at provider (designed model with comfort threshold) |
+| Aim cone | Club Accuracy + ClubControl | Club Accuracy only |
+
+At 100% condition and on the FALLBACK path: **zero delta**.
+
+---
+
 ## F8 — BallRollPerPoint 0.01 → 0.02 (2026-06-02)
 
 **Task:** `ball_roll_coefficient_retune`  

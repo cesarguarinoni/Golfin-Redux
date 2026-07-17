@@ -694,6 +694,33 @@ namespace Golfin.Physics.Viewer.Bot
                     firstStrokePowerOverride);
                 isFirstStroke = false;
 
+                // ── Off-green putter guard (Order 731, 2026-07-16) ─────────────────────
+                // Mirrors VersusBot.cs H3b and the real game's PutterModeSurfaceController,
+                // which reverts putter→last club whenever the ball is off-green. A putt fired
+                // from a non-putt surface (Fairway/Rough) fails IsPutt's surface gate and is
+                // misrouted to the AIRBORNE integrator; its origin sits on/below the sim
+                // ground, so the airborne ground-crossing guard never fires and the ball
+                // free-falls under gravity (y≈-1582m) while OnShotComplete never returns.
+                // Real players cannot putt off-green (the club UI auto-reverts it) and
+                // VersusBot already guards this — BotDriver was the lone harness that didn't,
+                // making the capture bot behave unlike a real player. Fall back to a Wedge
+                // chip so the shot launches upward (signedPrev>0) and resolves normally.
+                if (club == PhysicsLabController.PutterIndex)
+                {
+                    var surfaces    = ctrl.GetSurfaces();
+                    var ballSurface = surfaces != null
+                        ? surfaces.Classify(Golfin.Physics.Math.fp.FromFloat(ball.x),
+                                            Golfin.Physics.Math.fp.FromFloat(ball.z))
+                        : SurfaceType.Green;
+                    if (ballSurface != SurfaceType.Green && ballSurface != SurfaceType.GreenCollar)
+                    {
+                        club    = 2; // Wedge — gentle chip back onto the green.
+                        power01 = Mathf.Clamp(dist / 80f, 0.08f, 0.50f);
+                        label   = $"Wedge (off-green putter guard, surface={ballSurface}) dist={dist:F1}m power={power01:F2}";
+                        LogStep($"  Off-green putter guard: surface={ballSurface} at ({ball.x:F1},{ball.z:F1}) → Wedge instead of Putter (prevents airborne fall-through)");
+                    }
+                }
+
                 LogStep($"Stroke {strokes}: ball={ball:F1} cup={cup:F1} dist={dist:F1}m — {label} club={club} power={power01:F2}");
 
                 // PROD path: SetClub only (no lab bundle inject); clear any prior override so bus resolves live stats.
@@ -703,6 +730,67 @@ namespace Golfin.Physics.Viewer.Bot
                     shotCtl?.ClearStatBundleOverride();
                 }
                 catch (Exception ex) { LogStep($"  SetClub warn: {ex.Message}"); }
+
+                // LIVE-path club switch (Order 731, 2026-07-17).
+                // SetClub only updates the LAB club index + cone/putter UI. On the LIVE stat
+                // path the provider resolves the SWING club from ClubContext.SelectedClubId
+                // (LiveStatProviderHost.cs:188) — which SetClub never touches. Without this the
+                // equipped driver is fired for EVERY stroke (clubVel=75m/s, loft=10.9°) → every
+                // shot overshoots ~2× and the hole never converges. Drive the same selection the
+                // real club-selector widget uses (mirrors LabInventoryStub / ClubContextPopulator)
+                // so the chosen club is actually equipped — this is what makes the bot switch
+                // clubs like a real player. (Putter, LabClubIndex 3, is resolved from EquippedBag
+                // directly by the provider, but we keep the selection in sync for consistency.)
+                try
+                {
+                    var bag = Golfin.Gameplay.UI.HUD.ClubContext.EquippedBag;
+                    // Resolve the desired lab-club index to the NEAREST AVAILABLE equipped club.
+                    // The player's bag may not contain every lab club (e.g. the default loadout has
+                    // no wedge/LabClubIndex 2) — a real player then reaches for the closest club they
+                    // actually carry (a shorter club: prefer the largest index <= desired; else the
+                    // smallest index > desired). This is what makes the bot play its real bag.
+                    int bagIdx = -1;
+                    if (bag != null && bag.Count > 0)
+                    {
+                        bagIdx = bag.FindIndex(e => e.LabClubIndex == club);
+                        if (bagIdx < 0)
+                        {
+                            int bestBelow = -1, bestBelowIdx = -1, bestAbove = int.MaxValue, bestAboveIdx = -1;
+                            for (int i = 0; i < bag.Count; i++)
+                            {
+                                int li = bag[i].LabClubIndex;
+                                if (li <= club && li > bestBelow) { bestBelow = li; bestBelowIdx = i; }
+                                if (li >  club && li < bestAbove) { bestAbove = li; bestAboveIdx = i; }
+                            }
+                            bagIdx = bestBelowIdx >= 0 ? bestBelowIdx : bestAboveIdx;
+                        }
+                    }
+                    if (bagIdx >= 0)
+                    {
+                        var entry = bag[bagIdx];
+                        Golfin.Gameplay.UI.HUD.ClubContext.SelectedClubId    = entry.ClubId;
+                        Golfin.Gameplay.UI.HUD.ClubContext.SelectedIndex     = bagIdx;
+                        Golfin.Gameplay.UI.HUD.ClubContext.SelectedTypeLabel = entry.TypeLabel;
+                        Golfin.Gameplay.UI.HUD.ClubContext.RaiseSelectedChanged();
+                        // Keep the lab club index in sync with the club actually equipped so the
+                        // putter-mode / cone UI and isPutt detection match what the LIVE provider fires.
+                        if (entry.LabClubIndex != club)
+                        {
+                            try { ctrl.SetClub(entry.LabClubIndex); } catch { }
+                            LogStep($"  ClubContext → '{entry.ClubId}' (bagIdx={bagIdx}, labIdx {club}→{entry.LabClubIndex}, no exact club in bag) so the LIVE provider fires an available club");
+                            club = entry.LabClubIndex;
+                        }
+                        else
+                        {
+                            LogStep($"  ClubContext → '{entry.ClubId}' (bagIdx={bagIdx}, labIdx={club}) so the LIVE provider fires the selected club");
+                        }
+                    }
+                    else
+                    {
+                        LogStep($"  ClubContext WARN: empty EquippedBag (count={(bag?.Count ?? 0)}) — LIVE club unchanged, may overshoot");
+                    }
+                }
+                catch (Exception ex) { LogStep($"  ClubContext switch warn: {ex.Message}"); }
 
                 float yaw = Mathf.Atan2(flat.z, flat.x);
                 try { ctrl.SetCameraYawRadians(yaw); }

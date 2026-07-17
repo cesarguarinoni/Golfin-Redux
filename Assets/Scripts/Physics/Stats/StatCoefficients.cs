@@ -16,13 +16,13 @@ namespace Golfin.Physics.Stats
 
         public fp CharStrengthPerPoint;               // overpower forgiveness per Character Strength point
         public fp CharStrengthVelocityPerPoint;       // velocity multiplier per Character Strength point (swing only)
-        public fp CharClubControlPerPoint;            // aim cone reduction per Character Club Control point
+        public fp CharClubControlPerPoint;            // DEAD — retired by Order 731 (2026-07-16); field kept so csv loader doesn't error
 
         public fp PutterControlPerPoint;        // off-center forgiveness per Putter Control point
         public fp PutterAccuracyPerPoint;       // gravity well radius per Putter Accuracy point (assist)
         public fp PutterWeightPerPoint;         // aim cycles per Putter Weight point (UI layer)
 
-        public fp StaminaFloorFraction;         // stamina-modulated stats retain this fraction at zero stamina
+        public fp StaminaFloorFraction;         // DEAD — retired by Order 731 (2026-07-16); field kept so csv loader doesn't error
 
         public static StatCoefficients Default => new StatCoefficients
         {

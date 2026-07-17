@@ -111,18 +111,81 @@ namespace Golfin.Physics.Tests
                 "VelocityMultiplier must never exceed the 2.0 cap");
         }
 
-        // ── Test 6: Zero stamina retains 20% floor on character stats ─────────────
+        // ── Test 6 (Order 731): Resolver is stamina-agnostic ─────────────────────
+        // The resolver must NOT re-apply stamina.  Stamina degradation is done exactly
+        // once at LiveStatProviderHost.BuildCharacterStats before the bundle is built.
+        // The old Stats_ZeroStamina_FloorPreservesCharStats test asserted the resolver-side
+        // floor that Order 731 deletes and is replaced by this test.
 
         [Test]
-        public void Stats_ZeroStamina_FloorPreservesCharStats()
+        public void Stats_Resolver_IsStaminaAgnostic()
         {
-            // Strength 120 at zero stamina → effStrength = 120 × 0.20 = 24 → overpower = 24 × 0.00625 = 0.15
-            var charStats = new CharacterStats(120, 0, 0, 0);
-            var bundle    = new StatBundle(IronClub(), NeutralBall, charStats, fp.Zero, FullMax);
-            var r = StatModifierResolver.Resolve(bundle, Coeffs, Caps);
-            float actual = r.OverpowerForgivenessFraction.ToFloat();
-            Assert.IsTrue(System.Math.Abs(actual - 0.15f) < 0.001f,
-                $"Zero-stamina overpower ~0.15 (got {actual:F5})");
+            // Same CharacterStats + different CurrentStamina must produce identical ResolvedShotModifiers.
+            // (The bundle's stamina fields are present for bookkeeping; the resolver must not use them.)
+            var charStats = new CharacterStats(120, 25, 0, 0);
+            var club      = IronClub(power: 60, accuracy: 50);
+            fp fullCur  = fp.FromInt(100);
+            fp halfCur  = fp.FromInt(50);
+            fp zeroCur  = fp.Zero;
+            fp maxStam  = fp.FromInt(100);
+
+            var bundleFull = new StatBundle(club, NeutralBall, charStats, fullCur, maxStam);
+            var bundleHalf = new StatBundle(club, NeutralBall, charStats, halfCur, maxStam);
+            var bundleZero = new StatBundle(club, NeutralBall, charStats, zeroCur, maxStam);
+
+            var rFull = StatModifierResolver.Resolve(bundleFull, Coeffs, Caps);
+            var rHalf = StatModifierResolver.Resolve(bundleHalf, Coeffs, Caps);
+            var rZero = StatModifierResolver.Resolve(bundleZero, Coeffs, Caps);
+
+            // VelocityMultiplier must be bit-identical regardless of stamina level.
+            Assert.AreEqual(rFull.VelocityMultiplier.raw, rHalf.VelocityMultiplier.raw,
+                "VelocityMultiplier must not change with stamina (half vs full)");
+            Assert.AreEqual(rFull.VelocityMultiplier.raw, rZero.VelocityMultiplier.raw,
+                "VelocityMultiplier must not change with stamina (zero vs full)");
+
+            // AimConeReductionFraction must be bit-identical (no ClubControl or stamina component).
+            Assert.AreEqual(rFull.AimConeReductionFraction.raw, rHalf.AimConeReductionFraction.raw,
+                "AimConeReductionFraction must not change with stamina (half vs full)");
+            Assert.AreEqual(rFull.AimConeReductionFraction.raw, rZero.AimConeReductionFraction.raw,
+                "AimConeReductionFraction must not change with stamina (zero vs full)");
+
+            // OverpowerForgiveness must be bit-identical (effStrength is now raw from bundle).
+            Assert.AreEqual(rFull.OverpowerForgivenessFraction.raw, rHalf.OverpowerForgivenessFraction.raw,
+                "OverpowerForgiveness must not change with stamina (half vs full)");
+            Assert.AreEqual(rFull.OverpowerForgivenessFraction.raw, rZero.OverpowerForgivenessFraction.raw,
+                "OverpowerForgiveness must not change with stamina (zero vs full)");
+        }
+
+        // ── Test Order731-A: AimConeReductionFraction is a pure function of Club.Accuracy ──
+        // Varying Character.ClubControl must not affect it.
+
+        [Test]
+        public void Stats_AimConeReductionFraction_PureFunctionOfClubAccuracy()
+        {
+            var club = IronClub(accuracy: 50);
+            fp cur = FullCur; fp max = FullMax;
+
+            // Different ClubControl values — cone must be identical.
+            var charZeroCC    = new CharacterStats(0,   0,  0, 0);
+            var charMaxCC     = new CharacterStats(0, 120,  0, 0);
+            var charMidCC     = new CharacterStats(0,  25,  0, 0);
+
+            var rZeroCC = StatModifierResolver.Resolve(new StatBundle(club, NeutralBall, charZeroCC, cur, max), Coeffs, Caps);
+            var rMaxCC  = StatModifierResolver.Resolve(new StatBundle(club, NeutralBall, charMaxCC,  cur, max), Coeffs, Caps);
+            var rMidCC  = StatModifierResolver.Resolve(new StatBundle(club, NeutralBall, charMidCC,  cur, max), Coeffs, Caps);
+
+            Assert.AreEqual(rZeroCC.AimConeReductionFraction.raw, rMaxCC.AimConeReductionFraction.raw,
+                $"AimConeReductionFraction must not change with ClubControl (0 vs 120). " +
+                $"Zero={rZeroCC.AimConeReductionFraction.ToFloat():F4}, Max={rMaxCC.AimConeReductionFraction.ToFloat():F4}");
+            Assert.AreEqual(rZeroCC.AimConeReductionFraction.raw, rMidCC.AimConeReductionFraction.raw,
+                $"AimConeReductionFraction must not change with ClubControl (0 vs 25). " +
+                $"Zero={rZeroCC.AimConeReductionFraction.ToFloat():F4}, Mid={rMidCC.AimConeReductionFraction.ToFloat():F4}");
+
+            // Also assert that Club.Accuracy DOES drive cone — non-zero accuracy must reduce.
+            var clubZeroAcc = IronClub(accuracy: 0);
+            var rZeroAcc = StatModifierResolver.Resolve(new StatBundle(clubZeroAcc, NeutralBall, charZeroCC, cur, max), Coeffs, Caps);
+            Assert.Greater(rZeroCC.AimConeReductionFraction.raw, rZeroAcc.AimConeReductionFraction.raw,
+                "Accuracy=50 must produce larger AimConeReductionFraction than Accuracy=0");
         }
 
         // ── Test 7: Ball Rebound +10 → ReboundMultiplier == 1.10 ─────────────────

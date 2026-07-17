@@ -6,16 +6,11 @@ namespace Golfin.Physics.Stats
     {
         public static ResolvedShotModifiers Resolve(StatBundle bundle, StatCoefficients coeffs, StatCaps caps)
         {
-            // Step 1: Apply stamina scaling to character stats.
-            // effective = base × max(floor, current/max). Capped at 1.0 — stamina never amplifies.
-            fp staminaFraction = (bundle.MaxStamina > fp.Zero)
-                ? bundle.CurrentStamina / bundle.MaxStamina
-                : fp.One;
-            fp staminaMultiplier = fpMath.Max(coeffs.StaminaFloorFraction, staminaFraction);
-            staminaMultiplier    = fpMath.Min(staminaMultiplier, fp.One);
-
-            fp effStrength    = fp.FromInt(bundle.Character.Strength)    * staminaMultiplier;
-            fp effClubControl = fp.FromInt(bundle.Character.ClubControl) * staminaMultiplier;
+            // Step 1: Character stats — consumed raw from the bundle.
+            // Stamina degradation is applied EXACTLY ONCE at LiveStatProviderHost.BuildCharacterStats
+            // via StaminaModel.EffectiveStat before the bundle is built.  Do NOT re-apply it here.
+            // (Order 731 — retired the duplicate resolver-side staminaMultiplier lane, 2026-07-16.)
+            fp effStrength = fp.FromInt(bundle.Character.Strength);
 
             // Step 2: Velocity multiplier.
             // Lane: Club Power × Ball Power × Character Strength (multiplicative).
@@ -32,17 +27,15 @@ namespace Golfin.Physics.Stats
             velocityMultiplier    = fpMath.Min(velocityMultiplier, caps.VelocityMultiplierMax);
             velocityMultiplier    = fpMath.Max(velocityMultiplier, fp.Zero);
 
-            // Step 3: Aim cone reduction.
-            // Lane: Club Accuracy × Character Club Control. Putters don't use Club Accuracy here.
-            // reduction = 1 − (1 − clubReduction) × (1 − charReduction)
-            fp clubAccReduction  = bundle.IsPutt
+            // Step 3: Aim cone reduction — single-source from Club Accuracy (design §6, ruling 2026-07-16).
+            // Character ClubControl drives arrow speed (ShotController.TickArrow), NOT cone width.
+            // The charControlReduction term was removed by Order 731 (2026-07-16).
+            fp clubAccReduction = bundle.IsPutt
                 ? fp.Zero
                 : fp.FromInt(bundle.Club.Value.Accuracy) * coeffs.ClubAccuracyPerPoint;
-            fp charControlReduction = effClubControl * coeffs.CharClubControlPerPoint;
-            fp unreducedFraction    = (fp.One - clubAccReduction) * (fp.One - charControlReduction);
-            fp aimConeReduction     = fp.One - unreducedFraction;
-            aimConeReduction        = fpMath.Min(aimConeReduction, caps.AimConeReductionMax);
-            aimConeReduction        = fpMath.Max(aimConeReduction, fp.Zero);
+            fp aimConeReduction = clubAccReduction;
+            aimConeReduction    = fpMath.Min(aimConeReduction, caps.AimConeReductionMax);
+            aimConeReduction    = fpMath.Max(aimConeReduction, fp.Zero);
 
             // Step 4: Spin magnitude multiplier — single-source from Ball Spin.
             fp spinMul = fp.One + fp.FromInt(bundle.Ball.Spin) * coeffs.BallSpinPerPoint;

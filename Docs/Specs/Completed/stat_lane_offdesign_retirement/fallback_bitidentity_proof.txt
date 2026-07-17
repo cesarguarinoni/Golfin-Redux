@@ -1,0 +1,16 @@
+=== FALLBACK BIT-IDENTITY PROOF (Order 731) ===
+staminaFraction.raw    = 65536  (should be fp.One.raw=65536)
+staminaMultiplier.raw  = 65536 (should equal fp.One.raw)
+effStrengthOld.raw     = 0   (should be fp.Zero.raw=0)
+effStrengthNew.raw     = fp.FromInt(0).raw = 0
+charControlRedOld.raw  = 0 (should be fp.Zero.raw)
+aimConeRedOld.raw      = 0
+velMultOld.raw         = 65536
+--- Resolver comparison ---
+velMult:   old=65536  new=65536  MATCH=True
+aimConeRed: old=0  new=0  MATCH=True
+--- BallSimulation terminal position ---
+old final.x.raw=0  new final.x.raw=0  MATCH=True
+old final.y.raw=1399  new final.y.raw=1399  MATCH=True
+old final.z.raw=13272238  new final.z.raw=13272238  MATCH=True
+OVERALL BIT-IDENTITY PASS=True

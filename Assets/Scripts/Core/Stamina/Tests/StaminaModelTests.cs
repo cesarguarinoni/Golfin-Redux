@@ -282,6 +282,46 @@ low_condition_flag_pct,0.25,Below this Condition% the portrait low-stamina icon 
             Assert.IsFalse(StaminaModel.IsDegraded("Speed"));
         }
 
+        // ── Tests Order731-PS: Provider-side stamina gate (Order 731, 2026-07-16) ──
+        // Assert that StaminaModel.EffectiveStat IS the single degradation path and that
+        // it returns the base stat unchanged above the comfort threshold (90% condition → no penalty).
+        // These tests are the positive proof that the provider path degrades correctly now
+        // that the resolver-side duplicate lane is gone.
+
+        [Test]
+        public void ProviderSide_AboveComfort_NoStatPenalty()
+        {
+            // ComfortThresholdPct = 0.70; 90% is above it → penalty = 0 → effective == base.
+            int baseStat = 80;
+            int effective = StaminaModel.EffectiveStat(baseStat, 0.90f);
+            Assert.AreEqual(baseStat, effective,
+                $"At 90% condition (above comfort threshold 70%) EffectiveStat({baseStat}, 0.90) must equal base {baseStat}");
+        }
+
+        [Test]
+        public void ProviderSide_BelowComfort_StatDegraded()
+        {
+            // At 40% condition (below comfort 70%) the stat is reduced.
+            int baseStat = 80;
+            int effective = StaminaModel.EffectiveStat(baseStat, 0.40f);
+            Assert.Less(effective, baseStat,
+                $"At 40% condition (below comfort threshold 70%) EffectiveStat must be less than base {baseStat}");
+            // Sanity check: floor at 0% is 80*(1-0.33)=53.6→54; at 40% penalty < floor, so effective > 54.
+            Assert.Greater(effective, 53,
+                $"EffectiveStat at 40% condition should be > 53 (floor is 67% of base)");
+        }
+
+        [Test]
+        public void ProviderSide_IsDegraded_StrengthAndClubControl()
+        {
+            // Confirm that Strength and ClubControl are in the degraded set so the
+            // provider applies EffectiveStat to them.  Recovery and Stamina must NOT be degraded.
+            Assert.IsTrue(StaminaModel.IsDegraded("Strength"),    "Strength should be degraded");
+            Assert.IsTrue(StaminaModel.IsDegraded("ClubControl"), "ClubControl should be degraded");
+            Assert.IsFalse(StaminaModel.IsDegraded("Recovery"),   "Recovery should NOT be degraded");
+            Assert.IsFalse(StaminaModel.IsDegraded("Stamina"),    "Stamina stat should NOT be degraded");
+        }
+
         // ── Test 13: Pre-Configure guard ──────────────────────────────────────
 
         [Test]
