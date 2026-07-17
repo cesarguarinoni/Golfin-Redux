@@ -192,11 +192,15 @@ namespace Golfin.Course.Tests
             var labels = topo.GetPinLabels();
             Assert.IsNotNull(labels, "GetPinLabels() returned null.");
             Assert.GreaterOrEqual(labels.Count, 3,
-                "Hole_01 skeleton should have 3 pin candidates; got " + labels.Count);
+                "Hole_01 should have 3 pin candidates; got " + labels.Count);
 
-            Assert.AreEqual("skeleton-center",      labels[0], "labels[0] mismatch.");
-            Assert.AreEqual("skeleton-front-right", labels[1], "labels[1] mismatch.");
-            Assert.AreEqual("skeleton-back-left",   labels[2], "labels[2] mismatch.");
+            // 2026-07-17: Hole_01's original "skeleton-*" pin candidates were mis-placed ~250m
+            // off the green (buried mid-fairway at (-9,41)), making the cup unreachable. They were
+            // corrected onto the green centroid and relabeled "green-*". This test verifies the
+            // loader still returns the author-supplied pins in order; the labels track the data.
+            Assert.AreEqual("green-center",      labels[0], "labels[0] mismatch.");
+            Assert.AreEqual("green-front-right", labels[1], "labels[1] mismatch.");
+            Assert.AreEqual("green-back-left",   labels[2], "labels[2] mismatch.");
         }
 
         // ──────────────────────────────────────────────────────────────────────

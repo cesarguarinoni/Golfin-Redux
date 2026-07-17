@@ -714,10 +714,19 @@ namespace Golfin.Physics.Viewer.Bot
                         : SurfaceType.Green;
                     if (ballSurface != SurfaceType.Green && ballSurface != SurfaceType.GreenCollar)
                     {
-                        club    = 2; // Wedge — gentle chip back onto the green.
-                        power01 = Mathf.Clamp(dist / 80f, 0.08f, 0.50f);
-                        label   = $"Wedge (off-green putter guard, surface={ballSurface}) dist={dist:F1}m power={power01:F2}";
-                        LogStep($"  Off-green putter guard: surface={ballSurface} at ({ball.x:F1},{ball.z:F1}) → Wedge instead of Putter (prevents airborne fall-through)");
+                        // Chip with the Iron7 (the club the bag actually carries — there is no
+                        // wedge). Calibrated to the remaining distance so the chip does not
+                        // rocket 12m past the cup the way the old lab-wedge power did. The
+                        // Iron7's minimum carry is ~3.6m, so a sub-4m off-green shot still
+                        // overshoots — the real endgame relies on the approach LANDING ON the
+                        // green so a legal putt (this guard bypassed) can finish it.
+                        EnsureCarryTable();
+                        club    = 1; // Iron7 chip back toward the green.
+                        power01 = (_carryTable != null && _carryTable.Count > 0)
+                            ? InterpolateClubPower("iron7", Mathf.Max(dist, 3.6f))
+                            : Mathf.Clamp(dist / 260f, 0.05f, 0.30f);
+                        label   = $"Iron7 (off-green putter guard, surface={ballSurface}) dist={dist:F1}m power={power01:F2}";
+                        LogStep($"  Off-green putter guard: surface={ballSurface} at ({ball.x:F1},{ball.z:F1}) → Iron7 chip instead of Putter (prevents airborne fall-through)");
                     }
                 }
 
@@ -795,6 +804,16 @@ namespace Golfin.Physics.Viewer.Bot
                 float yaw = Mathf.Atan2(flat.z, flat.x);
                 try { ctrl.SetCameraYawRadians(yaw); }
                 catch (Exception ex) { LogStep($"  SetCameraYaw warn: {ex.Message}"); }
+
+                // Blocker A fix (2026-07-17): SetCameraYawRadians only sets the internal
+                // _cameraYaw float + ShotController heading — it does NOT rotate the chase
+                // camera transform (that happens in PhysicsLabController.ApplyCameraYaw, which
+                // the production auto-aim calls at AtRest but the bot seam bypasses). Rotate
+                // the chase camera to face the cup so the VIDEO shows the bot aiming at the pin
+                // and the HoleIndicatorWidget flag-tail (which reads chaseCamera.forward) points
+                // at the hole, instead of the stale "shoots straight" forward.
+                try { AimChaseCameraAtCup(ball, cup); }
+                catch (Exception ex) { LogStep($"  AimChaseCamera warn: {ex.Message}"); }
 
                 // Gate on BallSM in Aiming state before firing.
                 if (sm != null)
@@ -879,6 +898,15 @@ namespace Golfin.Physics.Viewer.Bot
                 {
                     inCup = res.TerminalState == BallState.InCup;
                     LogStep($"  Stroke {strokes} terminal={res.TerminalState} endSurface={res.EndSurface} ball={ctrl.BallPosition:F1}");
+                    // Diagnostic: first/last terrain contact so a truncated carry (early ground
+                    // strike / obstacle) is distinguishable from a full-carry-then-roll shot.
+                    var traj = ctrl.LastTrajectory;
+                    if (traj != null && traj.terrainHits != null && traj.terrainHits.Count > 0)
+                    {
+                        var fh = traj.terrainHits[0];
+                        var lh = traj.terrainHits[traj.terrainHits.Count - 1];
+                        LogStep($"    traj: bounces={traj.terrainHits.Count} firstHit=({fh.Position.x.ToFloat():F0},{fh.Position.y.ToFloat():F0},{fh.Position.z.ToFloat():F0}) surf={fh.Surface} lastHit=({lh.Position.x.ToFloat():F0},{lh.Position.y.ToFloat():F0},{lh.Position.z.ToFloat():F0}) surf={lh.Surface}");
+                    }
                 }
                 else
                 {
@@ -899,83 +927,181 @@ namespace Golfin.Physics.Viewer.Bot
         }
 
         /// <summary>
-        /// Select club and power for a shot of the given horizontal distance (metres).
+        /// Rotate the gameplay chase camera to look from behind the ball toward the cup —
+        /// mirrors PhysicsLabController.ApplyCameraYaw (orbitCenter = ball). The bot's
+        /// SetCameraYawRadians seam sets only the internal _cameraYaw + ShotController heading
+        /// (so the SHOT fires at the cup) but never moves the camera, so the visible camera and
+        /// the HoleIndicatorWidget flag-tail (bound to chaseCamera.forward) stayed pointed the
+        /// old way — the "shoots straight / flag not at the pin" symptom. Idempotent (same angle
+        /// as the production AtRest auto-aim). Only acts in Chase mode with the ball at rest so
+        /// it never fights ChaseCamera's in-flight follow.
+        /// </summary>
+        void AimChaseCameraAtCup(Vector3 ball, Vector3 cup)
+        {
+            var chase = UnityEngine.Object.FindObjectOfType<Golfin.Physics.Viewer.ChaseCamera>();
+            if (chase == null) return;
+            if (chase.CurrentMode != Golfin.Physics.Viewer.ChaseCamera.Mode.Chase) return;
+            var cam = chase.GetComponent<Camera>();
+            if (cam == null) return;
+            float yaw = Mathf.Atan2(cup.z - ball.z, cup.x - ball.x);
+            Vector3 lookDir = new Vector3(Mathf.Cos(yaw), 0f, Mathf.Sin(yaw));
+            cam.transform.position = ball - lookDir * 8f + Vector3.up * 3f;
+            cam.transform.LookAt(ball + lookDir * 3f + Vector3.up * 0.5f);
+        }
+
+        /// <summary>
+        /// Select club and power for a shot of the given horizontal distance (metres),
+        /// CALIBRATED against the LIVE default bag's measured carry curves (bot_clubs.csv).
         ///
-        /// Fix #2 (Cesar 2026-05-20): Driver ONLY on the first stroke. For subsequent strokes:
-        ///   dist > 90m   → Wedge  (club 2)  at ~70% power  → aim to land in front of green (~55-65m)
-        ///   dist > 40m   → Wedge  (club 2)  at reduced power → ~40-55m carry
-        ///   dist > 15m   → Wedge  (club 2)  at low power → 15-40m carry
-        ///   dist > 6m    → Putter (club 3)  at scaled power → long putt
-        ///   dist <= 6m   → Putter (club 3)  at scaled power → short putt
+        /// Why this was rewritten (2026-07-17, bot-completion rehab): the old table was tuned
+        /// for a LAB wedge (~91m full carry). But the default equipped bag has NO wedge —
+        /// it is Driver / Wood / Iron7 / Putter (see ClubManager.DefaultBagIds). On the LIVE
+        /// stat path the ClubContext resolver mapped the old "Wedge" (club 2) onto the Iron7,
+        /// whose real carry at power 0.75 is ~235m (bot_clubs.csv), not ~55m — so every
+        /// approach overshot ~4× and the ball oscillated 200m+ back and forth across the map,
+        /// never converging. Fix: select ONLY clubs the bag actually carries
+        /// (driver=0, iron7=1, putter=3) and interpolate power from THAT club's measured
+        /// carry curve, so the target carry is the real one. Mirrors VersusBot's H1 calibration
+        /// (SelectShotCalibrated) but bag-correct for the solo loadout (no wedge lane).
         ///
-        /// Strategy rationale (iter-5, 2026-05-20): After iter-4 playthrough, the ball landed
-        /// in sand ~118m from cup. Iron 7 shots from there all went OB because the trajectory
-        /// overshot the green (no safe terrain hit → OB drop back to origin → infinite loop).
-        /// Root cause: Iron 7 from sand at 84% power carries ~100-120m, overshoots the
-        /// green boundary into OB. Fix: use Wedge (max carry ~91m) for all post-driver
-        /// approach shots. Power = dist/130 gives conservative carry well short of OB.
+        /// Bands (remaining distance → cup, metres):
+        ///   dist &lt;= 18   : Putter  — carry = dist (on/near green).
+        ///   dist &lt;= 130  : Iron7   — carry = dist (land near the cup / drop into the green).
+        ///   dist &lt;= 230  : Iron7   — layup: carry = dist − 55 (leave a short iron in).
+        ///   dist &gt;  230  : Driver  — layup: carry = min(dist − 60, driverMax).
         ///
-        /// Power tuning reference (StatBundle production path, not preset path):
-        ///   Wedge base 42 m/s; carry scales as power^1.8 approximately.
-        ///   power=0.70 → ~0.55 * 91m ≈ 50m carry
-        ///   power=0.85 → ~0.75 * 91m ≈ 68m carry
-        ///   power=1.00 → 91m carry (full)
-        ///
-        /// Club indices: 0=Driver, 1=Iron 7, 2=Wedge, 3=Putter (PhysicsLabController.PutterIndex)
+        /// Club indices: 0=Driver, 1=Iron 7, 3=Putter (PhysicsLabController.PutterIndex).
+        /// (Club 2 / lab "Wedge" is intentionally never selected — the bag has no wedge.)
         /// </summary>
         void SelectShot(float dist, bool isFirstStroke, out int club, out float power01, out string label,
             float firstStrokePowerOverride = 0f)
         {
+            EnsureCarryTable();
             int putter = PhysicsLabController.PutterIndex;
 
-            // First stroke: Driver. Power defaults to 1.0 (full) unless overridden.
-            // On par-3 holes pass firstStrokePowerOverride ≈ 0.55 to keep the ball in play
-            // (Driver at 100% carries ~250m which overshoots any par-3 green into OB).
-            if (isFirstStroke)
+            // Explicit first-stroke override hook (e.g. par-3 tuning). Driver at the given power.
+            if (isFirstStroke && firstStrokePowerOverride > 0f)
             {
                 club    = 0;
-                power01 = firstStrokePowerOverride > 0f
-                    ? Mathf.Clamp01(firstStrokePowerOverride)
-                    : 1.0f;
-                label   = $"Driver (first stroke, dist={dist:F0}m to cup, power={power01:F2})";
+                power01 = Mathf.Clamp01(firstStrokePowerOverride);
+                label   = $"Driver (first-stroke override, dist={dist:F0}m, power={power01:F2})";
                 return;
             }
 
-            // Subsequent strokes: use Wedge for all approach shots (avoids OB overshoot).
-            if (dist > 40f)
+            // Carry table unavailable → fall back to the (bag-correct) legacy heuristic so the
+            // bot still plays if bot_clubs.csv is missing.
+            if (_carryTable == null || _carryTable.Count == 0)
             {
-                // Approach: Wedge at conservative power.
-                // Target: carry ~65% of remaining distance, leaving next shot in good range.
-                // Clamp to 0.75 to avoid overshooting green into OB.
-                // Wedge full power carry ~91m. power=0.75 → ~0.75^1.8 * 91 ≈ 55m carry.
-                // dist=118m → power=0.75 (cap) → carry~55m → 63m left → chip + putt.
-                // dist=60m  → power=0.60        → carry~35m → 25m left → chip.
-                club    = 2;
-                power01 = Mathf.Min(Mathf.Clamp01(dist / 130f), 0.75f);
-                label   = $"Wedge approach (dist={dist:F0}m) power={power01:F2}";
+                SelectShotLegacy(dist, out club, out power01, out label);
+                return;
             }
-            else if (dist > 15f)
+
+            // On / near the green: putt. NOTE the bot_clubs.csv putter curve (0.20→9m) is
+            // calibrated for a different, stronger character on flat ground; the LIVE solo
+            // default (low-level char_james) on Hole 1's green rolls ~5× shorter — measured
+            // 0.20→1.9m, 0.17→1.5m, 0.13→1.0m ⇒ carry ≈ 9·power. So target the distance with
+            // power = dist/9 (green-response calibrated) instead of the flat-ground table, or
+            // putts crawl and never reach the cup. Slight-short bias + the per-stroke re-aim
+            // loop converge onto the 5.4cm cup without lip-out (arrive < 1.5 m/s speed gate).
+            if (dist <= 18f)
             {
-                // Short approach: Wedge at low power.
-                // power = dist / 80 → 40m → 0.50 (≈23m carry), 15m → 0.19 (≈7m carry)
-                club    = 2;
-                power01 = Mathf.Clamp01(dist / 80f);
-                label   = $"Wedge chip (dist={dist:F0}m) power={power01:F2}";
-            }
-            else if (dist > 6f)
-            {
-                // Long putt: Putter. Putter base 5 m/s; scale conservatively.
                 club    = putter;
-                power01 = Mathf.Clamp01(dist / 18f);
-                label   = $"Putter long putt (dist={dist:F0}m) power={power01:F2}";
+                power01 = Mathf.Clamp(dist / 9f, 0.12f, 1f);
+                label   = $"Putter (green-calibrated, dist={dist:F1}m) power={power01:F2}";
+                return;
+            }
+
+            string name;
+            float  targetCarry;
+            if (dist > 230f)
+            {
+                name        = "driver";
+                targetCarry = Mathf.Min(dist - 60f, GetMaxCarry("driver"));
+            }
+            else if (dist > 130f)
+            {
+                name        = "iron7";
+                targetCarry = dist - 55f;   // layup, leave a short-iron approach
             }
             else
             {
-                // Short putt: Putter at moderate power.
-                club    = putter;
-                power01 = Mathf.Clamp01(dist / 8f);
-                label   = $"Putter short putt (dist={dist:F0}m) power={power01:F2}";
+                name        = "iron7";
+                targetCarry = dist;         // land near the cup / drop into the green
             }
+
+            club    = name == "driver" ? 0 : 1;
+            power01 = InterpolateClubPower(name, targetCarry);
+            label   = $"{name} (calibrated, dist={dist:F1}m carry~{targetCarry:F0}m) power={power01:F2}";
+        }
+
+        /// <summary>
+        /// Bag-correct legacy fallback used only when bot_clubs.csv fails to load.
+        /// Driver for long, Iron7 for approaches, Putter near the green — conservative powers.
+        /// </summary>
+        void SelectShotLegacy(float dist, out int club, out float power01, out string label)
+        {
+            int putter = PhysicsLabController.PutterIndex;
+            if (dist <= 18f)      { club = putter; power01 = Mathf.Clamp01(dist / 40f);  label = $"Putter legacy dist={dist:F0}m power={power01:F2}"; }
+            else if (dist > 200f) { club = 0;      power01 = 0.55f;                        label = $"Driver legacy dist={dist:F0}m power={power01:F2}"; }
+            else if (dist > 60f)  { club = 1;      power01 = Mathf.Clamp01(dist / 260f);   label = $"Iron7 legacy dist={dist:F0}m power={power01:F2}"; }
+            else                  { club = 1;      power01 = Mathf.Clamp01(dist / 170f);   label = $"Iron7 legacy chip dist={dist:F0}m power={power01:F2}"; }
+        }
+
+        // ── Carry-table calibration (bot_clubs.csv — LIVE production carries) ──────
+        // Reuses VersusBot's H1 calibration DATA (the same Resources/Data/bot_clubs.csv the 1v1
+        // bot is tuned on). Loaded once; interpolation mirrors VersusBot.InterpolateClubPower.
+        struct CarryRow { public string club; public float power01; public float carry; }
+        static List<CarryRow> _carryTable;
+        static bool           _carryTableLoaded;
+
+        static void EnsureCarryTable()
+        {
+            if (_carryTableLoaded) return;
+            _carryTableLoaded = true;
+            _carryTable = new List<CarryRow>(96);
+            var csv = Resources.Load<TextAsset>("Data/bot_clubs");
+            if (csv == null) { Debug.LogWarning("[BotDriver] bot_clubs.csv not found in Resources/Data — SelectShot will use legacy fallback."); return; }
+            foreach (var raw in csv.text.Split('\n'))
+            {
+                var line = raw.Trim();
+                if (line.Length == 0 || line.StartsWith("#") || line.StartsWith("club,")) continue;
+                var p = line.Split(',');
+                if (p.Length < 3) continue;
+                if (!float.TryParse(p[1].Trim(), System.Globalization.NumberStyles.Float,
+                        System.Globalization.CultureInfo.InvariantCulture, out float pow)) continue;
+                if (!float.TryParse(p[2].Trim(), System.Globalization.NumberStyles.Float,
+                        System.Globalization.CultureInfo.InvariantCulture, out float carry)) continue;
+                _carryTable.Add(new CarryRow { club = p[0].Trim(), power01 = pow, carry = carry });
+            }
+        }
+
+        static float GetMaxCarry(string clubName)
+        {
+            float max = 0f;
+            if (_carryTable != null)
+                foreach (var r in _carryTable)
+                    if (r.club == clubName && r.carry > max) max = r.carry;
+            return max;
+        }
+
+        /// <summary>Linear-interpolate power01 for a target carry (metres) from the club's curve.</summary>
+        static float InterpolateClubPower(string clubName, float targetDist)
+        {
+            CarryRow below = default, above = default;
+            bool foundBelow = false, foundAbove = false;
+            foreach (var r in _carryTable)
+            {
+                if (r.club != clubName) continue;
+                if (r.carry <= targetDist) { if (!foundBelow || r.carry > below.carry) { below = r; foundBelow = true; } }
+                else                       { if (!foundAbove || r.carry < above.carry) { above = r; foundAbove = true; } }
+            }
+            if (!foundBelow && foundAbove) return above.power01;
+            if (foundBelow && !foundAbove) return below.power01; // clamp at the club's max
+            if (!foundBelow)               return 0f;
+            float span = above.carry - below.carry;
+            if (span < 0.01f) return below.power01;
+            float t = (targetDist - below.carry) / span;
+            return Mathf.Clamp01(Mathf.Lerp(below.power01, above.power01, t));
         }
 
         /// <summary>

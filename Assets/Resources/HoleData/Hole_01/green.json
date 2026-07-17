@@ -615,22 +615,22 @@
   "liteToGeoScale": 0.9112037217012693,
   "pinCandidates": [
     {
-      "worldX": -9,
-      "worldY": 38.5,
-      "worldZ": 41,
-      "label": "skeleton-center"
+      "worldX": -230.50157,
+      "worldY": 10.178116,
+      "worldZ": -72.48376,
+      "label": "green-center"
     },
     {
-      "worldX": -8.5,
-      "worldY": 38.5,
-      "worldZ": 40.5,
-      "label": "skeleton-front-right"
+      "worldX": -230.00157,
+      "worldY": 10.178116,
+      "worldZ": -72.98376,
+      "label": "green-front-right"
     },
     {
-      "worldX": -9.5,
-      "worldY": 38.5,
-      "worldZ": 41.5,
-      "label": "skeleton-back-left"
+      "worldX": -231.00157,
+      "worldY": 10.178116,
+      "worldZ": -71.98376,
+      "label": "green-back-left"
     }
   ],
   "defaultPinIndex": 0

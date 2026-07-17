@@ -55,25 +55,23 @@ namespace Golfin.Physics.Viewer.Bot
             yield return new WaitForSecondsRealtime(1f); // let home screen fully settle
             yield return d.Capture("home");
 
-            // 2. Click PLAY button → matchmaking modal opens.
-            yield return d.Click("PLAY", settleSeconds: 1.5f);
+            // 2. Enter Hole 1 via the real SOLO Practice path (NO matchmaking). The Home screen
+            //    is a mode carousel with several "PLAY" buttons after the practice_1v1 split, so a
+            //    bare Click("PLAY") is ambiguous and hit a ModeHomeCard — the matchmaking modal
+            //    never opened. ClickModeCardPlay centres the Practice card and fires its real
+            //    onClick, which routes straight to Hole Selection (matchmaking is the 1v1/versus
+            //    path, covered by matchmaking_1v1_gate — not a solo completion).
+            yield return d.ClickModeCardPlay("practice", settleSeconds: 1.5f);
 
-            // 3. Wait for matchmaking modal to appear. MatchmakingModalController
-            //    is on GO named "MatchMakingModal"; check it becomes visible.
-            yield return d.WaitForModalVisible("MatchMakingModal", timeoutSeconds: 15f);
-            yield return d.Capture("matchmaking_searching");
+            // 3. Confirm the Hole Selection screen (not the matchmaking modal).
+            yield return d.WaitForScreen("HoleSelection", timeoutSeconds: 15f);
+            yield return new WaitForSecondsRealtime(3f); // HoleCardController auto-expand
+            yield return d.Capture("practice_hole_selection");
 
-            // 4. Wait until MatchmakingModalController.Phase == OpponentFound.
-            //    searchDurationSeconds defaults to 5s; allow generous timeout.
-            yield return d.WaitFor(
-                () => d.GetMatchmakingPhase() == "OpponentFound",
-                "matchmaking opponent found",
-                timeoutSeconds: 30f);
-            yield return new WaitForSecondsRealtime(0.5f); // settle on "OPPONENT FOUND" text
-            yield return d.Capture("opponent_found");
+            // 4. Tap PLAY on the first available (auto-expanded) hole card → Hole 1.
+            yield return d.Click("ActionButton", settleSeconds: 1.5f);
 
-            // 5. Wait for gameplay scenes to load (modal auto-triggers GameplaySceneLoader).
-            //    FadeController transition + scene load can take up to 30s.
+            // 5. Wait for gameplay scenes to load (GameplaySceneLoader.BeginGameplayLoad).
             yield return d.WaitForSceneLoaded("LabScaffold", timeoutSeconds: 40f);
             yield return d.WaitForSceneLoaded("Hole_01_Geo", timeoutSeconds: 40f);
             yield return new WaitForSecondsRealtime(3f); // fade-in + Awake/Start/HUD settle
