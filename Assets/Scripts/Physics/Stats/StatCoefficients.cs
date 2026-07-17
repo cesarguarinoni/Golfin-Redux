@@ -31,7 +31,7 @@ namespace Golfin.Physics.Stats
             ClubLieResistancePerPoint = fp.FromFloat(0.0042f),
 
             BallPowerPerPoint   = fp.FromFloat(0.01f),
-            BallReboundPerPoint = fp.FromFloat(0.01f),
+            BallReboundPerPoint = fp.FromFloat(0.02f),  // raised from 0.01 (ball_rebound_perceptibility / Order 417, 2026-07-17): ±10 Rebound now spans the full 0.80–1.20 cap band → ~10.7m total-distance delta (clears the 10m perceptibility bar); was ~4.8m at 0.01
             BallWindCutPerPoint = fp.FromFloat(0.01f),
             BallRollPerPoint    = fp.FromFloat(0.02f),  // raised from 0.01 (ball_roll_coefficient_retune, 2026-06-02)
             BallSpinPerPoint    = fp.FromFloat(0.01f),

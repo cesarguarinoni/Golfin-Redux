@@ -188,7 +188,11 @@ namespace Golfin.Physics.Tests
                 "Accuracy=50 must produce larger AimConeReductionFraction than Accuracy=0");
         }
 
-        // ── Test 7: Ball Rebound +10 → ReboundMultiplier == 1.10 ─────────────────
+        // ── Test 7: Ball Rebound +10 → ReboundMultiplier == 1.20 ─────────────────
+        // Updated for ball_rebound_perceptibility (Order 417, 2026-07-17): BallReboundPerPoint
+        // raised 0.01 → 0.02, so Rebound +10 → 1 + 10×0.02 = 1.20 (lands exactly on the
+        // ReboundMultiplierMax = 1.20 cap; no clamp change). At 0.01 the ±10 swing moved total
+        // distance only ~4.8m (below the 10m bar); at 0.02 it's ~10.7m.
 
         [Test]
         public void Stats_BallRebound_MultiplierCorrect()
@@ -197,8 +201,8 @@ namespace Golfin.Physics.Tests
             var bundle = new StatBundle(IronClub(), ball, NeutralChar, FullCur, FullMax);
             var r = StatModifierResolver.Resolve(bundle, Coeffs, Caps);
             float actual = r.BallPhysics.ReboundMultiplier.ToFloat();
-            Assert.IsTrue(System.Math.Abs(actual - 1.10f) < 0.001f,
-                $"Ball Rebound +10 → ReboundMultiplier ~1.10 (got {actual:F5})");
+            Assert.IsTrue(System.Math.Abs(actual - 1.20f) < 0.001f,
+                $"Ball Rebound +10 → ReboundMultiplier ~1.20 (got {actual:F5})");
         }
 
         // ── Test 8: Ball WindCut +10 → WindCutFraction == 0.10 ───────────────────

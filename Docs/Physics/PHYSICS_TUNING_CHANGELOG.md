@@ -6,6 +6,29 @@ against the Hole 1 par-5 completability baseline (≤7 strokes with default char
 
 ---
 
+## F10 — BallReboundPerPoint 0.01 → 0.02 (2026-07-17)
+
+**Task:** `ball_rebound_perceptibility` (Order 417)
+**Reason:** Measure-first (deterministic sim, flat fairway, neutral, power=1.0): at `BallReboundPerPoint = 0.01` the full ±10 Ball.Rebound swing (reboundMul 0.90→1.10) moved total distance only **~4.8m** — below the 10m perceptibility bar. Doubling to **0.02** maps ±10 to reboundMul **0.80→1.20**, i.e. exactly the existing `ReboundMultiplier{Min,Max}` cap band (**no clamp change, polarity unchanged**), for a **~10.7m** total-distance delta (Driver 10.8m, Iron7 10.6m) — clears the bar. Self-limiting: max stat lands on the 1.20 cap, so it cannot overcorrect. Sibling of F8 (`BallRollPerPoint 0.01 → 0.02`).
+
+### StatCoefficients change
+
+| Field | Old | New |
+|---|---|---|
+| `BallReboundPerPoint` | `0.01` | `0.02` |
+
+No caps changed (`ReboundMultiplierMin/Max` stay 0.80/1.20).
+
+### Hole 1 completability
+
+**Unaffected — no-op on the default ball.** The default `ball_golfin` has `rebound=0`, so `reboundMul = 1 + 0×0.02 = 1.0` regardless of the coefficient. The completability baseline (default character + default ball) is bit-unchanged; only rebound-stat balls (e.g. `ball_putt_ace`, rebound=−6) see the retune.
+
+### Tests
+
+`Stats_BallRebound_MultiplierCorrect` updated: Ball Rebound +10 → ReboundMultiplier 1.10 → **1.20**.
+
+---
+
 ## F9 — Retired resolver-side stamina lane + ClubControl aim-cone term (2026-07-16)
 
 **Task:** `stat_lane_offdesign_retirement` (Order 731)  
