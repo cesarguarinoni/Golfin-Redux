@@ -94,12 +94,12 @@ namespace Golfin.Gameplay.Config
             BallHitZoneRadiusPx            = 80f,
             TargetingLineLengthMeters      = 30f,
             BaseArrowSpeedHzAtCC0          = 3.0f,
-            ArrowSpeedHzPerCC              = -0.025f,
+            ArrowSpeedHzPerCC              = -0.05f,   // Order 732 (2026-07-17): -0.025 → -0.05 (mirror controls.csv); restores designed 3.0→0.5 Hz on reachable CC 0–50
             MaxCleanPassesAtCC0            = 1f,
-            CleanPassesPerCC               = 0.04f,
+            CleanPassesPerCC               = 0.08f,    // Order 732: 0.04 → 0.08 (mirror controls.csv); CC 0–50 → 1–5 clean passes
             MaxTotalPasses                 = 10f,
             DegradationYawDegPerPass       = 2f,
-            PuttArrowSpeedMultiplier       = 0.5f,
+            PuttArrowSpeedMultiplier       = 0.8f,     // Order 732: 0.5 → 0.8 (mirror controls.csv); avoids compounding into 4 s putt cycles
             PuttBaseVelocityMps            = 5f,
             SpinMagScaleSlope              = 1.5f,
             SpinMaxTiltRad                 = 0.075f,   // D3 trim: ~1/4 of prior 0.3 ≈ 4.3° max sidespin curve

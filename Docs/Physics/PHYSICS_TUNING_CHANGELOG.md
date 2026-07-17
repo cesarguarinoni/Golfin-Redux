@@ -6,6 +6,41 @@ against the Hole 1 par-5 completability baseline (≤7 strokes with default char
 
 ---
 
+## F11 — ClubControl → arrow range recalibration (2026-07-17)
+
+**Task:** `club_control_arrow_range_calibration` (Order 732)
+**File:** `Assets/Resources/Gameplay/controls.csv` (CSV-only; no `ShotController` logic change).
+**Reason:** The `ShotController.TickArrow` arrow-speed / clean-pass coefficients were calibrated for CC 0–100, but `RarityStatCaps` caps ClubControl at 50 (Supreme) / 25 (Common). The reachable ladder collapsed to a **1.36×** arrow-speed spread (2.375→1.75 Hz, Common cap→Supreme) and 2→3 clean passes — ClubControl felt dead. Measured (arithmetic on the two formulas across CC 0/25/30/35/40/50), then rescaled to restore the designed endpoints on the reachable 0–50 range (Cesar-approved: full rescale).
+
+### controls.csv changes
+
+| Key | Old | New | Effect at reachable caps |
+|---|---|---|---|
+| `ArrowSpeedHzPerCC` | −0.025 | **−0.05** | arrow Common cap 1.75 Hz → Supreme 0.5 Hz (**3.5×** spread; was 1.36×) |
+| `CleanPassesPerCC` | 0.04 | **0.08** | clean passes Common cap 3 → Supreme 5 (was 2 → 3) |
+| `PuttArrowSpeedMultiplier` | 0.5 | **0.8** | putts no longer compound into 4 s cycles; Supreme putt 0.25 Hz/4.0 s → 0.40 Hz/2.5 s (kept < 1.0 so putts stay slower/easier than the swing arrow) |
+| `MaxTotalPasses` | 10 | 10 (unchanged, Cesar) | Supreme degradation window 7 → 5 passes |
+| `BaseArrowSpeedHzAtCC0` | 3.0 | 3.0 (unchanged) | CC=0 FALLBACK floor |
+
+### Caveat (documented, not fixed here)
+
+`arrowHz` has **no floor**; with the −0.05 slope it goes negative above **CC=60** (3.0 − 100×0.05 = −2.0). Safe only because `RarityStatCaps` enforces CC ≤ 50 (arrowHz 0.5 there). If a future cap ever exceeds ~60, add an `arrowHz` floor in `ShotController` (a logic change → separate order).
+
+### Hole 1 completability
+
+**Unaffected.** The Loop-v2 bot fires via `ShotController.FireDebugShot()`, which bypasses `TickArrow()` entirely — arrow timing has no effect on bot-driven hole completion.
+
+### Tests
+
+- `ShotControllerTests.Test11_ArrowSpeed_MonotonicDecreasingWithCC`: CC=100 → **CC=50** (100 now yields a negative arrowHz under −0.05 and is unreachable; 50 is the real cap, arrowHz 0.5 — same expected values).
+- `ShotControllerPuttModeTests.F1_IsPutt_ArrowsSlowedByMultiplier`: comment refreshed for 0.8 (putt 2.4 Hz < non-putt 3.0 Hz; assertion unchanged).
+
+### Still open (felt gate, not yet done)
+
+The spec's felt gate is a side-by-side bot video of the arrow at Common-cap vs Supreme-cap CC. The physics bot bypasses `TickArrow`, so this needs a **new rig**. Not built in this CSV pass — flagged for follow-up.
+
+---
+
 ## F10 — BallReboundPerPoint 0.01 → 0.02 (2026-07-17)
 
 **Task:** `ball_rebound_perceptibility` (Order 417)

@@ -131,9 +131,9 @@ namespace Golfin.Gameplay.Tests
         public void F1_IsPutt_ArrowsSlowedByMultiplier()
         {
             // Polarity-independent invariant: at equal CC, putt arrowHz < non-putt arrowHz.
-            // PuttArrowSpeedMultiplier=0.5, so putt advances at half the non-putt rate.
-            // With default CC=0: non-putt arrowHz=3.0, putt arrowHz=1.5.
-            // Over dt=0.1s: non-putt progress=0.30, putt progress=0.15 → putt < non-putt.
+            // PuttArrowSpeedMultiplier=0.8 (Order 732; was 0.5), so putt advances at 0.8× the non-putt rate.
+            // With default CC=0: non-putt arrowHz=3.0, putt arrowHz=2.4.
+            // Over dt=0.1s: non-putt progress=0.30, putt progress=0.24 → putt < non-putt (still slower).
             const float dt = 0.1f;
 
             // Measure non-putt arrow progress

@@ -1,10 +1,31 @@
 ﻿# club_control_arrow_range_calibration
 
-> **Status:** Queued — actionable once Order 731 lands.
+> **Status: DONE (2026-07-17) — Cesar-approved.** Measured, rescaled, felt-gate video captured. See § Implemented.
 > **Order:** 732 (Notion GOLFIN_Roadmap) — Phase "Loop v2", P2 — Medium
 > **Tier:** 3 — FULL PIPELINE (gameplay-feel math + measurement gate)
 > **Filed:** 2026-07-16 17:05 JST (Architect)
 > **Replaces:** the never-written, now-VOID `club_control_aim_arrow_speed`. See `Docs/Physics/STAT_LANE_AUDIT.md` § "Findings 2a/2b VOID".
+
+---
+
+## Implemented (2026-07-17)
+
+Measured the arrow ladder (arithmetic on `TickArrow`'s two formulas across CC 0/25/30/35/40/50) — premise confirmed: at −0.025/0.04 the reachable Common-cap→Supreme spread was a flat **1.36×** (2.375→1.75 Hz) and 2→3 clean passes. Cesar approved the **full rescale** (restore the designed endpoints on the reachable 0–50 range):
+
+| Key | Old | New | Reachable effect |
+|---|---|---|---|
+| `ArrowSpeedHzPerCC` | −0.025 | **−0.05** | arrow Common cap 1.75 → Supreme 0.5 Hz (**3.5×**) |
+| `CleanPassesPerCC` | 0.04 | **0.08** | clean passes Common cap 3 → Supreme 5 |
+| `PuttArrowSpeedMultiplier` | 0.5 | **0.8** | Supreme putt 4.0 s → 2.5 s (kept < 1.0; putts still slower than swing) |
+| `MaxTotalPasses` | 10 | 10 (Cesar) | Supreme degradation window 7 → 5 passes |
+
+Changed in **both** `Assets/Resources/Gameplay/controls.csv` (runtime) and the mirrored `ControlsConfig.Default` (fallback/tests). CSV-only for logic — no `ShotController` change. **F11** in `PHYSICS_TUNING_CHANGELOG.md`.
+
+- **Caveat (documented):** `arrowHz` has no floor, so −0.05 goes negative above CC=60; safe only because RarityStatCaps enforces CC ≤ 50. A floor would be a `ShotController` change → separate order.
+- **Tests:** Golfin.Gameplay.Tests 243/0, Golfin.Physics.Tests 234/0. `Test11` moved CC=100→CC=50 (100 is unreachable and now yields negative arrowHz). Hole-1 completability unaffected (bot fires via `FireDebugShot`, bypassing `TickArrow`).
+- **Felt gate (video):** built a reusable rig `Assets/Scripts/UI/Editor/ClubControlArrowDemoRecorder.cs` (menu `GOLFIN > Physics > Record ClubControl Arrow Range Demo`) that drives the REAL Timing loop at CC 25 vs 50 and records. Side-by-side at `videos/club_control_arrow_range_sidebyside.mp4` — the Supreme (CC=50) arrow visibly sweeps ~3.5× slower. Resolves the "physics bot bypasses TickArrow, needs a different rig" gap the spec flagged.
+
+Open forks resolved by Cesar: (1) full linear rescale; (3) putt retuned to 0.8; (2) MaxTotalPasses unchanged.
 
 ---
 

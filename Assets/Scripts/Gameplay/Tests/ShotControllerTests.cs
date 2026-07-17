@@ -196,16 +196,19 @@ namespace Golfin.Gameplay.Tests
         [Test]
         public void Test11_ArrowSpeed_MonotonicDecreasingWithCC()
         {
-            // Polarity regression gate: arrowHz(CC=0) > arrowHz(CC=100) and both > 0.
-            // Use a fixed dt and compare elapsed arrow progress for CC=0 vs CC=100 bundles.
-            // CC=0  → arrowHz = 3.0 + 0   * (-0.025) = 3.0  → progress over dt=0.1: 0.30
-            // CC=100→ arrowHz = 3.0 + 100 * (-0.025) = 0.5  → progress over dt=0.1: 0.05
+            // Polarity regression gate: arrowHz(CC=0) > arrowHz(CC=max) and both > 0.
+            // Uses CC=50 (the reachable Supreme cap per RarityStatCaps), NOT CC=100.
+            // Order 732 (2026-07-17): ArrowSpeedHzPerCC -0.025 -> -0.05. arrowHz has no floor,
+            // so at CC=100 the slope would go negative (3.0 - 100*0.05 = -2.0); CC is capped at
+            // 50, so 50 is the real max and arrowHz stays positive there.
+            // CC=0  → arrowHz = 3.0 + 0  * (-0.05) = 3.0  → progress over dt=0.1: 0.30
+            // CC=50 → arrowHz = 3.0 + 50 * (-0.05) = 0.5  → progress over dt=0.1: 0.05
             // CC=0 must advance faster (higher Hz = faster oscillation = harder to time).
 
             const float dt = 0.1f;
 
             var cc0Char    = new Golfin.Physics.Stats.CharacterStats(0, 0, 0, 0);   // ClubControl=0
-            var cc100Char  = new Golfin.Physics.Stats.CharacterStats(0, 100, 0, 0); // ClubControl=100
+            var cc100Char  = new Golfin.Physics.Stats.CharacterStats(0, 50, 0, 0);  // ClubControl=50 (Supreme cap; max reachable)
             var ball       = Golfin.Physics.Stats.BallStats.Neutral;
             var club       = Golfin.Physics.Stats.ClubStats.DefaultDriver;
             var stamina100 = Golfin.Physics.Math.fp.FromFloat(100f);
@@ -237,9 +240,9 @@ namespace Golfin.Gameplay.Tests
             Assert.Greater(progressCC0, 0f,
                 "CC=0 arrow progress must be positive (arrowHz > 0)");
             Assert.Greater(progressCC100, 0f,
-                "CC=100 arrow progress must be positive (arrowHz > 0)");
+                "CC=50 arrow progress must be positive (arrowHz > 0)");
             Assert.Greater(progressCC0, progressCC100,
-                $"CC=0 must advance faster than CC=100: CC0={progressCC0:F4} CC100={progressCC100:F4}");
+                $"CC=0 must advance faster than CC=50: CC0={progressCC0:F4} CC50={progressCC100:F4}");
         }
     }
 }

@@ -13,12 +13,12 @@ ConeFadeOutSeconds,0.30,fade-out duration on entering Resolving
 BallHitZoneRadiusPx,80,fixed-pixel radius around ball sprite for touch input
 TargetingLineLengthMeters,30,length of the in-game targeting line
 BaseArrowSpeedHzAtCC0,3.0,arrow cycles/sec at ClubControl=0 — fastest/hardest end of range
-ArrowSpeedHzPerCC,-0.025,additive cycles/sec per CC point — negative: higher CC = slower arrow
+ArrowSpeedHzPerCC,-0.05,additive cycles/sec per CC point — negative: higher CC = slower arrow. Order 732 (2026-07-17): -0.025 -> -0.05 to restore the designed 3.0->0.5 Hz range on the reachable CC 0-50 (CC capped at 50 by RarityStatCaps). NOTE: arrowHz has no floor, so this slope goes negative above CC=60 — safe only because caps enforce CC<=50 (arrowHz 0.5 at CC=50).
 MaxCleanPassesAtCC0,1,passes before degradation at CC=0
-CleanPassesPerCC,0.04,additive passes per CC point (CC=100 gives 5 passes)
+CleanPassesPerCC,0.08,additive passes per CC point. Order 732 (2026-07-17): 0.04 -> 0.08 so the reachable CC 0-50 gives 1->5 passes (Common cap 3, Supreme cap 5); MaxTotalPasses stays 10 (Cesar).
 MaxTotalPasses,10,total before auto-cancel
 DegradationYawDegPerPass,2,aim error widening per pass past clean
-PuttArrowSpeedMultiplier,0.5,putts get slower arrows
+PuttArrowSpeedMultiplier,0.8,putts get slower arrows. Order 732 (2026-07-17): 0.5 -> 0.8 so the rescaled arrow doesn't compound into absurdly slow putts (Supreme putt was 0.25 Hz/4.0s at 0.5; now 0.40 Hz/2.5s). Kept < 1.0 so putts stay slower/easier than the swing arrow.
 PuttBaseVelocityMps,5,override default putter velocity
 SpinMagScaleSlope,1.5,spin.y magnitude slope (1.5 allows sign-flip topspin at y=+1)
 SpinMaxTiltRad,0.075,spin.x TRIM max tilt in radians (approx 4.3 deg) — demoted to trim by D3 (fade_draw_core_wiring); was 0.3
