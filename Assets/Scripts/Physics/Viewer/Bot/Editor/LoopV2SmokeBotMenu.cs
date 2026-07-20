@@ -38,6 +38,21 @@ namespace Golfin.Physics.Viewer.Editor
         [MenuItem("GOLFIN/Smoke/Loop v2/Hole 1 Playthrough")]
         public static void RunHole1Playthrough()    => Launch("hole1_playthrough");
 
+        [MenuItem("GOLFIN/Smoke/Loop v2/Hole 1 Playthrough (Deferred Record)")]
+        public static void RunHole1PlaythroughDeferred()
+        {
+            // Deferred-start recording: recording begins AFTER the hole is fully loaded,
+            // avoiding Y-flip bursts from scene-load render-target recreations on Mac/Metal.
+            // Mirrors AudioGameplayShotsV3 / AudioPuttToCup deferred pattern.
+            // Cap = 180s covers the full recorded segment (hole load settle + 6 strokes + result modal).
+            BotVideoRecorder.MaxRecordSecondsSessionOverride = 180;
+            BotVideoRecorder.ArmDeferred();  // sets DeferredRecord=true; Begin() is a no-op at EnteredPlayMode
+            Launch("hole1_playthrough");
+        }
+
+        [MenuItem("GOLFIN/Smoke/Loop v2/Hole 1 Playthrough (Deferred Record)", isValidateFunction: true)]
+        static bool ValidateRunHole1PlaythroughDeferred() => !EditorApplication.isPlaying;
+
         [MenuItem("GOLFIN/Smoke/Loop v2/Settings Round Trip")]
         public static void RunSettingsRoundTrip()   => Launch("settings_round_trip");
 

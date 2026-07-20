@@ -74,7 +74,40 @@ namespace Golfin.Physics.Viewer.Bot
             // 5. Wait for gameplay scenes to load (GameplaySceneLoader.BeginGameplayLoad).
             yield return d.WaitForSceneLoaded("LabScaffold", timeoutSeconds: 40f);
             yield return d.WaitForSceneLoaded("Hole_01_Geo", timeoutSeconds: 40f);
-            yield return new WaitForSecondsRealtime(3f); // fade-in + Awake/Start/HUD settle
+            yield return new WaitForSecondsRealtime(4f); // fade-in + HUD fully rendered; avoids Y-flip
+
+            // 5b. START RECORDING (deferred only) — fires iff ArmDeferred() was called.
+            //     Mirrors AudioGameplayShotsV3 §5: set RecordVideo via SessionState + call Begin().
+            //     The plain "Hole 1 Playthrough" menu item does not call ArmDeferred(), so
+            //     DeferredRecord remains false and this block is a complete no-op.
+            if (UnityEditor.SessionState.GetBool("LoopV2SmokeBot.DeferredRecord", false))
+            {
+                d.LogStep("  BeginDeferred: hole is armed, HUD visible — starting recording now.");
+                UnityEditor.SessionState.SetBool("LoopV2SmokeBot.RecordVideo", true);
+                UnityEditor.SessionState.SetBool("LoopV2SmokeBot.DeferredRecord", false);
+                try
+                {
+                    System.Type recType = null;
+                    foreach (var a in System.AppDomain.CurrentDomain.GetAssemblies())
+                    { var t = a.GetType("Golfin.Physics.Viewer.Editor.BotVideoRecorder"); if (t != null) { recType = t; break; } }
+                    if (recType != null)
+                    {
+                        var beginMethod = recType.GetMethod("Begin", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+                        beginMethod?.Invoke(null, null);
+                        d.LogStep("  BeginDeferred (reflection): BotVideoRecorder.Begin() called — recording started");
+                    }
+                    else
+                    {
+                        d.LogStep("  BeginDeferred WARN: BotVideoRecorder type not found — recording may not have started");
+                    }
+                }
+                catch (System.Exception ex)
+                {
+                    d.LogStep($"  BeginDeferred ERROR: {ex.Message}");
+                }
+                yield return new WaitForSecondsRealtime(1f); // let first recording frames settle
+            }
+
             yield return d.Capture("gameplay_armed"); // gameplay scene, ball armed on the tee
 
             // 6. Play Hole 1 (Par 5) with REAL physics shots — each stroke aims at the cup

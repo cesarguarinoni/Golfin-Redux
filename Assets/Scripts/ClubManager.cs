@@ -37,14 +37,25 @@ public class ClubManager : MonoBehaviour
     /// <summary>
     /// Starter bag (fresh save) + the default equip set for grandfathered saves. IDs match Clubs.csv
     /// (the same set the lab stub uses). Guarantees the A4 bag-safety invariant: one of each required
-    /// club type (Driver / Wood / Iron / Putter).
+    /// club type (Driver / Wood / Iron / Wedge / Putter). Updated by Order 761 to include P.Wedge.
     /// </summary>
     private static readonly string[] DefaultBagIds =
-        { "club_driver_gf", "club_wood_gf", "club_iron7_mireo", "club_putter_golfinx" };
+        { "club_driver_gf", "club_wood_gf", "club_iron7_mireo", "club_pwedge_royal", "club_putter_golfinx" };
 
     /// <summary>Required club types a playable bag must contain (A4 bag-safety). ClubType enum names.</summary>
     private static readonly string[] RequiredBagTypes =
         { nameof(ClubType.Driver), nameof(ClubType.Wood), nameof(ClubType.Iron), nameof(ClubType.Putter) };
+
+    /// <summary>
+    /// Role groups for A4 bag-safety: each inner array defines a set of alternative club types where
+    /// any ONE of them satisfies the role. Used for wedge (A_Wedge/P_Wedge/S_Wedge are equivalent roles).
+    /// ClubType enum names, matching the convention of RequiredBagTypes.
+    /// </summary>
+    private static readonly string[][] RequiredBagTypeGroups =
+    {
+        // Any wedge sub-type satisfies the "wedge" role (Order 761).
+        new[] { nameof(ClubType.A_Wedge), nameof(ClubType.P_Wedge), nameof(ClubType.S_Wedge) },
+    };
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
 
@@ -127,9 +138,52 @@ public class ClubManager : MonoBehaviour
 
         HydrateFrom(save);
 
+        // Order 761 v9 backfill: grant + equip the default-bag wedge for existing players
+        // seeded before the wedge was added to DefaultBagIds. The v8→v9 migrator sets the signal
+        // (wedgeBackfillPending=true) for any already-seeded save. Grant is idempotent (no dup
+        // if already owned). Runs BEFORE A4 so the bag is complete when A4 checks.
+        if (save.wedgeBackfillPending)
+        {
+            const string wedgeId = "club_pwedge_royal";
+            var wedgeTemplate = db.GetClub(wedgeId);
+            if (wedgeTemplate != null)
+            {
+                if (!ownedClubs.ContainsKey(wedgeId))
+                {
+                    // Not owned: grant and equip to bag slot 1. Covers fresh-seeded-post-610 cohort.
+                    var spec = BuildSpec(wedgeTemplate);
+                    var persisted = ClubOwnershipService.MakePersisted(spec, 1);
+                    save.ownedClubs.Add(persisted);
+                    ownedClubs[wedgeId] = ToRuntime(persisted);
+                    Debug.Log($"[ClubManager] Wedge backfill: granted + equipped '{wedgeId}' (fresh-seeded-post-610 cohort).");
+                }
+                else
+                {
+                    // Already owned (grandfathered cohort): ensure equipped to bag slot 1.
+                    var pc = save.ownedClubs.Find(c => c.clubId == wedgeId);
+                    if (pc != null && pc.equippedBagSlot != 1)
+                    {
+                        pc.equippedBagSlot = 1;
+                        ownedClubs[wedgeId].equippedBagSlot = 1;
+                        Debug.Log($"[ClubManager] Wedge backfill: re-equipped existing '{wedgeId}' to bag slot 1 (grandfathered cohort).");
+                    }
+                    else
+                    {
+                        Debug.Log($"[ClubManager] Wedge backfill: '{wedgeId}' already owned + equipped; no action needed.");
+                    }
+                }
+            }
+            else
+            {
+                Debug.LogWarning("[ClubManager] Wedge backfill: 'club_pwedge_royal' not found in DB — backfill skipped.");
+            }
+            save.wedgeBackfillPending = false;
+            host.MarkDirty();
+        }
+
         // A4 bag-safety: never leave the player with an unplayable bag. If the persisted bag is missing a
         // required type (corrupt/legacy save), re-equip the default bag for any owned required-type club.
-        if (!ClubOwnershipService.HasPlayableBag(save, catalog, RequiredBagTypes))
+        if (!ClubOwnershipService.HasPlayableBag(save, catalog, RequiredBagTypes, RequiredBagTypeGroups))
         {
             int fixedUp = 0;
             foreach (var id in DefaultBagIds)

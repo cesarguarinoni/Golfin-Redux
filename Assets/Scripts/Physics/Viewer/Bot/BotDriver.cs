@@ -694,7 +694,7 @@ namespace Golfin.Physics.Viewer.Bot
                     firstStrokePowerOverride);
                 isFirstStroke = false;
 
-                // ── Off-green putter guard (Order 731, 2026-07-16) ─────────────────────
+                // ── Off-green putter guard (Order 731, 2026-07-16; updated Order 761, 2026-07-19) ──
                 // Mirrors VersusBot.cs H3b and the real game's PutterModeSurfaceController,
                 // which reverts putter→last club whenever the ball is off-green. A putt fired
                 // from a non-putt surface (Fairway/Rough) fails IsPutt's surface gate and is
@@ -703,8 +703,9 @@ namespace Golfin.Physics.Viewer.Bot
                 // free-falls under gravity (y≈-1582m) while OnShotComplete never returns.
                 // Real players cannot putt off-green (the club UI auto-reverts it) and
                 // VersusBot already guards this — BotDriver was the lone harness that didn't,
-                // making the capture bot behave unlike a real player. Fall back to a Wedge
-                // chip so the shot launches upward (signedPrev>0) and resolves normally.
+                // making the capture bot behave unlike a real player.
+                // Order 761: chip with the Wedge (club 2, now in default bag) for a higher-loft
+                // approach that clears roughs and holds the green better than the Iron7.
                 if (club == PhysicsLabController.PutterIndex)
                 {
                     var surfaces    = ctrl.GetSurfaces();
@@ -714,19 +715,16 @@ namespace Golfin.Physics.Viewer.Bot
                         : SurfaceType.Green;
                     if (ballSurface != SurfaceType.Green && ballSurface != SurfaceType.GreenCollar)
                     {
-                        // Chip with the Iron7 (the club the bag actually carries — there is no
-                        // wedge). Calibrated to the remaining distance so the chip does not
-                        // rocket 12m past the cup the way the old lab-wedge power did. The
-                        // Iron7's minimum carry is ~3.6m, so a sub-4m off-green shot still
-                        // overshoots — the real endgame relies on the approach LANDING ON the
-                        // green so a legal putt (this guard bypassed) can finish it.
+                        // Chip with the Wedge (club 2 — club_pwedge_royal, now in default bag, Order 761).
+                        // High loft clears rough and lands softly on the green. Calibrated to the
+                        // remaining distance via the "wedge" carry curve so the chip does not overshoot.
                         EnsureCarryTable();
-                        club    = 1; // Iron7 chip back toward the green.
+                        club    = 2; // Wedge chip back toward the green.
                         power01 = (_carryTable != null && _carryTable.Count > 0)
-                            ? InterpolateClubPower("iron7", Mathf.Max(dist, 3.6f))
-                            : Mathf.Clamp(dist / 260f, 0.05f, 0.30f);
-                        label   = $"Iron7 (off-green putter guard, surface={ballSurface}) dist={dist:F1}m power={power01:F2}";
-                        LogStep($"  Off-green putter guard: surface={ballSurface} at ({ball.x:F1},{ball.z:F1}) → Iron7 chip instead of Putter (prevents airborne fall-through)");
+                            ? InterpolateClubPower("wedge", Mathf.Max(dist, 5f))
+                            : Mathf.Clamp(dist / 90f, 0.05f, 0.70f);
+                        label   = $"Wedge (off-green putter guard, surface={ballSurface}) dist={dist:F1}m power={power01:F2}";
+                        LogStep($"  Off-green putter guard: surface={ballSurface} at ({ball.x:F1},{ball.z:F1}) → Wedge chip instead of Putter (prevents airborne fall-through)");
                     }
                 }
 
@@ -754,10 +752,12 @@ namespace Golfin.Physics.Viewer.Bot
                 {
                     var bag = Golfin.Gameplay.UI.HUD.ClubContext.EquippedBag;
                     // Resolve the desired lab-club index to the NEAREST AVAILABLE equipped club.
-                    // The player's bag may not contain every lab club (e.g. the default loadout has
-                    // no wedge/LabClubIndex 2) — a real player then reaches for the closest club they
-                    // actually carry (a shorter club: prefer the largest index <= desired; else the
-                    // smallest index > desired). This is what makes the bot play its real bag.
+                    // The player's bag may not contain every lab club — a real player then reaches
+                    // for the closest club they actually carry (a shorter club: prefer the largest
+                    // index <= desired; else the smallest index > desired). This is what makes the
+                    // bot play its real bag. (Order 761: the default bag now includes a wedge at
+                    // LabClubIndex 2, so club=2 resolves directly. The fallback logic handles any
+                    // non-default bag that might be missing a slot.)
                     int bagIdx = -1;
                     if (bag != null && bag.Count > 0)
                     {
@@ -780,6 +780,8 @@ namespace Golfin.Physics.Viewer.Bot
                         Golfin.Gameplay.UI.HUD.ClubContext.SelectedClubId    = entry.ClubId;
                         Golfin.Gameplay.UI.HUD.ClubContext.SelectedIndex     = bagIdx;
                         Golfin.Gameplay.UI.HUD.ClubContext.SelectedTypeLabel = entry.TypeLabel;
+                        Golfin.Gameplay.UI.HUD.ClubContext.SelectedPortrait  = entry.Portrait;  // Order 761 fix: mirror SelectByIndex — was leaving driver portrait on wedge
+                        Golfin.Gameplay.UI.HUD.ClubContext.SelectedDistance  = entry.Distance;  // Order 761 fix: mirror SelectByIndex — was leaving "250 yrds" on wedge
                         Golfin.Gameplay.UI.HUD.ClubContext.RaiseSelectedChanged();
                         // Keep the lab club index in sync with the club actually equipped so the
                         // putter-mode / cone UI and isPutt detection match what the LIVE provider fires.
@@ -953,25 +955,26 @@ namespace Golfin.Physics.Viewer.Bot
         /// Select club and power for a shot of the given horizontal distance (metres),
         /// CALIBRATED against the LIVE default bag's measured carry curves (bot_clubs.csv).
         ///
-        /// Why this was rewritten (2026-07-17, bot-completion rehab): the old table was tuned
-        /// for a LAB wedge (~91m full carry). But the default equipped bag has NO wedge —
-        /// it is Driver / Wood / Iron7 / Putter (see ClubManager.DefaultBagIds). On the LIVE
-        /// stat path the ClubContext resolver mapped the old "Wedge" (club 2) onto the Iron7,
-        /// whose real carry at power 0.75 is ~235m (bot_clubs.csv), not ~55m — so every
-        /// approach overshot ~4× and the ball oscillated 200m+ back and forth across the map,
-        /// never converging. Fix: select ONLY clubs the bag actually carries
-        /// (driver=0, iron7=1, putter=3) and interpolate power from THAT club's measured
-        /// carry curve, so the target carry is the real one. Mirrors VersusBot's H1 calibration
-        /// (SelectShotCalibrated) but bag-correct for the solo loadout (no wedge lane).
+        /// Why this was originally rewritten (2026-07-17, bot-completion rehab): the old table
+        /// was tuned for a LAB wedge (~91m full carry). The default bag at that time had NO wedge
+        /// (Driver / Wood / Iron7 / Putter, see ClubManager.DefaultBagIds pre-Order-761). The LIVE
+        /// stat path mapped the old "Wedge" (club 2) onto the Iron7, whose real carry at power 0.75
+        /// is ~235m, not ~55m — every approach overshot ~4× and never converged. Fix was to select
+        /// ONLY clubs the bag actually carried and interpolate power from that club's measured curve.
+        ///
+        /// Order 761 (2026-07-19): the default bag NOW carries P.Wedge Royal Swing (club_pwedge_royal).
+        /// The wedge band is restored for short approaches (20–80m), using the "wedge" curve from
+        /// bot_clubs.csv (the same table VersusBot uses via InterpolateClubPower). The Iron7 band is
+        /// retained for medium approaches (80–130m) and layups.
         ///
         /// Bands (remaining distance → cup, metres):
         ///   dist &lt;= 18   : Putter  — carry = dist (on/near green).
-        ///   dist &lt;= 130  : Iron7   — carry = dist (land near the cup / drop into the green).
-        ///   dist &lt;= 230  : Iron7   — layup: carry = dist − 55 (leave a short iron in).
+        ///   dist &lt;= 80   : Wedge   — carry = dist (soft drop onto / into the green).
+        ///   dist &lt;= 130  : Iron7   — carry = dist (land near the cup).
+        ///   dist &lt;= 230  : Iron7   — layup: carry = dist − 55 (leave a wedge approach).
         ///   dist &gt;  230  : Driver  — layup: carry = min(dist − 60, driverMax).
         ///
-        /// Club indices: 0=Driver, 1=Iron 7, 3=Putter (PhysicsLabController.PutterIndex).
-        /// (Club 2 / lab "Wedge" is intentionally never selected — the bag has no wedge.)
+        /// Club indices: 0=Driver, 1=Iron 7, 2=Wedge, 3=Putter (PhysicsLabController.PutterIndex).
         /// </summary>
         void SelectShot(float dist, bool isFirstStroke, out int club, out float power01, out string label,
             float firstStrokePowerOverride = 0f)
@@ -1021,15 +1024,26 @@ namespace Golfin.Physics.Viewer.Bot
             else if (dist > 130f)
             {
                 name        = "iron7";
-                targetCarry = dist - 55f;   // layup, leave a short-iron approach
+                targetCarry = dist - 55f;   // layup, leave a wedge approach
+            }
+            else if (dist > 80f)
+            {
+                name        = "iron7";
+                targetCarry = dist;         // land near the cup
             }
             else
             {
-                name        = "iron7";
-                targetCarry = dist;         // land near the cup / drop into the green
+                // Short approach (20–80m): use the wedge (bag now has club_pwedge_royal, Order 761).
+                // Higher loft + backspin holds the sunken green better than Iron7 chips.
+                name        = "wedge";
+                targetCarry = dist;
             }
 
-            club    = name == "driver" ? 0 : 1;
+            if (name == "driver")       club = 0;
+            else if (name == "iron7")   club = 1;
+            else if (name == "wedge")   club = 2;
+            else                        club = 1;   // fallback
+
             power01 = InterpolateClubPower(name, targetCarry);
             label   = $"{name} (calibrated, dist={dist:F1}m carry~{targetCarry:F0}m) power={power01:F2}";
         }

@@ -136,6 +136,15 @@ namespace Golfin.Save
         /// </summary>
         public bool grandfatherClubs;
 
+        // ── Wedge backfill (schema v9, Order 761) ────────────────────────────
+        /// <summary>
+        /// Migrator signal (Order 761): set true by v8→v9 migration for any already-seeded save
+        /// so ClubManager grants+equips the default-bag wedge on next load. A brand-new SaveData
+        /// never runs Migrate(), so it stays false → wedge is seeded via DefaultBagIds instead.
+        /// Consumed + cleared by ClubManager.InitializeClubs() on first load.
+        /// </summary>
+        public bool wedgeBackfillPending;
+
         // ── Gacha tickets (schema v7→v8) ─────────────────────────────────────
         // v7: single int gachaTickets (gacha_screen Stage 1).
         // v8: per-kind List<PersistedTicketBalance> ticketBalances (gacha_history Stage 1).

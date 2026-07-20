@@ -1,0 +1,83 @@
+=== iter-1 kickoff baseline ===
+HEAD: 18709c140748c07f917d5c19ba7c34df76bcafa7
+DIRTY:
+ M "Assets/Art/Shop/Background - Blurred.png"
+ M "Assets/Fonts/NotoSansJP-VariableFont_wght SDF.asset"
+ M Assets/Plugins/NuGet/.nuget-installed.json
+ M Assets/Plugins/NuGet/McpPlugin.Common.dll
+ M Assets/Plugins/NuGet/McpPlugin.dll
+ M Assets/Plugins/NuGet/ReflectorNet.dll
+ M Docs/AI_CONTEXT.md
+ M Packages/manifest.json
+ M Packages/packages-lock.json
+ M tasks/loop_v2_smoke_bot/hole1_playthrough/live_stat_log.txt
+ M tasks/loop_v2_smoke_bot/hole1_playthrough/screenshots/history.log
+?? Docs/Specs/Active/club_bag_wedge_default/ARCHITECT_REVIEW.md
+?? Docs/Specs/Active/club_bag_wedge_default/HEARTBEAT.log
+?? Docs/Specs/Active/club_bag_wedge_default/IMPLEMENTER_REPORT.md
+?? Docs/Specs/Active/club_bag_wedge_default/SELF_REVIEW.md
+?? Docs/Specs/Active/club_bag_wedge_default/STATUS.md
+=== end baseline ===
+
+2026-07-19T10:00:00 activated, beginning Changes 1-5
+2026-07-19T14:30:14 All 882 EditMode tests pass — 44 in Golfin.Save.Tests (0 fail)
+2026-07-19T23:35:39 bot launched, waiting for hole1_playthrough completion
+2026-07-19T23:37:00 bot mid-run: 5 strokes captured, wedge approach in progress
+2026-07-19T23:50:00 done, awaiting review — all 22 checklist items PASS, video+screenshots captured, ShellScene.unity unintended side-effect flagged for revert
+
+=== iter-2 kickoff baseline ===
+HEAD: 18709c140
+DIRTY:
+ M "Assets/Art/Shop/Background - Blurred.png"
+ M "Assets/Fonts/NotoSansJP-VariableFont_wght SDF.asset"
+ M Assets/Plugins/NuGet/.nuget-installed.json
+ M Assets/Plugins/NuGet/McpPlugin.Common.dll
+ M Assets/Plugins/NuGet/McpPlugin.dll
+ M Assets/Plugins/NuGet/ReflectorNet.dll
+ M Assets/Scenes/ShellScene.unity
+ M Assets/Scripts/ClubManager.cs
+ M Assets/Scripts/Physics/Viewer/Bot/BotDriver.cs
+ M Assets/Scripts/Save/ClubOwnership.cs
+ M Assets/Scripts/Save/SaveData.cs
+ M Assets/Scripts/Save/SaveSchemaMigrator.cs
+ M Assets/Scripts/Save/Tests/ClubOwnershipTests.cs
+ M Assets/Scripts/Save/Tests/GachaTicketTests.cs
+ M Assets/Scripts/Save/Tests/SaveLayerTests.cs
+ M Docs/AI_CONTEXT.md
+ M Packages/manifest.json
+ M Packages/packages-lock.json
+ M tasks/loop_v2_smoke_bot/hole1_playthrough/live_stat_log.txt
+ M tasks/loop_v2_smoke_bot/hole1_playthrough/screenshots/history.log
+=== end baseline ===
+2026-07-20T06:50:52 iter-2 activated — surgical fix to BotDriver.cs SelectedPortrait+SelectedDistance
+2026-07-20T06:52:53 bot launched hole1_playthrough iter-2
+2026-07-20T06:56:55 launched hole1_playthrough iter-2 with video recording
+2026-07-20T07:10:00 iter-2 done — BotDriver 2-line fix verified, video+screenshots captured, report written
+2026-07-20T07:10:01 done, awaiting review
+
+=== iter-3 kickoff baseline ===
+HEAD: 18709c140748c07f917d5c19ba7c34df76bcafa7
+DIRTY:
+ M "Assets/Art/Shop/Background - Blurred.png"
+ M "Assets/Fonts/NotoSansJP-VariableFont_wght SDF.asset"
+ M Assets/Plugins/NuGet/.nuget-installed.json
+ M Assets/Plugins/NuGet/McpPlugin.Common.dll
+ M Assets/Plugins/NuGet/McpPlugin.dll
+ M Assets/Plugins/NuGet/ReflectorNet.dll
+ M Assets/Scripts/ClubManager.cs
+ M Assets/Scripts/Physics/Viewer/Bot/BotDriver.cs
+ M Assets/Scripts/Save/ClubOwnership.cs
+ M Assets/Scripts/Save/SaveData.cs
+ M Assets/Scripts/Save/SaveSchemaMigrator.cs
+ M Assets/Scripts/Save/Tests/ClubOwnershipTests.cs
+ M Assets/Scripts/Save/Tests/GachaTicketTests.cs
+ M Assets/Scripts/Save/Tests/SaveLayerTests.cs
+ M Docs/AI_CONTEXT.md
+ M Packages/manifest.json
+ M Packages/packages-lock.json
+ M tasks/loop_v2_smoke_bot/hole1_playthrough/live_stat_log.txt
+ M tasks/loop_v2_smoke_bot/hole1_playthrough/screenshots/history.log
+=== end baseline ===
+2026-07-20T08:00:00 iter-3 activated — capture-method redo only, deferred-start wiring for hole1_playthrough
+2026-07-20T08:10:00 iter-3 deferred bot launched — waiting for hole1_playthrough completion
+2026-07-20T09:30:00 iter-3 done, awaiting review — deferred-start wiring verified, flip-free clip, all 26 checklist items PASS
