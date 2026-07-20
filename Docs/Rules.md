@@ -7,6 +7,7 @@ Everything that stays constant across sessions. Read once per new chat if workin
 ## Output & Handoffs
 - **Any text meant to be copy-pasted goes in a fenced code block — every time, no exceptions.** This includes: new-chat kickoff/handoff/recap blocks, kickoff lines (`Use the implementer subagent on "..."`), commit messages, and any multi-line snippet. A handoff block in prose is a defect — Cesar copies these into a fresh chat and prose forces manual cleanup.
 - Acknowledging a formatting rule only in chat does NOT fix it — the acknowledgement does not survive into the next chat. Durable rules live here in Rules.md.
+- **Pipeline handoff is ONE line only:** `Use the implementer subagent on "<slug>"` in a fenced block, plus at most a one-line spec path + status note. The SPEC is the source of truth and Code reads it — do NOT reproduce its contents (context/why, stages, gates, traps, repo facts, architect findings) in the kickoff. Fat multi-section kickoff blocks are padding and a repeated miss. Brevity governs: one line, not a wall.
 
 ---
 
