@@ -33,7 +33,8 @@ namespace Golfin.UI.HUD
             "club_driver_gf",       // 0 — Driver
             "club_wood_gf",         // 1 — Wood
             "club_iron7_mireo",     // 2 — Iron
-            "club_putter_golfinx",  // 3 — Putter
+            "club_pwedge_royal",    // 3 — P.Wedge (Order 761 default-bag addition; labIdx=2)
+            "club_putter_golfinx",  // 4 — Putter
         };
 
         // True once stub is running in manager-absent mode; used to guard event handlers.

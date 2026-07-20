@@ -692,8 +692,21 @@ namespace Golfin.Physics.Viewer
 
             Debug.Log($"[VersusBot] TakeShot: ball={ball:F1} cup={cup:F1} dist={dist:F1}m aimYaw={aimYaw*Mathf.Rad2Deg:F1}° — {label}");
 
-            // ── 4. Set club; clear any stat-bundle override so bus resolves live stats ──
+            // ── 4. Set club; sync ClubContext; clear override so LIVE path fires intended club ──
+            // Order 762: SetClub only updates the LAB index + putter UI. On the LIVE stat path
+            // LiveStatProviderHost resolves the swing club from ClubContext.SelectedClubId (line 188),
+            // which SetClub never touches — so without the sync the equipped driver fires every stroke.
+            // BotClubSync pushes the nearest available bag entry for the selected lab index into
+            // ClubContext so the provider fires the club the bot actually chose.
             _controller.SetClub(club);
+            {
+                int resolvedLab = BotClubSync.SyncToClubContext(club, "VersusBot");
+                if (resolvedLab != club)
+                {
+                    _controller.SetClub(resolvedLab);
+                    club = resolvedLab;
+                }
+            }
             _shotController.ClearStatBundleOverride();
 
             // ── 5. Orient camera yaw ────────────────────────────────────────

@@ -738,67 +738,36 @@ namespace Golfin.Physics.Viewer.Bot
                 }
                 catch (Exception ex) { LogStep($"  SetClub warn: {ex.Message}"); }
 
-                // LIVE-path club switch (Order 731, 2026-07-17).
+                // LIVE-path club switch (Order 731, 2026-07-17; refactored Order 762 → BotClubSync).
                 // SetClub only updates the LAB club index + cone/putter UI. On the LIVE stat
                 // path the provider resolves the SWING club from ClubContext.SelectedClubId
-                // (LiveStatProviderHost.cs:188) — which SetClub never touches. Without this the
-                // equipped driver is fired for EVERY stroke (clubVel=75m/s, loft=10.9°) → every
-                // shot overshoots ~2× and the hole never converges. Drive the same selection the
-                // real club-selector widget uses (mirrors LabInventoryStub / ClubContextPopulator)
-                // so the chosen club is actually equipped — this is what makes the bot switch
-                // clubs like a real player. (Putter, LabClubIndex 3, is resolved from EquippedBag
-                // directly by the provider, but we keep the selection in sync for consistency.)
+                // (LiveStatProviderHost.cs:188) — which SetClub never touches. BotClubSync
+                // resolves the nearest available equipped club for the selected lab index and
+                // pushes all ClubContext fields so the provider fires the intended club.
+                // (Shared with VersusBot; logic is identical — no copy-paste.)
                 try
                 {
-                    var bag = Golfin.Gameplay.UI.HUD.ClubContext.EquippedBag;
-                    // Resolve the desired lab-club index to the NEAREST AVAILABLE equipped club.
-                    // The player's bag may not contain every lab club — a real player then reaches
-                    // for the closest club they actually carry (a shorter club: prefer the largest
-                    // index <= desired; else the smallest index > desired). This is what makes the
-                    // bot play its real bag. (Order 761: the default bag now includes a wedge at
-                    // LabClubIndex 2, so club=2 resolves directly. The fallback logic handles any
-                    // non-default bag that might be missing a slot.)
-                    int bagIdx = -1;
-                    if (bag != null && bag.Count > 0)
+                    int resolvedLab = BotClubSync.SyncToClubContext(club, null /* BotDriver uses LogStep */);
+                    // BotClubSync already logged nothing — mirror the BotDriver-style LogStep.
+                    if (Golfin.Gameplay.UI.HUD.ClubContext.EquippedBag != null &&
+                        Golfin.Gameplay.UI.HUD.ClubContext.EquippedBag.Count > 0)
                     {
-                        bagIdx = bag.FindIndex(e => e.LabClubIndex == club);
-                        if (bagIdx < 0)
+                        string cid = Golfin.Gameplay.UI.HUD.ClubContext.SelectedClubId;
+                        int    idx = Golfin.Gameplay.UI.HUD.ClubContext.SelectedIndex;
+                        if (resolvedLab != club)
                         {
-                            int bestBelow = -1, bestBelowIdx = -1, bestAbove = int.MaxValue, bestAboveIdx = -1;
-                            for (int i = 0; i < bag.Count; i++)
-                            {
-                                int li = bag[i].LabClubIndex;
-                                if (li <= club && li > bestBelow) { bestBelow = li; bestBelowIdx = i; }
-                                if (li >  club && li < bestAbove) { bestAbove = li; bestAboveIdx = i; }
-                            }
-                            bagIdx = bestBelowIdx >= 0 ? bestBelowIdx : bestAboveIdx;
-                        }
-                    }
-                    if (bagIdx >= 0)
-                    {
-                        var entry = bag[bagIdx];
-                        Golfin.Gameplay.UI.HUD.ClubContext.SelectedClubId    = entry.ClubId;
-                        Golfin.Gameplay.UI.HUD.ClubContext.SelectedIndex     = bagIdx;
-                        Golfin.Gameplay.UI.HUD.ClubContext.SelectedTypeLabel = entry.TypeLabel;
-                        Golfin.Gameplay.UI.HUD.ClubContext.SelectedPortrait  = entry.Portrait;  // Order 761 fix: mirror SelectByIndex — was leaving driver portrait on wedge
-                        Golfin.Gameplay.UI.HUD.ClubContext.SelectedDistance  = entry.Distance;  // Order 761 fix: mirror SelectByIndex — was leaving "250 yrds" on wedge
-                        Golfin.Gameplay.UI.HUD.ClubContext.RaiseSelectedChanged();
-                        // Keep the lab club index in sync with the club actually equipped so the
-                        // putter-mode / cone UI and isPutt detection match what the LIVE provider fires.
-                        if (entry.LabClubIndex != club)
-                        {
-                            try { ctrl.SetClub(entry.LabClubIndex); } catch { }
-                            LogStep($"  ClubContext → '{entry.ClubId}' (bagIdx={bagIdx}, labIdx {club}→{entry.LabClubIndex}, no exact club in bag) so the LIVE provider fires an available club");
-                            club = entry.LabClubIndex;
+                            try { ctrl.SetClub(resolvedLab); } catch { }
+                            LogStep($"  ClubContext → '{cid}' (bagIdx={idx}, labIdx {club}→{resolvedLab}, no exact club in bag) so the LIVE provider fires an available club");
+                            club = resolvedLab;
                         }
                         else
                         {
-                            LogStep($"  ClubContext → '{entry.ClubId}' (bagIdx={bagIdx}, labIdx={club}) so the LIVE provider fires the selected club");
+                            LogStep($"  ClubContext → '{cid}' (bagIdx={idx}, labIdx={club}) so the LIVE provider fires the selected club");
                         }
                     }
                     else
                     {
-                        LogStep($"  ClubContext WARN: empty EquippedBag (count={(bag?.Count ?? 0)}) — LIVE club unchanged, may overshoot");
+                        LogStep($"  ClubContext WARN: empty EquippedBag — LIVE club unchanged, may overshoot");
                     }
                 }
                 catch (Exception ex) { LogStep($"  ClubContext switch warn: {ex.Message}"); }
