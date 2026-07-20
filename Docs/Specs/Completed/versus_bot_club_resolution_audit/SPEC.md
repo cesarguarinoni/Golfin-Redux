@@ -1,6 +1,6 @@
 ﻿# versus_bot_club_resolution_audit
 
-> **Status:** Active — In Progress (Order 761 landed 2026-07-20; dependency satisfied). Handed to Code 2026-07-20.
+> **Status:** DONE 2026-07-20 (Cesar-approved). Divergence confirmed → Stage-2 fix landed in commit 2101e1bf4. Order 761 dependency satisfied.
 > **Order:** 762 (Notion GOLFIN_Roadmap) — Phase "Loop v2", P2 — Medium
 > **Tier:** 3 — FULL PIPELINE (runtime club-resolution behaviour + 1v1 gate)
 > **Filed:** 2026-07-17 11:30 JST (Architect)

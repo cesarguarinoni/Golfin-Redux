@@ -7,11 +7,12 @@
 
 ## 🟢 PRIORITY QUEUED — pick up immediately
 
-> **CURRENT STATE — 2026-07-20 (Architect session close).** Physics Tier-Tune band + default-bag wedge all shipped.
-> **NEXT = Order 762 `versus_bot_club_resolution_audit`** (Queued, UNBLOCKED by 761). Measure-first, Tier 3, P2.
-> SPEC: `Docs/Specs/Queued/versus_bot_club_resolution_audit/SPEC.md`.
+> **CURRENT STATE — 2026-07-20.** Physics Tier-Tune band + default-bag wedge + **versus-bot club-resolution audit all shipped**. "Check all bots (solo + multiplayer) have a working bag" is now fully closed (761 solo half + 762 multiplayer half).
+> **NEXT = Cesar's pick.** No primed architect-actionable order queued. Gacha remaining work stays blocked on content. Physics Tier-Tune follow-ups (felt-gate arrow rig from 732; arrowHz-negative-above-CC=60 guard) remain open but low-priority.
 >
-> Shipped this run (all Done+Closed in Notion unless noted):
+> - **762 `versus_bot_club_resolution_audit`** — DONE ✅ 2026-07-20 (Cesar-approved, full pipeline incl. red-team PASS; commit `2101e1bf4`; folder `Docs/Specs/Completed/versus_bot_club_resolution_audit/`). **Stage-1 measure confirmed divergence** (the 415-in-reverse: bug WAS real): `VersusBot.TakeShot()` set the LAB club via `SetClub(2)` but never pushed `ClubContext.SelectedClubId`, so `LiveStatProviderHost.ResolveLive():188` fired whatever stale id was held (driver) — the same partial-sync class 761 fixed in BotDriver. **Stage-2 fix:** new shared `BotClubSync.SyncToClubContext()` helper (production-safe, `Golfin.Physics.Viewer` asmdef, Lesson-W clean) called between `SetClub` and `ClearStatBundleOverride`; BotDriver refactored onto the same helper (kills Order-731 copy-paste); `LabInventoryStub` gains `club_pwedge_royal` so the lab-capture stub bag mirrors the 761 default bag (production resolves via BagManager/`ClubContextPopulator` independently). 2b/H2/H3 + `-1` sentinels byte-identical. Video: bot plays wedge on genuine 34–56m approaches, putter on green. Notion 762 → Done (pending — connector needs auth this session).
+>
+> Shipped earlier this run (all Done+Closed in Notion unless noted):
 > - **731 `stat_lane_offdesign_retirement`** — deleted 2 off-design resolver lanes (double-stamina + ClubControl→cone). F9.
 > - **417 `ball_rebound_perceptibility`** — `BallReboundPerPoint` 0.01→0.02 (~10.7m, clears bar). F10.
 > - **732 `club_control_arrow_range_calibration`** — rescaled CC→arrow to reachable 0–50 cap. F11. *(open follow-up: felt-gate side-by-side arrow video needs a new rig — physics bot bypasses `TickArrow`; and `arrowHz` goes negative above CC=60, safe only while caps hold ≤50.)*
