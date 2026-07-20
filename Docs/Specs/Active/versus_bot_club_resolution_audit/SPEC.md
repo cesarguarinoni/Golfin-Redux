@@ -1,6 +1,6 @@
 ﻿# versus_bot_club_resolution_audit
 
-> **Status:** Queued — actionable after Order 761 lands (or in parallel; see Dependency).
+> **Status:** Active — In Progress (Order 761 landed 2026-07-20; dependency satisfied). Handed to Code 2026-07-20.
 > **Order:** 762 (Notion GOLFIN_Roadmap) — Phase "Loop v2", P2 — Medium
 > **Tier:** 3 — FULL PIPELINE (runtime club-resolution behaviour + 1v1 gate)
 > **Filed:** 2026-07-17 11:30 JST (Architect)
