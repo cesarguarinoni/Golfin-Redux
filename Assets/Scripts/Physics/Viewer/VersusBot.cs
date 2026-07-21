@@ -218,13 +218,17 @@ namespace Golfin.Physics.Viewer
         /// (driver@1.0=433m, iron7@1.0=418m, wedge@1.0=360m) — all clubs can technically
         /// reach any distance at high power, so distance bands are the practical selector.
         /// </summary>
-        private void SelectShotCalibrated(float targetDist, out int club, out float power01, out string label)
+        // out float carry: the club's effective landing distance (clamped to its max carry when
+        // targetDist exceeds the table ceiling). Used by the trunk probe so it receives the real
+        // descent zone, not the full cup distance. tree_aware_bot (Order 351) §9.
+        private void SelectShotCalibrated(float targetDist, out int club, out float power01, out string label, out float carry)
         {
             EnsureTableLoaded();
 
             if (_carryTable == null || _carryTable.Count == 0)
             {
                 SelectShotLegacy(targetDist, out club, out power01, out label);
+                carry = targetDist;
                 return;
             }
 
@@ -236,6 +240,7 @@ namespace Golfin.Physics.Viewer
                 club    = putter;
                 power01 = InterpolateClubPower("putter", targetDist);
                 label   = $"Putter (calibrated) dist={targetDist:F1}m power={power01:F2}";
+                carry   = targetDist;
                 return;
             }
 
@@ -265,6 +270,10 @@ namespace Golfin.Physics.Viewer
             power01 = InterpolateClubPower(bestName, targetDist);
             club    = bestClubIndex;
             label   = $"{bestName} (calibrated, band) dist={targetDist:F1}m power={power01:F2}";
+            // §9: when targetDist exceeds the table ceiling, InterpolateClubPower clamps to max power
+            // (line 305: foundAbove=false → return below.power01). The real carry is GetMaxCarry, not
+            // targetDist. Clamp so the trunk probe checks the real landing zone.
+            carry = Mathf.Min(targetDist, GetMaxCarry(bestName));
         }
 
         private float GetMaxCarry(string clubName)
@@ -468,7 +477,9 @@ namespace Golfin.Physics.Viewer
             }
 
             // ── 3. Select club + power (H1 calibrated) ─────────────────────
-            SelectShotCalibrated(dist, out int club, out float power01, out string label);
+            // §9: capture probeCarry — the selected club's modelled carry (may be < dist when
+            // dist exceeds the table ceiling). Passed to trunk probe below; updated if H2 lays up.
+            SelectShotCalibrated(dist, out int club, out float power01, out string label, out float probeCarry);
             bool isPutt = club == PhysicsLabController.PutterIndex;
 
             // ── H3b: off-green putter override (putter-fall-through guard) ──
@@ -567,7 +578,8 @@ namespace Golfin.Physics.Viewer
                             safeDist = LayupPutterFloor;
                         }
                         // Re-select club+power for the new (shorter) safe distance.
-                        SelectShotCalibrated(safeDist, out club, out power01, out label);
+                        // §9: update probeCarry — H2 changed the landing target; trunk probe must see it.
+                        SelectShotCalibrated(safeDist, out club, out power01, out label, out probeCarry);
                         isPutt = club == PhysicsLabController.PutterIndex;
                         label += $" [laid up to {safeDist:F0}m]";
                         float aimDeltaDeg = (safeYaw - baseYaw) * Mathf.Rad2Deg;
@@ -623,6 +635,35 @@ namespace Golfin.Physics.Viewer
                     {
                         Debug.Log($"[VersusBot] H3 slope: mag={mag:F3} outside [{MagMin},{MagMax}] — skipping slope correction (degenerate cell guard).");
                     }
+                }
+            }
+
+            // ── tree_aware_bot (Order 351): trunk avoidance on H2-resolved line, before 2b ──
+            // Runs AFTER H2 (safe landing already chosen) and BEFORE 2b error injection so
+            // difficulty perturbation fires on the tree+water-safe aim exactly as it does today.
+            // Non-putt only (putter shots don't drive into trunks at playing distance).
+            if (!isPutt)
+            {
+                var trees = _controller.GetTreeProvider();      // null on treeless holes → no-op
+                // §9: pass probeCarry (the club's actual landing distance, updated by H2 if it fired)
+                // instead of dist (the full cup distance). Puts the landing window at the real descent zone.
+                if (trees != null && BotTreeProbe.TryFindTrunkClearAim(
+                        trees, _controller.GetSurfaces(), ball, aimYaw, probeCarry,
+                        out float treeYaw, out float treeDist))
+                {
+                    aimYaw = treeYaw;
+                    // putter-floor guard: treeDist < 22m triggers EnterPutterMode teleport.
+                    const float LayupPutterFloor = 22f;
+                    if (treeDist < LayupPutterFloor)
+                    {
+                        Debug.Log($"[VersusBot] Tree re-aim putter-floor: treeDist={treeDist:F1}m clamped to {LayupPutterFloor}m (prevents EnterPutterMode teleport)");
+                        treeDist = LayupPutterFloor;
+                    }
+                    SelectShotCalibrated(treeDist, out club, out power01, out label, out _);  // VersusBot's own selector; carry discarded (re-aim is already carry-space)
+                    isPutt = club == PhysicsLabController.PutterIndex;
+                    label += $" [tree re-aim to {treeDist:F0}m]";
+                    float aimDeltaDeg = (treeYaw - baseYaw) * Mathf.Rad2Deg;
+                    Debug.Log($"[VersusBot] Tree re-aim resolved: treeDist={treeDist:F1}m treeYaw={treeYaw * Mathf.Rad2Deg:F1}° (delta={aimDeltaDeg:+0.1;-0.1}° from cup line)");
                 }
             }
 

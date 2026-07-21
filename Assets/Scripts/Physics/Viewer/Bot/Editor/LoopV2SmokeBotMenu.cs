@@ -188,6 +188,87 @@ namespace Golfin.Physics.Viewer.Editor
         [MenuItem("GOLFIN/Smoke/Loop v2/Tree Trunk Normal Play", isValidateFunction: true)]
         static bool ValidateTreeTrunkNormalPlay() => !EditorApplication.isPlaying;
 
+        // ── tree_aware_bot (Order 351, 2026-07-20): trunk avoidance BEFORE/AFTER + Hole17 no-op ──
+
+        [MenuItem("GOLFIN/Smoke/Loop v2/Tree Aware Bot — Hole08 BEFORE (avoidance off)")]
+        public static void RunHole8TrunkAvoidanceBefore()
+        {
+            // BEFORE clip: SkipTreeAvoidance=true → bot fires on cup-line without trunk avoidance.
+            // Hole 08 (3927 trees, par 5). Direct LabScaffold+Hole_08_Geo additive load.
+            // Clip: 5s startup + 1s load + settle + par-5 strokes (~8s each) ≈ 65s generous cover.
+            // IMPORTANT: run this FIRST, then "Reset Video Session Guard", then AFTER.
+            BotVideoRecorder.MaxRecordSecondsSessionOverride = 65;
+            BotVideoRecorder.CustomOutputPath =
+                "Docs/Specs/Active/tree_aware_bot/videos/hole08_before";
+            BotVideoRecorder.Arm();
+            Launch("hole8_trunk_avoidance_before");
+        }
+
+        [MenuItem("GOLFIN/Smoke/Loop v2/Tree Aware Bot — Hole08 BEFORE (avoidance off)", isValidateFunction: true)]
+        static bool ValidateHole8TrunkAvoidanceBefore() => !EditorApplication.isPlaying;
+
+        [MenuItem("GOLFIN/Smoke/Loop v2/Tree Aware Bot — Hole08 AFTER (avoidance on)")]
+        public static void RunHole8TrunkAvoidanceAfter()
+        {
+            // AFTER clip: SkipTreeAvoidance=false (default) → avoidance active.
+            // Bot re-aims when trunk detected; logs show [BotDriver] Tree re-aim lines.
+            // Run AFTER "Reset Video Session Guard" (GOLFIN > Capture > Reset Video Session Guard).
+            BotVideoRecorder.MaxRecordSecondsSessionOverride = 65;
+            BotVideoRecorder.CustomOutputPath =
+                "Docs/Specs/Active/tree_aware_bot/videos/hole08_after";
+            BotVideoRecorder.Arm();
+            Launch("hole8_trunk_avoidance_after");
+        }
+
+        [MenuItem("GOLFIN/Smoke/Loop v2/Tree Aware Bot — Hole08 AFTER (avoidance on)", isValidateFunction: true)]
+        static bool ValidateHole8TrunkAvoidanceAfter() => !EditorApplication.isPlaying;
+
+        [MenuItem("GOLFIN/Smoke/Loop v2/Tree Aware Bot — Hole17 No-op")]
+        public static void RunHole17TrunkNoop()
+        {
+            // No-op proof: Hole 17 has no tree_obstacles.csv → GetTreeProvider()==null →
+            // BotTreeProbe never called → zero [BotDriver] Tree re-aim lines in log.
+            // No recording needed — just check the bot log output after run.
+            Launch("hole17_trunk_noop");
+        }
+
+        [MenuItem("GOLFIN/Smoke/Loop v2/Tree Aware Bot — Hole17 No-op", isValidateFunction: true)]
+        static bool ValidateHole17TrunkNoop() => !EditorApplication.isPlaying;
+
+        [MenuItem("GOLFIN/Smoke/Loop v2/Tree Aware Bot — Hole12 Lie BEFORE (avoidance off)")]
+        public static void RunHole12LieDemoBefore()
+        {
+            // §9.2 BEFORE clip: SkipTreeAvoidance=true → bot fires on cup-line without avoidance.
+            // Lie: (-34.27, 0, -14.77) interior rough, ~51m from OOB, Hole 12 (3026 trees, par 4). Cup ≈222m.
+            // Trunk at d=8m (near window [0,35m]): (-29.22,-8.57) R=0.295, baseY=16.09, topY=20.02.
+            // Shot expected to carom off trunk at d=8m (flat-probe Y=17.841 ∈ [16.09,20.02]).
+            // IMPORTANT: run this FIRST, then "Reset Video Session Guard", then AFTER.
+            BotVideoRecorder.MaxRecordSecondsSessionOverride = 65;
+            BotVideoRecorder.CustomOutputPath =
+                "Docs/Specs/Active/tree_aware_bot/videos/hole12_lie_before";
+            BotVideoRecorder.Arm();
+            Launch("hole12_lie_demo_before");
+        }
+
+        [MenuItem("GOLFIN/Smoke/Loop v2/Tree Aware Bot — Hole12 Lie BEFORE (avoidance off)", isValidateFunction: true)]
+        static bool ValidateHole12LieDemoBefore() => !EditorApplication.isPlaying;
+
+        [MenuItem("GOLFIN/Smoke/Loop v2/Tree Aware Bot — Hole12 Lie AFTER (avoidance on)")]
+        public static void RunHole12LieDemoAfter()
+        {
+            // §9.2 AFTER clip: SkipTreeAvoidance=false (default) → avoidance active.
+            // BotTreeProbe detects trunk on cup-line → "[BotDriver] Tree re-aim:" log line.
+            // Bot re-aims at safeYaw=40.8° (−10° from cup-line). Run AFTER "Reset Video Session Guard".
+            BotVideoRecorder.MaxRecordSecondsSessionOverride = 65;
+            BotVideoRecorder.CustomOutputPath =
+                "Docs/Specs/Active/tree_aware_bot/videos/hole12_lie_after";
+            BotVideoRecorder.Arm();
+            Launch("hole12_lie_demo_after");
+        }
+
+        [MenuItem("GOLFIN/Smoke/Loop v2/Tree Aware Bot — Hole12 Lie AFTER (avoidance on)", isValidateFunction: true)]
+        static bool ValidateHole12LieDemoAfter() => !EditorApplication.isPlaying;
+
         // ── Order 350 audio fidelity clips ───────────────────────────────────
 
         [MenuItem("GOLFIN/Smoke/Loop v2/Audio — UI and Music Slider")]

@@ -280,3 +280,115 @@ baseline.
 - Touch list (expected diff): **new** `Assets/Scripts/Physics/Viewer/BotTreeProbe.cs` (+ `.meta`); **edit**
   `PhysicsLabController.cs` (one getter), `VersusBot.cs` (one additive block), `BotDriver.cs` (one additive
   block); **new** EditMode test file. **No asmdef, no sim, no CSV, no prefab/scene edits.**
+
+---
+
+## 9. Architect resolution — Q1 (2026-07-21, supersedes §4.2/§4.3/§4.4 probe-distance)
+
+**Decision (Cesar):** feed the probe the selected club's actual **carry distance**, not the full ball→cup
+distance. This is the root cause of the iter-1 Gate-2 miss: the probe received `dist = flat.magnitude`
+(e.g. 417 m on a Par 5) while the chosen driver only carries ~228–287 m, so the landing window sat ~150 m
+past the ball's real descent and every on-line trunk in the true landing zone fell in the skipped apex band.
+Using carry keeps the §2 "no ballistic/apex height model" constraint fully intact — we still only probe where
+the ball is provably LOW (near the tee, and near where it actually LANDS), we just correct *where* "lands" is.
+
+**What must change (iter-2):**
+
+1. **`targetDist` passed to `TryFindTrunkClearAim` = the selected club's carry, not the cup distance.**
+   - `SelectShot` / `SelectShotCalibrated` already compute the carry internally (BotDriver logs it as
+     `carry~{targetCarry:F0}m`, `BotDriver.cs:1043`). Surface that carry (add an `out float carry` — or
+     equivalent read-back) so the wiring can pass it to the probe.
+   - **BotDriver (§4.4):** select the club for the cup distance FIRST (as today), read back its carry, then
+     call `TryFindTrunkClearAim(trees, surfaces, ball, yaw, carry, …)`. If it fires, re-run `SelectShot` on
+     `treeDist` (which is now a carry-space distance) exactly as today.
+   - **VersusBot (§4.3):** same shape — the probe's target is the carry of the club H2 left in scope, not the
+     raw cup/`dist`. Re-map `treeDist`→club via `SelectShotCalibrated` as before. The 22 m `LayupPutterFloor`
+     guard still applies.
+   - The probe's internal windows (`NearWindowM`/`LandWindowM`) and apex-skip logic are UNCHANGED — only the
+     `dist` value handed in changes. `LandWindowM=35` now means "35 m short of the real landing," which is the
+     descending, low-ball zone the design intended.
+
+2. **Gate-2 video must now reproduce.** With carry-space targeting, a driver stroke on Hole_08 whose ~250 m
+   landing zone contains an on-line trunk will fire the probe. Re-run the BEFORE (SkipTreeAvoidance) / AFTER
+   before/after on Hole_08 (fallback Hole_13/Hole_02); BEFORE = trunk carom, AFTER = re-aim/layup, no carom,
+   distinct-frame gate. If, after the carry fix, none of Hole_08/13/02 puts a trunk in a real landing zone,
+   surface that with the CSV projection numbers (do NOT hand-tune windows to force it) and escalate again.
+
+3. **Add one EditMode test** for the carry-vs-cup distinction: a trunk placed in the landing window of a
+   *carry-length* target that would have been in the apex band of the *cup-length* target → probe fires on
+   carry, no-fires on cup. This locks the fix so it can't silently regress.
+
+**Gate 3 (VersusBot clip) — Architect ruling:** the **BotDriver before/after is the PRIMARY,
+designated proof** (§6.2) and both bots call the identical `BotTreeProbe` helper. If VersusBot genuinely
+cannot be driven from the editor harness in a reasonable attempt, Gate 3 is satisfied by (a) the shared-helper
+unit tests, (b) code-inspection showing the tree block is strictly additive (H2/H3/2b untouched, guarded by
+`!isPutt && trees != null`), and (c) a VersusBot log excerpt on a tree-dense hole if one can be captured
+without building a new 1v1 script harness. Do NOT build a new VersusBot capture harness for this task — that
+is out of scope. Note the limitation in the report; it is not a blocker.
+
+## 9.1 Architect resolution — Q1b video-gate hole (2026-07-21, supersedes §7 hole choice)
+
+**Context:** iter-2 applied the carry fix correctly (Test 6 proves the probe fires when a trunk is in the
+carry window), but CSV analysis showed Holes 08/13/02 have **0 trunks in the carry landing window** on the
+straight tee→pin heading — their fairway corridors run clean between the tree rows (Hole_08 nearest gap:
+1.4 m). A dead-straight drive down a designed-clean fairway never has a trunk on-line, so the §7 hole choice
+cannot produce the BEFORE carom.
+
+**Decision (Cesar):** find the hole where it genuinely reproduces. **Sweep EVERY hole that has a
+`tree_obstacles.csv`** (not just 08/13/02) for one whose straight tee→pin line puts a trunk in a probe window
+(near or landing) at the driver's real carry — most likely a **dogleg** where the direct heading cuts across a
+tree corner.
+
+**How to run the sweep authoritatively (do NOT re-derive perp math — call the real probe):**
+1. For each hole with a tree CSV: load the provider (`PhysicsLabController` load path / `TreeObstacleProvider.
+   Create`), compute the straight tee→pin `aimYaw` and the driver's real `carry` for that hole's tee→pin
+   distance (the SAME `SelectShot`/`SelectShotCalibrated` carry the wiring now passes).
+2. Call the actual probe — `BotTreeProbe.TryFindTrunkClearAim(trees, surfaces, tee, aimYaw, carry, …)` (or the
+   internal `LineHasTrunkInWindows`) — and record whether it fires. This is ground truth; it reflects exactly
+   what the bot will do in play. Produce a ranked table: hole → fires? → min trunk gap in window.
+3. **Pick the hole(s) where the probe fires on the straight line** as the new video-gate hole. Prefer the one
+   with the clearest single on-line trunk (cleanest BEFORE carom).
+4. Shoot the BEFORE (SkipTreeAvoidance) / AFTER on THAT hole via BotDriver `PlayHoleToCup`, real play,
+   bot-recorded, full 1170×2532, captioned, distinct-frame gate. BEFORE = trunk carom; AFTER = re-aim/layup,
+   no carom. Update §7 in the report with the chosen hole and the sweep table.
+
+**Still no hand-tuning:** windows stay at 35 m; this only changes WHICH hole is filmed, chosen by the real
+probe firing on a real straight tee→pin line. If — after sweeping ALL tree holes — the probe fires on NONE of
+them on the straight tee→pin heading, that is itself the finding: report the full ranked table (every hole,
+min gap) and escalate; do not force it. (A realistic off-fairway lie demo remains the fallback only if Cesar
+approves it after seeing a genuinely empty sweep.)
+
+## 9.2 Architect resolution — Q1c off-line-lie demo (2026-07-21, after empty sweep)
+
+**Context:** the §9.1 sweep came back EMPTY — the real probe (`LineHasTrunkInWindows`) fires on NONE of the 17
+tree holes on the straight tee→pin heading at real driver carry (`sweep_probe_results.csv`). Reason: fairways
+are clean corridors by design, and the single hole with a trunk crossing the 2D line (Hole_05, XZ gap −0.14 m)
+is correctly suppressed by the accepted v1 flat-Y proxy (its landing is +2.65 m above the tee, so the flat-Y
+probe passes under the trunk base). **Conclusion: a dead-straight tee shot structurally never has a trunk
+on-line; the feature's real value is on OFF-LINE shots** (rough/dogleg lies, or VersusBot 2b-perturbed aim).
+
+**Decision (Cesar):** film the feature doing its actual job — a **realistic off-fairway lie demo**.
+
+**What to build (iter-4):**
+1. **Pick the densest, tightest-gap hole** — `Hole_12` (XZ gap 0.62 m, 3D gap 0.96 m — tightest real
+   candidate) or `Hole_08` (3926 trees) from the sweep. Either is fine; pick whichever yields the cleanest
+   single on-line trunk for a legible carom.
+2. **Find a REAL, plausible lie via the real probe** (not a synthetic mid-air teleport): a point on a *playable*
+   surface (rough / semirough / fairway — NOT water, NOT OB, NOT inside a trunk) from which the straight line
+   to the pin at the selected club's carry crosses a trunk in a probe window. Confirm by calling the actual
+   `BotTreeProbe.TryFindTrunkClearAim(...)` from that lie and asserting it returns `true`. This is a completely
+   normal mid-round situation (ball in the rough by a tree row) — legitimate real play, not scaffolding.
+3. **Seed that lie** in a BotDriver scenario, then let the bot **play normally from there** (real `SelectShot`,
+   real fire, real sim physics — `bots behave like real players`, no scaffolding a real session lacks).
+4. **BEFORE** (`SkipTreeAvoidance=true`): the bot fires straight at the pin, the ball **visibly caroms off the
+   trunk** (trunk = hard reflect, restitution 0.15 — already in the sim). Capture the deflection.
+5. **AFTER** (`SkipTreeAvoidance=false`): the probe fires, the bot **re-aims/lays up around the trunk**, no
+   carom, plays on. Capture. The `[BotDriver] Tree re-aim` log line MUST appear in the AFTER run.
+6. Both as full 1170×2532 captioned videos (`build_bot_video.py`), distinct-frame gate, frame extracts to
+   `screenshots/`. Canonical screenshot must show the BEFORE carom AND an AFTER re-aim frame. Pick a cam that
+   makes the carom legible (chase behind the ball, or a top-down `LastTrajectory` overlay per the lateral-curve
+   capture lesson — whichever reads clearest from chat).
+
+**Guardrails:** no probe-logic change, no window tuning, no sim edit, no new VersusBot harness. The lie must be
+on a playable surface reachable in normal play. If the chosen lie can't produce a clean carom (e.g. the trunk
+reflect is glancing), try another lie/hole from the sweep — do not fabricate the carom.

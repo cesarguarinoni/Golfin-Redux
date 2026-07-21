@@ -1,0 +1,283 @@
+2026-07-20T18:54:38 activated — reading SPEC and source files
+
+=== iter-1 kickoff baseline ===
+HEAD: 7578fc867
+DIRTY (pre-existing, not introduced by this task):
+ M "Assets/Art/Shop/Background - Blurred.png"
+ M "Assets/Fonts/NotoSansJP-VariableFont_wght SDF.asset"
+ M Assets/Plugins/NuGet/.nuget-installed.json
+ M Assets/Plugins/NuGet/McpPlugin.Common.dll
+ M Assets/Plugins/NuGet/McpPlugin.dll
+ M Assets/Plugins/NuGet/ReflectorNet.dll
+ M Packages/manifest.json
+ M Packages/packages-lock.json
+=== end baseline ===
+2026-07-20T19:09:00 BotDriver.cs edits complete + 5 BotTreeProbeTests all PASS (887/0)
+2026-07-20T10:30:15 hole17_trunk_noop PASS (providerNull=True, 4 strokes, zero Tree re-aim lines). Proceeding to Hole08 BEFORE recording.
+2026-07-20T19:38:00 Resetting session guard; re-running BEFORE with video recording
+2026-07-20T19:54 BEFORE video recording started — scenario=hole8_trunk_avoidance_before, SkipTreeAvoidance=true
+2026-07-20T20:26 AFTER video + Hole17 noop complete; CSV analysis done; Gate 1 PASS Gate 2 FAIL Gate 3 FAIL Gate 4 PASS; writing IMPLEMENTER_REPORT
+2026-07-20T20:30 done, awaiting review — READY_FOR_ARCHITECT_REVIEW (Gate 2 open question)
+
+=== iter-2 kickoff baseline ===
+HEAD: 7578fc867dd4c03e013a72667db1f5ebb298f5df
+DIRTY (pre-existing from prior iter, not introduced by iter-2):
+ M Assets/Scripts/Physics/Viewer/Bot/BotDriver.cs
+ M Assets/Scripts/Physics/Viewer/Bot/Editor/LoopV2SmokeBotMenu.cs
+ M Assets/Scripts/Physics/Viewer/Bot/LoopV2SmokeBot.cs
+ M Assets/Scripts/Physics/Viewer/Bot/Scenarios.cs
+ M Assets/Scripts/Physics/Viewer/PhysicsLabController.cs
+ M Assets/Scripts/Physics/Viewer/VersusBot.cs
+?? Assets/Scripts/Physics/Tests/BotTreeProbeTests.cs
+?? Assets/Scripts/Physics/Tests/BotTreeProbeTests.cs.meta
+?? Assets/Scripts/Physics/Viewer/BotTreeProbe.cs
+?? Assets/Scripts/Physics/Viewer/BotTreeProbe.cs.meta
+=== end baseline ===
+2026-07-21T00:00 activated iter-2 — carry-distance rewire per §9
+2026-07-21T02:30 iter-2 resumed — implementing carry-distance rewire in BotDriver+VersusBot
+2026-07-21T02:35 carry rewire complete — 6/6 BotTreeProbeTests PASS, 0 regressions in full suite (2 pre-existing StaminaLiveWiring fails). Running Gate 2 scenarios.
+2026-07-21T02:40 resumed iter-2 — running Gate 2 BEFORE/AFTER scenarios with carry-rewire fix
+2026-07-21T02:40 resumed iter-2 — running Gate 2 BEFORE/AFTER scenarios with carry-rewire fix
+2026-07-21T03:01 Hole 08/13/02 CSV analysis done — 0 trunks in probe windows on all three. §9 escalation condition met. Running AFTER scenario with iter-2 code for empirical proof.
+2026-07-21T03:10:00 done, awaiting architect review — Gate 2 §9 escalation (0 trunks in carry landing window on Hole_08/13/02)
+
+=== iter-3 kickoff baseline 2026-07-21T03:15:00 ===
+HEAD: 7578fc867 docs(spec): tree_aware_bot (Order 351) SPEC_READY
+DIRTY (M = modified, ?? = untracked):
+ M Assets/Art/Shop/Background - Blurred.png
+ M Assets/Fonts/NotoSansJP-VariableFont_wght SDF.asset
+ M Assets/Plugins/NuGet/.nuget-installed.json
+ M Assets/Plugins/NuGet/McpPlugin.Common.dll
+ M Assets/Plugins/NuGet/McpPlugin.dll
+ M Assets/Plugins/NuGet/ReflectorNet.dll
+ M Assets/Scripts/Physics/Viewer/Bot/BotDriver.cs
+ M Assets/Scripts/Physics/Viewer/Bot/Editor/LoopV2SmokeBotMenu.cs
+ M Assets/Scripts/Physics/Viewer/Bot/LoopV2SmokeBot.cs
+ M Assets/Scripts/Physics/Viewer/Bot/Scenarios.cs
+ M Assets/Scripts/Physics/Viewer/PhysicsLabController.cs
+ M Assets/Scripts/Physics/Viewer/VersusBot.cs
+ M Docs/Specs/Active/tree_aware_bot/SPEC.md
+ M Packages/manifest.json
+ M Packages/packages-lock.json
+?? Assets/Scripts/Physics/Tests/BotTreeProbeTests.cs
+?? Assets/Scripts/Physics/Tests/BotTreeProbeTests.cs.meta
+?? Assets/Scripts/Physics/Viewer/BotTreeProbe.cs
+?? Assets/Scripts/Physics/Viewer/BotTreeProbe.cs.meta
+=== end baseline ===
+2026-07-21T03:15:00 iter-3 start — sweeping all 17 holes via real BotTreeProbe
+2026-07-20T23:18:27 iter-3 resume after context compaction — making LineHasTrunkInWindows public then running 17-hole sweep
+2026-07-21T04:15:00 iter-3 all-17-hole sweep complete — all False; min-gap table computed; writing report
+2026-07-21T04:20:00 done, awaiting architect review — §9.1 empty sweep (all 17 holes fire=False); STATUS=READY_FOR_ARCHITECT_REVIEW
+
+=== iter-4 kickoff baseline 2026-07-21T04:25:00 ===
+HEAD: 7578fc867 docs(spec): tree_aware_bot (Order 351) SPEC_READY
+DIRTY (M = modified, ?? = untracked):
+ M Assets/Art/Shop/Background - Blurred.png
+ M Assets/Fonts/NotoSansJP-VariableFont_wght SDF.asset
+ M Assets/Plugins/NuGet/.nuget-installed.json
+ M Assets/Plugins/NuGet/McpPlugin.Common.dll
+ M Assets/Plugins/NuGet/McpPlugin.dll
+ M Assets/Plugins/NuGet/ReflectorNet.dll
+ M Assets/Scripts/Physics/Viewer/Bot/BotDriver.cs
+ M Assets/Scripts/Physics/Viewer/Bot/Editor/LoopV2SmokeBotMenu.cs
+ M Assets/Scripts/Physics/Viewer/Bot/LoopV2SmokeBot.cs
+ M Assets/Scripts/Physics/Viewer/Bot/Scenarios.cs
+ M Assets/Scripts/Physics/Viewer/PhysicsLabController.cs
+ M Assets/Scripts/Physics/Viewer/VersusBot.cs
+ M Assets/Scripts/Physics/Viewer/BotTreeProbe.cs
+ M Docs/Specs/Active/tree_aware_bot/SPEC.md
+ M Packages/manifest.json
+ M Packages/packages-lock.json
+?? Assets/Scripts/Physics/Tests/BotTreeProbeTests.cs
+?? Assets/Scripts/Physics/Tests/BotTreeProbeTests.cs.meta
+=== end baseline ===
+2026-07-21T04:25:00 iter-4 start — finding off-fairway lie via real probe on Hole_12/08
+2026-07-21T09:00:00 scenarios + menu items added; probe static check PASS (along=6.1m gap=-0.302m); launching BEFORE scenario
+2026-07-21T00:23:10 lie position updated to (-49,0,56); probe PASS confirmed; launching BEFORE video run
+2026-07-21T09:54:00 A4 PASS confirmed via Unity script-execute — LineHasTrunkInWindows=True, TryFindTrunkClearAim rerouted=True safeYaw=28.2deg; probe_invariants.json all PASS; launching BEFORE/AFTER scenarios
+2026-07-21T01:04:40 re-recording BEFORE with correct lie (-84,0,8) — old BEFORE used wrong lie (-49,0,56), Scenarios.cs fix compiled after scenario ran
+2026-07-21T10:20:00 iter-4: both videos captioned (hole12_lie_demo_before/after); extracting stills; writing IMPLEMENTER_REPORT
+2026-07-21T10:35:00 iter-4 done — IMPLEMENTER_REPORT written; Gate2 plays-on=FAIL; routing READY_FOR_ARCHITECT_REVIEW
+
+=== iter-5 kickoff baseline 2026-07-21T10:40:00 ===
+HEAD: 7578fc867dd4c03e013a72667db1f5ebb298f5df
+DIRTY (M = modified, ?? = untracked):
+ M Assets/Art/Shop/Background - Blurred.png
+ M Assets/Fonts/NotoSansJP-VariableFont_wght SDF.asset
+ M Assets/Plugins/NuGet/.nuget-installed.json
+ M Assets/Plugins/NuGet/McpPlugin.Common.dll
+ M Assets/Plugins/NuGet/McpPlugin.dll
+ M Assets/Plugins/NuGet/ReflectorNet.dll
+ M Assets/Scripts/Physics/Viewer/Bot/BotDriver.cs
+ M Assets/Scripts/Physics/Viewer/Bot/Editor/LoopV2SmokeBotMenu.cs
+ M Assets/Scripts/Physics/Viewer/Bot/LoopV2SmokeBot.cs
+ M Assets/Scripts/Physics/Viewer/Bot/Scenarios.cs
+ M Assets/Scripts/Physics/Viewer/PhysicsLabController.cs
+ M Assets/Scripts/Physics/Viewer/VersusBot.cs
+ M Docs/Specs/Active/tree_aware_bot/SPEC.md
+?? Assets/Scripts/Physics/Tests/BotTreeProbeTests.cs
+?? Assets/Scripts/Physics/Tests/BotTreeProbeTests.cs.meta
+?? Assets/Scripts/Physics/Viewer/BotTreeProbe.cs
+?? Assets/Scripts/Physics/Viewer/BotTreeProbe.cs.meta
+=== end baseline ===
+2026-07-21T10:40:00 iter-5 start — finding interior lie, Python search: 83 candidates from Hole12; top candidate lie=(-7.75,-2.69), tree=(-0.79,7.09); running Unity validation
+2026-07-21T11:12:00 iter-5: A4/A5 PASS confirmed (ValA5v3); liePos updated to (-34.27,0,-14.77); BEFORE scenario launched
+2026-07-21T11:45:00 done, awaiting review
+2026-07-21T12:00:00 iter-6 kickoff — reading red-team verdict + planning lie search
+2026-07-21T04:14:42 AFTER scenario running (SkipTreeAvoidance=false), waiting for play-mode exit
+
+=== iter-6 kickoff baseline 2026-07-21T12:00:00 ===
+HEAD: 7578fc867dd4c03e013a72667db1f5ebb298f5df
+DIRTY (M = modified from HEAD, ?? = untracked new files — all pre-existing from prior iters, none introduced by iter-6 cold-start):
+ M Assets/Art/Shop/Background - Blurred.png
+ M Assets/Fonts/NotoSansJP-VariableFont_wght SDF.asset
+ M Assets/Plugins/NuGet/.nuget-installed.json
+ M Assets/Plugins/NuGet/McpPlugin.Common.dll
+ M Assets/Plugins/NuGet/McpPlugin.dll
+ M Assets/Plugins/NuGet/ReflectorNet.dll
+ M Assets/Scripts/Physics/Viewer/Bot/BotDriver.cs
+ M Assets/Scripts/Physics/Viewer/Bot/Editor/LoopV2SmokeBotMenu.cs
+ M Assets/Scripts/Physics/Viewer/Bot/LoopV2SmokeBot.cs
+ M Assets/Scripts/Physics/Viewer/Bot/Scenarios.cs
+ M Assets/Scripts/Physics/Viewer/PhysicsLabController.cs
+ M Assets/Scripts/Physics/Viewer/VersusBot.cs
+ M Docs/Specs/Active/tree_aware_bot/SPEC.md
+ M Packages/manifest.json
+ M Packages/packages-lock.json
+?? Assets/Scripts/Physics/Tests/BotTreeProbeTests.cs
+?? Assets/Scripts/Physics/Tests/BotTreeProbeTests.cs.meta
+?? Assets/Scripts/Physics/Viewer/BotTreeProbe.cs
+?? Assets/Scripts/Physics/Viewer/BotTreeProbe.cs.meta
+=== end baseline ===
+2026-07-21T12:00:00 iter-6 start — hunting single-trunk-blocking lie on Hole 12 per red-team verdict
+2026-07-21T13:02:29 BEFORE run complete — Hole 12 lie (8.81,29.893,38.01) + carom at along=15.2m confirmed; top-down overlay saved
+2026-07-21T13:14:00 AFTER run complete — ball cleared trunk at (17.64,48.88); LayupPutterFloor fired (11.7m clamped to 22m)
+2026-07-21T13:34:52 ValA4iter6 script-execute confirmed A4/A5/A7 — 3026 trees, LineHasTrunkInWindows=True, rerouted=True safeYaw=50.83deg safeDist=12.0m, A7 False (clear at +10°)
+2026-07-21T13:36:00 probe_invariants.json updated to iter-6; BotTreeProbeTests 6/6 PASS; StaminaLiveWiringTests 2 pre-existing failures orthogonal
+2026-07-21T14:00:00+09:00 done, awaiting review
+
+=== iter-7 kickoff baseline ===
+Timestamp: 2026-07-21T00:00:00
+HEAD SHA: 3ba5cd1bb
+DIRTY (porcelain --untracked-files=all):
+ M .claude/review_misses.log
+ M "Assets/Art/Shop/Background - Blurred.png"
+ M "Assets/Fonts/NotoSansJP-VariableFont_wght SDF.asset"
+ M Assets/Plugins/NuGet/.nuget-installed.json
+ M Assets/Plugins/NuGet/McpPlugin.Common.dll
+ M Assets/Plugins/NuGet/McpPlugin.dll
+ M Assets/Plugins/NuGet/ReflectorNet.dll
+ M Assets/Scripts/Physics/Viewer/Bot/BotDriver.cs
+ M Assets/Scripts/Physics/Viewer/Bot/Editor/LoopV2SmokeBotMenu.cs
+ M Assets/Scripts/Physics/Viewer/Bot/LoopV2SmokeBot.cs
+ M Assets/Scripts/Physics/Viewer/Bot/Scenarios.cs
+ M Assets/Scripts/Physics/Viewer/PhysicsLabController.cs
+ M Assets/Scripts/Physics/Viewer/VersusBot.cs
+ M Docs/Specs/Active/tree_aware_bot/SPEC.md
+ M Packages/manifest.json
+ M Packages/packages-lock.json
+?? .mcp.json.bak-23886
+?? Assets/Scripts/Physics/Tests/BotTreeProbeTests.cs
+?? Assets/Scripts/Physics/Tests/BotTreeProbeTests.cs.meta
+?? Assets/Scripts/Physics/Viewer/BotTreeProbe.cs
+Focus: iter-7 FOCUSED fixes only — top-down overlay (matplotlib), A8 physics correction, A9 control assertion; no sim/probe/run changes
+2026-07-21T00:20:00 iter-7: generated iter7_topdown_overlay.png via matplotlib (2383x1666); corrected A8+added A9 in probe_invariants.json; updated IMPLEMENTER_REPORT.md iter/shape/canonical/A8/A9/checklist
+2026-07-21T00:25:00 done, awaiting review
+2026-07-21T05:43:49 === iter-8 kickoff baseline ===
+HEAD: 3ba5cd1bb7d1f291067cc9301f6b05bd08c1835c
+DIRTY (porcelain):
+ M .claude/review_misses.log
+ M "Assets/Art/Shop/Background - Blurred.png"
+ M "Assets/Fonts/NotoSansJP-VariableFont_wght SDF.asset"
+ M Assets/Localization/LocalizationText.csv
+ M Assets/Plugins/NuGet/.nuget-installed.json
+ M Assets/Plugins/NuGet/McpPlugin.Common.dll
+ M Assets/Plugins/NuGet/McpPlugin.dll
+ M Assets/Plugins/NuGet/ReflectorNet.dll
+ M Assets/Scripts/Physics/Viewer/Bot/BotDriver.cs
+ M Assets/Scripts/Physics/Viewer/Bot/Editor/LoopV2SmokeBotMenu.cs
+ M Assets/Scripts/Physics/Viewer/Bot/LoopV2SmokeBot.cs
+ M Assets/Scripts/Physics/Viewer/Bot/Scenarios.cs
+ M Assets/Scripts/Physics/Viewer/PhysicsLabController.cs
+ M Assets/Scripts/Physics/Viewer/VersusBot.cs
+ M Assets/Scripts/UI/ScreenManager.cs
+ M Docs/Specs/Active/tree_aware_bot/SPEC.md
+ M Packages/manifest.json
+ M Packages/packages-lock.json
+?? .mcp.json.bak-23886
+?? Assets/Art/UI/Account.meta
+?? Assets/Art/UI/Account/S_Login_SplashBG.png
+?? Assets/Art/UI/Account/S_Login_SplashBG.png.meta
+?? Assets/Art/UI/Account/S_Login_TopBG2.png
+?? Assets/Art/UI/Account/S_Login_TopBG2.png.meta
+?? Assets/Art/UI/Account/S_SignUp_BG.png
+?? Assets/Art/UI/Account/S_SignUp_BG.png.meta
+?? Assets/Art/UI/Account/S_SignUp_BG2.png
+?? Assets/Art/UI/Account/S_SignUp_BG2.png.meta
+?? Assets/Scripts/Physics/Tests/BotTreeProbeTests.cs
+?? Assets/Scripts/Physics/Tests/BotTreeProbeTests.cs.meta
+?? Assets/Scripts/Physics/Viewer/BotTreeProbe.cs
+?? Assets/Scripts/Physics/Viewer/BotTreeProbe.cs.meta
+?? Assets/Scripts/UI/Account.meta
+?? Assets/Scripts/UI/Account/CreateUsernameScreenController.cs
+?? Assets/Scripts/UI/Account/CreateUsernameScreenController.cs.meta
+?? Assets/Scripts/UI/Account/EmailConfirmationScreenController.cs
+?? Assets/Scripts/UI/Account/EmailConfirmationScreenController.cs.meta
+?? Assets/Scripts/UI/Account/LoginScreenController.cs
+?? Assets/Scripts/UI/Account/LoginScreenController.cs.meta
+?? Assets/Scripts/UI/Account/PasswordRequirements.cs
+?? Assets/Scripts/UI/Account/PasswordRequirements.cs.meta
+?? Assets/Scripts/UI/Account/SignUpScreenController.cs
+?? Assets/Scripts/UI/Account/SignUpScreenController.cs.meta
+?? Docs/Specs/Active/login_signup_screens/ARCHITECT_REVIEW.md
+?? Docs/Specs/Active/login_signup_screens/HEARTBEAT.log
+?? Docs/Specs/Active/login_signup_screens/IMPLEMENTER_REPORT.md
+?? Docs/Specs/Active/login_signup_screens/SELF_REVIEW.md
+?? Docs/Specs/Active/login_signup_screens/SPEC.md
+?? Docs/Specs/Active/login_signup_screens/STATUS.md
+?? Docs/Specs/Active/login_signup_screens/reference/01_Login.png
+?? Docs/Specs/Active/login_signup_screens/reference/02_CreateUsername.png
+?? Docs/Specs/Active/login_signup_screens/reference/03_SignUp.png
+?? Docs/Specs/Active/login_signup_screens/reference/04_EmailConfirmation.png
+?? Docs/Specs/Active/login_signup_screens/reference/README.md
+?? Docs/Specs/Active/login_signup_screens/screenshots/.gitkeep
+?? Docs/Specs/Active/tree_aware_bot/ARCHITECT_REVIEW.md
+?? Docs/Specs/Active/tree_aware_bot/HEARTBEAT.log
+?? Docs/Specs/Active/tree_aware_bot/IMPLEMENTER_REPORT.md
+?? Docs/Specs/Active/tree_aware_bot/SELF_REVIEW.md
+?? Docs/Specs/Active/tree_aware_bot/STATUS.md
+?? Docs/Specs/Active/tree_aware_bot/after_run_log_iter6.txt
+?? Docs/Specs/Active/tree_aware_bot/before_run_log.txt
+?? Docs/Specs/Active/tree_aware_bot/before_run_log_iter6.txt
+?? Docs/Specs/Active/tree_aware_bot/hole_positions.json
+?? Docs/Specs/Active/tree_aware_bot/probe_invariants.json
+?? Docs/Specs/Active/tree_aware_bot/screenshots/after_s01_reaim_iter5.png
+?? Docs/Specs/Active/tree_aware_bot/screenshots/after_stroke1_t10s.png
+?? Docs/Specs/Active/tree_aware_bot/screenshots/before_s01_interior_lie_iter5.png
+?? Docs/Specs/Active/tree_aware_bot/screenshots/before_stroke1_t10s.png
+?? Docs/Specs/Active/tree_aware_bot/screenshots/history.log
+?? Docs/Specs/Active/tree_aware_bot/screenshots/hole08_after_iter2_stroke1.png
+?? Docs/Specs/Active/tree_aware_bot/screenshots/hole08_after_stroke1.png
+?? Docs/Specs/Active/tree_aware_bot/screenshots/hole08_before_iter2_stroke1.png
+?? Docs/Specs/Active/tree_aware_bot/screenshots/hole08_before_stroke1.png
+?? Docs/Specs/Active/tree_aware_bot/screenshots/hole17_noop_stroke1.png
+?? Docs/Specs/Active/tree_aware_bot/screenshots/iter7_topdown_overlay.png
+?? Docs/Specs/Active/tree_aware_bot/screenshots/s01_topdown_traj_overlay_2026-07-21_12-46-59.png
+?? Docs/Specs/Active/tree_aware_bot/screenshots/s01_topdown_traj_overlay_2026-07-21_13-02-29.png
+?? Docs/Specs/Active/tree_aware_bot/screenshots/s02_stroke1_2026-07-21_12-47-00.png
+?? Docs/Specs/Active/tree_aware_bot/screenshots/s02_stroke1_2026-07-21_13-02-31.png
+?? Docs/Specs/Active/tree_aware_bot/screenshots/s03_stroke2_2026-07-21_12-47-10.png
+?? Docs/Specs/Active/tree_aware_bot/screenshots/s03_stroke2_2026-07-21_13-02-41.png
+?? Docs/Specs/Active/tree_aware_bot/screenshots/s04_stroke3_2026-07-21_12-47-23.png
+?? Docs/Specs/Active/tree_aware_bot/screenshots/s04_stroke3_2026-07-21_13-02-54.png
+?? Docs/Specs/Active/tree_aware_bot/screenshots/s05_stroke4_2026-07-21_12-47-33.png
+?? Docs/Specs/Active/tree_aware_bot/screenshots/s05_stroke4_2026-07-21_13-03-04.png
+?? Docs/Specs/Active/tree_aware_bot/screenshots/s06_stroke5_2026-07-21_12-47-43.png
+?? Docs/Specs/Active/tree_aware_bot/screenshots/s06_stroke5_2026-07-21_13-03-14.png
+?? Docs/Specs/Active/tree_aware_bot/screenshots/s07_stroke6_2026-07-21_12-47-49.png
+?? Docs/Specs/Active/tree_aware_bot/screenshots/s07_stroke6_2026-07-21_13-03-20.png
+?? Docs/Specs/Active/tree_aware_bot/screenshots/s08_stroke7_2026-07-21_12-47-59.png
+?? Docs/Specs/Active/tree_aware_bot/screenshots/s08_stroke7_2026-07-21_13-03-30.png
+?? Docs/Specs/Active/tree_aware_bot/sweep_probe_results.csv
+Focus: iter-8 — comment-and-json-integrity only. Fix BotDriver.cs:927-932 comment (wrong physics framing); fix probe_invariants.json A8 aside; optional overlay metric consistency. NO sim/probe/logic changes. No re-run.
+2026-07-21T05:52:12Z done, awaiting review — iter-8 complete: Fix1 BotDriver.cs comment corrected, Fix2 probe_invariants.json A8 updated, Fix3 iter8_topdown_overlay.png with consistent XZ euclidean metrics. STATUS -> READY_FOR_SELF_REVIEW

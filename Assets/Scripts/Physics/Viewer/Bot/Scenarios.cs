@@ -3193,6 +3193,341 @@ namespace Golfin.Physics.Viewer.Bot
             d.LogStep("=== FadeDrawAimLineBend normal playthrough complete ===");
             d.FlushLog();
         }
+
+        // ── Scenarios: tree_aware_bot (Order 351) ─────────────────────────────
+        //
+        // BEFORE/AFTER pair on Hole 08 (3927 trees — densest hole).
+        // Acceptance gate: BEFORE log has NO "[BotDriver] Tree re-aim" lines;
+        //   AFTER log DOES contain them (avoidance triggered on trunk-blocked strokes).
+        // Both use the same direct additive load (LabScaffold + Hole_08_Geo) used by
+        // TreeCollisionGate to bypass full ShellScene navigation.
+        //
+        // Usage:
+        //   1. GOLFIN > Smoke > Loop v2 > Tree Aware Bot — Hole08 BEFORE  (records first clip)
+        //   2. GOLFIN > Capture > Reset Video Session Guard                (one recording per launch)
+        //   3. GOLFIN > Smoke > Loop v2 > Tree Aware Bot — Hole08 AFTER   (records second clip)
+        //
+        // Hole 17 no-op: GetTreeProvider() returns null (no tree_obstacles.csv) so the helper
+        // is never called. Used to confirm the feature degrades gracefully to no-op.
+
+        /// <summary>
+        /// tree_aware_bot BEFORE — Hole 08, avoidance DISABLED (BotDriver.SkipTreeAvoidance=true).
+        /// Bot fires on cup-line without trunk avoidance. Logs show SelectShot chosen dist but
+        /// ZERO "[BotDriver] Tree re-aim" lines, demonstrating pre-fix behavior.
+        /// </summary>
+        public static IEnumerator Hole8TrunkAvoidanceBefore(BotDriver d)
+        {
+            BotDriver.SkipTreeAvoidance = true;
+            d.LogStep("=== tree_aware_bot BEFORE: SkipTreeAvoidance=true (avoidance DISABLED) ===");
+            return Hole8TrunkAvoidanceBody(d, scenarioLabel: "before");
+        }
+
+        /// <summary>
+        /// tree_aware_bot AFTER — Hole 08, avoidance ACTIVE (BotDriver.SkipTreeAvoidance=false).
+        /// When a trunk is detected on the cup line, the bot re-aims. Logs show one or more
+        /// "[BotDriver] Tree re-aim" lines, demonstrating the fix in action.
+        /// </summary>
+        public static IEnumerator Hole8TrunkAvoidanceAfter(BotDriver d)
+        {
+            BotDriver.SkipTreeAvoidance = false;
+            d.LogStep("=== tree_aware_bot AFTER: SkipTreeAvoidance=false (avoidance ENABLED) ===");
+            return Hole8TrunkAvoidanceBody(d, scenarioLabel: "after");
+        }
+
+        private static IEnumerator Hole8TrunkAvoidanceBody(BotDriver d, string scenarioLabel)
+        {
+            try
+            {
+            // 1. Hide ShellScene canvases so PhysicsLab camera dominates the Game View.
+            var shellCanvases = Object.FindObjectsOfType<Canvas>();
+            var hiddenCanvases = new System.Collections.Generic.List<Canvas>();
+            foreach (var c in shellCanvases)
+                if (c.gameObject.scene.name == "ShellScene" && c.enabled)
+                { c.enabled = false; hiddenCanvases.Add(c); }
+            d.LogStep($"  Hole8TrunkAvoidance({scenarioLabel}): hidden {hiddenCanvases.Count} ShellScene canvases.");
+
+            // 2. Simultaneously kick off LabScaffold + Hole_08_Geo additive loads.
+            //    (Same simultaneous-kick pattern as TreeCollisionGate — avoids the 2-frame race
+            //    where ScanForLoadedHoleSceneAtStartup runs before Hole_08_Geo appears.)
+            d.LogStep("  Starting LabScaffold + Hole_08_Geo loads (Additive, simultaneous)...");
+            var opLab = UnityEngine.SceneManagement.SceneManager.LoadSceneAsync(
+                "LabScaffold", UnityEngine.SceneManagement.LoadSceneMode.Additive);
+            if (opLab == null)
+            {
+                d.LogStep("=== Hole8TrunkAvoidance: FAIL — LabScaffold not in Build Settings ===");
+                yield break;
+            }
+            var opHole = UnityEngine.SceneManagement.SceneManager.LoadSceneAsync(
+                "Hole_08_Geo", UnityEngine.SceneManagement.LoadSceneMode.Additive);
+            if (opHole == null)
+            {
+                d.LogStep("=== Hole8TrunkAvoidance: FAIL — Hole_08_Geo not in Build Settings ===");
+                yield break;
+            }
+
+            // 3. Wait for both loads.
+            float lw = 0f;
+            while ((!opLab.isDone || !opHole.isDone) && lw < 30f)
+            { yield return new WaitForSecondsRealtime(0.25f); lw += 0.25f; }
+            if (!opLab.isDone || !opHole.isDone)
+            {
+                d.LogStep($"=== Hole8TrunkAvoidance: FAIL — load timeout after {lw:F1}s ===");
+                yield break;
+            }
+            d.LogStep($"  Both scenes loaded in {lw:F1}s. Polling IsHoleReady...");
+
+            // 4. Wait for PhysicsLabController.OnHoleLoaded (loads tree_obstacles.csv, 3927 trees).
+            var ctrl = Object.FindObjectOfType<PhysicsLabController>();
+            if (ctrl == null)
+            {
+                d.LogStep("=== Hole8TrunkAvoidance: FAIL — PhysicsLabController not found ===");
+                yield break;
+            }
+            float hw = 0f;
+            while (!ctrl.IsHoleReady && hw < 15f)
+            { yield return new WaitForSecondsRealtime(0.25f); hw += 0.25f; }
+            if (!ctrl.IsHoleReady)
+            {
+                d.LogStep($"=== Hole8TrunkAvoidance: FAIL — IsHoleReady never true after {hw:F1}s ===");
+                yield break;
+            }
+            d.LogStep($"  IsHoleReady=true after {hw:F1}s. TreeProvider null={ctrl.GetTreeProvider() == null}.");
+            yield return new WaitForSecondsRealtime(2f); // settle before first shot
+
+            // 5. Play hole to cup (or par+3 seam cap). Hole 08 par=5.
+            yield return d.PlayHoleToCup(par: 5);
+
+            d.LogStep($"=== Hole8TrunkAvoidance({scenarioLabel}) complete ===");
+            d.FlushLog();
+
+            // Restore canvases.
+            foreach (var c in hiddenCanvases) { if (c != null) c.enabled = true; }
+            }
+            finally
+            {
+                // Always restore the flag — even if an exception aborts the scenario.
+                BotDriver.SkipTreeAvoidance = false;
+            }
+        }
+
+        /// <summary>
+        /// tree_aware_bot Hole 17 no-op proof — Hole 17 has no tree_obstacles.csv,
+        /// so GetTreeProvider() returns null. BotTreeProbe.TryFindTrunkClearAim returns false
+        /// immediately. Log must contain ZERO "[BotDriver] Tree re-aim" lines.
+        /// </summary>
+        public static IEnumerator Hole17TrunkNoop(BotDriver d)
+        {
+            d.LogStep("=== tree_aware_bot Hole17 no-op: expecting null tree provider ===");
+
+            // 1. Hide ShellScene canvases.
+            var shellCanvases = Object.FindObjectsOfType<Canvas>();
+            var hiddenCanvases = new System.Collections.Generic.List<Canvas>();
+            foreach (var c in shellCanvases)
+                if (c.gameObject.scene.name == "ShellScene" && c.enabled)
+                { c.enabled = false; hiddenCanvases.Add(c); }
+
+            // 2. Load LabScaffold + Hole_17_Geo (no tree_obstacles.csv → null provider).
+            d.LogStep("  Starting LabScaffold + Hole_17_Geo loads (Additive, simultaneous)...");
+            var opLab = UnityEngine.SceneManagement.SceneManager.LoadSceneAsync(
+                "LabScaffold", UnityEngine.SceneManagement.LoadSceneMode.Additive);
+            if (opLab == null)
+            {
+                d.LogStep("=== Hole17TrunkNoop: FAIL — LabScaffold not in Build Settings ===");
+                foreach (var c in hiddenCanvases) { if (c != null) c.enabled = true; }
+                yield break;
+            }
+            var opHole = UnityEngine.SceneManagement.SceneManager.LoadSceneAsync(
+                "Hole_17_Geo", UnityEngine.SceneManagement.LoadSceneMode.Additive);
+            if (opHole == null)
+            {
+                d.LogStep("=== Hole17TrunkNoop: FAIL — Hole_17_Geo not in Build Settings ===");
+                foreach (var c in hiddenCanvases) { if (c != null) c.enabled = true; }
+                yield break;
+            }
+
+            // 3. Wait for both loads.
+            float lw = 0f;
+            while ((!opLab.isDone || !opHole.isDone) && lw < 30f)
+            { yield return new WaitForSecondsRealtime(0.25f); lw += 0.25f; }
+            if (!opLab.isDone || !opHole.isDone)
+            {
+                d.LogStep($"=== Hole17TrunkNoop: FAIL — load timeout {lw:F1}s ===");
+                foreach (var c in hiddenCanvases) { if (c != null) c.enabled = true; }
+                yield break;
+            }
+
+            // 4. Wait for IsHoleReady.
+            var ctrl = Object.FindObjectOfType<PhysicsLabController>();
+            if (ctrl == null)
+            {
+                d.LogStep("=== Hole17TrunkNoop: FAIL — PhysicsLabController not found ===");
+                foreach (var c in hiddenCanvases) { if (c != null) c.enabled = true; }
+                yield break;
+            }
+            float hw = 0f;
+            while (!ctrl.IsHoleReady && hw < 15f)
+            { yield return new WaitForSecondsRealtime(0.25f); hw += 0.25f; }
+            if (!ctrl.IsHoleReady)
+            {
+                d.LogStep($"=== Hole17TrunkNoop: FAIL — IsHoleReady never true {hw:F1}s ===");
+                foreach (var c in hiddenCanvases) { if (c != null) c.enabled = true; }
+                yield break;
+            }
+
+            // 5. Confirm null provider.
+            bool providerIsNull = ctrl.GetTreeProvider() == null;
+            d.LogStep($"  Hole17 tree provider null={providerIsNull} (EXPECTED: true). Hole_17 has no tree_obstacles.csv.");
+            if (!providerIsNull)
+                d.LogStep("  WARNING: non-null tree provider on Hole_17 is UNEXPECTED — check HoleData/Hole_17/.");
+
+            yield return new WaitForSecondsRealtime(1f);
+
+            // 6. Fire one stroke to confirm SkipTreeAvoidance check path is inactive when null.
+            //    PlayHoleToCup(par:4) but we only need 1 stroke as proof; seam cap fires at par+3.
+            yield return d.PlayHoleToCup(par: 4);
+
+            d.LogStep($"  no-op proof: providerNull={providerIsNull}. Inspect bot log above for absence of [BotDriver] Tree re-aim lines.");
+            d.LogStep("=== Hole17TrunkNoop complete ===");
+            d.FlushLog();
+
+            foreach (var c in hiddenCanvases) { if (c != null) c.enabled = true; }
+        }
+
+        // ── tree_aware_bot §9.2: realistic off-fairway lie demo (Hole 12) ────────────
+
+        /// <summary>
+        /// tree_aware_bot §9.2 lie demo BEFORE — Hole 12, open rough lie east of fairway.
+        /// BotDriver.SkipTreeAvoidance=true → bot fires straight on cup-line without avoidance.
+        /// iter-6 lie: (8.81, 0, 38.01), terrain_Y=29.893, cup-line blocked by SINGLE isolated trunk
+        /// at (17.64, 48.88) along=14.0m, R=0.385m (scale=1.1), baseY=29.282, trunkTopY=33.135.
+        /// ball.y=29.893 ∈ [29.282, 33.135] → trunk hit confirmed. Control dirs (+/-10°) are CLEAR.
+        /// CaptureTopDownAfterFirstStroke=true → top-down overlay captured after stroke 1.
+        /// </summary>
+        public static IEnumerator Hole12LieDemoBefore(BotDriver d)
+        {
+            BotDriver.SkipTreeAvoidance = true;
+            d.LogStep("=== tree_aware_bot Lie Demo BEFORE: SkipTreeAvoidance=true (avoidance DISABLED) ===");
+            return Hole12LieDemoBody(d, scenarioLabel: "before");
+        }
+
+        /// <summary>
+        /// tree_aware_bot §9.2 lie demo AFTER — Hole 12, same open rough lie, avoidance ACTIVE.
+        /// BotDriver.SkipTreeAvoidance=false (default) → BotTreeProbe detects trunk on cup-line.
+        /// iter-6 lie: (8.81, 0, 38.01); trunk at (17.64, 48.88) along=14m blocked; +/-10° is CLEAR.
+        /// Log MUST contain "[BotDriver] Tree re-aim:" with delta=-10° or +10° yaw that bypasses trunk.
+        /// </summary>
+        public static IEnumerator Hole12LieDemoAfter(BotDriver d)
+        {
+            BotDriver.SkipTreeAvoidance = false;
+            d.LogStep("=== tree_aware_bot Lie Demo AFTER: SkipTreeAvoidance=false (avoidance ENABLED) ===");
+            return Hole12LieDemoBody(d, scenarioLabel: "after");
+        }
+
+        /// <summary>
+        /// Shared body for Hole12LieDemoBefore / Hole12LieDemoAfter.
+        ///
+        /// iter-6 lie: (8.81, 0, 38.01) on Hole_12 — open rough east of fairway, ~155m from cup.
+        /// SINGLE blocking trunk on cup-line at (17.64, 48.88), along=14.0m, R=0.385m (JapaneseBlack_01 scale=1.1).
+        /// terrain_Y=29.893 ∈ [baseY=29.282, trunkTop=33.135] → trunk hit in BEFORE clip.
+        /// Control directions (+10° / -10° from cup-line): CLEAR (no trunks in near window [0,35m]).
+        /// Hole 12 par=4; cup ≈155m from lie → SelectShot picks iron7/wedge.
+        /// BEFORE: CaptureTopDownAfterFirstStroke=true → trajectory overlay top-down capture after stroke 1.
+        /// AFTER: TryFindTrunkClearAim returns safeYaw at -10° or +10° delta; bot files at cleared angle.
+        /// </summary>
+        private static IEnumerator Hole12LieDemoBody(BotDriver d, string scenarioLabel)
+        {
+            try
+            {
+            // 1. Hide ShellScene canvases so PhysicsLab camera dominates the Game View.
+            var shellCanvases = Object.FindObjectsOfType<Canvas>();
+            var hiddenCanvases = new System.Collections.Generic.List<Canvas>();
+            foreach (var c in shellCanvases)
+                if (c.gameObject.scene.name == "ShellScene" && c.enabled)
+                { c.enabled = false; hiddenCanvases.Add(c); }
+            d.LogStep($"  Hole12LieDemo({scenarioLabel}): hidden {hiddenCanvases.Count} ShellScene canvases.");
+
+            // 2. Simultaneously kick off LabScaffold + Hole_12_Geo additive loads.
+            d.LogStep("  Starting LabScaffold + Hole_12_Geo loads (Additive, simultaneous)...");
+            var opLab = UnityEngine.SceneManagement.SceneManager.LoadSceneAsync(
+                "LabScaffold", UnityEngine.SceneManagement.LoadSceneMode.Additive);
+            if (opLab == null)
+            {
+                d.LogStep("=== Hole12LieDemo: FAIL — LabScaffold not in Build Settings ===");
+                yield break;
+            }
+            var opHole = UnityEngine.SceneManagement.SceneManager.LoadSceneAsync(
+                "Hole_12_Geo", UnityEngine.SceneManagement.LoadSceneMode.Additive);
+            if (opHole == null)
+            {
+                d.LogStep("=== Hole12LieDemo: FAIL — Hole_12_Geo not in Build Settings ===");
+                yield break;
+            }
+
+            // 3. Wait for both loads to complete.
+            float lw = 0f;
+            while ((!opLab.isDone || !opHole.isDone) && lw < 30f)
+            { yield return new WaitForSecondsRealtime(0.25f); lw += 0.25f; }
+            if (!opLab.isDone || !opHole.isDone)
+            {
+                d.LogStep($"=== Hole12LieDemo: FAIL — load timeout after {lw:F1}s ===");
+                yield break;
+            }
+            d.LogStep($"  Both scenes loaded in {lw:F1}s. Polling IsHoleReady...");
+
+            // 4. Wait for PhysicsLabController.OnHoleLoaded (loads tree_obstacles.csv, ~3026 trees).
+            var ctrl = Object.FindObjectOfType<PhysicsLabController>();
+            if (ctrl == null)
+            {
+                d.LogStep("=== Hole12LieDemo: FAIL — PhysicsLabController not found ===");
+                yield break;
+            }
+            float hw = 0f;
+            while (!ctrl.IsHoleReady && hw < 15f)
+            { yield return new WaitForSecondsRealtime(0.25f); hw += 0.25f; }
+            if (!ctrl.IsHoleReady)
+            {
+                d.LogStep($"=== Hole12LieDemo: FAIL — IsHoleReady never true after {hw:F1}s ===");
+                yield break;
+            }
+            d.LogStep($"  IsHoleReady=true after {hw:F1}s. TreeProvider null={ctrl.GetTreeProvider() == null}.");
+            yield return new WaitForSecondsRealtime(1f); // let the hole settle
+
+            // 5. Seed ball at open rough lie — iter-6 (all A1–A5 PASS via Unity script-execute):
+            //      Blocking trunk: center=(17.64,48.88) scale=1.1 profileName=MESH_JapaneseBlack_01_Var1
+            //        R=0.385m, baseY=29.282, trunkTopY=33.135
+            //      Lie at (8.81, 29.893, 38.01): terrain_Y=29.893 ∈ [29.282, 33.135] → A1 PASS
+            //      along=14.0m in near window [0,35m]; lat=0.018m < R=0.385 → A2 PASS
+            //      LineHasTrunkInWindows=True → A4 PASS
+            //      TryFindTrunkClearAim rerouted=True safeYaw=40.83° (-10° from cup 50.83°) → A5 PASS
+            //      Control shots (+/-10°): both CLEAR (no trunks in near window) → A7 PASS
+            //    Open ground beyond trunk; open ground at +/-10° from cup-line.
+            var liePos = new Vector3(8.81f, 0f, 38.01f);
+            ctrl.PlaceBallAt(liePos, preferredSurfaceTypeValue: null);
+            d.LogStep($"  [Lie] Seeded ball at open rough lie {liePos:F2} (~155m from cup, trunk at (17.64,48.88) along=14m, Hole 12).");
+            yield return new WaitForSecondsRealtime(1.5f); // wait for ball to settle on terrain surface
+            d.LogStep($"  [Lie] Ball settled at {ctrl.BallPosition:F2}.");
+
+            // 6. Play from lie to cup.
+            //    Hole 12 par=4; cup ~155m away → SelectShot picks iron7 or wedge.
+            //    BEFORE (SkipTreeAvoidance=true): bot fires on cup-line → carom off trunk at along≈14m.
+            //      CaptureTopDownAfterFirstStroke captures trajectory overlay top-down after stroke 1.
+            //    AFTER  (SkipTreeAvoidance=false): probe detects trunk (near window [0,35m]) →
+            //      "[BotDriver] Tree re-aim: ..." log line → bot re-aims at safeYaw=40.8° (-10° delta).
+            if (scenarioLabel == "before")
+                d.CaptureTopDownAfterFirstStroke = true;
+            yield return d.PlayHoleToCup(par: 4);
+
+            d.LogStep($"=== Hole12LieDemo({scenarioLabel}) complete ===");
+            d.FlushLog();
+
+            foreach (var c in hiddenCanvases) { if (c != null) c.enabled = true; }
+            }
+            finally
+            {
+                // Always restore flag — even if an exception aborts the scenario.
+                BotDriver.SkipTreeAvoidance = false;
+            }
+        }
     }
 }
 #endif

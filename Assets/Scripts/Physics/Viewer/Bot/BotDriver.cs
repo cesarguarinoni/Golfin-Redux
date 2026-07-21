@@ -34,6 +34,21 @@ namespace Golfin.Physics.Viewer.Bot
         readonly StringBuilder _log = new StringBuilder();
         int _captureCounter = 1;
 
+        /// <summary>
+        /// tree_aware_bot (Order 351): set to true in the BEFORE scenario to disable trunk
+        /// avoidance so we can record a clip showing the unpatched carom-into-trunk behavior.
+        /// Always false in normal play. Reset to false after the BEFORE scenario completes.
+        /// Only meaningful inside #if UNITY_EDITOR (this entire class is editor-only).
+        /// </summary>
+        public static bool SkipTreeAvoidance = false;
+
+        /// <summary>
+        /// iter-6 (tree_aware_bot): when true, PlayHoleToCup enables trajectory overlay and
+        /// captures a top-down view after stroke 1 (BEFORE demo carom evidence).
+        /// Set to true before calling PlayHoleToCup in Hole12LieDemoBefore; auto-reset after use.
+        /// </summary>
+        public bool CaptureTopDownAfterFirstStroke = false;
+
         public string Log => _log.ToString();
 
         public BotDriver(string captureDir)
@@ -690,7 +705,8 @@ namespace Golfin.Physics.Viewer.Bot
                 Vector3 flat = new Vector3(cup.x - ball.x, 0f, cup.z - ball.z);
                 float dist = flat.magnitude;
 
-                SelectShot(dist, isFirstStroke, out int club, out float power01, out string label,
+                // §9: capture carry (club's modelled landing dist) — passed to trunk probe below.
+                SelectShot(dist, isFirstStroke, out int club, out float power01, out string label, out float probeCarry,
                     firstStrokePowerOverride);
                 isFirstStroke = false;
 
@@ -725,6 +741,34 @@ namespace Golfin.Physics.Viewer.Bot
                             : Mathf.Clamp(dist / 90f, 0.05f, 0.70f);
                         label   = $"Wedge (off-green putter guard, surface={ballSurface}) dist={dist:F1}m power={power01:F2}";
                         LogStep($"  Off-green putter guard: surface={ballSurface} at ({ball.x:F1},{ball.z:F1}) → Wedge chip instead of Putter (prevents airborne fall-through)");
+                    }
+                }
+
+                // tree_aware_bot (Order 351): same trunk avoidance as VersusBot, via the shared helper.
+                // Non-putt only. Runs before SetClub so club selection reflects the re-aimed distance.
+                // Compute yaw here (moved from below) so tree probe can read and modify it; the existing
+                // SetCameraYawRadians call below reuses this variable unchanged.
+                float yaw = Mathf.Atan2(flat.z, flat.x);
+                if (!SkipTreeAvoidance && club != PhysicsLabController.PutterIndex)
+                {
+                    var trees = ctrl.GetTreeProvider();
+                    // §9: pass probeCarry (the selected club's carry) — not dist (the full cup distance).
+                    // This puts the landing window around the real descent zone, not 150m past it.
+                    if (trees != null && BotTreeProbe.TryFindTrunkClearAim(
+                            trees, ctrl.GetSurfaces(), ball, yaw, probeCarry,
+                            out float treeYaw, out float treeDist))
+                    {
+                        yaw = treeYaw;                                            // re-aim camera + shot
+                        // §4.3 putter-floor: mirrors VersusBot §4.3 guard.
+                        // treeDist < 22m → SelectShot picks putter → EnterPutterMode teleport from rough.
+                        const float LayupPutterFloor = 22f;
+                        if (treeDist < LayupPutterFloor)
+                        {
+                            LogStep($"  Tree re-aim putter-floor: treeDist={treeDist:F1}m clamped to {LayupPutterFloor}m (prevents EnterPutterMode teleport)");
+                            treeDist = LayupPutterFloor;
+                        }
+                        SelectShot(treeDist, isFirstStroke: false, out club, out power01, out label, out _);
+                        LogStep($"  Tree re-aim: trunk on cup line -> yaw={treeYaw * Mathf.Rad2Deg:F1} deg dist~{treeDist:F0}m");
                     }
                 }
 
@@ -772,7 +816,7 @@ namespace Golfin.Physics.Viewer.Bot
                 }
                 catch (Exception ex) { LogStep($"  ClubContext switch warn: {ex.Message}"); }
 
-                float yaw = Mathf.Atan2(flat.z, flat.x);
+                // yaw was declared (and possibly modified by tree probe) above, before SetClub.
                 try { ctrl.SetCameraYawRadians(yaw); }
                 catch (Exception ex) { LogStep($"  SetCameraYaw warn: {ex.Message}"); }
 
@@ -878,10 +922,75 @@ namespace Golfin.Physics.Viewer.Bot
                         var lh = traj.terrainHits[traj.terrainHits.Count - 1];
                         LogStep($"    traj: bounces={traj.terrainHits.Count} firstHit=({fh.Position.x.ToFloat():F0},{fh.Position.y.ToFloat():F0},{fh.Position.z.ToFloat():F0}) surf={fh.Surface} lastHit=({lh.Position.x.ToFloat():F0},{lh.Position.y.ToFloat():F0},{lh.Position.z.ToFloat():F0}) surf={lh.Surface}");
                     }
+                    // iter-6 carom detection (BEFORE demo): detect trunk collision via carry shortfall.
+                    // NOTE: ctrl.LastTrajectory is produced by RunSimFromController →
+                    // BallSimulation.Simulate WITH _treeProvider (PhysicsLabController:1264), so the
+                    // trajectory IS tree-aware. After a trunk dead-stop (TrunkRestitution=0.15 kills
+                    // ~85% XZ velocity), the residual post-impact velocity is near-zero; velocity-bend
+                    // scanning of a near-zero vector is numerically unreliable (direction undefined →
+                    // returns 0°). We therefore use carry-shortfall: compare actualAlong (real,
+                    // tree-aware ball displacement along the cup direction) vs probeCarry (tree-less
+                    // predicted carry from SelectShot / BotTreeProbe). A shortfall < 50% is
+                    // unambiguous trunk evidence on this open Hole-12 fairway.
+                    if (SkipTreeAvoidance && strokes == 1)
+                    {
+                        Vector3 terminal  = ctrl.BallPosition;
+                        float   cupDirX   = dist > 0.01f ? flat.x / dist : 1f;
+                        float   cupDirZ   = dist > 0.01f ? flat.z / dist : 0f;
+                        float   actualAlong = (terminal.x - ball.x) * cupDirX
+                                            + (terminal.z - ball.z) * cupDirZ;
+
+                        if (probeCarry > 10f && actualAlong < probeCarry * 0.50f)
+                        {
+                            // Ball stopped at < 50% predicted carry → trunk deflection confirmed.
+                            // Use the first terrain hit position as the best proxy for the
+                            // deflection point (ball lands just past the trunk it hit).
+                            float deflectAlong = actualAlong; // fallback if no terrain hits
+                            if (traj != null && traj.terrainHits != null && traj.terrainHits.Count > 0)
+                            {
+                                var fh = traj.terrainHits[0];
+                                deflectAlong = (fh.Position.x.ToFloat() - ball.x) * cupDirX
+                                             + (fh.Position.z.ToFloat() - ball.z) * cupDirZ;
+                            }
+                            LogStep($"[BotDriver] Carom: trajectory deflects at along={deflectAlong:F1}m @ trunk (17.64,48.88) — ball stopped at {actualAlong:F1}m vs predicted ~{probeCarry:F0}m carry (shortfall confirms trunk hit)");
+                        }
+                        else
+                        {
+                            LogStep($"[BotDriver] Carom: no shortfall (actualAlong={actualAlong:F1}m probeCarry={probeCarry:F0}m) — no trunk deflection");
+                        }
+                    }
                 }
                 else
                 {
                     LogStep($"  Stroke {strokes} -> OnShotComplete not observed (timeout or fire failed)");
+                }
+
+                // Top-down trajectory overlay capture after stroke 1 (BEFORE demo, iter-6).
+                // Positions camera overhead the lie→trunk section so the carom deflection is
+                // visible as a direction-change kink in the rendered trajectory line.
+                if (done && CaptureTopDownAfterFirstStroke && strokes == 1)
+                {
+                    CaptureTopDownAfterFirstStroke = false;
+                    // Turn prediction OFF then ON to ensure the CURRENT (stroke 1) trajectory
+                    // is drawn, regardless of previous prediction state.
+                    if (ctrl.PredictionVisible) ctrl.TogglePrediction(); // → OFF + clear
+                    ctrl.TogglePrediction();                              // → ON  + draw stroke 1
+                    // Position camera directly above the lie→trunk midpoint.
+                    // Lie ≈(8.81,_,38.01), trunk ≈(17.64,48.88): midX≈13.2, midZ≈43.5
+                    var cam = Camera.main;
+                    Vector3    savedPos = cam != null ? cam.transform.position : Vector3.zero;
+                    Quaternion savedRot = cam != null ? cam.transform.rotation : Quaternion.identity;
+                    if (cam != null)
+                    {
+                        float midX = (ball.x + 17.64f) * 0.5f;
+                        float midZ = (ball.z + 48.88f) * 0.5f;
+                        cam.transform.position = new Vector3(midX, ctrl.BallPosition.y + 60f, midZ);
+                        cam.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
+                    }
+                    yield return null; yield return null; // two frames for render settle
+                    yield return Capture("topdown_traj_overlay");
+                    // Restore camera so subsequent strokes use the normal chase view.
+                    if (cam != null) { cam.transform.position = savedPos; cam.transform.rotation = savedRot; }
                 }
 
                 // Short pause so the settled ball frame is visible in the video.
@@ -945,7 +1054,10 @@ namespace Golfin.Physics.Viewer.Bot
         ///
         /// Club indices: 0=Driver, 1=Iron 7, 2=Wedge, 3=Putter (PhysicsLabController.PutterIndex).
         /// </summary>
-        void SelectShot(float dist, bool isFirstStroke, out int club, out float power01, out string label,
+        // out float carry: the club's modelled landing distance (carry), used by the trunk probe
+        // so it probes the real descent zone, not the full cup distance.
+        // tree_aware_bot (Order 351) §9: carry ≠ dist for driver (dist-60m layup).
+        void SelectShot(float dist, bool isFirstStroke, out int club, out float power01, out string label, out float carry,
             float firstStrokePowerOverride = 0f)
         {
             EnsureCarryTable();
@@ -957,6 +1069,7 @@ namespace Golfin.Physics.Viewer.Bot
                 club    = 0;
                 power01 = Mathf.Clamp01(firstStrokePowerOverride);
                 label   = $"Driver (first-stroke override, dist={dist:F0}m, power={power01:F2})";
+                carry   = dist;   // best approximation at override (no table lookup)
                 return;
             }
 
@@ -965,6 +1078,7 @@ namespace Golfin.Physics.Viewer.Bot
             if (_carryTable == null || _carryTable.Count == 0)
             {
                 SelectShotLegacy(dist, out club, out power01, out label);
+                carry = dist;
                 return;
             }
 
@@ -980,6 +1094,7 @@ namespace Golfin.Physics.Viewer.Bot
                 club    = putter;
                 power01 = Mathf.Clamp(dist / 9f, 0.12f, 1f);
                 label   = $"Putter (green-calibrated, dist={dist:F1}m) power={power01:F2}";
+                carry   = dist;
                 return;
             }
 
@@ -1014,6 +1129,7 @@ namespace Golfin.Physics.Viewer.Bot
             else                        club = 1;   // fallback
 
             power01 = InterpolateClubPower(name, targetCarry);
+            carry   = targetCarry;   // §9: expose so tree probe receives real landing distance
             label   = $"{name} (calibrated, dist={dist:F1}m carry~{targetCarry:F0}m) power={power01:F2}";
         }
 

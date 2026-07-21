@@ -1,0 +1,76 @@
+[t=93.91] === tree_aware_bot Lie Demo BEFORE: SkipTreeAvoidance=true (avoidance DISABLED) ===
+[t=93.92]   Hole12LieDemo(before): hidden 4 ShellScene canvases.
+[t=93.92]   Starting LabScaffold + Hole_12_Geo loads (Additive, simultaneous)...
+[t=94.95]   Both scenes loaded in 0.5s. Polling IsHoleReady...
+[t=94.95]   IsHoleReady=true after 0.0s. TreeProvider null=False.
+[t=95.96]   [Lie] Seeded ball at open rough lie (8.81, 0.00, 38.01) (~155m from cup, trunk at (17.64,48.88) along=14m, Hole 12).
+[t=97.46]   [Lie] Ball settled at (8.81, 29.89, 38.01).
+[t=97.46] === PlayHoleToCup: par=4, stroke cap=7, firstStrokePowerOverride=0.00 ===
+[t=97.47] FindCupPosition: HoleContext.PinWorld = (106.51, 40.64, 157.91)
+[t=97.47] Stroke 1: ball=(8.8, 29.9, 38.0) cup=(106.5, 40.6, 157.9) dist=154.7m — iron7 (calibrated, dist=154.7m carry~100m) power=0.48 club=1 power=0.48
+[t=97.47]   ClubContext → 'club_iron7_mireo' (bagIdx=2, labIdx=1) so the LIVE provider fires the selected club
+[t=97.48]   Pre-fire state: SM=Aiming (gated 0.00s)
+[t=98.59]   Fired via ShotController drag path — handle ramped to power=0.48
+[t=102.39]   Shot wait: done=True elapsed=3.8s
+[t=102.39]   Stroke 1 terminal=AtRest endSurface=Fairway ball=(18.6, 29.0, 52.9)
+[t=102.39]     traj: bounces=6 firstHit=(17,29,51) surf=Fairway lastHit=(19,29,53) surf=Fairway
+[t=102.39] [BotDriver] Carom: trajectory deflects at along=15.2m @ trunk (17.64,48.88) — ball stopped at 17.7m vs predicted ~100m carry (shortfall confirms trunk hit)
+[t=102.85] Capture: s01_topdown_traj_overlay → /Users/cesar/Documents/GolfinRedux/Docs/Specs/Active/tree_aware_bot/screenshots/s01_topdown_traj_overlay_2026-07-21_13-02-29.png
+[t=104.32] Capture: s02_stroke1 → /Users/cesar/Documents/GolfinRedux/Docs/Specs/Active/tree_aware_bot/screenshots/s02_stroke1_2026-07-21_13-02-31.png
+[t=104.32] Stroke 2: ball=(18.6, 29.0, 52.9) cup=(106.5, 40.6, 157.9) dist=137.0m — iron7 (calibrated, dist=137.0m carry~82m) power=0.44 club=1 power=0.44
+[t=104.32]   ClubContext → 'club_iron7_mireo' (bagIdx=2, labIdx=1) so the LIVE provider fires the selected club
+[t=104.32]   Pre-fire state: SM=Aiming (gated 0.00s)
+[t=105.05]   Fired via ShotController drag path — handle ramped to power=0.44
+[t=113.15]   Shot wait: done=True elapsed=8.3s
+[t=113.15]   Stroke 2 terminal=AtRest endSurface=Fairway ball=(69.6, 36.5, 128.8)
+[t=113.15]     traj: bounces=7 firstHit=(59,36,113) surf=Fairway lastHit=(70,37,129) surf=Fairway
+[t=114.43] Capture: s03_stroke2 → /Users/cesar/Documents/GolfinRedux/Docs/Specs/Active/tree_aware_bot/screenshots/s03_stroke2_2026-07-21_13-02-41.png
+[t=114.43] Stroke 3: ball=(69.6, 36.5, 128.8) cup=(106.5, 40.6, 157.9) dist=47.0m — wedge (calibrated, dist=47.0m carry~47m) power=0.36 club=2 power=0.36
+[t=114.43]   ClubContext → 'club_pwedge_royal' (bagIdx=4, labIdx=2) so the LIVE provider fires the selected club
+[t=114.43]   Pre-fire state: SM=Aiming (gated 0.00s)
+[t=115.40]   Fired via ShotController drag path — handle ramped to power=0.36
+[t=126.18]   Shot wait: done=True elapsed=11.1s
+[t=126.18]   Stroke 3 terminal=AtRest endSurface=Fairway ball=(93.2, 39.8, 151.8)
+[t=126.18]     traj: bounces=5 firstHit=(89,39,147) surf=Fairway lastHit=(93,40,152) surf=Fairway
+[t=127.38] Capture: s04_stroke3 → /Users/cesar/Documents/GolfinRedux/Docs/Specs/Active/tree_aware_bot/screenshots/s04_stroke3_2026-07-21_13-02-54.png
+[t=127.38]   Off-green putter guard: surface=Fairway at (93.2,151.8) → Wedge chip instead of Putter (prevents airborne fall-through)
+[t=127.38] Stroke 4: ball=(93.2, 39.8, 151.8) cup=(106.5, 40.6, 157.9) dist=14.7m — Wedge (off-green putter guard, surface=Fairway) dist=14.7m power=0.19 club=2 power=0.19
+[t=127.39]   ClubContext → 'club_pwedge_royal' (bagIdx=4, labIdx=2) so the LIVE provider fires the selected club
+[t=127.39]   Pre-fire state: SM=Aiming (gated 0.00s)
+[t=128.45]   Fired via ShotController drag path — handle ramped to power=0.19
+[t=135.72]   Shot wait: done=True elapsed=7.5s
+[t=135.72]   Stroke 4 terminal=AtRest endSurface=Fairway ball=(103.7, 40.4, 158.0)
+[t=135.72]     traj: bounces=5 firstHit=(101,40,156) surf=Fairway lastHit=(104,40,158) surf=Fairway
+[t=136.95] Capture: s05_stroke4 → /Users/cesar/Documents/GolfinRedux/Docs/Specs/Active/tree_aware_bot/screenshots/s05_stroke4_2026-07-21_13-03-04.png
+[t=136.95]   Off-green putter guard: surface=Fairway at (103.7,158.0) → Wedge chip instead of Putter (prevents airborne fall-through)
+[t=136.95] Stroke 5: ball=(103.7, 40.4, 158.0) cup=(106.5, 40.6, 157.9) dist=2.8m — Wedge (off-green putter guard, surface=Fairway) dist=2.8m power=0.10 club=2 power=0.10
+[t=136.95]   ClubContext → 'club_pwedge_royal' (bagIdx=4, labIdx=2) so the LIVE provider fires the selected club
+[t=136.95]   Pre-fire state: SM=Aiming (gated 0.00s)
+[t=138.03]   Fired via ShotController drag path — handle ramped to power=0.10
+[t=145.64]   Shot wait: done=True elapsed=7.8s
+[t=145.64]   Stroke 5 terminal=AtRest endSurface=Fairway ball=(108.5, 40.6, 158.3)
+[t=145.64]     traj: bounces=4 firstHit=(106,40,158) surf=Fairway lastHit=(109,41,158) surf=Fairway
+[t=146.85] Capture: s06_stroke5 → /Users/cesar/Documents/GolfinRedux/Docs/Specs/Active/tree_aware_bot/screenshots/s06_stroke5_2026-07-21_13-03-14.png
+[t=146.85]   Off-green putter guard: surface=Fairway at (108.5,158.3) → Wedge chip instead of Putter (prevents airborne fall-through)
+[t=146.85] Stroke 6: ball=(108.5, 40.6, 158.3) cup=(106.5, 40.6, 157.9) dist=2.1m — Wedge (off-green putter guard, surface=Fairway) dist=2.1m power=0.10 club=2 power=0.10
+[t=146.85]   ClubContext → 'club_pwedge_royal' (bagIdx=4, labIdx=2) so the LIVE provider fires the selected club
+[t=146.85]   Pre-fire state: SM=Aiming (gated 0.00s)
+[t=147.83]   Fired via ShotController drag path — handle ramped to power=0.10
+[t=152.17]   Shot wait: done=True elapsed=4.4s
+[t=152.17]   Stroke 6 terminal=AtRest endSurface=Fairway ball=(104.3, 40.4, 157.0)
+[t=152.17]     traj: bounces=5 firstHit=(106,40,157) surf=Fairway lastHit=(104,40,157) surf=Fairway
+[t=153.37] Capture: s07_stroke6 → /Users/cesar/Documents/GolfinRedux/Docs/Specs/Active/tree_aware_bot/screenshots/s07_stroke6_2026-07-21_13-03-20.png
+[t=153.37]   Off-green putter guard: surface=Fairway at (104.3,157.0) → Wedge chip instead of Putter (prevents airborne fall-through)
+[t=153.37] Stroke 7: ball=(104.3, 40.4, 157.0) cup=(106.5, 40.6, 157.9) dist=2.4m — Wedge (off-green putter guard, surface=Fairway) dist=2.4m power=0.10 club=2 power=0.10
+[t=153.37]   ClubContext → 'club_pwedge_royal' (bagIdx=4, labIdx=2) so the LIVE provider fires the selected club
+[t=153.37]   Pre-fire state: SM=Aiming (gated 0.00s)
+[t=154.49]   Fired via ShotController drag path — handle ramped to power=0.10
+[t=162.01]   Shot wait: done=True elapsed=7.8s
+[t=162.01]   Stroke 7 terminal=AtRest endSurface=Fairway ball=(108.5, 40.6, 159.3)
+[t=162.01]     traj: bounces=4 firstHit=(107,41,158) surf=Fairway lastHit=(109,41,159) surf=Fairway
+[t=163.23] Capture: s08_stroke7 → /Users/cesar/Documents/GolfinRedux/Docs/Specs/Active/tree_aware_bot/screenshots/s08_stroke7_2026-07-21_13-03-30.png
+[t=163.23] PlayHoleToCup: not holed in 7 real strokes — ForceShotComplete safety net (Cesar spec: par+3 cap).
+[t=163.23] ForceShotComplete: driving terminal=InCup
+[t=163.23] ForceShotComplete OK: terminal=InCup
+[t=163.74] === PlayHoleToCup done: 7 strokes, holed=seam ===
+[t=163.74] === Hole12LieDemo(before) complete ===

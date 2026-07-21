@@ -453,6 +453,9 @@ namespace Golfin.Physics.Viewer
 
         public IGroundProvider  GetGround()   => BuildGroundProvider();
         public ISurfaceProvider GetSurfaces() => BuildSurfaceProvider(default(ShotPreset));
+        // tree_aware_bot (Order 351): read-only exposure of the per-hole tree provider for bot
+        // trunk-avoidance. Null on treeless holes / lab flat-ground. Read-side only — no sim change.
+        public Golfin.Physics.ITreeObstacleProvider GetTreeProvider() => _treeProvider;
 
         // ── Public API ─────────────────────────────────────────────────────────
 

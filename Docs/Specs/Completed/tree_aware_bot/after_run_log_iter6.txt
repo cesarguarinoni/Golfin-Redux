@@ -1,0 +1,67 @@
+[t=10.42] [BotDriver] === LoopV2SmokeBot started: scenario='hole12_lie_demo_after' ===
+[t=10.42] [BotDriver] === tree_aware_bot Lie Demo AFTER: SkipTreeAvoidance=false (avoidance ENABLED) ===
+[t=10.45] [BotDriver]   Hole12LieDemo(after): hidden 4 ShellScene canvases.
+[t=10.45] [BotDriver]   Starting LabScaffold + Hole_12_Geo loads (Additive, simultaneous)...
+[t=11.75] [BotDriver]   Both scenes loaded in 0.5s. Polling IsHoleReady...
+[t=11.75] [BotDriver]   IsHoleReady=true after 0.0s. TreeProvider null=False.
+[t=12.75] [BotDriver]   [Lie] Seeded ball at open rough lie (8.81, 0.00, 38.01) (~155m from cup, trunk at (17.64,48.88) along=14m, Hole 12).
+[t=14.28] [BotDriver]   [Lie] Ball settled at (8.81, 29.89, 38.01).
+[t=14.29] [BotDriver] === PlayHoleToCup: par=4, stroke cap=7, firstStrokePowerOverride=0.00 ===
+[t=14.29] [BotDriver] FindCupPosition: HoleContext.PinWorld = (106.51, 40.64, 157.91)
+[t=14.29] [BotDriver]   Tree re-aim putter-floor: treeDist=11.7m clamped to 22m (prevents EnterPutterMode teleport)
+[t=14.29] [BotDriver]   Tree re-aim: trunk on cup line -> yaw=50.8 deg dist~22m
+[t=14.29] [BotDriver] Stroke 1: ball=(8.8, 29.9, 38.0) cup=(106.5, 40.6, 157.9) dist=154.7m — wedge (calibrated, dist=22.0m carry~22m) power=0.24 club=2 power=0.24
+[t=14.30] [BotDriver]   ClubContext → 'club_pwedge_royal' (bagIdx=4, labIdx=2) so the LIVE provider fires the selected club
+[t=14.30] [BotDriver]   Pre-fire state: SM=Aiming (gated 0.00s)
+[t=15.42] [BotDriver]   Fired via ShotController drag path — handle ramped to power=0.24
+[t=19.30] [BotDriver]   Shot wait: done=True elapsed=3.9s
+[t=19.30] [BotDriver]   Stroke 1 terminal=AtRest endSurface=Fairway ball=(16.8, 29.0, 50.2)
+[t=19.30] [BotDriver]     traj: bounces=6 firstHit=(16,29,49) surf=Fairway lastHit=(17,29,50) surf=Fairway
+[t=20.62] [BotDriver] Capture: s01_stroke1 → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/hole12_lie_demo_after/screenshots/s01_stroke1_2026-07-21_13-14-40.png
+[t=20.62] [BotDriver] Stroke 2: ball=(16.8, 29.0, 50.2) cup=(106.5, 40.6, 157.9) dist=140.2m — iron7 (calibrated, dist=140.2m carry~85m) power=0.45 club=1 power=0.45
+[t=20.62] [BotDriver]   ClubContext → 'club_iron7_mireo' (bagIdx=2, labIdx=1) so the LIVE provider fires the selected club
+[t=20.62] [BotDriver]   Pre-fire state: SM=Aiming (gated 0.00s)
+[t=21.45] [BotDriver]   Fired via ShotController drag path — handle ramped to power=0.45
+[t=28.71] [BotDriver]   Shot wait: done=True elapsed=7.3s
+[t=28.71] [BotDriver]   Stroke 2 terminal=AtRest endSurface=Fairway ball=(59.7, 36.0, 114.3)
+[t=28.71] [BotDriver]     traj: bounces=7 firstHit=(51,36,101) surf=Fairway lastHit=(60,36,114) surf=Fairway
+[t=29.92] [BotDriver] Capture: s02_stroke2 → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/hole12_lie_demo_after/screenshots/s02_stroke2_2026-07-21_13-14-50.png
+[t=29.92] [BotDriver] Stroke 3: ball=(59.7, 36.0, 114.3) cup=(106.5, 40.6, 157.9) dist=64.0m — wedge (calibrated, dist=64.0m carry~64m) power=0.42 club=2 power=0.42
+[t=29.96] [BotDriver]   ClubContext → 'club_pwedge_royal' (bagIdx=4, labIdx=2) so the LIVE provider fires the selected club
+[t=29.96] [BotDriver]   Pre-fire state: SM=Aiming (gated 0.00s)
+[t=30.86] [BotDriver]   Fired via ShotController drag path — handle ramped to power=0.42
+[t=33.88] [BotDriver]   Shot wait: done=True elapsed=3.1s
+[t=33.88] [BotDriver]   Stroke 3 terminal=AtRest endSurface=Sand ball=(84.3, 37.9, 142.6)
+[t=33.88] [BotDriver]     traj: bounces=3 firstHit=(84,38,142) surf=Sand lastHit=(84,38,143) surf=Sand
+[t=35.08] [BotDriver] Capture: s03_stroke3 → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/hole12_lie_demo_after/screenshots/s03_stroke3_2026-07-21_13-14-55.png
+[t=35.08] [BotDriver] Stroke 4: ball=(84.3, 37.9, 142.6) cup=(106.5, 40.6, 157.9) dist=27.0m — wedge (calibrated, dist=27.0m carry~27m) power=0.27 club=2 power=0.27
+[t=35.10] [BotDriver]   ClubContext → 'club_pwedge_royal' (bagIdx=4, labIdx=2) so the LIVE provider fires the selected club
+[t=35.10] [BotDriver]   Pre-fire state: SM=Aiming (gated 0.00s)
+[t=36.17] [BotDriver]   Fired via ShotController drag path — handle ramped to power=0.27
+[t=45.22] [BotDriver]   Shot wait: done=True elapsed=9.3s
+[t=45.22] [BotDriver]   Stroke 4 terminal=AtRest endSurface=Fairway ball=(99.4, 40.2, 155.5)
+[t=45.22] [BotDriver]     traj: bounces=5 firstHit=(96,40,153) surf=Fairway lastHit=(99,40,155) surf=Fairway
+[t=46.41] [BotDriver] Capture: s04_stroke4 → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/hole12_lie_demo_after/screenshots/s04_stroke4_2026-07-21_13-15-06.png
+[t=46.41] [BotDriver]   Off-green putter guard: surface=Fairway at (99.4,155.5) → Wedge chip instead of Putter (prevents airborne fall-through)
+[t=46.41] [BotDriver] Stroke 5: ball=(99.4, 40.2, 155.5) cup=(106.5, 40.6, 157.9) dist=7.5m — Wedge (off-green putter guard, surface=Fairway) dist=7.5m power=0.13 club=2 power=0.13
+[t=46.45] [BotDriver]   ClubContext → 'club_pwedge_royal' (bagIdx=4, labIdx=2) so the LIVE provider fires the selected club
+[t=46.45] [BotDriver]   Pre-fire state: SM=Aiming (gated 0.00s)
+[t=47.67] [BotDriver]   Fired via ShotController drag path — handle ramped to power=0.13
+[t=56.73] [BotDriver]   Shot wait: done=True elapsed=9.4s
+[t=56.73] [BotDriver]   Stroke 5 terminal=AtRest endSurface=Fairway ball=(106.4, 40.5, 158.7)
+[t=56.73] [BotDriver]     traj: bounces=4 firstHit=(104,40,157) surf=Fairway lastHit=(106,41,159) surf=Fairway
+[t=57.97] [BotDriver] Capture: s05_stroke5 → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/hole12_lie_demo_after/screenshots/s05_stroke5_2026-07-21_13-15-18.png
+[t=57.97] [BotDriver]   Off-green putter guard: surface=Fairway at (106.4,158.7) → Wedge chip instead of Putter (prevents airborne fall-through)
+[t=57.97] [BotDriver] Stroke 6: ball=(106.4, 40.5, 158.7) cup=(106.5, 40.6, 157.9) dist=0.8m — Wedge (off-green putter guard, surface=Fairway) dist=0.8m power=0.10 club=2 power=0.10
+[t=58.01] [BotDriver]   ClubContext → 'club_pwedge_royal' (bagIdx=4, labIdx=2) so the LIVE provider fires the selected club
+[t=58.01] [BotDriver]   Pre-fire state: SM=Aiming (gated 0.00s)
+[t=58.91] [BotDriver]   Fired via ShotController drag path — handle ramped to power=0.10
+[t=62.99] [BotDriver]   Shot wait: done=True elapsed=4.2s
+[t=62.99] [BotDriver]   Stroke 6 terminal=AtRest endSurface=Fairway ball=(107.6, 40.5, 154.6)
+[t=62.99] [BotDriver]     traj: bounces=5 firstHit=(107,40,156) surf=Fairway lastHit=(108,40,155) surf=Fairway
+[t=64.29] [BotDriver] Capture: s06_stroke6 → /Users/cesar/Documents/GolfinRedux/tasks/loop_v2_smoke_bot/hole12_lie_demo_after/screenshots/s06_stroke6_2026-07-21_13-15-24.png
+[t=64.29] [BotDriver]   Off-green putter guard: surface=Fairway at (107.6,154.6) → Wedge chip instead of Putter (prevents airborne fall-through)
+[t=64.29] [BotDriver] Stroke 7: ball=(107.6, 40.5, 154.6) cup=(106.5, 40.6, 157.9) dist=3.5m — Wedge (off-green putter guard, surface=Fairway) dist=3.5m power=0.10 club=2 power=0.10
+[t=64.33] [BotDriver]   ClubContext → 'club_pwedge_royal' (bagIdx=4, labIdx=2) so the LIVE provider fires the selected club
+[t=64.33] [BotDriver]   Pre-fire state: SM=Aiming (gated 0.00s)
+[t=65.40] [BotDriver]   Fired via ShotController drag path — handle ramped to power=0.10

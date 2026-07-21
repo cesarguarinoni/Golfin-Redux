@@ -182,6 +182,22 @@ namespace Golfin.Physics.Viewer
                 case "fade_draw_aim_line_bend_gate":
                     scenarioRoutine = Bot.Scenarios.FadeDrawAimLineBendGate(driver);
                     break;
+                // tree_aware_bot (Order 351, 2026-07-20): trunk avoidance BEFORE/AFTER + Hole17 no-op:
+                case "hole8_trunk_avoidance_before":
+                    scenarioRoutine = Bot.Scenarios.Hole8TrunkAvoidanceBefore(driver);
+                    break;
+                case "hole8_trunk_avoidance_after":
+                    scenarioRoutine = Bot.Scenarios.Hole8TrunkAvoidanceAfter(driver);
+                    break;
+                case "hole17_trunk_noop":
+                    scenarioRoutine = Bot.Scenarios.Hole17TrunkNoop(driver);
+                    break;
+                case "hole12_lie_demo_before":
+                    scenarioRoutine = Bot.Scenarios.Hole12LieDemoBefore(driver);
+                    break;
+                case "hole12_lie_demo_after":
+                    scenarioRoutine = Bot.Scenarios.Hole12LieDemoAfter(driver);
+                    break;
                 default:
                     driver.LogStep($"ERROR: Unknown scenario key '{scenario}'");
                     break;
