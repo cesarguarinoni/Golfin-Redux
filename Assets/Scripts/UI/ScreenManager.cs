@@ -28,8 +28,15 @@ namespace GolfinRedux.UI
         // Gacha pillar screen 2 — Gacha History / pull log (Figma 4079:18306)
         GachaHistory,
         // Gacha pillar screen 3 — Gacha Prizes / pool preview (Figma 13622:2222)
-        GachaPrizes
+        GachaPrizes,
         // Settings removed - it's an overlay, not a screen
+
+        // Order: login_signup_screens — account auth gate (Phase 1 — UI only, no backend)
+        // These screens are excluded from isMenuScreen and showBars (pre-game gates).
+        Login,
+        CreateUsername,
+        SignUp,
+        EmailConfirmation
     }
 
     /// <summary>
@@ -66,6 +73,12 @@ namespace GolfinRedux.UI
         // Gacha pillar screen 3 — Gacha Prizes / pool preview
         [SerializeField] private GameObject _gachaPrizesScreen;
         // _settingsScreen removed - Settings is an overlay managed by SettingsController, not ScreenManager
+
+        // Order: login_signup_screens — account auth gate screens
+        [SerializeField] private GameObject _loginScreen;
+        [SerializeField] private GameObject _createUsernameScreen;
+        [SerializeField] private GameObject _signUpScreen;
+        [SerializeField] private GameObject _emailConfirmationScreen;
 
         [Header("Audio (Order 350)")]
         [Tooltip("Main Theme music clip — assign Assets/Music/Main Theme.mp3 in the Inspector.")]
@@ -199,6 +212,16 @@ namespace GolfinRedux.UI
             if (_gachaPrizesScreen != null)
                 _gachaPrizesScreen.SetActive(screenId == ScreenId.GachaPrizes);
 
+            // Order: login_signup_screens — account auth gate (excluded from isMenuScreen + showBars)
+            if (_loginScreen != null)
+                _loginScreen.SetActive(screenId == ScreenId.Login);
+            if (_createUsernameScreen != null)
+                _createUsernameScreen.SetActive(screenId == ScreenId.CreateUsername);
+            if (_signUpScreen != null)
+                _signUpScreen.SetActive(screenId == ScreenId.SignUp);
+            if (_emailConfirmationScreen != null)
+                _emailConfirmationScreen.SetActive(screenId == ScreenId.EmailConfirmation);
+
             // Settings is an overlay (SettingsController), not managed here
 
             // Order 350: menu music — start on menu screens, stop during loading/logo/splash.
@@ -238,9 +261,21 @@ namespace GolfinRedux.UI
                          || screenId == ScreenId.StaminaShopSelection
                          || screenId == ScreenId.StaminaShopDetail
                          || screenId == ScreenId.GeneralShop;
+            // Account / auth screens reuse the shared top bar for their title only
+            // (banner + centered title, no bottom nav or logged-in chrome).
+            bool isAccountScreen = screenId == ScreenId.Login
+                                || screenId == ScreenId.CreateUsername
+                                || screenId == ScreenId.SignUp
+                                || screenId == ScreenId.EmailConfirmation;
             if (Golfin.UI.PersistentUIManager.Instance != null)
             {
-                if (showBars)
+                if (isAccountScreen)
+                {
+                    string accountTitle = (screenId == ScreenId.SignUp || screenId == ScreenId.EmailConfirmation)
+                        ? "SIGN UP" : "GOLFIN ACCOUNT";
+                    Golfin.UI.PersistentUIManager.Instance.ShowAccountTitleBar(accountTitle);
+                }
+                else if (showBars)
                 {
                     Golfin.UI.PersistentUIManager.Instance.ShowBars();
                     Golfin.UI.PersistentUIManager.Instance.HighlightScreen(screenId);

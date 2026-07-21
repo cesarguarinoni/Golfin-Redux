@@ -179,7 +179,41 @@ namespace Golfin.UI
         public void ShowBars()
         {
             ShowTopBar(true);
+            SetTopBarChromeVisible(true);
             ShowBottomNav(true);
+        }
+
+        /// <summary>
+        /// Account / auth screens (Login, Create Username, Sign Up, Email Confirmation):
+        /// show ONLY the shared top banner + centered title. No bottom nav and no
+        /// reward-points / shop / ticket / settings chrome — the user is not logged in yet.
+        /// </summary>
+        public void ShowAccountTitleBar(string title)
+        {
+            ShowTopBar(true);
+            SetTopBarChromeVisible(false);
+            if (usernameText != null)
+            {
+                usernameText.gameObject.SetActive(true);
+                usernameText.text = title;
+            }
+            ShowBottomNav(false);
+        }
+
+        /// <summary>
+        /// Toggle every Top Bar child EXCEPT the centered title (UsernameText).
+        /// Strips the reward-points / shop / ticket / settings chrome for pre-login
+        /// account screens, and restores it for normal menu screens via ShowBars().
+        /// The banner background lives on topBarPanel itself, so it is unaffected.
+        /// </summary>
+        private void SetTopBarChromeVisible(bool visible)
+        {
+            if (topBarPanel == null) return;
+            foreach (Transform child in topBarPanel.transform)
+            {
+                if (child.name == "UsernameText") continue;
+                child.gameObject.SetActive(visible);
+            }
         }
 
         /// <summary>

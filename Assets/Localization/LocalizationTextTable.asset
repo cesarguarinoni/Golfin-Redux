@@ -665,3 +665,108 @@ MonoBehaviour:
     english: "Kawana Hotel Golf Course \xB7 18 Holes"
     japanese: "\u5DDD\u5948\u30DB\u30C6\u30EB\u30B4\u30EB\u30D5\u30B3\u30FC\u30B9
       \xB7 18\u30DB\u30FC\u30EB"
+  - key: AUTH_LOGIN_TITLE
+    english: Welcome Back
+    japanese: "\u304A\u304B\u3048\u308A\u306A\u3055\u3044"
+  - key: AUTH_LOGIN_EMAIL_PLACEHOLDER
+    english: Email
+    japanese: "\u30E1\u30FC\u30EB"
+  - key: AUTH_LOGIN_PASSWORD_PLACEHOLDER
+    english: Password
+    japanese: "\u30D1\u30B9\u30EF\u30FC\u30C9"
+  - key: AUTH_LOGIN_FORGOT
+    english: Forgot Password?
+    japanese: "\u30D1\u30B9\u30EF\u30FC\u30C9\u3092\u5FD8\u308C\u305F\u65B9"
+  - key: AUTH_LOGIN_BUTTON
+    english: LOGIN
+    japanese: "\u30ED\u30B0\u30A4\u30F3"
+  - key: AUTH_LOGIN_GOOGLE
+    english: Continue with Google
+    japanese: "Google\u3067\u7D9A\u3051\u308B"
+  - key: AUTH_LOGIN_APPLE
+    english: Continue with Apple
+    japanese: "Apple\u3067\u7D9A\u3051\u308B"
+  - key: AUTH_LOGIN_OR
+    english: Or
+    japanese: "\u307E\u305F\u306F"
+  - key: AUTH_LOGIN_NO_ACCOUNT
+    english: Don't have an account?
+    japanese: "\u30A2\u30AB\u30A6\u30F3\u30C8\u3092\u304A\u6301\u3061\u3067\u306A\u3044\u3067\u3059\u304B\uFF1F"
+  - key: AUTH_LOGIN_CREATE
+    english: Create Account
+    japanese: "\u30A2\u30AB\u30A6\u30F3\u30C8\u4F5C\u6210"
+  - key: AUTH_LOGIN_CANCEL
+    english: Cancel
+    japanese: "\u30AD\u30E3\u30F3\u30BB\u30EB"
+  - key: AUTH_CREATE_USERNAME_TITLE
+    english: Create Username
+    japanese: "\u30E6\u30FC\u30B6\u30FC\u540D\u3092\u4F5C\u6210"
+  - key: AUTH_CREATE_USERNAME_PLACEHOLDER
+    english: Username
+    japanese: "\u30E6\u30FC\u30B6\u30FC\u540D"
+  - key: AUTH_CREATE_USERNAME_BUTTON
+    english: CREATE
+    japanese: "\u4F5C\u6210"
+  - key: AUTH_CREATE_USERNAME_CANCEL
+    english: Cancel
+    japanese: "\u30AD\u30E3\u30F3\u30BB\u30EB"
+  - key: AUTH_SIGNUP_TITLE
+    english: Create Account
+    japanese: "\u30A2\u30AB\u30A6\u30F3\u30C8\u4F5C\u6210"
+  - key: AUTH_SIGNUP_EMAIL_PLACEHOLDER
+    english: Email
+    japanese: "\u30E1\u30FC\u30EB"
+  - key: AUTH_SIGNUP_PASSWORD_PLACEHOLDER
+    english: Password
+    japanese: "\u30D1\u30B9\u30EF\u30FC\u30C9"
+  - key: AUTH_SIGNUP_BUTTON
+    english: CREATE ACCOUNT
+    japanese: "\u30A2\u30AB\u30A6\u30F3\u30C8\u4F5C\u6210"
+  - key: AUTH_SIGNUP_GOOGLE
+    english: Continue with Google
+    japanese: "Google\u3067\u7D9A\u3051\u308B"
+  - key: AUTH_SIGNUP_APPLE
+    english: Continue with Apple
+    japanese: "Apple\u3067\u7D9A\u3051\u308B"
+  - key: AUTH_SIGNUP_OR
+    english: Or
+    japanese: "\u307E\u305F\u306F"
+  - key: AUTH_SIGNUP_HAVE_ACCOUNT
+    english: Already have an account?
+    japanese: "\u3059\u3067\u306B\u30A2\u30AB\u30A6\u30F3\u30C8\u3092\u304A\u6301\u3061\u3067\u3059\u304B\uFF1F"
+  - key: AUTH_SIGNUP_LOGIN
+    english: Login Here
+    japanese: "\u3053\u3061\u3089\u304B\u3089\u30ED\u30B0\u30A4\u30F3"
+  - key: AUTH_SIGNUP_CANCEL
+    english: Cancel
+    japanese: "\u30AD\u30E3\u30F3\u30BB\u30EB"
+  - key: AUTH_SIGNUP_RULE_LEN8
+    english: At least 8 characters
+    japanese: "8\u6587\u5B57\u4EE5\u4E0A"
+  - key: AUTH_SIGNUP_RULE_LOWER
+    english: Contains lowercase letter
+    japanese: "\u5C0F\u6587\u5B57\u3092\u542B\u3080"
+  - key: AUTH_SIGNUP_RULE_UPPER
+    english: Contains uppercase letter
+    japanese: "\u5927\u6587\u5B57\u3092\u542B\u3080"
+  - key: AUTH_SIGNUP_RULE_DIGIT
+    english: Contains number
+    japanese: "\u6570\u5B57\u3092\u542B\u3080"
+  - key: AUTH_SIGNUP_RULE_SPECIAL
+    english: Contains special character
+    japanese: "\u7279\u6B8A\u6587\u5B57\u3092\u542B\u3080"
+  - key: AUTH_EMAIL_CONF_TITLE
+    english: Check Your Email
+    japanese: "\u30E1\u30FC\u30EB\u3092\u78BA\u8A8D\u3057\u3066\u304F\u3060\u3055\u3044"
+  - key: AUTH_EMAIL_CONF_BODY
+    english: We sent a confirmation link to
+    japanese: "\u78BA\u8A8D\u30EA\u30F3\u30AF\u3092\u9001\u4FE1\u3057\u307E\u3057\u305F"
+  - key: AUTH_EMAIL_CONF_OPEN
+    english: Open Email App
+    japanese: "\u30E1\u30FC\u30EB\u30A2\u30D7\u30EA\u3092\u958B\u304F"
+  - key: AUTH_EMAIL_CONF_RESEND
+    english: Resend Email
+    japanese: "\u30E1\u30FC\u30EB\u3092\u518D\u9001"
+  - key: AUTH_EMAIL_CONF_BACK
+    english: Back to Login
+    japanese: "\u30ED\u30B0\u30A4\u30F3\u306B\u623B\u308B"

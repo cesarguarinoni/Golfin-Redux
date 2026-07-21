@@ -191,3 +191,38 @@ tourn.venue.lomond,Lomond Country Club · 18 Holes,ロモンドカントリー�
 tourn.venue.gotemba,Taiheyo Club Gotemba · 18 Holes,太平洋クラブ御殿場 · 18ホール
 tourn.venue.kisarazu,Kisarazu Higashi CC · 18 Holes,木更津東カントリークラブ · 18ホール
 tourn.venue.kawana,Kawana Hotel Golf Course · 18 Holes,川奈ホテルゴルフコース · 18ホール
+AUTH_LOGIN_TITLE,Welcome Back,おかえりなさい
+AUTH_LOGIN_EMAIL_PLACEHOLDER,Email,メール
+AUTH_LOGIN_PASSWORD_PLACEHOLDER,Password,パスワード
+AUTH_LOGIN_FORGOT,Forgot Password?,パスワードを忘れた方
+AUTH_LOGIN_BUTTON,LOGIN,ログイン
+AUTH_LOGIN_GOOGLE,Continue with Google,Googleで続ける
+AUTH_LOGIN_APPLE,Continue with Apple,Appleで続ける
+AUTH_LOGIN_OR,Or,または
+AUTH_LOGIN_NO_ACCOUNT,Don't have an account?,アカウントをお持ちでないですか？
+AUTH_LOGIN_CREATE,Create Account,アカウント作成
+AUTH_LOGIN_CANCEL,Cancel,キャンセル
+AUTH_CREATE_USERNAME_TITLE,Create Username,ユーザー名を作成
+AUTH_CREATE_USERNAME_PLACEHOLDER,Username,ユーザー名
+AUTH_CREATE_USERNAME_BUTTON,CREATE,作成
+AUTH_CREATE_USERNAME_CANCEL,Cancel,キャンセル
+AUTH_SIGNUP_TITLE,Create Account,アカウント作成
+AUTH_SIGNUP_EMAIL_PLACEHOLDER,Email,メール
+AUTH_SIGNUP_PASSWORD_PLACEHOLDER,Password,パスワード
+AUTH_SIGNUP_BUTTON,CREATE ACCOUNT,アカウント作成
+AUTH_SIGNUP_GOOGLE,Continue with Google,Googleで続ける
+AUTH_SIGNUP_APPLE,Continue with Apple,Appleで続ける
+AUTH_SIGNUP_OR,Or,または
+AUTH_SIGNUP_HAVE_ACCOUNT,Already have an account?,すでにアカウントをお持ちですか？
+AUTH_SIGNUP_LOGIN,Login Here,こちらからログイン
+AUTH_SIGNUP_CANCEL,Cancel,キャンセル
+AUTH_SIGNUP_RULE_LEN8,At least 8 characters,8文字以上
+AUTH_SIGNUP_RULE_LOWER,Contains lowercase letter,小文字を含む
+AUTH_SIGNUP_RULE_UPPER,Contains uppercase letter,大文字を含む
+AUTH_SIGNUP_RULE_DIGIT,Contains number,数字を含む
+AUTH_SIGNUP_RULE_SPECIAL,Contains special character,特殊文字を含む
+AUTH_EMAIL_CONF_TITLE,Check Your Email,メールを確認してください
+AUTH_EMAIL_CONF_BODY,We sent a confirmation link to,確認リンクを送信しました
+AUTH_EMAIL_CONF_OPEN,Open Email App,メールアプリを開く
+AUTH_EMAIL_CONF_RESEND,Resend Email,メールを再送
+AUTH_EMAIL_CONF_BACK,Back to Login,ログインに戻る

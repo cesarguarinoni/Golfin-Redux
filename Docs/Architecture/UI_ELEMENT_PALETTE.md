@@ -122,6 +122,41 @@ explicitly built segment children.
 
 ---
 
+## Account / Auth atoms (login_signup_screens — Order 2026-07-21)
+
+New atoms exported from Figma file `5gEAHjl6xAtW8iYY7NMvWd` and imported as sprites under `Assets/Art/UI/Account/`.
+
+| Atom name | Asset path | GUID | Notes |
+|---|---|---|---|
+| Top-band banner (navy) | `Assets/Art/UI/Account/S_Login_TopBG_Navy.png` | `b23e2030b37249c8b75ed25d702cf7f8` | 9-sliced (L334 R47); notched gold-edged banner used on all 4 auth screens |
+| Splash background (login) | `Assets/Art/UI/Account/S_Login_SplashBG.png` | — | Full-screen course/sky photo for auth-screen BG |
+| Splash BG variant 2 | `Assets/Art/UI/Account/S_Login_TopBG2.png` | — | Alternative top-band graphic |
+| Sign-up BG | `Assets/Art/UI/Account/S_SignUp_BG.png` | — | Background for sign-up screen |
+| Sign-up BG variant 2 | `Assets/Art/UI/Account/S_SignUp_BG2.png` | — | Alternative sign-up background |
+| Password-rule cross icon | `Assets/Art/UI/Account/ICO_RuleCross.png` | — | Red X for unmet password rules |
+| Password-rule tick icon | `Assets/Art/UI/Account/ICO_RuleTick.png` | `66e339915cfd7491d830afe99ef11b7b` | Green checkmark for met password rules |
+| Google social icon | `Assets/Art/Original UI/LoginScreen/S_Login_Google_Icon.png` | `bb94c73e3c83e5145b77f3d7ab423fde` | Google G logo for social-auth pill (Login + SignUp) |
+| Apple social icon | `Assets/Art/Original UI/LoginScreen/S_Login_Apple_Icon.png` | `9cf6f483eef9f374989e51301871daec` | Apple logo for social-auth pill (Login + SignUp) |
+| Password eye-show | `Assets/Art/Original UI/SettingsScreen/S_Settings_Icon_EyeOn.png` | `985195deea614f14ca3fe265203c529d` | Eye open icon; password contentType=Standard |
+| Password eye-hide | `Assets/Art/Original UI/SettingsScreen/S_Settings_Icon_EyeOff.png` | `5b0184341b55e7e4b80b8f668b5c8757` | Eye closed icon; password contentType=Password (default) |
+| Green GPS primary button | `Assets/Art/SplashScreen/Green Button.png` | `091a45d11621e7745b879424b7b278a5` | Green gradient pill sprite for primary action buttons |
+| Text input field | `Assets/Art/Original UI/Common/S_Common_TextField_882.png` | `4f9a7fe719e942548a538f7891172652` | White rounded input field background (882px wide) |
+| Social auth pill bg | **REUSED** `Assets/Art/Tournaments/S_PillStadium.png` | `bb07d102185aa4f1ca51da13de9eeac6` | White pill stadium sprite for Google/Apple social buttons |
+| CANCEL silver button | **REUSED** `Assets/Art/RosterScreen/ButtonCancel.png` | `6021c639e9c124b44a06c8ccd977896f` | Existing silver gradient; reused on all auth screens |
+| Divider / separator | **REUSED** `Assets/Art/HomeScreen/Divider.png` | `36b5ccd887…` | Horizontal rule between sections |
+| Rubik SemiBold SDF | **REUSED** `Rubik-SemiBold SDF.asset` | `39fb7824…` | Primary heading font |
+| Rubik Variable SDF | **REUSED** `Rubik-VariableFont_wght SDF.asset` | `0e84913c…` | Body / label font |
+
+**Prefabs (4 screen prefabs):**
+- `Assets/Prefabs/UI/Account/LoginScreen.prefab`
+- `Assets/Prefabs/UI/Account/SignUpScreen.prefab`
+- `Assets/Prefabs/UI/Account/CreateUsernameScreen.prefab`
+- `Assets/Prefabs/UI/Account/EmailConfirmationScreen.prefab`
+
+Each screen: white-pill social buttons (3px black border radius-90), green GPS primary button (gradient `#22B800→#20A80C→#179005` + inner `#B2FFA1` border), white input fields (radius 20), navy card (20px radius, `#133453→#091B33`), `S_Common_BGCorner20` sprite for CardBorder.
+
+---
+
 ## Related pipeline pieces
 - **Detection/enforcement:** `Assets/Editor/UIFidelity/UIFidelityLinter.cs` (render-health + node-spec),
   `Docs/Scripts/figma_diff.py` (pixel diff), **Rule 21** in `.claude/hooks/enforce_implementer_done.py`.

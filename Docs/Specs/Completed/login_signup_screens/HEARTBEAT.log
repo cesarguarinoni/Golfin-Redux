@@ -1,0 +1,161 @@
+2026-07-21T00:00:00 activated
+
+=== iter-1 kickoff baseline ===
+HEAD: 3ba5cd1bb7d1f291067cc9301f6b05bd08c1835c
+DIRTY:
+ M .claude/review_misses.log
+ M "Assets/Art/Shop/Background - Blurred.png"
+ M "Assets/Fonts/NotoSansJP-VariableFont_wght SDF.asset"
+ M Assets/Plugins/NuGet/.nuget-installed.json
+ M Assets/Plugins/NuGet/McpPlugin.Common.dll
+ M Assets/Plugins/NuGet/McpPlugin.dll
+ M Assets/Plugins/NuGet/ReflectorNet.dll
+ M Assets/Scripts/Physics/Viewer/Bot/BotDriver.cs
+ M Assets/Scripts/Physics/Viewer/Bot/Editor/LoopV2SmokeBotMenu.cs
+ M Assets/Scripts/Physics/Viewer/Bot/LoopV2SmokeBot.cs
+ M Assets/Scripts/Physics/Viewer/Bot/Scenarios.cs
+ M Assets/Scripts/Physics/Viewer/PhysicsLabController.cs
+ M Assets/Scripts/Physics/Viewer/VersusBot.cs
+ M Docs/Specs/Active/tree_aware_bot/SPEC.md
+ M Packages/manifest.json
+ M Packages/packages-lock.json
+?? .mcp.json.bak-23886
+?? Assets/Scripts/Physics/Tests/BotTreeProbeTests.cs
+?? Assets/Scripts/Physics/Tests/BotTreeProbeTests.cs.meta
+?? Assets/Scripts/Physics/Viewer/BotTreeProbe.cs
+?? Assets/Scripts/Physics/Viewer/BotTreeProbe.cs.meta
+?? Docs/Specs/Active/login_signup_screens/
+?? Docs/Specs/Active/tree_aware_bot/ARCHITECT_REVIEW.md
+?? Docs/Specs/Active/tree_aware_bot/HEARTBEAT.log
+?? Docs/Specs/Active/tree_aware_bot/IMPLEMENTER_REPORT.md
+?? Docs/Specs/Active/tree_aware_bot/SELF_REVIEW.md
+?? Docs/Specs/Active/tree_aware_bot/STATUS.md
+?? Docs/Specs/Active/tree_aware_bot/after_run_log_iter6.txt
+?? Docs/Specs/Active/tree_aware_bot/before_run_log.txt
+?? Docs/Specs/Active/tree_aware_bot/before_run_log_iter6.txt
+?? Docs/Specs/Active/tree_aware_bot/hole_positions.json
+?? Docs/Specs/Active/tree_aware_bot/probe_invariants.json
+?? Docs/Specs/Active/tree_aware_bot/screenshots/
+?? Docs/Specs/Active/tree_aware_bot/sweep_probe_results.csv
+=== end baseline ===
+
+2026-07-21T02:00:00 writing scripts + ScreenManager update
+2026-07-21T15:15:00 resuming after context compaction - wiring confirmed OK, running linter + screenshots
+2026-07-21T15:30:00 entering play mode for screenshot capture of all 4 auth screens
+2026-07-21T16:00:00 resuming after context compaction - fixing 9-slice borders on buttons and separator height
+2026-07-21T12:04:03Z === iter-resumed kickoff baseline ===
+2026-07-21T12:04:03Z HEAD=7975d80eb36854ee1476b379dbd29e7a96c16320
+ M Assets/Art/RosterScreen/ButtonCancel.png.meta
+ M "Assets/Art/Shop/Background - Blurred.png"
+ M "Assets/Art/SplashScreen/Green Button.png.meta"
+ M "Assets/Fonts/NotoSansJP-VariableFont_wght SDF.asset"
+ M Assets/Localization/LocalizationText.csv
+ M Assets/Localization/LocalizationTextTable.asset
+ M Assets/Plugins/NuGet/.nuget-installed.json
+ M Assets/Plugins/NuGet/McpPlugin.Common.dll
+ M Assets/Plugins/NuGet/McpPlugin.dll
+ M Assets/Plugins/NuGet/ReflectorNet.dll
+ M Assets/Scenes/ShellScene.unity
+ M Assets/Scripts/UI/ScreenManager.cs
+ M Packages/manifest.json
+ M Packages/packages-lock.json
+?? .mcp.json.bak-23886
+?? Assets/Art/UI/Account.meta
+?? Assets/Art/UI/Account/
+?? Assets/Prefabs/UI/Account.meta
+?? Assets/Prefabs/UI/Account/
+?? Assets/Scripts/UI/Account.meta
+?? Assets/Scripts/UI/Account/
+?? Docs/Specs/Active/login_signup_screens/
+2026-07-21T12:04:03Z === end baseline ===
+2026-07-21T15:59:06Z done, awaiting review
+2026-07-21T16:02:07Z === iter-2 kickoff baseline ===
+2026-07-21T16:02:07Z HEAD=7975d80eb36854ee1476b379dbd29e7a96c16320
+ M Assets/Art/RosterScreen/ButtonCancel.png.meta
+ M "Assets/Art/Shop/Background - Blurred.png"
+ M "Assets/Art/SplashScreen/Green Button.png.meta"
+ M "Assets/Fonts/NotoSansJP-VariableFont_wght SDF.asset"
+ M Assets/Localization/LocalizationText.csv
+ M Assets/Localization/LocalizationTextTable.asset
+ M Assets/Plugins/NuGet/.nuget-installed.json
+ M Assets/Plugins/NuGet/McpPlugin.Common.dll
+ M Assets/Plugins/NuGet/McpPlugin.dll
+ M Assets/Plugins/NuGet/ReflectorNet.dll
+ M Assets/Scenes/ShellScene.unity
+ M Assets/Scripts/UI/ScreenManager.cs
+ M Docs/Architecture/UI_ELEMENT_PALETTE.md
+ M Docs/Architecture/UI_HIERARCHY.md
+ M Packages/manifest.json
+ M Packages/packages-lock.json
+?? .mcp.json.bak-23886
+?? Assets/Art/UI/Account.meta
+?? Assets/Art/UI/Account/ICO_RuleCross.png
+?? Assets/Art/UI/Account/ICO_RuleCross.png.meta
+?? Assets/Art/UI/Account/ICO_RuleTick.png
+?? Assets/Art/UI/Account/ICO_RuleTick.png.meta
+?? Assets/Art/UI/Account/S_Login_SplashBG.png
+?? Assets/Art/UI/Account/S_Login_SplashBG.png.meta
+?? Assets/Art/UI/Account/S_Login_TopBG2.png
+?? Assets/Art/UI/Account/S_Login_TopBG2.png.meta
+?? Assets/Art/UI/Account/S_Login_TopBG_Navy.png
+?? Assets/Art/UI/Account/S_Login_TopBG_Navy.png.meta
+?? Assets/Art/UI/Account/S_SignUp_BG.png
+?? Assets/Art/UI/Account/S_SignUp_BG.png.meta
+?? Assets/Art/UI/Account/S_SignUp_BG2.png
+?? Assets/Art/UI/Account/S_SignUp_BG2.png.meta
+?? Assets/Prefabs/UI/Account.meta
+?? Assets/Prefabs/UI/Account/CreateUsernameScreen.prefab
+?? Assets/Prefabs/UI/Account/CreateUsernameScreen.prefab.meta
+?? Assets/Prefabs/UI/Account/EmailConfirmationScreen.prefab
+?? Assets/Prefabs/UI/Account/EmailConfirmationScreen.prefab.meta
+?? Assets/Prefabs/UI/Account/LoginScreen.prefab
+?? Assets/Prefabs/UI/Account/LoginScreen.prefab.meta
+?? Assets/Prefabs/UI/Account/SignUpScreen.prefab
+?? Assets/Prefabs/UI/Account/SignUpScreen.prefab.meta
+?? Assets/Scripts/UI/Account.meta
+?? Assets/Scripts/UI/Account/CreateUsernameScreenController.cs
+?? Assets/Scripts/UI/Account/CreateUsernameScreenController.cs.meta
+?? Assets/Scripts/UI/Account/EmailConfirmationScreenController.cs
+?? Assets/Scripts/UI/Account/EmailConfirmationScreenController.cs.meta
+?? Assets/Scripts/UI/Account/LoginScreenController.cs
+?? Assets/Scripts/UI/Account/LoginScreenController.cs.meta
+?? Assets/Scripts/UI/Account/PasswordRequirements.cs
+?? Assets/Scripts/UI/Account/PasswordRequirements.cs.meta
+?? Assets/Scripts/UI/Account/SignUpScreenController.cs
+?? Assets/Scripts/UI/Account/SignUpScreenController.cs.meta
+?? Docs/Specs/Active/login_signup_screens/ARCHITECT_REVIEW.md
+?? Docs/Specs/Active/login_signup_screens/HEARTBEAT.log
+?? Docs/Specs/Active/login_signup_screens/IMPLEMENTER_REPORT.md
+?? Docs/Specs/Active/login_signup_screens/SELF_REVIEW.md
+?? Docs/Specs/Active/login_signup_screens/SPEC.md
+?? Docs/Specs/Active/login_signup_screens/STATUS.md
+?? Docs/Specs/Active/login_signup_screens/reference/01_Login.png
+?? Docs/Specs/Active/login_signup_screens/reference/02_CreateUsername.png
+2026-07-21T16:02:07Z === end baseline ===
+2026-07-21T16:02:07Z iter-2 start: fixing green button width, pill border, all button sizes
+2026-07-21T16:33:07 iter-2 fix script complete — sprite created + 4 prefabs fixed (green buttons flexW=0+CSF+HLG, pills S_SocialPillBordered 670x150, EmailConf anchors fixed)
+2026-07-22T01:55:00Z iter-2 complete — all fixes applied, Figma node pulled, all 4 linters 0 FAIL, 4 screenshots captured, report written, play mode exited, done awaiting review
+2026-07-22T02:00:00Z === iter-3 kickoff baseline ===
+HEAD SHA: 7975d80eb36854ee1476b379dbd29e7a96c16320
+DIRTY (porcelain --untracked=no):
+ M Assets/Art/RosterScreen/ButtonCancel.png.meta
+ M "Assets/Art/Shop/Background - Blurred.png"
+ M "Assets/Art/SplashScreen/Green Button.png.meta"
+ M "Assets/Fonts/NotoSansJP-VariableFont_wght SDF.asset"
+ M Assets/Localization/LocalizationText.csv
+ M Assets/Localization/LocalizationTextTable.asset
+ M Assets/Plugins/NuGet/.nuget-installed.json
+ M Assets/Plugins/NuGet/McpPlugin.Common.dll
+ M Assets/Plugins/NuGet/McpPlugin.dll
+ M Assets/Plugins/NuGet/ReflectorNet.dll
+ M Assets/Scenes/ShellScene.unity
+ M Assets/Scripts/UI/ScreenManager.cs
+ M Docs/Architecture/UI_ELEMENT_PALETTE.md
+ M Docs/Architecture/UI_HIERARCHY.md
+ M Packages/manifest.json
+ M Packages/packages-lock.json
+2026-07-22T02:00:00Z === end baseline ===
+2026-07-22T02:00:00Z iter-3 start: rebuild S_SocialPillBordered 160x150 true stadium, Image.type=Sliced, PPUM=100
+2026-07-22T02:30:00Z iter-3 pixel analysis: cap is a STRAIGHT vertical edge (71px straight, only 6px taper). PPU=100 PPUM=100 gives border=75/(100×100)=0.0075cu≈0. Fix: PPU=1 PPUM=1 gives border=75/1=75cu=half height=true stadium. Running fix now.
+2026-07-22T02:52:00Z iter-3 pill diagnostic CONFIRMED: PPUM=1, borderCU=75, ratio=1.000 (perfect stadium) — capturing all 4 screens
+2026-07-22T03:10:00Z done, awaiting review

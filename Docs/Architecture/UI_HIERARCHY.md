@@ -458,6 +458,55 @@ StaminaShopDetailScreen           (StaminaShopDetailScreenController)
 
 ---
 
+---
+
+## Account / Auth Screens (login_signup_screens — 2026-07-21)
+
+Four screens under `Canvas > ScreensRoot`, registered in `ScreenManager` (ScreenId: Login, CreateUsername, SignUp, EmailConfirmation). Prefabs at `Assets/Prefabs/UI/Account/`. Controllers at `Assets/Scripts/UI/Account/` (namespace `Golfin.UI.Account`).
+
+```
+ScreensRoot
+├── LoginScreen         (LoginScreenController)
+│   ├── Background      (S_Login_SplashBG full-screen)
+│   ├── Scrim           (rgba 0,0,0 alpha 0.1 — flat fill, intentional)
+│   ├── TopBand         (S_Login_TopBG_Navy 9-sliced, h=313, title "GOLFIN ACCOUNT" Rubik SemiBold 51px white)
+│   └── CardBorder      (S_Common_BGCorner20, w=1074, navy gradient #133453→#091B33, pad=48)
+│       └── CardBody    (ScrollRect > Content > VLG gap=48)
+│           ├── SectionHeader   "LOGIN WITH EMAIL"
+│           ├── EmailGroup      (EMAIL label + TMP_InputField)
+│           ├── PasswordGroup   (PASSWORD label + TMP_InputField + EyeButton inside)
+│           ├── ForgotPassword  (Button + ButtonPressFeedback, green text)
+│           ├── LoginButton     (Button + ButtonPressFeedback, green gradient)
+│           ├── Separator       (Divider.png)
+│           ├── ServiceHeader   "LOGIN WITH  A SERVICE"
+│           ├── GooglePill      (Button + ButtonPressFeedback, white w=670 h=150 r=90 3px black border)
+│           ├── ApplePill       (Button + ButtonPressFeedback, same pill)
+│           ├── Separator       (Divider.png)
+│           ├── CancelButton    (Button + ButtonPressFeedback, ButtonCancel.png silver)
+│           └── FooterRow       ("No account?" + CreateAccountButton green text)
+
+├── CreateUsernameScreen  (CreateUsernameScreenController)
+│   └── [same shell] CardBody: SectionHeader + UsernameGroup + BodyText (3 paragraphs) + CreateButton + CancelButton
+
+├── SignUpScreen          (SignUpScreenController)
+│   └── [same shell] CardBody: SectionHeader + EmailGroup + PasswordGroup + PasswordRules (5 rows: ICO_RuleCross/ICO_RuleTick + text) + CreateButton + Separator + ServiceHeader + GooglePill + ApplePill + Separator + CancelButton + FooterRow
+
+└── EmailConfirmationScreen  (EmailConfirmationScreenController)
+    └── [same shell] CardBody: SectionHeader + DescriptionText (4 paragraphs) + ResendButton (silver) + InstructionText + LoginButton (green)
+```
+
+**Password-rule rows** (SignUp only): each row has `RuleIcon` (Image, ICO_RuleCross/ICO_RuleTick 48px) + `RuleText` (TMP Rubik Regular 39px, white/green). Live toggle driven by `PasswordRequirements.Check(value)` on `onValueChanged`.
+
+**Eye toggle** (Login + SignUp password fields): EyeButton sits INSIDE the password TMP_InputField container. `OnEyeToggle()` flips `contentType` Password↔Standard and calls `ForceLabelUpdate()`.
+
+**Navigation stubs** (Phase 1 — ScreenManager wired in ShellScene):
+- Login: CreateAccount→SignUp, Cancel→Splash; Login/ForgotPw/Google/Apple are `// TODO(Phase 2)` stubs
+- SignUp: Create→EmailConfirmation, LoginHere→Login, Cancel→Login; Google/Apple stubs
+- CreateUsername: Create→stub, Cancel→back
+- EmailConfirmation: Resend→stub, Login→Login
+
+---
+
 ## Key Notes
 
 - **Character stat rows** use `Name+Bar/StatsName`, `Name+Bar/Bar`, `DiffLabel`, `StatNumber`
