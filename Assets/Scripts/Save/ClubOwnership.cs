@@ -109,9 +109,15 @@ namespace Golfin.Save
         /// <summary>
         /// Bag-safety invariant (A4): the EQUIPPED clubs must cover every required club type, so a
         /// fresh save never yields an unplayable bag. requiredTypes are ClubType enum names.
+        ///
+        /// requiredRoleGroups (optional, Order 761): each inner collection is a "wedge role" —
+        /// the group is satisfied when ANY ONE of its types is equipped. This prevents exact-subtype
+        /// false-failures: a P_Wedge satisfies the "wedge" role even though the role also lists
+        /// A_Wedge and S_Wedge. Pass null (or omit) for legacy callers.
         /// </summary>
         public static bool HasPlayableBag(SaveData save, IReadOnlyList<ClubCatalogSpec> catalog,
-                                          IReadOnlyCollection<string> requiredTypes)
+                                          IReadOnlyCollection<string> requiredTypes,
+                                          System.Collections.Generic.IEnumerable<System.Collections.Generic.IEnumerable<string>>? requiredRoleGroups = null)
         {
             if (save.ownedClubs == null) return false;
             var typeByClub = new Dictionary<string, string>(catalog.Count);
@@ -124,6 +130,17 @@ namespace Golfin.Save
 
             foreach (var req in requiredTypes)
                 if (!equippedTypes.Contains(req)) return false;
+
+            // Role groups: each group satisfied when ANY ONE alternative type is equipped.
+            if (requiredRoleGroups != null)
+                foreach (var group in requiredRoleGroups)
+                {
+                    bool groupSatisfied = false;
+                    foreach (var alt in group)
+                        if (equippedTypes.Contains(alt)) { groupSatisfied = true; break; }
+                    if (!groupSatisfied) return false;
+                }
+
             return true;
         }
     }

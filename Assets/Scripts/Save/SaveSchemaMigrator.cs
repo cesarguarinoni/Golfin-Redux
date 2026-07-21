@@ -15,7 +15,7 @@ namespace Golfin.Save
     /// </summary>
     public static class SaveSchemaMigrator
     {
-        public const int CurrentSchemaVersion = 8;
+        public const int CurrentSchemaVersion = 9;
 
         /// <summary>
         /// Apply any needed migrations to bring data from its on-disk schemaVersion
@@ -132,6 +132,19 @@ namespace Golfin.Save
                     data.ticketBalances.Add(new PersistedTicketBalance { ticketTypeInt = 0, balance = legacyBalance });
                 data.schemaVersion = 8;
                 Debug.Log($"[SaveSchemaMigrator] Migrated v7 → v8 (gachaTickets={legacyBalance} → ticketBalances[Standard]).");
+            }
+
+            // v8 → v9: backfill the default-bag wedge for existing players (Order 761).
+            // Pure signal only — ClubManager grants+equips on next load (it owns the catalog).
+            // An already-seeded save = an existing player (who didn't get the wedge via DefaultBagIds).
+            // A brand-new SaveData() is never passed to Migrate() so fresh saves never set the flag —
+            // they get the wedge via DefaultBagIds seeding instead (gate 4: no regression to seed gate).
+            if (data.schemaVersion < 9)
+            {
+                if (data.clubOwnershipSeeded)   // an already-seeded save = an existing player
+                    data.wedgeBackfillPending = true;
+                data.schemaVersion = 9;
+                Debug.Log($"[SaveSchemaMigrator] Migrated v8 → v9 (wedgeBackfillPending={data.wedgeBackfillPending}).");
             }
 
             // Ensure schemaVersion is current after all migrations

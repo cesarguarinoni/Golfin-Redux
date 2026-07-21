@@ -1,0 +1,20 @@
+2026-07-20T10:45:00 activated
+
+=== iter-1 kickoff baseline ===
+HEAD: 1bb7506d39fda72a569c60230b3cf763f4fe7ad1
+DIRTY:
+ M "Assets/Art/Shop/Background - Blurred.png"
+ M "Assets/Fonts/NotoSansJP-VariableFont_wght SDF.asset"
+ M Assets/Plugins/NuGet/.nuget-installed.json
+ M Assets/Plugins/NuGet/McpPlugin.Common.dll
+ M Assets/Plugins/NuGet/McpPlugin.dll
+ M Assets/Plugins/NuGet/ReflectorNet.dll
+ M Packages/manifest.json
+ M Packages/packages-lock.json
+?? .mcp.json.bak-23886
+?? Docs/Specs/Active/versus_bot_club_resolution_audit/HEARTBEAT.log
+?? Docs/Specs/Active/versus_bot_club_resolution_audit/IMPLEMENTER_REPORT.md
+?? Docs/Specs/Active/versus_bot_club_resolution_audit/STATUS.md
+=== end baseline ===
+2026-07-20T15:00:00 root-cause found: LabInventoryStub seeds 4-club bag (no wedge) because BagManager absent in lab capture; fixing s_TestClubIds to add club_pwedge_royal
+2026-07-20T16:30:00 done, awaiting review

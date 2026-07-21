@@ -113,11 +113,12 @@ namespace Golfin.Save.Tests
         // ── Migration tests ───────────────────────────────────────────────────
 
         [Test]
-        public void CurrentSchemaVersion_Is8()
+        public void CurrentSchemaVersion_Is9()
         {
             // Simple sentinel: catches accidental version rollback.
-            Assert.AreEqual(8, SaveSchemaMigrator.CurrentSchemaVersion,
-                "CurrentSchemaVersion must be 8 after gacha_history Stage 1");
+            // Bumped 8→9 by Order 761 (wedge backfill signal, v8→v9 migration block).
+            Assert.AreEqual(9, SaveSchemaMigrator.CurrentSchemaVersion,
+                "CurrentSchemaVersion must be 9 after Order 761 wedge backfill (gacha_history Stage 1 was 8)");
         }
 
         [Test]
@@ -129,7 +130,7 @@ namespace Golfin.Save.Tests
 
             SaveSchemaMigrator.Migrate(data);
 
-            Assert.AreEqual(8, data.schemaVersion, "Schema version must be 8 after full migration chain");
+            Assert.AreEqual(9, data.schemaVersion, "Schema version must be 9 after full migration chain (v6→v7→v8→v9)");
             // v6→v7 seeds gachaTickets=10, v7→v8 carries that to ticketBalances[Standard]=10
             Assert.AreEqual(10, GetStandard(data),
                 "Migration v6→v8 must seed Standard balance to 10 (test grant, carried from v6→v7)");
@@ -149,7 +150,7 @@ namespace Golfin.Save.Tests
             var data = JsonConvert.DeserializeObject<SaveData>(v6Json)!;
             SaveSchemaMigrator.Migrate(data);
 
-            Assert.AreEqual(8, data.schemaVersion);
+            Assert.AreEqual(9, data.schemaVersion);
             Assert.AreEqual(99000, data.rewardPoints,    "rewardPoints must survive chain migration");
             Assert.AreEqual("char_nova", data.selectedCharacterId, "selectedCharacterId must survive");
             Assert.AreEqual(5000L, data.lifetimeRpEarned, "lifetimeRpEarned must survive");
@@ -167,7 +168,7 @@ namespace Golfin.Save.Tests
 
             SaveSchemaMigrator.Migrate(data);
 
-            Assert.AreEqual(8, data.schemaVersion, "Schema must be 8 after v7→v8");
+            Assert.AreEqual(9, data.schemaVersion, "Schema must be 9 after v7→v8→v9");
             Assert.AreEqual(42, GetStandard(data),
                 "Existing gachaTickets balance (42) must be preserved in ticketBalances[Standard]");
         }
@@ -183,7 +184,7 @@ namespace Golfin.Save.Tests
 
             SaveSchemaMigrator.Migrate(data);
 
-            Assert.AreEqual(8, data.schemaVersion);
+            Assert.AreEqual(9, data.schemaVersion);
             Assert.AreEqual(5, GetStandard(data),
                 "Pre-existing Standard entry must not be overwritten by v7→v8 migration");
             int count = 0;
@@ -204,24 +205,29 @@ namespace Golfin.Save.Tests
             var data = JsonConvert.DeserializeObject<SaveData>(v5Json)!;
             SaveSchemaMigrator.Migrate(data);
 
-            Assert.AreEqual(8, data.schemaVersion, "Schema version must reach 8");
+            Assert.AreEqual(9, data.schemaVersion, "Schema version must reach 9 (v5→v6→v7→v8→v9)");
             Assert.AreEqual(10, GetStandard(data), "Standard balance seeded by v6→v7→v8 chain");
             Assert.IsTrue(data.grandfatherClubs, "v5→v6 must still set grandfatherClubs for unseeded save");
             Assert.AreEqual(500, data.rewardPoints, "rewardPoints must survive chain migration");
         }
 
         [Test]
-        public void Migration_AlreadyV8_IsNoOp()
+        public void Migration_AlreadyV8_AdvancesToV9_PreservesBalanceAndRp()
         {
-            // A fully migrated v8 save passed to Migrate() must be untouched.
+            // A v8 save passed to Migrate() runs the v8→v9 wedge-backfill step.
+            // clubOwnershipSeeded defaults false → wedgeBackfillPending stays false.
+            // ticketBalances and rewardPoints must be untouched; schemaVersion advances to 9.
             var data = new SaveData { schemaVersion = 8, rewardPoints = 777 };
             data.ticketBalances.Add(new PersistedTicketBalance { ticketTypeInt = 0, balance = 25 });
 
             SaveSchemaMigrator.Migrate(data);
 
-            Assert.AreEqual(8, data.schemaVersion);
-            Assert.AreEqual(25, GetStandard(data), "Already-migrated Standard balance must not change");
-            Assert.AreEqual(777, data.rewardPoints);
+            Assert.AreEqual(9, data.schemaVersion,
+                "v8 save must advance to v9 (v8→v9 wedge-backfill step, Order 761)");
+            Assert.AreEqual(25, GetStandard(data), "Standard balance must be preserved by v8→v9");
+            Assert.AreEqual(777, data.rewardPoints, "rewardPoints must be preserved by v8→v9");
+            Assert.IsFalse(data.wedgeBackfillPending,
+                "wedgeBackfillPending must stay false when clubOwnershipSeeded=false");
         }
     }
 }

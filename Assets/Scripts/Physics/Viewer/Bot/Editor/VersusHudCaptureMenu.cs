@@ -267,6 +267,25 @@ namespace Golfin.Physics.Viewer.Editor
         [MenuItem("GOLFIN/Capture 1v1/Record Bot Difficulty - Hardened (Lv200)", isValidateFunction: true)]
         static bool ValidateBotDifficultyLv200() => !EditorApplication.isPlaying;
 
+        /// <summary>
+        /// Order 762 wedge-proof clip: seeds _debugStartLie to 50m from Hole_04 pin
+        /// so VersusBot selects club=2 (wedge, 20–80m band). BotClubSync then pushes
+        /// the correct ClubContext.SelectedClubId before ClearStatBundleOverride(), so
+        /// the LIVE stat path fires the real sand-wedge instead of the default driver.
+        /// Both P1 and P2 are bot-driven. 60s watchdog (short approach, fast hole-out).
+        /// Output: tasks/loop_v2_smoke_bot/versus_762_wedge_proof/video/raw.mp4
+        /// Terrain-raycast confirmed: (4.767, 15.024, 4.554) = 49.95m from Flag_1(-38.73,16.55,29.06).
+        /// </summary>
+        [MenuItem("GOLFIN/Capture 1v1/Record 762 Wedge Proof")]
+        public static void RecordWedgeProof762()
+        {
+            BotVideoRecorder.Arm();
+            Launch("versus_762_wedge_proof");
+        }
+
+        [MenuItem("GOLFIN/Capture 1v1/Record 762 Wedge Proof", isValidateFunction: true)]
+        static bool ValidateWedgeProof762() => !EditorApplication.isPlaying;
+
         // ── Validation ──────────────────────────────────────────────────────
 
         [MenuItem("GOLFIN/Capture 1v1/Record Versus Launch", isValidateFunction: true)]
@@ -576,6 +595,18 @@ namespace Golfin.Physics.Viewer.Editor
             VersusMatchController.OnMatchReadyToBegin -= OnAudioMatchStingerReadyHandler;
             Debug.Log("[VersusHudCaptureMenu] audio_match_stinger: OnMatchReadyToBegin received — " +
                       "starting BotVideoRecorder now. Default 30s watchdog (near-green ~22-27s).");
+            BotVideoRecorder.Begin();
+        }
+
+        // ── Deferred recorder handler for versus_762_wedge_proof (Order 762) ────────────
+        // 60s watchdog — 50m wedge approach on Hole_04 par-3. Both bots pick wedge,
+        // match should resolve in ≤30s, but 60s guards against slow swing animations.
+        static void OnWedgeProof762ReadyHandler()
+        {
+            VersusMatchController.OnMatchReadyToBegin -= OnWedgeProof762ReadyHandler;
+            BotVideoRecorder.MaxRecordSecondsOverride = 60;
+            Debug.Log("[VersusHudCaptureMenu] versus_762_wedge_proof: OnMatchReadyToBegin received — " +
+                      "starting BotVideoRecorder now. 60s watchdog (50m wedge approach on Hole_04 par-3).");
             BotVideoRecorder.Begin();
         }
 
@@ -990,6 +1021,52 @@ namespace Golfin.Physics.Viewer.Editor
                     Debug.Log("[VersusHudCaptureMenu] audio_match_stinger: BotVideoRecorder deferred to OnMatchReadyToBegin.");
                     return;
                 }
+                else if (scenario == "versus_762_wedge_proof")
+                {
+                    // Order 762 wedge-proof: starts both bots at 50m from Hole_04 pin.
+                    // At 50m, VersusBot.SelectShotCalibrated selects club=2 (wedge, 20–80m band).
+                    // BotClubSync.SyncToClubContext pushes ClubContext.SelectedClubId="club_sandwedge_gf"
+                    // BEFORE ClearStatBundleOverride, so the LIVE stat path fires the wedge (not driver).
+                    // Terrain-raycast confirmed: (4.767, 15.024, 4.554) = 49.95m from Flag_1.
+                    // Both players bot-driven. BotVideoRecorder deferred to OnMatchReadyToBegin (60s).
+                    var wedgeLie = new Vector3(4.767f, 15.024f, 4.554f);
+
+                    Golfin.Gameplay.Session.GameSession.IsVersus = true;
+                    Golfin.Gameplay.UI.HUD.MatchContext.Players[0] = new Golfin.Gameplay.UI.HUD.MatchContext.Player
+                    {
+                        DisplayName = "CAMILA",
+                        Level       = 13,
+                        TurnCount   = 1,
+                        Lie         = wedgeLie
+                    };
+                    Golfin.Gameplay.UI.HUD.MatchContext.Players[1] = new Golfin.Gameplay.UI.HUD.MatchContext.Player
+                    {
+                        DisplayName = "TARO",
+                        Level       = 17,
+                        TurnCount   = 0,
+                        Lie         = wedgeLie
+                    };
+                    Golfin.Gameplay.UI.HUD.MatchContext.ActiveIndex = 0;
+                    Golfin.Gameplay.UI.HUD.MatchContext.Raise();
+
+                    var vmcWedge = Object.FindAnyObjectByType<VersusMatchController>();
+                    if (vmcWedge != null)
+                    {
+                        vmcWedge._debugBothBots  = true;
+                        vmcWedge._debugStartLie  = wedgeLie;
+                        Debug.Log("[VersusHudCaptureMenu] versus_762_wedge_proof: _debugBothBots=true, " +
+                                  "_debugStartLie=(4.767, 15.024, 4.554) [50m from Hole_04 pin]. " +
+                                  "VersusBot will select club=2 (wedge), BotClubSync fires club_sandwedge_gf. 60s watchdog.");
+                    }
+                    else
+                    {
+                        Debug.LogWarning("[VersusHudCaptureMenu] versus_762_wedge_proof: VersusMatchController not found.");
+                    }
+
+                    VersusMatchController.OnMatchReadyToBegin += OnWedgeProof762ReadyHandler;
+                    Debug.Log("[VersusHudCaptureMenu] versus_762_wedge_proof: BotVideoRecorder deferred to OnMatchReadyToBegin (60s watchdog).");
+                    return;
+                }
                 else if (scenario == "versus_resolution_clip")
                 {
                     // Clip B — near-green resolution proof (iter-9 two-clip strategy, Cesar 2026-06-10).
@@ -1102,6 +1179,7 @@ namespace Golfin.Physics.Viewer.Editor
                 // Clean up deferred-recorder subscriptions if match never reached readiness
                 // (e.g. play mode exited early or scenario was aborted before hole load).
                 VersusMatchController.OnMatchReadyToBegin -= OnMatchReadyToBeginHandler;
+                VersusMatchController.OnMatchReadyToBegin -= OnWedgeProof762ReadyHandler;
                 VersusMatchController.OnMatchReadyToBegin -= OnResolutionClipReadyHandler;
                 VersusMatchController.OnMatchReadyToBegin -= OnBotHardeningWaterReadyHandler;
                 VersusMatchController.OnMatchReadyToBegin -= OnBotHardeningWaterH06ReadyHandler;
