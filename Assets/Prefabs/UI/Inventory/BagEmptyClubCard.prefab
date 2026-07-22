@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 7410127219531963085}
   - component: {fileID: 1729956647298784619}
   - component: {fileID: 8785109334094849574}
+  - component: {fileID: 4348367803025102860}
   m_Layer: 0
   m_Name: NameText
   m_TagString: Untagged
@@ -158,6 +159,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &4348367803025102860
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1373547825871335983}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: BAG_EMPTY
 --- !u!1 &2524854217955578279
 GameObject:
   m_ObjectHideFlags: 0
@@ -573,6 +587,7 @@ GameObject:
   - component: {fileID: 75884527266391670}
   - component: {fileID: 5003492450094566301}
   - component: {fileID: 4690665628076004106}
+  - component: {fileID: 3148654650329794075}
   m_Layer: 0
   m_Name: EquipText
   m_TagString: Untagged
@@ -699,6 +714,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &3148654650329794075
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6212730089708808319}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: BAG_EQUIP_CLUB
 --- !u!1 &6622647731325451158
 GameObject:
   m_ObjectHideFlags: 0

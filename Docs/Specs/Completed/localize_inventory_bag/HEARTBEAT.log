@@ -1,0 +1,48 @@
+2026-07-22T10:46:42Z activated
+
+=== iter-1 kickoff baseline ===
+HEAD: 2767f740e393eaf4a5bcc1c89d95b3bfadf2aa23
+DIRTY:
+ M Assets/Art/RosterScreen/ButtonCancel.png.meta
+ M "Assets/Art/Shop/Background - Blurred.png"
+ M "Assets/Art/SplashScreen/Green Button.png.meta"
+ M "Assets/Fonts/NotoSansJP-VariableFont_wght SDF.asset"
+ M Assets/Plugins/NuGet/.nuget-installed.json
+ M Assets/Plugins/NuGet/McpPlugin.Common.dll
+ M Assets/Plugins/NuGet/McpPlugin.dll
+ M Assets/Plugins/NuGet/ReflectorNet.dll
+ M Packages/manifest.json
+ M Packages/packages-lock.json
+=== end baseline ===
+2026-07-22T10:54:38 compile fixed (Golfin.Localization asmdef created), 13 binders verified OK, all keys in table — proceeding to screenshot capture
+2026-07-22T11:12:00 done, awaiting review
+
+=== iter-2 kickoff baseline 2026-07-22T11:14:04Z ===
+HEAD: 2767f740e393eaf4a5bcc1c89d95b3bfadf2aa23
+DIRTY:
+ M Assets/Art/RosterScreen/ButtonCancel.png.meta
+ M "Assets/Art/Shop/Background - Blurred.png"
+ M "Assets/Art/SplashScreen/Green Button.png.meta"
+ M "Assets/Fonts/NotoSansJP-VariableFont_wght SDF.asset"
+ M Assets/Localization/LocalizationText.csv
+ M Assets/Localization/LocalizationTextTable.asset
+ M Assets/Plugins/NuGet/.nuget-installed.json
+ M Assets/Plugins/NuGet/McpPlugin.Common.dll
+ M Assets/Plugins/NuGet/McpPlugin.dll
+ M Assets/Plugins/NuGet/ReflectorNet.dll
+ M Assets/Prefabs/UI/Inventory/BagClubCard.prefab
+ M Assets/Prefabs/UI/Inventory/BagEmptyClubCard.prefab
+ M Assets/Prefabs/UI/Inventory/BagSlotLockedPrefab.prefab
+ M Assets/Prefabs/UI/Inventory/BagSwapClubCard.prefab
+ M Assets/Prefabs/UI/Inventory/BallThumbnailEmptyCard.prefab
+ M Assets/Prefabs/UI/Inventory/ItemUseClubCard.prefab
+ M Assets/Prefabs/UI/Inventory/ItemUseClubCardGlowup.prefab
+ M Assets/Scripts/Gameplay/UI/ShotUI/ClubButtonWidget.cs
+ M Assets/Scripts/Gameplay/UI/ShotUI/Golfin.Gameplay.UI.asmdef
+ M Packages/manifest.json
+ M Packages/packages-lock.json
+?? Assets/Localization/Golfin.Localization.asmdef
+?? Assets/Localization/Golfin.Localization.asmdef.meta
+=== end baseline ===
+2026-07-22T11:14:20 iter-2 start — reverting asmdef change, SHOOT literal, SHOT_SHOOT key per architect
+2026-07-22T11:23:29Z done, awaiting review

@@ -148,6 +148,7 @@ GameObject:
   - component: {fileID: 6003120494021240759}
   - component: {fileID: 5912052790685222075}
   - component: {fileID: 4265741906266722343}
+  - component: {fileID: 8404369842912702133}
   m_Layer: 0
   m_Name: Text
   m_TagString: Untagged
@@ -274,6 +275,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &8404369842912702133
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 827226037532266413}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: ROSTER_LEVEL_UP
 --- !u!1 &1119039950981551526
 GameObject:
   m_ObjectHideFlags: 0
@@ -997,6 +1011,7 @@ GameObject:
   - component: {fileID: 7337772914199614165}
   - component: {fileID: 2100749566238770353}
   - component: {fileID: 7215815127838953611}
+  - component: {fileID: 7413992055808331815}
   m_Layer: 0
   m_Name: Text
   m_TagString: Untagged
@@ -1123,6 +1138,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &7413992055808331815
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1712044059614062387}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: CLUB_REPAIR
 --- !u!1 &2358655575669803615
 GameObject:
   m_ObjectHideFlags: 0
@@ -1378,6 +1406,7 @@ GameObject:
   - component: {fileID: 7850394398891018344}
   - component: {fileID: 2359830528230970273}
   - component: {fileID: 3529639871001779324}
+  - component: {fileID: 1108589583947531185}
   m_Layer: 0
   m_Name: DistLabel
   m_TagString: Untagged
@@ -1524,6 +1553,19 @@ MonoBehaviour:
   m_FlexibleWidth: -1
   m_FlexibleHeight: -1
   m_LayoutPriority: 1
+--- !u!114 &1108589583947531185
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2846828953554060940}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: CLUB_DIST
 --- !u!1 &3141081433631934451
 GameObject:
   m_ObjectHideFlags: 0

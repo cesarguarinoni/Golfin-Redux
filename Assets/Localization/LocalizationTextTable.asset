@@ -791,3 +791,9 @@ MonoBehaviour:
   - key: NAV_REWARDS_CENTER
     english: REWARDS CENTER
     japanese: 'REWARDS CENTER [JP-TODO]'
+  - key: BAG_EMPTY
+    english: EMPTY
+    japanese: 'EMPTY [JP-TODO]'
+  - key: CLUB_DIST
+    english: DIST
+    japanese: 'DIST [JP-TODO]'

@@ -318,6 +318,7 @@ GameObject:
   - component: {fileID: 2723423477456871127}
   - component: {fileID: 5104196095977972318}
   - component: {fileID: 2690963115103628008}
+  - component: {fileID: 5869950025902423243}
   m_Layer: 0
   m_Name: BagLabel
   m_TagString: Untagged
@@ -444,3 +445,16 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &5869950025902423243
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5379488187141267827}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: BAG_EMPTY
