@@ -52,6 +52,7 @@ namespace Golfin.UI.Account
 
         private void OnEnable()
         {
+            ClearError();
             if (_loginButton          != null) _loginButton.onClick.AddListener(OnLoginClicked);
             if (_forgotPasswordButton != null) _forgotPasswordButton.onClick.AddListener(OnForgotPasswordClicked);
             if (_googleButton         != null) _googleButton.onClick.AddListener(OnGoogleClicked);
@@ -125,7 +126,8 @@ namespace Golfin.UI.Account
             AuthService.Instance.RequestPasswordReset(email, result =>
             {
                 SetBusy(false);
-                SetError(result.Success ? "Password reset email sent." : result.Message);
+                if (result.Success) SetError("Password reset email sent.", isError: false);
+                else SetError(result.Message);
             });
         }
 
@@ -144,16 +146,30 @@ namespace Golfin.UI.Account
         }
 
         // ── Feedback helpers ──────────────────────────────────────────────────
+        private static readonly Color ErrColor = new Color(0.898f, 0.282f, 0.302f); // #E5484D
+        private static readonly Color OkColor  = new Color(34f/255f, 184f/255f, 0f);  // #22B800
+
         private void SetBusy(bool busy)
         {
             _busy = busy;
             if (_loginButton != null) _loginButton.interactable = !busy;
         }
 
-        private void SetError(string message)
+        private void SetError(string message, bool isError = true)
         {
-            if (_errorLabel != null) _errorLabel.text = message ?? "";
+            if (_errorLabel != null)
+            {
+                bool has = !string.IsNullOrEmpty(message);
+                _errorLabel.gameObject.SetActive(has);
+                _errorLabel.text  = message ?? "";
+                _errorLabel.color = isError ? ErrColor : OkColor;
+            }
             if (!string.IsNullOrEmpty(message)) Debug.Log($"[LoginScreen] {message}");
+        }
+
+        private void ClearError()
+        {
+            if (_errorLabel != null) _errorLabel.gameObject.SetActive(false);
         }
 
         private void OnCancelClicked()

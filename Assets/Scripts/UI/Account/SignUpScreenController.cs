@@ -70,6 +70,7 @@ namespace Golfin.UI.Account
 
         private void OnEnable()
         {
+            ClearError();
             if (_passwordInput     != null) _passwordInput.onValueChanged.AddListener(OnPasswordChanged);
             if (_eyeToggleButton   != null) _eyeToggleButton.onClick.AddListener(OnEyeToggle);
             if (_createButton      != null) _createButton.onClick.AddListener(OnCreateClicked);
@@ -179,10 +180,23 @@ namespace Golfin.UI.Account
             if (_createButton != null) _createButton.interactable = !busy;
         }
 
+        private static readonly Color ErrColor = new Color(0.898f, 0.282f, 0.302f); // #E5484D
+
         private void SetError(string message)
         {
-            if (_errorLabel != null) _errorLabel.text = message ?? "";
+            if (_errorLabel != null)
+            {
+                bool has = !string.IsNullOrEmpty(message);
+                _errorLabel.gameObject.SetActive(has);
+                _errorLabel.text  = message ?? "";
+                _errorLabel.color = ErrColor;
+            }
             if (!string.IsNullOrEmpty(message)) Debug.Log($"[SignUpScreen] {message}");
+        }
+
+        private void ClearError()
+        {
+            if (_errorLabel != null) _errorLabel.gameObject.SetActive(false);
         }
 
         private void OnCancelClicked()

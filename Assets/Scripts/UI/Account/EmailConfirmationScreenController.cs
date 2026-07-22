@@ -44,6 +44,7 @@ namespace Golfin.UI.Account
 
         private void OnEnable()
         {
+            if (_errorLabel != null) _errorLabel.gameObject.SetActive(false);
             // Pick up the email carried from Sign Up (if any).
             if (!string.IsNullOrEmpty(AuthFlowState.PendingEmail))
                 _pendingEmail = AuthFlowState.PendingEmail;
@@ -81,7 +82,7 @@ namespace Golfin.UI.Account
             AuthService.Instance.ResendConfirmation(_pendingEmail, result =>
             {
                 SetBusy(false);
-                SetMessage(result.Success ? "Confirmation email re-sent." : result.Message);
+                SetMessage(result.Success ? "Confirmation email re-sent." : result.Message, isError: !result.Success);
             });
         }
 
@@ -91,9 +92,18 @@ namespace Golfin.UI.Account
             if (_resendEmailButton != null) _resendEmailButton.interactable = !busy;
         }
 
-        private void SetMessage(string message)
+        private static readonly Color ErrColor = new Color(0.898f, 0.282f, 0.302f); // #E5484D
+        private static readonly Color OkColor  = new Color(34f/255f, 184f/255f, 0f);  // #22B800
+
+        private void SetMessage(string message, bool isError)
         {
-            if (_errorLabel != null) _errorLabel.text = message ?? "";
+            if (_errorLabel != null)
+            {
+                bool has = !string.IsNullOrEmpty(message);
+                _errorLabel.gameObject.SetActive(has);
+                _errorLabel.text  = message ?? "";
+                _errorLabel.color = isError ? ErrColor : OkColor;
+            }
             if (!string.IsNullOrEmpty(message)) Debug.Log($"[EmailConfirmation] {message}");
         }
 
