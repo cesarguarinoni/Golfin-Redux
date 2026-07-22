@@ -1,0 +1,7 @@
+2026-07-23T10:00:00 === iter-1 kickoff baseline HEAD=d60046f1590980131c22f6cfb774038c10f53f25 DIRTY= M Assets/Art/RosterScreen/ButtonCancel.png.meta|M Assets/Art/Shop/Background - Blurred.png|M Assets/Art/SplashScreen/Green Button.png.meta|M Assets/Fonts/NotoSansJP-VariableFont_wght SDF.asset|M Assets/Plugins/NuGet/.nuget-installed.json|M Assets/Plugins/NuGet/McpPlugin.Common.dll|M Assets/Plugins/NuGet/McpPlugin.dll|M Assets/Plugins/NuGet/ReflectorNet.dll|M Packages/manifest.json|M Packages/packages-lock.json ===
+2026-07-23T10:00:00 activated, reading source files
+2026-07-23T03:20:00 bindings applied (27 LocalizedText), code-site converted, compile PASS — proceeding to capture
+2026-07-23T03:35:00 JP selection screen captured (jp_selection_screen.jpg 187239 bytes), EN restored, play mode exited — writing IMPLEMENTER_REPORT
+2026-07-23T03:38:00 done, awaiting review
+2026-07-23T03:42:00 SELF_REVIEW_FAIL received — iter-2 JP-first re-capture for STAMINA_HOUSE_SPECIAL code-site fix
+2026-07-23T04:00:00 iter-2 done — jp_detail_screen.jpg re-captured JP-first (144623 bytes), IMPLEMENTER_REPORT updated, awaiting review

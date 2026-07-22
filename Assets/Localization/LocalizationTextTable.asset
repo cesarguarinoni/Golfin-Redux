@@ -971,3 +971,78 @@ MonoBehaviour:
   - key: SHOP_FILTER_OFFERS
     english: OFFERS
     japanese: 'OFFERS [JP-TODO]'
+  - key: STAMINA_BUY
+    english: BUY
+    japanese: 'BUY [JP-TODO]'
+  - key: STAMINA_VIEW_ON_MAPS
+    english: View on Maps
+    japanese: 'View on Maps [JP-TODO]'
+  - key: STAMINA_FEATURED
+    english: FEATURED
+    japanese: 'FEATURED [JP-TODO]'
+  - key: STAMINA_OPEN_NOW
+    english: OPEN NOW
+    japanese: 'OPEN NOW [JP-TODO]'
+  - key: STAMINA_LOCATION
+    english: LOCATION
+    japanese: 'LOCATION [JP-TODO]'
+  - key: STAMINA_HOURS
+    english: HOURS
+    japanese: 'HOURS [JP-TODO]'
+  - key: STAMINA_SIGNATURE
+    english: SIGNATURE
+    japanese: 'SIGNATURE [JP-TODO]'
+  - key: STAMINA_MENU
+    english: MENU
+    japanese: 'MENU [JP-TODO]'
+  - key: STAMINA_HOUSE_SPECIAL
+    english: House special
+    japanese: 'House special [JP-TODO]'
+  - key: STAMINA_REGION_HOKKAIDO
+    english: HOKKAIDO
+    japanese: 'HOKKAIDO [JP-TODO]'
+  - key: STAMINA_REGION_TOHOKU
+    english: TOHOKU
+    japanese: 'TOHOKU [JP-TODO]'
+  - key: STAMINA_REGION_KANTO
+    english: KANTO
+    japanese: 'KANTO [JP-TODO]'
+  - key: STAMINA_REGION_CHUBU
+    english: CHUBU
+    japanese: 'CHUBU [JP-TODO]'
+  - key: STAMINA_REGION_KANSAI
+    english: KANSAI
+    japanese: 'KANSAI [JP-TODO]'
+  - key: STAMINA_REGION_CHUGOKU
+    english: CHUGOKU
+    japanese: 'CHUGOKU [JP-TODO]'
+  - key: STAMINA_REGION_SHIKOKU
+    english: SHIKOKU
+    japanese: 'SHIKOKU [JP-TODO]'
+  - key: STAMINA_REGION_KYUSHU
+    english: KYUSHU
+    japanese: 'KYUSHU [JP-TODO]'
+  - key: STAMINA_PREF_ALL
+    english: ALL
+    japanese: 'ALL [JP-TODO]'
+  - key: STAMINA_PREF_MIE
+    english: MIE
+    japanese: 'MIE [JP-TODO]'
+  - key: STAMINA_PREF_SHIGA
+    english: SHIGA
+    japanese: 'SHIGA [JP-TODO]'
+  - key: STAMINA_PREF_KYOTO
+    english: KYOTO
+    japanese: 'KYOTO [JP-TODO]'
+  - key: STAMINA_PREF_OSAKA
+    english: OSAKA
+    japanese: 'OSAKA [JP-TODO]'
+  - key: STAMINA_PREF_HYOGO
+    english: HYOGO
+    japanese: 'HYOGO [JP-TODO]'
+  - key: STAMINA_PREF_NARA
+    english: NARA
+    japanese: 'NARA [JP-TODO]'
+  - key: STAMINA_PREF_WAKAYAMA
+    english: WAKAYAMA
+    japanese: 'WAKAYAMA [JP-TODO]'

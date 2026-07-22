@@ -118,9 +118,69 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 801199882529505357}
     m_Modifications:
+    - target: {fileID: 960550639710591794, guid: eddfa4f4aa44a40dcbf71827529a4357, type: 3}
+      propertyPath: m_fontColor32.rgba
+      value: 4283287546
+      objectReference: {fileID: 0}
+    - target: {fileID: 960550639710591794, guid: eddfa4f4aa44a40dcbf71827529a4357, type: 3}
+      propertyPath: m_TextStyleHashCode
+      value: -1183493901
+      objectReference: {fileID: 0}
+    - target: {fileID: 1941269661699924286, guid: eddfa4f4aa44a40dcbf71827529a4357, type: 3}
+      propertyPath: m_AnchorMax.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1941269661699924286, guid: eddfa4f4aa44a40dcbf71827529a4357, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1941269661699924286, guid: eddfa4f4aa44a40dcbf71827529a4357, type: 3}
+      propertyPath: m_AnchorMin.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1941269661699924286, guid: eddfa4f4aa44a40dcbf71827529a4357, type: 3}
+      propertyPath: m_AnchorMin.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1941269661699924286, guid: eddfa4f4aa44a40dcbf71827529a4357, type: 3}
+      propertyPath: m_SizeDelta.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1941269661699924286, guid: eddfa4f4aa44a40dcbf71827529a4357, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2875007282921138057, guid: eddfa4f4aa44a40dcbf71827529a4357, type: 3}
+      propertyPath: m_SizeDelta.x
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 4093194146659657759, guid: eddfa4f4aa44a40dcbf71827529a4357, type: 3}
       propertyPath: m_Name
       value: StaminaShopMenuPanel
+      objectReference: {fileID: 0}
+    - target: {fileID: 5141799607908608142, guid: eddfa4f4aa44a40dcbf71827529a4357, type: 3}
+      propertyPath: m_AnchorMax.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5141799607908608142, guid: eddfa4f4aa44a40dcbf71827529a4357, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5141799607908608142, guid: eddfa4f4aa44a40dcbf71827529a4357, type: 3}
+      propertyPath: m_AnchorMin.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5141799607908608142, guid: eddfa4f4aa44a40dcbf71827529a4357, type: 3}
+      propertyPath: m_AnchorMin.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5141799607908608142, guid: eddfa4f4aa44a40dcbf71827529a4357, type: 3}
+      propertyPath: m_SizeDelta.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5141799607908608142, guid: eddfa4f4aa44a40dcbf71827529a4357, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 7494962188015159678, guid: eddfa4f4aa44a40dcbf71827529a4357, type: 3}
       propertyPath: m_Pivot.x
@@ -202,6 +262,18 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 7678193524776227885, guid: eddfa4f4aa44a40dcbf71827529a4357, type: 3}
+      propertyPath: m_TextStyleHashCode
+      value: -1183493901
+      objectReference: {fileID: 0}
+    - target: {fileID: 9040554570256225173, guid: eddfa4f4aa44a40dcbf71827529a4357, type: 3}
+      propertyPath: m_fontColor32.rgba
+      value: 4282067230
+      objectReference: {fileID: 0}
+    - target: {fileID: 9040554570256225173, guid: eddfa4f4aa44a40dcbf71827529a4357, type: 3}
+      propertyPath: m_TextStyleHashCode
+      value: -1183493901
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -247,9 +319,53 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 801199882529505357}
     m_Modifications:
+    - target: {fileID: 861559732171582982, guid: 0b82616efc617465c9a95dbccfd5517a, type: 3}
+      propertyPath: m_fontColor32.rgba
+      value: 4293646023
+      objectReference: {fileID: 0}
+    - target: {fileID: 861559732171582982, guid: 0b82616efc617465c9a95dbccfd5517a, type: 3}
+      propertyPath: m_TextStyleHashCode
+      value: -1183493901
+      objectReference: {fileID: 0}
+    - target: {fileID: 2683464575307966102, guid: 0b82616efc617465c9a95dbccfd5517a, type: 3}
+      propertyPath: m_TextStyleHashCode
+      value: -1183493901
+      objectReference: {fileID: 0}
     - target: {fileID: 2727390317838238212, guid: 0b82616efc617465c9a95dbccfd5517a, type: 3}
       propertyPath: m_Name
       value: StaminaShopInfoCard
+      objectReference: {fileID: 0}
+    - target: {fileID: 5262708865665800740, guid: 0b82616efc617465c9a95dbccfd5517a, type: 3}
+      propertyPath: m_TextStyleHashCode
+      value: -1183493901
+      objectReference: {fileID: 0}
+    - target: {fileID: 5862027016122235874, guid: 0b82616efc617465c9a95dbccfd5517a, type: 3}
+      propertyPath: m_TextStyleHashCode
+      value: -1183493901
+      objectReference: {fileID: 0}
+    - target: {fileID: 6368157356630521419, guid: 0b82616efc617465c9a95dbccfd5517a, type: 3}
+      propertyPath: m_fontColor32.rgba
+      value: 4293646023
+      objectReference: {fileID: 0}
+    - target: {fileID: 6368157356630521419, guid: 0b82616efc617465c9a95dbccfd5517a, type: 3}
+      propertyPath: m_TextStyleHashCode
+      value: -1183493901
+      objectReference: {fileID: 0}
+    - target: {fileID: 6783332583839496860, guid: 0b82616efc617465c9a95dbccfd5517a, type: 3}
+      propertyPath: m_TextStyleHashCode
+      value: -1183493901
+      objectReference: {fileID: 0}
+    - target: {fileID: 7512186327594496308, guid: 0b82616efc617465c9a95dbccfd5517a, type: 3}
+      propertyPath: m_TextStyleHashCode
+      value: -1183493901
+      objectReference: {fileID: 0}
+    - target: {fileID: 8452258384937348754, guid: 0b82616efc617465c9a95dbccfd5517a, type: 3}
+      propertyPath: m_TextStyleHashCode
+      value: -1183493901
+      objectReference: {fileID: 0}
+    - target: {fileID: 8576933651074555845, guid: 0b82616efc617465c9a95dbccfd5517a, type: 3}
+      propertyPath: m_fontColor32.rgba
+      value: 4294955404
       objectReference: {fileID: 0}
     - target: {fileID: 8856590244132256404, guid: 0b82616efc617465c9a95dbccfd5517a, type: 3}
       propertyPath: m_Pivot.x
@@ -415,6 +531,22 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 801199882529505357}
     m_Modifications:
+    - target: {fileID: 2706972179159919466, guid: 214cb78db28f440fe91fb4a50e6538fb, type: 3}
+      propertyPath: m_TextStyleHashCode
+      value: -1183493901
+      objectReference: {fileID: 0}
+    - target: {fileID: 2724026237882592539, guid: 214cb78db28f440fe91fb4a50e6538fb, type: 3}
+      propertyPath: m_fontColor32.rgba
+      value: 4076856793
+      objectReference: {fileID: 0}
+    - target: {fileID: 2724026237882592539, guid: 214cb78db28f440fe91fb4a50e6538fb, type: 3}
+      propertyPath: m_TextStyleHashCode
+      value: -1183493901
+      objectReference: {fileID: 0}
+    - target: {fileID: 5354305066184126084, guid: 214cb78db28f440fe91fb4a50e6538fb, type: 3}
+      propertyPath: m_TextStyleHashCode
+      value: -1183493901
+      objectReference: {fileID: 0}
     - target: {fileID: 5476674920624188821, guid: 214cb78db28f440fe91fb4a50e6538fb, type: 3}
       propertyPath: m_AnchorMax.x
       value: 0
@@ -510,6 +642,10 @@ PrefabInstance:
     - target: {fileID: 7008576946044680701, guid: 214cb78db28f440fe91fb4a50e6538fb, type: 3}
       propertyPath: m_Name
       value: StaminaShopHeroCard
+      objectReference: {fileID: 0}
+    - target: {fileID: 9074840330914049954, guid: 214cb78db28f440fe91fb4a50e6538fb, type: 3}
+      propertyPath: m_fontColor32.rgba
+      value: 4281342474
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

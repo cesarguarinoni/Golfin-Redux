@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 1902833494020094359}
   - component: {fileID: 4049943993065830314}
   - component: {fileID: 8151002869897950873}
+  - component: {fileID: 995449412795322451}
   m_Layer: 0
   m_Name: Seg_WAKAYAMA
   m_TagString: Untagged
@@ -137,6 +138,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &995449412795322451
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 131316234422482496}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: STAMINA_PREF_WAKAYAMA
 --- !u!1 &329535503401310398
 GameObject:
   m_ObjectHideFlags: 0
@@ -223,6 +237,7 @@ GameObject:
   - component: {fileID: 5678627628483227551}
   - component: {fileID: 2923003606353020787}
   - component: {fileID: 3162203777303752608}
+  - component: {fileID: 4027225179966080696}
   m_Layer: 0
   m_Name: Seg_NARA
   m_TagString: Untagged
@@ -349,6 +364,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &4027225179966080696
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1098042223811917890}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: STAMINA_PREF_NARA
 --- !u!1 &1135195061340729176
 GameObject:
   m_ObjectHideFlags: 0
@@ -360,6 +388,7 @@ GameObject:
   - component: {fileID: 1109395680571651784}
   - component: {fileID: 6393623779995485587}
   - component: {fileID: 6896199614913147147}
+  - component: {fileID: 4519484998007726710}
   m_Layer: 0
   m_Name: Seg_KYOTO
   m_TagString: Untagged
@@ -486,6 +515,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &4519484998007726710
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1135195061340729176}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: STAMINA_PREF_KYOTO
 --- !u!1 &1555722187920639727
 GameObject:
   m_ObjectHideFlags: 0
@@ -497,6 +539,7 @@ GameObject:
   - component: {fileID: 3575267445166015170}
   - component: {fileID: 6039867689301613634}
   - component: {fileID: 8204332486475128198}
+  - component: {fileID: 8580493820713180876}
   m_Layer: 0
   m_Name: Seg_OSAKA
   m_TagString: Untagged
@@ -623,6 +666,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &8580493820713180876
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1555722187920639727}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: STAMINA_PREF_OSAKA
 --- !u!1 &1591267877219270008
 GameObject:
   m_ObjectHideFlags: 0
@@ -709,6 +765,7 @@ GameObject:
   - component: {fileID: 4913964170953157289}
   - component: {fileID: 5715327001050236392}
   - component: {fileID: 1402260475221088540}
+  - component: {fileID: 7796090279134481473}
   m_Layer: 0
   m_Name: Seg_SHIGA
   m_TagString: Untagged
@@ -835,6 +892,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &7796090279134481473
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4360747092796202126}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: STAMINA_PREF_SHIGA
 --- !u!1 &5536791097468478059
 GameObject:
   m_ObjectHideFlags: 0
@@ -996,6 +1066,7 @@ GameObject:
   - component: {fileID: 4041708831654446521}
   - component: {fileID: 6324397664143182039}
   - component: {fileID: 6719909995109340117}
+  - component: {fileID: 6391725953783793425}
   m_Layer: 0
   m_Name: Seg_HYOGO
   m_TagString: Untagged
@@ -1122,6 +1193,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &6391725953783793425
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5635315061024776863}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: STAMINA_PREF_HYOGO
 --- !u!1 &5754510697367824840
 GameObject:
   m_ObjectHideFlags: 0
@@ -1298,6 +1382,7 @@ GameObject:
   - component: {fileID: 3645229337216413124}
   - component: {fileID: 800389769360839742}
   - component: {fileID: 3291415807990976129}
+  - component: {fileID: 5484192263303542960}
   m_Layer: 0
   m_Name: Seg_MIE
   m_TagString: Untagged
@@ -1424,6 +1509,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &5484192263303542960
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6174712831501992743}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: STAMINA_PREF_MIE
 --- !u!1 &7119347254757579527
 GameObject:
   m_ObjectHideFlags: 0
@@ -1435,6 +1533,7 @@ GameObject:
   - component: {fileID: 4753767520417546005}
   - component: {fileID: 361976538457783930}
   - component: {fileID: 7494209556911104928}
+  - component: {fileID: 1201696086340682195}
   m_Layer: 0
   m_Name: Seg_ALL
   m_TagString: Untagged
@@ -1561,6 +1660,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &1201696086340682195
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7119347254757579527}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: STAMINA_PREF_ALL
 --- !u!1 &8748285817275144152
 GameObject:
   m_ObjectHideFlags: 0

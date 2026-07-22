@@ -165,7 +165,7 @@ namespace GolfinRedux.UI.Shop
                 _hoursValueLabel.text = string.Format("{0} – {1}", shop.HoursOpen, shop.HoursClose);
             if (_hoursNoteLabel    != null) _hoursNoteLabel.text    = shop.HoursNote;
             if (_signatureNameLabel!= null) _signatureNameLabel.text= shop.SignatureName;
-            if (_signatureNoteLabel!= null) _signatureNoteLabel.text= "House special";
+            if (_signatureNoteLabel!= null) _signatureNoteLabel.text= LocalizationManager.Get("STAMINA_HOUSE_SPECIAL");
         }
 
         private void BindMenu(ShopModel shop)

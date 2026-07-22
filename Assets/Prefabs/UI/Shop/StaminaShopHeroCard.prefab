@@ -342,6 +342,7 @@ GameObject:
   - component: {fileID: 2808805966177312223}
   - component: {fileID: 1446080041834977444}
   - component: {fileID: 1963890498748339026}
+  - component: {fileID: 289349696845005695}
   m_Layer: 0
   m_Name: Label
   m_TagString: Untagged
@@ -468,6 +469,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &289349696845005695
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2744483858770914344}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: STAMINA_OPEN_NOW
 --- !u!1 &5091249139253687347
 GameObject:
   m_ObjectHideFlags: 0
@@ -1138,6 +1152,7 @@ GameObject:
   - component: {fileID: 4580811622805996037}
   - component: {fileID: 1217068446696654780}
   - component: {fileID: 9074840330914049954}
+  - component: {fileID: 3025068100217452179}
   m_Layer: 0
   m_Name: Label
   m_TagString: Untagged
@@ -1264,6 +1279,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &3025068100217452179
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8713913359198409678}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: STAMINA_FEATURED
 --- !u!1 &8867844060533244636
 GameObject:
   m_ObjectHideFlags: 0

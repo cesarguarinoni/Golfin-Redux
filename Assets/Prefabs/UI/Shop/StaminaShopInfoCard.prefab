@@ -223,6 +223,7 @@ GameObject:
   - component: {fileID: 4264030813621918759}
   - component: {fileID: 5249472075419600881}
   - component: {fileID: 8452258384937348754}
+  - component: {fileID: 1823167696882079294}
   m_Layer: 0
   m_Name: LocHeader
   m_TagString: Untagged
@@ -349,6 +350,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &1823167696882079294
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1848325705314135806}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: STAMINA_LOCATION
 --- !u!1 &2208526433498273661
 GameObject:
   m_ObjectHideFlags: 0
@@ -933,6 +947,7 @@ GameObject:
   - component: {fileID: 3292991994292307926}
   - component: {fileID: 7630715717587662122}
   - component: {fileID: 2683464575307966102}
+  - component: {fileID: 6494302503560554155}
   m_Layer: 0
   m_Name: SigHeader
   m_TagString: Untagged
@@ -1059,6 +1074,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &6494302503560554155
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5005736586757912068}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: STAMINA_SIGNATURE
 --- !u!1 &6254256433955943802
 GameObject:
   m_ObjectHideFlags: 0
@@ -1207,6 +1235,7 @@ GameObject:
   - component: {fileID: 6628237623586351466}
   - component: {fileID: 3436488029827317415}
   - component: {fileID: 6783332583839496860}
+  - component: {fileID: 729599042456610424}
   m_Layer: 0
   m_Name: HrsHeader
   m_TagString: Untagged
@@ -1333,6 +1362,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &729599042456610424
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7601757312343389760}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: STAMINA_HOURS
 --- !u!1 &7846359582233773165
 GameObject:
   m_ObjectHideFlags: 0

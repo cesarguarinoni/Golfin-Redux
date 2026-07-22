@@ -842,6 +842,7 @@ GameObject:
   - component: {fileID: 1899399478851942827}
   - component: {fileID: 7614300949580442265}
   - component: {fileID: 7647401693638967004}
+  - component: {fileID: 1602747005243249237}
   m_Layer: 0
   m_Name: Label
   m_TagString: Untagged
@@ -968,6 +969,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &1602747005243249237
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1862489863147448849}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: STAMINA_FEATURED
 --- !u!1 &2373677676035652391
 GameObject:
   m_ObjectHideFlags: 0
@@ -2186,6 +2200,7 @@ GameObject:
   - component: {fileID: 2115340155143179991}
   - component: {fileID: 4234389080063600085}
   - component: {fileID: 4139176089171407926}
+  - component: {fileID: 7046086555175102518}
   m_Layer: 0
   m_Name: MapsLink
   m_TagString: Untagged
@@ -2312,6 +2327,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &7046086555175102518
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7665625168009817964}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: STAMINA_VIEW_ON_MAPS
 --- !u!1 &7958461590187395592
 GameObject:
   m_ObjectHideFlags: 0

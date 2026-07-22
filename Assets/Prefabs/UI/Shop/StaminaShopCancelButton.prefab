@@ -147,6 +147,7 @@ GameObject:
   - component: {fileID: 1566809836118564225}
   - component: {fileID: 965263051957976826}
   - component: {fileID: 5220482862547676763}
+  - component: {fileID: 6530597755986982712}
   m_Layer: 0
   m_Name: Label
   m_TagString: Untagged
@@ -273,3 +274,16 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &6530597755986982712
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8303462946113976064}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: MODAL_CANCEL
