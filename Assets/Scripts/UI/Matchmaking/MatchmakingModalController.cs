@@ -210,7 +210,7 @@ namespace Golfin.UI.Matchmaking
 
             // 4. Player username + rank (placeholder)
             if (playerUsernameText != null)
-                playerUsernameText.text = "You";
+                playerUsernameText.text = LocalizationManager.Get("MATCH_YOU");
 
             if (playerRankText != null)
                 playerRankText.text = $"RANK: #{Random.Range(fakeRankRange.x, fakeRankRange.y + 1)}";
@@ -391,7 +391,7 @@ namespace Golfin.UI.Matchmaking
                         case 2:  suffix = ".." + INV;       break;
                         default: suffix = "...";            break;
                     }
-                    statusText.text = statusSearchingText + suffix;
+                    statusText.text = LocalizationManager.Get("MATCH_FINDING_OPPONENT") + suffix;
                 }
                 yield return new WaitForSeconds(dotCycleIntervalSeconds);
             }

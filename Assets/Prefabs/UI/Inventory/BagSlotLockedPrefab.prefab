@@ -423,4 +423,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
-  key: BAG_LOCKED
+  key: UI_LOCKED

@@ -154,7 +154,7 @@ namespace Golfin.UI.Matchmaking
             BindOpponentCard(opponentPlayer);
 
             // ── Username ──────────────────────────────────────────────────────
-            if (_leftUsernameText  != null) _leftUsernameText.text  = "You";
+            if (_leftUsernameText  != null) _leftUsernameText.text  = LocalizationManager.Get("MATCH_YOU");
             if (_rightUsernameText != null) _rightUsernameText.text = string.IsNullOrEmpty(opponentPlayer.DisplayName)
                                                                        ? "OPPONENT"
                                                                        : opponentPlayer.DisplayName;
@@ -342,12 +342,12 @@ namespace Golfin.UI.Matchmaking
         {
             if (_leftOutcomeLabel != null)
             {
-                _leftOutcomeLabel.text  = leftWon ? WinnerLabel : LoserLabel;
+                _leftOutcomeLabel.text  = leftWon ? LocalizationManager.Get("RESULT_WINNER") : LocalizationManager.Get("RESULT_LOSER");
                 _leftOutcomeLabel.color = leftWon ? WinnerColor : LoserColor;
             }
             if (_rightOutcomeLabel != null)
             {
-                _rightOutcomeLabel.text  = leftWon ? LoserLabel : WinnerLabel;
+                _rightOutcomeLabel.text  = leftWon ? LocalizationManager.Get("RESULT_LOSER") : LocalizationManager.Get("RESULT_WINNER");
                 _rightOutcomeLabel.color = leftWon ? LoserColor : WinnerColor;
             }
 
@@ -378,12 +378,12 @@ namespace Golfin.UI.Matchmaking
             {
                 if (_leftOutcomeLabel != null)
                 {
-                    _leftOutcomeLabel.text  = leftWon ? WinnerLabel : LoserLabel;
+                    _leftOutcomeLabel.text  = leftWon ? LocalizationManager.Get("RESULT_WINNER") : LocalizationManager.Get("RESULT_LOSER");
                     _leftOutcomeLabel.color = leftWon ? WinnerColor : LoserColor;
                 }
                 if (_rightOutcomeLabel != null)
                 {
-                    _rightOutcomeLabel.text  = leftWon ? LoserLabel : WinnerLabel;
+                    _rightOutcomeLabel.text  = leftWon ? LocalizationManager.Get("RESULT_LOSER") : LocalizationManager.Get("RESULT_WINNER");
                     _rightOutcomeLabel.color = leftWon ? LoserColor : WinnerColor;
                 }
             }
@@ -391,8 +391,8 @@ namespace Golfin.UI.Matchmaking
 
         private void SetSampleText()
         {
-            if (_leftUsernameText  != null) _leftUsernameText.text  = SampleLeftUsername;
-            if (_rightUsernameText != null) _rightUsernameText.text = SampleRightUsername;
+            if (_leftUsernameText  != null) _leftUsernameText.text  = LocalizationManager.Get("HOME_USERNAME");
+            if (_rightUsernameText != null) _rightUsernameText.text = LocalizationManager.Get("HOME_USERNAME");
             // Rank text is set in SetOutcomeLabels() with per-state rich-text color split (Fix #5)
             if (_holeInfoText      != null) _holeInfoText.text      = SampleHoleInfo;
             if (_reward1Amount     != null) _reward1Amount.text     = SampleReward1;

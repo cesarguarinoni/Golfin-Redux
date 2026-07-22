@@ -286,8 +286,15 @@ namespace GolfinRedux.UI.ModeSelect
 
         private void SetTitleText(string title)
         {
-            if (titleText != null)         titleText.text         = title;
-            if (titleTextExpanded != null) titleTextExpanded.text = title;
+            // Localize known mode titles (batch 3 — localize_hole_results).
+            // Key convention: "MODE_" + title uppercased with spaces→underscores.
+            // Get() returns the key itself when not found; fall back to raw title in that case.
+            string key = "MODE_" + title.ToUpper().Replace(" ", "_");
+            string display = LocalizationManager.Get(key);
+            if (string.Equals(display, key, System.StringComparison.Ordinal)) display = title;
+
+            if (titleText != null)         titleText.text         = display;
+            if (titleTextExpanded != null) titleTextExpanded.text = display;
         }
 
         /// <summary>Switch visual state. Animates height. Updates all visuals.</summary>

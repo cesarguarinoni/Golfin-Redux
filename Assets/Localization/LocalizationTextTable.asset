@@ -797,3 +797,60 @@ MonoBehaviour:
   - key: CLUB_DIST
     english: DIST
     japanese: 'DIST [JP-TODO]'
+  - key: RESULT_SUCCESS
+    english: SUCCESS
+    japanese: 'SUCCESS [JP-TODO]'
+  - key: RESULT_FAILED
+    english: FAILED
+    japanese: 'FAILED [JP-TODO]'
+  - key: RESULT_NEXT
+    english: NEXT
+    japanese: 'NEXT [JP-TODO]'
+  - key: RESULT_REPLAY
+    english: REPLAY
+    japanese: 'REPLAY [JP-TODO]'
+  - key: RESULT_RETRY
+    english: RETRY
+    japanese: 'RETRY [JP-TODO]'
+  - key: RESULT_RESULTS
+    english: RESULTS
+    japanese: 'RESULTS [JP-TODO]'
+  - key: RESULT_WINNER
+    english: WINNER
+    japanese: 'WINNER [JP-TODO]'
+  - key: RESULT_LOSER
+    english: LOSER
+    japanese: 'LOSER [JP-TODO]'
+  - key: RESULT_NEW_MATCH
+    english: NEW MATCH
+    japanese: 'NEW MATCH [JP-TODO]'
+  - key: MATCH_VS
+    english: Vs.
+    japanese: 'Vs. [JP-TODO]'
+  - key: MATCH_HOLE
+    english: HOLE
+    japanese: 'HOLE [JP-TODO]'
+  - key: MATCH_FINDING_OPPONENT
+    english: FINDING OPPONENT
+    japanese: 'FINDING OPPONENT [JP-TODO]'
+  - key: MATCH_DIAMOND_LEAGUE
+    english: DIAMOND LEAGE
+    japanese: 'DIAMOND LEAGE [JP-TODO]'
+  - key: MATCH_YOU
+    english: You
+    japanese: 'You [JP-TODO]'
+  - key: MODE_ENTRY_FEE
+    english: ENTRY FEE
+    japanese: 'ENTRY FEE [JP-TODO]'
+  - key: MODE_REWARDS
+    english: REWARDS
+    japanese: 'REWARDS [JP-TODO]'
+  - key: MODE_PRACTICE
+    english: PRACTICE
+    japanese: 'PRACTICE [JP-TODO]'
+  - key: UI_LOCKED
+    english: LOCKED
+    japanese: 'LOCKED [JP-TODO]'
+  - key: RESULT_REPLAY_HOLE
+    english: REPLAY HOLE
+    japanese: 'REPLAY HOLE [JP-TODO]'

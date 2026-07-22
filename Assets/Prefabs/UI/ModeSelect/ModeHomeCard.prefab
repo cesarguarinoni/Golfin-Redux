@@ -1082,6 +1082,7 @@ GameObject:
   - component: {fileID: 5808352730114497222}
   - component: {fileID: 442457059935892800}
   - component: {fileID: 438913877425786102}
+  - component: {fileID: 707296925786242860}
   m_Layer: 5
   m_Name: PlayLabel
   m_TagString: Untagged
@@ -1208,6 +1209,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &707296925786242860
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3220726093615752824}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: BTN_START
 --- !u!1 &3471567377048956374
 GameObject:
   m_ObjectHideFlags: 0
@@ -2004,6 +2018,7 @@ GameObject:
   - component: {fileID: 813009569678469639}
   - component: {fileID: 821738627439544515}
   - component: {fileID: 4818646223603380987}
+  - component: {fileID: 1144671896630585472}
   m_Layer: 5
   m_Name: RewardsLabel
   m_TagString: Untagged
@@ -2150,6 +2165,19 @@ MonoBehaviour:
   m_FlexibleWidth: -1
   m_FlexibleHeight: -1
   m_LayoutPriority: 1
+--- !u!114 &1144671896630585472
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4539288440483025354}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: MODE_REWARDS
 --- !u!1 &4748212504006894256
 GameObject:
   m_ObjectHideFlags: 0
@@ -2258,6 +2286,7 @@ GameObject:
   - component: {fileID: 253144246880376225}
   - component: {fileID: 6585940307578281615}
   - component: {fileID: 8714916505549609153}
+  - component: {fileID: 3006983692446636023}
   m_Layer: 5
   m_Name: EntryFeeLabel
   m_TagString: Untagged
@@ -2404,6 +2433,19 @@ MonoBehaviour:
   m_FlexibleWidth: -1
   m_FlexibleHeight: -1
   m_LayoutPriority: 1
+--- !u!114 &3006983692446636023
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4892733862133979417}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: MODE_ENTRY_FEE
 --- !u!1 &5172879005288124262
 GameObject:
   m_ObjectHideFlags: 0

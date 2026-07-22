@@ -223,6 +223,7 @@ GameObject:
   - component: {fileID: 924114377468685303}
   - component: {fileID: 5372566866556771931}
   - component: {fileID: 650878770307949966}
+  - component: {fileID: 1740816628671072813}
   m_Layer: 0
   m_Name: Label
   m_TagString: Untagged
@@ -349,6 +350,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &1740816628671072813
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 734666912662700043}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: MATCH_DIAMOND_LEAGUE
 --- !u!1 &986848983557924206
 GameObject:
   m_ObjectHideFlags: 0
@@ -1775,6 +1789,7 @@ GameObject:
   - component: {fileID: 2244168223422108736}
   - component: {fileID: 8351016862280013335}
   - component: {fileID: 971466458098166563}
+  - component: {fileID: 4915466823094512419}
   m_Layer: 0
   m_Name: HoleTitle
   m_TagString: Untagged
@@ -1901,6 +1916,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &4915466823094512419
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5159758768377737260}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: MATCH_HOLE
 --- !u!1 &5216149864858511520
 GameObject:
   m_ObjectHideFlags: 0
@@ -2210,7 +2238,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 0, g: 0, b: 0, a: 0.5019608}
@@ -2362,6 +2390,7 @@ GameObject:
   - component: {fileID: 5670537279819571033}
   - component: {fileID: 513795195363715386}
   - component: {fileID: 5393393514569603910}
+  - component: {fileID: 3385151011235698232}
   m_Layer: 0
   m_Name: Text
   m_TagString: Untagged
@@ -2488,6 +2517,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &3385151011235698232
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7375507210671355827}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: MODAL_CANCEL
 --- !u!1 &7786930622416573825
 GameObject:
   m_ObjectHideFlags: 0
@@ -3268,6 +3310,7 @@ GameObject:
   - component: {fileID: 3604527261018888459}
   - component: {fileID: 5882672902763469049}
   - component: {fileID: 5170923612429119506}
+  - component: {fileID: 7803108198892846505}
   m_Layer: 0
   m_Name: UserLabel
   m_TagString: Untagged
@@ -3394,6 +3437,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &7803108198892846505
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8934383221561710747}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: MATCH_VS
 --- !u!1 &9046803389399772183
 GameObject:
   m_ObjectHideFlags: 0

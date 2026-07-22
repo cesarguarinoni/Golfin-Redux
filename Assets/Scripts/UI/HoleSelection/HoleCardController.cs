@@ -135,9 +135,9 @@ namespace GolfinRedux.UI.HoleSelection
             // Both Title (collapsed) and TitleExp (expanded) get the same string.
             string titleStr;
             bool titleSilver;
-            if (state == HoleCardState.Locked)        { titleStr = "LOCKED";      titleSilver = true;  }
-            else if (mode == HoleCardMode.Replay)     { titleStr = "REPLAY HOLE"; titleSilver = true;  }
-            else                                       { titleStr = "NEXT";        titleSilver = false; }
+            if (state == HoleCardState.Locked)        { titleStr = LocalizationManager.Get("UI_LOCKED");            titleSilver = true;  }
+            else if (mode == HoleCardMode.Replay)     { titleStr = LocalizationManager.Get("RESULT_REPLAY_HOLE");   titleSilver = true;  }
+            else                                       { titleStr = LocalizationManager.Get("RESULT_NEXT");         titleSilver = false; }
 
             ApplyTitle(titleTextCollapsed, titleStr, titleSilver);
             ApplyTitle(titleTextExpanded,  titleStr, titleSilver);
@@ -180,12 +180,12 @@ namespace GolfinRedux.UI.HoleSelection
             {
                 if (mode == HoleCardMode.Replay)
                 {
-                    actionButtonLabel.text = "REPLAY";
+                    actionButtonLabel.text = LocalizationManager.Get("RESULT_REPLAY");
                     actionButtonLabel.color = new Color32(0x1E, 0x29, 0x3B, 255); // #1E293B dark navy
                 }
                 else
                 {
-                    actionButtonLabel.text = "PLAY";
+                    actionButtonLabel.text = LocalizationManager.Get("BTN_START");
                     actionButtonLabel.color = new Color32(0x32, 0x15, 0x06, 255); // #321506 dark brown
                 }
             }

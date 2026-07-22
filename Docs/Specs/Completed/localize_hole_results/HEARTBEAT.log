@@ -1,0 +1,23 @@
+
+=== iter-1 kickoff baseline 2026-07-22T00:00:00 ===
+HEAD: c90d3bd5bf8cefe896a3bf1bff4075472df0dfbe
+DIRTY (pre-existing, not this task):
+ M Assets/Art/RosterScreen/ButtonCancel.png.meta
+ M Assets/Art/Shop/Background - Blurred.png
+ M Assets/Art/SplashScreen/Green Button.png.meta
+ M Assets/Fonts/NotoSansJP-VariableFont_wght SDF.asset
+ M Assets/Plugins/NuGet/.nuget-installed.json
+ M Assets/Plugins/NuGet/McpPlugin.Common.dll
+ M Assets/Plugins/NuGet/McpPlugin.dll
+ M Assets/Plugins/NuGet/ReflectorNet.dll
+ M Packages/manifest.json
+ M Packages/packages-lock.json
+?? .mcp.json.bak-23886
+=== end baseline ===
+
+2026-07-22T00:00:01 activated — reading SPEC.md + localization infrastructure
+2026-07-22T12:35:33Z done, awaiting review
+2026-07-22T12:43:40Z === iter-2 kickoff baseline ===
+2026-07-22T12:43:40Z HEAD: c90d3bd5b
+DIRTY: .claude/review_misses.log Assets/Localization/LocalizationText.csv Assets/Localization/LocalizationTextTable.asset Assets/Prefabs/UI/HoleComplete/HoleCompleteWidget.prefab Assets/Prefabs/UI/Matchmaking/MatchMakingModal.prefab Assets/Prefabs/UI/Matchmaking/VersusResultScreen.prefab Assets/Prefabs/UI/ModeSelect/ModeCard.prefab Assets/Prefabs/UI/ModeSelect/ModeHomeCard.prefab Assets/Scripts/UI/HoleSelection/HoleCardController.cs Assets/Scripts/UI/Matchmaking/MatchmakingModalController.cs Assets/Scripts/UI/Matchmaking/VersusResultScreenController.cs Assets/Scripts/UI/ModeSelect/ModeCardController.cs Packages/manifest.json Packages/packages-lock.json
+2026-07-22T13:32:28Z done, awaiting review

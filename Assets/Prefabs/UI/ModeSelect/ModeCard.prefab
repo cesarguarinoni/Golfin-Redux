@@ -431,6 +431,7 @@ GameObject:
   - component: {fileID: 4359913204589962851}
   - component: {fileID: 5289222486453317011}
   - component: {fileID: 4832485725951486869}
+  - component: {fileID: 5154953399908277469}
   m_Layer: 0
   m_Name: EntryFeeLabel
   m_TagString: Untagged
@@ -577,6 +578,19 @@ MonoBehaviour:
   m_FlexibleWidth: 0
   m_FlexibleHeight: -1
   m_LayoutPriority: 1
+--- !u!114 &5154953399908277469
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 757976432414930082}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: MODE_ENTRY_FEE
 --- !u!1 &1301787702161750664
 GameObject:
   m_ObjectHideFlags: 0
@@ -2342,6 +2356,7 @@ GameObject:
   - component: {fileID: 1067007540169005411}
   - component: {fileID: 4129222002742110036}
   - component: {fileID: 5237747393456655156}
+  - component: {fileID: 4742973001849373087}
   m_Layer: 0
   m_Name: RewardsLabel
   m_TagString: Untagged
@@ -2488,6 +2503,19 @@ MonoBehaviour:
   m_FlexibleWidth: 0
   m_FlexibleHeight: -1
   m_LayoutPriority: 1
+--- !u!114 &4742973001849373087
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3375681500187258592}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: MODE_REWARDS
 --- !u!1 &3448166192395282832
 GameObject:
   m_ObjectHideFlags: 0
@@ -3265,6 +3293,7 @@ GameObject:
   - component: {fileID: 7735726470614089334}
   - component: {fileID: 4541138519323574578}
   - component: {fileID: 6725840384568316835}
+  - component: {fileID: 5252759670635094381}
   m_Layer: 0
   m_Name: RewardsLabel
   m_TagString: Untagged
@@ -3411,6 +3440,19 @@ MonoBehaviour:
   m_FlexibleWidth: 0
   m_FlexibleHeight: -1
   m_LayoutPriority: 1
+--- !u!114 &5252759670635094381
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4831299021450467825}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: MODE_REWARDS
 --- !u!1 &5124670344212160924
 GameObject:
   m_ObjectHideFlags: 0
@@ -4343,6 +4385,7 @@ GameObject:
   - component: {fileID: 5469579948567876431}
   - component: {fileID: 6701720523038892172}
   - component: {fileID: 175806974699526697}
+  - component: {fileID: 5551641344612746859}
   m_Layer: 0
   m_Name: EntryFeeLabel
   m_TagString: Untagged
@@ -4489,6 +4532,19 @@ MonoBehaviour:
   m_FlexibleWidth: 0
   m_FlexibleHeight: -1
   m_LayoutPriority: 1
+--- !u!114 &5551641344612746859
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6211628010261441531}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: MODE_ENTRY_FEE
 --- !u!1 &6340684182325910663
 GameObject:
   m_ObjectHideFlags: 0
@@ -5951,6 +6007,7 @@ GameObject:
   - component: {fileID: 5238296538218609076}
   - component: {fileID: 3520690491070896646}
   - component: {fileID: 9069125685380216788}
+  - component: {fileID: 328119715265845568}
   m_Layer: 0
   m_Name: Label
   m_TagString: Untagged
@@ -6077,6 +6134,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &328119715265845568
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8281206232086576561}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: BTN_START
 --- !u!1 &8382251579141895178
 GameObject:
   m_ObjectHideFlags: 0
