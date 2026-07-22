@@ -772,283 +772,283 @@ MonoBehaviour:
     japanese: "\u30ED\u30B0\u30A4\u30F3\u306B\u623B\u308B"
   - key: NAV_LEADERBOARD
     english: LEADERBOARD
-    japanese: 'LEADERBOARD [JP-TODO]'
+    japanese: "\u30EA\u30FC\u30C0\u30FC\u30DC\u30FC\u30C9"
   - key: NAV_MODE_SELECTION
     english: MODE SELECTION
-    japanese: 'MODE SELECTION [JP-TODO]'
+    japanese: "\u30E2\u30FC\u30C9\u9078\u629E"
   - key: NAV_SELECT_HOLE
     english: SELECT HOLE
-    japanese: 'SELECT HOLE [JP-TODO]'
+    japanese: "\u30DB\u30FC\u30EB\u9078\u629E"
   - key: NAV_TOURNAMENT_LEADERBOARD
     english: TOURNAMENT LEADERBOARD
-    japanese: 'TOURNAMENT LEADERBOARD [JP-TODO]'
+    japanese: "\u30C8\u30FC\u30CA\u30E1\u30F3\u30C8\u30EA\u30FC\u30C0\u30FC\u30DC\u30FC\u30C9"
   - key: NAV_TOURNAMENTS
     english: TOURNAMENTS
-    japanese: 'TOURNAMENTS [JP-TODO]'
+    japanese: "\u30C8\u30FC\u30CA\u30E1\u30F3\u30C8"
   - key: NAV_BOOST_STAMINA
     english: BOOST STAMINA
-    japanese: 'BOOST STAMINA [JP-TODO]'
+    japanese: "\u30B9\u30BF\u30DF\u30CA\u30D6\u30FC\u30B9\u30C8"
   - key: NAV_REWARDS_CENTER
     english: REWARDS CENTER
-    japanese: 'REWARDS CENTER [JP-TODO]'
+    japanese: "\u5831\u916C\u30BB\u30F3\u30BF\u30FC"
   - key: BAG_EMPTY
     english: EMPTY
-    japanese: 'EMPTY [JP-TODO]'
+    japanese: "\u7A7A\u304D"
   - key: CLUB_DIST
     english: DIST
-    japanese: 'DIST [JP-TODO]'
+    japanese: "\u98DB\u8DDD\u96E2"
   - key: RESULT_SUCCESS
     english: SUCCESS
-    japanese: 'SUCCESS [JP-TODO]'
+    japanese: "\u6210\u529F"
   - key: RESULT_FAILED
     english: FAILED
-    japanese: 'FAILED [JP-TODO]'
+    japanese: "\u5931\u6557"
   - key: RESULT_NEXT
     english: NEXT
-    japanese: 'NEXT [JP-TODO]'
+    japanese: "\u6B21\u3078"
   - key: RESULT_REPLAY
     english: REPLAY
-    japanese: 'REPLAY [JP-TODO]'
+    japanese: "\u30EA\u30D7\u30EC\u30A4"
   - key: RESULT_RETRY
     english: RETRY
-    japanese: 'RETRY [JP-TODO]'
+    japanese: "\u30EA\u30C8\u30E9\u30A4"
   - key: RESULT_RESULTS
     english: RESULTS
-    japanese: 'RESULTS [JP-TODO]'
+    japanese: "\u30EA\u30B6\u30EB\u30C8"
   - key: RESULT_WINNER
     english: WINNER
-    japanese: 'WINNER [JP-TODO]'
+    japanese: "\u52DD\u8005"
   - key: RESULT_LOSER
     english: LOSER
-    japanese: 'LOSER [JP-TODO]'
+    japanese: "\u6557\u8005"
   - key: RESULT_NEW_MATCH
     english: NEW MATCH
-    japanese: 'NEW MATCH [JP-TODO]'
+    japanese: "\u65B0\u3057\u3044\u8A66\u5408"
   - key: MATCH_VS
     english: Vs.
-    japanese: 'Vs. [JP-TODO]'
+    japanese: VS
   - key: MATCH_HOLE
     english: HOLE
-    japanese: 'HOLE [JP-TODO]'
+    japanese: "\u30DB\u30FC\u30EB"
   - key: MATCH_FINDING_OPPONENT
     english: FINDING OPPONENT
-    japanese: 'FINDING OPPONENT [JP-TODO]'
+    japanese: "\u5BFE\u6226\u76F8\u624B\u3092\u691C\u7D22\u4E2D"
   - key: MATCH_DIAMOND_LEAGUE
     english: DIAMOND LEAGE
-    japanese: 'DIAMOND LEAGE [JP-TODO]'
+    japanese: "\u30C0\u30A4\u30E4\u30E2\u30F3\u30C9\u30EA\u30FC\u30B0"
   - key: MATCH_YOU
     english: You
-    japanese: 'You [JP-TODO]'
+    japanese: "\u3042\u306A\u305F"
   - key: MODE_ENTRY_FEE
     english: ENTRY FEE
-    japanese: 'ENTRY FEE [JP-TODO]'
+    japanese: "\u53C2\u52A0\u8CBB"
   - key: MODE_REWARDS
     english: REWARDS
-    japanese: 'REWARDS [JP-TODO]'
+    japanese: "\u5831\u916C"
   - key: MODE_PRACTICE
     english: PRACTICE
-    japanese: 'PRACTICE [JP-TODO]'
+    japanese: "\u7DF4\u7FD2"
   - key: UI_LOCKED
     english: LOCKED
-    japanese: 'LOCKED [JP-TODO]'
+    japanese: "\u30ED\u30C3\u30AF"
   - key: RESULT_REPLAY_HOLE
     english: REPLAY HOLE
-    japanese: 'REPLAY HOLE [JP-TODO]'
+    japanese: "\u30DB\u30FC\u30EB\u3092\u30EA\u30D7\u30EC\u30A4"
   - key: RANK_DAILY
     english: DAILY
-    japanese: 'DAILY [JP-TODO]'
+    japanese: "\u30C7\u30A4\u30EA\u30FC"
   - key: RANK_WEEKLY
     english: WEEKLY
-    japanese: 'WEEKLY [JP-TODO]'
+    japanese: "\u30A6\u30A3\u30FC\u30AF\u30EA\u30FC"
   - key: RANK_MONTHLY
     english: MONTHLY
-    japanese: 'MONTHLY [JP-TODO]'
+    japanese: "\u30DE\u30F3\u30B9\u30EA\u30FC"
   - key: RANK_HISTORY
     english: HISTORY
-    japanese: 'HISTORY [JP-TODO]'
+    japanese: "\u5C65\u6B74"
   - key: TOURN_FILTER_ALL
     english: ALL
-    japanese: 'ALL [JP-TODO]'
+    japanese: "\u3059\u3079\u3066"
   - key: TOURN_OPEN
     english: OPEN
-    japanese: 'OPEN [JP-TODO]'
+    japanese: "\u958B\u50AC\u4E2D"
   - key: TOURN_FILTER_PLAYING
     english: PLAYING
-    japanese: 'PLAYING [JP-TODO]'
+    japanese: "\u30D7\u30EC\u30A4\u4E2D"
   - key: TOURN_FILTER_CLOSED
     english: CLOSED
-    japanese: 'CLOSED [JP-TODO]'
+    japanese: "\u7D42\u4E86"
   - key: TOURN_FINISHED
     english: FINISHED
-    japanese: 'FINISHED [JP-TODO]'
+    japanese: "\u5B8C\u4E86"
   - key: TOURN_LIVE
     english: LIVE
-    japanese: 'LIVE [JP-TODO]'
+    japanese: "\u30E9\u30A4\u30D6"
   - key: TOURN_CLAIM
     english: CLAIM
-    japanese: 'CLAIM [JP-TODO]'
+    japanese: "\u53D7\u3051\u53D6\u308B"
   - key: TOURN_ENTRY
     english: ENTRY
-    japanese: 'ENTRY [JP-TODO]'
+    japanese: "\u30A8\u30F3\u30C8\u30EA\u30FC"
   - key: TOURN_ENTERED
     english: ENTERED
-    japanese: 'ENTERED [JP-TODO]'
+    japanese: "\u53C2\u52A0\u6E08\u307F"
   - key: TOURN_FREE_ENTRY
     english: FREE ENTRY
-    japanese: 'FREE ENTRY [JP-TODO]'
+    japanese: "\u53C2\u52A0\u7121\u6599"
   - key: TOURN_GOLFIN_PRESENTS
     english: GOLFIN PRESENTS
-    japanese: 'GOLFIN PRESENTS [JP-TODO]'
+    japanese: "GOLFIN\u63D0\u4F9B"
   - key: TOURN_SPONSORED_BY
     english: SPONSORED BY
-    japanese: 'SPONSORED BY [JP-TODO]'
+    japanese: "\u30B9\u30DD\u30F3\u30B5\u30FC\uFF1A"
   - key: TOURN_EMPTY_HEADER
     english: No finishers yet
-    japanese: 'No finishers yet [JP-TODO]'
+    japanese: "\u307E\u3060\u5B8C\u8D70\u8005\u304C\u3044\u307E\u305B\u3093"
   - key: TOURN_EMPTY_BODY
     english: Be the first to complete every hole and top the board.
-    japanese: 'Be the first to complete every hole and top the board. [JP-TODO]'
+    japanese: "\u5168\u30DB\u30FC\u30EB\u3092\u5B8C\u8D70\u3057\u3066\u3001\u30E9\u30F3\u30AD\u30F3\u30B0\u306E\u30C8\u30C3\u30D7\u3092\u76EE\u6307\u3057\u307E\u3057\u3087\u3046\u3002"
   - key: TOURN_NEXT_SECTION
     english: Next
-    japanese: 'Next [JP-TODO]'
+    japanese: "\u6B21\u3078"
   - key: GACHA_TICKET
     english: TICKET
-    japanese: 'TICKET [JP-TODO]'
+    japanese: "\u30C1\u30B1\u30C3\u30C8"
   - key: GACHA_HISTORY
     english: GACHA HISTORY
-    japanese: 'GACHA HISTORY [JP-TODO]'
+    japanese: "\u30AC\u30C1\u30E3\u5C65\u6B74"
   - key: GACHA_TICKETS
     english: TICKETS
-    japanese: 'TICKETS [JP-TODO]'
+    japanese: "\u30C1\u30B1\u30C3\u30C8"
   - key: GACHA_CLUBS
     english: CLUBS
-    japanese: 'CLUBS [JP-TODO]'
+    japanese: "\u30AF\u30E9\u30D6"
   - key: GACHA_CHARACTERS
     english: CHARACTERS
-    japanese: 'CHARACTERS [JP-TODO]'
+    japanese: "\u30AD\u30E3\u30E9\u30AF\u30BF\u30FC"
   - key: GACHA_BALLS
     english: BALLS
-    japanese: 'BALLS [JP-TODO]'
+    japanese: "\u30DC\u30FC\u30EB"
   - key: GACHA_ITEMS
     english: ITEMS
-    japanese: 'ITEMS [JP-TODO]'
+    japanese: "\u30A2\u30A4\u30C6\u30E0"
   - key: GACHA_BACK
     english: BACK
-    japanese: 'BACK [JP-TODO]'
+    japanese: "\u623B\u308B"
   - key: GACHA_PITY_A_RANK
     english: Guaranteed A-rank or higher in at most
-    japanese: 'Guaranteed A-rank or higher in at most [JP-TODO]'
+    japanese: "A\u30E9\u30F3\u30AF\u4EE5\u4E0A\u78BA\u5B9A\u30FB\u6700\u5927"
   - key: GACHA_PITY_S_RANK
     english: Guaranteed S-rank signal in at most
-    japanese: 'Guaranteed S-rank signal in at most [JP-TODO]'
+    japanese: "S\u30E9\u30F3\u30AF\u78BA\u5B9A\u30FB\u6700\u5927"
   - key: GACHA_PRIZE_PREVIEW
     english: Common/Uncommon characters or clubs may also be obtained.
-    japanese: 'Common/Uncommon characters or clubs may also be obtained. [JP-TODO]'
+    japanese: "\u30B3\u30E2\u30F3\uFF0F\u30A2\u30F3\u30B3\u30E2\u30F3\u306E\u30AD\u30E3\u30E9\u30AF\u30BF\u30FC\u3084\u30AF\u30E9\u30D6\u304C\u6392\u51FA\u3055\u308C\u308B\u3053\u3068\u3082\u3042\u308A\u307E\u3059\u3002"
   - key: GACHA_PULL_X1
     english: PULL x1
-    japanese: 'PULL x1 [JP-TODO]'
+    japanese: "1\u56DE\u5F15\u304F"
   - key: GACHA_PULL_X10
     english: PULL x10
-    japanese: 'PULL x10 [JP-TODO]'
+    japanese: "10\u56DE\u5F15\u304F"
   - key: GACHA_RULES_RATES
     english: RULES & RATES
-    japanese: 'RULES & RATES [JP-TODO]'
+    japanese: "\u30EB\u30FC\u30EB\u3068\u78BA\u7387"
   - key: GACHA_BUY
     english: BUY
-    japanese: 'BUY [JP-TODO]'
+    japanese: "\u8CFC\u5165"
   - key: SHOP_TAB_GACHA
     english: GACHA
-    japanese: 'GACHA [JP-TODO]'
+    japanese: "\u30AC\u30C1\u30E3"
   - key: SHOP_TAB_STORE
     english: STORE
-    japanese: 'STORE [JP-TODO]'
+    japanese: "\u30B9\u30C8\u30A2"
   - key: SHOP_TAB_GIFTS
     english: GIFTS
-    japanese: 'GIFTS [JP-TODO]'
+    japanese: "\u30AE\u30D5\u30C8"
   - key: SHOP_FILTER_POPULAR
     english: POPULAR
-    japanese: 'POPULAR [JP-TODO]'
+    japanese: "\u4EBA\u6C17"
   - key: SHOP_FILTER_OFFERS
     english: OFFERS
-    japanese: 'OFFERS [JP-TODO]'
+    japanese: "\u30AA\u30D5\u30A1\u30FC"
   - key: STAMINA_BUY
     english: BUY
-    japanese: 'BUY [JP-TODO]'
+    japanese: "\u8CFC\u5165"
   - key: STAMINA_VIEW_ON_MAPS
     english: View on Maps
-    japanese: 'View on Maps [JP-TODO]'
+    japanese: "\u30DE\u30C3\u30D7\u3067\u898B\u308B"
   - key: STAMINA_FEATURED
     english: FEATURED
-    japanese: 'FEATURED [JP-TODO]'
+    japanese: "\u6CE8\u76EE"
   - key: STAMINA_OPEN_NOW
     english: OPEN NOW
-    japanese: 'OPEN NOW [JP-TODO]'
+    japanese: "\u55B6\u696D\u4E2D"
   - key: STAMINA_LOCATION
     english: LOCATION
-    japanese: 'LOCATION [JP-TODO]'
+    japanese: "\u6240\u5728\u5730"
   - key: STAMINA_HOURS
     english: HOURS
-    japanese: 'HOURS [JP-TODO]'
+    japanese: "\u55B6\u696D\u6642\u9593"
   - key: STAMINA_SIGNATURE
     english: SIGNATURE
-    japanese: 'SIGNATURE [JP-TODO]'
+    japanese: "\u30B7\u30B0\u30CD\u30C1\u30E3\u30FC"
   - key: STAMINA_MENU
     english: MENU
-    japanese: 'MENU [JP-TODO]'
+    japanese: "\u30E1\u30CB\u30E5\u30FC"
   - key: STAMINA_HOUSE_SPECIAL
     english: House special
-    japanese: 'House special [JP-TODO]'
+    japanese: "\u30CF\u30A6\u30B9\u30B9\u30DA\u30B7\u30E3\u30EB"
   - key: STAMINA_REGION_HOKKAIDO
     english: HOKKAIDO
-    japanese: 'HOKKAIDO [JP-TODO]'
+    japanese: "\u5317\u6D77\u9053"
   - key: STAMINA_REGION_TOHOKU
     english: TOHOKU
-    japanese: 'TOHOKU [JP-TODO]'
+    japanese: "\u6771\u5317"
   - key: STAMINA_REGION_KANTO
     english: KANTO
-    japanese: 'KANTO [JP-TODO]'
+    japanese: "\u95A2\u6771"
   - key: STAMINA_REGION_CHUBU
     english: CHUBU
-    japanese: 'CHUBU [JP-TODO]'
+    japanese: "\u4E2D\u90E8"
   - key: STAMINA_REGION_KANSAI
     english: KANSAI
-    japanese: 'KANSAI [JP-TODO]'
+    japanese: "\u95A2\u897F"
   - key: STAMINA_REGION_CHUGOKU
     english: CHUGOKU
-    japanese: 'CHUGOKU [JP-TODO]'
+    japanese: "\u4E2D\u56FD"
   - key: STAMINA_REGION_SHIKOKU
     english: SHIKOKU
-    japanese: 'SHIKOKU [JP-TODO]'
+    japanese: "\u56DB\u56FD"
   - key: STAMINA_REGION_KYUSHU
     english: KYUSHU
-    japanese: 'KYUSHU [JP-TODO]'
+    japanese: "\u4E5D\u5DDE"
   - key: STAMINA_PREF_ALL
     english: ALL
-    japanese: 'ALL [JP-TODO]'
+    japanese: "\u3059\u3079\u3066"
   - key: STAMINA_PREF_MIE
     english: MIE
-    japanese: 'MIE [JP-TODO]'
+    japanese: "\u4E09\u91CD"
   - key: STAMINA_PREF_SHIGA
     english: SHIGA
-    japanese: 'SHIGA [JP-TODO]'
+    japanese: "\u6ECB\u8CC0"
   - key: STAMINA_PREF_KYOTO
     english: KYOTO
-    japanese: 'KYOTO [JP-TODO]'
+    japanese: "\u4EAC\u90FD"
   - key: STAMINA_PREF_OSAKA
     english: OSAKA
-    japanese: 'OSAKA [JP-TODO]'
+    japanese: "\u5927\u962A"
   - key: STAMINA_PREF_HYOGO
     english: HYOGO
-    japanese: 'HYOGO [JP-TODO]'
+    japanese: "\u5175\u5EAB"
   - key: STAMINA_PREF_NARA
     english: NARA
-    japanese: 'NARA [JP-TODO]'
+    japanese: "\u5948\u826F"
   - key: STAMINA_PREF_WAKAYAMA
     english: WAKAYAMA
-    japanese: 'WAKAYAMA [JP-TODO]'
+    japanese: "\u548C\u6B4C\u5C71"
   - key: RESULT_PLAY_NEXT
     english: PLAY NEXT
-    japanese: 'PLAY NEXT [JP-TODO]'
+    japanese: "\u6B21\u3092\u30D7\u30EC\u30A4"
   - key: TOAST_COURSE_CLEARED
     english: COURSE CLEARED!
-    japanese: 'COURSE CLEARED! [JP-TODO]'
+    japanese: "\u30B3\u30FC\u30B9\u30AF\u30EA\u30A2\uFF01"
