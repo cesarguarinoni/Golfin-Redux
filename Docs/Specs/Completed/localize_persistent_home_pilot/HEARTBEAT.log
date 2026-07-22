@@ -1,0 +1,43 @@
+2026-07-22T09:22:37Z activated — localize_persistent_home_pilot
+
+=== iter-1 kickoff baseline ===
+HEAD: 1a398637a81988e4684bf8cc633a30b9f523deb6
+DIRTY (pre-existing, not this task):
+ M Assets/Art/RosterScreen/ButtonCancel.png.meta
+ M Assets/Art/Shop/Background - Blurred.png
+ M Assets/Art/SplashScreen/Green Button.png.meta
+ M Assets/Fonts/NotoSansJP-VariableFont_wght SDF.asset
+ M Assets/Plugins/NuGet/.nuget-installed.json
+ M Assets/Plugins/NuGet/McpPlugin.Common.dll
+ M Assets/Plugins/NuGet/McpPlugin.dll
+ M Assets/Plugins/NuGet/ReflectorNet.dll
+ M Packages/manifest.json
+ M Packages/packages-lock.json
+?? .mcp.json.bak-23886
+?? Docs/Specs/Active/localize_persistent_home_pilot/
+=== end baseline ===
+2026-07-22T09:49:07Z done, awaiting review
+
+=== iter-1b kickoff baseline (re-verify JP smoke after TMP fallback wired by architect) ===
+HEAD: 1a398637a81988e4684bf8cc633a30b9f523deb6
+DIRTY (task-scope: same 4 files as iter-1):
+ M Assets/Scripts/UI/PersistentUIManager.cs
+ M Assets/Localization/LocalizationText.csv
+ M Assets/Localization/LocalizationTextTable.asset
+ M Assets/Prefabs/UI/HomeScreen.prefab
+ARCHITECT CHANGE (NOT in this task's scope):
+ M Assets/TextMesh Pro/Resources/TMP Settings.asset  [NotoSansJP wired as fallback[0] — GUID 8f62f163976fae841ad23d559ebdf279]
+PRE-EXISTING (same as iter-1 baseline):
+ M Assets/Art/RosterScreen/ButtonCancel.png.meta
+ M Assets/Art/Shop/Background - Blurred.png
+ M Assets/Art/SplashScreen/Green Button.png.meta
+ M Assets/Fonts/NotoSansJP-VariableFont_wght SDF.asset
+ M Assets/Plugins/NuGet/.nuget-installed.json
+ M Assets/Plugins/NuGet/McpPlugin.Common.dll
+ M Assets/Plugins/NuGet/McpPlugin.dll
+ M Assets/Plugins/NuGet/ReflectorNet.dll
+ M Packages/manifest.json
+ M Packages/packages-lock.json
+=== end baseline ===
+2026-07-22T19:09:00 re-verification complete: 5a PASS confirmed (メンテナンス情報 visible, 次のホール text set), screenshots saved, report updated
+2026-07-22T19:09:00 done, awaiting review

@@ -770,3 +770,24 @@ MonoBehaviour:
   - key: AUTH_EMAIL_CONF_BACK
     english: Back to Login
     japanese: "\u30ED\u30B0\u30A4\u30F3\u306B\u623B\u308B"
+  - key: NAV_LEADERBOARD
+    english: LEADERBOARD
+    japanese: 'LEADERBOARD [JP-TODO]'
+  - key: NAV_MODE_SELECTION
+    english: MODE SELECTION
+    japanese: 'MODE SELECTION [JP-TODO]'
+  - key: NAV_SELECT_HOLE
+    english: SELECT HOLE
+    japanese: 'SELECT HOLE [JP-TODO]'
+  - key: NAV_TOURNAMENT_LEADERBOARD
+    english: TOURNAMENT LEADERBOARD
+    japanese: 'TOURNAMENT LEADERBOARD [JP-TODO]'
+  - key: NAV_TOURNAMENTS
+    english: TOURNAMENTS
+    japanese: 'TOURNAMENTS [JP-TODO]'
+  - key: NAV_BOOST_STAMINA
+    english: BOOST STAMINA
+    japanese: 'BOOST STAMINA [JP-TODO]'
+  - key: NAV_REWARDS_CENTER
+    english: REWARDS CENTER
+    japanese: 'REWARDS CENTER [JP-TODO]'

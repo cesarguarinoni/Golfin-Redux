@@ -68,10 +68,6 @@ MonoBehaviour:
   promoBannerText: {fileID: 0}
   gpsIcon: {fileID: 0}
   characterImage: {fileID: 6825722192094747676}
-  characterSprites:
-  - {fileID: 21300000, guid: eebe59678ae7de140a169ab20f292af9, type: 3}
-  - {fileID: 21300000, guid: a46ce137d866eb8418829ee862dd8eee, type: 3}
-  - {fileID: 21300000, guid: a30b7b13128c1c64797f087df809c5c8, type: 3}
   nextHoleTitleText: {fileID: 7910933110486902552}
   courseNameText: {fileID: 1086008858731386894}
   rewardRow1: {fileID: 2335356284258645366}
@@ -87,20 +83,10 @@ MonoBehaviour:
   repairKitIcon: {fileID: 21300000, guid: daa7c57f705cdf04f8ad1dbef6eb02a7, type: 3}
   ballIcon: {fileID: 21300000, guid: f7d5810099048784e8fbe582c498c4e8, type: 3}
   playButton: {fileID: 1492293185290353396}
-  navHomeButton: {fileID: 7537665885951869808}
-  navGachaButton: {fileID: 5246977802073880944}
-  navTeeButton: {fileID: 1227827509615908389}
-  navInventoryButton: {fileID: 4931347677979200662}
-  navCharactersButton: {fileID: 8052782767024139796}
-  navHomeIcon: {fileID: 4085881552635280415}
-  navGachaIcon: {fileID: 3090395560650003702}
-  navTeeIcon: {fileID: 6117845193711922734}
-  navInventoryIcon: {fileID: 599065185970205308}
-  navCharactersIcon: {fileID: 7147036718346604216}
-  navNormalColor: {r: 1, g: 1, b: 1, a: 1}
-  navActiveColor: {r: 0, g: 1, b: 1, a: 1}
   holeDatabase: {fileID: 0}
   currentHoleIndex: 0
+  matchmakingModal: {fileID: 0}
+  _leaderboardButton: {fileID: 0}
 --- !u!1 &100009
 GameObject:
   m_ObjectHideFlags: 0
@@ -1426,6 +1412,7 @@ GameObject:
   - component: {fileID: 7111186861387360314}
   - component: {fileID: 7779318534915226909}
   - component: {fileID: 5692405268115666803}
+  - component: {fileID: 5004516141967265801}
   m_Layer: 5
   m_Name: NewsTitleText
   m_TagString: Untagged
@@ -1552,6 +1539,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &5004516141967265801
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2088671532724511047}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: HOME_MAINTENANCE_TITLE
 --- !u!1 &2335356284258645366
 GameObject:
   m_ObjectHideFlags: 0
@@ -2940,6 +2940,7 @@ GameObject:
   - component: {fileID: 8446239521244761950}
   - component: {fileID: 492921880154678814}
   - component: {fileID: 7910933110486902552}
+  - component: {fileID: 4143184571898108813}
   m_Layer: 5
   m_Name: 'NextHoleTitleText '
   m_TagString: Untagged
@@ -3066,6 +3067,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &4143184571898108813
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5592495834984368451}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: HOME_NEXT_HOLE
 --- !u!1 &5635208575700123817
 GameObject:
   m_ObjectHideFlags: 0

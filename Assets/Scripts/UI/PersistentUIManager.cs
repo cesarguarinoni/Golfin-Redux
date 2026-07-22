@@ -386,25 +386,25 @@ namespace Golfin.UI
                         usernameText.text = _username;
                         break;
                     case GolfinRedux.UI.ScreenId.Leaderboard:
-                        usernameText.text = "LEADERBOARD";
+                        usernameText.text = LocalizationManager.Get("NAV_LEADERBOARD");
                         break;
                     case GolfinRedux.UI.ScreenId.ModeSelection:
-                        usernameText.text = "MODE SELECTION";
+                        usernameText.text = LocalizationManager.Get("NAV_MODE_SELECTION");
                         break;
                     case GolfinRedux.UI.ScreenId.TournamentHoleSelection:
-                        usernameText.text = "SELECT HOLE";
+                        usernameText.text = LocalizationManager.Get("NAV_SELECT_HOLE");
                         break;
                     case GolfinRedux.UI.ScreenId.TournamentLeaderboard:
-                        usernameText.text = "TOURNAMENT LEADERBOARD";
+                        usernameText.text = LocalizationManager.Get("NAV_TOURNAMENT_LEADERBOARD");
                         break;
                     case GolfinRedux.UI.ScreenId.TournamentSelection:
-                        usernameText.text = "TOURNAMENTS";
+                        usernameText.text = LocalizationManager.Get("NAV_TOURNAMENTS");
                         break;
                     case GolfinRedux.UI.ScreenId.StaminaShopSelection:
-                        usernameText.text = "BOOST STAMINA";
+                        usernameText.text = LocalizationManager.Get("NAV_BOOST_STAMINA");
                         break;
                     case GolfinRedux.UI.ScreenId.GeneralShop:
-                        usernameText.text = "REWARDS CENTER";
+                        usernameText.text = LocalizationManager.Get("NAV_REWARDS_CENTER");
                         break;
                     // StaminaShopDetail center text is set dynamically by StaminaShopDetailScreenController
                     // via SetUsername(shopName) after navigating.
