@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 4378440879369514150}
   - component: {fileID: 5866585256273425203}
   - component: {fileID: 7105455857306389981}
+  - component: {fileID: 6011989542344670528}
   m_Layer: 0
   m_Name: Text
   m_TagString: Untagged
@@ -137,6 +138,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &6011989542344670528
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 121190291886045721}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: STAMINA_MENU
 --- !u!1 &237132749494683817
 GameObject:
   m_ObjectHideFlags: 0
@@ -734,6 +748,7 @@ GameObject:
   - component: {fileID: 1022484336513251392}
   - component: {fileID: 4193195827165598200}
   - component: {fileID: 7863783292040623905}
+  - component: {fileID: 8816601044352998039}
   m_Layer: 0
   m_Name: Text
   m_TagString: Untagged
@@ -860,6 +875,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &8816601044352998039
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1847104565744611397}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: RESULT_RETRY
 --- !u!1 &1935558608017736178
 GameObject:
   m_ObjectHideFlags: 0
@@ -872,6 +900,7 @@ GameObject:
   - component: {fileID: 8890839079681455523}
   - component: {fileID: 7205216419123237637}
   - component: {fileID: 7637237594202755892}
+  - component: {fileID: 5145348776563910833}
   m_Layer: 0
   m_Name: Label
   m_TagString: Untagged
@@ -1012,6 +1041,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &5145348776563910833
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1935558608017736178}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: RESULT_SUCCESS
 --- !u!1 &2493335368861643751
 GameObject:
   m_ObjectHideFlags: 0
@@ -1469,6 +1511,7 @@ GameObject:
   - component: {fileID: 2266108517412596672}
   - component: {fileID: 7092147061931328932}
   - component: {fileID: 6370840191945619136}
+  - component: {fileID: 1999534337431899818}
   m_Layer: 0
   m_Name: Text
   m_TagString: Untagged
@@ -1595,6 +1638,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &1999534337431899818
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4896083997342957347}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: BTN_START
 --- !u!1 &4925567157157444671
 GameObject:
   m_ObjectHideFlags: 0
@@ -2447,22 +2503,7 @@ MonoBehaviour:
   closeButton: {fileID: 0}
   useAnimation: 1
   animationDuration: 0.2
-  _successHeaderRoot: {fileID: 3860926800872210804}
-  _failedHeaderRoot: {fileID: 6432396130695093824}
-  _subheadText: {fileID: 6322564022685492736}
-  _holeMapLarge: {fileID: 8119140766586443621}
-  _statsBlockText: {fileID: 8304740477532004392}
-  _rewardsCanvasGroup: {fileID: 4543033246504157671}
-  _rewardCoinText: {fileID: 1041788238232471480}
-  _rewardRepairText: {fileID: 8384543373007528512}
-  _rewardBallText: {fileID: 7067147378704840744}
-  _playNextButton: {fileID: 6392708343432622284}
-  _retryButton: {fileID: 2524738011089516422}
-  _menuButton: {fileID: 1171403677353201963}
-  _menuProminentSprite: {fileID: 0}
-  _menuButtonImage: {fileID: 8102229017276797742}
-  _menuProminentTextColor: {r: 1, g: 0.87, b: 0.6, a: 1}
-  _menuProminentImageColor: {r: 0.3, g: 0.24, b: 0.1, a: 1}
+  _widget: {fileID: 0}
 --- !u!1 &7041689180996471413
 GameObject:
   m_ObjectHideFlags: 0
@@ -2791,6 +2832,7 @@ GameObject:
   - component: {fileID: 4117360219719008659}
   - component: {fileID: 7730038046405852728}
   - component: {fileID: 8549540496456466547}
+  - component: {fileID: 6451265015056438428}
   m_Layer: 0
   m_Name: Text
   m_TagString: Untagged
@@ -2917,6 +2959,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &6451265015056438428
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7202008026269336820}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: RESULT_PLAY_NEXT
 --- !u!1 &7255917094336296024
 GameObject:
   m_ObjectHideFlags: 0
@@ -3210,6 +3265,7 @@ GameObject:
   - component: {fileID: 7829870041208932364}
   - component: {fileID: 3188841475465122866}
   - component: {fileID: 1793753606091858270}
+  - component: {fileID: 7097493409849333184}
   m_Layer: 0
   m_Name: Label
   m_TagString: Untagged
@@ -3350,6 +3406,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &7097493409849333184
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8078003927412085201}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: RESULT_FAILED
 --- !u!1 &8408675563667768853
 GameObject:
   m_ObjectHideFlags: 0

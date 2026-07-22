@@ -141,7 +141,7 @@ namespace Golfin.UI.Modals.Result
             if (isHole18 && _lastSuccess)
             {
                 if (ToastController.Instance != null)
-                    ToastController.Instance.Show("COURSE CLEARED!", 3f);
+                    ToastController.Instance.Show(LocalizationManager.Get("TOAST_COURSE_CLEARED"), 3f);
             }
         }
 

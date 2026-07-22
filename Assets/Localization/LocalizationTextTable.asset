@@ -1046,3 +1046,9 @@ MonoBehaviour:
   - key: STAMINA_PREF_WAKAYAMA
     english: WAKAYAMA
     japanese: 'WAKAYAMA [JP-TODO]'
+  - key: RESULT_PLAY_NEXT
+    english: PLAY NEXT
+    japanese: 'PLAY NEXT [JP-TODO]'
+  - key: TOAST_COURSE_CLEARED
+    english: COURSE CLEARED!
+    japanese: 'COURSE CLEARED! [JP-TODO]'

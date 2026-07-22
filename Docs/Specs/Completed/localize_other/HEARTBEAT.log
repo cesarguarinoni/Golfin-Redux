@@ -1,0 +1,26 @@
+2026-07-22T19:10:54Z activated
+
+=== iter-1 kickoff baseline 2026-07-22T19:11:10Z ===
+HEAD: d154679c81508992165a020256cd5d5e3e0d576a
+DIRTY:
+ M Assets/Art/RosterScreen/ButtonCancel.png.meta
+ M "Assets/Art/Shop/Background - Blurred.png"
+ M "Assets/Art/SplashScreen/Green Button.png.meta"
+ M "Assets/Fonts/NotoSansJP-VariableFont_wght SDF.asset"
+ M Assets/Plugins/NuGet/.nuget-installed.json
+ M Assets/Plugins/NuGet/McpPlugin.Common.dll
+ M Assets/Plugins/NuGet/McpPlugin.dll
+ M Assets/Plugins/NuGet/ReflectorNet.dll
+ M Packages/manifest.json
+ M Packages/packages-lock.json
+?? .mcp.json.bak-23886
+?? Docs/Specs/Active/localize_other/ARCHITECT_REVIEW.md
+?? Docs/Specs/Active/localize_other/HEARTBEAT.log
+?? Docs/Specs/Active/localize_other/IMPLEMENTER_REPORT.md
+?? Docs/Specs/Active/localize_other/SELF_REVIEW.md
+?? Docs/Specs/Active/localize_other/SPEC.md
+?? Docs/Specs/Active/localize_other/STATUS.md
+?? Docs/Specs/Active/localize_other/reference/.gitkeep
+?? Docs/Specs/Active/localize_other/reference/README.md
+?? Docs/Specs/Active/localize_other/screenshots/.gitkeep
+2026-07-23T04:35:00Z done, awaiting review
