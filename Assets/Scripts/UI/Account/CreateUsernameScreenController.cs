@@ -1,14 +1,17 @@
 // Order: login_signup_screens — Phase 1 (UI only, no backend)
+using System.Text.RegularExpressions;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using GolfinRedux.UI;
+using Golfin.Auth;
 
 namespace Golfin.UI.Account
 {
     /// <summary>
-    /// Create Username screen controller — Phase 1 (UI shell).
-    /// No UnityWebRequest, no HTTP, no Supabase.
+    /// Create Username screen controller — Phase 2 (mockable auth).
+    /// CREATE validates the username then calls <see cref="AuthService"/>.UpdateDisplayName
+    /// (Supabase user_metadata.display_name); on success advances to Home.
     /// </summary>
     public class CreateUsernameScreenController : MonoBehaviour
     {
@@ -21,6 +24,15 @@ namespace Golfin.UI.Account
         [Header("Buttons")]
         [SerializeField] private Button _createButton;
         [SerializeField] private Button _cancelButton;
+
+        [Header("Feedback (optional)")]
+        [Tooltip("Optional TMP label shown for validation / auth messages. Safe to leave unset.")]
+        [SerializeField] private TextMeshProUGUI _errorLabel;
+
+        // 3–20 chars, letters/numbers/underscore (matches the on-screen hint).
+        private static readonly Regex UsernamePattern = new Regex(@"^[A-Za-z0-9_]{3,20}$");
+
+        private bool _busy;
 
         private void OnEnable()
         {
@@ -36,15 +48,39 @@ namespace Golfin.UI.Account
 
         private void OnCreateClicked()
         {
-            // TODO(Phase 2 — GPS/Supabase): set profile display_name = _usernameInput.text;
-            // Placeholder: advance to Home to demo the first-login complete step
-            Debug.Log($"[CreateUsernameScreen] CREATE tapped with username='{_usernameInput?.text}' — Phase 2 stub");
+            if (_busy) return;
+            string username = _usernameInput != null ? _usernameInput.text.Trim() : "";
+            if (!UsernamePattern.IsMatch(username))
+            { SetError("3–20 characters, letters/numbers/underscore only."); return; }
+
+            SetBusy(true);
+            AuthService.Instance.UpdateDisplayName(username, result =>
+            {
+                SetBusy(false);
+                if (result.Success)
+                {
+                    if (_screenManager != null) _screenManager.ShowScreen(ScreenId.Home);
+                }
+                else SetError(result.Message);
+            });
         }
 
         private void OnCancelClicked()
         {
             if (_screenManager != null)
                 _screenManager.ShowScreen(ScreenId.Login);
+        }
+
+        private void SetBusy(bool busy)
+        {
+            _busy = busy;
+            if (_createButton != null) _createButton.interactable = !busy;
+        }
+
+        private void SetError(string message)
+        {
+            if (_errorLabel != null) _errorLabel.text = message ?? "";
+            if (!string.IsNullOrEmpty(message)) Debug.Log($"[CreateUsernameScreen] {message}");
         }
     }
 }

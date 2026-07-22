@@ -3,13 +3,14 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using GolfinRedux.UI;
+using Golfin.Auth;
 
 namespace Golfin.UI.Account
 {
     /// <summary>
-    /// Sign Up screen controller — Phase 1 (UI shell).
-    /// Implements client-side password checklist and show/hide toggle.
-    /// No UnityWebRequest, no HTTP, no Supabase.
+    /// Sign Up screen controller — Phase 2 (mockable auth).
+    /// Client-side password checklist gates submit; CREATE calls <see cref="AuthService"/>.SignUp and,
+    /// on success, carries the email to the Email Confirmation screen. OAuth is seam-wired ("coming soon").
     /// </summary>
     public class SignUpScreenController : MonoBehaviour
     {
@@ -19,6 +20,12 @@ namespace Golfin.UI.Account
         [Header("Input Fields")]
         [SerializeField] private TMP_InputField _emailInput;
         [SerializeField] private TMP_InputField _passwordInput;
+
+        [Header("Feedback (optional)")]
+        [Tooltip("Optional TMP label shown for auth errors / messages. Safe to leave unset.")]
+        [SerializeField] private TextMeshProUGUI _errorLabel;
+
+        private bool _busy;
 
         [Header("Eye Toggle")]
         [SerializeField] private Button _eyeToggleButton;
@@ -127,26 +134,55 @@ namespace Golfin.UI.Account
                 label.color = met ? GreenColor : WhiteColor;
         }
 
-        // ── Navigation / stubs ───────────────────────────────────────────────
+        // ── Auth handlers ─────────────────────────────────────────────────────
         private void OnCreateClicked()
         {
-            // TODO(Phase 2 — GPS/Supabase): auth.signUp({email, password})
-            // Placeholder: advance to EmailConfirmation screen
-            Debug.Log("[SignUpScreen] CREATE tapped — Phase 2 stub");
-            if (_screenManager != null)
-                _screenManager.ShowScreen(ScreenId.EmailConfirmation);
+            if (_busy) return;
+            string email = _emailInput != null ? _emailInput.text.Trim() : "";
+            string pw    = _passwordInput != null ? _passwordInput.text : "";
+
+            if (string.IsNullOrEmpty(email)) { SetError("Enter your email address."); return; }
+            if (!PasswordRequirements.Check(pw).AllMet)
+            { SetError("Your password does not meet all the requirements."); return; }
+
+            SetBusy(true);
+            AuthService.Instance.SignUp(email, pw, result =>
+            {
+                SetBusy(false);
+                if (result.Success)
+                {
+                    AuthFlowState.PendingEmail = email;
+                    if (_screenManager != null) _screenManager.ShowScreen(ScreenId.EmailConfirmation);
+                }
+                else SetError(result.Message);
+            });
         }
 
-        private void OnGoogleClicked()
+        private void OnGoogleClicked() => StartOAuth(OAuthProvider.Google);
+        private void OnAppleClicked()  => StartOAuth(OAuthProvider.Apple);
+
+        private void StartOAuth(OAuthProvider provider)
         {
-            // TODO(Phase 2 — GPS/Supabase): auth.signInWithOAuth({provider:'google'})
-            Debug.Log("[SignUpScreen] Google signup tapped — Phase 2 stub");
+            if (_busy) return;
+            SetBusy(true);
+            AuthService.Instance.SignInWithOAuth(provider, result =>
+            {
+                SetBusy(false);
+                if (!result.Success) SetError(result.Message); // "coming soon" until Phase 2b
+            });
         }
 
-        private void OnAppleClicked()
+        // ── Feedback helpers ──────────────────────────────────────────────────
+        private void SetBusy(bool busy)
         {
-            // TODO(Phase 2 — GPS/Supabase): auth.signInWithOAuth({provider:'apple'})
-            Debug.Log("[SignUpScreen] Apple signup tapped — Phase 2 stub");
+            _busy = busy;
+            if (_createButton != null) _createButton.interactable = !busy;
+        }
+
+        private void SetError(string message)
+        {
+            if (_errorLabel != null) _errorLabel.text = message ?? "";
+            if (!string.IsNullOrEmpty(message)) Debug.Log($"[SignUpScreen] {message}");
         }
 
         private void OnCancelClicked()

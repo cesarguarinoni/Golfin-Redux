@@ -3,13 +3,14 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using GolfinRedux.UI;
+using Golfin.Auth;
 
 namespace Golfin.UI.Account
 {
     /// <summary>
-    /// Email Confirmation screen controller — Phase 1 (UI shell).
-    /// Shown after Sign Up to prompt the user to verify their email.
-    /// No UnityWebRequest, no HTTP, no Supabase.
+    /// Email Confirmation screen controller — Phase 2 (mockable auth).
+    /// Shows the address carried from Sign Up (<see cref="AuthFlowState.PendingEmail"/>); Resend calls
+    /// <see cref="AuthService"/>.ResendConfirmation; Open-Email launches the device mail app.
     /// </summary>
     public class EmailConfirmationScreenController : MonoBehaviour
     {
@@ -24,9 +25,13 @@ namespace Golfin.UI.Account
         [SerializeField] private Button _resendEmailButton;   // "Resend Email" link
         [SerializeField] private Button _backToLoginButton;   // "Back to Login" link
 
-        // The email address carried forward from SignUp is set by LoginFlowCoordinator in Phase 2.
-        // For Phase 1 we show a placeholder.
+        [Header("Feedback (optional)")]
+        [Tooltip("Optional TMP label shown for resend confirmation / errors. Safe to leave unset.")]
+        [SerializeField] private TextMeshProUGUI _errorLabel;
+
+        // Email carried from Sign Up via AuthFlowState; falls back to a placeholder if entered directly.
         private string _pendingEmail = "your-email@example.com";
+        private bool _busy;
 
         /// <summary>
         /// Called by the coordinator (Phase 2) to show the actual submitted email address.
@@ -39,6 +44,9 @@ namespace Golfin.UI.Account
 
         private void OnEnable()
         {
+            // Pick up the email carried from Sign Up (if any).
+            if (!string.IsNullOrEmpty(AuthFlowState.PendingEmail))
+                _pendingEmail = AuthFlowState.PendingEmail;
             RefreshEmailLabel();
 
             if (_openEmailButton   != null) _openEmailButton.onClick.AddListener(OnOpenEmailClicked);
@@ -62,14 +70,31 @@ namespace Golfin.UI.Account
         // ── Button handlers ──────────────────────────────────────────────────
         private void OnOpenEmailClicked()
         {
-            // TODO(Phase 2 — GPS): Application.OpenURL("mailto:") or native email-app intent
-            Debug.Log("[EmailConfirmation] Open Email App tapped — Phase 2 stub");
+            // Launch the device's default mail app.
+            Application.OpenURL("mailto:");
         }
 
         private void OnResendEmailClicked()
         {
-            // TODO(Phase 2 — GPS/Supabase): auth.resend({type:'signup', email})
-            Debug.Log("[EmailConfirmation] Resend Email tapped — Phase 2 stub");
+            if (_busy) return;
+            SetBusy(true);
+            AuthService.Instance.ResendConfirmation(_pendingEmail, result =>
+            {
+                SetBusy(false);
+                SetMessage(result.Success ? "Confirmation email re-sent." : result.Message);
+            });
+        }
+
+        private void SetBusy(bool busy)
+        {
+            _busy = busy;
+            if (_resendEmailButton != null) _resendEmailButton.interactable = !busy;
+        }
+
+        private void SetMessage(string message)
+        {
+            if (_errorLabel != null) _errorLabel.text = message ?? "";
+            if (!string.IsNullOrEmpty(message)) Debug.Log($"[EmailConfirmation] {message}");
         }
 
         private void OnBackToLoginClicked()

@@ -3,13 +3,14 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using GolfinRedux.UI;
+using Golfin.Auth;
 
 namespace Golfin.UI.Account
 {
     /// <summary>
-    /// Login screen controller — Phase 1 (UI shell).
-    /// All auth handlers are clearly-marked TODO(Phase 2) stubs.
-    /// No UnityWebRequest, no HTTP, no Supabase.
+    /// Login screen controller — Phase 2 (mockable auth).
+    /// Handlers call <see cref="AuthService"/>; the transport is a mock until Ken supplies the anon key.
+    /// OAuth (Google/Apple) is wired to the seam but returns "coming soon" until Phase 2b.
     /// </summary>
     public class LoginScreenController : MonoBehaviour
     {
@@ -19,6 +20,12 @@ namespace Golfin.UI.Account
         [Header("Input Fields")]
         [SerializeField] private TMP_InputField _emailInput;
         [SerializeField] private TMP_InputField _passwordInput;
+
+        [Header("Feedback (optional)")]
+        [Tooltip("Optional TMP label shown for auth errors / messages. Safe to leave unset.")]
+        [SerializeField] private TextMeshProUGUI _errorLabel;
+
+        private bool _busy;
 
         [Header("Eye Toggle")]
         [SerializeField] private Button _eyeToggleButton;
@@ -80,32 +87,73 @@ namespace Golfin.UI.Account
                 _eyeIcon.sprite = _passwordVisible ? _eyeHideSprite : _eyeShowSprite;
         }
 
-        // ── Navigation / stubs ───────────────────────────────────────────────
+        // ── Auth handlers ─────────────────────────────────────────────────────
         private void OnLoginClicked()
         {
-            // TODO(Phase 2 — GPS/Supabase): auth.signInWithPassword({email, password})
-            // Placeholder: advance to CreateUsername to demo first-login flow
-            Debug.Log("[LoginScreen] LOGIN tapped — Phase 2 stub (would authenticate)");
-            if (_screenManager != null)
-                _screenManager.ShowScreen(ScreenId.CreateUsername);
+            if (_busy) return;
+            string email = _emailInput != null ? _emailInput.text.Trim() : "";
+            string pw    = _passwordInput != null ? _passwordInput.text : "";
+            if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(pw))
+            { SetError("Enter your email and password."); return; }
+
+            SetBusy(true);
+            AuthService.Instance.SignInWithPassword(email, pw, result =>
+            {
+                SetBusy(false);
+                if (result.Success)
+                {
+                    // First login (no username yet) → Create Username; otherwise → Home.
+                    var target = AuthService.Instance.Session.HasDisplayName ? ScreenId.Home : ScreenId.CreateUsername;
+                    if (_screenManager != null) _screenManager.ShowScreen(target);
+                }
+                else if (result.Error == AuthError.EmailNotConfirmed)
+                {
+                    AuthFlowState.PendingEmail = email;
+                    SetError(result.Message);
+                    if (_screenManager != null) _screenManager.ShowScreen(ScreenId.EmailConfirmation);
+                }
+                else SetError(result.Message);
+            });
         }
 
         private void OnForgotPasswordClicked()
         {
-            // TODO(Phase 2 — GPS/Supabase): auth.resetPasswordForEmail(email)
-            Debug.Log("[LoginScreen] Forgot Password tapped — Phase 2 stub");
+            if (_busy) return;
+            string email = _emailInput != null ? _emailInput.text.Trim() : "";
+            if (string.IsNullOrEmpty(email)) { SetError("Enter your email first."); return; }
+            SetBusy(true);
+            AuthService.Instance.RequestPasswordReset(email, result =>
+            {
+                SetBusy(false);
+                SetError(result.Success ? "Password reset email sent." : result.Message);
+            });
         }
 
-        private void OnGoogleClicked()
+        private void OnGoogleClicked() => StartOAuth(OAuthProvider.Google);
+        private void OnAppleClicked()  => StartOAuth(OAuthProvider.Apple);
+
+        private void StartOAuth(OAuthProvider provider)
         {
-            // TODO(Phase 2 — GPS/Supabase): auth.signInWithOAuth({provider:'google'})
-            Debug.Log("[LoginScreen] Google login tapped — Phase 2 stub");
+            if (_busy) return;
+            SetBusy(true);
+            AuthService.Instance.SignInWithOAuth(provider, result =>
+            {
+                SetBusy(false);
+                if (!result.Success) SetError(result.Message); // "coming soon" until Phase 2b
+            });
         }
 
-        private void OnAppleClicked()
+        // ── Feedback helpers ──────────────────────────────────────────────────
+        private void SetBusy(bool busy)
         {
-            // TODO(Phase 2 — GPS/Supabase): auth.signInWithOAuth({provider:'apple'})
-            Debug.Log("[LoginScreen] Apple login tapped — Phase 2 stub");
+            _busy = busy;
+            if (_loginButton != null) _loginButton.interactable = !busy;
+        }
+
+        private void SetError(string message)
+        {
+            if (_errorLabel != null) _errorLabel.text = message ?? "";
+            if (!string.IsNullOrEmpty(message)) Debug.Log($"[LoginScreen] {message}");
         }
 
         private void OnCancelClicked()
