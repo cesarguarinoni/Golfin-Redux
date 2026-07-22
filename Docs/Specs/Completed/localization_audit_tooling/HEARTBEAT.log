@@ -1,0 +1,91 @@
+=== iter-1 kickoff baseline ===
+HEAD: fe669561e feat(auth): Phase 2b OAuth scaffolding — Google/Apple deep-link flow (dormant)
+DIRTY porcelain:
+ M Assets/Art/RosterScreen/ButtonCancel.png.meta
+ M "Assets/Art/Shop/Background - Blurred.png"
+ M "Assets/Art/SplashScreen/Green Button.png.meta"
+ M "Assets/Fonts/NotoSansJP-VariableFont_wght SDF.asset"
+ M Assets/Plugins/NuGet/.nuget-installed.json
+ M Assets/Plugins/NuGet/McpPlugin.Common.dll
+ M Assets/Plugins/NuGet/McpPlugin.dll
+ M Assets/Plugins/NuGet/ReflectorNet.dll
+ M Packages/manifest.json
+ M Packages/packages-lock.json
+?? .mcp.json.bak-23886
+?? Docs/Specs/Active/localization_audit_tooling/
+=== end baseline ===
+2026-07-22T00:00:00Z activated
+2026-07-22T10:00:00Z baseline reconciled, writing implementation files
+2026-07-22T10:30:00Z writing LocalizationAudit.cs — primary deliverable
+2026-07-22T14:05:00Z CSV re-imported (227 rows confirmed); LintPrefab before/after PASS; IMPLEMENTER_REPORT.md written
+2026-07-22T14:06:00Z done, awaiting review
+
+=== iter-2 kickoff baseline ===
+HEAD: fe669561e2067b870cc8431e7c3c0d59336799b7
+DIRTY:
+ M Assets/Art/RosterScreen/ButtonCancel.png.meta
+ M "Assets/Art/Shop/Background - Blurred.png"
+ M "Assets/Art/SplashScreen/Green Button.png.meta"
+ M Assets/Editor/UIFidelity/UIFidelityLinter.cs
+ M "Assets/Fonts/NotoSansJP-VariableFont_wght SDF.asset"
+ M Assets/Localization/LocalizationText.csv
+ M Assets/Localization/LocalizationTextTable.asset
+ M Assets/Plugins/NuGet/.nuget-installed.json
+ M Assets/Plugins/NuGet/McpPlugin.Common.dll
+ M Assets/Plugins/NuGet/McpPlugin.dll
+ M Assets/Plugins/NuGet/ReflectorNet.dll
+ M Packages/manifest.json
+ M Packages/packages-lock.json
+?? .mcp.json.bak-23886
+?? Assets/Editor/Localization.meta
+?? Assets/Editor/Localization/LocalizationAudit.cs
+?? Assets/Editor/Localization/LocalizationAudit.cs.meta
+?? Docs/Reports/localization_audit_2026-07-22.csv
+?? Docs/Reports/localization_audit_2026-07-22.md
+?? Docs/Specs/Active/localization_audit_tooling/ARCHITECT_REVIEW.md
+?? Docs/Specs/Active/localization_audit_tooling/HEARTBEAT.log
+?? Docs/Specs/Active/localization_audit_tooling/IMPLEMENTER_REPORT.md
+?? Docs/Specs/Active/localization_audit_tooling/SELF_REVIEW.md
+?? Docs/Specs/Active/localization_audit_tooling/SPEC.md
+?? Docs/Specs/Active/localization_audit_tooling/STATUS.md
+?? Docs/Specs/Active/localization_audit_tooling/reference/.gitkeep
+?? Docs/Specs/Active/localization_audit_tooling/reference/README.md
+?? Docs/Specs/Active/localization_audit_tooling/screenshots/.gitkeep
+=== end baseline ===
+2026-07-22T14:10:00Z iter-2 started: investigating baseline reconciliation deltas (scene -187, code +32)
+2026-07-22T15:30:00Z iter-2 done: per-number reconciliation table written to MD report; all 6 deltas confirmed tool-correct; 3 non-blocking notes added; done awaiting review
+
+=== iter-3 kickoff baseline ===
+HEAD: fe669561e feat(auth): Phase 2b OAuth scaffolding — Google/Apple deep-link flow (dormant)
+DIRTY porcelain:
+ M Assets/Art/RosterScreen/ButtonCancel.png.meta
+ M "Assets/Art/Shop/Background - Blurred.png"
+ M "Assets/Art/SplashScreen/Green Button.png.meta"
+ M Assets/Editor/UIFidelity/UIFidelityLinter.cs
+ M "Assets/Fonts/NotoSansJP-VariableFont_wght SDF.asset"
+ M Assets/Localization/LocalizationText.csv
+ M Assets/Localization/LocalizationTextTable.asset
+ M Assets/Plugins/NuGet/.nuget-installed.json
+ M Assets/Plugins/NuGet/McpPlugin.Common.dll
+ M Assets/Plugins/NuGet/McpPlugin.dll
+ M Assets/Plugins/NuGet/ReflectorNet.dll
+ M Packages/manifest.json
+ M Packages/packages-lock.json
+?? .mcp.json.bak-23886
+?? Assets/Editor/Localization.meta
+?? Assets/Editor/Localization/LocalizationAudit.cs
+?? Assets/Editor/Localization/LocalizationAudit.cs.meta
+?? Docs/Reports/localization_audit_2026-07-22.csv
+?? Docs/Reports/localization_audit_2026-07-22.md
+?? Docs/Specs/Active/localization_audit_tooling/ARCHITECT_REVIEW.md
+?? Docs/Specs/Active/localization_audit_tooling/HEARTBEAT.log
+?? Docs/Specs/Active/localization_audit_tooling/IMPLEMENTER_REPORT.md
+?? Docs/Specs/Active/localization_audit_tooling/SELF_REVIEW.md
+?? Docs/Specs/Active/localization_audit_tooling/SPEC.md
+?? Docs/Specs/Active/localization_audit_tooling/STATUS.md
+?? Docs/Specs/Active/localization_audit_tooling/reference/.gitkeep
+?? Docs/Specs/Active/localization_audit_tooling/reference/README.md
+?? Docs/Specs/Active/localization_audit_tooling/screenshots/.gitkeep
+=== end baseline ===
+2026-07-22T16:00:00Z iter-3 started: fixing UIFidelityLinter.Esc() + LocalizationAudit.WriteMd() for ARCHITECT_REVIEW_FAIL
+2026-07-22T16:45:00Z done, awaiting review

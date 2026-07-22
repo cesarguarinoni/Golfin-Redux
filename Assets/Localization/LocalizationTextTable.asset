@@ -244,10 +244,10 @@ MonoBehaviour:
     japanese: "\u9589\u3058\u308B"
   - key: SETTINGS_ABOUT_APP_VERSION
     english: APP VERSION
-    japanese: 
+    japanese: APP VERSION
   - key: SETTINGS_ABOUT_LICENCES
     english: LICENCES
-    japanese: 
+    japanese: LICENCES
   - key: ROSTER_TITLE
     english: ROSTER
     japanese: "\u30ED\u30B9\u30BF\u30FC"

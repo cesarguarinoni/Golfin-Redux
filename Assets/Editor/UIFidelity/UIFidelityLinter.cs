@@ -57,6 +57,7 @@ namespace Golfin.EditorTools.UIFidelity
 
             var findings = new List<Finding>();
             findings.AddRange(RenderHealth(inst));
+            findings.AddRange(LocalizationHealth(inst));
             if (!string.IsNullOrEmpty(specJsonPath) && File.Exists(specJsonPath))
             {
                 var spec = JsonUtility.FromJson<UISpec>(File.ReadAllText(specJsonPath));
@@ -189,6 +190,31 @@ namespace Golfin.EditorTools.UIFidelity
             return f;
         }
 
+        // ---- Layer 3: localization health (WARN-only — must never raise fail count) ----
+        // Flags TextMeshProUGUI elements that have non-empty literal text but no LocalizedText binder.
+        // Severity is WARN so Rule 21 gates are unaffected (only FAIL changes the `fail` count).
+        // Added by localization_audit_tooling task to guard newly-built screens.
+        public static List<Finding> LocalizationHealth(GameObject root)
+        {
+            var f = new List<Finding>();
+            foreach (var tmp in root.GetComponentsInChildren<TextMeshProUGUI>(true))
+            {
+                if (string.IsNullOrEmpty(tmp.text)) continue;
+                // Skip single-character / pure-number / whitespace-only values — these are dynamic readouts
+                string t = tmp.text.Trim();
+                if (t.Length <= 1) continue;
+                if (System.Text.RegularExpressions.Regex.IsMatch(t, @"^[\d\s\.,:/+\-\%<>]+$")) continue;
+
+                var localizedText = tmp.GetComponent<LocalizedText>();
+                if (localizedText != null) continue; // BOUND — already has a binder
+
+                f.Add(new Finding("WARN", P(tmp.transform, root.transform), "unlocalized-text",
+                    $"TMP text \"{(t.Length > 60 ? t.Substring(0, 57) + "…" : t)}\" has no LocalizedText binder. " +
+                    "Add a binder during the batch-conversion pass (localization_audit_tooling)."));
+            }
+            return f;
+        }
+
         // ---- Layer 2: node-spec checks ----
         public static List<Finding> SpecCheck(GameObject root, UISpec spec)
         {
@@ -290,6 +316,11 @@ namespace Golfin.EditorTools.UIFidelity
             var s = t.name; while (t.parent != null && t != root) { t = t.parent; if (t != root) s = t.name + "/" + s; } return s;
         }
         static string Hex(Color c) => "#" + ColorUtility.ToHtmlStringRGBA(c);
-        static string Esc(string s) => (s ?? "").Replace("\\", "\\\\").Replace("\"", "\\'");
+        static string Esc(string s) => (s ?? "")
+            .Replace("\\", "\\\\")   // \ → \\  (must be first to avoid double-escaping)
+            .Replace("\"", "\\\"")   // " → \"  (valid JSON escape)
+            .Replace("\n", "\\n")    // newline
+            .Replace("\r", "\\r")    // carriage return
+            .Replace("\t", "\\t");   // tab
     }
 }
