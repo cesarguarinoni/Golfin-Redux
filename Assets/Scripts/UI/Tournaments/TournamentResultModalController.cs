@@ -168,7 +168,7 @@ namespace GolfinRedux.UI.Tournaments
         {
             // Sponsor: "{SPONSOR} PRESENTS"
             string sponsor = string.IsNullOrEmpty(def.SponsorKey)
-                ? "GOLFIN PRESENTS"
+                ? LocalizationManager.Get("TOURN_GOLFIN_PRESENTS")
                 : def.SponsorKey.ToUpperInvariant() + " PRESENTS";
             if (_sponsorText != null) _sponsorText.text = sponsor;
 

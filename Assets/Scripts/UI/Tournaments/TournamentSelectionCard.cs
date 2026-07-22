@@ -132,7 +132,7 @@ namespace GolfinRedux.UI.Tournaments
             if (_eyebrowLabel != null)
             {
                 // iter-2: use sponsorLine from CSV; default to "GOLFIN PRESENTS" if absent
-                _eyebrowLabel.text = string.IsNullOrEmpty(sponsorLine) ? "GOLFIN PRESENTS" : sponsorLine;
+                _eyebrowLabel.text = string.IsNullOrEmpty(sponsorLine) ? LocalizationManager.Get("TOURN_GOLFIN_PRESENTS") : sponsorLine;
                 ApplyEyebrowGradient();
             }
             if (_nameLabel != null) _nameLabel.text = tournamentName;
@@ -149,7 +149,7 @@ namespace GolfinRedux.UI.Tournaments
                 {
                     _freeEntryBadge.SetActive(true);
                     var lbl = _freeEntryBadge.GetComponentInChildren<TextMeshProUGUI>(true);
-                    if (lbl != null) lbl.text = "ENTERED";
+                    if (lbl != null) lbl.text = LocalizationManager.Get("TOURN_ENTERED");
                 }
                 if (_paidEntryBadge != null) _paidEntryBadge.SetActive(false);
             }
@@ -161,7 +161,7 @@ namespace GolfinRedux.UI.Tournaments
                     if (isFreeEntry)
                     {
                         var lbl = _freeEntryBadge.GetComponentInChildren<TextMeshProUGUI>(true);
-                        if (lbl != null) lbl.text = "FREE ENTRY";
+                        if (lbl != null) lbl.text = LocalizationManager.Get("TOURN_FREE_ENTRY");
                     }
                 }
                 if (_paidEntryBadge != null) _paidEntryBadge.SetActive(!isFreeEntry);
@@ -198,17 +198,17 @@ namespace GolfinRedux.UI.Tournaments
                 case CardState.EnteredActive:
                     bgColor   = BadgeLive;
                     textColor = TextWhite;
-                    label     = "LIVE";
+                    label     = LocalizationManager.Get("TOURN_LIVE");
                     break;
                 case CardState.EnteredFinished:
                     bgColor   = BadgeLive;
                     textColor = TextWhite;
-                    label     = "LIVE";
+                    label     = LocalizationManager.Get("TOURN_LIVE");
                     break;
                 case CardState.Open:
                     bgColor   = BadgeOpen;
                     textColor = TextDark;
-                    label     = "OPEN";
+                    label     = LocalizationManager.Get("TOURN_OPEN");
                     break;
                 case CardState.Ending:
                     bgColor   = BadgeEnding;

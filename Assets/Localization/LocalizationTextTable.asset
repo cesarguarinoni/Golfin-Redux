@@ -854,3 +854,60 @@ MonoBehaviour:
   - key: RESULT_REPLAY_HOLE
     english: REPLAY HOLE
     japanese: 'REPLAY HOLE [JP-TODO]'
+  - key: RANK_DAILY
+    english: DAILY
+    japanese: 'DAILY [JP-TODO]'
+  - key: RANK_WEEKLY
+    english: WEEKLY
+    japanese: 'WEEKLY [JP-TODO]'
+  - key: RANK_MONTHLY
+    english: MONTHLY
+    japanese: 'MONTHLY [JP-TODO]'
+  - key: RANK_HISTORY
+    english: HISTORY
+    japanese: 'HISTORY [JP-TODO]'
+  - key: TOURN_FILTER_ALL
+    english: ALL
+    japanese: 'ALL [JP-TODO]'
+  - key: TOURN_OPEN
+    english: OPEN
+    japanese: 'OPEN [JP-TODO]'
+  - key: TOURN_FILTER_PLAYING
+    english: PLAYING
+    japanese: 'PLAYING [JP-TODO]'
+  - key: TOURN_FILTER_CLOSED
+    english: CLOSED
+    japanese: 'CLOSED [JP-TODO]'
+  - key: TOURN_FINISHED
+    english: FINISHED
+    japanese: 'FINISHED [JP-TODO]'
+  - key: TOURN_LIVE
+    english: LIVE
+    japanese: 'LIVE [JP-TODO]'
+  - key: TOURN_CLAIM
+    english: CLAIM
+    japanese: 'CLAIM [JP-TODO]'
+  - key: TOURN_ENTRY
+    english: ENTRY
+    japanese: 'ENTRY [JP-TODO]'
+  - key: TOURN_ENTERED
+    english: ENTERED
+    japanese: 'ENTERED [JP-TODO]'
+  - key: TOURN_FREE_ENTRY
+    english: FREE ENTRY
+    japanese: 'FREE ENTRY [JP-TODO]'
+  - key: TOURN_GOLFIN_PRESENTS
+    english: GOLFIN PRESENTS
+    japanese: 'GOLFIN PRESENTS [JP-TODO]'
+  - key: TOURN_SPONSORED_BY
+    english: SPONSORED BY
+    japanese: 'SPONSORED BY [JP-TODO]'
+  - key: TOURN_EMPTY_HEADER
+    english: No finishers yet
+    japanese: 'No finishers yet [JP-TODO]'
+  - key: TOURN_EMPTY_BODY
+    english: Be the first to complete every hole and top the board.
+    japanese: 'Be the first to complete every hole and top the board. [JP-TODO]'
+  - key: TOURN_NEXT_SECTION
+    english: Next
+    japanese: 'Next [JP-TODO]'

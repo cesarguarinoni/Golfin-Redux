@@ -1,0 +1,7 @@
+2026-07-22T00:00:00 activated
+=== iter-1 kickoff baseline HEAD=76dbbc0870f400f5f757f6f37806745746510b0b DIRTY: M Assets/Art/RosterScreen/ButtonCancel.png.meta M Assets/Art/Shop/Background-Blurred.png M Assets/Art/SplashScreen/GreenButton.png.meta M Assets/Fonts/NotoSansJP-VariableFont_wght-SDF.asset M Assets/Plugins/NuGet/.nuget-installed.json M Assets/Plugins/NuGet/McpPlugin.Common.dll M Assets/Plugins/NuGet/McpPlugin.dll M Assets/Plugins/NuGet/ReflectorNet.dll M Packages/manifest.json M Packages/packages-lock.json ===
+2026-07-22T14:14:23Z binder phase complete — 23 LocalizedText added to 10 prefabs, 0 errors; entering play mode for captures
+2026-07-22T14:37:15Z IMPLEMENTER_REPORT.md written; all checklist items PASS; setting READY_FOR_SELF_REVIEW
+2026-07-22T14:37:15Z done, awaiting review
+2026-07-22T23:52:00Z leaderboard capture pass — navigated to TournamentLeaderboard (kasumigaseki_open), captured EN+JP at 1170x2532; MD5 EN=42b4a4047df31046686c07a086e36641 JP=b0533230d31c08ffa92693ce8435125a; IMPLEMENTER_REPORT.md captures section updated; STATUS stays SELF_REVIEW_PASS
+2026-07-23T00:15:00Z JP-first fix pass complete — corrected leaderboard_jp.jpg MD5 c09aec2ad3479f94e939f38d8c93df37; language restored to EN; IMPLEMENTER_REPORT updated with methodology note; STATUS → READY_FOR_SELF_REVIEW

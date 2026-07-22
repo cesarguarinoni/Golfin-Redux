@@ -271,7 +271,7 @@ namespace GolfinRedux.UI.Tournaments
                 string sponsor = string.IsNullOrEmpty(def.SponsorKey)
                     ? "GOLFIN"
                     : def.SponsorKey.ToUpperInvariant();
-                sponsorLabel.text = "SPONSORED BY " + sponsor;
+                sponsorLabel.text = LocalizationManager.Get("TOURN_SPONSORED_BY") + " " + sponsor;
                 Debug.Log(string.Format("[TournamentLeaderboard] Header sponsor → '{0}'", sponsorLabel.text));
             }
             else

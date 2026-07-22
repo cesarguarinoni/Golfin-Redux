@@ -2838,6 +2838,7 @@ GameObject:
   - component: {fileID: 990659855179670921}
   - component: {fileID: 2717265052213506436}
   - component: {fileID: 7220937337555048546}
+  - component: {fileID: 7640609394237346318}
   m_Layer: 0
   m_Name: TitleExp
   m_TagString: Untagged
@@ -2984,6 +2985,19 @@ MonoBehaviour:
   m_FlexibleWidth: -1
   m_FlexibleHeight: -1
   m_LayoutPriority: 1
+--- !u!114 &7640609394237346318
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5124670344212160924}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: TOURN_FINISHED
 --- !u!1 &5182163242235628948
 GameObject:
   m_ObjectHideFlags: 0
@@ -3738,6 +3752,7 @@ GameObject:
   - component: {fileID: 1891651124762891784}
   - component: {fileID: 3186222657097703891}
   - component: {fileID: 734236351606151882}
+  - component: {fileID: 5081651433521938633}
   m_Layer: 0
   m_Name: Title
   m_TagString: Untagged
@@ -3884,6 +3899,19 @@ MonoBehaviour:
   m_FlexibleWidth: -1
   m_FlexibleHeight: -1
   m_LayoutPriority: 1
+--- !u!114 &5081651433521938633
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6718471817539462810}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: TOURN_NEXT_SECTION
 --- !u!1 &6931505667505284275
 GameObject:
   m_ObjectHideFlags: 0
@@ -4868,6 +4896,7 @@ GameObject:
   - component: {fileID: 5238296538218609076}
   - component: {fileID: 3520690491070896646}
   - component: {fileID: 9069125685380216788}
+  - component: {fileID: 4634764456769799484}
   m_Layer: 0
   m_Name: Label
   m_TagString: Untagged
@@ -4994,6 +5023,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &4634764456769799484
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8281206232086576561}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: BTN_START
 --- !u!1 &8519528545397771011
 GameObject:
   m_ObjectHideFlags: 0

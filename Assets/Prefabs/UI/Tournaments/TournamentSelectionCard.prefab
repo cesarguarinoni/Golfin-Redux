@@ -1208,6 +1208,7 @@ GameObject:
   - component: {fileID: 9005261543970031243}
   - component: {fileID: 4790503128059953052}
   - component: {fileID: 1137555885647664097}
+  - component: {fileID: 3048068644579141354}
   m_Layer: 0
   m_Name: EntryText
   m_TagString: Untagged
@@ -1334,6 +1335,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &3048068644579141354
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4269020455169689056}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: TOURN_ENTRY
 --- !u!1 &5192666313562706902
 GameObject:
   m_ObjectHideFlags: 0

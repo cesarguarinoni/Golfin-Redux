@@ -165,7 +165,7 @@ namespace GolfinRedux.UI.Tournaments
 
                 // Sponsor: "{SPONSOR} PRESENTS" from CSV, not hardcoded "GOLFIN PRESENTS"
                 string sponsorLine = string.IsNullOrEmpty(def.SponsorKey)
-                    ? "GOLFIN PRESENTS"
+                    ? LocalizationManager.Get("TOURN_GOLFIN_PRESENTS")
                     : def.SponsorKey.ToUpperInvariant() + " PRESENTS";
 
                 var card = UnityEngine.Object.Instantiate(_cardPrefab, _cardsContent);
