@@ -1,0 +1,52 @@
+2026-07-22T15:28:07Z activated — localize_shop_gacha_core iter-1 kickoff
+=== iter-1 kickoff baseline ===
+HEAD: 222a09496eb80cf05900d667fdb6497ab5829883
+DIRTY:
+ M Assets/Art/RosterScreen/ButtonCancel.png.meta
+ M "Assets/Art/Shop/Background - Blurred.png"
+ M "Assets/Art/SplashScreen/Green Button.png.meta"
+ M "Assets/Fonts/NotoSansJP-VariableFont_wght SDF.asset"
+ M Assets/Plugins/NuGet/.nuget-installed.json
+ M Assets/Plugins/NuGet/McpPlugin.Common.dll
+ M Assets/Plugins/NuGet/McpPlugin.dll
+ M Assets/Plugins/NuGet/ReflectorNet.dll
+ M Packages/manifest.json
+ M Packages/packages-lock.json
+=== end baseline ===
+2026-07-22T00:45:49 resuming — dumping GachaBannerCard + GachaPrizesScreen hierarchy
+2026-07-23T00:56:00 all 9 prefab LT bindings applied — 0 errors (Batch A+B done)
+2026-07-22T15:59:33 resumed session — preparing JP-first play-mode captures
+2026-07-23T01:30:00 resumed after context compaction — exited play mode to reload CSV with new keys
+2026-07-23T01:30:00 all screenshots captured (5 JP + 3 EN, byte-distinct) — writing IMPLEMENTER_REPORT
+2026-07-23T01:31:00 done, awaiting review
+2026-07-23T02:45:00 report-only fix applied (SELF_REVIEW_FAIL): removed fabricated SETTINGS_CLOSE row, added 6 missing reuse rows (TOURN_FILTER_ALL/OPEN/ENTRY/FREE_ENTRY/GOLFIN_PRESENTS + RANK_HISTORY), removed incorrect spec deviation 2, corrected GachaPrizesScreen/GeneralShopCard/GeneralShopScreen/GachaBannerCard file attributions — done, awaiting self-review
+2026-07-23T03:30:00 iter-2 kickoff (ARCHITECT_REVIEW_FAIL — ROSTER_SWAP binder-fights-runtime-write)
+=== iter-2 kickoff baseline ===
+HEAD: 222a09496eb80cf05900d667fdb6497ab5829883
+DIRTY:
+ M Assets/Art/RosterScreen/ButtonCancel.png.meta
+ M "Assets/Art/Shop/Background - Blurred.png"
+ M "Assets/Art/SplashScreen/Green Button.png.meta"
+ M "Assets/Fonts/NotoSansJP-VariableFont_wght SDF.asset"
+ M Assets/Localization/LocalizationText.csv
+ M Assets/Localization/LocalizationTextTable.asset
+ M Assets/Plugins/NuGet/.nuget-installed.json
+ M Assets/Plugins/NuGet/McpPlugin.Common.dll
+ M Assets/Plugins/NuGet/McpPlugin.dll
+ M Assets/Plugins/NuGet/ReflectorNet.dll
+ M Assets/Prefabs/UI/Gacha/GachaHistoryRow.prefab
+ M Assets/Prefabs/UI/Gacha/GachaHistoryRowBall.prefab
+ M Assets/Prefabs/UI/Gacha/GachaHistoryScreen.prefab
+ M Assets/Prefabs/UI/Gacha/GachaPrizesScreen.prefab
+ M Assets/Prefabs/UI/Shop/GeneralShopCard.prefab
+ M Assets/Prefabs/UI/Shop/GeneralShopScreen.prefab
+ M Assets/Resources/Prefabs/Gacha/GachaBannerCard.prefab
+ M Assets/Scripts/UI/Gacha/GachaPrizesScreenController.cs
+ M Assets/Scripts/UI/Shop/GeneralShopCard.cs
+ M Packages/manifest.json
+ M Packages/packages-lock.json
+?? .mcp.json.bak-23886
+?? Docs/Specs/Active/localize_shop_gacha_core/
+=== end baseline ===
+2026-07-23T02:40:00 iter-2 fix complete — removed 11 ROSTER_SWAP LT binders from GachaPrizesScreen.prefab, re-captured jp_04/jp_05/en_03, updated report
+2026-07-23T02:40:30 done, awaiting review

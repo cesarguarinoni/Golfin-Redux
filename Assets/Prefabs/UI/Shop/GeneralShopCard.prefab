@@ -996,6 +996,7 @@ GameObject:
   - component: {fileID: 729975402029791728}
   - component: {fileID: 1990219497848390317}
   - component: {fileID: 3695528202758882674}
+  - component: {fileID: 3288720582686717948}
   m_Layer: 0
   m_Name: BadgeLabel
   m_TagString: Untagged
@@ -1122,6 +1123,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &3288720582686717948
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3991053540650020703}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: TOURN_OPEN
 --- !u!1 &4090960494586428474
 GameObject:
   m_ObjectHideFlags: 0
@@ -1208,6 +1222,7 @@ GameObject:
   - component: {fileID: 9005261543970031243}
   - component: {fileID: 4790503128059953052}
   - component: {fileID: 1137555885647664097}
+  - component: {fileID: 2378677076421880896}
   m_Layer: 0
   m_Name: EntryText
   m_TagString: Untagged
@@ -1334,6 +1349,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &2378677076421880896
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4269020455169689056}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: TOURN_ENTRY
 --- !u!1 &5192666313562706902
 GameObject:
   m_ObjectHideFlags: 0
@@ -1497,6 +1525,7 @@ GameObject:
   - component: {fileID: 3188204870932153946}
   - component: {fileID: 6882487663324772570}
   - component: {fileID: 5558682199367565802}
+  - component: {fileID: 8531390363409182258}
   m_Layer: 0
   m_Name: FreeEntryLabel
   m_TagString: Untagged
@@ -1623,6 +1652,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &8531390363409182258
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6158445514879490491}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: TOURN_FREE_ENTRY
 --- !u!1 &6369728809936049641
 GameObject:
   m_ObjectHideFlags: 0
@@ -1846,6 +1888,7 @@ GameObject:
   - component: {fileID: 9058543243598932627}
   - component: {fileID: 4988568421168357514}
   - component: {fileID: 3104269904590821710}
+  - component: {fileID: 7907185535707992905}
   m_Layer: 0
   m_Name: EyebrowLabel
   m_TagString: Untagged
@@ -1972,6 +2015,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &7907185535707992905
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7629630776796109444}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: TOURN_GOLFIN_PRESENTS
 --- !u!1 &7958461590187395592
 GameObject:
   m_ObjectHideFlags: 0
@@ -2429,7 +2485,8 @@ PrefabInstance:
       propertyPath: m_Enabled
       value: 0
       objectReference: {fileID: 0}
-    m_RemovedComponents: []
+    m_RemovedComponents:
+    - {fileID: 9074962263104895888, guid: 360c3e42b63494c3095f4360c8e87493, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents: []

@@ -911,3 +911,63 @@ MonoBehaviour:
   - key: TOURN_NEXT_SECTION
     english: Next
     japanese: 'Next [JP-TODO]'
+  - key: GACHA_TICKET
+    english: TICKET
+    japanese: 'TICKET [JP-TODO]'
+  - key: GACHA_HISTORY
+    english: GACHA HISTORY
+    japanese: 'GACHA HISTORY [JP-TODO]'
+  - key: GACHA_TICKETS
+    english: TICKETS
+    japanese: 'TICKETS [JP-TODO]'
+  - key: GACHA_CLUBS
+    english: CLUBS
+    japanese: 'CLUBS [JP-TODO]'
+  - key: GACHA_CHARACTERS
+    english: CHARACTERS
+    japanese: 'CHARACTERS [JP-TODO]'
+  - key: GACHA_BALLS
+    english: BALLS
+    japanese: 'BALLS [JP-TODO]'
+  - key: GACHA_ITEMS
+    english: ITEMS
+    japanese: 'ITEMS [JP-TODO]'
+  - key: GACHA_BACK
+    english: BACK
+    japanese: 'BACK [JP-TODO]'
+  - key: GACHA_PITY_A_RANK
+    english: Guaranteed A-rank or higher in at most
+    japanese: 'Guaranteed A-rank or higher in at most [JP-TODO]'
+  - key: GACHA_PITY_S_RANK
+    english: Guaranteed S-rank signal in at most
+    japanese: 'Guaranteed S-rank signal in at most [JP-TODO]'
+  - key: GACHA_PRIZE_PREVIEW
+    english: Common/Uncommon characters or clubs may also be obtained.
+    japanese: 'Common/Uncommon characters or clubs may also be obtained. [JP-TODO]'
+  - key: GACHA_PULL_X1
+    english: PULL x1
+    japanese: 'PULL x1 [JP-TODO]'
+  - key: GACHA_PULL_X10
+    english: PULL x10
+    japanese: 'PULL x10 [JP-TODO]'
+  - key: GACHA_RULES_RATES
+    english: RULES & RATES
+    japanese: 'RULES & RATES [JP-TODO]'
+  - key: GACHA_BUY
+    english: BUY
+    japanese: 'BUY [JP-TODO]'
+  - key: SHOP_TAB_GACHA
+    english: GACHA
+    japanese: 'GACHA [JP-TODO]'
+  - key: SHOP_TAB_STORE
+    english: STORE
+    japanese: 'STORE [JP-TODO]'
+  - key: SHOP_TAB_GIFTS
+    english: GIFTS
+    japanese: 'GIFTS [JP-TODO]'
+  - key: SHOP_FILTER_POPULAR
+    english: POPULAR
+    japanese: 'POPULAR [JP-TODO]'
+  - key: SHOP_FILTER_OFFERS
+    english: OFFERS
+    japanese: 'OFFERS [JP-TODO]'

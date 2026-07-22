@@ -96,7 +96,8 @@ namespace GolfinRedux.UI.Gacha
             // Update labels
             string multiplier = isX10 ? "x10" : "x1";
             if (_costMultiLabel != null) _costMultiLabel.text = multiplier;
-            if (_pullButtonLabel != null) _pullButtonLabel.text = $"PULL {multiplier}";
+            if (_pullButtonLabel != null)
+                _pullButtonLabel.text = LocalizationManager.Get(isX10 ? "GACHA_PULL_X10" : "GACHA_PULL_X1");
 
             // Bind cards
             if (isX10)

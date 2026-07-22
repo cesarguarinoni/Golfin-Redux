@@ -220,12 +220,12 @@ namespace GolfinRedux.UI.Shop
 
             if (owned)
             {
-                if (label != null) label.text = "OWNED";
+                if (label != null) label.text = LocalizationManager.Get("BALL_OWNED");
                 btn.interactable = false;
             }
             else
             {
-                if (label != null) label.text = "BUY";
+                if (label != null) label.text = LocalizationManager.Get("GACHA_BUY");
                 btn.interactable = true;
                 btn.onClick.AddListener(() => OnBuyClicked?.Invoke(this));
             }

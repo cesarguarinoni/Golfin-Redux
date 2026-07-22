@@ -409,6 +409,7 @@ GameObject:
   - component: {fileID: 2635445719022266439}
   - component: {fileID: 2171372652667235853}
   - component: {fileID: 7369167595131089213}
+  - component: {fileID: 8086767259391463017}
   m_Layer: 0
   m_Name: Label
   m_TagString: Untagged
@@ -535,6 +536,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &8086767259391463017
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 257201523010678216}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: GACHA_PULL_X1
 --- !u!1 &260985446209095919
 GameObject:
   m_ObjectHideFlags: 0
@@ -780,6 +794,7 @@ GameObject:
   - component: {fileID: 2039712052294938390}
   - component: {fileID: 3701647714894564988}
   - component: {fileID: 7048671063446412303}
+  - component: {fileID: 7642968838528827515}
   m_Layer: 0
   m_Name: CostText
   m_TagString: Untagged
@@ -906,6 +921,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &7642968838528827515
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 393766663128040798}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: MODAL_COST
 --- !u!1 &674385891390237226
 GameObject:
   m_ObjectHideFlags: 0
@@ -917,6 +945,7 @@ GameObject:
   - component: {fileID: 8647780654278442330}
   - component: {fileID: 4574609154279224310}
   - component: {fileID: 4307394342648078938}
+  - component: {fileID: 3004232400315273974}
   m_Layer: 0
   m_Name: CostText
   m_TagString: Untagged
@@ -1043,6 +1072,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &3004232400315273974
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 674385891390237226}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: MODAL_COST
 --- !u!1 &689891664973878497
 GameObject:
   m_ObjectHideFlags: 0
@@ -1542,6 +1584,7 @@ GameObject:
   - component: {fileID: 2951070659621666184}
   - component: {fileID: 5427488814312459513}
   - component: {fileID: 398506372624291242}
+  - component: {fileID: 3731240089534679809}
   m_Layer: 0
   m_Name: Label
   m_TagString: Untagged
@@ -1668,6 +1711,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &3731240089534679809
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1106819420980695810}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: GACHA_CHARACTERS
 --- !u!1 &1220151941578716503
 GameObject:
   m_ObjectHideFlags: 0
@@ -2590,6 +2646,7 @@ GameObject:
   - component: {fileID: 5206371005712365097}
   - component: {fileID: 8342550545762270818}
   - component: {fileID: 404620110948925692}
+  - component: {fileID: 4794716253756141921}
   m_Layer: 0
   m_Name: CostText
   m_TagString: Untagged
@@ -2716,6 +2773,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &4794716253756141921
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1794383070473695877}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: MODAL_COST
 --- !u!1 &1795880824572793361
 GameObject:
   m_ObjectHideFlags: 0
@@ -3544,6 +3614,7 @@ GameObject:
   - component: {fileID: 7296330950138623502}
   - component: {fileID: 6954645035741457118}
   - component: {fileID: 7337953953359052684}
+  - component: {fileID: 6902254864938799421}
   m_Layer: 0
   m_Name: Label
   m_TagString: Untagged
@@ -3670,6 +3741,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &6902254864938799421
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2211849685108718276}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: GACHA_CLUBS
 --- !u!1 &2222470554992779643
 GameObject:
   m_ObjectHideFlags: 0
@@ -3682,6 +3766,7 @@ GameObject:
   - component: {fileID: 244344278724176701}
   - component: {fileID: 785572737010560387}
   - component: {fileID: 4807168865028298851}
+  - component: {fileID: 1857822497061116549}
   m_Layer: 0
   m_Name: PrizePreviewText
   m_TagString: Untagged
@@ -3828,6 +3913,19 @@ MonoBehaviour:
   m_FlexibleWidth: -1
   m_FlexibleHeight: -1
   m_LayoutPriority: 1
+--- !u!114 &1857822497061116549
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2222470554992779643}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: GACHA_PRIZE_PREVIEW
 --- !u!1 &2233087126748606988
 GameObject:
   m_ObjectHideFlags: 0
@@ -4343,6 +4441,7 @@ GameObject:
   - component: {fileID: 4847727142502950372}
   - component: {fileID: 7529671578065953033}
   - component: {fileID: 8248817942392028376}
+  - component: {fileID: 8243796044722812425}
   m_Layer: 0
   m_Name: Label
   m_TagString: Untagged
@@ -4469,6 +4568,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &8243796044722812425
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2522706891041911356}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: GACHA_PULL_X10
 --- !u!1 &2661018209476127051
 GameObject:
   m_ObjectHideFlags: 0
@@ -4677,6 +4789,7 @@ GameObject:
   - component: {fileID: 1512772256865566681}
   - component: {fileID: 9195409641901716206}
   - component: {fileID: 8235727670503350345}
+  - component: {fileID: 935444716368707038}
   m_Layer: 0
   m_Name: Label
   m_TagString: Untagged
@@ -4803,6 +4916,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &935444716368707038
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2748235498721889079}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: GACHA_ITEMS
 --- !u!1 &2771990977651226794
 GameObject:
   m_ObjectHideFlags: 0
@@ -5672,6 +5798,7 @@ GameObject:
   - component: {fileID: 7497345204320426552}
   - component: {fileID: 6993418596084983154}
   - component: {fileID: 2783491634034725522}
+  - component: {fileID: 8287671004698684443}
   m_Layer: 0
   m_Name: Label
   m_TagString: Untagged
@@ -5798,6 +5925,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &8287671004698684443
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3700264495495219426}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: GACHA_TICKETS
 --- !u!1 &3717059105199575931
 GameObject:
   m_ObjectHideFlags: 0
@@ -6150,6 +6290,7 @@ GameObject:
   - component: {fileID: 3137812051562813151}
   - component: {fileID: 4204741873533364879}
   - component: {fileID: 2786610113074842758}
+  - component: {fileID: 2243079731501017446}
   m_Layer: 0
   m_Name: Label
   m_TagString: Untagged
@@ -6276,6 +6417,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &2243079731501017446
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3892713626982138297}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: GACHA_PULL_X1
 --- !u!1 &3930717608817008379
 GameObject:
   m_ObjectHideFlags: 0
@@ -6608,6 +6762,7 @@ GameObject:
   - component: {fileID: 1372824362944240023}
   - component: {fileID: 6793380885638848782}
   - component: {fileID: 5303280892226713306}
+  - component: {fileID: 2711594046883204021}
   m_Layer: 0
   m_Name: RatesLabel
   m_TagString: Untagged
@@ -6736,6 +6891,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &2711594046883204021
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4151606761932933929}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: GACHA_RULES_RATES
 --- !u!1 &4158544385595310956
 GameObject:
   m_ObjectHideFlags: 0
@@ -7285,6 +7453,7 @@ GameObject:
   - component: {fileID: 3479406656723466700}
   - component: {fileID: 768559428057658536}
   - component: {fileID: 2899074658793076248}
+  - component: {fileID: 1165001807056563537}
   m_Layer: 0
   m_Name: Label
   m_TagString: Untagged
@@ -7411,6 +7580,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &1165001807056563537
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4457303817629802655}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: SHOP_TAB_GACHA
 --- !u!1 &4553315788010503152
 GameObject:
   m_ObjectHideFlags: 0
@@ -7422,6 +7604,7 @@ GameObject:
   - component: {fileID: 6818793706746548835}
   - component: {fileID: 1567880594046703332}
   - component: {fileID: 3878284103023508740}
+  - component: {fileID: 1507603547011650205}
   m_Layer: 0
   m_Name: CostText
   m_TagString: Untagged
@@ -7548,6 +7731,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &1507603547011650205
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4553315788010503152}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: MODAL_COST
 --- !u!1 &4606959508616973557
 GameObject:
   m_ObjectHideFlags: 0
@@ -7709,6 +7905,7 @@ GameObject:
   - component: {fileID: 4745535533296028257}
   - component: {fileID: 6677356883949759017}
   - component: {fileID: 3434183730007533054}
+  - component: {fileID: 1499283109440398309}
   m_Layer: 0
   m_Name: Label
   m_TagString: Untagged
@@ -7835,6 +8032,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &1499283109440398309
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4766426098272678933}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: RANK_HISTORY
 --- !u!1 &4830480006682284331
 GameObject:
   m_ObjectHideFlags: 0
@@ -8661,6 +8871,7 @@ GameObject:
   - component: {fileID: 3391312689327579134}
   - component: {fileID: 8350751369407592381}
   - component: {fileID: 8718888378449530055}
+  - component: {fileID: 833412970309394491}
   m_Layer: 0
   m_Name: Label
   m_TagString: Untagged
@@ -8787,6 +8998,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &833412970309394491
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5372264752960318892}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: GACHA_PULL_X10
 --- !u!1 &5386083102513325680
 GameObject:
   m_ObjectHideFlags: 0
@@ -9298,6 +9522,7 @@ GameObject:
   - component: {fileID: 8321971076630626809}
   - component: {fileID: 1631770201092187832}
   - component: {fileID: 2912841063613647486}
+  - component: {fileID: 2731311414599650029}
   m_Layer: 0
   m_Name: PityLabel
   m_TagString: Untagged
@@ -9424,6 +9649,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &2731311414599650029
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5673606225205144650}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: GACHA_PITY_S_RANK
 --- !u!1 &5815757471936239227
 GameObject:
   m_ObjectHideFlags: 0
@@ -9511,6 +9749,7 @@ GameObject:
   - component: {fileID: 6359860465404789073}
   - component: {fileID: 1246233509399995948}
   - component: {fileID: 6060270080528589128}
+  - component: {fileID: 2156743753054987147}
   m_Layer: 0
   m_Name: PrizePreviewText
   m_TagString: Untagged
@@ -9657,6 +9896,19 @@ MonoBehaviour:
   m_FlexibleWidth: -1
   m_FlexibleHeight: -1
   m_LayoutPriority: 1
+--- !u!114 &2156743753054987147
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5825959557601158794}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: GACHA_PRIZE_PREVIEW
 --- !u!1 &5834623004824869336
 GameObject:
   m_ObjectHideFlags: 0
@@ -9732,6 +9984,7 @@ GameObject:
   - component: {fileID: 5431698361164572349}
   - component: {fileID: 5406795337819118258}
   - component: {fileID: 6554218916654148172}
+  - component: {fileID: 4526991578328731204}
   m_Layer: 0
   m_Name: Label
   m_TagString: Untagged
@@ -9858,6 +10111,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &4526991578328731204
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5868574487216917207}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: GACHA_BALLS
 --- !u!1 &5956753988927287919
 GameObject:
   m_ObjectHideFlags: 0
@@ -10422,6 +10688,7 @@ GameObject:
   - component: {fileID: 1088394231835125164}
   - component: {fileID: 472289189585787419}
   - component: {fileID: 6467466251853803611}
+  - component: {fileID: 3958038206076526402}
   m_Layer: 0
   m_Name: Label
   m_TagString: Untagged
@@ -10548,6 +10815,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &3958038206076526402
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6191303992226805155}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: GACHA_PULL_X10
 --- !u!1 &6200458308491129420
 GameObject:
   m_ObjectHideFlags: 0
@@ -10559,6 +10839,7 @@ GameObject:
   - component: {fileID: 1582662014932747333}
   - component: {fileID: 3077128349045905702}
   - component: {fileID: 4398151180307842298}
+  - component: {fileID: 3395238693252030150}
   m_Layer: 0
   m_Name: Label
   m_TagString: Untagged
@@ -10685,6 +10966,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &3395238693252030150
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6200458308491129420}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: SHOP_TAB_STORE
 --- !u!1 &6202719778049608281
 GameObject:
   m_ObjectHideFlags: 0
@@ -11019,6 +11313,7 @@ GameObject:
   - component: {fileID: 8769063723017189512}
   - component: {fileID: 1918793529002929517}
   - component: {fileID: 1371872936977712571}
+  - component: {fileID: 1699441489316760029}
   m_Layer: 0
   m_Name: Label
   m_TagString: Untagged
@@ -11145,6 +11440,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &1699441489316760029
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6242691108417248417}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: TOURN_FILTER_ALL
 --- !u!1 &6276082469025986738
 GameObject:
   m_ObjectHideFlags: 0
@@ -11358,6 +11666,7 @@ GameObject:
   - component: {fileID: 3818795162478037213}
   - component: {fileID: 3274785516881359692}
   - component: {fileID: 8453917579828288104}
+  - component: {fileID: 90230441812130972}
   m_Layer: 0
   m_Name: RatesLabel
   m_TagString: Untagged
@@ -11486,6 +11795,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &90230441812130972
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6434439702372943503}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: GACHA_RULES_RATES
 --- !u!1 &6476958033703156430
 GameObject:
   m_ObjectHideFlags: 0
@@ -11647,6 +11969,7 @@ GameObject:
   - component: {fileID: 439329771065407668}
   - component: {fileID: 6358879570948554077}
   - component: {fileID: 3114503165507171115}
+  - component: {fileID: 8185458718282817248}
   m_Layer: 0
   m_Name: Label
   m_TagString: Untagged
@@ -11773,6 +12096,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &8185458718282817248
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6510990201845108048}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: TOURN_FILTER_ALL
 --- !u!1 &6542520527796043554
 GameObject:
   m_ObjectHideFlags: 0
@@ -11784,6 +12120,7 @@ GameObject:
   - component: {fileID: 1528750117725482805}
   - component: {fileID: 7102139109376277624}
   - component: {fileID: 820359498350338624}
+  - component: {fileID: 2374844000209704555}
   m_Layer: 0
   m_Name: Label
   m_TagString: Untagged
@@ -11910,6 +12247,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &2374844000209704555
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6542520527796043554}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: SHOP_FILTER_OFFERS
 --- !u!1 &6557821274833698980
 GameObject:
   m_ObjectHideFlags: 0
@@ -12072,6 +12422,7 @@ GameObject:
   - component: {fileID: 988209895150165912}
   - component: {fileID: 8216089611470646118}
   - component: {fileID: 3885632978357640417}
+  - component: {fileID: 7791628738579632676}
   m_Layer: 0
   m_Name: CostText
   m_TagString: Untagged
@@ -12198,6 +12549,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &7791628738579632676
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6758662248640377111}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: MODAL_COST
 --- !u!1 &6762072424008230030
 GameObject:
   m_ObjectHideFlags: 0
@@ -12861,6 +13225,7 @@ GameObject:
   - component: {fileID: 7835259671574210953}
   - component: {fileID: 3293629296970711545}
   - component: {fileID: 2596517077273761839}
+  - component: {fileID: 6773352775098315871}
   m_Layer: 0
   m_Name: PityLabel
   m_TagString: Untagged
@@ -12987,6 +13352,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &6773352775098315871
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7122736539172282333}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: GACHA_PITY_S_RANK
 --- !u!1 &7265420908282095605
 GameObject:
   m_ObjectHideFlags: 0
@@ -12998,6 +13376,7 @@ GameObject:
   - component: {fileID: 1622673546851992496}
   - component: {fileID: 2382211058490781069}
   - component: {fileID: 2326980350129953590}
+  - component: {fileID: 3963904885655152098}
   m_Layer: 0
   m_Name: RatesLabel
   m_TagString: Untagged
@@ -13126,6 +13505,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &3963904885655152098
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7265420908282095605}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: GACHA_RULES_RATES
 --- !u!1 &7295809515532912354
 GameObject:
   m_ObjectHideFlags: 0
@@ -13274,6 +13666,7 @@ GameObject:
   - component: {fileID: 9170873959246095910}
   - component: {fileID: 6438682422887955556}
   - component: {fileID: 1851621381888974224}
+  - component: {fileID: 3488633599685681926}
   m_Layer: 0
   m_Name: PityLabel
   m_TagString: Untagged
@@ -13400,6 +13793,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &3488633599685681926
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7304282209456405432}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: GACHA_PITY_A_RANK
 --- !u!1 &7346100745488053290
 GameObject:
   m_ObjectHideFlags: 0
@@ -13411,6 +13817,7 @@ GameObject:
   - component: {fileID: 8529803045125123933}
   - component: {fileID: 5549578547739476135}
   - component: {fileID: 5647681557265106530}
+  - component: {fileID: 6886966545003873200}
   m_Layer: 0
   m_Name: PityLabel
   m_TagString: Untagged
@@ -13537,6 +13944,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &6886966545003873200
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7346100745488053290}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: GACHA_PITY_S_RANK
 --- !u!1 &7415703505119620445
 GameObject:
   m_ObjectHideFlags: 0
@@ -13548,6 +13968,7 @@ GameObject:
   - component: {fileID: 590036647058731667}
   - component: {fileID: 8708930530566971567}
   - component: {fileID: 9088207970819459269}
+  - component: {fileID: 5697201941031192667}
   m_Layer: 0
   m_Name: PityLabel
   m_TagString: Untagged
@@ -13674,6 +14095,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &5697201941031192667
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7415703505119620445}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: GACHA_PITY_A_RANK
 --- !u!1 &7469849459711380433
 GameObject:
   m_ObjectHideFlags: 0
@@ -14714,6 +15148,7 @@ GameObject:
   - component: {fileID: 2060151039020955936}
   - component: {fileID: 1451745757990142270}
   - component: {fileID: 7250757947476647845}
+  - component: {fileID: 668926150988944727}
   m_Layer: 0
   m_Name: Label
   m_TagString: Untagged
@@ -14840,6 +15275,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &668926150988944727
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7935716203994977799}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: SHOP_TAB_GIFTS
 --- !u!1 &7993130885615626106
 GameObject:
   m_ObjectHideFlags: 0
@@ -15149,6 +15597,7 @@ GameObject:
   - component: {fileID: 8722871663991954749}
   - component: {fileID: 1233715995714778244}
   - component: {fileID: 5277448558540114415}
+  - component: {fileID: 2420201308720318329}
   m_Layer: 0
   m_Name: CostText
   m_TagString: Untagged
@@ -15275,6 +15724,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &2420201308720318329
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8231813466808434681}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: MODAL_COST
 --- !u!1 &8262387085246095633
 GameObject:
   m_ObjectHideFlags: 0
@@ -15286,6 +15748,7 @@ GameObject:
   - component: {fileID: 1309788130271497301}
   - component: {fileID: 6225487288913914496}
   - component: {fileID: 8202067939992111774}
+  - component: {fileID: 201199830785205197}
   m_Layer: 0
   m_Name: Label
   m_TagString: Untagged
@@ -15412,6 +15875,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &201199830785205197
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8262387085246095633}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: SHOP_FILTER_POPULAR
 --- !u!1 &8325072628753243781
 GameObject:
   m_ObjectHideFlags: 0
@@ -16258,6 +16734,7 @@ GameObject:
   - component: {fileID: 1680429546209719349}
   - component: {fileID: 4114603522845853064}
   - component: {fileID: 8537781096915833664}
+  - component: {fileID: 2202301474925067394}
   m_Layer: 0
   m_Name: PrizePreviewText
   m_TagString: Untagged
@@ -16404,6 +16881,19 @@ MonoBehaviour:
   m_FlexibleWidth: -1
   m_FlexibleHeight: -1
   m_LayoutPriority: 1
+--- !u!114 &2202301474925067394
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8846427504796687296}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: GACHA_PRIZE_PREVIEW
 --- !u!1 &8895005001958396070
 GameObject:
   m_ObjectHideFlags: 0
@@ -16565,6 +17055,7 @@ GameObject:
   - component: {fileID: 6612168332640126666}
   - component: {fileID: 1878447439417742556}
   - component: {fileID: 2386308702471168416}
+  - component: {fileID: 3060241606589492671}
   m_Layer: 0
   m_Name: Label
   m_TagString: Untagged
@@ -16691,6 +17182,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &3060241606589492671
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8968362553376077350}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: GACHA_PULL_X1
 --- !u!1 &9021426761971615736
 GameObject:
   m_ObjectHideFlags: 0
@@ -16702,6 +17206,7 @@ GameObject:
   - component: {fileID: 2898827659503071748}
   - component: {fileID: 2613411976591609263}
   - component: {fileID: 6456645472064439356}
+  - component: {fileID: 5516909045106786928}
   m_Layer: 0
   m_Name: PityLabel
   m_TagString: Untagged
@@ -16828,6 +17333,19 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &5516909045106786928
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9021426761971615736}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
+  key: GACHA_PITY_A_RANK
 --- !u!1 &9057743955151031074
 GameObject:
   m_ObjectHideFlags: 0
