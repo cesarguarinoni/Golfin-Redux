@@ -45,8 +45,14 @@ namespace Golfin.Auth
         public void RefreshSession(string refreshToken, Action<AuthResult> onResult)
             => _runner.StartCoroutine(Post("/token?grant_type=refresh_token", Json1("refresh_token", refreshToken), null, onResult, expectSession: true));
 
+        public void GetUser(string accessToken, Action<AuthResult> onResult)
+            => _runner.StartCoroutine(Send(UnityWebRequest.kHttpVerbGET, "/user", null, accessToken, onResult, expectSession: false));
+
+        // OAuth for the LIVE client is orchestrated by AuthService (system browser + deep-link redirect),
+        // not this transport — the browser + custom-URL-scheme handling is app-level, not HTTP. See
+        // AuthService.SignInWithOAuth / OnDeepLink + OAuthUrlBuilder + OAuthCallbackParser.
         public void SignInWithOAuth(OAuthProvider provider, Action<AuthResult> onResult)
-            => onResult(AuthResult.Fail(AuthError.NotImplemented, $"{provider} sign-in is coming soon."));
+            => onResult(AuthResult.Fail(AuthError.NotImplemented, "OAuth is handled by AuthService for live transport."));
 
         // ── HTTP ───────────────────────────────────────────────────────────────
         private IEnumerator Post(string path, string body, string bearer, Action<AuthResult> onResult, bool expectSession)
@@ -60,8 +66,8 @@ namespace Golfin.Auth
             string url = _config.AuthBaseUrl + path;
             using (var req = new UnityWebRequest(url, verb))
             {
-                byte[] payload = Encoding.UTF8.GetBytes(body ?? "{}");
-                req.uploadHandler   = new UploadHandlerRaw(payload);
+                if (!string.IsNullOrEmpty(body))
+                    req.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes(body));
                 req.downloadHandler = new DownloadHandlerBuffer();
                 req.timeout         = Mathf.Max(5, _config.requestTimeoutSeconds);
                 req.SetRequestHeader("Content-Type", "application/json");

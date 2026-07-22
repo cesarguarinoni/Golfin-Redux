@@ -169,7 +169,12 @@ namespace Golfin.UI.Account
             AuthService.Instance.SignInWithOAuth(provider, result =>
             {
                 SetBusy(false);
-                if (!result.Success) SetError(result.Message); // "coming soon" until Phase 2b
+                if (result.Success)
+                {
+                    var target = AuthService.Instance.Session.HasDisplayName ? ScreenId.Home : ScreenId.CreateUsername;
+                    if (_screenManager != null) _screenManager.ShowScreen(target);
+                }
+                else SetError(result.Message); // "coming soon" until Phase 2b providers are enabled
             });
         }
 

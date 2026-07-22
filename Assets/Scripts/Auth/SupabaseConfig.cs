@@ -30,6 +30,12 @@ namespace Golfin.Auth
         [Tooltip("Per-request timeout in seconds (Supabase can cold-start).")]
         public int requestTimeoutSeconds = 30;
 
+        [Header("OAuth (Phase 2b — Google / Apple)")]
+        [Tooltip("App deep-link Supabase redirects back to after Google/Apple sign-in. Must be registered " +
+                 "in Supabase → Authentication → URL Configuration → Redirect URLs (see PHASE2_SERVER_SETUP_FOR_KEN.md B3), " +
+                 "and declared as a custom URL scheme in the iOS/Android player settings.")]
+        public string oauthRedirect = "golfin://auth-callback";
+
         /// <summary>True when live transport is selected but the anon key is missing — AuthService falls back to mock and warns.</summary>
         public bool LiveButUnconfigured => !useMockTransport && string.IsNullOrWhiteSpace(anonKey);
 

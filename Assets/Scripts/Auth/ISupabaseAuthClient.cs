@@ -32,6 +32,10 @@ namespace Golfin.Auth
         /// <summary>POST /auth/v1/token?grant_type=refresh_token — exchanges a refresh token for a fresh session.</summary>
         void RefreshSession(string refreshToken, Action<AuthResult> onResult);
 
+        /// <summary>GET /auth/v1/user — fetches the profile (email, display_name, confirmed) for an access token.
+        /// Used after an OAuth redirect (which returns only tokens) to resolve the user.</summary>
+        void GetUser(string accessToken, Action<AuthResult> onResult);
+
         /// <summary>Phase 2b — OAuth (Google/Apple) via the deep-link redirect flow. Present on the seam
         /// now so screens can call it; the mock and the current live client return NotImplemented until 2b.</summary>
         void SignInWithOAuth(OAuthProvider provider, Action<AuthResult> onResult);

@@ -35,6 +35,11 @@ namespace Golfin.Auth
         public AuthSession Session { get; private set; } = new AuthSession();
 
         private ISupabaseAuthClient _client;
+        private bool _useMock;
+
+        // Phase 2b — pending OAuth completion, resolved when the deep-link redirect arrives.
+        private Action<AuthResult> _pendingOAuth;
+        private bool _deepLinkHooked;
 
         private void Awake()
         {
@@ -53,16 +58,32 @@ namespace Golfin.Auth
                 Config = ScriptableObject.CreateInstance<SupabaseConfig>(); // useMockTransport = true by default
             }
 
-            bool useMock = Config.useMockTransport || Config.LiveButUnconfigured;
+            _useMock = Config.useMockTransport || Config.LiveButUnconfigured;
             if (Config.LiveButUnconfigured)
                 Debug.LogWarning("[AuthService] Live transport selected but anonKey is empty — falling back to MOCK. See PHASE2_SERVER_SETUP_FOR_KEN.md.");
 
-            _client = useMock
+            _client = _useMock
                 ? (ISupabaseAuthClient)new MockSupabaseAuthClient()
                 : new SupabaseAuthClient(Config, this);
 
+            HookDeepLinks();
             Session.Load();
-            Debug.Log($"[AuthService] Ready — transport={(useMock ? "MOCK" : "LIVE")}, authenticated={Session.IsAuthenticated}.");
+            Debug.Log($"[AuthService] Ready — transport={(_useMock ? "MOCK" : "LIVE")}, authenticated={Session.IsAuthenticated}.");
+        }
+
+        private void HookDeepLinks()
+        {
+            if (_deepLinkHooked) return;
+            _deepLinkHooked = true;
+            Application.deepLinkActivated += OnDeepLink;
+            // Cold-start: the app may have been launched by the redirect itself.
+            if (!string.IsNullOrEmpty(Application.absoluteURL))
+                OnDeepLink(Application.absoluteURL);
+        }
+
+        private void OnDestroy()
+        {
+            if (_deepLinkHooked) Application.deepLinkActivated -= OnDeepLink;
         }
 
         /// <summary>Test hook: inject a client + fresh session directly (bypasses Resources/scene).</summary>
@@ -95,8 +116,59 @@ namespace Golfin.Auth
             _client.RefreshSession(Session.RefreshToken, Wrap(onResult));
         }
 
+        public void GetUser(Action<AuthResult> onResult)
+            => _client.GetUser(Session.AccessToken, Wrap(onResult));
+
+        /// <summary>
+        /// Phase 2b OAuth. MOCK transport delegates to the mock client (returns "coming soon" unless
+        /// SimulateOAuthSuccess). LIVE transport opens the provider's consent page in the system browser;
+        /// completion arrives asynchronously via <see cref="OnDeepLink"/> when Supabase redirects back to
+        /// <c>Config.oauthRedirect</c>. Only one OAuth attempt is tracked at a time.
+        /// </summary>
         public void SignInWithOAuth(OAuthProvider provider, Action<AuthResult> onResult)
-            => _client.SignInWithOAuth(provider, Wrap(onResult));
+        {
+            if (_useMock) { _client.SignInWithOAuth(provider, Wrap(onResult)); return; }
+
+            _pendingOAuth = onResult;
+            string url = OAuthUrlBuilder.Authorize(Config, provider);
+            Debug.Log($"[AuthService] Opening OAuth ({provider}) in browser: {url}");
+            Application.OpenURL(url);
+            // Resolved later in OnDeepLink. NOTE(Phase 2b polish): if the user backs out of the browser
+            // without completing, no deep-link fires and _pendingOAuth stays set until the next attempt —
+            // a focus-regained timeout could surface a "cancelled" result; deferred.
+        }
+
+        private void OnDeepLink(string url)
+        {
+            if (!OAuthCallbackParser.IsCallback(url, Config)) return;
+
+            AuthResult tokens = OAuthCallbackParser.Parse(url);
+            var pending = _pendingOAuth;
+            _pendingOAuth = null;
+
+            if (!tokens.Success)
+            {
+                pending?.Invoke(tokens);
+                return;
+            }
+
+            // Establish the session from the redirect tokens, then resolve the profile (email/display_name)
+            // so the caller can route first-login → Create Username vs returning → Home.
+            Session.ApplyFrom(tokens);
+            Session.Save();
+            _client.GetUser(tokens.AccessToken, userResult =>
+            {
+                if (userResult != null && userResult.Success)
+                {
+                    Session.ApplyFrom(userResult);
+                    Session.Save();
+                }
+                // Return a combined success carrying the session + resolved user.
+                var final = AuthResult.Ok(userResult != null ? userResult.User : null,
+                    tokens.AccessToken, tokens.RefreshToken, tokens.ExpiresAtUnix, "Signed in.");
+                pending?.Invoke(final);
+            });
+        }
 
         public void SignOut()
         {

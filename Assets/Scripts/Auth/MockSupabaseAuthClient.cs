@@ -102,10 +102,31 @@ namespace Golfin.Auth
             onResult(Session(acc, "Session refreshed."));
         }
 
+        /// <summary>When true, OAuth returns a synthetic signed-in session (for flow demos/tests) instead
+        /// of "coming soon". Default false — keeps the pre-2b UX.</summary>
+        public bool SimulateOAuthSuccess = false;
+
+        public void GetUser(string accessToken, Action<AuthResult> onResult)
+        {
+            if (Net(onResult)) return;
+            var acc = FindByToken(accessToken);
+            if (acc == null) { onResult(AuthResult.Fail(AuthError.InvalidCredentials, "Session expired.")); return; }
+            onResult(AuthResult.Ok(ToUser(acc)));
+        }
+
         public void SignInWithOAuth(OAuthProvider provider, Action<AuthResult> onResult)
         {
-            // Phase 2b. The seam exists so screens can call it today.
-            onResult(AuthResult.Fail(AuthError.NotImplemented, $"{provider} sign-in is coming soon."));
+            if (Net(onResult)) return;
+            if (!SimulateOAuthSuccess)
+            {
+                // Phase 2b. The seam exists so screens can call it today; live flow is deep-link based.
+                onResult(AuthResult.Fail(AuthError.NotImplemented, $"{provider} sign-in is coming soon."));
+                return;
+            }
+            string email = OAuthUrlBuilder.ProviderKey(provider) + "-user@example.com";
+            if (!_accounts.TryGetValue(email, out var acc))
+            { acc = new Account { Id = "mock-" + (_idSeq++), Email = email, Confirmed = true }; _accounts[email] = acc; }
+            onResult(Session(acc, $"Signed in with {provider}."));
         }
 
         // ── helpers ──────────────────────────────────────────────────────────────
