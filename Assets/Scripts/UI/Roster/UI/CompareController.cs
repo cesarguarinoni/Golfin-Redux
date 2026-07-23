@@ -70,6 +70,10 @@ namespace Golfin.Roster
         [SerializeField] private GameObject? compareLevelUpReadyIcon; // IconLevelUpBig — wire in Inspector
         [SerializeField] private GameObject? compareLowStaminaIcon;
 
+        // Authored (EN) compare-bio font size, captured before any Japanese auto-size shrink.
+        private float _compareBioBaseFontSize;
+        private bool _compareBioBaseCaptured;
+
         // ── Carousel ───────────────────────────────────────────────────────────
         [Header("Carousel")]
         [SerializeField] private CarouselController? carousel;
@@ -308,6 +312,7 @@ namespace Golfin.Roster
                     if (loc != bioKey) localizedBio = loc; // key present in the localization table
                 }
                 compareBioText.text = !string.IsNullOrEmpty(localizedBio) ? localizedBio : (csvChar?.bio ?? "");
+                ApplyCompareBioLanguageSizing();
             }
 
             // Status icons
@@ -345,6 +350,33 @@ namespace Golfin.Roster
                 compareRightCompareButton.interactable = false;
 
             UpdateRightColumnButtons(playerData.isSelected);
+        }
+
+        // Japanese bios are taller than English; the long ones overflow the fixed compare
+        // BioText box. Shrink-to-fit ONLY in Japanese (max = authored EN size), leaving
+        // English unchanged and short Japanese bios at full size.
+        private void ApplyCompareBioLanguageSizing()
+        {
+            if (compareBioText == null) return;
+
+            if (!_compareBioBaseCaptured && !compareBioText.enableAutoSizing)
+            {
+                _compareBioBaseFontSize = compareBioText.fontSize;
+                _compareBioBaseCaptured = true;
+            }
+            if (!_compareBioBaseCaptured) return;
+
+            if (LocalizationManager.CurrentLanguage == Language.Japanese)
+            {
+                compareBioText.enableAutoSizing = true;
+                compareBioText.fontSizeMax = _compareBioBaseFontSize;
+                compareBioText.fontSizeMin = _compareBioBaseFontSize * 0.72f;
+            }
+            else
+            {
+                compareBioText.enableAutoSizing = false;
+                compareBioText.fontSize = _compareBioBaseFontSize;
+            }
         }
 
         /// <summary>

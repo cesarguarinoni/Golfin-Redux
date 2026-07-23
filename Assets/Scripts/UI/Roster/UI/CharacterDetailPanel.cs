@@ -93,6 +93,12 @@ namespace Golfin.Roster
         [Header("Bio")]
         [SerializeField] private TextMeshProUGUI bioText;           // BioPanel > BioText
 
+        // Authored (English/design) bio font size, captured once before any auto-size
+        // kicks in. Japanese bios are taller at the same size and the long ones
+        // overflow the fixed BioText box; we shrink-to-fit in Japanese only.
+        private float _bioBaseFontSize;
+        private bool _bioBaseCaptured;
+
         [Header("Status Icons")]
         [SerializeField] private GameObject? selectedIcon;       // IconSelectedBig — wire in Inspector
         [SerializeField] private GameObject? levelUpReadyIcon;   // IconLevelUpBig  — wire in Inspector
@@ -192,6 +198,35 @@ namespace Golfin.Roster
                 UpdatePanel(currentCharacterId);
         }
 
+        // English bios fit the fixed BioText box at the authored size; Japanese text is
+        // taller and the two long bios (Elizabeth, Shae) overflow. Shrink-to-fit ONLY in
+        // Japanese via TMP auto-sizing (max = authored EN size), so English is unchanged
+        // and short Japanese bios still render at full size.
+        private void ApplyBioLanguageSizing()
+        {
+            if (bioText == null) return;
+
+            // Capture the authored size once, before auto-sizing ever drives fontSize.
+            if (!_bioBaseCaptured && !bioText.enableAutoSizing)
+            {
+                _bioBaseFontSize = bioText.fontSize;
+                _bioBaseCaptured = true;
+            }
+            if (!_bioBaseCaptured) return;
+
+            if (LocalizationManager.CurrentLanguage == Language.Japanese)
+            {
+                bioText.enableAutoSizing = true;
+                bioText.fontSizeMax = _bioBaseFontSize;
+                bioText.fontSizeMin = _bioBaseFontSize * 0.72f;
+            }
+            else
+            {
+                bioText.enableAutoSizing = false;
+                bioText.fontSize = _bioBaseFontSize;
+            }
+        }
+
         /// <summary>
         /// Main data binding — populates all UI fields from character data.
         /// Skipped while CompareController is in compare mode (it handles
@@ -208,7 +243,12 @@ namespace Golfin.Roster
             bool charChanged = characterId != currentCharacterId;
             currentCharacterId = characterId;
 
-            var playerData = CharacterManager.Instance.GetCharacterData(characterId);
+            // OnEnable can drive this before the CharacterManager singleton exists
+            // (re-enable / scene-load race) — bail out rather than NRE.
+            var manager = CharacterManager.Instance;
+            if (manager == null) return;
+
+            var playerData = manager.GetCharacterData(characterId);
             if (playerData == null) return;
 
             // Get template data — CSV first; only query ScriptableObject if CSV has nothing
@@ -330,6 +370,8 @@ namespace Golfin.Roster
                     bioText.text = soData.bioFallbackText;
                 else
                     bioText.text = "Bio coming soon.";
+
+                ApplyBioLanguageSizing();
             }
 
             // Ensure tick is running (idempotent restart on same char)
