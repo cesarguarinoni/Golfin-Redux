@@ -158,6 +158,11 @@ namespace Golfin.Roster
             // Restart tick if a character is already selected (re-enable from background)
             if (!string.IsNullOrEmpty(currentCharacterId))
                 RestartTick();
+
+            // Re-localize on enable so a language change made while this panel was
+            // inactive — or fired before this panel subscribed in OnEnable — is picked
+            // up (closes the SELECT-button init race). Safe no-op when no char selected.
+            RefreshLocalizedText();
         }
 
         private void OnDisable()

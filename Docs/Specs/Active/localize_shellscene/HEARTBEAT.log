@@ -1,0 +1,37 @@
+2026-07-22T22:53:33Z activated — localize_shellscene iter-1 kickoff
+
+=== iter-1 kickoff baseline ===
+HEAD: 04e7ea1356db672c6eba4c7a7b03d04d9189a723
+DIRTY:
+ M Assets/Art/RosterScreen/ButtonCancel.png.meta
+ M Assets/Art/Shop/Background - Blurred.png
+ M Assets/Art/SplashScreen/Green Button.png.meta
+ M Assets/Fonts/NotoSansJP-VariableFont_wght SDF.asset
+ M Assets/Plugins/NuGet/.nuget-installed.json
+ M Assets/Plugins/NuGet/McpPlugin.Common.dll
+ M Assets/Plugins/NuGet/McpPlugin.dll
+ M Assets/Plugins/NuGet/ReflectorNet.dll
+ M Packages/manifest.json
+ M Packages/packages-lock.json
+?? .mcp.json.bak-23886
+?? Docs/Specs/Active/localize_shellscene/
+===
+
+2026-07-23T08:25:00 Step 0 complete — 32 GOs confirmed in-scope; starting Step 1 binding
+2026-07-23T08:30:00 Step 1 complete — 32 LocalizedText binders added and scene saved
+2026-07-23T08:35:00 JP verification — ブースト/バイオ/比較 text values confirmed; modal inactive, resolves on open
+2026-07-23T08:42:00 screenshots saved (EN home + JP roster); language restored to EN; play mode stopped
+2026-07-23T08:55:00 done, awaiting review
+2026-07-23T09:05:00 font-fix iteration — fixing stat-label JP wrap; re-capturing
+2026-07-23T09:15:00 captures complete — stat-label wrap fix confirmed, JP screenshots captured, reporting to architect
+2026-07-23T09:20:00 architect iteration — verify Rubik+NotoSansJP fallback fix; fix club stat wrap
+2026-07-23T09:35:00 atlas diagnosis complete — パ/ワ missing from NotoSansJP (U+30D1/U+30EF); club stat wrap fix confirmed 12 GOs; reporting to architect
+2026-07-23T09:40:00 screenshots reviewed and copied; composing architect report
+2026-07-23T09:43:30 Phase B complete — EN regression captures done, JP compare panel captured, all checks PASS, reporting to architect
+2026-07-23T09:50:00 final verification pass — checking SELECTED button JP value in non-compare mode
+2026-07-23T10:31:30 final verification complete — selected-button shows 選択済み after RefreshLocalizedText; LEVEL UP not in refresh scope; bio English; final_roster_jp.jpg saved
+2026-07-23T12:28:20 final_roster_jp_levelup.jpg captured — レベルアップ renders on LEVEL UP button, all JP labels correct, NO scene save performed
+2026-07-23T12:37:30 weight3_roster_jp.jpg captured — heavier Noto weight + auto-size-padding visible; NO scene save
+2026-07-23T12:52:30 EN safety audit complete — en_audit_splash/roster/inventory captured; all EN text at normal size, NO regressions
+2026-07-23T12:57:30 coordinator capture — en_splash_final + jp_roster_final saved; NO scene write
+2026-07-23T13:08:30 perlang captures done — jp_perlang_roster + en_perlang_splash + en_perlang_roster; NO scene write
