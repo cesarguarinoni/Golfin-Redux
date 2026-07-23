@@ -93,11 +93,18 @@ namespace Golfin.Roster
         [Header("Bio")]
         [SerializeField] private TextMeshProUGUI bioText;           // BioPanel > BioText
 
-        // Authored (English/design) bio font size, captured once before any auto-size
-        // kicks in. Japanese bios are taller at the same size and the long ones
-        // overflow the fixed BioText box; we shrink-to-fit in Japanese only.
+        // Authored (English/design) bio font size + box bottom edge, captured once before
+        // any auto-size kicks in. Japanese bios are taller at the same size and the long
+        // ones overflow the fixed BioText box past the divider; we shrink-to-fit in
+        // Japanese only (English is fixed-size + Overflow, so it ignores the box).
         private float _bioBaseFontSize;
+        private float _bioBaseBottomInset;
         private bool _bioBaseCaptured;
+
+        // In Japanese, raise the BioText box bottom this many px so auto-sizing targets the
+        // space ABOVE the divider (the authored box overhangs it by ~24px). English is
+        // untouched. Runtime-only — never serialized.
+        private const float BioJapaneseBottomLift = 30f;
 
         [Header("Status Icons")]
         [SerializeField] private GameObject? selectedIcon;       // IconSelectedBig — wire in Inspector
@@ -206,22 +213,29 @@ namespace Golfin.Roster
         {
             if (bioText == null) return;
 
-            // Capture the authored size once, before auto-sizing ever drives fontSize.
+            // Capture the authored size + box bottom once, before auto-sizing drives them.
             if (!_bioBaseCaptured && !bioText.enableAutoSizing)
             {
                 _bioBaseFontSize = bioText.fontSize;
+                _bioBaseBottomInset = bioText.rectTransform.offsetMin.y;
                 _bioBaseCaptured = true;
             }
             if (!_bioBaseCaptured) return;
 
+            var rt = bioText.rectTransform;
+            var offMin = rt.offsetMin;
             if (LocalizationManager.CurrentLanguage == Language.Japanese)
             {
+                // Raise the box bottom above the divider, then auto-shrink to fit it.
+                rt.offsetMin = new Vector2(offMin.x, _bioBaseBottomInset + BioJapaneseBottomLift);
                 bioText.enableAutoSizing = true;
                 bioText.fontSizeMax = _bioBaseFontSize;
                 bioText.fontSizeMin = _bioBaseFontSize * 0.72f;
             }
             else
             {
+                // Restore the authored box + fixed English size.
+                rt.offsetMin = new Vector2(offMin.x, _bioBaseBottomInset);
                 bioText.enableAutoSizing = false;
                 bioText.fontSize = _bioBaseFontSize;
             }

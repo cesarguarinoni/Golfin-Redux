@@ -70,9 +70,12 @@ namespace Golfin.Roster
         [SerializeField] private GameObject? compareLevelUpReadyIcon; // IconLevelUpBig — wire in Inspector
         [SerializeField] private GameObject? compareLowStaminaIcon;
 
-        // Authored (EN) compare-bio font size, captured before any Japanese auto-size shrink.
+        // Authored (EN) compare-bio font size + box bottom edge, captured before any
+        // Japanese auto-size shrink. English is fixed-size + Overflow so it ignores the box.
         private float _compareBioBaseFontSize;
+        private float _compareBioBaseBottomInset;
         private bool _compareBioBaseCaptured;
+        private const float BioJapaneseBottomLift = 30f;
 
         // ── Carousel ───────────────────────────────────────────────────────────
         [Header("Carousel")]
@@ -362,18 +365,23 @@ namespace Golfin.Roster
             if (!_compareBioBaseCaptured && !compareBioText.enableAutoSizing)
             {
                 _compareBioBaseFontSize = compareBioText.fontSize;
+                _compareBioBaseBottomInset = compareBioText.rectTransform.offsetMin.y;
                 _compareBioBaseCaptured = true;
             }
             if (!_compareBioBaseCaptured) return;
 
+            var rt = compareBioText.rectTransform;
+            var offMin = rt.offsetMin;
             if (LocalizationManager.CurrentLanguage == Language.Japanese)
             {
+                rt.offsetMin = new Vector2(offMin.x, _compareBioBaseBottomInset + BioJapaneseBottomLift);
                 compareBioText.enableAutoSizing = true;
                 compareBioText.fontSizeMax = _compareBioBaseFontSize;
                 compareBioText.fontSizeMin = _compareBioBaseFontSize * 0.72f;
             }
             else
             {
+                rt.offsetMin = new Vector2(offMin.x, _compareBioBaseBottomInset);
                 compareBioText.enableAutoSizing = false;
                 compareBioText.fontSize = _compareBioBaseFontSize;
             }
