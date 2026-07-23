@@ -332,3 +332,7 @@ CHAR_BIO_FREDA,"A legendary figure on the tour circuit.","ツアーサーキッ�
 CHAR_BIO_JOHAN,"Known for his precise short game.","精密なショートゲームで知られる。"
 CHAR_BIO_MIKE,"An enthusiastic newcomer to competitive golf.","競技ゴルフに情熱を燃やす新人。"
 CHAR_BIO_ROSHANA,"A fierce competitor with an unshakeable mindset.","揺るぎない精神を持つ闘志あふれる競技者。"
+GAMEPLAY_SHOOT,SHOOT,打つ
+GAMEPLAY_STRAIGHT,STRAIGHT,ストレート
+GAMEPLAY_FADE,FADE,フェード
+GAMEPLAY_DRAW,DRAW,ドロー

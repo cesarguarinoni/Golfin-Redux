@@ -31,7 +31,7 @@ namespace Golfin.Gameplay.UI.ShotUI
             if (router != null) router.enabled = !on;
             if (on)
             {
-                if (_primaryText   != null) _primaryText.text = "SHOOT";
+                if (_primaryText   != null) _primaryText.text = LocalizationManager.Get("GAMEPLAY_SHOOT");
                 if (_secondaryText != null) _secondaryText.gameObject.SetActive(false);
             }
             else

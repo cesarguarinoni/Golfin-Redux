@@ -1092,3 +1092,15 @@ MonoBehaviour:
   - key: CHAR_BIO_ROSHANA
     english: A fierce competitor with an unshakeable mindset.
     japanese: "\u63FA\u308B\u304E\u306A\u3044\u7CBE\u795E\u3092\u6301\u3064\u95D8\u5FD7\u3042\u3075\u308C\u308B\u7AF6\u6280\u8005\u3002"
+  - key: GAMEPLAY_SHOOT
+    english: SHOOT
+    japanese: "\u6253\u3064"
+  - key: GAMEPLAY_STRAIGHT
+    english: STRAIGHT
+    japanese: "\u30B9\u30C8\u30EC\u30FC\u30C8"
+  - key: GAMEPLAY_FADE
+    english: FADE
+    japanese: "\u30D5\u30A7\u30FC\u30C9"
+  - key: GAMEPLAY_DRAW
+    english: DRAW
+    japanese: "\u30C9\u30ED\u30FC"

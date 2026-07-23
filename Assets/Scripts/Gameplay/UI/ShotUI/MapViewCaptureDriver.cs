@@ -243,9 +243,10 @@ namespace Golfin.Gameplay.UI.ShotUI
                 // Approach 2: text-content fallback (STRAIGHT or FADE/DRAW text on active buttons)
                 if (fdBtn == null || !fdBtn.gameObject.activeInHierarchy)
                 {
-                    fdBtn = FindButtonByTextContent("STRAIGHT", Log)
-                         ?? FindButtonByTextContent("FADE", Log)
-                         ?? FindButtonByTextContent("DRAW", Log);
+                    // Match the localized label text (falls back through both toggle states).
+                    fdBtn = FindButtonByTextContent(LocalizationManager.Get("GAMEPLAY_STRAIGHT"), Log)
+                         ?? FindButtonByTextContent(LocalizationManager.Get("GAMEPLAY_FADE"), Log)
+                         ?? FindButtonByTextContent(LocalizationManager.Get("GAMEPLAY_DRAW"), Log);
                     Log($"  FadeDrawButton text fallback: {fdBtn?.gameObject.name ?? "NOT FOUND"}");
                 }
 
@@ -361,7 +362,7 @@ namespace Golfin.Gameplay.UI.ShotUI
             Log("Step 7: CLOSE map — tapping real SHOOT button");
             float headingAtClose = float.NaN;
             {
-                var shootBtn = FindButtonByTextContent("SHOOT", Log);
+                var shootBtn = FindButtonByTextContent(LocalizationManager.Get("GAMEPLAY_SHOOT"), Log);
                 if (shootBtn == null)
                 {
                     var mvc2 = FindObjectOfType<MapViewController>();

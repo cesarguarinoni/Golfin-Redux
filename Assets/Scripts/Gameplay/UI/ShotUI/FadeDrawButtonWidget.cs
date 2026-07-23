@@ -35,12 +35,14 @@ namespace Golfin.Gameplay.UI.ShotUI
             if (ShotModeContext.Mode == ShotMode.Straight)
             {
                 if (_iconImage   != null) _iconImage.sprite = _iconStraight;
-                if (_primaryText != null) _primaryText.text = "STRAIGHT";
+                if (_primaryText != null) _primaryText.text = LocalizationManager.Get("GAMEPLAY_STRAIGHT");
             }
             else
             {
                 if (_iconImage   != null) _iconImage.sprite = _iconFadeDraw;
-                if (_primaryText != null) _primaryText.text = "FADE/\nDRAW";
+                // "/" + line break kept as layout; only the FADE/DRAW words localize.
+                if (_primaryText != null)
+                    _primaryText.text = $"{LocalizationManager.Get("GAMEPLAY_FADE")}/\n{LocalizationManager.Get("GAMEPLAY_DRAW")}";
             }
             if (_secondaryText != null) _secondaryText.gameObject.SetActive(false);
         }

@@ -2227,7 +2227,7 @@ namespace Golfin.Gameplay.UI.ShotUI
                 else if (_shootButtonLabel != null)
                 {
                     _savedShootLabel       = _shootButtonLabel.text;
-                    _shootButtonLabel.text = "SHOOT";
+                    _shootButtonLabel.text = LocalizationManager.Get("GAMEPLAY_SHOOT");
                 }
                 _shootButton.onClick.RemoveAllListeners();
                 _shootButton.onClick.AddListener(Close);
