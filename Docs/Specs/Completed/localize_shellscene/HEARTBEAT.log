@@ -35,3 +35,4 @@ DIRTY:
 2026-07-23T12:52:30 EN safety audit complete — en_audit_splash/roster/inventory captured; all EN text at normal size, NO regressions
 2026-07-23T12:57:30 coordinator capture — en_splash_final + jp_roster_final saved; NO scene write
 2026-07-23T13:08:30 perlang captures done — jp_perlang_roster + en_perlang_splash + en_perlang_roster; NO scene write
+2026-07-23T05:48:24Z en_bio_james.jpg captured — all 3 bio captures complete (jp_bio_james, jp_bio_elizabeth, en_bio_james)
