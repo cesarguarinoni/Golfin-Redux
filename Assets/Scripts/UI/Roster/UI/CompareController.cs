@@ -297,9 +297,18 @@ namespace Golfin.Roster
                 HideAllDiffs();
             }
 
-            // Bio
+            // Bio (localized: CHAR_BIO_<NAME>; falls back to CSV English)
             if (compareBioText != null)
-                compareBioText.text = csvChar?.bio ?? "";
+            {
+                string bioKey = csvChar?.BioLocalizationKey;
+                string localizedBio = null;
+                if (!string.IsNullOrEmpty(bioKey))
+                {
+                    string loc = LocalizationManager.Get(bioKey);
+                    if (loc != bioKey) localizedBio = loc; // key present in the localization table
+                }
+                compareBioText.text = !string.IsNullOrEmpty(localizedBio) ? localizedBio : (csvChar?.bio ?? "");
+            }
 
             // Status icons
             if (compareSelectedIcon != null)

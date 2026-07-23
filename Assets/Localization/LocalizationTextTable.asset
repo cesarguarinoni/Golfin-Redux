@@ -1052,3 +1052,43 @@ MonoBehaviour:
   - key: TOAST_COURSE_CLEARED
     english: COURSE CLEARED!
     japanese: "\u30B3\u30FC\u30B9\u30AF\u30EA\u30A2\uFF01"
+  - key: CHAR_BIO_JAMES
+    english: A dependable player just starting out on the tour.
+    japanese: "\u30C4\u30A2\u30FC\u306B\u4E0A\u304C\u3063\u305F\u3070\u304B\u308A\u306E\u983C\u308C\u308B\u9078\u624B\u3002"
+  - key: CHAR_BIO_OLIVIA
+    english: A rising talent with solid fundamentals.
+    japanese: "\u57FA\u790E\u306E\u3057\u3063\u304B\u308A\u3057\u305F\u671F\u5F85\u306E\u65B0\u661F\u3002"
+  - key: CHAR_BIO_RICHARD
+    english: A seasoned pro with decades of experience.
+    japanese: "\u6570\u5341\u5E74\u306E\u7D4C\u9A13\u3092\u6301\u3064\u719F\u7DF4\u306E\u30D7\u30ED\u3002"
+  - key: CHAR_BIO_ELIZABETH
+    english: Elizabeth Blackwood, 46, a maverick from Cornwall, earned her Ladies
+      European Tour spot through precision. With three decades on coastal courses
+      her impeccable control makes her the top mentor for young talents.
+    japanese: "\u30B3\u30FC\u30F3\u30A6\u30A9\u30FC\u30EB\u51FA\u8EAB\u306E\u4E00\u5339\u72FC\u3001\u30A8\u30EA\u30B6\u30D9\u30B9\u30FB\u30D6\u30E9\u30C3\u30AF\u30A6\u30C3\u30C9\uFF0846\u6B73\uFF09\u3002\u7CBE\u5BC6\u306A\u30D7\u30EC\u30FC\u3067\u30EC\u30C7\u30A3\u30FC\u30B9\u30FB\u30E8\u30FC\u30ED\u30D4\u30A2\u30F3\u30C4\u30A2\u30FC\u306E\u51FA\u5834\u6A29\u3092\u63B4\u3093\u3060\u3002\u6D77\u6CBF\u3044\u306E\u30B3\u30FC\u30B9\u3067\u57F9\u3063\u305F30\u5E74\u306E\u30AD\u30E3\u30EA\u30A2\u3068\u975E\u306E\u6253\u3061\u6240\u306E\u306A\u3044\u30B3\u30F3\u30C8\u30ED\u30FC\u30EB\u3067\u3001\u82E5\u624B\u3092\u5C0E\u304F\u4E00\u6D41\u306E\u30E1\u30F3\u30BF\u30FC\u3068\u3057\u3066\u77E5\u3089\u308C\u308B\u3002"
+  - key: CHAR_BIO_SHAE
+    english: Shae O'Connell, 23, from County Clare, earned her Ladies European Tour
+      card through finesse and course smarts. Decades on windswept links make her
+      an ideal mentor for players refining control.
+    japanese: "\u30AB\u30A6\u30F3\u30C6\u30A3\u30FB\u30AF\u30EC\u30A2\u51FA\u8EAB\u306E\u30B7\u30A7\u30A4\u30FB\u30AA\u30B3\u30F3\u30CD\u30EB\uFF0823\u6B73\uFF09\u3002\u5DE7\u307F\u306A\u6280\u8853\u3068\u30B3\u30FC\u30B9\u3092\u8AAD\u3080\u8CE2\u3055\u3067\u30EC\u30C7\u30A3\u30FC\u30B9\u30FB\u30E8\u30FC\u30ED\u30D4\u30A2\u30F3\u30C4\u30A2\u30FC\u306E\u51FA\u5834\u8CC7\u683C\u3092\u5F97\u305F\u3002\u98A8\u306E\u5439\u304D\u8352\u308C\u308B\u30EA\u30F3\u30AF\u30B9\u3067\u7A4D\u3093\u3060\u9577\u5E74\u306E\u7D4C\u9A13\u306F\u3001\u30B3\u30F3\u30C8\u30ED\u30FC\u30EB\u3092\u78E8\u304F\u9078\u624B\u306B\u3068\u3063\u3066\u7406\u60F3\u7684\u306A\u624B\u672C\u3068\u306A\u308B\u3002"
+  - key: CHAR_BIO_CAMILA
+    english: A versatile player known for consistency.
+    japanese: "\u5B89\u5B9A\u611F\u3067\u77E5\u3089\u308C\u308B\u30AA\u30FC\u30EB\u30E9\u30A6\u30F3\u30C9\u306A\u9078\u624B\u3002"
+  - key: CHAR_BIO_GUILLERMO
+    english: A powerful hitter with natural talent.
+    japanese: "\u5929\u8CE6\u306E\u624D\u3092\u6301\u3064\u30D1\u30EF\u30D5\u30EB\u306A\u30D2\u30C3\u30BF\u30FC\u3002"
+  - key: CHAR_BIO_EAN
+    english: A balanced player with room to grow.
+    japanese: "\u6210\u9577\u306E\u4F59\u5730\u3092\u6B8B\u3059\u30D0\u30E9\u30F3\u30B9\u306E\u53D6\u308C\u305F\u9078\u624B\u3002"
+  - key: CHAR_BIO_FREDA
+    english: A legendary figure on the tour circuit.
+    japanese: "\u30C4\u30A2\u30FC\u30B5\u30FC\u30AD\u30C3\u30C8\u306E\u4F1D\u8AAC\u7684\u5B58\u5728\u3002"
+  - key: CHAR_BIO_JOHAN
+    english: Known for his precise short game.
+    japanese: "\u7CBE\u5BC6\u306A\u30B7\u30E7\u30FC\u30C8\u30B2\u30FC\u30E0\u3067\u77E5\u3089\u308C\u308B\u3002"
+  - key: CHAR_BIO_MIKE
+    english: An enthusiastic newcomer to competitive golf.
+    japanese: "\u7AF6\u6280\u30B4\u30EB\u30D5\u306B\u60C5\u71B1\u3092\u71C3\u3084\u3059\u65B0\u4EBA\u3002"
+  - key: CHAR_BIO_ROSHANA
+    english: A fierce competitor with an unshakeable mindset.
+    japanese: "\u63FA\u308B\u304E\u306A\u3044\u7CBE\u795E\u3092\u6301\u3064\u95D8\u5FD7\u3042\u3075\u308C\u308B\u7AF6\u6280\u8005\u3002"

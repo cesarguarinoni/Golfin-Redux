@@ -311,10 +311,20 @@ namespace Golfin.Roster
             // --- Select Button ---
             UpdateSelectButton(playerData.isSelected);
 
-            // --- Bio ---
+            // --- Bio (localized: CHAR_BIO_<NAME>; falls back to CSV English) ---
             if (bioText != null)
             {
-                if (csvData != null && !string.IsNullOrEmpty(csvData.bio))
+                string localizedBio = null;
+                string bioKey = csvData?.BioLocalizationKey;
+                if (!string.IsNullOrEmpty(bioKey))
+                {
+                    string loc = LocalizationManager.Get(bioKey);
+                    if (loc != bioKey) localizedBio = loc; // key present in the localization table
+                }
+
+                if (!string.IsNullOrEmpty(localizedBio))
+                    bioText.text = localizedBio;
+                else if (csvData != null && !string.IsNullOrEmpty(csvData.bio))
                     bioText.text = csvData.bio;
                 else if (soData != null && !string.IsNullOrEmpty(soData.bioFallbackText))
                     bioText.text = soData.bioFallbackText;

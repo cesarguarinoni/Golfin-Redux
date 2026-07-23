@@ -320,3 +320,15 @@ STAMINA_PREF_NARA,NARA,奈良
 STAMINA_PREF_WAKAYAMA,WAKAYAMA,和歌山
 RESULT_PLAY_NEXT,PLAY NEXT,次をプレイ
 TOAST_COURSE_CLEARED,COURSE CLEARED!,コースクリア！
+CHAR_BIO_JAMES,"A dependable player just starting out on the tour.","ツアーに上がったばかりの頼れる選手。"
+CHAR_BIO_OLIVIA,"A rising talent with solid fundamentals.","基礎のしっかりした期待の新星。"
+CHAR_BIO_RICHARD,"A seasoned pro with decades of experience.","数十年の経験を持つ熟練のプロ。"
+CHAR_BIO_ELIZABETH,"Elizabeth Blackwood, 46, a maverick from Cornwall, earned her Ladies European Tour spot through precision. With three decades on coastal courses her impeccable control makes her the top mentor for young talents.","コーンウォール出身の一匹狼、エリザベス・ブラックウッド（46歳）。精密なプレーでレディース・ヨーロピアンツアーの出場権を掴んだ。海沿いのコースで培った30年のキャリアと非の打ち所のないコントロールで、若手を導く一流のメンターとして知られる。"
+CHAR_BIO_SHAE,"Shae O'Connell, 23, from County Clare, earned her Ladies European Tour card through finesse and course smarts. Decades on windswept links make her an ideal mentor for players refining control.","カウンティ・クレア出身のシェイ・オコンネル（23歳）。巧みな技術とコースを読む賢さでレディース・ヨーロピアンツアーの出場資格を得た。風の吹き荒れるリンクスで積んだ長年の経験は、コントロールを磨く選手にとって理想的な手本となる。"
+CHAR_BIO_CAMILA,"A versatile player known for consistency.","安定感で知られるオールラウンドな選手。"
+CHAR_BIO_GUILLERMO,"A powerful hitter with natural talent.","天賦の才を持つパワフルなヒッター。"
+CHAR_BIO_EAN,"A balanced player with room to grow.","成長の余地を残すバランスの取れた選手。"
+CHAR_BIO_FREDA,"A legendary figure on the tour circuit.","ツアーサーキットの伝説的存在。"
+CHAR_BIO_JOHAN,"Known for his precise short game.","精密なショートゲームで知られる。"
+CHAR_BIO_MIKE,"An enthusiastic newcomer to competitive golf.","競技ゴルフに情熱を燃やす新人。"
+CHAR_BIO_ROSHANA,"A fierce competitor with an unshakeable mindset.","揺るぎない精神を持つ闘志あふれる競技者。"

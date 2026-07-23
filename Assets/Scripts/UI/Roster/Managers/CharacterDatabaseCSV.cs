@@ -250,6 +250,15 @@ namespace Golfin.Roster
         public string GetRarityLabel() => RarityHelper.GetRarityLabel(rarity);
 
         /// <summary>
+        /// Localization key for this character's bio, e.g. "char_james" -> "CHAR_BIO_JAMES".
+        /// Null when the id is empty so callers fall back to the CSV English <see cref="bio"/>.
+        /// </summary>
+        public string? BioLocalizationKey =>
+            string.IsNullOrEmpty(characterId)
+                ? null
+                : "CHAR_BIO_" + (characterId.StartsWith("char_") ? characterId.Substring(5) : characterId).ToUpperInvariant();
+
+        /// <summary>
         /// Get display name formatted as "FIRSTNAME\nLASTNAME" for the detail panel
         /// </summary>
         public string GetDisplayName()
