@@ -22,6 +22,7 @@ NOTES verified the code surface on **2026-05-17**. `tree_collisions` (Order 348)
 | `PhysicsLabController.cs:1185-1186` | drifted to **`:1453/:1454`**, plus a third load at **`:1484`** |
 | `tees` as `Dictionary<TeeColor, TeeData>` | **ILLEGAL** — see §3 |
 | Importer menus: pick option (a) | **Cesar overrode to (b)** 2026-07-24 |
+| Only `Resources/HoleData/` collides | **`Resources/HoleImages/` collides too** — see §1.7. Fails silently via a `Missing` sprite fallback. |
 
 **Do not work from NOTES' call-site list. Use §1.2 below.**
 
@@ -107,6 +108,36 @@ One-shot mechanical move of 18 Lomond folders (all 4 artifacts each):
 - **Use `AssetDatabase.MoveAsset`** to preserve `.meta` GUIDs.
 - `[MenuItem(..., validate = true)]` returns false once `HoleData/lomond-country-club/Hole_01/heightmap.bytes` exists, so the menu greys out after it has run.
 
+### 1.7 HoleImages — second collision path (added 2026-07-24 after Cesar asked "does this cover every per-hole detail?")
+
+**`Assets/Resources/HoleImages/Hole_01.png … Hole_18.png` is flat and un-namespaced.** Taiheiyo's `Hole_01.png` collides with Lomond's exactly like the sim data. NOT in the original NOTES scope.
+
+Load sites (2, both `Resources.Load<Sprite>($"HoleImages/{hole.holeImageName}")`):
+| File | Line | Fallback |
+|---|---|---|
+| `Assets/Scripts/UI/Modals/Result/HoleCompleteModalController.cs` | 376 | `HoleImages/Missing` at :379 |
+| `Assets/Scripts/UI/HoleSelection/HoleCardController.cs` | 157 | `HoleImages/Missing` at :160 |
+
+**TRAP — this one fails SILENTLY.** Both sites fall back to a `Missing` sprite on a null load, so a collision does not throw. Taiheiyo would ship rendering placeholder art on its hole cards and result modals with no error in the log. Any verification MUST be visual, not log-based.
+
+**Fix is data-only — no code change.** `holeImageName` is CSV column 4 and `Resources.Load` accepts a relative path:
+1. Move PNGs → `Assets/Resources/HoleImages/lomond-country-club/Hole_NN.png` (use `AssetDatabase.MoveAsset` — GUID preservation, same as §1.6).
+2. Rewrite `HoleDatabase.csv` col 4 from `Hole_01` → `lomond-country-club/Hole_01` (18 rows).
+3. Leave `HoleImages/Missing` at the root — it is course-agnostic and both fallbacks reference it directly.
+4. Update the comment on `HoleData.cs:44`, which documents the old flat convention.
+
+**Gate:** open Hole Selection and complete a hole — cards and result modal must show real hole art, not the `Missing` placeholder.
+
+### 1.8 Verified as NOT needing work
+
+Audited 2026-07-24; do not spend time re-checking these:
+- **Baked geometry** (materials, mask textures) — already at `Golf/Courses/<slug>/Data/hole-NN[-geo][-flat][-experimental]/`. Safe.
+- **Hole scenes** — already at `Golf/Courses/<slug>/Generated/Hole_NN_Geo.unity`. Safe.
+- **Baked lightmaps / GI** — none exist (no `.exr` or `*Lightmap*` anywhere under `Assets/Golf`).
+- **Per-hole prefabs** — none live. `Scenes/Original~/` is Unity-ignored (`~` suffix); `Prefabs/Original/OldHole/` is the known dead-asset pile.
+- **Localization keys** — `HOLE_LOMOND_N` / `HOLE_LOMOND_N_DESC` already encode the course.
+- **Non-shipping, out of scope:** `Assets/Screenshots/Hole_NN_*` (dev capture output), `Scenes/Debug/Hole_07_Geo_Diagnostic.unity`.
+
 ---
 
 ## 2. PHASE 2 — Course Importer EditorWindow
@@ -186,6 +217,7 @@ lomond-country-club,1,regular,509,green
 - New `CourseSlugResolverTests.cs` — lomond resolves, taiheiyo resolves, malformed returns null (~3).
 - New `TeeDataTests.cs` — Lomond hole parses 4 tees, `TryGetTee` miss returns false, null colour survives round-trip.
 - **Manual smoke:** Lomond Hole 1 — load, drive from tee, ball settles. Hole 7 (ravine repro) still classifies correctly. Hole 8 — tree collisions still fire (proves `tree_obstacles.csv` resolved at the new path).
+- **Manual smoke, VISUAL (§1.7):** Hole Selection cards + Hole Complete modal show real hole art, **not** the `Missing` placeholder. Must be checked by eye — the `Missing` fallback means a broken path produces no log error.
 
 ---
 
