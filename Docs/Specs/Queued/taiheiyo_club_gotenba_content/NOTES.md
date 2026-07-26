@@ -97,9 +97,12 @@ Other 16 holes have `description_jp: null`. Cesar can fill from Gora / Shotnavi 
    ```
    This produces the export package at `Tools/UHoleGeo/output/taiheiyo-club-gotenba/export/hole-XX/`.
 
-### Unity-side (BLOCKED on Phase 1 — `multi_club_architecture_refactor`)
+### Unity-side (Phase 1 `multi_club_architecture_refactor` — DONE 2026-07-27)
 
-7. **Unity importer course-aware.** Until Phase 1 lands, `HoleGeoImporter.cs` has Lomond hardcoded in 36 menu lines, and `Assets/Resources/HoleData/` is flat-namespaced — importing Taiheiyo would collide with Lomond. **Do not import Taiheiyo to Unity until Phase 1 ships.**
+> **⚠️ CODE PREREQUISITE before a second course ships — discovered by Phase 1 red-team, NOT yet fixed.**
+> `Assets/Scripts/Course/Runtime/GreenTopologyCache.cs:42` caches by `Dictionary<int, GreenTopology>` — **hole number alone, not course-namespaced.** `GreenTopology.LoadFromResources` beneath it IS course-aware, but the cache in front of it is not: with a second course loaded, `GetForHole(1)` silently returns Lomond's green topology for Taiheiyo's Hole 1. Its own doc comment (`:26`) claims `HoleSessionDriver.OnHoleUnloaded` invalidates the cache — **that call does not exist**; every real `Invalidate`/`InvalidateAll` caller is test- or editor-only. Correct for every state reachable *today* (single course), which is why Phase 1 correctly left it untouched (outside §1.2/§1.3/§1.8 surface). **But SPEC §7's "Taiheiyo becomes content-only, no code" is false until this cache is course-keyed.** Fix: key the cache on `(courseSlug, holeNumber)` and wire a real invalidation on hole unload. Do this BEFORE importing Taiheiyo holes, or greens will be silently wrong.
+
+7. **Unity importer course-aware — DONE.** Phase 1 replaced the 36 hardcoded menu lines with `GOLFIN > Course Importer` (`CourseImporterWindow`) and namespaced `Assets/Resources/HoleData/<course-slug>/`. **NOTE:** the window compiles but was never exercised on a real import during Phase 1 (the 40 legacy `HoleGeoImporter` menu items were intentionally retained per SPEC §2 until it is). First Taiheiyo import doubles as the window's real-world verification — if it misbehaves, the legacy menu items are still available as fallback.
 8. **Then per-hole:**
    ```
    Unity > Import > Geo > Normal > Import Hole XX Geo (Taiheiyo)   # menu added by Phase 1

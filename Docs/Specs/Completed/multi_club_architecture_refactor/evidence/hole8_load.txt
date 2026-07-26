@@ -1,0 +1,7 @@
+[LoadHole8] Starting...
+Unlocked Hole 8
+Current hole before change: 7
+Character ID: char_james
+SeedSession(8) called
+GameplaySceneLoader found, calling BeginGameplayLoad(8)
+BeginGameplayLoad(8) called

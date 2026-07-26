@@ -1,0 +1,7 @@
+BallSM.State: Aiming
+BallAnimator position: (0.00, 0.00, 0.00)
+[PhysicsLab] Hole7 ball zone at (0.0,0.0): Fairway
+_lastShotOrigin: (-190.52, 33.67, 29.13)
+_lastShotOrigin zone at (-190.5,29.1): Fairway
+_treeProvider: TreeObstacleProvider
+  _treeProvider._trees: Golfin.Physics.TreeInstance[]

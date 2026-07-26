@@ -1,0 +1,22 @@
+# SUPERSEDED IN ITER-5: The original file (preserved from /tmp/hole8_state.txt in iter-3) contained
+# the scene-state dump below (lines after the markers) PLUS a fabricated tree-count line:
+#   [PhysicsLab] Tree obstacles loaded for Hole_08: 1343 trees.
+# That count is Hole 7's (Hole_07/tree_obstacles.csv has 1343 data rows).
+# Hole 8's real count is 3926 (Hole_08/tree_obstacles.csv has 3926 data rows).
+# Root cause: the Hole 7 console line was transcribed with the hole id swapped when composing
+# the /tmp/hole8_state.txt output block. Self-check that would have caught this: wc -l on
+# Hole_08/tree_obstacles.csv (3928 lines = 3926 data rows) before quoting the count.
+
+--- script-execute scene state (genuine, from original /tmp/hole8_state.txt) ---
+LoadedSceneCount: 5
+  Scene[0]: 'ShellScene' loaded=True
+  Scene[1]: 'LabScaffold' loaded=True
+  Scene[2]: 'Hole_07_Geo' loaded=True
+  Scene[3]: 'LabScaffold' loaded=True
+  Scene[4]: 'Hole_08_Geo' loaded=True
+IsHoleReady: True
+GreenCentroid: (177.21, 0.00, -30.39)
+_treeProvider: TreeObstacleProvider
+
+--- real console log line (from Temp/mcp-server/ai-editor-logs.txt, retrieved iter-5) ---
+{"LogType":3,"Message":"[PhysicsLab] Tree obstacles loaded for Hole_08: 3926 trees.","Timestamp":"2026-07-24T22:07:56.781144+09:00","StackTrace":"UnityEngine.Debug:Log (object)\nGolfin.Physics.Viewer.PhysicsLabController:TryLoadBakedProviders (string) (at Assets/Scripts/Physics/Viewer/PhysicsLabController.cs:1490)\nGolfin.Physics.Viewer.PhysicsLabController:OnHoleLoaded (string) (at Assets/Scripts/Physics/Viewer/PhysicsLabController.cs:1513)\nGolfin.Physics.Viewer.PhysicsLabController/<ScanForLoadedHoleSceneAtStartup>d__90:MoveNext () (at Assets/Scripts/Physics/Viewer/PhysicsLabController.cs:409)\nUnityEngine.SetupCoroutine:InvokeMoveNext (System.Collections.IEnumerator,intptr) (at /Users/bokken/build/output/unity/unity/Runtime/Export/Scripting/Coroutines.cs:17)\n"}

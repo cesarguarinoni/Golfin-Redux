@@ -1,0 +1,6 @@
+IsHoleReady=True
+ShotController.State=Idle
+_lastShotOrigin=(-54.91, 24.13, -79.51)
+Scene[0]=ShellScene loaded=True
+Scene[1]=LabScaffold loaded=True
+Scene[2]=Hole_08_Geo loaded=True
