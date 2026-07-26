@@ -12,14 +12,14 @@ The runtime code is in **good shape** for iOS. No ATS/networking blockers, no AO
 
 ---
 
-## 1. HARD BLOCKERS — cannot install on device until these are done (Cesar/Xcode)
+## 1. Signing / device-install prerequisites (Cesar/Xcode)
 
-These are exactly the "dev account" gate TellCode flagged, now confirmed in `ProjectSettings/ProjectSettings.asset`:
+**UPDATE 2026-07-27: paid Apple Developer account is UNBLOCKED + TestFlight is available.** The old "dev account" gate is resolved — signing is now a config step, not an account wait. Two items remain before a tethered install:
 
-1. **Bundle identifier is the template default.** Current: `com.Unity-Technologies.com.unity.template.urp-blank` (malformed — double `com.`). **Cesar must set a real reverse-DNS id** (e.g. `com.<org>.golfinredux`). Claude Code should NOT invent the string — Cesar supplies it, then it's set in Player Settings > Identification.
-2. **No signing configured.** `appleDeveloperTeamID` empty · `appleEnableAutomaticSigning: 0` · `iOSManualSigningProvisioningProfileID` empty. **Cannot sign → cannot install.** Cesar action: Apple Developer account → set Team ID + enable Automatic Signing (simplest for a dev device), or attach a manual provisioning profile. This is an account/entitlement step, not code.
+1. **Bundle identifier is the template default.** Current: `com.Unity-Technologies.com.unity.template.urp-blank` (malformed — double `com.`). **Cesar sets a real reverse-DNS id** (e.g. `com.<org>.golfinredux`) in Player Settings > Identification. Claude Code should NOT invent the string. **Pick the FINAL id now** — it becomes the app's permanent identity once a TestFlight/App Store Connect record is created and can't easily change later.
+2. **Signing:** in Xcode's Signing & Capabilities, enable Automatically manage signing and select the **paid Team** (no longer a Personal Team → no 7-day expiry, no 3-app limit). Account/entitlement step, not code.
 
-Until 1 + 2 are resolved, the build cannot reach the device. Everything in §2 can proceed in parallel.
+Neither blocks §2 (Phase A) — that proceeds in parallel.
 
 ---
 
@@ -89,3 +89,18 @@ Core-loop, crash-focused. Pass = it runs; note anything visual for Order 930.
 ## 6. Implementer scope
 
 Claude Code owns **Phase A (A1–A3 required; A4–A5 optional/defer-if-risky)**. Phase B and §1 are Cesar (account, signing, Xcode, device). §4 is Cesar's on-device run. Do NOT attempt signing, bundle-id invention, or the Xcode build from Code.
+
+---
+
+## 7. TestFlight distribution lane (added 2026-07-27 — paid account + TestFlight now available)
+
+**Sequence: tethered smoke (§3–§4) FIRST, TestFlight SECOND.** Do not burn a TestFlight processing cycle + Ken's time on a build that hasn't cleared hardware smoke. Upload a build that already passed §4.
+
+**Three upload gates — none block the tethered smoke, ALL block a TestFlight upload (verified 2026-07-27):**
+1. **No app icon.** `m_BuildTargetPlatformIcons` empty; no 1024×1024 marketing icon on disk. App Store Connect **rejects uploads without a valid 1024² icon (no alpha).** Needs ART FROM CESAR (a placeholder logo is fine for beta but must be valid). Once the PNG exists, wiring it into Player Settings iOS icon slots is Code-able.
+2. **Build number empty** (`buildNumber:` blank, `bundleVersion: 0.1.0`). App Store Connect requires a build number, unique + incrementing per upload. Start at `1`. Code-able.
+3. **Export compliance** — no `ITSAppUsesNonExemptEncryption` flag → Xcode prompts per upload. Golf game = effectively exempt; set flag `false` once. Code-able (Info.plist / Player Settings).
+
+**Flow once gates cleared (Cesar):** create App Store Connect app record matching the bundle id → Xcode **Product → Archive** → Organizer → **Distribute → App Store Connect → Upload** → answer export compliance → wait for processing → TestFlight tab → add Ken as tester (internal = instant; external = light Beta App Review). Ken installs TestFlight app + accepts invite → plays OTA.
+
+**This is arguably its own Notion order** (App Store Connect record, icon asset, tester onboarding) distinct from the smoke test. Fileable as `testflight_distribution` if Cesar wants it tracked separately.
