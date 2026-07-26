@@ -4,6 +4,7 @@ using System.IO;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using Golfin.Course.Runtime;
 
 namespace Golfin.CourseImport
 {
@@ -154,11 +155,15 @@ namespace Golfin.CourseImport
                 for (int x = 0; x < res; x++)
                     buffer[y, x] = ToQ16_16(heights[y, x] * size.y);
 
-            // Determine output path
+            // Determine output path.
+            // SPEC §5.6: fail loudly at bake sites when slug is null.
+            string courseSlug = CourseSlugResolver.ResolveOrThrow(
+                EditorSceneManager.GetActiveScene().path,
+                "PhysicsHeightmapBaker.BakeActiveScene");
             string holeFolder = isFlat ? $"hole-{holeNumber:D2}-flat" : $"hole-{holeNumber:D2}";
             string exportRoot = Path.GetFullPath(Path.Combine(
                 Application.dataPath, "..",
-                $"Tools/UHoleGeo/output/lomond-country-club/export"));
+                $"Tools/UHoleGeo/output/{courseSlug}/export"));
             string exportPath = Path.Combine(exportRoot, holeFolder);
             string outPath = Path.Combine(exportPath, "heightmap.bytes");
 

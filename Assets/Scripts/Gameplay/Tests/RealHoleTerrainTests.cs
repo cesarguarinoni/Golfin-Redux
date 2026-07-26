@@ -45,8 +45,8 @@ namespace Golfin.Gameplay.Tests
 
         const string IgnoreReason = "Known-failing — see Docs/Specs/Queued/AIRBORNE_GROUND_LEVEL_DETECTION.md (M3.5).";
 
-        const string ZonesJsonPathFmt      = "Assets/Resources/HoleData/{0}/zones.json";
-        const string HeightmapBytesPathFmt = "Assets/Resources/HoleData/{0}/heightmap.bytes";
+        const string ZonesJsonPathFmt      = "Assets/Resources/HoleData/lomond-country-club/{0}/zones.json";
+        const string HeightmapBytesPathFmt = "Assets/Resources/HoleData/lomond-country-club/{0}/heightmap.bytes";
 
         struct HoleProviders
         {

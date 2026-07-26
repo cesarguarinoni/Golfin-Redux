@@ -15,7 +15,7 @@ namespace Golfin.Physics.Viewer
     /// that normal PhysicsLab_Hole1 uses, since TestGreen has no separate Geo scene).
     ///
     /// Flow:
-    ///   1. Start() loads HoleData/TestGreen/zones.json via Resources.Load.
+    ///   1. Start() loads HoleData/_test/TestGreen/zones.json via Resources.Load.
     ///   2. Creates a BakedZoneClassifier from that ZoneData.
     ///   3. Fires HoleContext.HoleNumber = 999 + HoleContext.Raise() so that
     ///      PutterGreenReader.OnHoleContextChanged triggers its bake via the
@@ -51,12 +51,12 @@ namespace Golfin.Physics.Viewer
         /// </summary>
         public void LoadAndBake()
         {
-            // Load zones.json for TestGreen.
-            var zonesAsset = Resources.Load<TextAsset>("HoleData/TestGreen/zones");
+            // Load zones.json for TestGreen (non-course fixture lives under _test/).
+            var zonesAsset = Resources.Load<TextAsset>("HoleData/_test/TestGreen/zones");
             if (zonesAsset == null)
             {
-                Debug.LogError("[TestGreenLabSetup] Resources/HoleData/TestGreen/zones not found. " +
-                               "Run TestGreenSceneBuilder or ensure the zones.json is in Resources.");
+                Debug.LogError("[TestGreenLabSetup] Resources/HoleData/_test/TestGreen/zones not found. " +
+                               "Run TestGreenSceneBuilder or ensure the zones.json is in Resources/_test/TestGreen.");
                 return;
             }
 

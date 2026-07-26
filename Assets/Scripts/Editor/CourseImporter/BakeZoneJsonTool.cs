@@ -7,13 +7,15 @@ using UnityEngine.SceneManagement;
 using Golfin.Physics;
 using Golfin.Physics.Runtime;
 using Golfin.Physics.Runtime.Baked;
+using Golfin.Course.Runtime;
 
 namespace Golfin.Editor.CourseImporter
 {
     /// <summary>
     /// Walks each Hole_XX_Geo scene's zone-mesh hierarchy, extracts the boundary
     /// contour of every zone mesh, projects to XZ, and writes a polygon-based
-    /// <see cref="ZoneData"/> JSON at <c>Assets/Resources/HoleData/Hole_XX/zones.json</c>.
+    /// <see cref="ZoneData"/> JSON at
+    /// <c>Assets/Resources/HoleData/&lt;courseSlug&gt;/Hole_XX/zones.json</c>.
     ///
     /// Spec: Docs/Specs/Active/SIM_BAKED_DATA_PATH.md, Milestone 1, step 4.
     ///
@@ -147,7 +149,9 @@ namespace Golfin.Editor.CourseImporter
                 ((int)a.SurfaceType).CompareTo((int)b.SurfaceType));
 
             // Write JSON.
-            string outDir = Path.Combine(ResourcesRoot, holeId);
+            // SPEC §5.6: fail loudly at bake sites when slug is null.
+            string courseSlug = CourseSlugResolver.ResolveOrThrow(holeScenePath, "BakeZoneJsonTool.BakeOne");
+            string outDir = Path.Combine(ResourcesRoot, courseSlug, holeId);
             Directory.CreateDirectory(outDir);
             string outPath = Path.Combine(outDir, "zones.json");
             File.WriteAllText(outPath, data.ToJson(pretty: true));

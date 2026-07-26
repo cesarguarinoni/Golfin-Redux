@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine;
 using Golfin.Course.Runtime;
 
@@ -13,7 +14,7 @@ namespace Golfin.Editor.GreenAuthoring
 {
     /// <summary>
     /// Serializes authored green topology state to JSON and writes atomically to
-    /// <c>Assets/Resources/HoleData/Hole_NN/green.json</c>.
+    /// <c>Assets/Resources/HoleData/&lt;courseSlug&gt;/Hole_NN/green.json</c>.
     ///
     /// <para>
     /// Pipeline: validate → ToJson → temp write → File.Replace → AssetDatabase.ImportAsset
@@ -28,7 +29,7 @@ namespace Golfin.Editor.GreenAuthoring
 
         /// <summary>
         /// Serializes the green's authored state to JSON and writes it atomically
-        /// to <c>Assets/Resources/HoleData/Hole_NN/green.json</c>.
+        /// to <c>Assets/Resources/HoleData/&lt;courseSlug&gt;/Hole_NN/green.json</c>.
         /// Returns <c>true</c> on success; emits <see cref="Debug.LogError"/> + returns <c>false</c>
         /// on validation failure or I/O error.
         /// </summary>
@@ -103,7 +104,10 @@ namespace Golfin.Editor.GreenAuthoring
                                  pinCandidates, defaultPinIndex, backdrop);
 
             // ── Atomic write (Q5) ────────────────────────────────────────────
-            string holeFolder  = $"Assets/Resources/HoleData/Hole_{holeNumber:D2}";
+            // Resolve course slug from active scene path (SPEC §5.6: fail loudly on null).
+            string activeScenePath = EditorSceneManager.GetActiveScene().path;
+            string courseSlug      = CourseSlugResolver.ResolveOrThrow(activeScenePath, "GreenJsonWriter.SaveToResources");
+            string holeFolder  = $"Assets/Resources/HoleData/{courseSlug}/Hole_{holeNumber:D2}";
             string assetPath   = $"{holeFolder}/green.json";
             string tmpPath     = $"{holeFolder}/green.json.tmp";
             string fullPath    = Path.GetFullPath(assetPath);

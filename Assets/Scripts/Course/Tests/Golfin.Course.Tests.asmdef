@@ -3,6 +3,7 @@
     "rootNamespace": "Golfin.Course.Tests",
     "references": [
         "Golfin.Course.Runtime",
+        "Golfin.Gameplay.Loop",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],

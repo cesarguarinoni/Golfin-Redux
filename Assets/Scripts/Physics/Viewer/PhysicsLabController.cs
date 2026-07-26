@@ -11,6 +11,7 @@ using Golfin.Physics.Math;
 using Golfin.Physics.Stats;
 using Golfin.Physics.Runtime;
 using Golfin.Gameplay.Input;
+using Golfin.Gameplay.Loop;
 using Golfin.Gameplay.UI.ShotUI;
 
 [assembly: InternalsVisibleTo("Golfin.Physics.Tests")]
@@ -1446,20 +1447,21 @@ namespace Golfin.Physics.Viewer
             _bakedGround     = null;
             _treeProvider    = null;
 
-            // Both files live under Assets/Resources/HoleData/<holeId>/ so they
+            // Both files live under Assets/Resources/HoleData/<courseSlug>/<holeId>/ so they
             // ship with built players AND survive cross-PC pulls (Tools/UHoleGeo/output/
             // is gitignored — heightmap MUST live in Resources, not the bake-tool's
             // staging folder).
-            var zonesAsset = Resources.Load<TextAsset>($"HoleData/{holeId}/zones");
-            var hmAsset    = Resources.Load<TextAsset>($"HoleData/{holeId}/heightmap");
+            string courseSlug = ActiveCourseContext.CurrentCourseSlug;
+            var zonesAsset = Resources.Load<TextAsset>($"HoleData/{courseSlug}/{holeId}/zones");
+            var hmAsset    = Resources.Load<TextAsset>($"HoleData/{courseSlug}/{holeId}/heightmap");
             if (zonesAsset == null)
             {
-                Debug.LogWarning($"[PhysicsLab] No baked zones at Resources/HoleData/{holeId}/zones — sim will use scene providers.");
+                Debug.LogWarning($"[PhysicsLab] No baked zones at Resources/HoleData/{courseSlug}/{holeId}/zones — sim will use scene providers.");
                 return;
             }
             if (hmAsset == null)
             {
-                Debug.LogWarning($"[PhysicsLab] No baked heightmap at Resources/HoleData/{holeId}/heightmap — sim will use scene providers.");
+                Debug.LogWarning($"[PhysicsLab] No baked heightmap at Resources/HoleData/{courseSlug}/{holeId}/heightmap — sim will use scene providers.");
                 return;
             }
 
@@ -1481,7 +1483,7 @@ namespace Golfin.Physics.Viewer
                         + $"OB mask={(data.obMask != null ? "yes" : "no")}.");
 
                 // Phase 7: load tree obstacles for this hole.
-                var treeAsset = Resources.Load<TextAsset>($"HoleData/{holeId}/tree_obstacles");
+                var treeAsset = Resources.Load<TextAsset>($"HoleData/{courseSlug}/{holeId}/tree_obstacles");
                 var instances = Golfin.Physics.Runtime.TreeObstacleLoader.LoadInstances(treeAsset);
                 _treeProvider = Golfin.Physics.Runtime.TreeObstacleProvider.Create(instances);
                 if (_treeProvider != null)

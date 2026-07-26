@@ -31,6 +31,7 @@ namespace Golfin.CourseImport.Diagnostic
     public static class GreenVariantDiagnostic
     {
         // ─── Constants ────────────────────────────────────────────────────────
+        private const string DiagCourseSlug = "lomond-country-club"; // diagnostic is hardcoded to this course
         private const float SeatY       = 0f;    // constant terrain stub
         private const float CollarWidth = 0.9f;  // matches production GreenCollarWidth
         private const float GridSpacing = 0.5f;  // matches production green gridSpacing
@@ -88,7 +89,7 @@ namespace Golfin.CourseImport.Diagnostic
 
             // 2. Load topology
             string absPath = Path.GetFullPath(
-                Path.Combine(Application.dataPath, "..", $"Assets/Resources/HoleData/Hole_{HoleNumber:D2}/green.json"));
+                Path.Combine(Application.dataPath, "..", $"Assets/Resources/HoleData/{DiagCourseSlug}/Hole_{HoleNumber:D2}/green.json"));
             var topo = GreenTopology.LoadFromDisk(absPath, HoleNumber);
             if (topo == null)
             {

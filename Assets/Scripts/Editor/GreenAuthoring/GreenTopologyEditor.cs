@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine;
 using Golfin.Course.Runtime;
 using Golfin.Physics;
@@ -21,7 +22,7 @@ namespace Golfin.Editor.GreenAuthoring
     ///
     /// <para>
     /// <b>Persistence:</b> UI state (zoom, pan, brush settings) is stored in EditorPrefs.
-    /// Green data lives only in <c>Assets/Resources/HoleData/Hole_NN/green.json</c>;
+    /// Green data lives only in <c>Assets/Resources/HoleData/&lt;courseSlug&gt;/Hole_NN/green.json</c>;
     /// loaded on hole switch, saved only when the Save button is pressed.
     /// </para>
     /// </summary>
@@ -213,7 +214,8 @@ namespace Golfin.Editor.GreenAuthoring
 
         private void LoadZonesJson(int holeNumber)
         {
-            string path = $"HoleData/Hole_{holeNumber:D2}/zones";
+            string courseSlug = CourseSlugResolver.Resolve(EditorSceneManager.GetActiveScene().path) ?? "lomond-country-club";
+            string path = $"HoleData/{courseSlug}/Hole_{holeNumber:D2}/zones";
             TextAsset ta = Resources.Load<TextAsset>(path);
             if (ta == null)
             {
@@ -253,7 +255,8 @@ namespace Golfin.Editor.GreenAuthoring
 
         private void LoadHeightmap(int holeNumber)
         {
-            string path = $"HoleData/Hole_{holeNumber:D2}/heightmap";
+            string courseSlug = CourseSlugResolver.Resolve(EditorSceneManager.GetActiveScene().path) ?? "lomond-country-club";
+            string path = $"HoleData/{courseSlug}/Hole_{holeNumber:D2}/heightmap";
             TextAsset ta = Resources.Load<TextAsset>(path);
             if (ta == null) return;
 

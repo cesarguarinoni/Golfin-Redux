@@ -7,12 +7,13 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using Golfin.Gameplay.Loop;
 
 namespace Golfin.Course.Runtime
 {
     /// <summary>
     /// In-memory representation of one green's authored topology.
-    /// Loaded from <c>Assets/Resources/HoleData/Hole_XX/green.json</c> via <see cref="LoadFromResources"/>.
+    /// Loaded from <c>Assets/Resources/HoleData/&lt;courseSlug&gt;/Hole_XX/green.json</c> via <see cref="LoadFromResources"/>.
     ///
     /// Schema v1 (locked 2026-05-26, see SPEC §"green.json schema"):
     /// <list type="bullet">
@@ -137,7 +138,7 @@ namespace Golfin.Course.Runtime
         private GreenTopology() { }
 
         /// <summary>
-        /// Loads <c>Assets/Resources/HoleData/Hole_NN/green.json</c> for the given hole, or returns
+        /// Loads <c>Assets/Resources/HoleData/&lt;courseSlug&gt;/Hole_NN/green.json</c> for the given hole, or returns
         /// <c>null</c> when (a) no file present, (b) JSON parse failed, (c) schemaVersion mismatch,
         /// or (d) slope grid byte length disagrees with the declared <c>gridWidth × gridHeight × 3</c>.
         /// All failure modes log via <see cref="Debug.LogError"/>. The bare TextAsset is unloaded
@@ -145,7 +146,7 @@ namespace Golfin.Course.Runtime
         /// </summary>
         public static GreenTopology LoadFromResources(int holeNumber)
         {
-            string path = $"HoleData/Hole_{holeNumber:D2}/green";
+            string path = $"HoleData/{ActiveCourseContext.CurrentCourseSlug}/Hole_{holeNumber:D2}/green";
             TextAsset asset = Resources.Load<TextAsset>(path);
             if (asset == null) return null;
 

@@ -40,8 +40,8 @@ namespace Golfin.Gameplay.Tests
         // the ball starts above the rim instead of behind it.
         const float BunkerEdgeOffsetMeters  = 1.5f;
 
-        const string ZonesJsonPath      = "Assets/Resources/HoleData/Hole_01/zones.json";
-        const string HeightmapBytesPath = "Assets/Resources/HoleData/Hole_01/heightmap.bytes";
+        const string ZonesJsonPath      = "Assets/Resources/HoleData/lomond-country-club/Hole_01/zones.json";
+        const string HeightmapBytesPath = "Assets/Resources/HoleData/lomond-country-club/Hole_01/heightmap.bytes";
 
         // Ignore reason linked from the 4 known-failing TestCases below.
         const string IgnoreReason = "Known-failing — see Docs/Specs/Queued/AIRBORNE_GROUND_LEVEL_DETECTION.md (M3.5).";

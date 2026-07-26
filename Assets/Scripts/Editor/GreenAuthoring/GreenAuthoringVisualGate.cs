@@ -53,6 +53,7 @@ namespace Golfin.Editor.GreenAuthoring
     /// </summary>
     public static class GreenAuthoringVisualGate
     {
+        private const string GateCourseSlug  = "lomond-country-club"; // visual gate is hardcoded to hole 01 of this course
         private const string OutputVideoDir  = "Docs/Specs/Active/green_authoring_editor_tool/videos";
         private const string OutputVideoPath = "Docs/Specs/Active/green_authoring_editor_tool/videos/green_authoring_visual_gate.mp4";
         private const string ScreenshotsDir  = "Docs/Specs/Active/green_authoring_editor_tool/screenshots";
@@ -97,7 +98,7 @@ namespace Golfin.Editor.GreenAuthoring
             Directory.CreateDirectory(OutputVideoDir);
             Directory.CreateDirectory(ScreenshotsDir);
 
-            _greenJsonPath = Path.GetFullPath("Assets/Resources/HoleData/Hole_01/green.json");
+            _greenJsonPath = Path.GetFullPath($"Assets/Resources/HoleData/{GateCourseSlug}/Hole_01/green.json");
             if (File.Exists(_greenJsonPath))
             {
                 _originalGreenJsonBytes = File.ReadAllBytes(_greenJsonPath);
@@ -459,7 +460,7 @@ namespace Golfin.Editor.GreenAuthoring
                 if (_originalGreenJsonBytes != null && _greenJsonPath != null)
                 {
                     File.WriteAllBytes(_greenJsonPath, _originalGreenJsonBytes);
-                    AssetDatabase.ImportAsset("Assets/Resources/HoleData/Hole_01/green.json");
+                    AssetDatabase.ImportAsset($"Assets/Resources/HoleData/{GateCourseSlug}/Hole_01/green.json");
                     GreenTopologyCache.Invalidate(1);
 
                     string restoredSha256 = ComputeSha256(File.ReadAllBytes(_greenJsonPath));

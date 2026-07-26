@@ -3378,7 +3378,7 @@ namespace Golfin.Physics.Viewer.Bot
             bool providerIsNull = ctrl.GetTreeProvider() == null;
             d.LogStep($"  Hole17 tree provider null={providerIsNull} (EXPECTED: true). Hole_17 has no tree_obstacles.csv.");
             if (!providerIsNull)
-                d.LogStep("  WARNING: non-null tree provider on Hole_17 is UNEXPECTED — check HoleData/Hole_17/.");
+                d.LogStep("  WARNING: non-null tree provider on Hole_17 is UNEXPECTED — check HoleData/lomond-country-club/Hole_17/.");
 
             yield return new WaitForSecondsRealtime(1f);
 

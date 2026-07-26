@@ -9,6 +9,7 @@ using NUnit.Framework;
 using UnityEditor;
 using UnityEngine;
 using Golfin.Course.Runtime;
+using Golfin.Gameplay.Loop;   // ActiveCourseContext
 
 // Note: GreenJsonWriter lives in Golfin.Editor.GreenAuthoring (separate asmdef).
 // Golfin.Course.Tests references Golfin.Course.Runtime only — it cannot reference
@@ -43,8 +44,11 @@ namespace Golfin.Course.Tests
         [TearDown]
         public void TearDown_DeleteHole99()
         {
+            // Restore the default course context that T1 overrides.
+            ActiveCourseContext.Reset();
+
             // Clean up any Hole_99 test fixture written during T1.
-            string dir = Path.GetFullPath("Assets/Resources/HoleData/Hole_99");
+            string dir = Path.GetFullPath("Assets/Resources/HoleData/_test/Hole_99");
             if (Directory.Exists(dir))
             {
                 // Remove all files then the directory.
@@ -58,7 +62,7 @@ namespace Golfin.Course.Tests
             }
 
             // Remove any stale files inside.
-            string jsonPath = Path.GetFullPath("Assets/Resources/HoleData/Hole_99/green.json");
+            string jsonPath = Path.GetFullPath("Assets/Resources/HoleData/_test/Hole_99/green.json");
             if (File.Exists(jsonPath)) File.Delete(jsonPath);
 
             // Bust cache.
@@ -98,6 +102,11 @@ namespace Golfin.Course.Tests
             // ── Write via inline JSON helper (no Golfin.Editor.GreenAuthoring reference needed) ──
             WriteTestGreenJson(TestHoleNumber, slopeGrid, W, H, cellSize, boundsMin, boundsMax,
                                pins, defaultPin);
+
+            // ── Point LoadFromResources at the _test slug so it finds the fixture ──
+            // Phase 1 changed LoadFromResources to use ActiveCourseContext.CurrentCourseSlug.
+            // The WriteTestGreenJson helper always writes to HoleData/_test/Hole_NN/.
+            ActiveCourseContext.Set("_test", "Test");
 
             // ── Load via GreenTopology.LoadFromResources ──
             GreenTopologyCache.Invalidate(TestHoleNumber);
@@ -269,12 +278,12 @@ namespace Golfin.Course.Tests
                 pinsJson,
                 defaultPinIndex);
 
-            string folder = Path.GetFullPath($"Assets/Resources/HoleData/Hole_{holeNumber:D2}");
+            string folder = Path.GetFullPath($"Assets/Resources/HoleData/_test/Hole_{holeNumber:D2}");
             Directory.CreateDirectory(folder);
             File.WriteAllText(Path.Combine(folder, "green.json"), json);
 
             // Tell Unity about the new file.
-            AssetDatabase.ImportAsset($"Assets/Resources/HoleData/Hole_{holeNumber:D2}/green.json");
+            AssetDatabase.ImportAsset($"Assets/Resources/HoleData/_test/Hole_{holeNumber:D2}/green.json");
         }
     }
 }

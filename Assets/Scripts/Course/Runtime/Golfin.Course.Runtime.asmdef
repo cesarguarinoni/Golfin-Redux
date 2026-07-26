@@ -1,7 +1,9 @@
 {
     "name": "Golfin.Course.Runtime",
     "rootNamespace": "Golfin.Course.Runtime",
-    "references": [],
+    "references": [
+        "Golfin.Gameplay.Loop"
+    ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,

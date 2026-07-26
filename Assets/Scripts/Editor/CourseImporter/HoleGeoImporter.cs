@@ -2495,7 +2495,10 @@ namespace Golfin.CourseImport
                 GreenTopology greenTopology = null;
                 if (holeNumber > 0)
                 {
-                    string greenJsonPath = $"Assets/Resources/HoleData/Hole_{holeNumber:D2}/green.json";
+                    // Resolve course slug from active scene (SPEC §1.3 bake-site update).
+                    string activePath   = UnityEditor.SceneManagement.EditorSceneManager.GetActiveScene().path;
+                    string courseSlug   = CourseSlugResolver.ResolveOrThrow(activePath, "HoleGeoImporter.ImportGeoHole");
+                    string greenJsonPath = $"Assets/Resources/HoleData/{courseSlug}/Hole_{holeNumber:D2}/green.json";
                     greenTopology = GreenTopology.LoadFromDisk(greenJsonPath, holeNumber);
                     if (greenTopology != null)
                         Debug.Log($"[HoleGeoImporter] Hole {holeNumber:D2}: loaded GreenTopology v{greenTopology.SchemaVersion} from disk");

@@ -10,7 +10,8 @@ using UnityEngine;
 namespace Golfin.CourseImport
 {
     /// <summary>
-    /// Bakes per-hole tree collision instances to Assets/Resources/HoleData/Hole_NN/tree_obstacles.csv.
+    /// Bakes per-hole tree collision instances to Assets/Resources/HoleData/&lt;courseSlug&gt;/Hole_NN/tree_obstacles.csv.
+    /// Course slug is resolved from the active scene path via <see cref="Golfin.Course.Runtime.CourseSlugResolver"/>.
     ///
     /// Harvests from three sources per scene:
     ///   1. terrain.terrainData.treeInstances  — terrain tree system (prototypeIndex → prefab name)
@@ -103,6 +104,13 @@ namespace Golfin.CourseImport
             int n = ExtractHoleNumber(scene.name);
             if (n < 1 || n > 18) return;
 
+            string slug = Golfin.Course.Runtime.CourseSlugResolver.Resolve(path);
+            if (slug == null)
+            {
+                Debug.LogWarning($"[TreeObstacleBaker] OnSceneSaving: could not resolve course slug from '{path}' — skipping auto re-bake.");
+                return;
+            }
+
             // Compute hash of current scene's tree harvest.
             var rows = HarvestScene(scene, n, out string _);
             if (rows == null) return;
@@ -110,7 +118,7 @@ namespace Golfin.CourseImport
             string newHash = ComputeHash(rows);
 
             // Load existing CSV and compare its header hash.
-            string csvPath = GetCsvAssetPath(n);
+            string csvPath = GetCsvAssetPath(n, slug);
             string fullPath = Path.GetFullPath(
                 Path.Combine(Application.dataPath, "..", csvPath));
 
@@ -151,6 +159,7 @@ namespace Golfin.CourseImport
         private static void BakeActiveScene(int n)
         {
             var scene = EditorSceneManager.GetActiveScene();
+            string slug = Golfin.Course.Runtime.CourseSlugResolver.ResolveOrThrow(scene.path, "TreeObstacleBaker.BakeActiveScene");
             var rows  = HarvestScene(scene, n, out string breakdown);
             if (rows == null)
             {
@@ -159,7 +168,7 @@ namespace Golfin.CourseImport
             }
 
             string hash    = ComputeHash(rows);
-            string csvPath = GetCsvAssetPath(n);
+            string csvPath = GetCsvAssetPath(n, slug);
             WriteCsv(csvPath, rows, hash, n);
             Debug.Log($"[TreeObstacleBaker] Hole {n:D2}: baked {rows.Count} trees → {csvPath}\n{breakdown}");
         }
@@ -352,8 +361,8 @@ namespace Golfin.CourseImport
             Debug.Log($"[TreeObstacleBaker] Wrote {rows.Count} rows to {csvAssetPath} (hash={hash})");
         }
 
-        private static string GetCsvAssetPath(int holeNumber)
-            => $"Assets/Resources/HoleData/Hole_{holeNumber:D2}/tree_obstacles.csv";
+        private static string GetCsvAssetPath(int holeNumber, string courseSlug)
+            => $"Assets/Resources/HoleData/{courseSlug}/Hole_{holeNumber:D2}/tree_obstacles.csv";
 
         private static string GetGeoScenePath(int n)
         {

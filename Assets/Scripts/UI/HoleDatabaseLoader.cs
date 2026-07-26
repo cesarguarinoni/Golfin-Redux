@@ -1,5 +1,7 @@
 using UnityEngine;
 using System.Collections.Generic;
+using Golfin.Gameplay.Loop;
+using Golfin.Course.Runtime;  // HoleTeesCsvParser (SPEC §3, Phase 3)
 
 namespace GolfinRedux.UI
 {
@@ -11,6 +13,7 @@ namespace GolfinRedux.UI
     {
         [Header("CSV Settings")]
         [SerializeField] private TextAsset holeDatabaseCSV;
+        [SerializeField] private TextAsset holeTeesCsv;   // Assets/Data/HoleTees.csv (optional; populates HoleData.tees)
         [SerializeField] private bool autoLoadOnAwake = true;
 
         private static HoleDatabase _runtimeDatabase;
@@ -115,6 +118,12 @@ namespace GolfinRedux.UI
                         hole.AddReplayReward(type, amount);
                     }
 
+                    // Parse courseId (col 19). Blank/missing defaults to lomond-country-club.
+                    string courseId = fields.Length > 19 ? fields[19].Trim() : string.Empty;
+                    if (string.IsNullOrEmpty(courseId)) courseId = "lomond-country-club";
+                    // Filter: only load holes belonging to the active course.
+                    if (courseId != ActiveCourseContext.CurrentCourseSlug) continue;
+
                     _runtimeDatabase.holes.Add(hole);
                     loadedCount++;
                 }
@@ -125,6 +134,27 @@ namespace GolfinRedux.UI
             }
 
             Debug.Log($"[HoleDatabaseLoader] Loaded {loadedCount} holes from CSV");
+
+            // Optional: populate tee data from HoleTees.csv
+            if (holeTeesCsv != null)
+            {
+                PopulateTees(_runtimeDatabase.holes, holeTeesCsv.text, ActiveCourseContext.CurrentCourseSlug);
+            }
+        }
+
+        private static void PopulateTees(List<HoleData> holes, string teesCsvText, string courseSlug)
+        {
+            var teesLookup = HoleTeesCsvParser.Parse(teesCsvText, courseSlug);
+            int populated = 0;
+            foreach (var hole in holes)
+            {
+                if (teesLookup.TryGetValue(hole.holeNumber, out var teeList))
+                {
+                    hole.tees = teeList;
+                    populated++;
+                }
+            }
+            Debug.Log($"[HoleDatabaseLoader] Populated tees for {populated}/{holes.Count} holes.");
         }
 
         private RewardType ParseRewardType(string typeStr)

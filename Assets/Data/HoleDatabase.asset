@@ -17,7 +17,7 @@ MonoBehaviour:
     holeNumber: 1
     par: 5
     descriptionKey: HOLE_LOMOND_1_DESC
-    holeImageName: Hole_01
+    holeImageName: lomond-country-club/Hole_01
     windSpeedMph: 0
     windDirectionDegrees: 0
     rewards:
@@ -38,7 +38,7 @@ MonoBehaviour:
     holeNumber: 2
     par: 4
     descriptionKey: HOLE_LOMOND_2_DESC
-    holeImageName: Hole_02
+    holeImageName: lomond-country-club/Hole_02
     windSpeedMph: 0
     windDirectionDegrees: 0
     rewards:
@@ -59,7 +59,7 @@ MonoBehaviour:
     holeNumber: 3
     par: 4
     descriptionKey: HOLE_LOMOND_3_DESC
-    holeImageName: Hole_03
+    holeImageName: lomond-country-club/Hole_03
     windSpeedMph: 0
     windDirectionDegrees: 0
     rewards:
@@ -80,7 +80,7 @@ MonoBehaviour:
     holeNumber: 4
     par: 3
     descriptionKey: HOLE_LOMOND_4_DESC
-    holeImageName: Hole_04
+    holeImageName: lomond-country-club/Hole_04
     windSpeedMph: 0
     windDirectionDegrees: 0
     rewards:
@@ -101,7 +101,7 @@ MonoBehaviour:
     holeNumber: 5
     par: 4
     descriptionKey: HOLE_LOMOND_5_DESC
-    holeImageName: Hole_05
+    holeImageName: lomond-country-club/Hole_05
     windSpeedMph: 1.5
     windDirectionDegrees: 45
     rewards:
@@ -122,7 +122,7 @@ MonoBehaviour:
     holeNumber: 6
     par: 3
     descriptionKey: HOLE_LOMOND_6_DESC
-    holeImageName: Hole_06
+    holeImageName: lomond-country-club/Hole_06
     windSpeedMph: 2.2
     windDirectionDegrees: 90
     rewards:
@@ -141,7 +141,7 @@ MonoBehaviour:
     holeNumber: 7
     par: 4
     descriptionKey: HOLE_LOMOND_7_DESC
-    holeImageName: Hole_07
+    holeImageName: lomond-country-club/Hole_07
     windSpeedMph: 0
     windDirectionDegrees: 0
     rewards:
@@ -162,7 +162,7 @@ MonoBehaviour:
     holeNumber: 8
     par: 5
     descriptionKey: HOLE_LOMOND_8_DESC
-    holeImageName: Hole_08
+    holeImageName: lomond-country-club/Hole_08
     windSpeedMph: 0
     windDirectionDegrees: 0
     rewards:
@@ -183,7 +183,7 @@ MonoBehaviour:
     holeNumber: 9
     par: 4
     descriptionKey: HOLE_LOMOND_9_DESC
-    holeImageName: Hole_09
+    holeImageName: lomond-country-club/Hole_09
     windSpeedMph: 0
     windDirectionDegrees: 0
     rewards:
@@ -204,7 +204,7 @@ MonoBehaviour:
     holeNumber: 10
     par: 4
     descriptionKey: HOLE_LOMOND_10_DESC
-    holeImageName: Hole_10
+    holeImageName: lomond-country-club/Hole_10
     windSpeedMph: 0
     windDirectionDegrees: 0
     rewards:
@@ -225,7 +225,7 @@ MonoBehaviour:
     holeNumber: 11
     par: 3
     descriptionKey: HOLE_LOMOND_11_DESC
-    holeImageName: Hole_11
+    holeImageName: lomond-country-club/Hole_11
     windSpeedMph: 0
     windDirectionDegrees: 0
     rewards:
@@ -246,7 +246,7 @@ MonoBehaviour:
     holeNumber: 12
     par: 4
     descriptionKey: HOLE_LOMOND_12_DESC
-    holeImageName: Hole_12
+    holeImageName: lomond-country-club/Hole_12
     windSpeedMph: 0
     windDirectionDegrees: 0
     rewards:
@@ -267,7 +267,7 @@ MonoBehaviour:
     holeNumber: 13
     par: 5
     descriptionKey: HOLE_LOMOND_13_DESC
-    holeImageName: Hole_13
+    holeImageName: lomond-country-club/Hole_13
     windSpeedMph: 0
     windDirectionDegrees: 0
     rewards:
@@ -288,7 +288,7 @@ MonoBehaviour:
     holeNumber: 14
     par: 4
     descriptionKey: HOLE_LOMOND_14_DESC
-    holeImageName: Hole_14
+    holeImageName: lomond-country-club/Hole_14
     windSpeedMph: 0
     windDirectionDegrees: 0
     rewards:
@@ -309,7 +309,7 @@ MonoBehaviour:
     holeNumber: 15
     par: 3
     descriptionKey: HOLE_LOMOND_15_DESC
-    holeImageName: Hole_15
+    holeImageName: lomond-country-club/Hole_15
     windSpeedMph: 0
     windDirectionDegrees: 0
     rewards:
@@ -330,7 +330,7 @@ MonoBehaviour:
     holeNumber: 16
     par: 4
     descriptionKey: HOLE_LOMOND_16_DESC
-    holeImageName: Hole_16
+    holeImageName: lomond-country-club/Hole_16
     windSpeedMph: 0
     windDirectionDegrees: 0
     rewards:
@@ -351,7 +351,7 @@ MonoBehaviour:
     holeNumber: 17
     par: 4
     descriptionKey: HOLE_LOMOND_17_DESC
-    holeImageName: Hole_17
+    holeImageName: lomond-country-club/Hole_17
     windSpeedMph: 0
     windDirectionDegrees: 0
     rewards:
@@ -372,7 +372,7 @@ MonoBehaviour:
     holeNumber: 18
     par: 5
     descriptionKey: HOLE_LOMOND_18_DESC
-    holeImageName: Hole_18
+    holeImageName: lomond-country-club/Hole_18
     windSpeedMph: 0
     windDirectionDegrees: 0
     rewards:

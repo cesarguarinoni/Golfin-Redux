@@ -47775,6 +47775,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GolfinRedux.UI.HoleDatabaseLoader
   holeDatabaseCSV: {fileID: 4900000, guid: e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6, type: 3}
+  holeTeesCsv: {fileID: 4900000, guid: 91abf3bc4a34f40df88bf8e7947da660, type: 3}
   autoLoadOnAwake: 1
 --- !u!114 &825584069
 MonoBehaviour:

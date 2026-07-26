@@ -253,7 +253,7 @@ namespace Golfin.UI.Matchmaking
 
             if (hole == null)
             {
-                // Hardcoded stub
+                // TODO(multi-course): hardcoded to Lomond Hole 5; use ActiveCourseContext + hole selection once a second course ships.
                 hole = new HoleData("HOLE_LOMOND_5", 5);
                 hole.AddReward(RewardType.Points,    10);
                 hole.AddReward(RewardType.RepairKit, 10);
