@@ -1,0 +1,20 @@
+2026-07-27T08:00:00 activated
+
+=== iter-1 kickoff baseline ===
+HEAD: a55073d9c03f036b342ce7dbd1d1d9a0772e85de
+DIRTY porcelain:
+ M "Assets/Art/ResultScreen/Button - Retry.png"
+ M "Assets/Art/ResultScreen/Button - Retry.png.meta"
+ M Assets/Art/RosterScreen/ButtonCancel.png.meta
+ M "Assets/Art/Shop/Background - Blurred.png"
+ M "Assets/Art/SplashScreen/Green Button.png.meta"
+ M Assets/Plugins/NuGet/.nuget-installed.json
+ M Assets/Plugins/NuGet/McpPlugin.Common.dll
+ M Assets/Plugins/NuGet/McpPlugin.dll
+ M Assets/Plugins/NuGet/ReflectorNet.dll
+ M Docs/KICKOFF_TOMORROW.md
+ M Packages/manifest.json
+ M Packages/packages-lock.json
+?? .mcp.json.bak-23886
+=== end baseline ===
+2026-07-27T08:01:00 done, awaiting review — A1 portrait lock PASS, A2 SafeAreaFitter PASS, A3 Mobile_RPAsset PASS, A4/A5 DEFER
