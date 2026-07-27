@@ -1,3 +1,8 @@
+// BUILD-FIX 2026-07-27: whole-file editor-only guard. This capture bot is dev/diagnostics
+// tooling injected at play-mode by Bot/Editor/VersusHudCaptureMenu (an Editor-only asmdef)
+// and calls #if UNITY_EDITOR debug seams on VersusHudController. It must never compile into
+// a player build. Not serialized in any scene/prefab, so excluding it from the player is safe.
+#if UNITY_EDITOR
 using System.Collections;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -405,3 +410,4 @@ namespace Golfin.Physics.Viewer
         }
     }
 }
+#endif // UNITY_EDITOR

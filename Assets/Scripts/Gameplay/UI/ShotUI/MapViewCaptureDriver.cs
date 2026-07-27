@@ -288,8 +288,12 @@ namespace Golfin.Gameplay.UI.ShotUI
                 const float kCaptureFinetune = 0.25f;
                 if (sc2 != null)
                 {
+#if UNITY_EDITOR
+                    // SetFinetuneForCapture is an editor-only seam on ShotController (#if UNITY_EDITOR).
+                    // Guard the call so this runtime capture driver still compiles in player builds.
                     sc2.SetFinetuneForCapture(kCaptureFinetune);
                     Log($"  SetFinetuneForCapture({kCaptureFinetune}) → sc.ConeFinetune={sc2.ConeFinetune:F2} (B2 fix)");
+#endif
                 }
                 else
                     Log("  WARN: ShotController not found — cannot pre-set finetune (B2 may fail)");
