@@ -18,9 +18,9 @@
 1. **Edit → Project Settings → Player**
 2. Click the **iOS tab** (Apple icon in the platform row)
 3. **Other Settings → Identification**
-4. **Bundle Identifier**: replace the template junk with your final reverse-DNS id, e.g. `com.golfin.redux`
-   - lowercase, letters/numbers/dots, no spaces
-   - **pick the FINAL one** — it becomes the app's permanent identity once TestFlight/App Store Connect knows it
+4. **Bundle Identifier** → `com.nextinnovation.golfingame` ✅ *(set 2026-07-27)*
+   - This is the **LIVE App Store Golfin's** identifier — reused on purpose so Redux ships as an *update* to the existing listing (keeps users, ratings, store page).
+   - ⚠️ Same id = if the live Golfin is installed on your test iPhone, this build **replaces it on that device** (local only — App Store + other users untouched).
 5. Confirm **Target minimum iOS Version = 15.0** and **Target SDK = Device SDK** (both already set)
 6. Leave **Automatically Sign** unticked here — you'll sign in Xcode
 7. **File → Save Project**
@@ -53,7 +53,8 @@
 1. In the build folder, open **`Unity-iPhone.xcodeproj`**
 2. Left sidebar: select **Unity-iPhone** project → **Unity-iPhone** target → **Signing & Capabilities** tab
 3. Tick **Automatically manage signing**
-4. **Team** → pick your **paid Team** *(NOT Personal — paid = no 7-day expiry, no 3-app limit)*
+4. **Team** → **NEXT INNOVATION PTE. LTD.** *(you're Admin — this is the team that owns `com.nextinnovation.golfingame`; NOT a Personal Team)*
+   - If it's not listed: Xcode → Settings → Accounts → add the Apple ID on that team (`cesar.guarinoni@wonderwallgp.com` = Admin, or `cesar@clumsydwarf.com` = Developer)
 5. Toolbar run destination → **your iPhone**
 6. Press **▶ Run**
 
@@ -90,3 +91,5 @@ The app should open into Logo → Splash → Loading → Home. Keep the **Xcode 
 ## Next: get a build to Ken (TestFlight)
 Once this tethered smoke is GREEN, the over-the-air path to Ken is its own task:
 **`Docs/Specs/Queued/testflight_distribution/SPEC.md`** (Notion Order 424). Don't upload an unsmoked build.
+
+⚠️ **Because Redux reuses the live app's bundle id**, that upload step has a hard gate the smoke test doesn't: `bundleVersion` (now `0.1.0`) must be bumped **above the live Golfin's current App Store version**, with a fresh build number — App Store Connect rejects anything not higher than what's already published. Details + how-to in the 424 spec (§1d).

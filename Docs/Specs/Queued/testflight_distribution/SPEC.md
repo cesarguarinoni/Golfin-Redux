@@ -4,6 +4,7 @@
 > **Depends on:** `phone_build_smoke_test` (Order 420) passing tethered smoke FIRST. Do not upload an unsmoked build — a TestFlight cycle costs processing time + Ken's time.
 > **Goal:** get a build to Ken (and any tester) over-the-air via TestFlight, instead of tethering to one phone.
 > **Split from** `phone_build_smoke_test/SPEC.md` §7 on 2026-07-27 (paid account + TestFlight now available). That §7 is the summary; this is the full task.
+> **Bundle ID (locked 2026-07-27):** `com.nextinnovation.golfingame` — the **LIVE App Store Golfin's** id, reused so Redux ships as an *update* to the existing listing. **Signing team:** NEXT INNOVATION PTE. LTD. (Cesar = Admin → signing authorized). Consequences: this is **NOT a new app** (see §2) and the version is **no longer free** (see §1d).
 
 ---
 
@@ -24,20 +25,27 @@ These do NOT block the tethered smoke, but App Store Connect rejects an upload w
 **STATUS 2026-07-27:** ✅ RESOLVED. `Assets/Icons/Golfin-Icon.png` is now **1024×1024, RGB, no alpha** (md5 `ccdcc11f0fad882e988f0ab28e9e5f22`, 495 KB) — Cesar's own re-export, verified compliant, tracked in git. **Remaining:** Code wires it into Player Settings iOS icon slots when 424 goes active.
 
 ### 1b. Build number
-`buildNumber:` is blank; `bundleVersion: 0.1.0`. App Store Connect requires a build number, **unique and incrementing per upload**. Start at `1`, bump every upload. (Version string `0.1.0` is fine, or bump to `1.0.0` for the first real beta — Cesar's call.)
+`buildNumber:` is blank; `bundleVersion: 0.1.0`. App Store Connect requires a build number, **unique and incrementing per upload**. Start at `1`, bump every upload.
 - **Code:** set `buildNumber` = 1 in Player Settings.
+- ⚠️ The version STRING is **no longer a free choice** (see §1d) — reusing the live bundle id means `0.1.0` will be rejected. Set `bundleVersion` per §1d before the first upload.
 
 ### 1c. Export compliance
 No `ITSAppUsesNonExemptEncryption` flag → Xcode prompts "does your app use encryption?" on every upload. A golf game using only standard HTTPS is **exempt**.
 - **Code:** set `ITSAppUsesNonExemptEncryption` = `NO`/`false` (Info.plist via Player Settings) to skip the per-upload prompt.
 
+### 1d. Version must EXCEED the live app  ⚠️ NEW — direct consequence of bundle-id reuse
+Because Redux uses `com.nextinnovation.golfingame` (the live App Store Golfin's id), every upload is validated against that app's existing version history. `bundleVersion: 0.1.0` is **below** the live app's published version, so App Store Connect **will reject** it.
+- **Cesar:** look up the live Golfin's **current App Store version** (App Store Connect → Golfin → App Store tab, or the public store listing).
+- **Code:** set `bundleVersion` **strictly higher** than that (e.g. live `2.3.1` → use `2.4.0` or `3.0.0`), plus `buildNumber` = 1 (per §1b).
+- ⚠️ Confirm the target version WITH Cesar before the first upload — it's a permanent, user-visible version jump on the live listing, not a throwaway beta number.
+
 ---
 
-## 2. App Store Connect setup (Cesar, one-time)
-1. appstoreconnect.apple.com → **My Apps → +** → **New App**
-2. Platform iOS; Name; primary language; **Bundle ID = the exact id set in Player Settings** (must already be registered — automatic signing registers it, or register manually in the Developer portal → Identifiers)
-3. SKU (any internal string, e.g. `golfin-redux`)
-4. Save. This creates the record TestFlight builds attach to.
+## 2. App Store Connect setup (Cesar) — record ALREADY EXISTS
+⚠️ Because Redux reuses the live bundle id, you do **NOT** create a New App. The `com.nextinnovation.golfingame` record already exists under NEXT INNOVATION PTE. LTD., and TestFlight builds attach to it automatically once uploaded (§3).
+1. Confirm you can see the **Golfin** app under App Store Connect → **My Apps**, and that your account (Admin) has TestFlight access on it.
+2. Do **NOT** register a new bundle id or create a new listing — that forks Redux off the live app and defeats the whole reuse.
+3. (If Redux were ever a *standalone* beta instead, you'd use a throwaway id like `com.nextinnovation.golfingame.reduxbeta` and *then* create a New App — but that is explicitly not the current plan.)
 
 ---
 
