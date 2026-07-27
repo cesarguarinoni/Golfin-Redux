@@ -21,6 +21,8 @@ These do NOT block the tethered smoke, but App Store Connect rejects an upload w
 - **Cesar:** supply the 1024² PNG (+ ideally the full iOS icon set, or let Unity downscale from the 1024).
 - **Code (once PNG exists):** wire it into Player Settings > iOS > Icon slots; verify the generated asset catalog carries the 1024 marketing slot.
 
+**STATUS 2026-07-27:** Cesar dropped `Assets/Icons/Golfin-Icon.png`. As-delivered it would FAIL upload — **1024×995 (not square) + has alpha channel** (both hard App Store Connect rejections). Architect produced a corrected **1024×1024, RGB, no-alpha** version (flattened + padded onto the design's own navy `#093953`, art centered, no distortion). **Pending:** Cesar drops the corrected PNG in (overwrite same filename → `.meta` GUID preserved), THEN Code wires it into Player Settings iOS icon slots when 424 goes active.
+
 ### 1b. Build number
 `buildNumber:` is blank; `bundleVersion: 0.1.0`. App Store Connect requires a build number, **unique and incrementing per upload**. Start at `1`, bump every upload. (Version string `0.1.0` is fine, or bump to `1.0.0` for the first real beta — Cesar's call.)
 - **Code:** set `buildNumber` = 1 in Player Settings.
