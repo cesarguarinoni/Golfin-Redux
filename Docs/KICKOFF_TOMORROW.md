@@ -1,130 +1,90 @@
 # Kickoff for next session
 
-> **Last session:** 2026-05-08 ended with §2c shipped + camera regression closed. This file is what to read when opening a fresh chat tomorrow.
+> **Last session:** 2026-07-23. Localization sweep closed, login/signup Phase 1 shipped, Tournaments v1 epic closed, roadmap housekeeping done. This file is what to read when opening a fresh chat.
 
-## State at end-of-session 2026-05-08
+## State at end-of-session 2026-07-23
 
-**Loop v1 progress:**
-- §2a Ball state machine ✅ closed 2026-05-06
-- §2b Camera transitions ✅ closed 2026-05-07
-- §2c Turn counter + shot history ✅ closed 2026-05-08
-- §2d Hole-complete detection + result screen ⬅ NEXT
-- §2e "Next shot" handoff
-- §2f Putter Phase 2: in-context tuning
+**Pipeline is IDLE.** `Docs/Specs/Active/` contains only `_TEMPLATE` — nothing in flight, nothing waiting on a review.
 
-**Camera regression saga closed:** controls_h iter-8 partial revert shipped 2026-05-08. Camera works as it did pre-§2b. Apex zoom-out was researched, deemed off-pattern vs shipped golf games (PGA TOUR/2K23/TV broadcast all use cuts, not continuous zooms), explicitly rejected. See `Docs/Game Design/CAMERA_SYSTEM_FUTURE_DESIGN.md` § Research note 2026-05-08 for full findings.
+**Closed this session:**
+- **Localization sweep (`10c`) — COMPLETE.** Ran audit-first (`localization_audit_tooling`) then 8 batch specs + `gameplay_localization_access`. Result: `LocalizedText` binders **32 → 232** (164 prefab / 68 scene); CSV **227 → 337** keys, **zero** missing JP, zero `[JP-TODO]` placeholders, no duplicate keys; hardcoded `.text` literals **79 → 59**. Also deleted 29 dead superseded prefabs under `Prefabs/Original/` (commit `1a398637a`). Evidence: 85 EN/JP screenshot pairs across the 8 specs + 2 demo videos in `Docs/Reports/Media/`.
+- **`login_signup_screens` Phase 1 — DONE.** Four account screens (Login, Create Username, Sign Up, Email Confirmation) built as standalone editable prefabs in `Assets/Prefabs/UI/Account/`, registered in `ScreenManager`. All auth actions are deliberate `// TODO(Phase 2)` stubs — no backend calls.
+- **Tournaments v1 EPIC — CLOSED.** All 13 sub-specs done. The T5 open risk (relaunch could double-claim a prize → RP duplication) was verified resolved: `SaveData.cs:25` has a persisted `claimed` flag, `ClaimPrize` guards on `_store.IsClaimed()`, and `SaveBackedEntryStoreTests` covers persistence-across-reload + idempotency.
+- **Roadmap housekeeping.** Fixed 4 stale/duplicate Notion cards (`tree_aware_bot`, Tournaments epic, `localization_audit`, `11a — Auth`).
 
-**Active spec folder:** empty (`Docs/Specs/Active/` has only `_TEMPLATE`).
+## NEXT: `phone_build_smoke_test` (P1, M)
 
-**Forward-flagged polish items** (none on Loop v1 critical path):
-- `controls_i_ball_visual_rotation` (Phase 10 Polish, Order 260, Deferred) — ball slides instead of rolls. NOTES at `Docs/Specs/Queued/controls_i_ball_visual_rotation/NOTES.md`. Cesar locked Option A first.
-- OBFreeze camera framing question — visible-water deferred per TellCode flag.
-- HUD ClubContext static-bus drift — triage before §2f per TellCode flag.
-- Camera System Future Design doc at `Docs/Game Design/CAMERA_SYSTEM_FUTURE_DESIGN.md` is the must-read for any future camera mode.
+**No spec written yet — it needs two answers from Cesar before it can be specced:**
+1. **Target: iOS, Android, or both?**
+2. **Is a physical device on hand?** (decides real-hardware vs simulator/emulator path)
 
-## §2d — what tomorrow's task is
+**Why this is next.** GOLFIN is a mobile game that appears to have never been built to a device — no `Builds/` directory, no `.apk`/`.ipa`/`.aab` artifacts anywhere in the tree. Everything so far is editor/play-mode verified. Three reasons it's now urgent:
+- **The localization sweep just added a JP font dependency.** `Assets/Fonts/NotoSansJP-VariableFont_wght SDF.asset` is 2.1 MB; `Assets/Fonts/` totals 23 MB. JP TMP atlases are a classic device-side problem — memory, build size, and runtime hitching when a dynamic atlas grows mid-scene. That path has only ever been validated in the editor.
+- **It gates Phase 8/9.** `8a — FPS capture`, `8b — Memory profile`, `9a–9d` are all queued and their numbers are meaningless off-device.
+- **Risk compounds.** Touch input, aspect ratios, shader variants, and IL2CPP stripping all fail *late*, and there is now a lot of UI built on unverified assumptions.
 
-**One-liner:** ship a real `ICupDetector` impl, wire it into `PhysicsLabController.OnHoleLoaded`, and add a minimal result screen that fires on `OnShotComplete(terminal=InCup)` showing strokes / par / score-to-par.
+## BLOCKED: `11a — Auth` = Phase 2 of login/signup
 
-**Why §2d is small:** the foundation is all stubbed. Verified 2026-05-08 by Architect code walk:
-- `Assets/Scripts/Gameplay/Loop/ICupDetector.cs` interface exists
-- `NullCupDetector.cs` is the current stub (always returns false)
-- `BallStateMachine.SetCupDetector(ICupDetector)` is the runtime swap-in
-- `BallStateMachine.cs:184` already calls `_cupDetector.IsInCup(sample.position, ballRadius)` during Rolling — when it returns true, terminal becomes `InCup` automatically
-- §2c's `ShotRecord` already has `TerminalState` field — ShotHistory records InCup shots automatically
-- `HoleContext.PinWorld` is already populated in `PhysicsLabController.OnHoleLoaded` (line ~1230 reads Flag GO position)
+⚠ **Waiting on Ken for the Supabase keys.** Do not spec this separately — the `11a — Auth` card was merged to *be* Phase 2 (promoted to P1, re-estimated M since Phase 1 built the screens and seams).
 
-**§2d scope (estimated half-day to one day):**
-1. **Real CupDetector** — class implementing `ICupDetector.IsInCup(fp3 position, fp ballRadius)`. Reads pin position via constructor injection (or static `HoleContext.PinWorld`). Returns true if `XZ distance from position to pin < cupRadius - ballRadius` AND `position.y < pin.y + cupDepth`. Cup radius is regulation 54mm (0.054m); cup depth is at least 4 inches (0.1016m). Architectural note: detector reads in fp3, so values pass through `fp.FromFloat` once at construction.
-2. **Wire on hole load** — `PhysicsLabController.OnHoleLoaded`, after `HoleContext.Raise()` and `GameSession.ResetForNewHole()`, call `_ballSM.SetCupDetector(new RealCupDetector(HoleContext.PinWorld, ...))`.
-3. **Result screen UI** — use the Figma + asset references below. Two states: Success (ball in cup) and Failed (?). Includes Hole Card background, banner, score readout, action buttons (Replay / Retry / Play / Continue — set TBD when reading Figma).
-4. **Fire result screen** — new MonoBehaviour subscribed to `BallStateMachine.OnShotComplete`. On terminal=InCup, show Success modal. Lives in `Golfin.Physics.Viewer` or `Golfin.Gameplay.UI.ShotUI`, mirroring `HoleSessionDriver` (§2c) pattern. Probably named `HoleCompleteDriver`.
-5. **Tests** — 4-6 EditMode tests:
-   - `RealCupDetector_BallInsideCup_ReturnsTrue`
-   - `RealCupDetector_BallOutsideCupRadius_ReturnsFalse`
-   - `RealCupDetector_BallAboveCup_ReturnsFalse`
-   - `RealCupDetector_BallAtCupEdge_ConsidersBallRadius`
-   - `HoleCompleteDriver_OnInCupTerminal_ShowsModal`
-   - `HoleCompleteDriver_OnAtRestTerminal_DoesNotShowModal`
-6. **Manual verification per Lesson O** — fire a putter shot on Hole 1 close to cup, verify InCup terminal fires, modal appears with correct strokes/par.
+**Scope when unblocked:** wire the existing Phase-1 stubs to GPS/PLAYLIFE Supabase Auth — `auth.signUp({email,password})`, sign-in, password reset, Google/Apple OAuth, confirm-email flow, and `display_name` via `/user/update`.
 
-## Reference materials for the result screen (provided 2026-05-08 EOD)
+**Reference:** `Docs/GPS/GPS_INTEGRATION_REFERENCE.md` + `GPS_UNITY_PORT_SPEC.md` §6 (`ApiClient` → `SupabaseAuthManager`).
 
-**Figma node (canonical UI source-of-truth):**
-- File: `5gEAHjl6xAtW8iYY7NMvWd` (Golfin Game Redux, paid plan)
-- Node: `12987-4556`
-- URL: https://www.figma.com/design/5gEAHjl6xAtW8iYY7NMvWd/Golfin-Game-Redux?node-id=12987-4556
+🚩 **The Confluence GPS pages are OUTDATED (Cognito-era). Do not use them.** `Docs/GPS/` is the source of truth. (`Docs/GPS/` was Windows-only and uncommitted until 2026-07-22 — it is now on origin/main.)
 
-**Reference screenshots (visual diff companions):**
-- `Docs/Reference/Results Screen/Results - Success (Replay).png`
-- `Docs/Reference/Results Screen/Results - Success (Replay)-1.png`
-- `Docs/Reference/Results Screen/Results - Failed (Replay).png`
-- `Docs/Reference/Results Screen/Results - Failed (Replay)-1.png`
+🚩 **Pre-existing code to reconcile before wiring:** `Assets/Scripts/Auth/` already holds an earlier auth iteration (`AuthService`, `ISupabaseAuthClient`, `SupabaseAuthClient`, `MockSupabaseAuthClient`, `SupabaseConfig`, `OAuthUrlBuilder`, `OAuthCallbackParser`). Also the older `AUTH_*` CSV copy reads `Welcome Back` / `Continue with Google` vs the Figma's `LOGIN WITH EMAIL` / `Login with Google`.
 
-Note: the existence of "Failed" state suggests holes can be failed, not just completed. **Open question for SPEC:** what triggers Failed in §2d's lab context? Out of bounds? Stroke limit? Just a visual placeholder for future logic? Architect needs Cesar's lock here — my lean is to NOT implement Failed in §2d (defer to §2e or later) and only ship Success. Confirm tomorrow.
+**Locked decisions (Cesar):** username uniqueness/availability check deferred to v2/v3 · terms/privacy lives in Settings, not these screens · password rules are advisory client-side only, server is source of truth · flow = Sign Up → Email Confirmation → Login → Create Username.
 
-**Imported PNG assets** (already in Unity project at `Assets/Art/ResultScreen/`):
-- `Background - Banner.png` (66 KB)
-- `Background - HoleCard.png` (267 KB)
-- `Button - Play.png` (46 KB)
-- `Button - Replay.png` (40 KB)
-- `Button - Retry.png` (41 KB)
-- `Icon - Check.png` (500 B — small, likely vector-style success indicator)
-- `Icon - X.png` (1.3 KB — likely fail indicator)
+## Alternatives if `phone_build_smoke_test` isn't the pick
 
-Three buttons (Play / Replay / Retry) suggest different next-action flows depending on result state. Architect to map button → action when Figma is consulted tomorrow.
-
-**Tomorrow's Figma protocol** (per project rules):
-1. Architect FIRST asks Cesar: is node `12987-4556` the canonical Result Screen design, or a placeholder version?
-2. Only after Cesar confirms canonical, run `Figma:get_design_context` with `fileKey=5gEAHjl6xAtW8iYY7NMvWd`, `nodeId=12987-4556`
-3. Use the screenshot references and the imported PNG assets as visual diff companions during SPEC writing
-4. Map button text/icon → action semantics (Play = next hole? Replay = view shot history? Retry = re-fire current shot?). Lock these with Cesar before SPEC finalizes.
-
-**Open questions for SPEC-lock time** (some now updated with Figma context):
-- Where does `PinWorld` live for the detector — constructor inject (immutable) or static read (live-updates if pin moves)? Lean: constructor inject; pin doesn't move during a hole.
-- Cup detection: instantaneous (any sample inside the cup) or sustained (ball must rest inside)? §2a's existing code samples during Rolling so any-sample-inside is the current contract. Lean: keep as-is.
-- Result modal UI — follow Figma node `12987-4556` design, use `Assets/Art/ResultScreen/` imported PNGs. Architect confirms canonical with Cesar before extracting.
-- Failed state in scope for §2d? Lean: NO, ship Success only; Failed deferred to §2e or later.
-- Continue/Replay/Retry/Play button next actions: lock from Figma + Cesar.
-- Test seam for `HoleCompleteDriver` — same as §2c's HoleSessionDriver pattern (`InjectForTests` helper).
-
-**Files §2d will touch:**
-- `Assets/Scripts/Gameplay/Loop/RealCupDetector.cs` (NEW, ~30 lines)
-- `Assets/Scripts/Physics/Viewer/HoleCompleteDriver.cs` (NEW, ~50 lines)
-- `Assets/Scripts/Physics/Viewer/PhysicsLabController.cs` (~3 line addition in OnHoleLoaded)
-- `Assets/Scripts/Gameplay/UI/ShotUI/HoleCompleteWidget.cs` (NEW, ~80 lines for the simple modal)
-- LabScaffold.unity (Unity Editor MCP component-add for HoleCompleteDriver + HoleCompleteWidget GO)
-- Tests new file ~50 lines / 6 tests
-
-**Test gate:** baseline + 6 new tests. Implementer confirms baseline first.
-
-## Kickoff line for tomorrow
-
-When ready to start, the architect can spec §2d and Cesar fires:
+**Quick P1 wins — specs already sitting in `Docs/Specs/Queued/`:**
 
 ```
-Use the golfin-implementer subagent on "loop_v1_2d_hole_complete_and_result_screen"
+Use the golfin-implementer subagent on "putter_aim_blue_line"
 ```
 
-But the spec doesn't exist yet. Tomorrow morning, first thing for the architect is:
+- `B-followup — Housekeeping` (P1, XS <2h)
+- `B-followup — Lab-only verification gap` (P1, S)
+- `putter_aim_blue_line` (P1, S) — spec ready in `Queued/`
+- `Multi-club architecture refactor` (P1, M) — spec ready in `Queued/`; architectural, worth doing before more club-dependent features land on the old structure
 
-1. Read this file
-2. Read `Docs/Specs/Active/_TEMPLATE/SPEC.md` for format
-3. Read `Docs/Specs/Completed/loop_v1_2c_turn_counter_and_shot_history/SPEC.md` for the pattern this task mirrors
-4. Write `Docs/Specs/Queued/loop_v1_2d_hole_complete_and_result_screen/SPEC.md`
-5. Move to Active, create Notion entry, update TellCode pointer
-6. Cesar confirms locks on the 5 open questions, then fires kickoff
+**Full P1/P2 queue (verified 2026-07-23):**
 
-That's the first ~30 minutes of tomorrow's session. After that, implementer pipeline runs.
+| Item | Pri | Est | Phase |
+|---|---|---|---|
+| `B-followup — Housekeeping` | P1 | XS | Putter P1 |
+| `B-followup — Lab-only verification gap` | P1 | S | Putter P1 |
+| `putter_aim_blue_line` | P1 | S | Loop v2 |
+| `phone_build_smoke_test` | P1 | M | Loop v2 |
+| `Multi-club architecture refactor` | P1 | M | Loop v2 |
+| `11a — Auth` (Phase 2) | P1 | M | Server — BLOCKED |
+| `Auto-dirty layout cleanup` | P2 | M | Foundations |
+| `C.6 — fpMath.Cos/Sin range-reduction repair` | P2 | S | Putter P1 |
+| `Tooling: CaptureCore frozen-time fallback` | P2 | S | Loop v1 |
+| `Pre-condition: canvas audit before closing Loop v2` | P2 | S | Loop v2 |
+| `5a — Bot opponent pool` | P2 | M | Matchmaking |
+| `5b — Matchmaking surface` | P2 | S | Matchmaking |
+| `5c — Async result UI` | P2 | S | Matchmaking |
 
-## Personal note for Cesar
+## Loose ends (small, not worth their own task)
 
-Today was exhausting. The camera saga was the kind of session that drains every reserve and leaves you questioning the workflow itself. But you ended with:
-- §2c shipped clean
-- Camera back to working state
-- Three durable assets in the repo (HandleShotResolved order fix, Pipeline Lesson O, Camera System Future Design doc)
-- Solid research that prevents the next round of camera mistakes
+**Localization residue — 2 user-visible English strings still hardcoded.** Fold into whatever ships next:
+- `Assets/Scripts/UI/Roster/UI/LevelUpModalController.cs:270` — `"MAX"` shows in English to a JP player at max level.
+- `Assets/Scripts/UI/Roster/UI/CharacterDetailPanel.cs:386` — `"Bio coming soon."` last-resort fallback (the main bio path was localized in `b4e5b474e`).
 
-The day wasn't zero-net even though it felt that way. Tomorrow you start with all your tools intact and §2d is the smallest task in the Loop v1 cluster. Wake up, coffee, fire the architect, and you'll close §2d before lunch.
+The other 57 remaining hardcoded `.text` literals were spot-checked and are legitimate: runtime-overwritten placeholders, `// TODO: load real value` server stubs (e.g. `HomeScreenController`'s `"Player"`), and editor-only scripts.
 
-Sleep well.
+**Localization guard now in place:** `UIFidelityLinter` has a `LocalizationHealth` layer emitting `unlocalized-text` at **WARN** severity (`UIFidelityLinter.cs:211`). It is deliberately WARN, not FAIL — a FAIL would red-gate Rule 21 across every task. Leave it WARN unless the whole project is bound.
+
+**Audit tool available:** `Tools/Localization/Audit Project` (`Assets/Editor/Localization/LocalizationAudit.cs`) re-runs the classification and writes `Docs/Reports/localization_audit_<date>.{csv,md}`.
+
+## Standing reminders for a fresh chat
+
+- **Repo is on the Mac:** `/Users/cesar/Documents/GolfinRedux`. Cesar also works on a Windows box (`C:\Users\cesar\GolfinRedux`) — if a referenced file isn't here, check whether it was committed from the other machine before assuming it doesn't exist.
+- **Verify "Done" against actual repo state** before accepting it (STATUS.md + the deliverables on disk + `git status`), rather than taking a report at face value. This has caught real gaps.
+- **Notion roadmap** = `GOLFIN_Roadmap` database, data source `364b3e97-02b7-8190-b82b-000ba7847856`. Task rows use Item(title)/Status/Priority/Order/Estimate/Phase/Description/Notes, with `Notes` carrying `SPEC: <path>`. Valid Status values: Queued / In Progress / Done / Deferred (there is no "Blocked").
+- **Kickoff lines always go in a fenced code block**, in chat and in SPEC.md/STATUS.md — never inline backticks.
+
+---
