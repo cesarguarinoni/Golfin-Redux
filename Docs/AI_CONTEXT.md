@@ -8,11 +8,17 @@
 ## 🟢 PRIORITY QUEUED — pick up immediately
 
 > ### ▶ EXECUTION ORDER (Cesar, 2026-07-28) — this is the running order, follow it
-> 1. **`surface_coverage_audit`** — measurement gate, half-day, fireable now
-> 2. **`surface_classification_ob_rough`** — gated on #1's number
+> 1. **`zone_bake_completeness`** — **P1, NEW, CONFIRMED LIVE BUG.** Bake silently drops whole surface types on 4/18 holes. Blocks #2.
+> 2. **`surface_classification_ob_rough`** — blocked on #1. **Cheap path now DEAD** (see below).
 > 3. **`ball_trail_shot_isolation`** — measure-first, independent
 > 4. **`phone_build_smoke_test`** — tethered on-device smoke (Cesar runs the build)
 > 5. **`testflight_distribution`** — after #4 passes
+>
+> ⚠️ **`surface_coverage_audit` is PARKED (Deferred), not queued.** Superseded before completion — my SPEC §3.2 sourced authored intent from the terrain alphamap, which `HoleGeoImporter.ZoneToLayer` (`:1614-1630`) collapses to rough/semirough, so fairway could never appear and `0.00%` was a foregone conclusion. Red-team FAIL was correct. Its `ClassifyWithProvenance` seam is sound and was reused read-only by the probe below.
+>
+> 🔴 **`zone_bake_completeness` — CONFIRMED LIVE BUG, filed P1 2026-07-28.** `BakeZoneJsonTool` is silently dropping entire surface types from `zones.json`: **Hole 14 has no Fairway AND no Green; Hole 15 no Fairway; Holes 02/12 no Green** — despite the build scenes visibly containing those meshes and the source rasters containing the data (Hole 14: 257,120 fairway / 20,208 green cells). **Read-only probe confirmed:** Hole_14 `Green_1` centroid (−111.506, 127.607) → `Fairway` via **Default**; `Fairway_1` centroid (−42.815, 62.402) → `Fairway` via **Default**. Nothing matched — not a polygon, not the OB mask. **Blast radius is wider than roll coefficients:** `BallSimulation.cs:758` gates the putt-tuned roll integrator on `Green || GreenCollar`, so it **never engages** on those greens; both bots (`BotDriver.cs:728-732`, `VersusBot.cs:496-501`) switch to a **wedge chip** when the surface isn't Green/GreenCollar, so a bot on Hole 14's green chips instead of putting. Coefficients also wrong (Green 0.12/0.05 → they get Fairway 0.18/0.10, so putts decelerate 50% faster and stop at 2× the threshold). Existing row `C.4 — Putter blocked when ball is off green` suggests the player-side putter may be gated identically — **UNCONFIRMED, verify.** Drop mechanism ranked but NOT proven: H1 = `BakeZoneJsonTool:278`/`:284` `if (loopVerts.Count < 3) continue;` silently drops meshes with no warning. **Direct proof covers Hole 14 only**; 02/12/15 inferred from the same zones.json signature. FINDINGS `Docs/Specs/Queued/zone_bake_completeness/FINDINGS.md`.
+>
+> 🔴 **The `DefaultSurface = Rough` cheap path is DEAD — do not implement it.** I raised it; the probe disproved it. Hole 14's *visible fairway* resolves by fallthrough, not by polygon, so flipping the default turns real fairway into rough and greens on 02/12/14 into rough. It only looked safe because missing bake data was hiding behind a fallback that happened to be `Fairway`. Fix the bake first. Option 2 (per-cell surface grid from the source raster) now has a second justification: it bypasses polygonisation entirely and would fix the missing zones as a side effect.
 >
 > ⚠️ **The Notion `Order` number field encodes ROADMAP PHASE, not execution sequence** (`phone_build_smoke_test` = 420 → phase 4; the surface/trail rows are 1250-1260 → phase 12). It sorts *against* the running order above and that is expected — **do NOT renumber rows to match.** This list is the authoritative sequence.
 >

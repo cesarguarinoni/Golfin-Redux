@@ -1,7 +1,7 @@
 # FINDINGS — `zone_bake_completeness`
 
 **Raised:** 2026-07-28, Architect, after Cesar challenged the `surface_coverage_audit` conclusion.
-**Status:** mechanism identified, **not yet proven**. One probe outstanding (§5).
+**Status:** **CONFIRMED 2026-07-28 by read-only probe.** §5 middle branch. Mechanism (§4) still hypothesis-ranked, not proven.
 
 ---
 
@@ -99,19 +99,37 @@ A surface type reaches `zones.json` **only** if at least one mesh survives the w
 
 ---
 
-## 5. The outstanding probe — run before acting on any of the above
+## 5. Probe — RUN, CONFIRMED (2026-07-28, read-only, wrote nothing)
 
-Sample `BakedZoneClassifier.Classify` at the world position of Hole 14's `Green_1` mesh centroid.
+| Mesh | World (x, z) | `Classify` returns | Provenance |
+|---|---|---|---|
+| `Greens/Green_1` | (−111.506, 127.607) | **`Fairway`** | **`Default`** (fallthrough) |
+| `Fairways/Fairway_1` | (−42.815, 62.402) | **`Fairway`** | **`Default`** (fallthrough) |
 
-- Returns **`Green`** => my model of the classifier is wrong and this whole document collapses. Investigate what actually resolved it.
-- Returns **`Fairway`** => confirmed: Hole 14's green plays with fairway physics (roll `0.18` vs green), a live bug today. Holes 02 and 12 have Fairway but no Green and would be in the same state.
-- Returns **`OOB`** => different and worse bug; report immediately.
+Both centroids verified inside the classifier's XZ frame — scene-mesh world space and classifier world space are the same frame, no alignment caveat. Both matched **no polygon of any type** and **no OB mask**, falling through to `DefaultSurface = Fairway`.
 
-Capture in the same run: `Classify` at Hole 14's `Fairway_1` centroid. Expect `Fairway` — but **by fallthrough, not by polygon** — which is exactly why `DefaultSurface = Rough` would break it.
+**Concavity caveat is moot:** `Provenance = Default` means nothing matched, so any interior point on those meshes returns the same answer. No secondary sample needed.
+
+**Outcome: §5 middle branch. My model of the classifier was correct; the bug is real.**
+
+### 5.1 Severity — what the greens actually play like
+
+`SurfaceConfig.Default` (`Assets/Scripts/Physics/Core/SurfaceConfig.cs`):
+
+| Coefficient | `Green` (intended) | `Fairway` (actual) | Effect on a putt |
+|---|---|---|---|
+| `RollingResistance` | 0.12 | **0.18** | decelerates **50% faster** |
+| `StopSpeed` | 0.05 | **0.10** | halts at **2×** the speed threshold |
+| `TangentFriction` | 0.75 | 0.55 | — |
+| `Restitution` | 0.40 | 0.50 | — |
+
+Putts on holes 02 / 12 / 14 come up **short and stop abruptly** — a ball that should trickle into the cup dies near it while still visibly moving.
+
+**Scope of direct confirmation:** the probe covered **Hole 14 only**. Holes 02 and 12 are inferred from the same data signature (Fairway present, Green absent in their `zones.json`) and have **not** been probed. Hole 15 (Fairway absent, Green present) is likewise inferred.
 
 ---
 
-## 6. Consequences if §5 confirms
+## 6. Consequences — now CONFIRMED, not conditional
 
 1. **A live gameplay bug**, independent of any pending decision: greens on holes 02 / 12 / 14 classify as `Fairway`.
 2. **The cheap path in `surface_classification_ob_rough` is dead.** `DefaultSurface = Rough` would turn Hole 14's fairway *and* green to rough, Hole 15's fairway to rough, and holes 02/12's greens to rough. It only looked safe because missing data was hiding behind a fallback that happened to be `Fairway`.
