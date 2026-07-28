@@ -177,23 +177,45 @@ namespace Golfin.Physics.Runtime.Baked
         // ── ISurfaceProvider ──────────────────────────────────────────────────
         public SurfaceType Classify(fp worldX, fp worldZ)
         {
-            float x = worldX.ToFloat();
-            float z = worldZ.ToFloat();
+            return ClassifyCore(worldX.ToFloat(), worldZ.ToFloat(), out _);
+        }
 
+        // Shared resolution ladder — both Classify and ClassifyWithProvenance delegate here.
+        // provenance: 0 = Polygon, 1 = ObMask, 2 = Default  (matches ClassifyProvenance enum order)
+        private SurfaceType ClassifyCore(float x, float z, out int provenance)
+        {
             // Polygon zones first — they always trump the OB mask (a fairway
             // overlapping an OB-marked terrain cell IS fairway, not OOB).
             for (int i = 0; i < polygons.Length; i++)
             {
                 ref readonly var p = ref polygons[i];
                 if (x < p.minX || x > p.maxX || z < p.minZ || z > p.maxZ) continue;
-                if (PointInPolygon(p.xs, p.zs, x, z)) return p.type;
+                if (PointInPolygon(p.xs, p.zs, x, z)) { provenance = 0; return p.type; }
             }
 
             // No polygon match: consult the OB mask if baked.
-            if (hasObMask && IsObAt(x, z)) return SurfaceType.OOB;
+            if (hasObMask && IsObAt(x, z)) { provenance = 1; return SurfaceType.OOB; }
 
+            provenance = 2;
             return DefaultSurface;
         }
+
+#if UNITY_EDITOR
+        /// <summary>How a point was classified — which step in the resolution ladder matched.</summary>
+        public enum ClassifyProvenance { Polygon, ObMask, Default }
+
+        /// <summary>
+        /// Editor-only variant of <see cref="Classify"/> that also reports which step of the
+        /// resolution ladder was responsible. Uses the same shared <c>ClassifyCore</c> path so
+        /// behaviour is guaranteed bit-identical to <see cref="Classify"/>.
+        /// </summary>
+        public SurfaceType ClassifyWithProvenance(fp worldX, fp worldZ, out ClassifyProvenance how)
+        {
+            SurfaceType result = ClassifyCore(worldX.ToFloat(), worldZ.ToFloat(), out int p);
+            how = (ClassifyProvenance)p;
+            return result;
+        }
+#endif
 
         private bool IsObAt(float x, float z)
         {

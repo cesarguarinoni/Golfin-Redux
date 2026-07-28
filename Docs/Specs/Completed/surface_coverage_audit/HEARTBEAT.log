@@ -1,0 +1,29 @@
+2026-07-28T15:30:00 activated
+
+=== iter-1 kickoff baseline ===
+HEAD: e36226615814b5ab07a40d160fe6bb320566842a
+DIRTY:
+ M Assets/Settings/Mobile_RPAsset.asset
+ M Assets/Settings/UniversalRenderPipelineGlobalSettings.asset
+ M ProjectSettings/ProjectSettings.asset
+?? Docs/Specs/Active/surface_coverage_audit/STATUS.md
+=== end baseline ===
+2026-07-28T15:45:00 BakedZoneClassifier.cs refactored + SurfaceCoverageAudit.cs written; compile clean; bit-identical proof PASS
+2026-07-28T15:30:00 done, awaiting review
+2026-07-28T15:45:00 iter-2 activated — SELF_REVIEW_FAIL, two fixes required
+=== iter-2 kickoff baseline ===
+HEAD: e36226615814b5ab07a40d160fe6bb320566842a
+DIRTY:
+ M Assets/Scripts/Physics/Runtime/Baked/BakedZoneClassifier.cs
+ M Assets/Settings/Mobile_RPAsset.asset
+ M Assets/Settings/UniversalRenderPipelineGlobalSettings.asset
+ M ProjectSettings/ProjectSettings.asset
+?? Assets/Scripts/Editor/SurfaceCoverageAudit.cs
+?? Assets/Scripts/Editor/SurfaceCoverageAudit.cs.meta
+?? Docs/Specs/Active/surface_coverage_audit/HEARTBEAT.log
+?? Docs/Specs/Active/surface_coverage_audit/IMPLEMENTER_REPORT.md
+?? Docs/Specs/Active/surface_coverage_audit/SELF_REVIEW.md
+?? Docs/Specs/Active/surface_coverage_audit/STATUS.md
+?? Docs/Specs/Active/surface_coverage_audit/coverage.csv
+=== end baseline ===
+2026-07-28T15:42:00 iter-2 Fix1+Fix2 applied — pre-vs-post proof 49152 samples 0 mismatches, footnote corrected; setting READY_FOR_SELF_REVIEW

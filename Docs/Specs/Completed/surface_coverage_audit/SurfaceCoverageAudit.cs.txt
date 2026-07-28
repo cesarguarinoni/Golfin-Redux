@@ -1,0 +1,255 @@
+// Surface Coverage Audit — editor-only measurement tool.
+// SPEC: Docs/Specs/Active/surface_coverage_audit/SPEC.md
+// Task: §3.2 Audit tool. Changes NO runtime behaviour.
+//
+// Answers: of the cells that fall through to DefaultSurface (= Fairway),
+//   how many are authored as Rough/Semirough (cheap-path FIXES these) vs
+//   authored as Fairway (cheap-path BREAKS these)?
+//
+// Writes coverage.csv to the spec task folder.
+
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Text;
+using Golfin.Physics;
+using Golfin.Physics.Math;
+using Golfin.Physics.Runtime.Baked;
+using UnityEditor;
+using UnityEngine;
+
+/// <summary>
+/// Menu: GOLFIN > Analysis > Surface Coverage Audit
+/// Samples all 18 Lomond holes at alphamap resolution; cross-tabulates
+/// runtime classifier output (with provenance) against terrain-alphamap
+/// authored intent; writes coverage.csv.
+/// </summary>
+public static class SurfaceCoverageAudit
+{
+    // ── Layer→SurfaceType mapping ─────────────────────────────────────────
+    // Derived from HoleGeoImporter layer-assignment order (verified against
+    // Assets/Scripts/Editor/CourseImporter/HoleGeoImporter.cs layer list).
+    // NOTE: SurfaceMarkerMap.MapCourseToPhysics maps ZONE-TYPE integers
+    // (not terrain-layer indices), so it is NOT used here.
+    // Mismatch: SurfaceMarkerMap.MapCourseToPhysics(8) returns GreenCollar,
+    // but terrain layer 8 = T_OB_TintedRough (the OB paint layer).
+    private static readonly SurfaceType[] s_LayerToSurface =
+    {
+        SurfaceType.Fairway,    // 0: T_Fairway_Light
+        SurfaceType.Green,      // 1: T_Green_Albedo
+        SurfaceType.Semirough,  // 2: T_Semirough_Albedo
+        SurfaceType.Rough,      // 3: T_Rough_Albedo
+        SurfaceType.Sand,       // 4: T_Bunker_Albedo
+        SurfaceType.Tee,        // 5: T_Tee_Albedo
+        SurfaceType.CartPath,   // 6: T_RoadAsphalt
+        SurfaceType.Fairway,    // 7: T_Fairway_Dark (alternate Fairway texture)
+        SurfaceType.OOB,        // 8: T_OB_TintedRough (OB paint — NOT GreenCollar)
+    };
+
+    private const string CourseSlug = "lomond-country-club";
+    private const string TaskFolder = "Docs/Specs/Active/surface_coverage_audit";
+    private const string CsvRelPath = TaskFolder + "/coverage.csv";
+
+    [MenuItem("GOLFIN/Analysis/Surface Coverage Audit")]
+    public static void Run()
+    {
+        string projectRoot = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
+        string csvPath = Path.Combine(projectRoot, CsvRelPath.Replace('/', Path.DirectorySeparatorChar));
+
+        var sb = new StringBuilder();
+        sb.AppendLine("hole,runtime_surface,authored_surface,provenance,cell_count,hole_total");
+
+        int grandTotal = 0;
+        long grandPolygon = 0, grandObMask = 0, grandDefault = 0;
+        long grandDefaultRough = 0, grandDefaultSemirough = 0, grandDefaultFairway = 0, grandDefaultOther = 0;
+
+        bool anyError = false;
+
+        for (int h = 1; h <= 18; h++)
+        {
+            string holeId   = $"Hole_{h:D2}";
+            string holeSlug = $"hole-{h:D2}-geo";
+
+            EditorUtility.DisplayProgressBar(
+                "Surface Coverage Audit",
+                $"Processing {holeId} ({h}/18)…",
+                (h - 1) / 18f);
+
+            // ── Load zones.json ──────────────────────────────────────────
+            string zonesAssetPath = $"Assets/Resources/HoleData/{CourseSlug}/{holeId}/zones.json";
+            TextAsset zonesAsset = AssetDatabase.LoadAssetAtPath<TextAsset>(zonesAssetPath);
+            if (zonesAsset == null)
+            {
+                Debug.LogError($"[SurfaceCoverageAudit] zones.json not found: {zonesAssetPath}");
+                anyError = true;
+                continue;
+            }
+
+            ZoneData zoneData = ZoneData.FromJson(zonesAsset.text);
+            if (zoneData == null)
+            {
+                Debug.LogError($"[SurfaceCoverageAudit] Failed to parse zones.json for {holeId}");
+                anyError = true;
+                continue;
+            }
+
+            // ── Load TerrainData ─────────────────────────────────────────
+            string tdPath = $"Assets/Golf/Courses/{CourseSlug}/Data/{holeSlug}/TerrainData_Hole{h:D2}Geo.asset";
+            TerrainData td = AssetDatabase.LoadAssetAtPath<TerrainData>(tdPath);
+            if (td == null)
+            {
+                Debug.LogError($"[SurfaceCoverageAudit] TerrainData not found: {tdPath}");
+                anyError = true;
+                continue;
+            }
+
+            // ── Verify OB mask present ───────────────────────────────────
+            if (zoneData.obMask == null || zoneData.obMask.width == 0)
+            {
+                Debug.LogError($"[SurfaceCoverageAudit] {holeId}: no obMask in zones.json — cannot determine terrain world origin. Skipping.");
+                anyError = true;
+                continue;
+            }
+
+            float worldOriginX = zoneData.obMask.worldOriginX;
+            float worldOriginZ = zoneData.obMask.worldOriginZ;
+            float worldSizeX   = zoneData.obMask.worldSizeX;
+            float worldSizeZ   = zoneData.obMask.worldSizeZ;
+
+            // ── Alphamap ─────────────────────────────────────────────────
+            int aw = td.alphamapWidth;
+            int ah = td.alphamapHeight;
+            int layerCount = td.terrainLayers != null ? td.terrainLayers.Length : 0;
+
+            float[,,] maps = td.GetAlphamaps(0, 0, aw, ah);
+
+            // Log layer names for documentation (captured in Editor console).
+            var layerNames = new string[layerCount];
+            for (int li = 0; li < layerCount; li++)
+                layerNames[li] = td.terrainLayers[li] != null ? td.terrainLayers[li].name : "(null)";
+            Debug.Log($"[SurfaceCoverageAudit] {holeId}: alphamap {aw}×{ah}, {layerCount} layers: [{string.Join(", ", layerNames)}]");
+
+            // ── Classifier ───────────────────────────────────────────────
+            var classifier = new BakedZoneClassifier(zoneData);
+
+            // ── Cross-tabulation ─────────────────────────────────────────
+            // Key: (runtimeSurface, authoredSurface, provenance) → count
+            var counts = new Dictionary<(SurfaceType, SurfaceType, BakedZoneClassifier.ClassifyProvenance), int>();
+
+            int holeTotal = aw * ah;
+            grandTotal += holeTotal;
+
+            for (int iz = 0; iz < ah; iz++)
+            {
+                for (int ix = 0; ix < aw; ix++)
+                {
+                    // Dominant terrain layer.
+                    int   domLayer  = 0;
+                    float domWeight = maps[iz, ix, 0];
+                    for (int l = 1; l < layerCount; l++)
+                    {
+                        float w = maps[iz, ix, l];
+                        if (w > domWeight) { domWeight = w; domLayer = l; }
+                    }
+
+                    SurfaceType authored = (domLayer < s_LayerToSurface.Length)
+                        ? s_LayerToSurface[domLayer]
+                        : SurfaceType.Fairway; // unmapped layer → reported separately below
+
+                    // World position: centre of alphamap cell.
+                    float wx = worldOriginX + (ix + 0.5f) / aw * worldSizeX;
+                    float wz = worldOriginZ + (iz + 0.5f) / ah * worldSizeZ;
+
+                    BakedZoneClassifier.ClassifyProvenance prov;
+                    SurfaceType runtime = classifier.ClassifyWithProvenance(
+                        fp.FromFloat(wx), fp.FromFloat(wz), out prov);
+
+                    var key = (runtime, authored, prov);
+                    if (!counts.TryGetValue(key, out int c)) c = 0;
+                    counts[key] = c + 1;
+                }
+            }
+
+            // ── Emit CSV rows ─────────────────────────────────────────────
+            foreach (var kv in counts)
+            {
+                var (rt, auth, prov) = kv.Key;
+                sb.AppendLine($"{holeId},{rt},{auth},{prov},{kv.Value},{holeTotal}");
+            }
+
+            // ── Accumulate grand totals ───────────────────────────────────
+            foreach (var kv in counts)
+            {
+                var (rt, auth, prov) = kv.Key;
+                int cnt = kv.Value;
+                if (prov == BakedZoneClassifier.ClassifyProvenance.Polygon)  grandPolygon  += cnt;
+                if (prov == BakedZoneClassifier.ClassifyProvenance.ObMask)   grandObMask   += cnt;
+                if (prov == BakedZoneClassifier.ClassifyProvenance.Default)
+                {
+                    grandDefault += cnt;
+                    if (auth == SurfaceType.Rough || auth == SurfaceType.Semirough)
+                        grandDefaultRough += cnt;
+                    else if (auth == SurfaceType.Fairway)
+                        grandDefaultFairway += cnt;
+                    else
+                        grandDefaultOther += cnt;
+
+                    if (auth == SurfaceType.Semirough)
+                        grandDefaultSemirough += cnt;
+                }
+            }
+        }
+
+        EditorUtility.ClearProgressBar();
+
+        // ── Write CSV ─────────────────────────────────────────────────────
+        try
+        {
+            string dir = Path.GetDirectoryName(csvPath);
+            if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
+            File.WriteAllText(csvPath, sb.ToString(), Encoding.UTF8);
+            Debug.Log($"[SurfaceCoverageAudit] Wrote {csvPath}");
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError($"[SurfaceCoverageAudit] Failed to write CSV: {ex}");
+            anyError = true;
+        }
+
+        // ── Summary to console ────────────────────────────────────────────
+        if (grandTotal > 0)
+        {
+            double pctPolygon  = 100.0 * grandPolygon  / grandTotal;
+            double pctObMask   = 100.0 * grandObMask   / grandTotal;
+            double pctDefault  = 100.0 * grandDefault  / grandTotal;
+
+            double pctDefRoughOfTotal    = grandDefault > 0 ? 100.0 * grandDefaultRough   / grandTotal   : 0;
+            double pctDefFairwayOfTotal  = grandDefault > 0 ? 100.0 * grandDefaultFairway / grandTotal   : 0;
+            double pctDefOtherOfTotal    = grandDefault > 0 ? 100.0 * grandDefaultOther   / grandTotal   : 0;
+
+            double pctDefRoughOfDefault  = grandDefault > 0 ? 100.0 * grandDefaultRough   / grandDefault : 0;
+            double pctDefSemiroughOfDef  = grandDefault > 0 ? 100.0 * grandDefaultSemirough / grandDefault : 0;
+            double pctDefFairwayOfDef    = grandDefault > 0 ? 100.0 * grandDefaultFairway / grandDefault : 0;
+            double pctDefOtherOfDef      = grandDefault > 0 ? 100.0 * grandDefaultOther   / grandDefault : 0;
+
+            Debug.Log(
+                $"[SurfaceCoverageAudit] ALL-18 SUMMARY ({grandTotal:N0} total cells)\n" +
+                $"  polygon_matched_pct         = {pctPolygon:F2}%\n" +
+                $"  obmask_pct                  = {pctObMask:F2}%\n" +
+                $"  default_pct                 = {pctDefault:F2}%\n" +
+                $"  --- fallthrough breakdown ---\n" +
+                $"  default_authored_rough+semi  (% of total)    = {pctDefRoughOfTotal:F2}%\n" +
+                $"  default_authored_rough+semi  (% of default)  = {pctDefRoughOfDefault:F2}%  [incl. semirough: {pctDefSemiroughOfDef:F2}%]\n" +
+                $"  default_authored_fairway     (% of total)    = {pctDefFairwayOfTotal:F2}%\n" +
+                $"  default_authored_fairway     (% of default)  = {pctDefFairwayOfDef:F2}%\n" +
+                $"  default_authored_other       (% of total)    = {pctDefOtherOfTotal:F2}%\n" +
+                $"  default_authored_other       (% of default)  = {pctDefOtherOfDef:F2}%"
+            );
+        }
+
+        if (anyError)
+            Debug.LogWarning("[SurfaceCoverageAudit] Completed with errors — check Console for details.");
+        else
+            Debug.Log("[SurfaceCoverageAudit] Completed successfully.");
+    }
+}
