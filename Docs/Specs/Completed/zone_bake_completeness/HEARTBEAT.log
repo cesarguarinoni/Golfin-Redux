@@ -1,0 +1,38 @@
+=== iter-1 kickoff baseline ===
+HEAD: 20c1d22c8 docs(specs): zone_bake_completeness repair spec — H1 confirmed by elimination, wrong-polygon-match framing, fail-loud completeness gate [2026-07-28 18:15 JST]
+DIRTY:
+ M Assets/Scripts/Physics/Runtime/Baked/BakedZoneClassifier.cs   ← pre-existing surface_coverage_audit ClassifyWithProvenance instrumentation; DO NOT TOUCH
+ M Assets/Settings/Mobile_RPAsset.asset                           ← pre-existing
+ M Assets/Settings/UniversalRenderPipelineGlobalSettings.asset    ← pre-existing
+ M ProjectSettings/ProjectSettings.asset                          ← pre-existing
+?? Assets/Scripts/Editor/SurfaceCoverageAudit.cs                  ← pre-existing surface_coverage_audit task
+?? Assets/Scripts/Editor/SurfaceCoverageAudit.cs.meta             ← pre-existing surface_coverage_audit task
+?? Docs/Specs/Active/surface_coverage_audit/ARCHITECT_ESCALATION.md ← pre-existing
+?? Docs/Specs/Active/surface_coverage_audit/ARCHITECT_REVIEW.md     ← pre-existing
+?? Docs/Specs/Active/surface_coverage_audit/HEARTBEAT.log           ← pre-existing
+?? Docs/Specs/Active/surface_coverage_audit/IMPLEMENTER_REPORT.md   ← pre-existing
+?? Docs/Specs/Active/surface_coverage_audit/REDTEAM_REVIEW.md       ← pre-existing
+?? Docs/Specs/Active/surface_coverage_audit/SELF_REVIEW.md          ← pre-existing
+?? Docs/Specs/Active/surface_coverage_audit/STATUS.md               ← pre-existing
+?? Docs/Specs/Active/surface_coverage_audit/coverage.csv            ← pre-existing
+=== end baseline ===
+2026-07-28T18:30:00 activated — reading SPEC, FINDINGS, BakeZoneJsonTool.cs, BakedZoneClassifier.cs
+2026-07-28T18:32:00 confirmed zones.json types: Hole01=Fairway+Green+Tee+Sand+CartPath; Hole02=Fairway+Tee+Sand+CartPath (no Green); Hole12=Fairway+Tee+Sand+CartPath+Water (no Green); Hole14=Tee+Sand+CartPath+Water (no Fairway, no Green); Hole15=Green+Tee+Sand+CartPath (no Fairway)
+2026-07-28T18:33:00 Stage 1 instrumentation — adding Debug.Log probes to BakeZoneJsonTool.ExtractBoundaryPolygons to observe loopVerts.Count at :278/:284
+2026-07-28T18:55:00 done, awaiting review — IMPLEMENTER_REPORT.md written; §6 FAIL surfaced; STATUS → READY_FOR_ARCHITECT_REVIEW
+=== iter-2 kickoff baseline HEAD=20c1d22c8 ===
+DIRTY: Hole_01-18/zones.json BakeZoneJsonTool.cs BakedZoneClassifier.cs(pre-existing) Mobile_RPAsset UniversalRPGlobalSettings ProjectSettings.asset Docs/Diag/baked-pivot/ ===
+2026-07-28T19:00:00 iter-2 activated — investigating Hole_15_Geo mis-stamped mesh
+2026-07-28T19:10:00 H15 full scan complete: 9 SurfaceMarkers, only 1 Green mesh (Green_1), source raster = 48625 green px — BLOCKING AMBIGUITY discovered
+2026-07-28T19:15:00 §3 spot-probes H06/H11/H17: all 6 PASS (Fairway/Polygon + Green/Polygon each)
+2026-07-28T19:20:00 IMPLEMENTER_BLOCKED — H15 ambiguity surfaced in IMPLEMENTER_REPORT.md ## Iter-2; open question to Cesar
+2026-07-28T10:34:18Z §6 after clips captured: H14 (IsPutt=True), H15 (IsPutt=False/Driver); report updated; done, awaiting review
+2026-07-28T10:40:41Z iter-3 kickoff: real-gameplay BotVideoRecorder pipeline for §6 H14+H15 clips
+2026-07-28T11:00:00Z writing ZoneBakeAfterClipBot + ZoneBakeAfterClipMenu
+2026-07-28T11:35:00Z reading ZoneBakeAfterClipBot to verify before launching H15 recording
+2026-07-28T12:00:00Z H15 verified (60MB, no Y-flip, DRIVER shown not putter — IsPutt=False confirmed); session guard reset; H14 recording launched (maxSeconds=120)
+2026-07-28T21:07:50Z H14 recording re-launched with fixed power formula: power=0.13 for close approach (was 0.55), max 8 shots (was 3), maxSeconds=200 (was 120); bot running
+2026-07-28T21:45:00Z captioned h15_after.mp4 (15MB) and h14_after.mp4 (48MB) via ffmpeg drawtext; extracted canonical frames; updated IMPLEMENTER_REPORT.md with iter-3 evidence and open question 5 (putter widget architectural gap); setting STATUS to READY_FOR_ARCHITECT_REVIEW
+2026-07-28T22:00:00Z ARCHITECT_REVIEW_FAIL set — iter-4 start: finding real tap-to-aim handler for H14 putter widget clip
+2026-07-28T12:58:35 recording h14_after_raw — bot running, waiting for settle+tap-to-aim
+2026-07-28T13:12:00Z done, awaiting review — iter-4 tap-to-aim complete; SelectedTypeLabel=PUTTER confirmed; h14_after_canonical.png (1170x2532) shows PUTTER 27 mts; IMPLEMENTER_REPORT updated; STATUS -> READY_FOR_SELF_REVIEW

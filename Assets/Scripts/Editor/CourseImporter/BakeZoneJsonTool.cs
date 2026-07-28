@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.IO;
+using Newtonsoft.Json.Linq;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -66,6 +67,18 @@ namespace Golfin.Editor.CourseImporter
         // Output path constants
         private const string ResourcesRoot = "Assets/Resources/HoleData";
 
+        /// <summary>
+        /// §4.2 Completeness gate — minimum pixel count in the source raster for a zone type
+        /// to be considered "meaningful" and required in the baked output.
+        /// Types below this threshold produce a warning instead of a hard failure.
+        ///
+        /// Rationale: the smallest meaningful type observed across all 18 holes is
+        /// Green at ~6 000 cells (0.3% of a 1.9M-pixel grid). Noise types
+        /// (background ~400 cells, semi_rough ~400–830 cells) are well below 1 000.
+        /// 1 000 cells = ≈0.05% of a 1.9M-pixel grid — below any gameplay-significant area.
+        /// </summary>
+        private const int COMPLETENESS_CELL_THRESHOLD = 1000;
+
         // ── Menu entries ──────────────────────────────────────────────────────
 
         [MenuItem("GOLFIN/Tools/Bake Zone JSON (Active Hole)")]
@@ -92,6 +105,7 @@ namespace Golfin.Editor.CourseImporter
                 {
                     string path = AssetDatabase.GUIDToAssetPath(g);
                     if (path.Contains("Video/")) continue;
+                    if (path.Contains("Experimental/")) continue;
                     if (!path.EndsWith("_Geo.unity")) continue;
 
                     EditorUtility.DisplayProgressBar("Bake Zone JSON",
@@ -151,6 +165,18 @@ namespace Golfin.Editor.CourseImporter
             // Write JSON.
             // SPEC §5.6: fail loudly at bake sites when slug is null.
             string courseSlug = CourseSlugResolver.ResolveOrThrow(holeScenePath, "BakeZoneJsonTool.BakeOne");
+
+            // §4.2 Completeness gate: verify all meaningful source-raster types survived into output.
+            // Runs BEFORE writing — a failed gate must NOT produce a file.
+            if (!CheckCompletenessGate(courseSlug, holeId, data.zones))
+            {
+                Debug.LogError($"[BakeZoneJsonTool] §4.2 COMPLETENESS GATE FAILED for {holeId}: " +
+                               "zones.json NOT written. Fix the surface mesh and re-bake.");
+                if (weOpened)
+                    EditorSceneManager.CloseScene(loaded, removeScene: true);
+                return 0;
+            }
+
             string outDir = Path.Combine(ResourcesRoot, courseSlug, holeId);
             Directory.CreateDirectory(outDir);
             string outPath = Path.Combine(outDir, "zones.json");
@@ -233,6 +259,7 @@ namespace Golfin.Editor.CourseImporter
             var mesh = mf.sharedMesh;
             var verts = mesh.vertices;
             var tris  = mesh.triangles;
+
             if (tris.Length < 3) return;
 
             // 1. Count usage of each unordered edge.
@@ -275,13 +302,15 @@ namespace Golfin.Editor.CourseImporter
                     current = next;
                 }
 
-                if (loopVerts.Count < 3) continue;
+                if (loopVerts.Count < 3)
+                    continue;
 
                 // Drop the duplicated closing vertex if present.
                 if (loopVerts.Count >= 2 && loopVerts[0] == loopVerts[loopVerts.Count - 1])
                     loopVerts.RemoveAt(loopVerts.Count - 1);
 
-                if (loopVerts.Count < 3) continue;
+                if (loopVerts.Count < 3)
+                    continue;
 
                 var poly = new Polygon2D();
                 for (int i = 0; i < loopVerts.Count; i++)
@@ -295,6 +324,123 @@ namespace Golfin.Editor.CourseImporter
                 }
                 outPolys.Add(poly);
             }
+        }
+
+        // ── §4.2 Completeness gate ────────────────────────────────────────────
+
+        /// <summary>
+        /// Compares the surface types present in the hole's source raster
+        /// (<c>Tools/UHoleGeo/output/{courseSlug}/export/hole-NN/zones.json</c>)
+        /// against the types that survived into <paramref name="bakedZones"/>.
+        ///
+        /// Returns <c>false</c> (and logs an error) if any mapped type with
+        /// <c>≥ COMPLETENESS_CELL_THRESHOLD</c> pixels is absent from the baked output.
+        /// Returns <c>true</c> with a warning if the source raster file is unavailable —
+        /// this is an intentional skip, NOT a silent pass; the warning names the missing path.
+        ///
+        /// SPEC §4.2: "the gate must SKIP with a clear warning, never silently pass."
+        /// </summary>
+        private static bool CheckCompletenessGate(string courseSlug, string holeId,
+                                                  List<ZonePolygonGroup> bakedZones)
+        {
+            // Map: source-raster zone name → baked zones.json SurfaceType string.
+            // Only types that the bake pipeline emits as explicit polygon zones are mapped.
+            // Excluded: rough, semi_rough, trees, ob, background — these have no polygon zones.
+            var rasterToSurface = new Dictionary<string, string>
+            {
+                { "fairway",   "Fairway"   },
+                { "green",     "Green"     },
+                { "tee_box",   "Tee"       },
+                { "bunker",    "Sand"      },
+                { "cart_path", "CartPath"  },
+                { "water",     "Water"     },
+            };
+
+            // "Hole_01" → "hole-01"
+            string holeDir = "hole-" + holeId.Substring(5).ToLower();
+            string projectRoot = Path.GetDirectoryName(Application.dataPath);
+            string sourceRasterPath = Path.Combine(
+                projectRoot, "Tools", "UHoleGeo", "output",
+                courseSlug, "export", holeDir, "zones.json");
+
+            if (!File.Exists(sourceRasterPath))
+            {
+                Debug.LogWarning(
+                    $"[BakeZoneJsonTool] §4.2 gate SKIPPED for {holeId}: " +
+                    $"source raster not found at '{sourceRasterPath}'. " +
+                    "NOTE: this bake now depends on Tools/UHoleGeo/ being present on disk. " +
+                    "CI/other machines without it will skip this gate — see SPEC §4.2.");
+                return true; // skip, not fail
+            }
+
+            JObject sourceDoc;
+            try
+            {
+                sourceDoc = JObject.Parse(File.ReadAllText(sourceRasterPath));
+            }
+            catch (System.Exception ex)
+            {
+                Debug.LogWarning(
+                    $"[BakeZoneJsonTool] §4.2 gate SKIPPED for {holeId}: " +
+                    $"failed to parse source raster: {ex.Message}");
+                return true;
+            }
+
+            var zoneStats = sourceDoc["zone_stats"] as JObject;
+            if (zoneStats == null)
+            {
+                Debug.LogWarning(
+                    $"[BakeZoneJsonTool] §4.2 gate SKIPPED for {holeId}: " +
+                    "source raster lacks a 'zone_stats' field.");
+                return true;
+            }
+
+            // Collect baked surface-type names (e.g. "Fairway", "Green", …).
+            var bakedTypes = new HashSet<string>();
+            foreach (var z in bakedZones) bakedTypes.Add(z.type);
+
+            bool gatePass = true;
+            foreach (var kvp in rasterToSurface)
+            {
+                string rasterName  = kvp.Key;
+                string surfaceName = kvp.Value;
+
+                int pixelCount = 0;
+                var statNode = zoneStats[rasterName];
+                if (statNode != null)
+                    pixelCount = statNode.Value<int?>("pixel_count") ?? 0;
+
+                if (pixelCount < COMPLETENESS_CELL_THRESHOLD)
+                {
+                    // Below threshold — warn only if the mapped type is also absent,
+                    // so the reader can see the counts.
+                    if (pixelCount > 0 && !bakedTypes.Contains(surfaceName))
+                    {
+                        Debug.LogWarning(
+                            $"[BakeZoneJsonTool] §4.2 sub-threshold: {holeId} '{rasterName}' " +
+                            $"= {pixelCount} px (< {COMPLETENESS_CELL_THRESHOLD}) and " +
+                            $"'{surfaceName}' absent from baked output — below hard-fail threshold.");
+                    }
+                    continue;
+                }
+
+                if (!bakedTypes.Contains(surfaceName))
+                {
+                    Debug.LogError(
+                        $"[BakeZoneJsonTool] §4.2 COMPLETENESS GATE FAIL: {holeId} — " +
+                        $"'{rasterName}' has {pixelCount} cells in source raster " +
+                        $"but '{surfaceName}' is absent from baked zones.json. " +
+                        "Check whether the surface mesh is tagged and present in the Geo scene.");
+                    gatePass = false;
+                }
+                else
+                {
+                    Debug.Log(
+                        $"[BakeZoneJsonTool] §4.2 OK: {holeId} '{rasterName}' " +
+                        $"({pixelCount} px) → '{surfaceName}' present in output.");
+                }
+            }
+            return gatePass;
         }
 
         // ── Edge helpers ──────────────────────────────────────────────────────
