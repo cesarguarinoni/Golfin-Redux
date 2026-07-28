@@ -5,6 +5,8 @@
 **Supersedes:** `surface_coverage_audit` (Deferred — its authored-intent oracle was invalid; see §2).
 **Depends on:** `zone_bake_completeness` (DONE `b7ebbf000`) — this probe is only meaningful against the re-baked `zones.json`.
 
+> **READ FIRST:** `Docs/SURFACE_CLASSIFICATION_PIPELINE.md` — full end-to-end reference for this pipeline, verified 2026-07-29. It documents the three incompatible integer numbering schemes, both poisoned oracles, the two unrelated files both named `zones.json`, and the current per-hole baked state. It will save you the two wrong turns this task has already taken.
+
 ---
 
 ## 1. Why this exists
@@ -156,7 +158,7 @@ Re-run the same control on **one additional hole** (pick any with all six zone g
 
 5. **Run all 18 holes.** Per-hole rows plus an aggregate. A per-hole outlier is a finding, not noise — Hole 15 in particular inverted the failure last time (its fairway classified as `Green`), so report it individually.
 
-   **Known anomaly — Hole 02 has `ob` = 0 px in the source raster.** It is the only such hole. Expect its fallthrough-authored-`ob` figure to be trivially zero, and **check whether its runtime `zones.json` carries an `obMask` at all** — if it does not, `hasObMask` is false and step 2 of the classifier ladder is skipped entirely on that hole, so *everything* not covered by a polygon falls through. Report that as a **finding in its own right**; do not treat it as a probe malfunction and do not exclude Hole 02 from the aggregate without saying so.
+   **Known anomaly — Hole 02 has `ob` = 0 px in the source raster.** It is the only such hole. **RESOLVED 2026-07-29 — do not re-investigate:** Hole 02's runtime `zones.json` *does* carry a structurally valid `obMask` block, but **0 of its 1,048,576 bits are set** (decoded and counted). Because `hasObMask` tests `obMaskBits.Length > 0` and not whether any bit is set (`BakedZoneClassifier.cs:98`), `hasObMask` is **true** — step 2 of the ladder executes on every call and can never match. Net effect: **Hole 02 has no out-of-bounds at runtime**; everything outside a polygon resolves to `Fairway` by default. Expect its fallthrough-authored-`ob` figure to be trivially zero and its fallthrough share to be the largest of any hole. Report it, keep it in the aggregate, and flag it separately — it is a real gameplay defect, not a probe malfunction. Full trace in `Docs/SURFACE_CLASSIFICATION_PIPELINE.md` §6.1.
 
 6. **Trees (index 5) are not a ground surface.** Report the trees bucket separately and do **not** fold it into either decision number. If it is large, say so and let it be a decision input rather than resolving it silently.
 
