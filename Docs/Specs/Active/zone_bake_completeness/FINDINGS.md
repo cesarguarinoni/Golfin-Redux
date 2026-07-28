@@ -99,6 +99,40 @@ A surface type reaches `zones.json` **only** if at least one mesh survives the w
 
 ---
 
+## 4a. CORRECTION (2026-07-28, `zone_bake_scope_probe`) — the observable effect is NOT always `Default`
+
+**H1 CONFIRMED by elimination. H2 and H3 ELIMINATED.** Every `Fairway_*`/`Green_*` object on holes 01/02/12/14/15 has a `MeshFilter`, a non-null mesh, and **both** `SurfaceMarker`s stamped with the correct type — identical to the working Hole 01 control. The bake had complete, correct inputs and dropped the polygons anyway. `BakeZoneJsonTool:278`/`:284` (`if (loopVerts.Count < 3) continue;`) is the only standing explanation.
+
+**But §5's framing was wrong.** Fallthrough-to-`Default` is the *special case*, not the rule:
+
+| Hole | Mesh | Actual result | §5 predicted |
+|---|---|---|---|
+| 01 (**control**) | `Green_1` | `Green` / **`Polygon`** | — (run VALID) |
+| 02 | `Green_1` | `Fairway` / **`Polygon`** | `Fairway`/`Default` MISMATCH |
+| 12 | `Green_1` | `Fairway` / **`Polygon`** | `Fairway`/`Default` MISMATCH |
+| 15 | `Fairway_1` | **`Green`** / **`Polygon`** | `Fairway`/`Default` MISMATCH |
+| 14 | `Green_1` | `Fairway` / `Default` | `Fairway`/`Default` match |
+
+**The real behaviour:** when a polygon is dropped, the region falls to whatever *surviving* polygon happens to cover it. It reaches `DefaultSurface` only when **every** covering polygon was dropped — which is why Hole 14, the one hole that lost *both* Fairway and Green, is the only `Default` case.
+
+So this is a **silent, location-dependent mis-classification**, not a clean fallback. Two points on the same green can resolve differently depending on which surviving polygon overlaps them.
+
+### 4a.1 Hole 15 is the worst case, and it inverts the failure
+
+Hole 15's **fairway classifies as `Green`**. That is not merely wrong coefficients:
+
+- `BallSimulation.cs:758` — `IsPuttSurface(s) => s == Green || s == GreenCollar`. The **putt-tuned roll integrator engages on Hole 15's fairway.**
+- `BotDriver.cs:728-732` / `VersusBot.cs:496-501` — both bots chip with a wedge only when the surface is *not* Green/GreenCollar. On Hole 15 they will **putt from the fairway**.
+- Coefficients invert: fairway gets Green's `RollingResistance 0.12` / `StopSpeed 0.05` instead of `0.18` / `0.10`, so the ball rolls **too far** rather than stopping short.
+
+Holes 02/12 fail the other direction (green plays fairway); Hole 15 fails outward (fairway plays green). Any repair must be verified in **both** directions.
+
+### 4a.2 What is still NOT observed
+
+H1 is confirmed **by elimination**, not by instrumentation. Nobody has watched `loopVerts.Count < 3` fire, and **why** boundary-loop extraction fails on these specific meshes is unknown. The repair must not patch a branch that has only been inferred — see the repair SPEC Stage 1.
+
+---
+
 ## 5. Probe — RUN, CONFIRMED (2026-07-28, read-only, wrote nothing)
 
 | Mesh | World (x, z) | `Classify` returns | Provenance |
