@@ -224,3 +224,17 @@ Assets/Scenes/Original~/
 
 # general_shop_ui review screenshots — kept on disk, not tracked (mirrors 1v1_match_flow)
 Docs/Specs/Completed/general_shop_ui/screenshots/
+
+# =========================
+# Spec review screenshots — GENERALIZED (2026-07-28, Order 1240 close-out).
+# Per-task screenshot folders had been added one-by-one after the fact (see the
+# 1v1_match_flow / map_view_aiming / sound_effects / general_shop_ui lines above),
+# and the rule was missed every time until someone noticed. ob_boundary_presentation
+# reached 169 files / 557 MB untracked before it was caught at close-out review —
+# one `git add .` from being permanently in history.
+#
+# Mirrors the `Docs/Specs/**/videos/` rule above: review evidence is local-only and
+# regenerable via the capture bots. Reports reference the paths; the bytes stay on disk.
+# .gitignore never untracks, so every screenshot already committed stays committed.
+# =========================
+Docs/Specs/**/screenshots/
