@@ -42,6 +42,13 @@ namespace Golfin.Physics.Viewer
         // ── §2b: OBFreeze state ───────────────────────────────────────────────
         Vector3 _obFreezePivot;
 
+        // ── OB chase clamp (ob_boundary_presentation) ─────────────────────────
+        // When _chaseClampActive, the camera stops advancing along _launchDir once
+        // the ball's projected progress equals or exceeds _chaseClampProgress.
+        // Rotation always tracks the live ball focus.
+        bool    _chaseClampActive;
+        float   _chaseClampProgress; // metres along _launchDir from _shotOrigin
+
         void Awake() => _mode = startMode;
 
         // ── Public API ─────────────────────────────────────────────────────────
@@ -71,6 +78,9 @@ namespace Golfin.Physics.Viewer
             _launchDir  = new Vector3(launchDir.x, 0f, launchDir.z).normalized;
             if (_launchDir == Vector3.zero) _launchDir = Vector3.forward;
             _velocity   = Vector3.zero;
+            // Clear clamp so it never leaks into the next shot.
+            _chaseClampActive   = false;
+            _chaseClampProgress = 0f;
         }
 
         // ── §2b: New public API ────────────────────────────────────────────────
@@ -84,6 +94,30 @@ namespace Golfin.Physics.Viewer
         public void SetCupZoomFocus(Vector3 focus) => _cupZoomFocus = focus;
 
         public void SetOBFreezePivot(Vector3 pivot) => _obFreezePivot = pivot;
+
+        /// <summary>
+        /// Arms the Chase-mode OB clamp. When active the camera stops advancing along
+        /// _launchDir once the ball's projected XZ progress equals the clamp's.
+        /// Rotation continues tracking the live ball (D4 — OBFreeze stays unchanged).
+        /// </summary>
+        public void SetChaseClamp(Vector3 clampPoint, bool active)
+        {
+            _chaseClampActive = active;
+            if (active)
+            {
+                // Pre-compute progress of the clamp point along launch direction.
+                Vector3 disp = clampPoint - _shotOrigin;
+                disp.y = 0f;
+                Vector3 flatDir = new Vector3(_launchDir.x, 0f, _launchDir.z);
+                _chaseClampProgress = flatDir.sqrMagnitude > 0.0001f
+                    ? Vector3.Dot(disp, flatDir.normalized)
+                    : 0f;
+            }
+            else
+            {
+                _chaseClampProgress = 0f;
+            }
+        }
 
         /// <summary>
         /// Extracted from LateUpdate for EditMode test access (same as TickCinematicCut pattern).
@@ -158,9 +192,28 @@ namespace Golfin.Physics.Viewer
                     break;
 
                 default: // Chase
-                    desiredPos = focus - _launchDir * _followDistance + Vector3.up * (_followHeight + FollowHeightOffset);
+                {
+                    // OB clamp: if armed, compute ball's current XZ progress along the
+                    // launch direction. If it exceeds the clamp's progress, cap the
+                    // position focus (where the camera sits) at the clamp point —
+                    // but always look at the LIVE ball (rotation tracks it out over the void).
+                    Vector3 posFocus = focus;
+                    if (_chaseClampActive && _launchDir.sqrMagnitude > 0.0001f)
+                    {
+                        Vector3 ballDisp = focus - _shotOrigin;
+                        ballDisp.y = 0f;
+                        float ballProgress = Vector3.Dot(ballDisp, _launchDir);
+                        if (ballProgress > _chaseClampProgress)
+                        {
+                            // Pin camera position focus at clamp point (along shot axis).
+                            float overshoot = ballProgress - _chaseClampProgress;
+                            posFocus = focus - _launchDir * overshoot;
+                        }
+                    }
+                    desiredPos = posFocus - _launchDir * _followDistance + Vector3.up * (_followHeight + FollowHeightOffset);
                     desiredRot = Quaternion.LookRotation(focus - desiredPos);
                     break;
+                }
             }
 
             transform.position = Vector3.SmoothDamp(transform.position, desiredPos,

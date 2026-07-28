@@ -59,6 +59,9 @@ namespace Golfin.Physics.Viewer
         // (GetComponent-or-AddComponent on the BallAnimator GO + Resources-loaded prefab) so the
         // scene carries no baked reference → LabScaffold.unity stays at zero diff for this task.
         WaterSplashController  _waterSplash;
+        // ob_boundary_presentation (Order 1240): ObGroundSkirt is wired in code in OnHoleLoaded,
+        // same pattern as WaterSplashController — GetComponent-or-AddComponent, no baked ref.
+        ObGroundSkirt          _obSkirt;
         // sound_effects (Order 350): BallAudioEmitter wired in code, same pattern as WaterSplashController.
         BallAudioEmitter       _ballAudio;
 
@@ -1782,6 +1785,12 @@ namespace Golfin.Physics.Viewer
             // PutterGreenReader subscribes to HoleContext.OnChanged and calls GetSurfaces()
             // (which returns the new _bakedClassifier) to trigger a rebake automatically.
             // No manual camera/ball sync needed — reader polls BallPosition each frame.
+
+            // ob_boundary_presentation (Order 1240): build/refresh the OB ground skirt.
+            // Exactly one ObGroundSkirt component on this GO at all times — GetComponent-or-AddComponent.
+            if (_obSkirt == null)
+                _obSkirt = GetComponent<ObGroundSkirt>() ?? gameObject.AddComponent<ObGroundSkirt>();
+            _obSkirt.Rebuild(chaseCamera != null ? chaseCamera.GetComponent<Camera>() : null);
 
             DiagAero($"OnHoleLoaded.end[{sceneName}]");
         }

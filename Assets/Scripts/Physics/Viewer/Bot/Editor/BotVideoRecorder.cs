@@ -99,6 +99,46 @@ namespace Golfin.Physics.Viewer.Editor
             set => SessionState.SetString(CustomOutputPathKey, value);
         }
 
+        // Camera input mode (2026-07-28, ob_boundary_presentation iter-9).
+        // When UseCameraInput=true, Begin() uses CameraInputSettings+TaggedCamera instead of
+        // GameViewInputSettings, avoiding the Mac/Metal systematic full-video Y-flip that
+        // GameViewInputSettings produces when recording starts during active gameplay.
+        //
+        // Root cause: GameViewInputSettings reads the Metal backbuffer which can be Y-flipped
+        // in certain playmode states. The existing Y-FLIP FIX (2026-06-16) only guards against
+        // single-frame transients caused by mid-record render-state changes; it cannot fix a
+        // systematic full-video flip that is baked in when recording begins.
+        //
+        // CameraInputSettings reads from the camera's own render target (correctly oriented),
+        // bypassing the Metal backbuffer entirely. Pipeline_Hardening Rule 4 mandates this
+        // approach for canonical proof of world→screen features.
+        //
+        // Tradeoff: URP Overlay cameras (HUD elements drawn by a separate Overlay Camera) are
+        // NOT captured in CameraInputSettings mode — only the base camera 3D world is shown.
+        // This is acceptable for camera-behaviour proof clips; use GameView mode for HUD-heavy captures.
+        //
+        // Set UseCameraInput=true + CameraTag BEFORE ArmDeferred()+Launch().
+        // Both are cleared automatically by Begin() after being read.
+        const string UseCameraInputKey = "LoopV2SmokeBot.UseCameraInput";
+        const string CameraTagKey      = "LoopV2SmokeBot.CameraTag";
+
+        /// <summary>When true, Begin() uses CameraInputSettings+TaggedCamera instead of
+        /// GameViewInputSettings. Avoids Mac/Metal systematic Y-flip per Pipeline_Hardening Rule 4.
+        /// Set BEFORE ArmDeferred()+Launch(). Cleared automatically by Begin().</summary>
+        public static bool UseCameraInput
+        {
+            get => SessionState.GetBool(UseCameraInputKey, false);
+            set => SessionState.SetBool(UseCameraInputKey, value);
+        }
+
+        /// <summary>Camera tag for TaggedCamera capture. Default "MainCamera".
+        /// Cleared automatically by Begin() (reset to empty string).</summary>
+        public static string CameraTag
+        {
+            get => SessionState.GetString(CameraTagKey, "MainCamera");
+            set => SessionState.SetString(CameraTagKey, value);
+        }
+
         // Runaway backstop. A clip longer than this is force-stopped — it catches a hung
         // bot that records indefinitely (itself a GPU-saturation risk), NOT normal clips.
         // Set above the longest legit clip (the menu→opponent-turn nav is ~19s) so it never
@@ -226,12 +266,20 @@ namespace Golfin.Physics.Viewer.Editor
                 Debug.Log($"[BotVideoRecorder] MaxRecordSecondsOverride set to {sessionOverride}s from SessionState.");
             }
 
-            // Read and clear audio opt-in and custom output path before domain reload risk.
+            // Read and clear audio opt-in, custom output path, and camera input mode
+            // before any domain reload risk. All three are SessionState-backed.
             bool captureAudio = CaptureAudio;
             CaptureAudio = false;   // clear so it never leaks
 
             string customOutputPath = CustomOutputPath;
             CustomOutputPath = "";  // clear immediately
+
+            // Camera input mode — read and clear immediately.
+            bool useCameraInput = UseCameraInput;
+            string cameraTag    = CameraTag;
+            UseCameraInput = false;      // clear so it never leaks
+            CameraTag      = "";         // reset; GetString default "MainCamera" used next session
+            if (string.IsNullOrEmpty(cameraTag)) cameraTag = "MainCamera";
 
             try
             {
@@ -301,11 +349,31 @@ namespace Golfin.Physics.Viewer.Editor
                 movie.name         = "BotVideo";
                 movie.Enabled      = true;
                 movie.OutputFormat = MovieRecorderSettings.VideoRecorderOutputFormat.MP4;
-                movie.ImageInputSettings = new GameViewInputSettings
+
+                if (useCameraInput)
                 {
-                    OutputWidth  = w,
-                    OutputHeight = h,
-                };
+                    // TaggedCamera capture: reads from the camera's own render target, NOT the
+                    // Metal backbuffer. Avoids systematic full-video Y-flip on Mac (Rule 4).
+                    // Tradeoff: URP Overlay cameras (HUD) are not captured — only the base
+                    // camera 3D world is visible. Acceptable for camera-behaviour proof clips.
+                    var camInput = new CameraInputSettings();
+                    camInput.Source      = ImageSource.TaggedCamera;
+                    camInput.CameraTag   = cameraTag;
+                    camInput.OutputWidth  = w;
+                    camInput.OutputHeight = h;
+                    movie.ImageInputSettings = camInput;
+                    Debug.Log($"[BotVideoRecorder] Using CameraInputSettings (TaggedCamera='{cameraTag}') " +
+                              "— flip-free on Mac/Metal per Pipeline_Hardening Rule 4. HUD not captured.");
+                }
+                else
+                {
+                    movie.ImageInputSettings = new GameViewInputSettings
+                    {
+                        OutputWidth  = w,
+                        OutputHeight = h,
+                    };
+                }
+
                 movie.AudioInputSettings.PreserveAudio = captureAudio;
                 movie.OutputFile = outputFileNoExt;   // Recorder appends the .mp4 extension
 
@@ -342,9 +410,12 @@ namespace Golfin.Physics.Viewer.Editor
                     ", \"width\": " + w + ", \"height\": " + h +
                     ", \"size\": \"iphone14-1170x2532-full\"" +
                     ", \"capture_audio\": " + (captureAudio ? "true" : "false") +
+                    ", \"camera_input\": " + (useCameraInput ? "true" : "false") +
+                    ", \"camera_tag\": \"" + cameraTag + "\"" +
                     "}");
 
-                Debug.Log($"[BotVideoRecorder] Recording started → {outputFileNoExt}.mp4 ({w}x{h} @ {Fps}fps, audio={captureAudio}). " +
+                Debug.Log($"[BotVideoRecorder] Recording started → {outputFileNoExt}.mp4 ({w}x{h} @ {Fps}fps, audio={captureAudio}, " +
+                          $"cameraInput={useCameraInput}, tag='{cameraTag}'). " +
                           "Game View pinned to the iPhone-14 1170×2532 device preset — UI lays out as in normal play.");
             }
             catch (Exception e)

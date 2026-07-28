@@ -153,11 +153,23 @@ namespace Golfin.Physics.Viewer
 
             var ctrl = ActiveController;
 
-            // Aiming → Flying: arm chase target + reset origin.
+            // Aiming → Flying: arm chase target + reset origin + pre-arm OB clamp.
             if (change.Next == BallState.Flying && change.Previous == BallState.Aiming)
             {
                 if (ctrl != null)
+                {
                     ArmChaseForShot(ctrl.LastShotOrigin, ctrl.LastShotLaunchDir, ctrl.CurrentBall);
+
+                    // D3: arm the OB clamp NOW using the already-computed trajectory.
+                    // Non-OB shots get active=false → camera behaves byte-identically to HEAD.
+                    // ExitedWorldBounds has no terrain hit but the ball is still OB — arm at finalPosition.
+                    var traj = ctrl.LastTrajectory;
+                    Vector3 clampPoint;
+                    bool hasOBHit = TryFindFirstOBHit(traj, ctrl.LastShotOrigin, out clampPoint);
+                    bool shouldClamp = hasOBHit
+                        || (traj != null && traj.termination == TerminationReason.ExitedWorldBounds);
+                    setter?.SetChaseClamp(clampPoint, shouldClamp);
+                }
             }
 
             // § controls_h R3: Flying → Rolling (or Rolling → Rolling on bounce):
@@ -217,24 +229,57 @@ namespace Golfin.Physics.Viewer
             setter.ResetToOrigin(origin, launchDir);
         }
 
-        Vector3 ComputeOBFreezePivot(Vector3 fallback, Trajectory traj)
+        /// <summary>
+        /// Shared scan: find the first terrain hit with Surface == Water or OOB in traj.terrainHits.
+        /// Returns true and writes the XZ world position (Y from hit) into <paramref name="pos"/>
+        /// if found; returns false and writes <paramref name="fallbackPos"/> into pos otherwise.
+        ///
+        /// Both ComputeOBFreezePivot and the Aiming→Flying clamp arm use this to guarantee
+        /// they derive from the same first-OB-hit — no copy-paste duplication (Order-731/762 scar).
+        /// </summary>
+        static bool TryFindFirstOBHit(Trajectory traj, Vector3 fallbackPos, out Vector3 pos)
         {
-            if (traj?.terrainHits == null)
-                return fallback + Vector3.up * obFreezeHeightAboveTerrain;
-
-            foreach (var hit in traj.terrainHits)
+            if (traj?.terrainHits != null)
             {
-                if (hit.Surface == SurfaceType.Water || hit.Surface == SurfaceType.OOB)
+                foreach (var hit in traj.terrainHits)
                 {
-                    return new Vector3(
-                        hit.Position.x.ToFloat(),
-                        hit.Position.y.ToFloat() + obFreezeHeightAboveTerrain,
-                        hit.Position.z.ToFloat());
+                    if (hit.Surface == SurfaceType.Water || hit.Surface == SurfaceType.OOB)
+                    {
+                        pos = new Vector3(
+                            hit.Position.x.ToFloat(),
+                            hit.Position.y.ToFloat(),
+                            hit.Position.z.ToFloat());
+                        return true;
+                    }
                 }
             }
 
-            // ExitedWorldBounds or no OB terrain hit — fall back to change position + height.
-            return fallback + Vector3.up * obFreezeHeightAboveTerrain;
+            // ExitedWorldBounds or no OB terrain hit — fall back.
+            // Use finalPosition if available, otherwise the supplied fallback.
+            if (traj != null)
+            {
+                pos = new Vector3(
+                    traj.finalPosition.x.ToFloat(),
+                    traj.finalPosition.y.ToFloat(),
+                    traj.finalPosition.z.ToFloat());
+            }
+            else
+            {
+                pos = fallbackPos;
+            }
+            return false;
+        }
+
+        Vector3 ComputeOBFreezePivot(Vector3 fallback, Trajectory traj)
+        {
+            TryFindFirstOBHit(traj, fallback, out var hitPos);
+            // Pivot is at OB-hit XZ + height offset Y (regardless of whether it was a hit or fallback).
+            // INTENTIONAL CHANGE (not equivalent to pre-refactor behaviour): when TryFindFirstOBHit
+            // returns false (no OB terrain hit found), hitPos is set to traj.finalPosition rather
+            // than the old 'fallback' value. This is deliberate — the freeze pivot now tracks the
+            // ball's actual computed final position on ExitedWorldBounds or terrain-unmapped OB
+            // terminations, giving a more accurate freeze anchor than the prior fallback did.
+            return hitPos + Vector3.up * obFreezeHeightAboveTerrain;
         }
 
         // ── Carry / progress helpers (for cinematic cut) ──────────────────────

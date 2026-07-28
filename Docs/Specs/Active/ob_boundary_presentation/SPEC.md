@@ -31,7 +31,42 @@ This is why the OB camera "was never successfully implemented" — the mode is c
 | **D2** | OB skirt colour derives from the **real OB terrain layer**, measured — not hand-picked. | See §4.1. |
 | **D3** | Chase clamp is **pre-armed at `Aiming→Flying`** from the already-computed trajectory. | The trajectory is fully known at shot time (deterministic pre-sim). No state-machine retiming, no new events, no sim touch. |
 | **D4** | The existing `OBFreeze` terminal mode **stays**. The clamp is an addition to `Chase`, not a replacement. | Terminal framing behaviour is already correct and video-gated by prior work; do not disturb it. |
-| **D5** | Video gate on **Hole_06** (the lake). | Already the established OB scenario — `SmokeRunner2eHost.cs:184-186` fires at the Hole_06 lake for the OB→Aiming sequence. |
+| **D5** | ~~Video gate on **Hole_06** (the lake).~~ **CORRECTED — see AMENDMENT A2.** Aim the shot at the **OB boundary** (out of bounds past the course edge), NOT the lake. | The lake is a water hazard *inside* the terrain; a lake shot never exposes the outer OB/void region where `ObGroundSkirt` renders. Every hole has OB — point the ball at it. |
+
+---
+
+## AMENDMENT A1 (2026-07-27, Cesar via architect) — textured, blended skirt
+
+**Supersedes D2's "flat measured colour" implication and §4.2's "Unlit material" bullet where they conflict. Everything else in this SPEC stands.**
+
+Iter-3 shipped a functionally-correct skirt (colour on target `#375910`, void gone) but it renders as a **flat, unlit, zero-texture green slab** below a **razor-straight diagonal seam** against the photoreal lit forest — it reads as "ground texture failed to load," not continuous terrain. The red-team gate broke §4.3.3 ("reads continuous to the horizon") on this. This is the flat-slab class Cesar rejects on sight. Root cause is the SPEC's own §4.2 **Unlit** + solid-colour choice, so the fix is a spec amendment, not an implementer defect.
+
+**New skirt requirements (override §4.2 accordingly):**
+
+1. **Textured, not solid fill.** The skirt must show real grass **texture**, matching the OB/rough ground it continues. Use the OB terrain's own grass albedo (`T_Rough_Albedo`, already loaded for §4.1) tiled at a world-space scale that matches the apparent grass grain near the terrain edge, tinted by the same `diffuseRemapMax (0.75, 0.82, 0.55)` as OB layer 8. **Not** a `Unlit/Color` flat fill.
+2. **Lit consistently with the terrain.** Use a **lit** material (URP/Lit, or the terrain grass shader) so the skirt takes scene ambient/lighting like the terrain does — no flat over-bright plane. Mobile perf flags still apply (no shadow *cast/receive*, light-probe Off, reflection-probe Off); a lit material can still skip shadow casting.
+3. **Blend the seam — no hard cutline.** The terrain→skirt transition must NOT read as a razor diagonal. Implementer's choice of whichever reads best (combine as needed): (a) let scene fog (Exp2, density 0.01) act on the skirt — do not force-disable fog on its material; (b) a distance/vertex-colour fade lerping the skirt toward the fog colour over the last few metres before the terrain edge; (c) overlap the skirt slightly **under** the terrain edge with matched Y so there is no gap. Goal: continuous ground to the horizon.
+4. **D1 retained.** Skybox stays above the horizon; the skirt only fills below the terrain edge.
+5. **D2 spirit retained.** Colour/texture still **derive** from the OB layer (measured albedo × tint) — the change is texture + lighting + blend, never a hand-picked colour.
+6. **Scope unchanged.** `ObGroundSkirt.cs` remains the locus; SPEC §8 file list stands. Runtime-loading `T_Rough_Albedo` for the material is allowed (WalkCamera / §4.1 precedent). No sim/CSV/asmdef/scene changes.
+
+**Amended acceptance (adds to §4.3):**
+- [ ] Skirt shows visible grass **texture** — colour variance across the skirt region is clearly non-zero (a flat slab measures ≈0 stdev; iter-3 was ~1). Report the measured variance.
+- [ ] Terrain→skirt seam does not read as a hard diagonal cutline — A/B the void-facing frame; transition reads continuous.
+- [ ] Void-facing proof frame captured via the **sanctioned** path (`ExecuteMenuItem("GOLFIN/Screenshot/Capture Game View")`) at the void pose — the hand-rolled `Camera.targetTexture`+`ReadPixels`+`EncodeToPNG` canonical from iter-3 is **not** acceptable as primary evidence this iteration.
+- [ ] Non-OB camera path, tests, videos, and clamp behaviour from iter-2/iter-3 remain green (re-confirm, do not regress).
+
+---
+
+## AMENDMENT A2 (2026-07-28, Cesar) — aim at OB, not the lake
+
+**Corrects D5 and the capture-bot shot target. This is the whole point of the task.**
+
+The task is about **OB (out of bounds)** — the region past the course boundary that renders as an empty screen. The capture bot (`ObBoundaryCaptureBot.cs`) was aiming at the **Hole_06 lake** (`Water_1` centre `(-19.7,-7.9)`), a water hazard *inside* the terrain — so the camera never looked at the OB/void region and the `ObGroundSkirt` was never in frame across 6 iterations.
+
+**Fix:** aim the capture shot **out of bounds** — past the course edge, toward the OB zone (`SurfaceType.OOB`), where the ball leaves the play area and the camera (post-clamp) faces the OB ground / skybox-void region the skirt fills. Every hole has an OB direction; Hole_06 is fine as long as the shot is pointed AT the OB, not the lake. The clamp path already scans `SurfaceType.Water || SurfaceType.OOB` (§5.1), so OOB is already handled — only the shot target was wrong.
+
+Everything from AMENDMENT A1 (textured/lit/blended skirt) still applies to what the camera sees at the OB boundary.
 
 ---
 

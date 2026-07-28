@@ -22,6 +22,10 @@ namespace Golfin.Physics.Tests
         public Vector3?                        LastCupZoomFocus;
         public Vector3?                        LastOBFreezePivot;
 
+        // ob_boundary_presentation: capture SetChaseClamp calls for test assertions.
+        public Vector3? LastChaseClampPoint;
+        public bool?    LastChaseClampActive;
+
         ChaseCamera.Mode _currentMode = ChaseCamera.Mode.Chase;
         public ChaseCamera.Mode CurrentMode => _currentMode;
 
@@ -31,6 +35,11 @@ namespace Golfin.Physics.Tests
         public void SetDownrangeFraming(Vector3 pos, Vector3 lookAt) { LastDownrangePos = pos; LastDownrangeLookAt = lookAt; }
         public void SetCupZoomFocus(Vector3 f)     { LastCupZoomFocus = f; }
         public void SetOBFreezePivot(Vector3 p)    { LastOBFreezePivot = p; }
+        public void SetChaseClamp(Vector3 clampPoint, bool active)
+        {
+            LastChaseClampPoint  = clampPoint;
+            LastChaseClampActive = active;
+        }
     }
 
     /// <summary>Minimal stub for IControllerAccessor. Mutate fields between test phases.</summary>
@@ -531,6 +540,169 @@ namespace Golfin.Physics.Tests
         // ── Tests 18–19: DELETED §controls_h iter-8 fallback ─────────────────
         // ChaseCamera_SetAiming_TrueUsesAimFraming — SetAiming is deleted in iter-8.
         // ChaseCamera_SetAiming_FalseUsesFollowFraming — SetAiming is deleted in iter-8.
+
+        // ── Tests 20–24: ob_boundary_presentation (Order 1240) ────────────────
+
+        // Test 20: Water hit → clamp armed at hit XZ.
+        [Test]
+        public void Director_OBClamp_WaterHit_ArmedAtHitXZ()
+        {
+            var waterHitPos = new fp3(fp.FromFloat(30f), fp.Zero, fp.FromFloat(7f));
+            var hits = new List<TerrainHit>
+            {
+                TrajectoryBuilder.NonStopHit(waterHitPos, SurfaceType.Water),
+            };
+            var finalPos = new fp3(fp.FromFloat(50f), fp.Zero, fp.FromFloat(10f));
+            var traj = new Trajectory(
+                new List<TrajectorySample>
+                {
+                    new TrajectorySample(fp.Zero, fp3.Zero, fp3.Zero),
+                    new TrajectorySample(fp.One,  finalPos, fp3.Zero),
+                },
+                finalPos, fp3.Zero, fp.One, TerminationReason.HitWater, hits);
+
+            var (director, setter, ctrl) = DirectorFactory.Create(isPutt: false, lastTraj: traj);
+            ctrl.LastTrajectory = traj;
+
+            ctrl.BallSM.OnTrajectoryComputed(fp3.Zero, traj, fp.FromFloat(0.02f));
+
+            Assert.IsTrue(setter.LastChaseClampActive.HasValue && setter.LastChaseClampActive.Value,
+                "Clamp should be armed (active=true) when trajectory has a Water hit");
+            Assert.IsTrue(setter.LastChaseClampPoint.HasValue,
+                "SetChaseClamp should have been called");
+            Assert.AreEqual(30f, setter.LastChaseClampPoint.Value.x, 0.01f,
+                "Clamp point X should match Water hit");
+            Assert.AreEqual(7f,  setter.LastChaseClampPoint.Value.z, 0.01f,
+                "Clamp point Z should match Water hit");
+        }
+
+        // Test 21: OOB hit → clamp armed.
+        [Test]
+        public void Director_OBClamp_OOBHit_Armed()
+        {
+            var oobHitPos = new fp3(fp.FromFloat(40f), fp.Zero, fp.FromFloat(3f));
+            var hits = new List<TerrainHit>
+            {
+                TrajectoryBuilder.NonStopHit(oobHitPos, SurfaceType.OOB),
+            };
+            var finalPos = oobHitPos;
+            var traj = new Trajectory(
+                new List<TrajectorySample>
+                {
+                    new TrajectorySample(fp.Zero, fp3.Zero, fp3.Zero),
+                    new TrajectorySample(fp.One,  finalPos, fp3.Zero),
+                },
+                finalPos, fp3.Zero, fp.One, TerminationReason.BallStopped, hits);
+
+            var (director, setter, ctrl) = DirectorFactory.Create(isPutt: false, lastTraj: traj);
+            ctrl.LastTrajectory = traj;
+
+            ctrl.BallSM.OnTrajectoryComputed(fp3.Zero, traj, fp.FromFloat(0.02f));
+
+            Assert.IsTrue(setter.LastChaseClampActive.HasValue && setter.LastChaseClampActive.Value,
+                "Clamp should be armed (active=true) when trajectory has an OOB hit");
+        }
+
+        // Test 22: No OB hit → clamp NOT armed (non-OB shots byte-identical to HEAD).
+        [Test]
+        public void Director_OBClamp_NoOBHit_NotArmed()
+        {
+            var fairwayHit = new fp3(fp.FromFloat(60f), fp.Zero, fp.Zero);
+            var hits = new List<TerrainHit>
+            {
+                TrajectoryBuilder.NonStopHit(fairwayHit, SurfaceType.Fairway),
+            };
+            var traj = new Trajectory(
+                new List<TrajectorySample>
+                {
+                    new TrajectorySample(fp.Zero, fp3.Zero, fp3.Zero),
+                    new TrajectorySample(fp.One,  fairwayHit, fp3.Zero),
+                },
+                fairwayHit, fp3.Zero, fp.One, TerminationReason.BallStopped, hits);
+
+            var (director, setter, ctrl) = DirectorFactory.Create(isPutt: false, lastTraj: traj);
+            ctrl.LastTrajectory = traj;
+
+            ctrl.BallSM.OnTrajectoryComputed(fp3.Zero, traj, fp.FromFloat(0.02f));
+
+            // active=false → clamp is disarmed; non-OB camera path is unaffected.
+            Assert.IsTrue(setter.LastChaseClampActive.HasValue,
+                "SetChaseClamp must have been called (with active=false) even for non-OB shots");
+            Assert.IsFalse(setter.LastChaseClampActive.Value,
+                "Clamp must be DISARMED (active=false) for trajectories with no OB hit");
+        }
+
+        // Test 23: ExitedWorldBounds → clamp armed at finalPosition.
+        [Test]
+        public void Director_OBClamp_ExitedWorldBounds_ArmedAtFinalPosition()
+        {
+            var finalPos = new fp3(fp.FromFloat(500f), fp.FromFloat(2f), fp.Zero);
+            var traj = new Trajectory(
+                new List<TrajectorySample>
+                {
+                    new TrajectorySample(fp.Zero, fp3.Zero, fp3.Zero),
+                    new TrajectorySample(fp.One,  finalPos, fp3.Zero),
+                },
+                finalPos, fp3.Zero, fp.One, TerminationReason.ExitedWorldBounds,
+                new List<TerrainHit>());
+
+            var (director, setter, ctrl) = DirectorFactory.Create(isPutt: false, lastTraj: traj);
+            ctrl.LastTrajectory = traj;
+
+            ctrl.BallSM.OnTrajectoryComputed(fp3.Zero, traj, fp.FromFloat(0.02f));
+
+            // ExitedWorldBounds produces no OB terrain hit, so TryFindFirstOBHit returns false
+            // and falls back to traj.finalPosition.
+            Assert.IsTrue(setter.LastChaseClampActive.HasValue && setter.LastChaseClampActive.Value,
+                "Clamp should be armed for ExitedWorldBounds");
+            Assert.IsTrue(setter.LastChaseClampPoint.HasValue,
+                "SetChaseClamp should have been called");
+            Assert.AreEqual(500f, setter.LastChaseClampPoint.Value.x, 1f,
+                "ExitedWorldBounds clamp X should fall back to finalPosition.x");
+        }
+
+        // Test 24: Clamp point and OBFreeze pivot agree in XZ (shared-helper regression).
+        [Test]
+        public void Director_OBClamp_AndOBFreezePivot_AgreeInXZ()
+        {
+            float obHeight = 5f; // default obFreezeHeightAboveTerrain
+
+            var waterHitPos = new fp3(fp.FromFloat(25f), fp.Zero, fp.FromFloat(5f));
+            var hits = new List<TerrainHit>
+            {
+                TrajectoryBuilder.NonStopHit(new fp3(fp.FromFloat(10f), fp.Zero, fp.Zero), SurfaceType.Fairway),
+                TrajectoryBuilder.NonStopHit(waterHitPos, SurfaceType.Water),
+            };
+            var finalPos = new fp3(fp.FromFloat(25f), fp.Zero, fp.FromFloat(5f));
+            var traj = new Trajectory(
+                new List<TrajectorySample>
+                {
+                    new TrajectorySample(fp.Zero,  fp3.Zero,     fp3.Zero),
+                    new TrajectorySample(fp.One,   finalPos,     fp3.Zero),
+                },
+                finalPos, fp3.Zero, fp.One, TerminationReason.HitWater, hits);
+
+            var (director, setter, ctrl) = DirectorFactory.Create(isPutt: false, lastTraj: traj);
+            ctrl.LastTrajectory = traj;
+
+            ctrl.BallSM.OnTrajectoryComputed(fp3.Zero, traj, fp.FromFloat(0.02f));
+
+            // OBFreeze pivot is set when BallState.OB fires.
+            Assert.IsTrue(setter.LastOBFreezePivot.HasValue, "SetOBFreezePivot should have been called");
+            Assert.IsTrue(setter.LastChaseClampPoint.HasValue, "SetChaseClamp should have been called");
+
+            Vector3 pivot = setter.LastOBFreezePivot.Value;
+            Vector3 clamp = setter.LastChaseClampPoint.Value;
+
+            // Both should derive from the same first Water hit XZ.
+            Assert.AreEqual(pivot.x, clamp.x, 0.01f,
+                "OBFreeze pivot X and chase clamp X must agree (same TryFindFirstOBHit source)");
+            Assert.AreEqual(pivot.z, clamp.z, 0.01f,
+                "OBFreeze pivot Z and chase clamp Z must agree (same TryFindFirstOBHit source)");
+            // Pivot has the height offset; clamp is the raw XZ hit position.
+            Assert.AreEqual(pivot.y - obHeight, clamp.y, 0.01f,
+                "OBFreeze pivot Y should be clamp Y + obFreezeHeight");
+        }
 
         // ── Teardown ────────────────────────────────────────────────────────────
 

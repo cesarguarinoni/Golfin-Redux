@@ -1,0 +1,285 @@
+=== ob_boundary_presentation task folder initialized 2026-07-27 14:41 JST ===
+=== iter-1 kickoff baseline 2026-07-28T00:00:00 ===
+HEAD SHA: f281d334695d7a0b3427d9d394bca14ca927ee4c
+DIRTY (git status --porcelain):
+ M "Assets/Fonts/NotoSansJP-VariableFont_wght SDF.asset"
+ M Assets/Settings/Mobile_RPAsset.asset
+ M Assets/Settings/UniversalRenderPipelineGlobalSettings.asset
+ M ProjectSettings/ProjectSettings.asset
+?? Docs/Specs/Active/ob_boundary_presentation/HEARTBEAT.log
+?? Docs/Specs/Active/ob_boundary_presentation/STATUS.md
+===
+2026-07-28T00:00:00 activated, reading spec and source files
+2026-07-28T00:15:00 ObGroundSkirt.cs created, color derived from T_Rough_Albedo + HoleGeoImporter remapMax
+2026-07-28T00:30:00 IModeSetter/ChaseCamera: SetChaseClamp added; LoopCameraDirector: TryFindFirstOBHit extracted + clamp arming at Aiming→Flying
+2026-07-28T00:45:00 LoopCameraDirectorTests: RecordingModeSetter updated + 5 new clamp tests added; ExitedWorldBounds implementation fix
+2026-07-28T01:00:00 EditMode tests: 943 total, 938 pass, 2 pre-existing StaminaLiveWiring fail, 3 pre-existing skip — all 5 new tests PASS
+2026-07-28T01:15:00 video gate: opening ShellScene for real-flow capture
+2026-07-28T02:30:00 done, awaiting review
+=== iter-2 kickoff baseline 2026-07-28T03:00:00 ===
+HEAD SHA: f281d334695d7a0b3427d9d394bca14ca927ee4c
+DIRTY (git status --porcelain):
+ M "Assets/Fonts/NotoSansJP-VariableFont_wght SDF.asset"
+ M Assets/Scripts/Physics/Tests/LoopCameraDirectorTests.cs
+ M Assets/Scripts/Physics/Viewer/ChaseCamera.cs
+ M Assets/Scripts/Physics/Viewer/IModeSetter.cs
+ M Assets/Scripts/Physics/Viewer/LoopCameraDirector.cs
+ M Assets/Scripts/Physics/Viewer/PhysicsLabController.cs
+ M Assets/Settings/Mobile_RPAsset.asset
+ M Assets/Settings/UniversalRenderPipelineGlobalSettings.asset
+ M ProjectSettings/ProjectSettings.asset
+?? Assets/Scripts/Physics/Viewer/ObGroundSkirt.cs
+?? Assets/Scripts/Physics/Viewer/ObGroundSkirt.cs.meta
+?? Docs/Specs/Active/ob_boundary_presentation/HEARTBEAT.log
+?? Docs/Specs/Active/ob_boundary_presentation/IMPLEMENTER_REPORT.md
+?? Docs/Specs/Active/ob_boundary_presentation/SELF_REVIEW.md
+?? Docs/Specs/Active/ob_boundary_presentation/STATUS.md
+?? Docs/Specs/Active/ob_boundary_presentation/screenshots/
+===
+2026-07-28T03:00:00 iter-2 activated — fixing colour-space (FAIL-1), video gate (FAIL-2/3), per-frame diff (PARTIAL-1)
+2026-07-27T06:44:55 colour fix confirmed in ObGroundSkirt.cs (0.2149, 0.3509, 0.0624 sRGB); compile clean; 937/943 tests (AudioEmitter flaky — pre-existing, unmodified file)
+2026-07-27T06:49:58 per-frame diff DONE: camera_before.csv == camera_after.csv (diff exit 0, 180 frames, non-OB path identical at HEAD and current); restoring from stash pop clean
+2026-07-27T07:30:47 ObBoundaryCaptureBot.cs + ObBoundaryCaptureMenu.cs written, compile clean, BotVideoRecorder API verified — starting BEFORE clip
+2026-07-27T07:46:19 BEFORE clip re-launched: SessionGuard reset, CustomOutputPath .mp4 extension bug fixed; bot running ob_before scenario
+2026-07-27T16:51:27 AFTER clip launched (skirt+clamp live)
+2026-07-27T17:45:00 done, awaiting review
+=== iter-3 kickoff baseline 2026-07-27T09:06:38Z ===
+HEAD SHA: f281d334695d7a0b3427d9d394bca14ca927ee4c
+DIRTY (git status --porcelain):
+ M "Assets/Fonts/NotoSansJP-VariableFont_wght SDF.asset"
+ M Assets/Scripts/Physics/Tests/LoopCameraDirectorTests.cs
+ M Assets/Scripts/Physics/Viewer/ChaseCamera.cs
+ M Assets/Scripts/Physics/Viewer/IModeSetter.cs
+ M Assets/Scripts/Physics/Viewer/LoopCameraDirector.cs
+ M Assets/Scripts/Physics/Viewer/PhysicsLabController.cs
+ M Assets/Settings/Mobile_RPAsset.asset
+ M Assets/Settings/UniversalRenderPipelineGlobalSettings.asset
+ M ProjectSettings/ProjectSettings.asset
+?? Assets/Scripts/Physics/Viewer/Bot/Editor/ObBoundaryCaptureMenu.cs
+?? Assets/Scripts/Physics/Viewer/Bot/Editor/ObBoundaryCaptureMenu.cs.meta
+?? Assets/Scripts/Physics/Viewer/Bot/ObBoundaryCaptureBot.cs
+?? Assets/Scripts/Physics/Viewer/Bot/ObBoundaryCaptureBot.cs.meta
+?? Assets/Scripts/Physics/Viewer/ObGroundSkirt.cs
+?? Assets/Scripts/Physics/Viewer/ObGroundSkirt.cs.meta
+?? Docs/Specs/Active/ob_boundary_presentation/HEARTBEAT.log
+?? Docs/Specs/Active/ob_boundary_presentation/IMPLEMENTER_REPORT.md
+?? Docs/Specs/Active/ob_boundary_presentation/SELF_REVIEW.md
+?? Docs/Specs/Active/ob_boundary_presentation/STATUS.md
+?? Docs/Specs/Active/ob_boundary_presentation/camera_after.csv
+?? Docs/Specs/Active/ob_boundary_presentation/camera_before.csv
+?? Docs/Specs/Active/ob_boundary_presentation/screenshots/
+===
+2026-07-27T09:06:38Z iter-3 activated — SINGLE ITEM: produce AFTER capture showing ObGroundSkirt in void region
+2026-07-27T09:50:00Z done, awaiting review
+=== iter-4 routed: SPEC AMENDMENT A1 (textured/lit/blended skirt) — Cesar chose "blend it" at ARCHITECT_REVIEW_ESCALATE 2026-07-27T19:07:50+0900 ===
+=== iter-4 kickoff baseline 2026-07-28T00:00:00Z ===
+HEAD SHA: f281d334695d7a0b3427d9d394bca14ca927ee4c
+DIRTY (git status --porcelain):
+ M "Assets/Fonts/NotoSansJP-VariableFont_wght SDF.asset"
+ M Assets/Scripts/Physics/Tests/LoopCameraDirectorTests.cs
+ M Assets/Scripts/Physics/Viewer/ChaseCamera.cs
+ M Assets/Scripts/Physics/Viewer/IModeSetter.cs
+ M Assets/Scripts/Physics/Viewer/LoopCameraDirector.cs
+ M Assets/Scripts/Physics/Viewer/PhysicsLabController.cs
+ M Assets/Settings/Mobile_RPAsset.asset
+ M Assets/Settings/UniversalRenderPipelineGlobalSettings.asset
+ M Docs/Specs/Active/ob_boundary_presentation/SPEC.md
+ M ProjectSettings/ProjectSettings.asset
+?? Assets/Scripts/Physics/Viewer/Bot/Editor/ObBoundaryCaptureMenu.cs
+?? Assets/Scripts/Physics/Viewer/Bot/Editor/ObBoundaryCaptureMenu.cs.meta
+?? Assets/Scripts/Physics/Viewer/Bot/ObBoundaryCaptureBot.cs
+?? Assets/Scripts/Physics/Viewer/Bot/ObBoundaryCaptureBot.cs.meta
+?? Assets/Scripts/Physics/Viewer/ObGroundSkirt.cs
+?? Assets/Scripts/Physics/Viewer/ObGroundSkirt.cs.meta
+?? Docs/Specs/Active/ob_boundary_presentation/ARCHITECT_REVIEW.md
+?? Docs/Specs/Active/ob_boundary_presentation/HEARTBEAT.log
+?? Docs/Specs/Active/ob_boundary_presentation/IMPLEMENTER_REPORT.md
+?? Docs/Specs/Active/ob_boundary_presentation/SELF_REVIEW.md
+?? Docs/Specs/Active/ob_boundary_presentation/STATUS.md
+?? Docs/Specs/Active/ob_boundary_presentation/camera_after.csv
+?? Docs/Specs/Active/ob_boundary_presentation/camera_before.csv
+?? Docs/Specs/Active/ob_boundary_presentation/screenshots/
+===
+2026-07-28T00:00:00Z iter-4 activated — SPEC AMENDMENT A1: textured/lit/blended skirt (only ObGroundSkirt.cs changes)
+2026-07-28T00:15:00Z ObGroundSkirt.cs updated: URP/Lit + T_Rough_Albedo texture (tileSize=10m) + normal map + fog-on; compile clean; entering real-flow Hole 6 load
+2026-07-28T00:45:00Z done, awaiting review
+=== iter-5 kickoff baseline ===
+HEAD: f281d334695d7a0b3427d9d394bca14ca927ee4c
+ M "Assets/Fonts/NotoSansJP-VariableFont_wght SDF.asset"
+ M Assets/Scripts/Physics/Tests/LoopCameraDirectorTests.cs
+ M Assets/Scripts/Physics/Viewer/ChaseCamera.cs
+ M Assets/Scripts/Physics/Viewer/IModeSetter.cs
+ M Assets/Scripts/Physics/Viewer/LoopCameraDirector.cs
+ M Assets/Scripts/Physics/Viewer/PhysicsLabController.cs
+ M Assets/Settings/Mobile_RPAsset.asset
+ M Assets/Settings/UniversalRenderPipelineGlobalSettings.asset
+ M Docs/Specs/Active/ob_boundary_presentation/SPEC.md
+ M ProjectSettings/ProjectSettings.asset
+?? Assets/Scripts/Physics/Viewer/Bot/Editor/ObBoundaryCaptureMenu.cs
+?? Assets/Scripts/Physics/Viewer/Bot/Editor/ObBoundaryCaptureMenu.cs.meta
+?? Assets/Scripts/Physics/Viewer/Bot/ObBoundaryCaptureBot.cs
+?? Assets/Scripts/Physics/Viewer/Bot/ObBoundaryCaptureBot.cs.meta
+?? Assets/Scripts/Physics/Viewer/ObGroundSkirt.cs
+?? Assets/Scripts/Physics/Viewer/ObGroundSkirt.cs.meta
+?? Docs/Specs/Active/ob_boundary_presentation/ARCHITECT_REVIEW.md
+?? Docs/Specs/Active/ob_boundary_presentation/HEARTBEAT.log
+?? Docs/Specs/Active/ob_boundary_presentation/IMPLEMENTER_REPORT.md
+?? Docs/Specs/Active/ob_boundary_presentation/SELF_REVIEW.md
+?? Docs/Specs/Active/ob_boundary_presentation/STATUS.md
+?? Docs/Specs/Active/ob_boundary_presentation/camera_after.csv
+?? Docs/Specs/Active/ob_boundary_presentation/camera_before.csv
+?? Docs/Specs/Active/ob_boundary_presentation/screenshots/
+
+2026-07-27T11:11:21Z activated iter-5 — fixing tiling+seam+capture-pose
+2026-07-27T11:15:00Z ObGroundSkirt.cs updated: 0→1 mesh UVs + SetTextureScale _BaseMap/_MainTex/_BumpMap, YEpsilon 0.05→0.01, diagnostic log
+2026-07-27T11:33:44 iter-5 resumed: added Rebuild() entry log + FindObjectsOfType<Terrain> fallback, resetting video session guard
+2026-07-27T20:50:00 diagnosing OBFreeze timing + skirt visibility angle
+2026-07-27T12:02:00 iter-5: void-facing capture via play-mode, position camera at terrain edge
+2026-07-27T21:30:00Z done, awaiting review
+=== iter-6 kickoff baseline 2026-07-28T03:30:00Z ===
+HEAD SHA: f281d334695d7a0b3427d9d394bca14ca927ee4c
+DIRTY (git status --porcelain):
+ M Assets/Scripts/Physics/Tests/LoopCameraDirectorTests.cs
+ M Assets/Scripts/Physics/Viewer/ChaseCamera.cs
+ M Assets/Scripts/Physics/Viewer/IModeSetter.cs
+ M Assets/Scripts/Physics/Viewer/LoopCameraDirector.cs
+ M Assets/Scripts/Physics/Viewer/PhysicsLabController.cs
+ M Assets/Settings/Mobile_RPAsset.asset
+ M Assets/Settings/UniversalRenderPipelineGlobalSettings.asset
+ M Docs/Specs/Active/ob_boundary_presentation/SPEC.md
+ M ProjectSettings/ProjectSettings.asset
+?? Assets/Scripts/Physics/Viewer/Bot/Editor/ObBoundaryCaptureMenu.cs
+?? Assets/Scripts/Physics/Viewer/Bot/Editor/ObBoundaryCaptureMenu.cs.meta
+?? Assets/Scripts/Physics/Viewer/Bot/ObBoundaryCaptureBot.cs
+?? Assets/Scripts/Physics/Viewer/Bot/ObBoundaryCaptureBot.cs.meta
+?? Assets/Scripts/Physics/Viewer/ObGroundSkirt.cs
+?? Assets/Scripts/Physics/Viewer/ObGroundSkirt.cs.meta
+?? Docs/Specs/Active/ob_boundary_presentation/ARCHITECT_REVIEW.md
+?? Docs/Specs/Active/ob_boundary_presentation/HEARTBEAT.log
+?? Docs/Specs/Active/ob_boundary_presentation/IMPLEMENTER_REPORT.md
+?? Docs/Specs/Active/ob_boundary_presentation/SELF_REVIEW.md
+?? Docs/Specs/Active/ob_boundary_presentation/STATUS.md
+?? Docs/Specs/Active/ob_boundary_presentation/camera_after.csv
+?? Docs/Specs/Active/ob_boundary_presentation/camera_before.csv
+?? Docs/Specs/Active/ob_boundary_presentation/screenshots/
+===
+2026-07-28T03:30:00Z iter-6 activated — extracting real chase-cam OB frames from after_camera_clamp.mp4
+2026-07-28T03:45:00Z FINDING: Hole 6 lake OB scenario does not expose outer terrain boundary void — setting IMPLEMENTER_BLOCKED
+2026-07-28T03:50:00Z done — IMPLEMENTER_BLOCKED: Hole 6 lake OB scenario does not expose outer terrain boundary void; surfaced Q1-Q3 for Architect
+=== iter-7 unblock: Cesar A2 — aim at OB boundary, NOT the lake. Re-aim ObBoundaryCaptureBot + re-capture real chase-cam OB view. 2026-07-28T06:37:42+0900 ===
+=== iter-7 kickoff baseline 2026-07-28T06:40:00Z ===
+HEAD SHA: f281d334695d7a0b3427d9d394bca14ca927ee4c
+DIRTY (git status --porcelain):
+ M Assets/Scripts/Physics/Tests/LoopCameraDirectorTests.cs
+ M Assets/Scripts/Physics/Viewer/ChaseCamera.cs
+ M Assets/Scripts/Physics/Viewer/IModeSetter.cs
+ M Assets/Scripts/Physics/Viewer/LoopCameraDirector.cs
+ M Assets/Scripts/Physics/Viewer/PhysicsLabController.cs
+ M Assets/Settings/Mobile_RPAsset.asset
+ M Assets/Settings/UniversalRenderPipelineGlobalSettings.asset
+ M Docs/Specs/Active/ob_boundary_presentation/SPEC.md
+ M ProjectSettings/ProjectSettings.asset
+?? Assets/Scripts/Physics/Viewer/Bot/Editor/ObBoundaryCaptureMenu.cs
+?? Assets/Scripts/Physics/Viewer/Bot/Editor/ObBoundaryCaptureMenu.cs.meta
+?? Assets/Scripts/Physics/Viewer/Bot/ObBoundaryCaptureBot.cs
+?? Assets/Scripts/Physics/Viewer/Bot/ObBoundaryCaptureBot.cs.meta
+?? Assets/Scripts/Physics/Viewer/ObGroundSkirt.cs
+?? Assets/Scripts/Physics/Viewer/ObGroundSkirt.cs.meta
+?? Docs/Specs/Active/ob_boundary_presentation/ARCHITECT_REVIEW.md
+?? Docs/Specs/Active/ob_boundary_presentation/HEARTBEAT.log
+?? Docs/Specs/Active/ob_boundary_presentation/IMPLEMENTER_REPORT.md
+?? Docs/Specs/Active/ob_boundary_presentation/SELF_REVIEW.md
+?? Docs/Specs/Active/ob_boundary_presentation/STATUS.md
+?? Docs/Specs/Active/ob_boundary_presentation/camera_after.csv
+?? Docs/Specs/Active/ob_boundary_presentation/camera_before.csv
+?? Docs/Specs/Active/ob_boundary_presentation/screenshots/
+===
+2026-07-28T06:40:00Z iter-7 activated — AMENDMENT A2: re-aim capture bot at OB boundary (not lake), re-capture real chase-cam OB view
+2026-07-28T08:30:00 iter-7: play-mode diagnostic to find tee world pos and correct OB aimYaw
+2026-07-27T22:21:22 iter-7 resumed — fixing aimYaw: 0.0→π for OB direction, reducing dwell timing
+2026-07-27T23:12:47Z resumed from summary, writing trajectory-diagnostic + OB-poll fix to ObBoundaryCaptureBot.cs
+2026-07-27T23:16:26 ObBoundaryCaptureBot.cs edited — trajectory diag + OB-poll; entering play mode
+2026-07-28T08:45:00Z iter-7 resumed from compaction — writing report; 5 captures analyzed, OB detection FAIL confirmed
+2026-07-28T09:00:00Z iter-7 done — READY_FOR_ARCHITECT_REVIEW: trajectory never produces SurfaceType.OOB for Hole 6 -X; Q1-Q4 surfaced
+=== iter-8 routed by architect: iter-7 OVERSHOT the OB mask (ball X=-195, mask ends X=-114). OB is a perimeter frame; aim +X toward solid right-edge OB (X~+108, ~62m from tee X=+46) to land INSIDE the mask. 2026-07-28T08:41:39+0900 ===
+
+=== iter-8 kickoff baseline 2026-07-28T09:00:00+0900 ===
+HEAD: f281d334695d7a0b3427d9d394bca14ca927ee4c
+DIRTY:
+ M Assets/Scripts/Physics/Tests/LoopCameraDirectorTests.cs
+ M Assets/Scripts/Physics/Viewer/ChaseCamera.cs
+ M Assets/Scripts/Physics/Viewer/IModeSetter.cs
+ M Assets/Scripts/Physics/Viewer/LoopCameraDirector.cs
+ M Assets/Scripts/Physics/Viewer/PhysicsLabController.cs
+?? Assets/Scripts/Physics/Viewer/Bot/Editor/ObBoundaryCaptureMenu.cs
+?? Assets/Scripts/Physics/Viewer/Bot/ObBoundaryCaptureBot.cs
+?? Assets/Scripts/Physics/Viewer/ObGroundSkirt.cs
+Root cause of iter-7 FAIL: aimYaw=π fired ball from tee past left OB edge (X=-114.45)
+  into unmapped terrain (X=-175..-201) which defaults to Fairway. No OOB terrainHit.
+iter-8 fix: aimYaw=0 (+X) power~0.50 → land at right-edge OB (X≈+108..+113, inside mask).
+=== iter-8 kickoff baseline 2026-07-28T10:00:00 ===
+HEAD SHA: f281d3346 docs(context): file orders 1240 ob_boundary_presentation + 1250 ball_trail_shot_isolation
+DIRTY (git status --porcelain):
+ M Assets/Scripts/Physics/Tests/LoopCameraDirectorTests.cs
+ M Assets/Scripts/Physics/Viewer/ChaseCamera.cs
+ M Assets/Scripts/Physics/Viewer/IModeSetter.cs
+ M Assets/Scripts/Physics/Viewer/LoopCameraDirector.cs
+ M Assets/Scripts/Physics/Viewer/PhysicsLabController.cs
+ M Assets/Settings/Mobile_RPAsset.asset
+ M Assets/Settings/UniversalRenderPipelineGlobalSettings.asset
+ M Docs/Specs/Active/ob_boundary_presentation/SPEC.md
+ M ProjectSettings/ProjectSettings.asset
+?? Assets/Scripts/Physics/Viewer/Bot/Editor/ObBoundaryCaptureMenu.cs
+?? Assets/Scripts/Physics/Viewer/Bot/Editor/ObBoundaryCaptureBot.cs
+?? Assets/Scripts/Physics/Viewer/ObGroundSkirt.cs
+?? Docs/Specs/Active/ob_boundary_presentation/ (various new files)
+2026-07-28T10:00:00 iter-8 activated: fixing ObGroundSkirt seam (baseY) + _NORMALMAP keyword
+2026-07-28T11:15:00 iter-8 done, awaiting architect review — P2-2 visual unverifiable (OBFreeze < 0.15s window), §7 video gate unmet
+=== iter-9 routed: skirt(P1) reads continuous ✓ + OOB hit confirmed ✓. Remaining: capture AFTER VIDEO of +X OB shot showing clamp stop+track over textured skirt (satisfies §7 + P2-2 visual). 2026-07-28T11:14:05+0900 ===
+=== iter-9 kickoff baseline 2026-07-28T12:00:00+0900 ===
+HEAD SHA: f281d334695d7a0b3427d9d394bca14ca927ee4c
+DIRTY (git status --porcelain):
+ M Assets/Scripts/Physics/Tests/LoopCameraDirectorTests.cs
+ M Assets/Scripts/Physics/Viewer/ChaseCamera.cs
+ M Assets/Scripts/Physics/Viewer/IModeSetter.cs
+ M Assets/Scripts/Physics/Viewer/LoopCameraDirector.cs
+ M Assets/Scripts/Physics/Viewer/PhysicsLabController.cs
+ M Assets/Settings/Mobile_RPAsset.asset
+ M Assets/Settings/UniversalRenderPipelineGlobalSettings.asset
+ M Docs/Specs/Active/ob_boundary_presentation/SPEC.md
+ M ProjectSettings/ProjectSettings.asset
+?? Assets/Scripts/Physics/Viewer/Bot/Editor/ObBoundaryCaptureMenu.cs
+?? Assets/Scripts/Physics/Viewer/Bot/Editor/ObBoundaryCaptureMenu.cs.meta
+?? Assets/Scripts/Physics/Viewer/Bot/ObBoundaryCaptureBot.cs
+?? Assets/Scripts/Physics/Viewer/Bot/ObBoundaryCaptureBot.cs.meta
+?? Assets/Scripts/Physics/Viewer/ObGroundSkirt.cs
+?? Assets/Scripts/Physics/Viewer/ObGroundSkirt.cs.meta
+Task: video gate — 3 captioned clips (BEFORE/AFTER/CONTROL) for +X OB shot on Hole 6
+Skirt(P1) + OOB hit confirmed in iter-8; no code changes expected this iter except bot shot params
+===
+2026-07-28T02:43:14 CameraInputSettings+TaggedCamera fix applied to BotVideoRecorder + ObBoundaryCaptureMenu; compile clean
+2026-07-28T03:41:48 resumed: building slideshow approach — modifying ObBoundaryCaptureBot for before/control scenarios
+2026-07-28T14:30:00 done, awaiting review — READY_FOR_ARCHITECT_REVIEW (§7 BEFORE video FAIL surfaced)
+=== punch-list iter (Cesar, 2026-07-28T14:33:17+0900): (1) silence ObGroundSkirt.Rebuild Debug.Logs / gate #if UNITY_EDITOR; (2) Destroy runtime Mesh in ObGroundSkirt.Destroy; (3) fix ComputeOBFreezePivot fallback comment. Re-run EditMode. No other files. ===
+=== punch-list kickoff baseline 2026-07-28T14:40:00+0900 ===
+HEAD SHA: d375281a2be5ad48eadffa916a7619ca34298e21
+DIRTY (git status --porcelain):
+ M Assets/Scripts/Physics/Tests/LoopCameraDirectorTests.cs
+ M Assets/Scripts/Physics/Viewer/Bot/Editor/BotVideoRecorder.cs
+ M Assets/Scripts/Physics/Viewer/ChaseCamera.cs
+ M Assets/Scripts/Physics/Viewer/IModeSetter.cs
+ M Assets/Scripts/Physics/Viewer/LoopCameraDirector.cs
+ M Assets/Scripts/Physics/Viewer/PhysicsLabController.cs
+ M Assets/Settings/Mobile_RPAsset.asset
+ M Assets/Settings/UniversalRenderPipelineGlobalSettings.asset
+ M Docs/Specs/Active/ob_boundary_presentation/SPEC.md
+ M ProjectSettings/ProjectSettings.asset
+ M ProjectSettings/TagManager.asset
+?? Assets/Scripts/Physics/Viewer/Bot/Editor/ObBoundaryCaptureMenu.cs
+?? Assets/Scripts/Physics/Viewer/Bot/ObBoundaryCaptureBot.cs
+?? Assets/Scripts/Physics/Viewer/ObGroundSkirt.cs
+?? Docs/Specs/Active/ob_boundary_presentation/ (various task files)
+===
+2026-07-28T14:40:00+0900 punch-list activated — 3 items: (1) gate Debug.Logs in Rebuild; (2) add Mesh teardown; (3) fix comment
+2026-07-28T14:55:00+0900 all 3 punch-list items complete; EditMode: 943 total / 938 pass / 2 fail (pre-existing) / 3 skip (pre-existing)
+2026-07-28T14:55:00+0900 done, awaiting review
