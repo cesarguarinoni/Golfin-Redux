@@ -8,8 +8,8 @@
 ## 🟢 PRIORITY QUEUED — pick up immediately
 
 > ### ▶ EXECUTION ORDER (Cesar, 2026-07-28) — this is the running order, follow it
-> 1. **`zone_bake_completeness`** — **P1, NEW, CONFIRMED LIVE BUG.** Bake silently drops whole surface types on 4/18 holes. Blocks #2.
-> 2. **`surface_classification_ob_rough`** — blocked on #1. **Cheap path now DEAD** (see below).
+> 1. ✅ **`zone_bake_completeness`** — **DONE 2026-07-29** (commit `b7ebbf000`, on main). Root cause was NOT the loopVerts<3 guard (H1 disproven) — the shipped zones.json were baked from stale m4-era scenes missing mesh objects; re-baked all 18 holes (restored Green H02/12/14, Fairway H14/15, CartPath H03) + added a fail-closed §4.2 completeness gate in `BakeZoneJsonTool` (reads `Tools/UHoleGeo/` source raster — new external dep, skips-with-warning if absent). Verified via ClassifyWithProvenance probes + real-gameplay after-clips (derived, not injected). Spec in `Docs/Specs/Completed/zone_bake_completeness/`. **NOTE:** the completeness gate now protects against future silent drops — the class of bug is closed, not just the instances. **#2 is now UNBLOCKED.**
+> 2. **`surface_classification_ob_rough`** — **now unblocked** (was blocked on #1). **Cheap path DEAD** (see below).
 > 3. **`ball_trail_shot_isolation`** — measure-first, independent
 > 4. **`phone_build_smoke_test`** — tethered on-device smoke (Cesar runs the build)
 > 5. **`testflight_distribution`** — after #4 passes

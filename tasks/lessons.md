@@ -1811,3 +1811,16 @@ For the Signup modal I pre-extracted Figma `13480:2479` into a §3 token table +
 2. **To find them:** the build log names the GameObject + scene. To fix: identify the dead guid via `git log --all -S <guid>` (tells you the original script name), confirm the type is genuinely gone and unreferenced, then remove the component.
 3. **Fix through Unity's API, not raw YAML, when the scene is open.** ShellScene was loaded in the Editor; editing the `.unity` on disk would race the open scene / trigger a reload popup. Used `GameObjectUtility.RemoveMonoBehavioursWithMissingScript(go)` via MCP `script-execute`, then `SaveScene` on that one scene. Verified surgical with `git diff` (13 lines: one component ref + the 12-line dead block, nothing re-serialized).
 4. **A GUID missing from `Assets/**/*.meta` is NOT proof of a missing script** — package/built-in components carry guids that live in `Packages/`/`Library/PackageCache`, so a naive "guid not under Assets" scan produces heavy false positives. Trust the build's named warning, not the raw guid sweep.
+
+---
+
+## Lesson — Donut-centroid probe artifact: a ring polygon's vertex-average lands in the hole (zone_bake_completeness, 2026-07-28)
+
+**The scar.** During `zone_bake_completeness` I flagged Hole 15's approach fairway as "still classifies as Green" because I probed the *centroid of `Fairway poly[0]`* (the vertex-average, 15.27/68.06) and it returned Green. I nearly routed the implementer to re-stamp/delete the Green mesh — which would have left Hole 15 with **zero** green and broken putting there. It was a false alarm.
+
+**Why it happened.** `Fairway poly[0]` was the fairway's **inner cutout loop** — it traces the border of the green that sits inside it (the fairway surrounds/abuts the green). The average of a ring/cutout polygon's boundary vertices falls **inside the hole**, i.e. on the green. So the "centroid" was never a fairway location; it was the green, and Green (priority 100 > Fairway 40) correctly won.
+
+**The rules.**
+1. **Never probe a polygon by its vertex-average when the polygon may be a ring / have a cutout.** The average of boundary points of a concave or ring polygon can land entirely outside the filled region. Sample a point you've confirmed is *inside the filled area* (point-in-polygon test against that polygon, and outside any higher-priority overlapping polygon), not the arithmetic centroid.
+2. **When two polygons share an identical AABB / identical point count, suspect a contour-extraction artifact, not a duplicate mesh.** Here Fairway's inner-cutout loop and Green's outer-boundary loop both extracted as 155-pt loops with the same bounds — but the raw meshes differed (1844 vs 3013 verts). "Same bounds" ≠ "same mesh."
+3. **Before ordering a scene mutation to fix a classification, confirm the region's *intended* surface from the source raster + the mesh inventory** (how many Green meshes exist, what the raster says at that world region). A single probe returning the "wrong" surface is not proof of a bug — verify the probe point first. Surfacing-before-mutating (the implementer's IMPLEMENTER_BLOCKED here) is exactly right and it saved a putting-surface-deleting mistake.
