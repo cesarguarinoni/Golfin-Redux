@@ -9,6 +9,30 @@
 
 ---
 
+## 0. BLOCKING PRE-FLIGHT — oracle freshness check. Run this before anything else.
+
+This probe compares **runtime baked output** against the **source raster** as its authored-intent oracle. Those two live in different places with different sync behaviour:
+
+| | path | tracked by git? |
+|---|---|---|
+| runtime baked | `Assets/Resources/HoleData/<slug>/Hole_NN/zones.json` | ✅ **yes** — syncs between machines |
+| source raster (the oracle) | `Tools/UHoleGeo/output/<slug>/export/hole-NN/zones.json` | ❌ **no** — `Tools/UHoleGeo/.gitignore:4` ignores `output/**` |
+
+**So the oracle does not travel with the repo.** A machine that pulled a re-bake but never re-ran the export will hold fresh baked data beside a stale oracle, and every comparison on the affected hole is meaningless — while looking completely normal in the output CSV.
+
+**This is live right now, not hypothetical.** Hole 02 was repainted, re-exported, re-imported and re-baked on the PC (`4b0054069`). As of 2026-07-29 the Mac holds the **fixed** runtime data (`obMask` = 760,542 set bits) beside the **broken** Apr-20 export (`ob` = 0 px).
+
+**Gate, per hole, before measuring:**
+
+1. Read `ob` `pixel_count` from the source raster's `zone_stats` and compute its share of `source_dimensions.width × height`.
+2. Decode the runtime `obMask.maskBase64` and compute its set-bit share.
+3. These are different resolutions, so they will not match exactly — but they track closely in practice (verified: H06 34.70% vs 34.7%, H14 69.17% vs 69.2%, H02-post-fix 72.5% vs 72.5%). **Allow 2 percentage points.**
+4. **Any hole outside that tolerance: ABORT the whole run.** Do not measure it, do not exclude it and carry on, do not widen the tolerance. Report the hole and both figures and stop — a stale oracle invalidates the aggregate, not just that row.
+
+The remedy is to re-run the UHoleGeo export for the offending hole on this machine, or to run the probe on the machine that holds the current export. That is Cesar's call, not the implementer's.
+
+---
+
 ## 1. Why this exists
 
 On 2026-07-28 I declared the cheap path for `surface_classification_ob_rough` — `DefaultSurface = Fairway` → `Rough`, one line — **dead**. The reason: a read-only probe showed Hole 14's *visible* fairway resolving by `Default` fallthrough rather than by polygon, so flipping the default would have turned real, visible fairway into rough.
