@@ -271,7 +271,9 @@ Note the resolution/aspect change: the raster is per-hole and non-square (e.g. 2
 
 ## 6. Known defects — current, verified
 
-### 6.1 🔴 Hole 02 has no out-of-bounds at all — **ROOT-CAUSED: the OB colour was never painted** ✅
+### 6.1 ✅ FIXED 2026-07-29 — Hole 02 had no out-of-bounds at all. Root cause: the OB colour was never painted.
+
+> **RESOLVED.** The OB layer PNG had never been imported into the paint stack for Hole 02. Repainted → re-exported → re-imported → re-baked. Runtime `obMask` now **760,542 / 1,048,576 = 72.5% set**, exactly matching the source raster. Content commit `4b0054069`; unblocked by importer fix `340564f6b` (§7.7). Side effect: Hole 02's `tree_obstacles.csv` dropped 3,316 → 2,985 rows — 331 trees that stood in what is now OB. **Kept below as the worked example**, because the failure shape generalises: a missed paint colour is invisible to every automated check in the pipeline.
 
 **Root cause is upstream art, not code.** Hole 02's `zones.png` contains **zero pixels of the OB colour `(255, 51, 51)`** — decoded and counted directly from the PNG. The entire out-of-play region was painted `trees` and `rough` instead:
 
@@ -298,7 +300,7 @@ zones.png has no (255,51,51) pixels
 
 **Gameplay impact: you cannot go out of bounds on Hole 02.** Off-course shots are unpenalised and the OB camera clamp never arms.
 
-**Fix is a content fix, not a code fix:** repaint `holes/02/zones.png` with the OB colour over the out-of-play region → re-run the UHoleGeo export → re-import → re-bake. No C# change required.
+**Fix was a content fix, not a code fix:** repaint `holes/02/zones.png` with the OB colour over the out-of-play region → re-run the UHoleGeo export → **re-import** → re-bake. No C# change to the classifier. ⚠️ **The re-import step is not optional and is easy to skip** — see §7.7.
 
 **Secondary code hardening worth considering** (separate decision): `hasObMask` treats an all-zero mask as a valid mask. A cheap guard — warn when a decoded mask has zero set bits — would have surfaced this at bake time instead of at playtest. The §4.2 gate cannot catch it, because `ob` is deliberately excluded from the gate's mapped types (it has no polygon zone).
 
@@ -367,6 +369,19 @@ Use `BakedZoneClassifier.ClassifyWithProvenance` (editor-only, shares `ClassifyC
 
 ### 7.6 ⚠️ `HoleLiteImporter.cs` is DEPRECATED.
 Live importer is `HoleGeoImporter.cs` (banner commit `980cc122`). `HoleLiteImporter` still contains its own marker-stamping code and will match greps. Never target it.
+
+### 7.7 ⚠️ Re-exporting from UHoleGeo is NOT enough. The order is export → **import** → bake.
+
+`BakeObMask` reads the **terrain alphamap**, not the export. The alphamap is only repainted by `HoleGeoImporter` on **re-import**. So:
+
+```
+repaint zones.png  →  UHoleGeo export  →  Import ▸ Geo ▸ Normal ▸ Import Hole NN Geo
+                                       →  GOLFIN ▸ Tools ▸ Bake Zone JSON (Active Hole)
+```
+
+**Baking without importing silently writes the old mask again** and looks exactly like the fix failed. Confirm success by decoding the runtime `obMask` and counting set bits — do not trust the console alone.
+
+**Related trap, fixed 2026-07-29 (`340564f6b`):** `HoleGeoImporter` used to derive the course slug from `EditorSceneManager.GetActiveScene().path` inside `CreateGreenMeshes`. But `ImportHoleInternal` calls `NewScene(EmptyScene, Single)` first, so the active scene was always a fresh unsaved scene with `.path == ""` and `CourseSlugResolver.ResolveOrThrow` threw unconditionally — **every hole import was broken for two days** (regression from `b44c22bc0`). The error message told you to open a hole scene first, which does *not* help, because the importer discards it. Now uses the `courseId` parameter directly. **General lesson: do not string-parse an identifier out of a path when the same function mutates the thing being parsed — use the value that was passed in.**
 
 ---
 
