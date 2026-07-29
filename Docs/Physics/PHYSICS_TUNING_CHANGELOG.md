@@ -6,6 +6,65 @@ against the Hole 1 par-5 completability baseline (≤7 strokes with default char
 
 ---
 
+## F12 — DefaultSurface Fairway → Rough (2026-07-29)
+
+**Task:** `surface_classification_ob_rough` (Stage 2)
+**File changed:** `Assets/Scripts/Physics/Runtime/Baked/BakedZoneClassifier.cs:73`
+  `public const SurfaceType DefaultSurface = SurfaceType.Rough;  // was SurfaceType.Fairway`
+
+**No coefficient value changes.** All surface coefficients (`SurfaceConfig.cs`) are unchanged.
+This entry records the behavioral change from the DefaultSurface flip.
+
+### What changed
+
+`BakedZoneClassifier.DefaultSurface` is the surface returned for any point not matched by a
+zone polygon or the OB mask. Before: `SurfaceType.Fairway` (RollingResistance 0.18).
+After: `SurfaceType.Rough` (RollingResistance 0.45).
+
+### Affected ground — 96.36% of the Default bucket
+
+Measured across 18 holes by `surface_fallthrough_coverage_probe` (DONE `bdb4f1f4d`):
+
+| Default-bucket category | cells | % of Default bucket |
+|---|---:|---:|
+| authored Rough + semi_rough | 8,286,618 | 68.33% |
+| tree zones (no polygon group; see §0 note) | 3,399,017 | 28.03% |
+| **total affected by this flip** | **11,685,635** | **96.36%** |
+| authored Fairway gaps (0.27% residual) | 32,411 | 0.27% |
+| authored ob | 8,525 | 0.07% |
+
+**Trees note (§0 gate, 2026-07-29):** `tree_obstacles.csv` stores point instances only —
+no polygon group is baked for tree coverage. 80–90% of tree-zone ground has no trunk collider
+(TrunkRadius 0.25–0.35 m vs canopyRadius 3.5 m, ~100× area difference). The ball routinely
+comes to rest under canopy on reachable ground. Ground under trees is pine straw/leaf litter/dirt —
+Rough is the correct classification and is the intended effect, not a side effect.
+
+### Rolling resistance shift
+
+| Surface | RollingResistance | StopSpeed |
+|---|---|---|
+| Fairway (old default) | 0.18 | 0.20 |
+| Rough (new default) | 0.45 | 0.22 |
+
+Effective RollingResistance for **96.36%** of fallthrough ground: **0.18 → 0.45 (2.5×)**.
+Courses play materially harder; roll-out on missed fairways is sharply reduced.
+This is the intended effect per the §0 product gate (Cesar, 2026-07-29).
+
+### 0.27% fairway residual — accepted known defect
+
+32,411 cells of genuine authored Fairway fall through the polygon lookup due to mesh boundary
+gaps. Post-flip they play as Rough. That is 0.07% of footprint and is a polygon-gap defect,
+not a tuning problem. No adjustment made; recorded here for future reference.
+
+### Companion change — Stage 1
+
+`IsObAt` now returns `bool?` (null = outside terrain grid). Points past the terrain edge
+that formerly fell to `DefaultSurface = Fairway` (no penalty) now return `SurfaceType.OOB`
+(penalty path armed). No surface coefficient impact — this change affects shot termination,
+not roll dynamics.
+
+---
+
 ## F11 — ClubControl → arrow range recalibration (2026-07-17)
 
 **Task:** `club_control_arrow_range_calibration` (Order 732)

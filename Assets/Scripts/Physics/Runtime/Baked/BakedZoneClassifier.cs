@@ -69,8 +69,9 @@ namespace Golfin.Physics.Runtime.Baked
         private readonly float   obCellH;     // worldSizeZ / height
         private readonly bool    hasObMask;
 
-        /// <summary>The default surface returned when no polygon contains the test point.</summary>
-        public const SurfaceType DefaultSurface = SurfaceType.Fairway;
+        /// <summary>The default surface returned when no polygon or OB mask covers the test point.</summary>
+        /// <remarks>Changed from Fairway to Rough by surface_classification_ob_rough Stage 2.</remarks>
+        public const SurfaceType DefaultSurface = SurfaceType.Rough;
 
         public BakedZoneClassifier(ZoneData data)
         {
@@ -181,7 +182,12 @@ namespace Golfin.Physics.Runtime.Baked
         }
 
         // Shared resolution ladder — both Classify and ClassifyWithProvenance delegate here.
-        // provenance: 0 = Polygon, 1 = ObMask, 2 = Default  (matches ClassifyProvenance enum order)
+        // provenance: 0=Polygon, 1=ObMask, 2=Default, 3=OutOfGrid  (matches ClassifyProvenance enum values)
+        //
+        // Stage 1 (surface_classification_ob_rough): IsObAt now returns bool?:
+        //   null  — outside terrain grid → OOB (provenance=OutOfGrid=3)
+        //   true  — inside grid, OB bit set → OOB (provenance=ObMask=1)
+        //   false — inside grid, OB bit clear → fall through to default
         private SurfaceType ClassifyCore(float x, float z, out int provenance)
         {
             // Polygon zones first — they always trump the OB mask (a fairway
@@ -194,7 +200,12 @@ namespace Golfin.Physics.Runtime.Baked
             }
 
             // No polygon match: consult the OB mask if baked.
-            if (hasObMask && IsObAt(x, z)) { provenance = 1; return SurfaceType.OOB; }
+            if (hasObMask)
+            {
+                bool? ob = IsObAt(x, z);
+                if (ob == null)  { provenance = 3; return SurfaceType.OOB; } // outside terrain grid
+                if (ob.Value)    { provenance = 1; return SurfaceType.OOB; } // mask-hit OOB
+            }
 
             provenance = 2;
             return DefaultSurface;
@@ -202,7 +213,17 @@ namespace Golfin.Physics.Runtime.Baked
 
 #if UNITY_EDITOR
         /// <summary>How a point was classified — which step in the resolution ladder matched.</summary>
-        public enum ClassifyProvenance { Polygon, ObMask, Default }
+        /// <remarks>
+        /// Values must stay in sync with the <c>provenance</c> int constants in <c>ClassifyCore</c>.
+        /// OutOfGrid (3) was added by surface_classification_ob_rough Stage 1.
+        /// </remarks>
+        public enum ClassifyProvenance
+        {
+            Polygon   = 0, // matched a zone polygon
+            ObMask    = 1, // inside terrain grid, OB bit set
+            Default   = 2, // inside terrain grid, not OB; resolved to DefaultSurface (Rough)
+            OutOfGrid = 3, // outside terrain grid extent; resolved to OOB
+        }
 
         /// <summary>
         /// Editor-only variant of <see cref="Classify"/> that also reports which step of the
@@ -217,12 +238,24 @@ namespace Golfin.Physics.Runtime.Baked
         }
 #endif
 
-        private bool IsObAt(float x, float z)
+        /// <summary>
+        /// Tri-state OB query — Stage 1 fix (surface_classification_ob_rough):
+        ///   <c>null</c>  — (x,z) is outside the terrain grid; caller treats as OOB
+        ///   <c>true</c>  — inside the grid and the OB bit is set; OOB
+        ///   <c>false</c> — inside the grid and the OB bit is clear; not OOB
+        /// The old <c>bool</c> signature returned <c>false</c> for both the
+        /// out-of-grid and the not-OB cases, causing out-of-bounds shots to
+        /// fall through to DefaultSurface instead of triggering the penalty path.
+        /// </summary>
+        private bool? IsObAt(float x, float z)
         {
-            int ix = (int)((x - obWorldOriginX) / obCellW);
-            int iz = (int)((z - obWorldOriginZ) / obCellH);
-            if (ix < 0 || ix >= obMaskWidth)  return false;
-            if (iz < 0 || iz >= obMaskHeight) return false;
+            // Use floor-division so fractional negative offsets (e.g. x=-0.5 gives
+            // (x-origin)/cellW = -0.05, C# truncation → 0, wrong) correctly resolve
+            // to -1 and trigger the out-of-grid guard below.
+            int ix = (int)System.Math.Floor((x - obWorldOriginX) / obCellW);
+            int iz = (int)System.Math.Floor((z - obWorldOriginZ) / obCellH);
+            if (ix < 0 || ix >= obMaskWidth)  return null; // outside terrain grid
+            if (iz < 0 || iz >= obMaskHeight) return null; // outside terrain grid
             int bitIdx  = iz * obMaskWidth + ix;
             int byteIdx = bitIdx >> 3;
             int bitMod  = bitIdx & 7;

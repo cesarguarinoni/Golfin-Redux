@@ -225,11 +225,12 @@ namespace Golfin.Physics.Tests
         // ── Test 5 ─────────────────────────────────────────────────────────────
 
         [Test]
-        public void Director_OnOB_NoWaterHit_FallsBackToChangePosition()
+        public void Director_OnOB_NoWaterHit_LongShot_UsesMidpointPivot()
         {
-            float obHeight = 5f;
-
             // No water/OOB hits — ExitedWorldBounds.
+            // finalPos is 500 m from shotOrigin (0,0,0) → distance >> 40 m threshold
+            // → ComputeOBFreezePivot places the camera at the trajectory mid-point XZ,
+            //   25 m above terrain (terrain=null in test → fallback to hitPos.y=2).
             var finalPos = new fp3(fp.FromFloat(500f), fp.FromFloat(2f), fp.Zero);
             var samples  = new List<TrajectorySample>
             {
@@ -241,16 +242,18 @@ namespace Golfin.Physics.Tests
 
             var (director, setter, ctrl) = DirectorFactory.Create(isPutt: false, lastTraj: traj);
             ctrl.LastTrajectory = traj;
+            ctrl.LastShotOrigin = Vector3.zero; // explicit — matches DirectorFactory default
 
             ctrl.BallSM.OnTrajectoryComputed(fp3.Zero, traj, fp.FromFloat(0.02f));
 
             Assert.IsTrue(setter.LastOBFreezePivot.HasValue,
                 "SetOBFreezePivot should have been called");
             Vector3 pivot = setter.LastOBFreezePivot.Value;
-            // Should fall back to the final position (=OB transition position) + height offset.
-            // BallStateMachine uses finalPosition as the OB change position for ExitedWorldBounds.
-            Assert.AreEqual(500f, pivot.x, 1f,         "Pivot X should fall back to final position");
-            Assert.AreEqual(2f + obHeight, pivot.y, 1f, "Pivot Y = terrain Y + obFreezeHeight");
+            // Mid-point between shotOrigin(0) and hitPos(500): X=250, Z=0.
+            // Y = hitPos.y(2) + 25 (no Terrain.activeTerrain in test).
+            // This gives ~27° downward pitch when looking at tee — clear of ObGroundSkirt.
+            Assert.AreEqual(250f, pivot.x, 1f, "Pivot X should be midpoint of shotOrigin and hitPos");
+            Assert.AreEqual(2f + 25f, pivot.y, 1f, "Pivot Y = terrain-fallback(hitPos.y) + 25 m");
         }
 
         // ── Test 6 ─────────────────────────────────────────────────────────────

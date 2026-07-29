@@ -397,12 +397,12 @@ namespace Golfin.Gameplay.Tests
             float minY = float.PositiveInfinity, maxY = float.NegativeInfinity;
             foreach (var (x, z) in samples)
             {
-                // Rough is the classifier default-Fairway (outside baked polygons,
-                // outside OB mask). Verify it's at least not OOB or in a polygon
-                // type that the sampler should have skipped.
+                // Post surface_classification_ob_rough Stage 2: DefaultSurface is Rough.
+                // SampleRoughXZ already filters for cls==Rough, so re-classifying here
+                // asserts that the classifier is stable and that Rough is returned precisely.
                 var cls = hp.classifier.Classify(fp.FromFloat(x), fp.FromFloat(z));
-                Assert.AreNotEqual(SurfaceType.OOB, cls,
-                    $"Sampled OOB at supposed-rough ({x:F1},{z:F1})");
+                Assert.AreEqual(SurfaceType.Rough, cls,
+                    $"Expected Rough at ({x:F1},{z:F1}), got {cls}");
 
                 float y = hp.ground.SampleHeight(fp.FromFloat(x), fp.FromFloat(z)).ToFloat();
                 Assert.IsFalse(float.IsNaN(y) || float.IsInfinity(y),
@@ -548,22 +548,13 @@ namespace Golfin.Gameplay.Tests
                 float x = Mathf.Lerp(minX, maxX, (float)rng.NextDouble());
                 float z = Mathf.Lerp(minZ, maxZ, (float)rng.NextDouble());
                 var cls = hp.classifier.Classify(fp.FromFloat(x), fp.FromFloat(z));
-                // "Rough" = default-Fairway-from-classifier (outside polygons AND
-                // outside OB mask). Skip explicit polygon types and OB.
-                if (cls == SurfaceType.Fairway)
-                {
-                    // Verify NOT in a baked Fairway polygon — those are the actual
-                    // fairway zones, not rough.
-                    bool inFairwayPoly = false;
-                    foreach (var grp in hp.data.zones)
-                    {
-                        if (grp.SurfaceType != SurfaceType.Fairway) continue;
-                        foreach (var poly in grp.polygons)
-                            if (PointInPolygon(poly, x, z)) { inFairwayPoly = true; break; }
-                        if (inFairwayPoly) break;
-                    }
-                    if (!inFairwayPoly) result.Add((x, z));
-                }
+                // Post surface_classification_ob_rough Stage 2: "Rough" is simply
+                // cls == SurfaceType.Rough. DefaultSurface is now Rough, so all fallthrough
+                // ground (outside all polygons, inside the terrain grid, not OB) returns Rough
+                // directly. The old Fairway-default-but-not-in-polygon filter was encoding the
+                // bug; this is the honest form of the same intent.
+                if (cls == SurfaceType.Rough)
+                    result.Add((x, z));
             }
             return result;
         }

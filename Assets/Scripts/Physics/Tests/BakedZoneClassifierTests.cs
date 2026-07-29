@@ -38,18 +38,20 @@ namespace Golfin.Physics.Tests
         // ── 1. Empty zone data ────────────────────────────────────────────────
 
         [Test]
-        public void Classify_EmptyZoneData_ReturnsFairway()
+        // Renamed from Classify_EmptyZoneData_ReturnsFairway by surface_classification_ob_rough Stage 2.
+        public void Classify_EmptyZoneData_ReturnsRough()
         {
             var c = new BakedZoneClassifier(new ZoneData { holeId = "EMPTY" });
-            Assert.AreEqual(SurfaceType.Fairway, c.Classify(F(0), F(0)));
-            Assert.AreEqual(SurfaceType.Fairway, c.Classify(F(123), F(-456)));
+            Assert.AreEqual(SurfaceType.Rough, c.Classify(F(0), F(0)));
+            Assert.AreEqual(SurfaceType.Rough, c.Classify(F(123), F(-456)));
         }
 
         [Test]
-        public void Classify_NullZoneData_ReturnsFairway()
+        // Renamed from Classify_NullZoneData_ReturnsFairway by surface_classification_ob_rough Stage 2.
+        public void Classify_NullZoneData_ReturnsRough()
         {
             var c = new BakedZoneClassifier(null);
-            Assert.AreEqual(SurfaceType.Fairway, c.Classify(F(0), F(0)));
+            Assert.AreEqual(SurfaceType.Rough, c.Classify(F(0), F(0)));
         }
 
         // ── 2. Single zone ────────────────────────────────────────────────────
@@ -64,12 +66,13 @@ namespace Golfin.Physics.Tests
         }
 
         [Test]
-        public void Classify_SingleGreen_PointOutside_ReturnsFairway()
+        // Renamed from Classify_SingleGreen_PointOutside_ReturnsFairway by surface_classification_ob_rough Stage 2.
+        public void Classify_SingleGreen_PointOutside_ReturnsRough()
         {
             var z = WithGroup(SurfaceType.Green, 0.11f, Square(-5, -5, 5, 5));
             var c = new BakedZoneClassifier(z);
-            Assert.AreEqual(SurfaceType.Fairway, c.Classify(F(10), F(0)));
-            Assert.AreEqual(SurfaceType.Fairway, c.Classify(F(-5.01f), F(0)));
+            Assert.AreEqual(SurfaceType.Rough, c.Classify(F(10), F(0)));
+            Assert.AreEqual(SurfaceType.Rough, c.Classify(F(-5.01f), F(0)));
         }
 
         // ── 3. Priority ordering ──────────────────────────────────────────────
@@ -96,8 +99,8 @@ namespace Golfin.Physics.Tests
             Assert.AreEqual(SurfaceType.Green, c.Classify(F(0), F(0)));
             // Outside Green but inside Sand → Sand.
             Assert.AreEqual(SurfaceType.Sand, c.Classify(F(7), F(7)));
-            // Outside both → default Fairway.
-            Assert.AreEqual(SurfaceType.Fairway, c.Classify(F(20), F(20)));
+            // Outside both → default Rough (surface_classification_ob_rough Stage 2).
+            Assert.AreEqual(SurfaceType.Rough, c.Classify(F(20), F(20)));
         }
 
         [Test]
@@ -142,8 +145,8 @@ namespace Golfin.Physics.Tests
             // 1 mm inside: still pass (catches off-by-tolerance bugs).
             Assert.AreEqual(SurfaceType.Green, c.Classify(F(4.999f), F(4.999f)));
 
-            // 1 mm outside: clearly out.
-            Assert.AreEqual(SurfaceType.Fairway, c.Classify(F(5.001f), F(0)));
+            // 1 mm outside: clearly out → DefaultSurface (Rough post Stage 2).
+            Assert.AreEqual(SurfaceType.Rough, c.Classify(F(5.001f), F(0)));
         }
 
         // ── 5. JSON round-trip ────────────────────────────────────────────────
@@ -236,8 +239,14 @@ namespace Golfin.Physics.Tests
             Assert.AreEqual(SurfaceType.OOB, c.Classify(F(25f), F(25f)));
             // (25, 35) → cell (2, 3) → OB.
             Assert.AreEqual(SurfaceType.OOB, c.Classify(F(25f), F(35f)));
-            // (5, 5) → cell (0, 0) → not OB → default Fairway.
-            Assert.AreEqual(SurfaceType.Fairway, c.Classify(F(5f), F(5f)));
+            // (5, 5) → cell (0, 0) → not OB → default Rough (surface_classification_ob_rough Stage 2).
+            Assert.AreEqual(SurfaceType.Rough, c.Classify(F(5f), F(5f)));
+            // Stage 1 (surface_classification_ob_rough): outside the grid → OOB, not DefaultSurface.
+            // Mask covers (0..40, 0..40); anything beyond is out-of-grid.
+            Assert.AreEqual(SurfaceType.OOB, c.Classify(F(-1f),  F(20f)),  "left of grid");
+            Assert.AreEqual(SurfaceType.OOB, c.Classify(F(45f),  F(20f)),  "right of grid");
+            Assert.AreEqual(SurfaceType.OOB, c.Classify(F(20f),  F(-1f)),  "below grid");
+            Assert.AreEqual(SurfaceType.OOB, c.Classify(F(20f),  F(45f)),  "above grid");
         }
 
         [Test]
@@ -289,9 +298,9 @@ namespace Golfin.Physics.Tests
             var z = WithGroup(SurfaceType.Tee, 0.005f, poly);
             var c = new BakedZoneClassifier(z);
 
-            Assert.AreEqual(SurfaceType.Tee,     c.Classify(F(2), F(2)));   // bottom strip
-            Assert.AreEqual(SurfaceType.Tee,     c.Classify(F(2), F(8)));   // left strip
-            Assert.AreEqual(SurfaceType.Fairway, c.Classify(F(8), F(8)));   // notch (excluded)
+            Assert.AreEqual(SurfaceType.Tee,   c.Classify(F(2), F(2)));   // bottom strip
+            Assert.AreEqual(SurfaceType.Tee,   c.Classify(F(2), F(8)));   // left strip
+            Assert.AreEqual(SurfaceType.Rough, c.Classify(F(8), F(8)));   // notch (excluded) → DefaultSurface (Rough, Stage 2)
         }
     }
 }
