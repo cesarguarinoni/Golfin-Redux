@@ -8,20 +8,17 @@
 
 ---
 
-## 0. BLOCKING PRODUCT GATE — Stage 2 only
+## 0. PRODUCT GATE — RESOLVED 2026-07-29: **YES, trees play as Rough.** Proceed.
 
-**Stage 2 makes 3,399,017 cells of authored `trees` play as Rough. This is unavoidable, not a tunable.**
+Cesar's call. Stage 2 proceeds as written; no further approval needed.
 
-There is **no runtime data structure that marks trees.** Verified: across all 18 holes the baked `zones.json` contains only `Fairway, Green, Tee, Sand, CartPath, Water` polygon groups — no `Trees` group — and the `obMask` marks OB only. `tree_obstacles.csv` is point obstacles for collision, not a coverage mask. So at classification time trees are indistinguishable from any other fallthrough ground.
+**The reasoning matters for §5, so record it.** The initial argument for waving this through was "the player can't play from a tree, they have collision." **That premise is false and the implementer should not repeat it.** Collision is **trunk-only**: `TreeObstacleData.TrunkRadius` is 0.25–0.35 m (×scale) against a `canopyRadius` of 3.5 m — a **100× area difference**. Measured on Hole_08: 3,927 trunks cover **771–1,511 m² of a 7,570 m² tree zone — 10–20%**. So **80–90% of tree-zone ground carries no collider**, the ball routinely comes to rest there, and today it rolls out as if on fairway.
 
-**Therefore the trees question is binary and decides the whole approach:**
+**The answer is still YES, on the merits:** ground under trees is pine straw, leaf litter and dirt. `Rough` is the correct classification, not a tolerated side effect.
 
-| Cesar's answer | Consequence |
-|---|---|
-| **YES**, trees should play as Rough | Stage 2 proceeds as written. One line. |
-| **NO**, trees need distinct behaviour | **Stage 2 is VOID and this spec is wrong.** The cheap path becomes impossible; it requires Option 2 (a per-cell surface grid baked from the source raster). Stop and re-scope. |
+**Consequence — this enlarges §5.** The rebalance covers **96.36% of the Default bucket** (68.33% rough + 28.03% trees), not 68.33%. Calibrate the tuning pass on that.
 
-**Do not start Stage 2 without an explicit recorded YES.** Stage 1 is unaffected and may proceed regardless.
+> Historical note, for anyone re-opening this: there is **no runtime structure that marks trees.** All 18 holes bake only `Fairway, Green, Tee, Sand, CartPath, Water` polygon groups — no Trees group — and the `obMask` marks OB only. `tree_obstacles.csv` is point instances (`worldX,worldZ,baseY,scale,profileName`), not a coverage mask. So trees are indistinguishable from any other fallthrough ground at classification time. Had the answer been NO, the cheap path would have been impossible and Option 2 (per-cell surface grid) would have been required.
 
 ---
 
@@ -143,7 +140,9 @@ Run the full Physics + Gameplay test suites. **Any other failure is a finding �
 
 ## 5. Difficulty rebalance — not optional
 
-Stage 2 moves **68% of fallthrough ground** from `RollingResistance 0.18` to `0.45` — a **2.5× change**. Plus 28% more from the trees bucket. The course gets materially harder, and this is the intended effect.
+Stage 2 moves **96.36% of the Default bucket** — rough 68.33% **plus** trees 28.03%, per the §0 resolution — from `RollingResistance 0.18` to `0.45`. That is a **2.5× change across essentially all fallthrough ground.** The course gets materially harder, and this is the intended effect.
+
+**Calibrate the tuning pass on 96%, not 68%.** The tree zones are not a rounding error: 80–90% of tree-zone ground has no trunk collider on it, so it is ordinary reachable lie-ground that currently plays as fairway.
 
 - Requires a tuning pass after the flip.
 - Requires a **`PHYSICS_TUNING_CHANGELOG.md` F-entry**. No coefficient values change, but effective surface distribution does — record it as a behavioural change with the probe's numbers as justification.
@@ -191,7 +190,7 @@ Real play (`screenshot-game-view` MCP tool — hand-rolled `script-execute` capt
 
 ## 10. Report
 
-1. Stage 1 and Stage 2 stated separately, with the §0 gate answer quoted.
+1. Stage 1 and Stage 2 stated separately. The §0 gate is **resolved YES** — no approval to seek.
 2. The `RealHoleTerrainTests` change, and why it makes the test more honest.
 3. Full test-suite result. Any failure beyond the known one called out explicitly.
 4. Each blast-radius site in §2 and §6 confirmed or flagged.
