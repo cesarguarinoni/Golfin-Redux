@@ -312,7 +312,7 @@ namespace Golfin.CourseImport
                 CreateZoneMeshes(terrainData, terrainGO, holeRoot.transform, exportPath, dataDir, projectRoot, holes);
 
                 EditorUtility.DisplayProgressBar("Importing Hole (Geo)", "Creating greens...", 0.53f);
-                CreateGreenMeshes(terrainData, terrainGO, holeRoot.transform, exportPath, dataDir, projectRoot, holes, holeNumber);
+                CreateGreenMeshes(terrainData, terrainGO, holeRoot.transform, exportPath, dataDir, projectRoot, courseId, holes, holeNumber);
 
                 EditorUtility.DisplayProgressBar("Importing Hole (Geo)", "Creating water...", 0.59f);
                 CreateWaterMeshes(terrainData, terrainGO, holeRoot.transform, exportPath, dataDir, projectRoot, holes);
@@ -2392,7 +2392,7 @@ namespace Golfin.CourseImport
 
         private static void CreateGreenMeshes(TerrainData terrainData, GameObject terrainGO,
             Transform parentRoot, string exportPath, string dataDir, string projectRoot,
-            bool[,] holes, int holeNumber = 0)
+            string courseId, bool[,] holes, int holeNumber = 0)
         {
             // Clear any stale cut-contour records from a previous partial import.
             // s_bunkerCutContours is cleared in CreateZoneMeshes (which runs before us).
@@ -2495,10 +2495,10 @@ namespace Golfin.CourseImport
                 GreenTopology greenTopology = null;
                 if (holeNumber > 0)
                 {
-                    // Resolve course slug from active scene (SPEC §1.3 bake-site update).
-                    string activePath   = UnityEditor.SceneManagement.EditorSceneManager.GetActiveScene().path;
-                    string courseSlug   = CourseSlugResolver.ResolveOrThrow(activePath, "HoleGeoImporter.ImportGeoHole");
-                    string greenJsonPath = $"Assets/Resources/HoleData/{courseSlug}/Hole_{holeNumber:D2}/green.json";
+                    // Slug comes from the courseId PARAMETER, not the active scene. ImportHoleInternal
+                    // calls NewScene(EmptyScene, Single) at :286, so the active scene here is always a
+                    // fresh UNSAVED scene with .path "" — ResolveOrThrow ALWAYS threw. Regression b44c22bc0, fixed 2026-07-29.
+                    string greenJsonPath = $"Assets/Resources/HoleData/{courseId}/Hole_{holeNumber:D2}/green.json";
                     greenTopology = GreenTopology.LoadFromDisk(greenJsonPath, holeNumber);
                     if (greenTopology != null)
                         Debug.Log($"[HoleGeoImporter] Hole {holeNumber:D2}: loaded GreenTopology v{greenTopology.SchemaVersion} from disk");
