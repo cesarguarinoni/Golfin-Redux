@@ -45,9 +45,45 @@ Three different integer enumerations describe "surface", and **they do not agree
 
 **The trap:** it takes a bare `int` and its `default:` branch only warns for values outside 0–8. Feed it a *raster* zone index and it returns confident garbage — raster `8` is `cart_path`, but the function reads `8` as `Fringe` and returns `GreenCollar`. Never route raster indices through it.
 
+✅ **Status: latent, not live.** Both call sites pass a genuine `Course.SurfaceType` — `HoleGeoImporter.cs:4837` and `HoleLiteImporter.cs:4110`, each `(int)surfaceType` where `surfaceType` is the value just assigned to `marker.surfaceType`. **No current caller is wrong.** The hazard is that the signature accepts any `int` and fails silently in-range, so a future caller can introduce the bug without a compile error or a warning.
+
 ---
 
 ## 3. The pipeline, stage by stage
+
+### 3.0 The authoring root: `zones.png` is hand-painted ✅
+
+**The pipeline does not begin with the raster — it begins with a painted image.** Per hole, at `Tools/UHoleGeo/output/<slug>/holes/NN/`:
+
+| File | Role |
+|---|---|
+| `satellite.png` | GSI aerial imagery — the backdrop being traced |
+| **`zones.png`** | **the hand-painted zone map — one flat RGB colour per surface class** |
+| `hole-bounds.json` | lat/lon extent |
+| `terrain-meta.json`, `heightmap.raw` | elevation |
+| `tees.json` | tee positions |
+
+`zones.png` is rasterised into the `grid` / `zone_stats` / `ob_mask` fields of the export. **The palette (✅ decoded from the PNGs directly, not from config):**
+
+| RGB | class | index |
+|---|---|---:|
+| `(0, 0, 0)` | background | 0 |
+| `(0, 204, 0)` | fairway | 1 |
+| `(128, 255, 64)` | green | 2 |
+| `(102, 136, 51)` | semi_rough | 3 |
+| `(51, 102, 34)` | rough | 4 |
+| `(26, 51, 16)` | trees | 5 |
+| `(221, 204, 136)` | bunker | 6 |
+| `(51, 102, 204)` | water | 7 |
+| `(153, 153, 153)` | cart_path | 8 |
+| **`(255, 51, 51)`** | **ob** | **9** |
+| `(255, 255, 255)` | tee_box | 10 |
+
+**Consequence:** every zone classification in this game is ultimately a human painting decision. A missed colour is a silent gameplay defect with no automated check anywhere upstream of the §4.2 gate — and the gate only covers the six polygon-backed types, so a missing **ob** paint passes it cleanly. This is exactly what happened on Hole 02 (§6.1).
+
+**Some surfaces have a second, independent source.** `water.json`, `bunkers.json`, `greens.json`, `cart-paths.json`, `tree-zones.json`, `fairway-contours.json` carry vector geometry alongside the painted raster. Where the two disagree, **the vector source wins for mesh generation** — see §5.4.
+
+### 3.0.1 End-to-end overview
 
 ```
  ┌─ AUTHORING (outside Unity) ──────────────────────────────────────────┐
@@ -199,11 +235,23 @@ Decoded from `Assets/Resources/HoleData/lomond-country-club/Hole_NN/zones.json`,
 
 `BakeZoneJsonTool.YOffsets` carries entries for `GreenCollar`, `Semirough`, `Rough` and `OOB`. **None are ever produced.** Vestigial but harmless.
 
-### 5.4 ⚠️ Unexplained: 3 holes have Water meshes with no raster water
+### 5.4 ✅ RESOLVED — 3 holes have Water meshes with no raster water. **Not a defect.**
 
-Runtime `Water` polygons exist on holes **5, 13, 16**, but those holes report `water: 0 px` in the source raster. The completeness gate cannot see this (§3.5 — it only checks raster→baked).
+Runtime `Water` polygons exist on holes **5, 13, 16** while those holes report `water: 0 px` in the painted raster — i.e. nobody painted blue on them.
 
-Two plausible explanations, **neither confirmed**: water was hand-authored in Unity for those holes, or a stray mesh is mis-tagged. Polygon counts are low (H05: 1, H13: 4, H16: 1). **Worth a look; do not assume benign.**
+**Explanation: `water.json` is an independent vector source** (§3.0). Its `water_count` matches the baked polygon count exactly:
+
+| Hole | `water.json` count | baked Water polygons | raster water px |
+|---|---:|---:|---:|
+| 05 | 1 | 1 | 0 |
+| 13 | 4 | 4 | 0 |
+| 16 | 1 | 1 | 0 |
+| 06 | 1 | 1 | 129,876 |
+| 14 | 1 | 1 | 48,786 |
+
+The mesh comes from the vector file; the paint is cosmetic for those holes. Behaviour is **correct** — the water plays as water. The §4.2 gate is also correct to stay silent: it only fails when the raster *has* a type the bake lacks, never the reverse.
+
+⚠️ **The one real consequence:** on holes 5, 13 and 16 the *terrain texture* around the water won't read as water, because the splatmap is painted from the raster. Cosmetic, not physical. Worth a glance in-game, not a blocker.
 
 ### 5.5 OB mask fidelity ✅
 
@@ -223,15 +271,36 @@ Note the resolution/aspect change: the raster is per-hole and non-square (e.g. 2
 
 ## 6. Known defects — current, verified
 
-### 6.1 🔴 Hole 02 has no out-of-bounds at all ✅
+### 6.1 🔴 Hole 02 has no out-of-bounds at all — **ROOT-CAUSED: the OB colour was never painted** ✅
 
-Hole 02's `obMask` block is present and well-formed, but **0 of 1,048,576 bits are set**. Consequence, traced through the code:
+**Root cause is upstream art, not code.** Hole 02's `zones.png` contains **zero pixels of the OB colour `(255, 51, 51)`** — decoded and counted directly from the PNG. The entire out-of-play region was painted `trees` and `rough` instead:
 
-- `hasObMask = obCellW > 0 && obCellH > 0 && obMaskBits.Length > 0` (`:98`) → **true** (the array exists, it's just all zeros)
-- `IsObAt` therefore always returns `false`
-- Step 2 of the ladder executes but can never match
+| class | Hole 01 | Hole 06 | **Hole 02** |
+|---|---:|---:|---:|
+| **ob** `(255,51,51)` | 59.7% | 34.7% | **0.0%** |
+| trees `(26,51,16)` | 11.2% | 14.1% | **54.9%** |
+| rough `(51,102,34)` | 20.5% | 34.2% | **36.7%** |
 
-**On Hole 02 you cannot go OB.** Everything outside a polygon is `Fairway`. This traces upstream to `ob: 0 px` in Hole 02's source raster — the only hole with zero OB authored. Whether that is an authoring omission or intentional is unresolved.
+Hole 02 is the **only** hole of 18 with zero OB. `grid` `ob` count and `ob_mask` set-bits agree exactly on all 18 holes (both 0 here), so nothing downstream lost the data — it was never authored.
+
+**The full failure chain, each link verified:**
+
+```
+zones.png has no (255,51,51) pixels
+   → export grid ob = 0, ob_mask = 0 bits
+   → HoleGeoImporter OB overlay (:1353) never promotes any cell to layer 8
+   → terrain OB layer exists but is unpainted everywhere
+   → BakeObMask packs 0 of 1,048,576 bits
+   → hasObMask == TRUE  (tests obMaskBits.Length > 0, not "any bit set" — :98)
+   → ladder step 2 runs on every call and can never match
+   → everything outside a polygon resolves to Fairway
+```
+
+**Gameplay impact: you cannot go out of bounds on Hole 02.** Off-course shots are unpenalised and the OB camera clamp never arms.
+
+**Fix is a content fix, not a code fix:** repaint `holes/02/zones.png` with the OB colour over the out-of-play region → re-run the UHoleGeo export → re-import → re-bake. No C# change required.
+
+**Secondary code hardening worth considering** (separate decision): `hasObMask` treats an all-zero mask as a valid mask. A cheap guard — warn when a decoded mask has zero set bits — would have surfaced this at bake time instead of at playtest. The §4.2 gate cannot catch it, because `ob` is deliberately excluded from the gate's mapped types (it has no polygon zone).
 
 ### 6.2 🔴 Rough is never classified (Defect B of `surface_classification_ob_rough`)
 
