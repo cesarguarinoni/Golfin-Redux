@@ -1,0 +1,23 @@
+=== iter-1 kickoff baseline HEAD=f2fbfa70cde13178a02a7d5a7b7609b011163de6 DIRTY porcelain ===
+ M Assets/Settings/Mobile_RPAsset.asset
+ M Assets/Settings/UniversalRenderPipelineGlobalSettings.asset
+ M Docs/Scripts/com.golfin.dailyreport.plist
+ M ProjectSettings/ProjectSettings.asset
+?? Docs/Specs/Active/surface_fallthrough_coverage_probe/STATUS.md
+=== end baseline ===
+2026-07-29T02:29:11Z activated
+2026-07-29T03:11:18Z done — FINDINGS.md + IMPLEMENTER_REPORT.md written, STATUS → READY_FOR_SELF_REVIEW
+=== iter-2 kickoff baseline HEAD=f2fbfa70cde13178a02a7d5a7b7609b011163de6 DIRTY porcelain ===
+ M Assets/Settings/Mobile_RPAsset.asset
+ M Assets/Settings/UniversalRenderPipelineGlobalSettings.asset
+ M Docs/Scripts/com.golfin.dailyreport.plist
+ M ProjectSettings/ProjectSettings.asset
+?? Docs/Specs/Active/surface_fallthrough_coverage_probe/FINDINGS.md
+?? Docs/Specs/Active/surface_fallthrough_coverage_probe/HEARTBEAT.log
+?? Docs/Specs/Active/surface_fallthrough_coverage_probe/IMPLEMENTER_REPORT.md
+?? Docs/Specs/Active/surface_fallthrough_coverage_probe/SELF_REVIEW.md
+?? Docs/Specs/Active/surface_fallthrough_coverage_probe/STATUS.md
+?? Docs/Specs/Active/surface_fallthrough_coverage_probe/coverage.csv
+=== end baseline ===
+2026-07-29T03:15:00Z iter-2 activated — seam cross-check
+2026-07-29T04:05:00Z iter-2 done — C# seam cross-check 8400/8400 (100.00%) provenance agree; §10 appended to FINDINGS.md; IMPLEMENTER_REPORT §5.1 changed FAIL→PASS; setting READY_FOR_SELF_REVIEW
