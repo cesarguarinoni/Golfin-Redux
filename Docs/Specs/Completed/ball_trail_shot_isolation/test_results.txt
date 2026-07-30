@@ -1,0 +1,11 @@
+TOTAL=943 PASSED=938 FAILED=5
+FAIL: Golfin.Gameplay.Tests.StaminaLiveWiringTests.T6_FailHard_V9_ThrowsSaveSchemaVersionException:   Expected: <Golfin.Save.SaveSchemaVersionException>
+  But was:  null
+
+FAIL: Golfin.Gameplay.Tests.StaminaLiveWiringTests.T6_Migration_V3ToV4_ConditionFieldsDefaultSafe:   Post-migration schemaVersion must be 8 (gacha_history Stage 1 bumped CurrentSchemaVersion to 8)
+  Expected: 8
+  But was:  9
+
+FAIL: Golfin.Physics.Tests.HoleCompleteDriverTests.HoleCompleteDriver_OnInCupTerminal_AtPar_ShowsSuccessReplay: Stage C1: HandleShotComplete is now a no-op. widget.Show stripped. See HoleCompleteModalController for production path.
+FAIL: Golfin.Physics.Tests.HoleCompleteDriverTests.HoleCompleteDriver_OnInCupTerminal_FiresMarkHoleComplete: Stage C1: HandleShotComplete no longer fires MarkHoleComplete. HoleCompletionBridge is the sole caller. See HoleCompletionBridgeTests.
+FAIL: Golfin.Physics.Tests.HoleCompleteDriverTests.HoleCompleteDriver_OnInCupTerminal_OverPar_ShowsFailedRetryAndLockedNext: Stage C1: HandleShotComplete is now a no-op. widget.Show stripped. See HoleCompleteModalController for production path.

@@ -1,0 +1,6 @@
+TOTAL=943 PASSED=938 FAILED=2 SKIPPED=3
+FAIL: Golfin.Gameplay.Tests.StaminaLiveWiringTests.T6_FailHard_V9_ThrowsSaveSchemaVersionException (pre-existing)
+FAIL: Golfin.Gameplay.Tests.StaminaLiveWiringTests.T6_Migration_V3ToV4_ConditionFieldsDefaultSafe (pre-existing)
+SKIP: Golfin.Physics.Tests.HoleCompleteDriverTests.HoleCompleteDriver_OnInCupTerminal_AtPar_ShowsSuccessReplay
+SKIP: Golfin.Physics.Tests.HoleCompleteDriverTests.HoleCompleteDriver_OnInCupTerminal_FiresMarkHoleComplete
+SKIP: Golfin.Physics.Tests.HoleCompleteDriverTests.HoleCompleteDriver_OnInCupTerminal_OverPar_ShowsFailedRetryAndLockedNext

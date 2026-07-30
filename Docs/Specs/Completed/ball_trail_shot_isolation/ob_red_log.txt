@@ -1,0 +1,3 @@
+=== OB red capture 08:07:22.481 ===
+[t=1.02] ForceOBRecolorForCapture called — posCount=28 emitting=False RibbonColor=RGBA(1.000, 0.180, 0.180, 1.000)
+[t=1.22] Screenshot saved via ExecuteMenuItem
