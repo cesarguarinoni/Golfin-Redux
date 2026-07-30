@@ -1,17 +1,23 @@
 # GOLFIN Redux — Demo Build Plan
 
-**Status:** SPEC_READY — all Cesar decisions locked, step 0 gate cleared · **Author:** Claude (Architect) · **Rev 3, 2026-07-30**
-**Verified against:** `C:\Users\cesar\GolfinRedux` @ Unity **6000.3.9f1** (Rev 2) · re-verified on the Mac `/Users/cesar/Documents/GolfinRedux` @ **6000.3.9f1** (Rev 3)
+**Status:** SPEC_READY — nothing open, ready to implement · **Author:** Claude (Architect) · **Rev 4, 2026-07-30**
+**Platform priority:** 📱 **iPhone first, Android second. This Mac is the build machine.**
+**Verified against:** `C:\Users\cesar\GolfinRedux` @ Unity **6000.3.9f1** (Rev 2) · re-verified on the Mac `/Users/cesar/Documents/GolfinRedux` @ **6000.3.9f1** (Rev 3–4)
 **Implementer:** Claude Code
-**Notion:** `demo_build_slice` (Order 426) · prereqs `unity_mcp_define_strip` (428), `unity_yaml_merge_driver` (429)
+**Notion:** `demo_build_slice` (Order 426) · prereq `unity_yaml_merge_driver` (429) · `unity_mcp_define_strip` (428) is now **executed inside §4 step 2+3**
 
+> **Rev 4 changelog (2026-07-30) — all triggered by "iPhone first, Mac is the build machine":**
+> - **§2.2 merge-driver path was Windows-only and would have failed here.** macOS path now verified *by executing the binary* (v1.0.1): `Unity.app/Contents/Helpers/UnityYAMLMerge`. ⚠️ There is a same-named **directory** at `Contents/Resources/UnityYAMLMerge/` holding the merge spec files — pointing the driver at it is the obvious mistake. Also confirmed: one Unity install (6000.3.9f1, no drift) and `git config` has **no** merge driver today.
+> - **§3.1 daily-driver profile `Dev-Android` → `Dev-iOS`.** With iPhone primary, the old default would have caused the §2.1 failure mode it was meant to prevent.
+> - **§3.5 `build-demo.ps1` → `build-demo.sh`**, `--platform ios|android`, default `ios`. Android retained as the *fast* loop (direct APK, no Xcode step); iOS is the milestone check.
+> - **§4 steps 2 and 3 MERGED.** `unity_mcp_define_strip` (428) and the profile creation both deliver the dev profile — separately they duplicate work. Close 428 when that step lands.
+>
 > **Rev 3 changelog (2026-07-30):**
-> - **Step 0 gate CLEARED.** `surface_classification_ob_rough` (`9d7d59a77`) and `ball_trail_shot_isolation` (`93f6348bb` + close-out `1a4e01031`) are both merged to `main`; `main == origin/main`. Structural work may begin.
+> - **Step 0 gate CLEARED.** `surface_classification_ob_rough` (`9d7d59a77`) and `ball_trail_shot_isolation` (`93f6348bb` + close-out `1a4e01031`) are both merged to `main`; `main == origin/main`.
 > - **§3.4 location instruction CORRECTED** — the Rev 2 `CharacterDatabaseCSV` precedent was wrong and would not have wired up against §3.2. Use the `GachaBannerModel` static-catalog pattern. Details in §3.4.
 > - **All four "Open items for Cesar" resolved** — `char_olivia`, full 7-club bag, Roster **fully locked**, display name `GOLFIN Demo`.
 > - **§3.2 allowlist re-confirmed unchanged** at `{ Logo, Splash, Loading, Home }`.
 > - Re-verified in source: `ScreenId` enum exists (`ScreenManager.cs:6`); `ShowScreen` is at `ScreenManager.cs:128` exactly as §3.2 asserts.
-> - One new open item (non-blocking): PowerShell vs shell for step 7 — see end of doc.
 
 ---
 
@@ -78,7 +84,7 @@ One hole, one character, fixed bag, everything else locked answers *no*.
 **Fix, preserving the MCP workflow** (build-profile defines are *additive*, so this composes cleanly):
 
 1. Remove `UNITY_MCP_READY` from the `iPhone` and `Android` entries in `ProjectSettings.asset` (leave Editor/Standalone if you want).
-2. Create a **`Dev-Android`** build profile that adds `UNITY_MCP_READY` in *Build Data → Scripting Defines*. Use it as the day-to-day active profile — the Editor compiles with the active profile's defines, so MCP keeps working.
+2. Create a **`Dev-iOS`** build profile that adds `UNITY_MCP_READY` in *Build Data → Scripting Defines*. Use it as the day-to-day active profile — the Editor compiles with the active profile's defines, so MCP keeps working. **(Rev 4: was `Dev-Android`; iPhone is now the primary target — see §3.1.)** Create `Dev-Android` alongside it for later.
 3. The Full and Demo release profiles omit it. The assembly and its DLLs never reach a store build.
 
 Trade-off: while a release profile is active, MCP tools go quiet in the Editor. Fine, and now explicit.
@@ -99,14 +105,25 @@ Either wire up UnityYAMLMerge on both machines:
 *.asset   merge=unityyamlmerge eol=lf
 ```
 ```ini
-# .git/config on BOTH machines (.git/config is not tracked)
+# .git/config — NOT tracked, so this must be done on EVERY machine that merges.
+# macOS path VERIFIED 2026-07-30 by executing the binary (reports v1.0.1):
 [merge "unityyamlmerge"]
     name = Unity SmartMerge
-    driver = '<UnityInstall>/Editor/Data/Tools/UnityYAMLMerge.exe' merge -p --force --fallback none %O %A %B %P
+    driver = '/Applications/Unity/Hub/Editor/6000.3.9f1/Unity.app/Contents/Helpers/UnityYAMLMerge' merge -p --force --fallback none %O %A %B %P
 ```
+
+> 🔴 **The Rev 2 path was Windows-only (`<UnityInstall>/Editor/Data/Tools/UnityYAMLMerge.exe`) and this is now the build machine — corrected.**
+> ⚠️ **Trap, verified:** on macOS there are **two** things named `UnityYAMLMerge` inside `Unity.app/Contents/`, and the obvious one is wrong.
+> - `Contents/Resources/UnityYAMLMerge/` — a **directory** holding `mergespecfile.txt`, `mergerules.txt`, `mergeresolving.txt`. Pointing the driver here fails silently-ish at merge time.
+> - `Contents/Helpers/UnityYAMLMerge` — the **actual Mach-O arm64 executable**. This is the one.
+>
+> For the PC, the Windows path stays `<UnityInstall>/Editor/Data/Tools/UnityYAMLMerge.exe`.
+
 …or, as a 60-second stopgap, mark them `-merge` so git refuses to auto-merge and forces a manual pick. Refusing is better than silently corrupting.
 
-Also confirm the Mac is on **exactly 6000.3.9f1** — minor drift causes divergent reimports and asset-format churn.
+**Version check — Mac side already satisfied.** `/Applications/Unity/Hub/Editor/` contains exactly one install, **6000.3.9f1**, matching the project. Nothing to reconcile here; the drift risk is PC-side only.
+
+**Current state verified 2026-07-30:** `.gitattributes` does mark `*.unity` / `*.prefab` / `*.mat` / `*.anim` / `*.controller` etc. as `text eol=lf` under the comment *"use smart merge driver when available"*, and `git config --get-regexp 'merge\.'` returns **nothing**. The diagnosis holds exactly as written.
 
 ### 2.3 🟡 There is no "Home scene" — the shell is one scene (architectural, shapes the whole plan)
 
@@ -126,13 +143,18 @@ One project. One repo. Four build profiles plus a dev profile. Content removed a
 
 `Assets/Settings/Build Profiles/` — profile assets are VCS-friendly and, as a bonus, **stop `EditorBuildSettings.asset` churning** every time the Mac dev adds a hole, removing a live conflict surface.
 
+**Platform priority (Cesar, 2026-07-30): iPhone first, Android second. This Mac is the build machine.** `iOS-Demo` is the profile that has to work; Android follows.
+
 | Profile | Scene list override | Scripting defines | Player Settings override |
 |---|---|---|---|
-| `Dev-Android` | off (global) | `UNITY_MCP_READY` | none |
-| `Android-Full` | off (global) | — | none |
+| `Dev-iOS` ⭐ **daily driver** | off (global) | `UNITY_MCP_READY` | none |
 | `iOS-Full` | off (global) | — | none |
-| `Android-Demo` | **on**: `ShellScene` + `Hole_01_Geo` | `GOLFIN_DEMO` | bundle ID, product name, icons **only** |
 | `iOS-Demo` | **on**: `ShellScene` + `Hole_01_Geo` | `GOLFIN_DEMO` | product name, icons **only** — **keep the Full bundle ID**, see §6 |
+| `Android-Full` | off (global) | — | none |
+| `Android-Demo` | **on**: `ShellScene` + `Hole_01_Geo` | `GOLFIN_DEMO` | bundle ID, product name, icons **only** |
+| `Dev-Android` | off (global) | `UNITY_MCP_READY` | none | *(create now — it's a 30-second `.asset` — but it isn't the daily driver)* |
+
+> 🔴 **Rev 2 named `Dev-Android` as the day-to-day active profile. With iPhone first that is now the wrong default and would actively cause the §2.1 failure mode.** The Editor compiles using the **active profile's** defines. In an iPhone-first shop you will spend the day switching between the dev profile and `iOS-Full` / `iOS-Demo` for real builds — so the dev profile must be the **iOS** one, or every switch back lands you on a profile whose platform doesn't match what you're building and MCP silently drops out for the wrong reason. **`Dev-iOS` is the daily driver.** Create `Dev-Android` in the same pass so it exists when Android work starts.
 
 Drops 17 hole scenes + 2 physics-lab scenes. Terrain and course geometry are the bulk of the binary — this is the single biggest win in the plan.
 
@@ -230,9 +252,18 @@ Also needed: trim Home-screen buttons that point at blocked screens (hide, don't
 
 ### 3.5 Verification — a script you'll actually run
 
-Skip CI. There is none today, iOS builds need macOS, and four profiles per push means multiple platform switches reimporting 1404 prefabs / 101 scenes / 333 `Resources` files. It would not get built, and every drift protection hanging off it would silently never run.
+Skip CI. There is none today, and four profiles per push means multiple platform switches reimporting 1404 prefabs / 101 scenes / 333 `Resources` files. It would not get built, and every drift protection hanging off it would silently never run.
 
-Instead: `Tools/build-demo.ps1` — batchmode Android-Demo build, dumping `BuildReport` summary + the top 50 packed assets by size + total size to a text file. ~2 hours to write, run at milestones. Eyeball the list for anything that shouldn't be there.
+Instead: **`Tools/build-demo.sh`** — batchmode build dumping `BuildReport` summary + the top 50 packed assets by size + total size to a text file. ~2 hours to write, run at milestones. Eyeball the list for anything that shouldn't be there.
+
+> 🔴 **Rev 2 specced `build-demo.ps1` (PowerShell) and an Android-only build. Both corrected in Rev 4** — this Mac is the build machine and iPhone is the primary target.
+
+**Shape:** one script, `--platform ios|android`, **defaulting to `ios`**.
+
+- **`ios`** — the shipping target, so this is what milestone checks run against. Note batchmode produces an **Xcode project**, not an `.ipa`; `BuildReport` is still fully populated at that point, which is all §3.5 needs. The `.ipa` comes from Xcode archive afterwards, as part of `testflight_distribution` (424).
+- **`android`** — keep it, because it is the *faster* loop: batchmode emits an APK directly with no Xcode step. For the actual question this script answers — *"is anything in this build that shouldn't be?"* — the packed-asset list is near-identical across platforms, so use `android` for quick iterative size checks and `ios` at milestones.
+
+Mac-specific: `bash`, not PowerShell; Unity at `/Applications/Unity/Hub/Editor/6000.3.9f1/Unity.app/Contents/MacOS/Unity`; remember `chmod +x`.
 
 ---
 
@@ -244,14 +275,13 @@ Their work (surface classification, OB, `HoleGeoImporter`, trails) lives in `Gol
 
 | # | Step | Days | Notes |
 |---|---|---|---|
-| 0 | **Merge the Mac dev's OB + trails work to `main` first** | — | Non-negotiable. No structural work over unmerged parallel work. |
-| 1 | YAML merge driver on both machines (§2.2) + confirm 6000.3.9f1 | 0.25 | Do this before anything else touches a scene. |
-| 2 | Strip `UNITY_MCP_READY` from iPhone/Android + `Dev-Android` profile (§2.1) | 0.25 | `ProjectSettings.asset`, two lines. Coordinate the 1-minute merge. |
-| 3 | Five build profiles: IDs, names, icons, defines, scene lists (§3.1) | 1.0 | All new `.asset` files. Additive. |
-| 4 | `DemoConfig.csv` + `DemoGate.cs` (§3.2, §3.4) | 1.5 | All new files. Fully concurrent-safe. |
-| 5 | `ScreenManager` gate + Home button trim (§3.2) | 1.0 | One existing file, ~5 lines. |
+| 0 | ~~Merge the Mac dev's OB + trails work to `main` first~~ | — | ✅ **DONE 2026-07-30.** `9d7d59a77` (OB) + `93f6348bb`/`1a4e01031` (trails) are on `main`; `main == origin/main`. Gate cleared. |
+| 1 | YAML merge driver (§2.2) | 0.25 | **Mac path verified** — use `Contents/Helpers/UnityYAMLMerge`, not the same-named directory under `Contents/Resources/`. Version check already satisfied on the Mac (one install, 6000.3.9f1). PC still needs its own `.git/config` block. Do this before anything else touches a scene. |
+| 2+3 | **Merged — `unity_mcp_define_strip` (428) + all build profiles (§2.1, §3.1)** | 1.25 | **Rev 4: these were separate steps and should not be.** 428's fix *is* "strip the define from the iPhone/Android entries in `ProjectSettings.asset`, then add it to a dev build profile" — and that dev profile (`Dev-iOS`) is already a deliverable of step 3. Doing them apart means creating the same `.asset` twice or half-creating it. One sitting: two lines in `ProjectSettings.asset` + six profile assets (`Dev-iOS`, `Dev-Android`, `iOS-Full`, `iOS-Demo`, `Android-Full`, `Android-Demo`). **Close Notion 428 when this lands.** |
+| 4 | `demo_config.csv` + `DemoGate.cs` (§3.2, §3.4) | 1.5 | All new files. Fully concurrent-safe. **See §3.4 for the corrected location** — `Assets/Resources/Data/demo_config.csv`, `Resources.Load`, NOT an Inspector-assigned TextAsset. |
+| 5 | `ScreenManager` gate + Home button trim (§3.2) | 1.0 | One existing file, ~5 lines. The only step with any merge surface. |
 | 6 | `DemoSceneProcessor.cs` (§3.3) | 1.0 | One new Editor file. Additive. |
-| 7 | `Tools/build-demo.ps1` + manual QA pass + written checklist | 0.5 | |
+| 7 | `Tools/build-demo.sh` + manual QA pass + written checklist | 0.5 | **Rev 4: `.sh` not `.ps1`, `--platform ios\|android` defaulting to `ios`.** See §3.5. |
 | | **Total** | **~5.5** | |
 
 Steps 3, 4, 6 are pure additions — no existing file is renamed or moved, so the merge surface with the Mac dev is one file (step 5) in territory they aren't touching.
@@ -329,9 +359,11 @@ That needs a **new, separate bundle ID** — a second ASC record, since the orig
 3. ~~Demo display name?~~ **RESOLVED — `GOLFIN Demo`.** Product-name override on the `iOS-Demo` / `Android-Demo` profiles only (§3.1). Nothing public; the bundle ID does **not** change (§6).
 4. ~~Does the old ASC record still exist?~~ **Resolved** — it does, it's in use, and it's reserved for the full game. See §6.
 
-### Still genuinely open — one item, raised 2026-07-30
+### Still genuinely open — RESOLVED 2026-07-30
 
-**Step 7's `Tools/build-demo.ps1` is PowerShell, but the repo is now Mac-primary.** §3.5 scopes that script to an **Android** batchmode build, so PowerShell on the PC is not *wrong* — but iOS builds require macOS, and the day-to-day machine is the Mac (`/Users/cesar/Documents/GolfinRedux`, verified on **6000.3.9f1**). Options: (a) keep `.ps1`, Android-only, PC-only; (b) write `build-demo.sh` instead and run everything on the Mac; (c) both. **Cesar's call — does not block steps 3, 4 or 6.**
+**~~Step 7's script format.~~ RESOLVED.** iPhone first, Android second, **this Mac is the build machine**. Step 7 is **`Tools/build-demo.sh`**, `--platform ios|android`, default `ios`. See §3.5. Knock-on corrections made in the same pass: §2.2's merge-driver path was Windows-only and is now the verified macOS binary; §3.1's daily-driver profile was `Dev-Android` and is now **`Dev-iOS`**; §4 steps 2 and 3 are **merged**, since `unity_mcp_define_strip` (428) and the profile creation deliver the same asset.
+
+**Nothing is open. The spec is ready to implement.**
 
 ## Sources
 
