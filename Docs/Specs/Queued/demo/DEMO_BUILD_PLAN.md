@@ -1,11 +1,16 @@
 # GOLFIN Redux — Demo Build Plan
 
-**Status:** SPEC_READY — nothing open, ready to implement · **Author:** Claude (Architect) · **Rev 4, 2026-07-30**
+**Status:** SPEC_READY — nothing open, ready to implement · **Author:** Claude (Architect) · **Rev 5, 2026-07-30**
 **Platform priority:** 📱 **iPhone first, Android second. This Mac is the build machine.**
 **Verified against:** `C:\Users\cesar\GolfinRedux` @ Unity **6000.3.9f1** (Rev 2) · re-verified on the Mac `/Users/cesar/Documents/GolfinRedux` @ **6000.3.9f1** (Rev 3–4)
 **Implementer:** Claude Code
 **Notion:** `demo_build_slice` (Order 426) · prereq `unity_yaml_merge_driver` (429) · `unity_mcp_define_strip` (428) is now **executed inside §4 step 2+3**
 
+> **Rev 5 changelog (2026-07-30) — "can I test this in the Editor first?":**
+> - **New §3.6: Editor testing before any build.** Most of the demo *is* testable in play mode — set the active build profile to `iOS-Demo` and press Play. Full per-mechanism table of what the Editor does and does not prove.
+> - 🔴 **Latent NRE caught in §3.3.** `IProcessSceneWithReport.OnProcessScene` also fires when entering play mode, and **`report` is `null` in that case** (Unity 6000.0 docs). Any implementation that reads `report.summary.*` to check the build target crashes on the first Play. Use `BuildPipeline.isBuildingPlayer` — Unity's own documented discriminator. Guard added to §3.6.
+> - ⚠️ **Fidelity caveat recorded:** `Awake` is *blocked* during a build's `OnProcessScene` but **not** in play mode, so a stripped screen's `Awake` can run in the Editor and never run in the shipped demo. Screen-gating is safe to judge in play mode; `Awake` side effects are not.
+>
 > **Rev 4 changelog (2026-07-30) — all triggered by "iPhone first, Mac is the build machine":**
 > - **§2.2 merge-driver path was Windows-only and would have failed here.** macOS path now verified *by executing the binary* (v1.0.1): `Unity.app/Contents/Helpers/UnityYAMLMerge`. ⚠️ There is a same-named **directory** at `Contents/Resources/UnityYAMLMerge/` holding the merge spec files — pointing the driver at it is the obvious mistake. Also confirmed: one Unity install (6000.3.9f1, no drift) and `git config` has **no** merge driver today.
 > - **§3.1 daily-driver profile `Dev-Android` → `Dev-iOS`.** With iPhone primary, the old default would have caused the §2.1 failure mode it was meant to prevent.
@@ -264,6 +269,57 @@ Instead: **`Tools/build-demo.sh`** — batchmode build dumping `BuildReport` sum
 - **`android`** — keep it, because it is the *faster* loop: batchmode emits an APK directly with no Xcode step. For the actual question this script answers — *"is anything in this build that shouldn't be?"* — the packed-asset list is near-identical across platforms, so use `android` for quick iterative size checks and `ios` at milestones.
 
 Mac-specific: `bash`, not PowerShell; Unity at `/Applications/Unity/Hub/Editor/6000.3.9f1/Unity.app/Contents/MacOS/Unity`; remember `chmod +x`.
+
+### 3.6 Testing the demo **in the Editor**, before any build — NEW in Rev 5
+
+Most of the demo is testable in play mode. Do this first; a build is the slow confirmation, not the first look.
+
+**Set the active build profile to `iOS-Demo`, press Play.** That's the whole setup — the Editor compiles using the *active profile's* scripting defines, so `GOLFIN_DEMO` is live in play mode.
+
+| Mechanism | Testable in Editor? | How |
+|---|---|---|
+| `GOLFIN_DEMO` define → `DemoGate.IsDemo` | ✅ **Fully** | Active profile `iOS-Demo` → define is set → `ShowScreen` gate is live. |
+| `DemoGate` allowlist blocking screens | ✅ **Fully** | Tap through Home. Blocked screens no-op and log `[DemoGate] blocked <id>`. |
+| `DemoSceneProcessor` stripper | ✅ **Yes** — see the null-report rule below | Runs on play-mode scene reload. Screen containers are physically destroyed in the play-mode copy. |
+| `demo_config.csv` | ✅ **Fully** | `Resources.Load` behaves identically in Editor and player. |
+| Home-screen button trim | ✅ **Fully** | Visual, in play mode. |
+| Scene-list override | ⚠️ **Partly** | The Editor can always open any scene from the Project window, so "the other 17 holes are gone" is **not** enforced in-editor. Verify via `BuildReport` (§3.5), not by trying to open `Hole_07_Geo`. |
+| Actual binary size | ❌ **No** | The whole point of the scene-list drop. §3.5 only. |
+| `UNITY_MCP_READY` stripped from the player | ❌ **No** | The Editor always has *some* profile active. Confirm via the packed-assembly list in `BuildReport`. |
+| IL2CPP behaviour, iOS safe area, portrait lock | ❌ **No** | Device build — `phone_build_smoke_test` (420) territory. |
+
+#### 🔴 Mandatory: `report` is **null** in play mode
+
+`IProcessSceneWithReport.OnProcessScene(Scene scene, BuildReport report)` is invoked during Player and AssetBundle builds **and also as a scene is reloaded while entering Editor play mode** — and in the play-mode case **`report` is `null`**. (Same for Addressables builds.)
+
+**Any implementation that dereferences `report` — e.g. `report.summary.platform` to check the build target — throws a `NullReferenceException` the moment Cesar presses Play.** Unity's documented discriminator is `BuildPipeline.isBuildingPlayer`; use that, and treat a null `report` as the play-mode path rather than as an error.
+
+```csharp
+public void OnProcessScene(Scene scene, BuildReport report)
+{
+    // report == null  =>  entering play mode (or an Addressables build). NOT an error.
+    // Do NOT touch report.* without a null check.
+    if (!DemoGate.IsDemo) return;
+    if (scene.name != "ShellScene") return;
+    // …destroy non-allowlisted containers
+}
+```
+
+#### ⚠️ One fidelity caveat — `Awake` ordering differs between play mode and build
+
+Known Unity behaviour: `OnProcessScene` always runs after the scene loads, but **in a build the call to `Awake` is blocked, while in play mode it is not.** So in the Editor a screen container's `Awake` can run *before* the stripper destroys it, whereas in the real build it never runs at all.
+
+Practical consequence: if any stripped screen registers a singleton, subscribes to a manager event, or writes state in `Awake`, the Editor will show side effects the shipped demo won't have (and vice-versa — an editor pass doesn't prove the build is clean). **Screen-gating behaviour is safe to judge in play mode; anything depending on `Awake` side effects must be confirmed on a real build.**
+
+#### Suggested loop
+
+1. Active profile → `iOS-Demo`. Press Play.
+2. Logo → Splash → Loading → Home should all work; every other screen should no-op with a `[DemoGate] blocked` log and no visible dead-end button.
+3. Play Hole 1 end-to-end with Olivia and the 7-club bag.
+4. Switch active profile → `Dev-iOS`, press Play again — **everything should come back**. If it doesn't, the gate is leaking outside `GOLFIN_DEMO` and that is a bug.
+5. Only then run `Tools/build-demo.sh` (§3.5) for the size/packed-asset confirmation.
+
+Step 4 is the one people skip. It is the cheapest possible check that the demo gating is genuinely compile-time and hasn't quietly become permanent.
 
 ---
 
