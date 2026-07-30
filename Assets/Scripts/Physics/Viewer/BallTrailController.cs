@@ -100,10 +100,20 @@ namespace Golfin.Physics.Viewer
             }
             else if (c.Next == BallState.AtRest || c.Next == BallState.InCup)
             {
-                // Ball at rest — stop emitting; ribbon stays for visual reference
-                // until next shot's BallAnimator.Play() destroys + respawns the ball.
+                // Ball at rest — stop emitting. Ribbon is wiped on the Aiming handler
+                // (ReArm), so it never bleeds into the next shot's aiming phase.
                 if (_tr != null)
                     _tr.emitting = false;
+            }
+            else if (c.Next == BallState.Aiming)
+            {
+                // ReArm: wipe the previous shot's ribbon immediately so it does not
+                // bleed into the next shot's aiming phase (H3 fix — ball_trail_shot_isolation).
+                if (_tr != null)
+                {
+                    _tr.Clear();
+                    _tr.emitting = false;
+                }
             }
         }
 
