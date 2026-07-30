@@ -1,9 +1,8 @@
 # GOLFIN Redux — Demo Build Plan
 
-**Status:** Spec for implementation · **Author:** Claude (Architect) · **Rev 2, 2026-07-30**
+**Status:** Spec for implementation · **Author:** Claude (Architect) · **Date:** 2026-07-29
 **Verified against:** `C:\Users\cesar\GolfinRedux` @ Unity **6000.3.9f1**
 **Implementer:** Claude Code
-**Notion:** `demo_build_slice` (Order 426) · prereqs `unity_mcp_define_strip` (428), `unity_yaml_merge_driver` (429)
 
 ---
 
@@ -11,8 +10,8 @@
 
 | Question | Answer |
 |---|---|
-| One Unity project or two? | **One.** Cesar's instinct was right. Build Profiles, not a second project, not a branch. |
-| Separate App Store listing? | **No.** Demo builds ride the **existing** ASC record's TestFlight as a separate tester group + a direct signed APK on Android. No new bundle ID at all. See §1 and §6. |
+| One Unity project or two? | **One.** Your instinct was right. Build Profiles, not a second project, not a branch. |
+| Separate App Store listing? | **No — not for this goal.** TestFlight (iOS) + direct signed APK (Android). See §1. |
 | How is content removed? | Scene-list override + a **build-time scene stripper** + a deny-by-default screen gate. **Not** an assembly reorg. See §3. |
 | Effort | **~5.5 dev-days**, zero file moves, merge-safe with the Mac dev's in-flight work. |
 | Blockers found in repo | 3, all pre-existing, all cheap to fix. See §2. **One of them is an App Review liability today.** |
@@ -21,13 +20,13 @@
 
 ## 1. Distribution — the goal changes the answer
 
-The demo is for **investors / publishers / Ken** (confirmed by Cesar 2026-07-30). That is a *controlled-audience* goal, and it is the one case where a public App Store listing is pure cost.
+You said the demo is for **investors / publishers / Ken**. That is a *controlled-audience* goal, and it is the one case where a public App Store listing is pure cost.
 
 ### Use TestFlight + direct APK
 
 | Channel | Mechanism | Setup |
 |---|---|---|
-| iOS | TestFlight — up to 10,000 external testers, shareable public link, no email collection, revocable | ~1 day incl. first Beta App Review |
+| iOS | TestFlight **public link** — up to 10,000 external testers, shareable URL, no email collection, revocable | ~1 day incl. first Beta App Review |
 | Android | Signed **APK** on a download link, or Play internal testing track | ~2 hours |
 
 TestFlight is *literally* what Apple's guideline 2.2 tells you to use, so there is no policy risk. It also exercises the entire real submission pipeline — signing, provisioning, App Store Connect, build upload, Beta App Review — which de-risks the full game's eventual submission **without** putting anything permanent on the store.
@@ -42,7 +41,7 @@ Three findings from the adversarial pass, in order of weight:
 2. **Guideline 2.2 names this artifact.** *"Demos, betas, and trial versions of your app don't belong on the App Store – use TestFlight instead."* Renaming it changes what it's *called*, not what it *is*. In practice reviewers cite 4.2 ("lasting entertainment value" — one hole, no progression) rather than 2.2, but the outcome is the same.
 3. **The positioning dodge is self-defeating.** To survive review the demo must look like an unrelated standalone product; to be useful it must be publicly connected to GOLFIN. The moment marketing says "try the demo," you've supplied the 4.3(a) evidence yourself. Compliance and usefulness are inversely coupled — there's no setting where both work.
 
-Plus: one-star reviews on a deliberately thin app become a permanent public artifact under the developer name, and ratings never transfer to the full game.
+Plus: one-star reviews on a deliberately thin app become a permanent public artifact under your developer name, and ratings never transfer to the full game.
 
 ### The one test that flips this
 
@@ -53,35 +52,33 @@ Plus: one-star reviews on a deliberately thin app become a permanent public arti
 
 One hole, one character, fixed bag, everything else locked answers *no*.
 
-**See §6 for the distribution mechanics — there's a route that needs no new bundle ID and no new store record at all.**
+**If you still want a public listing anyway, see §6 — there's a route that carries far less risk than a second bundle ID, and it's available to you specifically because a version of the original game was listed before.**
 
-**None of this changes the build work.** Everything in §2–§4 is required either way.
+**None of this changes the build work.** Everything in §2–§4 is required either way. Decide distribution at the end, not now.
 
 ---
 
 ## 2. Three landmines in the repo — fix before anything else
 
-### 2.1 🔴 `UNITY_MCP_READY` is compiled into player builds (~15 min) — Notion Order 428
+### 2.1 🔴 `UNITY_MCP_READY` is compiled into player builds (~15 min)
 
-`ProjectSettings.asset` lines 836–854 define `UNITY_MCP_READY` for **all 19 platforms, including iPhone and Android**. That satisfies the define constraint on `com.IvanMurzak.Unity.MCP.Runtime` — a **Runtime** asmdef (`includePlatforms: []`, `autoReferenced: true`) whose precompiled references include `Microsoft.AspNetCore.SignalR.Client.dll`, `Microsoft.AspNetCore.SignalR.Client.Core.dll` and `System.Text.Json.dll`.
+`ProjectSettings.asset` lines 836–854 define `UNITY_MCP_READY` for **all 19 platforms, including iPhone and Android**. That satisfies the define constraint on `com.IvanMurzak.Unity.MCP.Runtime` — a **Runtime** asmdef (`includePlatforms: []`, `autoReferenced: true`) whose precompiled references include `Microsoft.AspNetCore.SignalR.Client.dll` and `System.Text.Json.dll`.
 
 **An AI remote-control plugin with a live SignalR network client is being built into your store binaries right now.** That is the textbook shape of guideline 2.3.1 — *"Don't include any hidden, dormant, or undocumented features in your app"* — plus undeclared network behaviour against your privacy manifest, plus IL2CPP bloat.
 
-**Fix, preserving the MCP workflow** (build-profile defines are *additive*, so this composes cleanly):
+**Fix, preserving your MCP workflow** (build-profile defines are *additive*, so this composes cleanly):
 
 1. Remove `UNITY_MCP_READY` from the `iPhone` and `Android` entries in `ProjectSettings.asset` (leave Editor/Standalone if you want).
-2. Create a **`Dev-Android`** build profile that adds `UNITY_MCP_READY` in *Build Data → Scripting Defines*. Use it as the day-to-day active profile — the Editor compiles with the active profile's defines, so MCP keeps working.
+2. Create a **`Dev-Android`** build profile that adds `UNITY_MCP_READY` in *Build Data → Scripting Defines*. Use it as your day-to-day active profile — the Editor compiles with the active profile's defines, so MCP keeps working.
 3. The Full and Demo release profiles omit it. The assembly and its DLLs never reach a store build.
 
 Trade-off: while a release profile is active, MCP tools go quiet in the Editor. Fine, and now explicit.
 
-**Do this before `testflight_distribution` (424) — it is upload hygiene, not demo work.**
+### 2.2 🔴 No YAML merge driver, two devs, one 4.1 MB scene (~30 min, both machines)
 
-### 2.2 🔴 No YAML merge driver, two devs, one 4.1 MB scene (~30 min, both machines) — Notion Order 429
+`.gitattributes` marks `*.unity` / `*.prefab` as `text eol=lf` with the comment *"use smart merge driver when available"* — but **no `merge=unityyamlmerge` attribute and no driver is configured**. Git will line-merge `ShellScene.unity` (4.1 MB, ~1200 GameObjects) and produce plausible-looking garbage.
 
-`.gitattributes` marks `*.unity` / `*.prefab` as `text eol=lf` with the comment *"use smart merge driver when available"* — but **no `merge=unityyamlmerge` attribute exists and no driver is configured**. Git will line-merge `ShellScene.unity` (4.1 MB, ~1200 GameObjects) and produce plausible-looking garbage.
-
-This is a live data-loss hazard **today**, independent of the demo, because the Mac dev is working in parallel.
+This is a live data-loss hazard **today**, independent of the demo, because the Mac dev is working in parallel on out-of-bounds and trails.
 
 Either wire up UnityYAMLMerge on both machines:
 ```
@@ -91,7 +88,7 @@ Either wire up UnityYAMLMerge on both machines:
 *.asset   merge=unityyamlmerge eol=lf
 ```
 ```ini
-# .git/config on BOTH machines (.git/config is not tracked)
+# .git/config on BOTH machines
 [merge "unityyamlmerge"]
     name = Unity SmartMerge
     driver = '<UnityInstall>/Editor/Data/Tools/UnityYAMLMerge.exe' merge -p --force --fallback none %O %A %B %P
@@ -124,16 +121,16 @@ One project. One repo. Four build profiles plus a dev profile. Content removed a
 | `Android-Full` | off (global) | — | none |
 | `iOS-Full` | off (global) | — | none |
 | `Android-Demo` | **on**: `ShellScene` + `Hole_01_Geo` | `GOLFIN_DEMO` | bundle ID, product name, icons **only** |
-| `iOS-Demo` | **on**: `ShellScene` + `Hole_01_Geo` | `GOLFIN_DEMO` | product name, icons **only** — **keep the Full bundle ID**, see §6 |
+| `iOS-Demo` | **on**: `ShellScene` + `Hole_01_Geo` | `GOLFIN_DEMO` | bundle ID, product name, icons **only** |
 
 Drops 17 hole scenes + 2 physics-lab scenes. Terrain and course geometry are the bulk of the binary — this is the single biggest win in the plan.
 
 > ⚠️ **A Player Settings override is a full clone of the PlayerSettings object, not a per-field diff.** Every global change made afterwards silently fails to reach overriding profiles. The recent iOS work (portrait lock, SafeAreaFitter, iOS quality tier) is exactly the kind of thing that would drift.
-> **Rule: override the minimum — product name and icons, plus the Android bundle ID. Leave orientation, SDK levels, quality, stripping, and version/build numbers on the global settings.** Add a checklist line to `Tasks.md`.
+> **Rule: override the minimum — bundle ID, product name, icons. Leave orientation, SDK levels, quality, stripping, and version/build numbers on the global settings.** Add a checklist line to `Tasks.md`.
 
 > ⚠️ `-activeBuildProfile` has a reported Unity 6 bug where it exits batchmode if the profile is already active, and requires a **project-relative** path. Set the active profile inside the build method via the `BuildProfile` API instead of relying on the CLI flag.
 
-**Bundle IDs — do NOT change the iOS one.** Per §6, the demo rides the existing ASC record's TestFlight, so `iOS-Demo` keeps `com.nextinnovation.golfingame` (same as `iOS-Full`) and overrides only product name and icons. Android-Demo can take its own ID since it's a sideloaded APK with no store record — if you do, use a hyphen rather than a dot suffix (Apple DTS guidance) and **no underscores**, which script-set Android IDs have been reported to strip.
+Bundle IDs: `com.wonderwall.golfin` / `com.wonderwall.golfin-demo`. Hyphen, not a dot suffix (Apple DTS guidance), and **no underscores** — script-set Android IDs have been reported to strip them.
 
 ### 3.2 `DemoGate` — deny-by-default screen allowlist
 
@@ -210,15 +207,13 @@ Also needed: trim Home-screen buttons that point at blocked screens (hide, don't
 
 Skip CI. There is none today, iOS builds need macOS, and four profiles per push means multiple platform switches reimporting 1404 prefabs / 101 scenes / 333 `Resources` files. It would not get built, and every drift protection hanging off it would silently never run.
 
-Instead: `Tools/build-demo.ps1` — batchmode Android-Demo build, dumping `BuildReport` summary + the top 50 packed assets by size + total size to a text file. ~2 hours to write, run at milestones. Eyeball the list for anything that shouldn't be there.
+Instead: `Tools/build-demo.ps1` — batchmode Android-Demo build, dumping `BuildReport` summary + the top 50 packed assets by size + total size to a text file. ~2 hours to write, run at milestones, catches ~90% of the signal. Eyeball the list for anything that shouldn't be there.
 
 ---
 
 ## 4. Work order — minimizing merge pain with the Mac dev
 
 Their work (surface classification, OB, `HoleGeoImporter`, trails) lives in `Golfin.Physics.*` / `Golfin.Course.Runtime`, already behind asmdefs. Nothing below touches those. But their commits are landing **on `main`**, so ordering matters.
-
-**Roadmap dependency:** this sits behind `phone_build_smoke_test` (Order 420) and shares every iOS upload gate with `testflight_distribution` (Order 424) — empty `m_BuildTargetPlatformIcons` for iPhone, empty build number, unset export-compliance flag, and `bundleVersion` needing to exceed the live App Store version. Those get fixed once, in 424, and the demo inherits them. Don't re-solve them here.
 
 | # | Step | Days | Notes |
 |---|---|---|---|
@@ -267,43 +262,24 @@ Full-game **code** (Shop, Gacha, Roster, Tournaments) still exists in the demo b
 
 ---
 
-## 6. Distribution mechanics — 🔴 corrected 2026-07-30
+## 6. If you still want a public listing
 
-**Reading `AI_CONTEXT.md` closed the open question here, and it changes the answer.**
+Two routes, in order of risk:
 
-The iOS bundle ID is already deliberately set to **`com.nextinnovation.golfingame`** — the **live App Store Golfin's** ID — so that Redux ships as an *update to the existing App Store Connect record* (app owned by NEXT INNOVATION PTE. LTD., Cesar is Admin). That was decided under `phone_build_smoke_test` (Order 420).
+**A. Reuse the existing app record (much lower risk).** You mentioned a version of the original game was listed for a while. If that App Store Connect record and bundle ID still exist, ship the demo as **an update to that record**, not as a new bundle ID — then update the *same* record into the full game later. No new bundle ID means **4.3(a) simply doesn't apply**, and 2.2 doesn't bite as long as nothing says "demo/trial/lite/beta" in the name, icon, screenshots, description, release notes, or binary. Cost: the thin build burns the record's public reviews and rating for a while, and guideline 4.2 ("lasting entertainment value") is still in play for a one-hole app. Verify the record hasn't been removed for inactivity first.
 
-**So the existing record is already reserved for the full game.** The "ship the demo into the old record" idea from Rev 1 is **dead**: it would spend the full game's listing on a one-hole build, and its public reviews and rating with it.
+**B. New separate bundle ID.** Everything in §1 applies. If you go here anyway: a distinct name and icon with no relationship to GOLFIN anywhere public, no IAP, no account, and **a specific Notes-for-Review explanation on every single submission** describing the scope and the relationship — the developers who keep two-app setups alive credit exactly that. Understand that you're accepting a 15–30% conditional risk of a 4.3 tangle on GOLFIN's own submission, on an appeal path with no useful feedback.
 
-### ✅ Recommended: demo builds ride the existing record's TestFlight
-
-TestFlight builds live *under* an app record but are never publicly listed and never face App Store review — only the much lighter Beta App Review. Since the full game isn't released yet, that record's TestFlight is free to carry whatever build you want.
-
-- Create an **external tester group** ("Investors") on the existing record. Demo builds → that group. Full builds → internal testers.
-- Multiple builds coexist in TestFlight, and groups are assigned per build, so the two never collide.
-- **Zero new bundle IDs. Zero new App Store Connect records. Zero App Review exposure. Nothing public.**
-- Ken/investors get a tap-to-install build on their own iPhone in under two minutes.
-
-**The one trade-off:** demo and full builds share a bundle ID, so they can't be installed side by side on the same device. For stakeholder demos that's a non-issue.
-
-Version/build numbers are shared across the record too, so demo uploads consume build numbers from the same sequence — bump monotonically and don't reuse. The existing gate still applies: `bundleVersion` must exceed the live App Store Golfin's version or ASC rejects the upload (`0.1.0` will be rejected).
-
-**Android:** signed APK on a download link. No Play listing, no repetitive-content exposure, no 12-tester closed-testing cycle.
-
-### If you later want a genuinely public demo listing
-
-That needs a **new, separate bundle ID** — a second ASC record, since the original is committed to the full game. Everything in §1 applies: distinct name and icon with no public relationship to GOLFIN, no IAP, no account, and a specific Notes-for-Review explanation on every submission. You'd be accepting a real conditional risk of a 4.3 tangle on GOLFIN's own submission, on an appeal path with no useful feedback. Not recommended, and not needed for the stated goal.
-
-**Either way the build work in §2–§4 is identical.** Ship to TestFlight first, put it in Ken's hands, then decide.
+Either way the build work is identical. Ship it to TestFlight first, put it in Ken's hands, then decide.
 
 ---
 
 ## Open items for Cesar
 
-1. Which character and which club set for the demo? Needed for `DemoConfig.csv`.
-2. Should the demo show the Roster screen read-only (shows off the art, no progression), or stay locked to Home only? Currently specced as locked — but for an *investor* demo, a read-only Roster is probably the single highest-value screen to keep, since it's where the art and rarity system live. Worth reconsidering.
-3. Demo display name — only matters for the TestFlight build's product name, since there's no public listing.
-4. ~~Does the old ASC record still exist?~~ **Resolved** — it does, it's in use, and it's reserved for the full game. See §6.
+1. Does the old App Store Connect record still exist, and is the bundle ID recoverable? (Determines whether §6 route A is available.)
+2. Which character and which club set for the demo? Needed for `DemoConfig.csv`.
+3. Should the demo show the Roster screen read-only (shows off art, no progression), or stay locked to Home only? Currently specced as locked.
+4. Demo app display name and icon.
 
 ## Sources
 
