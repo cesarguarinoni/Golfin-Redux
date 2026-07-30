@@ -1,9 +1,17 @@
 # GOLFIN Redux — Demo Build Plan
 
-**Status:** Spec for implementation · **Author:** Claude (Architect) · **Rev 2, 2026-07-30**
-**Verified against:** `C:\Users\cesar\GolfinRedux` @ Unity **6000.3.9f1**
+**Status:** SPEC_READY — all Cesar decisions locked, step 0 gate cleared · **Author:** Claude (Architect) · **Rev 3, 2026-07-30**
+**Verified against:** `C:\Users\cesar\GolfinRedux` @ Unity **6000.3.9f1** (Rev 2) · re-verified on the Mac `/Users/cesar/Documents/GolfinRedux` @ **6000.3.9f1** (Rev 3)
 **Implementer:** Claude Code
 **Notion:** `demo_build_slice` (Order 426) · prereqs `unity_mcp_define_strip` (428), `unity_yaml_merge_driver` (429)
+
+> **Rev 3 changelog (2026-07-30):**
+> - **Step 0 gate CLEARED.** `surface_classification_ob_rough` (`9d7d59a77`) and `ball_trail_shot_isolation` (`93f6348bb` + close-out `1a4e01031`) are both merged to `main`; `main == origin/main`. Structural work may begin.
+> - **§3.4 location instruction CORRECTED** — the Rev 2 `CharacterDatabaseCSV` precedent was wrong and would not have wired up against §3.2. Use the `GachaBannerModel` static-catalog pattern. Details in §3.4.
+> - **All four "Open items for Cesar" resolved** — `char_olivia`, full 7-club bag, Roster **fully locked**, display name `GOLFIN Demo`.
+> - **§3.2 allowlist re-confirmed unchanged** at `{ Logo, Splash, Loading, Home }`.
+> - Re-verified in source: `ScreenId` enum exists (`ScreenManager.cs:6`); `ShowScreen` is at `ScreenManager.cs:128` exactly as §3.2 asserts.
+> - One new open item (non-blocking): PowerShell vs shell for step 7 — see end of doc.
 
 ---
 
@@ -198,9 +206,23 @@ What this buys, and why it beats the assembly approach:
 
 ### 3.4 `DemoConfig` — soft gating
 
-CSV, alongside the existing game-data CSVs (**NOTE for Claude Code:** place it in the existing CSV data folder, matching `CharacterDatabaseCSV` conventions — don't invent a new location).
+**Location — corrected 2026-07-30 (Architect, verified in source).** Place at **`Assets/Resources/Data/demo_config.csv`**, loaded via `Resources.Load<TextAsset>("Data/demo_config")`.
 
-Fields: playable hole IDs (`hole_01`), the single character ID, the fixed club bag IDs, `repair_kits_enabled=false`, `balls_enabled=false`, `points_enabled=false`.
+> ⚠️ **Rev 2 said "matching `CharacterDatabaseCSV` conventions." That instruction was wrong — do not follow it.** `CharacterDatabaseCSV.cs:45` and `ClubDatabaseCSV.cs:45` both take an **Inspector-assigned `TextAsset`** (*"drag Clubs.csv into Inspector"*) — a serialized field on a MonoBehaviour living in `ShellScene`. `DemoGate` (§3.2) is a `static class` with no Inspector, no MonoBehaviour and no scene presence, so it **cannot** consume one. The correct precedent is the static-catalog pattern at **`GachaBannerModel.cs:90`** — `Resources.Load<TextAsset>("Data/gacha_banners")`. Lowercase-snake filename also matches every existing file in `Resources/Data/` (`bot_clubs`, `gacha_banners`, `shop_catalog`, `stamina_shop_items`).
+> Side benefit: §5 already notes `Assets/Resources` ships regardless of scene list, defines or assemblies — so the config is guaranteed present in the demo binary with no build-profile coupling.
+
+**Locked values (Cesar, 2026-07-30):**
+
+| Field | Value | Note |
+|---|---|---|
+| `playable_holes` | `hole_01` | Only hole in the demo scene list (§3.1) |
+| `character_id` | **`char_olivia`** | Olivia Guarinoni — Uncommon, `startLevel 40` / `maxLevel 79`, `BigRosterOlivia`. Mid-tier deliberately: shows visible progression headroom rather than a maxed ceiling. |
+| `club_ids` | all 7 | See note below |
+| `repair_kits_enabled` | `false` | |
+| `balls_enabled` | `false` | |
+| `points_enabled` | `false` | |
+
+**On the club bag — this was not really a choice.** `Assets/Resources/Data/Clubs.csv` contains exactly **7 clubs, one per type**, spanning all six rarities: `club_driver_gf` (Driver, Common), `club_wood_gf` (Wood, Common), `club_iron9_klyro` (Iron, Uncommon), `club_iron7_mireo` (Iron, Rare), `club_awedge_fyloe` (A.Wedge, Mythic), `club_pwedge_royal` (P.Wedge, Legendary), `club_putter_golfinx` (Putter, Supreme). There is no second driver or second putter to pick between, so a playable bag is forced to the full set. Ship all 7 at default level.
 
 Ships as **data inside the demo binary**, not remote config — so it can't be flipped by a user or by a server, which is what keeps it clear of the 2.3.1 concern that runtime feature flags raise.
 
@@ -300,10 +322,16 @@ That needs a **new, separate bundle ID** — a second ASC record, since the orig
 
 ## Open items for Cesar
 
-1. Which character and which club set for the demo? Needed for `DemoConfig.csv`.
-2. Should the demo show the Roster screen read-only (shows off the art, no progression), or stay locked to Home only? Currently specced as locked — but for an *investor* demo, a read-only Roster is probably the single highest-value screen to keep, since it's where the art and rarity system live. Worth reconsidering.
-3. Demo display name — only matters for the TestFlight build's product name, since there's no public listing.
+**All four resolved 2026-07-30. Do not re-litigate — implement as stated.**
+
+1. ~~Which character and which club set?~~ **RESOLVED — `char_olivia` (Olivia Guarinoni), full 7-club bag.** See §3.4 for the locked table and why the bag was forced.
+2. ~~Roster read-only vs locked?~~ **RESOLVED — stays FULLY LOCKED**, as originally specced. The §3.2 allowlist is therefore **unchanged**: `{ Logo, Splash, Loading, Home }`. Roster is *not* added. The Rev 2 note arguing for a read-only Roster was considered and declined — treat it as closed, not as a standing suggestion.
+3. ~~Demo display name?~~ **RESOLVED — `GOLFIN Demo`.** Product-name override on the `iOS-Demo` / `Android-Demo` profiles only (§3.1). Nothing public; the bundle ID does **not** change (§6).
 4. ~~Does the old ASC record still exist?~~ **Resolved** — it does, it's in use, and it's reserved for the full game. See §6.
+
+### Still genuinely open — one item, raised 2026-07-30
+
+**Step 7's `Tools/build-demo.ps1` is PowerShell, but the repo is now Mac-primary.** §3.5 scopes that script to an **Android** batchmode build, so PowerShell on the PC is not *wrong* — but iOS builds require macOS, and the day-to-day machine is the Mac (`/Users/cesar/Documents/GolfinRedux`, verified on **6000.3.9f1**). Options: (a) keep `.ps1`, Android-only, PC-only; (b) write `build-demo.sh` instead and run everything on the Mac; (c) both. **Cesar's call — does not block steps 3, 4 or 6.**
 
 ## Sources
 
