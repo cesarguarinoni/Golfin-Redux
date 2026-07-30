@@ -1,0 +1,61 @@
+2026-07-29T23:00:00 activated
+=== iter-1 kickoff baseline ===
+HEAD SHA: 9a9978539
+DIRTY porcelain:
+ M Assets/Settings/Mobile_RPAsset.asset
+ M Assets/Settings/UniversalRenderPipelineGlobalSettings.asset
+ M Docs/Scripts/com.golfin.dailyreport.plist
+ M ProjectSettings/ProjectSettings.asset
+?? Docs/Specs/Active/surface_classification_ob_rough/ARCHITECT_REVIEW.md
+?? Docs/Specs/Active/surface_classification_ob_rough/HEARTBEAT.log
+?? Docs/Specs/Active/surface_classification_ob_rough/IMPLEMENTER_REPORT.md
+?? Docs/Specs/Active/surface_classification_ob_rough/SELF_REVIEW.md
+?? Docs/Specs/Active/surface_classification_ob_rough/STATUS.md
+=== end baseline ===
+2026-07-29T04:43:32 running test suite — Physics EditMode
+2026-07-29T05:01:36 MCP transport dropped after git stash + assets-refresh timeout; waiting for reconnect
+2026-07-29T05:08:02 assets-refresh timeout again (Unity compiling from stash pop); waiting for MCP
+2026-07-29T05:43:14 done, awaiting review — READY_FOR_ARCHITECT_REVIEW (ObBoundaryCaptureBot not run, §9 video clips not produced)
+2026-07-29T06:07:14 iter-2 activated — producing §9 video clips
+2026-07-29T06:07:56 Stage 1 bot running in play mode — waiting for completion
+2026-07-29T06:42:37 wrote Stage2RoughCaptureBot.cs + Stage2RoughCaptureMenu.cs — triggering compile
+2026-07-29T06:55 BEFORE recording launched — DefaultSurface=Fairway temporarily, awaiting play mode exit
+2026-07-29T16:05 done, awaiting review — §9 Stage 2 clips captioned; §9 Stage 1 clip captioned; all FAIL rows resolved; STATUS -> READY_FOR_SELF_REVIEW
+2026-07-29T16:10 iter-3 activated — CESAR_REJECTED; camera-under-terrain fix (ob_camera_clamp:under_terrain)
+=== iter-3 kickoff baseline ===
+HEAD SHA: a1b3e11b8
+DIRTY porcelain (tracked):
+ M .claude/review_misses.log
+ M Assets/Scripts/Gameplay/Tests/RealHoleTerrainTests.cs
+ M Assets/Scripts/Physics/Runtime/Baked/BakedZoneClassifier.cs
+ M Assets/Scripts/Physics/Tests/BakedZoneClassifierTests.cs
+ M Assets/Scripts/Physics/Viewer/VersusBot.cs
+ M Assets/Settings/Mobile_RPAsset.asset
+ M Assets/Settings/UniversalRenderPipelineGlobalSettings.asset
+ M Docs/Diag/baked-pivot/M0-regression-DriverFromGreen.md
+ M Docs/Diag/baked-pivot/M0-regression-WedgeFromBunkerEdge.md
+ M Docs/Physics/PHYSICS_TUNING_CHANGELOG.md
+ M Docs/Scripts/com.golfin.dailyreport.plist
+ M ProjectSettings/ProjectSettings.asset
+UNTRACKED (task folder):
+?? Docs/Specs/Active/surface_classification_ob_rough/ARCHITECT_REVIEW.md
+?? Docs/Specs/Active/surface_classification_ob_rough/CESAR_REJECTION.md
+?? Docs/Specs/Active/surface_classification_ob_rough/HEARTBEAT.log
+?? Docs/Specs/Active/surface_classification_ob_rough/IMPLEMENTER_REPORT.md
+?? Docs/Specs/Active/surface_classification_ob_rough/SELF_REVIEW.md
+?? Docs/Specs/Active/surface_classification_ob_rough/STATUS.md
+=== end baseline ===
+2026-07-29T17:45 fix applied to LoopCameraDirector.cs — chaseCamera.transform.position pivot; BakedZoneClassifierTests 12/12, LoopCameraDirectorTests all pass, RealHoleTerrainTests 60/60; proceeding to re-shoot Stage 1 clip
+
+=== iter-2 kickoff baseline 2026-07-29T15:00:00 ===
+HEAD: a1b3e11b8aed4522d78b4d711912bd297c34b68e
+DIRTY:
+ M Assets/Scripts/Physics/Viewer/LoopCameraDirector.cs
+ M Assets/Scripts/Physics/Runtime/Baked/BakedZoneClassifier.cs
+ M Assets/Scripts/Physics/Tests/BakedZoneClassifierTests.cs
+ M Assets/Scripts/Gameplay/Tests/RealHoleTerrainTests.cs
+ M Assets/Scripts/Physics/Viewer/VersusBot.cs
+ M Docs/Physics/PHYSICS_TUNING_CHANGELOG.md
+=== end baseline ===
+2026-07-29T09:08:07 re-shoot triggered via ObBoundaryCaptureMenu.RecordAfter; awaiting mp4 output (~35s)
+2026-07-29T18:50:00 done, awaiting review — iter-2 camera fix complete; BakedZoneClassifierTests 12/12, RealHoleTerrainTests 60/60, LoopCameraDirectorTests 17/17; STATUS -> READY_FOR_SELF_REVIEW

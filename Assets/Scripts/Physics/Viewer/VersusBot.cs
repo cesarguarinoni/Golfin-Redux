@@ -378,10 +378,12 @@ namespace Golfin.Physics.Viewer
 
         /// <summary>
         /// Probe the surface at a world-XZ position.
-        /// Returns SurfaceType.Fairway as fallback if surface provider is unavailable
-        /// (BakedZoneClassifier.DefaultSurface = Fairway — positions outside all polygons).
-        /// Note: world-bounds OB is NOT detectable via Classify (returns Fairway outside polygons);
-        /// rely on reactive LastOBReason for that case.
+        /// Returns SurfaceType.Fairway as a safe-playable fallback if surface provider is unavailable
+        /// (runtime safety net only; in normal play the provider is always present).
+        /// BakedZoneClassifier.DefaultSurface is now Rough (surface_classification_ob_rough Stage 2):
+        /// positions outside all polygons and inside the terrain grid classify as Rough.
+        /// World-bounds OB IS now detectable via Classify (surface_classification_ob_rough Stage 1):
+        /// points outside the terrain grid return OOB, arming the penalty path.
         /// </summary>
         private SurfaceType ProbeSurface(float worldX, float worldZ)
         {

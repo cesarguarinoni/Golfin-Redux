@@ -192,14 +192,30 @@ namespace Golfin.Physics.Viewer
                 setter.SetCupZoomFocus(pos);
             }
 
-            // OB: set freeze pivot before mode switch.
+            // OB: zero Chase velocity then set freeze pivot.
             if (change.Next == BallState.OB)
             {
+                // Kill carry-over Chase SmoothDamp velocity before entering OBFreeze.
+                // Without this the camera overshoots downward and sinks to/below terrain
+                // (the "bounce-back" Cesar rejection defect). ResetToOrigin also
+                // re-anchors _shotOrigin (the OBFreeze look-at focus) and clears the
+                // OB clamp, giving a clean OBFreeze entry for both in-grid mask-hit OB
+                // and out-of-grid ExitedWorldBounds OOB.
+                if (ctrl != null)
+                    setter.ResetToOrigin(ctrl.LastShotOrigin, ctrl.LastShotLaunchDir);
+
+                // ComputeOBFreezePivot returns traj.finalPosition + obFreezeHeightAboveTerrain
+                // for out-of-grid OOB (where TryFindFirstOBHit has no terrain hit) and
+                // first-OB-hit + height for in-grid mask-hit OB — both give a proper
+                // above-ground vantage point. Using chaseCamera.transform.position (the
+                // prior approach) only added followHeight (1.8 m) and still had carry-over
+                // velocity, causing the underground sink.
                 Vector3 fallback = new Vector3(
                     change.Position.x.ToFloat(),
                     change.Position.y.ToFloat(),
                     change.Position.z.ToFloat());
-                var pivot = ComputeOBFreezePivot(fallback, ctrl?.LastTrajectory);
+                var pivot = ComputeOBFreezePivot(fallback, ctrl?.LastTrajectory,
+                    ctrl?.LastShotOrigin ?? fallback);
                 setter.SetOBFreezePivot(pivot);
             }
 
@@ -270,15 +286,38 @@ namespace Golfin.Physics.Viewer
             return false;
         }
 
-        Vector3 ComputeOBFreezePivot(Vector3 fallback, Trajectory traj)
+        /// <param name="shotOrigin">Ball position at shot start — used by the long-distance
+        /// mid-point pivot to guarantee a decent aerial pitch when the camera looks back at the
+        /// ball reset position (tee).</param>
+        Vector3 ComputeOBFreezePivot(Vector3 fallback, Trajectory traj, Vector3 shotOrigin)
         {
-            TryFindFirstOBHit(traj, fallback, out var hitPos);
-            // Pivot is at OB-hit XZ + height offset Y (regardless of whether it was a hit or fallback).
-            // INTENTIONAL CHANGE (not equivalent to pre-refactor behaviour): when TryFindFirstOBHit
-            // returns false (no OB terrain hit found), hitPos is set to traj.finalPosition rather
-            // than the old 'fallback' value. This is deliberate — the freeze pivot now tracks the
-            // ball's actual computed final position on ExitedWorldBounds or terrain-unmapped OB
-            // terminations, giving a more accurate freeze anchor than the prior fallback did.
+            bool hadHit = TryFindFirstOBHit(traj, fallback, out var hitPos);
+
+            // Long-distance OB: hitPos is far from the shot origin (either ExitedWorldBounds
+            // with no terrain hit, OR an OOB-classified terrain hit at the grid boundary).
+            // In both cases hitPos can be 80–120 m from the tee. Freezing the camera there
+            // with only obFreezeHeightAboveTerrain (5 m) above the hit creates a ~3° downward
+            // pitch — the ObGroundSkirt fills ~40% of the frame.
+            //
+            // Fix: when OB hit is ≥40 m from shot origin, place the pivot at the trajectory
+            // mid-point XZ at 25 m above terrain. Camera at midpoint (~50 m from tee, 25 m up)
+            // produces ~27° downward pitch — well clear of the skirt, clean aerial boundary view.
+            float dx = hitPos.x - shotOrigin.x;
+            float dz = hitPos.z - shotOrigin.z;
+            if (dx * dx + dz * dz >= 40f * 40f)
+            {
+                float midX = (shotOrigin.x + hitPos.x) * 0.5f;
+                float midZ = (shotOrigin.z + hitPos.z) * 0.5f;
+                var   mid  = new Vector3(midX, 0f, midZ);
+                float terrainY = Terrain.activeTerrain != null
+                    ? Terrain.activeTerrain.transform.position.y
+                      + Terrain.activeTerrain.SampleHeight(mid)
+                    : hitPos.y;
+                return new Vector3(midX, terrainY + 25f, midZ);
+            }
+
+            // Short-distance OB (Water entry, mask-hit near tee): freeze at first hit + height
+            // offset. These are close-in shots where the 5 m pivot height gives a natural view.
             return hitPos + Vector3.up * obFreezeHeightAboveTerrain;
         }
 

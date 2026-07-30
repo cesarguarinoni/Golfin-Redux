@@ -1198,13 +1198,13 @@ namespace Golfin.Physics.Viewer
                     }
                     else
                     {
-                        // Reposition ball at drop point. RepositionBallWithLookDir calls
-                        // _shotController.CompleteShot() internally — no need to call it again.
-                        RepositionBallWithLookDir(dropPos, preferredSurfaceTypeValue: null, lookDir: lookDir);
-
-                        // spin_and_shot_shape_wiring: reset player spin selection for next shot.
-                        Golfin.Gameplay.UI.HUD.SpinContext.Reset();
-                        _ballSM.ReArm();
+                        // ball_trail_shot_isolation §9: boundary OB gets a brief hold BEFORE
+                        // repositioning so the red ribbon (set by BallTrailController on →OB)
+                        // renders for a visible beat. Reposition + ReArm happen after the hold;
+                        // ReArm fires →Aiming which clears the ribbon — so the aiming phase is
+                        // always clean. Mirror the water-path coroutine structure rather than
+                        // adding a second synchronous sequence.
+                        StartCoroutine(BoundaryOBHold(dropPos, lookDir));
                     }
                     break;
                 }
@@ -1221,6 +1221,14 @@ namespace Golfin.Physics.Viewer
         // water_splash_fx (Order 349): how long to hold the camera on the water entry so the splash
         // VFX is visible before the ball drops + the camera re-aims to the penalty shot.
         const float WaterOBDwellSeconds = 1.2f;
+
+        // ball_trail_shot_isolation §9: brief pause for boundary OB so the red ribbon renders
+        // for a visible beat before RepositionBallWithLookDir + ReArm wipe it. No camera freeze
+        // needed (unlike water: there is no VFX to frame, and the chase camera naturally holds
+        // near the landing area). 2.0s gives the player a clear read of the red OB feedback;
+        // longer than water (1.2s) because water has dramatic VFX so less time is needed —
+        // boundary OB has no VFX so the red ribbon alone carries the feedback signal.
+        const float BoundaryOBDwellSeconds = 2.0f;
 
         // Freezes the camera at its current transform (it was chasing the ball into the water, so it is
         // already looking at the entry point) for WaterOBDwellSeconds, letting the splash play on
@@ -1246,6 +1254,22 @@ namespace Golfin.Physics.Viewer
             if (chaseCamera != null) chaseCamera.enabled = chaseWasEnabled;
 
             // Normal OB drop + re-aim, deferred until after the splash beat.
+            // RepositionBallWithLookDir calls _shotController.CompleteShot() internally.
+            RepositionBallWithLookDir(dropPos, preferredSurfaceTypeValue: null, lookDir: lookDir);
+            Golfin.Gameplay.UI.HUD.SpinContext.Reset();
+            _ballSM.ReArm();
+        }
+
+        // ball_trail_shot_isolation §9: holds BoundaryOBDwellSeconds so the red ribbon that
+        // BallTrailController painted on →OB is actually visible for a beat, THEN does the
+        // normal OB drop + spin-reset + re-arm (which triggers →Aiming and wipes the ribbon).
+        // Holds BEFORE RepositionBallWithLookDir so the ribbon stays at the OB landing spot
+        // (parented to the ball; repositioning first would drag it to the drop point mid-hold).
+        System.Collections.IEnumerator BoundaryOBHold(Vector3 dropPos, Vector3 lookDir)
+        {
+            yield return new WaitForSeconds(BoundaryOBDwellSeconds);
+
+            // Normal OB drop + re-aim, deferred until after the ribbon beat.
             // RepositionBallWithLookDir calls _shotController.CompleteShot() internally.
             RepositionBallWithLookDir(dropPos, preferredSurfaceTypeValue: null, lookDir: lookDir);
             Golfin.Gameplay.UI.HUD.SpinContext.Reset();

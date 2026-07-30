@@ -1,0 +1,17 @@
+--- Tests run WITH FIX STASHED (BEFORE state, iter-3) ---
+TOTAL=943 PASSED=938 FAILED=2 SKIPPED=3
+
+FAILED:
+1. Golfin.Gameplay.Tests.StaminaLiveWiringTests.T6_FailHard_V9_ThrowsSaveSchemaVersionException
+   Expected: <Golfin.Save.SaveSchemaVersionException>  But was: null
+
+2. Golfin.Gameplay.Tests.StaminaLiveWiringTests.T6_Migration_V3ToV4_ConditionFieldsDefaultSafe
+   Post-migration schemaVersion must be 8 — Expected: 8  But was: 9
+
+SKIPPED (intentional — no BallTrailController involvement):
+3. Golfin.Physics.Tests.HoleCompleteDriverTests.HoleCompleteDriver_OnInCupTerminal_AtPar_ShowsSuccessReplay
+   "Stage C1: HandleShotComplete is now a no-op. widget.Show stripped."
+4. Golfin.Physics.Tests.HoleCompleteDriverTests.HoleCompleteDriver_OnInCupTerminal_FiresMarkHoleComplete
+   "Stage C1: HandleShotComplete no longer fires MarkHoleComplete. HoleCompletionBridge is the sole caller."
+5. Golfin.Physics.Tests.HoleCompleteDriverTests.HoleCompleteDriver_OnInCupTerminal_OverPar_ShowsFailedRetryAndLockedNext
+   "Stage C1: HandleShotComplete is now a no-op. widget.Show stripped."

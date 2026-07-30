@@ -1,0 +1,17 @@
+Summary: Total=943 Passed=938 Failed=2 Skipped=3 Duration=00:00:58.9604490
+
+FAILED:
+  Golfin.Gameplay.Tests.StaminaLiveWiringTests.T6_FailHard_V9_ThrowsSaveSchemaVersionException
+      Expected: <Golfin.Save.SaveSchemaVersionException>
+  But was:  null
+
+  Golfin.Gameplay.Tests.StaminaLiveWiringTests.T6_Migration_V3ToV4_ConditionFieldsDefaultSafe
+      Post-migration schemaVersion must be 8 (gacha_history Stage 1 bumped CurrentSchemaVersion to 8)
+  Expected: 8
+  But was:  9
+
+
+SKIPPED:
+  Golfin.Physics.Tests.HoleCompleteDriverTests.HoleCompleteDriver_OnInCupTerminal_AtPar_ShowsSuccessReplay
+  Golfin.Physics.Tests.HoleCompleteDriverTests.HoleCompleteDriver_OnInCupTerminal_FiresMarkHoleComplete
+  Golfin.Physics.Tests.HoleCompleteDriverTests.HoleCompleteDriver_OnInCupTerminal_OverPar_ShowsFailedRetryAndLockedNext

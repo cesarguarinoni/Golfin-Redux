@@ -1,0 +1,150 @@
+=== iter-1 kickoff baseline 2026-07-29T00:00:00 ===
+HEAD: 9d7d59a779156a61dc3c6525f7c7619cf3b61fb5
+DIRTY (git status --porcelain --untracked-files=all):
+ M Assets/Settings/Mobile_RPAsset.asset
+ M Assets/Settings/UniversalRenderPipelineGlobalSettings.asset
+ M Docs/Scripts/com.golfin.dailyreport.plist
+ M ProjectSettings/ProjectSettings.asset
+?? Docs/Specs/Active/ball_trail_shot_isolation/HEARTBEAT.log
+?? Docs/Specs/Active/ball_trail_shot_isolation/STATUS.md
+===
+
+2026-07-29T00:00:01 activated — reading SPEC.md and source files
+2026-07-29T00:15:00 CORRECTION received: "on iPhone" attribution retracted; device build not required; editor is primary measurement path; H1 observational backing removed
+2026-07-29T00:15:30 Stage 1 diagnostic instrumentation added to BallTrailController.HandleStateChanged (#if UNITY_EDITOR); no compile errors
+2026-07-29T20:26:36 Stage 2 fix applied — production Aiming handler added, Stage 1 diagnostics removed; no compile errors
+2026-07-29T11:44:12 done — IMPLEMENTER_REPORT.md written; all §5 checklist items PASS; awaiting self-review
+
+=== iter-2 kickoff baseline 2026-07-29T22:00:00 ===
+HEAD: 9d7d59a779156a61dc3c6525f7c7619cf3b61fb5
+DIRTY (git status --porcelain --untracked-files=all):
+ M "Assets/Fonts/NotoSansJP-VariableFont_wght SDF.asset"
+ M Assets/Scripts/Physics/Viewer/BallTrailController.cs
+ M Assets/Settings/Mobile_RPAsset.asset
+ M Assets/Settings/UniversalRenderPipelineGlobalSettings.asset
+ M Docs/Scripts/com.golfin.dailyreport.plist
+ M Docs/Specs/Active/ball_trail_shot_isolation/SPEC.md
+ M ProjectSettings/ProjectSettings.asset
+?? Docs/Specs/Active/ball_trail_shot_isolation/HEARTBEAT.log
+?? Docs/Specs/Active/ball_trail_shot_isolation/IMPLEMENTER_REPORT.md
+?? Docs/Specs/Active/ball_trail_shot_isolation/SELF_REVIEW.md
+?? Docs/Specs/Active/ball_trail_shot_isolation/STATUS.md
+===
+
+2026-07-29T22:00:01 iter-2 activated — all evidence failures from SELF_REVIEW_FAIL; code fix unchanged
+2026-07-29T12:31:45 iter-2 resumed — game in real flow (ShellScene+Hole_01_Geo confirmed), firing 5 shots with sleep-1.5-then-screenshot pattern
+2026-07-29T22:00:00 iter-2: real flow ready=True, firing 5-shot capture coroutine
+2026-07-29T23:30:00 iter-2 resumed from compaction: analyzing failed captures, replanning flight capture coroutine
+2026-07-29T15:48:41 MCP transport dropped, waiting 30s to retry
+2026-07-30T01:26:54 IMPLEMENTER_BLOCKED: Unity MCP RequestCallTool dispatcher broken after domain reload — same error 'Failed to invoke RequestCallTool after 10 retries' persists across sessions (confirmed fresh call at session start). 5+ consecutive tool failures. Blocking: flight-phase captures for §5.2, §5.3 OB recolor during flight, §5.4 gold ribbon, §5.6 fresh EditMode test run, §6 BEFORE/AFTER video. Also surfacing evidence design issue: camera perspective means ribbon trail is not visible in standard forward-facing chase-cam shots — programmatic measurement (emitting/posCount) is the correct gate but requires working MCP. Writing IMPLEMENTER_REPORT and setting STATUS.
+2026-07-30T01:30:03 STATUS set to IMPLEMENTER_BLOCKED. IMPLEMENTER_REPORT.md written. Awaiting Cesar to restart Unity Editor to recover MCP.
+
+=== iter-3 kickoff baseline 2026-07-30T00:00:00 ===
+HEAD: 9d7d59a779156a61dc3c6525f7c7619cf3b61fb5
+DIRTY (git status --porcelain --untracked-files=all):
+ M "Assets/Fonts/NotoSansJP-VariableFont_wght SDF.asset"
+ M Assets/Scripts/Physics/Viewer/BallTrailController.cs
+ M Assets/Settings/Mobile_RPAsset.asset
+ M Assets/Settings/UniversalRenderPipelineGlobalSettings.asset
+ M Docs/Scripts/com.golfin.dailyreport.plist
+ M Docs/Specs/Active/ball_trail_shot_isolation/SPEC.md
+ M ProjectSettings/ProjectSettings.asset
+?? Docs/Specs/Active/ball_trail_shot_isolation/HEARTBEAT.log
+?? Docs/Specs/Active/ball_trail_shot_isolation/IMPLEMENTER_REPORT.md
+?? Docs/Specs/Active/ball_trail_shot_isolation/SELF_REVIEW.md
+?? Docs/Specs/Active/ball_trail_shot_isolation/STATUS.md
+?? Docs/Specs/Active/ball_trail_shot_isolation/test_results.txt
+?? Docs/Specs/Active/ball_trail_shot_isolation/test_results_iter2.txt
+===
+
+2026-07-30T00:00:01 iter-3 activated — MCP confirmed working; Cesar restarted Unity Editor; unblocked
+2026-07-30T07:17:15 BEFORE screenshots reviewed — Turn 5 saved-state issue; ribbon not visible from forward cam; running positionCount probe
+2026-07-30T10:45:00 done, awaiting review
+
+=== iter-4 kickoff baseline 2026-07-30T11:00:00 ===
+HEAD: 9d7d59a779156a61dc3c6525f7c7619cf3b61fb5
+DIRTY (git status --porcelain --untracked-files=all):
+ M Assets/Scripts/Physics/Viewer/BallTrailController.cs
+ M Assets/Settings/Mobile_RPAsset.asset
+ M Assets/Settings/UniversalRenderPipelineGlobalSettings.asset
+ M Docs/Scripts/com.golfin.dailyreport.plist
+ M Docs/Specs/Active/ball_trail_shot_isolation/SPEC.md
+ M ProjectSettings/ProjectSettings.asset
+?? Docs/Specs/Active/ball_trail_shot_isolation/HEARTBEAT.log
+?? Docs/Specs/Active/ball_trail_shot_isolation/IMPLEMENTER_REPORT.md
+?? Docs/Specs/Active/ball_trail_shot_isolation/SELF_REVIEW.md
+?? Docs/Specs/Active/ball_trail_shot_isolation/STATUS.md
+?? Docs/Specs/Active/ball_trail_shot_isolation/ob_probe_log.txt
+?? Docs/Specs/Active/ball_trail_shot_isolation/ob_red_log.txt
+?? Docs/Specs/Active/ball_trail_shot_isolation/test_results.txt
+?? Docs/Specs/Active/ball_trail_shot_isolation/test_results_fix_stashed.txt
+?? Docs/Specs/Active/ball_trail_shot_isolation/test_results_iter2.txt
+?? Docs/Specs/Active/ball_trail_shot_isolation/test_results_iter3.txt
+?? Docs/Specs/Active/ball_trail_shot_isolation/trail_probe_log.txt
+?? Docs/Specs/Active/ball_trail_shot_isolation/trail_probe_log_after.txt
+===
+
+2026-07-30T11:00:01 iter-4 activated — addressing SELF_REVIEW ESCALATE: OB real shot, gold real shot, full-res video, matched A/B pair
+2026-07-30T09:17:49 iter-4 resumed from compaction — Turn 2 aiming screenshot shows no ribbon bleed (fix working); capturing gold at-rest and A/B pair
+2026-07-30T09:59:39 iter-4: Turn 11/395yds no-ribbon aiming captured; firing gold flight watcher for §5.4
+2026-07-30T10:15:00 iter-4 resumed from compaction: before_turn08=11yds forward-facing ribbon visible; need AFTER at ~11yds forward-facing; executing §5.4 copy then §5.2 AFTER then §5.3 OB
+2026-07-30T10:20:00 iter-4 resumed from compaction — before_turn08 shows clear gold ribbon bleed; after_22yd shows clean aiming; gold_flight_ribbon_shot is BEFORE-with-stash (not flight). Need §5.4 gold flight capture, §5.3 OB fresh, §6 video
+2026-07-30T11:34:23 iter-4: §6 video attempt — exiting play mode, stashing fix for BEFORE recording
+2026-07-30T15:00:00 iter-4: trail_before_after.mp4 stitched (1170x2532, 46s, 40MB); TrailCaptureSessionRunner.cs deleted; EditMode tests run (943/937/3/3); IMPLEMENTER_REPORT.md written; done, awaiting architect review
+
+=== iter-5 kickoff baseline 2026-07-30T00:00:00 ===
+HEAD: 9d7d59a779156a61dc3c6525f7c7619cf3b61fb5
+DIRTY (git status --porcelain --untracked-files=all):
+ M Assets/Scripts/Physics/Viewer/BallTrailController.cs
+ M Assets/Settings/Mobile_RPAsset.asset
+ M Assets/Settings/UniversalRenderPipelineGlobalSettings.asset
+ M Docs/Scripts/com.golfin.dailyreport.plist
+ M Docs/Specs/Active/ball_trail_shot_isolation/SPEC.md
+ M ProjectSettings/ProjectSettings.asset
+?? Docs/Specs/Active/ball_trail_shot_isolation/HEARTBEAT.log
+?? Docs/Specs/Active/ball_trail_shot_isolation/IMPLEMENTER_REPORT.md
+?? Docs/Specs/Active/ball_trail_shot_isolation/SELF_REVIEW.md
+?? Docs/Specs/Active/ball_trail_shot_isolation/STATUS.md
+?? Docs/Specs/Active/ball_trail_shot_isolation/ob_probe_log.txt
+?? Docs/Specs/Active/ball_trail_shot_isolation/ob_red_log.txt
+?? Docs/Specs/Active/ball_trail_shot_isolation/test_results.txt
+?? Docs/Specs/Active/ball_trail_shot_isolation/test_results_fix_stashed.txt
+?? Docs/Specs/Active/ball_trail_shot_isolation/test_results_iter2.txt
+?? Docs/Specs/Active/ball_trail_shot_isolation/test_results_iter3.txt
+?? Docs/Specs/Active/ball_trail_shot_isolation/trail_probe_log.txt
+?? Docs/Specs/Active/ball_trail_shot_isolation/trail_probe_log_after.txt
+===
+
+2026-07-30T00:00:01 iter-5 activated — implementing §9 BoundaryOBHold in PhysicsLabController.cs; §5.2 matched A/B; §5.3 water+boundary OB evidence; §5.6 test run
+2026-07-30T00:10:00 §9 BoundaryOBHold implemented in PhysicsLabController.cs — BoundaryOBDwellSeconds=0.75f, coroutine holds before reposition; compiled clean
+2026-07-30T13:38:17 iter-5 resumed from compaction — entering play mode with Hole_06_Geo loaded; launching boundary OB capture coroutine
+2026-07-30T14:10:00 iter-5 done — IMPLEMENTER_REPORT.md written, all §5 PASS, setting READY_FOR_SELF_REVIEW
+
+=== iter-6 kickoff baseline 2026-07-30T00:00:00 ===
+HEAD: 9d7d59a779156a61dc3c6525f7c7619cf3b61fb5
+DIRTY (git status --porcelain --untracked-files=all):
+ M Assets/Scripts/Physics/Viewer/BallTrailController.cs
+ M Assets/Scripts/Physics/Viewer/PhysicsLabController.cs
+ M Assets/Settings/Mobile_RPAsset.asset
+ M Assets/Settings/UniversalRenderPipelineGlobalSettings.asset
+ M Docs/Scripts/com.golfin.dailyreport.plist
+ M Docs/Specs/Active/ball_trail_shot_isolation/SPEC.md
+ M ProjectSettings/ProjectSettings.asset
+?? Docs/Specs/Active/ball_trail_shot_isolation/ARCHITECT_REVIEW.md
+?? Docs/Specs/Active/ball_trail_shot_isolation/HEARTBEAT.log
+?? Docs/Specs/Active/ball_trail_shot_isolation/IMPLEMENTER_REPORT.md
+?? Docs/Specs/Active/ball_trail_shot_isolation/REDTEAM_REVIEW.md
+?? Docs/Specs/Active/ball_trail_shot_isolation/SELF_REVIEW.md
+?? Docs/Specs/Active/ball_trail_shot_isolation/STATUS.md
+?? Docs/Specs/Active/ball_trail_shot_isolation/ob_probe_log.txt
+?? Docs/Specs/Active/ball_trail_shot_isolation/ob_red_log.txt
+?? Docs/Specs/Active/ball_trail_shot_isolation/test_results.txt
+?? Docs/Specs/Active/ball_trail_shot_isolation/test_results_fix_stashed.txt
+?? Docs/Specs/Active/ball_trail_shot_isolation/test_results_iter2.txt
+?? Docs/Specs/Active/ball_trail_shot_isolation/test_results_iter3.txt
+?? Docs/Specs/Active/ball_trail_shot_isolation/test_results_iter5.txt
+?? Docs/Specs/Active/ball_trail_shot_isolation/trail_probe_log.txt
+?? Docs/Specs/Active/ball_trail_shot_isolation/trail_probe_log_after.txt
+===
+
+2026-07-30T00:00:01 iter-6 activated — re-shooting §5.2 matched pair on real Hole 1 (PAR 5, non-zero flag, visible terrain)
