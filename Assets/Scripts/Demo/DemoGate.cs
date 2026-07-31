@@ -25,6 +25,7 @@ namespace GolfinRedux.Demo
             ScreenId.Splash,
             ScreenId.Loading,
             ScreenId.Home,
+            ScreenId.HoleSelection, // demo plays via Practice → hole picker (only Hole 1 unlocked)
         };
 
         /// <summary>

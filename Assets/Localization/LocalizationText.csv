@@ -17,6 +17,8 @@ HOME_CURRENCY_LABEL,COINS,コイン
 HOME_USERNAME,USERNAME,ユーザー名
 HOME_MAINTENANCE_TITLE,MAINTENANCE NOTICE,メンテナンス情報
 HOME_MAINTENANCE_BODY,Scheduled server maintenance: 2025/12/31\nThe game will not be available for a short time\nduring maintenance.,定期サーバーメンテナンス: 2025/12/31\nメンテナンス中はゲームをご利用いただけません。
+HOME_DEMO_WELCOME_TITLE,WELCOME TO THE DEMO,デモ版へようこそ
+HOME_DEMO_WELCOME_BODY,Thanks for trying this early GOLFIN preview!\nMuch more is on the way.\nStay tuned for great things to come.,GOLFINデモ版をお試しいただき\nありがとうございます。\n今後の展開にご期待ください！
 HOME_GPS_TITLE,GOLFIN·GPS,ゴルフィン・GPS
 HOME_GPS_SUBTITLE,CHECK-IN WITH GPS,GPSでチェックイン
 HOME_GPS_DESC,EARN MORE POINTS TO POWER UP!,ポイントを稼いでパワーアップ！

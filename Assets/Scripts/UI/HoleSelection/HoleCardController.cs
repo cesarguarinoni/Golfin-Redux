@@ -275,6 +275,11 @@ namespace GolfinRedux.UI.HoleSelection
             {
                 bool hasReward = (rewards != null) && i < rewards.Count;
 
+                // demo_build_slice §3.4: the demo disables the RP / repair-kit / ball economy,
+                // so hide reward slots whose type is off in the demo. No-op in the full game.
+                if (hasReward && GolfinRedux.Demo.DemoGate.IsDemo && !IsRewardTypeEnabledInDemo(rewards[i].type))
+                    hasReward = false;
+
                 if (slots.Length > i && slots[i] != null)
                     slots[i].SetActive(hasReward);
 
@@ -291,6 +296,17 @@ namespace GolfinRedux.UI.HoleSelection
                 {
                     amounts[i].text = $"x{reward.amount}";
                 }
+            }
+        }
+
+        private static bool IsRewardTypeEnabledInDemo(RewardType type)
+        {
+            switch (type)
+            {
+                case RewardType.Points:    return GolfinRedux.Demo.DemoConfig.Instance.PointsEnabled;
+                case RewardType.RepairKit: return GolfinRedux.Demo.DemoConfig.Instance.RepairKitsEnabled;
+                case RewardType.Ball:      return GolfinRedux.Demo.DemoConfig.Instance.BallsEnabled;
+                default:                   return true;
             }
         }
 

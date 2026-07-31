@@ -23,6 +23,8 @@ MonoBehaviour:
   - m_enabled: 1
     m_path: Assets/Scenes/ShellScene.unity
   - m_enabled: 1
+    m_path: Assets/Scenes/Physics/LabScaffold.unity
+  - m_enabled: 1
     m_path: Assets/Golf/Courses/lomond-country-club/Generated/Hole_01_Geo.unity
   m_HasScriptingDefines: 1
   m_ScriptingDefines:

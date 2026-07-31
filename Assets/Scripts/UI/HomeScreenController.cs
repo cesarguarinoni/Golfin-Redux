@@ -256,12 +256,16 @@ namespace GolfinRedux.UI
         private void UpdateNewsContent()
         {
             // TODO: Load news from data/CSV based on _currentNewsIndex
-            // For now, just use localization keys
+            // demo_build_slice §3.4: the demo build shows a welcome message instead of the
+            // maintenance notice. No-op in the full game.
+            bool demo = GolfinRedux.Demo.DemoGate.IsDemo;
+            string titleKey = demo ? "HOME_DEMO_WELCOME_TITLE" : "HOME_MAINTENANCE_TITLE";
+            string bodyKey  = demo ? "HOME_DEMO_WELCOME_BODY"  : "HOME_MAINTENANCE_BODY";
             if (newsTitleText != null)
-                newsTitleText.text = LocalizationManager.Get("HOME_MAINTENANCE_TITLE");
-            
+                newsTitleText.text = LocalizationManager.Get(titleKey);
+
             if (newsBodyText != null)
-                newsBodyText.text = LocalizationManager.Get("HOME_MAINTENANCE_BODY");
+                newsBodyText.text = LocalizationManager.Get(bodyKey);
         }
 
         // ---------- Promo Banner (GPS) ----------

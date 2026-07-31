@@ -259,7 +259,8 @@ namespace Golfin.UI.Modals.Result
             if (!_lastSuccess) return;
             int current = _lastSessionData.HoleNumber;
             _progression.MarkHolePlayed(current);
-            if (current < 18)
+            // demo_build_slice §3.4: finishing a hole in the demo never unlocks another.
+            if (current < 18 && !GolfinRedux.Demo.DemoGate.IsDemo)
                 _progression.UnlockHole(current + 1);
         }
 

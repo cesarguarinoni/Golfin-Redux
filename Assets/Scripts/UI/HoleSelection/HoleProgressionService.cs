@@ -26,6 +26,11 @@ namespace GolfinRedux.UI.HoleSelection
 
         public bool IsUnlocked(int holeNumber)
         {
+            // demo_build_slice §3.4: only Hole 1 is unlocked in the demo, regardless of save
+            // state — and completing it never unlocks another (see HoleCompleteModalController).
+            if (GolfinRedux.Demo.DemoGate.IsDemo)
+                return holeNumber == 1;
+
             // SaveData is the authoritative source when available
             if (SaveDataHost.Instance != null)
             {
