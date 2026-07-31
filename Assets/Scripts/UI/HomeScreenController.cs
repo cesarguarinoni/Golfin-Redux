@@ -99,6 +99,11 @@ namespace GolfinRedux.UI
             // Leaderboard header icon
             if (_leaderboardButton != null)
                 _leaderboardButton.onClick.AddListener(OnLeaderboardClicked);
+
+            // demo_build_slice §3.4: hide the Leaderboard entry in a GOLFIN_DEMO build
+            // (Leaderboard is not on the DemoGate allowlist). No-op in the full game.
+            if (_leaderboardButton != null && !GolfinRedux.Demo.DemoGate.IsScreenAllowed(ScreenId.Leaderboard))
+                _leaderboardButton.gameObject.SetActive(false);
         }
 
         private void OnLeaderboardClicked()
@@ -122,7 +127,13 @@ namespace GolfinRedux.UI
 
             // Top bar: placeholder values for now
             if (rewardPointsText != null)
-                rewardPointsText.text = "0";    // TODO: load real value
+            {
+                // demo_build_slice §3.4: hide Home's RP label when points are disabled in the demo.
+                if (GolfinRedux.Demo.DemoGate.IsDemo && !GolfinRedux.Demo.DemoConfig.Instance.PointsEnabled)
+                    rewardPointsText.gameObject.SetActive(false);
+                else
+                    rewardPointsText.text = "0";    // TODO: load real value
+            }
 
             if (usernameText != null)
                 usernameText.text = "Player";   // TODO: load real value
@@ -382,7 +393,16 @@ namespace GolfinRedux.UI
 
             if (rowRoot == null) return;
 
-            bool show = amount > 0;
+            // demo_build_slice §3.4: suppress reward rows whose type is disabled in the demo
+            // (all three are off, so the next-hole reward area is empty). No-op in the full game.
+            bool typeEnabled = !GolfinRedux.Demo.DemoGate.IsDemo || rewardType switch
+            {
+                RewardType.Points    => GolfinRedux.Demo.DemoConfig.Instance.PointsEnabled,
+                RewardType.RepairKit => GolfinRedux.Demo.DemoConfig.Instance.RepairKitsEnabled,
+                RewardType.Ball      => GolfinRedux.Demo.DemoConfig.Instance.BallsEnabled,
+                _                    => true
+            };
+            bool show = amount > 0 && typeEnabled;
             rowRoot.SetActive(show);
             if (!show) return;
 

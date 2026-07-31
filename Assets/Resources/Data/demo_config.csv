@@ -1,0 +1,7 @@
+key,value
+playable_holes,hole_01
+character_id,char_olivia
+club_ids,club_driver_gf;club_wood_gf;club_iron9_klyro;club_iron7_mireo;club_awedge_fyloe;club_pwedge_royal;club_putter_golfinx
+repair_kits_enabled,false
+balls_enabled,false
+points_enabled,false

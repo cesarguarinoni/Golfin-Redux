@@ -1,16 +1,17 @@
 # Auto detect text files and perform LF normalization
 * text=auto
 
-# Unity YAML — keep LF, use smart merge driver when available
-*.unity text eol=lf
-*.prefab text eol=lf
-*.mat text eol=lf
-*.anim text eol=lf
-*.controller text eol=lf
-*.overrideController text eol=lf
-*.physicsMaterial2D text eol=lf
-*.spriteatlas text eol=lf
-*.renderTexture text eol=lf
+# Unity YAML — keep LF + UnityYAMLMerge smart merge driver (configured per-machine in .git/config; see Docs/Specs/Queued/demo/DEMO_BUILD_PLAN.md §2.2)
+*.unity merge=unityyamlmerge text eol=lf
+*.prefab merge=unityyamlmerge text eol=lf
+*.asset merge=unityyamlmerge text eol=lf
+*.mat merge=unityyamlmerge text eol=lf
+*.anim merge=unityyamlmerge text eol=lf
+*.controller merge=unityyamlmerge text eol=lf
+*.overrideController merge=unityyamlmerge text eol=lf
+*.physicsMaterial2D merge=unityyamlmerge text eol=lf
+*.spriteatlas merge=unityyamlmerge text eol=lf
+*.renderTexture merge=unityyamlmerge text eol=lf
 
 # TMP Font Assets — binary (contain embedded glyph atlas; CRLF conversion breaks them)
 Assets/Fonts/*.asset binary

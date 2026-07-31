@@ -396,6 +396,18 @@ namespace GolfinRedux.UI.ModeSelect
         {
             if (mode == null) return;
 
+            // demo_build_slice §3.4: hide the RP economy (entry fee + rewards) on mode cards when
+            // points are disabled in the demo. Play still works off the hidden RP balance. No-op in
+            // the full game.
+            if (GolfinRedux.Demo.DemoGate.IsDemo && !GolfinRedux.Demo.DemoConfig.Instance.PointsEnabled)
+            {
+                if (rewardSlot1 != null)    rewardSlot1.SetActive(false);
+                if (rewardSlot2 != null)    rewardSlot2.SetActive(false);
+                if (rewardSlot1Exp != null) rewardSlot1Exp.SetActive(false);
+                if (rewardSlot2Exp != null) rewardSlot2Exp.SetActive(false);
+                return;
+            }
+
             bool hasFee     = mode.entryFee > 0;
             bool hasRewards = mode.rewards  > 0;
             string feeText  = hasFee ? $"x{mode.entryFee}" : "NO ENTRY FEE";

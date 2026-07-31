@@ -191,6 +191,40 @@ public class ClubManager : MonoBehaviour
             if (fixedUp > 0) { PersistOwnedClubs(); Debug.LogWarning($"[ClubManager] Bag-safety repair: re-equipped {fixedUp} default clubs."); }
         }
 
+        // demo_build_slice §3.4 soft-gating: guarantee the exact 7-club demo bag (one per type),
+        // all owned + in the equipped bag (slot 1; a bag holds up to 8). Mirrors the wedge-backfill
+        // grant+equip pattern above. No-op in the full game.
+        if (GolfinRedux.Demo.DemoGate.IsDemo)
+        {
+            int demoFixed = 0;
+            foreach (var clubId in GolfinRedux.Demo.DemoConfig.Instance.ClubIds)
+            {
+                var template = db.GetClub(clubId);
+                if (template == null)
+                {
+                    Debug.LogWarning($"[ClubManager] Demo club '{clubId}' not found in DB — skipped.");
+                    continue;
+                }
+                if (!ownedClubs.ContainsKey(clubId))
+                {
+                    var spec = BuildSpec(template);
+                    var persisted = ClubOwnershipService.MakePersisted(spec, 1); // grant + equip to bag 1
+                    save.ownedClubs.Add(persisted);
+                    ownedClubs[clubId] = ToRuntime(persisted);
+                    demoFixed++;
+                }
+                else if (ownedClubs[clubId].equippedBagSlot != 1)
+                {
+                    ownedClubs[clubId].equippedBagSlot = 1;
+                    var pc = save.ownedClubs.Find(c => c.clubId == clubId);
+                    if (pc != null) pc.equippedBagSlot = 1;
+                    demoFixed++;
+                }
+            }
+            if (demoFixed > 0) host.MarkDirty();
+            Debug.Log($"[ClubManager] Demo: ensured {GolfinRedux.Demo.DemoConfig.Instance.ClubIds.Length} clubs owned + in bag 1 ({demoFixed} changed).");
+        }
+
         Debug.Log($"[ClubManager] Loaded {ownedClubs.Count} owned clubs from save (schema v{save.schemaVersion}).");
     }
 

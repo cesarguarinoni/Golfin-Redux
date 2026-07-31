@@ -1,5 +1,6 @@
 using UnityEngine;
 using Golfin.Audio;
+using GolfinRedux.Demo;
 
 namespace GolfinRedux.UI
 {
@@ -127,8 +128,16 @@ namespace GolfinRedux.UI
         /// </summary>
         public void ShowScreen(ScreenId screenId, bool instant = false)
         {
+            // Demo gate (demo_build_slice §3.2): deny-by-default screen allowlist.
+            // No-op outside a GOLFIN_DEMO build.
+            if (!DemoGate.IsScreenAllowed(screenId))
+            {
+                Debug.Log($"[DemoGate] blocked {screenId}");
+                return;
+            }
+
             Debug.Log($"[ScreenManager] ShowScreen called: {screenId} (current: {_currentScreen}, instant: {instant})");
-            
+
             if (_currentScreen == screenId && !instant)
             {
                 Debug.Log($"[ScreenManager] Already on {screenId}, ignoring");

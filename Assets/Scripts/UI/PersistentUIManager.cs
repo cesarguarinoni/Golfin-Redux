@@ -181,6 +181,25 @@ namespace Golfin.UI
             ShowTopBar(true);
             SetTopBarChromeVisible(true);
             ShowBottomNav(true);
+            ApplyDemoTopBarTrim();
+        }
+
+        /// <summary>
+        /// demo_build_slice §3.4 soft-gating: hide the top-bar Reward Points chrome when RP is
+        /// disabled in the demo. Called AFTER SetTopBarChromeVisible(true), which re-shows every
+        /// top-bar child, so this must re-hide it. Idempotent. No-op in the full game.
+        /// </summary>
+        private void ApplyDemoTopBarTrim()
+        {
+            if (!GolfinRedux.Demo.DemoGate.IsDemo) return;
+            if (GolfinRedux.Demo.DemoConfig.Instance.PointsEnabled) return;
+            if (rewardPointsText != null) rewardPointsText.gameObject.SetActive(false);
+            if (rewardPointsIcon != null) rewardPointsIcon.gameObject.SetActive(false);
+            if (topBarPanel != null)
+            {
+                var pill = topBarPanel.transform.Find("RewardPointsBackground");
+                if (pill != null) pill.gameObject.SetActive(false);
+            }
         }
 
         /// <summary>
@@ -252,6 +271,29 @@ namespace Golfin.UI
 
             if (charactersButton != null)
                 charactersButton.onClick.AddListener(() => NavigateTo(Screen.Characters));
+
+            ApplyDemoNavTrim();
+        }
+
+        /// <summary>
+        /// demo_build_slice §3.4: in a GOLFIN_DEMO build, hide every bottom-nav button
+        /// whose target screen is blocked by DemoGate — a dead-end locked button reads
+        /// as an unfinished build under guideline 2.1. No-op in the full game.
+        /// Home stays (its target is allowlisted).
+        /// </summary>
+        private void ApplyDemoNavTrim()
+        {
+            if (!GolfinRedux.Demo.DemoGate.IsDemo) return;
+            HideIfScreenBlocked(gachaButton,      GolfinRedux.UI.ScreenId.GeneralShop);
+            HideIfScreenBlocked(mainPlayButton,   GolfinRedux.UI.ScreenId.ModeSelection);
+            HideIfScreenBlocked(inventoryButton,  GolfinRedux.UI.ScreenId.Inventory);
+            HideIfScreenBlocked(charactersButton, GolfinRedux.UI.ScreenId.Roster);
+        }
+
+        private static void HideIfScreenBlocked(Button button, GolfinRedux.UI.ScreenId target)
+        {
+            if (button != null && !GolfinRedux.Demo.DemoGate.IsScreenAllowed(target))
+                button.gameObject.SetActive(false);
         }
 
         public void SetRewardPoints(int points)

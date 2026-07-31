@@ -195,6 +195,24 @@ namespace Golfin.Roster
                 Debug.LogWarning("[CharacterManager] SaveDataHost.Instance is null — character progress NOT loaded from save.");
             }
 
+            // demo_build_slice §3.4 soft-gating: force the demo character selected. The Roster
+            // screen is locked in the demo, so this is what Home + gameplay use. No-op in the full game.
+            if (GolfinRedux.Demo.DemoGate.IsDemo)
+            {
+                var demoChar = GolfinRedux.Demo.DemoConfig.Instance.CharacterId;
+                if (!string.IsNullOrEmpty(demoChar) && ownedCharacters.ContainsKey(demoChar))
+                {
+                    foreach (var kv in ownedCharacters) kv.Value.isSelected = false;
+                    selectedCharacterId = demoChar;
+                    ownedCharacters[demoChar].isSelected = true;
+                    Debug.Log($"[CharacterManager] Demo: forced selection to '{demoChar}'.");
+                }
+                else
+                {
+                    Debug.LogWarning($"[CharacterManager] Demo character '{demoChar}' not found — keeping default selection.");
+                }
+            }
+
             OnRosterChanged?.Invoke();
         }
 

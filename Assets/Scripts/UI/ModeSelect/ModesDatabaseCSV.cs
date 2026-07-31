@@ -31,6 +31,23 @@ namespace GolfinRedux.UI.ModeSelect
             DontDestroyOnLoad(gameObject);
 
             LoadFromCSV();
+            ApplyDemoLock();
+        }
+
+        /// <summary>
+        /// demo_build_slice §3.4: close every mode except Practice, using the SAME 'locked'
+        /// Coming-Soon treatment Driving Range / Missions already ship with. The carousel
+        /// auto-centers on the first unlocked mode, so this leaves Practice front-and-center as
+        /// the only playable mode. Runs after both the CSV and fallback paths. No-op in the full game.
+        /// </summary>
+        private void ApplyDemoLock()
+        {
+            if (!GolfinRedux.Demo.DemoGate.IsDemo) return;
+            int closed = 0;
+            foreach (var m in _modes)
+                if (m.id != "practice" && !m.locked) { m.locked = true; closed++; }
+            if (closed > 0)
+                Debug.Log($"[ModesDatabaseCSV] Demo: closed {closed} non-practice mode(s) — Practice only.");
         }
 
         private void LoadFromCSV()
