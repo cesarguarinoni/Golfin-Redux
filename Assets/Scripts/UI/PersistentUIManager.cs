@@ -149,11 +149,13 @@ namespace Golfin.UI
             var pill = Instantiate(rp.gameObject, topbar);
             pill.name = "TicketCountBackground";
             var prt = pill.GetComponent<RectTransform>();
-            prt.anchorMin = new Vector2(0f, 0.5f);
-            prt.anchorMax = new Vector2(0f, 0.5f);
+            // Center-anchor (0.5) so the ticket cluster stays centered as the top bar
+            // stretches full-width on wider devices. Offset = designX(575) - barCenter(589).
+            prt.anchorMin = new Vector2(0.5f, 0.5f);
+            prt.anchorMax = new Vector2(0.5f, 0.5f);
             prt.pivot     = new Vector2(0.5f, 0.5f);
             prt.sizeDelta = new Vector2(138f, 54f);
-            prt.anchoredPosition = new Vector2(575f, 0f);   // left end tucks under the ticket, right ~8px from Shop+
+            prt.anchoredPosition = new Vector2(575f - 589f, 0f);   // -14: left end tucks under the ticket, right ~8px from Shop+
 
             // Render order: pill behind, then ticket icon + count + shop draw on top of it.
             pill.transform.SetAsLastSibling();
