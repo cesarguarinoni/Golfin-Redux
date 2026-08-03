@@ -71,15 +71,24 @@ namespace GolfinRedux.BuildEditor
         {
             int buildNumber = GitRevCountOrThrow();
 
-            // Guard: never regress below what App Store Connect already has.
-            int lastUploaded = ReadLastUploaded();
-            if (buildNumber <= lastUploaded)
+            // Guard: never regress below what App Store Connect already has — but ONLY for
+            // store-bound builds, since only they can burn an upload slot. Development /
+            // iteration builds (Dev-iOS / Dev-Android set BuildOptions.Development) skip the
+            // refuse-to-build check, so Cesar can rebuild and test at the same commit after a
+            // TestFlight upload without inventing a dummy commit. They STILL bake the build
+            // number normally below — only the refusal is skipped.
+            var buildOptions = report != null ? report.summary.options : BuildOptions.None;
+            if (GuardApplies(buildOptions))
             {
-                throw new BuildFailedException(
-                    $"{Tag} REFUSING TO BUILD: computed build number {buildNumber} <= last-uploaded {lastUploaded}. " +
-                    $"Build numbers must strictly increase or App Store Connect rejects the upload. " +
-                    $"Commit at least one change (git rev-list --count HEAD must advance) before building again. " +
-                    $"(last-uploaded is recorded by GOLFIN/Build/Mark Current Commit As Uploaded in {GuardFileRel}.)");
+                int lastUploaded = ReadLastUploaded();
+                if (buildNumber <= lastUploaded)
+                {
+                    throw new BuildFailedException(
+                        $"{Tag} REFUSING TO BUILD: computed build number {buildNumber} <= last-uploaded {lastUploaded}. " +
+                        $"Build numbers must strictly increase or App Store Connect rejects the upload. " +
+                        $"Commit at least one change (git rev-list --count HEAD must advance) before building again. " +
+                        $"(last-uploaded is recorded by GOLFIN/Build/Mark Current Commit As Uploaded in {GuardFileRel}.)");
+                }
             }
 
             // Write the build number into BOTH platforms. Snapshot first so postprocess
@@ -91,6 +100,14 @@ namespace GolfinRedux.BuildEditor
             PlayerSettings.iOS.buildNumber = buildNumber.ToString(CultureInfo.InvariantCulture);
             PlayerSettings.Android.bundleVersionCode = buildNumber;
 
+            // OnPostprocessBuild fires on SUCCESS only, so a FAILED build would otherwise leave
+            // the modified fields on disk (the exact churn the restore exists to prevent, in the
+            // situation where builds get repeated most). Schedule a safety net: EditorApplication.
+            // delayCall fires once the main thread frees, which for a synchronous BuildPlayer is
+            // after it returns — success OR failure. RestoreFields is idempotent, so whichever of
+            // the two runs first wins and the other no-ops.
+            EditorApplication.delayCall += RestoreFieldsSafetyNet;
+
             // Bake the display string. bundleVersion is read AFTER the assignments so it
             // reflects the manual marketing version already in PlayerSettings.
             string stamp = ComputeStampString(buildNumber);
@@ -101,19 +118,37 @@ namespace GolfinRedux.BuildEditor
 
         public void OnPostprocessBuild(BuildReport report)
         {
-            if (!_fieldsModified) return;
+            // Success path — fires promptly. Idempotent with the delayCall safety net.
+            RestoreFields();
+        }
 
-            // Restore ONLY the two fields we changed, back to their exact pre-build
-            // values, then persist — so ProjectSettings.asset generates no merge noise.
-            // The built player already has the number baked in; this only affects the
-            // working copy on disk.
+        static void RestoreFieldsSafetyNet()
+        {
+            EditorApplication.delayCall -= RestoreFieldsSafetyNet;
+            RestoreFields();
+        }
+
+        // Restore ONLY the two fields we changed, back to their exact captured pre-build
+        // values, then persist — so ProjectSettings.asset generates no merge noise. This is a
+        // NARROW restore on purpose: a wholesale revert of ProjectSettings.asset would clobber
+        // incrementalIl2cppBuild (committed in 35beb2723) and other live settings. The built
+        // player already has the number baked in; this only affects the working copy on disk.
+        // Guarded by _fieldsModified, so it is idempotent (safe to call from both the
+        // postprocess hook and the delayCall net).
+        static void RestoreFields()
+        {
+            if (!_fieldsModified) return;
             PlayerSettings.iOS.buildNumber = _prevIosBuildNumber;
             PlayerSettings.Android.bundleVersionCode = _prevAndroidBundleVersionCode;
             AssetDatabase.SaveAssets();
-
             _fieldsModified = false;
-            Debug.Log($"{Tag} postprocess: restored ProjectSettings buildNumber fields (no churn).");
+            Debug.Log($"{Tag} restored ProjectSettings buildNumber fields (no churn).");
         }
+
+        // The upload guard only protects App Store Connect slots, which only store-bound
+        // (non-development) builds can burn. Exposed internal for the verification harness.
+        internal static bool GuardApplies(BuildOptions options)
+            => !options.HasFlag(BuildOptions.Development);
 
         // ─────────────────────────────────────────────────────────────────────
         //  Editor play-mode: keep a live stamp so play-mode verification is real.
@@ -180,9 +215,17 @@ namespace GolfinRedux.BuildEditor
             string bundleVersion = PlayerSettings.bundleVersion;      // manual SemVer, e.g. "0.1.0"
             string shortSha = GitOutput("rev-parse --short=7 HEAD")?.Trim() ?? "nogit";
 
+            // `git diff HEAD` reports TRACKED changes only, so a brand-new uncommitted .cs
+            // (routine during implementation) would leave the tree looking clean and drop the
+            // "+diffHash". Fold untracked files in too. Keep the diff itself in the hash input
+            // so tracked-file CONTENT edits still register (porcelain alone would collapse every
+            // modification to " M path" and lose that). --exclude-standard respects .gitignore,
+            // so the generated (gitignored) build_stamp.txt never counts itself as dirt.
             string diff = GitOutput("diff HEAD") ?? string.Empty;
-            bool dirty = diff.Length > 0;
-            string diffHash = dirty ? Hash4(diff) : null;
+            string untracked = GitOutput("ls-files --others --exclude-standard") ?? string.Empty;
+            string dirtyInput = diff + untracked;
+            bool dirty = dirtyInput.Length > 0;
+            string diffHash = dirty ? Hash4(dirtyInput) : null;
 
             // BUILD time, LOCAL (JST on Cesar's machine) — the anti-staleness field.
             string timestamp = DateTime.Now.ToString("MM-dd HH:mm", CultureInfo.InvariantCulture);
