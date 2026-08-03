@@ -70,7 +70,21 @@ namespace Golfin.Gameplay.Input
         private void HandlePressStarted(InputAction.CallbackContext _)
         {
             _isTouching = true;
-            _origin     = _currentPosition;
+
+            // Sample the LIVE position at press time — do NOT reuse _currentPosition,
+            // which is only written in Update() and therefore holds the previous frame's
+            // value. With <Mouse>/position that is harmless (the cursor streams while
+            // unpressed, so the cached value is already correct). With
+            // <Touchscreen>/primaryTouch/position there is no position before the finger
+            // lands — the control holds the last-released touch's position (or 0,0 at
+            // launch) — so the cached value is stale and every current-origin delta would
+            // carry a spurious offset. The press control and the position control update
+            // in the same input event, so ReadValue here returns the true landing point.
+            var pos = _touchPositionAction.ReadValue<Vector2>();
+            _origin          = pos;
+            _currentPosition = pos;   // keep same-frame TouchPositionPx consumers correct (zero delta at press)
+            _prevPosition    = pos;   // avoid a spurious velocity spike on the first Update() after press
+
             Array.Clear(_velBuf, 0, VelBufSize);
             _velHead          = 0;
             _smoothedVelocity = Vector2.zero;

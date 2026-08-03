@@ -908,13 +908,40 @@ namespace Golfin.Physics.Viewer
             _prevBallPlaying = isPlaying;
             if (isPlaying) return;
 
+            // Read the active pointer: touch on device, mouse in the editor. Mouse.current
+            // is null on a physical iPhone, so the old mouse-only path returned here every
+            // frame and the camera orbit was dead on device (worked in-editor with a mouse).
+            // Prefer an active touch; fall back to the mouse. The over-UI gate uses the
+            // touch's fingerId so dragging ON the club handle still suppresses the orbit.
             var mouse = Mouse.current;
-            if (mouse == null) return;
+            var touch = Touchscreen.current != null ? Touchscreen.current.primaryTouch : null;
+            bool touchActive = touch != null && touch.press.isPressed;
 
-            bool pressing = mouse.leftButton.isPressed;
+            if (!touchActive && mouse == null)
+            {
+                _orbitDragActive = false;
+                return;
+            }
+
+            bool  pressing;
+            float dx;
+            bool  overUI;
+            if (touchActive)
+            {
+                pressing = true;
+                dx       = touch.delta.x.ReadValue();
+                overUI   = EventSystem.current != null &&
+                           EventSystem.current.IsPointerOverGameObject(touch.touchId.ReadValue());
+            }
+            else
+            {
+                pressing = mouse.leftButton.isPressed;
+                dx       = mouse.delta.x.ReadValue();
+                overUI   = EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
+            }
+
             if (pressing && !_orbitDragActive)
             {
-                bool overUI = EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
                 if (overUI) return;
                 _orbitDragActive = true;
             }
@@ -924,7 +951,6 @@ namespace Golfin.Physics.Viewer
                 return;
             }
 
-            float dx = mouse.delta.x.ReadValue();
             if (Mathf.Abs(dx) < 0.5f) return;
 
             _cameraYaw += dx * _orbitSensitivity * Mathf.Deg2Rad;
