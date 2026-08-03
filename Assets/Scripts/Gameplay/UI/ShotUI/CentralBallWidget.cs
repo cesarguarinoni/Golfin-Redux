@@ -23,6 +23,14 @@ namespace Golfin.Gameplay.UI.ShotUI
         [SerializeField] private RectTransform  _rect;
         [SerializeField] private ShotController _shotController;
 
+        [Header("Fallback sprite")]
+        // Direct serialized reference to the default ball thumbnail. Unlike Resources.Load,
+        // a serialized asset reference is GUARANTEED to be included in the player build and
+        // cannot fail to resolve on device. This mirrors BallButtonWidget._defaultThumbnail —
+        // the selector survives a null BallContext because it has this direct fallback, while
+        // this widget previously relied only on Resources.Load (which can be absent on device).
+        [SerializeField] private Sprite _defaultThumbnail;
+
         [Header("Debug")]
         [SerializeField] private DebugShotPanel _debugPanel;
 
@@ -78,8 +86,13 @@ namespace Golfin.Gameplay.UI.ShotUI
             // When BallContext has no thumbnail (e.g. BallManager not present in lab scenes),
             // fall back to the default GOLFIN thumbnail from Resources — same fallback logic
             // as BallButtonWidget.
+            // Prefer BallContext data; fall back to a directly-serialized default sprite, then
+            // (only if that is unwired) Resources. The serialized _defaultThumbnail is guaranteed
+            // in the player build and can't fail to resolve on device — same pattern as the
+            // BallButtonWidget selector.
             Sprite sprite = BallContext.SelectedThumbnail
                 ?? BallContext.SelectedFullSprite
+                ?? _defaultThumbnail
                 ?? Resources.Load<Sprite>("Balls/Thumbnails/S_Controls_Ball_GOLFIN");
             _image.sprite  = sprite;
             _image.enabled = sprite != null;
