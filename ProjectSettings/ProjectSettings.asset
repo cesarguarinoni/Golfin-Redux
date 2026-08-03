@@ -864,7 +864,8 @@ PlayerSettings:
   il2cppCodeGeneration: {}
   il2cppStacktraceInformation: {}
   managedStrippingLevel: {}
-  incrementalIl2cppBuild: {}
+  incrementalIl2cppBuild:
+    iPhone: 1
   suppressCommonWarnings: 1
   allowUnsafeCode: 0
   useDeterministicCompilation: 1
