@@ -1,11 +1,22 @@
 # GOLFIN Redux — Demo Build Plan
 
-**Status:** SPEC_READY — nothing open, ready to implement · **Author:** Claude (Architect) · **Rev 5, 2026-07-30**
+**Status:** 🟡 **IMPLEMENTED, NOT DEVICE-TESTED** · **Author:** Claude (Architect) · **Rev 6, 2026-08-03**
+
+> 🔴 **VERIFICATION STATE — read before writing anything into this doc.**
+> Code landed the implementation in `c7def999a` + `addfa34f0` (build profiles, screen gate, scene stripper, build script, soft-gating, playable Hole 1 flow, welcome banner, splash gate, showcase recorder).
+> **Cesar has NOT run this on a device. No device verification of any kind has happened.** As of 2026-08-03 the on-device pass is still outstanding and is Cesar's to run.
+> **Do not write, imply, or infer that Cesar tested, checked, saw, or confirmed anything on hardware.** If a claim about where Cesar observed something is not in his own words in the conversation, it does not go in this document — not as a premise, not as background, not as "presumably". This project has already burned iterations on exactly this fabrication (see the provenance scar in `AI_CONTEXT.md`), and it recurred here.
+> What *is* verified: Editor-side behaviour per §3.6. What is *not*: everything in the ❌ rows of the §3.6 table — binary size, MCP assembly actually stripped from the player, IL2CPP behaviour, iOS safe area, portrait lock.
+
 **Platform priority:** 📱 **iPhone first, Android second. This Mac is the build machine.**
 **Verified against:** `C:\Users\cesar\GolfinRedux` @ Unity **6000.3.9f1** (Rev 2) · re-verified on the Mac `/Users/cesar/Documents/GolfinRedux` @ **6000.3.9f1** (Rev 3–4)
 **Implementer:** Claude Code
 **Notion:** `demo_build_slice` (Order 426) · prereq `unity_yaml_merge_driver` (429) · `unity_mcp_define_strip` (428) is now **executed inside §4 step 2+3**
 
+> **Rev 6 changelog (2026-08-03):**
+> - **Status → IMPLEMENTED, NOT DEVICE-TESTED.** Implementation landed (`c7def999a`, `addfa34f0`); the device pass has not happened.
+> - 🔴 **Provenance guard added at the top of this doc**, after Cesar flagged an Architect assumption that he had already device-tested. He had not. Same failure shape as the `ball_trail_shot_isolation` scar.
+>
 > **Rev 5 changelog (2026-07-30) — "can I test this in the Editor first?":**
 > - **New §3.6: Editor testing before any build.** Most of the demo *is* testable in play mode — set the active build profile to `iOS-Demo` and press Play. Full per-mechanism table of what the Editor does and does not prove.
 > - 🔴 **Latent NRE caught in §3.3.** `IProcessSceneWithReport.OnProcessScene` also fires when entering play mode, and **`report` is `null` in that case** (Unity 6000.0 docs). Any implementation that reads `report.summary.*` to check the build target crashes on the first Play. Use `BuildPipeline.isBuildingPlayer` — Unity's own documented discriminator. Guard added to §3.6.
