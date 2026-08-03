@@ -238,3 +238,12 @@ Docs/Specs/Completed/general_shop_ui/screenshots/
 # .gitignore never untracks, so every screenshot already committed stays committed.
 # =========================
 Docs/Specs/**/screenshots/
+
+# =========================
+# build_version_stamp — the anti-staleness build stamp is GENERATED at build time
+# (and on every editor play-mode enter) by BuildStampGenerator, then read back at
+# runtime from Resources. It changes on every build by design, so it is never
+# tracked — mirrors the ProjectSettings restore that keeps buildNumber out of git.
+# =========================
+Assets/Resources/Data/build_stamp.txt
+Assets/Resources/Data/build_stamp.txt.meta

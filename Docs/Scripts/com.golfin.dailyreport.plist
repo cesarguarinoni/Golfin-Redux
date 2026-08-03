@@ -33,12 +33,12 @@
     <key>WorkingDirectory</key>
     <string>/Users/cesar/Documents/GolfinRedux</string>
 
-    <!-- Poll every 10 min (600s). The script gates the actual send to >= 20:30 and
+    <!-- Poll every 2 min (120s). The script gates the actual send to >= 20:30 and
          dedupes so only the first evening poll posts (so the report lands within
-         ~10 min of 20:30). Daytime/weekend polls return silently — no log spam.
+         ~2 min of 20:30). Daytime/weekend polls return silently — no log spam.
          See the header note. -->
     <key>StartInterval</key>
-    <integer>600</integer>
+    <integer>120</integer>
 
     <key>EnvironmentVariables</key>
     <dict>

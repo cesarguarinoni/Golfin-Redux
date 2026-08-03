@@ -23,6 +23,7 @@ MonoBehaviour:
   m_HasScriptingDefines: 1
   m_ScriptingDefines:
   - UNITY_MCP_READY
+  - GOLFIN_TESTBUILD
   m_PlayerSettingsYaml:
     m_Settings: []
   references:
