@@ -7,7 +7,7 @@
 
 ## ▶ CURRENT STATE — update this block at every session boundary
 
-- **Last updated:** 2026-08-04 15:28 JST (Architect — **DEVICE ERA.** Game builds+runs on physical iPhone since 2026-07-27; signing SOLVED (do not re-litigate); on-device smoke found 7 issues. Fixed since: `centralball_device_invisible` (device-verified `1a4ad15ca`), `hole6_tree_collision_profiles` (`c1d38e280`). Shipped: `build_version_stamp` (3 defects → hardening kickoff below). **iOS Simulator three-tier verification loop VALIDATED** — canonical doc `Docs/Pipeline/IOS_SIMULATOR_LOOP.md`; standing rules: never wipe the seeded DerivedData, never `BuildPipeline.BuildPlayer` via MCP script-execute. Full story: `Docs/Reports/2026-08-04_ios_simulator_build_blocker.md` §§10–13 + `Docs/AI_CONTEXT.md` top block. **OPEN = the PENDING KICKOFFS below** (5 smoke issues + build-stamp hardening + housekeeping) plus `putter_aim_blue_line` (413, SPEC_READY in `Specs/Active/`, awaiting Cesar go) and a device pass on `demo_build_slice` (426). Everything below this bullet predates the device era and is historical.)
+- **Last updated:** 2026-08-05 05:57 JST (Architect — **DEVICE ERA.** Game builds+runs on physical iPhone since 2026-07-27; signing SOLVED (do not re-litigate); on-device smoke found 7 issues. Fixed since: `centralball_device_invisible` (device-verified `1a4ad15ca`), `hole6_tree_collision_profiles` (`c1d38e280`). Shipped: `build_version_stamp` (3 defects → hardening kickoff below). **iOS Simulator three-tier verification loop VALIDATED** — canonical doc `Docs/Pipeline/IOS_SIMULATOR_LOOP.md`; standing rules: never wipe the seeded DerivedData, never `BuildPipeline.BuildPlayer` via MCP script-execute. Full story: `Docs/Reports/2026-08-04_ios_simulator_build_blocker.md` §§10–13 + `Docs/AI_CONTEXT.md` top block. **OPEN = the PENDING KICKOFFS below** (6 smoke issues + build-stamp hardening + housekeeping; K9 `ui_frame_pacing` smoke #8 added 2026-08-05 — root cause source-verified: no runtime `Application.targetFrameRate`, mobile default is 30 fps) plus `putter_aim_blue_line` (413, SPEC_READY in `Specs/Active/`, awaiting Cesar go) and a device pass on `demo_build_slice` (426). Everything below this bullet predates the device era and is historical.)
 
 - **Last updated:** 2026-07-02 (Architect — `1v1_result_rewards_display` (347) DONE. NEXT-at-the-time = `stamina_boost_shop` (517) design pass. STALE — superseded by the device-era bullet above.)
 - Older narrative bullets (2026-06-11 → 2026-06-24): preserved in git history of this file — all tasks named in them are closed in `Docs/Specs/Completed/`. Trust `Docs/Specs/Active/` + the AI_CONTEXT headline, not old bullets.
@@ -21,6 +21,7 @@ Paste any block below into Code as-is. Produced by the Architect during the 2026
 **Sequencing constraints:**
 - `nav_bar_edge_gaps` BEFORE `safe_area_top_bar` (same two bars, same scene; #1's outcome determines the bars' final geometry). Back-to-back isolated commits, no other ShellScene work interleaved.
 - `camera_drag_touch_origin` verification is DEVICE-ONLY (sim false-passes it). `tree_wind_device` verification is DEVICE-ONLY (sim false-passes it — measured, report §11). `arrow_speed_retune` and `safe_area_top_bar` are editor/sim-verifiable.
+- `ui_frame_pacing` (K9) should LAND before `arrow_speed_retune` (K6) LOCKS — 60 fps changes perceived arrow smoothness/speed; Cesar should calibrate at shipping frame pacing. K9 feel-verify is DEVICE-ONLY (perf class — sim renders at the Mac's refresh and false-passes smoothness).
 
 ### K1 · camera_drag_touch_origin (smoke #3) — Surgical
 
@@ -500,6 +501,66 @@ Housekeeping addendum — four bounded items, no investigation:
 
 4. For the record, no action: the §13 orphan hypothesis is logged in
    AI_CONTEXT as the first cheap check on recurrence. Investigation closed.
+```
+
+### K9 · ui_frame_pacing (smoke #8) — Surgical · LAND BEFORE K6 LOCKS
+
+```
+Task: ui_frame_pacing — UI animations feel choppy on the physical iPhone,
+mode-slide carousel especially; smooth in editor.
+
+ROOT CAUSE (source-verified, Architect 2026-08-05):
+NOTHING in runtime code sets Application.targetFrameRate — all 18 repo hits
+are Editor capture tools (MapViewCaptureBotMenu, BotVideoRecorder,
+AudioFidelityCapture, the demo recorders). Unity's MOBILE default when unset
+is 30 fps. The whole game renders at 30 on device; the editor runs at 60+.
+The carousel slide (ModeCarouselController.LerpToTargetLayout, 0.22 s cubic
+ease-out on unscaledDeltaTime) gets ~6–7 rendered frames per slide at 30 fps,
+with the largest positional steps front-loaded by the ease-out — that IS the
+choppiness. The animation code is frame-rate independent and correct: do NOT
+retune durations, do NOT rewrite the carousel.
+
+FIX — one new bootstrap file, additive, no scene edits:
+  Assets/Scripts/Core/FramePacingBootstrap.cs (Assembly-CSharp)
+  [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+  → Application.targetFrameRate = 60;
+Follow the existing bootstrap pattern (SfxBusReset.cs / StaminaRuntimeService
+Boot / BuildStamp.Bootstrap). One knob, one place; comment WHY (mobile
+defaults to 30 when unset). Do NOT touch QualitySettings.vSyncCount —
+ignored on iOS. Applies to Android too (same 30-fps default); fine.
+
+DO NOT (scope):
+- 120 Hz / ProMotion: Cesar's 14 Pro Max can do 120, but it needs
+  targetFrameRate=120 + the CADisableMinimumFrameDurationOnPhone Info.plist
+  key, and the battery/thermal cost is real. Per-tier fps is an Order 900
+  quality-tier decision — note the hook in a comment, don't build it.
+- Per-scene pacing (60 menus / 30 in-hole): only if the knock-on below
+  bites; report first.
+- Any carousel / animation / ModeCardController code changes.
+
+KNOCK-ON — REPORT, don't absorb:
+60 fps halves the frame budget (33.3 → 16.6 ms). Menus will hold trivially;
+HOLE scenes may not on device — a hole that drops frames at 60 feels WORSE
+than a steady 30. After the fix, explicitly report in-hole frame feel on
+device (one hole is enough). If holes can't hold 60, SAY SO — per-scene
+pacing or the Order 900/940 perf phase owns that call; do not silently
+revert menus to 30.
+
+FALLBACK H2 (only if slides still hitch at 60 — spikes, not low rate):
+LerpToTargetLayout writes sizeDelta + anchoredPosition on all 12 card
+instances (4 modes × 3 virtual passes) every frame — a full layout dirty
+per frame. A mitigation exists (animate only the visible ±2 cards) but do
+NOT build it preemptively. Measure first, report numbers.
+
+SEQUENCING: land BEFORE the K6 arrow_speed_retune calibration LOCKS —
+arrow rendering at 60 fps changes perceived speed; Cesar should calibrate
+feel at the shipping frame rate.
+
+VERIFY — feel is DEVICE-ONLY (sim renders at the Mac's refresh rate and
+false-passes smoothness; perf class = INVALID sim surface). The mechanism
+IS editor/sim-checkable: Debug.Log Application.targetFrameRate at boot → 60.
+Device: mode slides visibly smoother, Cesar's eyeball is the gate; spot-check
+one hole for the knock-on above.
 ```
 
 ---
