@@ -6,6 +6,99 @@ against the Hole 1 par-5 completability baseline (≤7 strokes with default char
 
 ---
 
+## F13 — Low-CC arrow speed retune + arrowHz floor clamp (2026-08-04)
+
+**Task:** `arrow_speed_retune`
+**Reason:** The timing arrow was too fast to read at low ClubControl. Retunes the F11 calibration
+at the low-CC end and closes the no-floor hazard F11 recorded but deferred.
+**Locked by:** Cesar, editor play mode, round 1 ("Speed looks good").
+
+### ⚠️ Correction to the F11 record — which file is load-bearing
+
+F11 states "**File:** `Assets/Resources/Gameplay/controls.csv` (CSV-only; no `ShotController` logic
+change)". **That is backwards.** `ControlsConfigLoader.Load()` has **zero call sites** in `Assets/`
+or `Packages/`: `ShotController._config` initialises to `ControlsConfig.Default` and the only
+`InjectConfig()` callers are test fixtures. `SpinPanelWidget` also reads `ControlsConfig.Default`
+directly. F11 only took effect because it *also* edited the C# mirror.
+
+**`ControlsConfig.Default` is runtime truth; `controls.csv` is currently documentation.** Both are
+still updated together — the divergence hazard is real and simply has not fired yet (all 30 keys
+were value-identical before this change). Whether to wire the loader or delete it is an open
+decision for Cesar; if wired, note `ControlsConfigLoader` has no `case` for `RingFrac` and
+`SpinPanelWidget` bypasses the injected config.
+
+### Value changes (both mirrors)
+
+| Key | Old (F11) | New | Rationale |
+|---|---|---|---|
+| `BaseArrowSpeedHzAtCC0` | 3.0 | **2.0** | low-CC arrow unreadably fast; 0.333 s → 0.500 s per pass |
+| `ArrowSpeedHzPerCC` | −0.05 | **−0.03** | moves as a **pair** with the base — holds the CC-50 end at 0.5 Hz |
+| `MinArrowSpeedHz` | *(did not exist)* | **0.5** | new floor; see hardening below |
+
+Base and slope are **not independently tunable**: lowering the base at slope −0.05 sends the
+high-CC end negative (base 2.0 → CC 50 = −0.5 Hz).
+
+### Resulting ladder (derived from the live config, not hand arithmetic)
+
+| CC | swing Hz | s/pass | putt Hz | putt s/pass | putt auto-cancel |
+|---|---|---|---|---|---|
+| 0 | 2.000 | 0.500 | 1.600 | 0.625 | 6.3 s |
+| 25 *(Common cap)* | 1.250 | 0.800 | 1.000 | 1.000 | 10.0 s |
+| 50 *(Supreme cap)* | 0.500 | 2.000 | 0.400 | 2.500 | 25.0 s |
+
+**Accepted trade-off:** the CC ladder spread narrows. Common cap → Supreme cap was 1.75→0.5 Hz
+(**3.5×**) under F11; it is now 1.25→0.5 Hz (**2.5×**). Restoring that spread was F11's whole
+purpose, so this partially walks it back at the low end. Flagged to Cesar before locking and
+accepted for feel. If the ladder later reads as flat, the fix is lowering the CC-50 anchor —
+**not** raising the base back.
+
+### Hardening — `MinArrowSpeedHz` floor clamp
+
+F11's recorded caveat: *"`arrowHz` has no floor … safe only because caps enforce CC ≤ 50."*
+That is a promise made in a different file (`RarityStatCaps`). Now closed in `ShotController`:
+
+`Assets/Scripts/Gameplay/Input/ShotController.cs` — `TickArrow`:
+```csharp
+arrowHz = Mathf.Max(arrowHz, _config.MinArrowSpeedHz);   // F13
+if (IsPutt) arrowHz *= _config.PuttArrowSpeedMultiplier;
+```
+
+Without it, past CC = Base/|Slope| (**66.7** at F13 values) `arrowHz` goes negative,
+`_arrowProgress` walks backwards, never crosses 1.0, and the shot **never auto-cancels** — a
+soft-lock, not merely a slow arrow.
+
+**Clamp order matters.** It is applied **before** the putt multiplier. Applying it after would
+raise a high-CC putt back up to the floor and break the invariant that putts are slower than
+swings at equal CC (`ShotControllerPuttModeTests.F1_IsPutt_ArrowsSlowedByMultiplier`).
+
+Floor = 0.5 = the calibrated CC-50 speed, so it engages only at **CC > 50** — a **no-op across the
+entire reachable range**. Purely a guard against a future cap change.
+
+### Knock-ons (measured, not absorbed silently)
+
+- **Putt compounding** (Order 732 burned on this once at multiplier 0.5 → 4 s cycles): worst case
+  is **2.5 s/pass at CC 50 — unchanged from F11**, since the pair holds the CC-50 end fixed. Low
+  end 0.625 s. Within the ~2.5–3 s tolerance; no change needed.
+- **Auto-cancel window** (`MaxTotalPasses = 10` is a time window in disguise): worst case
+  **unchanged** at 20 s swing / 25 s putt at CC 50. The *low* end stretched: CC 0 swing
+  3.3 s → **5.0 s**. `MaxTotalPasses` left at 10 (Cesar's call, not taken here).
+- **Hole 1 completability: unaffected.** The Loop-v2 bot fires via `ShotController.FireDebugShot()`,
+  which bypasses `TickArrow()` entirely.
+
+### Tests — `Golfin.Gameplay.Tests`, 941 passed / 0 failed / 3 pre-existing skips
+
+- `Test09_ArrowDegradation_StartsAfterCleanPasses` and `Test10_MaxTotalPasses_AutoCancelsToIdle`
+  **failed** on the new values: both hard-coded `dt = 0.34`, derived from `arrowHz = 3.0`, so a
+  tick no longer completed a pass. Fixed by deriving the tick from the config
+  (`OnePassDtAtCC0 => 1.02f / ControlsConfig.Default.BaseArrowSpeedHzAtCC0`) rather than
+  re-hardcoding — future retunes will not break them again.
+- `Test12_ArrowSpeed_FloorClamp_StaysPositiveBeyondStatCaps` **added**: drives CC = 100
+  (deliberately past every cap) and asserts the arrow still advances forward. This is the
+  regression gate for the soft-lock above.
+- Stale hard-coded Hz values in surviving comments (`3.0`, `2.4`, `1.5`) rewritten config-relative.
+
+---
+
 ## F12 — DefaultSurface Fairway → Rough (2026-07-29)
 
 **Task:** `surface_classification_ob_rough` (Stage 2)

@@ -24,6 +24,15 @@ namespace Golfin.Gameplay.Tests
             _sc.InjectConfig(_cfg);
         }
 
+        /// <summary>
+        /// dt that advances the arrow exactly one pass per Tick at ClubControl=0.
+        /// Derived from the config (at CC=0, arrowHz == BaseArrowSpeedHzAtCC0) rather than
+        /// hard-coded, so an arrow-speed retune does not silently break pass-counting tests.
+        /// TickArrow credits at most one pass per Tick, so the 1.02 margin only guarantees
+        /// the threshold is crossed — it never double-counts.
+        /// </summary>
+        private static float OnePassDtAtCC0 => 1.02f / ControlsConfig.Default.BaseArrowSpeedHzAtCC0;
+
         [TearDown]
         public void TearDown()
         {
@@ -166,14 +175,14 @@ namespace Golfin.Gameplay.Tests
         [Test]
         public void Test09_ArrowDegradation_StartsAfterCleanPasses()
         {
-            // CC=0 (neutral defaults) → arrowHz=3.0, cleanPasses=1.
-            // dt=0.34 → arrowProgress += 1.02 → 1 pass per tick.
+            // CC=0 (neutral defaults) → arrowHz = BaseArrowSpeedHzAtCC0, cleanPasses=1.
+            // OnePassDtAtCC0 → arrowProgress += 1.02 → 1 pass per tick (config-derived).
             // After pass 1: passIndex=1 >= cleanPasses=1 → IsDegrading=true.
             DriveToTiming(170f);
             ShotInputState lastState = default;
             _sc.OnStateChanged += s => lastState = s;
 
-            _sc.Tick(0.34f);
+            _sc.Tick(OnePassDtAtCC0);
 
             Assert.IsTrue(lastState.IsDegrading,
                 "Should degrade after exhausting clean passes");
@@ -182,12 +191,13 @@ namespace Golfin.Gameplay.Tests
         [Test]
         public void Test10_MaxTotalPasses_AutoCancelsToIdle()
         {
-            // MaxTotalPasses=10, arrowHz=3.0, dt=0.34 → ~1 pass per tick.
+            // MaxTotalPasses=10, OnePassDtAtCC0 → 1 pass per tick (config-derived).
             // After 10 ticks in Timing the controller auto-cancels.
             DriveToTiming(170f);
 
-            for (int i = 0; i < 10; i++)
-                _sc.Tick(0.34f);
+            int totalPasses = Mathf.RoundToInt(ControlsConfig.Default.MaxTotalPasses);
+            for (int i = 0; i < totalPasses; i++)
+                _sc.Tick(OnePassDtAtCC0);
 
             Assert.AreEqual(ShotState.Idle, _sc.State,
                 "Shot should auto-cancel after MaxTotalPasses");
@@ -198,11 +208,12 @@ namespace Golfin.Gameplay.Tests
         {
             // Polarity regression gate: arrowHz(CC=0) > arrowHz(CC=max) and both > 0.
             // Uses CC=50 (the reachable Supreme cap per RarityStatCaps), NOT CC=100.
-            // Order 732 (2026-07-17): ArrowSpeedHzPerCC -0.025 -> -0.05. arrowHz has no floor,
-            // so at CC=100 the slope would go negative (3.0 - 100*0.05 = -2.0); CC is capped at
-            // 50, so 50 is the real max and arrowHz stays positive there.
-            // CC=0  → arrowHz = 3.0 + 0  * (-0.05) = 3.0  → progress over dt=0.1: 0.30
-            // CC=50 → arrowHz = 3.0 + 50 * (-0.05) = 0.5  → progress over dt=0.1: 0.05
+            // arrowHz = BaseArrowSpeedHzAtCC0 + CC * ArrowSpeedHzPerCC (slope is negative).
+            // Assertions below are RELATIONAL on purpose — they hold for any (base, slope) pair
+            // that keeps arrowHz positive across CC 0–50, so an arrow retune cannot silently
+            // invert the polarity without tripping this gate.
+            // CC=50 is the reachable Supreme cap per RarityStatCaps; CC=100 is unreachable and
+            // would drive the raw slope negative, which is what the TickArrow floor clamp guards.
             // CC=0 must advance faster (higher Hz = faster oscillation = harder to time).
 
             const float dt = 0.1f;
@@ -243,6 +254,44 @@ namespace Golfin.Gameplay.Tests
                 "CC=50 arrow progress must be positive (arrowHz > 0)");
             Assert.Greater(progressCC0, progressCC100,
                 $"CC=0 must advance faster than CC=50: CC0={progressCC0:F4} CC50={progressCC100:F4}");
+        }
+
+        [Test]
+        public void Test12_ArrowSpeed_FloorClamp_StaysPositiveBeyondStatCaps()
+        {
+            // F13 hazard gate. arrowHz = Base + CC*Slope is a negative-slope line with no
+            // natural floor: past CC = Base/|Slope| it goes negative, so _arrowProgress walks
+            // BACKWARDS, never crosses 1.0, and the shot never auto-cancels — a soft-lock.
+            // Before F13 this was survivable only because RarityStatCaps caps ClubControl at 50,
+            // a promise made in a different file. MinArrowSpeedHz makes ShotController safe alone.
+            //
+            // Deliberately drives CC=100 — beyond any current cap — because the whole point is
+            // that ShotController must not depend on the cap holding.
+            var cfg = ControlsConfig.Default;
+            float unclamped = cfg.BaseArrowSpeedHzAtCC0 + 100f * cfg.ArrowSpeedHzPerCC;
+            Assert.Less(unclamped, 0f,
+                $"Precondition: raw arrowHz at CC=100 should be negative ({unclamped:F3}); " +
+                "if the slope ever goes non-negative this gate is moot and should be revisited.");
+
+            var overCapChar = new Golfin.Physics.Stats.CharacterStats(0, 100, 0, 0);
+            var stamina100  = Golfin.Physics.Math.fp.FromFloat(100f);
+            _sc.InjectStatBundle(new Golfin.Physics.Stats.StatBundle(
+                Golfin.Physics.Stats.ClubStats.DefaultDriver,
+                Golfin.Physics.Stats.BallStats.Neutral,
+                overCapChar, stamina100, stamina100));
+
+            DriveToTiming(170f);
+            ShotInputState state = default;
+            _sc.OnStateChanged += s => state = s;
+            _sc.Tick(0.1f);
+
+            Assert.Greater(state.ArrowProgress01, 0f,
+                "Arrow must still advance forward above the stat cap — the MinArrowSpeedHz " +
+                "floor is what prevents a backwards arrow that never auto-cancels.");
+
+            // And the floor must not have been so aggressive that it outruns the CC=0 speed.
+            Assert.LessOrEqual(cfg.MinArrowSpeedHz, cfg.BaseArrowSpeedHzAtCC0,
+                "Floor must sit at or below the CC=0 speed, else it inverts the CC ladder.");
         }
     }
 }

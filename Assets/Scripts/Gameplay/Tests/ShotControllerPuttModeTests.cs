@@ -131,9 +131,11 @@ namespace Golfin.Gameplay.Tests
         public void F1_IsPutt_ArrowsSlowedByMultiplier()
         {
             // Polarity-independent invariant: at equal CC, putt arrowHz < non-putt arrowHz.
-            // PuttArrowSpeedMultiplier=0.8 (Order 732; was 0.5), so putt advances at 0.8× the non-putt rate.
-            // With default CC=0: non-putt arrowHz=3.0, putt arrowHz=2.4.
-            // Over dt=0.1s: non-putt progress=0.30, putt progress=0.24 → putt < non-putt (still slower).
+            // PuttArrowSpeedMultiplier < 1.0, so putt advances at that fraction of the non-putt rate.
+            // At CC=0 non-putt arrowHz = BaseArrowSpeedHzAtCC0 and putt arrowHz = that × the multiplier.
+            // Assertion is relational, so it holds across arrow-speed retunes; it only fails if the
+            // multiplier reaches 1.0 or the floor clamp is ever applied AFTER the putt multiply
+            // (which would raise putt speed to the floor and break "putt slower than swing").
             const float dt = 0.1f;
 
             // Measure non-putt arrow progress
@@ -167,7 +169,9 @@ namespace Golfin.Gameplay.Tests
             _sc.CameraHeadingRadians = 0f;
             DriveToTiming(170f);
 
-            // Tick through 2 complete putt passes (putt arrowHz=1.5, dt=4.5 → progress=6.75 → 1 pass/tick).
+            // Tick through 2 complete putt passes. dt=4.5 is far above one putt period at CC=0
+            // for any sane (base, multiplier), so each Tick credits exactly one pass
+            // (TickArrow credits at most one pass per Tick regardless of dt).
             _sc.Tick(4.5f); // ~1 pass
             _sc.Tick(4.5f); // ~2 passes
 
@@ -227,7 +231,8 @@ namespace Golfin.Gameplay.Tests
             _sc.CameraHeadingRadians = 0f;
             DriveToTiming(170f);
 
-            // Tick through many passes (arrowHz=3.0, dt=2.5 → progress=7.5 → 1 pass/tick × 8 = 8 passes).
+            // Tick through many passes. dt=2.5 exceeds one arrow period at CC=0 for any sane base,
+            // so each Tick credits exactly one pass × 8 ticks = 8 passes.
             for (int i = 0; i < 8; i++) _sc.Tick(2.5f);
 
             // Still in Timing (not auto-cancelled yet, MaxTotalPasses=10), flick now.

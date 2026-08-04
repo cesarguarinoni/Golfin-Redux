@@ -48,6 +48,7 @@ namespace Golfin.Gameplay.Config
                     case "TargetingLineLengthMeters":      cfg.TargetingLineLengthMeters      = val; break;
                     case "BaseArrowSpeedHzAtCC0":          cfg.BaseArrowSpeedHzAtCC0          = val; break;
                     case "ArrowSpeedHzPerCC":              cfg.ArrowSpeedHzPerCC              = val; break;
+                    case "MinArrowSpeedHz":                cfg.MinArrowSpeedHz                = val; break;
                     case "MaxCleanPassesAtCC0":            cfg.MaxCleanPassesAtCC0            = val; break;
                     case "CleanPassesPerCC":               cfg.CleanPassesPerCC               = val; break;
                     case "MaxTotalPasses":                 cfg.MaxTotalPasses                 = val; break;

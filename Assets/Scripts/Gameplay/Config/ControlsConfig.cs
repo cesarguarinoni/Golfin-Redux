@@ -30,6 +30,17 @@ namespace Golfin.Gameplay.Config
         // Timing arrows
         public float BaseArrowSpeedHzAtCC0;
         public float ArrowSpeedHzPerCC;
+
+        /// <summary>
+        /// Hard floor applied to the computed swing arrowHz before the putt multiplier (F13).
+        /// arrowHz = Base + CC*Slope is a negative-slope line with no natural floor: past
+        /// CC = Base/|Slope| it goes negative, the arrow runs backwards, never completes a
+        /// pass, and the shot never auto-cancels. Prior to F13 this was "safe" only because
+        /// RarityStatCaps happens to cap ClubControl at 50 — a promise made in a different
+        /// file. This clamp makes ShotController safe on its own terms.
+        /// Set to the calibrated CC-50 arrow speed so it is a no-op across the reachable range.
+        /// </summary>
+        public float MinArrowSpeedHz;
         public float MaxCleanPassesAtCC0;   // treat as int at use site
         public float CleanPassesPerCC;
         public float MaxTotalPasses;        // treat as int at use site
@@ -93,8 +104,9 @@ namespace Golfin.Gameplay.Config
             ConeFadeOutSeconds             = 0.30f,
             BallHitZoneRadiusPx            = 80f,
             TargetingLineLengthMeters      = 30f,
-            BaseArrowSpeedHzAtCC0          = 3.0f,
-            ArrowSpeedHzPerCC              = -0.05f,   // Order 732 (2026-07-17): -0.025 → -0.05 (mirror controls.csv); restores designed 3.0→0.5 Hz on reachable CC 0–50
+            BaseArrowSpeedHzAtCC0          = 2.0f,     // F13 (arrow_speed_retune): 3.0 → 2.0 (mirror controls.csv); low-CC arrow was too fast to time
+            ArrowSpeedHzPerCC              = -0.03f,   // F13: −0.05 → −0.03 (mirror controls.csv); moves as a PAIR with the base — CC 0–50 spans 2.0→0.5 Hz, CC-50 end unchanged from F11
+            MinArrowSpeedHz                = 0.5f,     // F13: floor = the calibrated CC-50 speed; no-op on reachable CC 0–50, guards CC > 66.7 where the raw line goes negative
             MaxCleanPassesAtCC0            = 1f,
             CleanPassesPerCC               = 0.08f,    // Order 732: 0.04 → 0.08 (mirror controls.csv); CC 0–50 → 1–5 clean passes
             MaxTotalPasses                 = 10f,

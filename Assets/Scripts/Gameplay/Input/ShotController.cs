@@ -405,6 +405,12 @@ namespace Golfin.Gameplay.Input
             float cc = bundle.Character.ClubControl;
             float ccClamped = Mathf.Clamp(cc, 0f, 100f);
             float arrowHz = _config.BaseArrowSpeedHzAtCC0 + ccClamped * _config.ArrowSpeedHzPerCC;
+            // F13: the CC line has a negative slope and no natural floor — past
+            // CC = Base/|Slope| it goes negative, the arrow runs backwards, never completes a
+            // pass, and the shot never auto-cancels. Clamp BEFORE the putt multiplier: applying
+            // it after would raise a high-CC putt back up to the floor and break the invariant
+            // that putts are always slower than swings at equal CC (ShotControllerPuttModeTests.F1).
+            arrowHz = Mathf.Max(arrowHz, _config.MinArrowSpeedHz);
             if (IsPutt) arrowHz *= _config.PuttArrowSpeedMultiplier;
 
             _arrowProgress += arrowHz * dt;
