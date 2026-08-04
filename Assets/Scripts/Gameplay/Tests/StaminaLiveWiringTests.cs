@@ -376,18 +376,26 @@ namespace Golfin.Gameplay.Tests
         }
 
         // ══════════════════════════════════════════════════════════════════════════
-        // Test 6 — Migration v3 → v5 + fail-hard on v6
-        // (stamina_tournament_wiring Phase 3 bumped CurrentSchemaVersion to 5.
-        //  v3 JSON now migrates through v4 (conditionEnergy) then v5 (conditionRemaining
-        //  sentinel — empty block, safe), ending at 5. v6+ still throws.)
+        // Test 6 — a pre-v4 save migrates to current, and a future version fails hard.
+        //
+        // These assert against SaveSchemaMigrator.CurrentSchemaVersion rather than a
+        // literal ON PURPOSE. What this fixture cares about is that the v4 block
+        // default-inits the condition fields and that the chain terminates — not which
+        // number it terminates at. Hardcoding the number made every unrelated schema
+        // bump red these two tests: they sat failing from Order 761 (v8→v9, 2026-07-20)
+        // until 2026-08-04, and were written off as "pre-existing" in three separate
+        // task reviews in between.
+        //
+        // The constant's VALUE is pinned deliberately elsewhere, by
+        // GachaTicketTests.CurrentSchemaVersion_Is9 — that tripwire is what forces a
+        // human to review the migration chain on a bump. Do not duplicate it here.
         // ══════════════════════════════════════════════════════════════════════════
 
         [Test]
         public void T6_Migration_V3ToV4_ConditionFieldsDefaultSafe()
         {
-            // NOTE (Phase 3): CurrentSchemaVersion is now 5, so v3 JSON runs v4 then v5
-            // migrations and ends at schemaVersion=5. v4 block sets conditionEnergy
-            // defaults; v5 block is empty (sentinel default is safe on new fields).
+            // v3 JSON runs every migration block from v4 up and ends at CurrentSchemaVersion.
+            // The v4 block is the one under test: it sets the conditionEnergy defaults.
             const string v3Json = @"{
                 ""schemaVersion"": 3,
                 ""rewardPoints"": 123,
@@ -401,8 +409,8 @@ namespace Golfin.Gameplay.Tests
             Assert.IsNotNull(data);
             Assert.DoesNotThrow(() => SaveSchemaMigrator.Migrate(data!));
 
-            Assert.AreEqual(8, data!.schemaVersion,
-                "Post-migration schemaVersion must be 8 (gacha_history Stage 1 bumped CurrentSchemaVersion to 8)");
+            Assert.AreEqual(SaveSchemaMigrator.CurrentSchemaVersion, data!.schemaVersion,
+                "A v3 save must migrate all the way to CurrentSchemaVersion");
             Assert.AreEqual(0f, data.ownedCharacters[0].conditionEnergy, delta: 0.001f,
                 "conditionEnergy defaults to 0f for pre-v4 saves");
             Assert.AreEqual("", data.ownedCharacters[0].conditionUpdatedUtc,
@@ -410,17 +418,21 @@ namespace Golfin.Gameplay.Tests
         }
 
         [Test]
-        public void T6_FailHard_V9_ThrowsSaveSchemaVersionException()
+        public void T6_FailHard_FutureVersion_ThrowsSaveSchemaVersionException()
         {
-            // NOTE (gacha_history Stage 1): v8 is now the CURRENT version — v7 is also legal (migration chain).
-            // The fail-hard gate now triggers on v9 (unknown future version).
-            const string v9Json = @"{ ""schemaVersion"": 9, ""rewardPoints"": 1 }";
-            var data = JsonConvert.DeserializeObject<SaveData>(v9Json);
+            // Q-LOCK §4 Q2: a save written by a NEWER build than this one must fail hard
+            // rather than silently drop the fields this build doesn't know about.
+            // "Newer" is CurrentSchemaVersion + 1 by definition — naming a literal here is
+            // what made this test assert that the CURRENT version throws once v9 shipped.
+            int futureVersion = SaveSchemaMigrator.CurrentSchemaVersion + 1;
+            string futureJson = $@"{{ ""schemaVersion"": {futureVersion}, ""rewardPoints"": 1 }}";
+            var data = JsonConvert.DeserializeObject<SaveData>(futureJson);
             Assert.IsNotNull(data);
 
             UnityEngine.TestTools.LogAssert.Expect(
                 UnityEngine.LogType.Error,
-                new System.Text.RegularExpressions.Regex(@"\[SaveSchemaMigrator\].*schema version 9"));
+                new System.Text.RegularExpressions.Regex(
+                    $@"\[SaveSchemaMigrator\].*schema version {futureVersion}"));
 
             Assert.Throws<SaveSchemaVersionException>(() => SaveSchemaMigrator.Migrate(data!));
         }
