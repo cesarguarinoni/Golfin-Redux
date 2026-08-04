@@ -247,3 +247,16 @@ Docs/Specs/**/screenshots/
 # =========================
 Assets/Resources/Data/build_stamp.txt
 Assets/Resources/Data/build_stamp.txt.meta
+
+# =========================
+# iOS export residue — Unity re-drops these into Assets/ on every iOS player
+# build (BuildPipeline.BuildPlayer / Build & Run). They are generated build
+# artifacts, never authored, and were hand-deleted twice before being ignored
+# (see Docs/Reports/2026-08-04_ios_simulator_build_blocker.md §9, §12).
+# =========================
+Assets/Resources/PerformanceTestRunInfo.json
+Assets/Resources/PerformanceTestRunInfo.json.meta
+Assets/Resources/PerformanceTestRunSettings.json
+Assets/Resources/PerformanceTestRunSettings.json.meta
+Assets/packages-merged-link/
+Assets/packages-merged-link.meta
