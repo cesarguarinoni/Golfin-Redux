@@ -391,55 +391,80 @@ the base — difficulty leaning on CleanPassesPerCC instead of speed. That is a
 design conversation with the Architect, not a number tweak. Say so and stop.
 ```
 
-### K7 · safe_area_top_bar (smoke #2) — TellCode · RUN AFTER K4
+### K7 · safe_area_top_bar (smoke #2) — TellCode · RUN AFTER K4 · AMENDED 2026-08-04 (scene + PersistentUIManager.cs, Cesar-approved Option A)
 
 ```
 Task: safe_area_top_bar — tickets counter is eaten by the Dynamic Island on
 iPhone 14 Pro Max. Smoke issue #2.
 
+SCOPE (RULING 2026-08-04): scene-only is IMPOSSIBLE — show/hide and chrome
+logic in PersistentUIManager.cs couples to the current hierarchy. Approved
+plan = Option A: ShellScene.unity + PersistentUIManager.cs, ONE isolated
+commit. Two new serialized refs approved: topBarContent, bottomNavContent.
+
 THE COMPONENT ALREADY EXISTS — do not write a new one:
-Assets/Scripts/UI/Core/SafeAreaFitter.cs (GolfinRedux.UI.Core)
-Written for exactly this, deliberately unattached until now (its header says
-so). [ExecuteAlways], polls Screen.safeArea, converts to anchors.
+Assets/Scripts/UI/Core/SafeAreaFitter.cs (GolfinRedux.UI.Core).
+[ExecuteAlways], polls Screen.safeArea, converts to anchors.
 
 ⚠️ THE TRAP — inset the CONTENT, not the bar BACKGROUNDS:
-If topBarPanel (or bottomNavPanel) is moved wholesale inside a SafeArea
-wrapper, the bar BACKGROUND moves down too and a raw blank strip appears
-between the notch and the bar.
-Correct end state:
-- Bar background art: FULL-BLEED, extending under the Dynamic Island / into
-  the home-indicator zone. Backgrounds are decoration; allowed behind cutouts.
-- Bar CONTENT (tickets pill, RP counter, settings gear, screen title; bottom
-  nav icon row): inside the safe area.
+- Bar background art: FULL-BLEED on the existing roots (topBarPanel /
+  bottomNavPanel), extending under the Dynamic Island / into the
+  home-indicator zone.
+- Bar CONTENT: canvas-level "SafeArea" node (stretch anchors, zero offsets,
+  SafeAreaFitter attached) containing TopBarContent + BottomNavContent;
+  re-parent the content sub-objects into those.
 
-IMPLEMENTATION:
-Follow the component's own header usage: one full-screen "SafeArea" child
-under the shell canvas (stretch anchors, zero offsets, SafeAreaFitter
-attached), then re-parent the CONTENT sub-objects of the top bar and bottom
-nav into it — backgrounds stay outside at full bleed.
-- PersistentUIManager serializes topBarPanel / bottomNavPanel — those
-  references must survive. Re-parenting CHILDREN is fine; do not rename or
-  move the panel roots.
-- If content and background are fused, separate minimally — a new empty
-  "Content" RectTransform per bar is acceptable. Report before/after
-  hierarchy.
-- ShellScene.unity edit: isolated commit, minimal diff, diff the scene YAML
-  before committing, revert unrelated drift. No merge driver yet (429).
+CODE TOUCHPOINTS — four, not two. All in PersistentUIManager.cs:
+1. ShowTopBar(bool) / ShowBottomNav(bool): toggle BOTH the root panel AND
+   the matching content ref. Content-only inverts the bug (Splash/Loading
+   would show floating backgrounds); root-only strands the chrome (the bug
+   that forced this amendment). Null-guard the new refs.
+2. SetTopBarChromeVisible: retarget the child loop from topBarPanel to
+   topBarContent. UsernameText MOVES INTO topBarContent (it is top-bar
+   content and must sit inside the safe area — account-screen titles would
+   otherwise be under the island). The skip-by-name UsernameText logic
+   carries over unchanged, so ShowAccountTitleBar keeps working.
+3. ApplyDemoTopBarTrim: currently topBarPanel.transform.Find(
+   "RewardPointsBackground") — after the reparent this returns null and
+   NO-OPS SILENTLY, regressing demo_build_slice §3.4 (demo would show RP
+   chrome). Retarget the Find to topBarContent.
+4. EnsureTicketPill: resolves via ticketCountText.transform.parent — it
+   survives IF RewardPointsBackground, TicketIcon, ShopPlusButton and the
+   count text all move together as SIBLINGS into TopBarContent. Keep that
+   cluster intact; verify the pill still spawns (its center-anchor math
+   assumes the cluster centers as the bar stretches).
+
+SURVIVES UNTOUCHED (do not modify): HideIfScreenBlocked and every serialized
+Button/Text/Image ref — Unity object refs, not paths. The two Find calls
+above are the only path-based lookups in the file.
+
+SCENE EDIT RULES: isolated commit (ShellScene.unity + PersistentUIManager.cs
+together, nothing else), minimal diff, diff the scene YAML before committing,
+revert unrelated drift. No merge driver yet (Order 429 queued).
+PersistentUIManager's topBarPanel / bottomNavPanel serialized refs must
+survive — re-parent CHILDREN only, never rename/move the panel roots.
 
 SEQUENCING: run AFTER nav_bar_edge_gaps (K4) — same bars, same scene; K4's
 outcome determines the bars' final geometry.
 
-SCOPE: shell canvas only. The in-game HUD (player card / hole info) also
+SCOPE LIMITS: shell canvas only. In-game HUD (player card / hole info) also
 crowds the notch but was NOT the reported issue — CHECK visually and report,
-don't fix. The build stamp handles its own inset; leave it alone. If other
-screens' content also kisses the notch, that is the deferred full inset pass
-— its own row, not scope creep here.
+don't fix. Build stamp handles its own inset; leave it alone. Other screens'
+notch-kissing content = the deferred full inset pass, its own row.
 
 VERIFY — Simulator VALID (safe-area class; ShellScene ships in build data →
 tier-1 data swap covers iteration):
-- Sim (iPhone 14): tickets pill fully below the notch; NO blank strip between
-  notch and top-bar background; bottom nav icons clear of the home-indicator
-  band; backgrounds still reach all screen edges.
+- Sim (iPhone 14): tickets pill fully below the notch; NO blank strip
+  between notch and top-bar background; bottom nav icons clear of the
+  home-indicator band; backgrounds still reach all screen edges.
+- Show/hide matrix — every row, this is where the amendment bites:
+  Logo/Splash/Loading → NO bar backgrounds AND no chrome visible.
+  Account/login screens → banner + centered title ONLY (chrome stripped,
+  title visible and inside the safe area).
+  Home → full bars, chrome restored.
+  In-hole → shell bars fully hidden.
+  Demo define (GOLFIN_DEMO, PointsEnabled=false) → RP chrome hidden
+  (touchpoint 3 regression check).
 - Editor Game view at 16:9: layout unchanged (safe area is zero there — any
   visible difference is a regression).
 - Final confirm on Cesar's iPhone 14 Pro Max (taller Dynamic Island than the
