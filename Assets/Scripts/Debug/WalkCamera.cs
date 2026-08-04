@@ -182,9 +182,19 @@ public class WalkCamera : MonoBehaviour
         playerMarker.name = "PlayerMarker";
         playerMarker.transform.localScale = new Vector3(6f, 0.2f, 6f);
         var markerRenderer = playerMarker.GetComponent<Renderer>();
-        var markerMat = new Material(Shader.Find("Standard"));
-        markerMat.color = Color.cyan;
-        markerRenderer.sharedMaterial = markerMat;
+        // "Standard" is a built-in-RP shader: no URP material references it and it is not in
+        // Always Included Shaders, so it is stripped from player builds and Shader.Find returns
+        // null there (it resolves fine in the editor, which is why this only threw on device).
+        // new Material(null) => ArgumentNullException "Parameter name: shader" on every hole load.
+        var markerShader = Shader.Find("Universal Render Pipeline/Lit")
+                        ?? Shader.Find("Sprites/Default")          // always-included
+                        ?? Shader.Find("Legacy Shaders/Diffuse");  // always-included
+        if (markerShader != null)
+        {
+            var markerMat = new Material(markerShader);
+            markerMat.color = Color.cyan;
+            markerRenderer.sharedMaterial = markerMat;
+        }
         // Remove collider so it doesn't interfere
         var col = playerMarker.GetComponent<Collider>();
         if (col != null) Object.Destroy(col);
@@ -197,7 +207,10 @@ public class WalkCamera : MonoBehaviour
         facingLine.positionCount = 2;
         facingLine.startWidth = 1.5f;
         facingLine.endWidth = 0.3f;
-        facingLine.material = new Material(Shader.Find("Sprites/Default"));
+        // Sprites/Default IS always-included so this one resolves in builds, but guard anyway:
+        // new Material(null) would throw the same way if that ever changed.
+        var lineShader = Shader.Find("Sprites/Default") ?? Shader.Find("Legacy Shaders/Diffuse");
+        if (lineShader != null) facingLine.material = new Material(lineShader);
         facingLine.startColor = Color.yellow;
         facingLine.endColor = new Color(1f, 1f, 0f, 0.2f);
         facingLine.useWorldSpace = true;
