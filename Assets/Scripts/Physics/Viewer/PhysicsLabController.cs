@@ -1359,6 +1359,28 @@ namespace Golfin.Physics.Viewer
             return XZDist(fp3.Zero, landPos) * 1.09361f;
         }
 
+        // wind_affects_gameplay: convert the hole's HUD wind (WindContext) into the physics
+        // WindConfig the sim consumes. Pure wiring — no physics model/formula/tuning touched.
+        // Steady base wind only (no gusts / no altitude profile) so shots are deterministic and
+        // fair in 1v1: both players on the same hole face the identical, time-invariant wind.
+        //   speed:     mph -> m/s (x 0.44704).
+        //   direction: WindContext.DirectionDegrees is a compass bearing (0=North=+Z, 90=East=+X,
+        //              clockwise) treated as the direction the wind blows TOWARD, so the ball drifts
+        //              toward the HUD arrow. World-space +X east / +Z north matches WindConfig's frame.
+        //   NOTE: the direction SIGN is unverified on hardware (build blocker) -- if the ball drifts
+        //   opposite the HUD arrow, negate vx/vz here. That is the one thing to sanity-check on device.
+        static WindConfig WindConfigFromContext(float speedMph, float dirDeg)
+        {
+            if (speedMph <= 0f) return WindConfig.Calm;
+            float ms  = speedMph * 0.44704f;
+            float rad = dirDeg * Mathf.Deg2Rad;
+            float vx  = ms * Mathf.Sin(rad);   // +X east
+            float vz  = ms * Mathf.Cos(rad);   // +Z north
+            var cfg = WindConfig.Calm;         // inherits AltitudeRefMeters=10 (unused; AltitudeFactor=0)
+            cfg.BaseVelocity = new fp3(fp.FromFloat(vx), fp.Zero, fp.FromFloat(vz));
+            return cfg;
+        }
+
         // ── Internal ───────────────────────────────────────────────────────────
 
         void FireInternal(ShotPreset preset)
@@ -1781,11 +1803,17 @@ namespace Golfin.Physics.Viewer
                                 if (fSpeed != null) Golfin.Gameplay.UI.HUD.WindContext.SpeedMph         = (float)fSpeed.GetValue(holeData);
                                 if (fDir   != null) Golfin.Gameplay.UI.HUD.WindContext.DirectionDegrees = (float)fDir.GetValue(holeData);
                                 Golfin.Gameplay.UI.HUD.WindContext.Raise();
-                                Debug.Log($"[PhysicsLab] Wind: {Golfin.Gameplay.UI.HUD.WindContext.SpeedMph:F1} mph @ {Golfin.Gameplay.UI.HUD.WindContext.DirectionDegrees:F0} deg");
+                                // wind_affects_gameplay: feed the same per-hole wind into the sim so the
+                                // committed shot (RunSimFromController -> WindCfg) actually drifts.
+                                WindCfg = WindConfigFromContext(
+                                    Golfin.Gameplay.UI.HUD.WindContext.SpeedMph,
+                                    Golfin.Gameplay.UI.HUD.WindContext.DirectionDegrees);
+                                Debug.Log($"[PhysicsLab] Wind: {Golfin.Gameplay.UI.HUD.WindContext.SpeedMph:F1} mph @ {Golfin.Gameplay.UI.HUD.WindContext.DirectionDegrees:F0} deg -> BaseVelocity={WindCfg.BaseVelocity}");
                             }
                             else
                             {
                                 Golfin.Gameplay.UI.HUD.WindContext.Reset();
+                                WindCfg = WindConfig.Calm;
                                 Debug.LogWarning($"[PhysicsLab] HoleDatabaseLoader.GetHole({holeNumberLocal - 1}) returned null; WindContext reset.");
                             }
                         }
@@ -1793,6 +1821,7 @@ namespace Golfin.Physics.Viewer
                     else
                     {
                         Golfin.Gameplay.UI.HUD.WindContext.Reset();
+                        WindCfg = WindConfig.Calm;
                         Debug.LogWarning("[PhysicsLab] HoleDatabaseLoader type not found; WindContext reset.");
                     }
 
