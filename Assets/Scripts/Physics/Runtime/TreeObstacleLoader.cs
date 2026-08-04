@@ -13,6 +13,10 @@ namespace Golfin.Physics.Runtime
     {
         private static Dictionary<string, TreeCollisionProfile> _profiles;
 
+        // profileNames already reported as unprofiled, so the warning in GetProfile fires once
+        // per distinct name instead of once per instance (a hole is hundreds of rows).
+        private static HashSet<string> _warnedMissingProfiles;
+
         /// <summary>
         /// Ensure the profile table is loaded from Resources/Data/tree_collision_profiles.csv.
         /// Thread-safe via a reference check; main-thread only due to Resources.Load.
@@ -21,6 +25,7 @@ namespace Golfin.Physics.Runtime
         {
             if (_profiles != null) return _profiles;
             _profiles = new Dictionary<string, TreeCollisionProfile>(System.StringComparer.OrdinalIgnoreCase);
+            _warnedMissingProfiles = new HashSet<string>(System.StringComparer.OrdinalIgnoreCase);
 
             var asset = Resources.Load<TextAsset>("Data/tree_collision_profiles");
             if (asset == null)
@@ -88,11 +93,26 @@ namespace Golfin.Physics.Runtime
 
         /// <summary>
         /// Lookup profile by name; falls back to "default" row.
+        ///
+        /// An unprofiled name is a silent physics mis-tuning, not a benign default: the whole
+        /// hole collides as the generic 0.25m/3m cylinder. Hole 6 shipped that way for months
+        /// because tree_collision_profiles.csv had no Fir_* rows (2026-08-04). So the fallback
+        /// now warns — once per distinct name, since this is called per baked instance.
         /// </summary>
         public static TreeCollisionProfile GetProfile(string prefabName)
         {
             var profiles = GetProfiles();
             if (profiles.TryGetValue(prefabName, out var p)) return p;
+
+            if (_warnedMissingProfiles != null && _warnedMissingProfiles.Add(prefabName))
+            {
+                Debug.LogWarning(
+                    $"[TreeObstacleLoader] No collision profile for tree prefab '{prefabName}' — " +
+                    "falling back to `default` (0.25m trunk radius, 3m trunk, 3m canopy radius, 9m canopy top). " +
+                    "Add a measured row to Assets/Resources/Data/tree_collision_profiles.csv; " +
+                    "ball physics AND bot trunk-avoidance both read this table.");
+            }
+
             if (profiles.TryGetValue("default", out var d)) return d;
             // Ultra-defensive: return a built-in default.
             return new TreeCollisionProfile("default",

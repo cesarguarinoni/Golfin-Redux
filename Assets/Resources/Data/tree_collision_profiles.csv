@@ -3,6 +3,22 @@
 # Names match the normalized form emitted by TreeObstacleBaker (spaces replaced with underscores).
 prefabName,trunkRadius,trunkHeight,canopyRadius,canopyTop,trunkRestitution,canopyHitDamping
 default,0.25,3.0,3.0,9.0,0.15,0.40
+# Fir_01..Fir_06 (Hole 6, 434 instances) — MEASURED from the LOD0 meshes of
+# Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/BPS/Fir 0N.prefab, not estimated.
+#   canopyTop    = max vertex Y over the whole tree
+#   trunkHeight  = canopy base, 5th percentile of foliage-submesh vertex Y (robust to stray skirt verts)
+#   trunkRadius  = max XZ radius from the prefab origin over bark-submesh verts in the
+#                  branch-free band Y=[0.5, 3.0] m (excludes the root flare below 0.5 m)
+#   canopyRadius = max XZ radius from the prefab origin over foliage-submesh verts
+# Cross-checked against each prefab's baked LODGroup m_Size (agrees to <=0.01 m on all six).
+# These are 29-45 m trees; the `default` row they previously fell back to (no Fir_* rows existed)
+# under-represented them by ~8x in canopy footprint area.
+Fir_01,0.72,7.21,8.07,44.50,0.15,0.40
+Fir_02,0.86,10.39,11.08,43.68,0.15,0.40
+Fir_03,0.61,15.23,6.86,34.39,0.15,0.40
+Fir_04,0.57,4.20,8.05,28.72,0.15,0.40
+Fir_05,0.64,5.44,7.92,32.78,0.15,0.40
+Fir_06,0.73,6.29,9.98,40.74,0.15,0.40
 MESH_01Cedar,0.30,4.0,2.5,12.0,0.15,0.40
 MESH_JapaneseBlack_01,0.35,3.5,3.5,10.0,0.15,0.40
 MESH_JapaneseBlack_01_Var1,0.35,3.5,3.5,10.0,0.15,0.40

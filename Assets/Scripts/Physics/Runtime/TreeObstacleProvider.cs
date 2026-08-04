@@ -15,8 +15,16 @@ namespace Golfin.Physics.Runtime
     /// </summary>
     public sealed class TreeObstacleProvider : ITreeObstacleProvider
     {
-        // Cell size in meters; must be >= max canopy diameter for no missed adjacents.
-        // We use 10m to cover the 2×4.5=9m worst case with margin.
+        // Cell size in meters. This does NOT have to cover the largest canopy: insertion below
+        // is radius-aware — a tree is added to every cell its canopy overlaps (cxMin..cxMax) —
+        // and TestSegment gathers the 3×3 around p0, so any tree whose canopy reaches p0's cell
+        // is always a candidate. A larger canopy therefore widens coverage, never narrows it.
+        // (An earlier comment here claimed cell size must be >= max canopy diameter, citing a
+        // 9m worst case. Hole 6's measured firs reach 22m canopy diameter — the claim was wrong,
+        // the code was not. Verified 2026-08-04.)
+        //
+        // What cell size DOES bound: a step longer than ~CellSize can put p1 outside the 3×3
+        // around p0 and miss a tree near p1. That is a function of step length, not canopy size.
         private const float CellSize = 10f;
         private static readonly fp FpCellSize = fp.FromFloat(CellSize);
 
