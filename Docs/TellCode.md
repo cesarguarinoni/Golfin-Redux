@@ -7,7 +7,7 @@
 
 ## ▶ CURRENT STATE — update this block at every session boundary
 
-- **Last updated:** 2026-08-05 12:10 JST (Architect — **DEVICE ERA.** Game builds+runs on physical iPhone since 2026-07-27; signing SOLVED (do not re-litigate); on-device smoke found 7 issues. Fixed since: `centralball_device_invisible` (device-verified `1a4ad15ca`), `hole6_tree_collision_profiles` (`c1d38e280`), `camera_drag_touch_origin`/K1 (CLOSED — `bb59d32dd` 08-03, device-verified per commit + Cesar's session; block deleted 2026-08-05). Shipped: `build_version_stamp` (3 defects → hardening kickoff below). **iOS Simulator three-tier verification loop VALIDATED** — canonical doc `Docs/Pipeline/IOS_SIMULATOR_LOOP.md`; standing rules: never wipe the seeded DerivedData, never `BuildPipeline.BuildPlayer` via MCP script-execute. Full story: `Docs/Reports/2026-08-04_ios_simulator_build_blocker.md` §§10–13 + `Docs/AI_CONTEXT.md` top block. **OPEN = the PENDING KICKOFFS below** (6 smoke issues + build-stamp hardening + housekeeping; K9 `ui_frame_pacing` smoke #8 added 2026-08-05; K10 `ob_recovery_fixes` **CLOSED 2026-08-05** (`90dd574ff` camera+drop rule, `ed65f5726` permanent capture Y-flip fix; CupZoom same-class wedge found+fixed; OB now stops chasing with no aerial cut; ground-level settle built then reverted per Cesar); K1 closed. K11 `club_selection_green_gate` **CLOSED 2026-08-05** (`066df31f2` selector gate + `efa681acb` §2f re-decide after reposition — the item deferred pending K10; ⚠️ K10's close-out swept K11's in-flight lines and briefly broke `main`, repaired forward — see the K11 block). K12 `matchmaking_scan_pacing` added 2026-08-05 — find-opponent animation: decelerating scan + total cut ~5.6s→~3.1s, NO scene edit (new-serialized-field technique), queued AFTER K11 per Cesar — **now NEXT UP**. K13 `boot_loading_screen_removal` added 2026-08-05 — boot Loading screen is a pure 2s fake timer with zero real work behind it (only real-progress feeders in the repo are the HoleLoad path's); Cesar's <2s rule → remove the Splash→Loading hop, measure first; HoleLoad path untouched. ⚠️ RECONCILIATION PENDING: repo log shows K6-core `cd0ef6ed4` (arrow F13 + floor clamp) and K9 `7380baf67` already COMMITTED, plus `b702e1a41` wind→ball-flight landed outside the documented queue — K6/K9 blocks need close-out review with Cesar) plus `putter_aim_blue_line` (413, SPEC_READY in `Specs/Active/`, awaiting Cesar go) and a device pass on `demo_build_slice` (426). Everything below this bullet predates the device era and is historical.)
+- **Last updated:** 2026-08-05 12:10 JST (Architect — **DEVICE ERA.** Game builds+runs on physical iPhone since 2026-07-27; signing SOLVED (do not re-litigate); on-device smoke found 7 issues. Fixed since: `centralball_device_invisible` (device-verified `1a4ad15ca`), `hole6_tree_collision_profiles` (`c1d38e280`), `camera_drag_touch_origin`/K1 (CLOSED — `bb59d32dd` 08-03, device-verified per commit + Cesar's session; block deleted 2026-08-05). Shipped: `build_version_stamp` (3 defects → hardening kickoff below). **iOS Simulator three-tier verification loop VALIDATED** — canonical doc `Docs/Pipeline/IOS_SIMULATOR_LOOP.md`; standing rules: never wipe the seeded DerivedData, never `BuildPipeline.BuildPlayer` via MCP script-execute. Full story: `Docs/Reports/2026-08-04_ios_simulator_build_blocker.md` §§10–13 + `Docs/AI_CONTEXT.md` top block. **OPEN = the PENDING KICKOFFS below** (6 smoke issues + build-stamp hardening + housekeeping; K9 `ui_frame_pacing` smoke #8 added 2026-08-05; K10 `ob_recovery_fixes` **CLOSED 2026-08-05** (`90dd574ff` camera+drop rule, `ed65f5726` permanent capture Y-flip fix; CupZoom same-class wedge found+fixed; OB now stops chasing with no aerial cut; ground-level settle built then reverted per Cesar); K1 closed. K11 `club_selection_green_gate` **CLOSED 2026-08-05** (`066df31f2` selector gate + `efa681acb` §2f re-decide after reposition — the item deferred pending K10; ⚠️ K10's close-out swept K11's in-flight lines and briefly broke `main`, repaired forward — see the K11 block). K12 `matchmaking_scan_pacing` added 2026-08-05 — find-opponent animation: decelerating scan + total cut ~5.6s→~3.1s, NO scene edit (new-serialized-field technique), queued AFTER K11 per Cesar — **now NEXT UP**. K13 `boot_loading_screen_removal` **CLOSED 2026-08-05** (`d3bf00026`) — measured first as instructed: zero real progress ever fed (`_useExternalProgress` never true, max `_realProgress` 0.000 across 2 runs), boot init done at t=3.8s vs Splash interactive at t=9.0s, real work behind the transition ~0.23s (Main Theme decode, already under the 0.25s fade) → REMOVED per the <2s rule. **click→Home 2.72s → 0.48s.** HoleLoad path verified byte-identical + live-regression-passed (real bar 0→1 via the real ModeHomeCard PlayButton). ⚠️ Adjacent knob still open: `minLoadingTime` (2s, scene-serialized) is also the hole-load screen's MINIMUM — measured 2.586s with progress already at 1.0; same scene-serialization trap as K12. ⚠️ RECONCILIATION PENDING: repo log shows K6-core `cd0ef6ed4` (arrow F13 + floor clamp) and K9 `7380baf67` already COMMITTED, plus `b702e1a41` wind→ball-flight landed outside the documented queue — K6/K9 blocks need close-out review with Cesar) plus `putter_aim_blue_line` (413, SPEC_READY in `Specs/Active/`, awaiting Cesar go) and a device pass on `demo_build_slice` (426). Everything below this bullet predates the device era and is historical.)
 
 - **Last updated:** 2026-07-02 (Architect — `1v1_result_rewards_display` (347) DONE. NEXT-at-the-time = `stamina_boost_shop` (517) design pass. STALE — superseded by the device-era bullet above.)
 - Older narrative bullets (2026-06-11 → 2026-06-24): preserved in git history of this file — all tasks named in them are closed in `Docs/Specs/Completed/`. Trust `Docs/Specs/Active/` + the AI_CONTEXT headline, not old bullets.
@@ -24,7 +24,7 @@ Paste any block below into Code as-is. Produced by the Architect during the 2026
 - `ui_frame_pacing` (K9) should LAND before `arrow_speed_retune` (K6) LOCKS — 60 fps changes perceived arrow smoothness/speed; Cesar should calibrate at shipping frame pacing. K9 feel-verify is DEVICE-ONLY (perf class — sim renders at the Mac's refresh and false-passes smoothness).
 - ~~`club_selection_green_gate` (K11) may run IN PARALLEL with K10~~ — **K11 CLOSED 2026-08-05** (`066df31f2` gate + `efa681acb` the deferred §2f-after-reposition item, which K10's merge unblocked). Both shipped; see the K11 block below, including the process scar where K10's close-out swept K11's in-flight lines and briefly broke `main`.
 - `matchmaking_scan_pacing` (K12): queued AFTER K11 per Cesar. Single file (MatchmakingModalController.cs), no overlap with K10/K11 — technically parallel-safe if the queue frees up. ⚠️ NO ShellScene edit: the modal's tunables are scene-serialized (K7 is mid-flight in that scene); K12 uses new serialized fields so code defaults take effect without touching the scene. EDITOR-verifiable.
-- `boot_loading_screen_removal` (K13): parallel-safe with everything open — touches SplashScreenController + one HomeScreenController fallback line; K12 owns MatchmakingModalController; the SHARED LoadingScreenController is deliberately NOT edited (it is the HoleLoad surface). EDITOR-verifiable.
+- ~~`boot_loading_screen_removal` (K13): parallel-safe with everything open~~ — **CLOSED 2026-08-05** (`d3bf00026`). The parallel-safety prediction held: the commit used an explicit 2-file pathspec and left K7's ShellScene/SafeAreaFitter/PersistentUIManager and K12's MatchmakingModalController drift untouched (the K10→K11 sweep scar did NOT repeat). SHARED LoadingScreenController never edited, as designed.
 
 ### K2 · map_view_bottom_anchor (smoke #5) — TellCode
 
@@ -812,7 +812,45 @@ VERIFY — EDITOR-VALID:
    that.
 ```
 
-### K13 · boot_loading_screen_removal — Surgical · EDITOR-verifiable
+### K13 · boot_loading_screen_removal — **CLOSED 2026-08-05** (`d3bf00026`, Cesar-approved)
+
+**Outcome: REMOVED** (the branch the kickoff expected). Step-0 measurement, two baseline
+runs driving the real `StartButton.onClick`, confirmed the static read exactly:
+
+| Metric | run 1 | run 2 |
+|---|---|---|
+| boot init complete (AfterSceneLoad) | t=3.75s | t=3.88s |
+| Splash interactive | t=9.27s | t=8.99s |
+| Loading screen visible | 2.502s | 2.476s |
+| click → Home total | 2.749s | 2.723s |
+| `_useExternalProgress` ever true | **False** | **False** |
+| max `_realProgress` | **0.000** | **0.000** |
+| worst frame during Loading | 21.5ms | 17.9ms |
+
+Zero real progress, ever. Boot init finished 5.2 s *before* START was tappable. The only
+real cost behind the transition is a ~225 ms `AudioManager.PlayMusic(Main Theme)` decode
+running synchronously inside `ApplyScreen(Home)` — shorter than the 0.25 s fade that
+already covers it. Real work ≈ 0.23 s ≪ 2 s → remove.
+
+**After: click → Home = 0.468–0.483 s** (was 2.72 s). The music spike is unchanged
+(224.7 ms vs 230.3 ms baseline), so removal added no cost — it stopped hiding 2.2 s of
+nothing. Changed files: `SplashScreenController.cs` (+ rationale/re-entry comment) and
+`HomeScreenController.cs` (PLAY fallback → `Debug.LogError`). `LoadingScreenController`,
+`GameplaySceneLoader`, `ScreenManager` verified byte-identical to HEAD.
+
+Verification: (1) Logo→Splash→START→Home direct, bars/chrome correct, no flash ✅
+(2) GOLFIN_DEMO — **static only**, the define is build-profile-scoped so it is inactive in
+the Editor; Home is on `DemoGate.Allowed` so Loading never opens ✅ (by construction, not
+by run) (3) HoleLoad gate via the real `ModeHomeCard(Clone)/PlayButton`: OPPONENT FOUND →
+`BeginGameplayLoad`, `_useExternalProgress=True`, `_realProgress` 0.00→0.45→0.95→1.00 over
+112 frames, 2.586 s, hands off to gameplay ✅ (4) `CreateUsername → Home` unchanged ✅
+
+⚠️ **Adjacent knob still open (reported, not changed):** `FinishLoadingCoroutine` enforces
+`minLoadingTime` as the MINIMUM for the HOLE-LOAD screen too — measured live at **2.586 s
+with real progress already at 1.0**. Scene-serialized in ShellScene (~line 111701, value
+`2`); changing it later needs K12's new-serialized-field technique or a scene edit.
+
+<details><summary>Original kickoff (kept for reference)</summary>
 
 ```
 Task: boot_loading_screen_removal — the initial loading screen is a
@@ -876,6 +914,8 @@ VERIFY — EDITOR-VALID:
 4. Login/CreateUsername → Home paths unchanged (they never used Loading).
 5. Report the Step-0 measurement numbers either way.
 ```
+
+</details>
 
 ---
 
