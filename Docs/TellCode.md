@@ -7,7 +7,7 @@
 
 ## ▶ CURRENT STATE — update this block at every session boundary
 
-- **Last updated:** 2026-08-05 09:54 JST (Architect — **DEVICE ERA.** Game builds+runs on physical iPhone since 2026-07-27; signing SOLVED (do not re-litigate); on-device smoke found 7 issues. Fixed since: `centralball_device_invisible` (device-verified `1a4ad15ca`), `hole6_tree_collision_profiles` (`c1d38e280`), `camera_drag_touch_origin`/K1 (CLOSED — `bb59d32dd` 08-03, device-verified per commit + Cesar's session; block deleted 2026-08-05). Shipped: `build_version_stamp` (3 defects → hardening kickoff below). **iOS Simulator three-tier verification loop VALIDATED** — canonical doc `Docs/Pipeline/IOS_SIMULATOR_LOOP.md`; standing rules: never wipe the seeded DerivedData, never `BuildPipeline.BuildPlayer` via MCP script-execute. Full story: `Docs/Reports/2026-08-04_ios_simulator_build_blocker.md` §§10–13 + `Docs/AI_CONTEXT.md` top block. **OPEN = the PENDING KICKOFFS below** (6 smoke issues + build-stamp hardening + housekeeping; K9 `ui_frame_pacing` smoke #8 added 2026-08-05; K10 `ob_recovery_fixes` smoke #9 added 2026-08-05 — OBFreeze camera wedge + Cesar-ruled real-golf drop rule; K1 closed. ⚠️ RECONCILIATION PENDING: repo log shows K6-core `cd0ef6ed4` (arrow F13 + floor clamp) and K9 `7380baf67` already COMMITTED, plus `b702e1a41` wind→ball-flight landed outside the documented queue — K6/K9 blocks need close-out review with Cesar) plus `putter_aim_blue_line` (413, SPEC_READY in `Specs/Active/`, awaiting Cesar go) and a device pass on `demo_build_slice` (426). Everything below this bullet predates the device era and is historical.)
+- **Last updated:** 2026-08-05 11:19 JST (Architect — **DEVICE ERA.** Game builds+runs on physical iPhone since 2026-07-27; signing SOLVED (do not re-litigate); on-device smoke found 7 issues. Fixed since: `centralball_device_invisible` (device-verified `1a4ad15ca`), `hole6_tree_collision_profiles` (`c1d38e280`), `camera_drag_touch_origin`/K1 (CLOSED — `bb59d32dd` 08-03, device-verified per commit + Cesar's session; block deleted 2026-08-05). Shipped: `build_version_stamp` (3 defects → hardening kickoff below). **iOS Simulator three-tier verification loop VALIDATED** — canonical doc `Docs/Pipeline/IOS_SIMULATOR_LOOP.md`; standing rules: never wipe the seeded DerivedData, never `BuildPipeline.BuildPlayer` via MCP script-execute. Full story: `Docs/Reports/2026-08-04_ios_simulator_build_blocker.md` §§10–13 + `Docs/AI_CONTEXT.md` top block. **OPEN = the PENDING KICKOFFS below** (6 smoke issues + build-stamp hardening + housekeeping; K9 `ui_frame_pacing` smoke #8 added 2026-08-05; K10 `ob_recovery_fixes` smoke #9 added 2026-08-05 — OBFreeze camera wedge + Cesar-ruled real-golf drop rule; K1 closed. K11 `club_selection_green_gate` added 2026-08-05 — putter-only-on-green selection gate, PARALLEL-SAFE with K10 (one overlapping item deferred inside the block). ⚠️ RECONCILIATION PENDING: repo log shows K6-core `cd0ef6ed4` (arrow F13 + floor clamp) and K9 `7380baf67` already COMMITTED, plus `b702e1a41` wind→ball-flight landed outside the documented queue — K6/K9 blocks need close-out review with Cesar) plus `putter_aim_blue_line` (413, SPEC_READY in `Specs/Active/`, awaiting Cesar go) and a device pass on `demo_build_slice` (426). Everything below this bullet predates the device era and is historical.)
 
 - **Last updated:** 2026-07-02 (Architect — `1v1_result_rewards_display` (347) DONE. NEXT-at-the-time = `stamina_boost_shop` (517) design pass. STALE — superseded by the device-era bullet above.)
 - Older narrative bullets (2026-06-11 → 2026-06-24): preserved in git history of this file — all tasks named in them are closed in `Docs/Specs/Completed/`. Trust `Docs/Specs/Active/` + the AI_CONTEXT headline, not old bullets.
@@ -22,6 +22,7 @@ Paste any block below into Code as-is. Produced by the Architect during the 2026
 - `nav_bar_edge_gaps` BEFORE `safe_area_top_bar` (same two bars, same scene; #1's outcome determines the bars' final geometry). Back-to-back isolated commits, no other ShellScene work interleaved.
 - `tree_wind_device` verification is DEVICE-ONLY (sim false-passes it — measured, report §11). `arrow_speed_retune` and `safe_area_top_bar` are editor/sim-verifiable. `ob_recovery_fixes` (K10) is EDITOR-verifiable — state-machine logic; the camera wedge repros in the editor with a mouse.
 - `ui_frame_pacing` (K9) should LAND before `arrow_speed_retune` (K6) LOCKS — 60 fps changes perceived arrow smoothness/speed; Cesar should calibrate at shipping frame pacing. K9 feel-verify is DEVICE-ONLY (perf class — sim renders at the Mac's refresh and false-passes smoothness).
+- `club_selection_green_gate` (K11) may run IN PARALLEL with K10 — different files (SelectorOverlayWidget + putter-mode UI region vs LoopCameraDirector + OB branch). The ONE overlapping item (§2f re-decide after reposition, same PhysicsLabController region as K10 Part B) is explicitly DEFERRED inside K11 until K10 merges. K11 is EDITOR-verifiable.
 
 ### K2 · map_view_bottom_anchor (smoke #5) — TellCode
 
@@ -609,6 +610,85 @@ VERIFY — EDITOR-VALID (state-machine logic, not device-only):
 3. Device: one boundary-OB repro on iPhone for confidence (drag is the
    K1-verified path; expected to just work once LateUpdate stops fighting).
 4. Report the CupZoom same-class finding either way.
+```
+
+### K11 · club_selection_green_gate — TellCode · PARALLEL-SAFE with K10 · EDITOR-verifiable
+
+```
+Task: club_selection_green_gate — the putter is selectable ONLY on the
+green, and non-putter clubs are NOT selectable on the green. Player-facing
+selection gate (Cesar, 2026-08-05).
+
+CONTEXT — the rule already exists; the UI just doesn't enforce it:
+§2f auto-switch (PutterModeSurfaceController.DecideTargetClub, called from
+PhysicsLabController.HandleShotComplete AtRest branch) already flips to the
+putter when the ball rests on Green and back to _lastNonPutterClubIndex when
+it rests elsewhere. The classification is GREEN-STRICT: SurfaceType.Green
+only — GreenCollar counts as OFF-green. The gate must reuse THIS
+classification — do not invent a second rule; if the gate and §2f disagree
+they will fight the player.
+
+WHAT'S UNGATED TODAY (all paths funnel into ClubSelectionBroadcast.Raise →
+PhysicsLabController.OnClubBroadcastReceived → SetClub):
+1. SelectorOverlayWidget.Populate() Kind.Club — builds a selectable card for
+   EVERY club in ClubContext.EquippedBag, no surface awareness.
+2. SelectorOverlayWidget.Scroll(±1) — arrow buttons + hold-scroll over the
+   full bag.
+Both in Assets/Scripts/Gameplay/UI/ShotUI/SelectorOverlayWidget.cs.
+
+DESIGN — gate at the UI layer, NOT inside SetClub:
+Bots (BotDriver/VersusBot), map view, and debug paths call SetClub
+programmatically and must stay ungated — §2f keeps the player state correct;
+the defect is only that the SELECTOR lets the player override it.
+
+IMPLEMENTATION:
+a) Putt-mode flag visible to UI: PhysicsLabController.EnterPutterMode /
+   ExitPutterMode are the existing single entry/exit (driven by SetClub via
+   OnClubIndexChanged). Publish a static flag there that Gameplay.UI can
+   read — follow the ClubSelectionBroadcast static-bus precedent (same
+   asmdef-isolation reason): e.g. ClubSelectionBroadcast.InPutterMode plus
+   PutterLabClubIndex (UI must not hardcode 3 and must not reference
+   ShotController directly).
+b) Eligibility as a pure static (testable, shared by Populate + Scroll):
+   IsSelectable(labClubIndex, putterLabClubIndex, inPutterMode)
+     inPutterMode  → only the putter
+     !inPutterMode → everything EXCEPT the putter
+c) Populate(): ineligible cards render DISABLED — grayed, non-interactive
+   (match the ball-selector putter-mode precedent: alpha 0.5, no
+   interaction). Guard EVERY commit path for disabled cards: the card's
+   selection callback, CommitHighlighted, UpdateHoldHover (no highlight on
+   disabled), EvaluateRelease returning OnCard over a disabled card → treat
+   as Outside. If SelectorCardWidget makes a disabled state awkward, HIDING
+   ineligible cards is an acceptable fallback — report which you shipped.
+d) Scroll(): skip ineligible indices (off-green: skip the putter; on-green:
+   arrows effectively no-op). Mind ArrowScrollRoutine — the hold-scroll
+   coroutine must not spin trying to reach a skipped index.
+
+⚠️ K10 OVERLAP — EXPLICITLY DEFERRED, DO NOT DO IN THIS PASS:
+Repositioned balls (OB water drop, PlaceBallAt) never run the §2f decision,
+so putter-mode can be stale after a drop onto/off the green. The fix (run
+DecideTargetClub after reposition) lands in the SAME PhysicsLabController
+region K10 is editing. Keep K10/K11 parallel-safe: SKIP it here; it is a
+one-line follow-up AFTER K10 merges. Log it in your report so it isn't
+lost.
+
+DO NOT:
+- Gate Bags/Inventory screens — out-of-round club management stays free.
+- Touch SetClub, bots, the map-view SHOOT repurpose (iter-38 router guard),
+  or ClubContext.RequestSelection semantics.
+- Change §2f / PutterModeSurfaceController.
+
+TESTS: pure-logic tests for IsSelectable (both modes). Run the Gameplay
+test assembly (ShotControllerPuttModeTests neighborhood) — no regressions.
+
+VERIFY — EDITOR-VALID:
+- Off green: putter card disabled (or hidden); arrows skip it; hold-drag
+  release over it commits nothing.
+- On green (§2f flipped to putter): other clubs disabled; arrows no-op;
+  putter still commits fine.
+- Ball selector (Kind.Ball) untouched in both modes.
+- Bot smoke: one BotDriver hole plays through unchanged (bots bypass UI).
+- Device pass optional — pure UI logic, editor/sim sufficient.
 ```
 
 ---
