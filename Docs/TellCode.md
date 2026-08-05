@@ -7,7 +7,7 @@
 
 ## ▶ CURRENT STATE — update this block at every session boundary
 
-- **Last updated:** 2026-08-05 06:09 JST (Architect — **DEVICE ERA.** Game builds+runs on physical iPhone since 2026-07-27; signing SOLVED (do not re-litigate); on-device smoke found 7 issues. Fixed since: `centralball_device_invisible` (device-verified `1a4ad15ca`), `hole6_tree_collision_profiles` (`c1d38e280`). Shipped: `build_version_stamp` (3 defects → hardening kickoff below). **iOS Simulator three-tier verification loop VALIDATED** — canonical doc `Docs/Pipeline/IOS_SIMULATOR_LOOP.md`; standing rules: never wipe the seeded DerivedData, never `BuildPipeline.BuildPlayer` via MCP script-execute. Full story: `Docs/Reports/2026-08-04_ios_simulator_build_blocker.md` §§10–13 + `Docs/AI_CONTEXT.md` top block. **OPEN = the PENDING KICKOFFS below** (6 smoke issues + build-stamp hardening + housekeeping; K9 `ui_frame_pacing` smoke #8 added 2026-08-05 — root cause source-verified: no runtime `Application.targetFrameRate`, mobile default is 30 fps) plus `putter_aim_blue_line` (413, SPEC_READY in `Specs/Active/`, awaiting Cesar go) and a device pass on `demo_build_slice` (426). Everything below this bullet predates the device era and is historical.)
+- **Last updated:** 2026-08-05 09:54 JST (Architect — **DEVICE ERA.** Game builds+runs on physical iPhone since 2026-07-27; signing SOLVED (do not re-litigate); on-device smoke found 7 issues. Fixed since: `centralball_device_invisible` (device-verified `1a4ad15ca`), `hole6_tree_collision_profiles` (`c1d38e280`), `camera_drag_touch_origin`/K1 (CLOSED — `bb59d32dd` 08-03, device-verified per commit + Cesar's session; block deleted 2026-08-05). Shipped: `build_version_stamp` (3 defects → hardening kickoff below). **iOS Simulator three-tier verification loop VALIDATED** — canonical doc `Docs/Pipeline/IOS_SIMULATOR_LOOP.md`; standing rules: never wipe the seeded DerivedData, never `BuildPipeline.BuildPlayer` via MCP script-execute. Full story: `Docs/Reports/2026-08-04_ios_simulator_build_blocker.md` §§10–13 + `Docs/AI_CONTEXT.md` top block. **OPEN = the PENDING KICKOFFS below** (6 smoke issues + build-stamp hardening + housekeeping; K9 `ui_frame_pacing` smoke #8 added 2026-08-05; K10 `ob_recovery_fixes` smoke #9 added 2026-08-05 — OBFreeze camera wedge + Cesar-ruled real-golf drop rule; K1 closed. ⚠️ RECONCILIATION PENDING: repo log shows K6-core `cd0ef6ed4` (arrow F13 + floor clamp) and K9 `7380baf67` already COMMITTED, plus `b702e1a41` wind→ball-flight landed outside the documented queue — K6/K9 blocks need close-out review with Cesar) plus `putter_aim_blue_line` (413, SPEC_READY in `Specs/Active/`, awaiting Cesar go) and a device pass on `demo_build_slice` (426). Everything below this bullet predates the device era and is historical.)
 
 - **Last updated:** 2026-07-02 (Architect — `1v1_result_rewards_display` (347) DONE. NEXT-at-the-time = `stamina_boost_shop` (517) design pass. STALE — superseded by the device-era bullet above.)
 - Older narrative bullets (2026-06-11 → 2026-06-24): preserved in git history of this file — all tasks named in them are closed in `Docs/Specs/Completed/`. Trust `Docs/Specs/Active/` + the AI_CONTEXT headline, not old bullets.
@@ -20,65 +20,8 @@ Paste any block below into Code as-is. Produced by the Architect during the 2026
 
 **Sequencing constraints:**
 - `nav_bar_edge_gaps` BEFORE `safe_area_top_bar` (same two bars, same scene; #1's outcome determines the bars' final geometry). Back-to-back isolated commits, no other ShellScene work interleaved.
-- `camera_drag_touch_origin` verification is DEVICE-ONLY (sim false-passes it). `tree_wind_device` verification is DEVICE-ONLY (sim false-passes it — measured, report §11). `arrow_speed_retune` and `safe_area_top_bar` are editor/sim-verifiable.
+- `tree_wind_device` verification is DEVICE-ONLY (sim false-passes it — measured, report §11). `arrow_speed_retune` and `safe_area_top_bar` are editor/sim-verifiable. `ob_recovery_fixes` (K10) is EDITOR-verifiable — state-machine logic; the camera wedge repros in the editor with a mouse.
 - `ui_frame_pacing` (K9) should LAND before `arrow_speed_retune` (K6) LOCKS — 60 fps changes perceived arrow smoothness/speed; Cesar should calibrate at shipping frame pacing. K9 feel-verify is DEVICE-ONLY (perf class — sim renders at the Mac's refresh and false-passes smoothness).
-
-### K1 · camera_drag_touch_origin (smoke #3) — Surgical
-
-```
-Bug: on a physical iPhone, touch-and-drag no longer moves the camera sideways
-during aim. Works correctly in the Unity editor with a mouse. Editor-vs-device
-divergence, not a missing feature.
-
-START HERE — primary hypothesis, verify before fixing:
-Assets/Scripts/Gameplay/Input/InputSystemSource.cs
-
-HandlePressStarted() sets `_origin = _currentPosition`, but `_currentPosition`
-is only written in Update(). Input System callbacks fire before MonoBehaviour
-Update() in the same frame, so at press time `_currentPosition` holds the
-PREVIOUS frame's value.
-
-With <Mouse>/position that is harmless — the cursor was already at that point,
-so `_origin` is correct. With <Touchscreen>/primaryTouch/position there is no
-position before the finger lands: it holds the LAST RELEASED touch's position,
-or (0,0) at launch. So `_origin` is stale and every `current - origin` delta
-carries a spurious offset on press.
-
-Related, same root: <Mouse>/position updates continuously while unpressed;
-primaryTouch/position does not. Any consumer reading TouchPositionPx while
-IsTouching is false gets live data in the editor and stale data on device.
-
-Fix direction: sample the live position inside HandlePressStarted rather than
-reusing the cached field, so `_origin` is correct on the frame of the press.
-
-ALREADY RULED OUT — do not re-investigate:
-Shot.inputactions bindings are correct. Both Touch and TouchPress have proper
-<Touchscreen>/primaryTouch/{position,press} bindings alongside the <Mouse>
-ones. Do not edit the .inputactions asset.
-
-IF H1 IS DISPROVEN BY MEASUREMENT, fall back in this order:
-H2 — the "don't move camera while touching the club handle" gate. Check
-     ClubHandleDragger.cs and ShotController.cs for
-     EventSystem.current.IsPointerOverGameObject() called WITHOUT a fingerId.
-     The parameterless overload is mouse-semantics and is unreliable under
-     touch. Unverified; it is a grep, not an investigation.
-H3 — a full-screen GraphicRaycaster swallowing touches the mouse path misses.
-     Least likely, check last.
-
-CONSTRAINTS:
-- Do NOT rewrite ChaseCamera / LoopCameraDirector. The bug is in the input
-  layer, not the camera. Camera code is single-writer and off limits here.
-- Minimal diff. Additive guard preferred over restructuring the source.
-
-VERIFICATION — this is the important part:
-This bug is INVISIBLE IN THE EDITOR by definition, and the iOS SIMULATOR
-FALSE-PASSES it (sim input arrives from the trackpad down the mouse path —
-IOS_SIMULATOR_LOOP.md validity boundary). The only valid gate is a build on
-the physical iPhone showing sideways drag working, plus confirmation that
-dragging ON the club handle still does NOT move the camera.
-
-If you cannot run on device, report the fix as UNVERIFIED and say so plainly.
-```
 
 ### K2 · map_view_bottom_anchor (smoke #5) — TellCode
 
@@ -561,6 +504,111 @@ false-passes smoothness; perf class = INVALID sim surface). The mechanism
 IS editor/sim-checkable: Debug.Log Application.targetFrameRate at boot → 60.
 Device: mode slides visibly smoother, Cesar's eyeball is the gate; spot-check
 one hole for the knock-on above.
+```
+
+### K10 · ob_recovery_fixes (smoke #9) — Surgical+TellCode · EDITOR-verifiable
+
+```
+Task: ob_recovery_fixes — three symptoms on the shot AFTER an OB; one camera
+root cause + one design-rule change. Smoke #9 (device, Hole 1, first-shot OB
+into the right tree line; build 10fc22e+595c, 08-05 09:29).
+
+SYMPTOMS (Cesar, device):
+1. Ball not returned to the tee after a first-shot OB (dropped at green edge).
+2. Aiming line points BACKWARDS (toward the tee).
+3. Camera cannot be dragged sideways during that aim phase. The next shot
+   fires → everything recovers.
+
+NOT K1. camera_drag_touch_origin (`bb59d32dd`) is fixed + device-verified;
+normal-shot drag works. Do NOT touch InputSystemSource or the orbit input
+read.
+
+────────────────────────────────────────────────────────────────
+PART A — camera wedge after OB (symptoms 2+3, ONE root cause,
+source-verified by the Architect — re-verify the chain, then fix)
+────────────────────────────────────────────────────────────────
+Chain, all in Assets/Scripts/Physics/Viewer/:
+
+LoopCameraDirector.HandleStateChanged:
+  →OB: ResetToOrigin(LastShotOrigin,…) ← _shotOrigin = the TEE on shot 1
+       SetOBFreezePivot(pivot)         ← OB crossing point
+       ModeMap[OB] = Mode.OBFreeze
+       SetTarget(null)                 ← terminal clear; its comment claims
+                                         "aim owner takes over via ChaseCamera
+                                         LateUpdate null-target early-return"
+  →Aiming (from ReArm): ModeMap[Aiming] = null = "leave whatever was set"
+       → mode STAYS OBFreeze through the entire next aim phase.
+
+ChaseCamera.RunLateUpdateLogic: the null-target early-return exists ONLY for
+Chase/GroundLevel. OBFreeze keeps running every frame with
+focus = _target ?? _shotOrigin = THE TEE:
+  desiredPos = _obFreezePivot (out at the OB crossing)
+  desiredRot = LookRotation(tee − pivot)  ← camera looks BACKWARDS
+LateUpdate therefore overwrites, every frame:
+  – the pin-facing re-aim (ApplyCameraYaw committed in
+    PhysicsLabController.RepositionBallWithLookDir)   → symptom 2
+  – the orbit drag written in Update (HandleCameraOrbit) → symptom 3
+Why AtRest shots are fine: ModeMap[AtRest] = Chase → null-target early-return
+→ aim owner runs. The Aiming=null entry predates OBFreeze (§2b); OBFreeze
+broke the invariant that terminal modes are inert during aim.
+
+FIX (director-side, minimal — respect the single-writer rule; do NOT
+restructure ChaseCamera):
+In HandleStateChanged, on change.Next == BallState.Aiming:
+  if (setter.CurrentMode == ChaseCamera.Mode.OBFreeze)
+      ApplyMode(ChaseCamera.Mode.Chase);
+Chase + null target = dormant → the aim camera owner takes the view back.
+⚠️ Do NOT blanket-map Aiming→Chase: the null entry protects putter mode
+(EnterPutterMode sets GroundLevel; re-arms happen while putting).
+
+SAME-CLASS CHECK (report; fix only if same-shape): InCup → CupZoom is also a
+pivot/focus mode with no null-target early-return. If the NEXT hole's first
+aim phase can run with mode still CupZoom (does anything reset it before
+SetupAtTee?), it wedges identically. Check and report; if broken, include
+CupZoom in the same conditional exit.
+
+────────────────────────────────────────────────────────────────
+PART B — drop rule (symptom 1): Cesar RULING 2026-08-05 = REAL GOLF
+────────────────────────────────────────────────────────────────
+Current behavior: OBDropResolver.Resolve drops at the LAST in-bounds terrain
+hit; falls back to _lastShotOrigin only when no safe hit exists. Deliberate
+§2e design — now ruled against.
+
+New rule (real golf):
+– Boundary OB (result.OBReason != Water): STROKE AND DISTANCE — drop at the
+  previous shot origin (_lastShotOrigin). First-shot OB → back on the tee.
+– Water: KEEP current behavior (last dry touch ≈ lateral relief near entry,
+  never nearer the hole). KNOWN APPROXIMATION: a long carry over land that
+  splashes drops at the last BOUNCE, which can sit well behind the real
+  crossing point. Accepted for now — note it in the report; refining to the
+  actual water-crossing point is a separate design row if Cesar wants it.
+
+Implementation: branch on OBReason at the §2e call site in
+PhysicsLabController.HandleShotComplete (BallState.OB case) — water path
+keeps OBDropResolver.Resolve; boundary path uses _lastShotOrigin directly.
+Leave OBDropResolver itself unchanged (water still uses it). The
+aim-toward-pin yaw computation stays as-is — it is correct once the camera
+stops fighting it (re-tee drop → ComputeYawTowardPin(tee, pin) = down the
+fairway). Penalty/turn arithmetic: DO NOT touch — TURN counting is already
+correct (Cesar's TURN 3 after a first-shot OB = shot + penalty + 1).
+
+CONSTRAINTS:
+– No changes to ChaseCamera internals beyond (at most) the CupZoom finding;
+  no changes to BallStateMachine / ReArm semantics; keep the OB hold beats
+  (water 1.2 s, boundary 2.0 s) — shipped behavior.
+– Run the Physics test assembly; add a test for the boundary→origin branch
+  wherever the OB drop is covered (NextShotHandoffTests neighborhood).
+
+VERIFY — EDITOR-VALID (state-machine logic, not device-only):
+1. Editor: fire a deliberate boundary OB (ObBoundaryCaptureBot menu or
+   manual). After the drop: ball at the previous origin, camera behind the
+   ball facing the pin, aim line forward, mouse orbit drag WORKS. The drag
+   check is the wedge regression test — it FAILS on HEAD today.
+2. Water OB: ball still drops at last dry touch; camera/aim/drag equally
+   healthy afterward.
+3. Device: one boundary-OB repro on iPhone for confidence (drag is the
+   K1-verified path; expected to just work once LateUpdate stops fighting).
+4. Report the CupZoom same-class finding either way.
 ```
 
 ---
