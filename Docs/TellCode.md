@@ -7,7 +7,7 @@
 
 ## ▶ CURRENT STATE — update this block at every session boundary
 
-- **Last updated:** 2026-08-05 11:37 JST (Architect — **DEVICE ERA.** Game builds+runs on physical iPhone since 2026-07-27; signing SOLVED (do not re-litigate); on-device smoke found 7 issues. Fixed since: `centralball_device_invisible` (device-verified `1a4ad15ca`), `hole6_tree_collision_profiles` (`c1d38e280`), `camera_drag_touch_origin`/K1 (CLOSED — `bb59d32dd` 08-03, device-verified per commit + Cesar's session; block deleted 2026-08-05). Shipped: `build_version_stamp` (3 defects → hardening kickoff below). **iOS Simulator three-tier verification loop VALIDATED** — canonical doc `Docs/Pipeline/IOS_SIMULATOR_LOOP.md`; standing rules: never wipe the seeded DerivedData, never `BuildPipeline.BuildPlayer` via MCP script-execute. Full story: `Docs/Reports/2026-08-04_ios_simulator_build_blocker.md` §§10–13 + `Docs/AI_CONTEXT.md` top block. **OPEN = the PENDING KICKOFFS below** (6 smoke issues + build-stamp hardening + housekeeping; K9 `ui_frame_pacing` smoke #8 added 2026-08-05; K10 `ob_recovery_fixes` **CLOSED 2026-08-05** (`90dd574ff` camera+drop rule, `ed65f5726` permanent capture Y-flip fix; CupZoom same-class wedge found+fixed; OB now stops chasing with no aerial cut; ground-level settle built then reverted per Cesar); K1 closed. K11 `club_selection_green_gate` added 2026-08-05 — putter-only-on-green selection gate, PARALLEL-SAFE with K10 (one overlapping item deferred inside the block). K12 `matchmaking_scan_pacing` added 2026-08-05 — find-opponent animation: decelerating scan + total cut ~5.6s→~3.1s, NO scene edit (new-serialized-field technique), queued AFTER K11 per Cesar. ⚠️ RECONCILIATION PENDING: repo log shows K6-core `cd0ef6ed4` (arrow F13 + floor clamp) and K9 `7380baf67` already COMMITTED, plus `b702e1a41` wind→ball-flight landed outside the documented queue — K6/K9 blocks need close-out review with Cesar) plus `putter_aim_blue_line` (413, SPEC_READY in `Specs/Active/`, awaiting Cesar go) and a device pass on `demo_build_slice` (426). Everything below this bullet predates the device era and is historical.)
+- **Last updated:** 2026-08-05 11:37 JST (Architect — **DEVICE ERA.** Game builds+runs on physical iPhone since 2026-07-27; signing SOLVED (do not re-litigate); on-device smoke found 7 issues. Fixed since: `centralball_device_invisible` (device-verified `1a4ad15ca`), `hole6_tree_collision_profiles` (`c1d38e280`), `camera_drag_touch_origin`/K1 (CLOSED — `bb59d32dd` 08-03, device-verified per commit + Cesar's session; block deleted 2026-08-05). Shipped: `build_version_stamp` (3 defects → hardening kickoff below). **iOS Simulator three-tier verification loop VALIDATED** — canonical doc `Docs/Pipeline/IOS_SIMULATOR_LOOP.md`; standing rules: never wipe the seeded DerivedData, never `BuildPipeline.BuildPlayer` via MCP script-execute. Full story: `Docs/Reports/2026-08-04_ios_simulator_build_blocker.md` §§10–13 + `Docs/AI_CONTEXT.md` top block. **OPEN = the PENDING KICKOFFS below** (6 smoke issues + build-stamp hardening + housekeeping; K9 `ui_frame_pacing` smoke #8 added 2026-08-05; K10 `ob_recovery_fixes` **CLOSED 2026-08-05** (`90dd574ff` camera+drop rule, `ed65f5726` permanent capture Y-flip fix; CupZoom same-class wedge found+fixed; OB now stops chasing with no aerial cut; ground-level settle built then reverted per Cesar); K1 closed. K11 `club_selection_green_gate` **CLOSED 2026-08-05** (`066df31f2` selector gate + `efa681acb` §2f re-decide after reposition — the item deferred pending K10; ⚠️ K10's close-out swept K11's in-flight lines and briefly broke `main`, repaired forward — see the K11 block). K12 `matchmaking_scan_pacing` added 2026-08-05 — find-opponent animation: decelerating scan + total cut ~5.6s→~3.1s, NO scene edit (new-serialized-field technique), queued AFTER K11 per Cesar — **now NEXT UP**. ⚠️ RECONCILIATION PENDING: repo log shows K6-core `cd0ef6ed4` (arrow F13 + floor clamp) and K9 `7380baf67` already COMMITTED, plus `b702e1a41` wind→ball-flight landed outside the documented queue — K6/K9 blocks need close-out review with Cesar) plus `putter_aim_blue_line` (413, SPEC_READY in `Specs/Active/`, awaiting Cesar go) and a device pass on `demo_build_slice` (426). Everything below this bullet predates the device era and is historical.)
 
 - **Last updated:** 2026-07-02 (Architect — `1v1_result_rewards_display` (347) DONE. NEXT-at-the-time = `stamina_boost_shop` (517) design pass. STALE — superseded by the device-era bullet above.)
 - Older narrative bullets (2026-06-11 → 2026-06-24): preserved in git history of this file — all tasks named in them are closed in `Docs/Specs/Completed/`. Trust `Docs/Specs/Active/` + the AI_CONTEXT headline, not old bullets.
@@ -22,7 +22,7 @@ Paste any block below into Code as-is. Produced by the Architect during the 2026
 - `nav_bar_edge_gaps` BEFORE `safe_area_top_bar` (same two bars, same scene; #1's outcome determines the bars' final geometry). Back-to-back isolated commits, no other ShellScene work interleaved.
 - `tree_wind_device` verification is DEVICE-ONLY (sim false-passes it — measured, report §11). `arrow_speed_retune` and `safe_area_top_bar` are editor/sim-verifiable. `ob_recovery_fixes` (K10) is EDITOR-verifiable — state-machine logic; the camera wedge repros in the editor with a mouse.
 - `ui_frame_pacing` (K9) should LAND before `arrow_speed_retune` (K6) LOCKS — 60 fps changes perceived arrow smoothness/speed; Cesar should calibrate at shipping frame pacing. K9 feel-verify is DEVICE-ONLY (perf class — sim renders at the Mac's refresh and false-passes smoothness).
-- `club_selection_green_gate` (K11) may run IN PARALLEL with K10 — different files (SelectorOverlayWidget + putter-mode UI region vs LoopCameraDirector + OB branch). The ONE overlapping item (§2f re-decide after reposition, same PhysicsLabController region as K10 Part B) is explicitly DEFERRED inside K11 until K10 merges — **K10 merged 2026-08-05 (`90dd574ff`), so that item is now unblocked.** K11 is EDITOR-verifiable.
+- ~~`club_selection_green_gate` (K11) may run IN PARALLEL with K10~~ — **K11 CLOSED 2026-08-05** (`066df31f2` gate + `efa681acb` the deferred §2f-after-reposition item, which K10's merge unblocked). Both shipped; see the K11 block below, including the process scar where K10's close-out swept K11's in-flight lines and briefly broke `main`.
 - `matchmaking_scan_pacing` (K12): queued AFTER K11 per Cesar. Single file (MatchmakingModalController.cs), no overlap with K10/K11 — technically parallel-safe if the queue frees up. ⚠️ NO ShellScene edit: the modal's tunables are scene-serialized (K7 is mid-flight in that scene); K12 uses new serialized fields so code defaults take effect without touching the scene. EDITOR-verifiable.
 
 ### K2 · map_view_bottom_anchor (smoke #5) — TellCode
@@ -639,7 +639,40 @@ VERIFY — EDITOR-VALID (state-machine logic, not device-only):
 ```
 </details>
 
-### K11 · club_selection_green_gate — TellCode · PARALLEL-SAFE with K10 · EDITOR-verifiable
+### K11 · club_selection_green_gate — ✅ DONE 2026-08-05 (Cesar-approved)
+
+**Shipped:** `066df31f2` (selector gate) · `efa681acb` (the deferred §2f-after-reposition item).
+TellCode-dispatched — no `Docs/Specs/` folder for this one.
+
+- **Gate at the UI layer, reusing §2f — not a second rule.** `EnterPutterMode`/`ExitPutterMode`
+  publish to `ClubSelectionBroadcast` (same static-bus/asmdef-isolation precedent as `Raise`);
+  eligibility is one pure `IsSelectable(labClubIndex, putterLabClubIndex, inPutterMode)` shared by
+  `Populate` and `Scroll`. Reading the same decision that flipped the club is what stops the gate
+  and the auto-switch from fighting the player. Bots / map view / debug stay **ungated**;
+  `SetClub`, `PutterModeSurfaceController`, `ClubContext.RequestSelection` untouched.
+- **Shipped disabled, not hidden** — alpha 0.5 + non-interactive (ball-selector precedent), with
+  `CanvasGroup` added to runtime clones so no prefab is dirtied. Every commit path guarded; `Scroll`
+  steps over ineligible clubs and returns `bool` so the hold-scroll coroutine exits instead of spinning.
+- **Needed beyond the brief:** `Enter/ExitPutterMode` only fire on a club *change*, so a boot-time
+  publish in `Start()` was required or the gate would have been inert for the whole first hole.
+  `IsSelectable` fails open on an unpublished index so it can never soft-lock the selector.
+- **Deferred item — now done (`efa681acb`):** hooked the §2f re-decide into `RepositionBallWithLookDir`,
+  the single seam `PlaceBallAt` + both OB hold coroutines funnel through, classifying the drop point
+  with the same baked classifier the sim uses for `EndSurface`.
+- 🔵 **Scope correction:** K10's stroke-and-distance rule made **boundary OB self-correcting** (the drop
+  returns to the previous origin, where the club was already right). Real exposure is **water relief
+  crossing the green boundary**, plus `PlaceBallAt` — narrower than the kickoff implied.
+- **Tests:** Gameplay 252 / Physics 257, 0 fail. `RepositionClubReDecideTests` runs against **real baked
+  Hole 6 zone data** with points discovered by scanning, so a re-bake that moved the green fails it.
+
+⚠️ **Process scar — parallel close-outs stage whole files.** K10's close-out (`90dd574ff`) staged all of
+`PhysicsLabController.cs` and swept in three in-flight K11 lines, leaving `origin/main` calling a
+`ClubSelectionBroadcast.SetPutterMode` that did not exist yet (CS0117 on a fresh checkout; invisible
+locally because the working tree had both halves). Repaired forward by `066df31f2` — no history rewrite,
+`90dd574ff` was already pushed. **Rule: a publisher/consumer pair split across two asmdefs must be
+committed together.** CLAUDE.md Rule 12 guards the reverse direction only; nothing guards this one.
+
+<details><summary>Original kickoff (historical)</summary>
 
 ```
 Task: club_selection_green_gate — the putter is selectable ONLY on the
@@ -717,6 +750,8 @@ VERIFY — EDITOR-VALID:
 - Bot smoke: one BotDriver hole plays through unchanged (bots bypass UI).
 - Device pass optional — pure UI logic, editor/sim sufficient.
 ```
+
+</details>
 
 ### K12 · matchmaking_scan_pacing — Surgical · AFTER K11 per Cesar · EDITOR-verifiable
 
