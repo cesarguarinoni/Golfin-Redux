@@ -1,0 +1,35 @@
+=== iter-1 kickoff baseline 2026-08-04 17:13 JST ===
+HEAD 975cbca86dab6111d6b35e3b4b992619abd6c875
+DIRTY (porcelain, should be empty):
+?? Docs/Specs/Active/safe_area_top_bar/HEARTBEAT.log
+?? Docs/Specs/Active/safe_area_top_bar/STATUS.md
+=== end baseline ===
+
+=== iter-1 complete 2026-08-04 17:32 JST ===
+Implemented Option A on main thread. Compile clean, show/hide matrix verified in play mode,
+scene diff audited (1 benign TMP self-heal documented), editor full-safe-area unchanged,
+simulated iPhone-14 inset proven (top 141px / bottom 102px, bg full-bleed 0/2532).
+Awaiting Cesar device confirm + commit approval.
+
+=== iter-2 (design v2) 2026-08-04 18:30 JST ===
+Cesar rejected v1 (full inset, moved too far, touched bottom nav).
+v2: capped SafeAreaFitter (_maxInsetPixels=72) nudges ONLY top chrome; UsernameText excluded;
+bottom nav reverted to HEAD. Scene diff 105/17 clean (recovered from a 4600-line play-mode churn
+via git checkout + clean re-surgery). Numeric verify: chrome clears 14PM Island by ~28px, no leak,
+username + bottom nav unchanged. Full sim-SDK re-export in progress for real iPhone-14-sim render.
+
+=== iter-3 (baseline model) 2026-08-04 18:57 JST ===
+Cesar: elements already clear iPhone 14 notch; calculate from the 14's position.
+Fitter now BASELINE-relative: nudge = max(0, deviceTopInset - 141px[iPhone14 47pt@3x]).
+iPhone14 -> 0 move; 14 Pro Max -> 36px (12pt delta); no-notch -> 0. Scene diff 105/17 clean.
+Two churn incidents this session (play-mode save, ForceUpdateCanvases-then-save) recovered via
+git checkout + clean re-surgery. Discipline: surgery -> save immediately -> verify after (no save).
+
+=== iter-4 (center-only) 2026-08-05 09:49 JST ===
+Cesar: only the CENTER cluster is under the (centered) Dynamic Island; RP counter (top-left) +
+Settings (top-right) flank it and must NOT move.
+TopBarContent now holds ONLY TicketIcon/TicketCountText/ShopPlusButton (nudged, baseline 141).
+RP bg/icon/text + Settings + UsernameText stay on TopBar (no nudge). Code: EnsureTicketPill clones
+RP template from topBarPanel; ApplyDemoTopBarTrim finds RP on topBarPanel; SetTopBarChromeVisible
+iterates BOTH topBarPanel (skip Username) + topBarContent. Scene diff 97/9 clean; bottom nav untouched;
+reverted Dev-iOS.asset build-profile drift + ProjectSettings clean.

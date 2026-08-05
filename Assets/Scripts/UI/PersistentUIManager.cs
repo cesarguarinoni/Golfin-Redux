@@ -15,6 +15,14 @@ namespace Golfin.UI
 
         [Header("Top Bar References")]
         public GameObject topBarPanel;
+
+        [Tooltip("safe_area_top_bar (smoke #2): holds ONLY the CENTER ticket cluster (TicketIcon, TicketCountText, " +
+                 "ShopPlusButton + the runtime TicketCountBackground pill) — the elements that sit under the " +
+                 "centered Dynamic Island. Its SafeAreaFitter uses a 141px baseline (iPhone 14 top inset) and moves " +
+                 "them ONLY by the excess on a larger cutout (0 on a 14, ~36px on a 14 Pro Max). The RP cluster " +
+                 "(top-left) + Settings (top-right) + UsernameText stay on topBarPanel — they flank the Island and " +
+                 "don't move. Chrome/demo logic keys off this + topBarPanel.")]
+        public GameObject topBarContent;
         public Image rewardPointsIcon;
         public TMPro.TextMeshProUGUI rewardPointsText;
         public Button settingsButton;
@@ -139,14 +147,16 @@ namespace Golfin.UI
         private void EnsureTicketPill()
         {
             if (ticketCountText == null) return;
-            var topbar = ticketCountText.transform.parent;
-            if (topbar == null || topbar.Find("TicketCountBackground") != null) return;
+            // safe_area_top_bar: the ticket cluster (icon/count/shop + this pill) lives in the nudged
+            // TopBarContent; the RewardPointsBackground template stays on topBarPanel with the RP cluster.
+            var host = ticketCountText.transform.parent;   // TopBarContent (nudged center cluster)
+            if (host == null || host.Find("TicketCountBackground") != null) return;
 
-            var rp   = topbar.Find("RewardPointsBackground");
-            var icon = topbar.Find("TicketIcon");
+            var rp   = topBarPanel != null ? topBarPanel.transform.Find("RewardPointsBackground") : null;
+            var icon = host.Find("TicketIcon");
             if (rp == null || icon == null) return;
 
-            var pill = Instantiate(rp.gameObject, topbar);
+            var pill = Instantiate(rp.gameObject, host);
             pill.name = "TicketCountBackground";
             var prt = pill.GetComponent<RectTransform>();
             // Center-anchor (0.5) so the ticket cluster stays centered as the top bar
@@ -161,7 +171,7 @@ namespace Golfin.UI
             pill.transform.SetAsLastSibling();
             icon.SetAsLastSibling();
             ticketCountText.transform.SetAsLastSibling();
-            var shop = topbar.Find("ShopPlusButton");
+            var shop = host.Find("ShopPlusButton");
             if (shop != null) shop.SetAsLastSibling();
         }
 
@@ -197,6 +207,8 @@ namespace Golfin.UI
             if (GolfinRedux.Demo.DemoConfig.Instance.PointsEnabled) return;
             if (rewardPointsText != null) rewardPointsText.gameObject.SetActive(false);
             if (rewardPointsIcon != null) rewardPointsIcon.gameObject.SetActive(false);
+            // safe_area_top_bar: the RP cluster (incl. RewardPointsBackground) stays on topBarPanel —
+            // only the center ticket cluster moved into topBarContent. Find the RP pill on topBarPanel.
             if (topBarPanel != null)
             {
                 var pill = topBarPanel.transform.Find("RewardPointsBackground");
@@ -229,11 +241,21 @@ namespace Golfin.UI
         /// </summary>
         private void SetTopBarChromeVisible(bool visible)
         {
-            if (topBarPanel == null) return;
-            foreach (Transform child in topBarPanel.transform)
+            // safe_area_top_bar: chrome is split — the RP cluster + Settings stay on topBarPanel (with the
+            // UsernameText/nameplate, which must be skipped), and the center ticket cluster lives in the
+            // nudged topBarContent. Toggle both groups so account screens strip ALL chrome but keep the title.
+            if (topBarPanel != null)
             {
-                if (child.name == "UsernameText") continue;
-                child.gameObject.SetActive(visible);
+                foreach (Transform child in topBarPanel.transform)
+                {
+                    if (child.name == "UsernameText") continue;
+                    child.gameObject.SetActive(visible);
+                }
+            }
+            if (topBarContent != null)
+            {
+                foreach (Transform child in topBarContent.transform)
+                    child.gameObject.SetActive(visible);
             }
         }
 
@@ -491,8 +513,12 @@ namespace Golfin.UI
 
         public void ShowTopBar(bool show)
         {
+            // safe_area_top_bar: background + nameplate live on topBarPanel; the notch-clearing chrome
+            // lives in topBarContent (under a capped SafeAreaFitter sibling). Toggle both.
             if (topBarPanel != null)
                 topBarPanel.SetActive(show);
+            if (topBarContent != null)
+                topBarContent.SetActive(show);
         }
 
         public void ShowBottomNav(bool show)
