@@ -16,6 +16,9 @@ namespace GolfinRedux.UI
     public class HomeScreenController : MonoBehaviour
     {
         [Header("Screen Manager")]
+        // K13: no longer read from code — its only remaining caller was the PLAY fallback that
+        // navigated to the fake boot Loading screen. Kept as a scene-wired reference so the
+        // ShellScene serialization is untouched and any future navigation from Home has it ready.
         [SerializeField] private ScreenManager screenManager;
 
         // -------- Top Bar --------
@@ -449,9 +452,12 @@ namespace GolfinRedux.UI
                 matchmakingModal.Open(currentHoleIndex);
                 return;
             }
-            // Legacy fallback if matchmaking isn't wired in this scene
-            if (screenManager != null)
-                screenManager.ShowScreen(ScreenId.Loading);
+            // K13 (boot_loading_screen_removal): this used to fall back to ScreenId.Loading,
+            // which in LegacyBootHome mode is a fake 2s timer that just bounces straight back
+            // to Home — it never loaded a hole, so it helped nobody. This branch only fires on
+            // a wiring bug (matchmakingModal unassigned in the scene), so say so loudly instead.
+            Debug.LogError("[HomeScreen] PLAY: matchmakingModal is not wired on this " +
+                           "HomeScreenController — cannot start a match. Assign it in the Inspector.");
         }
 
     }
