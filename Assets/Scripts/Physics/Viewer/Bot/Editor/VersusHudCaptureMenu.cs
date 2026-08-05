@@ -57,6 +57,12 @@ namespace Golfin.Physics.Viewer.Editor
         const string ScenarioKey   = "VersusHudCaptureMenu.Scenario";
         const string ArmedKey      = "VersusHudCaptureMenu.Armed";
         const string RestoreReloadKey = "VersusHudCaptureMenu.RestoreSceneReload";
+        // hole_scene_leftover (2026-08-05): every launcher below stages its own hierarchy
+        // (LabScaffold/ShellScene single + Hole_NN_Geo additive). Without a restore on the way
+        // out, that staged hierarchy simply BECOMES the editor hierarchy. Snapshot taken before
+        // the first OpenScene; restored at EnteredEditMode. SessionState, not EditorPrefs.
+        const string SetupKey      = "VersusHudCaptureMenu.SceneSetup";
+        const string CleanupKey    = "VersusHudCaptureMenu.CleanupPending";
         // BUG A fix (iter-5): store the real tee world position from the loaded geo scene so the
         // versus_full_match_flow seeding block can set Players[i].Lie correctly.
         const string TeeLieXKey    = "VersusHudCaptureMenu.TeeLie.x";
@@ -315,6 +321,9 @@ namespace Golfin.Physics.Viewer.Editor
 
             Debug.Log($"[VersusHudCaptureMenu] Launching scenario: '{scenarioKey}'");
 
+            // 0. Snapshot the pre-run scene setup BEFORE any OpenScene (restored at EnteredEditMode).
+            Golfin.Physics.Viewer.Editor.CaptureSceneSetup.Capture(SetupKey);
+
             // 1. Open LabScaffold (single mode) — the HUD host scene.
             var labScene = EditorSceneManager.OpenScene(LabScenePath, OpenSceneMode.Single);
             if (!labScene.IsValid())
@@ -366,6 +375,9 @@ namespace Golfin.Physics.Viewer.Editor
 
             Debug.Log($"[VersusHudCaptureMenu] LaunchHole: scenario='{scenarioKey}' geoPath='{holeGeoPath}'");
 
+            // Snapshot the pre-run scene setup BEFORE any OpenScene (restored at EnteredEditMode).
+            Golfin.Physics.Viewer.Editor.CaptureSceneSetup.Capture(SetupKey);
+
             var labScene = EditorSceneManager.OpenScene(LabScenePath, OpenSceneMode.Single);
             if (!labScene.IsValid())
             {
@@ -399,6 +411,11 @@ namespace Golfin.Physics.Viewer.Editor
             }
 
             Debug.Log($"[VersusHudCaptureMenu] Launching nav scenario: '{scenarioKey}'");
+
+            // Snapshot the pre-run scene setup BEFORE any OpenScene. The nav scenario opens
+            // ShellScene single, but matchmaking then loads LabScaffold + a geo scene at
+            // runtime — so this run can leave a hole scene staged just like the others.
+            Golfin.Physics.Viewer.Editor.CaptureSceneSetup.Capture(SetupKey);
 
             // Nav scenario: open ShellScene (the real production scene) single mode.
             // The nav bot will drive the UI from Home → ModeSelect → 1v1 matchmaking.
@@ -471,6 +488,9 @@ namespace Golfin.Physics.Viewer.Editor
             // Arm via SessionState (survives domain reloads between Launch() and EnteredPlayMode).
             SessionState.SetString(ScenarioKey, scenarioKey);
             SessionState.SetBool(ArmedKey, true);
+            // Gate for the EnteredEditMode restore (ArmedKey is cleared at EnteredPlayMode,
+            // so it cannot double as the cleanup gate).
+            SessionState.SetBool(CleanupKey, true);
 
             // Also set LoopV2SmokeBot.Scenario so BotVideoRecorder.Begin() uses the correct
             // output folder (tasks/loop_v2_smoke_bot/<scenarioKey>/video/raw.mp4).
@@ -501,8 +521,12 @@ namespace Golfin.Physics.Viewer.Editor
         /// No-op unless SessionState Armed=true.
         /// </summary>
         [UnityEditor.Callbacks.DidReloadScripts]
+        [InitializeOnLoadMethod]
         static void OnScriptsReloaded()
         {
+            // [InitializeOnLoadMethod] runs on EVERY domain load (including the reloads into and
+            // out of play mode), not only after a script compile — so a domain reload mid-flow
+            // cannot orphan the EnteredEditMode cleanup.
             EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
             EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
         }
@@ -1201,6 +1225,19 @@ namespace Golfin.Physics.Viewer.Editor
                     SessionState.SetBool(RestoreReloadKey, false);
                     Debug.Log("[VersusHudCaptureMenu] Restored DisableSceneReload option (at ExitingPlayMode).");
                 }
+            }
+            else if (state == PlayModeStateChange.EnteredEditMode)
+            {
+                // hole_scene_leftover (2026-08-05): close the staged hole scene WITHOUT saving
+                // and put the editor hierarchy back the way the run found it. Exit-path only —
+                // nothing about the staging or the capture itself changes.
+                if (!SessionState.GetBool(CleanupKey, false)) return;
+                SessionState.SetBool(CleanupKey, false);
+
+                SessionState.SetBool(ArmedKey, false);
+
+                Golfin.Physics.Viewer.Editor.CaptureSceneSetup.Restore(SetupKey);
+                Debug.Log("[VersusHudCaptureMenu] Capture run cleaned up: hole scene closed, scene setup restored.");
             }
         }
     }

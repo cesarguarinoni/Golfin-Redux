@@ -17,6 +17,10 @@ namespace Golfin.Physics.Viewer.Editor
         const string Hole01ScenePath = "Assets/Golf/Courses/lomond-country-club/Generated/Hole_01_Geo.unity";
         const string Hole01SceneName = "Hole_01_Geo";
 
+        // hole_scene_leftover (2026-08-05). SessionState, not EditorPrefs.
+        const string SetupKey   = "SmokeRunner2fMenu.SceneSetup";
+        const string CleanupKey = "SmokeRunner2fMenu.CleanupPending";
+
         [MenuItem("GOLFIN/Smoke/Capture 2f Putter Auto-Switch + Tuning (Hole_01)")]
         public static void Run()
         {
@@ -26,9 +30,17 @@ namespace Golfin.Physics.Viewer.Editor
                 return;
             }
 
+            // Snapshot BEFORE any OpenScene — restored at EnteredEditMode so this run no longer
+            // leaves LabScaffold + Hole_01_Geo as the editor hierarchy. The defensive pre-clean
+            // in OpenLabAndHole() below STAYS — defence in depth; it should now find nothing.
+            CaptureSceneSetup.Capture(SetupKey);
+            // Arm the cleanup gate HERE, not in SaveAndEnterPlayMode — if that delayed call
+            // ever early-returns, the snapshot would otherwise be stranded and never restored.
+            SessionState.SetBool(CleanupKey, true);
+
             if (!OpenLabAndHole()) return;
-            AttachHost();
-            EditorApplication.delayCall += SaveAndEnterPlayMode;
+            Arm();
+            EditorApplication.delayCall += EnterPlayMode;
         }
 
         static bool OpenLabAndHole()
@@ -73,36 +85,25 @@ namespace Golfin.Physics.Viewer.Editor
             return true;
         }
 
-        static void AttachHost()
+        /// <summary>
+        /// Arm via SessionState only. The host component is NOT attached here — it is injected
+        /// at EnteredPlayMode (LoopV2SmokeBotMenu "Option B") so it is never serialized into
+        /// LabScaffold and the scene is never written by a capture run.
+        ///
+        /// This replaced an attach-then-SaveScene staging step. That save was not free: it also
+        /// baked unrelated serialization catch-up (13 `_disabledAlpha` lines) into LabScaffold,
+        /// so every §2f run dirtied the scene with churn that had nothing to do with the capture.
+        /// </summary>
+        static void Arm()
         {
-            var labRoot = GameObject.Find("LabRoot");
-            if (labRoot == null)
-            {
-                Debug.LogError("[SmokeRunner2fMenu] LabRoot not found.");
-                return;
-            }
-
-            // Remove stale 2f host
-            var stale2f = labRoot.GetComponent<SmokeRunner2fHost>();
-            if (stale2f != null) Object.DestroyImmediate(stale2f);
-
-            // Also clear out 2e and 2d hosts to prevent interference
-            var stale2e = labRoot.GetComponent<SmokeRunner2eHost>();
-            if (stale2e != null)
-            {
-                Object.DestroyImmediate(stale2e);
-                Debug.Log("[SmokeRunner2fMenu] Removed stale SmokeRunner2eHost.");
-            }
-            // Clear 2e armed state
+            // Clear 2e armed state so a stale §2e arm cannot interfere with this run.
             SmokeRunner2eHost.Armed = false;
-            Debug.Log("[SmokeRunner2fMenu] SmokeRunner2eHost.Armed cleared.");
-
-            labRoot.AddComponent<SmokeRunner2fHost>();
             SmokeRunner2fHost.Armed = true;
-            Debug.Log("[SmokeRunner2fMenu] SmokeRunner2fHost attached and armed.");
+            Debug.Log("[SmokeRunner2fMenu] SmokeRunner2eHost.Armed cleared; SmokeRunner2fHost armed via SessionState. " +
+                      "Host will be injected at EnteredPlayMode — never saved to disk.");
         }
 
-        static void SaveAndEnterPlayMode()
+        static void EnterPlayMode()
         {
             if (EditorApplication.isPlaying)
             {
@@ -110,40 +111,51 @@ namespace Golfin.Physics.Viewer.Editor
                 return;
             }
 
-            Scene lab = SceneManager.GetSceneByName("LabScaffold");
-            if (lab.IsValid() && lab.isLoaded)
-            {
-                EditorSceneManager.MarkSceneDirty(lab);
-                EditorSceneManager.SaveScene(lab);
-                Debug.Log("[SmokeRunner2fMenu] LabScaffold saved. Entering play mode...");
-            }
+            Debug.Log("[SmokeRunner2fMenu] Entering play mode. LabScaffold NOT saved.");
+            EditorApplication.EnterPlaymode();
+        }
 
+        /// <summary>
+        /// Re-register on EVERY domain load, not only after a compile, so a domain reload
+        /// mid-flow cannot orphan the EnteredEditMode cleanup. An orphaned cleanup is how the
+        /// serialized SmokeRunner2fHost residue ended up committed in LabScaffold.unity.
+        /// No-op unless a run armed the cleanup gate.
+        /// </summary>
+        [InitializeOnLoadMethod]
+        static void RegisterHandler()
+        {
             EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
             EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
-            EditorApplication.EnterPlaymode();
         }
 
         static void OnPlayModeStateChanged(PlayModeStateChange state)
         {
-            if (state != PlayModeStateChange.EnteredEditMode) return;
-            EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
-
-            SmokeRunner2fHost.Armed = false;
-
-            Scene lab = SceneManager.GetSceneByName("LabScaffold");
-            if (!lab.IsValid()) return;
-
-            foreach (var go in lab.GetRootGameObjects())
+            if (state == PlayModeStateChange.EnteredPlayMode)
             {
-                var host = go.GetComponentInChildren<SmokeRunner2fHost>();
-                if (host != null)
-                {
-                    Object.DestroyImmediate(host);
-                    EditorSceneManager.MarkSceneDirty(lab);
-                    EditorSceneManager.SaveScene(lab);
-                    Debug.Log("[SmokeRunner2fMenu] Cleaned SmokeRunner2fHost after §2f capture run.");
-                    break;
-                }
+                if (!SmokeRunner2fHost.Armed) return;
+
+                // Inject the host in-memory, in the play-mode scene. Never saved to disk.
+                // SmokeRunner2fHost resolves its dependencies by lookup, not by living on
+                // LabRoot, so this changes nothing about the capture sequence.
+                var go = new GameObject("[SmokeRunner2fHost]");
+                go.AddComponent<SmokeRunner2fHost>();
+                Debug.Log("[SmokeRunner2fMenu] Injected [SmokeRunner2fHost] into the play-mode scene (not saved to disk).");
+            }
+            else if (state == PlayModeStateChange.EnteredEditMode)
+            {
+                if (!SessionState.GetBool(CleanupKey, false)) return;
+                SessionState.SetBool(CleanupKey, false);
+
+                SmokeRunner2fHost.Armed = false;
+
+                // Safety net for residue left by an OLDER build of this launcher (which attached
+                // and serialized the host). No-op — and no LabScaffold write — in the normal case.
+                CaptureSceneSetup.StripSerializedHost<SmokeRunner2fHost>();
+
+                // Close the staged hole scene without saving and restore the pre-run hierarchy.
+                CaptureSceneSetup.Restore(SetupKey);
+
+                Debug.Log("[SmokeRunner2fMenu] §2f capture run cleaned up: hole scene closed, scene setup restored.");
             }
         }
     }
