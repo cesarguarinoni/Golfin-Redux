@@ -7,7 +7,7 @@
 
 ## ▶ CURRENT STATE — update this block at every session boundary
 
-- **Last updated:** 2026-08-05 11:37 JST (Architect — **DEVICE ERA.** Game builds+runs on physical iPhone since 2026-07-27; signing SOLVED (do not re-litigate); on-device smoke found 7 issues. Fixed since: `centralball_device_invisible` (device-verified `1a4ad15ca`), `hole6_tree_collision_profiles` (`c1d38e280`), `camera_drag_touch_origin`/K1 (CLOSED — `bb59d32dd` 08-03, device-verified per commit + Cesar's session; block deleted 2026-08-05). Shipped: `build_version_stamp` (3 defects → hardening kickoff below). **iOS Simulator three-tier verification loop VALIDATED** — canonical doc `Docs/Pipeline/IOS_SIMULATOR_LOOP.md`; standing rules: never wipe the seeded DerivedData, never `BuildPipeline.BuildPlayer` via MCP script-execute. Full story: `Docs/Reports/2026-08-04_ios_simulator_build_blocker.md` §§10–13 + `Docs/AI_CONTEXT.md` top block. **OPEN = the PENDING KICKOFFS below** (6 smoke issues + build-stamp hardening + housekeeping; K9 `ui_frame_pacing` smoke #8 added 2026-08-05; K10 `ob_recovery_fixes` **CLOSED 2026-08-05** (`90dd574ff` camera+drop rule, `ed65f5726` permanent capture Y-flip fix; CupZoom same-class wedge found+fixed; OB now stops chasing with no aerial cut; ground-level settle built then reverted per Cesar); K1 closed. K11 `club_selection_green_gate` **CLOSED 2026-08-05** (`066df31f2` selector gate + `efa681acb` §2f re-decide after reposition — the item deferred pending K10; ⚠️ K10's close-out swept K11's in-flight lines and briefly broke `main`, repaired forward — see the K11 block). K12 `matchmaking_scan_pacing` added 2026-08-05 — find-opponent animation: decelerating scan + total cut ~5.6s→~3.1s, NO scene edit (new-serialized-field technique), queued AFTER K11 per Cesar — **now NEXT UP**. ⚠️ RECONCILIATION PENDING: repo log shows K6-core `cd0ef6ed4` (arrow F13 + floor clamp) and K9 `7380baf67` already COMMITTED, plus `b702e1a41` wind→ball-flight landed outside the documented queue — K6/K9 blocks need close-out review with Cesar) plus `putter_aim_blue_line` (413, SPEC_READY in `Specs/Active/`, awaiting Cesar go) and a device pass on `demo_build_slice` (426). Everything below this bullet predates the device era and is historical.)
+- **Last updated:** 2026-08-05 12:10 JST (Architect — **DEVICE ERA.** Game builds+runs on physical iPhone since 2026-07-27; signing SOLVED (do not re-litigate); on-device smoke found 7 issues. Fixed since: `centralball_device_invisible` (device-verified `1a4ad15ca`), `hole6_tree_collision_profiles` (`c1d38e280`), `camera_drag_touch_origin`/K1 (CLOSED — `bb59d32dd` 08-03, device-verified per commit + Cesar's session; block deleted 2026-08-05). Shipped: `build_version_stamp` (3 defects → hardening kickoff below). **iOS Simulator three-tier verification loop VALIDATED** — canonical doc `Docs/Pipeline/IOS_SIMULATOR_LOOP.md`; standing rules: never wipe the seeded DerivedData, never `BuildPipeline.BuildPlayer` via MCP script-execute. Full story: `Docs/Reports/2026-08-04_ios_simulator_build_blocker.md` §§10–13 + `Docs/AI_CONTEXT.md` top block. **OPEN = the PENDING KICKOFFS below** (6 smoke issues + build-stamp hardening + housekeeping; K9 `ui_frame_pacing` smoke #8 added 2026-08-05; K10 `ob_recovery_fixes` **CLOSED 2026-08-05** (`90dd574ff` camera+drop rule, `ed65f5726` permanent capture Y-flip fix; CupZoom same-class wedge found+fixed; OB now stops chasing with no aerial cut; ground-level settle built then reverted per Cesar); K1 closed. K11 `club_selection_green_gate` **CLOSED 2026-08-05** (`066df31f2` selector gate + `efa681acb` §2f re-decide after reposition — the item deferred pending K10; ⚠️ K10's close-out swept K11's in-flight lines and briefly broke `main`, repaired forward — see the K11 block). K12 `matchmaking_scan_pacing` added 2026-08-05 — find-opponent animation: decelerating scan + total cut ~5.6s→~3.1s, NO scene edit (new-serialized-field technique), queued AFTER K11 per Cesar — **now NEXT UP**. K13 `boot_loading_screen_removal` added 2026-08-05 — boot Loading screen is a pure 2s fake timer with zero real work behind it (only real-progress feeders in the repo are the HoleLoad path's); Cesar's <2s rule → remove the Splash→Loading hop, measure first; HoleLoad path untouched. ⚠️ RECONCILIATION PENDING: repo log shows K6-core `cd0ef6ed4` (arrow F13 + floor clamp) and K9 `7380baf67` already COMMITTED, plus `b702e1a41` wind→ball-flight landed outside the documented queue — K6/K9 blocks need close-out review with Cesar) plus `putter_aim_blue_line` (413, SPEC_READY in `Specs/Active/`, awaiting Cesar go) and a device pass on `demo_build_slice` (426). Everything below this bullet predates the device era and is historical.)
 
 - **Last updated:** 2026-07-02 (Architect — `1v1_result_rewards_display` (347) DONE. NEXT-at-the-time = `stamina_boost_shop` (517) design pass. STALE — superseded by the device-era bullet above.)
 - Older narrative bullets (2026-06-11 → 2026-06-24): preserved in git history of this file — all tasks named in them are closed in `Docs/Specs/Completed/`. Trust `Docs/Specs/Active/` + the AI_CONTEXT headline, not old bullets.
@@ -24,6 +24,7 @@ Paste any block below into Code as-is. Produced by the Architect during the 2026
 - `ui_frame_pacing` (K9) should LAND before `arrow_speed_retune` (K6) LOCKS — 60 fps changes perceived arrow smoothness/speed; Cesar should calibrate at shipping frame pacing. K9 feel-verify is DEVICE-ONLY (perf class — sim renders at the Mac's refresh and false-passes smoothness).
 - ~~`club_selection_green_gate` (K11) may run IN PARALLEL with K10~~ — **K11 CLOSED 2026-08-05** (`066df31f2` gate + `efa681acb` the deferred §2f-after-reposition item, which K10's merge unblocked). Both shipped; see the K11 block below, including the process scar where K10's close-out swept K11's in-flight lines and briefly broke `main`.
 - `matchmaking_scan_pacing` (K12): queued AFTER K11 per Cesar. Single file (MatchmakingModalController.cs), no overlap with K10/K11 — technically parallel-safe if the queue frees up. ⚠️ NO ShellScene edit: the modal's tunables are scene-serialized (K7 is mid-flight in that scene); K12 uses new serialized fields so code defaults take effect without touching the scene. EDITOR-verifiable.
+- `boot_loading_screen_removal` (K13): parallel-safe with everything open — touches SplashScreenController + one HomeScreenController fallback line; K12 owns MatchmakingModalController; the SHARED LoadingScreenController is deliberately NOT edited (it is the HoleLoad surface). EDITOR-verifiable.
 
 ### K2 · map_view_bottom_anchor (smoke #5) — TellCode
 
@@ -809,6 +810,71 @@ VERIFY — EDITOR-VALID:
 4. Report before/after totals; Cesar tunes the three fields in the
    Inspector afterward if the feel is off — they are serialized for exactly
    that.
+```
+
+### K13 · boot_loading_screen_removal — Surgical · EDITOR-verifiable
+
+```
+Task: boot_loading_screen_removal — the initial loading screen is a
+hardcoded timer. Cesar's rule (2026-08-05): make it reflect REAL loading,
+or REMOVE it if the real wait is under 2 seconds.
+
+GROUNDED CURRENT BEHAVIOR:
+Boot flow: Splash START/Play → SplashScreenController.OnStartClicked →
+ScreenManager.ShowScreen(ScreenId.Loading) → LoadingScreenController in
+LegacyBootHome mode → auto-navigates to Home.
+LegacyBootHome is 100% FAKE: target = timer / minLoadingTime
+(minLoadingTime scene-serialized = 2, ShellScene ~line 111701), display bar
+chases at 0.5/s, finish requires timer ≥ 2s AND bar ≥ 0.999 → ~2.0–2.2 s of
+pure theater. NOTHING feeds it real progress — the only
+SetProgress/SetRealProgress callers in the repo are GameplaySceneLoader's
+(HoleLoad path). Heavyweight boot init (CSV singletons, CharacterManager,
+save load) runs in Awake/RuntimeInitializeOnLoad — done before the Splash
+screen is even interactive.
+→ Real remaining work at Loading-show ≈ 0 s → per the <2s rule: REMOVE.
+
+STEP 0 — MEASURE FIRST (cheap, guards against invisible async work):
+Log Time.realtimeSinceStartup at ShowScreen(Loading) and log any work still
+running at that moment. Expected: nothing but the timer. IF measurement
+finds ≥2 s of real async boot work the static read missed, STOP — wire
+SetRealProgress from that work instead of removing, and report. Otherwise
+proceed with removal.
+
+IMPLEMENTATION (removal branch, expected):
+1. SplashScreenController.OnStartClicked: ShowScreen(ScreenId.Loading) →
+   ShowScreen(ScreenId.Home). That is the entire boot change.
+2. HomeScreenController.OnPlayClicked legacy fallback (~line 454): when
+   matchmakingModal is unwired it shows ScreenId.Loading — a fake screen
+   that bounces back to Home. Replace the fallback with a Debug.LogError
+   (it only fires on a wiring bug; navigating to a fake loader helps
+   nobody). Do not touch the modal path above it.
+3. DO NOT touch LoadingScreenController, LoadingBar, GameplaySceneLoader,
+   or ScreenManager — the HoleLoad path (real progress: host op 0–50%,
+   hole op 50–100%, FinishLoadingCoroutine) reuses the same screen and
+   must keep working byte-identically. This also keeps K13 conflict-free
+   with K12 (in flight in MatchmakingModalController).
+4. Keep the Loading screen GameObject + ScreenId — it is the HoleLoad
+   surface, and a future real boot dependency (backend login is on the
+   roadmap) can re-enter the flow via the existing SetRealProgress
+   plumbing. Leave a comment at the OnStartClicked call site saying so.
+
+KNOWN ADJACENT KNOB — report, do not change:
+FinishLoadingCoroutine enforces minLoadingTime (2 s) as the MINIMUM for the
+HOLE-LOAD screen too. That path is real-progress-driven and the floor is
+deliberate anti-flash staging. If Cesar wants the hole-load handoff
+snappier later, that scene-serialized field is the knob (same
+scene-serialization trap as K12 — flag only).
+
+VERIFY — EDITOR-VALID:
+1. Editor, full game: Logo → Splash → START → lands DIRECTLY on Home; bars/
+   chrome correct per the ScreenManager show/hide matrix; no Loading flash.
+2. Demo define (GOLFIN_DEMO): Splash "Play" → Home works (DemoGate's
+   allowed-screens list includes Home; Loading simply never shows).
+3. 1v1 matchmaking → OPPONENT FOUND → hole-load Loading screen still
+   appears with a REAL progress bar and hands off to gameplay — the
+   HoleLoad regression gate.
+4. Login/CreateUsername → Home paths unchanged (they never used Loading).
+5. Report the Step-0 measurement numbers either way.
 ```
 
 ---
