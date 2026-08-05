@@ -92,13 +92,24 @@ namespace Golfin.Physics.Viewer.Bot
         /// </summary>
         public IEnumerator Capture(string label)
         {
+            string counterLabel = $"s{_captureCounter:D2}_{label}";
+            _captureCounter++;
+
+            // K10 (2026-08-05): while BotVideoRecorder is recording, backbuffer reads are
+            // LOCKED OUT (each ScreenCapture read mid-recording made the Recorder capture
+            // flipped frames on Metal — proven 1:1). Log the intended still with its
+            // realtime stamp instead; the still is extracted from the finished mp4 at
+            // video_t = (this t − record_start_realtime from record_info.json).
+            if (CaptureCore.RecordingActive)
+            {
+                LogStep($"CaptureDeferred: {counterLabel} (recording active — extract from video at this t)");
+                yield break;
+            }
+
             // WaitForEndOfFrame ensures the full render cycle completes (including
             // Screen Space Overlay UI canvases). ScreenCapture.CaptureScreenshotAsTexture()
             // must be called at end-of-frame; a plain "yield return null" is insufficient.
             yield return new WaitForEndOfFrame();
-
-            string counterLabel = $"s{_captureCounter:D2}_{label}";
-            _captureCounter++;
 
             // SnapPlayModeSafe is synchronous, returns the absolute path.
             string srcPath = CaptureCore.SnapPlayModeSafe(counterLabel);

@@ -10,7 +10,8 @@
         "Golfin.Gameplay.UI",
         "Golfin.Gameplay.Loop",
         "Golfin.Audio.Events",
-        "Unity.Recorder.Editor"
+        "Unity.Recorder.Editor",
+        "Golfin.Diagnostics.Runtime"
     ],
     "includePlatforms": [
         "Editor"

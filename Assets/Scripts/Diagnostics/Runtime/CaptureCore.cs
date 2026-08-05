@@ -23,10 +23,35 @@ namespace Golfin.Diagnostics.Runtime
     {
         public const string OutDir = "Docs/Diagnostics/_capture";
 
+        // ── Recording lock (K10 ob_recovery_fixes, 2026-08-05) ─────────────────
+        //
+        // ROOT CAUSE (proven by 1:1 frame-time correlation on ob_recovery_after_hud.mp4):
+        // any backbuffer / GameView-RT read DURING an active Unity Recorder GameView
+        // recording (ScreenCapture.CaptureScreenshotAsTexture, GameView RT ReadPixels)
+        // disturbs the Metal swapchain and the Recorder captures 1–7 vertically FLIPPED
+        // frames at that instant. The 2026-06-16 fix locked vSync/targetFrameRate at
+        // Begin(); this lock extends the same principle to the ENTIRE recorded window:
+        // while BotVideoRecorder is recording, every CaptureCore snap is refused (no-op)
+        // so the trigger cannot fire at all. Stills are extracted from the finished mp4
+        // instead — identical pixels, zero interference.
+        //
+        // Set/cleared exclusively by BotVideoRecorder.Begin()/End().
+        public static bool RecordingActive;
+
+        static bool BlockDuringRecording(string what, string label)
+        {
+            if (!RecordingActive) return false;
+            Debug.Log($"[CaptureCore] {what} SKIPPED (video recording active): '{label}' — " +
+                      "backbuffer reads during recording flip Recorder frames on Metal. " +
+                      "Extract this still from the finished video instead.");
+            return true;
+        }
+
         // ── RT reflection (shared between SnapGameView and SnapAtEndOfFrameAndPause) ──
 
         public static Texture2D GrabGameViewRT()
         {
+            if (BlockDuringRecording("GrabGameViewRT", "-")) return null;
 #if UNITY_EDITOR
             var gameViewType = typeof(EditorWindow).Assembly.GetType("UnityEditor.GameView");
             if (gameViewType == null) return null;
@@ -75,6 +100,7 @@ namespace Golfin.Diagnostics.Runtime
 
         public static string SnapGameViewWithLabel(string label)
         {
+            if (BlockDuringRecording("SnapGameViewWithLabel", label)) return string.Empty;
             Directory.CreateDirectory(OutDir);
             string path = $"{OutDir}/{label}_{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.png";
 
@@ -119,6 +145,7 @@ namespace Golfin.Diagnostics.Runtime
         /// </summary>
         public static string SnapPlayModeSafe(string label)
         {
+            if (BlockDuringRecording("SnapPlayModeSafe", label)) return string.Empty;
             Directory.CreateDirectory(OutDir);
             string path = $"{OutDir}/{label}_{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.png";
 
@@ -176,6 +203,7 @@ namespace Golfin.Diagnostics.Runtime
         public static IEnumerator SnapAtEndOfFrameAndPause(string label, string outputPath = null,
             bool skipPause = false)
         {
+            if (BlockDuringRecording("SnapAtEndOfFrameAndPause", label)) yield break;
             yield return new WaitForEndOfFrame();
             Directory.CreateDirectory(OutDir);
             string path = outputPath ?? $"{OutDir}/{label}_f{Time.frameCount}.png";

@@ -389,6 +389,16 @@ namespace Golfin.Physics.Viewer.Editor
 
                 _controller = new RecorderController(settings);
                 _controller.PrepareRecording();
+
+                // K10 (2026-08-05): lock out ALL CaptureCore backbuffer/GameView-RT reads for the
+                // entire recorded window. Proven root cause of mid-clip flipped frames: each
+                // ScreenCapture.CaptureScreenshotAsTexture() a bot takes DURING recording disturbs
+                // the Metal swapchain → the Recorder's GameView input captures 1–7 vertically
+                // flipped frames at exactly that instant (1:1 frame-time correlation,
+                // ob_recovery_after_hud.mp4). Stills must be extracted from the finished mp4.
+                // Set BEFORE StartRecording so not a single recorded frame is unguarded.
+                Golfin.Diagnostics.Runtime.CaptureCore.RecordingActive = true;
+
                 _controller.StartRecording();
 
                 // Guardrail 1 — mark this Editor session as having recorded (survives domain
@@ -422,6 +432,8 @@ namespace Golfin.Physics.Viewer.Editor
             {
                 Debug.LogError($"[BotVideoRecorder] Begin failed: {e}");
                 _controller = null;
+                // Never leave the capture lock stuck on after a failed start.
+                Golfin.Diagnostics.Runtime.CaptureCore.RecordingActive = false;
             }
         }
 
@@ -429,6 +441,10 @@ namespace Golfin.Physics.Viewer.Editor
         public static void End()
         {
             EditorApplication.update -= DurationWatchdog;   // idempotent
+
+            // K10: release the CaptureCore lock FIRST so post-recording snaps work even if
+            // StopRecording throws below. Safe to clear when not recording (idempotent).
+            Golfin.Diagnostics.Runtime.CaptureCore.RecordingActive = false;
 
             if (_controller != null)
             {
