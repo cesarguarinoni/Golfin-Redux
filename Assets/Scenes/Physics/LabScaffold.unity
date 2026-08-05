@@ -2118,6 +2118,7 @@ MonoBehaviour:
   _primaryText: {fileID: 1781836138}
   _secondaryText: {fileID: 359254958}
   _highlightScale: 1.05
+  _disabledAlpha: 0.5
 --- !u!114 &137113979
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3488,6 +3489,7 @@ MonoBehaviour:
   _primaryText: {fileID: 2130217636}
   _secondaryText: {fileID: 494805185}
   _highlightScale: 1.05
+  _disabledAlpha: 0.5
 --- !u!114 &233516774
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4135,6 +4137,7 @@ MonoBehaviour:
   _primaryText: {fileID: 39089501}
   _secondaryText: {fileID: 404993531}
   _highlightScale: 1.05
+  _disabledAlpha: 0.5
 --- !u!114 &279776945
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -7168,6 +7171,7 @@ MonoBehaviour:
   _primaryText: {fileID: 336637283}
   _secondaryText: {fileID: 1265364777}
   _highlightScale: 1.05
+  _disabledAlpha: 0.5
 --- !u!114 &558751301
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -8997,6 +9001,7 @@ MonoBehaviour:
   _primaryText: {fileID: 1311771168}
   _secondaryText: {fileID: 648409619}
   _highlightScale: 1.05
+  _disabledAlpha: 0.5
 --- !u!114 &701714165
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -11677,6 +11682,7 @@ MonoBehaviour:
   _primaryText: {fileID: 11689585}
   _secondaryText: {fileID: 1066712941}
   _highlightScale: 1.05
+  _disabledAlpha: 0.5
 --- !u!114 &1008784565
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -14016,6 +14022,7 @@ MonoBehaviour:
   _primaryText: {fileID: 1334702049}
   _secondaryText: {fileID: 365476650}
   _highlightScale: 1.05
+  _disabledAlpha: 0.5
 --- !u!114 &1146156199
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -14766,6 +14773,7 @@ MonoBehaviour:
   _primaryText: {fileID: 1694201272}
   _secondaryText: {fileID: 95111726}
   _highlightScale: 1.05
+  _disabledAlpha: 0.5
 --- !u!114 &1202582748
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -15171,6 +15179,7 @@ MonoBehaviour:
   _primaryText: {fileID: 1710349704}
   _secondaryText: {fileID: 1092674038}
   _highlightScale: 1.05
+  _disabledAlpha: 0.5
 --- !u!114 &1251932494
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -16467,6 +16476,7 @@ MonoBehaviour:
   _primaryText: {fileID: 678953439}
   _secondaryText: {fileID: 1293792935}
   _highlightScale: 1.05
+  _disabledAlpha: 0.5
 --- !u!114 &1305263024
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -16988,6 +16998,7 @@ MonoBehaviour:
   _primaryText: {fileID: 852313062}
   _secondaryText: {fileID: 1955074573}
   _highlightScale: 1.05
+  _disabledAlpha: 0.5
 --- !u!114 &1330415202
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -18898,6 +18909,7 @@ MonoBehaviour:
   _primaryText: {fileID: 618652808}
   _secondaryText: {fileID: 1790627089}
   _highlightScale: 1.05
+  _disabledAlpha: 0.5
 --- !u!114 &1468656615
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -19085,7 +19097,6 @@ GameObject:
   - component: {fileID: 2300000011}
   - component: {fileID: 2300000020}
   - component: {fileID: 2300000021}
-  - component: {fileID: 2300000022}
   - component: {fileID: 2300000023}
   m_Layer: 0
   m_Name: LabRoot
@@ -25617,6 +25628,7 @@ MonoBehaviour:
   _primaryText: {fileID: 2052337749}
   _secondaryText: {fileID: 979767733}
   _highlightScale: 1.05
+  _disabledAlpha: 0.5
 --- !u!114 &2077957132
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -26507,7 +26519,6 @@ MonoBehaviour:
   downrangeHeightMeters: 4
   cupZoomHoverHeightMeters: 2.5
   cupZoomTweenSeconds: 1
-  obFreezeHeightAboveTerrain: 5
 --- !u!114 &2300000011
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -26547,18 +26558,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 245fafc1f3f7d4481b3cd87fdb2d0dcf, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Golfin.Physics.Viewer::Golfin.Physics.Viewer.SmokeRunner2dHost
---- !u!114 &2300000022
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1483952037}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9c053377ad07d492a907ce654311bcf3, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Golfin.Physics.Viewer::Golfin.Physics.Viewer.SmokeRunner2fHost
 --- !u!114 &2300000023
 MonoBehaviour:
   m_ObjectHideFlags: 0
