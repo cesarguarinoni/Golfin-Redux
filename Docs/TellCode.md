@@ -7,7 +7,7 @@
 
 ## ▶ CURRENT STATE — update this block at every session boundary
 
-- **Last updated:** 2026-08-05 11:37 JST (Architect — **DEVICE ERA.** Game builds+runs on physical iPhone since 2026-07-27; signing SOLVED (do not re-litigate); on-device smoke found 7 issues. Fixed since: `centralball_device_invisible` (device-verified `1a4ad15ca`), `hole6_tree_collision_profiles` (`c1d38e280`), `camera_drag_touch_origin`/K1 (CLOSED — `bb59d32dd` 08-03, device-verified per commit + Cesar's session; block deleted 2026-08-05). Shipped: `build_version_stamp` (3 defects → hardening kickoff below). **iOS Simulator three-tier verification loop VALIDATED** — canonical doc `Docs/Pipeline/IOS_SIMULATOR_LOOP.md`; standing rules: never wipe the seeded DerivedData, never `BuildPipeline.BuildPlayer` via MCP script-execute. Full story: `Docs/Reports/2026-08-04_ios_simulator_build_blocker.md` §§10–13 + `Docs/AI_CONTEXT.md` top block. **OPEN = the PENDING KICKOFFS below** (6 smoke issues + build-stamp hardening + housekeeping; K9 `ui_frame_pacing` smoke #8 added 2026-08-05; K10 `ob_recovery_fixes` smoke #9 added 2026-08-05 — OBFreeze camera wedge + Cesar-ruled real-golf drop rule; K1 closed. K11 `club_selection_green_gate` added 2026-08-05 — putter-only-on-green selection gate, PARALLEL-SAFE with K10 (one overlapping item deferred inside the block). K12 `matchmaking_scan_pacing` added 2026-08-05 — find-opponent animation: decelerating scan + total cut ~5.6s→~3.1s, NO scene edit (new-serialized-field technique), queued AFTER K11 per Cesar. ⚠️ RECONCILIATION PENDING: repo log shows K6-core `cd0ef6ed4` (arrow F13 + floor clamp) and K9 `7380baf67` already COMMITTED, plus `b702e1a41` wind→ball-flight landed outside the documented queue — K6/K9 blocks need close-out review with Cesar) plus `putter_aim_blue_line` (413, SPEC_READY in `Specs/Active/`, awaiting Cesar go) and a device pass on `demo_build_slice` (426). Everything below this bullet predates the device era and is historical.)
+- **Last updated:** 2026-08-05 11:37 JST (Architect — **DEVICE ERA.** Game builds+runs on physical iPhone since 2026-07-27; signing SOLVED (do not re-litigate); on-device smoke found 7 issues. Fixed since: `centralball_device_invisible` (device-verified `1a4ad15ca`), `hole6_tree_collision_profiles` (`c1d38e280`), `camera_drag_touch_origin`/K1 (CLOSED — `bb59d32dd` 08-03, device-verified per commit + Cesar's session; block deleted 2026-08-05). Shipped: `build_version_stamp` (3 defects → hardening kickoff below). **iOS Simulator three-tier verification loop VALIDATED** — canonical doc `Docs/Pipeline/IOS_SIMULATOR_LOOP.md`; standing rules: never wipe the seeded DerivedData, never `BuildPipeline.BuildPlayer` via MCP script-execute. Full story: `Docs/Reports/2026-08-04_ios_simulator_build_blocker.md` §§10–13 + `Docs/AI_CONTEXT.md` top block. **OPEN = the PENDING KICKOFFS below** (6 smoke issues + build-stamp hardening + housekeeping; K9 `ui_frame_pacing` smoke #8 added 2026-08-05; K10 `ob_recovery_fixes` **CLOSED 2026-08-05** (`90dd574ff` camera+drop rule, `ed65f5726` permanent capture Y-flip fix; CupZoom same-class wedge found+fixed; OB now stops chasing with no aerial cut; ground-level settle built then reverted per Cesar); K1 closed. K11 `club_selection_green_gate` added 2026-08-05 — putter-only-on-green selection gate, PARALLEL-SAFE with K10 (one overlapping item deferred inside the block). K12 `matchmaking_scan_pacing` added 2026-08-05 — find-opponent animation: decelerating scan + total cut ~5.6s→~3.1s, NO scene edit (new-serialized-field technique), queued AFTER K11 per Cesar. ⚠️ RECONCILIATION PENDING: repo log shows K6-core `cd0ef6ed4` (arrow F13 + floor clamp) and K9 `7380baf67` already COMMITTED, plus `b702e1a41` wind→ball-flight landed outside the documented queue — K6/K9 blocks need close-out review with Cesar) plus `putter_aim_blue_line` (413, SPEC_READY in `Specs/Active/`, awaiting Cesar go) and a device pass on `demo_build_slice` (426). Everything below this bullet predates the device era and is historical.)
 
 - **Last updated:** 2026-07-02 (Architect — `1v1_result_rewards_display` (347) DONE. NEXT-at-the-time = `stamina_boost_shop` (517) design pass. STALE — superseded by the device-era bullet above.)
 - Older narrative bullets (2026-06-11 → 2026-06-24): preserved in git history of this file — all tasks named in them are closed in `Docs/Specs/Completed/`. Trust `Docs/Specs/Active/` + the AI_CONTEXT headline, not old bullets.
@@ -22,7 +22,7 @@ Paste any block below into Code as-is. Produced by the Architect during the 2026
 - `nav_bar_edge_gaps` BEFORE `safe_area_top_bar` (same two bars, same scene; #1's outcome determines the bars' final geometry). Back-to-back isolated commits, no other ShellScene work interleaved.
 - `tree_wind_device` verification is DEVICE-ONLY (sim false-passes it — measured, report §11). `arrow_speed_retune` and `safe_area_top_bar` are editor/sim-verifiable. `ob_recovery_fixes` (K10) is EDITOR-verifiable — state-machine logic; the camera wedge repros in the editor with a mouse.
 - `ui_frame_pacing` (K9) should LAND before `arrow_speed_retune` (K6) LOCKS — 60 fps changes perceived arrow smoothness/speed; Cesar should calibrate at shipping frame pacing. K9 feel-verify is DEVICE-ONLY (perf class — sim renders at the Mac's refresh and false-passes smoothness).
-- `club_selection_green_gate` (K11) may run IN PARALLEL with K10 — different files (SelectorOverlayWidget + putter-mode UI region vs LoopCameraDirector + OB branch). The ONE overlapping item (§2f re-decide after reposition, same PhysicsLabController region as K10 Part B) is explicitly DEFERRED inside K11 until K10 merges. K11 is EDITOR-verifiable.
+- `club_selection_green_gate` (K11) may run IN PARALLEL with K10 — different files (SelectorOverlayWidget + putter-mode UI region vs LoopCameraDirector + OB branch). The ONE overlapping item (§2f re-decide after reposition, same PhysicsLabController region as K10 Part B) is explicitly DEFERRED inside K11 until K10 merges — **K10 merged 2026-08-05 (`90dd574ff`), so that item is now unblocked.** K11 is EDITOR-verifiable.
 - `matchmaking_scan_pacing` (K12): queued AFTER K11 per Cesar. Single file (MatchmakingModalController.cs), no overlap with K10/K11 — technically parallel-safe if the queue frees up. ⚠️ NO ShellScene edit: the modal's tunables are scene-serialized (K7 is mid-flight in that scene); K12 uses new serialized fields so code defaults take effect without touching the scene. EDITOR-verifiable.
 
 ### K2 · map_view_bottom_anchor (smoke #5) — TellCode
@@ -508,7 +508,32 @@ Device: mode slides visibly smoother, Cesar's eyeball is the gate; spot-check
 one hole for the knock-on above.
 ```
 
-### K10 · ob_recovery_fixes (smoke #9) — Surgical+TellCode · EDITOR-verifiable
+### K10 · ob_recovery_fixes (smoke #9) — ✅ DONE 2026-08-05 (Cesar-approved)
+
+**Shipped:** `90dd574ff` (camera + drop rule) · `ed65f5726` (capture Y-flip fix + harness).
+Folder moved to `Docs/Specs/Completed/ob_recovery_fixes/`; clip in `Docs/Reports/Media/2026-08-05_ob_recovery_fixes.mp4`.
+
+- **Part A (symptoms 2+3):** `OBFreeze`/`CupZoom` are focus-based modes with no null-target
+  early-return, so they kept running through the next aim phase and overwrote the pin-facing
+  re-aim + orbit drag (both Chase-gated). Director now exits them → `Chase` on entry to `Aiming`.
+  **Same-class finding: `CupZoom` was broken identically** (every hole-out wedged the next
+  aim phase) — fixed in the same conditional.
+- **Part A follow-up (Cesar ruling):** OB no longer cuts to an aerial view — `ModeMap[OB]` = `Chase`,
+  pivot teleport + `ComputeOBFreezePivot` deleted; the camera just stops chasing (0.00 m drift, on video).
+  A ground-level "horizon settle" variant was built, reviewed and **reverted at Cesar's call** — the
+  plain freeze is what ships.
+- **Part B (symptom 1, Cesar ruling = real golf):** boundary OB is **stroke and distance**
+  (drop at previous origin → first-shot OB re-tees); water keeps last-dry-touch via the untouched
+  `OBDropResolver.Resolve`. **Known approximation:** a long carry over land that splashes drops at the
+  last *bounce*, which can sit behind the true crossing point — refining that is a separate design row.
+- **Tests:** 250 pass / 0 fail, incl. an end-to-end test on the real `ChaseCamera` + Director + SM.
+
+**Spun out of this task — permanent capture fix (`ed65f5726`):** mid-recording `ScreenCapture`
+reads were flipping Recorder frames on Metal (proven 1:1 by frame-pts↔capture-log correlation).
+`CaptureCore.RecordingActive` now hard-refuses every snap while recording; stills are extracted
+from the finished mp4. **Rule for all future capture bots: never snap a still during a recording.**
+
+<details><summary>Original kickoff (historical)</summary>
 
 ```
 Task: ob_recovery_fixes — three symptoms on the shot AFTER an OB; one camera
@@ -612,6 +637,7 @@ VERIFY — EDITOR-VALID (state-machine logic, not device-only):
    K1-verified path; expected to just work once LateUpdate stops fighting).
 4. Report the CupZoom same-class finding either way.
 ```
+</details>
 
 ### K11 · club_selection_green_gate — TellCode · PARALLEL-SAFE with K10 · EDITOR-verifiable
 
