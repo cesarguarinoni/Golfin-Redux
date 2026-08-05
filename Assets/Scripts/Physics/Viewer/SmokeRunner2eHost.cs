@@ -282,16 +282,14 @@ namespace Golfin.Physics.Viewer
                                  "Shot may not have hit water. Capturing current state as evidence.");
             }
 
-            // Camera fix: Director leaves camera in OBFreeze mode after OB→Aiming (ModeMap Aiming→null).
-            // Force Chase mode so ChaseCamera.LateUpdate returns early (null target + Chase) and
-            // ApplyCameraYaw (already called by RepositionBallWithLookDir) owns the camera position.
-            // This shows the ball on the actual drop-point terrain rather than the OB cinematic pivot.
+            // (Former local SetMode(Chase) fix removed — K10 2026-08-05.) The Director now maps
+            // OB→Chase (camera stops chasing in place, no OBFreeze pivot) and exits any lingering
+            // OBFreeze/CupZoom on →Aiming, so ChaseCamera.LateUpdate already early-returns
+            // (null target + Chase) and ApplyCameraYaw owns the position. Forcing the mode here
+            // would mask a Director regression this smoke run is meant to catch — so we only
+            // OBSERVE the mode now (logged with S2 below) and still use the reference for S3's
+            // manual orbit.
             var camChase = FindObjectOfType<ChaseCamera>();
-            if (camChase != null)
-            {
-                camChase.SetMode(ChaseCamera.Mode.Chase);
-                Debug.Log("[SmokeRunner2eHost] Forced ChaseCamera → Chase mode for S2 framing.");
-            }
 
             // Wait for HUD to update with new TURN value and camera to settle at ApplyCameraYaw position.
             yield return new WaitForSeconds(CaptureWait);

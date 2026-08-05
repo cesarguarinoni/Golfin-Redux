@@ -48,8 +48,7 @@ namespace Golfin.Physics.Viewer
         [SerializeField] float cupZoomHoverHeightMeters   = 2.5f;      // L11: hover above flat circle
         [SerializeField] float cupZoomTweenSeconds        = 1.0f;
 
-        [Header("OBFreeze framing")]
-        [SerializeField] float obFreezeHeightAboveTerrain = 5f;        // L9 / Q3'a
+        // (OBFreeze framing field deleted — OB no longer teleports to a pivot; K10 follow-up.)
 
         // ── Observable event (§controls_g_smoke_followup) ─────────────────────
 
@@ -111,7 +110,13 @@ namespace Golfin.Physics.Viewer
                 { BallState.Rolling, ChaseCamera.Mode.Chase  },  // back to chase on touchdown
                 { BallState.AtRest,  ChaseCamera.Mode.Chase  },
                 { BallState.InCup,   ChaseCamera.Mode.CupZoom  },
-                { BallState.OB,      ChaseCamera.Mode.OBFreeze },
+                // K10 follow-up (Cesar ruling 2026-08-05): on OB the camera just STOPS chasing —
+                // no aerial OBFreeze pivot teleport (the old midpoint-25m pivot read as a jarring
+                // top-down cut). Chase + the terminal-handler SetTarget(null) = LateUpdate
+                // early-return = camera frozen exactly where the chase (with the OB clamp)
+                // left it, looking at where the ball went out. Same pattern AtRest uses, and
+                // the same fix SmokeRunner2eHost already applied locally after OB→Aiming.
+                { BallState.OB,      ChaseCamera.Mode.Chase  },
             };
 
         // ── Unity lifecycle ────────────────────────────────────────────────────
@@ -153,6 +158,27 @@ namespace Golfin.Physics.Viewer
 
             var ctrl = ActiveController;
 
+            // K10 ob_recovery_fixes: exit terminal pivot/focus modes when re-entering Aiming.
+            // OBFreeze and CupZoom are focus-based modes with NO null-target early-return in
+            // ChaseCamera.RunLateUpdateLogic (that guard covers only Chase/GroundLevel). ModeMap
+            // leaves Aiming = null ("leave whatever was set"), so a lingering terminal mode keeps
+            // running every frame through the entire next aim phase — LateUpdate points the camera
+            // back at _shotOrigin (the tee / the cup) and overwrites both the pin-facing re-aim yaw
+            // (RepositionBallWithLookDir → ApplyCameraYaw) and the orbit drag (HandleCameraOrbit),
+            // which are themselves gated to Chase-only. Switching to Chase + the already-cleared
+            // terminal target makes the mode dormant via the null-target early-return, handing the
+            // view to the aim owner. CupZoom is the live case (hole-out → next aim phase); the
+            // OBFreeze check is retained defensively even though OB now maps to Chase directly
+            // (K10 follow-up ruling — OB stops chasing in place, no pivot).
+            // Scoped to OBFreeze/CupZoom ONLY — a blanket Aiming→Chase would clobber the null
+            // entry that protects putter GroundLevel re-arms (EnterPutterMode sets GroundLevel).
+            if (change.Next == BallState.Aiming
+                && (setter.CurrentMode == ChaseCamera.Mode.OBFreeze
+                 || setter.CurrentMode == ChaseCamera.Mode.CupZoom))
+            {
+                ApplyMode(ChaseCamera.Mode.Chase);
+            }
+
             // Aiming → Flying: arm chase target + reset origin + pre-arm OB clamp.
             if (change.Next == BallState.Flying && change.Previous == BallState.Aiming)
             {
@@ -192,32 +218,13 @@ namespace Golfin.Physics.Viewer
                 setter.SetCupZoomFocus(pos);
             }
 
-            // OB: zero Chase velocity then set freeze pivot.
-            if (change.Next == BallState.OB)
-            {
-                // Kill carry-over Chase SmoothDamp velocity before entering OBFreeze.
-                // Without this the camera overshoots downward and sinks to/below terrain
-                // (the "bounce-back" Cesar rejection defect). ResetToOrigin also
-                // re-anchors _shotOrigin (the OBFreeze look-at focus) and clears the
-                // OB clamp, giving a clean OBFreeze entry for both in-grid mask-hit OB
-                // and out-of-grid ExitedWorldBounds OOB.
-                if (ctrl != null)
-                    setter.ResetToOrigin(ctrl.LastShotOrigin, ctrl.LastShotLaunchDir);
-
-                // ComputeOBFreezePivot returns traj.finalPosition + obFreezeHeightAboveTerrain
-                // for out-of-grid OOB (where TryFindFirstOBHit has no terrain hit) and
-                // first-OB-hit + height for in-grid mask-hit OB — both give a proper
-                // above-ground vantage point. Using chaseCamera.transform.position (the
-                // prior approach) only added followHeight (1.8 m) and still had carry-over
-                // velocity, causing the underground sink.
-                Vector3 fallback = new Vector3(
-                    change.Position.x.ToFloat(),
-                    change.Position.y.ToFloat(),
-                    change.Position.z.ToFloat());
-                var pivot = ComputeOBFreezePivot(fallback, ctrl?.LastTrajectory,
-                    ctrl?.LastShotOrigin ?? fallback);
-                setter.SetOBFreezePivot(pivot);
-            }
+            // OB (K10 follow-up, Cesar ruling 2026-08-05): NO camera work here. The camera
+            // simply stops chasing — ModeMap dispatches Chase and the terminal handler below
+            // clears the target, so ChaseCamera.LateUpdate early-returns and the transform
+            // stays exactly where the clamped chase left it. The former OBFreeze pivot
+            // (ComputeOBFreezePivot midpoint-25m aerial) produced the jarring top-down cut.
+            // ResetToOrigin is intentionally NOT called: the dormant camera writes nothing,
+            // and the next shot's Aiming→Flying ArmChaseForShot resets origin/velocity/clamp.
 
             // Apply mode mapping (null = leave unchanged).
             if (ModeMap.TryGetValue(change.Next, out var mode) && mode.HasValue)
@@ -286,40 +293,10 @@ namespace Golfin.Physics.Viewer
             return false;
         }
 
-        /// <param name="shotOrigin">Ball position at shot start — used by the long-distance
-        /// mid-point pivot to guarantee a decent aerial pitch when the camera looks back at the
-        /// ball reset position (tee).</param>
-        Vector3 ComputeOBFreezePivot(Vector3 fallback, Trajectory traj, Vector3 shotOrigin)
-        {
-            bool hadHit = TryFindFirstOBHit(traj, fallback, out var hitPos);
-
-            // Long-distance OB: hitPos is far from the shot origin (either ExitedWorldBounds
-            // with no terrain hit, OR an OOB-classified terrain hit at the grid boundary).
-            // In both cases hitPos can be 80–120 m from the tee. Freezing the camera there
-            // with only obFreezeHeightAboveTerrain (5 m) above the hit creates a ~3° downward
-            // pitch — the ObGroundSkirt fills ~40% of the frame.
-            //
-            // Fix: when OB hit is ≥40 m from shot origin, place the pivot at the trajectory
-            // mid-point XZ at 25 m above terrain. Camera at midpoint (~50 m from tee, 25 m up)
-            // produces ~27° downward pitch — well clear of the skirt, clean aerial boundary view.
-            float dx = hitPos.x - shotOrigin.x;
-            float dz = hitPos.z - shotOrigin.z;
-            if (dx * dx + dz * dz >= 40f * 40f)
-            {
-                float midX = (shotOrigin.x + hitPos.x) * 0.5f;
-                float midZ = (shotOrigin.z + hitPos.z) * 0.5f;
-                var   mid  = new Vector3(midX, 0f, midZ);
-                float terrainY = Terrain.activeTerrain != null
-                    ? Terrain.activeTerrain.transform.position.y
-                      + Terrain.activeTerrain.SampleHeight(mid)
-                    : hitPos.y;
-                return new Vector3(midX, terrainY + 25f, midZ);
-            }
-
-            // Short-distance OB (Water entry, mask-hit near tee): freeze at first hit + height
-            // offset. These are close-in shots where the 5 m pivot height gives a natural view.
-            return hitPos + Vector3.up * obFreezeHeightAboveTerrain;
-        }
+        // ComputeOBFreezePivot DELETED (K10 follow-up, 2026-08-05): the OB terminal state no
+        // longer teleports the camera to an aerial pivot — it stops chasing in place (Cesar
+        // ruling). ChaseCamera.Mode.OBFreeze itself is intentionally left in place (unused by
+        // the Director) per the no-ChaseCamera-changes constraint.
 
         // ── Carry / progress helpers (for cinematic cut) ──────────────────────
 
@@ -380,7 +357,6 @@ namespace Golfin.Physics.Viewer
 
         // ── Test-accessible properties ─────────────────────────────────────────
 
-        public float OBFreezeHeight         => obFreezeHeightAboveTerrain;
         public float CinematicCutFraction   => cinematicCutAtCarryFraction;
         public float MinCarryForCinematic   => minCarryForCinematicMeters;
         public float DownrangePastLanding   => downrangePastLandingMeters;

@@ -128,6 +128,52 @@ namespace Golfin.Physics.Tests
                 "Resolve(null, fallback) should return fallback unchanged.");
         }
 
+        // ── Test 6b: K10 boundary OB is stroke-and-distance (drop at previous origin) ──
+
+        [Test]
+        public void OBDropResolver_ResolveByRule_BoundaryDropsAtPreviousOrigin()
+        {
+            // A boundary OB (isWater=false) must ignore any safe terrain hits and drop at
+            // the previous shot origin — stroke and distance. First-shot boundary OB → tee.
+            var hits = new List<TerrainHit>
+            {
+                MakeHit(new Vector3(20f, 0f, 0f), SurfaceType.Fairway),
+                MakeHit(new Vector3(40f, 0f, 0f), SurfaceType.OOB),
+            };
+            var trajectory = MakeTrajectory(hits);
+            var tee        = new Vector3(3f, 1f, 7f);
+
+            Vector3 result = OBDropResolver.ResolveByRule(trajectory, tee, isWater: false);
+
+            Assert.AreEqual(tee, result,
+                "Boundary OB must drop at the previous shot origin (stroke and distance), " +
+                "not at the last in-bounds terrain hit.");
+        }
+
+        // ── Test 6c: K10 water OB still uses the last-dry-touch resolver ──────────
+
+        [Test]
+        public void OBDropResolver_ResolveByRule_WaterDelegatesToResolve()
+        {
+            // Water (isWater=true) must be byte-identical to Resolve(): last safe hit before water.
+            var hits = new List<TerrainHit>
+            {
+                MakeHit(new Vector3(10f, 0f, 0f), SurfaceType.Fairway),
+                MakeHit(new Vector3(20f, 0f, 0f), SurfaceType.Fairway),
+                MakeHit(new Vector3(30f, 0f, 0f), SurfaceType.Water),
+            };
+            var trajectory = MakeTrajectory(hits);
+            var origin     = new Vector3(0f, 0f, 0f);
+
+            Vector3 byRule  = OBDropResolver.ResolveByRule(trajectory, origin, isWater: true);
+            Vector3 resolve = OBDropResolver.Resolve(trajectory, origin);
+
+            Assert.AreEqual(resolve, byRule,
+                "Water OB must delegate to Resolve() (last dry touch), unchanged from §2e.");
+            Assert.AreEqual(new Vector3(20f, 0f, 0f), byRule,
+                "Water drop should be the last fairway hit before the water hazard.");
+        }
+
         // ── Test 7: AimRotationHelper points toward pin ────────────────────────────
 
         [Test]

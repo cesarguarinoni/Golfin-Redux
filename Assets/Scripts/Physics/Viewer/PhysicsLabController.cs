@@ -343,6 +343,12 @@ namespace Golfin.Physics.Viewer
             // This prevents camera drags and button clicks from accidentally starting a shot.
             _shotController?.InjectInputSource(null);
 
+            // K11: seed the selector gate at boot. EnterPutterMode/ExitPutterMode only fire
+            // on a club CHANGE, so without this the putter index stays unpublished (-1) and
+            // IsSelectable fails open for the whole first hole. Also clears a stale flag when
+            // Enter-Play-Mode Options skip the domain reload that would reset the static.
+            ClubSelectionBroadcast.SetPutterMode(CurrentClubIndex == PutterIndex, PutterIndex);
+
             // Force cursor visible + unlocked. Hole scenes contain a WalkCamera that locks
             // the cursor in Awake; we deactivate its GO but the global cursor state persists.
             Cursor.lockState = CursorLockMode.None;
@@ -489,6 +495,9 @@ namespace Golfin.Physics.Viewer
                 _ballSelectorCanvasGroup.blocksRaycasts = false;
             }
             if (_centralBall != null) _centralBall.SetPuttMode(true);
+            // K11: publish putt mode so the club selector can gate its cards off the
+            // SAME §2f decision that put us here (see ClubSelectionBroadcast.IsSelectable).
+            ClubSelectionBroadcast.SetPutterMode(true, PutterIndex);
         }
 
         private void ExitPutterMode()
@@ -510,6 +519,8 @@ namespace Golfin.Physics.Viewer
                 _ballSelectorCanvasGroup.blocksRaycasts = true;
             }
             if (_centralBall != null) _centralBall.SetPuttMode(false);
+            // K11: mirror of EnterPutterMode's publish.
+            ClubSelectionBroadcast.SetPutterMode(false, PutterIndex);
         }
 
         /// <summary>
@@ -847,6 +858,27 @@ namespace Golfin.Physics.Viewer
             _cameraYaw = yawRadians;
             if (_shotController != null)
                 _shotController.CameraHeadingRadians = _cameraYaw;
+        }
+
+        /// <summary>
+        /// Bot / video-capture seam: simulate one frame of a sideways orbit drag through the
+        /// PRODUCTION orbit path — identical to <see cref="HandleCameraOrbit"/>'s write
+        /// (<c>_cameraYaw += Δ; ApplyCameraYaw(cam)</c>) AND its Chase-mode gate. Returns true
+        /// if the orbit applied (mode == Chase), false if gated out. Used by ObRecoveryCaptureBot
+        /// (K10) to prove on video that the aim phase AFTER an OB is draggable rather than wedged:
+        /// on HEAD the mode is stuck in OBFreeze so this returns false (can't drag — symptom 3);
+        /// with the fix the mode is Chase so the camera pans. Not on any production input path.
+        /// </summary>
+        internal bool SimulateOrbitDragDegrees(float deltaDegrees)
+        {
+            if (chaseCamera != null && chaseCamera.CurrentMode != ChaseCamera.Mode.Chase)
+                return false; // orbit only works in Chase — the exact gate HandleCameraOrbit uses
+            _cameraYaw += deltaDegrees * Mathf.Deg2Rad;
+            if (_shotController != null)
+                _shotController.CameraHeadingRadians = _cameraYaw;
+            Camera cam = chaseCamera != null ? chaseCamera.GetComponent<Camera>() : null;
+            if (cam != null) ApplyCameraYaw(cam);
+            return true;
         }
 
         /// <summary>
@@ -1203,22 +1235,28 @@ namespace Golfin.Physics.Viewer
 
                 case Golfin.Gameplay.Loop.BallState.OB:
                 {
-                    // §2e: compute drop point from the just-finished trajectory.
-                    Vector3 dropPos = OBDropResolver.Resolve(_previousTrajectory, _lastShotOrigin);
+                    // K10 ob_recovery_fixes — real-golf drop rule (Cesar ruling 2026-08-05):
+                    // boundary OB is STROKE AND DISTANCE (drop at the previous shot origin, so a
+                    // first-shot boundary OB goes back on the tee); water keeps the §2e last-dry-
+                    // touch behaviour (lateral relief near entry, never nearer the hole). The
+                    // aim-toward-pin yaw below is unchanged — a re-tee drop makes ComputeYawTowardPin
+                    // fire straight down the fairway once the camera stops fighting it (Part A).
+                    bool isWater = result.OBReason.HasValue
+                        && result.OBReason.Value == Golfin.Gameplay.Loop.OBReason.Water;
+                    Vector3 dropPos = OBDropResolver.ResolveByRule(_previousTrajectory, _lastShotOrigin, isWater);
                     Vector3 pinPos  = Golfin.Gameplay.UI.HUD.HoleContext.PinWorld;
                     float   newYaw  = AimRotationHelper.ComputeYawTowardPin(dropPos, pinPos, _cameraYaw);
                     Vector3 lookDir = new Vector3(Mathf.Cos(newYaw), 0f, Mathf.Sin(newYaw));
 
-                    Debug.Log($"[PhysicsLab][§2e] OB drop: from end={result.EndPosition} " +
-                              $"to drop={dropPos:F2} yawRad={newYaw:F3} (penalty stroke +1)");
+                    Debug.Log($"[PhysicsLab][§2e] OB drop ({(isWater ? "water/last-dry-touch" : "boundary/stroke+distance")}): " +
+                              $"from end={result.EndPosition} to drop={dropPos:F2} yawRad={newYaw:F3} (penalty stroke +1)");
 
                     // water_splash_fx (Order 349): on a WATER landing, freeze the camera where it is
                     // (it was chasing the ball into the water, so it is already looking at the entry
                     // point) for a beat so the splash VFX plays on screen, THEN drop the ball + re-aim
                     // to the penalty shot. Camera-only hold — the gameplay result (drop position,
                     // penalty stroke) is unchanged, just sequenced after the beat.
-                    if (result.OBReason.HasValue
-                        && result.OBReason.Value == Golfin.Gameplay.Loop.OBReason.Water)
+                    if (isWater)
                     {
                         StartCoroutine(WaterSplashCameraHold(dropPos, lookDir));
                     }

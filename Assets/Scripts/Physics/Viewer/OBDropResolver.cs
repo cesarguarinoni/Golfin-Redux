@@ -26,5 +26,16 @@ namespace Golfin.Physics.Viewer
             }
             return fallbackOrigin;
         }
+
+        /// <summary>
+        /// K10 ob_recovery_fixes — real-golf drop rule (Cesar ruling 2026-08-05).
+        /// Boundary OB is STROKE AND DISTANCE: the ball drops at the previous shot
+        /// origin (a first-shot boundary OB therefore goes back on the tee). Water
+        /// keeps lateral-relief-near-entry (the last dry touch before the hazard) via
+        /// <see cref="Resolve"/> — so it never drops nearer the hole. <paramref name="isWater"/>
+        /// is true when the shot's OBReason == Water. Resolve() itself is left untouched.
+        /// </summary>
+        public static Vector3 ResolveByRule(Trajectory trajectory, Vector3 lastShotOrigin, bool isWater)
+            => isWater ? Resolve(trajectory, lastShotOrigin) : lastShotOrigin;
     }
 }

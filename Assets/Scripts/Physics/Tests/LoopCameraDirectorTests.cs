@@ -184,13 +184,11 @@ namespace Golfin.Physics.Tests
                 "SetCupZoomFocus should have been called");
         }
 
-        // ── Test 4 ─────────────────────────────────────────────────────────────
+        // ── Test 4 — K10 follow-up (Cesar ruling 2026-08-05): OB just stops chasing ──
 
         [Test]
-        public void Director_OnOB_FreezesAtFirstWaterHitXZ()
+        public void Director_OnOB_StopsChasing_NoPivotTeleport()
         {
-            float obHeight = 5f; // default obFreezeHeightAboveTerrain
-
             var hits = new List<TerrainHit>
             {
                 TrajectoryBuilder.NonStopHit(new fp3(fp.FromFloat(10f), fp.Zero, fp.Zero), SurfaceType.Fairway),
@@ -211,26 +209,25 @@ namespace Golfin.Physics.Tests
 
             ctrl.BallSM.OnTrajectoryComputed(fp3.Zero, traj, fp.FromFloat(0.02f));
 
-            Assert.IsTrue(setter.SetModeCalls.Contains(ChaseCamera.Mode.OBFreeze),
-                $"Expected OBFreeze. Got: [{string.Join(", ", setter.SetModeCalls)}]");
-            Assert.IsTrue(setter.LastOBFreezePivot.HasValue,
-                "SetOBFreezePivot should have been called");
-
-            Vector3 pivot = setter.LastOBFreezePivot.Value;
-            Assert.AreEqual(25f, pivot.x, 0.01f, "Pivot X should match first Water hit");
-            Assert.AreEqual(obHeight, pivot.y, 0.01f, "Pivot Y should be obFreezeHeight above terrain (terrain y=0)");
-            Assert.AreEqual(5f,  pivot.z, 0.01f, "Pivot Z should match first Water hit");
+            // OB no longer enters OBFreeze or teleports to a pivot — camera stops chasing:
+            // mode stays/dispatches Chase, target cleared → LateUpdate early-return → frozen in place.
+            Assert.IsFalse(setter.SetModeCalls.Contains(ChaseCamera.Mode.OBFreeze),
+                $"OB must NOT dispatch OBFreeze (top-down pivot cut). Got: [{string.Join(", ", setter.SetModeCalls)}]");
+            Assert.AreEqual(ChaseCamera.Mode.Chase, setter.CurrentMode,
+                "Mode must be Chase after OB — dormant via null-target early-return.");
+            Assert.IsFalse(setter.LastOBFreezePivot.HasValue,
+                "SetOBFreezePivot must NOT be called on OB (no pivot teleport).");
+            Assert.IsNull(setter.SetTargetCalls[setter.SetTargetCalls.Count - 1],
+                "Target must be cleared on OB so the camera freezes where the chase left it.");
         }
 
-        // ── Test 5 ─────────────────────────────────────────────────────────────
+        // ── Test 5 — K10 follow-up: the long-shot case that used to go top-down ──
 
         [Test]
-        public void Director_OnOB_NoWaterHit_LongShot_UsesMidpointPivot()
+        public void Director_OnOB_LongShot_NoMidpointAerialPivot()
         {
-            // No water/OOB hits — ExitedWorldBounds.
-            // finalPos is 500 m from shotOrigin (0,0,0) → distance >> 40 m threshold
-            // → ComputeOBFreezePivot places the camera at the trajectory mid-point XZ,
-            //   25 m above terrain (terrain=null in test → fallback to hitPos.y=2).
+            // ExitedWorldBounds far from origin — the case whose old midpoint-25m pivot
+            // produced the jarring top-down cut Cesar rejected. Now: no pivot, stop chasing.
             var finalPos = new fp3(fp.FromFloat(500f), fp.FromFloat(2f), fp.Zero);
             var samples  = new List<TrajectorySample>
             {
@@ -246,14 +243,10 @@ namespace Golfin.Physics.Tests
 
             ctrl.BallSM.OnTrajectoryComputed(fp3.Zero, traj, fp.FromFloat(0.02f));
 
-            Assert.IsTrue(setter.LastOBFreezePivot.HasValue,
-                "SetOBFreezePivot should have been called");
-            Vector3 pivot = setter.LastOBFreezePivot.Value;
-            // Mid-point between shotOrigin(0) and hitPos(500): X=250, Z=0.
-            // Y = hitPos.y(2) + 25 (no Terrain.activeTerrain in test).
-            // This gives ~27° downward pitch when looking at tee — clear of ObGroundSkirt.
-            Assert.AreEqual(250f, pivot.x, 1f, "Pivot X should be midpoint of shotOrigin and hitPos");
-            Assert.AreEqual(2f + 25f, pivot.y, 1f, "Pivot Y = terrain-fallback(hitPos.y) + 25 m");
+            Assert.IsFalse(setter.LastOBFreezePivot.HasValue,
+                "Long-shot OB must NOT set an aerial pivot (was the top-down defect).");
+            Assert.AreEqual(ChaseCamera.Mode.Chase, setter.CurrentMode,
+                "Mode must be Chase after long-shot OB.");
         }
 
         // ── Test 6 ─────────────────────────────────────────────────────────────
@@ -664,12 +657,12 @@ namespace Golfin.Physics.Tests
                 "ExitedWorldBounds clamp X should fall back to finalPosition.x");
         }
 
-        // Test 24: Clamp point and OBFreeze pivot agree in XZ (shared-helper regression).
+        // Test 24 (K10 follow-up): clamp still arms at the OB hit; NO freeze pivot is ever set.
+        // (Replaces the old clamp↔pivot-agreement test — the pivot is deleted per Cesar's
+        // ruling that OB stops chasing in place instead of cutting to an aerial view.)
         [Test]
-        public void Director_OBClamp_AndOBFreezePivot_AgreeInXZ()
+        public void Director_OBClamp_Armed_NoFreezePivotOnOB()
         {
-            float obHeight = 5f; // default obFreezeHeightAboveTerrain
-
             var waterHitPos = new fp3(fp.FromFloat(25f), fp.Zero, fp.FromFloat(5f));
             var hits = new List<TerrainHit>
             {
@@ -690,21 +683,153 @@ namespace Golfin.Physics.Tests
 
             ctrl.BallSM.OnTrajectoryComputed(fp3.Zero, traj, fp.FromFloat(0.02f));
 
-            // OBFreeze pivot is set when BallState.OB fires.
-            Assert.IsTrue(setter.LastOBFreezePivot.HasValue, "SetOBFreezePivot should have been called");
+            // The flight-phase clamp still derives from the first OB hit (unchanged behavior).
             Assert.IsTrue(setter.LastChaseClampPoint.HasValue, "SetChaseClamp should have been called");
+            Assert.AreEqual(25f, setter.LastChaseClampPoint.Value.x, 0.01f,
+                "Chase clamp X must match the first Water hit (TryFindFirstOBHit)");
+            Assert.AreEqual(5f, setter.LastChaseClampPoint.Value.z, 0.01f,
+                "Chase clamp Z must match the first Water hit (TryFindFirstOBHit)");
 
-            Vector3 pivot = setter.LastOBFreezePivot.Value;
-            Vector3 clamp = setter.LastChaseClampPoint.Value;
+            // But the terminal OB state must NOT set a pivot anymore.
+            Assert.IsFalse(setter.LastOBFreezePivot.HasValue,
+                "SetOBFreezePivot must not be called — OB stops chasing in place.");
+        }
 
-            // Both should derive from the same first Water hit XZ.
-            Assert.AreEqual(pivot.x, clamp.x, 0.01f,
-                "OBFreeze pivot X and chase clamp X must agree (same TryFindFirstOBHit source)");
-            Assert.AreEqual(pivot.z, clamp.z, 0.01f,
-                "OBFreeze pivot Z and chase clamp Z must agree (same TryFindFirstOBHit source)");
-            // Pivot has the height offset; clamp is the raw XZ hit position.
-            Assert.AreEqual(pivot.y - obHeight, clamp.y, 0.01f,
-                "OBFreeze pivot Y should be clamp Y + obFreezeHeight");
+        // ── Tests 25–26: K10 ob_recovery_fixes (camera wedge exit) ────────────
+
+        // Test 25 (updated for the K10 follow-up ruling): the whole OB→Aiming camera lifecycle
+        // stays in Chase — OB itself no longer enters OBFreeze (stops chasing in place), and
+        // re-arming into Aiming keeps Chase so the aim owner / orbit drag (Chase-gated) own
+        // the camera. Also guards the defensive OBFreeze→Chase exit: if some legacy path DID
+        // set OBFreeze, Aiming still exits it (asserted via a manually-forced OBFreeze).
+        [Test]
+        public void Director_OBToAiming_StaysChase_AndExitsForcedOBFreeze()
+        {
+            var waterHit = new fp3(fp.FromFloat(25f), fp.Zero, fp.FromFloat(5f));
+            var hits = new List<TerrainHit>
+            {
+                TrajectoryBuilder.NonStopHit(waterHit, SurfaceType.Water),
+            };
+            var traj = new Trajectory(
+                new List<TrajectorySample>
+                {
+                    new TrajectorySample(fp.Zero, fp3.Zero, fp3.Zero),
+                    new TrajectorySample(fp.One,  waterHit, fp3.Zero),
+                },
+                waterHit, fp3.Zero, fp.One, TerminationReason.HitWater, hits);
+
+            var (director, setter, ctrl) = DirectorFactory.Create(isPutt: false, lastTraj: traj);
+            ctrl.LastTrajectory = traj;
+
+            // OB terminal → Chase (stop chasing in place) + target cleared.
+            ctrl.BallSM.OnTrajectoryComputed(fp3.Zero, traj, fp.FromFloat(0.02f));
+            Assert.AreEqual(ChaseCamera.Mode.Chase, setter.CurrentMode,
+                "OB must leave the camera in Chase (dormant), not OBFreeze.");
+
+            // Re-arm → Aiming: still Chase.
+            ctrl.BallSM.ReArm();
+            Assert.AreEqual(ChaseCamera.Mode.Chase, setter.CurrentMode,
+                "OB→Aiming must keep Chase — aim owner and orbit drag are Chase-gated.");
+
+            // Defensive branch: a lingering OBFreeze (legacy/unknown path) is exited on Aiming.
+            setter.SetMode(ChaseCamera.Mode.OBFreeze);
+            // Drive a fresh OB→ReArm cycle so →Aiming fires with mode == OBFreeze.
+            ctrl.BallSM.OnTrajectoryComputed(fp3.Zero, traj, fp.FromFloat(0.02f));
+            setter.SetMode(ChaseCamera.Mode.OBFreeze);   // force the wedge state pre-Aiming
+            ctrl.BallSM.ReArm();
+            Assert.AreEqual(ChaseCamera.Mode.Chase, setter.CurrentMode,
+                "A lingering OBFreeze must still be exited to Chase on Aiming (defensive guard).");
+        }
+
+        // Test 26: same-class — after a hole-out, re-arming into Aiming must exit CupZoom → Chase.
+        // CupZoom has the identical structural flaw (no null-target early-return, orbit + yaw
+        // gated Chase-only); reachable via InCup → modal close → RearmAfterHoleComplete → ReArm.
+        [Test]
+        public void Director_ReArmAfterInCup_ExitsCupZoomToChase()
+        {
+            var (director, setter, ctrl) = DirectorFactory.Create(isPutt: false);
+            var sm = new BallStateMachine(
+                new ConstantSurfaceProvider(SurfaceType.Green),
+                new AlwaysInCupDetector());
+            sm.Headless = true;
+            ctrl.BallSM = sm;
+            director.SetControllerAccessor(ctrl);
+
+            var inCupPos = new fp3(fp.FromFloat(10f), fp.Zero, fp.FromFloat(5f));
+            sm.OnTrajectoryComputed(fp3.Zero, TrajectoryBuilder.Simple(inCupPos), fp.FromFloat(0.02f));
+            Assert.AreEqual(ChaseCamera.Mode.CupZoom, setter.CurrentMode,
+                "Precondition: mode should be CupZoom after an InCup terminal state.");
+
+            setter.SetModeCalls.Clear();
+            sm.ReArm();
+
+            Assert.AreEqual(ChaseCamera.Mode.Chase, setter.CurrentMode,
+                "K10 same-class: re-entering Aiming from CupZoom must switch to Chase " +
+                "(otherwise the first aim phase after every hole-out wedges over the previous cup).");
+        }
+
+        // Test 27: end-to-end with the REAL ChaseCamera — K10 + follow-up ruling combined.
+        // On OB the real camera must go dormant IMMEDIATELY (stop chasing in place — no
+        // OBFreeze pivot teleport / top-down cut) and STAY dormant through ReArm→Aiming so
+        // the aim owner (ApplyCameraYaw) and orbit drag (HandleCameraOrbit) own the transform.
+        [Test]
+        public void Director_RealChaseCamera_OBToAiming_CameraGoesDormant()
+        {
+            var camGO = new GameObject("RealChaseCam");
+            var chase = camGO.AddComponent<ChaseCamera>();
+
+            var dirGO    = new GameObject("DirectorE2E");
+            var director = dirGO.AddComponent<LoopCameraDirector>();
+            director.SetModeSetter(chase); // real ChaseCamera, not RecordingModeSetter
+
+            var sm = new BallStateMachine(new ConstantSurfaceProvider(SurfaceType.Fairway));
+            sm.Headless = true;
+
+            var waterHit = new fp3(fp.FromFloat(25f), fp.Zero, fp.FromFloat(5f));
+            var hits = new List<TerrainHit> { TrajectoryBuilder.NonStopHit(waterHit, SurfaceType.Water) };
+            var traj = new Trajectory(
+                new List<TrajectorySample>
+                {
+                    new TrajectorySample(fp.Zero, fp3.Zero, fp3.Zero),
+                    new TrajectorySample(fp.One,  waterHit, fp3.Zero),
+                },
+                waterHit, fp3.Zero, fp.One, TerminationReason.HitWater, hits);
+
+            var ctrl = new StubControllerAccessor
+            {
+                BallSM            = sm,
+                LastTrajectory    = traj,
+                LastShotOrigin    = Vector3.zero,
+                LastShotLaunchDir = Vector3.forward,
+            };
+            director.SetControllerAccessor(ctrl);
+
+            // Park the camera where the (clamped) chase would have left it, then drive →OB.
+            Vector3 parked = new Vector3(111f, 222f, 333f);
+            chase.transform.position = parked;
+            sm.OnTrajectoryComputed(fp3.Zero, traj, fp.FromFloat(0.02f));
+
+            Assert.AreEqual(ChaseCamera.Mode.Chase, chase.CurrentMode,
+                "OB must leave the real camera in Chase — never OBFreeze (top-down pivot).");
+
+            // Dormant immediately on OB: LateUpdate must NOT move the camera — it stays
+            // exactly where the chase left it ("just stop chasing", Cesar 2026-08-05).
+            for (int i = 0; i < 30; i++) chase.FrameCamera(1f / 60f);
+            Assert.That(chase.transform.position, Is.EqualTo(parked),
+                "On OB the camera must freeze in place — no pivot teleport, no re-pointing.");
+
+            // Still dormant through ReArm→Aiming: aim owner / orbit drag own the transform.
+            sm.ReArm();
+            Assert.AreEqual(ChaseCamera.Mode.Chase, chase.CurrentMode,
+                "After ReArm→Aiming the real ChaseCamera must remain in Chase.");
+            Vector3 held = new Vector3(10f, 20f, 30f);
+            chase.transform.position = held;
+            for (int i = 0; i < 30; i++) chase.FrameCamera(1f / 60f);
+            Assert.AreEqual(held, chase.transform.position,
+                "In Chase with a null target the camera is dormant — aim/drag own it (no wedge).");
+
+            Object.DestroyImmediate(camGO);
+            Object.DestroyImmediate(dirGO);
         }
 
         // ── Teardown ────────────────────────────────────────────────────────────
