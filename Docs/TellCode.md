@@ -7,7 +7,7 @@
 
 ## ▶ CURRENT STATE — update this block at every session boundary
 
-- **Last updated:** 2026-08-05 12:10 JST (Architect — **DEVICE ERA.** Game builds+runs on physical iPhone since 2026-07-27; signing SOLVED (do not re-litigate); on-device smoke found 7 issues. Fixed since: `centralball_device_invisible` (device-verified `1a4ad15ca`), `hole6_tree_collision_profiles` (`c1d38e280`), `camera_drag_touch_origin`/K1 (CLOSED — `bb59d32dd` 08-03, device-verified per commit + Cesar's session; block deleted 2026-08-05). Shipped: `build_version_stamp` (3 defects → hardening kickoff below). **iOS Simulator three-tier verification loop VALIDATED** — canonical doc `Docs/Pipeline/IOS_SIMULATOR_LOOP.md`; standing rules: never wipe the seeded DerivedData, never `BuildPipeline.BuildPlayer` via MCP script-execute. Full story: `Docs/Reports/2026-08-04_ios_simulator_build_blocker.md` §§10–13 + `Docs/AI_CONTEXT.md` top block. **OPEN = the PENDING KICKOFFS below** (6 smoke issues + build-stamp hardening + housekeeping; K9 `ui_frame_pacing` smoke #8 added 2026-08-05; K10 `ob_recovery_fixes` **CLOSED 2026-08-05** (`90dd574ff` camera+drop rule, `ed65f5726` permanent capture Y-flip fix; CupZoom same-class wedge found+fixed; OB now stops chasing with no aerial cut; ground-level settle built then reverted per Cesar); K1 closed. K11 `club_selection_green_gate` **CLOSED 2026-08-05** (`066df31f2` selector gate + `efa681acb` §2f re-decide after reposition — the item deferred pending K10; ⚠️ K10's close-out swept K11's in-flight lines and briefly broke `main`, repaired forward — see the K11 block). K12 `matchmaking_scan_pacing` added 2026-08-05 — find-opponent animation: decelerating scan + total cut ~5.6s→~3.1s, NO scene edit (new-serialized-field technique), queued AFTER K11 per Cesar — **now NEXT UP**. K13 `boot_loading_screen_removal` **CLOSED 2026-08-05** (`d3bf00026`) — measured first as instructed: zero real progress ever fed (`_useExternalProgress` never true, max `_realProgress` 0.000 across 2 runs), boot init done at t=3.8s vs Splash interactive at t=9.0s, real work behind the transition ~0.23s (Main Theme decode, already under the 0.25s fade) → REMOVED per the <2s rule. **click→Home 2.72s → 0.48s.** HoleLoad path verified byte-identical + live-regression-passed (real bar 0→1 via the real ModeHomeCard PlayButton). ⚠️ Adjacent knob still open: `minLoadingTime` (2s, scene-serialized) is also the hole-load screen's MINIMUM — measured 2.586s with progress already at 1.0; same scene-serialization trap as K12. ⚠️ RECONCILIATION PENDING: repo log shows K6-core `cd0ef6ed4` (arrow F13 + floor clamp) and K9 `7380baf67` already COMMITTED, plus `b702e1a41` wind→ball-flight landed outside the documented queue — K6/K9 blocks need close-out review with Cesar) plus `putter_aim_blue_line` (413, SPEC_READY in `Specs/Active/`, awaiting Cesar go) and a device pass on `demo_build_slice` (426). Everything below this bullet predates the device era and is historical.)
+- **Last updated:** 2026-08-05 12:41 JST (Architect — **DEVICE ERA.** Game builds+runs on physical iPhone since 2026-07-27; signing SOLVED (do not re-litigate); on-device smoke found 7 issues. Fixed since: `centralball_device_invisible` (device-verified `1a4ad15ca`), `hole6_tree_collision_profiles` (`c1d38e280`), `camera_drag_touch_origin`/K1 (CLOSED — `bb59d32dd` 08-03, device-verified per commit + Cesar's session; block deleted 2026-08-05). Shipped: `build_version_stamp` (3 defects → hardening kickoff below). **iOS Simulator three-tier verification loop VALIDATED** — canonical doc `Docs/Pipeline/IOS_SIMULATOR_LOOP.md`; standing rules: never wipe the seeded DerivedData, never `BuildPipeline.BuildPlayer` via MCP script-execute. Full story: `Docs/Reports/2026-08-04_ios_simulator_build_blocker.md` §§10–13 + `Docs/AI_CONTEXT.md` top block. **OPEN = the PENDING KICKOFFS below** (6 smoke issues + build-stamp hardening + housekeeping; K9 `ui_frame_pacing` smoke #8 added 2026-08-05; K10 `ob_recovery_fixes` **CLOSED 2026-08-05** (`90dd574ff` camera+drop rule, `ed65f5726` permanent capture Y-flip fix; CupZoom same-class wedge found+fixed; OB now stops chasing with no aerial cut; ground-level settle built then reverted per Cesar); K1 closed. K11 `club_selection_green_gate` **CLOSED 2026-08-05** (`066df31f2` selector gate + `efa681acb` §2f re-decide after reposition — the item deferred pending K10; ⚠️ K10's close-out swept K11's in-flight lines and briefly broke `main`, repaired forward — see the K11 block). K12 `matchmaking_scan_pacing` added 2026-08-05 — find-opponent animation: decelerating scan + total cut ~5.6s→~3.1s, NO scene edit (new-serialized-field technique), queued AFTER K11 per Cesar — **now NEXT UP**. K13 `boot_loading_screen_removal` **CLOSED 2026-08-05** (`d3bf00026`) — measured first as instructed: zero real progress ever fed (`_useExternalProgress` never true, max `_realProgress` 0.000 across 2 runs), boot init done at t=3.8s vs Splash interactive at t=9.0s, real work behind the transition ~0.23s (Main Theme decode, already under the 0.25s fade) → REMOVED per the <2s rule. **click→Home 2.72s → 0.48s.** HoleLoad path verified byte-identical + live-regression-passed (real bar 0→1 via the real ModeHomeCard PlayButton). ⚠️ Adjacent knob still open: `minLoadingTime` (2s, scene-serialized) is also the hole-load screen's MINIMUM — measured 2.586s with progress already at 1.0; same scene-serialization trap as K12. K14 `loading_bar_inset` added 2026-08-05 — hole-load bar ≈8px narrower per side; ONE-VALUE ShellScene YAML edit (LoadingBarRoot sizeDelta.x 0→-16), QUEUED BEHIND the ShellScene queue (in-flight safe_area work + K4) and after K4's CanvasScaler question resolves. ⚠️ RECONCILIATION PENDING: repo log shows K6-core `cd0ef6ed4` (arrow F13 + floor clamp) and K9 `7380baf67` already COMMITTED, plus `b702e1a41` wind→ball-flight landed outside the documented queue — K6/K9 blocks need close-out review with Cesar) plus `putter_aim_blue_line` (413, SPEC_READY in `Specs/Active/`, awaiting Cesar go) and a device pass on `demo_build_slice` (426). Everything below this bullet predates the device era and is historical.)
 
 - **Last updated:** 2026-07-02 (Architect — `1v1_result_rewards_display` (347) DONE. NEXT-at-the-time = `stamina_boost_shop` (517) design pass. STALE — superseded by the device-era bullet above.)
 - Older narrative bullets (2026-06-11 → 2026-06-24): preserved in git history of this file — all tasks named in them are closed in `Docs/Specs/Completed/`. Trust `Docs/Specs/Active/` + the AI_CONTEXT headline, not old bullets.
@@ -24,6 +24,7 @@ Paste any block below into Code as-is. Produced by the Architect during the 2026
 - `ui_frame_pacing` (K9) should LAND before `arrow_speed_retune` (K6) LOCKS — 60 fps changes perceived arrow smoothness/speed; Cesar should calibrate at shipping frame pacing. K9 feel-verify is DEVICE-ONLY (perf class — sim renders at the Mac's refresh and false-passes smoothness).
 - ~~`club_selection_green_gate` (K11) may run IN PARALLEL with K10~~ — **K11 CLOSED 2026-08-05** (`066df31f2` gate + `efa681acb` the deferred §2f-after-reposition item, which K10's merge unblocked). Both shipped; see the K11 block below, including the process scar where K10's close-out swept K11's in-flight lines and briefly broke `main`.
 - `matchmaking_scan_pacing` (K12): queued AFTER K11 per Cesar. Single file (MatchmakingModalController.cs), no overlap with K10/K11 — technically parallel-safe if the queue frees up. ⚠️ NO ShellScene edit: the modal's tunables are scene-serialized (K7 is mid-flight in that scene); K12 uses new serialized fields so code defaults take effect without touching the scene. EDITOR-verifiable.
+- `loading_bar_inset` (K14): ShellScene YAML edit → joins the SHELLSCENE QUEUE — run only after the in-flight safe_area work lands AND after `nav_bar_edge_gaps` (K4) resolves its CanvasScaler question (if K4's fix is the scaler, every screen's apparent widths shift and this inset must be eyeballed against the new baseline). Isolated one-value commit, sim-valid (layout class).
 - ~~`boot_loading_screen_removal` (K13): parallel-safe with everything open~~ — **CLOSED 2026-08-05** (`d3bf00026`). The parallel-safety prediction held: the commit used an explicit 2-file pathspec and left K7's ShellScene/SafeAreaFitter/PersistentUIManager and K12's MatchmakingModalController drift untouched (the K10→K11 sweep scar did NOT repeat). SHARED LoadingScreenController never edited, as designed.
 
 ### K2 · map_view_bottom_anchor (smoke #5) — TellCode
@@ -916,6 +917,60 @@ VERIFY — EDITOR-VALID:
 ```
 
 </details>
+
+### K14 · loading_bar_inset — TellCode · SHELLSCENE QUEUE (after safe_area + K4) · sim-valid
+
+```
+Task: loading_bar_inset — the loading bar is too wide, nearly touching the
+phone's sides. Inset it ≈ 8 px per side. Do not break the fill behavior.
+(Cesar, 2026-08-05. Post-K13 this bar only appears on the HOLE-LOAD
+screen.)
+
+GROUNDED TARGET:
+ShellScene.unity → GameObject "LoadingBarRoot" (GO fileID 342786665,
+RectTransform fileID 342786666, ~line 18530): full-stretch anchors
+(0,0)–(1,1), sizeDelta (0,0), centered pivot → spans its parent's full
+width. Children (fill bar 957728170 + progress text 2073758602) follow it.
+
+THE EDIT — one value:
+LoadingBarRoot RectTransform m_SizeDelta.x: 0 → -16.
+Stretch anchors + centered pivot make that exactly 8 units off EACH side.
+Functionality is safe by construction — LoadingBar drives Image.fillAmount,
+which is proportional to whatever width the rect has.
+
+DIAGNOSE FIRST (30 seconds): confirm the parent (fileID 1921467785) is not
+itself inset and that the fill child uses stretch anchors inside the root.
+If the fill child has FIXED width instead, inset THAT rect's sizeDelta
+instead and say so.
+
+UNITS NOTE: "8 px" = 8 canvas reference units first pass; actual on-screen
+size depends on the CanvasScaler. Eyeball on the sim at iPhone-14
+resolution; Cesar approves the look. If it reads too subtle/too strong, the
+same single value is the dial.
+
+⚠️ SEQUENCING — THIS IS A SHELLSCENE EDIT:
+- ShellScene is occupied (safe_area work in flight) and K4
+  nav_bar_edge_gaps is still open. Run this ONLY when the scene frees up,
+  as its own ISOLATED commit (one-value YAML diff; diff the scene before
+  committing, revert unrelated drift — standing rule, no merge driver).
+- Run AFTER K4's cause is known: if K4's fix is the CanvasScaler (H2),
+  every screen's apparent widths change — including this bar — so the 8px
+  eyeball must happen against the post-K4 baseline.
+IF CESAR WANTS IT SOONER: fallback that avoids the scene — in
+LoadingScreenController.Awake, nudge the bar root at runtime
+(offsetMin.x += 8; offsetMax.x -= 8). Works today, but it is a code shim
+for a scene concern; prefer the scene edit unless Cesar explicitly asks.
+State which route shipped.
+
+VERIFY — sim-valid (layout class):
+1. Hole-load screen (1v1 flow): bar visibly ≈ 8 px off each side; progress
+   text position still correct.
+2. Full fill sweep 0% → 100%: fill reaches BOTH rounded ends exactly — no
+   undershoot/overshoot (fillAmount is proportional; this is the
+   don't-break-functionality gate).
+3. 19.5:9 and 16:9 Game view: inset reads correctly at both aspects.
+4. Screenshot to Cesar for the final look call.
+```
 
 ---
 
