@@ -806,6 +806,46 @@ namespace Golfin.Physics.Viewer
             if (placeCamForApply != null) ApplyCameraYaw(placeCamForApply);
 
             AdjustCameraForDepression(pos);
+
+            // K11 follow-up: a repositioned ball must re-run the §2f decision.
+            ReDecideClubAfterReposition(pos);
+        }
+
+        /// <summary>
+        /// Re-runs the §2f auto-switch after a REPOSITION (OB/water drop, PlaceBallAt).
+        ///
+        /// DecideTargetClub is otherwise only reachable from the AtRest branch of
+        /// HandleShotComplete, so a ball that is MOVED rather than STOPPED kept whatever
+        /// club it had: dropped onto the green still holding a wood, dropped off the green
+        /// still in putter mode. Since the K11 selector gate reads putt mode, a stale flag
+        /// also gated the selector the wrong way round — leaving the player unable to
+        /// correct it by hand (putter-only in the rough, putter greyed out on the green).
+        ///
+        /// Classifies via the SAME baked classifier the sim uses to produce EndSurface, so
+        /// this decision and §2f's cannot disagree (the K11 single-rule principle). When no
+        /// zones are baked (flat-ground lab presets) the club is left alone — today's
+        /// behaviour — rather than forcing a switch off a constant surface.
+        ///
+        /// Runs before the callers' ReArm(), mirroring the AtRest branch's SetClub→ReArm order.
+        /// </summary>
+        void ReDecideClubAfterReposition(Vector3 pos)
+        {
+            if (_bakedClassifier == null) return;
+
+            SurfaceType surface = _bakedClassifier.Classify(fp.FromFloat(pos.x), fp.FromFloat(pos.z));
+            int target = PutterModeSurfaceController.DecideTargetClub(
+                currentClubIndex: CurrentClubIndex,
+                putterIndex: PutterIndex,
+                endSurface: surface,
+                lastNonPutterClubIndex: _lastNonPutterClubIndex);
+
+            if (target < 0) return;   // idempotent: already on the right club
+
+            Debug.Log($"[PhysicsLab][§2f] Reposition surface={surface} " +
+                      $"auto-switch club {CurrentClubIndex}→{target}");
+            SetClub(target);
+            // PROD path: clear any lab bundle leftover so the bus resolves live stats.
+            _shotController?.ClearStatBundleOverride();
         }
 
         // Update the HUD max-carry yards readout for the current StatBundle/club.
