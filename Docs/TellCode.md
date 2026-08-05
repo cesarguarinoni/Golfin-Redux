@@ -7,7 +7,7 @@
 
 ## ▶ CURRENT STATE — update this block at every session boundary
 
-- **Last updated:** 2026-08-05 11:19 JST (Architect — **DEVICE ERA.** Game builds+runs on physical iPhone since 2026-07-27; signing SOLVED (do not re-litigate); on-device smoke found 7 issues. Fixed since: `centralball_device_invisible` (device-verified `1a4ad15ca`), `hole6_tree_collision_profiles` (`c1d38e280`), `camera_drag_touch_origin`/K1 (CLOSED — `bb59d32dd` 08-03, device-verified per commit + Cesar's session; block deleted 2026-08-05). Shipped: `build_version_stamp` (3 defects → hardening kickoff below). **iOS Simulator three-tier verification loop VALIDATED** — canonical doc `Docs/Pipeline/IOS_SIMULATOR_LOOP.md`; standing rules: never wipe the seeded DerivedData, never `BuildPipeline.BuildPlayer` via MCP script-execute. Full story: `Docs/Reports/2026-08-04_ios_simulator_build_blocker.md` §§10–13 + `Docs/AI_CONTEXT.md` top block. **OPEN = the PENDING KICKOFFS below** (6 smoke issues + build-stamp hardening + housekeeping; K9 `ui_frame_pacing` smoke #8 added 2026-08-05; K10 `ob_recovery_fixes` smoke #9 added 2026-08-05 — OBFreeze camera wedge + Cesar-ruled real-golf drop rule; K1 closed. K11 `club_selection_green_gate` added 2026-08-05 — putter-only-on-green selection gate, PARALLEL-SAFE with K10 (one overlapping item deferred inside the block). ⚠️ RECONCILIATION PENDING: repo log shows K6-core `cd0ef6ed4` (arrow F13 + floor clamp) and K9 `7380baf67` already COMMITTED, plus `b702e1a41` wind→ball-flight landed outside the documented queue — K6/K9 blocks need close-out review with Cesar) plus `putter_aim_blue_line` (413, SPEC_READY in `Specs/Active/`, awaiting Cesar go) and a device pass on `demo_build_slice` (426). Everything below this bullet predates the device era and is historical.)
+- **Last updated:** 2026-08-05 11:37 JST (Architect — **DEVICE ERA.** Game builds+runs on physical iPhone since 2026-07-27; signing SOLVED (do not re-litigate); on-device smoke found 7 issues. Fixed since: `centralball_device_invisible` (device-verified `1a4ad15ca`), `hole6_tree_collision_profiles` (`c1d38e280`), `camera_drag_touch_origin`/K1 (CLOSED — `bb59d32dd` 08-03, device-verified per commit + Cesar's session; block deleted 2026-08-05). Shipped: `build_version_stamp` (3 defects → hardening kickoff below). **iOS Simulator three-tier verification loop VALIDATED** — canonical doc `Docs/Pipeline/IOS_SIMULATOR_LOOP.md`; standing rules: never wipe the seeded DerivedData, never `BuildPipeline.BuildPlayer` via MCP script-execute. Full story: `Docs/Reports/2026-08-04_ios_simulator_build_blocker.md` §§10–13 + `Docs/AI_CONTEXT.md` top block. **OPEN = the PENDING KICKOFFS below** (6 smoke issues + build-stamp hardening + housekeeping; K9 `ui_frame_pacing` smoke #8 added 2026-08-05; K10 `ob_recovery_fixes` smoke #9 added 2026-08-05 — OBFreeze camera wedge + Cesar-ruled real-golf drop rule; K1 closed. K11 `club_selection_green_gate` added 2026-08-05 — putter-only-on-green selection gate, PARALLEL-SAFE with K10 (one overlapping item deferred inside the block). K12 `matchmaking_scan_pacing` added 2026-08-05 — find-opponent animation: decelerating scan + total cut ~5.6s→~3.1s, NO scene edit (new-serialized-field technique), queued AFTER K11 per Cesar. ⚠️ RECONCILIATION PENDING: repo log shows K6-core `cd0ef6ed4` (arrow F13 + floor clamp) and K9 `7380baf67` already COMMITTED, plus `b702e1a41` wind→ball-flight landed outside the documented queue — K6/K9 blocks need close-out review with Cesar) plus `putter_aim_blue_line` (413, SPEC_READY in `Specs/Active/`, awaiting Cesar go) and a device pass on `demo_build_slice` (426). Everything below this bullet predates the device era and is historical.)
 
 - **Last updated:** 2026-07-02 (Architect — `1v1_result_rewards_display` (347) DONE. NEXT-at-the-time = `stamina_boost_shop` (517) design pass. STALE — superseded by the device-era bullet above.)
 - Older narrative bullets (2026-06-11 → 2026-06-24): preserved in git history of this file — all tasks named in them are closed in `Docs/Specs/Completed/`. Trust `Docs/Specs/Active/` + the AI_CONTEXT headline, not old bullets.
@@ -23,6 +23,7 @@ Paste any block below into Code as-is. Produced by the Architect during the 2026
 - `tree_wind_device` verification is DEVICE-ONLY (sim false-passes it — measured, report §11). `arrow_speed_retune` and `safe_area_top_bar` are editor/sim-verifiable. `ob_recovery_fixes` (K10) is EDITOR-verifiable — state-machine logic; the camera wedge repros in the editor with a mouse.
 - `ui_frame_pacing` (K9) should LAND before `arrow_speed_retune` (K6) LOCKS — 60 fps changes perceived arrow smoothness/speed; Cesar should calibrate at shipping frame pacing. K9 feel-verify is DEVICE-ONLY (perf class — sim renders at the Mac's refresh and false-passes smoothness).
 - `club_selection_green_gate` (K11) may run IN PARALLEL with K10 — different files (SelectorOverlayWidget + putter-mode UI region vs LoopCameraDirector + OB branch). The ONE overlapping item (§2f re-decide after reposition, same PhysicsLabController region as K10 Part B) is explicitly DEFERRED inside K11 until K10 merges. K11 is EDITOR-verifiable.
+- `matchmaking_scan_pacing` (K12): queued AFTER K11 per Cesar. Single file (MatchmakingModalController.cs), no overlap with K10/K11 — technically parallel-safe if the queue frees up. ⚠️ NO ShellScene edit: the modal's tunables are scene-serialized (K7 is mid-flight in that scene); K12 uses new serialized fields so code defaults take effect without touching the scene. EDITOR-verifiable.
 
 ### K2 · map_view_bottom_anchor (smoke #5) — TellCode
 
@@ -689,6 +690,64 @@ VERIFY — EDITOR-VALID:
 - Ball selector (Kind.Ball) untouched in both modes.
 - Bot smoke: one BotDriver hole plays through unchanged (bots bypass UI).
 - Device pass optional — pure UI logic, editor/sim sufficient.
+```
+
+### K12 · matchmaking_scan_pacing — Surgical · AFTER K11 per Cesar · EDITOR-verifiable
+
+```
+Task: matchmaking_scan_pacing — the 1v1 "FINDING OPPONENT" animation should
+start FAST and decelerate before landing on the opponent (slot-machine
+feel), and the total wait is too long — shorten it. (Cesar, 2026-08-05.)
+
+MEASURED CURRENT BEHAVIOR (source-grounded):
+FILE: Assets/Scripts/UI/Matchmaking/MatchmakingModalController.cs
+OpponentScanRoutine cycles opponents at a CONSTANT
+opponentCycleIntervalSeconds (0.3 s) for searchDurationSeconds (5 s), then
+holds 0.6 s on "OPPONENT FOUND" before GameplaySceneLoader.BeginGameplayLoad.
+Total wait before the load even starts ≈ 5.6 s. No easing of any kind.
+
+⚠️ SCENE-SERIALIZATION TRAP — read before coding:
+The tunables are [SerializeField] and ShellScene.unity SERIALIZES them
+(searchDurationSeconds: 5 at ~line 131153). Changing the C# defaults does
+NOTHING — the scene values win. And ShellScene is OFF-LIMITS right now (K7
+mid-flight, no merge driver). Fix: introduce NEW serialized fields — absent
+from the scene YAML, so the script defaults take effect with ZERO scene
+edit. Deprecate the old two in a comment; a later housekeeping pass can
+remove them + their scene entries when ShellScene is next legally edited.
+
+IMPLEMENTATION (one file, one coroutine):
+New fields (script defaults become live immediately):
+  scanTotalSeconds       = 2.5f   // was 5 via scene — total cut ≈ 5.6→~3.1 s
+  scanStartIntervalSeconds = 0.10f  // fast flicker at start
+  scanEndIntervalSeconds   = 0.50f  // slow holds before the find
+OpponentScanRoutine: replace the constant wait with a decelerating ramp —
+  t = elapsed / scanTotalSeconds  (0→1)
+  interval = Mathf.Lerp(scanStartIntervalSeconds, scanEndIntervalSeconds,
+                        t * t)    // ease-out: fast early, slow late
+  yield WaitForSeconds(interval); elapsed += interval  (accumulate the
+  ACTUAL interval used — the old code added the constant).
+≈ 9–10 name flips: ~5–6 in the first second, 2–3 slow holds at the end.
+The deceleration lands naturally on the final opponent — finalPick already
+tracks the last displayed entry; keep that mechanism untouched.
+
+KEEP UNCHANGED:
+- The 0.6 s "OPPONENT FOUND" beat (Stage C0 staging — deliberate, the modal
+  hides at the FadeController midpoint; do not shorten without Cesar).
+- DotCycleRoutine (status dots) — independent, fine at 0.4 s.
+- Phase enum transitions (BotDriver test seam reads Phase; loop_v2 bots just
+  get a faster wait — no seam change).
+- GameSession seeding / MatchContext population order.
+
+VERIFY — EDITOR-VALID:
+1. Editor: open 1v1 matchmaking from the mode carousel. Scan visibly starts
+   fast and decelerates; last displayed name/card == the opponent the match
+   starts against; total scan ≈ 2.5 s (log elapsed at OpponentFound).
+2. Cancel mid-scan still works (coroutines stop, home panels restore —
+   OnHide path untouched).
+3. Bot smoke: loop_v2 matchmaking-dependent bot run passes (Phase seam).
+4. Report before/after totals; Cesar tunes the three fields in the
+   Inspector afterward if the feel is off — they are serialized for exactly
+   that.
 ```
 
 ---
