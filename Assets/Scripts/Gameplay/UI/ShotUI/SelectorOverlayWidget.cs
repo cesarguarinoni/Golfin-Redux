@@ -155,6 +155,9 @@ namespace Golfin.Gameplay.UI.ShotUI
                     break;
                 }
             }
+            // K11: a gated-out card never highlights — hovering it must look like hovering nothing,
+            // which also keeps CommitHighlighted() from ever having a disabled card to commit.
+            if (found >= 0 && !_cards[found].IsSelectable) found = -1;
             SetHighlightAt(found);
         }
 
@@ -169,7 +172,9 @@ namespace Golfin.Gameplay.UI.ShotUI
 
             for (int i = 0; i < _cardRts.Count; i++)
                 if (IsOverRect(_cardRts[i], screenPos))
-                    return ReleaseResult.OnCard;
+                    // K11: releasing over a gated-out card reads as releasing over nothing,
+                    // so the router takes its Outside branch instead of committing.
+                    return _cards[i].IsSelectable ? ReleaseResult.OnCard : ReleaseResult.Outside;
 
             return ReleaseResult.Outside;
         }
@@ -178,6 +183,7 @@ namespace Golfin.Gameplay.UI.ShotUI
         public void CommitHighlighted()
         {
             if (_highlightedIndex < 0 || _highlightedIndex >= _cards.Count) return;
+            if (!_cards[_highlightedIndex].IsSelectable) return;   // K11
             _cards[_highlightedIndex].InvokeSelection();
         }
 
@@ -197,30 +203,59 @@ namespace Golfin.Gameplay.UI.ShotUI
         public void ScrollUp()   => Scroll(+1);
         public void ScrollDown() => Scroll(-1);
 
-        void Scroll(int delta)
+        /// <summary>
+        /// Move the selection by <paramref name="delta"/>. Returns true if the selection
+        /// actually moved — false means there is nothing left to land on, which is how
+        /// ArrowScrollRoutine knows to stop instead of spinning.
+        /// </summary>
+        bool Scroll(int delta)
         {
             // Reorder: move selected by delta.
             // Cards are displayed bottom-to-top in inventory order.
             // The bottom card is "selected". Scrolling changes which item is selected.
             if (_kind == Kind.Club)
             {
-                int next = ClubContext.SelectedIndex + delta;
-                next = Mathf.Clamp(next, 0, ClubContext.EquippedBag.Count - 1);
-                if (next == ClubContext.SelectedIndex) return;
+                // K11: step OVER gated-out clubs rather than clamping onto them — off the
+                // green the arrows skip the putter, and on the green (putter-only) there is
+                // no eligible neighbour in either direction so the arrows no-op.
+                int next = FindNextSelectableClub(ClubContext.SelectedIndex, delta);
+                if (next < 0) return false;
                 ClubContext.RequestSelection(next);
                 ClubSelectionBroadcast.Raise(ClubContext.EquippedBag[next].LabClubIndex);
                 // Repopulate to reflect new selected-at-bottom ordering
                 Populate();
+                return true;
             }
             else
             {
                 int next = BallContext.SelectedIndex + delta;
                 next = Mathf.Clamp(next, 0, BallContext.OwnedBalls.Count - 1);
-                if (next == BallContext.SelectedIndex) return;
+                if (next == BallContext.SelectedIndex) return false;
                 BallContext.RequestSelection(next);
                 Populate();
+                return true;
             }
         }
+
+        /// <summary>
+        /// First selectable bag index strictly beyond <paramref name="from"/> in direction
+        /// <paramref name="delta"/> (±1), or -1 when the walk runs off either end.
+        /// </summary>
+        int FindNextSelectableClub(int from, int delta)
+        {
+            var bag = ClubContext.EquippedBag;
+            if (bag == null || bag.Count == 0 || delta == 0) return -1;
+            for (int i = from + delta; i >= 0 && i < bag.Count; i += delta)
+                if (IsClubSelectable(bag[i])) return i;
+            return -1;
+        }
+
+        /// <summary>The one eligibility rule, shared by Populate and Scroll (see §2f).</summary>
+        static bool IsClubSelectable(ClubEntry entry) =>
+            entry != null && ClubSelectionBroadcast.IsSelectable(
+                entry.LabClubIndex,
+                ClubSelectionBroadcast.PutterLabClubIndex,
+                ClubSelectionBroadcast.InPutterMode);
 
         void StartArrowScroll(bool isUp, float delay, float interval)
         {
@@ -242,7 +277,14 @@ namespace Golfin.Gameplay.UI.ShotUI
             yield return new WaitForSecondsRealtime(delay);
             while (true)
             {
-                Scroll(isUp ? +1 : -1);
+                if (!Scroll(isUp ? +1 : -1))
+                {
+                    // K11: nothing eligible left in this direction (on the green, that is
+                    // immediately). Exit rather than spin — and null the handle first, or
+                    // StartArrowScroll's non-null guard would block every later hold-scroll.
+                    _arrowScrollCoroutine = null;
+                    yield break;
+                }
                 yield return new WaitForSecondsRealtime(interval);
             }
         }
@@ -312,6 +354,9 @@ namespace Golfin.Gameplay.UI.ShotUI
                     {
                         card.SetClub(entry, () =>
                         {
+                            // K11: re-check live at commit time, not just at build time — the
+                            // last line of defence behind the card's disabled state.
+                            if (!IsClubSelectable(entry)) return;
                             ClubContext.RequestSelection(captured);
                             ClubSelectionBroadcast.Raise(entry.LabClubIndex);
                             if (_router != null)
@@ -319,6 +364,8 @@ namespace Golfin.Gameplay.UI.ShotUI
                             else
                                 Close();
                         });
+                        // K11: gated-out clubs render greyed + non-interactive (not hidden).
+                        card.SetSelectable(IsClubSelectable(entry));
                         _cards.Add(card);
                         _cardRts.Add(go.GetComponent<RectTransform>());
                     }
