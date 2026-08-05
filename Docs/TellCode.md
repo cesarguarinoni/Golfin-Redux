@@ -7,7 +7,7 @@
 
 ## ▶ CURRENT STATE — update this block at every session boundary
 
-- **Last updated:** 2026-08-05 12:45 JST (Architect — **DEVICE ERA.** Game builds+runs on physical iPhone since 2026-07-27; signing SOLVED (do not re-litigate); on-device smoke found 7 issues. Fixed since: `centralball_device_invisible` (device-verified `1a4ad15ca`), `hole6_tree_collision_profiles` (`c1d38e280`), `camera_drag_touch_origin`/K1 (CLOSED — `bb59d32dd` 08-03, device-verified per commit + Cesar's session; block deleted 2026-08-05), `nav_bar_edge_gaps` (K4) (CLOSED — `49825e867` + ticket-cluster follow-up `26ceeb051`, 08-03 — PRE-DATED the batch write, same drift class as K1; cause was H1: fixed-width 1178px center-anchored bars under a **ConstantPixelSize** canvas, fix = stretch anchors + proportional icon re-anchor; NOT the CanvasScaler — the `loading_bar_inset` (K14) hold on that question is resolved; block deleted 2026-08-05, flagged by Cesar). Shipped: `build_version_stamp` (3 defects → hardening kickoff below). **iOS Simulator three-tier verification loop VALIDATED** — canonical doc `Docs/Pipeline/IOS_SIMULATOR_LOOP.md`; standing rules: never wipe the seeded DerivedData, never `BuildPipeline.BuildPlayer` via MCP script-execute. Full story: `Docs/Reports/2026-08-04_ios_simulator_build_blocker.md` §§10–13 + `Docs/AI_CONTEXT.md` top block. **OPEN = the PENDING KICKOFFS below** (6 smoke issues + build-stamp hardening + housekeeping; K9 `ui_frame_pacing` smoke #8 added 2026-08-05; K10 `ob_recovery_fixes` **CLOSED 2026-08-05** (`90dd574ff` camera+drop rule, `ed65f5726` permanent capture Y-flip fix; CupZoom same-class wedge found+fixed; OB now stops chasing with no aerial cut; ground-level settle built then reverted per Cesar); K1 closed. K11 `club_selection_green_gate` **CLOSED 2026-08-05** (`066df31f2` selector gate + `efa681acb` §2f re-decide after reposition — the item deferred pending K10; ⚠️ K10's close-out swept K11's in-flight lines and briefly broke `main`, repaired forward — see the K11 block). K12 `matchmaking_scan_pacing` added 2026-08-05 — find-opponent animation: decelerating scan + total cut ~5.6s→~3.1s, NO scene edit (new-serialized-field technique), queued AFTER K11 per Cesar — **now NEXT UP**. K13 `boot_loading_screen_removal` **CLOSED 2026-08-05** (`d3bf00026`) — measured first as instructed: zero real progress ever fed (`_useExternalProgress` never true, max `_realProgress` 0.000 across 2 runs), boot init done at t=3.8s vs Splash interactive at t=9.0s, real work behind the transition ~0.23s (Main Theme decode, already under the 0.25s fade) → REMOVED per the <2s rule. **click→Home 2.72s → 0.48s.** HoleLoad path verified byte-identical + live-regression-passed (real bar 0→1 via the real ModeHomeCard PlayButton). ⚠️ Adjacent knob still open: `minLoadingTime` (2s, scene-serialized) is also the hole-load screen's MINIMUM — measured 2.586s with progress already at 1.0; same scene-serialization trap as K12. K14 `loading_bar_inset` added 2026-08-05 — hole-load bar ≈8px narrower per side; ONE-VALUE ShellScene YAML edit (LoadingBarRoot sizeDelta.x 0→-16); CanvasScaler question resolved by the `nav_bar_edge_gaps` (K4) closure (ConstantPixelSize, per-bar fix) — sole remaining gate is `safe_area_top_bar` (K7) freeing ShellScene. ⚠️ RECONCILIATION PENDING: repo log shows K6-core `cd0ef6ed4` (arrow F13 + floor clamp) and K9 `7380baf67` already COMMITTED, plus `b702e1a41` wind→ball-flight landed outside the documented queue — K6/K9 blocks need close-out review with Cesar) plus `putter_aim_blue_line` (413, SPEC_READY in `Specs/Active/`, awaiting Cesar go) and a device pass on `demo_build_slice` (426). Everything below this bullet predates the device era and is historical.)
+- **Last updated:** 2026-08-05 12:47 JST (Architect — **DEVICE ERA.** Game builds+runs on physical iPhone since 2026-07-27; signing SOLVED (do not re-litigate); on-device smoke found 7 issues. Fixed since: `centralball_device_invisible` (device-verified `1a4ad15ca`), `hole6_tree_collision_profiles` (`c1d38e280`), `camera_drag_touch_origin`/K1 (CLOSED — `bb59d32dd` 08-03, device-verified per commit + Cesar's session; block deleted 2026-08-05), `nav_bar_edge_gaps` (K4) (CLOSED — `49825e867` + ticket-cluster follow-up `26ceeb051`, 08-03 — PRE-DATED the batch write, same drift class as K1; cause was H1: fixed-width 1178px center-anchored bars under a **ConstantPixelSize** canvas, fix = stretch anchors + proportional icon re-anchor; NOT the CanvasScaler — the `loading_bar_inset` (K14) hold on that question is resolved; block deleted 2026-08-05, flagged by Cesar). Shipped: `build_version_stamp` (3 defects → hardening kickoff below). **iOS Simulator three-tier verification loop VALIDATED** — canonical doc `Docs/Pipeline/IOS_SIMULATOR_LOOP.md`; standing rules: never wipe the seeded DerivedData, never `BuildPipeline.BuildPlayer` via MCP script-execute. Full story: `Docs/Reports/2026-08-04_ios_simulator_build_blocker.md` §§10–13 + `Docs/AI_CONTEXT.md` top block. **OPEN = the PENDING KICKOFFS below** (6 smoke issues + build-stamp hardening + housekeeping; K9 `ui_frame_pacing` smoke #8 added 2026-08-05; K10 `ob_recovery_fixes` **CLOSED 2026-08-05** (`90dd574ff` camera+drop rule, `ed65f5726` permanent capture Y-flip fix; CupZoom same-class wedge found+fixed; OB now stops chasing with no aerial cut; ground-level settle built then reverted per Cesar); K1 closed. K11 `club_selection_green_gate` **CLOSED 2026-08-05** (`066df31f2` selector gate + `efa681acb` §2f re-decide after reposition — the item deferred pending K10; ⚠️ K10's close-out swept K11's in-flight lines and briefly broke `main`, repaired forward — see the K11 block). K12 `matchmaking_scan_pacing` added 2026-08-05 — find-opponent animation: decelerating scan + total cut ~5.6s→~3.1s, NO scene edit (new-serialized-field technique), queued AFTER K11 per Cesar — **now NEXT UP**. K13 `boot_loading_screen_removal` **CLOSED 2026-08-05** (`d3bf00026`) — measured first as instructed: zero real progress ever fed (`_useExternalProgress` never true, max `_realProgress` 0.000 across 2 runs), boot init done at t=3.8s vs Splash interactive at t=9.0s, real work behind the transition ~0.23s (Main Theme decode, already under the 0.25s fade) → REMOVED per the <2s rule. **click→Home 2.72s → 0.48s.** HoleLoad path verified byte-identical + live-regression-passed (real bar 0→1 via the real ModeHomeCard PlayButton). ⚠️ Adjacent knob still open: `minLoadingTime` (2s, scene-serialized) is also the hole-load screen's MINIMUM — measured 2.586s with progress already at 1.0; same scene-serialization trap as K12. K14 `loading_bar_inset` added 2026-08-05 — hole-load bar ≈8px narrower per side; ONE-VALUE ShellScene YAML edit (LoadingBarRoot sizeDelta.x 0→-16); CanvasScaler question resolved by the `nav_bar_edge_gaps` (K4) closure (ConstantPixelSize, per-bar fix) — sole remaining gate is `safe_area_top_bar` (K7) freeing ShellScene. RECONCILIATION DONE 2026-08-05 per Cesar ("Close them"): `arrow_speed_retune` (K6) CLOSED — `cd0ef6ed4` 08-04 verified against the kickoff shape in the diff: F13 changelog entry (93 lines), BOTH mirrors (controls.csv + ControlsConfig.cs), ShotController floor clamp (`Mathf.Max(arrowHz, MinArrowSpeedHz)`), both test files updated. NOTE: F13 locked at 30 fps, BEFORE `ui_frame_pacing` landed — if arrow feel reads differently at 60 fps on device, retune reopens as a NEW row; F13 stays the record. `ui_frame_pacing` (K9) CLOSED — `7380baf67`, FramePacingBootstrap.cs exactly as specced; device feel signed off via Cesar's own device sessions; in-hole 60 fps knock-on unreported — watch in whole-game perf (940). `b702e1a41` wind→ball-flight ACCEPTED as landed (no kickoff existed; it carries NO F-entry — flag for the next physics-changelog pass). Both blocks deleted.) plus `putter_aim_blue_line` (413, SPEC_READY in `Specs/Active/`, awaiting Cesar go) and a device pass on `demo_build_slice` (426). Everything below this bullet predates the device era and is historical.)
 
 - **Last updated:** 2026-07-02 (Architect — `1v1_result_rewards_display` (347) DONE. NEXT-at-the-time = `stamina_boost_shop` (517) design pass. STALE — superseded by the device-era bullet above.)
 - Older narrative bullets (2026-06-11 → 2026-06-24): preserved in git history of this file — all tasks named in them are closed in `Docs/Specs/Completed/`. Trust `Docs/Specs/Active/` + the AI_CONTEXT headline, not old bullets.
@@ -21,7 +21,7 @@ Paste any block below into Code as-is. Produced by the Architect during the 2026
 **Sequencing constraints:**
 - ~~`nav_bar_edge_gaps` BEFORE `safe_area_top_bar`~~ — SATISFIED: `nav_bar_edge_gaps` (K4) landed 08-03 (`49825e867`); `safe_area_top_bar` (K7) is in flight on top of it.
 - `tree_wind_device` verification is DEVICE-ONLY (sim false-passes it — measured, report §11). `arrow_speed_retune` and `safe_area_top_bar` are editor/sim-verifiable. `ob_recovery_fixes` (K10) is EDITOR-verifiable — state-machine logic; the camera wedge repros in the editor with a mouse.
-- `ui_frame_pacing` (K9) should LAND before `arrow_speed_retune` (K6) LOCKS — 60 fps changes perceived arrow smoothness/speed; Cesar should calibrate at shipping frame pacing. K9 feel-verify is DEVICE-ONLY (perf class — sim renders at the Mac's refresh and false-passes smoothness).
+- ~~`ui_frame_pacing` (K9) before `arrow_speed_retune` (K6) locks~~ — MOOT: both CLOSED 2026-08-05 per Cesar (`7380baf67` / `cd0ef6ed4`). Reality inverted the intended order (F13 locked at 30 fps): if arrow feel reads differently at 60 fps on device, `arrow_speed_retune` reopens as a new row — F13 stays the record.
 - ~~`club_selection_green_gate` (K11) may run IN PARALLEL with K10~~ — **K11 CLOSED 2026-08-05** (`066df31f2` gate + `efa681acb` the deferred §2f-after-reposition item, which K10's merge unblocked). Both shipped; see the K11 block below, including the process scar where K10's close-out swept K11's in-flight lines and briefly broke `main`.
 - `matchmaking_scan_pacing` (K12): queued AFTER K11 per Cesar. Single file (MatchmakingModalController.cs), no overlap with K10/K11 — technically parallel-safe if the queue frees up. ⚠️ NO ShellScene edit: the modal's tunables are scene-serialized (K7 is mid-flight in that scene); K12 uses new serialized fields so code defaults take effect without touching the scene. EDITOR-verifiable.
 - `loading_bar_inset` (K14): ShellScene YAML edit — the `nav_bar_edge_gaps` (K4) CanvasScaler question is RESOLVED (fix was per-bar anchors; canvas is ConstantPixelSize, no global width change), so the ONLY remaining gate is the in-flight `safe_area_top_bar` (K7) work freeing ShellScene. Isolated one-value commit, sim-valid (layout class). UNITS: ConstantPixelSize ⇒ 8 canvas units = 8 DEVICE pixels — subtle on a 3× panel; if Cesar meant 8 points, the dial is ~24. Start at -16, screenshot, he calls it.
@@ -216,73 +216,6 @@ Shader.DisableKeyword("_WIND") at runtime stops the sway — that proves the
 Order 900 hook exists.
 ```
 
-### K6 · arrow_speed_retune (smoke #7) — Surgical, Cesar-in-the-loop calibration
-
-```
-Task: arrow_speed_retune — timing arrow is too fast at low ClubControl.
-Editor and device agree (data-driven, same CSV ships) → tuning, not a bug.
-Editor play mode is a VALID verification surface for this task.
-
-⚠️ GOVERNANCE: this retunes the Order 732 / F11 calibration.
-- New F-entry in Docs/Physics/PHYSICS_TUNING_CHANGELOG.md (next free
-  F-number): old → new values + rationale.
-- TWO mirrors change together or they silently diverge:
-    Assets/Resources/Gameplay/controls.csv          (runtime truth)
-    ControlsConfig.Default in ControlsConfig.cs     (code fallback)
-  Update notes/comments in BOTH, following the Order 732 precedent in-file.
-
-THE KNOBS (current values):
-  BaseArrowSpeedHzAtCC0    = 3.0     arrowHz at CC 0 (fastest end)
-  ArrowSpeedHzPerCC        = -0.05   slope; CC 50 → 0.5 Hz
-  PuttArrowSpeedMultiplier = 0.8     putt = swing × 0.8 (COMPOUNDS)
-
-⚠️ CONSTRAINT — base and slope move TOGETHER:
-The floor at CC 50 must stay positive and playable. Base 2.0 with slope -0.05
-→ CC50 = -0.5 Hz (arrow runs backwards). Pick (base, slope) as a pair.
-Round-1 candidate: base 2.0, slope -0.03 → 2.0 Hz (CC 0) → 0.5 Hz (CC 50).
-Halves low-CC speed, keeps the CC-50 feel identical.
-
-CALIBRATION LOOP (Cesar is the scorer; nothing locks without his say-so):
-1. Confirm the CSV hot-path: edit controls.csv → editor play mode → observe.
-   Note re-enter cost if the loader caches across play sessions.
-2. Round 1 at the candidate pair. Cesar plays a full swing at LOW CC and, if
-   available, a high-CC character near the cap.
-3. Iterate per his verdict. Feel is his call — do not argue numbers.
-4. On lock: write both mirrors + the F-entry, THEN the hardening below, then
-   commit (scoped files only).
-
-HARDENING (same pass, one line — closes a recorded latent hazard):
-F11 notes flag that arrowHz has NO floor and goes negative above CC 60,
-"safe only because caps enforce CC ≤ 50." Caps are a different file's promise.
-Add a floor clamp in ShotController.TickArrow:
-    arrowHz = Mathf.Max(arrowHz, <floor>);
-floor = the locked CC-50 value (or 0.25 minimum). Update the F11 caveat text
-in controls.csv notes + changelog to record the floor exists.
-
-KNOCK-ONS — check, report numbers, do not silently absorb:
-- PUTT COMPOUNDING: putt = swing × 0.8. Order 732 already burned once here
-  (0.5 multiplier → 4 s putt cycles). After lock, report putt cycle times at
-  CC 0 and CC 50; if the low end exceeds ~2.5–3 s per sweep, flag Cesar
-  before locking.
-- AUTO-CANCEL WINDOW: MaxTotalPasses = 10 is a time window in disguise —
-  slower arrows stretch it (10 passes at 0.5 Hz = 20 s already). Report the
-  new worst case; changing MaxTotalPasses is Cesar's call.
-- TESTS: ShotControllerPuttModeTests exercises arrow-speed relations. Run the
-  Gameplay test assembly; update any test hard-coding 3.0 / -0.05 in this
-  task, not a follow-up. The F1 relation (putt slower than swing at equal CC)
-  must still hold.
-
-VERIFY: editor play mode at locked values — low- and high-CC sweeps feel
-right to Cesar; putt still slower than swing. git diff = controls.csv +
-ControlsConfig.cs + TickArrow clamp + changelog + (possibly) test file,
-nothing else. Device confirm: one build via the normal loop when convenient —
-expected identical, same CSV ships. Do not block close-out on it.
-
-NOTE: if 2.0 Hz still feels fast at low CC, the fix may be curve SHAPE, not
-the base — difficulty leaning on CleanPassesPerCC instead of speed. That is a
-design conversation with the Architect, not a number tweak. Say so and stop.
-```
-
 ### K7 · safe_area_top_bar (smoke #2) — TellCode · RUN AFTER K4 · AMENDED 2026-08-04 (scene + PersistentUIManager.cs, Cesar-approved Option A)
 
 ```
@@ -392,66 +325,6 @@ Housekeeping addendum — four bounded items, no investigation:
 
 4. For the record, no action: the §13 orphan hypothesis is logged in
    AI_CONTEXT as the first cheap check on recurrence. Investigation closed.
-```
-
-### K9 · ui_frame_pacing (smoke #8) — Surgical · LAND BEFORE K6 LOCKS
-
-```
-Task: ui_frame_pacing — UI animations feel choppy on the physical iPhone,
-mode-slide carousel especially; smooth in editor.
-
-ROOT CAUSE (source-verified, Architect 2026-08-05):
-NOTHING in runtime code sets Application.targetFrameRate — all 18 repo hits
-are Editor capture tools (MapViewCaptureBotMenu, BotVideoRecorder,
-AudioFidelityCapture, the demo recorders). Unity's MOBILE default when unset
-is 30 fps. The whole game renders at 30 on device; the editor runs at 60+.
-The carousel slide (ModeCarouselController.LerpToTargetLayout, 0.22 s cubic
-ease-out on unscaledDeltaTime) gets ~6–7 rendered frames per slide at 30 fps,
-with the largest positional steps front-loaded by the ease-out — that IS the
-choppiness. The animation code is frame-rate independent and correct: do NOT
-retune durations, do NOT rewrite the carousel.
-
-FIX — one new bootstrap file, additive, no scene edits:
-  Assets/Scripts/Core/FramePacingBootstrap.cs (Assembly-CSharp)
-  [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
-  → Application.targetFrameRate = 60;
-Follow the existing bootstrap pattern (SfxBusReset.cs / StaminaRuntimeService
-Boot / BuildStamp.Bootstrap). One knob, one place; comment WHY (mobile
-defaults to 30 when unset). Do NOT touch QualitySettings.vSyncCount —
-ignored on iOS. Applies to Android too (same 30-fps default); fine.
-
-DO NOT (scope):
-- 120 Hz / ProMotion: Cesar's 14 Pro Max can do 120, but it needs
-  targetFrameRate=120 + the CADisableMinimumFrameDurationOnPhone Info.plist
-  key, and the battery/thermal cost is real. Per-tier fps is an Order 900
-  quality-tier decision — note the hook in a comment, don't build it.
-- Per-scene pacing (60 menus / 30 in-hole): only if the knock-on below
-  bites; report first.
-- Any carousel / animation / ModeCardController code changes.
-
-KNOCK-ON — REPORT, don't absorb:
-60 fps halves the frame budget (33.3 → 16.6 ms). Menus will hold trivially;
-HOLE scenes may not on device — a hole that drops frames at 60 feels WORSE
-than a steady 30. After the fix, explicitly report in-hole frame feel on
-device (one hole is enough). If holes can't hold 60, SAY SO — per-scene
-pacing or the Order 900/940 perf phase owns that call; do not silently
-revert menus to 30.
-
-FALLBACK H2 (only if slides still hitch at 60 — spikes, not low rate):
-LerpToTargetLayout writes sizeDelta + anchoredPosition on all 12 card
-instances (4 modes × 3 virtual passes) every frame — a full layout dirty
-per frame. A mitigation exists (animate only the visible ±2 cards) but do
-NOT build it preemptively. Measure first, report numbers.
-
-SEQUENCING: land BEFORE the K6 arrow_speed_retune calibration LOCKS —
-arrow rendering at 60 fps changes perceived speed; Cesar should calibrate
-feel at the shipping frame rate.
-
-VERIFY — feel is DEVICE-ONLY (sim renders at the Mac's refresh rate and
-false-passes smoothness; perf class = INVALID sim surface). The mechanism
-IS editor/sim-checkable: Debug.Log Application.targetFrameRate at boot → 60.
-Device: mode slides visibly smoother, Cesar's eyeball is the gate; spot-check
-one hole for the knock-on above.
 ```
 
 ### K10 · ob_recovery_fixes (smoke #9) — ✅ DONE 2026-08-05 (Cesar-approved)
