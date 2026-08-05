@@ -987,6 +987,7 @@ VERIFY — sim-valid (layout class):
 - Spec-sized tasks (>50 lines): per-task folders under `Docs/Specs/Active/<slug>/SPEC.md`; this file gets a pointer only.
 - Kickoff-sized tasks: full fenced kickoff block in PENDING KICKOFFS, at the time it is produced — chat-only kickoffs are forbidden (they die with the session).
 - Chat delivery to Cesar = the FULL fenced block as well, not a one-line pointer (rule confirmed by Cesar 2026-08-05: he wants to see the info inline). TellCode is the durable copy; the chat block is the readable one. Both, every kickoff.
+- Task references use the TASK NAME first, K-number in brackets: `nav_bar_edge_gaps` (K4). Never a bare K-number — in chat or in new text in this file (Cesar 2026-08-05). Existing headers already carry both; no retro-rewrite needed.
 - Refresh the CURRENT STATE bullet whenever touching this file.
 - New UI tasks use the multi-agent pipeline at `.claude/agents/` (see `CLAUDE.md` § Multi-Agent Workflow).
 - Live course importer is `HoleGeoImporter.cs` (NOT `HoleLiteImporter.cs` — deprecated, banner header, commit 980cc122). Verify via `grep MenuItem` before touching importer internals.
