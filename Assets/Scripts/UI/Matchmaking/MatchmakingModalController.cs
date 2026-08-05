@@ -65,8 +65,30 @@ namespace Golfin.UI.Matchmaking
 
         // ── Tunables ──────────────────────────────────────────────────────────
         [Header("Tunables")]
+        // DEPRECATED (2026-08-05, matchmaking_scan_pacing): superseded by the
+        // scanTotalSeconds / scanStartIntervalSeconds / scanEndIntervalSeconds trio below.
+        // They are NOT removed yet because ShellScene.unity serializes them
+        // (searchDurationSeconds: 5) and ShellScene is off-limits while K7 is mid-flight —
+        // deleting the fields now would leave orphaned scene YAML entries. A later
+        // housekeeping pass should drop both fields AND their ShellScene entries together.
+#pragma warning disable 0414 // assigned but never used — intentional, see note above
         [SerializeField] private float searchDurationSeconds = 5f;
         [SerializeField] private float opponentCycleIntervalSeconds = 0.3f;
+#pragma warning restore 0414
+
+        // Scan pacing (slot-machine feel): the name flips fast at the start and
+        // decelerates into the final pick. NEW fields on purpose — they are absent from
+        // ShellScene.unity, so these script defaults are live with zero scene edit.
+        [SerializeField] private float scanTotalSeconds         = 2.5f;
+        [SerializeField] private float scanStartIntervalSeconds = 0.10f;
+        [SerializeField] private float scanEndIntervalSeconds   = 0.50f;
+
+        // How long "OPPONENT FOUND" holds before GameplaySceneLoader takes over (Stage C0
+        // staging: the loader hides this modal at the FadeController midpoint). Was a
+        // hardcoded 0.6s; lengthened to 1.1s (Cesar, 2026-08-05) so the reveal registers.
+        // NEW field — absent from ShellScene.unity, so this default is live with no scene edit.
+        [SerializeField] private float opponentFoundHoldSeconds = 1.1f;
+
         [SerializeField] private float dotCycleIntervalSeconds = 0.4f;
         [SerializeField] private string statusSearchingText = "FINDING OPPONENT";
         [SerializeField] private string statusFoundText = "OPPONENT FOUND";
@@ -406,7 +428,9 @@ namespace Golfin.UI.Matchmaking
             LeaderboardEntry finalPick = default;
             bool hasFinalPick = false;
 
-            while (elapsed < searchDurationSeconds)
+            int flips = 0;
+
+            while (elapsed < scanTotalSeconds)
             {
                 if (_opponentPool.Count > 0)
                 {
@@ -445,8 +469,16 @@ namespace Golfin.UI.Matchmaking
                         opponentRankText.text = $"RANK: #{pick.Rank}";
                 }
 
-                yield return new WaitForSeconds(opponentCycleIntervalSeconds);
-                elapsed += opponentCycleIntervalSeconds;
+                // Decelerating ramp: t² easing means the interval stays near
+                // scanStartIntervalSeconds through the early flicker and only stretches
+                // toward scanEndIntervalSeconds in the final stretch, so the scan lands
+                // on finalPick with a couple of slow holds instead of stopping abruptly.
+                float t        = scanTotalSeconds > 0f ? Mathf.Clamp01(elapsed / scanTotalSeconds) : 1f;
+                float interval = Mathf.Lerp(scanStartIntervalSeconds, scanEndIntervalSeconds, t * t);
+
+                yield return new WaitForSeconds(interval);
+                elapsed += interval;   // accumulate the ACTUAL interval waited
+                flips++;
             }
 
             // Search complete: stop dot cycle, set final status
@@ -460,6 +492,12 @@ namespace Golfin.UI.Matchmaking
                 statusText.text = statusFoundText;
 
             Phase = MatchmakingPhase.OpponentFound;
+
+#if UNITY_EDITOR
+            Debug.Log($"[Matchmaking] Scan complete — elapsed={elapsed:F2}s over {flips} flips " +
+                      $"(target {scanTotalSeconds:F2}s, {scanStartIntervalSeconds:F2}s→{scanEndIntervalSeconds:F2}s ramp), " +
+                      $"final opponent='{lastPickName}'.");
+#endif
 
             // Stage B: seed GameSession at OPPONENT FOUND so downstream
             // gameplay code (PhysicsLab, ShellScene Result modal, etc.) can
@@ -523,7 +561,12 @@ namespace Golfin.UI.Matchmaking
             // FadeController midpoint (under the full-black overlay) so the modal and the
             // home backdrop fade out together — no more "background fades then modal pops"
             // staging.
-            yield return new WaitForSeconds(0.6f);
+            float holdStart = Time.realtimeSinceStartup;
+            yield return new WaitForSeconds(opponentFoundHoldSeconds);
+#if UNITY_EDITOR
+            Debug.Log($"[Matchmaking] OPPONENT FOUND held {Time.realtimeSinceStartup - holdStart:F2}s " +
+                      $"(target {opponentFoundHoldSeconds:F2}s) → BeginGameplayLoad.");
+#endif
 
             var loader = Golfin.UI.GameplayTransition.GameplaySceneLoader.Instance;
             if (loader != null)
