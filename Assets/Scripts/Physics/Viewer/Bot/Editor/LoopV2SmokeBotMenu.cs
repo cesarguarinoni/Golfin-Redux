@@ -190,6 +190,48 @@ namespace Golfin.Physics.Viewer.Editor
 
         // ── tree_aware_bot (Order 351, 2026-07-20): trunk avoidance BEFORE/AFTER + Hole17 no-op ──
 
+        // ── cup_capture_and_lipout §7 acceptance clips (2026-08-05) ─────────────
+        // Run in order, with GOLFIN > Capture > Reset Video Session Guard between each.
+        // Putter powers are calibrated on Hole 6 (v0 = 4.981·power measured; the green costs
+        // ~0.52 m/s per metre over the 2 m approach), so the ARRIVAL speed at the cup is:
+        //   Slow 0.41 → ~1.07 m/s → captures.   Mid 0.49 → ~1.47 m/s (just under the 1.5 gate)
+        //   → captures.   Fast 0.58 → ~1.92 m/s, crossing 13 mm off-centre → lips out hard:
+        //   keeps ~62% of its pace, kicks ~7° off line and pops ~26 mm. No hole-complete.
+        //   (Was 0.75 / ~2.77 m/s, which clipped the extreme edge and barely reacted — the
+        //   free-fall chord collapses near the rim, so dip was only 0.06 ball-radii.)
+
+        static void RunCupClip(string variant, int seconds)
+        {
+            SessionState.SetString("CupClip.Variant", variant);
+            BotVideoRecorder.CaptureAudio = true;            // cup-drop SFX is part of the read
+            BotVideoRecorder.MaxRecordSecondsSessionOverride = seconds;
+            BotVideoRecorder.CustomOutputPath = $"Docs/Physics/videos/cup_{variant}";
+            // ArmDeferred (NOT Arm): the scenario calls Begin() itself once Hole 6 is loaded and
+            // settled. Arm() would start recording at play-mode entry, so the whole title →
+            // Home → hole-select navigation eats the watchdog window and the putt lands at the
+            // very end of the clip (observed on the first take). Deferred also avoids the Y-flip.
+            BotVideoRecorder.ArmDeferred();
+            Launch("cup_capture_lipout_clip");
+        }
+
+        [MenuItem("GOLFIN/Smoke/Loop v2/Cup — Slow putt captures (~1.0 m/s at cup)")]
+        public static void RunCupClipSlow() => RunCupClip("slow", 30);
+
+        [MenuItem("GOLFIN/Smoke/Loop v2/Cup — Slow putt captures (~1.0 m/s at cup)", isValidateFunction: true)]
+        static bool ValidateCupClipSlow() => !EditorApplication.isPlaying;
+
+        [MenuItem("GOLFIN/Smoke/Loop v2/Cup — Mid putt captures (~1.4 m/s, just under gate)")]
+        public static void RunCupClipMid() => RunCupClip("mid", 30);
+
+        [MenuItem("GOLFIN/Smoke/Loop v2/Cup — Mid putt captures (~1.4 m/s, just under gate)", isValidateFunction: true)]
+        static bool ValidateCupClipMid() => !EditorApplication.isPlaying;
+
+        [MenuItem("GOLFIN/Smoke/Loop v2/Cup — Fast putt lips out (~1.9 m/s at cup)")]
+        public static void RunCupClipFast() => RunCupClip("fast", 35);
+
+        [MenuItem("GOLFIN/Smoke/Loop v2/Cup — Fast putt lips out (~1.9 m/s at cup)", isValidateFunction: true)]
+        static bool ValidateCupClipFast() => !EditorApplication.isPlaying;
+
         [MenuItem("GOLFIN/Smoke/Loop v2/Tree Aware Bot — Hole08 BEFORE (avoidance off)")]
         public static void RunHole8TrunkAvoidanceBefore()
         {

@@ -198,6 +198,11 @@ namespace Golfin.Physics.Viewer
                 case "hole12_lie_demo_after":
                     scenarioRoutine = Bot.Scenarios.Hole12LieDemoAfter(driver);
                     break;
+                // cup_capture_and_lipout (2026-08-05): §7 acceptance clips. Variant comes from
+                // SessionState "CupClip.Variant" (slow | mid | fast) — one clip per Editor launch.
+                case "cup_capture_lipout_clip":
+                    scenarioRoutine = Bot.Scenarios.CupCaptureLipoutClip(driver);
+                    break;
                 default:
                     driver.LogStep($"ERROR: Unknown scenario key '{scenario}'");
                     break;

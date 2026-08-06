@@ -158,6 +158,42 @@ namespace Golfin.Physics
             PuttConfig puttCfg,
             BallPhysicsModifiers ballMods,
             ITreeObstacleProvider trees)
+            => Simulate(input, ground, aero, wind, surfaces, surfaceCfg, puttCfg, ballMods,
+                        trees, CupSpec.Disabled);
+
+        // ── Phase 8 (in-sim cup capture + lip-out) ────────────────────────────────────
+
+        /// <summary>
+        /// Phase 8 entry (cup_capture_and_lipout, 2026-08-05). Adds a <see cref="CupSpec"/> so
+        /// the roll and putt integrators know the cup exists and can actually change the ball's
+        /// path at it:
+        ///   CAPTURE — speed at or below cup.CaptureSpeed while over the open cup: integration
+        ///             terminates there and a fall-in is synthesized (§4.4), so the animation
+        ///             shows the ball dropping below the lip and the trajectory ENDS at the cup.
+        ///             Termination is <see cref="TerminationReason.CupCapture"/>.
+        ///   LIP-OUT — speed above the gate while crossing the cup mouth: one deterministic
+        ///             velocity deflection off the far rim (§4.5), then normal roll physics.
+        ///
+        /// cup.Enabled == false (CupSpec.Disabled) → behaviour is bit-exact identical to the
+        /// Phase 7 9-arg path. That is the blocking determinism gate for this phase, mirroring
+        /// the trees=null gate of Phase 7 and the Neutral gate of Phase 6.
+        ///
+        /// Scope: roll and putt phases only. An airborne ball landing straight in the cup
+        /// (chip-in) is NOT handled here — it needs entry-angle gating and is v2 backlog. The
+        /// post-hoc RealCupDetector scan in BallStateMachine still covers that case via its
+        /// own height gate, so behaviour there is unchanged.
+        /// </summary>
+        public static Trajectory Simulate(
+            ShotInput input,
+            IGroundProvider ground,
+            AeroConfig aero,
+            WindConfig wind,
+            ISurfaceProvider surfaces,
+            SurfaceConfig surfaceCfg,
+            PuttConfig puttCfg,
+            BallPhysicsModifiers ballMods,
+            ITreeObstacleProvider trees,
+            in CupSpec cup)
         {
 #if UNITY_EDITOR
             if (DiagShotLogger != null)
@@ -200,7 +236,7 @@ namespace Golfin.Physics
 
                 return RunPuttPhase(startPos, startVel, fp.Zero,
                                     ground, surfaces, surfaceCfg, puttCfg,
-                                    aero.BallRadius, samples, hits, ballMods, trees);
+                                    aero.BallRadius, samples, hits, ballMods, trees, cup);
             }
 
             // ── Airborne phase ────────────────────────────────────────────────────────
@@ -315,7 +351,7 @@ namespace Golfin.Physics
                 {
                     fp3 vRoll = vel - normal * fpMath.Dot(vel, normal);
                     return RunRollPhase(pos, vRoll, t, ground, surfaces, surfaceCfg,
-                                        aero.BallRadius, samplesList, hitsList, ballMods, trees);
+                                        aero.BallRadius, samplesList, hitsList, ballMods, trees, cup);
                 }
 
                 var nextInput    = new ShotInput(pos, vel, fp.FromInt(30), new SpinState(input.Spin.Axis, fp.Zero));
@@ -573,6 +609,422 @@ namespace Golfin.Physics
             return new Trajectory(samples, pos, vel, t, termination, new List<TerrainHit>());
         }
 
+        // ── In-sim cup: geometry, capture, lip-out ────────────────────────────────────
+        // cup_capture_and_lipout (2026-08-05). All of this is dead code when
+        // cup.Enabled == false, which is what keeps the legacy path bit-exact.
+
+        /// <summary>
+        /// Once the ball has lipped out, it must leave the mouth by this margin before another
+        /// impulse may fire. Guarantees one impulse per crossing (§4.5 single-fire rule).
+        /// </summary>
+        private static readonly fp LipRearmClearance = fp.FromFloat(0.02f); // 20 mm past the rim
+
+        private enum CupStepAction { None, Capture, LipOut }
+
+        /// <summary>Per-run cup bookkeeping carried through a roll/putt integration.</summary>
+        private struct CupRunState
+        {
+            public bool LipFired;   // an impulse has fired for the current mouth crossing
+            public bool HopActive;  // rendering the post-lip-out vertical hop
+            public fp   HopT;       // time since the hop started
+            public fp   HopDip;     // pop velocity (m/s) imparted by the rim on the lip-out
+        }
+
+        /// <summary>
+        /// §4.3 per-step cup zone test. Returns what the integrator should do this step and
+        /// maintains the single-fire lip-out latch. Zone tests use the closest point on the
+        /// prev→curr XZ segment, so a fast step that straddles the cup still registers.
+        ///
+        /// XZ-only by design (§4.2): in roll/putt the ball is on the ground by construction
+        /// (pos.y = SampleHeight + ballRadius), so there is no Y test — which also sidesteps
+        /// the height-gate fragility measured in RealCupDetector. On Hole 6 the baked green
+        /// height varies ±1.2 mm across the 33 mm capture disc while the gate ceiling is the
+        /// authored pin Y, so 20 of 39 in-radius samples were being rejected on height alone.
+        /// See Docs/Physics/CUP_CAPTURE_STEP0_DIAGNOSIS.md.
+        /// </summary>
+        private static CupStepAction CupStep(in fp3 pos, in fp3 posNext, in fp3 vel,
+                                             fp ballRadius, in CupSpec cup, ref CupRunState st)
+        {
+            long distSqRaw = CupSegmentDistSqRaw(pos, posNext, cup.Pin, cup.Radius.raw);
+
+            // Re-arm the single-fire lip-out once the ball is clear of the mouth (§4.5).
+            if (st.LipFired)
+            {
+                long clearRaw = cup.Radius.raw + LipRearmClearance.raw;
+                if (distSqRaw > clearRaw * clearRaw) st.LipFired = false;
+            }
+
+            long mouthRaw = cup.Radius.raw;
+            if (distSqRaw >= mouthRaw * mouthRaw) return CupStepAction.None;
+
+            fp speedSq = fpMath.Dot(vel, vel);
+            fp gateSq  = cup.CaptureSpeed * cup.CaptureSpeed;
+
+            // Capture uses the same effective radius as RealCupDetector: the ball centre must
+            // be inside (cupRadius − ballRadius) for the ball to fit through the mouth.
+            long effRaw = cup.Radius.raw - ballRadius.raw;
+            bool captureZone = effRaw > 0 && distSqRaw < effRaw * effRaw;
+
+            // A ball that has already lipped out on THIS crossing may not be captured on the
+            // way back out, even though the deflection dropped it under the gate (a 1.55 m/s
+            // putt leaves the rim at 1.08 m/s and is still over the mouth). Capturing there
+            // would read on screen as the ball vanishing at the rim with no visible deflection,
+            // and would make the speed gate cosmetic for everything up to ~2.1 m/s. The latch
+            // clears once the ball is clear of the mouth, so §4.5's "may come back and drop on
+            // the rebound" still works — it just has to actually come back.
+            if (captureZone && speedSq <= gateSq && !st.LipFired) return CupStepAction.Capture;
+            if (speedSq > gateSq && !st.LipFired)
+            {
+                st.LipFired = true;
+                return CupStepAction.LipOut;
+            }
+            // Slow graze in the lip ring (at or below the gate but outside effRadius): no
+            // interaction in v1 — the ball rolls past exactly as it does today (§4.3).
+            return CupStepAction.None;
+        }
+
+        /// <summary>
+        /// Display-only vertical offset for the post-lip-out hop. The roll/putt integrators
+        /// snap the ball to the surface every step and project out the normal velocity
+        /// component, so a real vy would be erased the same step (§4.5 fallback). Emitting the
+        /// pop as a short ballistic offset on the SAMPLE keeps the rattle visible without
+        /// touching the physics state. ~4.6 mm peak over ~0.06 s at the default 0.30 m/s.
+        /// </summary>
+        private static fp3 ApplyLipHop(in fp3 pos, in CupSpec cup, ref CupRunState st)
+        {
+            if (!st.HopActive) return pos;
+            st.HopT = st.HopT + Dt;
+            // HopDip now carries the pop VELOCITY (m/s) computed at the impulse from the
+            // horizontal speed the rim removed — see ComputeLipPopVy.
+            fp yOff = st.HopDip * st.HopT + (Gravity * st.HopT * st.HopT) / Two;
+            if (yOff <= fp.Zero) { st.HopActive = false; return pos; }
+            return new fp3(pos.x, pos.y + yOff, pos.z);
+        }
+
+        /// <summary>
+        /// Squared XZ distance from the cup centre to the segment a→b, returned in fp-raw²
+        /// units (i.e. Q32.32) so callers can compare against radius.raw * radius.raw.
+        ///
+        /// Deliberately computed in exact long integer arithmetic on fp.raw rather than in fp:
+        /// at the 1/240 s step a 1.5 m/s ball moves ~6 mm, whose squared length is only ~2
+        /// fp16.16 LSBs. The textbook `t = dot/lenSq` parameterisation divides by that and
+        /// loses almost all of its precision. Integer ops are exact AND deterministic across
+        /// platforms, so this is both more accurate and no weaker on the determinism contract.
+        ///
+        /// Segment (not endpoint) test per §4.3: putt steps are far smaller than the 108 mm
+        /// mouth, but roll-phase entry speeds can be high enough to straddle the cup in one dt.
+        /// </summary>
+        private static long CupSegmentDistSqRaw(in fp3 a, in fp3 b, in fp3 pin, long radiusRaw)
+        {
+            long apx = a.x.raw - pin.x.raw, apz = a.z.raw - pin.z.raw;
+            long bpx = b.x.raw - pin.x.raw, bpz = b.z.raw - pin.z.raw;
+
+            long dSqA = apx * apx + apz * apz;
+            long dSqB = bpx * bpx + bpz * bpz;
+            long best = dSqA < dSqB ? dSqA : dSqB;
+
+            long dx = bpx - apx, dz = bpz - apz;
+            long segSq = dx * dx + dz * dz;
+            if (segSq == 0) return best;
+
+            // Cheap reject: the segment cannot reach the cup unless the nearer endpoint is
+            // within (segLen + radius). Squared and loosened via (p+q)² ≤ 2(p²+q²), which is
+            // conservative — it never rejects a real intersection. Also bounds the magnitudes
+            // entering the cross product below, so `cross` cannot overflow.
+            long reachSq = 2 * (segSq + radiusRaw * radiusRaw);
+            if (best > reachSq) return best;
+
+            // Closest point is interior only when the projection parameter lies in (0,1).
+            // t = -(AP·D)/|D|²  →  test the numerator against segSq, no division needed.
+            long num = -(apx * dx + apz * dz);
+            if (num <= 0 || num >= segSq) return best;
+
+            // Interior: perpendicular distance = |cross| / segLen. Divide by an exact integer
+            // sqrt instead of squaring the cross product (which would be Q64.64 and overflow).
+            // The division loses < 1 raw unit (~15 µm) — negligible against a 54 mm mouth.
+            long segLen = ISqrt(segSq);
+            if (segLen == 0) return best;
+            long cross = dx * apz - dz * apx;
+            if (cross < 0) cross = -cross;
+            long perp = cross / segLen;
+            long perpSq = perp * perp;
+            return perpSq < best ? perpSq : best;
+        }
+
+        /// <summary>
+        /// Test/diagnostic seam over the cup segment-distance test the integrators use (§4.3).
+        /// Returns the XZ distance from <paramref name="pin"/> to the segment a→b.
+        ///
+        /// Exposed because the tunneling guard is otherwise unreachable from the public API:
+        /// on a Green the bounce loop's tangential friction bleeds a shot down to well under
+        /// 1 m/s before the roll phase starts, so no step ever straddles the 108 mm mouth in
+        /// practice. The guard is defensive, and this is how it gets verified. Pure geometry,
+        /// no state — safe to expose.
+        /// </summary>
+        public static fp CupDistanceToSegmentXZ(fp3 a, fp3 b, fp3 pin, fp cupRadius)
+            => fp.FromRaw(ISqrt(CupSegmentDistSqRaw(a, b, pin, cupRadius.raw)));
+
+        /// <summary>Exact floor(sqrt(n)) for n ≥ 0 via integer Newton. Pure integer → deterministic.</summary>
+        private static long ISqrt(long n)
+        {
+            if (n <= 0) return 0;
+            long x = n, y = (x + 1) >> 1;
+            while (y < x) { x = y; y = (x + n / x) >> 1; }
+            return x;
+        }
+
+        /// <summary>
+        /// How far the ball sinks into the open mouth while crossing it, expressed as a
+        /// fraction of the ball radius and clamped to [0,1]. This is what makes the lip-out
+        /// speed-dependent, and it is the physical quantity the whole interaction hinges on.
+        ///
+        /// While the ball's centre is over the open mouth it is unsupported and falls freely:
+        ///     t_over = chord / speed,  chord = 2·√(R² − off²),  dip = ½·g·t_over²
+        /// where `off` is the perpendicular distance of the crossing from the cup centre.
+        /// A ball that has fallen a full ball-radius by the time it reaches the far wall is
+        /// caught; one that has barely dipped skims over the top and is hardly touched.
+        ///
+        /// Sanity check against the architect-locked gate: on a dead-centre crossing
+        /// (chord = 108 mm) dip reaches one ball radius at ≈1.5 m/s — which is exactly the
+        /// USGA/Penner capture speed this project already uses. The model reproduces the
+        /// locked constant rather than contradicting it.
+        /// Source: Penner, A.R. (2002) "The physics of putting." Canadian Journal of Physics
+        /// 80(2): 83–96 (capture/lip-out analysis).
+        ///
+        /// Replaces the original §4.5 behaviour, which applied the SAME 30% speed loss and the
+        /// same reversal at every speed. Measured on the first implementation: a dead-centre
+        /// crossing at 2.9 m/s came straight back at 2.03 m/s (180°, ratio 0.700 at every
+        /// offset) — a squash-ball-off-a-wall read, not a lip-out. It also made the 1.5 m/s
+        /// gate a cliff: 1.49 m/s dropped, 1.51 m/s returned at 70% pace.
+        /// </summary>
+        /// <summary>
+        /// Perpendicular distance from the cup centre to the ball's LINE of travel (XZ).
+        ///
+        /// This — not the distance at the trigger step — is the crossing offset that sets the
+        /// free-fall chord. The lip-out fires on the first step whose segment enters the mouth,
+        /// where the ball is by definition ≈ one cup radius from the centre; feeding that in
+        /// would give chord = 2·√(R² − R²) ≈ 0 and hence dip ≈ 0 for every crossing, silently
+        /// disabling the interaction. Measured while building this: every dead-centre crossing
+        /// from 1.6–4.0 m/s reported 0° deflection because of exactly that.
+        /// </summary>
+        private static fp LipCrossingOffset(in fp3 pos, in fp3 vel, in fp3 pin)
+        {
+            fp vx = vel.x, vz = vel.z;
+            fp vLenSq = vx * vx + vz * vz;
+            if (vLenSq <= fp.Zero) return fp.Zero;
+            fp vLen = fpMath.Sqrt(vLenSq);
+            fp dx = pin.x - pos.x;
+            fp dz = pin.z - pos.z;
+            // |cross(d, v)| / |v| — distance from the pin to the infinite line through pos along v.
+            fp cross = dx * vz - dz * vx;
+            if (cross < fp.Zero) cross = -cross;
+            return cross / vLen;
+        }
+
+        private static fp ComputeLipDipFraction(fp offsetDist, fp speed, fp cupRadius, fp ballRadius)
+        {
+            if (speed <= fp.Epsilon || ballRadius <= fp.Zero) return fp.Zero;
+
+            fp rSq   = cupRadius * cupRadius;
+            fp offSq = offsetDist * offsetDist;
+            if (offSq >= rSq) return fp.Zero;              // grazing the rim: no free-fall span
+
+            fp halfChord = fpMath.Sqrt(rSq - offSq);
+            fp chord     = halfChord * Two;
+
+            fp tOver = chord / speed;
+            fp dip   = (-Gravity) * (tOver * tOver) / Two; // Gravity is negative; use magnitude
+
+            fp frac = dip / ballRadius;
+            if (frac <= fp.Zero) return fp.Zero;
+            return frac > fp.One ? fp.One : frac;
+        }
+
+        /// <summary>
+        /// §4.5 lip-out: one deterministic deflection off the rim, scaled by how far the ball
+        /// actually sank into the mouth (<see cref="ComputeLipDipFraction"/>).
+        ///
+        /// Decompose the horizontal velocity about n = the XZ unit vector pin→ball, then blend
+        /// the radial component between "passes straight over" and "bounces off the far wall":
+        ///     vRad' = vRad · (1 − dip·(1 + LipRestitution))
+        ///     vTan' = vTan · (1 − dip·(1 − LipSpeedDamping))
+        ///
+        ///   dip → 0  (fast skim):      both factors → 1, the ball runs over the top of the
+        ///                              hole essentially untouched — the real "went straight
+        ///                              over it" outcome.
+        ///   dip → 1  (just over gate): vRad' = −LipRestitution·vRad, a genuine rebound off the
+        ///                              far wall, and the tangential component takes the full
+        ///                              rim friction. This is the violent rattle.
+        ///
+        /// LipRestitution now genuinely governs the rebound magnitude. In the previous version
+        /// the result was rescaled to LipSpeedDamping·|v| unconditionally, so LipRestitution
+        /// only ever set the direction and the outgoing speed was 0.700·|v| at every offset and
+        /// every speed — tuning it down could not soften the bounce at all.
+        ///
+        /// Vertical pop is NOT applied to the velocity — see the hop offset in the integrators.
+        /// </summary>
+        /// <summary>
+        /// Outward unit normal of the cup wall at the point where the ball's chord EXITS the
+        /// mouth — i.e. the bit of wall it actually hits.
+        ///
+        /// This is what produces a lateral kick. The deflection used to be taken about the
+        /// entry radial (pin→ball at the trigger step), which for a straight crossing is very
+        /// nearly anti-parallel to the direction of travel: the tangential component came out
+        /// ~0, so the ball could only ever be slowed straight down its own line (measured: ≤4°
+        /// of deflection at every offset). The far wall's normal is angled away from the line
+        /// of travel by roughly asin(off/R), so an off-centre crossing now gets a real sideways
+        /// push — the horseshoe / spin-out read.
+        ///
+        /// Returns false when the geometry degenerates (zero speed, or the ball is already
+        /// outside the mouth), in which case the caller leaves the velocity alone.
+        /// </summary>
+        private static bool TryCupExitNormal(in fp3 pos, in fp3 vel, in CupSpec cup, out fp3 n)
+        {
+            n = fp3.Zero;
+            fp vLenSq = vel.x * vel.x + vel.z * vel.z;
+            if (vLenSq <= fp.Zero) return false;
+            fp vLen = fpMath.Sqrt(vLenSq);
+            fp dx = vel.x / vLen, dz = vel.z / vLen;
+
+            fp wx = pos.x - cup.Pin.x, wz = pos.z - cup.Pin.z;
+            fp b = wx * dx + wz * dz;
+            fp c = wx * wx + wz * wz - cup.Radius * cup.Radius;
+            fp disc = b * b - c;
+            if (disc < fp.Zero) return false;
+
+            fp s = fpMath.Sqrt(disc) - b;                 // forward root: where the chord leaves
+            fp ex = wx + dx * s, ez = wz + dz * s;        // exit point relative to the cup centre
+            fp eLenSq = ex * ex + ez * ez;
+            if (eLenSq <= fp.Zero) return false;
+            fp eLen = fpMath.Sqrt(eLenSq);
+            n = new fp3(ex / eLen, fp.Zero, ez / eLen);
+            return true;
+        }
+
+        private static fp3 ApplyLipOut(in fp3 vel, in fp3 pos, in CupSpec cup, fp dipFraction)
+        {
+            fp3 velXZ = new fp3(vel.x, fp.Zero, vel.z);
+            fp speedSq = fpMath.Dot(velXZ, velXZ);
+            if (speedSq <= fp.Zero || dipFraction <= fp.Zero) return vel;
+
+            // Radial outcome hinges on whether the ball has sunk far enough to STRIKE the far
+            // wall (dip ≥ 1 ball-radius, i.e. below its own equator) or merely clips the rim on
+            // the way over:
+            //   dip  < 1 : clears the far rim — keeps going forward, bled down toward
+            //              LipRestitution of its radial pace as the clip gets heavier.
+            //   dip >= 1 : hits the wall — rebounds at LipRestitution, i.e. comes back out.
+            // Magnitudes match across that boundary and only the SIGN flips, which is what a
+            // marginal lip-out actually looks like: it either just gets through or just comes
+            // back, at similar pace.
+            //
+            // Deliberately NOT a linear blend from +vRad to −e·vRad. That form crosses zero at
+            // dip ≈ 0.74 and stopped the ball dead on the rim — measured 1.945 m/s in, 0.083
+            // m/s out, which is not a thing a golf ball does.
+            fp radFactor = dipFraction >= fp.One
+                ? -cup.LipRestitution
+                : fp.One - dipFraction * (fp.One - cup.LipRestitution);
+            fp tanFactor = fp.One - dipFraction * (fp.One - cup.LipSpeedDamping);
+
+            // Split about the FAR WALL's normal — the surface the ball actually strikes.
+            if (!TryCupExitNormal(pos, velXZ, cup, out fp3 n)) return vel;
+
+            fp vn = velXZ.x * n.x + velXZ.z * n.z;               // outward (toward the far wall)
+            fp3 vNorm = new fp3(n.x * vn, fp.Zero, n.z * vn);
+            fp3 vTan  = velXZ - vNorm;
+            fp3 vOut  = vNorm * radFactor + vTan * tanFactor;
+            return new fp3(vOut.x, vel.y, vOut.z);
+        }
+
+        /// <summary>
+        /// Upward pop imparted by the far wall, as a velocity. Scaled by the horizontal speed
+        /// the rim actually took out of the ball: hitting an angled wall converts part of the
+        /// horizontal impulse into vertical, so a heavy clip pops and a clean skim does not.
+        ///
+        /// <see cref="CupSpec.LipPopVy"/> is the conversion FRACTION (dimensionless), not an
+        /// absolute m/s — see its doc comment. A clip that costs the ball 0.6 m/s at the
+        /// default 1.0 gives ≈0.6 m/s up, i.e. a ~2 cm hop, which is what a real rattled putt
+        /// looks like. The previous absolute 0.30 m/s scaled by dip produced a 0.4 mm hop at
+        /// speed — invisible.
+        /// </summary>
+        private static fp ComputeLipPopVy(in fp3 velIn, in fp3 velOut, in CupSpec cup)
+        {
+            fp inSpeed  = fpMath.Sqrt(velIn.x * velIn.x + velIn.z * velIn.z);
+            fp outSpeed = fpMath.Sqrt(velOut.x * velOut.x + velOut.z * velOut.z);
+            fp lost = inSpeed - outSpeed;
+            if (lost <= fp.Zero) return fp.Zero;
+            return lost * cup.LipPopVy;
+        }
+
+        /// <summary>
+        /// §4.4 capture: truncate at the capture step and synthesize the fall-in, so the
+        /// animator naturally shows the ball dropping below the lip. Y falls under gravity
+        /// (explicit Euler on vy — monotonic, and immune to the fp precision cliff a τ² form
+        /// hits at small τ); XZ lerps from the capture point to the pin over the same window.
+        /// Pure fp: no Random, no Time. Appends the terminal stop hit and returns CupCapture.
+        /// </summary>
+        private static Trajectory FinishCupCapture(
+            fp3 capPos, fp3 capVel, fp capT, in CupSpec cup, fp ballRadius,
+            List<TrajectorySample> samples, List<TerrainHit> hits)
+        {
+            // Ball centre rests on the cup floor: pin.y − depth + ballRadius.
+            fp bottomY = cup.Pin.y - cup.Depth + ballRadius;
+            fp3 bottom = new fp3(cup.Pin.x, bottomY, cup.Pin.z);
+
+            // Guard against a degenerate spec (depth ~0 / ball already below the floor):
+            // emit the terminal hit directly rather than looping forever.
+            if (capPos.y <= bottomY)
+            {
+                hits.Add(new TerrainHit(capT, bottom, capVel, fp3.Zero, SurfaceType.Green, true));
+                return new Trajectory(samples, bottom, fp3.Zero, capT, TerminationReason.CupCapture, hits);
+            }
+
+            fp dropTotal = capPos.y - bottomY;
+            fp vy = fp.Zero;
+            fp y  = capPos.y;
+            fp t  = capT;
+            fp3 p = capPos;
+
+            // Cap the fall at 1 s of steps — a 0.10 m drop takes ~0.14 s (34 steps); the cap is
+            // pure belt-and-braces against a pathological Depth value.
+            const int MaxFallSteps = 240;
+            for (int i = 0; i < MaxFallSteps; i++)
+            {
+                vy = vy + Gravity * Dt;      // Gravity is negative
+                y  = y + vy * Dt;
+                t  = t + Dt;
+
+                if (y <= bottomY)
+                {
+                    p = bottom;
+                    samples.Add(new TrajectorySample(t, p, fp3.Zero));
+                    break;
+                }
+
+                // XZ eases toward the pin in proportion to how far the ball has fallen, so the
+                // ball is centred over the cup by the time it reaches the floor.
+                fp fallen = capPos.y - y;
+                fp s = fallen / dropTotal;                    // 0 → 1 across the drop
+                fp3 xz = new fp3(
+                    capPos.x + (cup.Pin.x - capPos.x) * s,
+                    y,
+                    capPos.z + (cup.Pin.z - capPos.z) * s);
+                p = xz;
+                samples.Add(new TrajectorySample(t, p, new fp3(fp.Zero, vy, fp.Zero)));
+            }
+
+            hits.Add(new TerrainHit(t, bottom, capVel, fp3.Zero, SurfaceType.Green, true));
+#if UNITY_EDITOR
+            if (DiagShotLogger != null)
+                DiagShotLogger(
+                    $"[ShotExit] termination={TerminationReason.CupCapture} " +
+                    $"finalPos=({bottom.x.ToFloat():F2},{bottom.y.ToFloat():F2},{bottom.z.ToFloat():F2}) " +
+                    $"finalT={t.ToFloat():F2}s samples={samples.Count} hits={hits.Count} " +
+                    $"captureSpeed={fpMath.Sqrt(fpMath.Dot(capVel, capVel)).ToFloat():F3}m/s " +
+                    $"dropDist={dropTotal.ToFloat():F3}m");
+#endif
+            return new Trajectory(samples, bottom, fp3.Zero, t, TerminationReason.CupCapture, hits);
+        }
+
         // ── Roll phase ────────────────────────────────────────────────────────────────
 
         /// <summary>
@@ -585,13 +1037,14 @@ namespace Golfin.Physics
             fp3 startPos, fp3 startVel, fp startT,
             IGroundProvider ground, ISurfaceProvider surfaces, SurfaceConfig surfaceCfg,
             fp ballRadius, List<TrajectorySample> samples, List<TerrainHit> hits,
-            BallPhysicsModifiers ballMods, ITreeObstacleProvider trees = null)
+            BallPhysicsModifiers ballMods, ITreeObstacleProvider trees, in CupSpec cup)
         {
             fp3 pos = startPos;
             fp3 vel = startVel;
             fp  t   = startT;
 
             fp3 gravity = new fp3(fp.Zero, Gravity, fp.Zero);
+            var cupState = new CupRunState();
 
             // Classify once before the initial snap so we ground to the correct surface.
             SurfaceType initSurface = surfaces.Classify(pos.x, pos.z);
@@ -656,6 +1109,38 @@ namespace Golfin.Physics
                     ground.SampleHeight(posNext.x, posNext.z, surface) + ballRadius,
                     posNext.z);
 
+                // ── In-sim cup (roll phase) ───────────────────────────────────────────
+                // Runs on the prev→next segment before the tree test: a tree inside the cup
+                // is not a real layout, so the ordering between them is immaterial.
+                if (cup.Enabled)
+                {
+                    var cupAct = CupStep(pos, posNext, vel, ballRadius, cup, ref cupState);
+                    if (cupAct == CupStepAction.Capture)
+                    {
+                        t = t + Dt;
+                        samples.Add(new TrajectorySample(t, posNext, vel));
+                        return FinishCupCapture(posNext, vel, t, cup, ballRadius, samples, hits);
+                    }
+                    if (cupAct == CupStepAction.LipOut)
+                    {
+                        fp speedNow = fpMath.Sqrt(fpMath.Dot(new fp3(vel.x, fp.Zero, vel.z),
+                                                             new fp3(vel.x, fp.Zero, vel.z)));
+                        fp lipOffset = LipCrossingOffset(pos, vel, cup.Pin);
+                        fp dip = ComputeLipDipFraction(lipOffset, speedNow, cup.Radius, ballRadius);
+                        fp3 velBefore = vel;
+                        vel = ApplyLipOut(vel, posNext, cup, dip);
+                        cupState.HopActive = true;
+                        cupState.HopT      = fp.Zero;
+                        cupState.HopDip    = ComputeLipPopVy(velBefore, vel, cup);
+                        // Re-integrate this step from the deflected velocity so the ball
+                        // actually changes direction AT the rim rather than one step later.
+                        posNext = new fp3(pos.x + vel.x * Dt, fp.Zero, pos.z + vel.z * Dt);
+                        posNext = new fp3(posNext.x,
+                            ground.SampleHeight(posNext.x, posNext.z, surface) + ballRadius,
+                            posNext.z);
+                    }
+                }
+
                 // ── Tree trunk collision (roll phase) ─────────────────────────────────
                 // Canopy damping is airborne-only (a rolling ball's height < canopy floor in
                 // typical layouts). Only trunk XZ reflect is tested here.
@@ -683,7 +1168,7 @@ namespace Golfin.Physics
 #if UNITY_EDITOR
                 CheckTerrainInvariant(ground, surface, pos);
 #endif
-                samples.Add(new TrajectorySample(t, pos, vel));
+                samples.Add(new TrajectorySample(t, ApplyLipHop(pos, cup, ref cupState), vel));
 
                 fp speedSq    = fpMath.Dot(vel, vel);
                 fp stopThresh = coeff.StopSpeed * coeff.StopSpeed;
@@ -767,13 +1252,14 @@ namespace Golfin.Physics
             IGroundProvider ground, ISurfaceProvider surfaces,
             SurfaceConfig surfaceCfg, PuttConfig puttCfg,
             fp ballRadius, List<TrajectorySample> samples, List<TerrainHit> hits,
-            BallPhysicsModifiers ballMods, ITreeObstacleProvider trees = null)
+            BallPhysicsModifiers ballMods, ITreeObstacleProvider trees, in CupSpec cup)
         {
             fp3 pos = startPos;
             fp3 vel = startVel;
             fp  t   = startT;
 
             fp3 gravity = new fp3(fp.Zero, Gravity, fp.Zero);
+            var cupState = new CupRunState();
 
             int stopConsecutive = 0;
             const int StopStepsRequired = 10;
@@ -836,6 +1322,37 @@ namespace Golfin.Physics
                     ground.SampleHeight(posNext.x, posNext.z, surface) + ballRadius,
                     posNext.z);
 
+                // ── In-sim cup (putt phase) ───────────────────────────────────────────
+                // This is the path that fixes the reported bug: a putt arriving at or below
+                // CupCaptureSpeed now TERMINATES here with a synthesized drop, instead of
+                // rolling on past the hole for several more seconds.
+                if (cup.Enabled)
+                {
+                    var cupAct = CupStep(pos, posNext, vel, ballRadius, cup, ref cupState);
+                    if (cupAct == CupStepAction.Capture)
+                    {
+                        t = t + Dt;
+                        samples.Add(new TrajectorySample(t, posNext, vel));
+                        return FinishCupCapture(posNext, vel, t, cup, ballRadius, samples, hits);
+                    }
+                    if (cupAct == CupStepAction.LipOut)
+                    {
+                        fp speedNow = fpMath.Sqrt(fpMath.Dot(new fp3(vel.x, fp.Zero, vel.z),
+                                                             new fp3(vel.x, fp.Zero, vel.z)));
+                        fp lipOffset = LipCrossingOffset(pos, vel, cup.Pin);
+                        fp dip = ComputeLipDipFraction(lipOffset, speedNow, cup.Radius, ballRadius);
+                        fp3 velBefore = vel;
+                        vel = ApplyLipOut(vel, posNext, cup, dip);
+                        cupState.HopActive = true;
+                        cupState.HopT      = fp.Zero;
+                        cupState.HopDip    = ComputeLipPopVy(velBefore, vel, cup);
+                        posNext = new fp3(pos.x + vel.x * Dt, fp.Zero, pos.z + vel.z * Dt);
+                        posNext = new fp3(posNext.x,
+                            ground.SampleHeight(posNext.x, posNext.z, surface) + ballRadius,
+                            posNext.z);
+                    }
+                }
+
                 // ── Tree trunk collision (putt phase) ─────────────────────────────────
                 if (trees != null && trees.TestSegment(pos, posNext, out TreeHit puttTreeHit)
                     && puttTreeHit.IsTrunk)
@@ -861,7 +1378,7 @@ namespace Golfin.Physics
 #if UNITY_EDITOR
                 CheckTerrainInvariant(ground, surface, pos);
 #endif
-                samples.Add(new TrajectorySample(t, pos, vel));
+                samples.Add(new TrajectorySample(t, ApplyLipHop(pos, cup, ref cupState), vel));
 
                 fp speedSq    = fpMath.Dot(vel, vel);
                 fp stopThresh = coeff.StopSpeed * coeff.StopSpeed;

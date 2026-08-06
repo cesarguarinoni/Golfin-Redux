@@ -28,6 +28,37 @@ namespace Golfin.Physics
         /// </summary>
         public fp CupCaptureSpeed;
 
+        // ── cup_capture_and_lipout (2026-08-05) ───────────────────────────────────────
+        // Consumed by PhysicsLabController when it builds the CupSpec handed to the sim.
+        // See CupSpec for the full per-field rationale.
+
+        /// <summary>
+        /// Cup depth used to synthesize the fall-in animation.
+        /// REAL-WORLD CONSTANT: regulation minimum depth 4 in (0.1016 m) — USGA/R&amp;A Rules
+        /// of Golf, Equipment Rules. Tunable via putt.csv "cup_depth_m".
+        /// </summary>
+        public fp CupDepth;
+
+        /// <summary>
+        /// Restitution of the radial velocity component on a lip-out.
+        /// DESIGN-FEEL VALUE, ARCHITECT-TUNABLE — not physically calibrated (Lesson K).
+        /// Tunable via putt.csv "lip_restitution".
+        /// </summary>
+        public fp LipRestitution;
+
+        /// <summary>
+        /// Fraction of speed retained after a lip-out (0.70 = ~30% lost to the rim).
+        /// DESIGN-FEEL VALUE, ARCHITECT-TUNABLE. Tunable via putt.csv "lip_speed_damping".
+        /// </summary>
+        public fp LipSpeedDamping;
+
+        /// <summary>
+        /// Fraction of the horizontal speed the rim removes that becomes an upward pop
+        /// (dimensionless — see CupSpec.LipPopVy). 1.0 ≈ a 2 cm hop on a clip costing 0.6 m/s.
+        /// DESIGN-FEEL VALUE, ARCHITECT-TUNABLE. Tunable via putt.csv "lip_pop_fraction".
+        /// </summary>
+        public fp LipPopVy;
+
         public static PuttConfig Default
         {
             get
@@ -64,10 +95,18 @@ namespace Golfin.Physics
                 // CupCaptureSpeed: 1.5 m/s — USGA lip-out anchor (≈5 ft/s).
                 // See Penner, A.R. (2002) "The physics of putting." Canadian Journal of Physics 80(2): 83–96 (see lip-out analysis).
                 // Architect-locked 2026-05-14. Tunable via putt.csv "cup_capture_speed".
+                // CupDepth 0.10 m: regulation minimum cup depth 4 in (0.1016 m), USGA/R&A
+                // Rules of Golf, Equipment Rules — real-world constant.
+                // Lip* values: DESIGN-FEEL, architect-tunable; initial values pending lab
+                // verification (SPEC_CUP_CAPTURE_AND_LIPOUT §4.6 / §7). Not calibrated.
                 return new PuttConfig
                 {
                     Coefficients     = c,
                     CupCaptureSpeed  = fp.FromFloat(1.5f),
+                    CupDepth         = fp.FromFloat(0.10f),
+                    LipRestitution   = fp.FromFloat(0.35f),
+                    LipSpeedDamping  = fp.FromFloat(0.70f),
+                    LipPopVy         = fp.FromFloat(1.0f),
                 };
             }
         }

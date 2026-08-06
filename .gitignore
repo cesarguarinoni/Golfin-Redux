@@ -179,6 +179,12 @@ Docs/Specs/Active/green_orbit_videos/videos/
 # Spec verification videos — local-only, regenerable from orbit tooling (large; per green_orbit_videos precedent 2026-06-02)
 Docs/Specs/**/videos/
 
+# Physics verification videos — same rule as Docs/Specs/**/videos/ above (2026-08-06,
+# cup_capture_and_lipout). Physics specs live under Docs/Physics/ rather than Docs/Specs/,
+# so the glob above misses them; the three cup clips alone are 69 MB and are regenerable
+# from GOLFIN > Smoke > Loop v2 > Cup — …. Docs reference the paths; the bytes stay on disk.
+Docs/Physics/videos/
+
 # =========================
 # Transient run-output / scratch dirs (Cesar 2026-06-11). These are regenerable
 # capture/bot outputs and Unity auto-recovery scratch that the team has purged

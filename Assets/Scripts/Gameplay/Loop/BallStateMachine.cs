@@ -164,6 +164,22 @@ namespace Golfin.Gameplay.Loop
                     }
                     break;
 
+                // cup_capture_and_lipout (2026-08-05): the sim itself captured the ball and
+                // synthesized the fall-in, so the trajectory ENDS at the cup bottom. Trust the
+                // termination directly instead of re-deriving it from the sample scan — the
+                // scan's height gate is decided by a sub-millimetre baked-height-vs-pin-Y
+                // margin (see Docs/Physics/CUP_CAPTURE_STEP0_DIAGNOSIS.md), whereas the sim's
+                // check is XZ-only and cannot miss. Because the trajectory now ends at the cup,
+                // the existing animator falling-edge in Tick() fires InCup exactly when the
+                // drop finishes on screen — no downstream timing changes needed
+                // (HoleCompletionBridge / LoopCameraDirector / modal flow all key off InCup).
+                case TerminationReason.CupCapture:
+                    terminalState   = BallState.InCup;
+                    terminalPos     = trajectory.finalPosition;
+                    terminalTime    = trajectory.finalTime;
+                    terminalSurface = SurfaceType.Green;
+                    break;
+
                 case TerminationReason.ExitedWorldBounds:
                     terminalState   = BallState.OB;
                     obReason        = Golfin.Gameplay.Loop.OBReason.ExitedWorldBounds;

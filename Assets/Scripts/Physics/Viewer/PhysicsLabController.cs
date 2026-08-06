@@ -42,6 +42,12 @@ namespace Golfin.Physics.Viewer
         // live colliders. Null on flat-ground / no-hole sessions.
         Golfin.Physics.Runtime.Baked.BakedZoneClassifier _bakedClassifier;
         Golfin.Physics.Runtime.Baked.BakedHeightProvider _bakedGround;
+
+        // cup_capture_and_lipout (2026-08-05): the in-sim cup for the loaded hole. Built in
+        // OnHoleLoaded alongside the RealCupDetector, reset to Disabled on hole unload.
+        // Disabled → the sim's cup branches are dead code and output is bit-exact with the
+        // pre-cup path, which is what keeps the two flat-ground helper sims unaffected.
+        Golfin.Physics.CupSpec _cupSpec = Golfin.Physics.CupSpec.Disabled;
         // Phase 7: tree obstacle provider — null = no trees.
         Golfin.Physics.ITreeObstacleProvider _treeProvider;
 
@@ -466,6 +472,10 @@ namespace Golfin.Physics.Viewer
         // tree_aware_bot (Order 351): read-only exposure of the per-hole tree provider for bot
         // trunk-avoidance. Null on treeless holes / lab flat-ground. Read-side only — no sim change.
         public Golfin.Physics.ITreeObstacleProvider GetTreeProvider() => _treeProvider;
+
+        // cup_capture_and_lipout: read-only accessor so diagnostics/tests can reproduce the
+        // exact sim call this controller makes without reaching into private state.
+        public Golfin.Physics.CupSpec GetCupSpec() => _cupSpec;
 
         // ── Public API ─────────────────────────────────────────────────────────
 
@@ -1393,7 +1403,9 @@ namespace Golfin.Physics.Viewer
         {
             var ground  = BuildGroundProvider();
             var surface = BuildSurfaceProvider(default(ShotPreset));
-            return BallSimulation.Simulate(input, ground, AeroCfg, WindCfg, surface, SurfaceCfg, PuttCfg, ballMods, _treeProvider);
+            // cup_capture_and_lipout: production shot path — pass the loaded hole's cup so the
+            // sim can capture / lip-out. _cupSpec is Disabled when no hole is loaded.
+            return BallSimulation.Simulate(input, ground, AeroCfg, WindCfg, surface, SurfaceCfg, PuttCfg, ballMods, _treeProvider, _cupSpec);
         }
 
         bool _configsLoaded;
@@ -1520,7 +1532,8 @@ namespace Golfin.Physics.Viewer
             var input   = new ShotInput(origin, newVelocity, fp.FromInt(60), spin);
             var ground  = BuildGroundProvider();
             var surface = BuildSurfaceProvider(preset);
-            return BallSimulation.Simulate(input, ground, AeroCfg, preset.Wind, surface, SurfaceCfg, PuttCfg, BallPhysicsModifiers.Neutral, _treeProvider);
+            // cup_capture_and_lipout: preset/lab shot path gets the same cup as production.
+            return BallSimulation.Simulate(input, ground, AeroCfg, preset.Wind, surface, SurfaceCfg, PuttCfg, BallPhysicsModifiers.Neutral, _treeProvider, _cupSpec);
         }
 
         // Returns current ball position snapped to terrain, or fallback if no ball.
@@ -1919,6 +1932,25 @@ namespace Golfin.Physics.Viewer
                             Golfin.Gameplay.Loop.RealCupDetector.DefaultCupRadius,
                             PuttCfg.CupCaptureSpeed));
                         Debug.Log($"[PhysicsLab][§2d] RealCupDetector installed at pin={pinW:F3} cupCaptureSpeed={PuttCfg.CupCaptureSpeed.ToFloat():F2} m/s");
+
+                        // cup_capture_and_lipout: build the CupSpec the SIM consumes, from the
+                        // same inputs as the detector above. The detector stays as the fallback
+                        // (and the bot/test seam); the sim is now the primary authority because
+                        // it is the only place the ball's path can actually change at the cup.
+                        _cupSpec = new Golfin.Physics.CupSpec(
+                            pinFp,
+                            Golfin.Gameplay.Loop.RealCupDetector.DefaultCupRadius,
+                            PuttCfg.CupCaptureSpeed,
+                            PuttCfg.CupDepth,
+                            PuttCfg.LipRestitution,
+                            PuttCfg.LipSpeedDamping,
+                            PuttCfg.LipPopVy);
+                        Debug.Log($"[PhysicsLab][cup] In-sim CupSpec enabled: pin={pinW:F3} "
+                                + $"radius={_cupSpec.Radius.ToFloat():F3}m depth={_cupSpec.Depth.ToFloat():F3}m "
+                                + $"captureSpeed={_cupSpec.CaptureSpeed.ToFloat():F2}m/s "
+                                + $"lip=(restitution={_cupSpec.LipRestitution.ToFloat():F2}, "
+                                + $"damping={_cupSpec.LipSpeedDamping.ToFloat():F2}, "
+                                + $"popVy={_cupSpec.LipPopVy.ToFloat():F2})");
                     }
                 }
                 else
@@ -2119,6 +2151,9 @@ namespace Golfin.Physics.Viewer
             // §2d: revert to NullCupDetector for flat-ground fallback.
             if (_ballSM != null)
                 _ballSM.SetCupDetector(new Golfin.Gameplay.Loop.NullCupDetector());
+            // cup_capture_and_lipout: no hole loaded → no cup. Disabling restores the
+            // bit-exact pre-cup sim path on synthetic flat ground.
+            _cupSpec = Golfin.Physics.CupSpec.Disabled;
 
             PlacementEntries.Clear();
             OnPlacementEntriesChanged?.Invoke();

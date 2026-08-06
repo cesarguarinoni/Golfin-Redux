@@ -62,5 +62,10 @@ namespace Golfin.Physics
         HitWater,           // terminated by water hazard
         HitOOB,             // terminated by out-of-bounds zone
         MaxBouncesExceeded, // safety cap; shouldn't happen in practice
+        // cup_capture_and_lipout (2026-08-05): the roll/putt integrator captured the ball in
+        // the cup and synthesized the fall-in. The trajectory ENDS at the cup bottom, so the
+        // animator plays the drop and BallStateMachine reports InCup the moment it finishes.
+        // APPEND-ONLY: existing enum values are order-sensitive (serialized in bot goldens).
+        CupCapture,
     }
 }

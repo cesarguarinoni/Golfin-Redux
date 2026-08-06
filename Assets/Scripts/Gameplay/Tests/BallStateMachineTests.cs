@@ -332,6 +332,51 @@ namespace Golfin.Gameplay.Tests
         }
 
         // ─────────────────────────────────────────────────────────────────────
+        // 7b. cup_capture_and_lipout (SPEC §6.7): TerminationReason.CupCapture is
+        //     honoured directly — terminal InCup WITHOUT relying on the sample scan.
+        //     The detector here is a NullCupDetector (never reports a cup), so a pass
+        //     proves the termination switch, not the fallback scan.
+        // ─────────────────────────────────────────────────────────────────────
+
+        [Test]
+        public void CupCaptureTermination_TerminalIsInCup_WithoutSampleScan()
+        {
+            var sm = MakeSM(new NullCupDetector());
+            ShotResult? result = null;
+            sm.OnShotComplete += r => result = r;
+
+            // Trajectory that ENDS at the cup floor, as the in-sim capture produces.
+            fp3 cupBottom = TrajectoryFactory.At(15f, -0.08f, 5f);
+            var samples = new List<TrajectorySample>
+            {
+                TrajectoryFactory.Sample(0f, kStart.x.ToFloat(), kStart.y.ToFloat(), kStart.z.ToFloat()),
+                TrajectoryFactory.Sample(2.0f, 15f,  0.021f, 5f),   // last rolling sample
+                TrajectoryFactory.Sample(2.1f, 15f, -0.04f,  5f),   // falling in
+                TrajectoryFactory.Sample(2.14f, 15f, -0.08f, 5f),   // cup floor
+            };
+            var hits = new List<TerrainHit>
+            {
+                TrajectoryFactory.Hit(2.14f, 15f, -0.08f, 5f, SurfaceType.Green, true),
+            };
+            var traj = new Trajectory(samples, cupBottom, fp3.Zero,
+                                      TrajectoryFactory.T(2.14f),
+                                      TerminationReason.CupCapture, hits);
+
+            sm.OnTrajectoryComputed(kStart, traj, kBallR);
+            sm.Tick(true);
+            sm.Tick(false);
+
+            Assert.IsTrue(result.HasValue);
+            Assert.AreEqual(BallState.InCup, result.Value.TerminalState,
+                "CupCapture termination must map straight to InCup");
+            Assert.AreEqual(SurfaceType.Green, result.Value.EndSurface);
+            Assert.AreEqual(cupBottom.x, result.Value.EndPosition.x);
+            Assert.AreEqual(cupBottom.y, result.Value.EndPosition.y,
+                "EndPosition should be the cup floor, i.e. the trajectory's final position");
+            Assert.AreEqual(cupBottom.z, result.Value.EndPosition.z);
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
         // 8. Three bounces → correct state sequence
         // ─────────────────────────────────────────────────────────────────────
 

@@ -273,6 +273,28 @@ namespace Golfin.Physics.Runtime
                     continue;
                 }
 
+                // cup_capture_and_lipout (2026-08-05): additional global rows consumed by the
+                // in-sim cup (CupSpec). Same shape as cup_capture_speed above — key,value.
+                // cup_depth_m is a real-world constant (regulation ≥4 in); the lip_* trio are
+                // design-feel values flagged ARCHITECT-TUNABLE per Lesson K.
+                if (name == "cup_depth_m" || name == "lip_restitution"
+                    || name == "lip_speed_damping" || name == "lip_pop_fraction")
+                {
+                    if (parts.Length >= 2 &&
+                        float.TryParse(parts[1].Trim(), System.Globalization.NumberStyles.Float,
+                            System.Globalization.CultureInfo.InvariantCulture, out float gv))
+                    {
+                        switch (name)
+                        {
+                            case "cup_depth_m":       cfg.CupDepth        = fp.FromFloat(gv); break;
+                            case "lip_restitution":   cfg.LipRestitution  = fp.FromFloat(gv); break;
+                            case "lip_speed_damping": cfg.LipSpeedDamping = fp.FromFloat(gv); break;
+                            case "lip_pop_fraction":  cfg.LipPopVy        = fp.FromFloat(gv); break;
+                        }
+                    }
+                    continue;
+                }
+
                 if (!System.Enum.TryParse<SurfaceType>(name, out var st))
                 {
                     Debug.LogWarning($"[PhysicsConfigLoader] putt.csv: unknown surface '{name}' — skipped");

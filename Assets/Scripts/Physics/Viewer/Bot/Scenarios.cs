@@ -2523,6 +2523,201 @@ namespace Golfin.Physics.Viewer.Bot
         //   9. Wait 5s for splash to play out. Capture.
         //  10. Restore music volume.
         // </summary>
+        // ── Scenario: Cup Capture / Lip-out clips (cup_capture_and_lipout §7) ───
+        // Produced 2026-08-05. Three acceptance clips, one per Editor launch (the recorder
+        // allows a single recording per launch by design). Variant is read from SessionState
+        // key "CupClip.Variant": "slow" | "mid" | "fast".
+        //
+        //   slow — putter power 0.41 → arrives at the cup at ~1.07 m/s → CAPTURES.
+        //          Ball must drop below the lip on screen and the hole-complete modal appear.
+        //   mid  — power 0.49 → arrives at ~1.47 m/s, just under the 1.5 m/s gate → CAPTURES.
+        //   fast — power 0.75 → arrives at ~2.77 m/s, above the gate → LIPS OUT: visible
+        //          deflection + small hop, keeps rolling, NO hole-complete.
+        //
+        // Powers are calibrated, not guessed: launch speed is linear in power for the putter
+        // (measured on this hole, 0.30 → 1.494 m/s and 0.60 → 2.989 m/s, i.e. v0 = 4.981·p),
+        // and the green's rolling resistance costs ~0.52 m/s per metre over the 2 m approach.
+        //
+        // BotVideoRecorder MUST be armed with:
+        //   CaptureAudio = true
+        //   MaxRecordSecondsSessionOverride = 30
+        //   CustomOutputPath = "Docs/Physics/videos/cup_<variant>"
+        //   ArmDeferred() — deferred start so recording begins after the hole is armed (no Y-flip).
+        public static IEnumerator CupCaptureLipoutClip(BotDriver d)
+        {
+            string variant = UnityEditor.SessionState.GetString("CupClip.Variant", "slow");
+            float power = variant == "fast" ? 0.58f : (variant == "mid" ? 0.49f : 0.41f);
+            // The fast clip starts 20 mm off the pin line so the ball crosses the mouth ~13 mm
+            // off-centre. A dead-centre crossing gets the biggest hop but zero sideways kick
+            // (no tangential component by construction); 20 mm buys a visible 7° deflection AND
+            // a 26 mm pop, which is what "the hole grabbed it" actually looks like.
+            float startZOff = variant == "fast" ? 0.02f : 0f;
+            d.LogStep($"=== Cup Capture / Lip-out clip: variant={variant} power={power:F2} zOff={startZOff*1000f:F0}mm ===");
+
+            yield return CupClipBootToHole6(d);
+
+            // START RECORDING — hole armed, HUD visible, no Y-flip.
+            UnityEditor.SessionState.SetBool("LoopV2SmokeBot.RecordVideo", true);
+            UnityEditor.SessionState.SetBool("LoopV2SmokeBot.DeferredRecord", false);
+            try
+            {
+                System.Type recType = null;
+                foreach (var a in System.AppDomain.CurrentDomain.GetAssemblies())
+                { var t = a.GetType("Golfin.Physics.Viewer.Editor.BotVideoRecorder"); if (t != null) { recType = t; break; } }
+                recType?.GetMethod("Begin", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
+                       ?.Invoke(null, null);
+                d.LogStep("  BotVideoRecorder.Begin() — recording started");
+            }
+            catch (System.Exception ex) { d.LogStep($"  Begin ERROR: {ex.Message}"); }
+            yield return new WaitForSecondsRealtime(1.5f);
+
+            var ctrl = UnityEngine.Object.FindFirstObjectByType<PhysicsLabController>();
+            if (ctrl == null) { d.LogStep("  FAIL: no PhysicsLabController"); yield break; }
+
+            Vector3 pin = Golfin.Gameplay.UI.HUD.HoleContext.PinWorld;
+            d.LogStep($"  PinWorld = {pin:F3}");
+
+            // Place the ball 2 m from the pin on the green (offset off the line for the fast
+            // variant) and aim straight down the -X line.
+            ctrl.PlaceBallAt(pin + new Vector3(2f, 0f, startZOff));
+            ctrl.SetClub(PhysicsLabController.PutterIndex);
+            ctrl.InjectLabBundleForCurrentClub();
+            yield return new WaitForSecondsRealtime(2f);   // camera settle on the new ball position
+
+            Vector3 ballPos = ctrl.BallPosition;
+            Vector3 toPin = new Vector3(pin.x - ballPos.x, 0f, pin.z - ballPos.z);
+            // Fast variant fires PARALLEL to the pin line (straight -X) so the 20 mm start
+            // offset survives to the cup. Aiming at the pin would cancel it and produce the
+            // dead-centre crossing we are deliberately avoiding.
+            Vector3 aimDir = startZOff != 0f ? new Vector3(-1f, 0f, 0f) : toPin;
+            ctrl.SetCameraYawRadians(Mathf.Atan2(aimDir.z, aimDir.x));
+            yield return new WaitForSecondsRealtime(1.5f);
+            yield return d.Capture($"cup_{variant}_armed");
+
+            d.LogStep($"  Club index={ctrl.CurrentClubIndex} (PutterIndex={PhysicsLabController.PutterIndex}) "
+                    + $"— must be the putter for the calibrated power to mean anything");
+            d.LogStep($"  Firing putter at power {power:F2} from {toPin.magnitude:F2} m");
+            ctrl.FireViaShotController(power, Golfin.Gameplay.Input.DebugShotAccuracy.Green);
+
+            // Watch the outcome. NO ForceShotComplete safety net here — this clip exists to
+            // show what the physics actually does, so a forced terminal state would defeat it.
+            float t0 = Time.realtimeSinceStartup;
+            var seen = ctrl.BallSM.State;
+            while (Time.realtimeSinceStartup - t0 < 14f)
+            {
+                if (ctrl.BallSM.State != seen)
+                {
+                    seen = ctrl.BallSM.State;
+                    d.LogStep($"  BallState -> {seen} at t+{Time.realtimeSinceStartup - t0:F1}s");
+                    if (seen == Golfin.Gameplay.Loop.BallState.InCup
+                     || seen == Golfin.Gameplay.Loop.BallState.AtRest) break;
+                }
+                yield return new WaitForSecondsRealtime(0.05f);
+            }
+            d.LogStep($"  Terminal state: {ctrl.BallSM.State} (expected "
+                    + (variant == "fast" ? "AtRest — lip-out, no hole-complete)" : "InCup — captured)"));
+
+            yield return new WaitForSecondsRealtime(4f);   // dwell on the drop / rest + modal
+            yield return d.Capture($"cup_{variant}_settled");
+            yield return new WaitForSecondsRealtime(2f);
+
+            d.LogStep($"=== Cup clip {variant}: done ===");
+        }
+
+        /// <summary>
+        /// Shared boot for the cup clips: ShellScene → Home → Practice → HoleSelection →
+        /// Hole 6 → loaded and settled. Mirrors AudioWaterSplashSfx's Hole-6 path (kept as a
+        /// separate copy rather than refactoring that scenario, so the audio clips can't regress).
+        /// </summary>
+        static IEnumerator CupClipBootToHole6(BotDriver d)
+        {
+            yield return d.NavigateToHome(totalTimeoutSeconds: 60f);
+            yield return new WaitForSecondsRealtime(2f);
+
+            // Hole 6 is locked by default — unlock it for the run.
+            try
+            {
+                System.Type svcType = null;
+                foreach (var a in System.AppDomain.CurrentDomain.GetAssemblies())
+                { var t = a.GetType("GolfinRedux.UI.HoleSelection.HoleProgressionService"); if (t != null) { svcType = t; break; } }
+                if (svcType == null)
+                    foreach (var a in System.AppDomain.CurrentDomain.GetAssemblies())
+                    { var t = a.GetType("HoleProgressionService"); if (t != null) { svcType = t; break; } }
+                var inst = svcType?.GetProperty("Instance", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)?.GetValue(null);
+                if (inst != null)
+                {
+                    svcType.GetMethod("SetUnlockedOverride", new[] { typeof(int), typeof(bool) })
+                           ?.Invoke(inst, new object[] { 6, true });
+                    d.LogStep("  Hole 6 unlocked");
+                }
+            }
+            catch (System.Exception ex) { d.LogStep($"  WARN: unlock reflection error: {ex.Message}"); }
+
+            yield return d.ClickModeCardPlay("practice", settleSeconds: 1.5f);
+            yield return d.WaitForScreen("HoleSelection", timeoutSeconds: 15f);
+            yield return new WaitForSecondsRealtime(3f);
+
+            // Tap the Hole 6 card (real widget onClick), then drive the same loader entry
+            // HoleSelectionScreenController.HandleActionClicked uses.
+            try
+            {
+                System.Type cardType = null;
+                foreach (var a in System.AppDomain.CurrentDomain.GetAssemblies())
+                { var t = a.GetType("GolfinRedux.UI.HoleSelection.HoleCardController"); if (t != null) { cardType = t; break; } }
+                if (cardType == null)
+                    foreach (var a in System.AppDomain.CurrentDomain.GetAssemblies())
+                    { var t = a.GetType("HoleCardController"); if (t != null) { cardType = t; break; } }
+                if (cardType != null)
+                {
+                    var holeNumProp = cardType.GetProperty("HoleNumber", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+                    foreach (var card in UnityEngine.Object.FindObjectsByType(cardType, UnityEngine.FindObjectsSortMode.None))
+                    {
+                        if ((int)(holeNumProp?.GetValue(card) ?? 0) != 6) continue;
+                        var go = ((UnityEngine.Component)card).gameObject;
+                        UnityEngine.UI.Button tap = null;
+                        foreach (var btn in go.GetComponentsInChildren<UnityEngine.UI.Button>(true))
+                            if (btn.gameObject.name.Contains("CardTapButton") || btn.gameObject.name.Contains("TapButton"))
+                            { tap = btn; break; }
+                        if (tap == null) tap = go.GetComponentInChildren<UnityEngine.UI.Button>();
+                        if (tap != null) { tap.onClick.Invoke(); d.LogStep("  Tapped Hole 6 card"); }
+                        break;
+                    }
+                }
+            }
+            catch (System.Exception ex) { d.LogStep($"  WARN: card tap reflection error: {ex.Message}"); }
+
+            yield return new WaitForSecondsRealtime(1.5f);
+
+            try
+            {
+                System.Type gsType = null;
+                foreach (var a in System.AppDomain.CurrentDomain.GetAssemblies())
+                { var t = a.GetType("Golfin.Gameplay.Session.GameSession"); if (t != null) { gsType = t; break; } }
+                gsType?.GetMethod("SeedSession", new[] { typeof(int), typeof(string), typeof(int) })
+                      ?.Invoke(null, new object[] { 6, "", 0 });
+
+                System.Type loaderType = null;
+                foreach (var a in System.AppDomain.CurrentDomain.GetAssemblies())
+                { var t = a.GetType("Golfin.UI.GameplayTransition.GameplaySceneLoader"); if (t != null) { loaderType = t; break; } }
+                var loader = loaderType?.GetProperty("Instance", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)?.GetValue(null);
+                if (loader != null)
+                {
+                    foreach (var m in loaderType.GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance))
+                        if (m.Name == "BeginGameplayLoad")
+                        {
+                            m.Invoke(loader, m.GetParameters().Length == 1 ? new object[] { 6 } : new object[] { 6, null });
+                            d.LogStep("  BeginGameplayLoad(6)");
+                            break;
+                        }
+                }
+            }
+            catch (System.Exception ex) { d.LogStep($"  WARN: load reflection error: {ex.Message}"); }
+
+            yield return d.WaitForSceneLoaded("LabScaffold", timeoutSeconds: 40f);
+            yield return d.WaitForSceneLoaded("Hole_06_Geo", timeoutSeconds: 40f);
+            yield return new WaitForSecondsRealtime(4f);   // fade-in + HUD settle; avoids Y-flip
+        }
+
         public static IEnumerator AudioWaterSplashSfx(BotDriver d)
         {
             d.LogStep("=== Audio Water Splash SFX (ShellScene real flow) ===");
