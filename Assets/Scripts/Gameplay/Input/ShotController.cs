@@ -59,6 +59,44 @@ namespace Golfin.Gameplay.Input
         // --- Debug toggles (8 flags per design §8) ---
         public ShotDebugFlags DebugFlags = ShotDebugFlags.Defaults;
 
+        // ── Flick gate + aim lock (SHOT_FLICK_FIX_SPEC) ─────────────────────────
+        // Applies to the human touch path only (samples pushed by ClubHandleDragger).
+        // Programmatic drivers (bots, capture drivers, tests) push no samples and are
+        // never gated — see EvaluateFlickGate().
+
+        [Header("Flick gate (SHOT_FLICK_FIX_SPEC — Bug 1)")]
+        [Tooltip("Minimum upward release speed in screen-heights/sec. 0 = gate off.")]
+        [SerializeField] private float _minFlickSpeed = 1.2f;
+
+        [Tooltip("Seconds of touch history averaged to measure the release speed. " +
+                 "Windowed averaging makes a load stutter read LOW instead of spiking.")]
+        [SerializeField] private float _flickSampleWindow = 0.08f;
+
+        [Tooltip("Seconds. A sample pair spanning longer than this is a hitch frame and " +
+                 "is never trusted as the basis for the flick velocity.")]
+        [SerializeField] private float _stutterFrameThreshold = 0.1f;
+
+        [Tooltip("Bypass the windowed gate and fall back to the legacy single-frame check.")]
+        [SerializeField] private bool _debugDisableFlickGate;
+
+        [Header("Aim lock (SHOT_FLICK_FIX_SPEC — Bug 2)")]
+        [Tooltip("Screen-heights of cumulative upward travel from the lowest finger point " +
+                 "that latches the aim. Cumulative-since-lowest means micro-jitter never latches.")]
+        [SerializeField] private float _reversalThreshold = 0.01f;
+
+        [Tooltip("Bypass the aim latch — the targeting line tracks through the upswing (old behavior).")]
+        [SerializeField] private bool _debugDisableAimLock;
+
+        /// <summary>True when the windowed flick gate owns the release decision.
+        /// False = caller should fall back to its legacy single-frame check (debug parity).</summary>
+        public bool FlickGateActive => !_debugDisableFlickGate && _minFlickSpeed > 0f;
+
+        /// <summary>Last speed measured by EvaluateFlickGate, in screen-heights/sec. Tuning aid.</summary>
+        public float LastFlickSpeedScreenHeights { get; private set; }
+
+        /// <summary>True once the upswing reversal has latched the aim for this swing.</summary>
+        public bool IsAimLocked => _aimLocked;
+
         /// <summary>When true, emits a one-line snapshot at CommitFlick entry naming the bundle, override, and gate inputs.</summary>
         public bool LogResolution;
 
@@ -81,6 +119,15 @@ namespace Golfin.Gameplay.Input
         private float _coneFinetune;
         private bool  _wasTouching;
 
+        // Flick gate / aim lock state (SHOT_FLICK_FIX_SPEC)
+        private const int SampleBufferSize = 6;
+        private readonly Vector2[] _samplePos  = new Vector2[SampleBufferSize];
+        private readonly float[]   _sampleTime = new float[SampleBufferSize];
+        private int   _sampleCount;          // total pushed this swing (may exceed buffer size)
+        private bool  _aimLocked;
+        private float _lockedFinetune;
+        private float _lowestTouchY = float.NaN;
+
         // --- Events ---
         public event Action<ShotInputState>                     OnStateChanged;
         public event Action<ShotInput, BallPhysicsModifiers>    OnShotResolved;
@@ -99,7 +146,104 @@ namespace Golfin.Gameplay.Input
         /// Re-centers the cone finetune to 0 so subsequent handle movement
         /// drives the fade/draw curve from center, not carry over the old aim offset.
         /// </summary>
-        public void ForceRecenterFinetune() => _coneFinetune = 0f;
+        public void ForceRecenterFinetune()
+        {
+            _coneFinetune   = 0f;
+            _lockedFinetune = 0f;   // a re-arm must not restore a stale latched aim
+        }
+
+        // ── Flick gate + aim lock (SHOT_FLICK_FIX_SPEC) ─────────────────────────
+
+        /// <summary>
+        /// Push one touch sample (screen px) for this swing. Called every frame the finger is
+        /// down by the pointer handler that owns the swing gesture (ClubHandleDragger), plus
+        /// once at release. Feeds both the windowed flick gate (Bug 1) and the upswing aim
+        /// latch (Bug 2). Callers that never push samples are never gated.
+        /// </summary>
+        public void PushTouchSample(Vector2 screenPosPx)
+        {
+            _samplePos[_sampleCount % SampleBufferSize]  = screenPosPx;
+            _sampleTime[_sampleCount % SampleBufferSize] = Time.unscaledTime;
+            _sampleCount++;
+
+            if (_debugDisableAimLock || _aimLocked) return;
+
+            // Latch on cumulative upward travel since the LOWEST point of the swing, so
+            // micro-jitter (up 2px, down 2px) never latches but a real upswing latches
+            // within a frame or two. Aim = club position at the bottom of the swing.
+            if (float.IsNaN(_lowestTouchY) || screenPosPx.y < _lowestTouchY)
+            {
+                _lowestTouchY = screenPosPx.y;
+                return;
+            }
+
+            float h = Screen.height;
+            if (h <= 0f) return;
+            if ((screenPosPx.y - _lowestTouchY) / h >= _reversalThreshold)
+            {
+                _aimLocked      = true;
+                _lockedFinetune = _coneFinetune;   // freeze at the bottom-of-swing value
+            }
+        }
+
+        /// <summary>
+        /// True if the release qualifies as a flick. Measured as the windowed average over
+        /// <see cref="_flickSampleWindow"/> using unscaled time, so a hitch frame reads LOW
+        /// instead of spiking. Returns true when no samples were pushed (programmatic driver:
+        /// bots, capture drivers, tests) — the gate is for human touch input only.
+        /// </summary>
+        public bool EvaluateFlickGate()
+        {
+            LastFlickSpeedScreenHeights = 0f;
+
+            if (!FlickGateActive) return true;
+            if (_sampleCount == 0) return true;      // programmatic driver — not a touch swing
+            if (_sampleCount < 2)  return false;     // a tap has no measurable travel
+
+            int newest = (_sampleCount - 1) % SampleBufferSize;
+            int stored = Mathf.Min(_sampleCount, SampleBufferSize);
+
+            // Walk back to the oldest sample still inside the window.
+            int oldest = newest;
+            for (int step = 1; step < stored; step++)
+            {
+                int idx = (_sampleCount - 1 - step + SampleBufferSize * 2) % SampleBufferSize;
+                if (_sampleTime[newest] - _sampleTime[idx] > _flickSampleWindow) break;
+                oldest = idx;
+            }
+
+            // Every stored sample is older than the window (one very long frame) — fall back to
+            // the immediately-previous sample so the hitch is measured rather than ignored. Its
+            // dt then trips the stutter check below, which is the intended outcome.
+            if (oldest == newest)
+                oldest = (_sampleCount - 2 + SampleBufferSize * 2) % SampleBufferSize;
+
+            float dt = _sampleTime[newest] - _sampleTime[oldest];
+            if (dt <= 0f) return false;
+            if (dt > _stutterFrameThreshold) return false;   // hitch frame — never trusted
+
+            float h = Screen.height;
+            if (h <= 0f) return false;
+
+            LastFlickSpeedScreenHeights = ((_samplePos[newest].y - _samplePos[oldest].y) / dt) / h;
+
+#if UNITY_EDITOR
+            if (LogResolution)
+                UnityEngine.Debug.Log(
+                    $"[FlickGate] speed={LastFlickSpeedScreenHeights:F2} screen-heights/s " +
+                    $"min={_minFlickSpeed:F2} dt={dt:F3}s samples={_sampleCount} " +
+                    $"pass={LastFlickSpeedScreenHeights >= _minFlickSpeed} aimLocked={_aimLocked}");
+#endif
+            return LastFlickSpeedScreenHeights >= _minFlickSpeed;
+        }
+
+        private void ResetSwingSamples()
+        {
+            _sampleCount    = 0;
+            _aimLocked      = false;
+            _lockedFinetune = 0f;
+            _lowestTouchY   = float.NaN;
+        }
 
 #if UNITY_EDITOR
         /// <summary>
@@ -131,6 +275,7 @@ namespace Golfin.Gameplay.Input
         {
             if (State != ShotState.Idle) return;
             _externalDragActive = true;
+            ResetSwingSamples();
             TransitionToAiming();
             PublishState();
         }
@@ -139,17 +284,26 @@ namespace Golfin.Gameplay.Input
         {
             if (!_externalDragActive) return;
             PowerNormalized = Mathf.Clamp01(powerNormalized);
-            _coneFinetune   = Mathf.Clamp(coneFinetune, -1f, 1f);
+            // Aim latched at the upswing reversal: lateral finger movement stops steering the
+            // line, which just freezes at its last value (SHOT_FLICK_FIX_SPEC Bug 2).
+            _coneFinetune   = _aimLocked ? _lockedFinetune : Mathf.Clamp(coneFinetune, -1f, 1f);
             if (State == ShotState.Aiming && powerNormalized > 0f)
                 TransitionToTiming();
             PublishState();
         }
 
-        public void EndExternalDrag()
+        /// <param name="bypassFlickGate">Debug escape hatch (ClubHandleDragger._releaseToFire):
+        /// commit on any release without measuring the flick.</param>
+        public void EndExternalDrag(bool bypassFlickGate = false)
         {
             if (!_externalDragActive) return;
             _externalDragActive = false;
-            if (State == ShotState.Timing && PowerNormalized > 0f)
+
+            // Too slow to be a flick → reset the swing, no shot. TransitionToIdle IS the
+            // existing power-reset path, so the player just pulls back again.
+            bool validFlick = bypassFlickGate || EvaluateFlickGate();
+
+            if (State == ShotState.Timing && PowerNormalized > 0f && validFlick)
                 CommitFlick();
             else
                 TransitionToIdle();
@@ -234,7 +388,7 @@ namespace Golfin.Gameplay.Input
                     {
                         _pullDistancePx = ComputePullPx();
                         PowerNormalized = ComputePower(_pullDistancePx);
-                        _coneFinetune   = ComputeFinetune();
+                        _coneFinetune   = _aimLocked ? _lockedFinetune : ComputeFinetune();
                         if (PowerNormalized > 0f) TransitionToTiming();
                     }
                     break;
@@ -255,7 +409,7 @@ namespace Golfin.Gameplay.Input
                     {
                         _pullDistancePx = ComputePullPx();
                         PowerNormalized = ComputePower(_pullDistancePx);
-                        _coneFinetune   = ComputeFinetune();
+                        _coneFinetune   = _aimLocked ? _lockedFinetune : ComputeFinetune();
                         TickArrow(dt);
                     }
                     break;
@@ -284,6 +438,9 @@ namespace Golfin.Gameplay.Input
             _coneFinetune      = 0f;
             _aimYawRadians     = 0f;
             PendingSpinInput   = Vector2.zero;  // reset after each shot (spin is per-shot, not sticky)
+            // Unlatch the aim + drop the touch history on EVERY path back to pull-back:
+            // min-flick-speed failure, slow-release power reset, arrow timeout, shot complete.
+            ResetSwingSamples();
             // Fade/Draw mode state resets after each shot (FadeDrawActive persists between shots
             // — the toggle is sticky — but the locked aim resets so next arm captures fresh aim).
             FadeDrawLockedAimRad = float.NaN;

@@ -18,7 +18,8 @@ namespace Golfin.Gameplay.UI.ShotUI
         private float ConeHeightPx => _coneGraphic != null ? _coneGraphic.HeightPx : 1009f;
 
         [Header("Flick Settings")]
-        [Tooltip("Minimum upward screen-pixel delta per frame to count as a flick. Lower = more forgiving.")]
+        [Tooltip("LEGACY single-frame check. Only used when ShotController's windowed flick gate " +
+                 "is disabled (debugDisableFlickGate) — kept so that toggle restores old behavior exactly.")]
         [Range(0f, 200f)]
         [SerializeField] private float _flickThresholdPxPerFrame = 5f;
 
@@ -39,13 +40,17 @@ namespace Golfin.Gameplay.UI.ShotUI
             _peakFinetune = 0f;
             // Push current spin selection before starting the drag so CommitFlick sees it.
             _shotController.PendingSpinInput = HUD.SpinContext.Spin;
-            _shotController.BeginExternalDrag();
+            _shotController.BeginExternalDrag();   // clears the previous swing's touch history
+            _shotController.PushTouchSample(e.position);
             ProcessDrag(e);
         }
 
         public void OnDrag(PointerEventData e)
         {
             if (!_dragging) return;
+            // Push BEFORE ProcessDrag so that the frame the aim latches snapshots the
+            // bottom-of-swing finetune, not this frame's already-risen one.
+            _shotController.PushTouchSample(e.position);
             ProcessDrag(e);
         }
 
@@ -53,19 +58,32 @@ namespace Golfin.Gameplay.UI.ShotUI
         {
             if (!_dragging) return;
             _dragging = false;
+            _shotController.PushTouchSample(e.position);   // release position closes the window
 
             bool hasPower = _peakPower > 0.02f;
-            bool isFlick  = e.delta.y >= _flickThresholdPxPerFrame;
-            bool shouldFire = hasPower && (_releaseToFire || isFlick);
 
-            if (shouldFire)
+            if (!hasPower)
             {
-                _shotController.SetExternalPower(_peakPower, _peakFinetune);
-                _shotController.EndExternalDrag();
+                _shotController.CancelExternalDrag();
+                return;
+            }
+
+            // SetExternalPower is a no-op on finetune once the aim latched, so the frozen
+            // bottom-of-swing aim survives this call.
+            _shotController.SetExternalPower(_peakPower, _peakFinetune);
+
+            if (_shotController.FlickGateActive)
+            {
+                // Windowed, stutter-proof gate lives in ShotController; a failed gate resets
+                // the swing there rather than firing.
+                _shotController.EndExternalDrag(bypassFlickGate: _releaseToFire);
             }
             else
             {
-                _shotController.CancelExternalDrag();
+                // debugDisableFlickGate — legacy single-frame behavior, unchanged.
+                bool legacyFlick = e.delta.y >= _flickThresholdPxPerFrame;
+                if (_releaseToFire || legacyFlick) _shotController.EndExternalDrag(bypassFlickGate: true);
+                else                               _shotController.CancelExternalDrag();
             }
         }
 
