@@ -206,6 +206,10 @@ namespace Golfin.Physics.Tests
 
             var (director, setter, ctrl) = DirectorFactory.Create(isPutt: false, lastTraj: traj);
             ctrl.LastTrajectory = traj;
+            // Real ball transform so the Flying arm records a NON-null target — otherwise
+            // ArmChaseForShot(…, null) makes "last call is null" true regardless of the
+            // terminal branch under test.
+            ctrl.CurrentBall = new GameObject("WaterOBBall").transform;
 
             ctrl.BallSM.OnTrajectoryComputed(fp3.Zero, traj, fp.FromFloat(0.02f));
 
@@ -217,8 +221,47 @@ namespace Golfin.Physics.Tests
                 "Mode must be Chase after OB — dormant via null-target early-return.");
             Assert.IsFalse(setter.LastOBFreezePivot.HasValue,
                 "SetOBFreezePivot must NOT be called on OB (no pivot teleport).");
+
+            // water_entry_presentation (Cesar 2026-08-06): "The call I made yesterday was not
+            // for the water." This trajectory terminates in WATER, so the hard freeze is
+            // DEFERRED — the camera stops advancing (chase clamp) but stays live through the
+            // splash and the ball sink, and only then is the target cleared. The clear happens
+            // in a coroutine, so it must NOT have fired synchronously here.
+            Assert.IsNotNull(setter.SetTargetCalls[setter.SetTargetCalls.Count - 1],
+                "Water OB must NOT clear the target synchronously — the camera stays live " +
+                "until the splash has played, then freezes.");
+        }
+
+        // ── Test 4b — non-water OB still freezes on contact (K10 ruling intact) ──
+
+        [Test]
+        public void Director_OnBoundaryOB_ClearsTargetImmediately()
+        {
+            var hits = new List<TerrainHit>
+            {
+                TrajectoryBuilder.NonStopHit(new fp3(fp.FromFloat(10f), fp.Zero, fp.Zero), SurfaceType.Fairway),
+                TrajectoryBuilder.NonStopHit(new fp3(fp.FromFloat(25f), fp.Zero, fp.FromFloat(5f)), SurfaceType.OOB),
+            };
+
+            var samples = new List<TrajectorySample>
+            {
+                new TrajectorySample(fp.Zero, fp3.Zero, fp3.Zero),
+                new TrajectorySample(fp.One,  new fp3(fp.FromFloat(25f), fp.Zero, fp.FromFloat(5f)), fp3.Zero),
+            };
+            var finalPos = new fp3(fp.FromFloat(25f), fp.Zero, fp.FromFloat(5f));
+            var traj = new Trajectory(samples, finalPos, fp3.Zero, fp.One, TerminationReason.HitOOB, hits);
+
+            var (director, setter, ctrl) = DirectorFactory.Create(isPutt: false, lastTraj: traj);
+            ctrl.LastTrajectory = traj;
+            ctrl.CurrentBall = new GameObject("BoundaryOBBall").transform;
+
+            ctrl.BallSM.OnTrajectoryComputed(fp3.Zero, traj, fp.FromFloat(0.02f));
+
+            Assert.AreEqual(ChaseCamera.Mode.Chase, setter.CurrentMode,
+                "Mode must be Chase after a boundary OB.");
             Assert.IsNull(setter.SetTargetCalls[setter.SetTargetCalls.Count - 1],
-                "Target must be cleared on OB so the camera freezes where the chase left it.");
+                "Boundary OB must still clear the target on contact — the water hold is " +
+                "scoped to OBReason.Water only (K10 ruling unchanged).");
         }
 
         // ── Test 5 — K10 follow-up: the long-shot case that used to go top-down ──

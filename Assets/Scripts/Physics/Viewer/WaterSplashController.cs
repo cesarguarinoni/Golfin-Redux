@@ -35,6 +35,12 @@ namespace Golfin.Physics.Viewer
         [Header("Audio (clip assigned in Order 350)")]
         [SerializeField] AudioClip _splashClip;
 
+        [Header("Ball sink (water_entry_presentation)")]
+        [Tooltip("Metres the ball drops below the contact point before it is hidden.")]
+        [SerializeField] float _sinkDepth = 0.6f;
+        [Tooltip("Seconds the sink takes. Kept under the splash lifetime (~0.8s).")]
+        [SerializeField] float _sinkDuration = 0.5f;
+
         [Header("Debug")]
         [SerializeField] bool _verboseLogging = false;
 
@@ -43,6 +49,9 @@ namespace Golfin.Physics.Viewer
 
         // ── Runtime refs ───────────────────────────────────────────────────────
         BallStateMachine _sm;
+
+        // water_entry_presentation: source of the live ball transform for the sink.
+        BallAnimator _anim;
 
         // Pooled PS instance (lazy-created on first water OB).
         ParticleSystem _splashInstance;
@@ -67,9 +76,10 @@ namespace Golfin.Physics.Viewer
         /// </summary>
         public void Configure(BallAnimator anim, BallStateMachine sm, ShotController shot)
         {
-            // anim and shot unused by this controller but kept for signature parity.
-            _ = anim;
+            // shot unused by this controller but kept for signature parity.
             _ = shot;
+            // water_entry_presentation: the animator owns the ball transform we sink.
+            _anim = anim;
 
             // Idempotent re-wire: unsubscribe first to avoid double-subscribe.
             if (_sm != null) _sm.OnStateChanged -= HandleStateChanged;
@@ -102,6 +112,12 @@ namespace Golfin.Physics.Viewer
             if (_verboseLogging)
                 Debug.Log($"[WaterSplash] HandleStateChanged: firing splash at worldPos={worldPos:F2}");
             PlaySplash(worldPos);
+
+            // water_entry_presentation: drop the ball through the surface rather than
+            // leaving it sitting on top for the whole OB hold.
+            var ball = _anim != null ? _anim.CurrentBall : null;
+            if (ball != null && isActiveAndEnabled)
+                StartCoroutine(SinkBall(ball));
         }
 
         // ── Splash playback ────────────────────────────────────────────────────
@@ -137,6 +153,7 @@ namespace Golfin.Physics.Viewer
                 _splashInstance = Instantiate(_splashPrefab, worldPos, Quaternion.identity);
                 _splashInstance.gameObject.name = "[WaterSplash_Pool]";
                 // Don't parent to this GO — keeps world transform clean.
+                ForceDrawOverWater(_splashInstance);
             }
             else
             {
@@ -154,6 +171,57 @@ namespace Golfin.Physics.Viewer
             // This fixes the latent bug where the SFX volume slider had no effect on splash audio.
             // _splashClip field is preserved for backward-compat inspector wiring but no longer used.
             SfxBus.Play(SfxId.LandWater);
+        }
+
+        // ── water_entry_presentation: draw order ───────────────────────────────
+
+        /// <summary>
+        /// Push every splash renderer past the water surface in the transparent queue.
+        ///
+        /// The splash spawns exactly ON the water plane (measured: splash y 7.27, Water_1
+        /// y 7.27) and its three materials sit at renderQueue 3000 — the same queue as
+        /// URPWater/Standard — so the water sorted over it and the splash was invisible.
+        /// The .mat assets DO carry m_CustomRenderQueue: 3100, but Unity resets them to
+        /// 3000 on every load (the recurring M_Splash*.mat churn), so the authored value
+        /// never takes effect. Setting it here on the MATERIAL INSTANCE (renderer.material,
+        /// not sharedMaterial) makes it stick for the session and leaves the shared assets
+        /// untouched — they are under a standing no-edit rule.
+        /// </summary>
+        static void ForceDrawOverWater(ParticleSystem instance)
+        {
+            const int AboveWaterQueue = 3100;   // URPWater/Standard renders at 3000
+
+            var renderers = instance.GetComponentsInChildren<ParticleSystemRenderer>(true);
+            for (int i = 0; i < renderers.Length; i++)
+            {
+                var mat = renderers[i].material;   // instance, not the shared asset
+                if (mat != null) mat.renderQueue = AboveWaterQueue;
+            }
+        }
+
+        // ── water_entry_presentation: ball sink ────────────────────────────────
+
+        /// <summary>
+        /// Sink the ball through the surface and hide it, so a water landing reads as the
+        /// ball going IN rather than resting on top of the water (Cesar 2026-08-06).
+        /// BallAnimator.PlaceAtRest destroys and respawns the instance for the next shot,
+        /// so deactivating this one is safe.
+        /// </summary>
+        System.Collections.IEnumerator SinkBall(Transform ball)
+        {
+            Vector3 start = ball.position;
+            Vector3 end   = start + Vector3.down * _sinkDepth;
+
+            float t = 0f;
+            while (t < _sinkDuration)
+            {
+                if (ball == null) yield break;   // re-armed mid-sink
+                t += Time.deltaTime;
+                ball.position = Vector3.Lerp(start, end, Mathf.Clamp01(t / _sinkDuration));
+                yield return null;
+            }
+
+            if (ball != null) ball.gameObject.SetActive(false);
         }
 
 #if UNITY_EDITOR

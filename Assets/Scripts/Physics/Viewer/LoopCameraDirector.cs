@@ -50,6 +50,11 @@ namespace Golfin.Physics.Viewer
 
         // (OBFreeze framing field deleted — OB no longer teleports to a pivot; K10 follow-up.)
 
+        [Header("Water entry (water_entry_presentation)")]
+        [Tooltip("Seconds the camera stays live after a Water OB before it freezes. Covers the " +
+                 "splash (~0.8s) and the ball sink (0.5s). Non-water OB still freezes instantly.")]
+        [SerializeField] float _waterHoldSeconds = 1.1f;
+
         // ── Observable event (§controls_g_smoke_followup) ─────────────────────
 
         /// <summary>
@@ -234,12 +239,41 @@ namespace Golfin.Physics.Viewer
 
             // Pre-iter-3 behavior: clear target on ALL terminal states. Aiming-camera owner
             // (ApplyCameraYaw) takes over via ChaseCamera.LateUpdate's null-target early-return.
+            //
+            // water_entry_presentation (Cesar 2026-08-06): "The call I made yesterday was not
+            // for the water. Stop the camera on contact but don't freeze until after the splash
+            // plays." The K10 stop-chasing ruling stands for every other OB reason. On a WATER
+            // OB the camera has already stopped ADVANCING — the chase clamp pins its position at
+            // the water-entry point — so all we defer is the hard freeze: keep the target for
+            // _waterHoldSeconds so the camera stays live through the splash and the ball's sink,
+            // then clear it and freeze exactly as before.
+            if (change.Next == BallState.OB
+             && change.OBReason.HasValue
+             && change.OBReason.Value == OBReason.Water
+             && isActiveAndEnabled)
+            {
+                StartCoroutine(ClearTargetAfterWaterHold(setter));
+                return;
+            }
+
             if (change.Next == BallState.AtRest
              || change.Next == BallState.InCup
              || change.Next == BallState.OB)
             {
                 setter.SetTarget(null);
             }
+        }
+
+        /// <summary>
+        /// Water-OB freeze delay. The camera keeps rendering (position already pinned by the
+        /// chase clamp) until the splash has played, then goes dormant via the null target.
+        /// Re-arming a new shot calls ResetToOrigin/SetTarget itself, so a late clear here is
+        /// harmless only if it doesn't outlive the hold — hence the short, fixed duration.
+        /// </summary>
+        System.Collections.IEnumerator ClearTargetAfterWaterHold(IModeSetter setter)
+        {
+            yield return new WaitForSeconds(_waterHoldSeconds);
+            setter.SetTarget(null);
         }
 
         // ── Internal helpers ───────────────────────────────────────────────────
