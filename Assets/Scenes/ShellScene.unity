@@ -4492,7 +4492,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &59621553
 RectTransform:
   m_ObjectHideFlags: 0
@@ -4533,7 +4533,7 @@ CanvasGroup:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 59621552}
   m_Enabled: 1
-  m_Alpha: 1
+  m_Alpha: 0
   m_Interactable: 0
   m_BlocksRaycasts: 0
   m_IgnoreParentGroups: 0
@@ -44019,7 +44019,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6956406767266717853, guid: 9eafcbb3ea5a74c3c878705dfe0b962c, type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 7004980100899068302, guid: 9eafcbb3ea5a74c3c878705dfe0b962c, type: 3}
       propertyPath: m_Pivot.x
@@ -107768,7 +107768,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5878037670308284885, guid: 5b833d556cd544ab98228904a06bf189, type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
