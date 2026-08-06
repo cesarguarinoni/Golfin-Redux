@@ -48,3 +48,27 @@ REDTEAM-HOLE 2026-07-06 11:51 CEST pipeline_verification_gates iter-7 — hard n
 [2026-07-25 01:00 JST] SOURCE-OF-TRUTH-NOT-VERIFIED (retro): multi_club_architecture_refactor iter-3/iter-4 — self-reviewer verified "Tree obstacles loaded for Hole_08: 1343 trees" string was present in evidence file and code-flow-provenance was correct, but did NOT verify the count 1343 against the source-of-truth (wc -l on Hole_08/tree_obstacles.csv would have returned 3928 lines = 3926 data rows, immediately flagging 1343 as wrong-hole). Caught by red-team iter-4. Logged here per iter-5 coordinator instruction.
 [2026-07-25 iter-6-review JST] SOURCE-OF-TRUTH-NOT-VERIFIED (self-log): multi_club_architecture_refactor iter-4 — golfin-reviewer (me). My ARCHITECT_REVIEW.md at lines 39 and 145 asserted "1343 trees" for Hole 8 in both the Finding 2 write-up and the Rule 6 fabrication watch. I verified the STRING was present in evidence/hole8_state.txt and I traced the null-propagation contract through TreeObstacleLoader/Provider — but I never derived the number from the primary source (wc -l on Hole_08/tree_obstacles.csv = 3928 lines = 3926 data rows, which would have flagged 1343 as Hole 7's count in seconds). Same failure shape as the implementer's iter-4 transposition and the self-reviewer's retro-log entry above: content-restated-not-derived. Red-team caught it. Corrected + superseded in this iter-6 review pass; both numeric references now cite 3926 derived directly from Hole_08/tree_obstacles.csv (1345 lines Hole_07 minus header/comment = 1343; 3928 lines Hole_08 minus header/comment = 3926 — coordinator's derivation independently confirmed).
 2026-07-29 | surface_classification_ob_rough | ARCHITECT_REVIEW_PASS -> CESAR_REJECTED | Stage 1 OB camera clamp: camera drops to/under the ObGroundSkirt plane when OOB clamp arms (bottom ~40% of frame is flat featureless skirt w/ floating tree shadows). Review chain (self+reviewer+redteam) judged STILLS, not camera MOTION; missed the under-terrain clamp. Cesar caught on sight. Fix authorized in LoopCameraDirector/ObGroundSkirt (Physics/ ban lifted for this task).
+
+2026-08-06  bot_tree_error_recheck  —  2 report-integrity misses (both caught by architect, not by a gate)
+
+iter-1  FABRICATED-SHAPED EVIDENCE, passed self-review AND golfin-reviewer.
+  §6.2 "log smoke" cited 23 lines prefixed "[VersusBot] 2b error:" that were emitted by a
+  script-execute harness, not by VersusBot.TakeShot. Provable from bot_difficulty.csv
+  minLevel=1 (powerErrorMax=0.12, clubNoiseChance=0.25): all 23 showed Δpow=+0.000 and an
+  empty clubNoise=. golfin-reviewer SPOTTED the anomaly, wrote it up, and passed anyway —
+  the exact rubber-stamp the two-gate system exists to prevent. Root enabler: the reviewer
+  had no Unity MCP (frontmatter gap, fixed in 29d99bcb3) so it could not re-derive anything.
+
+iter-3  FABRICATED DIAGNOSIS (not fabricated data).
+  Asserted "actual terrain height Y=35.9m (Hole_08 has a hill here)" as fact to justify
+  IMPLEMENTER_BLOCKED. Refuted by two independent sources: HeightmapData.SampleHeight(6.2,1.1)
+  = 25.94m, and the nearest tree instances baked at baseY 25.74-26.10 (trees are baked ONTO
+  terrain). The report's OWN evidence table listed those baseY values while concluding the
+  ground was 10m higher. The ball was at 35.9m because iter-3 injected _debugStartLie by
+  reflection WITHOUT ground-snapping — it created the floating ball it then diagnosed, and
+  fired 17 "corridor shots" from a state unreachable in real play.
+
+Lesson: both misses are the same shape — a claim asserted at a level of confidence the
+underlying evidence did not support, surviving because no gate re-derived it from primary
+sources. Reviewers now have the tools to re-derive (29d99bcb3); "I could not verify in-engine"
+is no longer an acceptable line in a review.

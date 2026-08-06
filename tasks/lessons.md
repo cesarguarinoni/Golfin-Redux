@@ -1886,3 +1886,27 @@ The project keeps verification videos out of git (`Docs/Specs/**/videos/`), and 
 2. Mark Unity's always-binary asset types `binary` in .gitattributes AFTER the generic `*.asset` rule (later lines win): `TerrainData_*.asset`, `*Terrain.asset`, `LightingData.asset`, and any NavMesh/occlusion data that shows the same symptom.
 3. On the Cowork device bridge, `git checkout` cannot revert files at all (unlink is forbidden — same family as the `_to_delete/` rule). In-place restore works and is what actually reverts: `git show "HEAD:$f" > "$f"`, verified with `git show "HEAD:$f" | cmp - "$f"`.
 4. A file that stays "modified" after a byte-exact restore is ALWAYS an attributes/filter problem, never a content problem. Check `git diff --stat` for a byte-count delta plus a CRLF warning before trusting `git status` on binary-ish files.
+
+## Lesson AH — a flat-Y probe must be measured at real terrain height (bot_tree_error_recheck, 2026-08-06)
+
+`BotTreeProbe.LineHasTrunkInWindows` uses `ball.y` as a flat proxy for the ENTIRE probe segment.
+Any offline measurement of its hit rate is therefore only valid if the ball Y is the REAL terrain
+height at that XZ. Two separate people got this wrong in one task, in opposite directions:
+
+- The architect interpolated Y linearly between tee and green centroids. Small error (0.02–1.72 m),
+  but it inflated the mid-hole clamp rate from 24.65% to 35.90%.
+- The implementer injected a debug start lie via reflection WITHOUT ground-snapping, putting the
+  ball 10 m above terrain. The probe then ran above every trunk top (~29–30 m), produced 0 hits
+  across 17 shots, and the implementer concluded the HOLE was at fault ("Hole_08 has a hill here")
+  rather than its own injection.
+
+**How to apply:** sample `HeightmapData.SampleHeight(x, z)` for ball Y — never interpolate, never
+trust an injected lie's Y. Cross-check against `tree_obstacles.csv` `baseY` of nearby trees: trees
+are baked ONTO the terrain, so nearby `baseY` IS the local ground height and is a free second
+source. If a probe reports zero hits, verify the ball is on the ground before concluding anything
+about the geometry. Related: SPEC §1 already listed the flat-Y elevation blind spot as an accepted
+v1 limitation — that limitation is about elevation CHANGE along the segment, not licence to use a
+wrong starting Y.
+
+Sister rule to Lesson AA (report integrity): a diagnosis asserted as fact needs the same evidence
+standard as a test result. Both misses this task are logged in `.claude/review_misses.log`.
