@@ -1876,3 +1876,13 @@ Two follow-on traps, both caught only by sweeping:
 The project keeps verification videos out of git (`Docs/Specs/**/videos/`), and `.gitignore` even records a near-miss where 557 MB nearly entered history. My clips landed in `Docs/Physics/videos/` — physics specs live under `Docs/Physics/`, not `Docs/Specs/` — so the glob missed them and 69 MB of binaries were staged. Caught at close-out by reading the ignore rules rather than trusting that "videos are handled."
 
 **Rule:** when a task writes generated media to a NEW directory, run `git check-ignore -v <file>` before staging. A policy expressed as a path glob only protects the paths someone thought of.
+
+## Lesson AS — `*.asset text` in .gitattributes silently mangles Unity's BINARY assets (terrain churn cleanup, 2026-08-06)
+
+46 files (43 `TerrainData_*.asset`, 2 `*Terrain.asset`, 1 `LightingData.asset`) showed permanently "modified" after play-mode runs. `git checkout` couldn't clean them, and restoring exact HEAD bytes STILL left them "modified". Root cause: `* text=auto` + `*.asset text eol=lf` (meant for force-text YAML assets) also matched these — but TerrainData/LightingData serialize as BINARY even in force-text projects. Git's clean filter runs CRLF normalization over raw binary, so worktree-vs-blob never compares equal.
+
+**The rules.**
+1. **The dirty state was the SMALL problem. `git add` on such a file strips every 0x0D byte from the binary — real corruption committed to the repo.** If a binary file shows modified with `Bin N -> N-k bytes` in `git diff --stat` plus a CRLF warning, do not add it; fix attributes first.
+2. Mark Unity's always-binary asset types `binary` in .gitattributes AFTER the generic `*.asset` rule (later lines win): `TerrainData_*.asset`, `*Terrain.asset`, `LightingData.asset`, and any NavMesh/occlusion data that shows the same symptom.
+3. On the Cowork device bridge, `git checkout` cannot revert files at all (unlink is forbidden — same family as the `_to_delete/` rule). In-place restore works and is what actually reverts: `git show "HEAD:$f" > "$f"`, verified with `git show "HEAD:$f" | cmp - "$f"`.
+4. A file that stays "modified" after a byte-exact restore is ALWAYS an attributes/filter problem, never a content problem. Check `git diff --stat` for a byte-count delta plus a CRLF warning before trusting `git status` on binary-ish files.
