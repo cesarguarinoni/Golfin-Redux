@@ -262,6 +262,223 @@ namespace Golfin.Physics.Tests
                 "All maxTries (5) samples must have been drawn before giving up");
         }
 
+        // ══════════════════════════════════════════════════════════════════════════
+        // canopy_avoidance_v2 — Tests for TrySampleTreeAwareAimError + drift guard
+        // ══════════════════════════════════════════════════════════════════════════
+
+        // ── Fake provider helpers ──────────────────────────────────────────────────
+
+        /// <summary>
+        /// Provider that always reports no hit. Used for canopy-free / trunk-free baselines.
+        /// </summary>
+        private class NoHitProvider : ITreeObstacleProvider
+        {
+            public static readonly NoHitProvider Instance = new NoHitProvider();
+            public bool TestSegment(fp3 p0, fp3 p1, out TreeHit hit)
+            {
+                hit = default;
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Provider that returns a CANOPY hit (IsTrunk=false) when the probed segment
+        /// is aimed within <see cref="AngleThreshRad"/> of the +X axis AND the midpoint
+        /// height exceeds <see cref="MinHitY"/>. No trunk hits are ever reported.
+        ///
+        /// This decouples trunk vs canopy cleanly: LineHasTrunkInWindows probes at y=ball.y
+        /// (low, ≤ MinHitY) → no hit → trunk-clear. CountCanopyContacts probes at modelled
+        /// apex height (high, > MinHitY) → canopy hit when aimed near +X.
+        /// </summary>
+        private class CanopyInBoreProvider : ITreeObstacleProvider
+        {
+            public readonly float AngleThreshRad;
+            public readonly float MinHitY;
+
+            public CanopyInBoreProvider(float angleThreshDeg, float minHitY = 3f)
+            {
+                AngleThreshRad = angleThreshDeg * Mathf.Deg2Rad;
+                MinHitY        = minHitY;
+            }
+
+            public bool TestSegment(fp3 p0, fp3 p1, out TreeHit hit)
+            {
+                hit = default;
+                float midY = (p0.y + p1.y).ToFloat() * 0.5f;
+                if (midY <= MinHitY) return false;   // below canopy zone → no hit
+
+                // Horizontal direction of this probe segment.
+                float dx    = (p1.x - p0.x).ToFloat();
+                float dz    = (p1.z - p0.z).ToFloat();
+                float len   = Mathf.Sqrt(dx * dx + dz * dz);
+                if (len < 0.001f) return false;
+                float angle = Mathf.Atan2(Mathf.Abs(dz), Mathf.Abs(dx));  // angle from +X axis
+
+                if (angle < AngleThreshRad)
+                {
+                    hit.IsTrunk = false;   // canopy hit
+                    return true;
+                }
+                return false;
+            }
+        }
+
+        // ── Test A: null trees → first sample accepted, single draw, canopyContacts==0 ─
+
+        [Test]
+        public void TrySampleTreeAwareAimError_NullTrees_AcceptsFirstSampleCanopy0()
+        {
+            int draws = 0;
+            System.Func<float, float, float> sampler = (_, __) => { draws++; return 7.0f; };
+
+            bool ok = BotTreeProbe.TrySampleTreeAwareAimError(
+                trees: null, ball: BallOrigin, safeYaw: 0f,
+                carry: 60f, apex: 6f,
+                aimErrorDegMax: 10f, maxTries: 5,
+                sampleRange: sampler,
+                disableCanopyPreference: false,
+                out float delta, out int contacts);
+
+            Assert.IsTrue(ok,  "null trees: must return true");
+            Assert.AreEqual(7.0f, delta,    0.001f, "null trees: must return first sample value");
+            Assert.AreEqual(0,   contacts,          "null trees: canopyContacts must be 0");
+            Assert.AreEqual(1,   draws,              "null trees: sampler must be called exactly once");
+        }
+
+        // ── Test B: all trunk-clear, canopy-free → returns smallest |delta| (tie-break) ─
+
+        [Test]
+        public void TrySampleTreeAwareAimError_AllCanopyFree_ReturnsSmallestAbsDelta()
+        {
+            // Provider reports no hits at all — every sample is trunk-clear and canopy-free.
+            var trees = NoHitProvider.Instance;
+
+            // Three canned samples: |6|=6, |-3|=3, |5|=5 → tie-break picks -3.
+            float[] canned = { 6.0f, -3.0f, 5.0f };
+            int idx = 0;
+            System.Func<float, float, float> sampler = (_, __) => canned[idx++];
+
+            bool ok = BotTreeProbe.TrySampleTreeAwareAimError(
+                trees, BallOrigin, safeYaw: 0f,
+                carry: 60f, apex: 6f,
+                aimErrorDegMax: 8f, maxTries: 3,
+                sampleRange: sampler,
+                disableCanopyPreference: false,
+                out float delta, out int contacts);
+
+            Assert.IsTrue(ok,    "must return true when survivors exist");
+            Assert.AreEqual(-3.0f, delta,    0.001f,
+                "tie-break: smallest |delta| = |-3|=3, not |6| or |5|");
+            Assert.AreEqual(0, contacts,
+                "all samples are canopy-free → contacts must be 0");
+        }
+
+        // ── Test C: canopy-heavy sample loses to canopy-free despite larger |delta| ─────
+
+        [Test]
+        public void TrySampleTreeAwareAimError_CanopyFreePrefersOverHeavy_DespiteLargerDelta()
+        {
+            // CanopyInBoreProvider: reports canopy when aimed within 5° of +X AND
+            // probe height > 3 m. This means:
+            //   delta=-2° (yaw≈0): aimed near +X, apex probe at ~3-9 m → canopy contacts>0.
+            //   delta=20° (yaw=20°): aimed 20° away, angle>5° → NO canopy contacts.
+            // LineHasTrunkInWindows probes at ball.y=1m ≤ 3m → no trunk hits for either.
+            var trees = new CanopyInBoreProvider(angleThreshDeg: 5f, minHitY: 3f);
+            var ball  = new Vector3(0f, 1f, 0f);  // ball.y=1m < minHitY → trunk-clear
+
+            float[] canned = { -2.0f, 20.0f };
+            int idx = 0;
+            System.Func<float, float, float> sampler = (_, __) => canned[idx++];
+
+            bool ok = BotTreeProbe.TrySampleTreeAwareAimError(
+                trees, ball, safeYaw: 0f,
+                carry: 40f, apex: 8f,      // Driver apex=7.92m; probes reach ~7-9m
+                aimErrorDegMax: 20f, maxTries: 2,
+                sampleRange: sampler,
+                disableCanopyPreference: false,
+                out float delta, out int contacts);
+
+            Assert.IsTrue(ok, "must return true (both samples are trunk-clear)");
+            Assert.AreEqual(20.0f, delta, 0.001f,
+                "delta=20° (canopy-free) must win over delta=-2° (canopy-heavy) despite larger |delta|");
+            Assert.AreEqual(0, contacts,
+                "winning sample (20°) must have 0 canopy contacts");
+        }
+
+        // ── Test D: all trunk-blocked → false, deltaAimDeg==0, canopyContacts==-1 ─────
+
+        [Test]
+        public void TrySampleTreeAwareAimError_AllTrunkBlocked_ReturnsFalseAndZero()
+        {
+            // CsvHugeTrunkAhead: huge trunk (scale=8) at x=10 blocks all ±6° samples.
+            var trees = BuildProvider(CsvHugeTrunkAhead);
+            Assert.IsNotNull(trees, "provider must not be null");
+
+            float[] canned = { 5.5f, -5.5f, 4.0f, -4.0f, 3.0f };
+            int idx = 0;
+            System.Func<float, float, float> sampler = (_, __) => canned[idx++];
+
+            bool ok = BotTreeProbe.TrySampleTreeAwareAimError(
+                trees, BallOrigin, safeYaw: 0f,
+                carry: 30f, apex: 6f,
+                aimErrorDegMax: 6f, maxTries: 5,
+                sampleRange: sampler,
+                disableCanopyPreference: false,
+                out float delta, out int contacts);
+
+            Assert.IsFalse(ok,
+                "must return false when all maxTries samples are trunk-blocked");
+            Assert.AreEqual(0f, delta, 0.001f,
+                "deltaAimDeg must be 0 on false return (pre-2b line fallback)");
+            Assert.AreEqual(-1, contacts,
+                "canopyContacts must be -1 on false return");
+        }
+
+        // ── Test E: apex drift guard — BotTreeProbe table matches BallSimulation ≤±1.0m ─
+
+        [Test]
+        public void ApexDriftGuard_TableMatchesSim()
+        {
+            // Re-derive apex from BallSimulation.Simulate for clubs 0-2 (putter excluded).
+            // Assert that BotTreeProbe.ApexAtFullCarry matches within ±1.0m tolerance.
+            // This test fails loudly if the physics sim is retuned without updating the table.
+            //
+            // Input parameters from SPEC §1 table (ballSpeed m/s, launch °):
+            //   0=Driver:  speed=75.0, launch=10.9°, expectedApex=7.92
+            //   1=iron7:   speed=70.6, launch=9.2°,  expectedApex=5.29
+            //   2=A.Wedge: speed=46.0, launch=24.0°, expectedApex=14.42
+
+            float[] speeds  = { 75.0f, 70.6f, 46.0f };
+            float[] launchD = { 10.9f,  9.2f, 24.0f };
+            float   tol     = 1.0f;  // SPEC §4.1 drift-guard tolerance
+
+            for (int club = 0; club < 3; club++)
+            {
+                float speed      = speeds[club];
+                float launchRad  = launchD[club] * Mathf.Deg2Rad;
+                float horizSpeed = speed * Mathf.Cos(launchRad);
+                float vertSpeed  = speed * Mathf.Sin(launchRad);
+
+                var input = new ShotInput(
+                    origin:      fp3.Zero,
+                    velocity:    new fp3(fp.FromFloat(horizSpeed), fp.FromFloat(vertSpeed), fp.Zero),
+                    maxDuration: fp.FromInt(30),
+                    spin:        new SpinState(fp3.Zero, fp.Zero));
+
+                var traj = BallSimulation.Simulate(input, new FlatGround(fp.Zero), AeroConfig.Default);
+
+                float simApex = 0f;
+                foreach (var s in traj.samples)
+                    simApex = Mathf.Max(simApex, s.position.y.ToFloat());
+
+                float tableApex = BotTreeProbe.ApexAtFullCarry[club];
+
+                Assert.AreEqual(tableApex, simApex, tol,
+                    $"Club {club}: table apex {tableApex:F2}m vs sim apex {simApex:F2}m " +
+                    $"(tolerance ±{tol:F1}m). Re-run the calibration harness if this fails.");
+            }
+        }
+
         // ── Test 6: carry-vs-cup regression (Order 351 §9 iter-2 fix) ─────────────
         // A trunk placed at x=265m (inside the carry landing window 252-287m) must be
         // detected when the probe receives carry=287m, but NOT when it receives

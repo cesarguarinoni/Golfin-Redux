@@ -1,5 +1,6 @@
-// BotTreeProbe.cs — tree_aware_bot (Order 351)
+// BotTreeProbe.cs — tree_aware_bot (Order 351) + canopy_avoidance_v2
 // Flat-XZ trunk probe + trunk-clear re-aim ladder shared by VersusBot and BotDriver.
+// canopy_avoidance_v2: adds ApexForCarry, CountCanopyContacts, TrySampleTreeAwareAimError.
 // Production-safe: NO #if UNITY_EDITOR — VersusBot ships in player builds.
 // Read-side only: queries ITreeObstacleProvider interface in Golfin.Physics.
 // TreeObstacleProvider, tree CSVs, collision profiles, and BallSimulation are untouched.
@@ -30,6 +31,21 @@ namespace Golfin.Physics.Viewer
         private const float ProbeStepM    = 6f;   // march step (< 10 m cell → consecutive 3×3 scans overlap; no missed trunk)
         private const float LayupStepM    = 8f;   // walk-back step for ladder (matches VersusBot LayupStep)
         private const float LayupMinDistM = 10f;  // min layup target distance (matches VersusBot LayupMinDist)
+
+        // ── Constants (v2 — canopy_avoidance_v2) ───────────────────────────────────────────
+        // Apex per club (metres), measured from BallSimulation.Simulate(..., AeroConfig.Default)
+        // at full power. See SPEC §4.1 and the drift-guard test ApexDriftGuard_TableMatchesSim.
+        // NOTE: scaled linearly with carry for part-power shots (first-order approximation).
+        // Canopy is a soft cost, so a modest height error changes a tie-break, never playability.
+        // Club indices: 0=Driver, 1=Wood(iron7), 2=Iron/Wedge, 3=Putter.
+        // VersusBot club bands: >200m→driver(0), 80-200m→iron7(1), 20-80m→wedge(2), ≤20m→putter(3).
+        internal static readonly float[] ApexAtFullCarry = { 7.92f, 5.29f, 14.42f, 0f };
+        // Full carry (m) at full power, matching the SPEC §1 table.
+        internal static readonly float[] FullCarryForClub = { 132.9f, 109.1f, 108.6f, 0f };
+        // Iron apex is actually 11.45 m (launch 20°), but the bot uses wedge (index 2) for 20-80m
+        // and iron7 (index 1) for 80-200m. The SPEC apex table lists iron at 11.45 but VersusBot
+        // never uses a dedicated "iron" club slot — index 1 = "iron7" (5.29 m apex). Index 2
+        // is used for both A.Wedge (spec apex 14.42) and P.Wedge; use 14.42 (larger → more conservative).
 
         // Retarget offsets — match VersusBot.OffsetDegrees { -10, +10, -20, +20 }.
         private static readonly float[] OffsetsDeg = { -10f, 10f, -20f, 20f };
@@ -151,6 +167,174 @@ namespace Golfin.Physics.Viewer
                     return true;
             }
             deltaAimDeg = 0f;
+            return false;
+        }
+
+        // ── canopy_avoidance_v2: new API ────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Modelled apex height (m) for a given club index and actual carry distance.
+        /// Scales linearly with carry as a first-order approximation (canopy is a soft
+        /// cost so a modest height error only shifts a tie-break, never playability).
+        /// club index: 0=Driver, 1=iron7, 2=wedge, 3=Putter (always returns 0).
+        /// </summary>
+        public static float ApexForCarry(int club, float carry)
+        {
+            if (club < 0 || club >= ApexAtFullCarry.Length) return 0f;
+            float fullApex  = ApexAtFullCarry[club];
+            float fullCarry = FullCarryForClub[club];
+            if (fullCarry <= 0f || fullApex <= 0f) return 0f;
+            // Scale linearly with carry (first-order approximation — see SPEC §4.1 NOTE).
+            return fullApex * (carry / fullCarry);
+        }
+
+        /// <summary>
+        /// March the FULL ball→target line (no apex-band skip) at modelled trajectory height
+        /// and count how many 6 m steps enter a canopy. Trunk hits are reported separately
+        /// (the count only covers IsTrunk==false hits). Treeless (trees==null) → 0.
+        ///
+        /// Height model: parabola h(d) = 4 * apex * t * (1-t), t = d/carry.
+        /// Both probe endpoints use ball.y as the ground-Y reference.
+        ///
+        /// Public so the measurement sweep (script-execute / tests) can call it directly.
+        /// </summary>
+        /// <param name="trees">Tree obstacle provider. null → 0 (treeless).</param>
+        /// <param name="ball">Current ball world position (ball.y = ground-Y reference).</param>
+        /// <param name="yaw">Aim yaw in radians.</param>
+        /// <param name="carry">Modelled carry distance (m).</param>
+        /// <param name="apex">Apex height (m) from ApexForCarry.</param>
+        /// <returns>Number of probe steps that hit a canopy (IsTrunk==false).</returns>
+        public static int CountCanopyContacts(
+            ITreeObstacleProvider trees, Vector3 ball, float yaw, float carry, float apex)
+        {
+            if (trees == null) return 0;
+
+            float cosYaw = Mathf.Cos(yaw);
+            float sinYaw = Mathf.Sin(yaw);
+            float ballY  = ball.y;
+            int   count  = 0;
+
+            for (float d = 0f; d < carry; d += ProbeStepM)
+            {
+                float dEnd = Mathf.Min(d + ProbeStepM, carry);
+
+                // Heights at mid-distance of this step (use midpoint for representative height).
+                float dMid  = (d + dEnd) * 0.5f;
+                float t0    = (carry > 0f) ? dMid / carry : 0f;
+                float h0    = 4f * apex * t0 * (1f - t0);
+
+                float x0 = ball.x + d    * cosYaw;
+                float z0 = ball.z + d    * sinYaw;
+                float x1 = ball.x + dEnd * cosYaw;
+                float z1 = ball.z + dEnd * sinYaw;
+                float y0 = ballY + h0;
+                float y1 = ballY + h0;   // use same representative height for both endpoints
+
+                var p0 = new fp3(fp.FromFloat(x0), fp.FromFloat(y0), fp.FromFloat(z0));
+                var p1 = new fp3(fp.FromFloat(x1), fp.FromFloat(y1), fp.FromFloat(z1));
+
+                if (trees.TestSegment(p0, p1, out TreeHit hit) && !hit.IsTrunk)
+                    count++;
+            }
+
+            return count;
+        }
+
+        /// <summary>
+        /// canopy_avoidance_v2: scored sampler that supersedes TrySampleTrunkClearAimError
+        /// at the D2 call site in VersusBot.
+        ///
+        /// Trunk = hard reject (unchanged from Order 352).
+        /// Canopy = soft cost (scored tie-break): among trunk-clear samples, prefer the
+        /// fewest canopy contacts, tie-breaking to the smallest |deltaAimDeg| so the miss
+        /// model is preserved when canopy cost is equal.
+        ///
+        /// trees==null → first sample accepted, single draw (treeless no-op, identical to
+        /// TrySampleTrunkClearAimError with null provider).
+        /// DebugDisableCanopyPreference==true → reproduces Order 352 exactly (first trunk-
+        /// clear sample returned regardless of canopy cost).
+        ///
+        /// Returns false only when ALL samples were TRUNK-blocked.
+        /// On false: deltaAimDeg==0, canopyContacts==-1.
+        /// </summary>
+        /// <param name="trees">GetTreeProvider() — null on treeless holes → no-op.</param>
+        /// <param name="ball">Current ball world position.</param>
+        /// <param name="safeYaw">Tree-aware aim yaw BEFORE 2b perturbation (radians).</param>
+        /// <param name="carry">Modelled carry (probeCarry).</param>
+        /// <param name="apex">Apex height (m) from ApexForCarry(club, carry).</param>
+        /// <param name="aimErrorDegMax">Half-width of the aim-error bracket (degrees).</param>
+        /// <param name="maxTries">Rejection-sampling attempts before fallback.</param>
+        /// <param name="sampleRange">Sampler delegate: (min, max) → float.</param>
+        /// <param name="disableCanopyPreference">
+        /// When true, behaves identically to TrySampleTrunkClearAimError (Order 352).
+        /// </param>
+        /// <param name="deltaAimDeg">Output: accepted aim-error delta in degrees (0 on false).</param>
+        /// <param name="canopyContacts">Output: canopy contacts on the accepted line (-1 on false).</param>
+        /// <returns>true if a trunk-clear sample found; false if all were trunk-blocked.</returns>
+        public static bool TrySampleTreeAwareAimError(
+            ITreeObstacleProvider trees, Vector3 ball, float safeYaw, float carry, float apex,
+            float aimErrorDegMax, int maxTries,
+            System.Func<float, float, float> sampleRange,
+            bool disableCanopyPreference,
+            out float deltaAimDeg, out int canopyContacts)
+        {
+            // Fast path: treeless hole — identical to null-path of TrySampleTrunkClearAimError.
+            if (trees == null)
+            {
+                deltaAimDeg   = sampleRange(-aimErrorDegMax, aimErrorDegMax);
+                canopyContacts = 0;
+                return true;
+            }
+
+            // DebugDisableCanopyPreference: reproduce Order 352 exactly.
+            if (disableCanopyPreference)
+            {
+                bool ok = TrySampleTrunkClearAimError(
+                    trees, ball, safeYaw, carry, aimErrorDegMax, maxTries, sampleRange,
+                    out deltaAimDeg);
+                canopyContacts = ok ? 0 : -1;
+                return ok;
+            }
+
+            // Scored sampler: collect all trunk-clear survivors, pick lowest canopy cost.
+            // Storage: small fixed arrays (maxTries ≤ 5 in production; no heap alloc).
+            float bestDelta        = 0f;
+            int   bestCanopy       = int.MaxValue;
+            bool  foundSurvivor    = false;
+
+            for (int i = 0; i < maxTries; i++)
+            {
+                float delta = sampleRange(-aimErrorDegMax, aimErrorDegMax);
+                float yaw   = safeYaw + delta * Mathf.Deg2Rad;
+
+                // Hard reject: trunk hit.
+                if (LineHasTrunkInWindows(trees, ball, yaw, carry))
+                    continue;
+
+                // Soft cost: count canopy contacts on the FULL line at modelled height.
+                int contacts = CountCanopyContacts(trees, ball, yaw, carry, apex);
+
+                // Accept if: fewer canopy contacts, OR same contacts + smaller |delta|.
+                if (!foundSurvivor ||
+                    contacts < bestCanopy ||
+                    (contacts == bestCanopy && Mathf.Abs(delta) < Mathf.Abs(bestDelta)))
+                {
+                    bestDelta     = delta;
+                    bestCanopy    = contacts;
+                    foundSurvivor = true;
+                }
+            }
+
+            if (foundSurvivor)
+            {
+                deltaAimDeg   = bestDelta;
+                canopyContacts = bestCanopy;
+                return true;
+            }
+
+            // All samples trunk-blocked.
+            deltaAimDeg   = 0f;
+            canopyContacts = -1;
             return false;
         }
 

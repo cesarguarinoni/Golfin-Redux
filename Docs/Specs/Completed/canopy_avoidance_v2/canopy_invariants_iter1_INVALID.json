@@ -1,0 +1,59 @@
+{
+  "sweep_params": {
+    "N_trials": 1000,
+    "maxTries": 5,
+    "aimErrorDegMax": 6,
+    "carry_m": 132.9,
+    "apex_m": 7.92,
+    "club": "Driver (index 0)",
+    "tee_pos": [-121.5140, 24.7306, -165.5046],
+    "pin_pos": [133.5271, 28.1648, 165.0079],
+    "aimYaw_deg": 37.66,
+    "tree_instances": 3926,
+    "random_seed": 42,
+    "note": "Order-352 canopy contacts = post-hoc CountCanopyContacts on selected shot"
+  },
+  "order_352_baseline": {
+    "clampRate": 0.0580,
+    "trunkBlockRate": 0.5580,
+    "meanCanopyContacts_on_selected_shot": 4.1348,
+    "clampedCount": 58,
+    "nonClampedCount": 942
+  },
+  "v2_scored": {
+    "clampRate": 0.0580,
+    "trunkBlockRate": 0.5580,
+    "meanCanopyContacts_on_selected_shot": 3.5340,
+    "clampedCount": 58,
+    "nonClampedCount": 942
+  },
+  "assertions": [
+    {
+      "name": "clampRate_v2 <= clampRate_order352",
+      "order352_value": 0.0580,
+      "v2_value": 0.0580,
+      "result": "PASS"
+    },
+    {
+      "name": "meanCanopyContacts_v2 < meanCanopyContacts_order352",
+      "order352_value": 4.1348,
+      "v2_value": 3.5340,
+      "result": "PASS"
+    },
+    {
+      "name": "trunkBlockRate_v2 == trunkBlockRate_order352",
+      "shared_value": 0.5580,
+      "note": "Identical by construction: same sample pool + LineHasTrunkInWindows",
+      "result": "PASS"
+    }
+  ],
+  "section1_1_table": [
+    { "frac": 0.00, "dist_m": 1.3, "trunk_pct": 0.00, "canopyHit_pct": 0.00 },
+    { "frac": 0.12, "dist_m": 15.9, "trunk_pct": 0.00, "canopyHit_pct": 0.00 },
+    { "frac": 0.25, "dist_m": 33.2, "trunk_pct": 34.38, "canopyHit_pct": 36.25 },
+    { "frac": 0.38, "dist_m": 50.5, "trunk_pct": 35.50, "canopyHit_pct": 97.13 },
+    { "frac": 0.50, "dist_m": 66.5, "trunk_pct": 39.75, "canopyHit_pct": 96.38 },
+    { "frac": 0.62, "dist_m": 82.4, "trunk_pct": 41.13, "canopyHit_pct": 97.38 },
+    { "frac": 0.75, "dist_m": 99.7, "trunk_pct": 50.50, "canopyHit_pct": 100.00 }
+  ]
+}

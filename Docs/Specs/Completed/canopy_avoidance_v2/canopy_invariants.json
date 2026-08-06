@@ -1,0 +1,57 @@
+{
+  "_note": "ARCHITECT RE-RUN. The implementer's iter-1 sweep is preserved at canopy_invariants_iter1_INVALID.json and is SUPERSEDED — it computed the aim yaw as Atan2(x,z) = 37.66 deg, but BotTreeProbe uses the Atan2(z,x) convention = 52.34 deg (see BotTreeProbe.LineHasTrunkInWindows: x += d*cos(yaw), z += d*sin(yaw)). Its sweep therefore fired 14.68 deg off the tee-to-pin line, into the treeline, which is why it reported a 55.8% trunk block rate at the tee where the correct line gives 0%. It also walked fractions of a single carry from the tee rather than ball positions along the hole, so its 'section1_1_table' did not reproduce SPEC 1.1. The SHIPPED CODE IS UNAFFECTED: VersusBot passes the correct yaw; the defect was confined to the measurement script.",
+  "sweep_params": {
+    "run_by": "architect main thread",
+    "yaw_convention": "Atan2(z, x) — matches BotTreeProbe",
+    "aimYaw_deg": 51.94,
+    "ball_y_source": "HeightmapData.SampleHeight (Lesson AH — never interpolated)",
+    "ball_positions": "walks tee->pin centroids, frac 0.00..0.75",
+    "tee_centroid": [-122.45, 24.57, -163.15],
+    "pin_centroid": [134.76, 28.15, 165.31],
+    "club": "Driver, apex via BotTreeProbe.ApexForCarry(0, carry)",
+    "aimErrorDegMax": 6.0,
+    "maxTries": 5,
+    "trials_per_position": 1500,
+    "paired_seeds": "both samplers draw from an identically-seeded System.Random per trial, so the sample POOL is shared and only the SELECTION differs"
+  },
+  "per_position": [
+    { "frac": 0.00, "carry_m": 133, "clamp352_pct": 0.00,  "clampV2_pct": 0.00,  "meanCanopy352": 0.247, "meanCanopyV2": 0.001, "reduction_pct": 99.7 },
+    { "frac": 0.12, "carry_m": 133, "clamp352_pct": 0.00,  "clampV2_pct": 0.00,  "meanCanopy352": 0.302, "meanCanopyV2": 0.001, "reduction_pct": 99.8 },
+    { "frac": 0.25, "carry_m": 133, "clamp352_pct": 0.00,  "clampV2_pct": 0.00,  "meanCanopy352": 3.015, "meanCanopyV2": 0.281, "reduction_pct": 90.7 },
+    { "frac": 0.38, "carry_m": 133, "clamp352_pct": 0.00,  "clampV2_pct": 0.00,  "meanCanopy352": 6.135, "meanCanopyV2": 1.962, "reduction_pct": 68.0 },
+    { "frac": 0.50, "carry_m": 133, "clamp352_pct": 39.20, "clampV2_pct": 39.20, "meanCanopy352": 7.638, "meanCanopyV2": 6.993, "reduction_pct": 8.4 },
+    { "frac": 0.62, "carry_m": 133, "clamp352_pct": 19.60, "clampV2_pct": 19.60, "meanCanopy352": 6.478, "meanCanopyV2": 5.229, "reduction_pct": 19.3 },
+    { "frac": 0.75, "carry_m": 104, "clamp352_pct": 0.00,  "clampV2_pct": 0.00,  "meanCanopy352": 0.114, "meanCanopyV2": 0.000, "reduction_pct": 100.0 }
+  ],
+  "totals": {
+    "clampRate_order352_pct": 8.400,
+    "clampRate_v2_pct": 8.400,
+    "meanCanopyContacts_order352": 3.0669,
+    "meanCanopyContacts_v2": 1.6687,
+    "canopy_contact_reduction_pct": 45.6
+  },
+  "assertions": [
+    {
+      "name": "clampRate_v2 <= clampRate_order352",
+      "order352": 8.400, "v2": 8.400,
+      "result": "PASS",
+      "note": "Exactly equal — expected. The trunk gate is untouched, so the clamp condition (all samples trunk-blocked) is unchanged by construction. SPEC 1.1's infeasibility risk (a hard canopy reject inflating the clamp rate) did NOT materialise."
+    },
+    {
+      "name": "meanCanopyContacts_v2 < meanCanopyContacts_order352",
+      "order352": 3.0669, "v2": 1.6687,
+      "result": "PASS",
+      "note": "45.6% reduction — 3x larger than the 14.5% the mis-aimed iter-1 sweep reported. Canopy contact is near-eliminated wherever a canopy-free line exists (frac 0.00/0.12/0.25/0.75) and still trims 8-19% in the mid-hole band where SPEC 1.1 measured 100% of lines canopy-blocked."
+    },
+    {
+      "name": "trunkBlockRate_v2 == trunkBlockRate_order352",
+      "result": "PASS",
+      "note": "Identical by construction: v2 reuses LineHasTrunkInWindows unchanged and applies the canopy score only among already-trunk-clear survivors. Confirmed by the identical clamp rates at every position."
+    }
+  ],
+  "editmode_tests": {
+    "re_run_by": "architect main thread",
+    "total": 1000, "passed": 997, "failed": 0, "skipped": 3,
+    "note": "The 3 skips are pre-existing Stage C1 skips in HoleCompleteDriverTests, unrelated to this task."
+  }
+}

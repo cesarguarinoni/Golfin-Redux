@@ -1,0 +1,19 @@
+2026-08-06T00:00:00 activated
+
+=== iter-1 kickoff baseline ===
+HEAD: 8f56225fdbd188be6da67ad97563972ef0ca65b9
+DIRTY (pre-existing, not introduced by this task):
+ M Assets/Resources/FX/M_SplashDroplet.mat
+ M Assets/Resources/FX/M_SplashFoam.mat
+ M Assets/Resources/FX/M_SplashRing.mat
+ M Assets/Scenes/Physics/LabScaffold.unity
+ M Assets/Scripts/Gameplay/UI/ShotUI/HoleCardWidget.cs
+ M Assets/Scripts/Gameplay/UI/ShotUI/PowerGaugeWidget.cs
+ M tasks/loop_v2_smoke_bot/hole1_playthrough/live_stat_log.txt
+ M tasks/loop_v2_smoke_bot/hole1_playthrough/screenshots/history.log
+?? Assets/Scripts/Gameplay/UI/ShotUI/ShotInProgressUiGate.cs
+?? Assets/Scripts/Gameplay/UI/ShotUI/ShotInProgressUiGate.cs.meta
+?? Docs/Specs/Quick/shot_ui_hidden_while_shot_in_progress.md
+(canopy_avoidance_v2 task files are new/untracked as expected)
+=== end kickoff baseline ===
+2026-08-06T11:44:21 done, awaiting review

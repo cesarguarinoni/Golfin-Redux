@@ -43,6 +43,14 @@ namespace Golfin.Physics.Viewer
         // No #if UNITY_EDITOR — field ships in player builds (production-safe).
         [SerializeField] public bool DebugDisableTreeRecheck = false;
 
+        // ── canopy_avoidance_v2: suppress canopy soft-preference in 2b sampler ─
+        // false (default) = prefer aim with fewest canopy contacts (soft preference).
+        // true  = use Order 352 behaviour: return first trunk-clear sample regardless
+        //         of canopy contacts. Combined with DebugDisableTreeRecheck=true this
+        //         fully restores the pre-v1 unchecked sampler.
+        // No #if UNITY_EDITOR — field ships in player builds (production-safe).
+        [SerializeField] public bool DebugDisableCanopyPreference = false;
+
         // ── H2: reactive OB state ──────────────────────────────────────────
         // Written by VersusMatchController or caller after each shot resolves.
         // Public so VersusMatchController can set it if desired; VersusBot also
@@ -735,23 +743,31 @@ namespace Golfin.Physics.Viewer
                 }
 
                 // D2: aim/power error (applies to all shots including putts after H3).
-                float deltaAimDeg = 0f;
-                float deltaPow    = 0f;
-                int   treeChecked = 0;
+                float deltaAimDeg    = 0f;
+                float deltaPow       = 0f;
+                int   treeChecked    = 0;
+                int   canopyContacts = 0;
                 if (bkt.aimErrorDegMax > 0f || bkt.powerErrorMax > 0f)
                 {
-                    // bot_tree_error_recheck: aim error must not point the shot back into a trunk
-                    // corridor the tree_aware_bot probe just cleared. Route through rejection sampler.
+                    // canopy_avoidance_v2: route through scored sampler (TrySampleTreeAwareAimError).
+                    // Trunk = hard reject (unchanged from Order 352). Canopy = soft preference:
+                    // among trunk-clear samples prefer fewest canopy contacts, tie-break |delta|.
                     // Power error unchanged (re-check uses pre-error carry — accepted approximation,
                     // see spec §2 Out: power changes carry, not aim direction).
                     bool clamped = false;
                     if (!isPutt && trees != null && !DebugDisableTreeRecheck)
                     {
                         treeChecked = 1;
-                        if (!BotTreeProbe.TrySampleTrunkClearAimError(
-                                trees, ball, aimYaw, probeCarry, bkt.aimErrorDegMax,
-                                MaxAimErrorResamples, Random.Range, out deltaAimDeg))
+                        float apex = BotTreeProbe.ApexForCarry(club, probeCarry);
+                        if (!BotTreeProbe.TrySampleTreeAwareAimError(
+                                trees, ball, aimYaw, probeCarry, apex, bkt.aimErrorDegMax,
+                                MaxAimErrorResamples, Random.Range,
+                                DebugDisableCanopyPreference,
+                                out deltaAimDeg, out canopyContacts))
+                        {
                             clamped = true;   // deltaAimDeg == 0 → fire the validated pre-2b line
+                            canopyContacts = -1;
+                        }
                     }
                     else
                     {
@@ -764,7 +780,7 @@ namespace Golfin.Physics.Viewer
                         Debug.Log("[VersusBot] 2b tree re-check: all aim samples trunk-blocked — clamped to pre-2b line");
                 }
 
-                Debug.Log($"[VersusBot] 2b error: Δaim={deltaAimDeg:+0.0;-0.0}° Δpow={deltaPow:+0.000;-0.000} clubNoise={clubNoiseNote} treeChecked={treeChecked}");
+                Debug.Log($"[VersusBot] 2b error: Δaim={deltaAimDeg:+0.0;-0.0}° Δpow={deltaPow:+0.000;-0.000} clubNoise={clubNoiseNote} treeChecked={treeChecked} canopyContacts={canopyContacts}");
             }
             // ── END 2b error injection ──────────────────────────────────────
 
