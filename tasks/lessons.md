@@ -1843,3 +1843,36 @@ For the Signup modal I pre-extracted Figma `13480:2479` into a §3 token table +
 5. **Gate the cleanup on its own SessionState key, and set that key at ARM time.** I first set 2f's `CleanupPending` inside the delayed `SaveAndEnterPlayMode`; when that early-returned the snapshot was stranded and never restored. Set the gate in the same synchronous block that takes the snapshot. Don't reuse the "armed" flag — it's cleared at `EnteredPlayMode`, long before the restore needs it.
 6. **Prove "wrote nothing" with a hash, not a log line.** md5 the scene before and after a complete run. `git status` being empty is weaker evidence — it can't distinguish "never written" from "written back identically."
 7. **Watch for capture harnesses that fail SILENTLY.** Verifying this fix surfaced an unrelated open bug: the 2e OB capture no longer reaches OB (18.95m `AtRest` vs 131.28m `TerminalState=OB` in the committed log), and the host's fallback branch captures "current state as evidence" anyway — so the PNG looks like a successful OB capture while proving nothing. A fallback that produces an artifact indistinguishable from success is worse than a hard failure.
+
+## Lesson AO — Kickoff commands always go to Cesar as a copyable code block (Cesar standing rule, 2026-08-05)
+
+Whenever handing Cesar a command to paste into Claude Code — a pipeline kickoff (`Use the golfin-implementer subagent on "<task_slug>"`), a quick-task line (`Read Docs/Specs/Quick/<slug>.md and implement.`), a spec kickoff, or any other paste-me-verbatim string — render it in a fenced code block, never inline prose. Applies to the architect chat AND Claude Code session summaries. Rationale: inline kickoffs force manual selection and get mangled; a fenced block is one-click copy.
+
+## Lesson AP — A post-hoc scan can never fix a path problem; decide it where the path is decided (cup_capture_and_lipout, 2026-08-06)
+
+The ball rolled over the hole for years because cup detection lived in `BallStateMachine.OnTrajectoryComputed` — a scan over the **finished** trajectory, explicitly forbidden from modifying it. It correctly flagged `InCup` at sample 580 of 1765 and was still useless, because the remaining 1185 samples (4.78 s of rolling past the hole) had already been baked and the animator dutifully played them.
+
+1. **When the complaint is "the ball goes to the wrong place", the fix belongs in the integrator, not in a consumer of its output.** No amount of downstream interpretation repairs a trajectory that was computed wrong. Detecting the right answer late is not the same as producing it.
+2. **Quantify the symptom before designing.** "InCup fires at sample 580 of 1765; the ball rolls 4.78 s past the cup" is a spec. "The ball doesn't go in" is a complaint. The number told me exactly what to build (terminate at the capture step) and became the before/after evidence for free.
+3. **Suspicions in the spec deserve measurement, not assumption.** The spec suspected a height gate was rejecting every rolling sample. Measured: the pin sits exactly on the baked surface, so it did NOT blanket-reject — but the green tilts ±1.2 mm across the 33 mm capture disc, so **20 of 39 in-radius samples were being rejected on height alone**. Capture was a ±0.9 mm coin-flip. Neither "confirmed" nor "cleared" — and the real finding (hole-dependent latent failure) was better than the guess.
+4. **fp16.16 punishes the textbook formula.** At 1/240 s a 6 mm step's squared length is ~2 LSBs, so the standard `t = dot/lenSq` closest-point-on-segment parameterisation loses nearly all its precision. Doing it in exact `long` integer math on `fp.raw` is both more accurate AND still bit-deterministic. Reach for raw-integer arithmetic when the quantities are small, not just when they're huge.
+5. **Gate every new sim capability so "off" is provably the old behaviour.** `CupSpec.Disabled` reproduces the pre-cup sim sample-for-sample on raw fp values — same pattern as `trees=null` (Phase 7) and `Neutral` (Phase 6). That test is what makes a physics change safe to ship without re-tuning everything.
+
+## Lesson AQ — Model the mechanism, not the outcome you want to see (cup_capture_and_lipout lip-out, 2026-08-06)
+
+The lip-out went through three models before it behaved. Each failure was found by MEASURING a sweep, never by looking at one shot.
+
+1. **v1 — reverse the radial component, then rescale to `LipSpeedDamping·|v|`.** Swept it: a dead-centre crossing came straight back at **180°**, and the output speed was **exactly 0.700× at every offset and every speed**. The rescale had made `LipRestitution` decorative — it only set direction. Cesar spotted it instantly from the video and asked "does the flag have collision?" — a squash-ball read.
+2. **v2 — blend the radial component linearly from "passes over" to "reverses".** That crosses ZERO at dip ≈ 0.74 and **stopped the ball dead on the rim** (1.945 m/s in → 0.083 m/s out). A blend between two opposite-signed outcomes annihilates in the middle; if both endpoints are physical the midpoint need not be.
+3. **v3 — model the actual mechanism.** How far does the ball sink into the open mouth while crossing it? `dip = ½g(chord/speed)²`. Everything fell out: high-speed skims, near-gate rattles, no cliff at the gate — and it **reproduced the architect-locked 1.5 m/s constant** (dip hits one ball-radius at ≈1.5 m/s, exactly the USGA/Penner capture speed). When a derived model regenerates a constant someone else locked years earlier, that is strong evidence the model is right.
+
+Two follow-on traps, both caught only by sweeping:
+- **Feeding the wrong geometric quantity silently disables a feature.** The lip-out fires on the first step whose segment enters the mouth, where the ball is by definition ≈ one radius out. Passing THAT as the crossing offset gives `chord = 2√(R²−R²) ≈ 0` → dip ≈ 0 → no interaction, ever. The offset must be the perpendicular distance of the ball's **path**, not its distance at the trigger step.
+- **Splitting velocity about the wrong normal caps the effect.** Using the entry radial (pin→ball) — nearly anti-parallel to travel — leaves the tangential component ≈0, so the ball can only be slowed straight down its own line (≤4° at every offset). The ball hits the **far wall**; split about the normal at the chord's exit point and a real sideways kick appears.
+- **A "design-feel constant" that never changes the result is a bug, not a taste question.** Both `LipRestitution` (v1) and `LipPopVy` (rendered a 0.4 mm hop — invisible) looked tunable and were inert. Before shipping a tunable, sweep it and confirm the output actually moves.
+
+## Lesson AR — Check the ignore rules cover YOUR folder before committing generated media (2026-08-06)
+
+The project keeps verification videos out of git (`Docs/Specs/**/videos/`), and `.gitignore` even records a near-miss where 557 MB nearly entered history. My clips landed in `Docs/Physics/videos/` — physics specs live under `Docs/Physics/`, not `Docs/Specs/` — so the glob missed them and 69 MB of binaries were staged. Caught at close-out by reading the ignore rules rather than trusting that "videos are handled."
+
+**Rule:** when a task writes generated media to a NEW directory, run `git check-ignore -v <file>` before staging. A policy expressed as a path glob only protects the paths someone thought of.
