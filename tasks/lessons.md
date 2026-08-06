@@ -1910,3 +1910,22 @@ wrong starting Y.
 
 Sister rule to Lesson AA (report integrity): a diagnosis asserted as fact needs the same evidence
 standard as a test result. Both misses this task are logged in `.claude/review_misses.log`.
+
+## Lesson AI — yaw convention: BotTreeProbe is Atan2(z, x), not Atan2(x, z) (canopy_avoidance_v2, 2026-08-06)
+
+`BotTreeProbe` marches its probe as `x += d*cos(yaw); z += d*sin(yaw)` — i.e. yaw is measured
+from the **+X axis toward +Z**, so the correct construction is `Mathf.Atan2(dz, dx)`. Writing the
+intuitive-looking `Atan2(dx, dz)` yields the complement (90° − θ) and silently aims the probe at a
+mirrored heading. On Hole_08 tee→pin that is 37.66° instead of 52.34° — a 14.68° error that fires
+the sweep into the treeline and reported a 55.8% trunk-block rate where the true line gives 0%.
+
+It is a *silent* failure: the sweep still runs, still produces plausible-looking percentages, and
+still passes its own assertions (relative comparisons survive because both arms share the wrong
+line). It understated the measured benefit of the fix by 3× (14.5% vs the true 45.6%).
+
+**How to apply:** whenever you construct a yaw for `BotTreeProbe` / `VersusBot` in a diagnostic or
+sweep script, assert it against a known-good bearing before trusting any number — e.g. print
+`yaw*Rad2Deg` and sanity-check it against `Atan2(pin.z-ball.z, pin.x-ball.x)`. A block-rate that
+looks surprisingly high at a position with open sight lines is the tell. Sister to Lesson AH: both
+are cases where a measurement script's *setup* was wrong while the shipped code was fine, and the
+wrong number then drove a wrong conclusion.
