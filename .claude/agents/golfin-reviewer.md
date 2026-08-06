@@ -1,7 +1,7 @@
 ---
 name: golfin-reviewer
 description: Final reviewer of pipeline tasks before Cesar sees them. Activates after the self-reviewer routes a task forward (verdict=FORWARD_TO_ARCHITECT or ESCALATE_TO_ARCHITECT) or directly when STATUS.md is READY_FOR_ARCHITECT_REVIEW. Reads SPEC.md, IMPLEMENTER_REPORT.md, SELF_REVIEW.md, the screenshot, and the Figma reference. Verifies architectural soundness and visual fidelity, then either approves the task for Cesar or routes back to the Implementer with a concrete fail list. NOTE: spec authoring is handled by the human Architect (Cesar's claude.ai chat), NOT this agent.
-tools: Read, Write, Edit, Glob, Grep, Bash, WebFetch, mcp__d0f20b77-0273-460e-9241-835faf707de9__*
+tools: Read, Write, Edit, Glob, Grep, Bash, WebFetch, mcp__d0f20b77-0273-460e-9241-835faf707de9__*, mcp__ai-game-developer__script-execute, mcp__ai-game-developer__gameobject-find, mcp__ai-game-developer__gameobject-component-get, mcp__ai-game-developer__gameobject-component-list-all, mcp__ai-game-developer__scene-get-data, mcp__ai-game-developer__scene-list-opened, mcp__ai-game-developer__assets-find, mcp__ai-game-developer__assets-get-data, mcp__ai-game-developer__script-read, mcp__ai-game-developer__console-get-logs, mcp__ai-game-developer__editor-application-get-state, mcp__ai-game-developer__screenshot-game-view, mcp__ai-game-developer__screenshot-camera, mcp__ai-game-developer__tests-run
 model: claude-opus-4-7
 ---
 

@@ -1,7 +1,7 @@
 ---
 name: golfin-redteam-reviewer
 description: Adversarial second gate that runs AFTER golfin-reviewer passes a task (STATUS.md is READY_FOR_REDTEAM). Its ONLY job is to find a concrete reason to FAIL the work before Cesar sees it. It re-shoots the harshest camera angle, re-runs the geometry/bbox metrics, replays every prior CESAR_REJECTION defect, and defaults to FAIL on any uncertainty. It is the only agent that may advance a task to ARCHITECT_REVIEW_PASS (Cesar's approval); if it finds a blocker it routes back to the Implementer with ARCHITECT_REVIEW_FAIL. Exists because single-reviewer PASSes were rubber-stamping work Cesar rejected in seconds.
-tools: Read, Write, Edit, Glob, Grep, Bash, WebFetch, mcp__d0f20b77-0273-460e-9241-835faf707de9__*
+tools: Read, Write, Edit, Glob, Grep, Bash, WebFetch, mcp__d0f20b77-0273-460e-9241-835faf707de9__*, mcp__ai-game-developer__script-execute, mcp__ai-game-developer__gameobject-find, mcp__ai-game-developer__gameobject-component-get, mcp__ai-game-developer__gameobject-component-list-all, mcp__ai-game-developer__scene-get-data, mcp__ai-game-developer__scene-list-opened, mcp__ai-game-developer__assets-find, mcp__ai-game-developer__assets-get-data, mcp__ai-game-developer__script-read, mcp__ai-game-developer__console-get-logs, mcp__ai-game-developer__editor-application-get-state, mcp__ai-game-developer__screenshot-game-view, mcp__ai-game-developer__screenshot-camera, mcp__ai-game-developer__tests-run
 model: claude-opus-4-8
 ---
 
