@@ -356,5 +356,273 @@ namespace Golfin.Gameplay.Tests
             Assert.AreEqual(0f, _mvc.AimYawRadians, kEpsilon,
                 "AimYawRadians should default to 0");
         }
+
+        // ─────────────────────────────────────────────────────────────────────────
+        // Test 7 — Order 354 / 354c (map_view_playable_area): zoom-to-the-shot
+        //   framing and the pan clamp. All of these drive the PRODUCTION statics on
+        //   MapViewController — no local re-implementation of the algorithms.
+        //
+        // Fixture: Hole 1's real OB rectangle from
+        //   Assets/Resources/HoleData/lomond-country-club/Hole_01/zones.json
+        //   worldOrigin (-288.1, -130.6), worldSize (576.2, 261.2) → centre (0,0),
+        //   half (288.1, 130.6); tee ≈ (219.4, 34.7), pin ≈ (-230.5, -72.5).
+        // ─────────────────────────────────────────────────────────────────────────
+
+        private static readonly Vector2 kH1Center = new Vector2(0f, 0f);
+        private static readonly Vector2 kH1Half   = new Vector2(288.1f, 130.6f);
+        private static readonly Vector2 kH1Tee    = new Vector2(219.4f, 34.7f);
+        private static readonly Vector2 kH1Pin    = new Vector2(-230.5f, -72.5f);
+
+        // The margins the game frames with (MapViewController.kShotBottomFrac /
+        // kShotTopFrac / kWidthFillMargin). Mirrored here deliberately: these ARE the
+        // acceptance criteria for "leave a bit of margin so none of them touch the borders".
+        private const float kBottom = 0.08f;
+        private const float kTop    = 0.90f;
+        private const float kSide   = 0.02f;
+
+        private static Camera MakeDeviceCamera(string name)
+        {
+            var cam = new GameObject(name).AddComponent<Camera>();
+            cam.enabled       = false;
+            cam.aspect        = 1170f / 2532f;   // iPhone 14 portrait
+            cam.fieldOfView   = 45f;
+            cam.nearClipPlane = 0.3f;
+            cam.farClipPlane  = 20000f;
+            return cam;
+        }
+
+        /// <summary>The fit set the game builds: the ball and the flag, nothing else.</summary>
+        private static System.Collections.Generic.List<Vector3> ShotFitSet(Vector2 ball, Vector2 flag)
+            => new System.Collections.Generic.List<Vector3>
+            {
+                new Vector3(ball.x, 0f, ball.y),
+                new Vector3(flag.x, 0f, flag.y),
+            };
+
+        private static Vector3 HoleAxis3(Vector2 ball, Vector2 flag)
+        {
+            Vector2 n = (flag - ball).normalized;
+            return new Vector3(n.x, 0f, n.y);
+        }
+
+        [Test]
+        public void ShotFit_BallAndFlagBothLandInsideTheMargins()
+        {
+            // Cesar 2026-08-07: "as long as current ball position and flag are visible (leave a bit
+            // of margin so none of them touch the borders)". Swept tee → greenside lie.
+            var cam = MakeDeviceCamera("ShotFitCam");
+            try
+            {
+                foreach (float t in new[] { 0f, 0.25f, 0.5f, 0.75f, 0.9f })
+                {
+                    Vector2 ball = Vector2.Lerp(kH1Tee, kH1Pin, t);
+
+                    bool ok = MapViewController.SolveShowRegionPose(
+                        cam, ShotFitSet(ball, kH1Pin), HoleAxis3(ball, kH1Pin), 70f,
+                        kBottom, kSide, kTop, out float dist, out _, out _);
+                    Assert.IsTrue(ok, $"Solver must find a pose at lie t={t:F2}");
+                    Assert.Greater(dist, 8f,  $"Pose must not be degenerately close at t={t:F2}");
+                    Assert.Less(dist, 4000f,  $"Pose must not be degenerately far at t={t:F2}");
+
+                    Vector3 vb = cam.WorldToViewportPoint(new Vector3(ball.x, 0f, ball.y));
+                    Vector3 vf = cam.WorldToViewportPoint(new Vector3(kH1Pin.x, 0f, kH1Pin.y));
+
+                    AssertInsideMargins("ball", vb, t);
+                    AssertInsideMargins("flag", vf, t);
+                    Assert.Less(vb.y, vf.y, $"Ball must project BELOW the flag at t={t:F2}");
+                }
+            }
+            finally { Object.DestroyImmediate(cam.gameObject); }
+        }
+
+        private static void AssertInsideMargins(string what, Vector3 vp, float t)
+        {
+            Assert.Greater(vp.z, 0f, $"{what} must be in front of the camera at t={t:F2}");
+            Assert.GreaterOrEqual(vp.y, kBottom - kEpsilon,
+                $"{what} must not touch the bottom border at t={t:F2} (y={vp.y:F3})");
+            Assert.LessOrEqual(vp.y, kTop + kEpsilon,
+                $"{what} must not touch the top border at t={t:F2} (y={vp.y:F3})");
+            Assert.GreaterOrEqual(vp.x, kSide - kEpsilon,
+                $"{what} must not touch the left border at t={t:F2} (x={vp.x:F3})");
+            Assert.LessOrEqual(vp.x, 1f - kSide + kEpsilon,
+                $"{what} must not touch the right border at t={t:F2} (x={vp.x:F3})");
+        }
+
+        [Test]
+        public void ShotFit_IsTight_BallSeatsOnTheBottomMargin()
+        {
+            // "Zoom in as much as possible": the solve returns the SMALLEST containing distance, so
+            // the near point sits ON the bottom margin. If it floated above it, the map would be
+            // zoomed out further than the shot requires.
+            var cam = MakeDeviceCamera("ShotTightCam");
+            try
+            {
+                foreach (float t in new[] { 0f, 0.5f, 0.9f })
+                {
+                    Vector2 ball = Vector2.Lerp(kH1Tee, kH1Pin, t);
+                    bool ok = MapViewController.SolveShowRegionPose(
+                        cam, ShotFitSet(ball, kH1Pin), HoleAxis3(ball, kH1Pin), 70f,
+                        kBottom, kSide, kTop, out _, out _, out _);
+                    Assert.IsTrue(ok, $"Solver must find a pose at lie t={t:F2}");
+
+                    Vector3 vb = cam.WorldToViewportPoint(new Vector3(ball.x, 0f, ball.y));
+                    Assert.AreEqual(kBottom, vb.y, 0.01f,
+                        $"Ball must seat on the bottom margin at t={t:F2} (y={vb.y:F3})");
+                }
+            }
+            finally { Object.DestroyImmediate(cam.gameObject); }
+        }
+
+        [Test]
+        public void ShotFit_ZoomsInAsTheBallNearsTheFlag()
+        {
+            // The point of 354c: a short approach is framed much tighter than a tee shot.
+            var cam = MakeDeviceCamera("ShotZoomCam");
+            try
+            {
+                float prev = float.MaxValue;
+                foreach (float t in new[] { 0f, 0.3f, 0.6f, 0.9f })
+                {
+                    Vector2 ball = Vector2.Lerp(kH1Tee, kH1Pin, t);
+                    bool ok = MapViewController.SolveShowRegionPose(
+                        cam, ShotFitSet(ball, kH1Pin), HoleAxis3(ball, kH1Pin), 70f,
+                        kBottom, kSide, kTop, out float dist, out _, out _);
+                    Assert.IsTrue(ok, $"Solver must find a pose at lie t={t:F2}");
+                    Assert.Less(dist, prev,
+                        $"Camera must pull IN as the ball nears the flag (t={t:F2}: {dist:F1}m vs {prev:F1}m)");
+                    prev = dist;
+                }
+            }
+            finally { Object.DestroyImmediate(cam.gameObject); }
+        }
+
+        [Test]
+        public void ShotFit_SolverAcceptsATwoPointFitSet()
+        {
+            // 354c passes exactly two points; the solver must not demand a polygon.
+            var cam = MakeDeviceCamera("ShotTwoPointCam");
+            try
+            {
+                var two = ShotFitSet(kH1Tee, kH1Pin);
+                Assert.AreEqual(2, two.Count, "The shot fit set is ball + flag and nothing else");
+                Assert.IsTrue(
+                    MapViewController.SolveShowRegionPose(cam, two, HoleAxis3(kH1Tee, kH1Pin), 70f,
+                                                          kBottom, kSide, kTop, out _, out _, out _),
+                    "Solver must accept a two-point fit set");
+            }
+            finally { Object.DestroyImmediate(cam.gameObject); }
+        }
+
+        [Test]
+        public void PlayfieldSnap_PicksTheWorldAxisTheHoleRunsAlong()
+        {
+            // 354d: the playfield is world-axis-aligned, so the camera yaw snaps to ±X / ±Z and the
+            // field renders as an upright rectangle instead of a diagonal one.
+            var cases = new[]
+            {
+                (dir: new Vector3(-0.97f, 0f, -0.23f), want: Vector3.left),     // Hole 1: 13.4° off −X
+                (dir: new Vector3( 0.66f, 0f, -0.75f), want: Vector3.back),     // Hole 5: 41.5° off −Z
+                (dir: new Vector3(-0.99f, 0f,  0.10f), want: Vector3.left),     // Hole 6:  5.9° off −X
+                (dir: new Vector3( 1f,    0f,  0f),    want: Vector3.right),
+                (dir: new Vector3( 0f,    0f,  1f),    want: Vector3.forward),
+            };
+            foreach (var c in cases)
+            {
+                Vector3 snapped = MapViewController.SnapToWorldAxis(c.dir.normalized);
+                Assert.AreEqual(c.want, snapped,
+                    $"Hole running {c.dir} must frame along {c.want}, got {snapped}");
+                Assert.Less(Vector3.Angle(c.dir, snapped), 45f + kEpsilon,
+                    "The snapped axis must be the NEAREST world axis, never more than 45° off");
+            }
+        }
+
+        [Test]
+        public void PlayfieldSnap_KeepsBallAndFlagInFrame_WithTheLateralSpreadItIntroduces()
+        {
+            // Snapping to the field axis gives the ball→flag pair a LATERAL component, which the fit
+            // must absorb — including Hole 5's worst case (41.5° off axis, 242 m of lateral spread).
+            var cam = MakeDeviceCamera("SnapFitCam");
+            try
+            {
+                var holes = new[]
+                {
+                    (name: "H1", tee: kH1Tee,                     pin: kH1Pin),
+                    (name: "H5", tee: new Vector2(-120f, 136.4f), pin: new Vector2(122.1f, -137.5f)),
+                    (name: "H6", tee: new Vector2(80.2f, -24.5f), pin: new Vector2(-72.5f, -8.8f)),
+                };
+                foreach (var h in holes)
+                {
+                    foreach (float t in new[] { 0f, 0.5f, 0.8f })
+                    {
+                        Vector2 ball = Vector2.Lerp(h.tee, h.pin, t);
+                        Vector3 axis = MapViewController.SnapToWorldAxis(HoleAxis3(ball, h.pin));
+
+                        bool ok = MapViewController.SolveShowRegionPose(
+                            cam, ShotFitSet(ball, h.pin), axis, 70f, kBottom, kSide, kTop,
+                            out _, out _, out _);
+                        Assert.IsTrue(ok, $"{h.name} t={t:F1}: solver must find a pose on the snapped axis");
+
+                        Vector3 vb = cam.WorldToViewportPoint(new Vector3(ball.x, 0f, ball.y));
+                        Vector3 vf = cam.WorldToViewportPoint(new Vector3(h.pin.x, 0f, h.pin.y));
+                        AssertInsideMargins($"{h.name} t={t:F1} ball", vb, t);
+                        AssertInsideMargins($"{h.name} t={t:F1} flag", vf, t);
+                        Assert.Less(vb.y, vf.y, $"{h.name} t={t:F1}: ball must still project below the flag");
+                    }
+                }
+            }
+            finally { Object.DestroyImmediate(cam.gameObject); }
+        }
+
+        [Test]
+        public void ShotFit_BallProjectsBelowFlag_OnEveryHoleGeometry()
+        {
+            // §4.1: the camera axis is the ball→flag axis, so ball-below-flag holds regardless of
+            // where the hole runs in world space. Sweep the hole's world heading a full turn.
+            var cam = MakeDeviceCamera("ShotHeadingCam");
+            try
+            {
+                for (int deg = 0; deg < 360; deg += 30)
+                {
+                    float r = deg * Mathf.Deg2Rad;
+                    Vector2 ball = new Vector2(40f, -25f);
+                    Vector2 flag = ball + new Vector2(Mathf.Cos(r), Mathf.Sin(r)) * 300f;
+
+                    bool ok = MapViewController.SolveShowRegionPose(
+                        cam, ShotFitSet(ball, flag), HoleAxis3(ball, flag), 70f,
+                        kBottom, kSide, kTop, out _, out _, out _);
+                    Assert.IsTrue(ok, $"Solver must find a pose at heading {deg}°");
+
+                    Vector3 vb = cam.WorldToViewportPoint(new Vector3(ball.x, 0f, ball.y));
+                    Vector3 vf = cam.WorldToViewportPoint(new Vector3(flag.x, 0f, flag.y));
+                    Assert.Less(vb.y, vf.y, $"Ball must project below the flag at heading {deg}°");
+                }
+            }
+            finally { Object.DestroyImmediate(cam.gameObject); }
+        }
+
+
+        [Test]
+        public void PanClamp_KeepsFocusInsideObRect()
+        {
+            // Inside stays untouched.
+            Vector2 inside = new Vector2(100f, -40f);
+            Assert.AreEqual(inside, MapViewController.ClampPointToRect(inside, kH1Center, kH1Half),
+                "A focus point already inside the OB rect must not be moved");
+
+            // Every direction out of bounds is pulled back to the boundary.
+            foreach (var far in new[]
+            {
+                new Vector2( 9999f,  9999f), new Vector2(-9999f, -9999f),
+                new Vector2( 9999f, -9999f), new Vector2(-9999f,  9999f),
+                new Vector2( 400f,   0f),    new Vector2( 0f,    -400f),
+            })
+            {
+                Vector2 c = MapViewController.ClampPointToRect(far, kH1Center, kH1Half);
+                Assert.LessOrEqual(Mathf.Abs(c.x - kH1Center.x), kH1Half.x + kEpsilon,
+                    $"Pan must not take the focus past the OB rect in X (from {far})");
+                Assert.LessOrEqual(Mathf.Abs(c.y - kH1Center.y), kH1Half.y + kEpsilon,
+                    $"Pan must not take the focus past the OB rect in Z (from {far})");
+            }
+        }
     }
 }

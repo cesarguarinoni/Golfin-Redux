@@ -72,7 +72,10 @@ namespace Golfin.Gameplay.UI.ShotUI
         [SerializeField] private GameObject[]      _hideOnMapOpen;
 
         [Header("Map camera tuning")]
-        [SerializeField] private float             _heroTiltDeg    = 70f;  // iter-30: increased from 55° to eliminate sky/void in aimed-north state
+        // Order 354 (map_view_playable_area): raised 70°→80°. A steeper pitch keeps the horizon
+        // (and therefore the world beyond the hole tile) out of frame; combined with the
+        // hole-fitted far clip of HideEnvironmentForMap the mountain ring cannot enter the frame.
+        [SerializeField] private float             _heroTiltDeg    = 80f;
         [SerializeField] private float             _fieldOfView    = 75f;  // wide-angle for tight fit
         [SerializeField] private float             _nearClip       = 0.3f;
         [SerializeField] private float             _farClip        = 2000f;
@@ -85,6 +88,56 @@ namespace Golfin.Gameplay.UI.ShotUI
         /// Default 45° is more zoomed-in than the old hardcoded 55° minimum.
         /// </summary>
         [SerializeField] private float             _initialZoom    = 45f;
+
+        /// <summary>
+        /// Order 354: GameObject names whose Renderers are disabled while the map is open, so the
+        /// MOUNTAIN RING cannot appear. Identified by measurement, not guessed (§4.3):
+        ///   • <c>HoleRoot/MountainBackdrop</c> — 872×870 m, authored per <c>Hole_NN_Geo</c> scene:
+        ///     the mountain-ring arc at the top of the reference screenshot.
+        ///   • <c>Backdrop</c> / <c>Ring</c> cover older Geo scenes that name their shell differently.
+        ///
+        /// <c>ObGroundSkirt</c> — the 9000 m <c>ObSkirt_Mat</c> plane spawned at runtime — is
+        /// deliberately NOT in this list (Cesar, 2026-08-07: "Obground should still be green").
+        /// It was hidden briefly so off-tile ground read as a dark matte; the ground outside the hole
+        /// tile now stays green, exactly as it does in normal play. Anything ADDED to this list must
+        /// therefore be world shell, not ground.
+        ///
+        /// Matching is name-CONTAINS (case-insensitive) on the renderer or its first three ancestors —
+        /// MountainBackdrop is a CHILD of HoleRoot, so a root-only scan finds nothing. Name-matching
+        /// beats a layer mask because the shell shares layer 0 with the course.
+        ///
+        /// <see cref="HideEnvironmentForMap"/> logs any oversized renderer it did NOT hide, so a hole
+        /// that leaks unexpected geometry names its own offender.
+        /// </summary>
+        [SerializeField] private string[]          _environmentHideNames = { "MountainBackdrop", "Backdrop", "Ring" };
+
+        /// <summary>
+        /// Order 354c: floor on the ball→flag distance the map will frame, in metres. The map zooms
+        /// as tight as the ball and flag allow, so without a floor a 2 m tap-in would put the camera
+        /// a couple of metres off the deck. The shortfall is padded evenly behind the ball and beyond
+        /// the flag, keeping the pair centred. Set to 0 for a pure "as tight as they allow" fit.
+        /// </summary>
+        [SerializeField] private float             _minFramedSpanM = 40f;
+
+        /// <summary>
+        /// Order 354d (Cesar: "I want the rectangle playfield to match the view rectangle"): snap the
+        /// map camera's yaw to the playfield rectangle's own axis so the field reads as an UPRIGHT
+        /// rectangle instead of a diagonal one.
+        ///
+        /// The playfield is world-axis-aligned — the OB mask is a plain world-XZ grid
+        /// (<c>worldOriginX/Z</c> + <c>worldSizeX/Z</c>, no rotation), and the terrain tile is that
+        /// grid. Following the ball→flag heading therefore rotated the tile on screen by whatever
+        /// angle the hole runs at (13° on Hole 1). Snapping to the nearest of ±X / ±Z puts the tile's
+        /// edges parallel to the screen edges. On all three sampled holes the nearest axis is also the
+        /// field's LONG axis pointing at the flag, so the field stands up in portrait.
+        ///
+        /// Cost, measured: the ball→flag pair now has a lateral component too, and on a hole that runs
+        /// far off the field axis that component can drive the fit. Hole 5's tee shot is 41.5° off
+        /// axis, so its 242 m of lateral spread binds and the frame goes 546 m tall against a 337 m
+        /// field — green ground above and below. Holes 1 and 6 are 13.4° and 5.9° off and fill the
+        /// frame completely. Set false to follow the ball→flag heading exactly (354c behaviour).
+        /// </summary>
+        [SerializeField] private bool              _alignToPlayfieldAxis = true;
 
         [Header("Zoom / pan")]
         [SerializeField] private float             _minZoom        = 30f;
@@ -164,6 +217,16 @@ namespace Golfin.Gameplay.UI.ShotUI
         // OnEnable from re-enabling the Image via RefreshSprite()).
         private List<Image>             _hiddenImages       = new List<Image>();
         private List<MonoBehaviour>     _hiddenBehaviours   = new List<MonoBehaviour>();
+        // Order 354: environment Renderers (mountain ring / backdrop plane) disabled for the map's
+        // lifetime. Separate list from _hiddenBallRenderers because HideShotUIChrome() clears that
+        // one and runs AFTER BuildRuntimeObjects().
+        private List<Renderer>          _hiddenEnvRenderers = new List<Renderer>();
+
+        // Order 354: the hole's OB rectangle (world XZ), captured when the show-region framing
+        // succeeds. Drives the pan clamp (§4.4) and the hole-fitted far clip (§4.3).
+        private bool                _obRectValid;
+        private Vector2             _obRectCenter;
+        private Vector2             _obRectHalf;
 
         // Touch input tracking
         private Vector2             _lastTouchPos0;
@@ -204,6 +267,13 @@ namespace Golfin.Gameplay.UI.ShotUI
         // Width-fill: the playing-area corridor edges are fitted this far from the screen sides so the
         // course fills the frame width and as little off-course as possible is shown (Order 353b).
         private const float kWidthFillMargin  = 0.02f;
+        // Order 354c — zoom-to-the-shot framing (Cesar: "Zoom in as much as possible as long as
+        // current ball position and flag are visible (leave a bit of margin so none of them touch the
+        // borders)"). These are the margin: the ball seats at kShotBottomFrac and the flag at
+        // kShotTopFrac, and the camera comes no further back than that requires. Screen-space, so the
+        // gap reads the same on a 460 m par 5 and a 40 m pitch.
+        private const float kShotBottomFrac = 0.08f;
+        private const float kShotTopFrac    = 0.90f;
         // Playing-area borders come from the hole's OB (out-of-bounds) mask world-bounds in zones.json
         // (Order 353c, Cesar: "use the map borders from the OB, forget the corridor"). This is a clean
         // per-hole rectangle — far more robust than deriving a corridor from noisy course geometry.
@@ -544,6 +614,73 @@ namespace Golfin.Gameplay.UI.ShotUI
             // _label80  = BuildScreenLabel(_labelCanvas.transform, "80%");
             // _label100 = BuildScreenLabel(_labelCanvas.transform, "100%");
             // _label120 = BuildScreenLabel(_labelCanvas.transform, "120%");
+
+            // ── 4. Hard-hide the world outside the hole (Order 354 §4.3) ─────────
+            HideEnvironmentForMap();
+        }
+
+        // ── Environment hide / restore (Order 354 §4.3) ──────────────────────────
+        /// <summary>
+        /// Disable the Renderers of the off-course world shell (mountain ring + backdrop plane) for
+        /// the map's lifetime, so no pan, pinch or aim can reveal it.
+        ///
+        /// Verified on the shipping Geo scenes: a single <c>HoleRoot/MountainBackdrop</c> renderer,
+        /// 872×870 m centred on the origin at layer 0, is BOTH the mountain-ring arc and the large
+        /// flat green plane that filled the reference screenshot. It is a CHILD of HoleRoot, not a
+        /// scene root, so the scan walks the whole hierarchy (a root-only scan finds nothing).
+        /// Everything else in those scenes spans &lt; 250 m, i.e. is hole-tile geometry.
+        ///
+        /// Renderer-level (not SetActive) so nothing else observes an activation change — no OnEnable
+        /// re-entry, no scene mutation beyond a bool that <see cref="RestoreEnvironmentAfterMap"/>
+        /// puts back. Name-matching beats a layer mask here: the shell shares layer 0 with the course.
+        /// </summary>
+        private void HideEnvironmentForMap()
+        {
+            _hiddenEnvRenderers.Clear();
+            if (_environmentHideNames == null || _environmentHideNames.Length == 0) return;
+
+            // Single pass over Renderers (not Transforms): a hole scene carries ~20k tree renderers,
+            // so one bounded pass is the cheap way to do this once per map open.
+            var all = FindObjectsByType<Renderer>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            foreach (var rend in all)
+            {
+                if (rend == null || !rend.enabled) continue;
+                // Never hide our own runtime objects (markers, rings) — only scene environment.
+                if (_runtimeRoot != null && rend.transform.IsChildOf(_runtimeRoot.transform)) continue;
+                if (!MatchesEnvironmentName(rend.transform)) continue;
+
+                rend.enabled = false;
+                _hiddenEnvRenderers.Add(rend);
+            }
+            Debug.Log($"[MapView v2] Environment hide: disabled {_hiddenEnvRenderers.Count} renderer(s) " +
+                      $"matching [{string.Join(", ", _environmentHideNames)}]");
+        }
+
+        /// <summary>
+        /// True when the transform, or any of its first three ancestors, carries one of
+        /// <see cref="_environmentHideNames"/> in its name. The ancestor walk is bounded so the
+        /// per-renderer cost stays flat across the ~20k tree renderers a hole scene holds; it exists
+        /// because a shell may be a named parent (<c>Backdrop/Mesh</c>) rather than the renderer itself.
+        /// </summary>
+        private bool MatchesEnvironmentName(Transform t)
+        {
+            for (int depth = 0; depth < 3 && t != null; depth++, t = t.parent)
+            {
+                foreach (var n in _environmentHideNames)
+                {
+                    if (string.IsNullOrEmpty(n)) continue;
+                    if (t.name.IndexOf(n, StringComparison.OrdinalIgnoreCase) >= 0) return true;
+                }
+            }
+            return false;
+        }
+
+        /// <summary>Re-enable every Renderer disabled by <see cref="HideEnvironmentForMap"/>.</summary>
+        private void RestoreEnvironmentAfterMap()
+        {
+            foreach (var rend in _hiddenEnvRenderers)
+                if (rend != null) rend.enabled = true;
+            _hiddenEnvRenderers.Clear();
         }
 
         // ── Landing zone: ZTest=Always flat disc (iter-31) ───────────────────────
@@ -803,13 +940,16 @@ namespace Golfin.Gameplay.UI.ShotUI
             Vector3 ballToFlag = _flagWorldPos - _ballWorldPos;
             ballToFlag.y = 0f;
             if (ballToFlag.sqrMagnitude < 0.01f) ballToFlag = Vector3.forward;
-            // iter-28 Fix 1 (FRAMING ROOT CAUSE FIX #2):
-            // Use AimDirection2D() (player's current aim yaw) NOT ballToFlag.normalized (flag direction).
-            // The mustInclude points (ball + landing zone) are in the AIM direction, not the flag direction.
-            // If aimDir ≠ AimDirection2D(), the camera offset pulls back along a DIFFERENT axis than the
-            // mustInclude span → the terrain appears in a corner with large black void.
-            // ballToFlag is kept for reference; aimDir now tracks the player's live heading.
-            Vector3 aimDir = AimDirection2D();
+            // Order 354 §4.1 — CAMERA AXIS = HOLE AXIS, decoupled from the live aim yaw.
+            //
+            // Until now the camera axis was AimDirection2D(), so dragging the aim ROTATED THE WORLD.
+            // Every reference title (Golf Clash, Golf Rival, Ultimate Golf) does the opposite: the hole
+            // is pinned (ball bottom, green top) and the AIM LINE rotates on screen. AimDirection2D()
+            // still drives the guide line, landing zone, rings and the SHOOT write-back — only the
+            // camera stops following it. Consequence: the §11 invariant (the ball projects BELOW the
+            // flag on screen) is now unconditionally true — it no longer depends on where the player
+            // happens to be aiming — and the camera no longer re-frames while the player aims.
+            Vector3 aimDir = ballToFlag.normalized;
 
             // Build the set of must-include points.
             // iter-28 Fix 1 (ZOOM ROOT CAUSE FIX): Remove clampedFlag from mustInclude.
@@ -925,30 +1065,110 @@ namespace Golfin.Gameplay.UI.ShotUI
                 _mapCam.transform.LookAt(lookAtTarget, Vector3.up);
             }
 
-            // ── Framing: fill the playing-area width (Order 353b) ────────────────
-            // Preferred path: frame so the hole's playable corridor fills the screen WIDTH — the
-            // course edges hug the left/right screen edges, showing as little off-course as
-            // possible — with the ball flush at the bottom (Order 353) and the manual zoom-out
-            // capped at this fit. Falls back to the ball+landing bottom-anchor when the hole's
-            // playable geometry can't be resolved, so there is no regression.
+            // ── Framing: zoom to the SHOT — ball and flag, as tight as they allow ─
+            // (Order 354c, Cesar 2026-08-07: "Zoom in as much as possible as long as current ball
+            //  position and flag are visible (leave a bit of margin so none of them touch the
+            //  borders)".)
+            //
+            // The framing target is ONLY the ball and the flag. The camera pulls back exactly far
+            // enough to seat the ball at kShotBottomFrac and the flag at kShotTopFrac and no further,
+            // so the shot fills the screen: on a long par 5 that is still the whole hole, and on a
+            // short approach it is a close view of the green.
+            //
+            // This supersedes 354b's "fit the whole playable footprint". That framing was driven by
+            // the hole's OB-mask hull and had to zoom out to hold ground the player was never looking
+            // at; the ball→flag pair is the only thing that must be on screen. The camera axis is the
+            // ball→flag axis again for the same reason — any yaw off it shortens the on-screen
+            // ball→flag separation and would force the camera further back.
             //
             // Runs INSIDE Open() (via PositionMapCamera) BEFORE the first rendered frame, so the
             // correct framing is live on frame 1 (cf. P-010).
-            Vector3 aimFrameN = new Vector3(aimDir.x, 0f, aimDir.z);
-            if (aimFrameN.sqrMagnitude > 1e-4f) aimFrameN.Normalize(); else aimFrameN = Vector3.forward;
-            Vector3 rightFrameN = new Vector3(-aimFrameN.z, 0f, aimFrameN.x);
-            if (TryGetObExtent(aimFrameN, rightFrameN, _ballWorldPos.y, out float paHalfW, out Vector3 paPivot))
-            {
-                FramePlayingAreaWidth(aimFrameN, rightFrameN, paHalfW, paPivot);
-            }
-            else
+            Vector3 holeAxisN = new Vector3(aimDir.x, 0f, aimDir.z);
+            if (holeAxisN.sqrMagnitude > 1e-4f) holeAxisN.Normalize(); else holeAxisN = Vector3.forward;
+
+            // Still loaded: the OB rectangle bounds the two-finger pan (§4.4), and it tells us the
+            // playfield rectangle exists so the camera yaw can be snapped to it (354d).
+            _obRectValid = TryGetObRect(out _obRectCenter, out _obRectHalf);
+
+            Vector3 camAxisN = SnapAxisToPlayfield(holeAxisN);
+            var shotRegion = BuildShotRegion(camAxisN);
+            bool framed = FrameShowRegion(camAxisN, shotRegion);
+            if (!framed)
             {
                 AnchorBallToBottom(aimDir, ref lookAtTarget, distNeeded);
-                _zoomOutCapFov = _maxZoom;  // no OB data → keep the full manual zoom range
+                // Order 354 §4.4: cap zoom-out at THIS fit too. Previously the fallback reset the cap
+                // to _maxZoom, so the one path that could not compute a fit was also the one path that
+                // let the player pull back and reveal the world. No path may do that now.
+                _zoomOutCapFov = _currentFov;
             }
 
             Debug.Log($"[MapView v2] Camera pos={_mapCam.transform.position:F1} target={boundsCenter:F1} " +
-                      $"fov={_currentFov:F1}° dist={distNeeded:F1}m boundsR={boundsRadius:F1}m");
+                      $"fov={_currentFov:F1}° dist={distNeeded:F1}m boundsR={boundsRadius:F1}m " +
+                      $"framedByShot={framed} obRect={_obRectValid}");
+        }
+
+        /// <summary>
+        /// Order 354d — snap a camera axis to the playfield rectangle so the field renders upright.
+        /// Pure math, EditMode-testable.
+        ///
+        /// The playfield is world-axis-aligned, so the four candidates are ±X and ±Z; the winner is
+        /// the one the hole runs most nearly along, which keeps the flag up-screen and the ball
+        /// down-screen. Ties cannot occur in practice (a hole exactly 45° off both axes would take
+        /// the first candidate, which is still a valid upright framing).
+        /// </summary>
+        public static Vector3 SnapToWorldAxis(Vector3 axisN)
+        {
+            Vector3 best = Vector3.forward;
+            float bestDot = float.MinValue;
+            foreach (var c in new[] { Vector3.right, Vector3.left, Vector3.forward, Vector3.back })
+            {
+                float d = Vector3.Dot(axisN, c);
+                if (d > bestDot) { bestDot = d; best = c; }
+            }
+            return best;
+        }
+
+        /// <summary>
+        /// Instance wrapper: snap only when there IS a playfield rectangle to align to, and only when
+        /// <see cref="_alignToPlayfieldAxis"/> is on. Otherwise the ball→flag heading is used as-is.
+        /// </summary>
+        private Vector3 SnapAxisToPlayfield(Vector3 holeAxisN)
+        {
+            if (!_alignToPlayfieldAxis || !_obRectValid) return holeAxisN;
+            Vector3 snapped = SnapToWorldAxis(holeAxisN);
+            Debug.Log($"[MapView v2] Playfield align: hole axis ({holeAxisN.x:F2},{holeAxisN.z:F2}) → " +
+                      $"({snapped.x:F0},{snapped.z:F0}), {Vector3.Angle(holeAxisN, snapped):F1}° off");
+            return snapped;
+        }
+
+        /// <summary>
+        /// Order 354c — the fit set: the ball and the flag, and nothing else.
+        ///
+        /// The "bit of margin so none of them touch the borders" is applied in SCREEN space, by
+        /// <see cref="kShotBottomFrac"/> / <see cref="kShotTopFrac"/> in <see cref="FrameShowRegion"/>
+        /// — a world-space pad would read as a comfortable gap on a 460 m par 5 and swallow the whole
+        /// frame on a 40 m pitch.
+        ///
+        /// <see cref="_minFramedSpanM"/> is the one world-space term: a floor on the framed distance,
+        /// because without it a 2 m tap-in would drop the camera to a couple of metres off the deck.
+        /// The shortfall is split evenly behind the ball and beyond the flag so the pair stays
+        /// centred. Set it to 0 for a pure "as tight as the ball and flag allow" fit.
+        /// </summary>
+        private List<Vector3> BuildShotRegion(Vector3 axisN)
+        {
+            float y = _ballWorldPos.y;
+            Vector3 ballFlat = new Vector3(_ballWorldPos.x, y, _ballWorldPos.z);
+            Vector3 flagFlat = new Vector3(_flagWorldPos.x, y, _flagWorldPos.z);
+
+            float span = Vector3.Dot(flagFlat - ballFlat, axisN);
+            float pad  = Mathf.Max(0f, Mathf.Max(_minFramedSpanM, 0f) - span) * 0.5f;
+            if (pad <= 0f) return new List<Vector3>(2) { ballFlat, flagFlat };
+
+            return new List<Vector3>(2)
+            {
+                ballFlat - axisN * pad,
+                flagFlat + axisN * pad,
+            };
         }
 
         /// <summary>
@@ -997,123 +1217,165 @@ namespace Golfin.Gameplay.UI.ShotUI
         }
 
         /// <summary>
-        /// Derive the width-fill inputs from the hole's OB rectangle: the corridor half-width is the OB
-        /// box's support PERPENDICULAR to aim (<paramref name="rightN"/>), and the corridor centre
-        /// <paramref name="pivot"/> is the OB centre laterally, at the BALL's along-aim position (so the
-        /// ball anchors to the bottom with a small slide). Returns false when the OB rect is unavailable.
+        /// Order 354 §4.2 — SHOW-REGION pose solve (pure geometry; camera passed in so EditMode tests
+        /// drive the SAME code the game runs).
+        ///
+        /// Generalises Order 353b's two solvers:
+        ///   • <c>SolveWidthDist</c> tested the on-screen separation of TWO corridor edge points.
+        ///     <c>ContainsRegion</c> now tests that EVERY region vertex projects inside
+        ///     <c>[sideMargin, 1-sideMargin] × [bottomFrac, topFrac]</c> — same monotonicity
+        ///     (pulling back shrinks the projected region), same 44-step bisection.
+        ///   • <c>SolveAnchorSlide</c> is unchanged in shape, but anchors the region's LOWEST projected
+        ///     vertex (the near edge of the hole map) to <paramref name="bottomFrac"/> instead of the
+        ///     ball. That is K2 verbatim — the bottom of the map sits flush at the screen bottom; on
+        ///     the tee the near edge ≈ the ball, mid-hole the ball sits slightly above it (correct).
+        ///     Anchoring the lowest vertex rather than the near-edge MIDPOINT is deliberate: on a hole
+        ///     whose axis is rotated relative to the OB rectangle the near edge is a corner, and
+        ///     anchoring the midpoint would push that corner off the bottom of the screen.
+        ///
+        /// The two are solved JOINTLY: distance is bisected, and every candidate distance is evaluated
+        /// with the slide that already anchors the bottom. That makes the search monotone (a farther
+        /// camera shrinks the bottom-pinned region strictly upward) and guarantees BOTH invariants hold
+        /// at the answer, instead of alternating two weakly-coupled solves and hoping they converge.
+        ///
+        /// Returns false when no distance in [2, 5000] m contains the region — the caller then falls
+        /// back to the ball+landing bottom-anchor.
         /// </summary>
-        private bool TryGetObExtent(Vector3 aimN, Vector3 rightN, float ballY, out float halfW, out Vector3 pivot)
+        public static bool SolveShowRegionPose(
+            Camera cam, List<Vector3> region, Vector3 axisN, float tiltDeg,
+            float bottomFrac, float sideMargin, float topFrac,
+            out float dist, out float slide, out Vector3 focus)
         {
-            halfW = 0f; pivot = default;
-            if (!TryGetObRect(out Vector2 c, out Vector2 h)) return false;
+            dist = 0f; slide = 0f; focus = Vector3.zero;
+            if (cam == null || region == null || region.Count < 2) return false;
 
-            // Half-width the screen must fill = extent of the axis-aligned OB box projected onto rightN.
-            halfW = Mathf.Max(Mathf.Abs(h.x * rightN.x) + Mathf.Abs(h.y * rightN.z), 10f);
-            // Lateral centre = OB centre projected onto rightN; forward = ball's along-aim position.
-            float midR  = c.x * rightN.x + c.y * rightN.z;   // Dot(obCentreXZ, rightN)
-            float ballA = Vector3.Dot(_ballWorldPos, aimN);
-            Vector3 flat = aimN * ballA + rightN * midR;
-            pivot = new Vector3(flat.x, ballY, flat.z);
+            Vector3 rightN = new Vector3(-axisN.z, 0f, axisN.x);
+            float tanTilt  = Mathf.Tan(tiltDeg * Mathf.Deg2Rad);
+
+            // Pivot = the region's near-edge row, laterally centred, so the fit is symmetric on screen.
+            float alongMin = float.MaxValue, latMin = float.MaxValue, latMax = float.MinValue;
+            foreach (var p in region)
+            {
+                alongMin = Mathf.Min(alongMin, Vector3.Dot(p, axisN));
+                float lat = Vector3.Dot(p, rightN);
+                latMin = Mathf.Min(latMin, lat);
+                latMax = Mathf.Max(latMax, lat);
+            }
+            float groundY = region[0].y;
+            Vector3 flatPivot = axisN * alongMin + rightN * (0.5f * (latMin + latMax));
+            Vector3 pivot = new Vector3(flatPivot.x, groundY, flatPivot.z);
+
+            void SetPose(float d, float s)
+            {
+                Vector3 look = pivot + axisN * s;
+                cam.transform.position = look - axisN * d + Vector3.up * (d * tanTilt);
+                cam.transform.LookAt(look, Vector3.up);
+            }
+            // Lowest projected region vertex. Monotonically DECREASING in slide (look forward → the
+            // whole region slides down the screen). -1 when any vertex is behind the camera.
+            float MinVertY(float d, float s)
+            {
+                SetPose(d, s);
+                float lo = float.MaxValue;
+                foreach (var p in region)
+                {
+                    Vector3 vp = cam.WorldToViewportPoint(p);
+                    if (vp.z <= 0f) return -1f;
+                    lo = Mathf.Min(lo, vp.y);
+                }
+                return lo;
+            }
+            // Slide that puts the region's near edge at the bottom margin. Same bisection shape as
+            // Order 353b's SolveAnchorSlide; bracket is ±4 camera distances, which straddles the
+            // solution for any hole length.
+            float SolveAnchorSlide(float d)
+            {
+                float sLo = -4f * d, sHi = 4f * d;
+                if (!(MinVertY(d, sLo) > bottomFrac && MinVertY(d, sHi) < bottomFrac)) return 0f;
+                for (int k = 0; k < 44; k++)
+                {
+                    float sm = 0.5f * (sLo + sHi);
+                    if (MinVertY(d, sm) > bottomFrac) sLo = sm; else sHi = sm;
+                }
+                return 0.5f * (sLo + sHi);
+            }
+            bool ContainsRegion(float d, float s)
+            {
+                SetPose(d, s);
+                foreach (var p in region)
+                {
+                    Vector3 vp = cam.WorldToViewportPoint(p);
+                    if (vp.z <= 0f) return false;
+                    if (vp.x < sideMargin || vp.x > 1f - sideMargin) return false;
+                    if (vp.y < bottomFrac - 1e-3f || vp.y > topFrac) return false;
+                }
+                return true;
+            }
+            // Coupled predicate: at distance d, anchor the bottom, then ask whether everything fits.
+            bool FitsAnchored(float d, out float sOut)
+            {
+                sOut = SolveAnchorSlide(d);
+                return ContainsRegion(d, sOut);
+            }
+
+            float dLo = 2f, dHi = 5000f;
+            if (FitsAnchored(dLo, out _)) { dist = dLo; slide = SolveAnchorSlide(dLo); focus = pivot + axisN * slide; return true; }
+            if (!FitsAnchored(dHi, out _)) return false;      // never contains → caller falls back
+            for (int k = 0; k < 44; k++)
+            {
+                float dm = 0.5f * (dLo + dHi);
+                if (FitsAnchored(dm, out _)) dHi = dm; else dLo = dm;
+            }
+            dist  = dHi;                                      // smallest distance known to contain
+            slide = SolveAnchorSlide(dist);
+            SetPose(dist, slide);
+            focus = pivot + axisN * slide;
             return true;
         }
 
         /// <summary>
-        /// Frame the camera so the hole's playable corridor fills the screen WIDTH (course edges at
-        /// the screen sides — minimum off-course visible) with the ball flush at the bottom, and cap
-        /// the manual zoom-out at this fit. FOV is held at <see cref="_initialZoom"/>; zoom is driven
-        /// by camera DISTANCE so the fit respects the portrait aspect (Camera.fieldOfView is vertical;
-        /// WorldToViewportPoint accounts for aspect automatically). Distance (width) and along-aim
-        /// slide (bottom-anchor) are weakly coupled, so they are solved by a short alternating
-        /// bisection. Pitch is the same <see cref="_heroTiltDeg"/> hero tilt used elsewhere.
+        /// Frame the map camera on the fit set and cap the manual zoom-out at that fit.
+        /// FOV is held at <see cref="_initialZoom"/>; zoom is driven by camera DISTANCE so the fit
+        /// respects the portrait aspect (Camera.fieldOfView is vertical; WorldToViewportPoint accounts
+        /// for aspect automatically). Pitch is the <see cref="_heroTiltDeg"/> hero tilt.
+        ///
+        /// Order 354c: the viewport window is <see cref="kShotBottomFrac"/>…<see cref="kShotTopFrac"/>,
+        /// so the ball seats a little above the bottom edge and the flag a little below the top —
+        /// "a bit of margin so none of them touch the borders". Because the solve returns the SMALLEST
+        /// containing distance, that window is also the zoom: no further out than the shot requires.
+        /// Returns false when the solve found no containing pose, so the caller can fall back.
         /// </summary>
-        private void FramePlayingAreaWidth(Vector3 aimN, Vector3 rightN, float halfW, Vector3 pivot)
+        private bool FrameShowRegion(Vector3 axisN, List<Vector3> region)
         {
-            if (_mapCam == null) return;
-            float tanTilt = Mathf.Tan(_heroTiltDeg * Mathf.Deg2Rad);
+            if (_mapCam == null || region == null || region.Count < 2) return false;
 
             _currentFov = Mathf.Clamp(_initialZoom, _minZoom, _maxZoom);
             _mapCam.fieldOfView = _currentFov;
 
-            void SetPose(float dist, float slide)
+            if (!SolveShowRegionPose(_mapCam, region, axisN, _heroTiltDeg,
+                                     kShotBottomFrac, kWidthFillMargin, kShotTopFrac,
+                                     out float dist, out float slide, out Vector3 focus))
             {
-                Vector3 look = pivot + aimN * slide;
-                _mapCam.transform.position = look - aimN * dist + Vector3.up * (dist * tanTilt);
-                _mapCam.transform.LookAt(look, Vector3.up);
-            }
-            // On-screen SEPARATION of the two corridor edges (sign-independent: works whether rightN points
-            // screen-left or screen-right). Monotonically DECREASING in dist. Returns 999 when either edge is
-            // behind the camera (too close), so the search pulls back.
-            float EdgeSep(float dist, float slide)
-            {
-                SetPose(dist, slide);
-                Vector3 vpL = _mapCam.WorldToViewportPoint(pivot - rightN * halfW);
-                Vector3 vpR = _mapCam.WorldToViewportPoint(pivot + rightN * halfW);
-                if (vpL.z <= 0f || vpR.z <= 0f) return 999f;
-                return Mathf.Abs(vpR.x - vpL.x);
-            }
-            float BallY(float dist, float slide)        // monotonically DECREASING in slide
-            {
-                SetPose(dist, slide);
-                Vector3 vp = _mapCam.WorldToViewportPoint(_ballWorldPos);
-                return vp.z <= 0f ? -1f : vp.y;
+                Debug.LogWarning("[MapView v2] Shot-fit: no containing pose found — falling back to bottom-anchor framing.");
+                return false;
             }
 
-            float targetSep = 1f - 2f * kWidthFillMargin;   // corridor spans the frame width (edges at margins)
-
-            // WIDTH solve (EdgeSep is monotonically DECREASING in dist): bisect for the dist where the corridor
-            // spans the full frame width. Well-bracketed: at dLo the edges are far apart (>target, or 999 when
-            // too close), at dHi they are near centre (<target). Returns fallback if the bracket is invalid.
-            float SolveWidthDist(float slide, float fallback)
+            // Sanity: never ship a degenerate pose (kept from Order 353b).
+            if (dist < 8f || dist > 4000f)
             {
-                float dLo = 2f, dHi = 5000f;
-                if (!(EdgeSep(dLo, slide) > targetSep && EdgeSep(dHi, slide) < targetSep)) return fallback;
-                for (int k = 0; k < 44; k++)
-                {
-                    float dm = 0.5f * (dLo + dHi);
-                    if (EdgeSep(dm, slide) > targetSep) dLo = dm; else dHi = dm;
-                }
-                return 0.5f * (dLo + dHi);
-            }
-            // ANCHOR solve (BallY is monotonically DECREASING in slide): bisect for the slide where the ball
-            // sits at the bottom margin. Bracket is centred on the ball's along-aim offset from the pivot so
-            // it always straddles the solution regardless of hole length.
-            float SolveAnchorSlide(float dist, float fallback)
-            {
-                float ballFwd = Vector3.Dot(_ballWorldPos - pivot, aimN);
-                float sLo = ballFwd - 4f * dist, sHi = ballFwd + 4f * dist;
-                if (!(BallY(dist, sLo) > kBottomAnchorFrac && BallY(dist, sHi) < kBottomAnchorFrac)) return fallback;
-                for (int k = 0; k < 44; k++)
-                {
-                    float sm = 0.5f * (sLo + sHi);
-                    if (BallY(dist, sm) > kBottomAnchorFrac) sLo = sm; else sHi = sm;
-                }
-                return 0.5f * (sLo + sHi);
+                Debug.LogWarning($"[MapView v2] Shot-fit: solve degenerate (dist={dist:F1}m) — falling back to bottom-anchor framing.");
+                return false;
             }
 
-            // Decoupled: fill width at a neutral look, then anchor the ball; one light refinement of each.
-            float dist  = SolveWidthDist(0f, 150f);
-            float slide = SolveAnchorSlide(dist, 0f);
-            dist        = SolveWidthDist(slide, dist);     // refine width for the anchored look
-            slide       = SolveAnchorSlide(dist, slide);   // re-anchor at refined dist
+            _camFocusPoint = focus;
+            _zoomOutCapFov = _currentFov;   // player may zoom IN, but never zoom OUT past this fit
 
-            // Sanity: never ship a degenerate pose. If the solve collapsed (too close/far) or the ball did
-            // not land near the bottom, fall back to a safe width-only pose (ball roughly centred, no crash).
-            SetPose(dist, slide);
-            float finalBallY = BallY(dist, slide);
-            bool degenerate = dist < 8f || dist > 4000f || Mathf.Abs(finalBallY - kBottomAnchorFrac) > 0.12f;
-            if (degenerate)
-            {
-                dist  = SolveWidthDist(0f, 150f);
-                slide = SolveAnchorSlide(dist, 0f);
-                SetPose(dist, slide);
-                Debug.LogWarning($"[MapView v2] Width-fill: refined solve degenerate (ballY={finalBallY:F3}) — using single-pass pose.");
-            }
-
-            _camFocusPoint  = pivot + aimN * slide;
-            _zoomOutCapFov  = _currentFov;  // player may zoom IN, but not zoom OUT past this fit
-
-            Debug.Log($"[MapView v2] Width-fill: halfW={halfW:F1}m dist={dist:F1}m slide={slide:F1}m " +
-                      $"fov={_currentFov:F1}° capFov={_zoomOutCapFov:F1} pivot={pivot:F0} ballY={BallY(dist,slide):F3}");
+            Vector3 vpBall = _mapCam.WorldToViewportPoint(_ballWorldPos);
+            Vector3 vpFlag = _mapCam.WorldToViewportPoint(_flagWorldPos);
+            Debug.Log($"[MapView v2] Shot-fit: pts={region.Count} dist={dist:F1}m slide={slide:F1}m " +
+                      $"fov={_currentFov:F1}° capFov={_zoomOutCapFov:F1} camY={_mapCam.transform.position.y:F1} " +
+                      $"ballVP=({vpBall.x:F2},{vpBall.y:F2}) flagVP=({vpFlag.x:F2},{vpFlag.y:F2})");
+            return true;
         }
 
         /// <summary>
@@ -1545,6 +1807,14 @@ namespace Golfin.Gameplay.UI.ShotUI
             }
         }
 
+        /// <summary>
+        /// Order 354 §4.4 — clamp a world-XZ point into the OB rectangle. Pure math (EditMode seam).
+        /// </summary>
+        public static Vector2 ClampPointToRect(Vector2 p, Vector2 rectCenter, Vector2 rectHalf)
+            => new Vector2(
+                Mathf.Clamp(p.x, rectCenter.x - rectHalf.x, rectCenter.x + rectHalf.x),
+                Mathf.Clamp(p.y, rectCenter.y - rectHalf.y, rectCenter.y + rectHalf.y));
+
         private void PanCamera(Vector2 screenDelta)
         {
             if (_mapCam == null) return;
@@ -1553,6 +1823,22 @@ namespace Golfin.Gameplay.UI.ShotUI
             forward.y = 0f; right.y = 0f;
             float   scale = _panSensitivity * (_currentFov / _fieldOfView);
             Vector3 move  = (-right.normalized * screenDelta.x - forward.normalized * screenDelta.y) * scale;
+
+            // Order 354 §4.4: the focus point may never leave the hole's OB rectangle, so panning
+            // cannot walk the camera off the playable area and reveal the world. Clamping the FOCUS
+            // (then rebuilding the camera position from it) keeps the rig rigid — the camera stops
+            // dead at the edge instead of drifting while the focus is pinned.
+            // No OB rectangle → unclamped fallback (previous behaviour, no regression).
+            if (_obRectValid)
+            {
+                Vector3 camOffset  = _mapCam.transform.position - _camFocusPoint;
+                Vector3 wanted     = _camFocusPoint + move;
+                Vector2 clampedXZ  = ClampPointToRect(new Vector2(wanted.x, wanted.z), _obRectCenter, _obRectHalf);
+                _camFocusPoint     = new Vector3(clampedXZ.x, wanted.y, clampedXZ.y);
+                _mapCam.transform.position = _camFocusPoint + camOffset;
+                return;
+            }
+
             _mapCam.transform.position += move;
             _camFocusPoint             += move;
         }
@@ -2559,6 +2845,11 @@ namespace Golfin.Gameplay.UI.ShotUI
         // ── Destroy runtime objects ───────────────────────────────────────────────
         private void DestroyRuntimeObjects()
         {
+            // Order 354 §4.3: put the mountain ring / backdrop plane back BEFORE the map objects go
+            // away, so the world is intact the instant the gameplay camera takes over again.
+            RestoreEnvironmentAfterMap();
+            _obRectValid = false;
+
             // iter-27: _staticCamGO is parented under _runtimeRoot, so Destroy(_runtimeRoot)
             // also destroys the map camera. No "return to idle" needed — the cam simply ceases to
             // exist after map close, which means it cannot interfere with gameplay rendering at all.

@@ -1,0 +1,11 @@
+=== iter-1 kickoff baseline 2026-08-06T22:46:35Z ===
+HEAD: d705f053d188db66b89b5d7d0937b0bd08b19378
+DIRTY (git status --porcelain --untracked-files=all):
+ M Assets/Scripts/Gameplay/Tests/MapViewAimingTests.cs
+ M Assets/Scripts/Gameplay/UI/ShotUI/MapViewController.cs
+ M Docs/TellCode.md
+?? Docs/Specs/Active/map_view_playable_area/HEARTBEAT.log
+?? Docs/Specs/Active/map_view_playable_area/SPEC.md
+?? Docs/Specs/Active/map_view_playable_area/STATUS.md
+?? Docs/Specs/Active/map_view_playable_area/reference/snap_20260807_065944.png
+=== end baseline ===

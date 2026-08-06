@@ -16,6 +16,50 @@
 
 ## 📋 SPEC_READY POINTERS
 
+- ~~**`map_view_playable_area`** (added 2026-08-06)~~ — **DONE 2026-08-07, Cesar-approved.** Shipped and moved to `Docs/Specs/Completed/map_view_playable_area/`. Single file (`MapViewController.cs`) + tests, **zero scene edits**, `MapViewCaptureDriver` unmodified. Landed in four passes, each steered by Cesar on the previous one: **354** diagnose (neither suspected branch fired — the OB rect loads fine; the Order-353b fit filled the width *at the ball's row* with nothing constraining the far side, and the reference screenshot is **Hole 1, not Hole 5**) + camera on the hole axis + show-region fit + mountain-ring hide + pan/zoom clamps; **354b** frame the playable footprint (OB-mask in-bounds hull) instead of the bounding rect; **354c** off-tile ground stays GREEN and the fit becomes ball+flag only, zoomed as tight as they allow; **354d** camera yaw snapped to the playfield axis so the field renders upright (near/far edge Δy 0.148/0.081 → **0.000/0.000**). **K2 `map_view_bottom_anchor` ABSORBED — its block is DELETED from this file.** P-010 stays fixed-by-construction; P-008 closes inverted (the default view IS the zoom-out stop). EditMode 1005/0. Report: `Docs/Specs/Completed/map_view_playable_area/IMPLEMENTER_REPORT.md`. **Two open items handed back, neither blocking:** `_heroTiltDeg` is serialized `70` on the LabScaffold instance (spec asked 80; 90 would also remove the perspective trapezoid on the playfield rectangle — one Inspector field, untouched because the spec bans scene edits), and the on-device pinch / two-finger-pan gestures are unexercised (no Touchscreen in the editor harness — the clamp math is unit-tested and wired, but that gesture is the one path that could still reveal the outside world). Kickoff text below is kept for history; note that §4.2/§4.3 of it were superseded by 354b–d.
+
+### Kickoff · map_view_playable_area — TellCode (historical — see the DONE note above)
+
+```
+Task: map_view_playable_area — GO from Cesar 2026-08-06.
+
+AUTHORITATIVE SPEC: Docs/Specs/Active/map_view_playable_area/SPEC.md
+Read it in full before touching anything; this kickoff is a pointer, not the
+work definition. Reference screenshot in the spec header (map view: hole tile
+tiny + rotated, off-course green + mountain ring visible — the defect).
+Update STATUS.md as you move and fill IMPLEMENTER_REPORT.md with the spec §5
+acceptance checklist.
+
+FILE: Assets/Scripts/Gameplay/UI/ShotUI/MapViewController.cs (single file;
+tests in Assets/Scripts/Gameplay/Tests/MapViewAimingTests.cs). Parallel-safe
+with the Hole 6 task — no shared files.
+
+Shape of the work (details + line refs in the spec):
+0. DIAGNOSE FIRST (spec §3): open the map on the screenshot hole in the
+   editor, read the existing "[MapView v2] Width-fill:" logs, and report which
+   branch produced the mess (OB-rect load fail vs degenerate solve) BEFORE
+   coding. If TryGetObRect is failing, fixing the loader is in scope.
+1. Camera axis = ball→flag hole axis, NOT live aim yaw (§4.1). Aim line keeps
+   rotating on screen via AimDirection2D() — iter-33 behavior preserved in the
+   aim line, not the camera.
+2. Frame the remaining hole: OB rect clipped behind the ball (≤5-vertex
+   polygon), generalize the existing bisection solvers, near edge flush at
+   screen bottom = K2 verbatim (§4.2). Runs in Open() before frame 1 (P-010).
+3. Hard-hide the outside (§4.3): name-hide MountainBackdrop/Backdrop/Ring via
+   the existing _hiddenObjects machinery + dynamic far clip. Frame-debug any
+   remaining off-tile mesh and add its name — do NOT guess names.
+4. Clamp pan focus to the OB rect; cap zoom-out in ALL paths (§4.4).
+
+BANNED-list at the top of the file stays banned (no RT/RawImage/uvRect).
+Do not regress: P-006, P-007, P-009; MapViewCaptureDriver compiles unmodified.
+
+VERIFY (spec §5): Holes 1 / screenshot-hole / 6, tee AND green-side lie, aim
+±90°, pinch both stops, pan to all four edges — mountain ring / backdrop /
+off-tile ground NEVER visible; screenshot each hole in the report. Ball
+bottom-anchor flush on long + short hole (K2 check). SHOOT close + aim
+write-back + invariant JSON unchanged. Editor-verifiable.
+```
+
 - ~~**`landing_surface_banner`** (added 2026-08-06)~~ — **DONE 2026-08-06, Cesar-approved.** Shipped and moved to `Docs/Specs/Completed/landing_surface_banner/`. Landing-surface banner on ball settle as a runtime clone of the 1v1 TurnBanner (Figma 4094:26052), EN+JP `LANDING_*` rows, `VersusMatchController.AwaitShot` sequencing, LabScaffold `[Session]` wiring. Kickoff text below is kept for history.
 
 ### Kickoff · landing_surface_banner — TellCode
@@ -75,37 +119,6 @@ Paste any block below into Code as-is. Produced by the Architect during the 2026
 - ~~`app_identity` (K15): ProjectSettings.asset + one-shot PlayerSettings icon call — NO scene; parallel-safe~~ — **CLOSED 2026-08-05** (`66ac68575` then `7a63f7c2f`). Parallel-safety held: two commits, both scoped to ProjectSettings.asset + docs + the new icon asset; no scene touched, so the K14 side-finding (stale `MatchMakingModal` overrides reappearing on any ShellScene save) was never triggered. The K3 conflict window never opened. **The kickoff's name premise did not survive contact:** `Golfin: The Invitational` shipped first, and the springboard truncated it to `Golfin:TheI…` — iOS collapses the inter-word spaces BEFORE truncating, so it reads as one run-together token, worse than the kickoff's predicted `Golfin: The I…`. Cesar took the documented dial: **productName is now plain `Golfin`**, full title lives on the icon + store listing. Icon also swapped mid-task to `Assets/Icons/Golfin-Icon2.png` (shield + "The Invitational" script) — it DOES carry an alpha channel unlike icon1, but the channel is fully opaque (min=max=255) and Unity strips it generating the icon set (built `AppIcon60x60@2x.png` reports `hasAlpha: no`), so the store no-alpha rule is satisfied; do not "fix" it. Bundle id / signing untouched as specced.
 - ~~`hole_scene_leftover` (K16)~~ **CLOSED 2026-08-05** (`a6b022642` + `1372da34b`) — see the K16 block. Shipped Option B (host injected at EnteredPlayMode, never serialized) so no launcher writes LabScaffold at all; setup snapshot/restore closes staged hole scenes unsaved. Extended to SmokeRunner2fMenu beyond the kickoff (flagged there). ⚠️ Found a SEPARATE pre-existing bug: the 2e OB capture no longer reaches OB and fails silently — needs its own task.
 - ~~`boot_loading_screen_removal` (K13): parallel-safe with everything open~~ — **CLOSED 2026-08-05** (`d3bf00026`). The parallel-safety prediction held: the commit used an explicit 2-file pathspec and left K7's ShellScene/SafeAreaFitter/PersistentUIManager and K12's MatchmakingModalController drift untouched (the K10→K11 sweep scar did NOT repeat). SHARED LoadingScreenController never edited, as designed.
-
-### K2 · map_view_bottom_anchor (smoke #5) — TellCode
-
-```
-Task: map view should open with its bottom edge anchored to the bottom of the
-screen.
-
-FILE: Assets/Scripts/Gameplay/UI/ShotUI/MapViewController.cs, Open() framing.
-
-Currently the map opens with its initial framing computed such that the bottom
-of the hole map does not sit flush to the bottom of the screen. It should.
-
-CROSS-REF — read before touching Open():
-POLISH_BACKLOG.md P-010 records an existing open defect in this exact method:
-the camera recenters/reframes for 1–2 frames on open before settling. The
-recorded fix direction is to compute the bounds-fit framing BEFORE the first
-rendered frame, inside Open(), prior to enabling the overlay.
-
-That is the same code path this change touches. Compute the new bottom-anchored
-framing in the same place, so the correct framing is live on frame 1. If the
-open pop disappears as a side effect, say so explicitly in the report — do not
-silently claim P-010; the Architect will verify and close it separately.
-
-ALSO ON FILE, do not regress: P-007 (landing zone / rings project onto trees),
-P-008 (zoom-out feels limited), P-009 (distance bands missing). None are in
-scope here. If the framing change alters how any of them read on screen,
-report it rather than fixing it in this pass.
-
-VERIFY: open the map on a long hole and a short hole. Bottom edge flush both
-times, no reframe pop on open. Sim-valid (layout class).
-```
 
 ### K3 · build_stamp_hardening — Surgical (defect B AMENDED 2026-08-04)
 
