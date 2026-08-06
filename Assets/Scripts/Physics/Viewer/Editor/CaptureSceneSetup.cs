@@ -62,6 +62,14 @@ namespace Golfin.Physics.Viewer.Editor
             var payload = new Payload();
             foreach (var s in setup)
             {
+                // Filter Hole_NN_Geo entries FIRST — they are staged content by definition and
+                // must never be recorded as "user's pre-run setup" (that is the resurrection bug).
+                if (IsHoleGeoScene(s.path))
+                {
+                    Debug.Log($"[CaptureSceneSetup] Excluding staged hole scene from snapshot: {s.path}");
+                    continue;
+                }
+
                 if (string.IsNullOrEmpty(s.path))
                 {
                     Debug.LogWarning("[CaptureSceneSetup] Current scene setup contains an unsaved/untitled " +
@@ -78,6 +86,14 @@ namespace Golfin.Physics.Viewer.Editor
                     isActive   = s.isActive,
                     isSubScene = s.isSubScene
                 });
+            }
+
+            // If filtering left zero entries (user had only hole scenes open), erase and log.
+            if (payload.entries.Count == 0)
+            {
+                SessionState.EraseString(sessionKey);
+                Debug.Log("[CaptureSceneSetup] All scene entries were staged hole scenes — nothing to snapshot.");
+                return;
             }
 
             SessionState.SetString(sessionKey, JsonUtility.ToJson(payload));
@@ -116,6 +132,14 @@ namespace Golfin.Physics.Viewer.Editor
             foreach (var e in payload.entries)
             {
                 if (string.IsNullOrEmpty(e.path)) continue;
+
+                // Defence-in-depth: skip any hole scenes that snuck into a stale pre-fix snapshot.
+                if (IsHoleGeoScene(e.path))
+                {
+                    Debug.Log($"[CaptureSceneSetup] Skipping stale hole scene entry in snapshot: {e.path}");
+                    continue;
+                }
+
                 if (AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(e.path) == null)
                 {
                     Debug.LogWarning($"[CaptureSceneSetup] Snapshotted scene no longer exists: {e.path} — skipping restore.");
@@ -156,11 +180,22 @@ namespace Golfin.Physics.Viewer.Editor
             {
                 var s = SceneManager.GetSceneAt(i);
                 if (!s.IsValid() || string.IsNullOrEmpty(s.name)) continue;
-                if (!s.name.StartsWith("Hole_") || !s.name.EndsWith("_Geo")) continue;
+                if (!IsHoleGeoScene(s.name)) continue;
 
                 Debug.Log($"[CaptureSceneSetup] Closing staged hole scene without saving: {s.name}");
                 EditorSceneManager.CloseScene(s, true);
             }
+        }
+
+        /// <summary>
+        /// Returns true when <paramref name="nameOrPath"/> identifies a generated Hole_NN_Geo scene.
+        /// Works on both a scene name ("Hole_06_Geo") and a full asset path
+        /// ("Assets/…/Hole_06_Geo.unity"). Null/empty inputs safely return false.
+        /// </summary>
+        static bool IsHoleGeoScene(string nameOrPath)
+        {
+            string n = System.IO.Path.GetFileNameWithoutExtension(nameOrPath ?? "");
+            return n.StartsWith("Hole_") && n.EndsWith("_Geo");
         }
 
         /// <summary>

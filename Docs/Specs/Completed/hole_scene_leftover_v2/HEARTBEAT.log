@@ -1,0 +1,14 @@
+=== iter-1 kickoff baseline ===
+HEAD: 8e635d834d69721ff9855ae4d6cc7f73df3a332e
+DIRTY:
+?? Docs/Specs/Active/hole_scene_leftover_v2/ARCHITECT_REVIEW.md
+?? Docs/Specs/Active/hole_scene_leftover_v2/HEARTBEAT.log
+?? Docs/Specs/Active/hole_scene_leftover_v2/IMPLEMENTER_REPORT.md
+?? Docs/Specs/Active/hole_scene_leftover_v2/SELF_REVIEW.md
+?? Docs/Specs/Active/hole_scene_leftover_v2/SPEC.md
+?? Docs/Specs/Active/hole_scene_leftover_v2/STATUS.md
+=== end baseline ===
+
+2026-08-07T00:00:00 activated — reading SPEC and source files
+2026-08-07T06:47:50 compile check PASS — all 3 reflection checks green; running gate tests
+2026-08-07T06:53:30 all 4 gates PASS — done, awaiting review

@@ -35,6 +35,10 @@ namespace Golfin.Physics.Viewer.Editor
         const string LabScenePath   = "Assets/Scenes/Physics/LabScaffold.unity";
         const string Hole06GeoPath  = "Assets/Golf/Courses/lomond-country-club/Generated/Hole_06_Geo.unity";
 
+        // Scene-setup snapshot/restore keys (one pair per launcher, never shared with other launchers).
+        const string SetupKey   = "LoopV2SmokeBotMenu.SceneSetup";
+        const string CleanupKey = "LoopV2SmokeBotMenu.Cleanup";
+
         [MenuItem("GOLFIN/Smoke/Loop v2/Hole 1 Playthrough")]
         public static void RunHole1Playthrough()    => Launch("hole1_playthrough");
 
@@ -516,6 +520,12 @@ namespace Golfin.Physics.Viewer.Editor
 
             Debug.Log($"[LoopV2SmokeBotMenu] Launching scenario: '{scenarioKey}'");
 
+            // Snapshot the user's current scene setup BEFORE opening ShellScene.
+            // The EnteredEditMode handler uses this to restore it on exit.
+            // CleanupKey gates the handler so only OUR runs trigger a restore.
+            CaptureSceneSetup.Capture(SetupKey);
+            SessionState.SetBool(CleanupKey, true);
+
             // 1. Open ShellScene (single mode). Does NOT save the file.
             var shell = EditorSceneManager.OpenScene(ShellScenePath, OpenSceneMode.Single);
             if (!shell.IsValid())
@@ -570,6 +580,11 @@ namespace Golfin.Physics.Viewer.Editor
             }
 
             Debug.Log($"[LoopV2SmokeBotMenu] LaunchDirectLab: scenario='{scenarioKey}' geo='{holeGeoPath}'");
+
+            // Snapshot the user's current scene setup BEFORE opening any scene.
+            // Mirrors the Launch() pattern — same SetupKey/CleanupKey pair.
+            CaptureSceneSetup.Capture(SetupKey);
+            SessionState.SetBool(CleanupKey, true);
 
             // 1. Open LabScaffold as the host (single mode — never saves).
             var labScene = EditorSceneManager.OpenScene(LabScenePath, OpenSceneMode.Single);
@@ -664,7 +679,19 @@ namespace Golfin.Physics.Viewer.Editor
                     Debug.Log("[LoopV2SmokeBotMenu] Restored DisableSceneReload option (at ExitingPlayMode).");
                 }
             }
+            else if (state == PlayModeStateChange.EnteredEditMode)
+            {
+                // Restore the user's pre-run scene setup. Gated on CleanupKey so this handler
+                // is a no-op for play-mode exits launched by other menus (SmokeRunner2f, etc.).
+                // Restore runs at EnteredEditMode (not ExitingPlayMode) because scene operations
+                // during ExitingPlayMode are unsafe — matches the pattern used by all other launchers.
+                if (!SessionState.GetBool(CleanupKey, false)) return;
+                SessionState.SetBool(CleanupKey, false);
+                CaptureSceneSetup.Restore(SetupKey);
+                Debug.Log("[LoopV2SmokeBotMenu] Run cleaned up: staged scenes closed, scene setup restored.");
+            }
         }
     }
 }
+
 #endif

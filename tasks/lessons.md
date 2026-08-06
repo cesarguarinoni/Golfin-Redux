@@ -1929,3 +1929,45 @@ sweep script, assert it against a known-good bearing before trusting any number 
 looks surprisingly high at a position with open sight lines is the tell. Sister to Lesson AH: both
 are cases where a measurement script's *setup* was wrong while the shipped code was fine, and the
 wrong number then drove a wrong conclusion.
+
+## Lesson AJ — a fix that snapshots unfiltered state can resurrect the leftover it removes (hole_scene_leftover_v2, 2026-08-07)
+
+`hole_scene_leftover` (K16, 2026-08-05) made every capture launcher snapshot `GetSceneManagerSetup()`
+before staging and restore it at `EnteredEditMode`. Correct in shape, but `Capture()` recorded the
+setup **unfiltered** — so a `Hole_06_Geo` that was *already* open (a leftover from the pre-fix era)
+was recorded as "the user's pre-run setup", and `Restore()` closed the staged hole scenes and then
+**re-opened it from the payload**. Every run re-seeded the next one: a permanent cycle, created by
+the cleanup mechanism itself.
+
+The defensive pre-clean in SmokeRunner2f could not break it, and this is the part worth internalizing:
+the sweep ran *after* `Capture()`, so it cleaned the run while the restore put the leftover back
+afterwards. A defence placed downstream of the thing that records state cannot undo what that
+recording will later replay.
+
+**How to apply:** when a fix captures-and-restores ambient state, ask what happens if the state is
+*already dirty at capture time*. Snapshot/restore preserves whatever it finds, including the bug —
+so the snapshot must filter for the category it is meant to clean (here: `Hole_NN_Geo` is staged
+content by definition and may never be recorded as user setup). Order matters as much as presence:
+a sweep, guard, or pre-clean is only defence-in-depth if it runs upstream of the capture, not after
+it. Sister check: because `Restore()` sweeps staged holes unconditionally, the first run after the
+real fix retroactively cleans the leftover — a good property to design in deliberately.
+
+## Lesson AK — hook Rule 14 counts pixels, not evidence (hole_scene_leftover_v2, 2026-08-07)
+
+The task's declared canonical screenshot was a 1200×900 two-tone gradient blur: no Hierarchy, no
+scene list, no Console, no identifiable geometry. It cleared Rule 14's ≥900px resolution floor and
+the variance check (a gradient has variance) while substantiating nothing — yet the report attached
+to it the claim "the scene view shows only ShellScene geometry — no Hole_06_Geo present anywhere."
+An absence of geometry inside an unreadable blur is not evidence of absence.
+
+All three review gates independently gave it zero weight and judged on console log lines and
+`GetSceneManagerSetup()` dumps instead, which is the correct instrument for a code-only task. So the
+pipeline reached the right verdict — but via reviewer judgement, not via the gate.
+
+**How to apply:** Rule 14 is a *resolution* floor, not an evidence test; it cannot tell a readable
+Hierarchy capture from a gradient. For Tier-2 / code-only tasks the real gate is textual (console
+lines, state dumps, `git status`) and the canonical image should be required to be a readable
+Hierarchy/Console/scene-list capture, or dropped as a requirement rather than satisfied with a
+picture of nothing. When reviewing, always ask what a frame could *disprove* — if the answer is
+"nothing", it carries no PASS regardless of its dimensions. Related: `Docs/Specs/**/screenshots/` is
+gitignored (`.gitignore:246`), so screenshot evidence never reaches history anyway.
