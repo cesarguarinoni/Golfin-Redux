@@ -48,7 +48,10 @@ namespace Golfin.Gameplay.UI.ShotUI
 
         private void HandleStateChanged(ShotInputState state)
         {
-            bool show = state.State != ShotState.Idle;
+            // Visible only while the shot is being set up. Hidden at Idle (nothing to show yet)
+            // and hidden again from flick-commit onward — the gauge is a control readout, not a
+            // flight HUD (Cesar, 2026-08-06).
+            bool show = state.State is ShotState.Aiming or ShotState.Pulling or ShotState.Timing;
             _group.alpha          = show ? 1f : 0f;
             _group.blocksRaycasts = show;
             if (!show) return;

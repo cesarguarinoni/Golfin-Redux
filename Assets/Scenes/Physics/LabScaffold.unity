@@ -5902,7 +5902,7 @@ MonoBehaviour:
     m_HighlightedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
     m_PressedColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 1}
     m_SelectedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
-    m_DisabledColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 0.5019608}
+    m_DisabledColor: {r: 1, g: 1, b: 1, a: 1}
     m_ColorMultiplier: 1
     m_FadeDuration: 0.1
   m_SpriteState:
@@ -18971,6 +18971,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Golfin.Gameplay.Input::Golfin.Gameplay.Input.ShotController
   _inputSystemSource: {fileID: 1483952041}
+  _minFlickSpeed: 1.2
+  _flickSampleWindow: 0.08
+  _stutterFrameThreshold: 0.1
+  _debugDisableFlickGate: 0
+  _reversalThreshold: 0.01
+  _debugDisableAimLock: 0
   LogResolution: 0
 --- !u!114 &1483952041
 MonoBehaviour:
@@ -19861,6 +19867,7 @@ GameObject:
   - component: {fileID: 1552605530}
   - component: {fileID: 1552605529}
   - component: {fileID: 1552605532}
+  - component: {fileID: 1552605533}
   m_Layer: 0
   m_Name: ShotUI_Canvas
   m_TagString: Untagged
@@ -19991,6 +19998,29 @@ MonoBehaviour:
   _banner: {fileID: 1436714831}
   _debugForceVersus: 0
   _debugBannerText: YOUR TURN
+--- !u!114 &1552605533
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1552605527}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7550a348efe864cae95fb9ef2af3d547, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Golfin.Gameplay.UI::Golfin.Gameplay.UI.ShotUI.ShotInProgressUiGate
+  _shotController: {fileID: 1483952040}
+  _hideDuringShot:
+  - {fileID: 2300000001}
+  - {fileID: 2300000005}
+  _hideGroupsDuringShot:
+  - {fileID: 1744053445}
+  _clubSelector: {fileID: 1187566443}
+  _ballSelector: {fileID: 377935614}
+  _spinPanel: {fileID: 2121228882}
+  _actionButtonsFader: {fileID: 1744053443}
+  _holeMapButton: {fileID: 459716540}
 --- !u!1 &1560054900
 GameObject:
   m_ObjectHideFlags: 0
@@ -22822,6 +22852,7 @@ MonoBehaviour:
   _shotController: {fileID: 1483952040}
   _greenReader: {fileID: 0}
   DebugLevelOverride: -1
+  DebugDisableTreeRecheck: 0
 --- !u!114 &1817614133
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -26332,6 +26363,7 @@ MonoBehaviour:
   downrangeHeightMeters: 4
   cupZoomHoverHeightMeters: 2.5
   cupZoomTweenSeconds: 1
+  _waterHoldSeconds: 1.1
 --- !u!114 &2300000011
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -65,6 +65,11 @@ namespace Golfin.Gameplay.UI.ShotUI
         /// </summary>
         public void OpenMapView()
         {
+            // The map thumbnail stays visible during a shot but is not reachable until the
+            // next shot is armed. ShotInProgressUiGate flips the Button inert; this guard is
+            // the belt-and-braces behind it (Cesar, 2026-08-06).
+            if (ShotInProgressUiGate.ShotInProgress) return;
+
             var mvc = FindObjectOfType<MapViewController>(includeInactive: false);
             if (mvc == null)
             {

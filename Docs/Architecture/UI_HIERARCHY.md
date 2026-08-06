@@ -410,6 +410,26 @@ Singleton; `ToastController.Show(message, seconds)`. Fired by the modal on Hole 
 
 ---
 
+### Shot-input visibility gate (LabScaffold.unity — `ShotUI_Canvas`)
+
+`ShotInProgressUiGate` (on `ShotUI_Canvas`) is the single owner of "hide the shot controls while the
+ball is in the air". It subscribes to `ShotController.OnStateChanged` and edge-triggers on
+`Flicking`/`Resolving`, releasing at the `CompleteShot()` → `Idle` re-arm. Serialized wiring:
+
+| Field | Target | Effect while the shot is in progress |
+|---|---|---|
+| `_hideGroupsDuringShot` | `ActionButtons_Cluster` CanvasGroup | alpha 0, `interactable` + `blocksRaycasts` off |
+| `_hideDuringShot` | `PutterTrack`, `PuttPathRoot` | `SetActive(false)`; pre-shot `activeSelf` remembered and restored, so putt mode's own toggle wins |
+| `_clubSelector` / `_ballSelector` / `_spinPanel` | selector + spin overlays | force-closed if open (defensive) |
+| `_holeMapButton` | `HoleCard/HoleMapContainer/HoleMap` Button | `interactable = false`; thumbnail unchanged because `m_DisabledColor` was set to `m_NormalColor` (white) |
+
+`static ShotInProgressUiGate.ShotInProgress` is the public read; `HoleCardWidget.OpenMapView()` guards
+on it so no path can open the map view mid-flight. Everything else keeps its own owner —
+`ShotConeView`, `ConeAlphaController`, `CentralBallWidget`, `PowerGaugeWidget`. ⚠️ `ActionButtonsRoot`
+(same cluster) is inert: its `_shotController` is null in the scene, so it has never run.
+
+---
+
 ### In-Game 1v1 HUD (LabScaffold.unity — gameplay HUD, versus-only; Phase 1)
 
 Lives in the additive gameplay HUD scene `Assets/Scenes/Physics/LabScaffold.unity`, not ShellScene. All versus elements are gated behind `GameSession.IsVersus`; the solo/Practice HUD is unchanged.
