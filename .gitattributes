@@ -38,3 +38,13 @@ Assets/Fonts/*.asset.meta text eol=lf
 *.pdf binary
 *.zip binary
 *.unitypackage binary
+
+# Unity BINARY assets (cup_capture_and_lipout cleanup, 2026-08-06): TerrainData and
+# LightingData serialize as BINARY even in force-text projects. The `* text=auto` +
+# `*.asset text eol=lf` rules above make git run CRLF normalization over their raw bytes,
+# so they compare as perpetually "modified" (and would be CORRUPTED if ever re-added:
+# the clean filter strips 0x0D bytes from binary data). Mark them binary; overrides win
+# because later lines take precedence.
+TerrainData_*.asset binary
+*Terrain.asset binary
+LightingData.asset binary
