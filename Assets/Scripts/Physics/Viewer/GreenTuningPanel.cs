@@ -15,7 +15,11 @@ namespace Golfin.Physics.Viewer
     {
         [SerializeField] PhysicsLabController controller;
         [SerializeField] GameObject panelRoot;        // The collapsible content panel
-        [SerializeField] Button     toggleButton;     // Gear-icon button that shows/hides panelRoot
+        // Wired to the in-game HUD's SettingsButton wheel (ShotUI_Canvas/SettingsButton).
+        // This is deliberately the REAL settings wheel, not a dedicated debug icon — the old
+        // flat-green "G" square used to sit on top of the wheel and has been removed.
+        // Scope: gameplay HUD only. The shell/menu + nav-bar settings buttons are untouched.
+        [SerializeField] Button     toggleButton;     // Shows/hides panelRoot
         [SerializeField] Slider     rollingResistanceSlider;
         [SerializeField] Slider     stopSpeedSlider;
         [SerializeField] Text       rollingResistanceLabel;

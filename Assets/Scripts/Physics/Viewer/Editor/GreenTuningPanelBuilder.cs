@@ -70,33 +70,21 @@ namespace Golfin.Physics.Viewer.Editor
 
             var panelScript = rootGO.AddComponent<GreenTuningPanel>();
 
-            // ── ToggleButton (60×60, anchored top-right, offset -20,-20) ─────
-            var toggleBtnGO = new GameObject("ToggleButton");
-            toggleBtnGO.transform.SetParent(rootGO.transform, false);
-            var toggleBtnRT = toggleBtnGO.AddComponent<RectTransform>();
-            toggleBtnRT.anchorMin        = Vector2.one;
-            toggleBtnRT.anchorMax        = Vector2.one;
-            toggleBtnRT.pivot            = Vector2.one;
-            toggleBtnRT.sizeDelta        = new Vector2(60f, 60f);
-            toggleBtnRT.anchoredPosition = new Vector2(-20f, -20f);
-            var toggleBtnImg = toggleBtnGO.AddComponent<Image>();
-            toggleBtnImg.color = new Color(0.15f, 0.55f, 0.15f, 0.9f);
-            var toggleBtn = toggleBtnGO.AddComponent<Button>();
-
-            var toggleIconGO = new GameObject("IconImage");
-            toggleIconGO.transform.SetParent(toggleBtnGO.transform, false);
-            var toggleIconRT = toggleIconGO.AddComponent<RectTransform>();
-            toggleIconRT.anchorMin = Vector2.zero;
-            toggleIconRT.anchorMax = Vector2.one;
-            toggleIconRT.sizeDelta = Vector2.zero;
-            toggleIconRT.offsetMin = Vector2.zero;
-            toggleIconRT.offsetMax = Vector2.zero;
-            var toggleIconText = toggleIconGO.AddComponent<Text>();
-            toggleIconText.text      = "G";
-            toggleIconText.alignment = TextAnchor.MiddleCenter;
-            toggleIconText.fontSize  = 24;
-            toggleIconText.color     = Color.white;
-            toggleIconText.font      = defaultFont;
+            // ── Toggle host: the in-game HUD SettingsButton ───────────────────
+            // There is NO dedicated toggle icon any more. The panel used to own a
+            // 60x60 flat-green "G" square anchored top-right, which sat directly on
+            // top of the SettingsButton wheel (SettingsButton is at -58,-24 / 86x86;
+            // the green square was at -20,-20 / 60x60 — a near-total overlap).
+            // The wheel itself is now the toggle.
+            var settingsBtnT = targetCanvas.transform.Find("SettingsButton");
+            var toggleBtn    = settingsBtnT != null ? settingsBtnT.GetComponent<Button>() : null;
+            if (toggleBtn == null)
+            {
+                Debug.LogError("[§2f] SettingsButton (with a Button component) not found under ShotUI_Canvas — " +
+                               "GreenTuningPanel has no toggle host. Aborting build.");
+                Undo.DestroyObjectImmediate(rootGO);
+                return;
+            }
 
             // ── PanelRoot (320×220, top-right below toggle, initially inactive)
             var panelRootGO = new GameObject("PanelRoot");
