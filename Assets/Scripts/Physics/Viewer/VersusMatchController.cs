@@ -283,6 +283,15 @@ namespace Golfin.Physics.Viewer
             // Small pause so settled ball frame is visible.
             // Debug capture mode: shorten pause to save time inside the 30s window.
             yield return new WaitForSeconds(_debugBothBots ? 0.1f : 0.5f);
+
+            // landing_surface_banner: if the landing banner is still on screen (human shot),
+            // hold AnnounceTurn until it clears so the two banners never stack. Bounded 2.5s.
+            float bannerWait = 0f;
+            while (LandingBannerController.IsBannerVisible && bannerWait < 2.5f)
+            {
+                bannerWait += Time.unscaledDeltaTime;
+                yield return null;
+            }
         }
 
         /// <summary>

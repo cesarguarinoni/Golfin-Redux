@@ -1,0 +1,21 @@
+=== iter-1 kickoff baseline 2026-08-06 ===
+HEAD: 0f9383a8be4e354102b38895b7b484a1a31af3e1
+DIRTY (git status --porcelain --untracked-files=all):
+ M Docs/AI_CONTEXT.md
+ M Docs/TellCode.md
+?? Docs/Specs/Active/landing_surface_banner/SPEC.md
+?? Docs/Specs/Active/landing_surface_banner/STATUS.md
+?? Docs/Specs/Active/landing_surface_banner/reference/figma_4094-26052_landing_banner_fairway.png
+=== end baseline ===
+
+[12:40] CSV +8 LANDING_* rows; LandingBannerController.cs created; asmdef +Golfin.Localization; VersusMatchController AwaitShot bounded wait. Compile verified via MCP reflection.
+[12:42] Localization importer run (Tools/Localization/Import Text CSV) — LocalizationTextTable.asset regenerated (+24 lines, 8 LANDING_ keys).
+[12:43] LabScaffold: LandingBannerController added to [Session] (fileID 1817614134), _templateBanner -> TurnBannerWidget fileID 1436714831. Scene diff = 14 insertions only, no MatchMakingModal drift.
+[12:43-12:45] RUN 1 solo hole1_playthrough (real ShellScene->Practice->Hole1 path, real physics): ROUGH, ROUGH, BUNKER(Sand), FAIRWAY, GREEN, InCup(no banner) + Hole Complete modal. Video 1170x2532.
+[12:47] RUN 2 water (Hole 6, ShellScene path): banner "WATER" during splash hold.
+[12:50] RUN 3 boundary OB (Hole 6 recovery bot): banner "OB" during OB hold.
+[12:51] RUN 4 JP (SetLanguage(Japanese) in play): banner "ウォーター".
+[12:52] RUN 5 versus_full_match_flow: P1(index 0) shots banner, P2 shots silent. NOTE localization falls back to raw keys in this direct-lab harness (no LocalizationBootstrap in scene) — pre-existing/environmental, GAMEPLAY_STRAIGHT etc. also raw.
+[13:00] Found SEMI-ROUGH wraps to two lines inside the 534px text area (off-design). Fixed clone-only: textWrappingMode=NoWrap in Start(); auto-size settles at fontSize 78, preferredWidth 533.81 <= 534, one line. TurnBannerWidget untouched.
+[13:03-13:06] RUN 6 canonical solo hole1 playthrough with the shipped build: ROUGH, ROUGH, BUNKER, FAIRWAY, GREEN, InCup(silent). 1:1 banner-per-stroke, no double-fire. videos/solo_hole1_landings.mp4 (1170x2532, 69.0s).
+[13:07] Capture-run drift reverted (M_Splash*.mat render-queue churn, NotoSansJP SDF atlas 59KB->2.3MB, tasks/ bot logs). Working tree = 5 spec files + new script only.

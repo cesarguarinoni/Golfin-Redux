@@ -22755,6 +22755,7 @@ GameObject:
   - component: {fileID: 1817614133}
   - component: {fileID: 1817614132}
   - component: {fileID: 1817614131}
+  - component: {fileID: 1817614134}
   m_Layer: 0
   m_Name: '[Session]'
   m_TagString: Untagged
@@ -22837,6 +22838,19 @@ MonoBehaviour:
   _banner: {fileID: 1436714831}
   _bot: {fileID: 1817614132}
   _controller: {fileID: 1483952038}
+--- !u!114 &1817614134
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1817614128}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d234a59a8ecb64900a11d88654df4225, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Golfin.Physics.Viewer::Golfin.Physics.Viewer.LandingBannerController
+  _templateBanner: {fileID: 1436714831}
 --- !u!1 &1820754619
 GameObject:
   m_ObjectHideFlags: 0

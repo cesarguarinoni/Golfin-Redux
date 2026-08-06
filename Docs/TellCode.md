@@ -14,6 +14,53 @@
 
 ---
 
+## 📋 SPEC_READY POINTERS
+
+- ~~**`landing_surface_banner`** (added 2026-08-06)~~ — **DONE 2026-08-06, Cesar-approved.** Shipped and moved to `Docs/Specs/Completed/landing_surface_banner/`. Landing-surface banner on ball settle as a runtime clone of the 1v1 TurnBanner (Figma 4094:26052), EN+JP `LANDING_*` rows, `VersusMatchController.AwaitShot` sequencing, LabScaffold `[Session]` wiring. Kickoff text below is kept for history.
+
+### Kickoff · landing_surface_banner — TellCode
+
+```
+Task: landing_surface_banner — GO from Cesar 2026-08-06.
+
+AUTHORITATIVE SPEC: Docs/Specs/Active/landing_surface_banner/SPEC.md
+Read it in full before touching anything; this kickoff is a pointer, not the
+work definition. Reference render: the spec folder's reference/ PNG
+(Figma 4094:26052). Update STATUS.md as you move through the pipeline and
+fill IMPLEMENTER_REPORT.md with the spec's acceptance checklist.
+
+Shape of the work (details + code skeleton in the spec):
+1. Assets/Localization/LocalizationText.csv — append the 8 LANDING_* rows
+   exactly as specced (EN caps / JP). Importer auto-runs on play mode; commit
+   the regenerated LocalizationTextTable.asset.
+2. NEW Assets/Scripts/Physics/Viewer/LandingBannerController.cs — subscribes
+   BallSM.OnShotComplete, maps EndSurface/OBReason → key, runtime-clones the
+   existing TurnBanner (scene fileID 1436714829) and calls Show(). Do NOT
+   rebuild the banner or edit TurnBannerWidget.cs — the clone IS the visual
+   spec (white text inherited; set no colors in code).
+3. Golfin.Physics.Viewer.asmdef — add "Golfin.Localization" reference
+   (VERIFIED missing; asmdef refs are not transitive).
+4. LabScaffold.unity — add the component to [Session], wire _templateBanner →
+   TurnBanner. Scene diff must be ONLY that. ⚠️ Known trap: saving the scene
+   may sweep in stale MatchMakingModal prefab-override reconciliation (K14
+   side-finding) — check git diff and revert any such drift out of the commit.
+5. VersusMatchController.cs — bounded AwaitShot() edit only (wait while
+   LandingBannerController.IsBannerVisible, cap 2.5s) so landing banner and
+   OPPONENT'S TURN never stack.
+
+Suppression rules (locked): versus + ActiveIndex != 0 → no banner; InCup,
+Tee, CartPath → no banner. Sand AND BunkerLip → BUNKER. OB: Water → WATER,
+OutOfBounds/ExitedWorldBounds → OB.
+
+VERIFY (editor — Lesson O, visual not just dispatch): land on fairway/green/
+rough/bunker + water + boundary OB, describe what the banner visually did;
+one landing in JP; 1v1 run — bot shots silent, human shot banner → turn
+banner sequential; InCup shows no banner and Hole Complete flow unchanged.
+Console clean.
+```
+
+---
+
 ## 📋 PENDING KICKOFFS — 2026-08-04 batch
 
 Paste any block below into Code as-is. Produced by the Architect during the 2026-08-03/04 sessions; grounded against source at time of writing. Delete a block (and log it in CURRENT STATE) when its task closes.

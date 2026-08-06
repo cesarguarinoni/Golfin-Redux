@@ -11,6 +11,7 @@
         "Golfin.Gameplay.UI",
         "Golfin.Gameplay.Loop",
         "Golfin.Diagnostics.Runtime",
+        "Golfin.Localization",
         "Golfin.Save",
         "Golfin.Audio.Events",
         "Unity.InputSystem",

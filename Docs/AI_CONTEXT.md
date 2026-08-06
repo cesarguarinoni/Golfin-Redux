@@ -7,6 +7,8 @@
 
 ## 🟢 PRIORITY QUEUED — pick up immediately
 
+> **DONE 2026-08-06 · `landing_surface_banner`** — landing-surface banner (FAIRWAY/GREEN/FRINGE/SEMI-ROUGH/ROUGH/BUNKER/WATER/OB) on ball settle; runtime clone of the 1v1 TurnBanner (Figma 4094:26052), white text, EN+JP `LANDING_*` rows. Solo + 1v1 human shots; suppressed for InCup/Tee/CartPath and for the opponent's shots. `VersusMatchController.AwaitShot()` holds AnnounceTurn until the landing banner clears (bounded 2.5s) so the two never stack. Verified through the real player path on Hole 1 + Hole 6 (ROUGH/BUNKER/FAIRWAY/GREEN/SEMI-ROUGH from real landings, WATER + boundary OB, InCup silent, JP ウォーター, 1v1 sequencing across 3 cycles). Cesar-approved; moved to `Docs/Specs/Completed/landing_surface_banner/`. One deviation he accepted: clone-only `textWrappingMode = NoWrap` so SEMI-ROUGH stays on one line inside the 534px text area.
+
 > ## 📱 SESSIONS 2026-07-27 → 2026-08-03 — DEVICE ERA BEGINS. READ THIS BLOCK FIRST.
 >
 > **This block supersedes the `phone_build_smoke_test` (Order 420) entry further down, which still says "awaiting Cesar's tethered build." That is STALE — the build ran.**

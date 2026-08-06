@@ -1111,3 +1111,27 @@ MonoBehaviour:
   - key: GAMEPLAY_DRAW
     english: DRAW
     japanese: "\u30C9\u30ED\u30FC"
+  - key: LANDING_FAIRWAY
+    english: FAIRWAY
+    japanese: "\u30D5\u30A7\u30A2\u30A6\u30A7\u30A4"
+  - key: LANDING_GREEN
+    english: GREEN
+    japanese: "\u30B0\u30EA\u30FC\u30F3"
+  - key: LANDING_FRINGE
+    english: FRINGE
+    japanese: "\u30AB\u30E9\u30FC"
+  - key: LANDING_SEMIROUGH
+    english: SEMI-ROUGH
+    japanese: "\u30BB\u30DF\u30E9\u30D5"
+  - key: LANDING_ROUGH
+    english: ROUGH
+    japanese: "\u30E9\u30D5"
+  - key: LANDING_BUNKER
+    english: BUNKER
+    japanese: "\u30D0\u30F3\u30AB\u30FC"
+  - key: LANDING_WATER
+    english: WATER
+    japanese: "\u30A6\u30A9\u30FC\u30BF\u30FC"
+  - key: LANDING_OB
+    english: OB
+    japanese: OB
