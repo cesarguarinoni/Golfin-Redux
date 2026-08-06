@@ -1,0 +1,63 @@
+2026-08-06T00:00:00 activated
+
+=== iter-1 kickoff baseline ===
+HEAD: dfbc42e37ddcaed9695903aa9a0ba36e95442ff5
+DIRTY:
+?? Docs/Specs/Active/bot_tree_error_recheck/HEARTBEAT.log
+?? Docs/Specs/Active/bot_tree_error_recheck/IMPLEMENTER_REPORT.md
+?? Docs/Specs/Active/bot_tree_error_recheck/SPEC.md
+?? Docs/Specs/Active/bot_tree_error_recheck/STATUS.md
+=== end baseline ===
+2026-08-06T00:05:00 read all three target files, starting implementation
+2026-08-06T00:15:00 done, awaiting review
+
+=== iter-2 kickoff baseline ===
+HEAD: dfbc42e37ddcaed9695903aa9a0ba36e95442ff5
+DIRTY:
+ M .claude/agents/golfin-redteam-reviewer.md
+ M .claude/agents/golfin-reviewer.md
+ M .claude/agents/golfin-self-reviewer.md
+ M Assets/Resources/FX/M_SplashDroplet.mat
+ M Assets/Resources/FX/M_SplashFoam.mat
+ M Assets/Resources/FX/M_SplashRing.mat
+ M Assets/Scripts/Physics/Tests/BotTreeProbeTests.cs
+ M Assets/Scripts/Physics/Viewer/BotTreeProbe.cs
+ M Assets/Scripts/Physics/Viewer/VersusBot.cs
+?? Docs/Specs/Active/bot_tree_error_recheck/ARCHITECT_REVIEW.md
+?? Docs/Specs/Active/bot_tree_error_recheck/CESAR_REJECTION.md
+?? Docs/Specs/Active/bot_tree_error_recheck/HEARTBEAT.log
+?? Docs/Specs/Active/bot_tree_error_recheck/IMPLEMENTER_REPORT.md
+?? Docs/Specs/Active/bot_tree_error_recheck/SELF_REVIEW.md
+?? Docs/Specs/Active/bot_tree_error_recheck/SPEC.md
+?? Docs/Specs/Active/bot_tree_error_recheck/STATUS.md
+=== end baseline ===
+2026-08-06T07:54:13Z iter-2 activated — CESAR_REJECTED, evidence-only pass; pre-existing M files: M_Splash*.mat, golfin-*reviewer.md
+2026-08-06T08:45:00Z done, awaiting review
+
+=== iter-3 kickoff baseline ===
+HEAD: dfbc42e37ddcaed9695903aa9a0ba36e95442ff5
+DIRTY:
+ M .claude/agents/golfin-redteam-reviewer.md
+ M .claude/agents/golfin-reviewer.md
+ M .claude/agents/golfin-self-reviewer.md
+ M Assets/Resources/FX/M_SplashDroplet.mat
+ M Assets/Resources/FX/M_SplashFoam.mat
+ M Assets/Resources/FX/M_SplashRing.mat
+ M Assets/Scripts/Physics/Tests/BotTreeProbeTests.cs
+ M Assets/Scripts/Physics/Viewer/BotTreeProbe.cs
+ M Assets/Scripts/Physics/Viewer/VersusBot.cs
+?? Docs/Specs/Active/bot_tree_error_recheck/ARCHITECT_REVIEW.md
+?? Docs/Specs/Active/bot_tree_error_recheck/ARCHITECT_RULING_iter2.md
+?? Docs/Specs/Active/bot_tree_error_recheck/CESAR_REJECTION.md
+?? Docs/Specs/Active/bot_tree_error_recheck/HEARTBEAT.log
+?? Docs/Specs/Active/bot_tree_error_recheck/IMPLEMENTER_REPORT.md
+?? Docs/Specs/Active/bot_tree_error_recheck/SELF_REVIEW.md
+?? Docs/Specs/Active/bot_tree_error_recheck/SPEC.md
+?? Docs/Specs/Active/bot_tree_error_recheck/STATUS.md
+=== end baseline ===
+2026-08-06T09:00:00Z iter-3 activated — ARCHITECT_REVIEW_FAIL; evidence-only pass targeting mid-hole corridor (0.50–0.62 frac, ~150–210m remaining) where clamp fires at 17–34%
+2026-08-06T09:27:21Z starting new match with debugStartLie — re-launching matchmaking
+2026-08-06T09:27:26Z starting new match with debugStartLie — re-launching matchmaking
+HEARTBEAT: 2026-08-06T09:48:55Z match stuck in spin loop (VersusBot.cs:837 unscaledDeltaTime=0), restarting match from mid-corridor
+2026-08-06T10:30:00Z root cause confirmed — TrunkTopY≈29-30m vs ball.y=35.9m; probe flies 6-7m above all trunks at frac=0.50 (hill); setting IMPLEMENTER_BLOCKED
+2026-08-06T10:35:00Z done, awaiting review — IMPLEMENTER_BLOCKED; TrunkTopY<ball.y proven, clamp physically unobservable from frac=0.50 hill position

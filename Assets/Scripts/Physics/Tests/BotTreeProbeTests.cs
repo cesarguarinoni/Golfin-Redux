@@ -130,6 +130,138 @@ namespace Golfin.Physics.Tests
                 "Water surface must be rejected by IsPlayableLanding (IsAvoid=true)");
         }
 
+        // ── Tests 7–10: TrySampleTrunkClearAimError (bot_tree_error_recheck) ─────────────────
+
+        // Trunk dead-ahead at x=20 with large scale so it covers all ±6° perturbations.
+        // scale=32 → trunkRadius~8m; from origin at yaw=0, ANY sample within ±37° hits it at 20m.
+        private const string CsvHugeTrunkAhead =
+            "# test — huge trunk blocks all perturbed aim lines within ±6°\n" +
+            "worldX,worldZ,baseY,scale,profileName\n" +
+            "10.0,0.0,0.0,32.0,default\n";   // placed at 10m to ensure first 0→6m step hits
+
+        // Narrow trunk at x=100, scale=8 → trunkRadius~2m.
+        // At d=100m: samples < ~1.15° hit trunk; samples > ~1.15° miss.
+        // Used with a mock sampler to control which deltas are blocked vs clear.
+        private const string CsvNarrowTrunkAt100 =
+            "# test — narrow trunk at 100m; deltas > ~1.15° at carry=120 are clear\n" +
+            "worldX,worldZ,baseY,scale,profileName\n" +
+            "100.0,0.0,0.0,8.0,default\n";
+
+        // ── Test 7: null provider — first sample accepted, delta within ±max ────────
+
+        [Test]
+        public void TrySampleTrunkClearAimError_NullProvider_ReturnsFirstSample()
+        {
+            // Seed a deterministic sampler. trees==null → helper returns immediately after
+            // drawing exactly ONE sample (no LineHasTrunkInWindows call at all).
+            var rng = new System.Random(1234);
+            int sampleCount = 0;
+            System.Func<float, float, float> seededRange = (min, max) =>
+            {
+                sampleCount++;
+                return (float)(min + (max - min) * rng.NextDouble());
+            };
+
+            float delta;
+            bool result = BotTreeProbe.TrySampleTrunkClearAimError(
+                trees: null, ball: BallOrigin, safeYaw: 0f, carry: 80f,
+                aimErrorDegMax: 6f, maxTries: 5, sampleRange: seededRange,
+                deltaAimDeg: out delta);
+
+            Assert.IsTrue(result,
+                "Null provider must return true (treeless no-op — first sample accepted)");
+            Assert.AreEqual(1, sampleCount,
+                "Null provider must draw exactly ONE sample then return (no more iterations)");
+            Assert.That(delta, Is.InRange(-6f, 6f),
+                "Accepted delta must be within ±aimErrorDegMax");
+        }
+
+        // ── Test 8: straight line clear, all samples clear → returns true ─────────
+
+        [Test]
+        public void TrySampleTrunkClearAimError_AllSamplesClear_ReturnsTrue()
+        {
+            // Trunk is BESIDE the line (CsvTrunkAside: trunk at z=50), so all perturbed
+            // lines along +X are clear. Helper should return true on the first sample.
+            var trees = BuildProvider(CsvTrunkAside);
+            Assert.IsNotNull(trees);
+
+            var rng = new System.Random(7);
+            int sampleCount = 0;
+            System.Func<float, float, float> seededRange = (min, max) =>
+            {
+                sampleCount++;
+                return (float)(min + (max - min) * rng.NextDouble());
+            };
+
+            float delta;
+            bool result = BotTreeProbe.TrySampleTrunkClearAimError(
+                trees, BallOrigin, safeYaw: 0f, carry: 80f,
+                aimErrorDegMax: 6f, maxTries: 5, seededRange, out delta);
+
+            Assert.IsTrue(result,
+                "Clear line: helper must return true (first trunk-free sample accepted)");
+            Assert.LessOrEqual(sampleCount, 5,
+                "Sample count must not exceed maxTries");
+            Assert.That(delta, Is.InRange(-6f, 6f),
+                "Accepted delta must be within ±aimErrorDegMax");
+        }
+
+        // ── Test 9: trunk blocks first two samples; third is clear → returns true ──
+
+        [Test]
+        public void TrySampleTrunkClearAimError_TrunkBlocksEarlySamples_ReturnsClearSample()
+        {
+            // Narrow trunk at x=100, trunkRadius~2m (scale=8).
+            // Samples < ~1.15° in absolute value hit the trunk; samples > ~2° are clear.
+            // Mock sampler returns: 0.5° (blocked), 0.5° (blocked), 2.5° (clear).
+            var trees = BuildProvider(CsvNarrowTrunkAt100);
+            Assert.IsNotNull(trees);
+
+            float[] canned = { 0.5f, 0.5f, 2.5f };
+            int idx = 0;
+            System.Func<float, float, float> mock = (_, __) => canned[idx++];
+
+            float delta;
+            bool result = BotTreeProbe.TrySampleTrunkClearAimError(
+                trees, BallOrigin, safeYaw: 0f, carry: 120f,
+                aimErrorDegMax: 6f, maxTries: 5, mock, out delta);
+
+            Assert.IsTrue(result,
+                "Must return true when a clear sample is found within maxTries");
+            Assert.AreEqual(3, idx,
+                "Exactly 3 samples drawn: two blocked, one clear");
+            Assert.AreEqual(2.5f, delta, 0.001f,
+                "deltaAimDeg must be the first clear sample (2.5°)");
+        }
+
+        // ── Test 10: all samples blocked → returns false, deltaAimDeg == 0 ─────────
+
+        [Test]
+        public void TrySampleTrunkClearAimError_AllSamplesBlocked_ReturnsFalseAndZeroDelta()
+        {
+            // Huge trunk at x=10 with radius~8m covers all ±6° samples at dist=30m.
+            var trees = BuildProvider(CsvHugeTrunkAhead);
+            Assert.IsNotNull(trees);
+
+            // Mock sampler returns 5 distinct values, all within ±6° — all will be blocked.
+            float[] canned = { 5.5f, -5.5f, 4.0f, -4.0f, 3.0f };
+            int idx = 0;
+            System.Func<float, float, float> mock = (_, __) => canned[idx++];
+
+            float delta;
+            bool result = BotTreeProbe.TrySampleTrunkClearAimError(
+                trees, BallOrigin, safeYaw: 0f, carry: 30f,
+                aimErrorDegMax: 6f, maxTries: 5, mock, out delta);
+
+            Assert.IsFalse(result,
+                "Must return false when all maxTries samples are trunk-blocked");
+            Assert.AreEqual(0f, delta, 0.001f,
+                "deltaAimDeg must be 0 on false return (fall back to pre-2b line)");
+            Assert.AreEqual(5, idx,
+                "All maxTries (5) samples must have been drawn before giving up");
+        }
+
         // ── Test 6: carry-vs-cup regression (Order 351 §9 iter-2 fix) ─────────────
         // A trunk placed at x=265m (inside the carry landing window 252-287m) must be
         // detected when the probe receives carry=287m, but NOT when it receives

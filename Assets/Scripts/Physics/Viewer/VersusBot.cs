@@ -37,6 +37,12 @@ namespace Golfin.Physics.Viewer
         // field is production-safe (simply a floor/override on the level read).
         [SerializeField] public int DebugLevelOverride = -1;
 
+        // ── bot_tree_error_recheck: suppress tree re-check on 2b aim error ──
+        // false (default) = aim error is rejection-sampled until trunk-clear.
+        // true = restores pre-fix behaviour byte-for-byte (unchecked random sample).
+        // No #if UNITY_EDITOR — field ships in player builds (production-safe).
+        [SerializeField] public bool DebugDisableTreeRecheck = false;
+
         // ── H2: reactive OB state ──────────────────────────────────────────
         // Written by VersusMatchController or caller after each shot resolves.
         // Public so VersusMatchController can set it if desired; VersusBot also
@@ -64,6 +70,10 @@ namespace Golfin.Physics.Viewer
         private const float LayupMinDist   = 10f;  // m minimum layup target
         private const int   RetargetAngles = 4;    // ±10°, ±20°
         private static readonly float[] OffsetDegrees = { -10f, 10f, -20f, 20f };
+
+        // ── bot_tree_error_recheck: 2b aim-error rejection-sampling ────────
+        // Max samples before falling back to deltaAimDeg=0 (fires the pre-2b validated line).
+        private const int MaxAimErrorResamples = 5;
 
         // ── 2b: difficulty bracket ─────────────────────────────────────────
         private struct DifficultyBracket
@@ -644,9 +654,12 @@ namespace Golfin.Physics.Viewer
             // Runs AFTER H2 (safe landing already chosen) and BEFORE 2b error injection so
             // difficulty perturbation fires on the tree+water-safe aim exactly as it does today.
             // Non-putt only (putter shots don't drive into trunks at playing distance).
+            //
+            // bot_tree_error_recheck: hoist `trees` so the 2b block below can use it for the
+            // aim-error re-check (TrySampleTrunkClearAimError). Null on treeless holes → no-op.
+            var trees = _controller.GetTreeProvider();
             if (!isPutt)
             {
-                var trees = _controller.GetTreeProvider();      // null on treeless holes → no-op
                 // §9: pass probeCarry (the club's actual landing distance, updated by H2 if it fired)
                 // instead of dist (the full cup distance). Puts the landing window at the real descent zone.
                 if (trees != null && BotTreeProbe.TryFindTrunkClearAim(
@@ -661,7 +674,10 @@ namespace Golfin.Physics.Viewer
                         Debug.Log($"[VersusBot] Tree re-aim putter-floor: treeDist={treeDist:F1}m clamped to {LayupPutterFloor}m (prevents EnterPutterMode teleport)");
                         treeDist = LayupPutterFloor;
                     }
-                    SelectShotCalibrated(treeDist, out club, out power01, out label, out _);  // VersusBot's own selector; carry discarded (re-aim is already carry-space)
+                    // bot_tree_error_recheck: out probeCarry (was out _). The 2b block uses probeCarry
+                    // for TrySampleTrunkClearAimError — must reflect the tree-re-aimed carry so the
+                    // landing window in the re-check matches the line the bot is actually going to fire.
+                    SelectShotCalibrated(treeDist, out club, out power01, out label, out probeCarry);
                     isPutt = club == PhysicsLabController.PutterIndex;
                     label += $" [tree re-aim to {treeDist:F0}m]";
                     float aimDeltaDeg = (treeYaw - baseYaw) * Mathf.Rad2Deg;
@@ -721,15 +737,34 @@ namespace Golfin.Physics.Viewer
                 // D2: aim/power error (applies to all shots including putts after H3).
                 float deltaAimDeg = 0f;
                 float deltaPow    = 0f;
+                int   treeChecked = 0;
                 if (bkt.aimErrorDegMax > 0f || bkt.powerErrorMax > 0f)
                 {
-                    deltaAimDeg = Random.Range(-bkt.aimErrorDegMax, bkt.aimErrorDegMax);
-                    deltaPow    = Random.Range(-bkt.powerErrorMax,  bkt.powerErrorMax);
+                    // bot_tree_error_recheck: aim error must not point the shot back into a trunk
+                    // corridor the tree_aware_bot probe just cleared. Route through rejection sampler.
+                    // Power error unchanged (re-check uses pre-error carry — accepted approximation,
+                    // see spec §2 Out: power changes carry, not aim direction).
+                    bool clamped = false;
+                    if (!isPutt && trees != null && !DebugDisableTreeRecheck)
+                    {
+                        treeChecked = 1;
+                        if (!BotTreeProbe.TrySampleTrunkClearAimError(
+                                trees, ball, aimYaw, probeCarry, bkt.aimErrorDegMax,
+                                MaxAimErrorResamples, Random.Range, out deltaAimDeg))
+                            clamped = true;   // deltaAimDeg == 0 → fire the validated pre-2b line
+                    }
+                    else
+                    {
+                        deltaAimDeg = Random.Range(-bkt.aimErrorDegMax, bkt.aimErrorDegMax);
+                    }
+                    deltaPow = Random.Range(-bkt.powerErrorMax, bkt.powerErrorMax);
                     aimYaw  += deltaAimDeg * Mathf.Deg2Rad;
                     power01  = Mathf.Clamp01(power01 + deltaPow);
+                    if (clamped)
+                        Debug.Log("[VersusBot] 2b tree re-check: all aim samples trunk-blocked — clamped to pre-2b line");
                 }
 
-                Debug.Log($"[VersusBot] 2b error: Δaim={deltaAimDeg:+0.0;-0.0}° Δpow={deltaPow:+0.000;-0.000} clubNoise={clubNoiseNote}");
+                Debug.Log($"[VersusBot] 2b error: Δaim={deltaAimDeg:+0.0;-0.0}° Δpow={deltaPow:+0.000;-0.000} clubNoise={clubNoiseNote} treeChecked={treeChecked}");
             }
             // ── END 2b error injection ──────────────────────────────────────
 

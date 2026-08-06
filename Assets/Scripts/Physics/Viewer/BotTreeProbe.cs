@@ -112,6 +112,48 @@ namespace Golfin.Physics.Viewer
             return false;
         }
 
+        // ── bot_tree_error_recheck (Order 352) ─────────────────────────────────────────────
+
+        /// <summary>
+        /// Sample a 2b aim error whose resulting line is trunk-clear.
+        ///
+        /// Pure w.r.t. randomness: caller injects the sampler (UnityEngine.Random.Range in
+        /// production, seeded System.Random in tests). trees == null → first sample accepted
+        /// (treeless no-op, preserves current behaviour exactly). Returns false when all
+        /// maxTries samples were trunk-blocked → caller must use deltaAimDeg = 0 (fires the
+        /// already-validated pre-2b line).
+        ///
+        /// NOTE: rejection-sampling truncates the error distribution near tree corridors —
+        /// that IS the feature. Power error and club noise are NOT re-checked here (accepted
+        /// approximation per spec §2 Out; power changes carry, not aim).
+        /// Production-safe: no #if UNITY_EDITOR.
+        /// </summary>
+        /// <param name="trees">GetTreeProvider() — null on treeless holes → no-op (treeless).</param>
+        /// <param name="ball">Current ball world position.</param>
+        /// <param name="safeYaw">The tree-aware aim yaw BEFORE 2b perturbation (radians).</param>
+        /// <param name="carry">The club's modelled carry (probeCarry, updated by H2/tree re-aim).</param>
+        /// <param name="aimErrorDegMax">Half-width of the aim-error bracket (degrees), from bot_difficulty.csv.</param>
+        /// <param name="maxTries">Number of rejection-sampling attempts before fallback (VersusBot.MaxAimErrorResamples).</param>
+        /// <param name="sampleRange">Sampler delegate: (min, max) → float. Pass UnityEngine.Random.Range in production.</param>
+        /// <param name="deltaAimDeg">Output: the accepted aim-error delta in degrees (0 on false return).</param>
+        /// <returns>true if a trunk-clear sample was found within maxTries attempts; false if all were blocked.</returns>
+        public static bool TrySampleTrunkClearAimError(
+            ITreeObstacleProvider trees, Vector3 ball, float safeYaw, float carry,
+            float aimErrorDegMax, int maxTries,
+            System.Func<float, float, float> sampleRange,
+            out float deltaAimDeg)
+        {
+            for (int i = 0; i < maxTries; i++)
+            {
+                deltaAimDeg = sampleRange(-aimErrorDegMax, aimErrorDegMax);
+                if (trees == null) return true;  // treeless hole: first sample accepted, no probe
+                if (!LineHasTrunkInWindows(trees, ball, safeYaw + deltaAimDeg * Mathf.Deg2Rad, carry))
+                    return true;
+            }
+            deltaAimDeg = 0f;
+            return false;
+        }
+
         // ── Helpers (public for sweep tooling / script-execute; logic is read-side only) ──────
 
         /// <summary>
