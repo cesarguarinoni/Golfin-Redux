@@ -1,0 +1,22 @@
+=== iter-1 kickoff baseline 2026-08-07 16:56 JST ===
+HEAD: 0f39ec0a37beb3a05b887cc8ddb4ee00aaaeda77
+DIRTY (git status --porcelain --untracked-files=all):
+ M Assets/Scripts/UI/Gacha/GachaCarouselController.cs
+ M Assets/Scripts/UI/ModeSelect/ModeCardController.cs
+ M Assets/Scripts/UI/ModeSelect/ModeCarouselController.cs
+ M Docs/Specs/Completed/shot_ui_translucency_glow/ARCHITECT_REVIEW.md
+ M Docs/TellCode.md
+?? Docs/Specs/Active/tree_occlusion_fade/ARCHITECT_REVIEW.md
+?? Docs/Specs/Active/tree_occlusion_fade/HEARTBEAT.log
+?? Docs/Specs/Active/tree_occlusion_fade/IMPLEMENTER_REPORT.md
+?? Docs/Specs/Active/tree_occlusion_fade/SELF_REVIEW.md
+?? Docs/Specs/Active/tree_occlusion_fade/SPEC.md
+?? Docs/Specs/Active/tree_occlusion_fade/STATUS.md
+=== end baseline ===
+
+[17:04] STEP0 inventory done; driver+shader written; shader compiles 0 errors. Starting §4.3 bark/impostor A/B.
+[17:07] Control render proves flat-leaf artifact is rig-only, not my shader edit. Shader restored (13 markers). Retargeting 7 bark/impostor mats.
+[17:14] Tests written+green (1023 total, 0 fail). Capture bot compiled. Launching real-flow Hole-1 capture.
+[17:43] iter-1 closed: STATUS=IMPLEMENTER_BLOCKED. Impl complete + driver verified on real Hole 1; dithered window itself unproven. AI_CONTEXT updated.
+[17:58] VIDEO DELIVERED. Focus bug found+fixed via video (post-shot CurrentFocus returned _shotOrigin = previous tee, cone pointed behind camera). Dither CONFIRMED rendering on bark+leaves at 45/60 cone; invisible at shipped 10/16.
+[18:05] Cone defaults -> 45/60 per Cesar. Tests 1023/0. Re-recorded + delivered.
