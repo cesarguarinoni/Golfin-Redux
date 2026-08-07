@@ -74,6 +74,14 @@ namespace Golfin.Physics.Viewer
 
         public void SetModeSetter(IModeSetter ms) => _modeSetter = ms;
 
+        /// <summary>The live ball transform, or null before one exists. Exposed for
+        /// TreeOccludeFadeDriver (tree_occlusion_fade §4.1): ChaseCamera is deliberately dormant
+        /// until <see cref="ArmChaseForShot"/> runs, so its CurrentFocus is (0,0,0) while the player
+        /// is still aiming at the tee. The occlude-fade cone needs a focus in BOTH phases, so it
+        /// falls back to this while the chase camera has no target. Read-only; no behaviour change.</summary>
+        public Transform CurrentBall => (_controllerAccessor ?? (controller != null
+            ? (IControllerAccessor)new PhysicsLabControllerAdapter(controller) : null))?.CurrentBall;
+
         /// <summary>
         /// Inject a stub controller accessor for unit tests (bypasses PhysicsLabController).
         /// Also subscribes to the stub's BallSM.OnStateChanged if it differs from the current SM.

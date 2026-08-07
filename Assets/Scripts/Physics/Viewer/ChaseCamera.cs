@@ -72,6 +72,11 @@ namespace Golfin.Physics.Viewer
 
         public void SetTarget(Transform t) => _target = t;
 
+        /// <summary>What the camera is looking at this frame — live ball while it is flying, resting
+        /// shot origin otherwise. Same expression <see cref="RunLateUpdateLogic"/> uses for `focus`.
+        /// Read by TreeOccludeFadeDriver (tree_occlusion_fade §4.1).</summary>
+        public Vector3 CurrentFocus => _target != null ? _target.position : _shotOrigin;
+
         public void ResetToOrigin(Vector3 origin, Vector3 launchDir)
         {
             _shotOrigin = origin;
