@@ -1,0 +1,30 @@
+=== iter-1 kickoff baseline 2026-08-07T00:00:00 ===
+HEAD: 5e419e5952ccedddcbca80c52d8950d7ae867e12
+DIRTY:
+ M Assets/Scripts/UI/Gacha/GachaCarouselController.cs
+ M Assets/Scripts/UI/ModeSelect/ModeCardController.cs
+ M Assets/Scripts/UI/ModeSelect/ModeCarouselController.cs
+ M Docs/TellCode.md
+?? Docs/Specs/Active/shot_ui_translucency_glow/
+=== end baseline ===
+2026-08-07T00:01:00 activated - reading SPEC.md, setting IMPLEMENTER_WORKING
+2026-08-07T12:35:00 done, awaiting review
+=== iter-2 kickoff baseline 2026-08-07T13:00:00 ===
+HEAD: 5e419e5952ccedddcbca80c52d8950d7ae867e12
+DIRTY:
+ M Assets/Scenes/Physics/LabScaffold.unity
+ M Assets/Scripts/Gameplay/UI/ShotUI/ActionButtonWidget.cs
+ M Assets/Scripts/Gameplay/UI/ShotUI/ClubHandleDragger.cs
+ M Assets/Scripts/UI/Gacha/GachaCarouselController.cs
+ M Assets/Scripts/UI/ModeSelect/ModeCardController.cs
+ M Assets/Scripts/UI/ModeSelect/ModeCarouselController.cs
+ M Docs/TellCode.md
+?? Assets/Scripts/Gameplay/UI/ShotUI/BallConeAlphaMirror.cs
+?? Assets/Scripts/Gameplay/UI/ShotUI/BallConeAlphaMirror.cs.meta
+?? Assets/Scripts/Gameplay/UI/ShotUI/TeeIdleGlowController.cs
+?? Assets/Scripts/Gameplay/UI/ShotUI/TeeIdleGlowController.cs.meta
+?? Docs/Specs/Active/shot_ui_translucency_glow/
+=== end baseline ===
+2026-08-07T13:00:00 activated iter-2 - fixing sibling index, adding per-frame log, boot-path evidence
+2026-08-07T14:45:00 done, awaiting review
+2026-08-07T14:31:55 orchestrator iter-3: fixed glow scale (handle localScale 2.0 not mirrored); verified live on real boot path

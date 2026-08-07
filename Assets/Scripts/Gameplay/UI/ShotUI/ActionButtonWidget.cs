@@ -13,13 +13,21 @@ namespace Golfin.Gameplay.UI.ShotUI
 
         protected virtual void OnEnable()
         {
-            if (_button != null) _button.onClick.AddListener(OnClick);
+            if (_button != null)
+            {
+                _button.onClick.AddListener(OnClick);
+                _button.onClick.AddListener(TeeIdleGlowController.NotifyOtherInteraction);
+            }
             Refresh();
         }
 
         protected virtual void OnDisable()
         {
-            if (_button != null) _button.onClick.RemoveListener(OnClick);
+            if (_button != null)
+            {
+                _button.onClick.RemoveListener(OnClick);
+                _button.onClick.RemoveListener(TeeIdleGlowController.NotifyOtherInteraction);
+            }
         }
 
         protected abstract void Refresh();

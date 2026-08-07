@@ -18470,6 +18470,8 @@ GameObject:
   - component: {fileID: 1443870533}
   - component: {fileID: 1443870535}
   - component: {fileID: 1443870536}
+  - component: {fileID: 1443870537}
+  - component: {fileID: 1443870538}
   m_Layer: 0
   m_Name: ClubHandle
   m_TagString: Untagged
@@ -18549,6 +18551,7 @@ MonoBehaviour:
   _shotController: {fileID: 1483952040}
   _coneRect: {fileID: 1379986108}
   _coneGraphic: {fileID: 1379986110}
+  _glowController: {fileID: 1443870538}
   _flickThresholdPxPerFrame: 5
   _releaseToFire: 0
 --- !u!114 &1443870536
@@ -18563,6 +18566,38 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fe8acfe329c1100409ca9dbc4184531b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Golfin.Gameplay.UI::Golfin.Gameplay.UI.ShotUI.ClubHandleSpriteBinder
+--- !u!225 &1443870537
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1443870531}
+  m_Enabled: 1
+  m_Alpha: 1
+  m_Interactable: 1
+  m_BlocksRaycasts: 1
+  m_IgnoreParentGroups: 1
+--- !u!114 &1443870538
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1443870531}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 80638278997b243aba777b7794e84c67, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Golfin.Gameplay.UI::Golfin.Gameplay.UI.ShotUI.TeeIdleGlowController
+  _shotController: {fileID: 1483952040}
+  _mapViewController: {fileID: 2072667396}
+  idleGlowDelay: 5
+  glowPulsePeriod: 1.2
+  glowColor: {r: 1, g: 0.788, b: 0.29, a: 1}
+  haloPadding: 1.6
+  debugDisableIdleGlow: 0
+  _debugGlowFrameLog: 0
 --- !u!1 &1465451156
 GameObject:
   m_ObjectHideFlags: 0
@@ -22853,6 +22888,7 @@ MonoBehaviour:
   _greenReader: {fileID: 0}
   DebugLevelOverride: -1
   DebugDisableTreeRecheck: 0
+  DebugDisableCanopyPreference: 0
 --- !u!114 &1817614133
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -25433,6 +25469,12 @@ MonoBehaviour:
   _farClip: 2000
   _cameraHeight: 120
   _initialZoom: 45
+  _environmentHideNames:
+  - MountainBackdrop
+  - Backdrop
+  - Ring
+  _minFramedSpanM: 40
+  _alignToPlayfieldAxis: 1
   _minZoom: 30
   _maxZoom: 90
   _panSensitivity: 0.15
@@ -26103,6 +26145,7 @@ GameObject:
   - component: {fileID: 2200000003}
   - component: {fileID: 2200000005}
   - component: {fileID: 2200000006}
+  - component: {fileID: 2200000007}
   m_Layer: 0
   m_Name: CentralBall
   m_TagString: Untagged
@@ -26198,6 +26241,22 @@ CanvasGroup:
   m_Interactable: 1
   m_BlocksRaycasts: 1
   m_IgnoreParentGroups: 0
+--- !u!114 &2200000007
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2200000001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4aec54cfb87ea41f0a2fd5cc977fe9d2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Golfin.Gameplay.UI::Golfin.Gameplay.UI.ShotUI.BallConeAlphaMirror
+  _coneGroup: {fileID: 1838493592}
+  _baseAlpha: 1
+  debugLegacyTranslucency: 0
+  _handleCanvasGroup: {fileID: 1443870537}
 --- !u!1 &2300000001
 GameObject:
   m_ObjectHideFlags: 0

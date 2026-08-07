@@ -11,9 +11,10 @@ namespace Golfin.Gameplay.UI.ShotUI
     public class ClubHandleDragger : MonoBehaviour,
         IPointerDownHandler, IDragHandler, IPointerUpHandler
     {
-        [SerializeField] private ShotController  _shotController;
-        [SerializeField] private RectTransform   _coneRect;
-        [SerializeField] private ConeMeshGraphic _coneGraphic;
+        [SerializeField] private ShotController       _shotController;
+        [SerializeField] private RectTransform        _coneRect;
+        [SerializeField] private ConeMeshGraphic      _coneGraphic;
+        [SerializeField] private TeeIdleGlowController _glowController;
 
         private float ConeHeightPx => _coneGraphic != null ? _coneGraphic.HeightPx : 1009f;
 
@@ -38,6 +39,8 @@ namespace Golfin.Gameplay.UI.ShotUI
             _dragging     = true;
             _peakPower    = 0f;
             _peakFinetune = 0f;
+            // Notify glow controller before the drag begins so the glow disarms cleanly.
+            _glowController?.OnHandleTouched();
             // Push current spin selection before starting the drag so CommitFlick sees it.
             _shotController.PendingSpinInput = HUD.SpinContext.Spin;
             _shotController.BeginExternalDrag();   // clears the previous swing's touch history
