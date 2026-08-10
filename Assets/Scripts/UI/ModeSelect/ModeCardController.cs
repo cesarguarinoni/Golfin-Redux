@@ -161,6 +161,17 @@ namespace GolfinRedux.UI.ModeSelect
         private Coroutine _heightAnim;
         private bool _stateInitialized;
 
+        // When true the whole-card tap stays interactable even on a LOCKED card. The home carousel
+        // sets this so tapping a locked side card still slides it into the centre — tap and swipe
+        // reach the same place. The full-screen list leaves it false so locked rows stay inert.
+        private bool _tapWhenLocked;
+
+        // The card ROOT carries its own Button. It is the nearest IPointerClickHandler ancestor for
+        // every child graphic that isn't itself a button (the locked overlay, the economy rows, the
+        // background), so a tap landing there is swallowed unless we listen to it too. Hooking it
+        // makes the ENTIRE card surface a tap target, which is what "tapping selects it" requires.
+        private Button _rootTapButton;
+
         public event System.Action<ModeCardController> OnCardTapped;
         public event System.Action<ModeCardController> OnPlayClicked;
         public event System.Action<ModeCardController> OnTaglineTapped;
@@ -170,6 +181,18 @@ namespace GolfinRedux.UI.ModeSelect
         /// Home carousel: true. Full-screen list: false (§6.3 item 16).
         /// </summary>
         public void SetShowChevron(bool show) { _showChevron = show; }
+
+        /// <summary>
+        /// Keep the whole-card tap live on locked cards (home carousel), so a tap can still centre
+        /// them exactly as a swipe does. Leave false on the full-screen list.
+        /// </summary>
+        public void SetTapWhenLocked(bool enabled)
+        {
+            _tapWhenLocked = enabled;
+            bool tappable = _tapWhenLocked || !IsLocked;
+            if (cardTapButton  != null) cardTapButton.interactable  = tappable;
+            if (_rootTapButton != null) _rootTapButton.interactable = tappable;
+        }
 
         /// <summary>
         /// Set by the home carousel: true for the centered card, false for side/peek cards.
@@ -247,6 +270,11 @@ namespace GolfinRedux.UI.ModeSelect
                 cardTapButton.transform.SetAsFirstSibling();
                 cardTapButton.onClick.AddListener(() => OnCardTapped?.Invoke(this));
             }
+            // Catch-all: clicks on any non-button child bubble to the root Button, not to
+            // cardTapButton. UGUI dispatches pointerClick to ONE handler, so this never double-fires.
+            _rootTapButton = GetComponent<Button>();
+            if (_rootTapButton != null && _rootTapButton != cardTapButton)
+                _rootTapButton.onClick.AddListener(() => OnCardTapped?.Invoke(this));
             if (playButton != null)
                 playButton.onClick.AddListener(HandlePlayButtonClicked);
             if (taglineButton != null)
@@ -338,7 +366,10 @@ namespace GolfinRedux.UI.ModeSelect
             if (lockedOverlay != null) lockedOverlay.SetActive(isLocked);
 
             // ── Tap interactability ───────────────────────────────────────────
-            if (cardTapButton != null) cardTapButton.interactable = !isLocked;
+            // _tapWhenLocked keeps the tap alive on locked home-carousel cards so tap == swipe.
+            bool tappable = _tapWhenLocked || !isLocked;
+            if (cardTapButton  != null) cardTapButton.interactable  = tappable;
+            if (_rootTapButton != null) _rootTapButton.interactable = tappable;
 
             // ── Border (white=active / #3E7CA8=inactive) is POSITION-aware → RefreshCenterVisuals.
             // A locked card that is the SELECTED (centered) home card must show the white border

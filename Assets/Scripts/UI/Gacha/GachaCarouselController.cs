@@ -19,7 +19,7 @@ namespace GolfinRedux.UI.Gacha
     /// Attach to the GachaTabContent GameObject.
     /// Spawns one GachaBannerCard per live banner; manages positions, falloff, dots, countdown.
     /// </summary>
-    public class GachaCarouselController : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler
+    public class GachaCarouselController : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler, IPointerClickHandler
     {
         // ── Inspector refs ────────────────────────────────────────────────────
 
@@ -113,6 +113,35 @@ namespace GolfinRedux.UI.Gacha
             _currentIndex = idx;
             _targetOffset = idx * _cardSpacing;
             UpdateDots();
+        }
+
+        // ── Tap-to-centre ─────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Tapping a side banner slides it into the centre — the same result as swiping onto it.
+        /// The click bubbles up from the card's graphic (the PULL / RULES buttons handle their own
+        /// clicks, so they are unaffected); we hit-test the cards to find which one was hit.
+        /// </summary>
+        public void OnPointerClick(PointerEventData eventData)
+        {
+            // A swipe that begins and ends over the same card also dispatches a click. The drag is
+            // still in flight here (OnEndDrag runs AFTER the click), so the swipe owns the gesture.
+            if (_isDragging || eventData.dragging) return;
+
+            for (int i = 0; i < _cards.Count; i++)
+            {
+                if (_cards[i] == null) continue;
+                var rt = _cards[i].GetComponent<RectTransform>();
+                if (rt == null) continue;
+                if (!RectTransformUtility.RectangleContainsScreenPoint(rt, eventData.position, eventData.pressEventCamera))
+                    continue;
+
+                if (i == _currentIndex) return;   // already centred
+                _currentIndex = i;
+                _targetOffset = i * _cardSpacing; // Update()'s lerp eases us there, same as a snap
+                UpdateDots();
+                return;
+            }
         }
 
         // ── Build / Rebuild ───────────────────────────────────────────────────

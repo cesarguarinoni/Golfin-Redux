@@ -37,6 +37,10 @@ namespace GolfinRedux.UI.ModeSelect
         [Header("Card Prefab")]
         [SerializeField] private ModeCardController cardPrefab;
 
+        [Header("Initial selection")]
+        [Tooltip("Mode id centered when the home carousel opens. Falls back to the first playable mode if empty, unknown, or locked.")]
+        [SerializeField] private string _defaultModeId = "practice";
+
         // NOTE: §6.3 item 9 — arrows REMOVED from home carousel per Figma.
         // These fields are kept for backward-compat but should be left null.
         [Header("Arrow Buttons (REMOVED per §6.3 item 9 — leave null)")]
@@ -144,21 +148,40 @@ namespace GolfinRedux.UI.ModeSelect
                     ModeCardState state = mode.locked ? ModeCardState.Locked : ModeCardState.CollapsedNoPlay;
                     // §6.3 item 10: chevron is shown on HOME cards (expand/collapse affordance)
                     card.SetShowChevron(true);
+                    // Locked cards can be swiped into the centre, so they must be tappable too.
+                    card.SetTapWhenLocked(true);
                     // Set heights before Bind so AnimateHeight uses correct targets on initial Collapsed state
                     card.SetHeights(_collapsedCardHeight, _expandedCardHeight);
                     card.Bind(mode, state);
                     if (pass == 1) card.OnPlayClicked += HandlePlayClicked;
                     card.OnTaglineTapped += HandleTaglineTapped;
+                    // Wired on EVERY pass (unlike PLAY): the cards a player taps are the side/peek
+                    // instances, which live in passes 0 and 2 as well as 1.
+                    card.OnCardTapped += HandleCardTapped;
                     _allCards.Add(card);
                 }
             }
 
-            int firstPlayable = 0;
-            for (int i = 0; i < _dataCount; i++)
+            // Center on the configured default mode (Practice) when it is present and playable.
+            // The CSV is sorted by its `order` column, so "first playable" alone would land on
+            // whichever mode happens to sort first (versus_1v1) rather than the intended default.
+            int startIndex = -1;
+            if (!string.IsNullOrEmpty(_defaultModeId))
             {
-                if (i < modes.Count && !modes[i].locked) { firstPlayable = i; break; }
+                for (int i = 0; i < _dataCount; i++)
+                {
+                    if (modes[i].id == _defaultModeId && !modes[i].locked) { startIndex = i; break; }
+                }
             }
-            _centeredVirtualIndex = _dataCount + firstPlayable;
+            if (startIndex < 0)
+            {
+                for (int i = 0; i < _dataCount; i++)
+                {
+                    if (!modes[i].locked) { startIndex = i; break; }
+                }
+            }
+            if (startIndex < 0) startIndex = 0;
+            _centeredVirtualIndex = _dataCount + startIndex;
 
             StartCoroutine(InitialSnapAndExpand(_centeredVirtualIndex));
         }
@@ -455,6 +478,7 @@ namespace GolfinRedux.UI.ModeSelect
                 if (c == null) continue;
                 c.OnPlayClicked -= HandlePlayClicked;
                 c.OnTaglineTapped -= HandleTaglineTapped;
+                c.OnCardTapped -= HandleCardTapped;
             }
         }
 
@@ -499,13 +523,32 @@ namespace GolfinRedux.UI.ModeSelect
             }
         }
 
+        // Tapping a side/peek card slides it into the centre — identical to swiping onto it, so the
+        // two gestures land in the same place. Runs the same SnapAndExpandCoroutine the swipe uses,
+        // which carries the remembered expand preference and re-derives PLAY/border/title.
+        private void HandleCardTapped(ModeCardController card)
+        {
+            // A swipe that begins and ends over the same card also dispatches a click. The drag is
+            // still in flight at this point (OnEndDrag runs AFTER the click), so _isDragging tells
+            // us the gesture was a swipe and the swipe owns it.
+            if (_isDragging || _isSnapping || card == null) return;
+
+            int index = _allCards.IndexOf(card);
+            if (index < 0 || index == _centeredVirtualIndex) return;   // already centred
+
+            StartCoroutine(SnapAndExpandCoroutine(index));
+        }
+
         // Tapping the tagline of the CENTERED (non-locked) card toggles Expanded <-> Collapsed(+PLAY).
         // The preference is remembered and carries over when swiping to the next card.
         private void HandleTaglineTapped(ModeCardController card)
         {
-            if (_isSnapping || card == null) return;
+            if (_isDragging || _isSnapping || card == null) return;
             if (_centeredVirtualIndex < 0 || _centeredVirtualIndex >= _allCards.Count) return;
-            if (_allCards[_centeredVirtualIndex] != card) return;   // ignore side cards
+            // The tagline row sits ON TOP of the whole-card tap target, so on a side card it is the
+            // hit the player actually gets. Expand/collapse is only meaningful once a card IS the
+            // centre, so on a side card this tap means the same thing as any other: slide it in.
+            if (_allCards[_centeredVirtualIndex] != card) { HandleCardTapped(card); return; }
             if (card.IsLocked) return;
 
             _centerExpanded = !_centerExpanded;
