@@ -140,6 +140,9 @@ namespace Golfin.UI.HUD
                     Distance     = rt.baseDistance,
                     Portrait     = rt.portraitSprite,
                     LabClubIndex = MapClubTypeToLabIndex(rt.type),
+                    // auto_club_selection: mirrors ClubContextPopulator — Driver and Wood both map
+                    // to lab index 0, so the auto-selector keys off this flag, not the lab index.
+                    IsDriver     = rt.type == ClubType.Driver,
                 });
             }
 

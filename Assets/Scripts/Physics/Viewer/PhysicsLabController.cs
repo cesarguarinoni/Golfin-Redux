@@ -347,6 +347,14 @@ namespace Golfin.Physics.Viewer
 
             // Putter mode: unsubscribe local club-change event.
             OnClubChanged -= OnClubIndexChanged;
+
+            // auto_club_selection: drop the one-shot bag-wait if it is still armed
+            // (ClubContext.OnBagChanged is a static event — an un-removed handler leaks).
+            if (_autoClubAwaitingBag)
+            {
+                Golfin.Gameplay.UI.HUD.ClubContext.OnBagChanged -= HandleBagReadyForTeePick;
+                _autoClubAwaitingBag = false;
+            }
         }
 
         // Putter mode: called when the local OnClubChanged event fires (after SetClub).
@@ -686,6 +694,10 @@ namespace Golfin.Physics.Viewer
         // §2f: Named constant for the putter index. Matches LabClubs.Length - 1.
         public static readonly int PutterIndex = LabClubs.Length - 1;
 
+        [Header("Auto club selection (auto_club_selection)")]
+        [Tooltip("Auto-pick the best club for each shot (driver on tee, distance-based after). Player can still override per shot.")]
+        [SerializeField] bool _autoClubSelectEnabled = true;
+
         // §2f: Tracks the last non-putter club the player used.
         // Initialized in Awake to whatever the Inspector default CurrentClubIndex is
         // (typically Driver = 0). Updated on every SetClub(index != PutterIndex) call.
@@ -795,6 +807,13 @@ namespace Golfin.Physics.Viewer
             // same teleport the user gets from a click-swipe — just done up front.
             Camera teeCamForApply = chaseCamera != null ? chaseCamera.GetComponent<Camera>() : null;
             if (teeCamForApply != null) ApplyCameraYaw(teeCamForApply);
+
+            // auto_club_selection: stroke 1 explicitly selects the bag's DRIVER rather than
+            // trusting "bag index 0 happens to be a driver". Guarded on IsHoleReady so the
+            // flat-ground / no-hole fallback path (Start coroutine, PresetScene.Range) keeps
+            // today's behaviour exactly. The bag can populate a frame later than this runs,
+            // hence the OnBagChanged one-shot inside AutoSelectClubAtHoleStart.
+            if (IsHoleReady) AutoSelectClubAtHoleStart();
         }
 
         // Teleport the ball to a world position (Y resolved via type-aware downward raycast).
@@ -880,22 +899,112 @@ namespace Golfin.Physics.Viewer
         /// </summary>
         void ReDecideClubAfterReposition(Vector3 pos)
         {
-            if (_bakedClassifier == null) return;
+            // §2f runs only when zones are baked; with none (flat-ground lab presets) the club is
+            // left alone — today's behaviour — rather than forcing a switch off a constant surface.
+            if (_bakedClassifier != null)
+            {
+                SurfaceType surface = _bakedClassifier.Classify(fp.FromFloat(pos.x), fp.FromFloat(pos.z));
+                int target = PutterModeSurfaceController.DecideTargetClub(
+                    currentClubIndex: CurrentClubIndex,
+                    putterIndex: PutterIndex,
+                    endSurface: surface,
+                    lastNonPutterClubIndex: _lastNonPutterClubIndex);
 
-            SurfaceType surface = _bakedClassifier.Classify(fp.FromFloat(pos.x), fp.FromFloat(pos.z));
-            int target = PutterModeSurfaceController.DecideTargetClub(
-                currentClubIndex: CurrentClubIndex,
-                putterIndex: PutterIndex,
-                endSurface: surface,
-                lastNonPutterClubIndex: _lastNonPutterClubIndex);
+                if (target >= 0)   // target < 0 = idempotent: already on the right club
+                {
+                    Debug.Log($"[PhysicsLab][§2f] Reposition surface={surface} " +
+                              $"auto-switch club {CurrentClubIndex}→{target}");
+                    SetClub(target);
+                    // PROD path: clear any lab bundle leftover so the bus resolves live stats.
+                    _shotController?.ClearStatBundleOverride();
+                }
+            }
 
-            if (target < 0) return;   // idempotent: already on the right club
+            // auto_club_selection: the new lie gets a fresh pick — including a stroke-and-distance
+            // drop back on the tee, which BallIsOnTee() turns into the Driver again. Runs AFTER the
+            // §2f block (and unconditionally, including §2f's "no change" case) so the green rule
+            // always wins: the helper no-ops while putter mode is on.
+            AutoSelectClubForNextShot();
+        }
 
-            Debug.Log($"[PhysicsLab][§2f] Reposition surface={surface} " +
-                      $"auto-switch club {CurrentClubIndex}→{target}");
-            SetClub(target);
+        // ── auto_club_selection ────────────────────────────────────────────────
+
+        // True while we are waiting for the equipped bag to arrive so the TEE pick can run.
+        // ClubContextPopulator / LabInventoryStub can populate ClubContext a frame (or more)
+        // after SetupAtTee, so the tee pick arms a one-shot OnBagChanged re-run when the bag
+        // is still empty. Guarded so we never stack duplicate subscriptions.
+        bool _autoClubAwaitingBag;
+
+        /// <summary>
+        /// auto_club_selection: pre-selects the club for the NEXT shot from the equipped bag.
+        ///
+        /// Runs AFTER the §2f decision at every call site, so the green rule always wins:
+        /// <see cref="AutoClubSelector"/> returns -1 while §2f has the player in putter mode,
+        /// making this a no-op on the green. Off the green it picks the driver on the tee and
+        /// the shortest club that still reaches the pin everywhere else — never the driver.
+        ///
+        /// Commits through the SAME pair the selector overlay's card tap uses
+        /// (SelectorOverlayWidget): RequestSelection keeps ClubContext / the live-stat path
+        /// correct (Order 762), Raise reaches OnClubBroadcastReceived → SetClub for the lab
+        /// index. A bare SetClub would reintroduce the §2f ClubContext gap for full shots.
+        /// </summary>
+        void AutoSelectClubForNextShot()
+        {
+            if (!_autoClubSelectEnabled) return;
+
+            var bag = Golfin.Gameplay.UI.HUD.ClubContext.EquippedBag;
+            Vector3 ball = BallPosition;
+            Vector3 pin  = Golfin.Gameplay.UI.HUD.HoleContext.PinWorld;
+            float   distM = new Vector2(pin.x - ball.x, pin.z - ball.z).magnitude;
+            bool    onTee = BallIsOnTee();
+
+            int bagIdx = AutoClubSelector.SelectBestClub(
+                distM,
+                onTee,
+                Golfin.Gameplay.UI.ShotUI.ClubSelectionBroadcast.InPutterMode,
+                bag, PutterIndex);
+
+            if (bagIdx < 0 || bag == null || bagIdx >= bag.Count) return;
+
+            // Idempotent: both the bag selection AND the lab club already match.
+            if (bagIdx == Golfin.Gameplay.UI.HUD.ClubContext.SelectedIndex
+                && bag[bagIdx].LabClubIndex == CurrentClubIndex) return;
+
+            Debug.Log($"[PhysicsLab][auto_club] dist={distM:F1}m tee={onTee} → " +
+                      $"bag[{bagIdx}] '{bag[bagIdx].ClubId}' (labIdx={bag[bagIdx].LabClubIndex})");
+
+            Golfin.Gameplay.UI.HUD.ClubContext.RequestSelection(bagIdx);
+            Golfin.Gameplay.UI.ShotUI.ClubSelectionBroadcast.Raise(bag[bagIdx].LabClubIndex);
             // PROD path: clear any lab bundle leftover so the bus resolves live stats.
             _shotController?.ClearStatBundleOverride();
+        }
+
+        /// <summary>
+        /// Hole-start variant of <see cref="AutoSelectClubForNextShot"/>: if the equipped bag
+        /// has not been populated yet, re-run once when it arrives (ClubContext.OnBagChanged).
+        /// </summary>
+        void AutoSelectClubAtHoleStart()
+        {
+            if (!_autoClubSelectEnabled) return;
+
+            var bag = Golfin.Gameplay.UI.HUD.ClubContext.EquippedBag;
+            if (bag == null || bag.Count == 0)
+            {
+                if (_autoClubAwaitingBag) return;
+                _autoClubAwaitingBag = true;
+                Golfin.Gameplay.UI.HUD.ClubContext.OnBagChanged += HandleBagReadyForTeePick;
+                Debug.Log("[PhysicsLab][auto_club] bag empty at hole start — waiting for ClubContext.OnBagChanged.");
+                return;
+            }
+
+            AutoSelectClubForNextShot();
+        }
+
+        void HandleBagReadyForTeePick()
+        {
+            Golfin.Gameplay.UI.HUD.ClubContext.OnBagChanged -= HandleBagReadyForTeePick;
+            _autoClubAwaitingBag = false;
+            AutoSelectClubForNextShot();
         }
 
         // Update the HUD max-carry yards readout for the current StatBundle/club.
@@ -1493,6 +1602,10 @@ namespace Golfin.Physics.Viewer
                         // PROD path: clear any lab bundle leftover so the bus resolves live stats.
                         _shotController?.ClearStatBundleOverride();
                     }
+
+                    // auto_club_selection: pick the club for the NEXT shot from this lie.
+                    // Runs AFTER the §2f block so the green rule always wins (no-ops in putter mode).
+                    AutoSelectClubForNextShot();
 
                     // §2e: pin-aim rotation runs uniformly (including putter post-§2f-revert).
                     Vector3 ballPos = ballAnimator?.CurrentBall != null

@@ -46,5 +46,15 @@ namespace Golfin.Gameplay.UI.HUD
         public int     Distance     = 0;
         public Sprite? Portrait     = null;
         public int     LabClubIndex = 0;
+
+        /// <summary>
+        /// auto_club_selection: true only for ClubType.Driver. LabClubIndex cannot express this —
+        /// Driver and Wood BOTH map to lab index 0 — and the auto-selector must exclude the driver
+        /// off the tee while leaving woods eligible. A bool rather than a ClubType field because
+        /// ClubType lives in Golfin.Inventory (Assembly-CSharp) which this asmdef (Golfin.Gameplay.UI)
+        /// cannot reference; the two builders (ClubContextPopulator, LabInventoryStub) live on the
+        /// Assembly-CSharp side and set it from rt.type == ClubType.Driver.
+        /// </summary>
+        public bool    IsDriver     = false;
     }
 }

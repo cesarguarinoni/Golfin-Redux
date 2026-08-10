@@ -55,6 +55,9 @@ namespace Golfin.UI.HUD
                     Distance     = t.baseDistance,
                     Portrait     = t.portraitSprite,
                     LabClubIndex = MapClubTypeToLabIndex(t.type),
+                    // auto_club_selection: Driver and Wood share lab index 0, so the auto-selector
+                    // needs this explicit flag to exclude ONLY the driver off the tee.
+                    IsDriver     = t.type == ClubType.Driver,
                 });
             }
             ClubContext.EquippedBag = entries;
