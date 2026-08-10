@@ -1,0 +1,32 @@
+{
+  "task": "power_gauge_target_marker",
+  "entry": "ShellScene boot -> PLAY -> mode card -> Hole 1 card -> real HoleMap button",
+  "assertions": [
+    { "id": "harness.shot_controller_bound", "verdict": "PASS", "detail": "ShotController resolved via reflection" },
+    { "id": "harness.gauge_found", "verdict": "PASS", "detail": "PowerGaugeWidget=True PowerGaugeGraphic=True" },
+    { "id": "A.default_no_target", "verdict": "PASS", "detail": "MapTargetCarryM=-1.00 at the tee before any map session" },
+    { "id": "A.no_notch_without_target", "verdict": "PASS", "detail": "MarkerFrac01=-1.000 (expect <0 = notch not drawn)" },
+    { "id": "capture.A_no_target_no_notch", "verdict": "PASS", "detail": "Docs/Specs/Active/power_gauge_target_marker/screenshots/A_no_target_no_notch.png is 1170x2532" },
+    { "id": "B.map_opened", "verdict": "PASS", "detail": "MapViewController.IsOpen=True" },
+    { "id": "B.target_placed_via_production_path", "verdict": "PASS", "detail": "MapViewController.TrySetAimFromScreenPoint (the finger's own call) returned true" },
+    { "id": "capture.B_map_target_placed", "verdict": "PASS", "detail": "Docs/Specs/Active/power_gauge_target_marker/screenshots/B_map_target_placed.png is 1170x2532" },
+    { "id": "B.shoot_button_is_real_widget", "verdict": "PASS", "detail": "map SHOOT button resolved; closing through its own onClick" },
+    { "id": "B.writeback_metres", "verdict": "PASS", "detail": "MapTargetCarryM=91.75m == map _aimedCarryM=91.75m" },
+    { "id": "B.notch_at_expected_pct", "verdict": "PASS", "detail": "MarkerFrac01=0.4014 expected=0.4014 (target 91.7m / club 250yd = 228.6m)" },
+    { "id": "B.notch_not_unreachable", "verdict": "PASS", "detail": "MarkerUnreachable=False for an in-reach target" },
+    { "id": "B.yards_text_tracks_club", "verdict": "PASS", "detail": "gauge reads '150.0 yd' at 60% power; club=250yd -> expect 150.0 yd. serialized _maxCarryYards=250; NOT discriminating when club==250yd" },
+    { "id": "capture.B_notch_at_mapped_target", "verdict": "PASS", "detail": "Docs/Specs/Active/power_gauge_target_marker/screenshots/B_notch_at_mapped_target.png is 1170x2532" },
+    { "id": "C.club_change_moves_notch", "verdict": "PASS", "detail": "club 250yd -> 230yd; frac 0.4014 -> 0.4363 (target unchanged at 91.7m)" },
+    { "id": "C.target_metres_unchanged", "verdict": "PASS", "detail": "MapTargetCarryM=91.75m survived the club change (stored in metres, not %)" },
+    { "id": "C.yards_text_discriminating", "verdict": "PASS", "detail": "club now 230yd; gauge reads '138.0 yd' at 60% power = 138.0 yd (AFTER: 138.0 yd). BEFORE this change the SAME frame read 150.0 yd — the 250f default that nothing ever wrote." },
+    { "id": "capture.C_notch_after_club_change", "verdict": "PASS", "detail": "Docs/Specs/Active/power_gauge_target_marker/screenshots/C_notch_after_club_change.png is 1170x2532" },
+    { "id": "D.commit_clears_target", "verdict": "PASS", "detail": "MapTargetCarryM=-1.00 after the committed flick" },
+    { "id": "D.no_notch_next_stroke", "verdict": "PASS", "detail": "MarkerFrac01=-1.000 on the stroke after the shot" },
+    { "id": "capture.D_no_notch_after_shot", "verdict": "PASS", "detail": "Docs/Specs/Active/power_gauge_target_marker/screenshots/D_no_notch_after_shot.png is 1170x2532" },
+    { "id": "E.putter_mode_forces_no_notch", "verdict": "PASS", "detail": "MarkerFrac01=-1.000 in Meters/putter mode with MapTargetCarryM=40m set" },
+    { "id": "capture.E_putter_mode_no_notch", "verdict": "PASS", "detail": "Docs/Specs/Active/power_gauge_target_marker/screenshots/E_putter_mode_no_notch.png is 1170x2532" }
+  ],
+  "total": 23,
+  "fail": 0,
+  "verdict": "PASS"
+}
