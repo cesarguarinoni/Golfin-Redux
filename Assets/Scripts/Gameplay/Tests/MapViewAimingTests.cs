@@ -624,5 +624,458 @@ namespace Golfin.Gameplay.Tests
                     $"Pan must not take the focus past the OB rect in Z (from {far})");
             }
         }
+
+        // ─────────────────────────────────────────────────────────────────────────
+        // Test 8 — Order 355 (map_view_strict_crop_indicators): THE INVARIANT
+        //   (ground footprint ⊆ playable rect) and the floating indicators.
+        //
+        //   Cesar 2026-08-10: "I want to ONLY be able to see the playable area, the
+        //   place where the ball is resting, and if it fits, the Flag indicator over
+        //   the hole. If it doesn't fit, the indicator should float on screen with a
+        //   line pointing towards the hole."
+        //
+        //   All of these drive the PRODUCTION statics on MapViewController — no local
+        //   re-implementation of the algorithms.
+        // ─────────────────────────────────────────────────────────────────────────
+
+        private const float kTol   = 1f;     // MapViewController.kFootprintTolM
+        private const float kTilt  = 80f;    // MapViewController._heroTiltDeg
+
+        /// <summary>Pose a camera at hero tilt, distance d back along -axis, looking at focus.</summary>
+        private static void PoseCam(Camera cam, Vector3 focus, Vector3 axisN, float dist, float tiltDeg)
+        {
+            float tan = Mathf.Tan(tiltDeg * Mathf.Deg2Rad);
+            cam.transform.position = focus - axisN * dist + Vector3.up * (dist * tan);
+            cam.transform.LookAt(focus, Vector3.up);
+        }
+
+        [Test]
+        public void Footprint_AllFourCornersHitTheGround_AtHeroTilt()
+        {
+            // §2: at tilt 80° the top edge ray still points 35° below horizontal even at the widest
+            // FOV the map allows, so the footprint is always resolvable. If this ever fails, the
+            // horizon is in frame and the strict crop is unenforceable.
+            var cam = MakeDeviceCamera("FootprintCornersCam");
+            try
+            {
+                foreach (float fov in new[] { 30f, 45f, 75f, 90f })
+                {
+                    cam.fieldOfView = fov;
+                    PoseCam(cam, Vector3.zero, Vector3.forward, 150f, kTilt);
+
+                    Assert.IsTrue(
+                        MapViewController.TryComputeGroundFootprint(cam, 0f, out Vector2 min, out Vector2 max),
+                        $"All four viewport corners must hit the ground plane at fov={fov}°");
+                    Assert.Greater(max.x - min.x, 0f, $"Footprint must have positive width at fov={fov}°");
+                    Assert.Greater(max.y - min.y, 0f, $"Footprint must have positive depth at fov={fov}°");
+                    Assert.LessOrEqual(min.x, 0f, $"The look-at point must be inside the footprint (fov={fov}°)");
+                    Assert.GreaterOrEqual(max.x, 0f, $"The look-at point must be inside the footprint (fov={fov}°)");
+                }
+            }
+            finally { Object.DestroyImmediate(cam.gameObject); }
+        }
+
+        [Test]
+        public void Footprint_ShrinksMonotonically_AsTheCameraComesIn()
+        {
+            // §3.2 depends on this: the containment pass bisects/steps DOWN in distance because the
+            // footprint shrinks monotonically with distance at fixed tilt and FOV. If it did not,
+            // the pass would not terminate.
+            var cam = MakeDeviceCamera("FootprintMonotoneCam");
+            try
+            {
+                float prevW = float.MaxValue, prevD = float.MaxValue;
+                foreach (float dist in new[] { 400f, 300f, 200f, 120f, 60f, 30f })
+                {
+                    PoseCam(cam, Vector3.zero, Vector3.forward, dist, kTilt);
+                    Assert.IsTrue(MapViewController.TryComputeGroundFootprint(cam, 0f, out var min, out var max));
+
+                    float w = max.x - min.x, d = max.y - min.y;
+                    Assert.Less(w, prevW, $"Footprint width must shrink as the camera comes in (d={dist})");
+                    Assert.Less(d, prevD, $"Footprint depth must shrink as the camera comes in (d={dist})");
+                    prevW = w; prevD = d;
+                }
+            }
+            finally { Object.DestroyImmediate(cam.gameObject); }
+        }
+
+        [Test]
+        public void Footprint_GrowsWithFov_WhichIsWhyZoomOutIsGated()
+        {
+            // §4: pinch zoom-OUT widens the FOV, which grows the footprint — hence the dynamic gate.
+            var cam = MakeDeviceCamera("FootprintFovCam");
+            try
+            {
+                float prev = 0f;
+                foreach (float fov in new[] { 30f, 45f, 60f, 75f })
+                {
+                    cam.fieldOfView = fov;
+                    PoseCam(cam, Vector3.zero, Vector3.forward, 150f, kTilt);
+                    Assert.IsTrue(MapViewController.TryComputeGroundFootprint(cam, 0f, out var min, out var max));
+
+                    float area = (max.x - min.x) * (max.y - min.y);
+                    Assert.Greater(area, prev, $"A wider FOV must show MORE ground (fov={fov}°)");
+                    prev = area;
+                }
+            }
+            finally { Object.DestroyImmediate(cam.gameObject); }
+        }
+
+        [Test]
+        public void FootprintClamp_LeavesALegalMoveUntouched()
+        {
+            // A pan that keeps the whole footprint inside the rect must not be modified at all —
+            // otherwise panning would feel rubber-banded everywhere, not only at the edges.
+            Vector2 min = new Vector2(-60f, -30f), max = new Vector2(60f, 30f);
+            Vector2 move = new Vector2(10f, -5f);
+            Vector2 got = MapViewController.ClampFootprintMove(min, max, move, kH1Center, kH1Half, kTol);
+            Assert.AreEqual(move.x, got.x, kEpsilon, "A legal pan must pass through unchanged in X");
+            Assert.AreEqual(move.y, got.y, kEpsilon, "A legal pan must pass through unchanged in Z");
+        }
+
+        [Test]
+        public void FootprintClamp_StopsTheFootprintAtTheRectEdge_NotTheFocusPoint()
+        {
+            // THE 355 CHANGE: 354 clamped the FOCUS, which still let half a screen of off-course show
+            // past the boundary. The footprint's far edge must land ON the rect edge, never past it.
+            Vector2 min = new Vector2(200f, -30f), max = new Vector2(280f, 30f);   // 8.1 m of headroom in +X
+            Vector2 got = MapViewController.ClampFootprintMove(min, max, new Vector2(500f, 0f),
+                                                              kH1Center, kH1Half, kTol);
+            float wantX = kH1Half.x + kTol - MapViewController.kClampSafetyInsetM - max.x;
+            Assert.AreEqual(wantX, got.x, kEpsilon,
+                "The pan must stop where the footprint's far edge meets the rect edge (less the float-safety inset)");
+            Assert.IsTrue(
+                MapViewController.FootprintInsideRect(min + new Vector2(got.x, got.y), max + new Vector2(got.x, got.y),
+                                                      kH1Center, kH1Half, kTol),
+                "After clamping, the footprint must be inside the rect");
+        }
+
+        [Test]
+        public void FootprintClamp_SlidesAlongTheEdgeOnADiagonalPan()
+        {
+            // Per-axis solving is what gives slide-along-edge: a diagonal pan into a wall keeps the
+            // component that is still legal instead of dead-stopping both.
+            Vector2 min = new Vector2(200f, -30f), max = new Vector2(280f, 30f);
+            Vector2 got = MapViewController.ClampFootprintMove(min, max, new Vector2(500f, -40f),
+                                                              kH1Center, kH1Half, kTol);
+            Assert.Less(got.x, 500f, "The blocked axis must be clamped");
+            Assert.AreEqual(-40f, got.y, kEpsilon, "The free axis must still move its full amount");
+        }
+
+        [Test]
+        public void FootprintClamp_CorrectsAnAlreadyViolatingFootprint_WithAZeroMove()
+        {
+            // The framing pass (§3.2) reuses this with move=0 to pull a violating pose back inside.
+            Vector2 min = new Vector2(300f, -200f), max = new Vector2(380f, -140f);   // outside on both axes
+            Vector2 corr = MapViewController.ClampFootprintMove(min, max, Vector2.zero, kH1Center, kH1Half, kTol);
+            Assert.IsTrue(
+                MapViewController.FootprintInsideRect(min + corr, max + corr, kH1Center, kH1Half, kTol),
+                "A zero-move clamp must return the correction that brings the footprint inside");
+        }
+
+        [Test]
+        public void FootprintClamp_CentresAnOversizedFootprint_InsteadOfPilingTheLeakOnOneEdge()
+        {
+            // Only reachable if a caller skipped the distance pass; the leak must at least be symmetric.
+            Vector2 min = new Vector2(-900f, -400f), max = new Vector2(900f, 400f);
+            Vector2 corr = MapViewController.ClampFootprintMove(min, max, new Vector2(999f, 999f),
+                                                               kH1Center, kH1Half, kTol);
+            Vector2 c = (min + max) * 0.5f + corr;
+            Assert.AreEqual(kH1Center.x, c.x, 0.01f, "An oversized footprint must be centred on the rect in X");
+            Assert.AreEqual(kH1Center.y, c.y, 0.01f, "An oversized footprint must be centred on the rect in Z");
+        }
+
+        /// <summary>The Order 355 fit set: ball + the landing disc's four extreme points.</summary>
+        private static System.Collections.Generic.List<Vector3> ShotContextSet(
+            Vector2 ball, Vector3 axisN, float carryM, float discR)
+        {
+            Vector3 b = new Vector3(ball.x, 0f, ball.y);
+            Vector3 L = b + axisN * carryM;
+            Vector3 r = new Vector3(-axisN.z, 0f, axisN.x);
+            return new System.Collections.Generic.List<Vector3>
+            {
+                b, L + axisN * discR, L - axisN * discR, L + r * discR, L - r * discR,
+            };
+        }
+
+        [Test]
+        public void StrictCrop_OpenFramingContainsTheFootprint_OnRealHoleGeometry()
+        {
+            // §3 end-to-end on Hole 1's real OB rectangle: solve the shot-context pose the way the
+            // game does, then run the PRODUCTION containment pass and assert THE INVARIANT holds.
+            // Driver carry ≈ 130 m, wedge ≈ 55 m; tee through greenside lie.
+            var cam = MakeDeviceCamera("StrictCropCam");
+            try
+            {
+                foreach (float carryM in new[] { 130f, 90f, 55f })
+                foreach (float t in new[] { 0f, 0.35f, 0.7f, 0.95f })
+                {
+                    Vector2 ball = Vector2.Lerp(kH1Tee, kH1Pin, t);
+                    Vector3 axis = MapViewController.SnapToWorldAxis(HoleAxis3(ball, kH1Pin));
+                    var region   = ShotContextSet(ball, axis, carryM, 8f);
+
+                    Assert.IsTrue(
+                        MapViewController.SolveShowRegionPose(cam, region, axis, kTilt,
+                                                              kBottom, kSide, kTop,
+                                                              out _, out _, out Vector3 focus),
+                        $"Solver must find a shot-context pose (carry={carryM}m t={t:F2})");
+
+                    Assert.IsTrue(
+                        MapViewController.ContainFootprint(cam, new Vector3(ball.x, 0f, ball.y), kBottom, kSide, 1f - kSide,
+                                                           kH1Center, kH1Half, kTol,
+                                                           ref focus, out _, out _),
+                        $"Containment pass must resolve (carry={carryM}m t={t:F2})");
+
+                    Assert.IsTrue(MapViewController.TryComputeGroundFootprint(cam, 0f, out var min, out var max));
+                    Assert.IsTrue(
+                        MapViewController.FootprintInsideRect(min, max, kH1Center, kH1Half, kTol),
+                        $"THE INVARIANT: every viewport pixel must be playable area " +
+                        $"(carry={carryM}m t={t:F2}, footprint [{min.x:F0},{min.y:F0}]..[{max.x:F0},{max.y:F0}])");
+                }
+            }
+            finally { Object.DestroyImmediate(cam.gameObject); }
+        }
+
+        [Test]
+        public void StrictCrop_ContainmentWinsOverTheBallSeat_AndTheBallStaysOnScreen()
+        {
+            // §3.2: "Containment WINS over seats: if seating the ball at kShotBottomFrac would push the
+            // footprint out the near edge, the ball rides higher on screen — correct, not a bug."
+            // What is NOT acceptable is the ball leaving the frame entirely.
+            var cam = MakeDeviceCamera("SeatVsContainCam");
+            try
+            {
+                // Ball hard against the near end of the rect — the worst case for the bottom seat.
+                Vector2 ball = new Vector2(kH1Half.x - 12f, 0f);
+                Vector3 axis = Vector3.left;
+                var region   = ShotContextSet(ball, axis, 130f, 8f);
+
+                Assert.IsTrue(MapViewController.SolveShowRegionPose(
+                    cam, region, axis, kTilt, kBottom, kSide, kTop, out _, out _, out Vector3 focus));
+                Assert.IsTrue(MapViewController.ContainFootprint(
+                    cam, new Vector3(ball.x, 0f, ball.y), kBottom, kSide, 1f - kSide, kH1Center, kH1Half, kTol,
+                    ref focus, out _, out _));
+
+                Assert.IsTrue(MapViewController.TryComputeGroundFootprint(cam, 0f, out var min, out var max));
+                Assert.IsTrue(MapViewController.FootprintInsideRect(min, max, kH1Center, kH1Half, kTol),
+                    "Containment must hold even when it fights the ball seat");
+
+                Vector3 vb = cam.WorldToViewportPoint(new Vector3(ball.x, 0f, ball.y));
+                Assert.Greater(vb.z, 0f,  "The ball must stay in front of the camera");
+                Assert.GreaterOrEqual(vb.y, 0f, "The ball must not be pushed off the bottom of the screen");
+                Assert.LessOrEqual(vb.y, 1f,    "The ball must not be pushed off the top of the screen");
+            }
+            finally { Object.DestroyImmediate(cam.gameObject); }
+        }
+
+        [Test]
+        public void StrictCrop_BallStaysOnScreen_WhenTheContainmentZoomThrowsItSideways()
+        {
+            // REGRESSION, caught in play mode on Hole 5 (2026-08-10). Hole 5 runs 41.5° off the snapped
+            // playfield axis, so a 228 m driver puts the landing far to one side. The footprint came out
+            // 468 m deep against a 337 m rect, the containment pass shrank 6 steps to fix the depth, and
+            // the ball — which sits far from the focus laterally — was zoomed clean off the right edge
+            // at viewport x = 1.196. The vertical re-seat cannot fix that; only the lateral one can.
+            //
+            // Hole 5's REAL OB rect: Assets/Resources/HoleData/lomond-country-club/Hole_05/zones.json
+            //   centre (0,0), half (159, 169); tee ≈ (-120, 136), pin ≈ (122, -138).
+            Vector2 h5Center = Vector2.zero, h5Half = new Vector2(159f, 169f);
+            Vector2 tee = new Vector2(-120f, 136f), pin = new Vector2(122f, -138f);
+
+            var cam = MakeDeviceCamera("Hole5LateralCam");
+            try
+            {
+                foreach (float carryM in new[] { 228f, 150f, 80f })
+                foreach (float t in new[] { 0f, 0.3f, 0.6f })
+                {
+                    Vector2 ball = Vector2.Lerp(tee, pin, t);
+                    Vector3 axis = MapViewController.SnapToWorldAxis(HoleAxis3(ball, pin));
+                    // Aim along the true hole heading, NOT the snapped axis — that off-axis landing is
+                    // exactly what produces the lateral throw.
+                    Vector2 aim2 = (pin - ball).normalized;
+                    Vector3 aim  = new Vector3(aim2.x, 0f, aim2.y);
+                    var region   = ShotContextSet(ball, aim, carryM, 8f);
+
+                    if (!MapViewController.SolveShowRegionPose(cam, region, axis, kTilt,
+                                                               kBottom, kSide, kTop,
+                                                               out _, out _, out Vector3 focus))
+                        continue;   // no pose → the AnchorBallToBottom fallback path, covered elsewhere
+
+                    Assert.IsTrue(MapViewController.ContainFootprint(
+                        cam, new Vector3(ball.x, 0f, ball.y), kBottom, kSide, 1f - kSide, h5Center, h5Half, kTol,
+                        ref focus, out int shrinks, out _),
+                        $"Containment must resolve (carry={carryM}m t={t:F2})");
+
+                    Assert.IsTrue(MapViewController.TryComputeGroundFootprint(cam, 0f, out var min, out var max));
+                    Assert.IsTrue(MapViewController.FootprintInsideRect(min, max, h5Center, h5Half, kTol),
+                        $"THE INVARIANT must hold on Hole 5 (carry={carryM}m t={t:F2}, shrinks={shrinks})");
+
+                    Vector3 vb = cam.WorldToViewportPoint(new Vector3(ball.x, 0f, ball.y));
+                    Assert.Greater(vb.z, 0f, $"Ball must be in front of the camera (carry={carryM}m t={t:F2})");
+                    Assert.GreaterOrEqual(vb.x, 0f,
+                        $"Ball must not be thrown off the LEFT edge (carry={carryM}m t={t:F2}, x={vb.x:F3})");
+                    Assert.LessOrEqual(vb.x, 1f,
+                        $"Ball must not be thrown off the RIGHT edge (carry={carryM}m t={t:F2}, x={vb.x:F3})");
+                    Assert.GreaterOrEqual(vb.y, 0f,
+                        $"Ball must not be pushed off the bottom (carry={carryM}m t={t:F2}, y={vb.y:F3})");
+                    Assert.LessOrEqual(vb.y, 1f,
+                        $"Ball must not be pushed off the top (carry={carryM}m t={t:F2}, y={vb.y:F3})");
+                }
+            }
+            finally { Object.DestroyImmediate(cam.gameObject); }
+        }
+
+        // ── §5 floating indicators ───────────────────────────────────────────────
+
+        private const float kScrW  = 1170f;
+        private const float kScrH  = 2532f;
+        private const float kInset = 70f;
+
+        [Test]
+        public void Indicator_DocksWhenTheTargetIsOnScreen()
+        {
+            // "until it's over the hole when it appears on screen" — docked means the icon sits ON the
+            // target, with no arrow.
+            Vector3 sp = new Vector3(600f, 1400f, 250f);
+            bool docked = MapViewController.SolveIndicatorPlacement(
+                sp, kScrW, kScrH, kInset, default, out Vector2 pos, out _);
+
+            Assert.IsTrue(docked, "A target comfortably inside the frame must dock");
+            Assert.AreEqual(sp.x, pos.x, kEpsilon, "A docked icon sits exactly on its target (x)");
+            Assert.AreEqual(sp.y, pos.y, kEpsilon, "A docked icon sits exactly on its target (y)");
+        }
+
+        [Test]
+        public void Indicator_FloatsOnTheInsetRect_WhenTheTargetIsOffScreen()
+        {
+            // Off the top of the screen (the long-hole flag case): the icon clamps to the inset rect
+            // and the arrow points up-screen, toward the hole.
+            Vector3 sp = new Vector3(kScrW * 0.5f, kScrH + 4000f, 300f);
+            bool docked = MapViewController.SolveIndicatorPlacement(
+                sp, kScrW, kScrH, kInset, default, out Vector2 pos, out float ang);
+
+            Assert.IsFalse(docked, "A target off the top of the screen must float, not dock");
+            Assert.AreEqual(kScrH - kInset, pos.y, 0.01f, "The floating icon must sit on the inset top edge");
+            Assert.AreEqual(kScrW * 0.5f, pos.x, 0.01f, "Straight up-screen must clamp to the top edge centre");
+            Assert.AreEqual(90f, ang, 0.01f, "The arrow must point OUT toward the target (up = +90°)");
+        }
+
+        [Test]
+        public void Indicator_StaysInsideTheInsetRect_ForEveryOffScreenDirection()
+        {
+            for (int deg = 0; deg < 360; deg += 15)
+            {
+                float r = deg * Mathf.Deg2Rad;
+                Vector3 sp = new Vector3(kScrW * 0.5f + Mathf.Cos(r) * 9000f,
+                                         kScrH * 0.5f + Mathf.Sin(r) * 9000f, 200f);
+                bool docked = MapViewController.SolveIndicatorPlacement(
+                    sp, kScrW, kScrH, kInset, default, out Vector2 pos, out float ang);
+
+                Assert.IsFalse(docked, $"A target 9000 px out at {deg}° must float");
+                Assert.GreaterOrEqual(pos.x, kInset - 0.01f, $"Icon must not cross the left inset at {deg}°");
+                Assert.LessOrEqual(pos.x, kScrW - kInset + 0.01f, $"Icon must not cross the right inset at {deg}°");
+                Assert.GreaterOrEqual(pos.y, kInset - 0.01f, $"Icon must not cross the bottom inset at {deg}°");
+                Assert.LessOrEqual(pos.y, kScrH - kInset + 0.01f, $"Icon must not cross the top inset at {deg}°");
+
+                float want = Mathf.Repeat(deg, 360f);
+                Assert.AreEqual(0f, Mathf.DeltaAngle(want, ang), 0.5f,
+                    $"The arrow must point at the target's bearing at {deg}°");
+            }
+        }
+
+        [Test]
+        public void Indicator_MirrorsTargetsBehindTheCamera()
+        {
+            // WorldToScreenPoint reports behind-camera targets flipped; without the mirror the arrow
+            // would point 180° AWAY from the hole.
+            Vector3 behind = new Vector3(kScrW * 0.5f, kScrH * 0.5f - 800f, -50f);
+            bool docked = MapViewController.SolveIndicatorPlacement(
+                behind, kScrW, kScrH, kInset, default, out Vector2 pos, out float ang);
+
+            Assert.IsFalse(docked, "A target behind the camera can never dock");
+            Assert.Greater(pos.y, kScrH * 0.5f, "The mirrored target is up-screen, so the icon docks up-screen");
+            Assert.AreEqual(90f, ang, 0.01f, "The arrow must point at the MIRRORED bearing, not the raw one");
+        }
+
+        [Test]
+        public void Indicator_IsContinuous_SoItWalksTheEdgeInsteadOfJumping()
+        {
+            // "if the player moves the camera towards the hole, the indicator moves too" — no animation
+            // code is needed BECAUSE the placement is continuous in the camera pose. Two nearby target
+            // screen points must give two nearby icon positions, including across the dock boundary.
+            float prevX = float.NaN, prevY = float.NaN;
+            for (float y = kScrH + 600f; y > kScrH * 0.5f; y -= 6f)
+            {
+                MapViewController.SolveIndicatorPlacement(
+                    new Vector3(kScrW * 0.35f, y, 200f), kScrW, kScrH, kInset, default,
+                    out Vector2 pos, out _);
+
+                if (!float.IsNaN(prevX))
+                {
+                    Assert.Less(Mathf.Abs(pos.x - prevX), 30f,
+                        $"Indicator X must not jump as the target crosses the frame (y={y:F0})");
+                    Assert.Less(Mathf.Abs(pos.y - prevY), 30f,
+                        $"Indicator Y must not jump as the target crosses the frame (y={y:F0})");
+                }
+                prevX = pos.x; prevY = pos.y;
+            }
+        }
+
+        [Test]
+        public void Indicator_NeverFloatsUnderTheShootButton()
+        {
+            // §5: "skip the dock zone under the SHOOT button rect so the indicator never hides behind UI."
+            var shoot = Rect.MinMaxRect(kScrW - 420f, 40f, kScrW - 40f, 260f);
+            Vector3 sp = new Vector3(kScrW + 6000f, -2000f, 300f);   // off-screen bottom-right corner
+
+            bool docked = MapViewController.SolveIndicatorPlacement(
+                sp, kScrW, kScrH, kInset, shoot, out Vector2 pos, out _);
+
+            Assert.IsFalse(docked, "An off-screen target must float");
+            Assert.IsFalse(shoot.Contains(pos),
+                $"The floating icon must be lifted clear of the SHOOT button (got {pos})");
+        }
+
+        [Test]
+        public void Indicator_DockedTargetIsLeftOnTheWorldPoint_WhenClearOfUi()
+        {
+            // A docked icon is a marker on the world, so nothing may displace it while it is visible —
+            // moving it would put it over the wrong hole.
+            var shoot = Rect.MinMaxRect(kScrW - 420f, 40f, kScrW - 40f, 260f);
+            Vector3 sp = new Vector3(kScrW * 0.5f, kScrH * 0.5f, 200f);
+
+            bool docked = MapViewController.SolveIndicatorPlacement(
+                sp, kScrW, kScrH, kInset, shoot, out Vector2 pos, out _);
+
+            Assert.IsTrue(docked);
+            Assert.AreEqual(sp.x, pos.x, kEpsilon, "A docked icon is not displaced by the avoid rect");
+            Assert.AreEqual(sp.y, pos.y, kEpsilon, "A docked icon is not displaced by the avoid rect");
+        }
+
+        [Test]
+        public void Indicator_FloatsClearOfUi_WhenTheTargetIsHiddenUnderTheShootButton()
+        {
+            // REGRESSION, caught in play mode on Hole 5 (2026-08-10). Strict containment pins the
+            // footprint's left edge to the OB boundary, so the ball cannot be seated clear of the SHOOT
+            // button — it lands ON screen at (983, 203) inside a button spanning 955…1124. "Docked"
+            // there means the player sees nothing at all, which is exactly the case the indicator
+            // exists for. It must float clear of the button and point back down at the ball.
+            var shoot = Rect.MinMaxRect(955f, 84f, 1124f, 348f);
+            Vector3 sp = new Vector3(983f, 203f, 200f);
+
+            bool docked = MapViewController.SolveIndicatorPlacement(
+                sp, kScrW, kScrH, kInset, shoot, out Vector2 pos, out float ang);
+
+            Assert.IsFalse(docked, "A target hidden under the SHOOT button must not count as docked");
+            Assert.IsFalse(shoot.Contains(pos), $"The icon must be lifted clear of the button (got {pos})");
+            Assert.AreEqual(shoot.yMax, pos.y, 0.01f, "It should sit just above the button");
+
+            // The icon must stay NEAR the ball, not be flung to the screen edge.
+            Assert.Less(Vector2.Distance(pos, new Vector2(sp.x, sp.y)), 250f,
+                $"An on-screen occluded target keeps its indicator next to it (got {pos})");
+            // And the arrow must point back DOWN at what it is hiding behind.
+            Assert.Less(Mathf.Sin(ang * Mathf.Deg2Rad), 0f,
+                $"The arrow must point downward toward the occluded ball (ang={ang:F1}°)");
+        }
     }
 }

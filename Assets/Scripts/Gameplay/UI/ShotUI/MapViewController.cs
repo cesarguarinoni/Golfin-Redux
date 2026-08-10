@@ -139,6 +139,20 @@ namespace Golfin.Gameplay.UI.ShotUI
         /// </summary>
         [SerializeField] private bool              _alignToPlayfieldAxis = true;
 
+        /// <summary>
+        /// Order 355 §5 — how far (screen px) a floating indicator is held off the screen edge when
+        /// its target is off-screen. Also the inset of the "docked" test rect, so an indicator docks
+        /// the moment its target is comfortably inside the frame rather than exactly on the edge.
+        /// Serialized so the clearance can be tuned against the real device safe-area.
+        /// </summary>
+        [SerializeField] private float             _indicatorEdgeInsetPx = 70f;
+
+        [Header("Indicator art (optional — procedural placeholders when empty)")]
+        /// <summary>Order 355 §5 — drop-in slot for Robin's styled ball indicator. Null → procedural dot.</summary>
+        [SerializeField] private Sprite            _ballIndicatorSprite;
+        /// <summary>Order 355 §5 — drop-in slot for Robin's styled arrow. Null → procedural triangle.</summary>
+        [SerializeField] private Sprite            _indicatorArrowSprite;
+
         [Header("Zoom / pan")]
         [SerializeField] private float             _minZoom        = 30f;
         [SerializeField] private float             _maxZoom        = 90f;
@@ -179,6 +193,18 @@ namespace Golfin.Gameplay.UI.ShotUI
         // Hole indicator: screen-space Canvas icon (§iter-26: yellow line removed)
         private Canvas              _indicatorCanvas;
         private RectTransform       _flagIconRT;
+        // Order 355 §5 — edge-clamped floating indicators. The flag icon above is reused; when the
+        // flag leaves the frame it stops hiding and instead docks to the screen edge with an arrow.
+        // The ball gets the identical treatment on its own icon (hidden while the world-space
+        // _ballMarker sphere is the on-screen representation).
+        private RectTransform       _flagArrowRT;
+        private RectTransform       _ballIconRT;
+        private RectTransform       _ballArrowRT;
+        // Procedural placeholder art (destroyed with the controller, not per-open).
+        private Texture2D           _arrowTex;
+        private Texture2D           _dotTex;
+        private Sprite              _arrowSpriteGen;
+        private Sprite              _dotSpriteGen;
 
         // Screen-space labels
         private Canvas              _labelCanvas;
@@ -273,7 +299,21 @@ namespace Golfin.Gameplay.UI.ShotUI
         // kShotTopFrac, and the camera comes no further back than that requires. Screen-space, so the
         // gap reads the same on a 460 m par 5 and a 40 m pitch.
         private const float kShotBottomFrac = 0.08f;
+        // Order 355 §3.1: kShotTopFrac is now the LANDING ceiling, not a flag seat — the flag left the
+        // fit set (it is an indicator target, §5), so this is the top margin the ball+landing region
+        // must stay under.
         private const float kShotTopFrac    = 0.90f;
+        // Order 355 §2 — THE INVARIANT: the camera's ground footprint (the quad the four viewport
+        // corners cut out of the ball's ground plane) must stay inside the hole's OB rectangle at
+        // every frame the map is open. 354 clamped what the FOCUS POINT could do; 355 clamps what the
+        // SCREEN SHOWS. Tolerance absorbs float error in the plane raycasts — 1 m against a rectangle
+        // hundreds of metres on a side is invisible on screen.
+        private const float kFootprintTolM  = 1f;
+        // Order 355 §3.2 — the containment pass pulls the camera in by this factor per step until the
+        // footprint fits inside the rect. 0.94 converges in <40 steps from any sane start and lands
+        // within ~6% of the largest contained distance, which is below one screen pixel of zoom.
+        private const float kContainShrink  = 0.94f;
+        private const int   kContainMaxIter = 60;
         // Playing-area borders come from the hole's OB (out-of-bounds) mask world-bounds in zones.json
         // (Order 353c, Cesar: "use the map borders from the OB, forget the corridor"). This is a clean
         // per-hole rectangle — far more robust than deriving a corridor from noisy course geometry.
@@ -373,6 +413,11 @@ namespace Golfin.Gameplay.UI.ShotUI
             if (_landingZoneTex != null) Destroy(_landingZoneTex);
             if (_landingZoneMat != null) Destroy(_landingZoneMat);
             if (_landingMesh    != null) Destroy(_landingMesh);
+            // Order 355 §5 — procedural indicator placeholders are controller-lifetime, not per-open.
+            if (_arrowSpriteGen != null) Destroy(_arrowSpriteGen);
+            if (_dotSpriteGen   != null) Destroy(_dotSpriteGen);
+            if (_arrowTex       != null) Destroy(_arrowTex);
+            if (_dotTex         != null) Destroy(_dotTex);
         }
 
         private void OnDisable()
@@ -919,6 +964,89 @@ namespace Golfin.Gameplay.UI.ShotUI
             _flagIconRT.sizeDelta = new Vector2(48f, 48f);
             _flagIconRT.anchorMin = _flagIconRT.anchorMax = Vector2.zero;
             _flagIconRT.pivot     = new Vector2(0.5f, 0f);
+
+            // Order 355 §5 — the floating half of the indicator pair, for BOTH targets. Placeholder
+            // art is generated in code (no import); the two serialized sprite slots take Robin's
+            // styled versions when they land, with zero code change.
+            _flagArrowRT = BuildIndicatorPart(iconCanvasGO.transform, "FlagArrow",
+                                              _indicatorArrowSprite ?? ArrowSprite(),
+                                              new Color(1f, 0.9f, 0.1f, 0.95f), 34f);
+            _ballIconRT  = BuildIndicatorPart(iconCanvasGO.transform, "BallIcon",
+                                              _ballIndicatorSprite ?? DotSprite(),
+                                              Color.white, 30f);
+            _ballArrowRT = BuildIndicatorPart(iconCanvasGO.transform, "BallArrow",
+                                              _indicatorArrowSprite ?? ArrowSprite(),
+                                              new Color(1f, 1f, 1f, 0.95f), 30f);
+        }
+
+        /// <summary>Order 355 §5 — one screen-space indicator part (icon or arrow) on the shared canvas.</summary>
+        private RectTransform BuildIndicatorPart(Transform parent, string name, Sprite sprite, Color color, float size)
+        {
+            var go  = new GameObject(name);
+            go.transform.SetParent(parent, false);
+            var img = go.AddComponent<Image>();
+            img.raycastTarget = false;
+            img.sprite = sprite;
+            img.color  = color;
+
+            var rt = go.GetComponent<RectTransform>();
+            rt.sizeDelta = new Vector2(size, size);
+            rt.anchorMin = rt.anchorMax = Vector2.zero;
+            rt.pivot     = new Vector2(0.5f, 0.5f);
+            go.SetActive(false);
+            return rt;
+        }
+
+        /// <summary>
+        /// Order 355 §5 — procedural arrow placeholder: a solid triangle pointing UP (+Y), so
+        /// <see cref="PlaceIndicator"/>'s rotation is a plain <c>atan2 − 90°</c>. Built once per
+        /// controller and destroyed in <see cref="OnDestroy"/>.
+        /// </summary>
+        private Sprite ArrowSprite()
+        {
+            if (_arrowSpriteGen != null) return _arrowSpriteGen;
+
+            const int res = 64;
+            _arrowTex = new Texture2D(res, res, TextureFormat.RGBA32, false) { filterMode = FilterMode.Bilinear };
+            var px = new Color[res * res];
+            for (int y = 0; y < res; y++)
+            {
+                // Triangle: full width at y=0, collapsing to a point at y=res-1.
+                float halfW = 0.5f * res * (1f - (float)y / (res - 1));
+                for (int x = 0; x < res; x++)
+                {
+                    float dx = Mathf.Abs(x - (res - 1) * 0.5f);
+                    px[y * res + x] = dx <= halfW ? Color.white : Color.clear;
+                }
+            }
+            _arrowTex.SetPixels(px);
+            _arrowTex.Apply();
+            _arrowSpriteGen = Sprite.Create(_arrowTex, new Rect(0, 0, res, res), new Vector2(0.5f, 0.5f));
+            return _arrowSpriteGen;
+        }
+
+        /// <summary>
+        /// Order 355 §5 — procedural ball placeholder: a white disc with a soft edge, matching the
+        /// visual language of the world-space <c>_ballMarker</c> sphere (<see cref="kBallMarkerSz"/>).
+        /// </summary>
+        private Sprite DotSprite()
+        {
+            if (_dotSpriteGen != null) return _dotSpriteGen;
+
+            const int res = 64;
+            _dotTex = new Texture2D(res, res, TextureFormat.RGBA32, false) { filterMode = FilterMode.Bilinear };
+            var px = new Color[res * res];
+            Vector2 c = new Vector2((res - 1) * 0.5f, (res - 1) * 0.5f);
+            for (int y = 0; y < res; y++)
+                for (int x = 0; x < res; x++)
+                {
+                    float d = Vector2.Distance(new Vector2(x, y), c) / (res * 0.5f);
+                    px[y * res + x] = new Color(1f, 1f, 1f, Mathf.Clamp01((1f - d) * 6f));
+                }
+            _dotTex.SetPixels(px);
+            _dotTex.Apply();
+            _dotSpriteGen = Sprite.Create(_dotTex, new Rect(0, 0, res, res), new Vector2(0.5f, 0.5f));
+            return _dotSpriteGen;
         }
 
         // ── Camera positioning ────────────────────────────────────────────────────
@@ -1100,6 +1228,9 @@ namespace Golfin.Gameplay.UI.ShotUI
                 // to _maxZoom, so the one path that could not compute a fit was also the one path that
                 // let the player pull back and reveal the world. No path may do that now.
                 _zoomOutCapFov = _currentFov;
+                // Order 355 §3.2: and the same for the strict crop — the fallback gets the identical
+                // containment pass, so NO path can violate the invariant, not even the degenerate one.
+                ContainCameraFootprint("bottom-anchor-fallback");
             }
 
             Debug.Log($"[MapView v2] Camera pos={_mapCam.transform.position:F1} target={boundsCenter:F1} " +
@@ -1142,33 +1273,60 @@ namespace Golfin.Gameplay.UI.ShotUI
         }
 
         /// <summary>
-        /// Order 354c — the fit set: the ball and the flag, and nothing else.
+        /// Order 355 §3.1 — the fit set: the ball and THE SHOT, not the ball and the flag.
         ///
-        /// The "bit of margin so none of them touch the borders" is applied in SCREEN space, by
-        /// <see cref="kShotBottomFrac"/> / <see cref="kShotTopFrac"/> in <see cref="FrameShowRegion"/>
-        /// — a world-space pad would read as a comfortable gap on a 460 m par 5 and swallow the whole
-        /// frame on a 40 m pitch.
+        /// 354c framed ball+flag. Cesar 2026-08-10: "I want to ONLY be able to see the playable area,
+        /// the place where the ball is resting, and IF IT FITS, the Flag indicator over the hole."
+        /// The flag is therefore no longer a framing target — it is an INDICATOR target
+        /// (<see cref="PlaceIndicator"/>, §5). What must be framed is the shot context: the ball and
+        /// the landing disc this club can reach along the current aim. On a 460 m par 5 that is a
+        /// ~130 m window around the strike zone instead of the whole hole, which is what makes the
+        /// strict-containment crop (§2) achievable at all — a whole-hole frame on a 261 m-deep OB
+        /// rectangle cannot be contained.
+        ///
+        /// The landing DISC (not just its centre) is in the set, via its four extreme points, so the
+        /// zone never bleeds off a border. The "bit of margin so none of them touch the borders" is
+        /// otherwise applied in SCREEN space by <see cref="kShotBottomFrac"/> / <see cref="kShotTopFrac"/>
+        /// in <see cref="FrameShowRegion"/> — a world-space pad would read as a comfortable gap on a
+        /// 460 m par 5 and swallow the whole frame on a 40 m pitch.
         ///
         /// <see cref="_minFramedSpanM"/> is the one world-space term: a floor on the framed distance,
         /// because without it a 2 m tap-in would drop the camera to a couple of metres off the deck.
-        /// The shortfall is split evenly behind the ball and beyond the flag so the pair stays
-        /// centred. Set it to 0 for a pure "as tight as the ball and flag allow" fit.
+        /// The shortfall is split evenly behind the ball and beyond the landing so the pair stays
+        /// centred. Set it to 0 for a pure "as tight as the shot allows" fit.
         /// </summary>
         private List<Vector3> BuildShotRegion(Vector3 axisN)
         {
             float y = _ballWorldPos.y;
             Vector3 ballFlat = new Vector3(_ballWorldPos.x, y, _ballWorldPos.z);
-            Vector3 flagFlat = new Vector3(_flagWorldPos.x, y, _flagWorldPos.z);
 
-            float span = Vector3.Dot(flagFlat - ballFlat, axisN);
-            float pad  = Mathf.Max(0f, Mathf.Max(_minFramedSpanM, 0f) - span) * 0.5f;
-            if (pad <= 0f) return new List<Vector3>(2) { ballFlat, flagFlat };
+            // Club carry by default; once the player has placed a landing by touch, that wins — the
+            // frame follows the shot they are actually setting up.
+            float carryM = _carryValid ? _carryYards * kYardsToMeters : 80f;
+            if (_aimedCarryM > 0f) carryM = _aimedCarryM;
 
-            return new List<Vector3>(2)
+            Vector3 aimDir2D = AimDirection2D();
+            Vector3 landing  = ballFlat + new Vector3(aimDir2D.x, 0f, aimDir2D.z) * carryM;
+            Vector3 rightN   = new Vector3(-axisN.z, 0f, axisN.x);
+            float   margin   = Mathf.Max(_landingZoneRadiusM, 4f);
+
+            var region = new List<Vector3>(7)
             {
-                ballFlat - axisN * pad,
-                flagFlat + axisN * pad,
+                ballFlat,
+                landing + axisN  * margin,
+                landing - axisN  * margin,
+                landing + rightN * margin,
+                landing - rightN * margin,
             };
+
+            float span = Vector3.Dot(landing - ballFlat, axisN);
+            float pad  = Mathf.Max(0f, Mathf.Max(_minFramedSpanM, 0f) - span) * 0.5f;
+            if (pad > 0f)
+            {
+                region.Add(ballFlat - axisN * pad);
+                region.Add(landing  + axisN * pad);
+            }
+            return region;
         }
 
         /// <summary>
@@ -1333,6 +1491,316 @@ namespace Golfin.Gameplay.UI.ShotUI
             return true;
         }
 
+        // ── Order 355 §2/§3/§4 — ground footprint (THE INVARIANT) ─────────────────
+        /// <summary>
+        /// Order 355 §2 — the camera's GROUND FOOTPRINT: the quad the four viewport corners cut out
+        /// of the horizontal plane <paramref name="groundY"/>, returned as its world-XZ AABB.
+        ///
+        /// Pure math (EditMode seam): four <c>Plane.Raycast</c> calls, no physics, cheap enough to run
+        /// every frame and inside a bisection. At <see cref="_heroTiltDeg"/> 80° and FOV ≤ 90° the top
+        /// edge ray still points 35° below horizontal, so all four rays hit; returns false only for a
+        /// degenerate pose (camera below the plane, or looking up), which the callers treat as
+        /// "cannot verify → do not move".
+        ///
+        /// The AABB rather than the trapezoid is deliberate. The camera yaw is playfield-snapped
+        /// (<see cref="SnapAxisToPlayfield"/>, 354d) and the OB rectangle is world-axis-aligned, so the
+        /// AABB IS the trapezoid's bound in the rect's own frame — containment is four comparisons. On
+        /// an un-snapped yaw the AABB is a strict over-approximation, which errs toward showing LESS
+        /// off-course, never more.
+        /// </summary>
+        public static bool TryComputeGroundFootprint(Camera cam, float groundY, out Vector2 min, out Vector2 max)
+        {
+            min = Vector2.zero; max = Vector2.zero;
+            if (cam == null) return false;
+
+            var plane = new Plane(Vector3.up, new Vector3(0f, groundY, 0f));
+            float mnx = float.MaxValue, mnz = float.MaxValue, mxx = float.MinValue, mxz = float.MinValue;
+
+            for (int i = 0; i < 4; i++)
+            {
+                float vx = (i & 1) == 0 ? 0f : 1f;
+                float vy = (i & 2) == 0 ? 0f : 1f;
+                Ray r = cam.ViewportPointToRay(new Vector3(vx, vy, 0f));
+                if (!plane.Raycast(r, out float enter)) return false;   // parallel or pointing away
+                Vector3 p = r.GetPoint(enter);
+                mnx = Mathf.Min(mnx, p.x); mxx = Mathf.Max(mxx, p.x);
+                mnz = Mathf.Min(mnz, p.z); mxz = Mathf.Max(mxz, p.z);
+            }
+
+            min = new Vector2(mnx, mnz);
+            max = new Vector2(mxx, mxz);
+            return true;
+        }
+
+        /// <summary>
+        /// Order 355 §2 — THE INVARIANT itself: is the footprint AABB inside the playable rectangle?
+        /// </summary>
+        public static bool FootprintInsideRect(Vector2 fMin, Vector2 fMax,
+                                               Vector2 rectCenter, Vector2 rectHalf, float tol)
+            => fMin.x >= rectCenter.x - rectHalf.x - tol
+            && fMax.x <= rectCenter.x + rectHalf.x + tol
+            && fMin.y >= rectCenter.y - rectHalf.y - tol
+            && fMax.y <= rectCenter.y + rectHalf.y + tol;
+
+        /// <summary>
+        /// Order 355 §4 — clamp a world-XZ ground translation so the FOOTPRINT (not the focus point)
+        /// stays inside the playable rectangle. Pure math (EditMode seam).
+        ///
+        /// Solved per axis, which is what gives slide-along-edge behaviour: a diagonal pan into a
+        /// corner keeps the component that is still legal instead of dead-stopping both. Passing
+        /// <c>move = Vector2.zero</c> returns the CORRECTION that brings an already-violating footprint
+        /// back inside, which is how the framing pass (§3) re-seats itself — one function, both jobs.
+        ///
+        /// When the footprint is WIDER than the rect on an axis (only reachable if a caller skipped the
+        /// distance pass) the constraints are infeasible; the move that centres the footprint on the
+        /// rect is returned, so the leak is symmetric instead of piled on one edge.
+        ///
+        /// The clamp targets <see cref="kClampSafetyInsetM"/> INSIDE the tolerance band rather than the
+        /// band itself. Measured reason: re-deriving the footprint after the move runs four ray/plane
+        /// intersections at ~350 m in float32 and reproduces the edge to ~1 cm, so a clamp that lands
+        /// exactly ON the boundary reads back a hair outside it — and the every-frame invariant check
+        /// (§4) would then fire on a pose the clamp had just declared legal.
+        /// </summary>
+        public const float kClampSafetyInsetM = 0.25f;
+
+        public static Vector2 ClampFootprintMove(Vector2 fMin, Vector2 fMax, Vector2 move,
+                                                 Vector2 rectCenter, Vector2 rectHalf, float tol)
+        {
+            float inset = Mathf.Min(kClampSafetyInsetM, Mathf.Max(0f, tol) * 0.25f);
+            float SolveAxis(float curMin, float curMax, float m, float rc, float rh)
+            {
+                float lo = (rc - rh - tol + inset) - curMin;  // move must be >= lo to keep the near edge in
+                float hi = (rc + rh + tol - inset) - curMax;  // move must be <= hi to keep the far edge in
+                if (lo > hi) return 0.5f * ((lo + hi));       // infeasible → centre the footprint on the rect
+                return Mathf.Clamp(m, lo, hi);
+            }
+            return new Vector2(
+                SolveAxis(fMin.x, fMax.x, move.x, rectCenter.x, rectHalf.x),
+                SolveAxis(fMin.y, fMax.y, move.y, rectCenter.y, rectHalf.y));
+        }
+
+        /// <summary>
+        /// Order 355 §3.2 / §4 — bring the live camera's footprint inside the OB rectangle, and keep
+        /// the ball seated as low as containment allows.
+        ///
+        /// Runs on EVERY framing path (the show-region solve AND the <see cref="AnchorBallToBottom"/>
+        /// fallback), mirroring 354's "no path may reveal the world" rule: a path that cannot compute
+        /// a fit is exactly the path that must not be allowed to leak.
+        ///
+        /// Three steps, in this order, because the order is what makes it terminate:
+        ///   1. PULL IN until the footprint FITS BY SIZE. Scaling the position about the focus point
+        ///      preserves yaw and tilt, so the footprint shrinks monotonically and similarly — a pure
+        ///      zoom. Size-fit depends on distance alone, so this converges without reference to where
+        ///      the rect is.
+        ///   2. RE-SEAT the ball at <see cref="kShotBottomFrac"/>. Zooming in about the focus dropped
+        ///      the ball down-screen (it sits below the focus), so the seat has to be re-solved, not
+        ///      inherited.
+        ///   3. TRANSLATE the rig by the containment correction. A ground translation cannot change
+        ///      footprint SIZE, so after step 1 this always succeeds — which is why containment WINS
+        ///      over the seat: if seating the ball at the bottom margin pushes the footprint out the
+        ///      near edge, step 3 pushes it back and the ball rides higher on screen. That is the
+        ///      specified behaviour, not a bug.
+        ///
+        /// Static, with the camera and focus passed in, for the same reason
+        /// <see cref="SolveShowRegionPose"/> is: the EditMode tests drive the SAME code the game runs.
+        /// Returns false only for a degenerate pose whose footprint cannot be measured.
+        /// </summary>
+        public static bool ContainFootprint(
+            Camera cam, Vector3 ballWorldPos, float bottomFrac, float ballMinX, float ballMaxX,
+            Vector2 rectCenter, Vector2 rectHalf, float tol,
+            ref Vector3 focus, out int shrinks, out Vector2 correction)
+        {
+            shrinks = 0; correction = Vector2.zero;
+            if (cam == null) return false;
+
+            float groundY = ballWorldPos.y;
+
+            // 1 — shrink until the footprint fits the rect BY SIZE.
+            for (; shrinks < kContainMaxIter; shrinks++)
+            {
+                if (!TryComputeGroundFootprint(cam, groundY, out var fMin, out var fMax)) return false;
+                if ((fMax.x - fMin.x) <= 2f * rectHalf.x + 2f * tol &&
+                    (fMax.y - fMin.y) <= 2f * rectHalf.y + 2f * tol)
+                    break;
+
+                cam.transform.position = focus + (cam.transform.position - focus) * kContainShrink;
+            }
+
+            // 2 — re-seat the ball now that the zoom changed, along the view axis AND laterally.
+            //
+            // Both are needed. Measured on Hole 5 (hole runs 41.5° off the snapped playfield axis, so a
+            // 228 m driver puts the landing far to one side): the footprint was 468 m deep against a
+            // 337 m rect, six shrink steps fixed the depth, and the vertical re-seat put the ball back
+            // on the bottom margin — but the zoom-about-focus had thrown it to viewport x = 1.196, off
+            // the right edge. The landing stayed on screen and the BALL did not, which is exactly
+            // backwards: Cesar's first requirement is seeing "the place where the ball is resting", and
+            // §3 says it is the LANDING that may be sacrificed, never the ball.
+            // The VERTICAL re-seat is only needed when the zoom changed — the show-region solve already
+            // seated the ball on the bottom margin otherwise. The LATERAL one runs unconditionally, and
+            // is a no-op unless the ball is outside the window: on Hole 1 no shrink happens at all, yet
+            // the solve's own lateral framing put the ball at screen x = 959 against a SHOOT button
+            // starting at 955, i.e. touching it. It is a small nudge (~25 px of frame) and it only ever
+            // fires when the ball is at an extreme, which is always worth correcting.
+            if (shrinks > 0) SeatBallAtViewportFrac(cam, ballWorldPos, bottomFrac, ref focus);
+            SeatBallLaterally(cam, ballWorldPos, ballMinX, ballMaxX, ref focus);
+
+            // 3 — translate into the rect. Cannot fail after step 1.
+            if (!TryComputeGroundFootprint(cam, groundY, out var gMin, out var gMax)) return false;
+            correction = ClampFootprintMove(gMin, gMax, Vector2.zero, rectCenter, rectHalf, tol);
+            if (correction.sqrMagnitude > 1e-6f)
+            {
+                Vector3 t = new Vector3(correction.x, 0f, correction.y);
+                cam.transform.position += t;
+                focus                  += t;
+            }
+            return true;
+        }
+
+        /// <summary>Instance wrapper — runs the containment pass against the live map camera and rect.</summary>
+        private void ContainCameraFootprint(string ctx)
+        {
+            if (_mapCam == null || !_obRectValid) return;
+
+            // Seat the ball clear of the INDICATOR inset, not merely inside the solver's 2 % side
+            // margin. Measured on Hole 5: the lateral re-seat parked the ball at viewport x = 0.980,
+            // which is 24 px from the edge — inside the 70 px inset — so the ball's floating indicator
+            // fired while the ball itself was plainly visible, pointing at something already on screen.
+            // The footprint had 156 m of lateral slack there, so the extra clearance is free.
+            // The window the lateral re-seat may park the ball in. Three terms, all measured:
+            //
+            //  • kIndicatorDockClearancePx on top of the indicator inset, because the seat converges to
+            //    its target EXACTLY: at inset-width precisely the ball landed on screen x = 1100.0
+            //    against a dock boundary of 1100.0, and the float coin-flip decided whether its own
+            //    indicator fired — an indicator pointing at a ball that is plainly on screen. Anything
+            //    hugging that boundary also flickers under camera jitter.
+            //  • The SHOOT button. The ball seats at kShotBottomFrac — 203 px up on a 2532 px screen —
+            //    which is exactly the row SHOOT occupies. On Hole 5 the re-seat parked the ball at
+            //    x = 1076 against a button spanning 955…1124, i.e. behind it. "The place where the ball
+            //    is resting" being hidden under a button fails the same requirement the seat exists to
+            //    serve, so the window stops short of the button.
+            float w = Mathf.Max(1f, _mapCam.pixelWidth);
+            float h = Mathf.Max(1f, _mapCam.pixelHeight);
+            float ballMinX = Mathf.Max(kWidthFillMargin, (_indicatorEdgeInsetPx + kIndicatorDockClearancePx) / w);
+            float ballMaxX = 1f - ballMinX;
+
+            Rect shootRect = ShootButtonScreenRect();
+            if (shootRect.width > 0f && shootRect.yMin < kShotBottomFrac * h + kBallMarkerClearPx)
+                ballMaxX = Mathf.Min(ballMaxX,
+                                     Mathf.Max(ballMinX + 0.05f,
+                                               (shootRect.xMin - kIndicatorDockClearancePx) / w));
+
+            if (!ContainFootprint(_mapCam, _ballWorldPos, kShotBottomFrac, ballMinX, ballMaxX,
+                                  _obRectCenter, _obRectHalf, kFootprintTolM,
+                                  ref _camFocusPoint, out int shrinks, out Vector2 corr))
+            {
+                Debug.LogWarning($"[MapView v2] Contain({ctx}): footprint unresolvable (degenerate pose) — pose left as solved.");
+                return;
+            }
+
+            TryComputeGroundFootprint(_mapCam, _ballWorldPos.y, out var fMin, out var fMax);
+            Debug.Log($"[MapView v2] Contain({ctx}): shrinks={shrinks} corr=({corr.x:F1},{corr.y:F1})m " +
+                      $"footprint=[{fMin.x:F0},{fMin.y:F0}]..[{fMax.x:F0},{fMax.y:F0}] " +
+                      $"rect=c({_obRectCenter.x:F0},{_obRectCenter.y:F0}) h({_obRectHalf.x:F0},{_obRectHalf.y:F0})");
+        }
+
+        /// <summary>
+        /// Order 355 §3.2 — slide the rig along its own ground-forward axis until the ball projects at
+        /// <paramref name="frac"/> up the viewport. Same bisection shape as
+        /// <see cref="AnchorBallToBottom"/> (forward → ball lower, monotone), but operating on the
+        /// LIVE pose rather than a supplied base pose, so it can be re-run after the containment zoom.
+        /// Leaves the pose untouched when the target fraction is not bracketed.
+        /// </summary>
+        public static void SeatBallAtViewportFrac(Camera cam, Vector3 ballWorldPos, float frac, ref Vector3 focus)
+        {
+            if (cam == null) return;
+
+            Vector3 fwd = cam.transform.forward; fwd.y = 0f;
+            if (fwd.sqrMagnitude < 1e-4f) return;
+            fwd.Normalize();
+
+            Vector3 basePos   = cam.transform.position;
+            Vector3 baseFocus = focus;
+            float   reach     = Mathf.Max(20f, Vector3.Distance(basePos, baseFocus));
+
+            float BallYAt(float s)
+            {
+                cam.transform.position = basePos + fwd * s;
+                cam.transform.LookAt(baseFocus + fwd * s, Vector3.up);
+                Vector3 vp = cam.WorldToViewportPoint(ballWorldPos);
+                return vp.z <= 0f ? -1f : vp.y;
+            }
+
+            float sLo = -reach, sHi = reach;
+            if (!(BallYAt(sLo) >= frac && BallYAt(sHi) <= frac))
+            {
+                cam.transform.position = basePos;
+                cam.transform.LookAt(baseFocus, Vector3.up);
+                return;
+            }
+            for (int i = 0; i < 32; i++)
+            {
+                float sMid = 0.5f * (sLo + sHi);
+                if (BallYAt(sMid) < frac) sHi = sMid; else sLo = sMid;
+            }
+            float s0 = 0.5f * (sLo + sHi);
+            cam.transform.position = basePos + fwd * s0;
+            focus                  = baseFocus + fwd * s0;
+            cam.transform.LookAt(focus, Vector3.up);
+        }
+
+        /// <summary>
+        /// Order 355 §3.2 — slide the rig along its ground-RIGHT axis just far enough to pull the ball
+        /// back inside <paramref name="minX"/>…<paramref name="maxX"/> of the viewport. A no-op when the
+        /// ball is already within the margins, so it never fights the show-region solve — it only
+        /// repairs the lateral throw that the containment zoom introduces (see
+        /// <see cref="ContainFootprint"/> step 2). Moving the rig +right shifts the ball to a LOWER
+        /// viewport x, monotonically, which is what makes the bisection valid.
+        /// </summary>
+        public static void SeatBallLaterally(Camera cam, Vector3 ballWorldPos, float minX, float maxX, ref Vector3 focus)
+        {
+            if (cam == null) return;
+
+            Vector3 right = cam.transform.right; right.y = 0f;
+            if (right.sqrMagnitude < 1e-4f) return;
+            right.Normalize();
+
+            Vector3 basePos   = cam.transform.position;
+            Vector3 baseFocus = focus;
+            float   reach     = Mathf.Max(20f, Vector3.Distance(basePos, baseFocus)) * 2f;
+
+            float BallXAt(float s)
+            {
+                cam.transform.position = basePos + right * s;
+                cam.transform.LookAt(baseFocus + right * s, Vector3.up);
+                Vector3 vp = cam.WorldToViewportPoint(ballWorldPos);
+                return vp.z <= 0f ? float.NaN : vp.x;
+            }
+            void Restore()
+            {
+                cam.transform.position = basePos;
+                cam.transform.LookAt(baseFocus, Vector3.up);
+            }
+
+            float x0 = BallXAt(0f);
+            if (float.IsNaN(x0) || (x0 >= minX && x0 <= maxX)) { Restore(); return; }
+
+            float target = x0 < minX ? minX : maxX;
+            float sLo = -reach, sHi = reach;
+            float xLo = BallXAt(sLo), xHi = BallXAt(sHi);
+            if (float.IsNaN(xLo) || float.IsNaN(xHi) || !(xLo >= target && xHi <= target)) { Restore(); return; }
+
+            for (int i = 0; i < 32; i++)
+            {
+                float sMid = 0.5f * (sLo + sHi);
+                float x = BallXAt(sMid);
+                if (float.IsNaN(x) || x > target) sLo = sMid; else sHi = sMid;
+            }
+            float s0 = 0.5f * (sLo + sHi);
+            cam.transform.position = basePos + right * s0;
+            focus                  = baseFocus + right * s0;
+            cam.transform.LookAt(focus, Vector3.up);
+        }
+
         /// <summary>
         /// Frame the map camera on the fit set and cap the manual zoom-out at that fit.
         /// FOV is held at <see cref="_initialZoom"/>; zoom is driven by camera DISTANCE so the fit
@@ -1369,6 +1837,11 @@ namespace Golfin.Gameplay.UI.ShotUI
 
             _camFocusPoint = focus;
             _zoomOutCapFov = _currentFov;   // player may zoom IN, but never zoom OUT past this fit
+
+            // Order 355 §3.2 — CONTAINMENT WINS. The solve above answers "what shows the shot"; this
+            // answers "what may be shown at all". If the seated pose reveals ground outside the OB
+            // rectangle, the camera comes in and re-seats until it does not.
+            ContainCameraFootprint("shot-fit");
 
             Vector3 vpBall = _mapCam.WorldToViewportPoint(_ballWorldPos);
             Vector3 vpFlag = _mapCam.WorldToViewportPoint(_flagWorldPos);
@@ -1635,31 +2108,173 @@ namespace Golfin.Gameplay.UI.ShotUI
             label.GetComponent<RectTransform>().anchoredPosition = new Vector2(sp.x, sp.y);
         }
 
+        // ── Order 355 §5 — floating edge-clamped indicators (flag AND ball) ───────
+        /// <summary>
+        /// Order 355 §5 — where an indicator for a target at <paramref name="screenPoint"/> goes.
+        /// Pure math (EditMode seam), shared by the flag and the ball so docking is continuous BY
+        /// CONSTRUCTION rather than by two implementations agreeing.
+        ///
+        /// Cesar 2026-08-10: "if it doesn't fit, the indicator should float on screen with a line
+        /// pointing towards the hole — if the player moves the camera towards the hole, the indicator
+        /// moves too, until it's over the hole when it appears on screen." No animation is needed for
+        /// that: the clamped position is a CONTINUOUS function of the camera pose, so panning walks the
+        /// icon along the edge and it docks the frame the target crosses the inset rect.
+        ///
+        /// Returns true when DOCKED (target on screen → icon sits on it, no arrow); false when
+        /// FLOATING (icon on the inset-rect boundary along screen-centre→target, arrow pointing OUT at
+        /// <paramref name="arrowAngleDeg"/>, measured CCW from screen +X).
+        ///
+        /// <paramref name="avoidRect"/> (screen px, empty = none) is subtracted from the FLOATING dock
+        /// zone only — the SHOOT button corner, so an indicator never parks under live UI. A docked
+        /// icon is left where its target is: it is then a marker on the world, not a floating hint.
+        ///
+        /// Behind-camera targets (<c>screenPoint.z &lt; 0</c>) are mirrored through screen centre,
+        /// because <c>WorldToScreenPoint</c> reports those flipped — without the mirror the arrow would
+        /// point 180° away from the target.
+        /// </summary>
+        public static bool SolveIndicatorPlacement(
+            Vector3 screenPoint, float screenW, float screenH, float insetPx, Rect avoidRect,
+            out Vector2 iconPos, out float arrowAngleDeg)
+        {
+            Vector2 c = new Vector2(screenW * 0.5f, screenH * 0.5f);
+            Vector2 p = new Vector2(screenPoint.x, screenPoint.y);
+
+            bool behind = screenPoint.z < 0f;
+            if (behind) p = c - (p - c);
+
+            float inset = Mathf.Clamp(insetPx, 0f, Mathf.Min(screenW, screenH) * 0.45f);
+            float xMin = inset, xMax = screenW - inset, yMin = inset, yMax = screenH - inset;
+
+            bool hasAvoid = avoidRect.width > 0f && avoidRect.height > 0f;
+            bool inInset  = !behind && p.x >= xMin && p.x <= xMax && p.y >= yMin && p.y <= yMax;
+
+            // A target hidden UNDER the SHOOT button is not docked, it is invisible. Measured on Hole 5
+            // tee: strict containment pins the footprint's left edge to the OB boundary, so the ball
+            // physically cannot be seated clear of the button — it lands at screen (983, 203) inside a
+            // button spanning 955…1124. Treating that as "docked" showed nothing at all. Floating the
+            // indicator instead lifts it just clear of the button with an arrow pointing back down at
+            // the ball, which is the whole point of the indicator.
+            bool docked = inInset && !(hasAvoid && avoidRect.Contains(p));
+            if (docked)
+            {
+                iconPos       = p;
+                arrowAngleDeg = 0f;
+                return true;
+            }
+
+            // Floating: walk from screen centre toward the target and stop at the inset rect.
+            Vector2 d = p - c;
+            if (d.sqrMagnitude < 1e-6f) d = Vector2.up;          // degenerate: park it at the top edge
+            float tx = Mathf.Abs(d.x) < 1e-6f ? float.MaxValue : ((d.x > 0f ? xMax : xMin) - c.x) / d.x;
+            float ty = Mathf.Abs(d.y) < 1e-6f ? float.MaxValue : ((d.y > 0f ? yMax : yMin) - c.y) / d.y;
+            // Clamped to 1 so an ON-screen but occluded target keeps its icon AT the target rather than
+            // flinging it to the far screen edge; for a genuinely off-screen target the inset boundary
+            // is always nearer than the target, so t < 1 and this clamp is inert.
+            float t  = Mathf.Clamp(Mathf.Min(tx, ty), 0f, 1f);
+            iconPos  = c + d * t;
+
+            // Keep the floating dock out of the SHOOT-button corner by lifting it clear.
+            if (hasAvoid && avoidRect.Contains(iconPos))
+                iconPos.y = Mathf.Min(avoidRect.yMax, yMax);
+
+            // Point from where the icon ENDED UP, which for an off-screen target is the same ray as
+            // centre→target, and for a lifted-clear one correctly aims back down at what it hides.
+            Vector2 toTarget = p - iconPos;
+            Vector2 aim      = toTarget.sqrMagnitude > 1f ? toTarget : d;
+            arrowAngleDeg    = Mathf.Atan2(aim.y, aim.x) * Mathf.Rad2Deg;
+            return false;
+        }
+
+        /// <summary>
+        /// Order 355 §5 — drive one icon+arrow pair from a world target through
+        /// <see cref="SolveIndicatorPlacement"/>. <paramref name="hideWhenDocked"/> is set for the BALL:
+        /// on screen, the world-space <c>_ballMarker</c> sphere IS the ball's representation, so the
+        /// screen indicator only exists while the ball is off-frame. The flag has no world marker, so
+        /// its icon stays visible docked.
+        /// </summary>
+        private void PlaceIndicator(RectTransform iconRT, RectTransform arrowRT, Vector3 worldPos,
+                                    Rect avoidRect, bool hideWhenDocked)
+        {
+            if (iconRT == null || _mapCam == null) return;
+
+            // NOT Screen.width/height. In the Editor those report the Game View WINDOW (measured
+            // 2070×1772 while the surface was 1170×2532), so the inset rect was solved in a different
+            // space than WorldToScreenPoint's output and the flag never docked — it stayed pinned to a
+            // phantom edge at y=1702. The camera's pixel rect IS the projection surface, so it matches
+            // WorldToScreenPoint and the overlay canvas on device and in the Editor alike.
+            Vector3 sp = _mapCam.WorldToScreenPoint(worldPos + Vector3.up * 2f);
+            bool docked = SolveIndicatorPlacement(sp, _mapCam.pixelWidth, _mapCam.pixelHeight,
+                                                  _indicatorEdgeInsetPx, avoidRect,
+                                                  out Vector2 pos, out float angDeg);
+
+            bool showIcon = !(docked && hideWhenDocked);
+            if (iconRT.gameObject.activeSelf != showIcon) iconRT.gameObject.SetActive(showIcon);
+            if (showIcon)
+            {
+                // The flag icon is bottom-pivoted so a DOCKED flag stands on the hole. Floating, that
+                // same pivot throws the icon body outboard — straight into the arrow, and off the top
+                // of the screen — so the floating state centres it instead. Measured on Hole 1 tee:
+                // bottom-pivot put the 48 px icon at y 2462…2510 with the arrow at 2478…2512.
+                iconRT.pivot = docked ? _dockedIconPivot : new Vector2(0.5f, 0.5f);
+                iconRT.anchoredPosition = pos;
+            }
+
+            if (arrowRT == null) return;
+            bool showArrow = !docked;
+            if (arrowRT.gameObject.activeSelf != showArrow) arrowRT.gameObject.SetActive(showArrow);
+            if (!showArrow) return;
+
+            // Arrow sits just outboard of the icon, pointing at the target. Offset derived from the
+            // live sizes rather than a constant, so Robin's styled art cannot land on top of the icon.
+            // The procedural sprite is drawn pointing UP (+Y), hence the −90°.
+            float off = 0.5f * Mathf.Max(iconRT.sizeDelta.x, iconRT.sizeDelta.y)
+                      + 0.5f * arrowRT.sizeDelta.y + kIndicatorArrowGapPx;
+            Vector2 dir = new Vector2(Mathf.Cos(angDeg * Mathf.Deg2Rad), Mathf.Sin(angDeg * Mathf.Deg2Rad));
+            arrowRT.anchoredPosition = pos + dir * off;
+            arrowRT.localRotation    = Quaternion.Euler(0f, 0f, angDeg - 90f);
+        }
+
+        /// <summary>Screen-space rect of the live SHOOT button, so indicators never dock under it.</summary>
+        private Rect ShootButtonScreenRect()
+        {
+            if (_shootButton == null) return default;
+            var rt = _shootButton.transform as RectTransform;
+            if (rt == null || !_shootButton.gameObject.activeInHierarchy) return default;
+
+            var canvas = rt.GetComponentInParent<Canvas>();
+            Camera uiCam = (canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay)
+                         ? canvas.worldCamera : null;
+
+            rt.GetWorldCorners(_shootCornersScratch);   // reused: this runs every frame
+            Vector2 lo = RectTransformUtility.WorldToScreenPoint(uiCam, _shootCornersScratch[0]);
+            Vector2 hi = RectTransformUtility.WorldToScreenPoint(uiCam, _shootCornersScratch[2]);
+            return Rect.MinMaxRect(Mathf.Min(lo.x, hi.x) - kIndicatorUiPadPx, Mathf.Min(lo.y, hi.y) - kIndicatorUiPadPx,
+                                   Mathf.Max(lo.x, hi.x) + kIndicatorUiPadPx, Mathf.Max(lo.y, hi.y) + kIndicatorUiPadPx);
+        }
+
+        private const float kIndicatorArrowGapPx    = 6f;
+        private const float kIndicatorUiPadPx       = 12f;
+        /// <summary>Extra clearance past the indicator inset that the lateral ball seat aims for.</summary>
+        private const float kIndicatorDockClearancePx = 24f;
+        /// <summary>Screen-px band around the ball's seat row that counts as "the SHOOT button's row".</summary>
+        private const float kBallMarkerClearPx        = 48f;
+        private readonly Vector3[] _shootCornersScratch = new Vector3[4];
+        /// <summary>Pivot the flag icon docks with (bottom-centre — the flag stands on the hole).</summary>
+        private static readonly Vector2 _dockedIconPivot = new Vector2(0.5f, 0f);
+
         private void UpdateHoleIndicator()
         {
             if (_mapCam == null) return;
             // §iter-26 FIX #4: _flagLine removed — only the flag icon is updated.
-            // iter-30: also hide flag icon when off-viewport (not just behind camera).
-            // On long holes (>300m) the flag is legitimately off-screen; §11 no longer
-            // requires it in-viewport. Hide rather than show in an invalid screen position.
-
-            if (_flagIconRT != null)
-            {
-                Vector3 fs = _mapCam.WorldToScreenPoint(_flagWorldPos + Vector3.up * 2f);
-                // Check: in front of camera (z>0) AND within screen bounds.
-                bool inViewport = fs.z > 0f
-                    && fs.x >= 0f && fs.x <= Screen.width
-                    && fs.y >= 0f && fs.y <= Screen.height;
-                if (inViewport)
-                {
-                    _flagIconRT.gameObject.SetActive(true);
-                    _flagIconRT.anchoredPosition = new Vector2(fs.x, fs.y);
-                }
-                else
-                {
-                    _flagIconRT.gameObject.SetActive(false);
-                }
-            }
+            // Order 355 §5 supersedes iter-30's "hide when off-viewport": the flag is no longer a
+            // framing target (§3.1), so on any hole longer than one club it starts off-screen. Hiding
+            // it left the player with no orientation cue at all; it now floats at the edge with an
+            // arrow and docks over the hole the moment the hole enters the frame.
+            Rect avoid = ShootButtonScreenRect();
+            PlaceIndicator(_flagIconRT, _flagArrowRT, _flagWorldPos, avoid, hideWhenDocked: false);
+            // The ball's on-screen representation is the world-space marker sphere, so its indicator
+            // exists ONLY while the ball is panned off-frame.
+            PlaceIndicator(_ballIconRT, _ballArrowRT, _ballWorldPos, avoid, hideWhenDocked: true);
         }
 
         // ── Per-frame update ──────────────────────────────────────────────────────
@@ -1670,6 +2285,14 @@ namespace Golfin.Gameplay.UI.ShotUI
             HandleInput();
             UpdateGuideAndRings();
             UpdateHoleIndicator();
+
+#if UNITY_EDITOR
+            // Order 355 §4 — regression tripwire. THE INVARIANT (footprint ⊆ playable rect) is checked
+            // every frame the map is open, on every path: open framing, pan, pinch, aim. Any future
+            // framing change that leaks off-course ground announces itself here instead of reaching
+            // Cesar as a screenshot. Editor-only; rate-limited so one bad pose is not 60 errors/second.
+            AssertFootprintInvariant();
+#endif
 
             // Dump the second aim state once per open session, after the first update
             // cycle (so markers have their positions updated post-open).
@@ -1683,6 +2306,31 @@ namespace Golfin.Gameplay.UI.ShotUI
                 StartCoroutine(DoFrameReadbackAndDump("aimed"));
             }
         }
+
+#if UNITY_EDITOR
+        private float _lastInvariantLogTime = -999f;
+
+        /// <summary>
+        /// Order 355 §4 — editor-only assertion that the ground footprint has not left the playable
+        /// rectangle. Logs the offending corners AND the rectangle, so a violation is diagnosable from
+        /// the console line alone. Throttled to one line per second per violation streak.
+        /// </summary>
+        private void AssertFootprintInvariant()
+        {
+            if (!_obRectValid || _mapCam == null) return;
+            if (!TryComputeGroundFootprint(_mapCam, _ballWorldPos.y, out var fMin, out var fMax)) return;
+            if (FootprintInsideRect(fMin, fMax, _obRectCenter, _obRectHalf, kFootprintTolM)) return;
+            if (Time.unscaledTime - _lastInvariantLogTime < 1f) return;
+
+            _lastInvariantLogTime = Time.unscaledTime;
+            Debug.LogError(
+                "[MapView v2] INVARIANT VIOLATION (Order 355 §2): ground footprint left the playable rect. " +
+                $"footprint=[{fMin.x:F1},{fMin.y:F1}]..[{fMax.x:F1},{fMax.y:F1}] " +
+                $"rect=[{_obRectCenter.x - _obRectHalf.x:F1},{_obRectCenter.y - _obRectHalf.y:F1}].." +
+                $"[{_obRectCenter.x + _obRectHalf.x:F1},{_obRectCenter.y + _obRectHalf.y:F1}] " +
+                $"fov={_currentFov:F1}° camPos={_mapCam.transform.position:F1} focus={_camFocusPoint:F1}");
+        }
+#endif
 
         // ── Input ─────────────────────────────────────────────────────────────────
         // iter-33: true if the pointer/touch is over a UI element — so map-aim ignores taps on the
@@ -1789,7 +2437,14 @@ namespace Golfin.Gameplay.UI.ShotUI
                 {
                     float delta = (dist - _lastPinchDist) * _pinchSensitivity;
                     // Order 353b: cap zoom-OUT at the width-fit (_zoomOutCapFov); zoom-IN still allowed.
-                    _currentFov = Mathf.Clamp(_currentFov - delta, _minZoom, _zoomOutCapFov);
+                    // Order 355 §4: that static cap is now only a fast pre-check — the real gate is the
+                    // footprint. A wider FOV grows the footprint, so a zoom-OUT that would push it past
+                    // the OB rectangle is REFUSED outright (the pinch just stops); zoom-IN shrinks the
+                    // footprint and is therefore always legal.
+                    float candidateFov = Mathf.Clamp(_currentFov - delta, _minZoom, _zoomOutCapFov);
+                    if (candidateFov > _currentFov && !FootprintFitsAtFov(candidateFov))
+                        candidateFov = _currentFov;
+                    _currentFov = candidateFov;
                     if (_mapCam != null) _mapCam.fieldOfView = _currentFov;
 
                     Vector2 midNow  = (p0 + p1) * 0.5f;
@@ -1805,6 +2460,24 @@ namespace Golfin.Gameplay.UI.ShotUI
             {
                 _isPinching = false;
             }
+        }
+
+        /// <summary>
+        /// Order 355 §4 — would the footprint still be inside the OB rectangle at
+        /// <paramref name="candidateFov"/>? Probes by setting the FOV, measuring, and restoring it —
+        /// the projection matrix is the only thing that changes, so there is nothing else to undo.
+        /// True when there is no rectangle to violate (nothing to gate against).
+        /// </summary>
+        private bool FootprintFitsAtFov(float candidateFov)
+        {
+            if (_mapCam == null || !_obRectValid) return true;
+
+            float prev = _mapCam.fieldOfView;
+            _mapCam.fieldOfView = candidateFov;
+            bool ok = TryComputeGroundFootprint(_mapCam, _ballWorldPos.y, out var fMin, out var fMax)
+                   && FootprintInsideRect(fMin, fMax, _obRectCenter, _obRectHalf, kFootprintTolM);
+            _mapCam.fieldOfView = prev;
+            return ok;
         }
 
         /// <summary>
@@ -1824,11 +2497,23 @@ namespace Golfin.Gameplay.UI.ShotUI
             float   scale = _panSensitivity * (_currentFov / _fieldOfView);
             Vector3 move  = (-right.normalized * screenDelta.x - forward.normalized * screenDelta.y) * scale;
 
-            // Order 354 §4.4: the focus point may never leave the hole's OB rectangle, so panning
-            // cannot walk the camera off the playable area and reveal the world. Clamping the FOCUS
-            // (then rebuilding the camera position from it) keeps the rig rigid — the camera stops
-            // dead at the edge instead of drifting while the focus is pinned.
-            // No OB rectangle → unclamped fallback (previous behaviour, no regression).
+            // Order 355 §4 — clamp the FOOTPRINT, not the focus point. 354 stopped the focus at the
+            // OB edge, which still let half a screen of off-course show past it; the strict crop means
+            // the thing that must stay inside the rectangle is what the four viewport corners see.
+            // Per-axis, so a diagonal pan into a corner slides along the edge instead of dead-stopping.
+            if (_obRectValid && TryComputeGroundFootprint(_mapCam, _ballWorldPos.y, out var fpMin, out var fpMax))
+            {
+                Vector2 allowed = ClampFootprintMove(fpMin, fpMax, new Vector2(move.x, move.z),
+                                                     _obRectCenter, _obRectHalf, kFootprintTolM);
+                Vector3 applied = new Vector3(allowed.x, 0f, allowed.y);
+                _mapCam.transform.position += applied;
+                _camFocusPoint             += applied;
+                return;
+            }
+
+            // Order 354 §4.4 fallback (kept verbatim): footprint unresolvable but a rectangle exists →
+            // clamp the focus point, which at least keeps the rig over the playable area.
+            // No OB rectangle → unclamped (previous behaviour, no regression).
             if (_obRectValid)
             {
                 Vector3 camOffset  = _mapCam.transform.position - _camFocusPoint;
@@ -2866,6 +3551,12 @@ namespace Golfin.Gameplay.UI.ShotUI
             _ring120GO       = null;
             // §iter-26 FIX #4: _flagLine removed
             _flagIconRT      = null;
+            // Order 355 §5 — the indicator parts live under _indicatorCanvas (a child of _runtimeRoot),
+            // so they are already destroyed above; drop the references so a stale RectTransform can
+            // never be written to after close.
+            _flagArrowRT     = null;
+            _ballIconRT      = null;
+            _ballArrowRT     = null;
             _indicatorCanvas = null;
             _labelCanvas     = null;
             _label80 = _label100 = _label120 = null;
