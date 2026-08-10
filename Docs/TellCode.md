@@ -18,6 +18,48 @@
 
 ## 📋 SPEC_READY POINTERS
 
+- **`hole_scene_leftover_v3`** (filed 2026-08-10, Architect) — **SPEC_READY, GO from Cesar 2026-08-10.** 🔴 **THIRD attempt at the `Hole_NN_Geo` hierarchy leak — read the spec's "Read this first" section before touching anything.** Cesar had `Hole_06_Geo` reintroduced and left in the hierarchy **twice on 2026-08-10**, after both the Architect and Code assured him K16 (`hole_scene_leftover_v2`) had closed it. **v1 and v2 scoped the bug to the capture launchers; that was the wrong scope.** The dominant vector is the **EditMode test suite** — `RealHoleTerrainTests` opens all 18 `Hole_NN_Geo` scenes additively into the LIVE hierarchy (`:131`) and its `[OneTimeTearDown]` (`:85-91`) closes only what is still in a plain static `s_HoleCache` (`:60`), which any domain reload wipes while the scenes stay open (a cancelled run skips teardown entirely). Evidence: `LastSceneManagerSetup.txt.bak` records ShellScene + Hole_06_Geo; Editor.log shows holes 01–18 each opened 2× (= the two suite runs Cesar saw) and a `[CaptureSceneSetup] Excluding staged hole scene from snapshot: Hole_06_Geo` line ~280 lines AFTER a sweep, proving the sweep left it open; only 4 of 26 hole-scene stagers call `CaptureSceneSetup` — exactly K16's scope. Fix is two layers: (1) reload-proof, scan-based pre-clean + teardown in the fixtures, (2) an always-on `StagedHoleSceneGuard` with strict authoring protection (closes only a non-active, non-dirty `Hole_NN_Geo` while ShellScene/LabScaffold is open, never saves, EditorPrefs off-switch). Spec: `Docs/Specs/Active/hole_scene_leftover_v3/SPEC.md`. Kickoff below.
+
+### Kickoff · hole_scene_leftover_v3
+
+```
+Read Docs/Specs/Active/hole_scene_leftover_v3/SPEC.md and implement it.
+Read its "Read this first" section before writing any code.
+
+Context:
+- THIRD attempt at this bug. v1/v2 (K16) fixed the capture launchers; the real
+  vector is the EditMode TEST SUITE and was never in scope. Do not re-scope to
+  launchers — they are already handled and their behaviour must not change.
+- Layer 1 (the actual fix): RealHoleTerrainTests opens all 18 hole scenes
+  additively at :131 and its OneTimeTearDown (:85-91) only closes what survives
+  in the static s_HoleCache (:60) — a domain reload wipes that dict while the
+  scenes stay open, so teardown closes nothing and reports success. Replace with
+  a scan-based close over SceneManager.sceneCount, AND pre-clean in OneTimeSetUp
+  so a previous aborted run self-heals. Same for BakedPivotRegressionTests (:89,
+  :111-118). Never save a hole scene.
+- Layer 2 (safety net): new editor-only StagedHoleSceneGuard, [InitializeOnLoad],
+  hooked to EnteredEditMode + afterAssemblyReload + delayCall. Closes a scene ONLY
+  when ALL hold: Hole_NN_Geo, not active, not dirty, ShellScene-or-LabScaffold
+  also open, not playing/compiling. Plus a manual sweep menu item and an
+  EditorPrefs on/off toggle. Do NOT reference TestRunnerApi (asmdef compile risk).
+- One implementation of the "is this a staged hole scene" rule, not four —
+  promote CaptureSceneSetup's IsHoleGeoScene/CloseStagedHoleScenes and share them
+  (mind the asmdef; delegate rather than duplicate).
+- Minimal diff. ANY .unity diff is a failure of this task.
+- Out of scope: re-importing holes, touching HoleGeoImporter, shrinking the
+  18-hole sweep, changing CaptureSceneSetup behaviour, scene/prefab/CSV edits.
+
+When done: list changed files with a 1-line summary each, then run the acceptance
+checklist in the spec IN FULL — it requires TWO back-to-back full EditMode suite
+runs each followed by a quoted GetSceneManagerSetup() dump, the mid-run guard
+safety check, the interrupted-run recovery, BOTH directions of the authoring
+protection test (dirty+active hole survives; clean+non-active hole is closed),
+the killed-editor case, and a cat of Library/LastSceneManagerSetup.txt. A report
+that claims cleanliness without quoting the dumps will be rejected — this is the
+third time this bug has been declared fixed. Flag what needs Cesar on-device,
+update STATUS.md + IMPLEMENTER_REPORT.md, and update Docs/AI_CONTEXT.md.
+```
+
 - ~~**`auto_club_selection`**~~ — **DONE 2026-08-10, Cesar-approved** (shipped `43d8a34c9`, closed `b9225442d`; folder in `Docs/Specs/Completed/auto_club_selection/`). Driver on the tee, never auto-Driver off it (manual stays allowed — K11 gate untouched), elsewhere the shortest bag club that reaches the pin; re-runs every shot; §2f green rule wins; `_autoClubSelectEnabled` toggle default ON. Details: AI_CONTEXT top block. Pointer + kickoff block deleted 2026-08-10.
 
 - ~~**`power_gauge_target_marker`**~~ — **DONE 2026-08-10, Cesar-approved off the video** (Order 357; folder in `Docs/Specs/Completed/power_gauge_target_marker/`). Map-set landing target renders as a white radial notch on the power gauge via new `ShotController.MapTargetCarryM` (metres, re-derives on club change); also fixed the never-wired `PowerGaugeWidget` yards text (now reads `ClubContext.SelectedDistance`). Power system untouched. Details: AI_CONTEXT top block. Pointer + kickoff block deleted 2026-08-10.
