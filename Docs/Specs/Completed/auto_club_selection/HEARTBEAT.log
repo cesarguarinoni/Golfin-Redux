@@ -1,0 +1,23 @@
+=== iter-1 kickoff baseline 2026-08-10 (orchestrator-implemented, no subagent chain) ===
+HEAD: f6a70cdf24f55db3b99faab73f2e018404c5f186
+DIRTY (git status --porcelain --untracked-files=all at kickoff):
+ M Docs/TellCode.md
+?? Docs/Specs/Active/auto_club_selection/SPEC.md
+?? Docs/Specs/Active/auto_club_selection/STATUS.md
+=== end baseline ===
+
+15:0x  Read SPEC, asmdef check: Golfin.Gameplay.UI cannot reference Assembly-CSharp
+       (ClubType lives in Golfin.Inventory) -> SPEC fallback taken: ClubEntry.IsDriver bool.
+15:0x  Wrote AutoClubSelector.cs (pure), ClubEntry.IsDriver, both populators, PhysicsLabController
+       toggle + AutoSelectClubForNextShot() + AutoSelectClubAtHoleStart() + 3 call sites.
+15:08  assets-refresh: compiles clean (warnings only, all pre-existing CS0618/CS0414).
+15:12  EditMode full run: 1109 tests, 1106 pass, 0 fail, 3 pre-existing documented skips.
+15:1x  Tripwire test proved AutoClubSelectorTests IS in the run (1110 total, 1 fail = tripwire).
+       Tripwire removed.
+15:14  Real-flow run #1: GOLFIN/Smoke/Loop v2/Hole 1 Playthrough (ShellScene -> PLAY gate ->
+       Hole 1). 6 strokes, holed=real. 4x [PhysicsLab][auto_club] lines captured.
+15:2x  SELF-CAUGHT DEFECT: ReDecideClubAfterReposition returned early on target<0 (§2f
+       "no change"), so the reposition call site never reached the auto-pick in the COMMON
+       case. Restructured so the auto-pick runs unconditionally at the end. Recompiled.
+15:26  EditMode full run after fix: 1109 tests, 1106 pass, 0 fail. Green.
+15:2x  Real-flow run #2 at final code for the canonical frames.

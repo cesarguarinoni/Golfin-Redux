@@ -16,6 +16,38 @@
 
 ## 📋 SPEC_READY POINTERS
 
+- **`auto_club_selection`** (filed 2026-08-10, Architect) — **SPEC_READY, GO from Cesar 2026-08-10.** Player-side auto club selection, mirroring the bot's intent but selecting from the real equipped bag: tee shot ALWAYS Driver (`BallIsOnTee()` convention, so re-tee after OB gets Driver again); after the tee the auto-picker NEVER returns a Driver (player can still pick it manually — K11 gate NOT extended, Cesar's call); green stays pure §2f putter (auto-pick no-ops in putter mode); re-runs after EVERY shot (manual picks last one shot). New pure `AutoClubSelector.SelectBestClub` (bag + distToPin, yards via baseDistance) + 3 call sites in `PhysicsLabController` (AtRest after §2f, `ReDecideClubAfterReposition`, hole-start tee pick), committed via the selector-overlay pair `ClubContext.RequestSelection` + `ClubSelectionBroadcast.Raise` (Order 762 lesson — never bare `SetClub`). Adds a driver-identifying field to `ClubEntry` (Driver vs Wood share labIdx 0). Toggle `_autoClubSelectEnabled` (default ON). Spec: `Docs/Specs/Active/auto_club_selection/SPEC.md`. Kickoff below.
+
+### Kickoff · auto_club_selection
+
+```
+Read Docs/Specs/Active/auto_club_selection/SPEC.md and implement it.
+
+Context:
+- Auto-pick the player's club each shot: tee=Driver always; off-tee never
+  auto-Driver (manual still allowed, no K11 gate change); green stays §2f
+  putter (auto no-ops in putter mode); re-runs every shot.
+- New pure AutoClubSelector (mirror PutterModeSurfaceController style) +
+  AutoSelectClubForNextShot() in PhysicsLabController with 3 call sites
+  (HandleShotComplete AtRest AFTER the §2f block, ReDecideClubAfterReposition,
+  SetupAtTee/hole-start with OnBagChanged fallback). Commit selection via
+  ClubContext.RequestSelection + ClubSelectionBroadcast.Raise — NOT bare
+  SetClub (Order 762: live-stat path reads ClubContext.SelectedClubId).
+- ClubEntry gains a driver-identifying field (Driver vs Wood share labIdx 0);
+  populate in ClubContextPopulator AND LabInventoryStub. Check the asmdef
+  before referencing ClubType from Gameplay.UI — spec has the fallback.
+- Minimal diff. New toggle _autoClubSelectEnabled default true; false must be
+  byte-for-byte today's behaviour.
+- Out of scope: bots (VersusBot/BotDriver/BotClubSync), K11 gate changes,
+  §2f ClubContext gap fix, layup/hazard logic, power/flick, scene edits.
+
+When done: list changed files with a 1-line summary each, run the acceptance
+tests in the spec (new AutoClubSelectorTests + the 4 existing suites named
+there + editor manual matrix with [PhysicsLab][auto_club] log quotes), flag
+what needs on-device verification, update STATUS.md + IMPLEMENTER_REPORT.md
+in the spec folder, and update Docs/AI_CONTEXT.md.
+```
+
 - **`power_gauge_target_marker`** (filed 2026-08-10, Architect) — **SPEC_READY, GO from Cesar 2026-08-10.** Power stays club-relative (flick/F13 untouched — target-locked Golf-Clash-style power explicitly rejected for now); the map-view landing target (`_aimedCarryM`, today discarded on close) writes back to a new `ShotController.MapTargetCarryM` and renders as a notch on the `PowerGaugeGraphic` arc at target/carry % (pinned+red past the 1.2 overpower ceiling; putter mode excluded; cleared on shot commit). In scope: wire `PowerGaugeWidget` max carry from `ClubContext.SelectedDistance` — VERIFIED nothing calls `SetMaxCarryYards` today, so the yards text runs on the 250f default. Spec: `Docs/Specs/Active/power_gauge_target_marker/SPEC.md`. **Sequencing: AFTER `map_view_strict_crop_indicators`** if the queue is serial (both touch `MapViewController.cs`; disjoint regions, but don't invite a same-file merge). Kickoff below.
 
 ### Kickoff · power_gauge_target_marker
