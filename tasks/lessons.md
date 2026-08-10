@@ -1998,3 +1998,45 @@ re-shooting — I confirmed it was not my overlay by finding the cup missing in 
 line and grid were both off, then measured `greenSurfaceY − cupTopY` across all 18 holes rather than
 guessing at a sorting bug. Sister rule: the standing "video ALWAYS" requirement only pays off if
 someone actually watches the video with fresh eyes; be that someone before Cesar has to be.
+
+## Lesson AM — `Screen.width` is not the render surface, and EditMode cannot see the difference (map_view_strict_crop_indicators, Order 355, 2026-08-10)
+
+Order 355's floating indicators solve their dock/float geometry against the screen rect. I wrote
+`Screen.width` / `Screen.height`. Every EditMode test passed — they pass a width and height in
+explicitly, so the bug was structurally invisible to them. In play mode the flag **never docked**:
+panning it fully into frame (`flagVP = (0.201, 0.845)`, comfortably inside) left the icon pinned to a
+phantom edge at y = 1702 with the arrow still on.
+
+Cause: in Editor play mode `Screen.width/height` reports the **Game View window** (measured
+2070×1772) while the actual render surface was 1170×2532. `WorldToScreenPoint` returns coordinates in
+the *surface*, so the inset rect and the target point were in two different spaces. The fix is
+`camera.pixelWidth/pixelHeight` — that IS the projection surface, and it agrees with both
+`WorldToScreenPoint` and the ScreenSpaceOverlay canvas on device and in the Editor alike.
+
+Two more defects in the same task were also invisible to EditMode and only appeared in play mode on
+holes I had not hand-picked: on Hole 5 (41.5° off the snapped axis, driver) the containment zoom threw
+the **ball off the right edge** at viewport x = 1.196 while the *landing* stayed on screen — exactly
+backwards from the spec's priority; and the ball then seated **under the SHOOT button**.
+
+**How to apply:** (1) never use `Screen.width/height` for anything that has to line up with a
+projected point or an overlay canvas — use the camera's `pixelWidth/pixelHeight`; the existing memory
+`reference_screen_width_lies_in_editor_playmode` says the same thing about capture and it generalises
+to *all* screen-space math. (2) A green EditMode suite proves the math, never the wiring: any test
+that receives the environment as parameters cannot catch the caller passing the wrong environment.
+Budget a real play-mode pass on **more than one** fixture — Hole 1 alone would have shipped all three
+of these; Hole 5 (worst axis skew) and Hole 6 (shortest) are what surfaced them. Sister rule: Lesson
+AL — read the whole frame, not just your feature.
+
+## Lesson AN — `build_bot_video.py` does not wrap captions (2026-08-10)
+
+The caption tool renders each `Step:` line as a single `drawtext` at `fontsize = h/32` (79 px on a
+1170×2532 portrait clip) with **no wrapping**. A 54-character caption silently ran off both edges —
+the encode succeeded, the log said `Captions: 11`, and only a frame extract showed
+`is playable area — no world beyo…`.
+
+Budget roughly **26 characters per line** at portrait 1170 px and put explicit `\n` breaks in the
+`Step:` text yourself. **How to apply:** always frame-extract the *encoded* output and read the
+captions before delivering — the same discipline the standing rule already demands for Y-flip. Cheap
+recovery: captions come from `tasks/loop_v2_smoke_bot/<scenario>/screenshots/history.log`, so
+re-wrapping and re-running `build_bot_video.py` re-encodes from the kept raw with no re-record
+(pass `--keep-raw` on the first run so the raw survives).
