@@ -53,6 +53,17 @@ namespace Golfin.CourseImport
         private const float GreenCollarWidth = 0.9f;
 
         /// <summary>
+        /// Clearance of the cup disc's TOP face above the MEASURED green mesh surface at the pin XZ
+        /// (hole1_cup_buried_under_green, 2026-08-10).
+        ///
+        /// 6 mm is taken from live data, not taste: the 17 holes that already render correctly sit
+        /// between 1.3 mm and 6.4 mm proud, so 6 mm is inside the range already accepted visually,
+        /// while being 6x the 1 mm margin that Hole 1's green bake ate. `CupReseatTool` re-seats
+        /// existing shipped scenes to this same value, so imported and repaired holes match.
+        /// </summary>
+        internal const float CupSurfaceClearanceM = 0.006f;
+
+        /// <summary>
         /// Cut margin: how far INSIDE the collar edge the terrain hole-carve and fairway
         /// triangle-drop stop. Cut sits (GreenCollarWidth − GreenCutMargin) outside the
         /// green edge; the collar overhangs the cut by GreenCutMargin on every side.
@@ -2841,10 +2852,56 @@ namespace Golfin.CourseImport
                 {
                     var holeCup = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
                     holeCup.name = $"Hole_{green.id}";
-                    // B1 Change 2: cup uses same pinSeatY as flag — on the green surface, not old centroid datum.
-                    float cupY = pinSeatY;
-                    holeCup.transform.position = new Vector3(pinWorldX, cupY + 0.001f, pinWorldZ);
                     holeCup.transform.localScale = new Vector3(0.108f, 0.001f, 0.108f);
+
+                    // ── Cup seating (hole1_cup_buried_under_green, 2026-08-10) ──
+                    // Was: `pinSeatY + 0.001f`. pinSeatY is an ANALYTIC datum (seat plane + relH at
+                    // the pin XZ); the green MESH the player putts on can diverge from it by more
+                    // than that 1 mm margin. On Hole 1 it diverged by 23.1 mm, so the disc sat
+                    // inside the turf and never rendered — the flagstick appeared planted in
+                    // unbroken grass on the first hole every new player sees.
+                    //
+                    // Now: seat against the MEASURED mesh surface at the pin XZ, which is the datum
+                    // that actually decides visibility, with a clearance that survives a re-bake.
+                    // meshGO (this green's mesh, created above at CreateGreenMeshCDT) already
+                    // carries a MeshCollider via AddCleanMeshCollider, so it is raycastable here.
+                    // Falls back to the old analytic datum if the ray misses, so a green whose
+                    // collider failed to build still gets a cup rather than an exception.
+                    float halfHeight = holeCup.transform.localScale.y;  // Cylinder is 2 units tall
+                    float cupTopY = pinSeatY + 0.001f + halfHeight;     // legacy result, for the warning
+                    float cupY = pinSeatY + 0.001f;
+
+                    if (meshGO != null)
+                    {
+                        var greenCol = meshGO.GetComponent<MeshCollider>();
+                        if (greenCol != null)
+                        {
+                            UnityEngine.Physics.SyncTransforms();
+                            var origin = new Vector3(pinWorldX, pinSeatY + 50f, pinWorldZ);
+                            foreach (var h in UnityEngine.Physics.RaycastAll(
+                                         origin, Vector3.down, 200f, ~0, QueryTriggerInteraction.Ignore))
+                            {
+                                if (h.collider != greenCol) continue;
+                                float measuredY = h.point.y;
+                                cupY = measuredY + CupSurfaceClearanceM - halfHeight;
+
+                                float legacyClearanceMm = (cupTopY - measuredY) * 1000f;
+                                if (legacyClearanceMm <= 0f)
+                                {
+                                    Debug.LogWarning(
+                                        $"[HoleGeoImporter] Green {green.id}: cup would have been BURIED "
+                                      + $"{-legacyClearanceMm:F1} mm by the analytic pinSeatY datum "
+                                      + $"(pinSeatY={pinSeatY:F4}, measured green surface={measuredY:F4}). "
+                                      + $"Re-seated on the measured surface with "
+                                      + $"{CupSurfaceClearanceM * 1000f:F1} mm clearance. A green bake that "
+                                      + $"moves the mesh this far above the seat plane is worth a look.");
+                                }
+                                break;
+                            }
+                        }
+                    }
+
+                    holeCup.transform.position = new Vector3(pinWorldX, cupY, pinWorldZ);
                     holeCup.transform.SetParent(greensRoot.transform);
 
                     // Remove collider (visual only)
