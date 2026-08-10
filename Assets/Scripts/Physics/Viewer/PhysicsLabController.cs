@@ -87,6 +87,12 @@ namespace Golfin.Physics.Viewer
         [SerializeField] float _teeMarkerSafeFrac = 0.9f;
         [Tooltip("Ceiling for the tee-visibility pull-back (m). 8 = legacy distance.")]
         [SerializeField] float _aimCamMaxDistanceM = 8f;
+        [Tooltip("XZ distance behind the ball during PUTTER aim (m). Held at the legacy 8 so the " +
+                 "15 m aim line and the green-reading grid still fit on screen; only the ball's " +
+                 "screen position changed. Lower this to close in on the putt.")]
+        [SerializeField] float _puttCamDistanceM = 8f;
+        [Tooltip("Camera height above the ball during PUTTER aim (m). Legacy value.")]
+        [SerializeField] float _puttCamHeightM = 3f;
         [Tooltip("The 2D shot-UI ball. Aim framing pins the 3D ball to this widget's viewport point.")]
         [SerializeField] CentralBallWidget _centralBallWidget;
 
@@ -1224,13 +1230,19 @@ namespace Golfin.Physics.Viewer
         {
             Vector3 lookDir = new Vector3(Mathf.Cos(_cameraYaw), 0f, Mathf.Sin(_cameraYaw));
 
-            // Putter aim keeps the LEGACY framing verbatim (aim_camera_ball_centering §3 gate):
-            // the putt camera is tuned against the green-reading grid + blue aim line and is
-            // explicitly out of scope for this pass.
+            // Putter aim: same viewport pin as the full swing, but at its OWN distance/height.
+            // (Cesar, 2026-08-10 — the spec had scoped putting out and kept the legacy pose
+            // verbatim; the ball then sat ~62% down screen instead of under the 2D ball.)
+            // _puttCamDistanceM/_puttCamHeightM default to the legacy 8/3 on purpose: the putt
+            // view has to fit the 15 m aim line and the green-reading grid, so this pass changes
+            // WHERE the ball sits on screen, not how much green you can see.
             if (CurrentShotIsPutt)
             {
-                cam.transform.position = _orbitCenter - lookDir * 8f + Vector3.up * 3f;
-                cam.transform.LookAt(_orbitCenter + lookDir * 3f + Vector3.up * 0.5f);
+                SolveAimCameraPose(
+                    _orbitCenter, lookDir, _puttCamDistanceM, _puttCamHeightM,
+                    cam.fieldOfView, GetAimBallViewportY(),
+                    out Vector3 puttPos, out Quaternion puttRot);
+                cam.transform.SetPositionAndRotation(puttPos, puttRot);
                 return;
             }
 

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Reflection;
 using NUnit.Framework;
 using UnityEngine;
 using Golfin.Physics.Viewer;
@@ -98,6 +99,80 @@ namespace Golfin.Physics.Tests
             Vector3 vp = _cam.WorldToViewportPoint(ball);
             Assert.AreEqual(0.5f,    vp.x, 0.01f);
             Assert.AreEqual(0.4234f, vp.y, 0.01f);
+        }
+
+        /// <summary>
+        /// Drives the PRODUCTION putter path — <c>ApplyCameraYaw</c>'s <c>CurrentShotIsPutt</c>
+        /// branch on a real PhysicsLabController with a real ShotController reporting IsPutt —
+        /// and asserts on Unity's own projection of the resulting camera pose.
+        ///
+        /// Deliberately NOT a direct SolveAimCameraPose call with hardcoded 8/3: that version
+        /// passed whether or not the putter branch had been changed at all, because it never
+        /// touched the branch or the _puttCamDistanceM/_puttCamHeightM fields. This one fails if
+        /// the putter branch is reverted to the legacy LookAt pose, which is the whole point.
+        /// </summary>
+        [Test]
+        public void ApplyCameraYaw_PutterBranch_CentersTheBallAtTheLegacyStandoff()
+        {
+            var ctrlGO = new GameObject("TestLabRoot_Putt");
+            var scGO   = new GameObject("TestShotController_Putt");
+            try
+            {
+                var ctrl = ctrlGO.AddComponent<PhysicsLabController>();
+                var sc   = scGO.AddComponent<Golfin.Gameplay.Input.ShotController>();
+                sc.IsPutt = true;                                   // => CurrentShotIsPutt
+
+                const BindingFlags BF = BindingFlags.Instance | BindingFlags.NonPublic;
+                typeof(PhysicsLabController).GetField("_shotController", BF).SetValue(ctrl, sc);
+
+                var ball    = new Vector3(-231.3f, 10.35f, -70.0f); // real Hole 1 stroke-7 lie
+                var cup     = new Vector3(-230.5f, 10.20f, -72.5f);
+                float yaw   = Mathf.Atan2(cup.z - ball.z, cup.x - ball.x);
+
+                _cam.fieldOfView = 60f;
+                // ApplyAimCameraAt sets _orbitCenter/_cameraYaw then calls ApplyCameraYaw —
+                // the same entry the bot and the map-view restore use.
+                typeof(PhysicsLabController)
+                    .GetMethod("ApplyAimCameraAt", BF)
+                    .Invoke(ctrl, new object[] { _cam, ball, yaw });
+
+                // No CentralBallWidget is wired here, so the production fallback (0.4234) is the
+                // target — the point is that the branch pins the ball to whatever it resolves.
+                float vyExpected = (float)typeof(PhysicsLabController)
+                    .GetField("_aimBallViewportYFallback", BF).GetValue(ctrl);
+
+                Vector3 vp = _cam.WorldToViewportPoint(ball);
+                Assert.Greater(vp.z, 0f, "ball must be in front of the putt camera");
+                Assert.AreEqual(0.5f,       vp.x, 0.01f, "putt viewport X");
+                Assert.AreEqual(vyExpected, vp.y, 0.01f, "putt viewport Y — legacy pose fails here");
+
+                // Stand-off unchanged from legacy: this change moves the ball on screen, not the camera in.
+                Assert.AreEqual(8.544f, Vector3.Distance(_cam.transform.position, ball), 0.01f,
+                    "putter camera must stay at the legacy 8 m / 3 m stand-off");
+            }
+            finally
+            {
+                Object.DestroyImmediate(scGO);
+                Object.DestroyImmediate(ctrlGO);
+            }
+        }
+
+        /// <summary>
+        /// Guard on the tunables themselves: the shipped putter defaults must remain the legacy
+        /// 8 m / 3 m, so lowering them is a deliberate act and not an accident.
+        /// </summary>
+        [Test]
+        public void PutterCameraTunables_DefaultToTheLegacyStandoff()
+        {
+            var go = new GameObject("TestLabRoot_PuttDefaults");
+            try
+            {
+                var ctrl = go.AddComponent<PhysicsLabController>();
+                const BindingFlags BF = BindingFlags.Instance | BindingFlags.NonPublic;
+                Assert.AreEqual(8f, (float)typeof(PhysicsLabController).GetField("_puttCamDistanceM", BF).GetValue(ctrl), 1e-4f);
+                Assert.AreEqual(3f, (float)typeof(PhysicsLabController).GetField("_puttCamHeightM",   BF).GetValue(ctrl), 1e-4f);
+            }
+            finally { Object.DestroyImmediate(go); }
         }
 
         // ── Tee clamp ──────────────────────────────────────────────────────────────────────
