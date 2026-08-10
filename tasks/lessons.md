@@ -1971,3 +1971,30 @@ Hierarchy/Console/scene-list capture, or dropped as a requirement rather than sa
 picture of nothing. When reviewing, always ask what a frame could *disprove* — if the answer is
 "nothing", it carries no PASS regardless of its dimensions. Related: `Docs/Specs/**/screenshots/` is
 gitignored (`.gitignore:246`), so screenshot evidence never reaches history anyway.
+
+## Lesson AL — review the whole frame, not just the thing you built (putter_aim_blue_line, 2026-08-10)
+
+I shipped a gameplay video of the new putter aim line, verified to a high standard along every axis
+I had chosen in advance: resolution, frame rate, Y-flip on consecutive decoded frames, motion gates,
+caption legibility, 62 verts, zero GC, the line appearing/pivoting/vanishing on cue. Cesar watched it
+once and asked why the hole wasn't there. **The cup was missing from every frame and I had not looked
+at anything except my own feature.**
+
+It was not my regression — Hole 1's cup disc sits 23.6 mm *under* its green mesh (`HoleGeoImporter`
+seats it at `pinSeatY + 1 mm`; holes 2–18 clear by 1.3–6.4 mm). But "not my bug" is irrelevant to the
+point: I chose the hole, framed the shot, and shipped a putting video with no hole in it.
+
+The failure mode is that verification checklists are built from the diff. Everything I checked was
+downstream of "what did I change?", so nothing on the list could ever have caught a defect in the
+scene *around* the change. A frame-rate check and a flip check are not a substitute for looking at
+the picture and asking whether it depicts the thing it claims to depict.
+
+**How to apply:** before delivering any visual artifact, do one pass where you deliberately ignore
+your own feature and read the frame as a player would — is everything that *should* be on screen
+actually on screen? For a putting clip that is ball, putter, flag, **cup**, grid, HUD. Name the
+expected inventory explicitly and check it off; a missing element is a hard FAIL even when the
+feature under test is perfect. Corollary for diagnosis: when something is absent, prove *why* before
+re-shooting — I confirmed it was not my overlay by finding the cup missing in frames where the aim
+line and grid were both off, then measured `greenSurfaceY − cupTopY` across all 18 holes rather than
+guessing at a sorting bug. Sister rule: the standing "video ALWAYS" requirement only pays off if
+someone actually watches the video with fresh eyes; be that someone before Cesar has to be.

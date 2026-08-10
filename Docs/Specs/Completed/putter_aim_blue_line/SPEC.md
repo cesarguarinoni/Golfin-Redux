@@ -1,6 +1,7 @@
 # SPEC — `putter_aim_blue_line`
 
-**Status:** SPEC_READY · **Tier:** 2 (TellCode) · **Author:** Claude (Architect) · **Rev 1, 2026-08-03 13:10 JST**
+**Status:** SPEC_READY · **Tier:** 2 (TellCode) · **Author:** Claude (Architect) · **Rev 2, 2026-08-07 JST** (Rev 1: 2026-08-03 13:10 JST)
+**Rev 2 adds:** §8 mobile performance budget (device era — the line must be free at 60 fps) and §9 competitive check confirming the Rev 1 straight-line design. §§1–7 unchanged except the two DoD lines noted in §8.4.
 **Notion:** `putter_aim_blue_line` (Order 413, P1 — High, Loop v2)
 **Supersedes:** `Docs/Specs/Queued/putter_aim_blue_line/NOTES.md` (filed 2026-05-25) — **its architecture sketch is wrong, see §1.**
 **Estimate:** 2–4 h Code time + pipeline.
@@ -112,3 +113,58 @@ Per NOTES, unchanged: no aim line for iron/driver (the cone already covers those
 **Visual gate (Cesar):** production Hole 1 putter aim — line clearly readable over the grid, anchored through a full camera rotation, hidden after the putt. Plus the bot video `PutterAimWarpedGridOnTestGreen` extended to show it.
 
 **Open for Cesar at gate time:** colour `#7AE9FF` and width `0.08 m` are eyeballed from a reference screenshot, not locked. Expect one tuning round.
+
+---
+
+## 8. Mobile performance budget (Rev 2)
+
+Context: `ui_frame_pacing` (K9) shipped — the game now runs 60 fps on the physical iPhone. Anything living in putter-aim `Update()` runs every frame of the longest-held state in the game. The line itself is tiny; the budget below is about making its *steady-state cost zero*, the same way `PutterGreenReader` already behaves.
+
+### 8.1 Rebuild-on-dirty, not per-frame
+
+Cache last-built `(ballPos, aimYaw)`. Rebuild the mesh only when yaw moved > ~0.05° or ball moved > 1 cm; otherwise `Update()` is the existing `if (!_aimActive) return;` early-out plus two comparisons. While the player is *holding* an aim, cost is ~zero. (The grid gets this for free because its warp happens in the shader; the line's geometry depends on aim yaw, so the dirty check is where that saving lives.)
+
+### 8.2 Zero steady-state allocations
+
+- One `Mesh` created on first build, `MarkDynamic()`, reused for life; never `new Mesh` per rebuild.
+- Pre-allocated `Vector3[]` / `List<Vector3>` at fixed capacity (§8.3); refill + `SetVertices`/`SetUVs`; no LINQ, no `ToArray()` per rebuild.
+- Triangles + UVs set once (topology never changes); only vertex positions refresh on rebuild.
+- Gate: zero GC alloc per frame in putter aim after the first build (Profiler window on the aim state is sufficient evidence; a device capture is a bonus, not required).
+
+### 8.3 Geometry + draw cost
+
+15 m line sampled every 0.5 m (same pitch as the slope bake) = 31 samples → 62 verts / 60 tris / **one draw call**. Unlit URP shader (or the simplest transparent unlit variant of the grid's material setup), `ShadowCastingMode.Off`, `receiveShadows = false`, per-instance params via `MaterialPropertyBlock` — the exact pattern `PutterGreenReader` iter-3 established. Overdraw from a 0.08 m strip is negligible.
+
+### 8.4 Terrain height source — bake, not raycasts
+
+Sample line-vertex Y from the **same baked slope data the grid uses** (`BakedZoneClassifier` 0.5 m bake / `SlopeCell.meshY`), not `Physics.Raycast` per vertex per rebuild. Two reasons:
+
+1. **Perf:** raycasts × 31 × every aim-drag frame is the only way this feature could ever show up in a profile. Bake lookups are array reads.
+2. **Correctness (Rejection-3 lesson):** if the line and grid sample Y differently, the 2 cm gap between them is not guaranteed everywhere and the z-fight defense from `puttpath_predictor` iter-4 silently degrades. Same source ⇒ the gap is real at every vertex by construction.
+
+Off-bake fallback (line extends past the green polygon): clamp to last baked sample's Y, or a single raycast per rebuild for the overhang tail — implementer's choice, NOTE it in the report.
+
+Why not `LineRenderer`: camera-facing billboarding recomputes every frame whether or not aim changed, gives no control over per-vertex Y sampling against the bake, and would introduce a second line-drawing pattern beside the repo's established procedural-mesh + MPB one. Consistency wins (Lesson Q).
+
+### DoD additions (extend §7)
+
+7. Zero per-frame GC allocations in putter aim after first mesh build; mesh rebuilt only on aim/ball change (dirty check).
+8. One draw call for the line; unlit, no shadows; height sampled from the slope bake per §8.4.
+
+---
+
+## 9. What other games do (Rev 2 — competitive check)
+
+Surveyed before locking the plan. Result: **the Rev 1 design (straight intent line + separate slope grid) is the genre standard; no design change.**
+
+| Game | Putt-aim visual | Break shown how |
+|---|---|---|
+| Winning Putt (Cesar's original ref) | thin straight cyan line over grid | grid |
+| Golf Clash | straight "path of light" from ball + needle timing | separate break arrows / hole glow, not bent into the line |
+| PGA Tour 2K (2K23) | straight target/distance markers | grid with moving beads (our grid's own reference); ALSO has a curved putt-preview line — but even 2K treats it as a limited-use assist (once per stroke, difficulty-gated), i.e. the industry's own flag that live curve prediction removes the skill. This is exactly the "Sim positioning" anti-feature the `puttpath_predictor` L1 lock already excludes. |
+| WGT Golf | aim marker | grid + moving dots (Ken's original grid reference) |
+| Ultimate Golf | aim arc showing intent — explicitly does NOT fold wind into the arc | player compensates |
+| Mini Golf King | straight guideline; longer guideline is a *paid/boost* aid | — |
+
+Takeaways applied: (a) straight-line-plus-grid is what every comp title ships as the default read — the L1 "no curve prediction" lock is not just our preference, it is the norm, and where curve exists it is monetised/limited, which is a live-ops option for later, not a rendering feature now; (b) every comp title renders the aim line *uniformly bright, full length* — no fade-out gradient needed for v1; (c) Winning Putt's per-meter tick marks and Golf Clash's hole-glow-on-line remain the two obvious future-polish items, both already out of scope per §6.
+
