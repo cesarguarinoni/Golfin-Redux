@@ -173,29 +173,102 @@ namespace Golfin.Physics.Viewer.Editor
 
         /// <summary>
         /// Close every open Hole_NN_Geo scene without saving. Never writes a generated scene.
+        /// Returns how many scenes were closed.
+        ///
+        /// THE one implementation of "sweep staged hole scenes" in the project — the EditMode
+        /// fixtures that stage hole scenes (RealHoleTerrainTests, BakedPivotRegressionTests) and
+        /// StagedHoleSceneGuard all call this rather than re-rolling the loop
+        /// (hole_scene_leftover_v3). <paramref name="logContext"/> only changes the log prefix so
+        /// each caller is identifiable in Editor.log; the default reproduces the original message.
         /// </summary>
-        static void CloseStagedHoleScenes()
+        public static int CloseStagedHoleScenes(string logContext = "CaptureSceneSetup")
         {
+            int closed = 0;
             for (int i = SceneManager.sceneCount - 1; i >= 0; i--)
             {
                 var s = SceneManager.GetSceneAt(i);
                 if (!s.IsValid() || string.IsNullOrEmpty(s.name)) continue;
                 if (!IsHoleGeoScene(s.name)) continue;
 
-                Debug.Log($"[CaptureSceneSetup] Closing staged hole scene without saving: {s.name}");
+                Debug.Log($"[{logContext}] Closing staged hole scene without saving: {s.name}");
                 EditorSceneManager.CloseScene(s, true);
+                closed++;
             }
+            return closed;
         }
 
         /// <summary>
         /// Returns true when <paramref name="nameOrPath"/> identifies a generated Hole_NN_Geo scene.
         /// Works on both a scene name ("Hole_06_Geo") and a full asset path
         /// ("Assets/…/Hole_06_Geo.unity"). Null/empty inputs safely return false.
+        ///
+        /// Shared predicate — see <see cref="CloseStagedHoleScenes"/>.
         /// </summary>
-        static bool IsHoleGeoScene(string nameOrPath)
+        public static bool IsHoleGeoScene(string nameOrPath)
         {
             string n = System.IO.Path.GetFileNameWithoutExtension(nameOrPath ?? "");
             return n.StartsWith("Hole_") && n.EndsWith("_Geo");
+        }
+
+        // ── Staged-scene window (hole_scene_leftover_v3) ───────────────────────────
+        //
+        // A cooperative "an automated run is staging hole scenes right now" flag, so
+        // StagedHoleSceneGuard can never close a scene out from under an EditMode sweep
+        // that is still using it. SessionState (not EditorPrefs) so it dies with the
+        // Editor session — a killed editor leaves no stale inhibit behind.
+        //
+        // Deliberately NOT TestRunnerApi: hooking that would drag a test-framework asmdef
+        // reference into assemblies that do not have one (SPEC § Layer 2).
+
+        const string StagedWindowKey = "Golfin.SceneHygiene.StagedSceneWindow";
+
+        // Belt-and-braces expiry: a run that dies without reaching its teardown must not
+        // inhibit the guard for the rest of the Editor session.
+        const double StagedWindowMaxMinutes = 45.0;
+
+        /// <summary>Mark the start of an automated run that stages hole scenes.</summary>
+        public static void BeginStagedSceneWindow(string label)
+        {
+            SessionState.SetString(StagedWindowKey,
+                $"{label}|{System.DateTime.UtcNow.Ticks}");
+        }
+
+        /// <summary>Mark the end of the run opened by <see cref="BeginStagedSceneWindow"/>.</summary>
+        public static void EndStagedSceneWindow()
+        {
+            SessionState.EraseString(StagedWindowKey);
+        }
+
+        /// <summary>
+        /// True while an automated run has declared it is staging hole scenes and that
+        /// declaration has not expired. <paramref name="label"/> receives the declaring caller.
+        /// </summary>
+        public static bool IsStagedSceneWindowActive(out string label)
+        {
+            label = null;
+            string raw = SessionState.GetString(StagedWindowKey, "");
+            if (string.IsNullOrEmpty(raw)) return false;
+
+            int bar = raw.LastIndexOf('|');
+            if (bar < 0) { SessionState.EraseString(StagedWindowKey); return false; }
+
+            if (!long.TryParse(raw.Substring(bar + 1), out long ticks))
+            {
+                SessionState.EraseString(StagedWindowKey);
+                return false;
+            }
+
+            var age = System.DateTime.UtcNow - new System.DateTime(ticks, System.DateTimeKind.Utc);
+            if (age.TotalMinutes > StagedWindowMaxMinutes)
+            {
+                Debug.LogWarning($"[CaptureSceneSetup] Staged-scene window from '{raw.Substring(0, bar)}' " +
+                                 $"expired after {age.TotalMinutes:F0} min without a matching End — clearing it.");
+                SessionState.EraseString(StagedWindowKey);
+                return false;
+            }
+
+            label = raw.Substring(0, bar);
+            return true;
         }
 
         /// <summary>

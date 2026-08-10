@@ -10,6 +10,7 @@ using Golfin.Physics;
 using Golfin.Physics.Math;
 using Golfin.Physics.Runtime;
 using Golfin.Physics.Runtime.Baked;
+using Golfin.Physics.Viewer.Editor;
 
 namespace Golfin.Gameplay.Tests
 {
@@ -67,6 +68,15 @@ namespace Golfin.Gameplay.Tests
         [OneTimeSetUp]
         public static void LoadScene()
         {
+            // Pre-clean + staged-scene window — see RealHoleTerrainTests.GlobalSetup for the
+            // full rationale (hole_scene_leftover_v3). Same defect, smaller blast radius.
+            int preCleaned = CaptureSceneSetup.CloseStagedHoleScenes("BakedPivotRegressionTests/pre-clean");
+            if (preCleaned > 0)
+                Debug.Log($"[BakedPivotRegressionTests] Pre-clean closed {preCleaned} leftover staged "
+                        + "hole scene(s) from a previous run.");
+            s_HoleScene = default;
+            CaptureSceneSetup.BeginStagedSceneWindow("BakedPivotRegressionTests");
+
             Directory.CreateDirectory(DiagDir);
             s_Results.Clear();
 
@@ -114,8 +124,15 @@ namespace Golfin.Gameplay.Tests
             // Write per-fixture reports from the aggregated results dict.
             foreach (var kv in s_Results)
                 WriteReport(kv.Key, kv.Value);
-            if (s_HoleScene.IsValid())
-                EditorSceneManager.CloseScene(s_HoleScene, true);
+
+            // Scan-based close, NOT `if (s_HoleScene.IsValid())` — a domain reload wipes the
+            // static while the scene stays open, and the old teardown then closed nothing and
+            // reported success (hole_scene_leftover_v3).
+            int closed = CaptureSceneSetup.CloseStagedHoleScenes("BakedPivotRegressionTests/teardown");
+            Debug.Log($"[BakedPivotRegressionTests] Teardown closed {closed} staged hole scene(s); "
+                    + $"{SceneManager.sceneCount} scene(s) remain open.");
+            s_HoleScene = default;
+            CaptureSceneSetup.EndStagedSceneWindow();
         }
 
         // ── Helpers ────────────────────────────────────────────────────────────

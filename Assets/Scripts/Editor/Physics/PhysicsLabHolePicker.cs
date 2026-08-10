@@ -25,6 +25,16 @@ namespace Golfin.Physics.Editor
         static void OnSceneOpened(Scene scene, OpenSceneMode mode)
         {
             if (scene.path != SCAFFOLD_PATH) return;
+
+            // hole_scene_leftover_v3: restore ONLY when LabScaffold is opened as THE working
+            // scene. A human (or this window's Load button, :152) opens it Single; EditMode
+            // fixtures open it ADDITIVELY as a throwaway fixture host — ActionButtonRenderingTests
+            // does exactly that. Auto-restoring during a test run injects Hole_NN_Geo into the
+            // suite's hierarchy, the fixture's try/finally closes only the scene it opened itself,
+            // and the hole is left behind. That is the vector that made Cesar's leftover always
+            // Hole_06 (this pref), not a random hole from the 18-hole sweep.
+            if (mode != OpenSceneMode.Single) return;
+
             int savedHole = EditorPrefs.GetInt(PREF_KEY, -1);
             if (savedHole < 0) return;
 
@@ -34,6 +44,14 @@ namespace Golfin.Physics.Editor
 
         static void RestoreHole(int holeNumber)
         {
+            // Re-validate AFTER the deferral (hole_scene_leftover_v3). Between OnSceneOpened and
+            // this delayCall, LabScaffold can be closed or replaced by a Single-mode load of an
+            // unrelated scene — at which point this would additively inject a hole into whatever
+            // hierarchy happens to exist. Observed live: Hole_06_Geo opened next to ShellScene
+            // with no LabScaffold anywhere (Editor.log "[PhysicsLab] Auto-restored Hole 06").
+            var scaffold = EditorSceneManager.GetSceneByPath(SCAFFOLD_PATH);
+            if (!scaffold.IsValid() || !scaffold.isLoaded) return;
+
             // Skip if a hole is already loaded.
             for (int i = 0; i < EditorSceneManager.sceneCount; i++)
             {

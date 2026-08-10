@@ -10,6 +10,7 @@ using Golfin.Physics;
 using Golfin.Physics.Math;
 using Golfin.Physics.Runtime;
 using Golfin.Physics.Runtime.Baked;
+using Golfin.Physics.Viewer.Editor;
 
 namespace Golfin.Gameplay.Tests
 {
@@ -74,6 +75,20 @@ namespace Golfin.Gameplay.Tests
         [OneTimeSetUp]
         public static void GlobalSetup()
         {
+            // Pre-clean (hole_scene_leftover_v3). A previous run that died mid-sweep — cancelled,
+            // crashed, or interrupted by a domain reload — leaves its additively-opened
+            // Hole_NN_Geo scenes sitting in the editor hierarchy, where Unity then persists them
+            // to Library/LastSceneManagerSetup.txt and reopens them on every launch. Sweeping
+            // here makes that leak self-heal on the next suite run instead of living for days.
+            int preCleaned = CaptureSceneSetup.CloseStagedHoleScenes("RealHoleTerrainTests/pre-clean");
+            if (preCleaned > 0)
+                Debug.Log($"[RealHoleTerrainTests] Pre-clean closed {preCleaned} leftover staged hole "
+                        + "scene(s) from a previous run before starting the sweep.");
+            s_HoleCache.Clear();
+
+            // Tell StagedHoleSceneGuard to keep its hands off while this fixture is staging.
+            CaptureSceneSetup.BeginStagedSceneWindow("RealHoleTerrainTests");
+
             Directory.CreateDirectory(DiagDir);
             s_Aero    = PhysicsConfigLoader.LoadAeroConfig();
             s_Wind    = PhysicsConfigLoader.LoadWindConfig();
@@ -85,10 +100,16 @@ namespace Golfin.Gameplay.Tests
         [OneTimeTearDown]
         public static void GlobalTeardown()
         {
-            foreach (var kv in s_HoleCache)
-                if (kv.Value.scene.IsValid())
-                    EditorSceneManager.CloseScene(kv.Value.scene, true);
+            // Scan-based close (hole_scene_leftover_v3). The old implementation iterated
+            // s_HoleCache — a plain static with no reload-durable backing. A domain reload
+            // between an OpenScene and this teardown wipes the dictionary WHILE the scenes stay
+            // open, so the loop closed nothing and reported success. Scanning the live scene
+            // list instead is idempotent and cannot be defeated by a wiped static.
+            int closed = CaptureSceneSetup.CloseStagedHoleScenes("RealHoleTerrainTests/teardown");
+            Debug.Log($"[RealHoleTerrainTests] Teardown closed {closed} staged hole scene(s); "
+                    + $"{SceneManager.sceneCount} scene(s) remain open.");
             s_HoleCache.Clear();
+            CaptureSceneSetup.EndStagedSceneWindow();
 
             string summary = Path.Combine(DiagDir, "M4-real-conditions-summary.md");
             File.WriteAllText(summary,
