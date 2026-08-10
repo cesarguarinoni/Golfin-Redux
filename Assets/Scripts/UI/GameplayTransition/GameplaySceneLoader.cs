@@ -146,6 +146,18 @@ namespace Golfin.UI.GameplayTransition
             //    becomes visible.
             if (loadingScreen != null)
                 yield return loadingScreen.FinishLoadingCoroutine();
+
+            // 7. Hand-off: the player can now actually SEE the tee. Start the tee-idle
+            //    countdown from here.
+            //
+            //    ShotUI_Canvas is active for the whole of steps 3-6 (it ships active inside
+            //    LabScaffold), so TeeIdleGlowController's timer would otherwise run behind
+            //    the loading screen and the glow would already be lit the instant the hole
+            //    is revealed — which is exactly what it did before this call existed.
+            //
+            //    Null-safe and no-ops when there is no live controller, so the physics-lab
+            //    and bot launchers that never run this loader keep working unchanged.
+            Golfin.Gameplay.UI.ShotUI.TeeIdleGlowController.NotifyOtherInteraction();
         }
 
         /// <summary>

@@ -491,3 +491,75 @@ the `PlayButton` GameObject name when matching the label.
 Note: `Docs/Specs/**/videos/` is gitignored, so the MP4 lives on disk and in
 `Docs/Reports/Media/` (also gitignored) for the daily Telegram report — it is not committed.
 The extracted stills under `screenshots/` are committed.
+
+---
+
+## Post-DONE fix 2026-08-07 — glow was lit the moment the hole appeared
+
+**Cesar:** *"The glow is starting as soon as the UI is shown and not waiting 5 seconds."*
+
+### Root cause — the `shotUIVisible` term the SPEC required was never implemented
+
+SPEC §Part B's `armed` expression includes `&& shotUIVisible`. The shipped `armed` was
+`teeGate && shotIdle && !_dragging` only. The iter-2 self-review caught this exactly
+("Item 16: `shotUIVisible` term omitted from `armed`, SPEC line 100 requires it — undeclared
+spec deviation") and it was not carried forward when the orchestrator took the task over at
+iter-3. That omission is the whole bug.
+
+`ShotUI_Canvas` ships **active** inside `LabScaffold`, and the loader additively loads
+LabScaffold (step 3) and the hole geo (step 5) *behind* the loading screen. So
+`TeeIdleGlowController.Update()` ran, `teeGate` was already true (`TurnCount==1`,
+`ShotHistory.Count==0`, state `Idle`), and the countdown accumulated for the whole load.
+
+Measured at the instant the hole was revealed, before the fix:
+
+```
+_idleTimer=11.11837  _glowActive=True  _currentState=Idle
+ShotUI canvas='ShotUI_Canvas' activeInHierarchy=True enabled=True
+HandleGlow exists=True
+```
+
+The countdown had already run past 5.0 s twice over, so the halo was lit on the first frame
+the player ever saw.
+
+### Fix 1 — start the countdown at player hand-off
+
+`GameplaySceneLoader.LoadCoroutine` step 7: after `loadingScreen.FinishLoadingCoroutine()`
+(the point the hole is actually revealed), call the existing public
+`TeeIdleGlowController.NotifyOtherInteraction()`. `Golfin.Gameplay.UI` is
+`autoReferenced: true`, so Assembly-CSharp can call it directly — no new plumbing, no event
+bus, and the call is null-safe, so the physics-lab and bot launchers that never run this
+loader are unaffected.
+
+Measured at reveal, after the fix:
+
+```
+_idleTimer=4.163254  _glowActive=False  _currentState=Idle
+HandleGlow active=False
+```
+
+…then lighting normally once the countdown completes (`_idleTimer=14.98 _glowActive=True
+alpha=0.781 scale=2.230`).
+
+### Fix 2 — `ResetTimer()` left a running glow frozen on screen
+
+Found while fixing the above. `ResetTimer()` (what `NotifyOtherInteraction()` calls) only
+set `_idleTimer = 0`. The `Update()` state machine only ever **starts** the glow — nothing in
+the armed path stops it — so after a tap the halo stayed on screen, frozen at its last alpha
+and scale, until something else stopped it. This was invisible in the demo clip because the
+Spin tap opens `SpinPanel`, and the *modal* branch calls `StopGlow()`; any action button that
+does **not** open an overlay would have exposed it.
+
+`ResetTimer()` now calls `StopGlow(instant: false)` so the halo fades out over the normal
+0.15 s. Verified live:
+
+```
+BEFORE:                          timer=26.80778 glowActive=True  fadingOut=False
+AFTER NotifyOtherInteraction():  timer=0        glowActive=False fadingOut=True
+```
+
+### Note on the video
+
+`videos/raw_tee_idle_glow.mp4` remains accurate: the recorder explicitly zeroes the timer at
+record start, so the clip always showed the correct 5 s onset. The defect was only reachable
+through a real hole load, which the clip's timeline starts after. Not re-recorded.

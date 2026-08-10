@@ -212,6 +212,11 @@ namespace Golfin.Gameplay.UI.ShotUI
         void ResetTimer()
         {
             _idleTimer = 0f;
+            // Zeroing the timer is not enough: if the glow is already running, nothing in
+            // Update() will stop it (the state machine only ever STARTS the glow, once the
+            // timer passes the delay). Without this the halo freezes on screen at its last
+            // frame after a tap on any button that does not open a modal.
+            StopGlow(instant: false);
         }
 
         void AnimateGlow()
