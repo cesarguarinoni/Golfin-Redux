@@ -305,7 +305,11 @@ namespace Golfin.Physics.Viewer.Bot
                 ? Golfin.Gameplay.UI.HUD.HoleContext.Par
                 : 5;
             int cap = par + 5;
-            d.LogStep($"  Hole1RetryAfterFail: par={par} cap={cap} — bumping TurnCount to cap");
+            // The stroke cap is opt-in as of 2026-08-10 (no shipping mode has a fail
+            // condition; Missions will enable it). This scenario exists to exercise the
+            // FAILED modal, so it opts in explicitly — exactly as Missions will.
+            Golfin.Gameplay.Session.GameSession.StrokeCapEnabled = true;
+            d.LogStep($"  Hole1RetryAfterFail: par={par} cap={cap} — StrokeCapEnabled=true, bumping TurnCount to cap");
             Golfin.Gameplay.Session.GameSession.SetTurn(cap);
 
             yield return d.ForceShotComplete("AtRest", settleSeconds: 1f);

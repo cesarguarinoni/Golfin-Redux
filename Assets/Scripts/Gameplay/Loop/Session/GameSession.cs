@@ -57,6 +57,34 @@ namespace Golfin.Gameplay.Session
         /// </summary>
         public static int VersusStrokeCapOverPar = 5;
 
+        // ── Solo stroke-cap FAILED state (Missions opt-in) ────────────────────
+        /// <summary>
+        /// Master gate for the solo stroke-cap FAILED end-condition read by
+        /// <c>HoleCompletionBridge</c> (Golfin.Physics.Viewer).
+        ///
+        /// <b>Default false — no shipping mode has a fail condition.</b> Practice,
+        /// Tournament and 1v1 all run to the cup; only the mode that explicitly opts in
+        /// can end a hole as FAILED. Missions is the intended consumer: it sets this
+        /// true (plus <see cref="StrokeCapOverPar"/>) when seeding a mission that carries
+        /// a stroke limit, and the machinery below stays intact for it.
+        ///
+        /// Cleared to false in ResetSession() so a mission never leaks into the next
+        /// Practice session. NOT cleared by ResetForNewHole() — a multi-hole mission
+        /// keeps its limit across holes.
+        ///
+        /// Note: this does NOT gate <see cref="VersusStrokeCapOverPar"/>, which is a
+        /// separate 1v1 match-termination safety net (forced draw), not a FAILED screen.
+        /// </summary>
+        public static bool StrokeCapEnabled;
+
+        /// <summary>
+        /// Strokes above par at which the hole ends as FAILED, when
+        /// <see cref="StrokeCapEnabled"/> is true. Missions writes its own limit here.
+        /// <c>0</c> (the default) means "use the value serialized on HoleCompletionBridge".
+        /// Cleared to 0 in ResetSession().
+        /// </summary>
+        public static int StrokeCapOverPar;
+
         // ── Turn counter ──────────────────────────────────────────────────────
         public static int TurnCount = 1;
         public static event System.Action OnTurnChanged;
@@ -146,6 +174,8 @@ namespace Golfin.Gameplay.Session
             IsVersus            = false;
             IsTournament        = false;
             TournamentId        = null;
+            StrokeCapEnabled    = false;
+            StrokeCapOverPar    = 0;
             TournamentRoundContext.EndRound();
             ResetForNewHole();
         }

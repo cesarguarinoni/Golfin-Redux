@@ -16,9 +16,17 @@ namespace Golfin.Physics.Viewer
     /// Placed in Golfin.Physics.Viewer so it can access PhysicsLabController.BallSM
     /// (which is internal to the Viewer assembly).
     ///
-    /// FAILED detection rule (Q1 lock: par + 5):
-    ///   terminal == AtRest AND GameSession.TurnCount >= par + _strokeCapOverPar
+    /// FAILED detection rule — OPT-IN ONLY (Cesar 2026-08-10):
+    ///   GameSession.StrokeCapEnabled AND terminal == AtRest
+    ///   AND GameSession.TurnCount >= par + CapOverPar
     ///   → fire MarkHoleComplete with terminal=AtRest (FAILED proxy).
+    ///
+    /// <b>No shipping mode enables it.</b> Practice, Tournament and 1v1 all run to the
+    /// cup — a hole only ends on InCup. The cap originally shipped ungated at par + 5
+    /// (loop_v2_c1 Q1), which surfaced a FAILED screen on shot 10 of Hole 1 (par 5) in
+    /// Practice, where there is no fail condition by design. The machinery is preserved
+    /// intact for Missions, which will opt in via GameSession.StrokeCapEnabled and supply
+    /// its own limit through GameSession.StrokeCapOverPar.
     ///
     /// OB or AtRest-below-cap are no-ops (play continues; OB adds penalty stroke elsewhere).
     /// </summary>
@@ -26,8 +34,18 @@ namespace Golfin.Physics.Viewer
     {
         [SerializeField] PhysicsLabController _controller;
 
-        [Tooltip("Stroke count above par that triggers FAILED. Default: par + 5 (Q1 lock).")]
+        [Tooltip("Fallback stroke count above par that triggers FAILED, used when " +
+                 "GameSession.StrokeCapOverPar is 0. Only consulted when " +
+                 "GameSession.StrokeCapEnabled is true (Missions opt-in) — inert otherwise.")]
         [SerializeField] int _strokeCapOverPar = 5;
+
+        /// <summary>
+        /// Effective cap magnitude: the mode's runtime override when it supplied one,
+        /// otherwise the value serialized on this component.
+        /// </summary>
+        int CapOverPar => GameSession.StrokeCapOverPar > 0
+            ? GameSession.StrokeCapOverPar
+            : _strokeCapOverPar;
 
         BallStateMachine _sm;
         bool _firedThisHole;
@@ -94,10 +112,13 @@ namespace Golfin.Physics.Viewer
 
                 int tStrokes = GameSession.TurnCount;
                 int tPar     = HoleContext.Par;
-                int tCap     = tPar + _strokeCapOverPar;
+                int tCap     = tPar + CapOverPar;
 
                 bool isHoleOut = result.TerminalState == BallState.InCup;
-                bool isCapped  = result.TerminalState == BallState.AtRest && tStrokes >= tCap;
+                // Opt-in only: tournament rounds ship with no stroke cap.
+                bool isCapped  = GameSession.StrokeCapEnabled
+                              && result.TerminalState == BallState.AtRest
+                              && tStrokes >= tCap;
 
                 if (!isHoleOut && !isCapped) return;
 
@@ -121,19 +142,23 @@ namespace Golfin.Physics.Viewer
 
             int strokes = GameSession.TurnCount;
             int par     = HoleContext.Par;
-            int cap     = par + _strokeCapOverPar;
+            int cap     = par + CapOverPar;
 
             if (result.TerminalState == BallState.InCup)
             {
                 _firedThisHole = true;
                 Fire(BallState.InCup, strokes);
             }
-            else if (result.TerminalState == BallState.AtRest && strokes >= cap)
+            else if (GameSession.StrokeCapEnabled
+                  && result.TerminalState == BallState.AtRest
+                  && strokes >= cap)
             {
+                // Opt-in only (Missions). Practice and every other shipping mode fall
+                // through here forever — InCup is their sole end-condition.
                 _firedThisHole = true;
                 Fire(BallState.AtRest, strokes);
             }
-            // OB or AtRest-below-cap: no-op.
+            // OB, AtRest-below-cap, or cap disabled: no-op.
         }
 
         void Fire(BallState terminal, int strokes)
