@@ -556,7 +556,19 @@ namespace Golfin.Gameplay.UI.ShotUI
 
             // Write aim back to ShotController.
             if (_shotController != null)
+            {
                 _shotController.CameraHeadingRadians = _aimYawRadians;
+
+                // power_gauge_target_marker: the landing the player placed survives the map
+                // session as a marker on the power gauge. Metres, not a fraction — a club
+                // change re-derives the marker instead of freezing a stale percentage.
+                // _aimedCarryM is defaulted to the club carry in UpdateGuideAndRings on open,
+                // so an open-and-close with no touch writes the carry the map just showed —
+                // that landing IS the current target.
+                _shotController.MapTargetCarryM = (_aimedCarryM > 0f) ? _aimedCarryM : -1f;
+                Debug.Log($"[MapView v2] Close write-back: MapTargetCarryM={_shotController.MapTargetCarryM:F1}m " +
+                          $"(aimedCarry={_aimedCarryM:F1}m, clubCarry={_carryYards * kYardsToMeters:F1}m)");
+            }
 
             // Try PhysicsLab write-back as well (handles LabScaffold context).
             WriteBackAimToPhysicsLab(_aimYawRadians);
