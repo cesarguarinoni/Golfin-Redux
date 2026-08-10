@@ -95,6 +95,36 @@ namespace Golfin.Physics.Viewer.Editor
         public static void RunPutterAimGreenReaderVisible()
             => Launch("putter_aim_green_reader_visible");
 
+        // putter_aim_blue_line video deliverable (production Hole 1):
+
+        // Hole 6, not Hole 1: Hole 1's cup disc is buried 23.6 mm under its own green mesh, so a
+        // Hole 1 clip shows a flagstick with no black hole at its base. Holes 2-18 seat the cup
+        // 1.3-6.4 mm proud and render correctly. Root cause is the importer, not this scenario.
+        static void RunBlueLineClip(int hole)
+        {
+            SessionState.SetInt("BlueLineClip.Hole", hole);
+            BotVideoRecorder.MaxRecordSecondsSessionOverride = 60;
+            BotVideoRecorder.CustomOutputPath =
+                $"Docs/Specs/Active/putter_aim_blue_line/videos/putter_aim_blue_line_h{hole:00}";
+            // ArmDeferred, not Arm: the scenario calls Begin() once the hole is loaded and
+            // settled, so the Home→hole-select navigation does not eat the record window and
+            // no frame carries the play-mode-entry Y-flip transient.
+            BotVideoRecorder.ArmDeferred();
+            Launch("putter_aim_blue_line_clip");
+        }
+
+        [MenuItem("GOLFIN/Smoke/Loop v2/Putter Aim Blue Line — clip (Hole 6)")]
+        public static void RunPutterAimBlueLineClip() => RunBlueLineClip(6);
+
+        [MenuItem("GOLFIN/Smoke/Loop v2/Putter Aim Blue Line — clip (Hole 6)", isValidateFunction: true)]
+        static bool ValidatePutterAimBlueLineClip() => !EditorApplication.isPlaying;
+
+        [MenuItem("GOLFIN/Smoke/Loop v2/Putter Aim Blue Line — clip (Hole 1, cup is buried)")]
+        public static void RunPutterAimBlueLineClipHole1() => RunBlueLineClip(1);
+
+        [MenuItem("GOLFIN/Smoke/Loop v2/Putter Aim Blue Line — clip (Hole 1, cup is buried)", isValidateFunction: true)]
+        static bool ValidatePutterAimBlueLineClipHole1() => !EditorApplication.isPlaying;
+
         // Iter-2 warped grid visual gate (TestGreen scene):
 
         [MenuItem("GOLFIN/Smoke/Loop v2/Putter Aim Warped Grid On TestGreen")]

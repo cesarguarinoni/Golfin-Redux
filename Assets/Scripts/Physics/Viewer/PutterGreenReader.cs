@@ -563,6 +563,81 @@ namespace Golfin.Physics.Viewer
         public void RefreshBake() => BakeCells();
 
         /// <summary>
+        /// Surface Y of the *rendered grid lattice* at an arbitrary world XZ, WITHOUT
+        /// <c>_surfaceYOffset</c> applied (i.e. the raw <c>SlopeCell.meshY</c> field).
+        ///
+        /// Interpolates using the exact same triangulation <see cref="BuildGridMesh"/>
+        /// emits — quad corners A(row,col) B(row,col+1) C(row+1,col) D(row+1,col+1),
+        /// split into triangles A-B-C and B-D-C — so a caller that adds its own offset
+        /// to this value sits a *constant* distance above the grid surface at every
+        /// point, not just at cell centres.
+        ///
+        /// Added for <see cref="PutterAimLine"/> (SPEC putter_aim_blue_line §8.4): the
+        /// aim line must take its height from the same 0.5 m bake the grid uses rather
+        /// than per-vertex raycasts, both for cost (array reads, not physics queries on
+        /// every aim-drag frame) and so the 2 cm line-over-grid gap is guaranteed by
+        /// construction — the iter-4 z-fight defence degrades silently if the two
+        /// overlays sample Y from different sources.
+        ///
+        /// Read-only: allocation-free, O(1), and does not mutate any bake state.
+        /// Returns false when nothing is baked or the point is off the green lattice.
+        /// </summary>
+        public bool TrySampleBakedSurfaceY(float worldX, float worldZ, out float meshY)
+        {
+            meshY = 0f;
+            if (_cells == null || _cells.Length == 0 || _cellIndexByGrid == null) return false;
+
+            float fCol = (worldX - _gridOriginX) / _cellSize;
+            float fRow = (worldZ - _gridOriginZ) / _cellSize;
+
+            int col = Mathf.FloorToInt(fCol);
+            int row = Mathf.FloorToInt(fRow);
+            float u = fCol - col;   // 0..1 along +X within the quad
+            float v = fRow - row;   // 0..1 along +Z within the quad
+
+            bool okA = _cellIndexByGrid.TryGetValue((row,     col),     out int idxA);
+            bool okB = _cellIndexByGrid.TryGetValue((row,     col + 1), out int idxB);
+            bool okC = _cellIndexByGrid.TryGetValue((row + 1, col),     out int idxC);
+            bool okD = _cellIndexByGrid.TryGetValue((row + 1, col + 1), out int idxD);
+
+            if (okA && okB && okC && okD)
+            {
+                float yA = _cells[idxA].meshY;
+                float yB = _cells[idxB].meshY;
+                float yC = _cells[idxC].meshY;
+                float yD = _cells[idxD].meshY;
+
+                // Same diagonal split as BuildGridMesh: A-B-C covers u+v <= 1, B-D-C the rest.
+                meshY = (u + v <= 1f)
+                    ? yA + (yB - yA) * u + (yC - yA) * v
+                    : yD + (yC - yD) * (1f - u) + (yB - yD) * (1f - v);
+                return true;
+            }
+
+            // Partial quad (green boundary): fall back to the nearest present corner so the
+            // line still tracks the surface right up to the edge instead of snapping to 0.
+            int    bestIdx  = -1;
+            float  bestDist = float.MaxValue;
+            if (okA) { float d = u * u + v * v;                             if (d < bestDist) { bestDist = d; bestIdx = idxA; } }
+            if (okB) { float d = (1f - u) * (1f - u) + v * v;               if (d < bestDist) { bestDist = d; bestIdx = idxB; } }
+            if (okC) { float d = u * u + (1f - v) * (1f - v);               if (d < bestDist) { bestDist = d; bestIdx = idxC; } }
+            if (okD) { float d = (1f - u) * (1f - u) + (1f - v) * (1f - v); if (d < bestDist) { bestIdx = idxD; } }
+
+            if (bestIdx < 0) return false;
+            meshY = _cells[bestIdx].meshY;
+            return true;
+        }
+
+        /// <summary>
+        /// The vertical offset (metres) the grid mesh is lifted above the sampled surface
+        /// (the iter-4 z-fight fix). Exposed read-only so <see cref="PutterAimLine"/> can
+        /// check its own clearance over the grid at runtime and warn if the two were
+        /// retuned into each other, instead of both hard-coding numbers that can silently
+        /// desync.
+        /// </summary>
+        public float SurfaceYOffset => _surfaceYOffset;
+
+        /// <summary>
         /// H3 (versus_bot_hardening): additive slope accessor for VersusBot.
         /// Returns the slope at the nearest baked cell to (worldX, worldZ).
         /// Does not re-bake; reads the already-baked _cells array.

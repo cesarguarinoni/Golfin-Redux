@@ -978,6 +978,278 @@ namespace Golfin.Physics.Viewer.Bot
             }
         }
 
+        // ── Scenario: Putter Aim Blue Line clip (putter_aim_blue_line §7) ─────
+
+        /// <summary>
+        /// Video deliverable for `putter_aim_blue_line`. Production Hole 1, real entry path,
+        /// real ShotController — nothing about the aim line is forced on by a test seam here.
+        ///
+        /// What the clip has to show, in order:
+        ///   1. The line APPEARS the moment putter aim begins (DoD 2).
+        ///   2. It PIVOTS live as the player swings the aim, staying pinned to the ball and
+        ///      draping over the green's topology (DoD 3) — driven by sweeping
+        ///      ShotController.CameraHeadingRadians, which is the same input a real thumb
+        ///      produces, not a camera-only move.
+        ///   3. It sits cleanly ABOVE the green-reading grid with no z-fighting (DoD 4) —
+        ///      the sweep holds long enough at several headings to see it.
+        ///   4. It DISAPPEARS when the putt is struck (DoD 2 again), and the ball rolls.
+        ///
+        /// BotVideoRecorder MUST be armed with:
+        ///   MaxRecordSecondsSessionOverride = 60
+        ///   CustomOutputPath = "Docs/Specs/Active/putter_aim_blue_line/videos/putter_aim_blue_line"
+        ///   ArmDeferred() — the scenario calls Begin() itself once Hole 1 is loaded and settled,
+        ///   so the navigation does not eat the watchdog window and no frame carries the
+        ///   play-mode-entry Y-flip transient.
+        ///
+        /// Captures: aimline_armed, aimline_visible, aimline_after_putt.
+        /// </summary>
+        /// <summary>
+        /// Boot for the aim-line clip: ShellScene → Home → Practice → HoleSelection → hole N,
+        /// loaded and settled. Deliberately a separate copy of the cup clips'
+        /// CupClipBootToHole6 rather than a refactor of it — same reason that helper gives for
+        /// not folding into AudioWaterSplashSfx: the proven clips must not be able to regress
+        /// behind a shared edit.
+        ///
+        /// Hole is read from SessionState "BlueLineClip.Hole" (default 6). Hole 6 is the default
+        /// rather than Hole 1 because **Hole 1's cup is buried under its own green** — the
+        /// importer seats the cup at pinSeatY + 1 mm, and Hole 1's green mesh sits 23.6 mm ABOVE
+        /// that at the pin XZ, so the black disc is inside the turf and the clip shows a
+        /// flagstick with no hole at its base. Holes 2–18 all sit 1.3–6.4 mm proud and render
+        /// correctly (measured across all 18). See the report's "Found in passing" section —
+        /// the real fix belongs in HoleGeoImporter, not here.
+        /// </summary>
+        static IEnumerator BlueLineBootToHole(BotDriver d)
+        {
+            int hole = UnityEditor.SessionState.GetInt("BlueLineClip.Hole", 6);
+            d.LogStep($"  Booting to hole {hole} via Practice → HoleSelection");
+
+            yield return d.NavigateToHome(totalTimeoutSeconds: 60f);
+            yield return new WaitForSecondsRealtime(2f);
+
+            // Only Hole 1 is unlocked by default.
+            if (hole != 1)
+            {
+                try
+                {
+                    System.Type svcType = null;
+                    foreach (var a in System.AppDomain.CurrentDomain.GetAssemblies())
+                    { var t = a.GetType("GolfinRedux.UI.HoleSelection.HoleProgressionService"); if (t != null) { svcType = t; break; } }
+                    if (svcType == null)
+                        foreach (var a in System.AppDomain.CurrentDomain.GetAssemblies())
+                        { var t = a.GetType("HoleProgressionService"); if (t != null) { svcType = t; break; } }
+                    var inst = svcType?.GetProperty("Instance",
+                        System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)?.GetValue(null);
+                    if (inst != null)
+                    {
+                        svcType.GetMethod("SetUnlockedOverride", new[] { typeof(int), typeof(bool) })
+                               ?.Invoke(inst, new object[] { hole, true });
+                        d.LogStep($"  Hole {hole} unlocked");
+                    }
+                }
+                catch (System.Exception ex) { d.LogStep($"  WARN: unlock reflection error: {ex.Message}"); }
+            }
+
+            yield return d.ClickModeCardPlay("practice", settleSeconds: 1.5f);
+            yield return d.WaitForScreen("HoleSelection", timeoutSeconds: 15f);
+            yield return new WaitForSecondsRealtime(3f);
+
+            // Tap the hole card through its real widget onClick, then drive the same loader
+            // entry HoleSelectionScreenController.HandleActionClicked uses.
+            try
+            {
+                System.Type cardType = null;
+                foreach (var a in System.AppDomain.CurrentDomain.GetAssemblies())
+                { var t = a.GetType("GolfinRedux.UI.HoleSelection.HoleCardController"); if (t != null) { cardType = t; break; } }
+                if (cardType == null)
+                    foreach (var a in System.AppDomain.CurrentDomain.GetAssemblies())
+                    { var t = a.GetType("HoleCardController"); if (t != null) { cardType = t; break; } }
+                if (cardType != null)
+                {
+                    var holeNumProp = cardType.GetProperty("HoleNumber",
+                        System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+                    foreach (var card in Object.FindObjectsByType(cardType, FindObjectsSortMode.None))
+                    {
+                        if ((int)(holeNumProp?.GetValue(card) ?? 0) != hole) continue;
+                        var go = ((Component)card).gameObject;
+                        UnityEngine.UI.Button tap = null;
+                        foreach (var btn in go.GetComponentsInChildren<UnityEngine.UI.Button>(true))
+                            if (btn.gameObject.name.Contains("CardTapButton") || btn.gameObject.name.Contains("TapButton"))
+                            { tap = btn; break; }
+                        if (tap == null) tap = go.GetComponentInChildren<UnityEngine.UI.Button>();
+                        if (tap != null) { tap.onClick.Invoke(); d.LogStep($"  Tapped Hole {hole} card"); }
+                        break;
+                    }
+                }
+            }
+            catch (System.Exception ex) { d.LogStep($"  WARN: card tap reflection error: {ex.Message}"); }
+
+            yield return new WaitForSecondsRealtime(1.5f);
+
+            try
+            {
+                System.Type gsType = null;
+                foreach (var a in System.AppDomain.CurrentDomain.GetAssemblies())
+                { var t = a.GetType("Golfin.Gameplay.Session.GameSession"); if (t != null) { gsType = t; break; } }
+                gsType?.GetMethod("SeedSession", new[] { typeof(int), typeof(string), typeof(int) })
+                      ?.Invoke(null, new object[] { hole, "", 0 });
+
+                System.Type loaderType = null;
+                foreach (var a in System.AppDomain.CurrentDomain.GetAssemblies())
+                { var t = a.GetType("Golfin.UI.GameplayTransition.GameplaySceneLoader"); if (t != null) { loaderType = t; break; } }
+                var loader = loaderType?.GetProperty("Instance",
+                    System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)?.GetValue(null);
+                if (loader != null)
+                {
+                    foreach (var m in loaderType.GetMethods(
+                        System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance))
+                        if (m.Name == "BeginGameplayLoad")
+                        {
+                            m.Invoke(loader, m.GetParameters().Length == 1
+                                ? new object[] { hole } : new object[] { hole, null });
+                            d.LogStep($"  BeginGameplayLoad({hole})");
+                            break;
+                        }
+                }
+            }
+            catch (System.Exception ex) { d.LogStep($"  WARN: load reflection error: {ex.Message}"); }
+
+            yield return d.WaitForSceneLoaded("LabScaffold", timeoutSeconds: 40f);
+            yield return d.WaitForSceneLoaded($"Hole_{hole:00}_Geo", timeoutSeconds: 40f);
+            yield return new WaitForSecondsRealtime(4f);   // fade-in + HUD settle; avoids Y-flip
+        }
+
+        public static IEnumerator PutterAimBlueLineClip(BotDriver d)
+        {
+            int hole = UnityEditor.SessionState.GetInt("BlueLineClip.Hole", 6);
+            d.LogStep($"=== Putter Aim Blue Line — video clip (production Hole {hole}) ===");
+
+            // 1. Real entry path: ShellScene boot → Home → Practice → HoleSelection → hole N.
+            //    NOT the Home→"PLAY"→matchmaking route PutterAimGreenReaderVisible uses: since
+            //    the mode carousel landed, a plain Click("PLAY") matches five buttons and hits
+            //    the mode card instead of the play action. ClickModeCardPlay is the API that
+            //    survived that change, and this is the same boot shape the cup clips use.
+            yield return BlueLineBootToHole(d);
+
+            // 2. START RECORDING — hole is up, nothing left that could flip a frame.
+            UnityEditor.SessionState.SetBool("LoopV2SmokeBot.RecordVideo", true);
+            UnityEditor.SessionState.SetBool("LoopV2SmokeBot.DeferredRecord", false);
+            try
+            {
+                System.Type recType = null;
+                foreach (var a in System.AppDomain.CurrentDomain.GetAssemblies())
+                { var t = a.GetType("Golfin.Physics.Viewer.Editor.BotVideoRecorder"); if (t != null) { recType = t; break; } }
+                recType?.GetMethod("Begin", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
+                       ?.Invoke(null, null);
+                d.LogStep("  BotVideoRecorder.Begin() — recording started");
+            }
+            catch (System.Exception ex) { d.LogStep($"  Begin ERROR: {ex.Message}"); }
+            yield return new WaitForSecondsRealtime(1.5f);
+
+            var ctrl = Object.FindFirstObjectByType<PhysicsLabController>();
+            if (ctrl == null) { d.LogStep("=== PutterAimBlueLineClip: FAIL — no PhysicsLabController ==="); yield break; }
+
+            // 3. Ball on the green, 3 m from the pin, putter in hand.
+            Vector3 pin = Golfin.Gameplay.UI.HUD.HoleContext.PinWorld;
+            ctrl.PlaceBallAt(pin + new Vector3(3f, 0f, 0.4f));
+            ctrl.SetClub(PhysicsLabController.PutterIndex);
+            ctrl.InjectLabBundleForCurrentClub();
+            yield return new WaitForSecondsRealtime(2f);    // camera settles onto the new lie
+
+            Vector3 ballPos = ctrl.BallPosition;
+            Vector3 toPin   = new Vector3(pin.x - ballPos.x, 0f, pin.z - ballPos.z);
+            float   pinYaw  = Mathf.Atan2(toPin.z, toPin.x);
+            ctrl.SetCameraYawRadians(pinYaw);
+            yield return new WaitForSecondsRealtime(1.5f);
+            yield return d.Capture("aimline_armed");
+
+            var sc   = ctrl.GetComponentInChildren<ShotController>(true);
+            var line = ctrl.GetComponentInChildren<PutterAimLine>(true);
+            var rdr  = ctrl.GetComponentInChildren<PutterGreenReader>(true);
+            if (sc == null || line == null)
+            {
+                d.LogStep($"=== PutterAimBlueLineClip: FAIL — sc={sc != null} line={line != null} ===");
+                yield break;
+            }
+
+            // 4. Enter putter aim through the production path. No SetAimActiveForTest anywhere
+            //    in this scenario — if the line does not light up here, the feature is broken.
+            d.LogStep("  Entering putter aim via IsPutt=true + BeginExternalDrag()...");
+            sc.IsPutt = true;
+            sc.BeginExternalDrag();
+            yield return null; yield return null; yield return null;
+            d.LogStep($"  aim active={line.AimActive} lineVerts={line.MeshVertexCount} "
+                    + $"rebuilds={line.RebuildCount} gridCells={(rdr != null ? rdr.BakedCellCount : 0)}");
+            yield return new WaitForSecondsRealtime(1.5f);
+            yield return d.Capture("aimline_visible");
+
+            // 5. AIM SWEEP — the heart of the clip. Sweeping CameraHeadingRadians is what a
+            //    real aiming thumb does; ShotController.PublishState() republishes the live aim
+            //    every Tick, so the line follows continuously. Two slow passes either side of
+            //    the pin line, then settle back on the pin.
+            d.LogStep("  Aim sweep: ±35° about the pin line, 2 passes...");
+            const float SweepDeg   = 35f;
+            const float SweepSecs  = 4.0f;      // per half-pass — slow enough to read on video
+            float[] targets = { pinYaw + SweepDeg * Mathf.Deg2Rad,
+                                pinYaw - SweepDeg * Mathf.Deg2Rad,
+                                pinYaw };
+            float current = pinYaw;
+            int rebuildsAtSweepStart = line.RebuildCount;
+            foreach (float target in targets)
+            {
+                float from = current;
+                float t0   = Time.realtimeSinceStartup;
+                while (Time.realtimeSinceStartup - t0 < SweepSecs)
+                {
+                    float u = (Time.realtimeSinceStartup - t0) / SweepSecs;
+                    u = u * u * (3f - 2f * u);                       // smoothstep — no snap at the ends
+                    current = Mathf.Lerp(from, target, u);
+                    sc.CameraHeadingRadians = current;               // production aim input
+                    ctrl.SetCameraYawRadians(current);               // camera follows the aim
+                    sc.Tick(Time.unscaledDeltaTime);                 // republishes the live aim
+                    yield return null;
+                }
+                current = target;
+                d.LogStep($"    heading {current * Mathf.Rad2Deg:F1}° — lineVerts={line.MeshVertexCount} "
+                        + $"rebuilds={line.RebuildCount}");
+                yield return new WaitForSecondsRealtime(0.8f);       // hold so the eye can settle
+            }
+            d.LogStep($"  Sweep rebuilt the mesh {line.RebuildCount - rebuildsAtSweepStart}× "
+                    + "(one per aim-change frame — the dirty check is doing its job, not idling)");
+
+            // 6. Strike the putt. The line must vanish as the state leaves the aim window.
+            sc.CancelExternalDrag();
+            sc.IsPutt = false;
+            yield return new WaitForSecondsRealtime(0.3f);
+            d.LogStep($"  Aim released — line active={line.AimActive} (must be False)");
+
+            ctrl.SetCameraYawRadians(pinYaw);
+            yield return new WaitForSecondsRealtime(0.5f);
+            d.LogStep("  Firing the putt...");
+            ctrl.FireViaShotController(0.42f, Golfin.Gameplay.Input.DebugShotAccuracy.Green);
+
+            float tFire = Time.realtimeSinceStartup;
+            var seen = ctrl.BallSM.State;
+            while (Time.realtimeSinceStartup - tFire < 12f)
+            {
+                if (ctrl.BallSM.State != seen)
+                {
+                    seen = ctrl.BallSM.State;
+                    d.LogStep($"  BallState -> {seen} at t+{Time.realtimeSinceStartup - tFire:F1}s");
+                    if (seen == Golfin.Gameplay.Loop.BallState.InCup
+                     || seen == Golfin.Gameplay.Loop.BallState.AtRest) break;
+                }
+                yield return new WaitForSecondsRealtime(0.05f);
+            }
+            yield return new WaitForSecondsRealtime(2.5f);
+            yield return d.Capture("aimline_after_putt");
+
+            bool pass = line.MeshVertexCount == 62 && !line.AimActive;
+            d.LogStep(pass
+                ? $"=== PutterAimBlueLineClip: PASS — lineVerts={line.MeshVertexCount}, hidden after the putt ==="
+                : $"=== PutterAimBlueLineClip: FAIL — lineVerts={line.MeshVertexCount} (expected 62), "
+                  + $"aimActive={line.AimActive} (expected False) ===");
+        }
+
         // ── Scenario: Putter Aim Warped Grid on TestGreen ─────────────────────
 
         /// <summary>
@@ -993,7 +1265,14 @@ namespace Golfin.Physics.Viewer.Bot
         ///   4. Capture screenshot — visual gate: lines must visibly bend over humps/swales.
         ///   5. Assert baked >= 50 cells AND mesh was generated (MeshVertexCount > 0).
         ///
-        /// Captures: test_green_baked, putter_aim_warped_grid_on_test_green.
+        /// Extended by putter_aim_blue_line (SPEC §7 visual gate): the same run now also
+        /// gates PutterAimLine — the straight aim-direction line drawn above the grid. The
+        /// camera+aim sweep at step 7b is what proves DoD 3 (the line stays anchored to the
+        /// ball and the aim heading through a full rotation) as a sequence of frames rather
+        /// than a single lucky angle.
+        ///
+        /// Captures: test_green_baked, putter_aim_warped_grid_on_test_green,
+        ///           putter_aim_line_yaw_{0,90,180,270}.
         /// </summary>
         public static IEnumerator PutterAimWarpedGridOnTestGreen(BotDriver d)
         {
@@ -1082,20 +1361,65 @@ namespace Golfin.Physics.Viewer.Bot
                 yield return null;
             }
 
-            // 7. Wait a moment then capture the warped grid visual.
+            // 6b. Aim line (putter_aim_blue_line). It gates on exactly the same ShotController
+            //     event as the grid, so when step 6 took the production path it is already on.
+            //     TestGreen has no ShotController wired into the reader, so mirror whatever
+            //     gating the grid ended up with — and feed the overrides SPEC §3 exists for:
+            //     this scene has no live ball/aim driving the component.
+            var aimLine = labCtrl.GetComponentInChildren<PutterAimLine>(true);
+            bool aimLineDrivenByOverride = false;
+            if (aimLine == null)
+            {
+                d.LogStep("  WARN: PutterAimLine component not found — is it wired into the scene?");
+            }
+            else if (!aimLine.AimActive)
+            {
+                d.LogStep("  PutterAimLine not gated on by ShotController — using capture overrides.");
+                aimLine.SetAimActiveForTest(true);
+                aimLine.SetBallPositionOverride(labCtrl.BallPosition);
+                aimLineDrivenByOverride = true;
+            }
+
+            // 7. Wait a moment then capture the warped grid + aim line visual.
             yield return new WaitForSecondsRealtime(0.5f);
             yield return d.Capture("putter_aim_warped_grid_on_test_green");
+
+            // 7b. Rotation sweep — DoD 3: the line must stay anchored to the ball and follow
+            //     the aim heading as the camera comes around, not swim or detach.
+            if (aimLine != null)
+            {
+                float[] headingsRad = { 0f, Mathf.PI * 0.5f, Mathf.PI, Mathf.PI * 1.5f };
+                foreach (var heading in headingsRad)
+                {
+                    labCtrl.SetCameraYawRadians(heading);
+                    if (aimLineDrivenByOverride) aimLine.SetAimYawOverride(heading);
+                    else if (sc != null)         sc.CameraHeadingRadians = heading;
+
+                    yield return new WaitForSecondsRealtime(0.4f);
+                    int deg = Mathf.RoundToInt(heading * Mathf.Rad2Deg);
+                    d.LogStep($"  aim yaw {deg}°: lineVerts={aimLine.MeshVertexCount} rebuilds={aimLine.RebuildCount}");
+                    yield return d.Capture($"putter_aim_line_yaw_{deg}");
+                }
+            }
 
             // 8. Assert.
             var reader = labCtrl.GetComponentInChildren<PutterGreenReader>(true);
             int bakedCount  = reader != null ? reader.BakedCellCount   : 0;
             int meshVerts   = reader != null ? reader.MeshVertexCount   : 0;
+            int lineVerts   = aimLine != null ? aimLine.MeshVertexCount : 0;
 
             d.LogStep($"  PutterGreenReader: baked={bakedCount} meshVerts={meshVerts} (need >=50 baked AND meshVerts>0 for PASS)");
+            d.LogStep($"  PutterAimLine: verts={lineVerts} rebuilds={(aimLine != null ? aimLine.RebuildCount : 0)} (need 62 verts for PASS)");
 
             // 9. Clean up.
             if (sc != null) { sc.CancelExternalDrag(); sc.IsPutt = false; }
             if (reader != null) reader.SetAimActiveForTest(false);
+            if (aimLine != null)
+            {
+                aimLine.SetAimActiveForTest(false);
+                aimLine.SetBallPositionOverride(null);
+                aimLine.SetAimYawOverride(null);
+            }
 
             if (bakedCount < 1)
                 d.LogStep("=== PutterAimWarpedGridOnTestGreen: FAIL — no cells baked (BakedZoneClassifier not classifying TestGreen mesh as Green?) ===");
@@ -1103,8 +1427,11 @@ namespace Golfin.Physics.Viewer.Bot
                 d.LogStep($"=== PutterAimWarpedGridOnTestGreen: FAIL — baked={bakedCount} cells but mesh has 0 vertices (BuildGridMesh did not run?) ===");
             else if (bakedCount < 50)
                 d.LogStep($"=== PutterAimWarpedGridOnTestGreen: PARTIAL — baked={bakedCount} (< 50 threshold) meshVerts={meshVerts} ===");
+            else if (lineVerts != 62)
+                d.LogStep($"=== PutterAimWarpedGridOnTestGreen: PARTIAL — grid OK (baked={bakedCount}, meshVerts={meshVerts}) " +
+                          $"but PutterAimLine has {lineVerts} verts (SPEC §8.3 expects 62 = 31 samples × 2) ===");
             else
-                d.LogStep($"=== PutterAimWarpedGridOnTestGreen: PASS — baked={bakedCount} cells, meshVerts={meshVerts} ===");
+                d.LogStep($"=== PutterAimWarpedGridOnTestGreen: PASS — baked={bakedCount} cells, meshVerts={meshVerts}, lineVerts={lineVerts} ===");
         }
 
         // ── Scenario: stat_lane_surface_roll ─────────────────────────────────

@@ -258,6 +258,7 @@ GameObject:
   - component: {fileID: 631117027}
   - component: {fileID: 631117026}
   - component: {fileID: 631117025}
+  - component: {fileID: 631117029}
   m_Layer: 0
   m_Name: LabRoot
   m_TagString: Untagged
@@ -319,6 +320,7 @@ MonoBehaviour:
   _shotController: {fileID: 0}
   _shotConeView: {fileID: 0}
   _ballSpawnPoint: {fileID: 0}
+  _ballTrail: {fileID: 0}
   _defaultLookDirection: {x: 0, y: 0, z: 0}
   _orbitSensitivity: 0.5
   _putterTrack: {fileID: 0}
@@ -345,6 +347,27 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &631117029
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 631117024}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 73f0411616a6545e4ae9e5f950dc1eeb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Golfin.Physics.Viewer::Golfin.Physics.Viewer.PutterAimLine
+  _lineMaterial: {fileID: 2100000, guid: d63f19215286c400bb1d36048e5b5ee4, type: 2}
+  _labController: {fileID: 631117027}
+  _shotController: {fileID: 0}
+  _greenReader: {fileID: 631117026}
+  _lengthMeters: 15
+  _sampleStepMeters: 0.5
+  _widthMeters: 0.08
+  _surfaceYOffset: 0.04
+  _color: {r: 0.478431, g: 0.913725, b: 1, a: 1}
 --- !u!21 &764400239
 Material:
   serializedVersion: 8

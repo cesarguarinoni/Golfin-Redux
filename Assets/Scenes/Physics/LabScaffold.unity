@@ -18932,6 +18932,7 @@ GameObject:
   - component: {fileID: 2300000020}
   - component: {fileID: 2300000021}
   - component: {fileID: 2300000023}
+  - component: {fileID: 2300000024}
   m_Layer: 0
   m_Name: LabRoot
   m_TagString: Untagged
@@ -26483,6 +26484,27 @@ MonoBehaviour:
   _lineGlow: 1.5
   _visibleRadius: 10
   _surfaceYOffset: 0.02
+--- !u!114 &2300000024
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1483952037}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 73f0411616a6545e4ae9e5f950dc1eeb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Golfin.Physics.Viewer::Golfin.Physics.Viewer.PutterAimLine
+  _lineMaterial: {fileID: 2100000, guid: d63f19215286c400bb1d36048e5b5ee4, type: 2}
+  _labController: {fileID: 1483952038}
+  _shotController: {fileID: 1483952040}
+  _greenReader: {fileID: 2300000023}
+  _lengthMeters: 15
+  _sampleStepMeters: 0.5
+  _widthMeters: 0.08
+  _surfaceYOffset: 0.04
+  _color: {r: 0.478431, g: 0.913725, b: 1, a: 1}
 --- !u!1001 &1596199216455870784
 PrefabInstance:
   m_ObjectHideFlags: 0

@@ -120,6 +120,10 @@ namespace Golfin.Physics.Viewer
                 case "putter_aim_green_reader_visible":
                     scenarioRoutine = Bot.Scenarios.PutterAimGreenReaderVisible(driver);
                     break;
+                // putter_aim_blue_line video deliverable (production Hole 1):
+                case "putter_aim_blue_line_clip":
+                    scenarioRoutine = Bot.Scenarios.PutterAimBlueLineClip(driver);
+                    break;
                 // Iter-2 warped grid visual gate (TestGreen scene):
                 case "putter_aim_warped_grid_on_test_green":
                     scenarioRoutine = Bot.Scenarios.PutterAimWarpedGridOnTestGreen(driver);
