@@ -226,5 +226,95 @@ namespace Golfin.Physics.Tests
             Assert.That(chaseCamera.FollowHeightOffset, Is.LessThanOrEqualTo(0.5f),
                 $"FollowHeightOffset={chaseCamera.FollowHeightOffset} — expected ≤ 0.5 on flat ground.");
         }
+
+        // ── Tests 7–9: ob_ball_in_air — never snap onto a tree ─────────────────
+
+        /// <summary>
+        /// Stand-in for a terrain fir: Unity builds tree colliders from the prototype prefab's own
+        /// Collider, and the BPS firs carry a CapsuleCollider ~34 m tall (radius 0.88, centre
+        /// y 17.2). Placed so it straddles the ball's raycast column above the ground.
+        /// </summary>
+        GameObject CreateTreeCollider(float x, float groundY, float z)
+        {
+            var go = new GameObject("Fir 03 (tree collider)");
+            go.transform.position = new Vector3(x, groundY, z);
+            var cap = go.AddComponent<CapsuleCollider>();
+            cap.radius    = 0.8832352f;
+            cap.height    = 34.387943f;
+            cap.direction = 1;                                   // Y axis
+            cap.center    = new Vector3(0f, 17.193968f, 0f);
+            return Track(go);
+        }
+
+        // Test 7 — the reported bug: an OB drop (preferredSurfaceTypeValue: null) under a canopy
+        // must land on the ground, NOT metres up the tree's capsule.
+        [UnityTest]
+        public IEnumerator SurfaceSnap_UnderTreeCanopy_SnapsToGround_NotTheTree()
+        {
+            EnsureReflection();
+            if (_smType == null) { Assert.Ignore("SurfaceMarker type not found."); yield break; }
+
+            float testX = 640f, testZ = 640f, groundY = 12f;
+
+            var fairwayGO = Track(CreateFlatCollider(testX, groundY, testZ, 8f));
+            AddSurfaceMarker(fairwayGO, 0);                      // Fairway
+            CreateTreeCollider(testX, groundY, testZ);           // canopy overhead
+
+            yield return null;
+
+            // null preferred type == exactly what the OB drop path passes.
+            float result = PlacementSnapHelper.Snap(testX, testZ, 0f, preferredSurfaceTypeValue: null);
+
+            Assert.That(result, Is.EqualTo(groundY).Within(0.2f),
+                $"Ball must be placed on the ground (~{groundY}), got {result}. A value up near " +
+                "the capsule (~29–46) is the 'ball starts in the air' defect.");
+        }
+
+        // Test 8 — the same column with the tree only: with no playable surface at all the helper
+        // must still return something sane rather than silently standing the ball on foliage.
+        [UnityTest]
+        public IEnumerator SurfaceSnap_TreeOnlyColumn_DoesNotReportCanopyAsSurface()
+        {
+            float testX = 680f, testZ = 680f, groundY = 5f;
+            CreateTreeCollider(testX, groundY, testZ);
+
+            yield return null;
+
+            float result = PlacementSnapHelper.Snap(testX, testZ, defaultY: groundY,
+                                                    preferredSurfaceTypeValue: null);
+
+            // No SurfaceMarker and no terrain in this rig, so the last-resort branch is allowed to
+            // return the only hit — but it must never be treated as a *playable surface*.
+            Assert.IsFalse(
+                (bool)typeof(PlacementSnapHelper)
+                    .GetMethod("IsPlayableSurface", System.Reflection.BindingFlags.NonPublic
+                                                  | System.Reflection.BindingFlags.Static)
+                    .Invoke(null, new object[] { GameObject.Find("Fir 03 (tree collider)").GetComponent<CapsuleCollider>(), _smType }),
+                "A tree capsule must never classify as a playable surface.");
+            Assert.That(result, Is.Not.NaN);
+        }
+
+        // Test 9 — the fix must not disturb the normal case: nearest playable surface still wins,
+        // and the result is now deterministic regardless of RaycastAll's (undefined) ordering.
+        [UnityTest]
+        public IEnumerator SurfaceSnap_StackedSurfaces_PicksNearestPlayableSurface()
+        {
+            EnsureReflection();
+            if (_smType == null) { Assert.Ignore("SurfaceMarker type not found."); yield break; }
+
+            float testX = 720f, testZ = 720f;
+
+            var lower = Track(CreateFlatCollider(testX, 10.00f, testZ, 6f));
+            AddSurfaceMarker(lower, 0);                          // Fairway, buried
+            var upper = Track(CreateFlatCollider(testX, 10.30f, testZ, 6f));
+            AddSurfaceMarker(upper, 0);                          // Fairway, visible top
+
+            yield return null;
+
+            float result = PlacementSnapHelper.Snap(testX, testZ, 0f, preferredSurfaceTypeValue: null);
+
+            Assert.That(result, Is.GreaterThan(10.2f),
+                $"Nearest (highest) playable surface must win — expected ~10.31, got {result}.");
+        }
     }
 }
