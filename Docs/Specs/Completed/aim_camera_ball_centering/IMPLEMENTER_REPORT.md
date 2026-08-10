@@ -220,7 +220,7 @@ The four **lab** scenes that also carry a ChaseCamera (`PhysicsLab_Hole1`, `Phys
 ## Manual verification still required (cannot be closed from here)
 
 1. **Map view open → close** restores the *new* framing (signature-compat proven; the round trip is not).
-2. **Putter aim** on a green — code is byte-identical, but a live putt confirms the gate actually takes the legacy branch.
+2. ~~**Putter aim** on a green — code is byte-identical, but a live putt confirms the gate actually takes the legacy branch.~~ **SUPERSEDED by § Pass 3** — the putter branch is no longer the legacy pose; it now centres the ball. Verified live on the Hole 1 green.
 3. **Aim → chase handoff feel** after firing a real shot (no pop).
 4. **`AdjustCameraForDepression`** on a bunker/depressed lie.
 5. **On-device (iPhone) framing** — everything above is Editor play mode at 1170×2532; `cam.aspect` on device should match, but the tee clamp is aspect-sensitive by construction, so it is worth one device look.
@@ -230,4 +230,47 @@ The four **lab** scenes that also carry a ChaseCamera (`PhysicsLab_Hole1`, `Phys
 
 ## Editor state
 
-Left exactly as found: not playing, `ShellScene` (active) + `Hole_06_Geo` (additive), both clean. `Hole_01_Geo` unloaded. `ProjectSettings/Packages/com.unity.probuilder/Settings.json` was auto-touched by Unity on play-mode entry and has been reverted. Working tree contains only the five files in the table above plus the pre-existing drift listed in §Baseline.
+~~Left exactly as found: not playing, `ShellScene` (active) + `Hole_06_Geo` (additive), both clean.~~ **CORRECTED — that was wrong, and Cesar caught it.** I found `Hole_06_Geo` open additively at session start, treated it as his working state, and deliberately re-opened it after each play-mode run to "leave the editor as found." The clean-state target is **absolute, not relative**: `ShellScene` only, clean, not playing. A stray `Hole_NN_Geo` at session start is a previous run's leftover, not state to preserve — every generated course scene carries a `WalkCamera` that locks the cursor on play, which is what blocks testing. Recorded in the `feedback_leave_editor_clean` memory as a named anti-pattern. Final state at close: `ShellScene` only, clean, not playing.
+
+`ProjectSettings/Packages/com.unity.probuilder/Settings.json` was auto-touched by Unity on play-mode entry and has been reverted (it re-dirties on every scene open; reverted each time).
+
+---
+
+## Pass 3 — Cesar follow-up AFTER close-out (2026-08-10, commit `5d938c9a8`)
+
+> *"You did not center the camera during putting."*
+
+This post-dates the folder's move to `Completed/`, so the commit — not this folder — is the primary record.
+
+### What changed
+SPEC §3/§5 had explicitly scoped putting out and kept the legacy pose verbatim; I implemented that and flagged it. The consequence Cesar saw: during a putt the ball sat ~62% down screen while every other aim state pins it under the 2D ball.
+
+`ApplyCameraYaw`'s `CurrentShotIsPutt` branch now runs the same `SolveAimCameraPose` as the full swing, at its **own** distance/height. `_puttCamDistanceM` / `_puttCamHeightM` default to the legacy **8 m / 3 m deliberately** — the putt view has to fit the 15 m `PutterAimLine` and the green-reading grid, so this pass changes *where the ball sits on screen*, not how much green is visible. Both are `[SerializeField]` if the putt should close in later.
+
+### Measured (live, Hole 1 green, real entry path, `IsPutt=True`, ball 2.63 m from the cup)
+```
+cam.pos=(-233.74, 13.35, -62.38)  euler=(20.56, 162.26, 0)
+camera->ball  = 8.544 m           (legacy stand-off, unchanged)
+ball viewport = (0.5000, 0.5000)  target (0.5000, 0.5000)  dx=0.0000 dy=0.0000
+cup  viewport = (0.5000, 0.5616)  onScreen=True
+```
+Pitch 12.8° → 20.56° is what lifts the ball to centre. Setup used the production `SetClub(3)` + `PlaceBallAt` seams (pre-calculated state rather than playing the hole out — Cesar: *"Pre-calculate the shots so you stop burning cycles"*).
+
+### Test rewrite — the first version was a circular gate
+My first putt test called `SolveAimCameraPose` directly with hardcoded `8f, 3f`. It never entered `ApplyCameraYaw`, never set `CurrentShotIsPutt`, never read the new fields — **it would have passed whether or not the putter branch changed at all.** Cesar asked to see it, which is what surfaced this. Replaced with:
+
+- `ApplyCameraYaw_PutterBranch_CentersTheBallAtTheLegacyStandoff` — real `PhysicsLabController` + real `ShotController(IsPutt=true)`, driven through `ApplyAimCameraAt`, asserting on Unity's own `WorldToViewportPoint` plus the 8.544 m stand-off.
+- `PutterCameraTunables_DefaultToTheLegacyStandoff` — pins the 8/3 defaults so closing the putt camera in is a deliberate act.
+
+**Proven to catch a revert** rather than asserted: reverting the branch to the legacy `LookAt` failed the test by name — `putt viewport Y — legacy pose fails here / Expected: 0.4234 / But was: 0.38211` — and it passed again on restore.
+
+**Suite:** 1111 total, 1107 passed, 3 pre-existing skips. The 1 failure (`GameplaySceneLoaderTests.UnloadGameplay_RestoresBottomNav`) is intermittent in an untouched subsystem — `AudioEmitterTests.MinInterval_SecondBounceWithinInterval_IsSuppressed` failed on the previous run and passed on this one. Both recorded as flaky rather than re-run until green.
+
+### Video deliverable
+`videos/close_camera_and_putt_centering.mp4` — 27 s, 1170×2532, captioned, **flip-verified across all 1058 consecutive frame pairs** (keyframe sampling misses flips). Beats: tee aim 6.57 m → next lie 3.31 m → chase 2.33 m → putt aim centred with the cup directly above. Raw uncaptioned kept alongside; copy in `Docs/Reports/Media/`. `videos/` is gitignored by design, so these are local artifacts.
+
+Honest notes on that clip: the last 9 s were **trimmed** because the raw ended on a `SUCCESS / STROKES: 2 (ALBATROSS)` card — an artifact of teleporting between beats, not real play, and misleading to ship. The mid "next lie" beat landed in trees again (a bad lie pick, not a framing problem). Two full-res clips were recorded this Unity session, both requiring the documented `Reset Video Session Guard` override; a third should wait for a relaunch.
+
+### Still unverified after Pass 3
+- **The green-reading grid does not appear in the putt frames.** The blue aim line does show once the putt is struck. Grid visibility is the *entire* justification for holding the putt camera at 8 m, so this needs one real putt (arrived at by play, not teleport) to confirm it is a setup artifact.
+- Items 1, 3, 4, 5 in § Manual verification above still stand.
