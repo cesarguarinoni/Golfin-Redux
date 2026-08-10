@@ -105,6 +105,37 @@ namespace Golfin.Gameplay.Tests
         }
 
         [Test]
+        public void OnceLatched_HandleStillFollowsTheFinger()
+        {
+            // Cesar: "the handle should still follow the finger, it is the aiming that should
+            // not change on the UP flick." Display and aim are separate channels.
+            _sc.BeginExternalDrag();
+            _sc.PushTouchSample(new Vector2(100f, 900f));
+            _sc.PushTouchSample(new Vector2(100f, 600f));
+            _sc.SetExternalPower(0.8f, 0.30f);
+
+            _sc.PushTouchSample(new Vector2(100f, 600f + AboveReversal));   // latch
+            _sc.SetExternalPower(0.8f, -0.90f);           // finger drifts hard left mid-flick
+
+            Assert.AreEqual(-0.90f, _sc.HandleFinetune, 0.001f,
+                "The handle sprite must keep tracking the finger after the aim latches.");
+            Assert.AreEqual(0.30f, _sc.ConeFinetune, 0.001f,
+                "…while the aim stays pinned at the bottom-of-swing value.");
+        }
+
+        [Test]
+        public void BeforeLatch_HandleAndAimMoveTogether()
+        {
+            _sc.BeginExternalDrag();
+            _sc.PushTouchSample(new Vector2(100f, 900f));
+            _sc.SetExternalPower(0.5f, 0.42f);
+
+            Assert.IsFalse(_sc.IsAimLocked);
+            Assert.AreEqual(_sc.HandleFinetune, _sc.ConeFinetune, 0.001f,
+                "While pulling back, aiming must still track the finger.");
+        }
+
+        [Test]
         public void SwingReset_UnlatchesAim()
         {
             _sc.BeginExternalDrag();

@@ -343,7 +343,10 @@ namespace Golfin.Gameplay.UI.ShotUI
             float widthFraction = 1f - Mathf.Clamp01(handleY / _coneHeightPx);
             float maxX          = halfBase * widthFraction;
 
-            float xOffset = _puttMode ? 0f : state.ConeFinetuneX * maxX;
+            // HandleFinetune (LIVE), not state.ConeFinetuneX (the latched AIM value): once the
+            // upswing latches the aim, the handle must keep following the finger. Using the aim
+            // value here made the handle collapse toward the centreline during the flick.
+            float xOffset = _puttMode ? 0f : _shotController.HandleFinetune * maxX;
             _clubHandle.anchoredPosition = new Vector2(xOffset, handleY);
 
             float handleScale = Mathf.Lerp(_minHandleScale, _maxHandleScale, power);

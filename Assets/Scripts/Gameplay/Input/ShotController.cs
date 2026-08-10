@@ -54,7 +54,14 @@ namespace Golfin.Gameplay.Input
         /// Used by MapViewController to mirror the Fade/Draw bend direction in the map guide line
         /// (Order 352 — map_view_aiming). Write path remains internal to ShotController.
         /// </summary>
-        public float ConeFinetune => _coneFinetune;
+        public float ConeFinetune => _aimFinetune;
+
+        /// <summary>
+        /// LIVE handle offset (−1..1) — always tracks the finger, even while the aim is latched.
+        /// Display-only: read by ShotConeView to position the club handle. The aim/shape value is
+        /// <see cref="ConeFinetune"/>, which freezes at the upswing reversal.
+        /// </summary>
+        public float HandleFinetune => _coneFinetune;
 
         // --- Debug toggles (8 flags per design §8) ---
         public ShotDebugFlags DebugFlags = ShotDebugFlags.Defaults;
@@ -116,7 +123,8 @@ namespace Golfin.Gameplay.Input
         private int   _passIndex;
         private float _degradationYawRad;
         private float _aimYawRadians;
-        private float _coneFinetune;
+        private float _coneFinetune;   // LIVE — follows the finger, drives the handle sprite
+        private float _aimFinetune;    // AIM  — mirrors _coneFinetune until the upswing latch, then frozen
         private bool  _wasTouching;
 
         // Flick gate / aim lock state (SHOT_FLICK_FIX_SPEC)
@@ -125,7 +133,6 @@ namespace Golfin.Gameplay.Input
         private readonly float[]   _sampleTime = new float[SampleBufferSize];
         private int   _sampleCount;          // total pushed this swing (may exceed buffer size)
         private bool  _aimLocked;
-        private float _lockedFinetune;
         private float _lowestTouchY = float.NaN;
 
         // --- Events ---
@@ -148,8 +155,8 @@ namespace Golfin.Gameplay.Input
         /// </summary>
         public void ForceRecenterFinetune()
         {
-            _coneFinetune   = 0f;
-            _lockedFinetune = 0f;   // a re-arm must not restore a stale latched aim
+            _coneFinetune = 0f;
+            _aimFinetune  = 0f;   // a re-arm must not restore a stale latched aim
         }
 
         // ── Flick gate + aim lock (SHOT_FLICK_FIX_SPEC) ─────────────────────────
@@ -181,8 +188,7 @@ namespace Golfin.Gameplay.Input
             if (h <= 0f) return;
             if ((screenPosPx.y - _lowestTouchY) / h >= _reversalThreshold)
             {
-                _aimLocked      = true;
-                _lockedFinetune = _coneFinetune;   // freeze at the bottom-of-swing value
+                _aimLocked = true;   // _aimFinetune already holds the bottom-of-swing value
             }
         }
 
@@ -237,11 +243,23 @@ namespace Golfin.Gameplay.Input
             return LastFlickSpeedScreenHeights >= _minFlickSpeed;
         }
 
+        /// <summary>
+        /// Write the live handle offset. The aim value follows it only until the upswing latch —
+        /// after that the handle keeps tracking the finger while the aim stays put, which is the
+        /// whole point of the latch (Cesar: "the handle should still follow the finger, it is the
+        /// aiming that should not change on the UP flick").
+        /// </summary>
+        private void SetLiveFinetune(float v)
+        {
+            _coneFinetune = v;
+            if (!_aimLocked) _aimFinetune = v;
+        }
+
         private void ResetSwingSamples()
         {
             _sampleCount    = 0;
-            _aimLocked      = false;
-            _lockedFinetune = 0f;
+            _aimLocked    = false;
+            _aimFinetune  = 0f;
             _lowestTouchY   = float.NaN;
         }
 
@@ -263,7 +281,7 @@ namespace Golfin.Gameplay.Input
         /// (map_view_aiming Order 352 — capture driver sets this BEFORE tapping Open.)
         /// NOT callable in production (Idle→ExternalDrag transition is the production path).
         /// </summary>
-        public void SetFinetuneForCapture(float v) => _coneFinetune = Mathf.Clamp(v, -1f, 1f);
+        public void SetFinetuneForCapture(float v) => _coneFinetune = _aimFinetune = Mathf.Clamp(v, -1f, 1f);
 #endif
 
         // ── External drag API (ClubHandle → drives shot without pixel-pull math) ──
@@ -286,7 +304,7 @@ namespace Golfin.Gameplay.Input
             PowerNormalized = Mathf.Clamp01(powerNormalized);
             // Aim latched at the upswing reversal: lateral finger movement stops steering the
             // line, which just freezes at its last value (SHOT_FLICK_FIX_SPEC Bug 2).
-            _coneFinetune   = _aimLocked ? _lockedFinetune : Mathf.Clamp(coneFinetune, -1f, 1f);
+            SetLiveFinetune(Mathf.Clamp(coneFinetune, -1f, 1f));
             if (State == ShotState.Aiming && powerNormalized > 0f)
                 TransitionToTiming();
             PublishState();
@@ -324,7 +342,7 @@ namespace Golfin.Gameplay.Input
             PowerNormalized    = Mathf.Clamp(power, 0f, 1.2f);
             // Carry the fade/draw shaping only when armed; the default 0 keeps every existing
             // caller firing dead-straight exactly as before. This lets a debug/bot shot curve.
-            _coneFinetune      = (!IsPutt && FadeDrawActive) ? Mathf.Clamp(coneFinetune, -1f, 1f) : 0f;
+            _coneFinetune      = _aimFinetune = (!IsPutt && FadeDrawActive) ? Mathf.Clamp(coneFinetune, -1f, 1f) : 0f;
             _externalDragActive = false;
             _degradationYawRad = accuracy switch
             {
@@ -388,7 +406,7 @@ namespace Golfin.Gameplay.Input
                     {
                         _pullDistancePx = ComputePullPx();
                         PowerNormalized = ComputePower(_pullDistancePx);
-                        _coneFinetune   = _aimLocked ? _lockedFinetune : ComputeFinetune();
+                        SetLiveFinetune(ComputeFinetune());
                         if (PowerNormalized > 0f) TransitionToTiming();
                     }
                     break;
@@ -409,7 +427,7 @@ namespace Golfin.Gameplay.Input
                     {
                         _pullDistancePx = ComputePullPx();
                         PowerNormalized = ComputePower(_pullDistancePx);
-                        _coneFinetune   = _aimLocked ? _lockedFinetune : ComputeFinetune();
+                        SetLiveFinetune(ComputeFinetune());
                         TickArrow(dt);
                     }
                     break;
@@ -436,6 +454,7 @@ namespace Golfin.Gameplay.Input
             _passIndex         = 0;
             _degradationYawRad = 0f;
             _coneFinetune      = 0f;
+            _aimFinetune       = 0f;
             _aimYawRadians     = 0f;
             PendingSpinInput   = Vector2.zero;  // reset after each shot (spin is per-shot, not sticky)
             // Unlatch the aim + drop the touch history on EVERY path back to pull-back:
@@ -461,7 +480,7 @@ namespace Golfin.Gameplay.Input
 
             float degradYaw = DebugFlags.ForcePerfectAim ? 0f : _degradationYawRad;
             LastShotWasClean = !IsPutt && Mathf.Approximately(degradYaw, 0f);   // latched for BallTrailController
-            float finetune  = DebugFlags.DisableConeFineTune ? 0f : _coneFinetune;
+            float finetune  = DebugFlags.DisableConeFineTune ? 0f : _aimFinetune;
 
             // Phase D/E (fade_draw_core_wiring Order 356):
             // FadeDraw mode: aim is LOCKED at arming time (pushed by ShotConeView as FadeDrawLockedAimRad).
@@ -696,11 +715,11 @@ namespace Golfin.Gameplay.Input
             // Compute live aim every frame so the targeting line and any aim-driven UI
             // can pivot during Idle/Aiming/Pulling/Timing. Final committed aim still uses
             // the same formula at CommitFlick (which adds degradation).
-            float finetune = DebugFlags.DisableConeFineTune ? 0f : _coneFinetune;
+            float finetune = DebugFlags.DisableConeFineTune ? 0f : _aimFinetune;
             float liveAim  = CameraHeadingRadians + finetune * HalfConeAngleRad();
 
             OnStateChanged.Invoke(new ShotInputState(
-                State, PowerNormalized, _coneFinetune, _arrowProgress,
+                State, PowerNormalized, _aimFinetune, _arrowProgress,
                 _passIndex, _passIndex >= cleanPasses,
                 IsPutt, liveAim, CameraHeadingRadians));
         }
