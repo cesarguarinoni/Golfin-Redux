@@ -7,6 +7,8 @@
 
 ## ▶ CURRENT STATE — update this block at every session boundary
 
+- **Last updated:** 2026-08-10 (Architect — close-out sweep per Cesar: "all tasks from yesterday and today are done." CLOSED: `auto_club_selection` (`43d8a34c9`), `power_gauge_target_marker` (Order 357, off the video), `map_view_strict_crop_indicators` (Order 355, off the video), `aim_camera_ball_centering` (moved to Completed in this sweep — pending Architect calls D2/D3 accepted as-is), `putter_aim_blue_line` (approved off the Hole 6 video), plus the `hole1_cup_buried_under_green` repair (`da62daf86`, surgical CupReseatTool — a Hole 1 re-import would have destroyed 1362 trees + the baked sim data; standing rule: shipped holes are repaired in place, never re-imported). All five SPEC_READY pointer+kickoff blocks below pruned to strikethrough one-liners. Notion GOLFIN_Roadmap rows closed 2026-08-10. Repo committed + pushed same day, incl. the previously-uncommitted `Scenarios.cs` in-flight ClubHandle regression guard + smoke-bot log refresh. `Docs/Specs/Active/` now holds no SPEC_READY work (only the historical `ob_boundary_presentation` + `phone_build_smoke_test` folders) — next task comes from Cesar.)
+
 - **Last updated:** 2026-08-05 15:05 JST (Architect — **DEVICE ERA.** Game builds+runs on physical iPhone since 2026-07-27; signing SOLVED (do not re-litigate); on-device smoke found 7 issues. Fixed since: `centralball_device_invisible` (device-verified `1a4ad15ca`), `hole6_tree_collision_profiles` (`c1d38e280`), `camera_drag_touch_origin`/K1 (CLOSED — `bb59d32dd` 08-03, device-verified per commit + Cesar's session; block deleted 2026-08-05), `nav_bar_edge_gaps` (K4) (CLOSED — `49825e867` + ticket-cluster follow-up `26ceeb051`, 08-03 — PRE-DATED the batch write, same drift class as K1; cause was H1: fixed-width 1178px center-anchored bars under a **ConstantPixelSize** canvas, fix = stretch anchors + proportional icon re-anchor; NOT the CanvasScaler — the `loading_bar_inset` (K14) hold on that question is resolved; block deleted 2026-08-05, flagged by Cesar). Shipped: `build_version_stamp` (3 defects → hardening kickoff below). **iOS Simulator three-tier verification loop VALIDATED** — canonical doc `Docs/Pipeline/IOS_SIMULATOR_LOOP.md`; standing rules: never wipe the seeded DerivedData, never `BuildPipeline.BuildPlayer` via MCP script-execute. Full story: `Docs/Reports/2026-08-04_ios_simulator_build_blocker.md` §§10–13 + `Docs/AI_CONTEXT.md` top block. **OPEN = the PENDING KICKOFFS below** (6 smoke issues + build-stamp hardening + housekeeping; K9 `ui_frame_pacing` smoke #8 added 2026-08-05; K10 `ob_recovery_fixes` **CLOSED 2026-08-05** (`90dd574ff` camera+drop rule, `ed65f5726` permanent capture Y-flip fix; CupZoom same-class wedge found+fixed; OB now stops chasing with no aerial cut; ground-level settle built then reverted per Cesar); K1 closed. K11 `club_selection_green_gate` **CLOSED 2026-08-05** (`066df31f2` selector gate + `efa681acb` §2f re-decide after reposition — the item deferred pending K10; ⚠️ K10's close-out swept K11's in-flight lines and briefly broke `main`, repaired forward — see the K11 block). K12 `matchmaking_scan_pacing` added 2026-08-05 — find-opponent animation: decelerating scan + total cut ~5.6s→~3.1s, NO scene edit (new-serialized-field technique), queued AFTER K11 per Cesar — **now NEXT UP**. K13 `boot_loading_screen_removal` **CLOSED 2026-08-05** (`d3bf00026`) — measured first as instructed: zero real progress ever fed (`_useExternalProgress` never true, max `_realProgress` 0.000 across 2 runs), boot init done at t=3.8s vs Splash interactive at t=9.0s, real work behind the transition ~0.23s (Main Theme decode, already under the 0.25s fade) → REMOVED per the <2s rule. **click→Home 2.72s → 0.48s.** HoleLoad path verified byte-identical + live-regression-passed (real bar 0→1 via the real ModeHomeCard PlayButton). ⚠️ Adjacent knob still open: `minLoadingTime` (2s, scene-serialized) is also the hole-load screen's MINIMUM — measured 2.586s with progress already at 1.0; same scene-serialization trap as K12. K14 `loading_bar_inset` **CLOSED 2026-08-05** (`bae5386f3`) — shipped the SCENE route (not the code shim); `LoadingBarRoot` sizeDelta.x 0→-16, isolated one-line diff. Gate lifted when Cesar landed K7 (`d680198b3`) mid-task. **Two kickoff premises proved wrong and are corrected in the sequencing bullet above — read them before reusing that block's reasoning:** (a) the bar was never at zero inset — `Track` already carried `-48` (24 units/side), so the edit went 24→**32**/side; (b) the loading screen's canvas is **ScaleWithScreenSize** (ref 1170×2532, match-width), NOT ConstantPixelSize — that was K4's separate nav-bar canvas, so the kickoff's "8 units = 8 device px, dial ~24 for points" units advice was wrong-canvas and must not be reused. Verified on rendered pixels at 1170×2532: inset 32/32 at both 0% and 100%, fill 1106px across a 1106px track (reaches both ends exactly, the don't-break-functionality gate); `ProgressText` edges match `Track` edges; 16:9 renders the same 32 units as 28px at scaleFactor 0.874. Editing `Track` (the rect that owned the inset) would have desynced `ProgressText`, which carries its own `-48` — the root was the correct single dial. ⚠️ Side-finding for whoever owns matchmaking: opening+saving ShellScene reconciles STALE `MatchMakingModal` prefab overrides (an anchored-position `-564`→`-68` move, plus four `scan*Seconds` fields from `925a25398`). Reverted out of this commit to keep it one-line; it is still unreconciled on disk and will reappear on the next ShellScene save. RECONCILIATION DONE 2026-08-05 per Cesar ("Close them"): `arrow_speed_retune` (K6) CLOSED — `cd0ef6ed4` 08-04 verified against the kickoff shape in the diff: F13 changelog entry (93 lines), BOTH mirrors (controls.csv + ControlsConfig.cs), ShotController floor clamp (`Mathf.Max(arrowHz, MinArrowSpeedHz)`), both test files updated. NOTE: F13 locked at 30 fps, BEFORE `ui_frame_pacing` landed — if arrow feel reads differently at 60 fps on device, retune reopens as a NEW row; F13 stays the record. `ui_frame_pacing` (K9) CLOSED — `7380baf67`, FramePacingBootstrap.cs exactly as specced; device feel signed off via Cesar's own device sessions; in-hole 60 fps knock-on unreported — watch in whole-game perf (940). `b702e1a41` wind→ball-flight ACCEPTED as landed (no kickoff existed; it carries NO F-entry — flag for the next physics-changelog pass). Both blocks deleted. K15 `app_identity` **CLOSED 2026-08-05** (`66ac68575` → `7a63f7c2f`) — **the app is now `Golfin`**: productName RE2 → `Golfin`, companyName → NEXT INNOVATION PTE. LTD., default icon → `Assets/Icons/Golfin-Icon2.png`; bundle id + signing UNTOUCHED as specced. `Golfin: The Invitational` shipped first and was rejected on sight of the springboard — iOS collapses the spaces before truncating, rendering `Golfin:TheI…`. **The built .app is now `Golfin.app`** (executable + process name `Golfin`; `RE2.app` deleted) — `IOS_SIMULATOR_LOOP.md` re-pointed. ⚠️ Two findings for anyone driving the sim loop: (a) an append re-export can leave the pbxproj referencing `lib_burst_generated.cpp`/`.a`, which Burst NEVER generates for the simulator SDK — the tier-2 build dies with "Build input file cannot be found"; this is NOT a DerivedData problem, do not wipe, just strip the 8 lines (fix is PERMANENT — append preserves the pbxproj; the refs were legacy state inherited from an earlier device-SDK export); (b) icon2 carries an opaque alpha channel that Unity strips at icon generation — built icon reports `hasAlpha: no`, store-safe, leave it alone. K16 `hole_scene_leftover` **CLOSED 2026-08-05** (`a6b022642` fix + `1372da34b` residue strip) — capture launchers now snapshot the scene setup before staging and restore it at EnteredEditMode, closing staged hole scenes WITHOUT saving; shipped the Option-B alternative so SmokeRunner2e/2f inject their host at EnteredPlayMode and NEVER serialize it, removing the LabScaffold write entirely (2f's save was also baking 13 unrelated `_disabledAlpha` lines per run). The committed SmokeRunner2fHost residue is gone and cannot recur. 2f's defensive pre-clean stays and now finds nothing. ⚠️ SEPARATE pre-existing bug surfaced while verifying: the 2e OB capture no longer reaches OB (18.95m AtRest vs 131.28m TerminalState=OB in the log from `4f9fd2012`) — untouched host, fixed preset, so physics/terrain drift; it falls back to "capturing current state as evidence", i.e. LOOKS successful while proving nothing. Needs its own task.) plus `putter_aim_blue_line` (413, SPEC_READY in `Specs/Active/`, awaiting Cesar go) and a device pass on `demo_build_slice` (426). Everything below this bullet predates the device era and is historical.)
 
 - **Last updated:** 2026-07-02 (Architect — `1v1_result_rewards_display` (347) DONE. NEXT-at-the-time = `stamina_boost_shop` (517) design pass. STALE — superseded by the device-era bullet above.)
@@ -16,153 +18,15 @@
 
 ## 📋 SPEC_READY POINTERS
 
-- **`auto_club_selection`** (filed 2026-08-10, Architect) — **SPEC_READY, GO from Cesar 2026-08-10.** Player-side auto club selection, mirroring the bot's intent but selecting from the real equipped bag: tee shot ALWAYS Driver (`BallIsOnTee()` convention, so re-tee after OB gets Driver again); after the tee the auto-picker NEVER returns a Driver (player can still pick it manually — K11 gate NOT extended, Cesar's call); green stays pure §2f putter (auto-pick no-ops in putter mode); re-runs after EVERY shot (manual picks last one shot). New pure `AutoClubSelector.SelectBestClub` (bag + distToPin, yards via baseDistance) + 3 call sites in `PhysicsLabController` (AtRest after §2f, `ReDecideClubAfterReposition`, hole-start tee pick), committed via the selector-overlay pair `ClubContext.RequestSelection` + `ClubSelectionBroadcast.Raise` (Order 762 lesson — never bare `SetClub`). Adds a driver-identifying field to `ClubEntry` (Driver vs Wood share labIdx 0). Toggle `_autoClubSelectEnabled` (default ON). Spec: `Docs/Specs/Active/auto_club_selection/SPEC.md`. Kickoff below.
+- ~~**`auto_club_selection`**~~ — **DONE 2026-08-10, Cesar-approved** (shipped `43d8a34c9`, closed `b9225442d`; folder in `Docs/Specs/Completed/auto_club_selection/`). Driver on the tee, never auto-Driver off it (manual stays allowed — K11 gate untouched), elsewhere the shortest bag club that reaches the pin; re-runs every shot; §2f green rule wins; `_autoClubSelectEnabled` toggle default ON. Details: AI_CONTEXT top block. Pointer + kickoff block deleted 2026-08-10.
 
-### Kickoff · auto_club_selection
+- ~~**`power_gauge_target_marker`**~~ — **DONE 2026-08-10, Cesar-approved off the video** (Order 357; folder in `Docs/Specs/Completed/power_gauge_target_marker/`). Map-set landing target renders as a white radial notch on the power gauge via new `ShotController.MapTargetCarryM` (metres, re-derives on club change); also fixed the never-wired `PowerGaugeWidget` yards text (now reads `ClubContext.SelectedDistance`). Power system untouched. Details: AI_CONTEXT top block. Pointer + kickoff block deleted 2026-08-10.
 
-```
-Read Docs/Specs/Active/auto_club_selection/SPEC.md and implement it.
+- ~~**`map_view_strict_crop_indicators`**~~ — **DONE 2026-08-10, Cesar-approved off the video** (Order 355; folder in `Docs/Specs/Completed/map_view_strict_crop_indicators/`). Strict-crop invariant (viewport ground footprint ⊆ OB rect on open/pan/pinch, editor tripwire) + shared edge-clamped flag/ball indicators with docking. Pinch/two-finger-pan gestures remain on-device checks. Details: AI_CONTEXT top block. Pointer + kickoff block deleted 2026-08-10.
 
-Context:
-- Auto-pick the player's club each shot: tee=Driver always; off-tee never
-  auto-Driver (manual still allowed, no K11 gate change); green stays §2f
-  putter (auto no-ops in putter mode); re-runs every shot.
-- New pure AutoClubSelector (mirror PutterModeSurfaceController style) +
-  AutoSelectClubForNextShot() in PhysicsLabController with 3 call sites
-  (HandleShotComplete AtRest AFTER the §2f block, ReDecideClubAfterReposition,
-  SetupAtTee/hole-start with OnBagChanged fallback). Commit selection via
-  ClubContext.RequestSelection + ClubSelectionBroadcast.Raise — NOT bare
-  SetClub (Order 762: live-stat path reads ClubContext.SelectedClubId).
-- ClubEntry gains a driver-identifying field (Driver vs Wood share labIdx 0);
-  populate in ClubContextPopulator AND LabInventoryStub. Check the asmdef
-  before referencing ClubType from Gameplay.UI — spec has the fallback.
-- Minimal diff. New toggle _autoClubSelectEnabled default true; false must be
-  byte-for-byte today's behaviour.
-- Out of scope: bots (VersusBot/BotDriver/BotClubSync), K11 gate changes,
-  §2f ClubContext gap fix, layup/hazard logic, power/flick, scene edits.
+- ~~**`aim_camera_ball_centering`**~~ — **DONE 2026-08-10, Cesar-approved** (folder moved to `Docs/Specs/Completed/aim_camera_ball_centering/` at the 2026-08-10 close-out sweep; deviations D2 — live-widget viewport Y 0.5000, not the mockup 0.4234 — and D3 — tee clamp settles at 6.42 m on Hole 1 — ACCEPTED as-is). Ball projects exactly at the CentralBallWidget point, aim cam 8.54→3.31 m, chase cam 3.0/1.8→2.0/1.2 (ball 1.50× in flight), BotDriver now delegates via the `ApplyAimCameraAt` seam. Details: AI_CONTEXT top block. Pointer + kickoff block deleted 2026-08-10.
 
-When done: list changed files with a 1-line summary each, run the acceptance
-tests in the spec (new AutoClubSelectorTests + the 4 existing suites named
-there + editor manual matrix with [PhysicsLab][auto_club] log quotes), flag
-what needs on-device verification, update STATUS.md + IMPLEMENTER_REPORT.md
-in the spec folder, and update Docs/AI_CONTEXT.md.
-```
-
-- **`power_gauge_target_marker`** (filed 2026-08-10, Architect) — **SPEC_READY, GO from Cesar 2026-08-10.** Power stays club-relative (flick/F13 untouched — target-locked Golf-Clash-style power explicitly rejected for now); the map-view landing target (`_aimedCarryM`, today discarded on close) writes back to a new `ShotController.MapTargetCarryM` and renders as a notch on the `PowerGaugeGraphic` arc at target/carry % (pinned+red past the 1.2 overpower ceiling; putter mode excluded; cleared on shot commit). In scope: wire `PowerGaugeWidget` max carry from `ClubContext.SelectedDistance` — VERIFIED nothing calls `SetMaxCarryYards` today, so the yards text runs on the 250f default. Spec: `Docs/Specs/Active/power_gauge_target_marker/SPEC.md`. **Sequencing: AFTER `map_view_strict_crop_indicators`** if the queue is serial (both touch `MapViewController.cs`; disjoint regions, but don't invite a same-file merge). Kickoff below.
-
-### Kickoff · power_gauge_target_marker
-
-```
-Read Docs/Specs/Active/power_gauge_target_marker/SPEC.md and implement it.
-
-Context:
-- Map-set landing target becomes a marker (radial notch) on the power gauge:
-  new ShotController.MapTargetCarryM (meters, -1 = none) written back in
-  MapViewController.CloseImmediate() next to the existing yaw write-back;
-  PowerGaugeGraphic draws the notch at target/clubCarry %, PowerGaugeWidget
-  pushes it per state update. Full-swing (Yards mode) only; cleared on shot
-  commit; pinned + red past 1.2 (unreachable with this club).
-- Power system UNTOUCHED: no ComputePower / overpower / ControlsConfig /
-  perfect-zone changes. This is a readout, not a recalibration.
-- Also in scope (verified gap): PowerGaugeWidget._maxCarryYards is never set —
-  wire it from ClubContext.SelectedDistance where SetUnitMode(Yards) is called
-  (PhysicsLabController ~L546); report the yards-text before/after.
-- Minimal diff, no scene edits, no new art (procedural notch). Sequence AFTER
-  map_view_strict_crop_indicators if serial — same file, disjoint regions.
-- Out of scope: target-locked power, putter mode, bots, P-006 (but report any
-  100%-flick vs SelectedDistance mismatch as P-006 evidence).
-
-When done: list changed files with a 1-line summary each, run the acceptance
-tests in spec §5 (EditMode ComputeMarkerFrac seam + editor manual matrix,
-screenshots), flag what needs on-device verification, update STATUS.md +
-IMPLEMENTER_REPORT.md in the spec folder, and update Docs/AI_CONTEXT.md.
-```
-
-- **`map_view_strict_crop_indicators`** (filed 2026-08-10, Architect — Order 355) — **SPEC_READY, GO from Cesar 2026-08-10.** Cesar reviewed the shipped Order 354 result and re-cut the target: open framing = ball + shot context (NOT ball+flag — 354c's target is superseded, its machinery is kept); STRICT CROP invariant — the viewport ground footprint stays inside the OB rect at every frame (open/pan/pinch), so only playable area is ever on screen; flag AND ball get edge-clamped floating indicators with a pointer arrow that dock over the target when it enters view (continuous, no animation). Controls unchanged. Spec: `Docs/Specs/Active/map_view_strict_crop_indicators/SPEC.md`. Note for the implementer: the two open items 354 handed back land in scope here — the fallback path gets the containment pass, and the editor invariant assertion becomes the tripwire for the untestable-in-editor pinch/pan gestures. Kickoff below.
-
-### Kickoff · map_view_strict_crop_indicators
-
-```
-Read Docs/Specs/Active/map_view_strict_crop_indicators/SPEC.md and implement it.
-
-Context:
-- Order 355, single file: MapViewController.cs (+ MapViewAimingTests.cs).
-  Supersedes ONLY 354c's framing target (ball+flag); keep 354's axis snap,
-  env hide, caps, OB-rect loader, SolveShowRegionPose — extend, don't rewrite.
-- Three parts: (A) frame ball+landing under a NEW strict-containment invariant
-  (viewport ground footprint ⊆ OB rect, incl. the AnchorBallToBottom fallback);
-  (B) pan/pinch clamped by footprint, not focus point, + #if UNITY_EDITOR
-  invariant assertion in Update(); (C) shared edge-clamped floating indicator
-  for flag AND ball (extend UpdateHoleIndicator; new _ballIconRT; procedural
-  arrow, no art imports).
-- Minimal diff. Containment WINS over seat fractions. Controls untouched
-  (one finger aim, two finger pan/pinch).
-- Out of scope: fairway-mask-tight crop, indicator art polish, P-006/7/9,
-  scene edits, zones.json edits. MapViewCaptureDriver compiles unmodified.
-
-When done: list changed files with a 1-line summary each, run the acceptance
-tests in spec §7 (EditMode seams + the editor manual matrix, screenshots in
-the report), flag which need manual on-device verification (pinch/two-finger
-pan again), update STATUS.md + IMPLEMENTER_REPORT.md in the spec folder, and
-update Docs/AI_CONTEXT.md.
-```
-
-- **`aim_camera_ball_centering`** (filed 2026-08-10, Architect) — **SPEC_READY, awaiting Cesar go.** Full-swing AIM camera rework: 3D ball must project at the 2D `CentralBallWidget` anchor (viewport ≈ 0.5, 0.4234) and the camera comes in close (default 3 m / 1.4 m vs legacy hardcoded 8 m / 3 m — genre ref Golf Clash/Golf Rival ≈ 2.5–4 m) with a closed-form pitch solver reading live FOV. Tee-off constraint: closed-form pull-back clamp so all `TeeMarker` transforms stay on screen (cache marker positions in `OnHoleLoaded`, today only the midpoint survives). Spec: `Docs/Specs/Active/aim_camera_ball_centering/SPEC.md`. Internals-only rewrite of `PhysicsLabController.ApplyCameraYaw` (signature unchanged → orbit drag / map-view restore / bots keep working); putter aim keeps legacy path verbatim; ChaseCamera/LoopCameraDirector untouched. ⚠️ Portrait hFOV is narrow — the tee clamp may eat most of the close-up on stroke 1; spec §4 says MEASURE Hole 1 marker offsets and report, don't unilaterally relax safeFrac/FOV/ball scale. Kickoff below.
-
-### Kickoff · aim_camera_ball_centering
-
-```
-Read Docs/Specs/Active/aim_camera_ball_centering/SPEC.md and implement it.
-
-Context:
-- Fixes the aim-phase framing: 3D ball currently projects below the 2D
-  CentralBallWidget ball and reads tiny (~8.5 m away). New solver pins the
-  ball to the widget's viewport point and closes to 3 m (tunables in a new
-  [Header("Aim framing")] block on PhysicsLabController).
-- Single change point: rewrite ApplyCameraYaw INTERNALS only (~line 1051,
-  PhysicsLabController.cs) — signature unchanged, putter branch keeps the
-  legacy 8/3/3/0.5 lines verbatim. Do NOT touch ChaseCamera or
-  LoopCameraDirector.
-- Tee-off: closed-form distance clamp keeps TeeMarker transforms on screen
-  (cache their positions in OnHoleLoaded next to the existing regularMarkers
-  scan). If Hole 1's real marker spread forces d back to ~8 m, MEASURE and
-  report — escalation, not a unilateral fix (spec §4).
-- Minimal diff. Reuse _orbitCenter/_cameraYaw/AdjustCameraForDepression as-is.
-- Out of scope: FOV changes, ball visual scale, putter aim, controls.csv keys,
-  any 2D shot-UI move/resize.
-
-When done: list changed files with a 1-line summary each, run the acceptance
-tests in the spec, flag which need manual on-device verification, update
-STATUS.md + IMPLEMENTER_REPORT.md in the spec folder, and update
-Docs/AI_CONTEXT.md.
-```
-
-- **`putter_aim_blue_line`** (413, P1 — spec Rev 2 filed 2026-08-07; Rev 1 was 2026-08-03) — **SPEC_READY, awaiting Cesar go.** World-space straight cyan aim line from ball along current aim yaw, putter aim only, above the green grid. Spec: `Docs/Specs/Active/putter_aim_blue_line/SPEC.md`. New file `Assets/Scripts/Physics/Viewer/PutterAimLine.cs` (`Golfin.Physics.Viewer`, zero asmdef edits); mirror `PutterGreenReader` lifecycle incl. `SetBallPositionOverride`; procedural mesh child GO, +0.04 m Y, 0.08 m wide, 15 m, `#7AE9FF` provisional. ⚠️ `PutterTrackGraphic.cs` is the putt POWER METER — do not touch it (spec §1). Rev 2 adds §8 mobile perf budget (rebuild-on-dirty, zero steady-state GC, 62 verts / 1 draw call, vertex Y from the slope BAKE not raycasts — also re-guarantees the iter-4 z-fight gap) and §9 competitive check (Winning Putt / Golf Clash / PGA 2K / WGT / Ultimate Golf / Mini Golf King — straight-line-plus-grid is the genre standard; L1 no-curve lock confirmed, curve-preview is 2K's limited-use assist, a live-ops idea at most, not v1 rendering). Kickoff below.
-
-### Kickoff · putter_aim_blue_line
-
-```
-Read Docs/Specs/Active/putter_aim_blue_line/SPEC.md (Rev 2) and implement it.
-
-Context:
-- Adds the missing straight aim-direction line during putter aim, rendered
-  above the green-reading grid (Winning Putt reference). The grid shipped in
-  puttpath_predictor_perf_and_design; this is its companion visual.
-- New file: Assets/Scripts/Physics/Viewer/PutterAimLine.cs — ZERO asmdef
-  edits. Mirror PutterGreenReader.cs (same folder) for lifecycle, aim-heading
-  accessor, SetBallPositionOverride, and the child-GO mesh pattern.
-- Perf is specced (§8): rebuild-on-dirty, zero steady-state GC, one draw
-  call, vertex Y from the 0.5 m slope bake (NOT per-frame raycasts).
-- Do NOT touch PutterTrackGraphic.cs (it is the putt power meter, spec §1)
-  and NO curve prediction (L1 lock, spec §6/§9).
-- Out of scope: iron/driver line, distance ticks, cup-aware length, putt
-  strength on the line.
-
-When done: list changed files with a 1-line summary each, run the acceptance
-tests in the spec (§7 incl. the Rev 2 DoD lines 7–8), flag which need manual
-on-device verification, update STATUS.md + IMPLEMENTER_REPORT.md in the spec
-folder, and update Docs/AI_CONTEXT.md.
-```
+- ~~**`putter_aim_blue_line`**~~ (413) — **DONE, Cesar-approved 2026-08-10 off the Hole 6 video** (folder in `Docs/Specs/Completed/putter_aim_blue_line/`). Cyan putter aim line over the green grid; colour `#7AE9FF` / width 0.08 m stay provisional `[SerializeField]`s; spawned the `hole1_cup_buried_under_green` repair (`da62daf86`). Details: AI_CONTEXT top block. Pointer + kickoff block deleted 2026-08-10.
 
 - ~~**`tree_occlusion_fade`** (added 2026-08-07)~~ — **DONE 2026-08-07, Cesar-approved.** Shipped same-day and moved to `Docs/Specs/Completed/tree_occlusion_fade/`. Cone shipped at **45°/60°** (spec's 10°/16° proved too narrow — the gate is angular, so a near trunk fills the screen while sitting outside a narrow cone; Cesar's call). Proven by real-entry-path A/B video on Hole 1: dither renders on **bark AND leaves** (§4.3 retarget confirmed live); the video also caught+fixed a post-terminal focus bug (after `SetTarget(null)`, `CurrentFocus` degraded to the finished shot's origin and aimed the cone backwards — driver now prefers the live ball transform via new `LoopCameraDirector.CurrentBall`). Two spec premises corrected in code: `Camera.main` is NOT the gameplay camera during a hole (resolve by `ChaseCamera` component), and `_shotOrigin` is `(0,0,0)` during aiming. EditMode 1023/1020/0. ⚠️ `Vegetation.shader` is under gitignored `Assets/Packs/` — force-added with its .meta (pins GUID `e80a1e91…` that all 7 retargeted .mats reference). Still open on device (Cesar): dither grain at retina DPI, perf, cone feel. Report-only finding: Spruce is on `Realistic Tree` Shader Graphs (NOT the NoWind pack as assumed) and doesn't fade; absent from Holes 1/6. Notion roadmap row added 2026-08-07. Original pointer + kickoff below kept for history.
 
