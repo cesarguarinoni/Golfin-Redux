@@ -26,8 +26,21 @@ namespace Golfin.Physics.Viewer.Editor
             EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
         }
 
+        [MenuItem("GOLFIN/OB Recovery/Record WATER-OB recovery (Hole 6 lake)")]
+        public static void RecordWaterRecovery()
+        {
+            ObRecoveryCaptureBot.WaterScenario = true;
+            Launch("ob_recovery_water_hud");
+        }
+
         [MenuItem("GOLFIN/OB Recovery/Record boundary-OB recovery (Hole 6)")]
         public static void RecordRecovery()
+        {
+            ObRecoveryCaptureBot.WaterScenario = false;
+            Launch("ob_recovery_after_hud");
+        }
+
+        static void Launch(string outputName)
         {
             if (EditorApplication.isPlaying)
             {
@@ -38,7 +51,7 @@ namespace Golfin.Physics.Viewer.Editor
             Debug.Log($"[ObRecoveryCaptureMenu] Launching. Output: {OutputBase}/ob_recovery_after.mp4");
 
             BotVideoRecorder.MaxRecordSecondsSessionOverride = MaxSeconds;
-            BotVideoRecorder.CustomOutputPath = $"{OutputBase}/ob_recovery_after_hud";
+            BotVideoRecorder.CustomOutputPath = $"{OutputBase}/{outputName}";
             // GameView source → captures the full Overlay HUD (TURN counter, aim cone, ball,
             // buttons) so the re-tee + forward-aim + drag are all legible. The 2026-06-16
             // Y-FLIP FIX (lock render-pipeline state BEFORE StartRecording) makes GameView

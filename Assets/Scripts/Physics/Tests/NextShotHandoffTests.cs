@@ -174,6 +174,90 @@ namespace Golfin.Physics.Tests
                 "Water drop should be the last fairway hit before the water hazard.");
         }
 
+        // ── Tests 6d–6f: water drops at the hazard margin, not behind it ──────────
+
+        /// <summary>Everything at or beyond boundaryX is water; before it is fairway.</summary>
+        sealed class WaterBeyondXProvider : ISurfaceProvider
+        {
+            readonly float _boundaryX;
+            public WaterBeyondXProvider(float boundaryX) { _boundaryX = boundaryX; }
+            public SurfaceType Classify(fp worldX, fp worldZ)
+                => worldX.ToFloat() >= _boundaryX ? SurfaceType.Water : SurfaceType.Fairway;
+        }
+
+        // Flight from x=0 out to x=100 in 1 m steps; water starts at x=60.
+        // One land bounce is recorded far back at x=20 — the old resolver's answer.
+        static Trajectory WaterCarryTrajectory()
+        {
+            var samples = new List<TrajectorySample>();
+            for (int i = 0; i <= 100; i++)
+                samples.Add(new TrajectorySample(
+                    fp.FromFloat(i * 0.05f),
+                    new fp3(fp.FromFloat(i), fp.FromFloat(10f), fp.Zero),
+                    fp3.Zero));
+
+            var hits = new List<TerrainHit>
+            {
+                MakeHit(new Vector3(20f, 0f, 0f), SurfaceType.Fairway),   // early bounce, then carried
+                MakeHit(new Vector3(85f, 0f, 0f), SurfaceType.Water),     // splash
+            };
+            return new Trajectory(samples, new fp3(fp.FromFloat(85f), fp.Zero, fp.Zero),
+                fp3.Zero, fp.One, TerminationReason.HitWater, hits);
+        }
+
+        [Test]
+        public void OBDropResolver_Water_DropsAtHazardMargin_NotTheLastBounce()
+        {
+            var traj     = WaterCarryTrajectory();
+            var provider = new WaterBeyondXProvider(60f);
+            var origin   = new Vector3(0f, 0f, 0f);
+
+            Vector3 drop = OBDropResolver.ResolveByRule(traj, origin, isWater: true, provider: provider);
+
+            // Margin is at x=60; the last dry SAMPLE is x=59 (crossing lies between 59 and 60).
+            Assert.AreEqual(59f, drop.x, 1.01f,
+                "Water drop must be at the hazard margin the ball last crossed (x≈59–60), " +
+                "NOT the last land bounce at x=20 that the terrain-hit scan returns.");
+
+            // Guard the actual defect: strictly ahead of the old answer, still short of the water.
+            Assert.Greater(drop.x, 20f, "Must not fall back to the far-behind last bounce (x=20).");
+            Assert.Less(drop.x, 60f,    "Must never be dropped inside the hazard / nearer the hole.");
+        }
+
+        [Test]
+        public void OBDropResolver_Water_NoProvider_FallsBackToLegacyLastDryTouch()
+        {
+            var traj   = WaterCarryTrajectory();
+            var origin = new Vector3(0f, 0f, 0f);
+
+            // Flat-ground / no-hole sessions have no classifier — behaviour must be unchanged.
+            Vector3 drop = OBDropResolver.ResolveByRule(traj, origin, isWater: true, provider: null);
+
+            Assert.AreEqual(new Vector3(20f, 0f, 0f), drop,
+                "Without a classifier the legacy last-dry-touch scan must still be used.");
+        }
+
+        [Test]
+        public void OBDropResolver_Water_FlightNeverOverLand_FallsBackToOrigin()
+        {
+            // Teed off already inside the hazard: every sample is over water.
+            var samples = new List<TrajectorySample>();
+            for (int i = 0; i <= 10; i++)
+                samples.Add(new TrajectorySample(
+                    fp.FromFloat(i * 0.05f),
+                    new fp3(fp.FromFloat(70f + i), fp.FromFloat(5f), fp.Zero),
+                    fp3.Zero));
+            var traj = new Trajectory(samples, new fp3(fp.FromFloat(80f), fp.Zero, fp.Zero),
+                fp3.Zero, fp.One, TerminationReason.HitWater, new List<TerrainHit>());
+
+            var origin = new Vector3(65f, 0f, 0f);
+            Vector3 drop = OBDropResolver.ResolveByRule(traj, origin, isWater: true,
+                provider: new WaterBeyondXProvider(60f));
+
+            Assert.AreEqual(origin, drop,
+                "A flight that was never over land must fall back to the previous shot origin.");
+        }
+
         // ── Test 7: AimRotationHelper points toward pin ────────────────────────────
 
         [Test]

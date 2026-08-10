@@ -1301,7 +1301,11 @@ namespace Golfin.Physics.Viewer
                     // fire straight down the fairway once the camera stops fighting it (Part A).
                     bool isWater = result.OBReason.HasValue
                         && result.OBReason.Value == Golfin.Gameplay.Loop.OBReason.Water;
-                    Vector3 dropPos = OBDropResolver.ResolveByRule(_previousTrajectory, _lastShotOrigin, isWater);
+                    // Water needs the classifier to find the hazard margin the ball last crossed;
+                    // null on flat-ground sessions, where ResolveByRule falls back to the legacy
+                    // last-dry-touch scan.
+                    Vector3 dropPos = OBDropResolver.ResolveByRule(
+                        _previousTrajectory, _lastShotOrigin, isWater, _bakedClassifier);
                     Vector3 pinPos  = Golfin.Gameplay.UI.HUD.HoleContext.PinWorld;
                     float   newYaw  = AimRotationHelper.ComputeYawTowardPin(dropPos, pinPos, _cameraYaw);
                     Vector3 lookDir = new Vector3(Mathf.Cos(newYaw), 0f, Mathf.Sin(newYaw));

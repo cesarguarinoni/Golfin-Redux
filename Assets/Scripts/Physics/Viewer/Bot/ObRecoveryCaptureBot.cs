@@ -32,6 +32,7 @@ namespace Golfin.Physics.Viewer
     public class ObRecoveryCaptureBot : MonoBehaviour
     {
         const string ArmedKey    = "ObRecoveryCapture.Armed";
+        const string WaterKey    = "ObRecoveryCapture.Water";
         const float  StartupWait = 5f;
 
         public static bool Armed
@@ -39,6 +40,15 @@ namespace Golfin.Physics.Viewer
             get => UnityEditor.SessionState.GetBool(ArmedKey, false);
             set => UnityEditor.SessionState.SetBool(ArmedKey, value);
         }
+
+        /// <summary>True = fire into the Hole 6 lake (water drop rule); false = boundary OB.</summary>
+        public static bool WaterScenario
+        {
+            get => UnityEditor.SessionState.GetBool(WaterKey, false);
+            set => UnityEditor.SessionState.SetBool(WaterKey, value);
+        }
+
+        Vector3 _waterShotOrigin;
 
         void Start()
         {
@@ -197,12 +207,38 @@ namespace Golfin.Physics.Viewer
 
             yield return d.Capture("recov_00_pre_shot");
 
-            // ── 8. Fire the boundary OB (aimYaw=0 / +X, power=0.50) ────────────
+            // ── 8. Fire the OB shot ────────────────────────────────────────────
             ctrl.SetClub(0);                       // Driver
             ctrl.InjectLabBundleForCurrentClub();
-            ctrl.SetCameraYawRadians(0f);          // +X toward the mask edge
-            d.LogStep("  Firing Driver: aimYaw=0, power=0.50 (boundary OB → ExitedWorldBounds)");
-            ctrl.FireViaShotController(0.50f, Golfin.Gameplay.Input.DebugShotAccuracy.Green);
+
+            if (WaterScenario)
+            {
+                // Hole 6 lake, measured from zones.json by point-in-polygon (the bbox x[-40.8,1.3]
+                // in SmokeRunner2eHost's comment is the whole irregular 36-point outline; on the
+                // z=-24 line the water actually spans x -40.0 … -23.0). Ball on the fairway at
+                // x=20 → 43 m of LAND carry before the margin at x=-23.0, which is exactly the
+                // "long carry over land that splashes" case this fix targets. The SHOT still runs
+                // through the production FireViaShotController path; only the lie is placed,
+                // as SmokeRunner2eHost does.
+                ctrl.PlaceBallAt(new Vector3(20f, 0f, -24f));
+                yield return null;                          // let the placement settle
+                ctrl.SetCameraYawRadians(Mathf.PI);         // -X toward the lake (AFTER PlaceBallAt)
+                _waterShotOrigin = ctrl.BallPosition;
+                d.LogStep($"  WATER: ball placed at {_waterShotOrigin:F1}, firing -X at the lake " +
+                          $"(near margin x≈-23.0 on this z-line, far shore x≈-40.0). The carry never " +
+                          $"bounces on land, so the OLD last-dry-touch rule had no land hit and fell " +
+                          $"all the way back to the origin x≈20 — a ~43 m over-penalty.");
+                // Power calibrated live on this hole: 0.42 → 71.9 m (cleared the far shore, no
+                // splash); 0.31 → 38.9 m (stopped 4 m short of the near margin). Water spans
+                // 43–60 m out, so ~50 m lands mid-lake: 0.31·sqrt(50/38.9) ≈ 0.35.
+                ctrl.FireViaShotController(0.35f, Golfin.Gameplay.Input.DebugShotAccuracy.Green);
+            }
+            else
+            {
+                ctrl.SetCameraYawRadians(0f);      // +X toward the mask edge
+                d.LogStep("  Firing Driver: aimYaw=0, power=0.50 (boundary OB → ExitedWorldBounds)");
+                ctrl.FireViaShotController(0.50f, Golfin.Gameplay.Input.DebugShotAccuracy.Green);
+            }
 
             // Flight window.
             yield return new WaitForSecondsRealtime(0.4f);
@@ -279,6 +315,17 @@ namespace Golfin.Physics.Viewer
             }
             yield return new WaitForSecondsRealtime(0.3f); // let RepositionBallWithLookDir settle the camera
             Vector3 ballPos = ctrl.BallPosition;
+            if (WaterScenario)
+            {
+                // The gate for this fix: the drop must sit at the hazard margin (x≈1.3), i.e.
+                // clearly FORWARD of the shot origin (x≈20) that the old last-dry-touch scan
+                // fell back to, and never inside the lake (x < 1.3 would be nearer the hole).
+                float gained = _waterShotOrigin.x - ballPos.x;
+                d.LogStep($"  WATER DROP: ball={ballPos:F2} origin={_waterShotOrigin:F2} " +
+                          $"movedTowardHazard={gained:F1}m — must be ≈43 m (at the margin x≈-23.0); " +
+                          $"the OLD rule gave 0 m (dropped at the origin). Drop must stay OUT of the " +
+                          $"lake, i.e. x > -23.0, so it is never nearer the hole.");
+            }
             d.LogStep($"  RE-TEE: reachedAiming={reAimed} ballPos={ballPos:F2} " +
                       $"mode={(cc!=null?cc.CurrentMode.ToString():"?")} camPos={(cam!=null?cam.transform.position.ToString("F1"):"?")}");
             d.LogStep($"    (Part A proof: mode == Chase here means OBFreeze was exited on re-arm; on HEAD it stays OBFreeze)");
