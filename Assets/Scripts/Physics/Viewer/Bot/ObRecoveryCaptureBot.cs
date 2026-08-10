@@ -59,7 +59,7 @@ namespace Golfin.Physics.Viewer
             yield return new WaitForSecondsRealtime(StartupWait);
 
             var driver = new Bot.BotDriver(
-                "Docs/Specs/Active/ob_recovery_fixes/screenshots");
+                "Docs/Specs/Completed/ob_recovery_fixes/screenshots");
             driver.LogStep("=== ObRecoveryCaptureBot: boundary-OB recovery (Hole 6) ===");
 
             bool             done   = false;
@@ -208,15 +208,49 @@ namespace Golfin.Physics.Viewer
             yield return new WaitForSecondsRealtime(0.4f);
             yield return d.Capture("recov_01_flight");
 
-            // ── 9. Poll for OB ─────────────────────────────────────────────────
+            // ── 9. Poll for OB, sampling the BOUNDARY FREEZE while the ball is still in the air.
+            //     K10 follow-up gate: the camera must stop the moment the ball crosses the OB
+            //     line — well BEFORE the OB terminal state — so it never trails the ball out
+            //     over the non-existent terrain. Log ball X vs camera X each sample: once the
+            //     ball goes past the boundary the camera X must stop advancing entirely.
             float t0 = Time.realtimeSinceStartup;
             bool obFired = false;
+            Vector3 camFrozenAt = Vector3.zero;
+            bool    freezeSeen  = false;
+            float   maxCamX     = float.NegativeInfinity;
+            float   minAimDot   = 1f;   // worst aim-at-ball alignment after the hold began
             while (Time.realtimeSinceStartup - t0 < 6f)
             {
                 var sm = ctrl.BallSM;
+                Vector3 bp = ctrl.BallPosition;
+                Vector3 cp = cam != null ? cam.transform.position : Vector3.zero;
+                if (cp.x > maxCamX) maxCamX = cp.x;
+
+                // First frame where the camera has clearly stopped while the ball keeps going.
+                if (!freezeSeen && sm != null && sm.State == Golfin.Gameplay.Loop.BallState.Flying
+                    && bp.x > cp.x + 8f)
+                {
+                    freezeSeen  = true;
+                    camFrozenAt = cp;
+                    d.LogStep($"    [BOUNDARY HOLD] ball={bp:F1} camera={cp:F1} — camera stopped advancing, " +
+                              $"ball still airborne and heading out (state={sm.State})");
+                }
+
+                // Rotation must keep TRACKING the ball while position is pinned (Cesar's choice):
+                // log the aim error so the video claim is backed by numbers, not vibes.
+                if (freezeSeen && cam != null)
+                {
+                    Vector3 toBall = (bp - cp).normalized;
+                    float aimDot = Vector3.Dot(cam.transform.forward, toBall);
+                    if (aimDot < minAimDot) minAimDot = aimDot;
+                }
+
                 if (sm != null && sm.State == Golfin.Gameplay.Loop.BallState.OB) { obFired = true; break; }
                 yield return new WaitForSecondsRealtime(0.033f);
             }
+            d.LogStep($"  Boundary-hold seen={freezeSeen} heldAt={camFrozenAt:F1} " +
+                      $"maxCameraX={maxCamX:F1} (must stay inside the Hole 6 mesh edge X=+114.45) " +
+                      $"minAimDot={minAimDot:F3} (≈1.0 = camera kept tracking the ball out)");
             Vector3 camAtOB = cam != null ? cam.transform.position : Vector3.zero;
             d.LogStep($"  OB fired={obFired} at +{Time.realtimeSinceStartup - t0:F2}s | mode={(cc!=null?cc.CurrentMode.ToString():"?")} camPos={camAtOB:F1}");
             d.LogStep($"    (K10 follow-up proof: mode must be Chase — NOT OBFreeze — and the camera must" +

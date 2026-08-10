@@ -11,13 +11,13 @@ namespace Golfin.Physics.Viewer.Editor
     /// BotVideoRecorder.End() is called unconditionally by LoopV2SmokeBotMenu.ExitingPlayMode.
     ///
     /// Between clips, run GOLFIN > Capture > Reset Video Session Guard to allow a second recording.
-    /// Output: Docs/Specs/Active/ob_recovery_fixes/videos/ob_recovery_after.mp4
+    /// Output: Docs/Specs/Completed/ob_recovery_fixes/videos/ob_recovery_after.mp4
     /// </summary>
     [InitializeOnLoad]
     public static class ObRecoveryCaptureMenu
     {
         const string ScenePath  = "Assets/Scenes/ShellScene.unity";
-        const string OutputBase = "Docs/Specs/Active/ob_recovery_fixes/videos";
+        const string OutputBase = "Docs/Specs/Completed/ob_recovery_fixes/videos";
         const int    MaxSeconds = 30;
 
         static ObRecoveryCaptureMenu()

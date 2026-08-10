@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using Golfin.Gameplay.Loop;
 using Golfin.Physics;
+using Golfin.Physics.Math;   // fp — playable-area classification queries (K10 follow-up)
 
 namespace Golfin.Physics.Viewer
 {
@@ -17,6 +18,14 @@ namespace Golfin.Physics.Viewer
         Vector3                               LastShotLaunchDir { get; }
         Transform                             CurrentBall      { get; }
         bool                                  CurrentShotIsPutt { get; }
+
+        /// <summary>
+        /// Baked surface classifier for the loaded hole, or null on flat-ground / no-hole
+        /// sessions. Used by the OB playable-area freeze to ask "is this XZ still in play?"
+        /// (Classify returns SurfaceType.OOB both for OB-flagged cells and for points outside
+        /// the terrain grid — see BakedZoneClassifier.IsObAt's tri-state).
+        /// </summary>
+        ISurfaceProvider                      SurfaceProvider  { get; }
     }
 
     /// <summary>
@@ -207,6 +216,31 @@ namespace Golfin.Physics.Viewer
                     bool hasOBHit = TryFindFirstOBHit(traj, ctrl.LastShotOrigin, out clampPoint);
                     bool shouldClamp = hasOBHit
                         || (traj != null && traj.termination == TerminationReason.ExitedWorldBounds);
+
+                    // K10 follow-up (Cesar 2026-08-05): clamp at the AIRBORNE moment the ball
+                    // leaves the playable area, rather than at the first OB *terrain hit*.
+                    //   (1) It is strictly earlier — the ball crosses the OB line in the air long
+                    //       before it lands — so the camera holds at the boundary instead of
+                    //       trailing the ball out over ground that doesn't exist.
+                    //   (2) It fixes the real defect: for TerminationReason.ExitedWorldBounds
+                    //       TryFindFirstOBHit falls back to traj.finalPosition, but ExitedWorldBounds
+                    //       is the sim's ±2 km SAFETY NET (BallSimulation.WorldBound), not the course
+                    //       edge — so the clamp point landed ~2 km out and clamped nothing. That is
+                    //       why the camera flew out over the void even though a clamp was "armed".
+                    // Deterministic: the whole trajectory is precomputed at fire time, so the exact
+                    // crossing sample is known before the ball moves.
+                    //
+                    // The clamp is all that is needed for the behaviour Cesar chose: ChaseCamera's
+                    // Chase branch pins the POSITION focus at the clamp while desiredRot keeps
+                    // looking at the LIVE ball — so the camera stops at the boundary and pans to
+                    // watch the ball sail out, instead of freezing on whatever mid-flight pose it
+                    // happened to hold (which stared at the ground).
+                    if (TryFindPlayableExit(traj, ctrl.SurfaceProvider, out var exitPoint))
+                    {
+                        clampPoint  = exitPoint;
+                        shouldClamp = true;
+                    }
+
                     setter?.SetChaseClamp(clampPoint, shouldClamp);
                 }
             }
@@ -335,6 +369,36 @@ namespace Golfin.Physics.Viewer
             return false;
         }
 
+        /// <summary>
+        /// K10 follow-up: first trajectory sample whose XZ is no longer in play, i.e. the exact
+        /// airborne moment the ball crosses the OB line. Deterministic — the trajectory is fully
+        /// precomputed at fire time.
+        ///
+        /// "Not in play" is one predicate: <c>Classify(x,z) == SurfaceType.OOB</c>. BakedZone-
+        /// Classifier's tri-state IsObAt returns OOB both for OB-flagged cells AND for points
+        /// outside the terrain grid, so this catches the OB line and the mesh edge together —
+        /// and the OB line always comes first (it sits at or inside the mesh edge), which is the
+        /// stop point Cesar chose.
+        ///
+        /// Returns false when there is no provider, no samples, or the flight never leaves the
+        /// playable area — callers then keep the pre-existing clamp behavior.
+        /// </summary>
+        internal static bool TryFindPlayableExit(Trajectory traj, ISurfaceProvider provider, out Vector3 exitPos)
+        {
+            exitPos = Vector3.zero;
+            if (traj?.samples == null || provider == null) return false;
+
+            foreach (var s in traj.samples)
+            {
+                float x = s.position.x.ToFloat();
+                float z = s.position.z.ToFloat();
+                if (provider.Classify(fp.FromFloat(x), fp.FromFloat(z)) != SurfaceType.OOB) continue;
+                exitPos = new Vector3(x, s.position.y.ToFloat(), z);
+                return true;
+            }
+            return false;
+        }
+
         // ComputeOBFreezePivot DELETED (K10 follow-up, 2026-08-05): the OB terminal state no
         // longer teleports the camera to an aerial pivot — it stops chasing in place (Cesar
         // ruling). ChaseCamera.Mode.OBFreeze itself is intentionally left in place (unused by
@@ -418,5 +482,6 @@ namespace Golfin.Physics.Viewer
         public Vector3                               LastShotLaunchDir => _ctrl.LastShotLaunchDir;
         public Transform                             CurrentBall       => _ctrl.CurrentBall;
         public bool                                  CurrentShotIsPutt => _ctrl.CurrentShotIsPutt;
+        public ISurfaceProvider                      SurfaceProvider   => _ctrl.SurfaceProviderForCamera;
     }
 }

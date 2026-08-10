@@ -51,6 +51,19 @@ namespace Golfin.Physics.Tests
         public Vector3           LastShotLaunchDir { get; set; } = Vector3.forward;
         public Transform         CurrentBall      { get; set; }
         public bool              CurrentShotIsPutt { get; set; }
+        public ISurfaceProvider  SurfaceProvider  { get; set; }
+    }
+
+    /// <summary>
+    /// K10 follow-up: classifies everything beyond a boundary X as OOB, everything before it as
+    /// Fairway — a stand-in for the baked OB line so playable-area-exit tests stay deterministic.
+    /// </summary>
+    sealed class BoundaryAtXProvider : ISurfaceProvider
+    {
+        readonly float _boundaryX;
+        public BoundaryAtXProvider(float boundaryX) { _boundaryX = boundaryX; }
+        public SurfaceType Classify(fp worldX, fp worldZ)
+            => worldX.ToFloat() >= _boundaryX ? SurfaceType.OOB : SurfaceType.Fairway;
     }
 
     // ── Helpers ─────────────────────────────────────────────────────────────────
@@ -873,6 +886,131 @@ namespace Golfin.Physics.Tests
 
             Object.DestroyImmediate(camGO);
             Object.DestroyImmediate(dirGO);
+        }
+
+        // ── Tests 28–31: K10 follow-up — freeze on leaving the playable area ──
+
+        // Helper: a flight that crosses the OB line at X=100 mid-air and sails far beyond it.
+        static Trajectory CrossingTrajectory()
+        {
+            var samples = new List<TrajectorySample>();
+            for (int i = 0; i <= 20; i++)   // X = 0,10,...,200 — crosses X=100 at sample 10
+                samples.Add(new TrajectorySample(
+                    fp.FromFloat(i * 0.1f),
+                    new fp3(fp.FromFloat(i * 10f), fp.FromFloat(20f), fp.Zero),
+                    fp3.Zero));
+            return new Trajectory(samples, new fp3(fp.FromFloat(200f), fp.Zero, fp.Zero),
+                fp3.Zero, fp.One, TerminationReason.ExitedWorldBounds, new List<TerrainHit>());
+        }
+
+        // Test 28: the clamp point is the AIRBORNE boundary crossing, not the ±2 km
+        // ExitedWorldBounds fallback that made the old clamp a no-op.
+        [Test]
+        public void Director_ClampsAtPlayableAreaExit_NotWorldBoundsFallback()
+        {
+            var traj = CrossingTrajectory();
+            var (director, setter, ctrl) = DirectorFactory.Create(isPutt: false, lastTraj: traj);
+            ctrl.LastTrajectory  = traj;
+            ctrl.SurfaceProvider = new BoundaryAtXProvider(100f);
+
+            ctrl.BallSM.OnTrajectoryComputed(fp3.Zero, traj, fp.FromFloat(0.02f));
+
+            Assert.IsTrue(setter.LastChaseClampActive.HasValue && setter.LastChaseClampActive.Value,
+                "Clamp must be armed for a flight that leaves the playable area.");
+            Assert.AreEqual(100f, setter.LastChaseClampPoint.Value.x, 0.01f,
+                "Clamp must sit at the boundary crossing (X=100), NOT at finalPosition (X=200) — " +
+                "ExitedWorldBounds is the sim's 2 km safety net, not the course edge.");
+        }
+
+        // Test 29 — the behaviour Cesar chose, on the REAL ChaseCamera: once the ball is past
+        // the boundary the camera HOLDS its position (never advances further out) but keeps
+        // ROTATING to watch the ball sail away. Position pinned, rotation live.
+        [Test]
+        public void ChaseCamera_ClampedAtBoundary_HoldsPositionButKeepsTrackingBall()
+        {
+            var camGO = new GameObject("ClampCam");
+            var chase = camGO.AddComponent<ChaseCamera>();
+            chase.SetMode(ChaseCamera.Mode.Chase);
+            chase.ResetToOrigin(Vector3.zero, Vector3.right);      // shot along +X
+            chase.SetChaseClamp(new Vector3(100f, 0f, 0f), true);  // OB line at X=100
+
+            var ballGO = new GameObject("BallOut");
+            chase.SetTarget(ballGO.transform);
+
+            // Ball well past the boundary — converge.
+            ballGO.transform.position = new Vector3(150f, 20f, 0f);
+            for (int i = 0; i < 400; i++) chase.FrameCamera(1f / 60f);
+            Vector3 posAt150 = chase.transform.position;
+            Quaternion rotAt150 = chase.transform.rotation;
+
+            Assert.Less(posAt150.x, 100f,
+                "Camera must never advance past the boundary (X=100) even though the ball is at 150.");
+
+            // Ball keeps flying out — position must NOT follow, rotation MUST track.
+            ballGO.transform.position = new Vector3(400f, 20f, 0f);
+            for (int i = 0; i < 400; i++) chase.FrameCamera(1f / 60f);
+
+            Assert.AreEqual(posAt150.x, chase.transform.position.x, 0.01f,
+                "Camera X must stay pinned at the boundary as the ball flies further out.");
+            Assert.AreNotEqual(rotAt150, chase.transform.rotation,
+                "Camera must keep rotating to follow the ball out (not a frozen pose).");
+
+            // And it is genuinely looking at the ball.
+            Vector3 toBall = (ballGO.transform.position - chase.transform.position).normalized;
+            Assert.Greater(Vector3.Dot(chase.transform.forward, toBall), 0.9f,
+                "Camera should be aimed at the live ball position.");
+
+            Object.DestroyImmediate(ballGO);
+            Object.DestroyImmediate(camGO);
+        }
+
+        // Test 30: the target is never cleared mid-flight — the camera keeps tracking, so the
+        // ball stays on screen as it leaves (regression guard for the reverted freeze variant).
+        [Test]
+        public void Director_DoesNotClearTargetMidFlight_OnOBShot()
+        {
+            var traj = CrossingTrajectory();
+            var (director, setter, ctrl) = DirectorFactory.Create(isPutt: false, lastTraj: traj);
+            ctrl.LastTrajectory  = traj;
+            ctrl.SurfaceProvider = new BoundaryAtXProvider(100f);
+
+            var sm = new BallStateMachine(new ConstantSurfaceProvider(SurfaceType.Fairway));
+            sm.Headless = false;                 // only Aiming→Flying fires; ball stays airborne
+            ctrl.BallSM = sm;
+            var ballGO = new GameObject("BallInFlight");
+            ctrl.CurrentBall = ballGO.transform;
+            director.SetControllerAccessor(ctrl);
+
+            sm.OnTrajectoryComputed(fp3.Zero, traj, fp.FromFloat(0.02f));
+
+            Assert.IsNotNull(setter.SetTargetCalls[setter.SetTargetCalls.Count - 1],
+                "Chase target must be the ball while it is in flight.");
+
+            // Even with the ball past the boundary, nothing may clear the target mid-flight —
+            // the clamp alone keeps the camera inside while rotation tracks the ball out.
+            ballGO.transform.position = new Vector3(105f, 20f, 0f);
+            director.TickCinematicCut();
+            Assert.IsNotNull(setter.SetTargetCalls[setter.SetTargetCalls.Count - 1],
+                "Target must NOT be cleared mid-flight — the camera keeps watching the ball leave.");
+
+            Object.DestroyImmediate(ballGO);
+        }
+
+        // Test 31: a normal in-bounds shot never arms the clamp (byte-identical to before).
+        [Test]
+        public void Director_InBoundsShot_DoesNotArmClamp()
+        {
+            var traj = TrajectoryBuilder.Simple(new fp3(fp.FromFloat(50f), fp.Zero, fp.Zero));
+            var (director, setter, ctrl) = DirectorFactory.Create(isPutt: false, lastTraj: traj);
+            ctrl.LastTrajectory  = traj;
+            ctrl.SurfaceProvider = new BoundaryAtXProvider(100f);   // never reached
+
+            ctrl.BallSM.OnTrajectoryComputed(fp3.Zero, traj, fp.FromFloat(0.02f));
+
+            Assert.IsTrue(setter.LastChaseClampActive.HasValue,
+                "SetChaseClamp must still be called for in-bounds shots.");
+            Assert.IsFalse(setter.LastChaseClampActive.Value,
+                "An in-bounds shot must leave the clamp DISARMED — normal chase is unaffected.");
         }
 
         // ── Teardown ────────────────────────────────────────────────────────────

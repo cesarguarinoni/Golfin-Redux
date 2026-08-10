@@ -195,5 +195,8 @@ namespace Golfin.Physics.Tests
         public Vector3           LastShotLaunchDir => _ctrl.LastShotLaunchDir;
         public Transform         CurrentBall       => _ctrl.CurrentBall;
         public bool              CurrentShotIsPutt => _ctrl.CurrentShotIsPutt;
+        // K10 follow-up: same internal accessor the production adapter reads. Null on the
+        // flat-ground sessions these tests use → the playable-area freeze stays inert.
+        public ISurfaceProvider  SurfaceProvider   => _ctrl.SurfaceProviderForCamera;
     }
 }

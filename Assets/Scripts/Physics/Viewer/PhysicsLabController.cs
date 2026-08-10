@@ -137,6 +137,14 @@ namespace Golfin.Physics.Viewer
         // ── §2b internal accessors for LoopCameraDirector ──────────────────────
         internal Golfin.Gameplay.Loop.BallStateMachine BallSM        => _ballSM;
         internal Trajectory                            LastTrajectory => _previousTrajectory;
+
+        /// <summary>
+        /// Camera seam (K10 follow-up): the loaded hole's baked classifier, or null on
+        /// flat-ground / no-hole sessions. LoopCameraDirector uses it to detect the moment the
+        /// ball leaves the playable area so the chase can freeze at the boundary instead of
+        /// flying out over the void. Read-only — the camera never mutates course data.
+        /// </summary>
+        internal ISurfaceProvider SurfaceProviderForCamera => _bakedClassifier;
         internal Vector3                               LastShotOrigin    => _lastShotOrigin;
         internal Vector3                               LastShotLaunchDir => _lastShotLaunchDir;
         internal Transform                             CurrentBall    => ballAnimator?.CurrentBall;
