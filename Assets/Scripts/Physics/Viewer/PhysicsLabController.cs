@@ -76,6 +76,28 @@ namespace Golfin.Physics.Viewer
         [SerializeField] Vector3 _defaultLookDirection = Vector3.zero;
         [SerializeField] float   _orbitSensitivity     = 0.5f;
 
+        [Header("Aim framing (aim_camera_ball_centering)")]
+        [Tooltip("XZ distance behind the ball during full-swing aim (m). Genre ref: 2.5–4.")]
+        [SerializeField] float _aimCamDistanceM = 3.0f;
+        [Tooltip("Camera height above the ball during full-swing aim (m).")]
+        [SerializeField] float _aimCamHeightM = 1.4f;
+        [Tooltip("Fallback viewport Y for the ball projection when CentralBallWidget is unavailable. 0.4234 = mockup 2D ball center.")]
+        [SerializeField] float _aimBallViewportYFallback = 0.4234f;
+        [Tooltip("Tee markers must project within this fraction of half-screen-width during tee-off aim.")]
+        [SerializeField] float _teeMarkerSafeFrac = 0.9f;
+        [Tooltip("Ceiling for the tee-visibility pull-back (m). 8 = legacy distance.")]
+        [SerializeField] float _aimCamMaxDistanceM = 8f;
+        [Tooltip("The 2D shot-UI ball. Aim framing pins the 3D ball to this widget's viewport point.")]
+        [SerializeField] CentralBallWidget _centralBallWidget;
+
+        // World positions of the physical tee markers for the loaded hole. Populated by
+        // OnHoleLoaded (same scan that produces the tee midpoint), cleared by OnHoleUnloaded.
+        // Deliberately NOT serialized: it is derived scene data that OnHoleLoaded always
+        // rebuilds, and serializing it would bake per-hole state into LabScaffold.unity.
+        // Empty list ⇒ ComputeAimDistance skips the tee clamp (close framing).
+        readonly System.Collections.Generic.List<Vector3> _teeMarkerPositions
+            = new System.Collections.Generic.List<Vector3>();
+
         // Published after every Fire
         public event Action<ShotReadout> OnShotFired;
         // Published after Fire×N
@@ -521,7 +543,17 @@ namespace Golfin.Physics.Viewer
         private void ExitPutterMode()
         {
             if (_shotConeView   != null) _shotConeView.SetPuttMode(false);
-            if (_powerGaugeWidget != null) _powerGaugeWidget.SetUnitMode(PowerGaugeWidget.DistanceUnit.Yards);
+            if (_powerGaugeWidget != null)
+            {
+                _powerGaugeWidget.SetUnitMode(PowerGaugeWidget.DistanceUnit.Yards);
+                // power_gauge_target_marker: seed the widget's carry fallback from the same
+                // per-club authority the club button and map view use. Nothing had ever called
+                // SetMaxCarryYards, so the yards readout sat on its 250f default regardless of
+                // the selected club. The widget re-reads ClubContext live, so this only matters
+                // for contexts where the bus is unpopulated — but a stale 250 is never right.
+                int clubDist = Golfin.Gameplay.UI.HUD.ClubContext.SelectedDistance;
+                if (clubDist > 0) _powerGaugeWidget.SetMaxCarryYards(clubDist);
+            }
             if (_holeIndicatorWidget != null) _holeIndicatorWidget.SetUnitMode(HoleIndicatorWidget.DistanceUnit.Yards);
             var clubBtn = UnityEngine.Object.FindObjectOfType<ClubButtonWidget>();
             if (clubBtn != null) clubBtn.SetUnitMode(ClubButtonWidget.DistanceUnit.Yards);
@@ -1056,11 +1088,205 @@ namespace Golfin.Physics.Viewer
         // During Aiming when Director has cleared _target, ApplyCameraYaw writes the camera
         // transform directly. Two writers don't conflict because each gates on a different
         // condition (target null vs ball not playing).
-        void ApplyCameraYaw(Camera cam)
+        /// <summary>
+        /// Editor / smoke-bot seam: frame <paramref name="cam"/> on an explicit ball position and
+        /// heading using the PRODUCTION aim framing. Exists so bot scenarios never re-derive the
+        /// camera math — <see cref="ApplyCameraYaw"/> is the single implementation. (Before
+        /// aim_camera_ball_centering, BotDriver carried its own copy of the legacy 8/3 lines and
+        /// silently drifted out of sync, so bot clips framed shots differently than real players saw.)
+        /// Sets the same state the production path would hold at rest: orbit centre = ball, yaw =
+        /// heading, and the ShotController heading so a subsequent Fire() goes the same way.
+        /// Only call from smoke runners / Editor test tools — never from production code.
+        /// </summary>
+        internal void ApplyAimCameraAt(Camera cam, Vector3 ballPos, float yawRadians)
+        {
+            if (cam == null) return;
+            _orbitCenter = ballPos;
+            _cameraYaw   = yawRadians;
+            if (_shotController != null)
+                _shotController.CameraHeadingRadians = _cameraYaw;
+            ApplyCameraYaw(cam);
+        }
+
+        // `internal` (was private) so BotDriver can reuse the one framing implementation rather than
+        // duplicating it. MapViewController reaches this by reflection with Public|NonPublic|Instance,
+        // which still binds — internal is NonPublic to reflection.
+        internal void ApplyCameraYaw(Camera cam)
         {
             Vector3 lookDir = new Vector3(Mathf.Cos(_cameraYaw), 0f, Mathf.Sin(_cameraYaw));
-            cam.transform.position = _orbitCenter - lookDir * 8f + Vector3.up * 3f;
-            cam.transform.LookAt(_orbitCenter + lookDir * 3f + Vector3.up * 0.5f);
+
+            // Putter aim keeps the LEGACY framing verbatim (aim_camera_ball_centering §3 gate):
+            // the putt camera is tuned against the green-reading grid + blue aim line and is
+            // explicitly out of scope for this pass.
+            if (CurrentShotIsPutt)
+            {
+                cam.transform.position = _orbitCenter - lookDir * 8f + Vector3.up * 3f;
+                cam.transform.LookAt(_orbitCenter + lookDir * 3f + Vector3.up * 0.5f);
+                return;
+            }
+
+            // Full-swing aim: pin the 3D ball to the 2D CentralBallWidget's viewport point and
+            // close to _aimCamDistanceM, pulling back only as far as tee-marker visibility demands.
+            SolveAimCameraPose(
+                _orbitCenter,
+                lookDir,
+                ComputeAimDistance(lookDir, cam),
+                _aimCamHeightM,
+                cam.fieldOfView,
+                GetAimBallViewportY(),
+                out Vector3 camPos,
+                out Quaternion camRot);
+
+            cam.transform.SetPositionAndRotation(camPos, camRot);
+        }
+
+        /// <summary>
+        /// Viewport Y (0 = bottom, 1 = top) the 3D ball must project at during full-swing aim,
+        /// read from the live <see cref="CentralBallWidget"/> rect.
+        ///
+        /// Computed in the ROOT CANVAS's own rect space rather than via screen pixels: the canvas
+        /// rect maps 1:1 onto the camera viewport for both Screen Space – Overlay and
+        /// Screen Space – Camera, so this needs no render-mode branch, and it sidesteps
+        /// Screen.height reporting the Game View window size rather than the render height in
+        /// Editor play mode. Falls back to <see cref="_aimBallViewportYFallback"/> when the widget
+        /// is unwired or not under a canvas.
+        /// </summary>
+        float GetAimBallViewportY()
+        {
+            if (_centralBallWidget == null) return _aimBallViewportYFallback;
+
+            RectTransform rect = _centralBallWidget.Rect;
+            if (rect == null) return _aimBallViewportYFallback;
+
+            Canvas canvas = rect.GetComponentInParent<Canvas>();
+            RectTransform canvasRect = canvas != null ? canvas.rootCanvas.transform as RectTransform : null;
+            if (canvasRect == null || canvasRect.rect.height <= 0f) return _aimBallViewportYFallback;
+
+            float localY = canvasRect.InverseTransformPoint(rect.position).y;
+            float vy     = (localY - canvasRect.rect.yMin) / canvasRect.rect.height;
+
+            // Guard against a mis-parented / off-canvas widget producing an absurd pitch.
+            return (vy > 0.02f && vy < 0.98f) ? vy : _aimBallViewportYFallback;
+        }
+
+        /// <summary>
+        /// True when the ball is sitting on the tee (stroke 1). Uses the same
+        /// "within 1 m of the cached tee midpoint" convention the rest of the tee logic uses —
+        /// there is no stroke counter on this controller or on GameSession to key off.
+        /// </summary>
+        bool BallIsOnTee()
+        {
+            if (!_savedTeePosValid) return false;
+
+            Vector3 ballPos = ballAnimator?.CurrentBall != null
+                ? ballAnimator.CurrentBall.position
+                : _orbitCenter;
+
+            float dx = ballPos.x - _savedTeeWorldPos.x;
+            float dz = ballPos.z - _savedTeeWorldPos.z;
+            return (dx * dx + dz * dz) < 1f;   // 1 m radius
+        }
+
+        /// <summary>
+        /// Camera distance behind the ball for full-swing aim: <see cref="_aimCamDistanceM"/>,
+        /// pulled back only as far as keeping every tee marker on screen requires (tee shots only),
+        /// capped at <see cref="_aimCamMaxDistanceM"/>.
+        /// </summary>
+        float ComputeAimDistance(Vector3 lookDir, Camera cam)
+        {
+            if (cam == null || !BallIsOnTee() || _teeMarkerPositions.Count == 0)
+                return _aimCamDistanceM;
+
+            return SolveAimDistance(
+                _orbitCenter, lookDir, _teeMarkerPositions,
+                _aimCamDistanceM, _aimCamMaxDistanceM,
+                cam.fieldOfView, cam.aspect, _teeMarkerSafeFrac);
+        }
+
+        /// <summary>
+        /// Pure solver (no scene state — unit-testable): places the camera <paramref name="distanceM"/>
+        /// behind and <paramref name="heightM"/> above <paramref name="ballPos"/> along
+        /// <paramref name="lookDirXZ"/>, and pitches it so <paramref name="ballPos"/> projects at
+        /// viewport (0.5, <paramref name="targetViewportY"/>).
+        ///
+        /// Derivation: the ball sits atan(h/d) below the camera's horizontal. A point α below the
+        /// optical axis projects at viewport Y = 0.5 − 0.5·tan(α)/tan(fovV/2), so the required
+        /// offset below the axis is α = atan((1 − 2·vy)·tan(fovV/2)) and pitch = atan(h/d) − α.
+        /// Camera position and ball stay colinear in the XZ look direction, so viewport X = 0.5
+        /// falls out for free.
+        /// </summary>
+        internal static void SolveAimCameraPose(
+            Vector3 ballPos,
+            Vector3 lookDirXZ,
+            float   distanceM,
+            float   heightM,
+            float   verticalFovDeg,
+            float   targetViewportY,
+            out Vector3    camPos,
+            out Quaternion camRot)
+        {
+            Vector3 lookDir = new Vector3(lookDirXZ.x, 0f, lookDirXZ.z);
+            lookDir = lookDir.sqrMagnitude > 1e-8f ? lookDir.normalized : Vector3.forward;
+
+            float d  = Mathf.Max(0.01f, distanceM);
+            float h  = heightM;
+            float vy = Mathf.Clamp(targetViewportY, 0.02f, 0.98f);
+
+            camPos = ballPos - lookDir * d + Vector3.up * h;
+
+            float tanHalfV  = Mathf.Tan(verticalFovDeg * 0.5f * Mathf.Deg2Rad);
+            float thetaOff  = Mathf.Atan((1f - 2f * vy) * tanHalfV);   // rad below view centre
+            float pitchDown = Mathf.Atan2(h, d) - thetaOff;            // rad, + = nose down
+            float yawDeg    = Mathf.Atan2(lookDir.x, lookDir.z) * Mathf.Rad2Deg;
+
+            camRot = Quaternion.Euler(pitchDown * Mathf.Rad2Deg, yawDeg, 0f);
+        }
+
+        /// <summary>
+        /// Pure solver (no scene state — unit-testable): smallest camera distance ≥
+        /// <paramref name="baseDistanceM"/> that keeps every marker's horizontal projection inside
+        /// <paramref name="safeFrac"/> of the half-screen width, capped at <paramref name="maxDistanceM"/>.
+        ///
+        /// Closed form: a marker at lateral offset L and along-track offset A needs
+        /// L / (d + A) ≤ tan(fovH/2)·safeFrac ⇒ d ≥ L / (tan(fovH/2)·safeFrac) − A.
+        /// Uses (d + A) as the view depth, which is slightly conservative — the real depth is
+        /// (d + A)·cos(pitch) + h·sin(pitch), i.e. larger — so the result never under-pulls.
+        /// </summary>
+        internal static float SolveAimDistance(
+            Vector3 ballPos,
+            Vector3 lookDirXZ,
+            System.Collections.Generic.IReadOnlyList<Vector3> markerPositions,
+            float   baseDistanceM,
+            float   maxDistanceM,
+            float   verticalFovDeg,
+            float   aspect,
+            float   safeFrac)
+        {
+            float d = baseDistanceM;
+            if (markerPositions == null || markerPositions.Count == 0) return d;
+
+            Vector3 lookDir = new Vector3(lookDirXZ.x, 0f, lookDirXZ.z);
+            lookDir = lookDir.sqrMagnitude > 1e-8f ? lookDir.normalized : Vector3.forward;
+
+            float tanHalfV = Mathf.Tan(verticalFovDeg * 0.5f * Mathf.Deg2Rad);
+            float tanHalfH = tanHalfV * Mathf.Max(0.01f, aspect);
+            float frac     = Mathf.Clamp(safeFrac, 0.05f, 1f);
+            float denom    = tanHalfH * frac;
+            // Degenerate FOV/aspect: nothing fits on screen — fall back to the pull-back ceiling.
+            if (denom <= 1e-5f) return maxDistanceM;
+
+            Vector3 right = new Vector3(lookDir.z, 0f, -lookDir.x);   // XZ perpendicular
+
+            for (int i = 0; i < markerPositions.Count; i++)
+            {
+                Vector3 rel     = markerPositions[i] - ballPos;
+                float   lateral = Mathf.Abs(Vector3.Dot(rel, right));
+                float   along   = Vector3.Dot(rel, lookDir);          // + = ahead of the ball
+                float   dNeeded = lateral / denom - along;
+                if (dNeeded > d) d = dNeeded;
+            }
+
+            return Mathf.Min(d, maxDistanceM);
         }
 
         // ── Preset firing ──────────────────────────────────────────────────────
@@ -1769,11 +1995,15 @@ namespace Golfin.Physics.Viewer
             // Fall back to SurfaceMarker tee zone GOs if no named markers found.
             Vector3 teePos = Vector3.zero;
             bool teeFound = false;
+            // aim_camera_ball_centering: keep the individual marker positions too — the tee-off
+            // aim clamp needs the SPREAD, not just the midpoint the rest of this block computes.
+            _teeMarkerPositions.Clear();
             if (regularMarkers.Count > 0)
             {
                 foreach (var t in regularMarkers) teePos += t.position;
                 teePos /= regularMarkers.Count;
                 teeFound = true;
+                foreach (var t in regularMarkers) _teeMarkerPositions.Add(t.position);
                 Debug.Log($"[PhysicsLab] OnHoleLoaded: {sceneName} — tee midpoint from {regularMarkers.Count} TeeMarker_regular_* GOs at {teePos:F2}");
             }
             else if (teeGOs.Count > 0)
@@ -1781,6 +2011,7 @@ namespace Golfin.Physics.Viewer
                 foreach (var g in teeGOs) teePos += g.transform.position;
                 teePos /= teeGOs.Count;
                 teeFound = true;
+                foreach (var g in teeGOs) _teeMarkerPositions.Add(g.transform.position);
                 Debug.Log($"[PhysicsLab] OnHoleLoaded: {sceneName} — tee midpoint from {teeGOs.Count} SurfaceMarker tees (fallback) at {teePos:F2}");
             }
 
@@ -2149,6 +2380,7 @@ namespace Golfin.Physics.Viewer
             _greenCentroidValid  = false;
             _ballSpawnPoint      = null;
             _savedTeePosValid    = false;
+            _teeMarkerPositions.Clear();   // aim_camera_ball_centering: no hole ⇒ no tee clamp
             _bakedClassifier     = null;
             _bakedGround         = null;
 

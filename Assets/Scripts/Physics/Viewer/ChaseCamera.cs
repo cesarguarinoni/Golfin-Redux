@@ -18,11 +18,18 @@ namespace Golfin.Physics.Viewer
         [SerializeField] Mode  startMode = Mode.Chase;
         [SerializeField] float smoothTime = 0.08f;
 
+        // Chase framing — §controls_h R1; tightened by aim_camera_ball_centering (2026-08-10).
+        // 3.0/1.8 -> 2.0/1.2 is a uniform ×2/3 scale, so the framing ANGLE is unchanged (31.0° down)
+        // and only the distance closes: camera→ball 3.50 m -> 2.33 m, i.e. the ball renders 1.50×
+        // larger in flight. Chosen to match the aim-phase pass, which brought the at-rest ball from
+        // 8.54 m to 3.31 m; the remaining 3.31 -> 2.33 step at launch reads as a slight push-in and
+        // is absorbed by SmoothDamp (smoothTime 0.08). Both stay Inspector-tunable — scene values
+        // override these defaults, so LabScaffold.unity carries the same numbers.
         [Header("Chase framing — §controls_h R1")]
         [Tooltip("XZ distance behind ball in Chase mode (metres). Smaller = ball appears larger in frame.")]
-        [SerializeField] float _followDistance = 3f;
-        [Tooltip("Height above ball in Chase mode (metres).")]
-        [SerializeField] float _followHeight = 1.8f;
+        [SerializeField] float _followDistance = 2f;
+        [Tooltip("Height above ball in Chase mode (metres). Keep at 0.6 × _followDistance to hold the 31° framing angle.")]
+        [SerializeField] float _followHeight = 1.2f;
 
         Mode      _mode;
         Transform _target;

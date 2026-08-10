@@ -1243,11 +1243,31 @@ namespace Golfin.Physics.Viewer.Bot
             yield return new WaitForSecondsRealtime(2.5f);
             yield return d.Capture("aimline_after_putt");
 
-            bool pass = line.MeshVertexCount == 62 && !line.AimActive;
+            // Regression guard (Cesar, 2026-08-10): the ClubHandle sets ignoreParentGroups=true
+            // so it can stay opaque against a translucent cone, which also made it ignore
+            // ConeAlphaController taking the cone to 0 on Resolving — the handle sat on screen
+            // through the whole chase cam. ShotInProgressUiGate now owns hiding it (ClubHandle is
+            // in its _hideGroupsDuringShot list); no fade, a straight alpha 0 for the duration of
+            // the shot. Both must be ~0 once the shot has resolved.
+            float coneAlpha = -1f, handleAlpha = -1f;
+            foreach (var cg in Object.FindObjectsByType<CanvasGroup>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            {
+                if (cg.gameObject.name == "ConeRoot")   coneAlpha   = cg.alpha;
+                if (cg.gameObject.name == "ClubHandle") handleAlpha = cg.alpha;
+            }
+            bool handleHidden = handleAlpha >= 0f && handleAlpha <= 0.01f;
+            d.LogStep($"  post-shot alpha: ConeRoot={coneAlpha:F3} ClubHandle={handleAlpha:F3} "
+                    + $"(handle must be <=0.010 — it is not allowed to survive the chase cam)");
+            if (!handleHidden)
+                d.LogStep("=== PutterAimBlueLineClip: FAIL — ClubHandle still visible after the shot "
+                        + $"(alpha={handleAlpha:F3}) ===");
+
+            bool pass = line.MeshVertexCount == 62 && !line.AimActive && handleHidden;
             d.LogStep(pass
-                ? $"=== PutterAimBlueLineClip: PASS — lineVerts={line.MeshVertexCount}, hidden after the putt ==="
+                ? $"=== PutterAimBlueLineClip: PASS — lineVerts={line.MeshVertexCount}, aim line hidden "
+                  + $"after the putt, ClubHandle alpha={handleAlpha:F3} ==="
                 : $"=== PutterAimBlueLineClip: FAIL — lineVerts={line.MeshVertexCount} (expected 62), "
-                  + $"aimActive={line.AimActive} (expected False) ===");
+                  + $"aimActive={line.AimActive} (expected False), handleAlpha={handleAlpha:F3} (expected <=0.010) ===");
         }
 
         // ── Scenario: Putter Aim Warped Grid on TestGreen ─────────────────────

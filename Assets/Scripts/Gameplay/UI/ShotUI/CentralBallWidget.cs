@@ -40,6 +40,13 @@ namespace Golfin.Gameplay.UI.ShotUI
 
         private ShotState _currentState = ShotState.Idle;
 
+        /// <summary>
+        /// Read-only access to this widget's rect, so the aim camera can pin the 3D ball to the
+        /// same viewport point (aim_camera_ball_centering — the "future game-camera pass" named
+        /// in the class doc above, solved by moving the camera under this fixed anchor).
+        /// </summary>
+        public RectTransform Rect => _rect;
+
         public void OnPointerClick(PointerEventData eventData)
         {
             if (_currentState == ShotState.Idle && _debugPanel != null)

@@ -1018,14 +1018,21 @@ namespace Golfin.Physics.Viewer.Bot
         }
 
         /// <summary>
-        /// Rotate the gameplay chase camera to look from behind the ball toward the cup —
-        /// mirrors PhysicsLabController.ApplyCameraYaw (orbitCenter = ball). The bot's
+        /// Rotate the gameplay chase camera to look from behind the ball toward the cup. The bot's
         /// SetCameraYawRadians seam sets only the internal _cameraYaw + ShotController heading
         /// (so the SHOT fires at the cup) but never moves the camera, so the visible camera and
         /// the HoleIndicatorWidget flag-tail (bound to chaseCamera.forward) stayed pointed the
         /// old way — the "shoots straight / flag not at the pin" symptom. Idempotent (same angle
         /// as the production AtRest auto-aim). Only acts in Chase mode with the ball at rest so
         /// it never fights ChaseCamera's in-flight follow.
+        ///
+        /// aim_camera_ball_centering (2026-08-10): this used to carry its OWN copy of the legacy
+        /// `−lookDir·8 + up·3` / `LookAt(+lookDir·3 + up·0.5)` framing. When ApplyCameraYaw was
+        /// reworked to pin the ball under the 2D CentralBallWidget at ~3 m, that copy silently
+        /// went stale and bot-recorded clips framed shots from ~8.5 m while a real player saw
+        /// ~3.3 m — i.e. the bot videos stopped being evidence of what ships. It now delegates to
+        /// PhysicsLabController.ApplyAimCameraAt, so there is exactly ONE aim-framing
+        /// implementation and the bot inherits every future change for free.
         /// </summary>
         void AimChaseCameraAtCup(Vector3 ball, Vector3 cup)
         {
@@ -1034,10 +1041,16 @@ namespace Golfin.Physics.Viewer.Bot
             if (chase.CurrentMode != Golfin.Physics.Viewer.ChaseCamera.Mode.Chase) return;
             var cam = chase.GetComponent<Camera>();
             if (cam == null) return;
+
+            var ctrl = UnityEngine.Object.FindObjectOfType<Golfin.Physics.Viewer.PhysicsLabController>();
+            if (ctrl == null)
+            {
+                LogStep("AimChaseCameraAtCup: no PhysicsLabController — cannot apply production aim framing, camera left as-is.");
+                return;
+            }
+
             float yaw = Mathf.Atan2(cup.z - ball.z, cup.x - ball.x);
-            Vector3 lookDir = new Vector3(Mathf.Cos(yaw), 0f, Mathf.Sin(yaw));
-            cam.transform.position = ball - lookDir * 8f + Vector3.up * 3f;
-            cam.transform.LookAt(ball + lookDir * 3f + Vector3.up * 0.5f);
+            ctrl.ApplyAimCameraAt(cam, ball, yaw);
         }
 
         /// <summary>
