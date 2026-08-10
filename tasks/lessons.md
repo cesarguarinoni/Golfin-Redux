@@ -2040,3 +2040,61 @@ captions before delivering — the same discipline the standing rule already dem
 recovery: captions come from `tasks/loop_v2_smoke_bot/<scenario>/screenshots/history.log`, so
 re-wrapping and re-running `build_bot_video.py` re-encodes from the kept raw with no re-record
 (pass `--keep-raw` on the first run so the raw survives).
+
+## Lesson AO — the Unity Editor may be shared with another live session (2026-08-10)
+
+While implementing `hole_scene_leftover_v3` I called `tests-run` and got *"Cannot run tests: another
+test run is already in progress."* I read that as an MCP retry queueing duplicates of **my own** call
+(memory `reference_never_buildplayer_via_script_execute` documents that retry behaviour), and kept
+working around it — sampling scene state at odd moments, and eventually invoking a fixture's real
+`[OneTimeSetUp]` by reflection while 18 hole scenes were open. Cesar interrupted: those were **another
+Claude session's** runs. I had been stepping on live work. The same session also landed commit
+`5d938c9a8` mid-verification, which silently moved HEAD and removed two files from my recorded dirty
+baseline — and produced a "failure" in one of my acceptance runs that was really its half-landed state.
+
+**How to apply.** The Editor is a single shared resource, not mine. Before driving it:
+1. Treat *"another test run is already in progress"*, unexplained scenes appearing in the hierarchy,
+   and a HEAD that moves under you as **evidence of a concurrent operator**, not as MCP flakiness.
+2. Re-check `git rev-parse HEAD` before quoting any baseline or attributing a test failure; record the
+   move in HEARTBEAT rather than silently re-baselining.
+3. Never `kill -9` Unity, enter play mode, or force a domain reload on a shared Editor without asking
+   — those are the three actions that destroy someone else's in-flight work. Ask, and offer to hand
+   the step back as a Cesar-on-device item; a deferred acceptance item with exact repro steps is worth
+   far more than a completed one that cost another session its run.
+4. Reflection-invoking a test fixture's setup/teardown is only safe when nothing else is running.
+
+## Lesson AP — `delayCall` at `[InitializeOnLoad]` races Unity's scene restore (2026-08-11)
+
+`StagedHoleSceneGuard` (hole_scene_leftover_v3) hooked `EditorApplication.delayCall` once from its
+`[InitializeOnLoad]` static ctor to sweep leftover hole scenes at editor start. It passed its
+acceptance test. Then, on an identical staged state, it **silently did nothing** — a leaked
+`ShellScene + Hole_06_Geo` survived a full `kill -9` + relaunch with no guard line in the log at all.
+
+Unity restores the scene setup from `Library/LastSceneManagerSetup.txt` **after** `[InitializeOnLoad]`
+runs. A single `delayCall` therefore races that restore: sometimes it fires after the scenes are back
+(works), sometimes before (finds an empty hierarchy, returns 0, and never retries). The acceptance run
+happened to win the race; the next one lost it.
+
+**How to apply.** For any editor-load action that must observe the *restored* hierarchy, do not use a
+one-shot `delayCall`. Poll `EditorApplication.update` until the editor is genuinely idle
+(`!isCompiling && !isUpdating && !isPlaying`) plus a short settle, act once, then unsubscribe. More
+generally: a load-time hook that passed once has not been shown to be deterministic — re-run it on a
+freshly staged state before believing it, and make sure the *absence* of an action is loud enough to
+notice (a silent `return 0` is indistinguishable from "nothing to do").
+
+## Lesson AQ — a symptom that always names the same object is a pointer, not a coincidence (2026-08-11)
+
+`hole_scene_leftover_v3` was the third attempt at "`Hole_NN_Geo` keeps reappearing". v1 and v2 blamed
+the capture launchers; v3's spec blamed the EditMode 18-hole sweep. All three were real vectors. None
+explained the one detail present in every report: it was **always `Hole_06`**.
+
+The answer was `PhysicsLabAutoRestore` (`PhysicsLabHolePicker.cs`), which auto-loads EditorPref
+`Golfin.PhysicsLab.CurrentHole` — set to 6 — whenever `LabScaffold` is opened, including additively by
+a test fixture, and which never re-validated after its own `delayCall` deferral (observed injecting
+`Hole_06_Geo` next to ShellScene with no LabScaffold open at all).
+
+**How to apply.** When a bug report carries an oddly specific constant — always the same hole, always
+the same user, always the same hour — treat that constant as the strongest available evidence and
+hunt for the code that *stores* it. A vector that explains the mechanism but not the constant is at
+best an accomplice. Corollary: the 18-hole sweep genuinely leaked and Layer 1 genuinely fixes it, so
+"my diagnosis reproduced a leak" is not proof it is *the* leak the user is reporting.

@@ -1,0 +1,65 @@
+=== iter-1 kickoff baseline 2026-08-10 ===
+HEAD: a9ef35adb266118d26a20ad71d3f4e037c08607e
+DIRTY (git status --porcelain --untracked-files=all):
+ M Assets/Scripts/Physics/Tests/AimCameraFramingTests.cs
+ M Assets/Scripts/Physics/Viewer/Bot/Scenarios.cs
+ M Assets/Scripts/Physics/Viewer/PhysicsLabController.cs
+ M tasks/loop_v2_smoke_bot/hole1_playthrough/live_stat_log.txt
+ M tasks/loop_v2_smoke_bot/hole1_playthrough/screenshots/history.log
+Editor state at kickoff: IsPlaying=false IsCompiling=false; open scenes = ShellScene only (clean).
+=== end baseline ===
+
+=== iter-1 baseline UPDATE (HEAD moved mid-verification) ===
+A concurrent stream committed 5d938c9a8 "fix(camera): putter aim centres the ball under the
+2D ball widget" at ~16:44 JST, while acceptance runs were in flight. That commit took
+Assets/Scripts/Physics/Tests/AimCameraFramingTests.cs and
+Assets/Scripts/Physics/Viewer/PhysicsLabController.cs out of the DIRTY set recorded above.
+Neither file is touched by this task. This accounts for the transient
+AimCameraFramingTests.ApplyCameraYaw_PutterBranch_* failure seen in acceptance run #2.
+New HEAD: 5d938c9a8. Remaining pre-existing DIRTY (not this task):
+ M Assets/Scripts/Physics/Viewer/Bot/Scenarios.cs
+ M tasks/loop_v2_smoke_bot/hole1_playthrough/live_stat_log.txt
+ M tasks/loop_v2_smoke_bot/hole1_playthrough/screenshots/history.log
+=== end update ===
+
+=== iter-1 verification complete ===
+Acceptance runs A/B (back-to-back, fix in place): 1111 / 1108 pass / 0 fail / 3 skip, both dumps clean.
+Control runs (task changes stashed) used to attribute 3 flaky failures to the tree, not this task.
+Guard: all four condition branches exercised (A1 alone+active+dirty, A2 dirty+non-active,
+A3 clean+active, B clean+non-active) — 3 skips + 1 close, all correct.
+Hole_06_Geo.unity sha256 unchanged (d28fd1fb…), mtime still 2026-06-02. Zero .unity diffs.
+Editor left clean: ShellScene only, not dirty, guard ENABLED, staged-scene window cleared.
+NOT RUN (deferred to Cesar, shared Editor): capture-launcher play-mode pass; killed-editor kill -9 case.
+=== end ===
+
+=== iter-1 acceptance completed 2026-08-11 (Cesar handed over the Editor) ===
+#6 launcher path: GOLFIN/Capture 1v1/Record Versus Launch — full play-mode round trip.
+   Guard closed Hole_04_Geo on EnteredEditMode; CaptureSceneSetup then restored ShellScene with its
+   pre-change log text verbatim. Post-run dump: ShellScene only, HOLE_GEO_SCENES_OPEN=0.
+#7 killed-editor: staged LabScaffold+Hole_06_Geo, confirmed LastSceneManagerSetup.txt carried the
+   leak, kill -9 42719 @06:31:30, relaunched. Unity reopened Hole_06_Geo (log :565); guard closed it
+   at load (log :593, hook=delayCall). Post-relaunch: HOLE_GEO_SCENES_OPEN=0.
+   kill -9 crash recovery wrote Assets/_Recovery/{0 (3),1 (2)}.unity (gitignored, .gitignore:194);
+   both deleted via AssetDatabase.DeleteAsset. Folder back to the 5 April-30 scenes tracked in HEAD.
+Final: ShellScene only, clean, guard ON, zero .unity diffs, LastSceneManagerSetup.txt = ShellScene.
+ALL 11 acceptance items PASS.
+=== end ===
+
+=== iter-2 2026-08-11 (after red-team ARCHITECT_REVIEW_ESCALATE + Cesar scope decision) ===
+HEAD at iter-2 start: 5d938c9a8 (unchanged by me).
+Third vector found and fixed at source: PhysicsLabAutoRestore in PhysicsLabHolePicker.cs.
+  - Evidence A: Editor.log:31772 stack — RestoreHole(:52) <- OnSceneOpened b__0(:32), fired during
+    the suite because ActionButtonRenderingTests opens LabScaffold ADDITIVELY.
+  - Evidence B: Editor.log:64820-64826 — "Opening scene Hole_06_Geo additively" +
+    "[PhysicsLab] Auto-restored Hole 06" with ONLY ShellScene open. Deferred restore never
+    re-validated LabScaffold. EditorPref Golfin.PhysicsLab.CurrentHole = 6 => always Hole_06.
+Second defect found while verifying: guard's editor-load delayCall races Unity's post-
+  InitializeOnLoad scene restore and LOST it — a staged ShellScene+Hole_06_Geo survived a full
+  kill -9 + relaunch with no guard line at all. Replaced with an idle-settle pump on
+  EditorApplication.update; re-ran the kill/relaunch and it swept at hook=editor-load.
+Files changed this iter: PhysicsLabHolePicker.cs, StagedHoleSceneGuard.cs.
+Zero .unity diffs. Editor left: ShellScene only, clean, guard ON, PhysicsLab pref 6.
+Note: during iter-2 an errant relaunch briefly started a SECOND editor on the project (bad pgrep
+  pattern matched nothing, so the first kill was a no-op). Both were killed and one relaunched;
+  no corruption observed, zero .unity diffs, suite green afterwards.
+=== end ===
