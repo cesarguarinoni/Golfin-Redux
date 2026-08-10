@@ -16,7 +16,19 @@ namespace Golfin.Gameplay.UI.ShotUI
         [SerializeField] private Color _colorRed    = new Color(0.90f, 0.15f, 0.10f, 1f);
         [SerializeField] private Color _colorMaroon = new Color(0.55f, 0.00f, 0.12f, 1f);
 
+        // ── Map-target marker (power_gauge_target_marker) ────────────────────────
+        // A thin radial notch at the % of club carry that lands the shot on the target the
+        // player placed in map view. Procedural: vertices in this graphic's mesh, so it
+        // inherits the widget's CanvasGroup show/hide and ShotInProgressUiGate for free.
+        [Header("Map-target marker")]
+        [SerializeField] private float _markerWidthDeg    = 2.5f;
+        [SerializeField] private float _markerOverhangPx  = 4f;
+        [SerializeField] private Color _markerColor       = new Color(1f, 1f, 1f, 0.95f);
+        [SerializeField] private Color _markerColorUnreachable = new Color(0.90f, 0.15f, 0.10f, 0.95f);
+
         private float _progress01;
+        private float _markerFrac01 = -1f;
+        private bool  _markerUnreachable;
 
         public float Progress01
         {
@@ -29,35 +41,85 @@ namespace Golfin.Gameplay.UI.ShotUI
             }
         }
 
+        /// <summary>
+        /// Marker position as a fraction of club carry (1.0 = 100% power). Negative = no
+        /// target mapped → the notch is not drawn. Pushed by PowerGaugeWidget each state update.
+        /// </summary>
+        public float MarkerFrac01
+        {
+            get => _markerFrac01;
+            set
+            {
+                if (Mathf.Approximately(_markerFrac01, value)) return;
+                _markerFrac01 = value;
+                SetVerticesDirty();
+            }
+        }
+
+        /// <summary>
+        /// True when the mapped target lies beyond this club's overpower reach (frac &gt; 1.2).
+        /// The notch pins at 1.2 and turns red so "not reachable with this club" reads at a glance.
+        /// </summary>
+        public bool MarkerUnreachable
+        {
+            get => _markerUnreachable;
+            set
+            {
+                if (_markerUnreachable == value) return;
+                _markerUnreachable = value;
+                SetVerticesDirty();
+            }
+        }
+
         protected override void OnPopulateMesh(VertexHelper vh)
         {
             vh.Clear();
 
             float fillAngleDeg = _progress01 * 360f;
-            Debug.Log($"[PowerGaugeGraphic] OnPopulateMesh — progress={_progress01:F3} fill={fillAngleDeg:F1}° innerR={_innerRadius} outerR={_outerRadius} segs={_segmentCount}");
+            Debug.Log($"[PowerGaugeGraphic] OnPopulateMesh — progress={_progress01:F3} fill={fillAngleDeg:F1}° innerR={_innerRadius} outerR={_outerRadius} segs={_segmentCount} marker={_markerFrac01:F3}");
 
-            if (fillAngleDeg <= 0f) return;
-
-            float stepDeg   = 360f / _segmentCount;
-            int   totalSegs = Mathf.CeilToInt(fillAngleDeg / stepDeg);
-
-            for (int i = 0; i < totalSegs; i++)
+            if (fillAngleDeg > 0f)
             {
-                float a0 = i * stepDeg;
-                float a1 = Mathf.Min((i + 1) * stepDeg, fillAngleDeg);
-                AddQuad(vh, a0, a1, ArcColor(a0), ArcColor(a1));
+                float stepDeg   = 360f / _segmentCount;
+                int   totalSegs = Mathf.CeilToInt(fillAngleDeg / stepDeg);
+
+                for (int i = 0; i < totalSegs; i++)
+                {
+                    float a0 = i * stepDeg;
+                    float a1 = Mathf.Min((i + 1) * stepDeg, fillAngleDeg);
+                    AddQuad(vh, a0, a1, ArcColor(a0), ArcColor(a1));
+                }
             }
+
+            // Drawn LAST so the notch sits on top of the fill at any power level.
+            AddMarker(vh);
+        }
+
+        private void AddMarker(VertexHelper vh)
+        {
+            if (_markerFrac01 < 0f) return;
+
+            float centerDeg = _markerFrac01 * 360f;
+            float halfDeg   = Mathf.Max(0.1f, _markerWidthDeg) * 0.5f;
+            Color c         = _markerUnreachable ? _markerColorUnreachable : _markerColor;
+
+            AddQuad(vh, centerDeg - halfDeg, centerDeg + halfDeg, c, c,
+                    _innerRadius - _markerOverhangPx, _outerRadius + _markerOverhangPx);
         }
 
         private void AddQuad(VertexHelper vh, float deg0, float deg1, Color c0, Color c1)
+            => AddQuad(vh, deg0, deg1, c0, c1, _innerRadius, _outerRadius);
+
+        private void AddQuad(VertexHelper vh, float deg0, float deg1, Color c0, Color c1,
+                             float innerRadius, float outerRadius)
         {
             float rad0 = deg0 * Mathf.Deg2Rad;
             float rad1 = deg1 * Mathf.Deg2Rad;
 
-            var ia = new Vector3(Mathf.Sin(rad0) * _innerRadius, Mathf.Cos(rad0) * _innerRadius);
-            var oa = new Vector3(Mathf.Sin(rad0) * _outerRadius, Mathf.Cos(rad0) * _outerRadius);
-            var ib = new Vector3(Mathf.Sin(rad1) * _innerRadius, Mathf.Cos(rad1) * _innerRadius);
-            var ob = new Vector3(Mathf.Sin(rad1) * _outerRadius, Mathf.Cos(rad1) * _outerRadius);
+            var ia = new Vector3(Mathf.Sin(rad0) * innerRadius, Mathf.Cos(rad0) * innerRadius);
+            var oa = new Vector3(Mathf.Sin(rad0) * outerRadius, Mathf.Cos(rad0) * outerRadius);
+            var ib = new Vector3(Mathf.Sin(rad1) * innerRadius, Mathf.Cos(rad1) * innerRadius);
+            var ob = new Vector3(Mathf.Sin(rad1) * outerRadius, Mathf.Cos(rad1) * outerRadius);
 
             int b = vh.currentVertCount;
             var v = UIVertex.simpleVert;

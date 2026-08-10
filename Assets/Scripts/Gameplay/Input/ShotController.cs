@@ -31,6 +31,21 @@ namespace Golfin.Gameplay.Input
         /// </summary>
         public Vector2 PendingSpinInput      { get; set; }
 
+        /// <summary>
+        /// Landing distance (METRES) of the target the player placed in map view.
+        /// -1 = no target mapped. Written by MapViewController.CloseImmediate(); read by
+        /// PowerGaugeWidget to draw the "flick to here" notch (power_gauge_target_marker).
+        ///
+        /// Stored in METRES, deliberately NOT normalized: a club change after the target was
+        /// placed just moves the marker (the fraction is re-derived against the new club's
+        /// carry) instead of lying about a distance that never changed.
+        ///
+        /// READ-ONLY with respect to the shot: nothing in ComputePower / CommitFlick consumes
+        /// this — it is a HUD readout, not a power recalibration.
+        /// Cleared at CommitFlick (one marker per mapped shot).
+        /// </summary>
+        public float MapTargetCarryM          { get; set; } = -1f;
+
         // ── Fade/Draw mode state (D1–D5, fade_draw_core_wiring Order 356) ───────
         // Cannot read ShotModeContext directly (circular asmdef: Input does not ref UI).
         // UI layer (ShotConeView) pushes these values when mode changes.
@@ -472,6 +487,12 @@ namespace Golfin.Gameplay.Input
         private void CommitFlick()
         {
             State = ShotState.Flicking;
+
+            // One marker per mapped shot: the map target dies with the stroke that used it.
+            // Deliberately NOT in TransitionToIdle — a failed flick (slow release, arrow
+            // timeout, cancelled drag) routes there too, and re-pulling after a fumbled flick
+            // must keep the marker the player just placed on the map.
+            MapTargetCarryM = -1f;
 
             // ── Order 350: Swing + Hit SFX ────────────────────────────────────────
             // Published at the moment the player commits the shot. Read-only: does not
