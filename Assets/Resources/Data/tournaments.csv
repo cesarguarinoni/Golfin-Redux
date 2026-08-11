@@ -5,6 +5,16 @@
 # SIGN UP CTA anywhere, which stalled the tournament capture harness. Note the Ending
 # state only exists within 1h of endUtc, so it is only reachable via a relative row.
 #
+# ⚠️ THESE RELATIVE ROWS ARE DEMO/QA DATA, NOT A REAL SCHEDULE. This file ships (it is
+# under Resources/ and LocalTournamentBackend is the only backend), so with relative dates
+# every player's tournament window anchors to THEIR session load: Kasumigaseki always
+# "ends in 4d 23h" for everyone, tournaments never actually start or end, and the schedule
+# resets every launch. Two players a week apart sit in different personal windows while
+# sharing one leaderboard — incoherent for a competitive feature. Real tournaments need
+# server-authoritative definitions. The clock seam already exists (TimeProviderClock over
+# NetworkTimeProvider); it is the DEFINITIONS that still come from this static file.
+# Tracking ticket: "tournament schedule must come from the backend, not Resources CSV".
+#
 # Row order IS render order on the T7 selection screen (no sort), and the capture harness
 # clicks the FIRST "SIGN UP" button — so kasumigaseki must stay row 1 and stay Open.
 #
