@@ -420,60 +420,24 @@ namespace Golfin.Tournaments
         private static string? NullIfEmpty(string s)
             => string.IsNullOrEmpty(s) ? null : s;
 
+        /// <summary>
+        /// Parse an absolute UTC timestamp from the CSV.
+        /// <para>
+        /// Deliberately absolute-only. A clock-relative form (<c>now+5d</c>) was tried and
+        /// reverted: this file ships, so anchoring to session load time would give every
+        /// player a private schedule — the same tournament "ending in 4d" forever, never
+        /// actually starting or finishing, and two players in different windows sharing one
+        /// leaderboard. Every build must show the same tournaments at the same times, so the
+        /// dates live here and <c>LocalTournamentBackend.DeriveState</c> compares them to the
+        /// current time. Expired rows are the schedule doing its job; refresh the data.
+        /// </para>
+        /// </summary>
         private static DateTime ParseUtc(string raw, string rowId, string colName)
         {
-            // Relative form first — see TryParseRelativeUtc for why it exists.
-            DateTime? rel = TryParseRelativeUtc(raw);
-            if (rel.HasValue) return rel.Value;
-
             if (DateTime.TryParse(raw, null, DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal, out DateTime dt))
                 return dt;
             Debug.LogWarning($"[TournamentCsvLoader] Cannot parse '{colName}'='{raw}' for id='{rowId}'; using DateTime.MinValue");
             return DateTime.MinValue;
-        }
-
-        /// <summary>
-        /// Parse a clock-relative timestamp: <c>now</c>, <c>now+5d</c>, <c>now-45m</c>, <c>now+2h</c>.
-        /// Units: <c>d</c> days, <c>h</c> hours, <c>m</c> minutes. Returns null when
-        /// <paramref name="raw"/> is not relative, so absolute ISO timestamps keep working
-        /// exactly as before.
-        /// <para>
-        /// Why: fixture rows written with absolute dates silently rot. Every tournament in
-        /// this repo expired, which left the T7 screen with nothing but ENDED cards and no
-        /// SIGN UP CTA anywhere — the tournament capture harness could not get past its
-        /// signup step. Worse, the <c>Ending</c> state is only reachable within one hour of
-        /// <c>endUtc</c>, so an absolute row can occupy it for exactly one hour, ever.
-        /// Anchoring to load time makes the demo/QA fixtures self-maintaining.
-        /// </para>
-        /// </summary>
-        internal static DateTime? TryParseRelativeUtc(string raw)
-        {
-            if (string.IsNullOrWhiteSpace(raw)) return null;
-            string s = raw.Trim();
-            if (!s.StartsWith("now", StringComparison.OrdinalIgnoreCase)) return null;
-
-            DateTime now = DateTime.UtcNow;
-            string rest = s.Substring(3).Trim();
-            if (rest.Length == 0) return now;                       // bare "now"
-
-            char sign = rest[0];
-            if (sign != '+' && sign != '-') return null;
-            rest = rest.Substring(1).Trim();
-            if (rest.Length < 2) return null;
-
-            char unit = rest[rest.Length - 1];
-            string numberPart = rest.Substring(0, rest.Length - 1).Trim();
-            if (!double.TryParse(numberPart, NumberStyles.Float, CultureInfo.InvariantCulture, out double value))
-                return null;
-            if (sign == '-') value = -value;
-
-            switch (char.ToLowerInvariant(unit))
-            {
-                case 'd': return now.AddDays(value);
-                case 'h': return now.AddHours(value);
-                case 'm': return now.AddMinutes(value);
-                default:  return null;
-            }
         }
 
         private static int ParseInt(string raw, int fallback)

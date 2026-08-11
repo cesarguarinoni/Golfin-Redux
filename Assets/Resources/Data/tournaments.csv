@@ -1,36 +1,29 @@
 # Tournament definitions — one row per tournament. courseId→ClubId; holeSet expands ranges.
-# startUtc/endUtc accept an absolute ISO timestamp OR a clock-relative form anchored at
-# load time: now, now+5d, now-45m, now+2h (units d/h/m). Relative rows keep the demo and
-# QA fixtures from rotting — absolute dates expired and left every card ENDED with no
-# SIGN UP CTA anywhere, which stalled the tournament capture harness. Note the Ending
-# state only exists within 1h of endUtc, so it is only reachable via a relative row.
 #
-# ⚠️ THESE RELATIVE ROWS ARE DEMO/QA DATA, NOT A REAL SCHEDULE. This file ships (it is
-# under Resources/ and LocalTournamentBackend is the only backend), so with relative dates
-# every player's tournament window anchors to THEIR session load: Kasumigaseki always
-# "ends in 4d 23h" for everyone, tournaments never actually start or end, and the schedule
-# resets every launch. Two players a week apart sit in different personal windows while
-# sharing one leaderboard — incoherent for a competitive feature. Real tournaments need
-# server-authoritative definitions. The clock seam already exists (TimeProviderClock over
-# NetworkTimeProvider); it is the DEFINITIONS that still come from this static file.
-# Tracking ticket: "tournament schedule must come from the backend, not Resources CSV".
+# startUtc/endUtc are ABSOLUTE UTC timestamps, on purpose: this file ships, so every build
+# must show the same tournaments at the same times. LocalTournamentBackend.DeriveState
+# compares them against the current time to produce the card state:
+#
+#   now < startUtc ................................. Upcoming   -> UPCOMING
+#   in window, more than 1h before endUtc .......... Open       -> SIGN UP
+#   in window, within 1h of endUtc ................. Ending     -> SIGN UP
+#   now >= endUtc .................................. Ended      -> LEADERBOARD
+#   (+ EnteredActive -> CONTINUE and EnteredFinished -> LEADERBOARD once signed up)
+#
+# Ending is by nature the final hour of a tournament, so no row sits in it permanently —
+# each Open row passes through it on its way out. That is correct behaviour, not a gap.
+#
+# ⚠️ THIS IS A LIVE SCHEDULE AND IT EXPIRES. When every row's endUtc is in the past the
+# screen correctly shows all ENDED with no SIGN UP CTA anywhere, which also stalls
+# TournamentLoopCaptureHarness at its signup step. That is the data being out of date, not
+# a bug — refresh the dates below. Last refreshed 2026-08-11.
 #
 # Row order IS render order on the T7 selection screen (no sort), and the capture harness
-# clicks the FIRST "SIGN UP" button — so kasumigaseki must stay row 1 and stay Open.
-#
-# State coverage (card state -> CTA):
-#   kasumigaseki_open    Open      -> SIGN UP      (harness signs up here)
-#   hirono_invitational  Ending    -> SIGN UP      (inside the final hour)
-#   kisarazu_cup         Open      -> SIGN UP      (keeps the OPEN tab populated)
-#   lomond_championship  Upcoming  -> UPCOMING
-#   gotemba_masters      Ended     -> LEADERBOARD
-#   kawana_fuji_open     Ended     -> LEADERBOARD
-# EnteredActive (CONTINUE) and EnteredFinished (LEADERBOARD) are entry-driven, not
-# date-driven: they appear on kasumigaseki once a player signs up and plays.
+# clicks the FIRST "SIGN UP" — so keep an Open row at the top (kasumigaseki).
 id,nameKey,courseId,holeSet,startUtc,endUtc,resolveDelayMinutes,entryFeeRP,botFieldId,prizeTableId,sponsorKey,leagueKey
-kasumigaseki_open,tourn.kasumigaseki,kasumigaseki,1-18,now-2d,now+5d,30,100,field_major,prize_major,PUMA,DIAMOND
-hirono_invitational,tourn.hirono,hirono,1-18,now-3d,now+45m,30,0,field_major,prize_major,GOLFIN,DIAMOND
-kisarazu_cup,tourn.kisarazu,kisarazu,1-18,now-1d,now+9d,30,0,field_small,prize_small,MIZUNO,SILVER
-lomond_championship,tourn.lomond,lomond,1-18,now+6d,now+11d,30,0,field_medium,prize_medium,TITLEIST,GOLD
-gotemba_masters,tourn.gotemba,gotemba,1-18,now-12d,now-5d,30,500,field_major,prize_major,TAIHEIYO,GOLD
-kawana_fuji_open,tourn.kawana,kawana,1-18,now-20d,now-10d,30,0,field_major,prize_major,GOLFIN,DIAMOND
+kasumigaseki_open,tourn.kasumigaseki,kasumigaseki,1-18,2026-08-09T00:00:00Z,2026-08-25T00:00:00Z,30,100,field_major,prize_major,PUMA,DIAMOND
+hirono_invitational,tourn.hirono,hirono,1-18,2026-08-08T00:00:00Z,2026-08-14T12:00:00Z,30,0,field_major,prize_major,GOLFIN,DIAMOND
+kisarazu_cup,tourn.kisarazu,kisarazu,1-18,2026-08-10T00:00:00Z,2026-08-20T00:00:00Z,30,0,field_small,prize_small,MIZUNO,SILVER
+lomond_championship,tourn.lomond,lomond,1-18,2026-08-18T00:00:00Z,2026-08-24T00:00:00Z,30,0,field_medium,prize_medium,TITLEIST,GOLD
+gotemba_masters,tourn.gotemba,gotemba,1-18,2026-07-28T00:00:00Z,2026-08-05T00:00:00Z,30,500,field_major,prize_major,TAIHEIYO,GOLD
+kawana_fuji_open,tourn.kawana,kawana,1-18,2026-07-20T00:00:00Z,2026-07-27T00:00:00Z,30,0,field_major,prize_major,GOLFIN,DIAMOND
