@@ -2098,3 +2098,62 @@ the same user, always the same hour — treat that constant as the strongest ava
 hunt for the code that *stores* it. A vector that explains the mechanism but not the constant is at
 best an accomplice. Corollary: the 18-hole sweep genuinely leaked and Layer 1 genuinely fixes it, so
 "my diagnosis reproduced a leak" is not proof it is *the* leak the user is reporting.
+
+## Lesson AT — a "first match wins" lookup is wrong wherever the UI keeps duplicate instances (tournaments_mode_card demo recorder, 2026-08-11)
+
+The demo recorder found the card to drive with
+`FindObjectsByType<ModeCardController>().FirstOrDefault(c => c.ModeId == "tournaments")`. It recorded a
+clean 48-second clip in which the expand tap and **both** PLAY taps silently did nothing — the video
+just sat on the Home screen. No exception, no warning, and the runner's own log said every step had
+been "tapped".
+
+The home carousel is a **3× virtual array**: every mode exists as three live card instances so the
+list can scroll circularly. Only the middle-pass instance has `OnPlayClicked` wired, and expand only
+acts on whichever instance is currently *centred* — and `NormalizeCenterInstant` can swap which
+instance that is mid-snap. "First match" handed back a side card whose PLAY button is inactive and
+unwired, so `onClick.Invoke()` was a no-op on an object that looked correct in every respect.
+
+**How to apply.** Before addressing a UI element by type-search, ask whether the screen deliberately
+holds more than one of it (carousels, virtualised lists, pooled rows, 3× ring buffers). If so, resolve
+through the controller's own index — `_allCards[_centeredVirtualIndex]`, the middle-pass slice — not
+through a scene-wide search. And note the shape of the failure: **invoking a handler on the wrong
+instance fails silently**, so a log line saying "tapped X" proves nothing. Assert the *consequence*
+(`CurrentScreen == TournamentSelection`) rather than the action, which is what finally caught this.
+
+## Lesson AU — `setAtlasSizeToZero` does the opposite of what its name suggests; measure before "fixing" a flag (DynamicFontAtlasGuard, 2026-08-11)
+
+Rendering Japanese once in the editor grows `NotoSansJP-VariableFont_wght SDF.asset` from 59 KB to
+2.27 MB, because a **Dynamic** TMP font rasterises glyphs into its own serialized atlas. The guard that
+clears this on play-mode exit initially called `ClearFontAssetData(setAtlasSizeToZero: true)`. Seeing
+the file land *below* its committed size, I "fixed" the flag to `false` — reasoning, from the name,
+that `true` was destroying the authored 1024×1024 atlas.
+
+Both halves of that reasoning were wrong, and one measurement each disproved them:
+
+* `true` does **not** zero `atlasWidth/atlasHeight` — they stay 1024×1024. It drops the 1 MB Alpha8
+  *texture payload*, which is the only thing making the asset fat. `TryAddCharacters` afterwards still
+  rasterises normally (verified: 9 glyphs added, atlas still 1024×1024), so nothing ships as tofu.
+* `false` leaves the pixels serialized and does not shrink the file **at all** — 2,104,924 bytes either
+  way. The "safe" option was a guard that logs success and accomplishes nothing.
+
+**How to apply.** When an API flag's name implies a destructive side effect, verify what it actually
+mutates before trading it away — here, printing `atlasWidth`/`atlasHeight`/file size on both sides of
+the call settled it in one script. Second: for churn guards, "the file got smaller" is not success and
+"the file didn't grow" is not either. Prove **idempotency** — run the clear twice and require the two
+results to be byte-identical — then commit the asset in exactly that state so every future run
+round-trips to the committed bytes. Also worth knowing: this bloat never reached a player build
+(`m_ClearDynamicDataOnBuild` is already true), so it is purely editor hygiene.
+
+## Lesson AV — the ffmpeg caption font has no CJK and no arrows; captions are ASCII-only (build_bot_video.py, 2026-08-11)
+
+Two takes of a demo video shipped with visibly broken captions before frame inspection caught them.
+`build_bot_video.py` draws captions with Helvetica, which has neither Japanese glyphs nor `→` — both
+render as **tofu boxes** (`Japanese — □□□□□□`, `PLAY □ Tournament Selection`). A third defect came from
+sizing: the tool derives font size from *height* (`h/32` = 79 px at 2532), which overflows a 1170-wide
+portrait phone clip off **both** edges.
+
+**How to apply.** Keep burned-in caption text ASCII — the UI in frame already shows the localized
+strings, so the caption only has to name what is happening. Use `->` not `→`, `-` not `·`. For portrait
+captures pass `--caption-fontsize 42 --caption-wrap 32`. And never treat a caption pass as done because
+ffmpeg exited 0: **decode a frame from each caption window and look at it**, exactly as with the video
+itself. Every one of these three defects was invisible in the tool's output and obvious in the frame.
