@@ -1,8 +1,26 @@
 # Tournament definitions — one row per tournament. courseId→ClubId; holeSet expands ranges.
+# startUtc/endUtc accept an absolute ISO timestamp OR a clock-relative form anchored at
+# load time: now, now+5d, now-45m, now+2h (units d/h/m). Relative rows keep the demo and
+# QA fixtures from rotting — absolute dates expired and left every card ENDED with no
+# SIGN UP CTA anywhere, which stalled the tournament capture harness. Note the Ending
+# state only exists within 1h of endUtc, so it is only reachable via a relative row.
+#
+# Row order IS render order on the T7 selection screen (no sort), and the capture harness
+# clicks the FIRST "SIGN UP" button — so kasumigaseki must stay row 1 and stay Open.
+#
+# State coverage (card state -> CTA):
+#   kasumigaseki_open    Open      -> SIGN UP      (harness signs up here)
+#   hirono_invitational  Ending    -> SIGN UP      (inside the final hour)
+#   kisarazu_cup         Open      -> SIGN UP      (keeps the OPEN tab populated)
+#   lomond_championship  Upcoming  -> UPCOMING
+#   gotemba_masters      Ended     -> LEADERBOARD
+#   kawana_fuji_open     Ended     -> LEADERBOARD
+# EnteredActive (CONTINUE) and EnteredFinished (LEADERBOARD) are entry-driven, not
+# date-driven: they appear on kasumigaseki once a player signs up and plays.
 id,nameKey,courseId,holeSet,startUtc,endUtc,resolveDelayMinutes,entryFeeRP,botFieldId,prizeTableId,sponsorKey,leagueKey
-kasumigaseki_open,tourn.kasumigaseki,kasumigaseki,1-18,2026-06-26T00:00:00Z,2026-07-03T00:00:00Z,30,100,field_major,prize_major,PUMA,DIAMOND
-hirono_invitational,tourn.hirono,hirono,1-18,2026-06-20T00:00:00Z,2026-06-26T12:00:00Z,30,0,field_major,prize_major,GOLFIN,DIAMOND
-lomond_championship,tourn.lomond,lomond,1-18,2026-06-24T00:00:00Z,2026-06-27T00:00:00Z,30,0,field_medium,prize_medium,TITLEIST,GOLD
-gotemba_masters,tourn.gotemba,gotemba,1-18,2026-06-21T00:00:00Z,2026-06-25T22:00:00Z,30,500,field_major,prize_major,TAIHEIYO,GOLD
-kisarazu_cup,tourn.kisarazu,kisarazu,1-18,2026-07-02T00:00:00Z,2026-07-05T00:00:00Z,30,0,field_small,prize_small,MIZUNO,SILVER
-kawana_fuji_open,tourn.kawana,kawana,1-18,2026-06-08T00:00:00Z,2026-06-13T00:00:00Z,30,0,field_major,prize_major,GOLFIN,DIAMOND
+kasumigaseki_open,tourn.kasumigaseki,kasumigaseki,1-18,now-2d,now+5d,30,100,field_major,prize_major,PUMA,DIAMOND
+hirono_invitational,tourn.hirono,hirono,1-18,now-3d,now+45m,30,0,field_major,prize_major,GOLFIN,DIAMOND
+kisarazu_cup,tourn.kisarazu,kisarazu,1-18,now-1d,now+9d,30,0,field_small,prize_small,MIZUNO,SILVER
+lomond_championship,tourn.lomond,lomond,1-18,now+6d,now+11d,30,0,field_medium,prize_medium,TITLEIST,GOLD
+gotemba_masters,tourn.gotemba,gotemba,1-18,now-12d,now-5d,30,500,field_major,prize_major,TAIHEIYO,GOLD
+kawana_fuji_open,tourn.kawana,kawana,1-18,now-20d,now-10d,30,0,field_major,prize_major,GOLFIN,DIAMOND
