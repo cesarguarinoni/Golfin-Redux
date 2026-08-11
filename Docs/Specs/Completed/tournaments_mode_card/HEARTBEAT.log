@@ -1,0 +1,98 @@
+=== iter-1 kickoff baseline 2026-08-11T07:45:00+09:00 ===
+HEAD: 4008b7f202f82a9284720ba5f2357ed99bcf590f
+DIRTY:
+ M Assets/Scripts/Physics/Viewer/Bot/Scenarios.cs
+ M Docs/AI_CONTEXT.md
+ M Docs/Specs/Active/hole_scene_leftover_v3/STATUS.md
+ M Docs/TellCode.md
+ M tasks/lessons.md
+ M tasks/loop_v2_smoke_bot/hole1_playthrough/live_stat_log.txt
+ M tasks/loop_v2_smoke_bot/hole1_playthrough/screenshots/history.log
+?? Docs/Specs/Active/hole_scene_leftover_v3/ARCHITECT_REVIEW.md
+?? Docs/Specs/Active/hole_scene_leftover_v3/HEARTBEAT.log
+?? Docs/Specs/Active/hole_scene_leftover_v3/IMPLEMENTER_REPORT.md
+?? Docs/Specs/Active/hole_scene_leftover_v3/SELF_REVIEW.md
+?? Docs/Specs/Active/tournaments_mode_card/SPEC.md
+?? Docs/Specs/Active/tournaments_mode_card/STATUS.md
+=== END baseline ===
+
+(HEAD advanced to 0950385b5 mid-session — a CONCURRENT session committed
+ `docs: hole_scene_leftover_v3 DONE — move to Completed` at 07:47. Not this task.)
+
+None of the above are this task's files. Everything under
+Assets/Scripts/UI/ModeSelect/, Assets/Resources/Data/modes.csv,
+Assets/Localization/, and Assets/Prefabs/UI/ModeSelect/ was CLEAN at kickoff,
+so every change to those paths in the final diff belongs to this task.
+
+07:45  Read SPEC.md + the 6 touched source files + modes.csv + LocalizationText.csv.
+07:48  Data layer done (modes.csv row + rewardsTextKey column, ModeData, ModesDatabaseCSV).
+07:50  ModeCardController: Localize()/LocTagline()/LocDescription() helpers, 6 text sites
+       swapped, UpdateEconomyRows rewards-text branch + localized NO ENTRY FEE.
+07:52  Both HandlePlayClicked switches: case "tournaments" -> ScreenId.TournamentSelection.
+07:53  LocalizationText.csv +5 rows. assets-refresh: compile CLEAN (warnings only, all
+       pre-existing obsolete-API warnings in unrelated editor scripts).
+07:55  EditMode probe: Tools/Localization/Import Text CSV -> 352 rows. LoadFromCSV via
+       reflection -> 5 modes, tournaments order=3 target=tournaments rewardsTextKey set.
+       All 5 new keys resolve EN + JP; MODE_PRACTICE_TAGLINE/_DESC correctly MISSING
+       (fallback contract intact).
+07:57  Bound BOTH card prefabs in EditMode under a temp canvas, EN + JP, read back every
+       TMP + coin state. Found rewardsCoin UNWIRED on ModeHomeCard.
+07:58  Asked Cesar re: play mode (shared Editor). Approved.
+08:00  Play mode iter-1: Splash PLAY -> Home. Carousel = 5 modes x 3 passes, order
+       versus/practice/tournaments/driving_range/missions. Centred TOURNAMENTS via the
+       real card Button.onClick. Screenshot -> COIN STILL RENDERING on the REWARDS row.
+08:01  Home PLAY.onClick -> CurrentScreen=TournamentSelection (verified after fade).
+       NavTee -> ModeSelection; expanded tournaments -> TWO stray coins (fee + rewards).
+       Reproduced the same stray fee coin on versus_1v1 (untouched mode) => pre-existing.
+08:02  Exit play. Added coinIconExp/rewardsCoinExp [SerializeField]s + toggles; wired
+       ModeHomeCard.rewardsCoin, ModeCard.coinIconExp, ModeCard.rewardsCoinExp via
+       SerializedObject + SaveAsPrefabAsset.
+08:03  Play mode iter-2: re-verified Home (no coin), ModeSelect expanded (no coins),
+       both PLAY routes -> TournamentSelection, JP pass (title/tagline/desc/fee/rewards),
+       title colour measured #EEDC9A centre / #D1D5DB sides.
+08:05  FindButton('TOURNAMENTS (TEMP)') replica -> exactly 1 match: the untouched temp
+       button. Harness path unambiguous.
+08:06  Exit play mode. ShellScene IsDirty=false. UIFidelityLinter on both prefabs:
+       0 FAIL / PASS (health). Console: 0 game errors.
+08:08  Wrote IMPLEMENTER_REPORT.md, STATUS.md, AI_CONTEXT.md.
+
+=== iter-2 kickoff baseline 2026-08-11T10:25:00+09:00 ===
+HEAD: 0950385b52b7789a755eff1890b39346b10cdb26
+DIRTY:
+ M Assets/Localization/LocalizationText.csv
+ M Assets/Localization/LocalizationTextTable.asset
+ M Assets/Prefabs/UI/ModeSelect/ModeCard.prefab
+ M Assets/Prefabs/UI/ModeSelect/ModeHomeCard.prefab
+ M Assets/Resources/Data/modes.csv
+ M Assets/Scripts/Physics/Viewer/Bot/Scenarios.cs
+ M Assets/Scripts/UI/ModeSelect/ModeCardController.cs
+ M Assets/Scripts/UI/ModeSelect/ModeCarouselController.cs
+ M Assets/Scripts/UI/ModeSelect/ModeData.cs
+ M Assets/Scripts/UI/ModeSelect/ModeSelectScreenController.cs
+ M Assets/Scripts/UI/ModeSelect/ModesDatabaseCSV.cs
+ M Docs/AI_CONTEXT.md
+ M Docs/TellCode.md
+ M tasks/loop_v2_smoke_bot/hole1_playthrough/live_stat_log.txt
+ M tasks/loop_v2_smoke_bot/hole1_playthrough/screenshots/history.log
+=== END baseline ===
+
+iter-2 scope: Cesar's two direct requests — subtitle copy (EN + JP) and the REWARDS
+label→value gap. iter-1's own changes are the dirty set above (mine) plus Scenarios.cs /
+TellCode.md / the two bot logs (concurrent session, still untouched).
+
+10:25  Subtitle copy: LocalizationText.csv MODE_TOURNAMENTS_TAGLINE EN+JP, and the
+       modes.csv tagline fallback kept in sync.
+10:27  Measured the REWARDS gap BEFORE changing anything: 32.0px on the text variant,
+       80.0px on coin rows (= 32 + 42 coin + 6). Root cause = the row's authored HLG
+       spacing of 32, sized for the label→COIN step, stranded when the coin is hidden.
+10:28  Added serialized textRewardsGap (12) + ApplyRewardsGap(); authored spacing cached
+       and restored for coin rows. Re-measured: text 12.0px, coin rows still 80.0px.
+       Locked full-screen card's Exp pair reads -24px but is activeInHierarchy=False;
+       its VISIBLE collapsed row measures 80.0px, unchanged.
+10:31  Play mode: re-shot all four canonical captures (Home EN/JP, ModeSelect EN/JP).
+       Both changes visible; EN subtitle now fits one line where the old copy wrapped.
+10:33  Exit play mode. ShellScene IsDirty=false. Language restored to English.
+       UIFidelityLinter re-run on both prefabs: 0 FAIL / PASS (health).
+10:35  NOTED: 'Assets/Fonts/NotoSansJP-VariableFont_wght SDF.asset' grew 59KB -> 2.27MB.
+       TMP Dynamic atlas, 103 glyphs baked into a 1024x1024 texture during the JP play
+       passes. Incidental editor churn, NOT a code change. Disclosed, not reverted.
