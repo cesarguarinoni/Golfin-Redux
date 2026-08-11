@@ -171,6 +171,7 @@ namespace Golfin.UI.Account
                 SetBusy(false);
                 if (result.Success)
                 {
+                    AccountUiBridge.SyncUsername();
                     var target = AuthService.Instance.Session.HasDisplayName ? ScreenId.Home : ScreenId.CreateUsername;
                     if (_screenManager != null) _screenManager.ShowScreen(target);
                 }

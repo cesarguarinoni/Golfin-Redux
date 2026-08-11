@@ -12,7 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f0499e3d025004b929a556d47ca9a0eb, type: 3}
   m_Name: SupabaseConfig
   m_EditorClassIdentifier: Assembly-CSharp::Golfin.Auth.SupabaseConfig
-  useMockTransport: 1
+  useMockTransport: 0
   supabaseUrl: https://wmszyghwwkaptgqdunel.supabase.co
-  anonKey: 
+  anonKey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indtc3p5Z2h3d2thcHRncWR1bmVsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyNDUwNjUsImV4cCI6MjA5MDgyMTA2NX0.bjom80tb4sFZ5ozt165PDSBuKoqfZo_ynTryDJLzGws
   requestTimeoutSeconds: 30
+  oauthRedirect: golfin://auth-callback

@@ -211,8 +211,15 @@ namespace Golfin.UI
 
         private void OnLogOutClick()
         {
-            Debug.Log("[SettingsController] Log Out clicked - TODO: Show confirmation");
-            // Phase 3: Confirmation modal → Clear session → Login screen
+            // account_flow_wiring: direct sign-out for testing — clears the Supabase session and
+            // returns to the Splash gate. (Phase 3 polish: confirmation modal via logOutModal.)
+            Debug.Log("[SettingsController] Log Out clicked — clearing session, returning to Splash.");
+            Golfin.Auth.AuthService.Instance.SignOut();
+            CloseSettings();
+            if (GolfinRedux.UI.ScreenManager.Instance != null)
+                GolfinRedux.UI.ScreenManager.Instance.ShowScreen(GolfinRedux.UI.ScreenId.Splash);
+            else
+                Debug.LogError("[SettingsController] ScreenManager.Instance not found — cannot return to Splash.");
         }
 
         /// <summary>

@@ -60,6 +60,7 @@ namespace Golfin.UI.Account
                 SetBusy(false);
                 if (result.Success)
                 {
+                    AccountUiBridge.SyncUsername();
                     if (_screenManager != null) _screenManager.ShowScreen(ScreenId.Home);
                 }
                 else SetError(result.Message);

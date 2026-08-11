@@ -103,6 +103,7 @@ namespace Golfin.UI.Account
                 SetBusy(false);
                 if (result.Success)
                 {
+                    AccountUiBridge.SyncUsername();
                     // First login (no username yet) → Create Username; otherwise → Home.
                     var target = AuthService.Instance.Session.HasDisplayName ? ScreenId.Home : ScreenId.CreateUsername;
                     if (_screenManager != null) _screenManager.ShowScreen(target);
@@ -143,6 +144,7 @@ namespace Golfin.UI.Account
                 SetBusy(false);
                 if (result.Success)
                 {
+                    AccountUiBridge.SyncUsername();
                     var target = AuthService.Instance.Session.HasDisplayName ? ScreenId.Home : ScreenId.CreateUsername;
                     if (_screenManager != null) _screenManager.ShowScreen(target);
                 }
