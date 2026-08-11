@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- account_flow_wiring Phase 2b: deep-link intent-filter so Supabase OAuth can return to the game
+     via golfin://auth-callback (Application.deepLinkActivated / AuthService.OnDeepLink).
+     Unity merges this with its generated manifest; only the additions below are declared. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <application>
+    <activity android:name="com.unity3d.player.UnityPlayerActivity" android:exported="true">
+      <intent-filter>
+        <action android:name="android.intent.action.MAIN" />
+        <category android:name="android.intent.category.LAUNCHER" />
+      </intent-filter>
+      <intent-filter>
+        <action android:name="android.intent.action.VIEW" />
+        <category android:name="android.intent.category.DEFAULT" />
+        <category android:name="android.intent.category.BROWSABLE" />
+        <data android:scheme="golfin" android:host="auth-callback" />
+      </intent-filter>
+    </activity>
+  </application>
+</manifest>
