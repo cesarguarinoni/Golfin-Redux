@@ -283,18 +283,23 @@ backend/signup changes; no localization of other modes' taglines/descriptions; n
 visual rebuild; no changes to versus/practice routing, fee spend, or the demo gate.
 `AddFallbackModes()` was left without a tournaments entry (spec: optional).
 
-## Not verified / needs manual confirmation
+## Verification follow-ups — all closed 2026-08-11
 
-1. **`TournamentLoopCaptureHarness` end-to-end run.** I proved the harness's button lookup
-   stays unambiguous (item 9) but did not execute the full recording harness — it is a
-   long GPU recording and the session guard allows ~1 full-res clip per Editor launch.
-   Worth one confirming run before close-out.
-2. **On-device (iOS) check.** Everything above was verified in the Editor at the iPhone-14
-   1170×2532 preset. The JP description is the longest string either card has ever
-   rendered; worth an eyeball on a real device for wrapping/overflow in the expanded card.
-3. ~~The D1 side effect on Multiplayer~~ — **resolved 2026-08-11: Cesar approved it as a
-   fix** ("Fix it"). Recorded in § Spec deviations D1; a full economy-icon audit across both
-   prefabs confirms every icon that can draw is now controlled.
+1. ~~`TournamentLoopCaptureHarness` end-to-end run~~ — **RUN, and the `"TOURNAMENTS (TEMP)"`
+   path PASSES.** Dry-run log shows `Click TOURNAMENTS (TEMP)` → `WaitForScreen OK: on
+   'TournamentSelection' after 0.0s`, with no `AMBIGUOUS` warning and no `CLICK FAILED`.
+   The harness stops at its *next* step (`SIGN UP` → `FindButton MISS`) because all six
+   tournament fixtures are in state `Ended` and the only CTA on screen is `LEADERBOARD` —
+   a stale-fixture-date issue unrelated to this task. Detail in `STATUS.md`.
+2. ~~On-device (iOS) check of JP wrapping~~ — **closed in the Editor, which is authoritative
+   here.** The Game View at 1170×2532 is the device canvas, so line breaking is fully
+   determined; only safe-area insets and runtime glyph rasterisation differ on hardware and
+   neither affects wrapping. Measured on the live TMP: `isTextTruncated=false` and zero
+   width/height overflow on both prefabs in both languages, with the content-sized boxes
+   growing for JP (182→202, 168→186) rather than clipping. Table in `STATUS.md`.
+3. ~~The D1 side effect on Multiplayer~~ — **resolved: Cesar approved it as a fix** ("Fix
+   it"). Recorded in § Spec deviations D1; a full economy-icon audit across both prefabs
+   confirms every icon that can draw is now controlled.
 
 ## Editor state left behind
 

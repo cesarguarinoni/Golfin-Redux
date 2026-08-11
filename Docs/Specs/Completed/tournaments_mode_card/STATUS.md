@@ -60,8 +60,42 @@ reproduces identically on the unmodified HEAD version, so it is not from this ch
 - **"Varies by tournament" casing** kept lowercase per the SPEC's approved copy (Cesar's
   message wrote "Tournament"). Say the word to capitalize.
 
-## Still needing manual confirmation
+## Post-close-out verification (2026-08-11, at Cesar's request)
 
-- `TournamentLoopCaptureHarness` end-to-end run (its `"TOURNAMENTS (TEMP)"` lookup was
-  proven still unambiguous — exactly 1 match — but the harness was not executed).
-- On-device iOS check of the long JP description wrapping in the expanded card.
+**1. `TournamentLoopCaptureHarness` — RUN. The `"TOURNAMENTS (TEMP)"` path PASSES.**
+Executed `GOLFIN > Tournaments > Dry Run — Tournament Round Loop` (validates the real
+flow without a 24-minute recording). Log:
+
+    === TournamentRoundLoop: Click NavTeeButton (Home → ModeSelection) ===
+      WaitForScreen OK: on 'ModeSelection' after 0.0s
+    === TournamentRoundLoop: Click TOURNAMENTS (TEMP) ===
+      WaitForScreen OK: on 'TournamentSelection' after 0.0s
+
+No `FindButton AMBIGUOUS` warning and no `CLICK FAILED` — the new TOURNAMENTS card does
+not shadow the temp button, confirmed by execution rather than by reasoning.
+
+The harness then stops at its NEXT step, `Click "SIGN UP"` → `FindButton MISS`. **Not
+caused by this task.** Every tournament fixture has expired: a live query returned
+`kawana_fuji_open, kisarazu_cup, gotemba_masters, lomond_championship,
+hirono_invitational, kasumigaseki_open` all in state `Ended`, and the only CTA label
+present on screen was `LEADERBOARD` (card dates read "Ended Jul 3" / "Ended Jun 26" vs
+today 2026-08-11). With no OPEN tournament there is no SIGN UP button to click, so the
+signup→round→leaderboard half of the harness is unreachable until the fixture dates are
+refreshed. Worth a separate ticket.
+
+**2. JP description wrapping — VERIFIED IN EDITOR, no device needed.** The Game View at
+1170×2532 IS the device canvas, so wrap/truncation is fully determined here; only
+safe-area insets and runtime glyph rasterisation would differ on hardware, and neither
+affects line breaking at a fixed canvas size. Measured on the live TMP after a forced
+mesh update, both prefabs, both languages:
+
+| Card / language | lines | box | rendered | `isTextTruncated` | overflow |
+|---|---|---|---|---|---|
+| ModeHomeCard expanded, EN | 5 | 516×182 | 504×182 | false | none |
+| ModeHomeCard expanded, **JP** | 5 | 516×202 | 501×202 | false | none |
+| ModeCard expanded, EN | 4 | 770×168 | 769×168 | false | none |
+| ModeCard expanded, **JP** | 4 | 770×186 | 739×186 | false | none |
+
+The description containers are content-sized, so the taller JP text grows the box
+(182→202 and 168→186) instead of clipping. Nothing truncates, nothing overflows width or
+height. This item is closed.
