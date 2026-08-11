@@ -254,6 +254,11 @@ MATCH_YOU,You,あなた
 MODE_ENTRY_FEE,ENTRY FEE,参加費
 MODE_REWARDS,REWARDS,報酬
 MODE_PRACTICE,PRACTICE,練習
+MODE_TOURNAMENTS,TOURNAMENTS,トーナメント
+MODE_TOURNAMENTS_TAGLINE,Be the best and earn rewards,頂点に立って報酬を手に入れよう
+MODE_TOURNAMENTS_DESC,"Enter live tournaments, play the featured holes, and climb the leaderboard before time runs out. Finish high to claim your share of the prizes — every stroke counts.",開催中のトーナメントに参加して対象ホールをプレイし、期間内にリーダーボードを駆け上がろう。上位でフィニッシュして賞品を手に入れよう。一打一打が勝負を決める。
+MODE_REWARDS_VARY,Varies by tournament,トーナメントごとに異なります
+MODE_NO_ENTRY_FEE,NO ENTRY FEE,参加費無料
 UI_LOCKED,LOCKED,ロック
 RESULT_REPLAY_HOLE,REPLAY HOLE,ホールをリプレイ
 RANK_DAILY,DAILY,デイリー

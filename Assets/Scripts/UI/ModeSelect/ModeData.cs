@@ -7,7 +7,7 @@ namespace GolfinRedux.UI.ModeSelect
     /// Plain DTO for one row in Assets/Resources/Data/modes.csv.
     /// Columns: id, title, tagline, description, entryFee, rewards, locked, target, order,
     ///          versusStrokeCapOverPar, reward1Type, reward1Amount, reward2Type, reward2Amount,
-    ///          reward3Type, reward3Amount.
+    ///          reward3Type, reward3Amount, rewardsTextKey.
     /// The rewardList field is populated from the reward pair columns (Stage 2).
     /// The legacy int 'rewards' is retained for backward compatibility (other modes still use it).
     /// </summary>
@@ -37,5 +37,9 @@ namespace GolfinRedux.UI.ModeSelect
         // rewardList — parsed from (type,amount) reward-pair columns (Stage 2). Empty for modes
         // that only have the legacy int 'rewards' column. For versus_1v1: Points×200 on WIN.
         public List<HoleReward> rewardList = new List<HoleReward>();
+        // rewardsTextKey — optional localization key; when set, the REWARDS row shows this
+        // localized TEXT (no coin icon, no amount) instead of "x{rewards}". Used by
+        // tournaments ("Varies by tournament"). Empty for all other modes.
+        public string rewardsTextKey = "";
     }
 }

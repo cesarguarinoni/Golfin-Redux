@@ -591,6 +591,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: MODE_ENTRY_FEE
+  japaneseFontScale: 0
 --- !u!1 &1301787702161750664
 GameObject:
   m_ObjectHideFlags: 0
@@ -2516,6 +2517,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: MODE_REWARDS
+  japaneseFontScale: 0
 --- !u!1 &3448166192395282832
 GameObject:
   m_ObjectHideFlags: 0
@@ -3453,6 +3455,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: MODE_REWARDS
+  japaneseFontScale: 0
 --- !u!1 &5124670344212160924
 GameObject:
   m_ObjectHideFlags: 0
@@ -4545,6 +4548,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: MODE_ENTRY_FEE
+  japaneseFontScale: 0
 --- !u!1 &6340684182325910663
 GameObject:
   m_ObjectHideFlags: 0
@@ -5929,6 +5933,8 @@ MonoBehaviour:
   entryFeeAmountExp: {fileID: 736235381957616775}
   rewardsLabelExp: {fileID: 4541138519323574578}
   rewardsAmountExp: {fileID: 7184771281131110963}
+  coinIconExp: {fileID: 8123679417532382303}
+  rewardsCoinExp: {fileID: 7496374990169181954}
   separator1UnderTitle: {fileID: 1909282663273328563}
   separator2UnderDesc: {fileID: 7931988477011600547}
   separator3AbovePlay: {fileID: 5216559757419494954}
@@ -6147,6 +6153,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: BTN_START
+  japaneseFontScale: 0
 --- !u!1 &8382251579141895178
 GameObject:
   m_ObjectHideFlags: 0

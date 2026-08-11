@@ -496,10 +496,35 @@ def esc(p):
     return p.replace("\\", "\\\\").replace(":", "\\:").replace("'", "\\'")
 
 
+def parse_captionsjson(path, duration):
+    """Captions from a UI DemoRecorder sidecar.
+
+    The recorder stamps start/end in seconds since StartRecording(), so unlike the
+    bot-log parsers there is no clock to align — we only clamp to the clip and shift
+    by RECORDER_LEAD (the Recorder's spin-up before its first real frame).
+    """
+    if not os.path.isabs(path):
+        path = os.path.join(REPO, path)
+    if not os.path.exists(path):
+        sys.exit(f"ERROR: captions sidecar not found: {path}")
+    with open(path, encoding="utf-8") as fh:
+        data = json.load(fh)
+
+    out = []
+    for c in data.get("captions", []):
+        start = max(0.0, float(c["start"]) - RECORDER_LEAD)
+        end = min(float(c["end"]) - RECORDER_LEAD, duration)
+        text = str(c["text"]).replace("\\n", "\n")
+        if end > start and text.strip():
+            out.append((start, end, text))
+    out.sort(key=lambda x: x[0])
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--scenario", required=True, help="smoke-bot scenario key")
-    ap.add_argument("--mode", choices=["clicks", "steps", "visualgate", "spinshape", "treegate", "watersplash"], default="clicks",
+    ap.add_argument("--mode", choices=["clicks", "steps", "visualgate", "spinshape", "treegate", "watersplash", "captionsjson"], default="clicks",
                     help="Caption parser to use. 'clicks' = tap-event captions (default, "
                          "for UI flows). 'steps' = verbatim `Step: '<text>'` captions "
                          "(for scroll/swipe/expand UI walkthroughs). 'visualgate' = per-stroke "
@@ -509,7 +534,11 @@ def main():
                          "'treegate' = trunk/canopy/control captions "
                          "(for tree_collision_gate scenario, Order 348). "
                          "'watersplash' = splash burst/reuse/OOB captions "
-                         "(for water_splash_gate scenario, Order 349).")
+                         "(for water_splash_gate scenario, Order 349). "
+                         "'captionsjson' = read captions from a --captions-json sidecar "
+                         "written by a UI DemoRecorder (start/end already relative to "
+                         "record start). Needs no smoke-bot scenario, record_info.json or "
+                         "history.log — pair it with --raw-mp4.")
     ap.add_argument("--title", default="Loop v2 — Stage F\nButton Press Feedback")
     ap.add_argument("--suffix", default="stageF_buttons", help="output filename suffix")
     ap.add_argument("--output-dir", default=None,
@@ -520,6 +549,17 @@ def main():
                     help="Override raw mp4 source path. Use this when the raw recording "
                          "has already been moved out of tasks/loop_v2_smoke_bot/<scenario>/video/ "
                          "(e.g. copied into a task's videos/ folder).")
+    ap.add_argument("--captions-json", default=None,
+                    help="Path to a DemoRecorder captions sidecar: "
+                         "{\"captions\":[{\"start\":s,\"end\":s,\"text\":\"...\"}]} with times "
+                         "already relative to record start. Required by --mode captionsjson.")
+    ap.add_argument("--caption-fontsize", type=int, default=None,
+                    help="Override caption font size in px. The default (height/32) is tuned "
+                         "for landscape bot clips and overflows a portrait 1170-wide phone "
+                         "capture — pass ~42 for 1170x2532.")
+    ap.add_argument("--caption-wrap", type=int, default=None,
+                    help="Hard-wrap captions at N characters. Use with portrait clips so long "
+                         "captions stack instead of running off both edges.")
     ap.add_argument("--keep-raw", action="store_true", help="keep the raw Recorder mp4 + sidecar")
     ap.add_argument("--title-seconds", type=float, default=3.6,
                     help="How long the centered title card stays on screen (seconds). Lower it for "
@@ -533,13 +573,22 @@ def main():
 
     vdir = os.path.join(REPO, "tasks/loop_v2_smoke_bot", args.scenario, "video")
     info_path = os.path.join(vdir, "record_info.json")
-    if not os.path.exists(info_path):
-        sys.exit(f"ERROR: {info_path} not found.\n"
-                 f"Run the scenario with video recording armed "
-                 f"(BotVideoRecorder.RecordVideo = true) first.")
-    with open(info_path) as fh:
-        info = json.load(fh)
-    rec_start = float(info["record_start_realtime"]) + RECORDER_LEAD
+    if args.mode == "captionsjson":
+        # DemoRecorder path: the recorder already stamped caption times relative to
+        # StartRecording(), so there is no bot clock to align and no scenario folder.
+        if not args.captions_json:
+            sys.exit("ERROR: --mode captionsjson requires --captions-json <path>.")
+        if not args.raw_mp4:
+            sys.exit("ERROR: --mode captionsjson requires --raw-mp4 <path>.")
+        info, rec_start = {}, 0.0
+    else:
+        if not os.path.exists(info_path):
+            sys.exit(f"ERROR: {info_path} not found.\n"
+                     f"Run the scenario with video recording armed "
+                     f"(BotVideoRecorder.RecordVideo = true) first.")
+        with open(info_path) as fh:
+            info = json.load(fh)
+        rec_start = float(info["record_start_realtime"]) + RECORDER_LEAD
     if args.raw_mp4:
         raw = args.raw_mp4
         if not os.path.isabs(raw):
@@ -562,7 +611,9 @@ def main():
 
     log_path = os.path.join(REPO, "tasks/loop_v2_smoke_bot", args.scenario,
                             "screenshots/history.log")
-    if args.mode == "visualgate":
+    if args.mode == "captionsjson":
+        captions = parse_captionsjson(args.captions_json, duration)
+    elif args.mode == "visualgate":
         captions = parse_visualgate_captions(log_path, rec_start, rec_start + duration)
     elif args.mode == "spinshape":
         captions = parse_spinshape_captions(log_path, rec_start, rec_start + duration)
@@ -579,8 +630,21 @@ def main():
     captions.insert(0, (0.0, args.title_seconds, title_text))
     print(f"Captions: {len(captions)} (mode={args.mode})")
 
-    fontsize = max(22, h // 32)
-    title_fontsize = max(28, h // 40)  # smaller — title is 2 lines, must not clip width
+    fontsize = args.caption_fontsize if args.caption_fontsize else max(22, h // 32)
+    title_fontsize = (max(22, int(fontsize * 0.9)) if args.caption_fontsize
+                      else max(28, h // 40))  # smaller — title is 2 lines, must not clip width
+
+    if args.caption_wrap:
+        # Portrait clips: a caption wider than the frame runs off BOTH edges (drawtext
+        # centres it and does not wrap). Stack it instead, preserving explicit \n breaks.
+        import textwrap
+        wrapped = []
+        for start, end, text in captions:
+            lines = []
+            for para in text.split("\n"):
+                lines.extend(textwrap.wrap(para, args.caption_wrap) or [""])
+            wrapped.append((start, end, "\n".join(lines)))
+        captions = wrapped
 
     tmp = tempfile.mkdtemp(prefix="botvid_")
     try:

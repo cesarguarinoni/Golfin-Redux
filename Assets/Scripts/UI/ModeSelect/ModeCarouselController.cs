@@ -501,6 +501,15 @@ namespace GolfinRedux.UI.ModeSelect
                         Debug.LogWarning("[ModeCarousel] ScreenManager not found.");
                     break;
 
+                case "tournaments":
+                    // Tournament browse screen (T7). No entry-fee spend here — per-tournament
+                    // fees are owned by the signup flow (TournamentSignupModalController).
+                    if (ScreenManager.Instance != null)
+                        ScreenManager.Instance.ShowScreen(ScreenId.TournamentSelection);
+                    else
+                        Debug.LogWarning("[ModeCarousel] Tournaments PLAY — ScreenManager not found.");
+                    break;
+
                 case "matchmaking_1v1":
                     // 1v1 path: flag the session as versus BEFORE opening matchmaking.
                     GameSession.IsVersus = true;

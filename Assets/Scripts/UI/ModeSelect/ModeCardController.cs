@@ -61,6 +61,11 @@ namespace GolfinRedux.UI.ModeSelect
         [SerializeField] private Color titleCollapsedColor = new Color32(0xD1, 0xD5, 0xDB, 255);
         [Tooltip("Entry-fee text colour when the player can't afford the fee (#C04000).")]
         [SerializeField] private Color insufficientRpColor = new Color32(0xC0, 0x40, 0x00, 255);
+        [Tooltip("Label→value gap on a REWARDS row that shows localized TEXT instead of a coin " +
+                 "amount. The §6.2 authored gap (32) is sized for [LABEL gap32 coin42 gap6 value]; " +
+                 "with no coin it strands 32px between two words and reads as a double space. " +
+                 "Coin rows keep the authored gap.")]
+        [SerializeField] private float textRewardsGap = 12f;
 
         // ── Title TMP elements ────────────────────────────────────────────────
         // NOTE: Figma 45px ÷ 1.4 = 32.14 TMP, Rubik variable font weight 600
@@ -96,6 +101,12 @@ namespace GolfinRedux.UI.ModeSelect
         [SerializeField] private TextMeshProUGUI entryFeeAmountExp;
         [SerializeField] private TextMeshProUGUI rewardsLabelExp;
         [SerializeField] private TextMeshProUGUI rewardsAmountExp;
+        // Expanded-container coin icons — the counterparts of coinIcon / rewardsCoin above.
+        // They were never referenced, so the expanded rows always drew a coin: a fee-free mode
+        // read "(coin) NO ENTRY FEE", and a text-rewards mode would read "(coin) Varies by
+        // tournament". Toggled by the same hasFee / hasRewards rules as the collapsed pair.
+        [SerializeField] private Image coinIconExp;                 // Reward1IconExp
+        [SerializeField] private Image rewardsCoinExp;              // Reward2IconExp
 
         // ── Separators ────────────────────────────────────────────────────────
         // Active/expanded card has THREE separators; collapsed has ONE (under title).
@@ -144,6 +155,11 @@ namespace GolfinRedux.UI.ModeSelect
         // Insufficient-RP color — matches LevelUpModalController.spDepletedColor (#C04000)
         // Insufficient-RP colour is the serialized insufficientRpColor field above.
         private static readonly Color32 NormalWhite = new Color32(255, 255, 255, 255);
+
+        // Authored §6.2 REWARDS-row gaps, captured on first bind so the coin variant can be
+        // restored after a text-variant card has tightened them. -1 = not captured yet.
+        private float _authoredRewardsGap    = -1f;
+        private float _authoredRewardsGapExp = -1f;
 
         // ── Public state ──────────────────────────────────────────────────────
         public string ModeId { get; private set; }
@@ -302,11 +318,11 @@ namespace GolfinRedux.UI.ModeSelect
             _data = mode;
             ModeId = mode.id;
 
-            // Set text content
+            // Set text content (localized by convention, CSV string as fallback)
             SetTitleText(mode.title);
-            if (subtitleTextExpanded != null) subtitleTextExpanded.text = mode.tagline;
-            if (explanationText != null)      explanationText.text      = mode.tagline;
-            if (descriptionTextExpanded != null) descriptionTextExpanded.text = mode.description;
+            if (subtitleTextExpanded != null) subtitleTextExpanded.text = LocTagline();
+            if (explanationText != null)      explanationText.text      = LocTagline();
+            if (descriptionTextExpanded != null) descriptionTextExpanded.text = LocDescription();
 
             UpdateEconomyRows(mode);
             SetState(state);
@@ -325,6 +341,22 @@ namespace GolfinRedux.UI.ModeSelect
             if (titleTextExpanded != null) titleTextExpanded.text = display;
         }
 
+        // Localize tagline/description by convention (id-based): MODE_<ID>_TAGLINE / MODE_<ID>_DESC.
+        // Get() returns the key itself when not found; fall back to the raw CSV string in that
+        // case, so existing modes without keys are pixel-identical to today.
+        private static string Localize(string key, string fallback)
+        {
+            if (string.IsNullOrEmpty(key)) return fallback;
+            string s = LocalizationManager.Get(key);
+            return string.Equals(s, key, System.StringComparison.Ordinal) ? fallback : s;
+        }
+
+        private string LocTagline() => _data == null ? "" :
+            Localize($"MODE_{_data.id.ToUpperInvariant()}_TAGLINE", _data.tagline);
+
+        private string LocDescription() => _data == null ? "" :
+            Localize($"MODE_{_data.id.ToUpperInvariant()}_DESC", _data.description);
+
         /// <summary>Switch visual state. Animates height. Updates all visuals.</summary>
         public void SetState(ModeCardState state)
         {
@@ -335,11 +367,11 @@ namespace GolfinRedux.UI.ModeSelect
 
             // ── Update explanation text (single auto-sizing element) ──────────
             if (explanationText != null && _data != null)
-                explanationText.text = isExpanded ? _data.description : _data.tagline;
+                explanationText.text = isExpanded ? LocDescription() : LocTagline();
             if (descriptionTextExpanded != null && _data != null)
-                descriptionTextExpanded.text = _data.description;
+                descriptionTextExpanded.text = LocDescription();
             if (subtitleTextExpanded != null && _data != null)
-                subtitleTextExpanded.text = _data.tagline;
+                subtitleTextExpanded.text = LocTagline();
 
             // Home card uses dedicated Subtitle (always visible) + Description (expanded only)
             // elements rather than the single toggling explanationText. The subtitle stays on;
@@ -439,10 +471,14 @@ namespace GolfinRedux.UI.ModeSelect
                 return;
             }
 
+            // A mode may express its REWARDS as localized TEXT (rewardsTextKey) instead of a coin
+            // amount — tournaments pays out per-tournament prizes, so it shows "Varies by
+            // tournament" with no coin. Every other mode keeps the legacy "x{rewards}" path.
             bool hasFee     = mode.entryFee > 0;
-            bool hasRewards = mode.rewards  > 0;
-            string feeText  = hasFee ? $"x{mode.entryFee}" : "NO ENTRY FEE";
-            string rwdText  = $"x{mode.rewards}";
+            bool hasTextRwd = !string.IsNullOrEmpty(mode.rewardsTextKey);
+            bool hasRewards = hasTextRwd || mode.rewards > 0;
+            string feeText  = hasFee ? $"x{mode.entryFee}" : Localize("MODE_NO_ENTRY_FEE", "NO ENTRY FEE");
+            string rwdText  = hasTextRwd ? LocalizationManager.Get(mode.rewardsTextKey) : $"x{mode.rewards}";
 
             // ── Collapsed container ───────────────────────────────────────────
             if (rewardSlot1 != null) rewardSlot1.SetActive(true);
@@ -453,18 +489,45 @@ namespace GolfinRedux.UI.ModeSelect
             if (rewardSlot2 != null) rewardSlot2.SetActive(hasRewards);
             if (rewardsLabel  != null) rewardsLabel.gameObject.SetActive(hasRewards);
             if (rewardsAmount != null) { rewardsAmount.text = rwdText; rewardsAmount.color = NormalWhite; }
-            if (rewardsCoin != null) rewardsCoin.gameObject.SetActive(hasRewards);
+            // The text variant carries no amount, so it shows no coin icon.
+            if (rewardsCoin != null) rewardsCoin.gameObject.SetActive(hasRewards && !hasTextRwd);
 
             // ── Expanded container ────────────────────────────────────────────
             if (rewardSlot1Exp     != null) rewardSlot1Exp.SetActive(true);
             if (entryFeeLabelExp   != null) entryFeeLabelExp.gameObject.SetActive(hasFee);
             if (entryFeeAmountExp  != null) { entryFeeAmountExp.text = feeText; entryFeeAmountExp.color = NormalWhite; }
+            if (coinIconExp != null) coinIconExp.gameObject.SetActive(hasFee);
 
             if (rewardSlot2Exp   != null) rewardSlot2Exp.SetActive(hasRewards);
             if (rewardsLabelExp  != null) rewardsLabelExp.gameObject.SetActive(hasRewards);
             if (rewardsAmountExp != null) { rewardsAmountExp.text = rwdText; rewardsAmountExp.color = NormalWhite; }
+            if (rewardsCoinExp != null) rewardsCoinExp.gameObject.SetActive(hasRewards && !hasTextRwd);
+
+            // Tighten the label→value gap when the value is a word rather than a coin amount.
+            ApplyRewardsGap(rewardSlot2,    ref _authoredRewardsGap,    hasTextRwd);
+            ApplyRewardsGap(rewardSlot2Exp, ref _authoredRewardsGapExp, hasTextRwd);
 
             RefreshFeeColor();
+        }
+
+        /// <summary>
+        /// The REWARDS row is authored as [LABEL gap32 coin42 gap6 value]. When the value is
+        /// localized TEXT the coin is hidden, leaving the authored 32px stranded between two
+        /// words — it reads as a double space. Swap in the tighter textRewardsGap for that
+        /// case only, caching the authored value so coin rows are untouched.
+        /// </summary>
+        private void ApplyRewardsGap(GameObject slot, ref float authored, bool textVariant)
+        {
+            if (slot == null) return;
+            var row = slot.GetComponent<HorizontalLayoutGroup>();
+            if (row == null) return;
+            if (authored < 0f) authored = row.spacing;
+            float target = textVariant ? textRewardsGap : authored;
+            if (!Mathf.Approximately(row.spacing, target))
+            {
+                row.spacing = target;
+                LayoutRebuilder.MarkLayoutForRebuild(slot.transform as RectTransform);
+            }
         }
 
         private void RefreshFeeColor()

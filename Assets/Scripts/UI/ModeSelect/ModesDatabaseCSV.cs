@@ -8,8 +8,10 @@ namespace GolfinRedux.UI.ModeSelect
     /// Singleton that loads modes from Assets/Resources/Data/modes.csv at runtime.
     /// CSV columns: id, title, tagline, description, entryFee, rewards, locked, target, order,
     ///              versusStrokeCapOverPar, reward1Type, reward1Amount, reward2Type, reward2Amount,
-    ///              reward3Type, reward3Amount
+    ///              reward3Type, reward3Amount, rewardsTextKey
     /// The (type,amount) reward pair columns are parsed into ModeData.rewardList (Stage 2).
+    /// rewardsTextKey is optional — when present the card's REWARDS row shows that localized
+    /// text instead of "x{rewards}" (tournaments: "Varies by tournament").
     /// </summary>
     public class ModesDatabaseCSV : MonoBehaviour
     {
@@ -90,6 +92,8 @@ namespace GolfinRedux.UI.ModeSelect
             int iReward2Amount = System.Array.IndexOf(headers, "reward2Amount");
             int iReward3Type   = System.Array.IndexOf(headers, "reward3Type");
             int iReward3Amount = System.Array.IndexOf(headers, "reward3Amount");
+            // Optional text-rewards column: a localization key rendered in place of "x{rewards}".
+            int iRewardsTextKey = System.Array.IndexOf(headers, "rewardsTextKey");
 
             for (int i = 1; i < lines.Length; i++)
             {
@@ -111,6 +115,7 @@ namespace GolfinRedux.UI.ModeSelect
                 if (iTarget >= 0 && iTarget < cols.Length)  mode.target = cols[iTarget].Trim();
                 if (iOrder >= 0 && iOrder < cols.Length)    int.TryParse(cols[iOrder].Trim(), out mode.order);
                 if (iCapOverPar >= 0 && iCapOverPar < cols.Length) int.TryParse(cols[iCapOverPar].Trim(), out mode.versusStrokeCapOverPar);
+                if (iRewardsTextKey >= 0 && iRewardsTextKey < cols.Length) mode.rewardsTextKey = cols[iRewardsTextKey].Trim();
 
                 // Parse up to 3 reward pairs (Stage 2). Mirror HoleDatabaseLoader.ParseRewardType pattern.
                 ParseAndAddRewardPair(cols, iReward1Type, iReward1Amount, mode);

@@ -855,6 +855,23 @@ MonoBehaviour:
   - key: MODE_PRACTICE
     english: PRACTICE
     japanese: "\u7DF4\u7FD2"
+  - key: MODE_TOURNAMENTS
+    english: TOURNAMENTS
+    japanese: "\u30C8\u30FC\u30CA\u30E1\u30F3\u30C8"
+  - key: MODE_TOURNAMENTS_TAGLINE
+    english: Be the best and earn rewards
+    japanese: "\u9802\u70B9\u306B\u7ACB\u3063\u3066\u5831\u916C\u3092\u624B\u306B\u5165\u308C\u3088\u3046"
+  - key: MODE_TOURNAMENTS_DESC
+    english: "Enter live tournaments, play the featured holes, and climb the leaderboard
+      before time runs out. Finish high to claim your share of the prizes \u2014
+      every stroke counts."
+    japanese: "\u958B\u50AC\u4E2D\u306E\u30C8\u30FC\u30CA\u30E1\u30F3\u30C8\u306B\u53C2\u52A0\u3057\u3066\u5BFE\u8C61\u30DB\u30FC\u30EB\u3092\u30D7\u30EC\u30A4\u3057\u3001\u671F\u9593\u5185\u306B\u30EA\u30FC\u30C0\u30FC\u30DC\u30FC\u30C9\u3092\u99C6\u3051\u4E0A\u304C\u308D\u3046\u3002\u4E0A\u4F4D\u3067\u30D5\u30A3\u30CB\u30C3\u30B7\u30E5\u3057\u3066\u8CDE\u54C1\u3092\u624B\u306B\u5165\u308C\u3088\u3046\u3002\u4E00\u6253\u4E00\u6253\u304C\u52DD\u8CA0\u3092\u6C7A\u3081\u308B\u3002"
+  - key: MODE_REWARDS_VARY
+    english: Varies by tournament
+    japanese: "\u30C8\u30FC\u30CA\u30E1\u30F3\u30C8\u3054\u3068\u306B\u7570\u306A\u308A\u307E\u3059"
+  - key: MODE_NO_ENTRY_FEE
+    english: NO ENTRY FEE
+    japanese: "\u53C2\u52A0\u8CBB\u7121\u6599"
   - key: UI_LOCKED
     english: LOCKED
     japanese: "\u30ED\u30C3\u30AF"
