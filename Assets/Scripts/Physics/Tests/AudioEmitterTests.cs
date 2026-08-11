@@ -558,10 +558,12 @@ namespace Golfin.Physics.Tests
             _emitter.FireHitForTest(MakeHit(5f, SurfaceType.Fairway, isStop: false));
             Assert.AreEqual(1, _played.Count, "First bounce must publish");
 
-            // Simulate a second hit with _lastLandSfxTime just now (interval not elapsed)
-            // Since Time.unscaledTime is 0f in EditMode, set lastTime to 0f (current time)
-            _emitter.SetLastLandSfxTimeForTest(0f);  // simulate "just fired" at t=0
-            // Time.unscaledTime is 0f in EditMode → 0f - 0f = 0f < 0.15f → suppressed
+            // Simulate a second hit with _lastLandSfxTime just now (interval not elapsed).
+            // Anchor to the live clock, NOT a hardcoded 0f: Time.unscaledTime is only ~0
+            // on a freshly-started Editor, so a literal 0f made this test pass on the first
+            // suite run of a session and fail on every run after it.
+            _emitter.SetLastLandSfxTimeForTest(Time.unscaledTime);  // "just fired" == now
+            // now - now = 0f < 0.15f → suppressed, regardless of session age
 
             _emitter.FireHitForTest(MakeHit(5f, SurfaceType.Fairway, isStop: false));
             Assert.AreEqual(1, _played.Count,
@@ -579,9 +581,11 @@ namespace Golfin.Physics.Tests
             _emitter.FireHitForTest(MakeHit(5f, SurfaceType.Fairway, isStop: false));
             Assert.AreEqual(1, _played.Count, "First bounce must publish");
 
-            // Simulate time having passed: set _lastLandSfxTime to well in the past
-            // Time.unscaledTime = 0f; lastTime = -1.0f → 0f - (-1.0f) = 1.0f > 0.15f → passes
-            _emitter.SetLastLandSfxTimeForTest(-1.0f);
+            // Simulate time having passed: set _lastLandSfxTime one second into the past,
+            // relative to the live clock (same reason as the sibling test above — never
+            // hardcode an absolute time, Time.unscaledTime is not ~0 after the first run).
+            _emitter.SetLastLandSfxTimeForTest(Time.unscaledTime - 1.0f);
+            // now - (now - 1.0f) = 1.0f > 0.15f → passes, regardless of session age
 
             _emitter.FireHitForTest(MakeHit(5f, SurfaceType.Fairway, isStop: false));
             Assert.AreEqual(2, _played.Count,
