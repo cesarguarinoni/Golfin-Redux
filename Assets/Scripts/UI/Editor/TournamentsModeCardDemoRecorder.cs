@@ -33,7 +33,7 @@ namespace Golfin.EditorTools
     ///   tap the Tournaments row (expands: NO ENTRY FEE / Varies by tournament, no coins)
     ///   -> PLAY -> TournamentSelection -> Home in Japanese -> exit.
     ///
-    /// Output: Docs/Specs/Active/tournaments_mode_card/videos/raw.mp4
+    /// Output: Docs/Specs/Completed/tournaments_mode_card/videos/raw.mp4
     ///         + captions.json sidecar consumed by
     ///           `Docs/Scripts/build_bot_video.py --mode captionsjson`.
     /// Usage:  GOLFIN > Tournaments > Record Mode Card Demo  (or call LaunchDemo()).
@@ -41,7 +41,7 @@ namespace Golfin.EditorTools
     public static class TournamentsModeCardDemoRecorder
     {
         const string ShellScenePath = "Assets/Scenes/ShellScene.unity";
-        const string OutputDir      = "Docs/Specs/Active/tournaments_mode_card/videos";
+        const string OutputDir      = "Docs/Specs/Completed/tournaments_mode_card/videos";
         const string ArmedKey       = "TournamentsModeCardDemoRecorder.Armed";
 
         static RecorderController _recorder;
@@ -290,19 +290,19 @@ namespace Golfin.EditorTools
             Debug.Log($"[ModeCardDemo] Centred card after snap = {(centred == null ? "<null>" : centred.ModeId)}");
             Tap(centred, "taglineButton", "expand");
             yield return new WaitForSecondsRealtime(0.6f);
-            Say("NO ENTRY FEE · no coin icons\\nREWARDS: Varies by tournament", 4.5f);
+            Say("NO ENTRY FEE - no coin icons\\nREWARDS: Varies by tournament", 4.5f);
             yield return new WaitForSecondsRealtime(4.5f);
 
             // ── PLAY from the home carousel (centred instance owns the wired PLAY) ──
             Tap(HomeCentredCard(), "playButton", "home PLAY");
-            Say("PLAY → Tournament Selection", 5.0f);
+            Say("PLAY -> Tournament Selection", 5.0f);
             yield return new WaitForSecondsRealtime(5.0f);
             Debug.Log($"[ModeCardDemo] After home PLAY, CurrentScreen = {GolfinRedux.UI.ScreenManager.Instance?.CurrentScreen}");
 
             // ── Full-screen Mode Select via the bottom-nav Tee button ──
             var tee = FindButton("NavTeeButton");
             if (tee != null) tee.onClick.Invoke();
-            Say("Bottom-nav Tee → Mode Select", 3.5f);
+            Say("Bottom-nav Tee -> Mode Select", 3.5f);
             yield return new WaitForSecondsRealtime(3.5f);
 
             // Expand the Tournaments row (single instance on the full-screen list).
