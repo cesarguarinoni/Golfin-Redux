@@ -1948,7 +1948,7 @@ public static class Script {{
             var result = Golfin.EditorTools.UIFidelity.UIFidelityLinter.LintPrefab(prefabPath, null);
             foreach (var line in result.Split('\\n')) {{
                 var trimmed = line.Trim();
-                if (trimmed.StartsWith("fail:") || trimmed.StartsWith("\"fail\":")) {{
+                if (trimmed.StartsWith("fail:") || trimmed.StartsWith("\\"fail\\":")) {{
                     var parts = trimmed.Split(':');
                     if (parts.Length >= 2 && int.TryParse(parts[1].Trim().TrimEnd(','), out int n))
                         return "LINT_FAIL_COUNT:" + n;
@@ -1957,7 +1957,7 @@ public static class Script {{
             string jsonPath = "Docs/Diagnostics/_capture/" + prefabName + "_lint.json";
             if (File.Exists(jsonPath)) {{
                 var txt = File.ReadAllText(jsonPath);
-                var match = System.Text.RegularExpressions.Regex.Match(txt, "\\\"fail\\\"\\s*:\\s*(\\d+)");
+                var match = System.Text.RegularExpressions.Regex.Match(txt, "\\\"fail\\\"\\\\s*:\\\\s*(\\\\d+)");
                 if (match.Success) return "LINT_FAIL_COUNT:" + match.Groups[1].Value;
             }}
             return "LINT_FAIL_COUNT:0";
