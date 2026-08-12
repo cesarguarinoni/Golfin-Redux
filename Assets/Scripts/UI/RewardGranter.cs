@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using Golfin.Economy;
 using Golfin.Roster;
 
 namespace GolfinRedux.UI
@@ -29,7 +30,14 @@ namespace GolfinRedux.UI
         /// Null list is treated as empty (no-op).
         /// Zero-amount rewards are silently skipped.
         /// </summary>
-        public static void Grant(List<HoleReward> rewards)
+        /// <param name="pointsAction">
+        /// The <see cref="PointsActions"/> id the Points reward is booked under on the server ledger
+        /// (Slice 2). It is a REQUIRED parameter rather than a defaulted one precisely because the
+        /// caller is the only thing that knows which event this payout belongs to — a hole first-clear
+        /// and a replay of the same hole grant from different pools and post under different actions
+        /// with different daily caps. Non-Points rewards ignore it.
+        /// </param>
+        public static void Grant(List<HoleReward> rewards, string pointsAction)
         {
             if (rewards == null || rewards.Count == 0)
             {
@@ -46,8 +54,8 @@ namespace GolfinRedux.UI
                     case RewardType.Points:
                         if (RewardPointsManager.Instance != null)
                         {
-                            RewardPointsManager.Instance.EarnPoints(reward.amount);
-                            Debug.Log($"[RewardGranter] Granted Points ×{reward.amount}");
+                            RewardPointsManager.Instance.EarnPoints(reward.amount, pointsAction);
+                            Debug.Log($"[RewardGranter] Granted Points ×{reward.amount} ({pointsAction})");
                         }
                         else
                         {

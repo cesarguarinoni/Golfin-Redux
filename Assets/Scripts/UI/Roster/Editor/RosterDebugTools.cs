@@ -57,8 +57,19 @@ namespace Golfin.Roster.Editor
                 return;
             }
 
-            RewardPointsManager.Instance.EarnPoints(100000);
-            Debug.Log("[Roster Debug] Granted 100,000 R.");
+            // Local-only: this grant never reaches the server ledger, so with PointsBackendEnabled ON
+            // it would be wiped by the next balance refresh. Refuse rather than mislead — the same
+            // rule as RewardPointsManager.SetPoints (Slice 2).
+            if (Golfin.Economy.PointsBackendFlag.Enabled)
+            {
+                Debug.LogWarning("[Roster Debug] Grant refused — PointsBackendEnabled is ON and the server " +
+                                 "balance is authoritative. Grant RP admin-side (Supabase / dashboard points " +
+                                 "panel), or turn the flag off via GOLFIN > Points Backend > Enabled.");
+                return;
+            }
+
+            RewardPointsManager.Instance.EarnPointsLocalOnly(100000);
+            Debug.Log("[Roster Debug] Granted 100,000 R (local only).");
         }
 
         [MenuItem("GOLFIN/Debug/Reset Player Progress", priority = 302)]

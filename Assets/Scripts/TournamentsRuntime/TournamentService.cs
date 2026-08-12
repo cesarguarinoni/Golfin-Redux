@@ -38,6 +38,18 @@ namespace Golfin.Tournaments
         /// <summary>The live backend. Available after <c>Awake</c> completes.</summary>
         public ITournamentBackend Backend { get; private set; } = null!;
 
+        /// <summary>
+        /// The RP debit seam (reward_points_backend Slice 2). Exposed so the sign-up modal can settle
+        /// the entry fee — server first, then local — BEFORE calling <c>Register</c>, which it then
+        /// calls with a fee of 0.
+        ///
+        /// A distinct instance from the one handed to the backend, which is fine and deliberate:
+        /// <see cref="RewardPointsServiceAdapter"/> is stateless and resolves
+        /// <c>RewardPointsManager.Instance</c> lazily per call, so both see the same balance.
+        /// Available immediately — no <c>Awake</c> dependency.
+        /// </summary>
+        public IRewardPointsService RewardPoints { get; } = new RewardPointsServiceAdapter();
+
         // ── Shared navigation handoff (T5 → T6) ───────────────────────────────
         /// <summary>
         /// Set by the Selection screen CTA before navigating to the Leaderboard or

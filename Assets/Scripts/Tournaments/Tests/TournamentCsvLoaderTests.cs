@@ -641,7 +641,9 @@ field_major,30,25:0.20;50:0.25;100:0.30;180:0.25,0,10800,480
             // prize_medium band #1
             var band1 = tables["prize_medium"].Bands.FirstOrDefault(b => b.RankFrom == 1 && b.RankTo == 1);
             Assert.IsNotNull(band1, "Real loader: prize_medium must have rank-1-to-1 band");
-            Assert.AreEqual(5000L,       band1!.RpReward,     "Real loader: prize_medium band-1 RpReward");
+            // 5000 → 500 at the RP_REBALANCE cutover (2026-08-12). This assertion reads the SHIPPED
+            // CSV, unlike the inline-fixture tests above, so it moves with the shipped economy.
+            Assert.AreEqual(500L,        band1!.RpReward,     "Real loader: prize_medium band-1 RpReward");
             Assert.AreEqual("ticket_gold", band1.ItemRewardId, "Real loader: prize_medium band-1 ItemRewardId");
 
             // prize_medium band 4-10 has no item

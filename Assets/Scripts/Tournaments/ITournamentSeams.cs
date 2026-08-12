@@ -32,6 +32,23 @@ namespace Golfin.Tournaments
         /// </summary>
         bool TrySpend(long rp);
 
+        /// <summary>
+        /// Server-authoritative variant of <see cref="TrySpend"/> (reward_points_backend Slice 2).
+        ///
+        /// Debits the server ledger FIRST and only then the local balance, reporting the combined
+        /// outcome through <paramref name="onDone"/> — which is invoked exactly once, synchronously
+        /// when no round-trip is needed (fee of 0, or <c>PointsBackendEnabled</c> OFF) and after the
+        /// response otherwise. <c>false</c> means NOTHING was debited anywhere and the caller must
+        /// not perform the action.
+        ///
+        /// Sign-up is a UI/modal flow, so awaiting a round-trip is acceptable here; this exists
+        /// because <see cref="TrySpend"/>'s bool return has nowhere to put "the server never
+        /// answered", and collapsing that into "insufficient" would tell a player with a bad
+        /// connection that they are broke.
+        /// </summary>
+        /// <param name="reason">Ledger description (see <c>Golfin.Economy.SpendReasons</c>).</param>
+        void TrySpendAsync(long rp, string reason, System.Action<bool> onDone);
+
         /// <summary>Add <paramref name="rp"/> to the balance.</summary>
         void Grant(long rp);
     }
@@ -58,6 +75,11 @@ namespace Golfin.Tournaments
             _balance -= rp;
             return true;
         }
+
+        /// <summary>No server in a fake — completes synchronously with the same answer as
+        /// <see cref="TrySpend"/>, which is exactly the flag-OFF production behaviour.</summary>
+        public void TrySpendAsync(long rp, string reason, System.Action<bool> onDone)
+            => onDone?.Invoke(TrySpend(rp));
 
         public void Grant(long rp)
         {

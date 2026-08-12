@@ -312,3 +312,241 @@ Harness (throwaway, not added to the repo — the backend has no test infra to a
 None. Every SPEC §3 item is PASS. Two things are open by design, not by failure:
 - The migration is unapplied and the code undeployed (both explicitly out of scope — Cesar's/Architect's action).
 - The `gift_pts` → `total_points` trigger gap above needs a decision before the Slice-2 cutover.
+
+---
+
+# Part 3 — Slice 2 (rebalance + re-point + cutover), 2026-08-12
+
+> Scope: **SPEC §4 "Rebalance" + "Slice 2"**, per the kickoff. Economy rebalance from
+> `RP_REBALANCE.md` (binding), earn/spend call sites re-pointed at the server, client seed removed,
+> `PointsBackendEnabled` flipped to default ON, catalog-mirror SQL **written but NOT applied**.
+
+**Iteration shape:** `points_backend:slice2_cutover`
+
+**Baseline:** HEAD `510c433ad` ("feat(economy): RP backend Slice 1"). Working tree already dirty at
+kickoff with files belonging to OTHER work — `Assets/Scenes/ShellScene.unity`,
+`Assets/Scripts/Physics/Viewer/Bot/Scenarios.cs`, `Assets/Scripts/UI/Account/SignUpScreenController.cs`,
+`Assets/Scripts/UI/SplashScreenController.cs`, `Docs/Architecture/UI_HIERARCHY.md`,
+`tasks/loop_v2_smoke_bot/**`, `_to_delete/*.stale`. **None of those were touched by this slice** and
+none appear in the file table below.
+
+## 1. Economy rebalance — RP_REBALANCE.md applied verbatim
+
+Applied by script (`scratchpad/rebalance.py`) so every number is *derived* from the approved rule
+(÷10, round half-up, min 1 for non-zero; `LevelUpCosts` = `ceil(level/2)`) rather than hand-typed.
+101 discrete value edits + 240 level rows.
+
+| File | Change | PASS |
+|---|---|---|
+| `Assets/Data/HoleDatabase.csv` | Points rows only: 17× `100→10`, 1× `200→20` (Hole 6), 18× `50→5` (replay) | PASS — `RepairKit`/`Ball` amounts proved byte-identical to HEAD by diff |
+| `Assets/Resources/Data/modes.csv` | practice `entryFee 100→10` + `rewards 50→5`; versus_1v1 `rewards` and `reward1Amount 200→20`; missions `rewards 200→20` | PASS |
+| `Assets/Resources/Data/tournaments.csv` | `entryFeeRP`: kasumigaseki `100→10`, gotemba `500→50`; the four 0-fee rows unchanged | PASS — verified through the REAL loader, not just the file |
+| `Assets/Resources/Data/tournament_prizes.csv` | all 10 `rpReward` ÷10 (major 20000→2000 … 1000→100) | PASS — item rewards `ticket_gold`/`trophy_major` untouched |
+| `Assets/Data/LevelUpCosts.csv` | `cost_r = ceil(level/2)` for all 240 rows | PASS — `sp_reward` column proved byte-identical to HEAD by diff |
+| `Assets/Resources/Data/gacha_banners.csv` | `costX1`/`costX10`: 500/4500→50/450, 750/6750→75/675 | PASS |
+| `Assets/Resources/Data/shop_catalog.csv` | `rpCost` + `saleRpCost` ÷10 (all 5 entries) | PASS |
+| `Assets/Resources/Data/stamina_shop_items.csv` | `rp_cost` ÷10 round-half-up, all 30 rows | PASS — matches the doc's enumerated mapping exactly (65→7 … 365→37) |
+| `Assets/Scripts/Debug/RewardPointsDebugPanel.cs` | deltas ±1000/±10000 → ±100/±1000; "Set 50k" → "Set 5k" | PASS |
+
+**One discrepancy inside the approved doc, resolved in favour of the formula.** RP_REBALANCE §2 states
+both `cost_r = ceil(level/2)` *and* "cumulative **14,460** — an exact ÷10 of today's total". Those
+disagree: `Σ ceil(level/2)` for 1..240 is **14,520**. 14,460 is what a literal ÷10 of today's 144,600
+would give, but no per-level integer formula produces it. The formula is what was explicitly approved
+in §2 and again in §5.2, and the cumulative was descriptive, so the **formula won** — shipped
+cumulative is 14,520, a 0.4% (60-point) drift from the prose. Flagging rather than silently picking.
+
+**Two code-side mirrors of these CSVs were also rebalanced** (not enumerated in RP_REBALANCE, but they
+are the values the game runs on when a CSV fails to load — leaving them would silently reinstate the
+old economy):
+- `ModesDatabaseCSV.AddFallbackModes()` — versus 200→20 (incl. its `rewardList` Points entry),
+  practice fee 100→10 / rewards 50→5, missions 200→20.
+- `VersusResultHandler._fallbackReward` — default 200→20.
+
+## 2. Earns — every earn now names an action
+
+`RewardPointsManager.EarnPoints(int)` **no longer exists**; the only signature is
+`EarnPoints(int amount, string action)`, so the compiler forced every call site to declare which
+event it belongs to (verified by reflection against the loaded assembly:
+`EarnPoints(Int32,String) | EarnPointsLocalOnly(Int32)`).
+
+| Call site | Action | PASS |
+|---|---|---|
+| `HoleCompleteModalController.GrantRewards` → `RewardGranter.Grant` | `hole_complete` / `hole_replay`, chosen by the same `_wasReplay` that already chooses the reward pool | PASS |
+| `VersusResultHandler.HandleMatchComplete` → `RewardGranter.Grant` | `versus_win` | PASS |
+| `LocalTournamentBackend` prize payout → `RewardPointsServiceAdapter.Grant` | `tournament_prize` (fixed in the adapter — it is the only caller) | PASS |
+| `RosterDebugTools` "Grant 100000 Reward Points" | none — now `EarnPointsLocalOnly`, **refused outright while the flag is ON** | PASS |
+
+Local behaviour is unchanged: save-data write, leaderboard accumulators
+(`rpDaily/rpWeekly/rpMonthly/lifetimeRpEarned`), `OnPointsChanged`, and `SfxBus.Play(SfxId.RpEarn)`
+all still happen exactly as before, in the same order, *before* anything is queued. With the flag ON
+the earn is additionally enqueued (one idempotency GUID per gameplay event) and a replay is kicked
+fire-and-forget — a failed send leaves the op at the head of the queue with its key intact.
+
+## 3. Spends — server debit precedes the action, in all four flows
+
+New `Golfin.EconomyRuntime.PointsSpendGate.Spend(amount, reason, onApproved, onDenied)` is the single
+door. Each call site's existing body moved verbatim into `onApproved`; the local debit stayed exactly
+where it was. **Flag OFF or a zero cost short-circuits synchronously, before `PointsService` is ever
+touched** — no HTTP, no coroutine-runner GameObject, and `onApproved` runs on the caller's own stack
+frame, so modal timing does not shift from HEAD.
+
+| Flow | Amount debited | PASS |
+|---|---|---|
+| Character level-up (`LevelUpModalController.OnConfirmClicked`) | `totalRPCost` — ONE debit for the whole previewed run, not one per level | PASS |
+| Club level-up (`ClubLevelUpModalController.OnConfirmClicked`) | `totalRPCost` (already a single transaction) | PASS |
+| Tournament sign-up (`TournamentSignupModalController.OnConfirm`) | `EntryFeeRP`, via the new `IRewardPointsService.TrySpendAsync` | PASS |
+| Mode entry fee (`ModeCardController.HandlePlayButtonClicked`) | `entryFee` | PASS |
+
+**Seam adaptation (implementer's call per SPEC §4).** `IRewardPointsService` gained
+`TrySpendAsync(long rp, string reason, Action<bool> onDone)` — server debit, then the same local
+`TrySpend`, reporting the combined outcome. `LocalTournamentBackend.Register` is **unchanged**; the
+modal now pays *before* calling it and passes a fee of 0. Register's idempotence (already-registered →
+return the existing entry with no re-charge) would have been lost by moving payment in front of it, so
+the modal short-circuits on `GetMyEntry(id) != null` first — that restores it exactly.
+`FakeRewardPointsService` implements the new method synchronously, which is precisely the flag-OFF
+production behaviour, so all 209 tournament tests kept passing unmodified.
+
+**Double-charge guard.** Going async opened a window the sync API never had: a double-tapped CONFIRM
+would fire two debits with two distinct idempotency keys and the server would honour both. A single
+process-wide in-flight latch in the gate closes it for all four flows at once.
+
+**Offline copy.** Denied spends toast `"Connection required"` (unreachable/timeout/5xx/no session) or
+`"Not enough Reward Points"` (HTTP 200 `status:"insufficient"`). These are deliberately distinct —
+collapsing them would tell a player with a bad connection that they are broke.
+
+## 4. Client seed removed · debug paths guarded · flag flipped
+
+- `RewardPointsManager.Awake` no longer seeds anything. `DEFAULT_STARTING_POINTS = 50000` is gone;
+  what remains is `DEBUG_RESET_POINTS = 5000`, reachable only by `ResetToDefault` with the flag OFF.
+- `SetPoints` / `ResetToDefault` are flag-OFF-only (guarded, not deleted, per SPEC). With the flag ON
+  they log why and no-op rather than writing a balance the next refresh would silently revert.
+- `RewardPointsDebugPanel` replaces its controls with an explanation while the flag is ON.
+- `PointsBackendFlag.DefaultEnabled = false → true`. **Done last**, after everything compiled and the
+  suite was green. `CompiledDefault_IsOff` became `CompiledDefault_IsOn` — the assertion is kept
+  (rather than deleted) because an accidental revert to OFF would stop the game writing to the ledger
+  while still looking correct locally.
+
+## 5. Server catalog mirror — WRITTEN, NOT APPLIED
+
+`/Users/cesar/Documents/playlife/backend/migrations/2026_08_12_game_point_actions_rebalance.sql`
+upserts the four RP_REBALANCE §3 rows (`hole_complete` NULL/20/400, `hole_replay` NULL/5/100 — a NEW
+row, `versus_win` 20/20/200, `tournament_prize` NULL/2000/none) and deletes the retired
+`golfin_welcome` / `legacy_balance_migration` actions. Idempotent, with a staging verification footer.
+**No SQL was executed.**
+
+⚠️ It also flags a code change the SQL cannot make: `GAME_ACTION_LABELS` in
+`backend/routers/points.py` has no `hole_replay` entry, so those ledger rows would read `hole_replay
++5pts` instead of a Japanese label. Cosmetic only (`.get(action, action)` falls back), but it wants
+the next `fly deploy`.
+
+## 6. Verification
+
+| Check | Result |
+|---|---|
+| Compile | **Clean.** `EditorUtility.scriptCompilationFailed = False`; all four new types confirmed present in the *loaded* assemblies by reflection, not just on disk |
+| EditMode suite | **1172 passed / 0 failed / 3 skipped, of 1175 total.** Run per-assembly across all 16 EditMode assemblies; the per-assembly passes sum to exactly 1172 + 3 skipped = 1175, which is how full coverage was proved. The 3 skips are pre-existing `HoleCompleteDriverTests` Stage-C1 skips |
+| New tests | 13 added (`PointsSpendTests`) covering all four spend verdicts, the 200-insufficient trap, wire shape, per-spend key uniqueness, and that spends are never queued |
+| Test fixed | `TournamentCsvLoaderTests.LoadPrizeTables_RealLoader_ShippedCSV_Returns3Tables` asserted the *shipped* prize_medium rank-1 value; 5000 → 500. The inline-fixture tests in the same file keep their original numbers — they are self-contained test data, not the shipped economy |
+| Tournament harness | Dry run through the real UI path (home → tournament card → signup modal → CONFIRM → hole selection → 2 bot-played holes → leaderboard), flag OFF — see § below |
+
+> ⚠️ **`tests-run`'s summary is scoped by the filter.** A run filtered to `Golfin.Economy.Tests`
+> reported `TotalTests: 1175, FailedTests: 0` while a **real failure existed** in
+> `Golfin.Tournaments.Tests`. `TotalTests` counts the whole mode but `FailedTests` counts only the
+> filter. A single filtered green run is NOT evidence the suite is green — the per-assembly sweep is.
+
+## 7. Known gaps and deliberate exclusions
+
+1. **`ShopTransaction` still spends locally only.** The general shop and stamina shop both debit via
+   `RewardPointsManager.SpendPoints` with no server call. The kickoff enumerated four spend flows and
+   the shop was not among them, so it is untouched — but with the flag ON a shop purchase now debits
+   the local cache while the ledger keeps the points, and the next balance refresh will hand them
+   back. **Needs a follow-up before the shop is player-visible.**
+2. **A player who is not signed in cannot spend at all.** Online-required spends (decision of record
+   #2) plus a server-authoritative balance means any entry fee, level-up or sign-up fails with
+   "Connection required" until there is a session. The game currently lets you reach mode select
+   without signing in. Product call for Cesar.
+3. **`ShellScene` still serialises `VersusResultHandler._fallbackReward: 200`.** The code default is
+   now 20, but a serialised value wins. Deliberately NOT patched: ShellScene is dirty in the working
+   tree from other work, and a scene save would bake that drift. One Inspector edit — listed in the
+   manual steps.
+4. **`RosterDebugTools`' 100,000 grant keeps its amount.** RP_REBALANCE listed the debug *panel*
+   deltas but not this menu item; it is now flag-OFF-only and local-only, so it cannot desync the
+   ledger. Left at the approved-table boundary rather than rescaled on my own authority.
+
+## 8. Manual cutover steps — Cesar
+
+Order matters: **1 before 3**, or every hole-replay earn is dropped as an unknown action.
+
+1. **Apply the catalog SQL** (Supabase SQL editor, project `wmszyghwwkaptgqdunel`) —
+   `playlife/backend/migrations/2026_08_12_game_point_actions_rebalance.sql`, staging block first if
+   you have one, then run the verification footer. Until this runs the catalog still holds Phase-A
+   placeholders: `hole_replay` **does not exist** (every replay earn comes back
+   `{awarded: 0, reason: "Unknown game action"}` and the op is consumed — points silently lost),
+   `versus_win` pays 30 instead of 20, and `hole_complete`'s daily cap is ~10x too generous.
+2. **Hand-set the 5 test balances** in the Supabase table editor / SQL (`profiles`), using the
+   `earn_pts_v2` admin-grant workflow you used for Cratilo's 123 RP. New accounts now start at **0
+   RP** — there is no client seed any more, so an unseeded test account can afford nothing. At the
+   new scale a few hundred RP is a comfortable test balance, not tens of thousands.
+3. **Deploy the router label** (optional, cosmetic) — add `"hole_replay": "ホール再プレイ"` to
+   `GAME_ACTION_LABELS` in `backend/routers/points.py` and `fly deploy`. Without it those ledger rows
+   read `hole_replay +5pts` instead of a Japanese label.
+4. **One Inspector edit** — ShellScene → `VersusResultHandler` → `_fallbackReward` **200 → 20**. The
+   code default is already 20; the scene carries a serialised override that wins. Not patched here
+   because ShellScene is dirty from other work and saving it would bake that drift.
+5. **On-device smoke, flag ON**, signed in:
+   - **one earn** — finish a hole, confirm the RP counter moves by the new amount (10 first clear /
+     5 replay / 20 on Hole 6) and that `GET /points/balance` reflects it after the queue drains.
+   - **one spend** — level up a character or enter Practice (10 RP fee), confirm the debit lands
+     server-side before the action and the ledger shows a negative row with the right `reason`.
+   - **one offline-queue replay** — earn with airplane mode on, confirm the RP counter still moves
+     locally, then re-enable and confirm the queued op replays exactly once (the balance must not
+     double-count).
+   - **one offline spend** — with airplane mode on, try a level-up: expect the "Connection required"
+     toast and **no** level gained.
+6. **Decide the two open questions** in §7 — the shop's local-only spend path, and whether a
+   not-signed-in player should be able to spend at all.
+
+## 9. Tournament sign-up verification — what actually ran, and why
+
+**`TournamentLoopCaptureHarness` could not be run, and the reason is not this slice.** Its
+`BotDriver.NavigateToHome` clicks Splash → `StartButton` expecting Loading → Home, but the auth epic
+put a **mandatory Login screen** there. The bot stalls on Login and every downstream click misses:
+
+```
+[BotDriver]   WaitForScreen TIMEOUT: 'TournamentSelection' not reached after 15s. Current=Login
+[BotDriver] FindButton MISS: no active Button found for 'SIGN UP'
+[BotDriver]   WaitForScreen TIMEOUT: 'TournamentHoleSelection' not reached after 20s. Current=Login
+```
+
+I cannot drive it past that gate — signing in means typing credentials, which I don't do. So the
+harness break is reported as-is (**pre-existing, blocks every bot/capture run that starts from boot,
+needs its own fix**) and the sign-up path was verified instead by a throwaway probe that drives the
+**same production widgets** from Home onward: `NavTeeButton` → ModeSelection → `TOURNAMENTS` →
+TournamentSelection → real `SIGN UP` button → real `CONFIRM` button. It reached Home via
+`ScreenManager.ShowScreen`, skipping only the login gate — which is auth, not RP.
+
+**Run 1 — flag OFF (the harness's historical mode). PASS:**
+```
+[SignupProbe] flag=False rpBefore=41200 kasumigasekiFee=10 (expect 10) alreadyEntered=False
+[TournamentSignupModal] Registered tournament=kasumigaseki_open char=char_james entryFee=10RP
+[SignupProbe] RESULT rpBefore=41200 rpAfter=41190 delta=10 expectedDelta=10
+              entryCreated=True screen=TournamentHoleSelection
+```
+Sign-up still works with the rebalanced data, the fee debited is exactly the new 10 (not 100), and
+navigation continues to hole selection.
+
+**Run 2 — flag ON, no signed-in session. Correctly REFUSED:**
+```
+[PointsService] Spend of 10 (tournament_entry) failed: ApiResult<PointsSpendResult> Forbidden (403…): Not authenticated
+[PointsSpendGate] Spend of 10 RP (tournament_entry) denied: Unavailable — action not performed.
+[TournamentSignupModal] Entry fee of 10RP not paid — signup aborted.
+[SignupProbe] RESULT rpBefore=41200 rpAfter=41200 delta=0 entryCreated=False screen=TournamentSelection
+```
+This is the ordering guarantee working: the server said no, so **nothing** happened — no local debit,
+no entry, no navigation, and the player got the "Connection required" toast. It is also the concrete
+demonstration of §7.2: without a session, no spend of any kind can complete.
+
+**Editor left clean:** probe script deleted, play mode exited, the probe's flag override dropped so
+the Editor resolves to the new shipped default (`storedOverride=False compiledDefault=True`), and
+`save.json` restored (`rewardPoints` 41200, kasumigaseki entry removed — the probe's own registration
+undone). ShellScene was never saved.

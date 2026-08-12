@@ -21,8 +21,17 @@ namespace Golfin.Economy
     /// </summary>
     public static class PointsBackendFlag
     {
-        /// <summary>Ships OFF. Slice 2 flips this in the same commit as the RP rebalance.</summary>
-        public const bool DefaultEnabled = false;
+        /// <summary>
+        /// Ships ON as of the Slice-2 cutover (2026-08-12) — flipped in the same commit as the RP
+        /// rebalance, because the two are one change: the server catalog's caps
+        /// (<c>hole_complete</c> max 20, <c>versus_win</c> 20 …) only make sense against the
+        /// rebalanced client amounts, and the old 100/200-point payouts would be rejected or would
+        /// inflate PLAYLIFE avatar levels.
+        ///
+        /// Turning this OFF is still the supported local-development mode: the game falls back to the
+        /// purely local balance and every debug override works again.
+        /// </summary>
+        public const bool DefaultEnabled = true;
 
         private const string PrefKey = "golfin.points.backend.enabled";
 

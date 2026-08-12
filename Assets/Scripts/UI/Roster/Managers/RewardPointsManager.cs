@@ -1,4 +1,5 @@
 #nullable enable
+using Golfin.Economy;
 using Golfin.Save;
 using Golfin.UI.Rankings;
 using UnityEngine;
@@ -21,7 +22,14 @@ namespace Golfin.Roster
     {
         public static RewardPointsManager Instance { get; private set; } = null!;
 
-        private const int DEFAULT_STARTING_POINTS = 50000;
+        /// <summary>
+        /// Balance <see cref="ResetToDefault"/> restores. This is a DEV RESET VALUE, not a starting
+        /// balance: the 50,000-point first-run seed was removed at the Slice-2 cutover (decision of
+        /// record #6 — new accounts start at 0 RP and the server balance is authoritative), and the
+        /// remaining figure is scaled to the post-rebalance economy, matching the debug panel's
+        /// "Set 5k" preset. Reachable only with <c>PointsBackendEnabled</c> OFF.
+        /// </summary>
+        private const int DEBUG_RESET_POINTS = 5000;
 
         // Event for UI updates — same interface as before
         public event System.Action<int>? OnPointsChanged;
@@ -37,21 +45,18 @@ namespace Golfin.Roster
             Instance = this;
             DontDestroyOnLoad(gameObject);
 
-            // If SaveDataHost hasn't seeded rewardPoints yet (fresh save with no migration),
-            // apply the default starting points.
             if (SaveDataHost.Instance == null)
             {
                 Debug.LogError("[RewardPointsManager] SaveDataHost.Instance is null — check Script Execution Order.");
                 return;
             }
 
-            if (SaveDataHost.Instance.Data.rewardPoints == 0)
-            {
-                SaveDataHost.Instance.Data.rewardPoints = DEFAULT_STARTING_POINTS;
-                SaveDataHost.Instance.MarkDirty();
-            }
-
-            Debug.Log($"[RewardPointsManager] Loaded {GetPoints()} points");
+            // NO FIRST-RUN SEED. The 50,000-point grant that used to live here was a testing
+            // convenience and does NOT survive the Slice-2 cutover (SPEC decision of record #6): new
+            // accounts start at 0 RP, and with PointsBackendEnabled ON the server ledger is
+            // authoritative — the local save is a cache of it, not a source of truth. Test balances
+            // are granted admin-side (Supabase / the dashboard points panel), never by the client.
+            Debug.Log($"[RewardPointsManager] Loaded {GetPoints()} points (local cache)");
         }
 
         private void OnDestroy()
@@ -105,13 +110,41 @@ namespace Golfin.Roster
         /// Earn points. Writes through to SaveData; fires OnPointsChanged.
         /// Also accumulates into the leaderboard period buckets (Daily/Weekly/Monthly/Lifetime).
         /// SpendPoints does NOT touch these — earned ≠ balance.
+        ///
+        /// <paramref name="action"/> is a <see cref="PointsActions"/> id. With
+        /// <c>PointsBackendEnabled</c> ON the earn is ALSO queued for the server ledger; the local
+        /// balance, the leaderboard accumulators and the SFX above are unchanged either way — the
+        /// queue reconciles afterwards rather than gating the payout on a round-trip (SPEC §4:
+        /// queued earns, online-required spends).
         /// </summary>
-        public void EarnPoints(int amount)
+        public void EarnPoints(int amount, string action)
+        {
+            if (string.IsNullOrEmpty(action))
+            {
+                Debug.LogError($"[RewardPointsManager] EarnPoints({amount}) called with no action — " +
+                               "the server ledger cannot record it. Use EarnPointsLocalOnly for dev grants.");
+            }
+
+            if (!EarnLocal(amount)) return;
+
+            EnqueueServerEarn(amount, action);
+        }
+
+        /// <summary>
+        /// Dev-only grant that never reaches the server ledger. Callers MUST be flag-OFF-guarded —
+        /// with the backend ON the server balance is authoritative and a local-only grant would be
+        /// silently reverted by the next balance refresh.
+        /// </summary>
+        public void EarnPointsLocalOnly(int amount) => EarnLocal(amount);
+
+        /// <summary>The unchanged local earn: save-data write, leaderboard accumulation, event, SFX.
+        /// Returns false when the amount was rejected.</summary>
+        private bool EarnLocal(int amount)
         {
             if (amount < 0)
             {
                 Debug.LogError($"[RewardPointsManager] Cannot earn negative amount: {amount}");
-                return;
+                return false;
             }
 
             SaveDataHost.Instance.Data.rewardPoints += amount;
@@ -126,6 +159,25 @@ namespace Golfin.Roster
             SfxBus.Play(SfxId.RpEarn);
 
             Debug.Log($"[RewardPointsManager] Earned {amount}R, now have {GetPoints()}R");
+            return true;
+        }
+
+        /// <summary>
+        /// Mirror the earn into the persistent pending-ops queue and kick a replay.
+        ///
+        /// Fire-and-forget on purpose: a failed send leaves the op at the head of the queue with its
+        /// idempotency key intact, so the next replay (reconnect, next earn, next login) delivers it
+        /// exactly once. Nothing here can fail the local earn that already happened.
+        /// </summary>
+        private static void EnqueueServerEarn(int amount, string action)
+        {
+            if (!PointsBackendFlag.Enabled) return;
+            if (amount <= 0 || string.IsNullOrEmpty(action)) return;
+
+            PointsService service = PointsService.Instance;
+            if (service.EnqueueEarn(action, amount) == null) return;
+
+            service.ReplayPendingAsync();
         }
 
         /// <summary>
@@ -172,11 +224,17 @@ namespace Golfin.Roster
         }
 
         /// <summary>
-        /// Set points directly (for testing or rewards).
+        /// Set points directly (for testing).
         /// Writes through to SaveData; fires OnPointsChanged.
+        ///
+        /// FLAG-OFF ONLY. With <c>PointsBackendEnabled</c> ON the server ledger is authoritative, so
+        /// a local write here would be silently reverted by the next balance refresh while looking
+        /// like it worked — worse than refusing. Real balances are granted admin-side.
         /// </summary>
         public void SetPoints(int amount)
         {
+            if (!AllowLocalOverride("SetPoints")) return;
+
             if (amount < 0)
             {
                 Debug.LogError($"[RewardPointsManager] Cannot set negative points: {amount}");
@@ -190,12 +248,28 @@ namespace Golfin.Roster
             Debug.Log($"[RewardPointsManager] Set points to {GetPoints()}R");
         }
 
-        /// <summary>Reset to default (for testing).</summary>
+        /// <summary>Reset to the dev reset value (for testing). FLAG-OFF ONLY — see <see cref="SetPoints"/>.</summary>
         public void ResetToDefault()
         {
-            SaveDataHost.Instance.Data.rewardPoints = DEFAULT_STARTING_POINTS;
+            if (!AllowLocalOverride("ResetToDefault")) return;
+
+            SaveDataHost.Instance.Data.rewardPoints = DEBUG_RESET_POINTS;
             SaveDataHost.Instance.MarkDirty();
             OnPointsChanged?.Invoke(GetPoints());
+        }
+
+        /// <summary>
+        /// Gate for the local-balance override helpers. These are guarded rather than deleted (SPEC
+        /// §4 Slice 2) so the offline/flag-OFF development loop keeps working unchanged.
+        /// </summary>
+        private static bool AllowLocalOverride(string caller)
+        {
+            if (!PointsBackendFlag.Enabled) return true;
+
+            Debug.LogWarning($"[RewardPointsManager] {caller} ignored — PointsBackendEnabled is ON and the " +
+                             "server balance is authoritative. Grant RP admin-side (Supabase / dashboard " +
+                             "points panel), or turn the flag off for local-only testing.");
+            return false;
         }
     }
 }

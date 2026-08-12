@@ -2,6 +2,8 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using Golfin.Economy;
+using Golfin.EconomyRuntime;
 using Golfin.UI.Modals;
 
 namespace Golfin.Roster
@@ -470,6 +472,20 @@ namespace Golfin.Roster
             var playerData = CharacterManager.Instance.GetCharacterData(characterId);
             if (playerData == null) return;
 
+            // Slice 2: the server debit precedes the commit. It is ONE debit for `totalRPCost` (the
+            // whole previewed run), not one per level — the modal already presents this as a single
+            // transaction, and N round-trips for an N-level confirm would be both slow and only
+            // partially reversible if the connection dropped mid-run. The per-level local debits
+            // inside LevelUp() are unchanged and sum to exactly the same amount.
+            // Flag OFF → this runs synchronously and inline, exactly as it did before.
+            PointsSpendGate.Spend(totalRPCost, SpendReasons.CharacterLevelUp,
+                () => CommitLevelUps(playerData));
+        }
+
+        /// <summary>The previously-inline body of <see cref="OnConfirmClicked"/>, now gated on the
+        /// server debit landing first. Never runs when the debit is refused or unreachable.</summary>
+        private void CommitLevelUps(PlayerCharacterData playerData)
+        {
             // Commit each previewed level-up (LevelUp deducts RP, increments level, adds SP)
             int levelsGained = previewLevel - playerData.currentLevel;
             for (int i = 0; i < levelsGained; i++)

@@ -1,12 +1,12 @@
 # Rank-band prize tables. rpReward = RP; itemRewardId blank = RP only.
 prizeTableId,rankFrom,rankTo,rpReward,itemRewardId
-prize_small,1,1,3000,
-prize_small,2,3,1500,
-prize_small,4,10,500,
-prize_medium,1,1,5000,ticket_gold
-prize_medium,2,3,3000,
-prize_medium,4,10,1000,
-prize_major,1,1,20000,trophy_major
-prize_major,2,3,12000,ticket_gold
-prize_major,4,10,5000,
-prize_major,11,50,1000,
+prize_small,1,1,300,
+prize_small,2,3,150,
+prize_small,4,10,50,
+prize_medium,1,1,500,ticket_gold
+prize_medium,2,3,300,
+prize_medium,4,10,100,
+prize_major,1,1,2000,trophy_major
+prize_major,2,3,1200,ticket_gold
+prize_major,4,10,500,
+prize_major,11,50,100,

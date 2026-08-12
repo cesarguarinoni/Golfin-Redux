@@ -95,14 +95,16 @@ namespace Golfin.Economy.Tests
         }
 
         [Test]
-        public void CompiledDefault_IsOff()
+        public void CompiledDefault_IsOn()
         {
-            // The shipping default. Slice 2 flips this alongside the RP rebalance.
-            Assert.IsFalse(PointsBackendFlag.DefaultEnabled);
-            Assert.IsFalse(PointsBackendFlag.CompiledDefault);
+            // Flipped at the Slice-2 cutover (2026-08-12), in the same commit as the RP rebalance.
+            // Asserted rather than assumed: an accidental revert to OFF would silently stop the game
+            // writing to the ledger while everything still LOOKED correct locally.
+            Assert.IsTrue(PointsBackendFlag.DefaultEnabled);
+            Assert.IsTrue(PointsBackendFlag.CompiledDefault);
 
             PointsBackendFlag.ResetToDefault();
-            Assert.IsFalse(PointsBackendFlag.Enabled);
+            Assert.IsTrue(PointsBackendFlag.Enabled);
         }
 
         // ── balance ───────────────────────────────────────────────────────────────

@@ -3,6 +3,8 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using Golfin.UI.Toast;
+using Golfin.Economy;
+using Golfin.EconomyRuntime;
 using Golfin.Roster;
 
 namespace GolfinRedux.UI.ModeSelect
@@ -566,10 +568,16 @@ namespace GolfinRedux.UI.ModeSelect
                 return;
             }
 
-            if (_data.entryFee > 0 && RewardPointsManager.Instance != null)
-                RewardPointsManager.Instance.SpendPoints(_data.entryFee);
+            // Slice 2: the entry fee is debited server-side BEFORE the mode is entered, so a refused
+            // or unreachable debit cannot drop the player into a round they never paid for.
+            // Flag OFF (or a free mode) → this runs inline and synchronously, exactly as before.
+            PointsSpendGate.Spend(_data.entryFee, SpendReasons.ModeEntryFee, () =>
+            {
+                if (_data.entryFee > 0 && RewardPointsManager.Instance != null)
+                    RewardPointsManager.Instance.SpendPoints(_data.entryFee);
 
-            OnPlayClicked?.Invoke(this);
+                OnPlayClicked?.Invoke(this);
+            });
         }
 
         // Smoothly expand/collapse a full-screen LIST card. The card is sized by a parent

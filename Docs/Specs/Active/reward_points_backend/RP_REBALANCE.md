@@ -71,7 +71,7 @@ flagged — no grant, no distortion.)
 
 Current formula: `cost_r = level × 5` (5, 10, 15 … 1,200 at lv240; cumulative 144,600).
 
-**New formula: `cost_r = ceil(level / 2)`** → 1, 1, 2, 2, 3 … 120 at lv240; cumulative **14,460** — an exact ÷10 of today's total, so lifetime level-up spend keeps its place in the economy. `sp_reward` column unchanged.
+**New formula: `cost_r = ceil(level / 2)`** → 1, 1, 2, 2, 3 … 120 at lv240; cumulative **14,520** — ≈10% of today's total (the draft prose claimed 14,460 = exact ÷10; the formula actually sums to 14,520, a 60-pt drift over 240 levels. Caught by Claude Code at implementation, corrected 2026-08-12 — the twice-approved FORMULA is what ships; the prose was wrong). `sp_reward` column unchanged.
 
 *Alternative if you prefer cleaner per-level numbers: `cost_r = level` (1, 2, 3 … 240) — but that's effectively ÷5, making level-ups twice as expensive relative to everything else. My recommendation is ceil(level/2).*
 

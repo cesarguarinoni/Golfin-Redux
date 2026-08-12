@@ -1,6 +1,7 @@
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
 using UnityEngine;
 using UnityEngine.InputSystem;
+using Golfin.Economy;
 using Golfin.Roster;
 
 /// <summary>
@@ -56,6 +57,20 @@ public class RewardPointsDebugPanel : MonoBehaviour
             $"Current: <b>{current:N0} RP</b>");
         y += 24f;
 
+        // Slice 2: every control below writes the LOCAL balance only, which the server would
+        // overwrite on the next refresh. Rather than hand the tester buttons that silently do
+        // nothing, the panel says so and stops. Turn the flag off (GOLFIN > Points Backend) to get
+        // the local sandbox back; grant real RP admin-side.
+        if (PointsBackendFlag.Enabled)
+        {
+            GUI.Label(new Rect(Padding, y, PanelW - Padding * 2, 60),
+                "<b>Server balance is authoritative.</b>\n" +
+                "PointsBackendEnabled is ON — local overrides are disabled.\n" +
+                "GOLFIN > Points Backend > Enabled to toggle off.");
+            GUI.DragWindow(new Rect(0, 0, PanelW, 20));
+            return;
+        }
+
         // Text field + Set button
         GUI.Label(new Rect(Padding, y, 50, 20), "Set to:");
         _inputText = GUI.TextField(new Rect(Padding + 52, y, halfW - 20, 22), _inputText);
@@ -68,18 +83,19 @@ public class RewardPointsDebugPanel : MonoBehaviour
         y += 30f;
 
         // Preset delta buttons — row 1
-        if (GUI.Button(new Rect(Padding,            y, halfW, btnH), "+1 000"))    Adjust(rp,  1_000);
-        if (GUI.Button(new Rect(Padding * 2 + halfW, y, halfW, btnH), "+10 000"))  Adjust(rp, 10_000);
+        // Deltas rebalanced ÷10 with the rest of the economy (RP_REBALANCE.md, 2026-08-12).
+        if (GUI.Button(new Rect(Padding,            y, halfW, btnH), "+100"))      Adjust(rp,    100);
+        if (GUI.Button(new Rect(Padding * 2 + halfW, y, halfW, btnH), "+1 000"))   Adjust(rp,  1_000);
         y += btnH + 4f;
 
         // Row 2
-        if (GUI.Button(new Rect(Padding,             y, halfW, btnH), "-1 000"))   Adjust(rp,  -1_000);
-        if (GUI.Button(new Rect(Padding * 2 + halfW, y, halfW, btnH), "-10 000"))  Adjust(rp, -10_000);
+        if (GUI.Button(new Rect(Padding,             y, halfW, btnH), "-100"))     Adjust(rp,   -100);
+        if (GUI.Button(new Rect(Padding * 2 + halfW, y, halfW, btnH), "-1 000"))   Adjust(rp, -1_000);
         y += btnH + 4f;
 
         // Row 3 — presets
         if (GUI.Button(new Rect(Padding,             y, halfW, btnH), "Set 0"))    rp?.SetPoints(0);
-        if (GUI.Button(new Rect(Padding * 2 + halfW, y, halfW, btnH), "Set 50k"))  rp?.SetPoints(50_000);
+        if (GUI.Button(new Rect(Padding * 2 + halfW, y, halfW, btnH), "Set 5k"))   rp?.SetPoints(5_000);
         y += btnH + 8f;
 
         // Reset to default

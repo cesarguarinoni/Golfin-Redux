@@ -249,7 +249,12 @@ namespace Golfin.UI.Modals.Result
 
             // Delegate to shared RewardGranter (Stage 2 DRY extraction).
             // No behavior change — the grant switch now lives once in RewardGranter.Grant().
-            GolfinRedux.UI.RewardGranter.Grant(pool);
+            // Slice 2: the same _wasReplay that chose the pool also chooses the server action, so the
+            // ledger books a replay against hole_replay's cap and not hole_complete's.
+            GolfinRedux.UI.RewardGranter.Grant(
+                pool,
+                _wasReplay ? Golfin.Economy.PointsActions.HoleReplay
+                           : Golfin.Economy.PointsActions.HoleComplete);
         }
 
         // ── Progression write ─────────────────────────────────────────────────

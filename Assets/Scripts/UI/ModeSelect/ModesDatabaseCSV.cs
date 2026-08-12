@@ -202,12 +202,16 @@ namespace GolfinRedux.UI.ModeSelect
 
         private void AddFallbackModes()
         {
-            var versus = new ModeData { id = "versus_1v1",   title = "Multiplayer",    tagline = "1v1",                               description = "Face off in fast-paced 1v1 golf matches where every shot matters. Master the course, outplay your opponent, and sink clutch putts to claim victory.", entryFee = 0, rewards = 200, locked = false, target = "matchmaking_1v1", order = 1, versusStrokeCapOverPar = 5 };
-            versus.rewardList.Add(new HoleReward(RewardType.Points, 200));
+            // RP amounts below MIRROR modes.csv and must move with it — they are what the game runs on
+            // when the CSV fails to load, so a stale value here silently reinstates the pre-rebalance
+            // economy (RP_REBALANCE.md, applied 2026-08-12: versus 200→20, practice fee 100→10 /
+            // rewards 50→5, missions 200→20).
+            var versus = new ModeData { id = "versus_1v1",   title = "Multiplayer",    tagline = "1v1",                               description = "Face off in fast-paced 1v1 golf matches where every shot matters. Master the course, outplay your opponent, and sink clutch putts to claim victory.", entryFee = 0, rewards = 20, locked = false, target = "matchmaking_1v1", order = 1, versusStrokeCapOverPar = 5 };
+            versus.rewardList.Add(new HoleReward(RewardType.Points, 20));
             _modes.Add(versus);
-            _modes.Add(new ModeData { id = "practice",     title = "PRACTICE",      tagline = "Sharpen your skills.",              description = "Practice on any course.",             entryFee = 100, rewards = 50,  locked = false, target = "hole_select",    order = 2 });
+            _modes.Add(new ModeData { id = "practice",     title = "PRACTICE",      tagline = "Sharpen your skills.",              description = "Practice on any course.",             entryFee = 10, rewards = 5,   locked = false, target = "hole_select",    order = 2 });
             _modes.Add(new ModeData { id = "driving_range",title = "DRIVING RANGE",  tagline = "Coming Soon.",                      description = "Practice long shots.",                entryFee = 0,   rewards = 0,   locked = true,  target = "none",           order = 3 });
-            _modes.Add(new ModeData { id = "missions",     title = "MISSIONS",       tagline = "Coming Soon.",                      description = "Complete challenges for rewards.",     entryFee = 0,   rewards = 200, locked = true,  target = "none",           order = 4 });
+            _modes.Add(new ModeData { id = "missions",     title = "MISSIONS",       tagline = "Coming Soon.",                      description = "Complete challenges for rewards.",     entryFee = 0,   rewards = 20,  locked = true,  target = "none",           order = 4 });
         }
 
         public List<ModeData> GetAllModes()

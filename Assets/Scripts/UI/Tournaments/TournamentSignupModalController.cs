@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using Golfin.Economy;
 using Golfin.Roster;
 using Golfin.Tournaments;
 using Golfin.UI.Modals;
@@ -179,10 +180,46 @@ namespace GolfinRedux.UI.Tournaments
                 return;
             }
 
+            // Slice 2: the entry fee is now paid BEFORE Register instead of inside it, so an
+            // unreachable server cannot enter the player into a tournament the ledger never charged
+            // for. Register is therefore called with a fee of 0 — the payment already happened.
+            //
+            // Register's own idempotence (already-registered → return the existing entry, no
+            // re-charge) is preserved by this GetMyEntry short-circuit; without it, moving payment in
+            // front of Register would charge a second time on a re-entry.
+            if (TournamentService.Instance.Backend.GetMyEntry(_tournamentId) != null)
+            {
+                Debug.Log($"[TournamentSignupModal] Already registered for {_tournamentId} — no charge.");
+                CompleteSignup(charId, alreadyPaid: 0L);
+                return;
+            }
+
+            TournamentService.Instance.RewardPoints.TrySpendAsync(
+                fee,
+                SpendReasons.TournamentEntry,
+                paid =>
+                {
+                    // The gate has already toasted the reason (insufficient vs connection required).
+                    if (!paid)
+                    {
+                        Debug.Log($"[TournamentSignupModal] Entry fee of {fee}RP not paid — signup aborted.");
+                        return;
+                    }
+
+                    CompleteSignup(charId, alreadyPaid: fee);
+                });
+        }
+
+        /// <summary>
+        /// Registers and navigates, with the entry fee already settled. Always passes 0 to
+        /// <c>Register</c> — the debit is the caller's responsibility now (see <see cref="OnConfirm"/>).
+        /// </summary>
+        private void CompleteSignup(string charId, long alreadyPaid)
+        {
             EntryState entry;
             try
             {
-                entry = TournamentService.Instance.Backend.Register(_tournamentId, fee, charId);
+                entry = TournamentService.Instance.Backend.Register(_tournamentId, 0L, charId);
             }
             catch (Exception ex)
             {
@@ -197,7 +234,7 @@ namespace GolfinRedux.UI.Tournaments
                 return;
             }
 
-            Debug.Log($"[TournamentSignupModal] Registered tournament={_tournamentId} char={charId} entryFee={fee}RP");
+            Debug.Log($"[TournamentSignupModal] Registered tournament={_tournamentId} char={charId} entryFee={alreadyPaid}RP");
 
             Hide();
             ScreenManager.Instance?.ShowScreen(_holeSelectionTarget);

@@ -2,6 +2,8 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using Golfin.Economy;
+using Golfin.EconomyRuntime;
 using Golfin.Roster;       // CharacterLevelUpDatabase, RarityHelper
 using Golfin.UI.Modals;
 
@@ -437,6 +439,17 @@ namespace Golfin.Inventory
             var template   = ClubDatabaseCSV.Instance == null ? null : ClubDatabaseCSV.Instance.GetClub(clubId);
             if (playerClub == null || template == null) return;
 
+            // Slice 2: server debit first, then the (unchanged) local commit. Flag OFF → inline and
+            // synchronous, exactly as before. This modal already spent in ONE transaction, so the
+            // server call maps 1:1 onto it.
+            PointsSpendGate.Spend(totalRPCost, SpendReasons.ClubLevelUp,
+                () => CommitLevelUps(playerClub, template));
+        }
+
+        /// <summary>The previously-inline body of <see cref="OnConfirmClicked"/>, now gated on the
+        /// server debit landing first. Never runs when the debit is refused or unreachable.</summary>
+        private void CommitLevelUps(PlayerClubData playerClub, ClubDataRuntime template)
+        {
             // 1. Deduct RP (single transaction)
             RewardPointsManager.Instance.SpendPoints(totalRPCost);
 

@@ -29,8 +29,9 @@ namespace Golfin.UI.Modals
     public class VersusResultHandler : MonoBehaviour
     {
         [Tooltip("Fallback reward if ModesDatabaseCSV is unavailable. Matches the hardcoded " +
-                 "fallback in ModesDatabaseCSV.AddFallbackModes() for 'versus_1v1'.")]
-        [SerializeField] int _fallbackReward = 200;
+                 "fallback in ModesDatabaseCSV.AddFallbackModes() for 'versus_1v1'. " +
+                 "Rebalanced 200 → 20 with RP_REBALANCE.md (2026-08-12).")]
+        [SerializeField] int _fallbackReward = 20;
 
         [Tooltip("VersusResultModalController in ShellScene — wire in Inspector.")]
         [SerializeField] VersusResultModalController _resultModal = null!;
@@ -87,7 +88,7 @@ namespace Golfin.UI.Modals
             List<HoleReward> winRewardList = GetVersusRewardList();
             if (outcome == GameSession.MatchOutcome.P1Win)
             {
-                RewardGranter.Grant(winRewardList);
+                RewardGranter.Grant(winRewardList, Golfin.Economy.PointsActions.VersusWin);
                 Debug.Log($"[VersusResultHandler] P1 WIN — granted {winRewardList.Count} reward(s) via RewardGranter.");
             }
             else

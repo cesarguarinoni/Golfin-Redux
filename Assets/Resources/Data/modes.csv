@@ -1,6 +1,6 @@
 id,title,tagline,description,entryFee,rewards,locked,target,order,versusStrokeCapOverPar,reward1Type,reward1Amount,reward2Type,reward2Amount,reward3Type,reward3Amount,rewardsTextKey
-practice,PRACTICE,Sharpen your skills on any hole.,Practice your golf skills on any course. Choose a hole and tee off at your own pace — no pressure.,100,50,false,hole_select,2,0,,,,,,,
-versus_1v1,Multiplayer,1v1,"Face off in fast-paced 1v1 golf matches where every shot matters. Master the course, outplay your opponent, and sink clutch putts to claim victory.",0,200,false,matchmaking_1v1,1,5,Points,200,,,,,
+practice,PRACTICE,Sharpen your skills on any hole.,Practice your golf skills on any course. Choose a hole and tee off at your own pace — no pressure.,10,5,false,hole_select,2,0,,,,,,,
+versus_1v1,Multiplayer,1v1,"Face off in fast-paced 1v1 golf matches where every shot matters. Master the course, outplay your opponent, and sink clutch putts to claim victory.",0,20,false,matchmaking_1v1,1,5,Points,20,,,,,
 tournaments,TOURNAMENTS,Be the best and earn rewards,"Enter live tournaments, play the featured holes, and climb the leaderboard before time runs out. Finish high to claim your share of the prizes — every stroke counts.",0,0,false,tournaments,3,0,,,,,,,MODE_REWARDS_VARY
 driving_range,DRIVING RANGE,Coming Soon — practice your drives.,A dedicated driving range mode where you can practice long shots and experiment with different clubs.,0,0,true,none,4,0,,,,,,,
-missions,MISSIONS,Coming Soon — complete challenges.,Complete special challenges and objectives to earn bonus rewards and exclusive items.,0,200,true,none,5,0,,,,,,,
+missions,MISSIONS,Coming Soon — complete challenges.,Complete special challenges and objectives to earn bonus rewards and exclusive items.,0,20,true,none,5,0,,,,,,,

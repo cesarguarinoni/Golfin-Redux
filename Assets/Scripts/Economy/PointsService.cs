@@ -193,7 +193,121 @@ namespace Golfin.Economy
             onDone?.Invoke(sent);
         }
 
+        // ── spends (online-required, never queued) ────────────────────────────────
+
+        /// <summary>
+        /// Fire-and-forget server debit (SPEC §4 Slice 2). Spends are ONLINE-ONLY by design
+        /// (decision of record #2) — there is deliberately no queue fallback here, because a queued
+        /// spend would let the player buy something the server later refuses.
+        ///
+        /// <paramref name="onDone"/> is invoked exactly once. Callers act on
+        /// <see cref="SpendOutcome.Approved"/> and do nothing otherwise.
+        /// </summary>
+        public void SpendAsync(int amount, string reason, Action<SpendOutcome> onDone)
+            => _client.Run(SpendRoutine(amount, reason, onDone));
+
+        /// <summary>Coroutine form of <see cref="SpendAsync"/>. The flag gate lives HERE so neither
+        /// entry point can reach the network with the flag off.</summary>
+        public IEnumerator SpendRoutine(int amount, string reason, Action<SpendOutcome> onDone)
+        {
+            if (!PointsBackendFlag.Enabled)
+            {
+                // Flag OFF is not a refusal — it means "the server is not in this build's loop",
+                // and the caller falls through to the unchanged local-only path.
+                onDone?.Invoke(SpendOutcome.Disabled());
+                yield break;
+            }
+
+            if (amount <= 0)
+            {
+                // A free action still has to run. Nothing to debit, nothing to ask.
+                onDone?.Invoke(SpendOutcome.FreeOfCharge());
+                yield break;
+            }
+
+            if (string.IsNullOrEmpty(reason))
+            {
+                Debug.LogError("[PointsService] SpendAsync called with no reason — refusing to debit.");
+                onDone?.Invoke(SpendOutcome.Unavailable(null));
+                yield break;
+            }
+
+            string body = BuildSpendJson(amount, reason, Guid.NewGuid().ToString("D"));
+
+            ApiResult<PointsSpendResult> result = null;
+            IEnumerator call = _client.Post<PointsSpendResult>(Endpoints.PointsSpend, body, r => result = r);
+            while (call.MoveNext()) yield return call.Current;
+
+            if (result == null || !result.Success || result.Data == null)
+            {
+                Debug.LogWarning($"[PointsService] Spend of {amount} ({reason}) failed: " +
+                                 $"{(result != null ? result.ToString() : "no result")}");
+                onDone?.Invoke(SpendOutcome.Unavailable(result));
+                yield break;
+            }
+
+            PointsSpendResult data = result.Data;
+
+            if (data.IsInsufficient)
+            {
+                // 200 OK with status:"insufficient" — a definitive answer, and nothing was written.
+                Debug.Log($"[PointsService] Spend of {amount} ({reason}) refused: {data}");
+                ApplySpend(data);
+                onDone?.Invoke(SpendOutcome.Insufficient(data, result));
+                yield break;
+            }
+
+            if (!data.IsOk)
+            {
+                Debug.LogWarning($"[PointsService] Spend of {amount} ({reason}) returned an " +
+                                 $"unrecognised status '{data.Status}' — treating as unavailable.");
+                onDone?.Invoke(SpendOutcome.Unavailable(result));
+                yield break;
+            }
+
+            ApplySpend(data);
+            Debug.Log($"[PointsService] Spent {amount} ({reason}) → {data}");
+            onDone?.Invoke(SpendOutcome.Ok(data, result));
+        }
+
+        /// <summary>Request body for <c>POST /api/v1/points/spend</c>. Field names match the deployed
+        /// <c>SpendRequest</c> pydantic model: <c>{amount, reason, idempotency_key}</c>.
+        /// Public so the tests can pin the wire shape without a live transport, mirroring
+        /// <see cref="PendingPointsOp.ToEarnGameJson"/>.</summary>
+        public static string BuildSpendJson(int amount, string reason, string idempotencyKey)
+            => Newtonsoft.Json.JsonConvert.SerializeObject(new SpendBody
+            {
+                amount = amount,
+                reason = reason,
+                idempotency_key = idempotencyKey
+            });
+
+        // Mirrors backend/routers/points.py::SpendRequest — snake_case on purpose.
+        private sealed class SpendBody
+        {
+            public int amount;
+            public string reason;
+            public string idempotency_key;
+        }
+
         // ── internals ─────────────────────────────────────────────────────────────
+
+        /// <summary>Fold a spend response into the cached balance. Unlike an earn, the spend payload
+        /// carries BOTH buckets, so the full balance can be rebuilt. Avatar level/XP are deliberately
+        /// carried forward — <c>spend_pts</c> never touches them.</summary>
+        private void ApplySpend(PointsSpendResult spend)
+        {
+            if (spend == null) return;
+
+            ApplyBalance(new PointsBalance
+            {
+                ActivityPts = spend.ActivityPts,
+                GiftPts     = spend.GiftPts,
+                TotalPoints = spend.TotalPoints,
+                AvatarLevel = LastBalance != null ? LastBalance.AvatarLevel : 0,
+                AvatarXp    = LastBalance != null ? LastBalance.AvatarXp : 0
+            });
+        }
 
         private void ApplyBalance(PointsBalance balance)
         {

@@ -1,5 +1,5 @@
 bannerId,nameKey,artSprite,costX1,costX10,endUtc,rulesUrl,sortOrder,active
-banner_standard_club1,STANDARD CLUB 1,GachaBanner_StandardClub1,500,4500,2027-01-01T00:00:00Z,https://golfin.example.com/gacha-rules/standard-club1,1,true
-banner_test_a,TEST BANNER A,GachaBanner_StandardClub1,500,4500,2026-12-31T23:59:00Z,https://golfin.example.com/gacha-rules/test-a,2,true
-banner_test_b,TEST BANNER B,GachaBanner_StandardClub1,750,6750,2026-11-30T00:00:00Z,https://golfin.example.com/gacha-rules/test-b,3,true
-banner_inactive,INACTIVE BANNER,GachaBanner_StandardClub1,500,4500,2027-06-01T00:00:00Z,https://golfin.example.com/gacha-rules/inactive,10,false
+banner_standard_club1,STANDARD CLUB 1,GachaBanner_StandardClub1,50,450,2027-01-01T00:00:00Z,https://golfin.example.com/gacha-rules/standard-club1,1,true
+banner_test_a,TEST BANNER A,GachaBanner_StandardClub1,50,450,2026-12-31T23:59:00Z,https://golfin.example.com/gacha-rules/test-a,2,true
+banner_test_b,TEST BANNER B,GachaBanner_StandardClub1,75,675,2026-11-30T00:00:00Z,https://golfin.example.com/gacha-rules/test-b,3,true
+banner_inactive,INACTIVE BANNER,GachaBanner_StandardClub1,50,450,2027-06-01T00:00:00Z,https://golfin.example.com/gacha-rules/inactive,10,false
