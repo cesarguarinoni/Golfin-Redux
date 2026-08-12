@@ -34,6 +34,13 @@ namespace Golfin.UI.Account
 
         private bool _busy;
 
+        private void Awake()
+        {
+            // Mobile: type directly into the field — hide the OS keyboard's own input bar,
+            // which otherwise receives the text and only forwards it on commit.
+            if (_usernameInput != null) _usernameInput.shouldHideMobileInput = true;
+        }
+
         private void OnEnable()
         {
             ClearError();

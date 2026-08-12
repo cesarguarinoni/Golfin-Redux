@@ -266,3 +266,8 @@ Assets/Resources/PerformanceTestRunSettings.json
 Assets/Resources/PerformanceTestRunSettings.json.meta
 Assets/packages-merged-link/
 Assets/packages-merged-link.meta
+
+# =========================
+# Auth secrets (Sign in with Apple .p8 etc.) - NEVER commit
+# =========================
+Secrets/

@@ -31,6 +31,20 @@ namespace Golfin.Auth
             }
         }
 
+        /// <summary>
+        /// Boot-time bootstrap: deep links (OAuth redirects) can arrive at any moment after launch —
+        /// including a cold start caused BY the deep link — so the deepLinkActivated subscription must
+        /// exist from frame one. Lazy Instance creation left a window where the URL arrived with no
+        /// listener and was silently lost (observed on iOS, 2026-08-11). This forces creation at startup;
+        /// Initialize() then also sweeps Application.absoluteURL for a cold-start URL.
+        /// </summary>
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+        private static void BootstrapAtStartup()
+        {
+            var _ = Instance; // touch to create + hook deep links
+            Debug.Log("[AuthService] Bootstrapped at app start (deep-link listener live).");
+        }
+
         public SupabaseConfig Config { get; private set; }
         public AuthSession Session { get; private set; } = new AuthSession();
 
@@ -133,16 +147,54 @@ namespace Golfin.Auth
             string url = OAuthUrlBuilder.Authorize(Config, provider);
             Debug.Log($"[AuthService] Opening OAuth ({provider}) in browser: {url}");
             Application.OpenURL(url);
-            // Resolved later in OnDeepLink. NOTE(Phase 2b polish): if the user backs out of the browser
-            // without completing, no deep-link fires and _pendingOAuth stays set until the next attempt —
-            // a focus-regained timeout could surface a "cancelled" result; deferred.
+            // Resolved later in OnDeepLink, or failed by the focus-regained timeout below if the user
+            // returns to the app without a deep link ever arriving (backed out / redirect lost).
+        }
+
+        /// <summary>
+        /// Focus-regained watchdog: if we're back in the foreground with an OAuth attempt still pending
+        /// and no deep link arrives within a grace period, fail the attempt so the UI unlocks. The grace
+        /// period matters because on some platforms focus returns BEFORE deepLinkActivated fires.
+        /// </summary>
+        private void OnApplicationFocus(bool hasFocus)
+        {
+            if (!hasFocus || _pendingOAuth == null) return;
+            Debug.Log("[AuthService] Focus regained with OAuth pending — starting 8s deep-link watchdog.");
+            StartCoroutine(OAuthWatchdog());
+        }
+
+        private System.Collections.IEnumerator OAuthWatchdog()
+        {
+            float deadline = Time.realtimeSinceStartup + 8f;
+            while (Time.realtimeSinceStartup < deadline)
+            {
+                if (_pendingOAuth == null) yield break; // deep link resolved it
+                yield return null;
+            }
+            if (_pendingOAuth == null) yield break;
+            Debug.LogWarning("[AuthService] OAuth watchdog fired — no deep link received after focus regained.");
+            var pending = _pendingOAuth;
+            _pendingOAuth = null;
+            pending?.Invoke(AuthResult.Fail(AuthError.Unknown,
+                "Sign-in didn't complete. Please try again."));
         }
 
         private void OnDeepLink(string url)
         {
-            if (!OAuthCallbackParser.IsCallback(url, Config)) return;
+            // Diagnostic: log arrival without leaking tokens (prefix only, fragment stripped).
+            int cut = url != null ? url.IndexOfAny(new[] { '#', '?' }) : -1;
+            Debug.Log($"[AuthService] Deep link received: {(cut >= 0 ? url.Substring(0, cut) : url)} " +
+                      $"(len={url?.Length ?? 0}, hasFragment={url != null && url.Contains("#")}, pending={_pendingOAuth != null})");
+
+            if (!OAuthCallbackParser.IsCallback(url, Config))
+            {
+                Debug.LogWarning("[AuthService] Deep link did NOT match the configured oauthRedirect — ignored.");
+                return;
+            }
 
             AuthResult tokens = OAuthCallbackParser.Parse(url);
+            Debug.Log($"[AuthService] Callback parsed: success={tokens.Success}, hasSession={tokens.HasSession}" +
+                      $"{(tokens.Success ? "" : $", error={tokens.Error}: {tokens.Message}")}");
             var pending = _pendingOAuth;
             _pendingOAuth = null;
 

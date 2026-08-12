@@ -66,6 +66,10 @@ namespace Golfin.UI.Account
             _passwordVisible = false;
             if (_passwordInput != null)
                 _passwordInput.contentType = TMP_InputField.ContentType.Password;
+
+            // Mobile: type directly into the fields — hide the OS keyboard's own input bar.
+            if (_emailInput    != null) _emailInput.shouldHideMobileInput    = true;
+            if (_passwordInput != null) _passwordInput.shouldHideMobileInput = true;
         }
 
         private void OnEnable()
