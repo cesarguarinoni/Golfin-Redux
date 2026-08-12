@@ -1,0 +1,20 @@
+{
+    "name": "Golfin.Economy.Editor",
+    "rootNamespace": "Golfin.Economy.EditorTools",
+    "references": [
+        "Golfin.Economy",
+        "Golfin.Net",
+        "Golfin.Auth"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

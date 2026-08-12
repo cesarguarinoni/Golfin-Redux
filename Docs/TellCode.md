@@ -7,6 +7,10 @@
 
 ## ▶ CURRENT STATE — update this block at every session boundary
 
+- **Last updated:** 2026-08-12 later (Architect — SEQUENCING CHANGE, Cesar: **Reward Points move to the backend FIRST; admin dashboard waits.** New active task `reward_points_backend` (`Docs/Specs/Active/reward_points_backend/SPEC.md`) — answers GPS_UNITY_PORT_SPEC §2: unify on the PLAYLIFE `points_transactions` ledger. Decisions: online-required spends + queued earns (idempotency keys); dashboard's points panel will read the one ledger (its open question 2 = BEFORE). Kickoff issued for **Slice 1** (Unity infra behind default-OFF flag — no backend dependency, zero behavior change). Phase A UNBLOCKED same day: repo at **`/Users/cesar/Documents/playlife`** (Cesar; fresh copy, mtimes 2026-08-12) — real `points.py` + `points_atomic.sql` read; ⚠️ key find: `earn_activity_pts` welds every earn to avatar XP/level at 5–50-pt PLAYLIFE scale. Architect proposed a separate `golfin_rp` currency — **Cesar OVERRODE same day: ONE shared RP value** (`total_points`); game prices/rewards get rebalanced to the GPS scale, and per Cesar the **rebalance is folded into this task** — Slice 2 ships rebalance + cutover together, gated on an `RP_REBALANCE.md` table (Architect drafts, Cesar approves every number). Spec §3/§4 rewritten to the one-value design; Phase A kickoff below REVISED accordingly (any earlier `golfin_rp` kickoff is dead — this file's version is current). **REBALANCE APPROVED same day:** `RP_REBALANCE.md` (in the spec folder) is the binding number set — global ÷10, level-up `ceil(level/2)`, stamina global rounding, §3 caps as drafted, and one amendment: **the 50,000 welcome grant is REMOVED** (testing-only per Cesar; new accounts start at 0, test balances admin-set via dashboard/Supabase — no welcome or migration actions in `game_point_actions`, no client migration logic, and Slice 2 deletes `DEFAULT_STARTING_POINTS` from `RewardPointsManager.Awake`). Also of record: **Cesar now runs the GPS app too** — every former "Ken's nod" item is Cesar's own call. **✅ PHASE A SHIPPED TO PROD same day** (Architect + Cesar): migration `2026_08_12_points_spend_idempotency.sql` applied via Supabase SQL editor (verify-first passed; `earn_pts_v2`/`spend_pts` live, service_role-only; idempotency column+index live; catalog = 3 actions, welcome/migration seed rows deleted per decision #6), **gift bug fixed end-to-end** (new migration `2026_08_12_gift_pts_total_points_fix.sql`: trigger now credits total_points, EXECUTE revoked, reconciliation ran — invariant holds on 0 profiles, the 2 affected accounts now 475/680), and **deployed**: flyctl installed (`~/.fly/bin`), Cesar authed (wonderwall acct, one-time high-risk unlock), `fly deploy` green, `/health` ok, `/points/spend` + `/points/earn-game` + `/points/balance` all respond 403-not-404 in prod. **SLICE 1 LANDED same day** (Code report: 46 new tests, suite 1159/0, zero-behavior-change proven two ways; contract notes recorded: /health is root-mounted not under /api/v1, 403 = missing header vs 401 = refresh-and-replay, errors are {detail} not {data}; AuthServiceTokenProvider adapts AuthService.cs:126 refresh — no second auth path). Manual acceptance on Cesar: Editor play mode signed in -> GOLFIN > Points Backend > Enabled -> Log Server Balance Now -> expect the balance log; toggle back OFF after. **Slice 2 kickoff ISSUED — block below** (rebalance + re-point + cutover; catalog-mirror SQL is write-only, Architect applies). `admin_dashboard` pointer below marked ⏸ ON HOLD; its kickoff stays valid, don't start it.)
+
+- **Last updated:** 2026-08-12 (Architect — Cesar gave GO: **"start the admin dashboard."** `admin_dashboard` spec (filed 2026-08-12 by the auth-epic Cowork session, `Docs/Specs/Active/admin_dashboard/SPEC.md`) is now the active task — pointer + kickoff added below (§5 steps 1–2: Next.js scaffold at `Tools/admin-dashboard/` + read-only Users panel over Supabase). STATUS.md created at SPEC_READY. Web app, not Unity — no Assets/ edits.)
+
 - **Last updated:** 2026-08-10 (Architect — close-out sweep per Cesar: "all tasks from yesterday and today are done." CLOSED: `auto_club_selection` (`43d8a34c9`), `power_gauge_target_marker` (Order 357, off the video), `map_view_strict_crop_indicators` (Order 355, off the video), `aim_camera_ball_centering` (moved to Completed in this sweep — pending Architect calls D2/D3 accepted as-is), `putter_aim_blue_line` (approved off the Hole 6 video), plus the `hole1_cup_buried_under_green` repair (`da62daf86`, surgical CupReseatTool — a Hole 1 re-import would have destroyed 1362 trees + the baked sim data; standing rule: shipped holes are repaired in place, never re-imported). All five SPEC_READY pointer+kickoff blocks below pruned to strikethrough one-liners. Notion GOLFIN_Roadmap rows closed 2026-08-10. Repo committed + pushed same day, incl. the previously-uncommitted `Scenarios.cs` in-flight ClubHandle regression guard + smoke-bot log refresh. `Docs/Specs/Active/` now holds no SPEC_READY work (only the historical `ob_boundary_presentation` + `phone_build_smoke_test` folders) — next task comes from Cesar.)
 
 - **Last updated:** 2026-08-05 15:05 JST (Architect — **DEVICE ERA.** Game builds+runs on physical iPhone since 2026-07-27; signing SOLVED (do not re-litigate); on-device smoke found 7 issues. Fixed since: `centralball_device_invisible` (device-verified `1a4ad15ca`), `hole6_tree_collision_profiles` (`c1d38e280`), `camera_drag_touch_origin`/K1 (CLOSED — `bb59d32dd` 08-03, device-verified per commit + Cesar's session; block deleted 2026-08-05), `nav_bar_edge_gaps` (K4) (CLOSED — `49825e867` + ticket-cluster follow-up `26ceeb051`, 08-03 — PRE-DATED the batch write, same drift class as K1; cause was H1: fixed-width 1178px center-anchored bars under a **ConstantPixelSize** canvas, fix = stretch anchors + proportional icon re-anchor; NOT the CanvasScaler — the `loading_bar_inset` (K14) hold on that question is resolved; block deleted 2026-08-05, flagged by Cesar). Shipped: `build_version_stamp` (3 defects → hardening kickoff below). **iOS Simulator three-tier verification loop VALIDATED** — canonical doc `Docs/Pipeline/IOS_SIMULATOR_LOOP.md`; standing rules: never wipe the seeded DerivedData, never `BuildPipeline.BuildPlayer` via MCP script-execute. Full story: `Docs/Reports/2026-08-04_ios_simulator_build_blocker.md` §§10–13 + `Docs/AI_CONTEXT.md` top block. **OPEN = the PENDING KICKOFFS below** (6 smoke issues + build-stamp hardening + housekeeping; K9 `ui_frame_pacing` smoke #8 added 2026-08-05; K10 `ob_recovery_fixes` **CLOSED 2026-08-05** (`90dd574ff` camera+drop rule, `ed65f5726` permanent capture Y-flip fix; CupZoom same-class wedge found+fixed; OB now stops chasing with no aerial cut; ground-level settle built then reverted per Cesar); K1 closed. K11 `club_selection_green_gate` **CLOSED 2026-08-05** (`066df31f2` selector gate + `efa681acb` §2f re-decide after reposition — the item deferred pending K10; ⚠️ K10's close-out swept K11's in-flight lines and briefly broke `main`, repaired forward — see the K11 block). K12 `matchmaking_scan_pacing` added 2026-08-05 — find-opponent animation: decelerating scan + total cut ~5.6s→~3.1s, NO scene edit (new-serialized-field technique), queued AFTER K11 per Cesar — **now NEXT UP**. K13 `boot_loading_screen_removal` **CLOSED 2026-08-05** (`d3bf00026`) — measured first as instructed: zero real progress ever fed (`_useExternalProgress` never true, max `_realProgress` 0.000 across 2 runs), boot init done at t=3.8s vs Splash interactive at t=9.0s, real work behind the transition ~0.23s (Main Theme decode, already under the 0.25s fade) → REMOVED per the <2s rule. **click→Home 2.72s → 0.48s.** HoleLoad path verified byte-identical + live-regression-passed (real bar 0→1 via the real ModeHomeCard PlayButton). ⚠️ Adjacent knob still open: `minLoadingTime` (2s, scene-serialized) is also the hole-load screen's MINIMUM — measured 2.586s with progress already at 1.0; same scene-serialization trap as K12. K14 `loading_bar_inset` **CLOSED 2026-08-05** (`bae5386f3`) — shipped the SCENE route (not the code shim); `LoadingBarRoot` sizeDelta.x 0→-16, isolated one-line diff. Gate lifted when Cesar landed K7 (`d680198b3`) mid-task. **Two kickoff premises proved wrong and are corrected in the sequencing bullet above — read them before reusing that block's reasoning:** (a) the bar was never at zero inset — `Track` already carried `-48` (24 units/side), so the edit went 24→**32**/side; (b) the loading screen's canvas is **ScaleWithScreenSize** (ref 1170×2532, match-width), NOT ConstantPixelSize — that was K4's separate nav-bar canvas, so the kickoff's "8 units = 8 device px, dial ~24 for points" units advice was wrong-canvas and must not be reused. Verified on rendered pixels at 1170×2532: inset 32/32 at both 0% and 100%, fill 1106px across a 1106px track (reaches both ends exactly, the don't-break-functionality gate); `ProgressText` edges match `Track` edges; 16:9 renders the same 32 units as 28px at scaleFactor 0.874. Editing `Track` (the rect that owned the inset) would have desynced `ProgressText`, which carries its own `-48` — the root was the correct single dial. ⚠️ Side-finding for whoever owns matchmaking: opening+saving ShellScene reconciles STALE `MatchMakingModal` prefab overrides (an anchored-position `-564`→`-68` move, plus four `scan*Seconds` fields from `925a25398`). Reverted out of this commit to keep it one-line; it is still unreconciled on disk and will reappear on the next ShellScene save. RECONCILIATION DONE 2026-08-05 per Cesar ("Close them"): `arrow_speed_retune` (K6) CLOSED — `cd0ef6ed4` 08-04 verified against the kickoff shape in the diff: F13 changelog entry (93 lines), BOTH mirrors (controls.csv + ControlsConfig.cs), ShotController floor clamp (`Mathf.Max(arrowHz, MinArrowSpeedHz)`), both test files updated. NOTE: F13 locked at 30 fps, BEFORE `ui_frame_pacing` landed — if arrow feel reads differently at 60 fps on device, retune reopens as a NEW row; F13 stays the record. `ui_frame_pacing` (K9) CLOSED — `7380baf67`, FramePacingBootstrap.cs exactly as specced; device feel signed off via Cesar's own device sessions; in-hole 60 fps knock-on unreported — watch in whole-game perf (940). `b702e1a41` wind→ball-flight ACCEPTED as landed (no kickoff existed; it carries NO F-entry — flag for the next physics-changelog pass). Both blocks deleted. K15 `app_identity` **CLOSED 2026-08-05** (`66ac68575` → `7a63f7c2f`) — **the app is now `Golfin`**: productName RE2 → `Golfin`, companyName → NEXT INNOVATION PTE. LTD., default icon → `Assets/Icons/Golfin-Icon2.png`; bundle id + signing UNTOUCHED as specced. `Golfin: The Invitational` shipped first and was rejected on sight of the springboard — iOS collapses the spaces before truncating, rendering `Golfin:TheI…`. **The built .app is now `Golfin.app`** (executable + process name `Golfin`; `RE2.app` deleted) — `IOS_SIMULATOR_LOOP.md` re-pointed. ⚠️ Two findings for anyone driving the sim loop: (a) an append re-export can leave the pbxproj referencing `lib_burst_generated.cpp`/`.a`, which Burst NEVER generates for the simulator SDK — the tier-2 build dies with "Build input file cannot be found"; this is NOT a DerivedData problem, do not wipe, just strip the 8 lines (fix is PERMANENT — append preserves the pbxproj; the refs were legacy state inherited from an earlier device-SDK export); (b) icon2 carries an opaque alpha channel that Unity strips at icon generation — built icon reports `hasAlpha: no`, store-safe, leave it alone. K16 `hole_scene_leftover` **CLOSED 2026-08-05** (`a6b022642` fix + `1372da34b` residue strip) — capture launchers now snapshot the scene setup before staging and restore it at EnteredEditMode, closing staged hole scenes WITHOUT saving; shipped the Option-B alternative so SmokeRunner2e/2f inject their host at EnteredPlayMode and NEVER serialize it, removing the LabScaffold write entirely (2f's save was also baking 13 unrelated `_disabledAlpha` lines per run). The committed SmokeRunner2fHost residue is gone and cannot recur. 2f's defensive pre-clean stays and now finds nothing. ⚠️ SEPARATE pre-existing bug surfaced while verifying: the 2e OB capture no longer reaches OB (18.95m AtRest vs 131.28m TerminalState=OB in the log from `4f9fd2012`) — untouched host, fixed preset, so physics/terrain drift; it falls back to "capturing current state as evidence", i.e. LOOKS successful while proving nothing. Needs its own task.) plus `putter_aim_blue_line` (413, SPEC_READY in `Specs/Active/`, awaiting Cesar go) and a device pass on `demo_build_slice` (426). Everything below this bullet predates the device era and is historical.)
@@ -17,6 +21,206 @@
 ---
 
 ## 📋 SPEC_READY POINTERS
+
+- **`reward_points_backend`** (filed 2026-08-12, Architect) — **SPEC_READY, GO from Cesar 2026-08-12 (points-first sequencing).** Unify GOLFIN Reward Points onto the PLAYLIFE Supabase ledger (`points_transactions`), server-authoritative — the §2 fork in GPS_UNITY_PORT_SPEC, resolved. Offline policy: online spends, queued earns. Kickoff below covers **Slice 1 only**: `Golfin.Net` ApiClient + `PointsService` + persistent pending-ops queue behind a default-OFF `PointsBackendEnabled` flag — byte-identical game behavior with the flag off. **One-value design (Cesar): RP == PLAYLIFE `total_points`, no new currency.** Phase A (backend: idempotency + `spend_pts`/`earn_pts_v2` + `/points/spend` + `/points/earn-game` in `/Users/cesar/Documents/playlife/backend`) has its OWN kickoff below — runs in the playlife repo, independent of Slice 1, scale-agnostic. Slice 2 = **economy rebalance to GPS scale + re-point call sites + flag flip, one cutover** — gated on the Cesar-approved `RP_REBALANCE.md` table. Spec: `Docs/Specs/Active/reward_points_backend/SPEC.md`. Kickoffs below.
+
+### Kickoff · reward_points_backend — Slice 1
+
+```
+Read Docs/Specs/Active/reward_points_backend/SPEC.md and implement §4 Slice 1
+only (Golfin.Net infra + PointsService + pending-ops queue, behind a
+default-OFF flag). Phase A and Slice 2 are later kickoffs — do not start them.
+
+Context:
+- Goal: infrastructure for moving Reward Points to the PLAYLIFE backend
+  (https://playlife-api.fly.dev/api/v1, Bearer Supabase JWT, {data:...}
+  envelope). This slice changes NO game behavior: flag PointsBackendEnabled
+  defaults OFF and nothing existing calls the new code paths when off.
+- New asmdef Golfin.Net: ApiClient singleton (UnityWebRequest, Bearer attach,
+  envelope unwrap, retry on 408/connection failure, 401 -> refresh -> retry
+  once), static Endpoints (/points/* + /health only), ApiResult<T>.
+- Reuse the Supabase session/token from the auth epic (2ffe0403f, 122842b8c,
+  847d7bced) — read that code for the exact accessor; if token refresh isn't
+  exposed yet, flag it in the report rather than hand-rolling a second auth path.
+- PointsService (Golfin.Economy): RefreshBalanceAsync() + cached balance +
+  persistent JSON queue in Application.persistentDataPath (idempotency GUID
+  per op, FIFO replay on reconnect/login; earn ops only in v1).
+- Do NOT touch RewardPointsManager or any of its call sites in this slice.
+- EditMode tests: queue round-trip, idempotency-key stability, replay ordering,
+  ApiClient envelope/401 paths via mocked transport.
+- Out of scope: backend edits, RewardPointsManager re-pointing, spend flows,
+  migration grants, admin dashboard.
+
+When done: list changed files with a 1-line summary each, run the EditMode
+suite (must stay green — zero behavior change is the acceptance bar), flag the
+manual device check (flag ON + logged in -> RefreshBalanceAsync logs the test
+account's server balance), update STATUS.md + IMPLEMENTER_REPORT.md in the
+spec folder, and update Docs/AI_CONTEXT.md.
+```
+
+### Kickoff · reward_points_backend — Phase A (backend, run in the playlife repo) — REVISED (one-value design)
+
+```
+Open /Users/cesar/Documents/playlife. Read
+/Users/cesar/Documents/GolfinRedux/Docs/Specs/Active/reward_points_backend/SPEC.md
+and implement §3 Phase A only (idempotency + spend + earn-game on the EXISTING
+balance). Slice 2 is a later kickoff — do not touch the Unity repo.
+
+Context:
+- ONE shared RP value (Cesar decision): GOLFIN RP == total_points
+  (activity_pts + gift_pts). NO new currency, NO new balance column. Game
+  earns post to activity_pts via the existing atomic/avatar-coupled semantics;
+  the game-side rebalance to GPS scale happens in Slice 2 and gates when the
+  game actually starts writing — your work here is scale-agnostic.
+- Migration backend/migrations/2026_08_12_points_spend_idempotency.sql —
+  mirror 2026_06_29_points_atomic.sql conventions exactly (CREATE OR REPLACE,
+  revoke-from-public/anon/authenticated + grant-to-service_role on EVERY new
+  function, staging verification footer). Contents per spec §3.1:
+  points_transactions.idempotency_key + partial unique index;
+  earn_pts_v2 (same body as earn_activity_pts incl. avatar coupling, plus
+  idempotent replay — leave earn_activity_pts itself untouched);
+  spend_pts (row-locked, activity_pts first then gift_pts, total_points kept
+  consistent, distinct insufficient result, negative ledger row(s), no
+  avatar_xp change, idempotent);
+  game_point_actions table (pts nullable = fixed server amount vs cap-validated
+  client amount; once_per_user) seeded with PLACEHOLDER amounts — comment them
+  as placeholders, real values come from the Slice-2 rebalance table.
+- backend/routers/points.py additions in the existing style ({data} envelope,
+  get_current_user, service client): POST /points/earn-game (resolve amount:
+  catalog-fixed else validated client amount -> rpc earn_pts_v2),
+  POST /points/spend (-> rpc spend_pts, explicit insufficient payload).
+  /balance, /earn, /redeem untouched.
+- Add tests if the repo has a test setup; otherwise include the staging
+  verification SQL block (single call, idempotent replay, concurrency loop,
+  insufficient-funds incl. the activity->gift split boundary) in the migration
+  footer per house style.
+- Out of scope: Unity/GolfinRedux, applying the migration to prod (Cesar or
+  Architect-via-browser does that), fly deploy without Cesar's go, any
+  rebalance numbers.
+
+When done: list changed files with a 1-line summary each; state clearly that
+the migration is WRITTEN but NOT APPLIED and what the apply+deploy steps are
+(Supabase SQL editor → then fly deploy from backend/, app playlife-api — flag
+if flyctl isn't authenticated); update STATUS.md + IMPLEMENTER_REPORT.md in
+the spec folder and Docs/AI_CONTEXT.md in GolfinRedux.
+```
+
+### Kickoff · reward_points_backend — Slice 2 (rebalance + re-point + cutover) — issued 2026-08-12 after Slice 1 landed
+
+```
+Read Docs/Specs/Active/reward_points_backend/SPEC.md §4 (Rebalance + Slice 2)
+and RP_REBALANCE.md in the same folder (APPROVED — binding numbers), then
+implement Slice 2: economy rebalance + re-point RewardPointsManager call
+sites + cutover prep. Slice 1 infra (Golfin.Net, PointsService, queue, flag)
+is in; Phase A is live in prod.
+
+Context:
+- Rebalance FIRST, RP_REBALANCE.md verbatim: HoleDatabase.csv Points rows
+  (100->10, hole 6 200->20, replay 50->5); modes.csv (practice entryFee
+  100->10, rewards 50->5; versus rewards + reward1Amount 200->20; missions
+  200->20); tournaments.csv entryFeeRP (100->10, 500->50);
+  tournament_prizes.csv rpReward all /10; LevelUpCosts.csv cost_r =
+  ceil(level/2), sp_reward unchanged; gacha_banners.csv (500/4500 -> 50/450,
+  750/6750 -> 75/675); shop_catalog.csv rpCost+saleRpCost /10;
+  stamina_shop_items.csv rp_cost = round(x/10) min 1;
+  RewardPointsDebugPanel deltas ±1000/±10000 -> ±100/±1000, "Set 50k" ->
+  "Set 5k". Item amounts (RepairKit/Ball) and SP rewards are NOT RP — leave.
+- Remove the client seed: the DEFAULT_STARTING_POINTS (50,000) path in
+  RewardPointsManager.Awake goes away entirely (decision of record #6 — new
+  accounts start at 0; server balance is authoritative when the flag is ON).
+- Earns: EarnPoints call sites gain an action/reason; when flag ON also
+  enqueue earn-game with actions hole_complete / hole_replay / versus_win /
+  tournament_prize (one idempotency GUID per gameplay event). Local balance,
+  leaderboard accumulators, and RP SFX behavior unchanged — the queue
+  reconciles the server.
+- Spends: PointsService.SpendAsync(amount, reason) — server debit precedes
+  the action in the four spend flows (character level-up, club level-up,
+  tournament signup via IRewardPointsService, mode entry fee).
+  IRewardPointsService gains an async variant for
+  LocalTournamentBackend.Register; exact seam adaptation is your call under
+  the minimal-diff rule. Offline spend -> existing toast pattern
+  ("Connection required"). Use the live contract Slice 1 recorded: 401 =
+  refresh+retry; insufficient funds returns 200 with status "insufficient".
+- Server catalog mirror — WRITE ONLY, do not apply: new file
+  /Users/cesar/Documents/playlife/backend/migrations/2026_08_12_game_point_actions_rebalance.sql
+  updating game_point_actions to the approved RP_REBALANCE §3 values:
+  hole_complete pts=NULL max_per_event=20 daily_cap=400; hole_replay (NEW
+  row) pts=NULL max=5 cap=100; versus_win pts=20 cap=200; tournament_prize
+  pts=NULL max=2000 cap=NULL. Cesar/Architect applies it in Supabase.
+- Flag: PointsBackendEnabled flips to default ON in this slice, AFTER
+  everything compiles and tests pass. SetPoints/ResetToDefault/debug panel
+  become flag-OFF-only (guard, don't delete).
+- Out of scope: admin dashboard, fly deploy, applying any SQL, player_state
+  sync, avatar/leaderboard server-side work.
+
+When done: list changed files with a 1-line summary each, run the EditMode
+suite (must stay green), run TournamentLoopCaptureHarness (fees and prizes
+changed — signup must still work), list the manual cutover steps for Cesar
+(apply the catalog SQL; hand-set the 5 test balances in Supabase; on-device
+smoke with flag ON incl. one earn, one spend, one offline-queue replay),
+update STATUS.md + IMPLEMENTER_REPORT.md in the spec folder, and update
+Docs/AI_CONTEXT.md.
+```
+
+- **`admin_dashboard`** (filed 2026-08-12, Architect) — ⏸ **ON HOLD 2026-08-12 (later): Cesar sequenced `reward_points_backend` first — do NOT start this kickoff until that lands.** Original entry: **SPEC_READY, GO from Cesar 2026-08-12 ("start the admin dashboard").** New internal web app at `Tools/admin-dashboard/` — Next.js (App Router) + TypeScript + Tailwind — over the shared Supabase project (`wmszyghwwkaptgqdunel`). This kickoff covers **§5 steps 1–2 only**: scaffold (panel registry, admin login + `ADMIN_EMAILS` allowlist, `admin_audit_log` migration SQL) + Users panel **read-only** (`auth.admin.listUsers` ⋈ `profiles`). NOT Unity — no Assets/ edits. service_role key is server-side only; Cesar pastes secrets into `.env.local` himself. Spec: `Docs/Specs/Active/admin_dashboard/SPEC.md`. Kickoff below.
+
+### Kickoff · admin_dashboard
+
+```
+Read Docs/Specs/Active/admin_dashboard/SPEC.md and implement §5 steps 1–2
+(scaffold + Users panel read-only). Steps 3+ are a later kickoff.
+
+Context:
+- New web app: Tools/admin-dashboard — Next.js (App Router) + TypeScript +
+  Tailwind. Not Unity; touch nothing under Assets/. Talks to Supabase project
+  wmszyghwwkaptgqdunel via a SERVER-SIDE service_role client only
+  (lib/supabaseAdmin.ts — the key must never reach the browser).
+- Secrets: scaffold .env.local.example (SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY,
+  ADMIN_EMAILS) and gitignore .env.local — Cesar pastes real values himself.
+- Admin auth v1: Supabase email/password login + server-side ADMIN_EMAILS
+  allowlist. Day-one audit table public.admin_audit_log — write the migration
+  SQL to Docs/GPS/ (Cesar applies it in the Supabase dashboard, same pattern
+  as 2026_08_11_sync_display_name_trigger.sql).
+- Panel registry (lib/registry.ts) so future panels self-register in the
+  sidebar. Loud PRODUCTION banner — this DB serves live PLAYLIFE users.
+- Users panel per spec §4 v1 (list + detail drawer, READ-ONLY): verify against
+  the 5 test users listed there.
+- Out of scope: mutations (step 3), stat cards + points ledger (step 4),
+  Track B game-state sync, hosting/deploy.
+
+When done: list changed files with a 1-line summary each, run npm run dev and
+confirm login + user list + detail drawer render against live data, flag what
+needs Cesar's manual steps (env values, migration apply), update STATUS.md +
+IMPLEMENTER_REPORT.md in the spec folder, and update Docs/AI_CONTEXT.md.
+```
+
+- **`tournaments_mode_card`** (filed 2026-08-10, Architect) — **SPEC_READY.** Tournament mode is implemented but has no production entry point (only the dev "TOURNAMENTS (TEMP)" button on ModeSelection). Adds a fifth mode card **TOURNAMENTS** to the Home carousel + full-screen Mode Select, pure data + minimal code: new `modes.csv` row (order 3; driving_range→4, missions→5) with a new optional `rewardsTextKey` column ("Varies by tournament" text row, no coin), `case "tournaments"` → `ScreenId.TournamentSelection` in both `HandlePlayClicked` switches, id-based tagline/desc localization fallback in `ModeCardController`, 5 new LocalizationText.csv keys (EN+JP, incl. localizing the hardcoded "NO ENTRY FEE"). No scene/prefab edits. Temp button stays (capture harness clicks it). Spec: `Docs/Specs/Active/tournaments_mode_card/SPEC.md`. Kickoff below.
+
+### Kickoff · tournaments_mode_card
+
+```
+Read Docs/Specs/Active/tournaments_mode_card/SPEC.md and implement it.
+
+Context:
+- Adds a TOURNAMENTS card to the Home mode carousel + full-screen Mode Select,
+  routing PLAY to the existing ScreenId.TournamentSelection (same call the
+  TOURNAMENTS (TEMP) dev button already makes). Cards are runtime-instantiated
+  from ModesDatabaseCSV — this is a modes.csv row + small code diffs, NO scene
+  or prefab edits.
+- Touch only: modes.csv, ModeData.cs, ModesDatabaseCSV.cs, ModeCardController.cs,
+  ModeCarouselController.cs, ModeSelectScreenController.cs, LocalizationText.csv
+  (+ Tools → Localization → Import Text CSV, commit the regenerated table asset).
+- Minimal diff. Reuse the existing card pipeline (Bind/SetState/UpdateEconomyRows)
+  and the LocalizationManager.Get fallback contract. New CSV column `rewardsTextKey`
+  and the localization keys exactly as specced.
+- Out of scope: TournamentDevEntryButton (harness clicks it — leave it), tournament
+  backend/signup fees, other modes' tagline/desc localization, prefab visuals.
+
+When done: list changed files with a 1-line summary each, run the acceptance
+tests in the spec, flag which need manual on-device verification, update
+STATUS.md + IMPLEMENTER_REPORT.md in the spec folder, and update
+Docs/AI_CONTEXT.md.
+```
 
 - **`hole_scene_leftover_v3`** (filed 2026-08-10, Architect) — **SPEC_READY, GO from Cesar 2026-08-10.** 🔴 **THIRD attempt at the `Hole_NN_Geo` hierarchy leak — read the spec's "Read this first" section before touching anything.** Cesar had `Hole_06_Geo` reintroduced and left in the hierarchy **twice on 2026-08-10**, after both the Architect and Code assured him K16 (`hole_scene_leftover_v2`) had closed it. **v1 and v2 scoped the bug to the capture launchers; that was the wrong scope.** The dominant vector is the **EditMode test suite** — `RealHoleTerrainTests` opens all 18 `Hole_NN_Geo` scenes additively into the LIVE hierarchy (`:131`) and its `[OneTimeTearDown]` (`:85-91`) closes only what is still in a plain static `s_HoleCache` (`:60`), which any domain reload wipes while the scenes stay open (a cancelled run skips teardown entirely). Evidence: `LastSceneManagerSetup.txt.bak` records ShellScene + Hole_06_Geo; Editor.log shows holes 01–18 each opened 2× (= the two suite runs Cesar saw) and a `[CaptureSceneSetup] Excluding staged hole scene from snapshot: Hole_06_Geo` line ~280 lines AFTER a sweep, proving the sweep left it open; only 4 of 26 hole-scene stagers call `CaptureSceneSetup` — exactly K16's scope. Fix is two layers: (1) reload-proof, scan-based pre-clean + teardown in the fixtures, (2) an always-on `StagedHoleSceneGuard` with strict authoring protection (closes only a non-active, non-dirty `Hole_NN_Geo` while ShellScene/LabScaffold is open, never saves, EditorPrefs off-switch). Spec: `Docs/Specs/Active/hole_scene_leftover_v3/SPEC.md`. Kickoff below.
 
