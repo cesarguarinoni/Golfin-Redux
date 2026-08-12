@@ -37,10 +37,25 @@ namespace Golfin.Economy
 
         private static bool? _cached;
 
+        /// <summary>
+        /// Force the backend OFF for THIS RUN ONLY, without touching the stored preference.
+        ///
+        /// Added for the bot auth bypass (points_cutover_followups item 1): a bot session is a fake
+        /// local identity, so it must never reach the live ledger — but a bot run must equally never
+        /// leave the Editor with the backend switched off behind Cesar's back. Writing
+        /// <see cref="Enabled"/> would persist to PlayerPrefs and do exactly that, silently, until
+        /// someone noticed the next day. This is the non-persisting form: it wins over both the
+        /// stored override and the compiled default, and it evaporates on domain reload.
+        ///
+        /// Set only by editor/harness-guarded code (<c>Golfin.Dev.BotSessionOverride</c>).
+        /// </summary>
+        public static bool SessionForcedOff { get; set; }
+
         public static bool Enabled
         {
             get
             {
+                if (SessionForcedOff) return false;
                 if (_cached.HasValue) return _cached.Value;
 
                 int fallback = CompiledDefault ? 1 : 0;

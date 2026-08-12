@@ -28,6 +28,10 @@ namespace GolfinRedux.UI.Shop
         private GeneralShopCard _ballTemplate;
 
         private readonly List<GeneralShopCard> _cards = new List<GeneralShopCard>();
+
+        /// <summary>One purchase at a time — the RP debit is a server round-trip since
+        /// points_cutover_followups item 2. See HandleBuy.</summary>
+        private bool _purchaseInFlight;
         private ShopCategory? _activeCategory;   // null = ALL
 
         // ── Lifecycle ─────────────────────────────────────────────────────────────
@@ -140,26 +144,37 @@ namespace GolfinRedux.UI.Shop
         {
             if (card == null || card.Entry == null) return;
 
-            var result = ShopTransaction.TryPurchaseCatalogEntry(card.Entry);
-            var toast  = ToastController.Instance;
+            // Server round-trip since points_cutover_followups item 2 — latch so a double-tap cannot
+            // fire a second debit (see StaminaShopDetailScreenController.HandleBuyClicked).
+            if (_purchaseInFlight) return;
+            _purchaseInFlight = true;
 
-            switch (result)
+            ShopTransaction.TryPurchaseCatalogEntry(card.Entry, onGranted: null, onResult: result =>
             {
-                case ShopTransaction.GeneralPurchaseResult.Success:
-                    toast?.Show("Purchased!");
-                    card.Bind(card.Entry); // reflect OWNED / debited state
-                    break;
-                case ShopTransaction.GeneralPurchaseResult.InsufficientRp:
-                    toast?.Show("Not enough RP");
-                    break;
-                case ShopTransaction.GeneralPurchaseResult.AlreadyOwned:
-                    toast?.Show("Already owned");
-                    card.Bind(card.Entry);
-                    break;
-                default:
-                    toast?.Show("Purchase unavailable");
-                    break;
-            }
+                _purchaseInFlight = false;
+                var toast = ToastController.Instance;
+
+                switch (result)
+                {
+                    case ShopTransaction.GeneralPurchaseResult.Success:
+                        toast?.Show("Purchased!");
+                        card.Bind(card.Entry); // reflect OWNED / debited state
+                        break;
+                    case ShopTransaction.GeneralPurchaseResult.InsufficientRp:
+                        toast?.Show("Not enough RP");
+                        break;
+                    case ShopTransaction.GeneralPurchaseResult.AlreadyOwned:
+                        toast?.Show("Already owned");
+                        card.Bind(card.Entry);
+                        break;
+                    case ShopTransaction.GeneralPurchaseResult.SpendDenied:
+                        // PointsSpendGate already toasted the reason — stay silent.
+                        break;
+                    default:
+                        toast?.Show("Purchase unavailable");
+                        break;
+                }
+            });
         }
 
         private void OnRpChanged(int _) { /* RP pill lives on the persistent top bar */ }

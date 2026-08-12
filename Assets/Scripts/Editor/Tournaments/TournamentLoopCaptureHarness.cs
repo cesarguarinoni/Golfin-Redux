@@ -194,6 +194,11 @@ namespace Golfin.Tournaments.CaptureHarness.Editor
                 SessionState.SetBool(ArmedKey, false); // clear — must be immediate
                 Application.runInBackground = true;
 
+                // points_cutover_followups item 1: the splash is a hard sign-in gate now, and this
+                // harness has no credentials. Arm the dev override BEFORE the bot reaches the splash
+                // — fake local session + points backend forced OFF, so the run touches no ledger.
+                Golfin.Dev.BotSessionOverride.Arm("TournamentLoopCaptureHarness");
+
                 bool shouldRecord = SessionState.GetBool(RecordedKey, false);
                 SessionState.SetBool(RecordedKey, false);
 

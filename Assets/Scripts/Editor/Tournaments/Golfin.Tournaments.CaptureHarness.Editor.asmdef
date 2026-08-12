@@ -4,7 +4,8 @@
     "references": [
         "Golfin.Physics.Viewer",
         "Golfin.Physics.Viewer.BotEditor",
-        "Golfin.Save"
+        "Golfin.Save",
+        "Golfin.DevHarness"
     ],
     "includePlatforms": [
         "Editor"

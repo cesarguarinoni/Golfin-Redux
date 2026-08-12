@@ -550,3 +550,243 @@ demonstration of §7.2: without a session, no spend of any kind can complete.
 the Editor resolves to the new shipped default (`storedOverride=False compiledDefault=True`), and
 `save.json` restored (`rewardPoints` 41200, kasumigaseki entry removed — the probe's own registration
 undone). ShellScene was never saved.
+
+---
+
+# Part 3 — `points_cutover_followups` (bot bypass · shop spend · sign-in gate), 2026-08-12
+
+> Scope: the three bounded follow-ups Cesar decided on 2026-08-12 after the Slice 2 report.
+> Out of scope and untouched: backend/`playlife` repo, admin dashboard, every economy value.
+
+**Iteration shape:** `points_cutover:followups`
+
+## Baseline (git, before this work)
+
+HEAD `25292f73d`. The working tree was **already dirty on arrival** with another session's
+uncommitted auth-flow work. Those files are NOT mine and were left alone except where this kickoff
+required editing the same file (`SplashScreenController.cs` — see § Pre-existing drift):
+
+```
+ M Assets/Scenes/ShellScene.unity
+ M Assets/Scripts/Physics/Viewer/Bot/Scenarios.cs
+ M Assets/Scripts/UI/Account/SignUpScreenController.cs
+ M Assets/Scripts/UI/SplashScreenController.cs
+ M Docs/Architecture/UI_HIERARCHY.md
+ M tasks/loop_v2_smoke_bot/hole1_playthrough/{live_stat_log.txt,screenshots/history.log}
+?? _to_delete/*.stale
+```
+
+## Files modified or created
+
+| File | 1-line summary |
+|---|---|
+| `Assets/Scripts/Dev/BotSessionOverride.cs` | **NEW.** Whole-file `#if UNITY_EDITOR \|\| GOLFIN_BOT_HARNESS` dev bypass: installs a fake local session AND forces the points backend OFF for the run, as one indivisible act. |
+| `Assets/Scripts/Dev/Golfin.DevHarness.asmdef` | **NEW.** Own assembly so the Editor-only capture harness can reference it (an asmdef cannot reference Assembly-CSharp). Named `Golfin.DevHarness` because `Golfin.Dev` is already taken by `Debug/ScreenshotCapture/`. |
+| `Assets/Scripts/UI/AuthGate.cs` | **NEW.** Deny-by-default post-auth screen gate; three ways through (real session, demo build, armed bot). |
+| `Assets/Scripts/UI/ScreenManager.cs` | `ShowScreen` consults `AuthGate` right after `DemoGate` and redirects a signed-out navigation to Login. |
+| `Assets/Scripts/UI/SplashScreenController.cs` | Deleted `DevBypassCatcher_TEMP` (+ its `OnDisable`/field); added the bot-override short-circuit *before* `RefreshSession`. |
+| `Assets/Scripts/Economy/PointsBackendFlag.cs` | New non-persisting `SessionForcedOff` — wins over the stored pref and the compiled default, evaporates on domain reload. |
+| `Assets/Scripts/Economy/PointsActions.cs` | Two new spend reasons: `stamina_boost`, `shop_purchase` (spend reasons are free-form server-side — no backend change). |
+| `Assets/Scripts/UI/Shop/ShopTransaction.cs` | Both purchase entry points now debit through `PointsSpendGate` (server first) and report by callback; new `SpendDenied` verdict. |
+| `Assets/Scripts/UI/Shop/StaminaShopDetailScreenController.cs` | Callback form + `_purchaseInFlight` latch; silent on `SpendDenied` (the gate already toasted). |
+| `Assets/Scripts/UI/Shop/GeneralShopScreenController.cs` | Same: callback form + latch + silent `SpendDenied`. |
+| `Assets/Scripts/Editor/Tournaments/TournamentLoopCaptureHarness.cs` | Arms `BotSessionOverride` at `EnteredPlayMode`, before the bot reaches the splash. |
+| `Assets/Scripts/Editor/Tournaments/Golfin.Tournaments.CaptureHarness.Editor.asmdef` | +`Golfin.DevHarness` reference. |
+| `tasks/todo.md` | This task's plan/verification checklist. |
+
+**ZERO edits under `Assets/Scripts/Physics/`** (standing ban) — see item 1 for how the legacy bots are
+covered without touching them.
+
+## Item 1 — Bot auth bypass · PASS
+
+**The two halves are one decision.** Activating the override installs a fake local identity *and*
+forces `PointsBackendEnabled` OFF. Half of it would be worse than neither: a fake session with the
+backend still ON would aim real spend/earn calls at the production ledger carrying a token the server
+must reject. So `Apply()` does both, flag first.
+
+**Nothing persists.** The fake session is never `Save()`d, and the flag is forced through the new
+non-persisting `PointsBackendFlag.SessionForcedOff` rather than the `Enabled` setter — writing
+`Enabled` would have written PlayerPrefs and left Cesar's Editor with the points backend silently
+disabled after any bot run, discovered days later.
+
+**Covering every boot-from-Splash bot without editing `Physics/`.** The bot hosts
+(`LoopV2SmokeBot`, `ObBoundaryCaptureBot`, …) all live under the zero-edit `Assets/Scripts/Physics/`
+tree, so they cannot be taught to call `Arm()`. Arming is therefore two-way:
+- **explicit** `Arm(reason)` — used by `TournamentLoopCaptureHarness`, and what new harnesses should use;
+- **auto-detect** — a live MonoBehaviour whose declaring namespace is `Golfin.Physics.Viewer.Bot`
+  counts as armed. Every one of those types is whole-file `#if UNITY_EDITOR`, so their existence is a
+  sound editor-only signal (matched on namespace, not a `*Bot` name pattern, so an unrelated
+  MonoBehaviour cannot trip it).
+
+**Unshippable.** The file is whole-file guarded and every reference site (`AuthGate`,
+`SplashScreenController`) repeats the identical `#if` — the seam is only safe when the callers are
+guarded too, which is the iOS lesson about `#if UNITY_EDITOR` seams in runtime assemblies.
+
+### Acceptance — TournamentLoopCaptureHarness from boot
+
+Run **twice**, both reaching `=== TournamentRoundLoop: SEQUENCE COMPLETE ===` from a cold boot with
+two holes played to the cup each. The second run was on the FINAL code, after the leak fix below — the
+first run is what exposed that leak, so re-running was the only way to claim acceptance on what ships.
+
+Boot chain, quoted from `~/Library/Logs/Unity/Editor.log`:
+
+```
+[BotSessionOverride] ARMED (TournamentLoopCaptureHarness) — fake local session, points backend
+                     forced OFF for this run. Editor/harness builds only.
+[BotSessionOverride] Applied: fake local session ('Bot'), PointsBackendEnabled forced OFF (not persisted).
+[Splash] Bot session override active — straight to Home (no auth, backend OFF).
+```
+
+The Login screen is never shown: `NavigateToHome` clicks `StartButton` and the very next screen is
+Home. `BotDriver` itself is unchanged — the requirement was that `NavigateToHome` works again, and it
+does, because the override changes what `StartButton` *does*, not what the bot clicks.
+
+The run also confirms the economy side end-to-end: the tournament entry fee debited **exactly 10 RP**
+(`save.json` 41200 → 41190) through `PointsSpendGate` with the backend forced off — the deterministic
+offline economy, no ledger call. `save.json` was restored to its pre-run state after each run
+(RP back to 41200, the run's `kasumigaseki_open` entry removed).
+
+### Leak found by the first run, and fixed — `SessionForcedOff` outlived play mode
+
+The first harness run passed, and then this was true back in the Editor:
+
+```
+PointsBackendFlag.SessionForcedOff = True
+PointsBackendFlag.Enabled = False   | CompiledDefault = True
+```
+
+**This project runs with domain reload disabled**, so the static survived play-mode exit — leaving the
+Editor silently reporting the points backend as OFF against a compiled default of ON. That is the exact
+failure `SessionForcedOff` was introduced to prevent, reached by a different route; the same leak would
+also have carried a fake "Bot" session into the next ordinary Play. "Never written to disk" turned out
+not to mean "goes away."
+
+Fixed with an `InitializeOnLoad` hook that disarms on **both** play-mode edges (`ExitingEditMode` fires
+before a harness's `EnteredPlayMode` arm, so it clears stale state without racing it; resetting on entry
+too means a crashed or force-quit run cannot poison the next session).
+
+Fixing it surfaced a second, latent bug in the same path: `Disarm` called `session.Clear()`, and
+`AuthSession.Clear()` deletes the **PlayerPrefs** entry. The fake session only ever existed in memory
+(deliberately never `Save()`d), so that would have deleted Cesar's *real* persisted session — signing
+him out for real at the end of every bot run. `Disarm` now wipes the in-memory fake fields and calls
+`session.Load()` to restore whatever was genuinely stored, and only touches the session at all while
+`Application.isPlaying` (otherwise `AuthService.Instance` self-bootstraps a GameObject into the open
+edit-mode scene and dirties it — the same reason `AuthGate.HasSession` short-circuits in edit mode).
+
+Verified after the second run, with **nothing reset by hand** — the hook did it:
+
+```
+SessionForcedOff = False            (want False)
+PointsBackendFlag.Enabled = True    CompiledDefault = True
+stored flag pref written? False     persisted auth session key? False (unchanged)
+stray [AuthService] in scene? False scene ShellScene DIRTY=False
+```
+
+## Item 2 — Shop server spend · PASS
+
+The self-refunding purchase is closed. Both entry points previously debited RP locally and returned a
+verdict synchronously, which is exactly why the shop was the one spend flow Slice 2 missed: with the
+flag ON the purchase moved only the local balance, and the next server refresh overwrote it — item
+granted, points back.
+
+Both now follow the identical shape to the other four flows:
+
+| Stage | Behaviour |
+|---|---|
+| Pre-checks | Synchronous and unchanged (null character / stamina-full / unknown ref / already-owned / affordability). These answer immediately and never reach the server, so an unaffordable buy still gets its specific "Need N RP" copy rather than the gate's generic refusal. |
+| Debit | `PointsSpendGate.Spend(cost, reason, …)` — **server first**. |
+| Grant | Only inside `onApproved`: local `SpendPoints` mirror, then `GrantClub`/`GrantBall`/`AddEnergy`. |
+| Refusal | `onDenied` → new `SpendDenied` verdict. Offline → "Connection required"; 200-insufficient → "Not enough Reward Points" — both toasted **by the gate**, so the callers stay silent on `SpendDenied` instead of stacking a second toast. |
+| Busy state | New `_purchaseInFlight` latch in each controller. The gate's in-flight latch is process-wide and *drops* a concurrent spend, so without a caller-side latch a double-tap would charge once and silently swallow the second purchase. |
+
+Reasons are `stamina_boost` and `shop_purchase`. Spend reasons are free text server-side (they land in
+the ledger `description`; only *earn* actions are catalog-validated), so this needs no backend change —
+consistent with "out of scope: backend edits".
+
+Signature change, verified live via reflection after compile:
+```
+Void TryPurchase(PlayerCharacterData, Int32, Single, Action, Action`1)
+Void TryPurchaseCatalogEntry(ShopCatalogEntry, Action, Action`1)
+```
+Both callers were updated; no other call sites exist (`ClubManager.cs:303` is a doc comment only), and
+no test references `ShopTransaction`.
+
+**Flag-OFF is unchanged.** `PointsSpendGate.Spend` short-circuits before `PointsService` when the flag
+is off, running `onApproved` on the caller's own stack frame — so offline shop behaviour, including
+toast timing, is identical to HEAD.
+
+## Item 3 — Hard sign-in gate · PASS
+
+Decision of record: **no guest mode**.
+
+The hole was `DevBypassCatcher_TEMP` — an invisible full-screen `Button` the splash spawned over its
+own art, which sent any tap that missed the three real buttons straight to Home with no auth. It was
+marked "remove before release" and **shipped in player builds**. Deleted, with its field and `OnDisable`.
+
+Deleting it closes the path that existed; `AuthGate` closes the class. It hooks the same
+`ScreenManager.ShowScreen` seam `DemoGate` already uses, with the same deny-by-default posture: only
+the boot + account screens (`Logo`, `Splash`, `Loading`, `Login`, `SignUp`, `EmailConfirmation`,
+`CreateUsername`) are reachable without a session, so **a screen added later is gated by default**
+rather than silently reachable. A blocked navigation redirects to Login rather than dead-ending.
+
+Three ways through, all explicit: a real session; a `GOLFIN_DEMO` build (the offline demo is a guest
+product by design, with its own narrower allowlist); the editor-only bot override.
+
+### Verified in play mode, signed out — the real player path, not just the structure
+
+```
+session.IsAuthenticated  = False      BotSessionOverride.Active = False     AuthGate.HasSession = False
+real StartButton onClick -> screen settled on Login   (LoginScreen active=True, HomeScreen active=False)
+ShowScreen(Home)          -> Login    (want Login, NOT Home)
+ShowScreen(ModeSelection) -> Login    (the exact path the kickoff named)
+DevBypassCatcher_TEMP present = False
+```
+
+Driven through the **real** `StartButton.onClick`, and the screen was read back after the fade settled
+(the transition applies at the fade midpoint, so an immediate read still says `Splash` — worth knowing
+before anyone re-tests this and thinks the gate failed). The two direct `ShowScreen` calls are the gate
+itself under test: a signed-out navigation to a post-auth screen is refused and redirected, so the
+"reaches mode select without a session" path is closed at the door rather than at each spend.
+
+This also removes the standing reason mode select was reachable signed-out: since the cutover such a
+player can spend nothing anyway — every server debit 403s — so the honest place to stop them is the
+door, not four separate spend flows.
+
+## Verification
+
+| Check | Result |
+|---|---|
+| Compile | Clean. `Golfin.DevHarness` assembly built; `BotSessionOverride`, `AuthGate`, `ShopTransaction`, `PointsBackendFlag.SessionForcedOff` all resolve (verified by reflection via `script-execute`). |
+| EditMode suite | **1172 passed / 0 failed / 3 pre-existing skips of 1175** — identical to the Slice 2 baseline. Full unfiltered run (a filtered run under-reports; see the Slice 2 warning). Re-run after the leak fix so the green result is on the shipped code, not an earlier revision. |
+| Item-1 acceptance | `TournamentLoopCaptureHarness` dry run from boot → `=== TournamentRoundLoop: SEQUENCE COMPLETE ===`, **twice**, the second on the final code. 2 holes to cup per run; zero console errors (only the pre-existing "2 event systems in the scene" warning). |
+| Editor left clean | Play mode exited; no scene saved; ShellScene not dirty; flag + session verified back to baseline by the automatic disarm; `save.json` restored after each run. |
+
+### Needs Cesar (manual, on device)
+
+1. **On-device sign-in gate.** Confirm a signed-out launch cannot get past Login — the removed
+   bypass was a *tap-anywhere* affordance, so the check is "tap around the splash art, not just the
+   buttons". Editor coverage of this is structural (`AuthGate`), not a real touch test.
+2. **Shop purchase with the flag ON, signed in.** Buy one stamina item and one catalog item and
+   confirm the balance stays debited *after* a refresh (the self-refund is what this fixes). Then
+   airplane-mode one purchase and confirm "Connection required" with no item granted.
+3. **Double-tap BUY** on a slow connection — the new latch should make the second tap a no-op.
+
+### Pre-existing drift (Rule 13 attribution)
+
+Every uncommitted path outside this spec folder is accounted for. The following were **already
+modified at kickoff by another live session** (mtimes 09:46–09:47, ~9h before this work started; the
+Editor is shared) and are NOT part of this change:
+
+| Path | Whose | Note |
+|---|---|---|
+| `Assets/Scenes/ShellScene.unity` | other session | Not saved by me; verified `isDirty=False` before the test run. |
+| `Assets/Scripts/Physics/Viewer/Bot/Scenarios.cs` | other session | A chase-cam handle probe. I made **zero** `Physics/` edits. |
+| `Assets/Scripts/UI/Account/SignUpScreenController.cs` | other session | Cancel → Splash instead of Login. |
+| `Docs/Architecture/UI_HIERARCHY.md`, `tasks/loop_v2_smoke_bot/**`, `_to_delete/*.stale` | other session | Untouched. |
+
+`Assets/Scripts/UI/SplashScreenController.cs` is the one **shared** file: it arrived already modified
+by that session (StartButton became the login entry, the separate Login link removed), and this
+kickoff required editing the same file. My edits are additive to theirs — the bot short-circuit and
+the dev-bypass deletion — and do not revert any of it. Whoever commits should expect both changes in
+the same file and attribute accordingly.
+

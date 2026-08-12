@@ -2157,3 +2157,36 @@ strings, so the caption only has to name what is happening. Use `->` not `→`, 
 captures pass `--caption-fontsize 42 --caption-wrap 32`. And never treat a caption pass as done because
 ffmpeg exited 0: **decode a frame from each caption window and look at it**, exactly as with the video
 itself. Every one of these three defects was invisible in the tool's output and obvious in the frame.
+
+## Lesson AW — statics survive play mode (domain reload is DISABLED here), so "non-persisting" is not the same as "cleaned up" (points_cutover_followups, 2026-08-12)
+
+The bot auth bypass had to force `PointsBackendEnabled` OFF for a run without clobbering Cesar's
+Editor. The obvious hazard — writing `PointsBackendFlag.Enabled`, which persists to PlayerPrefs — was
+designed around correctly with a new non-persisting `SessionForcedOff` static. The comment even said
+"evaporates on domain reload."
+
+It doesn't. **This project runs with domain reload disabled**, so statics survive play-mode exit *and*
+re-entry. Measured immediately after the first harness run, back in edit mode:
+
+```
+PointsBackendFlag.SessionForcedOff = True
+PointsBackendFlag.Enabled = False   | CompiledDefault = True
+```
+
+The Editor was left silently reporting the points backend as OFF against a compiled default of ON —
+precisely the failure the design was meant to prevent, just reached by a different route. Worse, the
+same leak ran the other way: the next ordinary Play would have inherited a fake "Bot" session.
+
+A second, latent bug surfaced while fixing it: the disarm path called `session.Clear()`, and
+`AuthSession.Clear()` deletes the **PlayerPrefs** entry. The fake session only ever existed in memory
+(deliberately never `Save()`d), so clearing it would have deleted Cesar's *real* persisted session —
+signing him out for real at the end of a bot run.
+
+**How to apply.** (1) "I never wrote it to disk" does not mean "it goes away" — with domain reload off,
+any static that represents *run-scoped* state needs an explicit reset on both play-mode edges
+(`ExitingEditMode` **and** `EnteredEditMode`; resetting on entry too means a crashed or force-quit run
+can't poison the next one). (2) Verify the cleanup by **reading the state back after exiting play
+mode**, not by reasoning about lifetimes — one `script-execute` printing the flag, the PlayerPrefs
+keys, and scene `isDirty` is what caught this. (3) Before calling a `Clear()`/`Reset()` on shared
+state, check whether it also clears the *persisted* copy; an in-memory override must be undone by
+restoring from the store (`session.Load()`), never by wiping it.

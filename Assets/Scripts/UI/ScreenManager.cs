@@ -136,6 +136,16 @@ namespace GolfinRedux.UI
                 return;
             }
 
+            // Hard sign-in gate (points_cutover_followups item 3): no session, no post-auth screen.
+            // Redirect rather than dead-end — a blocked navigation with nowhere to go would strand
+            // the player on whatever screen they were already on with no explanation.
+            if (!AuthGate.IsScreenAllowed(screenId))
+            {
+                Debug.LogWarning($"[AuthGate] blocked {screenId} — not signed in. Routing to Login.");
+                ShowScreen(ScreenId.Login, instant);
+                return;
+            }
+
             Debug.Log($"[ScreenManager] ShowScreen called: {screenId} (current: {_currentScreen}, instant: {instant})");
 
             if (_currentScreen == screenId && !instant)

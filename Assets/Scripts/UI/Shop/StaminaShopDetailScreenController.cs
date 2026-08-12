@@ -59,6 +59,10 @@ namespace GolfinRedux.UI.Shop
         private ShopModel _currentShop;
         private readonly List<StaminaMenuRow> _menuRows = new List<StaminaMenuRow>();
 
+        /// <summary>One purchase at a time — the RP debit is a server round-trip since
+        /// points_cutover_followups item 2. See HandleBuyClicked.</summary>
+        private bool _purchaseInFlight;
+
         // ── Lifecycle ─────────────────────────────────────────────────────────
 
         private void Awake()
@@ -228,20 +232,36 @@ namespace GolfinRedux.UI.Shop
         private void HandleBuyClicked(StaminaMenuRow row)
         {
             if (row == null) return;
+
+            // The spend is a server round-trip now (points_cutover_followups item 2), so BUY stays
+            // live for as long as it takes to answer. Latch the screen for the duration: without it
+            // a double-tap fires a second debit, and PointsSpendGate's process-wide in-flight guard
+            // would silently swallow the second purchase after charging for the first tap only.
+            if (_purchaseInFlight) return;
+            _purchaseInFlight = true;
+
             var item = row.ItemData;
             var pcd  = GetSelectedPcd();
 
-            var result = ShopTransaction.TryPurchase(pcd, item.RpCost, item.Stamina, () =>
-            {
-                // Refresh buy buttons after successful purchase
-                UpdateBuyButtonStates();
-            });
-
-            ShowResultToast(result, item);
+            ShopTransaction.TryPurchase(pcd, item.RpCost, item.Stamina,
+                onGranted: () =>
+                {
+                    // Refresh buy buttons after successful purchase
+                    UpdateBuyButtonStates();
+                },
+                onResult: result =>
+                {
+                    _purchaseInFlight = false;
+                    ShowResultToast(result, item);
+                });
         }
 
         private void ShowResultToast(ShopTransaction.PurchaseResult result, ShopItemModel item)
         {
+            // PointsSpendGate already toasted "Connection required" / "Not enough Reward Points" —
+            // a second toast here would stack two messages for one refusal.
+            if (result == ShopTransaction.PurchaseResult.SpendDenied) return;
+
             var tc = ToastController.Instance;
             if (tc == null) return;
 

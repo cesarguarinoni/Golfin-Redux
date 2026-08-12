@@ -44,5 +44,11 @@ namespace Golfin.Economy
         public const string ClubLevelUp      = "club_level_up";
         public const string TournamentEntry  = "tournament_entry";
         public const string ModeEntryFee     = "mode_entry_fee";
+
+        /// <summary>Stamina Boost Shop (points_cutover_followups item 2).</summary>
+        public const string StaminaBoost     = "stamina_boost";
+
+        /// <summary>General Shop catalog purchase — club or ball (points_cutover_followups item 2).</summary>
+        public const string ShopPurchase     = "shop_purchase";
     }
 }

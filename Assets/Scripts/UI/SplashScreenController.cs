@@ -7,19 +7,21 @@ using Golfin.Auth;
 namespace GolfinRedux.UI
 {
     /// <summary>
-    /// Splash gate — Phase 2a (account_flow_wiring): PLAY is now the auth entry.
-    ///   • PLAY (StartButton): valid session → refresh token → Home (or CreateUsername when no
-    ///     display name yet); no/stale session → Login screen.
+    /// Splash gate — Phase 2a (account_flow_wiring): the primary button is now the auth entry.
+    ///   • LOGIN (StartButton): valid session → refresh token → Home (or CreateUsername when no
+    ///     display name yet); no/stale session → Login screen. Labelled "Play" in demo builds,
+    ///     where it skips auth entirely.
     ///   • CreateAccountButton (runtime-wired, it had no inspector link) → Sign Up screen.
-    ///   • TEMPORARY DEV BYPASS: tapping anywhere on the splash OUTSIDE the buttons keeps the old
-    ///     flow (straight to Home, no auth) so the game stays testable while auth is stabilised.
-    ///     Remove before release — see RemoveDevBypass note below.
+    ///   • NO DEV BYPASS. The temporary full-screen tap-catcher that used to send any stray tap
+    ///     straight to Home was deleted for the hard sign-in gate (points_cutover_followups item 3,
+    ///     Cesar 2026-08-12: no guest mode). It shipped in player builds and, since the RP cutover,
+    ///     dropped signed-out players into a game where every server debit 403s. Automated bots use
+    ///     the editor-only <see cref="Golfin.Dev.BotSessionOverride"/> instead.
     /// Demo builds (demo_build_slice §3.4) are unchanged: PLAY goes straight into the game.
     /// </summary>
     public class SplashScreenController : MonoBehaviour
     {
         private bool _busy;
-        private GameObject _devBypassCatcher;
 
         public void OnStartClicked()
         {
@@ -27,6 +29,19 @@ namespace GolfinRedux.UI
 
             // demo_build_slice §3.4: offline demo — guests go straight into the game.
             if (GolfinRedux.Demo.DemoGate.IsDemo) { GoHome(); return; }
+
+#if UNITY_EDITOR || GOLFIN_BOT_HARNESS
+            // points_cutover_followups item 1: an armed bot run carries a fake local session. Route
+            // it BEFORE RefreshSession — the fake session has no refresh token on purpose, so the
+            // normal returning-user path would round-trip, fail, SignOut and land on Login, which is
+            // precisely the stall this replaces. Editor/harness builds only.
+            if (Golfin.Dev.BotSessionOverride.Active)
+            {
+                Debug.Log("[Splash] Bot session override active — straight to Home (no auth, backend OFF).");
+                RouteAuthenticated();
+                return;
+            }
+#endif
 
             var auth = AuthService.Instance;
             if (!auth.Session.IsAuthenticated)
@@ -88,36 +103,20 @@ namespace GolfinRedux.UI
             if (GolfinRedux.Demo.DemoGate.IsDemo)
             {
                 StartCoroutine(ApplyDemoGate());
-                return; // demo: no auth entry, no bypass needed
+                return; // demo: no auth entry
             }
 
             WireLinkButtons();
-            CreateDevBypassCatcher();
-        }
-
-        private void OnDisable()
-        {
-            if (_devBypassCatcher != null)
-            {
-                Destroy(_devBypassCatcher);
-                _devBypassCatcher = null;
-            }
-        }
-
-        public void OnLoginLinkClicked()
-        {
-            if (_busy) return;
-            Show(ScreenId.Login);
         }
 
         /// <summary>
-        /// CreateAccountButton and LoginButton ship with NO inspector onClick (verified in ShellScene) —
-        /// wire both here. Logs loudly so a miswire is visible in the console instead of a dead button.
+        /// CreateAccountButton ships with NO inspector onClick (verified in ShellScene) — wire it here.
+        /// Logs loudly so a miswire is visible in the console instead of a dead button.
+        /// (The separate Login link was removed: StartButton is the login entry now.)
         /// </summary>
         private void WireLinkButtons()
         {
             WireChildButton("CreateAccountButton", OnCreateAccountClicked);
-            WireChildButton("LoginButton", OnLoginLinkClicked);
         }
 
         private void WireChildButton(string childName, UnityEngine.Events.UnityAction handler)
@@ -137,56 +136,12 @@ namespace GolfinRedux.UI
             button.onClick.RemoveListener(handler); // idempotent across OnEnable cycles
             button.onClick.AddListener(handler);
 
-            // The link buttons' rects are only 160x30 canvas units while the visible label text
-            // overflows wider — taps on the visible text missed the rect and fell through to the
-            // dev bypass catcher. Expand the raycast area (negative padding grows it) to ~280x80.
-            var img = button.targetGraphic as Image;
-            if (img != null) img.raycastPadding = new Vector4(-60f, -25f, -60f, -25f);
-
-            Debug.Log($"[Splash] Wired '{childName}' (raycast area expanded).");
-        }
-
-        /// <summary>
-        /// TEMPORARY DEV BYPASS (account_flow_wiring): an invisible full-screen catcher inserted ABOVE
-        /// the raycastable Background/SplashLogo art but BELOW the buttons (at StartButton's sibling
-        /// index — the buttons shift up by one and keep winning the raycast). First version sat behind
-        /// the Background, which swallowed every tap. Any tap that hits none of the three buttons goes
-        /// straight to Home exactly like the pre-auth flow.
-        /// RemoveDevBypass: delete this method + its OnEnable/OnDisable calls when auth is mandatory.
-        /// </summary>
-        private void CreateDevBypassCatcher()
-        {
-            if (_devBypassCatcher != null) return;
-
-            _devBypassCatcher = new GameObject("DevBypassCatcher_TEMP", typeof(RectTransform), typeof(Image), typeof(Button));
-            var rt = (RectTransform)_devBypassCatcher.transform;
-            rt.SetParent(transform, worldPositionStays: false);
-
-            // Place just below the first button: above background art, below all interactive controls.
-            var startButton = transform.Find("StartButton");
-            rt.SetSiblingIndex(startButton != null ? startButton.GetSiblingIndex() : 0);
-
-            rt.anchorMin = Vector2.zero;
-            rt.anchorMax = Vector2.one;
-            rt.offsetMin = Vector2.zero;
-            rt.offsetMax = Vector2.zero;
-
-            var img = _devBypassCatcher.GetComponent<Image>();
-            img.color = new Color(0f, 0f, 0f, 0f);  // invisible, but raycastable
-            img.raycastTarget = true;
-
-            var btn = _devBypassCatcher.GetComponent<Button>();
-            btn.transition = Selectable.Transition.None;
-            btn.onClick.AddListener(() =>
-            {
-                Debug.Log("[Splash] DEV BYPASS tap — skipping auth, straight to Home (temporary).");
-                GoHome();
-            });
+            Debug.Log($"[Splash] Wired '{childName}'.");
         }
 
         // demo_build_slice §3.4: the demo boots to this Splash gate. Label the guest button "Play"
-        // and remove Create Account (offline demo — guests tap Play to go straight into the game;
-        // Login is kept). No-op in the full game.
+        // (it reads "LOGIN" in the full game) and remove Create Account — offline demo, guests tap
+        // Play to go straight into the game. No-op in the full game.
         private IEnumerator ApplyDemoGate()
         {
             // Wait one frame so the LocalizedText on the Start label applies first — then override it.
