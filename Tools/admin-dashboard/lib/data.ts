@@ -1,14 +1,19 @@
 import "server-only";
 import type { User } from "@supabase/supabase-js";
-import { getMockUserDetail, getMockUsers, MOCK_CATALOG } from "./mock";
+import { MOCK_CATALOG } from "./mock";
+import { mockDb } from "./mockStore";
 import { isMockMode } from "./mode";
 import { getSupabaseAdmin } from "./supabaseAdmin";
 import type {
   ActivityRow,
   AdminUserRow,
+  AuditEntry,
+  AuditResponse,
   AuthProvider,
   GamePointAction,
+  LedgerEntry,
   PointsCurrency,
+  PointsResponse,
   PointsTransaction,
   UserDetailResponse,
   UsersResponse,
@@ -102,7 +107,7 @@ async function fetchCatalog(): Promise<GamePointAction[]> {
 
 export async function fetchUsers(): Promise<UsersResponse> {
   if (isMockMode()) {
-    return { users: getMockUsers(), catalog: MOCK_CATALOG };
+    return { users: mockDb().users, catalog: MOCK_CATALOG, mock: true };
   }
 
   const admin = getSupabaseAdmin();
@@ -123,7 +128,7 @@ export async function fetchUsers(): Promise<UsersResponse> {
     .map((u) => mergeUser(u, profileById.get(u.id)))
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 
-  return { users, catalog };
+  return { users, catalog, mock: false };
 }
 
 function mapTransaction(r: Row): PointsTransaction {
@@ -160,7 +165,15 @@ function mapActivity(r: Row): ActivityRow {
 
 export async function fetchUserDetail(userId: string): Promise<UserDetailResponse> {
   if (isMockMode()) {
-    return getMockUserDetail(userId);
+    const db = mockDb();
+    return {
+      transactions: db.transactions
+        .filter((t) => t.userId === userId)
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+      activities: db.activities
+        .filter((a) => a.userId === userId)
+        .sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? "")),
+    };
   }
 
   const admin = getSupabaseAdmin();
@@ -191,4 +204,63 @@ export async function fetchUserDetail(userId: string): Promise<UserDetailRespons
     transactions: (txRes.data as Row[]).map(mapTransaction),
     activities,
   };
+}
+
+/** Global points ledger (Points panel) — reverse-chron, joined with emails. */
+export async function fetchLedger(): Promise<PointsResponse> {
+  if (isMockMode()) {
+    const db = mockDb();
+    const emailById = new Map(db.users.map((u) => [u.id, u.email]));
+    const entries: LedgerEntry[] = db.transactions
+      .map((t) => ({ ...t, userEmail: emailById.get(t.userId) ?? "(deleted user)" }))
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    return { entries, mock: true };
+  }
+
+  const admin = getSupabaseAdmin();
+  const [txRes, authUsers] = await Promise.all([
+    admin
+      .from("points_transactions")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(500),
+    listAllAuthUsers(),
+  ]);
+  if (txRes.error) {
+    throw new Error(`points_transactions query failed: ${txRes.error.message}`);
+  }
+  const emailById = new Map(authUsers.map((u) => [u.id, u.email ?? "(no email)"]));
+  const entries: LedgerEntry[] = (txRes.data as Row[]).map((r) => {
+    const t = mapTransaction(r);
+    return { ...t, userEmail: emailById.get(t.userId) ?? "(deleted user)" };
+  });
+  return { entries, mock: false };
+}
+
+/** Audit log viewer (Audit Log panel) — read-only. */
+export async function fetchAuditLog(): Promise<AuditResponse> {
+  if (isMockMode()) {
+    return { entries: mockDb().audit, mock: true };
+  }
+
+  const admin = getSupabaseAdmin();
+  const { data, error } = await admin
+    .from("admin_audit_log")
+    .select("*")
+    .order("at", { ascending: false })
+    .limit(200);
+  if (error) {
+    throw new Error(`admin_audit_log query failed: ${error.message}`);
+  }
+  const entries: AuditEntry[] = (data as Row[]).map((r) => ({
+    id: String(r.id ?? ""),
+    at: String(r.at ?? ""),
+    adminEmail: String(r.admin_email ?? ""),
+    action: String(r.action ?? ""),
+    targetUser: str(r.target_user),
+    tableName: str(r.table_name),
+    before: r.before ?? null,
+    after: r.after ?? null,
+  }));
+  return { entries, mock: false };
 }

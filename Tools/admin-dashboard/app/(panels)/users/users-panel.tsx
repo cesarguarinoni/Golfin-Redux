@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ProviderBadge } from "@/components/ProviderBadge";
+import { fmtDate } from "@/lib/format";
 import type {
   AdminUserRow,
   AuthProvider,
@@ -12,20 +13,6 @@ import { UserDrawer } from "./user-drawer";
 
 const PAGE_SIZE = 25;
 const PROVIDERS: readonly AuthProvider[] = ["email", "google", "apple"];
-
-export function fmtDate(iso: string | null): string {
-  if (!iso) return "—";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "—";
-  return d.toISOString().slice(0, 10);
-}
-
-export function fmtDateTime(iso: string | null): string {
-  if (!iso) return "—";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "—";
-  return `${d.toISOString().slice(0, 10)} ${d.toISOString().slice(11, 16)} UTC`;
-}
 
 function isBanned(u: AdminUserRow): boolean {
   return u.bannedUntil !== null && new Date(u.bannedUntil) > new Date();
@@ -98,32 +85,35 @@ export function UsersPanel() {
   const [unconfirmedOnly, setUnconfirmedOnly] = useState(false);
   const [bannedOnly, setBannedOnly] = useState(false);
   const [page, setPage] = useState(0);
-  const [selected, setSelected] = useState<AdminUserRow | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await fetch("/api/users");
-        if (!res.ok) {
-          const body = (await res.json().catch(() => null)) as {
-            error?: string;
-          } | null;
-          throw new Error(body?.error ?? `Request failed (${res.status})`);
-        }
-        const json = (await res.json()) as UsersResponse;
-        if (!cancelled) setData(json);
-      } catch (err) {
-        if (!cancelled)
-          setError(err instanceof Error ? err.message : "Failed to load users");
+  const load = useCallback(async () => {
+    try {
+      const res = await fetch("/api/users");
+      if (!res.ok) {
+        const body = (await res.json().catch(() => null)) as {
+          error?: string;
+        } | null;
+        throw new Error(body?.error ?? `Request failed (${res.status})`);
       }
-    })();
-    return () => {
-      cancelled = true;
-    };
+      const json = (await res.json()) as UsersResponse;
+      setData(json);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load users");
+    }
   }, []);
 
+  useEffect(() => {
+    void load();
+  }, [load]);
+
   const users = useMemo(() => data?.users ?? [], [data]);
+  // Drawer re-renders from the freshest row after mutations reload the list.
+  const selected = useMemo(
+    () => users.find((u) => u.id === selectedId) ?? null,
+    [users, selectedId]
+  );
 
   const stats = useMemo(() => {
     const total = users.length;
@@ -293,7 +283,7 @@ export function UsersPanel() {
             {pageRows.map((u) => (
               <tr
                 key={u.id}
-                onClick={() => setSelected(u)}
+                onClick={() => setSelectedId(u.id)}
                 className="cursor-pointer border-t border-surface-800 bg-surface-950 transition hover:bg-surface-850"
               >
                 <td className="px-4 py-2.5 font-mono text-xs text-zinc-300">
@@ -375,8 +365,13 @@ export function UsersPanel() {
 
       <CatalogCard catalog={data.catalog} />
 
-      {selected && (
-        <UserDrawer user={selected} onClose={() => setSelected(null)} />
+      {selected && data && (
+        <UserDrawer
+          user={selected}
+          mock={data.mock}
+          onClose={() => setSelectedId(null)}
+          onMutated={load}
+        />
       )}
     </div>
   );

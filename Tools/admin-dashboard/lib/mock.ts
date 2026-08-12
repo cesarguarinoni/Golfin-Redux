@@ -3,12 +3,15 @@ import type {
   AdminUserRow,
   GamePointAction,
   PointsTransaction,
-  UserDetailResponse,
 } from "./types";
 
 /**
  * Mock data layer — fixtures mirroring the live PLAYLIFE Supabase project
  * (5 real users observed 2026-08-12). Used whenever the app runs in mock mode.
+ *
+ * These arrays are the immutable SEED. At runtime mock mode operates on a
+ * mutable copy held in lib/mockStore.ts so that phase-2 mutations visibly
+ * update the UI.
  */
 
 const U = {
@@ -117,7 +120,7 @@ export const MOCK_USERS: AdminUserRow[] = [
   },
 ];
 
-const MOCK_TRANSACTIONS: PointsTransaction[] = [
+export const MOCK_TRANSACTIONS: PointsTransaction[] = [
   // ken — plausible ledger
   {
     id: "b1a2f3e4-0001-4a01-9001-aaaaaaaa0001",
@@ -213,7 +216,7 @@ const MOCK_TRANSACTIONS: PointsTransaction[] = [
   },
 ];
 
-const MOCK_ACTIVITIES: ActivityRow[] = [
+export const MOCK_ACTIVITIES: ActivityRow[] = [
   {
     id: "c2b3a4d5-0001-4c01-a001-cccccccc0001",
     userId: U.ken,
@@ -235,17 +238,3 @@ export const MOCK_CATALOG: GamePointAction[] = [
   { action: "tournament_prize", pts: null, maxPerEvent: 2000, dailyCap: null, oncePerUser: false },
 ];
 
-export function getMockUsers(): AdminUserRow[] {
-  return MOCK_USERS;
-}
-
-export function getMockUserDetail(userId: string): UserDetailResponse {
-  return {
-    transactions: MOCK_TRANSACTIONS.filter((t) => t.userId === userId).sort(
-      (a, b) => b.createdAt.localeCompare(a.createdAt)
-    ),
-    activities: MOCK_ACTIVITIES.filter((a) => a.userId === userId).sort(
-      (a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? "")
-    ),
-  };
-}

@@ -1,14 +1,15 @@
 import "server-only";
 import { isMockMode } from "./mode";
+import { mockDb } from "./mockStore";
 import { getSupabaseAdmin } from "./supabaseAdmin";
 
 /**
  * Audit trail writer — inserts into public.admin_audit_log
  * (see migrations/2026_08_13_admin_audit_log.sql).
  *
- * v1 is read-only so no UI calls this yet, but it is wired and callable:
- * future mutation routes must call writeAudit() before returning success.
- * In mock mode entries are logged to the server console instead of Postgres.
+ * Every mutation route calls writeAudit() as part of its success path.
+ * In mock mode entries go to the in-memory mock audit log (visible in the
+ * Audit Log panel) and the server console instead of Postgres.
  */
 export async function writeAudit(
   adminEmail: string,
@@ -28,6 +29,16 @@ export async function writeAudit(
   };
 
   if (isMockMode()) {
+    mockDb().audit.unshift({
+      id: crypto.randomUUID(),
+      at: new Date().toISOString(),
+      adminEmail,
+      action,
+      targetUser,
+      tableName,
+      before: before ?? null,
+      after: after ?? null,
+    });
     console.info("[audit:mock]", JSON.stringify(entry));
     return;
   }

@@ -63,9 +63,52 @@ export interface GamePointAction {
 export interface UsersResponse {
   users: AdminUserRow[];
   catalog: GamePointAction[];
+  /** True when the server is running on fixtures (mock mode). */
+  mock: boolean;
 }
 
 export interface UserDetailResponse {
   transactions: PointsTransaction[];
   activities: ActivityRow[];
+}
+
+/** points_transactions row joined with the owner's email (Points panel). */
+export interface LedgerEntry extends PointsTransaction {
+  userEmail: string;
+}
+
+export interface PointsResponse {
+  entries: LedgerEntry[];
+  mock: boolean;
+}
+
+/** public.admin_audit_log row (Audit Log panel). */
+export interface AuditEntry {
+  id: string;
+  at: string;
+  adminEmail: string;
+  action: string;
+  targetUser: string | null;
+  tableName: string | null;
+  before: unknown;
+  after: unknown;
+}
+
+export interface AuditResponse {
+  entries: AuditEntry[];
+  mock: boolean;
+}
+
+/** Users-panel admin actions (POST /api/users/:id/actions). */
+export const USER_ACTION_KINDS = [
+  "resend_confirmation",
+  "send_password_reset",
+  "confirm_email",
+  "ban",
+  "unban",
+] as const;
+export type UserActionKind = (typeof USER_ACTION_KINDS)[number];
+
+export interface MutationResponse {
+  message: string;
 }

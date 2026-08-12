@@ -1,11 +1,9 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 export function LoginForm({ mockMode }: { mockMode: boolean }) {
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -36,8 +34,9 @@ export function LoginForm({ mockMode }: { mockMode: boolean }) {
         });
         if (signInError) throw new Error(signInError.message);
       }
-      router.push("/users");
-      router.refresh();
+      // Hard navigation: guarantees the new session cookie is applied and
+      // avoids a push/refresh race that intermittently left the URL on /login.
+      window.location.assign("/users");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");
       setBusy(false);

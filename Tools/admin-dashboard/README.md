@@ -1,9 +1,10 @@
-# GOLFIN Admin Dashboard (v1)
+# GOLFIN Admin Dashboard
 
 Internal admin tool for the GOLFIN game over the PLAYLIFE Supabase project
-(Postgres + Supabase Auth). **v1 is read-only** — user list, profile detail,
-points ledger, activities, economy catalog — plus login. Designed to grow
-panel-by-panel via `lib/registry.ts`.
+(Postgres + Supabase Auth). Three panels — **Users** (list, detail,
+admin mutations, RP adjust), **Points** (global ledger viewer), **Audit Log**
+(admin_audit_log viewer) — plus login. Designed to grow panel-by-panel via
+`lib/registry.ts`.
 
 Stack: Next.js (App Router) + TypeScript + Tailwind CSS. Fully self-contained
 in this folder (intended location in the Unity repo: `Tools/admin-dashboard`).
@@ -70,6 +71,58 @@ The game's Reward Points == `total_points` (= `activity_pts` + `gift_pts`).
 The UI displays **RP** as `total_points` everywhere; the activity/gift split
 appears only in the user detail drawer.
 
+## Admin mutations (Users panel, phase 2)
+
+All mutations: server-enforce the `ADMIN_EMAILS` allowlist on the route
+handler (never just in UI), write one row to `admin_audit_log` via
+`lib/audit.ts` (with before/after snapshots), and show a confirmation modal
+(labeled **MOCK** in mock mode). In mock mode they mutate the in-memory
+fixtures (`lib/mockStore.ts`) so the UI visibly updates.
+
+| Action | Endpoint | Live implementation |
+| --- | --- | --- |
+| Edit username | `PATCH /api/users/:id` | writes `profiles.display_name` **and** auth `user_metadata.display_name` (mirrors the prod sync trigger's shape); inline edit in the drawer header |
+| Resend confirmation | `POST /api/users/:id/actions` | `auth.resend({type:'signup'})` — disabled when already confirmed |
+| Send password reset | `POST /api/users/:id/actions` | `auth.resetPasswordForEmail(email)` |
+| Manually confirm email | `POST /api/users/:id/actions` | `auth.admin.updateUserById(id, {email_confirm:true})` |
+| Ban / Unban | `POST /api/users/:id/actions` | `updateUserById` with `ban_duration:'876000h'` (≈100y) / `'none'` |
+| Delete user | `DELETE /api/users/:id` | `auth.admin.deleteUser(id)` — type-the-email double confirm (also verified server-side) plus a red cascade warning: FK cascade removes `profiles`, `points_transactions`, `activities` |
+
+### Adjust RP (grant / deduct)
+
+In the drawer: **Adjust RP** — signed integer amount plus a required reason
+(max 200 chars). The ledger description becomes `admin: <reason>`.
+
+- **Positive** amounts (live): `rpc earn_pts_v2(p_user_id, p_action:
+  'manual_admin_grant', p_amount, p_description, p_key: random uuid)`.
+- **Negative** amounts (live): `rpc spend_pts(p_user_id, p_amount:
+  abs(amount), p_description, p_key)`; a `{status:'insufficient'}` payload is
+  surfaced as a friendly 409 error.
+- Mock mode simulates both paths, including the insufficient branch and the
+  debit order (**activity points first, then gift points** — a big deduction
+  can produce two spend rows, one per currency).
+- Both directions write an `rp_adjust` audit row with the profile's
+  activity/gift/total snapshot before and after.
+
+NOTE: the rpc parameter names are assumed from the observed PLAYLIFE
+signatures — verify against the deployed functions before first prod use
+(flagged with NOTE comments in `lib/mutations.ts`).
+
+## Points panel
+
+Global `points_transactions` viewer (read-only): reverse-chronological,
+25/page, filters for currency (activity/gift), type, user email search, and
+date range. Columns: when, user email, type, signed amount + currency,
+description, idempotency key (truncated, monospace). Live mode reads the most
+recent 500 rows.
+
+## Audit Log panel
+
+Read-only viewer of `public.admin_audit_log` (when, admin, action, target
+user, table, before/after JSON — hover for full payloads). Starts empty; it
+fills as soon as mutations run against the live database. In mock mode it
+shows the in-memory audit entries created by mock mutations.
+
 ## Migration
 
 `migrations/2026_08_13_admin_audit_log.sql` creates `public.admin_audit_log`
@@ -83,14 +136,18 @@ script is idempotent — safe to re-run.
 ## Architecture
 
 ```
-app/(panels)/users/     Users panel (list, filters, stat cards, detail drawer)
-app/login, app/not-admin, app/api/…   auth + read-only data routes
+app/(panels)/users/     Users panel (list, filters, stat cards, drawer, mutations)
+app/(panels)/points/    Points panel (global ledger viewer)
+app/(panels)/audit/     Audit Log panel (admin_audit_log viewer)
+app/login, app/not-admin, app/api/…   auth + data/mutation routes
 lib/registry.ts         panel registry — the sidebar builds itself from this
 lib/supabaseAdmin.ts    service_role client (server-only)
-lib/data.ts             data access, mock/live branching
-lib/mock.ts             fixtures
-lib/audit.ts            writeAudit → admin_audit_log
-lib/auth.ts             session + allowlist gate (used by every data route)
+lib/data.ts             read access, mock/live branching
+lib/mutations.ts        phase-2 mutations (server-only, all audited)
+lib/mock.ts             fixture seed data
+lib/mockStore.ts        mutable in-memory mock DB (globalThis-backed)
+lib/audit.ts            writeAudit → admin_audit_log (mock: in-memory log)
+lib/auth.ts             session + allowlist gate (used by every route)
 migrations/             SQL migrations
 ```
 
