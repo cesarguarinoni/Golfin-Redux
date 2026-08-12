@@ -162,6 +162,38 @@ update STATUS.md + IMPLEMENTER_REPORT.md in the spec folder, and update
 Docs/AI_CONTEXT.md.
 ```
 
+### Kickoff · points_cutover_followups — bot auth bypass + shop spend + sign-in gate (issued 2026-08-12, Cesar-decided)
+
+```
+Read Docs/Specs/Active/reward_points_backend/STATUS.md (top entries) for
+context. Three bounded follow-ups from the Slice 2 report, all decided by
+Cesar 2026-08-12. Minimal diffs; EditMode suite must stay green.
+
+1. BOT AUTH BYPASS (unblocks TournamentLoopCaptureHarness and every
+   boot-from-Splash bot). Dev-only BotSessionOverride behind an editor-only
+   guard (#if UNITY_EDITOR or a GOLFIN_BOT_HARNESS define — must be
+   impossible to ship in a player build): when active, the auth gate treats
+   the session as signed-in with a fake local identity AND
+   PointsBackendEnabled is forced OFF for the run — bots play the
+   deterministic offline economy: no network, no credentials, no prod
+   ledger writes. BotDriver.NavigateToHome must get Splash -> Home again
+   without touching the Login screen. Acceptance: TournamentLoopCaptureHarness
+   reaches === SEQUENCE COMPLETE === from boot.
+2. SHOP SERVER SPEND. Route ShopTransaction through
+   PointsService.SpendAsync exactly like the other four flows (busy state,
+   insufficient branch, offline -> "Connection required" toast). Kills the
+   self-refunding flag-ON purchase.
+3. HARD SIGN-IN GATE (decision of record: NO guest mode). Close the path
+   that reaches mode select without a session — signed-out users cannot get
+   past Login, except via the item-1 bot override.
+
+Out of scope: backend edits, admin dashboard, any economy value changes.
+When done: changed files with 1-line summaries, EditMode suite green, run
+TournamentLoopCaptureHarness end-to-end as item-1 acceptance, flag manual
+device checks, update STATUS.md + IMPLEMENTER_REPORT.md in the spec folder
+and Docs/AI_CONTEXT.md.
+```
+
 - **`admin_dashboard`** (filed 2026-08-12, Architect) — ⏸ **ON HOLD 2026-08-12 (later): Cesar sequenced `reward_points_backend` first — do NOT start this kickoff until that lands.** Original entry: **SPEC_READY, GO from Cesar 2026-08-12 ("start the admin dashboard").** New internal web app at `Tools/admin-dashboard/` — Next.js (App Router) + TypeScript + Tailwind — over the shared Supabase project (`wmszyghwwkaptgqdunel`). This kickoff covers **§5 steps 1–2 only**: scaffold (panel registry, admin login + `ADMIN_EMAILS` allowlist, `admin_audit_log` migration SQL) + Users panel **read-only** (`auth.admin.listUsers` ⋈ `profiles`). NOT Unity — no Assets/ edits. service_role key is server-side only; Cesar pastes secrets into `.env.local` himself. Spec: `Docs/Specs/Active/admin_dashboard/SPEC.md`. Kickoff below.
 
 ### Kickoff · admin_dashboard
