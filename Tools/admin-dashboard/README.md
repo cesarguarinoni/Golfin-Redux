@@ -104,9 +104,10 @@ In the drawer: **Adjust RP** — signed integer amount plus a required reason
 - Both directions write an `rp_adjust` audit row with the profile's
   activity/gift/total snapshot before and after.
 
-NOTE: the rpc parameter names are assumed from the observed PLAYLIFE
-signatures — verify against the deployed functions before first prod use
-(flagged with NOTE comments in `lib/mutations.ts`).
+VERIFIED 2026-08-13 against the deployed functions (`pg_get_function_arguments`
+on the live project): `earn_pts_v2(p_user_id uuid, p_action text, p_pts integer,
+p_description text, p_key uuid)` and `spend_pts(p_user_id uuid, p_amount integer,
+p_reason text, p_key uuid)` — these are what `lib/mutations.ts` calls.
 
 ## Points panel
 

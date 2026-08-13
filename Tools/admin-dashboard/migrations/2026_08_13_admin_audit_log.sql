@@ -6,6 +6,9 @@
 --            lib/audit.ts → writeAudit). v1 of the dashboard is read-only,
 --            so this table starts empty — it is created now so the write
 --            path is wired and testable before mutations ship.
+-- APPLIED TO PROD 2026-08-13 (Architect, Supabase SQL editor, project
+--            wmszyghwwkaptgqdunel). Post-apply verification: table exists,
+--            RLS enabled, authenticated SELECT = false.
 -- Idempotent: safe to run repeatedly (IF NOT EXISTS / OR REPLACE style).
 -- ============================================================================
 
