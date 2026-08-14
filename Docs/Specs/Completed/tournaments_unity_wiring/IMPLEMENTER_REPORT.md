@@ -61,7 +61,7 @@ from a real failure unless you check.
 | 1 | 📱 Brand case — no name key, server title, brand art | **PENDING DEVICE** | Logic verified end-to-end on a `puma_summer_slam` payload (name `PUMA Summer Slam`, venue `lomond · 18 Holes`, art layer 1). No dashboard row with art exists yet, so the real proof still needs one + a device. |
 | 2 | 📱 Schedule is live | **CLOSED (Editor)** | Live boot: `Schedule source: SERVER (live fetch). Tournaments=6`. The client now reads `GET /api/v1/tournaments/golfin`; the six slugs and their windows match the endpoint. A dashboard date edit needs dashboard access, but the mechanism is closed. |
 | 3 | 📱 Cold launch, airplane mode | **PASS (Editor) / PENDING DEVICE** | Boot applies cache-or-CSV synchronously before any socket; previously observed degrading cleanly on a failing host with one named log line. |
-| 4 | Cache hit — zero downloads on second launch | **CLOSED** | *Schedule:* cache written atomically, no `.tmp` left, re-maps identically (3 tests + live file inspected). *Art:* seeded a real PNG under the derived key, pumped `LoadRoutine` → served a sprite with **zero network**, logging `Cache HIT`. |
+| 4 | Cache hit — zero downloads on second launch | **CLOSED — with real art** | Closed after the Architect seeded `lomond_championship-8a7161e9de90.png` (260×360, 19158 B). Art cache wiped → **launch 1** `[TournamentArt] Downloaded and cached (18 KB)`; cache file `d1974ce81676ad69.png` matches the SHA-256-derived key exactly, byte count identical to the server object, no `.tmp` residue → **launch 2** `[TournamentArt] Cache HIT (18 KB), no download`. Stack shows the hit arriving via `WarmArt → Prefetch` on the **DISK CACHE** boot path, which also proves B6 in production. *Schedule cache:* written atomically, re-maps identically (3 tests + live file). |
 | 5 | Art removed → falls back to course photo, never another course's | **PASS** | All six resolve `Resources/TournamentImages/{course_id}`; the positional path is deleted from class and prefab. |
 | 6 | Host allowlist | **CLOSED** | 11-case live table, all pass, incl. 4 traversal forms, userinfo, non-default port, http, foreign host — each traversal shown normalizing outside the bucket. 14 unit cases on top. |
 | 7 | Reorder → no photo reshuffle | **PASS** | `_courseImages` + `csvIndex` gone; art keyed by `def.Id` / `def.ClubId` only. |
@@ -114,9 +114,9 @@ Editor left clean: not playing, `ShellScene` not dirty, art-cache probe files re
 
 - **`_placeholderImage` still unwired** (`{fileID: 0}`) — accepted in review §D as the correct
   default. The branch is near-unreachable (all six dashboard courses have bundled art).
-- **No tournament currently has `banner_url` set**, so the download half of the art path has never
-  run against a real object. Disk-cache, decode, allowlist, cap and sweep are all covered; the
-  network fetch itself is exercised only by the 404/refusal paths.
+- ~~No tournament has `banner_url` set, so the download half has never run against a real object.~~
+  **Retired 2026-08-14:** the Architect seeded real art on `lomond_championship` and the full
+  download → cache → hit cycle is now verified end-to-end (§ 3 row 4). The whole art path has run.
 - Out of scope per spec: entries, per-hole submission, leaderboards, server-side bot generation, the
   prize resolver, sponsor logos, any new playable course.
 - **Standing caveat unchanged (SPEC §8.1):** only `lomond-country-club` has playable hole data and
@@ -128,8 +128,7 @@ Editor left clean: not playing, `ShellScene` not dirty, art-cache probe files re
 
 | # | What | Why |
 |---|---|---|
-| 1 | Brand tournament end-to-end | Needs a dashboard row with uploaded art |
-| 3 | Airplane-mode cold launch | Proven in-editor against a failing host; device confirmation still wanted |
-| 4 | Art cache hit across real launches | Needs real art on a real device |
+| 1 | Brand tournament end-to-end | Needs a dashboard row with a brand title AND its own art. The art half is now proven; what remains is a real brand-led row rendered on a device. |
+| 3 | Airplane-mode cold launch, first ever run | Proven in-editor against a failing host and via the CSV boot path; device confirmation still wanted |
 
-Everything else is closed.
+Acceptance 4 moved to CLOSED once real art existed. Everything else is closed.
