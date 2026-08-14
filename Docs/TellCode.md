@@ -30,6 +30,44 @@
 
 ## 📋 SPEC_READY POINTERS
 
+- **`tournament_card_art_mask`** (filed 2026-08-14, Architect) — **SPEC_READY, quick.** The remote-art path works end to end (Cesar's screenshot: uploaded art rendering on the Lomond card), with one presentation defect — `tournament_image` is a 260×360 rect sitting flush over the card's two rounded LEFT corners, so every image renders square corners past the ~44 px radius. Cesar's call: fix it with a **mask**, not by pre-rounding each file before upload — right, now that art comes from the dashboard. Everything needed already exists: `Assets/Art/Original UI/Common/S_Common_BGCorner20Left.png` (guid `a007e88d378a6d04da972c3519543ec4`, border `25,25,0,25`) rounds the left two corners and leaves the right two square, and is referenced by **zero** prefabs — authored for exactly this and never used; and `StaminaShopCard.prefab` (same 978×360 archetype, same background sprite) already implements the pattern — a `Mask` carrying a sliced `S_Common_BGCorner20*` Image with `ShowMaskGraphic: 0`, photo as its child. One prefab, no C# change: drop the useless `RectMask2D` off `tournament_image`, make its Image the sliced left-rounded sprite at `pixelsPerUnitMultiplier ≈ 0.36` (16 ÷ ppu = radius; the card frame is ~44), add `Mask` with `ShowMaskGraphic: 0`, add a stretched `Photo` child, and re-point `_tournamentImage` at it. Spec: `Docs/Specs/Quick/tournament_card_art_mask/SPEC.md`. Kickoff below.
+
+### Kickoff · tournament_card_art_mask (issued 2026-08-14)
+
+```
+Read Docs/Specs/Quick/tournament_card_art_mask/SPEC.md and implement it.
+
+Context:
+- The remote tournament art now renders, but tournament_image is a plain
+  260x360 rect over the card's two rounded LEFT corners, so every image shows
+  square corners past the card's ~44px radius. Art comes from the dashboard
+  now, so this has to be a mask, not per-file editing before upload.
+- Do NOT write a shader. The project has no UI shaders and no soft-mask
+  package. Follow the pattern already in
+  Assets/Prefabs/UI/Shop/StaminaShopCard.prefab (same 978x360 card archetype,
+  same d162244f background sprite): a Mask carrying a sliced
+  S_Common_BGCorner20* Image with ShowMaskGraphic: 0, photo as its child.
+  StaminaShopHeroCard -> HeroMask and StaminaMenuRow -> Thumbnail/PhotoMask are
+  the same thing.
+- Use Assets/Art/Original UI/Common/S_Common_BGCorner20Left.png (guid
+  a007e88d378a6d04da972c3519543ec4, spriteBorder 25,25,0,25). It rounds the
+  left two corners only, which is the shape this card needs — the image's right
+  edge is interior, not a card edge. It is currently referenced by nothing.
+- Only Assets/Prefabs/UI/Tournaments/TournamentSelectionCard.prefab changes. No
+  C# change: re-pointing _tournamentImage at the new Photo child is a
+  serialized reference, and SetCourseImage keeps working untouched.
+- Radius has to MATCH, not merely exist. Start at pixelsPerUnitMultiplier 0.36
+  and confirm against CardBackground's corner by eye at 1170x2532. Close-but-
+  wrong reads worse than square.
+- Also delete the RectMask2D on tournament_image — it is axis-aligned clipping,
+  it can never round a corner, it clips nothing today, and RectMask2D next to a
+  stencil Mask on one object is a trap.
+
+When done: screenshot at 1170x2532 showing a remote-art card, a bundled-art
+card and a no-art card, run the acceptance list in the spec, confirm the
+EditMode suite is unchanged, and update STATUS.md.
+```
+
 - **`tournaments_unity_wiring`** (filed 2026-08-14, Architect) — **SPEC_READY. Phase 3 of the tournaments epic: the game finally reads the schedule from the server, artwork and all.** Phases 1 (schema, prod) and 2 (dashboard panel) shipped 2026-08-13/14, but the client still loads `Assets/Resources/Data/tournaments.csv`, so every dashboard edit needs an export + a build. **Cesar's 2026-08-14 decision reshaped this phase:** *"Tournaments names/images are not necessarily tied to a country club. Can be brands as well."* — so a tournament is brand-led as often as venue-led, which (a) promotes remote art from a deferred "3b" into this phase (a bundled course photo cannot express a brand) and (b) exposes a real gap: the card name is `LocalizationManager.Get(def.NameKey)` with **no fallback** (`TournamentSelectionScreenController.cs:153`) and localization keys ship in the build, so a dashboard-created tournament would render its raw key. The server now sends `title` and the client falls back to it. `course_id` keeps one job: which venue is played. Art order becomes `banner_url` → `Resources/TournamentImages/{course_id}` → placeholder, and the positional `_courseImages[csvIndex]` fallback is **deleted** (it silently reshuffles photos the moment the dashboard can reorder). Also inside: `Golfin.Net` must NOT be added to `Golfin.Tournaments.asmdef` — the fetch lives in `TournamentsRuntime/` (Assembly-CSharp, which already sees it); CSV stays the offline fallback; state stays client-derived; one new no-auth endpoint `GET /api/v1/tournaments/golfin` plus a `kind` filter on `/active` and `auto_enter_score` so GPS and game rows stop bleeding into each other. Spec: `Docs/Specs/Active/tournaments_unity_wiring/SPEC.md`. Kickoff below.
 
 ### Kickoff · tournaments_unity_wiring (issued 2026-08-14)
