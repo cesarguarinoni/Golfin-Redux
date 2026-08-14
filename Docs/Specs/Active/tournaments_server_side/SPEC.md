@@ -1,6 +1,7 @@
 # SPEC — tournaments_server_side (schedule moves to the server; admin gets a Tournaments panel)
 
-**Status:** SPEC_READY (Phase 1–2); Phase 3 needs its own kickoff
+**Status:** ✅ PHASE 1 APPLIED (prod, playlife `02fb177`) · ✅ PHASE 2 SHIPPED (GolfinRedux `0e5c509d0`) · Phase 3 (Unity) NOT STARTED — needs its own kickoff
+**Phase 2 note (2026-08-14):** built as specced, with one addition worth recording — `lib/courses.ts` now holds the six valid `course_id` values, because the Unity project has no course registry to read from (`CheckReferentialIntegrity` validates `prizeTableId` and `botFieldId` only). The dropdown IS the validation.
 **Author:** Architect (Cowork session), 2026-08-13, from Cesar: *"Add tournaments to the Admin."*
 **Decision of record (Cesar, 2026-08-13):** GOLFIN tournaments **move server-side**. Dashboard becomes where they are created and edited. Spec first, panel after.
 **Related:** `Docs/Specs/Completed/reward_points_backend` (same shared-ledger pattern), `Docs/Specs/Active/admin_dashboard`.
