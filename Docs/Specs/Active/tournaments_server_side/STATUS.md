@@ -1,0 +1,3 @@
+# STATUS — tournaments_server_side
+
+- **2026-08-13 — SPEC_READY (Phase 1–2).** Filed from Cesar's "Add tournaments to the Admin". Investigation first: server `tournaments`/`tournament_entries` exist but are EMPTY and GPS-shaped (trust/membership/real-round columns); the game's tournaments are a shipped CSV with course/holeSet/botField/rank-band concepts the server table has no room for. Cesar's call: **move them server-side**, spec before building. Awaiting his approval of the §4 schema shape, then the Architect builds the Phase 2 panel; Phase 3 (Unity reads server) is Claude Code's, own kickoff.
