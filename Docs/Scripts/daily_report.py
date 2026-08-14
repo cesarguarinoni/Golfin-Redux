@@ -91,6 +91,19 @@ REPORT_MEDIA_DIR = os.environ.get(
 SENT_MARKER = os.path.join(SCRIPT_DIR, ".last_sent")
 DEDUPE_WINDOW = timedelta(hours=12)
 
+# One-shot note for the NEXT report (2026-08-13).
+#
+# --note only helps when a human runs the script by hand, but the real send is the
+# launchd poll, which invokes daily_report.py with NO arguments — so there was no
+# way to get a note into the report that actually goes out at 20:30 without sitting
+# at the keyboard and sending it manually. Dropping a line in this file fixes that:
+# the next automatic run picks it up and then DELETES it, so a note is genuinely
+# one-report-only and can't silently repeat itself for weeks.
+#
+# An explicit --note on the command line still wins. Lives next to .last_sent, so
+# it's git-ignored and per-machine.
+NOTE_FILE = os.path.join(SCRIPT_DIR, ".today_note")
+
 # Poll model (2026-07-15): launchd's StartCalendarInterval trigger proved
 # unreliable on this Mac — it no-showed at 20:30 three weekday evenings running
 # even while awake and armed, only ever firing as a useless ~03:30 catch-up. So
@@ -129,6 +142,32 @@ def already_sent_recently():
     if last is None:
         return False
     return (datetime.now() - last) < DEDUPE_WINDOW
+
+
+def read_pending_note() -> str:
+    """Return the one-shot note staged in NOTE_FILE, or '' if there isn't one."""
+    try:
+        with open(NOTE_FILE, "r", encoding="utf-8") as f:
+            return f.read().strip()
+    except (FileNotFoundError, OSError):
+        return ""
+
+
+def consume_pending_note():
+    """Delete the staged note after it has actually gone out.
+
+    Called only after a successful PRODUCTION send — the same rule as the dedupe
+    marker. If the send fails, or it was a --test/--dry-run, the note survives for
+    the real report rather than being silently thrown away.
+    """
+    try:
+        os.remove(NOTE_FILE)
+        print(f"[INFO] Consumed one-shot note ({NOTE_FILE}) — it will not repeat tomorrow.")
+    except FileNotFoundError:
+        pass
+    except OSError as e:
+        print(f"[WARN] Could not delete note file {NOTE_FILE}: {e} — "
+              f"DELETE IT BY HAND or it will repeat in tomorrow's report.")
 
 # --- Notion config (optional — leave empty to skip) ---
 NOTION_TOKEN = os.environ.get("NOTION_TOKEN", "")
@@ -833,7 +872,10 @@ def send_all_media(git_videos: list, drop_media: list) -> None:
 
 def main():
     parser = argparse.ArgumentParser(description="GOLFIN daily report")
-    parser.add_argument("--note", default="", help="Extra note to include in today's report")
+    parser.add_argument("--note", default="",
+                        help="Extra note to include in today's report. When omitted, a note "
+                             "staged in Docs/Scripts/.today_note is used instead (and deleted "
+                             "after a successful production send, so it runs once).")
     parser.add_argument("--since", default=None,
                         help="Git --since window. Default is weekday-aware: a rolling "
                              "'24 hours ago' Tue–Fri, and '72 hours ago' on Monday so the "
@@ -896,6 +938,13 @@ def main():
         if weekday == 0:
             print("[INFO] Monday — using a 72h window so the report includes the weekend.")
 
+    # An explicit --note wins; otherwise pick up whatever was staged for this report.
+    # This is what lets a note reach the 20:30 launchd send, which passes no arguments.
+    if not args.note:
+        args.note = read_pending_note()
+        if args.note:
+            print(f"[INFO] Using staged one-shot note from {NOTE_FILE}: {args.note[:120]}")
+
     commits = get_todays_commits(args.since)
     commit_count = get_commit_count(args.since)
     file_changes = get_changed_files(args.since)
@@ -922,6 +971,9 @@ def main():
         print("\n========== DRY RUN — inputs ==========")
         print(f"Commits since '{args.since}': {commit_count}")
         print(f"Notion tasks found: {bool(notion_tasks_data)}")
+        print(f"Extra note: {args.note if args.note else '(none)'}")
+        if args.note:
+            print("  (a staged note is NOT consumed by --dry-run; it waits for the real send)")
         print("\n========== DRY RUN — media that WOULD be sent ==========")
         for v in git_videos:
             print(f"  🎬 git video : {os.path.relpath(v, REPO_PATH)}")
@@ -988,6 +1040,8 @@ def main():
     # (otherwise a test send would suppress the real scheduled report).
     if not args.test:
         write_last_sent()
+        # Same rule for the one-shot note: only burn it once it has really gone out.
+        consume_pending_note()
 
     if not args.no_media:
         send_all_media(git_videos, drop_media)

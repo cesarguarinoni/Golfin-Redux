@@ -211,8 +211,9 @@ namespace Golfin.UI.Account
 
         private void OnCancelClicked()
         {
+            // Cancel abandons the whole sign-up flow → back to the Splash gate (not Login).
             if (_screenManager != null)
-                _screenManager.ShowScreen(ScreenId.Login);
+                _screenManager.ShowScreen(ScreenId.Splash);
         }
 
         private void OnLoginHereClicked()

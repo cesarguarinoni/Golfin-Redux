@@ -1275,6 +1275,36 @@ namespace Golfin.Physics.Viewer.Bot
                 d.LogStep("  WARN: never observed ShotInProgress=true — the gate never engaged, "
                         + "so this run proves nothing about the handle.");
 
+            // The gate releases when the ball RESTS, but the chase camera keeps travelling for a
+            // beat afterwards. If the handle pops back while the camera is still moving, that is
+            // the "visible during the chase cam" Cesar reported — the ball-at-rest sample above
+            // would never see it. Watch the tail explicitly.
+            {
+                var chase = Object.FindAnyObjectByType<ChaseCamera>(FindObjectsInactive.Include);
+                var chaseTr = chase != null ? chase.transform : null;
+                Vector3 lastPos = chaseTr != null ? chaseTr.position : Vector3.zero;
+                float firstBadT = -1f; float camMoveAtBad = 0f;
+                float t0 = Time.realtimeSinceStartup;
+                while (Time.realtimeSinceStartup - t0 < 3f)
+                {
+                    yield return null;
+                    if (chaseTr == null || handleCg == null) continue;
+                    float camMove = (chaseTr.position - lastPos).magnitude / Mathf.Max(Time.unscaledDeltaTime, 1e-4f);
+                    lastPos = chaseTr.position;
+                    if (handleCg.alpha > 0.01f && camMove > 0.05f && firstBadT < 0f)
+                    {
+                        firstBadT   = Time.realtimeSinceStartup - t0;
+                        camMoveAtBad = camMove;
+                    }
+                }
+                if (firstBadT >= 0f)
+                    d.LogStep($"  ⚠ HANDLE BACK WHILE THE CHASE CAM IS STILL MOVING: t+{firstBadT:F2}s "
+                            + $"after rest, handleAlpha={handleCg.alpha:F3}, cam speed={camMoveAtBad:F2} m/s "
+                            + "— the gate releases on ball-rest, not on camera-settled.");
+                else
+                    d.LogStep("  post-rest tail: handle never reappeared while the chase cam was moving.");
+            }
+
             yield return new WaitForSecondsRealtime(2.5f);
             yield return d.Capture("aimline_after_putt");
 

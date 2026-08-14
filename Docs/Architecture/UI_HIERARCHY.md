@@ -521,7 +521,8 @@ ScreensRoot
 
 **Navigation stubs** (Phase 1 — ScreenManager wired in ShellScene):
 - Login: CreateAccount→SignUp, Cancel→Splash; Login/ForgotPw/Google/Apple are `// TODO(Phase 2)` stubs
-- SignUp: Create→EmailConfirmation, LoginHere→Login, Cancel→Login; Google/Apple stubs
+- SignUp: Create→EmailConfirmation, LoginHere→Login, Cancel→**Splash** (cancel abandons the whole flow); Google/Apple stubs
+- Splash gate: StartButton is the auth entry, labelled **LOGIN** (`BTN_LOGIN`; forced to "Play" in demo builds) → Login/Home; CreateAccountButton (680x110, sized to cover its label) → SignUp. The separate Login link under Create Account was removed 2026-08-12.
 - CreateUsername: Create→stub, Cancel→back
 - EmailConfirmation: Resend→stub, Login→Login
 
