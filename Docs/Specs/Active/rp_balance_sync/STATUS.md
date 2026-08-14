@@ -1,4 +1,8 @@
+AWAITING_CESAR_MANUAL_PASS
+
 # STATUS — rp_balance_sync
 
 - **2026-08-13 — SPEC_READY.** Filed from Cesar's observation that the nav-bar RP counter doesn't reflect the backend. Root cause diagnosed in code: `PointsService.OnBalanceChanged` has no subscribers, `RefreshBalanceAsync` has exactly one non-test caller (the editor menu), and `RewardPointsManager.SetPoints` is flag-OFF-only — so with the flag ON no server balance can reach the UI. Kickoff in TellCode.md.
-- Next state: `IN_PROGRESS` when Claude Code starts.
+- **2026-08-14 — IMPLEMENTED (code complete, tests green).** Inbound wire built end to end: `RewardPointsManager.ApplyServerBalance` (§3.1, ungated), `ServerBalanceSync` + `IServerBalanceSink` seam in `Golfin.Economy` (§3.2), `ServerBalanceSyncBehaviour` in Assembly-CSharp driving the four refresh moments (§3.3), `PointsService.DisplayBalance = Balance + PendingEarnTotal` (§3.4), and the `HasBalance` gate that never renders a fabricated 0 (§3.5). Sign-in hook chosen: a new **`AuthService.SignedIn` static event** — there was no existing one (see IMPLEMENTER_REPORT § "Sign-in hook"). One ordering fix outside the literal spec text was required and is documented: `PointsService.SpendRoutine` now folds the post-debit server total in AFTER `onDone`, because doing it before would have made the newly-live inbound wire double-debit the local counter.
+- **EditMode: 1190 passed / 0 failed / 3 pre-existing skips of 1193**, run per-assembly across all 17 EditMode assemblies (a filtered run only reports failures for its own filter).
+- **Next state: `DONE`** — blocked ONLY on Cesar's manual pass of SPEC §5.3 (live account at 173 → nav bar 173 → +25 dashboard grant → foreground → 198, no restart) and §5.4 (flag OFF unchanged). Nothing else is outstanding.

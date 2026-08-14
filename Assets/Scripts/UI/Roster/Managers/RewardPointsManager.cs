@@ -224,6 +224,49 @@ namespace Golfin.Roster
         }
 
         /// <summary>
+        /// Adopt the balance the SERVER reports (rp_balance_sync §3.1). The one authorized inbound
+        /// writer — every other RP display updates off the <see cref="OnPointsChanged"/> this fires.
+        ///
+        /// DELIBERATELY NOT gated by <see cref="AllowLocalOverride"/>. That guard exists to stop a
+        /// LOCAL write from being silently reverted by the next refresh; this is the refresh. Gating it
+        /// would be exactly backwards, and is why the counter went stale in the first place: with the
+        /// flag ON, <see cref="SetPoints"/> refused and no server balance could legally reach the UI.
+        ///
+        /// <paramref name="total"/> is the DISPLAYED total — server balance plus any earns still
+        /// queued (<see cref="PointsService.DisplayBalance"/>), so a fresh earn does not flicker away
+        /// while the queue drains. Callers must not pass a raw server balance while the queue is
+        /// non-empty.
+        ///
+        /// Leaves the leaderboard accumulators (rpDaily/rpWeekly/rpMonthly/lifetimeRpEarned) alone —
+        /// those track RP *earned*, not RP *held*, and only <see cref="EarnPoints"/> feeds them.
+        /// From here on <c>SaveData.rewardPoints</c> is a display cache of the server value, not a
+        /// source of truth.
+        /// </summary>
+        public void ApplyServerBalance(int total)
+        {
+            if (SaveDataHost.Instance == null)
+            {
+                Debug.LogWarning($"[RewardPointsManager] ApplyServerBalance({total}) ignored — no SaveDataHost.");
+                return;
+            }
+
+            if (total < 0)
+            {
+                Debug.LogError($"[RewardPointsManager] Server reported a negative balance ({total}) — ignored.");
+                return;
+            }
+
+            if (SaveDataHost.Instance.Data.rewardPoints == total) return; // no event, no disk write
+
+            int before = SaveDataHost.Instance.Data.rewardPoints;
+            SaveDataHost.Instance.Data.rewardPoints = total;
+            SaveDataHost.Instance.MarkDirty();
+            OnPointsChanged?.Invoke(total);
+
+            Debug.Log($"[RewardPointsManager] Server balance applied: {before}R → {total}R.");
+        }
+
+        /// <summary>
         /// Set points directly (for testing).
         /// Writes through to SaveData; fires OnPointsChanged.
         ///

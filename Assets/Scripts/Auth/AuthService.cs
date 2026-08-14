@@ -48,6 +48,18 @@ namespace Golfin.Auth
         public SupabaseConfig Config { get; private set; }
         public AuthSession Session { get; private set; } = new AuthSession();
 
+        /// <summary>
+        /// Fires whenever a call ESTABLISHES an authenticated session — password sign-in, sign-up,
+        /// OAuth deep-link completion, or a token refresh. Not fired for calls that merely read the
+        /// profile, and not fired on sign-out.
+        ///
+        /// Added for rp_balance_sync §3.3: the first server balance of a session has to be fetched at
+        /// the moment there is a token to fetch it with, and polling for one was explicitly ruled out.
+        /// STATIC on purpose — subscribers (the balance sync bridge) come up on their own schedule and
+        /// must not have to win a race against <see cref="Instance"/> being created.
+        /// </summary>
+        public static event Action<AuthSession> SignedIn;
+
         private ISupabaseAuthClient _client;
         private bool _useMock;
 
@@ -218,6 +230,9 @@ namespace Golfin.Auth
                 // Return a combined success carrying the session + resolved user.
                 var final = AuthResult.Ok(userResult != null ? userResult.User : null,
                     tokens.AccessToken, tokens.RefreshToken, tokens.ExpiresAtUnix, "Signed in.");
+                // This path never goes through Wrap (the tokens came from the redirect, not a call),
+                // so it raises the event itself.
+                RaiseSignedIn();
                 pending?.Invoke(final);
             });
         }
@@ -235,8 +250,19 @@ namespace Golfin.Auth
             {
                 Session.ApplyFrom(result);
                 Session.Save();
+                if (result.HasSession) RaiseSignedIn();
             }
             onResult?.Invoke(result);
         };
+
+        /// <summary>Announce a freshly established session. A throwing subscriber must never fail the
+        /// sign-in that produced it.</summary>
+        private void RaiseSignedIn()
+        {
+            if (!Session.IsAuthenticated) return;
+
+            try { SignedIn?.Invoke(Session); }
+            catch (Exception ex) { Debug.LogError($"[AuthService] SignedIn subscriber threw: {ex}"); }
+        }
     }
 }

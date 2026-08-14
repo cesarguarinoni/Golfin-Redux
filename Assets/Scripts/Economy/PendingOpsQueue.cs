@@ -39,6 +39,39 @@ namespace Golfin.Economy
 
         public IReadOnlyList<PendingPointsOp> Items => _ops;
 
+        /// <summary>
+        /// Fires after ANY change to the contents (enqueue, dequeue, remove, clear, load).
+        ///
+        /// rp_balance_sync §3.4: the number the player sees is <c>server balance + pending earns</c>,
+        /// so whoever renders it has to recompute when the pending half moves — not only when the
+        /// server half does. Without this, a fresh earn's points would vanish from the display the
+        /// instant the queue drained them into the server total.
+        /// </summary>
+        public event Action OnChanged;
+
+        /// <summary>
+        /// Sum of the amounts of every queued earn — RP the player has already been shown and paid
+        /// locally, but which the server ledger has not accepted yet.
+        ///
+        /// Non-positive amounts are skipped: those are catalog-fixed actions where the server picks
+        /// the value (see <see cref="PendingPointsOp.ToEarnGameJson"/>), so the client has no honest
+        /// figure to add and guessing one would make the counter jump on flush.
+        /// </summary>
+        public int PendingEarnTotal
+        {
+            get
+            {
+                int total = 0;
+                for (int i = 0; i < _ops.Count; i++)
+                {
+                    PendingPointsOp op = _ops[i];
+                    if (op == null || op.Kind != PendingOpKind.Earn || op.Amount <= 0) continue;
+                    total += op.Amount;
+                }
+                return total;
+            }
+        }
+
         // ── mutation ──────────────────────────────────────────────────────────────
 
         /// <summary>Mint an earn op, append it, and persist. The returned op carries the idempotency key
@@ -61,6 +94,7 @@ namespace Golfin.Economy
                 _ops.RemoveAt(0);
             }
             Save();
+            RaiseChanged();
         }
 
         /// <summary>Oldest unsent op, or null when the queue is drained.</summary>
@@ -73,6 +107,7 @@ namespace Golfin.Economy
             var op = _ops[0];
             _ops.RemoveAt(0);
             Save();
+            RaiseChanged();
             return op;
         }
 
@@ -86,6 +121,7 @@ namespace Golfin.Economy
 
             _ops.RemoveAt(i);
             Save();
+            RaiseChanged();
             return true;
         }
 
@@ -93,6 +129,15 @@ namespace Golfin.Economy
         {
             _ops.Clear();
             Save();
+            RaiseChanged();
+        }
+
+        /// <summary>Notify listeners that the pending total may have moved. Never lets a bad subscriber
+        /// take down the queue mutation that caused it.</summary>
+        private void RaiseChanged()
+        {
+            try { OnChanged?.Invoke(); }
+            catch (Exception ex) { Debug.LogError($"[PendingOpsQueue] OnChanged subscriber threw: {ex}"); }
         }
 
         // ── persistence ───────────────────────────────────────────────────────────
@@ -106,6 +151,12 @@ namespace Golfin.Economy
         /// <summary>Replace the in-memory contents with what is on disk. Safe on a missing/corrupt file:
         /// it warns and starts empty rather than throwing into whatever called it.</summary>
         public void Load()
+        {
+            LoadCore();
+            RaiseChanged();
+        }
+
+        private void LoadCore()
         {
             _ops.Clear();
 

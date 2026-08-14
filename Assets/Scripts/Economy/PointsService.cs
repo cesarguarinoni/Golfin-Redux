@@ -34,6 +34,12 @@ namespace Golfin.Economy
             _client = client;
             Queue = queue ?? new PendingOpsQueue(new InMemoryPendingOpsStore());
             Queue.Load();
+
+            // rp_balance_sync §3.4: the displayed number is server + pending, so a queue mutation
+            // moves it just as much as a server answer does. Subscribed AFTER Load so the initial
+            // read does not raise into a half-built service.
+            Queue.OnChanged += OnQueueChanged;
+            _lastDisplayBalance = DisplayBalance;
         }
 
         public static void ConfigureForTest(PointsService service) => _instance = service;
@@ -51,11 +57,57 @@ namespace Golfin.Economy
         /// <summary>Cached Reward Points (= <c>total_points</c>). 0 when unknown — check <see cref="HasBalance"/>.</summary>
         public int Balance => LastBalance != null ? LastBalance.TotalPoints : 0;
 
-        /// <summary>Fires whenever the cached balance changes value. No subscribers exist in Slice 1.</summary>
+        /// <summary>Fires whenever the cached SERVER balance changes value. Consumers that render RP
+        /// should prefer <see cref="OnDisplayBalanceChanged"/>, which also accounts for queued earns
+        /// the server has not seen yet (rp_balance_sync §3.4).</summary>
         public event Action<int> OnBalanceChanged;
 
         /// <summary>The persistent pending-earn queue.</summary>
         public PendingOpsQueue Queue { get; }
+
+        // ── displayed balance (rp_balance_sync §3.4) ──────────────────────────────
+
+        /// <summary>RP that has been paid to the player locally but not yet accepted by the server.</summary>
+        public int PendingEarnTotal => Queue != null ? Queue.PendingEarnTotal : 0;
+
+        /// <summary>
+        /// What the player should actually see: the server balance PLUS everything still queued.
+        ///
+        /// A queued earn has already been shown to the player and already added to the local save, but
+        /// by definition is not in the server total yet. Rendering the raw server balance would make
+        /// freshly earned points visibly disappear until the queue flushed — a worse bug than the stale
+        /// counter this feature exists to fix.
+        ///
+        /// Meaningless while <see cref="HasBalance"/> is false (the server half is unknown, not zero),
+        /// which is why <see cref="OnDisplayBalanceChanged"/> stays silent until the first answer.
+        /// </summary>
+        public int DisplayBalance => Balance + PendingEarnTotal;
+
+        /// <summary>
+        /// Fires when <see cref="DisplayBalance"/> changes — from a server answer OR a queue mutation.
+        /// NEVER fires while <see cref="HasBalance"/> is false: with no server answer this session there
+        /// is nothing authoritative to show, and the cached local value must stand (§3.5).
+        /// </summary>
+        public event Action<int> OnDisplayBalanceChanged;
+
+        private int _lastDisplayBalance;
+
+        private void OnQueueChanged() => RaiseDisplayBalanceIfChanged();
+
+        /// <param name="force">Raise even when the number is unchanged. Used on the FIRST server answer
+        /// of the session: "unknown" becoming "0" is a real transition the display must follow, and it
+        /// is indistinguishable from no-change by value alone.</param>
+        private void RaiseDisplayBalanceIfChanged(bool force = false)
+        {
+            int now = DisplayBalance;
+            bool changed = now != _lastDisplayBalance;
+            _lastDisplayBalance = now;
+
+            if (!HasBalance) return;      // unknown ≠ 0 — see §3.5
+            if (!changed && !force) return;
+
+            OnDisplayBalanceChanged?.Invoke(now);
+        }
 
         // ── balance ───────────────────────────────────────────────────────────────
 
@@ -168,6 +220,11 @@ namespace Golfin.Economy
                     break;
                 }
 
+                // Dequeue drops this op out of PendingEarnTotal and ApplyEarn puts the same points into
+                // the server total a few lines below, with no yield in between — so the displayed
+                // balance dips and recovers inside ONE frame and nothing is ever painted low. A refused
+                // op deliberately keeps the dip: the server rejected that earn, so the optimistic local
+                // credit for it SHOULD evaporate.
                 Queue.Dequeue();
                 sent++;
 
@@ -265,9 +322,23 @@ namespace Golfin.Economy
                 yield break;
             }
 
-            ApplySpend(data);
             Debug.Log($"[PointsService] Spent {amount} ({reason}) → {data}");
-            onDone?.Invoke(SpendOutcome.Ok(data, result));
+
+            // ORDER MATTERS (rp_balance_sync). onDone is what runs the LOCAL debit
+            // (RewardPointsManager.SpendPoints inside PointsSpendGate's onApproved). Folding the
+            // post-debit server total into the cache BEFORE that would push the already-debited number
+            // into the display, and the local debit would then subtract the same amount a second time —
+            // the counter would sit one spend too low until the next refresh. Applying it afterwards
+            // means the two agree and ApplyServerBalance no-ops. finally: a throwing call site must not
+            // leave the cached balance stale.
+            try
+            {
+                onDone?.Invoke(SpendOutcome.Ok(data, result));
+            }
+            finally
+            {
+                ApplySpend(data);
+            }
         }
 
         /// <summary>Request body for <c>POST /api/v1/points/spend</c>. Field names match the deployed
@@ -319,6 +390,9 @@ namespace Golfin.Economy
 
             if (!hadBalance || before != balance.TotalPoints)
                 OnBalanceChanged?.Invoke(balance.TotalPoints);
+
+            // Forced on the first answer of the session: see RaiseDisplayBalanceIfChanged.
+            RaiseDisplayBalanceIfChanged(force: !hadBalance);
         }
 
         /// <summary>
