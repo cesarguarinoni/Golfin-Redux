@@ -30,6 +30,46 @@
 
 ## 📋 SPEC_READY POINTERS
 
+- **`rp_balance_sync`** (filed 2026-08-13, Architect) — **SPEC_READY, from Cesar's find: the nav-bar RP counter doesn't show the backend balance.** The inbound half of the RP cutover was never built — Slice 2 made the game write to the server (earns queue, spends debit server-first) but nothing ever reads back: `PointsService.OnBalanceChanged` has **no subscribers**, `RefreshBalanceAsync`'s only non-test caller is the **editor menu**, and `RewardPointsManager.SetPoints` is flag-OFF-only, so with the flag ON there is no legal path for a server balance to reach the UI. Fix = `ApplyServerBalance` + subscription + refresh on sign-in/resume/Home/after-mutations, with the pending-queue rule (displayed = server + queued earns) so fresh earns don't visibly vanish. Spec: `Docs/Specs/Active/rp_balance_sync/SPEC.md`. Kickoff below.
+
+### Kickoff · rp_balance_sync (issued 2026-08-13)
+
+```
+Read Docs/Specs/Active/rp_balance_sync/SPEC.md and implement it.
+
+Context:
+- Slice 2 wired the game to WRITE to the server but never to READ: the nav-bar
+  RP counter shows a stale local number while the flag is ON. Verified in the
+  code — PointsService.OnBalanceChanged has zero subscribers,
+  RefreshBalanceAsync's only non-test caller is Economy/Editor/
+  PointsBackendMenu.cs, and RewardPointsManager.SetPoints is flag-OFF-only, so
+  no server balance can legally reach the UI today.
+- Fix per spec section 3: add RewardPointsManager.ApplyServerBalance(int) (NOT
+  gated by AllowLocalOverride — the server is not a local override), subscribe
+  it to PointsService.OnBalanceChanged without creating an asmdef cycle
+  (EconomyRuntime bridge like PointsSpendGate, or the tournament-adapter seam
+  pattern), and refresh after sign-in / on app resume / on entering Home /
+  after every successful earn+spend.
+- Section 3.4 is the subtle one: displayed = server balance + pending queued
+  earns, or a fresh earn visibly vanishes until the queue flushes. Don't skip.
+- Section 3.5: never render 0 for "unknown" — HasBalance distinguishes them.
+- No auth sign-in event was found in AuthService.cs during diagnosis; find the
+  real hook or add a minimal one, and flag what you chose. Don't poll.
+- Every RP consumer already listens to OnPointsChanged, so no UI rewrites.
+- Out of scope: backend, dashboard, queue retry logic, leaderboard
+  accumulators, economy values.
+
+When done: list changed files with a 1-line summary each, run the FULL EditMode
+sweep (per-assembly — filtered runs report FailedTests only for the filter),
+add the tests in section 5.2, and state clearly which acceptance items need
+Cesar's manual pass (5.3 is the real proof: live account
+cesar.guarinoni@gmail.com sits at 173 RP right now — the nav bar should read
+173, then 198 after a +25 dashboard grant and a foreground, no restart).
+Update STATUS.md + IMPLEMENTER_REPORT.md in the spec folder and
+Docs/AI_CONTEXT.md.
+```
+
+
 - **`reward_points_backend`** (filed 2026-08-12, Architect) — **SPEC_READY, GO from Cesar 2026-08-12 (points-first sequencing).** Unify GOLFIN Reward Points onto the PLAYLIFE Supabase ledger (`points_transactions`), server-authoritative — the §2 fork in GPS_UNITY_PORT_SPEC, resolved. Offline policy: online spends, queued earns. Kickoff below covers **Slice 1 only**: `Golfin.Net` ApiClient + `PointsService` + persistent pending-ops queue behind a default-OFF `PointsBackendEnabled` flag — byte-identical game behavior with the flag off. **One-value design (Cesar): RP == PLAYLIFE `total_points`, no new currency.** Phase A (backend: idempotency + `spend_pts`/`earn_pts_v2` + `/points/spend` + `/points/earn-game` in `/Users/cesar/Documents/playlife/backend`) has its OWN kickoff below — runs in the playlife repo, independent of Slice 1, scale-agnostic. Slice 2 = **economy rebalance to GPS scale + re-point call sites + flag flip, one cutover** — gated on the Cesar-approved `RP_REBALANCE.md` table. Spec: `Docs/Specs/Active/reward_points_backend/SPEC.md`. Kickoffs below.
 
 ### Kickoff · reward_points_backend — Slice 1
