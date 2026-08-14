@@ -30,6 +30,54 @@
 
 ## 📋 SPEC_READY POINTERS
 
+- **`tournaments_unity_wiring`** (filed 2026-08-14, Architect) — **SPEC_READY. Phase 3 of the tournaments epic: the game finally reads the schedule from the server, artwork and all.** Phases 1 (schema, prod) and 2 (dashboard panel) shipped 2026-08-13/14, but the client still loads `Assets/Resources/Data/tournaments.csv`, so every dashboard edit needs an export + a build. **Cesar's 2026-08-14 decision reshaped this phase:** *"Tournaments names/images are not necessarily tied to a country club. Can be brands as well."* — so a tournament is brand-led as often as venue-led, which (a) promotes remote art from a deferred "3b" into this phase (a bundled course photo cannot express a brand) and (b) exposes a real gap: the card name is `LocalizationManager.Get(def.NameKey)` with **no fallback** (`TournamentSelectionScreenController.cs:153`) and localization keys ship in the build, so a dashboard-created tournament would render its raw key. The server now sends `title` and the client falls back to it. `course_id` keeps one job: which venue is played. Art order becomes `banner_url` → `Resources/TournamentImages/{course_id}` → placeholder, and the positional `_courseImages[csvIndex]` fallback is **deleted** (it silently reshuffles photos the moment the dashboard can reorder). Also inside: `Golfin.Net` must NOT be added to `Golfin.Tournaments.asmdef` — the fetch lives in `TournamentsRuntime/` (Assembly-CSharp, which already sees it); CSV stays the offline fallback; state stays client-derived; one new no-auth endpoint `GET /api/v1/tournaments/golfin` plus a `kind` filter on `/active` and `auto_enter_score` so GPS and game rows stop bleeding into each other. Spec: `Docs/Specs/Active/tournaments_unity_wiring/SPEC.md`. Kickoff below.
+
+### Kickoff · tournaments_unity_wiring (issued 2026-08-14)
+
+```
+Read Docs/Specs/Active/tournaments_unity_wiring/SPEC.md and implement it.
+
+Context:
+- Phases 1+2 shipped: the tournament schedule, prize bands and per-tournament
+  artwork now live in Supabase and have an admin panel. The game still reads
+  Assets/Resources/Data/tournaments.csv, so nothing the dashboard does reaches
+  players. This phase wires the client to the server.
+- Decision of record (Cesar, 2026-08-14): a tournament's NAME and ARTWORK are
+  independent of the course it is played on — they can be brand-led. So remote
+  art ships in this phase, not later, and the display name must fall back
+  localize(name_key) -> title -> slug, because a dashboard-created tournament
+  has no localization key in the build.
+- The single client seam is TournamentService.Compose()
+  (Assets/Scripts/TournamentsRuntime/TournamentService.cs:145) — definitions are
+  injected into LocalTournamentBackend, so only where they come from changes.
+  ITournamentBackend, LocalTournamentBackend and DeriveState keep working
+  unchanged.
+- DO NOT add Golfin.Net to Golfin.Tournaments.asmdef. The fetch, the JSON
+  mapping and the art service go in Assets/Scripts/TournamentsRuntime/, which
+  compiles into Assembly-CSharp and already sees Golfin.Net and Golfin.Economy
+  (both autoReferenced). The tournaments core keeps taking plain DTOs.
+- Reuse, do not rebuild: ApiClient (Assets/Scripts/Net/ApiClient.cs:67 Get<T>,
+  401-refresh-and-replay already handled), TournamentCsvLoader.ExpandHoleSet
+  (:250) and CheckReferentialIntegrity (:341), and the atomic file-write
+  pattern in Economy/PendingOpsStore.cs:57-68.
+- Delete the positional _courseImages[csvIndex] fallback
+  (TournamentSelectionScreenController.cs:31, :333-334) and fix the
+  null-shadowing bug at :330 where a map entry with a null Sprite blanks the
+  card instead of falling through.
+- The server half is in /Users/cesar/Documents/playlife: add
+  GET /api/v1/tournaments/golfin (no auth, kind='golfin', prize bands joined in
+  one payload), and add a kind filter to /tournaments/active (tournaments.py:61)
+  and auto_enter_score's two selects (:239, :248).
+- Minimal diff. Out of scope: entries, per-hole submission, leaderboards,
+  server-side bot generation, the prize resolver (Phases 4-5), sponsor logo
+  images, and any new playable course.
+
+When done: list changed files with a 1-line summary each, run the acceptance
+tests in the spec, flag which need manual on-device verification, update
+STATUS.md + IMPLEMENTER_REPORT.md in the spec folder, and update
+Docs/AI_CONTEXT.md.
+```
+
 - **`rp_balance_sync`** (filed 2026-08-13, Architect) — **SPEC_READY, from Cesar's find: the nav-bar RP counter doesn't show the backend balance.** The inbound half of the RP cutover was never built — Slice 2 made the game write to the server (earns queue, spends debit server-first) but nothing ever reads back: `PointsService.OnBalanceChanged` has **no subscribers**, `RefreshBalanceAsync`'s only non-test caller is the **editor menu**, and `RewardPointsManager.SetPoints` is flag-OFF-only, so with the flag ON there is no legal path for a server balance to reach the UI. Fix = `ApplyServerBalance` + subscription + refresh on sign-in/resume/Home/after-mutations, with the pending-queue rule (displayed = server + queued earns) so fresh earns don't visibly vanish. Spec: `Docs/Specs/Active/rp_balance_sync/SPEC.md`. Kickoff below.
 
 ### Kickoff · rp_balance_sync (issued 2026-08-13)

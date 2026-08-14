@@ -302,11 +302,15 @@ export function TournamentEditor({
                   placeholder="Kasumigaseki Open"
                   className={field}
                 />
+                <p className="mt-1 text-[11px] text-zinc-600">
+                  Free text, and independent of the venue — a tournament can be brand-led (“PUMA
+                  Summer Slam” at Lomond). Shown to players when no localization key resolves.
+                </p>
               </div>
 
               <div className="col-span-1">
                 <label className={label} htmlFor="t-course">
-                  Course
+                  Venue (playable course)
                 </label>
                 <select
                   id="t-course"
@@ -321,7 +325,8 @@ export function TournamentEditor({
                   ))}
                 </select>
                 <p className="mt-1 text-[11px] text-zinc-600">
-                  Bundled art: <code className="text-zinc-500">{course?.art ?? "none"}</code>
+                  Where it is played, and the venue subtitle. Default art only —{" "}
+                  <code className="text-zinc-500">{course?.art ?? "none"}</code>
                   {course && !course.playable && (
                     <span className="text-amber-400/80">
                       {" "}
@@ -814,7 +819,7 @@ function ArtworkTab({
       className: "border-accent-500/40 bg-accent-500/10 text-accent-300",
     },
     bundled: {
-      text: `Bundled — the shipped course photo (${courseArt}). Fine, but every tournament on this course looks the same.`,
+      text: `Bundled — the shipped venue photo (${courseArt}). Fine for a venue-named event, but a brand tournament needs its own art: every tournament on this course looks identical without one.`,
       className: "border-surface-700 bg-surface-850 text-zinc-300",
     },
     placeholder: {
