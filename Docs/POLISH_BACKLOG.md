@@ -103,3 +103,5 @@ Items consciously deferred to the polish phase (Roadmap item 9: UI/UX Polish). N
 **Context:** On opening the map, the camera recenters/reframes for a frame or two (a brief pop) before settling.
 
 **When resumed:** compute the bounds-fit framing BEFORE the first rendered frame (set the map cam position/zoom in `Open()` prior to enabling the overlay) so frame 1 is already centered — no post-open recenter.
+
+- **Mode entry fee is charged on PLAY, before hole selection** (surfaced 2026-08-13 during `rp_balance_sync` acceptance — a 10 RP practice fee was debited, then the player returned to Home). If backing out of hole select forfeits the fee, decide refund-on-abandon before players see it: refund on cancel, or charge at hole-start instead of at PLAY. Cheap now; a review complaint later. Undecided — Cesar's call.
