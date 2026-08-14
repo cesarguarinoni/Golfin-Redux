@@ -29,11 +29,16 @@ The game's tournaments live in `Assets/Resources/Data/tournaments.csv`, which **
 
 **The mismatch:** the server tables model *"submit your real round, gated by trust and membership"*. The game models *"play N holes against a simulated bot field, win rank-band RP"*. Overlap is only id/title/dates/entry-fee/sponsor/tier.
 
-## 3. Scope decision — schedule now, results later
+## 3. Scope — schedule AND async multiplayer results (amended by Cesar, 2026-08-13)
 
-**IN:** the tournament **schedule and definition** (what exists, when, on which holes, fees, prizes) becomes server-authoritative and dashboard-editable.
+The first draft deferred results. **Cesar amended it the same day: tournaments become asynchronous multiplayer** — "player plays like practice and the game saves results" — so real players share one leaderboard and the server owns the outcome. That is now in scope and is the heart of the epic; the schedule move is its prerequisite.
 
-**OUT (explicitly deferred):** results, rankings and prize resolution stay **local** (`LocalTournamentBackend` + `InMemoryEntryStore`). GOLFIN tournaments today are single-player-vs-simulated-bots resolved on device; making *that* server-authoritative is real cross-player competition — a separate, much larger project with anti-cheat implications. Do not let it ride along on a schedule change.
+**Cesar's three architecture calls (2026-08-13):**
+1. **Anti-cheat: trust the client, with server-side plausibility checks.** Reject the impossible, not the improbable. Real verification waits until there is something worth cheating for.
+2. **Bots stay as field filler.** Real entries are ranked among them so a young tournament never looks empty; **bots are never paid**.
+3. **One entry, one run.** Register → character locks → play the hole set → that is your score. No replays.
+
+**Still out of scope:** real-time play; server-side physics/replay verification; cross-app (GPS) unification of tournaments.
 
 ## 4. Schema (Phase 1)
 
@@ -96,8 +101,47 @@ Both are **scene-serialized**, so art is assigned at build time by hand.
 - Endpoint: `GET /tournaments/golfin` (or `?kind=golfin` on the existing `/active`) returning definitions + prize bands in one payload.
 - Acceptance: with the network on, changing a date in the dashboard changes the T7 screen after a relaunch — **no rebuild**. With the network off, the shipped CSV still drives everything.
 
+## 6b. Async multiplayer — entries, scoring, resolution (Phases 4–5)
+
+### 6b.1 Entry model
+One row per (tournament, user) in `tournament_entries`, `unique (tournament_id, user_id)`. Add golfin columns (nullable, same discipline as §4.1): `character_id text` (**locked at entry** — the client already snapshots stats via `ICharacterStatsProvider` at `Register`; the lock is a GDD rule and must be enforced server-side too), `holes_completed int`, `status text` in `('in_progress','finished','forfeited')`, `is_bot boolean not null default false`, `display_name text` (for bots and for leaderboard rendering without a profile join), `submitted_at timestamptz`.
+- `best_score` carries **total strokes for the hole set** (lower is better). `rounds_submitted` stays a GPS column; the game uses `holes_completed`.
+- Entry costs `entry_fee_pts` RP, debited through the existing `spend_pts` path (server-first, audited, idempotent) — **not** a new payment path.
+
+### 6b.2 Per-hole results
+New `tournament_hole_results`: `(id uuid pk, entry_id uuid fk → tournament_entries on delete cascade, hole_number int, strokes int, submitted_at timestamptz default now(), idempotency_key uuid, unique (entry_id, hole_number))`.
+Three jobs at once: **resume** a part-played tournament on another device, **evidence** for plausibility checks, and **idempotent** submission for the offline queue.
+
+### 6b.3 Submission + plausibility (the anti-cheat surface)
+`POST /tournaments/{id}/submit-hole` `{hole_number, strokes, idempotency_key}` — one atomic RPC, rejecting:
+- tournament missing / `kind <> 'golfin'` / caller has no entry / entry belongs to another user
+- `hole_number` not in the tournament's `hole_set`
+- duplicate `(entry_id, hole_number)` — replay returns the stored row (offline queue safety)
+- `strokes` outside `[1, 15]` (absurd-value guard, not a skill judgement)
+- submission window closed — **accepted until `end_at + resolve_delay_minutes`**, see 6b.5
+- **pace guard:** total elapsed from `entered_at` shorter than ~20s × holes submitted — catches instant-complete scripting, which is the realistic cheat, while never punishing a fast human.
+Everything rejected is logged with the user id: the point of v1 checks is to *see* tampering, even before we can stop all of it.
+
+### 6b.4 Bots — same field for everyone
+Bots are generated **client-side today** (T3 generator + `bracketWeights` + `bot_score_brackets`), which cannot work for a shared leaderboard: two players would see two different fields. **The server generates the bot field once**, at tournament creation, from `bot_field_id` + a stored `bot_seed`, persisting bot rows into `tournament_entries` (`is_bot=true`, `user_id=null`, `display_name` from the `fake_players` pool). Everyone then reads one field. The client's generator stays only as the offline/fallback path.
+- **Bots occupy leaderboard positions but never prize money.** Prize bands are applied to the **human-only ordering**.
+- ⚠️ **Open UX question for Cesar:** a human who places 3rd on the visible board but is the top human gets the 1st-place band. Show the blended rank and label the prize honestly ("top finisher"), or rank humans separately in the UI? Needs a call before the leaderboard screen is touched.
+
+### 6b.5 Resolution + payout
+At `end_at + resolve_delay_minutes` a resolver: orders entries by `best_score` (ties → earlier `submitted_at`), writes `final_rank` for all, computes `prize_pts_awarded` for humans from `tournament_prize_bands`, and pays via **`earn_pts_v2` with action `tournament_prize`** and a **deterministic idempotency key (uuid5 of entry_id)** — so re-running the resolver can never double-pay. The existing `game_point_actions` cap (`tournament_prize`, `max_per_event 2000`) already matches the top prize band exactly.
+- **The resolve delay is also the late-submission grace window** — a round finished before close but submitted after (offline queue, backgrounded app) still counts, with no separate rule to invent.
+- Trigger: automatic (scheduled task) **plus** a manual **"Resolve now"** button in the dashboard, audited. Manual first — watching the first few resolve by hand is worth more than a cron that silently misfires.
+- ⚠️ `ClaimPrize` semantics change: RP is credited at resolution, so the client's claim becomes an acknowledgement/animation, not a grant. `LocalTournamentBackend.ClaimPrize` and the result modal's auto-claim (GDD §17.6) must be re-pointed, not left double-granting.
+
+### 6b.6 Client (Phase 4)
+- Entry, per-hole submission and leaderboard read go through `Golfin.Net`; **submissions ride the existing pending-ops queue pattern** from `reward_points_backend` (idempotency key per hole, FIFO replay) so a tournament played on the train submits itself on reconnect.
+- `GET /tournaments/{id}/ranking` already exists — extend it for golfin rows (blended field, `is_bot`, strokes, rank, display name). `TournamentLeaderboardScreenController` currently loads `Data/fake_players`; that becomes the server's bot rows.
+- Offline: a player can still *play*; they cannot *enter* (entry costs RP, and RP spends are online-only by decision of record).
+
 ## 7. Risks
-1. **Scope creep into live results** — §3 draws the line; hold it.
+1. **Cheating once RP is real money-adjacent** — v1 plausibility checks are a tripwire, not a wall (§6b.3). Revisit before tournaments pay anything a player would miss.
+2. **Bot/human prize ambiguity** — unresolved UX question in §6b.4; decide before the leaderboard is built.
+3. **Double-payout on resolve** — mitigated only by the deterministic idempotency key in §6b.5; that key is load-bearing, do not make it random.
 2. **Schedule drift between server and shipped CSV** during Phase 2→3 — mitigated by the export button and the panel banner.
 3. **`create_weekly_open_tournament()` and `auto_enter_score`** already write these tables for GPS; the `kind` discriminator must be respected by anything that writes, or GPS automation will start creating rows the game tries to render.
 4. Free-tier Supabase still auto-pauses — a paused project during Phase 3 means the game falls back to CSV (acceptable, by design).
