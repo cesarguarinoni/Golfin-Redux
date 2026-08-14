@@ -1,13 +1,33 @@
 # GOLFIN Admin Dashboard
 
 Internal admin tool for the GOLFIN game over the PLAYLIFE Supabase project
-(Postgres + Supabase Auth). Three panels — **Users** (list, detail,
-admin mutations, RP adjust), **Points** (global ledger viewer), **Audit Log**
+(Postgres + Supabase Auth). Four panels — **Users** (list, detail,
+admin mutations, RP adjust), **Points** (global ledger viewer), **Tournaments**
+(schedule authoring, rank-band prize editor, card-art upload), **Audit Log**
 (admin_audit_log viewer) — plus login. Designed to grow panel-by-panel via
 `lib/registry.ts`.
 
 Stack: Next.js (App Router) + TypeScript + Tailwind CSS. Fully self-contained
 in this folder (intended location in the Unity repo: `Tools/admin-dashboard`).
+
+## ⚠️ Never run `npm run build` while `npm run dev` is running
+
+`next dev` and `next build` share the same `.next/` directory and overwrite each
+other's artifacts. A build run against a live dev server leaves the running
+server serving HTML that references chunk files the build deleted: every
+`/_next/static/chunks/*.js` and the stylesheet return **404**, so the page loads
+unstyled and never hydrates — no login, no panels, nothing clickable. The server
+logs look clean, which is what makes it confusing.
+
+Recovery: stop the server, `rm -rf .next`, start it again.
+
+Related trap, and it bites when starting the server from tooling rather than a
+terminal: if `NODE_ENV` is inherited as `production`, `next dev` compiles
+middleware in a mode the Edge sandbox rejects and every page 500s with
+`EvalError: Code generation from strings disallowed for this context`. The
+startup banner warns about a "non-standard NODE_ENV" one line before it happens.
+Start with `NODE_ENV=development npm run dev` when in doubt.
+
 
 ## Run
 
