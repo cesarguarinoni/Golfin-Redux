@@ -65,6 +65,29 @@ New `Tournaments` panel in `Tools/admin-dashboard`, registered in `lib/registry.
 - Every mutation goes through `lib/audit.ts` with before/after, exactly like the RP adjust path.
 - ⚠️ **Honest limitation to surface in the UI:** until Phase 3 ships, edits here do **not** reach players — the game still reads the shipped CSV. Panel shows a persistent banner saying so, and offers **"Export tournaments.csv + tournament_prizes.csv"** so the dashboard is immediately useful as the authoring tool (edit here → export → commit → build), rather than a UI that pretends to be live.
 
+## 5b. Images — the thing that decides whether "server-side" really means "no rebuild" (Cesar, 2026-08-13)
+
+**How art resolves today** (`TournamentSelectionScreenController.ResolveSprite`, line 323):
+1. `_courseImageMap` — an Inspector-wired list of (tournamentId → Sprite)
+2. fallback `_courseImages[csvIndex]` — a serialized Sprite array indexed by **CSV row position**
+
+Both are **scene-serialized**, so art is assigned at build time by hand.
+
+**Why this breaks a server-driven schedule.** A tournament created in the dashboard has no map entry, so it falls through to `_courseImages[index]` and renders **another course's photograph** — or nothing. And because the fallback is positional, reordering tournaments (something the dashboard makes trivial) silently reshuffles which photo lands on which card. Shipping the panel without fixing this makes "create a tournament" an unsafe button.
+
+**The fix is nearly free, because the naming convention already exists.** The art at `Assets/Art/Tournaments/CourseImages/` is already named exactly by course id — `gotemba.png`, `hirono.png`, `kasumigaseki.png`, `kawana.jpg`, `kisarazu.png`, `lomond.png` — a 1:1 match with every `courseId` in `tournaments.csv`. It simply is not loadable at runtime because the folder is not under `Resources/`.
+
+**Phase 3 rule:** move (or mirror) that folder to `Resources/TournamentImages/` and resolve art as `Resources.Load<Sprite>($"TournamentImages/{course_id}")`. `Resources.Load` is extension-agnostic, so `kawana.jpg` needs no rename. Then:
+- **DELETE the positional `_courseImages[csvIndex]` fallback** — it is the bug, not a safety net.
+- Keep `_courseImageMap` as an optional per-tournament override for one-off art.
+- Missing art renders an explicit **placeholder** sprite + a warning log. Never silently show the wrong course.
+
+**Why bundled art is sufficient forever (no remote image pipeline needed).** A tournament can only be scheduled on a course that already ships in the build — it needs the hole scenes, terrain and baked sim data. So course art is inherently build-time content, and keying it by `course_id` covers every tournament the dashboard could legitimately create. New course = new build regardless; that is a property of the game, not a limitation of this design.
+
+**Deferred (do NOT build now):** the server's unused `banner_url` column could later carry sponsor or seasonal promo art fetched at runtime — the only genuine case for remote images. That needs download, disk cache, placeholder-while-loading and failure handling; it is a marketing feature, not a scheduling one. Note also that **sponsor is text-only today** (`"{SPONSOR} PRESENTS"` from `SponsorKey`, no logo image) and league/tier drives `_badgeBackground` — if a sponsor logo is ever wanted, the same convention rule applies.
+
+**Phase 2 consequence (dashboard):** `course_id` is a **dropdown of the courses known to ship**, never free text, and the create/edit form shows the resolved image name so a missing asset is visible before saving. The panel must not be able to author a tournament the game cannot draw.
+
 ## 6. Unity (Phase 3 — own kickoff, Claude Code)
 
 - New `RemoteTournamentSource` feeding the **existing** `TournamentDefinition`/prize-table DTOs — `ITournamentBackend` and `LocalTournamentBackend` keep working unchanged; only where the definitions come from changes (`TournamentService.Compose()`).
