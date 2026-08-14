@@ -87,11 +87,31 @@ Both are **scene-serialized**, so art is assigned at build time by hand.
 - Keep `_courseImageMap` as an optional per-tournament override for one-off art.
 - Missing art renders an explicit **placeholder** sprite + a warning log. Never silently show the wrong course.
 
-**Why bundled art is sufficient forever (no remote image pipeline needed).** A tournament can only be scheduled on a course that already ships in the build — it needs the hole scenes, terrain and baked sim data. So course art is inherently build-time content, and keying it by `course_id` covers every tournament the dashboard could legitimately create. New course = new build regardless; that is a property of the game, not a limitation of this design.
+**Why bundled art is the right FIRST step (but not the whole answer).** A tournament can only be scheduled on a course that already ships — it needs the hole scenes, terrain and baked sim data — so a default course photo keyed by `course_id` correctly covers every tournament the dashboard can create, with zero new infrastructure. ⚠️ **It does not deliver Cesar's actual goal** (2026-08-13: *"I want to add tournaments without new build"*): that requires **per-tournament** art — seasonal key art, a new sponsor's branding, a differently-dressed event on a course that already ships. Presentation is not bounded by playability. Bundled art is therefore the fallback layer, not the destination — see §5c.
 
-**Deferred (do NOT build now):** the server's unused `banner_url` column could later carry sponsor or seasonal promo art fetched at runtime — the only genuine case for remote images. That needs download, disk cache, placeholder-while-loading and failure handling; it is a marketing feature, not a scheduling one. Note also that **sponsor is text-only today** (`"{SPONSOR} PRESENTS"` from `SponsorKey`, no logo image) and league/tier drives `_badgeBackground` — if a sponsor logo is ever wanted, the same convention rule applies.
+**Promoted, not deferred (§5c):** the server's `banner_url` column carries per-tournament art fetched at runtime. Note also that **sponsor is text-only today** (`"{SPONSOR} PRESENTS"` from `SponsorKey`, no logo image) and league/tier drives `_badgeBackground` — if a sponsor logo is ever wanted, the same convention rule applies.
 
 **Phase 2 consequence (dashboard):** `course_id` is a **dropdown of the courses known to ship**, never free text, and the create/edit form shows the resolved image name so a missing asset is visible before saving. The panel must not be able to author a tournament the game cannot draw.
+
+## 5c. Remote tournament art — what actually delivers "no new build" (Cesar, 2026-08-13)
+
+**Requirement:** adding a tournament in the dashboard — including its artwork — must reach players without a client release. Bundled art (§5b) cannot do this; it is the offline/default layer beneath this one.
+
+**5c.1 Resolution order (client, Phase 3b).** First hit wins, and every step degrades safely:
+1. **`banner_url`** — per-tournament art from the server, downloaded and disk-cached.
+2. **`Resources/TournamentImages/{course_id}`** — the shipped default course photo (§5b).
+3. **Placeholder sprite** + warning log. Never a blank card, never another course's photo.
+While a remote image is still downloading the card shows layer 2 immediately and swaps on arrival — no empty rectangle, no layout jump.
+
+**5c.2 Storage: Supabase Storage, not arbitrary URLs.** Create a public-read bucket `tournament-art` in the same project. The dashboard uploads the file (service_role) and writes the resulting public URL into `banner_url`.
+- 🔒 **The client MUST validate the host** and accept only URLs under the project's Storage domain. A free-text URL field shipped to every player is a way to serve arbitrary content (and leak player IPs to third parties) if the DB is ever touched by something other than the dashboard — remember `/tournaments/admin/create` still writes these tables behind a static key (§4.5).
+- Immutable naming (`{slug}-{content_hash}.jpg`) so the cache key can be the URL and a changed image is a new URL — no cache-invalidation problem to solve.
+
+**5c.3 Client caching (Phase 3b).** `UnityWebRequestTexture` → disk cache under `Application.persistentDataPath/tournament-art/`, keyed by URL hash; cache survives launches, so a given image downloads once ever. Prefetch on the tournament-list fetch (boot/sign-in) so the T7 screen is already warm. Bounded cache with LRU eviction (say 50 MB) and eviction of art for tournaments long ended. Offline: cached art shows; uncached falls to layer 2.
+
+**5c.4 Dashboard (Phase 2 addition).** Image upload control in the tournament editor with **validation before upload** — accepted types (JPG/PNG/WebP), max ~500 KB, and the card's expected aspect ratio, with a live preview at card size. This is the guardrail that matters: without it someone uploads a 12 MB PNG and every mobile player pays for it on a metered connection. Show which layer a tournament will resolve to (remote / bundled / placeholder) right in the row, so a missing asset is visible before publish, not after.
+
+**5c.5 What still needs a build.** A brand-new *course* (hole scenes, terrain, baked sim data) and new *sponsor logo images* if those ever become sprites rather than text. Everything else about a tournament — existence, timing, holes played, fees, prizes, artwork — becomes live-editable. That is the honest boundary of "no new build".
 
 ## 6. Unity (Phase 3 — own kickoff, Claude Code)
 
@@ -141,7 +161,8 @@ At `end_at + resolve_delay_minutes` a resolver: orders entries by `best_score` (
 ## 7. Risks
 1. **Cheating once RP is real money-adjacent** — v1 plausibility checks are a tripwire, not a wall (§6b.3). Revisit before tournaments pay anything a player would miss.
 2. **Bot/human prize ambiguity** — unresolved UX question in §6b.4; decide before the leaderboard is built.
-3. **Double-payout on resolve** — mitigated only by the deterministic idempotency key in §6b.5; that key is load-bearing, do not make it random.
+3. **Remote art is a content channel into every client** — §5c.2's host allowlist is the control; do not ship a free-text URL that the client trusts blindly.
+4. **Double-payout on resolve** — mitigated only by the deterministic idempotency key in §6b.5; that key is load-bearing, do not make it random.
 2. **Schedule drift between server and shipped CSV** during Phase 2→3 — mitigated by the export button and the panel banner.
 3. **`create_weekly_open_tournament()` and `auto_enter_score`** already write these tables for GPS; the `kind` discriminator must be respected by anything that writes, or GPS automation will start creating rows the game tries to render.
 4. Free-tier Supabase still auto-pauses — a paused project during Phase 3 means the game falls back to CSV (acceptable, by design).
