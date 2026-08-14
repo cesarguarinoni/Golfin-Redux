@@ -1,10 +1,13 @@
 import "server-only";
 import { MOCK_ACTIVITIES, MOCK_TRANSACTIONS, MOCK_USERS } from "./mock";
+import { MOCK_TOURNAMENTS, MOCK_TOURNAMENT_ENTRIES } from "./mockTournaments";
 import type {
   ActivityRow,
   AdminUserRow,
   AuditEntry,
   PointsTransaction,
+  TournamentEntryRow,
+  TournamentRow,
 } from "./types";
 
 /**
@@ -19,6 +22,9 @@ export interface MockDb {
   transactions: PointsTransaction[];
   activities: ActivityRow[];
   audit: AuditEntry[];
+  tournaments: TournamentRow[];
+  /** tournament id → entries. */
+  tournamentEntries: Record<string, TournamentEntryRow[]>;
 }
 
 const g = globalThis as unknown as { __golfinMockDb?: MockDb };
@@ -30,6 +36,8 @@ export function mockDb(): MockDb {
       transactions: structuredClone(MOCK_TRANSACTIONS),
       activities: structuredClone(MOCK_ACTIVITIES),
       audit: [],
+      tournaments: structuredClone(MOCK_TOURNAMENTS),
+      tournamentEntries: structuredClone(MOCK_TOURNAMENT_ENTRIES),
     };
   }
   return g.__golfinMockDb;

@@ -15,5 +15,6 @@ export interface PanelDef {
 export const PANELS: readonly PanelDef[] = [
   { id: "users", title: "Users", icon: "users", route: "/users" },
   { id: "points", title: "Points", icon: "coins", route: "/points" },
+  { id: "tournaments", title: "Tournaments", icon: "flag", route: "/tournaments" },
   { id: "audit", title: "Audit Log", icon: "shield", route: "/audit" },
 ] as const;
