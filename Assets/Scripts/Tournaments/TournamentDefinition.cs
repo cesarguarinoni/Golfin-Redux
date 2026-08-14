@@ -77,6 +77,25 @@ namespace Golfin.Tournaments
         /// <summary>Localization/filter key for the league this tournament belongs to.</summary>
         public string LeagueKey { get; }
 
+        /// <summary>
+        /// Server-authored display title, e.g. <c>"PUMA Summer Slam"</c>. Null for CSV rows.
+        /// <para>
+        /// A tournament's identity is NOT its venue (Cesar, 2026-08-14): it can be brand-led,
+        /// and a tournament created in the dashboard has no localization key in the shipped
+        /// build. This is the second rung of the display ladder
+        /// <c>localize(NameKey) → Title → Id</c> — see <c>TournamentDisplayName.Resolve</c>.
+        /// Without it, "add a tournament with no new build" would be false for its name.
+        /// </para>
+        /// </summary>
+        public string? Title { get; }
+
+        /// <summary>
+        /// Server-authored card artwork URL. Always null for CSV rows, and null for a server row
+        /// whose URL failed the <c>TournamentArtPolicy</c> host allowlist — a refused URL is
+        /// indistinguishable from no URL to everything downstream, which is the point.
+        /// </summary>
+        public string? BannerUrl { get; }
+
         public TournamentDefinition(
             string id,
             string nameKey,
@@ -89,7 +108,11 @@ namespace Golfin.Tournaments
             string prizeTableId,
             string botFieldId,
             string sponsorKey,
-            string leagueKey)
+            string leagueKey,
+            // Appended and optional so every existing positional call site — the CSV loader and
+            // every test fixture — compiles untouched.
+            string? title = null,
+            string? bannerUrl = null)
         {
             Id                   = id;
             NameKey              = nameKey;
@@ -103,6 +126,8 @@ namespace Golfin.Tournaments
             BotFieldId           = botFieldId;
             SponsorKey           = sponsorKey;
             LeagueKey            = leagueKey;
+            Title                = title;
+            BannerUrl            = bannerUrl;
         }
     }
 }

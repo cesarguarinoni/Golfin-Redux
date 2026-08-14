@@ -234,14 +234,8 @@ MonoBehaviour:
   _cardsScrollRect: {fileID: 1900065583715396691}
   _cardsContent: {fileID: 6073143736790598429}
   _cardPrefab: {fileID: 1106691184123870979, guid: baac145d1783f41758376281a61c83e0, type: 3}
-  _courseImages:
-  - {fileID: 21300000, guid: 8d377fe6a21b44f479e51715fbefb9fa, type: 3}
-  - {fileID: 21300000, guid: bbb994a190b7649bbb8b4c3580038d6f, type: 3}
-  - {fileID: 21300000, guid: db4011618215f4515ad538d30c12e281, type: 3}
-  - {fileID: 21300000, guid: d93b47e6e119742ffa43a723b7cdc835, type: 3}
-  - {fileID: 21300000, guid: 5789974b3326f4e1bacff6b8147ac78e, type: 3}
-  - {fileID: 21300000, guid: 3e17c60ed201b48b28afb14fab42317b, type: 3}
   _courseImageMap: []
+  _placeholderImage: {fileID: 0}
   _tabAll: {fileID: 5151822443462025350}
   _tabOpen: {fileID: 8918165377328747443}
   _tabPlaying: {fileID: 4439115901102607172}
@@ -1659,6 +1653,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: TOURN_FILTER_ALL
+  japaneseFontScale: 0
 --- !u!1 &4830480006682284331
 GameObject:
   m_ObjectHideFlags: 0
@@ -1969,6 +1964,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: TOURN_OPEN
+  japaneseFontScale: 0
 --- !u!1 &6206972225009313167
 GameObject:
   m_ObjectHideFlags: 0
@@ -2120,6 +2116,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: TOURN_FILTER_CLOSED
+  japaneseFontScale: 0
 --- !u!1 &6373647721017975928
 GameObject:
   m_ObjectHideFlags: 0
@@ -2695,6 +2692,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: TOURN_FILTER_PLAYING
+  japaneseFontScale: 0
 --- !u!1 &8124777857182698907
 GameObject:
   m_ObjectHideFlags: 0

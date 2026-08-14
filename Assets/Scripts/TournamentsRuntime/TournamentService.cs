@@ -5,6 +5,8 @@
 // so the wiring is unit-testable (the MonoBehaviour is a thin shell).
 // ─────────────────────────────────────────────────────────────────────────────
 #nullable enable
+using System;
+using System.Collections;
 using System.Collections.Generic;
 using Golfin.UI.Rankings;
 using UnityEngine;
@@ -64,6 +66,25 @@ namespace Golfin.Tournaments
         private IReadOnlyDictionary<string, PrizeTable> _prizeTables
             = new Dictionary<string, PrizeTable>();
 
+        /// <summary>
+        /// Raised on the main thread after a server fetch has REPLACED the schedule.
+        /// Not raised for the boot-time cache/CSV load — the screen has not been built yet then.
+        /// <para>
+        /// <c>TournamentSelectionScreenController.OnEnable</c> already rebuilds on entry, so
+        /// subscribing to this is only what covers the case where the fetch lands while the player
+        /// is already looking at the screen.
+        /// </para>
+        /// </summary>
+        public static event Action? OnScheduleChanged;
+
+        /// <summary>Where the schedule currently in <see cref="Backend"/> came from. Diagnostics.</summary>
+        public ScheduleSource Source { get; private set; } = ScheduleSource.BundledCsv;
+
+        // Bot fields stay bundled (the server does not own them yet), and the mapper validates
+        // every server botFieldId against this. Loaded once at Awake.
+        private IReadOnlyDictionary<string, BotFieldConfig> _botFields
+            = new Dictionary<string, BotFieldConfig>();
+
         // ── Lifecycle ─────────────────────────────────────────────────────────
 
         private void Awake()
@@ -78,16 +99,126 @@ namespace Golfin.Tournaments
             DontDestroyOnLoad(gameObject);
 
             var loader = new TournamentCsvLoader();
-            _prizeTables = loader.LoadPrizeTables();
+            _botFields = loader.LoadBotFields();
 
-            Backend = Compose();
-            Debug.Log($"[TournamentService] Backend ready. Tournaments={Backend.GetTournaments().Count}");
+            // ── Boot: cache-or-CSV, SYNCHRONOUSLY, exactly as before this phase ──
+            // Nothing on the boot path may wait on a socket. A cold launch in airplane mode must
+            // behave precisely as it does today (SPEC §3 D3).
+            var cached = TournamentScheduleMapper.TryMapJson(
+                RemoteTournamentSource.ReadCache(), _botFields, "cache");
+
+            if (cached != null) Apply(cached, ScheduleSource.DiskCache);
+            else                ApplyBundledCsv(loader);
+
+            // ── Then warm from the server, off the critical path ──
+            StartCoroutine(RefreshScheduleRoutine());
         }
 
         private void OnDestroy()
         {
             if (Instance == this)
                 Instance = null;
+        }
+
+        // ── Schedule application ──────────────────────────────────────────────
+
+        private void ApplyBundledCsv(TournamentCsvLoader loader)
+        {
+            _prizeTables = loader.LoadPrizeTables();
+            Backend      = Compose();
+            Source       = ScheduleSource.BundledCsv;
+            LogSource();
+            WarmArt();
+        }
+
+        private void Apply(TournamentSchedule schedule, ScheduleSource source)
+        {
+            _prizeTables = schedule.PrizeTables;
+            Backend      = ComposeFrom(schedule.Definitions, schedule.PrizeTables);
+            Source       = source;
+            LogSource();
+            WarmArt();
+        }
+
+        /// <summary>
+        /// Warm the art cache and trim it — on <b>every</b> boot path (live, cache, CSV), not only
+        /// after a successful fetch.
+        /// <para>
+        /// The sweep is what enforces the 50 MB bound. Running it only on sessions that reach the
+        /// server would mean the bound does not exist on exactly the launches where the disk cache
+        /// is the only art there is — and Risk 2 (free-tier Supabase auto-pauses) says those are not
+        /// rare. Prefetch is a no-op on the CSV path, since CSV rows carry no <c>BannerUrl</c>.
+        /// </para>
+        /// </summary>
+        private void WarmArt()
+        {
+            var defs = Backend.GetTournaments();
+            TournamentArtService.Instance.Prefetch(defs);
+            TournamentArtService.Instance.SweepCacheAsync(BuildArtRetentionMap(defs));
+        }
+
+        private void LogSource()
+        {
+            string label = Source switch
+            {
+                ScheduleSource.Server    => "SERVER (live fetch)",
+                ScheduleSource.DiskCache => "DISK CACHE (previous fetch)",
+                _                        => "BUNDLED CSV (offline fallback)",
+            };
+            Debug.Log($"[TournamentService] Schedule source: {label}. Tournaments={Backend.GetTournaments().Count}");
+        }
+
+        /// <summary>
+        /// Fetch the schedule and, if it maps, swap it in wholesale and raise
+        /// <see cref="OnScheduleChanged"/>. Any failure leaves the boot-time schedule untouched.
+        /// </summary>
+        private IEnumerator RefreshScheduleRoutine()
+        {
+            string? body = null;
+            IEnumerator fetch = RemoteTournamentSource.FetchRoutine(b => body = b);
+            while (fetch.MoveNext()) yield return fetch.Current;
+
+            if (string.IsNullOrWhiteSpace(body)) yield break;
+
+            var schedule = TournamentScheduleMapper.TryMapJson(body, _botFields, "server");
+            if (schedule == null) yield break;   // errors already logged; keep what we have
+
+            schedule = PreserveEnteredTournaments(schedule);
+
+            // Apply() also warms + sweeps the art cache.
+            Apply(schedule, ScheduleSource.Server);
+
+            try { OnScheduleChanged?.Invoke(); }
+            catch (Exception ex) { Debug.LogError($"[TournamentService] OnScheduleChanged subscriber threw: {ex}"); }
+        }
+
+        /// <summary>
+        /// A tournament the player has ALREADY ENTERED must not change under them mid-session, and
+        /// must not VANISH either (SPEC §4.2, D3 as amended). The union logic — and the reason it is
+        /// a union rather than a filter over the incoming list — lives in
+        /// <see cref="TournamentScheduleMapper.MergePreservingEntered"/>, which is pure and tested.
+        /// This wrapper only supplies the live backend's entry lookup.
+        /// </summary>
+        private TournamentSchedule PreserveEnteredTournaments(TournamentSchedule incoming)
+        {
+            var backend = Backend;
+            if (backend == null) return incoming;
+
+            return TournamentScheduleMapper.MergePreservingEntered(
+                incoming,
+                backend.GetTournaments(),
+                _prizeTables,
+                id => backend.GetMyEntry(id) != null);
+        }
+
+        private static IReadOnlyDictionary<string, DateTime> BuildArtRetentionMap(
+            IReadOnlyList<TournamentDefinition> defs)
+        {
+            var map = new Dictionary<string, DateTime>(StringComparer.Ordinal);
+            foreach (var d in defs)
+                if (!string.IsNullOrEmpty(d.BannerUrl))
+                    map[d.BannerUrl!] = d.EndUtc;
+            return map;
         }
 
         // ── Prize accessor (T5 → T6 reuse) ────────────────────────────────────
@@ -141,13 +272,37 @@ namespace Golfin.Tournaments
         /// null (the <c>_stats?.</c> optional-injection trap). This is the composition
         /// guard against that regression.
         /// </para>
+        /// <para>
+        /// <b>The server seam is here and nowhere else.</b> Definitions and prize tables are
+        /// INJECTED into <c>LocalTournamentBackend</c>, so making the schedule server-authoritative
+        /// only changes where these two arguments come from. <c>ITournamentBackend</c>,
+        /// <c>LocalTournamentBackend</c> and <c>DeriveState</c> are untouched by that change, and
+        /// state stays client-derived from <c>StartUtc</c>/<c>EndUtc</c> (SPEC §3 D4).
+        /// Passing null for either falls back to the shipped CSV, which is what a no-network launch does.
+        /// </para>
         /// </summary>
-        public static ITournamentBackend Compose()
+        /// <summary>
+        /// CSV composition — the shipping default and the offline path.
+        /// <para>
+        /// Deliberately NOT an overload of <see cref="ComposeFrom"/> and deliberately not given
+        /// optional parameters: the wire-up regression guard resolves this by REFLECTION as
+        /// <c>GetMethod("Compose")</c> and invokes it with zero arguments. An optional-parameter
+        /// signature throws <c>TargetParameterCountException</c> there, and a second overload named
+        /// <c>Compose</c> throws <c>AmbiguousMatchException</c>. A distinct name for the server-fed
+        /// variant keeps that guard working untouched.
+        /// </para>
+        /// </summary>
+        public static ITournamentBackend Compose() => ComposeFrom(null, null);
+
+        /// <inheritdoc cref="Compose()"/>
+        public static ITournamentBackend ComposeFrom(
+            IReadOnlyList<TournamentDefinition>?     definitions,
+            IReadOnlyDictionary<string, PrizeTable>? prizeTables)
         {
             // ── CSV loaders (reads Resources; headless) ───────────────────────
             var loader   = new TournamentCsvLoader();
-            var defs     = loader.LoadTournaments();
-            var prizes   = loader.LoadPrizeTables();
+            var defs     = definitions ?? loader.LoadTournaments();
+            var prizes   = prizeTables ?? loader.LoadPrizeTables();
             var fields   = loader.LoadBotFields();
 
             // ── Bot field generator ───────────────────────────────────────────

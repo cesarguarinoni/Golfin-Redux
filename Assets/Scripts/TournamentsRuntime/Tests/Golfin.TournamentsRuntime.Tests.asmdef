@@ -3,7 +3,8 @@
     "rootNamespace": "Golfin.Tournaments.WireupTests",
     "references": [
         "Golfin.Tournaments",
-        "Golfin.Save"
+        "Golfin.Save",
+        "Golfin.Localization"
     ],
     "includePlatforms": ["Editor"],
     "excludePlatforms": [],

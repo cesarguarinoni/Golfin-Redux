@@ -172,9 +172,10 @@ namespace GolfinRedux.UI.Tournaments
                 : def.SponsorKey.ToUpperInvariant() + " PRESENTS";
             if (_sponsorText != null) _sponsorText.text = sponsor;
 
-            // Title: localised tournament name
+            // Title: localize(NameKey) → Title → Id. Same ladder as the selection card — a
+            // dashboard-created tournament has no localization key in this build.
             if (_titleText != null)
-                _titleText.text = LocalizationManager.Get(def.NameKey);
+                _titleText.text = TournamentDisplayName.Resolve(def);
 
             // Venue: "{club name}  -  {N} Holes" — mirrors Signup "already-has-Holes" guard
             string venueLocKey = "tourn.venue." + def.ClubId;

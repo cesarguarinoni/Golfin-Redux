@@ -182,9 +182,23 @@ namespace GolfinRedux.UI.Tournaments
             if (silver  && _ctaSilverLabel != null) _ctaSilverLabel.text = ctaText;
         }
 
+        /// <summary>
+        /// Set the card artwork. A null sprite HIDES the image rather than leaving whatever art the
+        /// prefab happened to ship with visible — showing another tournament's photo is worse than
+        /// showing none (SPEC §5.4).
+        /// </summary>
         public void SetCourseImage(Sprite sprite)
         {
-            if (_tournamentImage != null && sprite != null) _tournamentImage.sprite = sprite;
+            if (_tournamentImage == null) return;
+
+            if (sprite == null)
+            {
+                _tournamentImage.enabled = false;
+                return;
+            }
+
+            _tournamentImage.sprite  = sprite;
+            _tournamentImage.enabled = true;
         }
 
         private void ApplyBadge(CardState state)

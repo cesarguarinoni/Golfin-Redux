@@ -27,12 +27,12 @@ namespace GolfinRedux.UI.Tournaments
         [SerializeField] private RectTransform _cardsContent;
         [SerializeField] private TournamentSelectionCard _cardPrefab;
 
-        [Tooltip("Per-tournament course photos, indexed by CSV order (legacy fallback).")]
-        [SerializeField] private Sprite[] _courseImages;
-
-        [Tooltip("Optional: id-keyed course image map. Looked up by def.Id first; " +
-                 "falls back to _courseImages[csv-order] when the id is absent.")]
+        [Tooltip("Optional per-tournament bundled art override, keyed by def.Id. Overrides the " +
+                 "Resources/TournamentImages/{courseId} convention; the server's banner_url still wins.")]
         [SerializeField] private TournamentImageEntry[] _courseImageMap;
+
+        [Tooltip("Shown when a tournament has no art at any layer. Leave the image hidden if unwired.")]
+        [SerializeField] private Sprite _placeholderImage;
 
         [Header("Filter Tabs")]
         [SerializeField] private Button _tabAll;
@@ -91,13 +91,25 @@ namespace GolfinRedux.UI.Tournaments
 
         private void OnEnable()
         {
+            // A server fetch that lands while the player is already on this screen repaints it;
+            // entering the screen later is already covered by the rebuild below.
+            TournamentService.OnScheduleChanged += HandleScheduleChanged;
+
             StopAllCoroutines();
             StartCoroutine(RebuildNextFrame());
         }
 
         private void OnDisable()
         {
+            TournamentService.OnScheduleChanged -= HandleScheduleChanged;
             ClearCards();
+        }
+
+        private void HandleScheduleChanged()
+        {
+            if (!isActiveAndEnabled) return;
+            StopAllCoroutines();
+            StartCoroutine(RebuildNextFrame());
         }
 
         private IEnumerator RebuildNextFrame()
@@ -149,8 +161,9 @@ namespace GolfinRedux.UI.Tournaments
                 string ctaText = CardCtaText(cardState);
 
                 // ── Field derivations (iter-2) ────────────────────────────────
-                // Name: resolved through LocalizationManager; raw key never shown
-                string name = LocalizationManager.Get(def.NameKey);
+                // Name: localize(NameKey) → Title → Id. A dashboard-created tournament has no
+                // localization key in this build, so without the ladder its raw key would render.
+                string name = TournamentDisplayName.Resolve(def);
 
                 // Venue line: localized via tourn.venue.<clubId>; fallback if missing
                 string venueLocKey = "tourn.venue." + def.ClubId;
@@ -181,9 +194,7 @@ namespace GolfinRedux.UI.Tournaments
                     def.Id,
                     sponsorLine);
 
-                Sprite courseSprite = ResolveSprite(def.Id, i);
-                if (courseSprite != null)
-                    card.SetCourseImage(courseSprite);
+                ApplyCardArt(card, def);
 
                 card.OnCtaClicked += HandleCtaClicked;
                 _cards.Add(card);
@@ -320,19 +331,92 @@ namespace GolfinRedux.UI.Tournaments
             return inProgress ? TournamentState.Playing : TournamentState.Open;
         }
 
-        private Sprite ResolveSprite(string tournamentId, int csvIndex)
+        // ── Card artwork ──────────────────────────────────────────────────────
+        //
+        // Resolution order, first hit wins (SPEC §5.1):
+        //   1. def.BannerUrl        — server art, downloaded + disk-cached, host-allowlisted
+        //   2. _courseImageMap[id]  — optional bundled per-tournament override
+        //   3. Resources/TournamentImages/{ClubId} — the shipped course photo
+        //   4. _placeholderImage    — else the image is hidden
+        //
+        // ⚠️ The old positional fallback (_courseImages[csvIndex]) is DELETED. It was the bug, not a
+        // safety net: now that the dashboard can reorder tournaments, indexing art by schedule
+        // position silently reshuffles which photograph lands on which card. A card must never show
+        // a DIFFERENT course's photo — showing none is strictly better.
+
+        private static readonly Dictionary<string, Sprite> _bundledArtMemo =
+            new Dictionary<string, Sprite>(StringComparer.Ordinal);
+
+        private bool _warnedMissingPlaceholder;
+
+        private void ApplyCardArt(TournamentSelectionCard card, TournamentDefinition def)
         {
+            bool hasRemote = !string.IsNullOrEmpty(def.BannerUrl);
+
+            // Paint the bundled layer FIRST and unconditionally, so a card is never an empty
+            // rectangle while a download is in flight and never jumps layout on arrival.
+            // `hasRemote` suppresses the no-art warning: a brand tournament on a course with no
+            // bundled photo is not missing art, it is one frame away from it.
+            card.SetCourseImage(ResolveBundledSprite(def, suppressMissingWarning: hasRemote));
+
+            if (!hasRemote) return;
+
+            var art = TournamentArtService.Instance;
+
+            if (art.TryGet(def.BannerUrl, out Sprite remote) && remote != null)
+            {
+                card.SetCourseImage(remote);
+                return;
+            }
+
+            art.Request(def.BannerUrl, sprite =>
+            {
+                // The card can be destroyed by a tab switch or a rebuild before the download lands.
+                if (card == null || sprite == null) return;
+                card.SetCourseImage(sprite);
+            });
+        }
+
+        /// <summary>Layers 2–4: the art available with no network at all.</summary>
+        private Sprite ResolveBundledSprite(TournamentDefinition def, bool suppressMissingWarning)
+        {
+            // 2. Inspector override — but only when it actually carries a sprite.
+            //    The old code returned mapEntry.Sprite even when it was null, so an id-only map row
+            //    BLANKED the card instead of falling through to the course photo.
             if (_courseImageMap != null)
             {
                 foreach (var mapEntry in _courseImageMap)
                 {
-                    if (string.Equals(mapEntry.Id, tournamentId, StringComparison.Ordinal))
-                        return mapEntry.Sprite;
+                    if (!string.Equals(mapEntry.Id, def.Id, StringComparison.Ordinal)) continue;
+                    if (mapEntry.Sprite != null) return mapEntry.Sprite;
+                    break;   // matched the id but has no sprite → fall through, do not blank the card
                 }
             }
-            if (_courseImages != null && csvIndex >= 0 && csvIndex < _courseImages.Length)
-                return _courseImages[csvIndex];
-            return null;
+
+            // 3. Convention: Resources/TournamentImages/{courseId}. Memoised — Resources.Load per
+            //    card per rebuild would re-hit the asset database on every tab switch.
+            Sprite byCourse = LoadCourseSprite(def.ClubId);
+            if (byCourse != null) return byCourse;
+
+            // 4. Placeholder, or nothing.
+            if (_placeholderImage == null && !_warnedMissingPlaceholder && !suppressMissingWarning)
+            {
+                _warnedMissingPlaceholder = true;
+                Debug.LogWarning(
+                    $"[TournamentSelectionScreen] No art for '{def.Id}' (courseId='{def.ClubId}') and " +
+                    "_placeholderImage is unwired; the card image is hidden.");
+            }
+            return _placeholderImage;
+        }
+
+        private static Sprite LoadCourseSprite(string clubId)
+        {
+            if (string.IsNullOrEmpty(clubId)) return null;
+            if (_bundledArtMemo.TryGetValue(clubId, out var cached)) return cached;
+
+            var sprite = Resources.Load<Sprite>("TournamentImages/" + clubId);
+            _bundledArtMemo[clubId] = sprite;   // memoise misses too, so a bad id costs one lookup
+            return sprite;
         }
 
         private void ClearCards()

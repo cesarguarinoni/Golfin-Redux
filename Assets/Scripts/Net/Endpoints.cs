@@ -38,6 +38,17 @@ namespace Golfin.Net
         /// <summary>POST <c>{amount, reason, idempotency_key}</c> — the game spend path (Slice 2; unused here).</summary>
         public static string PointsSpend => BaseUrl + "/points/spend";
 
+        /// <summary>
+        /// GET → <c>{data:{fetched_at, tournaments:[…]}}</c> — the GOLFIN tournament schedule with each
+        /// tournament's prize bands joined into the same payload (one round trip).
+        ///
+        /// NO AUTH, deliberately: same posture as the GPS <c>/tournaments/active</c>, and the schedule
+        /// should be able to warm at boot before any token work has happened.
+        /// Server side returns <c>kind='golfin'</c> rows only, unfiltered by status — the client derives
+        /// state from start/end, and an Ended tournament still has a LEADERBOARD card to render.
+        /// </summary>
+        public static string TournamentsGolfin => BaseUrl + "/tournaments/golfin";
+
         /// <summary>GET ledger page. <paramref name="currency"/> is "activity" / "gift" or null for both.</summary>
         public static string PointsHistory(int skip = 0, int limit = 20, string currency = null)
         {
