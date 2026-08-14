@@ -74,7 +74,7 @@ Atomic-write pattern to copy: `Assets/Scripts/Economy/PendingOpsStore.cs:57-68` 
 
 **D2 — Networking stays out of `Golfin.Tournaments`.** That assembly is deliberately dependency-light. **Do not add `Golfin.Net` to `Golfin.Tournaments.asmdef`.** The fetch, the JSON mapping and the art service live in `Assets/Scripts/TournamentsRuntime/` (no asmdef → compiles into `Assembly-CSharp`, which already sees `Golfin.Net` and `Golfin.Economy` because both are `autoReferenced: true`). The tournaments core keeps receiving plain DTOs and never learns that a network exists.
 
-**D3 — The shipped CSV is the offline fallback, not dead weight.** A cold launch with no network must behave **exactly as it does today**. Server data replaces CSV data wholesale or not at all — never a merge (a half-server/half-CSV schedule is unreproducible in a bug report).
+**D3 — The shipped CSV is the offline fallback, not dead weight.** A cold launch with no network must behave **exactly as it does today**. Server data replaces CSV data wholesale or not at all — never a merge (a half-server/half-CSV schedule is unreproducible in a bug report). **Amended 2026-08-14 (Architect, after review):** the no-merge rule governs the schedule as a whole. A definition the player is **mid-entry in** (§4.2) is the one deliberate exception — it is carried forward with its own prize table even when that came from the CSV, and the carry-forward is logged. Nothing else crosses the boundary. Carrying it forward also means carrying it forward when the server has **dropped it entirely**: losing an entered definition makes every `GetTournament(id)` throw `KeyNotFoundException` (`LocalTournamentBackend.cs:124`), which is the signup modal, the result modal, the round handler and `SubmitHoleResult`.
 
 **D4 — State is still derived on the client.** `DeriveState` keeps owning Upcoming/Open/Playing/Ending/Closed/Ended from `StartUtc`/`EndUtc`. `tournaments.status` is not read for golfin rows and must not be — it is deliberately not maintained (see the column comment in the Phase-1 migration).
 
@@ -163,7 +163,7 @@ Accept a `banner_url` only when it starts with, exactly:
 https://wmszyghwwkaptgqdunel.supabase.co/storage/v1/object/public/tournament-art/
 ```
 
-as a single `const string` next to the fetch. Scheme, host **and** path prefix. Anything else → refuse, `Debug.LogWarning` naming the slug and the offending host, treat `BannerUrl` as null. Rationale: `/tournaments/admin/create` still writes these tables behind a static key (§2.3), so the column is not exclusively the dashboard's.
+as a single `const string` next to the fetch. Scheme, host **and** path prefix — compared on a **parsed `Uri`** (`Scheme` / `Host` / normalized `AbsolutePath`), never on the raw string. A raw `StartsWith` is defeated by `…/tournament-art/../../../rest/v1/rpc/x`, which `System.Uri` normalizes back out of the bucket before the request is sent. Anything else → refuse, `Debug.LogWarning` naming the slug and the offending host, treat `BannerUrl` as null. Rationale: `/tournaments/admin/create` still writes these tables behind a static key (§2.3), so the column is not exclusively the dashboard's.
 
 ### 5.3 Bundled art (layer 2)
 
@@ -183,6 +183,10 @@ Add `[SerializeField] private Sprite _placeholderImage;`. If it is unwired, log 
 New `TournamentArtService` (`Assets/Scripts/TournamentsRuntime/`):
 
 - `UnityWebRequestTexture.GetTexture(url)` → `Sprite`. Cache to `<persistentDataPath>/tournament-art/<first 16 hex of sha256(url)><ext>`.
+- **`redirectLimit = 0`.** A 30x from the allowlisted origin would otherwise put third-party bytes into the texture *and* into the disk cache under an allowlisted key, where they reload every launch with no network check.
+- **Refuse on `Content-Length` before buffering** (cap ~1 MB — the dashboard caps uploads at 500 KB, but the static-key admin route can write `banner_url` too). `DownloadHandlerTexture` buffers the whole body before any budget is consulted and `Prefetch` fires unattended at boot, so one oversized object is an OOM on launch with no user action.
+- The sweep **skips `*.tmp`** — it runs on the same frame as `Prefetch` and would otherwise delete a staging file mid-write.
+- Prefetch **and** the sweep run on **every** boot path (live, cache, CSV), not only after a successful fetch — otherwise the 50 MB bound only exists on sessions that reach the server, and Risk 2 says those are not all of them.
 - **The URL is the cache key** — the dashboard writes content-hashed immutable names (`{slug}-{hash}.jpg`), so a changed image is a new URL and there is nothing to invalidate.
 - In-memory sprite dictionary keyed by URL, so one texture serves every card and every screen.
 - **Prefetch on schedule fetch** (boot / sign-in) so the T7 screen is warm before it is opened.
