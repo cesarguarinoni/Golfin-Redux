@@ -14,3 +14,9 @@ out/
 next-env.d.ts
 .DS_Store
 npm-debug.log*
+
+# Cloudflare / OpenNext build output
+.open-next
+.wrangler
+cloudflare-env.d.ts
+.dev.vars

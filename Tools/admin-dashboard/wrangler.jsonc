@@ -1,0 +1,37 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "main": ".open-next/worker.js",
+  "name": "golfin-admin",
+  "compatibility_date": "2025-03-25",
+  // nodejs_compat: the app uses node:crypto (randomUUID, createHash) and Buffer
+  //   in the tournament art upload. Without this flag those imports fail at
+  //   runtime, not at build time.
+  // global_fetch_strictly_public: required by the OpenNext adapter.
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "services": [
+    {
+      "binding": "WORKER_SELF_REFERENCE",
+      "service": "golfin-admin"
+    }
+  ],
+  "observability": {
+    "enabled": true
+  }
+
+  // No R2 incremental cache binding on purpose: every route in this app is
+  // `export const dynamic = "force-dynamic"`, so there is no ISR/SSG output to
+  // cache. Add one only if that ever stops being true.
+  //
+  // Secrets are NOT listed here — `wrangler.jsonc` is committed. Set them with
+  // `wrangler secret put`:
+  //   SUPABASE_SERVICE_ROLE_KEY   (service_role; full DB write access)
+  //   SUPABASE_URL
+  //   NEXT_PUBLIC_SUPABASE_URL
+  //   NEXT_PUBLIC_SUPABASE_ANON_KEY
+  //   ADMIN_EMAILS
+  // See README "Deploying to Cloudflare".
+}
