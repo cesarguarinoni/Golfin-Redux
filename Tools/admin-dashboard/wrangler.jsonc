@@ -2,6 +2,11 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "main": ".open-next/worker.js",
   "name": "golfin-admin",
+  // The account that owns the golfin.world zone. A Worker can only take a
+  // custom domain from a zone in its OWN account, and this Cloudflare login
+  // has two accounts — without this, every wrangler command either prompts or
+  // fails "unable to select one in non-interactive mode". Not a secret.
+  "account_id": "c2c4b9869449639abcc77e5437c28dab",
   "compatibility_date": "2025-03-25",
   // nodejs_compat: the app uses node:crypto (randomUUID, createHash) and Buffer
   //   in the tournament art upload. Without this flag those imports fail at
