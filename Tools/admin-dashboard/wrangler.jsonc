@@ -7,6 +7,15 @@
   // has two accounts — without this, every wrangler command either prompts or
   // fails "unable to select one in non-interactive mode". Not a secret.
   "account_id": "c2c4b9869449639abcc77e5437c28dab",
+  // Publish straight to the custom domain and never to workers.dev.
+  // `custom_domain: true` makes wrangler create the DNS record and the
+  // certificate itself (the zone is in this same account), which also means
+  // there is no second, unprotected *.workers.dev URL for this app to answer
+  // on — Cloudflare Access only guards the hostname.
+  "workers_dev": false,
+  "routes": [
+    { "pattern": "admin.golfin.world", "custom_domain": true }
+  ],
   "compatibility_date": "2025-03-25",
   // nodejs_compat: the app uses node:crypto (randomUUID, createHash) and Buffer
   //   in the tournament art upload. Without this flag those imports fail at

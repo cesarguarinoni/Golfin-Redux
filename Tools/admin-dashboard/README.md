@@ -48,70 +48,83 @@ below) — no Supabase project needed.
 
 ## Deploying to Cloudflare (admin.golfin.world)
 
-Runs on Cloudflare Workers via the OpenNext adapter (`@opennextjs/cloudflare`).
-No rearchitecting was needed: every route is `force-dynamic`, so nothing needs
-build-time secrets; `middleware.ts` is standard Edge middleware, not the
-Node-runtime kind the adapter does not support; and the only Node built-ins are
-`node:crypto` and one `Buffer` in the art upload, both covered by the
-`nodejs_compat` flag in `wrangler.jsonc`.
+**Live.** Runs on Cloudflare Workers via the OpenNext adapter, published straight
+to `admin.golfin.world` as a custom domain. There is deliberately **no
+`workers.dev` URL** (`"workers_dev": false`) — a second, unprotected hostname
+answering the same app would sit outside whatever Access policy guards the
+domain.
 
-### One-time setup
+### Deploying
 
-1. `npx wrangler login` — browser OAuth, token lands in `~/.wrangler`. Nothing
-   secret needs to be pasted anywhere else.
-2. Set the five secrets on the Worker. They are NOT in `wrangler.jsonc` (that
-   file is committed):
-   ```
-   npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY
-   npx wrangler secret put SUPABASE_URL
-   npx wrangler secret put NEXT_PUBLIC_SUPABASE_URL
-   npx wrangler secret put NEXT_PUBLIC_SUPABASE_ANON_KEY
-   npx wrangler secret put ADMIN_EMAILS
-   ```
-   Verify with `npx wrangler secret list` — a missing service key is the exact
-   failure the production guard below exists to catch.
-3. **⚠️ Stop `npm run dev` before deploying.** The deploy runs a production
-   build into the same `.next/` the dev server is using. See the warning at the
-   top of this file — it has already taken the dashboard down once.
-4. `npm run deploy` — builds and uploads. First deploy gives a
-   `*.workers.dev` URL; check it there before attaching the domain.
-5. Attach the custom domain: Cloudflare dashboard → Workers & Pages →
-   `golfin-admin` → Settings → Domains & Routes → Add custom domain →
-   `admin.golfin.world`. The zone is already on Cloudflare, so the DNS record
-   and certificate are created for you.
-6. Supabase → Authentication → URL Configuration → add
-   `https://admin.golfin.world` to the redirect allowlist, or password-reset
-   links keep pointing at localhost.
+```
+npm run deploy          # stop `npm run dev` first — they share .next/
+```
 
-### Put Cloudflare Access in front of it
+That runs `scripts/cf-deploy.sh`, which does three things a bare
+`opennextjs-cloudflare deploy` does not:
 
-**Do this before sharing the URL.** Behind the app's own login sits a
-`service_role` key with unrestricted write access to the production database, so
-the Supabase password plus `ADMIN_EMAILS` is the only thing between the internet
-and the whole dataset. Cloudflare Access adds an independent gate at the edge,
-free for up to 50 users:
+1. **Moves `.env.development.local` aside for the build.** Next loads env files
+   at build time and OpenNext writes what it finds into
+   `.open-next/cloudflare/next-env.mjs`, which is uploaded with the Worker — so a
+   naive build ships the `service_role` key inside the bundle. It is not needed
+   there: `wrangler secret` values are injected into `process.env` at runtime.
+2. **Greps the built bundle for the key and aborts if it finds it.** Belt and
+   braces, because the failure is invisible otherwise.
+3. **Restores the env file on any exit path**, including Ctrl-C.
+
+### Why the local env file is `.env.development.local`, not `.env.local`
+
+`.env.local` is loaded by Next in *every* environment including production
+builds; `.env.development.local` is loaded only for `next dev`. Using the
+development-scoped name is what makes step 1 above possible without breaking
+local development.
+
+### Secrets
+
+Set once, on the Worker, and read at runtime:
+
+```
+npx wrangler secret bulk .env.development.local   # all five at once
+npx wrangler secret list                          # verify
+```
+
+⚠️ The Worker must exist before secrets can be set, so the **first** deploy
+necessarily runs without them. That is safe — see the guard below.
+
+`wrangler.jsonc` pins `account_id`, because this Cloudflare login has two
+accounts and `golfin.world` lives in the Next Innovation one. A Worker can only
+take a custom domain from a zone in its own account.
+
+### Cloudflare Access
+
+**Still to do, and it is the gate that matters.** Behind the app's own login sits
+a `service_role` key with unrestricted write access to production, so the
+Supabase password plus `ADMIN_EMAILS` is otherwise the only barrier.
 
 Zero Trust → Access → Applications → Add a self-hosted application →
-`admin.golfin.world` → policy: Allow, emails in `ADMIN_EMAILS`. Pick email OTP
-or Google as the identity provider.
+`admin.golfin.world` → policy: Allow, emails from `ADMIN_EMAILS`. One-time PIN
+needs no IdP setup. Free up to 50 users.
 
-### The production mock-mode guard
+### The missing-key guard
 
-`lib/mode.ts` throws rather than serving if a **production** build lands in mock
-mode without `ALLOW_MOCK_MODE=1`. Mock mode's login accepts any password, and it
-is entered automatically whenever `SUPABASE_SERVICE_ROLE_KEY` is absent — so a
-mistyped or unset Worker secret would otherwise publish a panel that lets anyone
-on the allowlist domain in with a made-up password, while looking completely
-normal. Symptom if you hit it: every route 500s. Fix: set the secret.
+`lib/mode.ts` **throws** if `SUPABASE_SERVICE_ROLE_KEY` is absent. It does not
+fall back to mock mode, because mock mode's login accepts any password — a
+mistyped Worker secret would otherwise publish a panel that anyone on the
+allowlist domain could enter with a made-up password, looking entirely normal.
 
-Verified under the real Workers runtime both ways — with the key, `/login` 200
-and the API 401s unauthenticated; without it, every route 500s and the mock
-login route stays refused.
+Mock mode is opt-in only: `MOCK_MODE=1`. The one exception is
+`NEXT_PHASE=phase-production-build`, since the build runs with no secrets by
+design (that is the point of step 1) and Next still prerenders `/_not-found`.
 
-### Local preview of the Worker build
+An earlier version of this guard only threw when `NODE_ENV === "production"`.
+That was wrong: `NODE_ENV` is not reliably set on Workers, and inferring intent
+from an environment name fails silently. A missing credential is an error
+everywhere.
 
-`npm run preview` runs the built Worker locally. It reads `.dev.vars` (gitignored)
-rather than `.env.local`; copy the same five values in, plus `NEXTJS_ENV`.
+### Supabase
+
+Add `https://admin.golfin.world` to Authentication → URL Configuration →
+Redirect URLs, or password-reset links point at localhost.
 
 ## Environment setup
 

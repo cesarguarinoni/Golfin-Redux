@@ -6,46 +6,46 @@
  * applies, but the password does not. That is fine on localhost and a hole on a
  * public URL.
  *
- * The dangerous shape is not someone choosing mock mode — it is mock mode being
- * entered BY ACCIDENT, because `SUPABASE_SERVICE_ROLE_KEY` was missing, renamed
- * or never set as a Worker secret. That failure is silent: the app boots, looks
- * completely normal, and lets anyone on the allowlist domain in with a made-up
- * password.
+ * ⚠️ THE RULE, and it is deliberately blunt: mock mode must be ASKED FOR.
+ * A missing `SUPABASE_SERVICE_ROLE_KEY` is never interpreted as "the operator
+ * wanted fixtures" — it throws, everywhere, in every environment.
  *
- * So in production, mock mode must be asked for out loud. If it is reached
- * without `ALLOW_MOCK_MODE=1`, we throw rather than serve. A 500 on every page
- * is a bad afternoon; a fake login on admin.golfin.world is a bad quarter.
+ * The first version of this guard only threw when `NODE_ENV === "production"`,
+ * which was wrong twice over: on Cloudflare Workers `NODE_ENV` is not
+ * necessarily set, and inferring intent from an environment name is exactly the
+ * kind of cleverness that fails silently. Absence of a credential is an error,
+ * not a configuration choice.
  *
  * Server-side only in practice (reads non-NEXT_PUBLIC env); client components
  * receive the flag as a prop / API field instead of calling this.
  */
 
-export class MockModeInProductionError extends Error {
+export class MissingServiceKeyError extends Error {
   constructor() {
     super(
-      "Refusing to start: the app fell back to MOCK MODE in a production build, " +
-        "where login accepts any password. This almost always means " +
-        "SUPABASE_SERVICE_ROLE_KEY is missing from the environment — on Cloudflare, " +
-        "check `wrangler secret list`. If mock mode is genuinely wanted here, set " +
-        "ALLOW_MOCK_MODE=1 explicitly."
+      "Refusing to serve: SUPABASE_SERVICE_ROLE_KEY is not set. This app will " +
+        "NOT silently fall back to mock mode, because mock mode's login accepts " +
+        "any password. On Cloudflare check `wrangler secret list`; locally check " +
+        ".env.development.local. If you actually want fixtures, set MOCK_MODE=1 " +
+        "explicitly."
     );
-    this.name = "MockModeInProductionError";
+    this.name = "MissingServiceKeyError";
   }
 }
 
 export function isMockMode(): boolean {
-  const explicit = process.env.MOCK_MODE === "1";
-  const missingKey = !process.env.SUPABASE_SERVICE_ROLE_KEY;
-  const mock = explicit || missingKey;
+  // The only way into mock mode is to say so.
+  if (process.env.MOCK_MODE === "1") return true;
 
-  if (!mock) return false;
-
-  const isProduction = process.env.NODE_ENV === "production";
-  const permitted = process.env.ALLOW_MOCK_MODE === "1";
-
-  if (isProduction && !permitted) {
-    throw new MockModeInProductionError();
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    // During `next build` there are deliberately no secrets in the environment —
+    // that is the whole point, it keeps the key out of the bundle (see the
+    // .env.development.local note in the README). Next still prerenders
+    // /_not-found, which pulls this module in, so throwing here would fail every
+    // build. Runtime is what this guard is for.
+    if (process.env.NEXT_PHASE === "phase-production-build") return false;
+    throw new MissingServiceKeyError();
   }
 
-  return true;
+  return false;
 }
