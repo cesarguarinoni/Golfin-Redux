@@ -31,7 +31,12 @@ namespace GolfinRedux.UI.Gacha
 
         // ── Content panel paths ───────────────────────────────────────────────
         private const string GachaContentPath  = "ContentArea/GachaTabContent";
-        private const string StoreContentPath  = "ContentArea/StoreTabContent";    // not yet in scene
+        // Order 610 built the STORE card grid under RankingsArea (a tournament-clone name kept from
+        // the original clone-and-modify). gacha_screen Stage 1 guessed "ContentArea/StoreTabContent",
+        // which never existed — so _storeContent resolved to null and the STORE tab rendered blank.
+        // Verified against the live GeneralShopScreen hierarchy (2026-08-17); this is also the parent
+        // of GeneralShopScreenController.GridPath.
+        private const string StoreContentPath  = "ContentArea/BarsArea/RankingsArea";
         private const string FilterGroupPath   = "ContentArea/BarsArea/FilterGroup";
 
         // ── HistoryChip path (direct child of GeneralShopScreen, not inside GachaTabContent) ──
@@ -65,11 +70,33 @@ namespace GolfinRedux.UI.Gacha
             WirePullButtons();
         }
 
-        private void Start()
+        /// <summary>
+        /// ShowScreen re-activates this GameObject on every visit, so the tab choice is applied here
+        /// rather than in Start() — Start() runs once and would re-apply the default AFTER OnEnable had
+        /// already consumed a RequestStoreTab(), sending the top-bar "+" back to GACHA.
+        /// Awake() has always run by the time OnEnable() fires, so the tabs are wired.
+        /// </summary>
+        private void OnEnable()
         {
-            // Default to GACHA tab active.
-            ShowGachaTab();
+            ApplyPendingOrDefaultTab();
         }
+
+        private void ApplyPendingOrDefaultTab()
+        {
+            // Default tab on nav open = GACHA (Cesar 2026-07-08; the bottom-nav slot IS the gacha icon).
+            // A caller can override for a single open via RequestStoreTab() — used by the top-bar "+".
+            if (_pendingStoreTab) ShowStoreTab();
+            else                  ShowGachaTab();
+            _pendingStoreTab = false;
+        }
+
+        /// <summary>
+        /// Ask the Rewards Center to open on the STORE tab instead of GACHA for the next open.
+        /// Consumed once. Call immediately before <c>ScreenManager.ShowScreen(ScreenId.GeneralShop)</c>.
+        /// </summary>
+        public static void RequestStoreTab() => _pendingStoreTab = true;
+
+        private static bool _pendingStoreTab;
 
         // ── Tab wiring ────────────────────────────────────────────────────────
 

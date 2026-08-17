@@ -276,9 +276,11 @@ namespace Golfin.UI
                 settingsButton.onClick.AddListener(OnSettingsButtonClick);
             }
 
-            // Top-bar ShopPlus stub (Stage 1 — no action yet; Stage 2+ will open gacha top-up flow)
+            // Top-bar ShopPlus — opens the Rewards Center on its STORE tab.
+            // (Was a Stage-1 Debug.Log stub; gacha_screen §8 deferred "ticket purchasing via Shop+",
+            //  but the button still has to take you to the shop rather than doing nothing.)
             if (shopPlusButton != null)
-                shopPlusButton.onClick.AddListener(() => Debug.Log("[PersistentUI] ShopPlus tapped — stub (Stage 1)"));
+                shopPlusButton.onClick.AddListener(OnShopPlusButtonClick);
 
             // Bottom nav buttons
             if (homeButton != null)
@@ -378,6 +380,21 @@ namespace Golfin.UI
             }
 
             Debug.Log($"[PersistentUI] Username updated: {newUsername}");
+        }
+
+        private void OnShopPlusButtonClick()
+        {
+            var sm = GolfinRedux.UI.ScreenManager.Instance;
+            if (sm == null)
+            {
+                Debug.LogWarning("[PersistentUI] ScreenManager.Instance is null — cannot open the shop.");
+                return;
+            }
+
+            // The "+" sits next to the ticket counter, so it opens the Rewards Center STORE tab
+            // rather than the GACHA tab the bottom-nav slot defaults to.
+            GolfinRedux.UI.Gacha.GachaTabController.RequestStoreTab();
+            sm.ShowScreen(GolfinRedux.UI.ScreenId.GeneralShop);
         }
 
         private void OnSettingsButtonClick()

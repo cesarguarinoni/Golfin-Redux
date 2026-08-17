@@ -100426,7 +100426,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Golfin.Inventory.ItemCarouselController
   contentParent: {fileID: 416612274}
-  itemCardPrefab: {fileID: 4539383018773378190, guid: 7e0d0a3332f151749a6308945c0daf71, type: 3}
+  itemCardPrefab: {fileID: 4539383018773378190, guid: 9d5186481b021b64b8c6f28bcc20c28f, type: 3}
   leftArrowButton: {fileID: 2072158471}
   rightArrowButton: {fileID: 1850139474}
   paginationDotsParent: {fileID: 2129675168}

@@ -463,11 +463,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Golfin.Inventory.ItemThumbnailCard
   portraitImage: {fileID: 7086633333368410549}
-  nameText: {fileID: 0}
-  quantityText: {fileID: 0}
+  nameText: {fileID: 1428054424454912751}
+  quantityText: {fileID: 3562329836935228558}
   rarityBadgeText: {fileID: 0}
   selectionHighlight: {fileID: 5466569931813526699}
-  backgroundImage: {fileID: 0}
+  backgroundImage: {fileID: 1967324459792567248}
   cardButton: {fileID: 5578315565720009812}
 --- !u!1 &5773709195805052530
 GameObject:
