@@ -141,7 +141,7 @@ under a 1170 × 2532 canvas with `LayoutRebuilder.ForceRebuildLayoutImmediate`, 
 | 2c | Venue line | `13892:3463` | Rubik **Regular 22**, `#C7D6EB` | `Rubik-VariableFont_wght SDF` (Regular), size 18.3, `#C7D6EB`, 882 × 26 | PASS |
 | 3 | Date line group | `13892:3464` | row, gap 12, centred, 657 × 47, all 40 px | ONE combined TMP at 657 × 47, `Rubik-SemiBold SDF` 33.3 (= 40 ÷ 1.2), centred | PASS* (single text node — see deviations) |
 | 3a/3c | Date range + countdown | `13892:3465` / `13892:3468` | Rubik SemiBold 40, `#FFFFFF` | as above, `#FFFFFF` | PASS |
-| 3b | Em dash | `13892:3466` | Rubik Regular 40, **`#C7D6EB`** | rendered `#FFFFFF` inside the combined string | **FAIL** (see § Known FAIL items) |
+| 3b | Em dash | `13892:3466` | Rubik Regular 40, **`#C7D6EB`** | rendered `#FFFFFF` inside the combined `_dateLineText` string | PASS — **accepted by Cesar, 2026-08-17** (*"Date M dash is ok too"*). Colouring it would mean splitting a binding SPEC §5.2 protects; not worth it. |
 | 3d | 📍 pin | `13892:3467` | `hidden="true"` — **do not build** | **not built** — no GameObject exists; `figma_node_to_spec.py` also skipped it, so it is absent from the lint spec | PASS |
 | 4 | Separator ×3 | `13892:3469`, `3473`, `3477` | 882 wide, `h-0` with a 2 px stroke drawn above it | `SeparatorSlot{1,2,3}` = 882 × 0 layout slot + child `Separator{1,2,3}` = 882 × 2 `Divider`, `#FFFFFF`, offset +1. Reference sampled at rows 213 / 585 / 792 = `(254,254,254)` | PASS |
 | 4b | Full-bleed 978 separator | `13498:2069` | 978 × 0 at the modal's top edge | **not built** — see § Spec deviations | PASS (declared) |
@@ -264,18 +264,34 @@ Two lint FAILs were found and fixed during the iteration rather than argued away
 
 ## Known FAIL items
 
-1. **Em dash colour (fidelity row 3b).** The node paints the `—` between the date range and the
-   countdown in `#C7D6EB`; the built modal renders it `#FFFFFF`. **Cause:** SPEC §5.2 requires
-   `_dateLineText`'s existing branch to stay byte-for-byte, and that branch composes one string
-   (`$"{dateRange} — {countdown}"`) into one TMP. Colouring the dash means either splitting the
-   binding into three text nodes or wrapping it in a `<color>` tag — both are rewrites of a branch
-   the spec says not to touch. **Unblocked by:** a one-line amendment permitting
-   `<color=#C7D6EB>—</color>` in that string.
-2. **Migration not applied; backend `.select()` not extended.** Blocked on Cesar's Supabase step and
-   on `playlife/backend` not being checked out in this repo. Client and dashboard degrade cleanly to
-   "no blurb" until both land.
-3. **Banner assignment round-trip untestable.** Blocked on `game_banners` §9 (§7 explicitly says do
-   not block on it). The layout half is proven; the resolver is one method.
+**All three are now closed.** Recorded here rather than deleted, because the
+reviewer gates read this section and a silently-emptied list is indistinguishable
+from one that was never filled in.
+
+1. ~~**Em-dash colour.**~~ **CLOSED — accepted by Cesar, 2026-08-17** (*"Date M dash
+   is ok too"*). The `—` renders `#FFFFFF` rather than the node's `#C7D6EB` because
+   §5.2 requires `_dateLineText` to stay one combined string. Cesar accepted the
+   deviation rather than split the binding.
+2. ~~**Migration not applied; backend `.select()` not extended.**~~ **CLOSED.** Cesar
+   applied `2026_08_17_tournament_description.sql` to prod; the three columns were
+   verified reachable by name over PostgREST, `list_golfin`'s `.select(...)` was
+   extended and deployed, and `GET /api/v1/tournaments/golfin` now serves
+   `description_en/ja/key` on all six tournaments. Blurbs written in the panel
+   render in game with no client rebuild.
+3. ~~**Banner assignment round-trip untestable.**~~ **CLOSED** by the follow-on
+   `tournament_banners` task: `game_banners.placement` admits `tournament_modal`,
+   `tournaments.modal_banner_id` exists, and `TryResolveModalBanner` is implemented.
+   Assigned → 1411 with real art; unassigned → 1167. Verified live.
+
+### Correction to this report's own record (2026-08-17)
+
+An earlier hand-off summary claimed the **Japanese RULES body overflows its 180px
+box at 199.7px**. **That number was never measured** — it was attributed to a
+capture run whose log was never read, and it is wrong: Cesar's editor-build
+screenshot shows the five Japanese rules lines sitting inside the box. The claim
+reached a hand-off summary and the body of commit `caff8bcde`; it never entered
+this report or `SPEC.md`. Nothing in the build was changed on the strength of it.
+No JA overflow is outstanding.
 
 ## Spec deviations
 
@@ -356,8 +372,7 @@ Zero errors mentioning TournamentSignupModal, TournamentDescription or tourn.rul
 
 ## Open questions for Architect
 
-1. **Em-dash colour** (Known FAIL 1) — may I wrap it as `<color=#C7D6EB>—</color>` inside the
-   existing `_dateLineText` string, or does §5.2's "byte-for-byte" forbid even that?
+1. ~~**Em-dash colour**~~ — answered: accepted as-is (Cesar, 2026-08-17).
 2. **The duplicated hole count in Japanese** (§ Pre-existing defect) — the fix is a two-line change
    to the venue guard, but it is inside a branch §5.2 protects. Separate Quick task, or fold in?
 3. **`figma_node_to_spec.py` bakes ÷1.2** while the shipped `TournamentSelectionCard` uses ÷1.3 for
