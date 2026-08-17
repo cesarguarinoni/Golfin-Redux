@@ -16,6 +16,7 @@ export function TournamentsPanel() {
   const [notice, setNotice] = useState<string | null>(null);
 
   const [kindFilter, setKindFilter] = useState<TournamentKind | "all">("golfin");
+  const [activeFilter, setActiveFilter] = useState<"all" | "active" | "inactive">("all");
   const [stateFilter, setStateFilter] = useState<TournamentState | "all">("all");
   const [query, setQuery] = useState("");
 
@@ -49,6 +50,8 @@ export function TournamentsPanel() {
     const q = query.trim().toLowerCase();
     return rows.filter((t) => {
       if (kindFilter !== "all" && t.kind !== kindFilter) return false;
+      if (activeFilter === "active" && !t.isActive) return false;
+      if (activeFilter === "inactive" && t.isActive) return false;
       if (stateFilter !== "all" && deriveState(t.startAt, t.endAt, now) !== stateFilter) {
         return false;
       }
@@ -58,7 +61,7 @@ export function TournamentsPanel() {
       }
       return true;
     });
-  }, [rows, kindFilter, stateFilter, query, now]);
+  }, [rows, kindFilter, activeFilter, stateFilter, query, now]);
 
   const counts = useMemo(() => {
     const out: Record<string, number> = {};
@@ -96,7 +99,8 @@ export function TournamentsPanel() {
       <div className="mb-4 flex items-baseline justify-between">
         <h1 className="text-lg font-semibold text-zinc-100">Tournaments</h1>
         <span className="text-xs text-zinc-500">
-          {counts.Open ?? 0} open · {counts.Upcoming ?? 0} upcoming · {counts.Ended ?? 0} ended
+          {rows.filter((t) => !t.isActive).length} inactive · {counts.Open ?? 0} open ·{" "}
+          {counts.Upcoming ?? 0} upcoming · {counts.Ended ?? 0} ended
         </span>
       </div>
 
@@ -151,6 +155,15 @@ export function TournamentsPanel() {
             </button>
           ))}
         </div>
+        <select
+          value={activeFilter}
+          onChange={(e) => setActiveFilter(e.target.value as "all" | "active" | "inactive")}
+          className="rounded-md border border-surface-700 bg-surface-900 px-2.5 py-1.5 text-xs text-zinc-300 focus:border-accent-500 focus:outline-none"
+        >
+          <option value="all">Active + inactive</option>
+          <option value="active">Active only</option>
+          <option value="inactive">Inactive only</option>
+        </select>
         <select
           value={stateFilter}
           onChange={(e) => setStateFilter(e.target.value as TournamentState | "all")}
@@ -212,12 +225,22 @@ export function TournamentsPanel() {
                     setNotice(null);
                     setEditing(t);
                   }}
-                  className="cursor-pointer border-t border-surface-800 bg-surface-950 transition hover:bg-surface-900"
+                  className={`cursor-pointer border-t border-surface-800 transition hover:bg-surface-900 ${
+                    t.isActive ? "bg-surface-950" : "bg-surface-950/40 opacity-60"
+                  }`}
                 >
                   <td className="px-4 py-2.5">
                     <div className="flex items-center gap-2">
                       <span className="font-medium text-zinc-200">{t.title}</span>
                       <KindBadge kind={t.kind} />
+                      {!t.isActive && (
+                        <span
+                          className="rounded border border-zinc-600 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-zinc-400"
+                          title="Hidden from the game — the schedule endpoint does not return it"
+                        >
+                          inactive
+                        </span>
+                      )}
                     </div>
                     <code className="text-[11px] text-zinc-600">{t.slug ?? "—"}</code>
                   </td>

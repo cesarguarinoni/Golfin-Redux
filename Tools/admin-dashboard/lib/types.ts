@@ -144,6 +144,8 @@ export interface TournamentRow {
   tier: string | null;
   createdAt: string | null;
   bands: PrizeBand[];
+  /** Admin on/off switch. false = the game never receives it. Not the open/closed state. */
+  isActive: boolean;
   /** Rows in tournament_entries for this tournament (all, including bots). */
   entryCount: number;
   humanEntryCount: number;
@@ -193,6 +195,7 @@ export interface TournamentInput {
   sponsorName: string | null;
   leagueKey: string | null;
   bannerUrl: string | null;
+  isActive: boolean;
   bands: PrizeBand[];
   /** Required (typed slug) when editing a tournament that is Open or Ending. */
   confirmSlug?: string;

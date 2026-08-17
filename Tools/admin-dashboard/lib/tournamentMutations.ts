@@ -142,6 +142,7 @@ function snapshot(t: TournamentRow): Record<string, unknown> {
     sponsor_name: t.sponsorName,
     league_key: t.leagueKey,
     banner_url: t.bannerUrl,
+    is_active: t.isActive,
     bands: t.bands.map((b) => ({
       rank_from: b.rankFrom,
       rank_to: b.rankTo,
@@ -168,6 +169,7 @@ function toDbRow(input: TournamentInput): Record<string, unknown> {
     sponsor_name: input.sponsorName?.trim() || null,
     league_key: input.leagueKey || null,
     banner_url: input.bannerUrl || null,
+    is_active: input.isActive,
     // tier/status are GPS columns; 'open'/'upcoming' satisfy their CHECK
     // constraints. State for golfin rows is DERIVED from the dates (SPEC §4.1).
     tier: "open",
@@ -229,6 +231,7 @@ export async function createTournament(
       sponsorName: input.sponsorName?.trim() || null,
       leagueKey: input.leagueKey || null,
       bannerUrl: input.bannerUrl || null,
+      isActive: input.isActive,
       botSeed,
       status: "upcoming",
       tier: "open",
@@ -320,6 +323,7 @@ export async function updateTournament(
       sponsorName: input.sponsorName?.trim() || null,
       leagueKey: input.leagueKey || null,
       bannerUrl: input.bannerUrl || null,
+      isActive: input.isActive,
       bands: input.bands.map((b) => ({ ...b, id: b.id || randomUUID() })),
     });
     await writeAudit(adminEmail, "tournament_update", null, "tournaments", before, snapshot(row));
@@ -392,6 +396,9 @@ export async function duplicateTournament(
     // Art is deliberately NOT copied: the same file under a new tournament
     // would be right by accident. The editor prompts for new art.
     bannerUrl: null,
+    // A copy starts switched OFF — you almost never want a duplicate live
+    // the instant it is created, before its dates and art are right.
+    isActive: false,
     bands: source.bands.map((b) => ({ ...b, id: "" })),
   };
 

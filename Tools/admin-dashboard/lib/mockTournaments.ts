@@ -69,6 +69,7 @@ export const MOCK_TOURNAMENTS: TournamentRow[] = SEEDS.map((s) => ({
   sponsorName: s.sponsor,
   leagueKey: s.league,
   bannerUrl: null,
+  isActive: true,
   botSeed: s.seed,
   status: "upcoming",
   tier: "open",

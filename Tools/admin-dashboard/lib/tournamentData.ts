@@ -64,6 +64,8 @@ function mapTournament(
     status: str(r.status),
     tier: str(r.tier),
     createdAt: str(r.created_at),
+    // Tolerate the column being absent on an un-migrated DB: default visible.
+    isActive: r.is_active !== false,
     bands: bands.sort((a, b) => a.rankFrom - b.rankFrom),
     entryCount,
     humanEntryCount,
