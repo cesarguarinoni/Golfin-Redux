@@ -302,10 +302,27 @@ export function TournamentEditor({
                   placeholder="Kasumigaseki Open"
                   className={field}
                 />
-                <p className="mt-1 text-[11px] text-zinc-600">
-                  Free text, and independent of the venue — a tournament can be brand-led (“PUMA
-                  Summer Slam” at Lomond). Shown to players when no localization key resolves.
-                </p>
+                {draft.nameKey?.trim() ? (
+                  <div className="mt-1 rounded-md border border-amber-500/40 bg-amber-500/10 px-2.5 py-2 text-[11px] text-amber-200">
+                    <strong className="font-semibold">Players will not see this title.</strong> The
+                    localization key <code>{draft.nameKey.trim()}</code> is set, and a key that
+                    resolves in the shipped build always wins — the title is only the fallback.
+                    Clear the key to make this title the name players see, in every language.
+                    <button
+                      type="button"
+                      onClick={() => patch({ nameKey: "" })}
+                      className="mt-1.5 block rounded-md border border-amber-500/50 px-2 py-1 font-medium text-amber-100 hover:bg-amber-500/15"
+                    >
+                      Clear the key and use this title
+                    </button>
+                  </div>
+                ) : (
+                  <p className="mt-1 text-[11px] text-zinc-600">
+                    Free text, and independent of the venue — a tournament can be brand-led (“PUMA
+                    Summer Slam” at Lomond). This is what players see, since no localization key
+                    is set.
+                  </p>
+                )}
               </div>
 
               <div className="col-span-1">
@@ -474,7 +491,10 @@ export function TournamentEditor({
                   className={`${field} font-mono`}
                 />
                 <p className="mt-1 text-[11px] text-zinc-600">
-                  Optional. Missing keys fall back to the title above.
+                  Optional, and it <strong className="text-zinc-400">overrides the title</strong>{" "}
+                  whenever it resolves in the shipped build. Keys ship inside the app, so a key
+                  invented here resolves nowhere and the title is used instead. Leave it empty for
+                  anything you name yourself.
                 </p>
               </div>
             </div>
