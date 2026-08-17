@@ -95,6 +95,13 @@ namespace GolfinRedux.UI.Tournaments
             // entering the screen later is already covered by the rebuild below.
             TournamentService.OnScheduleChanged += HandleScheduleChanged;
 
+            // Settings is an OVERLAY (SettingsController, not a ScreenManager screen) and the
+            // top-bar gear that opens it is visible on this screen — so the player can switch
+            // language with T7 still active and this OnEnable never re-fires. Every card string
+            // is language-dependent (the name ladder's JP rung, the venue line, the date line),
+            // so the cards have to be rebuilt in place.
+            LocalizationManager.OnLanguageChanged += HandleScheduleChanged;
+
             StopAllCoroutines();
             StartCoroutine(RebuildNextFrame());
         }
@@ -102,9 +109,11 @@ namespace GolfinRedux.UI.Tournaments
         private void OnDisable()
         {
             TournamentService.OnScheduleChanged -= HandleScheduleChanged;
+            LocalizationManager.OnLanguageChanged -= HandleScheduleChanged;
             ClearCards();
         }
 
+        /// <summary>Repaint in place — the schedule changed under us, or the language did.</summary>
         private void HandleScheduleChanged()
         {
             if (!isActiveAndEnabled) return;

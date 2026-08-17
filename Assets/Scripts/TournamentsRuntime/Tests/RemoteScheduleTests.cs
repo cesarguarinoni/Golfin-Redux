@@ -17,7 +17,7 @@
 //                          DROPPED individually, siblings survive
 //   §3  Host allowlist   — accept/reject table
 //   §4  Cache key        — derivation is stable, URL-sensitive, extension-preserving
-//   §5  Name ladder      — localize(NameKey) → Title → Id
+//   §5  Name ladder      — localize(NameKey) → TitleJa (JP only) → Title → Id
 //   §6  Integrity        — CheckReferentialIntegrity over mapped server data
 // ─────────────────────────────────────────────────────────────────────────────
 #nullable enable
@@ -74,6 +74,22 @@ namespace Golfin.Tournaments.WireupTests
             var m = DisplayName.GetMethod("Resolve", BindingFlags.Public | BindingFlags.Static,
                         null, new[] { typeof(string), typeof(string), typeof(string) }, null)!;
             return (string)m.Invoke(null, new object?[] { nameKey, title, id })!;
+        }
+
+        /// <summary>The four-part ladder: localize(nameKey) → titleJa (JP only) → title → id.</summary>
+        internal static string ResolveName(string? nameKey, string? title, string? titleJa, string? id)
+        {
+            var m = DisplayName.GetMethod("Resolve", BindingFlags.Public | BindingFlags.Static,
+                        null, new[] { typeof(string), typeof(string), typeof(string), typeof(string) }, null)!;
+            return (string)m.Invoke(null, new object?[] { nameKey, title, titleJa, id })!;
+        }
+
+        /// <summary>The definition overload — proves the ladder is fed TitleJa off a real DTO.</summary>
+        internal static string ResolveName(TournamentDefinition? def)
+        {
+            var m = DisplayName.GetMethod("Resolve", BindingFlags.Public | BindingFlags.Static,
+                        null, new[] { typeof(TournamentDefinition) }, null)!;
+            return (string)m.Invoke(null, new object?[] { def })!;
         }
 
         /// <summary>
@@ -151,6 +167,7 @@ namespace Golfin.Tournaments.WireupTests
         internal static string Tournament(
             string slug        = "kasumigaseki_open",
             string? title      = "Kasumigaseki Open",
+            string? titleJa    = null,
             string? nameKey    = "tourn.kasumigaseki",
             string courseId    = "kasumigaseki",
             string holeSet     = "1-18",
@@ -162,7 +179,7 @@ namespace Golfin.Tournaments.WireupTests
         {
             string J(string? s) => s == null ? "null" : "\"" + s + "\"";
             return "{"
-                 + $"\"slug\":{J(slug)},\"title\":{J(title)},\"name_key\":{J(nameKey)},"
+                 + $"\"slug\":{J(slug)},\"title\":{J(title)},\"title_ja\":{J(titleJa)},\"name_key\":{J(nameKey)},"
                  + $"\"course_id\":{J(courseId)},\"hole_set\":{J(holeSet)},"
                  + $"\"start_at\":{J(startAt)},\"end_at\":{J(endAt)},"
                  + "\"resolve_delay_minutes\":30,\"entry_fee_pts\":10,"
@@ -322,7 +339,7 @@ namespace Golfin.Tournaments.WireupTests
         [Test]
         public void CsvRowsCarryNoTitleOrBanner()
         {
-            // The positional ctor still works untouched, and the two appended fields default to null.
+            // The positional ctor still works untouched, and the three appended fields default to null.
             var def = new TournamentDefinition(
                 "id", "key", "club", new[] { "1" },
                 DateTime.UtcNow, DateTime.UtcNow.AddDays(1),
@@ -330,6 +347,47 @@ namespace Golfin.Tournaments.WireupTests
 
             Assert.IsNull(def.Title,     "A CSV row has no server title.");
             Assert.IsNull(def.BannerUrl, "A CSV row never carries remote art.");
+            Assert.IsNull(def.TitleJa,   "A CSV row has no server Japanese title.");
+        }
+
+        [Test]
+        public void MapsTitleJaOntoTheDefinition()
+        {
+            var mapped = Prod.MapJson(
+                Fixtures.Envelope(Fixtures.Tournament(titleJa: "霞ヶ関オープン")), _fields);
+
+            Assert.AreEqual("霞ヶ関オープン", mapped!.Value.Defs[0].TitleJa,
+                "title_ja must reach the DTO, or the JP rung of the name ladder can never fire.");
+        }
+
+        [Test]
+        public void TitleJaIsTrimmedAndBlankBecomesNull()
+        {
+            // Same treatment as title: an operator who saved a field of spaces has not set a name,
+            // and a null TitleJa is what makes a JP player fall through to Title.
+            var padded = Prod.MapJson(
+                Fixtures.Envelope(Fixtures.Tournament(titleJa: "  霞ヶ関オープン  ")), _fields);
+            Assert.AreEqual("霞ヶ関オープン", padded!.Value.Defs[0].TitleJa);
+
+            foreach (string? blank in new string?[] { null, "", "   " })
+            {
+                var mapped = Prod.MapJson(
+                    Fixtures.Envelope(Fixtures.Tournament(titleJa: blank)), _fields);
+                Assert.IsNull(mapped!.Value.Defs[0].TitleJa, $"'{blank ?? "null"}' must map to null.");
+            }
+        }
+
+        [Test]
+        public void TitleJaIsNeverInterpretedByTheJsonReader()
+        {
+            // title_ja is a plain string. A value that LOOKS like a date must survive verbatim —
+            // the same DateParseHandling.None guard DtoTimestampsAreNeverTouchedByNewtonsoft pins
+            // for the timestamps, asserted on the field this change adds.
+            var mapped = Prod.MapJson(
+                Fixtures.Envelope(Fixtures.Tournament(titleJa: "2026-08-25T00:00:00+00:00")), _fields);
+
+            Assert.AreEqual("2026-08-25T00:00:00+00:00", mapped!.Value.Defs[0].TitleJa,
+                "A date-shaped title_ja must arrive as the exact characters the server sent.");
         }
     }
 
@@ -767,27 +825,60 @@ namespace Golfin.Tournaments.WireupTests
     }
 
     // ═════════════════════════════════════════════════════════════════════════
-    // §5 Display-name ladder (SPEC §4.3)
+    // §5 Display-name ladder (SPEC §4.3; JP rung from tournament_title_ja §3.3)
     // ═════════════════════════════════════════════════════════════════════════
     public class DisplayNameLadderTests
     {
         private static FieldInfo TextMapField =>
             typeof(LocalizationManager).GetField("_textMap", BindingFlags.NonPublic | BindingFlags.Static)!;
 
-        private object? _savedTextMap;
+        private object?  _savedTextMap;
+        private Language _savedLanguage;
 
         [SetUp]
-        public void SetUp() => _savedTextMap = TextMapField.GetValue(null);
+        public void SetUp()
+        {
+            _savedTextMap  = TextMapField.GetValue(null);
+            _savedLanguage = LocalizationManager.CurrentLanguage;
+        }
 
         [TearDown]
-        public void TearDown() => TextMapField.SetValue(null, _savedTextMap);
+        public void TearDown()
+        {
+            // Language is global static state; leaving a test's JP switch behind would silently
+            // re-language every later test in the run. Restored through Initialize rather than
+            // SetLanguage so it does NOT fire OnLanguageChanged at whatever UI is alive in the
+            // editor — TournamentSelectionScreenController now subscribes to that event.
+            LocalizationManager.Initialize(
+                ScriptableObject.CreateInstance<LocalizationTextTable>(), _savedLanguage);
+            TextMapField.SetValue(null, _savedTextMap);
+        }
 
         private static void InstallLocalization(params (string Key, string English)[] rows)
+            => InstallLocalization(Language.English, rows);
+
+        /// <summary>
+        /// Installs a table and pins the language. <c>Initialize</c> assigns
+        /// <c>CurrentLanguage</c> directly, so this sets the language without firing
+        /// <c>OnLanguageChanged</c> at whatever UI happens to be alive in the editor.
+        /// </summary>
+        private static void InstallLocalization(
+            Language language, params (string Key, string English)[] rows)
         {
             var table = ScriptableObject.CreateInstance<LocalizationTextTable>();
             foreach (var (key, english) in rows)
                 table.rows.Add(new LocalizedTextRow { key = key, english = english, japanese = "" });
-            LocalizationManager.Initialize(table, Language.English);
+            LocalizationManager.Initialize(table, language);
+        }
+
+        /// <summary>A table whose rows carry BOTH languages — a real translation pair.</summary>
+        private static void InstallBilingual(
+            Language language, params (string Key, string English, string Japanese)[] rows)
+        {
+            var table = ScriptableObject.CreateInstance<LocalizationTextTable>();
+            foreach (var (key, english, japanese) in rows)
+                table.rows.Add(new LocalizedTextRow { key = key, english = english, japanese = japanese });
+            LocalizationManager.Initialize(table, language);
         }
 
         [Test]
@@ -801,7 +892,7 @@ namespace Golfin.Tournaments.WireupTests
         }
 
         [Test]
-        public void Rung2_FallsBackToServerTitleWhenTheKeyEchoesBack()
+        public void Rung3_FallsBackToServerTitleWhenTheKeyEchoesBack()
         {
             // THE HEADLINE CASE: a dashboard-created brand tournament has no localization key in
             // this build, so LocalizationManager.Get returns the key verbatim. Without the ladder
@@ -813,7 +904,7 @@ namespace Golfin.Tournaments.WireupTests
         }
 
         [Test]
-        public void Rung2_FallsBackToServerTitleWhenThereIsNoKeyAtAll()
+        public void Rung3_FallsBackToServerTitleWhenThereIsNoKeyAtAll()
         {
             InstallLocalization();
             Assert.AreEqual("PUMA Summer Slam", Prod.ResolveName(null, "PUMA Summer Slam", "puma_summer_slam"));
@@ -821,7 +912,7 @@ namespace Golfin.Tournaments.WireupTests
         }
 
         [Test]
-        public void Rung3_FallsBackToTheSlugWhenNothingElseExists()
+        public void Rung4_FallsBackToTheSlugWhenNothingElseExists()
         {
             InstallLocalization();
             Assert.AreEqual("puma_summer_slam", Prod.ResolveName(null, null, "puma_summer_slam"));
@@ -842,6 +933,142 @@ namespace Golfin.Tournaments.WireupTests
             // LocalizationManager.Get(null) would hit Dictionary.TryGetValue(null) → ArgumentNullException.
             InstallLocalization(("tourn.x", "X"));
             Assert.DoesNotThrow(() => Prod.ResolveName(null, "Title", "id"));
+        }
+
+        // ── The JP rung (tournament_title_ja §5) ──────────────────────────────
+
+        [Test]
+        public void Rung2_JapanesePlayerSeesTitleJa_EnglishPlayerSeesTitle()
+        {
+            // Acceptance 1. A dashboard-created tournament with both titles and NO key.
+            InstallLocalization(Language.Japanese);
+            Assert.AreEqual("プーマ サマースラム",
+                Prod.ResolveName(null, "PUMA Summer Slam", "プーマ サマースラム", "puma_summer_slam"),
+                "A JP player must get the operator's Japanese title.");
+
+            InstallLocalization(Language.English);
+            Assert.AreEqual("PUMA Summer Slam",
+                Prod.ResolveName(null, "PUMA Summer Slam", "プーマ サマースラム", "puma_summer_slam"),
+                "An EN player must get the English title, never the Japanese one.");
+        }
+
+        [Test]
+        public void Rung1_ResolvingKeyStillWinsInBothLanguages()
+        {
+            // Acceptance 2. A shipped key is a real translation PAIR — both languages get a proper
+            // name from it — so it outranks an operator's single-language string in both.
+            InstallBilingual(Language.English, ("tourn.kasumigaseki", "Kasumigaseki Open", "霞ヶ関オープン"));
+            Assert.AreEqual("Kasumigaseki Open",
+                Prod.ResolveName("tourn.kasumigaseki", "SERVER TITLE", "サーバータイトル", "kasumigaseki_open"));
+
+            InstallBilingual(Language.Japanese, ("tourn.kasumigaseki", "Kasumigaseki Open", "霞ヶ関オープン"));
+            Assert.AreEqual("霞ヶ関オープン",
+                Prod.ResolveName("tourn.kasumigaseki", "SERVER TITLE", "サーバータイトル", "kasumigaseki_open"),
+                "The key outranks title_ja: it is a translation pair, not one operator's string.");
+        }
+
+        [Test]
+        public void SeededKeyOnlyRowsAreUnchangedInBothLanguages()
+        {
+            // Acceptance 3. The six shipped CSV rows carry a key and no server titles; adding the
+            // JP rung must not move them.
+            InstallBilingual(Language.English, ("tourn.lomond", "Lomond Championship", "ローモンド選手権"));
+            Assert.AreEqual("Lomond Championship",
+                Prod.ResolveName("tourn.lomond", null, null, "lomond_championship"));
+
+            InstallBilingual(Language.Japanese, ("tourn.lomond", "Lomond Championship", "ローモンド選手権"));
+            Assert.AreEqual("ローモンド選手権",
+                Prod.ResolveName("tourn.lomond", null, null, "lomond_championship"));
+        }
+
+        [Test]
+        public void EnglishPlayerFallsToTheSlugRatherThanEverShowingTitleJa()
+        {
+            // Acceptance 4 — the case the whole "JP only" rule exists for. With title empty, the
+            // English ladder must SKIP title_ja entirely and land on the slug. A rung that merely
+            // preferred title would pass a naive test here and still leak Japanese to EN players.
+            InstallLocalization(Language.English);
+
+            foreach (string? emptyTitle in new string?[] { null, "", "   " })
+            {
+                string rendered = Prod.ResolveName(null, emptyTitle, "プーマ サマースラム", "puma_summer_slam");
+                Assert.AreEqual("puma_summer_slam", rendered,
+                    $"With title='{emptyTitle ?? "null"}' an EN player must see the slug.");
+                Assert.AreNotEqual("プーマ サマースラム", rendered,
+                    "The Japanese string must NEVER reach an English player.");
+            }
+
+            // And with a non-resolving key in play, which is the shape a dashboard row actually has.
+            Assert.AreEqual("puma_summer_slam",
+                Prod.ResolveName("tourn.puma_summer_slam", null, "プーマ サマースラム", "puma_summer_slam"));
+        }
+
+        [Test]
+        public void JapanesePlayerWithNoTitleJaFallsToTheEnglishTitle()
+        {
+            // Intended, not a gap: one name is better than a slug.
+            InstallLocalization(Language.Japanese);
+
+            foreach (string? blank in new string?[] { null, "", "   " })
+                Assert.AreEqual("PUMA Summer Slam",
+                    Prod.ResolveName(null, "PUMA Summer Slam", blank, "puma_summer_slam"),
+                    $"titleJa='{blank ?? "null"}' must fall through to Title, not to the slug.");
+        }
+
+        [Test]
+        public void TitleJaIsTrimmedWhenRendered()
+        {
+            InstallLocalization(Language.Japanese);
+            Assert.AreEqual("プーマ サマースラム",
+                Prod.ResolveName(null, "PUMA Summer Slam", "  プーマ サマースラム  ", "puma_summer_slam"));
+        }
+
+        [Test]
+        public void TheDefinitionOverloadFeedsTitleJaIntoTheLadder()
+        {
+            // The raw-parts ladder can be perfect while Resolve(def) still drops TitleJa on the
+            // floor — and Resolve(def) is what all three UI surfaces actually call.
+            var def = new TournamentDefinition(
+                "puma_summer_slam", "tourn.puma_summer_slam", "lomond", new[] { "1" },
+                new DateTime(2026, 8, 1, 0, 0, 0, DateTimeKind.Utc),
+                new DateTime(2026, 8, 30, 0, 0, 0, DateTimeKind.Utc),
+                30, 0L, "table", "field_major", "PUMA", "GOLD",
+                title: "PUMA Summer Slam", bannerUrl: null, titleJa: "プーマ サマースラム");
+
+            InstallLocalization(Language.Japanese);
+            Assert.AreEqual("プーマ サマースラム", Prod.ResolveName(def));
+
+            InstallLocalization(Language.English);
+            Assert.AreEqual("PUMA Summer Slam", Prod.ResolveName(def));
+        }
+
+        [Test]
+        public void CsvExportedDashboardTournamentRendersItsNameNotItsSlug()
+        {
+            // Acceptance 5, the display half. The loader half — that LoadTournaments feeds the raw
+            // nameKey column into Title — is pinned on the REAL loader in
+            // TournamentCsvLoaderTests.LoadTournaments_RealLoader_MirrorsNameKeyIntoTitle. This is
+            // the shape that produces: the dashboard's CSV export writes `nameKey ?? title` into
+            // the one name column, so a panel-named tournament arrives with the display name
+            // sitting in nameKey, resolving against nothing.
+            InstallLocalization(("tourn.lomond", "Lomond Championship"));
+
+            Assert.AreEqual("Cesar Championship",
+                Prod.ResolveName("Cesar Championship", "Cesar Championship", null, "cesar_championship"),
+                "Offline, a dashboard-named tournament must show its name, not 'cesar_championship'.");
+
+            // And a row whose key DOES resolve is untouched — rung 1 wins before Title is read.
+            Assert.AreEqual("Lomond Championship",
+                Prod.ResolveName("tourn.lomond", "tourn.lomond", null, "lomond_championship"),
+                "Mirroring nameKey into Title must not change a row whose key resolves.");
+        }
+
+        [Test]
+        public void ThreePartOverloadStillWorksAndBehavesAsIfTitleJaWereNull()
+        {
+            // Kept for every existing caller; a JP player on it must simply fall to Title.
+            InstallLocalization(Language.Japanese);
+            Assert.AreEqual("PUMA Summer Slam", Prod.ResolveName(null, "PUMA Summer Slam", "puma_summer_slam"));
         }
     }
 

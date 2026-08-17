@@ -217,7 +217,8 @@ namespace Golfin.Tournaments
                     sponsorKey:          t.SponsorName ?? string.Empty,
                     leagueKey:           t.LeagueKey   ?? string.Empty,
                     title:               NullIfBlank(t.Title),
-                    bannerUrl:           bannerUrl));
+                    bannerUrl:           bannerUrl,
+                    titleJa:             NullIfBlank(t.TitleJa)));   // JP-only rung of the name ladder
             }
 
             if (defs.Count == 0)

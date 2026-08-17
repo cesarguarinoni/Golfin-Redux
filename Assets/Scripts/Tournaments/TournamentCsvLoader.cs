@@ -87,6 +87,7 @@ namespace Golfin.Tournaments
                 string id = Get(cols, iId);
                 if (string.IsNullOrEmpty(id)) continue;
 
+                string nameKey       = Get(cols, iNameKey);
                 var holeSet          = ExpandHoleSet(Get(cols, iHoleSet));
                 var startUtc         = ParseUtc(Get(cols, iStartUtc), id, "startUtc");
                 var endUtc           = ParseUtc(Get(cols, iEndUtc),   id, "endUtc");
@@ -95,7 +96,7 @@ namespace Golfin.Tournaments
 
                 results.Add(new TournamentDefinition(
                     id:                  id,
-                    nameKey:             Get(cols, iNameKey),
+                    nameKey:             nameKey,
                     clubId:              Get(cols, iCourseId),   // courseId → ClubId per SPEC §2
                     holeSet:             holeSet,
                     startUtc:            startUtc,
@@ -105,7 +106,17 @@ namespace Golfin.Tournaments
                     prizeTableId:        Get(cols, iPrizeTableId),
                     botFieldId:          Get(cols, iBotFieldId),
                     sponsorKey:          Get(cols, iSponsorKey),
-                    leagueKey:           Get(cols, iLeagueKey)
+                    leagueKey:           Get(cols, iLeagueKey),
+                    // The SAME column value, deliberately, into both rungs of the name ladder.
+                    // This file has one name column, and the dashboard's CSV export writes
+                    // `nameKey ?? title` into it — so a dashboard-named tournament exported to CSV
+                    // arrives with NameKey="Cesar Championship", which resolves nowhere, and the
+                    // ladder would fall through to the SLUG ("cesar_championship") offline. Feeding
+                    // it to Title too makes that case render a readable name; a key that DOES
+                    // resolve is unaffected, because rung 1 wins before Title is ever consulted.
+                    // Deliberately NOT a new CSV column: this file is the offline fallback, not a
+                    // second source of truth. There is no titleJa rung here for the same reason.
+                    title:               string.IsNullOrEmpty(nameKey) ? null : nameKey
                 ));
             }
 

@@ -625,6 +625,36 @@ field_major,30,25:0.20;50:0.25;100:0.30;180:0.25,0,10800,480
         }
 
         /// <summary>
+        /// tournament_title_ja §4. The shipped CSV has ONE name column, and the dashboard's CSV
+        /// export writes <c>nameKey ?? title</c> into it — so a dashboard-named tournament comes
+        /// back as <c>NameKey="Cesar Championship"</c>, which resolves against nothing in the
+        /// build, with <c>Title=null</c>. The display ladder then fell through to the SLUG and the
+        /// card read <c>cesar_championship</c> offline. The loader now feeds the same column value
+        /// into Title as well; a key that resolves is unaffected because rung 1 wins first.
+        /// <para>
+        /// Asserted on the REAL loader against the SHIPPED CSV — the inline-fixture helper at the
+        /// top of this file is a copy of the parse logic and would prove nothing about production.
+        /// </para>
+        /// </summary>
+        [Test]
+        public void LoadTournaments_RealLoader_MirrorsNameKeyIntoTitle()
+        {
+            var rows = new TournamentCsvLoader().LoadTournaments();
+            Assert.Greater(rows.Count, 0, "Shipped CSV must load, or this test asserts nothing.");
+
+            foreach (var row in rows)
+            {
+                Assert.AreEqual(row.NameKey, row.Title,
+                    $"'{row.Id}': the raw nameKey column value must also reach Title, or a " +
+                    "dashboard-named tournament round-tripped through the CSV renders as its slug.");
+                Assert.IsFalse(string.IsNullOrEmpty(row.Title),
+                    $"'{row.Id}': every shipped row has a nameKey, so Title must be populated.");
+                Assert.IsNull(row.TitleJa,
+                    $"'{row.Id}': the CSV is the offline fallback and gains NO title_ja column.");
+            }
+        }
+
+        /// <summary>
         /// Calls the real TournamentCsvLoader.LoadPrizeTables() against the shipped CSV.
         /// Exercises Resources.Load path + "Data/tournament_prizes" path constant.
         /// </summary>

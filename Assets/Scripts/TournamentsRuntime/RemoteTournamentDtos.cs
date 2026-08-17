@@ -26,6 +26,14 @@ namespace Golfin.Tournaments
     {
         [JsonProperty("slug")]      public string? Slug;
         [JsonProperty("title")]     public string? Title;
+
+        /// <summary>
+        /// The dashboard's optional Japanese title. A plain string — it must NOT be interpreted by
+        /// the reader (the file-level <c>DateParseHandling.None</c> already guarantees that; do not
+        /// "simplify" it away). Shown only to JP players — see <c>TournamentDisplayName.Resolve</c>.
+        /// </summary>
+        [JsonProperty("title_ja")]  public string? TitleJa;
+
         [JsonProperty("name_key")]  public string? NameKey;
         [JsonProperty("course_id")] public string? CourseId;
         [JsonProperty("hole_set")]  public string? HoleSet;

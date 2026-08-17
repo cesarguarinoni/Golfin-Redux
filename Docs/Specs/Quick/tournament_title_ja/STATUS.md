@@ -1,4 +1,4 @@
-READY_FOR_CESAR
+DONE — approved by Cesar 2026-08-17
 
 # tournament_title_ja — Unity half
 

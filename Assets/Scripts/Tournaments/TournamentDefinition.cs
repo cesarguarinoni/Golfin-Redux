@@ -78,16 +78,43 @@ namespace Golfin.Tournaments
         public string LeagueKey { get; }
 
         /// <summary>
-        /// Server-authored display title, e.g. <c>"PUMA Summer Slam"</c>. Null for CSV rows.
+        /// Server-authored display title, e.g. <c>"PUMA Summer Slam"</c>.
         /// <para>
         /// A tournament's identity is NOT its venue (Cesar, 2026-08-14): it can be brand-led,
         /// and a tournament created in the dashboard has no localization key in the shipped
-        /// build. This is the second rung of the display ladder
-        /// <c>localize(NameKey) → Title → Id</c> — see <c>TournamentDisplayName.Resolve</c>.
-        /// Without it, "add a tournament with no new build" would be false for its name.
+        /// build. This is a rung of the display ladder
+        /// <c>localize(NameKey) → TitleJa (JP only) → Title → Id</c> — see
+        /// <c>TournamentDisplayName.Resolve</c>. Without it, "add a tournament with no new
+        /// build" would be false for its name.
+        /// </para>
+        /// <para>
+        /// For CSV rows this carries the raw <c>nameKey</c> column value (see
+        /// <c>TournamentCsvLoader.LoadTournaments</c>): the dashboard's CSV export writes
+        /// <c>nameKey ?? title</c> into that one column, so a dashboard-named tournament
+        /// round-tripped through the CSV would otherwise resolve nowhere and fall to its slug.
+        /// A key that resolves is unaffected — rung 1 still wins.
         /// </para>
         /// </summary>
         public string? Title { get; }
+
+        /// <summary>
+        /// Server-authored Japanese display title. Null for CSV rows.
+        /// <para>
+        /// GOLFIN ships EN + JP, but the only bilingual path for a tournament name was
+        /// <c>NameKey</c> — a localization key resolved against <c>LocalizationText.csv</c>,
+        /// which ships INSIDE the build, so the dashboard can only ever reference keys that
+        /// already exist. A tournament named in the panel therefore had exactly one name, in
+        /// one language. This is the second rung of the ladder and is consulted
+        /// <b>only when <c>LocalizationManager.CurrentLanguage == Language.Japanese</c></b>:
+        /// an English player must never see it, even when <see cref="Title"/> is empty.
+        /// </para>
+        /// <para>
+        /// ⚠️ Interim by design (Cesar, 2026-08-17: "we will move the Localization to the
+        /// editor in the future"). Two title columns do not scale to a third language and
+        /// nothing here should be read as a decision that they would.
+        /// </para>
+        /// </summary>
+        public string? TitleJa { get; }
 
         /// <summary>
         /// Server-authored card artwork URL. Always null for CSV rows, and null for a server row
@@ -112,7 +139,8 @@ namespace Golfin.Tournaments
             // Appended and optional so every existing positional call site — the CSV loader and
             // every test fixture — compiles untouched.
             string? title = null,
-            string? bannerUrl = null)
+            string? bannerUrl = null,
+            string? titleJa = null)
         {
             Id                   = id;
             NameKey              = nameKey;
@@ -128,6 +156,7 @@ namespace Golfin.Tournaments
             LeagueKey            = leagueKey;
             Title                = title;
             BannerUrl            = bannerUrl;
+            TitleJa              = titleJa;
         }
     }
 }
