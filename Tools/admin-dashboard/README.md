@@ -63,6 +63,13 @@ npm run deploy          # stop `npm run dev` first — they share .next/
 That runs `scripts/cf-deploy.sh`, which does three things a bare
 `opennextjs-cloudflare deploy` does not:
 
+0. **Passes `NEXT_PUBLIC_*` — and only those — into the build.** Next *inlines*
+   `NEXT_PUBLIC_` values into the client bundle at compile time, so a Worker
+   secret cannot supply them: the browser code is already built. Miss this and
+   the app deploys fine, passes Access, then dies on
+   `NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY are required in
+   live mode`. They are public by design (the anon key is meant to ship). The
+   script aborts if it finds none, rather than shipping that failure again.
 1. **Moves `.env.development.local` aside for the build.** Next loads env files
    at build time and OpenNext writes what it finds into
    `.open-next/cloudflare/next-env.mjs`, which is uploaded with the Worker — so a
