@@ -89,7 +89,10 @@ namespace GolfinRedux.UI.Tournaments
                 return;
             }
 
-            var def = TournamentService.Instance.Backend.GetTournament(tournamentId);
+            // TryGetTournament, not Backend.GetTournament: the latter THROWS KeyNotFoundException for
+            // an unknown id, which made this null-check dead code and an unknown id an uncaught
+            // exception. See OnConfirm for why an unknown id is now an ordinary occurrence.
+            var def = TournamentService.Instance.TryGetTournament(tournamentId);
             if (def == null)
             {
                 Debug.LogWarning($"[TournamentSignupModal] Unknown tournament id={tournamentId}");
@@ -151,10 +154,22 @@ namespace GolfinRedux.UI.Tournaments
                 return;
             }
 
-            var def = TournamentService.Instance.Backend.GetTournament(_tournamentId);
+            // The tournament can legitimately disappear BETWEEN Open() and CONFIRM: the schedule is
+            // refetched on every entry to the selection screen, and an admin deactivating a
+            // tournament simply removes it from the payload. The player is not entered yet, so
+            // MergePreservingEntered does not carry it forward — correctly, it is gone.
+            //
+            // Backend.GetTournament would throw KeyNotFoundException here and dead-end the player in
+            // an open modal with no feedback. Toast and close instead; the list behind is already
+            // (or about to be) rebuilt without the row.
+            var def = TournamentService.Instance.TryGetTournament(_tournamentId);
             if (def == null)
             {
-                ShowToast("Tournament not found.");
+                Debug.LogWarning(
+                    $"[TournamentSignupModal] '{_tournamentId}' left the schedule while the modal was " +
+                    "open (deactivated, or its window closed). Closing without registering.");
+                ShowToast("Tournament no longer available.");
+                Hide();
                 return;
             }
 

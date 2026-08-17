@@ -6,6 +6,7 @@ using UnityEngine.UI;
 using TMPro;
 using GolfinRedux.UI;
 using Golfin.Tournaments;
+using Golfin.UI.Modals;
 
 namespace GolfinRedux.UI.Tournaments
 {
@@ -102,23 +103,66 @@ namespace GolfinRedux.UI.Tournaments
             // so the cards have to be rebuilt in place.
             LocalizationManager.OnLanguageChanged += HandleScheduleChanged;
 
+            // A refresh that lands while a modal is open is deferred, not dropped (see
+            // HandleScheduleChanged); this is what flushes it once the stack empties.
+            ModalController.ModalStackEmptied += HandleModalStackEmptied;
+
+            // ── Render what we already have, FIRST ────────────────────────────
+            // The schedule in Backend is already composed (cache or CSV at boot, server after any
+            // earlier refresh), so this paints a full list on the next frame with nothing waiting on
+            // a socket. There is deliberately no spinner and no gate: a good cached list is what the
+            // player sees while the network is asked whether it is stale.
             StopAllCoroutines();
             StartCoroutine(RebuildNextFrame());
+
+            // ── ...then ask the server whether it changed ─────────────────────
+            // Throttled and in-flight-guarded inside the service, so bouncing Home↔Tournaments is not
+            // one request per bounce. Returns immediately; failure is silent and leaves the list as is.
+            TournamentService.Instance?.RefreshSchedule();
         }
 
         private void OnDisable()
         {
             TournamentService.OnScheduleChanged -= HandleScheduleChanged;
             LocalizationManager.OnLanguageChanged -= HandleScheduleChanged;
+            ModalController.ModalStackEmptied -= HandleModalStackEmptied;
+            _rebuildDeferred = false;
             ClearCards();
         }
+
+        /// <summary>
+        /// A schedule arrived while a modal was open, and the rebuild was deferred until it closes.
+        /// </summary>
+        private bool _rebuildDeferred;
 
         /// <summary>Repaint in place — the schedule changed under us, or the language did.</summary>
         private void HandleScheduleChanged()
         {
             if (!isActiveAndEnabled) return;
+
+            // ⚠️ Never rebuild underneath an open modal (SPEC §3.3). RebuildCards() destroys every
+            // card, and the signup modal was opened FROM one of them — for a tournament that, with
+            // the admin's Activate/Deactivate switch live, may be exactly the row this payload
+            // dropped. Rebuilding there yanks the list out from under a player mid-decision and
+            // leaves a modal pointing at a definition the new schedule no longer contains.
+            // The deferral is the fix for the yank; TournamentService.TryGetTournament is the fix for
+            // the dangling id, since the player can also just sit on the modal and hit CONFIRM.
+            if (ModalController.OpenModalCount > 0)
+            {
+                _rebuildDeferred = true;
+                return;
+            }
+
             StopAllCoroutines();
             StartCoroutine(RebuildNextFrame());
+        }
+
+        /// <summary>The last modal closed — flush a rebuild that landed while one was open.</summary>
+        private void HandleModalStackEmptied()
+        {
+            if (!_rebuildDeferred) return;
+            _rebuildDeferred = false;
+            HandleScheduleChanged();
         }
 
         private IEnumerator RebuildNextFrame()

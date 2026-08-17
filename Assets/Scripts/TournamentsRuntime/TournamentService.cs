@@ -80,6 +80,22 @@ namespace Golfin.Tournaments
         /// <summary>Where the schedule currently in <see cref="Backend"/> came from. Diagnostics.</summary>
         public ScheduleSource Source { get; private set; } = ScheduleSource.BundledCsv;
 
+        // ── Refresh throttling ────────────────────────────────────────────────
+
+        /// <summary>
+        /// The one place the refetch cooldown is defined. The screen calls
+        /// <see cref="RefreshSchedule"/> on every entry; this is what keeps that from becoming one
+        /// request per Home↔Tournaments bounce. Rationale and the in-flight guard live in
+        /// <see cref="ScheduleRefreshThrottle"/>.
+        /// </summary>
+        public const double ScheduleRefreshCooldownSeconds = ScheduleRefreshThrottle.DefaultCooldownSeconds;
+
+        private readonly ScheduleRefreshThrottle _refreshThrottle =
+            new ScheduleRefreshThrottle(ScheduleRefreshCooldownSeconds);
+
+        /// <summary>Monotonic seconds; unaffected by <c>Time.timeScale</c> or a paused game.</summary>
+        private static double NowSeconds => Time.realtimeSinceStartupAsDouble;
+
         // Bot fields stay bundled (the server does not own them yet), and the mapper validates
         // every server botFieldId against this. Loaded once at Awake.
         private IReadOnlyDictionary<string, BotFieldConfig> _botFields
@@ -111,7 +127,9 @@ namespace Golfin.Tournaments
             else                ApplyBundledCsv(loader);
 
             // ── Then warm from the server, off the critical path ──
-            StartCoroutine(RefreshScheduleRoutine());
+            // Through the SAME throttled entry point the screen uses, so opening Tournaments in the
+            // first seconds of a session does not fire a second request alongside the boot fetch.
+            RefreshSchedule();
         }
 
         private void OnDestroy()
@@ -169,27 +187,69 @@ namespace Golfin.Tournaments
         }
 
         /// <summary>
+        /// Ask for a fresh schedule from the server. <b>The caller never waits on this</b> — it
+        /// returns on the same frame, having at most started a coroutine. Whoever is on screen keeps
+        /// rendering whatever it already has; if a new schedule lands,
+        /// <see cref="OnScheduleChanged"/> is raised and subscribers repaint in place.
+        /// <para>
+        /// Called from <c>Awake</c> (the boot warm) and from
+        /// <c>TournamentSelectionScreenController.OnEnable</c> (screen entry). Both go through the
+        /// throttle, so re-entering the screen during a slow request, or five times in ten seconds,
+        /// is still one request.
+        /// </para>
+        /// <para>
+        /// <b>Failure is silent by construction.</b> Every failure path inside the routine leaves the
+        /// current schedule untouched and logs a warning once — no toast, no empty state, no retry.
+        /// </para>
+        /// </summary>
+        /// <returns>True if a fetch was started; false if throttled (in flight or within cooldown).</returns>
+        public bool RefreshSchedule()
+        {
+            if (!_refreshThrottle.TryBegin(NowSeconds)) return false;
+
+            StartCoroutine(RefreshScheduleRoutine());
+            return true;
+        }
+
+        /// <summary>
         /// Fetch the schedule and, if it maps, swap it in wholesale and raise
-        /// <see cref="OnScheduleChanged"/>. Any failure leaves the boot-time schedule untouched.
+        /// <see cref="OnScheduleChanged"/>. Any failure leaves the current schedule untouched.
+        /// <para>
+        /// Enter through <see cref="RefreshSchedule"/>, never directly — the <c>finally</c> below is
+        /// what releases the throttle's in-flight guard, and it pairs with a <c>TryBegin</c> that
+        /// only that method performs.
+        /// </para>
         /// </summary>
         private IEnumerator RefreshScheduleRoutine()
         {
-            string? body = null;
-            IEnumerator fetch = RemoteTournamentSource.FetchRoutine(b => body = b);
-            while (fetch.MoveNext()) yield return fetch.Current;
+            // try/finally (no catch) is legal around `yield`, and is what guarantees the in-flight
+            // guard is released on EVERY exit — including the four `yield break`s below. A guard left
+            // set would silently disable refresh for the rest of the session.
+            try
+            {
+                string? body = null;
+                IEnumerator fetch = RemoteTournamentSource.FetchRoutine(b => body = b);
+                while (fetch.MoveNext()) yield return fetch.Current;
 
-            if (string.IsNullOrWhiteSpace(body)) yield break;
+                if (string.IsNullOrWhiteSpace(body)) yield break;
 
-            var schedule = TournamentScheduleMapper.TryMapJson(body, _botFields, "server");
-            if (schedule == null) yield break;   // errors already logged; keep what we have
+                var schedule = TournamentScheduleMapper.TryMapJson(body, _botFields, "server");
+                if (schedule == null) yield break;   // errors already logged; keep what we have
 
-            schedule = PreserveEnteredTournaments(schedule);
+                schedule = PreserveEnteredTournaments(schedule);
 
-            // Apply() also warms + sweeps the art cache.
-            Apply(schedule, ScheduleSource.Server);
+                // Apply() also warms + sweeps the art cache — including art for tournaments that are
+                // new to this payload, which is what gets a brand-new card its remote banner without
+                // a relaunch.
+                Apply(schedule, ScheduleSource.Server);
 
-            try { OnScheduleChanged?.Invoke(); }
-            catch (Exception ex) { Debug.LogError($"[TournamentService] OnScheduleChanged subscriber threw: {ex}"); }
+                try { OnScheduleChanged?.Invoke(); }
+                catch (Exception ex) { Debug.LogError($"[TournamentService] OnScheduleChanged subscriber threw: {ex}"); }
+            }
+            finally
+            {
+                _refreshThrottle.Settle(NowSeconds);
+            }
         }
 
         /// <summary>
@@ -219,6 +279,34 @@ namespace Golfin.Tournaments
                 if (!string.IsNullOrEmpty(d.BannerUrl))
                     map[d.BannerUrl!] = d.EndUtc;
             return map;
+        }
+
+        // ── Safe definition lookup ────────────────────────────────────────────
+
+        /// <summary>
+        /// The non-throwing counterpart of <c>Backend.GetTournament(id)</c>, which throws
+        /// <see cref="KeyNotFoundException"/> for an unknown id.
+        /// <para>
+        /// With a refetch on every screen entry AND an admin Activate/Deactivate switch, "the id I am
+        /// holding is no longer in the schedule" stops being exotic: a tournament the player has NOT
+        /// entered legitimately disappears mid-session, and any UI still holding its id — a signup
+        /// modal left open across a refresh — would take the exception. Entered tournaments are a
+        /// different case and never vanish: see <see cref="PreserveEnteredTournaments"/>.
+        /// </para>
+        /// </summary>
+        /// <returns>The definition, or null when the id is unknown to the current schedule.</returns>
+        public TournamentDefinition? TryGetTournament(string? id)
+        {
+            if (string.IsNullOrEmpty(id)) return null;
+
+            var backend = Backend;
+            if (backend == null) return null;
+
+            var defs = backend.GetTournaments();
+            for (int i = 0; i < defs.Count; i++)
+                if (string.Equals(defs[i].Id, id, StringComparison.Ordinal)) return defs[i];
+
+            return null;
         }
 
         // ── Prize accessor (T5 → T6 reuse) ────────────────────────────────────
