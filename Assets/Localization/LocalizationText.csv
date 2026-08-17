@@ -193,6 +193,7 @@ tourn.venue.lomond,Lomond Country Club · 18 Holes,ロモンドカントリー�
 tourn.venue.gotemba,Taiheyo Club Gotemba · 18 Holes,太平洋クラブ御殿場 · 18ホール
 tourn.venue.kisarazu,Kisarazu Higashi CC · 18 Holes,木更津東カントリークラブ · 18ホール
 tourn.venue.kawana,Kawana Hotel Golf Course · 18 Holes,川奈ホテルゴルフコース · 18ホール
+tourn.venue.holes_suffix,Holes,ホール
 AUTH_LOGIN_TITLE,Welcome Back,おかえりなさい
 AUTH_LOGIN_EMAIL_PLACEHOLDER,Email,メール
 AUTH_LOGIN_PASSWORD_PLACEHOLDER,Password,パスワード

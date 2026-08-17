@@ -270,20 +270,11 @@ namespace GolfinRedux.UI.Tournaments
             if (_titleText != null)
                 _titleText.text = TournamentDisplayName.Resolve(def);
 
-            // Venue: "{club name}  -  {N} Holes" (single occurrence of Holes count)
-            // Guard: if the localization string already embeds "Holes" (e.g. "Kasumigaseki CC · 18 Holes"),
-            // do NOT append another count to avoid "Kasumigaseki CC · 18 Holes  -  18 Holes".
-            string venueLocKey = "tourn.venue." + def.ClubId;
-            string venueName   = LocalizationManager.Get(venueLocKey);
-            if (string.IsNullOrEmpty(venueName) || venueName == venueLocKey)
-                venueName = def.ClubId;
+            // Venue: the shared ladder. Was an inline copy that appended a hole count on top of a
+            // localized string which already had one, guarded by sniffing the output for "Holes" —
+            // blind to "ホール", so JP rendered the count twice. See TournamentVenueLine.
             if (_venueText != null)
-            {
-                bool alreadyHasHoles = venueName.IndexOf("Holes", StringComparison.OrdinalIgnoreCase) >= 0;
-                _venueText.text = alreadyHasHoles
-                    ? venueName
-                    : $"{venueName}  -  {def.HoleSet.Count} Holes";
-            }
+                _venueText.text = TournamentVenueLine.Resolve(def);
 
             // Date line (combined): "MMM d – MMM d — Ends in Xd Xh" (Figma 13480:2579+2580+2582)
             if (_dateLineText != null)

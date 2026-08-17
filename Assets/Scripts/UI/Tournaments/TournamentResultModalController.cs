@@ -177,18 +177,10 @@ namespace GolfinRedux.UI.Tournaments
             if (_titleText != null)
                 _titleText.text = TournamentDisplayName.Resolve(def);
 
-            // Venue: "{club name}  -  {N} Holes" — mirrors Signup "already-has-Holes" guard
-            string venueLocKey = "tourn.venue." + def.ClubId;
-            string venueName   = LocalizationManager.Get(venueLocKey);
-            if (string.IsNullOrEmpty(venueName) || venueName == venueLocKey)
-                venueName = def.ClubId;
+            // Venue: the shared ladder (TournamentVenueLine) — same fix as the signup modal, which
+            // this block was a copy of.
             if (_venueText != null)
-            {
-                bool alreadyHasHoles = venueName.IndexOf("Holes", StringComparison.OrdinalIgnoreCase) >= 0;
-                _venueText.text = alreadyHasHoles
-                    ? venueName
-                    : $"{venueName}  -  {def.HoleSet.Count} Holes";
-            }
+                _venueText.text = TournamentVenueLine.Resolve(def);
 
             // Date line: "MMM d – MMM d — Finished"  (node shows "Finished", no countdown)
             if (_dateLineText != null)

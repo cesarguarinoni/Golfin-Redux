@@ -218,11 +218,10 @@ namespace GolfinRedux.UI.Tournaments
                 // localization key in this build, so without the ladder its raw key would render.
                 string name = TournamentDisplayName.Resolve(def);
 
-                // Venue line: localized via tourn.venue.<clubId>; fallback if missing
-                string venueLocKey = "tourn.venue." + def.ClubId;
-                string clubLine    = LocalizationManager.Get(venueLocKey);
-                if (string.IsNullOrEmpty(clubLine) || clubLine == venueLocKey)
-                    clubLine = def.ClubId + " · " + def.HoleSet.Count + " Holes";
+                // Venue line: the shared ladder (TournamentVenueLine). This card never had the
+                // double-count bug — it only appended on the fallback path — but it carried a third
+                // copy of the ladder and a hardcoded English "Holes". One resolver now.
+                string clubLine = TournamentVenueLine.Resolve(def);
 
                 string dateLine = BuildDateLine(cardState, def, entry, now);
                 bool   isFree   = def.EntryFeeRP == 0;
