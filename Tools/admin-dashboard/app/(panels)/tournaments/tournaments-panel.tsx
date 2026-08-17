@@ -100,25 +100,26 @@ export function TournamentsPanel() {
         </span>
       </div>
 
-      {/* The honest limitation, stated where it cannot be missed (SPEC §5). */}
-      <div className="mb-4 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-xs text-amber-200">
+      {/* Phase 3 shipped 2026-08-14: the client now fetches this schedule. The CSV
+          export stays because the shipped file is still the OFFLINE fallback. */}
+      <div className="mb-4 rounded-lg border border-accent-500/40 bg-accent-500/10 px-4 py-3 text-xs text-accent-200">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-          <strong className="font-semibold">Edits here do not reach players yet.</strong>
-          <span className="text-amber-200/80">
-            The game still reads the shipped <code>tournaments.csv</code>. Until Phase 3 wires the
-            client to this schedule, the way an edit ships is: edit → export → drop into{" "}
-            <code>Assets/Resources/Data</code> → commit → build.
+          <strong className="font-semibold">Edits here reach players on their next launch.</strong>
+          <span className="text-accent-200/80">
+            The game fetches this schedule at boot and falls back to the shipped{" "}
+            <code>tournaments.csv</code> only when it cannot reach the server. Re-export at each
+            release so that offline fallback is not a schedule from three builds ago.
           </span>
           <span className="ml-auto flex gap-2">
             <a
               href="/api/tournaments/export?file=tournaments"
-              className="rounded-md border border-amber-500/50 px-2.5 py-1 font-medium text-amber-100 hover:bg-amber-500/15"
+              className="rounded-md border border-accent-500/50 px-2.5 py-1 font-medium text-accent-100 hover:bg-accent-500/15"
             >
               Export tournaments.csv
             </a>
             <a
               href="/api/tournaments/export?file=prizes"
-              className="rounded-md border border-amber-500/50 px-2.5 py-1 font-medium text-amber-100 hover:bg-amber-500/15"
+              className="rounded-md border border-accent-500/50 px-2.5 py-1 font-medium text-accent-100 hover:bg-accent-500/15"
             >
               Export tournament_prizes.csv
             </a>
