@@ -76,6 +76,13 @@ export function validateInput(input: TournamentInput): string | null {
   }
   if (!input.botFieldId) return "A bot field is required.";
 
+  // 600 chars: the Figma blurb is 268 and its box is FIXED at 360px tall, so a much
+  // longer string overflows the info row on device rather than scrolling.
+  const descEn = input.descriptionEn?.trim() ?? "";
+  if (descEn.length > 600) return "English description must be 600 characters or fewer.";
+  const descJa = input.descriptionJa?.trim() ?? "";
+  if (descJa.length > 600) return "Japanese description must be 600 characters or fewer.";
+
   if (input.bannerUrl) {
     const hostErr = validateArtUrl(input.bannerUrl);
     if (hostErr) return hostErr;
@@ -142,6 +149,10 @@ function snapshot(t: TournamentRow): Record<string, unknown> {
     sponsor_name: t.sponsorName,
     league_key: t.leagueKey,
     banner_url: t.bannerUrl,
+    modal_banner_id: t.modalBannerId,
+    description_en: t.descriptionEn,
+    description_ja: t.descriptionJa,
+    description_key: t.descriptionKey,
     is_active: t.isActive,
     bands: t.bands.map((b) => ({
       rank_from: b.rankFrom,
@@ -169,6 +180,10 @@ function toDbRow(input: TournamentInput): Record<string, unknown> {
     sponsor_name: input.sponsorName?.trim() || null,
     league_key: input.leagueKey || null,
     banner_url: input.bannerUrl || null,
+    modal_banner_id: input.modalBannerId || null,
+    description_en: input.descriptionEn?.trim() || null,
+    description_ja: input.descriptionJa?.trim() || null,
+    description_key: input.descriptionKey?.trim() || null,
     is_active: input.isActive,
     // tier/status are GPS columns; 'open'/'upcoming' satisfy their CHECK
     // constraints. State for golfin rows is DERIVED from the dates (SPEC §4.1).
@@ -192,6 +207,49 @@ function bandRows(tournamentId: string, bands: PrizeBand[]): Record<string, unkn
   }));
 }
 
+
+/**
+ * A non-null `modalBannerId` must name an EXISTING `game_banners` row whose
+ * placement is `tournament_modal`. A dangling id, or one pointing at a
+ * `home_promo` / `rankings` row, is a 400 — never a silent write.
+ *
+ * Why it is not in `validateInput`: that function is synchronous and pure, and
+ * this needs the database. Both create and update call it right after.
+ *
+ * Returns an error string, or null when the id is absent or valid.
+ */
+export async function validateModalBannerId(
+  modalBannerId: string | null | undefined
+): Promise<string | null> {
+  const id = modalBannerId?.trim();
+  if (!id) return null; // "None" is always valid — the modal renders without a strip.
+
+  if (isMockMode()) {
+    const b = mockDb().banners?.find((x) => x.id === id);
+    if (!b) return `Banner "${id}" does not exist.`;
+    if (b.placement !== "tournament_modal") {
+      return `Banner "${b.label}" is a ${b.placement} banner. Only tournament_modal banners can be assigned to a tournament.`;
+    }
+    return null;
+  }
+
+  const admin = getSupabaseAdmin();
+  const { data, error } = await admin
+    .from("game_banners")
+    .select("id, label, placement")
+    .eq("id", id)
+    .maybeSingle();
+
+  // A query failure is not a validation pass. Refuse rather than write an id
+  // we could not check.
+  if (error) return `Could not verify the banner: ${error.message}`;
+  if (!data) return `Banner "${id}" does not exist.`;
+  if (data.placement !== "tournament_modal") {
+    return `Banner "${data.label}" is a ${data.placement} banner. Only tournament_modal banners can be assigned to a tournament.`;
+  }
+  return null;
+}
+
 // ---------------------------------------------------------------------------
 // Create
 // ---------------------------------------------------------------------------
@@ -202,6 +260,9 @@ export async function createTournament(
 ): Promise<MutationOutcome> {
   const err = validateInput(input);
   if (err) return fail(400, err);
+
+  const bannerErr = await validateModalBannerId(input.modalBannerId);
+  if (bannerErr) return fail(400, bannerErr);
 
   const { tournaments } = await fetchTournaments();
   if (tournaments.some((t) => t.slug === input.slug)) {
@@ -231,6 +292,10 @@ export async function createTournament(
       sponsorName: input.sponsorName?.trim() || null,
       leagueKey: input.leagueKey || null,
       bannerUrl: input.bannerUrl || null,
+      modalBannerId: input.modalBannerId || null,
+      descriptionEn: input.descriptionEn?.trim() || null,
+      descriptionJa: input.descriptionJa?.trim() || null,
+      descriptionKey: input.descriptionKey?.trim() || null,
       isActive: input.isActive,
       botSeed,
       status: "upcoming",
@@ -288,6 +353,9 @@ export async function updateTournament(
   const err = validateInput(input);
   if (err) return fail(400, err);
 
+  const bannerErr = await validateModalBannerId(input.modalBannerId);
+  if (bannerErr) return fail(400, bannerErr);
+
   const existing = await loadOne(id);
   if (!existing) return fail(404, "Tournament not found.");
   if (existing.kind !== "golfin") {
@@ -323,6 +391,10 @@ export async function updateTournament(
       sponsorName: input.sponsorName?.trim() || null,
       leagueKey: input.leagueKey || null,
       bannerUrl: input.bannerUrl || null,
+      modalBannerId: input.modalBannerId || null,
+      descriptionEn: input.descriptionEn?.trim() || null,
+      descriptionJa: input.descriptionJa?.trim() || null,
+      descriptionKey: input.descriptionKey?.trim() || null,
       isActive: input.isActive,
       bands: input.bands.map((b) => ({ ...b, id: b.id || randomUUID() })),
     });
@@ -384,6 +456,10 @@ export async function duplicateTournament(
     title: `${source.title} (copy)`,
     titleJa: source.titleJa ? `${source.titleJa}（コピー）` : null,
     nameKey: source.nameKey,
+    modalBannerId: source.modalBannerId,
+    descriptionEn: source.descriptionEn,
+    descriptionJa: source.descriptionJa,
+    descriptionKey: source.descriptionKey,
     courseId: source.courseId ?? "",
     holeSet: source.holeSet ?? "1-18",
     startAt: new Date(start + shift).toISOString(),

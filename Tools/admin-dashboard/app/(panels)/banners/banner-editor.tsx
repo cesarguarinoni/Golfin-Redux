@@ -8,6 +8,7 @@ import {
   PLACEMENT_LABEL,
   bannerSpec,
   deriveBannerState,
+  isAssignedPlacement,
   validateBannerLinkUrl,
 } from "@/lib/banner";
 import type { BannerInput, BannerPlacement, BannerRow } from "@/lib/types";
@@ -62,12 +63,15 @@ export function BannerEditor({
   mock,
   onClose,
   onSaved,
+  assignedTo = [],
 }: {
   /** null = create a new banner. */
   banner: BannerRow | null;
   mock: boolean;
   onClose: () => void;
   onSaved: (message: string) => void;
+  /** Slugs of the tournaments pointing at this banner (tournament_modal only). */
+  assignedTo?: string[];
 }) {
   const isNew = banner === null;
   const [draft, setDraft] = useState<BannerInput>(() => (banner ? toDraft(banner) : blankDraft()));
@@ -78,6 +82,9 @@ export function BannerEditor({
   const [danger, setDanger] = useState(false);
 
   const state = banner ? deriveBannerState(banner, Date.now()) : "OFF";
+  // tournament_modal is chosen per tournament, so scheduling and ordering do not
+  // apply to it — the fields are hidden rather than shown doing nothing.
+  const assignedPlacement = isAssignedPlacement(draft.placement);
   /** Switching a LIVE banner off is player-facing and instant — typed confirm. */
   const needsConfirm = banner !== null && state === "LIVE" && !draft.isActive;
 
@@ -253,7 +260,7 @@ export function BannerEditor({
               <p className="mt-1 text-[11px] text-zinc-600">{spec.where}</p>
             </div>
 
-            <div className="col-span-1">
+            <div className={assignedPlacement ? "hidden" : "col-span-1"}>
               <label className={label} htmlFor="b-sort">
                 Sort order
               </label>
@@ -311,7 +318,7 @@ export function BannerEditor({
               )}
             </div>
 
-            <div className="col-span-1">
+            <div className={assignedPlacement ? "hidden" : "col-span-1"}>
               <label className={label} htmlFor="b-start">
                 Start (UTC, optional)
               </label>
@@ -323,7 +330,7 @@ export function BannerEditor({
                 className={field}
               />
             </div>
-            <div className="col-span-1">
+            <div className={assignedPlacement ? "hidden" : "col-span-1"}>
               <label className={label} htmlFor="b-end">
                 End (UTC, optional)
               </label>
@@ -338,6 +345,27 @@ export function BannerEditor({
                 Exclusive. Sent to the client so a banner cached on-device expires even offline.
               </p>
             </div>
+
+            {assignedPlacement && (
+              <div className="col-span-2 rounded-md border border-surface-700 bg-surface-900 px-3 py-2.5 text-[11px] leading-relaxed text-zinc-500">
+                <strong className="font-semibold text-zinc-300">
+                  This banner is assigned, not scheduled.
+                </strong>{" "}
+                Schedule and sort order do not apply — each tournament&apos;s own window decides
+                when its strip is on screen, and a tournament shows exactly the one banner it is
+                assigned in the Tournaments panel. <strong className="text-zinc-300">Active</strong>{" "}
+                is still the kill switch: switching this off removes it from{" "}
+                <strong className="text-zinc-300">every</strong> tournament using it, at once.
+                {assignedTo.length > 0 && (
+                  <>
+                    {" "}
+                    Right now that is {assignedTo.length}{" "}
+                    {assignedTo.length === 1 ? "tournament" : "tournaments"}:{" "}
+                    <span className="font-mono text-zinc-400">{assignedTo.join(", ")}</span>.
+                  </>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="mt-6 grid grid-cols-2 gap-5">
@@ -384,6 +412,18 @@ export function BannerEditor({
             <div className="mt-8 rounded-lg border border-red-500/30 bg-red-500/5 px-3 py-3">
               {danger ? (
                 <>
+                  {assignedTo.length > 0 && (
+                    <p className="mb-2 rounded-md border border-red-500/50 bg-red-500/15 px-2.5 py-2 text-xs text-red-200">
+                      <strong className="font-semibold">
+                        Assigned to {assignedTo.length}{" "}
+                        {assignedTo.length === 1 ? "tournament" : "tournaments"}:
+                      </strong>{" "}
+                      <span className="font-mono">{assignedTo.join(", ")}</span>. Deleting clears
+                      the assignment on {assignedTo.length === 1 ? "it" : "each of them"} — the
+                      {assignedTo.length === 1 ? " tournament" : " tournaments"} stay live and their
+                      sign-up modals simply render without a strip.
+                    </p>
+                  )}
                   <p className="text-xs text-red-300">
                     Type <code className="font-mono">{banner!.label}</code> to delete this banner.
                     The uploaded artwork stays in Storage.

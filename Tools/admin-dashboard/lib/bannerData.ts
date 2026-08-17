@@ -41,13 +41,41 @@ function mapBanner(r: Row): BannerRow {
 
 export async function fetchBanners(): Promise<BannersResponse> {
   if (isMockMode()) {
-    return { banners: sortForPanel(mockDb().banners), mock: true };
+    const db = mockDb();
+    const assigned: Record<string, string[]> = {};
+    for (const t of db.tournaments) {
+      const id = t.modalBannerId;
+      if (id) (assigned[id] ??= []).push(t.slug ?? t.title);
+    }
+    return { banners: sortForPanel(db.banners), mock: true, assignedTournaments: assigned };
   }
 
-  const { data, error } = await getSupabaseAdmin().from("game_banners").select("*");
-  if (error) throw new Error(`game_banners query failed: ${error.message}`);
+  const admin = getSupabaseAdmin();
+  const [bRes, tRes] = await Promise.all([
+    admin.from("game_banners").select("*"),
+    // Which tournaments point at which banner. Tolerated failure: on a DB that
+    // predates the migration this errors, and an absent count must not take the
+    // whole Banners panel down — it just means no assignment is shown.
+    admin.from("tournaments").select("slug, title, modal_banner_id"),
+  ]);
+  if (bRes.error) throw new Error(`game_banners query failed: ${bRes.error.message}`);
 
-  return { banners: sortForPanel((data as Row[]).map(mapBanner)), mock: false };
+  const assignedTournaments: Record<string, string[]> = {};
+  if (tRes.error) {
+    console.warn("modal_banner_id assignment count failed:", tRes.error.message);
+  } else {
+    for (const r of (tRes.data ?? []) as Row[]) {
+      const id = str(r.modal_banner_id);
+      if (!id) continue;
+      (assignedTournaments[id] ??= []).push(str(r.slug) ?? str(r.title) ?? "(untitled)");
+    }
+  }
+
+  return {
+    banners: sortForPanel((bRes.data as Row[]).map(mapBanner)),
+    mock: false,
+    assignedTournaments,
+  };
 }
 
 /**

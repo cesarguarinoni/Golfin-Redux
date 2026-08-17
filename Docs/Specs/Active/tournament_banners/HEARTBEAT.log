@@ -1,0 +1,68 @@
+=== iter-1 kickoff baseline 2026-08-17T06:45:02Z ===
+HEAD: 3ed77fb61e4461c986f051d98a0a23476e955eb9
+DIRTY (git status --porcelain --untracked-files=all):
+ M "Assets/Art/Original UI/Common/S_Common_BGCorner20.png.meta"
+ M Assets/Localization/LocalizationText.csv
+ M Assets/Localization/LocalizationTextTable.asset
+ M Assets/Plugins/NuGet/.nuget-installed.json
+ M Assets/Plugins/NuGet/McpPlugin.Common.dll
+ M Assets/Plugins/NuGet/McpPlugin.dll
+ M Assets/Prefabs/UI/Modals/TournamentSignupModal.prefab
+ M Assets/Scenes/ShellScene.unity
+ M Assets/Scripts/Tournaments/TournamentDefinition.cs
+ M Assets/Scripts/TournamentsRuntime/RemoteTournamentDtos.cs
+ M Assets/Scripts/TournamentsRuntime/TournamentScheduleMapper.cs
+ M Assets/Scripts/UI/Tournaments/TournamentSignupModalController.cs
+ M Docs/AI_CONTEXT.md
+ M Docs/Specs/Completed/game_banners/STATUS.md
+ M Docs/TellCode.md
+ M Packages/manifest.json
+ M Packages/packages-lock.json
+ M ProjectSettings/ProjectSettings.asset
+ M Tools/admin-dashboard/app/(panels)/tournaments/tournament-editor.tsx
+ M Tools/admin-dashboard/lib/mockTournaments.ts
+ M Tools/admin-dashboard/lib/tournamentData.ts
+ M Tools/admin-dashboard/lib/tournamentMutations.ts
+ M Tools/admin-dashboard/lib/types.ts
+?? "Assets/Art/Original UI/Common/S_Common_BGCorner50.png"
+?? "Assets/Art/Original UI/Common/S_Common_BGCorner50.png.meta"
+?? Assets/Editor/iOSPostProcess.cs
+?? Assets/Editor/iOSPostProcess.cs.meta
+?? "Assets/Resources/Characters/Homescreen/Resol Golf Banner.png"
+?? "Assets/Resources/Characters/Homescreen/Resol Golf Banner.png.meta"
+?? Assets/Scripts/TournamentsRuntime/Tests/TournamentDescriptionTests.cs
+?? Assets/Scripts/TournamentsRuntime/Tests/TournamentDescriptionTests.cs.meta
+?? Assets/Scripts/TournamentsRuntime/TournamentDescription.cs
+?? Assets/Scripts/TournamentsRuntime/TournamentDescription.cs.meta
+?? Docs/Specs/Active/tournament_banners/HEARTBEAT.log
+?? Docs/Specs/Active/tournament_banners/IMPLEMENTER_REPORT.md
+?? Docs/Specs/Active/tournament_banners/SPEC.md
+?? Docs/Specs/Active/tournament_banners/STATUS.md
+?? Docs/Specs/Active/tournament_signup_modal/HEARTBEAT.log
+?? Docs/Specs/Active/tournament_signup_modal/IMPLEMENTER_REPORT.md
+?? Docs/Specs/Active/tournament_signup_modal/SPEC.md
+?? Docs/Specs/Active/tournament_signup_modal/STATUS.md
+?? Docs/Specs/Active/tournament_signup_modal/reference/current_13480-2479_signup.png
+?? Docs/Specs/Active/tournament_signup_modal/reference/nodes/13892-3454_context.jsx
+?? Docs/Specs/Active/tournament_signup_modal/reference/nodes/13892-3454_metadata.xml
+?? Docs/Specs/Active/tournament_signup_modal/reference/nodes/TournamentSignupModal_spec.json
+?? Docs/Specs/Active/tournament_signup_modal/reference/nodes/namemap.json
+?? Docs/Specs/Active/tournament_signup_modal/reference/related_13894-3628_prize_banner.png
+?? Docs/Specs/Active/tournament_signup_modal/reference/target_13498-2067_info_banner.png
+?? Docs/Specs/Active/tournament_signup_modal/reference/variant_13892-3454_info_no_banner.png
+?? Docs/Specs/Active/tournament_signup_modal/reference/variant_13892-3454_repull.png
+?? Docs/TESTFLIGHT_RUNBOOK.md
+?? Tools/admin-dashboard/migrations/2026_08_17_tournament_description.sql
+=== end baseline ===
+
+=== iter-1 progress 2026-08-17 ===
+Order followed: migration (Cesar pasted) -> PostgREST verify -> backend + fly deploy ->
+curl verify -> dashboard + npm run deploy -> Unity.
+Constraint name game_banners_placement_check READ from the DB (failing-insert probe), not trusted.
+Backend deployed (playlife-api). Dashboard deployed (golfin-admin / admin.golfin.world).
+Client: DTO + 3 definition props + mapper + TryResolveModalBanner reusing BannerService.ResolveImageUrl.
+Verified live: assigned -> 1411 with real 970x252 art; unassigned -> 1167; JA falls back to EN;
+off-allowlist -> state B; /api/v1/banners excludes tournament_modal with one live;
+on delete set null leaves the tournament alive; 6 tournaments / 19 base fields intact.
+EditMode 128/128. Smoke banner row + storage object deleted afterwards.
+=== end ===

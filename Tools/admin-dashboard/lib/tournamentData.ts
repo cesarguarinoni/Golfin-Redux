@@ -60,6 +60,14 @@ function mapTournament(
     sponsorName: str(r.sponsor_name),
     leagueKey: str(r.league_key),
     bannerUrl: str(r.banner_url),
+    // Same tolerance as isActive/description*: str() yields null on an
+    // un-migrated DB instead of throwing, so the panel renders either way.
+    modalBannerId: str(r.modal_banner_id),
+    // str() tolerates the columns being absent on an un-migrated DB — the same
+    // courtesy isActive gets below — so the panel renders instead of throwing.
+    descriptionEn: str(r.description_en),
+    descriptionJa: str(r.description_ja),
+    descriptionKey: str(r.description_key),
     botSeed: numOrNull(r.bot_seed),
     status: str(r.status),
     tier: str(r.tier),

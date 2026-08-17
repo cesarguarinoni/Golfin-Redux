@@ -138,6 +138,21 @@ export interface TournamentRow {
   sponsorName: string | null;
   leagueKey: string | null;
   bannerUrl: string | null;
+  /**
+   * The game_banners row whose art is this tournament's sign-up-modal strip
+   * (970x252). Must name a `tournament_modal` row. Null = no strip.
+   * NOT `bannerUrl`, which is the 260x360 card art in a different bucket.
+   */
+  modalBannerId: string | null;
+  /**
+   * Sign-up modal blurb, English. NOT `tournaments.description` — that column is
+   * GPS-owned and single-locale (see migrations/2026_08_17_tournament_description.sql).
+   */
+  descriptionEn: string | null;
+  /** Sign-up modal blurb, Japanese. Shown only to players on Japanese. */
+  descriptionJa: string | null;
+  /** Build-time localization key; overrides both blurb columns when it resolves. */
+  descriptionKey: string | null;
   botSeed: number | null;
   /** GPS-only; informational for golfin rows. */
   status: string | null;
@@ -195,6 +210,10 @@ export interface TournamentInput {
   sponsorName: string | null;
   leagueKey: string | null;
   bannerUrl: string | null;
+  descriptionEn: string | null;
+  descriptionJa: string | null;
+  descriptionKey: string | null;
+  modalBannerId: string | null;
   isActive: boolean;
   bands: PrizeBand[];
   /** Required (typed slug) when editing a tournament that is Open or Ending. */
@@ -206,10 +225,14 @@ export interface TournamentInput {
 // ---------------------------------------------------------------------------
 
 /**
- * The two in-game slots. Both are hard-coded in the build, both keep their
- * bundled sprite as the fallback, and neither can be added from here.
+ * The three in-game slots, all hard-coded in the build; none can be added here.
+ *
+ * `home_promo` and `rankings` are AUTO-SERVED by GET /api/v1/banners and keep
+ * their bundled sprite as the fallback. `tournament_modal` is ASSIGNED per
+ * tournament instead (tournaments.modal_banner_id) and has no bundled fallback —
+ * with nothing assigned the sign-up modal simply renders its no-banner state.
  */
-export type BannerPlacement = "home_promo" | "rankings";
+export type BannerPlacement = "home_promo" | "rankings" | "tournament_modal";
 
 /**
  * Derived from is_active + the schedule window — never stored. LIVE is the only
@@ -256,6 +279,15 @@ export interface BannerInput {
 export interface BannersResponse {
   banners: BannerRow[];
   mock: boolean;
+  /**
+   * Which tournaments each banner is assigned to, keyed by banner id — read off
+   * `tournaments.modal_banner_id`. Only `tournament_modal` banners can appear.
+   *
+   * The panel shows this as "Assigned to N tournaments" so the blast radius of
+   * switching one off is visible without opening the Tournaments panel, and the
+   * delete confirmation can name them.
+   */
+  assignedTournaments: Record<string, string[]>;
 }
 
 /** Users-panel admin actions (POST /api/users/:id/actions). */

@@ -1,7 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { BANNER_PLACEMENTS, PLACEMENT_LABEL, bannerSpec, deriveBannerState } from "@/lib/banner";
+import {
+  BANNER_PLACEMENTS,
+  PLACEMENT_LABEL,
+  bannerSpec,
+  deriveBannerState,
+  isAssignedPlacement,
+} from "@/lib/banner";
 import { fmtDate } from "@/lib/format";
 import type { BannerRow, BannerState, BannersResponse } from "@/lib/types";
 import { BannerEditor } from "./banner-editor";
@@ -55,6 +61,8 @@ export function BannersPanel() {
 
   const now = Date.now();
   const rows = useMemo(() => data?.banners ?? [], [data]);
+  /** banner id → tournament slugs pointing at it. Empty for the auto-served placements. */
+  const assigned = useMemo(() => data?.assignedTournaments ?? {}, [data]);
 
   /** Grouped by placement, in the order the endpoint resolves them. */
   const groups = useMemo(
@@ -229,7 +237,25 @@ export function BannersPanel() {
                             )}
                           </div>
                         </td>
-                        <td className="px-4 py-2.5 text-sm font-medium text-zinc-200">{b.label}</td>
+                        <td className="px-4 py-2.5 text-sm font-medium text-zinc-200">
+                          {b.label}
+                          {isAssignedPlacement(b.placement) && (
+                            // The blast radius of switching this off, visible without
+                            // opening the Tournaments panel.
+                            <div
+                              className="mt-0.5 text-[11px] font-normal text-zinc-500"
+                              title={(assigned[b.id] ?? []).join(", ")}
+                            >
+                              {(assigned[b.id] ?? []).length === 0
+                                ? "Not assigned to any tournament"
+                                : `Assigned to ${(assigned[b.id] ?? []).length} ${
+                                    (assigned[b.id] ?? []).length === 1
+                                      ? "tournament"
+                                      : "tournaments"
+                                  }`}
+                            </div>
+                          )}
+                        </td>
                         <td className="px-4 py-2.5">
                           <StateBadge state={state} />
                         </td>
@@ -296,6 +322,7 @@ export function BannersPanel() {
       {(editing || creating) && (
         <BannerEditor
           banner={editing}
+          assignedTo={editing ? assigned[editing.id] ?? [] : []}
           mock={data.mock}
           onClose={() => {
             setEditing(null);

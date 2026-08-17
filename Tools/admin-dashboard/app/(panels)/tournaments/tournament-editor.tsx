@@ -12,6 +12,7 @@ import {
   validatePrizeBands,
 } from "@/lib/tournament";
 import type {
+  BannerRow,
   PrizeBand,
   TournamentEntriesResponse,
   TournamentInput,
@@ -53,6 +54,10 @@ function blankDraft(): TournamentInput {
     sponsorName: "GOLFIN",
     leagueKey: "SILVER",
     bannerUrl: null,
+    modalBannerId: null,
+    descriptionEn: "",
+    descriptionJa: "",
+    descriptionKey: "",
     isActive: true,
     bands: [
       { id: "", rankFrom: 1, rankTo: 1, rpReward: 300, itemRewardId: null },
@@ -78,6 +83,10 @@ function toDraft(t: TournamentRow): TournamentInput {
     sponsorName: t.sponsorName ?? "",
     leagueKey: t.leagueKey ?? "",
     bannerUrl: t.bannerUrl,
+    modalBannerId: t.modalBannerId,
+    descriptionEn: t.descriptionEn ?? "",
+    descriptionJa: t.descriptionJa ?? "",
+    descriptionKey: t.descriptionKey ?? "",
     isActive: t.isActive,
     bands: t.bands.map((b) => ({ ...b })),
   };
@@ -137,6 +146,10 @@ export function TournamentEditor({
         titleJa: draft.titleJa?.trim() || null,
         sponsorName: draft.sponsorName?.trim() || null,
         leagueKey: draft.leagueKey || null,
+        descriptionEn: draft.descriptionEn?.trim() || null,
+        descriptionJa: draft.descriptionJa?.trim() || null,
+        descriptionKey: draft.descriptionKey?.trim() || null,
+        modalBannerId: draft.modalBannerId || null,
         confirmSlug: live ? confirmSlug : undefined,
       };
       const res = await fetch(isNew ? "/api/tournaments" : `/api/tournaments/${tournament!.id}`, {
@@ -563,6 +576,93 @@ export function TournamentEditor({
                   anything you name yourself.
                 </p>
               </div>
+
+              {/* ── Sign-up modal blurb (tournament_signup_modal §6) ───────── */}
+              <div className="col-span-2 mt-1 border-t border-zinc-800 pt-4">
+                <p className="text-[11px] uppercase tracking-wider text-zinc-500">
+                  Sign-up modal description
+                </p>
+                <p className="mt-1 text-[11px] text-zinc-600">
+                  The blurb beside the course photo in the sign-up modal. Leave both empty and the
+                  modal hides that whole row — photo included — rather than showing a lone image.
+                </p>
+              </div>
+
+              <div className="col-span-1">
+                <label className={label} htmlFor="t-desc-en">
+                  Description (English)
+                </label>
+                <textarea
+                  id="t-desc-en"
+                  rows={5}
+                  maxLength={600}
+                  value={draft.descriptionEn ?? ""}
+                  onChange={(e) => patch({ descriptionEn: e.target.value })}
+                  placeholder="Compete in the prestigious Gold Tournament at Lomond Club…"
+                  className={`${field} resize-y`}
+                />
+                <p className="mt-1 text-[11px] text-zinc-600">
+                  <span
+                    className={
+                      (draft.descriptionEn?.trim().length ?? 0) > 600
+                        ? "text-red-400"
+                        : "text-zinc-500"
+                    }
+                  >
+                    {draft.descriptionEn?.trim().length ?? 0}/600
+                  </span>{" "}
+                  — the box is a fixed 360px tall on device, so long copy overflows rather than
+                  scrolling. The Figma reference is 268 characters.
+                </p>
+              </div>
+
+              <div className="col-span-1">
+                <label className={label} htmlFor="t-desc-ja">
+                  Description (Japanese)
+                </label>
+                <textarea
+                  id="t-desc-ja"
+                  rows={5}
+                  maxLength={600}
+                  lang="ja"
+                  value={draft.descriptionJa ?? ""}
+                  onChange={(e) => patch({ descriptionJa: e.target.value })}
+                  placeholder="日本有数の景観と難易度を誇るクラブでのトーナメント。"
+                  className={`${field} resize-y`}
+                />
+                <p className="mt-1 text-[11px] text-zinc-600">
+                  <span
+                    className={
+                      (draft.descriptionJa?.trim().length ?? 0) > 600
+                        ? "text-red-400"
+                        : "text-zinc-500"
+                    }
+                  >
+                    {draft.descriptionJa?.trim().length ?? 0}/600
+                  </span>{" "}
+                  — shown only to players on Japanese. An English player never sees it, even when
+                  the English box above is empty.
+                </p>
+              </div>
+
+              <div className="col-span-1">
+                <label className={label} htmlFor="t-desckey">
+                  Description localization key
+                </label>
+                <input
+                  id="t-desckey"
+                  value={draft.descriptionKey ?? ""}
+                  onChange={(e) => patch({ descriptionKey: e.target.value })}
+                  placeholder="tourn.desc.kasumigaseki"
+                  className={`${field} font-mono`}
+                />
+                <p className="mt-1 text-[11px] text-zinc-600">
+                  Optional, and it{" "}
+                  <strong className="text-zinc-400">overrides both descriptions</strong> whenever it
+                  resolves in the shipped build — in both languages. Keys ship inside the app, so a
+                  key invented here resolves nowhere and the text above is used instead.
+                </p>
+              </div>
             </div>
           )}
 
@@ -583,6 +683,8 @@ export function TournamentEditor({
               courseArt={course?.art ?? null}
               onChange={(url) => patch({ bannerUrl: url })}
               onNotice={setNotice}
+              modalBannerId={draft.modalBannerId}
+              onModalBannerChange={(id) => patch({ modalBannerId: id })}
             />
           )}
 
@@ -823,6 +925,8 @@ function ArtworkTab({
   courseArt,
   onChange,
   onNotice,
+  modalBannerId,
+  onModalBannerChange,
 }: {
   slug: string;
   bannerUrl: string | null;
@@ -830,6 +934,8 @@ function ArtworkTab({
   courseArt: string | null;
   onChange: (url: string | null) => void;
   onNotice: (message: string | null) => void;
+  modalBannerId: string | null;
+  onModalBannerChange: (id: string | null) => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
@@ -989,6 +1095,149 @@ function ArtworkTab({
           )}
         </div>
       </div>
+
+      <ModalBannerPicker value={modalBannerId} onChange={onModalBannerChange} />
+    </div>
+  );
+}
+
+/**
+ * Assign the sign-up modal's cross-promotion strip (tournament_banners §3.2).
+ *
+ * A PICKER, deliberately not an uploader: banner bytes are uploaded once in the
+ * Banners panel and one promo then serves every tournament. Adding a second
+ * upload control here would defeat the whole point of managing them centrally.
+ *
+ * Only ACTIVE tournament_modal banners are listed — assigning an inactive one
+ * would look like it worked and show nothing in game, because the endpoint
+ * applies is_active server-side.
+ */
+function ModalBannerPicker({
+  value,
+  onChange,
+}: {
+  value: string | null;
+  onChange: (id: string | null) => void;
+}) {
+  const [banners, setBanners] = useState<BannerRow[] | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/banners");
+        const body = (await res.json()) as { banners?: BannerRow[]; error?: string };
+        if (cancelled) return;
+        if (!res.ok) {
+          setLoadError(body.error ?? `Could not load banners (${res.status}).`);
+          return;
+        }
+        setBanners(body.banners ?? []);
+      } catch (err) {
+        if (!cancelled) setLoadError(err instanceof Error ? err.message : "Could not load banners.");
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const options = (banners ?? []).filter((b) => b.placement === "tournament_modal" && b.isActive);
+  const selected = options.find((b) => b.id === value) ?? null;
+  // An assignment pointing at a row that is no longer active/eligible still has to
+  // be visible, or the operator cannot see why the strip vanished in game.
+  const orphaned = value !== null && selected === null && banners !== null;
+
+  return (
+    <div className="mt-6 border-t border-surface-800 pt-5">
+      <label className={label} htmlFor="t-modal-banner">
+        Sign-up modal banner
+      </label>
+      <p className="mt-1 mb-2 text-[11px] leading-relaxed text-zinc-600">
+        The 970×252 cross-promotion strip at the top of this tournament&apos;s sign-up modal. The
+        artwork lives in the{" "}
+        <a href="/banners" className="text-accent-400 underline hover:text-accent-300">
+          Banners panel
+        </a>{" "}
+        — upload it once there and assign it to as many tournaments as you like. Switching a banner
+        off in that panel removes it from every tournament at once.
+      </p>
+
+      {loadError ? (
+        <p className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-300">
+          {loadError}
+        </p>
+      ) : (
+        <>
+          <select
+            id="t-modal-banner"
+            value={value ?? ""}
+            disabled={banners === null}
+            onChange={(e) => onChange(e.target.value || null)}
+            className={field}
+          >
+            <option value="">None — the modal renders without a strip</option>
+            {options.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.label}
+              </option>
+            ))}
+            {orphaned && <option value={value ?? ""}>(current assignment — inactive or removed)</option>}
+          </select>
+
+          {banners === null && <p className="mt-2 text-[11px] text-zinc-600">Loading banners…</p>}
+
+          {banners !== null && options.length === 0 && (
+            <p className="mt-2 rounded-md border border-surface-700 bg-surface-900 px-3 py-2 text-[11px] text-zinc-500">
+              No active <code>tournament_modal</code> banners yet. Create one in the{" "}
+              <a href="/banners" className="text-accent-400 underline hover:text-accent-300">
+                Banners panel
+              </a>{" "}
+              and it will appear here.
+            </p>
+          )}
+
+          {orphaned && (
+            <p className="mt-2 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-200">
+              This tournament points at a banner that is no longer active. Players see no strip.
+              Pick another, or None.
+            </p>
+          )}
+
+          {selected && (
+            <div className="mt-3 flex items-start gap-3">
+              <div className="h-[54px] w-[208px] shrink-0 overflow-hidden rounded-md border border-surface-700 bg-surface-950">
+                {selected.imageUrlEn ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={selected.imageUrlEn}
+                    alt={selected.label}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <div className="flex h-full items-center justify-center text-[10px] text-zinc-600">
+                    no art uploaded
+                  </div>
+                )}
+              </div>
+              <div className="min-w-0 text-[11px] text-zinc-500">
+                <div className="text-zinc-300">{selected.label}</div>
+                {selected.linkUrl ? (
+                  <div className="mt-0.5 break-all font-mono text-[10px] text-zinc-600">
+                    taps open {selected.linkUrl}
+                  </div>
+                ) : (
+                  <div className="mt-0.5">Not tappable — no link set.</div>
+                )}
+                {!selected.imageUrlJa && (
+                  <div className="mt-0.5">JP players see the English art (no JA upload).</div>
+                )}
+              </div>
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }

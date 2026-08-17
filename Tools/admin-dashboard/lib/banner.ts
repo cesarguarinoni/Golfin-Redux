@@ -11,10 +11,36 @@ import type { BannerInput, BannerPlacement, BannerRow, BannerState } from "./typ
 export const BANNER_BUCKET = "game-banners";
 
 /**
- * The two slots that exist. Both are hard-coded in the build — a placement
+ * The three slots that exist. All are hard-coded in the build — a placement
  * cannot be added from here, and the DB CHECK constraint agrees with this list.
+ *
+ * `tournament_modal` is different in kind from the other two: it is never
+ * auto-served by `GET /api/v1/banners`. It reaches a player only by being
+ * ASSIGNED to a tournament in the Tournaments panel, and shows inside that
+ * tournament's sign-up modal. See PLACEMENT_IS_ASSIGNED.
  */
-export const BANNER_PLACEMENTS = ["home_promo", "rankings"] as const;
+export const BANNER_PLACEMENTS = ["home_promo", "rankings", "tournament_modal"] as const;
+
+/**
+ * Placements chosen per-tournament rather than auto-served.
+ *
+ * For these, `start_at` / `end_at` / `sort_order` do NOT apply — the
+ * tournament's own window governs when the banner is on screen, and there is no
+ * "pick the top one" among assigned banners. The editor hides those three
+ * fields rather than showing controls that do nothing.
+ *
+ * `is_active` still applies, and is still the kill switch: switching one off
+ * drops it from EVERY tournament using it, at once.
+ */
+export const PLACEMENT_IS_ASSIGNED: Record<BannerPlacement, boolean> = {
+  home_promo: false,
+  rankings: false,
+  tournament_modal: true,
+};
+
+export function isAssignedPlacement(placement: BannerPlacement): boolean {
+  return PLACEMENT_IS_ASSIGNED[placement] === true;
+}
 
 export function isBannerPlacement(value: unknown): value is BannerPlacement {
   return (BANNER_PLACEMENTS as readonly string[]).includes(value as string);
@@ -54,6 +80,17 @@ export const BANNER_ART_SPEC = {
       height: 252,
       aspect: 970 / 252,
     },
+    tournament_modal: {
+      screen: "Tournament sign-up modal",
+      where: "TournamentSignupModal/Panel/Content/BannerRoot",
+      // No bundled sprite: unlike the other two slots the strip does not ship
+      // with fallback art. With no banner assigned the modal renders its
+      // no-banner state (1167 tall instead of 1411), which is a complete design.
+      sprite: "—  (no bundled fallback; the strip is simply absent)",
+      width: 970,
+      height: 252,
+      aspect: 970 / 252,
+    },
   },
 } as const;
 
@@ -64,6 +101,7 @@ export function bannerSpec(placement: BannerPlacement) {
 export const PLACEMENT_LABEL: Record<BannerPlacement, string> = {
   home_promo: "Home — promo strip",
   rankings: "Rankings — banner",
+  tournament_modal: "Tournament — sign-up modal strip",
 };
 
 // ---------------------------------------------------------------------------
@@ -213,7 +251,7 @@ export function validateBannerInput(input: BannerInput): string | null {
   }
 
   if (!isBannerPlacement(input.placement)) {
-    return `Unknown placement "${input.placement}". The build has exactly two: ${BANNER_PLACEMENTS.join(", ")}.`;
+    return `Unknown placement "${input.placement}". The build has exactly three: ${BANNER_PLACEMENTS.join(", ")}.`;
   }
 
   // A DRAFT may have no art. A LIVE banner with no art is a slot that silently
