@@ -49,6 +49,16 @@ namespace GolfinRedux.UI.Gacha
         // ── Tab colour tokens ─────────────────────────────────────────────────
         private static readonly Color ActiveTabColor   = new Color(1f, 0.816f, 0.137f); // gold
         private static readonly Color InactiveTabColor = Color.white;
+        private static readonly Color DisabledTabColor = new Color(1f, 1f, 1f, 0.35f);  // grayed-out
+
+        /// <summary>
+        /// GIFTS has no content panel built yet (gacha_screen SPEC §8 — out of scope), so the tab is
+        /// shown grayed and non-tappable rather than blanking the screen. Flip to true in the same
+        /// change that lands the gifts content; ShowGiftsTab() below is already the correct handler.
+        /// </summary>
+        /// (static readonly rather than const so the disabled branches don't trip CS0162
+        /// unreachable-code warnings while the flag is false.)
+        private static readonly bool GiftsTabEnabled = false;
 
         // ── Runtime state ─────────────────────────────────────────────────────
         private Button?   _dailyTab;
@@ -116,7 +126,16 @@ namespace GolfinRedux.UI.Gacha
 
             if (_dailyTab  != null) _dailyTab.onClick.AddListener(ShowGachaTab);
             if (_weeklyTab != null) _weeklyTab.onClick.AddListener(ShowStoreTab);
-            if (_monthlyTab != null) _monthlyTab.onClick.AddListener(ShowGiftsTab);
+
+            if (_monthlyTab != null)
+            {
+                if (GiftsTabEnabled) _monthlyTab.onClick.AddListener(ShowGiftsTab);
+                // Left unwired AND non-interactable while disabled: interactable=false alone still
+                // leaves a listener that a future refactor could re-trigger, and the tap would blank
+                // the screen. ButtonPressFeedback (if present) keys off interactable, so the tab also
+                // stops animating on press.
+                else _monthlyTab.interactable = false;
+            }
         }
 
         // ── HistoryChip → GachaHistory screen ────────────────────────────────
@@ -185,7 +204,7 @@ namespace GolfinRedux.UI.Gacha
         {
             SetTabActive(_dailyTabLabel,   true);
             SetTabActive(_weeklyTabLabel,  false);
-            SetTabActive(_monthlyTabLabel, false);
+            SetGiftsTabLabel(false);
             SetActive(_gachaContent,  true);
             SetActive(_storeContent,  false);
             SetActive(_filterGroup,   false);
@@ -195,17 +214,32 @@ namespace GolfinRedux.UI.Gacha
         {
             SetTabActive(_dailyTabLabel,   false);
             SetTabActive(_weeklyTabLabel,  true);
-            SetTabActive(_monthlyTabLabel, false);
+            SetGiftsTabLabel(false);
             SetActive(_gachaContent,  false);
             SetActive(_storeContent,  true);
             SetActive(_filterGroup,   true);
         }
 
+        /// <summary>
+        /// GIFTS styling: grayed while <see cref="GiftsTabEnabled"/> is false, otherwise the normal
+        /// active/inactive treatment. Kept separate so re-enabling the tab is a one-const change.
+        /// </summary>
+        private void SetGiftsTabLabel(bool active)
+        {
+            if (_monthlyTabLabel == null) return;
+            if (!GiftsTabEnabled) { _monthlyTabLabel.color = DisabledTabColor; return; }
+            SetTabActive(_monthlyTabLabel, active);
+        }
+
+        /// <summary>
+        /// Unreferenced while <see cref="GiftsTabEnabled"/> is false — this is the handler the tab
+        /// gets wired back to once the gifts content panel exists (add the SetActive for it here).
+        /// </summary>
         private void ShowGiftsTab()
         {
             SetTabActive(_dailyTabLabel,   false);
             SetTabActive(_weeklyTabLabel,  false);
-            SetTabActive(_monthlyTabLabel, true);
+            SetGiftsTabLabel(true);
             SetActive(_gachaContent,  false);
             SetActive(_storeContent,  false);
             SetActive(_filterGroup,   false);
