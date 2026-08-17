@@ -62,17 +62,22 @@ Stage-C1 skips. Baseline was 1233 total; +13 is exactly the 13 tests added here.
 
 The first `TournamentsRuntime` run returned the known spurious "No tests found"; retried, never read as green.
 
-## Needs a real run (not verifiable from here)
+## The live run — done by Cesar, 2026-08-17
 
-1. **A tournament with `title_ja` rendering on the T7 card in JP.** Everything above verifies the ladder
-   and the mapper; nothing here rendered an actual card from an actual server row, because that needs a
-   dashboard tournament with `title_ja` populated and a logged-in session against prod. Play mode in the
-   editor would do — a device is not strictly required, but a live row is.
-2. **The §3.4 repaint.** The subscription is wired and compiles, but "open Settings → 日本語 → the T7 cards
-   repaint in place" was not exercised. Same prerequisite as (1).
-3. Item 1's EN/JP split at the card level, for the same reason.
+Three things could not be checked from this session, because they need a dashboard tournament with
+`title_ja` populated plus a logged-in session against prod:
 
-Items 2–5 need nothing further: they are pure functions and are pinned by tests that were proven to run.
+1. A tournament with `title_ja` rendering on the T7 card in JP.
+2. The §3.4 repaint — open Settings → 日本語 with T7 already open, cards repaint in place.
+3. Item 1's EN/JP split at the card level.
+
+**Cesar ran these himself in the editor and approved on that basis.** This session did not observe
+that run, so the detail above is his, not a claim made here — everything else in this file was
+verified directly. (The play-mode session stopped mid-task was his, after the live run had already
+finished; nothing was lost.)
+
+Acceptance items 2–5 needed nothing further regardless: they are pure functions, pinned by tests
+that were proven to run.
 
 ## Interim, on purpose
 
