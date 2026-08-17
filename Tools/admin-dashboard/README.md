@@ -95,15 +95,29 @@ necessarily runs without them. That is safe — see the guard below.
 accounts and `golfin.world` lives in the Next Innovation one. A Worker can only
 take a custom domain from a zone in its own account.
 
-### Cloudflare Access
+### Cloudflare Access — ON
 
-**Still to do, and it is the gate that matters.** Behind the app's own login sits
-a `service_role` key with unrestricted write access to production, so the
-Supabase password plus `ADMIN_EMAILS` is otherwise the only barrier.
+Application **GOLFIN Admin** → destination `admin.golfin.world` → policy
+**Admins** (Allow; include Emails = the two `ADMIN_EMAILS` addresses), 24-hour
+session. Verified from outside: the hostname 302s to
+`late-cake-f2a4.cloudflareaccess.com/cdn-cgi/access/login/admin.golfin.world`,
+so the dashboard is unreachable without passing Access first.
 
-Zero Trust → Access → Applications → Add a self-hosted application →
-`admin.golfin.world` → policy: Allow, emails from `ADMIN_EMAILS`. One-time PIN
-needs no IdP setup. Free up to 50 users.
+This matters because behind the app's own login sits a `service_role` key with
+unrestricted write access to production — the Supabase password plus
+`ADMIN_EMAILS` was otherwise the only barrier.
+
+Notes for later:
+- The team domain is the auto-generated `late-cake-f2a4`. Renaming it to
+  something like `golfin` is Zero Trust → Settings → Custom Pages / team domain;
+  cosmetic, but it is what everyone sees on the login screen.
+- Adding an admin now means two places: `ADMIN_EMAILS` (the app's own allowlist,
+  a Worker secret) **and** the Access policy. Miss the second and they get a
+  Cloudflare block page; miss the first and they pass Access then land on
+  /not-admin.
+- The Zero Trust free plan covers 50 users. Access edit rights are NOT in the
+  wrangler OAuth token — it can read `/access/apps` but `POST` returns
+  `auth.forbidden`, so policy changes are dashboard or API-token work.
 
 ### The missing-key guard
 
