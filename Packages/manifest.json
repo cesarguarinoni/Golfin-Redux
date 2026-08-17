@@ -2,7 +2,7 @@
   "dependencies": {
     "com.andywiecko.burst.triangulator": "https://github.com/andywiecko/BurstTriangulator.git",
     "com.coffee.ui-particle": "https://github.com/mob-sakai/ParticleEffectForUGUI.git#4.12.1",
-    "com.ivanmurzak.unity.mcp": "0.87.0",
+    "com.ivanmurzak.unity.mcp": "0.88.0",
     "com.ivanmurzak.unity.mcp.animation": "1.2.14",
     "com.ivanmurzak.unity.mcp.cinemachine": "1.0.5",
     "com.ivanmurzak.unity.mcp.particlesystem": "1.2.19",
