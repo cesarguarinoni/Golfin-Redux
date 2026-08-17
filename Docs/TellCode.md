@@ -32,6 +32,49 @@
 
 ## 📋 SPEC_READY POINTERS
 
+- **`tournament_banners`** (filed 2026-08-17, Architect) — **SPEC_READY. THE feature the banner epic was for, and the one part that never got built.** Home-promo and Rankings banners are live end to end; **tournament banners do not exist in the admin at all.** This was `game_banners` **§9**, amended in after Code had already started, not implemented, and then carried into `Docs/Specs/Completed/` when that spec closed — so it went invisible. Refiled standalone; the §9 text in the Completed spec is superseded. **Cesar's decision:** the artwork is managed in the **Banners** panel like every other banner, but **which** banner a tournament shows is chosen **per tournament in the Tournaments panel** — upload once, assign many, switch off in one place. **Four gaps, verified in the tree 2026-08-17:** (1) the `game_banners.placement` CHECK allows only `('home_promo','rankings')`; (2) there is no `tournaments.modal_banner_id`; (3) the tournament editor has no picker; (4) `GET /tournaments/golfin` does not join it and the client has no DTO. ⚠️ **The consuming side is already built and tested** — `ApplyBanner`, `ApplyBannerState`, the 1411 ↔ 1167 padding switch, the strip, the button and the link handler all shipped with `tournament_signup_modal`; `TryResolveModalBanner` (`TournamentSignupModalController.cs:532`) is a 3-line `return false` stub. **Landing this is that one resolver plus the data feeding it — not the prefab, not the layout.** Also pinned: do NOT add `TournamentModal` to `BannerService.BannerPlacement` (a tournament banner never comes through `/api/v1/banners`, and adding it there builds a second unreachable path that looks like it works); `is_active` is checked server-side so the client never learns that column exists; `modal_banner_id` must not appear in the payload. Spec: `Docs/Specs/Active/tournament_banners/SPEC.md`.
+
+### Kickoff · tournament_banners (issued 2026-08-17)
+
+```
+Read Docs/Specs/Active/tournament_banners/SPEC.md and implement it.
+
+Context:
+- Tournament banners are the one banner placement that was never built. Home
+  promo and Rankings are live; the tournament sign-up modal's cross-promotion
+  strip has no admin at all. This was game_banners section 9, amended in late,
+  skipped, and then filed under Completed with the rest of that spec.
+- The consuming side is DONE. ApplyBanner, ApplyBannerState, the 1411/1167
+  padding switch, _bannerRoot/_bannerImage/_bannerButton and the link handler
+  all shipped and are tested. TryResolveModalBanner at
+  TournamentSignupModalController.cs:532 is a three-line stub returning false.
+  You are implementing that resolver and the data that feeds it. Do NOT touch
+  ApplyBanner, ApplyBannerState, the padding switch, or the prefab.
+- Build in this order: migration -> verify the columns over PostgREST ->
+  backend + fly deploy -> verify with curl -> dashboard + npm run deploy ->
+  Unity. Deploying a .select() naming a missing column 500s the WHOLE schedule
+  endpoint for every player (Docs/ADMIN_DASHBOARD_OPS.md 3.2).
+- Find the real name of the placement CHECK constraint with
+  pg_get_constraintdef before dropping it. Do not trust the name in the spec.
+- Do NOT add TournamentModal to BannerService.BannerPlacement. A tournament
+  banner never arrives through /api/v1/banners; adding it there creates a
+  second unreachable code path that looks like it works.
+- The banner's is_active check happens server-side, and modal_banner_id must
+  not appear in the payload.
+- Regression bar: Home promo and Rankings banners must still render, the
+  no-banner modal must still measure exactly 1167, and the schedule endpoint
+  must still return all 6 tournaments with its 19 base fields.
+- Out of scope: the result/CLAIM modal 13894:3628, scheduling or rotation for
+  tournament banners, tournaments.banner_url and the tournament-art bucket
+  (that is the 260x360 card art, a different image in a different bucket), and
+  analytics.
+
+When done: list changed files with a 1-line summary each, run the acceptance
+tests in the spec, flag which need manual on-device verification, update
+STATUS.md + IMPLEMENTER_REPORT.md in the spec folder, and update
+Docs/AI_CONTEXT.md.
+```
+
 - **`tournament_signup_modal`** (filed 2026-08-17, Architect) — **SPEC_READY. The sign-up confirmation modal goes from a four-line card to the full pre-entry briefing.** Figma `13480:2479` (978×531) → **`13498:2067` "INFO + Banner"** (978×1411): cross-promotion banner, existing header + date line, tournament card art beside a description blurb, a RULES block, then entry/prize and BACK · CONFIRM. **Cesar's decisions (2026-08-17):** **both** layouts ship from **one prefab** — `13498:2067` when the tournament has a banner, `13892:3454` when it does not; the banner is **created in the Banners panel and assigned per tournament in the Tournaments panel** (`game_banners` SPEC §9); **RULES stays hardcoded but localized**; the blurb gets **new per-tournament `description_en` / `description_ja` columns plus a `description_key` that overrides them when it resolves — the same ladder shape as the tournament title**. ⚠️ Notes the spec pins: **the title is Rubik Bold 42, overriding the Figma's Noto Sans JP (Cesar, 2026-08-17)** — Rubik has no CJK glyphs, so the title MUST use `Assets/Fonts/Rubik-VariableFont_wght SDF.asset`, the only Rubik asset that declares `NotoSansJP` in its `m_FallbackFontAssetTable`, or every Japanese tournament name renders as tofu; **the two states are not one layout with a hidden row** — the content container's top padding switches 0 ↔ 32 with the banner (1411 vs **1167**, not 1379), and the banner is 970 wide with 4px margins so it must NOT inherit the 48px side padding; the 📍 pin `13498:2079` is `hidden="true"` in the design and must NOT be built; CANCEL becomes **BACK** as a label change only — `_cancelButton` keeps its field name so the prefab reference survives; buttons are **359 / 391**, no longer symmetric; and `OnConfirm` / `CompleteSignup` / `TrySpendAsync` / the RP pre-check are **untouched — this task is presentation over a live payment path**. Deliberately does NOT reuse the GPS-owned `tournaments.description` column. The banner half is sequenced last: §5.1 collapses `_bannerRoot` when there is none, so the modal ships complete before `game_banners` lands. Japanese for the six `tourn.rules.*` keys is **written into the spec** (Architect, full-width `：` per the table's existing convention) — unreviewed by a native speaker, flag it in the report. Renders in `reference/`. Spec: `Docs/Specs/Active/tournament_signup_modal/SPEC.md`.
 
 ### Kickoff · tournament_signup_modal (issued 2026-08-17)

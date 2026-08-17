@@ -1,3 +1,10 @@
+SUPERSEDED IN PART — 2026-08-17
+§9 (`tournament_modal`: the placement, `tournaments.modal_banner_id`, the Tournaments-panel
+picker, the `GET /tournaments/golfin` join) was amended into this spec after implementation had
+started and was NEVER BUILT. It moved here with the rest of the spec and became invisible.
+It is now refiled standalone as `Docs/Specs/Active/tournament_banners/`, which supersedes §9.
+Everything else in this spec did ship and is live.
+
 DONE
 
 Approved by Cesar 2026-08-17. Shipped end to end:
