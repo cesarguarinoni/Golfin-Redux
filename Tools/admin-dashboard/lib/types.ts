@@ -125,6 +125,8 @@ export interface TournamentRow {
   /** Game-facing stable key (the old tournaments.csv id). Null on gps rows. */
   slug: string | null;
   title: string;
+  /** Japanese display name; used for JP players when no name_key resolves. */
+  titleJa: string | null;
   nameKey: string | null;
   courseId: string | null;
   holeSet: string | null;
@@ -179,6 +181,7 @@ export interface TournamentEntriesResponse {
 export interface TournamentInput {
   slug: string;
   title: string;
+  titleJa: string | null;
   nameKey: string | null;
   courseId: string;
   holeSet: string;

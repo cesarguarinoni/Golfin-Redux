@@ -48,6 +48,7 @@ function mapTournament(
     kind,
     slug: str(r.slug),
     title: String(r.title ?? "(untitled)"),
+    titleJa: str(r.title_ja),
     nameKey: str(r.name_key),
     courseId: str(r.course_id),
     holeSet: str(r.hole_set),

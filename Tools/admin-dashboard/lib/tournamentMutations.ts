@@ -48,6 +48,9 @@ export function validateInput(input: TournamentInput): string | null {
   const title = input.title.trim();
   if (title.length < 1 || title.length > 80) return "Title is required (1–80 characters).";
 
+  const titleJa = input.titleJa?.trim() ?? "";
+  if (titleJa.length > 80) return "Japanese title must be 80 characters or fewer.";
+
   if (!findCourse(input.courseId)) {
     return `Unknown course "${input.courseId}" — the game has no art or venue name for it.`;
   }
@@ -127,6 +130,7 @@ function snapshot(t: TournamentRow): Record<string, unknown> {
   return {
     slug: t.slug,
     title: t.title,
+    title_ja: t.titleJa,
     name_key: t.nameKey,
     course_id: t.courseId,
     hole_set: t.holeSet,
@@ -152,6 +156,7 @@ function toDbRow(input: TournamentInput): Record<string, unknown> {
     kind: "golfin",
     slug: input.slug,
     title: input.title.trim(),
+    title_ja: input.titleJa?.trim() || null,
     name_key: input.nameKey?.trim() || null,
     course_id: input.courseId,
     hole_set: input.holeSet.trim(),
@@ -212,6 +217,7 @@ export async function createTournament(
       kind: "golfin",
       slug: input.slug,
       title: input.title.trim(),
+      titleJa: input.titleJa?.trim() || null,
       nameKey: input.nameKey?.trim() || null,
       courseId: input.courseId,
       holeSet: input.holeSet.trim(),
@@ -302,6 +308,7 @@ export async function updateTournament(
     Object.assign(row, {
       slug: input.slug,
       title: input.title.trim(),
+      titleJa: input.titleJa?.trim() || null,
       nameKey: input.nameKey?.trim() || null,
       courseId: input.courseId,
       holeSet: input.holeSet.trim(),
@@ -371,6 +378,7 @@ export async function duplicateTournament(
   const input: TournamentInput = {
     slug,
     title: `${source.title} (copy)`,
+    titleJa: source.titleJa ? `${source.titleJa}（コピー）` : null,
     nameKey: source.nameKey,
     courseId: source.courseId ?? "",
     holeSet: source.holeSet ?? "1-18",

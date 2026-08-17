@@ -41,6 +41,7 @@ function blankDraft(): TournamentInput {
   return {
     slug: "",
     title: "",
+    titleJa: "",
     nameKey: "",
     courseId: "lomond",
     holeSet: "1-18",
@@ -64,6 +65,7 @@ function toDraft(t: TournamentRow): TournamentInput {
   return {
     slug: t.slug ?? "",
     title: t.title,
+    titleJa: t.titleJa ?? "",
     nameKey: t.nameKey ?? "",
     courseId: t.courseId ?? "",
     holeSet: t.holeSet ?? "1-18",
@@ -130,6 +132,7 @@ export function TournamentEditor({
       const payload: TournamentInput = {
         ...draft,
         nameKey: draft.nameKey?.trim() || null,
+        titleJa: draft.titleJa?.trim() || null,
         sponsorName: draft.sponsorName?.trim() || null,
         leagueKey: draft.leagueKey || null,
         confirmSlug: live ? confirmSlug : undefined,
@@ -323,6 +326,26 @@ export function TournamentEditor({
                     is set.
                   </p>
                 )}
+              </div>
+
+              <div className="col-span-1">
+                <label className={label} htmlFor="t-title-ja">
+                  Title (Japanese)
+                </label>
+                <input
+                  id="t-title-ja"
+                  value={draft.titleJa ?? ""}
+                  onChange={(e) => patch({ titleJa: e.target.value })}
+                  placeholder="セザール選手権"
+                  lang="ja"
+                  className={field}
+                />
+                <p className="mt-1 text-[11px] text-zinc-600">
+                  Shown to players on Japanese. Leave empty and they see the title above.
+                  {draft.nameKey?.trim()
+                    ? " Currently unused — the localization key overrides both titles."
+                    : ""}
+                </p>
               </div>
 
               <div className="col-span-1">

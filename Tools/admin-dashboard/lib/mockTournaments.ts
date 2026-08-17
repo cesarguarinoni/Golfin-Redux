@@ -57,6 +57,7 @@ export const MOCK_TOURNAMENTS: TournamentRow[] = SEEDS.map((s) => ({
   kind: "golfin" as const,
   slug: s.slug,
   title: s.title,
+  titleJa: null,
   nameKey: s.nameKey,
   courseId: s.courseId,
   holeSet: "1-18",
