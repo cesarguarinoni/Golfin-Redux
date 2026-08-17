@@ -49,6 +49,19 @@ namespace Golfin.Net
         /// </summary>
         public static string TournamentsGolfin => BaseUrl + "/tournaments/golfin";
 
+        /// <summary>
+        /// GET → <c>{data:{fetched_at, banners:[…]}}</c> — the admin-controlled banner image for
+        /// each in-game slot, at most one per placement.
+        ///
+        /// NO AUTH, same posture and same reason as <see cref="TournamentsGolfin"/>: it warms at
+        /// boot before any token work. Server side does the whole is_active + schedule-window
+        /// selection, so the client only has to honour the returned <c>expires_at</c>.
+        ///
+        /// No trailing slash — the bare form is the 200, and <c>RemoteBannerSource</c> must not
+        /// depend on redirect following.
+        /// </summary>
+        public static string Banners => BaseUrl + "/banners";
+
         /// <summary>GET ledger page. <paramref name="currency"/> is "activity" / "gift" or null for both.</summary>
         public static string PointsHistory(int skip = 0, int limit = 20, string currency = null)
         {

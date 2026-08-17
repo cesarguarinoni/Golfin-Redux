@@ -1,11 +1,12 @@
 # GOLFIN Admin Dashboard
 
 Internal admin tool for the GOLFIN game over the PLAYLIFE Supabase project
-(Postgres + Supabase Auth). Four panels — **Users** (list, detail,
+(Postgres + Supabase Auth). Five panels — **Users** (list, detail,
 admin mutations, RP adjust), **Points** (global ledger viewer), **Tournaments**
-(schedule authoring, rank-band prize editor, card-art upload), **Audit Log**
-(admin_audit_log viewer) — plus login. Designed to grow panel-by-panel via
-`lib/registry.ts`.
+(schedule authoring, rank-band prize editor, card-art upload), **Banners**
+(the two in-game banner slots: per-locale artwork, schedule window, tap-through
+link), **Audit Log** (admin_audit_log viewer) — plus login. Designed to grow
+panel-by-panel via `lib/registry.ts`.
 
 Stack: Next.js (App Router) + TypeScript + Tailwind CSS. Fully self-contained
 in this folder (intended location in the Unity repo: `Tools/admin-dashboard`).
@@ -260,12 +261,16 @@ script is idempotent — safe to re-run.
 ```
 app/(panels)/users/     Users panel (list, filters, stat cards, drawer, mutations)
 app/(panels)/points/    Points panel (global ledger viewer)
+app/(panels)/banners/   Banners panel (game_banners: art per locale, window, link)
 app/(panels)/audit/     Audit Log panel (admin_audit_log viewer)
 app/login, app/not-admin, app/api/…   auth + data/mutation routes
 lib/registry.ts         panel registry — the sidebar builds itself from this
 lib/supabaseAdmin.ts    service_role client (server-only)
 lib/data.ts             read access, mock/live branching
 lib/mutations.ts        phase-2 mutations (server-only, all audited)
+lib/banner.ts           banner rules: placements, state, URL allowlists, validation
+lib/bannerData.ts       banner read side (server-only, mock/live branching)
+lib/bannerMutations.ts  banner writes + game-banners art upload (server-only, audited)
 lib/mock.ts             fixture seed data
 lib/mockStore.ts        mutable in-memory mock DB (globalThis-backed)
 lib/audit.ts            writeAudit → admin_audit_log (mock: in-memory log)

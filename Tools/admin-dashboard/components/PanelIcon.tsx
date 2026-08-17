@@ -35,6 +35,13 @@ const PATHS: Record<PanelIconName, React.ReactNode> = {
       <path d="m9 12 2 2 4-4" />
     </>
   ),
+  image: (
+    <>
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <circle cx="8.5" cy="10" r="1.5" />
+      <polyline points="21 16 16 11 5 19" />
+    </>
+  ),
 };
 
 export function PanelIcon({

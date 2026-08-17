@@ -1505,6 +1505,7 @@ GameObject:
   m_Component:
   - component: {fileID: 25155776}
   - component: {fileID: 25155775}
+  - component: {fileID: 25155777}
   m_Layer: 0
   m_Name: TournamentService
   m_TagString: Untagged
@@ -1539,6 +1540,18 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &25155777
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 25155774}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7c245a90f985e4f4e924cc1a8c88cd01, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.Banners.BannerService
 --- !u!1 &27522005
 GameObject:
   m_ObjectHideFlags: 0
@@ -24166,6 +24179,9 @@ GameObject:
   - component: {fileID: 446239803}
   - component: {fileID: 446239805}
   - component: {fileID: 446239804}
+  - component: {fileID: 446239808}
+  - component: {fileID: 446239807}
+  - component: {fileID: 446239806}
   m_Layer: 5
   m_Name: PromoBanner
   m_TagString: Untagged
@@ -24189,8 +24205,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0}
   m_AnchorMax: {x: 0.5, y: 0}
-  m_AnchoredPosition: {x: 0, y: 260}
-  m_SizeDelta: {x: 970, y: 252}
+  m_AnchoredPosition: {x: 0, y: 298}
+  m_SizeDelta: {x: 970, y: 214}
   m_Pivot: {x: 0.5, y: 0}
 --- !u!114 &446239804
 MonoBehaviour:
@@ -24230,6 +24246,80 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 446239796}
   m_CullTransparentMesh: 1
+--- !u!114 &446239806
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 446239796}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 878e6fa3a32554145b5f3741a4b51e13, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.Banners.BannerSlotBinder
+  _placement: 0
+  _image: {fileID: 446239804}
+  _button: {fileID: 446239808}
+  _expandOnHide: []
+--- !u!114 &446239807
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 446239796}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
+--- !u!114 &446239808
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 446239796}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
+  m_Navigation:
+    m_Mode: 3
+    m_WrapAround: 0
+    m_SelectOnUp: {fileID: 0}
+    m_SelectOnDown: {fileID: 0}
+    m_SelectOnLeft: {fileID: 0}
+    m_SelectOnRight: {fileID: 0}
+  m_Transition: 0
+  m_Colors:
+    m_NormalColor: {r: 1, g: 1, b: 1, a: 1}
+    m_HighlightedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
+    m_PressedColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 1}
+    m_SelectedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
+    m_DisabledColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 0.5019608}
+    m_ColorMultiplier: 1
+    m_FadeDuration: 0.1
+  m_SpriteState:
+    m_HighlightedSprite: {fileID: 0}
+    m_PressedSprite: {fileID: 0}
+    m_SelectedSprite: {fileID: 0}
+    m_DisabledSprite: {fileID: 0}
+  m_AnimationTriggers:
+    m_NormalTrigger: Normal
+    m_HighlightedTrigger: Highlighted
+    m_PressedTrigger: Pressed
+    m_SelectedTrigger: Selected
+    m_DisabledTrigger: Disabled
+  m_Interactable: 0
+  m_TargetGraphic: {fileID: 446239804}
+  m_OnClick:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!224 &446239821
 RectTransform:
   m_ObjectHideFlags: 0
@@ -85638,6 +85728,28 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1490469525}
   m_CullTransparentMesh: 1
+--- !u!114 &1491477894 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 5367442680917389629, guid: 8bf3740e2df52a640abd4d4e609f576e, type: 3}
+  m_PrefabInstance: {fileID: 5963199919595119296}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5963199919595119298}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Button
+--- !u!114 &1491477895 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 4047171618050557354, guid: 8bf3740e2df52a640abd4d4e609f576e, type: 3}
+  m_PrefabInstance: {fileID: 5963199919595119296}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5963199919595119298}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
 --- !u!1 &1498144076
 GameObject:
   m_ObjectHideFlags: 0
@@ -134700,9 +134812,10 @@ MonoBehaviour:
   dotsContainer: {fileID: 1909492906842863269}
   totalNewsPages: 3
   newsAutoCycleInterval: 5
-  promoBannerButton: {fileID: 0}
+  promoBannerButton: {fileID: 446239808}
   promoBannerText: {fileID: 0}
   gpsIcon: {fileID: 0}
+  promoBannerImage: {fileID: 446239804}
   characterImage: {fileID: 6825722192472723183}
   nextHoleTitleText: {fileID: 7910933110930945515}
   courseNameText: {fileID: 1086008858553617149}
@@ -135788,6 +135901,8 @@ MonoBehaviour:
   _rankingsCardUser: {fileID: 5963199919595119299}
   _banner: {fileID: 5963199919595119298}
   _showBanner: 1
+  _bannerImage: {fileID: 1491477895}
+  _bannerButton: {fileID: 1491477894}
   _backButton: {fileID: 1943695223}
 --- !u!224 &8918472056162693361
 RectTransform:

@@ -201,6 +201,63 @@ export interface TournamentInput {
   confirmSlug?: string;
 }
 
+// ---------------------------------------------------------------------------
+// Banners panel (SPEC game_banners §3)
+// ---------------------------------------------------------------------------
+
+/**
+ * The two in-game slots. Both are hard-coded in the build, both keep their
+ * bundled sprite as the fallback, and neither can be added from here.
+ */
+export type BannerPlacement = "home_promo" | "rankings";
+
+/**
+ * Derived from is_active + the schedule window — never stored. LIVE is the only
+ * state a player can see; the other three all mean "the bundled sprite shows".
+ */
+export type BannerState = "LIVE" | "SCHEDULED" | "EXPIRED" | "OFF";
+
+/** One row of public.game_banners as the panel renders it. */
+export interface BannerRow {
+  id: string;
+  placement: BannerPlacement;
+  /** ADMIN-ONLY name. Never sent to the client, never shown to a player. */
+  label: string;
+  imageUrlEn: string | null;
+  imageUrlJa: string | null;
+  linkUrl: string | null;
+  startAt: string | null;
+  endAt: string | null;
+  sortOrder: number;
+  isActive: boolean;
+  createdAt: string | null;
+  updatedAt: string | null;
+}
+
+/** Editable fields — what create/update accept over the wire. */
+export interface BannerInput {
+  placement: BannerPlacement;
+  label: string;
+  imageUrlEn: string | null;
+  imageUrlJa: string | null;
+  linkUrl: string | null;
+  startAt: string | null;
+  endAt: string | null;
+  sortOrder: number;
+  isActive: boolean;
+  /**
+   * Required (typed label) when switching a banner that is currently LIVE off,
+   * the same way editing an Open tournament requires confirmSlug. Deactivation
+   * is player-facing and instant.
+   */
+  confirmLabel?: string;
+}
+
+export interface BannersResponse {
+  banners: BannerRow[];
+  mock: boolean;
+}
+
 /** Users-panel admin actions (POST /api/users/:id/actions). */
 export const USER_ACTION_KINDS = [
   "resend_confirmation",

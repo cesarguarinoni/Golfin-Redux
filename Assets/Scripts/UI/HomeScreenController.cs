@@ -45,6 +45,16 @@ namespace GolfinRedux.UI
         [SerializeField] private TextMeshProUGUI promoBannerText;
         [SerializeField] private Image gpsIcon;
 
+        /// <summary>
+        /// The strip's own Image. Assigned so the slot is inspectable from here; the sprite itself
+        /// is swapped by the <c>BannerSlotBinder</c> on the same GameObject, not by this controller.
+        /// <para>
+        /// <c>promoBannerText</c> and <c>gpsIcon</c> above stay UNASSIGNED on purpose: the banner
+        /// content model is image-only, with all copy baked into the artwork.
+        /// </para>
+        /// </summary>
+        [SerializeField] private Image promoBannerImage;
+
         // -------- Character --------
         [Header("Character")]
         [SerializeField] private Image characterImage;
@@ -273,10 +283,27 @@ namespace GolfinRedux.UI
 
         // ---------- Promo Banner (GPS) ----------
 
+        /// <summary>
+        /// The strip's tap. Kept as the <c>onClick</c> target (the listener is added in
+        /// <c>Awake</c>) and delegated to the <c>BannerSlotBinder</c> on the same GameObject, which
+        /// owns the link and re-checks it against the host allowlist before opening anything.
+        /// <para>
+        /// The binder deliberately does NOT add its own listener here — one tap must not open the
+        /// browser twice.
+        /// </para>
+        /// </summary>
         private void OnPromoBannerClicked()
         {
-            // TODO: open GPS info / permissions panel
-            Debug.Log("[HomeScreen] Promo (GPS) banner clicked");
+            var binder = promoBannerButton != null
+                ? promoBannerButton.GetComponent<Golfin.Banners.BannerSlotBinder>()
+                : null;
+
+            if (binder == null)
+            {
+                Debug.LogWarning("[HomeScreen] Promo banner tapped but no BannerSlotBinder is attached.");
+                return;
+            }
+            binder.OpenLink();
         }
 
 

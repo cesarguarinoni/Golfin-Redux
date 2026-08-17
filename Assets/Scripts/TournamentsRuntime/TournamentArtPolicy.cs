@@ -53,14 +53,28 @@ namespace Golfin.Tournaments
         /// </para>
         /// Everything unrecognised fails closed.
         /// </summary>
-        public static bool IsAllowed(string? url)
+        public static bool IsAllowed(string? url) => IsAllowedUnder(url, AllowedRoot);
+
+        /// <summary>
+        /// <inheritdoc cref="IsAllowed"/>
+        /// <para>
+        /// The same check against an arbitrary allowlisted root, so a second feature with its own
+        /// bucket reuses this reasoning instead of copying it. <c>Golfin.Banners.BannerPolicy</c>
+        /// calls this with the <c>game-banners/</c> root; forking it would fork a
+        /// security-critical decision, and the two copies would drift.
+        /// </para>
+        /// </summary>
+        /// <param name="allowedRoot">An absolute URI whose scheme, host and path prefix are the
+        /// allowlist. Parsed once by the caller so the comparison below is Uri-vs-Uri.</param>
+        internal static bool IsAllowedUnder(string? url, Uri allowedRoot)
         {
             if (string.IsNullOrWhiteSpace(url)) return false;
+            if (allowedRoot == null) return false;
             if (!Uri.TryCreate(url, UriKind.Absolute, out Uri? uri) || uri == null) return false;
 
             // Uri lower-cases scheme and host, so an ordinal compare here is exact, not lenient.
-            if (!string.Equals(uri.Scheme, AllowedRoot.Scheme, StringComparison.Ordinal)) return false;
-            if (!string.Equals(uri.Host,   AllowedRoot.Host,   StringComparison.Ordinal)) return false;
+            if (!string.Equals(uri.Scheme, allowedRoot.Scheme, StringComparison.Ordinal)) return false;
+            if (!string.Equals(uri.Host,   allowedRoot.Host,   StringComparison.Ordinal)) return false;
 
             // `https://host@evil.com/…` parses with Host=evil.com, so the Host check already covers
             // userinfo — but reject it outright rather than relying on that being true forever.
@@ -68,7 +82,7 @@ namespace Golfin.Tournaments
             if (!uri.IsDefaultPort) return false;
 
             string path    = uri.AbsolutePath;      // dot segments already collapsed
-            string bucket  = AllowedRoot.AbsolutePath;
+            string bucket  = allowedRoot.AbsolutePath;
 
             if (!path.StartsWith(bucket, StringComparison.Ordinal)) return false;
             if (path.Length <= bucket.Length) return false;   // the bucket root itself names no object

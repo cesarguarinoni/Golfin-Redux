@@ -74,6 +74,15 @@ namespace Golfin.UI.Rankings
         [SerializeField] private GameObject? _banner;
         [SerializeField] private bool _showBanner = true;
 
+        /// <summary>
+        /// The banner's Image and the Button added by the <c>game_banners</c> task. Held here so
+        /// the slot is inspectable from the controller, but the artwork and the tap belong to the
+        /// <c>BannerSlotBinder</c> on the same GameObject — <see cref="ApplyBanner"/> keeps doing
+        /// only what it did before, which is show or hide the whole slot.
+        /// </summary>
+        [SerializeField] private Image? _bannerImage;
+        [SerializeField] private Button? _bannerButton;
+
         // ── Back navigation ───────────────────────────────────────────────────
         [Header("Back Navigation")]
         [SerializeField] private Button? _backButton;

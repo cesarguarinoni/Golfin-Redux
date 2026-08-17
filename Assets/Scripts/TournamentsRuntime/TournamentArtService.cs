@@ -20,8 +20,6 @@ namespace Golfin.Tournaments
 {
     public sealed class TournamentArtService
     {
-        private const string Tag = "[TournamentArt]";
-
         /// <summary>Bounded disk cache (SPEC §5.5). LRU by last access once exceeded.</summary>
         public const long MaxCacheBytes = 50L * 1024L * 1024L;
 
@@ -37,7 +35,46 @@ namespace Golfin.Tournaments
         /// <summary>Art for a tournament that ended longer ago than this is dropped regardless of size.</summary>
         public static readonly TimeSpan EndedRetention = TimeSpan.FromDays(30);
 
-        public static TournamentArtService Instance { get; } = new TournamentArtService();
+        /// <summary>
+        /// Tournament card art. Values are exactly what this class hard-coded before it was
+        /// parameterized, so this instance's behaviour is unchanged.
+        /// </summary>
+        public static TournamentArtService Instance { get; } = new TournamentArtService(
+            "[TournamentArt]",
+            TournamentArtPolicy.CacheDirName,
+            TournamentArtPolicy.IsAllowed);
+
+        /// <summary>
+        /// Game banner art (<c>game_banners</c>). A SECOND INSTANCE of this class rather than a
+        /// copy of it: the download path here carries a lot of load-bearing behaviour — a handler
+        /// that refuses on <c>Content-Length</c> before buffering, <c>redirectLimit = 0</c>, atomic
+        /// cache writes, in-flight coalescing — and forking it would fork a security-critical path
+        /// that then drifts.
+        /// <para>
+        /// Its cache directory is separate from <c>tournament-art</c>, so the two 50 MB budgets
+        /// sweep independently and cannot evict each other.
+        /// </para>
+        /// </summary>
+        public static TournamentArtService Banners { get; } = new TournamentArtService(
+            "[BannerArt]",
+            Golfin.Banners.BannerPolicy.CacheDirName,
+            Golfin.Banners.BannerPolicy.IsArtAllowed);
+
+        // ── Per-instance identity ─────────────────────────────────────────────
+
+        private readonly string _tag;
+        private readonly string _cacheDirName;
+        private readonly Func<string?, bool> _isAllowed;
+
+        private TournamentArtService(string tag, string cacheDirName, Func<string?, bool> isAllowed)
+        {
+            _tag          = tag;
+            _cacheDirName = cacheDirName;
+            _isAllowed    = isAllowed;
+        }
+
+        /// <summary>Log prefix identifying which cache a line came from.</summary>
+        private string Tag => _tag;
 
         // URL → sprite. One texture serves every card and every screen.
         private readonly Dictionary<string, Sprite> _sprites = new Dictionary<string, Sprite>(StringComparer.Ordinal);
@@ -53,9 +90,13 @@ namespace Golfin.Tournaments
 
         private string? _cacheDir;
 
-        /// <summary><c>&lt;persistentDataPath&gt;/tournament-art</c>. Main thread only on first call.</summary>
+        /// <summary>
+        /// <c>&lt;persistentDataPath&gt;/&lt;cacheDirName&gt;</c> — <c>tournament-art</c> for
+        /// <see cref="Instance"/>, <c>game-banners</c> for <see cref="Banners"/>. Main thread only
+        /// on first call.
+        /// </summary>
         public string CacheDir =>
-            _cacheDir ??= Path.Combine(Application.persistentDataPath, TournamentArtPolicy.CacheDirName);
+            _cacheDir ??= Path.Combine(Application.persistentDataPath, _cacheDirName);
 
         // ── Query ─────────────────────────────────────────────────────────────
 
@@ -79,7 +120,7 @@ namespace Golfin.Tournaments
         {
             if (string.IsNullOrEmpty(url)) return;
 
-            if (!TournamentArtPolicy.IsAllowed(url))
+            if (!_isAllowed(url))
             {
                 // Defence in depth: the mapper already nulls refused URLs, so reaching here means a
                 // new call site skipped the mapper. Refuse anyway rather than trusting the caller.
@@ -119,6 +160,19 @@ namespace Golfin.Tournaments
             foreach (var d in defs)
                 if (d != null && !string.IsNullOrEmpty(d.BannerUrl))
                     Request(d.BannerUrl, null);
+        }
+
+        /// <summary>
+        /// Warm the cache for a bare list of URLs — what <see cref="Banners"/> has, since a banner
+        /// is a URL and not a <see cref="TournamentDefinition"/>. Nulls and blanks are skipped, and
+        /// <see cref="Request"/> still applies this instance's allowlist to every entry.
+        /// </summary>
+        public void Prefetch(IEnumerable<string?>? urls)
+        {
+            if (urls == null) return;
+            foreach (var url in urls)
+                if (!string.IsNullOrEmpty(url))
+                    Request(url, null);
         }
 
         // ── Load: disk first, then network ────────────────────────────────────
@@ -337,11 +391,14 @@ namespace Golfin.Tournaments
                 }
             }
 
-            Task.Run(() => SweepCore(dir, expiredNames));
+            string tag = _tag;                     // resolve here too; the worker holds no instance
+            Task.Run(() => SweepCore(dir, expiredNames, tag));
         }
 
         /// <summary>Pure <c>System.IO</c>. Static and internal so a test can call it directly.</summary>
-        internal static void SweepCore(string dir, HashSet<string> expiredNames)
+        /// <param name="tag">Log prefix of the instance that issued the sweep — the two caches are
+        /// swept independently and their lines must be distinguishable.</param>
+        internal static void SweepCore(string dir, HashSet<string> expiredNames, string tag)
         {
             try
             {
@@ -388,18 +445,19 @@ namespace Golfin.Tournaments
                     catch { /* skip and continue */ }
                 }
 
-                Debug.Log($"{Tag} Cache sweep evicted {evicted} file(s); {total / 1024} KB remain.");
+                Debug.Log($"{tag} Cache sweep evicted {evicted} file(s); {total / 1024} KB remain.");
             }
             catch (Exception ex)
             {
                 // A background thread that throws would otherwise vanish silently.
-                Debug.LogWarning($"{Tag} Cache sweep failed: {ex.Message}");
+                Debug.LogWarning($"{tag} Cache sweep failed: {ex.Message}");
             }
         }
 
         // ── Small helpers ─────────────────────────────────────────────────────
 
-        private static void WriteCacheFile(string path, byte[] bytes)
+        /// <summary>Instance-scoped only so the failure log carries this cache's <see cref="Tag"/>.</summary>
+        private void WriteCacheFile(string path, byte[] bytes)
         {
             try
             {
