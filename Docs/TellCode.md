@@ -32,6 +32,111 @@
 
 ## 📋 SPEC_READY POINTERS
 
+- **`tournament_signup_modal`** (filed 2026-08-17, Architect) — **SPEC_READY. The sign-up confirmation modal goes from a four-line card to the full pre-entry briefing.** Figma `13480:2479` (978×531) → **`13498:2067` "INFO + Banner"** (978×1411): cross-promotion banner, existing header + date line, tournament card art beside a description blurb, a RULES block, then entry/prize and BACK · CONFIRM. **Cesar's decisions (2026-08-17):** **both** layouts ship from **one prefab** — `13498:2067` when the tournament has a banner, `13892:3454` when it does not; the banner is **created in the Banners panel and assigned per tournament in the Tournaments panel** (`game_banners` SPEC §9); **RULES stays hardcoded but localized**; the blurb gets **new per-tournament `description_en` / `description_ja` columns plus a `description_key` that overrides them when it resolves — the same ladder shape as the tournament title**. ⚠️ Notes the spec pins: **the title is Rubik Bold 42, overriding the Figma's Noto Sans JP (Cesar, 2026-08-17)** — Rubik has no CJK glyphs, so the title MUST use `Assets/Fonts/Rubik-VariableFont_wght SDF.asset`, the only Rubik asset that declares `NotoSansJP` in its `m_FallbackFontAssetTable`, or every Japanese tournament name renders as tofu; **the two states are not one layout with a hidden row** — the content container's top padding switches 0 ↔ 32 with the banner (1411 vs **1167**, not 1379), and the banner is 970 wide with 4px margins so it must NOT inherit the 48px side padding; the 📍 pin `13498:2079` is `hidden="true"` in the design and must NOT be built; CANCEL becomes **BACK** as a label change only — `_cancelButton` keeps its field name so the prefab reference survives; buttons are **359 / 391**, no longer symmetric; and `OnConfirm` / `CompleteSignup` / `TrySpendAsync` / the RP pre-check are **untouched — this task is presentation over a live payment path**. Deliberately does NOT reuse the GPS-owned `tournaments.description` column. The banner half is sequenced last: §5.1 collapses `_bannerRoot` when there is none, so the modal ships complete before `game_banners` lands. Japanese for the six `tourn.rules.*` keys is **written into the spec** (Architect, full-width `：` per the table's existing convention) — unreviewed by a native speaker, flag it in the report. Renders in `reference/`. Spec: `Docs/Specs/Active/tournament_signup_modal/SPEC.md`.
+
+### Kickoff · tournament_signup_modal (issued 2026-08-17)
+
+```
+Read Docs/Specs/Active/tournament_signup_modal/SPEC.md and implement it.
+
+Context:
+- Rebuilds the tournament sign-up confirmation modal from Figma 13480:2479 to
+  13498:2067 "INFO + Banner". Renders for both are already in the spec folder's
+  reference/ - A/B against reference/target_13498-2067_info_banner.png at
+  1170x2532. Node ids are in the fidelity table; pull anything else you need
+  with get_design_context, file key 5gEAHjl6xAtW8iYY7NMvWd.
+- Every value except RULES comes from the tournament admin. RULES is hardcoded
+  this pass but must go through LocalizationManager - six new rows in
+  Assets/Localization/LocalizationText.csv, then Tools > Localization >
+  Import Text CSV. A CSV row without the re-import does nothing.
+- Minimal diff. Extend TournamentSignupModalController.Populate, do not rewrite
+  it: every existing binding (sponsor, title, venue, date line, entry pill,
+  reward) stays byte-for-byte, apart from the title's font asset. Reuse
+  TournamentArtService for the 260x360
+  thumbnail and TournamentDisplayName as the shape for the new
+  TournamentDescription ladder.
+- DO NOT TOUCH OnConfirm, CompleteSignup, Register, TrySpendAsync, the RP
+  pre-check, the GetMyEntry short-circuit or the navigation target. This is a
+  presentation change sitting on top of a live payment path, and the acceptance
+  list has regression items that will catch it if you do.
+- BOTH states ship from ONE prefab. 13498:2067 with a banner, 13892:3454
+  without. They are NOT the same layout minus one row: the content container's
+  top padding switches 0 (banner) to 32 (no banner), so the heights are 1411 and
+  1167. Toggling only the banner gives you 1379 with a gap at the top. Let a
+  layout group drive height; do not hard-code either number.
+- Four traps the spec pins: (1) the title is Rubik Bold 42, NOT the Figma's Noto
+  Sans JP - Cesar's override - and because Rubik has no CJK glyphs it must use
+  Assets/Fonts/Rubik-VariableFont_wght SDF.asset, the one Rubik asset with
+  NotoSansJP in its fallback table, or Japanese tournament names render as tofu;
+  (2) the banner is 970 wide with 4px side margins and must not inherit the
+  container's 48px padding; (3) the pin glyph 13498:2079 is hidden in the design
+  and must not be built; (4) BACK is a LABEL change only - keep the
+  _cancelButton field name so the prefab reference survives.
+- The six tourn.rules.* rows including Japanese are written out in SPEC section
+  4. Paste them verbatim, full-width colons included.
+- Build sections 1-6 first and ship. The banner half depends on
+  Docs/Specs/Active/game_banners/ section 9; section 5.1 collapses _bannerRoot
+  when there is no banner, so the modal is complete without it. Do not block.
+- Out of scope: the result/CLAIM modal 13894:3628 and
+  TournamentResultModalController, making RULES admin-editable, reusing the
+  GPS-owned tournaments.description column, uploading banner art from the
+  tournament editor, and adding description columns to the shipped
+  tournaments.csv.
+
+When done: list changed files with a 1-line summary each, run the acceptance
+tests in the spec, flag which need manual on-device verification, update
+STATUS.md + IMPLEMENTER_REPORT.md in the spec folder, and update
+Docs/AI_CONTEXT.md.
+```
+
+- **`game_banners`** (filed 2026-08-17, Architect) — **SPEC_READY. The two banner images baked into the build get an admin and a live fetch.** `Assets/Art/HomeScreen/GPS Banner.png` (`Canvas/ScreensRoot/HomeScreen/PromoBanner`) and `Assets/Art/RankingsScreen/Banner.png` (`RankingsScreen/ContentArea/Banner`, in the Rankings prefab) can only change today by shipping a build. This adds a `public.game_banners` table, a no-auth `GET /api/v1/banners` on playlife-api mirroring `/tournaments/golfin`, a **Banners** panel at `admin.golfin.world/banners`, and a client that swaps the bundled sprite for the served image and opens an allowlisted external URL on tap. **Cesar's decisions (2026-08-17):** two placements only (`home_promo`, `rankings`) — the Home news carousel is OUT; **image per locale, no text fields**; **one live banner per placement**, no rotation; tap opens an **external URL** behind a **client-side host allowlist**; delivery via **playlife-api**, not Supabase-direct. ⚠️ Two verified traps the spec turns on: (1) `HomeScreenController.promoBannerButton` / `promoBannerText` / `gpsIcon` are all `{fileID: 0}` in `ShellScene.unity` — **unassigned**, so `OnPromoBannerClicked` has never run in a build and the strip is a dead `Image` with no `Button`; (2) `TournamentArtService` must be **parameterized, not forked** — it is the only image-download path in the project and carries the pre-buffer size cap, `redirectLimit = 0` and the LRU sweep. Bundled sprites stay in the build and remain the fallback: no network, expired window, or nothing scheduled all render exactly what players see today. **OPEN — needs Cesar:** confirm the link-host allowlist (spec seeds it with `golfin.io` + `golfin.world` from `SettingsController.cs:188-209`); an admin cannot add a host from the dashboard, by design. Spec: `Docs/Specs/Active/game_banners/SPEC.md`. **AMENDED 2026-08-17 (Cesar): a third placement `tournament_modal` — see SPEC §9.** Tournament banners are created and managed in the Banners panel but **assigned per tournament** from the Tournaments panel (`tournaments.modal_banner_id` → a `game_banners` row), so one GPS promo serves every tournament and is swapped in one edit. `tournament_modal` rows are NOT served by `GET /api/v1/banners` — they ride on `GET /tournaments/golfin` as a `modal_banner` object, with the `is_active` check done server-side. Art spec 970×252, the same as the `rankings` slot. Consumer: `Docs/Specs/Active/tournament_signup_modal/`.
+
+### Kickoff · game_banners (issued 2026-08-17)
+
+```
+Read Docs/Specs/Active/game_banners/SPEC.md and implement it.
+
+Context:
+- Two banner images are baked into the build and can only change with a store
+  release: the Home promo strip (Canvas/ScreensRoot/HomeScreen/PromoBanner in
+  Assets/Scenes/ShellScene.unity) and the Rankings banner
+  (RankingsScreen/ContentArea/Banner in
+  Assets/Prefabs/UI/Rankings/RankingsScreen.prefab). This adds a game_banners
+  table, GET /api/v1/banners on playlife-api, a Banners panel in
+  Tools/admin-dashboard, and the client half that swaps the sprite and opens an
+  allowlisted external URL on tap.
+- Build it in the order the spec lists: migration -> verify the columns landed
+  over PostgREST -> FastAPI + fly deploy -> verify with curl -> dashboard panel
+  -> Unity. Deploying code that reads a column that does not exist yet 500s the
+  endpoint (Docs/ADMIN_DASHBOARD_OPS.md 3.2).
+- Minimal diff. Reuse, by name: TournamentArtService + TournamentArtPolicy
+  (parameterize per SPEC 4.1 - do NOT fork the downloader),
+  RemoteTournamentSource as the shape for RemoteBannerSource,
+  ScheduleRefreshThrottle verbatim, ApiClient.Get<string> + Endpoints,
+  checkAdmin + writeAudit + isMockMode + getSupabaseAdmin on the dashboard side,
+  and uploadTournamentArt / ArtworkTab as the upload template.
+- VERIFIED TRAP: HomeScreenController.promoBannerButton, promoBannerText and
+  gpsIcon are all {fileID: 0} in ShellScene.unity. The promo strip is an Image
+  with no Button and no wiring; OnPromoBannerClicked has never run. You are
+  adding that wiring, not reusing it. Leave promoBannerText and gpsIcon
+  unassigned - the content model is image-only.
+- Do NOT add the new runtime code to Golfin.Tournaments.asmdef. It goes in
+  Assets/Scripts/BannersRuntime/ with no asmdef, i.e. Assembly-CSharp, the same
+  arrangement as Assets/Scripts/TournamentsRuntime/.
+- Every pre-existing TournamentArtPolicy / TournamentArtService EditMode test
+  must still pass unmodified. If one needs editing, the extraction changed
+  behaviour - stop and re-read.
+- Out of scope: the Home news/announcement carousel (NoticePanel, PageDots,
+  HOME_MAINTENANCE_*), the TournamentLeaderboardScreen banner and its sponsor
+  pills, any banner text, rotation/carousels, targeting, analytics, in-game
+  deep links, and tournaments.banner_url / the tournament-art bucket.
+
+When done: list changed files with a 1-line summary each, run the acceptance
+tests in the spec, flag which need manual on-device verification, update
+STATUS.md + IMPLEMENTER_REPORT.md in the spec folder, and update
+Docs/AI_CONTEXT.md.
+```
+
 - **`tournament_card_art_mask`** (filed 2026-08-14, Architect) — **SPEC_READY, quick.** The remote-art path works end to end (Cesar's screenshot: uploaded art rendering on the Lomond card), with one presentation defect — `tournament_image` is a 260×360 rect sitting flush over the card's two rounded LEFT corners, so every image renders square corners past the ~44 px radius. Cesar's call: fix it with a **mask**, not by pre-rounding each file before upload — right, now that art comes from the dashboard. Everything needed already exists: `Assets/Art/Original UI/Common/S_Common_BGCorner20Left.png` (guid `a007e88d378a6d04da972c3519543ec4`, border `25,25,0,25`) rounds the left two corners and leaves the right two square, and is referenced by **zero** prefabs — authored for exactly this and never used; and `StaminaShopCard.prefab` (same 978×360 archetype, same background sprite) already implements the pattern — a `Mask` carrying a sliced `S_Common_BGCorner20*` Image with `ShowMaskGraphic: 0`, photo as its child. One prefab, no C# change: drop the useless `RectMask2D` off `tournament_image`, make its Image the sliced left-rounded sprite at `pixelsPerUnitMultiplier ≈ 0.36` (16 ÷ ppu = radius; the card frame is ~44), add `Mask` with `ShowMaskGraphic: 0`, add a stretched `Photo` child, and re-point `_tournamentImage` at it. Spec: `Docs/Specs/Quick/tournament_card_art_mask/SPEC.md`. Kickoff below.
 
 ### Kickoff · tournament_card_art_mask (issued 2026-08-14)
@@ -1366,3 +1471,25 @@ successful while proving nothing about OB.**
 - Refresh the CURRENT STATE bullet whenever touching this file.
 - New UI tasks use the multi-agent pipeline at `.claude/agents/` (see `CLAUDE.md` § Multi-Agent Workflow).
 - Live course importer is `HoleGeoImporter.cs` (NOT `HoleLiteImporter.cs` — deprecated, banner header, commit 980cc122). Verify via `grep MenuItem` before touching importer internals.
+
+---
+
+## 2026-08-17 · `game_banners` — CODE COMPLETE, blocked on one SQL paste
+
+All three halves built and locally verified: `public.game_banners` migration, `GET /api/v1/banners`
+on playlife-api, the Banners panel in `Tools/admin-dashboard`, and the Unity half
+(`Assets/Scripts/BannersRuntime/`, no asmdef → Assembly-CSharp). The bundled sprites stay in the
+build and remain the fallback on every failure path.
+
+**⛔ Cesar's one step:** paste `playlife/backend/migrations/2026_08_17_game_banners.sql` into the
+Supabase SQL editor. `public.game_banners` does not exist yet (probed over PostgREST with the
+service key → `PGRST205`), so **neither `fly deploy` nor `npm run deploy` has been run** —
+deploying code that reads a missing column 500s the endpoint (`ADMIN_DASHBOARD_OPS.md` §3.2, which
+now carries the four-step finish-it runbook).
+
+**⚠️ Also needs Cesar:** confirm the client-side link-host allowlist (SPEC §5.2) — it ships in the
+build, so a campaign page on a non-`golfin.io` host needs a client release.
+
+Spec + report: `Docs/Specs/Active/game_banners/`. STATUS = `IMPLEMENTER_BLOCKED`.
+EditMode `Golfin.Tournaments.WireupTests`: 115 passed / 0 failed, every pre-existing
+`TournamentArtPolicy`/`TournamentArtService` test unmodified.

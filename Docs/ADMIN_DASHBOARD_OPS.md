@@ -184,6 +184,32 @@ Routes live in `backend/routers/`, mounted under `/api/v1`. Envelope is
 
 ## 6. Still open
 
+- **Banners panel — BUILT, waiting on one SQL paste.** `Docs/Specs/Active/game_banners/`. The
+  fifth panel (`/banners`), `GET /api/v1/banners` on playlife-api, and the Unity half are all
+  written and locally verified. **Nothing is deployed**, deliberately: `public.game_banners`
+  does not exist yet (PostgREST returns `PGRST205`), and per §3.2 code that reads a missing
+  column 500s the endpoint. Order to finish it:
+
+  1. Paste `playlife/backend/migrations/2026_08_17_game_banners.sql` (same file is mirrored in
+     `Tools/admin-dashboard/migrations/`) into the Supabase SQL editor.
+  2. Verify the columns landed — the VERIFICATION block at the bottom of that file, or:
+     `curl -s "$SUPABASE_URL/rest/v1/game_banners?limit=1&select=*" -H "apikey: $KEY" -H "Authorization: Bearer $KEY"` → `200 []`.
+  3. `cd /Users/cesar/Documents/playlife/backend && export PATH="$HOME/.fly/bin:$PATH" && fly deploy`
+     (background it per §4.6), then `curl -s https://playlife-api.fly.dev/api/v1/banners` →
+     200 with `{"data":{"fetched_at","banners"}}`. The **bare** path must be 200, not 307.
+  4. `npm run deploy` from `Tools/admin-dashboard`, then the §2 check → 302.
+
+  The `game-banners` Storage bucket is created on first upload by `uploadBannerArt`, exactly as
+  `tournament-art` is — no manual Supabase step.
+
+- **⚠️ Banner link-host allowlist needs Cesar's confirmation.** `BannerPolicy.AllowedLinkHosts`
+  (`Assets/Scripts/BannersRuntime/BannerPolicy.cs`) currently allows `golfin.io`, `www.golfin.io`,
+  `golfin.world`, `www.golfin.world` — exact matches, no wildcards. **It ships in the build**, so a
+  campaign page on a marketing host, a Notion/Typeform page or a partner domain needs a client
+  release; an admin cannot add a host from the dashboard, by design. `ALLOWED_LINK_HOSTS` in
+  `lib/banner.ts` must be kept in step: a URL the dashboard accepts but the client refuses is a
+  banner that looks fine to the operator and does nothing on the device.
+
 - **`service_role` key rotation.** The key passed through a chat log once.
   Rotating means updating three places together: the Cloudflare secret, the Fly
   secret on `playlife-api`, and `.env.development.local`. Miss the Fly one and
