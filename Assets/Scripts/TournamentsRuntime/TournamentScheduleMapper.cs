@@ -218,7 +218,19 @@ namespace Golfin.Tournaments
                     leagueKey:           t.LeagueKey   ?? string.Empty,
                     title:               NullIfBlank(t.Title),
                     bannerUrl:           bannerUrl,
-                    titleJa:             NullIfBlank(t.TitleJa)));   // JP-only rung of the name ladder
+                    titleJa:             NullIfBlank(t.TitleJa),     // JP-only rung of the name ladder
+                    // Blurb: no validation on purpose. Empty is a legitimate value and simply
+                    // hides the modal's info row (SPEC §5.1), so there is nothing to drop a row for.
+                    descriptionEn:       NullIfBlank(t.DescriptionEn),
+                    descriptionJa:       NullIfBlank(t.DescriptionJa),
+                    descriptionKey:      NullIfBlank(t.DescriptionKey),
+                    // Cross-promotion strip. An absent or null `modal_banner` maps to three
+                    // nulls — that is the no-banner state, not an error, and it is what every
+                    // tournament without an assignment sends. The server has already applied
+                    // is_active, so there is nothing to filter here.
+                    modalBannerImageUrlEn: NullIfBlank(t.ModalBanner?.ImageUrlEn),
+                    modalBannerImageUrlJa: NullIfBlank(t.ModalBanner?.ImageUrlJa),
+                    modalBannerLinkUrl:    NullIfBlank(t.ModalBanner?.LinkUrl)));
             }
 
             if (defs.Count == 0)

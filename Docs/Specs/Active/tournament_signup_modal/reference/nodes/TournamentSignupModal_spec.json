@@ -1,0 +1,274 @@
+{
+  "elements": [
+    {
+      "name": "Content",
+      "w": 978.0,
+      "h": 1015.0,
+      "radius": -1.0,
+      "requireSprite": false,
+      "color": "",
+      "fontSize": -1.0,
+      "fontWeight": ""
+    },
+    {
+      "name": "Upper",
+      "w": 882.0,
+      "h": 169.0,
+      "radius": -1.0,
+      "requireSprite": false,
+      "color": "",
+      "fontSize": -1.0,
+      "fontWeight": ""
+    },
+    {
+      "name": "Header",
+      "w": 882.0,
+      "h": 112.0,
+      "radius": -1.0,
+      "requireSprite": false,
+      "color": "",
+      "fontSize": -1.0,
+      "fontWeight": ""
+    },
+    {
+      "name": "SponsorText",
+      "w": -1.0,
+      "h": -1.0,
+      "radius": -1.0,
+      "requireSprite": false,
+      "color": "",
+      "fontSize": 20.0,
+      "fontWeight": "SemiBold"
+    },
+    {
+      "name": "TitleText",
+      "w": -1.0,
+      "h": -1.0,
+      "radius": -1.0,
+      "requireSprite": false,
+      "color": "#FFFFFF",
+      "fontSize": 35.0,
+      "fontWeight": "Bold"
+    },
+    {
+      "name": "VenueText",
+      "w": -1.0,
+      "h": -1.0,
+      "radius": -1.0,
+      "requireSprite": false,
+      "color": "#C7D6EB",
+      "fontSize": 18.3,
+      "fontWeight": "Regular"
+    },
+    {
+      "name": "DateRangeText",
+      "w": 657.0,
+      "h": 47.0,
+      "radius": -1.0,
+      "requireSprite": false,
+      "color": "",
+      "fontSize": -1.0,
+      "fontWeight": ""
+    },
+    {
+      "name": "Separator1",
+      "w": 882.0,
+      "h": -1.0,
+      "radius": -1.0,
+      "requireSprite": true,
+      "color": "",
+      "fontSize": -1.0,
+      "fontWeight": ""
+    },
+    {
+      "name": "InfoRow",
+      "w": 882.0,
+      "h": 360.0,
+      "radius": -1.0,
+      "requireSprite": false,
+      "color": "",
+      "fontSize": -1.0,
+      "fontWeight": ""
+    },
+    {
+      "name": "TournamentImage",
+      "w": 260.0,
+      "h": 360.0,
+      "radius": 50.0,
+      "requireSprite": true,
+      "color": "",
+      "fontSize": -1.0,
+      "fontWeight": ""
+    },
+    {
+      "name": "DescriptionText",
+      "w": -1.0,
+      "h": -1.0,
+      "radius": -1.0,
+      "requireSprite": false,
+      "color": "#FFFFFF",
+      "fontSize": 27.5,
+      "fontWeight": "Medium"
+    },
+    {
+      "name": "Separator2",
+      "w": 882.0,
+      "h": -1.0,
+      "radius": -1.0,
+      "requireSprite": true,
+      "color": "",
+      "fontSize": -1.0,
+      "fontWeight": ""
+    },
+    {
+      "name": "RulesRow",
+      "w": 882.0,
+      "h": 180.0,
+      "radius": -1.0,
+      "requireSprite": false,
+      "color": "",
+      "fontSize": -1.0,
+      "fontWeight": ""
+    },
+    {
+      "name": "RulesLabel",
+      "w": -1.0,
+      "h": -1.0,
+      "radius": -1.0,
+      "requireSprite": false,
+      "color": "",
+      "fontSize": 32.5,
+      "fontWeight": "SemiBold"
+    },
+    {
+      "name": "RulesBody",
+      "w": -1.0,
+      "h": -1.0,
+      "radius": -1.0,
+      "requireSprite": false,
+      "color": "",
+      "fontSize": 27.5,
+      "fontWeight": "Medium"
+    },
+    {
+      "name": "Separator3",
+      "w": 882.0,
+      "h": -1.0,
+      "radius": -1.0,
+      "requireSprite": true,
+      "color": "",
+      "fontSize": -1.0,
+      "fontWeight": ""
+    },
+    {
+      "name": "EntryRewards",
+      "w": 303.0,
+      "h": 98.0,
+      "radius": -1.0,
+      "requireSprite": false,
+      "color": "",
+      "fontSize": -1.0,
+      "fontWeight": ""
+    },
+    {
+      "name": "EntryPill",
+      "w": 193.0,
+      "h": 42.0,
+      "radius": 22.0,
+      "requireSprite": true,
+      "color": "",
+      "fontSize": -1.0,
+      "fontWeight": ""
+    },
+    {
+      "name": "EntryText",
+      "w": -1.0,
+      "h": -1.0,
+      "radius": -1.0,
+      "requireSprite": false,
+      "color": "#FAC74D",
+      "fontSize": 18.3,
+      "fontWeight": "SemiBold"
+    },
+    {
+      "name": "PaidRpIcon",
+      "w": 30.0,
+      "h": 30.0,
+      "radius": -1.0,
+      "requireSprite": true,
+      "color": "",
+      "fontSize": -1.0,
+      "fontWeight": ""
+    },
+    {
+      "name": "PaidEntryAmount",
+      "w": -1.0,
+      "h": -1.0,
+      "radius": -1.0,
+      "requireSprite": false,
+      "color": "#FAC74D",
+      "fontSize": 18.3,
+      "fontWeight": "SemiBold"
+    },
+    {
+      "name": "RewardRow",
+      "w": 303.0,
+      "h": 40.0,
+      "radius": -1.0,
+      "requireSprite": false,
+      "color": "",
+      "fontSize": -1.0,
+      "fontWeight": ""
+    },
+    {
+      "name": "RewardCoinIcon",
+      "w": 40.0,
+      "h": 40.0,
+      "radius": -1.0,
+      "requireSprite": true,
+      "color": "",
+      "fontSize": -1.0,
+      "fontWeight": ""
+    },
+    {
+      "name": "RewardText",
+      "w": -1.0,
+      "h": -1.0,
+      "radius": -1.0,
+      "requireSprite": false,
+      "color": "#73E080",
+      "fontSize": 26.7,
+      "fontWeight": "Bold"
+    },
+    {
+      "name": "ButtonsRow",
+      "w": 782.0,
+      "h": 120.0,
+      "radius": -1.0,
+      "requireSprite": false,
+      "color": "",
+      "fontSize": -1.0,
+      "fontWeight": ""
+    },
+    {
+      "name": "CancelButton",
+      "w": 359.0,
+      "h": 120.0,
+      "radius": 20.0,
+      "requireSprite": true,
+      "color": "",
+      "fontSize": -1.0,
+      "fontWeight": ""
+    },
+    {
+      "name": "ConfirmButton",
+      "w": 391.0,
+      "h": 120.0,
+      "radius": 20.0,
+      "requireSprite": true,
+      "color": "",
+      "fontSize": -1.0,
+      "fontWeight": ""
+    }
+  ]
+}

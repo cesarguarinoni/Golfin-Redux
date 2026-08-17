@@ -1,0 +1,51 @@
+<frame id="13892:3454" name="INFO" x="15941" y="307" width="978" height="1167">
+  <frame id="13892:3455" name="Pop-Up" x="0" y="0" width="978" height="1167">
+    <frame id="13892:3457" name="Mission Content Container" x="0" y="0" width="978" height="1015">
+      <frame id="13892:3459" name="Upper" x="48" y="32" width="882" height="169">
+        <frame id="13892:3460" name="Header" x="0" y="0" width="882" height="112">
+          <text id="13892:3461" name="GOLFIN PRESENTS" x="331.5" y="0" width="219" height="28" />
+          <text id="13892:3462" name="Lomond Championship" x="200.5" y="32" width="481" height="50" />
+          <text id="13892:3463" name="Lomond Country Club - 18 Holes" x="270.5" y="86" width="341" height="26" />
+        </frame>
+        <frame id="13892:3464" name="Hours + Map" x="112.5" y="122" width="657" height="47">
+          <text id="13892:3465" name="Jun 24 - Jun 27" x="0" y="0" width="312" height="47" />
+          <text id="13892:3466" name="EmDash" x="324" y="0" width="31" height="47" />
+          <text id="13892:3467" name="Pin" x="213" y="3" width="20" height="20" hidden="true" />
+          <text id="13892:3468" name="Ends in 3d 04h" x="367" y="0" width="290" height="47" />
+        </frame>
+      </frame>
+      <line id="13892:3469" name="Separator" x="48" y="225" width="882" height="0" />
+      <frame id="13892:3470" name="InfoRow" x="48" y="249" width="882" height="360">
+        <frame id="13892:3471" name="tournament_image" x="0" y="0" width="260" height="360" />
+        <text id="13892:3472" name="Blurb" x="292" y="0" width="590" height="360" />
+      </frame>
+      <line id="13892:3473" name="Separator2" x="48" y="633" width="882" height="0" />
+      <frame id="13892:3474" name="RulesRow" x="48" y="657" width="882" height="180">
+        <text id="13892:3475" name="RULES" x="163.5" y="0" width="127" height="180" />
+        <text id="13892:3476" name="RulesBodyText" x="322.5" y="0" width="396" height="180" />
+      </frame>
+      <line id="13892:3477" name="Separator3" x="48" y="861" width="882" height="0" />
+      <frame id="13892:3478" name="Entry + Rewards" x="337.5" y="885" width="303" height="98">
+        <frame id="13892:3479" name="Entry + Rewards Inner" x="0" y="0" width="303" height="98">
+          <frame id="13892:3480" name="Daily Bonus" x="55" y="0" width="193" height="42">
+            <frame id="13892:3481" name="RP Amount" x="14" y="6" width="163" height="30">
+              <text id="13892:3482" name="ENTRY" x="0" y="2" width="73" height="26" />
+              <rounded-rectangle id="13892:3483" name="RP Icon Small" x="81" y="0" width="30" height="30" />
+              <text id="13892:3484" name="FeeAmount" x="119" y="2" width="44" height="26" />
+            </frame>
+          </frame>
+          <frame id="13892:3485" name="RewardRow" x="0" y="58" width="303" height="40">
+            <rounded-rectangle id="13892:3486" name="RP Icon Big" x="0" y="0" width="40" height="40" />
+            <text id="13892:3487" name="PrizeText" x="48" y="1" width="255" height="38" />
+          </frame>
+        </frame>
+      </frame>
+    </frame>
+    <frame id="13892:3488" name="Buttons Container" x="98" y="1015" width="782" height="120">
+      <frame id="13892:3489" name="BackWrap" x="0" y="0" width="359" height="120">
+        <instance id="13892:3490" name="BackButton" x="0" y="0" width="359" height="120" />
+      </frame>
+      <instance id="13892:3491" name="ConfirmButton" x="391" y="0" width="391" height="120" />
+    </frame>
+  </frame>
+</frame>

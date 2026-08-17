@@ -1,0 +1,26 @@
+=== iter-1 kickoff baseline 2026-08-17T04:26:20Z ===
+HEAD: 3ed77fb61e4461c986f051d98a0a23476e955eb9
+DIRTY (git status --porcelain --untracked-files=all):
+ M Assets/Plugins/NuGet/.nuget-installed.json
+ M Assets/Plugins/NuGet/McpPlugin.Common.dll
+ M Assets/Plugins/NuGet/McpPlugin.dll
+ M Packages/manifest.json
+ M Packages/packages-lock.json
+?? Docs/Specs/Active/tournament_signup_modal/HEARTBEAT.log
+?? Docs/Specs/Active/tournament_signup_modal/IMPLEMENTER_REPORT.md
+?? Docs/Specs/Active/tournament_signup_modal/SPEC.md
+?? Docs/Specs/Active/tournament_signup_modal/STATUS.md
+?? Docs/Specs/Active/tournament_signup_modal/reference/current_13480-2479_signup.png
+?? Docs/Specs/Active/tournament_signup_modal/reference/related_13894-3628_prize_banner.png
+?? Docs/Specs/Active/tournament_signup_modal/reference/target_13498-2067_info_banner.png
+?? Docs/Specs/Active/tournament_signup_modal/reference/variant_13892-3454_info_no_banner.png
+?? Docs/TESTFLIGHT_RUNBOOK.md
+=== end baseline ===
+
+=== iter-1 progress 2026-08-17T05:30Z ===
+Data layer + ladder + tests + localization + prefab rebuild + admin dashboard complete.
+Lint: 0 FAIL. EditMode: 128 passed / 0 failed (tripwire-proven).
+Four 1170x2532 captures via the real SIGN UP onClick path.
+Cesar corrections applied mid-iteration: entry pill reuse, canonical BACK atom,
+bold title, 3px border double-draw removed, 4-corner thumbnail mask.
+=== end ===

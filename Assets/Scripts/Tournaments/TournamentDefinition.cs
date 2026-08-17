@@ -123,6 +123,62 @@ namespace Golfin.Tournaments
         /// </summary>
         public string? BannerUrl { get; }
 
+        /// <summary>
+        /// Operator-authored English description blurb, shown in the sign-up modal's info row
+        /// (Figma <c>13892:3250</c>). Null for CSV rows — the bundled <c>tournaments.csv</c>
+        /// deliberately gains no description column.
+        /// <para>
+        /// This is NOT <c>public.tournaments.description</c>: that column is GPS-owned, predates
+        /// this work and is single-locale. Overloading it would put two products' meanings in one
+        /// field. See <c>Docs/Specs/Active/tournament_signup_modal/SPEC.md</c> §1.
+        /// </para>
+        /// </summary>
+        public string? DescriptionEn { get; }
+
+        /// <summary>
+        /// Operator-authored Japanese description blurb. Consulted <b>only</b> when
+        /// <c>LocalizationManager.CurrentLanguage == Language.Japanese</c> — the same JP-only
+        /// asymmetry <see cref="TitleJa"/> has, and for the same reason: an English player must
+        /// never fall into Japanese copy. See <c>TournamentDescription.Resolve</c>.
+        /// </summary>
+        public string? DescriptionJa { get; }
+
+        /// <summary>
+        /// Optional build-time localization key for the blurb. Outranks both columns when it
+        /// resolves, because a shipped key is a real translation pair; a key that does NOT resolve
+        /// falls through silently and is never rendered raw.
+        /// </summary>
+        public string? DescriptionKey { get; }
+
+        /// <summary>
+        /// English artwork for the sign-up modal's cross-promotion strip (Figma
+        /// <c>13892:3435</c>, 970 × 252), or null when the tournament has no banner assigned.
+        /// <para>
+        /// Sourced from a <c>game_banners</c> row with <c>placement = 'tournament_modal'</c>,
+        /// joined server-side. The server has already applied <c>is_active</c>, so a switched-off
+        /// banner arrives here as null and the modal renders its no-banner state.
+        /// </para>
+        /// <para>
+        /// ⚠️ NOT <see cref="BannerUrl"/>. That is the 260 × 360 card art in the
+        /// <c>tournament-art</c> bucket; this is a 970 × 252 strip in <c>game-banners</c>.
+        /// </para>
+        /// </summary>
+        public string? ModalBannerImageUrlEn { get; }
+
+        /// <summary>
+        /// Japanese artwork for the same strip. Preferred for JP players, with EN as the
+        /// fallback and vice versa — the ladder is <c>BannerService.ResolveImageUrl</c>, shared
+        /// with the Home and Rankings slots rather than reimplemented.
+        /// </summary>
+        public string? ModalBannerImageUrlJa { get; }
+
+        /// <summary>
+        /// Where tapping the strip goes, or null for a non-interactive banner. Passed through
+        /// raw: it is gated by <c>BannerPolicy.IsLinkAllowed</c> when the button's interactable
+        /// state is set, and again at the moment of the tap.
+        /// </summary>
+        public string? ModalBannerLinkUrl { get; }
+
         public TournamentDefinition(
             string id,
             string nameKey,
@@ -140,7 +196,13 @@ namespace Golfin.Tournaments
             // every test fixture — compiles untouched.
             string? title = null,
             string? bannerUrl = null,
-            string? titleJa = null)
+            string? titleJa = null,
+            string? descriptionEn = null,
+            string? descriptionJa = null,
+            string? descriptionKey = null,
+            string? modalBannerImageUrlEn = null,
+            string? modalBannerImageUrlJa = null,
+            string? modalBannerLinkUrl = null)
         {
             Id                   = id;
             NameKey              = nameKey;
@@ -157,6 +219,12 @@ namespace Golfin.Tournaments
             Title                = title;
             BannerUrl            = bannerUrl;
             TitleJa              = titleJa;
+            DescriptionEn        = descriptionEn;
+            DescriptionJa        = descriptionJa;
+            DescriptionKey       = descriptionKey;
+            ModalBannerImageUrlEn = modalBannerImageUrlEn;
+            ModalBannerImageUrlJa = modalBannerImageUrlJa;
+            ModalBannerLinkUrl    = modalBannerLinkUrl;
         }
     }
 }

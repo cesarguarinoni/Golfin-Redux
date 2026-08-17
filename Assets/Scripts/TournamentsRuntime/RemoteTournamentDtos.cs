@@ -54,7 +54,42 @@ namespace Golfin.Tournaments
         [JsonProperty("banner_url")]            public string? BannerUrl;
         [JsonProperty("bot_seed")]              public long   BotSeed;
 
+        // The sign-up modal's blurb (SPEC §3.1). Plain pass-through strings, exactly like
+        // title_ja — the file-level DateParseHandling.None discipline applies here too, so a
+        // description that happens to open with a date-shaped token is not silently reinterpreted.
+        [JsonProperty("description_en")]  public string? DescriptionEn;
+        [JsonProperty("description_ja")]  public string? DescriptionJa;
+        [JsonProperty("description_key")] public string? DescriptionKey;
+
         [JsonProperty("prize_bands")] public List<RemotePrizeBandDto>? PrizeBands;
+
+        /// <summary>
+        /// The sign-up modal's cross-promotion strip, or null when this tournament has no banner
+        /// assigned — or its banner row was deleted, or switched inactive. The server collapses all
+        /// three into the same null, deliberately: they are the same thing to the client, and the
+        /// no-banner modal is a complete design, not a degraded one.
+        /// <para>
+        /// Note there is no id here. <c>modal_banner_id</c> stays server-side.
+        /// </para>
+        /// </summary>
+        [JsonProperty("modal_banner")] public RemoteModalBannerDto? ModalBanner;
+    }
+
+    /// <summary>
+    /// The <c>modal_banner</c> object on a tournament row — the artwork for Figma
+    /// <c>13892:3435</c>, resolved out of <c>game_banners</c> by the server.
+    /// <para>
+    /// Plain strings, no date handling: a <c>tournament_modal</c> banner has no schedule of its
+    /// own. The tournament's own window governs when the strip is on screen, which is why
+    /// <c>start_at</c>/<c>end_at</c>/<c>sort_order</c> are absent here even though the table has
+    /// them for the other two placements.
+    /// </para>
+    /// </summary>
+    public sealed class RemoteModalBannerDto
+    {
+        [JsonProperty("image_url_en")] public string? ImageUrlEn;
+        [JsonProperty("image_url_ja")] public string? ImageUrlJa;
+        [JsonProperty("link_url")]     public string? LinkUrl;
     }
 
     /// <summary>One rank band. Per-tournament, not a shared template (Phase-1 schema decision).</summary>

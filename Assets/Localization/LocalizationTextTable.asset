@@ -672,6 +672,27 @@ MonoBehaviour:
     english: "Kawana Hotel Golf Course \xB7 18 Holes"
     japanese: "\u5DDD\u5948\u30DB\u30C6\u30EB\u30B4\u30EB\u30D5\u30B3\u30FC\u30B9
       \xB7 18\u30DB\u30FC\u30EB"
+  - key: tourn.venue.holes_suffix
+    english: Holes
+    japanese: "\u30DB\u30FC\u30EB"
+  - key: tourn.rules.label
+    english: RULES
+    japanese: "\u30EB\u30FC\u30EB"
+  - key: tourn.rules.max_players
+    english: 'MAX PLAYERS: Unlimited'
+    japanese: "\u6700\u5927\u53C2\u52A0\u4EBA\u6570\uFF1A\u7121\u5236\u9650"
+  - key: tourn.rules.divisions
+    english: 'DIVISIONS: Level based'
+    japanese: "\u30C7\u30A3\u30D3\u30B8\u30E7\u30F3\uFF1A\u30EC\u30D9\u30EB\u5225"
+  - key: tourn.rules.per_division
+    english: 'PLAYERS PER DIVISION: 100'
+    japanese: "1\u30C7\u30A3\u30D3\u30B8\u30E7\u30F3\uFF1A100\u4EBA"
+  - key: tourn.rules.gear
+    english: 'GEAR :  Supplied by GOLFIN'
+    japanese: "\u30AE\u30A2\uFF1AGOLFIN\u63D0\u4F9B"
+  - key: tourn.rules.characters
+    english: 'CHARACTERS:  Unrestricted'
+    japanese: "\u30AD\u30E3\u30E9\u30AF\u30BF\u30FC\uFF1A\u5236\u9650\u306A\u3057"
   - key: AUTH_LOGIN_TITLE
     english: Welcome Back
     japanese: "\u304A\u304B\u3048\u308A\u306A\u3055\u3044"

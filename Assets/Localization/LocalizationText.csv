@@ -194,6 +194,12 @@ tourn.venue.gotemba,Taiheyo Club Gotemba · 18 Holes,太平洋クラブ御殿場
 tourn.venue.kisarazu,Kisarazu Higashi CC · 18 Holes,木更津東カントリークラブ · 18ホール
 tourn.venue.kawana,Kawana Hotel Golf Course · 18 Holes,川奈ホテルゴルフコース · 18ホール
 tourn.venue.holes_suffix,Holes,ホール
+tourn.rules.label,RULES,ルール
+tourn.rules.max_players,MAX PLAYERS: Unlimited,最大参加人数：無制限
+tourn.rules.divisions,DIVISIONS: Level based,ディビジョン：レベル別
+tourn.rules.per_division,PLAYERS PER DIVISION: 100,1ディビジョン：100人
+tourn.rules.gear,GEAR :  Supplied by GOLFIN,ギア：GOLFIN提供
+tourn.rules.characters,CHARACTERS:  Unrestricted,キャラクター：制限なし
 AUTH_LOGIN_TITLE,Welcome Back,おかえりなさい
 AUTH_LOGIN_EMAIL_PLACEHOLDER,Email,メール
 AUTH_LOGIN_PASSWORD_PLACEHOLDER,Password,パスワード
