@@ -35,6 +35,13 @@ const PATHS: Record<PanelIconName, React.ReactNode> = {
       <path d="m9 12 2 2 4-4" />
     </>
   ),
+  megaphone: (
+    <>
+      <path d="M3 11v2a1 1 0 0 0 1 1h3l6 4V6L7 10H4a1 1 0 0 0-1 1z" />
+      <path d="M17 9a3.5 3.5 0 0 1 0 6" />
+      <path d="M7 14v5" />
+    </>
+  ),
   image: (
     <>
       <rect x="3" y="5" width="18" height="14" rx="2" />

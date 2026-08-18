@@ -32,6 +32,36 @@
 
 ## 📋 SPEC_READY POINTERS
 
+- **`home_notices`** (filed 2026-08-18, Architect) — **SPEC_READY. The Home screen's notice panel becomes admin-controlled — title + body, EN + JA, scheduled, no client build.** Server side is DONE and deployed by the Architect: table `public.home_notices` (migration `2026_08_18_home_notices.sql`, **APPLIED to prod 2026-08-18** — service key reads 200 `[]`, anon 401, and the endpoint was smoke-tested with four rows proving live/expired/future/draft filtering before they were deleted), `GET /api/v1/notices` (`backend/routers/notices.py`, no auth, server-side scheduling, `expires_at` echoed for the on-device cache), and a Notices panel in the admin dashboard (live at https://admin.golfin.world). **The Unity client is the only outstanding half.** New `Assets/Scripts/NoticesRuntime/` (`Golfin.Notices`, no asmdef) mirroring `BannersRuntime` file-for-file — `RemoteNoticeDtos` / `RemoteNoticeSource` (cache `home_notices.json`, atomic write, null on any failure) / `NoticeService` (singleton, sync cache read in `Awake`, throttled `Refresh()` on `ScheduleRefreshThrottle`, `OnNoticesChanged`, `LocalizationManager.OnLanguageChanged`) — plus one `Endpoints.Notices` line and a rewrite of `HomeScreenController.UpdateNewsContent()` to page the live notices through the dots that already exist. ⚠️ Two behaviour changes to be aware of: **with nothing live the panel HIDES** (it is an announcement surface, not a fixture — banners have a bundled sprite behind them, an unwritten announcement has nothing), and the bundled `HOME_MAINTENANCE_*` strings are **retired, not kept as an offline fallback** — they currently tell every player the servers go down on **2025/12/31**, a date eight months past, which is the bug this feature exists to fix. Demo build (`DemoGate.IsDemo`) path is unchanged. Needs one scene wiring step (`newsPanelRoot` on HomeScreenController in ShellScene). Spec: `Docs/Specs/Active/home_notices/SPEC.md`.
+
+### Kickoff · home_notices (issued 2026-08-18)
+
+```
+Read Docs/Specs/Active/home_notices/SPEC.md and implement it.
+
+Context:
+- The Home notice panel ("MAINTENANCE NOTICE" + body) currently reads two
+  hardcoded LocalizationText.csv keys and tells every player the servers go
+  down on 2025/12/31. This puts the copy under admin control instead.
+- Server side is already live — GET /api/v1/notices returns the scheduled,
+  ordered, EN+JA notices. Client only. Spec §2 is the contract.
+- Mirror Assets/Scripts/BannersRuntime/ file-for-file: same singleton shape,
+  same disk-cache discipline (raw body, atomic .tmp+replace, null on failure),
+  same ScheduleRefreshThrottle, same silent-failure posture. Read BannerService
+  and RemoteBannerSource before writing anything.
+- Minimal diff elsewhere: one Endpoints.Notices line, one new serialized field
+  on HomeScreenController (newsPanelRoot), and UpdateNewsContent rewritten.
+  Do NOT touch the DemoGate path.
+- An empty notice list is a NORMAL state and means hide the panel. Do not keep
+  HOME_MAINTENANCE_* as an offline fallback — spec §4.3 explains why.
+- Out of scope: rich text, targeting, push, a third language.
+
+When done: list changed files with a 1-line summary each, run the acceptance
+tests in the spec, flag which need manual on-device verification (§5 items 1–7
+mostly need a device + the dashboard), update STATUS.md +
+IMPLEMENTER_REPORT.md in the spec folder, and update Docs/AI_CONTEXT.md.
+```
+
 - **`beta_telemetry`** (filed 2026-08-18, Architect) — **SPEC_READY. Telemetry for next week's 20-tester live beta — Unity client + backend half.** A batching `TelemetryService` (new `Assets/Scripts/Telemetry/`, Assembly-CSharp) subscribes to EXISTING events — `ScreenManager.ScreenChanged`, `GameSession.OnHistoryChanged`/`OnHoleComplete` (ShotRecord already carries club/distance/OB/surface — the shot telemetry is free), `RewardPointsManager.OnPointsChanged`, `CharacterManager.OnCharacterLeveledUp`, `Application.logMessageReceived` — plus ~4 one-line insertions (`GameSession.SeedSession`, the two ShotController cancel/reject branches — raised as static events and relayed through a tiny `ShotTelemetryRelay` in `Golfin.Gameplay.UI`, because `Golfin.Gameplay.Input` is autoReferenced:false and Assembly-CSharp can't see `ShotController`; verified, see spec — and `Endpoints.cs`). Ships through the EXISTING `ApiClient` (Bearer/envelope/retry/401-replay — nothing re-implemented) to a new authed `POST /api/v1/telemetry/events` (`backend/routers/telemetry.py`) writing one `telemetry_events` table (migration `2026_08_18_telemetry_events.sql`, client-GUID `event_id` unique = idempotent retries, RLS on / no policies = service_role only). 13 events: sessions, screen funnel, round/shot/hole (incl. `flick_rejected` — THE control-feel number), abandons, capped client exceptions, FPS avg/low per hole, points/level-up/SP. Editor sends OFF unless `GOLFIN_TELEMETRY_DEBUG`. **Migration first, deploy second** (ops doc §3.2): Cesar pastes SQL, REST-probe verify, then `fly deploy`. Spec: `Docs/Specs/Active/beta_telemetry/SPEC.md`.
 
 ### Kickoff · beta_telemetry (issued 2026-08-18)

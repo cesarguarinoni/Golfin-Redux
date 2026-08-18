@@ -12,8 +12,8 @@ Full detail lives in that folder's `README.md`; this file is the operator's view
 
 Next.js 15 (App Router) + TypeScript + Tailwind, deployed to **Cloudflare
 Workers** via the OpenNext adapter, reading the PLAYLIFE Supabase project
-directly with a `service_role` key. Five panels — Users, Points, Tournaments, Banners,
-Audit Log — registered in `lib/registry.ts`.
+directly with a `service_role` key. Four panels — Users, Points, Tournaments,
+Audit Log, Banners, Notices — registered in `lib/registry.ts`.
 
 | Thing | Value |
 |---|---|
@@ -199,6 +199,10 @@ fly deploy                      # app playlife-api, region nrt
 
 Routes live in `backend/routers/`, mounted under `/api/v1`. Envelope is
 `{"data": …}` written by hand per route; errors are FastAPI `{"detail": …}`.
+`GET /notices` (`routers/notices.py`) is the Home notice panel's copy — every
+live `home_notices` row, ordered, EN+JA, with `expires_at` echoed so a cached
+notice dies on time offline. An empty list is normal and means "hide the panel".
+
 `GET /tournaments/golfin` is the game's schedule endpoint — it filters
 `kind='golfin'` and `is_active=true`, and must stay declared **above**
 `GET /{tournament_id}` or that route swallows the literal path.

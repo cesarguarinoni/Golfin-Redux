@@ -3,7 +3,7 @@
  * To add a panel: create app/(panels)/<id>/page.tsx and add an entry here.
  */
 
-export type PanelIcon = "users" | "coins" | "flag" | "chart" | "shield" | "image";
+export type PanelIcon = "users" | "coins" | "flag" | "chart" | "shield" | "image" | "megaphone";
 
 export interface PanelDef {
   id: string;
@@ -17,5 +17,6 @@ export const PANELS: readonly PanelDef[] = [
   { id: "points", title: "Points", icon: "coins", route: "/points" },
   { id: "tournaments", title: "Tournaments", icon: "flag", route: "/tournaments" },
   { id: "banners", title: "Banners", icon: "image", route: "/banners" },
+  { id: "notices", title: "Notices", icon: "megaphone", route: "/notices" },
   { id: "audit", title: "Audit Log", icon: "shield", route: "/audit" },
 ] as const;

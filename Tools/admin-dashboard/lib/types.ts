@@ -303,3 +303,57 @@ export type UserActionKind = (typeof USER_ACTION_KINDS)[number];
 export interface MutationResponse {
   message: string;
 }
+
+// ---------------------------------------------------------------------------
+// Notices panel (SPEC home_notices §3)
+// ---------------------------------------------------------------------------
+
+/**
+ * Same four states as a banner, derived the same way from is_active + the
+ * window. Aliased rather than redeclared so the two panels can never drift
+ * into meaning different things by the same name.
+ */
+export type NoticeState = BannerState;
+
+/** One row of public.home_notices as the panel renders it. */
+export interface NoticeRow {
+  id: string;
+  /** ADMIN-ONLY name. Never sent to the client, never shown to a player. */
+  label: string;
+  titleEn: string;
+  /** Null (not "") means "no Japanese written" — the client shows the EN one. */
+  titleJa: string | null;
+  bodyEn: string;
+  bodyJa: string | null;
+  startAt: string | null;
+  endAt: string | null;
+  sortOrder: number;
+  isActive: boolean;
+  createdAt: string | null;
+  updatedAt: string | null;
+}
+
+/** Editable fields — what create/update accept over the wire. */
+export interface NoticeInput {
+  label: string;
+  titleEn: string;
+  titleJa: string | null;
+  bodyEn: string;
+  bodyJa: string | null;
+  startAt: string | null;
+  endAt: string | null;
+  sortOrder: number;
+  isActive: boolean;
+  /**
+   * Required (typed label) when switching a notice that is currently LIVE off,
+   * the same way a LIVE banner does. Editing the text of a live notice is NOT
+   * guarded — fixing a wrong date mid-maintenance is the thing this feature
+   * exists for, and a confirmation there would be friction on the hot path.
+   */
+  confirmLabel?: string;
+}
+
+export interface NoticesResponse {
+  notices: NoticeRow[];
+  mock: boolean;
+}
