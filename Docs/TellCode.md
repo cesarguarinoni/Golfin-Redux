@@ -7,6 +7,7 @@
 
 ## ▶ CURRENT STATE — update this block at every session boundary
 
+- **Last updated:** 2026-08-18 evening (Architect — **`tournament_async_board` (Phase 4 of `tournaments_server_side`) server half BUILT; Unity spec SPEC_READY, kickoff GATED on deploy.** Cesar's calls: board first / payout (Phase 5) after; bots retire ONE-WAY at 10 human entries and are REMOVED from the ranking (`tournaments.bots_retired_at` latch); leaderboard sends BOTH ranks — display (blended) + `prize_rank` (human-only, bots never paid). Written into playlife (UNCOMMITTED): `migrations/2026_08_18_tournament_async_phase4.sql` (bot latch, `tournament_entries.display_level`, `golfin_bot_fields` + `golfin_bot_brackets` server mirrors of the CSVs), NEW `routers/tournaments_golfin.py` mounted at the same `/api/v1/tournaments` prefix — `POST /golfin/{slug}/enter` (server-side fee debit via `spend_pts` with deterministic uuid5(user:slug) key — self-heals, never double-charges), `POST /golfin/{slug}/submit-hole` (§6b.3 plausibility: hole-in-set, strokes 1–15, window = end+resolve_delay grace, 20s/hole pace tripwire, idempotent replay for the offline queue), `GET /golfin/{slug}/entry` (cross-device resume), `GET /golfin/{slug}/leaderboard` (server bot generation ONCE per tournament — seeded via bot_seed latch, persisted into entries+hole_results with organic-reveal timestamps; ranking is a faithful port of LocalTournamentBackend: provisional score-to-par/thru/earlier-submit no partial ties, final strokes+T-ties+earlier submitted_at; DNF & thru-0 hidden; caller row always in `player`). Logic proven end-to-end against a fake Supabase (enter/replay/pace/retire/final). GPS endpoints in `tournaments.py` untouched. ✅ SHIPPED TO PROD same evening: migration APPLIED (verification 2 new cols / 3 bot fields / 6 brackets / RLS true), `fly deploy` green, smoke: `/health` 200, all four `/golfin/{slug}/…` endpoints **403-not-404** (mounted, auth-gated), the public `/golfin` schedule still 200, garbage routes 404. **The tournament_async_board kickoff below is pasteable NOW.** Phase-4 NOTE: `GetResults`/`ClaimPrize` keep the existing client-side earn-game `tournament_prize` payment path (unchanged behavior) — Phase 5 moves payment into the resolver and re-points ClaimPrize (decision of record #5).)
 - **Last updated:** 2026-08-18 later (Architect — **`leaderboard_backend` server half BUILT; Unity spec SPEC_READY.** Cesar's decisions of record: server-side fake pool (everyone sees the same board), character id+level sync to profiles, Architect builds/deploys backend + Code does Unity. Written into playlife (UNCOMMITTED — Code or Cesar commits): `migrations/2026_08_18_golfin_leaderboards.sql` (profiles.golfin_character_id/level, `golfin_fake_players` seeded with the 120 fake_players.csv rows RLS-on-no-policies, `golfin_leaderboard(p_start,p_end)` aggregation fn — filters by the `game_point_actions` catalog so GPS RP + admin grants never rank, service_role-only), `routers/leaderboards.py` (`GET /api/v1/leaderboards/{daily|weekly|monthly|historic}`, AUTH, ranks+T-ties server-side 1,2,2,4, deterministic fake scores per period key — participation 35/70/90/100%, ranges sized post-÷10 ⚠️ NOTE constants need tuning once real beta scores exist), `user.py` `PUT /golfin-character`, `main.py` mount. ✅ SHIPPED TO PROD same day: migration APPLIED via Supabase SQL editor (Cesar; self-contained verification query returned 2 golfin profile cols / 120 fakes active / RLS true / 0 fn-vs-ledger mismatches), `fly deploy` green (both machines good, via MacOS-MCP shell + nohup — flyctl is NOT in the device_bash VM, it lives on the Mac at ~/.fly/bin), smoke: `/health` 200, all four `/api/v1/leaderboards/{period}` + `PUT /user/golfin-character` respond **403-not-404** (mounted, auth-gated), garbage route 404s. **The Unity kickoff below is pasteable NOW.** Ledger-derived scores mean past periods are queryable for free — the v1.0 "previous period results" popup needs no snapshots when it's wanted. Fake-pool dashboard panel = deliberate follow-up.)
 - **Last updated:** 2026-08-13 (final) (Architect — **THE DASHBOARD IS LIVE AND THE LOOP IS CLOSED.** `admin_dashboard` v1 scope complete: running against production, real Supabase password auth verified, and Cesar performed the first live admin RP adjustments through the UI (+100 then −50 on Cratilo → balance 123→223→**173**). Prod SQL confirms both rpc paths and the audit trail: ledger rows `manual_admin_grant +100` / `spend -50`, plus two `rp_adjust` rows in `admin_audit_log` carrying before/after `total_points` and the admin's email. Two days after "start the admin dashboard", the chain runs end to end: **dashboard → `earn_pts_v2`/`spend_pts` → the one shared ledger → the game's RP.** ⚠️ SECURITY STANDING ITEM: the service_role key was pasted into a chat transcript — rotate it, and when you do, update BOTH `Tools/admin-dashboard/.env.local` and the playlife-api Fly secret in the same sitting or `/points/*` breaks. Still open elsewhere: `points_device_checks` (Cesar-only, 3 checks); dashboard hosting + Google OAuth for admin login; spec §4 v2/v3 panels pending Track B.)
 
@@ -32,6 +33,44 @@
 ---
 
 ## 📋 SPEC_READY POINTERS
+
+- **`tournament_async_board`** (filed 2026-08-18, Architect) — **SPEC_READY — endpoints LIVE in prod 2026-08-18, kickoff pasteable.** Phase 4 of `tournaments_server_side` §6b: tournament entry, per-hole submission and the leaderboard move to the backend — every player sees the same board, server-generated bot field with organic reveal, bots retire one-way at 10 humans, sticky row shows `#rank · PRIZE #prize_rank` while bots pad. Unity-only: new `RemoteTournamentBackend` behind the existing `ITournamentBackend` seam, submissions ride a pending-ops queue, `LocalTournamentBackend` stays for bot/demo/signed-out. Spec: `Docs/Specs/Active/tournament_async_board/SPEC.md`.
+
+### Kickoff · tournament_async_board (issued 2026-08-18)
+
+```
+Read Docs/Specs/Active/tournament_async_board/SPEC.md and implement it.
+
+Context:
+- Tournaments become real async multiplayer: enter/submit/leaderboard now
+  live on the backend (endpoints are live; spec §1 is the contract,
+  verbatim). Every player must see the same board.
+- ITournamentBackend was built for this swap ("Later: RemoteTournamentBackend
+  (REST). UI code never changes."). New code goes in
+  Assets/Scripts/TournamentsRuntime/ — do NOT add Golfin.Net to
+  Golfin.Tournaments.asmdef (hard-won rule).
+- Register: the server debits the entry fee (deterministic spend key). Do
+  NOT also debit via IRewardPointsService — that double-charges. Trigger the
+  rp_balance_sync refresh instead. Insufficient/offline use the existing UX.
+- SubmitHoleResult: local persist first, then enqueue — mirror
+  Economy/PendingOpsStore (FIFO, idempotency GUID per hole, drop on
+  replayed:true and on 400). Newtonsoft: DateParseHandling.None, both
+  reader and serializer, or schedules shift by timezone.
+- Leaderboard: map the payload verbatim, do NOT re-rank. Sticky row shows
+  "#rank · PRIZE #prize_rank" while bots_active and they differ.
+- Provider selection: BotSessionOverride / signed-out / DemoGate keep
+  LocalTournamentBackend — bots are offline by design, never hit prod.
+- GetResults/ClaimPrize: final rank from the server board (prize_rank);
+  the award keeps the existing earn-game tournament_prize path, with a
+  NOTE where Phase 5 re-points it.
+- Out of scope: Phase 5 resolver/payout, dashboard editors, GPS endpoints,
+  tournament banners, the Rankings screen.
+
+When done: list changed files with a 1-line summary each, run the FULL
+per-assembly EditMode sweep + the new tests in spec §5, flag which §5 manual
+items need Cesar's device pass, update STATUS.md + IMPLEMENTER_REPORT.md in
+the spec folder, and update Docs/AI_CONTEXT.md.
+```
 
 - **`leaderboard_backend`** (filed 2026-08-18, Architect) — **SPEC_READY — endpoint LIVE in prod 2026-08-18, kickoff pasteable.** The Rankings screen moves off `LocalFakeLeaderboardProvider` onto `GET /api/v1/leaderboards/{period}` — same board for every player, ranks + ties computed server-side, fakes served from the server pool, character portrait/level synced via `PUT /user/golfin-character`. Unity-only: new `BackendLeaderboardProvider` behind the existing `ILeaderboardProvider` seam (built for this exact swap), disk-cached last payload, refresh driven from `RankingsScreenController.OnEnable`/tab taps, `LocalFakeLeaderboardProvider` retired to the bot/signed-out path only. Spec: `Docs/Specs/Active/leaderboard_backend/SPEC.md`.
 

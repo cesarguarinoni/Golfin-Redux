@@ -75,6 +75,42 @@ The `get_builds` call needed `includes: nil` to work around the spaceship drift 
 
 ---
 
+### Second run — 2026-08-18 15:42 JST, `1.5.7 (2211)`
+
+The repeat that matters: a lane is only unattended if it works the *second* time, on a machine
+whose state the first run changed. `./Tools/testflight.sh` from a clean tree at `bdec09259`,
+Editor closed, **exit 0 in 8 min 12 s** (15:42:32 → 15:50:44) — 3¼ minutes faster than the
+11:05 run, entirely in `build_app` (322 s vs 521 s: incremental IL2CPP off the 11:05 archive).
+
+| # | Step | Time |
+|---|---|---|
+| 1 | `default_platform` | 0s |
+| 2 | `ensure_git_status_clean` | 0s |
+| 3 | `assert-unity-closed.sh` | 0s |
+| 4 | `unity-build-ios.sh` | **88s** (warm iOS platform, incremental IL2CPP) |
+| 5 | `app_store_connect_api_key` | 0s |
+| 6 | `build_app` (archive + export + sign) | **322s** |
+| 7 | `upload_to_testflight` | **79s** |
+| 8 | `mark-uploaded.sh ..` | 0s |
+
+- `Successfully exported and signed the ipa file: Builds/ipa/Golfin.ipa`, dSYM compressed and
+  uploaded alongside it.
+- `Successfully uploaded the new binary to App Store Connect`.
+- **Confirmed at Apple, not just in the log:** polled the App Store Connect API until the record
+  appeared — `FOUND 1.5.7 (2211) state=VALID`, ~5 minutes after upload (the 11:05 run took ~4).
+  It is the newest build on the `Golfin Game` record (id 6741622475), ahead of `2201`, `2194`, `2192`.
+- Guard advanced `2201 → 2211` — this time the Fastfile's call did the writing, since the
+  archive post-action had already fired at the same commit; `Docs/Versioning/last_uploaded_build.txt` is the only dirty file
+  afterwards, exactly as designed.
+- Signing needed no interaction: automatic signing from Player Settings +
+  `-allowProvisioningUpdates`, no `match`, no keychain prompt.
+- Contents differ from 2201: this build is the first carrying the in-flight `beta_telemetry`
+  code (`bdec09259`), committed on Cesar's explicit call to clear the tree for the lane.
+
+**Every acceptance item PASSES. Nothing in this spec is AWAITING.**
+
+---
+
 ## Findings
 
 ### 1. A failed batchmode build used to poison the next run — fixed in `CIBuild`
@@ -273,16 +309,17 @@ Untracked build output (`Builds/iOS-Full/**`, `Builds/unity-build-ios.log`) is c
 
 1. ~~Install fastlane~~ — **DONE 2026-08-18** (2.238.0 on vendored ruby 4.0.6).
 2. ~~Mint the App Store Connect API key~~ — **DONE 2026-08-18**, proven to authenticate.
-3. ~~Run the lane end to end~~ — **DONE 2026-08-18 11:05 JST**, `1.5.7 (2201)` uploaded and
-   confirmed `VALID` on App Store Connect. All 12 acceptance items now PASS.
-4. **Commit `Docs/Versioning/last_uploaded_build.txt`** (now `2201`) — the one file the lane
-   leaves dirty, by design. NOT committed here: the working tree also carries unrelated
-   in-flight `Tools/admin-dashboard/` and `Docs/Specs/Active/home_notices/` work, and CLAUDE.md
-   rule 12 halts a close-out commit on drift outside the task folder.
+3. ~~Run the lane end to end~~ — **DONE**, twice: `1.5.7 (2201)` at 11:05 JST and
+   `1.5.7 (2211)` at 15:42 JST, both `VALID` on App Store Connect. All 12 acceptance items PASS.
+4. **Commit `Docs/Versioning/last_uploaded_build.txt`** (now `2211`) — the one file the lane
+   leaves dirty, by design. NOT committed here: no close-out commit was requested, and CLAUDE.md
+   rule 12 halts one while unrelated drift exists outside the task folder.
 5. **Optional, one line** — put the locale and `brew shellenv` in `~/.zprofile` (Findings §5,
    §7) so `fastlane ios testflight_build` works directly from any shell. `Tools/testflight.sh`
    already covers it for the common path.
-6. **Check TestFlight** — the build should have reached `In-House Testers` automatically. Worth
+6. **Check TestFlight** — `2211` should have reached `In-House Testers` automatically, and it is
+   the first tester build carrying the in-flight `beta_telemetry` code, so it is worth a device
+   smoke rather than a glance. Worth
    confirming once that the internal group really does auto-distribute a fastlane-uploaded
    build, since the lane deliberately passes no `groups:`.
 

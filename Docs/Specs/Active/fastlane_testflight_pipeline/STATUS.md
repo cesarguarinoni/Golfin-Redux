@@ -40,16 +40,26 @@ Two real defects were found by running it, not by reading it:
    failure. Fixed with `Tools/testflight.sh`, which exports the locale before fastlane starts.
    The `LC_ALL` in `fastlane/.env` does NOT fix this and had been wrongly recorded as doing so.
 
+## ✅ RE-RUN CLEAN — 2026-08-18 15:42 JST, `1.5.7 (2211)`
+
+The run that proves it is a pipeline and not a one-off: same command, from a machine the first
+run had already changed. `./Tools/testflight.sh`, **exit 0 in 8 min 12 s**, `VALID` on App Store
+Connect ~5 min later, guard `2201 → 2211`. 3¼ min faster than 11:05, all of it in `build_app`
+(322 s vs 521 s — incremental IL2CPP). No manual step, no prompt, no dialog.
+
+`2211` is also the first tester build carrying the in-flight `beta_telemetry` code, committed as
+`bdec09259` on Cesar's explicit call to clear the tree for the lane.
+
 ## Remaining for Cesar
 
-1. **Commit `Docs/Versioning/last_uploaded_build.txt`** (now `2201`) — the one file the lane
-   leaves dirty, by design. Not committed here: the tree carries unrelated in-flight
-   `Tools/admin-dashboard/` + `home_notices` work and CLAUDE.md rule 12 halts a close-out on
-   drift outside the task folder.
-2. **Confirm the build reached `In-House Testers`** — the lane passes no `groups:` on purpose
+1. **Commit `Docs/Versioning/last_uploaded_build.txt`** (now `2211`) — the one file the lane
+   leaves dirty, by design. Not committed here: no close-out commit was asked for.
+2. **Smoke `2211` on device** — it carries unfinished telemetry, so it deserves a real run, not
+   just a "did it install".
+3. **Confirm the build reached `In-House Testers`** — the lane passes no `groups:` on purpose
    (fastlane's `groups:` is external-only and the internal group auto-distributes). Worth
    eyeballing once that this holds for a fastlane-uploaded build.
-3. **Optional, one line in `~/.zprofile`** — locale + `brew shellenv`, so plain
+4. **Optional, one line in `~/.zprofile`** — locale + `brew shellenv`, so plain
    `fastlane ios testflight_build` works from any shell. `Tools/testflight.sh` already covers
    the common path.
 
@@ -75,3 +85,4 @@ closed.
 | 2026-08-18 | `READY_FOR_ARCHITECT_REVIEW` | Implemented. One defect found and fixed: a failed batchmode build used to leave `ProjectSettings.asset` dirty and block the next lane run. |
 | 2026-08-18 (later) | `READY_FOR_ARCHITECT_REVIEW` | Cesar installed fastlane and created the API key mid-task; key proven to authenticate against the live `Golfin Game` record, read-only. |
 | 2026-08-18 11:05 | `READY_FOR_ARCHITECT_REVIEW` | **Ran end to end.** `LANE EXIT=0` in 11 min 27 s; `1.5.7 (2201)` uploaded, confirmed `VALID` on App Store Connect; guard advanced `2192 → 2201`. **12 of 12 acceptance items PASS.** Second defect found and fixed en route: the US-ASCII locale crash in `build_app` (`Tools/testflight.sh`). Also disproved the spec's premise that scheme post-actions don't fire under `xcodebuild` — it fired, and idempotency made the double-fire a no-op (report Findings §8). |
+| 2026-08-18 (15:50) | `READY_FOR_ARCHITECT_REVIEW` | **Second unattended run, `1.5.7 (2211)`** — `./Tools/testflight.sh`, exit 0 in **8m12s**, `VALID` on App Store Connect ~5 min later, guard `2201 → 2211`. The repeat run is the one that proves the lane is re-runnable rather than a one-off: it started from a machine the first run had already changed, and was 3¼ min faster (incremental IL2CPP). This build is also the first carrying the in-flight `beta_telemetry` code, committed as `bdec09259` on Cesar's call to clear the tree. |
