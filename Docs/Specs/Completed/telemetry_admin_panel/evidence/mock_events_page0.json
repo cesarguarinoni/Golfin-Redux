@@ -1,0 +1,2034 @@
+{
+    "mock": true,
+    "tableMissing": false,
+    "range": {
+        "from": "2026-08-11T18:00:00.000Z",
+        "to": "2026-08-18T18:00:00.000Z"
+    },
+    "events": [
+        {
+            "eventId": "e7e70000-0000-4000-8000-000000000068",
+            "userId": "3e67d2a0-4f88-41c5-96b3-7a1f8c4d2505",
+            "tester": "cesar.guarinoni@gmail.com",
+            "sessionId": "5e551000-0000-4000-8000-00000000000a",
+            "name": "session_end",
+            "ts": "2026-08-18T16:10:00.000Z",
+            "receivedAt": "2026-08-18T16:10:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "iOS",
+            "deviceModel": "iPad13,4",
+            "os": "iPadOS 18.5",
+            "payload": {
+                "duration_s": 600
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-000000000067",
+            "userId": "3e67d2a0-4f88-41c5-96b3-7a1f8c4d2505",
+            "tester": "cesar.guarinoni@gmail.com",
+            "sessionId": "5e551000-0000-4000-8000-00000000000a",
+            "name": "shot_taken",
+            "ts": "2026-08-18T16:08:00.000Z",
+            "receivedAt": "2026-08-18T16:08:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "iOS",
+            "deviceModel": "iPad13,4",
+            "os": "iPadOS 18.5",
+            "payload": {
+                "shot_number": 3,
+                "club": "Putter",
+                "distance_m": 6.3,
+                "terminal": "InCup",
+                "ob_reason": null,
+                "surface": "Green",
+                "penalty": 0,
+                "hole": 1
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-000000000066",
+            "userId": "3e67d2a0-4f88-41c5-96b3-7a1f8c4d2505",
+            "tester": "cesar.guarinoni@gmail.com",
+            "sessionId": "5e551000-0000-4000-8000-00000000000a",
+            "name": "shot_taken",
+            "ts": "2026-08-18T16:07:00.000Z",
+            "receivedAt": "2026-08-18T16:07:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "iOS",
+            "deviceModel": "iPad13,4",
+            "os": "iPadOS 18.5",
+            "payload": {
+                "shot_number": 2,
+                "club": "7 Iron",
+                "distance_m": 132.1,
+                "terminal": "AtRest",
+                "ob_reason": null,
+                "surface": "Green",
+                "penalty": 0,
+                "hole": 1
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-000000000065",
+            "userId": "3e67d2a0-4f88-41c5-96b3-7a1f8c4d2505",
+            "tester": "cesar.guarinoni@gmail.com",
+            "sessionId": "5e551000-0000-4000-8000-00000000000a",
+            "name": "shot_taken",
+            "ts": "2026-08-18T16:06:00.000Z",
+            "receivedAt": "2026-08-18T16:06:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "iOS",
+            "deviceModel": "iPad13,4",
+            "os": "iPadOS 18.5",
+            "payload": {
+                "shot_number": 1,
+                "club": "Driver",
+                "distance_m": 214.4,
+                "terminal": "AtRest",
+                "ob_reason": null,
+                "surface": "Fairway",
+                "penalty": 0,
+                "hole": 1
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-000000000064",
+            "userId": "3e67d2a0-4f88-41c5-96b3-7a1f8c4d2505",
+            "tester": "cesar.guarinoni@gmail.com",
+            "sessionId": "5e551000-0000-4000-8000-00000000000a",
+            "name": "shot_cancelled",
+            "ts": "2026-08-18T16:05:00.000Z",
+            "receivedAt": "2026-08-18T16:05:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "iOS",
+            "deviceModel": "iPad13,4",
+            "os": "iPadOS 18.5",
+            "payload": {
+                "hole": 1,
+                "shot_number": 1
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-000000000063",
+            "userId": "3e67d2a0-4f88-41c5-96b3-7a1f8c4d2505",
+            "tester": "cesar.guarinoni@gmail.com",
+            "sessionId": "5e551000-0000-4000-8000-00000000000a",
+            "name": "round_start",
+            "ts": "2026-08-18T16:04:00.000Z",
+            "receivedAt": "2026-08-18T16:04:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "iOS",
+            "deviceModel": "iPad13,4",
+            "os": "iPadOS 18.5",
+            "payload": {
+                "hole": 1,
+                "character_id": "char_kaito",
+                "bag_slot": 0,
+                "is_tournament": false,
+                "tournament_id": null
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-000000000062",
+            "userId": "3e67d2a0-4f88-41c5-96b3-7a1f8c4d2505",
+            "tester": "cesar.guarinoni@gmail.com",
+            "sessionId": "5e551000-0000-4000-8000-00000000000a",
+            "name": "screen_view",
+            "ts": "2026-08-18T16:03:00.000Z",
+            "receivedAt": "2026-08-18T16:03:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "iOS",
+            "deviceModel": "iPad13,4",
+            "os": "iPadOS 18.5",
+            "payload": {
+                "screen": "HoleSelection",
+                "since_boot_s": 32.5
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-000000000061",
+            "userId": "3e67d2a0-4f88-41c5-96b3-7a1f8c4d2505",
+            "tester": "cesar.guarinoni@gmail.com",
+            "sessionId": "5e551000-0000-4000-8000-00000000000a",
+            "name": "screen_view",
+            "ts": "2026-08-18T16:02:00.000Z",
+            "receivedAt": "2026-08-18T16:02:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "iOS",
+            "deviceModel": "iPad13,4",
+            "os": "iPadOS 18.5",
+            "payload": {
+                "screen": "Home",
+                "since_boot_s": 6.8
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-000000000060",
+            "userId": "3e67d2a0-4f88-41c5-96b3-7a1f8c4d2505",
+            "tester": "cesar.guarinoni@gmail.com",
+            "sessionId": "5e551000-0000-4000-8000-00000000000a",
+            "name": "screen_view",
+            "ts": "2026-08-18T16:01:00.000Z",
+            "receivedAt": "2026-08-18T16:01:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "iOS",
+            "deviceModel": "iPad13,4",
+            "os": "iPadOS 18.5",
+            "payload": {
+                "screen": "Logo",
+                "since_boot_s": 0.4
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-00000000005f",
+            "userId": "3e67d2a0-4f88-41c5-96b3-7a1f8c4d2505",
+            "tester": "cesar.guarinoni@gmail.com",
+            "sessionId": "5e551000-0000-4000-8000-00000000000a",
+            "name": "session_start",
+            "ts": "2026-08-18T16:00:00.000Z",
+            "receivedAt": "2026-08-18T16:00:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "iOS",
+            "deviceModel": "iPad13,4",
+            "os": "iPadOS 18.5",
+            "payload": {
+                "device_model": "iPad13,4",
+                "os": "iPadOS 18.5",
+                "memory_mb": 6144,
+                "screen": "1170x2532"
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-00000000005b",
+            "userId": "9a45b1d8-6c22-4e93-b7f0-8d3c1e5a2404",
+            "tester": "cesar@clumsydwarf.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000008",
+            "name": "session_end",
+            "ts": "2026-08-18T15:13:00.000Z",
+            "receivedAt": "2026-08-18T15:13:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "Android",
+            "deviceModel": "Pixel 8",
+            "os": "Android OS 15",
+            "payload": {
+                "duration_s": 780
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-00000000005a",
+            "userId": "9a45b1d8-6c22-4e93-b7f0-8d3c1e5a2404",
+            "tester": "cesar@clumsydwarf.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000008",
+            "name": "points_changed",
+            "ts": "2026-08-18T15:11:00.000Z",
+            "receivedAt": "2026-08-18T15:11:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "Android",
+            "deviceModel": "Pixel 8",
+            "os": "Android OS 15",
+            "payload": {
+                "balance": 120,
+                "delta": 20
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-000000000059",
+            "userId": "9a45b1d8-6c22-4e93-b7f0-8d3c1e5a2404",
+            "tester": "cesar@clumsydwarf.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000008",
+            "name": "hole_complete",
+            "ts": "2026-08-18T15:10:00.000Z",
+            "receivedAt": "2026-08-18T15:10:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "Android",
+            "deviceModel": "Pixel 8",
+            "os": "Android OS 15",
+            "payload": {
+                "hole": 2,
+                "strokes": 5,
+                "penalty_strokes": 1,
+                "result": "InCup",
+                "duration_s": 300,
+                "fps_avg": 33.2,
+                "fps_low": 18.6,
+                "par": 5
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-000000000058",
+            "userId": "9a45b1d8-6c22-4e93-b7f0-8d3c1e5a2404",
+            "tester": "cesar@clumsydwarf.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000008",
+            "name": "shot_taken",
+            "ts": "2026-08-18T15:09:00.000Z",
+            "receivedAt": "2026-08-18T15:09:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "Android",
+            "deviceModel": "Pixel 8",
+            "os": "Android OS 15",
+            "payload": {
+                "shot_number": 4,
+                "club": "Putter",
+                "distance_m": 4.1,
+                "terminal": "InCup",
+                "ob_reason": null,
+                "surface": "Green",
+                "penalty": 0,
+                "hole": 2
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-000000000057",
+            "userId": "9a45b1d8-6c22-4e93-b7f0-8d3c1e5a2404",
+            "tester": "cesar@clumsydwarf.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000008",
+            "name": "shot_taken",
+            "ts": "2026-08-18T15:08:00.000Z",
+            "receivedAt": "2026-08-18T15:08:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "Android",
+            "deviceModel": "Pixel 8",
+            "os": "Android OS 15",
+            "payload": {
+                "shot_number": 3,
+                "club": "9 Iron",
+                "distance_m": 96.7,
+                "terminal": "AtRest",
+                "ob_reason": null,
+                "surface": "Green",
+                "penalty": 0,
+                "hole": 2
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-000000000056",
+            "userId": "9a45b1d8-6c22-4e93-b7f0-8d3c1e5a2404",
+            "tester": "cesar@clumsydwarf.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000008",
+            "name": "shot_taken",
+            "ts": "2026-08-18T15:07:00.000Z",
+            "receivedAt": "2026-08-18T15:07:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "Android",
+            "deviceModel": "Pixel 8",
+            "os": "Android OS 15",
+            "payload": {
+                "shot_number": 2,
+                "club": "Driver",
+                "distance_m": 198.2,
+                "terminal": "AtRest",
+                "ob_reason": null,
+                "surface": "Rough",
+                "penalty": 0,
+                "hole": 2
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-000000000055",
+            "userId": "9a45b1d8-6c22-4e93-b7f0-8d3c1e5a2404",
+            "tester": "cesar@clumsydwarf.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000008",
+            "name": "shot_taken",
+            "ts": "2026-08-18T15:06:00.000Z",
+            "receivedAt": "2026-08-18T15:06:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "Android",
+            "deviceModel": "Pixel 8",
+            "os": "Android OS 15",
+            "payload": {
+                "shot_number": 1,
+                "club": "Driver",
+                "distance_m": 231.8,
+                "terminal": "OB",
+                "ob_reason": "CrossedBoundary",
+                "surface": "OOB",
+                "penalty": 1,
+                "hole": 2
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-000000000054",
+            "userId": "9a45b1d8-6c22-4e93-b7f0-8d3c1e5a2404",
+            "tester": "cesar@clumsydwarf.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000008",
+            "name": "round_start",
+            "ts": "2026-08-18T15:05:00.000Z",
+            "receivedAt": "2026-08-18T15:05:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "Android",
+            "deviceModel": "Pixel 8",
+            "os": "Android OS 15",
+            "payload": {
+                "hole": 2,
+                "character_id": "char_kaito",
+                "bag_slot": 0,
+                "is_tournament": true,
+                "tournament_id": "golfin_weekly_open"
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-000000000053",
+            "userId": "9a45b1d8-6c22-4e93-b7f0-8d3c1e5a2404",
+            "tester": "cesar@clumsydwarf.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000008",
+            "name": "screen_view",
+            "ts": "2026-08-18T15:04:00.000Z",
+            "receivedAt": "2026-08-18T15:04:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "Android",
+            "deviceModel": "Pixel 8",
+            "os": "Android OS 15",
+            "payload": {
+                "screen": "TournamentHoleSelection",
+                "since_boot_s": 32.5
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-000000000052",
+            "userId": "9a45b1d8-6c22-4e93-b7f0-8d3c1e5a2404",
+            "tester": "cesar@clumsydwarf.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000008",
+            "name": "points_changed",
+            "ts": "2026-08-18T15:03:00.000Z",
+            "receivedAt": "2026-08-18T15:03:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "Android",
+            "deviceModel": "Pixel 8",
+            "os": "Android OS 15",
+            "payload": {
+                "balance": 100,
+                "delta": null
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-000000000051",
+            "userId": "9a45b1d8-6c22-4e93-b7f0-8d3c1e5a2404",
+            "tester": "cesar@clumsydwarf.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000008",
+            "name": "screen_view",
+            "ts": "2026-08-18T15:02:00.000Z",
+            "receivedAt": "2026-08-18T15:02:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "Android",
+            "deviceModel": "Pixel 8",
+            "os": "Android OS 15",
+            "payload": {
+                "screen": "Home",
+                "since_boot_s": 6.8
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-000000000050",
+            "userId": "9a45b1d8-6c22-4e93-b7f0-8d3c1e5a2404",
+            "tester": "cesar@clumsydwarf.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000008",
+            "name": "screen_view",
+            "ts": "2026-08-18T15:01:00.000Z",
+            "receivedAt": "2026-08-18T15:01:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "Android",
+            "deviceModel": "Pixel 8",
+            "os": "Android OS 15",
+            "payload": {
+                "screen": "Logo",
+                "since_boot_s": 0.4
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-00000000004f",
+            "userId": "9a45b1d8-6c22-4e93-b7f0-8d3c1e5a2404",
+            "tester": "cesar@clumsydwarf.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000008",
+            "name": "session_start",
+            "ts": "2026-08-18T15:00:00.000Z",
+            "receivedAt": "2026-08-18T15:00:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "Android",
+            "deviceModel": "Pixel 8",
+            "os": "Android OS 15",
+            "payload": {
+                "device_model": "Pixel 8",
+                "os": "Android OS 15",
+                "memory_mb": 6144,
+                "screen": "1170x2532"
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-000000000025",
+            "userId": "5f0b7c2e-1a44-4b3a-9c1d-0a6e3f8b2101",
+            "tester": "greedisland.k.k@gmail.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000002",
+            "name": "session_end",
+            "ts": "2026-08-18T13:12:00.000Z",
+            "receivedAt": "2026-08-18T13:12:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "iOS",
+            "deviceModel": "iPhone15,3",
+            "os": "iOS 18.5",
+            "payload": {
+                "duration_s": 720
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-000000000024",
+            "userId": "5f0b7c2e-1a44-4b3a-9c1d-0a6e3f8b2101",
+            "tester": "greedisland.k.k@gmail.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000002",
+            "name": "points_changed",
+            "ts": "2026-08-18T13:10:00.000Z",
+            "receivedAt": "2026-08-18T13:10:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "iOS",
+            "deviceModel": "iPhone15,3",
+            "os": "iOS 18.5",
+            "payload": {
+                "balance": 65,
+                "delta": 20
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-000000000023",
+            "userId": "5f0b7c2e-1a44-4b3a-9c1d-0a6e3f8b2101",
+            "tester": "greedisland.k.k@gmail.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000002",
+            "name": "hole_complete",
+            "ts": "2026-08-18T13:09:00.000Z",
+            "receivedAt": "2026-08-18T13:09:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "iOS",
+            "deviceModel": "iPhone15,3",
+            "os": "iOS 18.5",
+            "payload": {
+                "hole": 3,
+                "strokes": 3,
+                "penalty_strokes": 0,
+                "result": "InCup",
+                "duration_s": 240,
+                "fps_avg": 51.1,
+                "fps_low": 36.5,
+                "par": 4
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-000000000022",
+            "userId": "5f0b7c2e-1a44-4b3a-9c1d-0a6e3f8b2101",
+            "tester": "greedisland.k.k@gmail.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000002",
+            "name": "shot_taken",
+            "ts": "2026-08-18T13:08:00.000Z",
+            "receivedAt": "2026-08-18T13:08:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "iOS",
+            "deviceModel": "iPhone15,3",
+            "os": "iOS 18.5",
+            "payload": {
+                "shot_number": 3,
+                "club": "Putter",
+                "distance_m": 9.8,
+                "terminal": "InCup",
+                "ob_reason": null,
+                "surface": "Green",
+                "penalty": 0,
+                "hole": 3
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-000000000021",
+            "userId": "5f0b7c2e-1a44-4b3a-9c1d-0a6e3f8b2101",
+            "tester": "greedisland.k.k@gmail.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000002",
+            "name": "shot_taken",
+            "ts": "2026-08-18T13:07:00.000Z",
+            "receivedAt": "2026-08-18T13:07:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "iOS",
+            "deviceModel": "iPhone15,3",
+            "os": "iOS 18.5",
+            "payload": {
+                "shot_number": 2,
+                "club": "S.Wedge",
+                "distance_m": 61.4,
+                "terminal": "AtRest",
+                "ob_reason": null,
+                "surface": "Green",
+                "penalty": 0,
+                "hole": 3
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-000000000020",
+            "userId": "5f0b7c2e-1a44-4b3a-9c1d-0a6e3f8b2101",
+            "tester": "greedisland.k.k@gmail.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000002",
+            "name": "shot_taken",
+            "ts": "2026-08-18T13:06:00.000Z",
+            "receivedAt": "2026-08-18T13:06:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "iOS",
+            "deviceModel": "iPhone15,3",
+            "os": "iOS 18.5",
+            "payload": {
+                "shot_number": 1,
+                "club": "Driver",
+                "distance_m": 205.9,
+                "terminal": "AtRest",
+                "ob_reason": null,
+                "surface": "Bunker",
+                "penalty": 0,
+                "hole": 3
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-00000000001f",
+            "userId": "5f0b7c2e-1a44-4b3a-9c1d-0a6e3f8b2101",
+            "tester": "greedisland.k.k@gmail.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000002",
+            "name": "round_start",
+            "ts": "2026-08-18T13:05:00.000Z",
+            "receivedAt": "2026-08-18T13:05:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "iOS",
+            "deviceModel": "iPhone15,3",
+            "os": "iOS 18.5",
+            "payload": {
+                "hole": 3,
+                "character_id": "char_kaito",
+                "bag_slot": 0,
+                "is_tournament": false,
+                "tournament_id": null
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-00000000001e",
+            "userId": "5f0b7c2e-1a44-4b3a-9c1d-0a6e3f8b2101",
+            "tester": "greedisland.k.k@gmail.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000002",
+            "name": "screen_view",
+            "ts": "2026-08-18T13:04:00.000Z",
+            "receivedAt": "2026-08-18T13:04:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "iOS",
+            "deviceModel": "iPhone15,3",
+            "os": "iOS 18.5",
+            "payload": {
+                "screen": "HoleSelection",
+                "since_boot_s": 32.5
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-00000000001d",
+            "userId": "5f0b7c2e-1a44-4b3a-9c1d-0a6e3f8b2101",
+            "tester": "greedisland.k.k@gmail.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000002",
+            "name": "points_changed",
+            "ts": "2026-08-18T13:03:00.000Z",
+            "receivedAt": "2026-08-18T13:03:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "iOS",
+            "deviceModel": "iPhone15,3",
+            "os": "iOS 18.5",
+            "payload": {
+                "balance": 45,
+                "delta": null
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-00000000001c",
+            "userId": "5f0b7c2e-1a44-4b3a-9c1d-0a6e3f8b2101",
+            "tester": "greedisland.k.k@gmail.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000002",
+            "name": "screen_view",
+            "ts": "2026-08-18T13:02:00.000Z",
+            "receivedAt": "2026-08-18T13:02:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "iOS",
+            "deviceModel": "iPhone15,3",
+            "os": "iOS 18.5",
+            "payload": {
+                "screen": "Home",
+                "since_boot_s": 6.8
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-00000000001b",
+            "userId": "5f0b7c2e-1a44-4b3a-9c1d-0a6e3f8b2101",
+            "tester": "greedisland.k.k@gmail.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000002",
+            "name": "screen_view",
+            "ts": "2026-08-18T13:01:00.000Z",
+            "receivedAt": "2026-08-18T13:01:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "iOS",
+            "deviceModel": "iPhone15,3",
+            "os": "iOS 18.5",
+            "payload": {
+                "screen": "Logo",
+                "since_boot_s": 0.4
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-00000000001a",
+            "userId": "5f0b7c2e-1a44-4b3a-9c1d-0a6e3f8b2101",
+            "tester": "greedisland.k.k@gmail.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000002",
+            "name": "session_start",
+            "ts": "2026-08-18T13:00:00.000Z",
+            "receivedAt": "2026-08-18T13:00:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "iOS",
+            "deviceModel": "iPhone15,3",
+            "os": "iOS 18.5",
+            "payload": {
+                "device_model": "iPhone15,3",
+                "os": "iOS 18.5",
+                "memory_mb": 6144,
+                "screen": "1170x2532"
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-00000000004a",
+            "userId": "1c83e5f6-9b77-42d1-a4e8-2f5a6d9c2303",
+            "tester": "cesar.guarinoni@wonderwall-g.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000006",
+            "name": "hole_complete",
+            "ts": "2026-08-17T20:09:00.000Z",
+            "receivedAt": "2026-08-17T20:09:04.000Z",
+            "appVersion": "1.5.6",
+            "buildNumber": 2181,
+            "platform": "iOS",
+            "deviceModel": "iPhone12,1",
+            "os": "iOS 16.7.8",
+            "payload": {
+                "hole": 1,
+                "strokes": 3,
+                "penalty_strokes": 0,
+                "result": "InCup",
+                "duration_s": 300,
+                "fps_avg": 56.50000000000001,
+                "fps_low": 41.900000000000006,
+                "par": 4
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-000000000049",
+            "userId": "1c83e5f6-9b77-42d1-a4e8-2f5a6d9c2303",
+            "tester": "cesar.guarinoni@wonderwall-g.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000006",
+            "name": "client_error",
+            "ts": "2026-08-17T20:08:00.000Z",
+            "receivedAt": "2026-08-17T20:08:04.000Z",
+            "appVersion": "1.5.6",
+            "buildNumber": 2181,
+            "platform": "iOS",
+            "deviceModel": "iPhone12,1",
+            "os": "iOS 16.7.8",
+            "payload": {
+                "message": "NullReferenceException: Object reference not set to an instance of an object",
+                "stack": "at Golfin.Gameplay.UI.HUD.ShotMeter.OnDisable () [0x00012]",
+                "screen": "Gameplay"
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-000000000048",
+            "userId": "1c83e5f6-9b77-42d1-a4e8-2f5a6d9c2303",
+            "tester": "cesar.guarinoni@wonderwall-g.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000006",
+            "name": "shot_taken",
+            "ts": "2026-08-17T20:07:00.000Z",
+            "receivedAt": "2026-08-17T20:07:04.000Z",
+            "appVersion": "1.5.6",
+            "buildNumber": 2181,
+            "platform": "iOS",
+            "deviceModel": "iPhone12,1",
+            "os": "iOS 16.7.8",
+            "payload": {
+                "shot_number": 3,
+                "club": "Putter",
+                "distance_m": 6.3,
+                "terminal": "InCup",
+                "ob_reason": null,
+                "surface": "Green",
+                "penalty": 0,
+                "hole": 1
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-000000000047",
+            "userId": "1c83e5f6-9b77-42d1-a4e8-2f5a6d9c2303",
+            "tester": "cesar.guarinoni@wonderwall-g.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000006",
+            "name": "shot_taken",
+            "ts": "2026-08-17T20:06:00.000Z",
+            "receivedAt": "2026-08-17T20:06:04.000Z",
+            "appVersion": "1.5.6",
+            "buildNumber": 2181,
+            "platform": "iOS",
+            "deviceModel": "iPhone12,1",
+            "os": "iOS 16.7.8",
+            "payload": {
+                "shot_number": 2,
+                "club": "7 Iron",
+                "distance_m": 132.1,
+                "terminal": "AtRest",
+                "ob_reason": null,
+                "surface": "Green",
+                "penalty": 0,
+                "hole": 1
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-000000000046",
+            "userId": "1c83e5f6-9b77-42d1-a4e8-2f5a6d9c2303",
+            "tester": "cesar.guarinoni@wonderwall-g.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000006",
+            "name": "shot_taken",
+            "ts": "2026-08-17T20:05:00.000Z",
+            "receivedAt": "2026-08-17T20:05:04.000Z",
+            "appVersion": "1.5.6",
+            "buildNumber": 2181,
+            "platform": "iOS",
+            "deviceModel": "iPhone12,1",
+            "os": "iOS 16.7.8",
+            "payload": {
+                "shot_number": 1,
+                "club": "Driver",
+                "distance_m": 214.4,
+                "terminal": "AtRest",
+                "ob_reason": null,
+                "surface": "Fairway",
+                "penalty": 0,
+                "hole": 1
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-000000000045",
+            "userId": "1c83e5f6-9b77-42d1-a4e8-2f5a6d9c2303",
+            "tester": "cesar.guarinoni@wonderwall-g.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000006",
+            "name": "round_start",
+            "ts": "2026-08-17T20:04:00.000Z",
+            "receivedAt": "2026-08-17T20:04:04.000Z",
+            "appVersion": "1.5.6",
+            "buildNumber": 2181,
+            "platform": "iOS",
+            "deviceModel": "iPhone12,1",
+            "os": "iOS 16.7.8",
+            "payload": {
+                "hole": 1,
+                "character_id": "char_kaito",
+                "bag_slot": 0,
+                "is_tournament": false,
+                "tournament_id": null
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-000000000044",
+            "userId": "1c83e5f6-9b77-42d1-a4e8-2f5a6d9c2303",
+            "tester": "cesar.guarinoni@wonderwall-g.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000006",
+            "name": "screen_view",
+            "ts": "2026-08-17T20:03:00.000Z",
+            "receivedAt": "2026-08-17T20:03:04.000Z",
+            "appVersion": "1.5.6",
+            "buildNumber": 2181,
+            "platform": "iOS",
+            "deviceModel": "iPhone12,1",
+            "os": "iOS 16.7.8",
+            "payload": {
+                "screen": "HoleSelection",
+                "since_boot_s": 32.5
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-000000000043",
+            "userId": "1c83e5f6-9b77-42d1-a4e8-2f5a6d9c2303",
+            "tester": "cesar.guarinoni@wonderwall-g.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000006",
+            "name": "screen_view",
+            "ts": "2026-08-17T20:02:00.000Z",
+            "receivedAt": "2026-08-17T20:02:04.000Z",
+            "appVersion": "1.5.6",
+            "buildNumber": 2181,
+            "platform": "iOS",
+            "deviceModel": "iPhone12,1",
+            "os": "iOS 16.7.8",
+            "payload": {
+                "screen": "Home",
+                "since_boot_s": 6.8
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-000000000042",
+            "userId": "1c83e5f6-9b77-42d1-a4e8-2f5a6d9c2303",
+            "tester": "cesar.guarinoni@wonderwall-g.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000006",
+            "name": "screen_view",
+            "ts": "2026-08-17T20:01:00.000Z",
+            "receivedAt": "2026-08-17T20:01:04.000Z",
+            "appVersion": "1.5.6",
+            "buildNumber": 2181,
+            "platform": "iOS",
+            "deviceModel": "iPhone12,1",
+            "os": "iOS 16.7.8",
+            "payload": {
+                "screen": "Logo",
+                "since_boot_s": 0.4
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-000000000041",
+            "userId": "1c83e5f6-9b77-42d1-a4e8-2f5a6d9c2303",
+            "tester": "cesar.guarinoni@wonderwall-g.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000006",
+            "name": "session_start",
+            "ts": "2026-08-17T20:00:00.000Z",
+            "receivedAt": "2026-08-17T20:00:04.000Z",
+            "appVersion": "1.5.6",
+            "buildNumber": 2181,
+            "platform": "iOS",
+            "deviceModel": "iPhone12,1",
+            "os": "iOS 16.7.8",
+            "payload": {
+                "device_model": "iPhone12,1",
+                "os": "iOS 16.7.8",
+                "memory_mb": 6144,
+                "screen": "1170x2532"
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-00000000005e",
+            "userId": "3e67d2a0-4f88-41c5-96b3-7a1f8c4d2505",
+            "tester": "cesar.guarinoni@gmail.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000009",
+            "name": "session_end",
+            "ts": "2026-08-17T16:03:00.000Z",
+            "receivedAt": "2026-08-17T16:03:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "iOS",
+            "deviceModel": "iPad13,4",
+            "os": "iPadOS 18.5",
+            "payload": {
+                "duration_s": 190
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-00000000005d",
+            "userId": "3e67d2a0-4f88-41c5-96b3-7a1f8c4d2505",
+            "tester": "cesar.guarinoni@gmail.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000009",
+            "name": "screen_view",
+            "ts": "2026-08-17T16:01:00.000Z",
+            "receivedAt": "2026-08-17T16:01:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "iOS",
+            "deviceModel": "iPad13,4",
+            "os": "iPadOS 18.5",
+            "payload": {
+                "screen": "Logo",
+                "since_boot_s": 0.4
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-00000000005c",
+            "userId": "3e67d2a0-4f88-41c5-96b3-7a1f8c4d2505",
+            "tester": "cesar.guarinoni@gmail.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000009",
+            "name": "session_start",
+            "ts": "2026-08-17T16:00:00.000Z",
+            "receivedAt": "2026-08-17T16:00:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "iOS",
+            "deviceModel": "iPad13,4",
+            "os": "iPadOS 18.5",
+            "payload": {
+                "device_model": "iPad13,4",
+                "os": "iPadOS 18.5",
+                "memory_mb": 6144,
+                "screen": "1170x2532"
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-00000000003b",
+            "userId": "7d21a9c4-3e55-4f60-8b2a-c91d4e7f2202",
+            "tester": "apple.review@wonderwall-g.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000004",
+            "name": "session_end",
+            "ts": "2026-08-17T15:09:00.000Z",
+            "receivedAt": "2026-08-17T15:09:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "iOS",
+            "deviceModel": "iPhone14,5",
+            "os": "iOS 17.6.1",
+            "payload": {
+                "duration_s": 540
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-000000000039",
+            "userId": "7d21a9c4-3e55-4f60-8b2a-c91d4e7f2202",
+            "tester": "apple.review@wonderwall-g.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000004",
+            "name": "screen_view",
+            "ts": "2026-08-17T15:07:00.000Z",
+            "receivedAt": "2026-08-17T15:07:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "iOS",
+            "deviceModel": "iPhone14,5",
+            "os": "iOS 17.6.1",
+            "payload": {
+                "screen": "HoleSelection",
+                "since_boot_s": 410.2
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-00000000003a",
+            "userId": "7d21a9c4-3e55-4f60-8b2a-c91d4e7f2202",
+            "tester": "apple.review@wonderwall-g.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000004",
+            "name": "round_abandoned",
+            "ts": "2026-08-17T15:07:00.000Z",
+            "receivedAt": "2026-08-17T15:07:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "iOS",
+            "deviceModel": "iPhone14,5",
+            "os": "iOS 17.6.1",
+            "payload": {
+                "hole": 2,
+                "shots_taken": 1,
+                "last_screen": "HoleSelection"
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-000000000038",
+            "userId": "7d21a9c4-3e55-4f60-8b2a-c91d4e7f2202",
+            "tester": "apple.review@wonderwall-g.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000004",
+            "name": "shot_taken",
+            "ts": "2026-08-17T15:05:00.000Z",
+            "receivedAt": "2026-08-17T15:05:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "iOS",
+            "deviceModel": "iPhone14,5",
+            "os": "iOS 17.6.1",
+            "payload": {
+                "shot_number": 1,
+                "club": "Driver",
+                "distance_m": 231.8,
+                "terminal": "OB",
+                "ob_reason": "CrossedBoundary",
+                "surface": "OOB",
+                "penalty": 1,
+                "hole": 2
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-000000000037",
+            "userId": "7d21a9c4-3e55-4f60-8b2a-c91d4e7f2202",
+            "tester": "apple.review@wonderwall-g.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000004",
+            "name": "round_start",
+            "ts": "2026-08-17T15:04:00.000Z",
+            "receivedAt": "2026-08-17T15:04:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "iOS",
+            "deviceModel": "iPhone14,5",
+            "os": "iOS 17.6.1",
+            "payload": {
+                "hole": 2,
+                "character_id": "char_kaito",
+                "bag_slot": 0,
+                "is_tournament": false,
+                "tournament_id": null
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-000000000036",
+            "userId": "7d21a9c4-3e55-4f60-8b2a-c91d4e7f2202",
+            "tester": "apple.review@wonderwall-g.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000004",
+            "name": "screen_view",
+            "ts": "2026-08-17T15:03:00.000Z",
+            "receivedAt": "2026-08-17T15:03:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "iOS",
+            "deviceModel": "iPhone14,5",
+            "os": "iOS 17.6.1",
+            "payload": {
+                "screen": "HoleSelection",
+                "since_boot_s": 32.5
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-000000000035",
+            "userId": "7d21a9c4-3e55-4f60-8b2a-c91d4e7f2202",
+            "tester": "apple.review@wonderwall-g.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000004",
+            "name": "screen_view",
+            "ts": "2026-08-17T15:02:00.000Z",
+            "receivedAt": "2026-08-17T15:02:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "iOS",
+            "deviceModel": "iPhone14,5",
+            "os": "iOS 17.6.1",
+            "payload": {
+                "screen": "Home",
+                "since_boot_s": 6.8
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-000000000034",
+            "userId": "7d21a9c4-3e55-4f60-8b2a-c91d4e7f2202",
+            "tester": "apple.review@wonderwall-g.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000004",
+            "name": "screen_view",
+            "ts": "2026-08-17T15:01:00.000Z",
+            "receivedAt": "2026-08-17T15:01:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "iOS",
+            "deviceModel": "iPhone14,5",
+            "os": "iOS 17.6.1",
+            "payload": {
+                "screen": "Logo",
+                "since_boot_s": 0.4
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-000000000033",
+            "userId": "7d21a9c4-3e55-4f60-8b2a-c91d4e7f2202",
+            "tester": "apple.review@wonderwall-g.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000004",
+            "name": "session_start",
+            "ts": "2026-08-17T15:00:00.000Z",
+            "receivedAt": "2026-08-17T15:00:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "iOS",
+            "deviceModel": "iPhone14,5",
+            "os": "iOS 17.6.1",
+            "payload": {
+                "device_model": "iPhone14,5",
+                "os": "iOS 17.6.1",
+                "memory_mb": 6144,
+                "screen": "1170x2532"
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-00000000004e",
+            "userId": "9a45b1d8-6c22-4e93-b7f0-8d3c1e5a2404",
+            "tester": "cesar@clumsydwarf.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000007",
+            "name": "session_end",
+            "ts": "2026-08-17T12:06:00.000Z",
+            "receivedAt": "2026-08-17T12:06:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "Android",
+            "deviceModel": "Pixel 8",
+            "os": "Android OS 15",
+            "payload": {
+                "duration_s": 380
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-00000000004d",
+            "userId": "9a45b1d8-6c22-4e93-b7f0-8d3c1e5a2404",
+            "tester": "cesar@clumsydwarf.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000007",
+            "name": "screen_view",
+            "ts": "2026-08-17T12:02:00.000Z",
+            "receivedAt": "2026-08-17T12:02:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "Android",
+            "deviceModel": "Pixel 8",
+            "os": "Android OS 15",
+            "payload": {
+                "screen": "Home",
+                "since_boot_s": 6.8
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-00000000004c",
+            "userId": "9a45b1d8-6c22-4e93-b7f0-8d3c1e5a2404",
+            "tester": "cesar@clumsydwarf.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000007",
+            "name": "screen_view",
+            "ts": "2026-08-17T12:01:00.000Z",
+            "receivedAt": "2026-08-17T12:01:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "Android",
+            "deviceModel": "Pixel 8",
+            "os": "Android OS 15",
+            "payload": {
+                "screen": "Logo",
+                "since_boot_s": 0.4
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-00000000004b",
+            "userId": "9a45b1d8-6c22-4e93-b7f0-8d3c1e5a2404",
+            "tester": "cesar@clumsydwarf.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000007",
+            "name": "session_start",
+            "ts": "2026-08-17T12:00:00.000Z",
+            "receivedAt": "2026-08-17T12:00:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "Android",
+            "deviceModel": "Pixel 8",
+            "os": "Android OS 15",
+            "payload": {
+                "device_model": "Pixel 8",
+                "os": "Android OS 15",
+                "memory_mb": 6144,
+                "screen": "1170x2532"
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-000000000040",
+            "userId": "1c83e5f6-9b77-42d1-a4e8-2f5a6d9c2303",
+            "tester": "cesar.guarinoni@wonderwall-g.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000005",
+            "name": "session_end",
+            "ts": "2026-08-16T19:06:00.000Z",
+            "receivedAt": "2026-08-16T19:06:04.000Z",
+            "appVersion": "1.5.6",
+            "buildNumber": 2181,
+            "platform": "iOS",
+            "deviceModel": "iPhone12,1",
+            "os": "iOS 16.7.8",
+            "payload": {
+                "duration_s": 520
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-00000000003f",
+            "userId": "1c83e5f6-9b77-42d1-a4e8-2f5a6d9c2303",
+            "tester": "cesar.guarinoni@wonderwall-g.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000005",
+            "name": "screen_view",
+            "ts": "2026-08-16T19:03:00.000Z",
+            "receivedAt": "2026-08-16T19:03:04.000Z",
+            "appVersion": "1.5.6",
+            "buildNumber": 2181,
+            "platform": "iOS",
+            "deviceModel": "iPhone12,1",
+            "os": "iOS 16.7.8",
+            "payload": {
+                "screen": "HoleSelection",
+                "since_boot_s": 32.5
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-00000000003e",
+            "userId": "1c83e5f6-9b77-42d1-a4e8-2f5a6d9c2303",
+            "tester": "cesar.guarinoni@wonderwall-g.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000005",
+            "name": "screen_view",
+            "ts": "2026-08-16T19:02:00.000Z",
+            "receivedAt": "2026-08-16T19:02:04.000Z",
+            "appVersion": "1.5.6",
+            "buildNumber": 2181,
+            "platform": "iOS",
+            "deviceModel": "iPhone12,1",
+            "os": "iOS 16.7.8",
+            "payload": {
+                "screen": "Home",
+                "since_boot_s": 6.8
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-00000000003d",
+            "userId": "1c83e5f6-9b77-42d1-a4e8-2f5a6d9c2303",
+            "tester": "cesar.guarinoni@wonderwall-g.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000005",
+            "name": "screen_view",
+            "ts": "2026-08-16T19:01:00.000Z",
+            "receivedAt": "2026-08-16T19:01:04.000Z",
+            "appVersion": "1.5.6",
+            "buildNumber": 2181,
+            "platform": "iOS",
+            "deviceModel": "iPhone12,1",
+            "os": "iOS 16.7.8",
+            "payload": {
+                "screen": "Logo",
+                "since_boot_s": 0.4
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-00000000003c",
+            "userId": "1c83e5f6-9b77-42d1-a4e8-2f5a6d9c2303",
+            "tester": "cesar.guarinoni@wonderwall-g.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000005",
+            "name": "session_start",
+            "ts": "2026-08-16T19:00:00.000Z",
+            "receivedAt": "2026-08-16T19:00:04.000Z",
+            "appVersion": "1.5.6",
+            "buildNumber": 2181,
+            "platform": "iOS",
+            "deviceModel": "iPhone12,1",
+            "os": "iOS 16.7.8",
+            "payload": {
+                "device_model": "iPhone12,1",
+                "os": "iOS 16.7.8",
+                "memory_mb": 6144,
+                "screen": "1170x2532"
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-000000000032",
+            "userId": "7d21a9c4-3e55-4f60-8b2a-c91d4e7f2202",
+            "tester": "apple.review@wonderwall-g.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000003",
+            "name": "session_end",
+            "ts": "2026-08-16T16:13:00.000Z",
+            "receivedAt": "2026-08-16T16:13:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "iOS",
+            "deviceModel": "iPhone14,5",
+            "os": "iOS 17.6.1",
+            "payload": {
+                "duration_s": 780
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-000000000031",
+            "userId": "7d21a9c4-3e55-4f60-8b2a-c91d4e7f2202",
+            "tester": "apple.review@wonderwall-g.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000003",
+            "name": "points_changed",
+            "ts": "2026-08-16T16:11:00.000Z",
+            "receivedAt": "2026-08-16T16:11:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "iOS",
+            "deviceModel": "iPhone14,5",
+            "os": "iOS 17.6.1",
+            "payload": {
+                "balance": 20,
+                "delta": 20
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-000000000030",
+            "userId": "7d21a9c4-3e55-4f60-8b2a-c91d4e7f2202",
+            "tester": "apple.review@wonderwall-g.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000003",
+            "name": "hole_complete",
+            "ts": "2026-08-16T16:10:00.000Z",
+            "receivedAt": "2026-08-16T16:10:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "iOS",
+            "deviceModel": "iPhone14,5",
+            "os": "iOS 17.6.1",
+            "payload": {
+                "hole": 1,
+                "strokes": 3,
+                "penalty_strokes": 0,
+                "result": "InCup",
+                "duration_s": 300,
+                "fps_avg": 56.50000000000001,
+                "fps_low": 41.900000000000006,
+                "par": 4
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-00000000002f",
+            "userId": "7d21a9c4-3e55-4f60-8b2a-c91d4e7f2202",
+            "tester": "apple.review@wonderwall-g.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000003",
+            "name": "shot_taken",
+            "ts": "2026-08-16T16:09:00.000Z",
+            "receivedAt": "2026-08-16T16:09:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "iOS",
+            "deviceModel": "iPhone14,5",
+            "os": "iOS 17.6.1",
+            "payload": {
+                "shot_number": 3,
+                "club": "Putter",
+                "distance_m": 6.3,
+                "terminal": "InCup",
+                "ob_reason": null,
+                "surface": "Green",
+                "penalty": 0,
+                "hole": 1
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-00000000002e",
+            "userId": "7d21a9c4-3e55-4f60-8b2a-c91d4e7f2202",
+            "tester": "apple.review@wonderwall-g.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000003",
+            "name": "shot_taken",
+            "ts": "2026-08-16T16:08:00.000Z",
+            "receivedAt": "2026-08-16T16:08:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "iOS",
+            "deviceModel": "iPhone14,5",
+            "os": "iOS 17.6.1",
+            "payload": {
+                "shot_number": 2,
+                "club": "7 Iron",
+                "distance_m": 132.1,
+                "terminal": "AtRest",
+                "ob_reason": null,
+                "surface": "Green",
+                "penalty": 0,
+                "hole": 1
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-00000000002d",
+            "userId": "7d21a9c4-3e55-4f60-8b2a-c91d4e7f2202",
+            "tester": "apple.review@wonderwall-g.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000003",
+            "name": "shot_taken",
+            "ts": "2026-08-16T16:07:00.000Z",
+            "receivedAt": "2026-08-16T16:07:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "iOS",
+            "deviceModel": "iPhone14,5",
+            "os": "iOS 17.6.1",
+            "payload": {
+                "shot_number": 1,
+                "club": "Driver",
+                "distance_m": 214.4,
+                "terminal": "AtRest",
+                "ob_reason": null,
+                "surface": "Fairway",
+                "penalty": 0,
+                "hole": 1
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-00000000002c",
+            "userId": "7d21a9c4-3e55-4f60-8b2a-c91d4e7f2202",
+            "tester": "apple.review@wonderwall-g.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000003",
+            "name": "flick_rejected",
+            "ts": "2026-08-16T16:06:00.000Z",
+            "receivedAt": "2026-08-16T16:06:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "iOS",
+            "deviceModel": "iPhone14,5",
+            "os": "iOS 17.6.1",
+            "payload": {
+                "speed": 0.42,
+                "hole": 1,
+                "shot_number": 1
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-00000000002b",
+            "userId": "7d21a9c4-3e55-4f60-8b2a-c91d4e7f2202",
+            "tester": "apple.review@wonderwall-g.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000003",
+            "name": "round_start",
+            "ts": "2026-08-16T16:05:00.000Z",
+            "receivedAt": "2026-08-16T16:05:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "iOS",
+            "deviceModel": "iPhone14,5",
+            "os": "iOS 17.6.1",
+            "payload": {
+                "hole": 1,
+                "character_id": "char_kaito",
+                "bag_slot": 0,
+                "is_tournament": false,
+                "tournament_id": null
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-00000000002a",
+            "userId": "7d21a9c4-3e55-4f60-8b2a-c91d4e7f2202",
+            "tester": "apple.review@wonderwall-g.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000003",
+            "name": "screen_view",
+            "ts": "2026-08-16T16:04:00.000Z",
+            "receivedAt": "2026-08-16T16:04:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "iOS",
+            "deviceModel": "iPhone14,5",
+            "os": "iOS 17.6.1",
+            "payload": {
+                "screen": "HoleSelection",
+                "since_boot_s": 32.5
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-000000000029",
+            "userId": "7d21a9c4-3e55-4f60-8b2a-c91d4e7f2202",
+            "tester": "apple.review@wonderwall-g.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000003",
+            "name": "points_changed",
+            "ts": "2026-08-16T16:03:00.000Z",
+            "receivedAt": "2026-08-16T16:03:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "iOS",
+            "deviceModel": "iPhone14,5",
+            "os": "iOS 17.6.1",
+            "payload": {
+                "balance": 0,
+                "delta": null
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-000000000028",
+            "userId": "7d21a9c4-3e55-4f60-8b2a-c91d4e7f2202",
+            "tester": "apple.review@wonderwall-g.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000003",
+            "name": "screen_view",
+            "ts": "2026-08-16T16:02:00.000Z",
+            "receivedAt": "2026-08-16T16:02:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "iOS",
+            "deviceModel": "iPhone14,5",
+            "os": "iOS 17.6.1",
+            "payload": {
+                "screen": "Home",
+                "since_boot_s": 6.8
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-000000000027",
+            "userId": "7d21a9c4-3e55-4f60-8b2a-c91d4e7f2202",
+            "tester": "apple.review@wonderwall-g.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000003",
+            "name": "screen_view",
+            "ts": "2026-08-16T16:01:00.000Z",
+            "receivedAt": "2026-08-16T16:01:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "iOS",
+            "deviceModel": "iPhone14,5",
+            "os": "iOS 17.6.1",
+            "payload": {
+                "screen": "Logo",
+                "since_boot_s": 0.4
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-000000000026",
+            "userId": "7d21a9c4-3e55-4f60-8b2a-c91d4e7f2202",
+            "tester": "apple.review@wonderwall-g.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000003",
+            "name": "session_start",
+            "ts": "2026-08-16T16:00:00.000Z",
+            "receivedAt": "2026-08-16T16:00:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "iOS",
+            "deviceModel": "iPhone14,5",
+            "os": "iOS 17.6.1",
+            "payload": {
+                "device_model": "iPhone14,5",
+                "os": "iOS 17.6.1",
+                "memory_mb": 6144,
+                "screen": "1170x2532"
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-000000000019",
+            "userId": "5f0b7c2e-1a44-4b3a-9c1d-0a6e3f8b2101",
+            "tester": "greedisland.k.k@gmail.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000001",
+            "name": "session_end",
+            "ts": "2026-08-15T16:25:00.000Z",
+            "receivedAt": "2026-08-15T16:25:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "iOS",
+            "deviceModel": "iPhone15,3",
+            "os": "iOS 18.5",
+            "payload": {
+                "duration_s": 1500
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-000000000018",
+            "userId": "5f0b7c2e-1a44-4b3a-9c1d-0a6e3f8b2101",
+            "tester": "greedisland.k.k@gmail.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000001",
+            "name": "points_changed",
+            "ts": "2026-08-15T16:23:00.000Z",
+            "receivedAt": "2026-08-15T16:23:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "iOS",
+            "deviceModel": "iPhone15,3",
+            "os": "iOS 18.5",
+            "payload": {
+                "balance": 45,
+                "delta": 25
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-000000000017",
+            "userId": "5f0b7c2e-1a44-4b3a-9c1d-0a6e3f8b2101",
+            "tester": "greedisland.k.k@gmail.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000001",
+            "name": "hole_complete",
+            "ts": "2026-08-15T16:22:00.000Z",
+            "receivedAt": "2026-08-15T16:22:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "iOS",
+            "deviceModel": "iPhone15,3",
+            "os": "iOS 18.5",
+            "payload": {
+                "hole": 2,
+                "strokes": 5,
+                "penalty_strokes": 1,
+                "result": "InCup",
+                "duration_s": 480,
+                "fps_avg": 32.5,
+                "fps_low": 17.900000000000002,
+                "par": 5
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-000000000016",
+            "userId": "5f0b7c2e-1a44-4b3a-9c1d-0a6e3f8b2101",
+            "tester": "greedisland.k.k@gmail.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000001",
+            "name": "shot_taken",
+            "ts": "2026-08-15T16:21:00.000Z",
+            "receivedAt": "2026-08-15T16:21:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "iOS",
+            "deviceModel": "iPhone15,3",
+            "os": "iOS 18.5",
+            "payload": {
+                "shot_number": 4,
+                "club": "Putter",
+                "distance_m": 4.1,
+                "terminal": "InCup",
+                "ob_reason": null,
+                "surface": "Green",
+                "penalty": 0,
+                "hole": 2
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-000000000015",
+            "userId": "5f0b7c2e-1a44-4b3a-9c1d-0a6e3f8b2101",
+            "tester": "greedisland.k.k@gmail.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000001",
+            "name": "shot_taken",
+            "ts": "2026-08-15T16:20:00.000Z",
+            "receivedAt": "2026-08-15T16:20:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "iOS",
+            "deviceModel": "iPhone15,3",
+            "os": "iOS 18.5",
+            "payload": {
+                "shot_number": 3,
+                "club": "9 Iron",
+                "distance_m": 96.7,
+                "terminal": "AtRest",
+                "ob_reason": null,
+                "surface": "Green",
+                "penalty": 0,
+                "hole": 2
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-000000000014",
+            "userId": "5f0b7c2e-1a44-4b3a-9c1d-0a6e3f8b2101",
+            "tester": "greedisland.k.k@gmail.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000001",
+            "name": "shot_taken",
+            "ts": "2026-08-15T16:19:00.000Z",
+            "receivedAt": "2026-08-15T16:19:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "iOS",
+            "deviceModel": "iPhone15,3",
+            "os": "iOS 18.5",
+            "payload": {
+                "shot_number": 2,
+                "club": "Driver",
+                "distance_m": 198.2,
+                "terminal": "AtRest",
+                "ob_reason": null,
+                "surface": "Rough",
+                "penalty": 0,
+                "hole": 2
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-000000000013",
+            "userId": "5f0b7c2e-1a44-4b3a-9c1d-0a6e3f8b2101",
+            "tester": "greedisland.k.k@gmail.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000001",
+            "name": "shot_taken",
+            "ts": "2026-08-15T16:18:00.000Z",
+            "receivedAt": "2026-08-15T16:18:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "iOS",
+            "deviceModel": "iPhone15,3",
+            "os": "iOS 18.5",
+            "payload": {
+                "shot_number": 1,
+                "club": "Driver",
+                "distance_m": 231.8,
+                "terminal": "OB",
+                "ob_reason": "CrossedBoundary",
+                "surface": "OOB",
+                "penalty": 1,
+                "hole": 2
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-000000000012",
+            "userId": "5f0b7c2e-1a44-4b3a-9c1d-0a6e3f8b2101",
+            "tester": "greedisland.k.k@gmail.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000001",
+            "name": "shot_cancelled",
+            "ts": "2026-08-15T16:17:00.000Z",
+            "receivedAt": "2026-08-15T16:17:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "iOS",
+            "deviceModel": "iPhone15,3",
+            "os": "iOS 18.5",
+            "payload": {
+                "hole": 2,
+                "shot_number": 1
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-000000000011",
+            "userId": "5f0b7c2e-1a44-4b3a-9c1d-0a6e3f8b2101",
+            "tester": "greedisland.k.k@gmail.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000001",
+            "name": "flick_rejected",
+            "ts": "2026-08-15T16:16:00.000Z",
+            "receivedAt": "2026-08-15T16:16:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "iOS",
+            "deviceModel": "iPhone15,3",
+            "os": "iOS 18.5",
+            "payload": {
+                "speed": 0.47,
+                "hole": 2,
+                "shot_number": 2
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-000000000010",
+            "userId": "5f0b7c2e-1a44-4b3a-9c1d-0a6e3f8b2101",
+            "tester": "greedisland.k.k@gmail.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000001",
+            "name": "flick_rejected",
+            "ts": "2026-08-15T16:15:00.000Z",
+            "receivedAt": "2026-08-15T16:15:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "iOS",
+            "deviceModel": "iPhone15,3",
+            "os": "iOS 18.5",
+            "payload": {
+                "speed": 0.42,
+                "hole": 2,
+                "shot_number": 1
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-00000000000f",
+            "userId": "5f0b7c2e-1a44-4b3a-9c1d-0a6e3f8b2101",
+            "tester": "greedisland.k.k@gmail.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000001",
+            "name": "round_start",
+            "ts": "2026-08-15T16:14:00.000Z",
+            "receivedAt": "2026-08-15T16:14:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "iOS",
+            "deviceModel": "iPhone15,3",
+            "os": "iOS 18.5",
+            "payload": {
+                "hole": 2,
+                "character_id": "char_kaito",
+                "bag_slot": 0,
+                "is_tournament": false,
+                "tournament_id": null
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-00000000000e",
+            "userId": "5f0b7c2e-1a44-4b3a-9c1d-0a6e3f8b2101",
+            "tester": "greedisland.k.k@gmail.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000001",
+            "name": "points_changed",
+            "ts": "2026-08-15T16:13:00.000Z",
+            "receivedAt": "2026-08-15T16:13:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "iOS",
+            "deviceModel": "iPhone15,3",
+            "os": "iOS 18.5",
+            "payload": {
+                "balance": 20,
+                "delta": 20
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-00000000000d",
+            "userId": "5f0b7c2e-1a44-4b3a-9c1d-0a6e3f8b2101",
+            "tester": "greedisland.k.k@gmail.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000001",
+            "name": "hole_complete",
+            "ts": "2026-08-15T16:12:00.000Z",
+            "receivedAt": "2026-08-15T16:12:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "iOS",
+            "deviceModel": "iPhone15,3",
+            "os": "iOS 18.5",
+            "payload": {
+                "hole": 1,
+                "strokes": 3,
+                "penalty_strokes": 0,
+                "result": "InCup",
+                "duration_s": 420,
+                "fps_avg": 55.1,
+                "fps_low": 40.5,
+                "par": 4
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-00000000000c",
+            "userId": "5f0b7c2e-1a44-4b3a-9c1d-0a6e3f8b2101",
+            "tester": "greedisland.k.k@gmail.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000001",
+            "name": "shot_taken",
+            "ts": "2026-08-15T16:11:00.000Z",
+            "receivedAt": "2026-08-15T16:11:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "iOS",
+            "deviceModel": "iPhone15,3",
+            "os": "iOS 18.5",
+            "payload": {
+                "shot_number": 3,
+                "club": "Putter",
+                "distance_m": 6.3,
+                "terminal": "InCup",
+                "ob_reason": null,
+                "surface": "Green",
+                "penalty": 0,
+                "hole": 1
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-00000000000b",
+            "userId": "5f0b7c2e-1a44-4b3a-9c1d-0a6e3f8b2101",
+            "tester": "greedisland.k.k@gmail.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000001",
+            "name": "shot_taken",
+            "ts": "2026-08-15T16:10:00.000Z",
+            "receivedAt": "2026-08-15T16:10:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "iOS",
+            "deviceModel": "iPhone15,3",
+            "os": "iOS 18.5",
+            "payload": {
+                "shot_number": 2,
+                "club": "7 Iron",
+                "distance_m": 132.1,
+                "terminal": "AtRest",
+                "ob_reason": null,
+                "surface": "Green",
+                "penalty": 0,
+                "hole": 1
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-00000000000a",
+            "userId": "5f0b7c2e-1a44-4b3a-9c1d-0a6e3f8b2101",
+            "tester": "greedisland.k.k@gmail.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000001",
+            "name": "shot_taken",
+            "ts": "2026-08-15T16:09:00.000Z",
+            "receivedAt": "2026-08-15T16:09:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "iOS",
+            "deviceModel": "iPhone15,3",
+            "os": "iOS 18.5",
+            "payload": {
+                "shot_number": 1,
+                "club": "Driver",
+                "distance_m": 214.4,
+                "terminal": "AtRest",
+                "ob_reason": null,
+                "surface": "Fairway",
+                "penalty": 0,
+                "hole": 1
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-000000000009",
+            "userId": "5f0b7c2e-1a44-4b3a-9c1d-0a6e3f8b2101",
+            "tester": "greedisland.k.k@gmail.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000001",
+            "name": "shot_cancelled",
+            "ts": "2026-08-15T16:08:00.000Z",
+            "receivedAt": "2026-08-15T16:08:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "iOS",
+            "deviceModel": "iPhone15,3",
+            "os": "iOS 18.5",
+            "payload": {
+                "hole": 1,
+                "shot_number": 1
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-000000000008",
+            "userId": "5f0b7c2e-1a44-4b3a-9c1d-0a6e3f8b2101",
+            "tester": "greedisland.k.k@gmail.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000001",
+            "name": "flick_rejected",
+            "ts": "2026-08-15T16:07:00.000Z",
+            "receivedAt": "2026-08-15T16:07:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "iOS",
+            "deviceModel": "iPhone15,3",
+            "os": "iOS 18.5",
+            "payload": {
+                "speed": 0.47,
+                "hole": 1,
+                "shot_number": 2
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-000000000007",
+            "userId": "5f0b7c2e-1a44-4b3a-9c1d-0a6e3f8b2101",
+            "tester": "greedisland.k.k@gmail.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000001",
+            "name": "flick_rejected",
+            "ts": "2026-08-15T16:06:00.000Z",
+            "receivedAt": "2026-08-15T16:06:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "iOS",
+            "deviceModel": "iPhone15,3",
+            "os": "iOS 18.5",
+            "payload": {
+                "speed": 0.42,
+                "hole": 1,
+                "shot_number": 1
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-000000000006",
+            "userId": "5f0b7c2e-1a44-4b3a-9c1d-0a6e3f8b2101",
+            "tester": "greedisland.k.k@gmail.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000001",
+            "name": "round_start",
+            "ts": "2026-08-15T16:05:00.000Z",
+            "receivedAt": "2026-08-15T16:05:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "iOS",
+            "deviceModel": "iPhone15,3",
+            "os": "iOS 18.5",
+            "payload": {
+                "hole": 1,
+                "character_id": "char_kaito",
+                "bag_slot": 0,
+                "is_tournament": false,
+                "tournament_id": null
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-000000000005",
+            "userId": "5f0b7c2e-1a44-4b3a-9c1d-0a6e3f8b2101",
+            "tester": "greedisland.k.k@gmail.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000001",
+            "name": "screen_view",
+            "ts": "2026-08-15T16:04:00.000Z",
+            "receivedAt": "2026-08-15T16:04:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "iOS",
+            "deviceModel": "iPhone15,3",
+            "os": "iOS 18.5",
+            "payload": {
+                "screen": "HoleSelection",
+                "since_boot_s": 32.5
+            }
+        }
+    ],
+    "page": 0,
+    "pageSize": 100,
+    "total": 104,
+    "hasMore": true
+}

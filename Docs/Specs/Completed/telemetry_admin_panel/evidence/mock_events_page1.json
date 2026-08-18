@@ -1,0 +1,88 @@
+{
+    "mock": true,
+    "tableMissing": false,
+    "range": {
+        "from": "2026-08-11T18:00:00.000Z",
+        "to": "2026-08-18T18:00:00.000Z"
+    },
+    "events": [
+        {
+            "eventId": "e7e70000-0000-4000-8000-000000000004",
+            "userId": "5f0b7c2e-1a44-4b3a-9c1d-0a6e3f8b2101",
+            "tester": "greedisland.k.k@gmail.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000001",
+            "name": "points_changed",
+            "ts": "2026-08-15T16:03:00.000Z",
+            "receivedAt": "2026-08-15T16:03:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "iOS",
+            "deviceModel": "iPhone15,3",
+            "os": "iOS 18.5",
+            "payload": {
+                "balance": 0,
+                "delta": null
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-000000000003",
+            "userId": "5f0b7c2e-1a44-4b3a-9c1d-0a6e3f8b2101",
+            "tester": "greedisland.k.k@gmail.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000001",
+            "name": "screen_view",
+            "ts": "2026-08-15T16:02:00.000Z",
+            "receivedAt": "2026-08-15T16:02:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "iOS",
+            "deviceModel": "iPhone15,3",
+            "os": "iOS 18.5",
+            "payload": {
+                "screen": "Home",
+                "since_boot_s": 6.8
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-000000000002",
+            "userId": "5f0b7c2e-1a44-4b3a-9c1d-0a6e3f8b2101",
+            "tester": "greedisland.k.k@gmail.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000001",
+            "name": "screen_view",
+            "ts": "2026-08-15T16:01:00.000Z",
+            "receivedAt": "2026-08-15T16:01:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "iOS",
+            "deviceModel": "iPhone15,3",
+            "os": "iOS 18.5",
+            "payload": {
+                "screen": "Logo",
+                "since_boot_s": 0.4
+            }
+        },
+        {
+            "eventId": "e7e70000-0000-4000-8000-000000000001",
+            "userId": "5f0b7c2e-1a44-4b3a-9c1d-0a6e3f8b2101",
+            "tester": "greedisland.k.k@gmail.com",
+            "sessionId": "5e551000-0000-4000-8000-000000000001",
+            "name": "session_start",
+            "ts": "2026-08-15T16:00:00.000Z",
+            "receivedAt": "2026-08-15T16:00:04.000Z",
+            "appVersion": "1.5.7",
+            "buildNumber": 2192,
+            "platform": "iOS",
+            "deviceModel": "iPhone15,3",
+            "os": "iOS 18.5",
+            "payload": {
+                "device_model": "iPhone15,3",
+                "os": "iOS 18.5",
+                "memory_mb": 6144,
+                "screen": "1170x2532"
+            }
+        }
+    ],
+    "page": 1,
+    "pageSize": 100,
+    "total": 104,
+    "hasMore": false
+}

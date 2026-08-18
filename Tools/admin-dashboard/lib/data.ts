@@ -264,3 +264,49 @@ export async function fetchAuditLog(): Promise<AuditResponse> {
   }));
   return { entries, mock: false };
 }
+
+/**
+ * user_id → display identity, for panels that show a name next to a foreign
+ * key (Telemetry). Deliberately lives here and reuses `listAllAuthUsers()` +
+ * the one `profiles` select above rather than growing a second lookup pattern
+ * in another module.
+ */
+export interface UserIdentity {
+  email: string | null;
+  displayName: string | null;
+}
+
+export async function fetchUserDirectory(): Promise<Map<string, UserIdentity>> {
+  if (isMockMode()) {
+    return new Map(
+      mockDb().users.map((u) => [
+        u.id,
+        { email: u.email, displayName: u.displayName },
+      ])
+    );
+  }
+
+  const admin = getSupabaseAdmin();
+  const [authUsers, profilesRes] = await Promise.all([
+    listAllAuthUsers(),
+    admin.from("profiles").select("id, display_name"),
+  ]);
+
+  const nameById = new Map<string, string | null>();
+  if (profilesRes.error) {
+    // A missing/renamed profiles column must not take a read-only panel down —
+    // emails alone still name every tester.
+    console.warn("profiles lookup failed:", profilesRes.error.message);
+  } else {
+    for (const p of (profilesRes.data ?? []) as Row[]) {
+      nameById.set(String(p.id), str(p.display_name));
+    }
+  }
+
+  return new Map(
+    authUsers.map((u) => [
+      u.id,
+      { email: u.email ?? null, displayName: nameById.get(u.id) ?? null },
+    ])
+  );
+}

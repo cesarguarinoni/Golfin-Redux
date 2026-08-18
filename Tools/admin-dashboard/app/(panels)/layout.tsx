@@ -19,6 +19,13 @@ export default async function PanelsLayout({
   const lang = isLang(cookieLang) ? cookieLang : DEFAULT_LANG;
   const t = (key: DictKey) => translate(key, lang);
 
+  // Alphabetical by what the operator actually READS, not by the registry's
+  // array order — otherwise "alphabetical" would only hold in English and the
+  // Japanese sidebar would be in an order with no rule behind it at all.
+  const panels = [...PANELS].sort((a, b) =>
+    t(`nav.${a.id}` as DictKey).localeCompare(t(`nav.${b.id}` as DictKey), lang)
+  );
+
   const check = await checkAdmin();
   if (!check.ok) {
     redirect(check.status === 403 ? "/not-admin" : "/login");
@@ -42,7 +49,7 @@ export default async function PanelsLayout({
         </div>
 
         <nav className="mt-2 flex-1 space-y-1 px-2">
-          {PANELS.map((panel) => (
+          {panels.map((panel) => (
             <Link
               key={panel.id}
               href={panel.route}

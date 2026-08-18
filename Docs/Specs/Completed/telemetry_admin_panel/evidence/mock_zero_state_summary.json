@@ -1,0 +1,60 @@
+{
+    "mock": true,
+    "range": {
+        "from": "2026-01-01T00:00:00.000Z",
+        "to": "2026-01-02T23:59:59.999Z"
+    },
+    "rowCount": 0,
+    "truncated": false,
+    "tableMissing": false,
+    "kpis": {
+        "activeTesters": 0,
+        "activeTestersToday": 0,
+        "sessions": 0,
+        "sessionsToday": 0,
+        "roundsStarted": 0,
+        "holesCompleted": 0,
+        "abandons": 0,
+        "abandonRate": null,
+        "crashes": 0
+    },
+    "funnel": [
+        {
+            "id": "session_start",
+            "sessions": 0,
+            "pct": 0
+        },
+        {
+            "id": "home",
+            "sessions": 0,
+            "pct": 0
+        },
+        {
+            "id": "hole_select",
+            "sessions": 0,
+            "pct": 0
+        },
+        {
+            "id": "round_start",
+            "sessions": 0,
+            "pct": 0
+        },
+        {
+            "id": "hole_complete",
+            "sessions": 0,
+            "pct": 0
+        }
+    ],
+    "holes": [],
+    "shots": {
+        "shotsTaken": 0,
+        "flickRejected": 0,
+        "shotCancelled": 0,
+        "flickRejectRate": null,
+        "cancelRate": null,
+        "obShots": 0,
+        "obRate": null,
+        "clubs": []
+    },
+    "eventNames": []
+}

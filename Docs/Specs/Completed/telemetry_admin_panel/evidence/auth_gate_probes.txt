@@ -1,0 +1,10 @@
+# Auth gate probes — 2026-08-18T03:22:10Z
+no cookie   /api/telemetry/summary -> 401  {"error":"Not signed in."}
+no cookie   /api/telemetry/testers -> 401  {"error":"Not signed in."}
+no cookie   /api/telemetry/events -> 401  {"error":"Not signed in."}
+non-admin   /api/telemetry/summary -> 403  {"error":"nobody@example.com is not on the admin allowlist."}
+non-admin   /api/telemetry/testers -> 403  {"error":"nobody@example.com is not on the admin allowlist."}
+non-admin   /api/telemetry/events -> 403  {"error":"nobody@example.com is not on the admin allowlist."}
+admin       /api/telemetry/summary -> 200
+admin       /api/telemetry/testers -> 200
+admin       /api/telemetry/events -> 200

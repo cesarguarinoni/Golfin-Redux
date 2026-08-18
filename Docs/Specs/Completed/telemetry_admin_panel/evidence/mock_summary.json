@@ -1,0 +1,135 @@
+{
+    "mock": true,
+    "range": {
+        "from": "2026-08-11T18:00:00.000Z",
+        "to": "2026-08-18T18:00:00.000Z"
+    },
+    "rowCount": 104,
+    "truncated": false,
+    "tableMissing": false,
+    "kpis": {
+        "activeTesters": 5,
+        "activeTestersToday": 3,
+        "sessions": 10,
+        "sessionsToday": 3,
+        "roundsStarted": 8,
+        "holesCompleted": 6,
+        "abandons": 1,
+        "abandonRate": 0.125,
+        "crashes": 1
+    },
+    "funnel": [
+        {
+            "id": "session_start",
+            "sessions": 10,
+            "pct": 1
+        },
+        {
+            "id": "home",
+            "sessions": 9,
+            "pct": 0.9
+        },
+        {
+            "id": "hole_select",
+            "sessions": 8,
+            "pct": 0.8
+        },
+        {
+            "id": "round_start",
+            "sessions": 7,
+            "pct": 0.7
+        },
+        {
+            "id": "hole_complete",
+            "sessions": 5,
+            "pct": 0.5
+        }
+    ],
+    "holes": [
+        {
+            "hole": 1,
+            "plays": 4,
+            "completions": 3,
+            "abandons": 0,
+            "avgStrokes": 3,
+            "avgPenaltyStrokes": 0,
+            "shots": 12,
+            "obRate": 0,
+            "avgDurationS": 340,
+            "fpsLowMedian": 41.900000000000006
+        },
+        {
+            "hole": 2,
+            "plays": 3,
+            "completions": 2,
+            "abandons": 1,
+            "avgStrokes": 5,
+            "avgPenaltyStrokes": 1,
+            "shots": 9,
+            "obRate": 0.3333333333333333,
+            "avgDurationS": 390,
+            "fpsLowMedian": 18.25
+        },
+        {
+            "hole": 3,
+            "plays": 1,
+            "completions": 1,
+            "abandons": 0,
+            "avgStrokes": 3,
+            "avgPenaltyStrokes": 0,
+            "shots": 3,
+            "obRate": 0,
+            "avgDurationS": 240,
+            "fpsLowMedian": 36.5
+        }
+    ],
+    "shots": {
+        "shotsTaken": 24,
+        "flickRejected": 5,
+        "shotCancelled": 3,
+        "flickRejectRate": 0.1724137931034483,
+        "cancelRate": 0.1111111111111111,
+        "obShots": 3,
+        "obRate": 0.125,
+        "clubs": [
+            {
+                "club": "Driver",
+                "shots": 10,
+                "avgDistanceM": 215.53000000000003
+            },
+            {
+                "club": "Putter",
+                "shots": 7,
+                "avgDistanceM": 6.171428571428571
+            },
+            {
+                "club": "7 Iron",
+                "shots": 4,
+                "avgDistanceM": 132.1
+            },
+            {
+                "club": "9 Iron",
+                "shots": 2,
+                "avgDistanceM": 96.7
+            },
+            {
+                "club": "S.Wedge",
+                "shots": 1,
+                "avgDistanceM": 61.4
+            }
+        ]
+    },
+    "eventNames": [
+        "client_error",
+        "flick_rejected",
+        "hole_complete",
+        "points_changed",
+        "round_abandoned",
+        "round_start",
+        "screen_view",
+        "session_end",
+        "session_start",
+        "shot_cancelled",
+        "shot_taken"
+    ]
+}

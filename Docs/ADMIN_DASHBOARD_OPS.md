@@ -12,8 +12,11 @@ Full detail lives in that folder's `README.md`; this file is the operator's view
 
 Next.js 15 (App Router) + TypeScript + Tailwind, deployed to **Cloudflare
 Workers** via the OpenNext adapter, reading the PLAYLIFE Supabase project
-directly with a `service_role` key. Four panels — Users, Points, Tournaments,
-Audit Log, Banners, Notices — registered in `lib/registry.ts`.
+directly with a `service_role` key. Seven panels — Audit Log, Banners, Notices,
+Points, Telemetry, Tournaments, Users — registered in `lib/registry.ts`. The
+sidebar renders them **sorted by their translated title**, so the order follows
+whichever language is showing and the array order in the registry is not
+load-bearing.
 
 | Thing | Value |
 |---|---|
@@ -64,6 +67,14 @@ Add `app/(panels)/<id>/page.tsx` + a client component, an entry in
 `lib/registry.ts`, and API routes under `app/api/`. Every route handler starts
 with `checkAdmin()`; every mutation goes through `lib/audit.ts` with
 before/after snapshots. Follow the Tournaments panel — it is the most complete.
+
+For a **read-only** panel, follow **Telemetry** instead: same page.tsx → client
+component → `app/api/<id>/*` shape, but no editor, no mutation route, and no
+`lib/audit.ts` (there is nothing to audit). It is also the worked example of
+aggregating in TypeScript behind a row cap, of a deterministic mock fixture you
+can build a whole panel against before any real rows exist, and of tolerating a
+table that is not there yet instead of 500ing — see
+`Docs/Specs/Completed/telemetry_admin_panel/`.
 
 ### 3.2 A new DB column
 **Migration first, deploy second. Always.** Deploying code that references a

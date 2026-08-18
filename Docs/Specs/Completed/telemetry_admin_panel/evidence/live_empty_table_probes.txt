@@ -1,0 +1,14 @@
+# LIVE-mode probes — 2026-08-18T03:24:52Z
+
+## The table the panel reads exists and is empty (beta_telemetry §2.2 migration is applied)
+GET telemetry_events?limit=1  -> HTTP 200  body: []
+exact count -> content-range: */0
+
+## The same query the panel issues, with the panel's exact filters (7-day window, received_at, ordered, capped)
+GET telemetry_events?received_at=gte.$FROM&received_at=lte.$TO&order=received_at.desc&limit=10000 -> HTTP 200  body: []
+
+## Route wiring in LIVE mode (dev server started with no MOCK_MODE): the admin gate still fires first
+  no cookie /api/telemetry/summary -> 401 {"error":"Not signed in."}
+  no cookie /api/telemetry/testers -> 401 {"error":"Not signed in."}
+  no cookie /api/telemetry/events -> 401 {"error":"Not signed in."}
+  (mock-login route is absent in live mode: HTTP 404 — a browser-level live render needs a real Supabase admin session, i.e. Cesar)

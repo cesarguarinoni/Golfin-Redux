@@ -357,3 +357,158 @@ export interface NoticesResponse {
   notices: NoticeRow[];
   mock: boolean;
 }
+
+// ---------------------------------------------------------------------------
+// Telemetry panel (SPEC telemetry_admin_panel §3)
+//
+// Read-only. Every shape here is derived in lib/telemetryData.ts from rows of
+// public.telemetry_events; nothing in this panel writes. Field names in the
+// `payload` JSON come from beta_telemetry SPEC §1 — never invent one.
+// ---------------------------------------------------------------------------
+
+/** Resolved query window. Filtering is on `received_at` (server clock), not the
+ *  client-supplied `ts`, which can be skewed on a tester's device. */
+export interface TelemetryRange {
+  from: string;
+  to: string;
+}
+
+/** Every aggregate response carries this so a capped read is never silent. */
+export interface TelemetryReadMeta {
+  mock: boolean;
+  range: TelemetryRange;
+  /** Rows actually scanned. */
+  rowCount: number;
+  /** True when the 10,000-row cap was hit — the numbers below are a partial read. */
+  truncated: boolean;
+  /** True when `telemetry_events` does not exist yet (the beta_telemetry §2.2
+   *  migration has not been applied). Every number is a real zero, not a
+   *  failure — the panel says so rather than showing a red 500. */
+  tableMissing: boolean;
+}
+
+export interface TelemetryKpis {
+  activeTesters: number;
+  activeTestersToday: number;
+  sessions: number;
+  sessionsToday: number;
+  roundsStarted: number;
+  holesCompleted: number;
+  abandons: number;
+  /** abandons / roundsStarted, or null when no round started. */
+  abandonRate: number | null;
+  crashes: number;
+}
+
+export type FunnelStageId =
+  | "session_start"
+  | "home"
+  | "hole_select"
+  | "round_start"
+  | "hole_complete";
+
+export interface FunnelStage {
+  id: FunnelStageId;
+  /** Sessions that reached this stage OR any later one — so the funnel can
+   *  never read as increasing when an event is lost in transit. */
+  sessions: number;
+  /** 0..1 of all sessions in range. */
+  pct: number;
+}
+
+export interface HoleStat {
+  hole: number;
+  plays: number;
+  completions: number;
+  abandons: number;
+  avgStrokes: number | null;
+  avgPenaltyStrokes: number | null;
+  shots: number;
+  /** shot_taken with terminal "OB" ÷ shot_taken, on this hole. */
+  obRate: number | null;
+  avgDurationS: number | null;
+  fpsLowMedian: number | null;
+}
+
+export interface ClubStat {
+  club: string;
+  shots: number;
+  avgDistanceM: number | null;
+}
+
+export interface ShotQuality {
+  shotsTaken: number;
+  flickRejected: number;
+  shotCancelled: number;
+  /** rejected ÷ (rejected + taken). The headline number of the beta. */
+  flickRejectRate: number | null;
+  /** cancelled ÷ (cancelled + taken). */
+  cancelRate: number | null;
+  obShots: number;
+  obRate: number | null;
+  clubs: ClubStat[];
+}
+
+export interface TelemetrySummaryResponse extends TelemetryReadMeta {
+  kpis: TelemetryKpis;
+  funnel: FunnelStage[];
+  holes: HoleStat[];
+  shots: ShotQuality;
+  /** Distinct event names seen in range — populates the explorer's filter. */
+  eventNames: string[];
+}
+
+export interface TesterRow {
+  userId: string;
+  /** Resolved through the Users panel's lookup; null when no auth row exists. */
+  email: string | null;
+  displayName: string | null;
+  platform: string | null;
+  deviceModel: string | null;
+  os: string | null;
+  appVersion: string | null;
+  buildNumber: number | null;
+  sessions: number;
+  /** Sessions with no session_end — app killed, or the batch never flushed. */
+  uncleanExits: number;
+  playTimeS: number;
+  rounds: number;
+  holesCompleted: number;
+  /** last points_changed.balance − first, or null with fewer than two. */
+  pointsDelta: number | null;
+  crashes: number;
+  lastSeen: string | null;
+}
+
+export interface TelemetryTestersResponse extends TelemetryReadMeta {
+  testers: TesterRow[];
+}
+
+export interface TelemetryEventRow {
+  eventId: string;
+  userId: string;
+  /** email → display name → truncated uuid. */
+  tester: string;
+  sessionId: string;
+  name: string;
+  ts: string;
+  receivedAt: string;
+  appVersion: string | null;
+  buildNumber: number | null;
+  platform: string | null;
+  deviceModel: string | null;
+  os: string | null;
+  payload: unknown;
+}
+
+export interface TelemetryEventsResponse {
+  mock: boolean;
+  tableMissing: boolean;
+  range: TelemetryRange;
+  events: TelemetryEventRow[];
+  page: number;
+  pageSize: number;
+  /** Exact match count for the filter, or null when the DB declined to count. */
+  total: number | null;
+  hasMore: boolean;
+}
