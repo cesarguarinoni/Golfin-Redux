@@ -37,14 +37,41 @@ the spec's interaction section requires, and the scheme post-action was left in 
 | 7 | `ITSAppUsesNonExemptEncryption` present in the batchmode-generated `Info.plist` | **PASS** | `PlistBuddy -c 'Print :ITSAppUsesNonExemptEncryption'` → `false` on the freshly generated plist. `iOSPostProcess.cs` therefore runs in batchmode as it does in the GUI; that file was not modified. |
 | 8 | `ensure_git_status_clean` aborts the lane on a dirty tree | **PASS** | Ran `fastlane ios testflight_build` for real against the current 17-path dirty tree: the Fastfile loaded, `LANE_NAME = ios testflight_build`, step 1 `ensure_git_status_clean` 💥 with `Git repository is dirty!` quoting `Fastfile:27`, and **`LANE EXIT=1`**. Nothing downstream ran — `Builds/unity-build-ios.log` mtime stayed at the 08:21 run, so no Unity build, no archive, no upload was attempted. Also proven: a batchmode build — success **or** failure — leaves `ProjectSettings.asset` clean, so the lane's own build no longer trips its own precondition (Findings §1). |
 | 9 | `.p8`, `.env`, `Builds/ipa/`, `fastlane/report.xml` gitignored; tree clean after a run except the guard file | **PASS** | `git check-ignore -q` → IGNORED for `fastlane/.env`, `fastlane/report.xml`, `fastlane/README.md`, `Builds/ipa/Golfin.ipa`, `AuthKey_ABC123.p8`, `Builds/iOS-Full/…`; NOT ignored (correctly tracked) for `fastlane/Fastfile`, `fastlane/Appfile`, `fastlane/.env.example`. After the final successful build, `git status --porcelain ProjectSettings/ProjectSettings.asset` is empty and no `Builds/` path appears in `git status`. |
-| 10 | `Tools/mark-uploaded.sh` runs after upload and advances the guard file | **PARTIAL — call site proven, real invocation AWAITING CESAR** | The Fastfile calls it after `upload_to_testflight`. fastlane's `sh` runs with cwd = `fastlane/`, so the arguments were tested under exactly those semantics in a throwaway git repo (`cd fastlane && ../Tools/mark-uploaded.sh ".."`): guard `0 → 3` written, second run at the same commit `wrote=no` and `exit=0`, guard forced to `9999` then re-run left it at `9999` (no regression), `.mark-uploaded.log` appended on all three. Deliberately **not** run against the real repo — it would advance the live guard to `2195` and refuse every store build at this commit. |
+| 10 | `Tools/mark-uploaded.sh` runs after upload and advances the guard file | **PASS** | Real lane run: the guard advanced **2192 → 2201** and step 8 `../Tools/mark-uploaded.sh ..` appears in fastlane's own summary table. Precisely what happened, from `.mark-uploaded.log`: the **Xcode Archive post-action** fired first at `11:02:07` (`old=2192 new=2201 wrote=yes`), so the Fastfile's post-upload call at `11:05:09` correctly logged `old=2201 new=2201 wrote=no — no advance`. Both mechanisms ran, neither double-wrote, and the guard is now truthful. See Findings §8 — the post-action firing under `xcodebuild` contradicts the spec's premise. |
 | 11 | Unity Console / batchmode log has no errors related to this task | **PASS** | Successful run: `[CIBuild] result=Succeeded errors=0 warnings=139` (the 139 are pre-existing shader/obsolete-API warnings, none naming a file from this task). Editor-side compile after adding `CIBuild.cs`: reflection probe returned `type=Golfin.EditorTools.CIBuild asm=Assembly-CSharp-Editor BuildIOS=present profileLoads=iOS-Full SetActiveBuildProfile=present`; console `Error` query returned only pre-existing `CS0618`/`CS8632` warnings in unrelated files. |
 | 12 | Spec deviations flagged at the bottom with justification | **PASS** | Findings + Deviations below. |
 
-**Not claimed, per the spec:** `upload_to_testflight` itself. It needs the App Store Connect
-API key that only Cesar can mint, and it uploads to a real record. Everything up to and
-including `build_app` is code-complete; `build_app` has not been executed either (it needs
-`api_key` from the same `.env`, and fastlane is not installed).
+### End to end — run for real, 2026-08-18 11:05 JST
+
+Cesar authorized a full run. `LANE EXIT=0`, **11 min 27 s** wall clock, all 8 steps green:
+
+| Step | Action | Time |
+|---|---|---|
+| 1 | `default_platform` | 0 s |
+| 2 | `ensure_git_status_clean` | 0 s |
+| 3 | `../Tools/assert-unity-closed.sh` | 0 s |
+| 4 | `../Tools/unity-build-ios.sh` | 63 s |
+| 5 | `app_store_connect_api_key` | 0 s |
+| 6 | `build_app` (archive + export + sign) | 521 s |
+| 7 | `upload_to_testflight` | 99 s |
+| 8 | `../Tools/mark-uploaded.sh ..` | 0 s |
+
+Outputs: `Builds/ipa/Golfin.ipa` (522 MB) + `Golfin.app.dSYM.zip` (291 MB), both gitignored.
+
+**Verified at Apple, not merely reported by fastlane.** A read-only Spaceship query
+(`get_builds`, `sort: "-uploadedDate"`) against the live record, polled until it appeared:
+
+```
+2201   state=VALID   uploaded=2026-08-17T19:06:19-07:00   ← this run
+2194   state=VALID   uploaded=2026-08-17T07:00:30-07:00
+2192   state=VALID   uploaded=2026-08-17T04:16:14-07:00
+```
+
+It took ~4 minutes after the lane returned for the build to become visible over the API — worth
+knowing, since `skip_waiting_for_build_processing: true` means the lane returns before Apple has
+surfaced anything. `state=VALID` (not `PROCESSING`) by the time it appeared.
+
+The `get_builds` call needed `includes: nil` to work around the spaceship drift in Findings §6.
 
 ---
 
@@ -147,6 +174,66 @@ regenerated `Unity-iPhone.xcscheme` returns exactly **1** (injected, not duplica
 paths now feed the guard — the scheme post-action for manual GUI archives, the Fastfile `sh`
 call for lane runs — and `mark-uploaded.sh` never regresses, so both firing is harmless.
 
+### 7. The first real end-to-end run failed in `build_app` — on the locale, not the build
+
+Run 1 (10:48, clean tree at build 2201): steps 1–3 passed, Unity produced the Xcode project in
+94 s with `CFBundleVersion=2201`, `app_store_connect_api_key` succeeded — then `build_app` died
+**3 seconds** into `xcodebuild archive`:
+
+```
+[!] invalid byte sequence in US-ASCII (ArgumentError)
+    gym/lib/gym/error_handler.rb:15:in 'Regexp#==='
+```
+
+`~/Library/Logs/gym/Golfin-Unity-iPhone.log` contains no `error:` line at all — the build had
+barely started. gym streams every xcodebuild output line through error-matching regexes;
+xcodebuild prints `➜` (U+279C) in its dependency graph (log line 18, confirmed with
+`grep -P '[^\x00-\x7F]'`); matching that under `Encoding.default_external = US-ASCII` raises, and
+the raise killed fastlane and `xcodebuild` with it. **A build failure that was not a build
+failure.**
+
+Measured, not inferred:
+
+| Check | Result |
+|---|---|
+| `ruby -e 'puts Encoding.default_external'` in the shell that ran the lane | `US-ASCII` (`LANG=nil LC_ALL=nil`) |
+| same, with `LC_ALL=en_US.UTF-8` exported first | `UTF-8` |
+| `ruby -e 'ENV["LC_ALL"]="en_US.UTF-8"; puts Encoding.default_external'` | **`US-ASCII`** — setting it in-process is too late |
+
+That third row is why `fastlane/.env` cannot fix it: Ruby fixes its external encoding at process
+start and dotenv loads `.env` after. The `.env` lines were kept (children inherit them, and they
+do silence the cosmetic warning) with the comment corrected to say what they are not.
+
+Fix: `Tools/testflight.sh`, a thin wrapper that exports `LC_ALL`/`LANG` and prepends
+`/opt/homebrew/bin` **before** `exec fastlane ios testflight_build`. Both problems it solves are
+environment preconditions that bite exactly when nobody is watching — a non-interactive shell,
+cron, CI — so leaving them to "remember to run it from Terminal" was not good enough.
+
+### 8. The scheme post-action DOES fire under `xcodebuild` — the spec's premise was wrong
+
+`SPEC.md` § Interaction opens with: *"Scheme post-actions do not reliably fire under
+`xcodebuild`, which is what fastlane's `build_app` invokes — so under this pipeline the guard
+would silently stop being marked."* The real run says otherwise. `.mark-uploaded.log`:
+
+```
+11:02:07  old=2192  new=2201  wrote=yes  sha=6d243bd  advanced …last_uploaded_build.txt
+11:05:09  old=2201  new=2201  wrote=no   sha=6d243bd  no advance (new <= current)
+```
+
+`11:02:07` is mid-`build_app` — that is `iOSArchivePostAction`'s injected Archive post-action
+running under `xcodebuild archive`. `11:05:09` is the Fastfile's own call after
+`upload_to_testflight`, correctly declining to write again.
+
+This changes nothing about the design and is the best possible outcome for it: the spec's
+resolution — keep the script, call it from the Fastfile, leave the post-action in place, rely on
+idempotency — is what made a double-fire a no-op instead of a bug. Two independent paths now
+feed the guard and neither can corrupt it. Recorded because the *reasoning* in the spec is
+inaccurate and someone will otherwise remove the post-action believing it dead weight under CI.
+
+**Side effect for `upload_guard_automation`:** its one outstanding human-verification item was
+"confirm a real archive advances the guard file". That is now observed — under `xcodebuild
+archive` rather than a GUI **Product → Archive**, but both run the same injected scheme action.
+
 ---
 
 ## Deviations from the spec
@@ -184,18 +271,20 @@ Untracked build output (`Builds/iOS-Full/**`, `Builds/unity-build-ios.log`) is c
 
 ## Needs Cesar
 
-1. ~~Install fastlane~~ — **DONE 2026-08-18** (Homebrew + `brew install fastlane`, verified
-   2.238.0 on vendored ruby 4.0.6).
-2. ~~Mint the App Store Connect API key~~ — **DONE 2026-08-18**, and proven to authenticate.
-   See § API key below and Findings §6.
-3. **Add `brew shellenv` to `~/.zprofile`** — one line, Findings §5. Without it `fastlane` is not
-   on PATH in a fresh shell.
-4. **Commit, then run the lane end to end** — the tree must be clean (that is now demonstrably
-   enforced), the Editor closed. `build_app` and `upload_to_testflight` remain the only two
-   steps never executed; the first real run **uploads a build to a live App Store Connect
-   record**, so it is deliberately left as a human decision rather than run here.
-5. **After the run**, commit `Docs/Versioning/last_uploaded_build.txt` — it is the one file the
-   lane leaves dirty, by design.
+1. ~~Install fastlane~~ — **DONE 2026-08-18** (2.238.0 on vendored ruby 4.0.6).
+2. ~~Mint the App Store Connect API key~~ — **DONE 2026-08-18**, proven to authenticate.
+3. ~~Run the lane end to end~~ — **DONE 2026-08-18 11:05 JST**, `1.5.7 (2201)` uploaded and
+   confirmed `VALID` on App Store Connect. All 12 acceptance items now PASS.
+4. **Commit `Docs/Versioning/last_uploaded_build.txt`** (now `2201`) — the one file the lane
+   leaves dirty, by design. NOT committed here: the working tree also carries unrelated
+   in-flight `Tools/admin-dashboard/` and `Docs/Specs/Active/home_notices/` work, and CLAUDE.md
+   rule 12 halts a close-out commit on drift outside the task folder.
+5. **Optional, one line** — put the locale and `brew shellenv` in `~/.zprofile` (Findings §5,
+   §7) so `fastlane ios testflight_build` works directly from any shell. `Tools/testflight.sh`
+   already covers it for the common path.
+6. **Check TestFlight** — the build should have reached `In-House Testers` automatically. Worth
+   confirming once that the internal group really does auto-distribute a fastlane-uploaded
+   build, since the lane deliberately passes no `groups:`.
 
 ---
 
@@ -222,6 +311,9 @@ Checked rather than assumed:
   superset) — worth downgrading only if you want the key on your disk to hold less authority.
 
 The key **was** exercised, read-only — see Findings §6: it authenticates and resolves the live
-`Golfin Game` record (id `6741622475`). `fastlane/.env` also carries `LC_ALL`/`LANG=en_US.UTF-8`,
-which silences fastlane's UTF-8 locale warning (confirmed: the warning appears on a run without
-them and is absent with them). Item 10's real invocation still waits on the first lane run.
+`Golfin Game` record (id `6741622475`).
+
+⚠️ **Correction.** An earlier revision of this report presented the `LC_ALL`/`LANG` lines in
+`fastlane/.env` as the fix for fastlane's UTF-8 locale warning. They silence the *warning* but
+do **not** fix the *encoding*, and the first real lane run proved it by dying in the archive.
+See Findings §7.

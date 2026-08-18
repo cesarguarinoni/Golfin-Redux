@@ -62,8 +62,15 @@ and IL2CPP dominate and are untouched — but you can walk away, and the four di
 human currently picks the wrong thing are gone.
 
 ```bash
-fastlane ios testflight_build
+./Tools/testflight.sh
 ```
+
+That wrapper is one line of `exec fastlane ios testflight_build`, plus the two environment
+facts the run cannot survive without: `LC_ALL`/`LANG` set to UTF-8, and Homebrew's `bin` on
+`PATH`. `fastlane ios testflight_build` directly works too — **from a shell whose locale is
+UTF-8.** From one without it (cron, CI, `bash -c`, any non-interactive shell) it dies about
+three seconds into the archive with `invalid byte sequence in US-ASCII`, which looks exactly
+like a build failure and is not one. See § "The locale trap" below.
 
 What the lane does, in order (`fastlane/Fastfile`):
 
@@ -106,6 +113,37 @@ mkdir -p ~/.appstoreconnect && mv ~/Downloads/AuthKey_*.p8 ~/.appstoreconnect/ &
 
 **3. Environment** — copy `fastlane/.env.example` → `fastlane/.env` (gitignored) and fill in
 `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_PATH`. Never commit either the `.env` or the `.p8`.
+
+### The locale trap — read this before debugging an "archive failure"
+
+Hit for real on the first end-to-end run, 2026-08-18. `build_app` died after 3 seconds with:
+
+```
+[!] invalid byte sequence in US-ASCII (ArgumentError)
+    gym/lib/gym/error_handler.rb:15:in 'Regexp#==='
+```
+
+Nothing was wrong with the build. gym pipes **every line of xcodebuild's output** through
+error-matching regexes; xcodebuild prints `➜` (U+279C) in its dependency graph on line ~18 of
+any archive; and a regex match against a non-ASCII byte raises when Ruby's
+`Encoding.default_external` is `US-ASCII` — which is what Ruby picks in any shell with no
+`LANG`/`LC_ALL`. fastlane then died and took `xcodebuild` with it.
+
+**`LC_ALL` in `fastlane/.env` does not fix this.** Ruby fixes its external encoding at process
+start; dotenv reads `.env` afterwards. Those lines are still there (children inherit them, and
+they silence fastlane's cosmetic warning) but they leave the encoding US-ASCII — a half-fix that
+looks like a fix. The export must precede the fastlane process:
+
+```bash
+LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8 fastlane ios testflight_build
+```
+
+Or just use `./Tools/testflight.sh`, which does exactly that. To stop meeting this in every
+tool, put it in the shell profile once:
+
+```bash
+printf 'export LC_ALL=en_US.UTF-8\nexport LANG=en_US.UTF-8\neval "$(/opt/homebrew/bin/brew shellenv)"\n' >> ~/.zprofile
+```
 
 ### When it fails
 
