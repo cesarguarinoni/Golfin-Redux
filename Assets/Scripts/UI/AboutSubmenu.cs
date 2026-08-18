@@ -1,6 +1,7 @@
 using UnityEngine;
 using TMPro;
 using System.Text;
+using GolfinRedux.UI.BuildInfo;
 
 namespace Golfin.UI
 {
@@ -51,12 +52,16 @@ namespace Golfin.UI
 
         /// <summary>
         /// Get the current app version string.
+        /// Uses the FULL version — marketing version plus build number, e.g.
+        /// "0.1.0 (2201)" — since the build number is what identifies a specific
+        /// binary in TestFlight / App Store Connect. See <see cref="AppVersion"/>;
+        /// it degrades to the marketing version alone when no build number is baked.
         /// </summary>
         private string GetVersionString()
         {
             if (useApplicationVersion)
             {
-                return Application.version;
+                return AppVersion.Full;
             }
             return fallbackVersion;
         }

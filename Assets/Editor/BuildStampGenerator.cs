@@ -152,21 +152,22 @@ namespace GolfinRedux.BuildEditor
 
         // ─────────────────────────────────────────────────────────────────────
         //  Editor play-mode: keep a live stamp so play-mode verification is real.
-        //  Gated on GOLFIN_TESTBUILD so it only runs when a stamp-bearing profile
-        //  is active — matching the runtime BuildStamp component's own gate.
+        //  This used to be gated on GOLFIN_TESTBUILD, matching the runtime BuildStamp
+        //  overlay's own gate. It is now UNGATED because the stamp asset gained a
+        //  second, unconditional consumer: Settings ▸ About reads the build number
+        //  back from it (see GolfinRedux.UI.BuildInfo.AppVersion) on every profile.
+        //  Without this, About would show a bare marketing version in the editor and
+        //  the parenthesised build number could not be verified before a device build.
         // ─────────────────────────────────────────────────────────────────────
         [InitializeOnLoadMethod]
         static void InstallEditorHooks()
         {
-#if GOLFIN_TESTBUILD
             EditorApplication.playModeStateChanged += OnPlayModeChanged;
             // Ensure the asset exists (and is imported) before the first play session.
             if (!File.Exists(Path.Combine(ProjectRoot, StampAssetPath)))
                 RegenerateEditorStamp();
-#endif
         }
 
-#if GOLFIN_TESTBUILD
         static void OnPlayModeChanged(PlayModeStateChange state)
         {
             // Freshen the timestamp + diff hash right before every play session.
@@ -182,7 +183,6 @@ namespace GolfinRedux.BuildEditor
                 : $"v{PlayerSettings.bundleVersion} (editor) · {DateTime.Now.ToString("MM-dd HH:mm", CultureInfo.InvariantCulture)}";
             WriteStampAsset(stamp);
         }
-#endif
 
         // ─────────────────────────────────────────────────────────────────────
         //  Upload bookkeeping
