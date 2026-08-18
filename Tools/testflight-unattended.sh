@@ -74,7 +74,7 @@ if [ -n "$(git status --porcelain --untracked-files=all)" ]; then
   say "tree dirty ($N paths) — auto-committing per the scheduled-run rule"
   git add -A
   git commit -q -F - <<MSG
-chore(build): auto-commit swept by the scheduled TestFlight run
+chore(build): auto-commit swept by the unattended TestFlight runner
 
 $N path(s) were uncommitted when Tools/testflight-unattended.sh fired. The lane refuses a dirty
 tree because the build number is \`git rev-list --count HEAD\` and would otherwise not describe

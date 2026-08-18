@@ -34,6 +34,36 @@
 
 ## 📋 SPEC_READY POINTERS
 
+- **`ingame_settings_modal`** (filed 2026-08-18, Architect) — **SPEC_READY, kickoff pasteable.** The in-game gear (`ShotUI_Canvas/SettingsButton` in LabScaffold — gameplay HUD only, menu gear untouched) gets its real function: settings overlay with SFX+Music sliders (AudioManager reuse) and a PLAYING card (live HoleContext/HoleData bind) with BACK / QUIT; QUIT is solo-only, confirm-gated ("no rewards"), tears down via `GameplaySceneLoader.UnloadGameplay()`. Same change REMOVES the cheat on that gear: `GreenTuningPanel.toggleButton` unwired in LabScaffold (class + lab usage stay). Everything reuses existing card/button/slider assets — zero new art. Figma `13873:33610` + `13905:6678`; renders in `reference/`. ⚠️ Flagged for later, NOT in this task: app-kill mid-tournament-round = abandoned-round handling needs its own spec. Spec: `Docs/Specs/Active/ingame_settings_modal/SPEC.md`.
+
+### Kickoff · ingame_settings_modal (issued 2026-08-18)
+
+```
+Read Docs/Specs/Active/ingame_settings_modal/SPEC.md and implement it.
+
+Context:
+- In-game gear (ShotUI_Canvas/SettingsButton in LabScaffold) opens a new
+  settings modal: sound sliders + PLAYING card + solo-only confirm-gated
+  QUIT. Also REMOVES the cheat on that gear (GreenTuningPanel.toggleButton
+  — unwire in scene, keep the class; check SmokeRunner2fHost S3 capture).
+- Minimal diff. Reuse existing systems: ModalController base,
+  AudioManager Get/Set volumes, HoleContext + HoleData bind,
+  GoldPrimaryButton + signup-modal silver button + SettingsScreen sliders
+  + existing card backgrounds, ButtonPressFeedback, LocalizationManager
+  (6 new CSV keys, table in spec §5).
+- Quit = VersusResultModalController.NewMatchRoutine() pattern
+  (coroutine + UnloadGameplay). QUIT hidden when GameSession.IsVersus ||
+  TournamentRoundContext.IsActive.
+- Out of scope: tournament/versus forfeit rules, menu settings screen,
+  blur, timeScale, GreenTuningPanel feature changes, any reward/RP/stamina
+  grant or refund on quit.
+
+When done: list changed files with a 1-line summary each, run the acceptance
+tests in the spec, flag which need manual on-device verification, update
+STATUS.md + IMPLEMENTER_REPORT.md in the spec folder, and update
+Docs/AI_CONTEXT.md.
+```
+
 - **`tournament_async_board`** (filed 2026-08-18, Architect) — **SPEC_READY — endpoints LIVE in prod 2026-08-18, kickoff pasteable.** Phase 4 of `tournaments_server_side` §6b: tournament entry, per-hole submission and the leaderboard move to the backend — every player sees the same board, server-generated bot field with organic reveal, bots retire one-way at 10 humans, sticky row shows `#rank · PRIZE #prize_rank` while bots pad. Unity-only: new `RemoteTournamentBackend` behind the existing `ITournamentBackend` seam, submissions ride a pending-ops queue, `LocalTournamentBackend` stays for bot/demo/signed-out. Spec: `Docs/Specs/Active/tournament_async_board/SPEC.md`.
 
 ### Kickoff · tournament_async_board (issued 2026-08-18)
