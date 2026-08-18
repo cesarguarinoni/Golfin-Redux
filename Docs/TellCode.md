@@ -32,6 +32,142 @@
 
 ## 📋 SPEC_READY POINTERS
 
+- **`beta_telemetry`** (filed 2026-08-18, Architect) — **SPEC_READY. Telemetry for next week's 20-tester live beta — Unity client + backend half.** A batching `TelemetryService` (new `Assets/Scripts/Telemetry/`, Assembly-CSharp) subscribes to EXISTING events — `ScreenManager.ScreenChanged`, `GameSession.OnHistoryChanged`/`OnHoleComplete` (ShotRecord already carries club/distance/OB/surface — the shot telemetry is free), `RewardPointsManager.OnPointsChanged`, `CharacterManager.OnCharacterLeveledUp`, `Application.logMessageReceived` — plus ~4 one-line insertions (`GameSession.SeedSession`, the two ShotController cancel/reject branches — raised as static events and relayed through a tiny `ShotTelemetryRelay` in `Golfin.Gameplay.UI`, because `Golfin.Gameplay.Input` is autoReferenced:false and Assembly-CSharp can't see `ShotController`; verified, see spec — and `Endpoints.cs`). Ships through the EXISTING `ApiClient` (Bearer/envelope/retry/401-replay — nothing re-implemented) to a new authed `POST /api/v1/telemetry/events` (`backend/routers/telemetry.py`) writing one `telemetry_events` table (migration `2026_08_18_telemetry_events.sql`, client-GUID `event_id` unique = idempotent retries, RLS on / no policies = service_role only). 13 events: sessions, screen funnel, round/shot/hole (incl. `flick_rejected` — THE control-feel number), abandons, capped client exceptions, FPS avg/low per hole, points/level-up/SP. Editor sends OFF unless `GOLFIN_TELEMETRY_DEBUG`. **Migration first, deploy second** (ops doc §3.2): Cesar pastes SQL, REST-probe verify, then `fly deploy`. Spec: `Docs/Specs/Active/beta_telemetry/SPEC.md`.
+
+### Kickoff · beta_telemetry (issued 2026-08-18)
+
+```
+Read Docs/Specs/Active/beta_telemetry/SPEC.md and implement it.
+
+Context:
+- 20 external TestFlight testers play live next week; this captures controls
+  quality (flick rejects/cancels/OB), the drop-off funnel, crashes, and economy
+  events from their devices. Two halves: Unity client + playlife-api endpoint.
+- Almost everything hooks EXISTING events (spec lists file:line for each). Only
+  ~4 one-line insertions into existing files; everything else is new files under
+  Assets/Scripts/Telemetry/ and backend/routers/telemetry.py.
+- Reuse ApiClient.Instance + Endpoints (add one URL). Do NOT add retry/auth
+  logic — ApiClient already does Bearer, envelope unwrap, transient retry, 401
+  refresh-replay. Follow points.py for the router shape.
+- MIGRATION FIRST: write migrations/2026_08_18_telemetry_events.sql, hand Cesar
+  the SQL for the Supabase SQL editor, REST-probe that the table exists, THEN
+  fly deploy (ADMIN_DASHBOARD_OPS §3.2). Deploying first 500s the endpoint.
+- Telemetry must never break gameplay: every hook wrapped, queue capped at 500,
+  one re-enqueue then drop. EditMode tests per spec §5 (fake-transport style of
+  ApiClientTests.cs).
+- Spec has NOTE flags (par accessor, SP call site, JSON serializer choice, boot
+  choke point; the asmdef/relay question is already resolved in the spec) — resolve against the codebase and record
+  what you found; if a NOTE has no clean answer, skip that item and flag it.
+- Out of scope: the admin panel (separate spec telemetry_admin_panel), offline
+  queue persistence, remote kill switch, retention jobs, anything GPS/PII.
+
+When done: list changed files with a 1-line summary each, run the acceptance
+tests in the spec, flag which need manual on-device verification, update
+STATUS.md + IMPLEMENTER_REPORT.md in the spec folder, and update
+Docs/AI_CONTEXT.md.
+```
+
+- **`telemetry_admin_panel`** (filed 2026-08-18, Architect) — **SPEC_READY. Sixth dashboard panel: read the beta telemetry.** New read-only **Telemetry** panel in `Tools/admin-dashboard` (registry entry uses the already-defined-but-unused `"chart"` icon): KPI cards, session funnel (Home → hole select → round_start → hole_complete), per-hole table (strokes/OB%/abandons/fps_low), shot-quality cards (**flick reject rate is the headline number**), per-tester rollup, raw event explorer with filters + real pagination. Reads `telemetry_events` directly via service_role like every panel; aggregates in TS (20 testers = trivial volume; hard 10k row cap with a visible `truncated` badge, never silent). `checkAdmin()` on all three new API routes; NO audit writes (read-only). No chart lib — div bars. **Buildable NOW in mock mode** (`lib/mockTelemetry.ts`, deterministic fixture) — does not block on the `beta_telemetry` migration; acceptance includes the empty-table live state (no NaN/div-zero) and the §2 post-deploy 302 Access check. Spec: `Docs/Specs/Active/telemetry_admin_panel/SPEC.md`.
+
+### Kickoff · telemetry_admin_panel (issued 2026-08-18)
+
+```
+Read Docs/Specs/Active/telemetry_admin_panel/SPEC.md and implement it.
+
+Context:
+- Read-only Telemetry panel for admin.golfin.world so Cesar + Ken can read next
+  week's 20-tester beta: funnel, per-hole difficulty, flick-reject rate, crashes,
+  per-tester table, raw event explorer.
+- Copy the Tournaments panel STRUCTURE (page.tsx + client component + api
+  routes) but none of its mutation/editor parts. checkAdmin() first line of
+  every route. No lib/audit.ts — nothing mutates. No new npm deps; bars are
+  plain divs.
+- Event names/payloads come from Docs/Specs/Active/beta_telemetry/SPEC.md §1-§2
+  ONLY — do not invent fields. Table may not exist yet: build + verify in mock
+  mode (deterministic fixture, no Date.now()), and make the live empty-table
+  state render clean zero states.
+- Aggregate in TypeScript in lib/telemetryData.ts (mirror tournamentData.ts
+  naming); 10k row cap with a visible truncated badge. Explorer route paginates
+  server-side with .range(), 100/page.
+- Reuse the Users panel's user_id -> email/name lookup — do not write a second
+  profiles query pattern.
+- Deploy loop per ADMIN_DASHBOARD_OPS: NEVER next build while next dev runs;
+  NODE_ENV=development npm run dev; npm run deploy; then verify the 302 curl
+  check. A 200 on / means Access broke - stop and investigate.
+- Out of scope: mutations, CSV export, chart libs, realtime refresh, retention,
+  the Unity/backend half.
+
+When done: list changed files with a 1-line summary each, run the acceptance
+tests in the spec, flag which need manual verification (live smoke needs real
+rows), update STATUS.md + IMPLEMENTER_REPORT.md in the spec folder, and update
+Docs/AI_CONTEXT.md.
+```
+
+
+- **`fastlane_testflight_pipeline`** (filed 2026-08-17, Architect) — **SPEC_READY. One command replaces the whole manual TestFlight loop.** `bundle exec fastlane ios testflight_build` → Unity batchmode build → archive → upload. **Does NOT make it faster** — Unity + IL2CPP still dominate; it makes it *unattended* and removes the four GUI steps a human currently gets wrong. ⚠️ **Read the interaction section first:** scheme post-actions do not reliably fire under `xcodebuild`, so the Xcode-post-action half of `upload_guard_automation` silently stops working under this pipeline. Resolution is in the spec and is strictly better — call `Tools/mark-uploaded.sh` from the Fastfile after upload succeeds, which fires on real *upload* rather than *archive* and removes that spec's known over-strictness. Keep both; the script is idempotent. ⚠️ **Ruby is the real prerequisite:** this Mac has system Ruby **2.6.10**, EOL and Apple-deprecated — `brew install fastlane` (vendors its own Ruby), never `gem install` against system Ruby. **Blocked on Cesar for the end-to-end run only:** the App Store Connect API key must be generated by hand (Users and Access → Integrations; the `.p8` downloads once, store it outside the repo). Code builds and verifies everything up to `build_app` without it. Decisions already taken, do not re-litigate: no `match` (automatic signing works on one machine), no `groups:` (external-only in fastlane; `In-House Testers` auto-distributes), `skip_waiting_for_build_processing: true` (costs changelog support, worth it). Highest-risk item in the whole task: **a batchmode Unity build that fails but exits 0** — that is how a stale binary reaches TestFlight; the spec makes proving the non-zero exit an explicit acceptance line. Spec: `Docs/Specs/Active/fastlane_testflight_pipeline/SPEC.md`.
+
+### Kickoff · fastlane_testflight_pipeline (issued 2026-08-17)
+
+```
+Read Docs/Specs/Active/fastlane_testflight_pipeline/SPEC.md and implement it.
+
+Context:
+- Goal is one command: Unity batchmode build -> archive -> TestFlight upload. The
+  manual path was proven 2026-08-17 with 1.5.7 (2192); this automates it.
+- Ruby FIRST: system Ruby is 2.6.10 (EOL, Apple-deprecated). Use `brew install
+  fastlane`, which vendors its own Ruby. Do NOT gem install against system Ruby,
+  and do not modify it. Record the exact commands you used in the report.
+- New: Assets/Editor/CIBuild.cs (BuildIOS entry point), Tools/unity-build-ios.sh,
+  Tools/assert-unity-closed.sh, fastlane/Fastfile + Appfile + .env.example.
+- CIBuild must activate the iOS-Full profile via the BuildProfile API, NOT the
+  -activeBuildProfile CLI flag (Unity 6 batchmode bug, see DEMO_BUILD_PLAN §3.1).
+- MOST IMPORTANT: a Unity batchmode build that fails must exit NON-ZERO. Prove it
+  with a deliberately broken build. A silent zero-exit uploads stale binaries.
+- Read the "Interaction with upload_guard_automation" section before touching the
+  guard. Short version: call Tools/mark-uploaded.sh from the Fastfile after upload,
+  keep the scheme post-action for manual GUI archives.
+- Do NOT create the App Store Connect API key — Cesar does that by hand. Everything
+  through build_app is verifiable without it; upload_to_testflight is not. Flag it
+  as awaiting Cesar rather than marking it PASS.
+- Out of scope: match, Android, CI runners, changelog automation, external groups.
+
+When done: list changed files with a 1-line summary each, run the acceptance tests in
+the spec, flag which need manual verification (the end-to-end run is Cesar-only),
+update STATUS.md + IMPLEMENTER_REPORT.md in the spec folder, and update
+Docs/AI_CONTEXT.md.
+```
+
+- **`upload_guard_automation`** (filed 2026-08-17, Architect) — **SPEC_READY. Small, self-contained build-tooling task; fell out of Order 424.** `BuildStampGenerator` has a regression guard that refuses a store build whose number is ≤ the last uploaded one, and that value lives in `Docs/Versioning/last_uploaded_build.txt` — written **only** by the menu item `GOLFIN → Build → Mark Current Commit As Uploaded`. Nobody ran it after the 2026-08-17 upload of `1.5.7 (2192)`, so **the file still reads `0` and the guard has been inert since it was written.** Cesar's call: automate it via an **Xcode Archive post-action**. ⚠️ **The post-action cannot be added through Xcode's Edit Scheme UI** — Unity regenerates `Unity-iPhone.xcodeproj` including schemes on every Replace build and would wipe it; it has to be injected from Unity on every iOS build, the same way `iOSPostProcess.cs` already injects `ITSAppUsesNonExemptEncryption` into `Info.plist`. Two deliverables: `Tools/mark-uploaded.sh` (never regresses, always exits 0, logs to a gitignored file — a failing post-action is invisible in Xcode) and scheme-injection in the existing iOS post-process. Two paths need **verifying, not assuming**: where Unity 6000.3.9f1 actually writes the `.xcscheme` (`xcshareddata` vs `xcuserdata`), and the `$PROJECT_DIR` relative depth to the repo root. Known and accepted trade-off: it fires on **archive**, not upload, so a discarded archive still advances the guard — over-strict is fine here because the build number is `git rev-list --count HEAD` and Cesar commits between store builds anyway. **ASC API integration was considered and explicitly rejected** — key management for a problem whose worst case is one wasted archive. Do not delete the menu item; it stays as a manual escape hatch. Spec: `Docs/Specs/Active/upload_guard_automation/SPEC.md`.
+
+### Kickoff · upload_guard_automation (issued 2026-08-17)
+
+```
+Read Docs/Specs/Active/upload_guard_automation/SPEC.md and implement it.
+
+Context:
+- BuildStampGenerator's regression guard reads Docs/Versioning/last_uploaded_build.txt,
+  which today is only written by a menu item a human has to remember. It was missed
+  after the 1.5.7 (2192) upload, so the file reads 0 and the guard is inert.
+- Two deliverables: Tools/mark-uploaded.sh (git rev-list --count HEAD, write only if
+  greater, always exit 0, log to a gitignored file), and injection of an Xcode Archive
+  post-action into the generated .xcscheme from a [PostProcessBuild] callback.
+- The post-action MUST be injected from Unity, not added in Xcode's UI — Unity
+  regenerates the scheme on every Replace build. Follow the pattern already in
+  Assets/Editor/iOSPostProcess.cs and do not disturb its Info.plist behaviour.
+- Two things to VERIFY rather than assume, per the spec's NOTE markers: the actual
+  .xcscheme path Unity 6000.3.9f1 emits, and the $PROJECT_DIR depth to the repo root.
+  Flag with a NOTE comment if either can't be confirmed.
+- Minimal diff. Do not touch BuildStampGenerator's numbering logic, the menu item,
+  or anything Android.
+- Out of scope: App Store Connect API integration, auto-committing the guard file.
+
+When done: list changed files with a 1-line summary each, run the acceptance tests in
+the spec, paste the generated <PostActions> XML fragment into the report, flag which
+need manual on-device verification (the real Product -> Archive run is Cesar-only),
+update STATUS.md + IMPLEMENTER_REPORT.md in the spec folder, and update
+Docs/AI_CONTEXT.md.
+```
+
 - **`tournament_banners`** (filed 2026-08-17, Architect) — **SPEC_READY. THE feature the banner epic was for, and the one part that never got built.** Home-promo and Rankings banners are live end to end; **tournament banners do not exist in the admin at all.** This was `game_banners` **§9**, amended in after Code had already started, not implemented, and then carried into `Docs/Specs/Completed/` when that spec closed — so it went invisible. Refiled standalone; the §9 text in the Completed spec is superseded. **Cesar's decision:** the artwork is managed in the **Banners** panel like every other banner, but **which** banner a tournament shows is chosen **per tournament in the Tournaments panel** — upload once, assign many, switch off in one place. **Four gaps, verified in the tree 2026-08-17:** (1) the `game_banners.placement` CHECK allows only `('home_promo','rankings')`; (2) there is no `tournaments.modal_banner_id`; (3) the tournament editor has no picker; (4) `GET /tournaments/golfin` does not join it and the client has no DTO. ⚠️ **The consuming side is already built and tested** — `ApplyBanner`, `ApplyBannerState`, the 1411 ↔ 1167 padding switch, the strip, the button and the link handler all shipped with `tournament_signup_modal`; `TryResolveModalBanner` (`TournamentSignupModalController.cs:532`) is a 3-line `return false` stub. **Landing this is that one resolver plus the data feeding it — not the prefab, not the layout.** Also pinned: do NOT add `TournamentModal` to `BannerService.BannerPlacement` (a tournament banner never comes through `/api/v1/banners`, and adding it there builds a second unreachable path that looks like it works); `is_active` is checked server-side so the client never learns that column exists; `modal_banner_id` must not appear in the payload. Spec: `Docs/Specs/Active/tournament_banners/SPEC.md`.
 
 ### Kickoff · tournament_banners (issued 2026-08-17)
