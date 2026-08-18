@@ -55,6 +55,22 @@ namespace Golfin.Banners
                  "relative to it.")]
         [SerializeField] private RectTransform[] _expandOnHide = new RectTransform[0];
 
+        [Tooltip("Optional. Every RectTransform here MOVES DOWN when the slot is hidden, until its " +
+                 "bottom edge rests exactly where the banner's bottom edge was — so the content " +
+                 "above closes the gap instead of leaving a banner-shaped hole.\n\n" +
+                 "Home sets this to ModeCarouselSection: its strip is bottom-anchored under a " +
+                 "screen with NO layout group, so nothing moves on its own. Rankings leaves it " +
+                 "empty — ContentArea's VerticalLayoutGroup already closes up.\n\n" +
+                 "The distance is MEASURED from the authored geometry, not typed in, so " +
+                 "re-positioning either element cannot silently desync it.")]
+        [SerializeField] private RectTransform[] _shiftDownOnHide = new RectTransform[0];
+
+        /// <summary>Authored anchoredPositions of <c>_shiftDownOnHide</c>, so the move is idempotent.</summary>
+        private Vector2[]? _shiftBasePositions;
+
+        /// <summary>How far each target must drop, in ITS parent's local units. Measured once.</summary>
+        private float[]? _shiftDistances;
+
         /// <summary>
         /// Each <c>_expandOnHide</c> entry's authored height, captured once before anything touches
         /// it, so the grow/shrink is idempotent no matter how many times <see cref="Apply"/> runs.
@@ -131,6 +147,7 @@ namespace Golfin.Banners
 
             SetIgnoreLayout(false);
             SetExpanded(false);
+            SetShiftedDown(false);
             _image.enabled = true;
             _image.raycastTarget = true;
 
@@ -154,6 +171,62 @@ namespace Golfin.Banners
             }
             SetIgnoreLayout(true);
             SetExpanded(true);
+            SetShiftedDown(true);
+        }
+
+        /// <summary>
+        /// Drop each <c>_shiftDownOnHide</c> target so its bottom edge lands where the banner's
+        /// bottom edge was — literally "let it rest where the banner was".
+        /// <para>
+        /// The distance is measured ONCE from the authored geometry (target bottom minus slot
+        /// bottom), which on Home is the banner's height plus the 24px design gap. Measuring beats
+        /// a serialized number: re-sizing the slot or moving the cards cannot desync it.
+        /// </para>
+        /// </summary>
+        private void SetShiftedDown(bool shifted)
+        {
+            if (_shiftDownOnHide == null || _shiftDownOnHide.Length == 0) return;
+
+            // Length check, not just null — same stale-cache trap as SetExpanded.
+            if (_shiftBasePositions == null || _shiftBasePositions.Length != _shiftDownOnHide.Length)
+            {
+                _shiftBasePositions = new Vector2[_shiftDownOnHide.Length];
+                _shiftDistances     = new float[_shiftDownOnHide.Length];
+
+                var slot = _image != null ? (RectTransform)_image.transform : null;
+                float slotBottom = 0f;
+                if (slot != null)
+                {
+                    var sc = new Vector3[4];
+                    slot.GetWorldCorners(sc);
+                    slotBottom = sc[0].y;
+                }
+
+                for (int i = 0; i < _shiftDownOnHide.Length; i++)
+                {
+                    var rt = _shiftDownOnHide[i];
+                    if (rt == null) continue;
+                    _shiftBasePositions[i] = rt.anchoredPosition;
+                    if (slot == null) continue;
+
+                    var tc = new Vector3[4];
+                    rt.GetWorldCorners(tc);
+                    float worldDrop = tc[0].y - slotBottom;   // how far its bottom sits ABOVE the slot's
+
+                    var parent = rt.parent as RectTransform;
+                    _shiftDistances[i] = parent != null
+                        ? parent.InverseTransformVector(new Vector3(0f, worldDrop, 0f)).y
+                        : worldDrop;
+                }
+            }
+
+            for (int i = 0; i < _shiftDownOnHide.Length; i++)
+            {
+                var rt = _shiftDownOnHide[i];
+                if (rt == null) continue;
+                var b = _shiftBasePositions[i];
+                rt.anchoredPosition = shifted ? new Vector2(b.x, b.y - _shiftDistances![i]) : b;
+            }
         }
 
         /// <summary>

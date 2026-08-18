@@ -24262,6 +24262,8 @@ MonoBehaviour:
   _image: {fileID: 446239804}
   _button: {fileID: 446239808}
   _expandOnHide: []
+  _shiftDownOnHide:
+  - {fileID: 1363245840}
 --- !u!114 &446239807
 MonoBehaviour:
   m_ObjectHideFlags: 0
