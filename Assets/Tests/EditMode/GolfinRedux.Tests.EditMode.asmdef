@@ -1,7 +1,9 @@
 {
     "name": "GolfinRedux.Tests.EditMode",
     "rootNamespace": "GolfinRedux.Tests.EditMode",
-    "references": [],
+    "references": [
+        "Golfin.Net"
+    ],
     "includePlatforms": [
         "Editor"
     ],
@@ -10,7 +12,9 @@
     "overrideReferences": false,
     "precompiledReferences": [],
     "autoReferenced": false,
-    "optionalUnityReferences": ["TestAssemblies"],
+    "optionalUnityReferences": [
+        "TestAssemblies"
+    ],
     "defineConstraints": [
         "UNITY_INCLUDE_TESTS"
     ],

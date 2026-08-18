@@ -152,8 +152,29 @@ namespace Golfin.UI
                 return;
             }
             
-            // Live network round-trip (Supabase PUT /auth/v1/user) — lock the button until it lands.
+            // Two live round-trips — lock the button until both land. The backend uniqueness
+            // claim (profiles.display_name, unique index) runs FIRST; only a name the server
+            // granted is written into Supabase Auth user_metadata below. A taken name shows its
+            // own message and changes nothing anywhere.
             SetBusy(true);
+            UsernameClaim.Claim(newUsername, claim =>
+            {
+                if (!claim.MayProceed)
+                {
+                    SetBusy(false);
+                    ShowFeedback(claim.Message, Color.red);
+                    Debug.LogWarning($"[UserProfile] Username claim refused ({claim.Status}): {claim.Message}");
+                    return;
+                }
+
+                SaveUsernameToAccount(newUsername);
+            });
+        }
+
+        /// <summary>The pre-existing Supabase metadata write, unchanged — it just runs after the
+        /// uniqueness claim now instead of being the whole save.</summary>
+        private void SaveUsernameToAccount(string newUsername)
+        {
             AuthService.Instance.UpdateDisplayName(newUsername, result =>
             {
                 SetBusy(false);

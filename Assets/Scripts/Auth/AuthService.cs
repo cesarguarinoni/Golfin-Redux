@@ -63,6 +63,14 @@ namespace Golfin.Auth
         private ISupabaseAuthClient _client;
         private bool _useMock;
 
+        /// <summary>
+        /// True when this session runs on the MOCK auth transport (editor dev, unconfigured
+        /// builds). Server-side checks that need a REAL bearer token — the username uniqueness
+        /// claim, for one — skip themselves on a mock session instead of failing on a token the
+        /// server has never seen.
+        /// </summary>
+        public bool IsMockTransport => _useMock;
+
         // Phase 2b — pending OAuth completion, resolved when the deep-link redirect arrives.
         private Action<AuthResult> _pendingOAuth;
         private bool _deepLinkHooked;

@@ -59,15 +59,30 @@ namespace Golfin.UI.Account
             { SetError(UsernameRules.Requirement); return; }
 
             SetBusy(true);
-            AuthService.Instance.UpdateDisplayName(username, result =>
+
+            // Uniqueness first (unique_usernames): the backend's profiles row — the name every
+            // OTHER player's board shows — is claimed under a unique index BEFORE the auth
+            // metadata write. A taken name stops here with its own message; the metadata write
+            // below never runs for a name the player does not own.
+            UsernameClaim.Claim(username, claim =>
             {
-                SetBusy(false);
-                if (result.Success)
+                if (!claim.MayProceed)
                 {
-                    AccountUiBridge.SyncUsername();
-                    if (_screenManager != null) _screenManager.ShowScreen(ScreenId.Home);
+                    SetBusy(false);
+                    SetError(claim.Message);
+                    return;
                 }
-                else SetError(result.Message);
+
+                AuthService.Instance.UpdateDisplayName(username, result =>
+                {
+                    SetBusy(false);
+                    if (result.Success)
+                    {
+                        AccountUiBridge.SyncUsername();
+                        if (_screenManager != null) _screenManager.ShowScreen(ScreenId.Home);
+                    }
+                    else SetError(result.Message);
+                });
             });
         }
 

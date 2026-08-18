@@ -236,6 +236,7 @@ AUTH_EMAIL_CONF_BODY,We sent a confirmation link to,確認リンクを送信し�
 AUTH_EMAIL_CONF_OPEN,Open Email App,メールアプリを開く
 AUTH_EMAIL_CONF_RESEND,Resend Email,メールを再送
 AUTH_EMAIL_CONF_BACK,Back to Login,ログインに戻る
+AUTH_USERNAME_TAKEN,Username already taken,このユーザー名は既に使用されています
 NAV_LEADERBOARD,LEADERBOARD,リーダーボード
 NAV_MODE_SELECTION,MODE SELECTION,モード選択
 NAV_SELECT_HOLE,SELECT HOLE,ホール選択
