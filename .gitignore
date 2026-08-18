@@ -95,6 +95,9 @@ Assets/Screenshots/
 # =========================
 
 **/node_modules/
+# Scratch tarballs of the admin dashboard (Tools/_dash*.tgz) — build artifacts of the
+# Next.js/open-next bundle, regenerable, never authored. 2026-08-18.
+Tools/_dash*.tgz
 
 # =========================
 # Huge assets (over GitHub's 100MB limit or re-downloadable)
