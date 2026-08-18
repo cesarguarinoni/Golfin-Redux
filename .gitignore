@@ -126,6 +126,8 @@ Assets/Scenes/Original/
 # Bot demo-video transient artifacts (BotFrameRecorder → build_bot_video.py)
 Docs/Diagnostics/_capture/botframe_*.png
 tasks/loop_v2_smoke_bot/*/video/
+# Demo-recorder raw captures (the captioned deliverable lives in Docs/Reports/Media/)
+tasks/ingame_settings_demo/
 
 # Session-local lock/sentinel files dropped into _capture/ by smoke runners.
 # These should never have been tracked (rolled back in dae6f451, 2026-05-26).

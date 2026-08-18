@@ -8343,7 +8343,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Golfin.Physics.Viewer::Golfin.Physics.Viewer.GreenTuningPanel
   controller: {fileID: 0}
   panelRoot: {fileID: 19119808}
-  toggleButton: {fileID: 1156248958}
+  toggleButton: {fileID: 0}
   rollingResistanceSlider: {fileID: 1433899439}
   stopSpeedSlider: {fileID: 88101477}
   rollingResistanceLabel: {fileID: 882195402}
@@ -10995,6 +10995,112 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 940828880}
   m_CullTransparentMesh: 1
+--- !u!1001 &942138016
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 1552605528}
+    m_Modifications:
+    - target: {fileID: 8212861073928474045, guid: 001dc0db519b94a9dae7b8de5b0f4131, type: 3}
+      propertyPath: m_Pivot.x
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 8212861073928474045, guid: 001dc0db519b94a9dae7b8de5b0f4131, type: 3}
+      propertyPath: m_Pivot.y
+      value: 0.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 8212861073928474045, guid: 001dc0db519b94a9dae7b8de5b0f4131, type: 3}
+      propertyPath: m_AnchorMax.x
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8212861073928474045, guid: 001dc0db519b94a9dae7b8de5b0f4131, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8212861073928474045, guid: 001dc0db519b94a9dae7b8de5b0f4131, type: 3}
+      propertyPath: m_AnchorMin.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8212861073928474045, guid: 001dc0db519b94a9dae7b8de5b0f4131, type: 3}
+      propertyPath: m_AnchorMin.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8212861073928474045, guid: 001dc0db519b94a9dae7b8de5b0f4131, type: 3}
+      propertyPath: m_SizeDelta.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8212861073928474045, guid: 001dc0db519b94a9dae7b8de5b0f4131, type: 3}
+      propertyPath: m_SizeDelta.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8212861073928474045, guid: 001dc0db519b94a9dae7b8de5b0f4131, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8212861073928474045, guid: 001dc0db519b94a9dae7b8de5b0f4131, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8212861073928474045, guid: 001dc0db519b94a9dae7b8de5b0f4131, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8212861073928474045, guid: 001dc0db519b94a9dae7b8de5b0f4131, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8212861073928474045, guid: 001dc0db519b94a9dae7b8de5b0f4131, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8212861073928474045, guid: 001dc0db519b94a9dae7b8de5b0f4131, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8212861073928474045, guid: 001dc0db519b94a9dae7b8de5b0f4131, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8212861073928474045, guid: 001dc0db519b94a9dae7b8de5b0f4131, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8212861073928474045, guid: 001dc0db519b94a9dae7b8de5b0f4131, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8212861073928474045, guid: 001dc0db519b94a9dae7b8de5b0f4131, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8212861073928474045, guid: 001dc0db519b94a9dae7b8de5b0f4131, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8212861073928474045, guid: 001dc0db519b94a9dae7b8de5b0f4131, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8854772074711031382, guid: 001dc0db519b94a9dae7b8de5b0f4131, type: 3}
+      propertyPath: m_Name
+      value: InGameSettingsModal
+      objectReference: {fileID: 0}
+    - target: {fileID: 9001252412759191301, guid: 001dc0db519b94a9dae7b8de5b0f4131, type: 3}
+      propertyPath: gearButton
+      value: 
+      objectReference: {fileID: 1156248958}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 001dc0db519b94a9dae7b8de5b0f4131, type: 3}
+--- !u!224 &942138017 stripped
+RectTransform:
+  m_CorrespondingSourceObject: {fileID: 8212861073928474045, guid: 001dc0db519b94a9dae7b8de5b0f4131, type: 3}
+  m_PrefabInstance: {fileID: 942138016}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &950656494
 GameObject:
   m_ObjectHideFlags: 0
@@ -13562,6 +13668,10 @@ MonoBehaviour:
   _colorYellow: {r: 1, g: 0.85, b: 0, a: 1}
   _colorRed: {r: 0.9, g: 0.15, b: 0.1, a: 1}
   _colorMaroon: {r: 0.55, g: 0, b: 0.12, a: 1}
+  _markerWidthDeg: 2.5
+  _markerOverhangPx: 4
+  _markerColor: {r: 1, g: 1, b: 1, a: 0.95}
+  _markerColorUnreachable: {r: 0.9, g: 0.15, b: 0.1, a: 0.95}
 --- !u!222 &1124004901
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -18968,6 +19078,8 @@ MonoBehaviour:
   _aimBallViewportYFallback: 0.4234
   _teeMarkerSafeFrac: 0.9
   _aimCamMaxDistanceM: 8
+  _puttCamDistanceM: 8
+  _puttCamHeightM: 3
   _centralBallWidget: {fileID: 2200000005}
   _putterTrack: {fileID: 2300000001}
   _puttPathRoot: {fileID: 2300000005}
@@ -18978,6 +19090,7 @@ MonoBehaviour:
   _centralBall: {fileID: 2200000005}
   _powerGaugeWidget: {fileID: 7755260}
   _holeIndicatorWidget: {fileID: 1466718883}
+  _autoClubSelectEnabled: 1
 --- !u!4 &1483952039
 Transform:
   m_ObjectHideFlags: 0
@@ -19952,6 +20065,7 @@ RectTransform:
   - {fileID: 377935613}
   - {fileID: 584806878}
   - {fileID: 2072667395}
+  - {fileID: 942138017}
   m_Father: {fileID: 1483952039}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -25483,6 +25597,9 @@ MonoBehaviour:
   - Ring
   _minFramedSpanM: 40
   _alignToPlayfieldAxis: 1
+  _indicatorEdgeInsetPx: 70
+  _ballIndicatorSprite: {fileID: 0}
+  _indicatorArrowSprite: {fileID: 0}
   _minZoom: 30
   _maxZoom: 90
   _panSensitivity: 0.15
