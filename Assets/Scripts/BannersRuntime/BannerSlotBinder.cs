@@ -65,6 +65,15 @@ namespace Golfin.Banners
                  "re-positioning either element cannot silently desync it.")]
         [SerializeField] private RectTransform[] _shiftDownOnHide = new RectTransform[0];
 
+        [Tooltip("Canvas px trimmed off the measured drop, per the target's own drawn extent.\n\n" +
+                 "Home uses 2. ModeHomeCard carries an Outline with effectDistance (2, -2), and a " +
+                 "UI Outline draws four copies at the four sign combinations — so the card paints " +
+                 "2px BELOW its RectTransform. An untrimmed drop lands the card's rect 24px above " +
+                 "the Tee button but its VISIBLE edge only 22px above it.\n\n" +
+                 "Not auto-measured on purpose: the carousel's cards are runtime clones, so a scan " +
+                 "for outlines during OnEnable would find nothing and silently fall back to 0.")]
+        [SerializeField] private float _shiftDownTrim;
+
         /// <summary>Authored anchoredPositions of <c>_shiftDownOnHide</c>, so the move is idempotent.</summary>
         private Vector2[]? _shiftBasePositions;
 
@@ -214,9 +223,13 @@ namespace Golfin.Banners
                     float worldDrop = tc[0].y - slotBottom;   // how far its bottom sits ABOVE the slot's
 
                     var parent = rt.parent as RectTransform;
-                    _shiftDistances[i] = parent != null
+                    float local = parent != null
                         ? parent.InverseTransformVector(new Vector3(0f, worldDrop, 0f)).y
                         : worldDrop;
+
+                    // Trim by the target's own outline/shadow overhang so the gap the player
+                    // SEES is the design gap, not the gap between invisible rect edges.
+                    _shiftDistances[i] = local - _shiftDownTrim;
                 }
             }
 

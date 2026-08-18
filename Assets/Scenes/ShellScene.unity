@@ -24264,6 +24264,7 @@ MonoBehaviour:
   _expandOnHide: []
   _shiftDownOnHide:
   - {fileID: 1363245840}
+  _shiftDownTrim: 2
 --- !u!114 &446239807
 MonoBehaviour:
   m_ObjectHideFlags: 0
