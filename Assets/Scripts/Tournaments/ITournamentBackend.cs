@@ -101,4 +101,20 @@ namespace Golfin.Tournaments
         /// </summary>
         void ClaimPrize(string id);
     }
+
+    /// <summary>
+    /// Optional companion to <see cref="ITournamentBackend"/>: derives the display
+    /// <see cref="TournamentState"/> for a definition at a given instant.
+    /// <para>
+    /// Split out of the backend interface (rather than added to it) so the selection screen can ask
+    /// for it without caring WHICH backend it holds. Before this existed the screen cast to
+    /// <c>LocalTournamentBackend</c> and silently dropped to a lesser fallback the moment the remote
+    /// backend wrapped it — losing the <c>Playing</c> state for every entered tournament.
+    /// </para>
+    /// </summary>
+    public interface ITournamentStateDeriver
+    {
+        /// <summary>Derive the state badge for <paramref name="def"/> at <paramref name="now"/> (UTC).</summary>
+        TournamentState DeriveState(TournamentDefinition def, System.DateTime now);
+    }
 }

@@ -119,6 +119,28 @@ namespace Golfin.EconomyRuntime
         /// <see cref="PointsService.RefreshBalanceRoutine"/> short-circuits with the flag off, so this
         /// is safe even if the flag is flipped mid-session.
         /// </summary>
+        /// <summary>
+        /// Public refresh trigger for the few flows whose spend the SERVER performs, not the client
+        /// — today that is the tournament entry fee (tournament_async_board SPEC §3: the enter
+        /// endpoint debits <c>entry_fee_pts</c> itself with a deterministic key, and the client must
+        /// NOT debit as well or the player is charged twice).
+        ///
+        /// <para>Those flows leave the local counter stale by exactly the fee, and this is the pull
+        /// that reconciles it. Safe to call at any time: it no-ops with the flag off, when signed
+        /// out, and when the sync behaviour is not running at all.</para>
+        /// </summary>
+        public static void RequestRefresh(string why)
+        {
+            ServerBalanceSyncBehaviour instance = _instance;
+            if (instance == null)
+            {
+                // Flag off (Bootstrap never created it) or too early in boot. Nothing to reconcile.
+                Debug.Log($"[ServerBalanceSync] {why} refresh skipped — sync behaviour not running.");
+                return;
+            }
+            instance.Refresh(why);
+        }
+
         private void Refresh(string why)
         {
             if (!PointsBackendFlag.Enabled) return;

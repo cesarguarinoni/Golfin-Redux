@@ -1,0 +1,37 @@
+=== iter-1 kickoff baseline 2026-08-18T07:20Z ===
+HEAD: bdec092591a71eb7b263e10d5177c427de91d175
+DIRTY (git status --porcelain --untracked-files=all at kickoff):
+ M Docs/AI_CONTEXT.md
+ M Docs/Specs/Active/fastlane_testflight_pipeline/IMPLEMENTER_REPORT.md
+ M Docs/Specs/Active/fastlane_testflight_pipeline/STATUS.md
+ M Docs/Specs/Active/tournaments_server_side/STATUS.md
+ M Docs/TellCode.md
+ M Docs/Versioning/last_uploaded_build.txt
+?? Docs/Specs/Active/tournament_async_board/
+=== end baseline ===
+
+07:20Z  Read SPEC + the seam it targets (ITournamentBackend, LocalTournamentBackend,
+        TournamentService, ApiClient, PendingOpsStore/Queue, BackendLeaderboardProvider,
+        LeaderboardProviderPolicy, the signup modal and the leaderboard screen).
+07:28Z  Endpoints.cs +4 (TournamentEnter/SubmitHole/Entry/Leaderboard).
+07:33Z  TournamentNetDtos.cs — wire DTOs + TournamentNetJson reader
+        (DateParseHandling.None on BOTH reader and serializer).
+07:38Z  TournamentSubmitQueue.cs — FIFO pending-hole queue over Golfin.Economy's
+        IPendingOpsStore (atomic .tmp+replace), key minted once per hole.
+07:44Z  RemoteTournamentBackend.cs — wraps LocalTournamentBackend; enter/submit/entry/board
+        overridden, everything else delegated. TournamentPlayerRow + rank-label format.
+        TournamentBoardDiskCache (per-slug raw-body mirror).
+07:47Z  TournamentBackendPolicy.cs + TournamentService wiring (SetBackend →
+        EnsureBackendForSession, SignedIn + OnApplicationPause catch-up).
+07:50Z  ITournamentStateDeriver added so the selection screen keeps DeriveState on the
+        remote path; LocalTournamentBackend.ResolvePrize widened to public for reuse.
+        ServerBalanceSyncBehaviour.RequestRefresh added (server-side debit reconcile).
+07:53Z  UI: signup modal remote register path (no client debit); leaderboard screen fill
+        source + sticky "#N · PRIZE #M" label; selection screen cast.
+07:56Z  Compile green (Assembly-CSharp + Golfin.TournamentsRuntime.Tests).
+08:05Z  46 EditMode tests written; tripwire proved all 7 classes are in the run
+        (1418 -> 1425 with tripwires, all 7 named back).
+08:20Z  +8 queue-drain tests over a scripted IHttpTransport (drop on 200 / replayed:true /
+        400; keep+stop on transient). FULL EditMode sweep: 1426 total, 1423 passed,
+        0 failed, 3 skipped (pre-existing Physics skips).
+08:24Z  Editor left clean: not playing, ShellScene not dirty, no scene saved.

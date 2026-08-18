@@ -86,6 +86,18 @@ namespace Golfin.Net
         public static string UserGolfinCharacter => BaseUrl + "/user/golfin-character";
 
         /// <summary>
+        /// PUT <c>{username}</c> — claim (or change to) a game username, enforcing GLOBAL
+        /// uniqueness on <c>profiles.display_name</c> (case-insensitive unique index).
+        ///
+        /// AUTH REQUIRED. The client calls this BEFORE writing Supabase Auth
+        /// <c>user_metadata.display_name</c>: the profiles row is what every other player's
+        /// board reads, so it is the row that has to be unique. A taken name answers
+        /// 200 <c>{updated:false, status:"taken"}</c> — a rule, not an HTTP error — mirroring
+        /// the tournament-enter "insufficient" pattern.
+        /// </summary>
+        public static string UserUsername => BaseUrl + "/user/username";
+
+        /// <summary>
         /// GET → <c>{data:{fetched_at, period, period_end_utc, entries:[…], player:{…}}}</c> — the ranked
         /// board for one period plus the caller's own row (leaderboard_backend SPEC §1).
         ///
@@ -97,6 +109,54 @@ namespace Golfin.Net
         /// the client renders them verbatim and never re-ranks.
         /// </summary>
         public static string Leaderboard(string period) => BaseUrl + "/leaderboards/" + period;
+
+        // ── GOLFIN tournaments, async multiplayer half (tournament_async_board SPEC §2) ──
+        //
+        // All four hang off /tournaments/golfin/{slug}/… and ALL REQUIRE AUTH, unlike the public
+        // schedule at TournamentsGolfin above: the server identifies the entrant from the bearer
+        // token and never trusts a user id in the body. {slug} is the game-facing id
+        // ("kasumigaseki_open") — the same string as TournamentDefinition.Id — never a uuid.
+
+        /// <summary>
+        /// POST <c>{character_id}</c> — enter a tournament.
+        ///
+        /// The server debits <c>entry_fee_pts</c> itself, through <c>spend_pts</c> with a
+        /// DETERMINISTIC key (uuid5 of user:slug), so a retry after an ambiguous timeout cannot
+        /// double-charge. The client must therefore NOT run its own spend for the fee — see
+        /// <c>RemoteTournamentBackend.RegisterAsync</c>.
+        ///
+        /// 200 <c>{entered, already_entered, entry}</c> on success; 200
+        /// <c>{entered:false, status:"insufficient", requested, total_points}</c> when the balance is
+        /// short; 400 outside <c>start_at &lt;= now &lt; end_at</c>.
+        /// </summary>
+        public static string TournamentEnter(string slug) => TournamentGolfin(slug) + "/enter";
+
+        /// <summary>
+        /// POST <c>{hole_number, strokes, idempotency_key}</c> — submit one completed hole.
+        ///
+        /// Idempotent per (entry, hole): a replay answers 200 <c>{replayed:true, …}</c>, which the
+        /// offline queue treats as success and drops the op on. 400 is a REJECTION (hole not in the
+        /// set, strokes outside 1–15, no entry, window past <c>end_at + resolve_delay_minutes</c>,
+        /// implausible pace) — the queue drops those too rather than retrying forever.
+        /// </summary>
+        public static string TournamentSubmitHole(string slug) => TournamentGolfin(slug) + "/submit-hole";
+
+        /// <summary>
+        /// GET → the caller's entry plus <c>holes:[…]</c>, or <c>{data: null}</c> when not entered.
+        /// This is what makes a half-played tournament resumable on a second device.
+        /// </summary>
+        public static string TournamentEntry(string slug) => TournamentGolfin(slug) + "/entry";
+
+        /// <summary>
+        /// GET → <c>{fetched_at, provisional, bots_active, end_at, resolve_delay_minutes, entries:[…],
+        /// player:{…}}</c> — the board every entrant shares.
+        ///
+        /// Ranks, ties and the organic bot reveal are all computed server-side; the client renders
+        /// them verbatim and never re-ranks (same posture as <see cref="Leaderboard"/>).
+        /// </summary>
+        public static string TournamentLeaderboard(string slug) => TournamentGolfin(slug) + "/leaderboard";
+
+        private static string TournamentGolfin(string slug) => BaseUrl + "/tournaments/golfin/" + slug;
 
         /// <summary>GET ledger page. <paramref name="currency"/> is "activity" / "gift" or null for both.</summary>
         public static string PointsHistory(int skip = 0, int limit = 20, string currency = null)

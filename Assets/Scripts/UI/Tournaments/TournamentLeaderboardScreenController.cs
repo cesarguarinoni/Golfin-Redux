@@ -121,7 +121,34 @@ namespace GolfinRedux.UI.Tournaments
             if (_titleLabel != null && !string.IsNullOrEmpty(_titleText))
                 _titleLabel.text = _titleText;
 
+            // Cached board first, refresh second (tournament_async_board SPEC §4). The snapshot the
+            // last fetch left on disk renders instantly — including on a cold open in airplane mode —
+            // and the repaint below only happens if a NEW board actually landed.
             PopulateLive();
+            RefreshRemoteBoard();
+        }
+
+        /// <summary>
+        /// Ask the server for a fresh board and repaint when one arrives.
+        /// No-op on the local path (bot runs, signed out, demo), where the board is computed
+        /// synchronously and there is nothing to fetch. The per-slug in-flight guard lives in
+        /// <see cref="RemoteTournamentBackend"/>, so bouncing in and out of this screen is still one
+        /// request.
+        /// </summary>
+        private void RefreshRemoteBoard()
+        {
+            var remote = TournamentService.Instance?.Remote;
+            if (remote == null) return;
+
+            string id = TournamentService.Instance.SelectedTournamentId;
+            if (string.IsNullOrEmpty(id)) return;
+
+            remote.RefreshLeaderboard(id, changed =>
+            {
+                // The response can land after the player has left; rebuilding a disabled screen
+                // would bind rows nobody is looking at and fight the next OnEnable.
+                if (changed && this != null && isActiveAndEnabled) PopulateLive();
+            });
         }
 
         private void Close()
@@ -151,11 +178,20 @@ namespace GolfinRedux.UI.Tournaments
             BindHeader(id);
 
             var board = TournamentService.Instance.Backend.GetLeaderboard(id);
-            if (board == null || board.Count == 0)
+
+            // The caller's own row, when this session is on the shared server board. Read BEFORE the
+            // empty-board bail: a player entered but not yet ranked has a `player` row and no rows in
+            // `entries`, and their sticky row still has to render.
+            TournamentPlayerRow playerRow = TournamentService.Instance.Remote != null
+                ? TournamentService.Instance.Remote.GetPlayerRow(id)
+                : default;
+
+            if ((board == null || board.Count == 0) && !playerRow.HasRow)
             {
                 Debug.Log(string.Format("[TournamentLeaderboard] GetLeaderboard({0}) returned empty board.", id));
                 return;
             }
+            if (board == null) board = System.Array.Empty<TournamentLeaderboardEntry>();
 
             var modal = transform.Find(ModalPath);
             if (modal == null)
@@ -208,23 +244,37 @@ namespace GolfinRedux.UI.Tournaments
             }
 
             // ── Sticky "you" row ─────────────────────────────────────────────
+            //
+            // On the remote path the server ALWAYS sends the caller's row in `player`, even when it
+            // is excluded from `entries` (DNF, thru-0, outside the slice) — so the sticky row comes
+            // from there rather than from an IsPlayer scan that would find nothing.
+            var remotePlayer = playerRow;
+            if (remotePlayer.HasRow) playerEntry = remotePlayer.Entry;
+
             var sticky = modal.Find("TournamentPlayerStickyRow");
             if (sticky != null && playerEntry.HasValue)
             {
                 var pe = playerEntry.Value;
                 // Resolve identity via fake roster / player roster
                 LeaderboardEntry baseEntry = ResolveEntry(pe, roster);
-                baseEntry.Rank  = pe.IsProvisional ? 0 : pe.Rank;
+                baseEntry.Rank  = pe.IsProvisional && !remotePlayer.HasRow ? 0 : pe.Rank;
                 baseEntry.IsTie = pe.IsTie;
 
                 var widget = sticky.GetComponent<RankingsCardWidget>()
                           ?? sticky.gameObject.AddComponent<RankingsCardWidget>();
                 widget.Bind(baseEntry);
 
-                // Rank: "--" while provisional/unfinished
                 var rankLabel = sticky.Find("RankingsCard/Rank")?.GetComponent<TextMeshProUGUI>();
                 if (rankLabel != null)
-                    rankLabel.text = pe.IsProvisional ? "--" : pe.Rank.ToString();
+                {
+                    // Remote: the server's own rank, and BOTH ranks while bots are still padding the
+                    // board and the prize rank disagrees — "#14 · PRIZE #3" (SPEC §4). The format is
+                    // owned by TournamentPlayerRow so it is gated by a test, not by a screenshot.
+                    // Local: unchanged — "--" while provisional, exactly as it shipped.
+                    rankLabel.text = remotePlayer.HasRow
+                        ? remotePlayer.RankLabel()
+                        : (pe.IsProvisional ? "--" : pe.Rank.ToString());
+                }
 
                 // Cesar (iter-3): rarity/level row needs a dash → " - Lv {N}"
                 OverrideRowLevelDash(sticky, baseEntry.Level);

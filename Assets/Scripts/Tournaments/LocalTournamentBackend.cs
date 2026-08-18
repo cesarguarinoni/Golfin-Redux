@@ -29,7 +29,7 @@ namespace Golfin.Tournaments
     /// the per-hole pool, and thus the per-hole degraded Strength/ClubControl via Option-C.
     /// </para>
     /// </summary>
-    public sealed class LocalTournamentBackend : ITournamentBackend
+    public sealed class LocalTournamentBackend : ITournamentBackend, ITournamentStateDeriver
     {
         // ── "Ending" window threshold (D2) — last 1 hour of the window ─────────
         private static readonly TimeSpan EndingThreshold = TimeSpan.FromHours(1.0);
@@ -744,8 +744,14 @@ namespace Golfin.Tournaments
         /// Resolve the RP and item prize for the player given their final rank.
         /// Handles split-pool for ties spanning band boundaries (§6.2).
         /// Indivisible items are duplicated to each tied player (D-Tie rule).
+        /// <para>
+        /// PUBLIC on purpose (tournament_async_board): <c>RemoteTournamentBackend</c> resolves the
+        /// prize for the SERVER's <c>prize_rank</c> and must use this exact ladder — a second copy
+        /// of the tie-split arithmetic is precisely the kind of duplicate that drifts. Pure static;
+        /// it touches no instance state.
+        /// </para>
         /// </summary>
-        private static (long prizeRP, string? itemId) ResolvePrize(
+        public static (long prizeRP, string? itemId) ResolvePrize(
             int playerRank,
             bool isTie,
             PrizeTable? prizeTable,

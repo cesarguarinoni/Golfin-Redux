@@ -8,6 +8,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using Golfin.Auth;
 using Golfin.UI.Rankings;
 using UnityEngine;
 
@@ -101,6 +102,29 @@ namespace Golfin.Tournaments
         private IReadOnlyDictionary<string, BotFieldConfig> _botFields
             = new Dictionary<string, BotFieldConfig>();
 
+        // ── Async-multiplayer backend selection (tournament_async_board SPEC §3) ──
+
+        /// <summary>The composed local backend. Kept even on the remote path — the remote wrapper
+        /// delegates definitions, state derivation and the entry store straight back to it.</summary>
+        private LocalTournamentBackend? _localBackend;
+
+        /// <summary>The remote wrapper, built once per session and REUSED across schedule swaps and
+        /// sign-in re-evaluations. Rebuilding it would drop the cached board snapshots and re-read
+        /// the submit queue off disk for no reason.</summary>
+        private RemoteTournamentBackend? _remoteBackend;
+
+        private TournamentBackendKind _backendKind = TournamentBackendKind.Local;
+
+        /// <summary>Which backend this session is on. Diagnostics + the leaderboard screen's
+        /// "is this the shared board?" check.</summary>
+        public TournamentBackendKind BackendKind => _backendKind;
+
+        /// <summary>The remote backend when this session is on it, else null. The signup modal and
+        /// the leaderboard screen use it for the async register path and the served board; every
+        /// other caller goes through <see cref="Backend"/> and never knows the difference.</summary>
+        public RemoteTournamentBackend? Remote
+            => _backendKind == TournamentBackendKind.Remote ? _remoteBackend : null;
+
         // ── Lifecycle ─────────────────────────────────────────────────────────
 
         private void Awake()
@@ -130,12 +154,109 @@ namespace Golfin.Tournaments
             // Through the SAME throttled entry point the screen uses, so opening Tournaments in the
             // first seconds of a session does not fire a second request alongside the boot fetch.
             RefreshSchedule();
+
+            // A player who signs in mid-session must move onto the shared board without a relaunch.
+            // A returning player is already authenticated by the time Awake runs and never fires the
+            // event, which is why EnsureBackendForSession also runs inside Apply* above.
+            AuthService.SignedIn += OnSignedIn;
         }
 
         private void OnDestroy()
         {
+            AuthService.SignedIn -= OnSignedIn;
+
             if (Instance == this)
                 Instance = null;
+        }
+
+        // ── Backend selection + offline catch-up (tournament_async_board SPEC §3) ──
+
+        private void OnSignedIn(AuthSession session)
+        {
+            EnsureBackendForSession();
+            CatchUpWithServer("sign-in");
+        }
+
+        /// <summary>Foreground, not background: <c>paused == false</c> is the app coming BACK, which
+        /// is when a round played in airplane mode finally has signal to flush, and when a
+        /// tournament resumed on another device needs pulling down.</summary>
+        private void OnApplicationPause(bool paused)
+        {
+            if (paused) return;
+            CatchUpWithServer("resume");
+        }
+
+        /// <summary>
+        /// Drain the pending-hole queue and reconcile every ENTERED tournament from the server.
+        /// Scoped to entered tournaments deliberately: reconciling one the player never entered
+        /// would be a request per row on the schedule for an answer that is always <c>null</c>.
+        /// </summary>
+        private void CatchUpWithServer(string why)
+        {
+            RemoteTournamentBackend? remote = Remote;
+            if (remote == null) return;
+
+            Debug.Log($"[TournamentService] Catching up with the server ({why}): " +
+                      $"{remote.Queue.Count} hole(s) queued.");
+
+            remote.FlushSubmitQueue();
+
+            var defs = Backend != null ? Backend.GetTournaments() : null;
+            if (defs == null) return;
+
+            for (int i = 0; i < defs.Count; i++)
+            {
+                if (remote.GetMyEntry(defs[i].Id) != null)
+                    remote.ReconcileEntry(defs[i].Id);
+            }
+        }
+
+        /// <summary>
+        /// Point <see cref="Backend"/> at whatever this session should play on, and do nothing when
+        /// that has not changed. Safe to call repeatedly — every schedule swap does.
+        /// <para>
+        /// The RULE lives in <see cref="TournamentBackendPolicy"/> so an EditMode test can exercise
+        /// it without a scene; this method only supplies the three facts it needs.
+        /// </para>
+        /// </summary>
+        public void EnsureBackendForSession()
+        {
+            if (_localBackend == null) return;
+
+            bool botOverride = false;
+#if UNITY_EDITOR || GOLFIN_BOT_HARNESS
+            // Whole-file-guarded type: the caller must repeat the guard (see BotSessionOverride's
+            // header and the iOS lesson about #if UNITY_EDITOR seams in runtime assemblies).
+            botOverride = Golfin.Dev.BotSessionOverride.Active;
+#endif
+            // AuthService.Instance lazily creates a DontDestroyOnLoad singleton, which throws outside
+            // play mode — and this MonoBehaviour is reachable from editor tooling.
+            bool signedIn = Application.isPlaying
+                            && AuthService.Instance != null
+                            && AuthService.Instance.Session != null
+                            && AuthService.Instance.Session.IsAuthenticated;
+
+            _backendKind = TournamentBackendPolicy.Choose(botOverride, signedIn, GolfinRedux.Demo.DemoGate.IsDemo);
+
+            if (_backendKind == TournamentBackendKind.Remote)
+            {
+                _remoteBackend ??= new RemoteTournamentBackend(
+                    local:       _localBackend,
+                    store:       new SaveBackedEntryStore(),
+                    rp:          new RewardPointsServiceAdapter(),
+                    items:       new ItemRewardServiceAdapter(),
+                    prizeTables: _prizeTables,
+                    clock:       new TimeProviderClock(NetworkTimeProvider.Instance));
+
+                Backend = _remoteBackend;
+            }
+            else
+            {
+                Backend = _localBackend;
+            }
+
+            Debug.Log($"[TournamentService] Backend = {_backendKind} " +
+                      $"(bot override: {botOverride}, signed in: {signedIn}, demo: {GolfinRedux.Demo.DemoGate.IsDemo}).");
         }
 
         // ── Schedule application ──────────────────────────────────────────────
@@ -143,7 +264,7 @@ namespace Golfin.Tournaments
         private void ApplyBundledCsv(TournamentCsvLoader loader)
         {
             _prizeTables = loader.LoadPrizeTables();
-            Backend      = Compose();
+            SetBackend(Compose());
             Source       = ScheduleSource.BundledCsv;
             LogSource();
             WarmArt();
@@ -152,10 +273,33 @@ namespace Golfin.Tournaments
         private void Apply(TournamentSchedule schedule, ScheduleSource source)
         {
             _prizeTables = schedule.PrizeTables;
-            Backend      = ComposeFrom(schedule.Definitions, schedule.PrizeTables);
+            SetBackend(ComposeFrom(schedule.Definitions, schedule.PrizeTables));
             Source       = source;
             LogSource();
             WarmArt();
+        }
+
+        /// <summary>
+        /// Install a freshly-composed local backend and re-apply the session's backend policy on top
+        /// of it. Every schedule swap goes through here, so a live refetch cannot silently drop a
+        /// signed-in player back onto the local sim.
+        /// </summary>
+        private void SetBackend(ITournamentBackend composed)
+        {
+            _localBackend = composed as LocalTournamentBackend;
+
+            if (_localBackend == null)
+            {
+                // Compose() is the only producer and it always builds a LocalTournamentBackend, so
+                // this is a wiring bug rather than a runtime condition. Use what we were given.
+                Debug.LogWarning("[TournamentService] Composed backend is not a LocalTournamentBackend — " +
+                                 "the remote wrapper cannot be applied to it.");
+                Backend      = composed;
+                _backendKind = TournamentBackendKind.Local;
+                return;
+            }
+
+            EnsureBackendForSession();
         }
 
         /// <summary>

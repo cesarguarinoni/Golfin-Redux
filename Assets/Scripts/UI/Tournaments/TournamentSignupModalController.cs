@@ -12,6 +12,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using Golfin.Banners;
 using Golfin.Economy;
+using Golfin.EconomyRuntime;
 using Golfin.Roster;
 using Golfin.Tournaments;
 using Golfin.UI.Modals;
@@ -251,6 +252,51 @@ namespace GolfinRedux.UI.Tournaments
             {
                 Debug.Log($"[TournamentSignupModal] Already registered for {_tournamentId} — no charge.");
                 CompleteSignup(charId, alreadyPaid: 0L);
+                return;
+            }
+
+            // ── Async-multiplayer path (tournament_async_board SPEC §3) ───────
+            //
+            // The SERVER debits the entry fee inside POST /enter, through spend_pts with a
+            // deterministic uuid5(user:slug) key — which is what makes a retry after a dropped
+            // connection safe. Running the client's own TrySpendAsync as well would charge the
+            // player TWICE for one entry, so on this path the local spend is skipped entirely and
+            // the register call IS the payment.
+            var remote = TournamentService.Instance.Remote;
+            if (remote != null)
+            {
+                remote.RegisterAsync(_tournamentId, charId, outcome =>
+                {
+                    switch (outcome.Status)
+                    {
+                        case TournamentRegisterStatus.Entered:
+                        case TournamentRegisterStatus.AlreadyEntered:
+                            // CompleteSignup's Register call is a no-op here — the entry is already
+                            // mirrored locally — and is kept so both paths navigate identically.
+                            CompleteSignup(charId, alreadyPaid: fee);
+                            break;
+
+                        case TournamentRegisterStatus.Insufficient:
+                            // Same copy the spend gate uses, so a short balance reads the same
+                            // whether the client or the server was the one to notice.
+                            ShowToast(PointsSpendGate.InsufficientMessage);
+                            Debug.Log($"[TournamentSignupModal] Server refused entry to {_tournamentId} — " +
+                                      $"needs {outcome.Requested}RP, holds {outcome.TotalPoints}RP.");
+                            break;
+
+                        case TournamentRegisterStatus.Offline:
+                            // Entry is online-only by decision of record: there is no queue to fall
+                            // back on, because a queued entry is an unpaid one.
+                            ShowToast(PointsSpendGate.OfflineMessage);
+                            Debug.Log($"[TournamentSignupModal] Entry to {_tournamentId} could not reach the " +
+                                      "server — nothing charged, nothing entered.");
+                            break;
+
+                        default:
+                            ShowToast("Registration failed.");
+                            break;
+                    }
+                });
                 return;
             }
 

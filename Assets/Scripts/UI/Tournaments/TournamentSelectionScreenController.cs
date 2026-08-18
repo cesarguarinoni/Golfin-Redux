@@ -196,7 +196,10 @@ namespace GolfinRedux.UI.Tournaments
             }
 
             var backend = TournamentService.Instance.Backend;
-            var liveBk  = backend as LocalTournamentBackend;
+            // ITournamentStateDeriver, not LocalTournamentBackend: on the async-multiplayer path the
+            // live backend is RemoteTournamentBackend, and a concrete-type cast would quietly return
+            // null and drop every entered tournament from Playing to the lesser fallback state.
+            var liveBk  = backend as ITournamentStateDeriver;
             var defs    = backend.GetTournaments();
             DateTime now = DateTime.UtcNow;
 
