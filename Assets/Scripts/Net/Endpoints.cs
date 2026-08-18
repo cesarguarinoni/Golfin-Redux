@@ -66,6 +66,38 @@ namespace Golfin.Net
         /// No auth, same posture as <see cref="Banners"/>. No trailing slash.</summary>
         public static string Notices => BaseUrl + "/notices";
 
+        /// <summary>
+        /// POST <c>{session_id, app_version, build_number, platform, device_model, os, events:[…]}</c>
+        /// — the beta telemetry sink (beta_telemetry SPEC §2.1).
+        ///
+        /// AUTH REQUIRED, unlike <see cref="Banners"/> / <see cref="TournamentsGolfin"/>: the server
+        /// stamps <c>user_id</c> from the bearer token and never trusts one in the body, so a tester
+        /// can only ever write rows attributed to themselves. The token rides ApiClient automatically.
+        /// </summary>
+        public static string TelemetryEvents => BaseUrl + "/telemetry/events";
+
+        /// <summary>
+        /// PUT <c>{character_id, level}</c> — the leaderboard portrait sync (leaderboard_backend SPEC §1).
+        ///
+        /// AUTH REQUIRED, same posture as <see cref="TelemetryEvents"/>: the server stamps the row from
+        /// the bearer token, so a client can only ever write its own character. 400 on an empty or
+        /// oversized <c>character_id</c>; <c>level</c> is clamped server-side to 1–999.
+        /// </summary>
+        public static string UserGolfinCharacter => BaseUrl + "/user/golfin-character";
+
+        /// <summary>
+        /// GET → <c>{data:{fetched_at, period, period_end_utc, entries:[…], player:{…}}}</c> — the ranked
+        /// board for one period plus the caller's own row (leaderboard_backend SPEC §1).
+        ///
+        /// AUTH REQUIRED, unlike <see cref="Banners"/>: the server identifies the caller from the token
+        /// and ALWAYS returns their row, even at score 0 outside the top slice. 404 for an unknown period.
+        /// <paramref name="period"/> is one of <c>daily|weekly|monthly|historic</c>.
+        ///
+        /// Ranks and <c>is_tie</c> are computed server-side with standard competition ranking (1,2,2,4);
+        /// the client renders them verbatim and never re-ranks.
+        /// </summary>
+        public static string Leaderboard(string period) => BaseUrl + "/leaderboards/" + period;
+
         /// <summary>GET ledger page. <paramref name="currency"/> is "activity" / "gift" or null for both.</summary>
         public static string PointsHistory(int skip = 0, int limit = 20, string currency = null)
         {

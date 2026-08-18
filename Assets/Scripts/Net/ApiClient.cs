@@ -70,6 +70,12 @@ namespace Golfin.Net
         public IEnumerator Post<T>(string url, string jsonBody, Action<ApiResult<T>> onResult)
             => SendRoutine(new HttpRequest("POST", url, jsonBody) { TimeoutSeconds = TimeoutSeconds }, onResult);
 
+        /// <summary>Same path as <see cref="Post{T}"/> with the PUT verb — the API's idempotent
+        /// "replace this resource" calls (<c>/user/golfin-character</c>). Nothing else differs:
+        /// auth, envelope, transient retries and the single 401 replay are all shared.</summary>
+        public IEnumerator Put<T>(string url, string jsonBody, Action<ApiResult<T>> onResult)
+            => SendRoutine(new HttpRequest("PUT", url, jsonBody) { TimeoutSeconds = TimeoutSeconds }, onResult);
+
         /// <summary>Fire-and-forget: hand a routine to the coroutine host. Used by callers that are not
         /// themselves coroutines (e.g. <c>PointsService.RefreshBalanceAsync</c>).</summary>
         public void Run(IEnumerator routine)

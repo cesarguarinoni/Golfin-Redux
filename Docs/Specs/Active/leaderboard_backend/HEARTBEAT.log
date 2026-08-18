@@ -1,0 +1,75 @@
+=== iter-1 kickoff baseline 2026-08-18 ===
+HEAD: 2e90f1398 docs(telemetry): pre-write the §5.6 live-smoke SQL so the beta week is a paste
+DIRTY (git status --porcelain --untracked-files=all at kickoff):
+ M Assets/Localization/LocalizationText.csv
+ M Assets/Localization/LocalizationTextTable.asset
+ M Assets/Scenes/ShellScene.unity
+ M Assets/Scripts/Gameplay/Input/ShotController.cs
+ M Assets/Scripts/Gameplay/Loop/Session/GameSession.cs
+ M Assets/Scripts/Net/Endpoints.cs
+ M Assets/Scripts/Tournaments/Golfin.Tournaments.asmdef
+ M Assets/Scripts/Tournaments/LocalTournamentBackend.cs
+ M Assets/Scripts/UI/AboutSubmenu.cs
+ M Assets/Scripts/UI/Account/CreateUsernameScreenController.cs
+ M Assets/Scripts/UI/HomeScreenController.cs
+ M Assets/Scripts/UI/LanguageSubmenu.cs
+ M Assets/Scripts/UI/Matchmaking/MatchmakingModalController.cs
+ M Assets/Scripts/UI/Matchmaking/VersusResultScreenController.cs
+ M Assets/Scripts/UI/PersistentUIManager.cs
+ M Assets/Scripts/UI/Rankings/LocalFakeLeaderboardProvider.cs
+ M Assets/Scripts/UI/SettingsController.cs
+ M Assets/Scripts/UI/SettingsMenuItem.cs
+ M Assets/Scripts/UI/UserProfileSubmenu.cs
+ M Docs/ADMIN_DASHBOARD_OPS.md
+ M Docs/AI_CONTEXT.md
+ M Docs/Specs/Active/beta_telemetry/STATUS.md
+ M Docs/Specs/Active/beta_telemetry/reference/EVENT_CATALOG.md
+ M Docs/TellCode.md
+?? Assets/Scripts/Auth/PlayerIdentity.cs
+?? Assets/Scripts/Auth/PlayerIdentity.cs.meta
+?? Assets/Scripts/Gameplay/UI/ShotUI/ShotTelemetryRelay.cs
+?? Assets/Scripts/Gameplay/UI/ShotUI/ShotTelemetryRelay.cs.meta
+?? Assets/Scripts/Telemetry.meta
+?? Assets/Scripts/Telemetry/Golfin.Telemetry.asmdef
+?? Assets/Scripts/Telemetry/Golfin.Telemetry.asmdef.meta
+?? Assets/Scripts/Telemetry/TelemetryBehaviour.cs
+?? Assets/Scripts/Telemetry/TelemetryBehaviour.cs.meta
+?? Assets/Scripts/Telemetry/TelemetryConfig.cs
+?? Assets/Scripts/Telemetry/TelemetryConfig.cs.meta
+?? Assets/Scripts/Telemetry/TelemetryService.cs
+?? Assets/Scripts/Telemetry/TelemetryService.cs.meta
+?? Assets/Scripts/Telemetry/Tests.meta
+?? Assets/Scripts/Telemetry/Tests/Golfin.Telemetry.Tests.asmdef
+?? Assets/Scripts/Telemetry/Tests/Golfin.Telemetry.Tests.asmdef.meta
+?? Assets/Scripts/Telemetry/Tests/TelemetryServiceTests.cs
+?? Assets/Scripts/Telemetry/Tests/TelemetryServiceTests.cs.meta
+?? Assets/Scripts/TelemetryRuntime.meta
+?? Assets/Scripts/TelemetryRuntime/TelemetryHooks.cs
+?? Assets/Scripts/TelemetryRuntime/TelemetryHooks.cs.meta
+?? Assets/Scripts/UI/Account/UsernameRules.cs
+?? Assets/Scripts/UI/Account/UsernameRules.cs.meta
+?? Assets/Scripts/UI/SubmenuClickBoundary.cs
+?? Assets/Scripts/UI/SubmenuClickBoundary.cs.meta
+?? Docs/Specs/Active/beta_telemetry/IMPLEMENTER_REPORT.md
+?? Docs/Specs/Active/leaderboard_backend/HEARTBEAT.log
+?? Docs/Specs/Active/leaderboard_backend/SPEC.md
+?? Docs/Specs/Active/leaderboard_backend/STATUS.md
+=== end baseline ===
+
+=== iter-1 progress 2026-08-18 ===
+- Endpoints +2 members, ApiClient +Put<T> — compiled, verified live via script-execute.
+- LeaderboardDtos.cs, BackendLeaderboardProvider.cs (+LeaderboardDiskCache),
+  LeaderboardProviderPolicy.cs, GolfinCharacterSync.cs authored.
+- LeaderboardManager: provider selection in Awake + AuthService.SignedIn re-selection.
+- RankingsScreenController: RequestRefresh hooked into OnEnable + OnTabClicked.
+- BackendLeaderboardTests.cs: 35 tests covering all six SPEC §7 EditMode items.
+- Discovery proven with a deliberately failing tripwire (TotalTests 1372 -> 1373);
+  tripwire removed. tests-run testAssembly/testClass filters are broken for this
+  assembly (pre-existing); testNamespace works.
+- 1 real bug caught by the suite: my own test derived the unwrapped payload with
+  TrimEnd('}') which strips ALL trailing braces. Fixed with an explicit const.
+- FULL EditMode sweep: 1372 total / 1369 passed / 0 failed / 3 pre-existing skips,
+  unfiltered AND per-assembly across all 18 EditMode assemblies (sum checks out).
+- Editor left clean: not playing, no dirty scenes, zero scene saves, no stray files.
+- STATUS -> AWAITING_CESAR_MANUAL_PASS (six SPEC §7 device items remain).
+=== end iter-1 ===

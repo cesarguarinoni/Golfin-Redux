@@ -124,14 +124,21 @@ namespace Golfin.UI.Rankings
 
         private void OnEnable()
         {
+            // A session can become signed-in after LeaderboardManager.Awake ran (first launch goes
+            // through the auth gate). No-op when the provider is already the right one.
+            LeaderboardManager.Instance?.EnsureProviderForSession();
+
             // Invalidate cached rankings so the board reflects current RP
             LeaderboardManager.Instance?.InvalidateAllCache();
 
             _activePeriod = LeaderboardPeriod.Daily;
             ApplyBanner();
             ApplyLeagueLabel();
+            // Renders the disk-cached board instantly on the backend provider; the refresh below
+            // replaces it in place once the server answers.
             RebuildList();
             StartCountdown();
+            RequestRefresh(_activePeriod);
         }
 
         private void OnDisable()
@@ -157,6 +164,37 @@ namespace Golfin.UI.Rankings
             RebuildList();
             UpdateTabIndicators();
             StartCountdown();
+            RequestRefresh(period);
+        }
+
+        // ── Backend refresh (SPEC §4) ─────────────────────────────────────────
+
+        /// <summary>
+        /// Ask the backend provider for a fresh board for <paramref name="period"/> and rebuild if it
+        /// changed. A no-op on the local-fake provider, which has nothing to fetch.
+        ///
+        /// <para>The in-flight guard lives in <see cref="BackendLeaderboardProvider"/> and is PER
+        /// PERIOD, so bouncing tabs cannot stack requests for the same board while still letting a
+        /// second tab load while the first is in the air.</para>
+        ///
+        /// <para>Silent on failure by design (SPEC §3): the cached board stays on screen.</para>
+        /// </summary>
+        private void RequestRefresh(LeaderboardPeriod period)
+        {
+            if (LeaderboardManager.Instance?.Provider is not BackendLeaderboardProvider backend) return;
+
+            backend.Refresh(period, ok =>
+            {
+                if (!ok) return;
+
+                // The screen can have been closed — or destroyed — while the request was in the air.
+                if (this == null || !isActiveAndEnabled) return;
+
+                LeaderboardManager.Instance?.InvalidateCache(period);
+
+                // Another tab may have been tapped since; that tab drove its own refresh.
+                if (_activePeriod == period) RebuildList();
+            });
         }
 
         private void UpdateTabIndicators()
