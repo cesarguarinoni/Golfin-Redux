@@ -7,6 +7,7 @@
 
 ## ▶ CURRENT STATE — update this block at every session boundary
 
+- **Last updated:** 2026-08-18 later (Architect — **`leaderboard_backend` server half BUILT; Unity spec SPEC_READY.** Cesar's decisions of record: server-side fake pool (everyone sees the same board), character id+level sync to profiles, Architect builds/deploys backend + Code does Unity. Written into playlife (UNCOMMITTED — Code or Cesar commits): `migrations/2026_08_18_golfin_leaderboards.sql` (profiles.golfin_character_id/level, `golfin_fake_players` seeded with the 120 fake_players.csv rows RLS-on-no-policies, `golfin_leaderboard(p_start,p_end)` aggregation fn — filters by the `game_point_actions` catalog so GPS RP + admin grants never rank, service_role-only), `routers/leaderboards.py` (`GET /api/v1/leaderboards/{daily|weekly|monthly|historic}`, AUTH, ranks+T-ties server-side 1,2,2,4, deterministic fake scores per period key — participation 35/70/90/100%, ranges sized post-÷10 ⚠️ NOTE constants need tuning once real beta scores exist), `user.py` `PUT /golfin-character`, `main.py` mount. ✅ SHIPPED TO PROD same day: migration APPLIED via Supabase SQL editor (Cesar; self-contained verification query returned 2 golfin profile cols / 120 fakes active / RLS true / 0 fn-vs-ledger mismatches), `fly deploy` green (both machines good, via MacOS-MCP shell + nohup — flyctl is NOT in the device_bash VM, it lives on the Mac at ~/.fly/bin), smoke: `/health` 200, all four `/api/v1/leaderboards/{period}` + `PUT /user/golfin-character` respond **403-not-404** (mounted, auth-gated), garbage route 404s. **The Unity kickoff below is pasteable NOW.** Ledger-derived scores mean past periods are queryable for free — the v1.0 "previous period results" popup needs no snapshots when it's wanted. Fake-pool dashboard panel = deliberate follow-up.)
 - **Last updated:** 2026-08-13 (final) (Architect — **THE DASHBOARD IS LIVE AND THE LOOP IS CLOSED.** `admin_dashboard` v1 scope complete: running against production, real Supabase password auth verified, and Cesar performed the first live admin RP adjustments through the UI (+100 then −50 on Cratilo → balance 123→223→**173**). Prod SQL confirms both rpc paths and the audit trail: ledger rows `manual_admin_grant +100` / `spend -50`, plus two `rp_adjust` rows in `admin_audit_log` carrying before/after `total_points` and the admin's email. Two days after "start the admin dashboard", the chain runs end to end: **dashboard → `earn_pts_v2`/`spend_pts` → the one shared ledger → the game's RP.** ⚠️ SECURITY STANDING ITEM: the service_role key was pasted into a chat transcript — rotate it, and when you do, update BOTH `Tools/admin-dashboard/.env.local` and the playlife-api Fly secret in the same sitting or `/points/*` breaks. Still open elsewhere: `points_device_checks` (Cesar-only, 3 checks); dashboard hosting + Google OAuth for admin login; spec §4 v2/v3 panels pending Track B.)
 
 - **Last updated:** 2026-08-13 later (Architect, back on the Mac — **BOTH admin-dashboard pre-prod flags CLEARED; the dashboard is now one env-file away from live.** (1) `Tools/admin-dashboard/migrations/2026_08_13_admin_audit_log.sql` **APPLIED to prod** via the Supabase SQL editor (project `wmszyghwwkaptgqdunel`) — post-apply verification: `admin_audit_log` exists, RLS enabled, `authenticated` SELECT = **false**. `writeAudit()` now has a real table and the Audit panel is backed, not silently empty. Migration header stamped APPLIED. (2) **RPC signatures verified live** with `pg_get_function_arguments`: `earn_pts_v2(p_user_id uuid, p_action text, p_pts integer, p_description text, p_key uuid)` and `spend_pts(p_user_id uuid, p_amount integer, p_reason text, p_key uuid)` — **exactly what `lib/mutations.ts` calls**, so the code was right and the README caveat was stale text predating the fix; the caveat is deleted and replaced with the verified signatures. Code's PC-side import (`f5594562f` v1, `91e466684` v2) was clean — v1 a strict subset of v2, 12 added / 11 modified / 0 deleted, no node_modules, no secrets. **REMAINING to go live: Cesar pastes the 4 Supabase values into `Tools/admin-dashboard/.env.local`, then `npm install && npm run dev`.** ⚠️ Standing caveat worth repeating: mock mode accepts ANY credentials, so "it let me in" proves nothing about live auth — the first real email/password sign-in IS the auth test (use the gmail/Cratilo account; Google OAuth is not wired into the dashboard). `points_device_checks` remains Cesar-only and untouched.)
@@ -31,6 +32,39 @@
 ---
 
 ## 📋 SPEC_READY POINTERS
+
+- **`leaderboard_backend`** (filed 2026-08-18, Architect) — **SPEC_READY — endpoint LIVE in prod 2026-08-18, kickoff pasteable.** The Rankings screen moves off `LocalFakeLeaderboardProvider` onto `GET /api/v1/leaderboards/{period}` — same board for every player, ranks + ties computed server-side, fakes served from the server pool, character portrait/level synced via `PUT /user/golfin-character`. Unity-only: new `BackendLeaderboardProvider` behind the existing `ILeaderboardProvider` seam (built for this exact swap), disk-cached last payload, refresh driven from `RankingsScreenController.OnEnable`/tab taps, `LocalFakeLeaderboardProvider` retired to the bot/signed-out path only. Spec: `Docs/Specs/Active/leaderboard_backend/SPEC.md`.
+
+### Kickoff · leaderboard_backend (issued 2026-08-18)
+
+```
+Read Docs/Specs/Active/leaderboard_backend/SPEC.md and implement it.
+
+Context:
+- The Rankings screen currently runs on LocalFakeLeaderboardProvider (client
+  fakes + local SaveData accumulators). The backend endpoint is live and is
+  now the single source of truth; spec §1 is the contract, verbatim.
+- ILeaderboardProvider was built for this swap — UI code stays untouched
+  except the refresh hooks in RankingsScreenController.OnEnable/OnTabClicked
+  (§4). No prefab or scene edits.
+- Reuse, do not rebuild: ApiClient (Get<T> :67; add a one-line Put<T> —
+  §1 note), the RemoteBannerSource atomic disk-cache discipline, Endpoints
+  (+2 lines), PlayerIdentity.DisplayNameOr for the player's own row.
+- Server already computes ranks + T-ties (1,2,2,4) — do NOT re-rank
+  client-side. player row is always present; character_id can be null.
+- Provider selection (§4): BotSessionOverride / signed-out keeps LocalFake —
+  bots are offline by design and must never hit prod.
+- Character sync (§5): OnCharacterSelected + OnCharacterLeveledUp +
+  sign-in, fire-and-forget, throttled, silent failure. For the sign-in hook
+  reuse whatever rp_balance_sync lands — do not invent a second auth event.
+- Out of scope: previous-period popup, leagues, SNS share, fake-pool
+  dashboard panel, tournament leaderboards, backend edits.
+
+When done: list changed files with a 1-line summary each, run the FULL
+per-assembly EditMode sweep + the new tests in spec §7, flag which §7 manual
+items need Cesar's device pass, update STATUS.md + IMPLEMENTER_REPORT.md in
+the spec folder, and update Docs/AI_CONTEXT.md.
+```
 
 - **`home_notices`** (filed 2026-08-18, Architect) — **SPEC_READY. The Home screen's notice panel becomes admin-controlled — title + body, EN + JA, scheduled, no client build.** Server side is DONE and deployed by the Architect: table `public.home_notices` (migration `2026_08_18_home_notices.sql`, **APPLIED to prod 2026-08-18** — service key reads 200 `[]`, anon 401, and the endpoint was smoke-tested with four rows proving live/expired/future/draft filtering before they were deleted), `GET /api/v1/notices` (`backend/routers/notices.py`, no auth, server-side scheduling, `expires_at` echoed for the on-device cache), and a Notices panel in the admin dashboard (live at https://admin.golfin.world). **The Unity client is the only outstanding half.** New `Assets/Scripts/NoticesRuntime/` (`Golfin.Notices`, no asmdef) mirroring `BannersRuntime` file-for-file — `RemoteNoticeDtos` / `RemoteNoticeSource` (cache `home_notices.json`, atomic write, null on any failure) / `NoticeService` (singleton, sync cache read in `Awake`, throttled `Refresh()` on `ScheduleRefreshThrottle`, `OnNoticesChanged`, `LocalizationManager.OnLanguageChanged`) — plus one `Endpoints.Notices` line and a rewrite of `HomeScreenController.UpdateNewsContent()` to page the live notices through the dots that already exist. ⚠️ Two behaviour changes to be aware of: **with nothing live the panel HIDES** (it is an announcement surface, not a fixture — banners have a bundled sprite behind them, an unwritten announcement has nothing), and the bundled `HOME_MAINTENANCE_*` strings are **retired, not kept as an offline fallback** — they currently tell every player the servers go down on **2025/12/31**, a date eight months past, which is the bug this feature exists to fix. Demo build (`DemoGate.IsDemo`) path is unchanged. Needs one scene wiring step (`newsPanelRoot` on HomeScreenController in ShellScene). Spec: `Docs/Specs/Active/home_notices/SPEC.md`.
 

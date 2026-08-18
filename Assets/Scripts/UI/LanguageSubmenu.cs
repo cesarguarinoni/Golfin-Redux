@@ -14,13 +14,9 @@ namespace Golfin.UI
         [SerializeField] private Button englishButton;
         [SerializeField] private Button japaneseButton;
         
-        [Header("Selection Indicators")]
-        [SerializeField] private GameObject englishCheckmark;
-        [SerializeField] private GameObject japaneseCheckmark;
-        
-        [Header("Button Colors (Optional)")]
-        [SerializeField] private Color selectedColor = new Color(0.2f, 0.6f, 1f, 1f);
-        [SerializeField] private Color unselectedColor = new Color(0.5f, 0.5f, 0.5f, 1f);
+        [Header("Row Colors")]
+        [SerializeField] private Color selectedColor = new Color32(0x33, 0x99, 0xFF, 0xFF);
+        [SerializeField] private Color unselectedColor = new Color32(0x26, 0x42, 0x5F, 0xFF);
         
         private const string LANGUAGE_KEY = "Settings_Language";
 
@@ -42,6 +38,10 @@ namespace Golfin.UI
         {
             // Subscribe to language change events
             LocalizationManager.OnLanguageChanged += OnLanguageChangedExternally;
+
+            // While the accordion is collapsed this object is inactive, so it misses any
+            // OnLanguageChanged fired in the meantime. Re-sync on every open.
+            UpdateUI();
         }
 
         private void OnDisable()
@@ -120,19 +120,8 @@ namespace Golfin.UI
         {
             Language currentLanguage = LocalizationManager.CurrentLanguage;
             bool isEnglish = currentLanguage == Language.English;
-            
-            // Update checkmarks
-            if (englishCheckmark != null)
-            {
-                englishCheckmark.SetActive(isEnglish);
-            }
-            
-            if (japaneseCheckmark != null)
-            {
-                japaneseCheckmark.SetActive(!isEnglish);
-            }
-            
-            // Update button colors (optional)
+
+            // Selection is carried entirely by the row fill — no tick/ring indicator.
             UpdateButtonColor(englishButton, isEnglish);
             UpdateButtonColor(japaneseButton, !isEnglish);
         }

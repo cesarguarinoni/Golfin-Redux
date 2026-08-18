@@ -25,7 +25,7 @@ load-bearing.
 | Why that account | `golfin.world` is a zone in it; a Worker can only take a custom domain from a zone in its **own** account. Pinned as `account_id` in `wrangler.jsonc`. |
 | `workers.dev` | **Disabled on purpose.** A second unprotected hostname serving the same app would sit outside the Access policy. |
 | Access team domain | `late-cake-f2a4.cloudflareaccess.com` (auto-generated; renameable in Zero Trust settings) |
-| Access app / policy | "GOLFIN Admin" → `admin.golfin.world` → policy "Admins" (two emails), 24h session |
+| Access app / policy | "GOLFIN Admin" → `admin.golfin.world` → policy "Admins" (three emails — see §3.5), 24h session |
 | Supabase project | `wmszyghwwkaptgqdunel` |
 | Local dev | `npm run dev` → http://localhost:3000 |
 | Local env file | `.env.development.local` — **not** `.env.local`, see §4.4 |
@@ -128,13 +128,52 @@ right language on first paint — localStorage would flash English then flip.
 Untranslated by design: Unity object paths, bucket names, slugs, DB column
 names, `<title>` metadata, and the LIVE / SCHEDULED / OFF state badges.
 
-### 3.5 Adding an admin — two places
-`ADMIN_EMAILS` (Worker secret) **and** the Cloudflare Access policy. They fail
-differently: miss the policy and the person gets a Cloudflare block page; miss
-the secret and they clear Access and land on `/not-admin`.
+### 3.5 Adding an admin — THREE places
+1. **`ADMIN_EMAILS`** (Worker secret). Edit `.env.development.local`, then
+   `npx wrangler secret bulk .env.development.local` — it pushes all five and
+   takes effect immediately, no redeploy.
+2. **The Cloudflare Access policy** "Admins" (Zero Trust → Access controls →
+   Policies → Admins → Configure). Type the address and press **Enter** so it
+   becomes its own chip; reload the edit page afterwards and count the chips.
+   Two addresses once merged into one string here and it was only caught on a
+   screenshot. Dashboard work only — the wrangler OAuth token can *read*
+   `/access/apps` but `POST` returns `auth.forbidden`.
+3. **A Supabase account with a PASSWORD.** The dashboard's own login is
+   Supabase email/password; Google sign-in is not wired into it, so someone
+   whose account is Google-only cannot sign in even with 1 and 2 done. Check
+   before assuming — the live answer is one call:
 
-Access policy changes are dashboard work — the wrangler OAuth token can *read*
-`/access/apps` but `POST` returns `auth.forbidden`.
+   ```
+   curl -s "$SUPABASE_URL/auth/v1/admin/users?per_page=200" \
+     -H "apikey: $KEY" -H "Authorization: Bearer $KEY" \
+     | python3 -c "import json,sys; [print(u['email'], u['app_metadata'].get('providers')) for u in json.load(sys.stdin)['users']]"
+   ```
+
+   `providers: ['email', ...]` means they already have a password. If it is
+   Google-only, set one in Supabase → Authentication → Users → the user →
+   Reset password, and send it out of band.
+
+   ⚠️ **Do not read identity facts off the dashboard in MOCK mode.** The Users
+   panel and drawer render `lib/mock.ts` fixtures there, provider badges
+   included, and they are invented. This produced a confidently wrong claim
+   about Ken's account on 2026-08-18 — the fixture said Google, production says
+   `email` + `google`. Mock mode is for exercising the UI, never for answering
+   a question about a real user.
+
+They fail differently, which is how you tell which one you missed: no policy →
+Cloudflare block page; no `ADMIN_EMAILS` → they clear Access and land on
+`/not-admin`; no password → the login form rejects them at the dashboard's own
+sign-in.
+
+Current admins (2026-08-18): `cesar.guarinoni@wonderwall-g.com`,
+`cesar.guarinoni@gmail.com`, `greedisland.k.k@gmail.com` (Ken — verified
+`providers: ['email','google']`, so he signs in with his existing password;
+nothing to set).
+
+**No role tiers.** The allowlist is all-or-nothing: every admin can adjust RP,
+ban, and delete users. Every action is attributed by email in
+`admin_audit_log`, but nothing is *prevented*. A read-only role would be a real
+feature, not a config switch.
 
 ---
 
@@ -226,9 +265,24 @@ notice dies on time offline. An empty list is normal and means "hide the panel".
   Rotating means updating three places together: the Cloudflare secret, the Fly
   secret on `playlife-api`, and `.env.development.local`. Miss the Fly one and
   the game's `/points/*` breaks.
-- **Supabase redirect URL.** `https://admin.golfin.world` still needs adding to
-  Authentication → URL Configuration, or password-reset links point at
-  localhost.
+- ~~**Supabase redirect URL.**~~ DONE 2026-08-18 — `https://admin.golfin.world`
+  and `https://admin.golfin.world/**` are both in Authentication → URL
+  Configuration (4 entries total). The bare host covers the root callback, the
+  `/**` form covers password-reset links that land on a path. **Site URL was
+  also flipped to `https://admin.golfin.world`** (was `https://playlife-app.web.app/`;
+  Cesar, 2026-08-18: the GPS app is deprecated).
+
+  ⚠️ **Knock-on, still open.** Site URL is the fallback for any auth mail sent
+  with no explicit `redirect_to`, and the GAME sends two of those:
+  `/auth/v1/signup` (confirmation) and `/auth/v1/recover` (reset) — see
+  `Assets/Scripts/Auth/ISupabaseAuthClient.cs`. Only the OAuth path passes one
+  (`OAuthUrlBuilder` → `golfin://auth-callback`). So a player clicking a
+  confirmation or reset link now lands on `admin.golfin.world` and hits the
+  **Cloudflare Access block page**. Before the beta, the client should pass
+  `redirect_to=golfin://auth-callback` on both calls; that deep link is already
+  in the allow list. Until then, treat player email confirmation as broken on
+  the redirect leg (the account is still confirmed — the landing page is what
+  fails).
 - **`/tournaments/admin/create` and `/admin/weekly-open`** are still guarded only
   by a non-constant-time comparison against a static key, and `admin_create`
   never sets `kind`. Close them before tournaments carry anything a player would

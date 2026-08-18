@@ -66,33 +66,36 @@ namespace Golfin.UI
 
         /// <summary>
         /// Initialize accordion menu items and subscribe to events.
+        ///
+        /// The four Inspector slots below are the documented wiring, but registration does NOT
+        /// depend on them: any <see cref="SettingsMenuItem"/> living under this controller is swept
+        /// up as well. An unassigned slot used to silently drop a row out of the accordion group —
+        /// that row then stayed open while others expanded, breaking "only one open at a time".
+        /// (aboutItem was empty in ShellScene, so About behaved exactly that way.)
         /// </summary>
         private void InitializeAccordionItems()
         {
-            // Collect all accordion items
-            if (userProfileItem != null)
-            {
-                _accordionItems.Add(userProfileItem);
-                userProfileItem.OnExpanded += OnMenuItemExpanded;
-            }
+            RegisterAccordionItem(userProfileItem);
+            RegisterAccordionItem(soundSettingsItem);
+            RegisterAccordionItem(languageItem);
+            RegisterAccordionItem(aboutItem);
 
-            if (soundSettingsItem != null)
+            // Safety net: catch any row whose Inspector slot was never assigned.
+            foreach (var item in GetComponentsInChildren<SettingsMenuItem>(true))
             {
-                _accordionItems.Add(soundSettingsItem);
-                soundSettingsItem.OnExpanded += OnMenuItemExpanded;
+                RegisterAccordionItem(item);
             }
+        }
 
-            if (languageItem != null)
-            {
-                _accordionItems.Add(languageItem);
-                languageItem.OnExpanded += OnMenuItemExpanded;
-            }
+        /// <summary>
+        /// Add a menu item to the accordion group exactly once.
+        /// </summary>
+        private void RegisterAccordionItem(SettingsMenuItem item)
+        {
+            if (item == null || _accordionItems.Contains(item)) return;
 
-            if (aboutItem != null)
-            {
-                _accordionItems.Add(aboutItem);
-                aboutItem.OnExpanded += OnMenuItemExpanded;
-            }
+            _accordionItems.Add(item);
+            item.OnExpanded += OnMenuItemExpanded;
         }
 
         /// <summary>
@@ -182,16 +185,28 @@ namespace Golfin.UI
 
         // Simple menu item handlers (Phase 3 features)
 
+        /// <summary>
+        /// Terms of Service (Google Doc). Served read-only: the shared link is an /edit link, but
+        /// players have view access only, so Docs redirects them to the reader. /preview is used
+        /// instead of /edit so the editor chrome never flashes up on the way there.
+        /// </summary>
+        private const string TermsOfServiceUrl =
+            "https://docs.google.com/document/d/1g42eCJOtV4gI7NIYVnIOyL8wAIA-tzCJfyJGDOKgcMM/preview";
+
+        /// <summary>Privacy Policy (Google Doc). Same read-only treatment as <see cref="TermsOfServiceUrl"/>.</summary>
+        private const string PrivacyPolicyUrl =
+            "https://docs.google.com/document/d/1kclGdUoDkCCPlW6h8Vff1sERmDbJYAHE3vBys1BG7Lc/preview";
+
         private void OnTermsOfUseClick()
         {
             Debug.Log("[SettingsController] Terms of Use clicked");
-            OpenWebView("https://golfin.io/terms-of-use");
+            OpenWebView(TermsOfServiceUrl);
         }
 
         private void OnPrivacyPolicyClick()
         {
             Debug.Log("[SettingsController] Privacy Policy clicked");
-            OpenWebView("https://golfin.io/privacy-policy");
+            OpenWebView(PrivacyPolicyUrl);
         }
 
         private void OnFaqClick()

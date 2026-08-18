@@ -152,6 +152,7 @@ namespace Golfin.Gameplay.Session
             SelectedCharacterId = characterId ?? string.Empty;
             EquippedBagSlot     = bagSlot;
             ResetForNewHole();
+            RaiseRoundStarted();
         }
 
         /// <summary>
@@ -161,6 +162,7 @@ namespace Golfin.Gameplay.Session
         {
             CurrentHoleNumber = holeNumber;
             ResetForNewHole();
+            RaiseRoundStarted();
         }
 
         /// <summary>
@@ -178,6 +180,24 @@ namespace Golfin.Gameplay.Session
             StrokeCapOverPar    = 0;
             TournamentRoundContext.EndRound();
             ResetForNewHole();
+        }
+
+        // ── Round-start signal (beta_telemetry SPEC §1 #4) ────────────────────
+        /// <summary>
+        /// Fired whenever a hole actually begins: the initial <see cref="SeedSession"/> AND
+        /// the PLAY NEXT path through <see cref="SetCurrentHole"/>. Both are needed —
+        /// SeedSession alone would miss every hole after the first in a session.
+        ///
+        /// Deliberately NOT raised from <see cref="ResetForNewHole"/>, which
+        /// <see cref="ResetSession"/> also calls: a teardown is not a round start.
+        /// </summary>
+        public static event System.Action OnRoundStarted;
+
+        private static void RaiseRoundStarted()
+        {
+            // A telemetry subscriber must never be able to break a hole start.
+            try { OnRoundStarted?.Invoke(); }
+            catch (System.Exception ex) { Debug.LogWarning($"[GameSession] OnRoundStarted subscriber threw: {ex.Message}"); }
         }
 
         /// <summary>

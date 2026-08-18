@@ -232,7 +232,7 @@ namespace Golfin.UI.Matchmaking
 
             // 4. Player username + rank (placeholder)
             if (playerUsernameText != null)
-                playerUsernameText.text = LocalizationManager.Get("MATCH_YOU");
+                playerUsernameText.text = Golfin.Auth.PlayerIdentity.DisplayNameOr(LocalizationManager.Get("MATCH_YOU"));
 
             if (playerRankText != null)
                 playerRankText.text = $"RANK: #{Random.Range(fakeRankRange.x, fakeRankRange.y + 1)}";

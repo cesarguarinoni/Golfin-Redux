@@ -339,7 +339,7 @@ namespace Golfin.Tournaments
                 rawEntries.Add(new RawEntry
                 {
                     IsPlayer       = true,
-                    DisplayName    = "YOU",
+                    DisplayName    = Golfin.Auth.PlayerIdentity.DisplayNameOr("YOU"),
                     CharacterId    = playerEntry.CharacterId,
                     Level          = 1,
                     Strokes        = playerStrokes,

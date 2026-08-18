@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.UI;
 using TMPro;
 using System.Text;
 using GolfinRedux.UI.BuildInfo;
@@ -48,6 +49,52 @@ namespace Golfin.UI
             {
                 licensesText.text = GetLicensesText();
             }
+
+            ResizeToContent();
+        }
+
+        /// <summary>
+        /// Size each text slot to the text it actually holds, then tell the parent accordion item
+        /// how tall to open.
+        ///
+        /// The version string and licence list are built here at runtime (and the section headings
+        /// are localised), so the height authored in the scene is only ever a rough guess — baking
+        /// it clipped the licence list on some builds and left dead space on others.
+        /// </summary>
+        private void ResizeToContent()
+        {
+            var container = (RectTransform)transform;
+            var layout = GetComponent<VerticalLayoutGroup>();
+            if (layout == null) return;
+
+            float width = container.rect.width - layout.padding.left - layout.padding.right;
+            float total = layout.padding.top + layout.padding.bottom;
+            int shown = 0;
+
+            foreach (RectTransform child in container)
+            {
+                if (!child.gameObject.activeSelf) continue;
+
+                var element = child.GetComponent<LayoutElement>();
+                if (element == null) continue;
+
+                var label = child.GetComponent<TextMeshProUGUI>();
+                if (label != null && !string.IsNullOrEmpty(label.text))
+                {
+                    float needed = label.GetPreferredValues(label.text, width, 0f).y;
+                    element.preferredHeight = Mathf.Max(element.minHeight, Mathf.Ceil(needed) + 8f);
+                }
+
+                total += element.preferredHeight;
+                shown++;
+            }
+
+            if (shown > 1) total += layout.spacing * (shown - 1);
+
+            container.sizeDelta = new Vector2(container.sizeDelta.x, total);
+
+            var item = GetComponentInParent<SettingsMenuItem>();
+            if (item != null) item.SetSubmenuHeight(total);
         }
 
         /// <summary>

@@ -1,11 +1,20 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using Golfin.Auth;
+using Golfin.UI.Account;
 
 namespace Golfin.UI
 {
     /// <summary>
     /// User Profile submenu with username editing and account linking.
+    ///
+    /// The username here is the REAL account display name: it is read from
+    /// <see cref="AuthService"/>.Session.DisplayName and written through
+    /// <c>AuthService.UpdateDisplayName</c>, which PUTs Supabase Auth
+    /// <c>user_metadata.display_name</c> and persists the session. It previously read and wrote a
+    /// local <c>Settings_Username</c> PlayerPrefs key that nothing else in the game ever consulted,
+    /// so a name changed here looked changed but was not — sign out and it was gone.
     /// </summary>
     public class UserProfileSubmenu : MonoBehaviour
     {
@@ -22,12 +31,8 @@ namespace Golfin.UI
         [SerializeField] private GameObject linkedIndicatorApple;
         [SerializeField] private GameObject linkedIndicatorTwitter;
         
-        [Header("Settings")]
-        [SerializeField] private int maxUsernameLength = 16;
-        [SerializeField] private int minUsernameLength = 3;
-        
-        private const string USERNAME_KEY = "Settings_Username";
         private string _originalUsername;
+        private bool _busy;
 
         private void Awake()
         {
@@ -39,7 +44,7 @@ namespace Golfin.UI
             
             if (usernameInputField != null)
             {
-                usernameInputField.characterLimit = maxUsernameLength;
+                usernameInputField.characterLimit = UsernameRules.MaxLength;
                 usernameInputField.onValueChanged.AddListener(OnUsernameChanged);
             }
             
@@ -66,17 +71,25 @@ namespace Golfin.UI
             UpdateAccountLinkingUI();
         }
 
+        private void OnEnable()
+        {
+            // The accordion deactivates this object while collapsed, so re-read the session on every
+            // open — the name may have changed elsewhere (Create Username, a different sign-in).
+            LoadUsername();
+        }
+
         /// <summary>
-        /// Load the saved username from PlayerPrefs.
+        /// Load the current display name from the auth session (the source of truth).
         /// </summary>
         private void LoadUsername()
         {
-            string savedUsername = PlayerPrefs.GetString(USERNAME_KEY, "Player");
-            _originalUsername = savedUsername;
+            var session = AuthService.Instance != null ? AuthService.Instance.Session : null;
+            string currentUsername = session != null && session.HasDisplayName ? session.DisplayName : "";
+            _originalUsername = currentUsername;
             
             if (usernameInputField != null)
             {
-                usernameInputField.text = savedUsername;
+                usernameInputField.SetTextWithoutNotify(currentUsername);
             }
             
             // Hide feedback on load
@@ -91,7 +104,7 @@ namespace Golfin.UI
                 saveUsernameButton.interactable = false;
             }
             
-            Debug.Log($"[UserProfile] Loaded username: {savedUsername}");
+            Debug.Log($"[UserProfile] Loaded username from session: '{currentUsername}'");
         }
 
         /// <summary>
@@ -129,38 +142,56 @@ namespace Golfin.UI
         /// </summary>
         private void OnSaveUsernameClicked()
         {
-            if (usernameInputField == null) return;
+            if (usernameInputField == null || _busy) return;
             
             string newUsername = usernameInputField.text.Trim();
             
             if (!IsUsernameValid(newUsername))
             {
-                ShowFeedback("Invalid username", Color.red);
+                ShowFeedback(GetValidationMessage(newUsername), Color.red);
                 return;
             }
             
-            // Save to PlayerPrefs
-            PlayerPrefs.SetString(USERNAME_KEY, newUsername);
-            PlayerPrefs.Save();
-            
-            _originalUsername = newUsername;
-            
-            // Update PersistentUI if available
-            if (PersistentUIManager.Instance != null)
+            // Live network round-trip (Supabase PUT /auth/v1/user) — lock the button until it lands.
+            SetBusy(true);
+            AuthService.Instance.UpdateDisplayName(newUsername, result =>
             {
-                PersistentUIManager.Instance.UpdateUsername(newUsername);
-            }
+                SetBusy(false);
+                
+                if (result == null || !result.Success)
+                {
+                    string message = result != null && !string.IsNullOrEmpty(result.Message)
+                        ? result.Message
+                        : "Could not save username.";
+                    ShowFeedback(message, Color.red);
+                    Debug.LogWarning($"[UserProfile] Username change rejected: {message}");
+                    return;
+                }
+                
+                // AuthService.Wrap already applied + saved the session; push it into the shell UI.
+                _originalUsername = newUsername;
+                AccountUiBridge.SyncUsername();
+                
+                ShowFeedback("Username saved!", new Color(0.2f, 0.8f, 0.2f));
+                
+                if (saveUsernameButton != null)
+                {
+                    saveUsernameButton.interactable = false;
+                }
+                
+                Debug.Log($"[UserProfile] Username saved to account: {newUsername}");
+            });
+        }
+
+        /// <summary>
+        /// Lock the field and button while the account update is in flight.
+        /// </summary>
+        private void SetBusy(bool busy)
+        {
+            _busy = busy;
             
-            // Show success feedback
-            ShowFeedback("Username saved!", new Color(0.2f, 0.8f, 0.2f));
-            
-            // Disable save button
-            if (saveUsernameButton != null)
-            {
-                saveUsernameButton.interactable = false;
-            }
-            
-            Debug.Log($"[UserProfile] Username saved: {newUsername}");
+            if (saveUsernameButton != null) saveUsernameButton.interactable = !busy;
+            if (usernameInputField != null) usernameInputField.interactable = !busy;
         }
 
         /// <summary>
@@ -168,21 +199,7 @@ namespace Golfin.UI
         /// </summary>
         private bool IsUsernameValid(string username)
         {
-            if (string.IsNullOrWhiteSpace(username)) return false;
-            if (username.Length < minUsernameLength) return false;
-            if (username.Length > maxUsernameLength) return false;
-            
-            // Check for invalid characters (optional)
-            // For now, allow alphanumeric + underscore + spaces
-            foreach (char c in username)
-            {
-                if (!char.IsLetterOrDigit(c) && c != '_' && c != ' ')
-                {
-                    return false;
-                }
-            }
-            
-            return true;
+            return UsernameRules.IsValid(username);
         }
 
         /// <summary>
@@ -195,17 +212,7 @@ namespace Golfin.UI
                 return "Username cannot be empty";
             }
             
-            if (username.Length < minUsernameLength)
-            {
-                return $"Username must be at least {minUsernameLength} characters";
-            }
-            
-            if (username.Length > maxUsernameLength)
-            {
-                return $"Username must be {maxUsernameLength} characters or less";
-            }
-            
-            return "Username contains invalid characters";
+            return UsernameRules.Requirement;
         }
 
         /// <summary>

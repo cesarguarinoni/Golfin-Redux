@@ -69,7 +69,7 @@ namespace Golfin.UI.Rankings
             {
                 Rank = ranking.Count + 1,
                 IsTie = false,
-                DisplayName = "YOU",
+                DisplayName = Golfin.Auth.PlayerIdentity.DisplayNameOr("YOU"),
                 CharacterId = CharacterManager.Instance != null
                               ? CharacterManager.Instance.GetSelectedCharacterId()
                               : string.Empty,
@@ -171,7 +171,7 @@ namespace Golfin.UI.Rankings
 
             list.Add(new LeaderboardEntry
             {
-                DisplayName = "YOU",
+                DisplayName = Golfin.Auth.PlayerIdentity.DisplayNameOr("YOU"),
                 CharacterId = playerCharId,
                 Level       = playerLevel,
                 Score       = playerScore,

@@ -1,5 +1,4 @@
 // Order: login_signup_screens — Phase 1 (UI only, no backend)
-using System.Text.RegularExpressions;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
@@ -29,8 +28,6 @@ namespace Golfin.UI.Account
         [Tooltip("Optional TMP label shown for validation / auth messages. Safe to leave unset.")]
         [SerializeField] private TextMeshProUGUI _errorLabel;
 
-        // 3–20 chars, letters/numbers/underscore (matches the on-screen hint).
-        private static readonly Regex UsernamePattern = new Regex(@"^[A-Za-z0-9_]{3,20}$");
 
         private bool _busy;
 
@@ -58,8 +55,8 @@ namespace Golfin.UI.Account
         {
             if (_busy) return;
             string username = _usernameInput != null ? _usernameInput.text.Trim() : "";
-            if (!UsernamePattern.IsMatch(username))
-            { SetError("3–20 characters, letters/numbers/underscore only."); return; }
+            if (!UsernameRules.IsValid(username))
+            { SetError(UsernameRules.Requirement); return; }
 
             SetBusy(true);
             AuthService.Instance.UpdateDisplayName(username, result =>

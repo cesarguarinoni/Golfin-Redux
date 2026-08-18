@@ -466,6 +466,14 @@ namespace Golfin.UI
                 switch (screenId)
                 {
                     case GolfinRedux.UI.ScreenId.Home:
+                        // Prefer the signed-in player's real name over whatever was cached.
+                        // Awake() seeds _username from the designer placeholder ("CHOTO") and the
+                        // real value only arrives via AccountUiBridge.SyncUsername(); if that push
+                        // happened before this manager existed — or never fired, as on a boot that
+                        // restores a session without re-routing through login — the top bar kept
+                        // showing the placeholder. Re-reading here makes Home self-correcting.
+                        if (Golfin.Auth.PlayerIdentity.HasName)
+                            _username = Golfin.Auth.PlayerIdentity.DisplayName;
                         usernameText.text = _username;
                         break;
                     case GolfinRedux.UI.ScreenId.Leaderboard:

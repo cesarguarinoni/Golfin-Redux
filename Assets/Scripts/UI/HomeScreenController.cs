@@ -177,7 +177,7 @@ namespace GolfinRedux.UI
             }
 
             if (usernameText != null)
-                usernameText.text = "Player";   // TODO: load real value
+                usernameText.text = Golfin.Auth.PlayerIdentity.DisplayNameOr("Player");
 
             // Subscribe to selection changes so the image updates immediately
             if (CharacterManager.Instance != null)

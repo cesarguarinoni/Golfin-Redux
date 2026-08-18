@@ -1,17 +1,17 @@
 {
-    "name": "Golfin.Tournaments",
-    "rootNamespace": "Golfin.Tournaments",
+    "name": "Golfin.Telemetry",
+    "rootNamespace": "Golfin.Telemetry",
     "references": [
-        "Golfin.UI.Rankings.Core",
-        "Golfin.Save",
-        "Golfin.Core.Stamina",
+        "Golfin.Net",
         "Golfin.Auth"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
-    "overrideReferences": false,
-    "precompiledReferences": [],
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "Newtonsoft.Json.dll"
+    ],
     "autoReferenced": true,
     "defineConstraints": [],
     "versionDefines": [],

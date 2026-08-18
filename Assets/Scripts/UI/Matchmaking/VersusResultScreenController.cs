@@ -154,7 +154,7 @@ namespace Golfin.UI.Matchmaking
             BindOpponentCard(opponentPlayer);
 
             // ── Username ──────────────────────────────────────────────────────
-            if (_leftUsernameText  != null) _leftUsernameText.text  = LocalizationManager.Get("MATCH_YOU");
+            if (_leftUsernameText  != null) _leftUsernameText.text  = Golfin.Auth.PlayerIdentity.DisplayNameOr(LocalizationManager.Get("MATCH_YOU"));
             if (_rightUsernameText != null) _rightUsernameText.text = string.IsNullOrEmpty(opponentPlayer.DisplayName)
                                                                        ? "OPPONENT"
                                                                        : opponentPlayer.DisplayName;

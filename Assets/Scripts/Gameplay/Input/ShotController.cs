@@ -339,15 +339,34 @@ namespace Golfin.Gameplay.Input
             if (State == ShotState.Timing && PowerNormalized > 0f && validFlick)
                 CommitFlick();
             else
+            {
+                if (!validFlick) FlickRejected?.Invoke(LastFlickSpeedScreenHeights);
                 TransitionToIdle();
+            }
         }
 
         public void CancelExternalDrag()
         {
             if (!_externalDragActive) return;
             _externalDragActive = false;
+            ShotCancelled?.Invoke();
             TransitionToIdle();
         }
+
+        // ── Telemetry signals (beta_telemetry SPEC §1 #6/#7) ──────────────────────
+        // STATIC because the subscriber is the telemetry layer, which comes up at boot and
+        // must not race a per-hole ShotController instance into existence.
+        //
+        // Golfin.Gameplay.Input is autoReferenced:false, so Assembly-CSharp cannot see these
+        // directly — ShotTelemetryRelay (Golfin.Gameplay.UI) re-raises them where the hooks
+        // can subscribe. Raising an event nobody listens to costs a null check.
+
+        /// <summary>Player released the drag but the flick was too slow to fire.
+        /// Argument is <see cref="LastFlickSpeedScreenHeights"/> at the moment of rejection.</summary>
+        public static event System.Action<float> FlickRejected;
+
+        /// <summary>Player abandoned a drag without releasing into a shot.</summary>
+        public static event System.Action ShotCancelled;
 
         // Fires a shot directly without gesture input. Maps accuracy preset to degradation yaw.
         // power range: 0–1.2 (same as PowerNormalized; 1.0 = 100%).

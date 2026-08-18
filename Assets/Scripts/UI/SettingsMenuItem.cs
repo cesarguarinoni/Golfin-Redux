@@ -158,8 +158,14 @@ namespace Golfin.UI
             }
             
             _isExpanded = false;
-            _animationProgress = 0f;
-            
+
+            // Do NOT reset progress here. Collapsing means animating from wherever we are DOWN to 0,
+            // and 0 is the collapse target — zeroing it made Update()'s
+            // "progress != target" branch false on the very first frame, so the collapse animation
+            // never ran and, critically, the branch that deactivates the container never fired.
+            // The container then sat active at height 0, and since a zero-height rect does not clip,
+            // its children kept drawing over the rows underneath.
+
             OnCollapsed?.Invoke(this);
             
             Debug.Log($"[SettingsMenuItem] Collapsed: {gameObject.name}, _isExpanded now = {_isExpanded}");
@@ -235,6 +241,35 @@ namespace Golfin.UI
                     }
                     
                     Debug.Log($"[SettingsMenuItem] Visual state corrected for {gameObject.name}");
+                }
+            }
+        }
+
+        /// <summary>
+        /// Re-declare how tall this item's submenu needs to be.
+        ///
+        /// <see cref="Awake"/> caches the height off the container's authored size, which is only
+        /// correct for submenus whose content is fixed in the scene. A submenu that builds its own
+        /// content at runtime (About: version string + licence list, both localised) must call this
+        /// after populating, or the accordion animates to a stale height and clips the text.
+        /// </summary>
+        public void SetSubmenuHeight(float height)
+        {
+            if (height <= 0f) return;
+
+            _targetHeight = height;
+
+            if (_submenuRect == null) return;
+
+            // If we are already open, adopt the new height immediately rather than waiting for a
+            // re-expand (OnEnable fires mid-expand, so the animation picks this up on the next frame).
+            if (_isExpanded && Mathf.Approximately(_animationProgress, 1f))
+            {
+                _currentHeight = height;
+                _submenuRect.sizeDelta = new Vector2(_submenuRect.sizeDelta.x, height);
+                if (_layoutElement != null)
+                {
+                    _layoutElement.preferredHeight = _baseRowHeight + height;
                 }
             }
         }
