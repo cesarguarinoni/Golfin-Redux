@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { useT } from "@/components/I18nProvider";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 export function LoginForm({ mockMode }: { mockMode: boolean }) {
+  const t = useT();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -38,7 +40,7 @@ export function LoginForm({ mockMode }: { mockMode: boolean }) {
       // avoids a push/refresh race that intermittently left the URL on /login.
       window.location.assign("/users");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Login failed");
+      setError(err instanceof Error ? err.message : t("login.failed"));
       setBusy(false);
     }
   }
@@ -50,12 +52,11 @@ export function LoginForm({ mockMode }: { mockMode: boolean }) {
     >
       {mockMode && (
         <div className="mb-4 rounded-md border border-yellow-600/40 bg-yellow-500/10 px-3 py-2 text-xs text-yellow-300">
-          <span className="font-bold">MOCK MODE</span> — any allowlisted email
-          signs in, password is ignored.
+          <span className="font-bold">{t("common.mock")}</span> — {t("login.mockHint")}
         </div>
       )}
       <label className="block text-xs font-medium text-zinc-400">
-        Email
+        {t("login.email")}
         <input
           type="email"
           required
@@ -67,7 +68,7 @@ export function LoginForm({ mockMode }: { mockMode: boolean }) {
         />
       </label>
       <label className="mt-4 block text-xs font-medium text-zinc-400">
-        Password
+        {t("login.password")}
         <input
           type="password"
           required={!mockMode}
@@ -88,7 +89,7 @@ export function LoginForm({ mockMode }: { mockMode: boolean }) {
         disabled={busy}
         className="mt-5 w-full rounded-md bg-accent-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-accent-500 disabled:opacity-50"
       >
-        {busy ? "Signing in…" : "Sign in"}
+        {busy ? t("login.submitting") : t("login.submit")}
       </button>
     </form>
   );

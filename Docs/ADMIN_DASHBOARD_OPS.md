@@ -12,7 +12,7 @@ Full detail lives in that folder's `README.md`; this file is the operator's view
 
 Next.js 15 (App Router) + TypeScript + Tailwind, deployed to **Cloudflare
 Workers** via the OpenNext adapter, reading the PLAYLIFE Supabase project
-directly with a `service_role` key. Four panels — Users, Points, Tournaments,
+directly with a `service_role` key. Five panels — Users, Points, Tournaments, Banners,
 Audit Log — registered in `lib/registry.ts`.
 
 | Thing | Value |
@@ -94,7 +94,30 @@ npx wrangler secret list
 The Worker must exist before secrets can be set, so a first-ever deploy runs
 without them.
 
-### 3.4 Adding an admin — two places
+### 3.4 Adding UI text — it must be bilingual
+The dashboard ships EN + JA behind a switcher at the top right (added
+2026-08-18). No i18n library: `lib/i18n.ts` holds one flat `DICT` of
+`{ en, ja }` entries, `translate()` does `{var}` interpolation, and the chosen
+language lives in the **cookie** `golfin_admin_lang` so the *server* renders the
+right language on first paint — localStorage would flash English then flip.
+
+- Client components: `const t = useT()` from `components/I18nProvider`, then
+  `t("key")` / `t("key", { count: 3 })`.
+- Server components: read the cookie yourself — `app/not-admin/page.tsx` is the
+  three-line pattern.
+- Adding a string means adding a `DICT` entry with **both** languages; `DictKey`
+  is derived from `DICT`, so a missing key is a type error, not a runtime blank.
+- `t` is a short name and gets shadowed easily — `rows.map((t) => …)` has bitten
+  this file twice. Name row params `row`.
+- Japanese is longer in some places and unbreakable in others: badges and table
+  headers need `whitespace-nowrap`, and drop `tracking-wider` on JA badges.
+- The switcher is `z-30` on purpose — drawers and editors are `z-40` and must
+  cover it.
+
+Untranslated by design: Unity object paths, bucket names, slugs, DB column
+names, `<title>` metadata, and the LIVE / SCHEDULED / OFF state badges.
+
+### 3.5 Adding an admin — two places
 `ADMIN_EMAILS` (Worker secret) **and** the Cloudflare Access policy. They fail
 differently: miss the policy and the person gets a Cloudflare block page; miss
 the secret and they clear Access and land on `/not-admin`.
@@ -183,32 +206,6 @@ Routes live in `backend/routers/`, mounted under `/api/v1`. Envelope is
 ---
 
 ## 6. Still open
-
-- **Banners panel — BUILT, waiting on one SQL paste.** `Docs/Specs/Active/game_banners/`. The
-  fifth panel (`/banners`), `GET /api/v1/banners` on playlife-api, and the Unity half are all
-  written and locally verified. **Nothing is deployed**, deliberately: `public.game_banners`
-  does not exist yet (PostgREST returns `PGRST205`), and per §3.2 code that reads a missing
-  column 500s the endpoint. Order to finish it:
-
-  1. Paste `playlife/backend/migrations/2026_08_17_game_banners.sql` (same file is mirrored in
-     `Tools/admin-dashboard/migrations/`) into the Supabase SQL editor.
-  2. Verify the columns landed — the VERIFICATION block at the bottom of that file, or:
-     `curl -s "$SUPABASE_URL/rest/v1/game_banners?limit=1&select=*" -H "apikey: $KEY" -H "Authorization: Bearer $KEY"` → `200 []`.
-  3. `cd /Users/cesar/Documents/playlife/backend && export PATH="$HOME/.fly/bin:$PATH" && fly deploy`
-     (background it per §4.6), then `curl -s https://playlife-api.fly.dev/api/v1/banners` →
-     200 with `{"data":{"fetched_at","banners"}}`. The **bare** path must be 200, not 307.
-  4. `npm run deploy` from `Tools/admin-dashboard`, then the §2 check → 302.
-
-  The `game-banners` Storage bucket is created on first upload by `uploadBannerArt`, exactly as
-  `tournament-art` is — no manual Supabase step.
-
-- **⚠️ Banner link-host allowlist needs Cesar's confirmation.** `BannerPolicy.AllowedLinkHosts`
-  (`Assets/Scripts/BannersRuntime/BannerPolicy.cs`) currently allows `golfin.io`, `www.golfin.io`,
-  `golfin.world`, `www.golfin.world` — exact matches, no wildcards. **It ships in the build**, so a
-  campaign page on a marketing host, a Notion/Typeform page or a partner domain needs a client
-  release; an admin cannot add a host from the dashboard, by design. `ALLOWED_LINK_HOSTS` in
-  `lib/banner.ts` must be kept in step: a URL the dashboard accepts but the client refuses is a
-  banner that looks fine to the operator and does nothing on the device.
 
 - **`service_role` key rotation.** The key passed through a chat log once.
   Rotating means updating three places together: the Cloudflare secret, the Fly

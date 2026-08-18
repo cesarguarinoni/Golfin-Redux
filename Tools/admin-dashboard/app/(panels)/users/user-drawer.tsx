@@ -1,7 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useT } from "@/components/I18nProvider";
 import { ProviderBadge } from "@/components/ProviderBadge";
+import type { DictKey } from "@/lib/i18n";
 import { fmtDateTime } from "@/lib/format";
 import type {
   AdminUserRow,
@@ -25,38 +27,36 @@ type PendingModal =
 
 const ACTION_COPY: Record<
   UserActionKind,
-  { title: string; body: (u: AdminUserRow) => string; confirm: string; destructive: boolean }
+  { titleKey: DictKey; bodyKey: DictKey; confirmKey: DictKey; destructive: boolean }
 > = {
   resend_confirmation: {
-    title: "Resend confirmation email",
-    body: (u) => `Resend the signup confirmation email to ${u.email}?`,
-    confirm: "Resend email",
+    titleKey: "uact.resend_confirmation.title",
+    bodyKey: "uact.resend_confirmation.body",
+    confirmKey: "uact.resend_confirmation.confirm",
     destructive: false,
   },
   send_password_reset: {
-    title: "Send password reset",
-    body: (u) => `Send a password-reset email to ${u.email}?`,
-    confirm: "Send reset email",
+    titleKey: "uact.send_password_reset.title",
+    bodyKey: "uact.send_password_reset.body",
+    confirmKey: "uact.send_password_reset.confirm",
     destructive: false,
   },
   confirm_email: {
-    title: "Manually confirm email",
-    body: (u) =>
-      `Mark ${u.email} as confirmed without the user clicking the confirmation link?`,
-    confirm: "Confirm email",
+    titleKey: "uact.confirm_email.title",
+    bodyKey: "uact.confirm_email.body",
+    confirmKey: "uact.confirm_email.confirm",
     destructive: false,
   },
   ban: {
-    title: "Ban user",
-    body: (u) =>
-      `Ban ${u.email}? Sets banned_until ≈ 100 years from now (ban_duration 876000h). The user will be unable to sign in until unbanned.`,
-    confirm: "Ban user",
+    titleKey: "uact.ban.title",
+    bodyKey: "uact.ban.body",
+    confirmKey: "uact.ban.confirm",
     destructive: true,
   },
   unban: {
-    title: "Unban user",
-    body: (u) => `Lift the ban on ${u.email}? They will be able to sign in again.`,
-    confirm: "Unban user",
+    titleKey: "uact.unban.title",
+    bodyKey: "uact.unban.body",
+    confirmKey: "uact.unban.confirm",
     destructive: false,
   },
 };
@@ -116,6 +116,7 @@ export function UserDrawer({
   /** Re-fetches the users list; the drawer re-renders from the fresh row. */
   onMutated: () => Promise<void>;
 }) {
+  const t = useT();
   const [detail, setDetail] = useState<UserDetailResponse | null>(null);
   const [detailError, setDetailError] = useState<string | null>(null);
   const [detailVersion, setDetailVersion] = useState(0);
@@ -149,7 +150,7 @@ export function UserDrawer({
       } catch (err) {
         if (!cancelled)
           setDetailError(
-            err instanceof Error ? err.message : "Failed to load detail"
+            err instanceof Error ? err.message : t("udrawer.loadFailed")
           );
       }
     })();
@@ -187,12 +188,12 @@ export function UserDrawer({
           throw new Error(body?.error ?? `Request failed (${res.status})`);
         }
         setPending(null);
-        setNotice({ ok: true, text: body?.message ?? "Done." });
+        setNotice({ ok: true, text: body?.message ?? t("common.done") });
         await onMutated();
         setDetailVersion((v) => v + 1);
         if (opts?.closeDrawerOnSuccess) onClose();
       } catch (err) {
-        setModalError(err instanceof Error ? err.message : "Request failed");
+        setModalError(err instanceof Error ? err.message : t("common.requestFailed"));
       } finally {
         setBusy(false);
       }
@@ -214,12 +215,12 @@ export function UserDrawer({
         | null;
       if (!res.ok) throw new Error(body?.error ?? `Request failed (${res.status})`);
       setEditingName(false);
-      setNotice({ ok: true, text: body?.message ?? "Saved." });
+      setNotice({ ok: true, text: body?.message ?? t("te.saved") });
       await onMutated();
     } catch (err) {
       setNotice({
         ok: false,
-        text: err instanceof Error ? err.message : "Save failed",
+        text: err instanceof Error ? err.message : t("te.saveFailed"),
       });
     } finally {
       setBusy(false);
@@ -237,7 +238,7 @@ export function UserDrawer({
       {/* Overlay */}
       <button
         type="button"
-        aria-label="Close"
+        aria-label={t("udrawer.close")}
         onClick={onClose}
         className="absolute inset-0 h-full w-full cursor-default bg-black/60"
       />
@@ -262,7 +263,7 @@ export function UserDrawer({
                     disabled={busy || nameDraft.trim().length === 0}
                     className="rounded-md bg-accent-600 px-2 py-1 text-xs font-semibold text-white hover:bg-accent-500 disabled:opacity-50"
                   >
-                    Save
+                    {t("common.save")}
                   </button>
                   <button
                     type="button"
@@ -273,7 +274,7 @@ export function UserDrawer({
                     disabled={busy}
                     className="rounded-md border border-surface-700 px-2 py-1 text-xs text-zinc-400 hover:bg-surface-800"
                   >
-                    Cancel
+                    {t("common.cancel")}
                   </button>
                 </span>
               ) : (
@@ -288,8 +289,8 @@ export function UserDrawer({
                       setEditingName(true);
                       setNotice(null);
                     }}
-                    title="Edit display name (writes profiles.display_name + auth user_metadata)"
-                    aria-label="Edit display name"
+                    title={t("udrawer.editNameHint")}
+                    aria-label={t("udrawer.editName")}
                     className="rounded p-1 text-zinc-500 transition hover:bg-surface-800 hover:text-accent-400"
                   >
                     <svg
@@ -310,7 +311,7 @@ export function UserDrawer({
               ))}
               {banned && (
                 <span className="rounded bg-red-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-red-300">
-                  BANNED
+                  {t("udrawer.banned")}
                 </span>
               )}
             </div>
@@ -325,7 +326,7 @@ export function UserDrawer({
             type="button"
             onClick={onClose}
             className="rounded-md p-1.5 text-zinc-500 transition hover:bg-surface-800 hover:text-zinc-200"
-            aria-label="Close drawer"
+            aria-label={t("udrawer.close")}
           >
             <svg
               viewBox="0 0 24 24"
@@ -359,7 +360,7 @@ export function UserDrawer({
             <div className="flex items-end justify-between">
               <div>
                 <div className="text-[10px] font-medium uppercase tracking-wider text-zinc-500">
-                  Reward Points (total_points)
+                  {t("udrawer.rp")}
                 </div>
                 <div className="mt-1 text-3xl font-bold tabular-nums text-accent-400">
                   {user.totalPoints.toLocaleString()}
@@ -388,20 +389,20 @@ export function UserDrawer({
           {/* Admin actions */}
           <section className="mt-4 rounded-lg border border-surface-800 bg-surface-950 p-4">
             <div className="text-[10px] font-medium uppercase tracking-wider text-zinc-500">
-              Admin actions
+              {t("udrawer.adminActions")}
             </div>
             <div className="mt-2.5 flex flex-wrap gap-2">
               <ActionButton
-                label="Adjust RP"
+                label={t("udrawer.action.rp")}
                 tone="accent"
                 onClick={() => openModal({ kind: "rp" })}
               />
               <ActionButton
-                label="Resend confirmation"
+                label={t("udrawer.action.resendConfirmation")}
                 disabled={user.emailConfirmedAt !== null}
                 title={
                   user.emailConfirmedAt !== null
-                    ? "Email already confirmed"
+                    ? t("udrawer.alreadyConfirmed")
                     : undefined
                 }
                 onClick={() =>
@@ -409,17 +410,17 @@ export function UserDrawer({
                 }
               />
               <ActionButton
-                label="Send password reset"
+                label={t("udrawer.action.sendPasswordReset")}
                 onClick={() =>
                   openModal({ kind: "action", action: "send_password_reset" })
                 }
               />
               <ActionButton
-                label="Confirm email"
+                label={t("udrawer.action.confirmEmail")}
                 disabled={user.emailConfirmedAt !== null}
                 title={
                   user.emailConfirmedAt !== null
-                    ? "Email already confirmed"
+                    ? t("udrawer.alreadyConfirmed")
                     : undefined
                 }
                 onClick={() =>
@@ -428,18 +429,18 @@ export function UserDrawer({
               />
               {banned ? (
                 <ActionButton
-                  label="Unban user"
+                  label={t("udrawer.action.unban")}
                   onClick={() => openModal({ kind: "action", action: "unban" })}
                 />
               ) : (
                 <ActionButton
-                  label="Ban user"
+                  label={t("udrawer.action.ban")}
                   tone="danger"
                   onClick={() => openModal({ kind: "action", action: "ban" })}
                 />
               )}
               <ActionButton
-                label="Delete user"
+                label={t("udrawer.action.delete")}
                 tone="danger"
                 onClick={() => openModal({ kind: "delete" })}
               />
@@ -448,29 +449,29 @@ export function UserDrawer({
 
           {/* Profile fields */}
           <section className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 rounded-lg border border-surface-800 bg-surface-950 p-4 sm:grid-cols-3">
-            <Field label="Avatar level">{user.avatarLevel}</Field>
-            <Field label="Avatar XP">{user.avatarXp.toLocaleString()}</Field>
-            <Field label="Trust level">{user.trustLevel ?? "—"}</Field>
-            <Field label="Followers">{user.followersCount}</Field>
-            <Field label="Following">{user.followingCount}</Field>
-            <Field label="Badges">{user.badgesCount}</Field>
+            <Field label={t("udrawer.field.avatarLevel")}>{user.avatarLevel}</Field>
+            <Field label={t("udrawer.field.avatarXp")}>{user.avatarXp.toLocaleString()}</Field>
+            <Field label={t("udrawer.field.trustLevel")}>{user.trustLevel ?? "—"}</Field>
+            <Field label={t("udrawer.field.followers")}>{user.followersCount}</Field>
+            <Field label={t("udrawer.field.following")}>{user.followingCount}</Field>
+            <Field label={t("udrawer.field.badges")}>{user.badgesCount}</Field>
           </section>
 
           {/* Auth identity + timestamps */}
           <section className="mt-4 grid grid-cols-1 gap-3 rounded-lg border border-surface-800 bg-surface-950 p-4 sm:grid-cols-2">
-            <Field label="Providers">{user.providers.join(", ")}</Field>
-            <Field label="Email confirmed">
+            <Field label={t("udrawer.field.providers")}>{user.providers.join(", ")}</Field>
+            <Field label={t("udrawer.field.emailConfirmed")}>
               {user.emailConfirmedAt ? (
                 <span className="text-accent-400">
                   ✓ {fmtDateTime(user.emailConfirmedAt)}
                 </span>
               ) : (
-                <span className="text-red-400">✗ unconfirmed</span>
+                <span className="text-red-400">✗ {t("udrawer.unconfirmed")}</span>
               )}
             </Field>
-            <Field label="Created">{fmtDateTime(user.createdAt)}</Field>
-            <Field label="Last sign-in">{fmtDateTime(user.lastSignInAt)}</Field>
-            <Field label="Banned until">
+            <Field label={t("udrawer.field.created")}>{fmtDateTime(user.createdAt)}</Field>
+            <Field label={t("udrawer.field.lastSignIn")}>{fmtDateTime(user.lastSignInAt)}</Field>
+            <Field label={t("udrawer.field.bannedUntil")}>
               {user.bannedUntil ? (
                 <span className="text-red-400">
                   {fmtDateTime(user.bannedUntil)}
@@ -485,10 +486,10 @@ export function UserDrawer({
           <div className="mt-5 flex gap-1 border-b border-surface-800">
             {(
               [
-                ["transactions", "Points ledger"],
-                ["activities", "Activities"],
+                ["transactions", "udrawer.tab.transactions"],
+                ["activities", "udrawer.tab.activities"],
               ] as const
-            ).map(([key, label]) => (
+            ).map(([key, labelKey]) => (
               <button
                 key={key}
                 type="button"
@@ -499,7 +500,7 @@ export function UserDrawer({
                     : "text-zinc-500 hover:text-zinc-300"
                 }`}
               >
-                {label}
+                {t(labelKey)}
               </button>
             ))}
           </div>
@@ -511,13 +512,13 @@ export function UserDrawer({
               </p>
             )}
             {!detail && !detailError && (
-              <p className="py-6 text-center text-xs text-zinc-600">Loading…</p>
+              <p className="py-6 text-center text-xs text-zinc-600">{t("common.loading")}</p>
             )}
             {detail && tab === "transactions" && (
               <ul className="space-y-2">
                 {detail.transactions.length === 0 && (
                   <li className="py-6 text-center text-xs text-zinc-600">
-                    No points transactions.
+                    {t("udrawer.noTx")}
                   </li>
                 )}
                 {detail.transactions.map((t) => (
@@ -557,7 +558,7 @@ export function UserDrawer({
               <ul className="space-y-2">
                 {detail.activities.length === 0 && (
                   <li className="py-6 text-center text-xs text-zinc-600">
-                    No recorded activities.
+                    {t("udrawer.noActivities")}
                   </li>
                 )}
                 {detail.activities.map((a) => (
@@ -577,16 +578,16 @@ export function UserDrawer({
         </div>
 
         <footer className="border-t border-surface-800 px-5 py-2.5 text-center text-[10px] uppercase tracking-widest text-zinc-600">
-          All mutations are audited — admin_audit_log
+          {t("udrawer.audited")}
         </footer>
       </div>
 
       {/* Modals */}
       {pending?.kind === "action" && (
         <ConfirmActionModal
-          title={ACTION_COPY[pending.action].title}
-          body={ACTION_COPY[pending.action].body(user)}
-          confirmLabel={ACTION_COPY[pending.action].confirm}
+          title={t(ACTION_COPY[pending.action].titleKey)}
+          body={t(ACTION_COPY[pending.action].bodyKey, { email: user.email })}
+          confirmLabel={t(ACTION_COPY[pending.action].confirmKey)}
           destructive={ACTION_COPY[pending.action].destructive}
           mock={mock}
           busy={busy}

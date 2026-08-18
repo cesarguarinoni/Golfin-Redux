@@ -1,12 +1,15 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useT } from "@/components/I18nProvider";
 import { fmtDateTime } from "@/lib/format";
+import type { DictKey } from "@/lib/i18n";
 import type { PointsCurrency, PointsResponse } from "@/lib/types";
 
 const PAGE_SIZE = 25;
 
 export function PointsPanel() {
+  const t = useT();
   const [data, setData] = useState<PointsResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -32,7 +35,7 @@ export function PointsPanel() {
         if (!cancelled) setData(json);
       } catch (err) {
         if (!cancelled)
-          setError(err instanceof Error ? err.message : "Failed to load ledger");
+          setError(err instanceof Error ? err.message : t("points.loadFailed"));
       }
     })();
     return () => {
@@ -74,14 +77,14 @@ export function PointsPanel() {
   if (error) {
     return (
       <div className="rounded-lg border border-red-500/40 bg-red-500/10 p-4 text-sm text-red-300">
-        Failed to load ledger: {error}
+        {t("points.loadFailed")}: {error}
       </div>
     );
   }
   if (!data) {
     return (
       <div className="flex h-64 items-center justify-center text-sm text-zinc-500">
-        Loading ledger…
+        {t("points.loading")}
       </div>
     );
   }
@@ -89,9 +92,9 @@ export function PointsPanel() {
   return (
     <div>
       <div className="mb-5 flex items-baseline justify-between">
-        <h1 className="text-lg font-semibold text-zinc-100">Points</h1>
+        <h1 className="text-lg font-semibold text-zinc-100">{t("points.title")}</h1>
         <span className="text-xs text-zinc-500">
-          global points_transactions · read-only
+          {t("points.subtitle")}
         </span>
       </div>
 
@@ -106,13 +109,13 @@ export function PointsPanel() {
                 setCurrency(c);
                 resetPage();
               }}
-              className={`px-3 py-1.5 font-medium capitalize transition ${
+              className={`px-3 py-1.5 font-medium transition ${
                 currency === c
                   ? "bg-accent-600 text-white"
                   : "bg-surface-900 text-zinc-400 hover:bg-surface-800"
               }`}
             >
-              {c}
+              {t(`points.currency.${c}` as DictKey)}
             </button>
           ))}
         </div>
@@ -124,7 +127,7 @@ export function PointsPanel() {
           }}
           className="rounded-md border border-surface-700 bg-surface-900 px-2.5 py-1.5 text-xs text-zinc-300 focus:border-accent-500 focus:outline-none"
         >
-          <option value="all">All types</option>
+          <option value="all">{t("points.allTypes")}</option>
           {types.map((t) => (
             <option key={t} value={t}>
               {t}
@@ -138,11 +141,11 @@ export function PointsPanel() {
             setEmailQuery(e.target.value);
             resetPage();
           }}
-          placeholder="Filter by user email…"
+          placeholder={t("points.filterEmail")}
           className="w-56 rounded-md border border-surface-700 bg-surface-900 px-3 py-1.5 text-xs text-zinc-200 placeholder:text-zinc-600 focus:border-accent-500 focus:outline-none"
         />
         <label className="flex items-center gap-1.5 text-xs text-zinc-500">
-          From
+          {t("points.from")}
           <input
             type="date"
             value={dateFrom}
@@ -154,7 +157,7 @@ export function PointsPanel() {
           />
         </label>
         <label className="flex items-center gap-1.5 text-xs text-zinc-500">
-          To
+          {t("points.to")}
           <input
             type="date"
             value={dateTo}
@@ -166,7 +169,7 @@ export function PointsPanel() {
           />
         </label>
         <span className="ml-auto text-xs text-zinc-500">
-          {filtered.length} of {entries.length} rows
+          {filtered.length} {t("common.of")} {entries.length} {t("common.rows")}
         </span>
       </div>
 
@@ -175,12 +178,12 @@ export function PointsPanel() {
         <table className="w-full min-w-[820px] text-left text-sm">
           <thead className="bg-surface-900 text-xs text-zinc-500">
             <tr>
-              <th className="px-4 py-2.5 font-medium">When</th>
-              <th className="px-4 py-2.5 font-medium">User</th>
-              <th className="px-4 py-2.5 font-medium">Type</th>
-              <th className="px-4 py-2.5 text-right font-medium">Amount</th>
-              <th className="px-4 py-2.5 font-medium">Description</th>
-              <th className="px-4 py-2.5 font-medium">Idempotency key</th>
+              <th className="whitespace-nowrap px-4 py-2.5 font-medium">{t("points.col.when")}</th>
+              <th className="whitespace-nowrap px-4 py-2.5 font-medium">{t("points.col.user")}</th>
+              <th className="whitespace-nowrap px-4 py-2.5 font-medium">{t("points.col.type")}</th>
+              <th className="whitespace-nowrap px-4 py-2.5 text-right font-medium">{t("points.col.amount")}</th>
+              <th className="whitespace-nowrap px-4 py-2.5 font-medium">{t("points.col.description")}</th>
+              <th className="whitespace-nowrap px-4 py-2.5 font-medium">{t("points.col.key")}</th>
             </tr>
           </thead>
           <tbody>
@@ -229,7 +232,7 @@ export function PointsPanel() {
                   colSpan={6}
                   className="px-4 py-10 text-center text-sm text-zinc-600"
                 >
-                  No transactions match the current filters.
+                  {t("points.none")}
                 </td>
               </tr>
             )}
@@ -246,10 +249,10 @@ export function PointsPanel() {
             onClick={() => setPage(safePage - 1)}
             className="rounded-md border border-surface-700 px-2.5 py-1 disabled:opacity-40"
           >
-            ← Prev
+            {t("common.prev")}
           </button>
           <span>
-            Page {safePage + 1} / {pageCount}
+            {t("common.page")} {safePage + 1} / {pageCount}
           </span>
           <button
             type="button"
@@ -257,7 +260,7 @@ export function PointsPanel() {
             onClick={() => setPage(safePage + 1)}
             className="rounded-md border border-surface-700 px-2.5 py-1 disabled:opacity-40"
           >
-            Next →
+            {t("common.next")}
           </button>
         </div>
       )}

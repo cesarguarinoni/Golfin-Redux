@@ -1,6 +1,8 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { PanelIcon } from "@/components/PanelIcon";
+import { DEFAULT_LANG, isLang, LANG_COOKIE, translate, type DictKey } from "@/lib/i18n";
 import { checkAdmin } from "@/lib/auth";
 import { PANELS } from "@/lib/registry";
 
@@ -13,6 +15,10 @@ export const dynamic = "force-dynamic";
 export default async function PanelsLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  const cookieLang = (await cookies()).get(LANG_COOKIE)?.value;
+  const lang = isLang(cookieLang) ? cookieLang : DEFAULT_LANG;
+  const t = (key: DictKey) => translate(key, lang);
+
   const check = await checkAdmin();
   if (!check.ok) {
     redirect(check.status === 403 ? "/not-admin" : "/login");
@@ -27,10 +33,10 @@ export default async function PanelsLayout({
           </div>
           <div>
             <div className="text-sm font-bold tracking-wide text-zinc-100">
-              GOLFIN
+              {t("app.name")}
             </div>
             <div className="text-[10px] uppercase tracking-widest text-zinc-500">
-              Admin v1
+              {t("app.subtitle")}
             </div>
           </div>
         </div>
@@ -43,7 +49,7 @@ export default async function PanelsLayout({
               className="flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium text-zinc-300 transition hover:bg-surface-800 hover:text-zinc-100"
             >
               <PanelIcon name={panel.icon} className="h-4 w-4 text-accent-400" />
-              {panel.title}
+              {t(`nav.${panel.id}` as DictKey)}
             </Link>
           ))}
         </nav>
@@ -60,7 +66,7 @@ export default async function PanelsLayout({
               type="submit"
               className="w-full rounded-md border border-surface-700 bg-surface-850 px-3 py-1.5 text-xs font-medium text-zinc-300 transition hover:bg-surface-700"
             >
-              Sign out
+              {t("app.signOut")}
             </button>
           </form>
         </div>

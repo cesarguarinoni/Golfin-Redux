@@ -5,12 +5,13 @@ import {
   ALLOWED_LINK_HOSTS,
   BANNER_ART_SPEC,
   BANNER_PLACEMENTS,
-  PLACEMENT_LABEL,
   bannerSpec,
   deriveBannerState,
   isAssignedPlacement,
   validateBannerLinkUrl,
 } from "@/lib/banner";
+import { useT } from "@/components/I18nProvider";
+import type { DictKey } from "@/lib/i18n";
 import type { BannerInput, BannerPlacement, BannerRow } from "@/lib/types";
 
 /** ISO → the value a datetime-local input wants, in UTC. Same helpers as the tournament editor. */
@@ -73,6 +74,7 @@ export function BannerEditor({
   /** Slugs of the tournaments pointing at this banner (tournament_modal only). */
   assignedTo?: string[];
 }) {
+  const t = useT();
   const isNew = banner === null;
   const [draft, setDraft] = useState<BannerInput>(() => (banner ? toDraft(banner) : blankDraft()));
   const [busy, setBusy] = useState(false);
@@ -119,9 +121,9 @@ export function BannerEditor({
         error?: string;
       } | null;
       if (!res.ok) throw new Error(body?.error ?? `Request failed (${res.status})`);
-      onSaved(body?.message ?? "Saved.");
+      onSaved(body?.message ?? t("ban.saved"));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Save failed");
+      setError(err instanceof Error ? err.message : t("ban.saveFailed"));
     } finally {
       setBusy(false);
     }
@@ -141,9 +143,9 @@ export function BannerEditor({
         error?: string;
       } | null;
       if (!res.ok) throw new Error(body?.error ?? `Request failed (${res.status})`);
-      onSaved(body?.message ?? "Deleted.");
+      onSaved(body?.message ?? t("ban.deleted"));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Delete failed");
+      setError(err instanceof Error ? err.message : t("ban.deleteFailed"));
     } finally {
       setBusy(false);
     }
@@ -153,7 +155,7 @@ export function BannerEditor({
     <div className="fixed inset-0 z-40" role="dialog" aria-modal="true">
       <button
         type="button"
-        aria-label="Close"
+        aria-label={t("common.close")}
         onClick={onClose}
         className="absolute inset-0 h-full w-full cursor-default bg-black/60"
       />
@@ -163,7 +165,7 @@ export function BannerEditor({
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <h2 className="truncate text-base font-semibold text-zinc-100">
-                {isNew ? "New banner" : draft.label || "(unlabelled)"}
+                {isNew ? t("ban.new") : draft.label || t("common.none")}
               </h2>
               <div className="mt-1 flex items-center gap-2">
                 <code className="text-xs text-zinc-500">{draft.placement}</code>
@@ -179,15 +181,14 @@ export function BannerEditor({
               onClick={onClose}
               className="rounded-md border border-surface-700 px-2.5 py-1 text-xs text-zinc-400 hover:bg-surface-800"
             >
-              Close
+              {t("common.close")}
             </button>
           </div>
 
           {needsConfirm && (
             <div className="mt-3 rounded-md border border-amber-500/50 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
-              <strong className="font-semibold">This banner is LIVE.</strong> Switching it off is
-              instant and player-facing — the slot snaps back to the bundled sprite on the next
-              fetch. Re-type the label to confirm.
+              <strong className="font-semibold">{t("ban.isLive")}</strong>{" "}
+              {t("ban.liveConfirmHint")}
               <input
                 value={confirmLabel}
                 onChange={(e) => setConfirmLabel(e.target.value)}
@@ -214,19 +215,18 @@ export function BannerEditor({
                 }`}
               >
                 {draft.isActive
-                  ? "Active — the game receives this"
-                  : "Draft — hidden from the game"}
+                  ? t("ban.activeOn")
+                  : t("ban.draft")}
               </div>
               <p className="mt-0.5 text-[11px] leading-relaxed text-zinc-500">
-                Separate from the schedule window below. Active plus inside the window is the only
-                combination a player sees; everything else leaves the bundled sprite on screen.
+                {t("ban.activeHint")}
               </p>
             </div>
             <button
               type="button"
               role="switch"
               aria-checked={draft.isActive}
-              aria-label="Active"
+              aria-label={t("ban.activeOn")}
               onClick={() => patch({ isActive: !draft.isActive })}
               className={`mt-0.5 flex h-6 w-11 shrink-0 items-center rounded-full transition ${
                 draft.isActive ? "bg-accent-600" : "bg-surface-700"
@@ -243,7 +243,7 @@ export function BannerEditor({
           <div className="mt-4 grid grid-cols-2 gap-4">
             <div className="col-span-1">
               <label className={label} htmlFor="b-placement">
-                Placement
+                {t("ban.placement")}
               </label>
               <select
                 id="b-placement"
@@ -253,7 +253,7 @@ export function BannerEditor({
               >
                 {BANNER_PLACEMENTS.map((p) => (
                   <option key={p} value={p}>
-                    {PLACEMENT_LABEL[p]}
+                    {t(`ban.placement.${p}` as DictKey)}
                   </option>
                 ))}
               </select>
@@ -262,7 +262,7 @@ export function BannerEditor({
 
             <div className={assignedPlacement ? "hidden" : "col-span-1"}>
               <label className={label} htmlFor="b-sort">
-                Sort order
+                {t("ban.sortOrder")}
               </label>
               <input
                 id="b-sort"
@@ -272,13 +272,13 @@ export function BannerEditor({
                 className={field}
               />
               <p className="mt-1 text-[11px] text-zinc-600">
-                Highest wins within the placement, then newest. −999…999.
+                {t("ban.sortHint")}
               </p>
             </div>
 
             <div className="col-span-2">
               <label className={label} htmlFor="b-label">
-                Label (admin-only)
+                {t("ban.label")}
               </label>
               <input
                 id="b-label"
@@ -288,14 +288,13 @@ export function BannerEditor({
                 className={field}
               />
               <p className="mt-1 text-[11px] text-zinc-600">
-                So you can find the row. Never sent to the client and never shown to a player — all
-                player-visible copy is baked into the artwork.
+                {t("ban.labelHint")}
               </p>
             </div>
 
             <div className="col-span-2">
               <label className={label} htmlFor="b-link">
-                Link URL (optional)
+                {t("ban.linkUrl")}
               </label>
               <input
                 id="b-link"
@@ -310,17 +309,14 @@ export function BannerEditor({
                 </p>
               ) : (
                 <p className="mt-1 text-[11px] leading-relaxed text-zinc-600">
-                  Opens in the device browser. Only {ALLOWED_LINK_HOSTS.join(", ")} — the client
-                  ships its own copy of that list, so a new host needs a client release, not a
-                  dashboard change. Leave empty for an informational banner: the slot is then not
-                  tappable.
+                  {t("ban.linkHint", { hosts: ALLOWED_LINK_HOSTS.join(", ") })}
                 </p>
               )}
             </div>
 
             <div className={assignedPlacement ? "hidden" : "col-span-1"}>
               <label className={label} htmlFor="b-start">
-                Start (UTC, optional)
+                {t("ban.start")}
               </label>
               <input
                 id="b-start"
@@ -332,7 +328,7 @@ export function BannerEditor({
             </div>
             <div className={assignedPlacement ? "hidden" : "col-span-1"}>
               <label className={label} htmlFor="b-end">
-                End (UTC, optional)
+                {t("ban.end")}
               </label>
               <input
                 id="b-end"
@@ -342,26 +338,21 @@ export function BannerEditor({
                 className={field}
               />
               <p className="mt-1 text-[11px] text-zinc-600">
-                Exclusive. Sent to the client so a banner cached on-device expires even offline.
+                {t("ban.exclusiveHint")}
               </p>
             </div>
 
             {assignedPlacement && (
               <div className="col-span-2 rounded-md border border-surface-700 bg-surface-900 px-3 py-2.5 text-[11px] leading-relaxed text-zinc-500">
                 <strong className="font-semibold text-zinc-300">
-                  This banner is assigned, not scheduled.
+                  {t("ban.assignedNotScheduled")}
                 </strong>{" "}
-                Schedule and sort order do not apply — each tournament&apos;s own window decides
-                when its strip is on screen, and a tournament shows exactly the one banner it is
-                assigned in the Tournaments panel. <strong className="text-zinc-300">Active</strong>{" "}
-                is still the kill switch: switching this off removes it from{" "}
-                <strong className="text-zinc-300">every</strong> tournament using it, at once.
+                {t("ban.assignedHint")}
                 {assignedTo.length > 0 && (
                   <>
                     {" "}
-                    Right now that is {assignedTo.length}{" "}
-                    {assignedTo.length === 1 ? "tournament" : "tournaments"}:{" "}
-                    <span className="font-mono text-zinc-400">{assignedTo.join(", ")}</span>.
+                    {t("ban.assignedNow", { count: assignedTo.length })}{" "}
+                    <span className="font-mono text-zinc-400">{assignedTo.join(", ")}</span>
                   </>
                 )}
               </div>
@@ -371,7 +362,7 @@ export function BannerEditor({
           <div className="mt-6 grid grid-cols-2 gap-5">
             <ArtSlot
               locale="en"
-              title="English artwork"
+              title={t("ban.artEn")}
               placement={draft.placement}
               url={draft.imageUrlEn}
               onChange={(url) => patch({ imageUrlEn: url })}
@@ -379,7 +370,7 @@ export function BannerEditor({
             />
             <ArtSlot
               locale="ja"
-              title="Japanese artwork"
+              title={t("ban.artJa")}
               placement={draft.placement}
               url={draft.imageUrlJa}
               onChange={(url) => patch({ imageUrlJa: url })}
@@ -388,13 +379,12 @@ export function BannerEditor({
           </div>
 
           <p className="mt-3 text-[11px] leading-relaxed text-zinc-600">
-            One image per locale — there are no text fields, so all copy is baked into the artwork.
-            A JP player gets the JA image and falls back to EN when it is absent (and vice versa);
-            with neither, the slot keeps its bundled{" "}
-            <code className="text-zinc-500">{spec.sprite.split("/").pop()}</code>. JPG / PNG / WebP ·
-            max {BANNER_ART_SPEC.maxBytes / 1024} KB · target {spec.width}×{spec.height}. Uploads go
-            to the <code>game-banners</code> bucket under an immutable content-hashed name, so the
-            URL is its own cache key.
+            {t("ban.artHint", {
+              sprite: spec.sprite.split("/").pop() ?? "",
+              maxKb: BANNER_ART_SPEC.maxBytes / 1024,
+              w: spec.width,
+              h: spec.height,
+            })}
           </p>
 
           {notice && (
@@ -415,18 +405,16 @@ export function BannerEditor({
                   {assignedTo.length > 0 && (
                     <p className="mb-2 rounded-md border border-red-500/50 bg-red-500/15 px-2.5 py-2 text-xs text-red-200">
                       <strong className="font-semibold">
-                        Assigned to {assignedTo.length}{" "}
-                        {assignedTo.length === 1 ? "tournament" : "tournaments"}:
+                        {t("ban.deleteAssignedWarn", { count: assignedTo.length })}
                       </strong>{" "}
-                      <span className="font-mono">{assignedTo.join(", ")}</span>. Deleting clears
-                      the assignment on {assignedTo.length === 1 ? "it" : "each of them"} — the
-                      {assignedTo.length === 1 ? " tournament" : " tournaments"} stay live and their
-                      sign-up modals simply render without a strip.
+                      <span className="font-mono">{assignedTo.join(", ")}</span>{" "}
+                      {t("ban.deleteAssignedBody")}
                     </p>
                   )}
                   <p className="text-xs text-red-300">
-                    Type <code className="font-mono">{banner!.label}</code> to delete this banner.
-                    The uploaded artwork stays in Storage.
+                    {t("ban.deleteConfirmType")}{" "}
+                    <code className="font-mono">{banner!.label}</code>{" "}
+                    {t("ban.deleteConfirmHint")}
                   </p>
                   <input
                     value={confirmLabel}
@@ -447,7 +435,7 @@ export function BannerEditor({
                       onClick={() => setDanger(false)}
                       className="rounded-md border border-surface-700 px-3 py-1.5 text-xs text-zinc-400 hover:bg-surface-800"
                     >
-                      Cancel
+                      {t("common.cancel")}
                     </button>
                   </div>
                 </>
@@ -457,7 +445,7 @@ export function BannerEditor({
                   onClick={() => setDanger(true)}
                   className="text-xs font-medium text-red-400 hover:text-red-300"
                 >
-                  Delete banner…
+                  {t("ban.deleteBanner")}
                 </button>
               )}
             </div>
@@ -470,7 +458,7 @@ export function BannerEditor({
             onClick={onClose}
             className="rounded-md border border-surface-700 px-3 py-1.5 text-xs text-zinc-400 hover:bg-surface-800"
           >
-            Cancel
+            {t("common.cancel")}
           </button>
           <button
             type="button"
@@ -478,7 +466,7 @@ export function BannerEditor({
             onClick={() => void save()}
             className="rounded-md bg-accent-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-accent-500 disabled:opacity-40"
           >
-            {busy ? "Saving…" : isNew ? "Create" : "Save"}
+            {busy ? t("ban.saving") : isNew ? t("ban.create") : t("common.save")}
           </button>
         </footer>
       </div>
@@ -503,6 +491,7 @@ function ArtSlot({
   onChange: (url: string | null) => void;
   onNotice: (message: string | null) => void;
 }) {
+  const t = useT();
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
@@ -517,12 +506,15 @@ function ArtSlot({
     onNotice(null);
 
     if (!(BANNER_ART_SPEC.mimeTypes as readonly string[]).includes(file.type)) {
-      setLocalError(`Unsupported type "${file.type || "unknown"}". Use JPG, PNG or WebP.`);
+      setLocalError(t("art.unsupportedType", { type: file.type || "unknown" }));
       return;
     }
     if (file.size > BANNER_ART_SPEC.maxBytes) {
       setLocalError(
-        `${(file.size / 1024).toFixed(0)} KB exceeds the ${BANNER_ART_SPEC.maxBytes / 1024} KB cap. Every mobile player downloads this once.`
+        t("art.tooBig", {
+          kb: (file.size / 1024).toFixed(0),
+          cap: BANNER_ART_SPEC.maxBytes / 1024,
+        })
       );
       return;
     }
@@ -539,7 +531,14 @@ function ArtSlot({
         const drift = Math.abs(ratio - spec.aspect) / spec.aspect;
         if (drift > BANNER_ART_SPEC.aspectTolerance) {
           setAspectWarning(
-            `${img.width}×${img.height} (ratio ${ratio.toFixed(2)}) — the slot is ${spec.width}×${spec.height} (${spec.aspect.toFixed(2)}). It will be cropped or letterboxed.`
+            t("art.aspectWarn", {
+              w: img.width,
+              h: img.height,
+              ratio: ratio.toFixed(2),
+              sw: spec.width,
+              sh: spec.height,
+              saspect: spec.aspect.toFixed(2),
+            })
           );
         }
         resolve();
@@ -562,9 +561,9 @@ function ArtSlot({
       } | null;
       if (!res.ok) throw new Error(body?.error ?? `Upload failed (${res.status})`);
       onChange(body?.url ?? null);
-      onNotice(`${body?.message ?? "Uploaded."} Save the banner to publish it.`);
+      onNotice(`${body?.message ?? ""} ${t("art.uploadedSaveHint")}`.trim());
     } catch (err) {
-      setLocalError(err instanceof Error ? err.message : "Upload failed");
+      setLocalError(err instanceof Error ? err.message : t("art.uploadFailed"));
     } finally {
       setBusy(false);
     }
@@ -586,7 +585,7 @@ function ArtSlot({
           />
         ) : (
           <div className="flex h-full items-center justify-center px-3 text-center text-[11px] text-zinc-600">
-            none — falls back to the other locale, then the bundled sprite
+            {t("ban.artNone")}
           </div>
         )}
       </div>
@@ -602,7 +601,7 @@ function ArtSlot({
         className="mt-2 block w-full text-xs text-zinc-400 file:mr-3 file:rounded-md file:border-0 file:bg-surface-700 file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-zinc-200 hover:file:bg-surface-800"
       />
 
-      {busy && <p className="mt-2 text-xs text-zinc-400">Uploading…</p>}
+      {busy && <p className="mt-2 text-xs text-zinc-400">{t("art.uploading")}</p>}
       {localError && (
         <p className="mt-2 rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-300">
           {localError}
@@ -625,7 +624,7 @@ function ArtSlot({
             }}
             className="mt-1 rounded-md border border-surface-700 px-2.5 py-1 text-xs text-zinc-400 hover:bg-surface-800"
           >
-            Remove
+            {t("art.remove")}
           </button>
         </div>
       )}

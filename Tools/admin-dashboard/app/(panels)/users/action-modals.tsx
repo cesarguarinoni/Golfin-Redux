@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useT } from "@/components/I18nProvider";
 import type { AdminUserRow } from "@/lib/types";
 
 /** Confirmation / input modals for the phase-2 admin actions. */
@@ -18,11 +19,12 @@ function ModalShell({
   onClose: () => void;
   children: React.ReactNode;
 }) {
+  const t = useT();
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <button
         type="button"
-        aria-label="Close"
+        aria-label={t("common.close")}
         onClick={onClose}
         className="absolute inset-0 h-full w-full cursor-default bg-black/70"
       />
@@ -37,7 +39,7 @@ function ModalShell({
           <h3 className="text-sm font-semibold text-zinc-100">{title}</h3>
           {mock && (
             <span className="rounded bg-yellow-500/15 px-1.5 py-0.5 text-[10px] font-bold tracking-wider text-yellow-300 ring-1 ring-yellow-600/40">
-              MOCK
+              {t("common.mock")}
             </span>
           )}
         </div>
@@ -71,6 +73,7 @@ function ModalButtons({
   onConfirm: () => void;
   onCancel: () => void;
 }) {
+  const t = useT();
   return (
     <div className="mt-5 flex justify-end gap-2">
       <button
@@ -79,7 +82,7 @@ function ModalButtons({
         disabled={busy}
         className="rounded-md border border-surface-700 bg-surface-850 px-3 py-1.5 text-xs font-medium text-zinc-300 transition hover:bg-surface-700 disabled:opacity-50"
       >
-        Cancel
+        {t("common.cancel")}
       </button>
       <button
         type="button"
@@ -91,7 +94,7 @@ function ModalButtons({
             : "bg-accent-600 hover:bg-accent-500"
         }`}
       >
-        {busy ? "Working…" : confirmLabel}
+        {busy ? t("udrawer.working") : confirmLabel}
       </button>
     </div>
   );
@@ -154,35 +157,35 @@ export function DeleteUserModal({
   onConfirm: (confirmEmail: string) => void;
   onCancel: () => void;
 }) {
+  const t = useT();
   const [typed, setTyped] = useState("");
   const matches = typed.trim().toLowerCase() === user.email.toLowerCase();
 
   return (
-    <ModalShell title="Delete user" mock={mock} destructive onClose={onCancel}>
+    <ModalShell title={t("udel.title")} mock={mock} destructive onClose={onCancel}>
       <div className="mt-3 rounded-md border border-red-500/50 bg-red-500/10 px-3 py-2.5 text-xs leading-relaxed text-red-200">
         <p className="font-bold uppercase tracking-wide text-red-300">
-          Permanent — cannot be undone
+          {t("udel.permanent")}
         </p>
         <p className="mt-1.5">
-          Deleting <span className="font-mono">{user.email}</span> removes the
-          auth user and, via FK cascade, everything hanging off it:
+          {t("udel.body", { email: user.email })}
         </p>
         <ul className="mt-1.5 list-inside list-disc space-y-0.5">
           <li>
-            <span className="font-mono">profiles</span> row — RP balance (
-            {user.totalPoints.toLocaleString()} RP), avatar, social counters
+            <span className="font-mono">profiles</span>{" "}
+            {t("udel.item.profile", { rp: user.totalPoints.toLocaleString() })}
           </li>
           <li>
-            <span className="font-mono">points_transactions</span> — the entire
-            points ledger history
+            <span className="font-mono">points_transactions</span>{" "}
+            {t("udel.item.points")}
           </li>
           <li>
-            <span className="font-mono">activities</span> — GPS check-ins
+            <span className="font-mono">activities</span> {t("udel.item.activities")}
           </li>
         </ul>
       </div>
       <label className="mt-4 block text-xs font-medium text-zinc-400">
-        Type the user&apos;s email to confirm
+        {t("udel.typeEmail")}
         <input
           type="text"
           value={typed}
@@ -195,7 +198,7 @@ export function DeleteUserModal({
       </label>
       <ModalError error={error} />
       <ModalButtons
-        confirmLabel="Delete user permanently"
+        confirmLabel={t("udel.confirm")}
         destructive
         busy={busy}
         disabled={!matches}
@@ -224,6 +227,7 @@ export function AdjustRpModal({
   onSubmit: (amount: number, reason: string) => void;
   onCancel: () => void;
 }) {
+  const t = useT();
   const [amountText, setAmountText] = useState("");
   const [reason, setReason] = useState("");
 
@@ -233,7 +237,7 @@ export function AdjustRpModal({
   const reasonValid = reason.trim().length >= 1 && reason.trim().length <= 200;
 
   return (
-    <ModalShell title="Adjust RP" mock={mock} onClose={onCancel}>
+    <ModalShell title={t("urp.title")} mock={mock} onClose={onCancel}>
       <p className="mt-2 text-xs text-zinc-500">
         {user.email} — current balance{" "}
         <span className="font-semibold text-zinc-300">
@@ -243,23 +247,23 @@ export function AdjustRpModal({
         {user.giftPts.toLocaleString()})
       </p>
       <label className="mt-4 block text-xs font-medium text-zinc-400">
-        Amount (positive grants, negative deducts)
+        {t("urp.amount")}
         <input
           type="number"
           step={1}
           value={amountText}
           onChange={(e) => setAmountText(e.target.value)}
-          placeholder="e.g. 100 or -50"
+          placeholder={t("urp.amountPlaceholder")}
           className="mt-1 w-full rounded-md border border-surface-700 bg-surface-950 px-3 py-2 text-sm text-zinc-200 placeholder:text-zinc-600 focus:border-accent-500 focus:outline-none"
         />
       </label>
       <label className="mt-3 block text-xs font-medium text-zinc-400">
-        Reason (required, max 200 chars)
+        {t("urp.reason")}
         <textarea
           value={reason}
           onChange={(e) => setReason(e.target.value.slice(0, 200))}
           rows={3}
-          placeholder="e.g. welcome grant for closed beta tester"
+          placeholder={t("urp.reasonPlaceholder")}
           className="mt-1 w-full resize-none rounded-md border border-surface-700 bg-surface-950 px-3 py-2 text-sm text-zinc-200 placeholder:text-zinc-600 focus:border-accent-500 focus:outline-none"
         />
         <span className="mt-0.5 block text-right text-[10px] text-zinc-600">
@@ -267,16 +271,16 @@ export function AdjustRpModal({
         </span>
       </label>
       <p className="text-[11px] leading-relaxed text-zinc-600">
-        Ledger description will read{" "}
+        {t("urp.ledgerHint")}{" "}
         <span className="font-mono text-zinc-500">
           admin: {reason.trim() || "<reason>"}
-        </span>
-        . Deductions debit activity points first, then gift points.
+        </span>{" "}
+        {t("urp.ledgerHint2")}
       </p>
       <ModalError error={error} />
       <ModalButtons
         confirmLabel={
-          amountValid && amount < 0 ? "Deduct RP" : "Grant RP"
+          amountValid && amount < 0 ? t("urp.deduct") : t("urp.grant")
         }
         destructive={amountValid && amount < 0}
         busy={busy}

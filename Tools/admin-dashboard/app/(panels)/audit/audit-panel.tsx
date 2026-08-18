@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useT } from "@/components/I18nProvider";
 import { fmtDateTime } from "@/lib/format";
 import type { AuditResponse } from "@/lib/types";
 
@@ -20,6 +21,7 @@ function JsonCell({ value }: { value: unknown }) {
 }
 
 export function AuditPanel() {
+  const t = useT();
   const [data, setData] = useState<AuditResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(0);
@@ -40,7 +42,7 @@ export function AuditPanel() {
       } catch (err) {
         if (!cancelled)
           setError(
-            err instanceof Error ? err.message : "Failed to load audit log"
+            err instanceof Error ? err.message : t("audit.loadFailed")
           );
       }
     })();
@@ -60,14 +62,14 @@ export function AuditPanel() {
   if (error) {
     return (
       <div className="rounded-lg border border-red-500/40 bg-red-500/10 p-4 text-sm text-red-300">
-        Failed to load audit log: {error}
+        {t("audit.loadFailed")}: {error}
       </div>
     );
   }
   if (!data) {
     return (
       <div className="flex h-64 items-center justify-center text-sm text-zinc-500">
-        Loading audit log…
+        {t("audit.loading")}
       </div>
     );
   }
@@ -75,22 +77,17 @@ export function AuditPanel() {
   return (
     <div>
       <div className="mb-5 flex items-baseline justify-between">
-        <h1 className="text-lg font-semibold text-zinc-100">Audit Log</h1>
+        <h1 className="text-lg font-semibold text-zinc-100">{t("audit.title")}</h1>
         <span className="text-xs text-zinc-500">
-          admin_audit_log · read-only viewer
+          {t("audit.subtitle")}
         </span>
       </div>
 
       {entries.length === 0 ? (
         <div className="rounded-lg border border-surface-800 bg-surface-900 px-6 py-12 text-center">
-          <p className="text-sm text-zinc-400">No audit entries yet.</p>
+          <p className="text-sm text-zinc-400">{t("audit.empty")}</p>
           <p className="mx-auto mt-2 max-w-md text-xs leading-relaxed text-zinc-600">
-            Every admin mutation (username edits, RP adjustments, bans, email
-            confirmations, deletions…) writes one row to{" "}
-            <span className="font-mono">public.admin_audit_log</span>. This
-            panel fills up as soon as mutations run against the live database —
-            in mock mode, entries appear here after you perform mock mutations
-            in the Users panel.
+            {t("audit.emptyBody")}
           </p>
         </div>
       ) : (
@@ -99,13 +96,13 @@ export function AuditPanel() {
             <table className="w-full min-w-[900px] text-left text-sm">
               <thead className="bg-surface-900 text-xs text-zinc-500">
                 <tr>
-                  <th className="px-4 py-2.5 font-medium">When</th>
-                  <th className="px-4 py-2.5 font-medium">Admin</th>
-                  <th className="px-4 py-2.5 font-medium">Action</th>
-                  <th className="px-4 py-2.5 font-medium">Target user</th>
-                  <th className="px-4 py-2.5 font-medium">Table</th>
-                  <th className="px-4 py-2.5 font-medium">Before</th>
-                  <th className="px-4 py-2.5 font-medium">After</th>
+                  <th className="whitespace-nowrap px-4 py-2.5 font-medium">{t("audit.col.when")}</th>
+                  <th className="whitespace-nowrap px-4 py-2.5 font-medium">{t("audit.col.admin")}</th>
+                  <th className="whitespace-nowrap px-4 py-2.5 font-medium">{t("audit.col.action")}</th>
+                  <th className="whitespace-nowrap px-4 py-2.5 font-medium">{t("audit.col.target")}</th>
+                  <th className="whitespace-nowrap px-4 py-2.5 font-medium">{t("audit.col.table")}</th>
+                  <th className="whitespace-nowrap px-4 py-2.5 font-medium">{t("audit.col.before")}</th>
+                  <th className="whitespace-nowrap px-4 py-2.5 font-medium">{t("audit.col.after")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -157,10 +154,10 @@ export function AuditPanel() {
                 onClick={() => setPage(safePage - 1)}
                 className="rounded-md border border-surface-700 px-2.5 py-1 disabled:opacity-40"
               >
-                ← Prev
+                {t("common.prev")}
               </button>
               <span>
-                Page {safePage + 1} / {pageCount}
+                {t("common.page")} {safePage + 1} / {pageCount}
               </span>
               <button
                 type="button"
@@ -168,7 +165,7 @@ export function AuditPanel() {
                 onClick={() => setPage(safePage + 1)}
                 className="rounded-md border border-surface-700 px-2.5 py-1 disabled:opacity-40"
               >
-                Next →
+                {t("common.next")}
               </button>
             </div>
           )}

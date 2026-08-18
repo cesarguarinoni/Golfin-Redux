@@ -3,12 +3,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   BANNER_PLACEMENTS,
-  PLACEMENT_LABEL,
   bannerSpec,
   deriveBannerState,
   isAssignedPlacement,
 } from "@/lib/banner";
 import { fmtDate } from "@/lib/format";
+import { useT } from "@/components/I18nProvider";
+import type { DictKey } from "@/lib/i18n";
 import type { BannerRow, BannerState, BannersResponse } from "@/lib/types";
 import { BannerEditor } from "./banner-editor";
 
@@ -20,10 +21,11 @@ const STATE_STYLES: Record<BannerState, string> = {
 };
 
 function StateBadge({ state }: { state: BannerState }) {
+  const t = useT();
   return (
     <span
-      className={`rounded border px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${STATE_STYLES[state]}`}
-      title="LIVE is the only state a player can see — every other state means the slot shows its bundled sprite."
+      className={`whitespace-nowrap rounded border px-1.5 py-0.5 text-[10px] font-bold uppercase ${STATE_STYLES[state]}`}
+      title={t("ban.liveNote")}
     >
       {state}
     </span>
@@ -31,6 +33,7 @@ function StateBadge({ state }: { state: BannerState }) {
 }
 
 export function BannersPanel() {
+  const t = useT();
   const [data, setData] = useState<BannersResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -51,7 +54,7 @@ export function BannersPanel() {
         setError(null);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load banners");
+      setError(err instanceof Error ? err.message : t("ban.loadFailed"));
     }
   }, []);
 
@@ -89,9 +92,7 @@ export function BannersPanel() {
     const next = !b.isActive;
     let confirmLabel: string | undefined;
     if (!next && deriveBannerState(b, Date.now()) === "LIVE") {
-      const typed = window.prompt(
-        `"${b.label}" is LIVE — players are seeing it right now.\nRe-type the label to switch it off:`
-      );
+      const typed = window.prompt(t("ban.confirmDeactivate", { label: b.label }));
       if (typed === null) return;
       confirmLabel = typed;
     }
@@ -109,9 +110,9 @@ export function BannersPanel() {
         error?: string;
       } | null;
       if (!res.ok) throw new Error(body?.error ?? `Request failed (${res.status})`);
-      await afterMutation(body?.message ?? "Saved.");
+      await afterMutation(body?.message ?? t("ban.saved"));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to switch the banner");
+      setError(err instanceof Error ? err.message : t("ban.switchFailed"));
     } finally {
       setBusyId(null);
     }
@@ -120,14 +121,14 @@ export function BannersPanel() {
   if (error) {
     return (
       <div className="rounded-lg border border-red-500/40 bg-red-500/10 p-4 text-sm text-red-300">
-        Failed to load banners: {error}
+        {t("ban.loadFailed")}: {error}
       </div>
     );
   }
   if (!data) {
     return (
       <div className="flex h-64 items-center justify-center text-sm text-zinc-500">
-        Loading banners…
+        {t("ban.loading")}
       </div>
     );
   }
@@ -137,20 +138,17 @@ export function BannersPanel() {
   return (
     <div>
       <div className="mb-4 flex items-baseline justify-between">
-        <h1 className="text-lg font-semibold text-zinc-100">Banners</h1>
-        <span className="text-xs text-zinc-500">
-          {liveCount} live · {rows.length} total
+        <h1 className="text-lg font-semibold text-zinc-100">{t("ban.title")}</h1>
+        <span className="whitespace-nowrap text-xs text-zinc-500">
+          {t("ban.count", { live: liveCount, total: rows.length })}
         </span>
       </div>
 
       <div className="mb-4 rounded-lg border border-accent-500/40 bg-accent-500/10 px-4 py-3 text-xs leading-relaxed text-accent-200">
         <strong className="font-semibold">
-          At most one banner per placement is served, and the bundled sprite is always the fallback.
+          {t("ban.onePerPlacement")}
         </strong>{" "}
-        The game picks the highest <code>sort order</code> that is active and inside its window, then
-        the newest. A placement with nothing live shows exactly what it shows today — nothing here
-        can make a slot go blank. Players pick this up on their next launch, or on their next visit
-        to the screen (the client refetches on screen entry, at most once a minute).
+        {t("ban.howItWorks")}
       </div>
 
       {notice && (
@@ -173,7 +171,7 @@ export function BannersPanel() {
           }}
           className="ml-auto rounded-md bg-accent-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-accent-500"
         >
-          + New banner
+          {t("ban.newBanner")}
         </button>
       </div>
 
@@ -182,7 +180,7 @@ export function BannersPanel() {
         return (
           <section key={placement} className="mb-6">
             <header className="mb-2 flex items-baseline gap-3">
-              <h2 className="text-sm font-semibold text-zinc-200">{PLACEMENT_LABEL[placement]}</h2>
+              <h2 className="text-sm font-semibold text-zinc-200">{t(`ban.placement.${placement}` as DictKey)}</h2>
               <code className="text-[11px] text-zinc-600">{placement}</code>
               <span className="text-[11px] text-zinc-600">
                 {spec.width}×{spec.height} · {spec.where}
@@ -193,14 +191,14 @@ export function BannersPanel() {
               <table className="w-full min-w-[880px] text-left text-sm">
                 <thead className="bg-surface-900 text-xs text-zinc-500">
                   <tr>
-                    <th className="px-4 py-2.5 font-medium">Preview</th>
-                    <th className="px-4 py-2.5 font-medium">Label (admin-only)</th>
-                    <th className="px-4 py-2.5 font-medium">State</th>
-                    <th className="px-4 py-2.5 font-medium">Art</th>
-                    <th className="px-4 py-2.5 font-medium">Link</th>
-                    <th className="px-4 py-2.5 font-medium">Window (UTC)</th>
-                    <th className="px-4 py-2.5 text-right font-medium">Sort</th>
-                    <th className="px-4 py-2.5 font-medium" />
+                    <th className="whitespace-nowrap px-4 py-2.5 font-medium">{t("ban.preview")}</th>
+                    <th className="whitespace-nowrap px-4 py-2.5 font-medium">{t("ban.label")}</th>
+                    <th className="whitespace-nowrap px-4 py-2.5 font-medium">{t("ban.col.state")}</th>
+                    <th className="whitespace-nowrap px-4 py-2.5 font-medium">{t("ban.col.art")}</th>
+                    <th className="whitespace-nowrap px-4 py-2.5 font-medium">{t("ban.col.link")}</th>
+                    <th className="whitespace-nowrap px-4 py-2.5 font-medium">{t("ban.col.window")}</th>
+                    <th className="whitespace-nowrap px-4 py-2.5 text-right font-medium">{t("ban.col.sort")}</th>
+                    <th className="whitespace-nowrap px-4 py-2.5 font-medium" />
                   </tr>
                 </thead>
                 <tbody>
@@ -232,7 +230,7 @@ export function BannersPanel() {
                               />
                             ) : (
                               <div className="flex h-full items-center justify-center text-[10px] text-zinc-600">
-                                no art
+                                {t("ban.noArt")}
                               </div>
                             )}
                           </div>
@@ -247,12 +245,10 @@ export function BannersPanel() {
                               title={(assigned[b.id] ?? []).join(", ")}
                             >
                               {(assigned[b.id] ?? []).length === 0
-                                ? "Not assigned to any tournament"
-                                : `Assigned to ${(assigned[b.id] ?? []).length} ${
-                                    (assigned[b.id] ?? []).length === 1
-                                      ? "tournament"
-                                      : "tournaments"
-                                  }`}
+                                ? t("ban.noTournament")
+                                : t("ban.assignedTo", {
+                                    count: (assigned[b.id] ?? []).length,
+                                  })}
                             </div>
                           )}
                         </td>
@@ -269,16 +265,16 @@ export function BannersPanel() {
                           </span>
                         </td>
                         <td className="max-w-[220px] truncate px-4 py-2.5 text-xs text-zinc-400">
-                          {b.linkUrl ?? <span className="text-zinc-600">none — not tappable</span>}
+                          {b.linkUrl ?? <span className="text-zinc-600">{t("ban.notTappable")}</span>}
                         </td>
                         <td className="whitespace-nowrap px-4 py-2.5 text-xs text-zinc-400">
                           {b.startAt || b.endAt ? (
                             <>
-                              {b.startAt ? fmtDate(b.startAt) : "always"} →{" "}
-                              {b.endAt ? fmtDate(b.endAt) : "no expiry"}
+                              {b.startAt ? fmtDate(b.startAt) : t("ban.always")} →{" "}
+                              {b.endAt ? fmtDate(b.endAt) : t("ban.noExpiry")}
                             </>
                           ) : (
-                            <span className="text-zinc-600">no window</span>
+                            <span className="text-zinc-600">{t("ban.noWindow")}</span>
                           )}
                         </td>
                         <td className="px-4 py-2.5 text-right text-xs tabular-nums text-zinc-300">
@@ -298,7 +294,7 @@ export function BannersPanel() {
                                 : "border-accent-500/50 text-accent-300 hover:bg-accent-500/15"
                             }`}
                           >
-                            {b.isActive ? "Deactivate" : "Activate"}
+                            {b.isActive ? t("ban.deactivate") : t("ban.activate")}
                           </button>
                         </td>
                       </tr>
@@ -307,8 +303,11 @@ export function BannersPanel() {
                   {group.length === 0 && (
                     <tr>
                       <td colSpan={8} className="px-4 py-8 text-center text-sm text-zinc-600">
-                        Nothing scheduled — this slot shows the bundled{" "}
-                        <code className="text-zinc-500">{spec.sprite.split("/").pop()}</code>.
+                        {spec.sprite.startsWith("—")
+                          ? t("ban.emptyPlacementNoSprite")
+                          : t("ban.emptyPlacement", {
+                              sprite: spec.sprite.split("/").pop() ?? "",
+                            })}
                       </td>
                     </tr>
                   )}

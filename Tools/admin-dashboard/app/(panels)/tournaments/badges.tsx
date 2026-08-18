@@ -1,3 +1,7 @@
+"use client";
+
+import { useT } from "@/components/I18nProvider";
+import type { DictKey } from "@/lib/i18n";
 import type { ArtLayer } from "@/lib/tournament";
 import type { TournamentKind, TournamentState } from "@/lib/types";
 
@@ -10,27 +14,29 @@ const STATE_STYLES: Record<TournamentState, string> = {
 };
 
 export function StateBadge({ state }: { state: TournamentState }) {
+  const t = useT();
   return (
     <span
-      className={`rounded border px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${STATE_STYLES[state]}`}
-      title="Derived from start_at/end_at — the same rule as LocalTournamentBackend.DeriveState"
+      className={`whitespace-nowrap rounded border px-1.5 py-0.5 text-[10px] font-bold uppercase ${STATE_STYLES[state]}`}
+      title={t("tstate.hint")}
     >
-      {state}
+      {t(`tstate.${state}` as DictKey)}
     </span>
   );
 }
 
 export function KindBadge({ kind }: { kind: TournamentKind }) {
+  const t = useT();
   return (
     <span
-      className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+      className={`whitespace-nowrap rounded px-1.5 py-0.5 text-[10px] font-bold uppercase ${
         kind === "golfin"
           ? "bg-accent-600/20 text-accent-300 ring-1 ring-accent-500/30"
           : "bg-surface-700 text-zinc-400"
       }`}
-      title={kind === "golfin" ? "In-game tournament" : "Real-world PLAYLIFE event"}
+      title={t(`tkind.${kind}.hint` as DictKey)}
     >
-      {kind}
+      {t(`tkind.${kind}` as DictKey)}
     </span>
   );
 }
@@ -42,12 +48,13 @@ const ART_STYLES: Record<ArtLayer, string> = {
 };
 
 export function ArtBadge({ layer }: { layer: ArtLayer }) {
+  const t = useT();
   return (
     <span
-      className={`text-[10px] font-medium uppercase tracking-wider ${ART_STYLES[layer]}`}
-      title="Which art layer the client will resolve to (SPEC §5c.1)"
+      className={`whitespace-nowrap text-[10px] font-medium uppercase ${ART_STYLES[layer]}`}
+      title={t("tart.hint")}
     >
-      {layer}
+      {t(`tart.${layer}` as DictKey)}
     </span>
   );
 }

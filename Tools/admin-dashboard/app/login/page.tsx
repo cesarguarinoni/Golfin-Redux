@@ -1,4 +1,6 @@
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { DEFAULT_LANG, isLang, LANG_COOKIE, translate, type DictKey } from "@/lib/i18n";
 import { checkAdmin } from "@/lib/auth";
 import { isMockMode } from "@/lib/mode";
 import { LoginForm } from "./login-form";
@@ -6,6 +8,10 @@ import { LoginForm } from "./login-form";
 export const dynamic = "force-dynamic";
 
 export default async function LoginPage() {
+  const cookieLang = (await cookies()).get(LANG_COOKIE)?.value;
+  const lang = isLang(cookieLang) ? cookieLang : DEFAULT_LANG;
+  const t = (key: DictKey) => translate(key, lang);
+
   const check = await checkAdmin();
   if (check.ok) redirect("/users");
 
@@ -18,9 +24,9 @@ export default async function LoginPage() {
               ⛳
             </span>
           </div>
-          <h1 className="text-xl font-semibold text-zinc-100">GOLFIN Admin</h1>
+          <h1 className="text-xl font-semibold text-zinc-100">{t("loginPage.title")}</h1>
           <p className="mt-1 text-sm text-zinc-500">
-            Internal dashboard — admins only
+            {t("loginPage.subtitle")}
           </p>
         </div>
         <LoginForm mockMode={isMockMode()} />

@@ -1,9 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useT } from "@/components/I18nProvider";
 import { courseName } from "@/lib/courses";
 import { fmtDate } from "@/lib/format";
 import { artLayer, deriveState, expandHoleSet, prizePoolSummary } from "@/lib/tournament";
+import type { DictKey } from "@/lib/i18n";
 import type { TournamentKind, TournamentRow, TournamentState, TournamentsResponse } from "@/lib/types";
 import { ArtBadge, KindBadge, StateBadge } from "./badges";
 import { TournamentEditor } from "./tournament-editor";
@@ -11,6 +13,7 @@ import { TournamentEditor } from "./tournament-editor";
 const STATES: TournamentState[] = ["Upcoming", "Open", "Ending", "Ended"];
 
 export function TournamentsPanel() {
+  const t = useT();
   const [data, setData] = useState<TournamentsResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -35,7 +38,7 @@ export function TournamentsPanel() {
         setError(null);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load tournaments");
+      setError(err instanceof Error ? err.message : t("tourn.loadFailed"));
     }
   }, []);
 
@@ -82,14 +85,14 @@ export function TournamentsPanel() {
   if (error) {
     return (
       <div className="rounded-lg border border-red-500/40 bg-red-500/10 p-4 text-sm text-red-300">
-        Failed to load tournaments: {error}
+        {t("tourn.loadFailed")}: {error}
       </div>
     );
   }
   if (!data) {
     return (
       <div className="flex h-64 items-center justify-center text-sm text-zinc-500">
-        Loading tournaments…
+        {t("tourn.loading")}
       </div>
     );
   }
@@ -97,10 +100,11 @@ export function TournamentsPanel() {
   return (
     <div>
       <div className="mb-4 flex items-baseline justify-between">
-        <h1 className="text-lg font-semibold text-zinc-100">Tournaments</h1>
+        <h1 className="text-lg font-semibold text-zinc-100">{t("tourn.title")}</h1>
         <span className="text-xs text-zinc-500">
-          {rows.filter((t) => !t.isActive).length} inactive · {counts.Open ?? 0} open ·{" "}
-          {counts.Upcoming ?? 0} upcoming · {counts.Ended ?? 0} ended
+          {rows.filter((r) => !r.isActive).length} {t("tourn.count.inactive")} ·{" "}
+          {counts.Open ?? 0} {t("tourn.count.open")} · {counts.Upcoming ?? 0}{" "}
+          {t("tourn.count.upcoming")} · {counts.Ended ?? 0} {t("tourn.count.ended")}
         </span>
       </div>
 
@@ -108,24 +112,22 @@ export function TournamentsPanel() {
           export stays because the shipped file is still the OFFLINE fallback. */}
       <div className="mb-4 rounded-lg border border-accent-500/40 bg-accent-500/10 px-4 py-3 text-xs text-accent-200">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-          <strong className="font-semibold">Edits here reach players on their next launch.</strong>
+          <strong className="font-semibold">{t("tourn.live.headline")}</strong>
           <span className="text-accent-200/80">
-            The game fetches this schedule at boot and falls back to the shipped{" "}
-            <code>tournaments.csv</code> only when it cannot reach the server. Re-export at each
-            release so that offline fallback is not a schedule from three builds ago.
+            {t("tourn.live.body")}
           </span>
           <span className="ml-auto flex gap-2">
             <a
               href="/api/tournaments/export?file=tournaments"
               className="rounded-md border border-accent-500/50 px-2.5 py-1 font-medium text-accent-100 hover:bg-accent-500/15"
             >
-              Export tournaments.csv
+              {t("tourn.export.tournaments")}
             </a>
             <a
               href="/api/tournaments/export?file=prizes"
               className="rounded-md border border-accent-500/50 px-2.5 py-1 font-medium text-accent-100 hover:bg-accent-500/15"
             >
-              Export tournament_prizes.csv
+              {t("tourn.export.prizes")}
             </a>
           </span>
         </div>
@@ -160,19 +162,19 @@ export function TournamentsPanel() {
           onChange={(e) => setActiveFilter(e.target.value as "all" | "active" | "inactive")}
           className="rounded-md border border-surface-700 bg-surface-900 px-2.5 py-1.5 text-xs text-zinc-300 focus:border-accent-500 focus:outline-none"
         >
-          <option value="all">Active + inactive</option>
-          <option value="active">Active only</option>
-          <option value="inactive">Inactive only</option>
+          <option value="all">{t("tourn.filter.activeAll")}</option>
+          <option value="active">{t("tourn.filter.activeOnly")}</option>
+          <option value="inactive">{t("tourn.filter.inactiveOnly")}</option>
         </select>
         <select
           value={stateFilter}
           onChange={(e) => setStateFilter(e.target.value as TournamentState | "all")}
           className="rounded-md border border-surface-700 bg-surface-900 px-2.5 py-1.5 text-xs text-zinc-300 focus:border-accent-500 focus:outline-none"
         >
-          <option value="all">All states</option>
+          <option value="all">{t("tourn.filter.allStates")}</option>
           {STATES.map((s) => (
             <option key={s} value={s}>
-              {s}
+              {t(`tstate.${s}` as DictKey)}
             </option>
           ))}
         </select>
@@ -180,11 +182,11 @@ export function TournamentsPanel() {
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Filter by slug, title, course…"
+          placeholder={t("tourn.filter.search")}
           className="w-60 rounded-md border border-surface-700 bg-surface-900 px-3 py-1.5 text-xs text-zinc-200 placeholder:text-zinc-600 focus:border-accent-500 focus:outline-none"
         />
         <span className="text-xs text-zinc-500">
-          {filtered.length} of {rows.length}
+          {filtered.length} {t("common.of")} {rows.length}
         </span>
         <button
           type="button"
@@ -194,7 +196,7 @@ export function TournamentsPanel() {
           }}
           className="ml-auto rounded-md bg-accent-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-accent-500"
         >
-          + New tournament
+          {t("tourn.new")}
         </button>
       </div>
 
@@ -203,58 +205,58 @@ export function TournamentsPanel() {
         <table className="w-full min-w-[1000px] text-left text-sm">
           <thead className="bg-surface-900 text-xs text-zinc-500">
             <tr>
-              <th className="px-4 py-2.5 font-medium">Tournament</th>
-              <th className="px-4 py-2.5 font-medium">State</th>
-              <th className="px-4 py-2.5 font-medium">Course</th>
-              <th className="px-4 py-2.5 text-right font-medium">Holes</th>
-              <th className="px-4 py-2.5 text-right font-medium">Fee</th>
-              <th className="px-4 py-2.5 font-medium">Prizes</th>
-              <th className="px-4 py-2.5 font-medium">Window (UTC)</th>
-              <th className="px-4 py-2.5 text-right font-medium">Entries</th>
-              <th className="px-4 py-2.5 font-medium">Art</th>
+              <th className="whitespace-nowrap px-4 py-2.5 font-medium">{t("tourn.col.tournament")}</th>
+              <th className="whitespace-nowrap px-4 py-2.5 font-medium">{t("tourn.col.state")}</th>
+              <th className="whitespace-nowrap px-4 py-2.5 font-medium">{t("tourn.col.course")}</th>
+              <th className="whitespace-nowrap px-4 py-2.5 text-right font-medium">{t("tourn.col.holes")}</th>
+              <th className="whitespace-nowrap px-4 py-2.5 text-right font-medium">{t("tourn.col.fee")}</th>
+              <th className="whitespace-nowrap px-4 py-2.5 font-medium">{t("tourn.col.prizes")}</th>
+              <th className="whitespace-nowrap px-4 py-2.5 font-medium">{t("tourn.col.window")}</th>
+              <th className="whitespace-nowrap px-4 py-2.5 text-right font-medium">{t("tourn.col.entries")}</th>
+              <th className="whitespace-nowrap px-4 py-2.5 font-medium">{t("tourn.col.art")}</th>
             </tr>
           </thead>
           <tbody>
-            {filtered.map((t) => {
-              const state = deriveState(t.startAt, t.endAt, now);
-              const pool = prizePoolSummary(t.bands);
+            {filtered.map((row) => {
+              const state = deriveState(row.startAt, row.endAt, now);
+              const pool = prizePoolSummary(row.bands);
               return (
                 <tr
-                  key={t.id}
+                  key={row.id}
                   onClick={() => {
                     setNotice(null);
-                    setEditing(t);
+                    setEditing(row);
                   }}
                   className={`cursor-pointer border-t border-surface-800 transition hover:bg-surface-900 ${
-                    t.isActive ? "bg-surface-950" : "bg-surface-950/40 opacity-60"
+                    row.isActive ? "bg-surface-950" : "bg-surface-950/40 opacity-60"
                   }`}
                 >
                   <td className="px-4 py-2.5">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium text-zinc-200">{t.title}</span>
-                      <KindBadge kind={t.kind} />
-                      {!t.isActive && (
+                      <span className="font-medium text-zinc-200">{row.title}</span>
+                      <KindBadge kind={row.kind} />
+                      {!row.isActive && (
                         <span
-                          className="rounded border border-zinc-600 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-zinc-400"
-                          title="Hidden from the game — the schedule endpoint does not return it"
+                          className="whitespace-nowrap rounded border border-zinc-600 px-1.5 py-0.5 text-[10px] font-bold uppercase text-zinc-400"
+                          title={t("tourn.inactiveHint")}
                         >
-                          inactive
+                          {t("tourn.inactiveBadge")}
                         </span>
                       )}
                     </div>
-                    <code className="text-[11px] text-zinc-600">{t.slug ?? "—"}</code>
+                    <code className="text-[11px] text-zinc-600">{row.slug ?? "—"}</code>
                   </td>
                   <td className="px-4 py-2.5">
                     <StateBadge state={state} />
                   </td>
                   <td className="px-4 py-2.5 text-xs text-zinc-300">
-                    {courseName(t.courseId)}
+                    {courseName(row.courseId)}
                   </td>
                   <td className="px-4 py-2.5 text-right text-xs tabular-nums text-zinc-400">
-                    {expandHoleSet(t.holeSet).length || "—"}
+                    {expandHoleSet(row.holeSet).length || "—"}
                   </td>
                   <td className="px-4 py-2.5 text-right text-xs tabular-nums text-zinc-300">
-                    {t.entryFeePts > 0 ? `${t.entryFeePts} RP` : "free"}
+                    {row.entryFeePts > 0 ? `${row.entryFeePts} RP` : t("common.free")}
                   </td>
                   <td className="px-4 py-2.5 text-xs text-zinc-400">
                     {pool.places > 0 ? (
@@ -262,25 +264,25 @@ export function TournamentsPanel() {
                         <span className="font-semibold text-accent-400">
                           {pool.top.toLocaleString()}
                         </span>{" "}
-                        top · {pool.places} places
+                        {t("tourn.topPlaces")} {pool.places} {t("tourn.places")}
                       </>
                     ) : (
-                      <span className="text-amber-400">no bands</span>
+                      <span className="text-amber-400">{t("tourn.noBands")}</span>
                     )}
                   </td>
                   <td className="whitespace-nowrap px-4 py-2.5 text-xs text-zinc-400">
-                    {fmtDate(t.startAt)} → {fmtDate(t.endAt)}
+                    {fmtDate(row.startAt)} → {fmtDate(row.endAt)}
                   </td>
                   <td className="px-4 py-2.5 text-right text-xs tabular-nums text-zinc-300">
-                    {t.entryCount}
-                    {t.entryCount > 0 && (
+                    {row.entryCount}
+                    {row.entryCount > 0 && (
                       <span className="ml-1 text-[10px] text-zinc-600">
-                        ({t.humanEntryCount} human)
+                        ({row.humanEntryCount} {t("tourn.human")})
                       </span>
                     )}
                   </td>
                   <td className="px-4 py-2.5">
-                    <ArtBadge layer={artLayer(t)} />
+                    <ArtBadge layer={artLayer(row)} />
                   </td>
                 </tr>
               );
@@ -288,7 +290,7 @@ export function TournamentsPanel() {
             {filtered.length === 0 && (
               <tr>
                 <td colSpan={9} className="px-4 py-10 text-center text-sm text-zinc-600">
-                  No tournaments match the current filters.
+                  {t("tourn.none")}
                 </td>
               </tr>
             )}

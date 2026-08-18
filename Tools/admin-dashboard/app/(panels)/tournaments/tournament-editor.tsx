@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useT } from "@/components/I18nProvider";
+import type { DictKey } from "@/lib/i18n";
 import { ART_SPEC, BOT_FIELDS, LEAGUE_KEYS, SHIPPING_COURSES, findCourse } from "@/lib/courses";
 import { fmtDateTime } from "@/lib/format";
 import {
@@ -67,28 +69,28 @@ function blankDraft(): TournamentInput {
   };
 }
 
-function toDraft(t: TournamentRow): TournamentInput {
+function toDraft(row: TournamentRow): TournamentInput {
   return {
-    slug: t.slug ?? "",
-    title: t.title,
-    titleJa: t.titleJa ?? "",
-    nameKey: t.nameKey ?? "",
-    courseId: t.courseId ?? "",
-    holeSet: t.holeSet ?? "1-18",
-    startAt: t.startAt ?? "",
-    endAt: t.endAt ?? "",
-    resolveDelayMinutes: t.resolveDelayMinutes ?? 30,
-    entryFeePts: t.entryFeePts,
-    botFieldId: t.botFieldId ?? "",
-    sponsorName: t.sponsorName ?? "",
-    leagueKey: t.leagueKey ?? "",
-    bannerUrl: t.bannerUrl,
-    modalBannerId: t.modalBannerId,
-    descriptionEn: t.descriptionEn ?? "",
-    descriptionJa: t.descriptionJa ?? "",
-    descriptionKey: t.descriptionKey ?? "",
-    isActive: t.isActive,
-    bands: t.bands.map((b) => ({ ...b })),
+    slug: row.slug ?? "",
+    title: row.title,
+    titleJa: row.titleJa ?? "",
+    nameKey: row.nameKey ?? "",
+    courseId: row.courseId ?? "",
+    holeSet: row.holeSet ?? "1-18",
+    startAt: row.startAt ?? "",
+    endAt: row.endAt ?? "",
+    resolveDelayMinutes: row.resolveDelayMinutes ?? 30,
+    entryFeePts: row.entryFeePts,
+    botFieldId: row.botFieldId ?? "",
+    sponsorName: row.sponsorName ?? "",
+    leagueKey: row.leagueKey ?? "",
+    bannerUrl: row.bannerUrl,
+    modalBannerId: row.modalBannerId,
+    descriptionEn: row.descriptionEn ?? "",
+    descriptionJa: row.descriptionJa ?? "",
+    descriptionKey: row.descriptionKey ?? "",
+    isActive: row.isActive,
+    bands: row.bands.map((b) => ({ ...b })),
   };
 }
 
@@ -108,6 +110,7 @@ export function TournamentEditor({
   onClose: () => void;
   onSaved: (message: string) => void;
 }) {
+  const t = useT();
   const isNew = tournament === null;
   const [tab, setTab] = useState<Tab>("details");
   const [draft, setDraft] = useState<TournamentInput>(() =>
@@ -162,9 +165,9 @@ export function TournamentEditor({
         error?: string;
       } | null;
       if (!res.ok) throw new Error(body?.error ?? `Request failed (${res.status})`);
-      onSaved(body?.message ?? "Saved.");
+      onSaved(body?.message ?? t("te.saved"));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Save failed");
+      setError(err instanceof Error ? err.message : t("te.saveFailed"));
     } finally {
       setBusy(false);
     }
@@ -184,9 +187,9 @@ export function TournamentEditor({
         error?: string;
       } | null;
       if (!res.ok) throw new Error(body?.error ?? `Request failed (${res.status})`);
-      onSaved(body?.message ?? "Deleted.");
+      onSaved(body?.message ?? t("te.deleted"));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Delete failed");
+      setError(err instanceof Error ? err.message : t("te.delFailed"));
     } finally {
       setBusy(false);
     }
@@ -206,26 +209,26 @@ export function TournamentEditor({
         error?: string;
       } | null;
       if (!res.ok) throw new Error(body?.error ?? `Request failed (${res.status})`);
-      onSaved(body?.message ?? "Duplicated.");
+      onSaved(body?.message ?? t("te.duplicated"));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Duplicate failed");
+      setError(err instanceof Error ? err.message : t("te.dupFailed"));
     } finally {
       setBusy(false);
     }
   }
 
   const tabs: { id: Tab; title: string; hide?: boolean }[] = [
-    { id: "details", title: "Details" },
-    { id: "prizes", title: `Prizes (${draft.bands.length})` },
-    { id: "artwork", title: "Artwork" },
-    { id: "entries", title: `Entries${tournament ? ` (${tournament.entryCount})` : ""}`, hide: isNew },
+    { id: "details", title: t("te.tab.details") },
+    { id: "prizes", title: `${t("te.tab.prizes")} (${draft.bands.length})` },
+    { id: "artwork", title: t("te.tab.artwork") },
+    { id: "entries", title: `${t("te.tab.entries")}${tournament ? ` (${tournament.entryCount})` : ""}`, hide: isNew },
   ];
 
   return (
     <div className="fixed inset-0 z-40" role="dialog" aria-modal="true">
       <button
         type="button"
-        aria-label="Close"
+        aria-label={t("common.close")}
         onClick={onClose}
         className="absolute inset-0 h-full w-full cursor-default bg-black/60"
       />
@@ -235,7 +238,7 @@ export function TournamentEditor({
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <h2 className="truncate text-base font-semibold text-zinc-100">
-                {isNew ? "New tournament" : draft.title || draft.slug}
+                {isNew ? t("te.new") : draft.title || draft.slug}
               </h2>
               <div className="mt-1 flex items-center gap-2">
                 <code className="text-xs text-zinc-500">{draft.slug || "(no slug yet)"}</code>
@@ -252,15 +255,13 @@ export function TournamentEditor({
               onClick={onClose}
               className="rounded-md border border-surface-700 px-2.5 py-1 text-xs text-zinc-400 hover:bg-surface-800"
             >
-              Close
+              {t("common.close")}
             </button>
           </div>
 
           {live && (
             <div className="mt-3 rounded-md border border-amber-500/50 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
-              <strong className="font-semibold">This tournament is {state}.</strong> Players may be
-              mid-entry — changing the fee, dates or prize ladder now changes the deal underneath
-              them. Saving requires re-typing the slug below.
+              {t("te.liveWarn", { state: t(`tstate.${state}` as DictKey) })}
               <input
                 value={confirmSlug}
                 onChange={(e) => setConfirmSlug(e.target.value)}
@@ -307,19 +308,17 @@ export function TournamentEditor({
                         draft.isActive ? "text-accent-300" : "text-zinc-400"
                       }`}
                     >
-                      {draft.isActive ? "Active — the game receives this" : "Inactive — hidden from the game"}
+                      {draft.isActive ? t("te.activeOn") : t("te.activeOff")}
                     </div>
                     <p className="mt-0.5 text-[11px] leading-relaxed text-zinc-500">
-                      Separate from Upcoming/Open/Ended, which is derived from the dates. This is
-                      whether the game is told the tournament exists at all. Switching it off does
-                      not eject a player who has already entered — they finish, nobody new sees it.
+                      {t("te.hint.active")}
                     </p>
                   </div>
                   <button
                     type="button"
                     role="switch"
                     aria-checked={draft.isActive}
-                    aria-label="Active"
+                    aria-label={t("te.active")}
                     onClick={() => patch({ isActive: !draft.isActive })}
                     className={`mt-0.5 flex h-6 w-11 shrink-0 items-center rounded-full transition ${
                       draft.isActive ? "bg-accent-600" : "bg-surface-700"
@@ -336,7 +335,7 @@ export function TournamentEditor({
 
               <div className="col-span-1">
                 <label className={label} htmlFor="t-slug">
-                  Slug (game id)
+                  {t("te.slug")}
                 </label>
                 <input
                   id="t-slug"
@@ -346,13 +345,12 @@ export function TournamentEditor({
                   className={`${field} font-mono`}
                 />
                 <p className="mt-1 text-[11px] text-zinc-600">
-                  Stable key the client keys off. Changing it on a live tournament orphans entries
-                  in any client that cached the old id.
+                  {t("te.hint.slug")}
                 </p>
               </div>
               <div className="col-span-1">
                 <label className={label} htmlFor="t-title">
-                  Title
+                  {t("te.title")}
                 </label>
                 <input
                   id="t-title"
@@ -363,30 +361,26 @@ export function TournamentEditor({
                 />
                 {draft.nameKey?.trim() ? (
                   <div className="mt-1 rounded-md border border-amber-500/40 bg-amber-500/10 px-2.5 py-2 text-[11px] text-amber-200">
-                    <strong className="font-semibold">Players will not see this title.</strong> The
-                    localization key <code>{draft.nameKey.trim()}</code> is set, and a key that
-                    resolves in the shipped build always wins — the title is only the fallback.
-                    Clear the key to make this title the name players see, in every language.
+                    <strong className="font-semibold">{t("te.titleShadowed")}</strong>{" "}
+                    {t("te.hint.titleShadowedBody", { key: draft.nameKey.trim() })}
                     <button
                       type="button"
                       onClick={() => patch({ nameKey: "" })}
                       className="mt-1.5 block rounded-md border border-amber-500/50 px-2 py-1 font-medium text-amber-100 hover:bg-amber-500/15"
                     >
-                      Clear the key and use this title
+                      {t("te.clearKey")}
                     </button>
                   </div>
                 ) : (
                   <p className="mt-1 text-[11px] text-zinc-600">
-                    Free text, and independent of the venue — a tournament can be brand-led (“PUMA
-                    Summer Slam” at Lomond). This is what players see, since no localization key
-                    is set.
+                    {t("te.hint.title")}
                   </p>
                 )}
               </div>
 
               <div className="col-span-1">
                 <label className={label} htmlFor="t-title-ja">
-                  Title (Japanese)
+                  {t("te.titleJa")}
                 </label>
                 <input
                   id="t-title-ja"
@@ -397,16 +391,14 @@ export function TournamentEditor({
                   className={field}
                 />
                 <p className="mt-1 text-[11px] text-zinc-600">
-                  Shown to players on Japanese. Leave empty and they see the title above.
-                  {draft.nameKey?.trim()
-                    ? " Currently unused — the localization key overrides both titles."
-                    : ""}
+                  {t("te.hint.titleJa")}
+                  {draft.nameKey?.trim() ? ` ${t("te.hint.titleJaUnused")}` : ""}
                 </p>
               </div>
 
               <div className="col-span-1">
                 <label className={label} htmlFor="t-course">
-                  Venue (playable course)
+                  {t("te.venue")}
                 </label>
                 <select
                   id="t-course"
@@ -421,19 +413,12 @@ export function TournamentEditor({
                   ))}
                 </select>
                 <p className="mt-1 text-[11px] text-zinc-600">
-                  Where it is played, and the venue subtitle. Default art only —{" "}
-                  <code className="text-zinc-500">{course?.art ?? "none"}</code>
-                  {course && !course.playable && (
-                    <span className="text-amber-400/80">
-                      {" "}
-                      · no playable hole data ships for this course yet — holes fall back to Lomond
-                    </span>
-                  )}
+                  {t("te.hint.venue", { art: course?.art ?? "none" })}
                 </p>
               </div>
               <div className="col-span-1">
                 <label className={label} htmlFor="t-holeset">
-                  Hole set
+                  {t("te.holeSet")}
                 </label>
                 <input
                   id="t-holeset"
@@ -443,14 +428,13 @@ export function TournamentEditor({
                   className={`${field} font-mono`}
                 />
                 <p className="mt-1 text-[11px] text-zinc-600">
-                  {holes.length > 0 ? `${holes.length} holes` : "malformed"} · ranges and lists,
-                  expanded client-side
+                  {holes.length > 0 ? t("te.hint.holeSet", { n: holes.length }) : t("te.holeSetBad")}
                 </p>
               </div>
 
               <div className="col-span-1">
                 <label className={label} htmlFor="t-start">
-                  Start (UTC)
+                  {t("te.start")}
                 </label>
                 <input
                   id="t-start"
@@ -462,7 +446,7 @@ export function TournamentEditor({
               </div>
               <div className="col-span-1">
                 <label className={label} htmlFor="t-end">
-                  End (UTC)
+                  {t("te.end")}
                 </label>
                 <input
                   id="t-end"
@@ -472,14 +456,13 @@ export function TournamentEditor({
                   className={field}
                 />
                 <p className="mt-1 text-[11px] text-zinc-600">
-                  Absolute UTC on purpose. State is derived from these two — there is no status
-                  switch to flip.
+                  {t("te.hint.dates")}
                 </p>
               </div>
 
               <div className="col-span-1">
                 <label className={label} htmlFor="t-fee">
-                  Entry fee (RP)
+                  {t("te.fee")}
                 </label>
                 <input
                   id="t-fee"
@@ -492,7 +475,7 @@ export function TournamentEditor({
               </div>
               <div className="col-span-1">
                 <label className={label} htmlFor="t-resolve">
-                  Resolve delay (minutes)
+                  {t("te.resolveDelay")}
                 </label>
                 <input
                   id="t-resolve"
@@ -506,7 +489,7 @@ export function TournamentEditor({
 
               <div className="col-span-1">
                 <label className={label} htmlFor="t-botfield">
-                  Bot field
+                  {t("te.botField")}
                 </label>
                 <select
                   id="t-botfield"
@@ -521,12 +504,12 @@ export function TournamentEditor({
                   ))}
                 </select>
                 <p className="mt-1 text-[11px] text-zinc-600">
-                  Filler so a young leaderboard is never empty. Bots are never paid.
+                  {t("te.botFieldHint")}
                 </p>
               </div>
               <div className="col-span-1">
                 <label className={label} htmlFor="t-league">
-                  League
+                  {t("te.league")}
                 </label>
                 <select
                   id="t-league"
@@ -545,7 +528,7 @@ export function TournamentEditor({
 
               <div className="col-span-1">
                 <label className={label} htmlFor="t-sponsor">
-                  Sponsor
+                  {t("te.sponsor")}
                 </label>
                 <input
                   id="t-sponsor"
@@ -555,12 +538,12 @@ export function TournamentEditor({
                   className={field}
                 />
                 <p className="mt-1 text-[11px] text-zinc-600">
-                  Text only — renders as “{(draft.sponsorName || "SPONSOR").toUpperCase()} PRESENTS”.
+                  {t("te.hint.sponsor", { sponsor: (draft.sponsorName || "SPONSOR").toUpperCase() })}
                 </p>
               </div>
               <div className="col-span-1">
                 <label className={label} htmlFor="t-namekey">
-                  Localization key
+                  {t("te.locKey")}
                 </label>
                 <input
                   id="t-namekey"
@@ -570,27 +553,23 @@ export function TournamentEditor({
                   className={`${field} font-mono`}
                 />
                 <p className="mt-1 text-[11px] text-zinc-600">
-                  Optional, and it <strong className="text-zinc-400">overrides the title</strong>{" "}
-                  whenever it resolves in the shipped build. Keys ship inside the app, so a key
-                  invented here resolves nowhere and the title is used instead. Leave it empty for
-                  anything you name yourself.
+                  {t("te.nameKeyHint")}
                 </p>
               </div>
 
               {/* ── Sign-up modal blurb (tournament_signup_modal §6) ───────── */}
               <div className="col-span-2 mt-1 border-t border-zinc-800 pt-4">
                 <p className="text-[11px] uppercase tracking-wider text-zinc-500">
-                  Sign-up modal description
+                  {t("te.signupDesc")}
                 </p>
                 <p className="mt-1 text-[11px] text-zinc-600">
-                  The blurb beside the course photo in the sign-up modal. Leave both empty and the
-                  modal hides that whole row — photo included — rather than showing a lone image.
+                  {t("te.hint.desc")}
                 </p>
               </div>
 
               <div className="col-span-1">
                 <label className={label} htmlFor="t-desc-en">
-                  Description (English)
+                  {t("te.descEn")}
                 </label>
                 <textarea
                   id="t-desc-en"
@@ -618,7 +597,7 @@ export function TournamentEditor({
 
               <div className="col-span-1">
                 <label className={label} htmlFor="t-desc-ja">
-                  Description (Japanese)
+                  {t("te.descJa")}
                 </label>
                 <textarea
                   id="t-desc-ja"
@@ -647,7 +626,7 @@ export function TournamentEditor({
 
               <div className="col-span-1">
                 <label className={label} htmlFor="t-desckey">
-                  Description localization key
+                  {t("te.descKey")}
                 </label>
                 <input
                   id="t-desckey"
@@ -657,10 +636,7 @@ export function TournamentEditor({
                   className={`${field} font-mono`}
                 />
                 <p className="mt-1 text-[11px] text-zinc-600">
-                  Optional, and it{" "}
-                  <strong className="text-zinc-400">overrides both descriptions</strong> whenever it
-                  resolves in the shipped build — in both languages. Keys ship inside the app, so a
-                  key invented here resolves nowhere and the text above is used instead.
+                  {t("te.descKeyHint")}
                 </p>
               </div>
             </div>
@@ -705,10 +681,12 @@ export function TournamentEditor({
 
           {danger === "delete" && tournament && (
             <div className="mb-2 rounded-md border border-red-500/50 bg-red-500/10 px-3 py-2 text-xs text-red-200">
-              Deleting <code>{tournament.slug}</code> cascades{" "}
-              <strong>{tournament.entryCount} entries</strong> (
-              {tournament.humanEntryCount} human) and {tournament.bands.length} prize bands. Type
-              the slug to confirm.
+              {t("te.deleting")} <code>{tournament.slug}</code>{" "}
+              {t("te.deleteCascade", {
+                entries: tournament.entryCount,
+                human: tournament.humanEntryCount,
+                bands: tournament.bands.length,
+              })}
               <input
                 value={confirmSlug}
                 onChange={(e) => setConfirmSlug(e.target.value)}
@@ -720,8 +698,8 @@ export function TournamentEditor({
 
           {danger === "duplicate" && tournament && (
             <div className="mb-2 rounded-md border border-surface-700 bg-surface-850 px-3 py-2 text-xs text-zinc-300">
-              Copy <code>{tournament.slug}</code> — same course, holes, fee and prize ladder, dates
-              shifted forward one cycle, artwork not copied. New slug:
+              {t("te.copy")} <code>{tournament.slug}</code>{" "}
+              {t("te.duplicateHint")}
               <input
                 value={dupSlug}
                 onChange={(e) => setDupSlug(e.target.value.trim().toLowerCase())}
@@ -742,7 +720,7 @@ export function TournamentEditor({
                   }
                   className="rounded-md border border-surface-700 px-3 py-1.5 text-xs font-medium text-zinc-300 hover:bg-surface-800 disabled:opacity-50"
                 >
-                  {danger === "duplicate" ? "Create copy" : "Duplicate"}
+                  {danger === "duplicate" ? t("te.createCopy") : t("te.duplicate")}
                 </button>
                 <button
                   type="button"
@@ -750,7 +728,7 @@ export function TournamentEditor({
                   onClick={() => (danger === "delete" ? runDelete() : setDanger("delete"))}
                   className="rounded-md border border-red-500/50 px-3 py-1.5 text-xs font-medium text-red-300 hover:bg-red-500/10 disabled:opacity-40"
                 >
-                  {danger === "delete" ? "Delete for real" : "Delete"}
+                  {danger === "delete" ? t("te.deleteReal") : t("te.delete")}
                 </button>
               </>
             )}
@@ -765,7 +743,7 @@ export function TournamentEditor({
                 onClick={onClose}
                 className="rounded-md border border-surface-700 px-3 py-1.5 text-xs text-zinc-400 hover:bg-surface-800"
               >
-                Cancel
+                {t("common.cancel")}
               </button>
               <button
                 type="button"
@@ -773,7 +751,7 @@ export function TournamentEditor({
                 onClick={save}
                 className="rounded-md bg-accent-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-accent-500 disabled:opacity-40"
               >
-                {busy ? "Saving…" : isNew ? "Create tournament" : "Save changes"}
+                {busy ? t("te.saving") : isNew ? t("te.create") : t("te.save")}
               </button>
             </div>
           </div>
@@ -796,6 +774,7 @@ function PrizeEditor({
   pool: { top: number; total: number; places: number };
   onChange: (bands: PrizeBand[]) => void;
 }) {
+  const t = useT();
   const sorted = [...bands].sort((a, b) => a.rankFrom - b.rankFrom);
 
   function update(index: number, next: Partial<PrizeBand>) {
@@ -813,20 +792,23 @@ function PrizeEditor({
   return (
     <div>
       <div className="flex items-baseline justify-between">
-        <h3 className="text-sm font-semibold text-zinc-200">Rank bands</h3>
+        <h3 className="text-sm font-semibold text-zinc-200">{t("te.rankBands")}</h3>
         <span className="text-xs text-zinc-500">
-          top {pool.top.toLocaleString()} RP · {pool.places} paid places · {pool.total.toLocaleString()} RP
-          total if every place fills
+          {t("te.poolSummary", {
+            top: pool.top.toLocaleString(),
+            places: pool.places,
+            total: pool.total.toLocaleString(),
+          })}
         </span>
       </div>
 
       <table className="mt-3 w-full text-left text-sm">
         <thead className="text-[11px] uppercase tracking-wider text-zinc-500">
           <tr>
-            <th className="pb-1.5 font-medium">From</th>
-            <th className="pb-1.5 font-medium">To</th>
+            <th className="whitespace-nowrap pb-1.5 font-medium">{t("te.band.from")}</th>
+            <th className="whitespace-nowrap pb-1.5 font-medium">{t("te.band.to")}</th>
             <th className="pb-1.5 font-medium">RP</th>
-            <th className="pb-1.5 font-medium">Item reward</th>
+            <th className="whitespace-nowrap pb-1.5 font-medium">{t("te.itemReward")}</th>
             <th className="pb-1.5" />
           </tr>
         </thead>
@@ -867,7 +849,7 @@ function PrizeEditor({
                 <input
                   value={b.itemRewardId ?? ""}
                   onChange={(e) => update(i, { itemRewardId: e.target.value || null })}
-                  placeholder="(none)"
+                  placeholder={t("common.none")}
                   aria-label={`Band ${i + 1} item reward`}
                   className="w-full rounded-md border border-surface-700 bg-surface-950 px-2 py-1 font-mono text-xs text-zinc-300 placeholder:text-zinc-600 focus:border-accent-500 focus:outline-none"
                 />
@@ -876,7 +858,7 @@ function PrizeEditor({
                 <button
                   type="button"
                   onClick={() => remove(i)}
-                  aria-label={`Remove band ${i + 1}`}
+                  aria-label={t("art.removeBand", { n: i + 1 })}
                   className="rounded-md border border-surface-700 px-2 py-1 text-xs text-zinc-500 hover:bg-surface-800 hover:text-red-400"
                 >
                   ✕
@@ -892,7 +874,7 @@ function PrizeEditor({
         onClick={add}
         className="mt-3 rounded-md border border-surface-700 px-3 py-1.5 text-xs font-medium text-zinc-300 hover:bg-surface-800"
       >
-        + Add band
+        {t("te.addBand")}
       </button>
 
       {errors.length > 0 ? (
@@ -903,14 +885,12 @@ function PrizeEditor({
         </ul>
       ) : (
         <p className="mt-3 rounded-md border border-accent-500/30 bg-accent-500/10 px-3 py-2 text-xs text-accent-300">
-          Ladder is continuous from rank 1 with no gaps or overlaps.
+          {t("te.bandsOk")}
         </p>
       )}
 
       <p className="mt-3 text-[11px] leading-relaxed text-zinc-600">
-        Bands are per-tournament, not a shared template: raising this tournament&apos;s first prize
-        cannot silently change another&apos;s. Payouts run through <code>earn_pts_v2</code> under the{" "}
-        <code>tournament_prize</code> action, capped at 2000 RP per event.
+        {t("te.hint.bands")}
       </p>
     </div>
   );
@@ -937,6 +917,7 @@ function ArtworkTab({
   modalBannerId: string | null;
   onModalBannerChange: (id: string | null) => void;
 }) {
+  const t = useT();
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
@@ -949,16 +930,19 @@ function ArtworkTab({
     onNotice(null);
 
     if (!slug) {
-      setLocalError("Give the tournament a slug first — the file is named after it.");
+      setLocalError(t("te.slugFirst"));
       return;
     }
     if (!(ART_SPEC.mimeTypes as readonly string[]).includes(file.type)) {
-      setLocalError(`Unsupported type "${file.type || "unknown"}". Use JPG, PNG or WebP.`);
+      setLocalError(t("art.unsupportedType", { type: file.type || "unknown" }));
       return;
     }
     if (file.size > ART_SPEC.maxBytes) {
       setLocalError(
-        `${(file.size / 1024).toFixed(0)} KB exceeds the ${ART_SPEC.maxBytes / 1024} KB cap. Every mobile player downloads this once.`
+        t("art.tooBig", {
+          kb: (file.size / 1024).toFixed(0),
+          cap: ART_SPEC.maxBytes / 1024,
+        })
       );
       return;
     }
@@ -975,7 +959,14 @@ function ArtworkTab({
         const drift = Math.abs(ratio - ART_SPEC.aspect) / ART_SPEC.aspect;
         if (drift > ART_SPEC.aspectTolerance) {
           setAspectWarning(
-            `${img.width}×${img.height} (ratio ${ratio.toFixed(2)}) — cards are ${ART_SPEC.width}×${ART_SPEC.height} (${ART_SPEC.aspect.toFixed(2)}). It will be cropped or letterboxed.`
+            t("art.aspectWarn", {
+              w: img.width,
+              h: img.height,
+              ratio: ratio.toFixed(2),
+              sw: ART_SPEC.width,
+              sh: ART_SPEC.height,
+              saspect: ART_SPEC.aspect.toFixed(2),
+            })
           );
         }
         resolve();
@@ -995,11 +986,11 @@ function ArtworkTab({
         message?: string;
         error?: string;
       } | null;
-      if (!res.ok) throw new Error(body?.error ?? `Upload failed (${res.status})`);
+      if (!res.ok) throw new Error(body?.error ?? `{t("te.uploadFailed")} (${res.status})`);
       onChange(body?.url ?? null);
-      onNotice(`${body?.message ?? "Uploaded."} Save the tournament to publish it.`);
+      onNotice(`${body?.message ?? t("te.uploaded")} Save the tournament to publish it.`);
     } catch (err) {
-      setLocalError(err instanceof Error ? err.message : "Upload failed");
+      setLocalError(err instanceof Error ? err.message : t("te.uploadFailed"));
     } finally {
       setBusy(false);
     }
@@ -1007,22 +998,22 @@ function ArtworkTab({
 
   const layerCopy: Record<typeof layer, { text: string; className: string }> = {
     remote: {
-      text: "Remote — the uploaded image, fetched and disk-cached by the client.",
+      text: t("te.art.remote"),
       className: "border-accent-500/40 bg-accent-500/10 text-accent-300",
     },
     bundled: {
-      text: `Bundled — the shipped venue photo (${courseArt}). Fine for a venue-named event, but a brand tournament needs its own art: every tournament on this course looks identical without one.`,
+      text: t("te.art.bundled", { art: courseArt ?? "" }),
       className: "border-surface-700 bg-surface-850 text-zinc-300",
     },
     placeholder: {
-      text: "Placeholder — no remote art and no bundled photo for this course. The card will render the fallback sprite.",
+      text: t("te.art.placeholder"),
       className: "border-amber-500/40 bg-amber-500/10 text-amber-200",
     },
   };
 
   return (
     <div>
-      <h3 className="text-sm font-semibold text-zinc-200">Card artwork</h3>
+      <h3 className="text-sm font-semibold text-zinc-200">{t("te.cardArt")}</h3>
       <p className={`mt-2 rounded-md border px-3 py-2 text-xs ${layerCopy[layer].className}`}>
         <strong className="font-semibold uppercase tracking-wider">{layer}</strong> ·{" "}
         {layerCopy[layer].text}
@@ -1042,7 +1033,7 @@ function ArtworkTab({
             />
           ) : (
             <div className="flex h-full items-center justify-center px-3 text-center text-[11px] text-zinc-600">
-              {courseArt ? `bundled: ${courseArt}` : "placeholder"}
+              {courseArt ? t("te.bundledArt", { file: courseArt }) : t("te.placeholderArt")}
             </div>
           )}
         </div>
@@ -1059,13 +1050,14 @@ function ArtworkTab({
             className="block w-full text-xs text-zinc-400 file:mr-3 file:rounded-md file:border-0 file:bg-surface-700 file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-zinc-200 hover:file:bg-surface-800"
           />
           <p className="mt-2 text-[11px] leading-relaxed text-zinc-600">
-            JPG / PNG / WebP · max {ART_SPEC.maxBytes / 1024} KB · {ART_SPEC.width}×
-            {ART_SPEC.height} card. Uploaded to the project&apos;s{" "}
-            <code>tournament-art</code> bucket under an immutable content-hashed name, so the URL is
-            its own cache key. The client accepts only URLs on that host.
+            {t("te.artHint", {
+              maxKb: ART_SPEC.maxBytes / 1024,
+              w: ART_SPEC.width,
+              h: ART_SPEC.height,
+            })}
           </p>
 
-          {busy && <p className="mt-2 text-xs text-zinc-400">Uploading…</p>}
+          {busy && <p className="mt-2 text-xs text-zinc-400">{t("te.uploading")}</p>}
           {localError && (
             <p className="mt-2 rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-300">
               {localError}
@@ -1089,7 +1081,7 @@ function ArtworkTab({
                 }}
                 className="mt-2 rounded-md border border-surface-700 px-2.5 py-1 text-xs text-zinc-400 hover:bg-surface-800"
               >
-                Remove — fall back to the course photo
+                {t("te.removeArt")}
               </button>
             </div>
           )}
@@ -1105,7 +1097,7 @@ function ArtworkTab({
  * Assign the sign-up modal's cross-promotion strip (tournament_banners §3.2).
  *
  * A PICKER, deliberately not an uploader: banner bytes are uploaded once in the
- * Banners panel and one promo then serves every tournament. Adding a second
+ * {t("te.bannersPanel")} and one promo then serves every tournament. Adding a second
  * upload control here would defeat the whole point of managing them centrally.
  *
  * Only ACTIVE tournament_modal banners are listed — assigning an inactive one
@@ -1119,6 +1111,7 @@ function ModalBannerPicker({
   value: string | null;
   onChange: (id: string | null) => void;
 }) {
+  const t = useT();
   const [banners, setBanners] = useState<BannerRow[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -1135,7 +1128,7 @@ function ModalBannerPicker({
         }
         setBanners(body.banners ?? []);
       } catch (err) {
-        if (!cancelled) setLoadError(err instanceof Error ? err.message : "Could not load banners.");
+        if (!cancelled) setLoadError(err instanceof Error ? err.message : t("te.bannersFailed"));
       }
     })();
     return () => {
@@ -1152,16 +1145,14 @@ function ModalBannerPicker({
   return (
     <div className="mt-6 border-t border-surface-800 pt-5">
       <label className={label} htmlFor="t-modal-banner">
-        Sign-up modal banner
+        {t("te.signupBanner")}
       </label>
       <p className="mt-1 mb-2 text-[11px] leading-relaxed text-zinc-600">
-        The 970×252 cross-promotion strip at the top of this tournament&apos;s sign-up modal. The
-        artwork lives in the{" "}
+        {t("te.bannerHint1")}{" "}
         <a href="/banners" className="text-accent-400 underline hover:text-accent-300">
-          Banners panel
+          {t("te.bannersPanel")}
         </a>{" "}
-        — upload it once there and assign it to as many tournaments as you like. Switching a banner
-        off in that panel removes it from every tournament at once.
+        {t("te.bannerHint2")}
       </p>
 
       {loadError ? (
@@ -1177,31 +1168,30 @@ function ModalBannerPicker({
             onChange={(e) => onChange(e.target.value || null)}
             className={field}
           >
-            <option value="">None — the modal renders without a strip</option>
+            <option value="">{t("te.noBanner")}</option>
             {options.map((b) => (
               <option key={b.id} value={b.id}>
                 {b.label}
               </option>
             ))}
-            {orphaned && <option value={value ?? ""}>(current assignment — inactive or removed)</option>}
+            {orphaned && <option value={value ?? ""}>{t("te.currentAssignment")}</option>}
           </select>
 
-          {banners === null && <p className="mt-2 text-[11px] text-zinc-600">Loading banners…</p>}
+          {banners === null && <p className="mt-2 text-[11px] text-zinc-600">{t("te.bannersLoading")}</p>}
 
           {banners !== null && options.length === 0 && (
             <p className="mt-2 rounded-md border border-surface-700 bg-surface-900 px-3 py-2 text-[11px] text-zinc-500">
-              No active <code>tournament_modal</code> banners yet. Create one in the{" "}
+              {t("te.noActive")} <code>tournament_modal</code> {t("te.noActiveTail")}{" "}
               <a href="/banners" className="text-accent-400 underline hover:text-accent-300">
-                Banners panel
+                {t("te.bannersPanel")}
               </a>{" "}
-              and it will appear here.
+              {t("te.noActiveTail2")}
             </p>
           )}
 
           {orphaned && (
             <p className="mt-2 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-200">
-              This tournament points at a banner that is no longer active. Players see no strip.
-              Pick another, or None.
+              {t("te.hint.orphanBanner")}
             </p>
           )}
 
@@ -1217,7 +1207,7 @@ function ModalBannerPicker({
                   />
                 ) : (
                   <div className="flex h-full items-center justify-center text-[10px] text-zinc-600">
-                    no art uploaded
+                    {t("te.noArtUploaded")}
                   </div>
                 )}
               </div>
@@ -1225,13 +1215,13 @@ function ModalBannerPicker({
                 <div className="text-zinc-300">{selected.label}</div>
                 {selected.linkUrl ? (
                   <div className="mt-0.5 break-all font-mono text-[10px] text-zinc-600">
-                    taps open {selected.linkUrl}
+                    {t("te.tapsOpen")} {selected.linkUrl}
                   </div>
                 ) : (
-                  <div className="mt-0.5">Not tappable — no link set.</div>
+                  <div className="mt-0.5">{t("te.notTappable")}</div>
                 )}
                 {!selected.imageUrlJa && (
-                  <div className="mt-0.5">JP players see the English art (no JA upload).</div>
+                  <div className="mt-0.5">{t("te.art.jpFallback")}</div>
                 )}
               </div>
             </div>
@@ -1245,6 +1235,7 @@ function ModalBannerPicker({
 // ---------------------------------------------------------------------------
 
 function EntriesTab({ tournamentId }: { tournamentId: string }) {
+  const t = useT();
   const [data, setData] = useState<TournamentEntriesResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -1260,7 +1251,7 @@ function EntriesTab({ tournamentId }: { tournamentId: string }) {
         if (!cancelled && body) setData(body);
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Failed to load entries");
+          setError(err instanceof Error ? err.message : t("te.entriesFailed"));
         }
       }
     })();
@@ -1276,11 +1267,11 @@ function EntriesTab({ tournamentId }: { tournamentId: string }) {
       </p>
     );
   }
-  if (!data) return <p className="text-sm text-zinc-500">Loading entries…</p>;
+  if (!data) return <p className="text-sm text-zinc-500">{t("te.entriesLoading")}</p>;
   if (data.entries.length === 0) {
     return (
       <p className="text-sm text-zinc-600">
-        No entries yet. Bot filler is generated at resolve time, not stored up front.
+        {t("te.noEntries")}
       </p>
     );
   }
@@ -1294,12 +1285,12 @@ function EntriesTab({ tournamentId }: { tournamentId: string }) {
       <table className="w-full text-left text-sm">
         <thead className="text-[11px] uppercase tracking-wider text-zinc-500">
           <tr>
-            <th className="pb-1.5 font-medium">Player</th>
-            <th className="pb-1.5 font-medium">Character</th>
-            <th className="pb-1.5 text-right font-medium">Score</th>
-            <th className="pb-1.5 text-right font-medium">Holes</th>
-            <th className="pb-1.5 font-medium">Status</th>
-            <th className="pb-1.5 font-medium">Submitted</th>
+            <th className="whitespace-nowrap pb-1.5 font-medium">{t("te.col.player")}</th>
+            <th className="whitespace-nowrap pb-1.5 font-medium">{t("te.col.character")}</th>
+            <th className="whitespace-nowrap pb-1.5 text-right font-medium">{t("te.col.score")}</th>
+            <th className="whitespace-nowrap pb-1.5 text-right font-medium">{t("te.col.holes")}</th>
+            <th className="whitespace-nowrap pb-1.5 font-medium">{t("te.col.status")}</th>
+            <th className="whitespace-nowrap pb-1.5 font-medium">{t("te.col.submitted")}</th>
           </tr>
         </thead>
         <tbody>
