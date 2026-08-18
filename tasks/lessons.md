@@ -2190,3 +2190,46 @@ mode**, not by reasoning about lifetimes — one `script-execute` printing the f
 keys, and scene `isDirty` is what caught this. (3) Before calling a `Clear()`/`Reset()` on shared
 state, check whether it also clears the *persisted* copy; an in-memory override must be undone by
 restoring from the store (`session.Load()`), never by wiping it.
+
+---
+
+## Lesson AX — a teardown coroutine must not live on an object the teardown destroys (`ingame_settings_modal`, 2026-08-18)
+
+**Scar.** The in-game settings modal lives in `LabScaffold` (the gameplay scene). Its QUIT handler did
+the obvious thing and mirrored `VersusResultModalController.NewMatchRoutine()`:
+
+```csharp
+Hide();
+StartCoroutine(QuitRoutine());          // hosted on `this`
+...
+yield return StartCoroutine(loader.UnloadGameplay());   // <-- destroys `this`
+GameSession.ResetSession();             // never runs
+HoleContext.Reset();                    // never runs
+ScreenManager.Instance.ShowScreen(ScreenId.Home);       // never runs
+```
+
+`UnloadGameplay()` unloads `LabScaffold`, which destroys the modal — and a coroutine dies silently
+with its host `MonoBehaviour`. Everything after the unload simply never executed: no session reset,
+no Home routing, no error, no exception. The copied-from source doesn't have the bug only because
+`VersusResultModalController` lives in **ShellScene** and survives its own teardown.
+
+**How to apply.** Before copying a coroutine that unloads scenes, ask *which scene is the host in?*
+If the host dies in the unload, move the routine to something that outlives it — here
+`GameplaySceneLoader` (ShellScene-resident) — and make it `static` so it cannot accidentally touch
+the destroyed instance's fields:
+
+```csharp
+loader.StartCoroutine(QuitRoutine(loader));            // host survives
+private static IEnumerator QuitRoutine(GameplaySceneLoader loader) { ... }
+```
+
+**Sister trap, same task — `ModalController`'s fade-out outlives a re-open.** `Hide()` ends its 0.2s
+fade by deactivating `modalPanel`/`backdrop`. Re-opening inside that window leaves the old coroutine
+running and it blanks the modal a few frames after `Show()`: `IsVisible()==true` with
+`Panel.activeSelf==false`. Any *toggle* entry point (this gear) hits it on every double-tap. Fixed in
+the subclass with `StopAllCoroutines()` in `Show()`/`Hide()` rather than in the shared base, so no
+other modal's timing changed.
+
+**Both bugs were invisible to static reading and to the acceptance checklist** — they only appeared
+when the flow was driven end-to-end in play mode through the real widgets' `onClick`. A modal that
+"looks right" in a prefab render can still be broken in every way that matters.
