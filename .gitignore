@@ -256,6 +256,15 @@ Assets/Resources/Data/build_stamp.txt
 Assets/Resources/Data/build_stamp.txt.meta
 
 # =========================
+# upload_guard_automation — run log of Tools/mark-uploaded.sh, appended by the Xcode
+# Archive post-action on every archive. It is the ONLY diagnostic for a guard that did
+# not advance (the script always exits 0 so Xcode never surfaces a failure), which makes
+# it a per-machine debugging trail, not shared history. The guard file it writes
+# (Docs/Versioning/last_uploaded_build.txt) stays TRACKED — that one is shared truth.
+# =========================
+Docs/Versioning/.mark-uploaded.log
+
+# =========================
 # iOS export residue — Unity re-drops these into Assets/ on every iOS player
 # build (BuildPipeline.BuildPlayer / Build & Run). They are generated build
 # artifacts, never authored, and were hand-deleted twice before being ignored
@@ -272,3 +281,18 @@ Assets/packages-merged-link.meta
 # Auth secrets (Sign in with Apple .p8 etc.) - NEVER commit
 # =========================
 Secrets/
+
+# =========================
+# fastlane_testflight_pipeline — `fastlane ios testflight_build` run artifacts.
+# fastlane/Fastfile, Appfile and .env.example ARE tracked; everything below is
+# per-run or per-machine. The App Store Connect .p8 must live OUTSIDE the repo
+# entirely (~/.appstoreconnect/) — the *.p8 rule is a backstop, not the plan.
+# Builds/ipa/ is already covered by [Bb]uilds/ above; listed explicitly so the
+# .ipa is obviously accounted for.
+# =========================
+fastlane/.env
+fastlane/report.xml
+fastlane/README.md
+fastlane/test_output/
+Builds/ipa/
+*.p8

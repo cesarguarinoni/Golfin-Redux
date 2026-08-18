@@ -1,0 +1,5 @@
+# GOLFIN Redux — App Store Connect identity for the TestFlight lane.
+# Bundle ID and team are the same values Player Settings signs with
+# (appleDeveloperTeamID in ProjectSettings.asset); keep the three in sync.
+app_identifier("com.nextinnovation.golfingame")   # Golfin Game
+team_id("TCUV4A9VTJ")                             # NEXT INNOVATION PTE. LTD.

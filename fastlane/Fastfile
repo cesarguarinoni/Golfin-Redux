@@ -1,0 +1,79 @@
+# GOLFIN Redux — one command from a clean tree to a TestFlight build.
+#
+#   bundle exec fastlane ios testflight_build      # or: fastlane ios testflight_build
+#
+# Unity player build -> Xcode archive -> App Store Connect upload, unattended. This does NOT
+# make the build faster (Unity + IL2CPP dominate and are untouched); it makes it walk-away,
+# and removes the four dialogs a human currently has to pick correctly.
+#
+# PREREQUISITES
+#   - fastlane installed via Homebrew (`brew install fastlane`). Do NOT gem-install against
+#     macOS system Ruby — it is 2.6.10, EOL and Apple-deprecated.
+#   - fastlane/.env filled in from fastlane/.env.example (App Store Connect API key).
+#   - Unity Editor CLOSED. A batchmode build cannot take the project lock.
+#   - Everything committed. The build number is `git rev-list --count HEAD`.
+#
+# See Docs/TESTFLIGHT_RUNBOOK.md § "One command" for the full runbook, and
+# Docs/Specs/Active/fastlane_testflight_pipeline/SPEC.md for why each option below is set.
+
+default_platform(:ios)
+
+platform :ios do
+  desc "Unity build -> archive -> TestFlight"
+  lane :testflight_build do
+    # BuildStampGenerator derives the build number from `git rev-list --count HEAD`. On a
+    # dirty tree that number does not describe what is in the binary, and the number is the
+    # only handle App Store Connect gives you on a build. Refuse rather than guess.
+    ensure_git_status_clean
+
+    # Fails fast and loudly if the Editor holds the project lock — a batchmode build cannot
+    # take it, and Unity's own error for that is cryptic and buried in the log.
+    sh("../Tools/assert-unity-closed.sh")
+
+    # Non-zero here MUST abort the lane: otherwise build_app would archive the Xcode project
+    # left over from the PREVIOUS run and upload a stale binary. fastlane's sh raises on a
+    # non-zero exit, and the script propagates Unity's exit code verbatim.
+    sh("../Tools/unity-build-ios.sh")
+
+    api_key = app_store_connect_api_key(
+      key_id:       ENV.fetch("ASC_KEY_ID"),
+      issuer_id:    ENV.fetch("ASC_ISSUER_ID"),
+      key_filepath: ENV.fetch("ASC_KEY_PATH")
+    )
+
+    build_app(
+      project:          "Builds/iOS-Full/Unity-iPhone.xcodeproj",
+      scheme:           "Unity-iPhone",
+      configuration:    "Release",
+      export_method:    "app-store",
+      # Automatic signing (appleEnableAutomaticSigning: 1, team TCUV4A9VTJ) is driven from
+      # Player Settings; this lets xcodebuild create/refresh the profile headlessly. No
+      # `match` — a certificates repo is real overhead for a one-machine setup.
+      xcargs:           "-allowProvisioningUpdates",
+      output_directory: "Builds/ipa",
+      # Unity just regenerated the project; a clean would only re-do work it already did.
+      clean:            false
+    )
+
+    upload_to_testflight(
+      api_key: api_key,
+      # Returns in minutes instead of blocking the terminal for ~30. Trade-off: fastlane
+      # cannot set a changelog in this mode (supplying one forces a partial wait). Accepted
+      # — internal testers don't read changelogs.
+      skip_waiting_for_build_processing: true,
+      skip_submission: true
+      # No `groups:` — that parameter is for EXTERNAL testing groups. `In-House Testers` is
+      # internal and auto-distributes new builds already, so passing it is a no-op at best.
+    )
+
+    # Advance the upload-regression guard (Docs/Versioning/last_uploaded_build.txt), so the
+    # next store build at this same commit is refused instead of burning an upload slot.
+    # Called HERE, after a real upload — the Xcode scheme post-action that also calls this
+    # fires on archive, and does not reliably run under xcodebuild anyway. The script is
+    # idempotent and never regresses, so both firing is harmless. The guard file is tracked;
+    # commit it with your next change (the script deliberately does not commit).
+    sh("../Tools/mark-uploaded.sh", "..")
+
+    UI.success("Uploaded to TestFlight. Commit Docs/Versioning/last_uploaded_build.txt.")
+  end
+end
