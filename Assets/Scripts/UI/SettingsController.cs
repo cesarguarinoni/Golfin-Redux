@@ -206,7 +206,61 @@ namespace Golfin.UI
         private void OnContactClick()
         {
             Debug.Log("[SettingsController] Contact clicked");
-            OpenWebView("https://golfin.io/contact");
+            OpenWebView(BuildContactFormUrl());
+        }
+
+        /// <summary>
+        /// Contact form (Google Forms). Base link as published by the form owner.
+        /// </summary>
+        private const string ContactFormUrl =
+            "https://docs.google.com/forms/d/e/1FAIpQLSdcq3fyyWqykSph7u0JMZSx95drYhYH356F5cUnIhqimeLuvg/viewform?usp=publish-editor";
+
+        /// <summary>
+        /// Optional second prefill target for the player's email.
+        ///
+        /// The form's built-in email field (Settings → "Collect email addresses → Responder input")
+        /// is already prefilled by the <c>emailAddress=</c> param that <see cref="BuildContactFormUrl"/>
+        /// always appends — verified live 2026-08-18, the field lands pre-populated. That field is
+        /// rendered by Google's JS and carries no <c>name</c> in the page source, so it is invisible
+        /// to a plain HTML fetch; do not conclude from the source that the form has no email field.
+        ///
+        /// This constant is only needed if a SEPARATE short-answer "Email" question is ever added
+        /// alongside it. Get the id from the form's ⋮ → "Get pre-filled link": submit a dummy value
+        /// and copy the number out of the generated <c>entry.NNNNNNNNN=</c>. Empty = unused.
+        /// </summary>
+        private const string ContactFormEmailEntryId = "";
+
+        /// <summary>
+        /// Contact form URL with the player's email pre-filled when a session is available.
+        /// Falls back to the bare form for signed-out players.
+        /// </summary>
+        private static string BuildContactFormUrl()
+        {
+            string email = null;
+            try
+            {
+                // Instance is bootstrapped at app start; the getter lazily creates it as a fallback.
+                email = Golfin.Auth.AuthService.Instance?.Session?.Email;
+            }
+            catch (System.Exception e)
+            {
+                // Never let a prefill lookup break the Contact button — fall back to the bare form.
+                Debug.LogWarning($"[SettingsController] Could not read session email for contact prefill: {e.Message}");
+            }
+
+            if (string.IsNullOrEmpty(email))
+            {
+                Debug.Log("[SettingsController] No signed-in email — opening contact form without prefill.");
+                return ContactFormUrl;
+            }
+
+            var encoded = System.Uri.EscapeDataString(email);
+            var url = ContactFormUrl + "&emailAddress=" + encoded;
+
+            if (!string.IsNullOrEmpty(ContactFormEmailEntryId))
+                url += "&entry." + ContactFormEmailEntryId + "=" + encoded;
+
+            return url;
         }
 
         private void OnLogOutClick()
