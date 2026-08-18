@@ -15,6 +15,7 @@ TIP_TIMING,HIT THE BALL WHEN <color=#EEDC9A>HIGHLIGHTED</color> FOR A PERFECT SH
 TIP_VIEW,<color=#EEDC9A>DOUBLE TAP</color>TO SWITCH BETWEEN SHOT VIEW AND MAP VIEW,ダブルタップでショットビューとマップビューを切り替え
 HOME_CURRENCY_LABEL,COINS,コイン
 HOME_USERNAME,USERNAME,ユーザー名
+# unused since home_notices — the two HOME_MAINTENANCE_* rows below are no longer read by HomeScreenController; the Home notice comes from GET /api/v1/notices. Kept only to avoid CSV churn. (No commas: LocalizationTextImporter skips any line with fewer than 3 columns.)
 HOME_MAINTENANCE_TITLE,MAINTENANCE NOTICE,メンテナンス情報
 HOME_MAINTENANCE_BODY,Scheduled server maintenance: 2025/12/31\nThe game will not be available for a short time\nduring maintenance.,定期サーバーメンテナンス: 2025/12/31\nメンテナンス中はゲームをご利用いただけません。
 HOME_DEMO_WELCOME_TITLE,WELCOME TO THE DEMO,デモ版へようこそ

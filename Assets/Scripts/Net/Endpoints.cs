@@ -62,6 +62,10 @@ namespace Golfin.Net
         /// </summary>
         public static string Banners => BaseUrl + "/banners";
 
+        /// <summary>GET → <c>{data:{fetched_at, notices:[…]}}</c> — the Home notice panel's copy.
+        /// No auth, same posture as <see cref="Banners"/>. No trailing slash.</summary>
+        public static string Notices => BaseUrl + "/notices";
+
         /// <summary>GET ledger page. <paramref name="currency"/> is "activity" / "gift" or null for both.</summary>
         public static string PointsHistory(int skip = 0, int limit = 20, string currency = null)
         {

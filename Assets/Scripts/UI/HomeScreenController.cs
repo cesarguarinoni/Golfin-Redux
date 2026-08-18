@@ -32,12 +32,40 @@ namespace GolfinRedux.UI
         [SerializeField] private TextMeshProUGUI newsTitleText;
         [SerializeField] private TextMeshProUGUI newsBodyText;
         [SerializeField] private Transform dotsContainer;
+
+        /// <summary>
+        /// The notice panel's own root — the object owning <see cref="newsTitleText"/> and
+        /// <see cref="newsBodyText"/>. Hidden outright when no notice is live, because there is no
+        /// bundled copy to fall back to (home_notices SPEC §4.3): a cold offline launch with no
+        /// cache must show NOTHING, not a maintenance date that has already passed.
+        /// <para>
+        /// The page dots are a SIBLING of this root in ShellScene, not a child, so they are hidden
+        /// separately by <see cref="UpdateNewsDots"/> — a page count of 0 takes the <c>n &lt;= 1</c>
+        /// branch there and switches the whole container off.
+        /// </para>
+        /// <para>
+        /// Leaving this unassigned must not crash and must not hide anything: every use is
+        /// null-checked and falls back to leaving the panel visible, which is the pre-change
+        /// behaviour.
+        /// </para>
+        /// </summary>
+        [SerializeField] private GameObject newsPanelRoot;
+
+        /// <summary>
+        /// <b>Ignored for the live page count</b> (home_notices SPEC §4.2). Kept only so ShellScene's
+        /// serialization is untouched. It is not applied as a cap either: the endpoint already caps
+        /// at 5 rows, so capping again here would silently swallow a notice an operator published.
+        /// The count comes from <see cref="NewsPageCount"/>.
+        /// </summary>
         [SerializeField] private int totalNewsPages = 3;
         [SerializeField] private float newsAutoCycleInterval = 5f; // seconds
 
         private int _currentNewsIndex;
         private float _newsTimer;
         private bool _autoCycleNews = true;
+
+        /// <summary>One warning per session when the scene has fewer dots than there are pages.</summary>
+        private bool _warnedDotShortfall;
 
         // -------- Promo Banner (GPS) --------
         [Header("Promo Banner (GPS)")]
@@ -158,11 +186,18 @@ namespace GolfinRedux.UI
             // Character
             UpdateHomeCharacterImage();
 
-            // News
+            // News. A fetch that lands later repaints through OnNoticesChanged; a language switch
+            // from the Settings overlay repaints through OnLanguageChanged, because that overlay
+            // leaves Home enabled and so never re-runs this method.
+            Golfin.Notices.NoticeService.OnNoticesChanged += OnNoticesChanged;
+            LocalizationManager.OnLanguageChanged += OnNoticeLanguageChanged;
+
+            // Screen-entry refresh, throttled to at most one request per minute by the service.
+            Golfin.Notices.NoticeService.Instance?.Refresh();
+
             _currentNewsIndex = 0;
             _newsTimer = 0f;
-            UpdateNewsDots();
-            UpdateNewsContent();
+            RefreshNewsPanel();
 
             // Next hole panel
             LoadNextHole();
@@ -172,6 +207,9 @@ namespace GolfinRedux.UI
         {
             if (CharacterManager.Instance != null)
                 CharacterManager.Instance.OnCharacterSelected -= OnCharacterSelectionChanged;
+
+            Golfin.Notices.NoticeService.OnNoticesChanged -= OnNoticesChanged;
+            LocalizationManager.OnLanguageChanged -= OnNoticeLanguageChanged;
         }
 
         private void OnCharacterSelectionChanged(string _) => UpdateHomeCharacterImage();
@@ -199,8 +237,9 @@ namespace GolfinRedux.UI
 
         private void Update()
         {
-            // Auto-cycle news panel
-            if (_autoCycleNews && totalNewsPages > 1 && newsAutoCycleInterval > 0f)
+            // Auto-cycle news panel. Stops dead at one page or none — a single notice must not
+            // "cycle" to itself, and a hidden panel has nothing to cycle.
+            if (_autoCycleNews && NewsPageCount > 1 && newsAutoCycleInterval > 0f)
             {
                 _newsTimer += Time.deltaTime;
                 if (_newsTimer >= newsAutoCycleInterval)
@@ -224,10 +263,58 @@ namespace GolfinRedux.UI
 
         // ---------- News Panel ----------
 
+        /// <summary>
+        /// How many notice pages exist right now.
+        /// <para>
+        /// The demo build is always exactly one page: it has no server, so it keeps its bundled
+        /// welcome message verbatim (home_notices SPEC §4.2). The full game asks
+        /// <c>NoticeService</c>, and <b>0 is a normal answer</b> meaning "nothing is published" —
+        /// it hides the panel rather than falling back to any bundled string.
+        /// </para>
+        /// </summary>
+        private int NewsPageCount
+        {
+            get
+            {
+                if (GolfinRedux.Demo.DemoGate.IsDemo) return 1;
+                var service = Golfin.Notices.NoticeService.Instance;
+                return service != null ? service.Pages.Count : 0;
+            }
+        }
+
+        /// <summary>
+        /// Re-clamp the current page into range, then repaint dots and content. Entry point for
+        /// every path that can change the page COUNT underneath the player — screen entry, a fetch
+        /// that replaced the set, and a language switch that can drop a page whose only copy was
+        /// Japanese.
+        /// </summary>
+        private void RefreshNewsPanel()
+        {
+            int count = NewsPageCount;
+
+            // A refresh that removed pages while the player was looking at page 3 must not leave
+            // the index out of range (SPEC §4.5).
+            if (count <= 0) _currentNewsIndex = 0;
+            else if (_currentNewsIndex >= count) _currentNewsIndex = count - 1;
+            else if (_currentNewsIndex < 0) _currentNewsIndex = 0;
+
+            UpdateNewsDots();
+            UpdateNewsContent();
+        }
+
+        private void OnNoticesChanged() => RefreshNewsPanel();
+
+        /// <summary>
+        /// A language switch happens in the Settings OVERLAY, which leaves Home enabled — so
+        /// nothing re-runs <c>OnEnable</c> and the repaint has to come from the event.
+        /// </summary>
+        private void OnNoticeLanguageChanged() => RefreshNewsPanel();
+
         public void NextNewsPage()
         {
-            if (totalNewsPages <= 0) return;
-            _currentNewsIndex = (_currentNewsIndex + 1) % totalNewsPages;
+            int count = NewsPageCount;
+            if (count <= 0) return;
+            _currentNewsIndex = (_currentNewsIndex + 1) % count;
             _newsTimer = 0f; // Reset timer when manually changed
             UpdateNewsDots();
             UpdateNewsContent();
@@ -235,8 +322,9 @@ namespace GolfinRedux.UI
 
         public void PreviousNewsPage()
         {
-            if (totalNewsPages <= 0) return;
-            _currentNewsIndex = (_currentNewsIndex - 1 + totalNewsPages) % totalNewsPages;
+            int count = NewsPageCount;
+            if (count <= 0) return;
+            _currentNewsIndex = (_currentNewsIndex - 1 + count) % count;
             _newsTimer = 0f; // Reset timer when manually changed
             UpdateNewsDots();
             UpdateNewsContent();
@@ -244,20 +332,57 @@ namespace GolfinRedux.UI
 
         public void SetNewsPage(int index)
         {
-            if (totalNewsPages <= 0) return;
-            _currentNewsIndex = Mathf.Clamp(index, 0, totalNewsPages - 1);
+            int count = NewsPageCount;
+            if (count <= 0) return;
+            _currentNewsIndex = Mathf.Clamp(index, 0, count - 1);
             _newsTimer = 0f; // Reset timer when manually changed
             UpdateNewsDots();
             UpdateNewsContent();
         }
 
+        /// <summary>
+        /// Show one dot per page, highlight the current one (home_notices SPEC §4.4).
+        /// <list type="bullet">
+        ///   <item><c>n &lt;= 1</c> — the container goes away entirely. One page needs no dots, and
+        ///   zero pages means the whole notice area is gone.</item>
+        ///   <item>otherwise — the first <c>min(n, childCount)</c> dots are on, the rest off.</item>
+        /// </list>
+        /// </summary>
         private void UpdateNewsDots()
         {
             if (dotsContainer == null) return;
 
-            for (int i = 0; i < dotsContainer.childCount; i++)
+            int count = NewsPageCount;
+            var containerGo = dotsContainer.gameObject;
+
+            if (count <= 1)
             {
-                var img = dotsContainer.GetChild(i).GetComponent<Image>();
+                if (containerGo.activeSelf) containerGo.SetActive(false);
+                return;
+            }
+
+            if (!containerGo.activeSelf) containerGo.SetActive(true);
+
+            int childCount = dotsContainer.childCount;
+            if (count > childCount && !_warnedDotShortfall)
+            {
+                // The endpoint caps at 5 notices, so this means the scene needs more dot children —
+                // the extra pages still auto-cycle, the dots just under-represent them.
+                _warnedDotShortfall = true;
+                Debug.LogWarning(
+                    $"[HomeScreen] {count} notice pages but only {childCount} dot children under " +
+                    $"'{dotsContainer.name}'. The extra pages still cycle; add dot children to show them.");
+            }
+
+            int shown = Mathf.Min(count, childCount);
+            for (int i = 0; i < childCount; i++)
+            {
+                var child = dotsContainer.GetChild(i);
+                bool active = i < shown;
+                if (child.gameObject.activeSelf != active) child.gameObject.SetActive(active);
+                if (!active) continue;
+
+                var img = child.GetComponent<Image>();
                 if (img == null) continue;
 
                 img.color = (i == _currentNewsIndex)
@@ -266,19 +391,56 @@ namespace GolfinRedux.UI
             }
         }
 
+        /// <summary>
+        /// Paint the current notice page (home_notices SPEC §4.2).
+        /// <list type="number">
+        ///   <item><b>Demo build</b> — the bundled welcome message, UNCHANGED. A demo build has no
+        ///   server to ask.</item>
+        ///   <item><b>At least one live page</b> — the operator's copy for
+        ///   <c>_currentNewsIndex</c>, already language-resolved by <c>NoticeService</c>.</item>
+        ///   <item><b>Nothing live</b> — the panel is hidden. Deliberately NOT the bundled
+        ///   <c>HOME_MAINTENANCE_*</c> strings: those name a date in the past, and showing them
+        ///   offline is the exact bug this feature removes (SPEC §4.3).</item>
+        /// </list>
+        /// </summary>
         private void UpdateNewsContent()
         {
-            // TODO: Load news from data/CSV based on _currentNewsIndex
-            // demo_build_slice §3.4: the demo build shows a welcome message instead of the
-            // maintenance notice. No-op in the full game.
-            bool demo = GolfinRedux.Demo.DemoGate.IsDemo;
-            string titleKey = demo ? "HOME_DEMO_WELCOME_TITLE" : "HOME_MAINTENANCE_TITLE";
-            string bodyKey  = demo ? "HOME_DEMO_WELCOME_BODY"  : "HOME_MAINTENANCE_BODY";
-            if (newsTitleText != null)
-                newsTitleText.text = LocalizationManager.Get(titleKey);
+            // demo_build_slice §3.4: the demo build shows a welcome message instead of a notice.
+            if (GolfinRedux.Demo.DemoGate.IsDemo)
+            {
+                SetNewsPanelVisible(true);
+                if (newsTitleText != null)
+                    newsTitleText.text = LocalizationManager.Get("HOME_DEMO_WELCOME_TITLE");
+                if (newsBodyText != null)
+                    newsBodyText.text = LocalizationManager.Get("HOME_DEMO_WELCOME_BODY");
+                return;
+            }
 
-            if (newsBodyText != null)
-                newsBodyText.text = LocalizationManager.Get(bodyKey);
+            var service = Golfin.Notices.NoticeService.Instance;
+            var pages = service != null ? service.Pages : null;
+
+            if (pages == null || pages.Count == 0)
+            {
+                SetNewsPanelVisible(false);
+                return;
+            }
+
+            int index = Mathf.Clamp(_currentNewsIndex, 0, pages.Count - 1);
+            var page = pages[index];
+
+            SetNewsPanelVisible(true);
+            if (newsTitleText != null) newsTitleText.text = page.Title;
+            if (newsBodyText != null)  newsBodyText.text  = page.Body;
+        }
+
+        /// <summary>
+        /// Show or hide the notice panel. An unassigned <see cref="newsPanelRoot"/> is not an error:
+        /// the panel stays exactly as authored, which is the pre-change behaviour (SPEC §4.1).
+        /// </summary>
+        private void SetNewsPanelVisible(bool visible)
+        {
+            if (newsPanelRoot == null) return;
+            if (newsPanelRoot.activeSelf != visible) newsPanelRoot.SetActive(visible);
         }
 
         // ---------- Promo Banner (GPS) ----------
