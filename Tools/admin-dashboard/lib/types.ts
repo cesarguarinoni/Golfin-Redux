@@ -161,6 +161,20 @@ export interface TournamentRow {
   bands: PrizeBand[];
   /** Admin on/off switch. false = the game never receives it. Not the open/closed state. */
   isActive: boolean;
+  // Entry restrictions (tournament_restrictions, 2026-08-19). Null = unrestricted.
+  // Server enforces max_players + character bands at POST /golfin/{slug}/enter;
+  // gear_rule / club_rarity_max are client-enforced by design (Q2/Q3 in
+  // Docs/Specs/Active/tournament_restrictions/ARCHITECT_REVIEW.md).
+  category: string | null;
+  maxPlayers: number | null;
+  playersPerDivision: number | null;
+  divisionType: string | null;
+  charRarityMin: string | null;
+  charRarityMax: string | null;
+  charLevelMin: number | null;
+  charLevelMax: number | null;
+  gearRule: string | null;
+  clubRarityMax: string | null;
   /** Rows in tournament_entries for this tournament (all, including bots). */
   entryCount: number;
   humanEntryCount: number;
@@ -215,6 +229,17 @@ export interface TournamentInput {
   descriptionKey: string | null;
   modalBannerId: string | null;
   isActive: boolean;
+  // Entry restrictions — null = unrestricted (see TournamentRow).
+  category: string | null;
+  maxPlayers: number | null;
+  playersPerDivision: number | null;
+  divisionType: string | null;
+  charRarityMin: string | null;
+  charRarityMax: string | null;
+  charLevelMin: number | null;
+  charLevelMax: number | null;
+  gearRule: string | null;
+  clubRarityMax: string | null;
   bands: PrizeBand[];
   /** Required (typed slug) when editing a tournament that is Open or Ending. */
   confirmSlug?: string;

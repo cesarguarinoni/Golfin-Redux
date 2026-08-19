@@ -73,6 +73,82 @@ export function validateHoleSet(holeSet: string): string | null {
   return null;
 }
 
+// ---------------------------------------------------------------------------
+// Entry restrictions (tournament_restrictions, 2026-08-19)
+// ---------------------------------------------------------------------------
+
+export const CATEGORIES = ["sponsor", "competitive"] as const;
+export const DIVISION_TYPES = ["open", "level", "rarity_band"] as const;
+/** Declaration order IS the ladder — mirrors the server's RARITY_RANK and the game's CharacterRarity. */
+export const RARITIES = ["Common", "Uncommon", "Rare", "Mythic", "Legendary", "Supreme"] as const;
+
+function rarityRank(r: string): number {
+  return (RARITIES as readonly string[]).indexOf(r) + 1; // 0 = unknown
+}
+
+/**
+ * Restriction validation. Null/empty = unrestricted and always valid.
+ * `gear_rule = supplied` is REFUSED here on purpose: the client renders and
+ * gates it but nothing supplies a standard set yet, so authoring it would
+ * promise players clubs that never arrive (ARCHITECT_REVIEW.md Q3). Lift this
+ * when the standard-spec task lands.
+ */
+export function validateRestrictions(t: {
+  category: string | null;
+  maxPlayers: number | null;
+  playersPerDivision: number | null;
+  divisionType: string | null;
+  charRarityMin: string | null;
+  charRarityMax: string | null;
+  charLevelMin: number | null;
+  charLevelMax: number | null;
+  gearRule: string | null;
+  clubRarityMax: string | null;
+}): string | null {
+  if (t.category && !(CATEGORIES as readonly string[]).includes(t.category)) {
+    return `Unknown category "${t.category}".`;
+  }
+  if (t.divisionType && !(DIVISION_TYPES as readonly string[]).includes(t.divisionType)) {
+    return `Unknown division type "${t.divisionType}".`;
+  }
+  if (t.gearRule === "supplied") {
+    return 'gear_rule "supplied" cannot be authored yet — nothing supplies a standard set in the game. Blocked until the standard-spec task lands (tournament_restrictions review Q3).';
+  }
+  if (t.gearRule && t.gearRule !== "own") {
+    return `Unknown gear rule "${t.gearRule}".`;
+  }
+  for (const [name, v] of [
+    ["Character rarity min", t.charRarityMin],
+    ["Character rarity max", t.charRarityMax],
+    ["Club rarity cap", t.clubRarityMax],
+  ] as const) {
+    if (v && rarityRank(v) === 0) return `${name}: "${v}" is not a rarity.`;
+  }
+  if (t.charRarityMin && t.charRarityMax && rarityRank(t.charRarityMin) > rarityRank(t.charRarityMax)) {
+    return `Character rarity band is inverted (${t.charRarityMin} > ${t.charRarityMax}).`;
+  }
+  for (const [name, v] of [
+    ["Max players", t.maxPlayers],
+    ["Players per division", t.playersPerDivision],
+  ] as const) {
+    if (v !== null && (!Number.isInteger(v) || v < 1 || v > 100_000)) {
+      return `${name} must be a whole number ≥ 1 (blank = unlimited).`;
+    }
+  }
+  for (const [name, v] of [
+    ["Character level min", t.charLevelMin],
+    ["Character level max", t.charLevelMax],
+  ] as const) {
+    if (v !== null && (!Number.isInteger(v) || v < 1 || v > 999)) {
+      return `${name} must be a whole number between 1 and 999 (blank = no bound).`;
+    }
+  }
+  if (t.charLevelMin !== null && t.charLevelMax !== null && t.charLevelMin > t.charLevelMax) {
+    return `Character level band is inverted (${t.charLevelMin} > ${t.charLevelMax}).`;
+  }
+  return null;
+}
+
 export const SLUG_RE = /^[a-z][a-z0-9_]{2,47}$/;
 
 export function validateSlug(slug: string): string | null {

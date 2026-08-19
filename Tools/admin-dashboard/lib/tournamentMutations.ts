@@ -11,6 +11,7 @@ import {
   isLive,
   validateHoleSet,
   validatePrizeBands,
+  validateRestrictions,
   validateSlug,
 } from "./tournament";
 import type { MutationOutcome } from "./mutations";
@@ -91,6 +92,9 @@ export function validateInput(input: TournamentInput): string | null {
   const bandErrors = validatePrizeBands(input.bands);
   if (bandErrors.length > 0) return bandErrors.join(" ");
 
+  const restrErr = validateRestrictions(input);
+  if (restrErr) return restrErr;
+
   return null;
 }
 
@@ -154,6 +158,16 @@ function snapshot(t: TournamentRow): Record<string, unknown> {
     description_ja: t.descriptionJa,
     description_key: t.descriptionKey,
     is_active: t.isActive,
+    category: t.category,
+    max_players: t.maxPlayers,
+    players_per_division: t.playersPerDivision,
+    division_type: t.divisionType,
+    char_rarity_min: t.charRarityMin,
+    char_rarity_max: t.charRarityMax,
+    char_level_min: t.charLevelMin,
+    char_level_max: t.charLevelMax,
+    gear_rule: t.gearRule,
+    club_rarity_max: t.clubRarityMax,
     bands: t.bands.map((b) => ({
       rank_from: b.rankFrom,
       rank_to: b.rankTo,
@@ -185,6 +199,18 @@ function toDbRow(input: TournamentInput): Record<string, unknown> {
     description_ja: input.descriptionJa?.trim() || null,
     description_key: input.descriptionKey?.trim() || null,
     is_active: input.isActive,
+    // Restrictions (tournament_restrictions): null = unrestricted. gear_rule
+    // "supplied" is refused by validateRestrictions until standard-spec lands.
+    category: input.category || null,
+    max_players: input.maxPlayers,
+    players_per_division: input.playersPerDivision,
+    division_type: input.divisionType || null,
+    char_rarity_min: input.charRarityMin || null,
+    char_rarity_max: input.charRarityMax || null,
+    char_level_min: input.charLevelMin,
+    char_level_max: input.charLevelMax,
+    gear_rule: input.gearRule || null,
+    club_rarity_max: input.clubRarityMax || null,
     // tier/status are GPS columns; 'open'/'upcoming' satisfy their CHECK
     // constraints. State for golfin rows is DERIVED from the dates (SPEC §4.1).
     tier: "open",
@@ -297,6 +323,16 @@ export async function createTournament(
       descriptionJa: input.descriptionJa?.trim() || null,
       descriptionKey: input.descriptionKey?.trim() || null,
       isActive: input.isActive,
+      category: input.category || null,
+      maxPlayers: input.maxPlayers,
+      playersPerDivision: input.playersPerDivision,
+      divisionType: input.divisionType || null,
+      charRarityMin: input.charRarityMin || null,
+      charRarityMax: input.charRarityMax || null,
+      charLevelMin: input.charLevelMin,
+      charLevelMax: input.charLevelMax,
+      gearRule: input.gearRule || null,
+      clubRarityMax: input.clubRarityMax || null,
       botSeed,
       status: "upcoming",
       tier: "open",
@@ -396,6 +432,16 @@ export async function updateTournament(
       descriptionJa: input.descriptionJa?.trim() || null,
       descriptionKey: input.descriptionKey?.trim() || null,
       isActive: input.isActive,
+      category: input.category || null,
+      maxPlayers: input.maxPlayers,
+      playersPerDivision: input.playersPerDivision,
+      divisionType: input.divisionType || null,
+      charRarityMin: input.charRarityMin || null,
+      charRarityMax: input.charRarityMax || null,
+      charLevelMin: input.charLevelMin,
+      charLevelMax: input.charLevelMax,
+      gearRule: input.gearRule || null,
+      clubRarityMax: input.clubRarityMax || null,
       bands: input.bands.map((b) => ({ ...b, id: b.id || randomUUID() })),
     });
     await writeAudit(adminEmail, "tournament_update", null, "tournaments", before, snapshot(row));
@@ -475,6 +521,17 @@ export async function duplicateTournament(
     // A copy starts switched OFF — you almost never want a duplicate live
     // the instant it is created, before its dates and art are right.
     isActive: false,
+    // Restrictions copy verbatim — a duplicated bracket keeps its rules.
+    category: source.category,
+    maxPlayers: source.maxPlayers,
+    playersPerDivision: source.playersPerDivision,
+    divisionType: source.divisionType,
+    charRarityMin: source.charRarityMin,
+    charRarityMax: source.charRarityMax,
+    charLevelMin: source.charLevelMin,
+    charLevelMax: source.charLevelMax,
+    gearRule: source.gearRule,
+    clubRarityMax: source.clubRarityMax,
     bands: source.bands.map((b) => ({ ...b, id: "" })),
   };
 

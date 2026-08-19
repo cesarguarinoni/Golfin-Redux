@@ -7,11 +7,15 @@ import { ART_SPEC, BOT_FIELDS, LEAGUE_KEYS, SHIPPING_COURSES, findCourse } from 
 import { fmtDateTime } from "@/lib/format";
 import {
   artLayer,
+  CATEGORIES,
   deriveState,
+  DIVISION_TYPES,
   expandHoleSet,
   isLive,
   prizePoolSummary,
+  RARITIES,
   validatePrizeBands,
+  validateRestrictions,
 } from "@/lib/tournament";
 import type {
   BannerRow,
@@ -61,6 +65,16 @@ function blankDraft(): TournamentInput {
     descriptionJa: "",
     descriptionKey: "",
     isActive: true,
+    category: "sponsor",
+    maxPlayers: null,
+    playersPerDivision: null,
+    divisionType: "level",
+    charRarityMin: null,
+    charRarityMax: null,
+    charLevelMin: null,
+    charLevelMax: null,
+    gearRule: "own",
+    clubRarityMax: null,
     bands: [
       { id: "", rankFrom: 1, rankTo: 1, rpReward: 300, itemRewardId: null },
       { id: "", rankFrom: 2, rankTo: 3, rpReward: 150, itemRewardId: null },
@@ -90,8 +104,25 @@ function toDraft(row: TournamentRow): TournamentInput {
     descriptionJa: row.descriptionJa ?? "",
     descriptionKey: row.descriptionKey ?? "",
     isActive: row.isActive,
+    category: row.category,
+    maxPlayers: row.maxPlayers,
+    playersPerDivision: row.playersPerDivision,
+    divisionType: row.divisionType,
+    charRarityMin: row.charRarityMin,
+    charRarityMax: row.charRarityMax,
+    charLevelMin: row.charLevelMin,
+    charLevelMax: row.charLevelMax,
+    gearRule: row.gearRule,
+    clubRarityMax: row.clubRarityMax,
     bands: row.bands.map((b) => ({ ...b })),
   };
+}
+
+/** "" → null, otherwise a clamped integer — for the optional number fields. */
+function intOrNull(value: string): number | null {
+  if (value.trim() === "") return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? Math.trunc(n) : null;
 }
 
 const label = "block text-[11px] font-medium uppercase tracking-wider text-zinc-500";
@@ -129,6 +160,7 @@ export function TournamentEditor({
   const live = tournament !== null && isLive(state);
 
   const bandErrors = useMemo(() => validatePrizeBands(draft.bands), [draft.bands]);
+  const restrError = useMemo(() => validateRestrictions(draft), [draft]);
   const pool = useMemo(() => prizePoolSummary(draft.bands), [draft.bands]);
   const holes = useMemo(() => expandHoleSet(draft.holeSet), [draft.holeSet]);
   const course = findCourse(draft.courseId);
@@ -153,6 +185,12 @@ export function TournamentEditor({
         descriptionJa: draft.descriptionJa?.trim() || null,
         descriptionKey: draft.descriptionKey?.trim() || null,
         modalBannerId: draft.modalBannerId || null,
+        category: draft.category || null,
+        divisionType: draft.divisionType || null,
+        charRarityMin: draft.charRarityMin || null,
+        charRarityMax: draft.charRarityMax || null,
+        gearRule: draft.gearRule || null,
+        clubRarityMax: draft.clubRarityMax || null,
         confirmSlug: live ? confirmSlug : undefined,
       };
       const res = await fetch(isNew ? "/api/tournaments" : `/api/tournaments/${tournament!.id}`, {
@@ -555,6 +593,191 @@ export function TournamentEditor({
                 <p className="mt-1 text-[11px] text-zinc-600">
                   {t("te.nameKeyHint")}
                 </p>
+              </div>
+
+              {/* ── Entry restrictions (tournament_restrictions §A2) ─────────
+                   Null/blank = unrestricted. Server enforces max players +
+                   character bands at POST /golfin/{slug}/enter; gear rule and
+                   club rarity cap are client-enforced (review Q2/Q3). */}
+              <div className="col-span-2 mt-1 border-t border-zinc-800 pt-4">
+                <p className="text-[11px] uppercase tracking-wider text-zinc-500">
+                  {t("te.restr")}
+                </p>
+                <p className="mt-1 text-[11px] text-zinc-600">{t("te.restr.hint")}</p>
+                {restrError && (
+                  <p className="mt-1 text-[11px] text-red-400">{restrError}</p>
+                )}
+              </div>
+
+              <div className="col-span-1">
+                <label className={label} htmlFor="t-category">
+                  {t("te.restr.category")}
+                </label>
+                <select
+                  id="t-category"
+                  value={draft.category ?? ""}
+                  onChange={(e) => patch({ category: e.target.value || null })}
+                  className={field}
+                >
+                  <option value="">{t("te.restr.unset")}</option>
+                  {CATEGORIES.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="col-span-1">
+                <label className={label} htmlFor="t-divtype">
+                  {t("te.restr.divType")}
+                </label>
+                <select
+                  id="t-divtype"
+                  value={draft.divisionType ?? ""}
+                  onChange={(e) => patch({ divisionType: e.target.value || null })}
+                  className={field}
+                >
+                  <option value="">{t("te.restr.unset")}</option>
+                  {DIVISION_TYPES.map((d) => (
+                    <option key={d} value={d}>
+                      {d}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="col-span-1">
+                <label className={label} htmlFor="t-maxplayers">
+                  {t("te.restr.maxPlayers")}
+                </label>
+                <input
+                  id="t-maxplayers"
+                  type="number"
+                  min={1}
+                  value={draft.maxPlayers ?? ""}
+                  onChange={(e) => patch({ maxPlayers: intOrNull(e.target.value) })}
+                  placeholder={t("te.restr.unlimited")}
+                  className={field}
+                />
+                <p className="mt-1 text-[11px] text-zinc-600">{t("te.restr.maxPlayersHint")}</p>
+              </div>
+              <div className="col-span-1">
+                <label className={label} htmlFor="t-perdiv">
+                  {t("te.restr.perDivision")}
+                </label>
+                <input
+                  id="t-perdiv"
+                  type="number"
+                  min={1}
+                  value={draft.playersPerDivision ?? ""}
+                  onChange={(e) => patch({ playersPerDivision: intOrNull(e.target.value) })}
+                  placeholder={t("te.restr.unlimited")}
+                  className={field}
+                />
+              </div>
+
+              <div className="col-span-1">
+                <label className={label} htmlFor="t-rar-min">
+                  {t("te.restr.charRarity")}
+                </label>
+                <div className="mt-1 flex items-center gap-2">
+                  <select
+                    id="t-rar-min"
+                    value={draft.charRarityMin ?? ""}
+                    onChange={(e) => patch({ charRarityMin: e.target.value || null })}
+                    className={`${field} mt-0`}
+                    aria-label={t("te.restr.min")}
+                  >
+                    <option value="">{t("te.restr.unset")}</option>
+                    {RARITIES.map((r) => (
+                      <option key={r} value={r}>
+                        {r}
+                      </option>
+                    ))}
+                  </select>
+                  <span className="text-zinc-600">–</span>
+                  <select
+                    value={draft.charRarityMax ?? ""}
+                    onChange={(e) => patch({ charRarityMax: e.target.value || null })}
+                    className={`${field} mt-0`}
+                    aria-label={t("te.restr.max")}
+                  >
+                    <option value="">{t("te.restr.unset")}</option>
+                    {RARITIES.map((r) => (
+                      <option key={r} value={r}>
+                        {r}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="col-span-1">
+                <label className={label} htmlFor="t-lvl-min">
+                  {t("te.restr.charLevel")}
+                </label>
+                <div className="mt-1 flex items-center gap-2">
+                  <input
+                    id="t-lvl-min"
+                    type="number"
+                    min={1}
+                    max={999}
+                    value={draft.charLevelMin ?? ""}
+                    onChange={(e) => patch({ charLevelMin: intOrNull(e.target.value) })}
+                    placeholder={t("te.restr.min")}
+                    className={`${field} mt-0`}
+                  />
+                  <span className="text-zinc-600">–</span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={999}
+                    value={draft.charLevelMax ?? ""}
+                    onChange={(e) => patch({ charLevelMax: intOrNull(e.target.value) })}
+                    placeholder={t("te.restr.max")}
+                    className={`${field} mt-0`}
+                    aria-label={t("te.restr.max")}
+                  />
+                </div>
+              </div>
+
+              <div className="col-span-1">
+                <label className={label} htmlFor="t-gear">
+                  {t("te.restr.gear")}
+                </label>
+                <select
+                  id="t-gear"
+                  value={draft.gearRule ?? ""}
+                  onChange={(e) => patch({ gearRule: e.target.value || null })}
+                  className={field}
+                >
+                  <option value="">{t("te.restr.unset")}</option>
+                  <option value="own">own</option>
+                  {/* Q3 (ARCHITECT_REVIEW.md): authoring 'supplied' is blocked until
+                      the standard-spec task actually supplies a set in game. */}
+                  <option value="supplied" disabled>
+                    supplied — {t("te.restr.suppliedBlocked")}
+                  </option>
+                </select>
+                <p className="mt-1 text-[11px] text-zinc-600">{t("te.restr.gearHint")}</p>
+              </div>
+              <div className="col-span-1">
+                <label className={label} htmlFor="t-clubcap">
+                  {t("te.restr.clubCap")}
+                </label>
+                <select
+                  id="t-clubcap"
+                  value={draft.clubRarityMax ?? ""}
+                  onChange={(e) => patch({ clubRarityMax: e.target.value || null })}
+                  className={field}
+                >
+                  <option value="">{t("te.restr.unset")}</option>
+                  {RARITIES.map((r) => (
+                    <option key={r} value={r}>
+                      {r}
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-1 text-[11px] text-zinc-600">{t("te.restr.clubCapHint")}</p>
               </div>
 
               {/* ── Sign-up modal blurb (tournament_signup_modal §6) ───────── */}

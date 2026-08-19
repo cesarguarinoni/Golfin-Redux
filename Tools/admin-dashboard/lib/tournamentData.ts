@@ -74,6 +74,17 @@ function mapTournament(
     createdAt: str(r.created_at),
     // Tolerate the column being absent on an un-migrated DB: default visible.
     isActive: r.is_active !== false,
+    // Restrictions — str()/numOrNull() tolerate an un-migrated DB like the rest.
+    category: str(r.category),
+    maxPlayers: numOrNull(r.max_players),
+    playersPerDivision: numOrNull(r.players_per_division),
+    divisionType: str(r.division_type),
+    charRarityMin: str(r.char_rarity_min),
+    charRarityMax: str(r.char_rarity_max),
+    charLevelMin: numOrNull(r.char_level_min),
+    charLevelMax: numOrNull(r.char_level_max),
+    gearRule: str(r.gear_rule),
+    clubRarityMax: str(r.club_rarity_max),
     bands: bands.sort((a, b) => a.rankFrom - b.rankFrom),
     entryCount,
     humanEntryCount,
