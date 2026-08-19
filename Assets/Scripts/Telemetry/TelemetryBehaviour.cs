@@ -18,10 +18,26 @@ namespace Golfin.Telemetry
     {
         private static TelemetryBehaviour _instance;
 
+        /// <summary>
+        /// The live host, or NULL outside play mode.
+        ///
+        /// The null case is load-bearing, not defensive noise. `TelemetryHooks` subscribes to
+        /// GameSession's STATIC events, and a static subscription outlives play mode until the
+        /// next domain reload — so an EditMode test that calls `GameSession.MarkHoleComplete`
+        /// after anyone has entered play mode lands straight in our handler. Creating the host
+        /// there would call `DontDestroyOnLoad`, which THROWS in edit mode, and the exception
+        /// would surface out of `MarkHoleComplete` — a telemetry bug reaching a gameplay call,
+        /// which is exactly what SPEC §3 rule 1 forbids.
+        ///
+        /// Every caller null-checks. In a player build `isPlaying` is always true, so this
+        /// costs one bool on a path that runs a handful of times per round.
+        /// </summary>
         public static TelemetryBehaviour Instance
         {
             get
             {
+                if (!Application.isPlaying) return null;
+
                 if (_instance == null)
                 {
                     var go = new GameObject("[Golfin.Telemetry]");

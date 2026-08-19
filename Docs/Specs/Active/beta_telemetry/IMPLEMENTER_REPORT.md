@@ -188,6 +188,55 @@ short-lived session minted for the tests (admin `generate_link` + `email_otp` ve
 password involved, no account created) was revoked via `/auth/v1/logout` → `204`, and the
 local token scratch files were removed.
 
+## Post-ship defect found and fixed (2026-08-19)
+
+The concurrent `auth_recovery_flow` session's full-suite sweep hit
+`GameSessionTests.OnHoleComplete_…` failing with a `[Golfin.Telemetry]` `DontDestroyOnLoad`
+error, and logged it in AI_CONTEXT as "pre-existing and unrelated". **It was neither** —
+`[Golfin.Telemetry]` is the GameObject name in `TelemetryBehaviour`, so it could not predate
+this task. Reproduced deterministically, full stack:
+
+```
+GameSession.MarkHoleComplete (GameSession.cs:207)
+  → TelemetryHooks.OnHoleComplete (TelemetryHooks.cs:224)
+    → TelemetryBehaviour.get_Instance (TelemetryBehaviour.cs:29)
+      → DontDestroyOnLoad  →  THROWS ("can only be used in play mode")
+```
+
+**Mechanism.** `TelemetryHooks` subscribes to GameSession's **static** events. Static
+subscriptions outlive play mode until the next domain reload, so once anyone enters play
+mode, a later EditMode test calling `GameSession.MarkHoleComplete` lands in the handler,
+which reaches for the behaviour host and calls `DontDestroyOnLoad` in edit mode. My original
+full-suite run passed only because that Editor session had never entered play mode — the
+suite was order-dependent on something invisible.
+
+**Severity was higher than a leaked object: it threw, and the throw escaped into gameplay.**
+`GameSession.MarkHoleComplete` is a bare `OnHoleComplete?.Invoke(data)` with no try/catch,
+and `RecordSafe` only wraps the payload *builder* — every statement around it in a handler
+was unguarded. That directly violates SPEC §3 rule 1, the one invariant this feature is not
+allowed to break. In a player build `isPlaying` is always true so this specific throw could
+not fire, but the unguarded-handler hole was real on every path.
+
+**Three fixes:**
+
+| Fix | File | What it prevents |
+|---|---|---|
+| `Instance` returns **null** outside play mode instead of constructing a host | `TelemetryBehaviour.cs` | The throw itself. Every caller already null-checked. |
+| Every handler body runs inside a `Guard(...)` helper (`isPlaying` gate + try/catch) | `TelemetryHooks.cs` | Any handler throw reaching the gameplay caller — closes the gap `RecordSafe` never covered. |
+| `Install()` early-returns when not playing, **before** setting `_installed` | `TelemetryHooks.cs` | A latent bug found while fixing the above: an edit-mode `Install()` set `_installed = true` and would then silently block the real play-mode install, leaving telemetry wired to nothing with no error. |
+
+**Verified:** the exact reproduction now completes with no throw, 0 `[Golfin.Telemetry]`
+objects and 0 queued events across `MarkHoleComplete` / `SeedSession` / `SetCurrentHole` /
+`RecordShot` in edit mode. Full EditMode suite **1494 passed / 0 failed / 3 pre-existing
+skips** (1497 total). New regression test
+`TelemetryBehaviourInstance_IsNullOutsidePlayMode` asserts the root cause directly —
+`Instance` is null in edit mode, touching it does not throw, and no host GameObject appears.
+Telemetry suite is now 18/18.
+
+**Editor left clean:** the one `[Golfin.Telemetry]` object leaked by the *first* reproduction
+(created in the instant before `DontDestroyOnLoad` threw) was destroyed, service state reset,
+`GameSession` reset, `ShellScene` not dirty.
+
 ## Manual / on-device verification required
 
 | Item | Why it cannot be verified here |

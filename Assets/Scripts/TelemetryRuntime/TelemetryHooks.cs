@@ -45,6 +45,13 @@ namespace GolfinRedux.TelemetryRuntime
         public static void Install()
         {
             if (_installed || !TelemetryConfig.Enabled) return;
+
+            // Play mode only. This is [RuntimeInitializeOnLoadMethod] so it does not auto-run in
+            // edit mode, but an edit-mode call (a test, a tooling script) would otherwise set
+            // _installed and SILENTLY BLOCK the real install on the next play — the failure mode
+            // where telemetry is wired to nothing and no error says so.
+            if (!Application.isPlaying) return;
+
             _installed = true;
 
             try
@@ -124,47 +131,76 @@ namespace GolfinRedux.TelemetryRuntime
             }
         }
 
+        // ── Handler guard ─────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Runs a handler body so it can NEVER reach the gameplay code that raised the event.
+        ///
+        /// `TelemetryService.RecordSafe` only wraps the payload BUILDER; the statements around
+        /// it (reading a manager, touching the behaviour, flipping RoundActive) were unguarded,
+        /// so a throw there propagated out through e.g. `GameSession.MarkHoleComplete`, whose
+        /// `OnHoleComplete?.Invoke(data)` has no try/catch of its own. That is precisely the
+        /// failure SPEC §3 rule 1 forbids, and it was live: see the isPlaying note below.
+        ///
+        /// The `isPlaying` gate exists because these are STATIC event subscriptions. They
+        /// outlive play mode until the next domain reload, so an EditMode test calling
+        /// `GameSession.MarkHoleComplete` after any play-mode session lands here. Telemetry has
+        /// nothing to say about an edit-mode call, and trying to service one used to throw.
+        /// </summary>
+        private static void Guard(string what, Action body)
+        {
+            if (!TelemetryConfig.Enabled || !Application.isPlaying) return;
+            try { body(); }
+            catch (Exception ex) { Debug.LogWarning($"[Telemetry] {what} threw and was swallowed: {ex.Message}"); }
+        }
+
         // ── Handlers ──────────────────────────────────────────────────────────────
 
         private static void OnSignedIn(Golfin.Auth.AuthSession session)
         {
-            // The queue holds while unauthenticated; this is the moment it can drain.
-            TelemetryService.Instance.Flush();
+            Guard("OnSignedIn", () =>
+            {
+                // The queue holds while unauthenticated; this is the moment it can drain.
+                TelemetryService.Instance.Flush();
+            });
         }
 
         private static void OnScreenChanged(ScreenId screen)
         {
-            TryLateBind();
-
-            var svc = TelemetryService.Instance;
-
-            svc.RecordSafe(TelemetryEventNames.ScreenView, () => new Dictionary<string, object>
+            Guard("OnScreenChanged", () =>
             {
-                ["screen"]       = screen.ToString(),
-                // The first Home view's since_boot_s IS the boot→Home load-time metric
-                // (SPEC §1 #3) — there is no separate load_time event.
-                ["since_boot_s"] = Math.Round(Time.realtimeSinceStartup, 2),
-            });
+                TryLateBind();
 
-            // round_abandoned: a menu screen came up while a round was still active and no
-            // hole_complete had cleared it. ResetSession() would have been the tidier choke
-            // point but it has ZERO production call sites (tests only), so it never fires.
-            if (svc.RoundActive && IsMenuScreen(screen))
-            {
-                int hole = _roundHole;
-                int shots = GameSession.ShotHistory.Count;
-                ScreenId from = _lastScreen;
+                var svc = TelemetryService.Instance;
 
-                svc.RoundActive = false;
-                svc.RecordSafe(TelemetryEventNames.RoundAbandoned, () => new Dictionary<string, object>
+                svc.RecordSafe(TelemetryEventNames.ScreenView, () => new Dictionary<string, object>
                 {
-                    ["hole"]        = hole,
-                    ["shots_taken"] = shots,
-                    ["last_screen"] = from.ToString(),
+                    ["screen"]       = screen.ToString(),
+                    // The first Home view's since_boot_s IS the boot→Home load-time metric
+                    // (SPEC §1 #3) — there is no separate load_time event.
+                    ["since_boot_s"] = Math.Round(Time.realtimeSinceStartup, 2),
                 });
-            }
 
-            _lastScreen = screen;
+                // round_abandoned: a menu screen came up while a round was still active and no
+                // hole_complete had cleared it. ResetSession() would have been the tidier choke
+                // point but it has ZERO production call sites (tests only), so it never fires.
+                if (svc.RoundActive && IsMenuScreen(screen))
+                {
+                    int hole = _roundHole;
+                    int shots = GameSession.ShotHistory.Count;
+                    ScreenId from = _lastScreen;
+
+                    svc.RoundActive = false;
+                    svc.RecordSafe(TelemetryEventNames.RoundAbandoned, () => new Dictionary<string, object>
+                    {
+                        ["hole"]        = hole,
+                        ["shots_taken"] = shots,
+                        ["last_screen"] = from.ToString(),
+                    });
+                }
+
+                _lastScreen = screen;
+            });
         }
 
         private static bool IsMenuScreen(ScreenId screen)
@@ -176,111 +212,132 @@ namespace GolfinRedux.TelemetryRuntime
 
         private static void OnRoundStarted()
         {
-            var svc = TelemetryService.Instance;
-            svc.RoundActive = true;
-            _roundStartRealtime = Time.realtimeSinceStartup;
-            _roundHole = GameSession.CurrentHoleNumber;
-
-            var behaviour = TelemetryBehaviour.Instance;
-            if (behaviour != null) behaviour.ResetFpsSampling();
-
-            svc.RecordSafe(TelemetryEventNames.RoundStart, () => new Dictionary<string, object>
+            Guard("OnRoundStarted", () =>
             {
-                ["hole"]          = GameSession.CurrentHoleNumber,
-                ["character_id"]  = GameSession.SelectedCharacterId,
-                ["bag_slot"]      = GameSession.EquippedBagSlot,
-                ["is_tournament"] = GameSession.IsTournament,
-                ["tournament_id"] = GameSession.TournamentId,
+                var svc = TelemetryService.Instance;
+                svc.RoundActive = true;
+                _roundStartRealtime = Time.realtimeSinceStartup;
+                _roundHole = GameSession.CurrentHoleNumber;
+
+                var behaviour = TelemetryBehaviour.Instance;
+                if (behaviour != null) behaviour.ResetFpsSampling();
+
+                svc.RecordSafe(TelemetryEventNames.RoundStart, () => new Dictionary<string, object>
+                {
+                    ["hole"]          = GameSession.CurrentHoleNumber,
+                    ["character_id"]  = GameSession.SelectedCharacterId,
+                    ["bag_slot"]      = GameSession.EquippedBagSlot,
+                    ["is_tournament"] = GameSession.IsTournament,
+                    ["tournament_id"] = GameSession.TournamentId,
+                });
             });
         }
 
         private static void OnHistoryChanged()
         {
-            // OnHistoryChanged also fires on ResetForNewHole (a CLEAR, not a shot) — an empty
-            // history means there is nothing to report.
-            if (GameSession.ShotHistory.Count == 0) return;
-
-            TelemetryService.Instance.RecordSafe(TelemetryEventNames.ShotTaken, () =>
+            Guard("OnHistoryChanged", () =>
             {
-                var shot = GameSession.ShotHistory[GameSession.ShotHistory.Count - 1];
-                return new Dictionary<string, object>
+                // OnHistoryChanged also fires on ResetForNewHole (a CLEAR, not a shot) — an empty
+                // history means there is nothing to report.
+                if (GameSession.ShotHistory.Count == 0) return;
+
+                TelemetryService.Instance.RecordSafe(TelemetryEventNames.ShotTaken, () =>
                 {
-                    ["shot_number"] = shot.ShotNumber,
-                    ["club"]        = shot.ClubLabel,
-                    ["distance_m"]  = Math.Round(shot.DistanceXZMeters, 1),
-                    ["terminal"]    = shot.TerminalState,
-                    ["ob_reason"]   = shot.OBReason,
-                    ["surface"]     = shot.FinalSurface,
-                    ["penalty"]     = shot.PenaltyStrokes,
-                    ["hole"]        = GameSession.CurrentHoleNumber,
-                };
+                    var shot = GameSession.ShotHistory[GameSession.ShotHistory.Count - 1];
+                    return new Dictionary<string, object>
+                    {
+                        ["shot_number"] = shot.ShotNumber,
+                        ["club"]        = shot.ClubLabel,
+                        ["distance_m"]  = Math.Round(shot.DistanceXZMeters, 1),
+                        ["terminal"]    = shot.TerminalState,
+                        ["ob_reason"]   = shot.OBReason,
+                        ["surface"]     = shot.FinalSurface,
+                        ["penalty"]     = shot.PenaltyStrokes,
+                        ["hole"]        = GameSession.CurrentHoleNumber,
+                    };
+                });
             });
         }
 
         private static void OnHoleComplete(HoleCompletionData data)
         {
-            var svc = TelemetryService.Instance;
-            float duration = Time.realtimeSinceStartup - _roundStartRealtime;
-            var behaviour = TelemetryBehaviour.Instance;
-            float fpsAvg = behaviour != null ? behaviour.AverageFps : 0f;
-            float fpsLow = behaviour != null ? behaviour.LowFps : 0f;
-
-            svc.RoundActive = false;
-
-            svc.RecordSafe(TelemetryEventNames.HoleComplete, () => new Dictionary<string, object>
+            Guard("OnHoleComplete", () =>
             {
-                ["hole"]            = data.HoleNumber,
-                ["strokes"]         = data.Strokes,
-                ["penalty_strokes"] = data.PenaltyStrokes,
-                ["result"]          = data.TerminalState.ToString(),
-                ["duration_s"]      = Math.Round(duration, 1),
-                ["fps_avg"]         = Math.Round(fpsAvg, 1),
-                ["fps_low"]         = Math.Round(fpsLow, 1),
-                // HoleContext.Par is the same value the result modal and the hole card read.
-                ["par"]             = HoleContext.Par,
+                var svc = TelemetryService.Instance;
+                float duration = Time.realtimeSinceStartup - _roundStartRealtime;
+                var behaviour = TelemetryBehaviour.Instance;
+                float fpsAvg = behaviour != null ? behaviour.AverageFps : 0f;
+                float fpsLow = behaviour != null ? behaviour.LowFps : 0f;
+
+                svc.RoundActive = false;
+
+                svc.RecordSafe(TelemetryEventNames.HoleComplete, () => new Dictionary<string, object>
+                {
+                    ["hole"]            = data.HoleNumber,
+                    ["strokes"]         = data.Strokes,
+                    ["penalty_strokes"] = data.PenaltyStrokes,
+                    ["result"]          = data.TerminalState.ToString(),
+                    ["duration_s"]      = Math.Round(duration, 1),
+                    ["fps_avg"]         = Math.Round(fpsAvg, 1),
+                    ["fps_low"]         = Math.Round(fpsLow, 1),
+                    // HoleContext.Par is the same value the result modal and the hole card read.
+                    ["par"]             = HoleContext.Par,
+                });
             });
         }
 
         private static void OnFlickRejected(float speed)
         {
-            TelemetryService.Instance.RecordSafe(TelemetryEventNames.FlickRejected, () =>
-                new Dictionary<string, object>
-                {
-                    ["speed"]       = Math.Round(speed, 3),
-                    ["hole"]        = GameSession.CurrentHoleNumber,
-                    ["shot_number"] = GameSession.ShotHistory.Count + 1,
-                });
+            Guard("OnFlickRejected", () =>
+            {
+                TelemetryService.Instance.RecordSafe(TelemetryEventNames.FlickRejected, () =>
+                    new Dictionary<string, object>
+                    {
+                        ["speed"]       = Math.Round(speed, 3),
+                        ["hole"]        = GameSession.CurrentHoleNumber,
+                        ["shot_number"] = GameSession.ShotHistory.Count + 1,
+                    });
+            });
         }
 
         private static void OnShotCancelled()
         {
-            TelemetryService.Instance.RecordSafe(TelemetryEventNames.ShotCancelled, () =>
-                new Dictionary<string, object>
-                {
-                    ["hole"]        = GameSession.CurrentHoleNumber,
-                    ["shot_number"] = GameSession.ShotHistory.Count + 1,
-                });
+            Guard("OnShotCancelled", () =>
+            {
+                TelemetryService.Instance.RecordSafe(TelemetryEventNames.ShotCancelled, () =>
+                    new Dictionary<string, object>
+                    {
+                        ["hole"]        = GameSession.CurrentHoleNumber,
+                        ["shot_number"] = GameSession.ShotHistory.Count + 1,
+                    });
+            });
         }
 
         private static void OnPointsChanged(int balance)
         {
-            int previous = _lastPointsBalance;
-            _lastPointsBalance = balance;
+            Guard("OnPointsChanged", () =>
+            {
+                int previous = _lastPointsBalance;
+                _lastPointsBalance = balance;
 
-            TelemetryService.Instance.RecordSafe(TelemetryEventNames.PointsChanged, () =>
-                new Dictionary<string, object>
-                {
-                    ["balance"] = balance,
-                    // Null on the very first callback: there is no previous value to diff against,
-                    // and reporting `delta == balance` would read as a huge phantom grant.
-                    ["delta"]   = previous == int.MinValue ? (int?)null : balance - previous,
-                });
+                TelemetryService.Instance.RecordSafe(TelemetryEventNames.PointsChanged, () =>
+                    new Dictionary<string, object>
+                    {
+                        ["balance"] = balance,
+                        // Null on the very first callback: there is no previous value to diff against,
+                        // and reporting `delta == balance` would read as a huge phantom grant.
+                        ["delta"]   = previous == int.MinValue ? (int?)null : balance - previous,
+                    });
+            });
         }
 
         private static void OnCharacterLeveledUp(string characterId)
         {
-            TelemetryService.Instance.RecordSafe(TelemetryEventNames.LevelUp, () =>
-                new Dictionary<string, object> { ["character_id"] = characterId });
+            Guard("OnCharacterLeveledUp", () =>
+            {
+                TelemetryService.Instance.RecordSafe(TelemetryEventNames.LevelUp, () =>
+                    new Dictionary<string, object> { ["character_id"] = characterId });
+            });
         }
 
         private static void OnLogMessage(string condition, string stackTrace, LogType type)

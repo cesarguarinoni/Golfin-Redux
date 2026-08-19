@@ -1,6 +1,7 @@
 // Order: beta_telemetry — SPEC §5 acceptance tests 1–7. No network, no play mode.
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using NUnit.Framework;
@@ -342,6 +343,31 @@ namespace Golfin.Telemetry.Tests
             Assert.AreEqual(1, _sender.CallCount,
                 "A second flush must wait for the first to complete, not race it.");
             Assert.AreEqual(20, _svc.QueuedCount);
+        }
+
+        // ── edit-mode safety (regression: 2026-08-19) ────────────────────────────
+
+        [Test]
+        public void TelemetryBehaviourInstance_IsNullOutsidePlayMode()
+        {
+            // TelemetryHooks subscribes to GameSession's STATIC events, and those subscriptions
+            // outlive play mode until the next domain reload. So an EditMode test that calls
+            // GameSession.MarkHoleComplete after ANY play-mode session lands in our handler,
+            // which reads TelemetryBehaviour.Instance.
+            //
+            // Creating the host there calls DontDestroyOnLoad, which THROWS in edit mode, and
+            // the exception surfaced out of MarkHoleComplete itself — telemetry reaching a
+            // gameplay call. This shipped and broke GameSessionTests.OnHoleComplete_*.
+            Assert.IsFalse(Application.isPlaying, "Precondition: this is an EditMode test.");
+
+            TelemetryBehaviour instance = null;
+            Assert.DoesNotThrow(() => { instance = TelemetryBehaviour.Instance; },
+                "Touching Instance in edit mode must not throw (DontDestroyOnLoad would).");
+            Assert.IsNull(instance, "Instance must be null outside play mode, never a live host.");
+
+            Assert.IsFalse(
+                Resources.FindObjectsOfTypeAll<GameObject>().Any(g => g.name == "[Golfin.Telemetry]"),
+                "No [Golfin.Telemetry] GameObject may be spawned in edit mode.");
         }
 
         [Test]
