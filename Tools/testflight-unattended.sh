@@ -32,6 +32,16 @@ LOG="$REPO/Builds/testflight-unattended.log"
 LABEL=""
 [ "${1:-}" = "--oneshot-label" ] && LABEL="${2:-}"
 
+# SMOKE REHEARSAL. If this marker file exists, the run proves the chain — launchd -> program ->
+# this script -> repo access -> log -> notification — and stops before doing anything. It does NOT
+# quit Unity, does NOT commit, does NOT build, does NOT upload, and does NOT remove the launchd
+# agent. Exists because on 2026-08-18 a 23:33 agent was reported as armed having never been run
+# once; launchd could not even exec it (TCC, exit 126) and the overnight build was lost.
+# See tasks/lessons.md Lesson AY.
+SMOKE_FILE="/tmp/golfin_testflight_smoke"
+SMOKE=0
+[ -f "$SMOKE_FILE" ] && SMOKE=1
+
 say() { printf '%s  %s\n' "$(date '+%F %H:%M:%S')" "$*" >>"$LOG"; }
 notify() {
   if [ -x /opt/homebrew/bin/terminal-notifier ]; then
@@ -42,6 +52,8 @@ notify() {
 }
 cleanup_agent() {
   # One-shot: remove the launchd agent so this never fires a second time unasked.
+  # NEVER during a smoke rehearsal — that would delete the very schedule being proved.
+  [ "$SMOKE" = "1" ] && { say "smoke rehearsal — launchd agent left in place"; return 0; }
   [ -n "$LABEL" ] || return 0
   launchctl bootout "gui/$(id -u)/$LABEL" >/dev/null 2>&1
   rm -f "$HOME/Library/LaunchAgents/$LABEL.plist"
@@ -50,7 +62,17 @@ cleanup_agent() {
 finish() { say "RESULT: $2 (exit $1)"; notify "$2"; cleanup_agent; exit "$1"; }
 
 say "=========================================================="
-say "scheduled TestFlight run starting (pid $$)"
+say "scheduled TestFlight run starting (pid $$)${LABEL:+  agent=$LABEL}"
+say "user=$(id -un)  cwd=$(pwd)  repo readable=$([ -r "$REPO/Tools/testflight.sh" ] && echo yes || echo NO)"
+
+if [ "$SMOKE" = "1" ]; then
+  say "SMOKE REHEARSAL (marker $SMOKE_FILE present) — proving the chain, changing nothing."
+  say "  git:   $(/usr/bin/git -C "$REPO" rev-parse --short HEAD 2>&1)  count=$(/usr/bin/git -C "$REPO" rev-list --count HEAD 2>&1)"
+  say "  tree:  $(/usr/bin/git -C "$REPO" status --porcelain --untracked-files=all 2>/dev/null | wc -l | tr -d " ") dirty path(s) — would be auto-committed on a real run"
+  say "  unity: $([ -f "$REPO/Temp/UnityLockfile" ] && echo "OPEN — would be asked to quit" || echo "closed")"
+  say "  lane:  $([ -x "$REPO/Tools/testflight.sh" ] && echo "Tools/testflight.sh executable" || echo "NOT EXECUTABLE")"
+  finish 0 "SMOKE OK — launchd can run this job end to end. Nothing built or uploaded."
+fi
 
 # ── 1. Unity ───────────────────────────────────────────────────────────────────
 if [ -f "$REPO/Temp/UnityLockfile" ]; then
