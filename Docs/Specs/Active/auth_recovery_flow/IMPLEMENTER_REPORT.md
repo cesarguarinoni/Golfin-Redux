@@ -18,14 +18,14 @@ surfaced, and ran the full sweep. Nothing from §2 was rewritten.
 | Recovery deep link opens the set-new-password screen (NOT a silent sign-in) | PASS | Play mode, real entry path: title-gate `StartButton.onClick` → Login, then `AuthService.HandleAuthCallback("golfin://auth-callback#access_token=…&type=recovery")` — the same method `Application.deepLinkActivated` invokes. Result: `CurrentScreen=ResetPassword`, `PendingRecovery=HELD`, `Session.IsAuthenticated=False`, `Session.AccessToken=<empty>`. Captured in `screenshots/reset_password_en_clean.png`. |
 | Tokens are held, never persisted, until the password update succeeds | PASS | Measured before and after the deep link: `Session.AccessToken` stayed `<empty>` while `PendingRecovery` went `null → HELD`. After a rejected update the session was still `IsAuthenticated=False`. |
 | Client-side validation: password too weak | PASS | Real `SubmitButton.onClick.Invoke()` with `abc`/`abc` → MessageLabel active, text `Password does not meet the requirements.` (`AUTH_RESET_TOO_SHORT`), no network call. |
-| Client-side validation: passwords do not match | PASS | Real `SubmitButton.onClick.Invoke()` with `Str0ng!Pass1`/`Str0ng!Pass2` → MessageLabel active, text `Passwords do not match.` (`AUTH_RESET_MISMATCH`). Frame: `screenshots/reset_password_en_error_mismatch.png`. |
+| Client-side validation: passwords do not match | PASS | Real `SubmitButton.onClick.Invoke()` with `Str0ng!Pass1`/`Str0ng!Pass2` → MessageLabel active, text `Passwords do not match.` (`AUTH_RESET_MISMATCH`). Frame: `screenshots/reset_password_en_error_mismatch.png` (re-captured and visually confirmed — the first attempt saved a stale frame, see § Capture trap). |
 | Expired / rejected reset token shows the localized error and does not sign the player in | PASS | Editor runs the LIVE transport (`SupabaseConfig.useMockTransport: 0`, real anon key), so a valid+matching submit with a fabricated recovery token went to the real `PUT /auth/v1/user` and was refused. Result: `This reset link has expired or was already used. Please request a new one from the login screen.` in `#E5484D`, `CurrentScreen` still `ResetPassword`, `Session.IsAuthenticated=False`, submit button re-enabled. |
 | Expired-link *fragment* (`error_code=otp_expired`) surfaces on the Login screen | PASS | With Login open, fired `golfin://auth-callback#error=access_denied&error_code=otp_expired&error_description=…`. Login's MessageLabel became active with `AUTH_RESET_LINK_EXPIRED`; `CurrentScreen=Login`, `PendingRecovery=null`, `IsAuthenticated=False`. |
 | Back to Login clears the held tokens first (no bounce-back loop) | PASS | Real `BackButton.onClick.Invoke()` → `PendingRecovery=null` immediately, then `CurrentScreen=Login` after the fade. Order matters: `LoginScreenController.OnEnable` re-routes to ResetPassword whenever tokens are held, so a clear-after-navigate would ping-pong. |
 | Regression guard: a plain signup-confirmation deep link behaves exactly as before | PASS | Fired the same URL shape without `type=recovery`: `PendingRecovery` stayed `null` and `Session.AccessToken` was SET — i.e. the pre-existing sign-in path ran untouched. The fabricated session was cleared with `SignOut()` before leaving play mode. |
 | Eye toggle unmasks BOTH fields | PASS | `EyeButton.onClick.Invoke()` moved both `NewPasswordInput` and `ConfirmPasswordField` `Password → Standard`, and back on the second press. One button by design (both fields hold the same secret). |
 | EN strings render | PASS | `screenshots/reset_password_en_clean.png` — title `Set New Password`, labels + both placeholders, `SET PASSWORD`, `Back to Login`, all from `AUTH_RESET_*`. |
-| JA strings render | PASS | `LocalizationManager.SetLanguage(Japanese)` live: 新しいパスワードを設定 / 新しいパスワード / 新しいパスワード（確認） / パスワードを設定 / ログインに戻る, plus a fresh JA error パスワードが一致しません. Frame: `screenshots/reset_password_ja_error_mismatch.png`. |
+| JA strings render | PASS | `LocalizationManager.SetLanguage(Japanese)` live: 新しいパスワードを設定 / 新しいパスワード / 新しいパスワード（確認） / パスワードを設定 / ログインに戻る, plus a fresh JA error パスワードが一致しません. Frame: `screenshots/reset_password_ja_error_mismatch.png` (re-captured and visually confirmed — the first attempt saved the English error string, see § Capture trap). |
 | No white-box placeholders — every `[SerializeField]` wired | PASS | After reopening the saved scene, iterated every `ObjectReference` property on the live `ResetPasswordScreenController` via `SerializedObject`: **0 null refs** across all 18. `ScreenManager._resetPasswordScreen = ResetPasswordScreen`. |
 | Submit label sits inside its button (no text-outside-container) | PASS | First render FAILED this: `LayoutElement.preferredWidth=388` (baked for the word LOGIN) overrode the button's own ContentSizeFitter, so `SET PASSWORD` (467px preferred) rendered outside the green fill. Fixed by setting `preferredWidth = -1`. Re-measured with `GetWorldCorners`: button `w=658.6`, label `w=466.6`, `LABEL_INSIDE_BUTTON=True`. |
 | JA copy fits its containers | PASS | Per-element `TMP.preferredWidth` vs measured slot, in play mode: SubmitButton label EN 467 / JA 440 vs slot 467; BackButton label EN 401 / JA 385 vs slot 445; both password labels well under the 978 slot. SectionHeader's slot is text-driven (no `preferredWidth` override) so JA 605 ≤ 978 available. |
@@ -40,11 +40,37 @@ surfaced, and ran the full sweep. Nothing from §2 was rewritten.
 Canonical screenshot: `screenshots/reset_password_en_clean.png` (1170×2532, iPhone 14, play mode,
 reached through the real title-gate → Login → recovery deep link path).
 
-| File | State |
-|---|---|
-| `screenshots/reset_password_en_clean.png` | EN, fresh screen, both placeholders, submit + back |
-| `screenshots/reset_password_en_error_mismatch.png` | EN, mismatch error, both fields masked |
-| `screenshots/reset_password_ja_error_mismatch.png` | JA, all copy localized, JA error string |
+| File | State | md5 (first 12) |
+|---|---|---|
+| `screenshots/reset_password_en_clean.png` | EN, fresh screen, both placeholders, submit + back | `f2d988a47c09` |
+| `screenshots/reset_password_en_error_mismatch.png` | EN, mismatch error in `#E5484D`, both fields masked | `0e36cf0132c1` |
+| `screenshots/reset_password_ja_error_mismatch.png` | JA — title, labels, placeholders, buttons AND the error string (パスワードが一致しません) all localized | `c649da06533b` |
+
+**Each of these three files was opened and visually confirmed to show the state it is cited for**
+before this table was written. Distinct md5s are recorded because the first attempt produced two
+files that were not distinct — see § Capture trap below.
+
+## Capture trap — first attempt saved stale frames (corrected)
+
+The first pass invoked `EditorApplication.ExecuteMenuItem("GOLFIN/Screenshot/Capture Game View")`
+in the **same `script-execute` call** that mutated the UI. The Game View render texture is not
+synchronously refreshed inside one call, so two of the three saved PNGs were one frame stale:
+
+- `reset_password_en_error_mismatch.png` saved the *clean* screen — no error label at all
+  (identical 940 KB size to the clean capture, the tell).
+- `reset_password_ja_error_mismatch.png` saved the correct JA layout but the *English* error
+  string, i.e. the frame from before the fresh JA submit.
+
+This is the physics-lab capture rule in CLAUDE.md ("two sequential `screenshot-game-view` calls
+after two different shots produce visually identical PNGs") reappearing in a UI context. The
+findings themselves were never in doubt — they were established by reading `MessageLabel.text` /
+`.activeSelf` / `.color` back programmatically, and the correct frames did render in the live
+`screenshot-game-view` returns, which are a separate tool round-trip and therefore a frame later.
+Only the saved artifacts were wrong.
+
+Re-captured with the mutation and the capture in **separate calls**, with a settle wait between,
+then every file opened and checked before being cited. Fix for next time: never capture in the
+same call that changes state, and always open the PNG before citing it.
 
 ---
 
@@ -190,6 +216,13 @@ untouched, and deliberately excluded from this task's commit (in-flight work fro
   refuses on length; a server-side floor above 8 would surface through the `WeakPassword` branch.
   One dashboard check retires this NOTE.
 - **JA copy is machine-authored** and flagged for native review.
+- **JA renders a weight lighter than EN, app-wide.** Verified in play mode: every account screen's
+  `SectionHeader` (Login, SignUp, CreateUsername, EmailConfirmation, ResetPassword) uses
+  `Rubik-SemiBold SDF`, whose only JA fallback — global and font-asset-local — is
+  `NotoSansJP-VariableFont_wght SDF` at regular weight. So Japanese glyphs come out of a
+  regular-weight atlas while English renders SemiBold; visible in
+  `screenshots/reset_password_ja_error_mismatch.png`. Pre-existing and identical on all five
+  screens, not introduced here — but it is a real EN/JA fidelity gap and wants its own spec.
 - The empty lower half of the card is the account-screen family style, not a defect introduced
   here: `LoginScreen`, `SignUpScreen`, `CreateUsernameScreen` and `EmailConfirmationScreen` all use
   the same full-height stretched card (1080×2123, `sizeDelta -90/-409`), and the two sparse siblings
