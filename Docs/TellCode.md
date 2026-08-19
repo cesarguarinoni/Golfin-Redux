@@ -34,7 +34,7 @@
 
 ## 📋 SPEC_READY POINTERS
 
-- **`auth_recovery_flow`** (filed 2026-08-19, Architect via Cowork) — **SPEC_READY · CODE + TESTS ALREADY WRITTEN (Cowork 2026-08-19, uncommitted) — Code finishes: scene wiring, full sweep, acceptance, commit. READ `HANDOFF.md` IN THE SPEC FOLDER FIRST.** Filtered `Golfin.Auth.Tests` 45/45 at handoff; Editor pre-step (AuthRedirectUrl.cs import + first `AuthRedirectUrlTests` run) DONE, 31/31 before the new code. Password-reset links today **silently sign the player in with the password unchanged**: `AuthService.OnDeepLink` (AuthService.cs:202) has one branch, `OAuthCallbackParser` ignores `type=recovery`, and `ISupabaseAuthClient` has no password-update method. Server side done 2026-08-19 — reset emails land on `confirm.golfin.world` and deep-link back with `type` in the fragment. Task: parse `type`+error params, branch OnDeepLink (recovery session held un-persisted, no `RaiseSignedIn()` until the new password is set), `UpdatePassword` → `PUT /auth/v1/user`, set-new-password screen in `Assets/Scripts/UI/Account/`, EN+JA loc, tests in `Golfin.Auth.Tests`. Pre-step folded in: import `AuthRedirectUrl.cs` + first-ever Editor run of `AuthRedirectUrlTests`. Out of scope: SMTP, admin-dashboard password actions, email-change/magic-link, `Tools/golfin-confirm`. Spec: `Docs/Specs/Active/auth_recovery_flow/SPEC.md`.
+- **`auth_recovery_flow`** (filed 2026-08-19, Architect via Cowork) — **IMPLEMENTED — Code closed the loop 2026-08-19 (commits `0e4381fc6` + `96227b057`; STATUS `READY_FOR_SELF_REVIEW`). Architect spot-check PASSED same day** (commit scope, scene wiring `_resetPasswordScreen`→`883282913`, 2-block scene diff claim, screenshots present per gitignore policy, and the sweep's one failure — pre-existing telemetry edit-mode bootstrap — fixed separately in `15d805a47`, GameSessionTests re-run 5/5). ⚠️ ONE SCOPE NOTE: the auth commit's LocalizationText.csv hunk swept in the 16 `tourn.*` rows belonging to `tournament_restrictions` (still uncommitted) — benign, but that task's close-out must NOT re-add them. Remaining: Cesar's 3 device items (report §Needs-manual), Supabase min-length dashboard check, JA native review; JA-renders-lighter-than-EN wants its own spec. Password-reset links today **silently sign the player in with the password unchanged**: `AuthService.OnDeepLink` (AuthService.cs:202) has one branch, `OAuthCallbackParser` ignores `type=recovery`, and `ISupabaseAuthClient` has no password-update method. Server side done 2026-08-19 — reset emails land on `confirm.golfin.world` and deep-link back with `type` in the fragment. Task: parse `type`+error params, branch OnDeepLink (recovery session held un-persisted, no `RaiseSignedIn()` until the new password is set), `UpdatePassword` → `PUT /auth/v1/user`, set-new-password screen in `Assets/Scripts/UI/Account/`, EN+JA loc, tests in `Golfin.Auth.Tests`. Pre-step folded in: import `AuthRedirectUrl.cs` + first-ever Editor run of `AuthRedirectUrlTests`. Out of scope: SMTP, admin-dashboard password actions, email-change/magic-link, `Tools/golfin-confirm`. Spec: `Docs/Specs/Active/auth_recovery_flow/SPEC.md`.
 
 ### Kickoff · auth_recovery_flow (RE-ISSUED 2026-08-19 after partial Cowork implementation — supersedes the original Cowork kickoff)
 
@@ -91,6 +91,35 @@ When done: list changed files with a 1-line summary each, run the acceptance
 tests in the spec, flag which need manual on-device verification, update
 STATUS.md + IMPLEMENTER_REPORT.md in the spec folder, and update
 Docs/AI_CONTEXT.md.
+- **`tournament_restrictions`** (filed 2026-08-19, Architect) — **SPEC_READY, kickoff pasteable. Server half LIVE in prod 2026-08-18.** Tournaments carry category (`sponsor`|`competitive`) + entry restrictions (max players, character rarity/level bands, gear rule, club rarity cap), authored in the dashboard, served by `list_golfin` (10 new nullable fields), and enforced server-side at `POST /golfin/{slug}/enter` BEFORE the fee debit (denials 200-shaped: `full` / `ineligible` like `insufficient`; rarity truth = new `golfin_characters` mirror). Client half: DTO→`TournamentDefinition` plumbing (appended optional, CSV fallback = today's behaviour), the signup modal's RULES block goes data-driven (`ApplyRules()` currently joins 5 hardcoded loc strings; ⚠️ the "GEAR: Supplied by GOLFIN" default was display fiction and becomes "Own clubs" per backfilled data), and CONFIRM is gated client-side on character rarity/level + equipped-bag club rarity — ineligible = toast, no debit, no navigation. Standard-spec stat normalization explicitly deferred. Spec: `Docs/Specs/Active/tournament_restrictions/SPEC.md`.
+
+### Kickoff · tournament_restrictions (issued 2026-08-19)
+
+```
+Read Docs/Specs/Active/tournament_restrictions/SPEC.md and implement it.
+
+Context:
+- Server half is LIVE: list_golfin emits 10 nullable restriction fields
+  (playlife routers/tournaments.py); /golfin/{slug}/enter denies pre-debit
+  with 200-shaped {status:"full"|"ineligible"} (routers/tournaments_golfin.py).
+  Read them for the contract; do not change playlife.
+- Client: RemoteTournamentDtos + TournamentDefinition (appended optional,
+  Title/BannerUrl pattern) + TournamentScheduleMapper pass-through;
+  TournamentSignupModalController.ApplyRules() becomes data-driven with the
+  existing 5 loc keys as null fallbacks; OnConfirm gates eligibility BEFORE
+  the payment path (CharacterManager rarity/level, BagManager equipped bag
+  vs club_rarity_max; gear_rule=supplied skips the club check).
+- Minimal diff. Reuse RarityHelper/CharacterRarity ordering, the modal's
+  existing refusal-toast pattern, LocalizationManager. New loc rows EN+JA
+  (JA flagged for native review). No prefab surgery — if the category tag
+  needs layout work, SKIP it and note it.
+- Out of scope: standard-spec normalization, dashboard, server changes,
+  division/bracket logic.
+
+When done: list changed files with a 1-line summary each, run the acceptance
+tests in the spec (incl. the widget-click ineligible-CONFIRM test), flag which
+need manual on-device verification, update STATUS.md + IMPLEMENTER_REPORT.md
+in the spec folder, and update Docs/AI_CONTEXT.md.
 ```
 
 - **`ingame_settings_modal`** (filed 2026-08-18, Architect) — **SPEC_READY, kickoff pasteable.** The in-game gear (`ShotUI_Canvas/SettingsButton` in LabScaffold — gameplay HUD only, menu gear untouched) gets its real function: settings overlay with SFX+Music sliders (AudioManager reuse) and a PLAYING card (live HoleContext/HoleData bind) with BACK / QUIT; QUIT is solo-only, confirm-gated ("no rewards"), tears down via `GameplaySceneLoader.UnloadGameplay()`. Same change REMOVES the cheat on that gear: `GreenTuningPanel.toggleButton` unwired in LabScaffold (class + lab usage stay). Everything reuses existing card/button/slider assets — zero new art. Figma `13873:33610` + `13905:6678`; renders in `reference/`. ⚠️ Flagged for later, NOT in this task: app-kill mid-tournament-round = abandoned-round handling needs its own spec. Spec: `Docs/Specs/Active/ingame_settings_modal/SPEC.md`.
