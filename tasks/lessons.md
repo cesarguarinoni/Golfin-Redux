@@ -2233,3 +2233,56 @@ other modal's timing changed.
 **Both bugs were invisible to static reading and to the acceptance checklist** — they only appeared
 when the flow was driven end-to-end in play mode through the real widgets' `onClick`. A modal that
 "looks right" in a prefab render can still be broken in every way that matters.
+
+---
+
+## Lesson AY — a scheduled job is not scheduled until it has actually run once (2026-08-19)
+
+**What happened.** Cesar asked for a TestFlight build at 23:33. I wrote
+`Tools/testflight-unattended.sh`, installed a launchd agent, verified the script's dependencies
+under a stripped environment (`env -i`, minimal PATH, no locale — git, osascript, the `.env`
+source, the fastlane cellar, the Spaceship check all resolved), and reported it armed.
+
+At 23:33 launchd fired it and it died in under a second:
+
+```
+/bin/bash: /Users/cesar/Documents/GolfinRedux/Tools/testflight-unattended.sh: Operation not permitted
+last exit code = 126
+```
+
+No build overnight. Cesar found out at 06:30 the next morning.
+
+**The verification tested the wrong layer.** I proved the script *would work if it ran*. I never
+proved it *could be executed at all* by the thing scheduled to execute it. Those are different
+questions and only the second one killed it.
+
+**Root cause — macOS TCC.** `~/Documents` is a protected folder. A launchd agent has no UI, so the
+consent prompt can never be shown, so the access is denied outright. `/bin/bash` executing a script
+that lives under `~/Documents` gets `EPERM` on the exec itself. Proven twice by probe agents the
+next morning:
+
+| launchd program | reaching into the repo | result |
+|---|---|---|
+| `/bin/bash` + script **outside** Documents | `git -C <repo>` | `fatal: Unable to read current working directory: Operation not permitted` |
+| `Docs/Scripts/.venv/bin/python` (the daily-report binary) | `/bin/ls` + a repo bash script | **works** — `rc=0`, and it drove `assert-unity-closed.sh` correctly |
+
+`com.golfin.dailyreport` has run **6,169 times with exit 0** from that same protected folder — the
+precedent was sitting right there and I did not check it before choosing `/bin/bash`.
+
+**How to apply.**
+
+1. **Never report a scheduled job as armed until it has fired once for real.** Install it with
+   `RunAtLoad` (or a fire time 60 s out), read the log, confirm a genuine execution, and only then
+   set the real time. It costs five seconds. Skipping it cost Cesar an overnight build.
+2. **On this Mac, schedule through a program that already has the TCC grant** — the daily-report
+   venv python — not `/bin/bash`. Same rule for any future launchd/cron work touching
+   `~/Documents`, `~/Desktop` or `~/Downloads`.
+3. **`launchctl print gui/<uid>/<label>` is the diagnostic**: `runs =` and `last exit code =` tell
+   you whether it fired and how it died. `runs = 1, last exit code = 126` is "fired and could not
+   execute", NOT "never fired".
+4. Redirect `StandardErrorPath` somewhere readable and check it — the one line that explained this
+   whole failure was sitting in `Builds/testflight-launchd.err` from 23:33.
+
+**Wider rule.** "I verified it" has to name *which* layer was verified. Dependencies resolving is
+not the same as the job running; the job running is not the same as the job producing the artifact.
+For anything unattended, the only evidence that counts is one complete real run, end to end.
