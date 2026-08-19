@@ -1,0 +1,17 @@
+// GOLFIN — public auth-email landing page ("Email confirmed" / recovery variant).
+// Same hosting pattern as Tools/admin-dashboard (golfin-admin), with two deliberate
+// differences: NO Cloudflare Access policy (this page must be public — it is where
+// player confirmation emails land), and a static assets-only Worker (no server code).
+{
+  "name": "golfin-confirm",
+  // golfin.world zone lives in this account (Next.innovation.komatsu@gmail.com's) —
+  // a Worker can only take a custom domain from a zone in its own account.
+  "account_id": "c2c4b9869449639abcc77e5437c28dab",
+  "compatibility_date": "2026-08-01",
+  "assets": { "directory": "./public" },
+  // Same posture as golfin-admin: no second hostname outside the custom domain.
+  "workers_dev": false,
+  "routes": [
+    { "pattern": "confirm.golfin.world", "custom_domain": true }
+  ]
+}

@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GOLFIN — Email confirmed｜メール確認完了</title>
+<style>
+  :root { --green:#0e5c2f; --green-light:#17853f; --ink:#1a2b1e; --muted:#5c6b60; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,
+      "Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif;
+    background:linear-gradient(160deg,#f2f7f3 0%,#dcebe0 100%);
+    color:var(--ink); min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px;
+  }
+  .card { background:#fff; border-radius:16px; box-shadow:0 8px 32px rgba(14,92,47,.12); max-width:440px; width:100%; overflow:hidden; }
+  .head { background:var(--green); padding:26px; text-align:center; }
+  .head .logo { color:#fff; font-size:26px; font-weight:800; letter-spacing:3px; }
+  .body { padding:32px 28px; text-align:center; }
+  .check {
+    width:64px; height:64px; margin:0 auto 18px; border-radius:50%;
+    background:var(--green-light); color:#fff; font-size:34px; line-height:64px; font-weight:700;
+  }
+  h1 { font-size:20px; margin-bottom:8px; }
+  p  { font-size:14px; color:var(--muted); line-height:1.7; }
+  .ja { margin-top:14px; }
+  .btn {
+    display:inline-block; margin:22px 0 6px; padding:14px 34px; border-radius:10px;
+    background:var(--green); color:#fff; text-decoration:none; font-size:16px; font-weight:700;
+  }
+  .btn:active { background:var(--green-light); }
+  .desktop-note { display:none; margin-top:16px; font-size:13px; color:var(--muted);
+    background:#f2f7f3; border-radius:8px; padding:12px; }
+  .foot { padding:0 28px 26px; text-align:center; font-size:12px; color:#93a297; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="head"><span class="logo">GOLFIN</span></div>
+    <div class="body">
+      <div class="check">&#10003;</div>
+      <h1 id="title-en">Email confirmed!</h1>
+      <p id="msg-en">Your GOLFIN account is ready. Return to the game to start playing.</p>
+      <div class="ja">
+        <h1 id="title-ja" style="font-size:18px;">メールアドレスの確認が完了しました</h1>
+        <p id="msg-ja">GOLFINアカウントの準備ができました。ゲームに戻ってプレイを始めましょう。</p>
+      </div>
+      <a class="btn" id="open-btn" href="golfin://auth-callback">Open GOLFIN｜ゲームを開く</a>
+      <div class="desktop-note" id="desktop-note">
+        Opened on a computer? Your email is already confirmed — just open GOLFIN on your phone and sign in.<br>
+        <span lang="ja">パソコンで開いた場合も確認は完了しています。スマートフォンでGOLFINを開いてログインしてください。</span>
+      </div>
+    </div>
+    <div class="foot">If you didn't create a GOLFIN account, you can ignore this message.<br>
+      <span lang="ja">このページに心当たりがない場合は、そのまま閉じてください。</span></div>
+  </div>
+<script>
+  (function () {
+    var params = new URLSearchParams(window.location.search);
+    // Password-recovery variant: swap the copy, keep the same deep link.
+    if (params.get("type") === "recovery") {
+      document.getElementById("title-en").textContent = "Password reset link verified";
+      document.getElementById("msg-en").textContent = "Return to GOLFIN to set your new password.";
+      document.getElementById("title-ja").textContent = "パスワード再設定リンクを確認しました";
+      document.getElementById("msg-ja").textContent = "GOLFINに戻って新しいパスワードを設定してください。";
+    }
+    var isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    if (isMobile) {
+      // Best-effort auto-open; the button stays as manual fallback.
+      // Forward the auth fragment (tokens arrive in location.hash after Supabase verify).
+      var target = "golfin://auth-callback" + (window.location.hash || "");
+      document.getElementById("open-btn").setAttribute("href", target);
+      setTimeout(function () { window.location.href = target; }, 600);
+    } else {
+      document.getElementById("desktop-note").style.display = "block";
+    }
+  })();
+</script>
+</body>
+</html>

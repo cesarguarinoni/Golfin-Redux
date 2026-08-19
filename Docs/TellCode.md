@@ -34,6 +34,32 @@
 
 ## 📋 SPEC_READY POINTERS
 
+- **`auth_email_redirect`** (filed 2026-08-19, Architect via Cowork) — **SPEC_READY, kickoff pasteable.** Player signup-confirmation + password-reset emails were landing on `admin.golfin.world` → the Cloudflare Access block page (client sends no `redirect_to`, Site URL fallback — `ADMIN_DASHBOARD_OPS.md` §6). **Already done server-side 2026-08-19 (Supabase Studio, no code):** both email templates rewritten — GOLFIN-branded, EN+JA, verify link hardcodes `redirect_to=golfin://auth-callback` — so builds already in the field are fixed. Remaining (this task): deploy `Tools/golfin-confirm` (assets-only Worker, `confirm.golfin.world`, same CF account as golfin-admin, **NO Access policy** — verify 200 not 302), make the client pass `redirect_to` on signup/recover, then swap the two templates to the hosted page (+ Supabase URL-allowlist entries, Cesar). ⚠️ MUST VERIFY, not assume: does the `golfin://auth-callback` handler process `type=recovery` (set-new-password flow)? If not, document the gap in the report. Spec: `Docs/Specs/Active/auth_email_redirect/SPEC.md`. Worker files already in `Tools/golfin-confirm/`.
+
+### Kickoff · auth_email_redirect (issued 2026-08-19)
+
+```
+Read Docs/Specs/Active/auth_email_redirect/SPEC.md and implement it.
+
+Context:
+- Fixes player auth emails landing on admin.golfin.world / Cloudflare Access.
+- Templates already fixed server-side (deep link) — do NOT redo them. Your
+  parts: (1) deploy Tools/golfin-confirm (assets-only Worker, account pinned
+  in wrangler.jsonc, custom domain confirm.golfin.world, NO Access policy —
+  verify curl returns 200, not a 302 to cloudflareaccess.com),
+  (2) ISupabaseAuthClient signup/recover must pass redirect_to (mirror how
+  OAuthUrlBuilder passes golfin://auth-callback today).
+- Minimal diff. Out of scope: custom SMTP sender, admin-dashboard password
+  actions (separate backlog spec).
+- MUST VERIFY, not assume: does the golfin://auth-callback handler process
+  type=recovery (set-new-password flow)? If not, document the gap.
+
+When done: list changed files with a 1-line summary each, run the acceptance
+tests in the spec, flag which need manual on-device verification, update
+STATUS.md + IMPLEMENTER_REPORT.md in the spec folder, and update
+Docs/AI_CONTEXT.md.
+```
+
 - **`ingame_settings_modal`** (filed 2026-08-18, Architect) — **SPEC_READY, kickoff pasteable.** The in-game gear (`ShotUI_Canvas/SettingsButton` in LabScaffold — gameplay HUD only, menu gear untouched) gets its real function: settings overlay with SFX+Music sliders (AudioManager reuse) and a PLAYING card (live HoleContext/HoleData bind) with BACK / QUIT; QUIT is solo-only, confirm-gated ("no rewards"), tears down via `GameplaySceneLoader.UnloadGameplay()`. Same change REMOVES the cheat on that gear: `GreenTuningPanel.toggleButton` unwired in LabScaffold (class + lab usage stay). Everything reuses existing card/button/slider assets — zero new art. Figma `13873:33610` + `13905:6678`; renders in `reference/`. ⚠️ Flagged for later, NOT in this task: app-kill mid-tournament-round = abandoned-round handling needs its own spec. Spec: `Docs/Specs/Active/ingame_settings_modal/SPEC.md`.
 
 ### Kickoff · ingame_settings_modal (issued 2026-08-18)
