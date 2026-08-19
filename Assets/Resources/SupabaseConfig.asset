@@ -17,3 +17,5 @@ MonoBehaviour:
   anonKey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indtc3p5Z2h3d2thcHRncWR1bmVsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUyNDUwNjUsImV4cCI6MjA5MDgyMTA2NX0.bjom80tb4sFZ5ozt165PDSBuKoqfZo_ynTryDJLzGws
   requestTimeoutSeconds: 30
   oauthRedirect: golfin://auth-callback
+  emailConfirmRedirect: https://confirm.golfin.world/
+  passwordResetRedirect: https://confirm.golfin.world/?type=recovery

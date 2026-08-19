@@ -36,6 +36,17 @@ namespace Golfin.Auth
                  "and declared as a custom URL scheme in the iOS/Android player settings.")]
         public string oauthRedirect = "golfin://auth-callback";
 
+        [Header("Email links (auth_email_redirect)")]
+        [Tooltip("Where the confirm-signup email link lands after Supabase verifies the token. Sent as " +
+                 "redirect_to on POST /signup and /resend. Public hosted page (Worker 'golfin-confirm') that " +
+                 "deep-links into the app on mobile. Must be registered in Supabase -> Authentication -> " +
+                 "URL Configuration -> Redirect URLs. Leave EMPTY to fall back to the project Site URL.")]
+        public string emailConfirmRedirect = "https://confirm.golfin.world/";
+
+        [Tooltip("Where the password-reset email link lands. Sent as redirect_to on POST /recover. The " +
+                 "?type=recovery query switches the hosted page to the reset copy.")]
+        public string passwordResetRedirect = "https://confirm.golfin.world/?type=recovery";
+
         /// <summary>True when live transport is selected but the anon key is missing — AuthService falls back to mock and warns.</summary>
         public bool LiveButUnconfigured => !useMockTransport && string.IsNullOrWhiteSpace(anonKey);
 

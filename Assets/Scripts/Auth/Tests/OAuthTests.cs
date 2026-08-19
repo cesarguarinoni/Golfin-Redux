@@ -32,6 +32,40 @@ namespace Golfin.Auth.Tests
         }
     }
 
+    /// <summary>auth_email_redirect — redirect_to must ride the query string on the email endpoints.</summary>
+    public class AuthRedirectUrlTests
+    {
+        [Test]
+        public void Append_UsesQuestionMark_WhenPathHasNoQuery()
+        {
+            Assert.AreEqual("/signup?redirect_to=https%3A%2F%2Fconfirm.golfin.world%2F",
+                AuthRedirectUrl.Append("/signup", "https://confirm.golfin.world/"));
+        }
+
+        [Test]
+        public void Append_UsesAmpersand_WhenPathAlreadyHasQuery()
+        {
+            Assert.AreEqual("/verify?type=recovery&redirect_to=golfin%3A%2F%2Fauth-callback",
+                AuthRedirectUrl.Append("/verify?type=recovery", "golfin://auth-callback"));
+        }
+
+        [Test]
+        public void Append_EscapesTheRecoveryQueryInsideTheRedirect()
+        {
+            // The '?type=recovery' belongs to the landing page, so it must survive as escaped payload.
+            Assert.AreEqual("/recover?redirect_to=https%3A%2F%2Fconfirm.golfin.world%2F%3Ftype%3Drecovery",
+                AuthRedirectUrl.Append("/recover", "https://confirm.golfin.world/?type=recovery"));
+        }
+
+        [Test]
+        public void Append_ReturnsPathUnchanged_WhenRedirectIsEmpty()
+        {
+            // Clearing the SupabaseConfig field restores the old behaviour (Supabase Site URL fallback).
+            Assert.AreEqual("/signup", AuthRedirectUrl.Append("/signup", ""));
+            Assert.AreEqual("/signup", AuthRedirectUrl.Append("/signup", null));
+        }
+    }
+
     public class OAuthCallbackParserTests
     {
         private SupabaseConfig Cfg()

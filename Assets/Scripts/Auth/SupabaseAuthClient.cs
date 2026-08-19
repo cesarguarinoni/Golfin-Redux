@@ -28,16 +28,16 @@ namespace Golfin.Auth
         }
 
         public void SignUp(string email, string password, Action<AuthResult> onResult)
-            => _runner.StartCoroutine(Post("/signup", Json2("email", email, "password", password), null, onResult, expectSession: false));
+            => _runner.StartCoroutine(Post(WithEmailRedirect("/signup"), Json2("email", email, "password", password), null, onResult, expectSession: false));
 
         public void SignInWithPassword(string email, string password, Action<AuthResult> onResult)
             => _runner.StartCoroutine(Post("/token?grant_type=password", Json2("email", email, "password", password), null, onResult, expectSession: true));
 
         public void ResendConfirmation(string email, Action<AuthResult> onResult)
-            => _runner.StartCoroutine(Post("/resend", Json2("type", "signup", "email", email), null, onResult, expectSession: false));
+            => _runner.StartCoroutine(Post(WithEmailRedirect("/resend"), Json2("type", "signup", "email", email), null, onResult, expectSession: false));
 
         public void RequestPasswordReset(string email, Action<AuthResult> onResult)
-            => _runner.StartCoroutine(Post("/recover", Json1("email", email), null, onResult, expectSession: false));
+            => _runner.StartCoroutine(Post(AuthRedirectUrl.Append("/recover", _config.passwordResetRedirect), Json1("email", email), null, onResult, expectSession: false));
 
         public void UpdateDisplayName(string accessToken, string displayName, Action<AuthResult> onResult)
             => _runner.StartCoroutine(Put("/user", "{\"data\":{\"display_name\":" + Quote(displayName) + "}}", accessToken, onResult));
@@ -53,6 +53,12 @@ namespace Golfin.Auth
         // AuthService.SignInWithOAuth / OnDeepLink + OAuthUrlBuilder + OAuthCallbackParser.
         public void SignInWithOAuth(OAuthProvider provider, Action<AuthResult> onResult)
             => onResult(AuthResult.Fail(AuthError.NotImplemented, "OAuth is handled by AuthService for live transport."));
+
+        // ── redirect_to ────────────────────────────────────────
+        // Without an explicit redirect_to, Supabase falls back to the project Site URL
+        // (admin.golfin.world) and the emailed link dead-ends on a Cloudflare Access block page.
+        // Spec: Docs/Specs/Active/auth_email_redirect/SPEC.md.
+        private string WithEmailRedirect(string path) => AuthRedirectUrl.Append(path, _config.emailConfirmRedirect);
 
         // ── HTTP ───────────────────────────────────────────────────────────────
         private IEnumerator Post(string path, string body, string bearer, Action<AuthResult> onResult, bool expectSession)
