@@ -230,7 +230,22 @@ namespace Golfin.Tournaments
                     // is_active, so there is nothing to filter here.
                     modalBannerImageUrlEn: NullIfBlank(t.ModalBanner?.ImageUrlEn),
                     modalBannerImageUrlJa: NullIfBlank(t.ModalBanner?.ImageUrlJa),
-                    modalBannerLinkUrl:    NullIfBlank(t.ModalBanner?.LinkUrl)));
+                    modalBannerLinkUrl:    NullIfBlank(t.ModalBanner?.LinkUrl),
+                    // Restrictions: PASS-THROUGH, deliberately unvalidated here. Nothing in this
+                    // block can make a tournament undisplayable, so there is no drop condition to
+                    // add — TournamentDefinition normalises each value and an unrecognised one
+                    // becomes null, i.e. unrestricted. A newer dashboard must never be able to
+                    // take the whole schedule down over a string this build has not met.
+                    category:            NullIfBlank(t.Category),
+                    maxPlayers:          t.MaxPlayers,
+                    playersPerDivision:  t.PlayersPerDivision,
+                    divisionType:        NullIfBlank(t.DivisionType),
+                    charRarityMin:       NullIfBlank(t.CharRarityMin),
+                    charRarityMax:       NullIfBlank(t.CharRarityMax),
+                    charLevelMin:        t.CharLevelMin,
+                    charLevelMax:        t.CharLevelMax,
+                    gearRule:            NullIfBlank(t.GearRule),
+                    clubRarityMax:       NullIfBlank(t.ClubRarityMax)));
             }
 
             if (defs.Count == 0)

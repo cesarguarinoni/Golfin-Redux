@@ -56,7 +56,17 @@ namespace Golfin.Tournaments
         Offline,
 
         /// <summary>The server rejected the request (window closed, bad slug, auth). Terminal.</summary>
-        Rejected
+        Rejected,
+
+        // ── Entry restrictions (tournament_restrictions §3) ───────────────────
+        // 200-shaped denials, decided BEFORE the fee debit — nothing was charged.
+
+        /// <summary>The human field is already at <c>max_players</c>.</summary>
+        Full,
+
+        /// <summary>The character failed a rarity or level band. The band is named by
+        /// <see cref="TournamentRegisterOutcome.IneligibleReason"/>.</summary>
+        Ineligible
     }
 
     /// <summary>Result of one register attempt, with the numbers the insufficient-funds UX shows.</summary>
@@ -73,13 +83,25 @@ namespace Golfin.Tournaments
         /// <summary>The mirrored local entry on a success, else null.</summary>
         public readonly EntryState? Entry;
 
+        /// <summary>The cap the server enforced (<see cref="TournamentRegisterStatus.Full"/> only).</summary>
+        public readonly int MaxPlayers;
+
+        /// <summary>Server's <c>reason</c> for an <see cref="TournamentRegisterStatus.Ineligible"/>
+        /// denial — <c>"char_rarity"</c> or <c>"char_level"</c>. Kept as the RAW string: a newer
+        /// server can add a reason this build has not met, and the caller falls back to a generic
+        /// refusal rather than mis-naming the rule.</summary>
+        public readonly string? IneligibleReason;
+
         public TournamentRegisterOutcome(
-            TournamentRegisterStatus status, EntryState? entry = null, long requested = 0L, long totalPoints = 0L)
+            TournamentRegisterStatus status, EntryState? entry = null, long requested = 0L, long totalPoints = 0L,
+            int maxPlayers = 0, string? ineligibleReason = null)
         {
-            Status      = status;
-            Entry       = entry;
-            Requested   = requested;
-            TotalPoints = totalPoints;
+            Status           = status;
+            Entry            = entry;
+            Requested        = requested;
+            TotalPoints      = totalPoints;
+            MaxPlayers       = maxPlayers;
+            IneligibleReason = ineligibleReason;
         }
 
         /// <summary>True when the player is entered and the caller may navigate into the round.</summary>
@@ -408,6 +430,25 @@ namespace Golfin.Tournaments
                           $"(needed {dto.Requested}, holds {dto.TotalPoints}).");
                 onDone?.Invoke(new TournamentRegisterOutcome(
                     TournamentRegisterStatus.Insufficient, null, dto.Requested, dto.TotalPoints));
+                yield break;
+            }
+
+            // Restriction denials. These are decided BEFORE the fee debit server-side, so like
+            // "insufficient" they mean nothing was charged and nothing was entered — a toast, not
+            // a retry and not a transport error.
+            if (dto.IsFull)
+            {
+                Debug.Log($"{Tag} enter('{id}') refused — the field is full (max {dto.MaxPlayers}).");
+                onDone?.Invoke(new TournamentRegisterOutcome(
+                    TournamentRegisterStatus.Full, null, 0L, 0L, dto.MaxPlayers));
+                yield break;
+            }
+
+            if (dto.IsIneligible)
+            {
+                Debug.Log($"{Tag} enter('{id}') refused — character ineligible (reason='{dto.Reason}').");
+                onDone?.Invoke(new TournamentRegisterOutcome(
+                    TournamentRegisterStatus.Ineligible, null, 0L, 0L, 0, dto.Reason));
                 yield break;
             }
 

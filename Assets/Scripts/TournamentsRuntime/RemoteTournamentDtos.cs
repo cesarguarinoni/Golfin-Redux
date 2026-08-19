@@ -54,6 +54,23 @@ namespace Golfin.Tournaments
         [JsonProperty("banner_url")]            public string? BannerUrl;
         [JsonProperty("bot_seed")]              public long   BotSeed;
 
+        // ── Category + entry restrictions (tournament_restrictions, server LIVE 2026-08-18) ──
+        // ALL NULLABLE, and null means unrestricted. int? rather than int is load-bearing:
+        // a plain int would deserialise an absent max_players as 0, which the definition would
+        // then read as "a cap of zero players". The enum-ish fields stay STRINGS here — this
+        // layer only knows the server's field names; TournamentDefinition is where they are
+        // parsed, and where an unknown value degrades to unrestricted instead of throwing.
+        [JsonProperty("category")]             public string? Category;
+        [JsonProperty("max_players")]          public int?    MaxPlayers;
+        [JsonProperty("players_per_division")] public int?    PlayersPerDivision;
+        [JsonProperty("division_type")]        public string? DivisionType;
+        [JsonProperty("char_rarity_min")]      public string? CharRarityMin;
+        [JsonProperty("char_rarity_max")]      public string? CharRarityMax;
+        [JsonProperty("char_level_min")]       public int?    CharLevelMin;
+        [JsonProperty("char_level_max")]       public int?    CharLevelMax;
+        [JsonProperty("gear_rule")]            public string? GearRule;
+        [JsonProperty("club_rarity_max")]      public string? ClubRarityMax;
+
         // The sign-up modal's blurb (SPEC §3.1). Plain pass-through strings, exactly like
         // title_ja — the file-level DateParseHandling.None discipline applies here too, so a
         // description that happens to open with a date-shaped token is not silently reinterpreted.

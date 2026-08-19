@@ -179,6 +179,71 @@ namespace Golfin.Tournaments
         /// </summary>
         public string? ModalBannerLinkUrl { get; }
 
+        // ── Category + entry restrictions (tournament_restrictions, 2026-08-18) ──
+        // Every one of these is NULL for a CSV row and null means UNRESTRICTED, so the
+        // shipped-CSV path behaves exactly as it did before this block existed. The three
+        // enums are nullable rather than defaulted for the same reason the RULES block needs:
+        // "the server did not say" and "the server said `level`" must render differently —
+        // null falls back to the pre-existing localized line, a value renders the real one.
+        // Effective*, below, is what the GATE reads, where the backfilled default does apply.
+
+        /// <summary>What kind of tournament this is. Presentation only — <c>Competitive</c>
+        /// carries no stat normalization in this build (that is a later phase, deliberately not
+        /// implied by this field).</summary>
+        public TournamentCategory? Category { get; }
+
+        /// <summary>Human entry cap, bots excluded, or null for uncapped. Only the SERVER can
+        /// enforce it — it is the one that counts the entries — so this is display-only here.</summary>
+        public int? MaxPlayers { get; }
+
+        /// <summary>Players per division, or null.</summary>
+        public int? PlayersPerDivision { get; }
+
+        /// <summary>How the field is split, or null when the server did not say.</summary>
+        public TournamentDivisionType? DivisionType { get; }
+
+        /// <summary>Lowest allowed character rarity, canonical-cased
+        /// (<c>"Common"</c>…<c>"Supreme"</c>), or null for no floor. An unrecognised value from a
+        /// newer server is normalised to null — unrestricted — rather than throwing.</summary>
+        public string? CharRarityMin { get; }
+
+        /// <summary>Highest allowed character rarity, or null for no ceiling.</summary>
+        public string? CharRarityMax { get; }
+
+        /// <summary>Lowest allowed character level, or null.</summary>
+        public int? CharLevelMin { get; }
+
+        /// <summary>Highest allowed character level, or null.</summary>
+        public int? CharLevelMax { get; }
+
+        /// <summary>Whose clubs are played, or null when the server did not say.</summary>
+        public TournamentGearRule? GearRule { get; }
+
+        /// <summary>Highest allowed club rarity in the equipped bag, or null for no cap. Enforced
+        /// CLIENT-SIDE only — the server never sees the bag — and only under
+        /// <see cref="TournamentGearRule.Own"/>.</summary>
+        public string? ClubRarityMax { get; }
+
+        /// <summary>The gear rule the ENTRY GATE applies: the served value, or the backfilled
+        /// <see cref="TournamentGearRule.Own"/> when the server said nothing. Kept separate from
+        /// <see cref="GearRule"/> so display can still tell "unset" from "own".</summary>
+        public TournamentGearRule EffectiveGearRule => GearRule ?? TournamentGearRule.Own;
+
+        /// <summary>The category the game reasons with: served, else the backfilled
+        /// <see cref="TournamentCategory.Sponsor"/>.</summary>
+        public TournamentCategory EffectiveCategory => Category ?? TournamentCategory.Sponsor;
+
+        /// <summary>The division split the game reasons with: served, else the backfilled
+        /// <see cref="TournamentDivisionType.Level"/>.</summary>
+        public TournamentDivisionType EffectiveDivisionType => DivisionType ?? TournamentDivisionType.Level;
+
+        /// <summary>True when at least one rule could refuse an entry. False for every CSV row,
+        /// and for a server row the dashboard left unrestricted.</summary>
+        public bool HasEntryRestrictions
+            => CharRarityMin != null || CharRarityMax != null
+            || CharLevelMin  != null || CharLevelMax  != null
+            || (ClubRarityMax != null && EffectiveGearRule == TournamentGearRule.Own);
+
         public TournamentDefinition(
             string id,
             string nameKey,
@@ -202,7 +267,21 @@ namespace Golfin.Tournaments
             string? descriptionKey = null,
             string? modalBannerImageUrlEn = null,
             string? modalBannerImageUrlJa = null,
-            string? modalBannerLinkUrl = null)
+            string? modalBannerLinkUrl = null,
+            // Restrictions arrive as the RAW wire strings/ints and are normalised HERE rather than
+            // at each call site, so the CSV loader, the mapper and every test fixture get the same
+            // degrade-never-throw treatment: an unknown enum or rarity name becomes null, i.e.
+            // unrestricted, and can never reach the eligibility gate in a shape it cannot read.
+            string? category = null,
+            int?    maxPlayers = null,
+            int?    playersPerDivision = null,
+            string? divisionType = null,
+            string? charRarityMin = null,
+            string? charRarityMax = null,
+            int?    charLevelMin = null,
+            int?    charLevelMax = null,
+            string? gearRule = null,
+            string? clubRarityMax = null)
         {
             Id                   = id;
             NameKey              = nameKey;
@@ -225,6 +304,17 @@ namespace Golfin.Tournaments
             ModalBannerImageUrlEn = modalBannerImageUrlEn;
             ModalBannerImageUrlJa = modalBannerImageUrlJa;
             ModalBannerLinkUrl    = modalBannerLinkUrl;
+
+            Category            = TournamentRestrictions.ParseCategory(category);
+            MaxPlayers          = TournamentRestrictions.PositiveOrNull(maxPlayers);
+            PlayersPerDivision  = TournamentRestrictions.PositiveOrNull(playersPerDivision);
+            DivisionType        = TournamentRestrictions.ParseDivisionType(divisionType);
+            CharRarityMin       = TournamentRestrictions.CanonicalRarity(charRarityMin);
+            CharRarityMax       = TournamentRestrictions.CanonicalRarity(charRarityMax);
+            CharLevelMin        = TournamentRestrictions.PositiveOrNull(charLevelMin);
+            CharLevelMax        = TournamentRestrictions.PositiveOrNull(charLevelMax);
+            GearRule            = TournamentRestrictions.ParseGearRule(gearRule);
+            ClubRarityMax       = TournamentRestrictions.CanonicalRarity(clubRarityMax);
         }
     }
 }

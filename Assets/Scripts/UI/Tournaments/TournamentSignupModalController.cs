@@ -13,6 +13,7 @@ using UnityEngine.UI;
 using Golfin.Banners;
 using Golfin.Economy;
 using Golfin.EconomyRuntime;
+using Golfin.Inventory;
 using Golfin.Roster;
 using Golfin.Tournaments;
 using Golfin.UI.Modals;
@@ -255,6 +256,22 @@ namespace GolfinRedux.UI.Tournaments
                 return;
             }
 
+            // ── Entry restrictions (tournament_restrictions §3) ────────────────
+            //
+            // BEFORE the payment path, and after the already-entered short-circuit above: a player
+            // who is already in must never be thrown out by a rule they now fail (a bag change, a
+            // dashboard edit mid-tournament). The server re-checks the character bands inside
+            // POST /enter — also before its own debit — so this gate is UX plus the enforcement
+            // for the local/offline backend, not a trust boundary.
+            var failure = EvaluateEligibility(def, charId);
+            if (failure != TournamentEligibilityFailure.None)
+            {
+                ShowToast(TournamentRulesText.DenialMessage(failure, def));
+                Debug.Log($"[TournamentSignupModal] Entry to {_tournamentId} refused by the client gate " +
+                          $"({failure}) for char={charId} — nothing charged, nothing entered.");
+                return;   // modal stays open; no debit, no navigation
+            }
+
             // ── Async-multiplayer path (tournament_async_board SPEC §3) ───────
             //
             // The SERVER debits the entry fee inside POST /enter, through spend_pts with a
@@ -282,6 +299,23 @@ namespace GolfinRedux.UI.Tournaments
                             ShowToast(PointsSpendGate.InsufficientMessage);
                             Debug.Log($"[TournamentSignupModal] Server refused entry to {_tournamentId} — " +
                                       $"needs {outcome.Requested}RP, holds {outcome.TotalPoints}RP.");
+                            break;
+
+                        case TournamentRegisterStatus.Full:
+                            // The cap is the SERVER's to enforce — it is the only party that can
+                            // count the field — so this arrives as an answer, never as an error.
+                            ShowToast(TournamentRulesText.FullMessage(outcome.MaxPlayers));
+                            Debug.Log($"[TournamentSignupModal] Server refused entry to {_tournamentId} — " +
+                                      $"field full (max {outcome.MaxPlayers}).");
+                            break;
+
+                        case TournamentRegisterStatus.Ineligible:
+                            // Same copy the client gate uses, so a refusal reads identically
+                            // whether the client or the server was the one to notice it.
+                            ShowToast(TournamentRulesText.DenialMessage(
+                                TournamentRulesText.ParseServerReason(outcome.IneligibleReason), def));
+                            Debug.Log($"[TournamentSignupModal] Server refused entry to {_tournamentId} — " +
+                                      $"ineligible (reason='{outcome.IneligibleReason}').");
                             break;
 
                         case TournamentRegisterStatus.Offline:
@@ -355,7 +389,7 @@ namespace GolfinRedux.UI.Tournaments
             // never leave the previous tournament's blurb or banner on screen.
             ApplyBanner(def);
             ApplyInfoRow(def);
-            ApplyRules();
+            ApplyRules(def);
 
             // Sponsor: "{SPONSOR} PRESENTS"
             string sponsor = string.IsNullOrEmpty(def.SponsorKey)
@@ -534,25 +568,23 @@ namespace GolfinRedux.UI.Tournaments
         }
 
         /// <summary>
-        /// RULES (13892:3254). Static content — it never collapses — but localized, so a JP player
-        /// gets the Japanese table rows rather than English literals baked into C#.
-        /// The body is JOINED at runtime from five separate keys, not authored pre-joined, so one
-        /// line can change length in one language without disturbing the others.
+        /// RULES (13892:3254). Five lines, still joined at runtime from separate keys so one line
+        /// can change length in one language without disturbing the others — but the VALUES now
+        /// come from the tournament (tournament_restrictions §2) instead of five fixed strings.
+        /// <para>
+        /// A tournament with no authored restriction renders exactly the five strings it rendered
+        /// before, because each null falls back to its original key. The composition itself lives
+        /// in <see cref="TournamentRulesText"/>: it is pure, so what the block reads is gated by a
+        /// test in both languages rather than by a screenshot.
+        /// </para>
         /// </summary>
-        private void ApplyRules()
+        private void ApplyRules(TournamentDefinition def)
         {
             if (_rulesLabelText != null)
                 _rulesLabelText.text = LocalizationManager.Get("tourn.rules.label");
 
             if (_rulesBodyText != null)
-                _rulesBodyText.text = string.Join("\n", new[]
-                {
-                    LocalizationManager.Get("tourn.rules.max_players"),
-                    LocalizationManager.Get("tourn.rules.divisions"),
-                    LocalizationManager.Get("tourn.rules.per_division"),
-                    LocalizationManager.Get("tourn.rules.gear"),
-                    LocalizationManager.Get("tourn.rules.characters"),
-                });
+                _rulesBodyText.text = TournamentRulesText.Body(def);
         }
 
         private void OnBannerTapped()
@@ -612,6 +644,77 @@ namespace GolfinRedux.UI.Tournaments
             imageUrl = url;
             linkUrl  = def.ModalBannerLinkUrl;
             return true;
+        }
+
+        // ── Entry restrictions (tournament_restrictions §3) ───────────────────
+
+        /// <summary>
+        /// Gather the live character + bag state and hand it to the pure evaluator.
+        /// <para>
+        /// The DECISION lives in <see cref="TournamentEligibility"/>, which takes ranks rather than
+        /// managers and is therefore covered by an EditMode matrix. This method is only the
+        /// adapter: everything it does is read live singletons and translate them into ranks.
+        /// </para>
+        /// <para>
+        /// A missing manager yields a null input, and a null input is denied ONLY where the
+        /// corresponding rule is actually set — an unrestricted tournament is unaffected, which is
+        /// the same posture the server takes for an unresolvable character.
+        /// </para>
+        /// </summary>
+        private static TournamentEligibilityFailure EvaluateEligibility(TournamentDefinition def, string charId)
+        {
+            int? rarityRank = null;
+            int? level      = null;
+
+            // CSV FIRST, ScriptableObject fallback — the same ladder CharacterManager.GetMaxLevel
+            // walks. The build is CSV-first (CharacterDatabaseCSV), and GetCharacterTemplate alone
+            // returns null AND logs an error whenever the SO database is unassigned, which would
+            // have left every character unranked and refused them all from a rarity-restricted
+            // tournament.
+            CharacterRarity? rarity = CharacterDatabaseCSV.Instance?.GetCharacter(charId)?.rarity;
+
+            var characters = CharacterManager.Instance;
+            if (characters != null)
+            {
+                if (rarity == null)
+                    rarity = characters.GetCharacterTemplate(charId)?.rarity;
+
+                PlayerCharacterData? player = characters.GetCharacterData(charId);
+                if (player != null) level = player.currentLevel;
+            }
+
+            // CharacterRarity is declared ascending (Common = 0 … Supreme = 5) and
+            // TournamentRestrictions.RarityLadder is the same ladder 1-based, which is also the
+            // server's RARITY_RANK. The three are pinned together by
+            // RarityLadderPinTests.The_rarity_ladder_matches_CharacterRaritys_declaration_order.
+            if (rarity != null) rarityRank = (int)rarity.Value + 1;
+
+            return TournamentEligibility.Evaluate(def, rarityRank, level, EquippedClubRarityRanks());
+        }
+
+        /// <summary>
+        /// Rarity ranks of the clubs in the EQUIPPED bag, or null when there is no bag to read.
+        /// Null and empty mean the same thing to the evaluator — a ceiling that nothing reaches —
+        /// so a player with no bag is never refused by a club cap.
+        /// </summary>
+        private static List<int>? EquippedClubRarityRanks()
+        {
+            var bags  = BagManager.Instance;
+            var clubs = ClubManager.Instance;
+            if (bags == null || clubs == null) return null;
+
+            int slot = bags.EquippedBagSlot;
+            if (slot <= 0) return null;   // 0 = no bag equipped
+
+            var ranks = new List<int>();
+            foreach (var owned in bags.GetClubsInBag(slot))
+            {
+                if (owned == null) continue;
+                ClubDataRuntime? template = clubs.GetTemplate(owned.clubId);
+                if (template == null) continue;   // unknown club: a data gap, not evidence of cheating
+                ranks.Add((int)template.rarity + 1);
+            }
+            return ranks;
         }
 
         // ── Helpers ───────────────────────────────────────────────────────────

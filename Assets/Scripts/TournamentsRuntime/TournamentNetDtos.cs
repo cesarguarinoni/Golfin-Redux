@@ -58,10 +58,31 @@ namespace Golfin.Tournaments
 
         [JsonProperty("entry")]          public TournamentEntryDto? Entry;
 
+        // ── Restriction denials (tournament_restrictions, server LIVE 2026-08-18) ──
+        // Same 200-shaped family as "insufficient", and for the same reason: a refusal is an
+        // ANSWER, not a transport failure, so the client toasts it instead of retrying it.
+
+        /// <summary>Which band refused the entry — <c>"char_rarity"</c> or <c>"char_level"</c> —
+        /// on the <c>ineligible</c> denial.</summary>
+        [JsonProperty("reason")]         public string? Reason;
+
+        /// <summary>The human cap, echoed back on the <c>full</c> denial.</summary>
+        [JsonProperty("max_players")]    public int    MaxPlayers;
+
         /// <summary>True when the server refused for lack of points (SPEC §1).</summary>
         [JsonIgnore]
         public bool IsInsufficient
             => string.Equals(Status, "insufficient", StringComparison.OrdinalIgnoreCase);
+
+        /// <summary>True when the human field is already at <c>max_players</c>.</summary>
+        [JsonIgnore]
+        public bool IsFull
+            => string.Equals(Status, "full", StringComparison.OrdinalIgnoreCase);
+
+        /// <summary>True when the character failed a rarity/level band.</summary>
+        [JsonIgnore]
+        public bool IsIneligible
+            => string.Equals(Status, "ineligible", StringComparison.OrdinalIgnoreCase);
     }
 
     // ═════════════════════════════════════════════════════════════════════════
