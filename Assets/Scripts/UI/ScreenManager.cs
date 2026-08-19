@@ -37,7 +37,9 @@ namespace GolfinRedux.UI
         Login,
         CreateUsername,
         SignUp,
-        EmailConfirmation
+        EmailConfirmation,
+        // auth_recovery_flow — set-new-password screen, reached only from a type=recovery deep link.
+        ResetPassword
     }
 
     /// <summary>
@@ -80,6 +82,8 @@ namespace GolfinRedux.UI
         [SerializeField] private GameObject _createUsernameScreen;
         [SerializeField] private GameObject _signUpScreen;
         [SerializeField] private GameObject _emailConfirmationScreen;
+        // auth_recovery_flow — set-new-password screen
+        [SerializeField] private GameObject _resetPasswordScreen;
 
         [Header("Audio (Order 350)")]
         [Tooltip("Main Theme music clip — assign Assets/Music/Main Theme.mp3 in the Inspector.")]
@@ -120,6 +124,26 @@ namespace GolfinRedux.UI
             {
                 FadeController.Instance.FadeIn();
             }
+
+            // auth_recovery_flow — warm-path routing: a recovery deep link while the app is running
+            // routes to the set-new-password screen (success) or to Login (failure — the Login screen
+            // surfaces the localized error). Subscribed AFTER the initial ApplyScreen so a cold-start
+            // event (fired during AfterSceneLoad, before Start) can't be stomped by _initialScreen;
+            // the cold path is covered by LoginScreenController.OnEnable reading
+            // AuthService.PendingRecovery / ConsumeRecoveryFailure instead.
+            Golfin.Auth.AuthService.PasswordRecovery += OnPasswordRecovery;
+        }
+
+        private void OnDestroy()
+        {
+            Golfin.Auth.AuthService.PasswordRecovery -= OnPasswordRecovery;
+        }
+
+        // auth_recovery_flow — see the subscription note in Start().
+        private void OnPasswordRecovery(Golfin.Auth.AuthResult r)
+        {
+            if (r != null && r.Success) ShowScreen(ScreenId.ResetPassword);
+            else ShowScreen(ScreenId.Login);
         }
 
         /// <summary>
@@ -240,6 +264,8 @@ namespace GolfinRedux.UI
                 _signUpScreen.SetActive(screenId == ScreenId.SignUp);
             if (_emailConfirmationScreen != null)
                 _emailConfirmationScreen.SetActive(screenId == ScreenId.EmailConfirmation);
+            if (_resetPasswordScreen != null)
+                _resetPasswordScreen.SetActive(screenId == ScreenId.ResetPassword);
 
             // Settings is an overlay (SettingsController), not managed here
 
@@ -285,7 +311,8 @@ namespace GolfinRedux.UI
             bool isAccountScreen = screenId == ScreenId.Login
                                 || screenId == ScreenId.CreateUsername
                                 || screenId == ScreenId.SignUp
-                                || screenId == ScreenId.EmailConfirmation;
+                                || screenId == ScreenId.EmailConfirmation
+                                || screenId == ScreenId.ResetPassword;
             if (Golfin.UI.PersistentUIManager.Instance != null)
             {
                 if (isAccountScreen)

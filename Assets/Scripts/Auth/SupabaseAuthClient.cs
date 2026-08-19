@@ -42,6 +42,13 @@ namespace Golfin.Auth
         public void UpdateDisplayName(string accessToken, string displayName, Action<AuthResult> onResult)
             => _runner.StartCoroutine(Put("/user", "{\"data\":{\"display_name\":" + Quote(displayName) + "}}", accessToken, onResult));
 
+        // auth_recovery_flow — same PUT /user plumbing as UpdateDisplayName, top-level "password" field.
+        public void UpdatePassword(string accessToken, string newPassword, Action<AuthResult> onResult)
+            => _runner.StartCoroutine(Put("/user", PasswordBody(newPassword), accessToken, onResult));
+
+        /// <summary>Request body for the password update — public/static so the wire shape is unit-testable.</summary>
+        public static string PasswordBody(string newPassword) => "{\"password\":" + Quote(newPassword) + "}";
+
         public void RefreshSession(string refreshToken, Action<AuthResult> onResult)
             => _runner.StartCoroutine(Post("/token?grant_type=refresh_token", Json1("refresh_token", refreshToken), null, onResult, expectSession: true));
 

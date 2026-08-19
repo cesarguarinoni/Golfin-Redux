@@ -1,0 +1,64 @@
+=== iter-1 kickoff baseline 2026-08-19T05:07:36Z ===
+HEAD: ac41914b6e0affb25d95c8efcc0855e48bbd8d88
+DIRTY:
+ M Assets/Localization/LocalizationText.csv
+ M Assets/Localization/LocalizationTextTable.asset
+ M Assets/Scenes/ShellScene.unity
+ M Assets/Scripts/Auth/AuthService.cs
+ M Assets/Scripts/Auth/ISupabaseAuthClient.cs
+ M Assets/Scripts/Auth/MockSupabaseAuthClient.cs
+ M Assets/Scripts/Auth/OAuthCallbackParser.cs
+ M Assets/Scripts/Auth/SupabaseAuthClient.cs
+ M Assets/Scripts/Tournaments/TournamentDefinition.cs
+ M Assets/Scripts/TournamentsRuntime/RemoteTournamentBackend.cs
+ M Assets/Scripts/TournamentsRuntime/RemoteTournamentDtos.cs
+ M Assets/Scripts/TournamentsRuntime/TournamentNetDtos.cs
+ M Assets/Scripts/TournamentsRuntime/TournamentScheduleMapper.cs
+ M Assets/Scripts/UI/Account/LoginScreenController.cs
+ M Assets/Scripts/UI/AuthGate.cs
+ M Assets/Scripts/UI/ScreenManager.cs
+ M Assets/Scripts/UI/Tournaments/TournamentSignupModalController.cs
+ M Docs/AI_CONTEXT.md
+MM Docs/TellCode.md
+ M Docs/Versioning/last_uploaded_build.txt
+ M tasks/lessons.md
+?? Assets/Resources/Clubs/Controls/S_Controls_Driver_KLYRO.png
+?? Assets/Resources/Clubs/Controls/S_Controls_Driver_KLYRO.png.meta
+?? Assets/Resources/Clubs/Controls/S_Controls_Putter_KLYRO.png
+?? Assets/Resources/Clubs/Controls/S_Controls_Putter_KLYRO.png.meta
+?? Assets/Resources/Clubs/Full/Driver-Klyro.png
+?? Assets/Resources/Clubs/Full/Driver-Klyro.png.meta
+?? Assets/Resources/Clubs/Full/Putter-Klyro.png
+?? Assets/Resources/Clubs/Full/Putter-Klyro.png.meta
+?? Assets/Resources/Clubs/Full/Wedge-Klyro.png
+?? Assets/Resources/Clubs/Full/Wedge-Klyro.png.meta
+?? Assets/Resources/Clubs/Full/Wood-Klyro.png
+?? Assets/Resources/Clubs/Full/Wood-Klyro.png.meta
+?? Assets/Resources/Clubs/Portraits/S_Menu_Driver_KLYRO.png
+?? Assets/Resources/Clubs/Portraits/S_Menu_Driver_KLYRO.png.meta
+?? Assets/Resources/Clubs/Portraits/S_Menu_Putter_KLYRO.png
+?? Assets/Resources/Clubs/Portraits/S_Menu_Putter_KLYRO.png.meta
+?? Assets/Scripts/Auth/Tests/RecoveryFlowTests.cs
+?? Assets/Scripts/Auth/Tests/RecoveryFlowTests.cs.meta
+?? Assets/Scripts/Tournaments/Tests/TournamentEligibilityTests.cs
+?? Assets/Scripts/Tournaments/Tests/TournamentEligibilityTests.cs.meta
+?? Assets/Scripts/Tournaments/TournamentEligibility.cs
+?? Assets/Scripts/Tournaments/TournamentEligibility.cs.meta
+?? Assets/Scripts/Tournaments/TournamentRestrictions.cs
+?? Assets/Scripts/Tournaments/TournamentRestrictions.cs.meta
+?? Assets/Scripts/TournamentsRuntime/Tests/TournamentRestrictionsClientTests.cs
+?? Assets/Scripts/TournamentsRuntime/Tests/TournamentRestrictionsClientTests.cs.meta
+?? Assets/Scripts/TournamentsRuntime/TournamentRulesText.cs
+?? Assets/Scripts/TournamentsRuntime/TournamentRulesText.cs.meta
+?? Assets/Scripts/UI/Account/ResetPasswordScreenController.cs
+?? Assets/Scripts/UI/Account/ResetPasswordScreenController.cs.meta
+?? Docs/Specs/Active/auth_recovery_flow/HANDOFF.md
+?? Docs/Specs/Active/auth_recovery_flow/HEARTBEAT.log
+?? Docs/Specs/Active/auth_recovery_flow/SPEC.md
+?? Docs/Specs/Active/auth_recovery_flow/STATUS.md
+?? Docs/Specs/Active/tournament_restrictions/ARCHITECT_HANDOFF.md
+?? Docs/Specs/Active/tournament_restrictions/ARCHITECT_REVIEW.md
+?? Docs/Specs/Active/tournament_restrictions/IMPLEMENTER_REPORT.md
+?? Docs/Specs/Active/tournament_restrictions/SPEC.md
+?? Docs/Specs/Active/tournament_restrictions/STATUS.md
+=== END baseline ===

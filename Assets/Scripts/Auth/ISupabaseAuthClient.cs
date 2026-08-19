@@ -29,6 +29,11 @@ namespace Golfin.Auth
         /// Requires a valid access token.</summary>
         void UpdateDisplayName(string accessToken, string displayName, Action<AuthResult> onResult);
 
+        /// <summary>PUT /auth/v1/user with <c>{"password":"…"}</c> — sets a new password
+        /// (auth_recovery_flow). Called with the RECOVERY session's access token after a
+        /// <c>type=recovery</c> deep link; mirrors <see cref="UpdateDisplayName"/>'s plumbing.</summary>
+        void UpdatePassword(string accessToken, string newPassword, Action<AuthResult> onResult);
+
         /// <summary>POST /auth/v1/token?grant_type=refresh_token — exchanges a refresh token for a fresh session.</summary>
         void RefreshSession(string refreshToken, Action<AuthResult> onResult);
 

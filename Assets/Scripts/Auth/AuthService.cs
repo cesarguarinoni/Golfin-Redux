@@ -60,6 +60,43 @@ namespace Golfin.Auth
         /// </summary>
         public static event Action<AuthSession> SignedIn;
 
+        /// <summary>
+        /// auth_recovery_flow — fired when a password-recovery deep link arrives. Success=true means
+        /// recovery tokens are HELD in <see cref="PendingRecovery"/> (session NOT persisted, SignedIn
+        /// NOT raised) and the UI should route to the set-new-password screen; Success=false means the
+        /// link was expired/already used and the UI should surface a localized failure. STATIC like
+        /// <see cref="SignedIn"/> and for the same reason: the UI layer subscribes on its own schedule.
+        /// </summary>
+        public static event Action<AuthResult> PasswordRecovery;
+
+        /// <summary>
+        /// Recovery tokens parsed from a <c>type=recovery</c> deep link, held IN MEMORY ONLY until
+        /// <see cref="UpdatePasswordWithRecovery"/> succeeds (then applied + saved) or
+        /// <see cref="CancelPasswordRecovery"/> clears them. Never written to <see cref="Session"/>
+        /// or PlayerPrefs before the new password is set — that early persist was the silent-sign-in
+        /// bug this task removes. (AuthSession's shape persists on ApplyFrom+Save; holding an
+        /// un-persisted AuthResult sidesteps that without touching AuthSession.)
+        /// </summary>
+        public AuthResult PendingRecovery { get; private set; }
+
+        /// <summary>
+        /// Cold-start seam: a recovery-link FAILURE (expired/used) that fired before any UI was
+        /// listening. The Login screen consumes it on enable to show the localized error.
+        /// </summary>
+        private AuthResult _recoveryFailure;
+
+        /// <summary>Returns the un-surfaced recovery failure (if any) and clears it.</summary>
+        public AuthResult ConsumeRecoveryFailure()
+        {
+            var f = _recoveryFailure;
+            _recoveryFailure = null;
+            return f;
+        }
+
+        /// <summary>Player backed out of the set-new-password screen — drop the held tokens so the
+        /// Login screen stops re-routing to it.</summary>
+        public void CancelPasswordRecovery() => PendingRecovery = null;
+
         private ISupabaseAuthClient _client;
         private bool _useMock;
 
@@ -120,11 +157,15 @@ namespace Golfin.Auth
             if (_deepLinkHooked) Application.deepLinkActivated -= OnDeepLink;
         }
 
-        /// <summary>Test hook: inject a client + fresh session directly (bypasses Resources/scene).</summary>
+        /// <summary>Test hook: inject a client + fresh session directly (bypasses Resources/scene).
+        /// Also guarantees a Config in EDIT MODE, where Awake/Initialize never ran (no ExecuteAlways):
+        /// without one, IsCallback rejects every deep link and the recovery tests test nothing.</summary>
         public void ConfigureForTest(ISupabaseAuthClient client, AuthSession session = null)
         {
             _client = client;
             Session = session ?? new AuthSession();
+            if (Config == null)
+                Config = ScriptableObject.CreateInstance<SupabaseConfig>(); // defaults carry golfin://auth-callback
         }
 
         // ── Public API (mirrors the transport, but owns session side-effects) ─────
@@ -142,6 +183,36 @@ namespace Golfin.Auth
 
         public void UpdateDisplayName(string displayName, Action<AuthResult> onResult)
             => _client.UpdateDisplayName(Session.AccessToken, displayName, Wrap(onResult));
+
+        /// <summary>
+        /// auth_recovery_flow — set the new password using the HELD recovery tokens (never
+        /// <see cref="Session"/>'s). Deliberately NOT routed through Wrap: the recovery session
+        /// becomes the real, persisted session only AFTER the server accepts the new password.
+        /// On success: apply tokens + user, save, raise <see cref="SignedIn"/>.
+        /// </summary>
+        public void UpdatePasswordWithRecovery(string newPassword, Action<AuthResult> onResult)
+        {
+            var recovery = PendingRecovery;
+            if (recovery == null || !recovery.HasSession)
+            { onResult?.Invoke(AuthResult.Fail(AuthError.InvalidCredentials, "No recovery session. Please open the reset link again.")); return; }
+
+            _client.UpdatePassword(recovery.AccessToken, newPassword, result =>
+            {
+                if (result == null || !result.Success) { onResult?.Invoke(result); return; }
+
+                PendingRecovery = null;
+                Session.ApplyFrom(recovery);   // tokens
+                Session.ApplyFrom(result);     // PUT /user echoes the user (email / display_name)
+                Session.Save();
+                RaiseSignedIn();
+                onResult?.Invoke(AuthResult.Ok(result.User, recovery.AccessToken, recovery.RefreshToken,
+                    recovery.ExpiresAtUnix, "Password updated."));
+            });
+        }
+
+        /// <summary>Test seam for the deep-link entry point (auth_recovery_flow §6 —
+        /// recovery-does-not-persist-before-update is asserted through here).</summary>
+        public void HandleAuthCallback(string url) => OnDeepLink(url);
 
         public void RefreshSession(Action<AuthResult> onResult)
         {
@@ -213,14 +284,38 @@ namespace Golfin.Auth
             }
 
             AuthResult tokens = OAuthCallbackParser.Parse(url);
-            Debug.Log($"[AuthService] Callback parsed: success={tokens.Success}, hasSession={tokens.HasSession}" +
+            var info = OAuthCallbackParser.GetCallbackInfo(url);
+            Debug.Log($"[AuthService] Callback parsed: success={tokens.Success}, hasSession={tokens.HasSession}, type={info.Type ?? "-"}" +
                       $"{(tokens.Success ? "" : $", error={tokens.Error}: {tokens.Message}")}");
             var pending = _pendingOAuth;
             _pendingOAuth = null;
 
             if (!tokens.Success)
             {
-                pending?.Invoke(tokens);
+                // In-flight OAuth attempt — existing behavior, unchanged.
+                if (pending != null) { pending.Invoke(tokens); return; }
+
+                // auth_recovery_flow — an email link Supabase rejected (expired / already used,
+                // e.g. error_code=otp_expired) arrives with NO pending OAuth. Surface it instead
+                // of dropping it silently; never sign the player in.
+                if (info.HasError)
+                {
+                    Debug.LogWarning($"[AuthService] Email-link callback rejected: {info.ErrorCode ?? info.Error} — {info.ErrorDescription}");
+                    var failure = AuthResult.Fail(AuthError.Unknown, tokens.Message);
+                    _recoveryFailure = failure;
+                    RaisePasswordRecovery(failure);
+                }
+                return;
+            }
+
+            // auth_recovery_flow — type=recovery: HOLD the tokens and route to set-new-password.
+            // No Session.ApplyFrom, no Save, no RaiseSignedIn until the new password is set —
+            // the old single-branch fall-through here was the silent-sign-in bug.
+            if (info.IsRecovery)
+            {
+                PendingRecovery = tokens;
+                Debug.Log("[AuthService] Recovery deep link — tokens held, awaiting new password (no sign-in).");
+                RaisePasswordRecovery(tokens);
                 return;
             }
 
@@ -262,6 +357,14 @@ namespace Golfin.Auth
             }
             onResult?.Invoke(result);
         };
+
+        /// <summary>Announce a recovery-link outcome. A throwing subscriber must never break the
+        /// deep-link handler (mirror of <see cref="RaiseSignedIn"/>).</summary>
+        private static void RaisePasswordRecovery(AuthResult r)
+        {
+            try { PasswordRecovery?.Invoke(r); }
+            catch (Exception ex) { Debug.LogError($"[AuthService] PasswordRecovery subscriber threw: {ex}"); }
+        }
 
         /// <summary>Announce a freshly established session. A throwing subscriber must never fail the
         /// sign-in that produced it.</summary>

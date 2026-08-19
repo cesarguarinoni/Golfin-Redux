@@ -14,6 +14,46 @@ namespace Golfin.Auth
     /// </summary>
     public static class OAuthCallbackParser
     {
+        /// <summary>
+        /// auth_recovery_flow — non-token metadata riding the callback: the GoTrue <c>type</c>
+        /// (<c>recovery</c>, <c>signup</c>, …) and the error triplet Supabase puts in the fragment
+        /// when an email link is expired or already used (e.g. <c>error_code=otp_expired</c>).
+        /// Pure data; <see cref="Parse"/> stays the session-token path — minimal diff, nothing
+        /// about the existing parse behavior changes.
+        /// </summary>
+        public readonly struct CallbackInfo
+        {
+            public readonly string Type;
+            public readonly string Error;
+            public readonly string ErrorCode;
+            public readonly string ErrorDescription;
+
+            public CallbackInfo(string type, string error, string errorCode, string errorDescription)
+            {
+                Type             = type;
+                Error            = error;
+                ErrorCode        = errorCode;
+                ErrorDescription = errorDescription;
+            }
+
+            /// <summary>True when the link is a password-recovery callback (<c>type=recovery</c>).</summary>
+            public bool IsRecovery => string.Equals(Type, "recovery", StringComparison.OrdinalIgnoreCase);
+
+            /// <summary>True when Supabase reported an error (expired / already-used link, denial…).</summary>
+            public bool HasError => !string.IsNullOrEmpty(Error) || !string.IsNullOrEmpty(ErrorCode);
+        }
+
+        /// <summary>Extract <c>type</c> + error params from the callback URL (fragment and/or query).</summary>
+        public static CallbackInfo GetCallbackInfo(string url)
+        {
+            var p = ParseParams(url);
+            p.TryGetValue("type", out var type);
+            p.TryGetValue("error", out var error);
+            p.TryGetValue("error_code", out var errorCode);
+            string desc = p.TryGetValue("error_description", out var d) ? d.Replace('+', ' ') : null;
+            return new CallbackInfo(type, error, errorCode, desc);
+        }
+
         /// <summary>True when the URL is our app's OAuth redirect (matches the configured scheme/host).</summary>
         public static bool IsCallback(string url, SupabaseConfig config)
         {

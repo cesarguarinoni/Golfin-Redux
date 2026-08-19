@@ -57,6 +57,20 @@ namespace Golfin.UI.Account
         private void OnEnable()
         {
             ClearError();
+
+            // auth_recovery_flow — cold-start recovery: the deep link fired before any screen was
+            // listening, so this door checks for held tokens (→ set-new-password) or a rejected
+            // link (→ localized error) on the way in.
+            if (AuthService.Instance.PendingRecovery != null)
+            {
+                if (_screenManager != null) _screenManager.ShowScreen(ScreenId.ResetPassword);
+                return; // leaving immediately — skip listener wiring (OnDisable removals are no-ops)
+            }
+            var recoveryFailure = AuthService.Instance.ConsumeRecoveryFailure();
+            if (recoveryFailure != null)
+                SetError(LocalizationManager.Get("AUTH_RESET_LINK_EXPIRED"));
+
+            AuthService.PasswordRecovery += OnPasswordRecoveryWhileOpen;
             if (_loginButton          != null) _loginButton.onClick.AddListener(OnLoginClicked);
             if (_forgotPasswordButton != null) _forgotPasswordButton.onClick.AddListener(OnForgotPasswordClicked);
             if (_googleButton         != null) _googleButton.onClick.AddListener(OnGoogleClicked);
@@ -68,6 +82,7 @@ namespace Golfin.UI.Account
 
         private void OnDisable()
         {
+            AuthService.PasswordRecovery -= OnPasswordRecoveryWhileOpen;
             if (_loginButton          != null) _loginButton.onClick.RemoveListener(OnLoginClicked);
             if (_forgotPasswordButton != null) _forgotPasswordButton.onClick.RemoveListener(OnForgotPasswordClicked);
             if (_googleButton         != null) _googleButton.onClick.RemoveListener(OnGoogleClicked);
@@ -75,6 +90,16 @@ namespace Golfin.UI.Account
             if (_cancelButton         != null) _cancelButton.onClick.RemoveListener(OnCancelClicked);
             if (_createAccountButton  != null) _createAccountButton.onClick.RemoveListener(OnCreateAccountClicked);
             if (_eyeToggleButton      != null) _eyeToggleButton.onClick.RemoveListener(OnEyeToggle);
+        }
+
+        // auth_recovery_flow — expired/used reset link tapped while this screen is already open:
+        // ScreenManager's ShowScreen(Login) dedupes to a no-op in that case, so the error surfaces
+        // here. Success routing stays ScreenManager's job.
+        private void OnPasswordRecoveryWhileOpen(AuthResult r)
+        {
+            if (r == null || r.Success) return;
+            AuthService.Instance.ConsumeRecoveryFailure(); // consumed — don't re-show on next enable
+            SetError(LocalizationManager.Get("AUTH_RESET_LINK_EXPIRED"));
         }
 
         // ── Eye toggle ────────────────────────────────────────────────────────

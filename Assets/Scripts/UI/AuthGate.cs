@@ -47,6 +47,8 @@ namespace GolfinRedux.UI
                 case ScreenId.SignUp:
                 case ScreenId.EmailConfirmation:
                 case ScreenId.CreateUsername:
+                // auth_recovery_flow — reached FROM the reset email, i.e. before any session exists.
+                case ScreenId.ResetPassword:
                     return true;
                 default:
                     return false;

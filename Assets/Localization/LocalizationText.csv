@@ -201,6 +201,22 @@ tourn.rules.divisions,DIVISIONS: Level based,ディビジョン：レベル別
 tourn.rules.per_division,PLAYERS PER DIVISION: 100,1ディビジョン：100人
 tourn.rules.gear,GEAR :  Supplied by GOLFIN,ギア：GOLFIN提供
 tourn.rules.characters,CHARACTERS:  Unrestricted,キャラクター：制限なし
+tourn.rules.max_players_n,MAX PLAYERS: {0},最大参加人数：{0}人
+tourn.rules.divisions_open,DIVISIONS: Open,ディビジョン：オープン
+tourn.rules.divisions_level,DIVISIONS: Level based,ディビジョン：レベル別
+tourn.rules.divisions_rarity,DIVISIONS: Rarity band,ディビジョン：レアリティ別
+tourn.rules.per_division_n,PLAYERS PER DIVISION: {0},1ディビジョン：{0}人
+tourn.rules.gear_own,GEAR: Own clubs,ギア：自分のクラブ
+tourn.rules.gear_own_max,GEAR: Own clubs (up to {0}),ギア：自分のクラブ（{0}まで）
+tourn.rules.gear_supplied,GEAR: Supplied by GOLFIN,ギア：GOLFIN提供
+tourn.rules.chars_rarity_band,CHARACTERS: {0},キャラクター：{0}
+tourn.rules.chars_level_band,CHARACTERS: {0},キャラクター：{0}
+tourn.rules.chars_rarity_level_band,CHARACTERS: {0} · {1},キャラクター：{0}・{1}
+tourn.entry.denied.char_rarity,Your character is outside this tournament’s rarity range ({0}),このトーナメントのレアリティ条件（{0}）を満たしていません
+tourn.entry.denied.char_level,Your character is outside this tournament’s level range ({0}),このトーナメントのレベル条件（{0}）を満たしていません
+tourn.entry.denied.club_rarity,Your bag has a club above the {0} limit,バッグに{0}を超えるクラブがあります
+tourn.entry.denied.full,This tournament is full ({0} players),このトーナメントは満員です（{0}人）
+tourn.entry.denied.generic,You cannot enter this tournament,このトーナメントには参加できません
 AUTH_LOGIN_TITLE,Welcome Back,おかえりなさい
 AUTH_LOGIN_EMAIL_PLACEHOLDER,Email,メール
 AUTH_LOGIN_PASSWORD_PLACEHOLDER,Password,パスワード
@@ -237,6 +253,15 @@ AUTH_EMAIL_CONF_OPEN,Open Email App,メールアプリを開く
 AUTH_EMAIL_CONF_RESEND,Resend Email,メールを再送
 AUTH_EMAIL_CONF_BACK,Back to Login,ログインに戻る
 AUTH_USERNAME_TAKEN,Username already taken,このユーザー名は既に使用されています
+AUTH_RESET_TITLE,Set New Password,新しいパスワードを設定
+AUTH_RESET_NEW_PLACEHOLDER,New Password,新しいパスワード
+AUTH_RESET_CONFIRM_PLACEHOLDER,Confirm New Password,新しいパスワード（確認）
+AUTH_RESET_BUTTON,SET PASSWORD,パスワードを設定
+AUTH_RESET_MISMATCH,Passwords do not match.,パスワードが一致しません
+AUTH_RESET_TOO_SHORT,Password does not meet the requirements.,パスワードが要件を満たしていません
+AUTH_RESET_LINK_EXPIRED,This reset link has expired or was already used. Please request a new one from the login screen.,このリセットリンクは期限切れか、すでに使用されています。ログイン画面からもう一度お試しください。
+AUTH_RESET_SUCCESS,Password updated!,パスワードを更新しました！
+AUTH_RESET_BACK,Back to Login,ログインに戻る
 NAV_LEADERBOARD,LEADERBOARD,リーダーボード
 NAV_MODE_SELECTION,MODE SELECTION,モード選択
 NAV_SELECT_HOLE,SELECT HOLE,ホール選択

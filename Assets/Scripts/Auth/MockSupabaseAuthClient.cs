@@ -94,6 +94,20 @@ namespace Golfin.Auth
             onResult(AuthResult.Ok(ToUser(acc), message: "Username saved."));
         }
 
+        // auth_recovery_flow — mirrors the live PUT /user {"password":…}. Same 8-char floor as the
+        // mock SignUp so both mock entry points agree. NOTE: real minimum lives in Supabase project
+        // settings (spec §5 says verify before hardcoding client copy).
+        public void UpdatePassword(string accessToken, string newPassword, Action<AuthResult> onResult)
+        {
+            if (Net(onResult)) return;
+            Account acc = FindByToken(accessToken);
+            if (acc == null) { onResult(AuthResult.Fail(AuthError.InvalidCredentials, "Session expired.")); return; }
+            if (string.IsNullOrEmpty(newPassword) || newPassword.Length < 8)
+            { onResult(AuthResult.Fail(AuthError.WeakPassword, "Password does not meet the requirements.")); return; }
+            acc.Password = newPassword;
+            onResult(AuthResult.Ok(ToUser(acc), message: "Password updated."));
+        }
+
         public void RefreshSession(string refreshToken, Action<AuthResult> onResult)
         {
             if (Net(onResult)) return;

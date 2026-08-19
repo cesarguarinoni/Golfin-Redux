@@ -34,6 +34,39 @@
 
 ## 📋 SPEC_READY POINTERS
 
+- **`auth_recovery_flow`** (filed 2026-08-19, Architect via Cowork) — **SPEC_READY · CODE + TESTS ALREADY WRITTEN (Cowork 2026-08-19, uncommitted) — Code finishes: scene wiring, full sweep, acceptance, commit. READ `HANDOFF.md` IN THE SPEC FOLDER FIRST.** Filtered `Golfin.Auth.Tests` 45/45 at handoff; Editor pre-step (AuthRedirectUrl.cs import + first `AuthRedirectUrlTests` run) DONE, 31/31 before the new code. Password-reset links today **silently sign the player in with the password unchanged**: `AuthService.OnDeepLink` (AuthService.cs:202) has one branch, `OAuthCallbackParser` ignores `type=recovery`, and `ISupabaseAuthClient` has no password-update method. Server side done 2026-08-19 — reset emails land on `confirm.golfin.world` and deep-link back with `type` in the fragment. Task: parse `type`+error params, branch OnDeepLink (recovery session held un-persisted, no `RaiseSignedIn()` until the new password is set), `UpdatePassword` → `PUT /auth/v1/user`, set-new-password screen in `Assets/Scripts/UI/Account/`, EN+JA loc, tests in `Golfin.Auth.Tests`. Pre-step folded in: import `AuthRedirectUrl.cs` + first-ever Editor run of `AuthRedirectUrlTests`. Out of scope: SMTP, admin-dashboard password actions, email-change/magic-link, `Tools/golfin-confirm`. Spec: `Docs/Specs/Active/auth_recovery_flow/SPEC.md`.
+
+### Kickoff · auth_recovery_flow (RE-ISSUED 2026-08-19 after partial Cowork implementation — supersedes the original Cowork kickoff)
+
+```
+Read Docs/Specs/Active/auth_recovery_flow/SPEC.md, then HANDOFF.md in the same
+folder, and FINISH the implementation.
+
+Context:
+- The Unity code + tests are ALREADY WRITTEN and green (Cowork 2026-08-19,
+  uncommitted): parser CallbackInfo, AuthService recovery branch (tokens held,
+  no persist/SignedIn until update), UpdatePassword on all three clients,
+  ResetPasswordScreenController, AUTH_RESET_* CSV rows, 14 new tests —
+  Golfin.Auth.Tests 45/45 filtered. Do NOT rewrite; HANDOFF.md §2 lists every
+  file. The Editor pre-step (AuthRedirectUrl.cs import + first AuthRedirectUrl
+  test run) is DONE — 31/31 before the new code.
+- Remaining (HANDOFF.md §4): ShellScene wiring — duplicate LoginScreen →
+  ResetPasswordScreen, strip to title / new+confirm password fields / eye
+  toggle / submit / back / error label, add + wire the controller, wire
+  ScreenManager._resetPasswordScreen, LocalizedText keys incl. placeholders;
+  then FULL unfiltered EditMode sweep (Assembly-CSharp was touched), SPEC
+  acceptance run, docs.
+- ⚠️ The working tree carries UNRELATED in-flight work (tournament_restrictions,
+  KLYRO club art, AI_CONTEXT/lessons edits). Commit ONLY HANDOFF.md §2 files.
+- Out of scope: SMTP, admin-dashboard password actions, email-change/magic-link,
+  Tools/golfin-confirm changes.
+
+When done: list changed files with a 1-line summary each, run the acceptance
+tests in the spec, flag which need manual on-device verification, update
+STATUS.md + IMPLEMENTER_REPORT.md in the spec folder, and update
+Docs/AI_CONTEXT.md.
+```
+
 - **`auth_email_redirect`** (filed 2026-08-19, Architect via Cowork) — **SPEC_READY, kickoff pasteable.** Player signup-confirmation + password-reset emails were landing on `admin.golfin.world` → the Cloudflare Access block page (client sends no `redirect_to`, Site URL fallback — `ADMIN_DASHBOARD_OPS.md` §6). **Already done server-side 2026-08-19 (Supabase Studio, no code):** both email templates rewritten — GOLFIN-branded, EN+JA, verify link hardcodes `redirect_to=golfin://auth-callback` — so builds already in the field are fixed. Remaining (this task): deploy `Tools/golfin-confirm` (assets-only Worker, `confirm.golfin.world`, same CF account as golfin-admin, **NO Access policy** — verify 200 not 302), make the client pass `redirect_to` on signup/recover, then swap the two templates to the hosted page (+ Supabase URL-allowlist entries, Cesar). ⚠️ MUST VERIFY, not assume: does the `golfin://auth-callback` handler process `type=recovery` (set-new-password flow)? If not, document the gap in the report. Spec: `Docs/Specs/Active/auth_email_redirect/SPEC.md`. Worker files already in `Tools/golfin-confirm/`.
 
 ### Kickoff · auth_email_redirect (issued 2026-08-19)
