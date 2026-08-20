@@ -301,3 +301,7 @@ fastlane/README.md
 fastlane/test_output/
 Builds/ipa/
 *.p8
+
+# Editor-only dev sign-in credentials (DevAutoSignIn). Local to each machine, never
+# committed. Alternative to the GOLFIN_DEV_EMAIL / GOLFIN_DEV_PASSWORD env vars.
+.golfin-dev-login.json

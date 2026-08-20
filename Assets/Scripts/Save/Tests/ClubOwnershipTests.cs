@@ -34,6 +34,12 @@ namespace Golfin.Save.Tests
         private static readonly string[] StarterIds =
             { "club_driver_gf", "club_wood_gf", "club_iron7_mireo", "club_pwedge_royal", "club_putter_golfinx" };
 
+        // What a grandfathered (pre-club-persistence) save is owed: the clubs that existed when it
+        // was written. Deliberately NOT the whole catalog — see SeedGrandfather.
+        private static readonly string[] GrandfatherIds =
+            { "club_driver_gf", "club_wood_gf", "club_iron7_mireo", "club_pwedge_royal",
+              "club_putter_golfinx", "club_iron9_klyro" };
+
         private static readonly string[] RequiredTypes = { "Driver", "Wood", "Iron", "Putter" };
 
         // Wedge role-group (mirrors ClubManager.RequiredBagTypeGroups, Order 761).
@@ -74,15 +80,23 @@ namespace Golfin.Save.Tests
 
         // ── Grandfather seed (A3) ───────────────────────────────────────────────
 
+        /// <summary>
+        /// Grandfather seeds the PINNED id set, not the catalog. The pin is the whole safety
+        /// property: the catalog is now 799 rows, so a catalog-wide seed would hand a
+        /// grandfathered player every club in the game, free and persisted, on one load.
+        /// </summary>
         [Test]
-        public void SeedGrandfather_OwnsFullCatalog_StarterEquipped()
+        public void SeedGrandfather_OwnsOnlyPinnedIds_StarterEquipped()
         {
             var save = new SaveData();
-            ClubOwnershipService.SeedGrandfather(save, Catalog(), StarterIds);
+            ClubOwnershipService.SeedGrandfather(save, Catalog(), GrandfatherIds, StarterIds);
 
-            Assert.AreEqual(7, save.ownedClubs.Count, "grandfather owns the full catalog (5 starters + 2 purchasable)");
-            Assert.IsTrue(ClubOwnershipService.IsOwned(save, "club_iron9_klyro"), "extras are owned when grandfathered");
+            Assert.AreEqual(GrandfatherIds.Length, save.ownedClubs.Count,
+                "grandfather owns exactly the pinned set, never the whole catalog");
+            Assert.IsTrue(ClubOwnershipService.IsOwned(save, "club_iron9_klyro"), "pinned extras are owned");
             Assert.IsTrue(ClubOwnershipService.IsOwned(save, "club_pwedge_royal"), "wedge is owned when grandfathered");
+            Assert.IsFalse(ClubOwnershipService.IsOwned(save, "club_driver_klyro"),
+                "a catalog club OUTSIDE the pin must NOT be granted");
             Assert.IsTrue(ClubOwnershipService.HasPlayableBag(save, Catalog(), RequiredTypes));
 
             var extra = save.ownedClubs.Find(c => c.clubId == "club_iron9_klyro");
@@ -91,6 +105,26 @@ namespace Golfin.Save.Tests
             Assert.AreEqual(1, driver!.equippedBagSlot, "starter clubs are equipped to bag 1");
             var wedge = save.ownedClubs.Find(c => c.clubId == "club_pwedge_royal");
             Assert.AreEqual(1, wedge!.equippedBagSlot, "wedge is a starter club; must be equipped to bag 1 (Order 761)");
+        }
+
+        /// <summary>
+        /// The regression this pin exists for: growing the catalog must not grow what a
+        /// grandfathered player receives.
+        /// </summary>
+        [Test]
+        public void SeedGrandfather_CatalogGrowth_DoesNotWidenTheGrant()
+        {
+            var bigCatalog = Catalog();
+            for (int i = 0; i < 500; i++)
+                bigCatalog.Add(new ClubCatalogSpec($"club_generated_{i}", 10, 100, 45, "Iron"));
+
+            var save = new SaveData();
+            ClubOwnershipService.SeedGrandfather(save, bigCatalog, GrandfatherIds, StarterIds);
+
+            Assert.AreEqual(GrandfatherIds.Length, save.ownedClubs.Count,
+                "a 507-row catalog must still grant only the pinned set");
+            Assert.IsFalse(ClubOwnershipService.IsOwned(save, "club_generated_0"),
+                "no generated club may be granted for free by the grandfather path");
         }
 
         // ── Grant (A5) ──────────────────────────────────────────────────────────

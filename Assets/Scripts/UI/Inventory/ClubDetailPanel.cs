@@ -217,7 +217,7 @@ namespace Golfin.Inventory
             if (infoHeader != null)
                 infoHeader.text = LocalizationManager.Get("CLUB_INFO");
             if (infoText != null)
-                infoText.text = template.info;
+                infoText.text = ClubInfoText.Resolve(template);
 
             // ── Stat Bars ─────────────────────────────────────────────────────
             UpdateStatBar(powerName, powerBar, powerNumber,

@@ -2,7 +2,6 @@
 using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
-using Golfin.Roster;   // CharacterRarity
 
 namespace Golfin.Inventory
 {
@@ -10,6 +9,10 @@ namespace Golfin.Inventory
     /// CSV-driven club database — mirrors CharacterDatabaseCSV pattern.
     /// Loads Clubs.csv from a TextAsset assigned in Inspector and resolves
     /// portrait sprites from Resources/Clubs/Portraits/ and Resources/Clubs/Full/.
+    ///
+    /// Row parsing lives in <see cref="ClubCsvParser"/> (pure, EditMode-testable); this class
+    /// is the runtime adapter that maps rows onto <see cref="ClubDataRuntime"/> and resolves
+    /// sprites.
     ///
     /// Execution order: runs before ClubManager so data is ready for it.
     /// </summary>
@@ -22,6 +25,10 @@ namespace Golfin.Inventory
 
         private const string PortraitPath = "Clubs/Portraits";
         private const string FullPath     = "Clubs/Full";
+        private const string ControlPath  = "Clubs/Controls";
+
+        /// <summary>Fallback sprite name looked up inside each folder, then in <see cref="FullPath"/>.</summary>
+        private const string PlaceholderName = "Placeholder";
 
         private readonly Dictionary<string, ClubDataRuntime> clubMap  = new();
         private readonly List<ClubDataRuntime>                allClubs = new();
@@ -49,145 +56,113 @@ namespace Golfin.Inventory
             clubMap.Clear();
             allClubs.Clear();
 
-            string[] lines = clubsCSV.text.Split('\n');
-            if (lines.Length < 2) { Debug.LogError("[ClubDatabaseCSV] Clubs.csv is empty."); return; }
-
-            var headerIndex = BuildHeaderIndex(ParseCSVLine(lines[0]));
-
-            for (int i = 1; i < lines.Length; i++)
+            var rows = ClubCsvParser.Parse(clubsCSV.text);
+            if (rows.Count == 0)
             {
-                string line = lines[i].Trim();
-                if (string.IsNullOrEmpty(line)) continue;
+                Debug.LogError("[ClubDatabaseCSV] Clubs.csv produced no rows — is the file empty or all comments?");
+                return;
+            }
 
-                var club = ParseRow(ParseCSVLine(line), headerIndex);
-                if (club == null) continue;
+            // Sprite resolution is memoized across the whole load. The roster shares art across
+            // brand x type combos, so 799 rows reference only a few hundred distinct sprite names;
+            // without the cache this is 3 x 799 Resources.Load calls (and, while the art batches
+            // are still filling in, ~1800 duplicate "not found" warnings) on every boot.
+            var spriteCache  = new Dictionary<string, Sprite?>();
+            var missingNames = new HashSet<string>();
 
+            foreach (var row in rows)
+            {
+                var club = ToRuntime(row, spriteCache, missingNames);
                 clubMap[club.clubId] = club;
                 allClubs.Add(club);
             }
 
-            Debug.Log($"[ClubDatabaseCSV] Loaded {allClubs.Count} clubs.");
-        }
-
-        private Dictionary<string, int> BuildHeaderIndex(List<string> headers)
-        {
-            var idx = new Dictionary<string, int>();
-            for (int i = 0; i < headers.Count; i++)
-                idx[headers[i].Trim()] = i;
-            return idx;
-        }
-
-        private ClubDataRuntime? ParseRow(List<string> fields, Dictionary<string, int> idx)
-        {
-            try
+            if (missingNames.Count > 0)
             {
-                string  Get(string col, string def = "")
-                    => idx.TryGetValue(col, out int i) && i < fields.Count ? fields[i].Trim() : def;
-                int     GetInt(string col, int def = 0)
-                    => int.TryParse(Get(col), out int v) ? v : def;
-                float   GetFloat(string col, float def = 0f)
-                    => float.TryParse(Get(col), System.Globalization.NumberStyles.Float,
-                       System.Globalization.CultureInfo.InvariantCulture, out float v) ? v : def;
-
-                var club = new ClubDataRuntime
-                {
-                    clubId             = Get("id"),
-                    name               = Get("name"),
-                    type               = ParseType(Get("type")),
-                    rarity             = ParseRarity(Get("rarity", "Common")),
-                    brand              = Get("brand"),
-                    basePower          = GetInt("basePower"),
-                    baseAccuracy       = GetInt("baseAccuracy"),
-                    baseLieResistance  = GetInt("baseLieResistance"),
-                    baseLoft           = GetInt("baseLoft"),
-                    maxDurability      = GetInt("maxDurability", 100),
-                    baseDistance       = GetInt("baseDistance"),
-                    ballSpeedMps       = GetFloat("ballSpeedMps",   75f),
-                    launchAngleDeg     = GetFloat("launchAngleDeg", 10.9f),
-                    spinRateRpm        = GetFloat("spinRateRpm",    2686f),
-                    portraitSpriteName = Get("portraitSprite"),
-                    portraitFullName   = Get("portraitFull"),
-                    controlSpriteName  = Get("controlSprite"),
-                    maxLevel           = GetInt("maxLevel", 119),
-                    info               = Get("info"),
-                };
-
-                if (string.IsNullOrEmpty(club.clubId)) return null;
-
-                club.portraitSprite = LoadSprite(PortraitPath,      club.portraitSpriteName);
-                club.portraitFull   = LoadSprite(FullPath,          club.portraitFullName);
-                club.controlSprite  = LoadSprite("Clubs/Controls",  club.controlSpriteName);
-
-                return club;
+                // One summary line, not one per row. Missing art is EXPECTED while the
+                // club_art_batches specs fill in brand x type combos; every card falls back to the
+                // Placeholder sprite, so this is a warning and never an error.
+                Debug.LogWarning(
+                    $"[ClubDatabaseCSV] {missingNames.Count} club sprite(s) not found — falling back to " +
+                    $"'{PlaceholderName}'. Expected while art batches land. Missing: " +
+                    string.Join(", ", missingNames.OrderBy(n => n).Take(12)) +
+                    (missingNames.Count > 12 ? $", +{missingNames.Count - 12} more" : ""));
             }
-            catch (System.Exception e)
-            {
-                Debug.LogError($"[ClubDatabaseCSV] Row parse error: {e.Message}");
-                return null;
-            }
+
+            Debug.Log($"[ClubDatabaseCSV] Loaded {allClubs.Count} clubs " +
+                      $"({spriteCache.Count} distinct sprite lookups, {missingNames.Count} missing).");
         }
+
+        private static ClubDataRuntime ToRuntime(ClubCsvRow row,
+                                                 Dictionary<string, Sprite?> cache,
+                                                 HashSet<string> missing) => new ClubDataRuntime
+        {
+            clubId             = row.id,
+            name               = row.name,
+            type               = row.type,
+            rarity             = row.rarity,
+            brand              = row.brand,
+            basePower          = row.basePower,
+            baseAccuracy       = row.baseAccuracy,
+            baseLieResistance  = row.baseLieResistance,
+            baseLoft           = row.baseLoft,
+            maxDurability      = row.maxDurability,
+            baseDistance       = row.baseDistance,
+            ballSpeedMps       = row.ballSpeedMps,
+            launchAngleDeg     = row.launchAngleDeg,
+            spinRateRpm        = row.spinRateRpm,
+            portraitSpriteName = row.portraitSprite,
+            portraitFullName   = row.portraitFull,
+            controlSpriteName  = row.controlSprite,
+            maxLevel           = row.maxLevel,
+            info               = row.info,
+            infoJa             = row.infoJa,
+
+            portraitSprite     = LoadSprite(PortraitPath, row.portraitSprite, cache, missing),
+            portraitFull       = LoadSprite(FullPath,     row.portraitFull,   cache, missing),
+            controlSprite      = LoadSprite(ControlPath,  row.controlSprite,  cache, missing),
+        };
 
         // ── Sprite loading ────────────────────────────────────────────────────
 
-        private static Sprite? LoadSprite(string folder, string name)
+        /// <summary>
+        /// Resolves one sprite by name, memoized per (folder, name). A name the art batches have
+        /// not produced yet warns ONCE (collected into <paramref name="missing"/> and summarised by
+        /// the caller) and falls back to the Placeholder sprite, so a card is never blank and the
+        /// boot is never an error.
+        /// </summary>
+        private static Sprite? LoadSprite(string folder, string name,
+                                          Dictionary<string, Sprite?> cache,
+                                          HashSet<string> missing)
         {
-            if (string.IsNullOrEmpty(name)) return null;
-            var sprite = Resources.Load<Sprite>($"{folder}/{name}");
+            if (string.IsNullOrEmpty(name)) return Placeholder(folder, cache);
+
+            string key = $"{folder}/{name}";
+            if (cache.TryGetValue(key, out var cached)) return cached;
+
+            var sprite = Resources.Load<Sprite>(key);
             if (sprite == null)
-                Debug.LogWarning($"[ClubDatabaseCSV] Sprite not found: Resources/{folder}/{name}");
+            {
+                missing.Add(key);
+                sprite = Placeholder(folder, cache);
+            }
+
+            cache[key] = sprite;
             return sprite;
         }
 
-        // ── Parsers ───────────────────────────────────────────────────────────
-
-        private static ClubType ParseType(string s) => s.ToLower().Replace(" ", "") switch
+        /// <summary>Placeholder for a folder, falling back to the one shipped in Clubs/Full/.</summary>
+        private static Sprite? Placeholder(string folder, Dictionary<string, Sprite?> cache)
         {
-            "driver"  => ClubType.Driver,
-            "wood"    => ClubType.Wood,
-            "iron"    => ClubType.Iron,
-            "a.wedge" => ClubType.A_Wedge,
-            "p.wedge" => ClubType.P_Wedge,
-            "s.wedge" => ClubType.S_Wedge,
-            "putter"  => ClubType.Putter,
-            _         => ClubType.Driver
-        };
+            string key = $"{folder}/{PlaceholderName}";
+            if (cache.TryGetValue(key, out var cached)) return cached;
 
-        private static CharacterRarity ParseRarity(string s) => s.ToLower() switch
-        {
-            "common"    => CharacterRarity.Common,
-            "uncommon"  => CharacterRarity.Uncommon,
-            "rare"      => CharacterRarity.Rare,
-            "mythic"    => CharacterRarity.Mythic,
-            "legendary" => CharacterRarity.Legendary,
-            "supreme"   => CharacterRarity.Supreme,
-            _           => CharacterRarity.Common
-        };
+            var sprite = Resources.Load<Sprite>(key);
+            if (sprite == null && folder != FullPath)
+                sprite = Resources.Load<Sprite>($"{FullPath}/{PlaceholderName}");
 
-        /// <summary>Handles quoted fields containing commas.</summary>
-        private static List<string> ParseCSVLine(string line)
-        {
-            var fields  = new List<string>();
-            var current = new System.Text.StringBuilder();
-            bool inQuotes = false;
-
-            for (int i = 0; i < line.Length; i++)
-            {
-                char c = line[i];
-                if (c == '"')
-                {
-                    if (inQuotes && i + 1 < line.Length && line[i + 1] == '"')
-                    { current.Append('"'); i++; }
-                    else
-                    { inQuotes = !inQuotes; }
-                }
-                else if (c == ',' && !inQuotes)
-                { fields.Add(current.ToString()); current.Clear(); }
-                else
-                { current.Append(c); }
-            }
-
-            fields.Add(current.ToString());
-            return fields;
+            cache[key] = sprite;
+            return sprite;
         }
 
         // ── Public API ────────────────────────────────────────────────────────

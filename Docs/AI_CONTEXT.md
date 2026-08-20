@@ -23,6 +23,78 @@
 
 ## 🟢 PRIORITY QUEUED — pick up immediately
 
+> **▶ 2026-08-20 · `club_roster_799` — SHIPPED (code complete, EditMode green).** The 799-row
+> `Clubs.csv` is now actually consumable. **Two ship blockers were live in the working tree.**
+> (1) **The database loaded ZERO clubs.** The new CSV opens with three `#` provenance lines and
+> `ClubDatabaseCSV.LoadCSV` took `lines[0]` as the header — it built its column index out of prose,
+> every lookup missed, every row parsed to an empty id and was dropped. Reproduced against the
+> shipped file: old reader `clubsLoaded=0 rowsDropped=802`, new reader `799`. Parsing now lives in
+> `ClubCsvParser` (pure, Assembly-CSharp) and the header is the first non-blank **non-comment** line.
+> (2) **Grandfather seeding granted the whole catalog.** `ClubOwnershipService.SeedGrandfather` seeded
+> every `ClubCatalogSpec` handed to it — which read as "existing players keep their clubs" while the
+> catalog was 7 rows, and would have granted **all 799 clubs, free and persisted**, on one load.
+> It now takes an explicit `grandfatherIds` pin; `ClubManager.LegacyGrandfatherIds` is the 7 pre-expansion
+> rows. Tripwire-verified: removing the pin fails the gate with `actual is <String[799]>`.
+>
+> Also: `info_ja` wired end-to-end (`ClubDataRuntime.infoJa` → `ClubInfoText.Resolve`, the same JP-only
+> ladder as `TournamentDescription` — an EN player never sees Japanese copy, a JP player with a blank
+> column falls back to English, which is the 7 legacy rows today). New-player starter bag is now the
+> 7 Common **GOLFIN** clubs (one per type, fits `MAX_CLUBS_PER_BAG=8`); existing saves are untouched —
+> real boot confirms `Loaded 799 clubs` + `Loaded 5 owned clubs from save (schema v9)`. **No migrator
+> was added** — Cesar framed it as optional and it is a save-schema bump; current testers keep their
+> legacy bag and will not receive the GOLFIN set until one is written (the `wedgeBackfillPending`
+> v8→v9 pattern is the template).
+>
+> **Perf.** No UI surface reads the 799-row catalog — the Clubs carousel, the type filter bar and the
+> Bags equip modal all go through `GetAllOwnedClubs()` / `GetOwnedClubsOfType()`, so with the
+> grandfather pin every cohort instantiates ~7 cards, not 799. They are still eager (one `Instantiate`
+> per owned club, no pooling); that only becomes a problem once a player *buys* into the hundreds, and
+> it is flagged rather than rebuilt (no spec). Sprite resolution was the real boot cost and is fixed:
+> memoized per `(folder,name)` with a Placeholder fallback, so **2397 `Resources.Load` calls + ~1897
+> `LogWarning`s (≈243ms) became 299 loads (0.8ms) + one summary line**. Missing art is expected while
+> `club_art_batches` lands; every row resolves to a non-null sprite, so no card is ever blank.
+> Follow-up: `Clubs/Portraits/Placeholder.png` and `Clubs/Controls/Placeholder.png` do not exist, so
+> both currently fall through to the full-body `Clubs/Full/Placeholder` — correct, but wrong aspect.
+>
+> **`S.Wedge`** maps correctly (`ParseType("S.Wedge") → ClubType.S_Wedge`, 114 rows) and nothing
+> switches over `ClubType` without a `_ =>` default, so no throw. Note the filter bar has **6 tabs
+> (ALL/D/W/I/WEDGES/P)**, not the 7 per-type tabs the brief assumed — the unified WEDGES tab unions
+> A/P/S, so S.Wedge is reachable; a dedicated SW tab would be a design change and needs a spec.
+> Tests: `Golfin.Inventory.Tests` (24, new) + `Golfin.Save.Tests` (45). Full EditMode 1519 pass / 0 fail.
+>
+> **Verification (corrected — the first pass wrongly punted this to "on-device").** The fresh-save
+> starter bag IS verified in the real flow: save.json was backed up and wiped, ShellScene booted, and
+> `[ClubManager] Starter-seeded 7 clubs (fresh save)` came back with exactly the 7 GOLFIN ids; the save
+> was then restored byte-identically. The `info_ja` ladder is verified both rungs against the live CSV
+> (`club_swedge_golfin_common` lang=Japanese → JA copy; `club_driver_gf` jaLen=0 lang=Japanese →
+> English). **The one thing that cannot be recorded in the Editor is the Clubs screen itself:** the
+> app parks on the Splash LOGIN/CREATE ACCOUNT gate because this Editor has no auth session, the
+> session lives in **PlayerPrefs** (`AuthSession`) not save.json, and there is **no guest mode**
+> (Cesar 2026-08-12). Not a device problem — it needs one sign-in in the Editor.
+> **RECORDED 2026-08-20 (Cesar signed the Editor in).** `videos/raw.mp4` — 34.6s @ 1170x2532, every
+> step through real widget `onClick`. What it shows: WEDGES tab active listing A.Wedge / P.Wedge
+> Royal / P.Wedge GOLFIN / **S.Wedge GOLFIN** (task 3, visual); the S.Wedge detail panel in English;
+> the same panel in Japanese rendering `情報` + its `info_ja` copy, wrapping in 3 lines well inside the
+> panel; and `DRIVER G&F` (info_ja blank) in a Japanese UI showing ENGLISH body copy — the fallback
+> rung, not an empty box. BAGS shows the 8-slot grid, 5 equipped + 3 EMPTY.
+>
+> Two things the recorder taught us. (1) **The Splash gate needs a tap even when authenticated** —
+> `[AuthService] authenticated=True` yet ScreenManager parks at `ApplyScreen: Splash` until
+> `StartButton.onClick` fires; that button IS the token-refresh + route-to-Home entry. The bot now
+> taps it, and boot drops from a 45s timeout to 4.8s. (2) The bot hard-aborts with a BOOT GATE error
+> rather than recording the wrong screen — it silently filmed the login page once
+> (`screenshots/boot_gate_*.png`). ⚠️ it grants clubs via `GrantClub`, which persists — back up
+> save.json first (done, restored byte-identical both runs).
+>
+> **Unrelated JA gaps visible in the frames** (pre-existing, not this work): `REPAIR` stays English
+> next to `レベルアップ`/`比較`; the filter bar localizes `ALL`→`すべて` but leaves
+> DRIVERS/WOODS/IRONS/WEDGES/PUTTERS English; CLUBS/BAGS/BALLS/ITEMS untranslated.
+>
+> Minor, pre-existing, worth knowing: a brand-new `SaveData` logs `schema v2`, not v9 — it never runs
+> `Migrate()`. Harmless today only because `clubOwnershipSeeded` is already true by the time the
+> v5→v6 block would set `grandfatherClubs`. That gate is now load-bearing for the pin.
+
+
 > **▶ 2026-08-19 · `auth_recovery_flow` — READY_FOR_SELF_REVIEW.** Password reset actually works now. Before this, a reset link **silently signed the player in with the password unchanged**: `AuthService.OnDeepLink` had one branch, `type=recovery` in the fragment was never read, and the recovery tokens were applied as an ordinary session. Cowork wrote the C# half (uncommitted at handoff): `OAuthCallbackParser.GetCallbackInfo` exposes `type` / `error` / `error_code` / `error_description`; `OnDeepLink` now branches three ways — `type=recovery` **holds** the tokens in `PendingRecovery` (nothing persisted, no `SignedIn`), an error fragment with no pending OAuth surfaces a localized failure, and everything else is byte-for-byte the old path; `UpdatePassword` landed on all three clients; `ResetPasswordScreenController` + 9 `AUTH_RESET_*` EN/JA rows + 14 tests. **This Code session finished it:** built `ResetPasswordScreen` in ShellScene as a clone of `LoginScreen` (27 GameObjects, every element cloned — nothing hand-built), wired all 18 `[SerializeField]`s and `ScreenManager._resetPasswordScreen`, and added `ApplyLocalization()` to the controller because **the project has no `LocalizedText` component** — the account screens carry hardcoded English in-scene and the existing `AUTH_LOGIN_*` / `AUTH_SIGNUP_*` keys have **zero consumers**. ResetPassword is the first account screen that genuinely localizes; the other four are a small follow-up. Two things worth remembering: (1) the clone inherited `LayoutElement.preferredWidth=388` baked for the word LOGIN, which overrode the button's own ContentSizeFitter and pushed `SET PASSWORD` (467px) outside the green fill — `preferredWidth=-1` hands sizing back to the CSF; (2) saving the scene **after a play-mode session** re-baked anchor churn into 154 pre-existing RectTransforms + 3 PrefabInstances (the `project_scene_save_bakes_layout_churn` scar), repaired by restoring every HEAD block except the two intentional ones, then reopening the scene. Verified in play mode through the real entry path (title gate → Login → `HandleAuthCallback`): tokens held not persisted, weak/mismatch/expired errors, Back clearing tokens first, and the plain signup-confirmation regression guard. The Editor runs the **live** transport, so a fabricated recovery token was genuinely refused by Supabase — the failure branch is proven end-to-end, the success branch needs a real emailed link. Full unfiltered EditMode sweep: **1492/1496**, the one failure (`GameSessionTests.OnHoleComplete_…`, a `[Golfin.Telemetry]` `DontDestroyOnLoad` in EditMode) logged here as "pre-existing and unrelated" — **it was neither, and it is now FIXED**; see the `beta_telemetry` entry. Nothing to do on this task. **Device-only items remain:** real iPhone mail-tap, a real token succeeding + old password rejected, EN/JA on device. **Open NOTE:** Supabase's password minimum length is still unverified against the dashboard (client enforces 8+, stricter than the default 6). Report: `Docs/Specs/Active/auth_recovery_flow/IMPLEMENTER_REPORT.md`.
 
 > **▶ 2026-08-19 · `tournament_restrictions` (client half) — ✅ ARCHITECT_APPROVED, committed `fb44640ae`, pushed.** Tournaments now carry a category and entry restrictions. The **server half has been live in prod since 2026-08-18** and was not touched: `list_golfin` emits 10 nullable fields (`category`, `max_players`, `players_per_division`, `division_type`, `char_rarity_min/max`, `char_level_min/max`, `gear_rule`, `club_rarity_max`) and `POST /golfin/{slug}/enter` denies **before the fee debit** with 200-shaped `{status:"full"|"ineligible"}`. Client: the 10 fields ride DTO → `TournamentDefinition` (appended-optional, the `Title`/`BannerUrl` pattern) → mapper as a pass-through; **`Assets/Resources/Data/tournaments.csv` gained no columns**, so the offline path behaves exactly as before. The signup modal's RULES block is now composed **from data** (`TournamentRulesText`, pure and therefore test-gated in EN *and* JA) with the five original localization keys surviving as the null fallbacks — an unrestricted tournament renders byte-for-byte what it rendered yesterday. **One intended copy change:** `tourn.rules.gear` said "Supplied by GOLFIN", which was display fiction; it now shows only when the field is genuinely absent, and every server-fed tournament (all backfilled to `own`) reads "Own clubs". CONFIRM is gated **before the payment path** by `TournamentEligibility` — a pure evaluator taking ranks rather than managers, mirroring `_check_entry_eligibility` case for case, including its deny-when-unresolvable branches — sited *after* the already-entered short-circuit so a player already in is never thrown out by a rule they now fail. `gear_rule=supplied` skips the bag check entirely. Server `full`/`ineligible` denials map onto the same failure vocabulary and the same toast copy, so a refusal reads identically whether the client or the server noticed. **A real bug surfaced only by driving the actual CONFIRM button:** the first adapter read rarity through `CharacterManager.GetCharacterTemplate`, which is the ScriptableObject *fallback* — null plus a logged error in the shipped CSV-first configuration — so every character would have been unranked and a rarity-restricted tournament would have refused **everyone**; now CSV-first with the SO as fallback, matching `GetMaxLevel`. Rarity renders as its **coloured single letter** (C/U/R/M/L/S) through `RarityHelper` — the same letters and colours every card badge already uses, and language-neutral, so the `RARITY_*` rows are not consulted. 43 new EditMode tests; full suite **1478 / 1475 passed / 0 failed / 3 pre-existing skips**. 16 new localization rows (EN+JA, **JA flagged for native review**). **Category tag DROPPED, not deferred** (Cesar, 2026-08-19): the SPONSOR line already carries it — a tournament presented by GOLFIN is the hardcore one, and the shipped CSV already authors `GOLFIN` literally on two rows — so the modal needs no new element and no prefab surgery. `Category` is still carried end-to-end per SPEC §1 but nothing in the UI reads it; note that `category` and `sponsor_name` are independent dashboard columns and can disagree, so they are not synonyms. **Architect review APPROVED** (`ARCHITECT_REVIEW.md`, spot-checked against the working tree, not just the report) with rulings on all four open questions and **no code change required**: **Q1** the client/server level-check asymmetry is INTENDED and recorded — the server's `golfin_character_level` is a plausibility backstop, the client checks the character actually entering, both failures are soft, do NOT converge now (if it ever matters, the additive fix is optional `character_rarity`/`character_level` fields in the enter body); **Q2** `club_rarity_max` is CONFIRMED a design knob, not an integrity rule — a modified client affects only its own gear flavour, never scores or payouts; **Q3** the A2 dashboard ships with `gear_rule=supplied` DISABLED for authoring (visible, greyed, tooltip "requires the standard-spec task") so an unplayable promise cannot be authored by accident; **Q4** inert `category` ACCEPTED, with the standing note that `category` and `sponsor_name` are independent columns and must never be treated as synonyms. **Server half committed for the record** in `playlife` `9ec20d4` (migration + `list_golfin` + enter enforcement — already deployed 2026-08-18, this only records it). **Remaining before DONE:** (1) **A2 dashboard restrictions editor** (Architect, in progress); (2) then author ONE restricted tournament (rarity band + level band + max_players; NOT `gear=supplied`) and run the **live round trip** — RULES render from `list_golfin`, ineligible CONFIRM toast, server `ineligible` on a forced mismatch, `full` at cap; (3) **JA native review** of the 16 new rows; (4) **RULES pixel fit on device** for the worst line in the real body box. Spec + report + review: `Docs/Specs/Active/tournament_restrictions/`.

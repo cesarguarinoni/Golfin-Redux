@@ -35,11 +35,46 @@ public class ClubManager : MonoBehaviour
     private readonly Dictionary<string, PlayerClubData> ownedClubs = new();
 
     /// <summary>
-    /// Starter bag (fresh save) + the default equip set for grandfathered saves. IDs match Clubs.csv
-    /// (the same set the lab stub uses). Guarantees the A4 bag-safety invariant: one of each required
-    /// club type (Driver / Wood / Iron / Wedge / Putter). Updated by Order 761 to include P.Wedge.
+    /// Starter bag for a fresh save: the standard Common GOLFIN set — one club of every type
+    /// (Driver / Wood / Iron / P.Wedge / A.Wedge / S.Wedge / Putter). 7 clubs, so it fits
+    /// MAX_CLUBS_PER_BAG (8). IDs match Clubs.csv. Satisfies the A4 bag-safety invariant.
+    ///
+    /// Changed 2026-08-20 (Cesar) from the legacy mixed-brand 5 to the GOLFIN Commons: every new
+    /// player now starts on the same neutral, lowest-rarity baseline instead of inheriting a
+    /// Legendary Royal Swing wedge and a Rare MireO iron by accident of what shipped first.
     /// </summary>
     private static readonly string[] DefaultBagIds =
+    {
+        "club_driver_golfin_common", "club_wood_golfin_common",  "club_iron_golfin_common",
+        "club_pwedge_golfin_common", "club_awedge_golfin_common", "club_swedge_golfin_common",
+        "club_putter_golfin_common",
+    };
+
+    /// <summary>
+    /// The clubs a GRANDFATHERED player (a save from before club ownership was persisted) is owed.
+    /// These are the 7 rows that shipped in Clubs.csv before the 792-row roster expansion — exactly
+    /// what such a player could have had — so nobody loses a bag on upgrade.
+    ///
+    /// <para>
+    /// <b>This list is the whole point.</b> Grandfather seeding used to hand over the ENTIRE
+    /// catalog. That read as "existing players keep every club" when the catalog was these 7 rows;
+    /// against the 799-row roster it would have granted every club in the game, for free and
+    /// permanently, on the first load. Pinning it here means growing Clubs.csv can never again
+    /// widen what a grandfathered save receives.
+    /// </para>
+    /// </summary>
+    private static readonly string[] LegacyGrandfatherIds =
+    {
+        "club_driver_gf",     "club_wood_gf",      "club_iron9_klyro", "club_iron7_mireo",
+        "club_awedge_fyloe",  "club_pwedge_royal", "club_putter_golfinx",
+    };
+
+    /// <summary>
+    /// What a grandfathered save gets EQUIPPED — the bag DefaultBagIds named before the GOLFIN
+    /// starter change. Kept separate so the fix to grandfather ownership does not also silently
+    /// re-arrange an existing player's bag.
+    /// </summary>
+    private static readonly string[] LegacyDefaultBagIds =
         { "club_driver_gf", "club_wood_gf", "club_iron7_mireo", "club_pwedge_royal", "club_putter_golfinx" };
 
     /// <summary>Required club types a playable bag must contain (A4 bag-safety). ClubType enum names.</summary>
@@ -107,11 +142,13 @@ public class ClubManager : MonoBehaviour
 
         if (host == null)
         {
-            // No persistence available (e.g. a lab/test scene without SaveDataHost). Fall back to the
-            // pre-610 behaviour — own the full DB in-memory so the bag is playable — but DO NOT persist.
-            Debug.LogWarning("[ClubManager] SaveDataHost.Instance is null — seeding full DB in-memory (not persisted).");
+            // No persistence available (e.g. a lab/test scene without SaveDataHost). Seed the starter
+            // bag, NOT the catalog: such a scene needs a playable bag, not ownership of all 799 clubs.
+            // (This used to seed the whole DB, which was survivable while the DB was 7 rows.)
+            // Nothing here is persisted either way.
+            Debug.LogWarning("[ClubManager] SaveDataHost.Instance is null — seeding the starter bag in-memory (not persisted).");
             var scratch = new SaveData();
-            ClubOwnershipService.SeedGrandfather(scratch, catalog, DefaultBagIds);
+            ClubOwnershipService.SeedStarter(scratch, catalog, DefaultBagIds);
             HydrateFrom(scratch);
             Debug.Log($"[ClubManager] Initialized {ownedClubs.Count} clubs in-memory (no SaveDataHost).");
             return;
@@ -123,8 +160,9 @@ public class ClubManager : MonoBehaviour
         {
             if (save.grandfatherClubs)
             {
-                ClubOwnershipService.SeedGrandfather(save, catalog, DefaultBagIds);
-                Debug.Log($"[ClubManager] Grandfather-seeded {save.ownedClubs.Count} clubs (existing player, D-A3).");
+                ClubOwnershipService.SeedGrandfather(save, catalog, LegacyGrandfatherIds, LegacyDefaultBagIds);
+                Debug.Log($"[ClubManager] Grandfather-seeded {save.ownedClubs.Count} clubs (existing player, D-A3; " +
+                          $"pinned to the legacy {LegacyGrandfatherIds.Length}, not the {catalog.Count}-row catalog).");
             }
             else
             {
@@ -185,8 +223,11 @@ public class ClubManager : MonoBehaviour
         // required type (corrupt/legacy save), re-equip the default bag for any owned required-type club.
         if (!ClubOwnershipService.HasPlayableBag(save, catalog, RequiredBagTypes, RequiredBagTypeGroups))
         {
+            // Both sets: a fresh save's bag is DefaultBagIds, a grandfathered save's is the legacy
+            // one. Before the GOLFIN starter change these were the same list, so iterating only
+            // DefaultBagIds covered everyone; now it would silently skip every existing player.
             int fixedUp = 0;
-            foreach (var id in DefaultBagIds)
+            foreach (var id in DefaultBagIds.Concat(LegacyDefaultBagIds))
                 if (ownedClubs.TryGetValue(id, out var pc) && pc.equippedBagSlot == 0) { pc.equippedBagSlot = 1; fixedUp++; }
             if (fixedUp > 0) { PersistOwnedClubs(); Debug.LogWarning($"[ClubManager] Bag-safety repair: re-equipped {fixedUp} default clubs."); }
         }

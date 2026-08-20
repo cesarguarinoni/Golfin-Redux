@@ -1270,3 +1270,30 @@ MonoBehaviour:
   - key: INGAME_QUIT_CONFIRM_BODY
     english: YOU WILL NOT GET ANY REWARDS WHEN QUITTING.
     japanese: "\u9014\u4E2D\u3067\u7D42\u4E86\u3059\u308B\u3068\u5831\u916C\u306F\u7372\u5F97\u3067\u304D\u307E\u305B\u3093\u3002"
+  - key: INV_TAB_CLUBS
+    english: CLUBS
+    japanese: "\u30AF\u30E9\u30D6"
+  - key: INV_TAB_BAGS
+    english: BAGS
+    japanese: "\u30D0\u30C3\u30B0"
+  - key: INV_TAB_BALLS
+    english: BALLS
+    japanese: "\u30DC\u30FC\u30EB"
+  - key: INV_TAB_ITEMS
+    english: ITEMS
+    japanese: "\u30A2\u30A4\u30C6\u30E0"
+  - key: CLUB_FILTER_DRIVERS
+    english: DRIVERS
+    japanese: "\u30C9\u30E9\u30A4\u30D0\u30FC"
+  - key: CLUB_FILTER_WOODS
+    english: WOODS
+    japanese: "\u30A6\u30C3\u30C9"
+  - key: CLUB_FILTER_IRONS
+    english: IRONS
+    japanese: "\u30A2\u30A4\u30A2\u30F3"
+  - key: CLUB_FILTER_WEDGES
+    english: WEDGES
+    japanese: "\u30A6\u30A7\u30C3\u30B8"
+  - key: CLUB_FILTER_PUTTERS
+    english: PUTTERS
+    japanese: "\u30D1\u30BF\u30FC"

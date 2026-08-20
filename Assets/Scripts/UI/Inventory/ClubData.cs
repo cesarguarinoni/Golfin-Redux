@@ -56,6 +56,14 @@ namespace Golfin.Inventory
         public int    maxLevel = 119;
         public string info     = "";
 
+        /// <summary>
+        /// Japanese description (Clubs.csv column <c>info_ja</c>). Blank for the 7 legacy rows and
+        /// for any generated row whose JA copy has not landed yet. Never read directly by UI —
+        /// go through <see cref="ClubInfoText.Resolve(ClubDataRuntime)"/>, which falls back to
+        /// <see cref="info"/> for English players and for a blank JA column.
+        /// </summary>
+        public string infoJa   = "";
+
         public string GetTypeLabel() => type switch
         {
             ClubType.Driver  => "DRIVER",

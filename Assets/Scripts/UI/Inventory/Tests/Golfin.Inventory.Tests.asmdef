@@ -1,0 +1,18 @@
+{
+    "name": "Golfin.Inventory.Tests",
+    "rootNamespace": "Golfin.Inventory.Tests",
+    "references": [
+        "Golfin.Localization",
+        "Golfin.Save"
+    ],
+    "includePlatforms": ["Editor"],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "optionalUnityReferences": ["TestAssemblies"],
+    "overrideReferences": true,
+    "precompiledReferences": ["nunit.framework.dll"],
+    "autoReferenced": false,
+    "defineConstraints": ["UNITY_INCLUDE_TESTS"],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

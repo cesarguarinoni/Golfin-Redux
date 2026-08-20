@@ -67,15 +67,28 @@ namespace Golfin.Save
         };
 
         /// <summary>
-        /// D-A3 grandfather-all: seed the FULL catalog into ownedClubs (existing players keep every
-        /// club). starterBagIds are equipped to bag slot 1 so the bag is populated.
+        /// D-A3 grandfather seed: an existing player who predates club persistence keeps the clubs
+        /// that existed when their save was written. <paramref name="grandfatherIds"/> is that
+        /// PINNED set; ids in <paramref name="starterBagIds"/> are equipped to bag slot 1 so the bag
+        /// is populated. Catalog entries outside the pin are purchasable, not-yet-owned templates.
+        ///
+        /// <para>
+        /// <b>Why the pin is a parameter and not a call-site filter.</b> This method used to seed
+        /// the ENTIRE catalog. That was harmless while the catalog was 7 rows and catastrophic the
+        /// moment Clubs.csv grew to 799: a single grandfathered load would have granted every club
+        /// in the game for free, permanently, and persisted it. The set a grandfathered player is
+        /// owed is a property of the economy, so it is stated here — a future roster expansion
+        /// cannot silently widen it again.
+        /// </para>
         /// </summary>
         public static void SeedGrandfather(SaveData save, IReadOnlyList<ClubCatalogSpec> catalog,
+                                           IReadOnlyCollection<string> grandfatherIds,
                                            IReadOnlyCollection<string> starterBagIds)
         {
-            save.ownedClubs = new List<PersistedClub>(catalog.Count);
+            save.ownedClubs = new List<PersistedClub>(grandfatherIds.Count);
             foreach (var spec in catalog)
             {
+                if (!grandfatherIds.Contains(spec.clubId)) continue;
                 int slot = starterBagIds.Contains(spec.clubId) ? 1 : 0;
                 save.ownedClubs.Add(MakePersisted(spec, slot));
             }

@@ -5668,6 +5668,7 @@ GameObject:
   - component: {fileID: 96618007}
   - component: {fileID: 96618009}
   - component: {fileID: 96618008}
+  - component: {fileID: 96618010}
   m_Layer: 0
   m_Name: Text (TMP)
   m_TagString: Untagged
@@ -5794,6 +5795,20 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 96618006}
   m_CullTransparentMesh: 1
+--- !u!114 &96618010
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 96618006}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Golfin.Localization::LocalizedText
+  key: CLUB_REPAIR
+  japaneseFontScale: 0
 --- !u!1 &97237416
 GameObject:
   m_ObjectHideFlags: 0
@@ -18128,6 +18143,7 @@ GameObject:
   - component: {fileID: 335641793}
   - component: {fileID: 335641795}
   - component: {fileID: 335641794}
+  - component: {fileID: 335641796}
   m_Layer: 0
   m_Name: Label
   m_TagString: Untagged
@@ -18254,6 +18270,20 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 335641792}
   m_CullTransparentMesh: 1
+--- !u!114 &335641796
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 335641792}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Golfin.Localization::LocalizedText
+  key: CLUB_FILTER_DRIVERS
+  japaneseFontScale: 0
 --- !u!1 &335783208
 GameObject:
   m_ObjectHideFlags: 0
@@ -20458,6 +20488,7 @@ GameObject:
   - component: {fileID: 374655479}
   - component: {fileID: 374655481}
   - component: {fileID: 374655480}
+  - component: {fileID: 374655482}
   m_Layer: 0
   m_Name: Label
   m_TagString: Untagged
@@ -20584,6 +20615,20 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 374655478}
   m_CullTransparentMesh: 1
+--- !u!114 &374655482
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 374655478}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Golfin.Localization::LocalizedText
+  key: CLUB_FILTER_PUTTERS
+  japaneseFontScale: 0
 --- !u!1 &375907951
 GameObject:
   m_ObjectHideFlags: 0
@@ -24997,6 +25042,7 @@ GameObject:
   - component: {fileID: 456544320}
   - component: {fileID: 456544322}
   - component: {fileID: 456544321}
+  - component: {fileID: 456544323}
   m_Layer: 0
   m_Name: Label
   m_TagString: Untagged
@@ -25123,6 +25169,20 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 456544319}
   m_CullTransparentMesh: 1
+--- !u!114 &456544323
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 456544319}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Golfin.Localization::LocalizedText
+  key: INV_TAB_BAGS
+  japaneseFontScale: 0
 --- !u!1 &460225741
 GameObject:
   m_ObjectHideFlags: 0
@@ -51637,6 +51697,7 @@ GameObject:
   - component: {fileID: 882057496}
   - component: {fileID: 882057498}
   - component: {fileID: 882057497}
+  - component: {fileID: 882057499}
   m_Layer: 0
   m_Name: Label
   m_TagString: Untagged
@@ -51763,6 +51824,20 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 882057495}
   m_CullTransparentMesh: 1
+--- !u!114 &882057499
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 882057495}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Golfin.Localization::LocalizedText
+  key: CLUB_FILTER_IRONS
+  japaneseFontScale: 0
 --- !u!1 &882828507
 GameObject:
   m_ObjectHideFlags: 0
@@ -59859,6 +59934,7 @@ GameObject:
   - component: {fileID: 1002283016}
   - component: {fileID: 1002283018}
   - component: {fileID: 1002283017}
+  - component: {fileID: 1002283019}
   m_Layer: 0
   m_Name: Label
   m_TagString: Untagged
@@ -59985,6 +60061,20 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1002283015}
   m_CullTransparentMesh: 1
+--- !u!114 &1002283019
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1002283015}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Golfin.Localization::LocalizedText
+  key: INV_TAB_CLUBS
+  japaneseFontScale: 0
 --- !u!1 &1002946575
 GameObject:
   m_ObjectHideFlags: 0
@@ -75558,6 +75648,7 @@ GameObject:
   - component: {fileID: 1275418770}
   - component: {fileID: 1275418772}
   - component: {fileID: 1275418771}
+  - component: {fileID: 1275418773}
   m_Layer: 0
   m_Name: Label
   m_TagString: Untagged
@@ -75684,6 +75775,20 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1275418769}
   m_CullTransparentMesh: 1
+--- !u!114 &1275418773
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1275418769}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Golfin.Localization::LocalizedText
+  key: CLUB_FILTER_WOODS
+  japaneseFontScale: 0
 --- !u!1 &1282895093
 GameObject:
   m_ObjectHideFlags: 0
@@ -96718,6 +96823,7 @@ GameObject:
   - component: {fileID: 1601304095}
   - component: {fileID: 1601304097}
   - component: {fileID: 1601304096}
+  - component: {fileID: 1601304098}
   m_Layer: 0
   m_Name: Label
   m_TagString: Untagged
@@ -96844,6 +96950,20 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1601304094}
   m_CullTransparentMesh: 1
+--- !u!114 &1601304098
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1601304094}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Golfin.Localization::LocalizedText
+  key: CLUB_FILTER_WEDGES
+  japaneseFontScale: 0
 --- !u!1 &1606037713
 GameObject:
   m_ObjectHideFlags: 0
@@ -125490,6 +125610,7 @@ GameObject:
   - component: {fileID: 2089277912}
   - component: {fileID: 2089277914}
   - component: {fileID: 2089277913}
+  - component: {fileID: 2089277915}
   m_Layer: 0
   m_Name: Label
   m_TagString: Untagged
@@ -125616,6 +125737,20 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2089277911}
   m_CullTransparentMesh: 1
+--- !u!114 &2089277915
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2089277911}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Golfin.Localization::LocalizedText
+  key: INV_TAB_BALLS
+  japaneseFontScale: 0
 --- !u!1 &2092370975
 GameObject:
   m_ObjectHideFlags: 0
@@ -129434,6 +129569,7 @@ GameObject:
   - component: {fileID: 2144715409}
   - component: {fileID: 2144715411}
   - component: {fileID: 2144715410}
+  - component: {fileID: 2144715412}
   m_Layer: 0
   m_Name: Label
   m_TagString: Untagged
@@ -129560,6 +129696,20 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2144715408}
   m_CullTransparentMesh: 1
+--- !u!114 &2144715412
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2144715408}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Golfin.Localization::LocalizedText
+  key: INV_TAB_ITEMS
+  japaneseFontScale: 0
 --- !u!1 &2147189757
 GameObject:
   m_ObjectHideFlags: 0
