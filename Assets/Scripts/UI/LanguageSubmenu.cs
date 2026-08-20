@@ -17,8 +17,6 @@ namespace Golfin.UI
         [Header("Row Colors")]
         [SerializeField] private Color selectedColor = new Color32(0x33, 0x99, 0xFF, 0xFF);
         [SerializeField] private Color unselectedColor = new Color32(0x26, 0x42, 0x5F, 0xFF);
-        
-        private const string LANGUAGE_KEY = "Settings_Language";
 
         private void Awake()
         {
@@ -66,27 +64,23 @@ namespace Golfin.UI
         }
 
         /// <summary>
-        /// Load the saved language preference and apply it.
+        /// Re-apply the player's saved language preference. With no saved choice the
+        /// language resolved at boot (device language) is left untouched — never forced
+        /// back to English, or a Japanese device would flip to English on first open.
         /// </summary>
         private void LoadLanguagePreference()
         {
-            // Load from PlayerPrefs (default to current language or English)
-            string savedLanguage = PlayerPrefs.GetString(LANGUAGE_KEY, Language.English.ToString());
-            
-            if (System.Enum.TryParse<Language>(savedLanguage, out Language language))
+            if (!LanguageSettings.TryGetSavedLanguage(out Language language))
             {
-                // Apply to LocalizationManager if different from current
-                if (LocalizationManager.CurrentLanguage != language)
-                {
-                    LocalizationManager.SetLanguage(language);
-                }
-                Debug.Log($"[LanguageSubmenu] Loaded language: {language}");
+                Debug.Log($"[LanguageSubmenu] No saved language; keeping startup language: {LocalizationManager.CurrentLanguage}");
+                return;
             }
-            else
+
+            if (LocalizationManager.CurrentLanguage != language)
             {
-                Debug.LogWarning($"[LanguageSubmenu] Invalid saved language: {savedLanguage}, defaulting to English");
-                LocalizationManager.SetLanguage(Language.English);
+                LocalizationManager.SetLanguage(language);
             }
+            Debug.Log($"[LanguageSubmenu] Loaded language: {language}");
         }
 
         /// <summary>
@@ -101,8 +95,7 @@ namespace Golfin.UI
             }
             
             // Save preference
-            PlayerPrefs.SetString(LANGUAGE_KEY, language.ToString());
-            PlayerPrefs.Save();
+            LanguageSettings.SaveLanguage(language);
             
             // Apply language change to LocalizationManager
             // This will fire OnLanguageChanged event, which updates all LocalizedText components

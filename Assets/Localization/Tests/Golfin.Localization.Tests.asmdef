@@ -1,0 +1,17 @@
+{
+    "name": "Golfin.Localization.Tests",
+    "rootNamespace": "Golfin.Localization.Tests",
+    "references": [
+        "Golfin.Localization"
+    ],
+    "includePlatforms": ["Editor"],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "optionalUnityReferences": ["TestAssemblies"],
+    "overrideReferences": true,
+    "precompiledReferences": ["nunit.framework.dll"],
+    "autoReferenced": false,
+    "defineConstraints": ["UNITY_INCLUDE_TESTS"],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
