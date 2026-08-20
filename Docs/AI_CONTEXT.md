@@ -666,6 +666,53 @@ To keep `TellCode.md` readable for Claude Code (file was getting long enough to 
 
 ---
 
+## Session Changes (2026-08-20 — Device Language Startup)
+
+### Shipped (`a6831529b`, quick task — no spec folder)
+- **The game now boots in the device's language on a fresh install.** Japanese device → Japanese,
+  every other device language → English. Previously `LocalizationBootstrap.Awake` always initialized
+  `LocalizationManager` with its serialized `defaultLanguage` (English), so a Japanese player's first
+  launch was always English.
+- **New `LanguageSettings`** (`Assets/Localization/LanguageSettings.cs`, `Golfin.Localization`) is now
+  the single resolver for startup language: **saved player choice → device language → fallback**.
+  It owns the `Settings_Language` PlayerPrefs key plus its save/clear/parse helpers, and rejects
+  corrupt or out-of-range stored values instead of trusting them.
+- **`LocalizationBootstrap`** resolves through it and logs the decision
+  (`Startup language: X (saved=yes/no, device=Y)`). New `useDeviceLanguage` toggle (default **on**)
+  so a fixed language can still be forced; `defaultLanguage` remains the non-Japanese fallback, so
+  the `Tools > Localization > Language Debug` window keeps working.
+
+### Bug fixed along the way
+- **`LanguageSubmenu` forced English whenever no preference was saved.**
+  `PlayerPrefs.GetString(key, "English")` cannot distinguish *"no choice yet"* from *"chose English"*,
+  so on a Japanese device the game would boot Japanese and then snap back to English the first time
+  the settings accordion opened. It now leaves the boot-resolved language alone when nothing is saved.
+- **Side effect worth knowing:** because the bootstrap now reads the saved preference at `Awake`, a
+  player's saved choice is applied *at launch*. It was previously only applied when the language
+  submenu opened — pick Japanese, quit, relaunch, and you were back in English until you reopened
+  Settings.
+
+### Verification
+- Compile clean (warnings only, all pre-existing). Functional probe run against the **production**
+  type via `script-execute`, PlayerPrefs saved and restored: Japanese→Japanese;
+  English/French/Korean/ChineseSimplified→English; saved choice beats device; garbage value→fallback.
+- **`Golfin.Localization.Tests`** (new EditMode assembly) — 11 pass / 0 fail, covering the device
+  mapping, saved-choice precedence, corrupt + out-of-range stored values, and `useDeviceLanguage=false`.
+  **Tripwire-verified** (inverted one assertion → 1 failure with the expected message, then reverted),
+  because the MCP runner's assembly filter reports whole-mode totals and silently finds nothing at all
+  for a brand-new assembly until the test tree is rebuilt (`TestRunnerApi.RetrieveTestList` + a wait).
+- Editor left clean: ShellScene undirty, not in play mode, Cesar's own `Settings_Language` pref restored.
+
+### Follow-up
+- `ShellScene.unity` does **not** yet carry the new `useDeviceLanguage` key in YAML. Behaviour is
+  already correct — the live component reads `True` from the C# field initializer — and it will
+  serialize on the next scene save. The scene was clean and unrelated work was in flight, so it was
+  deliberately not saved.
+- Only Japanese is detected because `Language` only has English + Japanese. Adding a language means
+  extending `LanguageSettings.FromSystemLanguage` alongside the enum and the CSV column.
+
+---
+
 ## Session Changes (2026-05-04 — Controls C Diagnostic Instrumentation Spec)
 
 ### Completed (architect side, pre-pipeline)
