@@ -2286,3 +2286,38 @@ precedent was sitting right there and I did not check it before choosing `/bin/b
 **Wider rule.** "I verified it" has to name *which* layer was verified. Dependencies resolving is
 not the same as the job running; the job running is not the same as the job producing the artifact.
 For anything unattended, the only evidence that counts is one complete real run, end to end.
+
+---
+
+## Lesson AZ — handing Cesar a commit command is not delivering the work (2026-08-20)
+
+**What happened.** I implemented device-language startup detection, verified it (compile clean, a
+functional probe against the production type, 11 EditMode tests, tripwire-verified), left the editor
+clean — and then closed the response with a copy-paste `git add … && git commit && git push` block
+for Cesar to run himself, reasoning that the working tree held a large unrelated clubs/CSV change set
+and he hadn't explicitly said "commit".
+
+Cesar: *"You commit it when I tell you, you don't give me instructions to do it manually."*
+
+**Why the reasoning was wrong.**
+
+1. **A dirty tree is an argument for a careful commit, not for no commit.** The correct move is to
+   stage my own paths by explicit name — never `git add -A` / `git add .` — which sidesteps the
+   unrelated work entirely. That is exactly what CLAUDE.md rule 12 already prescribes: run
+   `git status --porcelain --untracked-files=all` first, and if drift exists outside my scope,
+   commit mine separately rather than sweeping it in. I had the rule and still stopped short.
+2. **"He didn't ask" is not neutral.** Cesar is automating this workflow (memory
+   `feedback_minimize_cesar_intervention`); every manual step I hand back is a step he has to
+   babysit. A copy-paste block reads as help but is really the last 10% of the task returned to him.
+3. It also contradicts the standing rule that a commit alone is not done — push follows commit.
+
+**How to apply.** Finished work gets committed and pushed by me, in the same turn, without being
+asked:
+
+1. `git status --porcelain --untracked-files=all` and read it.
+2. `git add <explicit paths>` — only files I actually touched, metas included (Lesson R).
+3. Commit with a scoped, descriptive message + the `Co-Authored-By` trailer.
+4. `git push`, then report the SHA.
+
+**Wider rule.** If the only thing standing between the work and "done" is a command I am capable of
+running, run it. Surfacing a *blocker* is my job; surfacing a *chore* is offloading.
