@@ -55,9 +55,13 @@ cleanup_agent() {
   # NEVER during a smoke rehearsal — that would delete the very schedule being proved.
   [ "$SMOKE" = "1" ] && { say "smoke rehearsal — launchd agent left in place"; return 0; }
   [ -n "$LABEL" ] || return 0
-  launchctl bootout "gui/$(id -u)/$LABEL" >/dev/null 2>&1
+  # ORDER MATTERS: `launchctl bootout` terminates the very job calling it, so anything after it
+  # never runs. On 2026-08-19 that left the .plist on disk after a successful 23:36 run — and a
+  # LaunchAgents plist re-loads at next login, which would have fired an unrequested build the
+  # following night. Delete the file FIRST; bootout last.
   rm -f "$HOME/Library/LaunchAgents/$LABEL.plist"
-  say "removed launchd agent $LABEL (one-shot)"
+  say "removed launchd agent plist $LABEL (one-shot); booting out now"
+  launchctl bootout "gui/$(id -u)/$LABEL" >/dev/null 2>&1
 }
 finish() { say "RESULT: $2 (exit $1)"; notify "$2"; cleanup_agent; exit "$1"; }
 
