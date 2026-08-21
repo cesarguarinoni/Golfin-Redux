@@ -453,11 +453,8 @@ namespace GolfinRedux.UI.Tournaments
                 _dateLineText.text = $"{dateRange} — {countdown}";
             }
 
-            // Entry pill
-            if (_entryLabelText  != null) _entryLabelText.text  = "ENTRY";
-            if (_entryAmountText != null) _entryAmountText.text = def.EntryFeeRP.ToString("N0");
-            // Coin icon visibility
-            if (_entryCoinIcon   != null) _entryCoinIcon.enabled = true;
+            // Entry pill — a zero fee reads "FREE ENTRY", exactly as the selection card does.
+            ApplyEntryPill(def.EntryFeeRP);
 
             // Reward
             if (_rewardCoinIcon  != null) _rewardCoinIcon.enabled = true;
@@ -465,6 +462,71 @@ namespace GolfinRedux.UI.Tournaments
             {
                 long topPrize = TournamentService.Instance.GetTopPrizeRP(def.Id);
                 _rewardText.text = $"{topPrize:N0} + Trophy";
+            }
+        }
+
+        // ── Entry pill ────────────────────────────────────────────────────────
+
+        /// <summary>Authored rect/alignment of <see cref="_entryLabelText"/>, captured once so the
+        /// paid state can be restored after a free tournament stretched the label.</summary>
+        private bool                  _entryLabelCaptured;
+        private Vector2               _entryLabelAnchorMin, _entryLabelAnchorMax;
+        private Vector2               _entryLabelAnchoredPos, _entryLabelSizeDelta;
+        private TextAlignmentOptions  _entryLabelAlignment;
+
+        /// <summary>
+        /// Entry pill copy. A zero-RP tournament renders one centred <c>TOURN_FREE_ENTRY</c>
+        /// label — the same string, from the same key, as the selection card's FreeEntryBadge
+        /// (<see cref="TournamentSelectionCard"/>) — instead of "ENTRY [coin] 0". A paid one
+        /// keeps the authored "ENTRY [coin] {fee}" triple.
+        /// <para>
+        /// The pill has no layout group (its children are absolutely positioned, Figma
+        /// 13480:2618), so the free state stretches the label across the pill itself rather
+        /// than relying on a sibling badge the way the card does. The authored rect is captured
+        /// on first use and restored whenever a paid tournament reopens the modal.
+        /// </para>
+        /// </summary>
+        private void ApplyEntryPill(long feeRP)
+        {
+            bool free = feeRP <= 0L;
+
+            if (_entryCoinIcon != null) _entryCoinIcon.gameObject.SetActive(!free);
+            if (_entryAmountText != null)
+            {
+                _entryAmountText.gameObject.SetActive(!free);
+                if (!free) _entryAmountText.text = feeRP.ToString("N0");
+            }
+
+            if (_entryLabelText == null) return;
+
+            var rt = _entryLabelText.rectTransform;
+            if (!_entryLabelCaptured)
+            {
+                _entryLabelAnchorMin   = rt.anchorMin;
+                _entryLabelAnchorMax   = rt.anchorMax;
+                _entryLabelAnchoredPos = rt.anchoredPosition;
+                _entryLabelSizeDelta   = rt.sizeDelta;
+                _entryLabelAlignment   = _entryLabelText.alignment;
+                _entryLabelCaptured    = true;
+            }
+
+            if (free)
+            {
+                rt.anchorMin = Vector2.zero;
+                rt.anchorMax = Vector2.one;
+                rt.offsetMin = Vector2.zero;
+                rt.offsetMax = Vector2.zero;
+                _entryLabelText.alignment = TextAlignmentOptions.Center;
+                _entryLabelText.text      = LocalizationManager.Get("TOURN_FREE_ENTRY");
+            }
+            else
+            {
+                rt.anchorMin        = _entryLabelAnchorMin;
+                rt.anchorMax        = _entryLabelAnchorMax;
+                rt.sizeDelta        = _entryLabelSizeDelta;
+                rt.anchoredPosition = _entryLabelAnchoredPos;
+                _entryLabelText.alignment = _entryLabelAlignment;
+                _entryLabelText.text      = LocalizationManager.Get("TOURN_ENTRY");
             }
         }
 
