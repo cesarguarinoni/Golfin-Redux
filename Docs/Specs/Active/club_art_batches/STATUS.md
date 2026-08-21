@@ -55,9 +55,156 @@ matching the shipped FOREFIT driver.
 Anything at those ratios is correctly framed no matter what the chat panel looked like.
 Four generations were thrown away to this misread; do not repeat it.
 
+## FOREFIT - COMPLETE, 13 of 13 committed (2026-08-21)
+
+Committed: portraits Wood/Iron/Wedge/Putter, controls Wood/Iron/Wedge/Putter (driver portrait and
+driver controls were already shipped), and all 5 full scenes
+`Full/{Driver,Wood,Iron,Wedge,Putter}-Forefit.png`. All 8 sprites pass qa_sprites.py; all 5 fulls
+are 537x900 with the 30px rounded mask.
+
+### ⚠️ FULL SCENES: the template's GRIP colour bleeds through
+W1 replaces the club but keeps the scene template's grip. `WedgeA-Fyloe` gives a bright purple grip
+and `Putter-GolfinX` a purple/black one, so FOREFIT's wedge and putter came back purple-gripped
+while driver/wood/iron (GandF/Klyro/Mireo templates) came back black. Shipped EAGLEZ fulls have the
+whole shaft+grip recoloured to brand, so purple is a real defect, not the house style.
+Fix is one in-chat correction on the same chat, which works reliably:
+> Same image, one single change: recolour the grip from purple to matte black with a thin mint-white
+> accent line. Everything else stays exactly as it is - same head, same FOREFIT wordmark, same
+> chrome shaft, same background, same lighting, same framing.
+**Check the grip colour on every full scene from the Fyloe wedge and GolfinX putter templates.**
+
+### NOT a defect: mirrored wordmark on Iron and Wedge fulls
+The iron and wedge scene templates show the club face-on, so the sole wordmark renders mirrored
+(reads "TIFEROF"). Shipped `Iron-Eaglez.png` and `Wedge-Eaglez.png` do exactly the same. Leave it -
+consistency with the shipped set wins.
+
+### Download-grab gotcha
+Gemini saves as `.jpeg`. A pre/post `ls *.png *.jpg` misses it and you can pick up a stale leftover
+download instead of the new one. Diff the FULL listing: `ls -1 > /tmp/dl_pre.txt` before the click,
+`ls -1 | diff /tmp/dl_pre.txt - | grep '^> '` after. One wrong file was banked this way and caught
+only by opening it.
+
+### ⚠️ TRADEMARK: the word "swoosh" pulls a real NIKE MARK
+The identity sheet's FOREFIT Look column says "mint-white outlined swoosh". Using that word in a
+prompt produced an actual Nike swoosh on the wood controls sole. An in-chat "remove the Nike logo"
+correction did NOT clear it - it took a fresh generation with the word removed. Say **"mint-white
+curved outline stripes"** instead, and add: "do NOT draw any real-world brand logo of any kind - no
+Nike mark, no tick, no check mark, no manufacturer emblem." Identity sheet updated to match.
+**Zoom every FOREFIT sole before shipping.** Check other brands whose Look column names a real-world
+graphic idiom for the same failure.
+
+### ⚠️ POST-PROCESSING, NOT GENERATION: the chrome-shaft "split shaft"
+FOREFIT controls kept failing QA with 2-3 narrow top-edge crossings. I regenerated three times
+before checking the raw - the raw shaft was ONE solid chrome tube every time. The specular highlight
+running down a chrome shaft is near-white; where it touches the frame edge the flood fill drives a
+3-4px slot up the middle, splitting the shaft in the alpha only.
+**Always open the RAW before regenerating an anatomy defect.** Fixes, in order:
+- `remove_white_bg(thresh=250)` instead of 235 for chrome-shaft brands (but 250 also lets background
+  noise through on some raws - if strays explode, go back to 235 and rely on the seal below).
+- `/root/seal.py` (cloud container): binary-closes the alpha with a 4px kernel to re-join the sliver,
+  then keeps only the largest component. Run it on every controls sprite after the cut.
+
+### ⚠️ PORTRAIT SCALE: fit by HEAD WIDTH, not bbox
+`portrait()` fits the whole head+shaft bbox into 264x411, so a raw with a long shaft shrinks the head
+- FOREFIT's wood and putter came out 156px wide where shipped art runs 224-255. `/root/fitfix.py`
+scales by measured head width instead. Per-type targets from the shipped median:
+**Driver 253, Iron 253, Wedge 252, Putter 250, Wood 232.**
+
+### Known cosmetic issue, not fixed
+`S_Controls_Iron_FOREFIT.png` - the FOREFIT wordmark reads upside-down. Spelling and count are
+correct and the shaft/head are clean. Left as-is per Cesar's "note it and move on"; worth one
+correction pass if he wants it.
+
+## PAR PERFECT - COMPLETE, 13 of 13 committed (2026-08-21)
+
+Committed: portraits Wood/Iron/Wedge/Putter, controls Wood/Iron/Wedge/Putter. Driver portrait and
+driver controls were already shipped. All 8 pass qa.py. Plus all 5 full scenes,
+`Full/{Driver,Wood,Iron,Wedge,Putter}-ParPerfect.png`, 537x900 with the 30px rounded mask.
+
+### ⚠️ "strictly monochrome" in a W1 prompt DESATURATES THE WHOLE PHOTOGRAPH
+The iron full came back with the grass, sky and wall all greyscale. Scope the colour rule to the
+club: *"Keep the photograph itself exactly as it is and in FULL COLOUR - same green grass, same blue
+sky, same wall, same daylight. Only the CLUB changes... the club itself carries no colour, only
+black, chrome, silver and grey."* Works first time.
+Also: the in-chat "put the colour back" correction restored colour but **swapped the smooth white
+stucco wall for a rough sandstone block wall** - the background is not preserved across that repair.
+Regenerate fresh instead of repairing a desaturated full.
+
+### ⚠️ IDENTITY SHEET WAS WRONG FOR THIS BRAND - corrected from the art
+The sheet said "clean white crown with a gloss black sole". The shipped driver is the opposite:
+**matte black body with a large polished mirror-chrome crown panel**, "PAR" in wide squared italic
+capitals above "PERFECT" in smaller capitals, engraved tone-on-tone in dark grey, fine dark groove
+lines, chrome shaft with a black ferrule, strictly monochrome. Sheet row rewritten (ART WINS).
+
+### Per-file threshold, not per-brand
+PAR PERFECT's chrome shafts fade to pure white at the top, so `remove_white_bg` splits them. But a
+single threshold does not work for the whole brand:
+**wood 235+seal, iron 250+seal, wedge 250+seal, putter 235+seal.**
+At 250 the wood raw let ~460k px of background noise through (98 phantom "shafts" in QA); at 235 the
+iron and wedge shafts split into 3 strands. Try 250 first, check the opaque pixel count against the
+other sprites of the same brand (~245k for controls here), and fall back to 235+seal if it explodes.
+
+### Putter portraits: fit by BBOX width, not head width
+`fitfix.place()` scales so the widest alpha row = target, then centres the *bounding box*. When the
+shaft leans well off to one side (as the PAR PERFECT putter raw does) the bbox is much wider than
+the head, so the head gets clipped at both frame edges. Shipped `S_Menu_Putter_GOLFIN.png` measures
+maxrow 224, x-extent 5..258 - so for putters scale **bbox width -> 253** and centre. Gives maxrow
+~221, matching the shipped norm.
+
+### In-chat wordmark rotation fixes DO work
+Both the wedge (rotated 90 degrees) and the iron (upside down) cleared on the first in-chat
+correction: "the wordmark is rotated sideways / upside down. Redraw it so it reads horizontally
+left-to-right for the viewer... Change absolutely nothing else." Cheaper than a regeneration.
+
+### W2 "transparent background" summons a literal checkerboard
+Write **"on a plain solid white background"** in the first W2 prompt instead of "transparent
+background" - it avoids the checkerboard render and the extra correction round-trip entirely.
+
+## BogeyB - 11 of 13 committed (2026-08-21), WEDGE + PUTTER FULLS STILL OWED
+
+Committed: portraits Driver/Wood/Wedge/Putter, controls Driver/Wood/Wedge/Putter. Iron portrait and
+iron controls were already shipped. All 8 pass qa.py at thresh=235, no seal needed - the olive-gold
+shaft is dark enough that the flood fill never eats it. Plus 3 of 5 full scenes:
+`Full/{Driver,Wood,Iron}-BogeyB.png`.
+
+### ⛔ STOPPED ON GEMINI'S DAILY IMAGE QUOTA (2026-08-21)
+"I can't create more images for you today." **Still owed: `Wedge-BogeyB.png` and
+`Putter-BogeyB.png`.** Both raws are ready to go - resume with W1:
+- Wedge: upload `mireo_up/WedgeA-Fyloe.jpg` first, `bb_wedge_portrait_raw.jpg` second
+- Putter: upload `mireo_up/Putter-GolfinX.jpg` first, `bb_putter_portrait_raw.jpg` second
+
+Both of those templates carry a PURPLE grip that bleeds through - the prompt already says
+"an olive-gold shaft with a black ferrule band and a matte black grip. NO purple anywhere - the grip
+must be matte black, not purple." Check the grip on the result anyway.
+
+Identity-sheet row was already accurate for this brand; the only refinement is that the star cluster
+is ONE LARGE star with two smaller ones, and the ferrule is a black band on an olive-gold shaft.
+
+### ⚠️ W2 SILENTLY REBUILDS THE CLUB FACE-ON AND MIRRORED
+BogeyB's driver and wedge controls both came back at the WRONG camera angle: the head redrawn
+face-on, left-right flipped, shaft entering from the opposite corner, and the wedge turned into a
+copy of the shipped iron with the grooves gone. Wood and putter from the same batch were fine, so
+this is intermittent - and both bad ones passed qa.py, because QA checks anatomy, not pose.
+**"keeping the first image's exact camera angle" is NOT enough.** Say the pose in words:
+> We are looking at the driver from BEHIND AND SLIGHTLY ABOVE, seeing the large domed CROWN - not
+> the face. The hosel and shaft leave the head at the TOP-LEFT and run up out of the top-left corner
+> of the frame. The head body sweeps to the RIGHT. Do NOT mirror or flip the club. Do NOT change the
+> camera angle. Do NOT redraw it face-on.
+
+Framing it as "Repaint the FIRST image in the <BRAND> brand. Keep the first image's geometry
+EXACTLY... Only the paint and graphics change" also holds the pose much better than "give me the
+first image with the club on the second image".
+**Always eyeball a new controls sprite against its template before committing.** Cesar caught these
+two after they were already in the repo.
+
+### Rotated wordmark on the driver controls: leave it
+The driver controls print "BogeyB" rotated along the sole. One in-chat correction did NOT fix it,
+and shipped `S_Controls_Iron_BOGEYB.png` reads the same way - it is the house style for this brand,
+not a defect. Don't spend generations on it.
+
 ## Then, in order (10 brands, ~92 generations)
 
-EAGLEZ → FOREFIT → PAR PERFECT → BogeyB → Fairway THREADS → GREEN SWING → FairX → FAIRLOFT →
+~~EAGLEZ~~ → ~~FOREFIT~~ → ~~PAR PERFECT~~ → BogeyB (fulls outstanding) → Fairway THREADS → GREEN SWING → FairX → FAIRLOFT →
 TeePit → VBOOOT (13 each), then **PUTT ACE last** (15 — it has no reference art at all).
 
 ## Identity sheet: ALL 19 ROWS NOW CORRECTED
