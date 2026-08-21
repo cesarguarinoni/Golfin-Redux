@@ -783,6 +783,75 @@ To keep `TellCode.md` readable for Claude Code (file was getting long enough to 
 
 ---
 
+## Session Changes (2026-08-21 — Japanese Localization Gaps)
+
+### Shipped (`594a4610d`, `18bcdffa3`, quick task — no spec folder)
+Two gaps Cesar reported, one shared cause: **keys that existed but were never reached.**
+
+- **Practice (and every non-tournament mode) fell back to English.** `ModeCardController` already
+  localizes by convention — `MODE_<ID>_TAGLINE` / `MODE_<ID>_DESC`, falling back to the raw
+  `modes.csv` string — but only `tournaments` had those rows. Added tagline + description for
+  practice / versus_1v1 / driving_range / missions, plus the three missing **title** keys.
+  Note the two conventions differ: the title key is derived from the *title text*
+  (`MODE_` + title uppercased → `MODE_MULTIPLAYER`), the tagline/desc keys from the *id*
+  (`MODE_VERSUS_1V1_TAGLINE`). No code change was needed.
+- **LoginScreen / SignUpScreen / CreateUsernameScreen had ZERO `LocalizedText` components across
+  35 labels.** The `AUTH_LOGIN_*` / `AUTH_SIGNUP_*` / `AUTH_CREATE_USERNAME_*` keys were authored
+  — Japanese included — and then referenced by **nothing**; the labels carried hardcoded English.
+  SplashScreen *was* wired, which is exactly why the gate localized and everything behind it did
+  not. ResetPasswordScreen localizes through its controller and was left alone.
+- **The account top banner was two hardcoded literals** in `ScreenManager` ("SIGN UP" /
+  "GOLFIN ACCOUNT") — a fully translated card under an English banner. Now `NAV_SIGN_UP` /
+  `NAV_GOLFIN_ACCOUNT`. **This was caught by the play-mode screenshots, not by the code work** —
+  see § Verification.
+
+### CSV English was realigned, not the shipped copy
+The authored keys had drifted from what the screens actually say ("Welcome Back" vs
+"LOGIN WITH EMAIL", "Continue with Google" vs "Login with Google", all five password rules). Since
+none of those keys were referenced, the **row English was moved to match the screen** rather than
+the screen being changed to match the CSV. The wiring pass asserted `key.english == label.text` for
+all 35 before adding a single component, so wiring cannot alter what an English player sees.
+Nine elements had no key at all (field labels, service headers, username hint/body) and got new ones.
+
+### Boot-order hardening (this feature depends on it)
+- `LocalizationManager.Initialize` now fires `OnLanguageChanged`. A label whose `OnEnable` ran first
+  resolved against a null map (`Get` returns the key) or the pre-Initialize language, and
+  `SetLanguage` could never rescue it — it early-returns when `CurrentLanguage` already matches.
+- `LocalizedText.Refresh` resolves its label lazily. `_label` is assigned in `Awake`, so `Refresh`
+  — and the public `SetKey` — silently did nothing when called earlier.
+
+### Verification
+- **Play mode, 1170×2532, booted into Japanese unprompted.** Practice reached the real way
+  (bottom-nav tee button → Mode Select). Login / Sign Up / Create Username reached via
+  `ScreenManager.ShowScreen(...)` — the same call `SplashScreenController.OnStartClicked` makes when
+  signed out. The literal Splash button was NOT pressed: the editor holds a real `SupabaseAuthClient`
+  session (`Cratilo`), and reaching the gate would mean signing out, which only Cesar can undo.
+- English A/B on the same screen: every label returns to the shipped copy character-for-character.
+- Multi-line `AUTH_CREATE_USERNAME_BODY` renders as real paragraphs. The CSV cannot hold a literal
+  newline (the importer reads line-by-line), so it stores `\n` and TMP's `parseCtrlCharacters`
+  converts it — **derived on a live active label**, not assumed; an inactive label generates no mesh
+  and `GetParsedText()` returns empty, which briefly looked like proof of the opposite.
+- Scene diff is purely additive: 70 new YAML objects (35 components + 35 prefab-instance stubs),
+  0 removed, every `m_text` / `m_fontSize` / anchor / size / position / `m_IsActive` value
+  byte-identical to HEAD. The scene was reloaded from disk first — `SceneSaveChurnGuard` reported
+  `_playModeRanSinceLoad = True`.
+- Full EditMode suite **1547 pass / 0 fail**; `Golfin.Localization.Tests` now 14.
+- Captures (gitignored, local): `Docs/Reports/Media/localization_ja_2026-08-21/`.
+
+### Known + follow-ups
+- The account banner resolves during a screen *transition*, so changing language while standing on
+  an account screen leaves the old banner. Unreachable — those screens have no settings entry point.
+- **Still English in a Japanese build** (pre-existing, unrelated to this work, previously logged
+  under `club_roster_799`): `REPAIR` next to レベルアップ/比較; the club filter bar localizes
+  `ALL`→すべて but leaves DRIVERS/WOODS/IRONS/WEDGES/PUTTERS; the CLUBS/BAGS/BALLS/ITEMS tabs.
+- Hardcoded English error strings remain in `LoginScreenController` / `SignUpScreenController`
+  ("Enter your email and password.", etc.). `result.Message` comes from Supabase and is not
+  localizable client-side.
+- `AUTH_EMAIL_CONF_*` keys are still referenced by nothing — EmailConfirmationScreen was not in
+  scope and is presumably the same defect.
+
+---
+
 ## Session Changes (2026-08-20 — Device Language Startup)
 
 ### Shipped (`a6831529b`, quick task — no spec folder)
