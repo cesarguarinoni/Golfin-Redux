@@ -1009,6 +1009,27 @@ MonoBehaviour:
   - key: NAV_TOURNAMENT_LEADERBOARD
     english: TOURNAMENT LEADERBOARD
     japanese: "\u30C8\u30FC\u30CA\u30E1\u30F3\u30C8\u30EA\u30FC\u30C0\u30FC\u30DC\u30FC\u30C9"
+  - key: RANK_LEAGUE_DIAMOND
+    english: DIAMOND LEAGUE
+    japanese: "\u30C0\u30A4\u30E4\u30E2\u30F3\u30C9\u30EA\u30FC\u30B0"
+  - key: RANK_RESETS_IN
+    english: 'RESETS IN: {0}'
+    japanese: "\u30EA\u30BB\u30C3\u30C8\u307E\u3067: {0}"
+  - key: RANK_LEVEL
+    english: LVL {0}
+    japanese: Lv {0}
+  - key: RANK_TIME_D
+    english: d
+    japanese: "\u65E5"
+  - key: RANK_TIME_H
+    english: h
+    japanese: "\u6642\u9593"
+  - key: RANK_TIME_M
+    english: m
+    japanese: "\u5206"
+  - key: RANK_TIME_S
+    english: s
+    japanese: "\u79D2"
   - key: NAV_TOURNAMENTS
     english: TOURNAMENTS
     japanese: "\u30C8\u30FC\u30CA\u30E1\u30F3\u30C8"

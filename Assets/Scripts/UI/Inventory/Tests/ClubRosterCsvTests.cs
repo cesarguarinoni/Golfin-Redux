@@ -89,11 +89,14 @@ namespace Golfin.Inventory.Tests
             Assert.Greater(withJa, 0,
                 "info_ja parsed as empty for every row — the column is missing or misnamed in Clubs.csv");
 
-            // The 7 legacy rows predate the column and are deliberately blank; everything the
-            // generator wrote carries JA copy. A blank JA cell is legal — ClubInfoText falls back
-            // to English — so this is a coverage assertion, not a hard schema rule.
-            Assert.AreEqual(rows.Count - 7, withJa,
-                "every generated row should carry info_ja; only the 7 legacy rows may be blank");
+            // Coverage is now complete: the generator filled 792 rows, and the 7 legacy rows that
+            // predate the column were translated by hand (2026-08-21) — a JP player was seeing the
+            // English blurb on the starter clubs, which are the first clubs anyone owns.
+            // A blank JA cell remains LEGAL at runtime (ClubInfoText falls back to English); this
+            // is a coverage assertion, so it is pinned at "all of them" rather than at a count that
+            // has to be edited every time copy lands.
+            Assert.AreEqual(rows.Count, withJa,
+                "every shipped club row should carry info_ja — a blank one shows a JP player English");
         }
 
         [Test]

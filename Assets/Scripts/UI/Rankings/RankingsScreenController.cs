@@ -311,7 +311,7 @@ namespace Golfin.UI.Rankings
         private void ApplyLeagueLabel()
         {
             if (_leagueLabel != null)
-                _leagueLabel.text = "DIAMOND LEAGUE";
+                _leagueLabel.text = LocalizationManager.Get("RANK_LEAGUE_DIAMOND");
         }
 
         // ── Reset countdown ───────────────────────────────────────────────────
@@ -360,7 +360,8 @@ namespace Golfin.UI.Rankings
             TimeSpan remaining = endUtc - NetworkTimeProvider.Instance.UtcNow;
             if (remaining <= TimeSpan.Zero)
             {
-                _resetLabel.text = "RESETS IN: 0s";
+                _resetLabel.text = string.Format(LocalizationManager.Get("RANK_RESETS_IN"),
+                    "0" + LocalizationManager.Get("RANK_TIME_S"));
                 return;
             }
 
@@ -369,13 +370,22 @@ namespace Golfin.UI.Rankings
             int minutes = remaining.Minutes;
             int seconds = remaining.Seconds;
 
-            string text;
+            // Units are localized too: "17h 35m 10s" reads as English abbreviations to a
+            // Japanese player, so d/h/m/s come from the table alongside the prefix.
+            string d = LocalizationManager.Get("RANK_TIME_D");
+            string h = LocalizationManager.Get("RANK_TIME_H");
+            string m = LocalizationManager.Get("RANK_TIME_M");
+            string sUnit = LocalizationManager.Get("RANK_TIME_S");
+
+            string span;
             if (days > 0)
-                text = $"RESETS IN: {days}d {hours}h {minutes}m {seconds}s";
+                span = $"{days}{d} {hours}{h} {minutes}{m} {seconds}{sUnit}";
             else if (hours > 0)
-                text = $"RESETS IN: {hours}h {minutes}m {seconds}s";
+                span = $"{hours}{h} {minutes}{m} {seconds}{sUnit}";
             else
-                text = $"RESETS IN: {minutes}m {seconds}s";
+                span = $"{minutes}{m} {seconds}{sUnit}";
+
+            string text = string.Format(LocalizationManager.Get("RANK_RESETS_IN"), span);
 
             _resetLabel.text = text;
         }

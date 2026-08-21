@@ -181,6 +181,19 @@ namespace Golfin.Roster
                 _ => "COMMON"
             };
         }
+
+        /// <summary>
+        /// The rarity word a player should read, localized. Falls back to
+        /// <see cref="GetRarityFullName"/> when the row is missing, so a missing key renders
+        /// English rather than leaking "RARITY_UNCOMMON" onto the screen — the same ladder
+        /// TournamentRulesText.RarityNameTag uses.
+        /// </summary>
+        public static string GetLocalizedRarityName(CharacterRarity rarity)
+        {
+            string key  = "RARITY_" + rarity.ToString().ToUpperInvariant();
+            string word = LocalizationManager.Get(key);
+            return word == key ? GetRarityFullName(rarity) : word;
+        }
         
         /// <summary>
         /// Get rarity badge text color for CharacterThumbnailCardGlowUp

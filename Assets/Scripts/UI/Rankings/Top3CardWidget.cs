@@ -52,7 +52,7 @@ namespace Golfin.UI.Rankings
                 _nameLabel.text = entry.DisplayName;
 
             if (_levelLabel != null)
-                _levelLabel.text = $"LVL {entry.Level}";
+                _levelLabel.text = string.Format(LocalizationManager.Get("RANK_LEVEL"), entry.Level);
 
             if (_scoreLabel != null)
                 _scoreLabel.text = FormatScore(entry.Score);
@@ -90,7 +90,7 @@ namespace Golfin.UI.Rankings
 
             if (_rarityLabel != null)
             {
-                _rarityLabel.text  = RarityHelper.GetRarityFullName(template.rarity);
+                _rarityLabel.text  = RarityHelper.GetLocalizedRarityName(template.rarity);
                 _rarityLabel.color = RarityHelper.GetRarityColor(template.rarity);
             }
         }
