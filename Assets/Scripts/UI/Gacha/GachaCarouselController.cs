@@ -8,6 +8,7 @@
 using System;
 using System.Collections.Generic;
 using GolfinRedux.UI.Gacha;
+using Golfin.UI.Common;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -52,7 +53,7 @@ namespace GolfinRedux.UI.Gacha
 
         private readonly List<GachaBannerCard> _cards     = new();
         private readonly List<GachaBannerEntry> _entries  = new();
-        private readonly List<GameObject>        _dots     = new();
+        private PaginationDotStrip              _dots;
         private int   _currentIndex  = 0;
         private float _currentOffset = 0f;   // continuous scroll position (canvas units)
         private float _targetOffset  = 0f;   // snap target scroll (nearest card * spacing)
@@ -232,65 +233,34 @@ namespace GolfinRedux.UI.Gacha
         {
             if (_dotContainer == null) return;
 
-            // Remove extra dots
-            while (_dots.Count > _cards.Count)
-            {
-                var d = _dots[_dots.Count - 1];
-                _dots.RemoveAt(_dots.Count - 1);
-                if (d != null) Destroy(d);
-            }
-
-            // Add missing dots
-            while (_dots.Count < _cards.Count)
-            {
-                GameObject dot;
-                if (_dotPrefab != null)
-                {
-                    dot = Instantiate(_dotPrefab, _dotContainer);
-                }
-                else
-                {
-                    // Fallback: clone first existing child of DotRow if prefab not set
-                    if (_dotContainer.childCount > 0)
-                        dot = Instantiate(_dotContainer.GetChild(0).gameObject, _dotContainer);
-                    else
-                    {
-                        dot = new GameObject("Dot", typeof(RectTransform), typeof(Image));
-                        dot.transform.SetParent(_dotContainer, false);
-                        var img = dot.GetComponent<Image>();
-                        var rt  = dot.GetComponent<RectTransform>();
-                        rt.sizeDelta = new Vector2(12f, 12f);
-                        img.color = Color.white;
-                    }
-                }
-                dot.SetActive(true);
-                _dots.Add(dot);
-            }
-
-            // Ensure we have the circular dot sprite (Resources fallback — the controller lives in
-            // the scene, so we avoid a serialized ref + scene save). Cached after first load.
+            // Ensure the circular dot sprite (Resources fallback — the controller lives in the
+            // scene, so we avoid a serialized ref + scene save). Cached after first load.
             if (_dotSprite == null)
                 _dotSprite = Resources.Load<Sprite>("Art/Gacha/GachaDot");
 
-            // Style: active = white/full, inactive = dim
-            for (int i = 0; i < _dots.Count; i++)
-            {
-                if (_dots[i] == null) continue;
-                var img = _dots[i].GetComponent<Image>();
-                if (img == null) continue;
-                if (_dotSprite != null) { img.sprite = _dotSprite; img.enabled = true; }  // ensure circular, not a null-sprite square
-                bool active = (i == _currentIndex);
-                img.color = active
-                    ? new Color(1f, 1f, 1f, 1f)
-                    : new Color(1f, 1f, 1f, 0.35f);
-            }
+            // Pooled + windowed. Previously this grew one dot per banner with no ceiling; the strip
+            // caps the row and reuses its dots instead of adding and destroying them per refresh.
+            _dots ??= new PaginationDotStrip(
+                _dotContainer,
+                _dotPrefab != null ? _dotPrefab : FirstDotChild(),
+                dotSprite: _dotSprite);
+            _dots.Rebuild(_cards.Count, _currentIndex);
         }
+
+        /// <summary>
+        /// The scene authors an inactive DotTemplate under DotRow. Cloning it keeps the authored
+        /// look when no explicit prefab is wired; it stays inactive itself and is never a pool member.
+        /// </summary>
+        private GameObject FirstDotChild()
+            => _dotContainer != null && _dotContainer.childCount > 0
+                ? _dotContainer.GetChild(0).gameObject
+                : null;
 
         private void ClearDots()
         {
-            foreach (var d in _dots)
-                if (d != null) Destroy(d);
-            _dots.Clear();
+            // Pooled: the strip owns its dots for the lifetime of the container, so clearing is just
+            // collapsing the row to nothing rather than destroying GameObjects.
+            _dots?.Clear();
         }
 
         // ── Countdown ─────────────────────────────────────────────────────────

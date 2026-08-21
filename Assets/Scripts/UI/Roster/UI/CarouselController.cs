@@ -4,6 +4,8 @@ using UnityEngine.UI;
 using TMPro;
 using System.Collections.Generic;
 
+using Golfin.UI.Common;
+
 namespace Golfin.Roster
 {
     /// <summary>
@@ -30,7 +32,7 @@ namespace Golfin.Roster
         [SerializeField] private float scrollSmoothness = 0.3f;
         
         private List<CharacterThumbnailCard> cards = new List<CharacterThumbnailCard>();
-        private List<Image> paginationDots = new List<Image>();
+        private PaginationDotStrip _dots;
         private ScrollRect scrollRect;
         private int currentPage = 0;
         private int totalPages = 1;
@@ -264,43 +266,18 @@ namespace Golfin.Roster
             totalPages = Mathf.CeilToInt(cards.Count > 0 ? (float)cards.Count / cardsPerPage : 1);
             currentPage = 0;
 
-            paginationDots.Clear();
-
             if (paginationDotsParent != null)
             {
-                // Remove any dots left over from a previous populate
-                foreach (Transform child in paginationDotsParent)
-                    Destroy(child.gameObject);
-
-                for (int i = 0; i < totalPages; i++)
-                {
-                    Image dotImg;
-
-                    if (paginationDotPrefab != null)
-                    {
-                        dotImg = Instantiate(paginationDotPrefab, paginationDotsParent)
-                                    .GetComponent<Image>();
-                    }
-                    else
-                    {
-                        // Runtime fallback: 16×16 white circle
-                        var dotGO = new GameObject($"Dot_{i}", typeof(RectTransform), typeof(Image));
-                        dotGO.transform.SetParent(paginationDotsParent, false);
-                        var rt = dotGO.GetComponent<RectTransform>();
-                        rt.sizeDelta = new Vector2(16f, 16f);
-                        dotImg = dotGO.GetComponent<Image>();
-                    }
-
-                    if (dotImg != null)
-                        paginationDots.Add(dotImg);
-                }
+                // Pooled + windowed: the strip creates at most PaginationDotStrip.MaxDots dots
+                // once and reuses them, instead of destroying and rebuilding one dot per page.
+                _dots ??= new PaginationDotStrip(paginationDotsParent, paginationDotPrefab);
+                _dots.Rebuild(totalPages, currentPage);
             }
             else
             {
                 Debug.Log("[CarouselController] paginationDotsParent not assigned — dots skipped.");
             }
 
-            RefreshDotColors();
             UpdateArrowButtonStates();
 
             // Swipe/drag listener — fires on every frame the user moves the scroll view
@@ -331,13 +308,7 @@ namespace Golfin.Roster
         /// </summary>
         private void RefreshDotColors()
         {
-            for (int i = 0; i < paginationDots.Count; i++)
-            {
-                if (paginationDots[i] != null)
-                    paginationDots[i].color = i == currentPage
-                        ? Color.white
-                        : new Color(1f, 1f, 1f, 0.35f);
-            }
+            _dots?.Refresh(currentPage);
         }
 
         /// <summary>

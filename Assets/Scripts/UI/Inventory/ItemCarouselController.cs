@@ -6,6 +6,8 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 
+using Golfin.UI.Common;
+
 namespace Golfin.Inventory
 {
     /// <summary>
@@ -34,7 +36,7 @@ namespace Golfin.Inventory
         public event System.Action<string>? OnItemSelected;
 
         private readonly List<ItemThumbnailCard> cards = new();
-        private readonly List<Image> paginationDots = new();
+        private PaginationDotStrip? _dots;
         private ScrollRect? scrollRect;
         private int currentPage = 0;
         private int totalPages = 1;
@@ -221,30 +223,10 @@ namespace Golfin.Inventory
             totalPages  = Mathf.CeilToInt(cards.Count > 0 ? (float)cards.Count / cardsPerPage : 1);
             currentPage = 0;
 
-            paginationDots.Clear();
             if (paginationDotsParent == null) return;
+            _dots ??= new PaginationDotStrip(paginationDotsParent, paginationDotPrefab);
+            _dots.Rebuild(totalPages, currentPage);
 
-            foreach (Transform child in paginationDotsParent)
-                Destroy(child.gameObject);
-
-            for (int i = 0; i < totalPages; i++)
-            {
-                Image dotImg;
-                if (paginationDotPrefab != null)
-                {
-                    dotImg = Instantiate(paginationDotPrefab, paginationDotsParent).GetComponent<Image>();
-                }
-                else
-                {
-                    var dotGO = new GameObject($"Dot_{i}", typeof(RectTransform), typeof(Image));
-                    dotGO.transform.SetParent(paginationDotsParent, false);
-                    dotGO.GetComponent<RectTransform>().sizeDelta = new Vector2(12f, 12f);
-                    dotImg = dotGO.GetComponent<Image>();
-                }
-                if (dotImg != null) paginationDots.Add(dotImg);
-            }
-
-            RefreshDotColors();
             UpdateArrowButtonStates();
         }
 
@@ -261,11 +243,7 @@ namespace Golfin.Inventory
 
         private void RefreshDotColors()
         {
-            for (int i = 0; i < paginationDots.Count; i++)
-                if (paginationDots[i] != null)
-                    paginationDots[i].color = i == currentPage
-                        ? Color.white
-                        : new Color(1f, 1f, 1f, 0.35f);
+            _dots?.Refresh(currentPage);
         }
 
         private void UpdateArrowButtonStates()

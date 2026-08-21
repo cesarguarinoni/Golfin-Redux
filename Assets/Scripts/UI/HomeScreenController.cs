@@ -4,6 +4,7 @@ using TMPro;
 using Golfin.UI;
 using Golfin.Roster;
 using Golfin.UI.Matchmaking;
+using Golfin.UI.Common;
 
 namespace GolfinRedux.UI
 {
@@ -64,8 +65,13 @@ namespace GolfinRedux.UI
         private float _newsTimer;
         private bool _autoCycleNews = true;
 
-        /// <summary>One warning per session when the scene has fewer dots than there are pages.</summary>
-        private bool _warnedDotShortfall;
+        /// <summary>
+        /// Pooled + windowed notice dots. Replaces the old "colour the scene's three authored dot
+        /// children" loop, which could not represent more notices than the scene happened to hold —
+        /// a 4th or 5th notice cycled with no dot for it and only logged a shortfall warning. The
+        /// strip adopts Dot1/Dot2/Dot3 as its pool and creates more on demand, up to its own cap.
+        /// </summary>
+        private PaginationDotStrip _newsDots;
 
         // -------- Promo Banner (GPS) --------
         [Header("Promo Banner (GPS)")]
@@ -363,32 +369,12 @@ namespace GolfinRedux.UI
 
             if (!containerGo.activeSelf) containerGo.SetActive(true);
 
-            int childCount = dotsContainer.childCount;
-            if (count > childCount && !_warnedDotShortfall)
-            {
-                // The endpoint caps at 5 notices, so this means the scene needs more dot children —
-                // the extra pages still auto-cycle, the dots just under-represent them.
-                _warnedDotShortfall = true;
-                Debug.LogWarning(
-                    $"[HomeScreen] {count} notice pages but only {childCount} dot children under " +
-                    $"'{dotsContainer.name}'. The extra pages still cycle; add dot children to show them.");
-            }
-
-            int shown = Mathf.Min(count, childCount);
-            for (int i = 0; i < childCount; i++)
-            {
-                var child = dotsContainer.GetChild(i);
-                bool active = i < shown;
-                if (child.gameObject.activeSelf != active) child.gameObject.SetActive(active);
-                if (!active) continue;
-
-                var img = child.GetComponent<Image>();
-                if (img == null) continue;
-
-                img.color = (i == _currentNewsIndex)
-                    ? new Color(1f, 1f, 1f, 1f)
-                    : new Color(1f, 1f, 1f, 0.4f);
-            }
+            // One dot per notice, however many the endpoint returns. The scene's authored dots are
+            // adopted as the pool, so the look is unchanged for the usual 2-3 notices.
+            _newsDots ??= new PaginationDotStrip(
+                dotsContainer, dotPrefab: null, adoptExisting: true,
+                inactiveColor: new Color(1f, 1f, 1f, 0.4f));
+            _newsDots.Rebuild(count, _currentNewsIndex);
         }
 
         /// <summary>
