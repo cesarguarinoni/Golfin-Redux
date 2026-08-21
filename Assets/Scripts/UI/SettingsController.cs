@@ -155,6 +155,13 @@ namespace Golfin.UI
         /// </summary>
         public void OpenSettings()
         {
+            // Settings is a modal overlay that predates ModalController, so it gets the shared
+            // scrim guarantee explicitly: its authored Background was a 50%-alpha black, which in
+            // linear space barely tints the screen at all (measured: top bar 26,72,113 → 16,50,81)
+            // and read as "Settings has no dim". ModalScrim lifts it to the project floor and
+            // keeps it raycast-blocking and canvas-sized.
+            background = ModalScrim.Apply(transform, background, settingsPanel);
+
             if (background != null) background.SetActive(true);
             if (settingsPanel != null) settingsPanel.SetActive(true);
 

@@ -23,6 +23,37 @@
 
 ## 🟢 PRIORITY QUEUED — pick up immediately
 
+> **▶ 2026-08-21 · modal scrims — every modal now darkens AND blocks the UI behind it — SHIPPED.**
+>
+> Cesar: *"Make sure the background UI is darkened when a modal is present (example, Settings screen
+> is missing it) and that the player cannot interact with the background."* Two real defects, both
+> measured in play mode on the iPhone-14 frame:
+>
+> 1. **Too-weak scrims.** We render in LINEAR space, so the 50%-alpha black authored on Settings
+>    (`SettingsScreen/Background`) and Matchmaking only pulls an sRGB white to ~187/255 — it reads
+>    as no dim at all. With Settings open the top bar measured 26,72,113 → 16,50,81.
+> 2. **Scrims that never reached the persistent chrome.** The top bar + bottom nav are their own
+>    root canvas (`PersistentUI`, order 0); the screens — and most modals — live on `Canvas` at
+>    order −1, so a modal parented under a screen paints BELOW the bars. With the roster Level Up
+>    modal open the roster card behind it dimmed 242 → 141 while the nav bar sat **unchanged** at
+>    15,40,71 and its buttons stayed clickable.
+>
+> Fix is code-only — **no scene edits**, so zero save churn. New `Golfin.UI.Modals.ModalScrim`
+> (`Assets/Scripts/UI/Modals/ModalScrim.cs`) is called from `ModalController.Show()` and from
+> `SettingsController.OpenSettings()`; at show time it (a) lifts the modal root onto its own
+> sorting canvas at order **500** (above PersistentUI, below hole-complete/tournament 900 and the
+> toast layer 950) with a `GraphicRaycaster`, (b) creates a scrim if none was authored, (c) raises
+> the scrim to the **0.80 alpha floor** — a floor, not a fixed value, so the deliberately heavier
+> 0.85/0.92 modals keep their look — forces `raycastTarget`, and (d) sizes it against the ROOT
+> canvas rect rather than its own parent (the inventory modals hang off a shorter `ContentArea`).
+> A full-screen panel with no authored backdrop (versus result) skips the scrim and is made
+> raycast-blocking instead. Verified: all 9 ShellScene `ModalController`s PASS the invariant sweep
+> (order ≥ 500, alpha ≥ 0.80, raycastTarget, scrim rect contains both `PersistentUI/TopBar` and
+> `PersistentUI/BottomNavBar`); `EventSystem.RaycastAll` over the nav buttons now returns the scrim
+> first; Settings and roster Level Up were driven through their REAL entry points. The gameplay
+> `InGameSettingsModal` (backdrop was 0.60) inherits the fix — LabScaffold's canvases are 0 and 10,
+> well under 500. **Dial:** `ModalScrim.MinAlpha` is the one constant if 0.80 wants tuning.
+
 > **▶ 2026-08-21 · tournament signup modal says FREE ENTRY — SHIPPED (6d6e31458, pushed).**
 >
 > A zero-fee tournament read **ENTRY 🪙 0** in the signup modal while the selection card showed the

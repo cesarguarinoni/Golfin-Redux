@@ -86,6 +86,12 @@ namespace Golfin.UI.Modals
             // backdrop, making the modal appear to open over an empty/opaque background.
             transform.SetAsLastSibling();
 
+            // Guarantee the two things a modal owes the player before anything is shown: the UI
+            // behind it is darkened, and it cannot be tapped. SetAsLastSibling above only wins
+            // against siblings in the SAME canvas — the persistent top bar / bottom nav live on
+            // their own root canvas and used to paint straight over the scrim. See ModalScrim.
+            backdrop = ModalScrim.Apply(transform, backdrop, modalPanel);
+
             // Show backdrop
             if (backdrop != null)
             {
