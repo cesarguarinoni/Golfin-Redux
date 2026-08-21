@@ -21,8 +21,10 @@ namespace Golfin.UI.Account
 
         private static readonly Regex Pattern = new Regex(@"^[A-Za-z0-9_]{3,20}$");
 
-        /// <summary>Player-facing description of the rule; matches the on-screen hint.</summary>
-        public const string Requirement = "3–20 characters, letters/numbers/underscore only.";
+        /// <summary>Player-facing description of the rule; matches the on-screen hint.
+        /// Localised via AUTH_USERNAME_REQUIREMENT (EN/JP in LocalizationText.csv). A property,
+        /// not a const: a const would bake the English into every call site at compile time.</summary>
+        public static string Requirement => LocalizationManager.Get("AUTH_USERNAME_REQUIREMENT");
 
         public static bool IsValid(string username)
         {

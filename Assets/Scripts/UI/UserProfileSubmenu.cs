@@ -230,7 +230,7 @@ namespace Golfin.UI
         {
             if (string.IsNullOrWhiteSpace(username))
             {
-                return "Username cannot be empty";
+                return LocalizationManager.Get("AUTH_USERNAME_EMPTY");
             }
             
             return UsernameRules.Requirement;

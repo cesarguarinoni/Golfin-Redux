@@ -124,7 +124,7 @@ namespace Golfin.UI.Account
             string email = _emailInput != null ? _emailInput.text.Trim() : "";
             string pw    = _passwordInput != null ? _passwordInput.text : "";
             if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(pw))
-            { SetError("Enter your email and password."); return; }
+            { SetError(LocalizationManager.Get("AUTH_LOGIN_ERR_MISSING_FIELDS")); return; }
 
             SetBusy(true);
             AuthService.Instance.SignInWithPassword(email, pw, result =>
@@ -151,12 +151,12 @@ namespace Golfin.UI.Account
         {
             if (_busy) return;
             string email = _emailInput != null ? _emailInput.text.Trim() : "";
-            if (string.IsNullOrEmpty(email)) { SetError("Enter your email first."); return; }
+            if (string.IsNullOrEmpty(email)) { SetError(LocalizationManager.Get("AUTH_LOGIN_ERR_MISSING_EMAIL")); return; }
             SetBusy(true);
             AuthService.Instance.RequestPasswordReset(email, result =>
             {
                 SetBusy(false);
-                if (result.Success) SetError("Password reset email sent.", isError: false);
+                if (result.Success) SetError(LocalizationManager.Get("AUTH_LOGIN_RESET_SENT"), isError: false);
                 else SetError(result.Message);
             });
         }

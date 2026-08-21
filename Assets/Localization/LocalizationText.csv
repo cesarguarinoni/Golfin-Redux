@@ -282,6 +282,15 @@ AUTH_EMAIL_CONF_OPEN,Open Email App,メールアプリを開く
 AUTH_EMAIL_CONF_RESEND,RESEND,再送
 AUTH_EMAIL_CONF_BACK,LOGIN,ログイン
 AUTH_USERNAME_TAKEN,Username already taken,このユーザー名は既に使用されています
+AUTH_LOGIN_ERR_MISSING_FIELDS,Enter your email and password.,メールアドレスとパスワードを入力してください。
+AUTH_LOGIN_ERR_MISSING_EMAIL,Enter your email first.,先にメールアドレスを入力してください。
+AUTH_LOGIN_RESET_SENT,Password reset email sent.,パスワード再設定メールを送信しました。
+AUTH_SIGNUP_ERR_MISSING_EMAIL,Enter your email address.,メールアドレスを入力してください。
+AUTH_SIGNUP_ERR_PASSWORD_RULES,Your password does not meet all the requirements.,パスワードが要件を満たしていません。
+AUTH_EMAIL_CONF_RESENT,Confirmation email re-sent.,確認メールを再送しました。
+AUTH_USERNAME_REQUIREMENT,"3–20 characters, letters/numbers/underscore only.",3〜20文字、英数字とアンダースコアのみ使用できます。
+AUTH_USERNAME_EMPTY,Username cannot be empty,ユーザー名を入力してください
+AUTH_ERR_OFFLINE,No internet connection. Please try again.,インターネット接続がありません。もう一度お試しください。
 AUTH_RESET_TITLE,Set New Password,新しいパスワードを設定
 AUTH_RESET_NEW_PLACEHOLDER,New Password,新しいパスワード
 AUTH_RESET_CONFIRM_PLACEHOLDER,Confirm New Password,新しいパスワード（確認）

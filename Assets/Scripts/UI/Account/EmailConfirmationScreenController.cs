@@ -82,7 +82,7 @@ namespace Golfin.UI.Account
             AuthService.Instance.ResendConfirmation(_pendingEmail, result =>
             {
                 SetBusy(false);
-                SetMessage(result.Success ? "Confirmation email re-sent." : result.Message, isError: !result.Success);
+                SetMessage(result.Success ? LocalizationManager.Get("AUTH_EMAIL_CONF_RESENT") : result.Message, isError: !result.Success);
             });
         }
 

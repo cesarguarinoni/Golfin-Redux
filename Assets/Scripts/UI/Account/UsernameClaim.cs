@@ -78,8 +78,10 @@ namespace Golfin.UI.Account
         public static string TakenMessage => LocalizationManager.Get("AUTH_USERNAME_TAKEN");
 
         /// <summary>Same copy the auth transport uses for a dead connection, so the two failure
-        /// modes on these screens read identically.</summary>
-        public const string OfflineMessage = "No internet connection. Please try again.";
+        /// modes on these screens read identically.
+        /// Localised via AUTH_ERR_OFFLINE (EN/JP in LocalizationText.csv). A property, not a
+        /// const: a const would bake the English into every call site at compile time.</summary>
+        public static string OfflineMessage => LocalizationManager.Get("AUTH_ERR_OFFLINE");
 
         /// <summary>
         /// Claim <paramref name="username"/> on the backend, then report through

@@ -146,9 +146,9 @@ namespace Golfin.UI.Account
             string email = _emailInput != null ? _emailInput.text.Trim() : "";
             string pw    = _passwordInput != null ? _passwordInput.text : "";
 
-            if (string.IsNullOrEmpty(email)) { SetError("Enter your email address."); return; }
+            if (string.IsNullOrEmpty(email)) { SetError(LocalizationManager.Get("AUTH_SIGNUP_ERR_MISSING_EMAIL")); return; }
             if (!PasswordRequirements.Check(pw).AllMet)
-            { SetError("Your password does not meet all the requirements."); return; }
+            { SetError(LocalizationManager.Get("AUTH_SIGNUP_ERR_PASSWORD_RULES")); return; }
 
             SetBusy(true);
             AuthService.Instance.SignUp(email, pw, result =>
