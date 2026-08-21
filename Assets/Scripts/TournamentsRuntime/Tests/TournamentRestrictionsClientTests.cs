@@ -472,6 +472,145 @@ namespace Golfin.Tournaments.WireupTests
     }
 
     // ═════════════════════════════════════════════════════════════════════════
+    // §4b  Entry-denied modal copy (Figma 13915:2273)
+    // ═════════════════════════════════════════════════════════════════════════
+
+    [TestFixture]
+    public class DeniedModalCopyTests
+    {
+        private static TournamentDefinition Def()
+            => RestrictionProd.Find(RestrictionProd.MapOrFail(RestrictionPayloads.Schedule), "restricted_cup");
+
+        private static IReadOnlyList<TournamentRequirement> Unmet(int? rarity, int? level, int[]? clubs)
+            => TournamentEligibility.UnmetRequirements(Def(), rarity, level, clubs);
+
+        private static string Body(IReadOnlyList<TournamentRequirement> u)
+            => RestrictionProd.Call("DeniedBody", u);
+
+        [Test]
+        public void A_single_failure_names_its_own_rule_the_way_the_node_does()
+        {
+            using (new LocalizationScope(Language.English))
+            {
+                // The node's headline, verbatim: "YOUR CHARACTER IS OUTSIDE THIS TOURNAMENT'S
+                // RARITY RANGE." then MINIMUM REQUIREMENT / value.
+                string body = Body(Unmet(rarity: 1, level: 100, clubs: null));
+
+                StringAssert.Contains("RARITY RANGE", body);
+                StringAssert.Contains("MINIMUM REQUIREMENT:", body);
+                StringAssert.Contains("RARE", body, "the band floor, spelled out");
+                Assert.IsFalse(body.Contains("tourn.denied."), "every key must exist");
+            }
+        }
+
+        [Test]
+        public void Several_failures_share_a_heading_and_list_every_one()
+        {
+            using (new LocalizationScope(Language.English))
+            {
+                string body = Body(Unmet(rarity: 1, level: 5, clubs: new[] { 6 }));
+
+                StringAssert.Contains("DO NOT MEET", body,
+                    "a headline naming only the first rule would contradict the list beneath it");
+                StringAssert.Contains("MINIMUM REQUIREMENT:",   body);
+                StringAssert.Contains("MINIMUM LEVEL:",         body);
+                StringAssert.Contains("MAXIMUM CLUB RARITY:",   body);
+            }
+        }
+
+        [Test]
+        public void A_breached_ceiling_says_maximum_not_minimum()
+        {
+            using (new LocalizationScope(Language.English))
+            {
+                string body = Body(Unmet(rarity: 6, level: 100, clubs: null));   // Supreme > Legendary
+
+                StringAssert.Contains("MAXIMUM ALLOWED:", body);
+                Assert.IsFalse(body.Contains("MINIMUM REQUIREMENT:"),
+                    "Telling a player their MINIMUM is X when they exceeded the MAXIMUM is the " +
+                    "opposite instruction.");
+            }
+        }
+
+        [Test]
+        public void The_rarity_value_is_localized_and_carries_its_rarity_colour()
+        {
+            // The one actionable value on the screen: a JP player must not be sent to find an
+            // "UNCOMMON" character. Colour still comes from RarityHelper, so the spelled-out and
+            // letter forms cannot disagree on palette.
+            using (new LocalizationScope(Language.English))
+                StringAssert.Contains("RARE", RestrictionProd.Call("RarityNameTag", "Rare"));
+
+            using (new LocalizationScope(Language.Japanese))
+            {
+                string ja = RestrictionProd.Call("RarityNameTag", "Rare");
+                StringAssert.Contains("レア", ja);
+                Assert.IsFalse(ja.Contains("RARE"), "English must not leak into the JP value.");
+                StringAssert.IsMatch(@"^<color=#[0-9A-F]{6}>.+</color>$", ja);
+            }
+        }
+
+        [Test]
+        public void The_full_denial_shows_the_cap_the_server_enforced()
+        {
+            using (new LocalizationScope(Language.English))
+            {
+                string body = RestrictionProd.Call("DeniedBodyFull", 100);
+                StringAssert.Contains("FULL", body.ToUpperInvariant());
+                StringAssert.Contains("100", body);
+
+                Assert.IsFalse(RestrictionProd.Call("DeniedBodyFull", 0).Contains("MAXIMUM PLAYERS"),
+                    "A missing cap must not render an empty requirement line.");
+            }
+        }
+
+        [Test]
+        public void The_short_balance_refusal_shows_the_fee_AND_what_the_player_holds()
+        {
+            using (new LocalizationScope(Language.English))
+            {
+                string body = RestrictionProd.Call("DeniedBodyInsufficient", 500L, 120L);
+
+                StringAssert.Contains("500", body, "the fee");
+                StringAssert.Contains("120", body,
+                    "and the balance — 'not enough points' without the gap leaves the player to " +
+                    "guess how far off they are, and both paths already know the number.");
+                Assert.IsFalse(body.Contains("tourn.denied."));
+            }
+        }
+
+        [Test]
+        public void Every_refusal_headline_resolves_in_both_languages()
+        {
+            // These are the paths that used to be toasts. A missing row would put a raw key in
+            // front of the player on the one screen that is supposed to explain the refusal.
+            var keys = new[]
+            {
+                "tourn.denied.head.insufficient", "tourn.denied.head.offline",
+                "tourn.denied.head.unavailable",  "tourn.denied.head.failed",
+                "tourn.denied.req.entry_fee",     "tourn.denied.req.your_balance",
+            };
+
+            foreach (var lang in new[] { Language.English, Language.Japanese })
+                using (new LocalizationScope(lang))
+                    foreach (var k in keys)
+                        Assert.AreNotEqual(k, LocalizationManager.Get(k),
+                            $"'{k}' has no {lang} row — it would render as the raw key.");
+        }
+
+        [Test]
+        public void An_empty_list_still_renders_something_rather_than_a_blank_modal()
+        {
+            using (new LocalizationScope(Language.English))
+            {
+                string body = Body(new List<TournamentRequirement>());
+                Assert.IsNotEmpty(body);
+                Assert.IsFalse(body.Contains("tourn.denied."));
+            }
+        }
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
     // §5  Server denials are 200-shaped answers
     // ═════════════════════════════════════════════════════════════════════════
 

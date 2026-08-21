@@ -294,6 +294,93 @@ namespace Golfin.Tournaments.Tests
                 TournamentEligibility.Evaluate(null!, null, null, null));
 
         // ═════════════════════════════════════════════════════════════════════
+        // §5b  UnmetRequirements — the LIST the refusal modal renders
+        // ═════════════════════════════════════════════════════════════════════
+
+        private static IReadOnlyList<TournamentRequirement> Unmet(
+            TournamentDefinition def, int? rarity = Rare, int? level = 100, params int[] clubs)
+            => TournamentEligibility.UnmetRequirements(def, rarity, level, clubs);
+
+        [Test]
+        public void An_eligible_player_has_no_unmet_requirements()
+            => Assert.AreEqual(0, Unmet(Def(charRarityMin: "Common")).Count);
+
+        [Test]
+        public void Every_broken_rule_is_listed_not_just_the_first()
+        {
+            // Sending a player away to fix one rule only to be refused by the next is the failure
+            // this list exists to prevent.
+            var def = Def(charRarityMin: "Uncommon", charLevelMin: 10, gearRule: "own", clubRarityMax: "Legendary");
+            var unmet = Unmet(def, rarity: Common, level: 5, clubs: new[] { Supreme });
+
+            Assert.AreEqual(3, unmet.Count);
+            Assert.AreEqual(TournamentEligibilityFailure.CharacterRarity, unmet[0].Failure);
+            Assert.AreEqual(TournamentEligibilityFailure.CharacterLevel,  unmet[1].Failure);
+            Assert.AreEqual(TournamentEligibilityFailure.ClubRarity,      unmet[2].Failure);
+        }
+
+        [Test]
+        public void The_first_unmet_requirement_is_always_what_Evaluate_would_have_named()
+        {
+            // Parity pin: the modal's list and the server-facing single reason must not disagree
+            // about which rule refused first.
+            var defs = new[]
+            {
+                Def(charRarityMin: "Uncommon", charLevelMin: 10, clubRarityMax: "Common"),
+                Def(charLevelMax: 50, clubRarityMax: "Common"),
+                Def(clubRarityMax: "Common"),
+                Def(charRarityMin: "Common"),
+            };
+
+            foreach (var def in defs)
+            {
+                var first = Unmet(def, rarity: Common, level: 500, clubs: new[] { Supreme });
+                var single = Eval(def, rarity: Common, level: 500, clubs: new[] { Supreme });
+
+                if (first.Count == 0) Assert.AreEqual(TournamentEligibilityFailure.None, single);
+                else                  Assert.AreEqual(first[0].Failure, single);
+            }
+        }
+
+        [Test]
+        public void A_missed_floor_reports_the_minimum_and_a_breached_ceiling_reports_the_maximum()
+        {
+            // "MINIMUM REQUIREMENT: UNCOMMON" and "MAXIMUM ALLOWED: RARE" are different sentences,
+            // and the failure enum alone cannot tell them apart.
+            var below = Unmet(Def(charRarityMin: "Rare"), rarity: Common)[0];
+            Assert.IsFalse(below.IsMaximum);
+            Assert.AreEqual("Rare", below.RarityBound);
+
+            var above = Unmet(Def(charRarityMax: "Rare"), rarity: Supreme)[0];
+            Assert.IsTrue(above.IsMaximum);
+            Assert.AreEqual("Rare", above.RarityBound);
+
+            var lowLevel = Unmet(Def(charLevelMin: 80), level: 10)[0];
+            Assert.IsFalse(lowLevel.IsMaximum);
+            Assert.AreEqual(80, lowLevel.LevelBound);
+
+            var highLevel = Unmet(Def(charLevelMax: 80), level: 200)[0];
+            Assert.IsTrue(highLevel.IsMaximum);
+            Assert.AreEqual(80, highLevel.LevelBound);
+        }
+
+        [Test]
+        public void The_club_cap_is_reported_once_however_many_clubs_break_it()
+        {
+            var unmet = Unmet(Def(gearRule: "own", clubRarityMax: "Common"),
+                              clubs: new[] { Supreme, Legendary, Mythic });
+
+            Assert.AreEqual(1, unmet.Count, "The requirement is the cap; repeating it per club is padding.");
+            Assert.AreEqual("Common", unmet[0].RarityBound);
+            Assert.IsTrue(unmet[0].IsMaximum);
+        }
+
+        [Test]
+        public void Supplied_gear_keeps_the_club_cap_out_of_the_list()
+            => Assert.AreEqual(0, Unmet(Def(gearRule: "supplied", clubRarityMax: "Common"),
+                                        clubs: new[] { Supreme }).Count);
+
+        // ═════════════════════════════════════════════════════════════════════
         // §6  The rank ladder itself
         // ═════════════════════════════════════════════════════════════════════
 

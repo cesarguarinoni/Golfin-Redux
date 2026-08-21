@@ -741,6 +741,63 @@ MonoBehaviour:
   - key: tourn.entry.denied.generic
     english: You cannot enter this tournament
     japanese: "\u3053\u306E\u30C8\u30FC\u30CA\u30E1\u30F3\u30C8\u306B\u306F\u53C2\u52A0\u3067\u304D\u307E\u305B\u3093"
+  - key: tourn.denied.head.char_rarity
+    english: "YOUR CHARACTER IS OUTSIDE THIS TOURNAMENT\u2019S RARITY RANGE."
+    japanese: "\u3053\u306E\u30C8\u30FC\u30CA\u30E1\u30F3\u30C8\u306E\u30EC\u30A2\u30EA\u30C6\u30A3\u6761\u4EF6\u3092\u6E80\u305F\u3057\u3066\u3044\u307E\u305B\u3093\u3002"
+  - key: tourn.denied.head.char_level
+    english: "YOUR CHARACTER IS OUTSIDE THIS TOURNAMENT\u2019S LEVEL RANGE."
+    japanese: "\u3053\u306E\u30C8\u30FC\u30CA\u30E1\u30F3\u30C8\u306E\u30EC\u30D9\u30EB\u6761\u4EF6\u3092\u6E80\u305F\u3057\u3066\u3044\u307E\u305B\u3093\u3002"
+  - key: tourn.denied.head.club_rarity
+    english: "YOUR BAG HAS A CLUB ABOVE THIS TOURNAMENT\u2019S LIMIT."
+    japanese: "\u30D0\u30C3\u30B0\u306B\u5236\u9650\u3092\u8D85\u3048\u308B\u30AF\u30E9\u30D6\u304C\u3042\u308A\u307E\u3059\u3002"
+  - key: tourn.denied.head.multiple
+    english: "YOU DO NOT MEET THIS TOURNAMENT\u2019S REQUIREMENTS."
+    japanese: "\u3053\u306E\u30C8\u30FC\u30CA\u30E1\u30F3\u30C8\u306E\u53C2\u52A0\u6761\u4EF6\u3092\u6E80\u305F\u3057\u3066\u3044\u307E\u305B\u3093\u3002"
+  - key: tourn.denied.head.full
+    english: THIS TOURNAMENT IS FULL.
+    japanese: "\u3053\u306E\u30C8\u30FC\u30CA\u30E1\u30F3\u30C8\u306F\u6E80\u54E1\u3067\u3059\u3002"
+  - key: tourn.denied.head.generic
+    english: YOU CANNOT ENTER THIS TOURNAMENT.
+    japanese: "\u3053\u306E\u30C8\u30FC\u30CA\u30E1\u30F3\u30C8\u306B\u306F\u53C2\u52A0\u3067\u304D\u307E\u305B\u3093\u3002"
+  - key: tourn.denied.req.rarity_min
+    english: 'MINIMUM REQUIREMENT:'
+    japanese: "\u6700\u4F4E\u6761\u4EF6\uFF1A"
+  - key: tourn.denied.req.rarity_max
+    english: 'MAXIMUM ALLOWED:'
+    japanese: "\u4E0A\u9650\uFF1A"
+  - key: tourn.denied.req.level_min
+    english: 'MINIMUM LEVEL:'
+    japanese: "\u6700\u4F4E\u30EC\u30D9\u30EB\uFF1A"
+  - key: tourn.denied.req.level_max
+    english: 'MAXIMUM LEVEL:'
+    japanese: "\u6700\u9AD8\u30EC\u30D9\u30EB\uFF1A"
+  - key: tourn.denied.req.club_max
+    english: 'MAXIMUM CLUB RARITY:'
+    japanese: "\u30AF\u30E9\u30D6\u30EC\u30A2\u30EA\u30C6\u30A3\u4E0A\u9650\uFF1A"
+  - key: tourn.denied.req.full_cap
+    english: 'MAXIMUM PLAYERS:'
+    japanese: "\u6700\u5927\u53C2\u52A0\u4EBA\u6570\uFF1A"
+  - key: tourn.denied.back
+    english: BACK
+    japanese: "\u623B\u308B"
+  - key: tourn.denied.head.insufficient
+    english: YOU DO NOT HAVE ENOUGH REWARD POINTS.
+    japanese: "\u30EA\u30EF\u30FC\u30C9\u30DD\u30A4\u30F3\u30C8\u304C\u8DB3\u308A\u307E\u305B\u3093\u3002"
+  - key: tourn.denied.head.offline
+    english: A CONNECTION IS REQUIRED TO ENTER.
+    japanese: "\u53C2\u52A0\u306B\u306F\u30A4\u30F3\u30BF\u30FC\u30CD\u30C3\u30C8\u63A5\u7D9A\u304C\u5FC5\u8981\u3067\u3059\u3002"
+  - key: tourn.denied.head.unavailable
+    english: THIS TOURNAMENT IS NO LONGER AVAILABLE.
+    japanese: "\u3053\u306E\u30C8\u30FC\u30CA\u30E1\u30F3\u30C8\u306F\u7D42\u4E86\u3057\u307E\u3057\u305F\u3002"
+  - key: tourn.denied.head.failed
+    english: ENTRY COULD NOT BE COMPLETED.
+    japanese: "\u53C2\u52A0\u624B\u7D9A\u304D\u3092\u5B8C\u4E86\u3067\u304D\u307E\u305B\u3093\u3067\u3057\u305F\u3002"
+  - key: tourn.denied.req.entry_fee
+    english: 'ENTRY FEE:'
+    japanese: "\u53C2\u52A0\u8CBB\uFF1A"
+  - key: tourn.denied.req.your_balance
+    english: 'YOUR BALANCE:'
+    japanese: "\u6240\u6301\u30DD\u30A4\u30F3\u30C8\uFF1A"
   - key: AUTH_LOGIN_TITLE
     english: Welcome Back
     japanese: "\u304A\u304B\u3048\u308A\u306A\u3055\u3044"

@@ -7,6 +7,7 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -84,6 +85,16 @@ namespace GolfinRedux.UI.Tournaments
         [SerializeField] private Button _cancelButton  = null!;
         [SerializeField] private Button _confirmButton = null!;
 
+        // ── Entry-denied dialog (13915:2273) ──────────────────────────────────
+        //
+        // A nested GameObject, not a second ModalController: InGameSettingsModal's ConfirmDialog
+        // does exactly this, and a nested ModalController would double-count OpenModalCount and
+        // fight this modal's own show/hide. Its own backdrop darkens the signup modal behind it.
+        [Header("Entry Denied Dialog (13915:2273)")]
+        [SerializeField] private GameObject      _deniedDialog     = null!;
+        [SerializeField] private TextMeshProUGUI _deniedBodyText   = null!;
+        [SerializeField] private Button          _deniedBackButton = null!;
+
         // ── Navigation ────────────────────────────────────────────────────────
         [Header("Navigation")]
         [SerializeField] private ScreenId _holeSelectionTarget = ScreenId.TournamentHoleSelection;
@@ -117,6 +128,11 @@ namespace GolfinRedux.UI.Tournaments
             if (_cancelButton  != null) _cancelButton.onClick.AddListener(OnCancel);
             if (_confirmButton != null) _confirmButton.onClick.AddListener(OnConfirm);
             if (_bannerButton  != null) _bannerButton.onClick.AddListener(OnBannerTapped);
+            if (_deniedBackButton != null) _deniedBackButton.onClick.AddListener(OnDeniedBack);
+
+            // Never author-visible on open: the dialog is a response to a tap, and a prefab saved
+            // with it active would greet every player with a refusal they never triggered.
+            HideDenied();
         }
 
         // ── Public API ────────────────────────────────────────────────────────
@@ -154,6 +170,8 @@ namespace GolfinRedux.UI.Tournaments
 
         protected override void OnShow()
         {
+            HideDenied();   // a refusal from a previous open must not survive into this one
+
             // Capture + hide panels (MatchmakingModal pattern)
             _panelWasActive.Clear();
             foreach (var panel in _panelsToHide)
@@ -165,6 +183,8 @@ namespace GolfinRedux.UI.Tournaments
 
         protected override void OnHide()
         {
+            HideDenied();
+
             // Restore panels
             for (int i = 0; i < _panelsToHide.Count && i < _panelWasActive.Count; i++)
             {
@@ -197,7 +217,7 @@ namespace GolfinRedux.UI.Tournaments
         {
             if (TournamentService.Instance == null)
             {
-                ShowToast("Tournament service unavailable.");
+                ShowDenied(TournamentRulesText.DeniedBodySimple("tourn.denied.head.failed"));
                 return;
             }
 
@@ -215,8 +235,10 @@ namespace GolfinRedux.UI.Tournaments
                 Debug.LogWarning(
                     $"[TournamentSignupModal] '{_tournamentId}' left the schedule while the modal was " +
                     "open (deactivated, or its window closed). Closing without registering.");
-                ShowToast("Tournament no longer available.");
-                Hide();
+                // BACK closes the signup modal too: the tournament it describes is gone, so
+                // returning to it would leave the player staring at a row that no longer exists.
+                ShowDenied(TournamentRulesText.DeniedBodySimple("tourn.denied.head.unavailable"),
+                           closeSignupOnBack: true);
                 return;
             }
 
@@ -224,10 +246,11 @@ namespace GolfinRedux.UI.Tournaments
             long fee = def.EntryFeeRP;
             if (fee > 0 && RewardPointsManager.Instance != null)
             {
-                if (RewardPointsManager.Instance.GetPoints() < (int)fee)
+                int held = RewardPointsManager.Instance.GetPoints();
+                if (held < (int)fee)
                 {
-                    ShowToast("Not enough RP");
-                    Debug.Log($"[TournamentSignupModal] Insufficient RP — need {fee}, have {RewardPointsManager.Instance.GetPoints()}");
+                    ShowDenied(TournamentRulesText.DeniedBodyInsufficient(fee, held));
+                    Debug.Log($"[TournamentSignupModal] Insufficient RP — need {fee}, have {held}");
                     return;
                 }
             }
@@ -238,7 +261,7 @@ namespace GolfinRedux.UI.Tournaments
 
             if (string.IsNullOrEmpty(charId))
             {
-                ShowToast("No character selected.");
+                ShowDenied(TournamentRulesText.DeniedBodySimple("tourn.denied.head.failed"));
                 return;
             }
 
@@ -263,12 +286,13 @@ namespace GolfinRedux.UI.Tournaments
             // dashboard edit mid-tournament). The server re-checks the character bands inside
             // POST /enter — also before its own debit — so this gate is UX plus the enforcement
             // for the local/offline backend, not a trust boundary.
-            var failure = EvaluateEligibility(def, charId);
-            if (failure != TournamentEligibilityFailure.None)
+            var unmet = EvaluateEligibility(def, charId);
+            if (unmet.Count > 0)
             {
-                ShowToast(TournamentRulesText.DenialMessage(failure, def));
+                ShowDenied(TournamentRulesText.DeniedBody(unmet));
                 Debug.Log($"[TournamentSignupModal] Entry to {_tournamentId} refused by the client gate " +
-                          $"({failure}) for char={charId} — nothing charged, nothing entered.");
+                          $"({string.Join(", ", unmet.Select(u => u.Failure))}) for char={charId} — " +
+                          "nothing charged, nothing entered.");
                 return;   // modal stays open; no debit, no navigation
             }
 
@@ -296,7 +320,8 @@ namespace GolfinRedux.UI.Tournaments
                         case TournamentRegisterStatus.Insufficient:
                             // Same copy the spend gate uses, so a short balance reads the same
                             // whether the client or the server was the one to notice.
-                            ShowToast(PointsSpendGate.InsufficientMessage);
+                            ShowDenied(TournamentRulesText.DeniedBodyInsufficient(
+                                outcome.Requested, outcome.TotalPoints));
                             Debug.Log($"[TournamentSignupModal] Server refused entry to {_tournamentId} — " +
                                       $"needs {outcome.Requested}RP, holds {outcome.TotalPoints}RP.");
                             break;
@@ -304,7 +329,7 @@ namespace GolfinRedux.UI.Tournaments
                         case TournamentRegisterStatus.Full:
                             // The cap is the SERVER's to enforce — it is the only party that can
                             // count the field — so this arrives as an answer, never as an error.
-                            ShowToast(TournamentRulesText.FullMessage(outcome.MaxPlayers));
+                            ShowDenied(TournamentRulesText.DeniedBodyFull(outcome.MaxPlayers));
                             Debug.Log($"[TournamentSignupModal] Server refused entry to {_tournamentId} — " +
                                       $"field full (max {outcome.MaxPlayers}).");
                             break;
@@ -312,8 +337,11 @@ namespace GolfinRedux.UI.Tournaments
                         case TournamentRegisterStatus.Ineligible:
                             // Same copy the client gate uses, so a refusal reads identically
                             // whether the client or the server was the one to notice it.
-                            ShowToast(TournamentRulesText.DenialMessage(
-                                TournamentRulesText.ParseServerReason(outcome.IneligibleReason), def));
+                            // The server names ONE rule and cannot see the bag, so this re-derives
+                            // the full list locally and falls back to the server's single reason
+                            // only when the client agrees the player is eligible (a disagreement
+                            // the Q1 ruling says is expected and must stay soft).
+                            ShowDenied(DeniedBodyForServerReason(def, charId, outcome.IneligibleReason));
                             Debug.Log($"[TournamentSignupModal] Server refused entry to {_tournamentId} — " +
                                       $"ineligible (reason='{outcome.IneligibleReason}').");
                             break;
@@ -321,13 +349,13 @@ namespace GolfinRedux.UI.Tournaments
                         case TournamentRegisterStatus.Offline:
                             // Entry is online-only by decision of record: there is no queue to fall
                             // back on, because a queued entry is an unpaid one.
-                            ShowToast(PointsSpendGate.OfflineMessage);
+                            ShowDenied(TournamentRulesText.DeniedBodySimple("tourn.denied.head.offline"));
                             Debug.Log($"[TournamentSignupModal] Entry to {_tournamentId} could not reach the " +
                                       "server — nothing charged, nothing entered.");
                             break;
 
                         default:
-                            ShowToast("Registration failed.");
+                            ShowDenied(TournamentRulesText.DeniedBodySimple("tourn.denied.head.failed"));
                             break;
                     }
                 });
@@ -342,6 +370,12 @@ namespace GolfinRedux.UI.Tournaments
                     // The gate has already toasted the reason (insufficient vs connection required).
                     if (!paid)
                     {
+                        // PointsSpendGate has already toasted its own reason; the pop-up is the
+                        // surface the player actually reads, so state it here too.
+                        long held = TournamentService.Instance.RewardPoints.Balance;
+                        ShowDenied(held < fee
+                            ? TournamentRulesText.DeniedBodyInsufficient(fee, held)
+                            : TournamentRulesText.DeniedBodySimple("tourn.denied.head.offline"));
                         Debug.Log($"[TournamentSignupModal] Entry fee of {fee}RP not paid — signup aborted.");
                         return;
                     }
@@ -364,13 +398,13 @@ namespace GolfinRedux.UI.Tournaments
             catch (Exception ex)
             {
                 Debug.LogError($"[TournamentSignupModal] Register failed: {ex.Message}");
-                ShowToast("Registration failed.");
+                ShowDenied(TournamentRulesText.DeniedBodySimple("tourn.denied.head.failed"));
                 return;
             }
 
             if (entry == null)
             {
-                ShowToast("Registration failed.");
+                ShowDenied(TournamentRulesText.DeniedBodySimple("tourn.denied.head.failed"));
                 return;
             }
 
@@ -661,7 +695,8 @@ namespace GolfinRedux.UI.Tournaments
         /// the same posture the server takes for an unresolvable character.
         /// </para>
         /// </summary>
-        private static TournamentEligibilityFailure EvaluateEligibility(TournamentDefinition def, string charId)
+        private static IReadOnlyList<TournamentRequirement> EvaluateEligibility(
+            TournamentDefinition def, string charId)
         {
             int? rarityRank = null;
             int? level      = null;
@@ -689,7 +724,64 @@ namespace GolfinRedux.UI.Tournaments
             // RarityLadderPinTests.The_rarity_ladder_matches_CharacterRaritys_declaration_order.
             if (rarity != null) rarityRank = (int)rarity.Value + 1;
 
-            return TournamentEligibility.Evaluate(def, rarityRank, level, EquippedClubRarityRanks());
+            return TournamentEligibility.UnmetRequirements(def, rarityRank, level, EquippedClubRarityRanks());
+        }
+
+        /// <summary>
+        /// Body copy for a SERVER `ineligible` denial. The server names one rule and has no view of
+        /// the bag, so the local list is preferred when it finds anything; when the client thinks
+        /// the player is eligible and the server disagreed — the Q1 level asymmetry, ruled
+        /// INTENDED — fall back to naming the server's rule rather than showing an empty list.
+        /// </summary>
+        private static string DeniedBodyForServerReason(
+            TournamentDefinition def, string charId, string? reason)
+        {
+            var unmet = EvaluateEligibility(def, charId);
+            if (unmet.Count > 0) return TournamentRulesText.DeniedBody(unmet);
+
+            var failure = TournamentRulesText.ParseServerReason(reason);
+            return TournamentRulesText.DenialMessage(failure, def);
+        }
+
+        // ── Entry-denied dialog ───────────────────────────────────────────────
+
+        /// <summary>
+        /// True when BACK should dismiss the signup modal as well — used when the tournament the
+        /// modal describes has gone, so there is nothing to go back TO.
+        /// </summary>
+        private bool _deniedClosesSignup;
+
+        private void ShowDenied(string body, bool closeSignupOnBack = false)
+        {
+            _deniedClosesSignup = closeSignupOnBack;
+            if (_deniedBodyText != null) _deniedBodyText.text = body;
+
+            if (_deniedDialog != null)
+            {
+                _deniedDialog.SetActive(true);
+                // Last sibling so the dialog's own backdrop darkens the signup modal behind it
+                // rather than painting under it.
+                _deniedDialog.transform.SetAsLastSibling();
+            }
+            else
+            {
+                // No dialog wired: say it rather than swallowing the refusal silently.
+                ShowToast(body);
+            }
+        }
+
+        private void HideDenied()
+        {
+            _deniedClosesSignup = false;
+            if (_deniedDialog != null) _deniedDialog.SetActive(false);
+        }
+
+        /// <summary>BACK on the refusal pop-up.</summary>
+        private void OnDeniedBack()
+        {
+            bool closeSignup = _deniedClosesSignup;
+            HideDenied();
+            if (closeSignup) Hide();
         }
 
         /// <summary>

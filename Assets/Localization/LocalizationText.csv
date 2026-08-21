@@ -217,6 +217,25 @@ tourn.entry.denied.char_level,Your character is outside this tournament’s leve
 tourn.entry.denied.club_rarity,Your bag has a club above the {0} limit,バッグに{0}を超えるクラブがあります
 tourn.entry.denied.full,This tournament is full ({0} players),このトーナメントは満員です（{0}人）
 tourn.entry.denied.generic,You cannot enter this tournament,このトーナメントには参加できません
+tourn.denied.head.char_rarity,YOUR CHARACTER IS OUTSIDE THIS TOURNAMENT’S RARITY RANGE.,このトーナメントのレアリティ条件を満たしていません。
+tourn.denied.head.char_level,YOUR CHARACTER IS OUTSIDE THIS TOURNAMENT’S LEVEL RANGE.,このトーナメントのレベル条件を満たしていません。
+tourn.denied.head.club_rarity,YOUR BAG HAS A CLUB ABOVE THIS TOURNAMENT’S LIMIT.,バッグに制限を超えるクラブがあります。
+tourn.denied.head.multiple,YOU DO NOT MEET THIS TOURNAMENT’S REQUIREMENTS.,このトーナメントの参加条件を満たしていません。
+tourn.denied.head.full,THIS TOURNAMENT IS FULL.,このトーナメントは満員です。
+tourn.denied.head.generic,YOU CANNOT ENTER THIS TOURNAMENT.,このトーナメントには参加できません。
+tourn.denied.req.rarity_min,MINIMUM REQUIREMENT:,最低条件：
+tourn.denied.req.rarity_max,MAXIMUM ALLOWED:,上限：
+tourn.denied.req.level_min,MINIMUM LEVEL:,最低レベル：
+tourn.denied.req.level_max,MAXIMUM LEVEL:,最高レベル：
+tourn.denied.req.club_max,MAXIMUM CLUB RARITY:,クラブレアリティ上限：
+tourn.denied.req.full_cap,MAXIMUM PLAYERS:,最大参加人数：
+tourn.denied.back,BACK,戻る
+tourn.denied.head.insufficient,YOU DO NOT HAVE ENOUGH REWARD POINTS.,リワードポイントが足りません。
+tourn.denied.head.offline,A CONNECTION IS REQUIRED TO ENTER.,参加にはインターネット接続が必要です。
+tourn.denied.head.unavailable,THIS TOURNAMENT IS NO LONGER AVAILABLE.,このトーナメントは終了しました。
+tourn.denied.head.failed,ENTRY COULD NOT BE COMPLETED.,参加手続きを完了できませんでした。
+tourn.denied.req.entry_fee,ENTRY FEE:,参加費：
+tourn.denied.req.your_balance,YOUR BALANCE:,所持ポイント：
 AUTH_LOGIN_TITLE,Welcome Back,おかえりなさい
 AUTH_LOGIN_EMAIL_PLACEHOLDER,Email,メール
 AUTH_LOGIN_PASSWORD_PLACEHOLDER,Password,パスワード

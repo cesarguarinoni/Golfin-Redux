@@ -49,6 +49,37 @@ namespace Golfin.Tournaments
         Full,
     }
 
+    /// <summary>
+    /// ONE unmet requirement, with enough detail to render a line the player can act on
+    /// (tournament_entry_denied_modal). <see cref="TournamentEligibilityFailure"/> says WHICH rule
+    /// refused; this also says WHICH BOUND of it was missed and WHAT the bound is, because
+    /// "MINIMUM REQUIREMENT: UNCOMMON" and "MAXIMUM ALLOWED: RARE" are different sentences and the
+    /// enum alone cannot tell them apart.
+    /// </summary>
+    public readonly struct TournamentRequirement
+    {
+        public readonly TournamentEligibilityFailure Failure;
+
+        /// <summary>True when the player exceeded a ceiling, false when they fell short of a floor.</summary>
+        public readonly bool IsMaximum;
+
+        /// <summary>Canonical rarity name of the bound, when the bound is a rarity. Else null.</summary>
+        public readonly string? RarityBound;
+
+        /// <summary>The bound, when it is a level. Else null.</summary>
+        public readonly int? LevelBound;
+
+        public TournamentRequirement(
+            TournamentEligibilityFailure failure, bool isMaximum,
+            string? rarityBound = null, int? levelBound = null)
+        {
+            Failure     = failure;
+            IsMaximum   = isMaximum;
+            RarityBound = rarityBound;
+            LevelBound  = levelBound;
+        }
+    }
+
     public static class TournamentEligibility
     {
         /// <summary>
@@ -110,6 +141,79 @@ namespace Golfin.Tournaments
             }
 
             return TournamentEligibilityFailure.None;
+        }
+
+        /// <summary>
+        /// EVERY unmet requirement, not just the first — the refusal modal lists them, so stopping
+        /// at the first would send a player to fix one rule only to be refused by the next.
+        /// <para>
+        /// Ordered rarity → level → club, the same order <see cref="Evaluate"/> and the server
+        /// short-circuit in, so the first entry here is always what the server would have named.
+        /// An eligible player yields an empty list.
+        /// </para>
+        /// </summary>
+        public static IReadOnlyList<TournamentRequirement> UnmetRequirements(
+            TournamentDefinition  def,
+            int?                  characterRarityRank,
+            int?                  characterLevel,
+            IReadOnlyList<int>?   equippedClubRarityRanks)
+        {
+            var unmet = new List<TournamentRequirement>();
+            if (def == null) return unmet;
+
+            // ── Character rarity band ────────────────────────────────────────
+            int? rarityMin = TournamentRestrictions.RarityRank(def.CharRarityMin);
+            int? rarityMax = TournamentRestrictions.RarityRank(def.CharRarityMax);
+            if (rarityMin.HasValue || rarityMax.HasValue)
+            {
+                // An unresolvable rarity cannot prove it is inside the band. Report it against the
+                // floor when there is one, because "you need at least X" is the actionable half.
+                if (!characterRarityRank.HasValue)
+                    unmet.Add(new TournamentRequirement(
+                        TournamentEligibilityFailure.CharacterRarity,
+                        isMaximum: !rarityMin.HasValue,
+                        rarityBound: def.CharRarityMin ?? def.CharRarityMax));
+                else if (rarityMin.HasValue && characterRarityRank.Value < rarityMin.Value)
+                    unmet.Add(new TournamentRequirement(
+                        TournamentEligibilityFailure.CharacterRarity, false, def.CharRarityMin));
+                else if (rarityMax.HasValue && characterRarityRank.Value > rarityMax.Value)
+                    unmet.Add(new TournamentRequirement(
+                        TournamentEligibilityFailure.CharacterRarity, true, def.CharRarityMax));
+            }
+
+            // ── Character level band ─────────────────────────────────────────
+            if (def.CharLevelMin.HasValue || def.CharLevelMax.HasValue)
+            {
+                if (!characterLevel.HasValue)
+                    unmet.Add(new TournamentRequirement(
+                        TournamentEligibilityFailure.CharacterLevel,
+                        isMaximum: !def.CharLevelMin.HasValue,
+                        levelBound: def.CharLevelMin ?? def.CharLevelMax));
+                else if (def.CharLevelMin.HasValue && characterLevel.Value < def.CharLevelMin.Value)
+                    unmet.Add(new TournamentRequirement(
+                        TournamentEligibilityFailure.CharacterLevel, false, null, def.CharLevelMin));
+                else if (def.CharLevelMax.HasValue && characterLevel.Value > def.CharLevelMax.Value)
+                    unmet.Add(new TournamentRequirement(
+                        TournamentEligibilityFailure.CharacterLevel, true, null, def.CharLevelMax));
+            }
+
+            // ── Equipped-bag club cap ────────────────────────────────────────
+            int? clubMax = TournamentRestrictions.RarityRank(def.ClubRarityMax);
+            if (clubMax.HasValue && def.EffectiveGearRule == TournamentGearRule.Own &&
+                equippedClubRarityRanks != null)
+            {
+                for (int i = 0; i < equippedClubRarityRanks.Count; i++)
+                {
+                    if (equippedClubRarityRanks[i] <= clubMax.Value) continue;
+                    // One entry however many clubs are over: the requirement is the cap, and
+                    // repeating it per offending club would just pad the list.
+                    unmet.Add(new TournamentRequirement(
+                        TournamentEligibilityFailure.ClubRarity, true, def.ClubRarityMax));
+                    break;
+                }
+            }
+
+            return unmet;
         }
     }
 }
