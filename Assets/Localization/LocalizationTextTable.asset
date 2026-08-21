@@ -979,6 +979,12 @@ MonoBehaviour:
   - key: NAV_TOURNAMENTS
     english: TOURNAMENTS
     japanese: "\u30C8\u30FC\u30CA\u30E1\u30F3\u30C8"
+  - key: NAV_GOLFIN_ACCOUNT
+    english: GOLFIN ACCOUNT
+    japanese: "GOLFIN\u30A2\u30AB\u30A6\u30F3\u30C8"
+  - key: NAV_SIGN_UP
+    english: SIGN UP
+    japanese: "\u65B0\u898F\u767B\u9332"
   - key: NAV_BOOST_STAMINA
     english: BOOST STAMINA
     japanese: "\u30B9\u30BF\u30DF\u30CA\u30D6\u30FC\u30B9\u30C8"

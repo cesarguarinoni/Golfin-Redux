@@ -317,8 +317,12 @@ namespace GolfinRedux.UI
             {
                 if (isAccountScreen)
                 {
+                    // Localized: these were the last hardcoded English strings on the account
+                    // screens, so a Japanese player saw a fully translated card under an
+                    // English banner.
                     string accountTitle = (screenId == ScreenId.SignUp || screenId == ScreenId.EmailConfirmation)
-                        ? "SIGN UP" : "GOLFIN ACCOUNT";
+                        ? LocalizationManager.Get("NAV_SIGN_UP")
+                        : LocalizationManager.Get("NAV_GOLFIN_ACCOUNT");
                     Golfin.UI.PersistentUIManager.Instance.ShowAccountTitleBar(accountTitle);
                 }
                 else if (showBars)
