@@ -2443,3 +2443,51 @@ evidence could not — the account top banner was still English, built from two 
 `ScreenManager` that were never among the 35 labels I had audited. **The picture found what the
 property dump could not.** That is the entire argument for the standing "always show me video/
 screenshots" rule, demonstrated in one frame.
+
+---
+
+## Lesson BC — I misread the same screenshot three times; the pixel sample was right every time (2026-08-21)
+
+**What happened.** Fixing the modal scrims, I judged "is the background darkened?" by looking at the
+captured frame. I got it wrong three separate times in one session:
+
+| # | What I concluded from looking | What the pixels said |
+|---|---|---|
+| 1 | Settings has no dim at all | It had one — a *weak* one (top bar 26,72,113 → 16,50,81) |
+| 2 | The 0.80 scrim made the roster look *brighter* | Darker everywhere (carousel card 141 → 117) |
+| 3 | The bag-club modal doesn't dim the top bar | It does (26,72,113 → 5,25,43) |
+
+Every one of those was settled in seconds by `Image.getpixel()` on two saved PNGs. The eyeball was
+0-for-3; the sample was 3-for-3.
+
+**Why.** Two compounding effects. A scrim over already-dark navy chrome changes the *absolute*
+numbers a lot but the *apparent* brightness little, especially next to a bright artwork panel that
+anchors your perception. And the frame is downscaled for display in chat, which shifts apparent
+contrast. Neither effect touches the pixel values.
+
+**How to apply.** For any question of the form "is this darker / lighter / dimmed / tinted", never
+answer from the rendered frame:
+
+1. Save **two** PNGs — the state with the effect and the state without — via
+   `EditorApplication.ExecuteMenuItem("GOLFIN/Screenshot/Capture Game View")`.
+2. Confirm they are not the same frame (`md5`). An unfocused editor silently returns a stale RT, and
+   two identical byte-for-byte captures will look like a perfect "no change" result. Put a `sleep 4`
+   between the state change and the capture.
+3. Sample named points with PIL and print a `no-effect / before / after` table.
+4. If you must show it, crop the exact region and A/B the crops — a full 1170×2532 frame is the
+   worst possible way to compare two navy bars.
+
+This is the colour counterpart of the standing "measure UI numerically" rule (`GetWorldCorners`
+before claiming a layout is fixed) — same discipline, different channel.
+
+**Bonus, earned the same run — two Unity facts worth keeping:**
+
+- **Linear colour space makes alpha read much weaker than the number suggests.** A 50%-alpha black
+  scrim pulls an sRGB white to ~187/255, not ~128. That is why the Settings scrim, which was
+  present, correct and full-screen the whole time, genuinely read as "missing". The alpha floor
+  that reads as a scrim in this project is ~0.80 (white → ~123).
+- **A nested canvas with `overrideSorting = true` DOES sort globally against other Screen-Space
+  Overlay root canvases**, by its own `sortingOrder`. I talked myself out of this on the theory
+  that a sub-canvas can only reorder within its own root — wrong, and the raycast dump plus the
+  pixel table both proved it. That is what lets a modal parented under a screen on `Canvas`
+  (order −1) paint over `PersistentUI` (order 0) without being reparented.
