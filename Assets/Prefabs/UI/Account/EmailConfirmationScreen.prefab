@@ -361,6 +361,7 @@ GameObject:
   - component: {fileID: 3882408794352167368}
   - component: {fileID: 2912826384222555226}
   - component: {fileID: 6779332345022159930}
+  - component: {fileID: 3938168094610195423}
   m_Layer: 0
   m_Name: InstructionText
   m_TagString: Untagged
@@ -507,6 +508,20 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &3938168094610195423
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2193654352149628673}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Golfin.Localization::LocalizedText
+  key: AUTH_EMAIL_CONF_INSTRUCTION
+  japaneseFontScale: 0
 --- !u!1 &2198162317927751238
 GameObject:
   m_ObjectHideFlags: 0
@@ -783,6 +798,7 @@ GameObject:
   - component: {fileID: 8487647165219341869}
   - component: {fileID: 7396106546981433607}
   - component: {fileID: 8744723501472022489}
+  - component: {fileID: 7172008648874376825}
   m_Layer: 0
   m_Name: DescriptionText
   m_TagString: Untagged
@@ -941,6 +957,20 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &7172008648874376825
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3398190136151313528}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Golfin.Localization::LocalizedText
+  key: AUTH_EMAIL_CONF_BODY
+  japaneseFontScale: 0
 --- !u!1 &3513408921712258722
 GameObject:
   m_ObjectHideFlags: 0
@@ -953,6 +983,7 @@ GameObject:
   - component: {fileID: 7876009185191586389}
   - component: {fileID: 4335503378622077957}
   - component: {fileID: 3578820434436726299}
+  - component: {fileID: 9064340769282051429}
   m_Layer: 0
   m_Name: SectionHeader
   m_TagString: Untagged
@@ -1099,6 +1130,20 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &9064340769282051429
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3513408921712258722}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Golfin.Localization::LocalizedText
+  key: AUTH_EMAIL_CONF_TITLE
+  japaneseFontScale: 0
 --- !u!1 &4056011980514024568
 GameObject:
   m_ObjectHideFlags: 0
@@ -1363,6 +1408,7 @@ GameObject:
   - component: {fileID: 2467670415543447167}
   - component: {fileID: 4255569988982540452}
   - component: {fileID: 8294784961120989235}
+  - component: {fileID: 2053791299178621425}
   m_Layer: 0
   m_Name: Label
   m_TagString: Untagged
@@ -1489,6 +1535,20 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &2053791299178621425
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5299580995992760414}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Golfin.Localization::LocalizedText
+  key: AUTH_EMAIL_CONF_BACK
+  japaneseFontScale: 0
 --- !u!1 &6868151189013406831
 GameObject:
   m_ObjectHideFlags: 0
@@ -1500,6 +1560,7 @@ GameObject:
   - component: {fileID: 1481634751375238533}
   - component: {fileID: 651848402331986105}
   - component: {fileID: 9121197393120913065}
+  - component: {fileID: 2832275853968342155}
   m_Layer: 0
   m_Name: Label
   m_TagString: Untagged
@@ -1626,6 +1687,20 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &2832275853968342155
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6868151189013406831}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Golfin.Localization::LocalizedText
+  key: AUTH_EMAIL_CONF_RESEND
+  japaneseFontScale: 0
 --- !u!1 &7191580659854231304
 GameObject:
   m_ObjectHideFlags: 0

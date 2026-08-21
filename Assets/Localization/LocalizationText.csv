@@ -275,11 +275,12 @@ AUTH_SIGNUP_RULE_LOWER,Must contain one lowercase letter,小文字を1文字以�
 AUTH_SIGNUP_RULE_UPPER,Must contain one uppercase letter,大文字を1文字以上含めてください
 AUTH_SIGNUP_RULE_DIGIT,Must contain one number,数字を1文字以上含めてください
 AUTH_SIGNUP_RULE_SPECIAL,Must contain one special character,記号を1文字以上含めてください
-AUTH_EMAIL_CONF_TITLE,Check Your Email,メールを確認してください
-AUTH_EMAIL_CONF_BODY,We sent a confirmation link to,確認リンクを送信しました
+AUTH_EMAIL_CONF_TITLE,EMAIL CONFIRMATION,メール確認
+AUTH_EMAIL_CONF_BODY,"A confirmation email has been sent to your inbox.\n\nPlease check your email and click the confirmation link to verify your account.\n\nRemember to check your spam folder.\n\nIf you didn't receive the email, please click the button below.",確認メールを受信トレイに送信しました。\n\nメールを確認し、記載されたリンクをクリックしてアカウントを認証してください。\n\n迷惑メールフォルダもご確認ください。\n\nメールが届かない場合は、下のボタンをクリックしてください。
+AUTH_EMAIL_CONF_INSTRUCTION,"Once you have confirmed your email, please go back to the login screen.",メールの確認が完了したら、ログイン画面に戻ってください。
 AUTH_EMAIL_CONF_OPEN,Open Email App,メールアプリを開く
-AUTH_EMAIL_CONF_RESEND,Resend Email,メールを再送
-AUTH_EMAIL_CONF_BACK,Back to Login,ログインに戻る
+AUTH_EMAIL_CONF_RESEND,RESEND,再送
+AUTH_EMAIL_CONF_BACK,LOGIN,ログイン
 AUTH_USERNAME_TAKEN,Username already taken,このユーザー名は既に使用されています
 AUTH_RESET_TITLE,Set New Password,新しいパスワードを設定
 AUTH_RESET_NEW_PLACEHOLDER,New Password,新しいパスワード
