@@ -23,6 +23,51 @@
 
 ## 🟢 PRIORITY QUEUED — pick up immediately
 
+> **▶ 2026-08-21 · pagination dots, the ShellScene save churn, and editor dev tooling — SHIPPED
+> (f2bcdbc29, 364519dfc, 8e7cb4777, pushed).**
+>
+> **Dots.** All **seven** page-dot implementations now share `PaginationDotStrip`
+> (`Assets/Scripts/UI/Common/`) — pooled and capped at 7. Five were carousels doing "one dot per
+> page, unbounded, destroy-and-rebuild every refresh": at 799 owned clubs that is 134 dots =
+> 2948px in a 1074px row, overflowing into a solid bar. The other two were found only after Cesar
+> asked whether I had really got them all (Lesson BA): `HomeScreenController.dotsContainer` and
+> `GachaCarouselController._dotContainer` — and Home had the OPPOSITE bug, three authored scene
+> children that could not grow, so a 4th notice cycled with no dot. Verified live at 134 pages:
+> 134 objects → 7, 2948px → 148px, window centring at page 66 and clamping at 0/133; ≤7 pages is
+> byte-identical to the old look. **35 insertions, 143 deletions** and no scene edit.
+>
+> **The ShellScene save churn is fixed at the root.** Cause: a play-mode round trip leaves
+> layout-driven RectTransforms holding runtime-computed values and **Unity leaves `isDirty` false**,
+> so the next save silently rewrote 153 of them (~1285 lines). Reproduced on demand, then baked
+> once deliberately after walking 14 screens (baking only the screens you visit bakes only those).
+> Safe because it is confined (all 153 under the ScaleWithScreenSize canvas, none under
+> ConstantPixelSize → not resolution-driven) and convergent (two independent sessions produced the
+> same hash). **A post-play-mode save now produces a zero diff.** Residual: a few auto-sizing TMP
+> labels can still flip `m_fontSize` by ~0.1; `SceneSaveChurnGuard` warns on any post-play-mode
+> save so it is never silent again, plus `GOLFIN > Dev > Reload Scene From Disk`.
+>
+> **Editor dev tooling.** `DevAutoSignIn` gets the Editor to Home unattended — credentials from
+> env vars or the gitignored `.golfin-dev-login.json`, never read or logged (verified 0 occurrences
+> in Editor.log). The non-obvious half: the Splash gate needs `StartButton.onClick` **even when
+> authenticated**; without it boot times out on Splash and bots silently film the login screen.
+> Recorded in memory `reference_editor_login_devautosignin`. `DevClubGrants` adds Grant All / Reset
+> To Starter.
+>
+> **Cesar's save now holds all 799 clubs** (rollback:
+> `Docs/Specs/Active/club_roster_799/save.json.pre-grantall.bak`). That grant is **Editor-only and
+> cannot reach a device**: `LocalJsonPersister` is the only `ISavePersister`, `ownedClubs` is never
+> sent to the server, and `persistentDataPath` is per-install. Perf at 799: data layer free
+> (`GetAllOwnedClubs` 0.01ms), but the carousel instantiates **all 799 cards** (~200ms, paid on the
+> Inventory screen transition) — real but only reachable at absurd ownership, still no spec.
+>
+> **Open, unfixed, needs a spec:** `Lv 200` overlaps `/239` on Supreme clubs (3-digit levels collide
+> in the club detail panel). Also: the Home-notices dot fix is not visually demonstrable while only
+> one notice is live (`count <= 1` correctly hides the row).
+>
+> Videos for the daily report are in `Docs/Reports/Media/` (2026-08-21 pagination dots + club roster/JA).
+> Full EditMode 1544 pass / 0 fail / 3 skipped.
+
+
 > **▶ 2026-08-20 · `club_roster_799` — SHIPPED (code complete, EditMode green).** The 799-row
 > `Clubs.csv` is now actually consumable. **Two ship blockers were live in the working tree.**
 > (1) **The database loaded ZERO clubs.** The new CSV opens with three `#` provenance lines and

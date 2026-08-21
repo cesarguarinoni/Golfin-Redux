@@ -1,0 +1,185 @@
+{
+  "schemaVersion": 9,
+  "rewardPoints": 148,
+  "selectedCharacterId": "char_james",
+  "ownedCharacters": [
+    {
+      "characterId": "char_james",
+      "currentLevel": 10,
+      "spentStrength": 0,
+      "spentClubControl": 0,
+      "spentRecovery": 0,
+      "spentStamina": 0,
+      "totalSPEarned": 0,
+      "isSelected": true,
+      "conditionEnergy": 96.0,
+      "conditionUpdatedUtc": "2026-08-20T01:35:28.7505420Z"
+    },
+    {
+      "characterId": "char_ean",
+      "currentLevel": 40,
+      "spentStrength": 0,
+      "spentClubControl": 0,
+      "spentRecovery": 0,
+      "spentStamina": 0,
+      "totalSPEarned": 0,
+      "isSelected": false,
+      "conditionEnergy": 102.0,
+      "conditionUpdatedUtc": "2026-08-11T10:45:51.5139350Z"
+    }
+  ],
+  "ballQuantities": {},
+  "itemQuantities": {},
+  "unlockedHoles": [
+    1,
+    6
+  ],
+  "playedHoles": [],
+  "lifetimeRpEarned": 0,
+  "rpDaily": 0,
+  "rpWeekly": 0,
+  "rpMonthly": 0,
+  "dailyPeriodKey": 0,
+  "weeklyPeriodKey": 0,
+  "monthlyPeriodKey": 0,
+  "tournamentEntries": [
+    {
+      "tournamentId": "kisarazu_cup",
+      "characterId": "char_james",
+      "perHole": [
+        {
+          "holeId": "1",
+          "strokes": 6,
+          "timeSeconds": 68.18017,
+          "completedUtc": "2026-08-11T02:42:45.0687500Z",
+          "rngSeed": 0
+        },
+        {
+          "holeId": "2",
+          "strokes": 4,
+          "timeSeconds": 42.14652,
+          "completedUtc": "2026-08-11T02:43:39.6770220Z",
+          "rngSeed": 0
+        }
+      ],
+      "startedUtc": "2026-08-11T02:41:31.7098365Z",
+      "lastHoleUtc": "2026-08-11T02:43:39.0613815Z",
+      "status": 1,
+      "claimed": false,
+      "snapshot": {
+        "characterId": "char_james",
+        "level": 10,
+        "strength": 6,
+        "clubControl": 7,
+        "recovery": 6,
+        "stamina": 6
+      },
+      "conditionRemaining": 80.0
+    },
+    {
+      "tournamentId": "hirono_invitational",
+      "characterId": "char_james",
+      "perHole": [
+        {
+          "holeId": "1",
+          "strokes": 6,
+          "timeSeconds": 68.2759,
+          "completedUtc": "2026-08-11T03:36:46.0706420Z",
+          "rngSeed": 0
+        },
+        {
+          "holeId": "2",
+          "strokes": 4,
+          "timeSeconds": 41.9292526,
+          "completedUtc": "2026-08-11T03:37:40.6356020Z",
+          "rngSeed": 0
+        }
+      ],
+      "startedUtc": "2026-08-11T03:35:32.6093550Z",
+      "lastHoleUtc": "2026-08-11T03:37:39.9813790Z",
+      "status": 1,
+      "claimed": false,
+      "snapshot": {
+        "characterId": "char_james",
+        "level": 10,
+        "strength": 6,
+        "clubControl": 7,
+        "recovery": 6,
+        "stamina": 6
+      },
+      "conditionRemaining": 80.0
+    }
+  ],
+  "ownedClubs": [
+    {
+      "clubId": "club_driver_gf",
+      "currentLevel": 10,
+      "currentDurability": 100,
+      "maxDurability": 100,
+      "equippedBagSlot": 1,
+      "totalSPEarned": 0,
+      "spentPower": 0,
+      "spentAccuracy": 0,
+      "spentLieResistance": 0,
+      "spentDurability": 0
+    },
+    {
+      "clubId": "club_wood_gf",
+      "currentLevel": 10,
+      "currentDurability": 100,
+      "maxDurability": 100,
+      "equippedBagSlot": 1,
+      "totalSPEarned": 0,
+      "spentPower": 0,
+      "spentAccuracy": 0,
+      "spentLieResistance": 0,
+      "spentDurability": 0
+    },
+    {
+      "clubId": "club_iron7_mireo",
+      "currentLevel": 80,
+      "currentDurability": 100,
+      "maxDurability": 100,
+      "equippedBagSlot": 1,
+      "totalSPEarned": 0,
+      "spentPower": 0,
+      "spentAccuracy": 0,
+      "spentLieResistance": 0,
+      "spentDurability": 0
+    },
+    {
+      "clubId": "club_pwedge_royal",
+      "currentLevel": 160,
+      "currentDurability": 75,
+      "maxDurability": 75,
+      "equippedBagSlot": 1,
+      "totalSPEarned": 0,
+      "spentPower": 0,
+      "spentAccuracy": 0,
+      "spentLieResistance": 0,
+      "spentDurability": 0
+    },
+    {
+      "clubId": "club_putter_golfinx",
+      "currentLevel": 200,
+      "currentDurability": 120,
+      "maxDurability": 120,
+      "equippedBagSlot": 1,
+      "totalSPEarned": 0,
+      "spentPower": 0,
+      "spentAccuracy": 0,
+      "spentLieResistance": 0,
+      "spentDurability": 0
+    }
+  ],
+  "clubOwnershipSeeded": true,
+  "grandfatherClubs": false,
+  "wedgeBackfillPending": false,
+  "gachaTickets": 10,
+  "ticketBalances": [
+    {
+      "ticketTypeInt": 0,
+      "balance": 10
+    }
+  ]
+}

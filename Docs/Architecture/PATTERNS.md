@@ -268,6 +268,35 @@ zero consumer refactor.
 
 ---
 
+## 11. Pagination Dot Pattern (PaginationDotStrip)
+
+`Assets/Scripts/UI/Common/PaginationDotStrip.cs` — the ONE page-dot implementation. Seven
+surfaces used to hand-roll this; they all delegate now (Club / Ball / Item / Bag carousels,
+Roster carousel, Home notices, Gacha banners).
+
+```csharp
+_dots ??= new PaginationDotStrip(dotsParent, dotPrefab);
+_dots.Rebuild(totalPages, currentPage);   // page COUNT changed
+_dots.Refresh(currentPage);               // page INDEX changed
+_dots.Clear();                            // collapse the row to nothing
+```
+
+Behaviour: dots are **pooled** (created once, then only toggled — never destroyed and
+re-instantiated) and **capped at `MaxDots = 7`**. At or under 7 pages it is one dot per page,
+identical to the old look. Above 7 the dots become a window that slides to keep the active page
+centred, with the edge dots scaled to 0.6 to signal more pages beyond. The row therefore cannot
+outgrow its container — the bug it was written for was 134 dots (799 clubs / 6 per page) in a
+row that fits 48, overflowing both edges into a solid bar.
+
+Constructor options for the two non-carousel callers:
+- `adoptExisting: true` — takes dot children already authored in the scene into the pool
+  (Home's `Dot1/Dot2/Dot3`) instead of adding a second set beside them.
+- `activeColor` / `inactiveColor` — Home uses 0.4 alpha inactive, everything else 0.35.
+- `dotSprite` — forced onto every dot, for a container whose dots would otherwise render as
+  null-sprite squares (Gacha).
+
+**When adding a new paged surface:** use this, do not write another dot loop.
+
 ## Quick Reference: File Locations
 
 | Pattern | Character (Roster) | Club (Inventory) | Bag (Inventory) |

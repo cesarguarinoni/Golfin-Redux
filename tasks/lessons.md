@@ -2321,3 +2321,50 @@ asked:
 
 **Wider rule.** If the only thing standing between the work and "done" is a command I am capable of
 running, run it. Surfacing a *blocker* is my job; surfacing a *chore* is offloading.
+
+## Lesson BA — "I grepped for X and found them all" is not a survey (2026-08-21)
+
+Asked to fix the pagination dots everywhere, I grepped `paginationDot|RebuildPagination`,
+found five carousels, fixed them, and reported "all five". Cesar asked "did you fix it for
+ALL dots — balls, roster, main screen notices?" There were **seven**. The two I missed did
+not use the word `paginationDot` at all:
+
+- `HomeScreenController.dotsContainer` → `PageDots/Dot1,Dot2,Dot3`
+- `GachaCarouselController._dotContainer` → `DotRow/DotTemplate`
+
+And the Home one had the **opposite** bug — three hand-authored scene children that could not
+GROW, so a 4th notice cycled with no dot and only logged a shortfall warning. A fix aimed
+only at "unbounded growth" would have missed it even if I had found the file.
+
+**The tell:** my search keyed on the *name the first hit happened to use*. Two other authors
+had solved the same problem with different vocabulary. What actually found them was searching
+for the SHAPE — fields typed `List<Image>`/`Transform ...Container`, code colouring a child by
+`i == currentIndex`, and GameObjects named `*Dot*` in the scene YAML — plus reading the scene,
+not just the C#.
+
+**How to apply:** when the task says "everywhere", one grep is a starting point, never the
+answer. Enumerate by shape and by artifact (scene/prefab names), state the count you believe
+is total, and say what you searched so the number can be challenged. Related: Lesson AZ.
+
+## Lesson BB — the scene churn was play mode, and I diagnosed it backwards twice (2026-08-21)
+
+ShellScene saves rewrote ~1285 lines of layout-driven RectTransforms nobody touched. I called
+it "ambient — any save does this", because a no-edit open+save reproduced it. Later the SAME
+test produced zero churn and I nearly concluded it had fixed itself.
+
+Both readings were wrong. The variable was **play mode**, not the file and not the editor's
+age: entering and leaving play mode leaves layout-driven RectTransforms holding runtime-computed
+values, and **Unity does not mark the scene dirty for it** (`isDirty == false`), so the next
+save writes them silently. My first test happened to follow many play sessions; my second
+followed a fresh Unity start.
+
+Baking it away was only defensible after proving two things: **confinement** (all 153 sit under
+the ScaleWithScreenSize canvas, none under ConstantPixelSize, so they do not move with Game
+View size) and **convergence** (two independent sessions each walking 14 screens produced the
+same file hash). Also worth knowing: baking only the screens you visit bakes only those — the
+14-screen walk was deliberate.
+
+**How to apply:** when a symptom appears and disappears between runs, the variable is something
+you did between runs, not the artifact. Find it and reproduce on demand BEFORE proposing a fix.
+And `isDirty == false` is not evidence a save is a no-op. Related: [[project_scene_save_bakes_layout_churn]].
+
