@@ -236,36 +236,45 @@ tourn.denied.head.unavailable,THIS TOURNAMENT IS NO LONGER AVAILABLE.,このト�
 tourn.denied.head.failed,ENTRY COULD NOT BE COMPLETED.,参加手続きを完了できませんでした。
 tourn.denied.req.entry_fee,ENTRY FEE:,参加費：
 tourn.denied.req.your_balance,YOUR BALANCE:,所持ポイント：
-AUTH_LOGIN_TITLE,Welcome Back,おかえりなさい
+AUTH_LOGIN_TITLE,LOGIN WITH EMAIL,メールアドレスでログイン
+AUTH_LOGIN_EMAIL_LABEL,EMAIL,メールアドレス
+AUTH_LOGIN_PASSWORD_LABEL,PASSWORD,パスワード
+AUTH_LOGIN_SERVICE_HEADER,LOGIN WITH A SERVICE,他のサービスでログイン
 AUTH_LOGIN_EMAIL_PLACEHOLDER,Email,メール
 AUTH_LOGIN_PASSWORD_PLACEHOLDER,Password,パスワード
 AUTH_LOGIN_FORGOT,Forgot Password?,パスワードを忘れた方
 AUTH_LOGIN_BUTTON,LOGIN,ログイン
-AUTH_LOGIN_GOOGLE,Continue with Google,Googleで続ける
-AUTH_LOGIN_APPLE,Continue with Apple,Appleで続ける
+AUTH_LOGIN_GOOGLE,Login with Google,Googleでログイン
+AUTH_LOGIN_APPLE,Login with Apple,Appleでログイン
 AUTH_LOGIN_OR,Or,または
-AUTH_LOGIN_NO_ACCOUNT,Don't have an account?,アカウントをお持ちでないですか？
+AUTH_LOGIN_NO_ACCOUNT,No account?  <color=#22B800><b>Create an account</b></color>,アカウントをお持ちでないですか？  <color=#22B800><b>アカウントを作成</b></color>
 AUTH_LOGIN_CREATE,Create Account,アカウント作成
-AUTH_LOGIN_CANCEL,Cancel,キャンセル
-AUTH_CREATE_USERNAME_TITLE,Create Username,ユーザー名を作成
+AUTH_LOGIN_CANCEL,CANCEL,キャンセル
+AUTH_CREATE_USERNAME_TITLE,CREATE USERNAME,ユーザー名を作成
+AUTH_CREATE_USERNAME_LABEL,USERNAME,ユーザー名
+AUTH_CREATE_USERNAME_HINT,"3–20 characters, letters/numbers/underscore",3〜20文字、英数字とアンダースコアが使えます
+AUTH_CREATE_USERNAME_BODY,Please choose a username.\n\nYour username is public and used across all Golfin services to interact with the community.\n\nYour username can only contain letters and numbers.,ユーザー名を決めてください。\n\nユーザー名は公開され、Golfinのすべてのサービスでコミュニティとの交流に使用されます。\n\nユーザー名には英数字のみ使用できます。
 AUTH_CREATE_USERNAME_PLACEHOLDER,Username,ユーザー名
 AUTH_CREATE_USERNAME_BUTTON,CREATE,作成
-AUTH_CREATE_USERNAME_CANCEL,Cancel,キャンセル
-AUTH_SIGNUP_TITLE,Create Account,アカウント作成
+AUTH_CREATE_USERNAME_CANCEL,CANCEL,キャンセル
+AUTH_SIGNUP_TITLE,SIGN UP WITH EMAIL,メールアドレスで登録
+AUTH_SIGNUP_EMAIL_LABEL,EMAIL,メールアドレス
+AUTH_SIGNUP_PASSWORD_LABEL,PASSWORD,パスワード
+AUTH_SIGNUP_SERVICE_HEADER,SIGN UP WITH  A SERVICE,他のサービスで登録
 AUTH_SIGNUP_EMAIL_PLACEHOLDER,Email,メール
 AUTH_SIGNUP_PASSWORD_PLACEHOLDER,Password,パスワード
-AUTH_SIGNUP_BUTTON,CREATE ACCOUNT,アカウント作成
-AUTH_SIGNUP_GOOGLE,Continue with Google,Googleで続ける
-AUTH_SIGNUP_APPLE,Continue with Apple,Appleで続ける
+AUTH_SIGNUP_BUTTON,CREATE,作成
+AUTH_SIGNUP_GOOGLE,Sign up with Google,Googleで登録
+AUTH_SIGNUP_APPLE,Sign up with Apple,Appleで登録
 AUTH_SIGNUP_OR,Or,または
-AUTH_SIGNUP_HAVE_ACCOUNT,Already have an account?,すでにアカウントをお持ちですか？
+AUTH_SIGNUP_HAVE_ACCOUNT,"If you already have an account, <color=#22b800><b>login here</b></color>",すでにアカウントをお持ちの方は、<color=#22b800><b>こちらからログイン</b></color>
 AUTH_SIGNUP_LOGIN,Login Here,こちらからログイン
-AUTH_SIGNUP_CANCEL,Cancel,キャンセル
-AUTH_SIGNUP_RULE_LEN8,At least 8 characters,8文字以上
-AUTH_SIGNUP_RULE_LOWER,Contains lowercase letter,小文字を含む
-AUTH_SIGNUP_RULE_UPPER,Contains uppercase letter,大文字を含む
-AUTH_SIGNUP_RULE_DIGIT,Contains number,数字を含む
-AUTH_SIGNUP_RULE_SPECIAL,Contains special character,特殊文字を含む
+AUTH_SIGNUP_CANCEL,CANCEL,キャンセル
+AUTH_SIGNUP_RULE_LEN8,Must contain 8 characters,8文字以上必要です
+AUTH_SIGNUP_RULE_LOWER,Must contain one lowercase letter,小文字を1文字以上含めてください
+AUTH_SIGNUP_RULE_UPPER,Must contain one uppercase letter,大文字を1文字以上含めてください
+AUTH_SIGNUP_RULE_DIGIT,Must contain one number,数字を1文字以上含めてください
+AUTH_SIGNUP_RULE_SPECIAL,Must contain one special character,記号を1文字以上含めてください
 AUTH_EMAIL_CONF_TITLE,Check Your Email,メールを確認してください
 AUTH_EMAIL_CONF_BODY,We sent a confirmation link to,確認リンクを送信しました
 AUTH_EMAIL_CONF_OPEN,Open Email App,メールアプリを開く
@@ -312,6 +321,17 @@ MODE_TOURNAMENTS_TAGLINE,Be the best and earn rewards,頂点に立って報酬�
 MODE_TOURNAMENTS_DESC,"Enter live tournaments, play the featured holes, and climb the leaderboard before time runs out. Finish high to claim your share of the prizes — every stroke counts.",開催中のトーナメントに参加して対象ホールをプレイし、期間内にリーダーボードを駆け上がろう。上位でフィニッシュして賞品を手に入れよう。一打一打が勝負を決める。
 MODE_REWARDS_VARY,Varies by tournament,トーナメントごとに異なります
 MODE_NO_ENTRY_FEE,NO ENTRY FEE,参加費無料
+MODE_MULTIPLAYER,Multiplayer,マルチプレイ
+MODE_DRIVING_RANGE,DRIVING RANGE,ドライビングレンジ
+MODE_MISSIONS,MISSIONS,ミッション
+MODE_PRACTICE_TAGLINE,Sharpen your skills on any hole.,好きなホールで腕を磨こう。
+MODE_PRACTICE_DESC,Practice your golf skills on any course. Choose a hole and tee off at your own pace — no pressure.,好きなコースでゴルフの腕を磨こう。ホールを選んで、自分のペースでティーオフ。プレッシャーはありません。
+MODE_VERSUS_1V1_TAGLINE,1v1,1v1
+MODE_VERSUS_1V1_DESC,"Face off in fast-paced 1v1 golf matches where every shot matters. Master the course, outplay your opponent, and sink clutch putts to claim victory.",一打が勝負を分けるスピーディーな1v1マッチで対戦しよう。コースを攻略し、相手を出し抜き、勝負どころのパットを沈めて勝利をつかもう。
+MODE_DRIVING_RANGE_TAGLINE,Coming Soon — practice your drives.,近日公開 — ドライバーショットを練習しよう。
+MODE_DRIVING_RANGE_DESC,A dedicated driving range mode where you can practice long shots and experiment with different clubs.,ロングショットの練習や、さまざまなクラブを試せる専用のドライビングレンジモード。
+MODE_MISSIONS_TAGLINE,Coming Soon — complete challenges.,近日公開 — チャレンジに挑戦しよう。
+MODE_MISSIONS_DESC,Complete special challenges and objectives to earn bonus rewards and exclusive items.,特別なチャレンジや目標を達成して、ボーナス報酬や限定アイテムを手に入れよう。
 UI_LOCKED,LOCKED,ロック
 RESULT_REPLAY_HOLE,REPLAY HOLE,ホールをリプレイ
 RANK_DAILY,DAILY,デイリー

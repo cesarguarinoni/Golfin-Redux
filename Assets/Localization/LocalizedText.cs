@@ -44,6 +44,11 @@ public class LocalizedText : MonoBehaviour
 
     public void Refresh()
     {
+        // Resolve lazily: Refresh can be called before Awake has run — via the public SetKey, or
+        // from editor tooling previewing a language — and _label would still be null, so the call
+        // silently did nothing.
+        if (_label == null) _label = GetComponent<TextMeshProUGUI>();
+
         if (_label == null || string.IsNullOrEmpty(key)) return;
         _label.text = LocalizationManager.Get(key);
         ApplyPerLanguageSize();

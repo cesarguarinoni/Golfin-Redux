@@ -23,6 +23,12 @@ public static class LocalizationManager
             if (!string.IsNullOrEmpty(row.key))
                 _textMap[row.key] = row;
         }
+
+        // Any LocalizedText whose OnEnable ran before this point refreshed against a null map
+        // (Get() returns the key itself) or against the pre-Initialize default language, and
+        // SetLanguage would never reach it because CurrentLanguage already equals the startup
+        // language. Firing here makes the boot language independent of script execution order.
+        OnLanguageChanged?.Invoke();
     }
 
     public static void SetLanguage(Language language)

@@ -4089,6 +4089,20 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &57244688
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1148379623}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Golfin.Localization::LocalizedText
+  key: AUTH_SIGNUP_SERVICE_HEADER
+  japaneseFontScale: 0
 --- !u!1 &57829269
 GameObject:
   m_ObjectHideFlags: 0
@@ -5292,7 +5306,55 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 3433022277251171262, guid: 0e38efed3c43848b48aecc811d093914, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1148379639}
+    - targetCorrespondingSourceObject: {fileID: 4965494798967397289, guid: 0e38efed3c43848b48aecc811d093914, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1148379638}
+    - targetCorrespondingSourceObject: {fileID: 8247335447150641412, guid: 0e38efed3c43848b48aecc811d093914, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1148379637}
+    - targetCorrespondingSourceObject: {fileID: 4728196322380031780, guid: 0e38efed3c43848b48aecc811d093914, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1148379636}
+    - targetCorrespondingSourceObject: {fileID: 9042251334435438158, guid: 0e38efed3c43848b48aecc811d093914, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1148379635}
+    - targetCorrespondingSourceObject: {fileID: 3446463510173341382, guid: 0e38efed3c43848b48aecc811d093914, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 521843889}
+    - targetCorrespondingSourceObject: {fileID: 4203762299136433095, guid: 0e38efed3c43848b48aecc811d093914, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1435534168}
+    - targetCorrespondingSourceObject: {fileID: 3950441308409345080, guid: 0e38efed3c43848b48aecc811d093914, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 690435310}
+    - targetCorrespondingSourceObject: {fileID: 1818262235860717777, guid: 0e38efed3c43848b48aecc811d093914, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1634098478}
+    - targetCorrespondingSourceObject: {fileID: 4689088719396471988, guid: 0e38efed3c43848b48aecc811d093914, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 615370150}
+    - targetCorrespondingSourceObject: {fileID: 2557480118754583228, guid: 0e38efed3c43848b48aecc811d093914, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1573134827}
+    - targetCorrespondingSourceObject: {fileID: 7872587741262748448, guid: 0e38efed3c43848b48aecc811d093914, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 57244688}
+    - targetCorrespondingSourceObject: {fileID: 7564123016250032318, guid: 0e38efed3c43848b48aecc811d093914, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 270180999}
+    - targetCorrespondingSourceObject: {fileID: 5556934436005331154, guid: 0e38efed3c43848b48aecc811d093914, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1042867970}
+    - targetCorrespondingSourceObject: {fileID: 8387199057545314820, guid: 0e38efed3c43848b48aecc811d093914, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1837530792}
+    - targetCorrespondingSourceObject: {fileID: 5249420712945367134, guid: 0e38efed3c43848b48aecc811d093914, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 939883688}
   m_SourcePrefab: {fileID: 100100000, guid: 0e38efed3c43848b48aecc811d093914, type: 3}
 --- !u!1 &88987606 stripped
 GameObject:
@@ -5304,7 +5366,7 @@ MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 5486429074256593133, guid: 0e38efed3c43848b48aecc811d093914, type: 3}
   m_PrefabInstance: {fileID: 88987605}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
+  m_GameObject: {fileID: 1148379619}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
@@ -13007,6 +13069,20 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 226715866}
   m_CullTransparentMesh: 1
+--- !u!114 &227351282
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1265413662}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Golfin.Localization::LocalizedText
+  key: AUTH_LOGIN_NO_ACCOUNT
+  japaneseFontScale: 0
 --- !u!1 &229762324
 GameObject:
   m_ObjectHideFlags: 0
@@ -15297,6 +15373,20 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 266168736}
   m_CullTransparentMesh: 1
+--- !u!114 &270180999
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1148379622}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Golfin.Localization::LocalizedText
+  key: AUTH_SIGNUP_GOOGLE
+  japaneseFontScale: 0
 --- !u!1 &277874392
 GameObject:
   m_ObjectHideFlags: 0
@@ -30384,6 +30474,20 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 521459001}
   m_CullTransparentMesh: 1
+--- !u!114 &521843889
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1148379629}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Golfin.Localization::LocalizedText
+  key: AUTH_SIGNUP_RULE_LEN8
+  japaneseFontScale: 0
 --- !u!1 &525263962
 GameObject:
   m_ObjectHideFlags: 0
@@ -35910,6 +36014,20 @@ MonoBehaviour:
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.RectMask2D
   m_Padding: {x: 0, y: 0, z: 0, w: 0}
   m_Softness: {x: 0, y: 0}
+--- !u!114 &615370150
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1148379625}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Golfin.Localization::LocalizedText
+  key: AUTH_SIGNUP_RULE_SPECIAL
+  japaneseFontScale: 0
 --- !u!1 &616052796
 GameObject:
   m_ObjectHideFlags: 0
@@ -40952,6 +41070,20 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 690037508}
   m_CullTransparentMesh: 1
+--- !u!114 &690435310
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1148379627}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Golfin.Localization::LocalizedText
+  key: AUTH_SIGNUP_RULE_LOWER
+  japaneseFontScale: 0
 --- !u!1 &694951796
 GameObject:
   m_ObjectHideFlags: 0
@@ -46713,7 +46845,28 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 7386290159627088343, guid: 0dccdf353a4e14a14827c702798697eb, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 808662313}
+    - targetCorrespondingSourceObject: {fileID: 5651152789586936834, guid: 0dccdf353a4e14a14827c702798697eb, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 808662312}
+    - targetCorrespondingSourceObject: {fileID: 699036962233422438, guid: 0dccdf353a4e14a14827c702798697eb, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 808662311}
+    - targetCorrespondingSourceObject: {fileID: 3796334852147757736, guid: 0dccdf353a4e14a14827c702798697eb, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 808662310}
+    - targetCorrespondingSourceObject: {fileID: 1460602131904197380, guid: 0dccdf353a4e14a14827c702798697eb, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 808662309}
+    - targetCorrespondingSourceObject: {fileID: 2658897604844134212, guid: 0dccdf353a4e14a14827c702798697eb, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1557579891}
+    - targetCorrespondingSourceObject: {fileID: 3396745554794602670, guid: 0dccdf353a4e14a14827c702798697eb, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1279661393}
   m_SourcePrefab: {fileID: 100100000, guid: 0dccdf353a4e14a14827c702798697eb, type: 3}
 --- !u!1 &808662298 stripped
 GameObject:
@@ -46747,6 +46900,111 @@ RectTransform:
   m_CorrespondingSourceObject: {fileID: 9199701488795807327, guid: 0dccdf353a4e14a14827c702798697eb, type: 3}
   m_PrefabInstance: {fileID: 808662297}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &808662302 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 3396745554794602670, guid: 0dccdf353a4e14a14827c702798697eb, type: 3}
+  m_PrefabInstance: {fileID: 808662297}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &808662303 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 2658897604844134212, guid: 0dccdf353a4e14a14827c702798697eb, type: 3}
+  m_PrefabInstance: {fileID: 808662297}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &808662304 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 1460602131904197380, guid: 0dccdf353a4e14a14827c702798697eb, type: 3}
+  m_PrefabInstance: {fileID: 808662297}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &808662305 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 3796334852147757736, guid: 0dccdf353a4e14a14827c702798697eb, type: 3}
+  m_PrefabInstance: {fileID: 808662297}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &808662306 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 699036962233422438, guid: 0dccdf353a4e14a14827c702798697eb, type: 3}
+  m_PrefabInstance: {fileID: 808662297}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &808662307 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 5651152789586936834, guid: 0dccdf353a4e14a14827c702798697eb, type: 3}
+  m_PrefabInstance: {fileID: 808662297}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &808662308 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 7386290159627088343, guid: 0dccdf353a4e14a14827c702798697eb, type: 3}
+  m_PrefabInstance: {fileID: 808662297}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &808662309
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 808662304}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Golfin.Localization::LocalizedText
+  key: AUTH_CREATE_USERNAME_BODY
+  japaneseFontScale: 0
+--- !u!114 &808662310
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 808662305}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Golfin.Localization::LocalizedText
+  key: AUTH_CREATE_USERNAME_HINT
+  japaneseFontScale: 0
+--- !u!114 &808662311
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 808662306}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Golfin.Localization::LocalizedText
+  key: AUTH_CREATE_USERNAME_PLACEHOLDER
+  japaneseFontScale: 0
+--- !u!114 &808662312
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 808662307}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Golfin.Localization::LocalizedText
+  key: AUTH_CREATE_USERNAME_LABEL
+  japaneseFontScale: 0
+--- !u!114 &808662313
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 808662308}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Golfin.Localization::LocalizedText
+  key: AUTH_CREATE_USERNAME_TITLE
+  japaneseFontScale: 0
 --- !u!1 &808821227
 GameObject:
   m_ObjectHideFlags: 0
@@ -48467,7 +48725,43 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 2700261513298929437, guid: fadc26950d1474732b0481bd24fd0251, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1265413678}
+    - targetCorrespondingSourceObject: {fileID: 7451722657259739062, guid: fadc26950d1474732b0481bd24fd0251, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1265413677}
+    - targetCorrespondingSourceObject: {fileID: 6365635017900845800, guid: fadc26950d1474732b0481bd24fd0251, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1265413676}
+    - targetCorrespondingSourceObject: {fileID: 4058113882693340357, guid: fadc26950d1474732b0481bd24fd0251, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1265413675}
+    - targetCorrespondingSourceObject: {fileID: 4120094710866681620, guid: fadc26950d1474732b0481bd24fd0251, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1265413674}
+    - targetCorrespondingSourceObject: {fileID: 1368105934145623025, guid: fadc26950d1474732b0481bd24fd0251, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1259225436}
+    - targetCorrespondingSourceObject: {fileID: 38006103240924649, guid: fadc26950d1474732b0481bd24fd0251, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 924137818}
+    - targetCorrespondingSourceObject: {fileID: 8694359312405536802, guid: fadc26950d1474732b0481bd24fd0251, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 875096569}
+    - targetCorrespondingSourceObject: {fileID: 1393466877916859018, guid: fadc26950d1474732b0481bd24fd0251, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1360475043}
+    - targetCorrespondingSourceObject: {fileID: 5694967676510194800, guid: fadc26950d1474732b0481bd24fd0251, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1005122045}
+    - targetCorrespondingSourceObject: {fileID: 6173954327638618070, guid: fadc26950d1474732b0481bd24fd0251, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1207474382}
+    - targetCorrespondingSourceObject: {fileID: 805253512110798459, guid: fadc26950d1474732b0481bd24fd0251, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 227351282}
   m_SourcePrefab: {fileID: 100100000, guid: fadc26950d1474732b0481bd24fd0251, type: 3}
 --- !u!1 &826858696 stripped
 GameObject:
@@ -48479,7 +48773,7 @@ MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 8311774662718996598, guid: fadc26950d1474732b0481bd24fd0251, type: 3}
   m_PrefabInstance: {fileID: 826858695}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
+  m_GameObject: {fileID: 1265413662}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
@@ -48501,7 +48795,7 @@ MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 173002842416497364, guid: fadc26950d1474732b0481bd24fd0251, type: 3}
   m_PrefabInstance: {fileID: 826858695}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
+  m_GameObject: {fileID: 1265413668}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
@@ -51428,6 +51722,20 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 874923821}
   m_CullTransparentMesh: 1
+--- !u!114 &875096569
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1265413666}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Golfin.Localization::LocalizedText
+  key: AUTH_LOGIN_SERVICE_HEADER
+  japaneseFontScale: 0
 --- !u!1 &880317234
 GameObject:
   m_ObjectHideFlags: 0
@@ -54846,6 +55154,20 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: TIP_NEXT
   japaneseFontScale: 0
+--- !u!114 &924137818
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1265413667}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Golfin.Localization::LocalizedText
+  key: AUTH_LOGIN_BUTTON
+  japaneseFontScale: 0
 --- !u!1 &924272910
 GameObject:
   m_ObjectHideFlags: 0
@@ -56251,6 +56573,20 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &939883688
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1148379619}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Golfin.Localization::LocalizedText
+  key: AUTH_SIGNUP_HAVE_ACCOUNT
+  japaneseFontScale: 0
 --- !u!1 &944256035
 GameObject:
   m_ObjectHideFlags: 0
@@ -60308,6 +60644,20 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1004990121}
   m_CullTransparentMesh: 1
+--- !u!114 &1005122045
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1265413664}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Golfin.Localization::LocalizedText
+  key: AUTH_LOGIN_APPLE
+  japaneseFontScale: 0
 --- !u!1001 &1011324447
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -62547,6 +62897,20 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1042800939}
   m_CullTransparentMesh: 1
+--- !u!114 &1042867970
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1148379621}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Golfin.Localization::LocalizedText
+  key: AUTH_SIGNUP_APPLE
+  japaneseFontScale: 0
 --- !u!1 &1043108156
 GameObject:
   m_ObjectHideFlags: 0
@@ -69564,6 +69928,156 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1146856974}
   m_CullTransparentMesh: 1
+--- !u!1 &1148379619 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 5249420712945367134, guid: 0e38efed3c43848b48aecc811d093914, type: 3}
+  m_PrefabInstance: {fileID: 88987605}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &1148379620 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 8387199057545314820, guid: 0e38efed3c43848b48aecc811d093914, type: 3}
+  m_PrefabInstance: {fileID: 88987605}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &1148379621 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 5556934436005331154, guid: 0e38efed3c43848b48aecc811d093914, type: 3}
+  m_PrefabInstance: {fileID: 88987605}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &1148379622 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 7564123016250032318, guid: 0e38efed3c43848b48aecc811d093914, type: 3}
+  m_PrefabInstance: {fileID: 88987605}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &1148379623 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 7872587741262748448, guid: 0e38efed3c43848b48aecc811d093914, type: 3}
+  m_PrefabInstance: {fileID: 88987605}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &1148379624 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 2557480118754583228, guid: 0e38efed3c43848b48aecc811d093914, type: 3}
+  m_PrefabInstance: {fileID: 88987605}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &1148379625 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 4689088719396471988, guid: 0e38efed3c43848b48aecc811d093914, type: 3}
+  m_PrefabInstance: {fileID: 88987605}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &1148379626 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 1818262235860717777, guid: 0e38efed3c43848b48aecc811d093914, type: 3}
+  m_PrefabInstance: {fileID: 88987605}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &1148379627 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 3950441308409345080, guid: 0e38efed3c43848b48aecc811d093914, type: 3}
+  m_PrefabInstance: {fileID: 88987605}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &1148379628 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 4203762299136433095, guid: 0e38efed3c43848b48aecc811d093914, type: 3}
+  m_PrefabInstance: {fileID: 88987605}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &1148379629 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 3446463510173341382, guid: 0e38efed3c43848b48aecc811d093914, type: 3}
+  m_PrefabInstance: {fileID: 88987605}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &1148379630 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 9042251334435438158, guid: 0e38efed3c43848b48aecc811d093914, type: 3}
+  m_PrefabInstance: {fileID: 88987605}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &1148379631 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 4728196322380031780, guid: 0e38efed3c43848b48aecc811d093914, type: 3}
+  m_PrefabInstance: {fileID: 88987605}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &1148379632 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 8247335447150641412, guid: 0e38efed3c43848b48aecc811d093914, type: 3}
+  m_PrefabInstance: {fileID: 88987605}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &1148379633 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 4965494798967397289, guid: 0e38efed3c43848b48aecc811d093914, type: 3}
+  m_PrefabInstance: {fileID: 88987605}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &1148379634 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 3433022277251171262, guid: 0e38efed3c43848b48aecc811d093914, type: 3}
+  m_PrefabInstance: {fileID: 88987605}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1148379635
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1148379630}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Golfin.Localization::LocalizedText
+  key: AUTH_SIGNUP_PASSWORD_PLACEHOLDER
+  japaneseFontScale: 0
+--- !u!114 &1148379636
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1148379631}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Golfin.Localization::LocalizedText
+  key: AUTH_SIGNUP_PASSWORD_LABEL
+  japaneseFontScale: 0
+--- !u!114 &1148379637
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1148379632}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Golfin.Localization::LocalizedText
+  key: AUTH_SIGNUP_EMAIL_PLACEHOLDER
+  japaneseFontScale: 0
+--- !u!114 &1148379638
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1148379633}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Golfin.Localization::LocalizedText
+  key: AUTH_SIGNUP_EMAIL_LABEL
+  japaneseFontScale: 0
+--- !u!114 &1148379639
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1148379634}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Golfin.Localization::LocalizedText
+  key: AUTH_SIGNUP_TITLE
+  japaneseFontScale: 0
 --- !u!1 &1150418945
 GameObject:
   m_ObjectHideFlags: 0
@@ -72144,6 +72658,20 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!114 &1207474382
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1265413663}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Golfin.Localization::LocalizedText
+  key: AUTH_LOGIN_CANCEL
+  japaneseFontScale: 0
 --- !u!1 &1211199077
 GameObject:
   m_ObjectHideFlags: 0
@@ -74807,6 +75335,20 @@ MonoBehaviour:
   m_FlexibleWidth: 1
   m_FlexibleHeight: -1
   m_LayoutPriority: 1
+--- !u!114 &1259225436
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1265413668}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Golfin.Localization::LocalizedText
+  key: AUTH_LOGIN_FORGOT
+  japaneseFontScale: 0
 --- !u!1 &1260597537
 GameObject:
   m_ObjectHideFlags: 0
@@ -74892,6 +75434,136 @@ MonoBehaviour:
   m_ChildScaleWidth: 0
   m_ChildScaleHeight: 0
   m_ReverseArrangement: 0
+--- !u!1 &1265413662 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 805253512110798459, guid: fadc26950d1474732b0481bd24fd0251, type: 3}
+  m_PrefabInstance: {fileID: 826858695}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &1265413663 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 6173954327638618070, guid: fadc26950d1474732b0481bd24fd0251, type: 3}
+  m_PrefabInstance: {fileID: 826858695}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &1265413664 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 5694967676510194800, guid: fadc26950d1474732b0481bd24fd0251, type: 3}
+  m_PrefabInstance: {fileID: 826858695}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &1265413665 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 1393466877916859018, guid: fadc26950d1474732b0481bd24fd0251, type: 3}
+  m_PrefabInstance: {fileID: 826858695}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &1265413666 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 8694359312405536802, guid: fadc26950d1474732b0481bd24fd0251, type: 3}
+  m_PrefabInstance: {fileID: 826858695}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &1265413667 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 38006103240924649, guid: fadc26950d1474732b0481bd24fd0251, type: 3}
+  m_PrefabInstance: {fileID: 826858695}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &1265413668 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 1368105934145623025, guid: fadc26950d1474732b0481bd24fd0251, type: 3}
+  m_PrefabInstance: {fileID: 826858695}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &1265413669 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 4120094710866681620, guid: fadc26950d1474732b0481bd24fd0251, type: 3}
+  m_PrefabInstance: {fileID: 826858695}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &1265413670 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 4058113882693340357, guid: fadc26950d1474732b0481bd24fd0251, type: 3}
+  m_PrefabInstance: {fileID: 826858695}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &1265413671 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 6365635017900845800, guid: fadc26950d1474732b0481bd24fd0251, type: 3}
+  m_PrefabInstance: {fileID: 826858695}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &1265413672 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 7451722657259739062, guid: fadc26950d1474732b0481bd24fd0251, type: 3}
+  m_PrefabInstance: {fileID: 826858695}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &1265413673 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 2700261513298929437, guid: fadc26950d1474732b0481bd24fd0251, type: 3}
+  m_PrefabInstance: {fileID: 826858695}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1265413674
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1265413669}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Golfin.Localization::LocalizedText
+  key: AUTH_LOGIN_PASSWORD_PLACEHOLDER
+  japaneseFontScale: 0
+--- !u!114 &1265413675
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1265413670}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Golfin.Localization::LocalizedText
+  key: AUTH_LOGIN_PASSWORD_LABEL
+  japaneseFontScale: 0
+--- !u!114 &1265413676
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1265413671}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Golfin.Localization::LocalizedText
+  key: AUTH_LOGIN_EMAIL_PLACEHOLDER
+  japaneseFontScale: 0
+--- !u!114 &1265413677
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1265413672}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Golfin.Localization::LocalizedText
+  key: AUTH_LOGIN_EMAIL_LABEL
+  japaneseFontScale: 0
+--- !u!114 &1265413678
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1265413673}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Golfin.Localization::LocalizedText
+  key: AUTH_LOGIN_TITLE
+  japaneseFontScale: 0
 --- !u!1 &1265890514
 GameObject:
   m_ObjectHideFlags: 0
@@ -75788,6 +76460,20 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Golfin.Localization::LocalizedText
   key: CLUB_FILTER_WOODS
+  japaneseFontScale: 0
+--- !u!114 &1279661393
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 808662302}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Golfin.Localization::LocalizedText
+  key: AUTH_CREATE_USERNAME_CANCEL
   japaneseFontScale: 0
 --- !u!1 &1282895093
 GameObject:
@@ -79602,6 +80288,20 @@ MonoBehaviour:
   m_ChildScaleWidth: 0
   m_ChildScaleHeight: 0
   m_ReverseArrangement: 0
+--- !u!114 &1360475043
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1265413665}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Golfin.Localization::LocalizedText
+  key: AUTH_LOGIN_GOOGLE
+  japaneseFontScale: 0
 --- !u!1 &1362266289
 GameObject:
   m_ObjectHideFlags: 0
@@ -83865,6 +84565,20 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1433495374}
   m_CullTransparentMesh: 1
+--- !u!114 &1435534168
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1148379628}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Golfin.Localization::LocalizedText
+  key: AUTH_SIGNUP_RULE_UPPER
+  japaneseFontScale: 0
 --- !u!1 &1436452701
 GameObject:
   m_ObjectHideFlags: 0
@@ -93784,6 +94498,20 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1556226288}
   m_CullTransparentMesh: 1
+--- !u!114 &1557579891
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 808662303}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Golfin.Localization::LocalizedText
+  key: AUTH_CREATE_USERNAME_BUTTON
+  japaneseFontScale: 0
 --- !u!1 &1558219248
 GameObject:
   m_ObjectHideFlags: 0
@@ -95059,6 +95787,20 @@ MonoBehaviour:
   carousel: {fileID: 500215735}
   slideDuration: 0.3
   fadeDuration: 0.2
+--- !u!114 &1573134827
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1148379624}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Golfin.Localization::LocalizedText
+  key: AUTH_SIGNUP_BUTTON
+  japaneseFontScale: 0
 --- !u!1 &1576317651
 GameObject:
   m_ObjectHideFlags: 0
@@ -98698,6 +99440,20 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: ROSTER_LEVEL_UP
   japaneseFontScale: 0.85
+--- !u!114 &1634098478
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1148379626}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Golfin.Localization::LocalizedText
+  key: AUTH_SIGNUP_RULE_DIGIT
+  japaneseFontScale: 0
 --- !u!1 &1636326840
 GameObject:
   m_ObjectHideFlags: 0
@@ -110310,6 +111066,20 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1836673836}
   m_CullTransparentMesh: 1
+--- !u!114 &1837530792
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1148379620}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Golfin.Localization::LocalizedText
+  key: AUTH_SIGNUP_CANCEL
+  japaneseFontScale: 0
 --- !u!1 &1838562969
 GameObject:
   m_ObjectHideFlags: 0
