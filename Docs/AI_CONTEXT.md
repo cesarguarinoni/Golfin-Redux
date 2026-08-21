@@ -23,6 +23,21 @@
 
 ## 🟢 PRIORITY QUEUED — pick up immediately
 
+> **▶ 2026-08-21 · tournament signup modal says FREE ENTRY — SHIPPED (6d6e31458, pushed).**
+>
+> A zero-fee tournament read **ENTRY 🪙 0** in the signup modal while the selection card showed the
+> FREE ENTRY badge for the same tournament. `TournamentSignupModalController.ApplyEntryPill` now
+> drives the pill from the fee: 0 → one centred label from the key the list already uses
+> (`TOURN_FREE_ENTRY` → "FREE ENTRY" / 参加無料) with the coin + amount deactivated; > 0 → the
+> authored rect restored exactly (EntryText (16,0) 72×28) and the label localized via `TOURN_ENTRY`
+> (EN string unchanged). The pill has no layout group — its children are absolutely positioned — so
+> the free state stretches the label across the pill and the paid state restores the captured rect.
+> Swept every reader of `EntryFeeRP`: the card and this modal are the only two surfaces that render
+> it, so "Entry 0" cannot appear anywhere else. Verified in play mode through the real entry path
+> (Home → PLAY → Tournaments → SIGN UP on Lomond Championship) in EN and JP, plus a 500RP re-apply
+> for the paid state. Mode Select's separate `entryFee` already falls back to "NO ENTRY FEE" and was
+> left alone.
+
 > **▶ 2026-08-21 · pagination dots, the ShellScene save churn, and editor dev tooling — SHIPPED
 > (f2bcdbc29, 364519dfc, 8e7cb4777, pushed).**
 >
