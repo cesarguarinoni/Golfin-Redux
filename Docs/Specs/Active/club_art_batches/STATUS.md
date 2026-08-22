@@ -1,8 +1,10 @@
 # STATUS — club_art_batches
 
-`IN_PROGRESS` (2026-08-20, Cowork/Architect runner).
+`IN_PROGRESS` (2026-08-22, Cowork/Architect runner).
 
-## Committed and verified clean (9 brands)
+**Coverage: 15 of 19 brands complete — 75 of 95 head designs.**
+
+## Committed and verified clean (15 brands)
 
 **EAGLEZ — DONE, 13 new sprites committed (2026-08-20).** Driver portrait + driver controls were
 already in the repo; generated Wood/Iron/Wedge/Putter portraits + controls and all five fulls
@@ -160,22 +162,24 @@ left-to-right for the viewer... Change absolutely nothing else." Cheaper than a 
 Write **"on a plain solid white background"** in the first W2 prompt instead of "transparent
 background" - it avoids the checkerboard render and the extra correction round-trip entirely.
 
-## BogeyB - 11 of 13 committed (2026-08-21), WEDGE + PUTTER FULLS STILL OWED
+## BogeyB - COMPLETE, 13 of 13 committed (2026-08-21)
 
 Committed: portraits Driver/Wood/Wedge/Putter, controls Driver/Wood/Wedge/Putter. Iron portrait and
 iron controls were already shipped. All 8 pass qa.py at thresh=235, no seal needed - the olive-gold
 shaft is dark enough that the flood fill never eats it. Plus 3 of 5 full scenes:
 `Full/{Driver,Wood,Iron}-BogeyB.png`.
 
-### ⛔ STOPPED ON GEMINI'S DAILY IMAGE QUOTA (2026-08-21)
-"I can't create more images for you today." **Still owed: `Wedge-BogeyB.png` and
-`Putter-BogeyB.png`.** Both raws are ready to go - resume with W1:
-- Wedge: upload `mireo_up/WedgeA-Fyloe.jpg` first, `bb_wedge_portrait_raw.jpg` second
-- Putter: upload `mireo_up/Putter-GolfinX.jpg` first, `bb_putter_portrait_raw.jpg` second
+All 5 full scenes done: `Full/{Driver,Wood,Iron,Wedge,Putter}-BogeyB.png`, 537x900 rounded.
 
-Both of those templates carry a PURPLE grip that bleeds through - the prompt already says
-"an olive-gold shaft with a black ferrule band and a matte black grip. NO purple anywhere - the grip
-must be matte black, not purple." Check the grip on the result anyway.
+### Gemini has a DAILY IMAGE QUOTA
+Hit it mid-brand: *"I can't create more images for you today."* Not a bug and nothing to work
+around - it resets on Google's clock (next day worked). Bank and commit whatever is finished before
+stopping, and write down exactly which items are owed plus which template pairs with which raw, so
+the resume is mechanical.
+
+Note: naming the grip explicitly ("matte black grip. NO purple anywhere - the grip must be matte
+black, not purple") stopped the Fyloe/GolfinX purple-grip bleed on the FIRST try for both the wedge
+and the putter. Worth keeping in every W1 prompt that uses those two templates.
 
 Identity-sheet row was already accurate for this brand; the only refinement is that the star cluster
 is ONE LARGE star with two smaller ones, and the ferrule is a black band on an olive-gold shaft.
@@ -202,9 +206,124 @@ The driver controls print "BogeyB" rotated along the sole. One in-chat correctio
 and shipped `S_Controls_Iron_BOGEYB.png` reads the same way - it is the house style for this brand,
 not a defect. Don't spend generations on it.
 
-## Then, in order (10 brands, ~92 generations)
+## Fairway THREADS - COMPLETE (13 of 13, 2026-08-22)
 
-~~EAGLEZ~~ → ~~FOREFIT~~ → ~~PAR PERFECT~~ → BogeyB (fulls outstanding) → Fairway THREADS → GREEN SWING → FairX → FAIRLOFT →
+Committed: 5 portraits (the iron was already shipped), 5 controls, 5 fulls
+(`Full/{Driver,Wood,Iron,Wedge,Putter}-Fairway.png`). All pass qa.py and were eyeballed against
+their templates for pose before committing.
+The putter portrait needed the bbox-width fit (scale bbox width -> 253, centre), same as PAR PERFECT
+and BogeyB - maxrow came out 222 against the shipped norm of 224.
+
+### IDENTITY SHEET WAS WRONG FOR THIS BRAND - corrected from the art
+The sheet said "polished chrome head with a WHITE PANEL". The shipped iron has NO panel: the entire
+head is polished mirror chrome with no colour anywhere. "Fairway" in a black italic serif script
+with "THREADS" in small black capitals tucked beneath it, a small circled-G emblem at the toe and
+again on the sole, chrome shaft with a black ferrule band. Sheet row rewritten (ART WINS).
+
+Working prompt clause: *"the ENTIRE head is polished mirror chrome with no colour anywhere - no
+white panel, no insert, no accent stripe."* Every one of the 13 landed first try.
+
+### No brand-portrait raw for the iron - flatten the shipped sprite instead
+There is no `ft_iron_portrait_raw.jpg` (the iron portrait was already in the repo). For the iron
+full, flatten `S_Menu_Iron_FAIRWAY.png` onto white and upscale 3x, then use that as the second
+image. Do NOT substitute another brand's iron.
+
+```python
+im = Image.open('.../S_Menu_Iron_FAIRWAY.png').convert('RGBA')
+bg = Image.new('RGB', im.size, (255,255,255)); bg.paste(im, (0,0), im)
+bg.resize((im.width*3, im.height*3), Image.LANCZOS).save('ft_iron_portrait_ref.jpg', quality=95)
+```
+
+### ❌ CORRECTION: THE GEMINI "+" MENU WAS NEVER WEDGED - I WAS MISSING IT
+An earlier version of this file said the upload menu wedges and that the fix is to quit and reopen
+Chrome. **That was wrong.** Cesar: *"The + sign works perfectly in Chrome."* The real cause, found
+with `javascript_tool`:
+
+- The "Upload & tools" button is only **32x32 px**, and its rect **moves horizontally** as the
+  composer resizes (CSS x=632 in one state, x=750 in another).
+- A hardcoded click at (652, 370) therefore lands on it sometimes and misses entirely other times.
+- A miss looks exactly like a wedge: `aria-expanded` stays false, no overlay, no file input.
+
+**THE FIX: compute the click point from the DOM every single time. Never hardcode it.**
+```js
+const b=[...document.querySelectorAll('button')].find(x=>x.getAttribute('aria-label')==='Upload & tools');
+const r=b.getBoundingClientRect(); const s=1568/window.innerWidth;
+JSON.stringify({x:Math.round((r.x+r.width/2)*s), y:Math.round((r.y+r.height/2)*s)})
+```
+Click that point, then wait ~2s for the overlay to mount and verify before calling `find`:
+```js
+await new Promise(r=>setTimeout(r,2200)); document.querySelectorAll('input[type=file]').length  // expect 2
+```
+Then `find` -> `file_upload` on the FIRST ref in the very next call (the menu closes on its own).
+Do the same DOM lookup for Send (`aria-label="Send message"`) rather than trusting (1169, 509).
+
+Do NOT restart Chrome, do NOT recreate the tab, and do NOT hand this back to Cesar. With the
+DOM-computed coordinate the menu opened first try on every one of the 5 Fairway THREADS fulls.
+
+Also: synthetic `click()` / dispatched MouseEvents do not work (Angular Material ignores untrusted
+events), and neither does focusing the button and pressing Return or Space. Use a real click at the
+measured coordinate.
+
+### Composer click point
+After the images attach, clicking (678, 402) hits a **thumbnail** (you get a filename tooltip)
+instead of the text field. Click **(950, 402)**, type "XX", screenshot to confirm the caret is in
+the composer, then type the real prompt.
+
+## GREEN SWING - COMPLETE (13 of 13, 2026-08-22)
+
+Committed: 4 portraits + 4 controls (the iron of each was already shipped) and 5 fulls
+(`Full/{Driver,Wood,Iron,Wedge,Putter}-GreenSwing.png`). All pass qa.py; every pose was eyeballed
+against its template before committing. Controls post-processed at `thresh=235` (a black-bodied
+brand - no chrome-shaft split risk; 235 and 250 differed by <2% opaque pixels).
+
+### ⚠️ THE SHIPPED ART CONTRADICTS ITSELF - portrait is SILVER, controls are BLACK
+This brand shipped with only an iron, and its two sprites disagree on the body colour:
+
+- `Portraits/S_Menu_Iron_GREENSWING.png` - **satin silver / polished chrome body with a large WHITE
+  cavity panel.**
+- `Controls/S_Controls_Iron_GREENSWING.png` - **gloss BLACK body.**
+
+This is not a rendering artefact of the controls camera angle: G&F's iron pair was checked as a
+control and its portrait and controls are both chrome/white, so a light body does render light in
+the controls view.
+
+**Resolution applied (ART WINS, per sprite kind):** generate each sprite kind to match its own
+shipped counterpart. Portraits and fulls follow the SILVER portrait; controls follow the BLACK
+controls. Each folder then stays internally consistent, which is what the game actually renders.
+Same precedent as the mirrored sole wordmark on iron/wedge fulls.
+**Flag for Cesar:** if he wants one body colour for the whole brand, the portraits or the controls
+need regenerating - say which and it's 4 sprites either way.
+
+### Everything the two shipped sprites DO agree on (put all of this in every prompt)
+- A solid bright grass-green rectangular bar sitting in the cavity slot
+- A thin bright grass-green outline stripe framing the cavity panel
+- "GREEN" in light grey (portrait) / white (controls) capitals, "SWING" in bright grass-green
+- A small **crossed-golf-clubs** emblem (dark on silver, white on black)
+- **A MATTE BLACK shaft** - the sheet said "chrome shaft" and was wrong. Chrome hosel, black
+  ferrule band, matte black grip.
+
+Exclusions that earned their place: `NO lime green` (GOLFIN), `NO yellow-green`, and per template
+`NO blue / NO crossed flags` (KLYRO), `NO gold / NO amber / NO sakura` (MireO),
+`NO purple / NO flame graphics` (FYLOE), `NO crimson` (G&F).
+
+### The MireO wedge template carries its gloss-black body into a silver brand
+The wedge portrait came back with a BLACK head from the `S_Menu_Wedge_MIREO` template even though
+the prompt asked for satin silver. One in-chat correction cleared it cleanly and did NOT disturb
+the pose:
+
+> Same image, one single change: recolour the black body of the wedge head to SATIN SILVER /
+> POLISHED CHROME. The whole head becomes bright satin silver metal instead of black - the topline,
+> the toe, the sole and the surround around the white panel. Everything else stays exactly as it is.
+
+### In-chat emblem DE-duplication works (unlike logo removal)
+The wedge controls printed the crossed-clubs emblem twice. Naming which copy to delete and what to
+fill the space with fixed it in one shot with the pose intact. Note this is the opposite of the
+FOREFIT Nike-mark case, where in-chat REMOVAL failed - deleting a duplicate of the brand's own mark
+is fine; removing a summoned real-world trademark is not.
+
+## Then, in order (5 brands, ~67 generations)
+
+~~EAGLEZ~~ → ~~FOREFIT~~ → ~~PAR PERFECT~~ → ~~BogeyB~~ → ~~Fairway THREADS~~ → ~~GREEN SWING~~ → **FairX (next)** → FAIRLOFT →
 TeePit → VBOOOT (13 each), then **PUTT ACE last** (15 — it has no reference art at all).
 
 ## Identity sheet: ALL 19 ROWS NOW CORRECTED
@@ -218,7 +337,7 @@ Per Cesar's ART-WINS rule, every brand's Look column was audited against the shi
 - PAR PERFECT = white/black minimalist (NOT navy)
 - BogeyB = chrome + white + gold chevrons (NOT "scuffed charcoal/yellow")
 - Fairway THREADS = plain chrome + script wordmark (NOT "fabric textures")
-- GREEN SWING = chrome/white + bright grass green
+- GREEN SWING = silver/white portraits + GLOSS BLACK controls, bright grass green, BLACK shaft
 - FairX = gloss black + white insert (NOT "gunmetal/cyan")
 - FAIRLOFT = deep teal/petrol mallet (NOT "sky blue")
 - TeePit = gunmetal + bright green band (NOT violet — the FYLOE clash is resolved)
