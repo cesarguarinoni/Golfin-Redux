@@ -55,13 +55,36 @@
 > **Sweep of 12 screens.** Clean: Home, Roster, Inventory, Mode Selection, Stamina Shop, General
 > Shop, Gacha History. **Still stale — same one-line fix each, not yet done:**
 >
-> | Screen | Stale labels |
-> |---|---|
-> | Hole Selection | `LOCKED`, `NEXT` (×2), `PLAY`, the hole tutorial description — `HoleCardController` |
-> | Leaderboard | every rarity label (`COMMON`…`SUPREME`) on the 100 cards + Top-3, and `DIAMOND LEAGUE` |
-> | Tournament Leaderboard | rarity labels on every ranking row + Top-3 |
-> | Tournament Selection | `GOLFIN PRESENTS`, `LEADERBOARD`, `SIGN UP` per card |
-> | Gacha Prizes | `PULL x10` |
+> | Screen | Stale labels | Status |
+> |---|---|---|
+> | Hole Selection | `LOCKED`, `NEXT` (×2), `PLAY`, the hole tutorial description — `HoleCardController` | FIXED `c612caba7` |
+> | Leaderboard | every rarity label (`COMMON`…`SUPREME`) on the 100 cards + Top-3, and `DIAMOND LEAGUE` | FIXED `c612caba7` |
+> | Tournament Leaderboard | rarity labels on every ranking row + Top-3 | FIXED `c612caba7` (shared widgets) |
+> | Tournament Selection | `GOLFIN PRESENTS`, `LEADERBOARD`, `SIGN UP` per card | FIXED `c612caba7` — was never localized |
+> | Gacha Prizes | `PULL x10` | FIXED `c612caba7` |
+>
+> **All five closed in `c612caba7`.** Two distinct defects hid behind the one symptom:
+> *stale* (bound imperatively, never repainted — Hole Selection, both leaderboards' rarity/level,
+> `DIAMOND LEAGUE`, `PULL x10`) and *never localized at all* (Tournament Selection's CTA
+> `SIGN UP`/`LEADERBOARD`/`CONTINUE`/`UPCOMING`, the `ENDING`/`UPCOMING`/`ENDED` badges, and the
+> eyebrow's concatenated literal `" PRESENTS"` — English even after re-entering the screen). Six
+> new EN+JP rows were added (`TOURN_SPONSOR_PRESENTS` carries the whole `{0} PRESENTS` / `{0}提供`
+> pattern; `LEADERBOARD` reuses `NAV_LEADERBOARD`). **The new Japanese strings are first-pass and
+> want Ken's review.** Re-running the detector over all 12 menu screens now reports 0 stale
+> everywhere.
+>
+> ⚠️ **Two follow-ups this uncovered, neither fixed:**
+> 1. **Empty tournament board shows authored English placeholder rows.** Every board is empty in
+>    the Editor session, so `TournamentLeaderboardScreenController.PopulateLive()` early-returns
+>    and `BindCard` never runs — leaving the scene's hand-authored `RARE` / `LEGENDARY` rows and
+>    fake names on screen. Binding one row through the real path
+>    (`AddComponent<RankingsCardWidget>` + `Bind`) flips it `COMMON` ⇄ `コモン` in place, so the
+>    localization path is correct; the defect is that an empty board renders placeholders at all.
+> 2. **~30 more files still call `LocalizationManager.Get()` without subscribing** — the sweep only
+>    covered the 12 menu screens. In-game HUD (`ClubButtonWidget`, `FadeDrawButtonWidget`,
+>    `MapViewController`), the result/hole-complete modals, the account screens and most inventory
+>    modals are untested. They matter less (the Settings overlay is not reachable from most of
+>    them) but the in-game settings modal makes the HUD worth a look.
 
 ---
 
