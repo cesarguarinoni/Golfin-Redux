@@ -139,6 +139,16 @@ namespace Golfin.UI.GameplayTransition
                     if (loadingScreen != null) loadingScreen.SetProgress(0.5f + holeOp.progress * 0.5f);
                     yield return null;
                 }
+
+                // 5b. Roll this hole's sky and override the imported skybox + sun.
+                //     Done HERE, behind the loading screen, so the swap is never visible:
+                //     DynamicGI.UpdateEnvironment() re-solves ambient and the default
+                //     reflection probe, which would pop if it landed on a visible frame.
+                //     No-ops safely when the preset library is missing, in which case the
+                //     hole keeps the skybox HoleGeoImporter baked into it.
+                var holeScene = SceneManager.GetSceneByName(holeSceneName);
+                if (holeScene.IsValid() && holeScene.isLoaded)
+                    Golfin.Gameplay.Environment.SkyRandomizer.ApplyRandomTo(holeScene, holeNumber);
             }
 
             // 6. Loading screen finishes — hands off to gameplay. Does NOT navigate to Home;

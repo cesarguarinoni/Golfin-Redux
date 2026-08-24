@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1805f223f295e4b658cfea77a8ccad54, type: 3}
+  m_Name: SkyPreset_GoldenAfternoon
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.Gameplay.Environment.SkyPreset
+  _displayName: Golden Afternoon
+  _notes: Poly Haven 'qwantani_late_afternoon_puresky' (CC0). Low sun (19.1 deg),
+    long warm shadows.
+  _skyboxMaterial: {fileID: 2100000, guid: 10d4eac6269ce4d5c9e36212e2602c2a, type: 2}
+  _sunEuler: {x: 19.1, y: 306.1, z: 0}
+  _sunColor: {r: 1, g: 0.805, b: 0.572, a: 1}
+  _sunIntensity: 1.05
+  _overrideFog: 0
+  _fogColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+  _enabledInRotation: 1
+  _weight: 1

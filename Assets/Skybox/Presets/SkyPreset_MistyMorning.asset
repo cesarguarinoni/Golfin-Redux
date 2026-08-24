@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1805f223f295e4b658cfea77a8ccad54, type: 3}
+  m_Name: SkyPreset_MistyMorning
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.Gameplay.Environment.SkyPreset
+  _displayName: Misty Morning
+  _notes: 'Poly Haven ''kloofendal_misty_morning_puresky'' (CC0). Overcast: no sun
+    disc, soft cool light.'
+  _skyboxMaterial: {fileID: 2100000, guid: f0e9c66f200ba4bce92d1c548a2ee611, type: 2}
+  _sunEuler: {x: 44.5, y: 311.6, z: 0}
+  _sunColor: {r: 0.854, g: 0.903, b: 1, a: 1}
+  _sunIntensity: 0.55
+  _overrideFog: 0
+  _fogColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+  _enabledInRotation: 1
+  _weight: 0.75

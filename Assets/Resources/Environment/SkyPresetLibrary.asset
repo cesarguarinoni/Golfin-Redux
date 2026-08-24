@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1bef1bf398f594d658df2c17193ab3c4, type: 3}
+  m_Name: SkyPresetLibrary
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.Gameplay.Environment.SkyPresetLibrary
+  _presets:
+  - {fileID: 11400000, guid: aaaadae99efe44141888402c2c84b9e7, type: 2}
+  - {fileID: 11400000, guid: b7c94bda58ee44974a1e1923ab0cdbbc, type: 2}
+  - {fileID: 11400000, guid: 36b3fda0c92a241fc81fc2168178cd66, type: 2}
+  - {fileID: 11400000, guid: e27ab9813ab2e4469b0814c71626137f, type: 2}
+  - {fileID: 11400000, guid: 51471e0c3955647399c62c0caec13a9e, type: 2}
+  _randomizationEnabled: 1
+  _yawJitterDegrees: 0
