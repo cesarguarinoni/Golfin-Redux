@@ -126,6 +126,13 @@ namespace GolfinRedux.UI.Tournaments
             // and the repaint below only happens if a NEW board actually landed.
             PopulateLive();
             RefreshRemoteBoard();
+
+            // The ENDS IN pill was authored scene text that nothing ever wrote, so every
+            // tournament showed the same frozen fake time in English. Drive it from the real
+            // EndUtc; it re-formats each second, so a language switch repaints it on the next tick.
+            StartCoroutine(TournamentCountdown.Run(
+                transform, TournamentCountdown.LeaderboardPillPath,
+                () => TournamentService.Instance?.SelectedTournamentId));
         }
 
         /// <summary>

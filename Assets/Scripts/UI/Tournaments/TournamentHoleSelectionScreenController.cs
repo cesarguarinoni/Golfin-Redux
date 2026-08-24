@@ -70,6 +70,12 @@ namespace GolfinRedux.UI.Tournaments
         {
             StopAllCoroutines();
             StartCoroutine(RebuildNextFrame());
+
+            // Same authored-placeholder ENDS IN pill as the leaderboard screen — see
+            // TournamentCountdown. Started after StopAllCoroutines so it is not immediately killed.
+            StartCoroutine(TournamentCountdown.Run(
+                transform, TournamentCountdown.HoleSelectionPillPath,
+                () => TournamentService.Instance?.SelectedTournamentId));
         }
 
         private void OnDisable()

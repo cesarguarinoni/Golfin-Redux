@@ -74,6 +74,30 @@ namespace Golfin.Inventory
             // re-enables on a language switch and its imperatively-bound labels kept the old
             // language until the screen was re-entered.
             LocalizationManager.OnLanguageChanged += RefreshLocalizedText;
+
+            // Re-bind on enable, not just on selection. The panel binds once in Start() and then
+            // only when the carousel fires a selection, so entering the tab after the language
+            // changed elsewhere left the previous language's copy on screen — and unlike the
+            // repaint bugs, leaving and re-entering did NOT fix it.
+            RefreshLocalizedText();
+        }
+
+
+        /// <summary>Get(key), falling back to the raw CSV copy when the row is absent.</summary>
+        static string LocalizeBody(string key, string fallback)
+        {
+            if (string.IsNullOrEmpty(key)) return fallback;
+            string v = LocalizationManager.Get(key);
+            return string.Equals(v, key, System.StringComparison.Ordinal) ? fallback : v;
+        }
+
+        /// <summary>"ball_putt_ace" -> "PUTT_ACE".</summary>
+        static string KeySuffix(string id, string prefix)
+        {
+            if (string.IsNullOrEmpty(id)) return "";
+            if (id.StartsWith(prefix, System.StringComparison.OrdinalIgnoreCase))
+                id = id.Substring(prefix.Length);
+            return id.ToUpperInvariant();
         }
 
         /// <summary>Re-resolve the panel against the current language. UpdatePanel is a pure re-bind.</summary>
@@ -157,7 +181,12 @@ namespace Golfin.Inventory
 
             // Info
             if (infoHeader != null) infoHeader.text = LocalizationManager.Get("BALL_INFO");
-            if (infoText != null) infoText.text = template.info;
+            // template.info is the raw English CSV blurb, so the body stayed English even
+            // though the 情報 header above it localized. Key by id, exactly as the mode cards
+            // and hole cards do; a missing row falls back to the CSV string, so English is
+            // byte-identical to before.
+            if (infoText != null)
+                infoText.text = LocalizeBody("BALL_INFO_" + KeySuffix(template.ballId, "ball_"), template.info);
 
             // Stat bars
             UpdateBallStatBar(powerName, powerBar, powerNumber,

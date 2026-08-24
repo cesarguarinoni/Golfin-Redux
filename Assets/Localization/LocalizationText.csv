@@ -374,6 +374,14 @@ TOURN_CTA_CONTINUE,CONTINUE,続ける
 TOURN_UPCOMING,UPCOMING,開催予定
 TOURN_ENDING,ENDING,まもなく終了
 TOURN_ENDED,ENDED,終了
+TOURN_ENDS_IN,ENDS IN: {0},終了まで: {0}
+TOURN_ENDED_PILL,ENDED,終了
+BALL_INFO_GOLFIN,"The standard Golfin ball. Perfectly balanced with no stat bonuses or penalties—reliable in any situation.",標準的なGolfinボール。ステータス補正がなく完璧にバランスが取れており、どんな状況でも安定した性能を発揮します。
+BALL_INFO_PUTT_ACE,"Designed by PUTT ACE, a name synonymous with short-game mastery, this ball delivers exceptional spin, subtle roll, and balanced power—tailored for precision play in any condition.",ショートゲームの名手として知られるPUTT ACEが設計したボール。優れたスピン、控えめなロール、バランスの取れたパワーを備え、あらゆる状況で精密なプレーを支えます。
+ITEM_PROTIP_REPAIRKIT,Clubs will automatically use the best repair kit available when you repair them from the Clubs tab.,クラブタブから修理すると、所持している中で最も効果の高いリペアキットが自動的に使用されます。
+ITEM_INFO_REPAIRKIT_COMMON,"Essential and efficient, this Repair Kit restores up to 50% of any club's durability. Designed for quick fixes and reliable performance, it's a must have for keeping your equipment in solid shape round after round.",必需品にして効率的なリペアキット。あらゆるクラブの耐久度を最大50%回復します。手早い修理と安定した性能を追求した設計で、ラウンドを重ねても装備を万全に保つために欠かせません。
+ITEM_INFO_REPAIRKIT_RARE,"A step above the standard kit, this Rare Repair Kit restores up to 75% of any club's durability. Ideal for mid-range repairs when you need your gear back in top form.",標準キットを一段上回るレアリペアキット。あらゆるクラブの耐久度を最大75%回復します。装備を万全の状態に戻したいときの中位修理に最適です。
+ITEM_INFO_REPAIRKIT_MYTHIC,"The ultimate repair solution. This Mythic Repair Kit fully restores any club's durability to 100%. Save it for when your best gear needs a complete overhaul.",究極の修理手段。ミシックリペアキットはあらゆるクラブの耐久度を100%まで完全に回復します。とっておきの装備を万全に整えたいときのために取っておきましょう。
 TOURN_EMPTY_HEADER,No finishers yet,まだ完走者がいません
 TOURN_EMPTY_BODY,Be the first to complete every hole and top the board.,全ホールを完走して、ランキングのトップを目指しましょう。
 TOURN_NEXT_SECTION,Next,次へ
