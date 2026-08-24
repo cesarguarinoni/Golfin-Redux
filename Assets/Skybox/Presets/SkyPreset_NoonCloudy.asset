@@ -10,16 +10,16 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 1805f223f295e4b658cfea77a8ccad54, type: 3}
-  m_Name: SkyPreset_GoldenAfternoon
+  m_Name: SkyPreset_NoonCloudy
   m_EditorClassIdentifier: Assembly-CSharp::Golfin.Gameplay.Environment.SkyPreset
-  _displayName: Golden Afternoon
-  _notes: Poly Haven 'qwantani_late_afternoon_puresky' (CC0). Low sun (19.1 deg),
-    long warm shadows.
-  _skyboxMaterial: {fileID: 2100000, guid: 10d4eac6269ce4d5c9e36212e2602c2a, type: 2}
-  _sunEuler: {x: 19.1, y: 306.1, z: 0}
-  _sunColor: {r: 1, g: 0.805, b: 0.572, a: 1}
-  _sunIntensity: 1.05
+  _displayName: Noon (Cloudy)
+  _notes: 'Poly Haven ''kloppenheim_05_puresky'' (CC0). Broken cloud, near-overhead
+    sun.  [sky _Rotation=220.9, sun bearing=175deg]'
+  _skyboxMaterial: {fileID: 2100000, guid: 33d8fcbc3331c474f9c1fd0b48d5291c, type: 2}
+  _sunEuler: {x: 74.5, y: 355, z: 0}
+  _sunColor: {r: 1, g: 0.934, b: 0.857, a: 1}
+  _sunIntensity: 1.1
   _overrideFog: 0
   _fogColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
   _enabledInRotation: 1
-  _weight: 1
+  _weight: 0.7

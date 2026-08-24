@@ -10,16 +10,16 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 1805f223f295e4b658cfea77a8ccad54, type: 3}
-  m_Name: SkyPreset_PartlyCloudyNoon
+  m_Name: SkyPreset_NoonClear
   m_EditorClassIdentifier: Assembly-CSharp::Golfin.Gameplay.Environment.SkyPreset
-  _displayName: Partly Cloudy Noon
-  _notes: Poly Haven 'kloppenheim_05_puresky' (CC0). Sun near overhead (74.5 deg),
-    short shadows.
-  _skyboxMaterial: {fileID: 2100000, guid: 1fdfbf244cfda402890a4b1b68044507, type: 2}
-  _sunEuler: {x: 74.5, y: 305.9, z: 0}
-  _sunColor: {r: 1, g: 0.934, b: 0.857, a: 1}
-  _sunIntensity: 1.4
+  _displayName: Noon
+  _notes: 'Poly Haven ''qwantani_noon_puresky'' (CC0). Highest sun, neutral white
+    light.  [sky _Rotation=221.2, sun bearing=175deg]'
+  _skyboxMaterial: {fileID: 2100000, guid: 538030aba9037489e82926c2c2605511, type: 2}
+  _sunEuler: {x: 49.8, y: 355, z: 0}
+  _sunColor: {r: 1, g: 0.969, b: 0.935, a: 1}
+  _sunIntensity: 1.5
   _overrideFog: 0
   _fogColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
   _enabledInRotation: 1
-  _weight: 1.5
+  _weight: 1

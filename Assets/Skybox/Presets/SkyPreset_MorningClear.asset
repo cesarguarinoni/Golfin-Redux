@@ -10,15 +10,16 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 1805f223f295e4b658cfea77a8ccad54, type: 3}
-  m_Name: SkyPreset_ClearMidday
+  m_Name: SkyPreset_MorningClear
   m_EditorClassIdentifier: Assembly-CSharp::Golfin.Gameplay.Environment.SkyPreset
-  _displayName: Clear Midday
-  _notes: Poly Haven 'kloofendal_43d_clear_puresky' (CC0). Sun 42.9 deg.
-  _skyboxMaterial: {fileID: 2100000, guid: be556814d8aea4e608d55f3fb94a3c7b, type: 2}
-  _sunEuler: {x: 42.9, y: 306.2, z: 0}
-  _sunColor: {r: 1, g: 0.942, b: 0.863, a: 1}
-  _sunIntensity: 1.3
+  _displayName: Morning
+  _notes: 'Poly Haven ''qwantani_morning_puresky'' (CC0). Low east sun, 20.2 deg. 
+    [sky _Rotation=296.1, sun bearing=100deg]'
+  _skyboxMaterial: {fileID: 2100000, guid: b4cc06ff92f83485594b23049e48ac14, type: 2}
+  _sunEuler: {x: 20.2, y: 280, z: 0}
+  _sunColor: {r: 1, g: 0.814, b: 0.591, a: 1}
+  _sunIntensity: 1.15
   _overrideFog: 0
   _fogColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
   _enabledInRotation: 1
-  _weight: 1.5
+  _weight: 1

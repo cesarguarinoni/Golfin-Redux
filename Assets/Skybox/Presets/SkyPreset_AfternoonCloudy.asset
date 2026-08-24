@@ -10,17 +10,16 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 1805f223f295e4b658cfea77a8ccad54, type: 3}
-  m_Name: SkyPreset_Classic
+  m_Name: SkyPreset_AfternoonCloudy
   m_EditorClassIdentifier: Assembly-CSharp::Golfin.Gameplay.Environment.SkyPreset
-  _displayName: Classic
-  _notes: "The sky Golfin shipped with (Sky-2.mat) and the hole scenes' original
-    45/135 sun. DISABLED in rotation \u2014 kept so the old look can be restored
-    by ticking one box."
-  _skyboxMaterial: {fileID: 2100000, guid: af31a7f17c003d1488946e5847482393, type: 2}
-  _sunEuler: {x: 45, y: 135, z: 0}
-  _sunColor: {r: 1, g: 0.96, b: 0.88, a: 1}
-  _sunIntensity: 1.2
+  _displayName: Afternoon (Cloudy)
+  _notes: 'Poly Haven ''kloofendal_28d_misty_puresky'' (CC0). Misty broken cloud,
+    sun 28.5 deg. [sky _Rotation=114.1, sun bearing=235deg]'
+  _skyboxMaterial: {fileID: 2100000, guid: 72178cc7930ae42b7b3d98f8f0049b94, type: 2}
+  _sunEuler: {x: 28.5, y: 55, z: 0}
+  _sunColor: {r: 0.95, g: 0.97, b: 1, a: 1}
+  _sunIntensity: 0.8
   _overrideFog: 0
   _fogColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
-  _enabledInRotation: 0
-  _weight: 1
+  _enabledInRotation: 1
+  _weight: 0.7

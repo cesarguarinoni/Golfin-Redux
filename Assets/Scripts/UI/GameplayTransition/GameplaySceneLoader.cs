@@ -140,7 +140,12 @@ namespace Golfin.UI.GameplayTransition
                     yield return null;
                 }
 
-                // 5b. Roll this hole's sky and override the imported skybox + sun.
+                // 5b. Apply this RUN's sky, overriding the imported skybox + sun.
+                //     The sky is rolled once per run and held across Next Hole, so this
+                //     is a re-apply on every hole after the first — needed because each
+                //     hole scene has its own directional light to point. SkyRandomizer.EndRun
+                //     (in UnloadGameplay) is what releases it.
+                //
                 //     Done HERE, behind the loading screen, so the swap is never visible:
                 //     DynamicGI.UpdateEnvironment() re-solves ambient and the default
                 //     reflection probe, which would pop if it landed on a visible frame.
@@ -148,7 +153,7 @@ namespace Golfin.UI.GameplayTransition
                 //     hole keeps the skybox HoleGeoImporter baked into it.
                 var holeScene = SceneManager.GetSceneByName(holeSceneName);
                 if (holeScene.IsValid() && holeScene.isLoaded)
-                    Golfin.Gameplay.Environment.SkyRandomizer.ApplyRandomTo(holeScene, holeNumber);
+                    Golfin.Gameplay.Environment.SkyRandomizer.ApplyRandomTo(holeScene);
             }
 
             // 6. Loading screen finishes — hands off to gameplay. Does NOT navigate to Home;
@@ -175,6 +180,11 @@ namespace Golfin.UI.GameplayTransition
         /// </summary>
         public IEnumerator UnloadGameplay()
         {
+            // Returning to the menu ends the run, so the next one rolls a fresh sky.
+            // Playing Next Hole never comes through here, which is exactly why the sky
+            // stays put across a whole round.
+            Golfin.Gameplay.Environment.SkyRandomizer.EndRun();
+
             // Unload any loaded Hole_NN_Geo scene first.
             for (int i = SceneManager.sceneCount - 1; i >= 0; i--)
             {
