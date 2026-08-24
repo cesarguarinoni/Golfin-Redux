@@ -73,18 +73,39 @@
 > want Ken's review.** Re-running the detector over all 12 menu screens now reports 0 stale
 > everywhere.
 >
-> ⚠️ **Two follow-ups this uncovered, neither fixed:**
-> 1. **Empty tournament board shows authored English placeholder rows.** Every board is empty in
->    the Editor session, so `TournamentLeaderboardScreenController.PopulateLive()` early-returns
->    and `BindCard` never runs — leaving the scene's hand-authored `RARE` / `LEGENDARY` rows and
->    fake names on screen. Binding one row through the real path
->    (`AddComponent<RankingsCardWidget>` + `Bind`) flips it `COMMON` ⇄ `コモン` in place, so the
->    localization path is correct; the defect is that an empty board renders placeholders at all.
-> 2. **~30 more files still call `LocalizationManager.Get()` without subscribing** — the sweep only
->    covered the 12 menu screens. In-game HUD (`ClubButtonWidget`, `FadeDrawButtonWidget`,
->    `MapViewController`), the result/hole-complete modals, the account screens and most inventory
->    modals are untested. They matter less (the Settings overlay is not reachable from most of
->    them) but the in-game settings modal makes the HUD worth a look.
+> ✅ **Both follow-ups closed in `cf3f250f9`.**
+>
+> 1. **Empty tournament board rendered placeholders as real results — FIXED.**
+>    `PopulateLive()` returned on an empty board *before* it had even resolved the modal, so the
+>    scene's hand-authored podium and rows (`RARE` / `LEGENDARY` / fake names) stayed on screen.
+>    `TournamentLeaderboardEmptyState` was already built and wired to `TOURN_EMPTY_HEADER` /
+>    `TOURN_EMPTY_BODY` — nothing ever activated it, so both keys were orphaned. New
+>    `ApplyBoardChrome()` shows exactly as much chrome as there is data for and sets both ways.
+>    **It also fixes the same defect at PARTIAL fill, which was never reported:** a 5-finisher
+>    board left Top3's third card and every unbound row showing placeholder finishers, because the
+>    bind loop skipped slots past `ranked.Count` instead of hiding them. Sticky "you" row now
+>    hides when the caller has no row.
+> 2. **Inventory detail panels never repainted — FIXED.** The 12-screen sweep only ever saw each
+>    screen's DEFAULT state, so panels that bind on *selection* were never exercised. Subscribing +
+>    re-binding fixes `BagDetailPanel` (club-card `SWAP`, `EQUIPPED`), `BallDetailPanel` (`OWNED`,
+>    `INFO`, all five stat names), `ItemDetailPanel` (`RESTORES`, `INFO`, `*PRO TIP`) and
+>    `StaminaShopDetailScreenController` (the info card's signature note). Plus one that was never
+>    localized at all: `ItemDetailPanel` rendered rarity as `template.rarity.ToUpper()` — the raw
+>    CSV word — so it read `COMMON` in every language; it now goes through
+>    `RarityHelper.GetLocalizedRarityName`.
+>
+> **Final detector sweep: 11 screens + all four inventory tabs with detail panels populated →
+> TOTAL STALE = 0.**
+>
+> ⚠️ **Two sweep hits are NOT bugs — do not "fix" them.** StaminaShopDetail's `House special` and
+> the tournament rows' rarities are *authored scene text*, shown because the harness reached those
+> screens without the selection the real flow always makes (`_currentShop` null, board empty). A
+> detector hit on a screen reached out-of-flow means "never bound", not "stale".
+>
+> **Still unswept:** the in-game HUD (`ClubButtonWidget`, `FadeDrawButtonWidget`,
+> `MapViewController`), the result/hole-complete modals, matchmaking, and the account screens. All
+> bind per-open or per-event and the language toggle is not reachable from any of them (the in-game
+> settings modal has no language row), so they are low risk — but unproven.
 
 ---
 
