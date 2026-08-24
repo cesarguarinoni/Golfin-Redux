@@ -23,6 +23,48 @@
 
 ## 🟢 PRIORITY QUEUED — pick up immediately
 
+> **▶ 2026-08-24 · language switch now repaints in place — mode cards + top-bar title SHIPPED;
+> 5 screens still stale.**
+>
+> Cesar: *"Not all text in Mode selection in Main screen change language until you reenter the
+> screen; this might happen in other screens as well."*
+>
+> **Root cause.** The language toggle (`LanguageSubmenu`) lives in the Settings **overlay**, and
+> `ScreenManager` never disables the screen underneath an overlay. So only `LocalizedText`
+> components repaint — they subscribe to `LocalizationManager.OnLanguageChanged`. Every label a
+> controller assigns imperatively (`text = LocalizationManager.Get(key)` in `Bind`/`OnEnable`/a nav
+> callback) keeps the OLD language until the screen is left and re-entered. ~40 files call `Get()`;
+> only ~15 subscribe.
+>
+> **Fixed (code-only, no scene edits).** `ModeCardController` subscribes and re-resolves title,
+> tagline, description, `NO ENTRY FEE` and the tournaments rewards text via a new
+> `RefreshLocalizedText()` — deliberately NOT `SetState(State)`, which would replay the
+> expand/collapse height animation and jump the card. Covers the Main-screen carousel AND the
+> full-screen Mode Selection list. `PersistentUIManager`: the top-bar centre title
+> (`MODE SELECTION`, `LEADERBOARD`, …) was resolved once at navigation time, so it went stale too
+> — switch split into `ApplyTopBarCenterText` + `NavTitleKeyFor`, re-resolved on language change;
+> Home (username) and StaminaShopDetail (`SetUsername(shopName)`) return `null` so the refresh
+> cannot clobber their non-localized titles. Commit `3e9727653`.
+>
+> **Detector — reuse this, do not eyeball.** In play mode `SetLanguage(Japanese)` in place, then
+> flag every visible `TextMeshProUGUI` whose text exactly equals the *english* column of a loc row
+> whose *japanese* column differs (read the table by reflection on the private static
+> `LocalizationManager._textMap`; skip strings under 3 chars). A leave-and-re-enter diff does NOT
+> work — identical sibling paths (`Card(Clone)`) reorder and produce false positives.
+>
+> **Sweep of 12 screens.** Clean: Home, Roster, Inventory, Mode Selection, Stamina Shop, General
+> Shop, Gacha History. **Still stale — same one-line fix each, not yet done:**
+>
+> | Screen | Stale labels |
+> |---|---|
+> | Hole Selection | `LOCKED`, `NEXT` (×2), `PLAY`, the hole tutorial description — `HoleCardController` |
+> | Leaderboard | every rarity label (`COMMON`…`SUPREME`) on the 100 cards + Top-3, and `DIAMOND LEAGUE` |
+> | Tournament Leaderboard | rarity labels on every ranking row + Top-3 |
+> | Tournament Selection | `GOLFIN PRESENTS`, `LEADERBOARD`, `SIGN UP` per card |
+> | Gacha Prizes | `PULL x10` |
+
+---
+
 > **▶ 2026-08-21 · modal scrims — every modal now darkens AND blocks the UI behind it — SHIPPED.**
 >
 > Cesar: *"Make sure the background UI is darkened when a modal is present (example, Settings screen
