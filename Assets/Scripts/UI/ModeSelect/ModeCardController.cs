@@ -303,15 +303,45 @@ namespace GolfinRedux.UI.ModeSelect
         {
             if (RewardPointsManager.Instance != null)
                 RewardPointsManager.Instance.OnPointsChanged += OnPointsChanged;
+
+            // Every string on this card is resolved imperatively at Bind() time (title, tagline,
+            // description, NO ENTRY FEE, the tournaments rewards text), so unlike a LocalizedText
+            // label it does NOT repaint on its own when the language changes. The language toggle
+            // lives in the Settings OVERLAY, which leaves the screen underneath enabled — so the
+            // card never re-enables and the old-language text survived until the screen was
+            // re-entered. Re-apply the text in place instead.
+            LocalizationManager.OnLanguageChanged += RefreshLocalizedText;
         }
 
         private void OnDisable()
         {
             if (RewardPointsManager.Instance != null)
                 RewardPointsManager.Instance.OnPointsChanged -= OnPointsChanged;
+
+            LocalizationManager.OnLanguageChanged -= RefreshLocalizedText;
         }
 
         private void OnPointsChanged(int _) => RefreshFeeColor();
+
+        /// <summary>
+        /// Re-resolve every localized string on the card against the current language, without
+        /// touching layout state. Deliberately NOT SetState(State): that re-runs the expand /
+        /// collapse height animation and would visibly jump the card on a language switch.
+        /// </summary>
+        private void RefreshLocalizedText()
+        {
+            if (_data == null) return;   // never bound yet — Bind() will localize on its own
+
+            SetTitleText(_data.title);
+
+            bool isExpanded = State == ModeCardState.Expanded;
+            if (explanationText != null)         explanationText.text         = isExpanded ? LocDescription() : LocTagline();
+            if (descriptionTextExpanded != null) descriptionTextExpanded.text = LocDescription();
+            if (subtitleTextExpanded != null)    subtitleTextExpanded.text    = LocTagline();
+
+            // Carries the localized "NO ENTRY FEE" and the tournaments rewards text.
+            UpdateEconomyRows(_data);
+        }
 
         /// <summary>Bind a mode's data and initial state.</summary>
         public void Bind(ModeData mode, ModeCardState state)

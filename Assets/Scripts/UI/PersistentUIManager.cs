@@ -13,6 +13,9 @@ namespace Golfin.UI
     {
         public static PersistentUIManager Instance { get; private set; }
 
+        // Last screen passed to HighlightScreen — lets a language change re-resolve the centre title.
+        private GolfinRedux.UI.ScreenId? _lastHighlightedScreen;
+
         [Header("Top Bar References")]
         public GameObject topBarPanel;
 
@@ -105,6 +108,19 @@ namespace Golfin.UI
                 GachaTicketManager.Instance.OnTicketsChanged += OnTicketCountChanged;
                 SetTickets(GachaTicketManager.Instance.GetTickets(TicketType.Standard));
             }
+
+            // The top-bar centre title ("MODE SELECTION", "LEADERBOARD", …) is resolved once, at
+            // navigation time, inside HighlightScreen. The language toggle lives in the Settings
+            // OVERLAY — no navigation happens when it is used — so the title kept the old language
+            // until the player left and re-entered the screen. Re-resolve it in place instead.
+            LocalizationManager.OnLanguageChanged += RefreshTopBarCenterText;
+        }
+
+        /// <summary>Re-apply the centre title for whatever screen is currently highlighted.</summary>
+        private void RefreshTopBarCenterText()
+        {
+            if (_lastHighlightedScreen.HasValue && NavTitleKeyFor(_lastHighlightedScreen.Value) != null)
+                ApplyTopBarCenterText(_lastHighlightedScreen.Value);
         }
 
         private void Start()
@@ -183,6 +199,8 @@ namespace Golfin.UI
             // GachaTicketManager unsubscribe.
             if (GachaTicketManager.Instance != null)
                 GachaTicketManager.Instance.OnTicketsChanged -= OnTicketCountChanged;
+
+            LocalizationManager.OnLanguageChanged -= RefreshTopBarCenterText;
         }
 
         /// <summary>
@@ -457,53 +475,61 @@ namespace Golfin.UI
         ///   Leaderboard → "LEADERBOARD"
         ///   all others  → "" (blank center)
         /// </summary>
+
+        /// <summary>
+        /// Set the top-bar centre title for a screen. Split out of HighlightScreen so a language
+        /// change can re-resolve it without re-running the nav-highlight pass.
+        /// </summary>
+        private void ApplyTopBarCenterText(GolfinRedux.UI.ScreenId screenId)
+        {
+            if (usernameText == null) return;
+
+            if (screenId == GolfinRedux.UI.ScreenId.Home)
+            {
+                // Prefer the signed-in player's real name over whatever was cached.
+                // Awake() seeds _username from the designer placeholder ("CHOTO") and the
+                // real value only arrives via AccountUiBridge.SyncUsername(); if that push
+                // happened before this manager existed — or never fired, as on a boot that
+                // restores a session without re-routing through login — the top bar kept
+                // showing the placeholder. Re-reading here makes Home self-correcting.
+                if (Golfin.Auth.PlayerIdentity.HasName)
+                    _username = Golfin.Auth.PlayerIdentity.DisplayName;
+                usernameText.text = _username;
+                return;
+            }
+
+            string key = NavTitleKeyFor(screenId);
+            usernameText.text = key != null ? LocalizationManager.Get(key) : string.Empty;
+        }
+
+        /// <summary>
+        /// The localization key backing a screen's top-bar centre title, or null when the screen
+        /// has no localized title. Home (player username) and StaminaShopDetail (set dynamically
+        /// by StaminaShopDetailScreenController via SetUsername(shopName) after navigating)
+        /// deliberately return null so a language refresh never clobbers their non-localized text.
+        /// </summary>
+        private static string NavTitleKeyFor(GolfinRedux.UI.ScreenId screenId)
+        {
+            switch (screenId)
+            {
+                case GolfinRedux.UI.ScreenId.Leaderboard:              return "NAV_LEADERBOARD";
+                case GolfinRedux.UI.ScreenId.ModeSelection:            return "NAV_MODE_SELECTION";
+                case GolfinRedux.UI.ScreenId.TournamentHoleSelection:  return "NAV_SELECT_HOLE";
+                case GolfinRedux.UI.ScreenId.TournamentLeaderboard:    return "NAV_TOURNAMENT_LEADERBOARD";
+                case GolfinRedux.UI.ScreenId.TournamentSelection:      return "NAV_TOURNAMENTS";
+                case GolfinRedux.UI.ScreenId.StaminaShopSelection:     return "NAV_BOOST_STAMINA";
+                case GolfinRedux.UI.ScreenId.GeneralShop:              return "NAV_REWARDS_CENTER";
+                default:                                               return null;
+            }
+        }
+
         public void HighlightScreen(GolfinRedux.UI.ScreenId screenId)
         {
+            _lastHighlightedScreen = screenId;
+
             // ── Drive top-bar center text BEFORE the nav-highlight switch ────────
             // (The switch has a default:return for Leaderboard; text must be set first.)
-            if (usernameText != null)
-            {
-                switch (screenId)
-                {
-                    case GolfinRedux.UI.ScreenId.Home:
-                        // Prefer the signed-in player's real name over whatever was cached.
-                        // Awake() seeds _username from the designer placeholder ("CHOTO") and the
-                        // real value only arrives via AccountUiBridge.SyncUsername(); if that push
-                        // happened before this manager existed — or never fired, as on a boot that
-                        // restores a session without re-routing through login — the top bar kept
-                        // showing the placeholder. Re-reading here makes Home self-correcting.
-                        if (Golfin.Auth.PlayerIdentity.HasName)
-                            _username = Golfin.Auth.PlayerIdentity.DisplayName;
-                        usernameText.text = _username;
-                        break;
-                    case GolfinRedux.UI.ScreenId.Leaderboard:
-                        usernameText.text = LocalizationManager.Get("NAV_LEADERBOARD");
-                        break;
-                    case GolfinRedux.UI.ScreenId.ModeSelection:
-                        usernameText.text = LocalizationManager.Get("NAV_MODE_SELECTION");
-                        break;
-                    case GolfinRedux.UI.ScreenId.TournamentHoleSelection:
-                        usernameText.text = LocalizationManager.Get("NAV_SELECT_HOLE");
-                        break;
-                    case GolfinRedux.UI.ScreenId.TournamentLeaderboard:
-                        usernameText.text = LocalizationManager.Get("NAV_TOURNAMENT_LEADERBOARD");
-                        break;
-                    case GolfinRedux.UI.ScreenId.TournamentSelection:
-                        usernameText.text = LocalizationManager.Get("NAV_TOURNAMENTS");
-                        break;
-                    case GolfinRedux.UI.ScreenId.StaminaShopSelection:
-                        usernameText.text = LocalizationManager.Get("NAV_BOOST_STAMINA");
-                        break;
-                    case GolfinRedux.UI.ScreenId.GeneralShop:
-                        usernameText.text = LocalizationManager.Get("NAV_REWARDS_CENTER");
-                        break;
-                    // StaminaShopDetail center text is set dynamically by StaminaShopDetailScreenController
-                    // via SetUsername(shopName) after navigating.
-                    default:
-                        usernameText.text = string.Empty;
-                        break;
-                }
-            }
+            ApplyTopBarCenterText(screenId);
 
             // ── Bottom-nav icon highlight ─────────────────────────────────────────
             switch (screenId)
