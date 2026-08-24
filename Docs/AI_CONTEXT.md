@@ -23,6 +23,64 @@
 
 ## 🟢 PRIORITY QUEUED — pick up immediately
 
+> **▶ 2026-08-24 · randomly-rotating skyboxes — 4 times of day × clear/cloudy — SHIPPED
+> (`36c06e4ba`, `f1940fed1`, `6aaf010dc`).**
+>
+> Eight free (CC0, Poly Haven) skies — Morning / Noon / Afternoon / Evening, each with a cloudy
+> variant. **One sky per run:** rolled once when a run starts and held for every hole in it.
+> Next Hole goes through `BeginGameplayLoad` and keeps the weather; only the four menu-return
+> paths reach `UnloadGameplay`, which calls `SkyRandomizer.EndRun()`. Seeded from
+> `SkyRandomizer.RoundSeed`, so a shared match id makes both 1v1 clients agree.
+>
+> **Runtime override, never an import.** `HoleGeoImporter` bakes `Sky-2.mat` into every
+> `Hole_NN_Geo` RenderSettings, and re-importing a shipped hole wipes its trees + bot bake data.
+> `SkyRandomizer.ApplyRandomTo` overrides after the hole scene loads instead — no hole scene is
+> touched. A preset carries the **sun** with the sky: hole scenes run `AmbientMode.Skybox`, so
+> swapping only the material silently relights the course while the sun stays put. `Apply` also
+> calls `DynamicGI.UpdateEnvironment()`, without which ambient and the default reflection probe
+> keep solving against the previous sky.
+>
+> **Two measured facts that will bite again if forgotten.** Both verified against this project's
+> own assets, not assumed:
+> 1. `Skybox/Cubemap` rotates the *sampling* direction, so apparent sun bearing =
+>    `36.1 − _Rotation` (linear at 0/45/90/180/270). Code applying a yaw offset must **subtract**
+>    it from `_Rotation` while **adding** it to the sun's euler Y, or sky and shadows drift apart
+>    at double rate.
+> 2. Unity's lat-long → cubemap conversion applies a **−90° yaw** vs the standard equirectangular
+>    convention. A sun bearing derived from a raw `.hdr` needs 90° subtracted before it describes
+>    what Unity renders. (The first commit shipped every sun 90° off because of this; invisible
+>    only because trees hid the disc.)
+>
+> **Sizing.** `maxTextureSize` does NOT constrain cubemap face size for a lat-long source — the
+> face comes from source width, so shrinking the source is the only lever. Downsampled
+> 2048×1024 → 1024×512 in linear float: 512px faces, ASTC 6×6, ~0.9 MB each (~7.3 MB for eight).
+> **Do not re-scale HDRIs with ffmpeg** — its Radiance path clamps to [0,1] and collapsed
+> sun/sky contrast 1702 → 2.9. Full rationale: `Assets/Skybox/CREDITS.md`.
+>
+> **Exposure is solved, not authored.** URP tonemapping makes output luminance non-linear in
+> `_Exposure`; each preset is bisected against the median of the whole sky (four azimuths — a
+> one-direction probe biases sunsets, which have a bright and a dim side), then a guard lowers
+> it until under 1% of the player's view clips.
+>
+> **Tuning knobs.** `Assets/Resources/Environment/SkyPresetLibrary.asset` — master on/off,
+> per-preset weight/enable, and a yaw-jitter field left at 0 (rotating the sun changes whether
+> the player hits into it — a playability call). `Classic` (the old `Sky-2` look) is kept as a
+> preset but disabled; tick one box to restore it.
+>
+> **Follow-ups, none blocking:**
+> - **Next Hole reloads Hole 1, not Hole 2.** Reproduced in every take of the demo recorder, even
+>   invoking Card 2's real PLAY button directly: `GameSession.CurrentHoleNumber` becomes 2 and
+>   `Hole_02_Geo` is requested, but Hole 1 is what loads. Unrelated to the sky work — the sky
+>   behaviour held correctly across the reload — but it is a real bug in the Next Hole path.
+> - `Sky-2.hdr` is 4096×2048 with mipmaps off and costs ~10–21 MB alone, more than all eight new
+>   skies combined. Same downsample recovers most of it; not done because it softens the shipped
+>   look.
+> - Evening's sun sits at 310° so it is off Hole 6's play line (at 275° it blew out 18.5% of the
+>   frame). That is tuned against one hole; per-hole sun placement would need each hole's bearing.
+> - Demo: `GOLFIN > Environment > Record Sky Rotation Demo Video`; captioned clip at
+>   `Docs/Reports/Media/sky_rotation_2026-08-24.mp4`.
+
+
 > **▶ 2026-08-24 · language switch now repaints in place — mode cards + top-bar title SHIPPED;
 > 5 screens still stale.**
 >

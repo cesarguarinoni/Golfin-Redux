@@ -2491,3 +2491,66 @@ before claiming a layout is fixed) — same discipline, different channel.
   that a sub-canvas can only reorder within its own root — wrong, and the raycast dump plus the
   pixel table both proved it. That is what lets a modal parented under a screen on `Canvas`
   (order −1) paint over `PersistentUI` (order 0) without being reparented.
+
+---
+
+## Lesson BD — verify a coordinate convention against the engine, don't derive it and ship
+
+**Session:** 2026-08-24, sky rotation (`36c06e4ba` → `f1940fed1`).
+
+I derived the sun direction for each HDRI by reading the Radiance file and converting through
+what I believed was Unity's lat-long mapping. The derivation was internally correct and I had
+what looked like strong confirmation: `kloofendal_43d_clear_puresky` resolved to **42.9°**, and
+the asset's own name says 43°. I shipped it.
+
+That check only validated the **elevation**. The **azimuth** was 90° wrong, because Unity's
+lat-long → cubemap conversion applies a −90° yaw versus the standard equirectangular convention.
+Every preset in the first commit pointed its sun 90° away from the sun visible in its own sky. It
+survived review because the tee camera had trees across the horizon and the disc was never in
+frame.
+
+The second bug was in the same family: `Skybox/Cubemap` rotates the *sampling* direction, so
+apparent bearing = `native − _Rotation`. My yaw-offset code added the same sign to both the
+material and the light, which would have pulled sky and shadows apart at twice the rate.
+
+Both were found in minutes once I stopped reasoning and **measured**: sweep a probe camera for
+the rendered sun disc at several `_Rotation` values and read the bearing back. The relationship
+came out exactly linear and immediately showed both errors.
+
+**Rules:**
+- A convention (handedness, yaw offset, sign, winding) is an **empirical property of the engine**,
+  not something to derive from docs or first principles. Measure it, in this project, once.
+- When a check confirms a derivation, ask **which component it actually constrained**. Elevation
+  matching told me nothing about azimuth; I treated it as whole-model validation.
+- Set the probe up so the thing you are measuring cannot saturate. My first sweep clipped the sun
+  disc and returned a meaningless plateau (`peakLum=5`, bearing off by ~8°); dropping exposure to
+  0.01 made it exact.
+- A defect invisible in the chosen camera angle is still shipped. Trees hid this one.
+
+## Lesson BE — "no output" and "the wrong output" need different waits
+
+**Session:** 2026-08-24, sky rotation demo recorder (five takes).
+
+The demo bot waited on the wrong signals three separate times, and each time the run *completed*
+and produced a video — just not of the thing being demonstrated:
+
+1. **Waited for any `Hole_NN_Geo`** instead of a specific one. The previous hole was still
+   loaded, so the wait returned in 0.0s and every subsequent beat raced ahead of the transition.
+2. **Waited for the hole SCENE to load** and treated that as "gameplay is on screen". The
+   loading screen stays up for the loader's reveal, so every "hold and look at the sky" beat
+   elapsed behind it — the payoff shot ended up being ~1.8s of a 106s recording.
+3. **Found a button by name** (`PlayButton`) where two cards both carry that name and
+   `FindObjectsOfType` order is not deterministic. One take clicked *replay* and reloaded hole 1
+   while logging "NEXT HOLE".
+
+**Rules:**
+- Wait for the **specific** thing (`Hole_02_Geo`), never the category. A category wait is
+  satisfied by leftovers from the previous step.
+- "Loaded" ≠ "visible". If the artefact is a screenshot or video, wait on what the *camera* shows.
+- Resolve UI targets structurally (`HoleCompleteWidget.Card2` → its serialized field), not by
+  name, whenever a name could be shared.
+- Any fallback that bypasses the real entry point must **log loudly that it did**. Mine printed
+  "This act does NOT demonstrate the real entry path", which is the only reason the failed act
+  did not quietly become evidence.
+- Tightening a probe can break it: adding `btn.interactable` to a check that previously used
+  `activeInHierarchy` alone stalled a whole take. Change one condition at a time.
