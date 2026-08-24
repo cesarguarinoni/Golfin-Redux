@@ -26,8 +26,8 @@ public class ProTipCard : MonoBehaviour, IPointerClickHandler
     [SerializeField]
     private string[] tipKeys = new string[]
     {
-        "tip_club", "tip_forecast", "tip_rarities", "tip_swing",
-        "tip_accuracy", "tip_leaderboard", "tip_timing", "tip_view"
+        "TIP_SWING", "TIP_CLUB", "TIP_FORECAST", "TIP_RARITIES",
+        "TIP_ACCURACY", "TIP_TIMING", "TIP_VIEW"
     };
 
     [Header("Settings")]

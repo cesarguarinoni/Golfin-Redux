@@ -125895,7 +125895,6 @@ MonoBehaviour:
   - {fileID: 21300000, guid: fa39e71db1b512746926f4009c9f48a2, type: 3}
   - {fileID: 21300000, guid: 138e5778d6c6e89478eacebea4ffadef, type: 3}
   - {fileID: 21300000, guid: cbb1fbba72e9265498850bec5b876d49, type: 3}
-  - {fileID: 21300000, guid: c66e70430603c514a8b345f9c754a863, type: 3}
   - {fileID: 21300000, guid: 02879563e1f454841bb4c79963031842, type: 3}
   - {fileID: 21300000, guid: 8a0b32a9117c2f04e90721c87c2b4d45, type: 3}
   tipImageDisplay: {fileID: 860714350}
@@ -125905,7 +125904,6 @@ MonoBehaviour:
   - TIP_FORECAST
   - TIP_RARITIES
   - TIP_ACCURACY
-  - TIP_LEADERBOARD
   - TIP_TIMING
   - TIP_VIEW
   autoCycleInterval: 8

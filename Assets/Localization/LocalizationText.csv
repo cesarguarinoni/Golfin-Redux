@@ -5,14 +5,13 @@ BTN_CREATE,CREATE ACCOUNT,アカウント作成
 BTN_LOGIN,LOGIN,ログイン
 TIP_HEADER,PRO TIP,プロのヒント
 TIP_NEXT,TAP FOR NEXT TIP,タップして次へ
-TIP_CLUB,<color=#EEDC9A>HOLD</color> THE CLUB BALL BUTTON TO ENTER YOUR BAGS IN-GAME,クラブボタン長押しでバッグを開く
+TIP_CLUB,<color=#EEDC9A>HOLD THE CLUB/BALL BUTTONS</color> TO CHANGE EQUIPPED GEAR,クラブ/ボールボタンを長押しして装備を変更
 TIP_FORECAST,LANDING <color=#EEDC9A>FORECAST</color> DOES NOT FACTOR THE BALL'S RUN OR WIND. COMPENSATE ACCORDINGLY,着地予測にはボールの転がりと風は含まれません
 TIP_RARITIES,DIFFERENT <color=#EEDC9A>RARITIES</color> BESTOW DIFFERENT INITIAL STATS  AND MAX</color> LEVEL,レア度によって初期ステータスと最大レベルが異なります
 TIP_SWING,<color=#EEDC9A>PULL</color> THE CLUB BACK THEN FLICK  IT FORWARD TO SWING,クラブを引いて前に弾いてスイング
 TIP_ACCURACY,<color=#EEDC9A>FLICKER</color> THROUGH THE BALL FOR <color=#EEDC9A>PERFECT</color> ACCURACY,ボールを通過させると完璧な精度
-TIP_LEADERBOARD,LOOK FOR THESE ICONS IN <color=#EEDC9A>LEADERBOARDS</colors> FOR LONGEST SHOTS,リーダーボードでこれらのアイコンを探して最長ショット
 TIP_TIMING,HIT THE BALL WHEN <color=#EEDC9A>HIGHLIGHTED</color> FOR A PERFECT SHOT,ハイライト時にボールを打つと完璧なショット
-TIP_VIEW,<color=#EEDC9A>DOUBLE TAP</color>TO SWITCH BETWEEN SHOT VIEW AND MAP VIEW,ダブルタップでショットビューとマップビューを切り替え
+TIP_VIEW,<color=#EEDC9A>TAP THE MAP</color> TO SWITCH BETWEEN SHOT VIEW AND MAP VIEW,マップをタップしてショットビューとマップビューを切り替え
 HOME_CURRENCY_LABEL,COINS,コイン
 HOME_USERNAME,USERNAME,ユーザー名
 # unused since home_notices — the two HOME_MAINTENANCE_* rows below are no longer read by HomeScreenController; the Home notice comes from GET /api/v1/notices. Kept only to avoid CSV churn. (No commas: LocalizationTextImporter skips any line with fewer than 3 columns.)
