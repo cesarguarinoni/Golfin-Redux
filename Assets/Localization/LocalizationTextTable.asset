@@ -1210,6 +1210,24 @@ MonoBehaviour:
   - key: TOURN_SPONSORED_BY
     english: SPONSORED BY
     japanese: "\u30B9\u30DD\u30F3\u30B5\u30FC\uFF1A"
+  - key: TOURN_SPONSOR_PRESENTS
+    english: '{0} PRESENTS'
+    japanese: "{0}\u63D0\u4F9B"
+  - key: TOURN_CTA_SIGN_UP
+    english: SIGN UP
+    japanese: "\u30A8\u30F3\u30C8\u30EA\u30FC"
+  - key: TOURN_CTA_CONTINUE
+    english: CONTINUE
+    japanese: "\u7D9A\u3051\u308B"
+  - key: TOURN_UPCOMING
+    english: UPCOMING
+    japanese: "\u958B\u50AC\u4E88\u5B9A"
+  - key: TOURN_ENDING
+    english: ENDING
+    japanese: "\u307E\u3082\u306A\u304F\u7D42\u4E86"
+  - key: TOURN_ENDED
+    english: ENDED
+    japanese: "\u7D42\u4E86"
   - key: TOURN_EMPTY_HEADER
     english: No finishers yet
     japanese: "\u307E\u3060\u5B8C\u8D70\u8005\u304C\u3044\u307E\u305B\u3093"

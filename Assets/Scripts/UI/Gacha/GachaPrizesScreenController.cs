@@ -78,7 +78,30 @@ namespace GolfinRedux.UI.Gacha
             int pullCount = s_pendingPullCount;
             s_pendingPullCount = 10; // reset default
 
+            _pullCount = pullCount;
             ApplyMode(pullCount);
+
+            // The PULL label is resolved imperatively here, so — unlike a LocalizedText label —
+            // nothing repaints it when the language changes. The toggle lives in the Settings
+            // OVERLAY, which leaves this screen enabled, so OnEnable never re-ran and the label
+            // kept the old language until the screen was re-entered.
+            LocalizationManager.OnLanguageChanged += RefreshLocalizedText;
+        }
+
+        private void OnDisable()
+        {
+            LocalizationManager.OnLanguageChanged -= RefreshLocalizedText;
+        }
+
+        // The pull count OnEnable consumed. s_pendingPullCount is reset to 10 as it is read, so it
+        // cannot be re-read later — a refresh has to use this instead or an x1 pull would relabel
+        // itself as x10.
+        private int _pullCount = 10;
+
+        private void RefreshLocalizedText()
+        {
+            if (_pullButtonLabel != null)
+                _pullButtonLabel.text = LocalizationManager.Get(_pullCount != 1 ? "GACHA_PULL_X10" : "GACHA_PULL_X1");
         }
 
         // ── Mode logic ─────────────────────────────────────────────────────────

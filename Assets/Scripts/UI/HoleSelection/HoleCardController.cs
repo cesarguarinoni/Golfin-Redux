@@ -115,6 +115,46 @@ namespace GolfinRedux.UI.HoleSelection
                 actionButton.onClick.AddListener(() => OnActionButtonClicked?.Invoke(this));
         }
 
+
+        // Every string below is resolved imperatively at Bind() time, so — unlike a LocalizedText
+        // label — nothing repaints it when the language changes. The toggle lives in the Settings
+        // OVERLAY, which leaves the screen underneath enabled, so the card never re-enables and
+        // LOCKED / NEXT / PLAY / the hole description kept the old language until the screen was
+        // re-entered. Re-resolve them in place instead.
+        private HoleData _hole;
+
+        private void OnEnable()  => LocalizationManager.OnLanguageChanged += RefreshLocalizedText;
+        private void OnDisable() => LocalizationManager.OnLanguageChanged -= RefreshLocalizedText;
+
+        /// <summary>
+        /// Re-resolve the card's localized strings against the current language. Deliberately NOT
+        /// Bind(...): Bind ends in SetState(state) with the state it was FIRST given, which would
+        /// snap an expanded card shut and force a layout rebuild on every language switch.
+        /// </summary>
+        private void RefreshLocalizedText()
+        {
+            if (_hole == null) return;   // never bound yet — Bind() will localize on its own
+
+            string titleStr;
+            bool titleSilver;
+            if (State == HoleCardState.Locked)      { titleStr = LocalizationManager.Get("UI_LOCKED");          titleSilver = true;  }
+            else if (Mode == HoleCardMode.Replay)   { titleStr = LocalizationManager.Get("RESULT_REPLAY_HOLE"); titleSilver = true;  }
+            else                                    { titleStr = LocalizationManager.Get("RESULT_NEXT");        titleSilver = false; }
+
+            ApplyTitle(titleTextCollapsed, titleStr, titleSilver);
+            ApplyTitle(titleTextExpanded,  titleStr, titleSilver);
+
+            if (descriptionText != null)
+                descriptionText.text = string.IsNullOrEmpty(_hole.descriptionKey)
+                    ? ""
+                    : LocalizationManager.Get(_hole.descriptionKey);
+
+            if (actionButtonLabel != null)
+                actionButtonLabel.text = Mode == HoleCardMode.Replay
+                    ? LocalizationManager.Get("RESULT_REPLAY")
+                    : LocalizationManager.Get("BTN_START");
+        }
+
         /// <summary>
         /// Bind a hole's data and initial state. Called once by the parent after instantiation.
         /// </summary>
@@ -122,6 +162,7 @@ namespace GolfinRedux.UI.HoleSelection
         {
             if (hole == null) return;
 
+            _hole = hole;
             HoleNumber = hole.holeNumber;
             Mode = mode;
 

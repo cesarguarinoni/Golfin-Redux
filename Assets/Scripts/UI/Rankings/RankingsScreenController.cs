@@ -139,11 +139,17 @@ namespace Golfin.UI.Rankings
             RebuildList();
             StartCountdown();
             RequestRefresh(_activePeriod);
+
+            // The language toggle lives in the Settings OVERLAY, which leaves this screen enabled,
+            // so OnEnable never re-runs and the league label kept the old language until the screen
+            // was re-entered. (The countdown re-formats every tick, so it heals itself.)
+            LocalizationManager.OnLanguageChanged += ApplyLeagueLabel;
         }
 
         private void OnDisable()
         {
             StopCountdown();
+            LocalizationManager.OnLanguageChanged -= ApplyLeagueLabel;
         }
 
         // ── Public API (called from HomeScreenController / HoleSelectionScreenController) ──

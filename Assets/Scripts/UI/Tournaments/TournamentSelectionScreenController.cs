@@ -232,9 +232,12 @@ namespace GolfinRedux.UI.Tournaments
                 int    rewardRp = (int)TournamentService.Instance.GetTopPrizeRP(def.Id);
 
                 // Sponsor: "{SPONSOR} PRESENTS" from CSV, not hardcoded "GOLFIN PRESENTS"
+                // The " PRESENTS" suffix used to be concatenated in English regardless of language,
+                // so a sponsored card read "ACME PRESENTS" even in Japanese. TOURN_SPONSOR_PRESENTS
+                // carries the whole pattern ("{0} PRESENTS" / "{0}提供").
                 string sponsorLine = string.IsNullOrEmpty(def.SponsorKey)
                     ? LocalizationManager.Get("TOURN_GOLFIN_PRESENTS")
-                    : def.SponsorKey.ToUpperInvariant() + " PRESENTS";
+                    : string.Format(LocalizationManager.Get("TOURN_SPONSOR_PRESENTS"), def.SponsorKey.ToUpperInvariant());
 
                 var card = UnityEngine.Object.Instantiate(_cardPrefab, _cardsContent);
                 card.BindStatic(
@@ -282,13 +285,13 @@ namespace GolfinRedux.UI.Tournaments
         {
             switch (cs)
             {
-                case TournamentSelectionCard.CardState.Upcoming:        return "UPCOMING";
-                case TournamentSelectionCard.CardState.EnteredActive:   return "CONTINUE";
-                case TournamentSelectionCard.CardState.EnteredFinished: return "LEADERBOARD";
-                case TournamentSelectionCard.CardState.Ending:          return "SIGN UP";
-                case TournamentSelectionCard.CardState.Open:            return "SIGN UP";
-                case TournamentSelectionCard.CardState.Ended:           return "LEADERBOARD";
-                default:                                                return "LEADERBOARD";
+                case TournamentSelectionCard.CardState.Upcoming:        return LocalizationManager.Get("TOURN_UPCOMING");
+                case TournamentSelectionCard.CardState.EnteredActive:   return LocalizationManager.Get("TOURN_CTA_CONTINUE");
+                case TournamentSelectionCard.CardState.EnteredFinished: return LocalizationManager.Get("NAV_LEADERBOARD");
+                case TournamentSelectionCard.CardState.Ending:          return LocalizationManager.Get("TOURN_CTA_SIGN_UP");
+                case TournamentSelectionCard.CardState.Open:            return LocalizationManager.Get("TOURN_CTA_SIGN_UP");
+                case TournamentSelectionCard.CardState.Ended:           return LocalizationManager.Get("NAV_LEADERBOARD");
+                default:                                                return LocalizationManager.Get("NAV_LEADERBOARD");
             }
         }
 

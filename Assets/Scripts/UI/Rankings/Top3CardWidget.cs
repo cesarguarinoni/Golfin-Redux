@@ -44,9 +44,25 @@ namespace Golfin.UI.Rankings
             _scoreLabel  = transform.Find("RewardPoints/Background/NameLabel")?.GetComponent<TextMeshProUGUI>();
         }
 
+
+        // Rank rows are bound imperatively, so — unlike a LocalizedText label — nothing repaints
+        // them when the language changes. The toggle lives in the Settings OVERLAY, which leaves
+        // the screen underneath enabled, so the row never re-enables and RANK_LEVEL / the rarity
+        // name kept the old language until the screen was re-entered. Re-bind in place instead.
+        private LeaderboardEntry? _lastEntry;
+
+        private void OnEnable()  => LocalizationManager.OnLanguageChanged += RefreshLocalizedText;
+        private void OnDisable() => LocalizationManager.OnLanguageChanged -= RefreshLocalizedText;
+
+        private void RefreshLocalizedText()
+        {
+            if (_lastEntry.HasValue) Bind(_lastEntry.Value);   // Bind is pure data -> visuals
+        }
+
         public void Bind(LeaderboardEntry entry)
         {
             Resolve();
+            _lastEntry = entry;
 
             if (_nameLabel != null)
                 _nameLabel.text = entry.DisplayName;

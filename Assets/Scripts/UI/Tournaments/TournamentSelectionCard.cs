@@ -227,17 +227,17 @@ namespace GolfinRedux.UI.Tournaments
                 case CardState.Ending:
                     bgColor   = BadgeEnding;
                     textColor = TextDark;
-                    label     = "ENDING";
+                    label     = LocalizationManager.Get("TOURN_ENDING");
                     break;
                 case CardState.Upcoming:
                     bgColor   = BadgeUpcoming;
                     textColor = TextWhite;
-                    label     = "UPCOMING";
+                    label     = LocalizationManager.Get("TOURN_UPCOMING");
                     break;
                 case CardState.Ended:
                     bgColor   = BadgeEnded;
                     textColor = TextWhite;
-                    label     = "ENDED";
+                    label     = LocalizationManager.Get("TOURN_ENDED");
                     break;
                 default:
                     bgColor   = BadgeEnded;
