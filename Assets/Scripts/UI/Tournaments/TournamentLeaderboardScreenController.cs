@@ -186,17 +186,24 @@ namespace GolfinRedux.UI.Tournaments
                 ? TournamentService.Instance.Remote.GetPlayerRow(id)
                 : default;
 
-            if ((board == null || board.Count == 0) && !playerRow.HasRow)
-            {
-                Debug.Log(string.Format("[TournamentLeaderboard] GetLeaderboard({0}) returned empty board.", id));
-                return;
-            }
             if (board == null) board = System.Array.Empty<TournamentLeaderboardEntry>();
 
             var modal = transform.Find(ModalPath);
             if (modal == null)
             {
                 Debug.LogError(string.Format("[TournamentLeaderboard] Could not find Modal at {0}.", ModalPath));
+                return;
+            }
+
+            // An empty board used to return here, BEFORE the modal was even resolved — which left
+            // the scene's hand-authored placeholder podium and rows (RARE / LEGENDARY / fake names)
+            // on screen, reading as real finishers. TournamentLeaderboardEmptyState was built for
+            // exactly this case and is wired to TOURN_EMPTY_HEADER / TOURN_EMPTY_BODY, but nothing
+            // ever activated it — both keys were orphaned.
+            if (board.Count == 0 && !playerRow.HasRow)
+            {
+                Debug.Log(string.Format("[TournamentLeaderboard] GetLeaderboard({0}) returned empty board.", id));
+                ApplyBoardChrome(modal, rankedCount: 0, hasSticky: false);
                 return;
             }
 
@@ -224,6 +231,15 @@ namespace GolfinRedux.UI.Tournaments
                     ranked.Add(e);
             }
 
+            // The caller's own row (see the comment on the sticky block below) is resolved here
+            // rather than at the bottom, because the chrome pass needs to know whether the sticky
+            // row has anything to show before any of it is bound.
+            var remotePlayer = playerRow;
+            if (remotePlayer.HasRow) playerEntry = remotePlayer.Entry;
+
+            // Show exactly as much chrome as there is data for, BEFORE binding.
+            ApplyBoardChrome(modal, ranked.Count, playerEntry.HasValue);
+
             // ── Podium #1 / #2 / #3 ──────────────────────────────────────────
             BindCard(modal.Find("Top3/Top1Card"), ranked, 0, roster, isPodium: true);
             BindCard(modal.Find("Top3/Top2Card"), ranked, 1, roster, isPodium: true);
@@ -248,9 +264,6 @@ namespace GolfinRedux.UI.Tournaments
             // On the remote path the server ALWAYS sends the caller's row in `player`, even when it
             // is excluded from `entries` (DNF, thru-0, outside the slice) — so the sticky row comes
             // from there rather than from an IsPlayer scan that would find nothing.
-            var remotePlayer = playerRow;
-            if (remotePlayer.HasRow) playerEntry = remotePlayer.Entry;
-
             var sticky = modal.Find("TournamentPlayerStickyRow");
             if (sticky != null && playerEntry.HasValue)
             {
@@ -280,6 +293,52 @@ namespace GolfinRedux.UI.Tournaments
                 OverrideRowLevelDash(sticky, baseEntry.Level);
                 SetStrokes(sticky, pe.Strokes);
             }
+        }
+
+
+        /// <summary>
+        /// Show exactly as much board chrome as there is data for. The podium cards and every
+        /// ranking row are authored in the scene WITH placeholder finishers, so any slot this pass
+        /// does not bind has to be hidden — otherwise a short board (or an empty one) renders the
+        /// designer's fake names and rarities as if they were real results. Sets both ways, so a
+        /// later fuller board restores what an earlier one hid.
+        /// </summary>
+        private static void ApplyBoardChrome(Transform modal, int rankedCount, bool hasSticky)
+        {
+            if (modal == null) return;
+
+            bool empty = rankedCount == 0;
+
+            var podium = modal.Find("Top3");
+            if (podium != null)
+            {
+                SetActive(podium, !empty);
+                SetActive(podium.Find("Top1Card"), rankedCount >= 1);
+                SetActive(podium.Find("Top2Card"), rankedCount >= 2);
+                SetActive(podium.Find("Top3Card"), rankedCount >= 3);
+            }
+
+            SetActive(modal.Find("Bottom97/ScrollArea"), !empty);
+
+            var grid = modal.Find("Bottom97/ScrollArea/Viewport/GridContent");
+            if (grid != null)
+            {
+                int entryIdx = 3;   // the scrolling rows start at rank #4
+                foreach (Transform row in grid)
+                {
+                    if (!row.name.StartsWith("TournamentRankingRow")) continue;
+                    SetActive(row, entryIdx < rankedCount);
+                    entryIdx++;
+                }
+            }
+
+            SetActive(modal.Find("Bottom97/TournamentLeaderboardEmptyState"), empty);
+            SetActive(modal.Find("TournamentPlayerStickyRow"), hasSticky);
+        }
+
+        private static void SetActive(Transform t, bool on)
+        {
+            if (t != null && t.gameObject.activeSelf != on) t.gameObject.SetActive(on);
         }
 
         // ── Header pill binding (iter-2 Defect 6) ────────────────────────────

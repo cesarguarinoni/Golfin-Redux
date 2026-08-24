@@ -2,6 +2,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using Golfin.Roster;   // RarityHelper.GetLocalizedRarityName
 
 namespace Golfin.Inventory
 {
@@ -63,6 +64,17 @@ namespace Golfin.Inventory
 
             if (useButton != null)
                 useButton.onClick.AddListener(OnUseClicked);
+
+            // The Settings overlay leaves the screen underneath enabled, so this panel never
+            // re-enables on a language switch and its imperatively-bound labels kept the old
+            // language until the screen was re-entered.
+            LocalizationManager.OnLanguageChanged += RefreshLocalizedText;
+        }
+
+        /// <summary>Re-resolve the panel against the current language. UpdatePanel is a pure re-bind.</summary>
+        private void RefreshLocalizedText()
+        {
+            if (!string.IsNullOrEmpty(currentItemId)) UpdatePanel(currentItemId);
         }
 
         private void OnDisable()
@@ -72,6 +84,8 @@ namespace Golfin.Inventory
 
             if (useButton != null)
                 useButton.onClick.RemoveListener(OnUseClicked);
+
+            LocalizationManager.OnLanguageChanged -= RefreshLocalizedText;
         }
 
         // ── Event Handlers ─────────────────────────────────────────────────────
@@ -120,7 +134,10 @@ namespace Golfin.Inventory
             // Rarity (colored)
             if (rarityText != null)
             {
-                rarityText.text  = template.rarity.ToUpper();
+                // template.rarity is the raw CSV word ("Common"), so .ToUpper() rendered COMMON in
+                // every language. Route it through the same localized resolver the roster and both
+                // leaderboards use; it falls back to the English name when a row is missing.
+                rarityText.text  = RarityHelper.GetLocalizedRarityName(ClubCsvParser.ParseRarity(template.rarity));
                 rarityText.color = GetRarityColor(template.rarity);
             }
 

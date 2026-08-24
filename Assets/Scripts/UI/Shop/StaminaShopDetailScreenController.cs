@@ -79,12 +79,25 @@ namespace GolfinRedux.UI.Shop
 
             if (RewardPointsManager.Instance != null)
                 RewardPointsManager.Instance.OnPointsChanged += OnRpChanged;
+
+            // The Settings overlay leaves the screen underneath enabled, so this panel never
+            // re-enables on a language switch and its imperatively-bound labels kept the old
+            // language until the screen was re-entered.
+            LocalizationManager.OnLanguageChanged += RefreshLocalizedText;
+        }
+
+        /// <summary>The info card carries this screen's only localized string (the signature note).</summary>
+        private void RefreshLocalizedText()
+        {
+            if (_currentShop != null) BindInfoCard(_currentShop);
         }
 
         private void OnDisable()
         {
             if (RewardPointsManager.Instance != null)
                 RewardPointsManager.Instance.OnPointsChanged -= OnRpChanged;
+
+            LocalizationManager.OnLanguageChanged -= RefreshLocalizedText;
             ClearRows();
         }
 

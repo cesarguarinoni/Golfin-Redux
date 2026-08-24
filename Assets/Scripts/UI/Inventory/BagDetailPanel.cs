@@ -51,6 +51,18 @@ namespace Golfin.Inventory
             }
             if (ClubManager.Instance != null)
                 ClubManager.Instance.OnClubEquipped += OnClubEquipStateChanged;
+
+            // The Settings overlay leaves the screen underneath enabled, so this panel never
+            // re-enables on a language switch and its imperatively-bound labels kept the old
+            // language until the screen was re-entered.
+            LocalizationManager.OnLanguageChanged += RefreshLocalizedText;
+        }
+
+        /// <summary>Re-resolve the panel's localized labels (club-card SWAP, the equip button).</summary>
+        private void RefreshLocalizedText()
+        {
+            RefreshEquipButton();
+            BuildClubGrid();
         }
 
         private void OnDisable()
@@ -62,6 +74,8 @@ namespace Golfin.Inventory
             }
             if (ClubManager.Instance != null)
                 ClubManager.Instance.OnClubEquipped -= OnClubEquipStateChanged;
+
+            LocalizationManager.OnLanguageChanged -= RefreshLocalizedText;
         }
 
         // ── Public API (called by carousel) ────────────────────────────────

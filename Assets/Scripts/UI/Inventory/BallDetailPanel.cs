@@ -69,6 +69,17 @@ namespace Golfin.Inventory
 
             if (compareButton != null)
                 compareButton.onClick.AddListener(OnCompareClicked);
+
+            // The Settings overlay leaves the screen underneath enabled, so this panel never
+            // re-enables on a language switch and its imperatively-bound labels kept the old
+            // language until the screen was re-entered.
+            LocalizationManager.OnLanguageChanged += RefreshLocalizedText;
+        }
+
+        /// <summary>Re-resolve the panel against the current language. UpdatePanel is a pure re-bind.</summary>
+        private void RefreshLocalizedText()
+        {
+            if (!string.IsNullOrEmpty(currentBallId)) UpdatePanel(currentBallId);
         }
 
         private void OnDisable()
@@ -78,6 +89,8 @@ namespace Golfin.Inventory
 
             if (compareButton != null)
                 compareButton.onClick.RemoveListener(OnCompareClicked);
+
+            LocalizationManager.OnLanguageChanged -= RefreshLocalizedText;
         }
 
         private void Start()
