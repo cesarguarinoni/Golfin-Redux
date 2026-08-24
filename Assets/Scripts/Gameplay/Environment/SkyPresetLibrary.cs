@@ -34,8 +34,22 @@ namespace Golfin.Gameplay.Environment
             "cosmetic one.")]
         [SerializeField, Range(0f, 180f)] float _yawJitterDegrees;
 
-        public bool  RandomizationEnabled => _randomizationEnabled;
-        public float YawJitterDegrees     => _yawJitterDegrees;
+        [Header("Play-line guard")]
+        [Tooltip(
+            "Keep the sun off the hole's play line. Sun bearings are authored per time of day " +
+            "against no particular hole, so on a hole that happens to play toward the sun it " +
+            "sits in the player's eyes and blows out the frame. With this on, the sky AND sun " +
+            "rotate together by the smallest amount that clears the window below — so the time " +
+            "of day still reads, but no hole ever plays into the sun.")]
+        [SerializeField] bool _avoidSunInPlayLine = true;
+
+        [Tooltip("How far the sun must stay from straight-ahead, in degrees. 0 disables.")]
+        [SerializeField, Range(0f, 90f)] float _minSunAngleFromPlayLine = 32f;
+
+        public bool  RandomizationEnabled      => _randomizationEnabled;
+        public float YawJitterDegrees          => _yawJitterDegrees;
+        public bool  AvoidSunInPlayLine        => _avoidSunInPlayLine;
+        public float MinSunAngleFromPlayLine   => _minSunAngleFromPlayLine;
 
         public IReadOnlyList<SkyPreset> Presets => _presets;
 

@@ -68,10 +68,11 @@
 > preset but disabled; tick one box to restore it.
 >
 > **Follow-ups, none blocking:**
-> - **Next Hole reloads Hole 1, not Hole 2.** Reproduced in every take of the demo recorder, even
->   invoking Card 2's real PLAY button directly: `GameSession.CurrentHoleNumber` becomes 2 and
->   `Hole_02_Geo` is requested, but Hole 1 is what loads. Unrelated to the sky work — the sky
->   behaviour held correctly across the reload — but it is a real bug in the Next Hole path.
+> - ~~Next Hole reloads Hole 1~~ — **RETRACTED, harness artifact, not a product bug.** The demo
+>   modal reads "Hole **0**": `GameSession.CurrentHoleNumber` was 0 when the recorder's synthetic
+>   `MarkHoleComplete` fired, so `nextHole = 0+1 = 1` and Hole 1 is what the real code correctly
+>   loaded. The bot drove hole selection via `ScreenManager.ShowScreen` and never seeded the
+>   session the way the production path does. Nothing to fix in the Next Hole flow.
 > - `Sky-2.hdr` is 4096×2048 with mipmaps off and costs ~10–21 MB alone, more than all eight new
 >   skies combined. Same downsample recovers most of it; not done because it softens the shipped
 >   look.

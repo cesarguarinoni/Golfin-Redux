@@ -14,9 +14,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Golfin.Gameplay.Environment.SkyPreset
   _displayName: Evening
   _notes: 'Poly Haven ''qwantani_late_afternoon_puresky'' (CC0). Low west sun, long
-    warm shadows.  [sky _Rotation=121.1, sun bearing=275deg]'
+    warm shadows.  [sky _Rotation=121.1, sun bearing=275deg (due west; the play-line
+    guard offsets it per hole)]'
   _skyboxMaterial: {fileID: 2100000, guid: 97ed5f3970cfa4c89b9223ef7cc7a3dc, type: 2}
-  _sunEuler: {x: 19.1, y: 130, z: 0}
+  _sunEuler: {x: 19.1, y: 95, z: 0}
   _sunColor: {r: 1, g: 0.805, b: 0.572, a: 1}
   _sunIntensity: 1.1
   _overrideFog: 0

@@ -140,6 +140,14 @@ namespace Golfin.Gameplay.Environment
                 return false;
             }
 
+            // ── Play-line guard ────────────────────────────────────────────────────
+            // Sun bearings are authored per time of day, blind to which way any given hole
+            // plays. On a hole that runs toward the sun it lands in the player's eyes: on
+            // Hole 6 (plays due west) an evening sun at 275 deg blew out 18.5% of the frame.
+            // Rotate sky AND sun together by the smallest amount that clears the window, so
+            // the time of day still reads but no hole plays into the sun.
+            yawOffsetDegrees += ComputePlayLineGuardYaw(holeScene, preset, yawOffsetDegrees);
+
             // ── Sky ────────────────────────────────────────────────────────────────
             // NOTE THE MINUS SIGN. Skybox/Cubemap rotates the SAMPLING direction, so a
             // larger _Rotation moves the sky's features to a LOWER compass bearing.
@@ -199,15 +207,86 @@ namespace Golfin.Gameplay.Environment
 
         // ── internals ──────────────────────────────────────────────────────────────
 
+
+        // ── play-line guard ────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Extra yaw needed to push this preset's sun clear of the hole's play line.
+        /// Returns 0 when the guard is off, the hole geometry cannot be found, or the sun
+        /// is already clear.
+        /// </summary>
+        static float ComputePlayLineGuardYaw(Scene holeScene, SkyPreset preset, float yawAlready)
+        {
+            var library = SkyPresetLibrary.Load();
+            if (library == null || !library.AvoidSunInPlayLine) return 0f;
+            float minAngle = library.MinSunAngleFromPlayLine;
+            if (minAngle <= 0f) return 0f;
+            if (!TryGetPlayBearing(holeScene, out float playBearing)) return 0f;
+
+            // Where the sun ends up once the caller's own yaw is applied.
+            float sunBearing = Mathf.Repeat(preset.SunEuler.y - 180f + yawAlready, 360f);
+
+            // Signed angle from "straight down the hole" to the sun. Near 0 = in the eyes.
+            float delta = Mathf.DeltaAngle(playBearing, sunBearing);
+            float need  = minAngle - Mathf.Abs(delta);
+            if (need <= 0f) return 0f;
+
+            // Push it to whichever side is nearer. Exactly-ahead is broken toward +1 so the
+            // result stays deterministic (same seed must always give the same sky).
+            float sign = delta >= 0f ? 1f : -1f;
+            float guard = need * sign;
+            Debug.Log($"[SkyRandomizer] Play-line guard: hole plays {playBearing:0.#}deg, " +
+                      $"sun at {sunBearing:0.#}deg ({Mathf.Abs(delta):0.#}deg off) -> " +
+                      $"rotating {guard:+0.#;-0.#}deg to clear {minAngle:0.#}deg.");
+            return guard;
+        }
+
+        /// <summary>
+        /// Compass bearing from the tee to the pin, in degrees. Reads the hole scene's own
+        /// Tees/Greens objects, so it works for any hole without per-hole authoring.
+        /// </summary>
+        public static bool TryGetPlayBearing(Scene holeScene, out float bearingDegrees)
+        {
+            bearingDegrees = 0f;
+            if (!holeScene.IsValid() || !holeScene.isLoaded) return false;
+
+            Transform tee = null, pin = null;
+            foreach (var root in holeScene.GetRootGameObjects())
+            {
+                foreach (var t in root.GetComponentsInChildren<Transform>(includeInactive: true))
+                {
+                    string n = t.name;
+                    if (pin == null && (n.StartsWith("Hole_") || n.StartsWith("Flag_"))) pin = t;
+                    else if (tee == null && n.StartsWith("Tee_")) tee = t;
+                    if (tee != null && pin != null) break;
+                }
+                if (tee != null && pin != null) break;
+            }
+            if (tee == null || pin == null) return false;
+
+            Vector3 d = pin.position - tee.position;
+            if (d.sqrMagnitude < 1f) return false;
+            bearingDegrees = Mathf.Repeat(Mathf.Atan2(d.x, d.z) * Mathf.Rad2Deg, 360f);
+            return true;
+        }
+
         static readonly int RotationId = Shader.PropertyToID("_Rotation");
 
         static Material GetRuntimeClone(Material source)
         {
-            if (s_runtimeClones.TryGetValue(source, out var clone) && clone != null)
+            if (!s_runtimeClones.TryGetValue(source, out var clone) || clone == null)
+            {
+                clone = new Material(source) { name = source.name + " (runtime)" };
+                s_runtimeClones[source] = clone;
                 return clone;
+            }
 
-            clone = new Material(source) { name = source.name + " (runtime)" };
-            s_runtimeClones[source] = clone;
+            // Re-sync from the source every time. The clone is cached to avoid leaking a
+            // material per apply, but a cache that never refreshes silently serves stale
+            // values whenever the preset's material changes — which is exactly what happened
+            // while tuning exposures: the asset moved and the rendered sky did not.
+            clone.CopyPropertiesFromMaterial(source);
+            clone.name = source.name + " (runtime)";
             return clone;
         }
 
