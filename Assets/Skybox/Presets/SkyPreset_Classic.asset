@@ -13,14 +13,16 @@ MonoBehaviour:
   m_Name: SkyPreset_Classic
   m_EditorClassIdentifier: Assembly-CSharp::Golfin.Gameplay.Environment.SkyPreset
   _displayName: Classic
-  _notes: "The sky Golfin shipped with (Sky-2.mat) and the hole scenes' original
-    45/135 sun. DISABLED in rotation \u2014 kept so the old look can be restored
-    by ticking one box."
+  _notes: "The sky Golfin shipped with (Sky-2.mat) plus the hole scenes' original
+    45/135 sun, IN ROTATION at its original exposure 0.8 \u2014 deliberately not
+    re-levelled to the other eight, so this entry stays the original look. Play-line
+    guard off: no sun disc to steer around."
   _skyboxMaterial: {fileID: 2100000, guid: af31a7f17c003d1488946e5847482393, type: 2}
   _sunEuler: {x: 45, y: 135, z: 0}
   _sunColor: {r: 1, g: 0.96, b: 0.88, a: 1}
   _sunIntensity: 1.2
   _overrideFog: 0
   _fogColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
-  _enabledInRotation: 0
+  _minSunAngleFromPlayLine: 0
+  _enabledInRotation: 1
   _weight: 1
