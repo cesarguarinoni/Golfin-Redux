@@ -351,8 +351,22 @@
 >
 > **Tuning knobs.** `Assets/Resources/Environment/SkyPresetLibrary.asset` — master on/off,
 > per-preset weight/enable, and a yaw-jitter field left at 0 (rotating the sun changes whether
-> the player hits into it — a playability call). `Classic` (the old `Sky-2` look) is kept as a
-> preset but disabled; tick one box to restore it.
+> the player hits into it — a playability call).
+>
+> **`Classic` is IN the rotation as of 2026-08-25 (`02c16780d`) — nine skies, not eight.** The
+> original `Sky-2` look plus the hole scenes' original 45°/135° sun, weight 1 (~13% of runs).
+> Deliberately kept at its **original exposure 0.8**, not re-levelled to the other eight, so this
+> entry stays the look the game shipped with; and its play-line guard is explicitly **off**
+> (`_minSunAngleFromPlayLine = 0`) because Sky-2 is hazy with no sun disc (sun/sky contrast 4.1
+> vs ~1700 for the clear plates) — nothing to steer around, and off preserves the original sun
+> exactly. Verified: sun reads (45, 135, 0) unchanged on holes 01/03/06/09/12/18, blow-out 0.00%
+> on all six, and all 9 presets are reachable in a 450-seed draw.
+>
+> One number to distrust if you find it quoted elsewhere: Classic was predicted to look dull
+> beside the re-levelled eight (~33% below the dimmest). **Measured, it is 7% below** — all-sky
+> median 0.191 vs their 0.206–0.527, and its frame mean on hole 6 (0.357) is actually higher than
+> Evening's (0.325). The prediction reused a measurement taken before the guard, the re-target and
+> the Sky-2 downsample. No re-levelling was needed.
 >
 > **Follow-ups, none blocking:**
 > - ~~Next Hole reloads Hole 1~~ — **RETRACTED, harness artifact, not a product bug.** The demo

@@ -2671,3 +2671,29 @@ element before authoring one** — `find Assets/Art -iname "*divider*"` would ha
 **And:** when Cesar gives a number that conflicts with the node, go re-read the node. He said "24px
 top and the same on the bottom"; the node is 24 above / **32** below. His later *"Check Figma and fix
 it"* was the correction — the node is the authority for geometry.
+
+---
+
+## Lesson BH — a measurement has a shelf life; re-take it after the system changes
+
+**Session:** 2026-08-25, adding `Classic` to the sky rotation (`02c16780d`).
+
+Asked to put the original sky back in rotation, I warned it would look dull: "all-sky median
+0.202 against the others' 0.30–0.52, so ~33% below the dimmest." I was quoting my own earlier
+measurement — but it had been taken *before* the per-hole play-line guard, before the eight were
+re-targeted, and before Sky-2 was downsampled. Every one of those changed the number.
+
+Re-measured, Classic sits at **0.191 against 0.206–0.527** — 7% below the dimmest, not 33%, and
+on the actual hole its frame was *brighter* than Evening. The concern was groundless and the
+"maybe we should re-level it" trade-off I raised did not exist. I had already told Cesar the wrong
+figure before checking.
+
+**Rules:**
+- Numbers age. Before quoting a measurement, ask what has changed in the system since it was
+  taken — and if anything has, re-run it. Re-running took one script.
+- This is distinct from [[feedback_derive_dont_confirm_evidence]]: the source was my own primary
+  measurement, not someone's claim. Provenance being good does not make it current.
+- Do not surface a trade-off ("faithful vs consistent") until the number that creates it has been
+  re-confirmed. I nearly had us re-levelling an asset that was already in band.
+- When the fresh number contradicts one already given, say so explicitly and plainly rather than
+  quietly using the new one.
