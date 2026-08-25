@@ -126,11 +126,41 @@ render at matched scale — the divisor arithmetic is not the gate** (`feedback_
 | Content container | `13924:42331` | 978×227. |
 | Title text | `13924:42334` | 882×47 at x=48 y=32 (inside `13924:42332` "Upper"); centred; ALL CAPS; **Rubik Medium**; node 40px → TMP 33.33. Content = `ROSTER_STARTER_CONFIRM_TITLE`. |
 | Character name text | `13924:42354` | 882×76 at y=63 within Upper; centred; ALL CAPS; **Rubik Bold**; node 64px → TMP 53.33. Content = the chosen character's `"{name} {lastName}"` from CSV — **not** a localization key. |
-| Mid separator | `13924:42335` | 882-wide 1px line at x=48 y=195. |
+| Mid separator | `13924:42335` | 882-wide 1px line at x=48 y=195. **Gap: 24px above (to the character-name text) and 24px below (to the buttons row) — Cesar, 2026-08-25, verbatim: *"It should be 24px on top and the same on the bottom"*. This number is authoritative and overrides whatever the node spacing computes to.** Measure the gaps numerically (world corners) and report them as exact values, not "about 24". |
 | Buttons row | `13924:42336` | 798×120 at x=90 y=227. Two `Main Buttons` instances. |
 | BACK button | `13924:42338` | 359×120, **silver** variant, left. Label `ROSTER_STARTER_BACK`. |
 | CONFIRM button | `13924:42340` | 391×120, **gold** variant, right, starts at x=407 within the row (i.e. a 48px gap). Label `MODAL_CONFIRM` (existing key). |
 | Backdrop | — | Standard `ModalController` backdrop. Note `reference_linear_space_alpha_and_canvas_sorting`: 50% black only dims white to ~187 — match the family's existing backdrop value rather than inventing one. |
+
+## Cover art supplied by Cesar (2026-08-24) — replaces ALL hand-rolled flat fills
+
+Cesar dropped real art for the three fabricated flat fills that iter-1/iter-2 hand-rolled. These are
+now mandated clone-provenance sources. **Authoring a flat-colour fill for any of these three is a
+hard FAIL.**
+
+| Element | Asset | Size | Matches |
+|---|---|---|---|
+| Instruction block background (starter screen) | `Assets/Art/RosterScreen/Nav Bar Cover.png` | 1170×263 | Figma node `13924:42124` "Nav Bar Container" — **exact** match. Carries the gradient; Cesar: *"yours was flat and not using the gradient that one has"* |
+| Locked portrait cover (carousel card) | `Assets/Art/RosterScreen/Locked Portraits.png` | 178×351 | Card geometry 170×343 / 180×353 selected. Replaces the hand-rolled `new Color(0.05f, 0.13f, 0.20f, 0.75f)` in `CharacterThumbnailCard.SetLocked` (fail F8) |
+| Locked detail-panel cover | `Assets/Art/RosterScreen/Roster Cover.png` | 1082×1491 | Figma "Outline" node `13924:42016` is 1074×1483; +4px rim per side. Cesar: *"the cover you are using does not have rounded corners"* — this sprite has them |
+
+**Note:** `Assets/Art/RosterScreen/Button - Retry.png` is a byte-identical duplicate of
+`Roster Cover.png` (both md5 `d118cd92a17ee6a3be2666027de444dd`) — an earlier copy under a wrong
+filename. Use `Roster Cover.png`. Do not delete the duplicate without asking Cesar; another task may
+reference that name.
+
+**ALL THREE ARE IMPORTED AS `textureType: 0` (Default), `spriteMode: 0` — they are NOT sprites yet.**
+No `Image.sprite` can reference them until each is re-imported as **Sprite (2D and UI)**. Do that
+first, via the importer API (never by hand-editing `.meta`).
+
+**Scaling discipline** (Rule 21 render-health; both of these are defects Cesar has caught by eye
+before): a 9-sliced sprite without `pixelsPerUnitMultiplier` collapses its corners into an oval; a
+non-9-sliced sprite stretched non-uniformly distorts its corner radius. Prefer native-size
+`Image.Type.Simple` where the sprite already matches the target rect — `Nav Bar Cover.png` does
+(1170×263). Otherwise 9-slice with correct `spriteBorder` AND set the multiplier.
+
+Never sample a colour off these PNGs and reproduce it as a fill — the entire point is that they
+carry gradients and rounded corners.
 
 ## Clone provenance (Rule 19 — REUSE MANDATE)
 
@@ -338,8 +368,12 @@ ShellScene → title/PLAY gate → login/account → starter screen
 (`reference_editor_login_devautosignin`, `feedback_real_world_game_testing`). `ShowScreen(target)`
 alone is a **false positive** — the frame stays on the title screen.
 
-**Dev reset for a fresh run:** delete the `LocalJsonPersister` save file between runs; state the
-exact path used in the report.
+**Fresh save is the PREFERRED test condition (Cesar, 2026-08-25):** *"I don't care about my save.
+In fact, better to start from 0 to check the flow."* Delete
+`~/Library/Application Support/NEXT INNOVATION PTE_ LTD_/Golfin/save.json` outright and boot from
+nothing — that exercises the genuine first-run path, which is what this feature is. There is NO
+requirement to preserve or restore any existing save. Wiping `save.json` does not clear the auth
+session (PlayerPrefs); `PlayerPrefs.DeleteAll()` remains banned because it logs the Editor out.
 
 **Captures — 1170×2532, via `mcp__ai-game-developer__screenshot-game-view`** (Capture Rule 0 —
 never a hand-rolled `script-execute`; the hook hard-blocks it). Set `runInBackground` and **look at
@@ -367,7 +401,7 @@ Home → Roster showing the other candidate locked. Reuse the DemoRecorder famil
 (`convention_videos_vs_screenshots`), and give Cesar the path as a clickable link.
 
 **Leave the editor clean** (`feedback_leave_editor_clean`): exit play mode, no dirty scene, no
-leftover mutations, save file restored to a sane state.
+leftover mutations. The save file does NOT need restoring — see the fresh-save note above.
 
 ## Out of scope (do NOT do these)
 

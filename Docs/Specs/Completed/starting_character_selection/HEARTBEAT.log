@@ -1,0 +1,321 @@
+=== iter-1 kickoff baseline ===
+Timestamp: 2026-08-24T02:01:24Z
+HEAD: b017ae14b (spec(starting_character_selection): first-run starter pick + character ownership model)
+DIRTY porcelain:
+ M Docs/Versioning/last_uploaded_build.txt
+Pre-existing drift (NOT introduced by this task):
+  M Docs/Versioning/last_uploaded_build.txt
+===
+2026-08-24T02:01:24Z activated
+2026-08-24T02:14:09 compilation clean, proceeding to scene wiring
+2026-08-24T02:18:51Z scene wired: StarterInstructionBar + StartingCharacterConfirmModal created, all SerializeFields wired, scene saved
+2026-08-24T02:27:37Z
+done, awaiting review
+2026-08-24T02:28:48Z done, awaiting review
+2026-08-24T02:32:33 iter-2 kickoff — addressing F1-F10 from ARCHITECT_REVIEW_FAIL
+=== iter-2 kickoff baseline ===
+b017ae14b3d7a0af14d9243d4ef62856314a4ea1
+ M .claude/review_misses.log
+ M Assets/Data/Characters.csv
+ M Assets/Localization/LocalizationText.csv
+ M Assets/Localization/LocalizationTextTable.asset
+ M Assets/Scenes/ShellScene.unity
+ M Assets/Scripts/CharacterManager.cs
+ M Assets/Scripts/Save/SaveData.cs
+ M Assets/Scripts/Save/SaveSchemaMigrator.cs
+ M Assets/Scripts/UI/Account/CreateUsernameScreenController.cs
+ M Assets/Scripts/UI/Roster/Managers/CharacterDatabaseCSV.cs
+ M Assets/Scripts/UI/Roster/UI/CarouselController.cs
+ M Assets/Scripts/UI/Roster/UI/CharacterDetailPanel.cs
+ M Assets/Scripts/UI/Roster/UI/CharacterThumbnailCard.cs
+ M Assets/Scripts/UI/Roster/UI/RosterScreenController.cs
+ M Assets/Scripts/UI/ScreenManager.cs
+ M Docs/Specs/Active/starting_character_selection/ARCHITECT_REVIEW.md
+ M Docs/Specs/Active/starting_character_selection/IMPLEMENTER_REPORT.md
+ M Docs/Specs/Active/starting_character_selection/STATUS.md
+ M Docs/Versioning/last_uploaded_build.txt
+?? Assets/Prefabs/UI/Modals/StartingCharacterConfirmModal.prefab
+?? Assets/Prefabs/UI/Modals/StartingCharacterConfirmModal.prefab.meta
+?? Assets/Scripts/UI/Roster/UI/StartingCharacterConfirmModalController.cs
+?? Assets/Scripts/UI/Roster/UI/StartingCharacterConfirmModalController.cs.meta
+?? Docs/Specs/Active/starting_character_selection/HEARTBEAT.log
+===
+2026-08-24T11:46:57 resuming - inspecting BagSlotLockedPrefab for F8 sprite source
+2026-08-24T11:54:41 iter-2 kickoff: all code fixes done, starting evidence capture
+2026-08-24T03:00:34 all code fixes compiled clean; starting evidence capture (fresh-save path)
+2026-08-24T03:43:39 iter-2: FadeController fix applied, save restored, writing report (token-exhausted — escalating to architect)
+2026-08-24T03:44:40 iter-2 done, STATUS=READY_FOR_ARCHITECT_REVIEW — fade blocker unresolved, 2 open questions for architect
+=== iter-3 kickoff baseline ===
+HEAD SHA: 36c06e4ba58de1089bd785d24f2beab3edbf8c0c
+DIRTY porcelain:
+ M .claude/review_misses.log
+ M Assets/Data/Characters.csv
+ M Assets/Localization/LocalizationText.csv
+ M Assets/Localization/LocalizationTextTable.asset
+ M Assets/Prefabs/UI/Roster/CharacterThumbnailCard.prefab
+ M Assets/Scenes/ShellScene.unity
+ M Assets/Scripts/CharacterManager.cs
+ M Assets/Scripts/Save/SaveData.cs
+ M Assets/Scripts/Save/SaveSchemaMigrator.cs
+ M Assets/Scripts/UI/Account/CreateUsernameScreenController.cs
+ M Assets/Scripts/UI/Account/LoginScreenController.cs
+ M Assets/Scripts/UI/Account/SignUpScreenController.cs
+ M Assets/Scripts/UI/Roster/Managers/CharacterDatabaseCSV.cs
+ M Assets/Scripts/UI/Roster/UI/CarouselController.cs
+ M Assets/Scripts/UI/Roster/UI/CharacterDetailPanel.cs
+ M Assets/Scripts/UI/Roster/UI/CharacterThumbnailCard.cs
+ M Assets/Scripts/UI/Roster/UI/RosterScreenController.cs
+ M Assets/Scripts/UI/ScreenManager.cs
+ M Assets/Scripts/UI/SplashScreenController.cs
+ M Docs/Specs/Active/starting_character_selection/ARCHITECT_REVIEW.md
+ M Docs/Specs/Active/starting_character_selection/IMPLEMENTER_REPORT.md
+ M Docs/Specs/Active/starting_character_selection/STATUS.md
+ M Docs/Versioning/last_uploaded_build.txt
+?? Assets/Prefabs/UI/Modals/StartingCharacterConfirmModal.prefab
+?? Assets/Prefabs/UI/Modals/StartingCharacterConfirmModal.prefab.meta
+?? Assets/Scripts/UI/Roster/UI/StartingCharacterConfirmModalController.cs
+?? Assets/Scripts/UI/Roster/UI/StartingCharacterConfirmModalController.cs.meta
+?? Assets/Skybox/CREDITS.md.meta
+?? Docs/Specs/Active/starting_character_selection/HEARTBEAT.log
+=== end baseline ===
+2026-08-24T03:48:55 activated iter-3
+2026-08-24T04:13:40Z Q1+F8+Q2 code done; entering play mode for F9 captures
+2026-08-24T04:19:43Z resumed after context compaction - wiring GlowUp prefab _lockedOverlay+_lockedLabel
+2026-08-24T05:13:24 F8 prefab wiring done: _lockedOverlay+_lockedLabel wired in CharacterThumbnailCardGlowUp.prefab. Entering play mode for state captures.
+2026-08-24T08:25:21Z resumed after API 529 — fixing D1/D2/D3/sprite-import, then all-8-state captures
+2026-08-24T08:36:21 iter-3 resumed - entering play mode for 8-state capture
+2026-08-24T09:51:50 done, awaiting review — D1/D2/D3/D4 addressed, Rules 9+21 marked FAIL (token budget), STATUS→READY_FOR_ARCHITECT_REVIEW
+2026-08-24T09:55:21 activated — iter-4 kickoff, addressing F-A/F-B/F-C/F-D/R9/R21
+2026-08-24T09:56:37 F-A done: [DefaultExecutionOrder(-1000)] added to LocalizationBootstrap; Initialize already fires OnLanguageChanged. Starting F-B re-shoot.
+2026-08-24T10:13:19 iter-4 resumed: fix compiled, re-entering play mode for remaining states
+2026-08-24T11:03:45Z BLOCKER: Unity frozen on Save-dialog from SaveCurrentModifiedScenesIfUserWantsTo() — MCP unresponsive 5+ min — setting IMPLEMENTER_BLOCKED
+2026-08-24T11:10:39Z done, awaiting review — F-D video recorded (demo.mp4 3.0MB 35.5s), all items PASS, STATUS→READY_FOR_SELF_REVIEW
+2026-08-24T21:48:20 === iter-5 kickoff baseline ===
+00cb67835 docs(environment): sky rotation close-out + the two conventions it cost
+ M .claude/review_misses.log
+ M Assets/Data/Characters.csv
+ M Assets/Localization/LocalizationBootstrap.cs
+ M Assets/Localization/LocalizationText.csv
+ M Assets/Localization/LocalizationTextTable.asset
+ M Assets/Prefabs/UI/Roster/CharacterThumbnailCard.prefab
+ M Assets/Prefabs/UI/Roster/CharacterThumbnailCardGlowUp.prefab
+ M Assets/Scenes/ShellScene.unity
+ M Assets/Scripts/CharacterManager.cs
+ M Assets/Scripts/Editor/ScreenshotTool.cs
+ M Assets/Scripts/Save/SaveData.cs
+ M Assets/Scripts/Save/SaveSchemaMigrator.cs
+ M Assets/Scripts/UI/Account/CreateUsernameScreenController.cs
+ M Assets/Scripts/UI/Account/LoginScreenController.cs
+ M Assets/Scripts/UI/Account/SignUpScreenController.cs
+ M Assets/Scripts/UI/FadeController.cs
+ M Assets/Scripts/UI/Roster/Editor/RosterDebugTools.cs
+ M Assets/Scripts/UI/Roster/Managers/CharacterDatabaseCSV.cs
+ M Assets/Scripts/UI/Roster/UI/CarouselController.cs
+ M Assets/Scripts/UI/Roster/UI/CharacterDetailPanel.cs
+ M Assets/Scripts/UI/Roster/UI/CharacterThumbnailCard.cs
+ M Assets/Scripts/UI/Roster/UI/RosterScreenController.cs
+ M Assets/Scripts/UI/ScreenManager.cs
+ M Assets/Scripts/UI/SplashScreenController.cs
+ M Docs/Economy/ECONOMY_MASTER.md
+ M Docs/Economy/GOLFIN_Economy_Model.xlsx
+ M Docs/Specs/Active/starting_character_selection/ARCHITECT_REVIEW.md
+ M Docs/Specs/Active/starting_character_selection/IMPLEMENTER_REPORT.md
+ M Docs/Specs/Active/starting_character_selection/SPEC.md
+ M Docs/Specs/Active/starting_character_selection/STATUS.md
+ M Docs/Versioning/last_uploaded_build.txt
+?? "Assets/Art/RosterScreen/Locked Portraits.png"
+?? "Assets/Art/RosterScreen/Locked Portraits.png.meta"
+?? "Assets/Art/RosterScreen/Nav Bar Cover.png"
+?? "Assets/Art/RosterScreen/Nav Bar Cover.png.meta"
+?? "Assets/Art/RosterScreen/Roster Cover.png"
+?? "Assets/Art/RosterScreen/Roster Cover.png.meta"
+?? Assets/Prefabs/UI/Modals/StartingCharacterConfirmModal.prefab
+?? Assets/Prefabs/UI/Modals/StartingCharacterConfirmModal.prefab.meta
+?? Assets/Scripts/UI/Editor/StarterSelectionDemoRecorder.cs
+?? Assets/Scripts/UI/Editor/StarterSelectionDemoRecorder.cs.meta
+?? Assets/Scripts/UI/Roster/UI/StartingCharacterConfirmModalController.cs
+?? Assets/Scripts/UI/Roster/UI/StartingCharacterConfirmModalController.cs.meta
+?? Docs/Specs/Active/starting_character_selection/ARCHITECT_ESCALATION.md
+?? Docs/Specs/Active/starting_character_selection/HEARTBEAT.log
+?? tasks/sky_rotation_demo/
+2026-08-24T21:48:20 activated
+2026-08-24T22:02:19 modal InstructionText destroyed, separator+fontSize+padding fixed; C1 language cleared
+2026-08-25T07:45:00 done, awaiting review — FAIL items: video not recorded, linter not run, runtime flow items unverified
+2026-08-24T22:22:54 iter-6 activated
+2026-08-24T22:23:51 F1 fix applied - CarouselController lock logic
+2026-08-24T22:42:03Z done, awaiting review — F1/F2/F4 PASS, F3 FAIL (captions fixed, modal-on-camera needs re-record), F5 PASS* (modal visible, separator/WITH: noted for reviewer)
+2026-08-24T22:46:46 iter-7 activated — fixing F1 locked card reachability, F2 modal width, F3 separator, F4 re-record, F5 clone residue
+=== iter-7 kickoff baseline ===
+HEAD SHA: bea290de83b29e8ab201dbeff3f9c23797db906f
+DIRTY porcelain:
+ M .claude/review_misses.log
+ M Assets/Data/Characters.csv
+ M Assets/Localization/LocalizationBootstrap.cs
+ M Assets/Localization/LocalizationText.csv
+ M Assets/Localization/LocalizationTextTable.asset
+ M Assets/Prefabs/UI/Roster/CharacterThumbnailCard.prefab
+ M Assets/Prefabs/UI/Roster/CharacterThumbnailCardGlowUp.prefab
+ M Assets/Resources/Clubs/Full/Iron9-Klyro.png
+ M Assets/Resources/Clubs/Full/Placeholder.png
+ M Assets/Resources/Clubs/Full/Putter-GolfinX.png
+ M Assets/Resources/Clubs/Full/WedgeA-Fyloe.png
+ M Assets/Resources/Clubs/Full/WedgeP-RoyalSwing.png
+ M Assets/Scenes/ShellScene.unity
+ M Assets/Scripts/CharacterManager.cs
+ M Assets/Scripts/Editor/ScreenshotTool.cs
+ M Assets/Scripts/Save/SaveData.cs
+ M Assets/Scripts/Save/SaveSchemaMigrator.cs
+ M Assets/Scripts/UI/Account/CreateUsernameScreenController.cs
+ M Assets/Scripts/UI/Account/LoginScreenController.cs
+ M Assets/Scripts/UI/Account/SignUpScreenController.cs
+ M Assets/Scripts/UI/FadeController.cs
+ M Assets/Scripts/UI/PersistentUIManager.cs
+ M Assets/Scripts/UI/Roster/Data/PlayerCharacterData.cs
+ M Assets/Scripts/UI/Roster/Editor/RosterDebugTools.cs
+ M Assets/Scripts/UI/Roster/Managers/CharacterDatabaseCSV.cs
+ M Assets/Scripts/UI/Roster/UI/CarouselController.cs
+ M Assets/Scripts/UI/Roster/UI/CharacterDetailPanel.cs
+ M Assets/Scripts/UI/Roster/UI/CharacterThumbnailCard.cs
+ M Assets/Scripts/UI/Roster/UI/RosterScreenController.cs
+ M Assets/Scripts/UI/ScreenManager.cs
+ M Assets/Scripts/UI/SplashScreenController.cs
+ M Docs/Economy/ECONOMY_MASTER.md
+ M Docs/Economy/GOLFIN_Economy_Model.xlsx
+ M "Docs/Game Design/GAME_DESIGN_CHANGELOG.md"
+ M Docs/Specs/Active/club_art_batches/SPEC.md
+ M Docs/Specs/Active/starting_character_selection/ARCHITECT_REVIEW.md
+ M Docs/Specs/Active/starting_character_selection/IMPLEMENTER_REPORT.md
+ M Docs/Specs/Active/starting_character_selection/SPEC.md
+ M Docs/Specs/Active/starting_character_selection/STATUS.md
+ M Docs/Versioning/last_uploaded_build.txt
+?? Assets/Art/Clubs/Full_Masters~/Iron9-Klyro.png
+?? Assets/Art/Clubs/Full_Masters~/Placeholder.png
+?? Assets/Art/Clubs/Full_Masters~/Putter-GolfinX.png
+?? Assets/Art/Clubs/Full_Masters~/WedgeA-Fyloe.png
+?? Assets/Art/Clubs/Full_Masters~/WedgeP-RoyalSwing.png
+?? "Assets/Art/RosterScreen/Locked Portraits.png"
+?? "Assets/Art/RosterScreen/Locked Portraits.png.meta"
+?? "Assets/Art/RosterScreen/Nav Bar Cover.png"
+?? "Assets/Art/RosterScreen/Nav Bar Cover.png.meta"
+?? "Assets/Art/RosterScreen/Roster Cover.png"
+?? "Assets/Art/RosterScreen/Roster Cover.png.meta"
+?? Assets/Prefabs/UI/Modals/StartingCharacterConfirmModal.prefab
+?? Assets/Prefabs/UI/Modals/StartingCharacterConfirmModal.prefab.meta
+?? Assets/Scripts/UI/Editor/StarterSelectionDemoRecorder.cs
+?? Assets/Scripts/UI/Editor/StarterSelectionDemoRecorder.cs.meta
+?? Assets/Scripts/UI/Roster/UI/StartingCharacterConfirmModalController.cs
+?? Assets/Scripts/UI/Roster/UI/StartingCharacterConfirmModalController.cs.meta
+?? Docs/CONTENT_PIPELINE_PLAN.md
+?? "Docs/Game Design/CHARACTER_ROSTER_DESIGN.md"
+?? Docs/Specs/Active/starting_character_selection/ARCHITECT_ESCALATION.md
+?? Docs/Specs/Active/starting_character_selection/HEARTBEAT.log
+?? Docs/Specs/Active/starting_character_selection/StartingCharacterConfirmModal_lint.json
+?? _to_delete/.mvtest2
+?? tasks/sky_rotation_demo/video/raw.mp4
+=== end baseline ===
+2026-08-25T07:56:43 fixing modal layout: Content height + CSF disable
+2026-08-25T08:30:00 done, awaiting review — F1/F2/F3/F5 PASS; F4 FAIL (video not re-recorded); routing READY_FOR_ARCHITECT_REVIEW
+2026-08-25T09:00:00 iter-8 activated: addressing F6, F7, F4
+=== iter-8 kickoff baseline HEAD=bea290de83b29e8ab201dbeff3f9c23797db906f ===
+DIRTY:
+ M .claude/review_misses.log
+ M Assets/Data/Characters.csv
+ M Assets/Localization/LocalizationBootstrap.cs
+ M Assets/Localization/LocalizationText.csv
+ M Assets/Localization/LocalizationTextTable.asset
+ M Assets/Prefabs/UI/Roster/CharacterThumbnailCard.prefab
+ M Assets/Prefabs/UI/Roster/CharacterThumbnailCardGlowUp.prefab
+ M Assets/Resources/Clubs/Full/Iron9-Klyro.png
+ M Assets/Resources/Clubs/Full/Placeholder.png
+ M Assets/Resources/Clubs/Full/Putter-GolfinX.png
+ M Assets/Resources/Clubs/Full/WedgeA-Fyloe.png
+ M Assets/Resources/Clubs/Full/WedgeP-RoyalSwing.png
+ M Assets/Scenes/ShellScene.unity
+ M Assets/Scripts/CharacterManager.cs
+ M Assets/Scripts/Editor/ScreenshotTool.cs
+ M Assets/Scripts/Save/SaveData.cs
+ M Assets/Scripts/Save/SaveSchemaMigrator.cs
+ M Assets/Scripts/UI/Account/CreateUsernameScreenController.cs
+ M Assets/Scripts/UI/Account/LoginScreenController.cs
+ M Assets/Scripts/UI/Account/SignUpScreenController.cs
+ M Assets/Scripts/UI/FadeController.cs
+ M Assets/Scripts/UI/PersistentUIManager.cs
+ M Assets/Scripts/UI/Roster/Data/PlayerCharacterData.cs
+ M Assets/Scripts/UI/Roster/Editor/RosterDebugTools.cs
+ M Assets/Scripts/UI/Roster/Managers/CharacterDatabaseCSV.cs
+ M Assets/Scripts/UI/Roster/UI/CarouselController.cs
+ M Assets/Scripts/UI/Roster/UI/CharacterDetailPanel.cs
+ M Assets/Scripts/UI/Roster/UI/CharacterThumbnailCard.cs
+ M Assets/Scripts/UI/Roster/UI/RosterScreenController.cs
+ M Assets/Scripts/UI/ScreenManager.cs
+ M Assets/Scripts/UI/SplashScreenController.cs
+ M Docs/Economy/ECONOMY_MASTER.md
+ M Docs/Economy/GOLFIN_Economy_Model.xlsx
+ M "Docs/Game Design/GAME_DESIGN_CHANGELOG.md"
+ M Docs/Specs/Active/club_art_batches/SPEC.md
+ M Docs/Specs/Active/starting_character_selection/ARCHITECT_REVIEW.md
+ M Docs/Specs/Active/starting_character_selection/IMPLEMENTER_REPORT.md
+ M Docs/Specs/Active/starting_character_selection/SPEC.md
+ M Docs/Specs/Active/starting_character_selection/STATUS.md
+ M Docs/Versioning/last_uploaded_build.txt
+?? Assets/Art/Clubs/Full_Masters~/
+?? "Assets/Art/RosterScreen/Locked Portraits.png"
+?? "Assets/Art/RosterScreen/Locked Portraits.png.meta"
+?? "Assets/Art/RosterScreen/Nav Bar Cover.png"
+?? "Assets/Art/RosterScreen/Nav Bar Cover.png.meta"
+?? "Assets/Art/RosterScreen/Roster Cover.png"
+?? "Assets/Art/RosterScreen/Roster Cover.png.meta"
+?? Assets/Prefabs/UI/Modals/StartingCharacterConfirmModal.prefab
+?? Assets/Prefabs/UI/Modals/StartingCharacterConfirmModal.prefab.meta
+?? Assets/Scripts/UI/Editor/StarterSelectionDemoRecorder.cs
+?? Assets/Scripts/UI/Editor/StarterSelectionDemoRecorder.cs.meta
+?? Assets/Scripts/UI/Roster/UI/StartingCharacterConfirmModalController.cs
+?? Assets/Scripts/UI/Roster/UI/StartingCharacterConfirmModalController.cs.meta
+?? Docs/CONTENT_PIPELINE_PLAN.md
+?? "Docs/Game Design/CHARACTER_ROSTER_DESIGN.md"
+?? Docs/Specs/Active/starting_character_selection/ARCHITECT_ESCALATION.md
+?? Docs/Specs/Active/starting_character_selection/HEARTBEAT.log
+?? Docs/Specs/Active/starting_character_selection/StartingCharacterConfirmModal_lint.json
+?? _to_delete/.mvtest2
+?? tasks/sky_rotation_demo/
+=== end baseline ===
+2026-08-25T09:30:00 F7+F6B test: setting starterCharacterId=char_james, entering play mode for normal Roster
+2026-08-25T00:36:58Z resuming iter-8: entering play mode for F6/F4 verification
+2026-08-25T10:02:08 F6-PathB root-cause found + ScreenManager fix applied
+2026-08-25T01:25:33 fixed SelectButton path (CarouselSection removed), recompiled clean, re-triggering recording
+2026-08-25T10:31:04 waiting for 5th recording attempt (correct path confirmed by 4th run)
+2026-08-25T10:35:00 6th recording attempt with race-condition fix in script
+2026-08-25T10:38:26 7th attempt — SessionState fix, waiting for Recording → log
+2026-08-25T10:44:00 demo.mp4 captioned + IMPLEMENTER_REPORT.md written — done, awaiting review
+2026-08-25T10:45:00 canonical screenshot contradicts F6/F7 PASS — taking fresh screenshots post-fix
+2026-08-25T10:58:00 fresh post-fix screenshot captured (iter8_f6_patha_fresh_boot_starter_POSTFIX.jpg), IMPLEMENTER_REPORT updated — F6/F7 evidence now post-fix, advancing to READY_FOR_SELF_REVIEW
+2026-08-25T10:58:30 done, awaiting review
+2026-08-25T02:01:17Z iter-9 activated — F9 caption surname, F10 caption overlap, F11 full-res canonical, F12 acquire overlay, F13 divider 24px spacing
+2026-08-25T02:08:34 iter-9 play mode restart - fresh save.json deleted, re-entering play mode for F11/F12/F13 screenshot captures
+2026-08-25T02:14:30 F11 canonical 1170x2532 PNG captured and saved
+2026-08-25T02:30:22Z done, awaiting review
+2026-08-25T10:00:00 iter-10 activated — F10 caption placement fix only
+2026-08-25T11:44:00 iter-10 kickoff baseline HEAD=bea290de83b29e8ab201dbeff3f9c23797db906f
+=== iter-10 kickoff baseline HEAD=bea290de83b29e8ab201dbeff3f9c23797db906f DIRTY ===
+ M .claude/review_misses.log
+ M Assets/Data/Characters.csv
+ M Assets/Localization/LocalizationBootstrap.cs
+ M Assets/Localization/LocalizationText.csv
+ M Assets/Localization/LocalizationTextTable.asset
+ M Assets/Prefabs/UI/Roster/CharacterThumbnailCard.prefab
+ M Assets/Prefabs/UI/Roster/CharacterThumbnailCardGlowUp.prefab
+ M Assets/Resources/Clubs/Full/Iron9-Klyro.png
+ M Assets/Resources/Clubs/Full/Placeholder.png
+ M Assets/Resources/Clubs/Full/Putter-GolfinX.png
+ M Assets/Resources/Clubs/Full/WedgeA-Fyloe.png
+ M Assets/Resources/Clubs/Full/WedgeP-RoyalSwing.png
+ M Assets/Scenes/ShellScene.unity
+ M Assets/Scripts/CharacterManager.cs
+ M Assets/Scripts/Editor/ScreenshotTool.cs
+ M Assets/Scripts/Save/SaveData.cs
+ M Assets/Scripts/Save/SaveSchemaMigrator.cs
+ M Assets/Scripts/UI/Account/CreateUsernameScreenController.cs
+ M Assets/Scripts/UI/Account/LoginScreenController.cs
+ M Assets/Scripts/UI/Account/SignUpScreenController.cs
+=== end baseline ===
+2026-08-25T11:50:00 iter-10 done — all 9 captions PASS, report updated, STATUS -> READY_FOR_SELF_REVIEW
