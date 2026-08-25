@@ -2633,3 +2633,41 @@ actually "the fix was never loaded":
   before being recognised as capture contamination rather than a product bug.
 - Related timing trap: `ShowScreen` swaps at the **fade midpoint**, so any UI state read immediately
   after a nav `onClick.Invoke()` still reflects the previous screen. Wait ~2-3s before asserting.
+
+---
+
+## Lesson BI — Two Unity layout traps that make a correct number render wrong, and the double-dim.
+
+**Session:** 2026-08-25, confirm-modal rebuild + locked-card wash-out.
+
+Cesar: *"Confirm pop up still has wrong gaps and made up divider"* and *"Locked characters are still
+looking white instead of the blue png I gave you."* Three distinct causes, all of which produce a
+result that looks like the value was never applied:
+
+1. **`sizeDelta` on a stretch-anchored rect is an OFFSET, not a size.** `Background` was anchored
+   (0,0)-(1,1); writing `sizeDelta.y = 363` gave it parent + 363 = **726**, so the panel art rendered
+   at nearly double its layout height. For a stretched rect, zero `offsetMin`/`offsetMax` (fill) or
+   use `SetSizeWithCurrentAnchors`. Never write `sizeDelta` and assume it is a height.
+
+2. **A `VerticalLayoutGroup` with `childControlHeight = false` ignores its children's
+   `LayoutElement` entirely.** I set `LayoutElement.minHeight/preferredHeight` on the divider wrapper
+   and it changed nothing, because the parent never applies it — the RectTransform height is what
+   renders. Check `childControlHeight` BEFORE reaching for `LayoutElement`.
+
+   Corollary: stale `LayoutElement`s silently pin the old design. Header/Upper/Content were pinned at
+   109/109/169 while real content was 121, leaving 60px of dead space that read as a wrong gap.
+
+3. **Supplied art usually already carries its own alpha — don't dim it again.**
+   `Locked Portraits.png` is navy at alpha 128 (50%). The code added a card-wide
+   `CanvasGroup.alpha = 0.5` on top, halving both the portrait and the overlay (25% effective), so
+   the blue washed out to white. **Sample the PNG before writing any dim code** — one PIL read showed
+   `RGBA=(14,40,68,128)` and settled it instantly.
+
+**Also:** the "divider" was an `Image` with **no sprite** and a flat `#808080` fill. The real one was
+already in the project three times over (`Settings/Divider.png`, `HomeScreen/`, `LoadingScreen/` —
+identical md5, 978x2, alpha 0→255→0, exactly the Figma separator SVG). **Grep the art folders for the
+element before authoring one** — `find Assets/Art -iname "*divider*"` would have found it in seconds.
+
+**And:** when Cesar gives a number that conflicts with the node, go re-read the node. He said "24px
+top and the same on the bottom"; the node is 24 above / **32** below. His later *"Check Figma and fix
+it"* was the correction — the node is the authority for geometry.
