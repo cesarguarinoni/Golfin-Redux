@@ -55,11 +55,16 @@
 > row. 501 = 501, identical id sets. See `IMPLEMENTER_REPORT.md` § D-1; nothing was dressed up as a
 > fix. `texts` sits at v11 because of the acceptance round trip (changed then reverted on a dead key).
 >
-> **NOT DEPLOYED — Cesar's call.** `playlife-api` on fly.io still serves the Phase 0 scalar shape.
-> The change is verified against a local server on the real router + real prod Supabase
-> (`acceptance_probe.txt`), but deploying a shared production API is not something a session does
-> unasked. `flyctl` is installed and authenticated; nothing consumes the endpoint yet, and the
-> bare-int form keeps any runbook curl working.
+> **DEPLOYED to prod 2026-08-25** (fly image **version 50**, both machines) on Cesar's go-ahead.
+> Whole acceptance list re-run against the live host — `acceptance_probe_prod.txt`. `/health`,
+> `/notices`, `/banners`, `/tournaments/golfin` all still 200.
+>
+> **Gotcha worth keeping:** `flyctl deploy` exited **non-zero** with `smoke checks … unauthorized`
+> and a `401` on the release-status update — its session token expired mid-run. The machines had
+> already updated. On this app a flyctl 401 in the post-update phase does NOT mean a rollback; the
+> check that settles it is `flyctl status` (image version per machine) plus a live probe, not the
+> CLI's exit code. Confirmed here by both machines reading version 50 and a 12-way concurrent burst
+> returning 12/12 new-shape responses.
 
 > **`content_catalog` (Phase 0 of the content pipeline) — implemented 2026-08-25, awaiting Cesar's sign-off.**
 > Spec: `Docs/Specs/Active/content_catalog/`. Backend + tooling only; **the game is unchanged.**

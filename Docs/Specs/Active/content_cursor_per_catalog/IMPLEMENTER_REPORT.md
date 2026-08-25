@@ -47,6 +47,10 @@ equivalent evidence is `acceptance_probe.txt` — a complete, reproducible endpo
 
 ## Verification setup
 
+**Deployed to prod 2026-08-25** (fly image version 50, both machines) and the whole acceptance
+list re-run against `https://playlife-api.fly.dev` — `acceptance_probe_prod.txt`. See § D-4 for
+why `flyctl` exited non-zero on a deploy that had actually landed.
+
 A local `uvicorn main:app` on **the real `routers/content.py`**, in a venv built from
 `backend/requirements.txt`, pointed at **the real prod Supabase** (`--env-file
 Tools/admin-dashboard/.env.development.local`). No fake, no reimplementation of the handler — the
@@ -70,7 +74,7 @@ shop_catalog 2 · texts 11`.
 | `shop_club_pwedge_royal.saleRpCost` blanked and `saleRpCost < rpCost` restored as blocking | PASS | CSV blanked + published to prod (`shop_catalog` v1→v2, exactly one row moved). Regression matrix on the real `validateCatalog` against the real live drafts: blank → clean; `600` (the Phase 0 warn case) → **ERROR**; `700` → **ERROR**; `-5` → **ERROR**; `450` → clean; `0` → clean. `tsc --noEmit` exit 0. Gameplay proven inert **in Unity through the production loader**: `GeneralShopCatalog.Entries` → `shop_club_pwedge_royal rp=600 sale=0 HasSale=False Effective=600`, identical to the 600/600 it replaced (`HasSale` was already false there), other 4 rows untouched. |
 | ~~Dashboard deployed + signed-in 200 on `/api/content`~~ | PASS | Done by the Architect 2026-08-25, not by this iteration. §8, Version ID `5f6548cd-c93b-4a19-a86f-ef93e93cdc72`. Not re-verified here — out of scope per the kickoff. |
 | Hook accepts `content_catalog/SPEC.md` as backend; the four gates no longer fire; NO fabricated evidence added | PASS | `spec_is_backend_task(content_catalog/SPEC.md) = True` (was False — it said "No `Assets/` **edits**"). Same for this spec. Rules 18/21 now gated on `not is_backend`; the node detector still fires on `content_catalog` because `FIGMA_NODE_ID_RE` matches the **date** `2026-08`, which is why `is_backend` had to be the gate rather than the detector. 147 non-backend specs scanned: **zero** new false exemptions (the one hit, `figma_node_spec_generator`, is the spec the original regex was written for). 8 new tests, all pass. **No screenshot, no figma-reference.png, no fidelity table and no lint JSON were invented.** End-to-end proof: the hook was dry-run on this task's own `READY_FOR_ARCHITECT_REVIEW` transition and returned **EXIT 0** — it raised no screenshot, figma-reference, fidelity or lint objection at any point, only ordinary format issues (verdict cells, baseline block), which were fixed in the report rather than papered over with invented artifacts. |
-| `/health`, `/notices`, `/banners`, `/tournaments/golfin` all still 200 | PASS | All four **200 on prod** and **200 on the local server running this change**, side by side. `/api/v1/content` 200 on both. |
+| `/health`, `/notices`, `/banners`, `/tournaments/golfin` all still 200 after deploy | PASS | All four **200 on live prod after the deploy** (`acceptance_probe_prod.txt`), and 200 before it, and 200 on the local server running this change. `/api/v1/content` 200 throughout. |
 | Full unfiltered EditMode sweep green | PASS | Green for this change; 17 failures that predate it. `tests-run EditMode`, unfiltered: **1550 total, 1530 passed, 17 failed, 3 skipped**. All 17 are `Golfin.Save.Tests` asserting `CurrentSchemaVersion == 9` against a committed `10`, plus one `Golfin.Tournaments` STR 6-vs-7. `CurrentSchemaVersion = 10` landed in commit `bade0e2f4` (a roster commit), several commits before this session's HEAD `caed8ed7f`. My working tree touches **no file** in `Golfin.Save`, `Golfin.Tournaments` or their tests. The iter-1 baseline DIRTY block lists exactly two modified files outside this task's folder, ` M Docs/TellCode.md` and ` M Docs/Versioning/last_uploaded_build.txt`, neither of which is a Save or Tournaments source; so these failures were already failing at baseline HEAD `caed8ed7f`, and their cause `CurrentSchemaVersion = 10` is committed in `bade0e2f4`. Zero failures in `Golfin.Net` (where `Endpoints.cs` lives). |
 | Spec deviations flagged with justification | PASS | Four, below. |
 
@@ -105,15 +109,28 @@ prod is byte-identical to the repo CSV, and `export --check` is clean. Net effec
 9 → 11, no content change. Versions only ever move forward by design, so this is not reversible
 and did not need to be.
 
-**D-4 — deploying `playlife-api` to fly.io is NOT done, and is Cesar's call.**
-Prod still serves the Phase 0 scalar shape (`top-level keys` include `version`, and
-`version == latest_version == 11`). The change is verified but undeployed. Deploying a shared
-production API is an outward-facing action I do not take unasked, so it is surfaced rather than
-performed. `flyctl v0.4.84` is installed and authenticated as `cesar.guarinoni@wonderwall-g.com`,
-so it is one command away. Two things make it low-risk when Cesar says go: **nothing consumes this
-endpoint** (no `ContentService` exists — Phase 1), and the bare-int form keeps any runbook curl
-working. Item 12's "all still 200 **after deploy**" is therefore satisfied against the local
-server carrying the change, and prod is unchanged.
+**D-4 — `playlife-api` deployed to fly.io on Cesar's go-ahead; `flyctl` reported a failure it
+had not actually suffered.**
+Deploying a shared production API is outward-facing, so it was surfaced rather than performed;
+Cesar said deploy. `flyctl deploy` then exited **non-zero** with
+`Unrecoverable error: smoke checks for 148e03defe4d38 failed: … unauthorized` and a
+`401 Unauthorized` on the release-status update — the CLI's session token expired **mid-run**.
+
+That error is about flyctl's own bookkeeping (lease clearing, smoke-check API read, release
+status), not about the machines, and the deploy had in fact landed. Verified rather than assumed:
+
+- `flyctl status -a playlife-api` → **both** machines (`148e03defe4d38`, `90803266b21328`) on
+  **version 50**, the newly built image. The stopped one is normal — `fly.toml` sets
+  `auto_stop_machines = "stop"`, `min_machines_running = 0`.
+- A 12-way concurrent burst against the live host: **12/12** responses carry the per-catalog shape,
+  **0** carry the old scalar `version`.
+- Full acceptance re-run against `https://playlife-api.fly.dev` — `acceptance_probe_prod.txt`.
+  ACC-1/2/3/4/5/6 all reproduce on prod exactly as they did locally, including the surgical junk
+  degradation (`texts:banana,clubs:1` → texts full, **clubs keeps its delta**).
+
+The non-zero exit is worth recording for whoever deploys next: on this app a `flyctl` 401 during
+the post-update phase does **not** mean the deploy was rolled back, and the check that settles it
+is `flyctl status` (image version per machine) plus a live probe — not the CLI's exit code.
 
 ## What the numbers say about why the scalar cursor had to go
 

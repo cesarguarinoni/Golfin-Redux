@@ -1,0 +1,46 @@
+content_cursor_per_catalog — acceptance re-run against LIVE PROD
+run: 2026-08-25T12:16:11.444841+00:00
+host: https://playlife-api.fly.dev   image version 50 (both machines)
+==============================================================================
+
+-- ACC-1  since=texts:9,clubs:1,shop_catalog:1 — three DIFFERENT cursors
+   GET https://playlife-api.fly.dev/api/v1/content?since=texts%3A9%2Cclubs%3A1%2Cshop_catalog%3A1&build=99999&catalogs=texts%2Cclubs%2Cshop_catalog
+   HTTP 200   675 bytes
+   clubs         v1   full=False changed=0    []
+   shop_catalog  v2   full=False changed=1    ['shop_club_pwedge_royal']
+   texts         v11  full=False changed=1    ['HOME_MAINTENANCE_TITLE']
+
+ACC-5  top-level keys : ['catalogs', 'enabled', 'fetched_at', 'latest_version']
+       'version' present: False   <- must be False
+       latest_version   : 11 (informational only, never a cursor)
+
+-- ACC-2  clubs omitted from `since` -> full
+   GET https://playlife-api.fly.dev/api/v1/content?since=texts%3A11&build=99999&catalogs=texts%2Cclubs
+   HTTP 200   598,043 bytes
+   clubs         v1   full=True  changed=799  ['club_awedge_bogeyb_common', 'club_awedge_bogeyb_legendary']
+   texts         v11  full=False changed=0    []
+
+-- ACC-3  bare int since=1 still works
+   GET https://playlife-api.fly.dev/api/v1/content?since=1&build=99999&catalogs=texts%2Cshop_catalog
+   HTTP 200   627 bytes
+   shop_catalog  v2   full=False changed=1    ['shop_club_pwedge_royal']
+   texts         v11  full=False changed=1    ['HOME_MAINTENANCE_TITLE']
+
+-- ACC-4  junk: texts:banana,clubs:1 -> 200; texts full, clubs KEEPS its delta
+   GET https://playlife-api.fly.dev/api/v1/content?since=texts%3Abanana%2Cclubs%3A1&build=99999&catalogs=texts%2Cclubs
+   HTTP 200   95,021 bytes
+   clubs         v1   full=False changed=0    []
+   texts         v11  full=True  changed=501  ['AUTH_CREATE_USERNAME_BODY', 'AUTH_CREATE_USERNAME_BUTTON']
+
+-- ACC-6  the exact URL Unity's Endpoints.Content() builds
+   GET https://playlife-api.fly.dev/api/v1/content?since=clubs%3A1%2Ctexts%3A11&build=1234&catalogs=clubs%2Ctexts
+   HTTP 200   203 bytes
+   clubs         v1   full=False changed=0    []
+   texts         v11  full=False changed=0    []
+
+
+### other endpoints, live
+   /health                        200
+   /api/v1/notices                200
+   /api/v1/banners                200
+   /api/v1/tournaments/golfin     200
