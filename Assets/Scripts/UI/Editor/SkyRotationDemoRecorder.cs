@@ -302,7 +302,13 @@ namespace Golfin.EditorTools
                              $"({timeout}s); calling BeginGameplayLoad directly. This act does NOT " +
                              "demonstrate the real entry path.");
             var loader = GameplaySceneLoader.Instance;
-            if (loader != null) loader.BeginGameplayLoad(holeNumber);
+            if (loader != null)
+            {
+                // Seed first. The production card path does this; without it the HUD keeps
+                // showing the PREVIOUS hole number over the newly loaded hole.
+                GameSession.SetCurrentHole(holeNumber);
+                loader.BeginGameplayLoad(holeNumber);
+            }
             yield return new WaitForSecondsRealtime(1.5f);
         }
 
@@ -462,7 +468,10 @@ namespace Golfin.EditorTools
             yield return ClickHoleCard(1);              // SAME hole, new run
             yield return WaitForHoleGeo(1);
             yield return WaitForGameplayVisible();
-            yield return new WaitForSecondsRealtime(1.5f);
+            // Settle floor: the visibility probe has twice returned while the loading UI was
+            // still drawn, which left the payoff shot ~2s long. This guarantees the new sky is
+            // actually on screen before the hold below.
+            yield return new WaitForSecondsRealtime(8f);
             LogSky("ACT3 new run, hole 1");
             string act3 = SkyRandomizer.Current != null ? SkyRandomizer.Current.DisplayName : "?";
             Debug.Log($"[SkyDemoBot] NEW-RUN CHECK: act1='{act1}' act3='{act3}' different={act1 != act3}");

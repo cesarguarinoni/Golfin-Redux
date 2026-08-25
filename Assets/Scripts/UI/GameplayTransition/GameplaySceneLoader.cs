@@ -108,6 +108,16 @@ namespace Golfin.UI.GameplayTransition
                 ApplyPreloadSetup(holeNumber);
             }
 
+            // 2b. Tear down any gameplay scenes still loaded from a previous hole.
+            //     Both loads below are ADDITIVE, so without this "Next Hole" stacked a second
+            //     LabScaffold and a second Hole_NN_Geo on top of the old ones. PhysicsLab's
+            //     ScanForLoadedHoleSceneAtStartup takes the FIRST Hole_*_Geo it finds, so it
+            //     kept binding to the PREVIOUS hole and placed the player at that hole's tee
+            //     while the new hole's terrain was drawn — 11.3 m underground going from
+            //     hole 1 to hole 2. A clean slate also means the fresh LabScaffold's Start()
+            //     re-runs the scan, which is the only thing that rebinds it.
+            yield return UnloadGameplayScenes();
+
             // 3. Additively load the gameplay host scene (LabScaffold).
             var hostOp = SceneManager.LoadSceneAsync(GAMEPLAY_SCENE_NAME, LoadSceneMode.Additive);
             hostOp.allowSceneActivation = true;
@@ -175,17 +185,14 @@ namespace Golfin.UI.GameplayTransition
             Golfin.Gameplay.UI.ShotUI.TeeIdleGlowController.NotifyOtherInteraction();
         }
 
-        /// <summary>
-        /// Stage D entry point. Tears down gameplay scenes and restores the shell.
-        /// </summary>
-        public IEnumerator UnloadGameplay()
-        {
-            // Returning to the menu ends the run, so the next one rolls a fresh sky.
-            // Playing Next Hole never comes through here, which is exactly why the sky
-            // stays put across a whole round.
-            Golfin.Gameplay.Environment.SkyRandomizer.EndRun();
 
-            // Unload any loaded Hole_NN_Geo scene first.
+        /// <summary>
+        /// Unloads every gameplay scene: any Hole_NN_Geo, then the LabScaffold host.
+        /// Shared by the menu teardown and by LoadCoroutine, because loading a hole is
+        /// only safe from a clean slate — see the comment at LoadCoroutine step 2b.
+        /// </summary>
+        IEnumerator UnloadGameplayScenes()
+        {
             for (int i = SceneManager.sceneCount - 1; i >= 0; i--)
             {
                 var s = SceneManager.GetSceneAt(i);
@@ -197,13 +204,25 @@ namespace Golfin.UI.GameplayTransition
                 }
             }
 
-            // Unload the gameplay host scene.
             var hostScene = SceneManager.GetSceneByName(GAMEPLAY_SCENE_NAME);
             if (hostScene.IsValid() && hostScene.isLoaded)
             {
                 var op = SceneManager.UnloadSceneAsync(hostScene);
                 while (op != null && !op.isDone) yield return null;
             }
+        }
+
+        /// <summary>
+        /// Stage D entry point. Tears down gameplay scenes and restores the shell.
+        /// </summary>
+        public IEnumerator UnloadGameplay()
+        {
+            // Returning to the menu ends the run, so the next one rolls a fresh sky.
+            // Playing Next Hole never comes through here, which is exactly why the sky
+            // stays put across a whole round.
+            Golfin.Gameplay.Environment.SkyRandomizer.EndRun();
+
+            yield return UnloadGameplayScenes();
 
             // Restore bottom nav for the shell.
             if (persistentUI != null) persistentUI.SetBottomNavVisible(true);
