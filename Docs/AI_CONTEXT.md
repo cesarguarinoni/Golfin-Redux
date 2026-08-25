@@ -21,7 +21,108 @@
 
 ---
 
+## ✅ RECENTLY LANDED
+
+> **`starting_character_selection` — DONE 2026-08-25** (`bade0e2f4` + `8ceb59473`).
+> Spec archived at `Docs/Specs/Completed/starting_character_selection/`.
+>
+> A new player picks one of two starter candidates (James / Olivia) before reaching Home; every
+> other character — including the candidate they did NOT pick — is locked in the Roster: dimmed
+> cover, LOCKED badge, browsable but not selectable, acquire overlay on the detail panel.
+>
+> **This introduced the game's first real character ownership model.** `PlayerCharacterData.isOwned`
+> was dead code (default `true`, never read, never persisted) and `CharacterManager` seeded every CSV
+> row as owned, so all 12 characters were playable from boot. `isOwned` now defaults to **false**, is
+> persisted, and is granted only by `GrantStarter` or a persisted row. Save schema **v9 → v10**.
+>
+> **Three pre-existing bugs this work exposed** (fixed here, Cesar-authorised — all outside the
+> task's nominal scope):
+> - `FadeController` — `StopCoroutine` killed a fade suspended at its midpoint, leaving the overlay
+>   permanently black on re-entrant navigation. Replaced with a generation guard.
+> - `LocalizationManager` / `LocalizationBootstrap` — Awake-order race: any `LocalizedText` waking
+>   before `Initialize` baked the raw key and never repainted. `Initialize` now fires
+>   `OnLanguageChanged`; bootstrap at `[DefaultExecutionOrder(-1000)]`.
+> - **Starter-is-always-owned invariant** — a save naming a starter that was not owned locked the
+>   player out of their entire roster with no route back (`NeedsStarter` false, nothing owned).
+>   Hydration now self-repairs and logs it.
+>
+> **Known gaps, deliberately out of scope:** no acquisition path (locked stays locked); ownership is
+> local-save only — a reinstall loses the starter and the player re-picks (server-side is a future
+> migration); the Roster tab header shows the username where Figma shows "ROSTER" (pre-existing
+> top-bar behaviour).
+>
+> **Process note:** ten iterations, and the pipeline's two review gates were NOT run — the architect
+> rejected each iteration directly on evidence re-derived from primary sources (live MCP runs,
+> runtime dumps, frame extraction). Recorded as a deliberate deviation in the task's
+> `ARCHITECT_REVIEW.md`. Two fabricated-evidence findings went to `.claude/review_misses.log`: a
+> canonical screenshot declared as a 1170×2532 Home frame that was a 1200×900 empty scene view, and
+> a caption track narrating a confirm modal that never appeared in the footage. **Flow video is
+> gitignored** — it lives only at `Docs/Specs/Completed/starting_character_selection/videos/demo.mp4`
+> and `Docs/Reports/Media/` on Cesar's machine.
+
+---
+
 ## 🟢 PRIORITY QUEUED — pick up immediately
+
+> **▶ 2026-08-24 · ADMIN-MANAGED CONTENT — Phase 0 STARTED. Stage A1 SQL IS IN PROD.
+> Next action: Claude Code runs the `content_catalog` kickoff in `Docs/TellCode.md`, starting at
+> Stage A2 (seed generator) — A1 is already applied, do not re-apply it.**
+>
+> Plan of record: `Docs/CONTENT_PIPELINE_PLAN.md` (read §2, the six invariants, before touching
+> anything). Spec: `Docs/Specs/Active/content_catalog/SPEC.md`, STATUS `SPEC_READY`.
+> Goal: clubs, characters, items, texts, shop and (later) player inventory editable from
+> `admin.golfin.world`, with the bundled CSV as a floor that a remote overlay patches by id, a
+> delta wire format, and rollback. Phase 0 is backend + tooling only — **zero Unity behaviour
+> change**.
+>
+> **APPLIED TO PROD 2026-08-24 (Cesar, Supabase SQL editor), both verified live over PostgREST:**
+> - `2026_08_24_content_catalog.sql` — `content_catalogs` / `content_rows` / `content_drafts` /
+>   `content_versions` + `content_publish()` / `content_rollback()`. Verification 7/7; catalogs =
+>   7 rows (clubs, characters, items, bags, balls, texts, shop_catalog) all v0 + enabled; RLS on,
+>   zero policies, EXECUTE revoked from anon/authenticated.
+> - `2026_08_24_golfin_characters_rarity_fix.sql` — **a real bug found while collision-checking.**
+>   `golfin_characters` (the server mirror `tournaments_golfin.py:373` reads to enforce
+>   `char_rarity_min/max`) had `char_olivia` = Uncommon since the 2026-08-18 seed, against
+>   `Common` in `Characters.csv` since 2026-08-21. On a rarity-RESTRICTED tournament only, she was
+>   wrongly rejected from a Common-only event and wrongly accepted into an Uncommon-minimum one.
+>   Now all 12 rarities match the CSV, 0 mismatches.
+>
+> **`playlife-api` was deliberately NOT redeployed** — `/api/v1/content` is still 404 while
+> `/health`, `/tournaments/golfin`, `/notices`, `/banners` are all 200. That 404 is the proof the
+> schema change could not affect the live build. Stage B is the first step with real blast radius.
+>
+> ⚠️ **Three design points in the SQL that must not be "simplified"** (each has a comment in the
+> migration saying so): (1) `content_publish`'s `ON CONFLICT … WHERE … IS DISTINCT FROM` guard —
+> unchanged rows keep their OLD version, which is the only reason a one-word text fix is a
+> one-row delta instead of a 799-row download; (2) `content_rollback` moves FORWARD, restoring a
+> snapshot as a HIGHER version — decrementing would strand every client already holding the bad
+> version; (3) drafts are an UPSERT with no DELETE, so removing a draft row does NOT unpublish it
+> (retire via `is_active = false`) and an empty-drafts publish never wipes content.
+>
+> **Also this session (uncommitted, Code commits):**
+> - **PNG/texture report** (`CONTENT_PIPELINE_PLAN.md` §12). Lossless recompression measured at
+>   **1.3 %** and worth ZERO build bytes (Unity re-encodes to ASTC — `ProjectSettings` format 3
+>   for both platforms), so it was deliberately NOT done. Import settings are already clean:
+>   0 of 925 sprites carry mipmaps, 4 readable textures (none ship), no crunch. Because the
+>   target is ASTC, stripping opaque alpha is a no-op — don't chase it.
+> - **FIXED: five `Resources/Clubs/Full` sprites shipped at 2148×3600, 4× the 537×900 the art
+>   pipeline spec mandates** (`Putter-GolfinX`, `WedgeA-Fyloe`, `WedgeP-RoyalSwing`, `Iron9-Klyro`,
+>   `Placeholder`); the other 66 conformed. Resampled to spec with the 30 px rounded-corner alpha
+>   re-applied. **Mean abs pixel diff vs the original at UI size = 0.0, max 0** — bit-identical
+>   where it is drawn. Source 37.8 → 3.4 MB, in-build 5.6 → 1.1 MB. **`.png.meta` files were left
+>   in place so every GUID and reference survives.** The hi-res originals are NOT deleted — two
+>   are W1 generation templates — they moved to `Assets/Art/Clubs/Full_Masters~/` (trailing `~` =
+>   Unity ignores it, so they no longer ship); `club_art_batches/SPEC.md` §Template registry
+>   updated to point there. Unity will reimport those five on next focus.
+> - **Addressables answered** (`CONTENT_PIPELINE_PLAN.md` §10): NOT for row data, NOT for 2D art
+>   (`TournamentArtService` is already a parameterised URL+disk-cache and beats it), YES eventually
+>   for hole/course 3D — and the trigger is **course #2**, not a date: `Assets/Resources` is 572 MB
+>   of which 388 MB is `HoleData`, and everything under `Resources/` ships in every build. Cheap
+>   things to do now so that later is cheap: don't add the package yet, stop putting new hole data
+>   under `Assets/Resources/`, and put one `ICourseDataProvider` indirection in front of course
+>   loads.
+> - ⚠️ **`user_inventory` already exists and is the PARTNER APP's gift inventory** (`gifts.py`).
+>   The game's inventory is `profiles.golfin_inventory` (Phase 4) — do not conflate them.
 
 > **▶ 2026-08-24 · randomly-rotating skyboxes — 4 times of day × clear/cloudy — SHIPPED
 > (`36c06e4ba`, `f1940fed1`, `6aaf010dc`).**
@@ -111,10 +212,28 @@
 >   modal reads "Hole **0**": `GameSession.CurrentHoleNumber` was 0 when the recorder's synthetic
 >   `MarkHoleComplete` fired, so `nextHole = 0+1 = 1` and Hole 1 is what the real code correctly
 >   loaded. The bot drove hole selection via `ScreenManager.ShowScreen` and never seeded the
->   session the way the production path does. Nothing to fix in the Next Hole flow.
-> - `Sky-2.hdr` is 4096×2048 with mipmaps off and costs ~10–21 MB alone, more than all eight new
->   skies combined. Same downsample recovers most of it; not done because it softens the shipped
->   look.
+>   session the way the production path does. That specific claim was wrong.
+>   **But a real Next Hole bug did exist underneath it — see below.**
+> - **Next Hole spawned the player ~11 m underground on hole 2 — FIXED 2026-08-25 (`91f5cd983`).**
+>   `LoadCoroutine` loaded BOTH LabScaffold and `Hole_NN_Geo` additively and never unloaded the
+>   previous ones (`UnloadSceneAsync` lived only in `UnloadGameplay`, which Next Hole does not go
+>   through). Hole 2 stacked on hole 1, and `PhysicsLabController`'s one-shot
+>   `ScanForLoadedHoleSceneAtStartup` takes the FIRST `Hole_*_Geo` it finds — so it kept binding
+>   to the stale hole 1 and placed the player at that hole's tee under hole 2's terrain. Measured:
+>   hole 1's tee (219.43, 11.58, 34.73) is 0.2 m above hole 1's ground and **11.32 m below hole
+>   2's** at the same XZ. Fix: `UnloadGameplayScenes()` factored out of `UnloadGameplay` and run
+>   at the top of every load, so each hole starts clean — which also matters because only a
+>   freshly loaded LabScaffold re-runs the scan. Caught by watching the demo video, not by a test.
+> - ~~`Sky-2.hdr` is 4096×2048 with mipmaps off~~ — **DONE 2026-08-25.** Downsampled to
+>   1024×512 with mipmaps enabled: 18 MB → 2.0 MB on disk, 10.7 → 1.8 MB runtime. Safe because
+>   its peak luminance is 1.1 (no sun disc to smear). Artifacts measured, not eyeballed: sky-plate
+>   mean diff 1.55/255, distinct colours slightly UP and gradients smoother (mean|dx| 0.45 →
+>   0.23) so no banding; the residual is confined to foliage edges and cloud micro-detail.
+> - **Blow-out figure — two numbers, both honest.** This entry records 1.32% worst case; an
+>   independent re-measure got **3.92%** (hole 03 / Noon, with Afternoon ~2.5% on holes 01/03).
+>   The difference is the probe: the higher number puts the camera at y=40 in open sky, which
+>   catches more bright sky than a tee-level view. Quote 3.92% as the conservative bound. Both
+>   are a long way from the 27% this started at, and clearance was respected 48/48.
 > - ~~Evening's sun is tuned against one hole; per-hole sun placement would need each hole's
 >   bearing.~~ — **DONE 2026-08-25.** The guard reads each hole's own bearing from
 >   `TryGetPlayBearing`, and clearance is now per preset (table above). Verified across
@@ -127,7 +246,9 @@
 >   do not need to be. Do NOT probe with `_Exposure = 0.01` on an 8-bit target — it crushes the
 >   disc to ~11/255 and the "peak" is quantization noise.
 > - Demo: `GOLFIN > Environment > Record Sky Rotation Demo Video`; captioned clip at
->   `Docs/Reports/Media/sky_rotation_2026-08-24.mp4`.
+>   `Docs/Reports/Media/sky_rotation_2026-08-25.mp4` (Evening on hole 1 → held onto hole 2 with
+>   the sun re-aimed → Noon on a fresh run). ACT3 still uses the recorder's logged fallback
+>   because the hole card does not go live after a menu return; acts 1–2 are real-entry-path.
 
 
 > **▶ 2026-08-24 · language switch now repaints in place — mode cards + top-bar title SHIPPED;
