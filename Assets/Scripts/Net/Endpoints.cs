@@ -1,4 +1,6 @@
 // Order: reward_points_backend Slice 1 — PLAYLIFE API URLs. Scope-limited to /points/* + /health.
+using UnityEngine.Networking;
+
 namespace Golfin.Net
 {
     /// <summary>
@@ -67,28 +69,37 @@ namespace Golfin.Net
         public static string Notices => BaseUrl + "/notices";
 
         /// <summary>
-        /// GET → <c>{data:{fetched_at, enabled, version, catalogs:{…}}}</c> — the admin-managed
-        /// content delta. <paramref name="since"/> is the content version the bundled CSVs were
-        /// exported at (<c>Assets/Resources/Data/content_version.txt</c>); <paramref name="build"/>
-        /// is the running build number, and the server withholds any row whose <c>min_build</c>
-        /// exceeds it, so an old build is never sent content it cannot render.
+        /// GET → <c>{data:{fetched_at, enabled, latest_version, catalogs:{…}}}</c> — the
+        /// admin-managed content delta. No auth, same posture and same reason as
+        /// <see cref="Banners"/>: it warms at boot before any token work. No trailing slash — the
+        /// bare form is the 200, and the caller must not depend on redirect following.
+        /// <paramref name="build"/> is the running build number, and the server withholds any row
+        /// whose <c>min_build</c> exceeds it, so an old build is never sent content it cannot render.
         ///
-        /// No auth, same posture and same reason as <see cref="Banners"/>: it warms at boot before
-        /// any token work. No trailing slash — the bare form is the 200, and the caller must not
-        /// depend on redirect following.
+        /// <paramref name="since"/> IS PER-CATALOG: <c>"clubs:1,texts:9,characters:5"</c>. Each
+        /// catalog's cursor comes from its own line in
+        /// <c>Assets/Resources/Data/content_version.txt</c> (which the exporter already writes one
+        /// <c>&lt;catalog&gt;=&lt;version&gt;</c> line at a time), or from that catalog's own
+        /// <c>version</c> in a previous response — whichever is higher. A catalog left out of the
+        /// string has no cursor and comes back in full. A bare integer is still accepted and
+        /// applies to every catalog, for runbook curls and staging builds.
         ///
-        /// REPLAY <c>data.version</c>, NOT <c>data.latest_version</c>. Catalogs version
-        /// independently, and <c>version</c> is the LOWEST across them — the only value a single
-        /// shared <paramref name="since"/> can replay without either skipping a catalog that
-        /// published behind the newest one, or pulling every catalog down in full on every boot.
-        /// <c>latest_version</c> is for display and logs. Measured against prod 2026-08-25:
-        /// replaying the max cost 610 KB per boot, replaying the min cost 1.4 KB.
+        /// THERE IS DELIBERATELY NO SINGLE TOP-LEVEL VERSION TO STORE. Catalogs version
+        /// independently, so no scalar can describe the client's state: replaying the max silently
+        /// drops a catalog that published behind the newest one (and costs 610 KB a boot until it
+        /// does), and replaying the min pins the cursor to the least-active catalog and replays
+        /// every row that ever moved, forever. Measured against prod 2026-08-25 on the same live
+        /// data: max-scalar 610,333 B · min-scalar 2,192 B and rising · per-catalog 454 B.
+        /// See <c>content_cursor_per_catalog/SPEC.md</c>.
+        ///
+        /// <c>data.latest_version</c> survives as INFORMATIONAL ONLY — "which publish is prod on",
+        /// for the dashboard and for logs. NEVER replay it as a cursor.
         ///
         /// NOTHING CALLS THIS YET. Phase 0 (content_catalog SPEC §B2) stands up the backend only;
         /// the client-side reader lands with the ContentService spec.
         /// </summary>
-        public static string Content(int since, int build) =>
-            BaseUrl + "/content?since=" + since + "&build=" + build;
+        public static string Content(string since, int build) =>
+            BaseUrl + "/content?since=" + UnityWebRequest.EscapeURL(since ?? "") + "&build=" + build;
 
         /// <summary>
         /// POST <c>{session_id, app_version, build_number, platform, device_model, os, events:[…]}</c>

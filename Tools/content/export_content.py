@@ -2,8 +2,23 @@
 """Exporter — the PUBLISHED Supabase catalogs → the seven repo CSVs.
 
     python3 Tools/content/export_content.py --env-file <dotenv>   # rewrite in place
-    python3 Tools/content/export_content.py --check               # exit 1 if anything would change
+    python3 Tools/content/export_content.py --check               # exit 1 if anything would change OR drifted
     python3 Tools/content/export_content.py --catalogs texts,clubs
+
+`--check` answers TWO questions, and the second one was added by
+content_cursor_per_catalog §5:
+
+  1. IDEMPOTENCE — would exporting change a file? (the repo is behind a publish)
+  2. DRIFT — does each catalog hold exactly the ids the repo CSV holds?
+
+Question 2 is not implied by question 1. A row that is in the CSV but NOT in the
+catalog changes no file: the exporter keeps it verbatim (I6 — nothing is ever
+deleted, so a missing row means the CATALOG is incomplete) and only warns. So
+the case that motivated this check — a CSV that gained a row from in-flight work
+while the catalog stayed behind — passed `--check` cleanly while the admin
+dashboard was quietly serving a catalog the repo disagreed with. That is exactly
+the drift the catalog exists to prevent, so it is now a non-zero exit that names
+the offending ids.
 
 Spec: Docs/Specs/Active/content_catalog/SPEC.md §C.
 Plan: Docs/CONTENT_PIPELINE_PLAN.md §2 I1/I3/I6, §3 ("run it before every release build").
@@ -180,6 +195,58 @@ def render_csv(catalog: Catalog, published: List[dict], repo_root: str) -> Tuple
     return "\n".join(out) + "\n", warnings
 
 
+def drift_report(catalog: Catalog, published: List[dict], repo_root: str) -> List[str]:
+    """Id-set drift between one catalog and its repo CSV. [] means in sync.
+
+    (content_cursor_per_catalog §5.) Counts alone are not enough — two files can
+    both hold 501 rows and disagree about which 501 — so this compares the ID
+    SETS and names what is missing on each side.
+
+    The two directions mean different things and both are wrong:
+
+      IN THE CSV, NOT IN THE CATALOG — the catalog is behind the repo. This is
+        the one `--check` used to miss entirely, because the exporter keeps such
+        a line verbatim (I6) and changes no bytes. It means the dashboard is
+        editing a catalog that does not know about content the game already
+        ships, and a publish will not put it back.
+      IN THE CATALOG, NOT IN THE CSV — the repo is behind the catalog. An export
+        would append the row, so `--check` already catches this via the file
+        diff; it is reported here too so one message explains the whole picture.
+
+    Rows are compared by id only, not by value: a value difference is already a
+    file difference, which `write_if_changed` reports.
+    """
+    csv_ids = {ln.row_id for ln in read_csv(catalog, repo_root).rows if ln.row_id}
+    catalog_ids = {str(r["row_id"]) for r in published}
+
+    missing = sorted(csv_ids - catalog_ids)   # in the CSV, absent from the catalog
+    extra = sorted(catalog_ids - csv_ids)     # in the catalog, absent from the CSV
+    if not missing and not extra:
+        return []
+
+    out = [
+        f"{catalog.name}: DRIFT — {len(csv_ids)} row(s) in {catalog.csv_path} vs "
+        f"{len(catalog_ids)} in the catalog."
+    ]
+    if missing:
+        out.append(
+            f"  {len(missing)} id(s) in the CSV but NOT in the catalog "
+            f"(the catalog is behind the repo; re-seed it): {_sample(missing)}"
+        )
+    if extra:
+        out.append(
+            f"  {len(extra)} id(s) in the catalog but NOT in the CSV "
+            f"(the repo is behind the catalog; run this exporter without --check): {_sample(extra)}"
+        )
+    return out
+
+
+def _sample(ids: List[str], limit: int = 12) -> str:
+    """Name the ids — an unnamed count is not actionable."""
+    head = ", ".join(ids[:limit])
+    return head + (f" … (+{len(ids) - limit} more)" if len(ids) > limit else "")
+
+
 def render_version_file(versions: Dict[str, int], names: List[str]) -> str:
     return "".join(f"{n}={versions.get(n, 0)}\n" for n in sorted(names))
 
@@ -222,14 +289,18 @@ def main() -> int:
 
     changed: List[str] = []
     warnings: List[str] = []
+    drift: List[str] = []
 
     for name in names:
         catalog = CATALOGS_BY_NAME[name]
         published = fetch_catalog(client, name)
         if not published:
             warnings.append(f"{name}: content_rows is EMPTY — {catalog.csv_path} left untouched.")
+            drift.append(f"{name}: DRIFT — content_rows is EMPTY but {catalog.csv_path} has rows.")
             print(f"  {name:<13} SKIP (catalog empty)")
             continue
+
+        drift.extend(drift_report(catalog, published, args.repo_root))
 
         text, warn = render_csv(catalog, published, args.repo_root)
         warnings.extend(warn)
@@ -257,14 +328,35 @@ def main() -> int:
     for w in warnings:
         print(f"WARNING: {w}", file=sys.stderr)
 
+    if drift:
+        print("\nCSV-vs-catalog DRIFT:", file=sys.stderr)
+        for d in drift:
+            print(f"  {d}" if d.startswith("  ") else f"  {d}", file=sys.stderr)
+
     if args.check:
+        # Two independent failure modes, reported separately so the message says
+        # which one it is. Drift is checked even on a partial --catalogs run,
+        # scoped to the catalogs that ran.
         if changed:
             print(f"\n--check: {len(changed)} file(s) would change:", file=sys.stderr)
             for c in changed:
                 print(f"  {c}", file=sys.stderr)
+        if changed or drift:
+            reasons = []
+            if changed:
+                reasons.append(f"{len(changed)} stale file(s)")
+            if drift:
+                reasons.append("CSV-vs-catalog drift")
+            print(f"\n--check: FAILED — {' and '.join(reasons)}.", file=sys.stderr)
             return 1
-        print("\n--check: clean, nothing would change.")
+        print("\n--check: clean — no file would change and no catalog has drifted.")
         return 0
+
+    if drift:
+        # A plain export cannot repair drift in the CSV→catalog direction (that
+        # needs a re-seed), so it must not exit 0 and look successful.
+        print("\nexport wrote its files, but the drift above is UNRESOLVED.", file=sys.stderr)
+        return 1
 
     print(f"\n{len(changed)} file(s) written." if changed else "\nno changes.")
     return 0

@@ -1,0 +1,113 @@
+content_cursor_per_catalog — acceptance probe
+run: 2026-08-25T12:09:07.141404+00:00
+target: local uvicorn on the REAL routers/content.py, against the REAL prod Supabase
+live catalog versions: bags 1 · balls 5 · characters 5 · clubs 1 · items 1 · shop_catalog 2 · texts 11
+==============================================================================
+
+
+### ACC-1 — clubs and texts deltas computed from DIFFERENT cursors
+
+── A. since=texts:9,clubs:1,shop_catalog:1
+   GET http://127.0.0.1:8099/api/v1/content?since=texts%3A9%2Cclubs%3A1%2Cshop_catalog%3A1&build=99999&catalogs=texts%2Cclubs%2Cshop_catalog
+   HTTP 200   675 bytes   top-level keys = ['catalogs', 'enabled', 'fetched_at', 'latest_version']
+   clubs         version=1   full=False changed=0    []
+   shop_catalog  version=2   full=False changed=1    ['shop_club_pwedge_royal']
+   texts         version=11  full=False changed=1    ['HOME_MAINTENANCE_TITLE']
+
+── B. texts cursor +1 ONLY  → texts empties, shop unchanged
+   GET http://127.0.0.1:8099/api/v1/content?since=texts%3A11%2Cclubs%3A1%2Cshop_catalog%3A1&build=99999&catalogs=texts%2Cclubs%2Cshop_catalog
+   HTTP 200   504 bytes   top-level keys = ['catalogs', 'enabled', 'fetched_at', 'latest_version']
+   clubs         version=1   full=False changed=0    []
+   shop_catalog  version=2   full=False changed=1    ['shop_club_pwedge_royal']
+   texts         version=11  full=False changed=0    []
+
+── C. shop cursor +1 ONLY   → shop empties, texts unchanged
+   GET http://127.0.0.1:8099/api/v1/content?since=texts%3A9%2Cclubs%3A1%2Cshop_catalog%3A2&build=99999&catalogs=texts%2Cclubs%2Cshop_catalog
+   HTTP 200   429 bytes   top-level keys = ['catalogs', 'enabled', 'fetched_at', 'latest_version']
+   clubs         version=1   full=False changed=0    []
+   shop_catalog  version=2   full=False changed=0    []
+   texts         version=11  full=False changed=1    ['HOME_MAINTENANCE_TITLE']
+
+   → each catalog's answer moves ONLY when ITS OWN cursor moves. That is the whole spec.
+
+
+### ACC-2 — a catalog omitted from `since` comes back full
+
+── texts named, clubs omitted
+   GET http://127.0.0.1:8099/api/v1/content?since=texts%3A11&build=99999&catalogs=texts%2Cclubs
+   HTTP 200   598,043 bytes   top-level keys = ['catalogs', 'enabled', 'fetched_at', 'latest_version']
+   clubs         version=1   full=True  changed=799  ['club_awedge_bogeyb_common', 'club_awedge_bogeyb_legendary', 'club_awedge_bogeyb_mythic']
+   texts         version=11  full=False changed=0    []
+
+
+### ACC-3 — the bare-int form still works (and is the scalar counterfactual)
+
+── since=1   — the MIN cursor Phase 0 shipped
+   GET http://127.0.0.1:8099/api/v1/content?since=1&build=99999
+   HTTP 200   2,177 bytes   top-level keys = ['catalogs', 'enabled', 'fetched_at', 'latest_version']
+   bags          version=1   full=False changed=0    []
+   balls         version=5   full=True  changed=2    ['ball_golfin', 'ball_putt_ace']
+   characters    version=5   full=False changed=1    ['char_mike']
+   clubs         version=1   full=False changed=0    []
+   items         version=1   full=False changed=0    []
+   shop_catalog  version=2   full=False changed=1    ['shop_club_pwedge_royal']
+   texts         version=11  full=False changed=1    ['HOME_MAINTENANCE_TITLE']
+
+── since=11  — the MAX cursor content_catalog §B1 asked for
+   GET http://127.0.0.1:8099/api/v1/content?since=11&build=99999
+   HTTP 200   610,333 bytes   top-level keys = ['catalogs', 'enabled', 'fetched_at', 'latest_version']
+   bags          version=1   full=True  changed=10   ['bag_golfin', 'bag_locked10', 'bag_locked3']
+   balls         version=5   full=True  changed=2    ['ball_golfin', 'ball_putt_ace']
+   characters    version=5   full=True  changed=12   ['char_camila', 'char_ean', 'char_elizabeth']
+   clubs         version=1   full=True  changed=799  ['club_awedge_bogeyb_common', 'club_awedge_bogeyb_legendary', 'club_awedge_bogeyb_mythic']
+   items         version=1   full=True  changed=3    ['repairkit_common', 'repairkit_mythic', 'repairkit_rare']
+   shop_catalog  version=2   full=True  changed=5    ['shop_ball_putt_ace', 'shop_club_awedge_fyloe', 'shop_club_driver_gf']
+   texts         version=11  full=False changed=0    []
+
+── per-catalog, fully current
+   GET http://127.0.0.1:8099/api/v1/content?since=bags%3A1%2Cballs%3A5%2Ccharacters%3A5%2Cclubs%3A1%2Citems%3A1%2Cshop_catalog%3A2%2Ctexts%3A11&build=99999
+   HTTP 200   454 bytes   top-level keys = ['catalogs', 'enabled', 'fetched_at', 'latest_version']
+   bags          version=1   full=False changed=0    []
+   balls         version=5   full=False changed=0    []
+   characters    version=5   full=False changed=0    []
+   clubs         version=1   full=False changed=0    []
+   items         version=1   full=False changed=0    []
+   shop_catalog  version=2   full=False changed=0    []
+   texts         version=11  full=False changed=0    []
+
+
+### ACC-4 — unparseable pairs degrade to full, never 400
+
+── a. since=texts:banana,clubs:1  (clubs is well-formed and KEEPS its delta)
+   GET http://127.0.0.1:8099/api/v1/content?since=texts%3Abanana%2Cclubs%3A1&build=99999&catalogs=texts%2Cclubs
+   HTTP 200   95,021 bytes   top-level keys = ['catalogs', 'enabled', 'fetched_at', 'latest_version']
+   clubs         version=1   full=False changed=0    []
+   texts         version=11  full=True  changed=501  ['AUTH_CREATE_USERNAME_BODY', 'AUTH_CREATE_USERNAME_BUTTON', 'AUTH_CREATE_USERNAME_CANCEL']
+
+── b. since=totally-garbage
+   GET http://127.0.0.1:8099/api/v1/content?since=totally-garbage&build=99999&catalogs=texts%2Cclubs
+   HTTP 200   692,861 bytes   top-level keys = ['catalogs', 'enabled', 'fetched_at', 'latest_version']
+   clubs         version=1   full=True  changed=799  ['club_awedge_bogeyb_common', 'club_awedge_bogeyb_legendary', 'club_awedge_bogeyb_mythic']
+   texts         version=11  full=True  changed=501  ['AUTH_CREATE_USERNAME_BODY', 'AUTH_CREATE_USERNAME_BUTTON', 'AUTH_CREATE_USERNAME_CANCEL']
+
+── c. since=clubs:1,,:9,texts
+   GET http://127.0.0.1:8099/api/v1/content?since=clubs%3A1%2C%2C%3A9%2Ctexts&build=99999&catalogs=texts%2Cclubs
+   HTTP 200   95,021 bytes   top-level keys = ['catalogs', 'enabled', 'fetched_at', 'latest_version']
+   clubs         version=1   full=False changed=0    []
+   texts         version=11  full=True  changed=501  ['AUTH_CREATE_USERNAME_BODY', 'AUTH_CREATE_USERNAME_BUTTON', 'AUTH_CREATE_USERNAME_CANCEL']
+
+
+### ACC-5 — top-level `version` is gone; latest_version remains
+   top-level keys : ['catalogs', 'enabled', 'fetched_at', 'latest_version']
+   'version' in d : False  ← must be False
+   latest_version : 11 (informational only — never a cursor)
+
+
+### ACC-6 — the exact URL Unity's Endpoints.Content() builds (URL-encoded)
+   GET http://127.0.0.1:8099/api/v1/content?since=clubs%3a1%2ctexts%3a11&build=1234&catalogs=clubs,texts
+   clubs  v1 full=False changed=0
+   texts  v11 full=False changed=0
+   → %3a / %2c decode; per-catalog cursors honoured end to end.
+content: unparseable since fragment(s) ['texts:banana'] in since='texts:banana,clubs:1' — those catalogs are FULL
+content: unparseable since fragment(s) ['totally-garbage'] in since='totally-garbage' — those catalogs are FULL
+content: unparseable since fragment(s) [':9', 'texts'] in since='clubs:1,,:9,texts' — those catalogs are FULL

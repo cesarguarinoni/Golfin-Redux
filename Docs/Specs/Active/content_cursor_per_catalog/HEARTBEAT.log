@@ -1,0 +1,21 @@
+=== iter-1 kickoff baseline 2026-08-25T11:52:36Z ===
+HEAD: caed8ed7f2c64857d3edb9cd34138fcf2ad10a29
+DIRTY:
+ M Docs/TellCode.md
+ M Docs/Versioning/last_uploaded_build.txt
+?? Docs/Specs/Active/content_cursor_per_catalog/ARCHITECT_REVIEW.md
+?? Docs/Specs/Active/content_cursor_per_catalog/HEARTBEAT.log
+?? Docs/Specs/Active/content_cursor_per_catalog/IMPLEMENTER_REPORT.md
+?? Docs/Specs/Active/content_cursor_per_catalog/SELF_REVIEW.md
+?? Docs/Specs/Active/content_cursor_per_catalog/SPEC.md
+?? Docs/Specs/Active/content_cursor_per_catalog/STATUS.md
+?? Docs/Specs/Active/content_cursor_per_catalog/reference/.gitkeep
+?? Docs/Specs/Active/content_cursor_per_catalog/reference/README.md
+=== END baseline ===
+
+playlife repo baseline: HEAD 41838522a1663bc5fb6c5d3498e8089f71f8ee7d, working tree CLEAN
+
+2026-08-25T11:58:44Z — content.py per-catalog cursor done; shop_catalog v2 (§6 blank saleRpCost); texts v10→v11 acceptance round-trip, value restored. Next: exporter drift check.
+2026-08-25T12:04:54Z — exporter drift check + contentValidate + Endpoints.cs + hook §7 done, 127 hook tests (1 pre-existing unrelated FAIL). Next: Unity compile + EditMode sweep.
+2026-08-25T12:09:25Z — acceptance probe written; EditMode sweep 1550/1530 pass (17 pre-existing Save-schema fails from bade0e2f4); local server stopped. Writing reports.
+2026-08-25T12:12:35Z — reports written; hook dry-run on the STATUS transition returns EXIT 0 with zero fabricated evidence. Ready for review.

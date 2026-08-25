@@ -1,5 +1,14 @@
 # SPEC — `content_catalog`
 
+SPEC_KIND: backend
+
+> Declared for `.claude/hooks/enforce_implementer_done.py` (Rule: `SPEC_KIND`). This task
+> builds no Unity surface — no scene, no prefab, no Game View — so the screenshot,
+> figma-reference, Figma-fidelity and UI-lint gates do not apply and are skipped. The
+> declaration is a field rather than a prose phrase on purpose: prose gets reworded, and one
+> reworded word ("changes" → "edits") is what forced four impossible gates onto this task's
+> predecessor. See `content_cursor_per_catalog/SPEC.md` §7.
+
 > **Authoritative spec for this task.** Implementer reads this and ONLY this for the work
 > definition. STATUS.md tracks pipeline state. Reports/reviews go in their own files.
 >

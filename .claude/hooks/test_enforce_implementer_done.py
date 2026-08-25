@@ -1141,6 +1141,71 @@ class TestBackendExemption(unittest.TestCase):
         self.assertFalse(eid.spec_is_backend_task(self._spec(
             "# Spec\nBuild the shop card from Figma node 13156:1232.")))
 
+    # ── content_cursor_per_catalog §7 (2026-08-25) ──────────────────────────
+    # content_catalog/SPEC.md wrote "No `Assets/` **edits**" where the regex
+    # only knew "changes". One word forced four inapplicable gates (screenshot,
+    # figma-reference.png, Figma fidelity table, UI lint) onto a spec that opens
+    # "No Figma. This task has no UI surface." The implementer left them failing
+    # rather than fabricating a screenshot — the right call — so the HOOK is what
+    # got fixed, both narrowly (synonyms) and durably (an explicit field).
+
+    def test_detects_no_assets_edits(self):
+        """The exact wording content_catalog used."""
+        self.assertTrue(eid.spec_is_backend_task(self._spec(
+            "## Out of scope\n- No `Assets/` edits — the client reader is Phase 1.")))
+
+    def test_detects_no_assets_modifications(self):
+        self.assertTrue(eid.spec_is_backend_task(self._spec(
+            "No `Assets/` modifications are made by this task.")))
+
+    def test_spec_kind_backend_field_is_honoured(self):
+        """The DURABLE detector: a declared field, not a matched phrase."""
+        self.assertTrue(eid.spec_is_backend_task(self._spec(
+            "# SPEC — `thing`\n\nSPEC_KIND: backend\n\nBuilds a Python tool.")))
+
+    def test_spec_kind_tolerates_markdown_decoration(self):
+        for line in ("> SPEC_KIND: backend", "- SPEC_KIND: backend",
+                     "  SPEC_KIND:  backend", "spec_kind: Backend"):
+            with self.subTest(line=line):
+                self.assertTrue(eid.spec_is_backend_task(self._spec(f"# SPEC\n\n{line}\n")))
+
+    def test_spec_kind_ui_is_not_backend(self):
+        self.assertFalse(eid.spec_is_backend_task(self._spec(
+            "# SPEC\n\nSPEC_KIND: ui\n\nBuild the modal from Figma node 13156:1232.")))
+
+    def test_spec_kind_in_prose_backticks_does_not_declare(self):
+        """Discussing the field is not declaring it — otherwise this very hook's
+        own documentation would exempt every spec that quotes it."""
+        self.assertFalse(eid.spec_is_backend_task(self._spec(
+            "# SPEC\n\nHonour an explicit `SPEC_KIND: backend` line near the top of SPEC.md.")))
+
+    def test_backend_spec_skips_the_figma_node_ui_gates(self):
+        """Rules 18/21 are scoped to non-backend specs.
+
+        FIGMA_NODE_ID_RE matches a DATE ("2026-08"), so a backend spec that says
+        the word "figma" even to say it has none was being handed a Figma
+        fidelity table + UI lint requirement it could only satisfy by inventing
+        one. The node detector may still fire; `is_backend` is what gates.
+        """
+        spec = self._spec(
+            "# SPEC\n\nSPEC_KIND: backend\n\nNo Figma. Measured on prod 2026-08-25.\n")
+        self.assertTrue(eid.spec_references_figma_node(spec),
+                        "precondition: the node detector still fires on the date token")
+        self.assertTrue(eid.spec_is_backend_task(spec),
+                        "so is_backend is the thing that must gate Rules 18/21")
+
+    def test_real_spec_files_are_detected_as_backend(self):
+        """The two live specs this change exists for."""
+        repo = Path(__file__).resolve().parents[2]
+        for name in ("content_catalog", "content_cursor_per_catalog"):
+            spec = repo / "Docs/Specs/Active" / name / "SPEC.md"
+            if not spec.exists():
+                spec = repo / "Docs/Specs/Completed" / name / "SPEC.md"
+            if not spec.exists():
+                continue  # moved on; the synthetic cases above still cover it
+            with self.subTest(spec=name):
+                self.assertTrue(eid.spec_is_backend_task(spec), f"{name} must be backend")
+
     def _report_without_screenshot(self) -> Path:
         td = Path(tempfile.mkdtemp(prefix="hook_backend_rep_")).resolve()
         p = td / "IMPLEMENTER_REPORT.md"

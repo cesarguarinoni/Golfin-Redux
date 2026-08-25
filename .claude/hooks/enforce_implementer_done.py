@@ -502,9 +502,26 @@ FIGMA_URL_RE = re.compile(r"figma\.com/(?:design|file)/", re.IGNORECASE)
 BACKEND_TASK_RE = re.compile(
     r"no\s+unity\s*/\s*scene\s*/\s*prefab"          # "no Unity/scene/prefab (changes|edits)"
     r"|no\s+unity\s*,\s*scene\s*,?\s*(?:or\s+)?prefab"  # "no Unity, scene, or prefab"
-    r"|no\s+`?assets/`?\s+changes",                 # "No `Assets/` changes"
+    # "No `Assets/` changes" / "edits" / "modifications". content_catalog wrote
+    # "edits" and the one-word difference forced four inapplicable gates onto a
+    # spec that opens "No Figma. This task has no UI surface" — see SPEC_KIND_RE,
+    # which is the fix that does not depend on guessing a synonym.
+    r"|no\s+`?assets/`?\s+(?:changes|edits|modifications)",
     re.IGNORECASE,
 )
+
+# The DURABLE backend declaration (content_cursor_per_catalog §7). Prose drifts;
+# a declared field does not. A spec states `SPEC_KIND: backend` near the top and
+# the no-Unity gates are skipped — no phrase-matching, no synonym roulette.
+# BACKEND_TASK_RE stays as the fallback so every existing spec keeps working.
+#
+# This exists because the alternative failure mode is worse than a missed gate:
+# content_catalog's implementer was handed four gates (screenshot,
+# figma-reference.png, Figma fidelity table, UI lint) that a backend task can
+# only satisfy by INVENTING evidence. It correctly left them failing. A hook that
+# can only be satisfied by fabricating a screenshot teaches people to fabricate
+# screenshots, so the hook is what gets fixed.
+SPEC_KIND_RE = re.compile(r"^[ \t>*_-]*SPEC_KIND:\s*backend\b", re.IGNORECASE | re.MULTILINE)
 
 # Rule 19 — clone-provenance gate. The tournament_round_loop signup-modal scar
 # (Cesar-approved 2026-06-28): the SPEC §0 REUSE MANDATE said clone the navy
@@ -881,16 +898,22 @@ def spec_is_backend_task(spec_path: Path) -> bool:
     """True when SPEC.md explicitly declares a backend / no-Unity task.
 
     Such a task (a Python tool, data migration, editor-less generator) produces
-    no Game View, so the Rule 5 screenshot gate and the Figma-reference-png gate
-    are skipped for it. Detection is narrow by design (see BACKEND_TASK_RE): only
-    an explicit "no Unity/scene/prefab" or "No `Assets/` changes" declaration
-    qualifies, so a normal UI task can never accidentally exempt itself out of
-    the screenshot requirement.
+    no Game View, so the screenshot, Figma-reference-png, Figma-fidelity and
+    UI-lint gates are all skipped for it.
+
+    Two detectors, in order:
+      1. `SPEC_KIND: backend` — the EXPLICIT declaration, and the one to use in
+         new specs. Prose gets reworded; a declared field does not.
+      2. BACKEND_TASK_RE — the prose fallback, kept so every spec written before
+         the field existed still passes. Narrow by design: only an explicit "no
+         Unity/scene/prefab" or "No `Assets/` changes|edits|modifications"
+         qualifies, so a normal UI task can never accidentally exempt itself out
+         of the screenshot requirement.
     """
     if not spec_path.exists():
         return False
     text = spec_path.read_text(encoding="utf-8", errors="ignore")
-    return bool(BACKEND_TASK_RE.search(text))
+    return bool(SPEC_KIND_RE.search(text) or BACKEND_TASK_RE.search(text))
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -3132,7 +3155,13 @@ def main() -> int:
     # Rule 18: Figma-node UI tasks must carry a per-element Figma fidelity table
     # in IMPLEMENTER_REPORT.md (the UI counterpart of Rule 16). Blocks the
     # vibe-match that let 1v1_ingame_ui ship with an explicit border token absent.
-    if spec_references_figma_node(spec_path):
+    #
+    # SKIPPED for declared backend tasks (content_cursor_per_catalog §7). A
+    # backend spec has no built surface to diff, so these two gates can only be
+    # satisfied by inventing a fidelity table and a lint JSON. They fired on
+    # content_catalog only because FIGMA_NODE_ID_RE matches a DATE ("2026-08"),
+    # and the spec says the word "figma" while saying it has none.
+    if not is_backend and spec_references_figma_node(spec_path):
         errors.extend(validate_figma_fidelity(report_path, "IMPLEMENTER_REPORT.md"))
         # Rule 21: the automated counterpart — each built prefab must pass the
         # UIFidelityLinter (fail == 0), cited in a '## UI fidelity lint' section.

@@ -278,15 +278,28 @@ export function validateCatalog(
       const saleRpCost = num(row.data.saleRpCost);
       if (rpCost !== null && rpCost < 0) err(row.rowId, "rpCost", `rpCost ${rpCost} is negative.`);
       if (saleRpCost !== null && saleRpCost < 0) err(row.rowId, "saleRpCost", `saleRpCost ${saleRpCost} is negative.`);
-      // §D1.6 says "saleRpCost < rpCost when present". EQUAL is how the shipped
-      // catalog encodes "no discount" — shop_catalog.csv ships
-      // shop_club_pwedge_royal at 600/600 — so equal WARNS and only a sale price
-      // ABOVE the list price is an error. A validator that cannot publish the
-      // catalog the game ships today is a validator that will be switched off.
-      if (rpCost !== null && saleRpCost !== null && saleRpCost > rpCost) {
-        err(row.rowId, "saleRpCost", `saleRpCost ${saleRpCost} is above rpCost ${rpCost} — the "sale" costs more.`);
-      } else if (rpCost !== null && saleRpCost !== null && saleRpCost === rpCost) {
-        warn(row.rowId, "saleRpCost", `saleRpCost equals rpCost (${rpCost}) — no discount. Fine if that is the intent.`);
+      // §D1.6: "saleRpCost < rpCost when present", BLOCKING — restored by
+      // content_cursor_per_catalog §6 after Phase 0 relaxed it to a warning.
+      //
+      // Relaxing was right in the moment: shop_catalog.csv shipped
+      // shop_club_pwedge_royal at 600/600, and a validator that cannot publish
+      // the catalog the game ships is a validator that gets switched off. But
+      // that row also carried offer=false and popular=false — it was not on sale
+      // at all, and 600/600 was "no sale" written as an equal price. The DATA was
+      // the bug, so the data was fixed (saleRpCost blanked) and the rule is a
+      // rule again.
+      //
+      // BLANK is the way to say "no sale": `num("")` is null, so an unset
+      // saleRpCost never reaches this branch. An always-warn rule on a field
+      // whose whole job is to mean "on sale" is a rule nobody reads.
+      if (rpCost !== null && saleRpCost !== null && saleRpCost >= rpCost) {
+        err(
+          row.rowId,
+          "saleRpCost",
+          saleRpCost === rpCost
+            ? `saleRpCost equals rpCost (${rpCost}) — that is not a sale. Leave saleRpCost BLANK when the row is not discounted.`
+            : `saleRpCost ${saleRpCost} is above rpCost ${rpCost} — the "sale" costs more.`,
+        );
       }
 
       // 8. WARN ONLY — the economy band, not a rule.

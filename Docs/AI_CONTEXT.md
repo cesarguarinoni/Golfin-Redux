@@ -23,6 +23,44 @@
 
 ## ✅ RECENTLY LANDED
 
+> **`content_cursor_per_catalog` — implemented 2026-08-25, awaiting Cesar's sign-off.**
+> Spec: `Docs/Specs/Active/content_cursor_per_catalog/`. Backend + tooling only; **the game is
+> unchanged.** Supersedes `content_catalog` §B1 — read this BEFORE the Phase 1 Unity overlay spec,
+> which is exactly why it was filed now: once a build ships with a scalar cursor this stops being
+> an edit and becomes a migration.
+>
+> - **`since` is PER-CATALOG** — `?since=clubs:1,texts:9&build=…`. A catalog left out has no cursor
+>   and comes back full. A bare int still works and applies to every catalog. An unparseable
+>   fragment degrades **only that catalog** to full and logs a warning — never a 400.
+> - **The top-level `version` field is DELETED.** No scalar can describe seven independently
+>   versioned catalogs. Measured on prod, same data, same endpoint: **max 610,333 B · min 2,177 B ·
+>   per-catalog 454 B**. And the min is a ratchet, not a floor — it was 1,407 B when Phase 0
+>   measured it one day earlier. `latest_version` stays, documented as **informational only, never
+>   a cursor**. The client stores `catalogs[<name>].version`.
+> - **`export_content.py --check` now also checks DRIFT** — per-catalog id sets, CSV vs catalog,
+>   naming the offending ids. This is the case `--check` provably could not see: an extra row in the
+>   CSV changes no bytes, so the old check exited 0 while the repo and the catalog disagreed.
+> - **`saleRpCost < rpCost` is blocking again**, with the data fixed instead of the rule bent:
+>   `shop_club_pwedge_royal` was `600/600` with `offer=false` — "no sale" written as an equal price —
+>   so its `saleRpCost` is now blank (prod `shop_catalog` v2). Verified inert in Unity through the
+>   real loader: `rp=600 sale=0 HasSale=False Effective=600`, identical to before.
+> - **`enforce_implementer_done.py` knows what a backend task is.** It matched the prose "No
+>   `Assets/` **changes**" while `content_catalog` wrote "**edits**", and that one word forced four
+>   impossible gates (screenshot, figma-reference, Figma fidelity, UI lint) onto a spec with no UI.
+>   Now: an explicit `SPEC_KIND: backend` field (declared in both specs), synonyms accepted as a
+>   fallback, and Rules 18/21 scoped to non-backend tasks. 147 specs re-scanned, zero new false
+>   exemptions; 8 new tests.
+>
+> **`texts` was NOT drifted** — the spec's "501 vs 502" was the mid-file `#` comment counted as a
+> row. 501 = 501, identical id sets. See `IMPLEMENTER_REPORT.md` § D-1; nothing was dressed up as a
+> fix. `texts` sits at v11 because of the acceptance round trip (changed then reverted on a dead key).
+>
+> **NOT DEPLOYED — Cesar's call.** `playlife-api` on fly.io still serves the Phase 0 scalar shape.
+> The change is verified against a local server on the real router + real prod Supabase
+> (`acceptance_probe.txt`), but deploying a shared production API is not something a session does
+> unasked. `flyctl` is installed and authenticated; nothing consumes the endpoint yet, and the
+> bare-int form keeps any runbook curl working.
+
 > **`content_catalog` (Phase 0 of the content pipeline) — implemented 2026-08-25, awaiting Cesar's sign-off.**
 > Spec: `Docs/Specs/Active/content_catalog/`. Backend + tooling only; **the game is unchanged.**
 >
@@ -31,7 +69,8 @@
 >   `content_publish` / `content_rollback` (applied by Cesar 2026-08-24), seeded 2026-08-25 with the
 >   **1332 rows** of the seven shipped CSVs (clubs 799 · characters 12 · items 3 · bags 10 · balls 2 ·
 >   **texts 501** · shop_catalog 5), at v1 with a v1 snapshot.
-> - **`GET /api/v1/content?since=&build=&catalogs=`** — live on prod, no auth, `max-age=60`. Returns a
+> - **`GET /api/v1/content?since=&build=&catalogs=`** — live on prod, no auth, `max-age=60`. (`since`
+>   is now per-catalog and the top-level `version` is gone — see the entry above.) Returns a
 >   delta filtered server-side by `min_build`; `is_enabled=false` removes a catalog entirely and drops
 >   the top-level `enabled`. Fresh client 705 KB, current client ~200 bytes per catalog.
 > - **`Tools/content/`** — `seed_from_csv.py` (CSVs → SQL, `--apply` runs it) and `export_content.py`
@@ -42,10 +81,10 @@
 >   validate+publish / rollback / kill switch, each behind `checkAdmin()` and audited.
 >   Publishing `characters` also upserts the `golfin_characters` mirror in the same request.
 >
-> **Read `IMPLEMENTER_REPORT.md` § Spec deviations D-2 before approving.** The endpoint's top-level
-> `version` is the **min** across catalogs, not the max the spec called for: replaying the max was
-> measured at **610 KB per boot** on prod and could silently skip a catalog's rows; the min costs 1.4 KB.
-> The max is still returned as `latest_version`.
+> **SUPERSEDED 2026-08-25 by `content_cursor_per_catalog`.** Phase 0 shipped a scalar top-level
+> `version` (the **min** across catalogs, corrected from the spec's max — D-2). Both scalars are
+> wrong: the max is lossy, the min is a ratchet. The cursor is now per-catalog and the top-level
+> `version` field is gone. See the entry above.
 >
 > **Not done and deliberately so:** no `ContentService`, no `RemoteContentSource`, no `*DatabaseCSV.cs`
 > change, no admin panels, no `LevelUpCosts` catalog (plan §9 open question 2). `Endpoints.Content()`
