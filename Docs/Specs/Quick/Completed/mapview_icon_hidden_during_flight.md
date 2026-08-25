@@ -39,7 +39,9 @@ Hole 04, 1170x2532 full-res, 54.5 s / 1581 frames.
 - **Frames:** f300 (10.0 s, `BALL: Flying`) and f1000 (33.3 s, `BALL: Flying`) show the icon gone;
   f136 (4.5 s) and f1300 (43.3 s, `BALL: Aiming`) show it back with the rest of the shot UI.
 
-Clip: [`Docs/Specs/Quick/_attachments/mapview_icon_hidden_during_flight_1v1.mp4`](_attachments/mapview_icon_hidden_during_flight_1v1.mp4)
+Clip: [`Docs/Specs/Quick/_attachments/mapview_icon_hidden_during_flight_1v1.mp4`](../_attachments/mapview_icon_hidden_during_flight_1v1.mp4)
 (aiming -> flight -> re-arm, captioned).
 
 Solo was not re-recorded — same component, same GameObject, no `IsVersus` branch anywhere in the gate.
+
+Status: DONE — approved by Cesar 2026-08-25. Clip also copied to `Docs/Reports/Media/mapview_icon_hidden_during_flight_2026-08-25.mp4` for the daily report.
