@@ -40,6 +40,19 @@ namespace Golfin.Gameplay.Environment
         [SerializeField] bool _overrideFog;
         [SerializeField, ColorUsage(false)] Color _fogColor = new Color(0.5f, 0.5f, 0.5f, 1f);
 
+        [Header("Play-line guard override")]
+        [Tooltip(
+            "How far this sky's sun must stay from the hole's play line, in degrees. " +
+            "Negative = use the library default.\n\n" +
+            "Per preset because glare is a property of the HDRI, not of the guard. " +
+            "Measured over the player's portrait frustum, p99 luminance relative to each " +
+            "sky's own median falls off at wildly different rates: MorningClear is 41x the " +
+            "median looking straight at the sun and still 10x at 32 degrees, while " +
+            "MorningCloudy is a flat 1.2x at every offset. One global clearance therefore " +
+            "either blows out the low-sun clear skies or pointlessly rotates the overcast " +
+            "ones away from a sun that isn't there. 0 disables the guard for this preset.")]
+        [SerializeField, Range(-1f, 90f)] float _minSunAngleFromPlayLine = -1f;
+
         [Header("Selection")]
         [Tooltip("Uncheck to keep the asset around but exclude it from random draws.")]
         [SerializeField] bool _enabledInRotation = true;
@@ -57,6 +70,15 @@ namespace Golfin.Gameplay.Environment
         public Color    FogColor          => _fogColor;
         public bool     EnabledInRotation => _enabledInRotation;
         public float    Weight            => _weight;
+
+        /// <summary>
+        /// Per-preset play-line clearance in degrees, or negative to defer to
+        /// <see cref="SkyPresetLibrary.MinSunAngleFromPlayLine"/>.
+        /// </summary>
+        public float MinSunAngleFromPlayLine => _minSunAngleFromPlayLine;
+
+        /// <summary>True when this preset overrides the library's clearance.</summary>
+        public bool HasMinSunAngleOverride => _minSunAngleFromPlayLine >= 0f;
 
         /// <summary>True when this preset can actually be applied.</summary>
         public bool IsUsable => _skyboxMaterial != null;

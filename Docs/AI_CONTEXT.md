@@ -62,6 +62,45 @@
 > one-direction probe biases sunsets, which have a bright and a dim side), then a guard lowers
 > it until under 1% of the player's view clips.
 >
+> **Play-line clearance is PER PRESET, not global (2026-08-25).** Glare belongs to the HDRI, so
+> `SkyPreset._minSunAngleFromPlayLine` overrides the library's 32° default (negative = defer to
+> library, 0 = guard off). One global number can only be wrong at one end: an overcast sky has no
+> disc to steer around, while a low clear sun is still ~10× median brightness 32° off axis.
+> Shipped values, and the worst blow-out each leaves across holes 01/03/06/09/12/18:
+>
+> | preset | clearance | worst hole | blow-out |
+> |---|---|---|---|
+> | MorningClear | 60° | 18 | 0.72% |
+> | NoonClear | 65° | 03 | 1.32% |
+> | AfternoonClear | 55° | 03 | 0.01% |
+> | EveningClear | 55° | — | 0.00% |
+> | AfternoonCloudy | 45° | — | 0.00% |
+> | EveningCloudy | 50° | — | 0.00% |
+> | MorningCloudy | 0° (off) | — | 0.00% |
+> | NoonCloudy | 0° (off) | 03 | 0.37% |
+>
+> **Worst case anywhere: 1.32%** (Hole 03 + NoonClear), against a <1.5% target. Before this pass
+> every preset fell through to the library's 32° and the worst cells were Hole 09 + Morning
+> **20.1%** and Hole 18 + Morning **17.9%**. Hole 03 is the hard case — it plays 184.7° into a
+> 175° noon sun, 9.7° off — and NoonClear needed 65° rather than 45° to clear the gate; the
+> falloff there is shallow (45°→2.79%, 55°→2.08%, 65°→1.32%) because at 49.8° elevation the disc
+> is already outside the portrait frame and what remains is bright sky, not the disc. Azimuth is
+> a weak time-of-day cue for a high sun, so rotating noon costs less legibility than the same
+> rotation would on morning or evening.
+>
+> **How to re-measure (the two traps that void the result).** Camera at the tee, aimed down
+> `TryGetPlayBearing`, FOV 55, portrait 240×520, count px with r,g,b all > 0.99.
+> 1. **`Tee_` transforms sit at y=0 but the geometry is at y≈5–23.** Placing the camera at
+>    `tee.position + up` buries it under the course, looking at the inside of the unlit
+>    `MountainBackdrop` dome — which reads as a huge "blow-out" that is pure artifact. Raycast
+>    DOWN from y=500 at the tee's XZ and use the hit point. The play *bearing* is unaffected.
+> 2. **`renderPostProcessing = true` makes every frame unmeasurable.** Hole scenes contain zero
+>    URP Volumes, so it applies a default that clamps max luminance to ~209/255 and reports
+>    0.00% even aimed straight at the sun. Measure with post OFF; that over-reports slightly
+>    (no highlight compression), which is the right bias for a safety gate.
+> Also reload the `SkyPreset` via `AssetDatabase` after **every** `OpenScene` — the asset is
+> unloaded by repeated scene loads and `ApplyTo` then silently no-ops on a destroyed reference.
+>
 > **Tuning knobs.** `Assets/Resources/Environment/SkyPresetLibrary.asset` — master on/off,
 > per-preset weight/enable, and a yaw-jitter field left at 0 (rotating the sun changes whether
 > the player hits into it — a playability call). `Classic` (the old `Sky-2` look) is kept as a
@@ -76,8 +115,17 @@
 > - `Sky-2.hdr` is 4096×2048 with mipmaps off and costs ~10–21 MB alone, more than all eight new
 >   skies combined. Same downsample recovers most of it; not done because it softens the shipped
 >   look.
-> - Evening's sun sits at 310° so it is off Hole 6's play line (at 275° it blew out 18.5% of the
->   frame). That is tuned against one hole; per-hole sun placement would need each hole's bearing.
+> - ~~Evening's sun is tuned against one hole; per-hole sun placement would need each hole's
+>   bearing.~~ — **DONE 2026-08-25.** The guard reads each hole's own bearing from
+>   `TryGetPlayBearing`, and clearance is now per preset (table above). Verified across
+>   6 holes × 8 presets; worst case 1.32%.
+> - Sun bearing verified against the render for the four clear skies (probe camera, `cullingMask=0`,
+>   float target so the disc cannot clip, world-direction reconstruction): EveningClear +0.1°,
+>   NoonClear −1.1°, MorningClear −1.4°, AfternoonClear −2.3° — all within ~2°, confirming
+>   `apparent bearing = 36.1 − _Rotation`. The cloudy variants have no disc to locate
+>   (MorningCloudy peak/median = 1.3, i.e. flat); their bearings are not measurable this way and
+>   do not need to be. Do NOT probe with `_Exposure = 0.01` on an 8-bit target — it crushes the
+>   disc to ~11/255 and the "peak" is quantization noise.
 > - Demo: `GOLFIN > Environment > Record Sky Rotation Demo Video`; captioned clip at
 >   `Docs/Reports/Media/sky_rotation_2026-08-24.mp4`.
 

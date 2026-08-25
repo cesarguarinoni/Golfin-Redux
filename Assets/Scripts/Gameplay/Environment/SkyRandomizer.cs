@@ -219,7 +219,14 @@ namespace Golfin.Gameplay.Environment
         {
             var library = SkyPresetLibrary.Load();
             if (library == null || !library.AvoidSunInPlayLine) return 0f;
-            float minAngle = library.MinSunAngleFromPlayLine;
+
+            // Per-preset clearance wins over the library default. Glare belongs to the
+            // HDRI: an overcast sky has no disc to steer around and needs 0, while a low
+            // clear sun is still ~10x the median brightness 32 degrees off axis and needs
+            // 55-60. A single global number can only be wrong for one end or the other.
+            float minAngle = preset.HasMinSunAngleOverride
+                ? preset.MinSunAngleFromPlayLine
+                : library.MinSunAngleFromPlayLine;
             if (minAngle <= 0f) return 0f;
             if (!TryGetPlayBearing(holeScene, out float playBearing)) return 0f;
 
@@ -237,7 +244,8 @@ namespace Golfin.Gameplay.Environment
             float guard = need * sign;
             Debug.Log($"[SkyRandomizer] Play-line guard: hole plays {playBearing:0.#}deg, " +
                       $"sun at {sunBearing:0.#}deg ({Mathf.Abs(delta):0.#}deg off) -> " +
-                      $"rotating {guard:+0.#;-0.#}deg to clear {minAngle:0.#}deg.");
+                      $"rotating {guard:+0.#;-0.#}deg to clear {minAngle:0.#}deg " +
+                      $"({(preset.HasMinSunAngleOverride ? "preset" : "library")} clearance).");
             return guard;
         }
 

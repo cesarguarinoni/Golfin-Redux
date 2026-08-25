@@ -21,5 +21,6 @@ MonoBehaviour:
   _sunIntensity: 1.1
   _overrideFog: 0
   _fogColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+  _minSunAngleFromPlayLine: 0
   _enabledInRotation: 1
   _weight: 0.7
