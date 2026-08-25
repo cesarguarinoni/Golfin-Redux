@@ -856,14 +856,11 @@ export const DICT = {
   "c.facet.brand": { en: "Brand", ja: "ブランド" },
   "c.facet.type": { en: "Type", ja: "種別" },
   "c.facet.rarity": { en: "Rarity", ja: "レアリティ" },
+  "c.facet.category": { en: "Category", ja: "カテゴリ" },
   "c.facet.any": { en: "Any {label}", ja: "{label}: すべて" },
   "c.facet.serverNote": {
-    en: "Filters run as a server query, not on the loaded page.",
-    ja: "フィルタはサーバー側のクエリとして実行され、表示中のページ内での絞り込みではありません。",
-  },
-  "c.facet.partial": {
-    en: "Reaches {hit} of {total} rows — see the report; the rows route has no filter parameter.",
-    ja: "{total} 件中 {hit} 件に到達します（rows API にフィルタ用パラメータがないため）。詳細はレポート参照。",
+    en: "Runs as a server query over the whole catalog, combined with the other filters — not a narrowing of the loaded page.",
+    ja: "カタログ全体に対するサーバー側クエリとして、他のフィルタと組み合わせて実行されます。表示中のページ内での絞り込みではありません。",
   },
 
   "c.edit.title": { en: "Edit draft row", ja: "下書き行を編集" },
@@ -943,7 +940,14 @@ export const DICT = {
     ja: "ロールバックは「前に進む」操作です。v{example} を復元すると、そのスナップショットが新しい、より大きなバージョンとして再公開されます。番号が戻ることはありません。不具合のあるバージョンを既に取得したクライアントは、番号が上がることでのみ修正を認識できます。",
   },
   "cp.history.current": { en: "Current", ja: "現在" },
-  "cp.history.restore": { en: "Restore this version", ja: "このバージョンを復元" },
+  // Short by necessity: measured 2026-08-25, "Restore this version" rendered
+  // 122px into a 104px column and pushed the button outside the drawer. The
+  // full phrase lives in the title attribute instead.
+  "cp.history.restore": { en: "Restore", ja: "復元" },
+  "cp.history.restoreHint": {
+    en: "Republish this snapshot as a new, higher version.",
+    ja: "このスナップショットを、新しくより大きなバージョンとして再公開します。",
+  },
   "cp.history.confirm": {
     en: "Restore v{version}? It will be republished as v{next}.",
     ja: "v{version} を復元しますか？ v{next} として再公開されます。",
@@ -952,18 +956,20 @@ export const DICT = {
   "cp.history.failed": { en: "Rollback failed", ja: "ロールバックに失敗しました" },
   "cp.history.col.version": { en: "Version", ja: "バージョン" },
   "cp.history.col.when": { en: "When", ja: "日時" },
-  "cp.history.col.who": { en: "By", ja: "実行者" },
   "cp.history.col.what": { en: "What changed", ja: "変更内容" },
   "cp.history.source": {
-    en: "Built from the audit log, which keeps the 200 most recent admin actions overall. Versions published before that window — including the v1 seed, which was applied by SQL and never passed through this dashboard — appear as a number with no detail. There is no route that reads content_versions; see the implementer report.",
-    ja: "監査ログ（管理操作の直近 200 件）から構築しています。この範囲より前に公開されたバージョン（SQL で適用され、この管理画面を経由していない v1 のシード投入を含む）は、番号のみで詳細なしと表示されます。content_versions を読む API は存在しません。詳細は実装レポート参照。",
+    en: "Every published snapshot, read from content_versions — including v1, the seeded baseline. Paged, not capped: the oldest version is always reachable, because it is the one you want in an emergency.",
+    ja: "content_versions から読み取った、公開済みスナップショットのすべてです（シード投入された v1 を含む）。件数の打ち切りはなくページ送りで表示するため、最も古いバージョンにも必ず到達できます。緊急時に必要になるのはそのバージョンだからです。",
   },
-  "cp.history.capped": {
-    en: "Showing the {cap} most recent versions (down to v{oldest}). Older snapshots still exist and are still restorable — the list is capped so a large version number cannot render an unbounded table.",
-    ja: "直近 {cap} 件のバージョン（v{oldest} まで）を表示しています。これより古いスナップショットも存在し、復元も可能です。バージョン番号が大きい場合に際限なく行が描画されるのを防ぐための上限です。",
+  "cp.history.col.rows": { en: "Rows", ja: "行数" },
+  "cp.history.seed": { en: "SEED", ja: "初期" },
+  "cp.history.seedHint": {
+    en: "The baseline every catalog started from, applied by SQL before this dashboard existed. The most likely rollback target in an emergency.",
+    ja: "各カタログの出発点となるバージョン。この管理画面ができる前に SQL で投入されました。緊急時に最も選ばれる可能性が高いロールバック先です。",
   },
-  "cp.history.noDetail": { en: "(before the audit window)", ja: "（監査ログの保持範囲より前）" },
-  "cp.history.rollbackOf": { en: "rollback of v{from}", ja: "v{from} のロールバック" },
+  "cp.history.bySeed": { en: "(seeded)", ja: "（シード投入）" },
+  "cp.history.none": { en: "No versions recorded yet.", ja: "記録されているバージョンはまだありません。" },
+  "cp.history.total": { en: "{n} versions", ja: "全 {n} バージョン" },
 
   "cp.enabled.title": { en: "Serve this catalog to the game", ja: "このカタログをゲームに配信する" },
   "cp.enabled.on": {
@@ -1037,9 +1043,18 @@ export const DICT = {
     ja: "カタログが保持しているのは画像 URL ではなく Unity のスプライト「名」で、ゲーム側が Resources.Load で解決します。ここで取得できる画像は存在しません（画像 URL 列は本タスクの対象外）。",
   },
   "sh.sale": { en: "SALE", ja: "セール" },
-  "sh.windowsMissing": {
-    en: "shop_catalog has no startAt / endAt columns yet (CONTENT_PIPELINE_PLAN §11.2 proposes them; no migration has applied them). Until they exist the badge shows LIVE or OFF from is_active rather than inventing a schedule.",
-    ja: "shop_catalog にはまだ startAt / endAt 列がありません（CONTENT_PIPELINE_PLAN §11.2 の提案段階で、マイグレーション未適用）。列が追加されるまで、バッジはスケジュールを推測せず is_active に基づき LIVE / OFF を表示します。",
+  "sh.state.hint": {
+    en: "Derived from startAt / endAt (endAt is EXCLUSIVE). A row with no window falls back to its active switch.",
+    ja: "startAt / endAt から判定します（endAt は「その時刻を含まない」）。期間が未設定の行は有効フラグに従います。",
+  },
+  "sh.state.brokenHint": {
+    en: "This row's schedule window could not be read, so it is treated as NOT live. Fix startAt / endAt — an unreadable bound must never mean 'show it forever'.",
+    ja: "この行のスケジュール期間を読み取れなかったため、配信対象外として扱っています。startAt / endAt を修正してください。読み取れない値が「無期限に表示」を意味してはならないためです。",
+  },
+  "sh.windows.title": { en: "Scheduling", ja: "スケジュール" },
+  "sh.windows.help": {
+    en: "startAt / endAt set the listing window and saleStartAt / saleEndAt the sale window, as ISO-8601 UTC (2026-09-01T00:00:00Z). endAt is EXCLUSIVE. Empty means no bound. The sale window must sit inside the listing window, and publish blocks on an unreadable or inverted one.",
+    ja: "startAt / endAt で出品期間を、saleStartAt / saleEndAt でセール期間を指定します（ISO-8601 UTC 形式、例: 2026-09-01T00:00:00Z）。endAt はその時刻を含みません。空欄は「期限なし」です。セール期間は出品期間の内側に収める必要があり、読み取れない値や前後が逆の場合は公開時にブロックされます。",
   },
 } as const satisfies Record<string, Entry>;
 

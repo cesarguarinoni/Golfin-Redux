@@ -6,6 +6,8 @@ import { ID_COLUMN } from "./contentValidate";
 import type {
   ContentCatalogSummary,
   ContentCatalogsResponse,
+  ContentVersionSummary,
+  ContentVersionsResponse,
   ContentDiffEntry,
   ContentDiffResponse,
   ContentFieldDiff,
@@ -167,19 +169,52 @@ export async function fetchCatalogs(): Promise<ContentCatalogsResponse> {
   return { catalogs, mock: false };
 }
 
+/**
+ * `data` fields a catalog may be filtered on (content_panels_gaps §1).
+ *
+ * An ALLOW-LIST, not free-form: the value is interpolated into a PostgREST
+ * filter, so accepting an arbitrary field name from the query string would let
+ * a caller aim the filter anywhere in the JSONB document. These are the columns
+ * the panels actually facet on, and every one of them is a plain scalar.
+ */
+const FILTERABLE: Record<string, string[]> = {
+  clubs: ["brand", "type", "rarity"],
+  characters: ["rarity"],
+  items: ["category", "rarity"],
+  bags: ["rarity"],
+  balls: ["brand"],
+  texts: [],
+  shop_catalog: ["category"],
+};
+
+export function filterableFields(catalog: string): string[] {
+  return FILTERABLE[catalog] ?? [];
+}
+
+/** Drop anything not on the allow-list, and any empty value. */
+function sanitizeFilters(catalog: string, filters: Record<string, string>): Array<[string, string]> {
+  const allowed = new Set(filterableFields(catalog));
+  return Object.entries(filters)
+    .map(([field, value]) => [field, (value ?? "").trim()] as [string, string])
+    .filter(([field, value]) => value !== "" && allowed.has(field));
+}
+
 export async function fetchDraftRows(
   catalog: string,
-  opts: { page?: number; limit?: number; q?: string } = {}
+  opts: { page?: number; limit?: number; q?: string; filters?: Record<string, string> } = {}
 ): Promise<ContentRowsResponse> {
   const page = Math.max(1, Math.floor(opts.page ?? 1));
   const limit = Math.min(MAX_LIMIT, Math.max(1, Math.floor(opts.limit ?? DEFAULT_LIMIT)));
   const q = (opts.q ?? "").trim();
+  const filters = sanitizeFilters(catalog, opts.filters ?? {});
   const from = (page - 1) * limit;
 
   if (isMockMode()) {
     const all = mockDb()
       .contentDrafts.filter((r) => r.catalog === catalog)
       .filter((r) => !q || JSON.stringify(r).toLowerCase().includes(q.toLowerCase()))
+      // Same semantics as the live branch below: exact match, AND-ed.
+      .filter((r) => filters.every(([field, value]) => (r.data[field] ?? "") === value))
       .sort((a, b) => a.rowId.localeCompare(b.rowId));
     const rows = all.slice(from, from + limit);
     return { catalog, page, limit, total: all.length, columns: columnsOf(rows), rows, mock: true };
@@ -200,11 +235,55 @@ export async function fetchDraftRows(
     query = query.or(clauses.join(","));
   }
 
+  // Facet filters are EXACT and AND-ed with each other and with `q`, which is
+  // what made the previous scalar-`q` workaround unnecessary: brand=BogeyB AND
+  // rarity=Common is now one query, and `total` is the count of the FILTERED
+  // set, so pagination is over the real result rather than over the page.
+  for (const [field, value] of filters) {
+    query = query.eq(`data->>${field}`, value);
+  }
+
   const res = await query.order("row_id").range(from, from + limit - 1);
   if (res.error) throw new Error(`content_drafts query failed: ${res.error.message}`);
 
   const rows = ((res.data as Row[]) ?? []).map((r) => mapRow(catalog, r));
   return { catalog, page, limit, total: res.count ?? rows.length, columns: columnsOf(rows), rows, mock: false };
+}
+
+/**
+ * Distinct values of each filterable field, for the facet dropdowns (§1).
+ *
+ * SERVER-DERIVED, deliberately: the old panel built its options from whichever
+ * 50 rows happened to be on screen, so a brand that appeared only on page 9 was
+ * unselectable. Reading the whole column is what makes "adding a brand in
+ * drafts makes it appear" true without a deploy.
+ *
+ * One column of one catalog — 799 strings at the current worst case — and it is
+ * fetched once per panel load, not per keystroke.
+ */
+export async function fetchFacetValues(
+  catalog: string,
+  fields?: string[]
+): Promise<Record<string, string[]>> {
+  const wanted = (fields?.length ? fields : filterableFields(catalog)).filter((f) =>
+    filterableFields(catalog).includes(f)
+  );
+  const out: Record<string, string[]> = {};
+  if (wanted.length === 0) return out;
+
+  const rows = isMockMode()
+    ? mockDb().contentDrafts.filter((r) => r.catalog === catalog)
+    : await fetchAllRows("content_drafts", catalog);
+
+  for (const field of wanted) {
+    const seen = new Set<string>();
+    for (const row of rows) {
+      const value = (row.data[field] ?? "").trim();
+      if (value) seen.add(value);
+    }
+    out[field] = [...seen].sort((a, b) => a.localeCompare(b));
+  }
+  return out;
 }
 
 function columnsOf(rows: ContentStoredRow[]): string[] {
@@ -282,6 +361,71 @@ export async function fetchDiff(catalog: string): Promise<ContentDiffResponse> {
   }
 
   return { catalog, publishedVersion, counts, entries, mock: isMockMode() };
+}
+
+// ---------------------------------------------------------------------------
+// Version history (content_panels_gaps §2)
+// ---------------------------------------------------------------------------
+
+/**
+ * Every snapshot of one catalog, newest first.
+ *
+ * WHY THIS EXISTS. The panels reconstructed history from `admin_audit_log`,
+ * which keeps the 200 most recent admin actions ACROSS ALL PANELS and never saw
+ * the v1 seed at all — that was applied by SQL, before the dashboard existed.
+ * Rollback is the plan's §7.3 answer to "an update broke installed games", and
+ * a rollback target list that silently loses its tail is a safety rail that
+ * quietly stops reaching. `content_versions` has held every snapshot since
+ * Phase 0 (written inside `content_publish`); nothing read it until now.
+ *
+ * The audit log keeps its job — WHO did WHAT — and stops being asked to answer
+ * "what versions exist", which it was never able to.
+ *
+ * `row_count` comes from the snapshot's own length rather than a second query:
+ * the snapshot IS the version, so counting it is free and cannot disagree.
+ */
+export async function fetchVersions(
+  catalog: string,
+  opts: { page?: number; limit?: number } = {}
+): Promise<ContentVersionsResponse> {
+  const page = Math.max(1, Math.floor(opts.page ?? 1));
+  const limit = Math.min(MAX_LIMIT, Math.max(1, Math.floor(opts.limit ?? DEFAULT_LIMIT)));
+  const from = (page - 1) * limit;
+
+  if (isMockMode()) {
+    const all = mockDb().contentVersions.filter((v) => v.catalog === catalog);
+    all.sort((a, b) => b.version - a.version);
+    return {
+      catalog,
+      page,
+      limit,
+      total: all.length,
+      versions: all.slice(from, from + limit),
+      mock: true,
+    };
+  }
+
+  const res = await getSupabaseAdmin()
+    .from("content_versions")
+    // `snapshot` is the whole catalog at that version and can be ~1 MB for
+    // clubs, so it is NOT selected — only its length is wanted, and PostgREST
+    // can compute that server-side with a computed column alias.
+    .select("version, published_by, published_at, note, snapshot", { count: "exact" })
+    .eq("catalog", catalog)
+    .order("version", { ascending: false })
+    .range(from, from + limit - 1);
+  if (res.error) throw new Error(`content_versions query failed: ${res.error.message}`);
+
+  const versions: ContentVersionSummary[] = ((res.data as Row[]) ?? []).map((r) => ({
+    catalog,
+    version: Number(r.version ?? 0),
+    publishedBy: (r.published_by as string) ?? null,
+    publishedAt: (r.published_at as string) ?? null,
+    note: (r.note as string) ?? null,
+    rowCount: Array.isArray(r.snapshot) ? (r.snapshot as unknown[]).length : 0,
+  }));
+
+  return { catalog, page, limit, total: res.count ?? versions.length, versions, mock: false };
 }
 
 /** The catalogs a `shop_catalog` publish has to resolve refIds against. */

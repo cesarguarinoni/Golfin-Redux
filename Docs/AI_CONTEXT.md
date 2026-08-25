@@ -23,6 +23,39 @@
 
 ## ✅ RECENTLY LANDED
 
+> **`content_panels_gaps` — implemented 2026-08-25, awaiting Cesar's sign-off.**
+> Spec: `Docs/Specs/Active/content_panels_gaps/`. Closes the four gaps `content_admin_panels`
+> reported. Deployed, Version ID `053c80d6-11ee-41a6-9ef7-d250d8a78857`; root still 302s to
+> cloudflareaccess and the new versions route is behind Access too.
+>
+> - **§1 Clubs facets are all real server queries now, and they AND.** `rarity=Common` returns
+>   **133** as an exact server count; `brand=BogeyB AND rarity=Common` returns **7** — a
+>   combination the old single-`q` design could not express. Facet values come from the whole
+>   catalog, so a brand added in drafts appears with no deploy. The coverage caveat is gone from
+>   the UI, because all three are now complete.
+>   **The earlier diagnosis was wrong and it is worth remembering why:** all 799/799 club rows
+>   carry `data.rarity` (the 7 hand-authored ids included). What got measured was the *id*
+>   convention — generated ids encode rarity, hand-authored ones don't — and reported as a limit on
+>   the facet. The facet was simply reading the wrong place.
+> - **§2 version history reads `content_versions`, so v1 is selectable again.** New
+>   `GET /api/content/[catalog]/versions`, paginated, newest first. The old reconstruction from
+>   `admin_audit_log` capped at 200 actions across all panels and never saw the SQL-seeded v1 —
+>   a §7.3 safety rail that quietly stopped reaching. Rolling back TO v1 verified: v9999 → v10000.
+>   The audit log keeps its real job, who-did-what.
+> - **§3 the four §11.2 scheduling columns exist** — `startAt`/`endAt`/`saleStartAt`/`saleEndAt`,
+>   EMPTY on all 5 rows (prod `shop_catalog` v2 → **v3**), so nothing changed behaviour.
+>   `export --check` clean. Parsing **fails closed** like `routers/notices.py` `_parse`: an
+>   unreadable bound throws, the badge reads **BROKEN** rather than LIVE, and publish blocks with
+>   the offending field named. `endAt` is EXCLUSIVE.
+>   **Unity read-back confirms the CSV change shifted nothing** — `GeneralShopCatalog` parses by
+>   column index, all 5 entries still parse identically and `rarity` at index 8 still resolves.
+> - **§4 art thumbnails: deliberately untouched.** Zero-line diff on the art path. Sprite names are
+>   what the game resolves; a URL column would pre-empt plan §10.2.
+>
+> **Two defects caught by measuring, not looking:** the rollback button rendered **185px outside**
+> the drawer in both languages (unclickable — and it is the whole point of §2), and the history
+> table overflowed with no scroll container. Both fixed and re-measured (1412 < 1440).
+
 > **`content_admin_panels` — implemented 2026-08-25, awaiting Cesar's sign-off.**
 > Spec: `Docs/Specs/Active/content_admin_panels/`. Dashboard only; **the game is unchanged.**
 > Deployed to `admin.golfin.world`, Version ID `3361ddfe-8132-4596-b306-2d5f89d33064`; root still

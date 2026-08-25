@@ -1,6 +1,11 @@
 import "server-only";
 import { MOCK_BANNERS } from "./mockBanners";
-import { MOCK_CONTENT_CATALOGS, MOCK_CONTENT_DRAFTS, MOCK_CONTENT_PUBLISHED } from "./mockContent";
+import {
+  MOCK_CONTENT_CATALOGS,
+  MOCK_CONTENT_DRAFTS,
+  MOCK_CONTENT_PUBLISHED,
+  MOCK_CONTENT_VERSIONS,
+} from "./mockContent";
 import { MOCK_NOTICES } from "./mockNotices";
 import { MOCK_ACTIVITIES, MOCK_TRANSACTIONS, MOCK_USERS } from "./mock";
 import { MOCK_TOURNAMENTS, MOCK_TOURNAMENT_ENTRIES } from "./mockTournaments";
@@ -11,6 +16,7 @@ import type {
   BannerRow,
   ContentCatalogSummary,
   ContentStoredRow,
+  ContentVersionSummary,
   NoticeRow,
   PointsTransaction,
   TournamentEntryRow,
@@ -40,6 +46,8 @@ export interface MockDb {
   contentCatalogs: ContentCatalogSummary[];
   contentPublished: ContentStoredRow[];
   contentDrafts: ContentStoredRow[];
+  /** Published snapshots — the rollback target list (content_panels_gaps §2). */
+  contentVersions: ContentVersionSummary[];
 }
 
 const g = globalThis as unknown as { __golfinMockDb?: MockDb };
@@ -58,6 +66,7 @@ export function mockDb(): MockDb {
       contentCatalogs: structuredClone(MOCK_CONTENT_CATALOGS),
       contentPublished: structuredClone(MOCK_CONTENT_PUBLISHED),
       contentDrafts: structuredClone(MOCK_CONTENT_DRAFTS),
+      contentVersions: structuredClone(MOCK_CONTENT_VERSIONS),
     };
   }
   return g.__golfinMockDb;

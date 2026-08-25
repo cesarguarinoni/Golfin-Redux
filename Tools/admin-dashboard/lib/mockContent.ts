@@ -1,4 +1,4 @@
-import type { ContentCatalogSummary, ContentStoredRow } from "./types";
+import type { ContentCatalogSummary, ContentStoredRow, ContentVersionSummary } from "./types";
 
 /**
  * Mock-mode fixtures for the content catalogs.
@@ -88,3 +88,29 @@ export const MOCK_CONTENT_DRAFTS: ContentStoredRow[] = MOCK_CONTENT_PUBLISHED.ma
     ? { ...r, data: { ...r.data, name: "MOCK Driver (EDITED DRAFT)" } }
     : { ...r }
 );
+
+/**
+ * Version snapshots (content_panels_gaps §2).
+ *
+ * Deliberately spans a RANGE with a gap at the bottom — v1 plus a couple of
+ * recent ones — because the bug this replaces was "the list loses its tail":
+ * the audit-log reconstruction could not see v1 at all. A fixture where v1 is
+ * present and selectable is the one that would have caught it.
+ */
+export const MOCK_CONTENT_VERSIONS: ContentVersionSummary[] = [
+  { catalog: "clubs", version: 9999, publishedBy: "mock@example.invalid", publishedAt: "2026-08-25T00:00:00Z", note: "MOCK FIXTURE — latest", rowCount: 2 },
+  { catalog: "clubs", version: 9998, publishedBy: "mock@example.invalid", publishedAt: "2026-08-24T00:00:00Z", note: "MOCK FIXTURE", rowCount: 2 },
+  { catalog: "clubs", version: 1, publishedBy: null, publishedAt: "2026-08-01T00:00:00Z", note: "MOCK FIXTURE — the seeded baseline, and the point of §2", rowCount: 2 },
+  { catalog: "characters", version: 9999, publishedBy: "mock@example.invalid", publishedAt: "2026-08-25T00:00:00Z", note: "MOCK FIXTURE", rowCount: 1 },
+  { catalog: "characters", version: 1, publishedBy: null, publishedAt: "2026-08-01T00:00:00Z", note: "MOCK FIXTURE — seeded baseline", rowCount: 1 },
+  { catalog: "shop_catalog", version: 9999, publishedBy: "mock@example.invalid", publishedAt: "2026-08-25T00:00:00Z", note: "MOCK FIXTURE", rowCount: 1 },
+  { catalog: "shop_catalog", version: 1, publishedBy: null, publishedAt: "2026-08-01T00:00:00Z", note: "MOCK FIXTURE — seeded baseline", rowCount: 1 },
+  { catalog: "items", version: 9999, publishedBy: "mock@example.invalid", publishedAt: "2026-08-25T00:00:00Z", note: "MOCK FIXTURE", rowCount: 2 },
+  { catalog: "items", version: 1, publishedBy: null, publishedAt: "2026-08-01T00:00:00Z", note: "MOCK FIXTURE — seeded baseline", rowCount: 2 },
+  { catalog: "bags", version: 9999, publishedBy: "mock@example.invalid", publishedAt: "2026-08-25T00:00:00Z", note: "MOCK FIXTURE", rowCount: 2 },
+  { catalog: "bags", version: 1, publishedBy: null, publishedAt: "2026-08-01T00:00:00Z", note: "MOCK FIXTURE — seeded baseline", rowCount: 2 },
+  { catalog: "balls", version: 9999, publishedBy: "mock@example.invalid", publishedAt: "2026-08-25T00:00:00Z", note: "MOCK FIXTURE", rowCount: 2 },
+  { catalog: "balls", version: 1, publishedBy: null, publishedAt: "2026-08-01T00:00:00Z", note: "MOCK FIXTURE — seeded baseline", rowCount: 2 },
+  { catalog: "texts", version: 9999, publishedBy: "mock@example.invalid", publishedAt: "2026-08-25T00:00:00Z", note: "MOCK FIXTURE", rowCount: 2 },
+  { catalog: "texts", version: 1, publishedBy: null, publishedAt: "2026-08-01T00:00:00Z", note: "MOCK FIXTURE — seeded baseline", rowCount: 2 },
+];

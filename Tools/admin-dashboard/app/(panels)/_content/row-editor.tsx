@@ -24,6 +24,7 @@ export function RowEditor({
   onClose,
   onSaved,
   children,
+  hiddenColumns,
 }: {
   catalog: string;
   row: ContentStoredRow;
@@ -35,6 +36,8 @@ export function RowEditor({
   onSaved: (message: string) => void;
   /** Panel-specific extras rendered above the raw field list (Shop uses it). */
   children?: (draft: Record<string, string>, set: (col: string, v: string) => void) => React.ReactNode;
+  /** Columns the extras already render, so the raw list does not repeat them. */
+  hiddenColumns?: string[];
 }) {
   const translate = useT();
   const [draft, setDraft] = useState<Record<string, string>>({ ...row.data });
@@ -65,7 +68,9 @@ export function RowEditor({
     }
   }
 
-  const ordered = [...columns, ...Object.keys(draft).filter((c) => !columns.includes(c))];
+  const ordered = [...columns, ...Object.keys(draft).filter((c) => !columns.includes(c))].filter(
+    (column) => !hiddenColumns?.includes(column)
+  );
 
   return (
     <div className="fixed inset-0 z-40" role="dialog" aria-modal="true">

@@ -30,7 +30,14 @@ export function ShopPanel() {
       return (
         <span className="flex items-center gap-2">
           <code className="text-[11px] text-zinc-300">{row.data.category || "—"}</code>
-          <ShopStateBadge state={shopState(row, now)} title={translate("sh.windowsMissing")} />
+          <ShopStateBadge
+            state={shopState(row, now)}
+            title={
+              shopState(row, now) === "BROKEN"
+                ? translate("sh.state.brokenHint")
+                : translate("sh.state.hint")
+            }
+          />
         </span>
       );
     }
@@ -72,6 +79,7 @@ export function ShopPanel() {
       catalog="shop_catalog"
       titleKey="sh.title"
       renderCell={renderCell}
+      editorHiddenColumns={["category", "refId", "startAt", "endAt", "saleStartAt", "saleEndAt"]}
       banner={
         <div className="mb-4 rounded-lg border border-red-500/50 bg-red-500/10 px-4 py-3">
           <p className="text-xs font-bold text-red-300">⚠ {translate("sh.notice.headline")}</p>
@@ -110,9 +118,35 @@ export function ShopPanel() {
             onPick={(refId) => set("refId", refId)}
           />
 
-          <p className="text-[10px] leading-relaxed text-zinc-600">
-            {translate("sh.windowsMissing")}
-          </p>
+          {/* The four §11.2 window fields are rendered EXPLICITLY rather than
+              left to the generic field list below, so they are editable even on
+              a row that predates the columns (a newly added draft has no
+              `startAt` key at all, and an absent key would simply not appear). */}
+          <div className="space-y-2 border-t border-surface-800 pt-3">
+            <p className="text-[10px] font-medium text-zinc-500">{translate("sh.windows.title")}</p>
+            <div className="grid grid-cols-2 gap-2">
+              {(["startAt", "endAt", "saleStartAt", "saleEndAt"] as const).map((column) => {
+                const raw = (draft[column] ?? "").trim();
+                const unreadable = raw !== "" && Number.isNaN(Date.parse(raw.replace(" ", "T")));
+                return (
+                  <label key={column} className="block">
+                    <span className="font-mono text-[10px] text-zinc-500">{column}</span>
+                    <input
+                      value={draft[column] ?? ""}
+                      onChange={(e) => set(column, e.target.value)}
+                      placeholder="2026-09-01T00:00:00Z"
+                      className={`mt-0.5 w-full rounded-md border bg-surface-950 px-2 py-1 font-mono text-[11px] text-zinc-200 placeholder:text-zinc-700 focus:outline-none ${
+                        unreadable
+                          ? "border-red-500/60 focus:border-red-500"
+                          : "border-surface-700 focus:border-accent-500"
+                      }`}
+                    />
+                  </label>
+                );
+              })}
+            </div>
+            <p className="text-[10px] leading-relaxed text-zinc-600">{translate("sh.windows.help")}</p>
+          </div>
         </div>
       )}
     />

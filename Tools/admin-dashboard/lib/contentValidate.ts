@@ -302,6 +302,79 @@ export function validateCatalog(
         );
       }
 
+      // 7b. SCHEDULING WINDOWS (content_panels_gaps §3; plan §11.2/§11.4.3).
+      //
+      // Blocking, and fail-closed on the parse: a bound that is present but
+      // unreadable is an ERROR here rather than something the runtime silently
+      // ignores. The runtime does fail closed too (`shopState` → BROKEN), but a
+      // row that never renders is a worse way to learn about a typo than a
+      // publish that refuses.
+      const bound = (column: string): number | null | "invalid" => {
+        const raw = text(row.data[column]).trim();
+        if (raw === "") return null;
+        const ms = Date.parse(raw.replace(" ", "T"));
+        return Number.isNaN(ms) ? "invalid" : ms;
+      };
+
+      const windows: Array<[string, string, string]> = [
+        ["startAt", "endAt", "listing"],
+        ["saleStartAt", "saleEndAt", "sale"],
+      ];
+      const parsed: Record<string, number | null> = {};
+      let windowsUsable = true;
+
+      for (const [startCol, endCol] of windows) {
+        for (const column of [startCol, endCol]) {
+          const value = bound(column);
+          if (value === "invalid") {
+            windowsUsable = false;
+            err(
+              row.rowId,
+              column,
+              `"${text(row.data[column])}" is not a readable timestamp. Use an ISO-8601 UTC ` +
+                `instant like 2026-09-01T00:00:00Z, or leave it empty for "no bound".`
+            );
+          } else {
+            parsed[column] = value;
+          }
+        }
+      }
+
+      if (windowsUsable) {
+        // Each window well-ordered. endAt is EXCLUSIVE, so start === end is an
+        // empty window — almost certainly a mistake, and it would list nothing.
+        for (const [startCol, endCol, label] of windows) {
+          const from = parsed[startCol];
+          const to = parsed[endCol];
+          if (from !== null && from !== undefined && to !== null && to !== undefined && from >= to) {
+            err(
+              row.rowId,
+              endCol,
+              `The ${label} window ends at or before it starts (${text(row.data[startCol])} → ` +
+                `${text(row.data[endCol])}). endAt is EXCLUSIVE, so this window is empty.`
+            );
+          }
+        }
+
+        // The sale window must sit INSIDE the listing window: a sale on a row
+        // that is not listed is a discount nobody can reach.
+        const listFrom = parsed.startAt;
+        const listTo = parsed.endAt;
+        const saleFrom = parsed.saleStartAt;
+        const saleTo = parsed.saleEndAt;
+        if (saleFrom !== null && saleFrom !== undefined && listFrom !== null && listFrom !== undefined && saleFrom < listFrom) {
+          err(row.rowId, "saleStartAt", `The sale starts before the row is listed (${text(row.data.startAt)}).`);
+        }
+        if (saleTo !== null && saleTo !== undefined && listTo !== null && listTo !== undefined && saleTo > listTo) {
+          err(row.rowId, "saleEndAt", `The sale ends after the row stops being listed (${text(row.data.endAt)}).`);
+        }
+        // A sale window with no sale price is inert; the reverse is the one that
+        // surprises people, so both are called out as warnings only.
+        if ((saleFrom ?? saleTo) != null && saleRpCost === null) {
+          warn(row.rowId, "saleRpCost", "A sale window is set but saleRpCost is empty, so nothing is discounted.");
+        }
+      }
+
       // 8. WARN ONLY — the economy band, not a rule.
       const rarity =
         text(row.data.rarity).trim() ||

@@ -15,18 +15,16 @@
  *   POST /api/content/:catalog/publish     validate → publish → audit
  *   POST /api/content/:catalog/rollback    republish a snapshot, FORWARD
  *   POST /api/content/:catalog/enabled     the kill switch
- *
- * Plus `GET /api/audit`, which is how the version history is assembled — see
- * `fetchVersionHistory`.
+ *   GET  /api/content/:catalog/versions    every snapshot — the rollback targets
  */
 
 import type { ContentProblem } from "@/lib/contentValidate";
 import type {
-  AuditEntry,
   ContentCatalogsResponse,
   ContentDiffResponse,
   ContentRowInput,
   ContentRowsResponse,
+  ContentVersionsResponse,
 } from "@/lib/types";
 
 /** Every failure reaches the UI as a thrown Error carrying the server's text. */
@@ -51,12 +49,24 @@ export function fetchCatalogs(): Promise<ContentCatalogsResponse> {
 
 export function fetchRows(
   catalog: string,
-  opts: { page?: number; limit?: number; q?: string } = {}
+  opts: {
+    page?: number;
+    limit?: number;
+    q?: string;
+    /** Exact-match facet filters, AND-ed server-side (§1). */
+    filters?: Record<string, string>;
+    /** Ask for the catalog-wide distinct facet values alongside the page. */
+    withFacets?: boolean;
+  } = {}
 ): Promise<ContentRowsResponse> {
   const params = new URLSearchParams();
   if (opts.page) params.set("page", String(opts.page));
   if (opts.limit) params.set("limit", String(opts.limit));
   if (opts.q) params.set("q", opts.q);
+  for (const [field, value] of Object.entries(opts.filters ?? {})) {
+    if (value) params.set(field, value);
+  }
+  if (opts.withFacets) params.set("facets", "1");
   const qs = params.toString();
   return call<ContentRowsResponse>(`/api/content/${catalog}/rows${qs ? `?${qs}` : ""}`);
 }
@@ -104,105 +114,30 @@ export function setCatalogEnabled(catalog: string, enabled: boolean): Promise<{ 
 }
 
 // ---------------------------------------------------------------------------
-// Version history — assembled, not fetched
+// Version history — READ from content_versions (content_panels_gaps §2)
 // ---------------------------------------------------------------------------
 
-export interface VersionEntry {
-  version: number;
-  at: string | null;
-  by: string | null;
-  note: string | null;
-  /** Set when this version was produced by a rollback of an earlier one. */
-  restoredFrom: number | null;
-  counts: { added: number; changed: number; deactivated: number; reactivated: number } | null;
-  /** False ⇒ the number is known but nothing else is (outside the audit window). */
-  detailed: boolean;
-}
-
 /**
- * ⚠️ THERE IS NO ENDPOINT THAT READS `content_versions`.
+ * Every published snapshot, newest first, straight from `content_versions`.
  *
- * The six deployed routes expose `publishedVersion` (a single number) and
- * accept a `toVersion` for rollback, but nothing lists the snapshots with their
- * timestamps, authors or notes. Adding one is server logic, which this task is
- * barred from, so the history is RECONSTRUCTED from `admin_audit_log` — every
- * publish and rollback writes `content.publish:<catalog>` /
- * `content.rollback:<catalog>` with the resulting version in `after`.
+ * This replaces the reconstruction-from-`admin_audit_log` that shipped with
+ * content_admin_panels. That approach could only ever see versions the DASHBOARD
+ * had published, within the 200 most recent admin actions across all panels —
+ * so it lost its tail as unrelated admin work accumulated, and it never saw v1
+ * at all, because v1 of every catalog was seeded by SQL before the dashboard
+ * existed. Rollback is the plan's §7.3 safety rail; a target list that quietly
+ * stops reaching is worse than one that is obviously empty.
  *
- * What that costs, stated here rather than discovered later:
- *
- *   - `/api/audit` returns the 200 most recent admin actions ACROSS ALL PANELS,
- *     so a busy week of unrelated admin work pushes old publishes out of view.
- *   - Versions created outside the dashboard have no audit row at all. v1 of
- *     every catalog is exactly that: it was seeded by SQL.
- *
- * Versions with no audit row are still LISTED (from 1..publishedVersion) and
- * still restorable — they just carry no detail, and the UI says so. Silently
- * hiding a version you can roll back to would be the worse failure.
+ * `admin_audit_log` keeps its actual job — who did what — and is no longer
+ * asked a question it could not answer.
  */
-export const HISTORY_CAP = 50;
-
-export async function fetchVersionHistory(
+export function fetchVersions(
   catalog: string,
-  publishedVersion: number
-): Promise<VersionEntry[]> {
-  const known = new Map<number, VersionEntry>();
-
-  try {
-    const { entries } = await call<{ entries: AuditEntry[] }>("/api/audit");
-    for (const entry of entries) {
-      const isPublish = entry.action === `content.publish:${catalog}`;
-      const isRollback = entry.action === `content.rollback:${catalog}`;
-      if (!isPublish && !isRollback) continue;
-
-      const after = (entry.after ?? {}) as {
-        version?: number;
-        note?: string | null;
-        restoredFrom?: number;
-      };
-      const before = (entry.before ?? {}) as {
-        counts?: { added: number; changed: number; deactivated: number; reactivated: number };
-      };
-      const version = Number(after.version);
-      if (!Number.isFinite(version) || version < 1) continue;
-
-      known.set(version, {
-        version,
-        at: entry.at || null,
-        by: entry.adminEmail || null,
-        note: typeof after.note === "string" ? after.note : null,
-        restoredFrom: Number.isFinite(Number(after.restoredFrom)) ? Number(after.restoredFrom) : null,
-        counts: before.counts ?? null,
-        detailed: true,
-      });
-    }
-  } catch {
-    // The audit read is an enrichment, not a dependency: a failure here must
-    // still leave a usable (if bare) list of restorable versions.
-  }
-
-  // CAPPED. The list is generated from a NUMBER, so without a bound a catalog
-  // at v10000 renders ten thousand rows — which is exactly what the mock
-  // fixture (publishedVersion 9999, deliberately absurd) produced the first
-  // time this ran. Real catalogs sit in single digits today, so the cap is
-  // never reached in practice; it is here so that a number can never turn into
-  // an unbounded DOM. Newest first, so the cap drops the oldest — the versions
-  // least likely to be a rollback target and, by definition, the ones with no
-  // audit detail anyway.
-  const floor = Math.max(1, publishedVersion - HISTORY_CAP + 1);
-  const out: VersionEntry[] = [];
-  for (let v = publishedVersion; v >= floor; v -= 1) {
-    out.push(
-      known.get(v) ?? {
-        version: v,
-        at: null,
-        by: null,
-        note: null,
-        restoredFrom: null,
-        counts: null,
-        detailed: false,
-      }
-    );
-  }
-  return out;
+  opts: { page?: number; limit?: number } = {}
+): Promise<ContentVersionsResponse> {
+  const params = new URLSearchParams();
+  if (opts.page) params.set("page", String(opts.page));
+  if (opts.limit) params.set("limit", String(opts.limit));
+  const qs = params.toString();
+  return call<ContentVersionsResponse>(`/api/content/${catalog}/versions${qs ? `?${qs}` : ""}`);
 }

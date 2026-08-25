@@ -4,16 +4,18 @@ import { useCallback, useEffect, useState } from "react";
 import { useT } from "@/components/I18nProvider";
 import { fmtDateTime } from "@/lib/format";
 import type { ContentProblem } from "@/lib/contentValidate";
-import type { ContentCatalogSummary, ContentDiffResponse } from "@/lib/types";
+import type {
+  ContentCatalogSummary,
+  ContentDiffResponse,
+  ContentVersionsResponse,
+} from "@/lib/types";
 import { DiffKindBadge } from "./badges";
 import {
   fetchDiff,
-  fetchVersionHistory,
-  HISTORY_CAP,
+  fetchVersions,
   publishCatalog,
   rollbackCatalog,
   setCatalogEnabled,
-  type VersionEntry,
 } from "./client";
 
 /**
@@ -31,6 +33,9 @@ import {
  */
 
 const DIFF_ROW_CAP = 200;
+/** Versions per page. The list is PAGED, not capped — v1 is always reachable
+ *  by paging to the end, which is the whole point of §2. */
+const HISTORY_PAGE = 25;
 
 type Tab = "diff" | "history" | "switch";
 
@@ -60,7 +65,9 @@ export function PublishDrawer({
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
 
-  const [history, setHistory] = useState<VersionEntry[] | null>(null);
+  const [history, setHistory] = useState<ContentVersionsResponse | null>(null);
+  const [historyPage, setHistoryPage] = useState(1);
+  const [historyError, setHistoryError] = useState<string | null>(null);
 
   const loadDiff = useCallback(async () => {
     setDiff(null);
@@ -76,10 +83,20 @@ export function PublishDrawer({
     void loadDiff();
   }, [loadDiff]);
 
+  const loadHistory = useCallback(async () => {
+    setHistoryError(null);
+    try {
+      setHistory(await fetchVersions(catalog, { page: historyPage, limit: HISTORY_PAGE }));
+    } catch (err) {
+      setHistory(null);
+      setHistoryError(err instanceof Error ? err.message : String(err));
+    }
+  }, [catalog, historyPage]);
+
   useEffect(() => {
-    if (tab !== "history" || history) return;
-    void fetchVersionHistory(catalog, summary.publishedVersion).then(setHistory);
-  }, [tab, history, catalog, summary.publishedVersion]);
+    if (tab !== "history") return;
+    void loadHistory();
+  }, [tab, loadHistory]);
 
   const changeCount = diff
     ? diff.counts.added + diff.counts.changed + diff.counts.deactivated + diff.counts.reactivated
@@ -101,7 +118,8 @@ export function PublishDrawer({
       setAcknowledged(false);
       setNote("");
       await loadDiff();
-      setHistory(null);
+      setHistoryPage(1);
+      await loadHistory();
       onChanged(res.message);
     } catch (err) {
       const e = err as Error & { problems?: ContentProblem[] };
@@ -120,7 +138,8 @@ export function PublishDrawer({
     try {
       const res = await rollbackCatalog(catalog, version);
       setDone(translate("cp.history.done", { from: version, version: res.version }));
-      setHistory(null);
+      setHistoryPage(1);
+      await loadHistory();
       await loadDiff();
       onChanged(res.message);
     } catch (err) {
@@ -362,90 +381,144 @@ export function PublishDrawer({
                 })}
               </p>
               <p className="mb-3 text-[11px] text-zinc-500">{translate("cp.history.source")}</p>
-              {summary.publishedVersion > HISTORY_CAP && (
-                <p className="mb-3 text-[11px] text-amber-300">
-                  {translate("cp.history.capped", {
-                    cap: HISTORY_CAP,
-                    oldest: summary.publishedVersion - HISTORY_CAP + 1,
-                  })}
-                </p>
+
+              {historyError && (
+                <div className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-300">
+                  {historyError}
+                </div>
+              )}
+              {!history && !historyError && (
+                <p className="py-6 text-center text-sm text-zinc-500">{translate("common.loading")}</p>
               )}
 
-              {!history && <p className="py-6 text-center text-sm text-zinc-500">{translate("common.loading")}</p>}
-
               {history && (
-                <table className="w-full text-left text-xs">
-                  <thead className="text-zinc-600">
-                    <tr>
-                      <th className="whitespace-nowrap px-2 py-1.5 font-medium">
-                        {translate("cp.history.col.version")}
-                      </th>
-                      <th className="whitespace-nowrap px-2 py-1.5 font-medium">
-                        {translate("cp.history.col.when")}
-                      </th>
-                      <th className="whitespace-nowrap px-2 py-1.5 font-medium">
-                        {translate("cp.history.col.who")}
-                      </th>
-                      <th className="whitespace-nowrap px-2 py-1.5 font-medium">
-                        {translate("cp.history.col.what")}
-                      </th>
-                      <th />
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {history.map((entry) => {
-                      const current = entry.version === summary.publishedVersion;
-                      return (
-                        <tr key={entry.version} className="border-t border-surface-800">
-                          <td className="whitespace-nowrap px-2 py-2 font-semibold tabular-nums text-zinc-200">
-                            v{entry.version}
-                            {current && (
-                              <span className="ml-1.5 whitespace-nowrap rounded border border-accent-500/40 bg-accent-500/10 px-1 py-0.5 text-[9px] font-bold text-accent-300">
-                                {translate("cp.history.current")}
-                              </span>
-                            )}
-                          </td>
-                          <td className="whitespace-nowrap px-2 py-2 text-zinc-400">
-                            {entry.detailed ? fmtDateTime(entry.at) : "—"}
-                          </td>
-                          <td className="px-2 py-2 text-zinc-400">
-                            <span className="block max-w-[14rem] truncate">{entry.by ?? "—"}</span>
-                          </td>
-                          <td className="px-2 py-2 text-zinc-400">
-                            {!entry.detailed && (
-                              <span className="text-zinc-600">{translate("cp.history.noDetail")}</span>
-                            )}
-                            {entry.detailed && entry.restoredFrom !== null && (
-                              <span className="text-sky-300">
-                                {translate("cp.history.rollbackOf", { from: entry.restoredFrom })}
-                              </span>
-                            )}
-                            {entry.detailed && entry.restoredFrom === null && entry.counts && (
-                              <span className="tabular-nums">
-                                +{entry.counts.added} ~{entry.counts.changed} −{entry.counts.deactivated}
-                              </span>
-                            )}
-                            {entry.note && (
-                              <span className="ml-1.5 italic text-zinc-500">“{entry.note}”</span>
-                            )}
-                          </td>
-                          <td className="px-2 py-2 text-right">
-                            {!current && (
-                              <button
-                                type="button"
-                                disabled={busy}
-                                onClick={() => void doRollback(entry.version)}
-                                className="whitespace-nowrap rounded-md border border-surface-700 px-2 py-1 text-[11px] text-zinc-300 transition hover:bg-surface-800 disabled:opacity-40"
-                              >
-                                {translate("cp.history.restore")}
-                              </button>
-                            )}
-                          </td>
+                <>
+                  {/* `table-fixed` + a scroll container, because the RESTORE
+                      BUTTON MUST STAY REACHABLE. Measured 2026-08-25: with a
+                      free-flowing table and a `note` column of its own, the
+                      buttons landed at x=1625 inside a panel ending at x=1440 —
+                      185px outside, in BOTH languages. The rollback control is
+                      the entire point of this tab, so the note moved under the
+                      timestamp instead of competing for width. */}
+                  <div className="overflow-x-auto">
+                    <table className="w-full table-fixed text-left text-xs">
+                      <colgroup>
+                        <col className="w-[7.5rem]" />
+                        <col />
+                        <col className="w-[4rem]" />
+                        <col className="w-[6.5rem]" />
+                      </colgroup>
+                      <thead className="text-zinc-600">
+                        <tr>
+                          <th className="whitespace-nowrap px-2 py-1.5 font-medium">
+                            {translate("cp.history.col.version")}
+                          </th>
+                          <th className="whitespace-nowrap px-2 py-1.5 font-medium">
+                            {translate("cp.history.col.when")}
+                          </th>
+                          <th className="whitespace-nowrap px-2 py-1.5 text-right font-medium">
+                            {translate("cp.history.col.rows")}
+                          </th>
+                          <th />
                         </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                      </thead>
+                      <tbody>
+                        {history.versions.map((entry) => {
+                          const current = entry.version === summary.publishedVersion;
+                          return (
+                            <tr key={entry.version} className="border-t border-surface-800 align-top">
+                              <td className="px-2 py-2 font-semibold tabular-nums text-zinc-200">
+                                <span className="whitespace-nowrap">v{entry.version}</span>
+                                {current && (
+                                  <span className="ml-1.5 whitespace-nowrap rounded border border-accent-500/40 bg-accent-500/10 px-1 py-0.5 text-[9px] font-bold text-accent-300">
+                                    {translate("cp.history.current")}
+                                  </span>
+                                )}
+                                {entry.version === 1 && (
+                                  <span
+                                    title={translate("cp.history.seedHint")}
+                                    className="ml-1.5 whitespace-nowrap rounded border border-sky-500/40 bg-sky-500/10 px-1 py-0.5 text-[9px] font-bold text-sky-300"
+                                  >
+                                    {translate("cp.history.seed")}
+                                  </span>
+                                )}
+                              </td>
+                              <td className="px-2 py-2 text-zinc-400">
+                                <span className="block whitespace-nowrap">
+                                  {fmtDateTime(entry.publishedAt)}
+                                </span>
+                                <span className="block truncate text-[11px] text-zinc-500">
+                                  {entry.publishedBy ?? translate("cp.history.bySeed")}
+                                </span>
+                                {entry.note && (
+                                  <span
+                                    title={entry.note}
+                                    className="mt-0.5 block truncate text-[11px] italic text-zinc-600"
+                                  >
+                                    “{entry.note}”
+                                  </span>
+                                )}
+                              </td>
+                              <td className="whitespace-nowrap px-2 py-2 text-right tabular-nums text-zinc-400">
+                                {entry.rowCount}
+                              </td>
+                              <td className="px-2 py-2 text-right">
+                                {!current && (
+                                  <button
+                                    type="button"
+                                    disabled={busy}
+                                    title={translate("cp.history.restoreHint")}
+                                    onClick={() => void doRollback(entry.version)}
+                                    className="whitespace-nowrap rounded-md border border-surface-700 px-2 py-1 text-[11px] text-zinc-300 transition hover:bg-surface-800 disabled:opacity-40"
+                                  >
+                                    {translate("cp.history.restore")}
+                                  </button>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                        {history.versions.length === 0 && (
+                          <tr>
+                            <td colSpan={4} className="px-2 py-8 text-center text-zinc-600">
+                              {translate("cp.history.none")}
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {history.total > history.limit && (
+                    <div className="mt-3 flex items-center justify-center gap-3 text-xs text-zinc-500">
+                      <button
+                        type="button"
+                        disabled={historyPage <= 1}
+                        onClick={() => setHistoryPage((n) => Math.max(1, n - 1))}
+                        className="rounded-md border border-surface-700 px-2.5 py-1 text-zinc-300 hover:bg-surface-800 disabled:opacity-30"
+                      >
+                        {translate("common.prev")}
+                      </button>
+                      <span className="tabular-nums">
+                        {translate("c.page", {
+                          page: history.page,
+                          pages: Math.max(1, Math.ceil(history.total / history.limit)),
+                        })}
+                      </span>
+                      <button
+                        type="button"
+                        disabled={historyPage >= Math.ceil(history.total / history.limit)}
+                        onClick={() => setHistoryPage((n) => n + 1)}
+                        className="rounded-md border border-surface-700 px-2.5 py-1 text-zinc-300 hover:bg-surface-800 disabled:opacity-30"
+                      >
+                        {translate("common.next")}
+                      </button>
+                      <span className="text-zinc-600">
+                        {translate("cp.history.total", { n: history.total })}
+                      </span>
+                    </div>
+                  )}
+                </>
               )}
             </>
           )}

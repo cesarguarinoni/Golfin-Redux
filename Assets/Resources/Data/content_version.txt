@@ -3,5 +3,5 @@ balls=5
 characters=5
 clubs=1
 items=1
-shop_catalog=2
+shop_catalog=3
 texts=11

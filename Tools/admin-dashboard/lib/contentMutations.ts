@@ -206,6 +206,17 @@ export async function publishCatalog(
       meta.draftCount = drafts.length;
       meta.dirtyCount = 0;
     }
+    // Record the snapshot the way `content_publish` does live, so mock mode's
+    // version history is a real list rather than one that only ever shows the
+    // fixture (content_panels_gaps §2).
+    store.contentVersions.unshift({
+      catalog,
+      version,
+      publishedBy: adminEmail,
+      publishedAt: new Date().toISOString(),
+      note: note ?? null,
+      rowCount: drafts.length,
+    });
   } else {
     const res = await getSupabaseAdmin().rpc("content_publish", {
       p_catalog: catalog,
@@ -254,10 +265,24 @@ export async function rollbackCatalog(
   }
 
   if (isMockMode()) {
-    const meta = mockDb().contentCatalogs.find((c) => c.name === catalog);
+    const store = mockDb();
+    const meta = store.contentCatalogs.find((c) => c.name === catalog);
     if (!meta) return fail(404, `Unknown catalog "${catalog}".`);
+    const restored = store.contentVersions.find(
+      (v) => v.catalog === catalog && v.version === toVersion
+    );
+    if (!restored) return fail(404, `${catalog} has no version ${toVersion}.`);
     const version = meta.publishedVersion + 1;
     meta.publishedVersion = version;
+    // Rollback publishes FORWARD, so it creates a version too.
+    store.contentVersions.unshift({
+      catalog,
+      version,
+      publishedBy: adminEmail,
+      publishedAt: new Date().toISOString(),
+      note: `rollback of v${toVersion}`,
+      rowCount: restored.rowCount,
+    });
     await writeAudit(adminEmail, `content.rollback:${catalog}`, null, "content_rows",
       { catalog, toVersion }, { catalog, version, mock: true });
     return ok(`Rolled ${catalog} back to v${toVersion}, published as v${version}.`, { version });

@@ -579,6 +579,12 @@ export interface ContentRowsResponse {
   /** Column order for the page, first-seen across its rows. */
   columns: string[];
   rows: ContentStoredRow[];
+  /**
+   * Distinct values per filterable field, present only when `?facets=1`.
+   * Read from the WHOLE catalog, not from `rows` — a value that appears only on
+   * a later page still has to be selectable (content_panels_gaps §1).
+   */
+  facetValues?: Record<string, string[]>;
   mock: boolean;
 }
 
@@ -601,6 +607,27 @@ export interface ContentDiffResponse {
   publishedVersion: number;
   counts: Record<ContentDiffKind, number>;
   entries: ContentDiffEntry[];
+  mock: boolean;
+}
+
+/** One published snapshot of a catalog (content_panels_gaps §2). */
+export interface ContentVersionSummary {
+  catalog: string;
+  version: number;
+  publishedBy: string | null;
+  publishedAt: string | null;
+  note: string | null;
+  /** Rows in the snapshot — the catalog's size AT that version. */
+  rowCount: number;
+}
+
+export interface ContentVersionsResponse {
+  catalog: string;
+  page: number;
+  limit: number;
+  total: number;
+  /** Newest first. v1 is always reachable by paging to the end. */
+  versions: ContentVersionSummary[];
   mock: boolean;
 }
 

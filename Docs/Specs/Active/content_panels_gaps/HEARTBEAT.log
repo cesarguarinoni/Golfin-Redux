@@ -1,0 +1,20 @@
+=== iter-1 kickoff baseline 2026-08-25T21:57:23Z ===
+HEAD: 02c16780d0d888ed84029148366857bc3e9dc66f
+DIRTY:
+ M Assets/Scripts/UI/Editor/SkyRotationDemoRecorder.cs
+ M Docs/CONTENT_PIPELINE_PLAN.md
+ M Docs/Specs/Active/content_cursor_per_catalog/SPEC.md
+ D Docs/Specs/Queued/content_admin_panels_NOTE.md
+ M Docs/TellCode.md
+ M Docs/Versioning/last_uploaded_build.txt
+?? Docs/Specs/Active/content_panels_gaps/ARCHITECT_REVIEW.md
+?? Docs/Specs/Active/content_panels_gaps/HEARTBEAT.log
+?? Docs/Specs/Active/content_panels_gaps/IMPLEMENTER_REPORT.md
+?? Docs/Specs/Active/content_panels_gaps/SELF_REVIEW.md
+?? Docs/Specs/Active/content_panels_gaps/SPEC.md
+?? Docs/Specs/Active/content_panels_gaps/STATUS.md
+?? Docs/Specs/Active/content_panels_gaps/reference/.gitkeep
+?? Docs/Specs/Active/content_panels_gaps/reference/README.md
+?? tasks/quit_transition_demo/quit_invariants.json
+=== END baseline ===
+2026-08-25T22:17:06Z — §1 facets server-side (rarity=133 verified on prod), §2 versions route + v1 selectable, §3 columns published (shop_catalog v3) + Unity parser verified unshifted, §4 no-op. Deployed 053c80d6. Writing reports.

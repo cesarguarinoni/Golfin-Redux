@@ -1,6 +1,6 @@
-entryId,category,refId,rpCost,saleRpCost,sortOrder,popular,offer,rarity
-shop_club_iron9_klyro,club,club_iron9_klyro,200,150,10,true,true,
-shop_club_awedge_fyloe,club,club_awedge_fyloe,400,300,20,true,false,
-shop_club_pwedge_royal,club,club_pwedge_royal,600,,30,false,false,
-shop_club_driver_gf,club,club_driver_gf,100,80,40,false,true,
-shop_ball_putt_ace,ball,ball_putt_ace,50,35,50,false,true,Rare
+entryId,category,refId,rpCost,saleRpCost,sortOrder,popular,offer,rarity,startAt,endAt,saleStartAt,saleEndAt
+shop_club_iron9_klyro,club,club_iron9_klyro,200,150,10,true,true,,,,,
+shop_club_awedge_fyloe,club,club_awedge_fyloe,400,300,20,true,false,,,,,
+shop_club_pwedge_royal,club,club_pwedge_royal,600,,30,false,false,,,,,
+shop_club_driver_gf,club,club_driver_gf,100,80,40,false,true,,,,,
+shop_ball_putt_ace,ball,ball_putt_ace,50,35,50,false,true,Rare,,,,

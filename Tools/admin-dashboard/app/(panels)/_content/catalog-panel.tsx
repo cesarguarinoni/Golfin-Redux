@@ -49,6 +49,8 @@ export interface CatalogPanelProps {
   extraFilter?: (query: string, setQuery: (q: string) => void) => React.ReactNode;
   /** Hide the h1 — the Items panel supplies its own above the tabs. */
   hideTitle?: boolean;
+  /** Columns `editorExtras` already renders, so the raw field list skips them. */
+  editorHiddenColumns?: string[];
 }
 
 export function CatalogPanel({
@@ -61,6 +63,7 @@ export function CatalogPanel({
   columns: columnsOverride,
   extraFilter,
   hideTitle,
+  editorHiddenColumns,
 }: CatalogPanelProps) {
   const translate = useT();
   const view = catalogView(catalog);
@@ -75,30 +78,34 @@ export function CatalogPanel({
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [facetValue, setFacetValue] = useState<Record<string, string>>({});
+  /** Distinct values per field, from the SERVER — see fetchFacetValues. */
+  const [facetValues, setFacetValues] = useState<Record<string, string[]> | null>(null);
 
   const [editing, setEditing] = useState<ContentStoredRow | null>(null);
   const [publishing, setPublishing] = useState(false);
 
   /**
-   * The one place a filter becomes a server query.
+   * Filters are structured and AND-ed, server-side (content_panels_gaps §1).
    *
-   * `/api/content/:catalog/rows` accepts exactly one free-text `q`, which the
-   * route matches against `row_id` OR the catalog's search column. A facet is
-   * therefore only offered when its value provably lands in one of those two
-   * (see `Facet` in lib/contentView.ts for the measured coverage), and picking
-   * a facet REPLACES `q` rather than being AND-ed with it — the route cannot
-   * express a conjunction, and pretending otherwise would show an operator a
-   * narrower result than the filter claims.
+   * Each facet is its own query parameter matching `data->>'<field>'` exactly,
+   * so brand=BogeyB AND rarity=Common is one query and `total` is the count of
+   * the FILTERED set. The previous version had to squeeze a facet through the
+   * single free-text `q`, which meant one facet at a time and — for rarity —
+   * matching the row id instead of the field. Both limits are gone.
    */
-  const activeFacet = useMemo(() => {
+  const activeFilters = useMemo(() => {
+    const out: Record<string, string> = {};
     for (const facet of view.facets) {
       const value = facetValue[facet.column];
-      if (value) return { facet, value };
+      if (value) out[facet.column] = value;
     }
-    return null;
+    return out;
   }, [view.facets, facetValue]);
 
-  const serverQuery = activeFacet ? activeFacet.facet.toQuery(activeFacet.value) : search.trim();
+  // Stable identity for the effect dependency — an object literal would refetch
+  // on every render.
+  const filterKey = JSON.stringify(activeFilters);
+  const searchQuery = search.trim();
 
   const loadSummary = useCallback(async () => {
     try {
@@ -111,12 +118,24 @@ export function CatalogPanel({
 
   const loadRows = useCallback(async () => {
     try {
-      setData(await fetchRows(catalog, { page, limit: view.limit, q: serverQuery }));
+      const res = await fetchRows(catalog, {
+        page,
+        limit: view.limit,
+        q: searchQuery,
+        filters: JSON.parse(filterKey) as Record<string, string>,
+        // Ask for the catalog-wide distinct values once, on the first load.
+        withFacets: view.facets.length > 0 && !facetValues,
+      });
+      setData(res);
+      if (res.facetValues) setFacetValues(res.facetValues);
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     }
-  }, [catalog, page, view.limit, serverQuery]);
+    // `facetValues` is intentionally not a dependency: including it would
+    // refetch the moment the values arrive.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [catalog, page, view.limit, view.facets.length, searchQuery, filterKey]);
 
   useEffect(() => {
     void loadSummary();
@@ -129,7 +148,7 @@ export function CatalogPanel({
   // table that looks like "no rows match".
   useEffect(() => {
     setPage(1);
-  }, [serverQuery]);
+  }, [searchQuery, filterKey]);
 
   async function refresh(message: string) {
     setNotice(message);
@@ -139,21 +158,12 @@ export function CatalogPanel({
   const rows = data?.rows ?? [];
   const pages = data ? Math.max(1, Math.ceil(data.total / data.limit)) : 1;
 
-  /** Facet options come from the loaded page — the values, not the filtering. */
-  const facetOptions = useMemo(() => {
-    const out: Record<string, string[]> = {};
-    for (const facet of view.facets) {
-      const seen = new Set<string>();
-      for (const row of rows) {
-        const value = row.data[facet.column];
-        if (value) seen.add(value);
-      }
-      const chosen = facetValue[facet.column];
-      if (chosen) seen.add(chosen);
-      out[facet.column] = [...seen].sort();
-    }
-    return out;
-  }, [rows, view.facets, facetValue]);
+  /**
+   * Options come from the SERVER's distinct values over the whole catalog, not
+   * from the rows on screen. That is the difference between "BogeyB is
+   * selectable" and "BogeyB is selectable once you happen to page onto it".
+   */
+  const facetOptions = facetValues ?? {};
 
   return (
     <div>
@@ -196,10 +206,7 @@ export function CatalogPanel({
         <input
           type="search"
           value={search}
-          onChange={(e) => {
-            setFacetValue({});
-            setSearch(e.target.value);
-          }}
+          onChange={(e) => setSearch(e.target.value)}
           placeholder={translate(searchKey ?? "c.search")}
           className="w-64 rounded-md border border-surface-700 bg-surface-900 px-3 py-1.5 text-xs text-zinc-200 placeholder:text-zinc-600 focus:border-accent-500 focus:outline-none"
         />
@@ -210,17 +217,18 @@ export function CatalogPanel({
             facet={facet}
             value={facetValue[facet.column] ?? ""}
             options={facetOptions[facet.column] ?? []}
-            onChange={(value) => {
-              setSearch("");
-              setFacetValue(value ? { [facet.column]: value } : {});
-            }}
+            onChange={(value) =>
+              setFacetValue((prev) => {
+                const next = { ...prev };
+                if (value) next[facet.column] = value;
+                else delete next[facet.column];
+                return next;
+              })
+            }
           />
         ))}
 
-        {extraFilter?.(search, (q) => {
-          setFacetValue({});
-          setSearch(q);
-        })}
+        {extraFilter?.(search, setSearch)}
 
         {data && (
           <span className="text-xs text-zinc-500">
@@ -338,6 +346,7 @@ export function CatalogPanel({
           row={editing}
           columns={columns}
           published={editing.version !== undefined}
+          hiddenColumns={editorHiddenColumns}
           onClose={() => setEditing(null)}
           onSaved={async (message) => {
             setEditing(null);
@@ -373,14 +382,11 @@ function FacetSelect({
 }) {
   const translate = useT();
   const label = translate(facet.labelKey);
-  const partial = facet.coverage
-    ? translate("c.facet.partial", { hit: facet.coverage.hit, total: facet.coverage.total })
-    : "";
   return (
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      title={`${translate("c.facet.serverNote")}${partial ? ` ${partial}` : ""}`}
+      title={translate("c.facet.serverNote")}
       className={`rounded-md border bg-surface-900 px-2.5 py-1.5 text-xs focus:outline-none ${
         value
           ? "border-accent-500/60 text-accent-300"

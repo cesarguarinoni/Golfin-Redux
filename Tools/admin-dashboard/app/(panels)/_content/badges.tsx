@@ -19,6 +19,9 @@ const SHOP_STATE_STYLE: Record<ShopState, string> = {
   SCHEDULED: "border-sky-500/40 bg-sky-500/10 text-sky-300",
   ENDED: "border-surface-700 bg-surface-850 text-zinc-500",
   OFF: "border-zinc-600 bg-surface-850 text-zinc-500",
+  // Red, and never mistakable for LIVE: the row has a schedule window that
+  // could not be parsed, so it fails closed (content_panels_gaps §3).
+  BROKEN: "border-red-500/50 bg-red-500/15 text-red-300",
 };
 
 export function ShopStateBadge({ state, title }: { state: ShopState; title?: string }) {

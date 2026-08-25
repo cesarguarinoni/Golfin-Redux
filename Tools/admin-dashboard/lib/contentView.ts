@@ -35,70 +35,37 @@ export type ContentCatalog = (typeof CONTENT_CATALOGS)[number];
 // ---------------------------------------------------------------------------
 
 /**
- * How a facet value reaches the SERVER.
+ * A facet dropdown over one `data` field.
  *
- * `/api/content/:catalog/rows` takes `page`, `limit` and `q`, and `q` matches
- * `row_id ILIKE *q*` OR `data->>{searchColumn} ILIKE *q*`. There is no
- * `?brand=` / `?type=` / `?rarity=` — adding one is server logic, which this
- * task is explicitly barred from (SPEC §Out of scope). So a facet is only
- * offered when its value provably lands in one of those two columns, and each
- * facet declares which and how completely.
+ * Every facet is now a real server query: `/api/content/:catalog/rows` takes the
+ * field as its own parameter and matches `data->>'<field>'` EXACTLY, with all
+ * active facets AND-ed together and with `q`, and `total` counting the filtered
+ * set (content_panels_gaps §1).
  *
- * Measured against the shipped `Assets/Resources/Data/Clubs.csv` (799 rows) on
- * 2026-08-25 — these numbers are not estimates:
+ * There is deliberately no `coverage` field any more. The previous version
+ * carried one because the facets were being squeezed through the single
+ * free-text `q`, which forced rarity to match the ROW ID — and the generated
+ * ids encode rarity (`club_awedge_bogeyb_common`) while the 7 hand-authored
+ * ones do not. That made rarity look like a partial facet. It never was: every
+ * one of the 799 club rows carries `data.rarity`, the 7 hand-authored ones
+ * included, and `data->>rarity=eq.Common` returns 133 on prod. The facet was
+ * reading the wrong place. Now that all three are complete queries, showing a
+ * coverage caveat would state something untrue.
  *
- *   brand  → `name`   799/799  every club name contains its brand
- *   type   → `name`   798/799  only `club_awedge_fyloe` misses ("A. Wedge Fyloe"
- *                              has a space, type is "A.Wedge")
- *   rarity → `row_id` 792/799  the 7 originally-shipped rows predate the
- *                              `club_<type>_<brand>_<rarity>` id convention
- *
- * `coverage` is rendered in the UI next to the facet. A filter that quietly
- * drops rows is worse than no filter, so the ones that cannot be complete say
- * so instead of pretending.
+ * `values` are NOT listed here: they come from the server
+ * (`fetchFacetValues`), so a brand added in drafts appears without a deploy.
  */
 export interface Facet {
-  /** `data` column the values are read from, and grouped by. */
+  /** `data` field this facet filters on. Must be on the route's allow-list. */
   column: string;
   /** i18n key for the label. */
-  labelKey: "c.facet.brand" | "c.facet.type" | "c.facet.rarity";
-  /**
-   * Which server-side column the chosen value is matched against via `q`.
-   * `name` → the catalog's search column; `row_id` → the id.
-   */
-  matches: "name" | "row_id";
-  /** Rows out of the catalog this facet can actually reach, or null if exact. */
-  coverage: { hit: number; total: number } | null;
-  /**
-   * Turn a chosen facet value into the `q` string sent to the server.
-   * Rarity matches the id SUFFIX convention, so it is lowercased.
-   */
-  toQuery: (value: string) => string;
+  labelKey: "c.facet.brand" | "c.facet.type" | "c.facet.rarity" | "c.facet.category";
 }
 
-const BRAND_FACET: Facet = {
-  column: "brand",
-  labelKey: "c.facet.brand",
-  matches: "name",
-  coverage: null,
-  toQuery: (v) => v,
-};
-
-const TYPE_FACET: Facet = {
-  column: "type",
-  labelKey: "c.facet.type",
-  matches: "name",
-  coverage: { hit: 798, total: 799 },
-  toQuery: (v) => v,
-};
-
-const RARITY_FACET: Facet = {
-  column: "rarity",
-  labelKey: "c.facet.rarity",
-  matches: "row_id",
-  coverage: { hit: 792, total: 799 },
-  toQuery: (v) => v.toLowerCase(),
-};
+const BRAND_FACET: Facet = { column: "brand", labelKey: "c.facet.brand" };
+const TYPE_FACET: Facet = { column: "type", labelKey: "c.facet.type" };
+const RARITY_FACET: Facet = { column: "rarity", labelKey: "c.facet.rarity" };
+const CATEGORY_FACET: Facet = { column: "category", labelKey: "c.facet.category" };
 
 // ---------------------------------------------------------------------------
 // One descriptor per panel
@@ -132,25 +99,25 @@ export const CATALOG_VIEWS: Record<string, CatalogView> = {
   characters: {
     catalog: "characters",
     columns: ["name", "lastName", "rarity", "baseStrength", "baseClubControl", "baseRecovery", "baseStamina", "startLevel", "maxLevel"],
-    facets: [],
+    facets: [RARITY_FACET],
     limit: 50,
   },
   items: {
     catalog: "items",
     columns: ["name", "category", "rarity", "restorePercent"],
-    facets: [],
+    facets: [CATEGORY_FACET, RARITY_FACET],
     limit: 50,
   },
   bags: {
     catalog: "bags",
     columns: ["name", "rarity", "unlocked"],
-    facets: [],
+    facets: [RARITY_FACET],
     limit: 50,
   },
   balls: {
     catalog: "balls",
     columns: ["name", "brand", "power", "rebound", "windResistance", "roll", "spin"],
-    facets: [],
+    facets: [BRAND_FACET],
     limit: 50,
   },
   texts: {
@@ -162,7 +129,7 @@ export const CATALOG_VIEWS: Record<string, CatalogView> = {
   shop_catalog: {
     catalog: "shop_catalog",
     columns: ["category", "refId", "rpCost", "saleRpCost", "sortOrder", "popular", "offer"],
-    facets: [],
+    facets: [CATEGORY_FACET],
     limit: 50,
   },
 };
@@ -179,28 +146,53 @@ export function catalogView(catalog: string): CatalogView {
 // Shop row state
 // ---------------------------------------------------------------------------
 
-export type ShopState = "LIVE" | "SCHEDULED" | "ENDED" | "OFF";
+export type ShopState = "LIVE" | "SCHEDULED" | "ENDED" | "OFF" | "BROKEN";
+
+/**
+ * A window bound → epoch ms, or null when genuinely absent.
+ *
+ * FAILS CLOSED, exactly like `routers/notices.py` `_parse`: a bound that is
+ * PRESENT but unreadable THROWS, and the caller treats the row as broken rather
+ * than as unscheduled. "We could not read the schedule window" must never
+ * collapse into "so show it forever" — that is how a typo in an end date turns
+ * a one-week sale into a permanent one.
+ *
+ * An absent bound (empty string) is a real, meaningful value: no bound.
+ */
+export function parseWindowBound(value: string | undefined): number | null {
+  const raw = (value ?? "").trim();
+  if (raw === "") return null;
+  const ms = Date.parse(raw.replace(" ", "T"));
+  if (Number.isNaN(ms)) {
+    throw new RangeError(`Unparseable window bound: ${raw}`);
+  }
+  return ms;
+}
 
 /**
  * The untranslated state badge (§11.3), derived from the listing window.
  *
- * ⚠️ `startAt` / `endAt` DO NOT EXIST on `shop_catalog` today. They are §11.2
- * *proposed* columns and no migration has applied them — the shipped header is
- * `entryId,category,refId,rpCost,saleRpCost,sortOrder,popular,offer,rarity`.
- * Schema changes are out of scope for this task, so this reads the windows
- * WHEN PRESENT (the row is JSONB and I4 is additive-only, so they can appear
- * without touching this function) and otherwise falls back to the one piece of
- * lifecycle state that does exist: `is_active`.
+ * `startAt` / `endAt` / `saleStartAt` / `saleEndAt` were specified in
+ * CONTENT_PIPELINE_PLAN.md §11.2 and added to the catalog by
+ * content_panels_gaps §3 — empty on every shipped row, so nothing changed
+ * behaviour on the way in. `endAt` is EXCLUSIVE, matching `home_notices`.
  *
- * That fallback is why an inactive row reads OFF rather than ENDED. Inventing a
- * schedule out of a column that is not there would be worse than saying "this
- * row is switched off", which is exactly what `is_active` means.
+ * A row with no window falls back to `is_active`, which is why an inactive row
+ * reads OFF rather than ENDED: `is_active` is a switch, not a schedule.
+ * A row whose window cannot be PARSED reads BROKEN — never LIVE.
  */
 export function shopState(row: ContentStoredRow, now: number = Date.now()): ShopState {
   if (!row.isActive) return "OFF";
 
-  const start = parseInstant(row.data.startAt);
-  const end = parseInstant(row.data.endAt);
+  let start: number | null;
+  let end: number | null;
+  try {
+    start = parseWindowBound(row.data.startAt);
+    end = parseWindowBound(row.data.endAt);
+  } catch {
+    return "BROKEN";
+  }
+
   if (start !== null && now < start) return "SCHEDULED";
   if (end !== null && now >= end) return "ENDED";
   return "LIVE";
@@ -211,7 +203,10 @@ export function hasListingWindows(rows: ContentStoredRow[]): boolean {
   return rows.some((r) => "startAt" in r.data || "endAt" in r.data);
 }
 
-/** A sale is on when saleRpCost undercuts rpCost AND any sale window is open. */
+/**
+ * A sale is on when `saleRpCost` undercuts `rpCost` AND the sale window is open.
+ * Fails closed the same way: an unreadable sale bound is NOT a sale.
+ */
 export function shopOnSale(row: ContentStoredRow, now: number = Date.now()): boolean {
   const rp = Number(row.data.rpCost);
   const sale = row.data.saleRpCost?.trim();
@@ -219,18 +214,17 @@ export function shopOnSale(row: ContentStoredRow, now: number = Date.now()): boo
   const saleN = Number(sale);
   if (!Number.isFinite(rp) || !Number.isFinite(saleN) || saleN <= 0 || saleN >= rp) return false;
 
-  const start = parseInstant(row.data.saleStartAt);
-  const end = parseInstant(row.data.saleEndAt);
+  let start: number | null;
+  let end: number | null;
+  try {
+    start = parseWindowBound(row.data.saleStartAt);
+    end = parseWindowBound(row.data.saleEndAt);
+  } catch {
+    return false;
+  }
   if (start !== null && now < start) return false;
   if (end !== null && now >= end) return false;
   return true;
-}
-
-function parseInstant(v: string | undefined): number | null {
-  const s = (v ?? "").trim();
-  if (!s) return null;
-  const ms = Date.parse(s);
-  return Number.isNaN(ms) ? null : ms;
 }
 
 // ---------------------------------------------------------------------------
