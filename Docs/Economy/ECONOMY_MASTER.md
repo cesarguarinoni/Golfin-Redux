@@ -38,6 +38,12 @@ drains are entry fees and stamina — once a player caps their roster the econom
 Activating durability wear (which also makes the club roster's Durability stat and repair-kit
 drops meaningful) is the highest-leverage sink to ship next.
 
+**Related docs:** stamina system design + tunables: `Docs/Design/STAMINA_ECONOMY.md` +
+`Docs/Design/stamina_economy.csv` (kept there — referenced by AI_CONTEXT and five completed
+specs). Character roster & starter flow: `Docs/Game Design/CHARACTER_ROSTER_DESIGN.md`.
+Outdated predecessor: `Docs/Game Design/New Levels.xlsx` (pre-÷10 — superseded by the workbook
+beside this file).
+
 ## 2. Policy layer (agreed rules, restated as product law)
 
 Decisions of record (Ken-doc §04 as amended by Cesar's comments [a][d][g][i]):
@@ -63,6 +69,16 @@ Decisions of record (Ken-doc §04 as amended by Cesar's comments [a][d][g][i]):
   treating gacha as a sink; odds published per banner `rulesUrl`.
 - **Repairs:** keep item-based; if a direct RP repair price ships, anchor at ~10–30 RP per use
   so it stays below replay earn rates.
+- **Character unlocks (NEW — flow shipped 2026-08-20):** new players pick ONE starter (James or
+  Olivia) in a Starting Character Selection screen; every other character is locked in Roster,
+  including the unpicked starter. That makes character unlocking the second pillar sink beside
+  clubs. Proposed RP ladder (workbook `CharacterEconomy`, editable): Common 200 / Uncommon 400 /
+  Rare 800 / Mythic 1,600 / Legendary 3,000 / Supreme 6,000 — full roster ≈ **18,800 RP**
+  (~74 days at net earn), and each unlock opens its own level track (up to 14,520 RP to cap), so
+  the roster compounds long-term level-up demand. The unlock PURCHASE flow (RP price on the
+  locked Roster card) is not built yet — needs its own spec. (Starter rarity asymmetry resolved
+  2026-08-21: both James and Olivia are now Common — see
+  `Docs/Game Design/CHARACTER_ROSTER_DESIGN.md`.)
 
 ## 4. Paid track (future, cosmetics-gated)
 
@@ -99,7 +115,10 @@ revenue model without content would be fiction.
 現時点で有償販売はゼロ — 本物のコスメ（3Dアバター／クラブスキン）が完成するまで課金は
 開始しない。B2B収益の配分は 50%リワード / 40% GOLFIN / 10%ゴルフ場。
 
-**次の追加：** クラブ799本のRP価格帯（100〜3,000、レビュー中）、ガチャの実プール化。
+**次の追加：** クラブ799本のRP価格帯（100〜3,000、レビュー中）、ガチャの実プール化、
+**キャラクター解放（新）**：初回にJamesかOliviaを1体選択、他は全てロック → RPで解放
+（提案：200〜6,000、全12体で約18,800 RP ≒ 純増換算で約74日）。解放ごとに育成トラックが
+増えるため、レベルアップ需要も積み上がる。解放購入フローは未実装（要スペック）。
 
 **要決定：** RP有効期限（3/6ヶ月）、カンスト後のループ設計、Supremeの入手経路
 （ショップ3,000 RP か大会限定か）、ガチャ内容と確率公開。

@@ -61,8 +61,16 @@ first: GOLFINIX → single-design brands → PUTT ACE last.
 
 - **Full scenes** (club leaning on white wall, course behind): Driver → `Full/Driver-G&F.png`;
   Wood → `Full/Wood-Klyro.png`; Iron → `Full/Iron7-Mireo.png`; Wedge → `Full/WedgeA-Fyloe.png`;
-  Putter → `Full/Putter-GolfinX.png`. ⚠️ `Putter-GolfinX.png` is 9.3MB — compress to JPEG q92
-  before upload (10MB total cap per file_upload).
+  Putter → `Full/Putter-GolfinX.png`.
+
+  ⚠️ **CHANGED 2026-08-24.** Five `Full/` sprites shipped at 2148×3600 — 4× the 537×900 spec
+  above — including the WEDGE and PUTTER templates. `Resources/Clubs/Full/` is now
+  spec-conformant (all 71 at 537×900); the high-resolution originals were preserved and moved to
+  **`Assets/Art/Clubs/Full_Masters~/`** (trailing `~` = Unity ignores the folder, so they no
+  longer ship in the build). Use the MASTERS folder as the W1 template source — a 537×900
+  template gives the model less to work with. `Full_Masters~/Putter-GolfinX.png` is 8.8MB —
+  compress to JPEG q92 before upload (10MB total cap per file_upload). Rationale and the
+  pixel-diff proof: `Docs/CONTENT_PIPELINE_PLAN.md` §11.
 - **Controls** (large side view, transparent): `Controls/S_Controls_<Type>_GOLFIN.png` for
   Driver/Iron/Putter/Wedge/Wood — GOLFIN has all... verify per type with `ls`; any same-type
   `S_Controls_*` works.

@@ -34,6 +34,197 @@
 
 ## 📋 SPEC_READY POINTERS
 
+- **`bridge_transplant`** (filed 2026-08-25, Architect via Cowork) — **SPEC_READY, kickoff pasteable.**
+  **SPLIT 2026-08-25 (Cesar: "Split, bridges first, trees later"). This spec is BRIDGES ONLY,
+  5 holes.** The scenery half is now `Docs/Specs/Queued/scenery_transplant/` and the wind gap
+  found while auditing it is `Docs/Specs/Queued/tree_wind_coverage/` — both QUEUED, pointers below.
+  Copy the 7 bridges that exist only in `Generated/Video/Hole_NN_Geo.unity` into the live
+  `Generated/Hole_NN_Geo.unity` scenes (holes 7, 8×2, 9, 12×2, 17), give them deck + railing/pier
+  collision in the fixed-point sim, and re-bake only what changed. Spec:
+  `Docs/Specs/Active/bridge_transplant/SPEC.md` — it carries the exact world TRS of all 7 instances
+  as ground truth (both scene sets share TerrainData guid `f024468aa2c3f9c42ac9cc410c8576d0`, so
+  transforms transplant verbatim).
+  **Cesar's decisions of record:** (1) deck AND railings/piers, not deck-only; (2) bots AVOID
+  bridges — no `VersusBot` change; (3) all 7 instances; (4) split — scenery/trees deferred.
+  **Four findings that are load-bearing — do not "simplify" past them:**
+  (a) Unity colliders are dead weight — the ball runs on `BallSimulation` fixed-point, so a bridge
+  in the scene is physically invisible until something bakes it. The prefabs' 140 / 38 `BoxCollider`s
+  are *authoring data* for the obstacle bake, not runtime collision.
+  (b) `PhysicsHeightmapBaker` reads terrain only, so `heightmap.bytes` must come out BYTE-IDENTICAL —
+  do not re-bake it. The deck's height reaches the sim through the zone path instead
+  (`BakedHeightProvider.SampleHeight` calls `TrySampleMeshY` FIRST and it beats the heightmap).
+  (c) **A CartPath deck over water is silently masked** — `BakedZoneClassifier.Priority` puts
+  Water at 80 and CartPath at 50, and the first containing polygon wins, so the ball standing on
+  the bridge would classify as Water and take a penalty. Hence a NEW `SurfaceType.Bridge` at
+  priority 95. That also delivers decision (2) for free: `Bridge` is absent from
+  `VersusBot.IsPlayableSurface`, so bots decline to aim at decks with ZERO bot-code change and zero
+  blast radius onto the real cart paths on the other 13 holes.
+  (d) `TreeObstacleBaker.OnSceneSaving` re-harvests `StandaloneTrees`/`PaintedTrees` on EVERY save —
+  the `Bridges` container must be scene-root or bridge parts get baked as tree cylinders. A changed
+  `tree_obstacles.csv` hash is a BUG, never an expected diff. ⚠️ Hole 17's is `79f0eae4` / 1663 rows
+  as of 2026-08-25 04:04 — Cesar planted 829 spruces there that morning, so that file is FRESH live
+  data this task must leave untouched.
+  ⚠️ Two traps: `SurfaceConfig.cs:24` is a hardcoded `new SurfaceCoefficients[11]` (must become 12 or
+  the first bridge classification throws), and `bridgeLODs.fbx` (holes 8×2, 9) is an FBX with NO
+  colliders — those three either need a prefab variant with railing boxes or ship deck-only in v1,
+  flagged either way.
+  ⚠️ Known limitation, accepted: the height field is 2.5D, so nothing can pass UNDER a bridge.
+  Confirm how bad it looks on hole 12 (two bridges) and report.
+  **Do NOT confuse this with the pre-existing `BridgeAnchor` / `BridgeExporter` / `bridges.json`** —
+  that is cart-path spline snapping for UHoleGeo, a different feature that shares the word.
+  Stage A+B on hole 7 alone is a complete, reviewable increment — get it reviewed before batching
+  the other four holes.
+
+  ### Kickoff · bridge_transplant
+
+  ```
+  Read Docs/Specs/Active/bridge_transplant/SPEC.md and implement it.
+
+  Context:
+  - Copies the 7 bridges from Generated/Video/Hole_NN_Geo.unity into the live
+    Generated/Hole_NN_Geo.unity scenes (holes 7, 8x2, 9, 12x2, 17) and gives them real
+    collision in the fixed-point sim: deck via a new SurfaceType.Bridge zone mesh,
+    railings/piers via a new BridgeObstacleProvider mirroring TreeObstacleProvider.
+  - Read SPEC "Architecture context" FIRST — Facts 1-4 explain why the obvious approach
+    (Unity colliders / CartPath deck / re-bake the heightmap) is wrong in each case.
+  - BRIDGES ONLY. Do not move grass, rocks, signs or any tree, and do not touch any
+    material or shader. Those are two separate queued specs.
+  - Minimal diff. Mirror the existing tree pipeline exactly: TreeObstacleData /
+    TreeObstacleProvider (XZ grid, sorted candidates, fp containment guard) /
+    TreeObstacleLoader / TreeObstacleBaker (bake-hash header + sceneSaving hook).
+    Reuse SurfaceMarker, BakeZoneJsonTool, CourseSlugResolver, BakedZoneClassifier.
+  - Do Stage A+B on HOLE 7 ONLY and stop for review before batching holes 8/9/12/17.
+  - Never hand-edit .unity YAML. Never re-import a hole. Never re-bake heightmap.bytes.
+    tree_obstacles.csv must be unchanged on all 5 holes — hole 17's especially, it was
+    freshly baked 2026-08-25 when Cesar planted that hole.
+  - Out of scope: VersusBot / BotTreeProbe changes, BridgeAnchor / BridgeExporter /
+    bridges.json, cart-path behaviour on the other 13 holes, ball-under-bridge 3D
+    collision, and everything in scenery_transplant / tree_wind_coverage.
+
+  When done: list changed files with a 1-line summary each, run the acceptance
+  tests in the spec, flag which need manual on-device verification, update
+  STATUS.md + IMPLEMENTER_REPORT.md in the spec folder, and update
+  Docs/AI_CONTEXT.md.
+  ```
+
+- **`scenery_transplant`** (filed 2026-08-25, Architect via Cowork) — **QUEUED. Runs AFTER
+  `bridge_transplant` is DONE** (both edit the same five hole scenes and share the same
+  `tree_obstacles.csv` hash invariant). Spec: `Docs/Specs/Queued/scenery_transplant/SPEC.md`.
+  Moves the rest of the Video-only content: **five trees** (Pine 03 ×2 + Poplar 01 on H02,
+  Old 03 on H03, Ash 02 on H14, Fir 04 on H16), 1 841 grass tufts, 6 rocks, 14 wooden signs,
+  across 8 more holes (01, 02, 03, 05, 06, 14, 16, 18 — note H18 has 380 grass and no bridge).
+  **The audit's headline: the move is Video → live and the LIVE scenes are the RICHER set.**
+  13 702 hand-placed `Spruce 1`/`Spruce 3` are already in 15 live holes under `StandaloneTrees`
+  and already baked (hole 7: 677 standalone + 666 terrain = its 1343 CSV rows exactly). There
+  was never a pile of hand-placed trees waiting in the Video scenes — there are five.
+  ⚠️ **`PaintedTrees` is a phantom-obstacle trap.** `TreeObstacleBaker.HarvestContainer` bakes
+  EVERY child of `PaintedTrees` as a tree, and `tree_collision_profiles.csv` has no grass rows —
+  so grass transplanted into that container becomes one `default` cylinder each (0.25 m trunk × 3 m,
+  3 m canopy radius to 9 m), 840 of them on H08 alone. Grass goes to a NEW `PaintedGrass` container,
+  rocks/signs to `Props`; only the 5 real trees go to `StandaloneTrees`, each needing a MEASURED
+  profile row (Fir_04 already has one). Expected tree-hash changes: H02/H03/H14/H16 ONLY.
+  ✅ Resolved 2026-08-25: hole 17 previously had NO `tree_obstacles.csv` at all — the only hole
+  shipping with zero tree collision. Cesar planted it that morning (829 spruces + 834 terrain);
+  the save hook auto-baked `79f0eae4` / 1663 rows at 04:04. **All 18 holes now have tree collision.**
+
+- **`tree_wind_coverage`** (filed 2026-08-25, Architect via Cowork) — **QUEUED, BLOCKED on a
+  Cesar decision.** Spec: `Docs/Specs/Queued/tree_wind_coverage/SPEC.md`. Do not start.
+  `TreeWindDriver` maps `WindContext.SpeedMph` onto `WindSpeedFloat1` but walks
+  `terrain.terrainData.treePrototypes` ONLY and skips non-`Custom/Vegetation` materials. The
+  13 702 hand-placed spruces are on `Leaves_URP.shadergraph` ("Wind Speed" =
+  `Vector1_b0ddedae341d4c7ba1d429299f3078ea`, authored **0.4**) — wrong shader AND not terrain
+  prototypes, so nothing drives them. **0.4 is exactly `MaxTreeWindSpeed`, so every hand-placed
+  spruce is pinned at MAXIMUM sway on 15 holes while the terrain trees correctly scale with hole
+  wind.** Worst on a calm hole; hole 17 is the one hole where the two populations happen to agree
+  (windiest hole, terrain trees also reach 0.4), so do NOT eyeball the bug there.
+  **Two routes, Cesar picks:** (A) extend the driver to walk the containers and write both property
+  names — must also extend `TreeWindDriverEditorGuard`'s authored-value restore or values bake into
+  the `.mat` on disk, and the two shaders' sway curves differ so the mapping needs a feel pass;
+  (B) re-material the spruces onto `Custom/Vegetation` — simpler at runtime, art change with
+  15-hole regression risk. Acceptance either way: at 0 mph every tree is static, and at the hole's
+  authored wind both populations agree.
+
+- **`content_catalog`** (filed 2026-08-24, Architect via Cowork) — **SPEC_READY, kickoff pasteable.**
+  Phase 0 of admin-managed game content (`Docs/CONTENT_PIPELINE_PLAN.md`): Supabase tables +
+  seed from the seven CSVs the game ships today + atomic draft→publish→rollback + the public
+  `GET /api/v1/content` delta endpoint + the build-time exporter that rewrites the repo CSVs
+  from the published catalogs. **Zero Unity behaviour change** — `Endpoints.cs` gains one
+  property nothing calls; no `*DatabaseCSV.cs`, no `LocalizationManager`, no admin UI (panels
+  are the follow-up spec `content_admin_panels`). Four stages, each independently verifiable:
+  A schema+seed (⚠️ the round-trip seed→export→`diff` must come back EMPTY — that is Stage A's
+  real acceptance), B FastAPI read endpoint, C exporter, D dashboard publish/validate/rollback
+  route handlers (no pages). SQL for Cesar: `playlife/backend/migrations/2026_08_24_content_catalog.sql`
+  **✅ APPLIED TO PROD 2026-08-24 (Cesar).** Verification returned all 7 rows (tables 4 /
+  functions 2 / rls_enabled 4 / policies 0 / catalogs 7 / both exec-privilege checks 0),
+  re-confirmed live over PostgREST: `content_catalogs` = 7 rows all v0+enabled, the other three
+  tables HTTP 200 with the service key. `playlife-api` deliberately NOT redeployed —
+  `/api/v1/content` is still 404, and `/health` + `/tournaments/golfin` + `/notices` + `/banners`
+  are all still 200. **So the Implementer starts at A2 (seed generator), not A1.**
+  **✅ `2026_08_24_golfin_characters_rarity_fix.sql` ALSO APPLIED 2026-08-24 (Cesar).** Verified
+  over PostgREST: all 12 `golfin_characters` rarities now match `Assets/Data/Characters.csv`,
+  0 mismatches (`char_olivia` Uncommon → Common). The rarity-restricted-tournament bug is closed.
+  Spec §A4 still stands: seed the `characters` catalog from the CSV, and make publishing it
+  upsert the mirror in the same request so this cannot silently recur once panels exist.
+  **Three design points that are load-bearing and must not be "simplified":** (1) the
+  `ON CONFLICT … WHERE … IS DISTINCT FROM` guard in `content_publish` — without it every publish
+  stamps every row and the delta becomes a full download; (2) `content_rollback` moves FORWARD
+  (restores a snapshot as a higher version) — rewinding the counter strands every client that
+  already holds the bad version; (3) `min_build` is filtered SERVER-side so an old build never
+  receives a row whose art it does not have.
+  ⚠️ **Found while collision-checking the migration: `golfin_characters` (the server mirror
+  `tournaments_golfin.py:373` reads for `char_rarity_min/max`) is STALE — it says `char_olivia`
+  = Uncommon, `Characters.csv` says Common since 2026-08-21. On a rarity-RESTRICTED tournament
+  only, Olivia is wrongly rejected from a Common-only event and wrongly accepted into an
+  Uncommon-minimum one; the other 11 rows agree. Fix written, NOT YET APPLIED:
+  `playlife/backend/migrations/2026_08_24_golfin_characters_rarity_fix.sql` — apply it with the
+  content-catalog migration. Spec §A4 also makes publishing the `characters` catalog upsert the
+  mirror in the same request, because an admin editing rarity in a panel will never know the
+  mirror exists.**
+  Open question the Implementer must ask, not guess:
+  whether `Bags.csv`/`Balls.csv` are in scope (seeded on the assumption they are).
+  Spec: `Docs/Specs/Active/content_catalog/SPEC.md`.
+
+### Kickoff · content_catalog
+
+```
+Read Docs/Specs/Active/content_catalog/SPEC.md and implement it.
+
+Context:
+- Phase 0 of Docs/CONTENT_PIPELINE_PLAN.md — read §2 (the six invariants) first;
+  every design choice in the spec follows from them. Backend + tooling only.
+- TWO repos: GolfinRedux (Tools/content/, Tools/admin-dashboard/) and
+  /Users/cesar/Documents/playlife (backend/migrations/, backend/routers/,
+  backend/main.py). No Assets/ edits except ONE new property in
+  Assets/Scripts/Net/Endpoints.cs that nothing calls yet.
+- ⚠️ STAGE A1 IS ALREADY DONE — DO NOT RE-APPLY IT. Both migrations were
+  applied to prod by Cesar on 2026-08-24 and verified live:
+  2026_08_24_content_catalog.sql (4 tables + content_publish/content_rollback;
+  content_catalogs = 7 rows, all v0 + enabled; RLS on, 0 policies, EXECUTE
+  revoked from anon/authenticated) and
+  2026_08_24_golfin_characters_rarity_fix.sql (all 12 mirror rarities now match
+  Characters.csv). Both files are stamped APPLIED. START AT STAGE A2.
+- Do the remaining stages IN ORDER and report at each: A2 seed generator +
+  A3 round-trip, B GET /api/v1/content, C export_content.py, D dashboard route
+  handlers. Stage A is not done until seed -> export -> diff against the seven
+  repo CSVs comes back EMPTY.
+- playlife-api has NOT been redeployed: /api/v1/content is 404 while /health,
+  /tournaments/golfin, /notices and /banners are all 200. Stage B's fly deploy
+  is the first step with real blast radius on the live build — treat it as such.
+- Copy the existing patterns, do not invent: routers/notices.py for the envelope
+  and fail-closed windows; lib/audit.ts + lib/auth.ts checkAdmin() + lib/mode.ts
+  for the dashboard routes. Read ADMIN_DASHBOARD_OPS.md §4 before touching
+  Tools/admin-dashboard — NODE_ENV, next dev vs next build, and the env-file
+  traps have all cost time already.
+- Out of scope: ContentService / RemoteContentSource / any *DatabaseCSV.cs edit,
+  admin panels or pages, player inventory, Addressables, art URLs on rows,
+  LevelUpCosts (deliberately unseeded — open question), PointsSpendGate.
+
+When done: list changed files with a 1-line summary each, run the acceptance
+tests in the spec, flag which need manual on-device verification, update
+STATUS.md + IMPLEMENTER_REPORT.md in the spec folder, and update
+Docs/AI_CONTEXT.md.
+```
+
 - **`auth_recovery_flow`** (filed 2026-08-19, Architect via Cowork) — **IMPLEMENTED — Code closed the loop 2026-08-19 (commits `0e4381fc6` + `96227b057`; STATUS `READY_FOR_SELF_REVIEW`). Architect spot-check PASSED same day** (commit scope, scene wiring `_resetPasswordScreen`→`883282913`, 2-block scene diff claim, screenshots present per gitignore policy, and the sweep's one failure — pre-existing telemetry edit-mode bootstrap — fixed separately in `15d805a47`, GameSessionTests re-run 5/5). ⚠️ ONE SCOPE NOTE: the auth commit's LocalizationText.csv hunk swept in the 16 `tourn.*` rows belonging to `tournament_restrictions` (still uncommitted) — benign, but that task's close-out must NOT re-add them. Remaining: Cesar's 3 device items (report §Needs-manual), Supabase min-length dashboard check, JA native review; JA-renders-lighter-than-EN wants its own spec. Password-reset links today **silently sign the player in with the password unchanged**: `AuthService.OnDeepLink` (AuthService.cs:202) has one branch, `OAuthCallbackParser` ignores `type=recovery`, and `ISupabaseAuthClient` has no password-update method. Server side done 2026-08-19 — reset emails land on `confirm.golfin.world` and deep-link back with `type` in the fragment. Task: parse `type`+error params, branch OnDeepLink (recovery session held un-persisted, no `RaiseSignedIn()` until the new password is set), `UpdatePassword` → `PUT /auth/v1/user`, set-new-password screen in `Assets/Scripts/UI/Account/`, EN+JA loc, tests in `Golfin.Auth.Tests`. Pre-step folded in: import `AuthRedirectUrl.cs` + first-ever Editor run of `AuthRedirectUrlTests`. Out of scope: SMTP, admin-dashboard password actions, email-change/magic-link, `Tools/golfin-confirm`. Spec: `Docs/Specs/Active/auth_recovery_flow/SPEC.md`.
 
 ### Kickoff · auth_recovery_flow (RE-ISSUED 2026-08-19 after partial Cowork implementation — supersedes the original Cowork kickoff)

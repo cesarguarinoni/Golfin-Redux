@@ -170,15 +170,32 @@ than "default bag selector" — same idea, better UX language.
 
 ---
 
+## 2026-08-21 — Starter Selection + Character Roster Identity Pass
+
+**What changed**
+- New-player flow: pick ONE starter (James or Olivia, both Common) in a Starting Character
+  Selection screen (Roster reuse, `ROSTER_STARTER_*` strings, EN+JA). All other characters
+  locked in Roster, including the unpicked starter; selection shows only on first run.
+- Character unlocks become an RP sink: proposed ladder 200→6,000 RP by rarity (full roster
+  ≈18,800 RP) — pricing in `Docs/Economy/GOLFIN_Economy_Model.xlsx` (CharacterEconomy tab).
+  Unlock PURCHASE flow not built yet.
+- All 12 characters got stat identities (rarity totals preserved, inside RarityStatCaps) and
+  new broadcast-register bios EN+JA, length-calibrated to the detail panel
+  (EN ≤ ~205 / JA ≤ ~110 chars).
+
+**Files**: `Assets/Data/Characters.csv`, `Assets/Localization/LocalizationText.csv`
+(`CHAR_BIO_*`), full design: `Docs/Game Design/CHARACTER_ROSTER_DESIGN.md`.
+
 ## Design Reference Files
 
 | File | Description |
 |---|---|
 | `Docs/Game Design/Old Levels.xlsx` | Original GDD leveling tables (archived) |
-| `Docs/Game Design/New Levels.xlsx` | Current leveling economy (3 sheets: Clubs, Putter, Characters) |
+| `Docs/Game Design/New Levels.xlsx` | OUTDATED (pre-÷10) — superseded by `Docs/Economy/GOLFIN_Economy_Model.xlsx` + `Docs/Economy/ECONOMY_MASTER.md` |
 | `Docs/Game Design/Old Gameplay Formulas.xlsx` | Original complex formulas (archived) |
 | `Docs/Game Design/Old Control.docx` | Original control scheme issues and proposals |
 | `Docs/Game Design/GAMEPLAY_FORMULAS_PROPOSAL.md` | New simplified formulas (PROPOSAL) |
 | `Docs/Game Design/Golfin - Confluence.pdf` | Original full GDD |
 | `Docs/Game Design/Golfin - Confluence.txt` | GDD text extract |
+| `Docs/Game Design/CHARACTER_ROSTER_DESIGN.md` | Starter flow, character stats & bios (2026-08-21) |
 | `Docs/GAME_DESIGN_AGENT.md` | AI agent for evaluating GDD systems (use "game design mode") |

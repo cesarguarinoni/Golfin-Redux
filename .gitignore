@@ -305,3 +305,18 @@ Builds/ipa/
 # Editor-only dev sign-in credentials (DevAutoSignIn). Local to each machine, never
 # committed. Alternative to the GOLFIN_DEV_EMAIL / GOLFIN_DEV_PASSWORD env vars.
 .golfin-dev-login.json
+
+# =========================
+# Large local-only binaries (2026-08-25). None of these belong in history:
+#   - Unity-ignored `~` staging folders: the tilde stops Unity importing them, but git does not
+#     skip them. Full_Masters~ is 36 MB of club source PNGs — kept on disk, per the same rule as
+#     *.psd / *.tga / Assets/Packs/ above (Cesar, 2026-08-25).
+#   - Bot demo recordings under tasks/: mirrors Docs/Specs/**/videos/ and tasks/loop_v2_smoke_bot/.
+#     tasks/sky_rotation_demo/video/raw.mp4 alone is 80 MB and is regenerable from the recorder.
+#   - _to_delete/ is a staging area for things on their way out.
+# Caught by the TestFlight lane's clean-tree gate, which would otherwise have swept 116 MB into
+# a commit on its way to a build.
+# =========================
+Assets/Art/Clubs/Full_Masters~/
+tasks/*/video/
+_to_delete/
