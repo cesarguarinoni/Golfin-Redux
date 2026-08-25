@@ -21,8 +21,14 @@ namespace Golfin.Gameplay.UI.ShotUI
     ///     null in LabScaffold.unity, so it has never run; wiring it also changes pre-shot
     ///     interaction semantics, which is out of scope here.
     ///   - PutterTrack / PuttPathRoot (owned by PhysicsLabController's putt-mode toggle)
+    ///   - HoleCard/HoleMapContainer — the round map thumbnail (Cesar, 2026-08-25: the map-view
+    ///     icon must NOT be on screen during the ball's flight; flagged in Versus, where
+    ///     VersusHudController hides the ChipStack so the lone icon reads as a live control,
+    ///     but the hide applies in solo too). The rest of the HoleCard (course / hole / par
+    ///     chips) still stays up, per the original scope call.
     ///   - the selector / spin overlays (defensive close; they cannot normally survive a flick)
-    ///   - the HoleCard map button, which stays VISIBLE but goes inert
+    ///   - the HoleCard map button, kept inert as well so no tap can land on the frame the
+    ///     container goes back on
     ///
     /// The hide is edge-triggered and remembers each object's <c>activeSelf</c>, so re-arming
     /// never switches on a putter track that putt mode had legitimately turned off.
@@ -43,7 +49,7 @@ namespace Golfin.Gameplay.UI.ShotUI
         [SerializeField] private SpinPanelWidget       _spinPanel;
         [SerializeField] private OtherButtonsFader     _actionButtonsFader;
 
-        [Header("Kept visible but inert while the shot is in progress")]
+        [Header("Made inert while the shot is in progress (its container is hidden too)")]
         [SerializeField] private Button _holeMapButton;
 
         /// <summary>

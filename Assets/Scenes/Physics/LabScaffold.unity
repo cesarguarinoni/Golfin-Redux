@@ -20170,6 +20170,7 @@ MonoBehaviour:
   _hideDuringShot:
   - {fileID: 2300000001}
   - {fileID: 2300000005}
+  - {fileID: 7000007}
   _hideGroupsDuringShot:
   - {fileID: 1744053445}
   - {fileID: 1443870537}
