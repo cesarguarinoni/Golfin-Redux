@@ -73,7 +73,25 @@ namespace Golfin.Save
     /// </summary>
     public class SaveData
     {
+        /// <summary>
+        /// On-disk schema version. The default is the OLDEST version this class can be read back
+        /// as — a legacy JSON with no schemaVersion key must still run the whole migration chain.
+        /// A brand-new save must NOT use this default: create it with <see cref="CreateFresh"/> so
+        /// it is stamped at the current version. (Before 2026-08-26 a fresh save was written to disk
+        /// stamped v2; on the NEXT boot the migrator saw a "legacy" save and ran every migration
+        /// against it — which is how new players were granted the Legendary Royal Swing wedge by the
+        /// v8→v9 backfill.)
+        /// </summary>
         public int schemaVersion = 2;
+
+        /// <summary>
+        /// A brand-new save, stamped at the CURRENT schema version. Every field on a fresh
+        /// SaveData already holds its current-schema default, so there is nothing to migrate —
+        /// stamping it here is what keeps the next load from re-running the migration chain and
+        /// applying legacy-player backfills to a brand-new player.
+        /// </summary>
+        public static SaveData CreateFresh() =>
+            new SaveData { schemaVersion = SaveSchemaMigrator.CurrentSchemaVersion };
 
         public int rewardPoints;
         public string selectedCharacterId = "";

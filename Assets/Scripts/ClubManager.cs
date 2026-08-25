@@ -180,41 +180,38 @@ public class ClubManager : MonoBehaviour
         // seeded before the wedge was added to DefaultBagIds. The v8→v9 migrator sets the signal
         // (wedgeBackfillPending=true) for any already-seeded save. Grant is idempotent (no dup
         // if already owned). Runs BEFORE A4 so the bag is complete when A4 checks.
+        //
+        // 2026-08-26 guard: the club it grants is the LEGENDARY 'P.Wedge Royal Swing'. Since the
+        // starter bag became the GOLFIN Commons it already carries 'club_pwedge_golfin_common', so
+        // a save that already owns a wedge does not need this backfill — and running it anyway is
+        // what handed new players an extra Royal Swing. Only saves with NO wedge at all (the
+        // fresh-seeded-post-610 cohort this backfill was written for) may take it; A4 bag-safety
+        // below equips whatever wedge such a player already owns.
         if (save.wedgeBackfillPending)
         {
             const string wedgeId = "club_pwedge_royal";
             var wedgeTemplate = db.GetClub(wedgeId);
-            if (wedgeTemplate != null)
+            if (OwnsAnyWedge(db))
             {
-                if (!ownedClubs.ContainsKey(wedgeId))
-                {
-                    // Not owned: grant and equip to bag slot 1. Covers fresh-seeded-post-610 cohort.
-                    var spec = BuildSpec(wedgeTemplate);
-                    var persisted = ClubOwnershipService.MakePersisted(spec, 1);
-                    save.ownedClubs.Add(persisted);
-                    ownedClubs[wedgeId] = ToRuntime(persisted);
-                    Debug.Log($"[ClubManager] Wedge backfill: granted + equipped '{wedgeId}' (fresh-seeded-post-610 cohort).");
-                }
-                else
-                {
-                    // Already owned (grandfathered cohort): ensure equipped to bag slot 1.
-                    var pc = save.ownedClubs.Find(c => c.clubId == wedgeId);
-                    if (pc != null && pc.equippedBagSlot != 1)
-                    {
-                        pc.equippedBagSlot = 1;
-                        ownedClubs[wedgeId].equippedBagSlot = 1;
-                        Debug.Log($"[ClubManager] Wedge backfill: re-equipped existing '{wedgeId}' to bag slot 1 (grandfathered cohort).");
-                    }
-                    else
-                    {
-                        Debug.Log($"[ClubManager] Wedge backfill: '{wedgeId}' already owned + equipped; no action needed.");
-                    }
-                }
+                // The common case now: the save already has a wedge (the Common GOLFIN one from
+                // DefaultBagIds, or the legacy royal from the grandfather set). Nothing is owed.
+                Debug.Log($"[ClubManager] Wedge backfill: save already owns a wedge — skipping the Legendary '{wedgeId}' grant.");
+            }
+            else if (wedgeTemplate == null)
+            {
+                Debug.LogWarning($"[ClubManager] Wedge backfill: '{wedgeId}' not found in DB — backfill skipped.");
             }
             else
             {
-                Debug.LogWarning("[ClubManager] Wedge backfill: 'club_pwedge_royal' not found in DB — backfill skipped.");
+                // No wedge at all: grant and equip to bag slot 1. The fresh-seeded-post-610 cohort
+                // this backfill was written for.
+                var spec = BuildSpec(wedgeTemplate);
+                var persisted = ClubOwnershipService.MakePersisted(spec, 1);
+                save.ownedClubs.Add(persisted);
+                ownedClubs[wedgeId] = ToRuntime(persisted);
+                Debug.Log($"[ClubManager] Wedge backfill: granted + equipped '{wedgeId}' (no wedge owned).");
             }
+            // Cleared on every pending load, taken or skipped — the signal is one-shot.
             save.wedgeBackfillPending = false;
             host.MarkDirty();
         }
@@ -267,6 +264,22 @@ public class ClubManager : MonoBehaviour
         }
 
         Debug.Log($"[ClubManager] Loaded {ownedClubs.Count} owned clubs from save (schema v{save.schemaVersion}).");
+    }
+
+    /// <summary>
+    /// True when the runtime dict holds at least one club of any wedge type (A/P/S). Mirrors the
+    /// wedge role group in RequiredBagTypeGroups — any wedge sub-type satisfies the wedge role.
+    /// </summary>
+    private bool OwnsAnyWedge(ClubDatabaseCSV db)
+    {
+        foreach (var id in ownedClubs.Keys)
+        {
+            var t = db.GetClub(id);
+            if (t == null) continue;
+            if (t.type == ClubType.A_Wedge || t.type == ClubType.P_Wedge || t.type == ClubType.S_Wedge)
+                return true;
+        }
+        return false;
     }
 
     /// <summary>Builds the pure ClubCatalogSpec list from the club DB for the ownership service.</summary>

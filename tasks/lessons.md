@@ -2697,3 +2697,34 @@ figure before checking.
   re-confirmed. I nearly had us re-levelling an asset that was already in band.
 - When the fresh number contradicts one already given, say so explicitly and plainly rather than
   quietly using the new one.
+
+---
+
+## Lesson BJ — a fresh save stamped at the class-default schema is re-read as a legacy save
+
+**Session:** 2026-08-26, "new players are getting an extra Royal Swing."
+
+`SaveData.schemaVersion` defaulted to `2` — the *oldest readable* version, correct for
+deserializing legacy JSON that has no `schemaVersion` key. But `SaveDataHost.LoadData()` used the
+same `new SaveData()` for a **brand-new** save, so a new player's first save was written to disk
+stamped v2. On the next launch the migrator read it as a v2 legacy save and ran the entire v2→v10
+chain against a player who was one boot old.
+
+Three comments in the codebase asserted the invariant that made this safe — *"a brand-new SaveData
+never runs Migrate()"* — and all three were true of the in-memory object and false of the file it
+wrote. The v8→v9 block granted the Legendary `club_pwedge_royal` to anyone with
+`clubOwnershipSeeded == true`, which the first boot had just set. Same root cause would have
+re-locked every gacha character on second boot via v9→v10.
+
+**Rules:**
+- **The default value of a version field and the value a fresh record is created with are two
+  different decisions.** Defaults exist for the read path (absent key → oldest); creation must
+  stamp *current*. Give fresh records their own factory (`SaveData.CreateFresh()`) rather than
+  reusing the deserialization default.
+- **A migration guard keyed on "this cohort was never migrated" is only as good as what gets
+  persisted.** Round-trip the fresh record through disk before believing the cohort split.
+- Derive the symptom from the real artifact: reading Cesar's `save.json` showed the 7 Commons plus
+  the stray royal, all at `equippedBagSlot 1` — which named the exact grant site in one step and
+  beat reasoning forward from `DefaultBagIds` (which was correct all along).
+- The reported bug was in the starter bag; the defect was in save versioning. **Follow the grant,
+  not the list.**

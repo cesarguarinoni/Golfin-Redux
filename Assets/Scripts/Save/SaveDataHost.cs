@@ -37,7 +37,7 @@ namespace Golfin.Save
 
         // ── State ─────────────────────────────────────────────────────────────
 
-        private SaveData _data = new SaveData();
+        private SaveData _data = SaveData.CreateFresh();
         private ISavePersister _persister = null!;
         private Coroutine? _debounceCoroutine;
         private bool _pendingWrite;
@@ -136,8 +136,11 @@ namespace Golfin.Save
                 }
             }
 
-            // No save file yet — try one-time PlayerPrefs migration
-            _data = new SaveData();
+            // No save file yet — try one-time PlayerPrefs migration.
+            // CreateFresh (not `new SaveData()`) stamps the CURRENT schema version: a fresh save
+            // written to disk at the class default (v2) would come back on the next boot looking
+            // like a legacy save and run every migration against a brand-new player.
+            _data = SaveData.CreateFresh();
             MigrateFromPlayerPrefs();
 
             // Seed default: Hole 1 unlocked

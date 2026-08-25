@@ -292,6 +292,35 @@ namespace Golfin.Save.Tests
                 "brand-new SaveData must have wedgeBackfillPending=false (gets wedge from DefaultBagIds, not migration)");
         }
 
+        // ── 2026-08-26: a fresh save must not be re-read as a legacy save ───────
+
+        [Test]
+        public void CreateFresh_IsStampedAtCurrentSchemaVersion()
+        {
+            // The class default (2) is the OLDEST readable version, for legacy JSON with no
+            // schemaVersion key. A brand-new save must be stamped current, or the file it writes
+            // comes back on the next boot looking like a v2 legacy save.
+            Assert.AreEqual(SaveSchemaMigrator.CurrentSchemaVersion, SaveData.CreateFresh().schemaVersion,
+                "a fresh save must be stamped at the current schema version");
+        }
+
+        [Test]
+        public void CreateFresh_SeededThenReloaded_DoesNotSetWedgeBackfillPending()
+        {
+            // The exact new-player second-boot path: fresh save → ClubManager starter-seeds it
+            // (clubOwnershipSeeded=true) → written to disk → loaded again → Migrate().
+            // Stamped at the class default this ran v8→v9 and flagged the player for the
+            // Legendary Royal Swing backfill — an extra club a new player must never receive.
+            var save = SaveData.CreateFresh();
+            save.clubOwnershipSeeded = true;   // starter seed ran on the first boot
+
+            SaveSchemaMigrator.Migrate(save);  // second boot
+
+            Assert.IsFalse(save.wedgeBackfillPending,
+                "a fresh save reloaded after starter-seeding must NOT be flagged for the legacy wedge backfill");
+            Assert.AreEqual(SaveSchemaMigrator.CurrentSchemaVersion, save.schemaVersion);
+        }
+
         // ── Order 761: HasPlayableBag wedge role-group ───────────────────────────
 
         [Test]
