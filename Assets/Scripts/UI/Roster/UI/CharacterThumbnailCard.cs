@@ -306,15 +306,20 @@ namespace Golfin.Roster
             // hides the SELECT button on locked characters, so tapping only browses, never selects.
             // Do NOT set cardButton.interactable = false or blocksRaycasts = false here.
 
-            // Dim: Figma node 13924:42412 shows the locked card div at opacity-50.
-            // That maps to CanvasGroup.alpha = 0.5f (sampled: Figma opacity-50 = 50% = 0.50).
-            // IMPORTANT: use Unity == null, not C# ?? — Unity-null is not C#-null.
+            // DO NOT dim the card with CanvasGroup.alpha. `Locked Portraits.png` (the art Cesar
+            // supplied) IS the dim treatment: navy #0E2844 at alpha 128 (50%) with rounded-corner
+            // falloff, sized to the card. Stacking a card-wide 50% alpha on top halved BOTH the
+            // portrait underneath AND the overlay itself (effective 25%), so the blue washed out
+            // and the card read as white against the bright background — exactly what Cesar
+            // rejected ("still looking white instead of the blue png I gave you").
+            // The overlay alone is the whole effect. Keep the card fully opaque.
             var canvasGroup = GetComponent<CanvasGroup>();
-            if (canvasGroup == null)
-                canvasGroup = gameObject.AddComponent<CanvasGroup>();
-            canvasGroup.alpha = isLocked ? 0.50f : 1f;
-            // Keep blocksRaycasts=true so the card button can receive taps regardless of lock state.
-            canvasGroup.blocksRaycasts = true;
+            if (canvasGroup != null)
+            {
+                canvasGroup.alpha = 1f;
+                // Keep blocksRaycasts=true so the card button receives taps in either state.
+                canvasGroup.blocksRaycasts = true;
+            }
         }
     }
 }
