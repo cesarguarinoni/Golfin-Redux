@@ -334,27 +334,36 @@ namespace Golfin.EditorTools
 
 
         /// <summary>
-        /// Waits until the loading screen is actually gone. WaitForHoleGeo only proves the
-        /// scene finished loading; the LoadingScreen stays up for the loader's reveal, so
-        /// every "hold and look at the sky" beat was elapsing behind it.
+        /// Waits for the loading screen to appear and THEN disappear.
+        /// The single-shot version asked "is a LoadingScreenController inactive?" and
+        /// FindObjectsOfTypeAll happily returned an inactive instance on the first frame,
+        /// so it returned in 0.0s and every "hold and look at the sky" beat still elapsed
+        /// behind the loading screen. Two phases removes that whole class of false pass.
         /// </summary>
-        IEnumerator WaitForGameplayVisible(float timeout = 30f)
+        IEnumerator WaitForGameplayVisible(float timeout = 40f)
         {
             float e = 0f;
-            while (e < timeout)
+            // Phase 1 — let it come up (it may already be up; that is fine).
+            while (e < 10f && ActiveLoadingScreens() == 0)
+            { yield return new WaitForSecondsRealtime(0.25f); e += 0.25f; }
+
+            // Phase 2 — the real wait: gone means NO active loading screen anywhere.
+            float e2 = 0f;
+            while (e2 < timeout)
             {
-                var ls = Resources.FindObjectsOfTypeAll<LoadingScreenController>()
-                    .FirstOrDefault(c => c != null && !string.IsNullOrEmpty(c.gameObject.scene.name));
-                if (ls == null || !ls.gameObject.activeInHierarchy)
+                if (ActiveLoadingScreens() == 0)
                 {
-                    Debug.Log($"[SkyDemoBot] Gameplay visible after {e:F1}s.");
-                    yield return new WaitForSecondsRealtime(0.5f);
+                    Debug.Log($"[SkyDemoBot] Gameplay visible after {e2:F1}s (loading screen down).");
+                    yield return new WaitForSecondsRealtime(0.75f);
                     yield break;
                 }
-                yield return new WaitForSecondsRealtime(0.25f); e += 0.25f;
+                yield return new WaitForSecondsRealtime(0.25f); e2 += 0.25f;
             }
-            Debug.LogWarning("[SkyDemoBot] Loading screen never hid — sky may not be on screen.");
+            Debug.LogWarning("[SkyDemoBot] Loading screen never hid — the sky may not be on screen.");
         }
+
+        static int ActiveLoadingScreens()
+            => FindObjectsByType<LoadingScreenController>(FindObjectsInactive.Exclude, FindObjectsSortMode.None).Length;
 
         static void LogSky(string act)
         {
@@ -389,6 +398,11 @@ namespace Golfin.EditorTools
             yield return WaitForHoleGeo(1);
             yield return WaitForGameplayVisible();
             yield return new WaitForSecondsRealtime(1.5f);
+            // Seed the session the way the production hole-selection path does. Without this
+            // CurrentHoleNumber stays 0, the result modal reads "Hole 0", and NEXT HOLE
+            // computes 0+1 = 1 — which is why an earlier take reloaded hole 1 and looked
+            // like a Next Hole bug.
+            GameSession.SetCurrentHole(1);
             LogSky("ACT1 hole 1");
             string act1 = SkyRandomizer.Current != null ? SkyRandomizer.Current.DisplayName : "?";
             yield return new WaitForSecondsRealtime(5f);
