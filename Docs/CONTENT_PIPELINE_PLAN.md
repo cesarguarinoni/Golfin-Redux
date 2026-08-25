@@ -458,7 +458,7 @@ their names and meaning (I4 is additive-only); new columns:
 | Column | Purpose |
 |---|---|
 | `category` | widen the accepted set to `club \| character \| ball \| item \| bag` |
-| `startAt` / `endAt` | scheduled visibility, UTC, `endAt` exclusive — same semantics as `home_notices` |
+| `startAt` / `endAt` | scheduled visibility, UTC, `endAt` exclusive — same semantics as `home_notices`. ⚠️ **Specced here but NOT built in Phase 0** (which seeded only the existing CSV shape), so the Shop panel's LIVE/SCHEDULED/ENDED badge had to fall back to `is_active`. Added by `content_panels_gaps` §3 — an Architect gap, caught by the panels Implementer. |
 | `saleStartAt` / `saleEndAt` | the SALE window, independent of listing window; outside it `saleRpCost` is ignored |
 | `stockLimit` | per-player purchase cap; empty = unlimited. Clubs are unique so 1 is implied |
 | `minPlayerLevel` | gate, empty = none |

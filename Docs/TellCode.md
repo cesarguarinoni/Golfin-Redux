@@ -34,6 +34,292 @@
 
 ## 📋 SPEC_READY POINTERS
 
+- **`content_overlay_texts`** (filed 2026-08-26, Architect via Cowork) — **SPEC_READY, kickoff
+  pasteable. PHASE 1 — the first time the content pipeline reaches the GAME.** Everything shipped
+  so far (catalogs, publish/rollback, six panels, the per-catalog delta endpoint) is a system the
+  client has never read. **Texts only, deliberately** — if the mechanism is wrong, find out on a
+  string, not on 799 clubs. New `Golfin.Content` asmdef: `RemoteContentSource` (near-copy of
+  `RemoteNoticeSource` — raw-body disk cache, atomic tmp+File.Replace, null on ANY failure),
+  `ContentService` MonoBehaviour in ShellScene beside `NoticeService`, and
+  `LocalizationManager.ApplyOverlay` (~15 lines, no call-site changes).
+  ⚠️ **Two things the spec makes the Implementer resolve rather than guess:** (1) execution order —
+  `ContentService` must be `-900`, AFTER `LocalizationBootstrap`'s `-1000` which builds `_textMap`;
+  backwards means the overlay is applied then wiped by `Initialize`. (2) **`min_build` has no
+  cross-platform Unity runtime API and the two on-disk sources DISAGREE** — `ProjectSettings`
+  `buildNumber: iPhone` = **2113**, `Resources/Data/build_stamp.txt` = **`v1.5.7 (2297)`**. Pick
+  one, bake an integer at build time (`BuildStamp.cs` compiles out unless `GOLFIN_TESTBUILD`, so
+  reusing it directly will not work in release), and NAME the choice in the report. Parse failure
+  ⇒ send 0, the safe end.
+  Fetch writes the cache and does NOT re-apply mid-session (§2 I5 — next launch); live text swap
+  is explicitly deferred so the first Unity spec has as few moving parts as possible.
+  Spec: `Docs/Specs/Active/content_overlay_texts/SPEC.md`.
+
+### Kickoff · content_overlay_texts
+
+```
+Read Docs/Specs/Active/content_overlay_texts/SPEC.md and implement it.
+
+Context:
+- PHASE 1 of Docs/CONTENT_PIPELINE_PLAN.md — read §2 (the six invariants) first.
+  This is the first time the content pipeline reaches the game; everything built
+  so far is a system the client has never read.
+- TEXTS ONLY. Clubs/characters/items/shop overlays are the next spec and need the
+  §5 clamping rules texts does not. If the mechanism is wrong, better to find out
+  on a string than on 799 clubs.
+- Copy RemoteNoticeSource/NoticeService shape exactly — raw-body disk cache,
+  atomic .tmp + File.Replace, null on ANY failure, fetch off the critical path,
+  MonoBehaviour in ShellScene. Do not invent new networking.
+- ⚠️ Execution order: ContentService is -900, AFTER LocalizationBootstrap's
+  -1000. Bootstrap builds _textMap in Initialize(); apply the overlay before it
+  and it gets wiped. Log both and paste the order in the report.
+- ⚠️ min_build: there is NO cross-platform Unity runtime API for the build
+  number, and the two on-disk sources disagree — ProjectSettings buildNumber
+  iPhone = 2113, build_stamp.txt = "v1.5.7 (2297)". RESOLVE it, bake an integer
+  at build time (BuildStamp.cs compiles out unless GOLFIN_TESTBUILD, so it will
+  not work in release as-is), and name your choice in the report. Parse failure
+  sends 0 — the safe end.
+- The fetch writes the cache and does NOT re-apply this session (invariant I5:
+  next launch). Live text swap is deliberately deferred — do not add it.
+- Airplane mode, a corrupt cache, a missing content_version.txt and
+  enabled:false must ALL fall back to bundled strings with a warning and no
+  exception. Those are designed paths, not malfunctions.
+- Out of scope: every other catalog, live swap, player inventory, Addressables,
+  art URLs, and any change to the endpoint/panels/schema. If the client needs
+  something the API cannot serve, REPORT it — that has caught four real gaps.
+
+When done: list changed files with a 1-line summary each, run the acceptance
+tests in the spec, flag which need manual on-device verification, update
+STATUS.md + IMPLEMENTER_REPORT.md in the spec folder, and update
+Docs/AI_CONTEXT.md.
+```
+
+- **`perf_baseline_capture`** (filed 2026-08-26, Architect via Cowork) — **Phase 0 of
+  `Docs/PERF_OPTIMIZATION_PLAN.md`. Measurement only, NO code changes. Kickoff pasteable.**
+  Inspection found five suspected per-frame costs that must be confirmed on the iPhone before the
+  tier system (`9a`, Order 900) is specced: (1) `ShellScene` `Main Camera` (post-processing ON, cull
+  Everything) is never disabled during a hole → the hole may render twice + a bloom chain;
+  (2) 130–1,958 standalone Spruce GameObjects per hole (Hole 08 = 23,538 MeshRenderers, all shadow
+  casters); (3) 4 shadow cascades / 100 m on the Mobile URP asset; (4) terrain basemap distance 1000
+  (9-layer splat everywhere) + instancing off; (5) an unused `DecalRendererFeature` (DBuffer) that may
+  add a DepthNormals prepass. Output = `Docs/Reports/perf_baseline_<date>.md` with the numbers below.
+  Plan + tier table + options: `Docs/PERF_OPTIMIZATION_PLAN.md` (decisions for Cesar in §6).
+
+### Kickoff · perf_baseline_capture (issued 2026-08-26) — measurement only
+
+```
+Read Docs/PERF_OPTIMIZATION_PLAN.md §0–§1 and produce the Phase 0 baseline report.
+NO gameplay/rendering code changes in this task — measure and report.
+
+Setup:
+- Dev-iOS build profile (Development Build + Autoconnect Profiler + Deep Profiling OFF),
+  physical iPhone over USB. Frame Debugger attached to the player.
+- Holes to capture: 06 (no standalone Spruce), 01 (terrain trees only), 08 (worst case,
+  1,958 standalone Spruce). Same pose each time: tee, default aim camera, after the
+  tee-idle glow settles; then one capture mid-flight of a driver shot on Hole 08.
+
+Capture per hole (write every number into the report):
+1. Profiler: CPU main thread ms, Render thread ms, GPU ms (GPU module), frame rate,
+   Batches / SetPass calls / Tris / Verts, shadow casters count, culling time.
+2. Frame Debugger event list, saved as text: COUNT THE CAMERAS that render
+   (expected suspects: ShellScene "Main Camera" AND LabScaffold "Main Camera"),
+   count the shadow cascade passes, and state whether a DepthNormals prepass or
+   DBuffer pass exists. This confirms or kills plan items #1 and #5.
+3. Memory Profiler snapshot after playing Holes 01 → 08 → 06 consecutively:
+   Texture2D / Mesh / AudioClip / Managed heap totals, top 10 objects by size,
+   and the managed allocation spike during hole load (Profiler Memory module,
+   GC Alloc column in the load frames).
+4. Thermal: note Xcode Energy/Thermal state after 10 minutes on Hole 08.
+
+Verification experiments (each one toggled in the Editor/Inspector only, no commits,
+revert after measuring; report before/after GPU ms + batches on Hole 08 tee pose):
+  a) ShellScene Main Camera disabled during the hole.
+  b) Mobile_RPAsset shadow cascades 4 → 1, shadow distance 100 → 40.
+  c) Terrain basemapDistance 1000 → 100 and drawInstanced ON (Terrain inspector).
+  d) DecalRendererFeature removed from Mobile_Renderer.
+  e) QualitySettings.maximumLODLevel = 1 (skip LOD0).
+
+Out of scope: any fix, any tier code, any scene or importer edit that gets committed,
+Vegetation.shader, Spruce conversion. If Hole 02 shows invisible tree collisions
+(plan §7), note it — do not fix it here.
+
+When done: write Docs/Reports/perf_baseline_<date>.md (numbers, Frame Debugger event
+list attached, screenshots), list which of plan §0 items #1–#5 were CONFIRMED / REFUTED
+with the evidence, update Docs/AI_CONTEXT.md, and update the TellCode pointer.
+```
+
+
+- **`content_panels_gaps`** (filed 2026-08-25, Architect via Cowork) — **SPEC_READY, kickoff
+  pasteable.** Closes the four gaps `content_admin_panels` reported instead of working around
+  (panels are DONE + deployed, Worker `3361ddfe-8132-4596-b306-2d5f89d33064`, 14/15 PASS).
+  ⚠️ **The escalated Clubs-rarity FAIL is real but its stated cause is NOT** — Architect checked
+  prod: all **799/799** club rows carry `rarity` in `data` (`data->>rarity=eq.Common` → 133;
+  distribution 133/133/133/133/134/133). `Clubs.csv` has had a `rarity` column since the roster
+  shipped. What misled it: the GENERATED ids also encode rarity (`club_awedge_bogeyb_common`)
+  while the 7 hand-authored ids do not — true of the ids, irrelevant to the facet, which should
+  read `data`. So rarity is the SAME 3-line filter as brand/type, not a special case, and the
+  coverage caveat comes OUT of the UI once all three are complete queries.
+  The other three: (a) **version history must read `content_versions`, not the audit log** — the
+  audit log caps at 200 actions and never saw the SQL-seeded v1, so rollback (the §7.3 safety rail)
+  silently loses its tail; needs a `versions` route and v1 must be selectable. (b) **`shop_catalog`
+  scheduling columns were specced in `CONTENT_PIPELINE_PLAN.md` §11.2 and never built — an
+  ARCHITECT gap**; add `startAt/endAt/saleStartAt/saleEndAt` empty on all 5 rows, fail-closed
+  parsing like `notices.py`. (c) **art thumbnails are NOT a gap** — sprite names are what the game
+  resolves, the monogram tile is right, and a URL column would pre-empt §10.2. Explicitly a no-op.
+  Spec: `Docs/Specs/Active/content_panels_gaps/SPEC.md`.
+
+### Kickoff · content_panels_gaps
+
+```
+Read Docs/Specs/Active/content_panels_gaps/SPEC.md and implement it.
+
+Context:
+- These are the four things you reported from content_admin_panels rather than
+  working around. Reporting them was right. Three are real; one is a no-op.
+- §1 Clubs rarity: your FAIL grade was correct, the stated cause was not. All
+  799/799 club rows carry rarity in `data` (verified on prod:
+  data->>rarity=eq.Common returns 133). The generated ids ALSO encode rarity,
+  which is what misled it — the facet should read `data`, not the id. Implement
+  rarity identically to brand and type, and REMOVE the per-facet coverage
+  caveat from the UI once all three are complete server queries.
+- §2 is the consequential one: version history currently comes from the audit
+  log, which caps at 200 actions and never saw the SQL-seeded v1. content_versions
+  already holds every snapshot and nothing reads it. Rollback is the §7.3 safety
+  rail — a target list that loses its tail is a rail that stops reaching. v1 must
+  be selectable.
+- §3 shop scheduling columns were specced in CONTENT_PIPELINE_PLAN.md §11.2 and
+  never built — my gap, not yours. Add them EMPTY on all 5 rows so the round-trip
+  stays clean, and parse fail-closed like routers/notices.py _parse.
+- §4 art thumbnails: deliberately DO NOTHING. Sprite names are what the game
+  resolves; a URL column would pre-empt §10.2.
+- Out of scope: art URLs / remote art, any Unity or Assets/Scripts change (the
+  only Assets/ edit is four empty CSV columns), player inventory, Addressables.
+
+When done: list changed files with a 1-line summary each, run the acceptance
+tests in the spec, flag which need manual on-device verification, update
+STATUS.md + IMPLEMENTER_REPORT.md in the spec folder, and update
+Docs/AI_CONTEXT.md.
+```
+
+- **`content_admin_panels`** (filed 2026-08-25, Architect via Cowork) — **SPEC_READY, kickoff
+  pasteable. This is where admin-managed content becomes VISIBLE** — everything shipped so far is
+  API-only, editable by curl and nothing else. Five panels (Clubs / Characters / Items+Bags+Balls
+  as tabs / Texts / Shop) plus ONE shared publish drawer: diff preview → confirm → publish, version
+  history with rollback, per-catalog kill switch. **Adds no server logic** — all six routes exist
+  and are live (`/api/content`, `[catalog]/rows|diff|publish|rollback|enabled`, every one
+  `checkAdmin()` + `writeAudit()`). If a panel needs something the routes cannot serve, that is a
+  finding to REPORT, not a licence to add an endpoint. Live counts: clubs 799 · texts 501 ·
+  characters 12 · bags 10 · shop 5 · items 3 · balls 2 — **clubs needs server-side pagination and
+  filtering, not a `<table>`**. Shop specifics in `CONTENT_PIPELINE_PLAN.md` §11: `refId` typeahead
+  against the live catalog (makes a dangling ref impossible rather than merely rejected), resolved
+  preview with name/rarity/thumbnail, and a printed notice that **prices are NOT server-enforced**
+  (`PointsSpendGate` still debits client-side). Rollback UI must say it moves FORWARD. EN+JA on
+  every string (`DictKey` makes a missing key a type error); never name a row-map param `t`.
+  Spec: `Docs/Specs/Active/content_admin_panels/SPEC.md`. Predecessors `content_catalog` and
+  `content_cursor_per_catalog` are both DONE and deployed.
+
+### Kickoff · content_admin_panels
+
+```
+Read Docs/Specs/Active/content_admin_panels/SPEC.md and implement it.
+
+Context:
+- The content backend is DONE and live. This task adds NO server logic: all six
+  route handlers already exist, are deployed and are auth-gated. Build the UI on
+  top of them. If a panel needs something they cannot serve, REPORT it — do not
+  add an endpoint.
+- Five panels + ONE shared publish drawer (diff preview -> confirm -> publish,
+  version history with rollback, per-catalog kill switch). Follow the Tournaments
+  panel; ADMIN_DASHBOARD_OPS.md §3.1 calls it the most complete.
+- Clubs is 799 rows: server-side pagination and filtering, never a full table.
+- Read ADMIN_DASHBOARD_OPS.md §3.4 and §4 BEFORE touching the dashboard. The
+  ones that have already cost time: never `next build` against a running
+  `next dev` (shared .next/, every chunk 404s, server log stays clean);
+  NODE_ENV=development for both `npm run dev` and `npm install --include=dev`;
+  every new string needs BOTH en and ja in lib/i18n.ts; never name a row-map
+  parameter `t` (it shadows the translator and has bitten that file twice).
+- Shop panel: refId typeahead against the live catalog, resolved preview
+  (name/rarity/thumbnail), and PRINT ON THE PANEL that prices are not
+  server-enforced — purchases still debit RP client-side via PointsSpendGate.
+- Rollback moves FORWARD (republishes an old snapshot as a higher version). Say
+  so in the UI or an operator will misread the version numbers.
+- Out of scope: new API routes or schema, any Assets/ or Unity change, player
+  inventory, Addressables, art-URL columns, LevelUpCosts.
+
+When done: list changed files with a 1-line summary each, run the acceptance
+tests in the spec, flag which need manual on-device verification, update
+STATUS.md + IMPLEMENTER_REPORT.md in the spec folder, and update
+Docs/AI_CONTEXT.md.
+```
+
+- **`content_cursor_per_catalog`** (filed 2026-08-25, Architect via Cowork) — **SPEC_READY, kickoff
+  pasteable. Must land BEFORE the Phase-1 Unity overlay spec** — once a build ships with a scalar
+  cursor this is a migration, not an edit. Phase 0 (`content_catalog`) is otherwise DONE: A2 seeded
+  1,332 rows, A3 round-trip clean, B deployed (`/api/v1/content` live; `/health` `/notices`
+  `/banners` `/tournaments/golfin` all still 200), C exporter + `content_version.txt`, D six
+  dashboard route handlers with `checkAdmin()` + `writeAudit()`. **Code's D-2 call was right and my
+  spec was wrong**: §B1 said top-level `version = max(published_version)`, which both replays
+  610 KB every boot AND silently drops a catalog that publishes while sitting below the max. Code
+  shipped `min`, which is safe — but `min` is pinned by whichever catalog changes least, so every
+  row past v1 re-sends forever and the delta degenerates to a full replay. (Its "164 bytes"
+  measurement is real but only because the v2–v9 publishes were validation tests that changed no
+  rows — the `IS DISTINCT FROM` guard left everything at v1. The first real edit starts the
+  ratchet.) **A single scalar cursor cannot describe seven independently-versioned catalogs.**
+  Fix: per-catalog `since=clubs:1,texts:9`, delete the top-level `version`, keep `latest_version`
+  as informational-only. `content_version.txt` is already per-catalog, so the plumbing exists.
+  Also folded in: ~~a live texts drift~~ — **CORRECTED 2026-08-25: there was no drift.** The
+  Architect counted a mid-file `#` comment as a data row (`csv.DictReader` does not skip comments;
+  the shipping `LocalizationTextImporter` does). 501 = 501, identical id sets. The `--check` drift
+  guard was built anyway and gates on **id sets, not counts** — two files can hold 501 rows each
+  and disagree about which 501; the `shop_club_pwedge_royal`
+  600/600 data fix; and widening the STATUS hook's `BACKEND_TASK_RE` (it matches "No `Assets/`
+  changes", the spec said "edits" — one word forced four Figma/screenshot gates onto a backend
+  task). **Code left those four gates failing rather than fabricating evidence — that was the right
+  call and the spec says so.**
+  **Phase 0's last open item is CLOSED**: the dashboard had never been redeployed (`.open-next`
+  from 08-19 vs handlers from 08-25, so `/api/content` was a live 404 while `/api/audit` was 200
+  on the same cookie — not an auth problem). Architect deployed 2026-08-25, Version ID
+  `5f6548cd-c93b-4a19-a86f-ef93e93cdc72`; root now 302s to cloudflareaccess and `/api/content`
+  returns 200 with a real admin session, `"mock": false`. **Skip §8 of the follow-up spec.**
+  Spec: `Docs/Specs/Active/content_cursor_per_catalog/SPEC.md`.
+
+### Kickoff · content_cursor_per_catalog
+
+```
+Read Docs/Specs/Active/content_cursor_per_catalog/SPEC.md and implement it.
+
+Context:
+- Follow-up to content_catalog (Phase 0, DONE and deployed). This must land
+  BEFORE the Phase 1 Unity overlay spec — after a build ships with a scalar
+  cursor it becomes a migration instead of an edit.
+- The core change is small: `since` becomes per-catalog
+  (since=clubs:1,texts:9), the top-level `version` field is DELETED, and
+  `latest_version` stays as informational-only. Each catalog already returns its
+  own version, and Tools/content/export_content.py already writes
+  content_version.txt as one <catalog>=<version> line per catalog — the plumbing
+  exists, only the endpoint and cursor are scalar.
+- Your D-2 analysis was correct and my spec was wrong. Do not re-litigate min vs
+  max: both are wrong, per-catalog is the answer. §Background explains why min
+  degrades even though your 164-byte measurement was accurate.
+- §8 (deploy the dashboard) is ALREADY DONE — the Architect deployed it
+  2026-08-25, Version ID 5f6548cd-c93b-4a19-a86f-ef93e93cdc72. Verified: root
+  302 to cloudflareaccess, /api/content 200 with a real admin session,
+  "mock": false, all 7 catalogs, dirtyCount 0. Phase 0 is fully closed. Skip §8.
+- Also in scope, all small: fix the live texts drift (catalog 501 rows vs CSV
+  502) and add a drift check to `--check`; blank shop_club_pwedge_royal's
+  saleRpCost and restore the strict rule (§6 — Cesar delegated the call, it is
+  recorded in the spec, do not re-ask); widen BACKEND_TASK_RE and add an explicit
+  SPEC_KIND: backend declaration so prose drift stops breaking the hook.
+- You were RIGHT to leave the four inapplicable STATUS gates failing rather than
+  fabricate a screenshot. Keep that posture. Fix the hook, not the evidence.
+- Out of scope: ContentService / RemoteContentSource / any *DatabaseCSV.cs edit
+  (all Phase 1), admin panels, player inventory, Addressables, art URLs.
+
+When done: list changed files with a 1-line summary each, run the acceptance
+tests in the spec, flag which need manual on-device verification, update
+STATUS.md + IMPLEMENTER_REPORT.md in the spec folder, and update
+Docs/AI_CONTEXT.md.
+```
+
 - **`bridge_transplant`** (filed 2026-08-25, Architect via Cowork) — **SPEC_READY, kickoff pasteable.**
   **SPLIT 2026-08-25 (Cesar: "Split, bridges first, trees later"). This spec is BRIDGES ONLY,
   5 holes.** The scenery half is now `Docs/Specs/Queued/scenery_transplant/` and the wind gap
