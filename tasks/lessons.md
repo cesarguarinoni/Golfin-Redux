@@ -2554,3 +2554,49 @@ and produced a video — just not of the thing being demonstrated:
   did not quietly become evidence.
 - Tightening a probe can break it: adding `btn.interactable` to a check that previously used
   `activeInHierarchy` alone stalled a whole take. Change one condition at a time.
+
+---
+
+## Lesson BF — a retraction can be right about the claim and wrong about the conclusion
+
+**Session:** 2026-08-25, sky rotation demo (`bea290de8` → `91f5cd983`).
+
+I reported "Next Hole reloads Hole 1, not Hole 2" as a product bug. Investigating, I found the
+recorder's synthetic `MarkHoleComplete` had fed `CurrentHoleNumber = 0`, so `nextHole = 0+1 = 1`
+and the real code had loaded hole 1 **correctly**. I retracted it — and wrote in AI_CONTEXT
+"Nothing to fix in the Next Hole flow."
+
+The claim was right. The conclusion was wrong. Once I fixed the harness so hole 2 genuinely
+loaded, a real bug surfaced immediately: the loader loads scenes **additively and never unloads
+the previous ones**, so hole 2 stacked on hole 1 and `PhysicsLabController` — whose scan takes the
+first `Hole_*_Geo` it finds — kept binding to the stale hole and put the player 11.3 m underground.
+The harness fault had been *masking* a genuine one.
+
+**Rules:**
+- Explaining a symptom is not the same as clearing the subsystem. Retract the specific claim; do
+  not upgrade that into "nothing here is broken" unless the corrected path has actually been run.
+- When you fix a test harness, **re-run and re-look**. The first correct run is the first real
+  observation of that code path, not a formality.
+- Phrase retractions narrowly: "this symptom was mine" beats "nothing to fix here".
+
+## Lesson BG — review the frame's content at readable size, not the contact sheet
+
+**Session:** 2026-08-25, same.
+
+I verified the demo video from contact sheets of ~165–250px-wide thumbnails, confirmed the act
+boundaries were where I wanted, and shipped it. Cesar's reply: *"Video starts underground on
+second hole."* A third of the clip showed the camera embedded in terrain. At thumbnail size that
+region reads as ordinary dark foliage; at full size it is unmistakable.
+
+I have the matching memory already (`feedback_read_whole_frame_not_just_your_feature`) and still
+used the sheet as the *final* check rather than as an index.
+
+**Rules:**
+- A contact sheet is for **locating** things, never for **judging** them. Judge at a size where
+  the specific claim would visibly fail.
+- Say what the frame must contain before looking — "tee view, ball on ground, horizon below the
+  HUD" — then check those. "Gameplay is on screen" is not an acceptance criterion.
+- The HUD is free ground truth: it said `HOLE 2 / PAR 4 / 374 yds`. Reading it would have exposed
+  the mismatch instantly on the earlier take, where it still read hole 1's par and yardage.
+- Cheap numeric backstop for this class: sample terrain height at the camera XZ and compare to
+  camera Y. It took one script and gave "11.32 m underground" — far stronger than any look.
