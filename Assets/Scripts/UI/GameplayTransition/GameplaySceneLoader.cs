@@ -227,5 +227,43 @@ namespace Golfin.UI.GameplayTransition
             // Restore bottom nav for the shell.
             if (persistentUI != null) persistentUI.SetBottomNavVisible(true);
         }
+
+        /// <summary>
+        /// Leave gameplay for a shell screen with nothing ugly on show in between.
+        ///
+        /// <see cref="UnloadGameplay"/> alone is not enough: unloading Hole_NN_Geo and
+        /// LabScaffold takes several frames, and the moment LabScaffold goes there is
+        /// nothing left to render — the player watches the bare shell scene (empty camera
+        /// clear, no UI) until the target screen finally appears. Worse, ScreenManager's
+        /// own fade then starts FROM that empty frame, so it is on screen for the unload
+        /// plus another fade-out.
+        ///
+        /// So: curtain down over the live hole, tear down and swap behind it, curtain up
+        /// on the target screen. <paramref name="onTornDown"/> runs while the screen is
+        /// still black, for the session/context resets the target screen expects.
+        /// </summary>
+        public IEnumerator ExitToScreen(ScreenId target, System.Action onTornDown = null)
+        {
+            var fade = FadeController.Instance;
+            if (fade != null) yield return fade.CurtainDown();
+
+            yield return UnloadGameplay();
+
+            onTornDown?.Invoke();
+
+            if (ScreenManager.Instance != null)
+            {
+                // instant: the curtain already owns the black. A non-instant ShowScreen
+                // would run a second fade system on top of it, re-blackening a screen that
+                // is about to be revealed.
+                ScreenManager.Instance.ShowScreen(target, instant: true);
+            }
+            else
+            {
+                Debug.LogWarning($"[GameplaySceneLoader] ScreenManager.Instance is null - cannot route to {target}.");
+            }
+
+            if (fade != null) yield return fade.CurtainUp();
+        }
     }
 }

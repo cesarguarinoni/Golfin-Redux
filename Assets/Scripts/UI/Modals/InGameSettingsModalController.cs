@@ -365,26 +365,28 @@ namespace Golfin.UI.Modals
         }
 
         /// <summary>
-        /// Mirrors VersusResultModalController.NewMatchRoutine(): a frame gap so Hide() lands,
-        /// then the sanctioned gameplay teardown, then the state reset a clean re-entry needs.
-        /// Static, because `this` is destroyed by the unload halfway through.
+        /// A frame gap so Hide() lands, then the sanctioned gameplay exit — teardown and the
+        /// swap to Home both happen behind GameplaySceneLoader's black curtain, because the
+        /// unload takes several frames and the shell scene behind it is empty (bare camera
+        /// clear, no UI) the whole time. Static, because `this` is destroyed by the unload
+        /// halfway through.
         /// </summary>
         private static IEnumerator QuitRoutine(GameplaySceneLoader loader)
         {
-            // Small frame gap so Hide() completes before unload.
+            // Small frame gap so Hide() completes before the curtain drops.
             yield return null;
 
-            yield return loader.UnloadGameplay();
+            yield return loader.ExitToScreen(ScreenId.Home, () =>
+            {
+                // Full session clear (the Stage D MENU/back-to-Home contract): clears the hole
+                // pointer, IsVersus / IsTournament and the tournament round context, so the next
+                // hole started from Home begins clean. Runs while the screen is still black, so
+                // Home is only ever revealed already-reset.
+                GameSession.ResetSession();
+                HoleContext.Reset();
+            });
+
             Debug.Log("[InGameSettings] Gameplay unloaded — round discarded, no rewards granted.");
-
-            // Full session clear (the Stage D MENU/back-to-Home contract): clears the hole
-            // pointer, IsVersus / IsTournament and the tournament round context, so the next
-            // hole started from Home begins clean.
-            GameSession.ResetSession();
-            HoleContext.Reset();
-
-            if (ScreenManager.Instance != null) ScreenManager.Instance.ShowScreen(ScreenId.Home);
-            else Debug.LogWarning("[InGameSettings] ScreenManager.Instance is null — cannot route Home.");
         }
 
         // ── Editor helper ─────────────────────────────────────────────────────
