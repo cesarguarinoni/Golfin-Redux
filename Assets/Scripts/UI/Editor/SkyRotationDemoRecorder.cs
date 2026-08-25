@@ -388,9 +388,10 @@ namespace Golfin.EditorTools
             LocalizationManager.SetLanguage(Language.English);
 
             // Seeds picked so the two runs are obviously different even though the sky is
-            // only ~15% of the player's frame: seed 3 -> Evening (warm), seed 1 -> Noon (blue).
+            // only ~15% of the player's frame. Seed 23 -> Classic, the original Sky-2 look now
+            // back in the rotation; seed 5 -> Evening, the strongest contrast to its blue.
             SkyRandomizer.EndRun();
-            SkyRandomizer.SetRoundSeed(3);
+            SkyRandomizer.SetRoundSeed(23);
 
             yield return NavigateToHome();
             yield return new WaitForSecondsRealtime(1f);
@@ -463,7 +464,7 @@ namespace Golfin.EditorTools
             }
             yield return new WaitForSecondsRealtime(2f);
 
-            SkyRandomizer.SetRoundSeed(1);              // a different match -> Noon
+            SkyRandomizer.SetRoundSeed(5);              // a different match -> Evening
             // Route through Home first. Going straight back to HoleSelection left the cards
             // un-rebuilt and their action buttons inactive, which forced the fallback path.
             yield return ShowScreenNamed("Home");
