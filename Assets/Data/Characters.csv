@@ -1,13 +1,13 @@
-id,name,lastName,rarity,baseStrength,baseClubControl,baseRecovery,baseStamina,portraitSprite,portraitFull,startLevel,maxLevel,bio
-char_james,James,Cartwright,Common,6,7,6,6,James,BigRosterJames,10,39,A dependable player just starting out on the tour.
-char_olivia,Olivia,Guarinoni,Uncommon,7,8,6,7,Olivia,BigRosterOlivia,40,79,A rising talent with solid fundamentals.
-char_richard,Richard,Brenson,Mythic,11,10,10,11,Richard,BigRosterRichard,120,159,A seasoned pro with decades of experience.
-char_elizabeth,Elizabeth,Blackwood,Rare,8,10,7,9,Elizabeth,BigRosterElizabeth,80,119,"Elizabeth Blackwood, 46, a maverick from Cornwall, earned her Ladies European Tour spot through precision. With three decades on coastal courses her impeccable control makes her the top mentor for young talents."
-char_shae,Shae,O'Connell,Legendary,12,8,15,10,Shae,BigRosterShae,160,199,"Shae O'Connell, 23, from County Clare, earned her Ladies European Tour card through finesse and course smarts. Decades on windswept links make her an ideal mentor for players refining control."
-char_camila,Camila,Perez,Rare,9,9,8,8,Camila,BigRosterCamila,80,119,A versatile player known for consistency.
-char_guillermo,Guillermo,Abravanel,Mythic,10,11,9,12,Guillermo,BigRosterGuillermo,120,159,A powerful hitter with natural talent.
-char_ean,Ean,McCormick,Uncommon,7,7,7,7,Ean,BigRosterEan,40,79,A balanced player with room to grow.
-char_freda,Freda,Faarlund,Supreme,15,12,18,14,Freda,BigRosterFreda,200,239,A legendary figure on the tour circuit.
-char_johan,Johan,Christofferson,Rare,8,10,7,10,Johan,BigRosterJohan,80,119,Known for his precise short game.
-char_mike,Mike,Millar,Common,6,6,7,7,Mike,BigRosterMike,10,39,An enthusiastic newcomer to competitive golf.
-char_roshana,Roshana,Smith,Legendary,13,9,14,11,Roshana,BigRosterRoshana,160,199,A fierce competitor with an unshakeable mindset.
+id,name,lastName,rarity,baseStrength,baseClubControl,baseRecovery,baseStamina,portraitSprite,portraitFull,startLevel,maxLevel,bio,starterCandidate
+char_james,James,Cartwright,Common,7,6,5,7,James,BigRosterJames,10,39,"Out of the amateur ranks, Cartwright arrives with driving distance that already turns heads at this level. The short game is still maturing, but scouts agree the foundations are tour-calibre.",1
+char_olivia,Olivia,Guarinoni,Common,6,7,6,6,Olivia,BigRosterOlivia,10,39,"A product of long hours on the practice range, Guarinoni brings a compact, repeatable swing and exceptional tempo. Modest off the tee, but her ball-striking consistency is well beyond her years.",1
+char_richard,Richard,Brenson,Mythic,13,9,9,11,Richard,BigRosterRichard,120,159,Twenty seasons at the top level and the power numbers have barely declined. Brenson compensates for an aging short game with course knowledge and shot selection few active players can match.,0
+char_elizabeth,Elizabeth,Blackwood,Rare,8,11,6,9,Elizabeth,BigRosterElizabeth,80,119,"Schooled on championship links, Blackwood plays a tactician's game. Elite club control, disciplined course management, and a willingness to sacrifice distance for position define her rounds.",0
+char_shae,Shae,O'Connell,Legendary,11,8,16,10,Shae,BigRosterShae,160,199,"O'Connell's recovery statistics are simply in a category of their own. From deep rough or broken ground, she routinely salvages pars that keep rounds alive — trouble is where she does her best work.",0
+char_camila,Camila,Perez,Rare,11,8,7,8,Camila,BigRosterCamila,80,119,Perez plays the most aggressive tee-to-green game in her bracket. Exceptional carry distance and fearless target lines produce low rounds in bunches when the execution holds up.,0
+char_guillermo,Guillermo,Abravanel,Mythic,9,13,8,12,Guillermo,BigRosterGuillermo,120,159,"A gallery favourite, Abravanel attempts — and lands — shot shapes most professionals decline. Behind the showmanship sits an elite short game and touch regarded among the finest on tour.",0
+char_ean,Ean,McCormick,Uncommon,7,7,7,7,Ean,BigRosterEan,40,79,Analysts struggle to name a weakness in McCormick's game — and that is precisely the point. Even numbers across the board make him the most complete development platform in his class.,0
+char_freda,Freda,Faarlund,Supreme,16,12,17,14,Freda,BigRosterFreda,200,239,"The world number one by a distance. Faarlund's combination of power, touch and stamina presents no exploitable weakness, and her tournament record reads less like results than inevitability.",0
+char_johan,Johan,Christofferson,Rare,7,10,7,11,Johan,BigRosterJohan,80,119,"Developed on wind-swept northern courses, Christofferson pairs precise iron play with remarkable endurance. Adverse conditions barely move his scoring average — a genuine bad-weather specialist.",0
+char_mike,Mike,Millar,Common,5,6,8,7,Mike,BigRosterMike,10,39,"A former caddie who learned the game from inside the ropes, Millar is renowned for his conditioning and composure. Rarely spectacular, never rattled — and statistically strongest late in the round.",0
+char_roshana,Roshana,Smith,Legendary,14,9,13,11,Roshana,BigRosterRoshana,160,199,"Smith combines top-tier driving power with the durability to grind through brutal conditions. When tournaments turn into wars of attrition, her name is invariably on the final leaderboard.",0

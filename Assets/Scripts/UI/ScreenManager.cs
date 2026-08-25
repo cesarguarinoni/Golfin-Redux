@@ -39,7 +39,9 @@ namespace GolfinRedux.UI
         SignUp,
         EmailConfirmation,
         // auth_recovery_flow — set-new-password screen, reached only from a type=recovery deep link.
-        ResetPassword
+        ResetPassword,
+        // starting_character_selection — first-run character picker; shares RosterScreen in starter-mode
+        StartingCharacterSelection
     }
 
     /// <summary>
@@ -207,9 +209,13 @@ namespace GolfinRedux.UI
             
             if (_rosterScreen != null)
             {
-                bool shouldBeActive = (screenId == ScreenId.Roster);
+                bool shouldBeActive = (screenId == ScreenId.Roster || screenId == ScreenId.StartingCharacterSelection);
                 Debug.Log($"[ScreenManager] RosterScreen: {(shouldBeActive ? "ACTIVATING" : "deactivating")}");
                 _rosterScreen.SetActive(shouldBeActive);
+                // Notify RosterScreenController about which mode to use
+                var rosterCtrl = _rosterScreen.GetComponentInChildren<Golfin.Roster.RosterScreenController>(includeInactive: true);
+                if (rosterCtrl != null)
+                    rosterCtrl.SetStarterMode(screenId == ScreenId.StartingCharacterSelection);
             }
             else
             {
@@ -313,6 +319,9 @@ namespace GolfinRedux.UI
                                 || screenId == ScreenId.SignUp
                                 || screenId == ScreenId.EmailConfirmation
                                 || screenId == ScreenId.ResetPassword;
+            // SPEC decision 6: starter selection shows top bar (RP + gear) but hides bottom nav.
+            bool isStarterScreen = screenId == ScreenId.StartingCharacterSelection;
+
             if (Golfin.UI.PersistentUIManager.Instance != null)
             {
                 if (isAccountScreen)
@@ -324,6 +333,11 @@ namespace GolfinRedux.UI
                         ? LocalizationManager.Get("NAV_SIGN_UP")
                         : LocalizationManager.Get("NAV_GOLFIN_ACCOUNT");
                     Golfin.UI.PersistentUIManager.Instance.ShowAccountTitleBar(accountTitle);
+                }
+                else if (isStarterScreen)
+                {
+                    // Top bar visible (RP balance + gear); bottom nav hidden (replaced by instruction block).
+                    Golfin.UI.PersistentUIManager.Instance.ShowTopBarOnly();
                 }
                 else if (showBars)
                 {

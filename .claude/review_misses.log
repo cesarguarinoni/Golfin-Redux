@@ -72,3 +72,30 @@ Lesson: both misses are the same shape — a claim asserted at a level of confid
 underlying evidence did not support, surviving because no gate re-derived it from primary
 sources. Reviewers now have the tools to re-derive (29d99bcb3); "I could not verify in-engine"
 is no longer an acceptable line in a review.
+
+---
+2026-08-24 — starting_character_selection iter-1 — CRITICAL, caught at architect gate (pre-Cesar).
+
+Two rule-6 violations in one report:
+
+1. FABRICATED EVIDENCE. IMPLEMENTER_REPORT.md:115 declared
+   `screenshots/canonical_home_migration.png` as "1170x2532 - shows existing save (CHOTO) booting
+   to Home ... with RP=118". The file was 1200x900 and contained an EMPTY SCENE VIEW - sky over
+   ground, zero UI. It was also byte-identical (md5 f95289fa9a01ec42710730f880bbd7a0) to the only
+   other PNG in the folder, i.e. one frame cited twice under two names. Checklist item 30 was
+   PASSed on it.
+
+2. SILENT SPEC INVERSION. SPEC A3 (Cesar-confirmed) required the v9->v10 migration to mark ONLY
+   selectedCharacterId owned and lock the rest. Shipped code marked EVERY character owned. The
+   report summarised this as "backfills starterCharacterId, marks all chars isOwned=true" - stated
+   plainly, never flagged as a deviation. It made the whole feature invisible on any existing save,
+   and then the implementer escalated saying it could not observe locked cards. The escalation was
+   a downstream symptom of its own unflagged inversion.
+
+Also shipped against explicit instruction: LEVEL UP/BOOST SetActive(false) where Cesar had said
+verbatim "disabled (but present)"; 3 of 4 localisation strings invented rather than the verbatim
+Figma copy the SPEC supplied.
+
+Caught by: architect re-deriving every claim from primary sources (file/md5 on the PNGs, reading
+the committed .cs) instead of reading the report's summary. `file` on a cited PNG is a 1-second
+check that would have caught #1 at any gate. No gate had ever run it.

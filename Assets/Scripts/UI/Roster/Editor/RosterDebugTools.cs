@@ -4,6 +4,7 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using System.Collections.Generic;
 using Golfin.Roster;
+using Golfin.Save;
 
 namespace Golfin.Roster.Editor
 {
@@ -70,6 +71,65 @@ namespace Golfin.Roster.Editor
 
             RewardPointsManager.Instance.EarnPointsLocalOnly(100000);
             Debug.Log("[Roster Debug] Granted 100,000 R (local only).");
+        }
+
+        /// <summary>
+        /// Resets the in-memory starter-choice state without touching PlayerPrefs or auth.
+        /// Mutates SaveDataHost.Instance.Data directly: clears starterCharacterId,
+        /// selectedCharacterId, and all PersistedCharacter.isOwned flags, then flushes.
+        /// Also clears the runtime PlayerCharacterData.isOwned flags in CharacterManager.
+        ///
+        /// After calling this, CharacterManager.NeedsStarter returns true in-memory.
+        /// Exit and re-enter play mode to test the full fresh-save boot flow (StartingCharacterSelection).
+        ///
+        /// Do NOT use this as a substitute for "Reset Player Progress" — it does NOT touch
+        /// PlayerPrefs, does NOT delete auth session data.
+        /// </summary>
+        [MenuItem("GOLFIN/Debug/Reset Starter Choice", priority = 303)]
+        public static void ResetStarterChoice()
+        {
+            if (!Application.isPlaying)
+            {
+                Debug.LogError("[ResetStarterChoice] Must be in play mode. Enter Play Mode first, then call this menu item.");
+                return;
+            }
+
+            if (SaveDataHost.Instance == null)
+            {
+                Debug.LogError("[ResetStarterChoice] SaveDataHost.Instance is null — cannot reset.");
+                return;
+            }
+
+            var data = SaveDataHost.Instance.Data;
+            string previousStarter = data.starterCharacterId;
+
+            // 1. Clear starter and selected in the persisted model.
+            data.starterCharacterId  = "";
+            data.selectedCharacterId = "";
+
+            // 2. Clear isOwned on all PersistedCharacter entries in SaveData.
+            foreach (var c in data.ownedCharacters)
+                c.isOwned = false;
+
+            // 3. Mirror the change into CharacterManager's live runtime model.
+            if (CharacterManager.Instance != null)
+            {
+                var all = CharacterManager.Instance.GetAllCatalogCharacters();
+                foreach (var pd in all)
+                    pd.isOwned = false;
+            }
+            else
+            {
+                Debug.LogWarning("[ResetStarterChoice] CharacterManager.Instance is null — runtime data not cleared.");
+            }
+
+            // 4. Flush via the host's own debounced write (does NOT touch PlayerPrefs or auth).
+            SaveDataHost.Instance.MarkDirty();
+
+            Debug.Log($"[ResetStarterChoice] Starter choice reset. Previous starter was '{previousStarter}'. " +
+                      "CharacterManager.NeedsStarter is now true in-memory. " +
+                      "Exit and re-enter play mode to test the full fresh-save boot path (StartingCharacterSelection). " +
+                      "Auth session (PlayerPrefs) was NOT touched.");
         }
 
         [MenuItem("GOLFIN/Debug/Reset Player Progress", priority = 302)]

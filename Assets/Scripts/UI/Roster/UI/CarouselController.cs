@@ -117,25 +117,26 @@ namespace Golfin.Roster
                 Debug.LogWarning("[CarouselController] CharacterManager not ready yet");
                 return;
             }
-            var ownedCharacters = CharacterManager.Instance.GetAllOwnedCharacters();
-            
+            // Normal Roster mode shows all catalog characters (owned show active, locked show dimmed).
+            var ownedCharacters = CharacterManager.Instance.GetAllCatalogCharacters();
+
             if (ownedCharacters.Count == 0)
             {
-                Debug.LogWarning("[CarouselController] No owned characters found!");
+                Debug.LogWarning("[CarouselController] No catalog characters found!");
                 return;
             }
-            
+
             // Check if prefab is assigned
             if (characterCardPrefab == null)
             {
                 Debug.LogWarning("[CarouselController] characterCardPrefab not assigned - skipping card creation (assign in Phase 2b)");
                 Debug.Log($"[CarouselController] {ownedCharacters.Count} characters would be created once prefab is assigned");
-                
+
                 // For Phase 2a testing: Create placeholder cards without the prefab
                 CreatePlaceholderCards(ownedCharacters);
                 return;
             }
-            
+
             // Create card for each character using prefab
             foreach (var playerChar in ownedCharacters)
             {
@@ -149,11 +150,17 @@ namespace Golfin.Roster
                 var card = cardGO.GetComponent<CharacterThumbnailCard>();
                 if (card != null)
                 {
+                    bool cardLocked = !playerChar.isOwned;
                     card.Initialize(playerChar.characterId);
-                    card.OnClicked += () => SelectCharacter(playerChar.characterId);
+                    card.SetLocked(cardLocked);
+                    // F1 (iter-7): Wire OnClicked for ALL cards — locked cards are browsable.
+                    // Tapping a locked card drives the detail panel into the locked treatment
+                    // (dim + acquire overlay + no SELECT button) without making it the active char.
+                    string capturedId = playerChar.characterId;
+                    card.OnClicked += () => SelectCharacter(capturedId);
                     cards.Add(card);
 
-                    Debug.Log($"[CarouselController] Created card for {playerChar.characterId}");
+                    Debug.Log($"[CarouselController] Created card for {playerChar.characterId} locked={cardLocked}");
                 }
             }
             
@@ -372,5 +379,86 @@ namespace Golfin.Roster
         /// Get currently selected character ID
         /// </summary>
         public string GetSelectedCharacterId() => selectedCharacterId;
+
+        // ── Starter mode ──────────────────────────────────────────────────────
+
+        private bool _starterMode = false;
+
+        /// <summary>
+        /// Switch carousel into starter-selection mode.
+        /// Shows ALL catalog characters; non-starterCandidate and non-owned chars appear locked.
+        /// Called by RosterScreenController.SetStarterMode.
+        /// </summary>
+        public void SetStarterMode(bool isStarterMode)
+        {
+            _starterMode = isStarterMode;
+            RepopulateForMode();
+        }
+
+        /// <summary>
+        /// Repopulate cards using the correct source list for the current mode.
+        /// Both modes now use GetAllCatalogCharacters so all characters appear (owned
+        /// show active, locked show dimmed). Starter mode additionally marks candidates.
+        /// </summary>
+        private void RepopulateForMode()
+        {
+            if (CharacterManager.Instance == null) return;
+
+            // Clear existing cards
+            cards.Clear();
+            foreach (Transform child in contentParent)
+                Destroy(child.gameObject);
+
+            // Always show the full catalog so locked chars are visible and dimmed.
+            var source = CharacterManager.Instance.GetAllCatalogCharacters();
+
+            if (source.Count == 0)
+            {
+                Debug.LogWarning("[CarouselController] RepopulateForMode: no characters.");
+                return;
+            }
+
+            if (characterCardPrefab == null)
+            {
+                Debug.LogWarning("[CarouselController] characterCardPrefab not assigned — skipping starter repopulate.");
+                return;
+            }
+
+            foreach (var playerChar in source)
+            {
+                var cardGO = Instantiate(characterCardPrefab, contentParent);
+                var le = cardGO.GetComponent<LayoutElement>() ?? cardGO.AddComponent<LayoutElement>();
+                le.preferredWidth  = 170f;
+                le.preferredHeight = 343f;
+
+                var card = cardGO.GetComponent<CharacterThumbnailCard>();
+                if (card == null) continue;
+
+                bool isOwned = playerChar.isOwned;
+                bool isCandidate = CharacterManager.Instance.IsStarterCandidate(playerChar.characterId);
+
+                // Starter mode: only non-candidates are locked. Normal Roster: non-owned are locked.
+                bool locked = _starterMode ? !isCandidate : !isOwned;
+
+                card.Initialize(playerChar.characterId);
+                card.SetLocked(locked);
+
+                // F1 (iter-7): Wire OnClicked for ALL cards — locked cards are browsable.
+                // Detail panel handles the locked treatment; SELECT button is hidden for locked chars.
+                string capturedId = playerChar.characterId;
+                card.OnClicked += () => SelectCharacter(capturedId);
+
+                cards.Add(card);
+            }
+
+            if (cards.Count > 0)
+                SelectCharacter(cards[0].GetCharacterId());
+
+            // Rebuild pagination for the new card set
+            totalPages = Mathf.CeilToInt((float)cards.Count / cardsPerPage);
+            currentPage = 0;
+            _dots?.Rebuild(totalPages, currentPage);
+            UpdateArrowButtonStates();
+        }
     }
 }

@@ -286,6 +286,19 @@ namespace Golfin.UI
             ShowBottomNav(false);
         }
 
+        /// <summary>
+        /// Show only the Top Bar (with full chrome) but hide the Bottom Nav.
+        /// Used by StartingCharacterSelection: SPEC decision 6 — top bar (RP + gear) visible,
+        /// bottom nav replaced by the instruction block.
+        /// </summary>
+        public void ShowTopBarOnly()
+        {
+            ShowTopBar(true);
+            SetTopBarChromeVisible(true);
+            ShowBottomNav(false);
+            ApplyDemoTopBarTrim();
+        }
+
         private void InitializeButtons()
         {
             // Settings button

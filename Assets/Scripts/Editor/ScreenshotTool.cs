@@ -28,6 +28,27 @@ public static class ScreenshotTool
         AssetDatabase.Refresh();
     }
 
+    [MenuItem("GOLFIN/Screenshot/Capture Full Res")]
+    public static void CaptureFullRes()
+    {
+        if (!Directory.Exists(ScreenshotDir))
+            Directory.CreateDirectory(ScreenshotDir);
+
+        string capturePath = CaptureHelper.SnapGameViewWithLabel("screenshot_fullres");
+        if (string.IsNullOrEmpty(capturePath) || !File.Exists(capturePath))
+        {
+            Debug.LogError("[ScreenshotTool] Full-res capture failed — no file at: " + capturePath);
+            return;
+        }
+
+        string timestamp = System.DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss");
+        string destPath = $"{ScreenshotDir}/screenshot_{timestamp}_fullres.png";
+        File.Copy(capturePath, destPath, overwrite: true);
+
+        EditorApplication.delayCall += () => AssetDatabase.Refresh();
+        Debug.Log($"[ScreenshotTool] Full-res captured to {destPath}");
+    }
+
     [MenuItem("GOLFIN/Screenshot/Capture Named")]
     public static void CaptureNamed()
     {

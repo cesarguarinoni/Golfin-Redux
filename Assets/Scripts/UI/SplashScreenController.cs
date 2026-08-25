@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using Golfin.Auth;
+using Golfin.Roster;
 
 namespace GolfinRedux.UI
 {
@@ -79,8 +80,21 @@ namespace GolfinRedux.UI
         private void RouteAuthenticated()
         {
             Golfin.UI.Account.AccountUiBridge.SyncUsername();
-            var target = AuthService.Instance.Session.HasDisplayName ? ScreenId.Home : ScreenId.CreateUsername;
-            Show(target);
+            if (!AuthService.Instance.Session.HasDisplayName)
+            {
+                Show(ScreenId.CreateUsername);
+                return;
+            }
+            // starting_character_selection: check for interrupted fresh-save before landing on Home.
+            if (CharacterManager.Instance != null && CharacterManager.Instance.NeedsStarter)
+            {
+                Debug.Log("[Splash] NeedsStarter=true → StartingCharacterSelection (interrupted or fresh-save boot).");
+                Show(GolfinRedux.UI.ScreenId.StartingCharacterSelection);
+            }
+            else
+            {
+                Show(ScreenId.Home);
+            }
         }
 
         // K13 (boot_loading_screen_removal): boot goes straight to Home — the Loading screen on

@@ -154,7 +154,8 @@ namespace Golfin.Roster
                     portraitSpriteName = GetField("portraitSprite"),
                     portraitFullSpriteName = GetField("portraitFull"),
                     maxLevel = GetIntField("maxLevel", 199),
-                    bio = GetField("bio")
+                    bio = GetField("bio"),
+                    starterCandidate = GetIntField("starterCandidate", 0) == 1
                 };
 
                 // Find sprites by name
@@ -244,6 +245,8 @@ namespace Golfin.Roster
         public string portraitFullSpriteName = "";
         public Sprite? portraitFullSprite = null;
         public int maxLevel = 199;
+        /// <summary>True if this character can be chosen as the player's starter.</summary>
+        public bool starterCandidate = false;
         public string bio = "";
 
         public Color GetRarityColor() => RarityHelper.GetRarityColor(rarity);
@@ -258,14 +261,58 @@ namespace Golfin.Roster
                 ? null
                 : "CHAR_BIO_" + (characterId.StartsWith("char_") ? characterId.Substring(5) : characterId).ToUpperInvariant();
 
+        /// <summary>Localization key for the character's first name, e.g. "CHAR_NAME_JAMES".</summary>
+        public string? NameLocalizationKey =>
+            string.IsNullOrEmpty(characterId)
+                ? null
+                : "CHAR_NAME_" + (characterId.StartsWith("char_") ? characterId.Substring(5) : characterId).ToUpperInvariant();
+
+        /// <summary>Localization key for the character's last name, e.g. "CHAR_LASTNAME_JAMES".</summary>
+        public string? LastNameLocalizationKey =>
+            string.IsNullOrEmpty(characterId)
+                ? null
+                : "CHAR_LASTNAME_" + (characterId.StartsWith("char_") ? characterId.Substring(5) : characterId).ToUpperInvariant();
+
         /// <summary>
-        /// Get display name formatted as "FIRSTNAME\nLASTNAME" for the detail panel
+        /// Get display name formatted as "FIRSTNAME\nLASTNAME" for the detail panel (unlocalized).
         /// </summary>
         public string GetDisplayName()
         {
             return string.IsNullOrEmpty(characterLastName)
                 ? characterName.ToUpper()
                 : $"{characterName.ToUpper()}\n{characterLastName.ToUpper()}";
+        }
+
+        /// <summary>
+        /// Get localized display name. Falls back to CSV English names when no key is found.
+        /// Format for detail panel (two-line): "FIRSTNAME\nLASTNAME".
+        /// Format for card (single-line): "FIRSTNAME".
+        /// </summary>
+        public string GetLocalizedDisplayName(bool singleLine = false)
+        {
+            string firstName = characterName;
+            string lastName  = characterLastName;
+
+            if (NameLocalizationKey != null)
+            {
+                string loc = LocalizationManager.Get(NameLocalizationKey);
+                // Only use the localized value when the manager returned something different from the key
+                if (!string.IsNullOrEmpty(loc) && loc != NameLocalizationKey)
+                    firstName = loc;
+            }
+            if (!singleLine && LastNameLocalizationKey != null)
+            {
+                string loc = LocalizationManager.Get(LastNameLocalizationKey);
+                if (!string.IsNullOrEmpty(loc) && loc != LastNameLocalizationKey)
+                    lastName = loc;
+            }
+
+            if (singleLine)
+                return firstName.ToUpper();
+
+            return string.IsNullOrEmpty(lastName)
+                ? firstName.ToUpper()
+                : $"{firstName.ToUpper()}\n{lastName.ToUpper()}";
         }
 
         public override string ToString()

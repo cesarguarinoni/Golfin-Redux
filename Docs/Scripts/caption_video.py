@@ -76,6 +76,7 @@ def main():
     ap.add_argument("--wrap", type=int, default=34, help="wrap width in characters")
     ap.add_argument("--fontsize", type=int, default=0, help="0 = derive from height")
     ap.add_argument("--crf", type=int, default=23)
+    ap.add_argument("--bottom", type=int, default=0, help="0 = derive from height (h/9)")
     args = ap.parse_args()
 
     video = os.path.abspath(args.video)
@@ -88,7 +89,7 @@ def main():
     font = pick_font()
     fs = args.fontsize or max(22, h // 52)
     title_fs = max(fs, h // 42)
-    bottom = max(80, h // 9)
+    bottom = args.bottom if args.bottom > 0 else max(80, h // 9)
 
     tmp = tempfile.mkdtemp(prefix="capvid_")
     try:
@@ -110,8 +111,8 @@ def main():
                 f"drawtext=textfile='{esc(cap_file)}'"
                 f":fontfile='{esc(font)}'"
                 f":fontsize={size}:fontcolor=white:line_spacing=8"
-                f":box=1:boxcolor=black@0.62:boxborderw={max(10, size // 3)}"
-                f":x=(w-text_w)/2:y={y}"
+                f":box=1:boxcolor=black@0.85:boxborderw={max(10, size // 3)}"
+                f":x=(w-text_w)/2:y={y}:text_align=C"
                 f":enable='between(t,{float(c['start']):.3f},{float(c['end']):.3f})'"
             )
 

@@ -1,6 +1,7 @@
 // Assets/Scripts/Localization/LocalizationBootstrap.cs
 using UnityEngine;
 
+[DefaultExecutionOrder(-1000)]
 public class LocalizationBootstrap : MonoBehaviour
 {
     [SerializeField] private LocalizationTextTable textTable;

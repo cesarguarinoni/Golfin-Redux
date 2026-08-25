@@ -15,7 +15,7 @@ namespace Golfin.Save
     /// </summary>
     public static class SaveSchemaMigrator
     {
-        public const int CurrentSchemaVersion = 9;
+        public const int CurrentSchemaVersion = 10;
 
         /// <summary>
         /// Apply any needed migrations to bring data from its on-disk schemaVersion
@@ -145,6 +145,27 @@ namespace Golfin.Save
                     data.wedgeBackfillPending = true;
                 data.schemaVersion = 9;
                 Debug.Log($"[SaveSchemaMigrator] Migrated v8 → v9 (wedgeBackfillPending={data.wedgeBackfillPending}).");
+            }
+
+
+            // v9 -> v10: starting_character_selection — add starterCharacterId + isOwned per character.
+            // Per SPEC A3: the save's selectedCharacterId becomes the starter; ONLY that character is
+            // marked owned. Everything else is locked. Existing testers skip the starter screen but see
+            // the lock rule everywhere (they are NOT sent through starter selection again).
+            if (data.schemaVersion < 10)
+            {
+                // Backfill starterCharacterId from the current selectedCharacterId.
+                // An empty selectedCharacterId means no character was ever chosen — leave empty;
+                // NeedsStarter will catch it and prompt selection.
+                if (string.IsNullOrEmpty(data.starterCharacterId) && !string.IsNullOrEmpty(data.selectedCharacterId))
+                    data.starterCharacterId = data.selectedCharacterId;
+                // Mark ONLY the starter character owned — all others are locked (SPEC A3).
+                foreach (var c in data.ownedCharacters)
+                    c.isOwned = !string.IsNullOrEmpty(data.starterCharacterId)
+                                && c.characterId == data.starterCharacterId;
+                data.schemaVersion = 10;
+                int ownedCount = data.ownedCharacters.FindAll(c => c.isOwned).Count;
+                Debug.Log($"[SaveSchemaMigrator] Migrated v9 -> v10 (starterCharacterId='{data.starterCharacterId}', ownedCount={ownedCount}/{data.ownedCharacters.Count}).");
             }
 
             // Ensure schemaVersion is current after all migrations

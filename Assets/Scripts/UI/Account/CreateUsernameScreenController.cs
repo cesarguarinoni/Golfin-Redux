@@ -1,5 +1,6 @@
 // Order: login_signup_screens — Phase 1 (UI only, no backend)
 using UnityEngine;
+using Golfin.Roster;
 using UnityEngine.UI;
 using TMPro;
 using GolfinRedux.UI;
@@ -79,7 +80,14 @@ namespace Golfin.UI.Account
                     if (result.Success)
                     {
                         AccountUiBridge.SyncUsername();
-                        if (_screenManager != null) _screenManager.ShowScreen(ScreenId.Home);
+                        if (_screenManager != null)
+                        {
+                            // starting_character_selection: first-run players pick a starter before Home
+                            if (CharacterManager.Instance != null && CharacterManager.Instance.NeedsStarter)
+                                _screenManager.ShowScreen(GolfinRedux.UI.ScreenId.StartingCharacterSelection);
+                            else
+                                _screenManager.ShowScreen(GolfinRedux.UI.ScreenId.Home);
+                        }
                     }
                     else SetError(result.Message);
                 });

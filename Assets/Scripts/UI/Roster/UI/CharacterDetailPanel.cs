@@ -90,6 +90,12 @@ namespace Golfin.Roster
         [SerializeField] private Button selectButton;
         [SerializeField] private TextMeshProUGUI selectButtonText;  // SelectButton > Text (TMP)
 
+        [Header("Locked State (Normal Roster — F7)")]
+        // Full-panel dim + acquire-overlay text for locked characters in normal Roster mode.
+        // Author these as children in the scene/prefab and wire them here.
+        [SerializeField] private GameObject? _lockedDetailOverlay;      // dark semi-transparent Image spanning the full detail panel
+        [SerializeField] private TextMeshProUGUI? _acquireOverlayText;  // ROSTER_LOCKED_ACQUIRE centred across the full panel
+
         [Header("Bio")]
         [SerializeField] private TextMeshProUGUI bioText;           // BioPanel > BioText
 
@@ -123,6 +129,8 @@ namespace Golfin.Roster
         // Bar colours removed — Image colours are set on the sprites in the Editor
 
         private string currentCharacterId = "";
+        private bool _starterMode = false;
+        private RosterScreenController? _rosterCtrl = null;
 
         // ── Live-tick lerp state (Phase 5) ───────────────────────────────────
         // Displayed (lerped) values separate from target values so we can
@@ -280,12 +288,13 @@ namespace Golfin.Roster
                     characterImage.sprite = csvData.portraitSprite;
             }
 
-            // --- Name (single TMP, line break for first/last) ---
+            // --- Name (single TMP, line break for first/last, localized) ---
             if (characterNameText != null)
             {
                 if (csvData != null)
                 {
-                    characterNameText.text = csvData.GetDisplayName();
+                    // Use localized two-line name (FIRSTNAME\nLASTNAME); falls back to CSV English.
+                    characterNameText.text = csvData.GetLocalizedDisplayName(singleLine: false);
                 }
                 else if (soData != null)
                 {
@@ -388,8 +397,72 @@ namespace Golfin.Roster
                 ApplyBioLanguageSizing();
             }
 
+            // --- Locked State ---
+            // Normal Roster: if character not owned → overlay + remove interactive buttons.
+            // Starter mode: candidates show Select/Compare; non-candidates have them hidden.
+            if (!_starterMode)
+                ApplyLockedState(!playerData.isOwned);
+            else
+                ApplyStarterVisibility(characterId);
+
             // Ensure tick is running (idempotent restart on same char)
             RestartTick();
+        }
+
+        /// <summary>
+        /// Show/hide the locked presentation on the detail panel (F7).
+        /// Called from UpdatePanel in normal-Roster mode only (not starter mode).
+        /// Locked = character not owned:
+        ///   - _lockedDetailOverlay visible
+        ///   - _acquireOverlayText = ROSTER_LOCKED_ACQUIRE
+        ///   - LevelUp/Boost disabled (interactable=false)
+        ///   - Compare / Select hidden (SetActive false) — meaningless on locked chars
+        /// </summary>
+        private void ApplyLockedState(bool isLocked)
+        {
+            // Overlay
+            if (_lockedDetailOverlay != null)
+                _lockedDetailOverlay.SetActive(isLocked);
+            if (_acquireOverlayText != null)
+                _acquireOverlayText.text = LocalizationManager.Get("ROSTER_LOCKED_ACQUIRE");
+
+            if (isLocked)
+            {
+                // Buttons disabled on locked character
+                if (levelUpButton != null) levelUpButton.interactable = false;
+                if (boostButton   != null) boostButton.interactable   = false;
+                // Compare/Select removed (not just disabled — they have no function on a locked char)
+                if (compareButton != null) compareButton.gameObject.SetActive(false);
+                if (selectButton  != null) selectButton.gameObject.SetActive(false);
+            }
+            else
+            {
+                // Restore Compare/Select visibility (UpdatePanel already set interactable above)
+                if (compareButton != null) compareButton.gameObject.SetActive(true);
+                if (selectButton  != null) selectButton.gameObject.SetActive(true);
+            }
+        }
+
+        /// <summary>
+        /// Sets button and overlay visibility for the detail panel in starter mode.
+        /// Candidates (starterCandidate=true in CSV): Select+Compare shown and interactive.
+        /// Non-candidates: Select+Compare hidden, locked overlay shown (they can't be chosen).
+        /// LevelUp and Boost remain present but non-interactive in both cases (SPEC A2).
+        /// </summary>
+        private void ApplyStarterVisibility(string charId)
+        {
+            bool isCandidate = CharacterManager.Instance != null
+                && CharacterManager.Instance.IsStarterCandidate(charId);
+
+            if (compareButton != null) compareButton.gameObject.SetActive(isCandidate);
+            if (selectButton  != null) selectButton.gameObject.SetActive(isCandidate);
+
+            // Locked overlay: show for non-candidates (they are not selectable starters)
+            if (_lockedDetailOverlay != null)
+                _lockedDetailOverlay.SetActive(!isCandidate);
+            // Repaint acquire text so it reflects the current language (mirrors ApplyLockedState)
+            if (!isCandidate && _acquireOverlayText != null)
+                _acquireOverlayText.text = LocalizationManager.Get("ROSTER_LOCKED_ACQUIRE");
         }
 
         // ── Live projection helpers ───────────────────────────────────────────
@@ -654,8 +727,46 @@ namespace Golfin.Roster
             UpdatePanel(characterId);
         }
 
+        /// <summary>Set to true when the roster is displayed for initial character selection.</summary>
+        public void SetStarterMode(bool starterMode, RosterScreenController? rosterCtrl)
+        {
+            _starterMode = starterMode;
+            _rosterCtrl  = rosterCtrl;
+
+            // Starter mode: LEVEL UP + BOOST disabled (present, non-interactive — SPEC A2).
+            // COMPARE stays enabled. SELECT stays enabled but re-routed to confirm modal.
+            if (levelUpButton != null) levelUpButton.interactable = !starterMode;
+            if (boostButton   != null) boostButton.interactable   = !starterMode;
+            // compareButton — leave active and interactable in starter mode (SPEC A2, F3 fix)
+
+            // D1 fix (2026-08-24): clear any locked-state that UpdatePanel may have applied
+            // before SetStarterMode was called. UpdatePanel runs on OnEnable/carousel-selection,
+            // at which point _starterMode is still false — so isOwned=false candidates get
+            // ApplyLockedState(true) painted. SetStarterMode must explicitly undo that so the
+            // call order (UpdatePanel → SetStarterMode) is indistinguishable from the other way.
+            if (starterMode)
+                ApplyLockedState(false);
+
+            if (!string.IsNullOrEmpty(currentCharacterId))
+            {
+                UpdateSelectButton(CharacterManager.Instance?.GetCharacterData(currentCharacterId)?.isSelected ?? false);
+                if (starterMode)
+                    ApplyStarterVisibility(currentCharacterId);
+            }
+        }
+
         private void UpdateSelectButton(bool isSelected)
         {
+            if (_starterMode)
+            {
+                // In starter mode SELECT means "CHOOSE this character" — label stays ROSTER_SELECT (F5 fix)
+                if (selectButtonText != null)
+                    selectButtonText.text = LocalizationManager.Get("ROSTER_SELECT");
+                if (selectButton != null)
+                    selectButton.interactable = true;
+                return;
+            }
+
             if (selectButtonText != null)
                 selectButtonText.text = isSelected
                     ? LocalizationManager.Get("ROSTER_SELECTED")
@@ -703,6 +814,13 @@ namespace Golfin.Roster
         private void OnSelectClicked()
         {
             if (string.IsNullOrEmpty(currentCharacterId)) return;
+
+            if (_starterMode)
+            {
+                Debug.Log($"[CharacterDetailPanel] Starter select pressed for {currentCharacterId}");
+                _rosterCtrl?.OnStarterSelectPressed(currentCharacterId);
+                return;
+            }
 
             Debug.Log($"[CharacterDetailPanel] Select clicked for {currentCharacterId}");
             CharacterManager.Instance.SelectCharacter(currentCharacterId);

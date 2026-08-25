@@ -115,6 +115,7 @@ namespace Golfin.Roster
                         playerData.spentStamina     = persisted.spentStamina;
                         playerData.totalSPEarned    = persisted.totalSPEarned;
                         playerData.isSelected       = persisted.isSelected;
+                        playerData.isOwned          = persisted.isOwned;
 
                         // ── Stamina condition hydration (Phase 2, §4.3) ───────────
                         // Recompute stat values first so currentStamina is current.
@@ -165,6 +166,39 @@ namespace Golfin.Roster
                                 playerData.conditionUpdatedUtc  = nowUtc;
                             }
                         }
+                    }
+                }
+
+                // F8 invariant: the named starter character MUST always be owned.
+                // A partial/interrupted write can produce a save where starterCharacterId is set
+                // but the character is missing or has isOwned=false in ownedCharacters.
+                // Self-repair on every hydration so any player in this state is un-stuck.
+                if (!string.IsNullOrEmpty(saveData.starterCharacterId))
+                {
+                    if (ownedCharacters.TryGetValue(saveData.starterCharacterId, out var starterPD))
+                    {
+                        if (!starterPD.isOwned)
+                        {
+                            Debug.LogWarning($"[CharacterManager] INVARIANT REPAIR: " +
+                                $"starterCharacterId='{saveData.starterCharacterId}' had isOwned=false. " +
+                                "Forcing isOwned=true and flushing save.");
+                            starterPD.isOwned = true;
+                            var persistedRec = saveData.ownedCharacters.Find(c => c.characterId == saveData.starterCharacterId);
+                            if (persistedRec != null)
+                                persistedRec.isOwned = true;
+                            else
+                                saveData.ownedCharacters.Add(new PersistedCharacter
+                                    { characterId = saveData.starterCharacterId, isOwned = true,
+                                      currentLevel = starterPD.currentLevel });
+                            if (string.IsNullOrEmpty(saveData.selectedCharacterId))
+                                saveData.selectedCharacterId = saveData.starterCharacterId;
+                            SaveDataHost.Instance.MarkDirty();
+                        }
+                    }
+                    else
+                    {
+                        Debug.LogWarning($"[CharacterManager] INVARIANT: starterCharacterId='" +
+                            saveData.starterCharacterId + "' not found in catalog — cannot auto-repair.");
                     }
                 }
 
@@ -241,6 +275,7 @@ namespace Golfin.Roster
             existing.spentStamina     = playerData.spentStamina;
             existing.totalSPEarned    = playerData.totalSPEarned;
             existing.isSelected       = playerData.isSelected;
+            existing.isOwned         = playerData.isOwned;
 
             // Persist stamina condition (Phase 2 §4.3 dehydrate)
             existing.conditionEnergy     = playerData.currentStaminaEnergy;
@@ -261,9 +296,82 @@ namespace Golfin.Roster
             return null;
         }
 
+        /// <summary>
+        /// Returns all characters the player has been granted (isOwned=true).
+        /// Pre-v10 saves: all characters are owned (migrated). New saves: only the chosen starter + future grants.
+        /// </summary>
         public List<PlayerCharacterData> GetAllOwnedCharacters()
         {
+            return ownedCharacters.Values.Where(c => c.isOwned).ToList();
+        }
+
+        /// <summary>
+        /// Returns the full character catalog (owned + locked).
+        /// Use this for the Roster carousel, which shows all cards with locked/unlocked state.
+        /// </summary>
+        public List<PlayerCharacterData> GetAllCatalogCharacters()
+        {
             return ownedCharacters.Values.ToList();
+        }
+
+        /// <summary>
+        /// Returns characters that can be chosen as the starting character (starterCandidate=true in CSV).
+        /// </summary>
+        public List<PlayerCharacterData> GetStarterCandidates()
+        {
+            var db = CharacterDatabaseCSV.Instance;
+            return ownedCharacters.Values
+                .Where(c => db?.GetCharacter(c.characterId)?.starterCandidate == true)
+                .ToList();
+        }
+
+        /// <summary>True if the player has never chosen a starting character.</summary>
+        public bool NeedsStarter
+        {
+            get
+            {
+                if (SaveDataHost.Instance == null) return false;
+                return string.IsNullOrEmpty(SaveDataHost.Instance.Data.starterCharacterId);
+            }
+        }
+
+        /// <summary>
+        /// Grants the specified character as the player's starting character.
+        /// Sets isOwned=true, records starterCharacterId, selects the character, and persists.
+        /// May only be called once (NeedsStarter gates the call site).
+        /// </summary>
+        public void GrantStarter(string characterId)
+        {
+            if (!ownedCharacters.TryGetValue(characterId, out var playerData))
+            {
+                Debug.LogError($"[CharacterManager] GrantStarter: character '{characterId}' not in catalog.");
+                return;
+            }
+
+            playerData.isOwned = true;
+            SyncCharacterToSaveData(characterId);
+
+            if (SaveDataHost.Instance != null)
+            {
+                SaveDataHost.Instance.Data.starterCharacterId = characterId;
+                SaveDataHost.Instance.MarkDirty();
+            }
+
+            SelectCharacter(characterId);
+            OnRosterChanged?.Invoke();
+            Debug.Log($"[CharacterManager] GrantStarter: '{characterId}' granted and selected.");
+        }
+
+        /// <summary>Returns true if the player owns the specified character.</summary>
+        public bool IsOwned(string characterId)
+        {
+            return ownedCharacters.TryGetValue(characterId, out var c) && c.isOwned;
+        }
+
+        /// <summary>Returns true if the character is flagged as starterCandidate in the CSV.</summary>
+        public bool IsStarterCandidate(string characterId)
+        {
+            return CharacterDatabaseCSV.Instance?.GetCharacter(characterId)?.starterCandidate == true;
         }
 
         /// <summary>

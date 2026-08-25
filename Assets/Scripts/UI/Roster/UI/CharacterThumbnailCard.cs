@@ -34,8 +34,13 @@ namespace Golfin.Roster
         [SerializeField] private GameObject? selectedIcon;     // IconSelectedSmall — wire in Inspector
         [SerializeField] private GameObject? levelUpReadyIcon; // IconLevelUpSmall  — wire in Inspector
         [SerializeField] private GameObject? staminaIcon;      // IconStaminaSmall  — wire in Inspector
-        
+
+        [Header("Locked State (Starter Mode)")]
+        [SerializeField] private GameObject? _lockedOverlay;   // Dark gradient + LOCKED label; MUST be wired in Inspector (prefab-authored, no runtime fallback)
+        [SerializeField] private TextMeshProUGUI? _lockedLabel;  // "LOCKED" text inside the overlay
+
         private string characterId = "";
+        private bool _isLocked = false;
         private bool isSelected = false;
         
         // Events
@@ -80,13 +85,13 @@ namespace Golfin.Roster
                     portraitImage.sprite = csvData.portraitSprite;
             }
 
-            // Set name
+            // Set name — use localized first name on the card (single-line)
             if (nameText != null)
             {
                 if (soData != null && !string.IsNullOrEmpty(soData.characterNickname))
                     nameText.text = soData.characterNickname;
                 else if (csvData != null)
-                    nameText.text = csvData.characterName;
+                    nameText.text = csvData.GetLocalizedDisplayName(singleLine: true);
             }
 
             // Disable rarity badge background — only the text letter should be visible
@@ -227,7 +232,7 @@ namespace Golfin.Roster
                 portraitImage.sprite = csvData.portraitSprite;
 
             if (nameText != null)
-                nameText.text = csvData.characterName;
+                nameText.text = csvData.GetLocalizedDisplayName(singleLine: true);
 
             if (rarityBadgeImage != null)
                 rarityBadgeImage.enabled = false;
@@ -262,10 +267,54 @@ namespace Golfin.Roster
         /// Get character ID
         /// </summary>
         public string GetCharacterId() => characterId;
-        
+
         /// <summary>
         /// Check if selected
         /// </summary>
         public bool IsSelected() => isSelected;
+
+        /// <summary>
+        /// Show/hide the locked overlay (used in starter-selection mode for non-candidate chars).
+        /// When locked: dims the card to 50% alpha (opacity-50 per Figma) and shows the "LOCKED"
+        /// overlay authored in the prefab. _lockedOverlay MUST be wired in the Inspector; there
+        /// is no runtime fallback — a missing wire is an authoring error, not a handled case.
+        /// </summary>
+        public void SetLocked(bool isLocked)
+        {
+            _isLocked = isLocked;
+
+            if (_lockedOverlay == null)
+            {
+                // Authoring error: the prefab must have _lockedOverlay wired.
+                // DO NOT create a runtime fallback — fabricated flat-colour overlays break the
+                // clone-provenance mandate and produce wrong dim values. Fix the prefab.
+                Debug.LogError("[CharacterThumbnailCard] _lockedOverlay is not wired in the prefab. " +
+                               "Wire the LockedOverlay child GO in the Inspector.");
+                return;
+            }
+
+            _lockedOverlay.SetActive(isLocked);
+
+            // Update the localized label text each call so language changes are reflected.
+            // (F6) Card label uses UI_LOCKED, not ROSTER_LOCKED_ACQUIRE.
+            if (_lockedLabel != null)
+                _lockedLabel.text = LocalizationManager.Get("UI_LOCKED");
+
+            // F1 (iter-7): Locked cards remain TAPPABLE so the player can browse the locked
+            // detail panel (SPEC state 6 / node 13922:36488). Keeping the card interactive does
+            // NOT let the player select the character — ApplyLockedState() in CharacterDetailPanel
+            // hides the SELECT button on locked characters, so tapping only browses, never selects.
+            // Do NOT set cardButton.interactable = false or blocksRaycasts = false here.
+
+            // Dim: Figma node 13924:42412 shows the locked card div at opacity-50.
+            // That maps to CanvasGroup.alpha = 0.5f (sampled: Figma opacity-50 = 50% = 0.50).
+            // IMPORTANT: use Unity == null, not C# ?? — Unity-null is not C#-null.
+            var canvasGroup = GetComponent<CanvasGroup>();
+            if (canvasGroup == null)
+                canvasGroup = gameObject.AddComponent<CanvasGroup>();
+            canvasGroup.alpha = isLocked ? 0.50f : 1f;
+            // Keep blocksRaycasts=true so the card button can receive taps regardless of lock state.
+            canvasGroup.blocksRaycasts = true;
+        }
     }
 }

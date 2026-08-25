@@ -78,6 +78,10 @@ namespace Golfin.Save
         public int rewardPoints;
         public string selectedCharacterId = "";
 
+        // starting_character_selection (schema v10)
+        /// <summary>Set once when player picks their first character; gates NeedsStarter.</summary>
+        public string starterCharacterId = "";
+
         public List<PersistedCharacter> ownedCharacters = new List<PersistedCharacter>();
 
         /// <summary>ballId → quantity (-1 = unlimited)</summary>
@@ -213,6 +217,10 @@ namespace Golfin.Save
         public int spentStamina;
         public int totalSPEarned;
         public bool isSelected;
+
+        // starting_character_selection (schema v10)
+        /// <summary>True if player has been granted this character (owns it).</summary>
+        public bool isOwned = false;
 
         // ── Stamina condition (schema v4, Phase 2) ────────────────────────────
         // conditionEnergy: current Condition pool (float). Defaults 0f; empty

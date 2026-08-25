@@ -1410,45 +1410,65 @@ MonoBehaviour:
     english: COURSE CLEARED!
     japanese: "\u30B3\u30FC\u30B9\u30AF\u30EA\u30A2\uFF01"
   - key: CHAR_BIO_JAMES
-    english: A dependable player just starting out on the tour.
-    japanese: "\u30C4\u30A2\u30FC\u306B\u4E0A\u304C\u3063\u305F\u3070\u304B\u308A\u306E\u983C\u308C\u308B\u9078\u624B\u3002"
+    english: Out of the amateur ranks, Cartwright arrives with driving distance that
+      already turns heads at this level. The short game is still maturing, but scouts
+      agree the foundations are tour-calibre.
+    japanese: "\u30A2\u30DE\u30C1\u30E5\u30A2\u51FA\u8EAB\u306E\u65B0\u92ED\u30AB\u30FC\u30C8\u30E9\u30A4\u30C8\u3002\u3053\u306E\u968E\u7D1A\u3067\u306F\u969B\u7ACB\u3064\u98DB\u8DDD\u96E2\u304C\u6301\u3061\u5473\u3002\u30B7\u30E7\u30FC\u30C8\u30B2\u30FC\u30E0\u306B\u306F\u8AB2\u984C\u3092\u6B8B\u3059\u304C\u3001\u305D\u306E\u7D20\u8CEA\u306F\u30C4\u30A2\u30FC\u7D1A\u3068\u8A55\u3055\u308C\u308B\u3002"
   - key: CHAR_BIO_OLIVIA
-    english: A rising talent with solid fundamentals.
-    japanese: "\u57FA\u790E\u306E\u3057\u3063\u304B\u308A\u3057\u305F\u671F\u5F85\u306E\u65B0\u661F\u3002"
+    english: A product of long hours on the practice range, Guarinoni brings a compact,
+      repeatable swing and exceptional tempo. Modest off the tee, but her ball-striking
+      consistency is well beyond her years.
+    japanese: "\u7DF4\u7FD2\u5834\u3067\u8155\u3092\u78E8\u3044\u305F\u30B0\u30A2\u30EA\u30CE\u30FC\u30CB\u3002\u30B3\u30F3\u30D1\u30AF\u30C8\u3067\u518D\u73FE\u6027\u306E\u9AD8\u3044\u30B9\u30A4\u30F3\u30B0\u3068\u629C\u7FA4\u306E\u30C6\u30F3\u30DD\u304C\u6B66\u5668\u3002\u98DB\u8DDD\u96E2\u306F\u63A7\u3048\u3081\u3060\u304C\u3001\u30DF\u30FC\u30C8\u306E\u5B89\u5B9A\u611F\u306F\u5E74\u9F62\u4EE5\u4E0A\u3068\u8A55\u4FA1\u304C\u9AD8\u3044\u3002"
   - key: CHAR_BIO_RICHARD
-    english: A seasoned pro with decades of experience.
-    japanese: "\u6570\u5341\u5E74\u306E\u7D4C\u9A13\u3092\u6301\u3064\u719F\u7DF4\u306E\u30D7\u30ED\u3002"
+    english: Twenty seasons at the top level and the power numbers have barely declined.
+      Brenson compensates for an aging short game with course knowledge and shot
+      selection few active players can match.
+    japanese: "\u30C8\u30C3\u30D7\u30EC\u30D9\u30EB\u306720\u30B7\u30FC\u30BA\u30F3\u3092\u6226\u3046\u30D6\u30EC\u30F3\u30BD\u30F3\u3002\u30D1\u30EF\u30FC\u306F\u4ECA\u306A\u304A\u5065\u5728\u3067\u3001\u5186\u719F\u306E\u30B3\u30FC\u30B9\u6226\u7565\u3068\u30B7\u30E7\u30C3\u30C8\u9078\u629E\u306F\u73FE\u5F79\u5C48\u6307\u3002\u7D4C\u9A13\u304C\u751F\u304D\u308B\u30D9\u30C6\u30E9\u30F3\u306E\u4EE3\u8868\u683C\u3060\u3002"
   - key: CHAR_BIO_ELIZABETH
-    english: Elizabeth Blackwood, 46, a maverick from Cornwall, earned her Ladies
-      European Tour spot through precision. With three decades on coastal courses
-      her impeccable control makes her the top mentor for young talents.
-    japanese: "\u30B3\u30FC\u30F3\u30A6\u30A9\u30FC\u30EB\u51FA\u8EAB\u306E\u4E00\u5339\u72FC\u3001\u30A8\u30EA\u30B6\u30D9\u30B9\u30FB\u30D6\u30E9\u30C3\u30AF\u30A6\u30C3\u30C9\uFF0846\u6B73\uFF09\u3002\u7CBE\u5BC6\u306A\u30D7\u30EC\u30FC\u3067\u30EC\u30C7\u30A3\u30FC\u30B9\u30FB\u30E8\u30FC\u30ED\u30D4\u30A2\u30F3\u30C4\u30A2\u30FC\u306E\u51FA\u5834\u6A29\u3092\u63B4\u3093\u3060\u3002\u6D77\u6CBF\u3044\u306E\u30B3\u30FC\u30B9\u3067\u57F9\u3063\u305F30\u5E74\u306E\u30AD\u30E3\u30EA\u30A2\u3068\u975E\u306E\u6253\u3061\u6240\u306E\u306A\u3044\u30B3\u30F3\u30C8\u30ED\u30FC\u30EB\u3067\u3001\u82E5\u624B\u3092\u5C0E\u304F\u4E00\u6D41\u306E\u30E1\u30F3\u30BF\u30FC\u3068\u3057\u3066\u77E5\u3089\u308C\u308B\u3002"
+    english: Schooled on championship links, Blackwood plays a tactician's game.
+      Elite club control, disciplined course management, and a willingness to sacrifice
+      distance for position define her rounds.
+    japanese: "\u540D\u9580\u30EA\u30F3\u30AF\u30B9\u3067\u7814\u947D\u3092\u7A4D\u3093\u3060\u30D6\u30E9\u30C3\u30AF\u30A6\u30C3\u30C9\u3002\u5353\u8D8A\u3057\u305F\u30AF\u30E9\u30D6\u30B3\u30F3\u30C8\u30ED\u30FC\u30EB\u3068\u7DFB\u5BC6\u306A\u30B3\u30FC\u30B9\u30DE\u30CD\u30B8\u30E1\u30F3\u30C8\u3092\u8EF8\u306B\u3001\u8DDD\u96E2\u3088\u308A\u30DD\u30B8\u30B7\u30E7\u30F3\u3092\u53D6\u308B\u77E5\u7684\u306A\u30B4\u30EB\u30D5\u3092\u5C55\u958B\u3059\u308B\u3002"
   - key: CHAR_BIO_SHAE
-    english: Shae O'Connell, 23, from County Clare, earned her Ladies European Tour
-      card through finesse and course smarts. Decades on windswept links make her
-      an ideal mentor for players refining control.
-    japanese: "\u30AB\u30A6\u30F3\u30C6\u30A3\u30FB\u30AF\u30EC\u30A2\u51FA\u8EAB\u306E\u30B7\u30A7\u30A4\u30FB\u30AA\u30B3\u30F3\u30CD\u30EB\uFF0823\u6B73\uFF09\u3002\u5DE7\u307F\u306A\u6280\u8853\u3068\u30B3\u30FC\u30B9\u3092\u8AAD\u3080\u8CE2\u3055\u3067\u30EC\u30C7\u30A3\u30FC\u30B9\u30FB\u30E8\u30FC\u30ED\u30D4\u30A2\u30F3\u30C4\u30A2\u30FC\u306E\u51FA\u5834\u8CC7\u683C\u3092\u5F97\u305F\u3002\u98A8\u306E\u5439\u304D\u8352\u308C\u308B\u30EA\u30F3\u30AF\u30B9\u3067\u7A4D\u3093\u3060\u9577\u5E74\u306E\u7D4C\u9A13\u306F\u3001\u30B3\u30F3\u30C8\u30ED\u30FC\u30EB\u3092\u78E8\u304F\u9078\u624B\u306B\u3068\u3063\u3066\u7406\u60F3\u7684\u306A\u624B\u672C\u3068\u306A\u308B\u3002"
+    english: "O'Connell's recovery statistics are simply in a category of their own.
+      From deep rough or broken ground, she routinely salvages pars that keep rounds
+      alive \u2014 trouble is where she does her best work."
+    japanese: "\u30AA\u30B3\u30F3\u30CD\u30EB\u306E\u30EA\u30AB\u30D0\u30EA\u30FC\u6210\u7E3E\u306F\u4ED6\u306E\u8FFD\u968F\u3092\u8A31\u3055\u306A\u3044\u3002\u6DF1\u3044\u30E9\u30D5\u3084\u8352\u308C\u305F\u30E9\u30A4\u304B\u3089\u3082\u5F53\u7136\u306E\u3088\u3046\u306B\u30D1\u30FC\u3092\u62FE\u3044\u3001\u7AAE\u5730\u3067\u3053\u305D\u771F\u4FA1\u3092\u767A\u63EE\u3059\u308B\u7A00\u6709\u306A\u5B58\u5728\u3002"
   - key: CHAR_BIO_CAMILA
-    english: A versatile player known for consistency.
-    japanese: "\u5B89\u5B9A\u611F\u3067\u77E5\u3089\u308C\u308B\u30AA\u30FC\u30EB\u30E9\u30A6\u30F3\u30C9\u306A\u9078\u624B\u3002"
+    english: Perez plays the most aggressive tee-to-green game in her bracket. Exceptional
+      carry distance and fearless target lines produce low rounds in bunches when
+      the execution holds up.
+    japanese: "\u540C\u30AF\u30E9\u30B9\u5C48\u6307\u306E\u30A2\u30B0\u30EC\u30C3\u30B7\u30D6\u306A\u30D7\u30EC\u30FC\u30B9\u30BF\u30A4\u30EB\u3092\u8CAB\u304F\u30DA\u30EC\u30B9\u3002\u5091\u51FA\u3057\u305F\u30AD\u30E3\u30EA\u30FC\u3068\u679C\u6562\u306A\u653B\u3081\u306E\u30E9\u30A4\u30F3\u304C\u565B\u307F\u5408\u3048\u3070\u3001\u7206\u767A\u7684\u306A\u30B9\u30B3\u30A2\u30E1\u30A4\u30AF\u3092\u898B\u305B\u308B\u3002"
   - key: CHAR_BIO_GUILLERMO
-    english: A powerful hitter with natural talent.
-    japanese: "\u5929\u8CE6\u306E\u624D\u3092\u6301\u3064\u30D1\u30EF\u30D5\u30EB\u306A\u30D2\u30C3\u30BF\u30FC\u3002"
+    english: "A gallery favourite, Abravanel attempts \u2014 and lands \u2014 shot
+      shapes most professionals decline. Behind the showmanship sits an elite short
+      game and touch regarded among the finest on tour."
+    japanese: "\u30AE\u30E3\u30E9\u30EA\u30FC\u3092\u9B45\u4E86\u3059\u308B\u30A2\u30D6\u30E9\u30D0\u30CD\u30EB\u3002\u30D7\u30ED\u3067\u3082\u907F\u3051\u308B\u66F2\u7403\u3092\u6DBC\u3057\u3044\u9854\u3067\u6C7A\u3081\u308B\u6280\u5DE7\u6D3E\u3067\u3001\u305D\u306E\u83EF\u3084\u304B\u3055\u306E\u88CF\u306B\u306F\u30C4\u30A2\u30FC\u6700\u9AD8\u5CF0\u3068\u79F0\u3055\u308C\u308B\u30BF\u30C3\u30C1\u304C\u3042\u308B\u3002"
   - key: CHAR_BIO_EAN
-    english: A balanced player with room to grow.
-    japanese: "\u6210\u9577\u306E\u4F59\u5730\u3092\u6B8B\u3059\u30D0\u30E9\u30F3\u30B9\u306E\u53D6\u308C\u305F\u9078\u624B\u3002"
+    english: "Analysts struggle to name a weakness in McCormick's game \u2014 and
+      that is precisely the point. Even numbers across the board make him the most
+      complete development platform in his class."
+    japanese: "\u30DE\u30B3\u30FC\u30DF\u30C3\u30AF\u306E\u30D7\u30EC\u30FC\u306B\u5F31\u70B9\u3092\u6319\u3052\u308B\u306E\u306F\u96E3\u3057\u3044\u3002\u5168\u9805\u76EE\u3067\u5747\u6574\u306E\u53D6\u308C\u305F\u6570\u5B57\u3092\u6B8B\u3057\u3001\u540C\u30AF\u30E9\u30B9\u968F\u4E00\u306E\u5B8C\u6210\u3055\u308C\u305F\u80B2\u6210\u7D20\u6750\u3068\u8A55\u3055\u308C\u308B\u3002"
   - key: CHAR_BIO_FREDA
-    english: A legendary figure on the tour circuit.
-    japanese: "\u30C4\u30A2\u30FC\u30B5\u30FC\u30AD\u30C3\u30C8\u306E\u4F1D\u8AAC\u7684\u5B58\u5728\u3002"
+    english: The world number one by a distance. Faarlund's combination of power,
+      touch and stamina presents no exploitable weakness, and her tournament record
+      reads less like results than inevitability.
+    japanese: "\u6587\u53E5\u306A\u3057\u306E\u4E16\u754C\u30E9\u30F3\u30AD\u30F3\u30B01\u4F4D\u3001\u30D5\u30A1\u30FC\u30E9\u30F3\u30C9\u3002\u30D1\u30EF\u30FC\u3001\u30BF\u30C3\u30C1\u3001\u30B9\u30BF\u30DF\u30CA\u306E\u5168\u3066\u306B\u4ED8\u3051\u5165\u308B\u9699\u304C\u306A\u304F\u3001\u305D\u306E\u6226\u7E3E\u306F\u3082\u306F\u3084\u5FC5\u7136\u3068\u547C\u3076\u3079\u304D\u6C34\u6E96\u306B\u3042\u308B\u3002"
   - key: CHAR_BIO_JOHAN
-    english: Known for his precise short game.
-    japanese: "\u7CBE\u5BC6\u306A\u30B7\u30E7\u30FC\u30C8\u30B2\u30FC\u30E0\u3067\u77E5\u3089\u308C\u308B\u3002"
+    english: "Developed on wind-swept northern courses, Christofferson pairs precise
+      iron play with remarkable endurance. Adverse conditions barely move his scoring
+      average \u2014 a genuine bad-weather specialist."
+    japanese: "\u5317\u6B27\u306E\u5F37\u98A8\u30B3\u30FC\u30B9\u3067\u80B2\u3063\u305F\u30AF\u30EA\u30B9\u30C8\u30D5\u30A1\u30FC\u30BD\u30F3\u3002\u6B63\u78BA\u306A\u30A2\u30A4\u30A2\u30F3\u3068\u9A5A\u7570\u7684\u306A\u6301\u4E45\u529B\u3092\u4F75\u305B\u6301\u3061\u3001\u60AA\u5929\u5019\u3067\u3082\u30B9\u30B3\u30A2\u304C\u5D29\u308C\u306A\u3044\u60AA\u6761\u4EF6\u306E\u30B9\u30DA\u30B7\u30E3\u30EA\u30B9\u30C8\u3002"
   - key: CHAR_BIO_MIKE
-    english: An enthusiastic newcomer to competitive golf.
-    japanese: "\u7AF6\u6280\u30B4\u30EB\u30D5\u306B\u60C5\u71B1\u3092\u71C3\u3084\u3059\u65B0\u4EBA\u3002"
+    english: "A former caddie who learned the game from inside the ropes, Millar
+      is renowned for his conditioning and composure. Rarely spectacular, never rattled
+      \u2014 and statistically strongest late in the round."
+    japanese: "\u5143\u30AD\u30E3\u30C7\u30A3\u30FC\u3068\u3044\u3046\u7570\u8272\u306E\u7D4C\u6B74\u3092\u6301\u3064\u30DF\u30E9\u30FC\u3002\u8C4A\u5BCC\u306A\u904B\u52D5\u91CF\u3068\u51B7\u9759\u3055\u306B\u5B9A\u8A55\u304C\u3042\u308A\u3001\u6D3E\u624B\u3055\u306F\u306A\u3044\u304C\u7D42\u76E4\u307B\u3069\u6570\u5B57\u3092\u6B8B\u3059\u30BF\u30A4\u30D7\u3068\u3057\u3066\u77E5\u3089\u308C\u308B\u3002"
   - key: CHAR_BIO_ROSHANA
-    english: A fierce competitor with an unshakeable mindset.
-    japanese: "\u63FA\u308B\u304E\u306A\u3044\u7CBE\u795E\u3092\u6301\u3064\u95D8\u5FD7\u3042\u3075\u308C\u308B\u7AF6\u6280\u8005\u3002"
+    english: Smith combines top-tier driving power with the durability to grind through
+      brutal conditions. When tournaments turn into wars of attrition, her name is
+      invariably on the final leaderboard.
+    japanese: "\u30C8\u30C3\u30D7\u30AF\u30E9\u30B9\u306E\u98DB\u8DDD\u96E2\u3068\u3001\u904E\u9177\u306A\u6761\u4EF6\u3092\u8010\u3048\u629C\u304F\u30BF\u30D5\u3055\u3092\u517C\u5099\u3059\u308B\u30B9\u30DF\u30B9\u3002\u6D88\u8017\u6226\u3068\u306A\u3063\u305F\u5927\u4F1A\u3067\u306F\u3001\u6700\u7D42\u30EA\u30FC\u30C0\u30FC\u30DC\u30FC\u30C9\u306B\u5FC5\u305A\u540D\u3092\u6B8B\u3059\u5B9F\u529B\u8005\u3060\u3002"
   - key: GAMEPLAY_SHOOT
     english: SHOOT
     japanese: "\u6253\u3064"
@@ -1530,3 +1550,88 @@ MonoBehaviour:
   - key: CLUB_FILTER_PUTTERS
     english: PUTTERS
     japanese: "\u30D1\u30BF\u30FC"
+  - key: ROSTER_STARTER_INSTRUCTION
+    english: CHOOSE YOUR STARTING CHARACTER. YOU WILL BE ABLE TO ACQUIRE NEW CHARACTERS
+      THROUGHOUT THE GAME.
+    japanese: "\u30B9\u30BF\u30FC\u30C8\u30AD\u30E3\u30E9\u30AF\u30BF\u30FC\u3092\u9078\u3093\u3067\u304F\u3060\u3055\u3044\u3002\u65B0\u3057\u3044\u30AD\u30E3\u30E9\u30AF\u30BF\u30FC\u306F\u30B2\u30FC\u30E0\u3092\u9032\u3081\u306A\u304C\u3089\u7372\u5F97\u3067\u304D\u307E\u3059\u3002"
+  - key: ROSTER_STARTER_CONFIRM_TITLE
+    english: 'YOU ARE STARTING THE GAME WITH:'
+    japanese: "\u3053\u306E\u30AD\u30E3\u30E9\u30AF\u30BF\u30FC\u3067\u30B2\u30FC\u30E0\u3092\u958B\u59CB\u3057\u307E\u3059:"
+  - key: ROSTER_STARTER_BACK
+    english: BACK
+    japanese: "\u623B\u308B"
+  - key: ROSTER_LOCKED_ACQUIRE
+    english: ACQUIRE THIS CHARACTER IN THE STORE OR AS A PRIZE TO UNLOCK IT.
+    japanese: "\u3053\u306E\u30AD\u30E3\u30E9\u30AF\u30BF\u30FC\u306F\u30B7\u30E7\u30C3\u30D7\u307E\u305F\u306F\u5831\u916C\u3067\u7372\u5F97\u3059\u308B\u3068\u30A2\u30F3\u30ED\u30C3\u30AF\u3055\u308C\u307E\u3059\u3002"
+  - key: CHAR_NAME_JAMES
+    english: James
+    japanese: "\u30B8\u30A7\u30FC\u30E0\u30BA"
+  - key: CHAR_LASTNAME_JAMES
+    english: Cartwright
+    japanese: "\u30AB\u30FC\u30C8\u30E9\u30A4\u30C8"
+  - key: CHAR_NAME_OLIVIA
+    english: Olivia
+    japanese: "\u30AA\u30EA\u30D3\u30A2"
+  - key: CHAR_LASTNAME_OLIVIA
+    english: Guarinoni
+    japanese: "\u30B0\u30A2\u30EA\u30CE\u30FC\u30CB"
+  - key: CHAR_NAME_RICHARD
+    english: Richard
+    japanese: "\u30EA\u30C1\u30E3\u30FC\u30C9"
+  - key: CHAR_LASTNAME_RICHARD
+    english: Brenson
+    japanese: "\u30D6\u30EC\u30F3\u30BD\u30F3"
+  - key: CHAR_NAME_ELIZABETH
+    english: Elizabeth
+    japanese: "\u30A8\u30EA\u30B6\u30D9\u30B9"
+  - key: CHAR_LASTNAME_ELIZABETH
+    english: Blackwood
+    japanese: "\u30D6\u30E9\u30C3\u30AF\u30A6\u30C3\u30C9"
+  - key: CHAR_NAME_SHAE
+    english: Shae
+    japanese: "\u30B7\u30A7\u30A4"
+  - key: CHAR_LASTNAME_SHAE
+    english: O'Connell
+    japanese: "\u30AA\u30B3\u30F3\u30CD\u30EB"
+  - key: CHAR_NAME_CAMILA
+    english: Camila
+    japanese: "\u30AB\u30DF\u30E9"
+  - key: CHAR_LASTNAME_CAMILA
+    english: Perez
+    japanese: "\u30DA\u30EC\u30B9"
+  - key: CHAR_NAME_GUILLERMO
+    english: Guillermo
+    japanese: "\u30AE\u30B8\u30A7\u30EB\u30E2"
+  - key: CHAR_LASTNAME_GUILLERMO
+    english: Abravanel
+    japanese: "\u30A2\u30D6\u30E9\u30D0\u30CD\u30EB"
+  - key: CHAR_NAME_EAN
+    english: Ean
+    japanese: "\u30A4\u30A2\u30F3"
+  - key: CHAR_LASTNAME_EAN
+    english: McCormick
+    japanese: "\u30DE\u30B3\u30FC\u30DF\u30C3\u30AF"
+  - key: CHAR_NAME_FREDA
+    english: Freda
+    japanese: "\u30D5\u30EC\u30FC\u30C0"
+  - key: CHAR_LASTNAME_FREDA
+    english: Faarlund
+    japanese: "\u30D5\u30A1\u30FC\u30EB\u30F3\u30C9"
+  - key: CHAR_NAME_JOHAN
+    english: Johan
+    japanese: "\u30E8\u30CF\u30F3"
+  - key: CHAR_LASTNAME_JOHAN
+    english: Christofferson
+    japanese: "\u30AF\u30EA\u30B9\u30C8\u30D5\u30A1\u30FC\u30BD\u30F3"
+  - key: CHAR_NAME_MIKE
+    english: Mike
+    japanese: "\u30DE\u30A4\u30AF"
+  - key: CHAR_LASTNAME_MIKE
+    english: Millar
+    japanese: "\u30DF\u30E9\u30FC"
+  - key: CHAR_NAME_ROSHANA
+    english: Roshana
+    japanese: "\u30ED\u30B7\u30E3\u30FC\u30CA"
+  - key: CHAR_LASTNAME_ROSHANA
+    english: Smith
+    japanese: "\u30B9\u30DF\u30B9"

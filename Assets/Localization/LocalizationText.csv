@@ -432,18 +432,18 @@ STAMINA_PREF_NARA,NARA,奈良
 STAMINA_PREF_WAKAYAMA,WAKAYAMA,和歌山
 RESULT_PLAY_NEXT,PLAY NEXT,次をプレイ
 TOAST_COURSE_CLEARED,COURSE CLEARED!,コースクリア！
-CHAR_BIO_JAMES,"A dependable player just starting out on the tour.","ツアーに上がったばかりの頼れる選手。"
-CHAR_BIO_OLIVIA,"A rising talent with solid fundamentals.","基礎のしっかりした期待の新星。"
-CHAR_BIO_RICHARD,"A seasoned pro with decades of experience.","数十年の経験を持つ熟練のプロ。"
-CHAR_BIO_ELIZABETH,"Elizabeth Blackwood, 46, a maverick from Cornwall, earned her Ladies European Tour spot through precision. With three decades on coastal courses her impeccable control makes her the top mentor for young talents.","コーンウォール出身の一匹狼、エリザベス・ブラックウッド（46歳）。精密なプレーでレディース・ヨーロピアンツアーの出場権を掴んだ。海沿いのコースで培った30年のキャリアと非の打ち所のないコントロールで、若手を導く一流のメンターとして知られる。"
-CHAR_BIO_SHAE,"Shae O'Connell, 23, from County Clare, earned her Ladies European Tour card through finesse and course smarts. Decades on windswept links make her an ideal mentor for players refining control.","カウンティ・クレア出身のシェイ・オコンネル（23歳）。巧みな技術とコースを読む賢さでレディース・ヨーロピアンツアーの出場資格を得た。風の吹き荒れるリンクスで積んだ長年の経験は、コントロールを磨く選手にとって理想的な手本となる。"
-CHAR_BIO_CAMILA,"A versatile player known for consistency.","安定感で知られるオールラウンドな選手。"
-CHAR_BIO_GUILLERMO,"A powerful hitter with natural talent.","天賦の才を持つパワフルなヒッター。"
-CHAR_BIO_EAN,"A balanced player with room to grow.","成長の余地を残すバランスの取れた選手。"
-CHAR_BIO_FREDA,"A legendary figure on the tour circuit.","ツアーサーキットの伝説的存在。"
-CHAR_BIO_JOHAN,"Known for his precise short game.","精密なショートゲームで知られる。"
-CHAR_BIO_MIKE,"An enthusiastic newcomer to competitive golf.","競技ゴルフに情熱を燃やす新人。"
-CHAR_BIO_ROSHANA,"A fierce competitor with an unshakeable mindset.","揺るぎない精神を持つ闘志あふれる競技者。"
+CHAR_BIO_JAMES,"Out of the amateur ranks, Cartwright arrives with driving distance that already turns heads at this level. The short game is still maturing, but scouts agree the foundations are tour-calibre.","アマチュア出身の新鋭カートライト。この階級では際立つ飛距離が持ち味。ショートゲームには課題を残すが、その素質はツアー級と評される。"
+CHAR_BIO_OLIVIA,"A product of long hours on the practice range, Guarinoni brings a compact, repeatable swing and exceptional tempo. Modest off the tee, but her ball-striking consistency is well beyond her years.","練習場で腕を磨いたグアリノーニ。コンパクトで再現性の高いスイングと抜群のテンポが武器。飛距離は控えめだが、ミートの安定感は年齢以上と評価が高い。"
+CHAR_BIO_RICHARD,"Twenty seasons at the top level and the power numbers have barely declined. Brenson compensates for an aging short game with course knowledge and shot selection few active players can match.","トップレベルで20シーズンを戦うブレンソン。パワーは今なお健在で、円熟のコース戦略とショット選択は現役屈指。経験が生きるベテランの代表格だ。"
+CHAR_BIO_ELIZABETH,"Schooled on championship links, Blackwood plays a tactician's game. Elite club control, disciplined course management, and a willingness to sacrifice distance for position define her rounds.","名門リンクスで研鑽を積んだブラックウッド。卓越したクラブコントロールと緻密なコースマネジメントを軸に、距離よりポジションを取る知的なゴルフを展開する。"
+CHAR_BIO_SHAE,"O'Connell's recovery statistics are simply in a category of their own. From deep rough or broken ground, she routinely salvages pars that keep rounds alive — trouble is where she does her best work.","オコンネルのリカバリー成績は他の追随を許さない。深いラフや荒れたライからも当然のようにパーを拾い、窮地でこそ真価を発揮する稀有な存在。"
+CHAR_BIO_CAMILA,"Perez plays the most aggressive tee-to-green game in her bracket. Exceptional carry distance and fearless target lines produce low rounds in bunches when the execution holds up.","同クラス屈指のアグレッシブなプレースタイルを貫くペレス。傑出したキャリーと果敢な攻めのラインが噛み合えば、爆発的なスコアメイクを見せる。"
+CHAR_BIO_GUILLERMO,"A gallery favourite, Abravanel attempts — and lands — shot shapes most professionals decline. Behind the showmanship sits an elite short game and touch regarded among the finest on tour.","ギャラリーを魅了するアブラバネル。プロでも避ける曲球を涼しい顔で決める技巧派で、その華やかさの裏にはツアー最高峰と称されるタッチがある。"
+CHAR_BIO_EAN,"Analysts struggle to name a weakness in McCormick's game — and that is precisely the point. Even numbers across the board make him the most complete development platform in his class.","マコーミックのプレーに弱点を挙げるのは難しい。全項目で均整の取れた数字を残し、同クラス随一の完成された育成素材と評される。"
+CHAR_BIO_FREDA,"The world number one by a distance. Faarlund's combination of power, touch and stamina presents no exploitable weakness, and her tournament record reads less like results than inevitability.","文句なしの世界ランキング1位、ファーランド。パワー、タッチ、スタミナの全てに付け入る隙がなく、その戦績はもはや必然と呼ぶべき水準にある。"
+CHAR_BIO_JOHAN,"Developed on wind-swept northern courses, Christofferson pairs precise iron play with remarkable endurance. Adverse conditions barely move his scoring average — a genuine bad-weather specialist.","北欧の強風コースで育ったクリストファーソン。正確なアイアンと驚異的な持久力を併せ持ち、悪天候でもスコアが崩れない悪条件のスペシャリスト。"
+CHAR_BIO_MIKE,"A former caddie who learned the game from inside the ropes, Millar is renowned for his conditioning and composure. Rarely spectacular, never rattled — and statistically strongest late in the round.","元キャディーという異色の経歴を持つミラー。豊富な運動量と冷静さに定評があり、派手さはないが終盤ほど数字を残すタイプとして知られる。"
+CHAR_BIO_ROSHANA,"Smith combines top-tier driving power with the durability to grind through brutal conditions. When tournaments turn into wars of attrition, her name is invariably on the final leaderboard.","トップクラスの飛距離と、過酷な条件を耐え抜くタフさを兼備するスミス。消耗戦となった大会では、最終リーダーボードに必ず名を残す実力者だ。"
 GAMEPLAY_SHOOT,SHOOT,打つ
 GAMEPLAY_STRAIGHT,STRAIGHT,ストレート
 GAMEPLAY_FADE,FADE,フェード
@@ -471,3 +471,31 @@ CLUB_FILTER_WOODS,WOODS,ウッド
 CLUB_FILTER_IRONS,IRONS,アイアン
 CLUB_FILTER_WEDGES,WEDGES,ウェッジ
 CLUB_FILTER_PUTTERS,PUTTERS,パター
+ROSTER_STARTER_INSTRUCTION,"CHOOSE YOUR STARTING CHARACTER. YOU WILL BE ABLE TO ACQUIRE NEW CHARACTERS THROUGHOUT THE GAME.",スタートキャラクターを選んでください。新しいキャラクターはゲームを進めながら獲得できます。
+ROSTER_STARTER_CONFIRM_TITLE,YOU ARE STARTING THE GAME WITH:,このキャラクターでゲームを開始します:
+ROSTER_STARTER_BACK,BACK,戻る
+ROSTER_LOCKED_ACQUIRE,"ACQUIRE THIS CHARACTER IN THE STORE OR AS A PRIZE TO UNLOCK IT.",このキャラクターはショップまたは報酬で獲得するとアンロックされます。
+CHAR_NAME_JAMES,James,ジェームズ
+CHAR_LASTNAME_JAMES,Cartwright,カートライト
+CHAR_NAME_OLIVIA,Olivia,オリビア
+CHAR_LASTNAME_OLIVIA,Guarinoni,グアリノーニ
+CHAR_NAME_RICHARD,Richard,リチャード
+CHAR_LASTNAME_RICHARD,Brenson,ブレンソン
+CHAR_NAME_ELIZABETH,Elizabeth,エリザベス
+CHAR_LASTNAME_ELIZABETH,Blackwood,ブラックウッド
+CHAR_NAME_SHAE,Shae,シェイ
+CHAR_LASTNAME_SHAE,O'Connell,オコンネル
+CHAR_NAME_CAMILA,Camila,カミラ
+CHAR_LASTNAME_CAMILA,Perez,ペレス
+CHAR_NAME_GUILLERMO,Guillermo,ギジェルモ
+CHAR_LASTNAME_GUILLERMO,Abravanel,アブラバネル
+CHAR_NAME_EAN,Ean,イアン
+CHAR_LASTNAME_EAN,McCormick,マコーミック
+CHAR_NAME_FREDA,Freda,フレーダ
+CHAR_LASTNAME_FREDA,Faarlund,ファールンド
+CHAR_NAME_JOHAN,Johan,ヨハン
+CHAR_LASTNAME_JOHAN,Christofferson,クリストファーソン
+CHAR_NAME_MIKE,Mike,マイク
+CHAR_LASTNAME_MIKE,Millar,ミラー
+CHAR_NAME_ROSHANA,Roshana,ロシャーナ
+CHAR_LASTNAME_ROSHANA,Smith,スミス

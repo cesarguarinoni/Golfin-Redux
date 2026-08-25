@@ -4,6 +4,7 @@ using UnityEngine.UI;
 using TMPro;
 using GolfinRedux.UI;
 using Golfin.Auth;
+using Golfin.Roster;
 
 namespace Golfin.UI.Account
 {
@@ -133,9 +134,16 @@ namespace Golfin.UI.Account
                 if (result.Success)
                 {
                     AccountUiBridge.SyncUsername();
-                    // First login (no username yet) → Create Username; otherwise → Home.
-                    var target = AuthService.Instance.Session.HasDisplayName ? ScreenId.Home : ScreenId.CreateUsername;
-                    if (_screenManager != null) _screenManager.ShowScreen(target);
+                    // starting_character_selection: check NeedsStarter before landing on Home.
+                    if (CharacterManager.Instance != null && CharacterManager.Instance.NeedsStarter)
+                    {
+                        if (_screenManager != null) _screenManager.ShowScreen(ScreenId.StartingCharacterSelection);
+                    }
+                    else
+                    {
+                        var target = AuthService.Instance.Session.HasDisplayName ? ScreenId.Home : ScreenId.CreateUsername;
+                        if (_screenManager != null) _screenManager.ShowScreen(target);
+                    }
                 }
                 else if (result.Error == AuthError.EmailNotConfirmed)
                 {
@@ -174,8 +182,16 @@ namespace Golfin.UI.Account
                 if (result.Success)
                 {
                     AccountUiBridge.SyncUsername();
-                    var target = AuthService.Instance.Session.HasDisplayName ? ScreenId.Home : ScreenId.CreateUsername;
-                    if (_screenManager != null) _screenManager.ShowScreen(target);
+                    // starting_character_selection: check NeedsStarter before landing on Home.
+                    if (CharacterManager.Instance != null && CharacterManager.Instance.NeedsStarter)
+                    {
+                        if (_screenManager != null) _screenManager.ShowScreen(ScreenId.StartingCharacterSelection);
+                    }
+                    else
+                    {
+                        var target = AuthService.Instance.Session.HasDisplayName ? ScreenId.Home : ScreenId.CreateUsername;
+                        if (_screenManager != null) _screenManager.ShowScreen(target);
+                    }
                 }
                 else SetError(result.Message); // "coming soon" until Phase 2b providers are enabled
             });
