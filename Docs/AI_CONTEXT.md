@@ -23,6 +23,39 @@
 
 ## ✅ RECENTLY LANDED
 
+> **`content_catalog` (Phase 0 of the content pipeline) — implemented 2026-08-25, awaiting Cesar's sign-off.**
+> Spec: `Docs/Specs/Active/content_catalog/`. Backend + tooling only; **the game is unchanged.**
+>
+> Admin-managed content now has a store, a read endpoint and a round trip to the repo:
+> - **Supabase** — `content_catalogs / content_rows / content_drafts / content_versions` plus
+>   `content_publish` / `content_rollback` (applied by Cesar 2026-08-24), seeded 2026-08-25 with the
+>   **1332 rows** of the seven shipped CSVs (clubs 799 · characters 12 · items 3 · bags 10 · balls 2 ·
+>   **texts 501** · shop_catalog 5), at v1 with a v1 snapshot.
+> - **`GET /api/v1/content?since=&build=&catalogs=`** — live on prod, no auth, `max-age=60`. Returns a
+>   delta filtered server-side by `min_build`; `is_enabled=false` removes a catalog entirely and drops
+>   the top-level `enabled`. Fresh client 705 KB, current client ~200 bytes per catalog.
+> - **`Tools/content/`** — `seed_from_csv.py` (CSVs → SQL, `--apply` runs it) and `export_content.py`
+>   (published rows → the seven CSVs + the new `Assets/Resources/Data/content_version.txt`).
+>   Round trip verified: **`git diff` over all seven CSVs is empty**, and stays empty after a publish
+>   and a rollback.
+> - **Dashboard route handlers** (no UI, by design) — list / paginated draft rows / field-level diff /
+>   validate+publish / rollback / kill switch, each behind `checkAdmin()` and audited.
+>   Publishing `characters` also upserts the `golfin_characters` mirror in the same request.
+>
+> **Read `IMPLEMENTER_REPORT.md` § Spec deviations D-2 before approving.** The endpoint's top-level
+> `version` is the **min** across catalogs, not the max the spec called for: replaying the max was
+> measured at **610 KB per boot** on prod and could silently skip a catalog's rows; the min costs 1.4 KB.
+> The max is still returned as `latest_version`.
+>
+> **Not done and deliberately so:** no `ContentService`, no `RemoteContentSource`, no `*DatabaseCSV.cs`
+> change, no admin panels, no `LevelUpCosts` catalog (plan §9 open question 2). `Endpoints.Content()`
+> exists and nothing calls it.
+>
+> **Known follow-up:** three more hand-maintained CSV mirrors (`golfin_bot_fields`,
+> `golfin_bot_brackets`, `golfin_fake_players`) have the same drift risk `golfin_characters` had, and
+> no gate covers any of them.
+
+
 > **`starting_character_selection` — DONE 2026-08-25** (`bade0e2f4` + `8ceb59473`).
 > Spec archived at `Docs/Specs/Completed/starting_character_selection/`.
 >

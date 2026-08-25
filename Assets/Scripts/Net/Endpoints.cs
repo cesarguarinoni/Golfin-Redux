@@ -67,6 +67,30 @@ namespace Golfin.Net
         public static string Notices => BaseUrl + "/notices";
 
         /// <summary>
+        /// GET → <c>{data:{fetched_at, enabled, version, catalogs:{…}}}</c> — the admin-managed
+        /// content delta. <paramref name="since"/> is the content version the bundled CSVs were
+        /// exported at (<c>Assets/Resources/Data/content_version.txt</c>); <paramref name="build"/>
+        /// is the running build number, and the server withholds any row whose <c>min_build</c>
+        /// exceeds it, so an old build is never sent content it cannot render.
+        ///
+        /// No auth, same posture and same reason as <see cref="Banners"/>: it warms at boot before
+        /// any token work. No trailing slash — the bare form is the 200, and the caller must not
+        /// depend on redirect following.
+        ///
+        /// REPLAY <c>data.version</c>, NOT <c>data.latest_version</c>. Catalogs version
+        /// independently, and <c>version</c> is the LOWEST across them — the only value a single
+        /// shared <paramref name="since"/> can replay without either skipping a catalog that
+        /// published behind the newest one, or pulling every catalog down in full on every boot.
+        /// <c>latest_version</c> is for display and logs. Measured against prod 2026-08-25:
+        /// replaying the max cost 610 KB per boot, replaying the min cost 1.4 KB.
+        ///
+        /// NOTHING CALLS THIS YET. Phase 0 (content_catalog SPEC §B2) stands up the backend only;
+        /// the client-side reader lands with the ContentService spec.
+        /// </summary>
+        public static string Content(int since, int build) =>
+            BaseUrl + "/content?since=" + since + "&build=" + build;
+
+        /// <summary>
         /// POST <c>{session_id, app_version, build_number, platform, device_model, os, events:[…]}</c>
         /// — the beta telemetry sink (beta_telemetry SPEC §2.1).
         ///

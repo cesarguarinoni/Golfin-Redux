@@ -1,0 +1,18 @@
+
+=== iter-1 kickoff baseline 2026-08-25T08:29:34Z ===
+HEAD cc8d2d25db512f5ed445e821b076cf40540cc1b5
+DIRTY (git status --porcelain --untracked-files=all) at kickoff:
+   M Assets/Scripts/UI/Roster/UI/CharacterThumbnailCard.cs   <- NOT mine; Cesar's concurrent edit, committed by him during this session
+   M Docs/Versioning/last_uploaded_build.txt                 <- NOT mine; pre-existing at session start
+=== end baseline ===
+
+=== iter-1 kickoff baseline 2026-08-25T08:32:54Z ===
+HEAD: cc8d2d25db512f5ed445e821b076cf40540cc1b5
+DIRTY:
+ M Assets/Scripts/UI/Roster/UI/CharacterThumbnailCard.cs
+ M Docs/Versioning/last_uploaded_build.txt
+=== END baseline ===
+
+Neither DIRTY path was created or modified by this task. CharacterThumbnailCard.cs
+was Cesar's concurrent edit (he committed it as cc8d2d25d mid-session);
+last_uploaded_build.txt was already modified at session start.

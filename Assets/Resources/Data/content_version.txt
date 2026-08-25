@@ -1,0 +1,7 @@
+bags=1
+balls=5
+characters=5
+clubs=1
+items=1
+shop_catalog=1
+texts=9

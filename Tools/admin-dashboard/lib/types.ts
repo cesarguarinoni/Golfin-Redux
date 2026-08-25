@@ -537,3 +537,76 @@ export interface TelemetryEventsResponse {
   total: number | null;
   hasMore: boolean;
 }
+
+// ---------------------------------------------------------------------------
+// Admin-managed content (SPEC content_catalog §D). Backend only in Phase 0 —
+// route handlers, no panels. See lib/contentData.ts / lib/contentMutations.ts.
+// ---------------------------------------------------------------------------
+
+/** One row of `content_rows` or `content_drafts`. `data` is the CSV row. */
+export interface ContentStoredRow {
+  catalog: string;
+  rowId: string;
+  data: Record<string, string>;
+  minBuild: number;
+  isActive: boolean;
+  /** Published rows only; drafts have no version until they are published. */
+  version?: number;
+  updatedAt?: string | null;
+  updatedBy?: string | null;
+}
+
+export interface ContentCatalogSummary {
+  name: string;
+  publishedVersion: number;
+  isEnabled: boolean;
+  publishedCount: number;
+  draftCount: number;
+  /** Draft rows that differ from published — what a publish would actually change. */
+  dirtyCount: number;
+}
+
+export interface ContentCatalogsResponse {
+  catalogs: ContentCatalogSummary[];
+  mock: boolean;
+}
+
+export interface ContentRowsResponse {
+  catalog: string;
+  page: number;
+  limit: number;
+  total: number;
+  /** Column order for the page, first-seen across its rows. */
+  columns: string[];
+  rows: ContentStoredRow[];
+  mock: boolean;
+}
+
+export type ContentDiffKind = "added" | "changed" | "deactivated" | "reactivated";
+
+export interface ContentFieldDiff {
+  column: string;
+  before: string | null;
+  after: string | null;
+}
+
+export interface ContentDiffEntry {
+  rowId: string;
+  kind: ContentDiffKind;
+  fields: ContentFieldDiff[];
+}
+
+export interface ContentDiffResponse {
+  catalog: string;
+  publishedVersion: number;
+  counts: Record<ContentDiffKind, number>;
+  entries: ContentDiffEntry[];
+  mock: boolean;
+}
+
+export interface ContentRowInput {
+  rowId: string;
+  data: Record<string, string>;
+  minBuild?: number;
+  isActive?: boolean;
+}

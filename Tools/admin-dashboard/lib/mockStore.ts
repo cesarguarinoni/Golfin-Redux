@@ -1,5 +1,6 @@
 import "server-only";
 import { MOCK_BANNERS } from "./mockBanners";
+import { MOCK_CONTENT_CATALOGS, MOCK_CONTENT_DRAFTS, MOCK_CONTENT_PUBLISHED } from "./mockContent";
 import { MOCK_NOTICES } from "./mockNotices";
 import { MOCK_ACTIVITIES, MOCK_TRANSACTIONS, MOCK_USERS } from "./mock";
 import { MOCK_TOURNAMENTS, MOCK_TOURNAMENT_ENTRIES } from "./mockTournaments";
@@ -8,6 +9,8 @@ import type {
   AdminUserRow,
   AuditEntry,
   BannerRow,
+  ContentCatalogSummary,
+  ContentStoredRow,
   NoticeRow,
   PointsTransaction,
   TournamentEntryRow,
@@ -31,6 +34,12 @@ export interface MockDb {
   tournamentEntries: Record<string, TournamentEntryRow[]>;
   banners: BannerRow[];
   notices: NoticeRow[];
+  /** Admin-managed content (SPEC content_catalog §D2). Fixtures are DELIBERATELY
+   *  absurd — every price is 9999 — because §3.5 records mock fixtures being
+   *  read as production facts. */
+  contentCatalogs: ContentCatalogSummary[];
+  contentPublished: ContentStoredRow[];
+  contentDrafts: ContentStoredRow[];
 }
 
 const g = globalThis as unknown as { __golfinMockDb?: MockDb };
@@ -46,6 +55,9 @@ export function mockDb(): MockDb {
       tournamentEntries: structuredClone(MOCK_TOURNAMENT_ENTRIES),
       banners: structuredClone(MOCK_BANNERS),
       notices: structuredClone(MOCK_NOTICES),
+      contentCatalogs: structuredClone(MOCK_CONTENT_CATALOGS),
+      contentPublished: structuredClone(MOCK_CONTENT_PUBLISHED),
+      contentDrafts: structuredClone(MOCK_CONTENT_DRAFTS),
     };
   }
   return g.__golfinMockDb;
