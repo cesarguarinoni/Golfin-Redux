@@ -8,7 +8,19 @@
  * in English alphabetical order anyway so the two agree at a glance.
  */
 
-export type PanelIcon = "users" | "coins" | "flag" | "chart" | "shield" | "image" | "megaphone";
+export type PanelIcon =
+  | "users"
+  | "coins"
+  | "flag"
+  | "chart"
+  | "shield"
+  | "image"
+  | "megaphone"
+  | "club"
+  | "character"
+  | "box"
+  | "text"
+  | "cart";
 
 export interface PanelDef {
   id: string;
@@ -20,9 +32,17 @@ export interface PanelDef {
 export const PANELS: readonly PanelDef[] = [
   { id: "audit", title: "Audit Log", icon: "shield", route: "/audit" },
   { id: "banners", title: "Banners", icon: "image", route: "/banners" },
+  // Admin-managed game content (content_admin_panels). `items` covers the
+  // items / bags / balls catalogs behind three tabs: 15 rows between them does
+  // not justify three sidebar entries.
+  { id: "characters", title: "Characters", icon: "character", route: "/characters" },
+  { id: "clubs", title: "Clubs", icon: "club", route: "/clubs" },
+  { id: "items", title: "Items", icon: "box", route: "/items" },
   { id: "notices", title: "Notices", icon: "megaphone", route: "/notices" },
   { id: "points", title: "Points", icon: "coins", route: "/points" },
+  { id: "shop", title: "Shop", icon: "cart", route: "/shop" },
   { id: "telemetry", title: "Telemetry", icon: "chart", route: "/telemetry" },
+  { id: "texts", title: "Texts", icon: "text", route: "/texts" },
   { id: "tournaments", title: "Tournaments", icon: "flag", route: "/tournaments" },
   { id: "users", title: "Users", icon: "users", route: "/users" },
 ] as const;

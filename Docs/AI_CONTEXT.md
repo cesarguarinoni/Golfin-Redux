@@ -23,6 +23,50 @@
 
 ## ✅ RECENTLY LANDED
 
+> **`content_admin_panels` — implemented 2026-08-25, awaiting Cesar's sign-off.**
+> Spec: `Docs/Specs/Active/content_admin_panels/`. Dashboard only; **the game is unchanged.**
+> Deployed to `admin.golfin.world`, Version ID `3361ddfe-8132-4596-b306-2d5f89d33064`; root still
+> 302s to cloudflareaccess and all five new routes sit behind Access.
+>
+> The content catalogs finally have a UI. **Five panels + ONE shared publish drawer**, built
+> entirely on the six route handlers Phase 0 already deployed — **zero new API routes, zero schema
+> change, zero `Assets/` edits.**
+>
+> - **Clubs** (799 rows — server-paged 50 at a time, never a full table), **Characters**, **Items**
+>   (items/bags/balls in three tabs, each publishing independently), **Texts** (EN/JA side by side,
+>   prefix filter, a "No Japanese" badge), **Shop**.
+> - **The publish drawer is the guard**: publish is unreachable until the diff has loaded AND the
+>   operator ticks "I have read the changes above" — measured in the DOM, not asserted. Plus version
+>   history with rollback and the per-catalog kill switch.
+> - **Rollback says, in the UI, that it moves FORWARD** — restoring v9999 published as v10001.
+> - **Kill switch verified against the live game endpoint**: disabling `balls` took
+>   `/api/v1/content` from 7 catalogs to 6 with `enabled: false` — the catalog VANISHES rather than
+>   arriving empty — then restored.
+> - **Shop** carries the loud red notice that **prices are NOT server-enforced** (§11.5,
+>   `PointsSpendGate` still debits RP client-side), and its `refId` typeahead offers only ACTIVE
+>   rows of the chosen category, so a dangling reference is unreachable rather than merely rejected.
+> - 124 new i18n entries, **every one with both `en` and `ja`** (audited: 0 missing, 0 identical).
+>
+> **ONE ACCEPTANCE ITEM IS OPEN (graded FAIL, deliberately).** The Clubs **rarity** facet cannot be a
+> complete server query: `/api/content/:catalog/rows` has no filter parameter, and rarity only
+> appears in the row id, which the 7 originally-shipped clubs predate. Brand (799/799) and type
+> (798/799) DO narrow the query — measured, and the UI states each facet's coverage rather than
+> silently dropping rows. Closing it is ~3 lines in `fetchDraftRows` plus one query param; that is
+> server logic, which the spec forbids, so it is reported.
+>
+> **Three more things the six routes cannot serve, all reported not worked around:** nothing reads
+> `content_versions` (version history is reconstructed from the audit log, which caps at 200 actions
+> and never saw the SQL-seeded v1); the catalogs store Unity **sprite names**, not image URLs, so
+> the "art thumbnail" is a monogram tile beside the sprite name; and `shop_catalog` has no
+> `startAt`/`endAt` yet, so the LIVE/SCHEDULED/ENDED badge degrades to LIVE/OFF from `is_active`
+> instead of inventing a schedule.
+>
+> **Fixed in passing:** `dirtyCount` was stale in MOCK mode (the badge read 0 while the diff showed
+> a change — mock-branch only, live untouched); the drawer header was clipped 13px by the mode
+> banner; and Rule 19 of the STATUS hook was unsatisfiable for web tasks (scoped to `not is_backend`
+> like Rules 18/21). Still inherited and NOT changed: `rows.map((t) => …)` shadows the translator in
+> 4 places in the Tournaments/Users panels, and their drawers still clip by 13px.
+
 > **`content_cursor_per_catalog` — implemented 2026-08-25, awaiting Cesar's sign-off.**
 > Spec: `Docs/Specs/Active/content_cursor_per_catalog/`. Backend + tooling only; **the game is
 > unchanged.** Supersedes `content_catalog` §B1 — read this BEFORE the Phase 1 Unity overlay spec,
@@ -140,6 +184,32 @@
 ---
 
 ## 🟢 PRIORITY QUEUED — pick up immediately
+
+> **▶ 2026-08-25 · CONTENT PIPELINE — Phase 0 CLOSED + per-catalog cursor LIVE.
+> Next: `content_admin_panels` (the six admin panels). Everything so far is API-only.**
+>
+> `content_catalog` (Phase 0) and `content_cursor_per_catalog` are both DONE and deployed.
+> Live on prod, verified by the Architect 2026-08-25:
+> `GET /api/v1/content` returns `latest_version` (informational) and NO top-level `version`;
+> each catalog carries its own version and its own full/delta decision. Measured on identical
+> live data: **since=0 → 705,151 B · scalar-min → 2,177 B · per-catalog → 871 B.**
+> `/health`, `/notices`, `/banners`, `/tournaments/golfin` all still 200.
+> Dashboard deployed (Worker version `5f6548cd-c93b-4a19-a86f-ef93e93cdc72`); `/api/content`
+> 200 with a real admin session, `"mock": false`.
+>
+> ⚠️ **ARCHITECT ERROR, corrected — worth remembering.** I reported a live "texts drift"
+> (catalog 501 vs CSV 502). There was none. `LocalizationText.csv` is 503 lines = header +
+> **one mid-file `#` comment** + 501 keys; I counted with `csv.DictReader`, which does not skip
+> comments, while the shipping `LocalizationTextImporter` skips any line with fewer than 3
+> columns. **I validated with a different parser than the one that ships.** The Implementer
+> checked the premise instead of implementing it and said so — the right call. The drift guard
+> that came out of it gates on **id sets, not row counts**, because two files can hold 501 rows
+> each and disagree about which 501.
+>
+> Also of record: `flyctl` can exit NON-ZERO on a deploy that actually landed — its token expired
+> mid-run, so lease clearing, smoke and release-status all 401'd while both machines were already
+> on the new image. **On playlife-api, a flyctl 401 in the post-update phase is not a rollback
+> signal** — verify machine image versions and hit the endpoint before believing the exit code.
 
 > **▶ 2026-08-24 · ADMIN-MANAGED CONTENT — Phase 0 STARTED. Stage A1 SQL IS IN PROD.
 > Next action: Claude Code runs the `content_catalog` kickoff in `Docs/TellCode.md`, starting at

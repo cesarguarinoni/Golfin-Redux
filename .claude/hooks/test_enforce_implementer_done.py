@@ -1194,6 +1194,25 @@ class TestBackendExemption(unittest.TestCase):
         self.assertTrue(eid.spec_is_backend_task(spec),
                         "so is_backend is the thing that must gate Rules 18/21")
 
+    def test_backend_spec_skips_the_clone_provenance_gate(self):
+        """Rule 19 is scoped to non-backend specs (content_admin_panels).
+
+        CLONE_SOURCE_RE accepts only a .prefab path, an Assets/ path or a 32-hex
+        Unity GUID, so a Next.js dashboard task cannot cite one truthfully. A
+        spec that says "do not rebuild" (meaning: build on the existing API
+        routes) would otherwise hit a gate satisfiable only by inventing an
+        Assets/ path.
+        """
+        spec = self._spec(
+            "# SPEC\n\nSPEC_KIND: backend\n\n"
+            "## What already exists (verified live — do not rebuild)\n"
+            "Six route handlers. Build the UI on top of them.\n"
+        )
+        self.assertTrue(eid.spec_requires_clone_provenance(spec),
+                        "precondition: 'do not rebuild' still trips the Rule 19 detector")
+        self.assertTrue(eid.spec_is_backend_task(spec),
+                        "so is_backend is what must gate it")
+
     def test_real_spec_files_are_detected_as_backend(self):
         """The two live specs this change exists for."""
         repo = Path(__file__).resolve().parents[2]

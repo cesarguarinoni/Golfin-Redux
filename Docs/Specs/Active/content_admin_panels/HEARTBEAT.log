@@ -1,0 +1,17 @@
+=== iter-1 kickoff baseline 2026-08-25T12:31:14Z ===
+HEAD: d3f9b05082dd4dae16f373791cb9eac5aad7738d
+DIRTY:
+ M Docs/AI_CONTEXT.md
+ M Docs/Specs/Active/content_cursor_per_catalog/SPEC.md
+ D Docs/Specs/Queued/content_admin_panels_NOTE.md
+ M Docs/TellCode.md
+ M Docs/Versioning/last_uploaded_build.txt
+?? Docs/Specs/Active/content_admin_panels/ARCHITECT_REVIEW.md
+?? Docs/Specs/Active/content_admin_panels/HEARTBEAT.log
+?? Docs/Specs/Active/content_admin_panels/IMPLEMENTER_REPORT.md
+?? Docs/Specs/Active/content_admin_panels/SELF_REVIEW.md
+?? Docs/Specs/Active/content_admin_panels/SPEC.md
+?? Docs/Specs/Active/content_admin_panels/STATUS.md
+?? Docs/Specs/Active/content_admin_panels/reference/.gitkeep
+?? Docs/Specs/Active/content_admin_panels/reference/README.md
+=== END baseline ===

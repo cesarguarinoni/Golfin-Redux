@@ -107,7 +107,35 @@ function dirtyCount(published: ContentStoredRow[], drafts: ContentStoredRow[]): 
 
 export async function fetchCatalogs(): Promise<ContentCatalogsResponse> {
   if (isMockMode()) {
-    return { catalogs: mockDb().contentCatalogs, mock: true };
+    // DERIVE the counts from the mock rows rather than trusting the numbers
+    // stored on the fixture (content_admin_panels, 2026-08-25).
+    //
+    // `upsertDraftRow` mutates `contentDrafts` but never refreshed the summary,
+    // so after editing a draft in mock mode `dirtyCount` stayed at whatever the
+    // fixture said — 0 — while the diff correctly showed a changed row. That is
+    // the one number an operator reads to decide whether a publish is needed,
+    // and a stale one is exactly the "mock fixtures read as fact" failure
+    // ADMIN_DASHBOARD_OPS.md §3.5 is about.
+    //
+    // Deriving is also what the live branch below does, so the two modes now
+    // agree by construction instead of by every mutation remembering to keep a
+    // cached count in step. `publishedVersion` / `isEnabled` still come from the
+    // fixture — publish, rollback and the kill switch own those and do update
+    // them. LIVE BEHAVIOUR IS UNCHANGED: this whole block is mock-only.
+    const store = mockDb();
+    return {
+      catalogs: store.contentCatalogs.map((meta) => {
+        const published = store.contentPublished.filter((r) => r.catalog === meta.name);
+        const drafts = store.contentDrafts.filter((r) => r.catalog === meta.name);
+        return {
+          ...meta,
+          publishedCount: published.length,
+          draftCount: drafts.length,
+          dirtyCount: dirtyCount(published, drafts),
+        };
+      }),
+      mock: true,
+    };
   }
 
   const supabase = getSupabaseAdmin();

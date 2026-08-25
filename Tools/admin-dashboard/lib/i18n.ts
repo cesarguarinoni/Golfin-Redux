@@ -53,6 +53,11 @@ export const DICT = {
   "nav.banners": { en: "Banners", ja: "バナー" },
   "nav.telemetry": { en: "Telemetry", ja: "テレメトリ" },
   "nav.audit": { en: "Audit Log", ja: "監査ログ" },
+  "nav.clubs": { en: "Clubs", ja: "クラブ" },
+  "nav.characters": { en: "Characters", ja: "キャラクター" },
+  "nav.items": { en: "Items", ja: "アイテム" },
+  "nav.texts": { en: "Texts", ja: "テキスト" },
+  "nav.shop": { en: "Shop", ja: "ショップ" },
 
   "mode.mock": {
     en: "MOCK DATA — running on local fixtures, no Supabase connection",
@@ -812,6 +817,230 @@ export const DICT = {
   "tel.events.expand": { en: "Click a payload to expand it.", ja: "ペイロードをクリックすると展開されます。" },
   "tel.events.none": { en: "No events match these filters.", ja: "条件に一致するイベントはありません。" },
   "tel.events.count": { en: "{n} matching events", ja: "一致 {n} 件" },
+
+  // ---- content catalogs (content_admin_panels) ---------------------------
+  // Untranslated by design (ADMIN_DASHBOARD_OPS.md §3.4): catalog names, DB
+  // column names, row ids, sprite names, and the LIVE/SCHEDULED/ENDED/OFF
+  // state badges.
+
+  "c.loading": { en: "Loading catalog…", ja: "カタログを読み込み中…" },
+  "c.loadFailed": { en: "Could not load the catalog", ja: "カタログを読み込めませんでした" },
+  "c.search": { en: "Search id or name…", ja: "ID・名前で検索…" },
+  "c.searchTexts": { en: "Search key or English…", ja: "キー・英文で検索…" },
+  "c.rows.none": { en: "No rows match these filters.", ja: "条件に一致する行はありません。" },
+  "c.rows.count": { en: "{shown} of {total} rows", ja: "{total} 件中 {shown} 件" },
+  "c.page": { en: "Page {page} of {pages}", ja: "{pages} ページ中 {page} ページ目" },
+  "c.serverPaged": {
+    en: "Paged on the server — only this page is fetched.",
+    ja: "サーバー側でページ分割。表示中のページのみ取得します。",
+  },
+
+  "c.col.rowId": { en: "Row id", ja: "行 ID" },
+  "c.col.state": { en: "State", ja: "状態" },
+  "c.col.minBuild": { en: "Min build", ja: "最小ビルド" },
+
+  "c.badge.dirty": { en: "{n} unpublished", ja: "未公開 {n}" },
+  "c.badge.dirtyHint": {
+    en: "Draft rows that differ from what the game is being served. A publish would apply exactly these.",
+    ja: "配信中の内容と異なる下書き行の数。公開するとこの行がそのまま反映されます。",
+  },
+  "c.badge.clean": { en: "No unpublished changes", ja: "未公開の変更なし" },
+  "c.badge.disabled": { en: "DISABLED", ja: "配信停止中" },
+  "c.badge.disabledHint": {
+    en: "The kill switch is off, so the game does not receive this catalog at all and falls back to its bundled CSV.",
+    ja: "キルスイッチが OFF のため、ゲームはこのカタログを受信せず、同梱 CSV にフォールバックします。",
+  },
+  "c.version": { en: "Published v{n}", ja: "公開中 v{n}" },
+  "c.publishOpen": { en: "Review & publish", ja: "差分を確認して公開" },
+
+  "c.facet.brand": { en: "Brand", ja: "ブランド" },
+  "c.facet.type": { en: "Type", ja: "種別" },
+  "c.facet.rarity": { en: "Rarity", ja: "レアリティ" },
+  "c.facet.any": { en: "Any {label}", ja: "{label}: すべて" },
+  "c.facet.serverNote": {
+    en: "Filters run as a server query, not on the loaded page.",
+    ja: "フィルタはサーバー側のクエリとして実行され、表示中のページ内での絞り込みではありません。",
+  },
+  "c.facet.partial": {
+    en: "Reaches {hit} of {total} rows — see the report; the rows route has no filter parameter.",
+    ja: "{total} 件中 {hit} 件に到達します（rows API にフィルタ用パラメータがないため）。詳細はレポート参照。",
+  },
+
+  "c.edit.title": { en: "Edit draft row", ja: "下書き行を編集" },
+  "c.edit.subtitle": {
+    en: "Drafts are never served to the game. Publish is the gate.",
+    ja: "下書きはゲームに配信されません。公開が唯一のゲートです。",
+  },
+  "c.edit.active": { en: "Active", ja: "有効" },
+  "c.edit.activeHint": {
+    en: "Turning this off deactivates the row: it leaves shops and pools, and every player who already owns one keeps it. Nothing is ever deleted.",
+    ja: "OFF にすると行が無効化されます。ショップや排出から外れますが、既に所持しているプレイヤーは保持したままです。削除は行われません。",
+  },
+  "c.edit.minBuildHint": {
+    en: "Withheld from any build below this number. Immutable once published.",
+    ja: "この番号未満のビルドには配信されません。公開後は変更できません。",
+  },
+  "c.edit.save": { en: "Save draft", ja: "下書きを保存" },
+  "c.edit.saving": { en: "Saving…", ja: "保存中…" },
+  "c.edit.saved": { en: "Draft saved. Publish to send it to the game.", ja: "下書きを保存しました。ゲームに反映するには公開してください。" },
+  "c.edit.saveFailed": { en: "Save failed", ja: "保存に失敗しました" },
+
+  // ---- publish drawer ----------------------------------------------------
+  "cp.title": { en: "Publish {catalog}", ja: "{catalog} を公開" },
+  "cp.tab.diff": { en: "Changes", ja: "変更点" },
+  "cp.tab.history": { en: "Version history", ja: "バージョン履歴" },
+  "cp.tab.switch": { en: "Kill switch", ja: "キルスイッチ" },
+
+  "cp.diff.loading": { en: "Computing the diff…", ja: "差分を計算中…" },
+  "cp.diff.failed": { en: "Could not compute the diff", ja: "差分を計算できませんでした" },
+  "cp.diff.none": {
+    en: "Drafts match what is published. There is nothing to publish.",
+    ja: "下書きは公開中の内容と一致しています。公開する変更はありません。",
+  },
+  "cp.diff.added": { en: "added", ja: "追加" },
+  "cp.diff.changed": { en: "changed", ja: "変更" },
+  "cp.diff.deactivated": { en: "deactivated", ja: "無効化" },
+  "cp.diff.reactivated": { en: "reactivated", ja: "再有効化" },
+  "cp.diff.col.field": { en: "Field", ja: "項目" },
+  "cp.diff.col.before": { en: "Published", ja: "公開中" },
+  "cp.diff.col.after": { en: "Draft", ja: "下書き" },
+  "cp.diff.deactivatedNote": {
+    en: "A deactivated row leaves shops and gacha pools; players who own it keep it. It is never deleted.",
+    ja: "無効化された行はショップや排出から外れますが、所持しているプレイヤーは保持したままです。削除はされません。",
+  },
+  "cp.diff.truncated": {
+    en: "Showing the first {shown} of {total} changed rows.",
+    ja: "変更 {total} 件のうち先頭 {shown} 件を表示しています。",
+  },
+
+  "cp.confirm.headline": { en: "This goes live to every player.", ja: "この操作は全プレイヤーに即時反映されます。" },
+  "cp.confirm.body": {
+    en: "Publishing replaces what {catalog} serves from v{from} onward. Read the changes above first — this is the only place they are shown.",
+    ja: "公開すると {catalog} の配信内容が v{from} から置き換わります。上の変更点を必ず確認してください。ここが唯一の確認画面です。",
+  },
+  "cp.confirm.check": { en: "I have read the changes above", ja: "上の変更点を確認しました" },
+  "cp.note.label": { en: "Note (optional)", ja: "メモ（任意）" },
+  "cp.note.placeholder": { en: "Why this publish — stored on the version snapshot", ja: "公開理由。バージョンのスナップショットに保存されます" },
+
+  "cp.publish": { en: "Publish now", ja: "今すぐ公開" },
+  "cp.publishing": { en: "Publishing…", ja: "公開中…" },
+  "cp.published": { en: "Published {catalog} v{version}.", ja: "{catalog} v{version} を公開しました。" },
+  "cp.publishFailed": { en: "Publish failed — nothing was published", ja: "公開に失敗しました。何も公開されていません" },
+  "cp.problems.title": { en: "Blocking problems ({n})", ja: "公開できない問題 ({n} 件)" },
+  "cp.problems.body": {
+    en: "Every problem below has to be fixed. Nothing was published — not the valid rows, not a subset.",
+    ja: "以下の問題をすべて解消する必要があります。正常な行を含め、一切公開されていません。",
+  },
+  "cp.warnings.title": { en: "Warnings ({n})", ja: "警告 ({n} 件)" },
+  "cp.warnings.body": {
+    en: "Published anyway — these are advisory, not rules.",
+    ja: "公開は完了しています。これらは参考情報であり、規則ではありません。",
+  },
+
+  "cp.history.title": { en: "Version history", ja: "バージョン履歴" },
+  "cp.history.forward": {
+    en: "Rollback moves FORWARD. Restoring v{example} republishes that snapshot as a NEW, HIGHER version — the counter never decreases. A client that already fetched the bad version only learns about the fix because the number went UP.",
+    ja: "ロールバックは「前に進む」操作です。v{example} を復元すると、そのスナップショットが新しい、より大きなバージョンとして再公開されます。番号が戻ることはありません。不具合のあるバージョンを既に取得したクライアントは、番号が上がることでのみ修正を認識できます。",
+  },
+  "cp.history.current": { en: "Current", ja: "現在" },
+  "cp.history.restore": { en: "Restore this version", ja: "このバージョンを復元" },
+  "cp.history.confirm": {
+    en: "Restore v{version}? It will be republished as v{next}.",
+    ja: "v{version} を復元しますか？ v{next} として再公開されます。",
+  },
+  "cp.history.done": { en: "Restored v{from} — published forward as v{version}.", ja: "v{from} を復元し、v{version} として再公開しました。" },
+  "cp.history.failed": { en: "Rollback failed", ja: "ロールバックに失敗しました" },
+  "cp.history.col.version": { en: "Version", ja: "バージョン" },
+  "cp.history.col.when": { en: "When", ja: "日時" },
+  "cp.history.col.who": { en: "By", ja: "実行者" },
+  "cp.history.col.what": { en: "What changed", ja: "変更内容" },
+  "cp.history.source": {
+    en: "Built from the audit log, which keeps the 200 most recent admin actions overall. Versions published before that window — including the v1 seed, which was applied by SQL and never passed through this dashboard — appear as a number with no detail. There is no route that reads content_versions; see the implementer report.",
+    ja: "監査ログ（管理操作の直近 200 件）から構築しています。この範囲より前に公開されたバージョン（SQL で適用され、この管理画面を経由していない v1 のシード投入を含む）は、番号のみで詳細なしと表示されます。content_versions を読む API は存在しません。詳細は実装レポート参照。",
+  },
+  "cp.history.capped": {
+    en: "Showing the {cap} most recent versions (down to v{oldest}). Older snapshots still exist and are still restorable — the list is capped so a large version number cannot render an unbounded table.",
+    ja: "直近 {cap} 件のバージョン（v{oldest} まで）を表示しています。これより古いスナップショットも存在し、復元も可能です。バージョン番号が大きい場合に際限なく行が描画されるのを防ぐための上限です。",
+  },
+  "cp.history.noDetail": { en: "(before the audit window)", ja: "（監査ログの保持範囲より前）" },
+  "cp.history.rollbackOf": { en: "rollback of v{from}", ja: "v{from} のロールバック" },
+
+  "cp.enabled.title": { en: "Serve this catalog to the game", ja: "このカタログをゲームに配信する" },
+  "cp.enabled.on": {
+    en: "ON — the game receives {catalog} from /api/v1/content.",
+    ja: "ON — ゲームは /api/v1/content から {catalog} を受信します。",
+  },
+  "cp.enabled.off": {
+    en: "OFF — {catalog} vanishes from /api/v1/content entirely and the game runs on its bundled CSV. It is never sent as an empty catalog, which a client could apply as 'everything was deleted'.",
+    ja: "OFF — {catalog} は /api/v1/content から完全に消え、ゲームは同梱 CSV で動作します。「空のカタログ」としては送信されません（クライアントが「全削除」と解釈しうるため）。",
+  },
+  "cp.enabled.disable": { en: "Stop serving", ja: "配信を停止" },
+  "cp.enabled.enable": { en: "Resume serving", ja: "配信を再開" },
+  "cp.enabled.failed": { en: "Could not change the kill switch", ja: "キルスイッチを変更できませんでした" },
+
+  // ---- clubs / characters / items / texts --------------------------------
+  "cl.title": { en: "Clubs", ja: "クラブ" },
+  "ch.title": { en: "Characters", ja: "キャラクター" },
+  "it.title": { en: "Items, Bags & Balls", ja: "アイテム・バッグ・ボール" },
+  "it.tab.items": { en: "Items", ja: "アイテム" },
+  "it.tab.bags": { en: "Bags", ja: "バッグ" },
+  "it.tab.balls": { en: "Balls", ja: "ボール" },
+  "it.oneCatalogNote": {
+    en: "Three catalogs, one panel — each publishes independently.",
+    ja: "3 つのカタログを 1 つの画面に集約しています。公開はカタログごとに独立しています。",
+  },
+  "tx.title": { en: "Texts", ja: "テキスト" },
+  "tx.col.key": { en: "Key", ja: "キー" },
+  "tx.col.en": { en: "English", ja: "英語" },
+  "tx.col.ja": { en: "Japanese", ja: "日本語" },
+  "tx.prefix": { en: "Key prefix", ja: "キーの接頭辞" },
+  "tx.prefix.any": { en: "All prefixes", ja: "すべての接頭辞" },
+  "tx.missingJa": { en: "No Japanese", ja: "日本語なし" },
+  "tx.missingJaHint": {
+    en: "This key falls back to English in the game.",
+    ja: "このキーはゲーム内で英語にフォールバックします。",
+  },
+
+  // ---- shop --------------------------------------------------------------
+  "sh.title": { en: "Shop", ja: "ショップ" },
+  "sh.notice.headline": { en: "Prices here are NOT enforced by the server.", ja: "ここで設定した価格はサーバーで強制されません。" },
+  "sh.notice.body": {
+    en: "Purchases still debit RP on the client through PointsSpendGate and grant locally. Moving the listing to the server did not make the price authoritative — a modified client can still grant itself the item. Treat this panel as the shop WINDOW, not as the till.",
+    ja: "購入処理は従来どおりクライアント側の PointsSpendGate で RP を消費し、ローカルで付与されます。出品情報をサーバー管理にしても価格が正となるわけではなく、改造クライアントは依然としてアイテムを自己付与できます。この画面は「ショーウィンドウ」であり、レジではありません。",
+  },
+  "sh.col.entry": { en: "Entry", ja: "出品" },
+  "sh.col.refers": { en: "Refers to", ja: "参照先" },
+  "sh.col.price": { en: "Price", ja: "価格" },
+  "sh.col.order": { en: "Order", ja: "並び順" },
+  "sh.col.flags": { en: "Flags", ja: "フラグ" },
+  "sh.category": { en: "Category", ja: "カテゴリ" },
+  "sh.refId": { en: "Referenced row", ja: "参照する行" },
+  "sh.refId.search": { en: "Type to search the {catalog} catalog…", ja: "{catalog} カタログを検索…" },
+  "sh.refId.searching": { en: "Searching…", ja: "検索中…" },
+  "sh.refId.none": { en: "No active rows match.", ja: "一致する有効な行はありません。" },
+  "sh.refId.activeOnly": {
+    en: "Only ACTIVE rows are offered — listing a deactivated row is the most likely way a shop edit produces a broken card.",
+    ja: "有効な行のみを候補として表示します。無効な行を出品することが、ショップの表示崩れを招く最も多い原因です。",
+  },
+  "sh.preview.title": { en: "Resolved reference", ja: "参照先の解決結果" },
+  "sh.preview.unresolved": {
+    en: "\"{refId}\" does not exist in the {catalog} catalog. Publish will block on it.",
+    ja: "「{refId}」は {catalog} カタログに存在しません。公開時にブロックされます。",
+  },
+  "sh.preview.inactive": {
+    en: "\"{refId}\" exists but is DEACTIVATED. Publish will block on it.",
+    ja: "「{refId}」は存在しますが無効化されています。公開時にブロックされます。",
+  },
+  "sh.preview.artRef": { en: "Sprite", ja: "スプライト" },
+  "sh.preview.noArtUrl": {
+    en: "The catalogs store a Unity sprite NAME, not an image URL — the game resolves it with Resources.Load. There is no image to fetch here; art-URL columns are out of scope for this task.",
+    ja: "カタログが保持しているのは画像 URL ではなく Unity のスプライト「名」で、ゲーム側が Resources.Load で解決します。ここで取得できる画像は存在しません（画像 URL 列は本タスクの対象外）。",
+  },
+  "sh.sale": { en: "SALE", ja: "セール" },
+  "sh.windowsMissing": {
+    en: "shop_catalog has no startAt / endAt columns yet (CONTENT_PIPELINE_PLAN §11.2 proposes them; no migration has applied them). Until they exist the badge shows LIVE or OFF from is_active rather than inventing a schedule.",
+    ja: "shop_catalog にはまだ startAt / endAt 列がありません（CONTENT_PIPELINE_PLAN §11.2 の提案段階で、マイグレーション未適用）。列が追加されるまで、バッジはスケジュールを推測せず is_active に基づき LIVE / OFF を表示します。",
+  },
 } as const satisfies Record<string, Entry>;
 
 export type DictKey = keyof typeof DICT;

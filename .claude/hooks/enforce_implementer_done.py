@@ -3174,7 +3174,19 @@ def main() -> int:
     # from-scratch rebuild. Blocks the tournament_round_loop signup-modal scar
     # (hand-rolled spriteless modal that falsely claimed clone PASS) and forces
     # the "surface, don't silently rebuild" rule when a source can't be found.
-    if spec_requires_clone_provenance(spec_path):
+    #
+    # SKIPPED for declared backend tasks (content_admin_panels, 2026-08-25) —
+    # the same reasoning that scoped Rules 18/21 in content_cursor_per_catalog §7.
+    # Rule 19 is inherently about UNITY reuse: CLONE_SOURCE_RE only accepts a
+    # `.prefab` path, an `Assets/...` asset path, or a 32-hex Unity GUID. A
+    # Next.js dashboard task has none of those by construction, so on a spec that
+    # merely says "do not rebuild" (meaning: build on the existing API routes)
+    # the gate becomes unsatisfiable except by INVENTING an Assets/ path — which
+    # is precisely the "a hook that can only be satisfied by fabricating evidence
+    # teaches people to fabricate evidence" failure the SPEC_KIND work removed.
+    # Reuse discipline on a web task is still reviewed; it just is not expressed
+    # as a prefab GUID.
+    if not is_backend and spec_requires_clone_provenance(spec_path):
         errors.extend(validate_clone_provenance(report_path))
 
     # ── Phase 1 (P1 + P3): YAML-based clone-provenance VERIFIER ──────────────
