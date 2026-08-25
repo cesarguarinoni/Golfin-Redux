@@ -2600,3 +2600,36 @@ used the sheet as the *final* check rather than as an index.
   the mismatch instantly on the earlier take, where it still read hole 1's par and yardage.
 - Cheap numeric backstop for this class: sample terrain height at the camera XZ and compare to
   camera Y. It took one script and gave "11.32 m underground" — far stronger than any look.
+
+---
+
+## Lesson BH — Unity reads *imported* assets, not your file writes. Verify against the compiled build, not the disk.
+
+**Session:** 2026-08-25, `starting_character_selection` close-out + the Roster/Inventory nav-title fix.
+
+Two variants of one mistake, both of which produced a confident "the fix didn't work" that was
+actually "the fix was never loaded":
+
+1. **CSV → localization table.** I edited `LocalizationText.csv` with a Python heredoc, then ran
+   `Tools/Localization/Import Text CSV`. It reported success — *"CSV imported. Rows: 499"* — and the
+   new keys were absent from the generated table. The importer does
+   `AssetDatabase.LoadAssetAtPath<TextAsset>(csvPath)`, which returns Unity's **imported** copy. An
+   external write leaves that copy stale, so the import faithfully reprocessed the OLD content and
+   logged a healthy row count. A silent no-op that looks exactly like a pass.
+
+2. **External `.cs` edit.** I edited `PersistentUIManager.cs` with the Edit tool, entered play mode,
+   and measured — the old assembly. Unity only picks up externally-written scripts on focus or an
+   explicit refresh. My first verification "disproved" a fix that was correct in the file and simply
+   not compiled.
+
+**Rules:**
+- After writing any asset from outside the Editor, `AssetDatabase.ImportAsset(path,
+  ImportAssetOptions.ForceUpdate)` — or a full `assets-refresh` for scripts — **before** running any
+  tool that consumes it or entering play mode to verify.
+- A success log from an importer proves it ran, not that it read what you wrote. Assert the OUTPUT
+  contains your change (`table.rows` contains the key), never the importer's own row count.
+- Never refresh assets during play mode — it nulls `LocalizationManager`'s statics and every string
+  becomes a raw key. Exit play, refresh, re-enter. That symptom cost several iterations this task
+  before being recognised as capture contamination rather than a product bug.
+- Related timing trap: `ShowScreen` swaps at the **fade midpoint**, so any UI state read immediately
+  after a nav `onClick.Invoke()` still reflects the previous screen. Wait ~2-3s before asserting.
