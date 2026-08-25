@@ -525,6 +525,8 @@ namespace Golfin.UI
         {
             switch (screenId)
             {
+                case GolfinRedux.UI.ScreenId.Roster:                   return "NAV_ROSTER";
+                case GolfinRedux.UI.ScreenId.Inventory:                return "NAV_INVENTORY";
                 case GolfinRedux.UI.ScreenId.Leaderboard:              return "NAV_LEADERBOARD";
                 case GolfinRedux.UI.ScreenId.ModeSelection:            return "NAV_MODE_SELECTION";
                 case GolfinRedux.UI.ScreenId.TournamentHoleSelection:  return "NAV_SELECT_HOLE";

@@ -1041,6 +1041,12 @@ MonoBehaviour:
   - key: NAV_REWARDS_CENTER
     english: REWARDS CENTER
     japanese: "\u5831\u916C\u30BB\u30F3\u30BF\u30FC"
+  - key: NAV_ROSTER
+    english: ROSTER
+    japanese: "\u30ED\u30B9\u30BF\u30FC"
+  - key: NAV_INVENTORY
+    english: INVENTORY
+    japanese: "\u30A4\u30F3\u30D9\u30F3\u30C8\u30EA"
   - key: BAG_EMPTY
     english: EMPTY
     japanese: "\u7A7A\u304D"
