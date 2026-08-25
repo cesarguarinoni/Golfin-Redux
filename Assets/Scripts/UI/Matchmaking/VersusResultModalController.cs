@@ -174,24 +174,29 @@ namespace Golfin.UI.Matchmaking
 
         private IEnumerator NewMatchRoutine()
         {
-            // Small frame gap so Hide() completes before unload.
+            // Small frame gap so Hide() completes before the curtain drops.
             yield return null;
 
-            // Unload gameplay → return to ShellScene.
+            // Tear gameplay down behind the curtain and land on Home before re-queueing.
+            // Two things this fixes over the old unload-then-Open: the unload takes several
+            // frames with nothing left to render (the bare shell scene was on show), and
+            // nobody ever swapped the screen — so the matchmaking modal re-opened over that
+            // emptiness instead of over Home, which is where a player opens it from.
             if (GameplaySceneLoader.Instance != null)
             {
-                yield return StartCoroutine(GameplaySceneLoader.Instance.UnloadGameplay());
+                yield return GameplaySceneLoader.Instance.ExitToScreen(
+                    ScreenId.Home,
+                    () => GameSession.IsVersus = false);   // reset while the screen is black
                 Debug.Log("[VersusResultModalController] Gameplay unloaded for NEW MATCH re-queue.");
             }
             else
             {
                 Debug.LogWarning("[VersusResultModalController] GameplaySceneLoader.Instance is null.");
+                GameSession.IsVersus = false;
             }
 
-            // Reset session flag so re-entry works cleanly.
-            GameSession.IsVersus = false;
-
-            // Re-open matchmaking to re-queue versus_1v1 (D3).
+            // Re-open matchmaking to re-queue versus_1v1 (D3) — after the reveal, so the
+            // queue animation plays in front of the player exactly as it does from Home.
             if (_matchmakingModal != null)
             {
                 _matchmakingModal.Open();

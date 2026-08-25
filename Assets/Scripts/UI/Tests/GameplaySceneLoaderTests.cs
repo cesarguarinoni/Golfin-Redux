@@ -21,6 +21,9 @@ namespace Golfin.UI.Tests
     ///  3. UnloadGameplay restores the bottom nav (drained in test, no real scenes loaded).
     ///  4. LoadingScreenController.PrepareForHoleLoad sets Target=HoleLoad + TargetHoleNumber.
     ///  5. LoadingScreenController.ClearTarget resets back to LegacyBootHome.
+    ///  6. ExitToScreen is self-hosting (returns a Coroutine started on the loader).
+    ///  7. No production caller unloads gameplay outside ExitToScreen — the source lint
+    ///     that keeps the empty-scene gap from coming back in a new exit path.
     /// </summary>
     public class GameplaySceneLoaderTests
     {
@@ -101,8 +104,10 @@ namespace Golfin.UI.Tests
 
         System.Collections.IEnumerator InvokeUnloadGameplay()
         {
+            // NonPublic: UnloadGameplay is deliberately private so every exit goes through
+            // ExitToScreen (see NoProductionCallerUnloadsGameplayDirectly).
             var mi = _gameplayLoaderType.GetMethod("UnloadGameplay",
-                BindingFlags.Instance | BindingFlags.Public);
+                BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
             Assert.IsNotNull(mi, "UnloadGameplay must exist on GameplaySceneLoader.");
             return (System.Collections.IEnumerator)mi.Invoke(_loader, null);
         }
@@ -228,6 +233,59 @@ namespace Golfin.UI.Tests
                 "ClearTarget must zero out TargetHoleNumber.");
 
             UnityEngine.Object.DestroyImmediate(go);
+        }
+
+        // ── Test 6: ExitToScreen hosts its own coroutine ──
+
+        [Test]
+        public void ExitToScreen_IsSelfHosting()
+        {
+            var mi = _gameplayLoaderType.GetMethod("ExitToScreen",
+                BindingFlags.Public | BindingFlags.Instance);
+
+            Assert.IsNotNull(mi, "GameplaySceneLoader.ExitToScreen must exist — it is the only " +
+                                 "sanctioned way to leave gameplay for a shell screen.");
+            // Returning Coroutine (not IEnumerator) is what makes it self-hosting: the loader
+            // lives in ShellScene and survives the unload, while several callers live in
+            // LabScaffold and are destroyed halfway through. A caller-hosted teardown would
+            // die with the curtain down and leave the screen black forever.
+            Assert.AreEqual(typeof(Coroutine), mi.ReturnType,
+                "ExitToScreen must return a Coroutine started on the loader, not an IEnumerator " +
+                "the caller hosts — callers in LabScaffold are destroyed by the unload.");
+        }
+
+        // ── Test 7: nobody tears gameplay down outside ExitToScreen ──
+
+        [Test]
+        public void NoProductionCallerUnloadsGameplayDirectly()
+        {
+            string scripts = System.IO.Path.Combine(Application.dataPath, "Scripts");
+            var offenders = new System.Collections.Generic.List<string>();
+
+            foreach (string file in System.IO.Directory.GetFiles(scripts, "*.cs", System.IO.SearchOption.AllDirectories))
+            {
+                string name = System.IO.Path.GetFileName(file);
+                // The loader declares it; this test file names it in prose and reflection.
+                if (name == "GameplaySceneLoader.cs" || name == "GameplaySceneLoaderTests.cs") continue;
+
+                string[] lines = System.IO.File.ReadAllLines(file);
+                for (int i = 0; i < lines.Length; i++)
+                {
+                    string line = lines[i];
+                    if (!line.Contains("UnloadGameplay(")) continue;
+                    // Prose in a comment is fine — only real calls matter.
+                    string trimmed = line.TrimStart();
+                    if (trimmed.StartsWith("//") || trimmed.StartsWith("///") || trimmed.StartsWith("*")) continue;
+
+                    offenders.Add($"{name}:{i + 1}: {trimmed}");
+                }
+            }
+
+            Assert.IsEmpty(offenders,
+                "Gameplay teardown must go through GameplaySceneLoader.ExitToScreen, which runs the " +
+                "unload behind the black curtain and reveals the target screen. Calling UnloadGameplay " +
+                "directly puts the empty shell scene on screen for the length of the unload. Offenders:\n" +
+                string.Join("\n", offenders));
         }
     }
 }

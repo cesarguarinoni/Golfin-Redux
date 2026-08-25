@@ -453,8 +453,12 @@ namespace Golfin.EditorTools
             var loader = GameplaySceneLoader.Instance;
             if (loader != null)
             {
-                yield return loader.UnloadGameplay();   // the MENU teardown — calls EndRun()
-                GameSession.ResetSession();
+                // ExitToScreen is the MENU teardown a player actually gets (curtain down,
+                // unload — which calls EndRun — reset, Home, curtain up), so the clip shows
+                // the real transition instead of the raw unload.
+                yield return loader.ExitToScreen(
+                    GolfinRedux.UI.ScreenId.Home,
+                    () => GameSession.ResetSession());
                 Debug.Log("[SkyDemoBot] Quit to menu — run ended.");
             }
             yield return new WaitForSecondsRealtime(2f);

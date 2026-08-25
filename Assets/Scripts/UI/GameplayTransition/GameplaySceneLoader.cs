@@ -213,9 +213,14 @@ namespace Golfin.UI.GameplayTransition
         }
 
         /// <summary>
-        /// Stage D entry point. Tears down gameplay scenes and restores the shell.
+        /// Tears down gameplay scenes and restores the shell.
+        ///
+        /// Private on purpose: on its own this leaves the shell scene empty (no screen up)
+        /// for however long the unload takes, which is exactly the flash every exit path
+        /// used to show. <see cref="ExitToScreen"/> is the entry point — it wraps this in
+        /// the curtain and reveals a real screen afterwards.
         /// </summary>
-        public IEnumerator UnloadGameplay()
+        IEnumerator UnloadGameplay()
         {
             // Returning to the menu ends the run, so the next one rolls a fresh sky.
             // Playing Next Hole never comes through here, which is exactly why the sky
@@ -241,8 +246,17 @@ namespace Golfin.UI.GameplayTransition
         /// So: curtain down over the live hole, tear down and swap behind it, curtain up
         /// on the target screen. <paramref name="onTornDown"/> runs while the screen is
         /// still black, for the session/context resets the target screen expects.
+        ///
+        /// The work is hosted on THIS loader (ShellScene), never on the caller: several
+        /// callers live in LabScaffold and are destroyed by the unload halfway through.
+        /// A caller hosting it itself would die with the curtain still down and the screen
+        /// black forever. Callers may `yield return` the returned Coroutine to wait for it;
+        /// if the caller dies first, the exit still completes.
         /// </summary>
-        public IEnumerator ExitToScreen(ScreenId target, System.Action onTornDown = null)
+        public Coroutine ExitToScreen(ScreenId target, System.Action onTornDown = null)
+            => StartCoroutine(ExitRoutine(target, onTornDown));
+
+        IEnumerator ExitRoutine(ScreenId target, System.Action onTornDown)
         {
             var fade = FadeController.Instance;
             if (fade != null) yield return fade.CurtainDown();

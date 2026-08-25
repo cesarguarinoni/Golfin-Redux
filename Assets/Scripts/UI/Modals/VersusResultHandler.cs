@@ -115,11 +115,19 @@ namespace Golfin.UI.Modals
             {
                 Debug.LogWarning("[VersusResultHandler] _resultModal is null — cannot show result modal. " +
                                  "Falling back to home navigation.");
-                // Fallback: unload and return home so the game doesn't get stuck.
-                GameSession.IsVersus = false;
-                if (Golfin.UI.GameplayTransition.GameplaySceneLoader.Instance != null)
-                    yield return StartCoroutine(
-                        Golfin.UI.GameplayTransition.GameplaySceneLoader.Instance.UnloadGameplay());
+                // Fallback: unload and return home so the game doesn't get stuck. ExitToScreen
+                // does the routing this branch always claimed to do but never actually did —
+                // the old code unloaded and stopped, leaving the player on the empty shell
+                // scene with no screen up — and it does the teardown behind the curtain.
+                // ExitToScreen hosts itself on the loader, which matters here: a copy of this
+                // handler lives in LabScaffold and is destroyed by the unload.
+                var loader = Golfin.UI.GameplayTransition.GameplaySceneLoader.Instance;
+                if (loader != null)
+                    yield return loader.ExitToScreen(
+                        GolfinRedux.UI.ScreenId.Home,
+                        () => GameSession.IsVersus = false);
+                else
+                    GameSession.IsVersus = false;
                 yield break;
             }
 

@@ -138,20 +138,21 @@ namespace GolfinRedux.UI.Tournaments
 
         private System.Collections.IEnumerator RouteAfterDelay(ScreenId target)
         {
-            // Unload gameplay scenes first.
+            // ExitToScreen, not UnloadGameplay + ShowScreen: the unload takes several frames
+            // and the shell scene behind it is empty, so tearing down and swapping in the
+            // open showed the bare camera clear between the hole and the target screen.
             var loader = GameplaySceneLoader.Instance;
             if (loader != null)
             {
-                yield return loader.UnloadGameplay();
+                yield return loader.ExitToScreen(target);
             }
             else
             {
                 Debug.LogWarning("[TournamentRoundHandler] GameplaySceneLoader.Instance is null; " +
                                  "gameplay scenes may not unload.");
                 yield return new WaitForSeconds(_postHoleDelaySeconds);
+                ScreenManager.Instance?.ShowScreen(target);
             }
-
-            ScreenManager.Instance?.ShowScreen(target);
         }
     }
 }
