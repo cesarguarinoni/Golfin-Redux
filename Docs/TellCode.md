@@ -46,7 +46,7 @@
   ⚠️ Two traps carried into the spec: runtime-disabling a renderer feature renders the terrain black
   (§10.3 — asset edit only), and `OnHoleUnloaded()` never fires in a player build (`LabHoleBinder` is
   editor-only) so the restore goes in `OnDestroy` — which also fixes the shell light never coming back.
-  Spec: `Docs/Specs/Active/perf_phase1_free_wins/SPEC.md`.
+  Spec: `Docs/Specs/Completed/perf_phase1_free_wins/SPEC.md`.
 - ~~**`perf_baseline_experiments`**~~ — ✅ **DONE 2026-08-26 for everything that gates Phase 1** (report
   §10). Leftovers (e) mid-flight, Instruments trace, Memory Profiler top-10, GC call stack roll into
   `perf_phase1_free_wins` §5 (GC/console) and Phase 4 (memory). Superseded pointer kept below.
@@ -54,7 +54,7 @@
 ### Kickoff · perf_phase1_free_wins (issued 2026-08-26)
 
 ```
-Read Docs/Specs/Active/perf_phase1_free_wins/SPEC.md and implement it.
+Read Docs/Specs/Completed/perf_phase1_free_wins/SPEC.md and implement it.
 
 Context:
 - Ships the Phase 0b wins: ShellScene camera disabled during a hole (mirror

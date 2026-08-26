@@ -67,7 +67,7 @@
 - **`home_notices`** — flagged by its own session as needing a device + the dashboard to sign off.
   See its entry below; not touched here.
 
-- **`perf_phase1_free_wins` — ✅ ALL ACCEPTANCE ITEMS PASS 2026-08-26. Awaiting the move to Completed/.**
+- **`perf_phase1_free_wins` — ✅ DONE 2026-08-26. Moved to `Docs/Specs/Completed/`.**
   Lesson O closed on build 2317: Cesar played Hole 08 end to end — *"Smooth as a baby's butt."*
   §11 of [Docs/Reports/perf_baseline_2026-08-26.md](Docs/Reports/perf_baseline_2026-08-26.md).
   Pinned sky + pinned yaw, 3 runs per pose, iPhone 15 Pro Max:
