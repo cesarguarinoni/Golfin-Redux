@@ -695,6 +695,10 @@ namespace Golfin.Tournaments.WireupTests
             var saveGo = NewGo("TEST_SaveDataHost");
             var host   = saveGo.AddComponent<Golfin.Save.SaveDataHost>();
             host.SetPersister(new NullPersister());
+            // The fake boot must be COMPLETE, not just present. EditMode never calls Awake, so
+            // nothing has read the save — and CharacterManager asserts on SaveDataHost.IsLoaded
+            // (content_kill_switch_and_order §2). ReloadFromDisk is the load Awake would have done.
+            host.ReloadFromDisk();
             if (Golfin.Save.SaveDataHost.Instance == null) SetSaveDataHost(host);
 
             AsmCSharp.ClearSingleton("Golfin.Roster.RewardPointsManager");

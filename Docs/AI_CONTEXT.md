@@ -1,4 +1,4 @@
-﻿# AI Context — Golfin Redux
+# AI Context — Golfin Redux
 
 **Project:** GOLFIN Redux — 3D mobile golf game, Unity (C#), iOS + Android  
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
@@ -6,6 +6,33 @@
 ---
 
 ## ⏳ WAITING ON A DEVICE — nothing else blocks these
+
+> **▶ CONTENT PIPELINE — device pass DEFERRED to the end by Cesar (2026-08-26). Batch all of it
+> in one session once every phase has landed.** Accumulated list, so nothing falls out of the
+> individual IMPLEMENTER_REPORTs:
+>
+> - A real admin publish, end to end, seen on the phone (Phase 1 + 2).
+> - The per-catalog kill switch flipped for real — **UNBLOCKED 2026-08-26.** Its gate,
+>   `content_kill_switch_and_order`, is landed: migration applied, `playlife-api` on v51, and the
+>   kill re-measured live (one catalog off ⇒ `enabled` stays true, `disabled ['bags']`, the other
+>   six unaffected). The device pass can now flip it for real and see a per-catalog revert.
+> - Boot cost on phone hardware. Editor measured 49.82 → 102.80 ms worst case (fresh install,
+>   799-row clubs); 0.17 ms at cursor parity.
+> - The Phase-1-cache upgrade path on a device that already holds one.
+> - Phase 4a inventory push, once it exists.
+>
+> **CARVE-OUT WITHDRAWN (Cesar, 2026-08-26): testers only, no real players yet.** The Phase-4c
+> "confirm on device before shipping" gate is dropped — batch it with the rest. The 4a→4b→4c
+> ladder existed to bound blast radius on real inventories; with testers it is ceremony, so
+> **Phase 4 collapses into ONE spec** (push + restore + two-way sync + grants queue).
+>
+> **What does NOT relax: the additive merge** (union owned ids, max of levels/quantities, never
+> subtract). Not because testers' stuff is precious, but because it is the only thing that keeps
+> loss DIAGNOSTIC — with additive merge any missing item is a bug; with last-write-wins loss is
+> sometimes correct and you cannot tell which. That is worth more during testing, not less. It is
+> also the hardest piece to change once real players exist, so it should be decided on what is
+> right at launch, not on who is playing today. ~30 lines vs ~5.
+
 
 > Both of these are **built, tested and deployed**. Neither can be finished from the Editor;
 > each needs a TestFlight build in a hand. Clear them and two specs close.
@@ -19,9 +46,198 @@
 - **`home_notices`** — flagged by its own session as needing a device + the dashboard to sign off.
   See its entry below; not touched here.
 
+- **`perf_baseline` Phase 0 — the device half (2026-08-26).** Static half is DONE and written up:
+  [Docs/Reports/perf_baseline_2026-08-26.md](Docs/Reports/perf_baseline_2026-08-26.md). All five
+  `PERF_OPTIMIZATION_PLAN` §0 items came back **CONFIRMED** from the assets/scenes/URP source alone
+  (#5 is worse than the plan said — the DBuffer decal feature also *disables* Native Render Pass;
+  #1 is confirmed as "two cameras render" but the shell camera turns out to sit ~25 m **under** the
+  terrain, so the plan's "up to ~2× GPU" needs the measured number before Phase 1 is ranked).
+  What still needs a phone on USB: Profiler CPU/Render/GPU ms, batches/SetPass/tris/verts, shadow
+  caster count, culling time, the Frame Debugger event list, the Memory Profiler snapshot after
+  01→08→06, 10-minute thermal state on Hole 08, and the five before/after experiments. §6 of the
+  report is a turnkey procedure with empty tables to paste into — nothing needs re-deriving.
+  ⚠️ Both iPhones read `unavailable` on 2026-08-26; that is the only thing blocking it.
+
 ---
 
 ## ✅ RECENTLY LANDED
+
+> **`content_kill_switch_and_order` — implemented 2026-08-26, awaiting Cesar's sign-off AND two
+> prod steps.** Spec: `Docs/Specs/Active/content_kill_switch_and_order/`. Two small pre-existing
+> fixes; the first **gates the Phase-2 device pass**.
+>
+> - **§1 — the per-catalog kill was a GLOBAL kill.** Top-level `enabled` was an AND across the
+>   catalogs the CLIENT HAD REQUESTED, and `ContentService` requests all seven and drops every
+>   cache on `enabled:false` — so switching off `bags` reverted `clubs`, `texts` and the rest to
+>   bundled, on every client. Measured on prod with `bags` disabled: `catalogs=bags,items` →
+>   `enabled False`, `catalogs=items` → `True`. Now `enabled` is derived from the WHOLE REGISTRY
+>   plus a new `content_settings.content_enabled` row and **never** from the requested subset; the
+>   per-catalog kill arrives as a top-level `disabled` list, each served catalog carries
+>   `enabled: true`, and the client drops **only that catalog's** cache.
+>   **A disabled catalog stays ABSENT from `catalogs` — unchanged, and load-bearing:** cursor
+>   parity is present-and-empty, so absent is what Phase 2's WITHDRAWN handling keys off. What is
+>   new is that absent now comes with a REASON, so a kill is logged as a kill instead of being
+>   indistinguishable from an unknown name or a server bug.
+> - **§2 — the −100 tie is gone.** `CharacterManager` −100 → **−95** (written by
+>   `MonoImporter.SetExecutionOrder`, not a hand-edited `.meta`), strictly after `SaveDataHost` and
+>   still ahead of `ClubDatabaseCSV` −90. New `SaveDataHost.IsLoaded` — `Instance` is assigned
+>   BEFORE `LoadData()`, so it never proved the save had been read — and `CharacterManager` asserts
+>   on it. **The assert earned its keep immediately:** it failed 5 tournament tests whose harnesses
+>   force-set `Instance` without ever loading a save. Fixed by completing the fake boot
+>   (`ReloadFromDisk()`), not by expecting the error away.
+> - **Evidence.** Full unfiltered EditMode sweep **1706 / 1703 / 0 / 3** (baseline 1692/1689/0/3,
+>   +14 new). Backend: 10 pytest cases driving the real `get_content` against an in-memory Supabase
+>   fake — and **tripwired**: against the pre-fix router 8 of 10 fail, reproducing the prod
+>   measurement exactly. Clamp determinism: 5 consecutive `ShellScene` play-mode boots, each
+>   `SaveDataHost loaded → CharacterManager → Clamp (characters)`, zero order errors.
+> - **✅ SHIPPED AND VERIFIED ON PROD (2026-08-26).** Cesar applied the migration; deployed
+>   `playlife-api` v50 → **v51** (image `deployment-01M0XVQSXZJVQQG2T71ZAR40DR`, confirmed by
+>   `flyctl status` + live probes, never the deploy exit code). The original measurement re-run
+>   with `bags` disabled: `catalogs=bags,items` → **`enabled True`**, `disabled ['bags']` — and
+>   `disabled` is IDENTICAL across all three subsets, which is the property the fix turns on.
+>   `bags` absent, other six served, registry restored. `/health` · `/notices` · `/banners` ·
+>   `/tournaments/golfin` all 200.
+>   **The global kill was proven to actually FIRE**, which fail-open otherwise hides —
+>   `_global_enabled()` returns true on a good read of `true`, on a FAILED read, and on a non-bool
+>   truthy value, so "prod says enabled" proves nothing by itself. Set false → `enabled False`,
+>   `disabled []`; restored. The value also arrives as a real bool, not the string `"true"`.
+>   `flyctl logs` shows no `content_settings` warning, so the row is genuinely read.
+> - **Architect report:** [Docs/Reports/2026-08-26_content_kill_switch_and_order.md](Docs/Reports/2026-08-26_content_kill_switch_and_order.md)
+>   — two asks in it: **§7.4 of the plan needs rewriting** (it describes ONE switch doing two jobs,
+>   which is where this bug actually originated — the code matched the document it was reviewed
+>   against), and the wire-shape decision below.
+> - **One open question for the architect:** SPEC §1 asked for `"enabled": false` *inside each
+>   catalog object* AND for a disabled catalog to stay *absent* — which cannot both hold, since an
+>   absent object carries no fields. Both halves are implemented (per-catalog `enabled` on served
+>   catalogs + a top-level `disabled` list) and the client consumes both, so either can be dropped
+>   later in two lines. The spec's claim that the client was "already written for it" was checked
+>   and is **false** — the DTO had no such field.
+
+> **`content_overlay_catalogs` — implemented 2026-08-26, awaiting Cesar's sign-off.**
+> Spec: `Docs/Specs/Active/content_overlay_catalogs/`. **PHASE 2 — the first time a publish can
+> touch data a player already has.** Phase 1 could only ever get a STRING wrong; this can publish a
+> `maxDurability` below an owned club's `currentDurability`. `Golfin.Content` was EXTENDED, not
+> rebuilt.
+>
+> - **Six catalogs overlay their bundled CSVs** — `clubs`, `characters`, `items`, `bags`, `balls`,
+>   `shop_catalog` — merged **field-by-field** through one new `ContentFields` reader that every
+>   `<X>DatabaseCSV` now parses through. A published row is a SPARSE PATCH: it overrides the columns
+>   it names, leaves the rest bundled, and a blank cell counts as absent (otherwise an operator
+>   editing `basePower` blanks the sprite names). Unknown columns stay ignored (I4).
+> - **THE CLAMP is one explicit step per owned collection, not a read-site guard.**
+>   `ContentClamp.ClampClubs` in `ClubManager.InitializeClubs`, `ContentClamp.ClampCharacters` in
+>   `CharacterManager.LoadRoster` — the first point where the overlaid catalog and the loaded save
+>   are both available. **Every field that moves logs one warning naming id / field / old / new**,
+>   and the save is marked dirty. Verified live: `maxDurability 60 → 40`, `currentDurability 60 → 40`,
+>   `currentLevel 10 → 8`, `char_james currentLevel 35 → 20 / spentStrength 30 → 18`. **No refunds** —
+>   `totalSPEarned` re-read from disk was unchanged; a test pins that.
+> - **⚠️ THE ORDERING GUARANTEE WAS A COMMENT.** Not `[DefaultExecutionOrder]` (neither class has
+>   one), not Project Settings (**this project has no `ProjectSettings/MonoManager.asset` at all**).
+>   It is the `executionOrder:` field committed into each `.cs.meta` — `ClubDatabaseCSV` −90,
+>   `ClubManager` −80, `CharacterDatabaseCSV` −200, `CharacterManager` −100 — written ONCE by the
+>   `GOLFIN ▸ Setup ▸ Club Managers` menu item and **never re-asserted**, unlike `SaveDataHost`'s
+>   `[InitializeOnLoad]` hook. A regenerated `.meta` drops both to 0, the catalog reads empty, and the
+>   player has no clubs with zero errors logged. Now asserted at runtime in three places
+>   (`ClubDatabaseCSV.IsLoaded`, `CharacterDatabaseCSV.IsLoaded`, `ContentCatalogStore.RequireReady`).
+>   ~~**Still open: `CharacterManager` and `SaveDataHost` are BOTH at −100**~~ — **CLOSED
+>   2026-08-26** by `content_kill_switch_and_order` §2: `CharacterManager` is now −95 and asserts
+>   the new `SaveDataHost.IsLoaded`. See the entry directly below.
+> - **§7 kill switch — half closed, half REPORTED.** Measured against prod: a catalog at cursor
+>   parity comes back **present-and-empty**, an unserved one comes back **absent**. So absent is NOT
+>   "no update", and a requested-but-absent catalog is now read as WITHDRAWN and its cache dropped —
+>   the "last good overlay applies forever" hole is closed. **What the payload still cannot say:**
+>   absent conflates `is_enabled=false`, an unknown catalog name, and a server omission bug. Needs a
+>   one-field API addition (`"enabled": false` per catalog, or a top-level `"disabled": [...]`).
+>   The client side is already written to take it.
+> - **`CharacterManager.GetMaxLevel` ignored the CSV `maxLevel` column entirely — fixed.** Invisible
+>   while the bundled CSV agreed with the rarity table; the overlay is what let them disagree. A
+>   published `maxLevel` 20 clamped the SAVE to 20 while the roster showed `/39` and LEVEL UP kept
+>   selling levels 21–39 — the player climbs back, gets clamped down next launch, and has spent the
+>   RP each time, forever.
+> - **§5 sprite veto.** A published sprite that does not resolve KEEPS THE BUNDLED ROW (a silently
+>   stale club beats a Placeholder); an APPENDED row with an unresolvable sprite is dropped outright.
+>   Only names the overlay CHANGED are guarded — the bundled roster has 77 missing sprites on purpose
+>   while `club_art_batches` lands.
+> - **I6 verified end to end.** A deactivated OWNED club left the shop, stayed in the bag carousel
+>   with its real art, and stayed EQUIPPED (`slot 1` in `save.json`). `GetAllClubs()=799` /
+>   `GetAvailableClubs()=798`.
+> - **§6 shop windows honoured for the first time.** The columns have shipped since
+>   `content_panels_gaps` and this client never read them. `endAt` EXCLUSIVE, sale price ignored
+>   outside its window (an expired sale removes the DISCOUNT, never the product), unparseable bound
+>   **drops the row** (fail closed). 1 of 5 rows listed in the live probe, each for a different reason.
+> - **Cache is now ONE FILE PER CATALOG** (`content_clubs.json`, …), each a minimal payload envelope
+>   so both mappers read it unchanged **and a Phase-1 whole-body `content_texts.json` still parses** —
+>   no existing player loses their text overlay on the upgrade.
+> - **Boot cost MEASURED, not asserted** (3 real boots): baseline **49.82 ms** → worst case
+>   **102.80 ms** with a FULL 799-row / 638 KB clubs payload, of which **40.55 ms is clubs alone**.
+>   At cursor parity the six catalogs cost **0.17 ms**, and I3's export resets cursors every release,
+>   so the 40 ms is the fresh-install path. Real, and named as a follow-up rather than hidden.
+> - **Tournaments left alone and PINNED** (§3): `TournamentSnapshotImmunityTests` clamps the roster
+>   row hard and proves the entry in flight does not move.
+> - **The 17 pre-existing failures are gone.** 16 were the schema literal `9` vs the shipped `10`;
+>   the 17th was `char_james` STR 6/CC 7/REC 6/STA 6 vs the rebalanced 7/6/5/7. Fixed by binding to
+>   `SaveSchemaMigrator.CurrentSchemaVersion` and to the live database rather than to fresh literals,
+>   so the next migration or rebalance cannot re-redden them. **Sweep: 1692 / 1689 passed / 0 failed /
+>   3 skipped** (was 1615 / 1595 / 17 / 3).
+> - **Still needs a device:** a REAL admin publish end to end, the per-catalog kill switch flipped
+>   for real, boot cost on phone hardware, and the Phase-1-cache upgrade path. Listed in
+>   `IMPLEMENTER_REPORT.md` § Needs manual on-device verification.
+
+
+> **`content_overlay_texts` — implemented 2026-08-26, awaiting Cesar's sign-off.**
+> Spec: `Docs/Specs/Active/content_overlay_texts/`. **PHASE 1 — the first time any of the content
+> pipeline reaches the game.** Everything before this (catalogs, publish/rollback, panels, the
+> delta endpoint) was a system the client had never read. Texts only, deliberately: if the
+> mechanism is wrong it is better to find out on a string than on 799 clubs.
+>
+> - **New `Golfin.Content` asmdef** (`Assets/Scripts/ContentRuntime/`, → `Golfin.Net` +
+>   `Golfin.Localization`). `RemoteContentSource` is a shape-for-shape copy of
+>   `RemoteNoticeSource` — raw-body mirror at `persistentDataPath/content_texts.json`, atomic
+>   `.tmp` + `File.Replace`, null on any failure. No new networking was invented.
+> - **`ContentService` is `[DefaultExecutionOrder(-900)]`, in `ShellScene` on the
+>   `TournamentService` GameObject beside `NoticeService`.** The order is the whole ballgame and it
+>   is now **asserted at runtime**, not just declared: `LocalizationBootstrap` (-1000) rebuilds
+>   `_textMap` from scratch, so an overlay applied first is silently wiped and the game merely
+>   shows bundled strings — invisible. `ContentService` refuses to apply and logs a `LogError` if
+>   `LocalizationManager.IsInitialized` is false. Real boot log, in order:
+>   `[LocalizationBootstrap] Startup language: English` → `[Content] Awake — LocalizationManager
+>   already initialised (order OK: -1000 → -900)`.
+> - **`min_build` RESOLVED — `Assets/Resources/Data/build_stamp.txt` is authoritative (2302).**
+>   The `ProjectSettings` 2113 is a stale working-copy leftover: `BuildStampGenerator` deliberately
+>   RESTORES that field after every build to avoid merge noise, so it is in no shipped binary and
+>   has no runtime API. The stamp is baked **ungated** on every build from
+>   `git rev-list --count HEAD` — the `GOLFIN_TESTBUILD` gate is on `BuildStamp.cs` (the on-screen
+>   overlay), NOT on the generator that writes the file — and `AppVersion` already trusts it for
+>   Settings ▸ About. **Deliberately did NOT bake a new `build_number.txt`** as the spec suggested:
+>   a third source that can disagree with the other two is the exact problem being solved.
+>   Parse failure ⇒ `0`, the safe end. Pinned by a test that parses the REAL bundled stamp.
+> - **The fetch writes the cache and does NOT re-apply this session** (§2 I5) — next launch.
+>   The live swap is deliberately unbuilt; `ContentService.OnCacheRefreshed` is the seam for it.
+> - **Every fail-soft path exercised in real play mode, six boots.** Airplane mode, corrupt cache,
+>   `enabled:false`, garbage `content_version.txt`, no cache, and the real 501-row catalog. All
+>   degrade to bundled strings with ONE WARNING and no exception. `enabled:false` drops the cache.
+> - **One screenshot proves four invariants at once** —
+>   `screenshots/settings_overlay_applied_EN.png` (1170×2532): five overlaid rows render, an
+>   `is_active:false` row and a blank-`english` row both keep their BUNDLED strings, and three
+>   untouched keys are untouched. JA frame proves the JA value + mid-session language switch.
+> - **Bonus (I3 round trip):** the garbage-cursor boot pulled the FULL 501-row catalog and every
+>   applied string was byte-identical to its bundled value — the published catalog and the shipped
+>   CSV currently agree exactly, so the export step has not rotted.
+> - **61 new EditMode tests, all green.** Full unfiltered sweep 1615/1595 pass; the 17 failures are
+>   pre-existing (`SaveSchemaMigrator.cs:18` ships `CurrentSchemaVersion = 10` at HEAD from
+>   `baa9f123c` while the Save tests still assert 9, plus one Tournaments STR drift).
+>
+> **TWO ITEMS NEED CESAR, both because they require a PRODUCTION WRITE I did not make unilaterally:**
+> (1) *edit → publish → relaunch* — bumps prod `texts` to v12; blast radius is genuinely zero today
+> because **no shipped build contains `ContentService`**, and the panel has rollback;
+> (2) *`min_build` withhold* — cannot be observed at all until one row is published with
+> `min_build > 0`; all 501 prod rows are `min_build = 0` (probed at build 0/1/2113/2302/999999,
+> identical responses). One throwaway row at `min_build = 999999` proves it in a single curl.
+>
+> Also worth an eye: **~43 ms of one-time JSON-stack warm-up now lands at `-900`.** Measured, not
+> asserted — a 101-byte ZERO-row payload costs 44 ms while 501 rows cost 5 ms once warm, so it is
+> fixed first-parse cost, not row work. Whether it is net-new or merely moved earlier off
+> `NoticeService` could not be isolated; the report says so plainly and names the fix if wanted.
 
 > **`content_panels_gaps` — implemented 2026-08-25, awaiting Cesar's sign-off.**
 > Spec: `Docs/Specs/Active/content_panels_gaps/`. Closes the four gaps `content_admin_panels`
@@ -217,6 +433,61 @@
 ---
 
 ## 🟢 PRIORITY QUEUED — pick up immediately
+
+> **▶ 2026-08-26 · ⚠️ VERIFIED PROD BUG — THE PER-CATALOG KILL SWITCH IS GLOBAL IN EFFECT.
+> Found by the Architect actually flipping it against prod (nobody had). Fix before any device
+> pass; it makes the kill switch unusable as designed.**
+>
+> Measured on `playlife-api` 2026-08-26, `bags` disabled, then restored (prod is back to all seven
+> enabled, unchanged versions):
+>
+> | request | top-level `enabled` |
+> |---|---|
+> | `catalogs=bags,items` (bags disabled) | **False** |
+> | `catalogs=items` (bags disabled, not requested) | True |
+> | all seven (bags disabled) | **False** |
+>
+> Top-level `enabled` is an **AND across the REQUESTED catalogs**, not a global flag. Phase 2's
+> `ContentService` requests all six, and Phase 1 established that `enabled:false` **drops the
+> cache and reverts to bundled**. So **disabling ONE catalog silently reverts EVERY catalog to
+> bundled content on every client** — a per-catalog kill has global blast radius. Nothing is
+> broken for players today (no shipped build contains `ContentService`), and the floor it reverts
+> to is the bundled CSV, so it degrades safely rather than dangerously — but the switch does not
+> do what §7.4 says it does.
+>
+> Fix is the one-field API addition the Phase-2 Implementer already asked for, scoped correctly:
+> per-catalog `"enabled": false` (or a top-level `"disabled": [...]`), and top-level `enabled`
+> reserved for a genuine global kill. The client is already written to consume it.
+>
+> ✅ **Settled at the same time, no device needed:** a disabled catalog IS **absent** from the
+> payload (not present-and-empty). That was the assumption the Phase-2 WITHDRAWN handling rests
+> on, and it holds — so the "overlay applies forever" hole really is closed.
+>
+> **Also of record from Phase 2** (`content_overlay_catalogs`, STATUS `READY_FOR_SELF_REVIEW`):
+> - **Script execution order lives ONLY in `.cs.meta` `executionOrder:` fields** — there is no
+>   `ProjectSettings/MonoManager.asset` in this project at all. Verified: `CharacterDatabaseCSV`
+>   −200, `CharacterManager` −100, `SaveDataHost` −100, `ClubDatabaseCSV` −90, `ClubManager` −80.
+>   Written once by `GOLFIN ▸ Setup ▸ Club Managers` and never re-asserted. **A regenerated `.meta`
+>   drops them to 0 → the catalog reads empty → seeding grants nothing → the player has no clubs,
+>   with zero errors logged.** Now asserted at runtime in three places.
+> - ⚠️ **STILL OPEN: `CharacterManager` and `SaveDataHost` are BOTH −100 — a tie** — and
+>   `CharacterManager` reads the save (`SaveDataHost.Instance.Data`, guarded by a null check). Lose
+>   the tie and the clamp silently does not run; the save keeps out-of-range values until a launch
+>   where the tie falls the other way. **Non-deterministic clamping.** Needs its own task; it is
+>   pre-existing, not content-pipeline.
+> - **`CharacterManager.GetMaxLevel` ignored the CSV `maxLevel` column entirely** — invisible while
+>   the bundled CSV agreed with the rarity table; the overlay is what let them disagree. A published
+>   `maxLevel 20` clamped the save while LEVEL UP kept selling 21–39, so the player pays RP, climbs,
+>   is clamped next launch, and pays again. Fixed.
+> - **Pattern worth naming: the content pipeline keeps acting as a truth-serum for latent
+>   divergence.** It has now surfaced the stale `golfin_characters` mirror, the `GetMaxLevel`
+>   bug, the meta-only execution order, and this kill switch — none of them caused by it.
+> - Boot: 49.82 ms → 102.80 ms worst case (fresh install, 799-row/638 KB clubs; 40.55 ms is clubs
+>   alone). At cursor parity, six catalogs cost **0.17 ms**. Named as a follow-up, not buried.
+> - Suite: **1692 / 1689 passed / 0 failed / 3 skipped** (was 1615 / 1595 / 17 failed). The 17
+>   stale assertions were fixed by binding to `SaveSchemaMigrator.CurrentSchemaVersion` and the
+>   live character DB rather than to fresh literals — a new literal would just go stale next migration.
+
 
 > **▶ 2026-08-25 · CONTENT PIPELINE — Phase 0 CLOSED + per-catalog cursor LIVE.
 > Next: `content_admin_panels` (the six admin panels). Everything so far is API-only.**

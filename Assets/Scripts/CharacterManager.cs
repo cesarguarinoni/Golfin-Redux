@@ -118,6 +118,24 @@ namespace Golfin.Roster
             // Step 2: Overlay player-specific data from SaveData
             if (SaveDataHost.Instance != null)
             {
+                // ── SAVE-BEFORE-MANAGER, ASSERTED (content_kill_switch_and_order §2) ──
+                // CharacterManager sat at -100 alongside SaveDataHost until 2026-08-26, and Unity
+                // leaves the relative order of an execution-order TIE undefined. Losing it does not
+                // crash — Instance is null, this whole block is skipped, and the clamp below never
+                // runs — so a save with out-of-range values simply stays out of range until a launch
+                // where the tie falls the other way. That is now -95 vs -100, and this asserts it
+                // rather than trusting it: Instance is assigned BEFORE LoadData(), so only IsLoaded
+                // proves the save on disk has actually been read.
+                if (!SaveDataHost.Instance.IsLoaded)
+                {
+                    Debug.LogError(
+                        "[CharacterManager] EXECUTION ORDER BROKEN: SaveDataHost exists but has not " +
+                        "finished loading, so this roster is about to be overlaid from save data that " +
+                        "is not the player's — and the clamp below would run against it. SaveDataHost " +
+                        "must stay ahead of CharacterManager (-100 vs -95, from their .cs.meta " +
+                        "executionOrder fields).");
+                }
+
                 var saveData = SaveDataHost.Instance.Data;
                 var nowUtc   = DateTime.UtcNow;
 
@@ -125,8 +143,9 @@ namespace Golfin.Roster
                 //
                 // ONCE, HERE, and never at a read site. This is the first point in the boot where
                 // BOTH halves are available — the overlaid character definitions (CharacterDatabaseCSV,
-                // order -200) and the loaded save (SaveDataHost, -100) — and it runs BEFORE the
-                // hydration loop below, so nothing downstream ever sees an out-of-bounds value.
+                // order -200) and the loaded save (SaveDataHost, -100; this manager is -95, so both
+                // are guaranteed done) — and it runs BEFORE the hydration loop below, so nothing
+                // downstream ever sees an out-of-bounds value.
                 //
                 // The case that matters: a rarity DOWNGRADE. Legendary → Rare drops the Strength cap
                 // 40 → 30, orphaning any SP allocated above the new ceiling. It is clamped and

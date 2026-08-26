@@ -51,6 +51,23 @@ namespace Golfin.Save
         public SaveData Data => _data;
 
         /// <summary>
+        /// True once <see cref="LoadData"/> has finished, i.e. <see cref="Data"/> is the persisted
+        /// save (or a deliberate fresh one) rather than the field initialiser.
+        ///
+        /// <para>
+        /// THE RUNTIME ASSERT FOR "SaveDataHost RAN FIRST"
+        /// (content_kill_switch_and_order §2). <c>Instance != null</c> only proves Awake STARTED —
+        /// it is assigned before <c>LoadData()</c> — and every manager that reads the save is
+        /// ordered after this one by an <c>executionOrder:</c> field committed in a <c>.cs.meta</c>
+        /// that nothing re-asserts except this class's own [InitializeOnLoad] hook. The same shape
+        /// as <c>ClubDatabaseCSV.IsLoaded</c> and <c>CharacterDatabaseCSV.IsLoaded</c>, and it
+        /// exists for the same reason: a reader must be able to CHECK the invariant instead of
+        /// trusting a comment about it.
+        /// </para>
+        /// </summary>
+        public bool IsLoaded { get; private set; }
+
+        /// <summary>
         /// Call after any in-memory mutation to schedule a debounced disk write.
         /// Multiple calls within 250ms collapse to one write.
         /// </summary>
@@ -109,7 +126,23 @@ namespace Golfin.Save
 
         // ── Load / Save ───────────────────────────────────────────────────────
 
+        /// <summary>
+        /// Read the save through the current persister and raise <see cref="IsLoaded"/>.
+        /// <para>
+        /// The flag is set HERE rather than inside <see cref="LoadDataCore"/>, which returns early
+        /// on the happy path — a flag that only became true on the fallback branch would be worse
+        /// than no flag. Setting it in this wrapper also means <see cref="ReloadFromDisk"/> marks
+        /// the host loaded, which is what a test that fakes the boot (EditMode never calls Awake)
+        /// needs in order to be a faithful stand-in for one.
+        /// </para>
+        /// </summary>
         private void LoadData()
+        {
+            LoadDataCore();
+            IsLoaded = true;
+        }
+
+        private void LoadDataCore()
         {
             if (_persister.TryLoad(out string? json) && json != null)
             {
@@ -233,7 +266,10 @@ namespace Golfin.Save
         }
 
         /// <summary>
-        /// Force-load from the current persister. Used in durability tests to simulate restart.
+        /// Force-load from the current persister. Used in durability tests to simulate restart, and
+        /// by EditMode harnesses that stand in for a boot Awake never runs — it is the call that
+        /// makes <see cref="IsLoaded"/> true, so a hand-built host is in the same state a booted one
+        /// would be.
         /// </summary>
         public void ReloadFromDisk()
         {

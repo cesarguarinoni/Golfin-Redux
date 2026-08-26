@@ -233,6 +233,10 @@ namespace Golfin.Tournaments.WireupTests
             var saveGo = new GameObject("TEST_SaveDataHost");
             var host   = (SaveDataHost)saveGo.AddComponent<SaveDataHost>();
             host.SetPersister(new NullPersister());
+            // The fake boot must be COMPLETE, not just present. EditMode never calls Awake, so
+            // nothing has read the save — and CharacterManager asserts on SaveDataHost.IsLoaded
+            // (content_kill_switch_and_order §2). ReloadFromDisk is the load Awake would have done.
+            host.ReloadFromDisk();
             _toDestroy.Add(saveGo);
 
             // Force-set SaveDataHost.Instance if Awake didn't fire
@@ -373,13 +377,50 @@ namespace Golfin.Tournaments.WireupTests
                 "`stats: new CharacterManagerStatsProvider()` was removed from " +
                 "TournamentService.Compose() — the silent-null trap has fired.");
 
-            // ── char_james stats from Characters.csv ─────────────────────────
-            //   char_james, Common, baseSTR=6, baseCC=7, baseREC=6, baseSTA=6, startLevel=10
-            Assert.AreEqual(10, entry.Snapshot!.Level,    "Level must be 10 (Common start)");
-            Assert.AreEqual(6,  entry.Snapshot.Strength,  "STR must be 6");
-            Assert.AreEqual(7,  entry.Snapshot.ClubControl, "CC must be 7");
-            Assert.AreEqual(6,  entry.Snapshot.Recovery,  "REC must be 6");
-            Assert.AreEqual(6,  entry.Snapshot.Stamina,   "STA must be 6");
+            // ── char_james stats, read FROM THE LIVE DATABASE ────────────────
+            //
+            // These used to be four hard-coded literals (6 / 7 / 6 / 6), which is what this test
+            // was ACTUALLY asserting: that Characters.csv had not been rebalanced since 2026-07.
+            // It had — the shipped row is 7 / 6 / 5 / 7 — so the test sat red and told nobody
+            // anything about the wireup it exists to guard. (content_overlay_catalogs)
+            //
+            // The real claim is "the snapshot carries the character's stats", so the expected
+            // values come from the same database the provider reads. A balance change — bundled OR
+            // published through the content overlay — can no longer make this go red, and a
+            // BROKEN snapshot still does.
+            var template = ClubRosterlessCharacter("char_james");
+            Assert.IsNotNull(template, "char_james must exist in the character database");
+
+            Assert.AreEqual(10, entry.Snapshot!.Level, "Level must be 10 (Common start)");
+            Assert.AreEqual(Field<int>(template!, "baseStrength"),    entry.Snapshot.Strength,
+                "Snapshot STR must equal the database's baseStrength");
+            Assert.AreEqual(Field<int>(template!, "baseClubControl"), entry.Snapshot.ClubControl,
+                "Snapshot CC must equal the database's baseClubControl");
+            Assert.AreEqual(Field<int>(template!, "baseRecovery"),    entry.Snapshot.Recovery,
+                "Snapshot REC must equal the database's baseRecovery");
+            Assert.AreEqual(Field<int>(template!, "baseStamina"),     entry.Snapshot.Stamina,
+                "Snapshot STA must equal the database's baseStamina");
+        }
+
+        /// <summary>
+        /// <c>CharacterDatabaseCSV.Instance.GetCharacter(id)</c> through reflection — the database
+        /// lives in Assembly-CSharp, which this test asmdef cannot reference.
+        /// </summary>
+        private static object? ClubRosterlessCharacter(string characterId)
+        {
+            object? db = AsmCSharp.GetStaticInstance("Golfin.Roster.CharacterDatabaseCSV");
+            if (db == null) return null;
+            var method = db.GetType().GetMethod("GetCharacter",
+                BindingFlags.Public | BindingFlags.Instance);
+            return method?.Invoke(db, new object[] { characterId });
+        }
+
+        private static T Field<T>(object instance, string fieldName)
+        {
+            var f = instance.GetType().GetField(fieldName,
+                BindingFlags.Public | BindingFlags.Instance);
+            Assert.IsNotNull(f, $"CharacterDataRuntime.{fieldName} must exist");
+            return (T)f!.GetValue(instance);
         }
     }
 
@@ -606,6 +647,10 @@ namespace Golfin.Tournaments.WireupTests
             _saveGo = new GameObject("TEST_SaveDataHost_ItemAdapter");
             _host   = (SaveDataHost)_saveGo.AddComponent<SaveDataHost>();
             _host.SetPersister(new NullPersister());
+            // The fake boot must be COMPLETE, not just present. EditMode never calls Awake, so
+            // nothing has read the save — and CharacterManager asserts on SaveDataHost.IsLoaded
+            // (content_kill_switch_and_order §2). ReloadFromDisk is the load Awake would have done.
+            _host.ReloadFromDisk();
 
             // If Awake didn't set Instance (non-generic AddComponent edge case), force-set
             if (SaveDataHost.Instance == null)
