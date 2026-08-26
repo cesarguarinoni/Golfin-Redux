@@ -61,5 +61,19 @@ namespace Golfin.Telemetry
         public const string ClientError    = "client_error";
         public const string PointsChanged  = "points_changed";
         public const string LevelUp        = "level_up";
+
+        /// <summary>
+        /// The additive inventory merge put a quantity the player already held back UP — i.e. it may
+        /// have refunded something they consumed (CONTENT_PIPELINE_PLAN §6.5 decision 1).
+        ///
+        /// <para>
+        /// This exists to turn an unknown into a COUNT. The refund itself is an accepted trade for
+        /// the beta; what is not acceptable is not knowing how often it fires, because beta
+        /// consumption figures are what tune the economy. ~0 of these through the beta and
+        /// server-authoritative spends (PLAN §6 step 4d) stay a launch-gate; anything else and they
+        /// move up. The player is the row's `user_id`, stamped server-side from the token.
+        /// </para>
+        /// </summary>
+        public const string InventoryMergeRaise = "inventory_merge_raise";
     }
 }

@@ -16,6 +16,7 @@ import {
   publishCatalog,
   rollbackCatalog,
   setCatalogEnabled,
+  setGlobalContentEnabled,
 } from "./client";
 
 /**
@@ -42,11 +43,21 @@ type Tab = "diff" | "history" | "switch";
 export function PublishDrawer({
   catalog,
   summary,
+  globalEnabled,
   onClose,
   onChanged,
 }: {
   catalog: string;
   summary: ContentCatalogSummary;
+  /**
+   * `content_settings.content_enabled` — the GLOBAL kill switch (PLAN §7.4).
+   *
+   * It lives in every catalog's drawer on purpose, next to that catalog's own switch. The two
+   * were once the same switch, and disabling one catalog silently reverted all seven on every
+   * client (content_kill_switch_and_order). Showing them side by side, each saying plainly what
+   * it reaches, is the cheapest guard against that confusion coming back through the UI.
+   */
+  globalEnabled: boolean;
   onClose: () => void;
   /** Called after any mutation so the panel can refetch. */
   onChanged: (message: string) => void;
@@ -158,6 +169,30 @@ export function PublishDrawer({
       onChanged(res.message);
     } catch (err) {
       setError(`${translate("cp.enabled.failed")}: ${err instanceof Error ? err.message : err}`);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  /**
+   * The GLOBAL kill. CONFIRMED on the way OFF, one click on the way back ON.
+   *
+   * Asymmetric on purpose: killing reverts every catalog for every player and costs each of them
+   * two launches to undo, while restoring only ever moves toward the state the pipeline is
+   * supposed to be in. The per-catalog switch above needs no confirm because its blast radius is
+   * one catalog — which is exactly the distinction that got lost the first time.
+   */
+  async function doToggleGlobal() {
+    if (globalEnabled && !window.confirm(translate("cp.global.confirm"))) return;
+
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await setGlobalContentEnabled(!globalEnabled);
+      setDone(res.message);
+      onChanged(res.message);
+    } catch (err) {
+      setError(`${translate("cp.global.failed")}: ${err instanceof Error ? err.message : err}`);
     } finally {
       setBusy(false);
     }
@@ -524,24 +559,70 @@ export function PublishDrawer({
           )}
 
           {tab === "switch" && (
-            <div className="rounded-lg border border-surface-800 bg-surface-950 p-4">
-              <h3 className="text-sm font-semibold text-zinc-200">{translate("cp.enabled.title")}</h3>
-              <p
-                className={`mt-2 text-xs ${summary.isEnabled ? "text-accent-300" : "text-red-300"}`}
-              >
-                {translate(summary.isEnabled ? "cp.enabled.on" : "cp.enabled.off", { catalog })}
-              </p>
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => void doToggleEnabled()}
-                className={`mt-4 rounded-md px-3 py-1.5 text-xs font-semibold text-white transition disabled:opacity-40 ${
-                  summary.isEnabled ? "bg-red-600 hover:bg-red-500" : "bg-accent-600 hover:bg-accent-500"
+            <>
+              {/* TWO SWITCHES, SHOWN TOGETHER, NEVER MERGED. Each card states its own blast
+                  radius in its own body text — one catalog vs every catalog for every player —
+                  because "kill switch" on its own is exactly the phrase that let the per-catalog
+                  column quietly do the global job (content_kill_switch_and_order). */}
+              <div className="rounded-lg border border-surface-800 bg-surface-950 p-4">
+                <h3 className="text-sm font-semibold text-zinc-200">{translate("cp.enabled.title")}</h3>
+                <p
+                  className={`mt-2 text-xs ${summary.isEnabled ? "text-accent-300" : "text-red-300"}`}
+                >
+                  {translate(summary.isEnabled ? "cp.enabled.on" : "cp.enabled.off", { catalog })}
+                </p>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void doToggleEnabled()}
+                  className={`mt-4 rounded-md px-3 py-1.5 text-xs font-semibold text-white transition disabled:opacity-40 ${
+                    summary.isEnabled ? "bg-red-600 hover:bg-red-500" : "bg-accent-600 hover:bg-accent-500"
+                  }`}
+                >
+                  {translate(summary.isEnabled ? "cp.enabled.disable" : "cp.enabled.enable")}
+                </button>
+              </div>
+
+              <div
+                className={`mt-4 rounded-lg border p-4 ${
+                  globalEnabled
+                    ? "border-surface-800 bg-surface-950"
+                    : "border-red-500/50 bg-red-500/10"
                 }`}
               >
-                {translate(summary.isEnabled ? "cp.enabled.disable" : "cp.enabled.enable")}
-              </button>
-            </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="text-sm font-semibold text-zinc-200">
+                    {translate("cp.global.title")}
+                  </h3>
+                  <span className="whitespace-nowrap rounded border border-red-500/50 bg-red-500/15 px-1.5 py-0.5 text-[10px] font-bold text-red-300">
+                    {translate("cp.global.tag")}
+                  </span>
+                </div>
+
+                <p className={`mt-2 text-xs ${globalEnabled ? "text-accent-300" : "text-red-300"}`}>
+                  {translate(globalEnabled ? "cp.global.on" : "cp.global.off")}
+                </p>
+
+                <p className="mt-2 text-[11px] leading-relaxed text-zinc-500">
+                  {translate("cp.global.timing")}
+                </p>
+
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void doToggleGlobal()}
+                  className={`mt-4 rounded-md px-3 py-1.5 text-xs font-semibold text-white transition disabled:opacity-40 ${
+                    globalEnabled ? "bg-red-600 hover:bg-red-500" : "bg-accent-600 hover:bg-accent-500"
+                  }`}
+                >
+                  {translate(globalEnabled ? "cp.global.disable" : "cp.global.enable")}
+                </button>
+
+                <p className="mt-3 text-[11px] leading-relaxed text-zinc-600">
+                  {translate("cp.global.row")}
+                </p>
+              </div>
+            </>
           )}
         </div>
 

@@ -56,7 +56,10 @@ export const MOCK_INVENTORY_REV = 9999;
 
 export const MOCK_INVENTORY_GRANTS: InventoryGrantRow[] = [
   {
-    id: "00000000-0000-4000-8000-00000000mock",
+    // A VALID uuid — "mock" in the last group was not one, and the revoke route rejects a
+    // malformed grantId before it reaches the mock branch, which made this fixture unrevokable in
+    // the one mode where trying it out is free. Still unmistakably fake: see refId and note.
+    id: "00000000-0000-4000-8000-00000000dead",
     kind: "item",
     refId: "item_MOCK_NOT_REAL",
     amount: 9999,
@@ -64,5 +67,18 @@ export const MOCK_INVENTORY_GRANTS: InventoryGrantRow[] = [
     createdBy: "mock@example.invalid",
     createdAt: "2026-08-26T00:00:00.000Z",
     appliedAt: null,
+  },
+  {
+    // An ALREADY-APPLIED grant, so both states of the row are visible in mock mode. It is the one
+    // that must NOT offer Revoke: the player has it, grants are additive-only end to end, and
+    // deleting the queue row would take nothing back (PLAN §6.5 decision 3).
+    id: "00000000-0000-4000-8000-00000000beef",
+    kind: "ticket",
+    refId: "0",
+    amount: 9999,
+    note: "MOCK FIXTURE — already applied, so it cannot be revoked",
+    createdBy: "mock@example.invalid",
+    createdAt: "2026-08-25T00:00:00.000Z",
+    appliedAt: "2026-08-25T01:00:00.000Z",
   },
 ];

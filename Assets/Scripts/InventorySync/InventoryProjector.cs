@@ -100,10 +100,18 @@ namespace Golfin.InventorySync
         /// Subtraction has exactly one home: an explicit server-side spend, which already exists for
         /// RP (<c>spend_pts</c>). Nothing in this file is that.
         /// </para>
+        /// <para>
+        /// <paramref name="raises"/> COLLECTS THE REFUNDABLE-SPEND PATH (PLAN §6.5 decision 1). Every
+        /// quantity this raises on a key the save ALREADY held is appended, because that is the case
+        /// where the merge can hand back an item the player consumed — and beta consumption figures
+        /// are what tune the economy, so it has to be a count rather than an assumption. Pass null
+        /// when the caller does not care; nothing else about the merge changes either way. See
+        /// <see cref="InventoryRaise"/> for why a NEW key is deliberately not one of these.
+        /// </para>
         /// <returns>True when the save actually changed — the caller uses this to decide whether a
         /// disk write is owed. A no-op restore must not dirty the save, or every boot writes.</returns>
         /// </summary>
-        public static bool Apply(InventorySnapshot snap, SaveData save)
+        public static bool Apply(InventorySnapshot snap, SaveData save, List<InventoryRaise>? raises = null)
         {
             if (snap == null || save == null) return false;
 
@@ -164,11 +172,13 @@ namespace Golfin.InventorySync
             // ── Quantities ───────────────────────────────────────────────────
             save.itemQuantities ??= new Dictionary<string, int>();
             foreach (var kv in snap.Items)
-                changed |= RaiseQuantity(save.itemQuantities, kv.Key, kv.Value);
+                changed |= RaiseQuantity(save.itemQuantities, kv.Key, kv.Value,
+                                         InventoryRaiseKind.Item, raises);
 
             save.ballQuantities ??= new Dictionary<string, int>();
             foreach (var kv in snap.Balls)
-                changed |= RaiseQuantity(save.ballQuantities, kv.Key, kv.Value);
+                changed |= RaiseQuantity(save.ballQuantities, kv.Key, kv.Value,
+                                         InventoryRaiseKind.Ball, raises);
 
             save.ticketBalances ??= new List<PersistedTicketBalance>();
             foreach (var kv in snap.Tickets)
@@ -183,10 +193,19 @@ namespace Golfin.InventorySync
                         { ticketTypeInt = kv.Key, balance = kv.Value });
                     changed = true;
                 }
-                else if (InventoryMerge.MergeQuantity(mine.balance, kv.Value) != mine.balance)
+                else
                 {
-                    mine.balance = InventoryMerge.MergeQuantity(mine.balance, kv.Value);
-                    changed = true;
+                    int merged = InventoryMerge.MergeQuantity(mine.balance, kv.Value);
+                    if (merged != mine.balance)
+                    {
+                        // The save HELD this ticket type — see InventoryRaise: an existing key
+                        // going up is the refund path, a new one is a restore.
+                        raises?.Add(new InventoryRaise(InventoryRaiseKind.Ticket,
+                            kv.Key.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                            mine.balance, merged));
+                        mine.balance = merged;
+                        changed = true;
+                    }
                 }
             }
 
@@ -254,12 +273,18 @@ namespace Golfin.InventorySync
             return changed;
         }
 
-        private static bool RaiseQuantity(IDictionary<string, int> into, string key, int value)
+        private static bool RaiseQuantity(IDictionary<string, int> into, string key, int value,
+                                          InventoryRaiseKind kind, List<InventoryRaise>? raises)
         {
             if (string.IsNullOrEmpty(key)) return false;
+
+            // A key this save does not have is a RESTORE, not a refund — deliberately NOT counted.
             if (!into.TryGetValue(key, out int mine)) { into[key] = value; return true; }
+
             int merged = InventoryMerge.MergeQuantity(mine, value);
             if (merged == mine) return false;
+
+            raises?.Add(new InventoryRaise(kind, key, mine, merged));
             into[key] = merged;
             return true;
         }

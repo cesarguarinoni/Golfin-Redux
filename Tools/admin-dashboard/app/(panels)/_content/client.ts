@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Browser-side wrappers over the SIX content routes that already exist.
+ * Browser-side wrappers over the content routes.
  *
  * This module is deliberately thin and deliberately closed: every panel goes
  * through it, and it can only reach endpoints that were already deployed by
@@ -14,7 +14,8 @@
  *   GET  /api/content/:catalog/diff        drafts vs published, field level
  *   POST /api/content/:catalog/publish     validate → publish → audit
  *   POST /api/content/:catalog/rollback    republish a snapshot, FORWARD
- *   POST /api/content/:catalog/enabled     the kill switch
+ *   POST /api/content/:catalog/enabled     the PER-CATALOG kill switch
+ *   POST /api/content/enabled              the GLOBAL kill switch (content_cleanup_quick item 2)
  *   GET  /api/content/:catalog/versions    every snapshot — the rollback targets
  */
 
@@ -105,8 +106,24 @@ export function rollbackCatalog(
   });
 }
 
+/** ONE catalog back to (or off) its bundled CSV. See `setGlobalContentEnabled` for the other one. */
 export function setCatalogEnabled(catalog: string, enabled: boolean): Promise<{ message: string }> {
   return call(`/api/content/${catalog}/enabled`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ enabled }),
+  });
+}
+
+/**
+ * EVERY catalog, for every player — `content_settings.content_enabled` (PLAN §7.4).
+ *
+ * Note the URL has no catalog segment, which is the point: the global flag is not a property of
+ * any catalog, and the bug this pipeline already shipped once was exactly a per-catalog column
+ * doing a global job.
+ */
+export function setGlobalContentEnabled(enabled: boolean): Promise<{ message: string }> {
+  return call("/api/content/enabled", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ enabled }),

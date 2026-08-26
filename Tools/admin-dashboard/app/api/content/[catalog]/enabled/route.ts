@@ -5,11 +5,16 @@ import { setCatalogEnabled } from "@/lib/contentMutations";
 export const dynamic = "force-dynamic";
 
 /**
- * POST /api/content/:catalog/enabled `{ enabled }` — the §7.4 kill switch.
+ * POST /api/content/:catalog/enabled `{ enabled }` — the PER-CATALOG §7.4 kill switch.
  *
- * Disabling makes the catalog vanish from /api/v1/content and drops the
- * top-level `enabled` flag. The game then runs on its bundled CSVs (§2 I1),
- * which is the whole point: one flip, and remote content stops mattering.
+ * Disabling makes THIS catalog vanish from /api/v1/content and names it in the response's
+ * top-level `disabled` list. That one catalog falls back to its bundled CSV (§2 I1); no other
+ * catalog is touched.
+ *
+ * ⚠️ IT DOES NOT TOUCH THE TOP-LEVEL `enabled` FLAG. It used to — the endpoint ANDed this column
+ * across the REQUESTED catalogs, and the client drops EVERY cache on `enabled:false`, so killing
+ * one catalog reverted all seven on every client (content_kill_switch_and_order). The global
+ * switch is `POST /api/content/enabled`, with no catalog segment.
  */
 export async function POST(request: Request, ctx: { params: Promise<{ catalog: string }> }) {
   const check = await checkAdmin();

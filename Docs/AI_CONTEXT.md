@@ -32,10 +32,15 @@
 >   grants that session** — the drain is boot-only and its flag is set only on a successful fetch,
 >   so "I granted it and they don't have it" has a boring explanation first: ask whether they have
 >   relaunched twice.
-> - **Instrument the refund window** (`CONTENT_PIPELINE_PLAN.md` §6.5 decision 1): log every merge
->   that RAISES a quantity, with player + item. Beta consumption numbers are what tune the economy,
->   and a silent refund path skews exactly those. A count near zero keeps 4d a launch-gate; anything
->   else moves it up.
+> - **Instrument the refund window** — ✅ **BUILT 2026-08-26** (`content_cleanup_quick` item 5), so
+>   the device pass now READS the number instead of adding the instrumentation. Every merge that
+>   raises a quantity on a key the save already held emits `inventory_merge_raise` with `kind` /
+>   `item` / `from` / `to` / `delta`; the player is the row's own `user_id`, stamped server-side.
+>   Both merge sites are counted (boot restore AND the stale-PUT retry). A brand-new key is NOT
+>   counted — that is a restore, not a refund, and counting it would bury the signal under every
+>   reinstall. **What to do on the pass:** after it, query `telemetry_events` for
+>   `name = 'inventory_merge_raise'`. Near zero keeps `PLAN` §6 step 4d (server-authoritative
+>   spends) a launch-gate; anything else moves it up.
 >
 > **CARVE-OUT WITHDRAWN (Cesar, 2026-08-26): testers only, no real players yet.** The Phase-4c
 > "confirm on device before shipping" gate is dropped — batch it with the rest. The 4a→4b→4c
@@ -77,6 +82,43 @@
 ---
 
 ## ✅ RECENTLY LANDED
+
+> **`content_cleanup_quick` — FIVE small items, the last work before the batched device pass.
+> Done 2026-08-26, awaiting Cesar's sign-off.** No SPEC.md; the items are in `Docs/TellCode.md`
+> and the decisions of record for 4 and 5 in `CONTENT_PIPELINE_PLAN.md` §6.5. Report:
+> `Docs/Specs/Active/content_cleanup_quick/IMPLEMENTER_REPORT.md`. Implemented DIRECTLY by the main
+> Claude Code thread — no implementer / self-reviewer / red-team chain ran.
+>
+> 1. **The per-catalog `enabled` field is gone from the wire and both client DTOs.** A disabled
+>    catalog is ABSENT from `catalogs`, so a served one could only ever carry `true` — a boolean
+>    true by construction, which reads as a guard whose branch never fires. Top-level `disabled[]`
+>    is untouched and `IsDisabled(name)` already read it, so no correctness moved. A stray
+>    `enabled` still arriving is IGNORED like any unknown field (I4), never a second kill switch.
+> 2. **The GLOBAL kill switch has a button.** `content_settings.content_enabled` needed a SQL
+>    `update`, which fails §7.4's "one flag, no deploy". `POST /api/content/enabled` (no catalog
+>    segment — the flag is not a property of any catalog), a second card in the existing Kill
+>    switch tab tagged `ALL CATALOGS`, a confirm on the way off, and a red banner across the panel
+>    while it is off. Both switches are shown together and never merged, each naming its own blast
+>    radius — the confusion between them is what `content_kill_switch_and_order` existed to fix.
+> 3. **One fake host boot: `Golfin.TestSupport.TestBoot.SaveDataHost()`.** ⚠️ It was FOUR harnesses,
+>    not the three the task named — `TournamentRestrictionsClientTests` is a fourth copy and is
+>    converted too. The divergence was already real: §2's `SaveDataHost.IsLoaded` assert made
+>    `ReloadFromDisk()` necessary, two copies grew it and two did not.
+> 4. **Revoke an UNAPPLIED grant, from the existing Users drawer** (§6.5 decision 3 — no separate
+>    panel). Grants are additive-only with no subtraction anywhere, so a fat-fingered grant is
+>    permanent once it drains; revoking before it does is the cheap half. A DELETE, not a
+>    `revoked_at` column — `applied_at is null` ⇒ pending is the contract on both sides, and
+>    `admin_audit_log` keeps the row. An already-applied grant is a 409, never a silent no-op.
+> 5. **Every merge that RAISES a quantity is logged** — see the device-pass bullet above.
+>
+> Verified: Unity EditMode **1768 / 1765 passed / 0 failed / 3 pre-existing skips**; playlife
+> backend **26 passed**; dashboard `tsc` + `next build` clean. Every new suite proven with a
+> TRIPWIRE (`tests-run` reports only failures, never the passing names) — three deliberate breaks
+> took the run to 13 failures naming exactly the new tests, then reverted to green.
+>
+> ⚠️ **The playlife change is NOT deployed.** `playlife-api` still serves the per-catalog `enabled`
+> field until Cesar deploys. Harmless in either order (the client ignores unknown fields), but the
+> device pass should run against a deployed API so the wire shape matches the client under test.
 
 > **`content_player_inventory` — PHASE 4, THE LAST PIECE. DONE, approved by Cesar 2026-08-26.**
 > Spec: `Docs/Specs/Completed/content_player_inventory/`. Architect report:

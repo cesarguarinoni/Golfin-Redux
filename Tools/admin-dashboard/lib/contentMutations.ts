@@ -1,6 +1,12 @@
 import "server-only";
 import { writeAudit } from "./audit";
-import { fetchAllRows, fetchDiff, REFERENCED_CATALOGS } from "./contentData";
+import {
+  fetchAllRows,
+  fetchDiff,
+  fetchGlobalContentEnabled,
+  GLOBAL_ENABLED_KEY,
+  REFERENCED_CATALOGS,
+} from "./contentData";
 import { hasErrors, validateCatalog, type ContentProblem, type DraftRow } from "./contentValidate";
 import { mockDb } from "./mockStore";
 import { isMockMode } from "./mode";
@@ -313,9 +319,18 @@ export async function rollbackCatalog(
 // ---------------------------------------------------------------------------
 
 /**
- * §7.4. `is_enabled = false` makes the catalog vanish from /api/v1/content
- * entirely and drops the top-level `enabled` flag — never an empty catalog,
- * which a client could reasonably apply as "everything was deleted".
+ * §7.4, the PER-CATALOG half. `is_enabled = false` makes ONE catalog vanish from
+ * /api/v1/content and names it in the response's top-level `disabled` list —
+ * never an empty catalog, which a client could reasonably apply as "everything
+ * was deleted". That catalog reverts to its bundled CSV; no other is touched.
+ *
+ * ⚠️ IT DOES NOT DROP THE TOP-LEVEL `enabled` FLAG, and the wording that said it
+ * did was the bug. Until 2026-08-26 the endpoint ANDed this column across the
+ * REQUESTED catalogs into top-level `enabled`, and the client drops EVERY cache
+ * on `enabled:false` — so disabling one catalog reverted all seven on every
+ * client (content_kill_switch_and_order). The global switch is
+ * `setGlobalContentEnabled` below, and it is a different row in a different
+ * table on purpose.
  */
 export async function setCatalogEnabled(
   adminEmail: string,
@@ -356,4 +371,63 @@ export async function setCatalogEnabled(
     { catalog, is_enabled: enabled }
   );
   return ok(`${catalog} is now ${enabled ? "ENABLED" : "DISABLED"} for the game.`);
+}
+
+/**
+ * §7.4, the GLOBAL half — `content_settings.content_enabled`.
+ *
+ * ⚠️ THIS IS THE BIG ONE. `false` means every client ignores the whole content response and drops
+ * EVERY catalog's cache, reverting the game to its bundled CSVs until it is flipped back. The
+ * per-catalog switch above takes one catalog back to bundled; this takes all of them, for every
+ * player.
+ *
+ * WHY IT EXISTS AS A BUTTON. §7.4 promises "one flag, no deploy" for both switches, and until now
+ * only the per-catalog one had a control — the global flag needed a hand-written SQL `update`,
+ * which is not "no deploy" in any sense an operator at 2am would recognise. The flag was always a
+ * DB row precisely so it could be flipped from here; this is the missing half of that decision.
+ *
+ * NOT INSTANT, and the UI says so: a 60 s response cache plus apply-at-next-launch (I5) means up
+ * to a minute to reach a client, landing at its next launch. Re-enabling costs another launch,
+ * because a killed client has already dropped its caches and has to refetch.
+ *
+ * UPSERT, not update: the row is seeded by the migration, but a project where the migration has
+ * not run reads as ENABLED (the endpoint fails open), and there the operator's flip has to CREATE
+ * the row or it would silently do nothing.
+ */
+export async function setGlobalContentEnabled(
+  adminEmail: string,
+  enabled: boolean
+): Promise<ContentOutcome> {
+  const before = await fetchGlobalContentEnabled();
+
+  if (isMockMode()) {
+    mockDb().contentGlobalEnabled = enabled;
+  } else {
+    const res = await getSupabaseAdmin()
+      .from("content_settings")
+      .upsert(
+        { key: GLOBAL_ENABLED_KEY, value: enabled, updated_at: new Date().toISOString() },
+        { onConflict: "key" }
+      );
+    if (res.error) return fail(500, `content_settings update failed: ${res.error.message}`);
+  }
+
+  // targetUser stays null — the target is the whole content pipeline, not a user. The action
+  // string is deliberately NOT `content.enabled:*`, which is the per-catalog action: an audit
+  // reader must be able to tell "someone killed the bags catalog" from "someone killed remote
+  // content for every player" without opening the payload.
+  await writeAudit(
+    adminEmail,
+    "content.global_enabled",
+    null,
+    "content_settings",
+    { key: GLOBAL_ENABLED_KEY, value: before },
+    { key: GLOBAL_ENABLED_KEY, value: enabled }
+  );
+
+  return ok(
+    enabled
+      ? "Remote content is ENABLED globally. Clients pick it up within ~60s, applied at their next launch."
+      : "Remote content is KILLED globally — every client reverts to its bundled CSVs at its next launch."
+  );
 }

@@ -18,33 +18,25 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 using Golfin.Economy;
 using Golfin.Save;
+using Golfin.TestSupport;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools;
 
 namespace Golfin.EconomyRuntime.Tests
 {
-    /// <summary>In-memory <see cref="ISavePersister"/> — never touches the real save file.</summary>
-    internal sealed class NullPersister : ISavePersister
-    {
-        public bool TryLoad(out string? json) { json = null; return false; }
-        public Task SaveAsync(string json) => Task.CompletedTask;
-    }
-
     [TestFixture]
     public class ApplyServerBalanceTests
     {
         private const string ManagerTypeName = "Golfin.Roster.RewardPointsManager";
 
-        private GameObject? _saveGo;
+        private TestBoot.SaveDataHostLease? _save;
         private GameObject? _rpGo;
         private object? _manager;
         private Type _managerType = null!;
 
-        private object? _savedSaveDataHost;
         private object? _savedManagerInstance;
 
         // ── bootstrap ─────────────────────────────────────────────────────────────
@@ -67,16 +59,11 @@ namespace Golfin.EconomyRuntime.Tests
             _managerType = AsmCSharpType(ManagerTypeName);
 
             // ── SaveDataHost (in-memory) ─────────────────────────────────────────
-            _savedSaveDataHost = SaveDataHost.Instance;
-            StaticBackingField(typeof(SaveDataHost), "Instance")?.SetValue(null, null);
-
-            _saveGo = new GameObject("TEST_SaveDataHost_RP");
-            var host = _saveGo.AddComponent<SaveDataHost>();
-            host.SetPersister(new NullPersister());
-            if (SaveDataHost.Instance == null)
-                StaticBackingField(typeof(SaveDataHost), "Instance")?.SetValue(null, host);
-
-            SaveDataHost.Instance.Data.rewardPoints = 100;
+            // ONE shared boot (Golfin.TestSupport.TestBoot). This fixture used to hand-roll it and
+            // was the copy that never called ReloadFromDisk, so its host had IsLoaded == false —
+            // a state no real boot survives past its first frame.
+            _save = TestBoot.SaveDataHost("TEST_SaveDataHost_RP");
+            _save.Data.rewardPoints = 100;
 
             // ── RewardPointsManager ──────────────────────────────────────────────
             _savedManagerInstance = _managerType
@@ -97,10 +84,11 @@ namespace Golfin.EconomyRuntime.Tests
             PointsBackendFlag.ResetToDefault();
 
             if (_rpGo != null) UnityEngine.Object.DestroyImmediate(_rpGo);
-            if (_saveGo != null) UnityEngine.Object.DestroyImmediate(_saveGo);
-            _rpGo = null; _saveGo = null; _manager = null;
+            _rpGo = null; _manager = null;
 
-            StaticBackingField(typeof(SaveDataHost), "Instance")?.SetValue(null, _savedSaveDataHost);
+            _save?.Dispose();
+            _save = null;
+
             try { StaticBackingField(_managerType, "Instance")?.SetValue(null, _savedManagerInstance); }
             catch { /* the manager type may not have a backing field in some builds */ }
         }

@@ -7,7 +7,8 @@
         "Golfin.Localization",
         "Golfin.Core.Stamina",
         "Golfin.Economy",
-        "Golfin.Net"
+        "Golfin.Net",
+        "Golfin.TestSupport"
     ],
     "includePlatforms": [
         "Editor"

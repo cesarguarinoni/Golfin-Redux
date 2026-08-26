@@ -852,6 +852,14 @@ export const DICT = {
     en: "The kill switch is off, so the game does not receive this catalog at all and falls back to its bundled CSV.",
     ja: "キルスイッチが OFF のため、ゲームはこのカタログを受信せず、同梱 CSV にフォールバックします。",
   },
+  "c.globalKill.headline": {
+    en: "Remote content is OFF for every player",
+    ja: "リモートコンテンツはすべてのプレイヤーで OFF です",
+  },
+  "c.globalKill.body": {
+    en: "content_settings.content_enabled is false, so every client ignores the content response and runs on its bundled CSVs. Editing and publishing still work here, but nothing reaches a player until it is switched back on — Review & publish ▸ Kill switch.",
+    ja: "content_settings.content_enabled が false のため、すべてのクライアントがコンテンツ応答を無視し同梱 CSV で動作しています。この画面での編集と公開は引き続き可能ですが、再度 ON にするまでプレイヤーには届きません（「差分を確認して公開」▸「キルスイッチ」）。",
+  },
   "c.version": { en: "Published v{n}", ja: "公開中 v{n}" },
   "c.publishOpen": { en: "Review & publish", ja: "差分を確認して公開" },
 
@@ -986,6 +994,35 @@ export const DICT = {
   "cp.enabled.enable": { en: "Resume serving", ja: "配信を再開" },
   "cp.enabled.failed": { en: "Could not change the kill switch", ja: "キルスイッチを変更できませんでした" },
 
+  // The GLOBAL kill switch — a DIFFERENT switch from the per-catalog one above
+  // (content_settings.content_enabled). Every string here names its blast radius explicitly,
+  // because "kill switch" on its own is the phrase that let the two be confused for one.
+  "cp.global.title": { en: "Serve remote content at all", ja: "リモートコンテンツ配信そのもの" },
+  "cp.global.tag": { en: "ALL CATALOGS", ja: "全カタログ" },
+  "cp.global.on": {
+    en: "ON — the game reads remote content. Killing this reverts EVERY catalog to its bundled CSV, for EVERY player.",
+    ja: "ON — ゲームはリモートコンテンツを読み込みます。これを停止すると、すべてのプレイヤーで全カタログが同梱 CSV に戻ります。",
+  },
+  "cp.global.off": {
+    en: "OFF — every client is ignoring the content response entirely and running on its bundled CSVs. Nothing you publish reaches a player until this is back on.",
+    ja: "OFF — すべてのクライアントがコンテンツ応答を完全に無視し、同梱 CSV で動作しています。これを ON に戻すまで、公開した内容はプレイヤーに届きません。",
+  },
+  "cp.global.timing": {
+    en: "Not instant: up to ~60s of response cache to reach a client, then applied at that client's NEXT LAUNCH. Turning it back on costs another launch, because a killed client has already dropped its caches.",
+    ja: "即時ではありません。クライアントに届くまで応答キャッシュで最大約 60 秒、その後そのクライアントの次回起動時に適用されます。再開時はキャッシュを破棄済みのため、さらに 1 回の起動が必要です。",
+  },
+  "cp.global.disable": { en: "Kill remote content (all catalogs)", ja: "リモートコンテンツを停止（全カタログ）" },
+  "cp.global.enable": { en: "Resume remote content", ja: "リモートコンテンツを再開" },
+  "cp.global.confirm": {
+    en: "Kill remote content for EVERY catalog and EVERY player?\n\nEvery client reverts to its bundled CSVs at its next launch, and turning it back on costs them another launch. The per-catalog switch above is the one that affects a single catalog.",
+    ja: "すべてのカタログ・すべてのプレイヤーに対してリモートコンテンツを停止しますか？\n\n各クライアントは次回起動時に同梱 CSV に戻り、再開にはさらに 1 回の起動が必要です。1 つのカタログだけを止めたい場合は、上のカタログ別スイッチを使用してください。",
+  },
+  "cp.global.failed": { en: "Could not change the global kill switch", ja: "グローバルキルスイッチを変更できませんでした" },
+  "cp.global.row": {
+    en: "Stored as content_settings.content_enabled. It is a database row, not a deploy — but it used to have no control here at all, so flipping it meant hand-writing SQL.",
+    ja: "content_settings.content_enabled として保存されます。デプロイではなくデータベースの 1 行です。以前はこの画面に操作がなく、切り替えには SQL を手書きする必要がありました。",
+  },
+
   // ---- clubs / characters / items / texts --------------------------------
   "cl.title": { en: "Clubs", ja: "クラブ" },
   "ch.title": { en: "Characters", ja: "キャラクター" },
@@ -1057,6 +1094,20 @@ export const DICT = {
     en: "A grant is queued, not written into the inventory: the player's client owns that blob and writes it back every 30 seconds, so an admin edit would race it. The player picks a grant up on their NEXT LAUNCH, applies it once, and acknowledges it. Grants are additive-only and idempotent — re-issuing the same one is a new grant, but the same grant can never apply twice.",
     ja: "付与はインベントリに直接書き込まれず、キューに積まれます。インベントリはプレイヤーのクライアントが所有し 30 秒ごとに書き戻すため、管理画面から直接編集すると競合します。プレイヤーは次回起動時に受け取り、一度だけ適用して確認応答します。付与は加算のみで冪等です。同じ内容をもう一度発行すれば別の付与になりますが、同一の付与が二重に適用されることはありません。",
   },
+
+  "uinv.revoke": { en: "Revoke", ja: "取り消し" },
+  "uinv.revokeHint": {
+    en: "Delete this grant from the queue before the player picks it up. Only possible while it is PENDING — once applied, the player has it, and nothing in this system can subtract it.",
+    ja: "プレイヤーが受け取る前に、この付与をキューから削除します。「未受取」の間だけ可能です。受取済みになるとプレイヤーの所持品となり、このシステムには減算する手段がありません。",
+  },
+
+  // ---- users ▸ revoke-grant modal ----------------------------------------
+  "urevoke.title": { en: "Revoke this grant?", ja: "この付与を取り消しますか？" },
+  "urevoke.body": {
+    en: "{amount}× {refId} ({kind}) is still queued and has NOT been applied. Revoking removes it from the queue, so the player never receives it. This is the only chance: grants are additive-only, so once it is applied nothing here can take it back.",
+    ja: "{amount}×{refId}（{kind}）はキューに残っており、まだ適用されていません。取り消すとキューから削除され、プレイヤーには届きません。取り消せるのは今だけです。付与は加算のみのため、適用後はこの画面から取り戻す手段はありません。",
+  },
+  "urevoke.confirm": { en: "Revoke grant", ja: "付与を取り消す" },
 
   // ---- users ▸ grant modal ----------------------------------------------
   "ugrant.title": { en: "Grant inventory", ja: "インベントリを付与" },

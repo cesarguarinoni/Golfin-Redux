@@ -37,8 +37,8 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Threading.Tasks;
 using Golfin.Save;
+using Golfin.TestSupport;
 using Golfin.Tournaments;
 using NUnit.Framework;
 using UnityEngine;
@@ -181,13 +181,6 @@ namespace Golfin.Tournaments.WireupTests
         }
     }
 
-    /// <summary>In-memory <see cref="ISavePersister"/> — never touches disk.</summary>
-    internal sealed class NullPersister : ISavePersister
-    {
-        public bool TryLoad(out string? json) { json = null; return false; }
-        public Task SaveAsync(string json) => Task.CompletedTask;
-    }
-
     // ═════════════════════════════════════════════════════════════════════════
     // §1. REGRESSION GUARD — TournamentService.Compose() → Register() → Snapshot
     // ═════════════════════════════════════════════════════════════════════════
@@ -206,7 +199,7 @@ namespace Golfin.Tournaments.WireupTests
 
         // Snapshot of pre-existing singleton instances (restored in TearDown so we
         // don't corrupt the Editor state for other tests).
-        private object? _savedSaveDataHost;
+        private TestBoot.SaveDataHostLease? _save;
         private object? _savedCharCsvDb;
         private object? _savedCharMgr;
 
@@ -214,39 +207,15 @@ namespace Golfin.Tournaments.WireupTests
         public void SetUp()
         {
             // ── Save pre-existing singleton values ────────────────────────────
-            _savedSaveDataHost = SaveDataHost.Instance;
             _savedCharCsvDb    = AsmCSharp.GetStaticInstance("Golfin.Roster.CharacterDatabaseCSV");
             _savedCharMgr      = AsmCSharp.GetStaticInstance("Golfin.Roster.CharacterManager");
 
             // ── 1. SaveDataHost ───────────────────────────────────────────────
-            // Clear any stale instance so Awake sets ours.
-            // SaveDataHost.Instance backing field name from reflection probe: <Instance>k__BackingField
-            AsmCSharp.ClearSingleton("Golfin.Save.SaveDataHost"); // clear via base type name
-            // Actually SaveDataHost is in Golfin.Save asmdef — use the direct property.
-            // Force-clear via the backing field (it's auto-prop):
-            {
-                var f = typeof(SaveDataHost).GetField("<Instance>k__BackingField",
-                    BindingFlags.Static | BindingFlags.NonPublic);
-                f?.SetValue(null, null);
-            }
-
-            var saveGo = new GameObject("TEST_SaveDataHost");
-            var host   = (SaveDataHost)saveGo.AddComponent<SaveDataHost>();
-            host.SetPersister(new NullPersister());
-            // The fake boot must be COMPLETE, not just present. EditMode never calls Awake, so
-            // nothing has read the save — and CharacterManager asserts on SaveDataHost.IsLoaded
-            // (content_kill_switch_and_order §2). ReloadFromDisk is the load Awake would have done.
-            host.ReloadFromDisk();
-            _toDestroy.Add(saveGo);
-
-            // Force-set SaveDataHost.Instance if Awake didn't fire
-            if (SaveDataHost.Instance == null)
-            {
-                var f2 = typeof(SaveDataHost).GetField("<Instance>k__BackingField",
-                    BindingFlags.Static | BindingFlags.NonPublic);
-                f2?.SetValue(null, host);
-                Debug.Log("[WireupTests] SaveDataHost.Instance force-set");
-            }
+            // ONE shared boot for every EditMode harness (Golfin.TestSupport.TestBoot). It clears
+            // the stale Instance, injects a NullPersister, and — the part that matters —
+            // ReloadFromDisk()es, because CharacterManager asserts on SaveDataHost.IsLoaded
+            // (content_kill_switch_and_order §2) and EditMode never calls Awake.
+            _save = TestBoot.SaveDataHost();
 
             // ── 2. CharacterDatabaseCSV ──────────────────────────────────────
             AsmCSharp.ClearSingleton("Golfin.Roster.CharacterDatabaseCSV");
@@ -320,11 +289,9 @@ namespace Golfin.Tournaments.WireupTests
             _toDestroy.Clear();
 
             // Restore pre-existing singleton values (so we don't corrupt Editor state)
-            {
-                var f = typeof(SaveDataHost).GetField("<Instance>k__BackingField",
-                    BindingFlags.Static | BindingFlags.NonPublic);
-                f?.SetValue(null, _savedSaveDataHost);
-            }
+            _save?.Dispose();
+            _save = null;
+
             AsmCSharp.ClearSingleton("Golfin.Roster.CharacterDatabaseCSV");
             try { AsmCSharp.SetStaticField("Golfin.Roster.CharacterDatabaseCSV", "Instance", _savedCharCsvDb); }
             catch { /* ignore */ }
@@ -627,38 +594,14 @@ namespace Golfin.Tournaments.WireupTests
     [TestFixture]
     public class RealItemRewardAdapterTests
     {
-        private GameObject? _saveGo;
-        private SaveDataHost? _host;
-        private object? _savedSaveDataHost;
+        private TestBoot.SaveDataHostLease? _save;
         private object? _adapter;
 
         [SetUp]
         public void SetUp()
         {
-            _savedSaveDataHost = SaveDataHost.Instance;
-
-            // Clear stale instance so our test AddComponent takes effect
-            {
-                var f = typeof(SaveDataHost).GetField("<Instance>k__BackingField",
-                    BindingFlags.Static | BindingFlags.NonPublic);
-                f?.SetValue(null, null);
-            }
-
-            _saveGo = new GameObject("TEST_SaveDataHost_ItemAdapter");
-            _host   = (SaveDataHost)_saveGo.AddComponent<SaveDataHost>();
-            _host.SetPersister(new NullPersister());
-            // The fake boot must be COMPLETE, not just present. EditMode never calls Awake, so
-            // nothing has read the save — and CharacterManager asserts on SaveDataHost.IsLoaded
-            // (content_kill_switch_and_order §2). ReloadFromDisk is the load Awake would have done.
-            _host.ReloadFromDisk();
-
-            // If Awake didn't set Instance (non-generic AddComponent edge case), force-set
-            if (SaveDataHost.Instance == null)
-            {
-                var f = typeof(SaveDataHost).GetField("<Instance>k__BackingField",
-                    BindingFlags.Static | BindingFlags.NonPublic);
-                f?.SetValue(null, _host);
-            }
+            // Same shared boot as the fixture above — see Golfin.TestSupport.TestBoot.
+            _save = TestBoot.SaveDataHost("TEST_SaveDataHost_ItemAdapter");
 
             _adapter = Activator.CreateInstance(
                 AsmCSharp.GetType("Golfin.Tournaments.ItemRewardServiceAdapter"));
@@ -667,17 +610,9 @@ namespace Golfin.Tournaments.WireupTests
         [TearDown]
         public void TearDown()
         {
-            if (_saveGo != null) UnityEngine.Object.DestroyImmediate(_saveGo);
-            _saveGo  = null;
-            _host    = null;
             _adapter = null;
-
-            // Restore pre-existing SaveDataHost
-            {
-                var f = typeof(SaveDataHost).GetField("<Instance>k__BackingField",
-                    BindingFlags.Static | BindingFlags.NonPublic);
-                f?.SetValue(null, _savedSaveDataHost);
-            }
+            _save?.Dispose();
+            _save = null;
         }
 
         private void Grant(string? itemId, int qty)
@@ -691,18 +626,18 @@ namespace Golfin.Tournaments.WireupTests
         public void Grant_NewItem_CreatesKey()
         {
             Grant("repair_kit", 3);
-            Assert.IsTrue(_host!.Data.itemQuantities.ContainsKey("repair_kit"),
+            Assert.IsTrue(_save!.Data.itemQuantities.ContainsKey("repair_kit"),
                 "Grant must create 'repair_kit' key in SaveData.itemQuantities");
-            Assert.AreEqual(3, _host.Data.itemQuantities["repair_kit"],
+            Assert.AreEqual(3, _save!.Data.itemQuantities["repair_kit"],
                 "Grant(3) must set qty=3 for new key");
         }
 
         [Test]
         public void Grant_ExistingItem_Increments()
         {
-            _host!.Data.itemQuantities["repair_kit"] = 5;
+            _save!.Data.itemQuantities["repair_kit"] = 5;
             Grant("repair_kit", 2);
-            Assert.AreEqual(7, _host.Data.itemQuantities["repair_kit"],
+            Assert.AreEqual(7, _save!.Data.itemQuantities["repair_kit"],
                 "Grant must increment: 5 + 2 = 7");
         }
 
@@ -710,7 +645,7 @@ namespace Golfin.Tournaments.WireupTests
         public void Grant_ZeroQty_IsNoOp()
         {
             Grant("repair_kit", 0);
-            Assert.IsFalse(_host!.Data.itemQuantities.ContainsKey("repair_kit"),
+            Assert.IsFalse(_save!.Data.itemQuantities.ContainsKey("repair_kit"),
                 "Grant(qty=0) must be a no-op — no key created");
         }
 
@@ -718,7 +653,7 @@ namespace Golfin.Tournaments.WireupTests
         public void Grant_NegativeQty_IsNoOp()
         {
             Grant("repair_kit", -1);
-            Assert.IsFalse(_host!.Data.itemQuantities.ContainsKey("repair_kit"),
+            Assert.IsFalse(_save!.Data.itemQuantities.ContainsKey("repair_kit"),
                 "Grant(qty=-1) must be a no-op — no key created");
         }
 
@@ -726,7 +661,7 @@ namespace Golfin.Tournaments.WireupTests
         public void Grant_NullItemId_IsNoOp()
         {
             Grant(null, 5);
-            Assert.AreEqual(0, _host!.Data.itemQuantities.Count,
+            Assert.AreEqual(0, _save!.Data.itemQuantities.Count,
                 "Grant(null, qty) must be a no-op — no key created");
         }
 
@@ -734,7 +669,7 @@ namespace Golfin.Tournaments.WireupTests
         public void Grant_EmptyItemId_IsNoOp()
         {
             Grant("", 5);
-            Assert.AreEqual(0, _host!.Data.itemQuantities.Count,
+            Assert.AreEqual(0, _save!.Data.itemQuantities.Count,
                 "Grant('', qty) must be a no-op — no key created");
         }
 
@@ -745,7 +680,7 @@ namespace Golfin.Tournaments.WireupTests
             var f = typeof(SaveDataHost).GetField("_pendingWrite",
                 BindingFlags.Instance | BindingFlags.NonPublic);
             Assert.IsNotNull(f, "_pendingWrite field must exist on SaveDataHost");
-            Assert.IsTrue((bool)f!.GetValue(_host)!,
+            Assert.IsTrue((bool)f!.GetValue(_save!.Host)!,
                 "MarkDirty() must set _pendingWrite=true after a valid Grant");
         }
     }

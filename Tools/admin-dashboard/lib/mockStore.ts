@@ -48,6 +48,9 @@ export interface MockDb {
   contentDrafts: ContentStoredRow[];
   /** Published snapshots — the rollback target list (content_panels_gaps §2). */
   contentVersions: ContentVersionSummary[];
+  /** `content_settings.content_enabled` — the GLOBAL kill switch (PLAN §7.4). Seeded ON, so mock
+   *  mode starts in the state prod is in and the OFF banner means something when it appears. */
+  contentGlobalEnabled: boolean;
 }
 
 const g = globalThis as unknown as { __golfinMockDb?: MockDb };
@@ -67,6 +70,7 @@ export function mockDb(): MockDb {
       contentPublished: structuredClone(MOCK_CONTENT_PUBLISHED),
       contentDrafts: structuredClone(MOCK_CONTENT_DRAFTS),
       contentVersions: structuredClone(MOCK_CONTENT_VERSIONS),
+      contentGlobalEnabled: true,
     };
   }
   return g.__golfinMockDb;

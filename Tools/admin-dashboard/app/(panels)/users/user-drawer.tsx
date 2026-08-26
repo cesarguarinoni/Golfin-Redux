@@ -7,6 +7,7 @@ import type { DictKey } from "@/lib/i18n";
 import { fmtDateTime } from "@/lib/format";
 import type {
   AdminUserRow,
+  InventoryGrantRow,
   MutationResponse,
   PlayerInventoryResponse,
   UserActionKind,
@@ -27,6 +28,9 @@ type PendingModal =
   | { kind: "delete" }
   | { kind: "rp" }
   | { kind: "grant" }
+  /** Revoke a grant that has NOT drained yet (PLAN §6.5 decision 3). Carries the whole row so the
+   *  confirm can name what is being taken back out of the queue. */
+  | { kind: "revokeGrant"; grant: InventoryGrantRow }
   | null;
 
 const ACTION_COPY: Record<
@@ -608,7 +612,15 @@ export function UserDrawer({
                     {t("common.loading")}
                   </p>
                 )}
-                {inventory && <InventoryTab data={inventory} />}
+                {inventory && (
+                  <InventoryTab
+                    data={inventory}
+                    onRevokeGrant={(grant) => {
+                      setNotice(null);
+                      setPending({ kind: "revokeGrant", grant });
+                    }}
+                  />
+                )}
               </>
             )}
             {detail && tab === "activities" && (
@@ -685,6 +697,28 @@ export function UserDrawer({
             runMutation(`/api/users/${user.id}/inventory`, {
               method: "POST",
               body: JSON.stringify({ kind, refId, amount, note }),
+            })
+          }
+        />
+      )}
+      {pending?.kind === "revokeGrant" && (
+        <ConfirmActionModal
+          title={t("urevoke.title")}
+          body={t("urevoke.body", {
+            amount: pending.grant.amount,
+            refId: pending.grant.refId,
+            kind: pending.grant.kind,
+          })}
+          confirmLabel={t("urevoke.confirm")}
+          destructive
+          mock={mock}
+          busy={busy}
+          error={modalError}
+          onCancel={() => setPending(null)}
+          onConfirm={() =>
+            runMutation(`/api/users/${user.id}/inventory`, {
+              method: "DELETE",
+              body: JSON.stringify({ grantId: pending.grant.id }),
             })
           }
         />

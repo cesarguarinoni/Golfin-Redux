@@ -34,6 +34,182 @@
 
 ## 📋 SPEC_READY POINTERS
 
+- **`content_cleanup_quick`** (filed 2026-08-26, updated after Phase 4) — ✅ **DONE 2026-08-26,
+  awaiting Cesar's sign-off.** All five items implemented directly by Claude Code. Report:
+  `Docs/Specs/Active/content_cleanup_quick/IMPLEMENTER_REPORT.md`. Unity EditMode 1765/1768 (0
+  failed, 3 pre-existing skips), playlife backend 26 passed, dashboard build clean; every new
+  suite proven with a tripwire. ⚠️ The playlife half is committed to the working tree but NOT
+  deployed. Item 3 turned out to be FOUR harnesses, not three. Original brief below.
+
+  **FIVE small items, no spec folder. The last thing before the batched device pass.**
+  1. **Drop the per-catalog `"enabled"` field** from the payload and its client DTOs. Disabled ⇒
+     absent, so it can only ever be `true`, and a tautologically-true boolean gets misread as a
+     guard. Keep top-level `disabled[]`; `IsDisabled(name)` already reads it. Architect override of
+     the keep-both recommendation — the window closes at first release.
+  2. **Global kill switch has no dashboard control.** `lib/contentMutations.ts` toggles per-catalog
+     `is_enabled` only, so `content_settings.content_enabled` needs a SQL update — which fails
+     §7.4's "one flag, no deploy". Add the button.
+  3. **Shared `TestBoot.SaveDataHost()` helper** — three EditMode harnesses fake a host boot and any
+     future boot-order assert hits all three again.
+  4. **Revoke an UNAPPLIED grant** from the Users drawer (`CONTENT_PIPELINE_PLAN.md` §6.5 decision
+     3). Grants are additive-only with no subtraction, so a fat-fingered grant is PERMANENT once
+     drained, fixable only in SQL. Revoking before it drains is the cheap half. No separate panel.
+  5. **Log every merge that RAISES a quantity**, with player + item (§6.5 decision 1). The additive
+     merge can refund a consumed item on a rev mismatch; that is accepted for the beta, but beta
+     consumption numbers are what tune the economy, so the refund path must be counted rather than
+     assumed rare. Near-zero keeps §6 step 4d a launch-gate; anything else moves it up.
+
+- **`content_player_inventory`** (filed 2026-08-26, Architect) — **SPEC_READY. PHASE 4, the last
+  piece of Cesar's original ask.** Collapsed into ONE spec (Cesar 2026-08-26: testers only, no real
+  players, so the 4a→4b→4c ladder is ceremony). `profiles.golfin_inventory` JSONB +
+  `golfin_inventory_rev`; ⚠️ **NOT `user_inventory`, which already exists and is the partner app's
+  gift inventory** (`routers/gifts.py`). One blob per user, **deltas-from-default only** (Cesar's
+  cost constraint). Write-behind ≤1 PUT/30 s + pause. **Additive merge stays** even though tester
+  inventories are expendable — it is what keeps loss DIAGNOSTIC (missing item = bug; under
+  last-write-wins loss is sometimes correct and you cannot tell), and it is the hardest thing to
+  change once real players exist. Plus a `golfin_pending_grants` queue (idempotent by grant id,
+  additive-only) and an admin inventory tab. **Not anti-cheat** — say so on the panel, same as
+  prices. Spec: `Docs/Specs/Active/content_player_inventory/SPEC.md`.
+
+### Kickoff · content_player_inventory
+
+```
+Read Docs/Specs/Active/content_player_inventory/SPEC.md and implement it.
+
+Context:
+- PHASE 4, the last piece. ONE spec, not the 4a/4b/4c ladder — Cesar confirmed
+  testers only, no real players, so the phasing that bounded blast radius on
+  real inventories is ceremony.
+- profiles.golfin_inventory JSONB + golfin_inventory_rev. ⚠️ Do NOT reuse
+  user_inventory — it exists and is the PARTNER APP's gift inventory
+  (routers/gifts.py). Different concern.
+- One blob per user, deltas-from-default only. A default-state club is just its
+  id. That is Cesar's cost constraint from day one, and it also means catalog
+  rebalances propagate to untouched instances for free.
+- Do NOT duplicate what the server already owns: RP balance, the leaderboard
+  accumulators, tournament entries.
+- Additive merge (union ids, max levels/quantities, never subtract) STAYS. Not
+  because tester inventories are precious — because it keeps loss diagnostic. A
+  missing item is then unambiguously a bug; under last-write-wins loss is
+  sometimes correct and you cannot tell which. Hardest thing to change later.
+- Write-behind: at most one PUT per 30s plus one on pause/quit. Never per
+  mutation.
+- golfin_pending_grants: drain at boot, ack, idempotent by grant id,
+  additive-only.
+- This is sync and backup, NOT anti-cheat. A modified client can still grant
+  itself anything. Print that on the admin panel, same as the shop's price
+  notice.
+- Out of scope: server-authoritative purchases, Addressables, art URLs,
+  LevelUpCosts, any content-endpoint or catalog change.
+
+When done: list changed files with a 1-line summary each, run the acceptance
+tests, update STATUS.md + IMPLEMENTER_REPORT.md, and update Docs/AI_CONTEXT.md.
+```
+
+- **`content_kill_switch_and_order`** (filed 2026-08-26, Architect) — **SPEC_READY. GATES THE
+  PHASE-2 DEVICE PASS.** Two small pre-existing fixes, both verified against prod.
+  (1) Top-level `enabled` is an AND across the REQUESTED catalogs, so disabling ONE catalog
+  reverts EVERY catalog to bundled on every client — a per-catalog kill with global blast radius.
+  Fix: per-catalog `"enabled": false`, top-level reserved for a real global kill. Disabled ⇒ absent
+  is CORRECT and Phase 2 depends on it — do not change that.
+  (2) `CharacterManager` and `SaveDataHost` are both −100; the tie means the Phase-2 clamp silently
+  may not run. Move `CharacterManager` to −95 + assert.
+  Spec: `Docs/Specs/Active/content_kill_switch_and_order/SPEC.md`.
+
+### Kickoff · content_kill_switch_and_order
+
+```
+Read Docs/Specs/Active/content_kill_switch_and_order/SPEC.md and implement it.
+
+Two small fixes, both pre-existing, both verified against prod:
+
+1. Top-level `enabled` is an AND across the REQUESTED catalogs. ContentService
+   requests all six and drops the cache on enabled:false, so disabling ONE
+   catalog reverts EVERY catalog to bundled. Make `enabled` a real global flag
+   and add per-catalog `"enabled": false` (your client is already written for
+   it). Disabled-means-absent is CORRECT — Phase 2's WITHDRAWN handling depends
+   on it, verified on prod. Do not change that.
+2. CharacterManager and SaveDataHost are both at -100. CharacterManager reads
+   the save, so the tie means the clamp silently may not run. Move
+   CharacterManager to -95 and assert SaveDataHost ran first.
+
+This gates the Phase-2 device pass — testing the per-catalog kill before this
+lands would pass while doing something much larger than intended.
+
+Out of scope: the .cs.meta-only execution-order fragility in general (its own
+task), boot cost, inventory, Addressables, art URLs.
+
+When done: list changed files with a 1-line summary each, run the acceptance
+tests, update STATUS.md + IMPLEMENTER_REPORT.md, and update Docs/AI_CONTEXT.md.
+```
+
+- **`content_overlay_catalogs`** (filed 2026-08-26, Architect via Cowork) — **SPEC_READY, kickoff
+  pasteable. PHASE 2 — clubs / characters / items / bags / balls / shop_catalog.** Phase 1
+  (`content_overlay_texts`) is DONE: `Golfin.Content` exists, `min_build` resolved to the
+  `build_stamp.txt` number (2302, `git rev-list --count HEAD`, guarded by the generator's
+  refuse-to-build check against `last_uploaded_build.txt`) — do NOT rebuild any of it.
+  **Why this is a separate spec and not a widening:** a wrong string is harmless, a wrong
+  `maxDurability` leaves a saved `PersistedClub` above a ceiling that no longer exists.
+  **Un-clamped application is the single most likely way this feature corrupts a save.**
+  Execution order is already right — `ContentService` −900, `SaveDataHost` −100, DBs+managers 0 —
+  so at 0 BOTH overlay and save are available, which is exactly what clamping needs.
+  ⚠️ But `ClubDatabaseCSV` and `ClubManager` are BOTH at default 0 and the "runs before" guarantee
+  is only a code comment — find what actually enforces it and ASSERT it, the way Phase 1 asserted
+  `LocalizationManager.IsInitialized`. Also folded in: `is_active=false` stays renderable and
+  equipped (I6); an overlay row whose sprite does not resolve keeps the BUNDLED row rather than
+  showing `Placeholder`; shop windows honoured fail-closed; tournaments already safe via
+  `PersistedCharacterSnapshot` (pin it with a test, don't "fix" it); **and a kill-switch semantics
+  gap found reviewing Phase 1** — global `enabled:false` drops the cache, but a per-catalog
+  `is_enabled=false` only makes the catalog ABSENT, which this client reads as "no update", so the
+  last good overlay applies forever. §7.4 promises otherwise. Fix or report what the payload cannot
+  express. Finally: the 17 pre-existing test failures are STALE ASSERTIONS
+  (`GachaTicketTests.CurrentSchemaVersion_Is9` asserts 9, `SaveSchemaMigrator` ships 10) — fix the
+  literals here so the suite is a real signal again.
+  Spec: `Docs/Specs/Active/content_overlay_catalogs/SPEC.md`.
+
+### Kickoff · content_overlay_catalogs
+
+```
+Read Docs/Specs/Active/content_overlay_catalogs/SPEC.md and implement it.
+
+Context:
+- PHASE 2 of Docs/CONTENT_PIPELINE_PLAN.md — clubs, characters, items, bags,
+  balls, shop_catalog. Phase 1 is done and deployed; Golfin.Content,
+  ContentService (-900), RemoteContentSource, per-catalog cursors and the
+  min_build resolution all EXIST. Extend them, do not rebuild them.
+- The heart of this task is CLAMPING, not plumbing. A wrong string was harmless;
+  a published maxDurability below an owned club's currentDurability is not.
+  Clamp once, in an explicit step after the overlay is applied and the save is
+  loaded — never at each read site — and log every clamp with id/field/old/new.
+  A silent clamp is indistinguishable from a bug report six weeks later.
+- Execution order is already correct: ContentService -900, SaveDataHost -100,
+  DBs and managers at 0, so at 0 both the overlay and the save are ready.
+  ⚠️ But ClubDatabaseCSV and ClubManager are BOTH default 0 and "runs before
+  ClubManager" is only a comment. Find what actually enforces it and ASSERT it
+  at runtime — same class of invisible failure as Phase 1's IsInitialized.
+- is_active=false means deactivated, never deleted: gone from shop and pools,
+  still fully renderable in the bag, still equipped if it was.
+- If an overlay row's sprite does not resolve, KEEP THE BUNDLED ROW. A silently
+  wrong club beats a grid of Placeholder.
+- Tournaments are already safe (PersistedCharacterSnapshot freezes stats at
+  sign-up). Do not "fix" it — pin it with a test.
+- Kill-switch gap I found reviewing Phase 1: global enabled:false drops the
+  cache, but a per-catalog is_enabled=false only makes the catalog ABSENT, which
+  this client treats as "no update" — so the last good overlay applies forever.
+  Make them agree, or REPORT what the payload cannot express.
+- Fix the 17 pre-existing failures while you are here: they are stale assertions
+  (CurrentSchemaVersion 9 vs the shipped 10), not a code bug. A red suite masks
+  regressions and we have leaned on "sweep green" as evidence repeatedly.
+- Out of scope: live mid-session swap, player inventory, Addressables, art URLs,
+  SP refunds on rarity downgrade (clamp and log — refunding is its own
+  decision), LevelUpCosts, and any endpoint/panel/schema change.
+
+When done: list changed files with a 1-line summary each, run the acceptance
+tests in the spec, flag which need manual on-device verification, update
+STATUS.md + IMPLEMENTER_REPORT.md in the spec folder, and update
+Docs/AI_CONTEXT.md.
+```
+
 - **`content_overlay_texts`** (filed 2026-08-26, Architect via Cowork) — **SPEC_READY, kickoff
   pasteable. PHASE 1 — the first time the content pipeline reaches the GAME.** Everything shipped
   so far (catalogs, publish/rollback, six panels, the per-catalog delta endpoint) is a system the
@@ -93,7 +269,31 @@ STATUS.md + IMPLEMENTER_REPORT.md in the spec folder, and update
 Docs/AI_CONTEXT.md.
 ```
 
-- **`perf_baseline_capture`** (filed 2026-08-26, Architect via Cowork) — **Phase 0 of
+- **`perf_baseline_capture`** (filed 2026-08-26, Architect via Cowork) — ⏳ **STATIC HALF DONE
+  2026-08-26; DEVICE HALF PENDING A PHONE.** Report:
+  [`Docs/Reports/perf_baseline_2026-08-26.md`](Docs/Reports/perf_baseline_2026-08-26.md).
+  **All five §0 items came back CONFIRMED from the shipping assets, scenes and URP package source —
+  none refuted.** Highlights: two enabled **Base** cameras during a hole (shell one has
+  post ON, shadows ON, cull Everything) and nothing in `Assets/Scripts` disables it — **but it sits
+  at `(0,1,-10)`, which the baked heightmaps put ~25 m UNDER the Hole 08 surface, so the plan's
+  "up to ~2× GPU" is too generous**: the certain cost is 4 cascade passes + the prepass set + a full
+  Bloom/Uber chain, and the opaque draw is what the Frame Debugger has to size; Hole 08 = 27,468 GO / 23,538 MeshRenderers
+  / 1,958 LODGroups with **23,538 of 23,538 casting shadows**, 12 renderers per tree, no billboard
+  LOD, animated crossfade on all 1,958; 9 TerrainLayers on every hole → 3 TerrainLit passes,
+  `m_SplatMapDistance: 1000` + `m_DrawInstanced: 0` on all 18; no `LightingDataAsset` anywhere →
+  shadows fully realtime. **#5 is worse than filed:** `technique: 1` is DBuffer, which
+  unconditionally `ConfigureInput(Depth|Normal)`s a DepthNormals prepass **per camera** with zero
+  decals in the project *and* returns `false` from `SupportsNativeRenderPass()` — one unused feature
+  is vetoing Native Render Pass on a TBDR GPU. **New:** Hole 02's 1,495 invisible tree collisions are
+  CONFIRMED and structural (plan §7 — needs its own task, not fixed here); holes 01/02/06 carry
+  `m_TreeDistance: 5000`/billboard 50 vs 150/80 on the other 15, which confounds the 01↔08 baseline
+  comparison and breaks plan §2's own fairness rule between holes.
+  **Still needs a phone on USB** (both iPhones read `unavailable` on 2026-08-26): all Profiler ms /
+  batches / SetPass / tris / verts / shadow-caster / culling numbers, the Frame Debugger event list,
+  the Memory Profiler snapshot after 01→08→06, the 10-minute Hole 08 thermal state, and experiments
+  a–e. **§6 of the report is a turnkey procedure with the empty tables to paste into** — re-run the
+  kickoff below as-is once a device is attached; nothing in it needs re-deriving.
+  *(Original pointer text follows.)* **Phase 0 of
   `Docs/PERF_OPTIMIZATION_PLAN.md`. Measurement only, NO code changes. Kickoff pasteable.**
   Inspection found five suspected per-frame costs that must be confirmed on the iPhone before the
   tier system (`9a`, Order 900) is specced: (1) `ShellScene` `Main Camera` (post-processing ON, cull

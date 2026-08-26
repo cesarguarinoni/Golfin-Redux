@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using Golfin.Gameplay.Session;
+using Golfin.InventorySync;
 using Golfin.Roster;
 using Golfin.Gameplay.UI;
 using Golfin.Gameplay.UI.HUD;
@@ -78,6 +79,13 @@ namespace GolfinRedux.TelemetryRuntime
                 ShotTelemetryRelay.ShotCancelled += OnShotCancelled;
                 Golfin.Auth.AuthService.SignedIn += OnSignedIn;
 
+                // The refundable-spend path, counted (CONTENT_PIPELINE_PLAN §6.5 decision 1).
+                // ASSIGNED, not +=: Install() is guarded against running twice, but a domain reload
+                // between edit and play can leave a stale delegate on the service singleton, and a
+                // double-subscribe here would double every count — which is exactly the number this
+                // is being read for.
+                InventorySyncService.Instance.OnQuantitiesRaised = OnInventoryQuantitiesRaised;
+
                 _lateBindDeadline = Time.realtimeSinceStartup + 60f;
                 TryLateBind();
 
@@ -94,6 +102,43 @@ namespace GolfinRedux.TelemetryRuntime
             catch (Exception ex)
             {
                 Debug.LogWarning($"[Telemetry] Install failed and was swallowed: {ex}");
+            }
+        }
+
+        // ── Inventory merge raises (CONTENT_PIPELINE_PLAN §6.5 decision 1) ───────
+
+        /// <summary>
+        /// ONE ROW PER RAISED STACK, not one per merge.
+        ///
+        /// <para>
+        /// The decision of record asks for "every merge that raises a quantity, WITH PLAYER AND
+        /// ITEM" — so the item has to be the grain. A single row carrying a count would answer "how
+        /// often" but not "which consumable", and which consumable is the half that feeds back into
+        /// the economy tuning. The player is not in the payload deliberately: <c>/telemetry/events</c>
+        /// stamps <c>user_id</c> from the bearer token and IGNORES any id in the body, so putting one
+        /// here would be a second, lower-trust copy of a column the server already fills correctly.
+        /// </para>
+        /// </summary>
+        private static void OnInventoryQuantitiesRaised(IReadOnlyList<InventoryRaise> raises)
+        {
+            if (raises == null) return;
+
+            var svc = TelemetryService.Instance;
+            foreach (var raise in raises)
+            {
+                // Captured per iteration — RecordSafe runs the builder immediately, but a foreach
+                // variable closed over lazily is the classic way this stops being true.
+                InventoryRaise captured = raise;
+                svc.RecordSafe(TelemetryEventNames.InventoryMergeRaise, () => new Dictionary<string, object>
+                {
+                    ["kind"]  = captured.Kind.ToString().ToLowerInvariant(),
+                    ["item"]  = captured.Id,
+                    ["from"]  = captured.From,
+                    ["to"]    = captured.To,
+                    // -1 is the UNLIMITED sentinel on balls, so a delta there is meaningless and is
+                    // reported as 0 rather than as a made-up number.
+                    ["delta"] = captured.To < 0 || captured.From < 0 ? 0 : captured.To - captured.From,
+                });
             }
         }
 

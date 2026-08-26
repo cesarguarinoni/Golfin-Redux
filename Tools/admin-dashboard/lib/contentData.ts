@@ -107,6 +107,40 @@ function dirtyCount(published: ContentStoredRow[], drafts: ContentStoredRow[]): 
   }).length;
 }
 
+export const GLOBAL_ENABLED_KEY = "content_enabled";
+/** The row in `content_settings` that is the GLOBAL kill switch (PLAN §7.4). The endpoint reads
+ *  the same key — see `GLOBAL_ENABLED_KEY` in playlife `routers/content.py`. */
+
+/**
+ * The global kill switch, read the way the endpoint reads it.
+ *
+ * ⚠️ FAILS OPEN, deliberately, and for a DIFFERENT reason than the endpoint does.
+ * `_global_enabled()` fails open so a PostgREST blip cannot wipe every client's content cache.
+ * Here the stake is smaller but the direction has to match: if this returned false on an
+ * unreadable flag, the panel would show a global kill that is not in effect, and the operator's
+ * fix — pressing "Resume" — would write `true` over a row that already says `true` while the real
+ * problem (a missing table, a broken key) stayed invisible. Reading the same value the game reads
+ * is the whole job of this function.
+ */
+export async function fetchGlobalContentEnabled(): Promise<boolean> {
+  if (isMockMode()) return mockDb().contentGlobalEnabled;
+
+  const res = await getSupabaseAdmin()
+    .from("content_settings")
+    .select("value")
+    .eq("key", GLOBAL_ENABLED_KEY)
+    .maybeSingle();
+
+  // A missing table surfaces as an error, a missing row as null data. Both mean the migration has
+  // not been applied here, and the endpoint treats both as ENABLED.
+  if (res.error) {
+    console.warn("content_settings read failed:", res.error.message);
+    return true;
+  }
+  if (!res.data) return true;
+  return (res.data as { value: boolean }).value !== false;
+}
+
 export async function fetchCatalogs(): Promise<ContentCatalogsResponse> {
   if (isMockMode()) {
     // DERIVE the counts from the mock rows rather than trusting the numbers
@@ -136,11 +170,13 @@ export async function fetchCatalogs(): Promise<ContentCatalogsResponse> {
           dirtyCount: dirtyCount(published, drafts),
         };
       }),
+      globalEnabled: store.contentGlobalEnabled,
       mock: true,
     };
   }
 
   const supabase = getSupabaseAdmin();
+  const globalEnabled = await fetchGlobalContentEnabled();
   const res = await supabase
     .from("content_catalogs")
     .select("name, published_version, is_enabled")
@@ -166,7 +202,7 @@ export async function fetchCatalogs(): Promise<ContentCatalogsResponse> {
       dirtyCount: dirtyCount(published, drafts),
     });
   }
-  return { catalogs, mock: false };
+  return { catalogs, globalEnabled, mock: false };
 }
 
 /**

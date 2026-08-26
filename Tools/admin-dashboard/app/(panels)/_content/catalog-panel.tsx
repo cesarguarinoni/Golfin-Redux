@@ -71,6 +71,8 @@ export function CatalogPanel({
   const idColumn = ID_COLUMN[catalog] ?? "id";
 
   const [summary, setSummary] = useState<ContentCatalogSummary | null>(null);
+  /** The GLOBAL kill switch (PLAN §7.4) — see GlobalKillBanner below. */
+  const [globalEnabled, setGlobalEnabled] = useState(true);
   const [data, setData] = useState<ContentRowsResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -111,6 +113,7 @@ export function CatalogPanel({
     try {
       const res = await fetchCatalogs();
       setSummary(res.catalogs.find((c) => c.name === catalog) ?? null);
+      setGlobalEnabled(res.globalEnabled);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     }
@@ -187,6 +190,12 @@ export function CatalogPanel({
           </div>
         )}
       </div>
+
+      {/* ⚠️ ABOVE the panel's own banner and above everything else, because it OUTRANKS
+          everything else on this screen: while the global switch is off, no publish on any
+          catalog reaches a single player. An operator publishing into a global kill and seeing
+          "Published v12" with no other signal is the failure this exists to prevent. */}
+      {!globalEnabled && <GlobalKillBanner />}
 
       {banner}
 
@@ -361,10 +370,30 @@ export function CatalogPanel({
         <PublishDrawer
           catalog={catalog}
           summary={summary}
+          globalEnabled={globalEnabled}
           onClose={() => setPublishing(false)}
           onChanged={(message) => void refresh(message)}
         />
       )}
+    </div>
+  );
+}
+
+/**
+ * Remote content is off for EVERY player — `content_settings.content_enabled` is false.
+ *
+ * Deliberately loud and deliberately not a badge: the per-catalog OFF state is a badge next to
+ * the version, and these two must never look alike at a glance. One catalog reverting to its
+ * bundled CSV and the whole pipeline being dark are different emergencies.
+ */
+function GlobalKillBanner() {
+  const translate = useT();
+  return (
+    <div className="mb-4 rounded-lg border border-red-500/50 bg-red-500/10 px-3 py-2.5">
+      <p className="text-xs font-bold text-red-300">⚠ {translate("c.globalKill.headline")}</p>
+      <p className="mt-1 text-[11px] leading-relaxed text-red-200/85">
+        {translate("c.globalKill.body")}
+      </p>
     </div>
   );
 }

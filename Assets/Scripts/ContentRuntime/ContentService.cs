@@ -410,10 +410,11 @@ namespace Golfin.Content
         /// ORDER is a thing a test can drive, not a thing a reviewer has to read.
         ///
         /// <para>
-        /// ⚠️ DISABLED IS ASKED FIRST, AND THAT ORDER IS LOAD-BEARING. A killed catalog is normally
-        /// absent, so the two drops would agree — but a server that serves a killed catalog
-        /// present-and-flagged (<c>enabled:false</c> inside the object) would otherwise take the
-        /// Write branch and cache content an operator has just switched off.
+        /// ⚠️ DISABLED IS ASKED FIRST, AND THAT ORDER IS LOAD-BEARING. A killed catalog is absent
+        /// from <c>catalogs</c>, so it normally has no slice and the two drops would agree — but a
+        /// server that named a catalog in <c>disabled</c> AND still served it would otherwise take
+        /// the Write branch and cache content an operator has just switched off. The operator's
+        /// switch wins over the payload.
         /// </para>
         /// <para>
         /// The GLOBAL kill never reaches here: <c>enabled:false</c> short-circuits the whole
@@ -430,8 +431,8 @@ namespace Golfin.Content
         }
 
         /// <summary>
-        /// A catalog the server NAMED as killed — top-level <c>disabled</c>, or served with
-        /// <c>enabled:false</c>.
+        /// A catalog the server NAMED as killed — the top-level <c>disabled</c> list, which since
+        /// content_cleanup_quick is the only per-catalog kill signal on the wire.
         ///
         /// <para>
         /// Identical in effect to <see cref="DropWithdrawnCatalog"/> — that catalog's cache is

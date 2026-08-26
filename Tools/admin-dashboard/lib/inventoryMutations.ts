@@ -23,6 +23,11 @@ import { INVENTORY_GRANT_KINDS, type InventoryGrantKind } from "./types";
  *
  * AUDITED like every other mutation: checkAdmin() in the route, writeAudit()
  * here on the success path.
+ *
+ * REVOKING — see `revokeInventoryGrant` below (PLAN §6.5 decision 3). Grants are additive-only
+ * with no subtraction anywhere in the system, so a fat-fingered grant is PERMANENT once it drains:
+ * the only fix is SQL against a player's blob. Revoking one that has not drained yet is the cheap
+ * half of that problem and closes most of it.
  */
 
 export interface MutationOutcome {
@@ -120,4 +125,88 @@ export async function issueInventoryGrant(
 
   await writeAudit(adminEmail, "inventory_grant", userId, "golfin_pending_grants", null, row);
   return ok(`Queued ${amount}× ${ref} (${kind}). The player receives it on their next launch.`);
+}
+
+/**
+ * Delete a grant that has NOT been applied yet (PLAN §6.5 decision 3).
+ *
+ * WHY THIS AND NOT A GRANTS PANEL. A separate panel is not warranted at dozens of grants per
+ * tester; the real gap is narrower. Grants are additive-only and there is no subtraction anywhere
+ * — not in the queue, not in the merge, not on the client — so once a grant DRAINS, undoing it
+ * means hand-editing a player's inventory blob in SQL. Catching it while it is still pending is
+ * the cheap half of that, and it is the half that covers a wrong id typed thirty seconds ago.
+ *
+ * ⚠️ IT IS DELIBERATELY A DELETE, NOT A `revoked_at` COLUMN. The queue's whole contract, on both
+ * the client and the API, is `applied_at is null` ⇒ pending; a third state would have to be
+ * special-cased in `routers/golfin_inventory.py`'s drain AND its ack, for a row nobody will ever
+ * read again. The history is not lost — `admin_audit_log` keeps the full row in the audit's
+ * `before` payload, which is exactly the job it already has.
+ *
+ * TWO FILTERS, BOTH LOAD-BEARING. `user_id` scopes the delete to the drawer that is open, and
+ * `applied_at is null` is what makes revoking an ALREADY-DRAINED grant impossible rather than
+ * merely discouraged: the player has it, deleting the row would not take it back, and a UI that
+ * said "revoked" would be lying. That case returns 409 and says what actually happened.
+ */
+export async function revokeInventoryGrant(
+  adminEmail: string,
+  userId: string,
+  grantId: string
+): Promise<MutationOutcome> {
+  const id = grantId.trim();
+  if (!id) return fail(400, "grantId is required.");
+
+  if (isMockMode()) {
+    const found = MOCK_INVENTORY_GRANTS.find((g) => g.id === id);
+    if (!found) return fail(404, "That grant no longer exists.");
+    if (found.appliedAt) {
+      return fail(409, "That grant has already been applied — the player has it, so it cannot be revoked.");
+    }
+    MOCK_INVENTORY_GRANTS.splice(MOCK_INVENTORY_GRANTS.indexOf(found), 1);
+    await writeAudit(adminEmail, "inventory_grant_revoke", userId, "golfin_pending_grants", found, null);
+    return ok(`Revoked ${found.amount}× ${found.refId} (${found.kind}) before it was applied.`);
+  }
+
+  const admin = getSupabaseAdmin();
+
+  // Read first, so the failure can SAY WHICH failure it is. A delete that matches nothing is
+  // ambiguous between "already applied", "already revoked" and "wrong user", and those need three
+  // different sentences in front of an operator who is mid-mistake.
+  const existing = await admin
+    .from("golfin_pending_grants")
+    .select("id, user_id, kind, ref_id, amount, note, created_by, created_at, applied_at")
+    .eq("id", id)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (existing.error) return fail(500, `Could not read the grant: ${existing.error.message}`);
+  if (!existing.data) return fail(404, "That grant no longer exists for this player.");
+
+  const row = existing.data as { applied_at: string | null; kind: string; ref_id: string; amount: number };
+  if (row.applied_at) {
+    return fail(
+      409,
+      "That grant has already been applied — the player has it. Revoking the queue row would not " +
+        "take it back, so nothing was changed."
+    );
+  }
+
+  // The `applied_at is null` filter is REPEATED on the delete and is not redundant: the read above
+  // and the delete are two statements, and a boot in between is exactly the window where a tester
+  // drains the grant. Without it, the delete would silently win that race and the operator would
+  // be told the grant was revoked while the player was already holding it.
+  const res = await admin
+    .from("golfin_pending_grants")
+    .delete()
+    .eq("id", id)
+    .eq("user_id", userId)
+    .is("applied_at", null)
+    .select("id");
+
+  if (res.error) return fail(500, `Could not revoke the grant: ${res.error.message}`);
+  if (!res.data || res.data.length === 0) {
+    return fail(409, "The player applied that grant while this page was open — nothing was revoked.");
+  }
+
+  await writeAudit(adminEmail, "inventory_grant_revoke", userId, "golfin_pending_grants", existing.data, null);
+  return ok(`Revoked ${row.amount}× ${row.ref_id} (${row.kind}) before it was applied.`);
 }

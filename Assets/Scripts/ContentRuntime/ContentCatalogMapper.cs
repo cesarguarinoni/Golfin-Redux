@@ -38,13 +38,11 @@ namespace Golfin.Content
     /// <summary>One catalog's rows, in payload order and keyed by id.</summary>
     public sealed class ContentCatalog
     {
-        public ContentCatalog(string name, int version, bool full, List<ContentRow> rows,
-                              bool enabled = true)
+        public ContentCatalog(string name, int version, bool full, List<ContentRow> rows)
         {
             Name    = name;
             Version = version;
             Full    = full;
-            Enabled = enabled;
             Rows    = rows;
 
             ById = new Dictionary<string, ContentRow>(rows.Count, StringComparer.Ordinal);
@@ -67,17 +65,9 @@ namespace Golfin.Content
         /// </summary>
         public bool Full { get; }
 
-        /// <summary>
-        /// This catalog's own kill switch, as the server reported it.
-        /// <para>
-        /// Practically always true: the server omits a disabled catalog and names it in the
-        /// top-level <c>disabled</c> list instead (see <see cref="ContentPayload.Disabled"/>), so a
-        /// catalog that reached this type was served. It defaults to true for the same reason and
-        /// is honoured anyway, so a server that starts sending a killed catalog present-and-flagged
-        /// cannot have its kill silently dropped.
-        /// </para>
-        /// </summary>
-        public bool Enabled { get; }
+        // A CATALOG THAT REACHED THIS TYPE WAS SERVED, so it has no kill flag of its own
+        // (content_cleanup_quick, 2026-08-26). The per-catalog kill lives in
+        // ContentPayload.Disabled and is read through ContentPayload.IsDisabled.
 
         public List<ContentRow> Rows { get; }
         public Dictionary<string, ContentRow> ById { get; }
@@ -141,15 +131,12 @@ namespace Golfin.Content
             => Catalogs.TryGetValue(name, out var c) ? c : null;
 
         /// <summary>
-        /// True when the server said THIS catalog is killed — either by naming it in
-        /// <see cref="Disabled"/>, or by serving it with <c>enabled:false</c>. Both are honoured so
-        /// the client is correct under either wire shape.
+        /// True when the server said THIS catalog is killed — i.e. it is named in
+        /// <see cref="Disabled"/>. That is the ONLY per-catalog kill signal on the wire: a killed
+        /// catalog is absent from <see cref="Catalogs"/>, so a served catalog could never have
+        /// carried a false flag of its own (content_cleanup_quick, 2026-08-26).
         /// </summary>
-        public bool IsDisabled(string name)
-        {
-            if (Disabled.Contains(name)) return true;
-            return Catalogs.TryGetValue(name, out var c) && !c.Enabled;
-        }
+        public bool IsDisabled(string name) => Disabled.Contains(name);
 
         /// <summary>Requested catalogs the response did NOT carry. See the file header.</summary>
         public List<string> AbsentFrom(IEnumerable<string> requested)
@@ -272,7 +259,7 @@ namespace Golfin.Content
             if (unusable > 0)
                 Debug.LogWarning($"{Tag} Catalog '{name}': dropped {unusable} row(s) with no usable id.");
 
-            return new ContentCatalog(name, dto.Version, dto.Full, rows, dto.Enabled ?? true);
+            return new ContentCatalog(name, dto.Version, dto.Full, rows);
         }
 
         /// <summary>

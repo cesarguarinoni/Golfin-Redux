@@ -202,5 +202,84 @@ namespace Golfin.InventorySync.Tests
             Assert.IsFalse(InventoryProjector.Apply(new InventorySnapshot(), null));
             Assert.AreEqual(0, InventoryProjector.Project(null).Clubs.Count);
         }
+
+        // ── The refundable spend, counted (PLAN §6.5 decision 1) ─────────────
+
+        [Test]
+        public void A_raised_quantity_on_a_key_we_already_held_is_reported()
+        {
+            // THE REFUND, exactly as §6.5 describes it: this device spent a repair kit (3 -> 2) and
+            // the other device's blob still says 3. max(2,3) hands it back. RP stays debited, so it
+            // is a free consumable — accepted for the beta, but it MUST be counted, because beta
+            // consumption figures are what tune the economy.
+            var save = Populated();
+            save.itemQuantities["item_repair_kit"] = 2;
+
+            var theirs = new InventorySnapshot();
+            theirs.Items["item_repair_kit"] = 3;
+
+            var raises = new List<InventoryRaise>();
+            Assert.IsTrue(InventoryProjector.Apply(theirs, save, raises));
+
+            Assert.AreEqual(1, raises.Count, "the refund path must produce exactly one row");
+            Assert.AreEqual(InventoryRaiseKind.Item, raises[0].Kind);
+            Assert.AreEqual("item_repair_kit", raises[0].Id, "the ITEM is half of what §6.5 asks for");
+            Assert.AreEqual(2, raises[0].From);
+            Assert.AreEqual(3, raises[0].To);
+        }
+
+        [Test]
+        public void A_brand_new_key_is_a_restore_and_is_NOT_counted_as_a_raise()
+        {
+            // A fresh install pulling its inventory back is the feature working. Counting it would
+            // bury the refund signal under every reinstall — see InventoryRaise.
+            var save = SaveData.CreateFresh();
+            var theirs = new InventorySnapshot();
+            theirs.Items["item_repair_kit"] = 3;
+            theirs.Balls["ball_pro"] = 7;
+
+            var raises = new List<InventoryRaise>();
+            Assert.IsTrue(InventoryProjector.Apply(theirs, save, raises));
+
+            Assert.AreEqual(3, save.itemQuantities["item_repair_kit"], "the restore still happens");
+            Assert.AreEqual(0, raises.Count, "a key we never held is a restore, not a refund");
+        }
+
+        [Test]
+        public void Balls_and_tickets_are_counted_too_and_a_no_op_merge_counts_nothing()
+        {
+            var save = Populated();                       // ticket 0 = 10, ball_standard = -1
+            save.ballQuantities["ball_pro"] = 1;
+
+            var theirs = new InventorySnapshot();
+            theirs.Balls["ball_pro"]   = 4;               // raised   -> counted
+            theirs.Balls["ball_standard"] = 5;            // unlimited stays unlimited -> not counted
+            theirs.Tickets[0]          = 12;              // raised   -> counted
+            theirs.Items["item_repair_kit"] = 1;          // lower than ours -> not counted
+
+            var raises = new List<InventoryRaise>();
+            Assert.IsTrue(InventoryProjector.Apply(theirs, save, raises));
+
+            CollectionAssert.AreEquivalent(
+                new[] { "Ball:ball_pro 1->4", "Ticket:0 10->12" },
+                raises.ConvertAll(r => r.ToString()));
+        }
+
+        [Test]
+        public void Passing_no_collector_changes_nothing_about_the_merge()
+        {
+            // The count is observation, never behaviour. Every pre-existing caller passes null.
+            var withList = Populated();
+            var withNull = Populated();
+            withList.itemQuantities["item_repair_kit"] = withNull.itemQuantities["item_repair_kit"] = 2;
+
+            var theirs = new InventorySnapshot();
+            theirs.Items["item_repair_kit"] = 3;
+
+            Assert.AreEqual(InventoryProjector.Apply(theirs, withNull),
+                            InventoryProjector.Apply(theirs, withList, new List<InventoryRaise>()));
+            Assert.AreEqual(withNull.itemQuantities["item_repair_kit"],
+                            withList.itemQuantities["item_repair_kit"]);
+        }
     }
 }

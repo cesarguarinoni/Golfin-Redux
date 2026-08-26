@@ -201,6 +201,80 @@ namespace Golfin.InventorySync.Tests
             Assert.AreEqual(99, stored.Clubs.Find(c => c.clubId == "club_driver_golfinx").currentLevel);
         }
 
+        // ── The refundable spend, counted at BOTH merge sites (PLAN §6.5) ────
+
+        [Test]
+        public void A_stale_merge_that_refunds_a_consumed_item_is_reported()
+        {
+            // §6.5's exact scenario. This device spent a repair kit (3 -> 2); the other device is
+            // holding a stale rev and its blob still says 3. The additive merge hands it back — RP
+            // stays debited, so it is a free consumable. Accepted for the beta; NOT accepted
+            // silently, because the beta consumption numbers are what tune the economy.
+            var theirs = new InventorySnapshot();
+            theirs.Items["item_repair_kit"] = 3;
+            _server.ServerJson = InventoryCodec.Encode(theirs, _sync.Catalog);
+            _server.ServerRev = 7;
+
+            var seen = new List<InventoryRaise>();
+            _sync.OnQuantitiesRaised = rs => seen.AddRange(rs);
+
+            _sync.Boot();                                  // boot merge: a NEW key -> a restore
+            Assert.AreEqual(0, seen.Count, "a fresh key arriving is a restore, not a refund");
+
+            _save.itemQuantities["item_repair_kit"] = 2;   // ... then the player spends one
+            _server.ServerRev = 9;                         // and the other device moves the rev
+
+            _sync.MarkDirty();
+            _sync.Tick(100f);
+
+            Assert.AreEqual(1, seen.Count, "the stale-merge refund must be reported exactly once");
+            Assert.AreEqual("Item:item_repair_kit 2->3", seen[0].ToString());
+        }
+
+        [Test]
+        public void A_boot_merge_that_raises_a_held_quantity_is_reported_too()
+        {
+            // The less obvious of the two sites: a reinstall (or a second device booting) restores a
+            // blob written BEFORE this device's last spend. Counting only the stale path would
+            // undercount by exactly the cases nobody expected.
+            _save.itemQuantities["item_repair_kit"] = 2;
+
+            var theirs = new InventorySnapshot();
+            theirs.Items["item_repair_kit"] = 5;
+            _server.ServerJson = InventoryCodec.Encode(theirs, _sync.Catalog);
+            _server.ServerRev = 3;
+
+            var seen = new List<InventoryRaise>();
+            _sync.OnQuantitiesRaised = rs => seen.AddRange(rs);
+
+            _sync.Boot();
+
+            Assert.AreEqual(1, seen.Count);
+            Assert.AreEqual("Item:item_repair_kit 2->5", seen[0].ToString());
+            Assert.AreEqual(5, _save.itemQuantities["item_repair_kit"], "the merge still applies");
+        }
+
+        [Test]
+        public void A_reporting_handler_that_throws_cannot_break_the_sync()
+        {
+            // The merge is already applied to the save by the time the handler runs. Losing that to
+            // a telemetry bug would be the expensive half of a very cheap feature.
+            _save.itemQuantities["item_repair_kit"] = 2;
+
+            var theirs = new InventorySnapshot();
+            theirs.Items["item_repair_kit"] = 5;
+            _server.ServerJson = InventoryCodec.Encode(theirs, _sync.Catalog);
+            _server.ServerRev = 3;
+
+            _sync.OnQuantitiesRaised = _ => throw new InvalidOperationException("telemetry is down");
+
+            // Only a WARNING is logged by the swallow, so the test framework does not fail on it.
+            Assert.DoesNotThrow(() => _sync.Boot());
+
+            Assert.AreEqual(5, _save.itemQuantities["item_repair_kit"]);
+            Assert.IsTrue(_sync.BootCompleted);
+        }
+
         [Test]
         public void A_second_stale_answer_defers_instead_of_looping()
         {

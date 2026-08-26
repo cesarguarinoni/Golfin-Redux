@@ -84,6 +84,20 @@ namespace Golfin.InventorySync
         /// profiles.</summary>
         public bool SendsEnabled = true;
 
+        /// <summary>
+        /// Called with every quantity a merge RAISED on a key the save already held — the
+        /// refundable-spend path (PLAN §6.5 decision 1), made countable.
+        ///
+        /// <para>
+        /// A SEAM, not a direct telemetry call, for the same reason everything else here is one:
+        /// this assembly must stay constructible in an EditMode test with no play mode and no
+        /// network, and telemetry wiring lives in ONE place (<c>TelemetryHooks</c>) by convention.
+        /// The default is null — the warning below is emitted regardless, so a build with no hooks
+        /// installed still leaves the evidence in the log.
+        /// </para>
+        /// </summary>
+        public Action<IReadOnlyList<InventoryRaise>>? OnQuantitiesRaised;
+
         public readonly InventoryWriteBehind WriteBehind = new InventoryWriteBehind();
 
         // ── State ─────────────────────────────────────────────────────────────
@@ -160,7 +174,7 @@ namespace Golfin.InventorySync
             if (save == null) return;
 
             var theirs = InventoryCodec.Decode(serverJson, Catalog);
-            if (!InventoryProjector.Apply(theirs, save))
+            if (!ApplyAndCount(theirs, save, "boot"))
             {
                 Debug.Log($"{Tag} Server inventory (rev {Rev}) added nothing — already in sync.");
                 return;
@@ -317,7 +331,7 @@ namespace Golfin.InventorySync
                 // the local save too, or the next projection would drop it again and the two devices
                 // would ping-pong forever.
                 SaveData? save = SaveProvider();
-                if (save != null && InventoryProjector.Apply(theirs, save)) MarkSaveDirty();
+                if (save != null && ApplyAndCount(theirs, save, "stale-merge")) MarkSaveDirty();
             }
             catch (Exception ex)
             {
@@ -332,6 +346,47 @@ namespace Golfin.InventorySync
         }
 
         // ── helpers ───────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// <see cref="InventoryProjector.Apply"/>, plus the count PLAN §6.5 decision 1 asks for.
+        ///
+        /// <para>
+        /// BOTH merge sites go through here, and there are exactly two: the boot restore and the
+        /// stale-PUT retry. The stale one is where the refund is most likely (a second device with
+        /// an older rev), but the boot one can do it too — a reinstall that restores a blob written
+        /// before this device's last spend — so counting only the obvious site would undercount by
+        /// exactly the cases nobody expected.
+        /// </para>
+        /// <para>
+        /// The warning is emitted even with no <see cref="OnQuantitiesRaised"/> handler installed:
+        /// the Editor log is the fallback record, and a refund that reached a tester's device with
+        /// nothing written down anywhere is the outcome this whole item exists to prevent.
+        /// </para>
+        /// </summary>
+        private bool ApplyAndCount(InventorySnapshot theirs, SaveData save, string context)
+        {
+            var raises = new List<InventoryRaise>();
+            bool changed = InventoryProjector.Apply(theirs, save, raises);
+
+            if (raises.Count > 0)
+            {
+                foreach (var raise in raises)
+                    Debug.LogWarning($"{Tag} MERGE RAISED A QUANTITY ({context}, rev {Rev}): " +
+                                     $"{raise.Kind} '{raise.Id}' {raise.From} -> {raise.To}. " +
+                                     "If the player had spent it, this refunded it — PLAN §6.5.");
+
+                // Never let a reporting handler take the sync down with it: the merge has already
+                // been applied to the save at this point, and losing that to a telemetry bug would
+                // be the expensive half of a cheap feature.
+                try { OnQuantitiesRaised?.Invoke(raises); }
+                catch (Exception ex)
+                {
+                    Debug.LogWarning($"{Tag} OnQuantitiesRaised threw and was swallowed: {ex.Message}");
+                }
+            }
+
+            return changed;
+        }
 
         private bool SafeAuthed()
         {

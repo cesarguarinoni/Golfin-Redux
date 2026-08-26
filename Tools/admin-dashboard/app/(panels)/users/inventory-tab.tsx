@@ -119,7 +119,24 @@ function CountList({
   );
 }
 
-function GrantList({ grants }: { grants: InventoryGrantRow[] }) {
+/**
+ * The grants queue, with a REVOKE on the pending ones (PLAN §6.5 decision 3).
+ *
+ * ⚠️ REVOKE IS OFFERED ONLY WHILE `appliedAt` IS NULL, and that is not a cosmetic disable. Grants
+ * are additive-only end to end — the queue, the merge and the client all refuse to subtract — so
+ * once a grant drains, the player HAS the thing and deleting the queue row would take nothing
+ * back. A button that appeared to undo an applied grant would be a lie about the one part of this
+ * system that has no undo. The server enforces the same rule and answers 409, so a grant that
+ * drains while this drawer is open cannot slip through the gap.
+ */
+function GrantList({
+  grants,
+  onRevoke,
+}: {
+  grants: InventoryGrantRow[];
+  /** Absent when the host has no way to run the mutation; the button is then not rendered. */
+  onRevoke?: (grant: InventoryGrantRow) => void;
+}) {
   const t = useT();
   if (grants.length === 0) return <Empty label={t("uinv.noGrants")} />;
   return (
@@ -139,14 +156,26 @@ function GrantList({ grants }: { grants: InventoryGrantRow[] }) {
                 ×{g.amount}
               </span>
             </span>
-            <span
-              className={`shrink-0 rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide ${
-                g.appliedAt
-                  ? "bg-surface-800 text-zinc-500"
-                  : "bg-accent-600/15 text-accent-300 ring-1 ring-accent-500/40"
-              }`}
-            >
-              {g.appliedAt ? t("uinv.grantApplied") : t("uinv.grantPending")}
+            <span className="flex shrink-0 items-center gap-1.5">
+              <span
+                className={`rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide ${
+                  g.appliedAt
+                    ? "bg-surface-800 text-zinc-500"
+                    : "bg-accent-600/15 text-accent-300 ring-1 ring-accent-500/40"
+                }`}
+              >
+                {g.appliedAt ? t("uinv.grantApplied") : t("uinv.grantPending")}
+              </span>
+              {!g.appliedAt && onRevoke && (
+                <button
+                  type="button"
+                  title={t("uinv.revokeHint")}
+                  onClick={() => onRevoke(g)}
+                  className="whitespace-nowrap rounded border border-red-500/40 px-1.5 py-0.5 text-[10px] font-medium text-red-300 transition hover:bg-red-500/10"
+                >
+                  {t("uinv.revoke")}
+                </button>
+              )}
             </span>
           </div>
           {g.note && <div className="mt-0.5 text-[11px] text-zinc-400">{g.note}</div>}
@@ -160,7 +189,14 @@ function GrantList({ grants }: { grants: InventoryGrantRow[] }) {
   );
 }
 
-export function InventoryTab({ data }: { data: PlayerInventoryResponse }) {
+export function InventoryTab({
+  data,
+  onRevokeGrant,
+}: {
+  data: PlayerInventoryResponse;
+  /** Opens the drawer's confirm modal. The drawer owns every mutation, so this tab stays a view. */
+  onRevokeGrant?: (grant: InventoryGrantRow) => void;
+}) {
   const t = useT();
   const [showRaw, setShowRaw] = useState(false);
   const inv: PlayerInventory | null = data.inventory;
@@ -287,7 +323,7 @@ export function InventoryTab({ data }: { data: PlayerInventoryResponse }) {
       )}
 
       <Section title={t("uinv.grants")} count={data.grants.length}>
-        <GrantList grants={data.grants} />
+        <GrantList grants={data.grants} onRevoke={onRevokeGrant} />
       </Section>
 
       <p className="mt-2 text-[10px] leading-relaxed text-zinc-600">

@@ -645,6 +645,16 @@ export interface ContentCatalogSummary {
 
 export interface ContentCatalogsResponse {
   catalogs: ContentCatalogSummary[];
+  /**
+   * The GLOBAL kill switch — `content_settings.content_enabled` (PLAN §7.4).
+   *
+   * A DIFFERENT SWITCH from every `catalogs[].isEnabled`, and the distinction is the one that
+   * caused the bug `content_kill_switch_and_order` fixed: a per-catalog kill takes ONE catalog
+   * back to its bundled CSV, this takes ALL of them. Reads as `true` when the table or the row
+   * is missing, exactly as the endpoint's `_global_enabled()` fails open — a dashboard that
+   * showed OFF on an unreadable flag would send an operator to flip a switch that is already on.
+   */
+  globalEnabled: boolean;
   mock: boolean;
 }
 

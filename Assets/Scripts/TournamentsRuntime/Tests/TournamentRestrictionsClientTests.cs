@@ -31,6 +31,7 @@ using UnityEngine;
 using System.Text.RegularExpressions;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
+using Golfin.TestSupport;
 
 namespace Golfin.Tournaments.WireupTests
 {
@@ -674,7 +675,7 @@ namespace Golfin.Tournaments.WireupTests
         private object? _savedCharCsv;
         private object? _savedCharMgr;
         private object? _savedRewardPts;
-        private Golfin.Save.SaveDataHost? _savedSaveHost;
+        private TestBoot.SaveDataHostLease? _save;
 
         // ── Bootstrap ─────────────────────────────────────────────────────────
 
@@ -685,21 +686,14 @@ namespace Golfin.Tournaments.WireupTests
             _savedCharCsv   = AsmCSharp.GetStaticInstance("Golfin.Roster.CharacterDatabaseCSV");
             _savedCharMgr   = AsmCSharp.GetStaticInstance("Golfin.Roster.CharacterManager");
             _savedRewardPts = AsmCSharp.GetStaticInstance("Golfin.Roster.RewardPointsManager");
-            _savedSaveHost  = Golfin.Save.SaveDataHost.Instance;
 
             // ── SaveDataHost + RewardPointsManager ────────────────────────────
             // The ELIGIBLE control click walks the real spend path, and even a fee of 0 goes
-            // through RewardPointsManager → SaveDataHost. An in-memory persister keeps the run
-            // off disk: this fixture must never touch a real save file.
-            SetSaveDataHost(null);
-            var saveGo = NewGo("TEST_SaveDataHost");
-            var host   = saveGo.AddComponent<Golfin.Save.SaveDataHost>();
-            host.SetPersister(new NullPersister());
-            // The fake boot must be COMPLETE, not just present. EditMode never calls Awake, so
-            // nothing has read the save — and CharacterManager asserts on SaveDataHost.IsLoaded
-            // (content_kill_switch_and_order §2). ReloadFromDisk is the load Awake would have done.
-            host.ReloadFromDisk();
-            if (Golfin.Save.SaveDataHost.Instance == null) SetSaveDataHost(host);
+            // through RewardPointsManager → SaveDataHost. The shared boot keeps the run off disk
+            // (NullPersister) and, crucially, ReloadFromDisk()es — CharacterManager asserts on
+            // SaveDataHost.IsLoaded (content_kill_switch_and_order §2) and EditMode never calls
+            // Awake. See Golfin.TestSupport.TestBoot.
+            _save = TestBoot.SaveDataHost();
 
             AsmCSharp.ClearSingleton("Golfin.Roster.RewardPointsManager");
             var rpGo   = NewGo("TEST_RewardPointsManager");
@@ -745,15 +739,10 @@ namespace Golfin.Tournaments.WireupTests
             RestoreSingleton("Golfin.Roster.CharacterDatabaseCSV", _savedCharCsv);
             RestoreSingleton("Golfin.Roster.CharacterManager", _savedCharMgr);
             RestoreSingleton("Golfin.Roster.RewardPointsManager", _savedRewardPts);
-            SetSaveDataHost(_savedSaveHost);
-        }
 
-        /// <summary>SaveDataHost lives in the Golfin.Save asmdef, so its auto-property backing
-        /// field is reached directly rather than through the Assembly-CSharp helper.</summary>
-        private static void SetSaveDataHost(Golfin.Save.SaveDataHost? value)
-            => typeof(Golfin.Save.SaveDataHost)
-                .GetField("<Instance>k__BackingField", BindingFlags.Static | BindingFlags.NonPublic)?
-                .SetValue(null, value);
+            _save?.Dispose();
+            _save = null;
+        }
 
         private GameObject NewGo(string name)
         {

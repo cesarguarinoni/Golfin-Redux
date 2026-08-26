@@ -80,17 +80,14 @@ namespace Golfin.Content
         /// <summary>That catalog's own published version. The ONLY value that is a valid cursor.</summary>
         [JsonProperty("version")] public int Version;
 
-        /// <summary>
-        /// This catalog's own kill switch. The server only ever serves <c>true</c> here — a
-        /// disabled catalog is omitted from <c>catalogs</c> and named in the top-level
-        /// <c>disabled</c> list instead, because an absent object cannot carry a field.
-        /// <para>
-        /// Read anyway, and honoured: a future server that chooses to serve a killed catalog
-        /// present-and-flagged rather than absent must not have its kill silently ignored. Absent
-        /// is true, so a server that predates the field is not read as disabled.
-        /// </para>
-        /// </summary>
-        [JsonProperty("enabled")] public bool? Enabled;
+        // ⚠️ THERE IS NO PER-CATALOG `enabled` FIELD HERE, AND ONE MUST NOT COME BACK
+        // (content_cleanup_quick, 2026-08-26). A disabled catalog is ABSENT from `catalogs` and
+        // named in the top-level `disabled` list, so the server could only ever have serialised
+        // `true` on a catalog that reached this type. A tautologically-true boolean is worse than
+        // no boolean: it reads like a guard, so the next person writes `if (!catalog.Enabled)`,
+        // and that branch is dead. The per-catalog kill is `RemoteContentDto.Disabled`, one place.
+        // An `enabled` that somehow arrives on the wire is IGNORED, exactly like any other unknown
+        // column (I4) — never a parse failure.
 
         /// <summary>
         /// True when the server sent the whole (active) catalog rather than a delta.

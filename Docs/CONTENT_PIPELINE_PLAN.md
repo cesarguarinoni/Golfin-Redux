@@ -260,6 +260,9 @@ sync is actually wanted for the beta.
 Phase 4 shipped (`content_player_inventory`, prod v52). Three questions the Implementer raised, answered.
 
 **1. A refundable spend IS acceptable through the beta — but MEASURE it, don't just accept it.**
+✅ **INSTRUMENTED 2026-08-26** (`content_cleanup_quick` item 5): `inventory_merge_raise`, one row
+per raised stack, at BOTH merge sites. A brand-new key is deliberately not counted — that is a
+restore, not a refund.
 The additive merge can restore a consumed item on a rev mismatch (device B with a stale rev pushes
 `max(4,5)=5`). RP stays debited, so it is a free consumable, not RP duplication. For testers that is
 the correct trade and the one the merge was chosen for. The non-obvious cost is not player harm but
@@ -276,7 +279,8 @@ built on it. The case that actually matters for testers, restore-after-reinstall
 to win, so the blob's slots arrive and are used. Preference costs nothing in the case we care about
 and avoids silently equipping a club the player deliberately benched. Keep it.
 
-**3. No grants panel — add a REVOKE action to the existing drawer.** A separate panel is not
+**3. No grants panel — add a REVOKE action to the existing drawer.** ✅ **DONE 2026-08-26**
+(`content_cleanup_quick` item 4). A separate panel is not
 warranted at dozens of grants per tester. The real gap is narrower and worth closing: grants are
 additive-only and there is no subtraction, so a fat-fingered grant is **permanent** once drained,
 fixable only by SQL. Revoking an *unapplied* grant is the cheap half of that and closes most of it.
@@ -306,7 +310,9 @@ Cross-player visibility can wait.
 
    - **Per-catalog kill** — `content_catalogs.is_enabled=false` kills ONE catalog. It vanishes from
      `catalogs` and is named in the top-level `disabled` list; that catalog reverts to bundled and
-     no other is touched.
+     no other is touched. ⚠️ **A SERVED catalog carries no `enabled` field of its own** — it was
+     dropped by `content_cleanup_quick` item 1, because a disabled catalog is absent and so the
+     field could only ever be `true`. `disabled[]` is the whole of the per-catalog kill on the wire.
    - **Global kill** — `content_settings.content_enabled=false`. Top-level `enabled` goes false and
      clients ignore all remote content until it is flipped back.
    - **Top-level `enabled` is NEVER a function of which catalogs the client requested.** Derive it
@@ -315,8 +321,11 @@ Cross-player visibility can wait.
    - `_global_enabled()` **fails OPEN** — a missing table, missing row or any exception reads as
      enabled. Failing closed would turn a transient PostgREST blip into a global cache wipe,
      recovered only on the launch after that.
-   - One flag each, no deploy. ⚠️ The global flag currently has **no dashboard control** — it needs
-     a SQL `update`, which does not meet "no deploy" in spirit. Own task.
+   - One flag each, no deploy. ✅ **The global flag now has a dashboard control**
+     (`content_cleanup_quick` item 2, 2026-08-26): `POST /api/content/enabled`, surfaced as a
+     second card in every catalog's Kill switch tab, tagged `ALL CATALOGS` and confirmed on the way
+     off. It is shown NEXT TO the per-catalog switch, never merged with it, each naming its own
+     blast radius — the two being indistinguishable is the shape of the original bug.
    - **A kill is not instant:** 60 s response cache plus apply-at-next-launch (I5). Budget up to
      60 s to reach a client, landing at its next launch; re-enabling costs another launch.
 5. **Deactivate, never delete** (I6), enforced in the API layer, not just the UI.

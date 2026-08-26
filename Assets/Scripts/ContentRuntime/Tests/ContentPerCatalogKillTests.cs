@@ -24,12 +24,14 @@ namespace Golfin.Content.Tests
     /// </summary>
     public class ContentPerCatalogKillTests
     {
+        // NOTE the shape: served catalogs carry NO `enabled` field (content_cleanup_quick item 1).
+        // `bags` is killed and is therefore ABSENT, named only in the top-level `disabled` list.
         private const string OneCatalogKilled = @"
         {""data"":{""enabled"":true,""disabled"":[""bags""],""latest_version"":9,
-                   ""catalogs"":{""clubs"":{""version"":1,""enabled"":true,""full"":true,""changed"":[
+                   ""catalogs"":{""clubs"":{""version"":1,""full"":true,""changed"":[
                        {""id"":""club_driver_a"",""is_active"":true,""min_build"":0,
                         ""data"":{""id"":""club_driver_a""}}]},
-                                 ""texts"":{""version"":9,""enabled"":true,""full"":false,""changed"":[]}}}}";
+                                 ""texts"":{""version"":9,""full"":false,""changed"":[]}}}}";
 
         // ── The payload reads the split ───────────────────────────────────────
 
@@ -73,16 +75,23 @@ namespace Golfin.Content.Tests
         }
 
         [Test]
-        public void ACatalogServedWithEnabledFalse_IsAlsoReadAsDisabled()
+        public void AStrayPerCatalogEnabledField_IsIgnored_NotAKill()
         {
-            // The other wire shape the server could pick: present-and-flagged instead of absent.
-            // The client honours both, so it cannot be wrong-footed by a server-side choice.
+            // content_cleanup_quick item 1. The per-catalog `enabled` field is GONE from the wire
+            // (a disabled catalog is absent, so it could only ever have been `true`). If an older
+            // or hand-rolled server still emits one, it is an unknown field and is IGNORED like
+            // any other (I4) — it must not parse-fail, and it must not kill the catalog either:
+            // `disabled` is the only per-catalog kill signal and this payload names nothing.
             ContentPayload payload = ContentCatalogMapper.Map(
                 @"{""data"":{""enabled"":true,""catalogs"":{
                      ""clubs"":{""version"":1,""enabled"":false,""full"":true,""changed"":[]}}}}");
 
+            Assert.IsTrue(payload.Parsed, "An unknown per-catalog field must never fail the parse.");
             Assert.IsTrue(payload.Enabled);
-            Assert.IsTrue(payload.IsDisabled("clubs"));
+            Assert.IsFalse(payload.IsDisabled("clubs"),
+                "Only the top-level `disabled` list kills a catalog. A stray per-catalog flag " +
+                "must not become a second, quieter kill switch.");
+            Assert.IsTrue(payload.Catalogs.ContainsKey("clubs"));
         }
 
         [Test]
@@ -148,7 +157,7 @@ namespace Golfin.Content.Tests
         {
             ContentPayload payload = ContentCatalogMapper.Map(
                 @"{""data"":{""enabled"":true,""disabled"":[],""catalogs"":{
-                     ""clubs"":{""version"":1,""enabled"":true,""full"":false,""changed"":[]}}}}");
+                     ""clubs"":{""version"":1,""full"":false,""changed"":[]}}}}");
 
             Assert.AreEqual(ContentService.CatalogRefreshAction.Write,
                 ContentService.DecideCatalogAction(payload, "clubs", hasSlice: true),
