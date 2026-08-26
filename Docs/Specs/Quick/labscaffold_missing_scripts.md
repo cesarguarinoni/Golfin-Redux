@@ -1,6 +1,6 @@
 # Quick — `labscaffold_missing_scripts`
 
-**Diagnosed and patch-ready 2026-08-26. NOT applied — see "Why it is not committed".**
+**DONE 2026-08-27.** Applied and verified in a healthy Editor after a machine reboot.
 
 ## Symptom
 
@@ -47,22 +47,25 @@ Structural check — **PASS**:
 | removed fileIDs referenced anywhere in `Assets/` | **0 files** |
 | line count | 26758 → 26732 (−26, exactly the removal) |
 
-## Why it is not committed
+## Applied and verified (2026-08-27)
 
-**The Unity Editor could not be brought up to confirm the scene loads.** Editing the `.unity` on
-disk while the Editor had it open raised a blocking "reload externally-modified scene" modal; killing
-that Editor left an orphaned `gamedev-m` MCP server holding port 21573 (socket answered, no Editor
-attached), and subsequent launches stall at licensing without completing boot.
+The Editor was unavailable when this was diagnosed — editing the `.unity` on disk while Unity had it
+open raised a blocking reload modal, and killing that Editor left an orphaned `gamedev-m` MCP server
+holding port 21573 (socket answered, no Editor attached). After a machine reboot the Editor came up
+clean and the patch was applied and checked properly:
 
-A hand-touched scene must not be committed without a real Editor load — this project has been bitten
-by scene corruption that was invisible until the game was launched normally. The value here is two
-cosmetic log lines; that does not justify the risk.
+| check | result |
+|---|---|
+| `git apply` of the saved patch | clean, 26 deletions / 0 insertions |
+| scene opens in Unity | 22 roots, `isDirty=False` |
+| **missing-script components** | **0** (was 2) |
+| `LabRoot` | 15 components, 0 null refs |
+| `PuttPathRoot` | 2 components, 0 null refs |
+| console on load | no missing-script warnings |
+| file after Unity opened it | still 26 deletions / 0 insertions |
 
-**To finish (≈2 minutes with a healthy Editor):**
+Closed **without saving**, so the TMP/prefab save-churn was never re-introduced.
 
-```bash
-git apply Docs/Specs/Quick/media/labscaffold_missing_scripts.patch
-```
-
-then open `LabScaffold.unity`, confirm no missing-script warnings and no errors, close **without
-saving** (saving re-introduces the churn), and commit the scene alone.
+Note for anyone repeating this: opening `LabScaffold` triggers `PhysicsLabAutoRestore`, which
+auto-loads the last hole (Hole 06 here) and runs `OnHoleLoaded` in edit mode. That is expected and
+did not dirty the scene.
