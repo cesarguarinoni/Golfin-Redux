@@ -133,6 +133,42 @@
 
 ## ✅ RECENTLY LANDED
 
+> **`quality_tiers` (roadmap 9a, Order 900 — PERF Phase 2) — CODE + ASSETS + UI DONE 2026-08-27,
+> DEVICE NUMBERS NOT RUN.** Implemented DIRECTLY by the main Claude Code thread — no implementer /
+> self-reviewer / red-team chain ran. Spec + report: `Docs/Specs/Active/quality_tiers/`.
+> Report §12 appended to `Docs/Reports/perf_baseline_2026-08-26.md`.
+>
+> Three tiers — **Low / Mid / High** — resolved from the device at boot, overridable in
+> **Settings ▸ Graphics** (Auto / Low / Medium / High), persisted in PlayerPrefs like language and
+> volume. Quality levels are now **Low(0) / Mid(1) / High(2) / PC(3)**; the `QualityTier` enum
+> values ARE those indices, so reordering the Quality window silently re-points every tier.
+> `Mobile_RPAsset` became `Mobile_High_RPAsset` **with its GUID intact**; Low and Mid are copies.
+> Low runs at 30 fps, 0.6 render scale, 1 cascade / 15 m / 512, skips LOD0, and freezes tree wind.
+>
+> - **The fairness rule holds, measured.** High/Mid/Low captured in one session at one pose:
+>   per-column treeline displacement High vs Low **mean 0.02 px, max 2 px, 98.9 % of columns
+>   identical**; `treeInstances / treeDistance / heightmapRes / pixelError / lodBias` byte-identical
+>   across tiers. `lodBias` is never touched — it scales the CULL threshold.
+> - **A bug caught in verification that would have shipped.** `TreeWindDriver.SetEnabled(true)`
+>   blanket-enabled `_WIND`, but only LEAF materials author it on — bark and imposters ship with it
+>   off (7 of 14 on Hole 08). The Editor guard restores assets on play-mode exit and hid it
+>   completely; **a player build has no guard.** Re-enabling now restores each material's cached
+>   authored state.
+> - **`Vegetation.shader` needed 7 pragma conversions, not the 5 the brief named** — it missed
+>   `DepthNormals` and `GBuffer`. Converting only 5 would leave two passes half-honouring the toggle.
+> - **Home bloom buys nothing.** The flag flips correctly, but High and Low Home frames are
+>   pixel-identical apart from the dev FPS counter (mean abs diff 0.09/255) — Home is a
+>   Screen-Space-Overlay canvas covering the 3D view. No breakage, no saving. Do not count it.
+> - **STILL OPEN — needs a cooled iPhone.** Per-tier H08/H06/H01 tables, the 5-minute H06 endurance
+>   curves, thermal states, telemetry-on-the-wire and the build-size delta are all EMPTY CELLS.
+>   `PerfBaselineBot` jobs **14–25** are in the build and ready; `job.txt` accepts `tier=low|mid|high|auto`.
+> - **Cesar-judged, three items:** High at 2 cascades / 60 m (fallback 4 / 100), the fairness A/B,
+>   and aim-arrow feel at 30 fps on Low. Plus one art call — the Graphics row's icon is a
+>   **placeholder** (the Home gear); `Assets/Art/Settings/` has no display/graphics icon.
+>
+> EditMode: **1809 tests, 1806 passed, 0 failed, 3 pre-existing skips** (42 new, proven to execute
+> with a deliberate-failure tripwire).
+
 > **`content_cleanup_quick` — FIVE small items, the last work before the batched device pass.
 > Done 2026-08-26, awaiting Cesar's sign-off.** No SPEC.md; the items are in `Docs/TellCode.md`
 > and the decisions of record for 4 and 5 in `CONTENT_PIPELINE_PLAN.md` §6.5. Report:

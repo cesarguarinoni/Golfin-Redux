@@ -22,6 +22,7 @@ namespace Golfin.UI
         [Header("Menu Items with Accordion")]
         public SettingsMenuItem userProfileItem;
         public SettingsMenuItem soundSettingsItem;
+        public SettingsMenuItem graphicsItem;
         public SettingsMenuItem languageItem;
         public SettingsMenuItem aboutItem;
 
@@ -35,6 +36,7 @@ namespace Golfin.UI
         [Header("Submenus")]
         public UserProfileSubmenu userProfileSubmenu;
         public SoundSettingsSubmenu soundSettingsSubmenu;
+        public GraphicsSubmenu graphicsSubmenu;
         public LanguageSubmenu languageSubmenu;
         public AboutSubmenu aboutSubmenu;
         
@@ -77,6 +79,7 @@ namespace Golfin.UI
         {
             RegisterAccordionItem(userProfileItem);
             RegisterAccordionItem(soundSettingsItem);
+            RegisterAccordionItem(graphicsItem);
             RegisterAccordionItem(languageItem);
             RegisterAccordionItem(aboutItem);
 

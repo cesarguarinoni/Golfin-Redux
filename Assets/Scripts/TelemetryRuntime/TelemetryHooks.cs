@@ -6,6 +6,7 @@ using Golfin.InventorySync;
 using Golfin.Roster;
 using Golfin.Gameplay.UI;
 using Golfin.Gameplay.UI.HUD;
+using Golfin.Gameplay.UI.Quality;
 using Golfin.Telemetry;
 using GolfinRedux.UI;
 using GolfinRedux.UI.BuildInfo;
@@ -95,6 +96,13 @@ namespace GolfinRedux.TelemetryRuntime
                     ["os"]           = SystemInfo.operatingSystem,
                     ["memory_mb"]    = SystemInfo.systemMemorySize,
                     ["screen"]       = $"{Screen.width}x{Screen.height}",
+
+                    // quality_tiers §6: which tier this session actually rendered at, and whether the
+                    // player pinned it. Paired with the existing per-hole fps_avg/fps_low this is the
+                    // whole evidence base for the deferred thermal-governor question — a Mid session
+                    // that still sags means static tiers were not enough.
+                    ["tier"]         = QualityTierService.Current.ToString(),
+                    ["tier_source"]  = QualityTierService.IsOverride ? "override" : "auto",
                 });
 
                 Debug.Log($"[Telemetry] Hooks installed — session={svc.SessionId}, sends={svc.SendsEnabled}.");

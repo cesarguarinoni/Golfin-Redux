@@ -2,6 +2,7 @@
     "name": "Golfin.DevHarness",
     "rootNamespace": "Golfin.Dev",
     "references": [
+        "Golfin.Gameplay.UI",
         "Golfin.Auth",
         "Golfin.Economy",
         "UnityEngine.UI"

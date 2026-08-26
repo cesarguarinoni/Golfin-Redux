@@ -42,6 +42,7 @@ using Unity.Profiling;
 using Unity.Profiling.LowLevel.Unsafe;
 using UnityEngine;
 using UnityEngine.UI;
+using Golfin.Gameplay.UI.Quality;
 
 namespace Golfin.Dev
 {
@@ -52,8 +53,10 @@ namespace Golfin.Dev
         {
             public int hole; public string exp; public bool midflight; public string label;
             public bool teardown;   // perf_phase1_free_wins: drive the quit path and assert the restore
-            public Job(int h, string e, bool mf, string l, bool td = false)
-            { hole = h; exp = e; midflight = mf; label = l; teardown = td; }
+            public string tier;     // quality_tiers: "low"|"mid"|"high"|"auto"|null (null = leave as resolved)
+            public float endurance; // quality_tiers: >0 = hold the pose this long, logging every 30 s
+            public Job(int h, string e, bool mf, string l, bool td = false, string tr = null, float end = 0f)
+            { hole = h; exp = e; midflight = mf; label = l; teardown = td; tier = tr; endurance = end; }
         }
 
         static readonly Job[] Schedule =
@@ -80,6 +83,32 @@ namespace Golfin.Dev
             // Teardown gate: loads a hole, quits through the REAL in-game-settings widgets, and
             // asserts the shell camera + light come back. Writes teardown_invariants.json.
             new Job(8, "none", false, "P1_teardown", true),
+
+            // T — quality_tiers (9a) acceptance. Indices 0-13 are FROZEN so the Phase 0b/Phase 1
+            // logs stay readable; these start at 14 exactly as the spec pins them. exp="none"
+            // throughout: a tier is not an experiment, it is the shipping configuration, applied
+            // through QualityTierService before the hole loads so the URP asset swap is already
+            // settled by the time anything is sampled.
+            new Job(8, "none", false, "T_h08_tee_low",  false, "low"),      // 14
+            new Job(8, "none", false, "T_h08_tee_mid",  false, "mid"),      // 15
+            new Job(8, "none", false, "T_h08_tee_high", false, "high"),     // 16
+            new Job(6, "none", false, "T_h06_tee_low",  false, "low"),      // 17
+            new Job(6, "none", false, "T_h06_tee_mid",  false, "mid"),      // 18
+            new Job(6, "none", false, "T_h06_tee_high", false, "high"),     // 19
+
+            // Endurance. H06 is the hole Phase 1 could NOT hold (40.7 fps after 45 s at Serious),
+            // so it is the one that answers "do static tiers make the thermal governor unnecessary".
+            // 5 minutes, fps + thermal every 30 s.
+            new Job(6, "none", false, "T_h06_endurance_high", false, "high", 300f),   // 20
+            new Job(6, "none", false, "T_h06_endurance_mid",  false, "mid",  300f),   // 21
+            new Job(6, "none", false, "T_h06_endurance_low",  false, "low",  300f),   // 22
+
+            // H01 per tier. The spec's §7 job list stops at H08/H06, but the acceptance checklist
+            // asks for an H01 tee row per tier as well — added here so that table is runnable
+            // rather than hand-measured.
+            new Job(1, "none", false, "T_h01_tee_low",  false, "low"),      // 23
+            new Job(1, "none", false, "T_h01_tee_mid",  false, "mid"),      // 24
+            new Job(1, "none", false, "T_h01_tee_high", false, "high"),     // 25
         };
 
         const int  RunsPerJob      = 3;
@@ -275,6 +304,7 @@ namespace Golfin.Dev
             int jobIdx = Mathf.Clamp(PlayerPrefs.GetInt(JobIdxKey, 0), 0, Schedule.Length - 1);
             int runIdx = PlayerPrefs.GetInt(RunIdxKey, 0);
             bool overridden = false;
+            string tierOverride = null;
             try
             {
                 var ovr = System.IO.Path.Combine(Application.persistentDataPath, "perfbot", "job.txt");
@@ -287,6 +317,14 @@ namespace Golfin.Dev
                         jobIdx = Mathf.Clamp(j, 0, Schedule.Length - 1);
                         runIdx = (parts.Length >= 2 && int.TryParse(parts[1], out int r)) ? Mathf.Clamp(r, 0, RunsPerJob - 1) : 0;
                         overridden = true;
+                    }
+                    // quality_tiers §7: "tier=low|mid|high|auto" anywhere in the file re-tiers the run
+                    // WITHOUT needing a schedule entry — so a one-off "same job, other tier" A/B costs
+                    // a file write instead of a rebuild. Positional, order-independent, optional.
+                    foreach (var part in parts)
+                    {
+                        if (part.StartsWith("tier=", StringComparison.OrdinalIgnoreCase))
+                            tierOverride = part.Substring(5).Trim().ToLowerInvariant();
                     }
                     System.IO.File.Delete(ovr);
                 }
@@ -305,8 +343,14 @@ namespace Golfin.Dev
             if (overridden) Mark($"JOB OVERRIDE from job.txt → job={jobIdx} run={runIdx}");
 
             Mark($"JOB idx={jobIdx} run={runIdx}/{RunsPerJob} label={job.label} hole={job.hole} " +
-                 $"exp={job.exp} midflight={job.midflight} thermalAtBoot={ThermalState()} " +
+                 $"exp={job.exp} midflight={job.midflight} tier={job.tier ?? "<resolved>"} " +
+                 $"endurance={job.endurance:F0}s thermalAtBoot={ThermalState()} " +
                  $"version={Application.version} device={SystemInfo.deviceModel}");
+
+            // quality_tiers §7: BEFORE the hole loads. SetOverride swaps the URP asset immediately,
+            // so render scale / shadows / HDR are already the tier's by the time any content streams
+            // in — and the 30 fps cap on Low is in force for the whole navigation, not just the pose.
+            ApplyTier(tierOverride ?? job.tier);
 
             yield return new WaitForSecondsRealtime(2f);
 
@@ -367,6 +411,13 @@ namespace Golfin.Dev
             if (job.teardown)
             {
                 yield return RunTeardownGate(job.hole);
+                Mark($"JOB_DONE idx={jobIdx} run={runIdx} label={job.label} thermal={ThermalState()}");
+                yield break;
+            }
+
+            if (job.endurance > 0f)
+            {
+                yield return RunEndurance(job, jobIdx, runIdx);
                 Mark($"JOB_DONE idx={jobIdx} run={runIdx} label={job.label} thermal={ThermalState()}");
                 yield break;
             }
@@ -554,6 +605,73 @@ namespace Golfin.Dev
         }
 
         // ── Experiments (runtime only — never an asset edit) ────────────────────────────
+
+        /// <summary>
+        /// quality_tiers §7 — pin the run to a tier. null/empty leaves whatever the device resolved
+        /// to, which is what jobs 0-13 want (they predate tiers and must stay comparable).
+        /// "auto" explicitly CLEARS a previously pinned override, so a Low run cannot leak into the
+        /// next launch through PlayerPrefs.
+        /// </summary>
+        static void ApplyTier(string tier)
+        {
+            if (string.IsNullOrEmpty(tier))
+            {
+                Mark($"TIER left as resolved: {QualityTierService.Current} " +
+                     $"(source={(QualityTierService.IsOverride ? "override" : "auto")})");
+                return;
+            }
+
+            int pref;
+            switch (tier.ToLowerInvariant())
+            {
+                case "low":  pref = (int)QualityTier.Low;  break;
+                case "mid":  pref = (int)QualityTier.Mid;  break;
+                case "high": pref = (int)QualityTier.High; break;
+                case "auto": pref = QualityTierService.AutoPref; break;
+                default:
+                    Mark($"WARN unknown tier '{tier}' — leaving as resolved ({QualityTierService.Current})");
+                    return;
+            }
+
+            QualityTierService.SetOverride(pref);
+            Mark($"TIER applied={QualityTierService.Current} pref={pref} " +
+                 $"qualityLevel={QualitySettings.GetQualityLevel()} targetFrameRate={Application.targetFrameRate} " +
+                 $"maxLOD={QualitySettings.maximumLODLevel} aniso={QualitySettings.anisotropicFiltering}");
+        }
+
+        /// <summary>
+        /// quality_tiers §7 — the 5-minute endurance hold. Phase 1 put every COOLED pose at 60 fps;
+        /// H08 then fell to 47.5 and H06 to 40.7 once the device reached thermal Serious. A cooled
+        /// table therefore cannot answer whether static tiers are enough, and this can: one sample
+        /// every 30 s, each with its thermal state, for the whole five minutes.
+        ///
+        /// Recorders run for the WHOLE hold rather than being restarted per sample, so each line is
+        /// a rolling 60-frame median at that moment — the same statistic every other row in the
+        /// report uses.
+        /// </summary>
+        IEnumerator RunEndurance(Job job, int jobIdx, int runIdx)
+        {
+            StartRecorders();
+            yield return new WaitForSecondsRealtime(SampleSeconds);
+
+            LogStats($"{job.label}_t000s", job.hole, job.exp, jobIdx, runIdx);
+            yield return CaptureFrame($"{job.label}_run{runIdx}_t000s");
+
+            const float StepSeconds = 30f;
+            int steps = Mathf.RoundToInt(job.endurance / StepSeconds);
+            for (int i = 1; i <= steps; i++)
+            {
+                yield return new WaitForSecondsRealtime(StepSeconds);
+                float t = i * StepSeconds;
+                LogStats($"{job.label}_t{t:000}s", job.hole, job.exp, jobIdx, runIdx);
+                Mark($"ENDURANCE label={job.label} t={t:F0}s thermal={ThermalState()} frames={Time.frameCount}");
+            }
+
+            // A number without a frame is not evidence — same rule as the cooled samples. The LAST
+            // frame is the one that matters here: it is the one drawn while throttled.
+            yield return CaptureFrame($"{job.label}_run{runIdx}_t{job.endurance:000}s");
+            StopRecorders();
+        }
 
         static void ApplyExperiment(string exp)
         {

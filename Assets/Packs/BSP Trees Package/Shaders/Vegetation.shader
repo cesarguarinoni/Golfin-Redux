@@ -312,7 +312,7 @@ Shader "Custom/Vegetation"
 			#define ASE_NEEDS_VERT_POSITION
 			#define ASE_NEEDS_FRAG_WORLD_POSITION
 			#define ASE_NEEDS_FRAG_WORLD_NORMAL
-			#pragma shader_feature _WIND
+			#pragma multi_compile _ _WIND
 
 
 			struct VertexInput
@@ -1013,7 +1013,7 @@ Shader "Custom/Vegetation"
 
 			#define ASE_NEEDS_VERT_POSITION
 			#define ASE_NEEDS_FRAG_WORLD_POSITION
-			#pragma shader_feature _WIND
+			#pragma multi_compile _ _WIND
 
 
 			struct VertexInput
@@ -1423,7 +1423,7 @@ Shader "Custom/Vegetation"
 
 			#define ASE_NEEDS_VERT_POSITION
 			#define ASE_NEEDS_FRAG_WORLD_POSITION
-			#pragma shader_feature _WIND
+			#pragma multi_compile _ _WIND
 
 
 			struct VertexInput
@@ -1812,7 +1812,7 @@ Shader "Custom/Vegetation"
 			#define ASE_NEEDS_VERT_POSITION
 			#define ASE_NEEDS_FRAG_WORLD_POSITION
 			#define ASE_NEEDS_VERT_NORMAL
-			#pragma shader_feature _WIND
+			#pragma multi_compile _ _WIND
 
 
 			struct VertexInput
@@ -2228,7 +2228,7 @@ Shader "Custom/Vegetation"
 
 			#define ASE_NEEDS_VERT_POSITION
 			#define ASE_NEEDS_FRAG_WORLD_POSITION
-			#pragma shader_feature _WIND
+			#pragma multi_compile _ _WIND
 
 
 			struct VertexInput
@@ -2618,7 +2618,7 @@ Shader "Custom/Vegetation"
 
 			#define ASE_NEEDS_VERT_POSITION
 			#define ASE_NEEDS_FRAG_WORLD_POSITION
-			#pragma shader_feature _WIND
+			#pragma multi_compile _ _WIND
 
 
 			struct VertexInput
@@ -3077,7 +3077,7 @@ Shader "Custom/Vegetation"
 			#define ASE_NEEDS_VERT_POSITION
 			#define ASE_NEEDS_FRAG_WORLD_POSITION
 			#define ASE_NEEDS_FRAG_WORLD_NORMAL
-			#pragma shader_feature _WIND
+			#pragma multi_compile _ _WIND
 
 
 			struct VertexInput

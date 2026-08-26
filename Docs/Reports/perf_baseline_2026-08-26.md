@@ -1151,3 +1151,138 @@ to 1. Remaining candidates: the `TerrainLit` material/splat path itself, and the
 Pre-existing, not Phase 1, but it is on screen on every hole and should be someone's task before
 this build goes to testers. First probe: `m_UseNativeRenderPass: 1`, set on **both**
 `Mobile_Renderer` and `PC_Renderer` — so it predates the decal removal.
+
+---
+
+# 12. Tiers (`quality_tiers`, roadmap 9a — Phase 2)
+
+Implemented 2026-08-27. This section records what is **settled** and, explicitly, what is still
+an empty cell — the device tables are not in yet and nothing here should be read as if they were.
+
+## 12.1 What shipped
+
+Three tiers, resolved from the device at boot, overridable in Settings ▸ Graphics
+(Auto / Low / Medium / High), persisted in `PlayerPrefs["golfin.qualityTier"]` (−1 = Auto).
+`QualityTierService` boots at `AfterSceneLoad`, after `FramePacingBootstrap` — which stays,
+because it guarantees a sane 60 even if the service throws.
+
+| | **Low** | **Mid** | **High** |
+|---|---|---|---|
+| `targetFrameRate` | **30** | 60 | 60 |
+| URP render scale | 0.6 | 0.7 | 0.8 |
+| Shadow cascades / distance / map | 1 / 15 m / 512 | 1 / 40 m / 1024 | **2 / 60 m / 1024** (was 4 / 100) |
+| Soft shadows | off | off | off |
+| `maximumLODLevel` | **1** (skip LOD0) | 0 | 0 |
+| Tree wind | **off** | on | on |
+| Shell-camera post-processing + HDR | off | off | on |
+| Anisotropic | Disable | Enable | Enable |
+
+Quality levels are **Low(0) / Mid(1) / High(2) / PC(3)** — the enum values *are* the indices, so
+reordering them in the Quality window silently re-points every tier. Platform default for
+iPhone and Android is **1 (Mid)**, so the first frame before the service runs is Mid.
+
+Every other platform's stored default was remapped at the same time: old index 1 meant "PC",
+which after the insert is 3. `Standalone: 1` left alone would have become Mid — a level
+excluded on Standalone.
+
+## 12.2 The fairness rule holds — measured
+
+Plan §2 says a tier changes presentation only. Enforced two ways.
+
+**In the asset:** `lodBias` = 1 and `terrainQualityOverrides` = 0 on all three levels.
+`lodBias` was never used because it scales the LOD *cull* threshold; `maximumLODLevel` only
+skips LOD0, which changes detail without moving the cut.
+
+**On screen:** High, Mid and Low captured in ONE session at ONE pose without reloading, so sky,
+yaw and tree-LOD selection cannot drift between frames. Invariants identical across all three:
+
+```
+treeInstances=1968  treeDistance=150  treeBillboardDistance=80  treeCrossFadeLength=20
+heightmapRes=2049   pixelError=5      basemapDistance=1000      lodBias=1
+```
+
+Per-column treeline displacement (first non-sky pixel, 930 columns):
+
+| | mean | median | p95 | max | ≤1 px |
+|---|---|---|---|---|---|
+| High vs Low | **0.02 px** | 0 | 0 | 2 | 98.9 % |
+| High vs Mid | **0.01 px** | 0 | 0 | 1 | 100 % |
+
+Whole-frame High-vs-Low mean abs diff is 4.99/255 and *falls* under downsampling — a sharpness
+difference, not displacement. Frames:
+`Docs/Specs/Active/quality_tiers/screenshots/fairness_treeline_high_mid_low.png`.
+
+## 12.3 Tree wind
+
+`Vegetation.shader`'s `_WIND` went from `shader_feature` to `multi_compile _ _WIND` on **7**
+passes — Forward, ShadowCaster, DepthOnly, Meta, Universal2D, **DepthNormals, GBuffer**. The
+Phase-2 brief said 5; it missed the last two. Converting only 5 would leave those two passes'
+off-variant strippable at build time while the others always ship, i.e. a shader that
+half-honours the toggle on device.
+
+The toggle is **per material**, not global: material-local and global keyword sets are OR'd, so
+`Shader.DisableKeyword` cannot override a material that enables it.
+
+Measured on the Hole 08 tee, switching tier mid-hole **without a reload**:
+
+| | Low | Mid |
+|---|---|---|
+| Custom/Vegetation `_WIND` | False on all 11 | True on the 4 leaf materials, False on the 7 bark/imposter materials |
+| `WindSpeedFloat1` | 0 | 0.1818 |
+| Spruce wind speed | 0 | restored per material (0.4 / 0.4) |
+
+> **A bug worth recording.** The first cut of `TreeWindDriver.SetEnabled(true)` blanket-enabled
+> `_WIND`. Only the *leaf* materials author it on — bark and imposters ship with it off (7 of 14
+> on Hole 08). A Low→Mid switch was therefore turning wind on for trunks that were never meant
+> to sway. In the Editor `TreeWindDriverEditorGuard` restores the assets on play-mode exit and
+> hid it completely; **a player build has no guard**, so it would have shipped. Re-enabling now
+> restores each material's cached authored state.
+
+## 12.4 Home bloom — the lever buys nothing on Home
+
+`renderPostProcessing` flips correctly (`Main Camera:True` on High, `False` on Low) and Bloom is
+authored (`SampleSceneProfile`, active, intensity 0.5). But the High and Low Home frames are
+**pixel-identical apart from the dev FPS counter** — mean abs diff 0.09/255, with all 2 302
+differing pixels inside the FPS overlay box.
+
+Home is a Screen-Space-Overlay UI canvas covering the 3D view, so there is nothing for the post
+stack to work on. No visual breakage on Low/Mid, and no saving either. Do not count it.
+
+## 12.5 Harness
+
+`PerfBaselineBot` indices 0–13 are frozen. Added:
+
+| idx | label | tier |
+|---|---|---|
+| 14–16 | `T_h08_tee_{low,mid,high}` | pinned |
+| 17–19 | `T_h06_tee_{low,mid,high}` | pinned |
+| 20–22 | `T_h06_endurance_{high,mid,low}` — 5 min hold, fps + thermal every 30 s | pinned |
+| 23–25 | `T_h01_tee_{low,mid,high}` | pinned |
+
+`job.txt` gains an optional `tier=low|mid|high|auto` token anywhere in the file
+(e.g. `18 0 tier=mid`), so a one-off "same job, other tier" A/B costs a file write rather than a
+rebuild. `auto` explicitly clears a pinned override so a Low run cannot leak into the next launch.
+
+`session_start` telemetry gains `tier` and `tier_source`. Paired with the existing per-hole
+`fps_avg` / `fps_low`, that is the evidence base for the deferred thermal-governor question.
+
+## 12.6 EMPTY CELLS — the device numbers are not in
+
+**None of the following has been measured.** Phase 1 put every *cooled* pose at 60 fps and H08
+still fell to 47.5 / H06 to 40.7 at thermal Serious; whether static tiers close that gap is
+exactly what these tables would answer, and they are blank.
+
+| | Low | Mid | High |
+|---|---|---|---|
+| H08 tee — fps / frameMs / batches / tris / shadow casters | — | — | — |
+| H06 tee | — | — | — |
+| H01 tee | — | — | — |
+| H06 endurance @ 0/1/2/3/4/5 min + thermal | — | — | — |
+
+Targets when they are run: High ≥ 58 fps; Mid batches and shadow casters strictly below High;
+Low flat 30.0 fps with tris below Mid; Mid holds ≥ 55 through minute 5; Low holds 30 through
+minute 5. High's endurance curve is reported as-is — the brief expects it not to hold, and that
+is the point of the row.
+
+Build size / shader-variant delta is also **not measured** — it needs an iOS build diffed
+against the Phase 1 one. New source bytes on disk are 9 307 (the Low + Mid `.asset` files).

@@ -13,6 +13,7 @@ using Golfin.Physics.Runtime;
 using Golfin.Gameplay.Input;
 using Golfin.Gameplay.Loop;
 using Golfin.Gameplay.UI.ShotUI;
+using Golfin.Gameplay.UI.Quality;
 
 [assembly: InternalsVisibleTo("Golfin.Physics.Tests")]
 
@@ -219,6 +220,12 @@ namespace Golfin.Physics.Viewer
         void Awake()
         {
             DiagAero("Awake.start");
+
+            // quality_tiers §3: re-apply hole-scoped tier effects when the player changes tier from
+            // Settings while a hole is loaded. Assigned defensively — a domain reload between edit
+            // and play can leave a stale delegate on the static event.
+            QualityTierService.OnTierChanged -= ApplyTierHoleEffects;
+            QualityTierService.OnTierChanged += ApplyTierHoleEffects;
             // Recover _runtimeTeeAnchor after domain reload: the field is non-serialised so it
             // becomes null after every script compilation, but the GO stays in the scene.
             // Scan children, keep the first match, destroy extras accumulated from prior reloads.
@@ -350,6 +357,8 @@ namespace Golfin.Physics.Viewer
             // disabled would NOT go unnoticed. PhysicsLabController lives in LabScaffold, which
             // GameplaySceneLoader.UnloadGameplayScenes() unloads on every exit path (menu quit,
             // curtain, and Next Hole's step 2b), so OnDestroy is the reliable hook.
+            QualityTierService.OnTierChanged -= ApplyTierHoleEffects;
+
             RestoreShellCamera();
             RestoreShellDirectionalLight();
             RestoreEventSystem();
@@ -2214,6 +2223,11 @@ namespace Golfin.Physics.Viewer
             ReconcileEventSystems();
             ApplyTerrainRenderDefaults();
 
+            // quality_tiers §3: the tier's hole-scoped presentation. Terrain, tree placement and
+            // tree cull distance are NOT here on purpose — the fairness rule (plan §2) says a tier
+            // may never change what is on the course, only how it is drawn.
+            ApplyTierHoleEffects(QualityTierService.Current);
+
             // Populate HoleContext for HUD widgets (PlayerCardWidget, HoleCardWidget).
             // HoleMetadata lives in Assembly-CSharp; use reflection to avoid a circular asmdef dep
             // (Viewer has autoReferenced:true, so Viewer→Assembly-CSharp would be circular).
@@ -2614,6 +2628,26 @@ namespace Golfin.Physics.Viewer
         /// on those three holes now cut at 150 m like everywhere else.
         /// treeMaximumFullLODCount is left alone (already 50 on all eighteen).
         /// </summary>
+        /// <summary>
+        /// quality_tiers §3 — the presentation this tier changes INSIDE a hole.
+        ///
+        /// Exactly one lever today: tree wind. Shell-camera post-processing / HDR is applied by
+        /// QualityTierService itself (it is a Home-screen concern and must survive the shell camera
+        /// being disabled for the duration of a hole).
+        ///
+        /// Deliberately NOT here, by the fairness rule: terrain settings, tree placement, tree draw
+        /// or cull distance, lodBias. Two players on different tiers must see every tree in the same
+        /// place — see ApplyTerrainRenderDefaults, which stays tier-independent.
+        /// </summary>
+        static void ApplyTierHoleEffects(QualityTier tier)
+        {
+            // Low freezes foliage: the _WIND keyword comes off every Custom/Vegetation material and
+            // the Spruce Shader Graph's wind speed goes to 0 (§4).
+            Golfin.Gameplay.UI.HUD.TreeWindDriver.SetEnabled(tier != QualityTier.Low);
+
+            Debug.Log($"[PhysicsLab] Tier hole effects applied for {tier}: treeWind={(tier != QualityTier.Low ? "on" : "off")} (quality_tiers §3).");
+        }
+
         static void ApplyTerrainRenderDefaults()
         {
             var t = Terrain.activeTerrain;
