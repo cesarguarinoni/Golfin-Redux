@@ -38,8 +38,9 @@
   awaiting Cesar's sign-off.** All five items implemented directly by Claude Code. Report:
   `Docs/Specs/Active/content_cleanup_quick/IMPLEMENTER_REPORT.md`. Unity EditMode 1765/1768 (0
   failed, 3 pre-existing skips), playlife backend 26 passed, dashboard build clean; every new
-  suite proven with a tripwire. ⚠️ The playlife half is committed to the working tree but NOT
-  deployed. Item 3 turned out to be FOUR harnesses, not three. Original brief below.
+  suite proven with a tripwire. ✅ **DEPLOYED** — `playlife-api` v53, `golfin-admin` `cf90ee8a…`;
+  the per-catalog `enabled` is measurably gone from the live response. Item 3 turned out to be
+  FOUR harnesses, not three. Original brief below.
 
   **FIVE small items, no spec folder. The last thing before the batched device pass.**
   1. **Drop the per-catalog `"enabled"` field** from the payload and its client DTOs. Disabled ⇒

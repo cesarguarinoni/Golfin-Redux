@@ -116,9 +116,15 @@
 > TRIPWIRE (`tests-run` reports only failures, never the passing names) — three deliberate breaks
 > took the run to 13 failures naming exactly the new tests, then reverted to green.
 >
-> ⚠️ **The playlife change is NOT deployed.** `playlife-api` still serves the per-catalog `enabled`
-> field until Cesar deploys. Harmless in either order (the client ignores unknown fields), but the
-> device pass should run against a deployed API so the wire shape matches the client under test.
+> ✅ **DEPLOYED 2026-08-26.** `playlife-api` v52 → **v53**; `golfin-admin` (admin.golfin.world)
+> version `cf90ee8a-d341-4e1d-b405-33f832ff6f36`. No migration needed — nothing here touched the
+> schema. Measured live before/after: `catalogs[texts]` went from
+> `['changed','enabled','full','version']` to `['changed','full','version']`, and the top-level
+> `enabled`/`disabled` are still identical across every requested subset (the invariant that
+> regresses first). ⚠️ The DASHBOARD half is unverified on its live URL — `admin.golfin.world` is
+> behind Cloudflare Access, which 302s an unauthenticated probe; items 2 and 4 rest on the
+> mock-mode UI run plus the active version id. **First browser check: Clubs ▸ Review & publish ▸
+> Kill switch should show TWO cards.** No kill switch was flipped on prod.
 
 > **`content_player_inventory` — PHASE 4, THE LAST PIECE. DONE, approved by Cesar 2026-08-26.**
 > Spec: `Docs/Specs/Completed/content_player_inventory/`. Architect report:

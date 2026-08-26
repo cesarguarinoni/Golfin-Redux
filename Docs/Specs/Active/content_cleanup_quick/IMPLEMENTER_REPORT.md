@@ -344,12 +344,15 @@ listed at the top of this report, unchanged.
 
 1. **Four harnesses, not three** (item 3). `TournamentRestrictionsClientTests` was a fourth copy;
    it is converted. Flagging it because the task said three.
-2. **The playlife change is not deployed.** Committed to the working tree only. Removing the field
-   and updating the client are independent (the client ignores unknown fields either way), but the
-   device pass should run against a deployed API so the wire shape matches the client under test.
-3. **Nothing was verified against prod.** Every dashboard check ran in mock mode against local
-   fixtures; the backend checks ran against the in-memory fake the existing suite already uses. No
-   live Supabase row was read or written by this task.
+2. **Both halves are DEPLOYED** (2026-08-26) — see STATUS.md for the version ids and the
+   before/after prod probe. `playlife-api` v52 → v53; `golfin-admin` version `cf90ee8a…`. No
+   migration was needed; nothing here touched the schema.
+3. **What was and was not verified against prod.** The API half WAS: the per-catalog `enabled`
+   field is measurably gone from the live response, and the subset-invariance of the top-level
+   flags still holds. The dashboard half was NOT — `admin.golfin.world` is behind Cloudflare
+   Access, which 302s an unauthenticated probe, so items 2 and 4 rest on the mock-mode UI run
+   above plus the active version id. No kill switch was flipped on prod and no live Supabase row
+   was written by this task.
 4. **Item 5 has no real-play evidence, by nature.** Reproducing a refund needs two devices with
    divergent revs. The EditMode tests drive the production `InventorySyncService` end to end through
    the existing `FakeTransport`, which is the honest gate here; the first real number will come out
