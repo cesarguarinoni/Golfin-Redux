@@ -67,28 +67,32 @@
 - **`home_notices`** — flagged by its own session as needing a device + the dashboard to sign off.
   See its entry below; not touched here.
 
-- **`perf_phase1_free_wins` — bisect done, Phase 1 CLEARED; device pass to resume (2026-08-26).**
+- **`perf_phase1_free_wins` — DEVICE PASS COMPLETE 2026-08-26, build 2316. Owes only Lesson O.**
   §11 of [Docs/Reports/perf_baseline_2026-08-26.md](Docs/Reports/perf_baseline_2026-08-26.md).
-  **The flat untextured terrain Cesar saw on build 2314 is PRE-EXISTING — not Phase 1.** Reproduced
-  in the Editor **Game View** at HEAD (Hole 08 tee, pinned sky, pinned yaw), then re-shot with all
-  four Phase 1 changes reverted, then against **real pre-Phase-1 code** (`a98008f6d` checked out for
-  `PhysicsLabController.cs` + both Settings assets). Near-fairway patch **bit-identical in all three**
-  (141.9, sd 22.44) and flat in all three. **Own task now**; `m_UseNativeRenderPass: 1` on
-  `Mobile_Renderer`/`PC_Renderer` is the obvious first probe. §11.4 + `bisect_step0_*.png`.
-  ⚠️ **Method: only the Game View shows it.** Three earlier Editor investigations looked clean
-  because they rendered through an ad-hoc `screenshot-camera`, which does not exercise the real
-  pipeline. Render checks for this class of bug must go through the Game View.
-  **Shipped this round:** `drawInstanced` removed — within noise on device (13.48 vs 13.35 ms,
-  identical batches/tris) and it measurably flattened DISTANT terrain (mid-rough sd 13.12 vs 22.10);
-  plus a device-only stripping risk (holes ship `m_DrawInstanced: 0`, flag is runtime-only,
-  `m_InstancingStripping` is StripUnused). **§3 is now the tree-distance normalisation only** —
-  both halves of Phase 0b's (c) are gone.
-  **Measured win still stands** (pinned sky+yaw, Hole 08 tee, build 2314): **30.1 → 58.1 fps,
-  26.11 → 13.35 ms render thread, 7,375 → 1,848 batches, 5.03 M → 1.78 M tris.** One run.
-  ⚠️ **`SkyRandomizer` rolls a NEW SKY PER APP LAUNCH** — no frame comparison in this report, Phase
-  0b's included, was taken under controlled lighting until `PerfBaselineBot.PinSky()` was added.
-  **Next:** rebuild Dev-iOS without `drawInstanced`, then resume §11.7 — Holes 01/06, mid-flight,
-  3-run medians, Frame Debugger, the `P1_teardown` bot job (built, never run), MapView, Lesson O.
+  Pinned sky + pinned yaw, 3 runs per pose, iPhone 15 Pro Max:
+  **H08 tee 30.1 → 60.0 fps, 26.11 → 14.34 ms, 7,375 → 3,014 batches, 5.03 M → 2.37 M tris.
+  H06 tee 35.2 → 60.0 fps, 26.59 → 14.75 ms. H01 tee 59.8 fps. H08 mid-flight 59.9 fps (first ever).
+  GC 29,030 → 21,506 B/frame.**
+  Items 16/17/18/19/22/23/24 PASS. Teardown ran as a BOT job (`P1_teardown`) — 8/8 assertions,
+  `teardown_invariants.json` `fails=0`, driven through the real `confirmQuitButton.onClick`, and it
+  confirms on hardware the shell-light restore that never worked in a player build.
+  **Only Cesar's full-hole playthrough (Lesson O) is owed.**
+  ✅ **THE HARNESS IS REPRODUCIBLE NOW.** With sky + yaw pinned, batches and triangles are IDENTICAL
+  across all three runs of every hole. Phase 0b swung 7,375 vs 6,086 batches on the same pose — that
+  variance was `SkyRandomizer` rolling a new sky per app launch, not the renderer. **Any frame A/B
+  without `PerfBaselineBot.PinSky()` is not evidence.**
+  ⚠️ **Sustained load is NOT 60 fps on the heavy holes:** after 45 s at thermal Serious, H08 tee
+  falls to 47.5 fps and H06 tee to 40.7 (H01 and mid-flight hold 60). That is 9a / Phase 2-3.
+  ⚠️ `renderMs` from ProfilerRecorder is unreliable (~3.3 ms on 16.7 ms frames); `fps`/`frameMs`
+  carry the verdicts.
+  §3 ended up as the **tree-distance normalisation only** — both halves of Phase 0b's (c) were
+  dropped after measurement (basemapDistance: no gain; drawInstanced: within noise + flattened
+  distant terrain + a StripUnused device risk).
+  🚩 **Separate blocker for testers:** the **flat untextured terrain** (§11.4) is **PRE-EXISTING** —
+  proven against real pre-Phase-1 code (`a98008f6d`), near-fairway patch bit-identical. It is on
+  screen on every hole. First probe: `m_UseNativeRenderPass: 1`, set on **both** `Mobile_Renderer`
+  and `PC_Renderer`. Also: **only the Game View reproduces it** — ad-hoc `screenshot-camera` renders
+  look clean, which is why three earlier investigations missed it.
 
 - **`perf_baseline` Phase 0b — DONE for the experiment sweep (2026-08-26).** §10 of
   [Docs/Reports/perf_baseline_2026-08-26.md](Docs/Reports/perf_baseline_2026-08-26.md).

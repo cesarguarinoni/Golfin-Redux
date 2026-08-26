@@ -902,26 +902,99 @@ loads, right next to the pinned yaw. Verified in the device log:
 
 **Any future frame A/B must be taken under a pinned sky or it is not evidence.**
 
-## 11.2 Device numbers — Hole 08 tee, pinned sky + pinned yaw, thermal Nominal
+## 11.2 Device numbers — build 2316, pinned sky + pinned yaw, 3 runs each
 
-Build 2314 (`Dev-iOS`, Development + Autoconnect Profiler, Deep Profiling off), iPhone 15 Pro Max.
+iPhone 15 Pro Max, `Dev-iOS` (Development + Autoconnect Profiler, Deep Profiling off), sky pinned to
+`Afternoon (Cloudy)` (sun 28.5°), yaw pinned per hole. **Primary sample** = 6 s settle + 4 s window,
+the same point Phase 0b's before-numbers were taken at, so the comparison is like-for-like.
 
-| | before (2311, §10.2) | after | target |
+| pose | fps (median · raws) | frame ms | render ms | batches | triangles | thermal per run |
+|---|---|---|---|---|---|---|
+| **H08 tee** | **60.0** · 59.9/60.0/60.2 | 16.67 | 14.34 | 3,014 | 2,369,599 | Nominal/Serious/Serious |
+| **H01 tee** | **59.8** · 59.8/59.8/59.8 | 16.72 | 3.60 ⚠ | 1,957 | 1,072,738 | Serious ×3 |
+| **H06 tee** | **60.0** · 60.0/60.2/59.8 | 16.68 | 14.75 | 4,006 | 3,882,347 | Nominal/Nominal/Serious |
+| **H08 mid-flight** | **59.9** · 60.0/59.9/59.2 | 16.70 | 13.71 | 2,071 | 1,527,874 | Serious ×3 |
+
+### Against the targets
+
+| # | Item | Target | Result |
 |---|---|---|---|
-| fps | 30.1 | **58.1** (settled 60.0) | ≥ 58 ✅ |
-| render-thread ms | 26.11 | **13.35** (settled 3.37) | ≤ 15.0 ✅ |
-| batches | 7,375 | **1,848** | — |
-| triangles | 5,036,446 | **1,779,839** | — |
-| shadow casters | 2,249 | 725 | — |
-| GC B/frame | 29,030 | **21,506** | — |
+| 16 | H08 tee | ≥ 58 fps, ≤ 15.0 ms | **PASS** — 60.0 fps, 14.34 ms (was 30.1 / 26.11) |
+| 17 | H01 tee | — | **PASS** — 59.8 fps |
+| 17 | H06 tee | ≤ 26.59 ms | **PASS** — 14.75 ms, 60.0 fps (cooled baseline was 35.2 fps / 26.59 ms) |
+| 18 | H08 mid-flight | record only | 59.9 fps / 13.71 ms / 2,071 batches — first ever measurement |
+| 24 | GC per frame | — | **29,030 → 21,506 B** (−26 %), identical across all 12 runs |
 
-⚠️ **This is one run, not the 3-run median the protocol demands** — the pass was halted before runs
-1–2 and before Holes 01/06 and the mid-flight sample. Treat it as indicative, not as the acceptance
-number.
+**The harness is finally reproducible.** With sky and yaw both pinned, batches and triangles are
+*identical* across all three runs of every hole (H08 varies by 1 batch and 2 triangles; H01, H06 not
+at all). Phase 0b, with the sky unpinned, swung 7,375 vs 6,086 batches on the same pose — that
+variance was the sky, not the renderer.
 
-⚠️ The `_late` sample (after the 45 s pose hold) reports render-thread **3.37 ms**, which is not
-credible as a like-for-like figure and is not being claimed; the settled batches/tris are identical
-to the primary sample, so the primary sample is the one reported.
+⚠️ **`renderMs` is not trustworthy and is not the basis of any claim above.** It intermittently
+reports ~3.3–4.2 ms on frames whose `frameMs` is 16.7 (H01 raws 3.33 / 3.60 / 13.98). `fps` and
+`frameMs` are stable and mutually consistent, so they carry the verdicts; `renderMs` is quoted only
+where all three runs agree.
+
+### Sustained load — the honest caveat
+
+The **late** sample (after the 45 s pose hold, device already at thermal Serious) degrades on the two
+heavy tee poses:
+
+| pose | primary fps | late fps (median · raws) |
+|---|---|---|
+| H08 tee | 60.0 | **47.5** · 40.8 / 60.0 / 47.5 |
+| H06 tee | 60.0 | **40.7** · 60.1 / 40.7 / 35.2 |
+| H01 tee | 59.8 | 59.6 · 59.9 / 59.6 / 59.5 |
+| H08 mid-flight | 59.9 | 60.0 · 60.0 / 59.9 / 60.0 |
+
+So Phase 1 gets every pose to 60 fps *cold*, and H01 and mid-flight hold it indefinitely — but H08
+and H06 tee still fall to 35–48 fps after ~45 s at thermal Serious, on a device that had been under
+continuous load for ~40 minutes. That is the tier system's problem (9a) and the shadow/LOD levers of
+Phase 2/3, not something Phase 1 claimed to fix. Recorded so nobody reads "60 fps" as "60 fps forever".
+
+### Item 19 — one camera, no prepass, no CopyDepth: **PASS** (by direct state, not Frame Debugger)
+
+`FrameDebuggerUtility` (Unity 6: `UnityEditorInternal.FrameDebuggerInternal`) reports 0 events when
+driven headlessly — it needs its window repainting — so the two claims were closed with direct
+runtime state instead, which is stronger than counting events:
+
+```
+CAM 'Main Camera'  ShellScene    enabled=False activeInHierarchy=True   -> renders=False
+CAM 'Main Camera'  LabScaffold   enabled=True  activeInHierarchy=True   -> renders=True
+CAM 'WalkCamera'   Hole_08_Geo   enabled=True  activeInHierarchy=False  -> renders=False
+CAMERAS ACTUALLY RENDERING = 1
+_CameraDepthTexture        = UnityBlack 4x4     _CameraNormalsTexture      = UnityBlack 4x4
+_CameraDepthNormalsTexture = <null>             depthPrimingMode = Disabled
+```
+
+Both depth globals are still Unity's dummy texture and the depth-normals global is null — the
+observable consequence of no CopyDepth and no DepthNormals prepass having run.
+
+### Item 23 — MapView `ReadPixels`: **PASS** (proved from the shipped binary)
+
+`DoFrameReadbackAndDump` has **0 matches** in `Builds/iOS-Dev/Il2CppOutputProject/Source/il2cppOutput/`
+(controls: `DumpInvariants` 2 matches, `PerfBaselineBot` 8). Both blocking GPU `ReadPixels` calls are
+physically absent from the device binary, not merely unreached.
+
+### Item 22 — teardown: **PASS, 8/8 assertions, on device**
+
+`P1_teardown` (bot job 13) drove the player's own quit path and wrote
+`teardown_invariants.json` with `"fails":0`:
+
+| assertion | verdict |
+|---|---|
+| in_hole_shell_camera_disabled | PASS |
+| in_hole_shell_light_disabled | PASS |
+| quit_driven_via_real_widget (`confirmQuitButton.onClick`) | PASS |
+| returned_to_home | PASS |
+| **shell_camera_re_enabled** | PASS |
+| **shell_light_re_enabled** | PASS |
+| labscaffold_unloaded | PASS |
+| second_hole_shell_camera_disabled_again | PASS |
+
+The two bolded rows are the §1 `OnDestroy` fix confirmed on hardware — the shell light restore that
+never happened in a player build before this task. `P1_teardown_home_after_quit.png` shows Home
+rendering normally after the quit; `P1_teardown_second_hole.png` shows the Next-Hole case.
 
 ## 11.3 `basemapDistance` — **reverted, and Phase 0b's −6.31 ms does not reproduce**
 
@@ -1007,9 +1080,18 @@ in a player build at all (same class as the K5 tree-wind stripping).
   trunks proved to be a first-render-after-cold-load transient present with the decal feature both
   on and off.
 
-## 11.7 Not done (pass halted)
+## 11.7 Still outstanding
 
-Runs 1–2 of Hole 08 · Holes 01 and 06 · Hole 08 mid-flight · the 3-run medians · Frame Debugger
-one-camera/no-prepass capture · the teardown job run · MapView `ReadPixels` check on device ·
-Hole 01 tree-distance before/after · Hole 08 + Hole 13 shoreline frames · Cesar's full-hole
-playthrough (Lesson O).
+| Item | State |
+|---|---|
+| 20 — device frame A/B vs `exp_ad_CORRECT.png` | **Not comparable.** That reference was shot under a different, unpinned sky. Superseded: the 12 frames of this pass are the new pinned-sky reference set |
+| 21 — Hole 01 tree distance before/after **on device** | Editor evidence stands (§2 item 5 of the report: authored 5000/50/5 on disk, live 150/80/20). A device before-frame would need a pre-Phase-1 build reinstalled |
+| Water / shoreline decision (§11.5 of the earlier draft) | Open. `m_RequireDepthTexture` stays 0 |
+| Lesson O — Cesar plays one full hole on 2316 | **Owed.** The only remaining sign-off that a bot cannot give |
+| Instruments Metal System Trace, Memory Profiler top-10, GC call stack | Phase 0b leftovers, unchanged |
+
+### The flat terrain (§11.4) is the live blocker
+
+Pre-existing, not Phase 1, but it is on screen on every hole and should be someone's task before
+this build goes to testers. First probe: `m_UseNativeRenderPass: 1`, set on **both**
+`Mobile_Renderer` and `PC_Renderer` — so it predates the decal removal.

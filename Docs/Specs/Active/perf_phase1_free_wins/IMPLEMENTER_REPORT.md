@@ -205,19 +205,28 @@ xcrun devicectl device install app --device <id> Golfin.app
 despite `CIBuild.RestoreBuildNumbers`. Restored surgically after every build — never with
 `git checkout`, per the standing rule — so the file is clean in the diff.
 
-### Item status
+### Item status — build 2316, pinned sky + yaw, 3 runs each
 
 | # | Item | Verdict |
 |---|---|---|
-| 16 | H08 tee fps ≥ 58, render ≤ 15.0 ms | **PASS on one run** (58.1 fps / 13.35 ms) — *not* the 3-run median the protocol demands |
-| 17 | H01 + H06 tee | **NOT RUN** (halted) |
-| 18 | H08 mid-flight | **NOT RUN** |
-| 19 | Frame Debugger one-camera / no prepass | **NOT RUN**. An automated event-enumeration probe was written (`FrameDebuggerUtility` via reflection, limit 3000) but never executed |
-| 20 | Device frame A/B vs `exp_ad_CORRECT.png` | **BLOCKED** — that reference was shot under a different, unpinned sky, so it is not a valid comparand |
-| 21 | Hole 01 tree distance before/after | **NOT RUN on device** (Editor evidence is §2 item 5) |
-| 22 | Teardown paths i–iv | **BUILT, NOT RUN** — now a bot job (`P1_teardown`, job 13) per Cesar's "automate always"; writes `teardown_invariants.json` |
-| 23 | MapView no `ReadPixels` | **NOT RUN on device** (code-side guard is §2 item 10) |
-| 24 | GC B/frame | **29,030 → 21,506** observed, single run |
+| 16 | H08 tee ≥ 58 fps / ≤ 15.0 ms | **PASS** — 60.0 fps, 14.34 ms (was 30.1 / 26.11) |
+| 17 | H01 tee | **PASS** — 59.8 fps, 1,957 batches |
+| 17 | H06 tee ≤ 26.59 ms | **PASS** — 60.0 fps, 14.75 ms (cooled baseline 35.2 fps / 26.59 ms) |
+| 18 | H08 mid-flight | **RECORDED** — 59.9 fps / 13.71 ms / 2,071 batches. First ever measurement |
+| 19 | One camera, no DepthNormals prepass, no CopyDepth | **PASS** by direct runtime state — `CAMERAS ACTUALLY RENDERING = 1`; `_CameraDepthTexture` and `_CameraNormalsTexture` both `UnityBlack 4x4`; `_CameraDepthNormalsTexture` null; `depthPrimingMode=Disabled`. `FrameDebuggerUtility` returns 0 events headlessly (needs its window repainting), so this is direct state rather than an event count — stronger, not weaker |
+| 20 | Frame A/B vs `exp_ad_CORRECT.png` | **NOT COMPARABLE** — that reference was shot under a different, unpinned sky. The 12 frames of this pass are the new pinned-sky reference set |
+| 21 | H01 tree distance before/after on device | Editor evidence stands (§2 item 5); a device "before" needs a pre-Phase-1 build reinstalled |
+| 22 | Teardown paths | **PASS 8/8 on device** — `teardown_invariants.json` `"fails":0`, driven through `confirmQuitButton.onClick`. Includes the shell-light restore that never worked in a player build |
+| 23 | MapView no `ReadPixels` | **PASS** — `DoFrameReadbackAndDump` has 0 matches in the IL2CPP player output (controls: `DumpInvariants` 2, `PerfBaselineBot` 8). Physically absent from the binary |
+| 24 | GC per frame | **29,030 → 21,506 B** (−26 %), identical across all 12 runs |
+| — | Lesson O playthrough | **OWED** — the only sign-off a bot cannot give |
+
+**Reproducibility, finally.** With sky and yaw pinned, batches and triangles are identical across all
+three runs of every hole. Phase 0b swung 7,375 vs 6,086 batches on the same pose; that was the sky.
+
+**Sustained-load caveat, recorded so "60 fps" is not over-read:** the late sample (after 45 s at
+thermal Serious) falls to 47.5 fps on H08 tee and 40.7 fps on H06 tee. H01 and mid-flight hold 60.
+That is 9a / Phase 2-3 territory, not something Phase 1 claimed.
 
 ### Two attributions I got wrong, and what corrected them
 
