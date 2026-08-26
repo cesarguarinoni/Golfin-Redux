@@ -3,7 +3,8 @@
     "rootNamespace": "Golfin.Dev",
     "references": [
         "Golfin.Auth",
-        "Golfin.Economy"
+        "Golfin.Economy",
+        "UnityEngine.UI"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
