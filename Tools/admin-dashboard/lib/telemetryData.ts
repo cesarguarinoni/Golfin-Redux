@@ -39,6 +39,14 @@ type Row = Record<string, unknown>;
 /** Hard cap per aggregate read. Hitting it sets `truncated`, which the panel
  *  surfaces as a badge — a partial read must never look like a whole one. */
 export const ROW_CAP = 10_000;
+/**
+ * PostgREST answers at most 1000 rows per request regardless of what `.limit()`
+ * asks for, and says so only in the `content-range` header. A single
+ * `.limit(ROW_CAP)` therefore returned the most recent 1000 events and called
+ * it the week, while `rows.length >= ROW_CAP` stayed false so nothing warned.
+ * `scanEvents` pages at this size instead.
+ */
+const SCAN_PAGE_SIZE = 1000;
 /** Event-explorer page size (SPEC §3.6). */
 export const EVENT_PAGE_SIZE = 100;
 
@@ -167,22 +175,34 @@ async function scanEvents(range: TelemetryRange): Promise<Scan> {
   }
 
   const admin = getSupabaseAdmin();
-  const { data, error } = await admin
-    .from("telemetry_events")
-    .select("*")
-    .gte("received_at", range.from)
-    .lte("received_at", range.to)
-    .order("received_at", { ascending: false })
-    .limit(ROW_CAP);
-  if (error) {
-    if (isMissingTable(error)) {
-      console.warn("telemetry_events not found — migration not applied yet.");
-      return { rows: [], truncated: false, mock: false, tableMissing: true };
+  const rows: Row[] = [];
+
+  // Page until a short read or the cap. The secondary sort on `event_id` is not
+  // cosmetic: a batch upload shares one `received_at`, so ordering on that
+  // column alone leaves tied rows free to reshuffle between requests, which
+  // drops and duplicates rows across page boundaries.
+  for (let offset = 0; offset < ROW_CAP; offset += SCAN_PAGE_SIZE) {
+    const { data, error } = await admin
+      .from("telemetry_events")
+      .select("*")
+      .gte("received_at", range.from)
+      .lte("received_at", range.to)
+      .order("received_at", { ascending: false })
+      .order("event_id", { ascending: false })
+      .range(offset, Math.min(offset + SCAN_PAGE_SIZE, ROW_CAP) - 1);
+    if (error) {
+      if (isMissingTable(error)) {
+        console.warn("telemetry_events not found — migration not applied yet.");
+        return { rows: [], truncated: false, mock: false, tableMissing: true };
+      }
+      throw new Error(`telemetry_events query failed: ${error.message}`);
     }
-    throw new Error(`telemetry_events query failed: ${error.message}`);
+
+    const page = (data ?? []) as Row[];
+    rows.push(...page);
+    if (page.length < SCAN_PAGE_SIZE) break;
   }
 
-  const rows = (data ?? []) as Row[];
   return { rows, truncated: rows.length >= ROW_CAP, mock: false, tableMissing: false };
 }
 
