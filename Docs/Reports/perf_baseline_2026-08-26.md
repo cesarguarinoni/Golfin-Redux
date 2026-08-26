@@ -1266,11 +1266,51 @@ rebuild. `auto` explicitly clears a pinned override so a Low run cannot leak int
 `session_start` telemetry gains `tier` and `tier_source`. Paired with the existing per-hole
 `fps_avg` / `fps_low`, that is the evidence base for the deferred thermal-governor question.
 
-## 12.6 EMPTY CELLS — the device numbers are not in
+## 12.6 Device triage — ONE warm run per tier, H06 (2026-08-27)
 
-**None of the following has been measured.** Phase 1 put every *cooled* pose at 60 fps and H08
-still fell to 47.5 / H06 to 40.7 at thermal Serious; whether static tiers close that gap is
-exactly what these tables would answer, and they are blank.
+**Not the protocol.** One run per tier, back-to-back, no cooldown between them, `FORCE=1`. It
+exists to answer "is there a signal at all" before spending hours on cooled 3-run medians, and
+it is not a publishable number. Build 2325 (`Dev-iOS`, `GOLFIN_TESTBUILD`), iPhone 15 Pro Max
+(`iPhone16,2`), pinned sky + pinned yaw, H06 tee.
+
+| | **Low** | **Mid** | **High** |
+|---|---|---|---|
+| fps @ sample | 30.0 | 60.0 | 59.8 |
+| **fps @ +45 s** | **30.0** | **60.0** | **39.5** |
+| frameMs @ sample → +45 s | 33.33 → 33.35 | 16.67 → 16.67 | 16.73 → **25.33** |
+| mainMs | 8.67 | 5.04 | 7.71 |
+| renderMs @ sample → +45 s | 3.22 → 3.44 | 12.26 → 2.22 | 12.29 → **18.33** |
+| batches | 2,689 | 2,783 | 3,062 |
+| SetPass | 43 | 43 | 50 |
+| triangles | 1,686,415 | 2,384,868 | 2,823,808 |
+| vertices | 1,493,564 | 1,976,715 | 2,386,652 |
+| shadow casters | 204 | 300 | 579 |
+| thermal at tee → late | Nominal → Nominal | Nominal → Nominal | **Fair → Serious** |
+
+**Mid holds 60.0 fps flat and never leaves thermal Nominal — on the hole Phase 1 could not
+hold.** High reproduces the Phase 1 failure almost exactly: 59.8 → 39.5 fps at Serious, against
+the brief's predicted 40.7. That is the entire thermal-governor question answered in the
+direction the phase hoped for: on this evidence static tiers are enough and Adaptive Performance
+is not needed.
+
+The levers are doing what the tier table says:
+- `maximumLODLevel=1` cuts **29 %** of triangles on Low (1.69 M vs 2.38 M).
+- The cascade/distance trim cuts shadow casters **579 → 300 → 204** across High/Mid/Low.
+- Batches fall 3,062 → 2,783 → 2,689, so Mid is strictly below High on both batches and shadow
+  casters — the spec's Mid criterion, met.
+- `renderMs` is the clean GPU-bound signature: Low and Mid finish early and idle (3.4 / 2.2 ms
+  late), High climbs to 18.33 as it throttles.
+
+**The confound, stated plainly.** The three ran in the order Low → Mid → High, so High started
+from the warmest device. All three reported `thermalAtBoot=Nominal`, so the phone did recover
+between launches, and High went Nominal → Fair during its own ~30 s of navigation before the
+sample — which argues the heat is its own rather than inherited. That is an argument, not a
+controlled measurement. §12.7 is what settles it.
+
+## 12.7 STILL EMPTY — the cooled protocol
+
+**None of the following has been measured.** §12.6 is a warm triage, not a substitute: it shows
+the signal is real and large, which is what justifies spending the hours below.
 
 | | Low | Mid | High |
 |---|---|---|---|
@@ -1284,5 +1324,18 @@ Low flat 30.0 fps with tris below Mid; Mid holds ≥ 55 through minute 5; Low ho
 minute 5. High's endurance curve is reported as-is — the brief expects it not to hold, and that
 is the point of the row.
 
-Build size / shader-variant delta is also **not measured** — it needs an iOS build diffed
-against the Phase 1 one. New source bytes on disk are 9 307 (the Low + Mid `.asset` files).
+## 12.8 Build size — MEASURED
+
+`Builds/iOS-Dev`, Phase 1 (2026-08-26 21:28) vs quality_tiers (2026-08-27 08:22). 71 of 73
+`Data/` files were rewritten, so this is a real data rebuild rather than a stale-artifact reading.
+Baseline captured before the rebuild overwrote it: `Docs/Specs/Active/quality_tiers/phase1_build_baseline.txt`.
+
+| | Phase 1 | quality_tiers | Δ |
+|---|---|---|---|
+| `Data/` total | 1,233,700 KB | 1,233,728 KB | **+28 KB (+0.002 %)** |
+| `globalgamemanagers.assets` | 1,196,008 B | 1,197,416 B | +1,408 B |
+| `resources.assets` | 408,098,264 B | 408,098,264 B | 0 |
+
+Three URP assets plus `multi_compile _ _WIND` across 7 passes cost **28 KB shipped**. The
++1,408 B in `globalgamemanagers.assets` is the three quality levels and their pipeline-asset
+references. K5 asked for this number; it is not a consideration.

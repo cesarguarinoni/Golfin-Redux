@@ -1,0 +1,7 @@
+[PerfBot] JOB OVERRIDE from job.txt → job=17 run=0
+[PerfBot] JOB idx=17 run=0/3 label=T_h06_tee_low hole=6 exp=none midflight=False tier=low endurance=0s thermalAtBoot=Nominal version=1.5.7 device=iPhone16,2
+[PerfBot] TIER applied=Low pref=0 qualityLevel=0 targetFrameRate=30 maxLOD=1 aniso=Disable
+[PerfBot] TEE hole=6 terrain=TerrainRoot terrainTrees=434 thermal=Nominal
+[PerfBot] STATS job=17 run=0 label=T_h06_tee_low hole=6 exp=none thermal=Nominal fps=30.0 frameMs=33.33 mainMs=8.67 renderMs=3.22 batches=2689 setpass=43 draws=2689 tris=1686415 verts=1493564 shadowCasters=204 sysMemMB=1057.4 reservedMB=711.0 gcPerFrameB=50970
+[PerfBot] STATS job=17 run=0 label=T_h06_tee_low_late hole=6 exp=none thermal=Nominal fps=30.0 frameMs=33.35 mainMs=8.72 renderMs=3.44 batches=2689 setpass=43 draws=2689 tris=1686415 verts=1493564 shadowCasters=204 sysMemMB=1050.5 reservedMB=698.0 gcPerFrameB=50970
+[PerfBot] JOB_DONE idx=17 run=0 label=T_h06_tee_low thermal=Nominal

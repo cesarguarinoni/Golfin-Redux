@@ -64,16 +64,30 @@ fi
 
 # ── 2. Arm ──────────────────────────────────────────────────────────────────────
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
-mkdir -p "$TMP/perfbot"
-printf '%s %s%s\n' "$JOB" "$RUN" "${TIER:+ tier=$TIER}" > "$TMP/perfbot/job.txt"
-echo "[runjob] job.txt = $(cat "$TMP/perfbot/job.txt")"
+printf '%s %s%s\n' "$JOB" "$RUN" "${TIER:+ tier=$TIER}" > "$TMP/job.txt"
+echo "[runjob] job.txt = $(cat "$TMP/job.txt")"
 
-xcrun devicectl device copy to \
+# NOTE the destination is Documents/perfbot/, and the SOURCE IS THE FILE, not its directory:
+# `devicectl device copy to` copies the CONTENTS of a source directory into the destination, so
+# --source <dir>/perfbot --destination Documents/ lands job.txt at Documents/job.txt, where the
+# bot never looks. It reads Application.persistentDataPath/perfbot/job.txt, i.e.
+# Documents/perfbot/job.txt, and silently reports "not armed" for anything else.
+COPY_OUT="$(xcrun devicectl device copy to \
   --device "$DEVICE" \
   --domain-type appDataContainer \
   --domain-identifier "$BUNDLE" \
-  --source "$TMP/perfbot" \
-  --destination "Documents/" || { echo "[runjob] copy-to FAILED" >&2; exit 5; }
+  --source "$TMP/job.txt" \
+  --destination "Documents/perfbot/job.txt" 2>&1)" || { echo "$COPY_OUT"; echo "[runjob] copy-to FAILED" >&2; exit 5; }
+
+# Prove it landed before spending a launch on it — copy-to echoes the resolved on-device path,
+# which is the authoritative answer. (`devicectl device info files` is NOT reliable here: it can
+# return a stale listing that omits a file written seconds earlier.)
+if ! grep -q "Documents/perfbot/job.txt" <<< "$COPY_OUT"; then
+  echo "$COPY_OUT" >&2
+  echo "[runjob] job.txt did not land at Documents/perfbot/job.txt — the bot reports 'not armed'." >&2
+  exit 6
+fi
+echo "[runjob] armed: $(grep -m1 'Path:' <<< "$COPY_OUT" | sed 's/^ *//')"
 
 # ── 3. Launch with the console attached ─────────────────────────────────────────
 #

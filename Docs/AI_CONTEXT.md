@@ -168,6 +168,18 @@
 >
 > EditMode: **1809 tests, 1806 passed, 0 failed, 3 pre-existing skips** (42 new, proven to execute
 > with a deliberate-failure tripwire).
+>
+> **DEVICE TRIAGE IS IN (2026-08-27, build 2325 on the iPhone 15 Pro Max) — and it answers the
+> thermal question.** One warm back-to-back run per tier on H06, NOT the cooled 3-run protocol:
+> **Mid holds 60.0 fps flat and never leaves thermal Nominal**, while High reproduces the Phase 1
+> failure almost exactly (59.8 → **39.5 fps** at Serious, vs the brief's predicted 40.7) and Low
+> holds 30.0 flat at Nominal. So on this evidence **static tiers are enough and Adaptive
+> Performance is not needed** — which was the whole question Phase 2 existed to answer. Levers
+> confirmed working: LOD0 skipping cuts 29 % of triangles on Low (1.69 M vs 2.38 M), shadow
+> casters fall 579 → 300 → 204, batches 3,062 → 2,783 → 2,689. Caveat recorded in report §12.6:
+> the three ran Low → Mid → High back-to-back, so High started warmest; all three booted at
+> Nominal and High went Nominal → Fair during its own navigation, but only the cooled protocol
+> settles it. **Build size: +28 KB of `Data/` (+0.002 %) for the whole task** — measured, §12.8.
 
 > **`content_cleanup_quick` — FIVE small items, the last work before the batched device pass.
 > Done 2026-08-26, awaiting Cesar's sign-off.** No SPEC.md; the items are in `Docs/TellCode.md`
