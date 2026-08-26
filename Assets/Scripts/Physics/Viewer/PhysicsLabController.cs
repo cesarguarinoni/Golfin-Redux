@@ -352,6 +352,7 @@ namespace Golfin.Physics.Viewer
             // curtain, and Next Hole's step 2b), so OnDestroy is the reliable hook.
             RestoreShellCamera();
             RestoreShellDirectionalLight();
+            RestoreEventSystem();
 
             if (_shotController != null)
                 _shotController.OnShotResolved -= HandleShotResolved;
@@ -2210,6 +2211,7 @@ namespace Golfin.Physics.Viewer
             // every frame behind a view that completely covers it; the terrain defaults are the
             // measured (c) experiment plus the 01/02/06 tree-distance normalisation.
             DisableShellCamera();
+            ReconcileEventSystems();
             ApplyTerrainRenderDefaults();
 
             // Populate HoleContext for HUD widgets (PlayerCardWidget, HoleCardWidget).
@@ -2485,6 +2487,10 @@ namespace Golfin.Physics.Viewer
         // held so the restore paths can bring it back. See DisableShellCamera for why.
         Camera _shellCameraDisabled;
 
+        // duplicate_eventsystem_fix: the EventSystem we switch off while a hole is loaded, held so
+        // the restore paths can bring it back. See ReconcileEventSystems.
+        UnityEngine.EventSystems.EventSystem _eventSystemDisabled;
+
         // perf_phase1_free_wins §3: terrain render values applied at hole load.
         //
         // basemapDistance is DELIBERATELY NOT SET — see ApplyTerrainRenderDefaults. Phase 0b
@@ -2540,6 +2546,58 @@ namespace Golfin.Physics.Viewer
             _shellDirLightDisabled.enabled = true;
             Debug.Log("[PhysicsLab] Re-enabled ShellScene directional light.");
             _shellDirLightDisabled = null;
+        }
+
+        /// <summary>
+        /// Leaves exactly one active EventSystem while a hole is loaded.
+        ///
+        /// ShellScene and LabScaffold each ship their own, so from the moment LabScaffold loads
+        /// there are two and Unity logs "There can be only one active Event System." — on every
+        /// hole load, 13 out of 13 runs of the Phase 1 device pass. Unity keeps one as
+        /// EventSystem.current and the loser's Update() early-returns, so the frame cost is small;
+        /// the reason to fix it is that two enabled InputSystemUIInputModules are bound to the same
+        /// input actions, and which one wins is load-order luck.
+        ///
+        /// ShellScene's is the one to keep: it is persistent, whereas LabScaffold is loaded and
+        /// unloaded per hole — so leaving LabScaffold's as `current` means destroying `current`
+        /// on every exit. An EventSystem is global, not per-scene, so ShellScene's drives
+        /// LabScaffold's canvases perfectly well.
+        ///
+        /// No-op when there is only one (the standalone lab-rig path has no ShellScene, and there
+        /// the lab's own EventSystem is the only one and must stay).
+        /// </summary>
+        void ReconcileEventSystems()
+        {
+            if (_eventSystemDisabled != null) return;   // already reconciled for this hole
+
+            var all = UnityEngine.Object.FindObjectsByType<UnityEngine.EventSystems.EventSystem>(
+                FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+            if (all.Length < 2) return;
+
+            UnityEngine.EventSystems.EventSystem keep = null;
+            foreach (var es in all)
+                if (es != null && es.gameObject.scene.name == "ShellScene") { keep = es; break; }
+            if (keep == null) return;   // no shell one to prefer — leave the lab's alone
+
+            foreach (var es in all)
+            {
+                if (es == null || es == keep || !es.enabled) continue;
+                es.enabled = false;
+                _eventSystemDisabled = es;
+                Debug.Log($"[PhysicsLab] Disabled duplicate EventSystem '{es.gameObject.name}' in " +
+                          $"scene '{es.gameObject.scene.name}'; keeping the ShellScene one " +
+                          $"(duplicate_eventsystem_fix).");
+                break;   // only ever two in practice; hold one for restore
+            }
+        }
+
+        /// <summary>Re-enables the EventSystem disabled by <see cref="ReconcileEventSystems"/>.</summary>
+        void RestoreEventSystem()
+        {
+            if (_eventSystemDisabled == null) return;
+            _eventSystemDisabled.enabled = true;
+            Debug.Log($"[PhysicsLab] Re-enabled EventSystem '{_eventSystemDisabled.gameObject.name}'.");
+            _eventSystemDisabled = null;
         }
 
         /// <summary>
@@ -2624,6 +2682,7 @@ namespace Golfin.Physics.Viewer
             // only reached on the EDITOR hole-picker path — see OnDestroy for the player build.
             RestoreShellDirectionalLight();
             RestoreShellCamera();
+            RestoreEventSystem();
             _useSceneProviders   = false;
             _greenCentroidValid  = false;
             _ballSpawnPoint      = null;
