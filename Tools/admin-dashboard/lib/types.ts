@@ -330,6 +330,83 @@ export interface MutationResponse {
 }
 
 // ---------------------------------------------------------------------------
+// Player inventory (SPEC content_player_inventory §1, §4, §5)
+// ---------------------------------------------------------------------------
+
+/**
+ * ⚠️ THIS IS NOT `user_inventory`. That table is the PARTNER APP's GIFT inventory
+ * (backend routers/gifts.py) and this panel never touches it. The game's
+ * inventory is `profiles.golfin_inventory` — a single JSONB blob, one per
+ * player, next to golfin_character_id.
+ */
+
+/** One club or character row as stored in the blob. A row that is at its catalog
+ *  default is stored as a BARE ID and arrives here with `atDefault: true` — the
+ *  dashboard has no catalog, so "default" is genuinely all it can say, and
+ *  saying it is more honest than inventing numbers. */
+export interface InventoryEntityRow {
+  id: string;
+  /** True when the blob stored this as a bare id — the row is at catalog default. */
+  atDefault: boolean;
+  /** The fields that DIFFER from the default, verbatim from the blob. */
+  deltas: Record<string, string | number | boolean>;
+}
+
+/** `profiles.golfin_inventory`, decoded far enough to render. */
+export interface PlayerInventory {
+  /** Wire-format version (`v`), from Golfin.InventorySync.InventoryCodec. */
+  formatVersion: number | null;
+  clubs: InventoryEntityRow[];
+  characters: InventoryEntityRow[];
+  items: Record<string, number>;
+  balls: Record<string, number>;
+  /** (int)TicketType → balance. */
+  tickets: Record<string, number>;
+  unlockedHoles: number[];
+  starterCharacterId: string | null;
+  selectedCharacterId: string | null;
+  /** UTF-8 size of the stored blob — the number SPEC §1 budgets ~3 KB for. */
+  bytes: number;
+  /** The raw blob, for the "show me what is actually stored" disclosure. */
+  raw: string;
+}
+
+/** The kinds a grant can be. Mirrors the `kind` CHECK constraint in
+ *  migrations/2026_08_26_golfin_inventory.sql — adding one here without adding
+ *  it there produces a row the database refuses. */
+export const INVENTORY_GRANT_KINDS = [
+  "club",
+  "character",
+  "item",
+  "ball",
+  "ticket",
+  "hole",
+] as const;
+export type InventoryGrantKind = (typeof INVENTORY_GRANT_KINDS)[number];
+
+/** One row of `golfin_pending_grants`. */
+export interface InventoryGrantRow {
+  id: string;
+  kind: InventoryGrantKind | string;
+  refId: string;
+  amount: number;
+  note: string | null;
+  createdBy: string | null;
+  createdAt: string;
+  /** Null while the client has not drained it yet. */
+  appliedAt: string | null;
+}
+
+export interface PlayerInventoryResponse {
+  /** Null when the player has never synced — a normal state, not an error. */
+  inventory: PlayerInventory | null;
+  rev: number;
+  updatedAt: string | null;
+  grants: InventoryGrantRow[];
+  mock: boolean;
+}
+
+// ---------------------------------------------------------------------------
 // Notices panel (SPEC home_notices §3)
 // ---------------------------------------------------------------------------
 

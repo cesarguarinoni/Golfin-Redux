@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useT } from "@/components/I18nProvider";
-import type { AdminUserRow } from "@/lib/types";
+import { INVENTORY_GRANT_KINDS, type AdminUserRow } from "@/lib/types";
 
 /** Confirmation / input modals for the phase-2 admin actions. */
 
@@ -286,6 +286,138 @@ export function AdjustRpModal({
         busy={busy}
         disabled={!amountValid || !reasonValid}
         onConfirm={() => onSubmit(amount, reason.trim())}
+        onCancel={onCancel}
+      />
+    </ModalShell>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Grant inventory — kind + refId + amount, additive-only
+// ---------------------------------------------------------------------------
+
+/**
+ * SPEC content_player_inventory §4, §5.
+ *
+ * ADDITIVE-ONLY IS ENFORCED IN THE INPUT, not just validated on submit: the
+ * amount field has `min={1}` and the form refuses anything below it. A grant
+ * cannot subtract — the schema CHECKs `amount > 0` and the client ignores a
+ * non-positive one — so an admin who types -3 is expressing something the whole
+ * system has no way to carry out, and the honest place to say so is here.
+ *
+ * `club` and `character` are pinned to amount 1: they are owned or not owned
+ * (clubs are unique, no stacking), so "5 drivers" would deliver one.
+ */
+export function GrantInventoryModal({
+  user,
+  mock,
+  busy,
+  error,
+  onSubmit,
+  onCancel,
+}: {
+  user: AdminUserRow;
+  mock: boolean;
+  busy: boolean;
+  error: string | null;
+  onSubmit: (kind: string, refId: string, amount: number, note: string) => void;
+  onCancel: () => void;
+}) {
+  const t = useT();
+  const [kind, setKind] = useState<string>("item");
+  const [refId, setRefId] = useState("");
+  const [amountText, setAmountText] = useState("1");
+  const [note, setNote] = useState("");
+
+  const unique = kind === "club" || kind === "character";
+  const numeric = kind === "ticket" || kind === "hole";
+
+  const amount = unique ? 1 : Number(amountText);
+  const amountValid = Number.isInteger(amount) && amount >= 1 && amount <= 9999;
+  const refValid =
+    refId.trim().length >= 1 &&
+    refId.trim().length <= 64 &&
+    (!numeric || /^\d+$/.test(refId.trim()));
+
+  return (
+    <ModalShell title={t("ugrant.title")} mock={mock} onClose={onCancel}>
+      <p className="mt-2 text-xs text-zinc-500">{user.email}</p>
+
+      <label className="mt-4 block text-xs font-medium text-zinc-400">
+        {t("ugrant.kind")}
+        <select
+          value={kind}
+          onChange={(e) => {
+            setKind(e.target.value);
+            // The id space changes with the kind — a club id is not a hole
+            // number. Clearing forces a deliberate re-type instead of leaving a
+            // refId that means nothing in the new kind.
+            setRefId("");
+            setAmountText("1");
+          }}
+          className="mt-1 block w-full rounded-md border border-surface-700 bg-surface-950 px-3 py-2 text-sm text-zinc-200 focus:border-accent-500 focus:outline-none"
+        >
+          {INVENTORY_GRANT_KINDS.map((k) => (
+            <option key={k} value={k}>
+              {k}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      <label className="mt-3 block text-xs font-medium text-zinc-400">
+        {numeric ? t("ugrant.refIdNumeric") : t("ugrant.refId")}
+        <input
+          type="text"
+          value={refId}
+          onChange={(e) => setRefId(e.target.value.slice(0, 64))}
+          placeholder={
+            numeric ? t("ugrant.refIdNumericPlaceholder") : t("ugrant.refIdPlaceholder")
+          }
+          autoComplete="off"
+          spellCheck={false}
+          className="mt-1 w-full rounded-md border border-surface-700 bg-surface-950 px-3 py-2 font-mono text-xs text-zinc-200 placeholder:text-zinc-700 focus:border-accent-500 focus:outline-none"
+        />
+      </label>
+
+      <label className="mt-3 block text-xs font-medium text-zinc-400">
+        {t("ugrant.amount")}
+        <input
+          type="number"
+          min={1}
+          max={9999}
+          step={1}
+          value={unique ? 1 : amountText}
+          disabled={unique}
+          onChange={(e) => setAmountText(e.target.value)}
+          className="mt-1 w-full rounded-md border border-surface-700 bg-surface-950 px-3 py-2 text-sm text-zinc-200 disabled:opacity-50 focus:border-accent-500 focus:outline-none"
+        />
+        <span className="mt-0.5 block text-[10px] text-zinc-600">
+          {unique ? t("ugrant.amountUnique") : t("ugrant.amountHint")}
+        </span>
+      </label>
+
+      <label className="mt-3 block text-xs font-medium text-zinc-400">
+        {t("ugrant.note")}
+        <input
+          type="text"
+          value={note}
+          onChange={(e) => setNote(e.target.value.slice(0, 200))}
+          placeholder={t("ugrant.notePlaceholder")}
+          className="mt-1 w-full rounded-md border border-surface-700 bg-surface-950 px-3 py-2 text-sm text-zinc-200 placeholder:text-zinc-600 focus:border-accent-500 focus:outline-none"
+        />
+      </label>
+
+      <p className="mt-3 text-[11px] leading-relaxed text-zinc-600">
+        {t("ugrant.deliveryHint")}
+      </p>
+
+      <ModalError error={error} />
+      <ModalButtons
+        confirmLabel={t("ugrant.confirm")}
+        busy={busy}
+        disabled={!refValid || !amountValid}
+        onConfirm={() => onSubmit(kind, refId.trim(), amount, note.trim())}
         onCancel={onCancel}
       />
     </ModalShell>

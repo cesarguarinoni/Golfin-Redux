@@ -185,6 +185,30 @@ namespace Golfin.Save
         /// </summary>
         public System.Collections.Generic.List<PersistedTicketBalance> ticketBalances
             = new System.Collections.Generic.List<PersistedTicketBalance>();
+
+        // ── Admin grant ledger (schema v11, content_player_inventory Phase 4) ──
+        /// <summary>
+        /// Ids of every <c>golfin_pending_grants</c> row this save has already applied.
+        ///
+        /// <para>
+        /// THE CLIENT HALF OF THE GRANT IDEMPOTENCY LOCK. The client applies a grant and THEN acks
+        /// it, so there is a window — the app dies, the network drops — where a grant is applied and
+        /// the server still lists it as pending. Without this ledger the next boot re-drains it and
+        /// applies it again. (The other ordering, ack-then-apply, loses the grant outright in the
+        /// same window, and a lost grant is worse than a redundant ack.)
+        /// </para>
+        /// <para>
+        /// Append-only and unbounded by design: grants are an admin action measured in dozens per
+        /// tester, not a per-session event, so there is nothing here worth pruning and pruning would
+        /// re-open the double-apply window for whatever it pruned.
+        /// </para>
+        /// <para>
+        /// Written by <c>Golfin.InventorySync.InventoryGrants.Apply</c>. Added empty in the v10→v11
+        /// migration; absent in pre-v11 saves defaults to an empty list on load.
+        /// </para>
+        /// </summary>
+        public System.Collections.Generic.List<string> appliedGrantIds
+            = new System.Collections.Generic.List<string>();
     }
 
     /// <summary>

@@ -295,6 +295,7 @@ export const DICT = {
   "udrawer.action.unban": { en: "Unban user", ja: "BAN を解除" },
   "udrawer.action.ban": { en: "Ban user", ja: "ユーザーを BAN" },
   "udrawer.action.delete": { en: "Delete user", ja: "ユーザーを削除" },
+  "udrawer.action.grant": { en: "Grant items", ja: "アイテムを付与" },
   "udrawer.field.avatarLevel": { en: "Avatar level", ja: "アバターレベル" },
   "udrawer.field.avatarXp": { en: "Avatar XP", ja: "アバター XP" },
   "udrawer.field.trustLevel": { en: "Trust level", ja: "信頼レベル" },
@@ -309,6 +310,7 @@ export const DICT = {
   "udrawer.unconfirmed": { en: "unconfirmed", ja: "未確認" },
   "udrawer.tab.transactions": { en: "Points ledger", ja: "ポイント履歴" },
   "udrawer.tab.activities": { en: "Activities", ja: "アクティビティ" },
+  "udrawer.tab.inventory": { en: "Inventory", ja: "インベントリ" },
 
   "loginPage.title": { en: "GOLFIN Admin", ja: "GOLFIN 管理画面" },
   "loginPage.subtitle": { en: "Internal dashboard — admins only", ja: "社内管理画面 — 管理者専用" },
@@ -1009,6 +1011,77 @@ export const DICT = {
 
   // ---- shop --------------------------------------------------------------
   "sh.title": { en: "Shop", ja: "ショップ" },
+  // ---- users ▸ inventory tab (content_player_inventory §5, §6) -----------
+  //
+  // ⚠️ uinv.notice.* is the SPEC §6 disclosure and is the counterpart of
+  // sh.notice.* below: moving something server-side makes it very easy to assume
+  // it is now enforced. It is not. Do not soften or drop these two strings.
+  "uinv.notice.headline": {
+    en: "This inventory is NOT server-enforced.",
+    ja: "このインベントリはサーバーで検証されていません。",
+  },
+  "uinv.notice.body": {
+    en: "Everything below was asserted by the player's client and backed up as-is. Inventory sync is backup and cross-device restore, not anti-cheat — a modified client can still grant itself anything. Server-authoritative purchases are a separate, later decision. Read this tab as a RECORD of what a device reported, not as proof of what was earned.",
+    ja: "以下の内容はプレイヤーのクライアントが申告したものをそのまま保存したものです。インベントリ同期はバックアップと機種変更時の復元のための仕組みであり、チート対策ではありません。改造クライアントは依然として何でも自己付与できます。サーバー側で購入を検証する仕組みは別途、後日の判断となります。この画面は「端末が報告した記録」であり、「正当に入手した証明」ではありません。",
+  },
+  "uinv.rev": { en: "rev", ja: "rev" },
+  "uinv.lastSync": { en: "Last sync", ja: "最終同期" },
+  "uinv.size": { en: "Blob size", ja: "データサイズ" },
+  "uinv.neverSynced": {
+    en: "This player has never synced an inventory. Normal for an account that has not launched a build with sync in it — their local save is still the only copy.",
+    ja: "このプレイヤーはまだインベントリを同期していません。同期対応ビルドを起動していないアカウントでは正常な状態で、端末内のセーブが唯一のコピーです。",
+  },
+  "uinv.clubs": { en: "Clubs", ja: "クラブ" },
+  "uinv.characters": { en: "Characters", ja: "キャラクター" },
+  "uinv.items": { en: "Items", ja: "アイテム" },
+  "uinv.balls": { en: "Balls", ja: "ボール" },
+  "uinv.tickets": { en: "Gacha tickets", ja: "ガチャチケット" },
+  "uinv.holes": { en: "Unlocked holes", ja: "解放済みホール" },
+  "uinv.starter": { en: "Starter character", ja: "スターターキャラ" },
+  "uinv.selected": { en: "Selected character", ja: "選択中キャラ" },
+  "uinv.noClubs": { en: "No clubs in the blob.", ja: "クラブは記録されていません。" },
+  "uinv.noCharacters": { en: "No characters in the blob.", ja: "キャラクターは記録されていません。" },
+  "uinv.noItems": { en: "No items.", ja: "アイテムはありません。" },
+  "uinv.noBalls": { en: "No balls.", ja: "ボールはありません。" },
+  "uinv.noTickets": { en: "No tickets.", ja: "チケットはありません。" },
+  "uinv.unlimited": { en: "unlimited", ja: "無制限" },
+  "uinv.atDefault": { en: "default", ja: "初期値" },
+  "uinv.showRaw": { en: "Show the stored blob", ja: "保存されている生データを表示" },
+  "uinv.hideRaw": { en: "Hide the stored blob", ja: "生データを隠す" },
+  "uinv.grants": { en: "Grants", ja: "付与キュー" },
+  "uinv.noGrants": { en: "No grants issued.", ja: "付与はありません。" },
+  "uinv.grantPending": { en: "PENDING", ja: "未受取" },
+  "uinv.grantApplied": { en: "APPLIED", ja: "受取済" },
+  "uinv.appliedAt": { en: "applied", ja: "受取" },
+  "uinv.grantsHint": {
+    en: "A grant is queued, not written into the inventory: the player's client owns that blob and writes it back every 30 seconds, so an admin edit would race it. The player picks a grant up on their NEXT LAUNCH, applies it once, and acknowledges it. Grants are additive-only and idempotent — re-issuing the same one is a new grant, but the same grant can never apply twice.",
+    ja: "付与はインベントリに直接書き込まれず、キューに積まれます。インベントリはプレイヤーのクライアントが所有し 30 秒ごとに書き戻すため、管理画面から直接編集すると競合します。プレイヤーは次回起動時に受け取り、一度だけ適用して確認応答します。付与は加算のみで冪等です。同じ内容をもう一度発行すれば別の付与になりますが、同一の付与が二重に適用されることはありません。",
+  },
+
+  // ---- users ▸ grant modal ----------------------------------------------
+  "ugrant.title": { en: "Grant inventory", ja: "インベントリを付与" },
+  "ugrant.kind": { en: "Kind", ja: "種別" },
+  "ugrant.refId": { en: "Catalog id", ja: "カタログ ID" },
+  "ugrant.refIdPlaceholder": { en: "club_iron9_klyro", ja: "club_iron9_klyro" },
+  "ugrant.refIdNumeric": { en: "Number", ja: "番号" },
+  "ugrant.refIdNumericPlaceholder": { en: "a ticket type or hole number, e.g. 0", ja: "チケット種別またはホール番号（例: 0）" },
+  "ugrant.amount": { en: "Amount", ja: "数量" },
+  "ugrant.amountHint": {
+    en: "1–9999. Grants add; they can never subtract.",
+    ja: "1〜9999。付与は加算のみで、減算はできません。",
+  },
+  "ugrant.amountUnique": {
+    en: "A club or character is owned or not owned — there is no stacking, so the amount is always 1.",
+    ja: "クラブとキャラクターは所有しているかどうかのみで、重複所持はありません。数量は常に 1 です。",
+  },
+  "ugrant.note": { en: "Note (optional)", ja: "メモ（任意）" },
+  "ugrant.notePlaceholder": { en: "support ticket #12", ja: "サポート問い合わせ #12" },
+  "ugrant.deliveryHint": {
+    en: "The player receives this on their next launch, not immediately — grants drain at boot. Recorded in the audit log with your email.",
+    ja: "付与は起動時にまとめて受け取られるため、プレイヤーに届くのは次回起動時です。あなたのメールアドレスとともに監査ログに記録されます。",
+  },
+  "ugrant.confirm": { en: "Queue grant", ja: "付与を登録" },
+
   "sh.notice.headline": { en: "Prices here are NOT enforced by the server.", ja: "ここで設定した価格はサーバーで強制されません。" },
   "sh.notice.body": {
     en: "Purchases still debit RP on the client through PointsSpendGate and grant locally. Moving the listing to the server did not make the price authoritative — a modified client can still grant itself the item. Treat this panel as the shop WINDOW, not as the till.",

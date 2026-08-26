@@ -8,6 +8,7 @@ import { fmtDateTime } from "@/lib/format";
 import type {
   AdminUserRow,
   MutationResponse,
+  PlayerInventoryResponse,
   UserActionKind,
   UserDetailResponse,
 } from "@/lib/types";
@@ -15,14 +16,17 @@ import {
   AdjustRpModal,
   ConfirmActionModal,
   DeleteUserModal,
+  GrantInventoryModal,
 } from "./action-modals";
+import { InventoryTab } from "./inventory-tab";
 
-type Tab = "transactions" | "activities";
+type Tab = "transactions" | "activities" | "inventory";
 
 type PendingModal =
   | { kind: "action"; action: UserActionKind }
   | { kind: "delete" }
   | { kind: "rp" }
+  | { kind: "grant" }
   | null;
 
 const ACTION_COPY: Record<
@@ -119,6 +123,8 @@ export function UserDrawer({
   const t = useT();
   const [detail, setDetail] = useState<UserDetailResponse | null>(null);
   const [detailError, setDetailError] = useState<string | null>(null);
+  const [inventory, setInventory] = useState<PlayerInventoryResponse | null>(null);
+  const [inventoryError, setInventoryError] = useState<string | null>(null);
   const [detailVersion, setDetailVersion] = useState(0);
   const [tab, setTab] = useState<Tab>("transactions");
 
@@ -150,6 +156,36 @@ export function UserDrawer({
       } catch (err) {
         if (!cancelled)
           setDetailError(
+            err instanceof Error ? err.message : t("udrawer.loadFailed")
+          );
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user.id, detailVersion]);
+
+  // Fetched alongside the detail, not lazily on tab-open: the drawer's whole
+  // job is answering a support question, and a second click before the answer
+  // appears is the kind of friction that makes an operator go query Supabase by
+  // hand instead. Re-runs on detailVersion so a grant shows up immediately.
+  useEffect(() => {
+    let cancelled = false;
+    setInventoryError(null);
+    (async () => {
+      try {
+        const res = await fetch(`/api/users/${user.id}/inventory`);
+        if (!res.ok) {
+          const body = (await res.json().catch(() => null)) as {
+            error?: string;
+          } | null;
+          throw new Error(body?.error ?? `Request failed (${res.status})`);
+        }
+        const json = (await res.json()) as PlayerInventoryResponse;
+        if (!cancelled) setInventory(json);
+      } catch (err) {
+        if (!cancelled)
+          setInventoryError(
             err instanceof Error ? err.message : t("udrawer.loadFailed")
           );
       }
@@ -398,6 +434,11 @@ export function UserDrawer({
                 onClick={() => openModal({ kind: "rp" })}
               />
               <ActionButton
+                label={t("udrawer.action.grant")}
+                tone="accent"
+                onClick={() => openModal({ kind: "grant" })}
+              />
+              <ActionButton
                 label={t("udrawer.action.resendConfirmation")}
                 disabled={user.emailConfirmedAt !== null}
                 title={
@@ -488,6 +529,7 @@ export function UserDrawer({
               [
                 ["transactions", "udrawer.tab.transactions"],
                 ["activities", "udrawer.tab.activities"],
+                ["inventory", "udrawer.tab.inventory"],
               ] as const
             ).map(([key, labelKey]) => (
               <button
@@ -554,6 +596,21 @@ export function UserDrawer({
                 ))}
               </ul>
             )}
+            {tab === "inventory" && (
+              <>
+                {inventoryError && (
+                  <p className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-300">
+                    {inventoryError}
+                  </p>
+                )}
+                {!inventory && !inventoryError && (
+                  <p className="py-6 text-center text-xs text-zinc-600">
+                    {t("common.loading")}
+                  </p>
+                )}
+                {inventory && <InventoryTab data={inventory} />}
+              </>
+            )}
             {detail && tab === "activities" && (
               <ul className="space-y-2">
                 {detail.activities.length === 0 && (
@@ -614,6 +671,21 @@ export function UserDrawer({
               { method: "DELETE", body: JSON.stringify({ confirmEmail }) },
               { closeDrawerOnSuccess: true }
             )
+          }
+        />
+      )}
+      {pending?.kind === "grant" && (
+        <GrantInventoryModal
+          user={user}
+          mock={mock}
+          busy={busy}
+          error={modalError}
+          onCancel={() => setPending(null)}
+          onSubmit={(kind, refId, amount, note) =>
+            runMutation(`/api/users/${user.id}/inventory`, {
+              method: "POST",
+              body: JSON.stringify({ kind, refId, amount, note }),
+            })
           }
         />
       )}

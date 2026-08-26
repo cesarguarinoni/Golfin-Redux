@@ -15,7 +15,7 @@ namespace Golfin.Save
     /// </summary>
     public static class SaveSchemaMigrator
     {
-        public const int CurrentSchemaVersion = 10;
+        public const int CurrentSchemaVersion = 11;
 
         /// <summary>
         /// Apply any needed migrations to bring data from its on-disk schemaVersion
@@ -166,6 +166,19 @@ namespace Golfin.Save
                 data.schemaVersion = 10;
                 int ownedCount = data.ownedCharacters.FindAll(c => c.isOwned).Count;
                 Debug.Log($"[SaveSchemaMigrator] Migrated v9 -> v10 (starterCharacterId='{data.starterCharacterId}', ownedCount={ownedCount}/{data.ownedCharacters.Count}).");
+            }
+
+            // v10 -> v11: content_player_inventory Phase 4 — the applied-grant ledger.
+            // PURE ADDITION, no transform: an existing save has never applied a grant (there was no
+            // grants queue before this build), so an empty list is not a default standing in for
+            // unknown history — it is the true history. Defensive null-init only, for the same
+            // reason v2->v3 does it: Newtonsoft leaves a missing key at the field initialiser, but
+            // a save hand-edited to `"appliedGrantIds": null` would otherwise NRE on first drain.
+            if (data.schemaVersion < 11)
+            {
+                data.appliedGrantIds ??= new List<string>();
+                data.schemaVersion = 11;
+                Debug.Log("[SaveSchemaMigrator] Migrated v10 -> v11 (appliedGrantIds added, default empty).");
             }
 
             // Ensure schemaVersion is current after all migrations

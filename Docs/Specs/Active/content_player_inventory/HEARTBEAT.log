@@ -1,0 +1,57 @@
+=== iter-1 kickoff baseline 2026-08-26T02:35:49Z ===
+Implemented DIRECTLY by the main Claude Code thread at Cesar's instruction
+("Read Docs/Specs/Active/content_player_inventory/SPEC.md and implement it"),
+NOT through the golfin-implementer subagent chain. There is no self-review or
+red-team pass on this one — it goes straight to Cesar.
+
+HEAD at session start: 6b689a8da fix(content,save): per-catalog kill switch, and break the -100 tie
+HEAD now:              9a1385b84 docs(content): the pipeline specs are DONE — Active/ -> Completed/
+  (HEAD moved mid-session: Cesar's own close-out commit for the Phase 0-2 specs.
+   It touches Docs/ only and does not overlap anything in this task.)
+
+DIRTY at session start (git status --porcelain, pre-existing — NONE of these are mine):
+ M Assets/Localization/LocalizationManager.cs
+ M Assets/Scenes/ShellScene.unity
+ M Assets/Scripts/Gameplay/Tests/StaminaLiveWiringTests.cs
+ M Assets/Scripts/Save/Tests/ClubOwnershipTests.cs
+ M Assets/Scripts/Save/Tests/GachaTicketTests.cs
+ M Assets/Scripts/Save/Tests/SaveLayerTests.cs
+ M Assets/Scripts/Tournaments/Tests/Golfin.Tournaments.Tests.asmdef
+ M Assets/Scripts/UI/BuildInfo/AppVersion.cs
+ M Docs/TellCode.md
+ M Docs/Versioning/last_uploaded_build.txt
+ D _to_delete/... (13 paths)
+?? Assets/Scripts/Tournaments/Tests/TournamentSnapshotImmunityTests.cs(+.meta)
+?? Docs/Reports/perf_baseline_2026-08-26.md
+?? Docs/Specs/Active/content_player_inventory/   (this task's folder)
+?? tasks/quit_transition_demo/
+
+Baseline EditMode sweep at that dirty state: 1706 / 1703 / 0 / 3 (SPEC acceptance).
+--- work log ---
+
+Backend (~/Documents/playlife, separate repo):
+  · migrations/2026_08_26_golfin_inventory.sql — profiles.golfin_inventory jsonb
+    + golfin_inventory_rev + golfin_inventory_at, and golfin_pending_grants.
+    NOT YET APPLIED to prod — Cesar's step.
+  · routers/golfin_inventory.py — GET/PUT /user/golfin-inventory,
+    GET /user/golfin-grants, POST /user/golfin-grants/ack. Wired in main.py.
+  · tests/test_golfin_inventory.py — 15 tests, green. Whole backend suite: 25 green.
+
+Unity:
+  · Assets/Scripts/InventorySync/ — new asmdef Golfin.InventorySync (10 files)
+    + Tests/ (5 files, 55 tests).
+  · SaveData schema v10 -> v11 (appliedGrantIds).
+  · Endpoints.cs + 3 URLs. ClubManager/CharacterManager: 2 catalog accessors made public.
+  · Assets/Scripts/InventoryCatalogAdapter.cs (Assembly-CSharp seam).
+
+Admin (Tools/admin-dashboard):
+  · Inventory tab in the Users drawer + Grant items action + red "not
+    server-enforced" notice. 5 new files, 4 modified. tsc --noEmit clean,
+    next build green.
+
+Verification:
+  · Full unfiltered EditMode sweep: 1761 / 1758 / 0 / 3 (+55, all mine, 0 failures).
+  · Admin verified live in MOCK_MODE=1 at localhost:3111 — tab renders EN + JA,
+    grant queued, audit row written (action=inventory_grant, table=golfin_pending_grants).
+  · Live endpoint baseline pre-deploy: /health /notices /banners
+    /tournaments/golfin all 200.

@@ -19,7 +19,11 @@
 > - Boot cost on phone hardware. Editor measured 49.82 → 102.80 ms worst case (fresh install,
 >   799-row clubs); 0.17 ms at cursor parity.
 > - The Phase-1-cache upgrade path on a device that already holds one.
-> - Phase 4a inventory push, once it exists.
+> - **Phase 4 inventory sync — BUILT 2026-08-26, and it needs TWO device passes, not one.**
+>   (a) Push + restore: play on a device, background it, wipe, reinstall, sign back in, and confirm
+>   the bag comes back. (b) A grant: issue one from the admin Users drawer, relaunch, confirm it
+>   applied EXACTLY once and did not come back on the launch after that. Both are blocked on the
+>   migration being applied + `playlife-api` deployed — see the entry below.
 >
 > **CARVE-OUT WITHDRAWN (Cesar, 2026-08-26): testers only, no real players yet.** The Phase-4c
 > "confirm on device before shipping" gate is dropped — batch it with the rest. The 4a→4b→4c
@@ -61,6 +65,72 @@
 ---
 
 ## ✅ RECENTLY LANDED
+
+> **`content_player_inventory` — PHASE 4, THE LAST PIECE. Built 2026-08-26, awaiting Cesar.**
+> Spec: `Docs/Specs/Active/content_player_inventory/`. STATUS `READY_FOR_ARCHITECT_REVIEW`.
+> Implemented DIRECTLY by the main Claude Code thread at Cesar's instruction — no implementer /
+> self-reviewer / red-team chain ran, so `SELF_REVIEW.md` and `ARCHITECT_REVIEW.md` are still the
+> unfilled template. **ONE spec, not the 4a→4b→4c ladder** (testers only, so the phasing that
+> bounded blast radius on real inventories is ceremony).
+>
+> - **Storage — one JSONB blob per player.** `profiles.golfin_inventory` + `golfin_inventory_rev`
+>   (+ `_at`). ⚠️ **NOT `user_inventory`** — that table exists and is the PARTNER APP's gift
+>   inventory (`routers/gifts.py`); conflating them would put gift items in a golf bag. Row-per-
+>   owned-club would be ~300 k rows at 10 k players; a blob is ~3 KB each and nothing queries across
+>   players' clubs.
+> - **Deltas from the catalog default, and that buys two things.** A club at its catalog default is
+>   stored as a **bare id string**; only fields that DIFFER are written. That is Cesar's cost
+>   constraint from day one — **measured: a 40-club tester blob is 765 bytes**. It also means a bare
+>   id is a REFERENCE, not a frozen copy, so a published rebalance reaches every untouched instance
+>   for free while a club the player levelled keeps the level they earned. Same I1/I5 relationship
+>   the content overlay already has with the bundled CSVs.
+> - **The merge is ADDITIVE and never subtracts**, and the reason is not sentimentality about tester
+>   data: it is what keeps LOSS DIAGNOSTIC. Under additive merge a missing item is unambiguously a
+>   bug and someone goes and finds it; under last-write-wins some loss is correct, they look
+>   identical in a bug report, and you cannot tell which one you are holding. Union ids, max
+>   levels/quantities, keep the higher durability, OR ownership. Subtraction has exactly one home —
+>   an explicit server-side spend, which already exists for RP.
+> - **Write-behind, never per mutation.** ≤ 1 PUT / 30 s on `SaveDataHost.OnSaved`, plus one on
+>   pause/quit. `OnSaved` fires after every debounced disk write, so a burst of SP allocations is a
+>   burst of callbacks — one request per mutation would be one per button press, all but the last
+>   obsolete on arrival.
+> - **A stale rev is a 200, not a 409** — a business outcome like the "taken" username, carrying the
+>   server's blob so the client merges additively and retries ONCE. The server deliberately does not
+>   merge: the merge needs catalog defaults that live in the client's bundled CSVs.
+> - **Grants queue** (`golfin_pending_grants`): drained at boot, additive-only by CHECK constraint,
+>   idempotent by grant id on BOTH sides — the server stamps `applied_at` on ack, and the client
+>   records the id in `SaveData.appliedGrantIds` (schema **v10 → v11**) because it applies FIRST and
+>   acks SECOND, so a lost ack must not become a double-apply. The other ordering loses the grant
+>   outright, and a lost grant is worse than a redundant ack.
+> - **Admin:** Inventory tab + "Grant items" in the Users drawer, `checkAdmin()` + `writeAudit()`,
+>   fixtures deliberately absurd. **The red "this inventory is NOT server-enforced" notice is not
+>   decoration** — it is the counterpart of the Shop panel's price notice (§11.5). This is sync and
+>   backup, NOT anti-cheat: a modified client can still grant itself anything. Server-authoritative
+>   spends stay a separate, later decision.
+> - **Evidence.** Full unfiltered EditMode sweep **1761 / 1758 / 0 / 3** (baseline 1706/1703/0/3;
+>   **+55 = exactly this task's tests**, zero failures, same 3 pre-existing skips). Backend: 15
+>   pytest cases driving the real coroutines against an in-memory Supabase fake — whole backend
+>   suite 25 green. Admin verified live in `MOCK_MODE=1`: tab renders EN + JA, grant queued, audit
+>   row written (`inventory_grant` / `golfin_pending_grants`). `tsc --noEmit` clean, `next build`
+>   green.
+> - **✅ SHIPPED AND VERIFIED ON PROD (2026-08-26). ALL 11 ACCEPTANCE ITEMS PASS.** Cesar applied
+>   the migration — all 7 verification rows as expected, including `grants_rls 1` /
+>   `grants_policies 0` and `user_inventory_untouched 1` (the PARTNER table still there, unchanged).
+>   Deployed `playlife-api` v51 → **v52** (image `deployment-01M0XZD461YMEZZ2X53PFCYWGJ`, confirmed
+>   by `flyctl status` + live probes, never the deploy exit code). `/health` · `/notices` ·
+>   `/banners` · `/tournaments/golfin` all **200**; the four new routes answer **403**
+>   unauthenticated and **401** on a garbage bearer — mounted and auth-gated, not a 404 route miss.
+>   Backend commit `4bd745b`, pushed.
+>   **The PostgREST schema cache was checked directly, and that is not ceremony:** a column can
+>   exist in Postgres while the API cannot see it, and the router's `_missing_relation` handler
+>   degrades a missing relation to "never synced" ON PURPOSE (so deploy order does not matter) —
+>   which means that failure would have looked exactly like a healthy empty inventory. It reads
+>   `golfin_inventory null / rev 0 / at null` on live rows, and `golfin_pending_grants` selects
+>   clean.
+>   ⚠️ **The Supabase SQL editor warns "creates a table without enabling RLS" — false positive.** It
+>   lints the `create table` statement in isolation; the enable is three statements later.
+>   `grants_rls = 1` is the proof.
+> - **Still uncommitted on the Unity side** — scoped and ready, awaiting Cesar's approval.
 
 > **`content_kill_switch_and_order` — DONE, approved by Cesar 2026-08-26.** Spec:
 > `Docs/Specs/Completed/content_kill_switch_and_order/`. Two small pre-existing

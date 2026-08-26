@@ -354,6 +354,24 @@ public class ClubManager : MonoBehaviour
         return map;
     }
 
+    /// <summary>
+    /// The catalog specs, for callers outside the seeding path.
+    ///
+    /// <para>
+    /// Exists so <c>InventoryCatalogAdapter</c> (content_player_inventory Phase 4) can answer
+    /// "what does a freshly-granted club look like" WITHOUT re-deriving the rarity → starting-level
+    /// table a second time. The inventory blob is deltas from exactly this state, so the two
+    /// answers agreeing is not a nicety: a divergence would encode a delta against a level the
+    /// catalog never said, and the player's real level would be the thing that disappeared.
+    /// </para>
+    /// <para>Empty when the club DB is not up yet — the caller degrades to no compression.</para>
+    /// </summary>
+    public List<ClubCatalogSpec> BuildCatalogSpecs()
+    {
+        var db = ClubDatabaseCSV.Instance;
+        return db == null ? new List<ClubCatalogSpec>() : BuildCatalog(db);
+    }
+
     /// <summary>Builds the pure ClubCatalogSpec list from the club DB for the ownership service.</summary>
     private List<ClubCatalogSpec> BuildCatalog(ClubDatabaseCSV db)
     {

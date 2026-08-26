@@ -145,6 +145,58 @@ namespace Golfin.Net
         /// </summary>
         public static string UserUsername => BaseUrl + "/user/username";
 
+        // ── GOLFIN player inventory, Phase 4 (content_player_inventory SPEC §2, §4) ──
+        //
+        // ALL FOUR REQUIRE AUTH and the server stamps `user_id` from the bearer token, never from
+        // the body — the same posture as <see cref="TelemetryEvents"/> and
+        // <see cref="UserGolfinCharacter"/>. There is deliberately no user id in any of these
+        // request bodies: one could not be trusted, so one is not accepted.
+        //
+        // ⚠️ THIS IS NOT `user_inventory`. That table exists already and is the PARTNER APP's GIFT
+        // inventory (routers/gifts.py) — a different concern on a different row. The game's
+        // inventory is `profiles.golfin_inventory`, next to golfin_character_id.
+        //
+        // AND IT IS SYNC AND BACKUP, NOT ANTI-CHEAT (SPEC §6). Everything the client PUTs here is
+        // client-asserted; a modified client can still grant itself anything. Moving inventory
+        // server-side does not change that, exactly as moving the shop listing server-side did not
+        // make prices authoritative. Server-authoritative spends are a separate, later decision.
+
+        /// <summary>
+        /// GET → <c>{data:{inventory, rev, updated_at}}</c> · PUT <c>{inventory, rev}</c> →
+        /// <c>{data:{stored, rev}}</c> — the whole player inventory as ONE JSONB blob.
+        ///
+        /// The blob is DELTAS FROM THE CATALOG DEFAULT (<c>Golfin.InventorySync.InventoryCodec</c>):
+        /// a club sitting at its catalog default is a bare id string. That is the cost constraint,
+        /// and it is also why a published rebalance reaches every untouched instance for free.
+        ///
+        /// <c>rev</c> is optimistic concurrency. A PUT carrying a stale rev is REFUSED, and the
+        /// refusal is a <b>200</b> carrying <c>{stored:false, status:"stale", rev, inventory}</c> —
+        /// a business outcome, like the "taken" username, not an HTTP error. The client merges the
+        /// returned blob into its own ADDITIVELY (union ids, max levels/quantities, never subtract)
+        /// and PUTs once more at the returned rev. The server never merges: the merge needs catalog
+        /// defaults that live in the client's bundled CSVs.
+        /// </summary>
+        public static string UserGolfinInventory => BaseUrl + "/user/golfin-inventory";
+
+        /// <summary>
+        /// GET → <c>{data:{grants:[{id, kind, ref_id, amount, note, created_at}]}}</c> — every
+        /// admin-issued grant this player has not acked yet.
+        ///
+        /// Drained at BOOT, never mid-session. Additive-only by schema (<c>amount &gt; 0</c>), so a
+        /// grant can only ever give something; there is no way to express a subtraction.
+        /// </summary>
+        public static string UserGolfinGrants => BaseUrl + "/user/golfin-grants";
+
+        /// <summary>
+        /// POST <c>{grant_ids:[…]}</c> → <c>{data:{acked}}</c> — mark grants applied.
+        ///
+        /// The client applies FIRST and acks SECOND, so a lost ack leaves a grant applied but still
+        /// pending. That is why the client ALSO records applied ids in its save
+        /// (<c>SaveData.appliedGrantIds</c>): the ack is the server's idempotency lock, the id
+        /// ledger is the client's, and the window between them needs both.
+        /// </summary>
+        public static string UserGolfinGrantsAck => BaseUrl + "/user/golfin-grants/ack";
+
         /// <summary>
         /// GET → <c>{data:{fetched_at, period, period_end_utc, entries:[…], player:{…}}}</c> — the ranked
         /// board for one period plus the caller's own row (leaderboard_backend SPEC §1).

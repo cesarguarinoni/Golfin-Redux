@@ -499,8 +499,14 @@ namespace Golfin.Roster
         /// the rarity table otherwise, so a published <c>startLevel</c> is honoured without
         /// changing how a NEW character is seeded.
         /// </para>
+        /// <para>
+        /// PUBLIC since content_player_inventory Phase 4: <c>InventoryCatalogAdapter</c> reads
+        /// <c>StartLevel</c> from here to build the "freshly-granted character" the inventory blob
+        /// deltas against, rather than re-deriving the rarity → starting-level table a second time.
+        /// Pure read; safe to call at any point after the roster is built.
+        /// </para>
         /// </summary>
-        private Dictionary<string, CharacterClampDefinition> BuildCharacterClampDefinitions()
+        public Dictionary<string, CharacterClampDefinition> BuildCharacterClampDefinitions()
         {
             var map = new Dictionary<string, CharacterClampDefinition>(StringComparer.Ordinal);
 

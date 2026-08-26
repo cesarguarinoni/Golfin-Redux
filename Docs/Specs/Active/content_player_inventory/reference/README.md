@@ -1,0 +1,1 @@
+Drop pulled Figma node renders here at spec time (one per frame/component the task touches). They are the ground truth the implementer + reviewers A/B against for the § Figma fidelity table (Rule 18).
