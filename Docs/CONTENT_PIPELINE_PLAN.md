@@ -255,6 +255,35 @@ sync is actually wanted for the beta.
 
 ---
 
+## 6.5 Phase 4 decisions of record (Architect, 2026-08-26)
+
+Phase 4 shipped (`content_player_inventory`, prod v52). Three questions the Implementer raised, answered.
+
+**1. A refundable spend IS acceptable through the beta — but MEASURE it, don't just accept it.**
+The additive merge can restore a consumed item on a rev mismatch (device B with a stale rev pushes
+`max(4,5)=5`). RP stays debited, so it is a free consumable, not RP duplication. For testers that is
+the correct trade and the one the merge was chosen for. The non-obvious cost is not player harm but
+**data harm**: beta consumption figures are what `ECONOMY_MASTER.md` §1 says will tune the economy,
+and a silent refund path skews exactly those numbers. So: **log every merge that raises a quantity**,
+with player and item. It turns an unknown into a count, costs almost nothing, and it is what tells us
+before launch whether §6 step 4d (server-authoritative spends) is urgent or theoretical. If the count
+is ~0 through the beta, 4d stays a launch-gate; if it is not, it moves up.
+
+**2. Bag layout is PREFERENCE. The Implementer's call stands, and the reasoning is stronger than
+"judgment".** Local-wins only ever decides the case where BOTH a local layout and a blob layout
+exist — i.e. two actively-used devices — and there the device you are holding should keep the bag you
+built on it. The case that actually matters for testers, restore-after-reinstall, has no local layout
+to win, so the blob's slots arrive and are used. Preference costs nothing in the case we care about
+and avoids silently equipping a club the player deliberately benched. Keep it.
+
+**3. No grants panel — add a REVOKE action to the existing drawer.** A separate panel is not
+warranted at dozens of grants per tester. The real gap is narrower and worth closing: grants are
+additive-only and there is no subtraction, so a fat-fingered grant is **permanent** once drained,
+fixable only by SQL. Revoking an *unapplied* grant is the cheap half of that and closes most of it.
+Cross-player visibility can wait.
+
+---
+
 ## 7. Rails (build these in Phase 0, not after the first incident)
 
 1. **Publish validation, blocking.** Required columns present; types parse; `rarity` in the

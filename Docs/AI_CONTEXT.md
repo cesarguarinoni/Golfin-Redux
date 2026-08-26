@@ -24,6 +24,18 @@
 >   the bag comes back. (b) A grant: issue one from the admin Users drawer, relaunch, confirm it
 >   applied EXACTLY once and did not come back on the launch after that. Both are blocked on the
 >   migration being applied + `playlife-api` deployed — see the entry below.
+> - ⚠️ **BRIEF THE TESTERS BEFORE THE PASS, not after.** Two things will otherwise arrive as bug
+>   reports: (1) **the save schema is now v11 and the migrator fails hard on a newer-than-code
+>   file** — a tester who rolls a TestFlight build BACK to a v10 binary cannot read their v11 save.
+>   Phase 4 partly rescues this (the bricked save now restores from the server on the next launch),
+>   so "my stuff is gone" may just need one more relaunch. (2) **A failed grants fetch means no
+>   grants that session** — the drain is boot-only and its flag is set only on a successful fetch,
+>   so "I granted it and they don't have it" has a boring explanation first: ask whether they have
+>   relaunched twice.
+> - **Instrument the refund window** (`CONTENT_PIPELINE_PLAN.md` §6.5 decision 1): log every merge
+>   that RAISES a quantity, with player + item. Beta consumption numbers are what tune the economy,
+>   and a silent refund path skews exactly those. A count near zero keeps 4d a launch-gate; anything
+>   else moves it up.
 >
 > **CARVE-OUT WITHDRAWN (Cesar, 2026-08-26): testers only, no real players yet.** The Phase-4c
 > "confirm on device before shipping" gate is dropped — batch it with the rest. The 4a→4b→4c
