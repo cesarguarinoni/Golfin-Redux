@@ -62,8 +62,8 @@
 
 ## ✅ RECENTLY LANDED
 
-> **`content_kill_switch_and_order` — implemented 2026-08-26, awaiting Cesar's sign-off AND two
-> prod steps.** Spec: `Docs/Specs/Active/content_kill_switch_and_order/`. Two small pre-existing
+> **`content_kill_switch_and_order` — DONE, approved by Cesar 2026-08-26.** Spec:
+> `Docs/Specs/Completed/content_kill_switch_and_order/`. Two small pre-existing
 > fixes; the first **gates the Phase-2 device pass**.
 >
 > - **§1 — the per-catalog kill was a GLOBAL kill.** Top-level `enabled` was an AND across the
@@ -103,9 +103,9 @@
 >   `disabled []`; restored. The value also arrives as a real bool, not the string `"true"`.
 >   `flyctl logs` shows no `content_settings` warning, so the row is genuinely read.
 > - **Architect report:** [Docs/Reports/2026-08-26_content_kill_switch_and_order.md](Docs/Reports/2026-08-26_content_kill_switch_and_order.md)
->   — two asks in it: **§7.4 of the plan needs rewriting** (it describes ONE switch doing two jobs,
->   which is where this bug actually originated — the code matched the document it was reviewed
->   against), and the wire-shape decision below.
+>   — it carried two asks. **§7.4 is DONE** (amended 2026-08-26; it now documents two switches and
+>   keeps the original wording as the lesson — a spec that conflates two mechanisms produces an
+>   implementation that passes review and is still wrong). The wire-shape decision below is still open.
 > - **One open question for the architect:** SPEC §1 asked for `"enabled": false` *inside each
 >   catalog object* AND for a disabled catalog to stay *absent* — which cannot both hold, since an
 >   absent object carries no fields. Both halves are implemented (per-catalog `enabled` on served
@@ -113,8 +113,8 @@
 >   later in two lines. The spec's claim that the client was "already written for it" was checked
 >   and is **false** — the DTO had no such field.
 
-> **`content_overlay_catalogs` — implemented 2026-08-26, awaiting Cesar's sign-off.**
-> Spec: `Docs/Specs/Active/content_overlay_catalogs/`. **PHASE 2 — the first time a publish can
+> **`content_overlay_catalogs` — DONE, approved by Cesar 2026-08-26.**
+> Spec: `Docs/Specs/Completed/content_overlay_catalogs/`. **PHASE 2 — the first time a publish can
 > touch data a player already has.** Phase 1 could only ever get a STRING wrong; this can publish a
 > `maxDurability` below an owned club's `currentDurability`. `Golfin.Content` was EXTENDED, not
 > rebuilt.
@@ -184,8 +184,8 @@
 >   `IMPLEMENTER_REPORT.md` § Needs manual on-device verification.
 
 
-> **`content_overlay_texts` — implemented 2026-08-26, awaiting Cesar's sign-off.**
-> Spec: `Docs/Specs/Active/content_overlay_texts/`. **PHASE 1 — the first time any of the content
+> **`content_overlay_texts` — DONE, approved by Cesar 2026-08-26.**
+> Spec: `Docs/Specs/Completed/content_overlay_texts/`. **PHASE 1 — the first time any of the content
 > pipeline reaches the game.** Everything before this (catalogs, publish/rollback, panels, the
 > delta endpoint) was a system the client had never read. Texts only, deliberately: if the
 > mechanism is wrong it is better to find out on a string than on 799 clubs.
@@ -316,8 +316,8 @@
 > like Rules 18/21). Still inherited and NOT changed: `rows.map((t) => …)` shadows the translator in
 > 4 places in the Tournaments/Users panels, and their drawers still clip by 13px.
 
-> **`content_cursor_per_catalog` — implemented 2026-08-25, awaiting Cesar's sign-off.**
-> Spec: `Docs/Specs/Active/content_cursor_per_catalog/`. Backend + tooling only; **the game is
+> **`content_cursor_per_catalog` — DONE, approved by Cesar 2026-08-26.**
+> Spec: `Docs/Specs/Completed/content_cursor_per_catalog/`. Backend + tooling only; **the game is
 > unchanged.** Supersedes `content_catalog` §B1 — read this BEFORE the Phase 1 Unity overlay spec,
 > which is exactly why it was filed now: once a build ships with a scalar cursor this stops being
 > an edit and becomes a migration.

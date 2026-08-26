@@ -1,7 +1,7 @@
 # `content_kill_switch_and_order` — architect report
 
-**Date:** 2026-08-26 · **Spec:** `Docs/Specs/Active/content_kill_switch_and_order/`
-**Status:** shipped to prod and verified; awaiting Cesar's sign-off.
+**Date:** 2026-08-26 · **Spec:** `Docs/Specs/Completed/content_kill_switch_and_order/`
+**Status:** shipped to prod, verified, merged to `main`, approved by Cesar 2026-08-26 (spec moved to `Completed/`).
 **Implemented by:** Claude Code (main thread, direct — not the subagent pipeline; SPEC_KIND backend,
 no Figma node, no screenshot deliverable).
 
@@ -26,7 +26,11 @@ This matters beyond the fix: the spec's framing ("the endpoint promises a per-ca
 delivers a global one") locates the defect in the endpoint. It is actually in the plan of record,
 which is why review never caught it — the code matched the document it was reviewed against.
 
-**Ask #1: §7.4 needs rewriting** to describe two switches. Suggested replacement:
+**Ask #1: §7.4 needs rewriting** to describe two switches. ✅ **DONE 2026-08-26** — amended in
+`CONTENT_PIPELINE_PLAN.md` independently of this report, and the shipped wording is better than
+the draft below: it keeps the original text as the lesson and adds the ops caveats (fail-open,
+the 60 s + next-launch delay, and the missing dashboard control for the global flag). The draft
+is kept here only as the record of what was asked for:
 
 > **Kill switches, two of them.** `content_catalogs.is_enabled=false` kills ONE catalog: it
 > vanishes from `catalogs` and is named in top-level `disabled`; that catalog reverts to bundled and
@@ -34,7 +38,7 @@ which is why review never caught it — the code matched the document it was rev
 > `enabled` goes false and clients ignore all remote content until it is flipped back. Top-level
 > `enabled` is NEVER a function of which catalogs the client requested. One flag each, no deploy.
 
-Until §7.4 is amended, the shipped behaviour and the plan of record disagree.
+~~Until §7.4 is amended, the shipped behaviour and the plan of record disagree.~~ They now agree.
 
 ---
 
@@ -237,12 +241,38 @@ recommendation: keep both — the cost is one always-`true` field, and the unifo
 
 ## 7. State
 
-- `STATUS.md` = `READY_FOR_ARCHITECT_REVIEW`; every acceptance item PASS, nothing outstanding.
-- Prod verified clean after both flips: `enabled True`, `disabled []`, 7 catalogs served, all
-  enabled.
-- **Nothing is committed.** `Assets/Scripts/ContentRuntime/` is entirely untracked in-flight work
-  from another session, so staging the edited files there would sweep that feature into this
-  commit. The `playlife` repo is clean apart from this task and can be committed on its own. Awaiting
-  Cesar's call.
-- The Phase-2 device pass is **unblocked** — flipping the per-catalog kill on a phone will now
-  revert one catalog, not seven.
+- **DONE**, approved by Cesar 2026-08-26. Spec folder moved to `Docs/Specs/Completed/`, along with
+  the three pipeline specs it sits on (`content_overlay_texts`, `content_overlay_catalogs`,
+  `content_cursor_per_catalog`).
+- **Merged to `main` and live.** GolfinRedux `5aa3286b9` → `6b689a8da` (`aa981b1b1` = the pipeline
+  Phases 1–2, `6b689a8da` = this fix); playlife `9a76545` → `ee42f42`. Both clean fast-forwards.
+  Merged by pushing each branch to `main` rather than checking `main` out locally — with the Unity
+  Editor open, a checkout would have deleted ~89 files and restored them moments later.
+- Prod verified clean after both live flips: `enabled True`, `disabled []`, 7 catalogs served, all
+  enabled. `playlife-api` v51 and `main` agree.
+- **The Phase-2 device pass is unblocked** — flipping the per-catalog kill on a phone now reverts
+  one catalog, not seven.
+
+### One provenance note on `aa981b1b1`
+
+That commit contains an edit that is **not mine and not described in its message**: the §7.4
+amendment discussed in §1 above. It was made in the working tree by another process during the same
+session — after this report existed, since it cites findings from it — and `git add` of
+`Docs/CONTENT_PIPELINE_PLAN.md` swept it in. The content is correct and desirable; only the
+attribution is off, and history was left alone rather than rewritten because `main` was already
+pushed and another process was working in the repo.
+
+Worth knowing generally: staging by path picks up whatever is in the file at that moment, including
+another session's concurrent edits to the same file. `CharacterManager.cs` was split deliberately
+for this reason; `CONTENT_PIPELINE_PLAN.md` was not, because at stage time there was no reason to
+think it had changed.
+
+### Still open
+
+- **The wire-shape decision** (§4). Both `disabled` and per-catalog `enabled` are implemented and
+  consumed; dropping either is a two-line change. No shipped build contains `ContentService`, so the
+  window to simplify closes at first release.
+- **No dashboard control for the global flag** (§5.2) — flipping it needs a SQL `update`, which does
+  not meet §7.4's "one flag, no deploy" in spirit. Its own task.
+- **The `.cs.meta` execution-order task** (§5.1), now re-scopeable from "make it detectable" to
+  "re-assert on reload".

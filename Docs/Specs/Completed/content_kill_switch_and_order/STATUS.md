@@ -1,4 +1,13 @@
-READY_FOR_ARCHITECT_REVIEW
+DONE
+
+Approved by Cesar 2026-08-26. Per-catalog kill switch split from the global one; the -100 tie broken.
+Previous state: READY_FOR_ARCHITECT_REVIEW.
+Shipped on `main` — GolfinRedux `aa981b1b1` (Phases 1-2) and `6b689a8da` (kill switch + order), playlife `ee42f42` (endpoint + migration).
+Folder moved Active/ -> Completed/ as part of that approval.
+
+---
+
+Prior contents, verbatim:
 
 Implemented directly by Claude Code at Cesar's request (2026-08-26) — SPEC_KIND: backend, no
 Figma node, no screenshot deliverable.
