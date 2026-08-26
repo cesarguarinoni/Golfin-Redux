@@ -1,0 +1,51 @@
+diff --git a/Assets/Scenes/Physics/LabScaffold.unity b/Assets/Scenes/Physics/LabScaffold.unity
+index b2d26680c..e7097bdbd 100644
+--- a/Assets/Scenes/Physics/LabScaffold.unity
++++ b/Assets/Scenes/Physics/LabScaffold.unity
+@@ -19036,7 +19036,6 @@ GameObject:
+   - component: {fileID: 1483952044}
+   - component: {fileID: 1483952043}
+   - component: {fileID: 1483952045}
+-  - component: {fileID: 2300000009}
+   - component: {fileID: 2300000010}
+   - component: {fileID: 2300000011}
+   - component: {fileID: 2300000020}
+@@ -26469,7 +26468,6 @@ GameObject:
+   m_Component:
+   - component: {fileID: 2300000006}
+   - component: {fileID: 2300000007}
+-  - component: {fileID: 2300000008}
+   m_Layer: 0
+   m_Name: PuttPathRoot
+   m_TagString: Untagged
+@@ -26504,30 +26502,6 @@ CanvasRenderer:
+   m_PrefabAsset: {fileID: 0}
+   m_GameObject: {fileID: 2300000005}
+   m_CullTransparentMesh: 1
+---- !u!114 &2300000008
+-MonoBehaviour:
+-  m_ObjectHideFlags: 0
+-  m_CorrespondingSourceObject: {fileID: 0}
+-  m_PrefabInstance: {fileID: 0}
+-  m_PrefabAsset: {fileID: 0}
+-  m_GameObject: {fileID: 2300000005}
+-  m_Enabled: 1
+-  m_EditorHideFlags: 0
+-  m_Script: {fileID: 11500000, guid: ccc48e5aae6235a4c95c81edcc035229, type: 3}
+-  m_Name: 
+-  m_EditorClassIdentifier: Golfin.Gameplay.UI.ShotUI::Golfin.Gameplay.UI.ShotUI.PuttPathRenderer
+---- !u!114 &2300000009
+-MonoBehaviour:
+-  m_ObjectHideFlags: 0
+-  m_CorrespondingSourceObject: {fileID: 0}
+-  m_PrefabInstance: {fileID: 0}
+-  m_PrefabAsset: {fileID: 0}
+-  m_GameObject: {fileID: 1483952037}
+-  m_Enabled: 0
+-  m_EditorHideFlags: 0
+-  m_Script: {fileID: 11500000, guid: 214108b3eee6815409554ccf16662fa5, type: 3}
+-  m_Name: 
+-  m_EditorClassIdentifier: Golfin.Physics.Viewer::Golfin.Physics.Viewer.PuttPathPredictor
+ --- !u!114 &2300000010
+ MonoBehaviour:
+   m_ObjectHideFlags: 0
