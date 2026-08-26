@@ -2,15 +2,18 @@
 using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
+using Golfin.Content;
 
 namespace Golfin.Inventory
 {
     /// <summary>
     /// CSV-driven item database — mirrors BallDatabaseCSV pattern.
-    /// Loads Items.csv from a TextAsset assigned in Inspector and resolves
+    /// Loads Items.csv from a TextAsset assigned in Inspector, merges the admin-published
+    /// <c>items</c> overlay on top of it (content_overlay_catalogs §1), and resolves
     /// sprites from Resources/Items/Thumbnails/ and Resources/Items/Full/.
     ///
-    /// Execution order: runs before ItemManager so data is ready for it.
+    /// Execution order -90 (from ItemDatabaseCSV.cs.meta, set by ItemManagerSetup), i.e. ahead of
+    /// ItemManager's -80 and behind ContentService's -900.
     /// </summary>
     public class ItemDatabaseCSV : MonoBehaviour
     {
@@ -44,24 +47,91 @@ namespace Golfin.Inventory
             itemMap.Clear();
             allItems.Clear();
 
+            ContentCatalog? overlay = ContentCatalogStore.RequireReady(nameof(ItemDatabaseCSV))
+                ? ContentCatalogStore.Catalog(ContentCatalogs.Items)
+                : null;
+
             string[] lines = itemsCSV.text.Split('\n');
             if (lines.Length < 2) { Debug.LogError("[ItemDatabaseCSV] Items.csv is empty."); return; }
 
             var headerIndex = BuildHeaderIndex(ParseCSVLine(lines[0]));
+            var seen = new HashSet<string>(System.StringComparer.Ordinal);
+            int overlaid = 0, deactivated = 0;
 
             for (int i = 1; i < lines.Length; i++)
             {
                 string line = lines[i].Trim();
                 if (string.IsNullOrEmpty(line)) continue;
 
-                var item = ParseRow(ParseCSVLine(line), headerIndex);
-                if (item == null) continue;
+                var fields = ParseCSVLine(line);
 
+                // Bundled first: the id has to exist before the overlay can be looked up.
+                var bundled = ParseRow(ContentFields.Csv(fields, headerIndex));
+                if (bundled == null) continue;
+
+                seen.Add(bundled.itemId);
+
+                ContentRow? patch = null;
+                overlay?.ById.TryGetValue(bundled.itemId, out patch);
+
+                var item = bundled;
+                if (patch != null)
+                {
+                    var merged = ParseRow(ContentFields.Csv(fields, headerIndex, patch));
+                    if (merged != null)
+                    {
+                        // SPEC §5 — only names the overlay CHANGED are guarded; a bundled sprite
+                        // that has never landed is the art pipeline's problem, not the overlay's.
+                        string? unresolved = ContentSpriteGuard.FirstUnresolvedChange(new[]
+                        {
+                            new SpriteRef(ThumbnailPath, bundled.thumbnailSpriteName, merged.thumbnailSpriteName),
+                            new SpriteRef(FullPath,      bundled.fullSpriteName,      merged.fullSpriteName),
+                        });
+
+                        if (unresolved != null)
+                            ContentSpriteGuard.LogVeto(ContentCatalogs.Items, bundled.itemId, unresolved, false);
+                        else { item = merged; overlaid++; }
+                    }
+                }
+
+                if (!item.isActive) deactivated++;
                 itemMap[item.itemId] = item;
                 allItems.Add(item);
             }
 
-            Debug.Log($"[ItemDatabaseCSV] Loaded {allItems.Count} items.");
+            if (overlay != null)
+            {
+                foreach (var row in overlay.Rows)
+                {
+                    if (seen.Contains(row.Id)) continue;
+
+                    var appended = ParseRow(ContentFields.OverlayOnly(row));
+                    if (appended == null) continue;
+
+                    string? unresolved = ContentSpriteGuard.FirstUnresolved(new[]
+                    {
+                        SpritePath(ThumbnailPath, appended.thumbnailSpriteName),
+                        SpritePath(FullPath,      appended.fullSpriteName),
+                    });
+
+                    if (unresolved != null)
+                    {
+                        ContentSpriteGuard.LogVeto(ContentCatalogs.Items, appended.itemId, unresolved, true);
+                        continue;
+                    }
+
+                    if (!appended.isActive) deactivated++;
+                    itemMap[appended.itemId] = appended;
+                    allItems.Add(appended);
+                    overlaid++;
+                }
+            }
+
+            Debug.Log($"[ItemDatabaseCSV] Loaded {allItems.Count} items" +
+                      (overlay == null
+                          ? " — BUNDLED only, no items overlay this launch."
+                          : $" — overlay v{overlay.Version}: {overlaid} row(s) patched/appended, " +
+                            $"{deactivated} deactivated (still owned + renderable, I6)."));
         }
 
         private Dictionary<string, int> BuildHeaderIndex(List<string> headers)
@@ -72,26 +142,27 @@ namespace Golfin.Inventory
             return idx;
         }
 
-        private ItemDataRuntime? ParseRow(List<string> fields, Dictionary<string, int> idx)
+        /// <summary>
+        /// One row from whatever <see cref="ContentFields"/> stands in front of it — a bundled CSV
+        /// row, a bundled row patched by an overlay, or an overlay row alone. Column names and
+        /// defaults are declared once, here (I4).
+        /// </summary>
+        private ItemDataRuntime? ParseRow(ContentFields f)
         {
             try
             {
-                string Get(string col, string def = "")
-                    => idx.TryGetValue(col, out int i) && i < fields.Count ? fields[i].Trim() : def;
-                int GetInt(string col, int def = 0)
-                    => int.TryParse(Get(col), out int v) ? v : def;
-
                 var item = new ItemDataRuntime
                 {
-                    itemId              = Get("id"),
-                    name                = Get("name"),
-                    category            = Get("category"),
-                    rarity              = Get("rarity"),
-                    restorePercent      = GetInt("restorePercent"),
-                    thumbnailSpriteName = Get("thumbnailSprite"),
-                    fullSpriteName      = Get("fullSprite"),
-                    proTip              = Get("proTip"),
-                    info                = Get("info"),
+                    itemId              = f.Get("id"),
+                    name                = f.Get("name"),
+                    category            = f.Get("category"),
+                    rarity              = f.Get("rarity"),
+                    restorePercent      = f.GetInt("restorePercent"),
+                    thumbnailSpriteName = f.Get("thumbnailSprite"),
+                    fullSpriteName      = f.Get("fullSprite"),
+                    proTip              = f.Get("proTip"),
+                    info                = f.Get("info"),
+                    isActive            = f.IsActive,
                 };
 
                 if (string.IsNullOrEmpty(item.itemId)) return null;
@@ -116,6 +187,9 @@ namespace Golfin.Inventory
                 Debug.LogWarning($"[ItemDatabaseCSV] Sprite not found: Resources/{folder}/{name}");
             return sprite;
         }
+
+        private static string SpritePath(string folder, string name)
+            => string.IsNullOrEmpty(name) ? string.Empty : folder + "/" + name;
 
         private static List<string> ParseCSVLine(string line)
         {
@@ -152,7 +226,11 @@ namespace Golfin.Inventory
             return null;
         }
 
+        /// <summary>EVERY item row, deactivated ones included — the inventory view (I6).</summary>
         public List<ItemDataRuntime> GetAllItems() => allItems.ToList();
+
+        /// <summary>Only ACTIVE rows — the shop / "can be acquired" view (I6).</summary>
+        public List<ItemDataRuntime> GetAvailableItems() => allItems.Where(i => i.isActive).ToList();
 
         public List<ItemDataRuntime> GetItemsByCategory(string category)
             => allItems.Where(i => i.category == category).ToList();

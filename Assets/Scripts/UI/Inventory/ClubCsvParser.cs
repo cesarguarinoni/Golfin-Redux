@@ -7,6 +7,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 #nullable enable
 using System.Collections.Generic;
+using Golfin.Content;  // ContentCatalog / ContentFields / ContentRow
 using Golfin.Roster;   // CharacterRarity
 
 namespace Golfin.Inventory
@@ -17,6 +18,30 @@ namespace Golfin.Inventory
     /// </summary>
     public class ClubCsvRow
     {
+        // ── Overlay provenance (content_overlay_catalogs) ─────────────────────
+        // Carried on the row rather than returned alongside it, because the runtime adapter needs
+        // to answer two questions per row — "did the overlay touch this?" and "what did the CSV say
+        // before it did?" — and the second one is what SPEC §5's sprite veto falls back to.
+
+        /// <summary>True when a published row patched this one, or supplied it outright.</summary>
+        public bool overlayApplied = false;
+
+        /// <summary>True when there was no bundled CSV row at all — an APPENDED overlay row.</summary>
+        public bool overlayAppended = false;
+
+        /// <summary>
+        /// I6 — deactivated, never deleted. False means: gone from the shop and from any pool,
+        /// still fully renderable in the bag of a player who owns one, still equipped if it was.
+        /// It is NOT a signal to drop the row.
+        /// </summary>
+        public bool isActive = true;
+
+        /// <summary>
+        /// The pre-merge row, when an overlay patched this one. Null for a bundled-only row and for
+        /// an appended one. This is what SPEC §5 reverts to when a published sprite does not resolve.
+        /// </summary>
+        public ClubCsvRow? bundled = null;
+
         public string id    = "";
         public string name  = "";
         public ClubType       type   = ClubType.Driver;
@@ -38,6 +63,7 @@ namespace Golfin.Inventory
         public string portraitFull   = "";
         public string controlSprite  = "";
 
+        public int    startLevel = 0;      // 0 = column absent; the caller falls back to the rarity table
         public int    maxLevel = 119;
         public string info     = "";
         public string infoJa   = "";
@@ -60,7 +86,28 @@ namespace Golfin.Inventory
         /// <summary>Lines starting with this (after trimming) are provenance comments, not data.</summary>
         public const char CommentPrefix = '#';
 
-        public static List<ClubCsvRow> Parse(string? csvText)
+        /// <summary>The bundled roster, with no overlay. Unchanged from Phase 1.</summary>
+        public static List<ClubCsvRow> Parse(string? csvText) => Parse(csvText, null);
+
+        /// <summary>
+        /// The bundled roster with an admin-published overlay merged on top (SPEC §1).
+        ///
+        /// <para>
+        /// <b>Field-by-field, never row-for-row.</b> A published row is a sparse patch: it overrides
+        /// the columns it names and leaves every other column at its bundled value (I4). That is why
+        /// the merge runs through <see cref="ContentFields"/> rather than replacing the row — an
+        /// operator editing only <c>basePower</c> must not blank the sprite names by omission.
+        /// </para>
+        /// <para>
+        /// Overlay rows whose id is NEW are APPENDED, after the bundled ones, in payload order.
+        /// </para>
+        /// <para>
+        /// Still pure — the overlay is a parameter, not a global — so the whole merge matrix is an
+        /// EditMode test. Sprite resolution (and SPEC §5's veto) stays in the runtime adapter,
+        /// because it is the only part that needs <c>Resources</c>.
+        /// </para>
+        /// </summary>
+        public static List<ClubCsvRow> Parse(string? csvText, ContentCatalog? overlay)
         {
             var rows = new List<ClubCsvRow>();
             if (string.IsNullOrWhiteSpace(csvText)) return rows;
@@ -76,12 +123,50 @@ namespace Golfin.Inventory
             if (headerLine < 0) return rows;
 
             var idx = BuildHeaderIndex(ParseLine(lines[headerLine]));
+            var seen = new HashSet<string>(System.StringComparer.Ordinal);
 
             for (int i = headerLine + 1; i < lines.Length; i++)
             {
                 if (IsSkippable(lines[i])) continue;
-                var row = ParseRow(ParseLine(lines[i].Trim()), idx);
-                if (row != null) rows.Add(row);
+
+                var fields = ParseLine(lines[i].Trim());
+
+                // The id has to come out of the CSV before the overlay can be looked up, so the
+                // bundled row is parsed first and patched second. That also gives §5 the pre-merge
+                // row it reverts to for free.
+                var bundled = ParseRow(ContentFields.Csv(fields, idx));
+                if (bundled == null) continue;
+
+                seen.Add(bundled.id);
+
+                ContentRow? patch = null;
+                overlay?.ById.TryGetValue(bundled.id, out patch);
+                if (patch == null) { rows.Add(bundled); continue; }
+
+                var merged = ParseRow(ContentFields.Csv(fields, idx, patch));
+                if (merged == null) { rows.Add(bundled); continue; }
+
+                merged.overlayApplied = true;
+                merged.isActive       = patch.IsActive;
+                merged.bundled        = bundled;
+                rows.Add(merged);
+            }
+
+            // Append overlay rows the bundled CSV has never carried.
+            if (overlay != null)
+            {
+                foreach (var row in overlay.Rows)
+                {
+                    if (seen.Contains(row.Id)) continue;
+
+                    var appended = ParseRow(ContentFields.OverlayOnly(row));
+                    if (appended == null) continue;
+
+                    appended.overlayApplied  = true;
+                    appended.overlayAppended = true;
+                    appended.isActive        = row.IsActive;
+                    rows.Add(appended);
+                }
             }
 
             return rows;
@@ -102,41 +187,41 @@ namespace Golfin.Inventory
             return idx;
         }
 
-        private static ClubCsvRow? ParseRow(List<string> fields, Dictionary<string, int> idx)
+        /// <summary>
+        /// One row from whatever <see cref="ContentFields"/> is standing in front of it: a bundled
+        /// CSV row, a bundled row patched by an overlay, or an overlay row on its own. The column
+        /// names and defaults are declared ONCE, here, which is what keeps a published row and a
+        /// bundled row from ever diverging on how a column is read.
+        /// </summary>
+        public static ClubCsvRow? ParseRow(ContentFields f)
         {
-            string Get(string col, string def = "")
-                => idx.TryGetValue(col, out int i) && i < fields.Count ? fields[i].Trim() : def;
-            int GetInt(string col, int def = 0)
-                => int.TryParse(Get(col), out int v) ? v : def;
-            float GetFloat(string col, float def = 0f)
-                => float.TryParse(Get(col), System.Globalization.NumberStyles.Float,
-                   System.Globalization.CultureInfo.InvariantCulture, out float v) ? v : def;
-
-            string id = Get("id");
+            string id = f.Get("id");
             if (string.IsNullOrEmpty(id)) return null;
 
             return new ClubCsvRow
             {
                 id                = id,
-                name              = Get("name"),
-                type              = ParseType(Get("type")),
-                rarity            = ParseRarity(Get("rarity", "Common")),
-                brand             = Get("brand"),
-                basePower         = GetInt("basePower"),
-                baseAccuracy      = GetInt("baseAccuracy"),
-                baseLieResistance = GetInt("baseLieResistance"),
-                baseLoft          = GetInt("baseLoft"),
-                maxDurability     = GetInt("maxDurability", 100),
-                baseDistance      = GetInt("baseDistance"),
-                ballSpeedMps      = GetFloat("ballSpeedMps",   75f),
-                launchAngleDeg    = GetFloat("launchAngleDeg", 10.9f),
-                spinRateRpm       = GetFloat("spinRateRpm",    2686f),
-                portraitSprite    = Get("portraitSprite"),
-                portraitFull      = Get("portraitFull"),
-                controlSprite     = Get("controlSprite"),
-                maxLevel          = GetInt("maxLevel", 119),
-                info              = Get("info"),
-                infoJa            = Get("info_ja"),
+                name              = f.Get("name"),
+                type              = ParseType(f.Get("type")),
+                rarity            = ParseRarity(f.Get("rarity", "Common")),
+                brand             = f.Get("brand"),
+                basePower         = f.GetInt("basePower"),
+                baseAccuracy      = f.GetInt("baseAccuracy"),
+                baseLieResistance = f.GetInt("baseLieResistance"),
+                baseLoft          = f.GetInt("baseLoft"),
+                maxDurability     = f.GetInt("maxDurability", 100),
+                baseDistance      = f.GetInt("baseDistance"),
+                ballSpeedMps      = f.GetFloat("ballSpeedMps",   75f),
+                launchAngleDeg    = f.GetFloat("launchAngleDeg", 10.9f),
+                spinRateRpm       = f.GetFloat("spinRateRpm",    2686f),
+                portraitSprite    = f.Get("portraitSprite"),
+                portraitFull      = f.Get("portraitFull"),
+                controlSprite     = f.Get("controlSprite"),
+                startLevel        = f.GetInt("startLevel", 0),
+                maxLevel          = f.GetInt("maxLevel", 119),
+                info              = f.Get("info"),
+                infoJa            = f.Get("info_ja"),
+                isActive          = f.IsActive,
             };
         }
 

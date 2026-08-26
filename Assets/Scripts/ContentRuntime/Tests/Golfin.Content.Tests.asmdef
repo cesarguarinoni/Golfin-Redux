@@ -1,0 +1,29 @@
+{
+    "name": "Golfin.Content.Tests",
+    "rootNamespace": "Golfin.Content.Tests",
+    "references": [
+        "Golfin.Content",
+        "Golfin.Net",
+        "Golfin.Localization",
+        "Golfin.Save"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "optionalUnityReferences": [
+        "TestAssemblies"
+    ],
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "nunit.framework.dll",
+        "Newtonsoft.Json.dll"
+    ],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

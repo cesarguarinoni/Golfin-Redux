@@ -19,6 +19,12 @@ namespace Golfin.Inventory
         public string proTip              = "";
         public string info                = "";
 
+        /// <summary>
+        /// I6 — deactivated, never deleted. False means: gone from the shop, still fully renderable
+        /// and usable in the inventory of a player who already holds one.
+        /// </summary>
+        public bool   isActive            = true;
+
         // Resolved at load time
         public Sprite? thumbnailSprite;
         public Sprite? fullSprite;

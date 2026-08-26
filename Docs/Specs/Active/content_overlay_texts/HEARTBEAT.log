@@ -1,0 +1,38 @@
+=== iter-1 kickoff baseline 2026-08-26 ===
+HEAD: 0998ecb497f940ed8d0bca36aab34f77293314bb
+DIRTY (git status --porcelain --untracked-files=all):
+ M Docs/CONTENT_PIPELINE_PLAN.md
+ M Docs/Specs/Active/content_cursor_per_catalog/SPEC.md
+ D Docs/Specs/Queued/content_admin_panels_NOTE.md
+ M Docs/TellCode.md
+ M Docs/Versioning/last_uploaded_build.txt
+?? Docs/PERF_OPTIMIZATION_PLAN.md
+?? Docs/Specs/Active/content_overlay_texts/ARCHITECT_REVIEW.md
+?? Docs/Specs/Active/content_overlay_texts/IMPLEMENTER_REPORT.md
+?? Docs/Specs/Active/content_overlay_texts/SELF_REVIEW.md
+?? Docs/Specs/Active/content_overlay_texts/SPEC.md
+?? Docs/Specs/Active/content_overlay_texts/STATUS.md
+?? Docs/Specs/Active/content_overlay_texts/reference/.gitkeep
+?? Docs/Specs/Active/content_overlay_texts/reference/README.md
+?? tasks/quit_transition_demo/quit_invariants.json
+=== end baseline ===
+Read SPEC, CONTENT_PIPELINE_PLAN §2/§4, RemoteNoticeSource, NoticeService, LocalizationManager/Bootstrap, Endpoints, ApiClient, BuildStampGenerator, AppVersion, backend routers/content.py. Probed live endpoint. Starting implementation.
+
+[+15m] Golfin.Content asmdef + 6 runtime files + 5 test files written. Compiles clean (0 errors).
+       ContentService order=-900 confirmed by reflection. ContentBuildNumber.Current=2297 (build_stamp.txt).
+       ContentVersionFile.VersionFor("texts")=11. ContentService added to ShellScene/TournamentService GO
+       (beside NoticeService). Scene-save produced 1297/1284 lines of anchor churn -> isolated the 2 real
+       hunks via git apply --cached idiom, restored ShellScene from HEAD, re-applied component-only patch.
+       ShellScene diff is now exactly 13 insertions, 0 deletions. Scene reloaded from disk, not dirty.
+       Next: full unfiltered EditMode sweep.
+
+[+70m] All acceptance runs done. 6 play-mode boots (no-cache / warm 8-row / corrupt / kill-switch /
+       garbage-cursor / real 501-row). Execution order proven in log both directions. EN + JA
+       screenshots captured at 1170x2532 via the sanctioned GOLFIN/Screenshot menu item.
+       Full unfiltered EditMode sweep: 1615 tests, 1595 pass, 17 fail (ALL pre-existing — Save
+       schema 9-vs-10 from HEAD commit baa9f123c, SaveSchemaMigrator.cs:18 ships 10; plus one
+       Tournaments STR 6-vs-7), 3 skip (pre-existing). 61 new tests, 0 failures.
+       NOTE: HEAD moved mid-session (0998ecb49 -> 96c9e0d78 "Docs and Tellcode", Cesar's own
+       commit at 08:55). `_to_delete/` disappeared from disk in the same window; no command this
+       session touched that path. Not staged, not reverted, reported as not-mine.
+       Writing report.

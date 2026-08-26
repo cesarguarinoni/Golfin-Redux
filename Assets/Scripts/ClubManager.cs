@@ -2,6 +2,7 @@
 using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
+using Golfin.Content;
 using Golfin.Inventory;
 using Golfin.Roster;
 using Golfin.Save;
@@ -10,7 +11,17 @@ using Golfin.Save;
 /// Singleton — owns all player club data, handles equip/unequip and bag assignment.
 /// Mirrors CharacterManager pattern.
 ///
-/// Execution order: after ClubDatabaseCSV (set in Project Settings > Script Execution Order).
+/// <para>
+/// <b>Execution order: after ClubDatabaseCSV — and now ASSERTED rather than assumed.</b>
+/// The guarantee is NOT [DefaultExecutionOrder] (neither class has one) and NOT Project Settings
+/// (this project has no ProjectSettings/MonoManager.asset at all). It is the <c>executionOrder:</c>
+/// field committed into ClubDatabaseCSV.cs.meta (-90) and ClubManager.cs.meta (-80), written ONCE
+/// by the <c>GOLFIN ▸ Setup ▸ Club Managers</c> menu item and never re-asserted afterwards —
+/// unlike SaveDataHost's, which an [InitializeOnLoad] hook re-applies on every reload. A
+/// regenerated or merge-mangled .meta silently drops both to 0, where the relative order is
+/// UNDEFINED and this manager would hydrate from an empty catalog. Hence the
+/// <c>ClubDatabaseCSV.IsLoaded</c> check in InitializeClubs (content_overlay_catalogs).
+/// </para>
 /// </summary>
 public class ClubManager : MonoBehaviour
 {
@@ -135,6 +146,20 @@ public class ClubManager : MonoBehaviour
             return;
         }
 
+        // ── DB-BEFORE-MANAGER, ASSERTED (content_overlay_catalogs) ───────────
+        // Instance != null only proves ClubDatabaseCSV's Awake STARTED. IsLoaded proves LoadCSV
+        // finished with rows. Without this, a broken order produces a zero-row catalog, which makes
+        // BuildCatalog empty, which makes seeding grant nothing — a player with no clubs and not a
+        // single error in the log. See the class remarks for where the ordering actually comes from.
+        if (!db.IsLoaded)
+        {
+            Debug.LogError(
+                "[ClubManager] EXECUTION ORDER BROKEN: ClubDatabaseCSV exists but has loaded no rows " +
+                "yet, so the club catalog is about to be read EMPTY. ClubDatabaseCSV must stay ahead " +
+                "of ClubManager (-90 vs -80, from their .cs.meta executionOrder fields — re-run " +
+                "GOLFIN ▸ Setup ▸ Club Managers if a .meta lost the field).");
+        }
+
         ownedClubs.Clear();
 
         var host = SaveDataHost.Instance;
@@ -155,6 +180,24 @@ public class ClubManager : MonoBehaviour
         }
 
         var save = host.Data;
+
+        // ── THE CLAMP STEP (content_overlay_catalogs §2) ─────────────────────
+        //
+        // ONCE, HERE, and never at a read site. This is the first point in the boot where BOTH
+        // halves are available — the overlaid club definitions (ClubDatabaseCSV, order -90) and the
+        // loaded save (SaveDataHost, -100) — and it runs BEFORE HydrateFrom, so the runtime dict is
+        // built from already-clamped values.
+        //
+        // The case that matters: a published maxDurability BELOW an owned club's currentDurability.
+        // The saved copy of maxDurability follows the catalog down, currentDurability follows it,
+        // and both movements are logged with id / field / old / new. A silent clamp is
+        // indistinguishable from a bug report six weeks later.
+        //
+        // equippedBagSlot is deliberately NOT touched: I6 says a club whose row became
+        // is_active=false stays exactly as equipped as it was.
+        var clampEvents = ContentClamp.ClampClubs(save.ownedClubs, BuildClampDefinitions(db));
+        ContentClamp.LogAll(clampEvents, "clubs");
+        if (clampEvents.Count > 0) host.MarkDirty();
 
         if (!save.clubOwnershipSeeded)
         {
@@ -280,6 +323,35 @@ public class ClubManager : MonoBehaviour
                 return true;
         }
         return false;
+    }
+
+    /// <summary>
+    /// The bounds every owned club must fit inside, from the (possibly overlaid) catalog.
+    /// <para>
+    /// Club SP caps FLAT per stat (<see cref="PlayerClubData.MAX_SP_PER_STAT"/>) rather than by
+    /// rarity, so — unlike characters — a club rarity change cannot orphan allocated SP. The SP
+    /// clamp still runs, because a negative or corrupt value is a state a save can genuinely be in.
+    /// </para>
+    /// <para>
+    /// <c>startLevel</c> comes from the Clubs.csv column when the row carries one and falls back to
+    /// the rarity table otherwise, so a published <c>startLevel</c> is honoured by the clamp without
+    /// changing how a NEW club is granted (<see cref="BuildSpec"/> keeps the rarity table).
+    /// </para>
+    /// </summary>
+    private Dictionary<string, ClubClampDefinition> BuildClampDefinitions(ClubDatabaseCSV db)
+    {
+        var map = new Dictionary<string, ClubClampDefinition>(System.StringComparer.Ordinal);
+        foreach (var t in db.GetAllClubs())
+        {
+            if (string.IsNullOrEmpty(t.clubId)) continue;
+            map[t.clubId] = new ClubClampDefinition(
+                t.clubId,
+                t.maxDurability,
+                t.startLevel > 0 ? t.startLevel : GetStartingLevel(t.rarity),
+                t.maxLevel,
+                PlayerClubData.MAX_SP_PER_STAT);
+        }
+        return map;
     }
 
     /// <summary>Builds the pure ClubCatalogSpec list from the club DB for the ownership service.</summary>

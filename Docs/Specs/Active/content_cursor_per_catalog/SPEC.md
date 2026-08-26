@@ -99,7 +99,21 @@ public static string Content(string since, int build) =>
 
 Still called by nothing. Do not write `ContentService`.
 
-### 5. Fix the live texts drift — and make it impossible to miss again
+### 5. ~~Fix the live texts drift~~ — ⚠️ THE PREMISE WAS WRONG. There is no drift.
+
+**Correction, Architect, 2026-08-25.** I asserted a live 501-vs-502 drift. There was none: 501 = 501,
+identical id sets, `export --check` clean before anything was touched. `LocalizationText.csv` is
+**503 lines = 1 header + 1 mid-file `#` comment + 501 keys**, and my count came from
+`csv.DictReader`, which does not skip comment lines — so I counted the comment as a row. The game's
+own `LocalizationTextImporter` skips any line with fewer than 3 columns, which is precisely what
+that comment line says about itself.
+
+The lesson is the one worth keeping: **I validated with a different parser than the one that ships,
+and got a different answer.** The drift check was still built and is still right — and it gates on
+**id sets, not counts**, because two files can hold 501 rows each and disagree about which 501.
+
+Original text follows for the record.
+
 
 **The `texts` catalog holds 501 rows; `Assets/Localization/LocalizationText.csv` holds 502.**
 Measured on prod against the working tree the day after Phase 0 landed. The A3 round-trip was
@@ -198,7 +212,7 @@ in step.
 - [ ] An unparseable pair yields `full` for that catalog and a server log line — not a 400
 - [ ] Top-level `version` is GONE from the response; `latest_version` remains and is documented as not-a-cursor
 - [ ] Publish `texts`, then re-fetch with the OLD texts cursor and an unchanged clubs cursor: texts returns the changed rows, clubs returns `changed: []` (this is the exact case `max` lost and `min` replayed)
-- [ ] `texts` catalog row count on prod == `LocalizationText.csv` data row count (paste both)
+- [x] ~~texts row count matches~~ — no drift existed; see the §5 correction. Superseded by the id-set check below.
 - [ ] `export_content.py --check` exits non-zero on a deliberately introduced drift and names the offending ids; exits 0 when clean
 - [ ] `shop_club_pwedge_royal.saleRpCost` blanked per §6 and `saleRpCost < rpCost` restored as blocking
 - [x] ~~Dashboard deployed + signed-in 200 on `/api/content`~~ — DONE 2026-08-25 by the Architect, see §8

@@ -65,11 +65,48 @@ namespace Golfin.Inventory.Tests
 
         // ── Reflection wrappers ───────────────────────────────────────────────
 
-        /// <summary>ClubCsvParser.Parse(text) — returned as a non-generic IList of ClubCsvRow.</summary>
+        /// <summary>
+        /// ClubCsvParser.Parse(text) — returned as a non-generic IList of ClubCsvRow.
+        /// <para>
+        /// Bound by SIGNATURE, not by name: content_overlay_catalogs added a second
+        /// <c>Parse(string, ContentCatalog)</c> overload, and a name-only GetMethod would start
+        /// throwing AmbiguousMatchException the moment it did.
+        /// </para>
+        /// </summary>
         internal static IList Parse(string? csvText)
         {
-            var m = Parser.GetMethod("Parse", BindingFlags.Public | BindingFlags.Static)!;
+            var m = Parser.GetMethod("Parse", BindingFlags.Public | BindingFlags.Static,
+                        null, new[] { typeof(string) }, null)!;
             return (IList)m.Invoke(null, new object?[] { csvText })!;
+        }
+
+        /// <summary>ClubCsvParser.Parse(text, overlay) — the merged roster (content_overlay_catalogs §1).</summary>
+        internal static IList Parse(string? csvText, Golfin.Content.ContentCatalog? overlay)
+        {
+            var m = Parser.GetMethod("Parse", BindingFlags.Public | BindingFlags.Static,
+                        null, new[] { typeof(string), typeof(Golfin.Content.ContentCatalog) }, null)!;
+            return (IList)m.Invoke(null, new object?[] { csvText, overlay })!;
+        }
+
+        /// <summary>Find one row by id in a parsed roster, or null.</summary>
+        internal static object? Row(IList rows, string id)
+        {
+            foreach (var r in rows)
+                if (Field<string>(r!, "id") == id) return r;
+            return null;
+        }
+
+        /// <summary>
+        /// A one-catalog overlay built from <c>{id: {column: value}}</c>, for merge tests.
+        /// </summary>
+        internal static Golfin.Content.ContentCatalog Overlay(
+            string catalog,
+            params (string id, bool isActive, Dictionary<string, string?> data)[] rows)
+        {
+            var list = new List<Golfin.Content.ContentRow>();
+            foreach (var (id, isActive, data) in rows)
+                list.Add(new Golfin.Content.ContentRow(id, isActive, 0, data));
+            return new Golfin.Content.ContentCatalog(catalog, 42, false, list);
         }
 
         /// <summary>Reads one public field off a ClubCsvRow instance.</summary>

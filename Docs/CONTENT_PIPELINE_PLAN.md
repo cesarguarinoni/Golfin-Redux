@@ -266,9 +266,30 @@ sync is actually wanted for the beta.
 3. **Rollback = republish a snapshot.** `content_versions` makes this one click. It is the
    answer to "an update broke installed games", and it needs to be tested once, on purpose,
    before beta.
-4. **Kill switch.** `content_catalogs.is_enabled=false` → the manifest reports
-   `enabled:false` → clients ignore all remote content and run bundled until it is flipped
-   back. One flag, no deploy.
+4. **Kill switches, two of them.** ⚠️ **AMENDED 2026-08-26 — the original wording of this item
+   WAS the bug.** It described one switch doing two jobs: a per-catalog column driving a global
+   client behaviour. `routers/content.py` implemented it faithfully (`enabled` ANDed across the
+   requested catalogs) and `ContentService` implemented the client half faithfully (requests all
+   catalogs, drops every cache on `enabled:false`). Each half matched this document; together they
+   meant **disabling one catalog reverted all seven to bundled on every client**. Review never
+   caught it because the code matched the spec — the spec was wrong. Corrected by
+   `content_kill_switch_and_order`; found by flipping the switch against prod, which nobody had done.
+
+   - **Per-catalog kill** — `content_catalogs.is_enabled=false` kills ONE catalog. It vanishes from
+     `catalogs` and is named in the top-level `disabled` list; that catalog reverts to bundled and
+     no other is touched.
+   - **Global kill** — `content_settings.content_enabled=false`. Top-level `enabled` goes false and
+     clients ignore all remote content until it is flipped back.
+   - **Top-level `enabled` is NEVER a function of which catalogs the client requested.** Derive it
+     from the whole registry, so the same server state gives every client the same answer. The
+     invariance of `disabled` across requested subsets is the property that regresses first.
+   - `_global_enabled()` **fails OPEN** — a missing table, missing row or any exception reads as
+     enabled. Failing closed would turn a transient PostgREST blip into a global cache wipe,
+     recovered only on the launch after that.
+   - One flag each, no deploy. ⚠️ The global flag currently has **no dashboard control** — it needs
+     a SQL `update`, which does not meet "no deploy" in spirit. Own task.
+   - **A kill is not instant:** 60 s response cache plus apply-at-next-launch (I5). Budget up to
+     60 s to reach a client, landing at its next launch; re-enabling costs another launch.
 5. **Deactivate, never delete** (I6), enforced in the API layer, not just the UI.
 6. **Staging target.** `Endpoints.RootUrl` is already settable; point dev builds at a staging
    catalog so a publish is rehearsed before it reaches phones.

@@ -95,11 +95,24 @@ namespace Golfin.Net
         /// <c>data.latest_version</c> survives as INFORMATIONAL ONLY — "which publish is prod on",
         /// for the dashboard and for logs. NEVER replay it as a cursor.
         ///
-        /// NOTHING CALLS THIS YET. Phase 0 (content_catalog SPEC §B2) stands up the backend only;
-        /// the client-side reader lands with the ContentService spec.
+        /// <paramref name="catalogs"/> narrows the response to a comma-separated subset
+        /// ("texts"). Null/empty asks for every catalog. An UNKNOWN NAME IS IGNORED server-side,
+        /// not a 400, so a build asking for a catalog this server does not have yet degrades
+        /// rather than fails. <c>Golfin.Content.ContentService</c> sends "texts" and only "texts":
+        /// Phase 1 overlays texts alone, and asking for catalogs it will not read would cost a
+        /// 275 KB clubs payload on the boot path for nothing.
+        ///
+        /// CALLED BY <c>Golfin.Content.RemoteContentSource.FetchRoutine</c> (content_overlay_texts,
+        /// Phase 1) — the first client-side reader of the content pipeline.
         /// </summary>
-        public static string Content(string since, int build) =>
-            BaseUrl + "/content?since=" + UnityWebRequest.EscapeURL(since ?? "") + "&build=" + build;
+        public static string Content(string since, int build, string catalogs = null)
+        {
+            string url = BaseUrl + "/content?since=" + UnityWebRequest.EscapeURL(since ?? "") +
+                         "&build=" + build;
+            if (!string.IsNullOrEmpty(catalogs))
+                url += "&catalogs=" + UnityWebRequest.EscapeURL(catalogs);
+            return url;
+        }
 
         /// <summary>
         /// POST <c>{session_id, app_version, build_number, platform, device_model, os, events:[…]}</c>

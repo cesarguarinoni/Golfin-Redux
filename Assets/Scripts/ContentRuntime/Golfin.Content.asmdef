@@ -1,0 +1,20 @@
+{
+    "name": "Golfin.Content",
+    "rootNamespace": "Golfin.Content",
+    "references": [
+        "Golfin.Net",
+        "Golfin.Localization",
+        "Golfin.Save"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "Newtonsoft.Json.dll"
+    ],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

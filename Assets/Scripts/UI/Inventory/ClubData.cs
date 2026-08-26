@@ -53,7 +53,24 @@ namespace Golfin.Inventory
         public string  controlSpriteName  = "";
         public Sprite? controlSprite      = null;
 
+        /// <summary>
+        /// Clubs.csv <c>startLevel</c>. 0 means the column was absent, in which case callers fall
+        /// back to the rarity table (<c>ClubManager.GetStartingLevel</c>). It is the lower bound of
+        /// the level clamp in <c>ContentClamp.ClampClubs</c>.
+        /// </summary>
+        public int    startLevel = 0;
+
         public int    maxLevel = 119;
+
+        /// <summary>
+        /// I6 — <b>deactivated, never deleted</b>. False means: gone from the shop and from any
+        /// pool that can hand out a NEW club, but still fully renderable in the bag of a player who
+        /// owns one, and still equipped if it was. Use
+        /// <c>ClubDatabaseCSV.GetAvailableClubs()</c> for the "can be acquired" view and
+        /// <c>GetAllClubs()</c> for the "can be rendered" one.
+        /// </summary>
+        public bool   isActive = true;
+
         public string info     = "";
 
         /// <summary>

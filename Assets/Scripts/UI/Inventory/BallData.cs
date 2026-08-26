@@ -30,6 +30,12 @@ namespace Golfin.Inventory
 
         public string info = "";
 
+        /// <summary>
+        /// I6 — deactivated, never deleted. False means: gone from the shop, still fully renderable
+        /// and playable in the bag of a player who already owns one.
+        /// </summary>
+        public bool isActive = true;
+
         public override string ToString() =>
             $"{name}: PWR={power} REB={rebound} WIND={windResistance} ROLL={roll} SPIN={spin}";
     }

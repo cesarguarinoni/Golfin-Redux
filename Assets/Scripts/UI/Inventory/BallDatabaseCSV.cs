@@ -2,15 +2,17 @@
 using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
+using Golfin.Content;
 
 namespace Golfin.Inventory
 {
     /// <summary>
     /// CSV-driven ball database — mirrors ClubDatabaseCSV pattern.
-    /// Loads Balls.csv from a TextAsset assigned in Inspector and resolves
+    /// Loads Balls.csv from a TextAsset assigned in Inspector, merges the admin-published
+    /// <c>balls</c> overlay on top of it (content_overlay_catalogs §1), and resolves
     /// sprites from Resources/Balls/Thumbnails/ and Resources/Balls/Full/.
     ///
-    /// Execution order: runs before BallManager so data is ready for it.
+    /// Execution order -70 (from BallDatabaseCSV.cs.meta), i.e. behind ContentService's -900.
     /// </summary>
     public class BallDatabaseCSV : MonoBehaviour
     {
@@ -44,24 +46,89 @@ namespace Golfin.Inventory
             ballMap.Clear();
             allBalls.Clear();
 
+            ContentCatalog? overlay = ContentCatalogStore.RequireReady(nameof(BallDatabaseCSV))
+                ? ContentCatalogStore.Catalog(ContentCatalogs.Balls)
+                : null;
+
             string[] lines = ballsCSV.text.Split('\n');
             if (lines.Length < 2) { Debug.LogError("[BallDatabaseCSV] Balls.csv is empty."); return; }
 
             var headerIndex = BuildHeaderIndex(ParseCSVLine(lines[0]));
+            var seen = new HashSet<string>(System.StringComparer.Ordinal);
+            int overlaid = 0, deactivated = 0;
 
             for (int i = 1; i < lines.Length; i++)
             {
                 string line = lines[i].Trim();
                 if (string.IsNullOrEmpty(line)) continue;
 
-                var ball = ParseRow(ParseCSVLine(line), headerIndex);
-                if (ball == null) continue;
+                var fields = ParseCSVLine(line);
 
+                var bundled = ParseRow(ContentFields.Csv(fields, headerIndex));
+                if (bundled == null) continue;
+
+                seen.Add(bundled.ballId);
+
+                ContentRow? patch = null;
+                overlay?.ById.TryGetValue(bundled.ballId, out patch);
+
+                var ball = bundled;
+                if (patch != null)
+                {
+                    var merged = ParseRow(ContentFields.Csv(fields, headerIndex, patch));
+                    if (merged != null)
+                    {
+                        // SPEC §5 — only names the overlay CHANGED are guarded.
+                        string? unresolved = ContentSpriteGuard.FirstUnresolvedChange(new[]
+                        {
+                            new SpriteRef(ThumbnailPath, bundled.thumbnailSpriteName, merged.thumbnailSpriteName),
+                            new SpriteRef(FullPath,      bundled.fullSpriteName,      merged.fullSpriteName),
+                        });
+
+                        if (unresolved != null)
+                            ContentSpriteGuard.LogVeto(ContentCatalogs.Balls, bundled.ballId, unresolved, false);
+                        else { ball = merged; overlaid++; }
+                    }
+                }
+
+                if (!ball.isActive) deactivated++;
                 ballMap[ball.ballId] = ball;
                 allBalls.Add(ball);
             }
 
-            Debug.Log($"[BallDatabaseCSV] Loaded {allBalls.Count} balls.");
+            if (overlay != null)
+            {
+                foreach (var row in overlay.Rows)
+                {
+                    if (seen.Contains(row.Id)) continue;
+
+                    var appended = ParseRow(ContentFields.OverlayOnly(row));
+                    if (appended == null) continue;
+
+                    string? unresolved = ContentSpriteGuard.FirstUnresolved(new[]
+                    {
+                        SpritePath(ThumbnailPath, appended.thumbnailSpriteName),
+                        SpritePath(FullPath,      appended.fullSpriteName),
+                    });
+
+                    if (unresolved != null)
+                    {
+                        ContentSpriteGuard.LogVeto(ContentCatalogs.Balls, appended.ballId, unresolved, true);
+                        continue;
+                    }
+
+                    if (!appended.isActive) deactivated++;
+                    ballMap[appended.ballId] = appended;
+                    allBalls.Add(appended);
+                    overlaid++;
+                }
+            }
+
+            Debug.Log($"[BallDatabaseCSV] Loaded {allBalls.Count} balls" +
+                      (overlay == null
+                          ? " — BUNDLED only, no balls overlay this launch."
+                          : $" — overlay v{overlay.Version}: {overlaid} row(s) patched/appended, " +
+                            $"{deactivated} deactivated (still owned + playable, I6)."));
         }
 
         private Dictionary<string, int> BuildHeaderIndex(List<string> headers)
@@ -72,28 +139,28 @@ namespace Golfin.Inventory
             return idx;
         }
 
-        private BallDataRuntime? ParseRow(List<string> fields, Dictionary<string, int> idx)
+        /// <summary>
+        /// One row from whatever <see cref="ContentFields"/> stands in front of it — bundled,
+        /// bundled+overlay, or overlay alone. Column names declared once, here (I4).
+        /// </summary>
+        private BallDataRuntime? ParseRow(ContentFields f)
         {
             try
             {
-                string Get(string col, string def = "")
-                    => idx.TryGetValue(col, out int i) && i < fields.Count ? fields[i].Trim() : def;
-                int GetInt(string col, int def = 0)
-                    => int.TryParse(Get(col), out int v) ? v : def;
-
                 var ball = new BallDataRuntime
                 {
-                    ballId              = Get("id"),
-                    name                = Get("name"),
-                    brand               = Get("brand"),
-                    power               = GetInt("power"),
-                    rebound             = GetInt("rebound"),
-                    windResistance      = GetInt("windResistance"),
-                    roll                = GetInt("roll"),
-                    spin                = GetInt("spin"),
-                    thumbnailSpriteName = Get("thumbnailSprite"),
-                    fullSpriteName      = Get("fullSprite"),
-                    info                = Get("info"),
+                    ballId              = f.Get("id"),
+                    name                = f.Get("name"),
+                    brand               = f.Get("brand"),
+                    power               = f.GetInt("power"),
+                    rebound             = f.GetInt("rebound"),
+                    windResistance      = f.GetInt("windResistance"),
+                    roll                = f.GetInt("roll"),
+                    spin                = f.GetInt("spin"),
+                    thumbnailSpriteName = f.Get("thumbnailSprite"),
+                    fullSpriteName      = f.Get("fullSprite"),
+                    info                = f.Get("info"),
+                    isActive            = f.IsActive,
                 };
 
                 if (string.IsNullOrEmpty(ball.ballId)) return null;
@@ -118,6 +185,9 @@ namespace Golfin.Inventory
                 Debug.LogWarning($"[BallDatabaseCSV] Sprite not found: Resources/{folder}/{name}");
             return sprite;
         }
+
+        private static string SpritePath(string folder, string name)
+            => string.IsNullOrEmpty(name) ? string.Empty : folder + "/" + name;
 
         // Reuse the same CSV parser as ClubDatabaseCSV
         private static List<string> ParseCSVLine(string line)
@@ -155,6 +225,10 @@ namespace Golfin.Inventory
             return null;
         }
 
+        /// <summary>EVERY ball row, deactivated ones included — the bag view (I6).</summary>
         public List<BallDataRuntime> GetAllBalls() => allBalls.ToList();
+
+        /// <summary>Only ACTIVE rows — the shop / "can be acquired" view (I6).</summary>
+        public List<BallDataRuntime> GetAvailableBalls() => allBalls.Where(b => b.isActive).ToList();
     }
 }

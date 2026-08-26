@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using Golfin.Content;
 using Golfin.Core.Stamina;
 using Golfin.Save;
 using Golfin.Audio.Events;
@@ -60,6 +61,22 @@ namespace Golfin.Roster
 
             // Step 1: Build dict from CSV templates (or ScriptableObject fallback)
             var csvDb = CharacterDatabaseCSV.Instance;
+
+            // ── DB-BEFORE-MANAGER, ASSERTED (content_overlay_catalogs) ───────
+            // CharacterDatabaseCSV is -200 and this is -100, but that comes from a committed
+            // `executionOrder:` in each .cs.meta and nothing re-asserts it. A database that has NOT
+            // run yet hands back an EMPTY roster, and an empty roster is indistinguishable from
+            // "the player owns nothing" at every consumer downstream. Error, not warning: it is a
+            // wiring defect, not a designed path.
+            if (csvDb != null && !csvDb.IsLoaded)
+            {
+                Debug.LogError(
+                    "[CharacterManager] EXECUTION ORDER BROKEN: CharacterDatabaseCSV exists but has " +
+                    "not loaded any rows yet, so this roster is about to be built from an EMPTY " +
+                    "catalog. CharacterDatabaseCSV must stay ahead of CharacterManager " +
+                    "(-200 vs -100, from their .cs.meta executionOrder fields).");
+            }
+
             if (csvDb != null)
             {
                 var allChars = csvDb.GetAllCharacters();
@@ -103,6 +120,23 @@ namespace Golfin.Roster
             {
                 var saveData = SaveDataHost.Instance.Data;
                 var nowUtc   = DateTime.UtcNow;
+
+                // ── THE CLAMP STEP (content_overlay_catalogs §2) ──────────────
+                //
+                // ONCE, HERE, and never at a read site. This is the first point in the boot where
+                // BOTH halves are available — the overlaid character definitions (CharacterDatabaseCSV,
+                // order -200) and the loaded save (SaveDataHost, -100) — and it runs BEFORE the
+                // hydration loop below, so nothing downstream ever sees an out-of-bounds value.
+                //
+                // The case that matters: a rarity DOWNGRADE. Legendary → Rare drops the Strength cap
+                // 40 → 30, orphaning any SP allocated above the new ceiling. It is clamped and
+                // logged; NOTHING IS REFUNDED (SPEC §2, explicitly out of scope — refunding is its
+                // own economy decision, and inventing one here would make it impossible to make
+                // properly later).
+                var clampEvents = ContentClamp.ClampCharacters(
+                    saveData.ownedCharacters, BuildCharacterClampDefinitions());
+                ContentClamp.LogAll(clampEvents, "characters");
+                if (clampEvents.Count > 0) SaveDataHost.Instance.MarkDirty();
 
                 foreach (var persisted in saveData.ownedCharacters)
                 {
@@ -321,7 +355,9 @@ namespace Golfin.Roster
         {
             var db = CharacterDatabaseCSV.Instance;
             return ownedCharacters.Values
-                .Where(c => db?.GetCharacter(c.characterId)?.starterCandidate == true)
+                // I6: a DEACTIVATED character can still be owned and rendered, but it must never
+                // be offered as a NEW starter — this is an "available" list.
+                .Where(c => db?.GetCharacter(c.characterId) is { starterCandidate: true, isActive: true })
                 .ToList();
         }
 
@@ -429,6 +465,47 @@ namespace Golfin.Roster
         public CharacterData? GetCharacter(string characterId)
             => GetCharacterTemplate(characterId);
 
+        /// <summary>
+        /// The bounds every owned character must fit inside, from the (possibly overlaid) catalog.
+        ///
+        /// <para>
+        /// The SP ceilings are SPENT ceilings, not stat caps: <see cref="RarityStatCaps"/> caps
+        /// <c>base + spent</c>, so what the clamp needs is <c>max(0, cap − base)</c> for the row's
+        /// CURRENT rarity — which is exactly the number a rarity downgrade moves. Computed here
+        /// rather than inside ContentClamp because RarityStatCaps lives in Assembly-CSharp and
+        /// Golfin.Content cannot reference it.
+        /// </para>
+        /// <para>
+        /// <c>startLevel</c> comes from the CSV column when the row carries one and falls back to
+        /// the rarity table otherwise, so a published <c>startLevel</c> is honoured without
+        /// changing how a NEW character is seeded.
+        /// </para>
+        /// </summary>
+        private Dictionary<string, CharacterClampDefinition> BuildCharacterClampDefinitions()
+        {
+            var map = new Dictionary<string, CharacterClampDefinition>(StringComparer.Ordinal);
+
+            var db = CharacterDatabaseCSV.Instance;
+            if (db == null) return map;
+
+            foreach (var t in db.GetAllCharacters())
+            {
+                if (string.IsNullOrEmpty(t.characterId)) continue;
+
+                var caps = RarityStatCaps.GetStatCaps(t.rarity);
+                map[t.characterId] = new CharacterClampDefinition(
+                    t.characterId,
+                    t.startLevel > 0 ? t.startLevel : GetStartingLevel(t.rarity),
+                    t.maxLevel > 0 ? t.maxLevel : GetMaxLevelForRarity(t.rarity),
+                    Mathf.Max(0, caps.strengthCap    - t.baseStrength),
+                    Mathf.Max(0, caps.clubControlCap - t.baseClubControl),
+                    Mathf.Max(0, caps.recoveryCap    - t.baseRecovery),
+                    Mathf.Max(0, caps.staminaCap     - t.baseStamina));
+            }
+
+            return map;
+        }
+
         private int GetStartingLevel(CharacterRarity rarity) => rarity switch
         {
             CharacterRarity.Common    => 10,
@@ -451,12 +528,32 @@ namespace Golfin.Roster
             _                         => 39
         };
 
-        /// <summary>Get max level based on rarity.</summary>
+        /// <summary>
+        /// The character's level ceiling: the CATALOG's <c>maxLevel</c> when the row carries one,
+        /// and the rarity table only as a fallback.
+        ///
+        /// <para>
+        /// ⚠️ This used to read <see cref="GetMaxLevelForRarity"/> unconditionally and ignore the
+        /// CSV's <c>maxLevel</c> column entirely. That was invisible while the bundled CSV agreed
+        /// with the table (Common 39, Uncommon 79, …) — content_overlay_catalogs is what makes them
+        /// able to DISAGREE, and the bug it produced is worth naming: a published maxLevel of 20
+        /// clamped the SAVE to 20 on load (ContentClamp) while the roster went on showing "/39" and
+        /// LevelUp went on selling levels 21–39. The player would climb back above the published
+        /// ceiling and be silently clamped down again on the next launch, forever, having spent the
+        /// RP each time.
+        /// </para>
+        /// <para>
+        /// The clamp and the UI must read the SAME ceiling. This is that ceiling.
+        /// </para>
+        /// </summary>
         public int GetMaxLevel(string characterId)
         {
             var csv = CharacterDatabaseCSV.Instance?.GetCharacter(characterId);
-            if (csv != null) return GetMaxLevelForRarity(csv.rarity);
+            if (csv != null)
+                return csv.maxLevel > 0 ? csv.maxLevel : GetMaxLevelForRarity(csv.rarity);
 
+            // The ScriptableObject fallback carries no maxLevel column, so the rarity table is all
+            // there is — and it is never the overlaid path anyway.
             var so = GetCharacterTemplate(characterId);
             if (so != null) return GetMaxLevelForRarity(so.rarity);
 
