@@ -1,0 +1,25 @@
+=== Phase 1 baseline (Builds/iOS-Dev, built 2026-08-26 21:28, HEAD before quality_tiers) ===
+Data/ total:
+  1233700 KB (1204.8 MB)
+Data/ breakdown:
+398536	Builds/iOS-Dev/Data/resources.assets
+85092	Builds/iOS-Dev/Data/resources.assets.resS
+36940	Builds/iOS-Dev/Data/sharedassets0.assets.resS
+29644	Builds/iOS-Dev/Data/sharedassets2.assets
+29476	Builds/iOS-Dev/Data/sharedassets4.assets
+29252	Builds/iOS-Dev/Data/sharedassets7.assets
+29064	Builds/iOS-Dev/Data/sharedassets6.assets
+29052	Builds/iOS-Dev/Data/sharedassets9.assets
+29040	Builds/iOS-Dev/Data/sharedassets14.assets
+29036	Builds/iOS-Dev/Data/sharedassets13.assets
+29032	Builds/iOS-Dev/Data/sharedassets15.assets
+29028	Builds/iOS-Dev/Data/sharedassets3.assets
+resources.assets / shader data:
+-rw-r--r--@ 1 cesar  staff    1196008 Aug 26 21:28 Builds/iOS-Dev/Data/globalgamemanagers.assets
+-rw-r--r--@ 1 cesar  staff  408098264 Aug 26 21:28 Builds/iOS-Dev/Data/resources.assets
+-rw-r--r--@ 1 cesar  staff   11364480 Aug 26 21:28 Builds/iOS-Dev/Data/sharedassets0.assets
+-rw-r--r--@ 1 cesar  staff    4295904 Aug 26 21:28 Builds/iOS-Dev/Data/sharedassets0.resource
+-rw-r--r--@ 1 cesar  staff     155840 Aug 26 21:28 Builds/iOS-Dev/Data/sharedassets1.assets
+-rw-r--r--@ 1 cesar  staff   29687192 Aug 26 21:28 Builds/iOS-Dev/Data/sharedassets10.assets
+-rw-r--r--@ 1 cesar  staff   29699228 Aug 26 21:28 Builds/iOS-Dev/Data/sharedassets11.assets
+-rw-r--r--@ 1 cesar  staff   29688464 Aug 26 21:28 Builds/iOS-Dev/Data/sharedassets12.assets
