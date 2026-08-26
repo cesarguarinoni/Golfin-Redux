@@ -860,3 +860,95 @@ to terrain size), applied to every device, inside the §2 "identical terrain" ru
 | C — Instruments Metal System Trace | Not started |
 | D — Memory Profiler snapshot / top-10 / load-spike GC | Not started |
 | E — GC alloc call stack behind ~29 KB/frame | Not started. The 29,030 B/frame figure is confirmed stable across every hole and every experiment |
+
+---
+
+# 11. Phase 1 — `perf_phase1_free_wins` (2026-08-26, code complete; device numbers outstanding)
+
+> **Read the header before the tables: there are no Phase 1 device numbers in this section yet.**
+> Dev build **2311** is deliberately still on the phone as the Phase 1 **"before"**, so no iOS build
+> was made when the code landed. Everything below is what was *implemented and verified in the
+> Editor*; §11.4 is the empty device table waiting for the measurement pass.
+> Task folder: `Docs/Specs/Active/perf_phase1_free_wins/` (SPEC + IMPLEMENTER_REPORT).
+
+## 11.1 What shipped
+
+| § | Change | Where |
+|---|---|---|
+| 1 | ShellScene **camera** disabled while a hole is loaded (Camera component only — the GameObject stays active so its AudioListener keeps running) | `PhysicsLabController.DisableShellCamera()`, called at hole load beside `DisableShellDirectionalLight()` |
+| 1 NOTE | Camera **and light** restored from `OnDestroy()` | `PhysicsLabController.OnDestroy()` |
+| 2 | `DecalRendererFeature` **removed** — list entry *and* sub-asset | `Assets/Settings/Mobile_Renderer.asset` |
+| 3 | `basemapDistance=100`, `drawInstanced=true`, trees `150/80/20` applied at hole load | `PhysicsLabController.ApplyTerrainRenderDefaults()` |
+| 4 | Both MapView `ReadPixels` readbacks, and the coroutine itself, `#if UNITY_EDITOR` | `MapViewController.cs` |
+| 5 | Console spam fixed (see §11.3) | `CharacterThumbnailCard.SetSelected()` |
+
+**No `.unity` and no TerrainData file was edited.** Holes 01/02/06 keep their authored
+`5000 / 50 / 5` on disk and are normalised to `150 / 80 / 20` at runtime — verified live on Hole 01.
+
+## 11.2 The §1 NOTE was real, and it was a live player-build bug
+
+`LabHoleBinder` is wrapped in `#if UNITY_EDITOR` **in its entirety**, so in a player build nothing
+has ever called `OnHoleUnloaded()` — meaning the ShellScene directional light disabled at hole load
+was **never re-enabled on device**. It went unnoticed because Home is a full-screen overlay canvas.
+`OnHoleLoaded` still fires on device via `ScanForLoadedHoleSceneAtStartup` (`:468`, ungated), which
+is why the disable half always worked.
+
+Verified by driving the real `GameplaySceneLoader.UnloadGameplayScenes()`: after unload the ShellScene
+camera **and** light are both back to `enabled=True`.
+
+## 11.3 §5 — the Development Console spam in `exp_ad_CORRECT.png`
+
+```
+Coroutine couldn't be started because the the game object
+'CharacterThumbnailCardGlowUp(Clone)' is inactive!
+```
+
+`CharacterThumbnailCard.SetSelected()` called `StartCoroutine(AnimateScale(...))` unconditionally.
+During a hole the Roster screen is deactivated, so Unity refuses the coroutine and logs an error
+**with a full stack trace** — a plausible contributor to the ~29 KB/frame GC. **Not** a
+`PerfBaselineBot` artefact: the bot only *reads* `GetSelectedCharacterId`.
+
+Fix: an inactive card snaps straight to its target scale and skips both the coroutine and the
+adjacent per-call `Debug.Log`. Console is clean in both new Editor frames.
+
+The same unguarded pattern exists in `ClubThumbnailCard`, `BallThumbnailCard` and `ItemThumbnailCard`
+— **filed, not fixed** (out of the observed symptom's scope).
+
+## 11.4 Device table — TO BE FILLED (protocol: §10, cooled to Nominal, pinned yaw, 3 runs, median + raws, a frame per number)
+
+| Pose | Before (build 2311) | After | Target |
+|---|---|---|---|
+| H08 tee — fps | 30.1 | | ≥ 58 |
+| H08 tee — render ms | 26.11 | | ≤ 15.0 |
+| H08 tee — batches | 7,375 | | |
+| H08 tee — tris | 5,036,446 | | |
+| H08 mid-flight (driver) | never run | | record only |
+| H01 tee — fps / render ms | | | |
+| H06 tee — render ms | 26.59 (cooled) | | ≤ 26.59 |
+| GC B/frame | 29,030 | | |
+
+Also owed on device: Frame Debugger (one camera, zero `DrawDepthNormalPrepass`, zero `CopyDepth`);
+frame A/B vs `exp_ad_CORRECT.png`; Hole 01 tree-distance before/after; teardown paths i–iii;
+MapView open with no `ReadPixels`.
+
+## 11.5 Water edge fade — recommendation: **leave depth off**
+
+Confirmed mechanically: with the decal feature gone, `_CameraDepthTexture` is the **`UnityBlack` 4×4
+dummy** and `Mobile_RPAsset.supportsCameraDepthTexture = False`. A per-camera `requiresDepthTexture`
+does **not** override the asset flag — `m_RequireDepthTexture: 1` is the only lever, exactly as §2 said.
+
+Forcing depth back on and re-rendering an identical Hole 13 shoreline pose moved the shoreline band
+by **mean 3.16/255**, against a **16.49** foliage-AA noise floor in the same frame pair — i.e. no
+measurable edge change. So the depth copy would buy nothing.
+
+Caveat: an Editor render, "below the noise floor" rather than pixel-identical. Worth one look on
+device — and build 2311 is the ideal "before" for it.
+
+## 11.6 New finding — black quads on Hole 13 trees (pre-existing, filed)
+
+Black rectangular cards hang on several Hole 13 tree trunks. Ruled out: **not** §3 (identical with
+the authored terrain values; `0.00` mean near-band diff) and **not** billboard imposters (survive
+`treeBillboardDistance = 5000`). Raycasts land on `TerrainRoot` — these are terrain **tree
+instances**, so there is no separate renderer to inspect. **Not** ruled out: §2, because both A/B
+frames already had the decal feature removed — build 2311 (feature enabled) answers that in one look.
+Tree-shader work is out of Phase 1 scope, so this is filed, not chased.

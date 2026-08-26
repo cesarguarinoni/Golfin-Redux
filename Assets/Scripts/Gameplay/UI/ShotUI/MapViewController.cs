@@ -520,9 +520,13 @@ namespace Golfin.Gameplay.UI.ShotUI
             UpdateGuideAndRings();
 
             OnMapOpened?.Invoke(_aimYawRadians);
+#if UNITY_EDITOR   // perf_phase1_free_wins §4: two blocking GPU ReadPixels stalls per map
+            // open. Diagnostic-only (they feed lzCenterPixelRGBA/lzEdgePixelRGBA in the
+            // invariant JSON) and have no business running on a retail device.
             // §iter-24 FIX #14: Start coroutine so DumpInvariants reads COMPOSITED FRAME pixels
             // (ReadPixels after WaitForEndOfFrame) rather than source texture (GetPixel).
             StartCoroutine(DoFrameReadbackAndDump("open"));
+#endif
 
             Debug.Log($"[MapView v2] Opened. Ball={_ballWorldPos:F1} Flag={_flagWorldPos:F1} " +
                       $"Carry={_carryYards:F1}yds Aim={_aimYawRadians:F3}rad ({_aimYawRadians*Mathf.Rad2Deg:F1}°)");
@@ -2313,9 +2317,11 @@ namespace Golfin.Gameplay.UI.ShotUI
             if (!_secondStateDumped)
             {
                 _secondStateDumped = true;
+#if UNITY_EDITOR   // perf_phase1_free_wins §4: see the "open" call site above.
                 // §iter-24 FIX #14: Use coroutine so "aimed" dump reads COMPOSITED FRAME pixels.
                 // The coroutine re-aims, waits WaitForEndOfFrame, does ReadPixels, then dumps.
                 StartCoroutine(DoFrameReadbackAndDump("aimed"));
+#endif
             }
         }
 
@@ -2888,6 +2894,11 @@ namespace Golfin.Gameplay.UI.ShotUI
         private static string BoolStr(bool v) => v ? "true" : "false";
 
         // ── §iter-24 FIX #14: Frame-readback coroutine ────────────────────────────
+#if UNITY_EDITOR   // perf_phase1_free_wins §4: both call sites are editor-only now, so this
+                   // would be dead code in a player build. _lzFrameCenter / _lzFrameEdge stay
+                   // player-compiled: DumpInvariants reads them unconditionally and already
+                   // handles the never-populated case (Color.clear), and MapViewCaptureDriver
+                   // reaches DumpInvariants through the public ForceInvariantDump.
         /// <summary>
         /// For the "aimed" state: re-aims 10°, waits for the frame to render,
         /// reads the landing-zone blob center + edge pixels from the COMPOSITED SCREEN,
@@ -3002,6 +3013,7 @@ namespace Golfin.Gameplay.UI.ShotUI
                 UpdateHoleIndicator();
             }
         }
+#endif   // UNITY_EDITOR — perf_phase1_free_wins §4 frame-readback coroutine
 
         // ── World position snapshot ────────────────────────────────────────────────
         private void SnapshotWorldPositions()

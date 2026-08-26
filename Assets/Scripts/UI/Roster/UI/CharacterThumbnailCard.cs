@@ -182,6 +182,13 @@ namespace Golfin.Roster
             // Animate scale with bounce
             float target = selected ? 1.05f : 1f;
             if (scaleCoroutine != null) StopCoroutine(scaleCoroutine);
+            // perf_phase1_free_wins §5: an inactive card cannot run a coroutine — Unity throws
+            // "Coroutine couldn't be started because the game object is inactive!" and logs it with
+            // a full stack trace. That fired every frame on the Hole 08 tee (the Roster screen is
+            // deactivated during a hole) and filled the Development Console in exp_ad_CORRECT.png.
+            // Snap to the final scale instead: the animation has nothing to animate on-screen, and
+            // the card shows the right size the moment it is re-activated.
+            if (!isActiveAndEnabled) { transform.localScale = Vector3.one * target; return; }
             scaleCoroutine = StartCoroutine(AnimateScale(target));
 
             Debug.Log($"[CharacterThumbnailCard] {characterId} selection: {selected}");

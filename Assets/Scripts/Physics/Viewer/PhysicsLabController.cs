@@ -342,6 +342,17 @@ namespace Golfin.Physics.Viewer
 
         void OnDestroy()
         {
+            // perf_phase1_free_wins §1: this — NOT OnHoleUnloaded — is the restore path that runs
+            // in a player build. LabHoleBinder, the only thing that calls OnHoleUnloaded outside
+            // the editor picker and the test harnesses, is wrapped in #if UNITY_EDITOR in its
+            // entirety, so on device nothing has ever re-enabled the shell light after a hole.
+            // That went unnoticed because Home is a full-screen overlay canvas; a shell camera left
+            // disabled would NOT go unnoticed. PhysicsLabController lives in LabScaffold, which
+            // GameplaySceneLoader.UnloadGameplayScenes() unloads on every exit path (menu quit,
+            // curtain, and Next Hole's step 2b), so OnDestroy is the reliable hook.
+            RestoreShellCamera();
+            RestoreShellDirectionalLight();
+
             if (_shotController != null)
                 _shotController.OnShotResolved -= HandleShotResolved;
 
@@ -2195,6 +2206,12 @@ namespace Golfin.Physics.Viewer
             // is loaded so the hole's sun is the only one.
             DisableShellDirectionalLight();
 
+            // perf_phase1_free_wins §1 + §3: the shell camera is a second full render of the world
+            // every frame behind a view that completely covers it; the terrain defaults are the
+            // measured (c) experiment plus the 01/02/06 tree-distance normalisation.
+            DisableShellCamera();
+            ApplyTerrainRenderDefaults();
+
             // Populate HoleContext for HUD widgets (PlayerCardWidget, HoleCardWidget).
             // HoleMetadata lives in Assembly-CSharp; use reflection to avoid a circular asmdef dep
             // (Viewer has autoReferenced:true, so Viewer→Assembly-CSharp would be circular).
@@ -2464,6 +2481,98 @@ namespace Golfin.Physics.Viewer
         // is loaded, held so OnHoleUnloaded can restore it when we return to the shell.
         Light _shellDirLightDisabled;
 
+        // perf_phase1_free_wins §1: the ShellScene camera we switch off while a hole is loaded,
+        // held so the restore paths can bring it back. See DisableShellCamera for why.
+        Camera _shellCameraDisabled;
+
+        // perf_phase1_free_wins §3: terrain render values applied at hole load. Held as consts so
+        // the tier system (9a) has a single place to move basemapDistance per tier.
+        const float TerrainBasemapDistance       = 100f;
+        const float TerrainTreeDistance          = 150f;
+        const float TerrainTreeBillboardDistance = 80f;
+        const float TerrainTreeCrossFadeLength   = 20f;
+
+        /// <summary>
+        /// Disables the ShellScene camera while a hole is loaded. ShellScene stays additively
+        /// loaded during gameplay and its Base camera keeps rendering a full second view of the
+        /// world every frame — Phase 0b measured that at 11.63 ms of render thread on the Hole 08
+        /// tee (26.11 -> 14.48 ms, 30.1 -> 59.8 fps), and disabling it also makes fps independent
+        /// of thermal state. Nothing on screen changes: the shell's view is completely covered by
+        /// the hole's.
+        ///
+        /// The Camera COMPONENT is disabled, not the GameObject — the AudioListener rides on the
+        /// same object and must keep running.
+        /// </summary>
+        void DisableShellCamera()
+        {
+            if (_shellCameraDisabled != null) return; // already disabled for the current hole
+            foreach (var cam in Camera.allCameras)    // enabled cameras only, which is what we want
+            {
+                if (cam == null || cam.gameObject.scene.name != "ShellScene") continue;
+                cam.enabled = false;
+                _shellCameraDisabled = cam;
+                Debug.Log($"[PhysicsLab] Disabled ShellScene camera '{cam.gameObject.name}' while hole is loaded (perf_phase1_free_wins §1).");
+                return;
+            }
+            Debug.Log("[PhysicsLab] DisableShellCamera: no enabled ShellScene camera found (ok for the standalone lab-rig path).");
+        }
+
+        /// <summary>
+        /// Re-enables the ShellScene camera disabled by <see cref="DisableShellCamera"/>.
+        /// Null-safe against domain teardown, where the camera may already be destroyed.
+        /// </summary>
+        void RestoreShellCamera()
+        {
+            if (_shellCameraDisabled == null) return;
+            _shellCameraDisabled.enabled = true;
+            Debug.Log($"[PhysicsLab] Re-enabled ShellScene camera '{_shellCameraDisabled.gameObject.name}'.");
+            _shellCameraDisabled = null;
+        }
+
+        /// <summary>
+        /// Re-enables the ShellScene directional light disabled by
+        /// <see cref="DisableShellDirectionalLight"/>. Null-safe against domain teardown.
+        /// </summary>
+        void RestoreShellDirectionalLight()
+        {
+            if (_shellDirLightDisabled == null) return;
+            _shellDirLightDisabled.enabled = true;
+            Debug.Log("[PhysicsLab] Re-enabled ShellScene directional light.");
+            _shellDirLightDisabled = null;
+        }
+
+        /// <summary>
+        /// perf_phase1_free_wins §3: applies the terrain render defaults at hole load, at runtime,
+        /// so no .unity or TerrainData file is edited.
+        ///
+        /// basemapDistance + drawInstanced are the Phase 0b (c) experiment (-6.31 ms): all 18 holes
+        /// shipped a 1000 m splat distance, meaning the 9-layer splat shader ran over the whole
+        /// terrain instead of the basemap taking over past 100 m.
+        ///
+        /// The tree values normalise holes 01/02/06, which shipped 5000/50/5 against the other
+        /// fifteen holes' 150/80/20. That is the plan §2 fairness rule — every hole should cost
+        /// about the same — and it is the ONE deliberate visible change in this task: distant trees
+        /// on those three holes now cut at 150 m like everywhere else.
+        /// treeMaximumFullLODCount is left alone (already 50 on all eighteen).
+        /// </summary>
+        static void ApplyTerrainRenderDefaults()
+        {
+            var t = Terrain.activeTerrain;
+            if (t == null)
+            {
+                Debug.Log("[PhysicsLab] ApplyTerrainRenderDefaults: no active terrain (ok for the flat-ground fallback path).");
+                return;
+            }
+
+            t.basemapDistance       = TerrainBasemapDistance;
+            t.drawInstanced         = true;
+            t.treeDistance          = TerrainTreeDistance;
+            t.treeBillboardDistance = TerrainTreeBillboardDistance;
+            t.treeCrossFadeLength   = TerrainTreeCrossFadeLength;
+
+            Debug.Log($"[PhysicsLab] Terrain render defaults applied to '{t.name}': basemapDistance={TerrainBasemapDistance}, drawInstanced=true, treeDistance={TerrainTreeDistance}, treeBillboardDistance={TerrainTreeBillboardDistance}, treeCrossFadeLength={TerrainTreeCrossFadeLength} (perf_phase1_free_wins §3).");
+        }
+
         /// <summary>
         /// Disables the ShellScene's directional light while a hole is loaded. ShellScene is kept
         /// additively loaded during gameplay and ships an intensity-2 Directional Light; the hole
@@ -2495,12 +2604,10 @@ namespace Golfin.Physics.Viewer
 
             // water_splash_fx (Order 349): restore the ShellScene directional light we switched off
             // on load, so returning to the shell/home is lit normally again.
-            if (_shellDirLightDisabled != null)
-            {
-                _shellDirLightDisabled.enabled = true;
-                Debug.Log("[PhysicsLab] Re-enabled ShellScene directional light on hole unload.");
-                _shellDirLightDisabled = null;
-            }
+            // perf_phase1_free_wins §1: and the camera we switched off with it. NOTE this method is
+            // only reached on the EDITOR hole-picker path — see OnDestroy for the player build.
+            RestoreShellDirectionalLight();
+            RestoreShellCamera();
             _useSceneProviders   = false;
             _greenCentroidValid  = false;
             _ballSpawnPoint      = null;

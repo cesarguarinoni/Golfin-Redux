@@ -67,6 +67,26 @@
 - **`home_notices`** — flagged by its own session as needing a device + the dashboard to sign off.
   See its entry below; not touched here.
 
+- **`perf_phase1_free_wins` — CODE COMPLETE 2026-08-26, device numbers outstanding.**
+  §11 of [Docs/Reports/perf_baseline_2026-08-26.md](Docs/Reports/perf_baseline_2026-08-26.md);
+  task folder `Docs/Specs/Active/perf_phase1_free_wins/`. Shipped: ShellScene camera off during a
+  hole, `DecalRendererFeature` removed from `Mobile_Renderer.asset`, terrain
+  `basemapDistance=100`/`drawInstanced`/trees `150-80-20` applied at hole load (no scene edits — this
+  normalises holes 01/02/06's `5000/50/5`), both MapView `ReadPixels` guarded `UNITY_EDITOR`, and the
+  console spam fixed. All 15 Editor-verifiable acceptance items PASS via the **production entry
+  path**; EditMode **1765/1768, 0 failed**.
+  ⚠️ **The §1 NOTE was a real live bug:** `LabHoleBinder` is entirely `#if UNITY_EDITOR`, so in a
+  player build nothing ever re-enabled the ShellScene directional light after a hole — `OnDestroy`
+  now restores camera *and* light. (`OnHoleLoaded` was fine: it fires via
+  `ScanForLoadedHoleSceneAtStartup`, ungated.)
+  **Water decision: leave depth off** — forcing `_CameraDepthTexture` back on moves the Hole 13
+  shoreline by 3.16/255 against a 16.49 foliage-AA noise floor.
+  **Still owed (Cesar + phone):** every device number — fps/render-ms/batches/tris for H08+H01+H06,
+  H08 mid-flight, Frame Debugger one-camera/no-prepass proof, teardown paths i–iii, MapView open.
+  **Dev build 2311 is deliberately still on the phone as the Phase 1 "before" — do not overwrite it
+  before the after-pass is captured.** Also filed: black quads on Hole 13 terrain tree instances
+  (pre-existing; §2 not yet ruled out — build 2311 answers it).
+
 - **`perf_baseline` Phase 0b — DONE for the experiment sweep (2026-08-26).** §10 of
   [Docs/Reports/perf_baseline_2026-08-26.md](Docs/Reports/perf_baseline_2026-08-26.md).
   Cooled + yaw-pinned + 3-run-median protocol, thermal state recorded from iOS, and **a frame saved
