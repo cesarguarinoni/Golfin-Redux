@@ -34,6 +34,132 @@
 
 ## 📋 SPEC_READY POINTERS
 
+- **`perf_phase1_free_wins`** (filed 2026-08-26, Architect via Cowork) — **SPEC_READY, kickoff
+  pasteable. Phase 1 of `Docs/PERF_OPTIMIZATION_PLAN.md`.** Phase 0b (`Docs/Reports/
+  perf_baseline_2026-08-26.md` §10) measured, cooled + pinned + 3-run + frame-verified, on Hole 08:
+  (a) ShellScene camera off **26.11 → 14.48 ms render thread, 30.1 → 59.8 fps**; (d) DecalRendererFeature
+  removed via the asset **→ 15.05 ms**; (a+d) **→ 14.09 ms, 7,375 → 2,430 batches, 5.0 M → 1.4 M tris**;
+  (c) terrain basemap 100 + instanced **−6.31 ms**. (a) also holds 60 fps at thermal Serious. This spec
+  ships a + d + c, normalises the 5000/50 tree draw distance on holes 01/02/06 to 150/80 at runtime
+  (fairness, plan §2), guards the two MapView `ReadPixels`, and chases the Development Console spam
+  visible in `exp_ad_CORRECT.png`. **No scene edits** — terrain values are set at hole load.
+  ⚠️ Two traps carried into the spec: runtime-disabling a renderer feature renders the terrain black
+  (§10.3 — asset edit only), and `OnHoleUnloaded()` never fires in a player build (`LabHoleBinder` is
+  editor-only) so the restore goes in `OnDestroy` — which also fixes the shell light never coming back.
+  Spec: `Docs/Specs/Active/perf_phase1_free_wins/SPEC.md`.
+- ~~**`perf_baseline_experiments`**~~ — ✅ **DONE 2026-08-26 for everything that gates Phase 1** (report
+  §10). Leftovers (e) mid-flight, Instruments trace, Memory Profiler top-10, GC call stack roll into
+  `perf_phase1_free_wins` §5 (GC/console) and Phase 4 (memory). Superseded pointer kept below.
+
+### Kickoff · perf_phase1_free_wins (issued 2026-08-26)
+
+```
+Read Docs/Specs/Active/perf_phase1_free_wins/SPEC.md and implement it.
+
+Context:
+- Ships the Phase 0b wins: ShellScene camera disabled during a hole (mirror
+  PhysicsLabController.DisableShellDirectionalLight, :2475, called at :2196), the
+  DecalRendererFeature REMOVED from Assets/Settings/Mobile_Renderer.asset (asset edit +
+  rebuild ONLY — runtime SetActive(false) renders the terrain black, report §10.3), and
+  terrain basemapDistance 100 / drawInstanced / treeDistance 150-80-20 applied at hole load
+  via Terrain.activeTerrain (no scene edits — this also fixes holes 01/02/06's 5000/50).
+- Restore camera AND light from PhysicsLabController.OnDestroy(): LabHoleBinder only calls
+  OnHoleUnloaded() under UNITY_EDITOR, so in a player build nothing restores today.
+- Guard MapViewController's two DoFrameReadbackAndDump calls (:525, :2318) UNITY_EDITOR.
+- Water: URPWater _EDGEFADE_ON loses _CameraDepthTexture when the decal CopyDepth goes;
+  check Hole 08/13 shorelines, decide per spec §2 NOTE, report the delta.
+- Minimal diff. Reuse PerfBaselineBot for the acceptance captures (cooled, pinned yaw,
+  3 runs, median + raws, frame PNG each). Expect Mobile_RPAsset m_PrefilterDBufferMRT3 to
+  churn — commit it; diff ALL of Assets/Settings/ and nothing else may change.
+- Out of scope: tier system (9a), shadow cascades, LOD level, Vegetation.shader, Spruce,
+  audio/textures/HoleData, Hole 02 invisible trees, Hole 06 heightmap density, any .unity edit.
+
+When done: list changed files with a 1-line summary each, run the acceptance
+checklist in the spec (device tables before/after for Holes 08/01/06 + mid-flight,
+Frame Debugger one-camera/no-prepass proof, teardown paths i–iv, water decision,
+Hole 01 tree-distance before/after), append §11 to
+Docs/Reports/perf_baseline_2026-08-26.md, flag which items need Cesar's on-device
+eyes, update STATUS.md + IMPLEMENTER_REPORT.md in the spec folder, and update
+Docs/AI_CONTEXT.md.
+```
+
+
+- **`perf_baseline_experiments` / Phase 0b** — ✅ **EXPERIMENT SWEEP DONE 2026-08-26**, §10 of
+  [`Docs/Reports/perf_baseline_2026-08-26.md`](Docs/Reports/perf_baseline_2026-08-26.md).
+  Protocol built and used: cooled device, **pinned camera yaw**, 3 runs + median with all raws, iOS
+  `NSProcessInfo.thermalState` logged per run, on-device `ProfilerRecorder` counters (no Editor in the
+  loop), and **a PNG saved with every measurement**.
+  **ANSWER — biggest win in render-thread ms: (a) ShellScene camera off, 26.11 → 14.48 ms (−11.63),
+  Hole 08 30.1 → 59.8 fps — and fps stops depending on temperature (59.8/60.2/59.7 at
+  Nominal/Fair/Serious).** (d) decal feature off, done via the asset: −11.06 ms. **(a+d) together:
+  −12.02 ms, batches 7,375 → 2,430, triangles 5.03 M → 1.41 M, 59.8 fps** — the Phase 1 first commit,
+  now evidenced. (c) −6.31 ms. (b) −3.69 ms.
+  ⚠️ **A renderer feature CANNOT be A/B'd by `SetActive(false)` at runtime** — (d) that way rendered a
+  fully BLACK terrain, logged no error, and read as a 2× win; caught only because Cesar looked at the
+  phone. Re-tested via `m_Active: 0` in the asset + rebuild, then reverted — and reverting needs TWO
+  files, because the build rewrites `m_PrefilterDBufferMRT3` into `Mobile_RPAsset.asset`.
+  H06's 6.3 M tris CONFIRMED as heightmap density (2049² on 229×101 m ≈ 7× the samples/m² of H08) →
+  fix at import. §9's H06 "20.0 fps" was throttling; cooled it is 35.2 fps.
+  Harness to keep: `Assets/Scripts/Dev/PerfBaselineBot.cs` + `Assets/Plugins/iOS/GolfinThermal.m`.
+  **STILL OWED:** (e) `maximumLODLevel=1` mid-flight, H08 mid-flight baseline, Instruments Metal
+  System Trace, Memory Profiler top-10 + load-spike GC column, GC call stack behind ~29 KB/frame.
+  *(Original Phase 0b brief follows.)*
+- ~~**`perf_baseline_experiments`**~~ (superseded pointer, see DONE note above) — **Phase 0b. Finishes what
+  `perf_baseline_capture` owed. Measurement only. Kickoff pasteable.** Phase 0 (`Docs/Reports/
+  perf_baseline_2026-08-26.md`) confirmed all five plan items on device — 31 % of render events belong
+  to the ShellScene camera, DepthNormals prepass on both cameras with zero decals, 48.8 fps cold on the
+  EASIEST hole on an A17 Pro, Home 778 MB → Hole 08 1,370 MB — but stopped before the five A/B
+  experiments, the thermal-state proof, the Memory Profiler top-10 and any real GPU timing (Unity
+  cannot report GPU ms on Metal). Architect verdict + plan corrections: `PERF_OPTIMIZATION_PLAN.md` §8.
+
+### Kickoff · perf_baseline_experiments (issued 2026-08-26) — Phase 0b, measurement only
+
+```
+Read Docs/PERF_OPTIMIZATION_PLAN.md §8 and Docs/Reports/perf_baseline_2026-08-26.md §9,
+then finish Phase 0. Measurement only — no fix is committed; every experiment is reverted.
+
+FIRST, make captures comparable (Phase 0 §9.4 showed single captures are not evidence):
+1. PerfBaselineBot: add a pinned camera yaw at POSE_READY (serialize the yaw it lands on
+   once, reuse it every run) and log ProcessInfo.thermalState (iOS native, tiny
+   [DllImport("__Internal")] in the DevHarness assembly, GOLFIN_TESTBUILD-gated like the bot)
+   in the same [PerfBot] line as the frame stats. Also log the last 60-frame median of
+   Profiler render-thread ms so the number lands in the device log without the Editor.
+2. Protocol for EVERY number below: device cooled (screen off ≥ 8 min, thermalState must
+   read Nominal), same pinned pose, 3 runs, report the median AND the three raw values.
+
+THEN:
+A. Re-take the baseline on Hole 08 tee and Hole 06 tee under that protocol (Phase 0's H08
+   and H06 numbers were throttled). Add H08 mid-flight (driver) under the same protocol.
+B. Experiments, each alone, each reverted before the next, Hole 08 tee, 3 runs:
+     a) ShellScene Main Camera disabled during the hole
+     b) Mobile_RPAsset cascades 4→1, shadow distance 100→40
+     c) Terrain basemapDistance 1000→100 + drawInstanced ON
+     d) DecalRendererFeature removed from Mobile_Renderer
+     e) QualitySettings.maximumLODLevel = 1 — measure mid-flight, not at the tee
+     a+d) together (they are the Phase 1 first commit; measure the pair)
+   Report per experiment: fps, wall ms, render-thread ms, batches, tris, shadow casters,
+   before/after, medians + raws.
+C. GPU timing: one Xcode Instruments "Metal System Trace" (or GPU counters) capture on the
+   Hole 08 tee baseline and on a+d. Report GPU frame time and the top 3 encoders by time.
+   If Instruments cannot attach, say so and report render-thread ms as the proxy.
+D. Memory Profiler snapshot after H01 → H08 → H06 (cooled protocol not required): Texture2D /
+   Mesh / AudioClip / Managed totals, top 10 objects by size, and the GC Alloc column across
+   the Hole 08 load frames (expected ~32.8 MB managed spike). State what the +590 MB
+   Home→Hole 08 is made of.
+E. GC: Profiler CPU module, Hole 08 tee, one frame's GC Alloc call stack — name the
+   allocator(s) behind the ~29 KB/frame.
+F. Hole 06 6.3 M tris: read TerrainData_Hole06Geo size + heightmapResolution and the terrain
+   Profiler "Terrain.Render" tri count; confirm or refute the heightmap-density hypothesis.
+
+Out of scope: any fix, any tier code, any committed scene/asset change, Vegetation.shader,
+Spruce conversion, the Hole 02 invisible-tree bug (§5.1 — own task).
+
+When done: append §10 to Docs/Reports/perf_baseline_2026-08-26.md with every table above,
+state which of a–e (and a+d) is the biggest win in render-thread ms, update Docs/AI_CONTEXT.md,
+and update this TellCode pointer. Bot changes are the only code that may be committed.
+```
+
+
 - **`content_cleanup_quick`** (filed 2026-08-26, updated after Phase 4) — ✅ **DONE 2026-08-26,
   awaiting Cesar's sign-off.** All five items implemented directly by Claude Code. Report:
   `Docs/Specs/Active/content_cleanup_quick/IMPLEMENTER_REPORT.md`. Unity EditMode 1765/1768 (0
@@ -270,7 +396,7 @@ STATUS.md + IMPLEMENTER_REPORT.md in the spec folder, and update
 Docs/AI_CONTEXT.md.
 ```
 
-- **`perf_baseline_capture`** (filed 2026-08-26, Architect via Cowork) — ⏳ **STATIC HALF DONE
+- ~~**`perf_baseline_capture`**~~ — ✅ **DONE 2026-08-26** (device half ran later the same day — report §9; Architect review + plan corrections in `Docs/PERF_OPTIMIZATION_PLAN.md` §8; the owed items are now `perf_baseline_experiments` above). Superseded pointer kept for history: — ⏳ **STATIC HALF DONE
   2026-08-26; DEVICE HALF PENDING A PHONE.** Report:
   [`Docs/Reports/perf_baseline_2026-08-26.md`](Docs/Reports/perf_baseline_2026-08-26.md).
   **All five §0 items came back CONFIRMED from the shipping assets, scenes and URP package source —

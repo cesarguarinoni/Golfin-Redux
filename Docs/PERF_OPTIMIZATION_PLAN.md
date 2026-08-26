@@ -28,7 +28,7 @@ rule a tier system must obey: **never touch the baked sim inputs or tree placeme
 | 2 | **Standalone Spruce trees.** Holes 03–18 carry 130–1,958 `Spruce 1/3` trees as *unpacked GameObjects* (12 MeshRenderers each, 4 LODs, LOD0 15–17k tris, no billboard, cull at 1 % screen). Hole 08 = **27,468 GameObjects / 23,538 MeshRenderers / 1,958 LODGroups** in a 68 MB scene; all cast+receive shadows, no static/instanced batching. | `TreePlacer.ForceStandaloneNames`, `Hole_08_Geo.unity` counts | CPU culling + draw submission + shadow passes. The #1 *scaling* problem for Low/Mid. |
 | 3 | **Shadow setup is desktop-grade.** Mobile URP asset: main-light shadows **4 cascades**, distance 100 m, 1024 map; every tree renderer casts; terrain casts; no lightmaps baked (light is Mixed but there is no LightingData → effectively realtime). | `Assets/Settings/Mobile_RPAsset.asset` | 4 extra scene passes over 23k renderers. Cascades→1–2 and distance→40–60 is the cheapest big GPU win. |
 | 4 | **Terrain renders full 9-layer splat everywhere.** `m_SplatMapDistance: 1000` (basemap never used), `m_DrawInstanced: 0`, pixel error 5 on 2049² heightmaps, URP `TerrainLit` with 9 layers = 3 blend passes. | Terrain block in every `Hole_NN_Geo.unity` | Basemap distance 100–150 m + instanced drawing: big fragment win, zero visual change up close. |
-| 5 | **Dead renderer feature + settings that cost for nothing.** `DecalRendererFeature` (DBuffer) active on `Mobile_Renderer` with zero decals in the project (MapView removed its projector in iter-31); HDR on; `m_UseAdaptivePerformance: 1` with no Adaptive Performance package; Render Graph disabled (compatibility mode). | `Assets/Settings/Mobile_Renderer.asset`, `UniversalRenderPipelineGlobalSettings.asset:32` | DBuffer needs a DepthNormals prepass → potentially a third full scene pass. Free to remove. |
+| 5 | **Dead renderer feature + settings that cost for nothing.** `DecalRendererFeature` (DBuffer) active on `Mobile_Renderer` with zero decals in the project (MapView removed its projector in iter-31); HDR on; `m_UseAdaptivePerformance: 1` with no Adaptive Performance package. (~~Render Graph disabled~~ — wrong, see §1.1/§8.) | `Assets/Settings/Mobile_Renderer.asset` | DBuffer forces a DepthNormals prepass on every camera — **confirmed on device, §8**. Free to remove. |
 
 **Also found, not per-frame:** build `Data/` is **1.2 GB** (`resources.assets` 407 MB — `heightmap.bytes` 16.4 MB + `zones.json` 8.1 MB per hole ×18; `TerrainData` ~29.7 MB per hole); all 460 audio clips are DecompressOnLoad (Main Theme ≈ 31 MB PCM resident); no per-platform texture overrides on 3,234 textures; MapView does two GPU `ReadPixels` on every open in player builds.
 
@@ -39,7 +39,7 @@ rule a tier system must obey: **never touch the baked sim inputs or tree placeme
 ## 1. What was inspected (facts)
 
 ### 1.1 Pipeline & settings
-- Unity `6000.3.9f1`, URP `17.3.0`. **Render Graph disabled** (`m_EnableRenderGraph: 0` — compatibility mode, deprecated in Unity 6).
+- Unity `6000.3.9f1`, URP `17.3.0`. **Render Graph is ON** (`m_EnableRenderCompatibilityMode: 0`, `UniversalRenderPipelineGlobalSettings.asset:199`; the `m_EnableRenderGraph: 0` at line 32 is an obsolete field — Architect misread it on 2026-08-26, corrected by Phase 0 §9.3). Option I is moot.
 - Quality levels: only **`Mobile`** (index 0, iOS+Android default) and `PC`. No runtime quality/tier logic exists anywhere in `Assets/Scripts` (grep: `QualitySettings.`, `SystemInfo.` only in telemetry, `renderScale`, `AdaptivePerformance` — nothing).
 - `Mobile_RPAsset.asset`: HDR **on**, MSAA off, **renderScale 0.8**, main light per-pixel + shadows 1024 / **4 cascades** / 100 m, soft shadows off, additional lights **per-pixel** (4/object), light cookies + light layers on, reflection probe blending + box projection on, SRP Batcher on, dynamic batching off, GPU Resident Drawer **off**, `m_UseAdaptivePerformance: 1` (package NOT installed), volume profile = `SampleSceneProfile` (Bloom intensity 1 / threshold 0, Vignette 0.2, Tonemapping Neutral).
 - `Mobile_Renderer.asset`: Forward, Native Render Pass on, **DecalRendererFeature active (DBuffer)** — unused.
@@ -125,7 +125,7 @@ Implementation shape (Order 900 — `9a`): three URP assets (`Mobile_Low/Mid/Hig
 
 **H. Adaptive Performance package (optional, later).** `com.unity.adaptiveperformance` with the Android (Samsung) and iOS providers: thermal + bottleneck signals → automatic render-scale / LOD scaler. Would make the "Auto" tier self-correcting on thermal throttling — the failure mode a static tier table cannot see. Only worth it after Phase 0 shows throttling on real hardware.
 
-**I. Render Graph on.** Flip `m_EnableRenderGraph` (URP 17 default). Gains native pass merging on TBDR mobile GPUs and future-proofs (compat mode is deprecated). Risk: the only custom feature is the Decal one (being removed); `URPWater` and `Custom/Vegetation` are plain shaders and unaffected. Do it on its own commit with a device A/B.
+**I. Render Graph on.** ~~Flip `m_EnableRenderGraph`~~ — **MOOT.** Phase 0 §9.3: every Frame Debugger event runs under `ExecuteRenderGraph`; compatibility mode is already off. Dropped.
 
 **J. Memory / load / size (not fps, but "runs on more devices" = 3–4 GB Android phones):**
 - Audio: music → `Streaming`, SFX → `CompressedInMemory`, quality 100→~70. (`Main Theme.wav`, 31 MB, is unreferenced — repo hygiene only, it is not in the build.)
@@ -181,3 +181,43 @@ Two things the numbers will settle: whether A12 (iPhone XR/XS, 4 GB) belongs in 
 - `URPWater` `_EDGEFADE_ON` samples a depth texture the Mobile asset never produces.
 - `Assets/Settings/DefaultVolumeProfile.asset` (the URP-generated global default, assigned in `UniversalRenderPipelineGlobalSettings`) carries MotionBlur/FilmGrain entries at intensity 0 plus URP test components — inert, but a cleaner regenerated profile would remove doubt.
 - Occlusion culling is ticked on every camera but no occlusion data exists — harmless, just misleading.
+
+---
+
+## 8. Phase 0 results — what changed (2026-08-26, `Docs/Reports/perf_baseline_2026-08-26.md`)
+
+Device: iPhone 15 Pro Max (A17 Pro — *faster* than the iPhone 15 baseline), Dev build 2311.
+
+| Fact | Consequence for this plan |
+|---|---|
+| **H01 tee cold: 48.8 fps / H08: 31.2 / H06: 20.0** (H08, H06 taken throttled). Main thread 3.8–6.4 ms; render thread 19–38 ms. | The game is **GPU-bound**, and the "High tier holds 60 at current settings" assumption in §3/§6.1 is **false** even above the baseline. Phase 1 is not a low-end courtesy — it is required for every tier. |
+| #1 CONFIRMED on device: 622 of 2,011 render events (31 %) belong to the ShellScene camera — 232 shadow + 255 opaque draws + full Bloom chain, never reaches the backbuffer. | Option A stays first. |
+| #5 CONFIRMED: `DrawDepthNormalPrepass` on **both** cameras (85 + 237 draws) + 2 CopyDepth; zero DBuffer draws. | Option D moves up next to A. |
+| Render Graph already on (§1.1 corrected). | Option I dropped. |
+| Unity cannot report GPU ms on Metal (`NotSupportedWithMetal`); the "GPU Frame Time" counter is a CPU stand-in. | Every "GPU ms" line in §5 becomes **Xcode Instruments (Metal System Trace)**; render-thread ms is the in-Unity proxy. |
+| Hot vs cold H01: −30 % geometry, +56 % frame time. Thermal throttling is the leading explanation but **unproven** — the pose differed and `ProcessInfo.thermalState` was not captured. | Phase 0b logs thermal state; Option H (Adaptive Performance) promoted to "evaluate after Phase 1". |
+| Poses are not reproducible run-to-run (5,483 vs 4,043 batches, same hole, same bot). | A/B protocol for all phases: cooled device, pinned camera yaw, ≥3 runs, median. Single captures are not evidence. |
+| **System memory: Home 778 MB → H08 1,370 MB** (+590 MB for one hole). | A 3 GB device will be jetsam-killed on H08. Phase 4 (memory) is no longer "size hygiene" — it is a device-support blocker. Memory Profiler top-10 still missing. |
+| **~29 KB GC alloc per frame** in gameplay (≈1.7 MB/s). | New Phase 1 line: find the per-frame allocator(s). |
+| H06 draws **6.3 M tris** with the least content; hypothesis = 2049² heightmap on a 229 × 101 m terrain → ~0.11 m samples, `pixelError 5` keeps them all. | If confirmed, fix at **import** (heightmap res scaled to terrain size) — a content change applied to every device, so it stays inside the "identical terrain" rule. Phase 1 candidate. |
+| Terrain tree distance is inconsistent: holes 01/02/06 = 5000/50, the other 15 = 150/80. | Normalise to 150/80 in Phase 1 — a fairness-rule item (§2), not just perf. |
+| Hole 02: 1,495 Spruce in the collision bake, zero in the scene — structural (`ForceStandaloneNames`). | Own task before the beta; acceptance = `bake_hash` unchanged. |
+| `PerfBaselineBot` (`Assets/Scripts/Dev/PerfBaselineBot.cs`, gated `GOLFIN_TESTBUILD`, absent from the iOS-Full IL2CPP output) drives the tee pose hands-off. | Keep; it is the Phase 1/5 A/B harness. Needs a yaw pin + thermal-state log (Phase 0b). |
+
+### 8.1 Phase 0b results (same day, report §10) — the experiments, cooled / pinned yaw / 3 runs / frame-verified
+
+Hole 08 tee, iPhone 15 Pro Max, render-thread ms is the GPU proxy (Unity cannot time the GPU on Metal):
+
+| | baseline | **(a) shell cam off** | **(d) decal feature off (asset)** | **(a+d)** | (c) basemap 100 + instanced | (b) cascades 1 / 40 m |
+|---|---|---|---|---|---|---|
+| fps | 30.1 | **59.8** | 58.7 | **59.8** | 45.2 | 39.8 |
+| render ms | 26.11 | **14.48** | 15.05 | **14.09** | 19.80 | 22.42 |
+| batches / tris | 7,375 / 5.04 M | 3,917 / 2.40 M | 4,712 / 3.38 M | **2,430 / 1.41 M** | 4,610 / 3.13 M | 5,358 / 3.11 M |
+| thermal held? | — | **60 fps at Serious** | fell to 34 at Serious | held | — | — |
+
+- Cooled H06 = 35.2 fps (§9's 20.0 was throttling). H06 still draws 6.86 M tris: **heightmap density confirmed** — every hole ships 2049² regardless of size, H06 is 182 samples/m² vs H08's 26. Fix at import, all devices, inside the identical-terrain rule. Own task.
+- **Trap:** disabling a renderer feature at runtime renders the terrain black and reads as a 2× win (caught by looking at the phone). Asset edit + rebuild only. Removing the feature also churns `Mobile_RPAsset.m_PrefilterDBufferMRT3` — diff all of `Assets/Settings/`.
+- **Trap:** `LabHoleBinder` is editor-only → `OnHoleUnloaded()` never fires in a player build; anything disabled at hole load must be restored from `PhysicsLabController.OnDestroy()`. (The shell light has been silently never-restored on device.)
+- Consequence for §3: with (a+d+c) the A17 Pro sits at the 60 cap with thermal headroom; the iPhone 15 (A16) is expected to land ~17 ms → High is plausible again, Mid/Low still need (b) + the tier levers. Re-baseline on the A16 after Phase 1.
+- **Phase 1 is specced: `Docs/Specs/Active/perf_phase1_free_wins/`** = a + d + c + tree-distance normalisation (01/02/06 → 150/80, runtime) + MapView readback guard + console-spam/GC check. (b) stays a tier lever.
+- Still open from Phase 0b: (e) mid-flight, Instruments trace, Memory Profiler top-10, GC call stack (folded into Phase 1 §5 and Phase 4).

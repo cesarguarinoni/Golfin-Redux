@@ -1,0 +1,160 @@
+JOB idx=0 run=0/3 label=A1_h08_tee_baseline hole=8 exp=none midflight=False thermalAtBoot=Nominal version=1.5.7 device=iPhone16,2
+YAW pinned hole=8 yaw=0.91161 rad (52.23 deg) — first run, recorded
+EXP none (baseline)
+STATS job=0 run=0 label=A1_h08_tee_baseline hole=8 exp=none thermal=Nominal fps=25.5 frameMs=39.27 mainMs=5.41 renderMs=26.11 batches=7375 setpass=199 draws=7375 tris=5036446 verts=7273436 shadowCasters=2249 sysMemMB=1356.2 reservedMB=906.4 gcPerFrameB=29030
+---
+JOB idx=0 run=1/3 label=A1_h08_tee_baseline hole=8 exp=none midflight=False thermalAtBoot=Nominal version=1.5.7 device=iPhone16,2
+YAW replayed hole=8 yaw=0.91161 rad (52.23 deg)
+EXP none (baseline)
+STATS job=0 run=1 label=A1_h08_tee_baseline hole=8 exp=none thermal=Nominal fps=39.7 frameMs=25.16 mainMs=5.30 renderMs=22.66 batches=6086 setpass=189 draws=6086 tris=3613683 verts=4947587 shadowCasters=960 sysMemMB=1306.3 reservedMB=890.3 gcPerFrameB=29030
+---
+JOB idx=0 run=2/3 label=A1_h08_tee_baseline hole=8 exp=none midflight=False thermalAtBoot=Nominal version=1.5.7 device=iPhone16,2
+YAW replayed hole=8 yaw=0.91161 rad (52.23 deg)
+EXP none (baseline)
+STATS job=0 run=2 label=A1_h08_tee_baseline hole=8 exp=none thermal=Fair fps=30.1 frameMs=33.24 mainMs=5.74 renderMs=29.80 batches=7375 setpass=200 draws=7375 tris=5036446 verts=7273436 shadowCasters=2249 sysMemMB=1323.0 reservedMB=890.7 gcPerFrameB=29030
+---
+JOB idx=1 run=0/3 label=A2_h06_tee_baseline hole=6 exp=none midflight=False thermalAtBoot=Nominal version=1.5.7 device=iPhone16,2
+YAW pinned hole=6 yaw=3.03979 rad (174.17 deg) — first run, recorded
+EXP none (baseline)
+STATS job=1 run=0 label=A2_h06_tee_baseline hole=6 exp=none thermal=Nominal fps=35.2 frameMs=28.40 mainMs=4.27 renderMs=26.07 batches=6849 setpass=156 draws=6849 tris=6861172 verts=5949441 shadowCasters=2428 sysMemMB=1182.0 reservedMB=825.3 gcPerFrameB=29030
+---
+JOB idx=1 run=1/3 label=A2_h06_tee_baseline hole=6 exp=none midflight=False thermalAtBoot=Nominal version=1.5.7 device=iPhone16,2
+YAW replayed hole=6 yaw=3.03979 rad (174.17 deg)
+EXP none (baseline)
+STATS job=1 run=1 label=A2_h06_tee_baseline hole=6 exp=none thermal=Nominal fps=35.2 frameMs=28.45 mainMs=4.32 renderMs=26.59 batches=7133 setpass=156 draws=7133 tris=7363570 verts=6437570 shadowCasters=2712 sysMemMB=1187.8 reservedMB=827.1 gcPerFrameB=29030
+---
+JOB idx=1 run=2/3 label=A2_h06_tee_baseline hole=6 exp=none midflight=False thermalAtBoot=Fair version=1.5.7 device=iPhone16,2
+YAW replayed hole=6 yaw=3.03979 rad (174.17 deg)
+EXP none (baseline)
+STATS job=1 run=2 label=A2_h06_tee_baseline hole=6 exp=none thermal=Fair fps=30.0 frameMs=33.32 mainMs=4.51 renderMs=26.90 batches=6849 setpass=155 draws=6849 tris=6861172 verts=5949441 shadowCasters=2428 sysMemMB=1185.1 reservedMB=827.0 gcPerFrameB=29030
+---
+JOB idx=2 run=0/3 label=A3_h08_midflight_baseline hole=8 exp=none midflight=True thermalAtBoot=Nominal version=1.5.7 device=iPhone16,2
+YAW replayed hole=8 yaw=0.91161 rad (52.23 deg)
+EXP none (baseline)
+---
+JOB idx=2 run=1/3 label=A3_h08_midflight_baseline hole=8 exp=none midflight=True thermalAtBoot=Serious version=1.5.7 device=iPhone16,2
+YAW replayed hole=8 yaw=0.91161 rad (52.23 deg)
+EXP none (baseline)
+---
+JOB idx=2 run=2/3 label=A3_h08_midflight_baseline hole=8 exp=none midflight=True thermalAtBoot=Serious version=1.5.7 device=iPhone16,2
+YAW replayed hole=8 yaw=0.91161 rad (52.23 deg)
+EXP none (baseline)
+---
+JOB idx=3 run=0/3 label=Ba_shellcam_off hole=8 exp=a midflight=False thermalAtBoot=Nominal version=1.5.7 device=iPhone16,2
+YAW replayed hole=8 yaw=0.91161 rad (52.23 deg)
+EXP a — ShellScene cameras disabled: 1
+STATS job=3 run=0 label=Ba_shellcam_off hole=8 exp=a thermal=Nominal fps=59.8 frameMs=16.71 mainMs=3.66 renderMs=14.26 batches=4864 setpass=124 draws=4864 tris=2854625 verts=4346960 shadowCasters=1626 sysMemMB=1326.9 reservedMB=895.6 gcPerFrameB=29030
+---
+JOB idx=3 run=1/3 label=Ba_shellcam_off hole=8 exp=a midflight=False thermalAtBoot=Nominal version=1.5.7 device=iPhone16,2
+YAW replayed hole=8 yaw=0.91161 rad (52.23 deg)
+EXP a — ShellScene cameras disabled: 1
+STATS job=3 run=1 label=Ba_shellcam_off hole=8 exp=a thermal=Fair fps=60.2 frameMs=16.62 mainMs=3.26 renderMs=14.61 batches=3773 setpass=108 draws=3773 tris=2104156 verts=2916611 shadowCasters=535 sysMemMB=1269.5 reservedMB=894.0 gcPerFrameB=29030
+---
+JOB idx=3 run=2/3 label=Ba_shellcam_off hole=8 exp=a midflight=False thermalAtBoot=Fair version=1.5.7 device=iPhone16,2
+YAW replayed hole=8 yaw=0.91161 rad (52.23 deg)
+EXP a — ShellScene cameras disabled: 1
+STATS job=3 run=2 label=Ba_shellcam_off hole=8 exp=a thermal=Serious fps=59.7 frameMs=16.75 mainMs=3.55 renderMs=14.48 batches=3917 setpass=111 draws=3917 tris=2402157 verts=3316430 shadowCasters=679 sysMemMB=1278.9 reservedMB=878.7 gcPerFrameB=29030
+---
+JOB idx=4 run=0/3 label=Bb_cascades1_dist40 hole=8 exp=b midflight=False thermalAtBoot=Nominal version=1.5.7 device=iPhone16,2
+YAW replayed hole=8 yaw=0.91161 rad (52.23 deg)
+EXP b — shadow diet: cascades=4 dist=100 → cascades=1 dist=40
+STATS job=4 run=0 label=Bb_cascades1_dist40 hole=8 exp=b thermal=Nominal fps=45.8 frameMs=21.83 mainMs=4.90 renderMs=19.67 batches=5358 setpass=141 draws=5358 tris=3113957 verts=4401759 shadowCasters=232 sysMemMB=1291.7 reservedMB=911.6 gcPerFrameB=29030
+---
+JOB idx=4 run=1/3 label=Bb_cascades1_dist40 hole=8 exp=b midflight=False thermalAtBoot=Nominal version=1.5.7 device=iPhone16,2
+YAW replayed hole=8 yaw=0.91161 rad (52.23 deg)
+EXP b — shadow diet: cascades=4 dist=100 → cascades=1 dist=40
+STATS job=4 run=1 label=Bb_cascades1_dist40 hole=8 exp=b thermal=Nominal fps=34.3 frameMs=29.14 mainMs=5.65 renderMs=26.46 batches=5503 setpass=142 draws=5503 tris=3116500 verts=4506924 shadowCasters=377 sysMemMB=1357.5 reservedMB=921.5 gcPerFrameB=29030
+---
+JOB idx=4 run=2/3 label=Bb_cascades1_dist40 hole=8 exp=b midflight=False thermalAtBoot=Fair version=1.5.7 device=iPhone16,2
+YAW replayed hole=8 yaw=0.91161 rad (52.23 deg)
+EXP b — shadow diet: cascades=4 dist=100 → cascades=1 dist=40
+STATS job=4 run=2 label=Bb_cascades1_dist40 hole=8 exp=b thermal=Fair fps=39.8 frameMs=25.12 mainMs=5.39 renderMs=22.42 batches=5358 setpass=141 draws=5358 tris=3113957 verts=4401759 shadowCasters=232 sysMemMB=1291.5 reservedMB=921.6 gcPerFrameB=29030
+---
+JOB idx=5 run=0/3 label=Bc_basemap100_instanced hole=8 exp=c midflight=False thermalAtBoot=Nominal version=1.5.7 device=iPhone16,2
+YAW replayed hole=8 yaw=0.91161 rad (52.23 deg)
+EXP c — TerrainRoot before: basemapDistance=1000 drawInstanced=False
+EXP c — terrains modified: 1 (basemapDistance=100, drawInstanced=true)
+STATS job=5 run=0 label=Bc_basemap100_instanced hole=8 exp=c thermal=Nominal fps=58.1 frameMs=17.21 mainMs=4.48 renderMs=15.00 batches=4252 setpass=186 draws=4252 tris=2812766 verts=4968633 shadowCasters=845 sysMemMB=1310.7 reservedMB=936.8 gcPerFrameB=29030
+---
+JOB idx=5 run=1/3 label=Bc_basemap100_instanced hole=8 exp=c midflight=False thermalAtBoot=Nominal version=1.5.7 device=iPhone16,2
+YAW replayed hole=8 yaw=0.91161 rad (52.23 deg)
+EXP c — TerrainRoot before: basemapDistance=1000 drawInstanced=False
+EXP c — terrains modified: 1 (basemapDistance=100, drawInstanced=true)
+STATS job=5 run=1 label=Bc_basemap100_instanced hole=8 exp=c thermal=Nominal fps=45.2 frameMs=22.14 mainMs=4.95 renderMs=19.80 batches=4610 setpass=190 draws=4610 tris=3126037 verts=5591387 shadowCasters=1203 sysMemMB=1333.7 reservedMB=924.0 gcPerFrameB=29030
+---
+JOB idx=5 run=2/3 label=Bc_basemap100_instanced hole=8 exp=c midflight=False thermalAtBoot=Fair version=1.5.7 device=iPhone16,2
+YAW replayed hole=8 yaw=0.91161 rad (52.23 deg)
+EXP c — TerrainRoot before: basemapDistance=1000 drawInstanced=False
+EXP c — terrains modified: 1 (basemapDistance=100, drawInstanced=true)
+STATS job=5 run=2 label=Bc_basemap100_instanced hole=8 exp=c thermal=Fair fps=31.9 frameMs=31.37 mainMs=5.43 renderMs=24.38 batches=6093 setpass=207 draws=6093 tris=4143819 verts=7537076 shadowCasters=2687 sysMemMB=1405.6 reservedMB=941.0 gcPerFrameB=29030
+---
+JOB idx=6 run=0/3 label=Bd_decalfeature_off hole=8 exp=d midflight=False thermalAtBoot=Nominal version=1.5.7 device=iPhone16,2
+YAW replayed hole=8 yaw=0.91161 rad (52.23 deg)
+EXP d — disabled renderer feature: DecalRendererFeature
+EXP d — decal features disabled: 1
+STATS job=6 run=0 label=Bd_decalfeature_off hole=8 exp=d thermal=Nominal fps=47.2 frameMs=21.20 mainMs=4.86 renderMs=18.90 batches=5273 setpass=170 draws=5273 tris=3901626 verts=5455192 shadowCasters=2249 sysMemMB=1288.5 reservedMB=859.2 gcPerFrameB=29030
+---
+JOB idx=6 run=1/3 label=Bd_decalfeature_off hole=8 exp=d midflight=False thermalAtBoot=Nominal version=1.5.7 device=iPhone16,2
+YAW replayed hole=8 yaw=0.91161 rad (52.23 deg)
+EXP d — disabled renderer feature: DecalRendererFeature
+EXP d — decal features disabled: 1
+STATS job=6 run=1 label=Bd_decalfeature_off hole=8 exp=d thermal=Nominal fps=59.9 frameMs=16.69 mainMs=4.43 renderMs=14.56 batches=4424 setpass=164 draws=4424 tris=2829178 verts=3807575 shadowCasters=1400 sysMemMB=1227.7 reservedMB=859.3 gcPerFrameB=29030
+---
+JOB idx=6 run=2/3 label=Bd_decalfeature_off hole=8 exp=d midflight=False thermalAtBoot=Fair version=1.5.7 device=iPhone16,2
+YAW replayed hole=8 yaw=0.91161 rad (52.23 deg)
+EXP d — disabled renderer feature: DecalRendererFeature
+EXP d — decal features disabled: 1
+STATS job=6 run=2 label=Bd_decalfeature_off hole=8 exp=d thermal=Fair fps=59.7 frameMs=16.75 mainMs=4.64 renderMs=14.51 batches=4712 setpass=159 draws=4712 tris=3377235 verts=4538387 shadowCasters=1688 sysMemMB=1253.9 reservedMB=859.2 gcPerFrameB=29030
+---
+JOB idx=3 run=0/3 label=Ba_shellcam_off hole=8 exp=a midflight=False thermalAtBoot=Nominal version=1.5.7 device=iPhone16,2
+YAW replayed hole=8 yaw=0.91161 rad (52.23 deg)
+EXP a — ShellScene cameras disabled: 1
+STATS job=3 run=0 label=Ba_shellcam_off hole=8 exp=a thermal=Nominal fps=59.5 frameMs=16.82 mainMs=3.55 renderMs=14.55 batches=4315 setpass=113 draws=4315 tris=3106573 verts=4377332 shadowCasters=1077 sysMemMB=1279.5 reservedMB=895.0 gcPerFrameB=29030
+---
+JOB idx=6 run=0/3 label=Bd_decalfeature_off hole=8 exp=d midflight=False thermalAtBoot=Nominal version=1.5.7 device=iPhone16,2
+YAW replayed hole=8 yaw=0.91161 rad (52.23 deg)
+EXP d — disabled renderer feature: DecalRendererFeature
+EXP d — decal features disabled: 1
+STATS job=6 run=0 label=Bd_decalfeature_off hole=8 exp=d thermal=Nominal fps=59.9 frameMs=16.68 mainMs=4.50 renderMs=14.52 batches=3984 setpass=159 draws=3984 tris=2478863 verts=3129343 shadowCasters=960 sysMemMB=1272.9 reservedMB=859.1 gcPerFrameB=29030
+---
+JOB idx=4 run=0/3 label=Bb_cascades1_dist40 hole=8 exp=b midflight=False thermalAtBoot=Fair version=1.5.7 device=iPhone16,2
+YAW replayed hole=8 yaw=0.91161 rad (52.23 deg)
+EXP b — shadow diet: cascades=4 dist=100 → cascades=1 dist=40
+STATS job=4 run=0 label=Bb_cascades1_dist40 hole=8 exp=b thermal=Fair fps=34.6 frameMs=28.93 mainMs=5.25 renderMs=22.37 batches=5358 setpass=141 draws=5358 tris=3113957 verts=4401759 shadowCasters=232 sysMemMB=1348.1 reservedMB=907.5 gcPerFrameB=29030
+---
+JOB idx=5 run=0/3 label=Bc_basemap100_instanced hole=8 exp=c midflight=False thermalAtBoot=Fair version=1.5.7 device=iPhone16,2
+YAW replayed hole=8 yaw=0.91161 rad (52.23 deg)
+EXP c — TerrainRoot before: basemapDistance=1000 drawInstanced=False
+EXP c — terrains modified: 1 (basemapDistance=100, drawInstanced=true)
+STATS job=5 run=0 label=Bc_basemap100_instanced hole=8 exp=c thermal=Fair fps=45.5 frameMs=21.99 mainMs=4.93 renderMs=19.74 batches=4610 setpass=190 draws=4610 tris=3126037 verts=5591387 shadowCasters=1203 sysMemMB=1324.2 reservedMB=940.7 gcPerFrameB=29030
+---
+JOB idx=0 run=0/3 label=A1_h08_tee_baseline hole=8 exp=none midflight=False thermalAtBoot=Nominal version=1.5.7 device=iPhone16,2
+YAW replayed hole=8 yaw=0.91161 rad (52.23 deg)
+EXP none (baseline)
+STATS job=0 run=0 label=A1_h08_tee_baseline hole=8 exp=none thermal=Nominal fps=58.7 frameMs=17.03 mainMs=4.53 renderMs=15.05 batches=4965 setpass=161 draws=4965 tris=3687665 verts=5017437 shadowCasters=1941 sysMemMB=1226.8 reservedMB=856.6 gcPerFrameB=29030
+---
+JOB idx=0 run=0/3 label=A1_h08_tee_baseline hole=8 exp=none midflight=False thermalAtBoot=Nominal version=1.5.7 device=iPhone16,2
+YAW replayed hole=8 yaw=0.91161 rad (52.23 deg)
+EXP none (baseline)
+STATS job=0 run=0 label=A1_h08_tee_baseline hole=8 exp=none thermal=Fair fps=59.9 frameMs=16.68 mainMs=4.50 renderMs=14.66 batches=4712 setpass=159 draws=4712 tris=3377235 verts=4538387 shadowCasters=1688 sysMemMB=1226.6 reservedMB=856.9 gcPerFrameB=29030
+---
+JOB idx=0 run=0/3 label=A1_h08_tee_baseline hole=8 exp=none midflight=False thermalAtBoot=Fair version=1.5.7 device=iPhone16,2
+YAW replayed hole=8 yaw=0.91161 rad (52.23 deg)
+EXP none (baseline)
+STATS job=0 run=0 label=A1_h08_tee_baseline hole=8 exp=none thermal=Serious fps=34.2 frameMs=29.25 mainMs=5.62 renderMs=26.05 batches=4712 setpass=159 draws=4712 tris=3377235 verts=4538387 shadowCasters=1688 sysMemMB=1214.2 reservedMB=857.7 gcPerFrameB=29030
+---
+JOB idx=3 run=0/3 label=Ba_shellcam_off hole=8 exp=a midflight=False thermalAtBoot=Nominal version=1.5.7 device=iPhone16,2
+YAW replayed hole=8 yaw=0.91161 rad (52.23 deg)
+EXP a — ShellScene cameras disabled: 1
+STATS job=3 run=0 label=Ba_shellcam_off hole=8 exp=a thermal=Nominal fps=59.8 frameMs=16.71 mainMs=3.51 renderMs=14.09 batches=2430 setpass=92 draws=2430 tris=1410076 verts=1806649 shadowCasters=535 sysMemMB=1192.9 reservedMB=845.2 gcPerFrameB=29030
+---
+JOB idx=3 run=0/3 label=Ba_shellcam_off hole=8 exp=a midflight=False thermalAtBoot=Nominal version=1.5.7 device=iPhone16,2
+YAW replayed hole=8 yaw=0.91161 rad (52.23 deg)
+EXP a — ShellScene cameras disabled: 1
+STATS job=3 run=0 label=Ba_shellcam_off hole=8 exp=a thermal=Nominal fps=59.4 frameMs=16.84 mainMs=3.75 renderMs=13.59 batches=2429 setpass=91 draws=2429 tris=1410074 verts=1806645 shadowCasters=535 sysMemMB=1158.9 reservedMB=845.2 gcPerFrameB=29030
+---
+JOB idx=3 run=0/3 label=Ba_shellcam_off hole=8 exp=a midflight=False thermalAtBoot=Fair version=1.5.7 device=iPhone16,2
+YAW replayed hole=8 yaw=0.91161 rad (52.23 deg)
+EXP a — ShellScene cameras disabled: 1
+STATS job=3 run=0 label=Ba_shellcam_off hole=8 exp=a thermal=Fair fps=60.6 frameMs=16.50 mainMs=3.56 renderMs=14.28 batches=2964 setpass=96 draws=2964 tris=2394329 verts=3248188 shadowCasters=1070 sysMemMB=1203.2 reservedMB=844.4 gcPerFrameB=29030
+---

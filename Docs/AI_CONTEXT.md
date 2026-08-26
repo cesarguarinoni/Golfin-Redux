@@ -67,6 +67,23 @@
 - **`home_notices`** — flagged by its own session as needing a device + the dashboard to sign off.
   See its entry below; not touched here.
 
+- **`perf_baseline` Phase 0b — DONE for the experiment sweep (2026-08-26).** §10 of
+  [Docs/Reports/perf_baseline_2026-08-26.md](Docs/Reports/perf_baseline_2026-08-26.md).
+  Cooled + yaw-pinned + 3-run-median protocol, thermal state recorded from iOS, and **a frame saved
+  with every measurement**. **Biggest win in render-thread ms: (a) shell camera off, −11.63 ms
+  (26.11 → 14.48) taking Hole 08 from 30.1 → 59.8 fps; (d) decal feature off is −11.06 ms, and the
+  pair (a+d) is −12.02 ms with batches 7,375 → 2,430 and tris 5.03 M → 1.41 M.** (a) also makes fps
+  independent of thermal state (59.8/60.2/59.7 at Nominal/Fair/Serious).
+  ⚠️ **Disabling a renderer feature at RUNTIME corrupts the render** — (d) via `SetActive(false)`
+  drew a fully BLACK terrain and read as a 2× win with no error logged; caught only because Cesar
+  looked at the phone. Re-tested properly via the asset + rebuild, then reverted. Lesson: a number
+  without a frame is not evidence. Also: reverting a renderer-feature A/B means reverting TWO files
+  — the build rewrites `m_PrefilterDBufferMRT3` in `Mobile_RPAsset.asset`.
+  H06's 6.3 M tris CONFIRMED as heightmap density (2049² on a 229×101 m terrain = ~7× the samples/m²
+  of H08); fix belongs at import. §9's H06 "20.0 fps" was throttling — cooled it is 35.2 fps.
+  **Still owed:** (e) maxLOD1 mid-flight, H08 mid-flight baseline, Instruments GPU timing, Memory
+  Profiler top-10, GC call stack behind the ~29 KB/frame.
+
 - **`perf_baseline` Phase 0 — the device half (2026-08-26).** Static half is DONE and written up:
   [Docs/Reports/perf_baseline_2026-08-26.md](Docs/Reports/perf_baseline_2026-08-26.md). All five
   `PERF_OPTIMIZATION_PLAN` §0 items came back **CONFIRMED** from the assets/scenes/URP source alone
