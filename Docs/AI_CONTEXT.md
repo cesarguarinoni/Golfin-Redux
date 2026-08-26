@@ -67,7 +67,8 @@
 - **`home_notices`** — flagged by its own session as needing a device + the dashboard to sign off.
   See its entry below; not touched here.
 
-- **`perf_phase1_free_wins` — DEVICE PASS COMPLETE 2026-08-26, build 2316. Owes only Lesson O.**
+- **`perf_phase1_free_wins` — ✅ ALL ACCEPTANCE ITEMS PASS 2026-08-26. Awaiting the move to Completed/.**
+  Lesson O closed on build 2317: Cesar played Hole 08 end to end — *"Smooth as a baby's butt."*
   §11 of [Docs/Reports/perf_baseline_2026-08-26.md](Docs/Reports/perf_baseline_2026-08-26.md).
   Pinned sky + pinned yaw, 3 runs per pose, iPhone 15 Pro Max:
   **H08 tee 30.1 → 60.0 fps, 26.11 → 14.34 ms, 7,375 → 3,014 batches, 5.03 M → 2.37 M tris.
@@ -76,7 +77,12 @@
   Items 16/17/18/19/22/23/24 PASS. Teardown ran as a BOT job (`P1_teardown`) — 8/8 assertions,
   `teardown_invariants.json` `fails=0`, driven through the real `confirmQuitButton.onClick`, and it
   confirms on hardware the shell-light restore that never worked in a player build.
-  **Only Cesar's full-hole playthrough (Lesson O) is owed.**
+  **Two dev-harness fixes landed alongside:** the bot no longer hijacks a dev build (device arming
+  is now gated on `Documents/perfbot/job.txt`, which `Start()` consumes — one automated launch per
+  push, the next launch is the human's), and `Assets/Scripts/Dev/DevFpsOverlay.cs` puts
+  **fps · frame ms · GC KB/f · thermal** on the glass in dev builds. The overlay deliberately does
+  NOT run while the bot is armed, because IMGUI allocates and would corrupt `gcPerFrameB`.
+  Latest dev build on the phone: **2318**.
   ✅ **THE HARNESS IS REPRODUCIBLE NOW.** With sky + yaw pinned, batches and triangles are IDENTICAL
   across all three runs of every hole. Phase 0b swung 7,375 vs 6,086 batches on the same pose — that
   variance was `SkyRandomizer` rolling a new sky per app launch, not the renderer. **Any frame A/B

@@ -1090,6 +1090,14 @@ in a player build at all (same class as the K5 tree-wind stripping).
 | Lesson O — Cesar plays one full hole on 2316 | **Owed.** The only remaining sign-off that a bot cannot give |
 | Instruments Metal System Trace, Memory Profiler top-10, GC call stack | Phase 0b leftovers, unchanged |
 
+### 11.7b Lesson O — **PASSED** (Cesar, build 2317, Hole 08)
+
+Cesar played Hole 08 end to end on the device: **"Smooth as a baby's butt."** That closes the last
+acceptance item — every other one was already carried by device numbers or an invariant JSON.
+Hole 13 could not be played (locked), which is unrelated to this task.
+
+With that, **every acceptance item in the spec now passes.**
+
 ### 11.8 The bot no longer hijacks a dev build (2026-08-26, build 2317)
 
 `AutoStart` checked `EditorArmed` only under `#if UNITY_EDITOR`; on device it spawned the bot
@@ -1108,6 +1116,20 @@ no job.txt : [PerfBot] not armed — no Documents/perfbot/job.txt. The app is yo
 job.txt    : [PerfBot] JOB OVERRIDE from job.txt → job=9 run=0
              [PerfBot] JOB idx=9 run=0/3 label=P1_h08_tee_after …      job.txt then gone
 ```
+
+### 11.8b Dev fps overlay (build 2318)
+
+`Assets/Scripts/Dev/DevFpsOverlay.cs` — self-installing IMGUI readout showing **fps · frame ms ·
+GC KB/frame · iOS thermal state**, so a human holding the phone can see what previously only existed
+in a device log. Same `GOLFIN_TESTBUILD` gate as the bot, so it compiles to nothing in the store
+build. No scene or prefab wiring; it spawns itself.
+
+**It deliberately does not run while the bot is armed.** IMGUI allocates every frame, and leaving it
+on during a measurement run would inflate the very `gcPerFrameB` figure Phase 1 reports. It uses the
+bot's arm signal inverted — `job.txt` present ⇒ overlay off. One of the two is on, never both.
+
+The GC figure it shows in the **Editor** (~54 KB/f) is much higher than the device's 21,506 B/f;
+that is Editor overhead plus the overlay's own allocations, and is expected.
 
 ### 11.9 Flat-terrain investigation — candidate #2 (Native Render Pass) ELIMINATED
 

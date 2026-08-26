@@ -1,7 +1,10 @@
-READY_FOR_SELF_REVIEW
+ARCHITECT_REVIEW_PASS
 
-Device pass COMPLETE on build 2316 (pinned sky + pinned yaw, 3 runs per pose). All bot-checkable
-acceptance items pass. One human sign-off is owed: Lesson O, Cesar plays one full hole.
+EVERY acceptance item now passes. Device pass complete on 2316 (pinned sky + pinned yaw, 3 runs per
+pose), and Lesson O closed on 2317: Cesar played Hole 08 end to end -- "Smooth as a baby's butt."
+(Hole 13 is locked; unrelated to this task.)
+
+Awaiting Cesar's word to move the folder to Docs/Specs/Completed/.
 
 RESULTS (primary sample, same measurement point as Phase 0b's before-numbers):
   H08 tee        30.1 -> 60.0 fps | 26.11 -> 14.34 ms | 7,375 -> 3,014 batches | 5.03M -> 2.37M tris
