@@ -2728,3 +2728,50 @@ re-locked every gacha character on second boot via v9→v10.
   beat reasoning forward from `DefaultBagIds` (which was correct all along).
 - The reported bug was in the starter bag; the defect was in save versioning. **Follow the grant,
   not the list.**
+
+---
+
+## Lesson BK — the Supabase SQL editor's RLS warning lints one statement, not the script
+
+**Session:** 2026-08-26, `content_player_inventory` (Phase 4 migration).
+
+Pasting a migration that does `create table …` and then, three statements later,
+`alter table … enable row level security` makes the Supabase SQL editor stop and warn:
+
+> This query creates a table without enabling Row Level Security. Clients using anon or
+> authenticated keys may be able to access `public.golfin_pending_grants`.
+
+**It is a false positive.** The linter inspects the `create table` statement in isolation; it does
+not look ahead in the script. Every migration in this repo that follows the house pattern (create,
+index, then enable RLS) will trip it, so it will recur on every future one.
+
+**Rules:**
+- **Do not restructure the migration to silence it, and do not reassure from the shape of the
+  script.** Prove it from the database afterwards: `pg_class.relrowsecurity` for the table and a
+  `pg_policies` count. Every migration here already ends in a verification `select` — the
+  `grants_rls = 1` / `grants_policies = 0` pair *is* the answer to the warning.
+- **RLS ON with ZERO policies is deny-all, and that is the intended posture**, not an oversight —
+  `service_role` bypasses RLS, so the API writes and the dashboard reads while `anon`/`authenticated`
+  get nothing over PostgREST. Say that explicitly when the warning comes up, because "no policies"
+  reads to most people as "no protection", which is the exact inverse.
+- Selecting the table as `anon` and getting `[]` proves nothing when the table is empty. The
+  catalogue-level check is the proof; the read is not.
+
+## Lesson BL — `git add` resolves paths against a cwd a previous command may have moved
+
+**Session:** 2026-08-26, same task, during close-out.
+
+An earlier command in the session ended with `cd Tools/admin-dashboard` to count lines. Several
+tool calls later a carefully-enumerated `git add` of ~20 repo-root-relative paths ran from *that*
+directory, failed on the first pathspec, and aborted — staging nothing.
+
+Nothing was lost, and only because git aborts the whole `add` on an unmatched pathspec. The failure
+mode worth fearing is the one where it *doesn't*: a path list where the first few entries happen to
+resolve under the wrong root, staging a subset and committing a partial change that compiles.
+
+**Rules:**
+- **Start any staging command with an explicit `cd` to the repo root**, even when you believe you
+  are already there. Shell cwd persists across calls and is invisible in the transcript.
+- **Read back `git diff --cached --name-only` and count it before committing.** The count is the
+  cheap assertion — 62 staged paths against ~62 expected is a real check; "the add didn't error" is
+  not, because a partial add doesn't error.

@@ -78,8 +78,10 @@
 
 ## ✅ RECENTLY LANDED
 
-> **`content_player_inventory` — PHASE 4, THE LAST PIECE. Built 2026-08-26, awaiting Cesar.**
-> Spec: `Docs/Specs/Active/content_player_inventory/`. STATUS `READY_FOR_ARCHITECT_REVIEW`.
+> **`content_player_inventory` — PHASE 4, THE LAST PIECE. DONE, approved by Cesar 2026-08-26.**
+> Spec: `Docs/Specs/Completed/content_player_inventory/`. Architect report:
+> [Docs/Reports/2026-08-26_content_player_inventory.md](Docs/Reports/2026-08-26_content_player_inventory.md).
+> **The admin-managed content plan is now complete end to end — Phases 0 through 4 all shipped.**
 > Implemented DIRECTLY by the main Claude Code thread at Cesar's instruction — no implementer /
 > self-reviewer / red-team chain ran, so `SELF_REVIEW.md` and `ARCHITECT_REVIEW.md` are still the
 > unfilled template. **ONE spec, not the 4a→4b→4c ladder** (testers only, so the phasing that
@@ -142,7 +144,17 @@
 >   ⚠️ **The Supabase SQL editor warns "creates a table without enabling RLS" — false positive.** It
 >   lints the `create table` statement in isolation; the enable is three statements later.
 >   `grants_rls = 1` is the proof.
-> - **Still uncommitted on the Unity side** — scoped and ready, awaiting Cesar's approval.
+> - **Committed and pushed:** GolfinRedux `cbb1cb4d5`, playlife `4bd745b`.
+> - **Two follow-ups fell out of the Architect's review** (`CONTENT_PIPELINE_PLAN.md` §6.5).
+>   Neither blocked the task; both are small and both are worth doing before the beta widens:
+>   1. **Instrument the refund window** (§6.5 decision 1) — log every merge that RAISES a quantity,
+>      with player + item. The point is not the exploit, it is the MEASUREMENT: beta consumption
+>      figures are what tune the economy, and a silent refund path skews exactly those. A count near
+>      zero keeps §6 step 4d a launch-gate; anything else moves it up. Lives in
+>      `InventoryMerge` / `InventoryProjector.RaiseQuantity` — a few lines.
+>   2. **A REVOKE action for UNAPPLIED grants** (§6.5 decision 3) in the Users drawer. Grants are
+>      additive-only, so a fat-fingered one is permanent once drained and fixable only in SQL;
+>      revoking before it drains is the cheap half and closes most of it. No separate panel.
 
 > **`content_kill_switch_and_order` — DONE, approved by Cesar 2026-08-26.** Spec:
 > `Docs/Specs/Completed/content_kill_switch_and_order/`. Two small pre-existing

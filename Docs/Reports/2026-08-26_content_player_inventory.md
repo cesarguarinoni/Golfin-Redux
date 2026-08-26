@@ -1,7 +1,9 @@
 # `content_player_inventory` — architect report
 
-**Date:** 2026-08-26 · **Spec:** `Docs/Specs/Active/content_player_inventory/`
-**Status:** shipped to prod, verified, awaiting Cesar's approval (spec not yet moved to `Completed/`).
+**Date:** 2026-08-26 · **Spec:** `Docs/Specs/Completed/content_player_inventory/`
+**Status:** shipped to prod, verified, **approved by Cesar 2026-08-26** (spec moved to `Completed/`).
+**Architect's answers to §7:** `CONTENT_PIPELINE_PLAN.md` §6.5 — all three questions decided; two
+follow-ups fell out (instrument the refund window; a revoke action for unapplied grants).
 **Implemented by:** Claude Code (main thread, direct — not the subagent pipeline; backend + client,
 no Figma node, no screenshot deliverable).
 
@@ -222,8 +224,8 @@ quietly dropped in a later redesign.
 
 ## 7. State
 
-- **Shipped to prod and verified.** All 11 acceptance items PASS. Awaiting Cesar's approval; spec
-  folder still in `Docs/Specs/Active/`.
+- **DONE**, approved by Cesar 2026-08-26. All 11 acceptance items PASS. Spec folder moved to
+  `Docs/Specs/Completed/content_player_inventory/`.
 - **playlife** `ee42f42` → `4bd745b`, pushed. `playlife-api` v52.
 - **GolfinRedux** — this commit. Staged by explicit path: the pre-existing dirt in the working tree
   (`ShellScene.unity`, `LocalizationManager.cs`, four test files, `AppVersion.cs`, `TellCode.md`,
@@ -232,13 +234,21 @@ quietly dropped in a later redesign.
   `HEARTBEAT.log`'s kickoff baseline block.
 - **The device pass is unblocked** and now carries two Phase-4 checks (§4).
 
-### Open for the architect
+### ~~Open for the architect~~ — ANSWERED, `CONTENT_PIPELINE_PLAN.md` §6.5
 
-1. **§2.2 — is a refundable spend acceptable through the beta?** If yes, nothing to do. If no, 4d
-   moves up the queue and I would want to know whether it covers all four spend paths (clubs,
-   characters, items, gacha) or starts with one.
-2. **§3.2 — is the bag layout property or preference?** I chose preference (local wins). Two lines to
-   flip if that is wrong.
-3. **Should the grants queue get its own admin panel?** Today it is read-only inside the Users
-   drawer, and there is no way to see grants across players or revoke a mis-issued one before it
-   drains. Revocation is a genuine gap: an unapplied grant is deletable in SQL and nowhere else.
+1. **§2.2 — is a refundable spend acceptable through the beta?** **Yes, but measure it.** The cost
+   is not player harm but DATA harm: beta consumption figures tune the economy and a silent refund
+   path skews exactly those. **Follow-up: log every merge that RAISES a quantity, with player and
+   item.** ~0 through the beta keeps 4d a launch-gate; anything else moves it up. Sharper than my
+   framing — I weighed it as an exploit, and the more expensive consequence was the corrupted
+   measurement.
+2. **§3.2 — property or preference?** **Preference; the call stands**, with better reasoning than it
+   shipped with: local-wins only ever decides the two-active-devices case, and
+   restore-after-reinstall — the case testers actually hit — has no local layout to win, so the
+   blob's slots arrive and are used. It costs nothing where it matters.
+3. **A grants panel?** **No — a REVOKE action on the existing drawer.** The gap is narrower than
+   "no panel": grants are additive-only, so a fat-fingered one is permanent once drained and fixable
+   only in SQL. Revoking an *unapplied* grant is the cheap half and closes most of it.
+   Cross-player visibility can wait. **Follow-up.**
+
+Both follow-ups are tracked in `AI_CONTEXT.md`; neither blocked this task.
