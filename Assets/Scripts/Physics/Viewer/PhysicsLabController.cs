@@ -2546,9 +2546,9 @@ namespace Golfin.Physics.Viewer
         /// perf_phase1_free_wins §3: applies the terrain render defaults at hole load, at runtime,
         /// so no .unity or TerrainData file is edited.
         ///
-        /// drawInstanced is the safe half of the Phase 0b (c) experiment: a pure draw-call
-        /// reduction with no texturing consequence. The other half — basemapDistance 1000 -> 100 —
-        /// was reverted after it produced a visible seam on device; see the body for why.
+        /// §3 is now the TREE-DISTANCE NORMALISATION ONLY. Both halves of the Phase 0b (c)
+        /// experiment were dropped after measurement: basemapDistance 100 gave no gain (§11.3) and
+        /// drawInstanced was within noise while flattening distant terrain. See the body.
         ///
         /// The tree values normalise holes 01/02/06, which shipped 5000/50/5 against the other
         /// fifteen holes' 150/80/20. That is the plan §2 fairness rule — every hole should cost
@@ -2565,21 +2565,28 @@ namespace Golfin.Physics.Viewer
                 return;
             }
 
-            // basemapDistance is left at the authored 1000 ON PURPOSE. Setting it to 100 makes
-            // everything past 100 m render from the terrain basemap instead of the 9-layer splat,
-            // and these terrains ship baseMapResolution=512 over a 668 m hole — 1.30 m per texel.
-            // On device that draws a hard horizontal seam across the fairway, blocky stair-stepped
-            // bunker/cart-path edges, and dark/bright patches either side of the boundary (Cesar
-            // caught it on build 2314, report §11.7). It would need baseMapResolution raised on
-            // every TerrainData, which this task is explicitly barred from touching. The (a)+(d)
-            // pair already clears the target on its own, so the basemap lever is deferred to the
-            // tier work (9a) where the resolution can be fixed alongside it.
-            t.drawInstanced         = true;
+            // basemapDistance is left at the authored 1000 ON PURPOSE — but NOT for the reason an
+            // earlier revision of this comment claimed. It does not cause a visible seam; a
+            // pinned-sky device A/B put basemap 100 vs 1000 at mean 2.01/255 apart with identical
+            // batches and triangles (report §11.3). It is dropped because it buys NOTHING: 13.48 ms
+            // with it vs 13.35 ms without, i.e. marginally slower. Phase 0b's -6.31 ms for (c) does
+            // not reproduce. Worth knowing if it is ever revisited: these terrains ship
+            // baseMapResolution=512 over a 668 m hole = 1.30 m per basemap texel, so the lever has
+            // little headroom before it costs detail, and raising that resolution is a TerrainData
+            // edit this task is barred from. Deferred to the tier work (9a).
+            // drawInstanced is NOT set either. §11.3 measured instanced-vs-not as within noise on
+            // device (13.48 vs 13.35 ms, identical batches and triangles), so it buys nothing — and
+            // an Editor A/B at the Hole 08 tee shows it measurably FLATTENS distant terrain
+            // (mid-rough patch stddev 13.12 with it on vs 22.10 with it off; far hillside 2.52 vs
+            // 8.84). It is also a device-only risk: every hole scene ships m_DrawInstanced: 0 and
+            // GraphicsSettings m_InstancingStripping is StripUnused, so the terrain's instanced
+            // shader variants may not be in a player build at all — the Editor compiles them on
+            // demand and would never show it. Cost without benefit; dropped.
             t.treeDistance          = TerrainTreeDistance;
             t.treeBillboardDistance = TerrainTreeBillboardDistance;
             t.treeCrossFadeLength   = TerrainTreeCrossFadeLength;
 
-            Debug.Log($"[PhysicsLab] Terrain render defaults applied to '{t.name}': drawInstanced=true, treeDistance={TerrainTreeDistance}, treeBillboardDistance={TerrainTreeBillboardDistance}, treeCrossFadeLength={TerrainTreeCrossFadeLength}, basemapDistance left authored at {t.basemapDistance} (perf_phase1_free_wins §3).");
+            Debug.Log($"[PhysicsLab] Terrain render defaults applied to '{t.name}': treeDistance={TerrainTreeDistance}, treeBillboardDistance={TerrainTreeBillboardDistance}, treeCrossFadeLength={TerrainTreeCrossFadeLength}; basemapDistance ({t.basemapDistance}) and drawInstanced ({t.drawInstanced}) left authored (perf_phase1_free_wins §3).");
         }
 
         /// <summary>

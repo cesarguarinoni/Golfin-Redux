@@ -104,28 +104,42 @@ surface animates between shots. Closing it on device per the order's item 4 (Hol
 shoreline frames). Frames: `h13_shoreline_depth_off.png`, `h13_shoreline_depth_on.png` in
 `Docs/Reports/perf_baseline_2026-08-26_frames/`.
 
-## 4. Black tree trunks — RETRACTED. Not a defect, not Phase 1, no task filed.
+## 4. The flat terrain is PRE-EXISTING — bisect stopped at step 0
 
-Step 0 of the device order asked Cesar to check Hole 13 on build 2311. **He could not**: Hole 13 is
-locked and the installed build's bot auto-loads holes. So I settled it in the Editor instead, by
-restoring the decal-enabled `Mobile_Renderer.asset` from `4a703fb40` and A/B-ing directly:
+**Cesar's symptom on build 2314:** terrain renders flat untextured colour near and far (rough flat
+dark green, bunker flat white, fairway layer flat light green); only overlay meshes (`Fairway_n`,
+`Tee_n`) keep texture.
 
-| Condition | spruce trunk RGB | verdict |
-|---|---|---|
-| decal **ON**, first render after a cold session + first load | `(0,0,0)` / `(1,1,1)` | black |
-| decal **ON**, reloaded ×2 | `(97,85,60)` / `(98,86,60)` | correct brown |
-| decal **OFF**, reloaded ×4 | `(91,79,54)` … `(91,79,55)` | correct brown |
+**Reproduced in the Editor Game View** at HEAD — Hole 08 tee, pinned sky (`Afternoon (Cloudy)`,
+sun 28.5°), pinned yaw, 1170×2532. Then re-shot with all four Phase 1 changes reverted, and again
+against **real pre-Phase-1 code** (`a98008f6d` checked out for `PhysicsLabController.cs`,
+`Mobile_Renderer.asset`, `Mobile_RPAsset.asset`).
 
-Sun (`euler 49.8, 332.8`, int 1.50) and skybox (`Sky_NoonClear`) identical across every run, so it is
-not sky randomisation. It reproduces **only on the first render after a cold load** — the same
-"sampled before tree LOD fully resolves" transient that §10.1 blamed for the 6,086-vs-7,375-batch
-outlier.
+| patch (luminance) | HEAD | all reverted | pre-Phase-1 |
+|---|---|---|---|
+| near fairway | 141.9 · sd **22.44** | 141.9 · sd **22.44** | 141.9 · sd **22.44** |
+| mid rough left | 92.5 · sd 13.12 | 85.9 · sd 22.10 | 85.9 · sd 22.10 |
+| far hillside | 77.3 · sd 2.52 | 72.6 · sd 8.84 | 72.6 · sd 8.84 |
 
-So: it appears **with the decal feature enabled**, therefore Phase 1 did not cause it; and it is gone
-on every later load, therefore it is not a persistent defect. **Neither branch of the order's step 0
-applies** — I am not stopping, and I am not filing a task. Proceeding to build and measure.
+Near fairway bit-identical across all three, flat in all three. **Phase 1 did not cause it.**
+Steps 1–4 (drawInstanced, NRP, decal, shell camera) not run — step 0 answered it. Own task;
+`m_UseNativeRenderPass: 1` is the obvious first probe.
 
-**Carried into the measurement protocol: never sample the first frame after a cold load.**
+**Method note that matters:** my earlier Editor passes missed this because they rendered through an
+ad-hoc `screenshot-camera`, which does not exercise the real pipeline. Only the **Game View** shows
+it. That is why three earlier investigations looked clean.
+
+### The one real Phase 1 delta, and the fix
+
+HEAD's *distant* terrain was measurably flatter than pre-Phase-1 (mid-rough sd 13.12 vs 22.10; far
+hillside 2.52 vs 8.84) with the near field untouched. `drawInstanced` was the only §3 setting that
+could do it. **Removed** — instructed either way, and justified independently: §11.3 shows it is
+within noise on device (13.48 vs 13.35 ms, identical batches/tris). It also carried a device-only
+risk the Editor cannot surface: every hole ships `m_DrawInstanced: 0`, the flag is runtime-only, and
+`GraphicsSettings m_InstancingStripping` is **StripUnused**, so the instanced terrain variants may
+not be in a player build at all.
+
+**§3 is now the tree-distance normalisation only.**
 
 ## 5. Spec deviations
 

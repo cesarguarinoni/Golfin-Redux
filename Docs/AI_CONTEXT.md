@@ -67,31 +67,28 @@
 - **`home_notices`** — flagged by its own session as needing a device + the dashboard to sign off.
   See its entry below; not touched here.
 
-- **`perf_phase1_free_wins` — device pass HALTED 2026-08-26, ESCALATED to the Architect.**
-  §11 of [Docs/Reports/perf_baseline_2026-08-26.md](Docs/Reports/perf_baseline_2026-08-26.md);
-  task folder `Docs/Specs/Active/perf_phase1_free_wins/`.
-  **The win is real and measured** (pinned sky + pinned yaw, thermal Nominal, build 2314 on iPhone 15
-  Pro Max, Hole 08 tee): **30.1 → 58.1 fps, 26.11 → 13.35 ms render thread, 7,375 → 1,848 batches,
-  5.03 M → 1.78 M tris, GC 29,030 → 21,506 B/frame.** One run, not the 3-run median.
-  **OPEN:** Cesar stopped the pass — the tee frame still looks wrong to him on both the shipped
-  build and the basemap variant, and neither hypothesis explains it (not basemapDistance: the two
-  frames differ by mean 2.01/255; not sky: both pinned). The decisive test was never run — Hole 08
-  tee on `a98008f6d` vs HEAD under a pinned sky. §11.4 has the isolation plan.
-  ⚠️ **PROCESS FINDING, applies beyond this task: `SkyRandomizer` rolls a NEW SKY PER APP LAUNCH**
-  (`RoundSeed` self-seeds from `Random.Range`), so **no frame comparison in the perf report — Phase
-  0b's included — was taken under controlled lighting.** Runs saw `Noon (Cloudy)` 74.5° elev,
-  `Classic` 45°, `Morning` 20.2°; a low morning sun throws long canopy shadows that read as "dark
-  patches" appearing and disappearing between builds. Now pinned by `PerfBaselineBot.PinSky()`.
-  **A frame A/B without a pinned sky is not evidence.**
-  Also: `basemapDistance = 100` **removed from §3** — a controlled A/B shows it delivers no gain
-  (13.48 vs 13.35 ms, identical batches/tris) and no visual change. `drawInstanced` + the 01/02/06
-  tree normalisation stay. Bot gained `PinSky()`, jobs 9–12 (H08/H01/H06/mid-flight after) and job
-  13 `P1_teardown`, which drives the real quit widgets and writes `teardown_invariants.json`
-  (built, never run). Also fixed: `LabHoleBinder` is entirely `#if UNITY_EDITOR`, so in a player
-  build nothing ever re-enabled the ShellScene directional light after a hole — `OnDestroy` now
-  restores camera *and* light.
-  **Not run:** runs 1–2, Holes 01/06, mid-flight, medians, Frame Debugger, teardown job, MapView
-  device check, shoreline frames, Cesar's playthrough.
+- **`perf_phase1_free_wins` — bisect done, Phase 1 CLEARED; device pass to resume (2026-08-26).**
+  §11 of [Docs/Reports/perf_baseline_2026-08-26.md](Docs/Reports/perf_baseline_2026-08-26.md).
+  **The flat untextured terrain Cesar saw on build 2314 is PRE-EXISTING — not Phase 1.** Reproduced
+  in the Editor **Game View** at HEAD (Hole 08 tee, pinned sky, pinned yaw), then re-shot with all
+  four Phase 1 changes reverted, then against **real pre-Phase-1 code** (`a98008f6d` checked out for
+  `PhysicsLabController.cs` + both Settings assets). Near-fairway patch **bit-identical in all three**
+  (141.9, sd 22.44) and flat in all three. **Own task now**; `m_UseNativeRenderPass: 1` on
+  `Mobile_Renderer`/`PC_Renderer` is the obvious first probe. §11.4 + `bisect_step0_*.png`.
+  ⚠️ **Method: only the Game View shows it.** Three earlier Editor investigations looked clean
+  because they rendered through an ad-hoc `screenshot-camera`, which does not exercise the real
+  pipeline. Render checks for this class of bug must go through the Game View.
+  **Shipped this round:** `drawInstanced` removed — within noise on device (13.48 vs 13.35 ms,
+  identical batches/tris) and it measurably flattened DISTANT terrain (mid-rough sd 13.12 vs 22.10);
+  plus a device-only stripping risk (holes ship `m_DrawInstanced: 0`, flag is runtime-only,
+  `m_InstancingStripping` is StripUnused). **§3 is now the tree-distance normalisation only** —
+  both halves of Phase 0b's (c) are gone.
+  **Measured win still stands** (pinned sky+yaw, Hole 08 tee, build 2314): **30.1 → 58.1 fps,
+  26.11 → 13.35 ms render thread, 7,375 → 1,848 batches, 5.03 M → 1.78 M tris.** One run.
+  ⚠️ **`SkyRandomizer` rolls a NEW SKY PER APP LAUNCH** — no frame comparison in this report, Phase
+  0b's included, was taken under controlled lighting until `PerfBaselineBot.PinSky()` was added.
+  **Next:** rebuild Dev-iOS without `drawInstanced`, then resume §11.7 — Holes 01/06, mid-flight,
+  3-run medians, Frame Debugger, the `P1_teardown` bot job (built, never run), MapView, Lesson O.
 
 - **`perf_baseline` Phase 0b — DONE for the experiment sweep (2026-08-26).** §10 of
   [Docs/Reports/perf_baseline_2026-08-26.md](Docs/Reports/perf_baseline_2026-08-26.md).

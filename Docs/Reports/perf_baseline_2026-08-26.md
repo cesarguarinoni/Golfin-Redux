@@ -941,30 +941,53 @@ Relevant context if it is ever revisited: these terrains ship `baseMapResolution
 668 m hole = **1.30 m per basemap texel**, so the lever has little headroom before it costs detail;
 raising that resolution is a TerrainData edit, which this task is barred from.
 
-## 11.4 **OPEN — the tee frame still looks wrong to Cesar**
+## 11.4 The flat terrain is **PRE-EXISTING** — Phase 1 did not cause it. Bisect stopped at step 0.
 
-Cesar's verdict on the last two device frames (`P1_h08_tee_after_run0.png` and
-`Bc_basemap100_instanced_run0.png`, both under the pinned `Afternoon (Cloudy)` sky):
-**"Both look broken."**
+**Symptom (Cesar, build 2314):** the terrain renders flat untextured colour near and far — rough a
+flat dark green, bunker a flat white, fairway layer a flat light green — while only the overlay
+meshes (`Fairway_n`, `Tee_n`) still show texture.
 
-This is **not explained** by either hypothesis chased this session:
-- **Not** `basemapDistance` — the two frames above differ by mean 2.01 and one of them has it at the
-  authored 1000.
-- **Not** sky variation — both frames share the same pinned sky.
+**Reproduced in the Editor Game View at HEAD**, Hole 08 tee, pinned sky (`Afternoon (Cloudy)`,
+sun 28.5°), pinned yaw, 1170×2532. Then the same shot in two more configurations.
 
-So a genuine visual defect may remain, or it may predate Phase 1. **Unresolved. Handed to the
-Architect.** What is still worth isolating, and is faster in the Editor than on device:
+> Why earlier Editor passes missed it: they rendered through an ad-hoc `screenshot-camera`, which
+> does **not** exercise the real pipeline. Only the **Game View** shows it. Any future render check
+> for this class of bug must go through the Game View.
 
-1. **Is it pre-existing?** Render Hole 08 tee on `a98008f6d` (pre-Phase-1) and on HEAD under a
-   pinned sky and identical camera. This is the one test that was never run.
-2. **`drawInstanced`** is the only §3 setting still applied — A/B it alone.
-3. **§2 decal removal** — restore `Mobile_Renderer.asset` from `4a703fb40` and A/B.
-4. **§1 shell camera off** — the remaining Phase 1 delta.
+| patch (40×40, luminance) | HEAD (Phase 1) | all four reverted at runtime | **pre-Phase-1 `a98008f6d`** |
+|---|---|---|---|
+| near fairway | 141.9 · sd **22.44** | 141.9 · sd **22.44** | 141.9 · sd **22.44** |
+| mid rough left | 92.5 · sd 13.12 | 85.9 · sd 22.10 | 85.9 · sd 22.10 |
+| far hillside | 77.3 · sd 2.52 | 72.6 · sd 8.84 | 72.6 · sd 8.84 |
+| bunker / right rough | 62.0 · sd 22.83 | 58.2 · sd 23.12 | 59.7 · sd 24.02 |
 
-Method note for whoever picks this up: global image diffing **cannot** resolve these. Measured
-Editor noise floor (same config, two consecutive renders) is **mean 6.36**, and every terrain-config
-diff measured 6.97–7.85 — indistinguishable. Wind-animated foliage and water dominate. Compare
-specific named regions, or pause animation, or judge by eye against a pinned-sky reference.
+The near fairway is **bit-identical across all three** and flat in all three. The pre-Phase-1 column
+was produced by checking out `a98008f6d` for `PhysicsLabController.cs`, `Mobile_Renderer.asset` and
+`Mobile_RPAsset.asset` — a real pre-Phase-1 render, not a simulation — and it matches the
+runtime-reverted column exactly on the first three patches, which validates the runtime revert.
+
+**Verdict: the flat terrain predates `perf_phase1_free_wins`.** Steps 1–4 of the bisect (drawInstanced,
+Native Render Pass, decal feature, shell camera) were **not run** — step 0 answered the question.
+Frames: `bisect_step0_prephase1_vs_head.png` (top pre-Phase-1, bottom HEAD), plus the three
+full frames `bisect_step0_*.png`.
+
+**This is its own task, not Phase 1's.** It is the terrain material/splat path — `TerrainLit`,
+9 layers, `alphamapResolution` 1024 — rendering unlit flat colour in the Game View while overlay
+meshes texture correctly. `m_UseNativeRenderPass: 1` on both `Mobile_Renderer` and `PC_Renderer`
+remains an untested candidate and is the obvious first probe for whoever picks it up.
+
+### One real Phase 1 delta found on the way
+
+HEAD's **distant** terrain is measurably flatter than pre-Phase-1 — mid-rough sd **13.12 vs 22.10**,
+far hillside **2.52 vs 8.84** — while the near field is untouched. The only §3 setting that could do
+that was `drawInstanced`. It has been **removed**, which was the instruction either way: §11.3 shows
+it is within noise on device (13.48 vs 13.35 ms, identical batches/tris), so it was cost without
+benefit. It also carried a device-only risk that the Editor could never surface — every hole scene
+ships `m_DrawInstanced: 0`, the flag is set purely at runtime, and `GraphicsSettings`
+`m_InstancingStripping` is **StripUnused**, so the terrain's instanced shader variants may not exist
+in a player build at all (same class as the K5 tree-wind stripping).
+
+**§3 is now the tree-distance normalisation only.** Both halves of the Phase 0b (c) experiment are gone.
 
 ## 11.5 Harness changes (`PerfBaselineBot`)
 

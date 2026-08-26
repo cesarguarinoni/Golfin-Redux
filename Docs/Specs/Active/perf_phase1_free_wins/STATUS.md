@@ -1,24 +1,22 @@
-ARCHITECT_REVIEW_ESCALATE
+IMPLEMENTER_WORKING
 
-Device pass ran and was HALTED by Cesar: the Hole 08 tee frame still looks wrong to him on both the
-shipped configuration and the basemap variant, and the visual question is going to the Architect
-because it reproduces faster in the Editor than on device.
+Bisect DONE, and it cleared Phase 1: the flat untextured terrain Cesar saw on build 2314 is
+PRE-EXISTING. Reproduced in the Editor Game View at HEAD, then re-shot with all four Phase 1
+changes reverted, then against real pre-Phase-1 code (a98008f6d checked out for
+PhysicsLabController.cs + Mobile_Renderer.asset + Mobile_RPAsset.asset). The near-fairway patch is
+bit-identical in all three (141.9, sd 22.44) and flat in all three. Steps 1-4 were not needed.
+Details + frames: report §11.4, bisect_step0_*.png.
 
-SETTLED — the performance win is real, measured under a controlled protocol (pinned sky + pinned
-yaw, thermal Nominal, build 2314 on iPhone 15 Pro Max):
-  Hole 08 tee   30.1 -> 58.1 fps | 26.11 -> 13.35 ms render thread | 7,375 -> 1,848 batches
-                5.03 M -> 1.78 M tris | GC 29,030 -> 21,506 B/frame
-  Caveat: ONE run, not the 3-run median the protocol demands.
+The flat terrain is its own task, not this one. m_UseNativeRenderPass: 1 (on both Mobile_Renderer
+and PC_Renderer) is the obvious first probe for it.
 
-OPEN — see Docs/Reports/perf_baseline_2026-08-26.md §11.4. Neither hypothesis chased this session
-explains what Cesar sees: it is not basemapDistance (the two frames differ by mean 2.01/255, one of
-them at the authored 1000) and it is not sky variation (both frames share a pinned sky). The one
-test never run is the decisive one: Hole 08 tee on a98008f6d (pre-Phase-1) vs HEAD, pinned sky,
-identical camera.
+SHIPPED THIS ROUND: drawInstanced removed from ApplyTerrainRenderDefaults. It was instructed either
+way, and it is justified twice over -- within noise on device (13.48 vs 13.35 ms, identical
+batches/tris) and it measurably flattened DISTANT terrain (mid-rough sd 13.12 vs 22.10). It also
+carried a device-only stripping risk: every hole ships m_DrawInstanced: 0, the flag is runtime-only,
+and GraphicsSettings m_InstancingStripping is StripUnused.
+=> §3 is now the tree-distance normalisation only. Both halves of Phase 0b's (c) are gone.
 
-PROCESS FINDING worth carrying beyond this task: SkyRandomizer rolls a new sky per app launch, so no
-frame comparison in this report -- Phase 0b's included -- was taken under controlled lighting. Now
-pinned via PerfBaselineBot.PinSky(). Any future frame A/B without a pinned sky is not evidence.
-
-NOT RUN: runs 1-2, Holes 01/06, mid-flight, 3-run medians, Frame Debugger, the teardown bot job
-(built, never executed), MapView device check, shoreline frames, Cesar's playthrough.
+NEXT (not started): rebuild Dev-iOS with drawInstanced removed, then resume the device pass --
+report §11.7 list: Hole 08 runs 1-2 + Holes 01/06 + mid-flight, 3-run medians, Frame Debugger,
+the P1_teardown bot job (built, never run), MapView check, shoreline frames, Lesson O playthrough.
