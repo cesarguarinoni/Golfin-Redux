@@ -42,6 +42,10 @@ namespace Golfin.EditorTools
         const string ProfilePath = "Assets/Settings/Build Profiles/iOS-Full.asset";
         const string OutputPath = "Builds/iOS-Full";
 
+        // perf_baseline Phase 0 (PERF_OPTIMIZATION_PLAN §5). Profiling build, never uploaded.
+        const string DevProfilePath = "Assets/Settings/Build Profiles/Dev-iOS.asset";
+        const string DevOutputPath = "Builds/iOS-Dev";
+
         /// <summary>
         /// -executeMethod Golfin.EditorTools.CIBuild.BuildIOS
         /// Produces Builds/iOS-Full/Unity-iPhone.xcodeproj. Exits 1 on any failure.
@@ -80,6 +84,45 @@ namespace Golfin.EditorTools
             if (error != null) Fail(error);
         }
 
+        /// <summary>
+        /// -executeMethod Golfin.EditorTools.CIBuild.BuildIOSDev
+        /// Produces Builds/iOS-Dev/Unity-iPhone.xcodeproj from the Dev-iOS profile:
+        /// Development Build ON, Autoconnect Profiler ON, Deep Profiling OFF. Exits 1 on failure.
+        ///
+        /// FOR PROFILING ONLY — NEVER UPLOAD THE OUTPUT.
+        ///   BuildStampGenerator.GuardApplies() skips the upload-regression refusal for
+        ///   development builds, so the guard BuildIOS() depends on is disarmed here by design.
+        ///   That is safe precisely because nothing downstream archives Builds/iOS-Dev; fastlane
+        ///   reads Builds/iOS-Full. Keep it that way.
+        ///
+        ///   Same PlayerSettings snapshot/restore as BuildIOS() — a failed batchmode build must
+        ///   not leave ProjectSettings.asset dirty and strand the next testflight lane at
+        ///   ensure_git_status_clean.
+        /// </summary>
+        public static void BuildIOSDev()
+        {
+            var prevIosBuildNumber = PlayerSettings.iOS.buildNumber;
+            var prevAndroidVersionCode = PlayerSettings.Android.bundleVersionCode;
+
+            string error;
+            try
+            {
+                // Development | ConnectWithProfiler are also carried by the Dev-iOS profile's
+                // iOSPlatformSettings; passing them explicitly means the build is a profiling
+                // build even if someone flips the profile back.
+                error = BuildIOSCore(DevProfilePath, DevOutputPath,
+                                     BuildOptions.Development | BuildOptions.ConnectWithProfiler);
+            }
+            catch (Exception e)
+            {
+                error = $"unhandled exception during build: {e.GetType().Name}: {e.Message}\n{e.StackTrace}";
+            }
+
+            RestoreBuildNumbers(prevIosBuildNumber, prevAndroidVersionCode);
+
+            if (error != null) Fail(error);
+        }
+
         static void RestoreBuildNumbers(string iosBuildNumber, int androidVersionCode)
         {
             try
@@ -103,16 +146,18 @@ namespace Golfin.EditorTools
 
         /// <summary>Returns null on success, or the failure message. Never exits — the caller
         /// restores PlayerSettings first, then exits.</summary>
-        static string BuildIOSCore()
+        static string BuildIOSCore() => BuildIOSCore(ProfilePath, OutputPath, BuildOptions.None);
+
+        static string BuildIOSCore(string profilePath, string outputPath, BuildOptions buildOptions)
         {
-            var profile = AssetDatabase.LoadAssetAtPath<BuildProfile>(ProfilePath);
+            var profile = AssetDatabase.LoadAssetAtPath<BuildProfile>(profilePath);
             if (profile == null)
-                return $"build profile not found: {ProfilePath}";
+                return $"build profile not found: {profilePath}";
 
             BuildProfile.SetActiveBuildProfile(profile);
             Debug.Log($"{Tag} active build profile → {profile.name}");
 
-            var full = Path.GetFullPath(OutputPath);
+            var full = Path.GetFullPath(outputPath);
             Directory.CreateDirectory(full);
             Debug.Log($"{Tag} output → {full}");
 
@@ -122,8 +167,8 @@ namespace Golfin.EditorTools
                 report = BuildPipeline.BuildPlayer(new BuildPlayerWithProfileOptions
                 {
                     buildProfile = profile,
-                    locationPathName = OutputPath,
-                    options = BuildOptions.None,
+                    locationPathName = outputPath,
+                    options = buildOptions,
                 });
             }
             catch (Exception e)

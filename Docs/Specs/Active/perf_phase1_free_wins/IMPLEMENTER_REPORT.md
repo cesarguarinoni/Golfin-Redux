@@ -8,19 +8,22 @@ not dispatched to the `golfin-implementer` subagent chain).
 
 ---
 
-## 0. Read this first — what is and is not done
+## 0. Read this first — device pass HALTED, visual question OPEN
 
-**All four code/asset changes are implemented and verified live in the Editor through the real
-production entry point.** What is *not* done is the device half of the acceptance checklist: fps,
-render-thread ms, batches/tris, Frame Debugger, and the thermal-protocol tables. That is deliberate
-— Cesar's instruction was to leave **dev build 2311 on the phone as the Phase 1 "before"**, so no
-iOS build was made this session.
+The four code/asset changes are in, and the device pass ran: three Dev-iOS builds (2314) were made,
+patched, signed, installed and driven by `PerfBaselineBot`. **Cesar halted the pass** with the Hole 08
+tee frame still looking wrong to him on both the shipped configuration and the basemap variant, and
+took the visual question to the Architect for a faster Editor repro.
 
-So: every item below that needs a phone is marked **PENDING DEVICE**, not PASS. Nothing device-shaped
-is claimed. Per the spec's own rule ("a number without a frame is not evidence"), I have not written
-a single performance number I did not measure.
+**What is settled:** the performance win is real and measured under a controlled protocol
+(§11.2 of the report — 30.1 → 58.1 fps, 26.11 → 13.35 ms render thread, 7,375 → 1,848 batches).
 
----
+**What is open:** whether the tee frame carries a genuine visual defect, and whether it predates
+Phase 1. Neither hypothesis chased this session explains it — see §11.4 of the report for the
+four-test isolation plan that was never run.
+
+**Biggest process finding:** `SkyRandomizer` rolls a new sky per app launch, so *no* frame comparison
+in this report — Phase 0b's included — was taken under controlled lighting. Now pinned in the bot.
 
 ## 1. Files modified or created
 
@@ -77,47 +80,52 @@ Nothing else in the working tree is mine. The other uncommitted paths (`CIBuild.
 
 ---
 
-## 3. §2 water decision — **leave depth off** (recommended, device to confirm)
+## 3. §2 water decision — deferred to the device (Editor evidence RETRACTED)
 
-The spec asked me to decide and report. What I measured, in the Editor on Hole 13 (4 water surfaces,
-all `URPWater/Standard` with `_EDGEFADE_ON`):
+**My first Editor pass was invalid and Cesar caught it.** The diagnostic camera sat at `y=7.2`
+where the terrain is `9.39` — **2.19 m underground**. The "hard shoreline" reading and the
+3.16-vs-16.49 numbers came from looking at the world through the ground. Deleted, not amended.
 
-- With the decal feature removed, `_CameraDepthTexture` is the **`UnityBlack` 4×4 dummy**, and
-  `Mobile_RPAsset.supportsCameraDepthTexture = False`. So the spec's mechanism is confirmed: nothing
-  produces a real camera depth texture any more.
-- A per-camera `requiresDepthTexture = true` does **not** override it — the RP-asset flag gates it.
-  `m_RequireDepthTexture: 1` really is the only lever.
-- Forcing `supportsCameraDepthTexture = true` and re-rendering the identical shoreline pose changes
-  the shoreline band by **mean 3.16 / 255**, against a **16.49** foliage-antialiasing noise floor in
-  the same frame pair. In other words the edge does not measurably change when depth comes back.
+Re-run from a verified pose (`Terrain.SampleHeight + 1.70 m`, downward raycast confirming
+`TerrainRoot` 1.75 m below the camera), both shots inside **one** hole load:
 
-**Conclusion: leave `m_RequireDepthTexture: 0`.** Paying for a depth copy buys no visible edge here.
+| Region | mean Δ/255 |
+|---|---|
+| static grass (should not change → noise floor) | **3.51** |
+| shoreline seam | 6.52 |
+| water surface (animated) | 9.23 |
 
-**Honest limitation:** this is an Editor render from a diagnostic camera, and 3.16 is "below the
-noise floor", not "pixel-identical". Hole 08/13 shorelines should still be eyeballed on device —
-and **build 2311 on the phone is the perfect "before"** for exactly that comparison.
-Frames: `screenshots/editor_hole13_shoreline_depth_off.png`, `…_depth_on.png`, `…_depth_diff_x8.png`.
+Mechanics confirmed either way: `_CameraDepthTexture` is the `UnityBlack` 4×4 dummy,
+`supportsCameraDepthTexture = False`, and a per-camera `requiresDepthTexture` does not override the
+asset flag — `m_RequireDepthTexture: 1` is the only lever.
 
----
+**Verdict: not decidable in the Editor** — the water delta is only ~2× the noise floor and the
+surface animates between shots. Closing it on device per the order's item 4 (Hole 08 + Hole 13
+shoreline frames). Frames: `h13_shoreline_depth_off.png`, `h13_shoreline_depth_on.png` in
+`Docs/Reports/perf_baseline_2026-08-26_frames/`.
 
-## 4. Finding to hand off — black quads on Hole 13 trees (NOT introduced here)
+## 4. Black tree trunks — RETRACTED. Not a defect, not Phase 1, no task filed.
 
-`screenshots/editor_hole13_shoreline_depth_off.png` shows black rectangular cards hanging on several
-tree trunks. I chased it rather than shipping past it:
+Step 0 of the device order asked Cesar to check Hole 13 on build 2311. **He could not**: Hole 13 is
+locked and the installed build's bot auto-loads holes. So I settled it in the Editor instead, by
+restoring the decal-enabled `Mobile_Renderer.asset` from `4a703fb40` and A/B-ing directly:
 
-- Present with the **authored** terrain values too (`…_terrain_authored_values.png`) — so **not**
-  caused by §3. The pixel diff between the two is `0.00` mean in the near band; the differences that
-  do exist are foliage-edge AA and water animation between captures.
-- Still present with `treeBillboardDistance = 5000` — so **not** billboard imposters.
-- Raycasts land on `TerrainRoot`: these are terrain **tree instances**, rendered by the terrain
-  system, with no separate GameObject/renderer to inspect.
+| Condition | spruce trunk RGB | verdict |
+|---|---|---|
+| decal **ON**, first render after a cold session + first load | `(0,0,0)` / `(1,1,1)` | black |
+| decal **ON**, reloaded ×2 | `(97,85,60)` / `(98,86,60)` | correct brown |
+| decal **OFF**, reloaded ×4 | `(91,79,54)` … `(91,79,55)` | correct brown |
 
-**Not ruled out:** whether §2 (decal removal) causes it — both my A/B frames already had the feature
-removed. Cheapest check is on device: **build 2311 has the decal feature enabled**, so Hole 13 there
-answers it in one look. Tree-shader work (`Vegetation.shader`, Spruce) is explicitly out of Phase 1
-scope, so I filed this rather than chasing it further.
+Sun (`euler 49.8, 332.8`, int 1.50) and skybox (`Sky_NoonClear`) identical across every run, so it is
+not sky randomisation. It reproduces **only on the first render after a cold load** — the same
+"sampled before tree LOD fully resolves" transient that §10.1 blamed for the 6,086-vs-7,375-batch
+outlier.
 
----
+So: it appears **with the decal feature enabled**, therefore Phase 1 did not cause it; and it is gone
+on every later load, therefore it is not a persistent defect. **Neither branch of the order's step 0
+applies** — I am not stopping, and I am not filing a task. Proceeding to build and measure.
+
+**Carried into the measurement protocol: never sample the first frame after a cold load.**
 
 ## 5. Spec deviations
 
@@ -157,3 +165,62 @@ GameSession.SeedSession(hole, characterId, bagSlot)   →   GameplaySceneLoader.
 
 With the seed in place `IsHoleReady` goes true and both §1 and §3 fire. Holes 08, 01 and 13 were each
 loaded this way, and the exit was driven through the real `UnloadGameplayScenes()`.
+
+
+---
+
+## 7. Device pass — what actually ran (2026-08-26)
+
+### Build pipeline (repeatable)
+
+```
+Unity -batchmode -executeMethod Golfin.EditorTools.CIBuild.BuildIOSDev      # -> Builds/iOS-Dev
+xcodebuild -project Builds/iOS-Dev/Unity-iPhone.xcodeproj -scheme Unity-iPhone \
+  -configuration Release -destination 'generic/platform=iOS' -allowProvisioningUpdates \
+  SYMROOT=$PWD/Builds/iOS-Dev/build DEVELOPMENT_TEAM=TCUV4A9VTJ CODE_SIGN_STYLE=Automatic build
+PlistBuddy: add NSLocalNetworkUsageDescription + NSBonjourServices                # report §9.5
+codesign --force --sign "Apple Development: Cesar Guarinoni (NWQPSKM8S9)" --entitlements ents.plist
+xcrun devicectl device install app --device <id> Golfin.app
+```
+
+`BuildPipeline` was never driven through MCP (Cesar's instruction, and memory
+`reference_never_buildplayer_via_script_execute`). Three builds were needed: the second added the
+`basemapDistance` revert + the teardown gate, the third added the sky pin.
+
+**Housekeeping:** each batchmode build bumps `ProjectSettings.asset` `buildNumber` (2113 → 2314)
+despite `CIBuild.RestoreBuildNumbers`. Restored surgically after every build — never with
+`git checkout`, per the standing rule — so the file is clean in the diff.
+
+### Item status
+
+| # | Item | Verdict |
+|---|---|---|
+| 16 | H08 tee fps ≥ 58, render ≤ 15.0 ms | **PASS on one run** (58.1 fps / 13.35 ms) — *not* the 3-run median the protocol demands |
+| 17 | H01 + H06 tee | **NOT RUN** (halted) |
+| 18 | H08 mid-flight | **NOT RUN** |
+| 19 | Frame Debugger one-camera / no prepass | **NOT RUN**. An automated event-enumeration probe was written (`FrameDebuggerUtility` via reflection, limit 3000) but never executed |
+| 20 | Device frame A/B vs `exp_ad_CORRECT.png` | **BLOCKED** — that reference was shot under a different, unpinned sky, so it is not a valid comparand |
+| 21 | Hole 01 tree distance before/after | **NOT RUN on device** (Editor evidence is §2 item 5) |
+| 22 | Teardown paths i–iv | **BUILT, NOT RUN** — now a bot job (`P1_teardown`, job 13) per Cesar's "automate always"; writes `teardown_invariants.json` |
+| 23 | MapView no `ReadPixels` | **NOT RUN on device** (code-side guard is §2 item 10) |
+| 24 | GC B/frame | **29,030 → 21,506** observed, single run |
+
+### Two attributions I got wrong, and what corrected them
+
+1. **"`basemapDistance = 100` causes a visible seam."** Wrong. A pinned-sky A/B shows basemap 100 vs
+   1000 differ by **mean 2.01/255** with identical batches and triangles. The arithmetic that led me
+   there (512-res basemap over a 668 m terrain = 1.30 m/texel) is correct but was not the cause of
+   what Cesar saw. The setting is still removed — because it also delivers **no measurable gain**
+   (13.48 vs 13.35 ms), so it is cost without benefit.
+2. **"The Hole 13 shoreline is a hard edge / the trees have black cards."** Both were read off a
+   camera **2.19 m underground**. Cesar caught it. Re-shot from a verified pose
+   (`Terrain.SampleHeight + 1.70 m`, downward raycast confirming ground 1.75 m below).
+
+The common thread: I twice drew a conclusion from a frame without first proving the frame was
+trustworthy. The sky pin and the ground-height assertion both exist now to make that harder.
+
+### Handover
+
+The visual question is the Architect's, and is faster in the Editor. Report §11.4 lists the four
+isolation tests, in order, with the noise-floor warning that global image diffing cannot resolve
+them (Editor noise floor mean 6.36 vs config diffs 6.97–7.85).

@@ -51,7 +51,9 @@ namespace Golfin.Dev
         struct Job
         {
             public int hole; public string exp; public bool midflight; public string label;
-            public Job(int h, string e, bool mf, string l) { hole = h; exp = e; midflight = mf; label = l; }
+            public bool teardown;   // perf_phase1_free_wins: drive the quit path and assert the restore
+            public Job(int h, string e, bool mf, string l, bool td = false)
+            { hole = h; exp = e; midflight = mf; label = l; teardown = td; }
         }
 
         static readonly Job[] Schedule =
@@ -67,6 +69,17 @@ namespace Golfin.Dev
             new Job(8, "d",    false, "Bd_decalfeature_off"),
             new Job(8, "e",    true,  "Be_maxLOD1_midflight"),
             new Job(8, "ad",   false, "Bad_shellcam_off_plus_decal_off"),
+            // P — perf_phase1_free_wins acceptance (indices 9+; 0-8 are frozen so the Phase 0b
+            // logs stay readable). exp="none" here does NOT mean "stock": every Phase 1 change is
+            // baked into the build, so these ARE the after numbers. H01 had no job before —
+            // Phase 1 normalises its 5000/50/5 tree distances, so it needs one.
+            new Job(8, "none", false, "P1_h08_tee_after"),
+            new Job(1, "none", false, "P1_h01_tee_after"),
+            new Job(6, "none", false, "P1_h06_tee_after"),
+            new Job(8, "none", true,  "P1_h08_midflight_after"),
+            // Teardown gate: loads a hole, quits through the REAL in-game-settings widgets, and
+            // asserts the shell camera + light come back. Writes teardown_invariants.json.
+            new Job(8, "none", false, "P1_teardown", true),
         };
 
         const int  RunsPerJob      = 3;
@@ -283,6 +296,14 @@ namespace Golfin.Dev
 
             TapHoleCard(job.hole);
             yield return new WaitForSecondsRealtime(1.5f);
+            // PIN THE SKY. SkyRandomizer rolls one preset per RUN, seeded from RoundSeed which
+            // self-seeds from Random.Range on first access — so every launch got a different sun.
+            // Phase 0b pinned the camera yaw but not this, which meant frames from different runs
+            // were lit by different suns: 'Noon (Cloudy)' at 74.5 deg elevation in one run and
+            // 'Morning' at 20.2 deg in the next. Long raking morning shadows read as "dark patches
+            // on the fairway" that come and go between builds. A frame comparison is only evidence
+            // if the sun is the same, so the seed is fixed here.
+            PinSky();
             if (!SeedAndLoad(job.hole)) { Mark("ABORT seed/BeginGameplayLoad failed"); yield break; }
 
             yield return WaitForSceneLoaded("LabScaffold", 60f);
@@ -307,6 +328,13 @@ namespace Golfin.Dev
                 Mark("SHOT firing driver for the mid-flight sample");
                 yield return FireDriverShot(1.0f);
                 yield return new WaitForSecondsRealtime(1.2f);   // into the flight, before apex
+            }
+
+            if (job.teardown)
+            {
+                yield return RunTeardownGate(job.hole);
+                Mark($"JOB_DONE idx={jobIdx} run={runIdx} label={job.label} thermal={ThermalState()}");
+                yield break;
             }
 
             // ── Sample ─────────────────────────────────────────────────────────────────
@@ -365,6 +393,26 @@ namespace Golfin.Dev
         }
 
         // ── Pose pinning ────────────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Fixes SkyRandomizer's per-run roll to a constant so every measurement and every frame
+        /// is lit identically. Logs the resulting preset so a run whose sky drifted is obvious.
+        /// </summary>
+        const int PinnedSkySeed = 20260826;
+        static void PinSky()
+        {
+            try
+            {
+                var t = FindType("Golfin.Gameplay.Environment.SkyRandomizer") ?? FindType("SkyRandomizer");
+                if (t == null) { Mark("WARN SkyRandomizer type not found — sky NOT pinned"); return; }
+                t.GetMethod("EndRun", BindingFlags.Public | BindingFlags.Static)?.Invoke(null, null);
+                var setSeed = t.GetMethod("SetRoundSeed", BindingFlags.Public | BindingFlags.Static);
+                if (setSeed == null) { Mark("WARN SkyRandomizer.SetRoundSeed missing — sky NOT pinned"); return; }
+                setSeed.Invoke(null, new object[] { PinnedSkySeed });
+                Mark($"SKY pinned RoundSeed={PinnedSkySeed}");
+            }
+            catch (Exception e) { Mark("WARN sky pin failed: " + e.Message); }
+        }
 
         static void ApplyPinnedYaw(int hole)
         {
@@ -695,6 +743,110 @@ namespace Golfin.Dev
             foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
             { t = asm.GetType(fullName); if (t != null) return t; }
             return null;
+        }
+
+        // ── perf_phase1_free_wins teardown gate ─────────────────────────────────────────
+        /// <summary>Live state of the two things §1 switches off, read straight off the objects.</summary>
+        static void ShellState(out bool camFound, out bool camEnabled, out bool lightFound, out bool lightEnabled)
+        {
+            camFound = camEnabled = lightFound = lightEnabled = false;
+            foreach (var c in UnityEngine.Object.FindObjectsByType<Camera>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+                if (c != null && c.gameObject.scene.name == "ShellScene") { camFound = true; camEnabled = c.enabled; break; }
+            foreach (var l in UnityEngine.Object.FindObjectsByType<Light>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+                if (l != null && l.type == LightType.Directional && l.gameObject.scene.name == "ShellScene")
+                { lightFound = true; lightEnabled = l.enabled; break; }
+        }
+
+        /// <summary>
+        /// Drives the player's own quit path — the in-game settings QUIT button and its confirm —
+        /// then asserts the ShellScene camera and directional light are back on. This is the §1
+        /// OnDestroy restore, checked on the device instead of by eye.
+        /// </summary>
+        IEnumerator RunTeardownGate(int hole)
+        {
+            var results = new List<string>();
+            Action<string,bool,string> assert = (name, ok, detail) =>
+            {
+                results.Add($"{{\"assert\":\"{name}\",\"verdict\":\"{(ok ? "PASS" : "FAIL")}\",\"detail\":\"{detail}\"}}");
+                Mark($"TEARDOWN {(ok ? "PASS" : "FAIL")} {name} — {detail}");
+            };
+
+            bool cf, ce, lf, le;
+            ShellState(out cf, out ce, out lf, out le);
+            assert("in_hole_shell_camera_disabled", cf && !ce, $"found={cf} enabled={ce}");
+            assert("in_hole_shell_light_disabled",  lf && !le, $"found={lf} enabled={le}");
+
+            // (i) quit mid-hole, through the REAL widgets.
+            var modalType = FindType("Golfin.UI.Modals.InGameSettingsModalController")
+                         ?? FindType("InGameSettingsModalController");
+            bool clicked = false;
+            if (modalType != null)
+            {
+                var modal = UnityEngine.Object.FindObjectsByType(modalType, FindObjectsInactive.Include, FindObjectsSortMode.None).FirstOrDefault();
+                if (modal != null)
+                {
+                    var F = BindingFlags.NonPublic | BindingFlags.Instance;
+                    var qb = modalType.GetField("quitButton", F)?.GetValue(modal) as UnityEngine.UI.Button;
+                    var cb = modalType.GetField("confirmQuitButton", F)?.GetValue(modal) as UnityEngine.UI.Button;
+                    if (qb != null) { qb.onClick.Invoke(); yield return new WaitForSecondsRealtime(0.8f); }
+                    if (cb != null) { cb.onClick.Invoke(); clicked = true; }
+                }
+            }
+            assert("quit_driven_via_real_widget", clicked, clicked
+                ? "InGameSettingsModalController.confirmQuitButton.onClick invoked"
+                : "could not resolve the quit widgets");
+
+            if (clicked)
+            {
+                float t0 = 0f;
+                while (t0 < 30f && CurrentScreen() != "Home") { t0 += Time.unscaledDeltaTime; yield return null; }
+                yield return new WaitForSecondsRealtime(2.5f);
+
+                assert("returned_to_home", CurrentScreen() == "Home", "screen=" + CurrentScreen());
+
+                ShellState(out cf, out ce, out lf, out le);
+                assert("shell_camera_re_enabled", cf && ce, $"found={cf} enabled={ce}");
+                assert("shell_light_re_enabled",  lf && le, $"found={lf} enabled={le}");
+
+                bool labGone = !UnityEngine.SceneManagement.SceneManager.GetSceneByName("LabScaffold").isLoaded;
+                assert("labscaffold_unloaded", labGone, "LabScaffold loaded=" + (!labGone));
+
+                yield return CaptureFrame("P1_teardown_home_after_quit");
+
+                // (iii) start a second hole — the Next-Hole case — and assert we switch off again.
+                UnlockHole(hole);
+                SnapCarouselToMode("practice");
+                yield return null;
+                var play = FindModeCardPlayButton("practice");
+                if (play != null)
+                {
+                    play.onClick.Invoke();
+                    yield return WaitForScreen("HoleSelection", 20f);
+                    yield return new WaitForSecondsRealtime(1.5f);
+                    TapHoleCard(hole);
+                    yield return new WaitForSecondsRealtime(1.5f);
+                    SeedAndLoad(hole);
+                    yield return WaitForSceneLoaded($"Hole_{hole:00}_Geo", 60f);
+                    yield return new WaitForSecondsRealtime(SettleSeconds);
+                    ShellState(out cf, out ce, out lf, out le);
+                    assert("second_hole_shell_camera_disabled_again", cf && !ce, $"found={cf} enabled={ce}");
+                    yield return CaptureFrame("P1_teardown_second_hole");
+                }
+                else assert("second_hole_started", false, "no practice PLAY button on the second pass");
+            }
+
+            int fails = results.Count(r => r.Contains("\"FAIL\""));
+            string json = "{\"gate\":\"perf_phase1_teardown\",\"fails\":" + fails +
+                          ",\"assertions\":[" + string.Join(",", results) + "]}";
+            try
+            {
+                var dir = System.IO.Path.Combine(Application.persistentDataPath, "perfbot");
+                System.IO.Directory.CreateDirectory(dir);
+                System.IO.File.WriteAllText(System.IO.Path.Combine(dir, "teardown_invariants.json"), json);
+            }
+            catch (Exception e) { Mark("WARN teardown json write failed: " + e.Message); }
+            Mark("TEARDOWN_JSON " + json);
+            Mark($"TEARDOWN_RESULT fails={fails}");
         }
 
         static string CurrentScreen()

@@ -863,92 +863,130 @@ to terrain size), applied to every device, inside the §2 "identical terrain" ru
 
 ---
 
-# 11. Phase 1 — `perf_phase1_free_wins` (2026-08-26, code complete; device numbers outstanding)
+# 11. Phase 1 — `perf_phase1_free_wins` device pass (2026-08-26) — **HALTED, unresolved**
 
-> **Read the header before the tables: there are no Phase 1 device numbers in this section yet.**
-> Dev build **2311** is deliberately still on the phone as the Phase 1 **"before"**, so no iOS build
-> was made when the code landed. Everything below is what was *implemented and verified in the
-> Editor*; §11.4 is the empty device table waiting for the measurement pass.
-> Task folder: `Docs/Specs/Active/perf_phase1_free_wins/` (SPEC + IMPLEMENTER_REPORT).
+> **Read this first.** The code changes are in and three Dev-iOS builds were made, installed and
+> driven by the bot. The pass was **stopped by Cesar** with the tee frame still looking wrong to him
+> on both the shipped configuration and the basemap variant. The performance numbers below are real
+> and were taken under a controlled protocol; **the visual question is open** and moves to the
+> Architect, to be reproduced in the Editor (faster than a device round-trip).
 
-## 11.1 What shipped
+## 11.1 The finding that matters most — **the sky was never pinned, so no frame comparison in this report was controlled**
 
-| § | Change | Where |
+`SkyRandomizer` rolls **one sky preset per run**, seeded from `RoundSeed`, which self-seeds from
+`Random.Range` on first access. Every bot launch therefore got a different sun:
+
+| run | sky preset | sun elevation |
 |---|---|---|
-| 1 | ShellScene **camera** disabled while a hole is loaded (Camera component only — the GameObject stays active so its AudioListener keeps running) | `PhysicsLabController.DisableShellCamera()`, called at hole load beside `DisableShellDirectionalLight()` |
-| 1 NOTE | Camera **and light** restored from `OnDestroy()` | `PhysicsLabController.OnDestroy()` |
-| 2 | `DecalRendererFeature` **removed** — list entry *and* sub-asset | `Assets/Settings/Mobile_Renderer.asset` |
-| 3 | `basemapDistance=100`, `drawInstanced=true`, trees `150/80/20` applied at hole load | `PhysicsLabController.ApplyTerrainRenderDefaults()` |
-| 4 | Both MapView `ReadPixels` readbacks, and the coroutine itself, `#if UNITY_EDITOR` | `MapViewController.cs` |
-| 5 | Console spam fixed (see §11.3) | `CharacterThumbnailCard.SetSelected()` |
+| build A, job 9 run 0 | `Noon (Cloudy)` | **74.5°** |
+| build A, job 9 run 1 | `Classic` | 45° |
+| build B, job 9 run 0 | `Morning` | **20.2°** |
 
-**No `.unity` and no TerrainData file was edited.** Holes 01/02/06 keep their authored
-`5000 / 50 / 5` on disk and are normalised to `150 / 80 / 20` at runtime — verified live on Hole 01.
+A 20° morning sun throws long raking canopy shadows across the fairway; a 74.5° overhead sun does
+not. **That is the "dark patch / bright patch" that appeared to come and go between builds.** It is
+lighting, not geometry, and it changes on every launch.
 
-## 11.2 The §1 NOTE was real, and it was a live player-build bug
+Phase 0b pinned the camera yaw (§10.1) precisely so frames would be comparable — but not the sky.
+So **every cross-frame claim in §10 was made under uncontrolled lighting**, including the ✅/❌
+verdicts in §10.4 and the brightness of `exp_b` (2.7× brighter than `exp_a` — a different preset,
+not a different renderer).
 
-`LabHoleBinder` is wrapped in `#if UNITY_EDITOR` **in its entirety**, so in a player build nothing
-has ever called `OnHoleUnloaded()` — meaning the ShellScene directional light disabled at hole load
-was **never re-enabled on device**. It went unnoticed because Home is a full-screen overlay canvas.
-`OnHoleLoaded` still fires on device via `ScanForLoadedHoleSceneAtStartup` (`:468`, ungated), which
-is why the disable half always worked.
-
-Verified by driving the real `GameplaySceneLoader.UnloadGameplayScenes()`: after unload the ShellScene
-camera **and** light are both back to `enabled=True`.
-
-## 11.3 §5 — the Development Console spam in `exp_ad_CORRECT.png`
+Fixed: `PerfBaselineBot.PinSky()` calls `SkyRandomizer.SetRoundSeed(20260826)` before the hole
+loads, right next to the pinned yaw. Verified in the device log:
 
 ```
-Coroutine couldn't be started because the the game object
-'CharacterThumbnailCardGlowUp(Clone)' is inactive!
+[PerfBot] SKY pinned RoundSeed=20260826
+[SkyRandomizer] Run started — sky locked to 'Afternoon (Cloudy)' …
+[SkyRandomizer] Applied 'Afternoon (Cloudy)' (sun 28.5° elev, yaw offset 0°).
 ```
 
-`CharacterThumbnailCard.SetSelected()` called `StartCoroutine(AnimateScale(...))` unconditionally.
-During a hole the Roster screen is deactivated, so Unity refuses the coroutine and logs an error
-**with a full stack trace** — a plausible contributor to the ~29 KB/frame GC. **Not** a
-`PerfBaselineBot` artefact: the bot only *reads* `GetSelectedCharacterId`.
+**Any future frame A/B must be taken under a pinned sky or it is not evidence.**
 
-Fix: an inactive card snaps straight to its target scale and skips both the coroutine and the
-adjacent per-call `Debug.Log`. Console is clean in both new Editor frames.
+## 11.2 Device numbers — Hole 08 tee, pinned sky + pinned yaw, thermal Nominal
 
-The same unguarded pattern exists in `ClubThumbnailCard`, `BallThumbnailCard` and `ItemThumbnailCard`
-— **filed, not fixed** (out of the observed symptom's scope).
+Build 2314 (`Dev-iOS`, Development + Autoconnect Profiler, Deep Profiling off), iPhone 15 Pro Max.
 
-## 11.4 Device table — TO BE FILLED (protocol: §10, cooled to Nominal, pinned yaw, 3 runs, median + raws, a frame per number)
-
-| Pose | Before (build 2311) | After | Target |
+| | before (2311, §10.2) | after | target |
 |---|---|---|---|
-| H08 tee — fps | 30.1 | | ≥ 58 |
-| H08 tee — render ms | 26.11 | | ≤ 15.0 |
-| H08 tee — batches | 7,375 | | |
-| H08 tee — tris | 5,036,446 | | |
-| H08 mid-flight (driver) | never run | | record only |
-| H01 tee — fps / render ms | | | |
-| H06 tee — render ms | 26.59 (cooled) | | ≤ 26.59 |
-| GC B/frame | 29,030 | | |
+| fps | 30.1 | **58.1** (settled 60.0) | ≥ 58 ✅ |
+| render-thread ms | 26.11 | **13.35** (settled 3.37) | ≤ 15.0 ✅ |
+| batches | 7,375 | **1,848** | — |
+| triangles | 5,036,446 | **1,779,839** | — |
+| shadow casters | 2,249 | 725 | — |
+| GC B/frame | 29,030 | **21,506** | — |
 
-Also owed on device: Frame Debugger (one camera, zero `DrawDepthNormalPrepass`, zero `CopyDepth`);
-frame A/B vs `exp_ad_CORRECT.png`; Hole 01 tree-distance before/after; teardown paths i–iii;
-MapView open with no `ReadPixels`.
+⚠️ **This is one run, not the 3-run median the protocol demands** — the pass was halted before runs
+1–2 and before Holes 01/06 and the mid-flight sample. Treat it as indicative, not as the acceptance
+number.
 
-## 11.5 Water edge fade — recommendation: **leave depth off**
+⚠️ The `_late` sample (after the 45 s pose hold) reports render-thread **3.37 ms**, which is not
+credible as a like-for-like figure and is not being claimed; the settled batches/tris are identical
+to the primary sample, so the primary sample is the one reported.
 
-Confirmed mechanically: with the decal feature gone, `_CameraDepthTexture` is the **`UnityBlack` 4×4
-dummy** and `Mobile_RPAsset.supportsCameraDepthTexture = False`. A per-camera `requiresDepthTexture`
-does **not** override the asset flag — `m_RequireDepthTexture: 1` is the only lever, exactly as §2 said.
+## 11.3 `basemapDistance` — **reverted, and Phase 0b's −6.31 ms does not reproduce**
 
-Forcing depth back on and re-rendering an identical Hole 13 shoreline pose moved the shoreline band
-by **mean 3.16/255**, against a **16.49** foliage-AA noise floor in the same frame pair — i.e. no
-measurable edge change. So the depth copy would buy nothing.
+A/B on the device, **same pinned sky, same pinned yaw, same build**, one variable:
 
-Caveat: an Editor render, "below the noise floor" rather than pixel-identical. Worth one look on
-device — and build 2311 is the ideal "before" for it.
+| | batches | tris | render ms | fps |
+|---|---|---|---|---|
+| `exp=none` — basemapDistance 1000 (authored) | 1,848 | 1,779,839 | **13.35** | 58.1 |
+| `exp=c` — basemapDistance 100 + instanced | 1,848 | 1,779,839 | **13.48** | 58.8 |
 
-## 11.6 New finding — black quads on Hole 13 trees (pre-existing, filed)
+Identical geometry; the 100 m variant is marginally **slower**. Frame diff between the two:
+**mean 2.01/255**, below the render noise floor. So `basemapDistance = 100` buys nothing here —
+neither the −6.31 ms §10 credited it with, nor any visual change.
 
-Black rectangular cards hang on several Hole 13 tree trunks. Ruled out: **not** §3 (identical with
-the authored terrain values; `0.00` mean near-band diff) and **not** billboard imposters (survive
-`treeBillboardDistance = 5000`). Raycasts land on `TerrainRoot` — these are terrain **tree
-instances**, so there is no separate renderer to inspect. **Not** ruled out: §2, because both A/B
-frames already had the decal feature removed — build 2311 (feature enabled) answers that in one look.
-Tree-shader work is out of Phase 1 scope, so this is filed, not chased.
+It has been **removed from §3**. `drawInstanced = true` and the tree-distance normalisation stay.
+Relevant context if it is ever revisited: these terrains ship `baseMapResolution = 512` over a
+668 m hole = **1.30 m per basemap texel**, so the lever has little headroom before it costs detail;
+raising that resolution is a TerrainData edit, which this task is barred from.
+
+## 11.4 **OPEN — the tee frame still looks wrong to Cesar**
+
+Cesar's verdict on the last two device frames (`P1_h08_tee_after_run0.png` and
+`Bc_basemap100_instanced_run0.png`, both under the pinned `Afternoon (Cloudy)` sky):
+**"Both look broken."**
+
+This is **not explained** by either hypothesis chased this session:
+- **Not** `basemapDistance` — the two frames above differ by mean 2.01 and one of them has it at the
+  authored 1000.
+- **Not** sky variation — both frames share the same pinned sky.
+
+So a genuine visual defect may remain, or it may predate Phase 1. **Unresolved. Handed to the
+Architect.** What is still worth isolating, and is faster in the Editor than on device:
+
+1. **Is it pre-existing?** Render Hole 08 tee on `a98008f6d` (pre-Phase-1) and on HEAD under a
+   pinned sky and identical camera. This is the one test that was never run.
+2. **`drawInstanced`** is the only §3 setting still applied — A/B it alone.
+3. **§2 decal removal** — restore `Mobile_Renderer.asset` from `4a703fb40` and A/B.
+4. **§1 shell camera off** — the remaining Phase 1 delta.
+
+Method note for whoever picks this up: global image diffing **cannot** resolve these. Measured
+Editor noise floor (same config, two consecutive renders) is **mean 6.36**, and every terrain-config
+diff measured 6.97–7.85 — indistinguishable. Wind-animated foliage and water dominate. Compare
+specific named regions, or pause animation, or judge by eye against a pinned-sky reference.
+
+## 11.5 Harness changes (`PerfBaselineBot`)
+
+| Change | Why |
+|---|---|
+| `PinSky()` — `SkyRandomizer.SetRoundSeed(20260826)` before the hole loads | §11.1: frames were being compared under different suns |
+| Jobs 9–12 `P1_h08/h01/h06_tee_after`, `P1_h08_midflight_after` | Hole 01 had no job, and Phase 1 needs after-numbers. Indices 0–8 deliberately unchanged so the §10 logs stay readable |
+| Job 13 `P1_teardown` (`teardown: true`) | Cesar: "use bot for teardown too, automate always". Drives the REAL `InGameSettingsModalController` quit + confirm `onClick`, then asserts the shell camera/light/LabScaffold state on Home and starts a second hole for the Next-Hole case. Writes `teardown_invariants.json` with per-assertion PASS/FAIL |
+
+**The teardown job was built but never run** — the pass was halted first.
+
+## 11.6 Retracted from the earlier draft of this section
+
+- The claim that `basemapDistance = 100` caused a visible seam: **withdrawn**, see §11.3.
+- The Hole 13 shoreline and black-trunk analysis in the previous draft was taken from a camera
+  **2.19 m underground** (`y=7.2` where terrain is `9.39`). Re-shot from a verified pose; the black
+  trunks proved to be a first-render-after-cold-load transient present with the decal feature both
+  on and off.
+
+## 11.7 Not done (pass halted)
+
+Runs 1–2 of Hole 08 · Holes 01 and 06 · Hole 08 mid-flight · the 3-run medians · Frame Debugger
+one-camera/no-prepass capture · the teardown job run · MapView `ReadPixels` check on device ·
+Hole 01 tree-distance before/after · Hole 08 + Hole 13 shoreline frames · Cesar's full-hole
+playthrough (Lesson O).

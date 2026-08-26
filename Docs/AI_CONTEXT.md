@@ -67,25 +67,31 @@
 - **`home_notices`** — flagged by its own session as needing a device + the dashboard to sign off.
   See its entry below; not touched here.
 
-- **`perf_phase1_free_wins` — CODE COMPLETE 2026-08-26, device numbers outstanding.**
+- **`perf_phase1_free_wins` — device pass HALTED 2026-08-26, ESCALATED to the Architect.**
   §11 of [Docs/Reports/perf_baseline_2026-08-26.md](Docs/Reports/perf_baseline_2026-08-26.md);
-  task folder `Docs/Specs/Active/perf_phase1_free_wins/`. Shipped: ShellScene camera off during a
-  hole, `DecalRendererFeature` removed from `Mobile_Renderer.asset`, terrain
-  `basemapDistance=100`/`drawInstanced`/trees `150-80-20` applied at hole load (no scene edits — this
-  normalises holes 01/02/06's `5000/50/5`), both MapView `ReadPixels` guarded `UNITY_EDITOR`, and the
-  console spam fixed. All 15 Editor-verifiable acceptance items PASS via the **production entry
-  path**; EditMode **1765/1768, 0 failed**.
-  ⚠️ **The §1 NOTE was a real live bug:** `LabHoleBinder` is entirely `#if UNITY_EDITOR`, so in a
-  player build nothing ever re-enabled the ShellScene directional light after a hole — `OnDestroy`
-  now restores camera *and* light. (`OnHoleLoaded` was fine: it fires via
-  `ScanForLoadedHoleSceneAtStartup`, ungated.)
-  **Water decision: leave depth off** — forcing `_CameraDepthTexture` back on moves the Hole 13
-  shoreline by 3.16/255 against a 16.49 foliage-AA noise floor.
-  **Still owed (Cesar + phone):** every device number — fps/render-ms/batches/tris for H08+H01+H06,
-  H08 mid-flight, Frame Debugger one-camera/no-prepass proof, teardown paths i–iii, MapView open.
-  **Dev build 2311 is deliberately still on the phone as the Phase 1 "before" — do not overwrite it
-  before the after-pass is captured.** Also filed: black quads on Hole 13 terrain tree instances
-  (pre-existing; §2 not yet ruled out — build 2311 answers it).
+  task folder `Docs/Specs/Active/perf_phase1_free_wins/`.
+  **The win is real and measured** (pinned sky + pinned yaw, thermal Nominal, build 2314 on iPhone 15
+  Pro Max, Hole 08 tee): **30.1 → 58.1 fps, 26.11 → 13.35 ms render thread, 7,375 → 1,848 batches,
+  5.03 M → 1.78 M tris, GC 29,030 → 21,506 B/frame.** One run, not the 3-run median.
+  **OPEN:** Cesar stopped the pass — the tee frame still looks wrong to him on both the shipped
+  build and the basemap variant, and neither hypothesis explains it (not basemapDistance: the two
+  frames differ by mean 2.01/255; not sky: both pinned). The decisive test was never run — Hole 08
+  tee on `a98008f6d` vs HEAD under a pinned sky. §11.4 has the isolation plan.
+  ⚠️ **PROCESS FINDING, applies beyond this task: `SkyRandomizer` rolls a NEW SKY PER APP LAUNCH**
+  (`RoundSeed` self-seeds from `Random.Range`), so **no frame comparison in the perf report — Phase
+  0b's included — was taken under controlled lighting.** Runs saw `Noon (Cloudy)` 74.5° elev,
+  `Classic` 45°, `Morning` 20.2°; a low morning sun throws long canopy shadows that read as "dark
+  patches" appearing and disappearing between builds. Now pinned by `PerfBaselineBot.PinSky()`.
+  **A frame A/B without a pinned sky is not evidence.**
+  Also: `basemapDistance = 100` **removed from §3** — a controlled A/B shows it delivers no gain
+  (13.48 vs 13.35 ms, identical batches/tris) and no visual change. `drawInstanced` + the 01/02/06
+  tree normalisation stay. Bot gained `PinSky()`, jobs 9–12 (H08/H01/H06/mid-flight after) and job
+  13 `P1_teardown`, which drives the real quit widgets and writes `teardown_invariants.json`
+  (built, never run). Also fixed: `LabHoleBinder` is entirely `#if UNITY_EDITOR`, so in a player
+  build nothing ever re-enabled the ShellScene directional light after a hole — `OnDestroy` now
+  restores camera *and* light.
+  **Not run:** runs 1–2, Holes 01/06, mid-flight, medians, Frame Debugger, teardown job, MapView
+  device check, shoreline frames, Cesar's playthrough.
 
 - **`perf_baseline` Phase 0b — DONE for the experiment sweep (2026-08-26).** §10 of
   [Docs/Reports/perf_baseline_2026-08-26.md](Docs/Reports/perf_baseline_2026-08-26.md).

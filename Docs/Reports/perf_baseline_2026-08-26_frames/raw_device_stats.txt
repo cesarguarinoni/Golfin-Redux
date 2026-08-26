@@ -158,3 +158,48 @@ YAW replayed hole=8 yaw=0.91161 rad (52.23 deg)
 EXP a — ShellScene cameras disabled: 1
 STATS job=3 run=0 label=Ba_shellcam_off hole=8 exp=a thermal=Fair fps=60.6 frameMs=16.50 mainMs=3.56 renderMs=14.28 batches=2964 setpass=96 draws=2964 tris=2394329 verts=3248188 shadowCasters=1070 sysMemMB=1203.2 reservedMB=844.4 gcPerFrameB=29030
 ---
+[PerfBot] JOB OVERRIDE from job.txt → job=5 run=0
+[PerfBot] JOB idx=5 run=0/3 label=Bc_basemap100_instanced hole=8 exp=c midflight=False thermalAtBoot=Nominal version=1.5.7 device=iPhone16,2
+[PerfBot] SPLASH StartButton pressed
+[PerfBot] CARDTAP hole=8
+[PerfBot] SKY pinned RoundSeed=20260826
+[PerfBot] LOAD BeginGameplayLoad(8)
+[PerfBot] SCENE LabScaffold loaded after 0.8s
+[PerfBot] SCENE Hole_08_Geo loaded after 0.0s
+[SkyRandomizer] Run started — sky locked to 'Afternoon (Cloudy)' for every hole until the player returns to the menu.
+Golfin.Gameplay.Environment.SkyRandomizer:ApplyRandomTo(Scene)
+[SkyRandomizer] Applied 'Afternoon (Cloudy)' (sun 28.5° elev, yaw offset 0°).
+Golfin.Gameplay.Environment.SkyRandomizer:ApplyTo(Scene, SkyPreset, Single)
+Golfin.Gameplay.Environment.SkyRandomizer:ApplyRandomTo(Scene)
+[PerfBot] YAW replayed hole=8 yaw=0.91161 rad (52.23 deg)
+[PerfBot] EXP c — TerrainRoot before: basemapDistance=1000 drawInstanced=True
+[PerfBot] EXP c — terrains modified: 1 (basemapDistance=100, drawInstanced=true)
+[PerfBot] TEE hole=8 terrain=TerrainRoot terrainTrees=1968 thermal=Nominal
+[PerfBot] RECORDERS started=12 missing=[] available=3086
+[PerfBot] STATS job=5 run=0 label=Bc_basemap100_instanced hole=8 exp=c thermal=Nominal fps=58.8 frameMs=17.02 mainMs=3.62 renderMs=13.48 batches=1848 setpass=77 draws=1848 tris=1779839 verts=2843935 shadowCasters=725 sysMemMB=1190.1 reservedMB=847.1 gcPerFrameB=21506
+[PerfBot] FRAME saved Bc_basemap100_instanced_run0.png (1290x2796)
+[PerfBot] POSE_READY job=5 run=0 label=Bc_basemap100_instanced — holding 45s
+[PerfBot] STATS job=5 run=0 label=Bc_basemap100_instanced_late hole=8 exp=c thermal=Fair fps=59.7 frameMs=16.76 mainMs=3.51 renderMs=3.87 batches=1848 setpass=77 draws=1848 tris=1779839 verts=2843935 shadowCasters=725 sysMemMB=1186.9 reservedMB=847.0 gcPerFrameB=21506
+[PerfBot] JOB_DONE idx=5 run=0 label=Bc_basemap100_instanced thermal=Fair
+[PerfBot] JOB OVERRIDE from job.txt → job=9 run=0
+[PerfBot] JOB idx=9 run=0/3 label=P1_h08_tee_after hole=8 exp=none midflight=False thermalAtBoot=Nominal version=1.5.7 device=iPhone16,2
+[PerfBot] SPLASH StartButton pressed
+[PerfBot] CARDTAP hole=8
+[PerfBot] SKY pinned RoundSeed=20260826
+[PerfBot] LOAD BeginGameplayLoad(8)
+[PerfBot] SCENE LabScaffold loaded after 0.8s
+[PerfBot] SCENE Hole_08_Geo loaded after 0.0s
+[SkyRandomizer] Run started — sky locked to 'Afternoon (Cloudy)' for every hole until the player returns to the menu.
+Golfin.Gameplay.Environment.SkyRandomizer:ApplyRandomTo(Scene)
+[SkyRandomizer] Applied 'Afternoon (Cloudy)' (sun 28.5° elev, yaw offset 0°).
+Golfin.Gameplay.Environment.SkyRandomizer:ApplyTo(Scene, SkyPreset, Single)
+Golfin.Gameplay.Environment.SkyRandomizer:ApplyRandomTo(Scene)
+[PerfBot] YAW replayed hole=8 yaw=0.91161 rad (52.23 deg)
+[PerfBot] EXP none (baseline)
+[PerfBot] TEE hole=8 terrain=TerrainRoot terrainTrees=1968 thermal=Nominal
+[PerfBot] RECORDERS started=12 missing=[] available=3086
+[PerfBot] STATS job=9 run=0 label=P1_h08_tee_after hole=8 exp=none thermal=Nominal fps=58.1 frameMs=17.20 mainMs=3.83 renderMs=13.35 batches=1848 setpass=77 draws=1848 tris=1779839 verts=2843935 shadowCasters=725 sysMemMB=1189.8 reservedMB=842.9 gcPerFrameB=21506
+[PerfBot] FRAME saved P1_h08_tee_after_run0.png (1290x2796)
+[PerfBot] POSE_READY job=9 run=0 label=P1_h08_tee_after — holding 45s
+[PerfBot] STATS job=9 run=0 label=P1_h08_tee_after_late hole=8 exp=none thermal=Nominal fps=60.0 frameMs=16.68 mainMs=3.36 renderMs=3.37 batches=1848 setpass=77 draws=1848 tris=1779839 verts=2843935 shadowCasters=725 sysMemMB=1181.8 reservedMB=842.9 gcPerFrameB=21506
+[PerfBot] JOB_DONE idx=9 run=0 label=P1_h08_tee_after thermal=Nominal

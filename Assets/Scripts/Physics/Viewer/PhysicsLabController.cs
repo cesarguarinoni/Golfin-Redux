@@ -2485,9 +2485,10 @@ namespace Golfin.Physics.Viewer
         // held so the restore paths can bring it back. See DisableShellCamera for why.
         Camera _shellCameraDisabled;
 
-        // perf_phase1_free_wins §3: terrain render values applied at hole load. Held as consts so
-        // the tier system (9a) has a single place to move basemapDistance per tier.
-        const float TerrainBasemapDistance       = 100f;
+        // perf_phase1_free_wins §3: terrain render values applied at hole load.
+        //
+        // basemapDistance is DELIBERATELY NOT SET — see ApplyTerrainRenderDefaults. Phase 0b
+        // measured it as a -6.31 ms win, but on device it is a visible regression.
         const float TerrainTreeDistance          = 150f;
         const float TerrainTreeBillboardDistance = 80f;
         const float TerrainTreeCrossFadeLength   = 20f;
@@ -2545,9 +2546,9 @@ namespace Golfin.Physics.Viewer
         /// perf_phase1_free_wins §3: applies the terrain render defaults at hole load, at runtime,
         /// so no .unity or TerrainData file is edited.
         ///
-        /// basemapDistance + drawInstanced are the Phase 0b (c) experiment (-6.31 ms): all 18 holes
-        /// shipped a 1000 m splat distance, meaning the 9-layer splat shader ran over the whole
-        /// terrain instead of the basemap taking over past 100 m.
+        /// drawInstanced is the safe half of the Phase 0b (c) experiment: a pure draw-call
+        /// reduction with no texturing consequence. The other half — basemapDistance 1000 -> 100 —
+        /// was reverted after it produced a visible seam on device; see the body for why.
         ///
         /// The tree values normalise holes 01/02/06, which shipped 5000/50/5 against the other
         /// fifteen holes' 150/80/20. That is the plan §2 fairness rule — every hole should cost
@@ -2564,13 +2565,21 @@ namespace Golfin.Physics.Viewer
                 return;
             }
 
-            t.basemapDistance       = TerrainBasemapDistance;
+            // basemapDistance is left at the authored 1000 ON PURPOSE. Setting it to 100 makes
+            // everything past 100 m render from the terrain basemap instead of the 9-layer splat,
+            // and these terrains ship baseMapResolution=512 over a 668 m hole — 1.30 m per texel.
+            // On device that draws a hard horizontal seam across the fairway, blocky stair-stepped
+            // bunker/cart-path edges, and dark/bright patches either side of the boundary (Cesar
+            // caught it on build 2314, report §11.7). It would need baseMapResolution raised on
+            // every TerrainData, which this task is explicitly barred from touching. The (a)+(d)
+            // pair already clears the target on its own, so the basemap lever is deferred to the
+            // tier work (9a) where the resolution can be fixed alongside it.
             t.drawInstanced         = true;
             t.treeDistance          = TerrainTreeDistance;
             t.treeBillboardDistance = TerrainTreeBillboardDistance;
             t.treeCrossFadeLength   = TerrainTreeCrossFadeLength;
 
-            Debug.Log($"[PhysicsLab] Terrain render defaults applied to '{t.name}': basemapDistance={TerrainBasemapDistance}, drawInstanced=true, treeDistance={TerrainTreeDistance}, treeBillboardDistance={TerrainTreeBillboardDistance}, treeCrossFadeLength={TerrainTreeCrossFadeLength} (perf_phase1_free_wins §3).");
+            Debug.Log($"[PhysicsLab] Terrain render defaults applied to '{t.name}': drawInstanced=true, treeDistance={TerrainTreeDistance}, treeBillboardDistance={TerrainTreeBillboardDistance}, treeCrossFadeLength={TerrainTreeCrossFadeLength}, basemapDistance left authored at {t.basemapDistance} (perf_phase1_free_wins §3).");
         }
 
         /// <summary>
