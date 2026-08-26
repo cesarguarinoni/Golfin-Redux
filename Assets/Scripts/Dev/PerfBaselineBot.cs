@@ -144,11 +144,45 @@ namespace Golfin.Dev
         }
 #endif
 
+        /// <summary>
+        /// The bot is OPT-IN on device as well as in the Editor.
+        ///
+        /// It used to spawn unconditionally in any GOLFIN_TESTBUILD player, which meant every
+        /// launch of a dev build was hijacked: it drove the menus, picked a hole and held a pinned
+        /// tee pose, so a human could not play the build they had just been handed. On device the
+        /// arm signal is the presence of the job-override file the Mac-side runner already writes
+        /// before every automated launch:
+        ///
+        ///     Documents/perfbot/job.txt        (devicectl device copy to --domain-type appDataContainer)
+        ///
+        /// Start() consumes and deletes that file, so exactly one launch is automated per push and
+        /// the next launch belongs to whoever is holding the phone. Automation is unaffected —
+        /// runjob.sh writes job.txt every time.
+        /// </summary>
+        static bool DeviceArmed()
+        {
+            try
+            {
+                var f = System.IO.Path.Combine(Application.persistentDataPath, "perfbot", "job.txt");
+                if (System.IO.File.Exists(f)) return true;
+                Debug.Log("[PerfBot] not armed — no Documents/perfbot/job.txt. The app is yours; " +
+                          "push a job file to automate a launch.");
+                return false;
+            }
+            catch (Exception e)
+            {
+                Debug.Log("[PerfBot] not armed — arm check failed: " + e.Message);
+                return false;   // never hijack the app because the check itself broke
+            }
+        }
+
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         static void AutoStart()
         {
 #if UNITY_EDITOR
             if (!EditorArmed) return;
+#else
+            if (!DeviceArmed()) return;
 #endif
             var go = new GameObject("~PerfBaselineBot");
             DontDestroyOnLoad(go);

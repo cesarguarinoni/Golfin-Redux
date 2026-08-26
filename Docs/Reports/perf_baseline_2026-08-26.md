@@ -1090,6 +1090,40 @@ in a player build at all (same class as the K5 tree-wind stripping).
 | Lesson O — Cesar plays one full hole on 2316 | **Owed.** The only remaining sign-off that a bot cannot give |
 | Instruments Metal System Trace, Memory Profiler top-10, GC call stack | Phase 0b leftovers, unchanged |
 
+### 11.8 The bot no longer hijacks a dev build (2026-08-26, build 2317)
+
+`AutoStart` checked `EditorArmed` only under `#if UNITY_EDITOR`; on device it spawned the bot
+**unconditionally on every launch**, so a human handed a dev build could not play it — the bot drove
+the menus and parked on a pinned tee pose. Cesar hit exactly that trying to do the Lesson O
+playthrough.
+
+The device arm signal is now the job-override file the runner already writes:
+`Documents/perfbot/job.txt`. `Start()` consumes and deletes it, so **one launch is automated per
+push and the next launch belongs to whoever is holding the phone.** Verified both directions on
+build 2317:
+
+```
+no job.txt : [PerfBot] not armed — no Documents/perfbot/job.txt. The app is yours…   jobs started: 0
+                                    (app boots Logo → Splash normally, 931 log lines)
+job.txt    : [PerfBot] JOB OVERRIDE from job.txt → job=9 run=0
+             [PerfBot] JOB idx=9 run=0/3 label=P1_h08_tee_after …      job.txt then gone
+```
+
+### 11.9 Flat-terrain investigation — candidate #2 (Native Render Pass) ELIMINATED
+
+`m_UseNativeRenderPass` 1 → 0 on `Mobile_Renderer`, edited on disk, reimported, and rendered from a
+**fresh play session** (an in-play toggle does not rebuild the active pipeline — the first attempt
+looked "identical" for that reason and was redone). Hole 08 tee, pinned sky, Game View:
+
+| patch | NRP ON | NRP OFF |
+|---|---|---|
+| near fairway | 141.9 · sd 22.44 | 141.9 · sd 22.44 |
+| mid rough | 85.9 · sd 22.10 | 85.9 · sd 22.10 |
+| far hillside | 72.7 · sd 8.84 | 72.7 · sd 8.84 |
+
+Whole-frame diff **2.23** mean, under the ~6 noise floor. **NRP is not the cause.** Asset restored
+to 1. Remaining candidates: the `TerrainLit` material/splat path itself, and the terrain layers.
+
 ### The flat terrain (§11.4) is the live blocker
 
 Pre-existing, not Phase 1, but it is on screen on every hole and should be someone's task before
