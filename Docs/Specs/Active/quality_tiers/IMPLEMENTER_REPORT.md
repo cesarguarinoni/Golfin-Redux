@@ -34,7 +34,7 @@ Every uncommitted path outside this task folder, attributed.
 | `Assets/Scripts/TelemetryRuntime/TelemetryHooks.cs` | `session_start` gains `tier` + `tier_source`. |
 | `Assets/Scripts/Dev/PerfBaselineBot.cs` | `Job.tier` / `Job.endurance`; jobs 14–25; `tier=` in `job.txt`; `ApplyTier()`; `RunEndurance()`. |
 | `Assets/Scripts/Dev/Golfin.DevHarness.asmdef` | +`Golfin.Gameplay.UI` reference (the bot must reach `QualityTierService`; no cycle). |
-| `Assets/Scripts/Gameplay/Tests/QualityTierResolverTests.cs` | **NEW.** 34 tests — the whole device table incl. fallbacks. |
+| `Assets/Scripts/Gameplay/Tests/QualityTierResolverTests.cs` | **NEW.** 33 tests — the whole device table incl. fallbacks. |
 | `Assets/Scripts/Gameplay/Tests/QualityTierServiceTests.cs` | **NEW.** 8 tests — override round-trip, level order, frame-rate, `OnTierChanged`, fairness invariants. |
 | `Assets/Scripts/UI/Editor/QualityTierVerificationRecorder.cs` | **NEW, editor-only.** The evidence harness (§ 7). Deviation — see § 8. |
 
@@ -114,7 +114,9 @@ enforced in the asset, not just in prose.
 ## 3. Resolver + override — EditMode tests
 
 `1809 tests, 1806 passed, 0 failed, 3 skipped` (the 3 skips are pre-existing
-`HoleCompleteDriverTests` Stage-C1 skips). 42 of those are new.
+`HoleCompleteDriverTests` Stage-C1 skips). **41** of those are new — 33 in
+`QualityTierResolverTests` + 8 in `QualityTierServiceTests`. (An earlier revision of this
+report said 42; the self-reviewer counted the `[Test]` attributes and was right.)
 
 **Proof the new suites actually ran** (`tests-run` ignores class filters and hides passes, so a
 count alone proves nothing): a deliberate `Assert.Fail` tripwire was added to
@@ -290,7 +292,7 @@ view. Worth knowing before anyone counts it as a saving. Measured, not eyeballed
 | 5 | **NEW** `QualityTierVerificationRecorder.cs` (editor-only) | The spec names no evidence harness, but the repo has ~25 sibling `*DemoRecorder`s and this is how UI evidence is produced here. It is what produced every number in § 4–7 and makes them re-runnable. |
 | 6 | `PerfBaselineBot` jobs **23–25** (`T_h01_tee_{low,mid,high}`) added | Spec § 7 stops at H08/H06, but the acceptance checklist asks for an H01 row per tier. Indices 0–19 are exactly as pinned. |
 | 7 | Auto row's `LocalizedText` retained; `GraphicsSubmenu` re-asserts `"Auto (High)"` in `LateUpdate` | Both LocalizedText and the submenu write that TMP on a language change and subscriber order is undefined. Re-asserting is order-independent; the object is inactive unless the accordion is open, and the string is only rebuilt when the language or resolved tier moves. |
-| 8 | **Graphics row icon is a placeholder** | `Assets/Art/Settings/` has no display/graphics icon. Rather than invent one I reused `Assets/Art/HomeScreen/Settings Icon.png` — the grey gear, same flat light-grey silhouette treatment as the globe and speaker on the neighbouring rows. **Cesar's art call.** Surfaced rather than silently hand-rolled. |
+| 8 | ~~Graphics row icon is a placeholder~~ — **RESOLVED** | Originally the Home-screen grey gear, surfaced to Cesar rather than hand-rolled because `Assets/Art/Settings/` had no display icon. Cesar supplied `Assets/Art/Settings/Quality Icon.png` (display-with-gear, 72×72, matching the row-icon family) and it is wired as of `7a8e99927`. It arrived as a **default texture** (`textureType 0` / `spriteMode None` / `alphaIsTransparency false`), so `LoadAssetAtPath<Sprite>` returned null and the row would have rendered an empty Image; its importer is now mirrored from `Language Icon.png`. Scene diff for that commit is exactly one line — the sprite GUID. |
 
 ---
 
@@ -299,16 +301,43 @@ view. Worth knowing before anyone counts it as a saving. Measured, not eyeballed
 Nothing below can be produced from a Mac. All of it is blocked on the same thing: a cooled
 iPhone 15 Pro Max running a `GOLFIN_TESTBUILD` install.
 
-| Acceptance item | Status | How to get it |
+Build **2325** (`Dev-iOS`, `GOLFIN_TESTBUILD`) is built, signed and **installed** on the
+iPhone 15 Pro Max (`iPhone16,2`). A warm triage has run; the cooled protocol has not.
+
+| Acceptance item | Status | Note |
 |---|---|---|
-| Boot log on device reads `resolved=High source=auto` | **NOT RUN** | Any launch; the line is `[QualityTier] resolved=… source=… device=… gpu=… mem=… reason=…`. |
-| H08 / H06 / H01 tee per tier, cooled, 3 runs | **NOT RUN** | `PerfBaselineBot` jobs **14–19** (H08/H06) and **23–25** (H01). |
-| H06 endurance 5 min per tier + thermal | **NOT RUN** | Jobs **20** (high), **21** (mid), **22** (low). Logs `ENDURANCE … t=NNNs thermal=…` every 30 s plus a frame at t=0 and t=300. |
-| Build size / shader-variant delta vs Phase 1 | **NOT MEASURED** | Needs an iOS build. What I *can* state: new source bytes on disk = **9 307** (Low + Mid `.asset`); `Vegetation.shader` declares 9 passes and a `_WIND` keyword that now contributes a guaranteed ×2 on the 7 gameplay passes instead of being stripped. The shipped `Data/` number requires `Tools/unity-build-ios.sh` and a diff against the Phase 1 build. |
+| Boot log reads `resolved=… source=…` on device | **DONE** | Every triage launch logged `TIER applied=Low/Mid/High pref=0/1/2 qualityLevel=0/1/2 targetFrameRate=30/60/60 maxLOD=1/0/0 aniso=Disable/Enable/Enable`. |
+| **H06 tee per tier — WARM TRIAGE** | **DONE (not the protocol)** | § 9.1 below and report §12.6. Low 30.0 flat / Mid 60.0 flat, both Nominal; High 59.8 → **39.5** at Serious. |
+| H08 / H06 / H01 tee per tier, **cooled, 3 runs** | **NOT RUN** | Jobs **14–19** and **23–25** via `Tools/perfbot-runjob.sh`. Hours of wall-clock — the triage is what justifies spending them. |
+| H06 endurance 5 min per tier + thermal | **NOT RUN** | Jobs **20** (high), **21** (mid), **22** (low), `TIMEOUT=600`. |
+| Build size / variant delta vs Phase 1 | **MEASURED** | `Data/` 1,233,700 → 1,233,728 KB = **+28 KB (+0.002 %)**; `globalgamemanagers.assets` +1,408 B; `resources.assets` unchanged. 71 of 73 `Data/` files rewritten, so it is a real rebuild. Baseline: `phase1_build_baseline.txt`; report §12.8. |
 | Telemetry `tier` / `tier_source` on the wire | **CODE DONE, NOT OBSERVED** | Fields are in the `session_start` payload; confirm from a device log or the REST explorer. |
 | High at 2 cascades / 60 m — look | **CESAR JUDGES** | Fallback if rejected: 4 / 100. |
-| Fairness A/B Low vs High | **EVIDENCE READY, CESAR JUDGES** | § 4 + `screenshots/fairness_*`. |
-| Aim-arrow feel at 30 fps on Low | **CESAR PLAYS** | Driver + putter, one hole. If it reads wrong: file `arrow_speed_retune` v2, do **not** retune here. |
+| Fairness A/B Low vs High | **ACCEPTED by Cesar 2026-08-27** | § 4. Independently re-derived by the self-reviewer (4.986/255 vs the 4.99 cited here). |
+| Aim-arrow feel at 30 fps on Low | **CESAR PLAYS** | Build 2325 is on the phone with the Graphics submenu live. If it reads wrong: file `arrow_speed_retune` v2, do **not** retune here. |
+
+### 9.1 Warm triage — H06, one run per tier (2026-08-27)
+
+Back-to-back, no cooldown, `FORCE=1`. **Directional, not publishable.**
+
+| | Low | Mid | High |
+|---|---|---|---|
+| fps @ sample → +45 s | 30.0 → 30.0 | 60.0 → 60.0 | 59.8 → **39.5** |
+| renderMs @ sample → +45 s | 3.22 → 3.44 | 12.26 → 2.22 | 12.29 → **18.33** |
+| batches / SetPass | 2,689 / 43 | 2,783 / 43 | 3,062 / 50 |
+| triangles | 1,686,415 | 2,384,868 | 2,823,808 |
+| shadow casters | 204 | 300 | 579 |
+| thermal tee → late | Nominal → Nominal | Nominal → Nominal | **Fair → Serious** |
+
+**Mid holds 60.0 flat at Nominal on the hole Phase 1 could not hold**; High reproduces the Phase 1
+failure (brief predicted 40.7, measured 39.5). Mid is strictly below High on batches AND shadow
+casters — the spec's Mid criterion, met. Low's triangles are 29 % below Mid — `maximumLODLevel=1`
+working. On this evidence static tiers close the gap and no thermal governor is needed.
+
+**Confound:** the three ran Low → Mid → High back-to-back, so High started warmest. All three
+booted at `thermalAtBoot=Nominal` and High went Nominal → Fair during its own ~30 s of
+navigation, which argues the heat is its own — but that is an argument, not a controlled
+measurement. Only the cooled 3-run protocol settles it.
 
 A note on `job.txt`: it now accepts `tier=low|mid|high|auto` as an extra token anywhere in the
 file, e.g. `18 0 tier=mid`. `auto` explicitly clears a pinned override, so a Low run cannot leak
