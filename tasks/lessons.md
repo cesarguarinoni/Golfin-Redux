@@ -2805,3 +2805,43 @@ against my own wrong expectation. Measure the rect and read the frame before enc
 into an assertion, and when the measurement contradicts the report, say so instead of quietly
 relaxing the assertion to match the story. Related: [[feedback_exact_not_close_enough]],
 [[feedback_verify_ui_metrics_numerically]].
+
+## Lesson BN — a bundled CSV edit owes a catalog row, and nothing was asking for it
+
+**2026-08-27, `shop_stocking` §5.** The first run of the new release-lane content gate
+failed, and what it found had been sitting there for weeks: `quality_tiers` added
+`SETTINGS_GRAPHICS` and four `SETTINGS_QUALITY_*` keys to
+`Assets/Localization/LocalizationText.csv` and never put them in the admin `texts`
+catalog. Nothing noticed, because until that day nothing ever ran
+`export_content.py --check`.
+
+**Why it could not fix itself.** Drift has two directions and only one is repairable
+by the exporter:
+
+- *Repo behind catalog* (a row was published and never exported) → run the exporter,
+  commit. Normal, self-healing.
+- *CSV ahead of catalog* (a row was added in Unity and never created in the admin) →
+  **the exporter cannot fix it.** It never deletes (I6), so it keeps the extra line
+  verbatim, reports "unchanged", and the drift persists forever.
+
+**Why it surfaced at the worst moment.** The gate lives in `testflight_build`, which
+is the last possible instant — you discover a weeks-old authoring gap at archive time,
+when the only thing you wanted was a build.
+
+**The rule.** Adding or renaming a row in any of the seven catalog-backed CSVs
+(`Tools/content/catalogs.py::CATALOGS`) is only half the change. The other half is
+creating that row in the admin panel (`+ New row`, which only exists as of
+`shop_stocking` §2 — before it, this was not even possible without a SQL seed) and
+publishing it. A task that ships one half and not the other has left a landmine under
+the next release.
+
+**Enforced, not remembered.** `.claude/hooks/warn_catalog_csv_edit.py` (PostToolUse on
+`Write|Edit`) fires the moment one of those CSVs is written, names the catalog and what
+is owed, and exits 2 so the message reaches the session without undoing the write. Once
+per catalog per session. Its path list is IMPORTED from `catalogs.py` — never restated.
+
+**Still to do structurally:** `import_content.py` (`content_two_way`, spec §7) makes CSV
+edits into draft PROPOSALS instead of drift, which removes the failure mode rather than
+reporting it. Until then the hook is the guard and `--check` is the backstop.
+
+Related: [[project_editor_only_seams_break_player_builds]], [[feedback_never_arm_unverified_schedule]].

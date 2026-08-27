@@ -30,6 +30,17 @@
         ]
       }
     ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python .claude/hooks/warn_catalog_csv_edit.py"
+          }
+        ]
+      }
+    ],
     "SubagentStop": [
       {
         "hooks": [
