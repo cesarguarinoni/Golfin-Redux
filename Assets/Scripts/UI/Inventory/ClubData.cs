@@ -54,6 +54,17 @@ namespace Golfin.Inventory
         public Sprite? controlSprite      = null;
 
         /// <summary>
+        /// Remote art URL for the portrait thumbnail (SPEC §3 — <c>portraitUrl</c> column).
+        /// Empty means "no remote art". Resolution ladder step 1 (SPEC §2). Clubs fall back to
+        /// Placeholder at step 3 rather than to null, so renderable is not affected.
+        /// </summary>
+        public string portraitUrl     = "";
+        /// <summary>Remote art URL for the full portrait (SPEC §3 — <c>fullUrl</c> column).</summary>
+        public string portraitFullUrl = "";
+        /// <summary>Remote art URL for the control shot image (SPEC §3 — <c>controlUrl</c> column).</summary>
+        public string controlUrl      = "";
+
+        /// <summary>
         /// Clubs.csv <c>startLevel</c>. 0 means the column was absent, in which case callers fall
         /// back to the rarity table (<c>ClubManager.GetStartingLevel</c>). It is the lower bound of
         /// the level clamp in <c>ContentClamp.ClampClubs</c>.

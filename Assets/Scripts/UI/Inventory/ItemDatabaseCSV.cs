@@ -2,6 +2,8 @@
 using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
+using Golfin.CatalogArt;
+using Golfin.Tournaments;
 using Golfin.Content;
 
 namespace Golfin.Inventory
@@ -81,15 +83,18 @@ namespace Golfin.Inventory
                 var item = bundled;
                 if (patch != null)
                 {
-                    var merged = ParseRow(ContentFields.Csv(fields, headerIndex, patch));
+                    var merged = ParseRow(ContentFields.Csv(fields, headerIndex, patch),
+                        bundled.thumbnailUrl, bundled.fullUrl);
                     if (merged != null)
                     {
                         // SPEC §5 — only names the overlay CHANGED are guarded; a bundled sprite
                         // that has never landed is the art pipeline's problem, not the overlay's.
                         string? unresolved = ContentSpriteGuard.FirstUnresolvedChange(new[]
                         {
-                            new SpriteRef(ThumbnailPath, bundled.thumbnailSpriteName, merged.thumbnailSpriteName),
-                            new SpriteRef(FullPath,      bundled.fullSpriteName,      merged.fullSpriteName),
+                            new SpriteRef(ThumbnailPath, bundled.thumbnailSpriteName, merged.thumbnailSpriteName,
+                                          CatalogArtPolicy.IsArtAllowed(merged.thumbnailUrl)),
+                            new SpriteRef(FullPath,      bundled.fullSpriteName,      merged.fullSpriteName,
+                                          CatalogArtPolicy.IsArtAllowed(merged.fullUrl)),
                         });
 
                         if (unresolved != null)
@@ -115,8 +120,10 @@ namespace Golfin.Inventory
 
                     string? unresolved = ContentSpriteGuard.FirstUnresolved(new[]
                     {
-                        SpritePath(ThumbnailPath, appended.thumbnailSpriteName),
-                        SpritePath(FullPath,      appended.fullSpriteName),
+                        new SpriteRef(ThumbnailPath, string.Empty, appended.thumbnailSpriteName,
+                                      CatalogArtPolicy.IsArtAllowed(appended.thumbnailUrl)),
+                        new SpriteRef(FullPath,      string.Empty, appended.fullSpriteName,
+                                      CatalogArtPolicy.IsArtAllowed(appended.fullUrl)),
                     });
 
                     if (unresolved != null)
@@ -149,6 +156,12 @@ namespace Golfin.Inventory
                           ? " — BUNDLED only, no items overlay this launch."
                           : $" — overlay v{overlay.Version}: {overlaid} row(s) patched/appended, " +
                             $"{deactivated} deactivated (still owned + renderable, I6)."));
+
+            // SPEC §4 — boot prefetch (see CharacterDatabaseCSV for rationale).
+            var artUrls = allItems
+                .SelectMany(it => new[] { it.thumbnailUrl, it.fullUrl })
+                .Where(u => !string.IsNullOrEmpty(u));
+            TournamentArtService.CatalogArt.Prefetch(artUrls);
         }
 
         private Dictionary<string, int> BuildHeaderIndex(List<string> headers)
@@ -164,10 +177,14 @@ namespace Golfin.Inventory
         /// row, a bundled row patched by an overlay, or an overlay row alone. Column names and
         /// defaults are declared once, here (I4).
         /// </summary>
-        private ItemDataRuntime? ParseRow(ContentFields f)
+        private ItemDataRuntime? ParseRow(ContentFields f,
+            string bundledThumbnailUrl = "", string bundledFullUrl = "")
         {
             try
             {
+                string thumbnailUrl = f.Get("thumbnailUrl");
+                string fullUrl      = f.Get("fullUrl");
+
                 var item = new ItemDataRuntime
                 {
                     itemId              = f.Get("id"),
@@ -177,6 +194,8 @@ namespace Golfin.Inventory
                     restorePercent      = f.GetInt("restorePercent"),
                     thumbnailSpriteName = f.Get("thumbnailSprite"),
                     fullSpriteName      = f.Get("fullSprite"),
+                    thumbnailUrl        = thumbnailUrl,
+                    fullUrl             = fullUrl,
                     proTip              = f.Get("proTip"),
                     info                = f.Get("info"),
                     isActive            = f.IsActive,
@@ -184,8 +203,17 @@ namespace Golfin.Inventory
 
                 if (string.IsNullOrEmpty(item.itemId)) return null;
 
-                item.thumbnailSprite = LoadSprite(ThumbnailPath, item.thumbnailSpriteName);
-                item.fullSprite      = LoadSprite(FullPath,      item.fullSpriteName);
+                // Resolution ladder (SPEC §2, revised 2026-08-27):
+                //   1. URL the OVERLAY CHANGED (overlay URL ≠ bundled CSV URL), if cached
+                //   2. bundled sprite by name  →  the build's own art wins
+                //   3. URL unchanged since build, if cached  →  row newer than any bundled art
+                //   5. otherwise null ⇒ renderable=false ⇒ withheld
+                item.thumbnailSprite = CatalogArtCache.Cached(thumbnailUrl, bundledThumbnailUrl)  // step 1
+                                       ?? LoadSprite(ThumbnailPath, item.thumbnailSpriteName)     // step 2
+                                       ?? CatalogArtCache.Cached(thumbnailUrl);                   // step 3
+                item.fullSprite      = CatalogArtCache.Cached(fullUrl, bundledFullUrl)            // step 1
+                                       ?? LoadSprite(FullPath, item.fullSpriteName)               // step 2
+                                       ?? CatalogArtCache.Cached(fullUrl);                        // step 3
 
                 // content_two_way §4 — the PRIMARY sprite (the thumbnail the grid draws) is the
                 // renderability test, read off the resolution just performed.

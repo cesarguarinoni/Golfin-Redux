@@ -60,6 +60,21 @@ namespace Golfin.Tournaments
             Golfin.Banners.BannerPolicy.CacheDirName,
             Golfin.Banners.BannerPolicy.IsArtAllowed);
 
+        /// <summary>
+        /// Catalog row art (<c>catalog-art</c>). A THIRD INSTANCE of this class — same rationale as
+        /// <see cref="Banners"/>: the download path carries load-bearing security behaviour and must
+        /// not be forked.
+        /// <para>
+        /// Its cache directory is <c>catalog-art</c>, separate from both <c>tournament-art</c> and
+        /// <c>game-banners</c>, so the three 50 MB LRU budgets sweep independently and cannot evict
+        /// each other.
+        /// </para>
+        /// </summary>
+        public static TournamentArtService CatalogArt { get; } = new TournamentArtService(
+            "[CatalogArt]",
+            Golfin.CatalogArt.CatalogArtPolicy.CacheDirName,
+            Golfin.CatalogArt.CatalogArtPolicy.IsArtAllowed);
+
         // ── Per-instance identity ─────────────────────────────────────────────
 
         private readonly string _tag;

@@ -1,7 +1,51 @@
-=== spec authored 2026-08-27 ===
-Drafted by the main Claude Code thread (not the subagent chain), from a live read of:
-  Assets/Scripts/TournamentsRuntime/TournamentArtService.cs   (ctor already parameterised; 2 instances)
-  Assets/Scripts/BannersRuntime/BannerPolicy.cs               (allowlist shape to mirror)
-  Tools/admin-dashboard/lib/bannerMutations.ts                (uploadBannerArt: hash-named, bucket-on-first-use)
-  Docs/CONTENT_PIPELINE_PLAN.md §10                           (why not Addressables)
-  the ~20 sprite-binding consumers                            (why resolution happens at the LOADER)
+2026-08-27T10:07:15 activated
+
+=== iter-1 kickoff baseline HEAD=c84134ce6 ===
+DIRTY:
+ M Docs/Versioning/last_uploaded_build.txt   (pre-existing, not mine)
+=== end baseline ===
+2026-08-27T10:24:07 boot prefetch + CSV headers + admin dashboard + tests complete
+2026-08-27T10:28:42 writing IMPLEMENTER_REPORT
+2026-08-27T10:35:14 done, awaiting review
+2026-08-27T10:39:59 === iter-2 kickoff baseline HEAD=c84134ce6d522c35f0c877197738b27d8dc2ae0c ===
+DIRTY:
+ M .claude/review_misses.log
+ M Assets/Data/Balls.csv
+ M Assets/Data/Characters.csv
+ M Assets/Data/Items.csv
+ M Assets/Resources/Data/Clubs.csv
+ M Assets/Scripts/ContentRuntime/ContentSpriteGuard.cs
+ M Assets/Scripts/TournamentsRuntime/TournamentArtService.cs
+ M Assets/Scripts/UI/Inventory/BallData.cs
+ M Assets/Scripts/UI/Inventory/BallDatabaseCSV.cs
+ M Assets/Scripts/UI/Inventory/ClubCsvParser.cs
+ M Assets/Scripts/UI/Inventory/ClubData.cs
+ M Assets/Scripts/UI/Inventory/ClubDatabaseCSV.cs
+ M Assets/Scripts/UI/Inventory/ItemDataRuntime.cs
+ M Assets/Scripts/UI/Inventory/ItemDatabaseCSV.cs
+ M Assets/Scripts/UI/Roster/Managers/CharacterDatabaseCSV.cs
+ M Docs/Specs/Active/content_art_urls/ARCHITECT_REVIEW.md
+ M Docs/Specs/Active/content_art_urls/HEARTBEAT.log
+ M Docs/Specs/Active/content_art_urls/IMPLEMENTER_REPORT.md
+ M Docs/Specs/Active/content_art_urls/STATUS.md
+ M Docs/Versioning/last_uploaded_build.txt
+ M Tools/admin-dashboard/app/(panels)/_content/row-editor.tsx
+ M Tools/admin-dashboard/lib/contentView.ts
+=== end baseline ===
+2026-08-27T10:44:07 iter-2 activated, starting fixes
+2026-08-27T10:57:04 Item1 tested + CSV restored. Running Item2/3 and confirming EditMode suite.
+2026-08-27T11:07:46 iter-2 rewriting IMPLEMENTER_REPORT - all evidence collected
+2026-08-27T11:09:35 done, awaiting review
+2026-08-27T11:17:59Z activated — iter-3 kickoff, single fix: validateArtUrlUnderBucket extraction
+2026-08-27T11:20:38Z done — validateArtUrlUnderBucket extracted, npm build green, report updated; awaiting review
+2026-08-27T11:28:41 activated — iter-4 spec-change ladder reorder
+2026-08-27T11:37:58 code changes complete — all 5 source files updated, running compile check
+2026-08-27T11:39:15 dispatching compile check via Unity MCP
+2026-08-27T11:44:34 running EditMode tests
+2026-08-27T11:52:52 taking canonical screenshot — boot into play mode
+2026-08-27T12:04:22Z done, awaiting review
+2026-08-27T12:10:12 activated iter-5: adding two loader-level tests for ClubDatabaseCSV.ToRuntime
+2026-08-27T12:18:34 tests passed 1875/1872/0/3; writing updated report
+2026-08-27T12:19:50 done, awaiting review
+2026-08-27T12:29:04Z activated iter-6: fix Part A so it reaches step 3 (not step 1), run tripwire
+2026-08-27T12:42:13Z done — Part A fixture corrected to reach step 3; tripwire evidence recorded (FAIL: Placeholder, PASS: injected_loader_portrait); awaiting review

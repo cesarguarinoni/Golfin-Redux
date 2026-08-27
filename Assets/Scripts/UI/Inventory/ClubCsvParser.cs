@@ -63,6 +63,13 @@ namespace Golfin.Inventory
         public string portraitFull   = "";
         public string controlSprite  = "";
 
+        /// <summary>Remote art URL for the portrait thumbnail (SPEC §3 — <c>portraitUrl</c> column).</summary>
+        public string portraitUrl    = "";
+        /// <summary>Remote art URL for the full portrait (SPEC §3 — <c>fullUrl</c> column).</summary>
+        public string portraitFullUrl = "";
+        /// <summary>Remote art URL for the control shot image (SPEC §3 — <c>controlUrl</c> column).</summary>
+        public string controlUrl     = "";
+
         public int    startLevel = 0;      // 0 = column absent; the caller falls back to the rarity table
         public int    maxLevel = 119;
         public string info     = "";
@@ -217,6 +224,9 @@ namespace Golfin.Inventory
                 portraitSprite    = f.Get("portraitSprite"),
                 portraitFull      = f.Get("portraitFull"),
                 controlSprite     = f.Get("controlSprite"),
+                portraitUrl       = f.Get("portraitUrl"),
+                portraitFullUrl   = f.Get("fullUrl"),
+                controlUrl        = f.Get("controlUrl"),
                 startLevel        = f.GetInt("startLevel", 0),
                 maxLevel          = f.GetInt("maxLevel", 119),
                 info              = f.Get("info"),

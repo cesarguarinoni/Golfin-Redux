@@ -142,25 +142,25 @@ export function deriveBannerState(
 // ---------------------------------------------------------------------------
 
 /**
- * 🔒 Artwork must live in THIS project's Supabase Storage, inside the
- * `game-banners` bucket.
+ * 🔒 Canonical URL validator for Supabase Storage art buckets.
  *
- * `image_url_*` is a free-text column and the client fetches it unattended at
- * boot, so an arbitrary URL here is a content channel into every player's
- * device and a way to harvest every player's IP. The client enforces the same
- * rule in `BannerPolicy.IsArtAllowed`, and THAT is the control — this one is a
- * usability guard so the operator finds out at save time rather than on a
- * device. A URL this accepts but the client refuses is a banner that looks fine
- * in the panel and does nothing in the game.
+ * Both art callers use this single implementation — do not fork it into a
+ * second copy. Mirrors `TournamentArtPolicy.IsAllowedUnder` on the Unity
+ * client, so every URL this accepts is one the client will serve.
  *
- * Parse first, then compare the NORMALIZED parts — never a raw `startsWith`.
- * A string prefix check passes
- * `…/public/game-banners/../../../rest/v1/rpc/x`, and the request the runtime
- * actually makes has the dot segments collapsed.
+ * Callers:
+ *   - `validateBannerArtUrl`  → bucket `game-banners`
+ *   - `uploadCatalogArt`      → bucket `catalog-art`
+ *
+ * `image_url_*` / catalog art URL columns are free-text stored in the DB and
+ * fetched unattended at boot: an arbitrary URL is a content channel into every
+ * player's device. Parse first, compare NORMALIZED parts — never a raw
+ * `startsWith`. A prefix check passes
+ * `…/public/catalog-art/../../../rest/v1/rpc/x`.
  *
  * @returns an error message, or null when the URL is acceptable.
  */
-export function validateBannerArtUrl(url: string): string | null {
+export function validateArtUrlUnderBucket(url: string, bucket: string): string | null {
   const base = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
 
   let parsed: URL;
@@ -188,10 +188,10 @@ export function validateBannerArtUrl(url: string): string | null {
     }
   }
 
-  const bucketRoot = `/storage/v1/object/public/${BANNER_BUCKET}/`;
+  const bucketRoot = `/storage/v1/object/public/${bucket}/`;
   const path = parsed.pathname; // dot segments already collapsed by URL
   if (!path.startsWith(bucketRoot)) {
-    return `Artwork must be inside the "${BANNER_BUCKET}" bucket.`;
+    return `Artwork must be inside the "${bucket}" bucket.`;
   }
   if (path.length <= bucketRoot.length) {
     return "Artwork URL names the bucket root, not an object.";
@@ -201,6 +201,20 @@ export function validateBannerArtUrl(url: string): string | null {
     return "Artwork URL contains a path traversal.";
   }
   return null;
+}
+
+/**
+ * 🔒 Validates that banner artwork lives in THIS project's Supabase Storage,
+ * inside the `game-banners` bucket.
+ *
+ * Thin wrapper over `validateArtUrlUnderBucket` — all checks live there.
+ * Behaviour is identical to the pre-refactor implementation; the mock-mode
+ * branch (no SUPABASE_URL → host check skipped) is preserved unchanged.
+ *
+ * @returns an error message, or null when the URL is acceptable.
+ */
+export function validateBannerArtUrl(url: string): string | null {
+  return validateArtUrlUnderBucket(url, BANNER_BUCKET);
 }
 
 /**

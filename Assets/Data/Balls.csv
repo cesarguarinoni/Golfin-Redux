@@ -1,3 +1,3 @@
-id,name,brand,power,rebound,windResistance,roll,spin,thumbnailSprite,fullSprite,info
-ball_golfin,Golfin,Golfin,0,0,0,0,0,Golfin,Golfin,"The standard Golfin ball. Perfectly balanced with no stat bonuses or penalties—reliable in any situation."
-ball_putt_ace,Putt Ace,Putt Ace,10,-6,0,5,-4,PuttAce,PuttAce,"Designed by PUTT ACE, a name synonymous with short-game mastery, this ball delivers exceptional spin, subtle roll, and balanced power—tailored for precision play in any condition."
+id,name,brand,power,rebound,windResistance,roll,spin,thumbnailSprite,fullSprite,info,thumbnailUrl,fullUrl
+ball_golfin,Golfin,Golfin,0,0,0,0,0,Golfin,Golfin,"The standard Golfin ball. Perfectly balanced with no stat bonuses or penalties—reliable in any situation.",,
+ball_putt_ace,Putt Ace,Putt Ace,10,-6,0,5,-4,PuttAce,PuttAce,"Designed by PUTT ACE, a name synonymous with short-game mastery, this ball delivers exceptional spin, subtle roll, and balanced power—tailored for precision play in any condition.",,

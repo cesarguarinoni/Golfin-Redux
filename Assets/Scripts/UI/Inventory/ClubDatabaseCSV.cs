@@ -2,6 +2,8 @@
 using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
+using Golfin.CatalogArt;
+using Golfin.Tournaments;
 using Golfin.Content;
 
 namespace Golfin.Inventory
@@ -125,15 +127,24 @@ namespace Golfin.Inventory
                     string? unresolved = row.overlayAppended
                         ? ContentSpriteGuard.FirstUnresolved(new[]
                           {
-                              Path(PortraitPath, row.portraitSprite),
-                              Path(FullPath,     row.portraitFull),
-                              Path(ControlPath,  row.controlSprite),
+                              // Clubs fall back to Placeholder, so a missing PRIMARY is not dropped.
+                              // However the sprite veto still applies when a name was given: if the
+                              // name does not resolve and no URL is supplied, the guard fires.
+                              new SpriteRef(PortraitPath, string.Empty, row.portraitSprite,
+                                            CatalogArtPolicy.IsArtAllowed(row.portraitUrl)),
+                              new SpriteRef(FullPath,     string.Empty, row.portraitFull,
+                                            CatalogArtPolicy.IsArtAllowed(row.portraitFullUrl)),
+                              new SpriteRef(ControlPath,  string.Empty, row.controlSprite,
+                                            CatalogArtPolicy.IsArtAllowed(row.controlUrl)),
                           })
                         : ContentSpriteGuard.FirstUnresolvedChange(new[]
                           {
-                              new SpriteRef(PortraitPath, row.bundled!.portraitSprite, row.portraitSprite),
-                              new SpriteRef(FullPath,     row.bundled!.portraitFull,   row.portraitFull),
-                              new SpriteRef(ControlPath,  row.bundled!.controlSprite,  row.controlSprite),
+                              new SpriteRef(PortraitPath, row.bundled!.portraitSprite, row.portraitSprite,
+                                            CatalogArtPolicy.IsArtAllowed(row.portraitUrl)),
+                              new SpriteRef(FullPath,     row.bundled!.portraitFull,   row.portraitFull,
+                                            CatalogArtPolicy.IsArtAllowed(row.portraitFullUrl)),
+                              new SpriteRef(ControlPath,  row.bundled!.controlSprite,  row.controlSprite,
+                                            CatalogArtPolicy.IsArtAllowed(row.controlUrl)),
                           });
 
                     if (unresolved != null)
@@ -180,6 +191,12 @@ namespace Golfin.Inventory
                             $"{deactivated} deactivated (still owned + renderable, I6), " +
                             $"{vetoed} reverted to bundled and {dropped} dropped by the sprite veto (§5).") +
                       ".");
+
+            // SPEC §4 — boot prefetch (see CharacterDatabaseCSV for rationale).
+            var artUrls = allClubs
+                .SelectMany(c => new[] { c.portraitUrl, c.portraitFullUrl, c.controlUrl })
+                .Where(u => !string.IsNullOrEmpty(u));
+            TournamentArtService.CatalogArt.Prefetch(artUrls);
         }
 
         private static string Path(string folder, string name)
@@ -187,37 +204,103 @@ namespace Golfin.Inventory
 
         private static ClubDataRuntime ToRuntime(ClubCsvRow row,
                                                  Dictionary<string, Sprite?> cache,
-                                                 HashSet<string> missing) => new ClubDataRuntime
+                                                 HashSet<string> missing)
         {
-            clubId             = row.id,
-            name               = row.name,
-            type               = row.type,
-            rarity             = row.rarity,
-            brand              = row.brand,
-            basePower          = row.basePower,
-            baseAccuracy       = row.baseAccuracy,
-            baseLieResistance  = row.baseLieResistance,
-            baseLoft           = row.baseLoft,
-            maxDurability      = row.maxDurability,
-            baseDistance       = row.baseDistance,
-            ballSpeedMps       = row.ballSpeedMps,
-            launchAngleDeg     = row.launchAngleDeg,
-            spinRateRpm        = row.spinRateRpm,
-            portraitSpriteName = row.portraitSprite,
-            portraitFullName   = row.portraitFull,
-            controlSpriteName  = row.controlSprite,
-            startLevel         = row.startLevel,
-            maxLevel           = row.maxLevel,
-            isActive           = row.isActive,
-            info               = row.info,
-            infoJa             = row.infoJa,
+            // Resolution ladder for clubs (SPEC §2, revised 2026-08-27 + Placeholder policy):
+            //   1. URL the OVERLAY CHANGED (overlay URL ≠ bundled CSV URL), if cached
+            //      → art re-uploaded since this build; same comparison ContentSpriteGuard
+            //        performs on sprite NAMES. row.bundled holds the pre-merge row.
+            //   2. REAL bundled sprite by name (NOT Placeholder fallback)
+            //      → the build's own art wins; Placeholder must not shadow step 3.
+            //   3. URL unchanged since the build, if cached
+            //      → row is newer than any bundled art (new admin row, no bundled counterpart)
+            //   4. clubs only: Placeholder (LoadSprite always returns something; decision of record)
+            //
+            // ⚠️ Step 2 uses LoadRealSprite (no Placeholder fallback) so that a club with no
+            // real bundled art but a cached URL uses the URL at step 3, not the stand-in at step 4.
+            string bundledPortraitUrl  = row.bundled?.portraitUrl    ?? "";
+            string bundledFullUrl      = row.bundled?.portraitFullUrl ?? "";
+            string bundledControlUrl   = row.bundled?.controlUrl     ?? "";
 
-            portraitSprite     = LoadSprite(PortraitPath, row.portraitSprite, cache, missing),
-            portraitFull       = LoadSprite(FullPath,     row.portraitFull,   cache, missing),
-            controlSprite      = LoadSprite(ControlPath,  row.controlSprite,  cache, missing),
-        };
+            Sprite? portraitSpriteResolved =
+                CatalogArtCache.Cached(row.portraitUrl,  bundledPortraitUrl)  // step 1
+                ?? LoadRealSprite(PortraitPath, row.portraitSprite)            // step 2 REAL
+                ?? CatalogArtCache.Cached(row.portraitUrl)                    // step 3
+                ?? LoadSprite(PortraitPath, row.portraitSprite, cache, missing); // step 4 Placeholder
+
+            Sprite? portraitFullResolved =
+                CatalogArtCache.Cached(row.portraitFullUrl, bundledFullUrl)   // step 1
+                ?? LoadRealSprite(FullPath, row.portraitFull)                  // step 2 REAL
+                ?? CatalogArtCache.Cached(row.portraitFullUrl)                // step 3
+                ?? LoadSprite(FullPath, row.portraitFull, cache, missing);    // step 4 Placeholder
+
+            Sprite? controlSpriteResolved =
+                CatalogArtCache.Cached(row.controlUrl,   bundledControlUrl)   // step 1
+                ?? LoadRealSprite(ControlPath, row.controlSprite)              // step 2 REAL
+                ?? CatalogArtCache.Cached(row.controlUrl)                     // step 3
+                ?? LoadSprite(ControlPath, row.controlSprite, cache, missing); // step 4 Placeholder
+
+            return new ClubDataRuntime
+            {
+                clubId             = row.id,
+                name               = row.name,
+                type               = row.type,
+                rarity             = row.rarity,
+                brand              = row.brand,
+                basePower          = row.basePower,
+                baseAccuracy       = row.baseAccuracy,
+                baseLieResistance  = row.baseLieResistance,
+                baseLoft           = row.baseLoft,
+                maxDurability      = row.maxDurability,
+                baseDistance       = row.baseDistance,
+                ballSpeedMps       = row.ballSpeedMps,
+                launchAngleDeg     = row.launchAngleDeg,
+                spinRateRpm        = row.spinRateRpm,
+                portraitSpriteName = row.portraitSprite,
+                portraitFullName   = row.portraitFull,
+                controlSpriteName  = row.controlSprite,
+                portraitUrl        = row.portraitUrl,
+                portraitFullUrl    = row.portraitFullUrl,
+                controlUrl         = row.controlUrl,
+                startLevel         = row.startLevel,
+                maxLevel           = row.maxLevel,
+                isActive           = row.isActive,
+                info               = row.info,
+                infoJa             = row.infoJa,
+
+                portraitSprite  = portraitSpriteResolved,
+                portraitFull    = portraitFullResolved,
+                controlSprite   = controlSpriteResolved,
+            };
+        }
 
         // ── Sprite loading ────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Step 2 of the resolution ladder — REAL bundled art only.
+        /// Returns the named sprite if found in Resources; returns null if
+        /// <paramref name="name"/> is empty or the sprite is not bundled.
+        ///
+        /// <para>
+        /// Does NOT fall back to <c>Placeholder</c> — that is step 4
+        /// (<see cref="LoadSprite"/>). This distinction ensures that a club with no real
+        /// bundled art (name missing or sprite file absent) does not have the stand-in
+        /// shadow a live URL at step 3, which would be worse than shipping nothing
+        /// (SPEC §2 ⚠️ note on step 4).
+        /// </para>
+        ///
+        /// <para>
+        /// Does NOT use the shared sprite cache to avoid reading a <c>Placeholder</c>
+        /// that <see cref="LoadSprite"/> may have written for a different miss on the
+        /// same key. Unity's internal resource system memoizes the load itself; this is
+        /// not expensive.
+        /// </para>
+        /// </summary>
+        private static Sprite? LoadRealSprite(string folder, string name)
+        {
+            if (string.IsNullOrEmpty(name)) return null;
+            return Resources.Load<Sprite>($"{folder}/{name}");
+        }
 
         /// <summary>
         /// Resolves one sprite by name, memoized per (folder, name). A name the art batches have

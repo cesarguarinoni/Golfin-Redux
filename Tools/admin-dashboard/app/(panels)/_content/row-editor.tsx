@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useT } from "@/components/I18nProvider";
-import { ID_COLUMN, isValidNewRowId, ROW_ID_MAX, spriteFolder } from "@/lib/contentView";
+import { ID_COLUMN, isArtUrlColumn, isValidNewRowId, ROW_ID_MAX, spriteFolder } from "@/lib/contentView";
 import type { ContentStoredRow } from "@/lib/types";
 import { saveRow } from "./client";
 
@@ -72,6 +72,9 @@ export function RowEditor({
   const [minBuild, setMinBuild] = useState(String(row.minBuild));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Per-column upload state for art URL columns (content_art_urls).
+  const [uploading, setUploading] = useState<Record<string, boolean>>({});
+  const [uploadError, setUploadError] = useState<Record<string, string>>({});
 
   const idColumn = ID_COLUMN[catalog] ?? "id";
   const trimmedId = rowId.trim();
@@ -109,6 +112,49 @@ export function RowEditor({
       );
     } finally {
       setBusy(false);
+    }
+  }
+
+  /**
+   * Upload artwork for a URL column (content_art_urls §3).
+   * On success, writes the returned public URL into the draft field so the
+   * operator can see it and save. The upload itself is fire-and-forget from the
+   * DB perspective: the URL only lands in the row when the operator presses Save.
+   */
+  async function uploadArt(column: string, file: File) {
+    const effectiveRowId = isNew ? rowId.trim() : row.rowId;
+    if (!effectiveRowId) {
+      setUploadError((prev) => ({
+        ...prev,
+        [column]: "Set a row id before uploading art.",
+      }));
+      return;
+    }
+    setUploading((prev) => ({ ...prev, [column]: true }));
+    setUploadError((prev) => ({ ...prev, [column]: "" }));
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      form.append("catalog", catalog);
+      form.append("rowId", effectiveRowId);
+      form.append("column", column);
+      const res = await fetch("/api/content/art", { method: "POST", body: form });
+      const json = (await res.json()) as { url?: string; error?: string };
+      if (!res.ok || json.error) {
+        setUploadError((prev) => ({
+          ...prev,
+          [column]: json.error ?? `Upload failed (${res.status}).`,
+        }));
+      } else if (json.url) {
+        set(column, json.url);
+      }
+    } catch (err) {
+      setUploadError((prev) => ({
+        ...prev,
+        [column]: err instanceof Error ? err.message : "Upload failed.",
+      }));
+    } finally {
+      setUploading((prev) => ({ ...prev, [column]: false }));
     }
   }
 
@@ -226,9 +272,31 @@ export function RowEditor({
               // the constraint has to be visible at the point of typing. No new
               // control: a hint under the field the operator is already using.
               const folder = spriteFolder(catalog, column);
+              // content_art_urls §3 — a URL column holds a public Supabase Storage
+              // URL. The operator can paste a URL directly or upload art via the
+              // button; either way the URL lands in the draft and is saved with the row.
+              const isUrlCol = isArtUrlColumn(catalog, column);
               return (
-                <label key={column} className="block">
-                  <span className="font-mono text-[11px] text-zinc-500">{column}</span>
+                <div key={column} className="block">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-mono text-[11px] text-zinc-500">{column}</span>
+                    {isUrlCol && (
+                      <label className="flex cursor-pointer items-center gap-1 rounded-md border border-surface-700 px-2 py-0.5 text-[10px] text-zinc-400 hover:bg-surface-800">
+                        {uploading[column] ? "Uploading…" : "Upload art"}
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp"
+                          className="sr-only"
+                          disabled={uploading[column]}
+                          onChange={(e) => {
+                            const f = e.target.files?.[0];
+                            if (f) void uploadArt(column, f);
+                            e.target.value = "";
+                          }}
+                        />
+                      </label>
+                    )}
+                  </div>
                   {(draft[column] ?? "").length > 60 ? (
                     <textarea
                       rows={3}
@@ -251,7 +319,17 @@ export function RowEditor({
                       )}
                     </span>
                   )}
-                </label>
+                  {isUrlCol && (
+                    <span className="mt-1 block text-[11px] leading-relaxed text-zinc-500">
+                      URL from the catalog-art bucket — paste directly or use &ldquo;Upload art&rdquo;.
+                      The client&apos;s resolution ladder picks this over the bundled sprite when the
+                      file is already cached on-device (content_art_urls §2).
+                    </span>
+                  )}
+                  {uploadError[column] && (
+                    <span className="mt-1 block text-[11px] text-red-400">{uploadError[column]}</span>
+                  )}
+                </div>
               );
             })}
           </div>

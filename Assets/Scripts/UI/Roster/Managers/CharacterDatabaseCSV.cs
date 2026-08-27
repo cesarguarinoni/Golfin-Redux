@@ -2,7 +2,9 @@
 using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
+using Golfin.CatalogArt;
 using Golfin.Content;
+using Golfin.Tournaments;
 
 namespace Golfin.Roster
 {
@@ -117,14 +119,17 @@ namespace Golfin.Roster
                 var character = bundled;
                 if (patch != null)
                 {
-                    var merged = ParseCharacterFromCSV(ContentFields.Csv(fields, headerIndex, patch));
+                    var merged = ParseCharacterFromCSV(ContentFields.Csv(fields, headerIndex, patch),
+                        bundled.portraitUrl, bundled.portraitFullUrl);
                     if (merged != null)
                     {
                         // SPEC §5 — only names the overlay CHANGED are guarded.
                         string? unresolved = ContentSpriteGuard.FirstUnresolvedChange(new[]
                         {
-                            new SpriteRef(ThumbnailResourcesPath, bundled.portraitSpriteName,     merged.portraitSpriteName),
-                            new SpriteRef(FullBodyResourcesPath,  bundled.portraitFullSpriteName, merged.portraitFullSpriteName),
+                            new SpriteRef(ThumbnailResourcesPath, bundled.portraitSpriteName,     merged.portraitSpriteName,
+                                          CatalogArtPolicy.IsArtAllowed(merged.portraitUrl)),
+                            new SpriteRef(FullBodyResourcesPath,  bundled.portraitFullSpriteName, merged.portraitFullSpriteName,
+                                          CatalogArtPolicy.IsArtAllowed(merged.portraitFullUrl)),
                         });
 
                         if (unresolved != null)
@@ -162,8 +167,10 @@ namespace Golfin.Roster
                     // carousel is worse than an absent character.
                     string? unresolved = ContentSpriteGuard.FirstUnresolved(new[]
                     {
-                        Path(ThumbnailResourcesPath, appended.portraitSpriteName),
-                        Path(FullBodyResourcesPath,  appended.portraitFullSpriteName),
+                        new SpriteRef(ThumbnailResourcesPath, string.Empty, appended.portraitSpriteName,
+                                      CatalogArtPolicy.IsArtAllowed(appended.portraitUrl)),
+                        new SpriteRef(FullBodyResourcesPath,  string.Empty, appended.portraitFullSpriteName,
+                                      CatalogArtPolicy.IsArtAllowed(appended.portraitFullUrl)),
                     });
 
                     if (unresolved != null)
@@ -202,6 +209,17 @@ namespace Golfin.Roster
                           : $" — overlay v{overlay.Version}: {OverlaidRowCount} row(s) patched/appended, " +
                             $"{deactivated} deactivated (still owned + renderable, I6), " +
                             $"{vetoed} reverted to bundled and {dropped} dropped by the sprite veto (§5)."));
+
+            // SPEC §4 — boot prefetch: warm the catalog-art cache for any URL-backed rows so art
+            // is ready to paint before the player opens the roster. Fire-and-forget (I5 — not
+            // re-applied this session). Sweep evicts by 50MB LRU; catalog rows carry no end date
+            // so the expiry map is empty — only the size cap bounds retention.
+            var artUrls = allCharacters
+                .SelectMany(c => new[] { c.portraitUrl, c.portraitFullUrl })
+                .Where(u => !string.IsNullOrEmpty(u));
+            TournamentArtService.CatalogArt.Prefetch(artUrls);
+            TournamentArtService.CatalogArt.SweepCacheAsync(
+                new System.Collections.Generic.Dictionary<string, System.DateTime>());
         }
 
         private static string Path(string folder, string name)
@@ -253,13 +271,25 @@ namespace Golfin.Roster
         /// CSV row, a bundled row patched by an overlay, or an overlay row on its own. The column
         /// names and defaults are declared ONCE, here, so a published row and a bundled row can
         /// never diverge on how a column is read (I4).
+        ///
+        /// <para>
+        /// <paramref name="bundledPortraitUrl"/> and <paramref name="bundledFullUrl"/> are the URLs
+        /// as they appear in the BUNDLED CSV row (before any overlay). Pass <c>""</c> when there is
+        /// no bundled counterpart (appended rows) or when parsing the bundled row itself. These are
+        /// used by step 1 of the resolution ladder to detect re-uploaded art (SPEC §2.2).
+        /// </para>
         /// </summary>
-        private CharacterDataRuntime? ParseCharacterFromCSV(ContentFields f)
+        private CharacterDataRuntime? ParseCharacterFromCSV(ContentFields f,
+            string bundledPortraitUrl = "", string bundledFullUrl = "")
         {
             try
             {
                 string id = f.Get("id");
                 if (string.IsNullOrEmpty(id)) return null;
+
+                // Read URL columns (SPEC §3 — new optional columns, additive).
+                string portraitUrl     = f.Get("portraitUrl");
+                string portraitFullUrl = f.Get("fullUrl");
 
                 var character = new CharacterDataRuntime
                 {
@@ -273,6 +303,8 @@ namespace Golfin.Roster
                     baseStamina = f.GetInt("baseStamina", 10),
                     portraitSpriteName = f.Get("portraitSprite"),
                     portraitFullSpriteName = f.Get("portraitFull"),
+                    portraitUrl     = portraitUrl,
+                    portraitFullUrl = portraitFullUrl,
                     startLevel = f.GetInt("startLevel", 0),
                     maxLevel = f.GetInt("maxLevel", 199),
                     bio = f.Get("bio"),
@@ -280,9 +312,23 @@ namespace Golfin.Roster
                     isActive = f.IsActive
                 };
 
-                // Find sprites by name
-                character.portraitSprite = FindSpriteByName(character.portraitSpriteName);
-                character.portraitFullSprite = FindFullBodySpriteByName(character.portraitFullSpriteName);
+                // Resolution ladder (SPEC §2, revised 2026-08-27):
+                //   1. URL the OVERLAY CHANGED (overlay URL ≠ bundled CSV URL), if cached
+                //      → art re-uploaded since this build; same comparison ContentSpriteGuard
+                //        performs on sprite NAMES (SpriteRef.Changed). Both URLs are in hand
+                //        here — caller passed the bundled URL so we never re-read the CSV.
+                //   2. bundled sprite by name (REAL art only)  →  the build's own art wins
+                //   3. URL unchanged since the build, if cached → row newer than any bundled art
+                //   5. otherwise null ⇒ renderable=false ⇒ withheld (§4)
+                character.portraitSprite =
+                    CatalogArtCache.Cached(portraitUrl, bundledPortraitUrl)       // step 1
+                    ?? FindSpriteByName(character.portraitSpriteName)              // step 2
+                    ?? CatalogArtCache.Cached(portraitUrl);                        // step 3
+
+                character.portraitFullSprite =
+                    CatalogArtCache.Cached(portraitFullUrl, bundledFullUrl)       // step 1
+                    ?? FindFullBodySpriteByName(character.portraitFullSpriteName)  // step 2
+                    ?? CatalogArtCache.Cached(portraitFullUrl);                    // step 3
 
                 // content_two_way §4 — the primary sprite IS the renderability test, and it is read
                 // off the resolution just performed rather than repeated.
@@ -381,6 +427,19 @@ namespace Golfin.Roster
         public Sprite? portraitSprite = null;
         public string portraitFullSpriteName = "";
         public Sprite? portraitFullSprite = null;
+
+        /// <summary>
+        /// Remote art URL for the portrait thumbnail (SPEC §3 — <c>portraitUrl</c> column).
+        /// Empty means "no remote art". Resolution ladder step 1 (SPEC §2).
+        /// The boot prefetch uses this to warm the disk cache for the next launch.
+        /// </summary>
+        public string portraitUrl = "";
+
+        /// <summary>
+        /// Remote art URL for the full-body portrait (SPEC §3 — <c>fullUrl</c> column).
+        /// Empty means "no remote art". Resolution ladder step 1 (SPEC §2).
+        /// </summary>
+        public string portraitFullUrl = "";
 
         /// <summary>
         /// content_two_way §4 — <b>can THIS build draw this row?</b> False when the PRIMARY sprite

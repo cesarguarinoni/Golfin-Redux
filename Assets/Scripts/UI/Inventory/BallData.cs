@@ -28,6 +28,18 @@ namespace Golfin.Inventory
         public string  fullSpriteName      = "";
         public Sprite? fullSprite          = null;
 
+        /// <summary>
+        /// Remote art URL for the thumbnail (SPEC §3 — <c>thumbnailUrl</c> column).
+        /// Empty means "no remote art". Resolution ladder step 1 (SPEC §2).
+        /// </summary>
+        public string thumbnailUrl = "";
+
+        /// <summary>
+        /// Remote art URL for the full image (SPEC §3 — <c>fullUrl</c> column).
+        /// Empty means "no remote art". Resolution ladder step 1 (SPEC §2).
+        /// </summary>
+        public string fullUrl = "";
+
         public string info = "";
 
         /// <summary>

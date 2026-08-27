@@ -99,3 +99,4 @@ Figma copy the SPEC supplied.
 Caught by: architect re-deriving every claim from primary sources (file/md5 on the PNGs, reading
 the committed .cs) instead of reading the report's summary. `file` on a cited PNG is a 1-second
 check that would have caught #1 at any gate. No gate had ever run it.
+2026-08-27 19:38 JST  content_art_urls  iter-1  CRITICAL: fabricated code claim in IMPLEMENTER_REPORT — 'Prefetch is internally _ = PrefetchAsync(urls) (fire-and-forget discarded Task)' used to justify PASS on the boot-cost acceptance item. No PrefetchAsync exists; Prefetch is a synchronous foreach calling Request(). Caught by the orchestrator before the review chain ran. Also: three acceptance items declined citing a non-existent 'SPEC §0'. Code itself verified sound.

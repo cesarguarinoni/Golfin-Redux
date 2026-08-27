@@ -199,6 +199,37 @@ export function spriteFolder(catalog: string, column: string): string | null {
 }
 
 // ---------------------------------------------------------------------------
+// Art URL columns (content_art_urls)
+// ---------------------------------------------------------------------------
+
+/**
+ * `catalog → [urlColumn, …]` — columns that hold a public Supabase Storage URL
+ * instead of a bundled sprite name (SPEC content_art_urls §3, I4).
+ *
+ * These columns are additive: a row can carry BOTH a sprite name (for builds
+ * that bundled the art) AND a URL (for installed builds that have not). The
+ * resolution ladder in each DatabaseCSV prefers the URL when a cached copy is
+ * present.
+ *
+ * The row editor shows an upload button beside each of these fields; the API
+ * route is POST /api/content/art.
+ */
+export const ART_URL_COLUMNS: Record<string, readonly string[]> = {
+  characters: ["portraitUrl", "fullUrl"],
+  clubs:      ["portraitUrl", "fullUrl", "controlUrl"],
+  items:      ["thumbnailUrl", "fullUrl"],
+  balls:      ["thumbnailUrl", "fullUrl"],
+} as const;
+
+/**
+ * Returns true when the given column in the given catalog is a URL column
+ * rather than a bundled sprite-name column.
+ */
+export function isArtUrlColumn(catalog: string, column: string): boolean {
+  return (ART_URL_COLUMNS[catalog] ?? []).includes(column);
+}
+
+// ---------------------------------------------------------------------------
 // Shop row state
 // ---------------------------------------------------------------------------
 

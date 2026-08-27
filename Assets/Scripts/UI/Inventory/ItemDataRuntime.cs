@@ -16,6 +16,19 @@ namespace Golfin.Inventory
         public int    restorePercent      = 0;    // 50, 75, 100
         public string thumbnailSpriteName = "";
         public string fullSpriteName      = "";
+
+        /// <summary>
+        /// Remote art URL for the thumbnail (SPEC §3 — <c>thumbnailUrl</c> column).
+        /// Empty means "no remote art". Resolution ladder step 1 (SPEC §2).
+        /// </summary>
+        public string thumbnailUrl = "";
+
+        /// <summary>
+        /// Remote art URL for the full image (SPEC §3 — <c>fullUrl</c> column).
+        /// Empty means "no remote art". Resolution ladder step 1 (SPEC §2).
+        /// </summary>
+        public string fullUrl = "";
+
         public string proTip              = "";
         public string info                = "";
 

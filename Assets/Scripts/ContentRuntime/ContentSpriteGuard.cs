@@ -36,11 +36,23 @@ namespace Golfin.Content
         /// <summary>The name after the overlay merge.</summary>
         public readonly string Overlaid;
 
-        public SpriteRef(string folder, string bundled, string overlaid)
+        /// <summary>
+        /// True when the row carries an allowlisted remote URL for this sprite column.
+        /// Set by the CALLER (the loader), because <c>ContentSpriteGuard</c> lives in
+        /// <c>Golfin.Content</c> and cannot evaluate <c>CatalogArtPolicy</c> directly
+        /// (assembly boundary — <c>Golfin.Content</c> cannot reference Assembly-CSharp).
+        /// When true, the guard treats the column as satisfied regardless of whether the
+        /// sprite NAME resolves — the row is not an appended row that simply has no bundled
+        /// art, it is a row whose art is intentionally delivered by URL (SPEC §4.4).
+        /// </summary>
+        public readonly bool HasRemote;
+
+        public SpriteRef(string folder, string bundled, string overlaid, bool hasRemote = false)
         {
-            Folder   = folder ?? string.Empty;
-            Bundled  = bundled ?? string.Empty;
-            Overlaid = overlaid ?? string.Empty;
+            Folder     = folder ?? string.Empty;
+            Bundled    = bundled ?? string.Empty;
+            Overlaid   = overlaid ?? string.Empty;
+            HasRemote  = hasRemote;
         }
 
         /// <summary>True when the overlay named something other than what the CSV named.</summary>
@@ -65,6 +77,11 @@ namespace Golfin.Content
         /// <summary>
         /// The first sprite the OVERLAY introduced that does not resolve, or null when every changed
         /// name is present (and when the overlay changed no names at all).
+        /// <para>
+        /// A column is satisfied when either (a) its sprite NAME resolves or (b) the caller set
+        /// <see cref="SpriteRef.HasRemote"/> — the row carries an allowlisted URL for that column,
+        /// so a missing bundled name is expected and correct (SPEC §4.4).
+        /// </para>
         /// </summary>
         public static string? FirstUnresolvedChange(IReadOnlyList<SpriteRef> refs)
         {
@@ -72,6 +89,7 @@ namespace Golfin.Content
             {
                 SpriteRef r = refs[i];
                 if (!r.Changed) continue;
+                if (r.HasRemote) continue;          // URL satisfies this column (SPEC §4.4)
                 if (!ResolvesInternal(r.ResourcePath)) return r.ResourcePath;
             }
             return null;
@@ -79,7 +97,9 @@ namespace Golfin.Content
 
         /// <summary>
         /// Convenience for the APPEND case — a brand-new overlay row has no bundled counterpart to
-        /// fall back to, so EVERY sprite it names is guarded and a miss drops the row.
+        /// fall back to, so EVERY sprite it names is guarded and a miss drops the row. Does not
+        /// support <see cref="SpriteRef.HasRemote"/>; use the <see cref="SpriteRef"/> overload when
+        /// URL columns are present.
         /// </summary>
         public static string? FirstUnresolved(IReadOnlyList<string> resourcePaths)
         {
@@ -88,6 +108,27 @@ namespace Golfin.Content
                 string path = resourcePaths[i];
                 if (string.IsNullOrEmpty(path)) continue;
                 if (!ResolvesInternal(path)) return path;
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// APPEND case variant that respects <see cref="SpriteRef.HasRemote"/> — a column whose URL
+        /// is allowlisted is satisfied even when no bundled sprite name resolves (SPEC §4.4).
+        /// <para>
+        /// Used by loaders that pass URL information alongside the name. The <see cref="string"/>
+        /// overload is kept for call sites that have no URL information.
+        /// </para>
+        /// </summary>
+        public static string? FirstUnresolved(IReadOnlyList<SpriteRef> refs)
+        {
+            for (int i = 0; i < refs.Count; i++)
+            {
+                SpriteRef r = refs[i];
+                // An empty Overlaid means the row has no name for this column — skip.
+                if (string.IsNullOrEmpty(r.Overlaid)) continue;
+                if (r.HasRemote) continue;              // URL satisfies this column (SPEC §4.4)
+                if (!ResolvesInternal(r.ResourcePath)) return r.ResourcePath;
             }
             return null;
         }
