@@ -12,10 +12,15 @@
  * thing to forget to update.
  */
 
-import { ID_COLUMN, SHOP_CATEGORY_TO_CATALOG } from "./contentValidate";
+import {
+  ID_COLUMN,
+  isValidNewRowId,
+  ROW_ID_MAX,
+  SHOP_CATEGORY_TO_CATALOG,
+} from "./contentValidate";
 import type { ContentStoredRow } from "./types";
 
-export { ID_COLUMN, SHOP_CATEGORY_TO_CATALOG };
+export { ID_COLUMN, SHOP_CATEGORY_TO_CATALOG, isValidNewRowId, ROW_ID_MAX };
 
 /** Catalogs these panels edit. `bags`/`balls` ride inside the Items panel. */
 export const CONTENT_CATALOGS = [

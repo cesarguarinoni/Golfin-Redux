@@ -862,6 +862,7 @@ export const DICT = {
   },
   "c.version": { en: "Published v{n}", ja: "公開中 v{n}" },
   "c.publishOpen": { en: "Review & publish", ja: "差分を確認して公開" },
+  "c.newRow": { en: "+ New row", ja: "+ 新規行" },
 
   "c.facet.brand": { en: "Brand", ja: "ブランド" },
   "c.facet.type": { en: "Type", ja: "種別" },
@@ -874,6 +875,21 @@ export const DICT = {
   },
 
   "c.edit.title": { en: "Edit draft row", ja: "下書き行を編集" },
+  "c.edit.newTitle": { en: "New draft row", ja: "下書き行を新規作成" },
+  // The id is the one field that cannot be changed later: `upsertDraftRow` keys
+  // the upsert on it, and publish keys `on conflict (catalog, row_id)`.
+  "c.edit.rowIdHint": {
+    en: "Lower-case letters, digits and underscores, up to {max}. Written into data.{column} automatically, and fixed once saved — it is what every other catalog resolves against.",
+    ja: "英小文字・数字・アンダースコアのみ、最大 {max} 文字。data.{column} には自動で書き込まれます。保存後は変更できません（他のカタログが参照する識別子です）。",
+  },
+  "c.edit.rowIdInvalid": {
+    en: "Row id must be lower-case letters, digits and underscores only (texts keys may be upper-case), and at most {max} characters.",
+    ja: "行 ID は英小文字・数字・アンダースコアのみ（texts のキーは大文字も可）、最大 {max} 文字です。",
+  },
+  "c.edit.rowIdTaken": {
+    en: "Row id \"{rowId}\" is already taken in this catalog",
+    ja: "行 ID「{rowId}」はこのカタログで既に使用されています",
+  },
   "c.edit.subtitle": {
     en: "Drafts are never served to the game. Publish is the gate.",
     ja: "下書きはゲームに配信されません。公開が唯一のゲートです。",
@@ -1143,6 +1159,18 @@ export const DICT = {
   "sh.notice.headline": {
     en: "Prices are enforced by the server for builds {build} and later.",
     ja: "ビルド {build} 以降では価格をサーバーが強制します。",
+  },
+  // The PENDING half of the banner: the constant in lib/buildGates.ts is still
+  // 0, so no build carrying the strict client half has been uploaded, validator
+  // rule G1 refuses every character/item row, and promising an enforcement
+  // build number here would be promising a build that does not exist.
+  "sh.notice.pendingHeadline": {
+    en: "Server pricing is live; the client build is pending upload — character and item rows cannot be published yet.",
+    ja: "サーバー価格は有効です。ただしクライアントビルドが未アップロードのため、キャラクター行とアイテム行はまだ公開できません。",
+  },
+  "sh.notice.pendingBody": {
+    en: "Purchases go through /shop/purchase, which charges the PUBLISHED price at purchase time (server clock, listing + sale windows). Club and ball rows publish normally. Character and item rows need the build that parses those categories strictly: upload it, then set SHOP_CATEGORY_STRICT_BUILD in lib/buildGates.ts from Docs/Versioning/last_uploaded_build.txt and redeploy this dashboard.",
+    ja: "購入は /shop/purchase を経由し、購入時点で公開中の価格（サーバー時刻・出品期間とセール期間を適用）を請求します。クラブ行とボール行は通常どおり公開できます。キャラクター行とアイテム行は、それらのカテゴリを厳密に解釈するビルドが必要です。アップロード後、Docs/Versioning/last_uploaded_build.txt の値を lib/buildGates.ts の SHOP_CATEGORY_STRICT_BUILD に設定し、この管理画面を再デプロイしてください。",
   },
   "sh.notice.body": {
     en: "Purchases on build {build} and later go through /shop/purchase, which charges the PUBLISHED price at purchase time (server clock, listing + sale windows) and queues the item as a grant in the same transaction. Older builds still debit locally at their bundled price until the legacy spend path is closed.",

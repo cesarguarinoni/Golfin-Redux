@@ -7,7 +7,15 @@ import {
   GLOBAL_ENABLED_KEY,
   REFERENCED_CATALOGS,
 } from "./contentData";
-import { hasErrors, validateCatalog, type ContentProblem, type DraftRow } from "./contentValidate";
+import {
+  hasErrors,
+  ID_COLUMN,
+  rowIdPattern,
+  ROW_ID_MAX,
+  validateCatalog,
+  type ContentProblem,
+  type DraftRow,
+} from "./contentValidate";
 import { mockDb } from "./mockStore";
 import { isMockMode } from "./mode";
 import { getSupabaseAdmin } from "./supabaseAdmin";
@@ -52,9 +60,16 @@ const toDraftRow = (r: ContentStoredRow): DraftRow => ({
 // Draft edit
 // ---------------------------------------------------------------------------
 
-/** Upsert ONE draft row. Drafts are never served, so this needs no validation —
- *  publish is the gate (§D1), and blocking a half-typed row would make the
- *  editor unusable. */
+/** Upsert ONE draft row. Drafts are never served, so the row CONTENT needs no
+ *  validation — publish is the gate (§D1), and blocking a half-typed row would
+ *  make the editor unusable.
+ *
+ *  The row ID is the exception, and it is not content: it is the identity the
+ *  upsert keys on. A malformed one produces a row nothing can resolve, and a
+ *  colliding one silently overwrites something that already exists — which the
+ *  editor's `+ New row` control makes reachable for the first time
+ *  (shop_stocking §2). Both are checked HERE rather than only in the form: the
+ *  route is reachable without the form. */
 export async function upsertDraftRow(
   adminEmail: string,
   catalog: string,
@@ -72,6 +87,51 @@ export async function upsertDraftRow(
   }
 
   const before = (await fetchAllRows("content_drafts", catalog)).find((r) => r.rowId === rowId) ?? null;
+
+  // ---- row id rules, on creation only ------------------------------------
+  //
+  // `expectNew` is the CALLER'S INTENT, and it is what makes the draft
+  // collision detectable at all: without it, "create a row that happens to
+  // exist" and "edit that row" are the same request, and the create silently
+  // wins. With it, the editor's new-row drawer can be told no.
+  const creating = input.expectNew === true || before === null;
+
+  if (creating) {
+    const pattern = rowIdPattern(catalog);
+    if (rowId.length > ROW_ID_MAX) {
+      return fail(400, `Row id "${rowId}" is ${rowId.length} characters; the maximum is ${ROW_ID_MAX}.`);
+    }
+    if (!pattern.test(rowId)) {
+      return fail(
+        400,
+        `Row id "${rowId}" is not a valid id for ${catalog}. Allowed: ${pattern.source} ` +
+          `(${catalog === "texts" ? "letters, digits and underscores" : "lower-case letters, digits and underscores"}).`
+      );
+    }
+
+    if (input.expectNew === true && before) {
+      return fail(409, `Row id "${rowId}" already exists as a DRAFT row in ${catalog}. Edit that row instead.`);
+    }
+
+    // Unique against PUBLISHED rows too. A draft created under a published
+    // row's id is not a new row at all: the next publish would overwrite the
+    // published one (`on conflict (catalog, row_id) do update`), silently.
+    const publishedClash = (await fetchAllRows("content_rows", catalog)).some((r) => r.rowId === rowId);
+    if (publishedClash) {
+      return fail(
+        409,
+        `Row id "${rowId}" already exists as a PUBLISHED row in ${catalog}. Publishing a new row ` +
+          "under that id would overwrite it. Pick a different id, or edit the existing row."
+      );
+    }
+  }
+
+  // The id column inside `data` is WRITTEN FROM the row id, never typed. The
+  // two are the same fact, the exporter writes `data` into the CSV, and the
+  // validator already errors when they disagree — so the way to make them
+  // agree is to stop having two places to say it (shop_stocking §2).
+  const idColumn = ID_COLUMN[catalog];
+  if (idColumn) data[idColumn] = rowId;
 
   if (isMockMode()) {
     const store = mockDb().contentDrafts;

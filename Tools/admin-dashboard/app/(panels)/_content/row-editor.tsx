@@ -2,8 +2,16 @@
 
 import { useState } from "react";
 import { useT } from "@/components/I18nProvider";
+import { ID_COLUMN, isValidNewRowId, ROW_ID_MAX } from "@/lib/contentView";
 import type { ContentStoredRow } from "@/lib/types";
 import { saveRow } from "./client";
+
+/** What a panel's extras need in order to prefill the id of a NEW row. */
+export interface RowIdContext {
+  rowId: string;
+  setRowId: (rowId: string) => void;
+  isNew: boolean;
+}
 
 /**
  * Edit ONE draft row.
@@ -15,12 +23,23 @@ import { saveRow } from "./client";
  * `minBuild` is editable only while the row is unpublished — §D1.7 makes it
  * immutable afterwards, and a field that silently fails at publish is worse
  * than a disabled one that says why.
+ *
+ * `isNew` (shop_stocking §2) is the CREATE mode: the row id becomes an input.
+ * It is deliberately NOT `!published`. An existing-but-unpublished draft has a
+ * locked id too, because the id is what the upsert keys on — editing it there
+ * would not rename the row, it would silently mint a second one and leave the
+ * first behind.
+ *
+ * The catalog's ID COLUMN (`entryId`, `id`, `key`) is never an editable field
+ * in any mode: `upsertDraftRow` writes it from the row id, so the two cannot
+ * disagree. It is shown, read-only, in the header.
  */
 export function RowEditor({
   catalog,
   row,
   columns,
   published,
+  isNew = false,
   onClose,
   onSaved,
   children,
@@ -32,44 +51,71 @@ export function RowEditor({
   columns: string[];
   /** True when this row already exists in content_rows (⇒ minBuild is locked). */
   published: boolean;
+  /** True for the `+ New row` drawer: the row id is an input, and the save
+   *  asserts the id is free (409 if it is not). */
+  isNew?: boolean;
   onClose: () => void;
   onSaved: (message: string) => void;
   /** Panel-specific extras rendered above the raw field list (Shop uses it). */
-  children?: (draft: Record<string, string>, set: (col: string, v: string) => void) => React.ReactNode;
+  children?: (
+    draft: Record<string, string>,
+    set: (col: string, v: string) => void,
+    rowIdCtx: RowIdContext
+  ) => React.ReactNode;
   /** Columns the extras already render, so the raw list does not repeat them. */
   hiddenColumns?: string[];
 }) {
   const translate = useT();
   const [draft, setDraft] = useState<Record<string, string>>({ ...row.data });
+  const [rowId, setRowId] = useState(row.rowId);
   const [isActive, setIsActive] = useState(row.isActive);
   const [minBuild, setMinBuild] = useState(String(row.minBuild));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const idColumn = ID_COLUMN[catalog] ?? "id";
+  const trimmedId = rowId.trim();
 
   function set(column: string, value: string) {
     setDraft((prev) => ({ ...prev, [column]: value }));
   }
 
   async function save() {
+    // Shape is checked here for the immediacy; `upsertDraftRow` checks it again
+    // because the route is reachable without this form, and collisions can only
+    // be answered there.
+    if (isNew && !isValidNewRowId(catalog, trimmedId)) {
+      setError(translate("c.edit.rowIdInvalid", { max: ROW_ID_MAX }));
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
       await saveRow(catalog, {
-        rowId: row.rowId,
+        rowId: isNew ? trimmedId : row.rowId,
         data: draft,
         minBuild: Number(minBuild) || 0,
         isActive,
+        expectNew: isNew || undefined,
       });
       onSaved(translate("c.edit.saved"));
     } catch (err) {
-      setError(`${translate("c.edit.saveFailed")}: ${err instanceof Error ? err.message : err}`);
+      const status = (err as { status?: number }).status;
+      const detail = err instanceof Error ? err.message : String(err);
+      setError(
+        status === 409
+          ? `${translate("c.edit.rowIdTaken", { rowId: trimmedId })} — ${detail}`
+          : `${translate("c.edit.saveFailed")}: ${detail}`
+      );
     } finally {
       setBusy(false);
     }
   }
 
+  // The id column is written from the row id server-side, so it is never an
+  // editable field — showing one would be showing a value that gets overwritten.
   const ordered = [...columns, ...Object.keys(draft).filter((c) => !columns.includes(c))].filter(
-    (column) => !hiddenColumns?.includes(column)
+    (column) => column !== idColumn && !hiddenColumns?.includes(column)
   );
 
   return (
@@ -92,9 +138,11 @@ export function RowEditor({
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <h2 className="truncate text-base font-semibold text-zinc-100">
-                {translate("c.edit.title")}
+                {translate(isNew ? "c.edit.newTitle" : "c.edit.title")}
               </h2>
-              <code className="mt-1 block truncate text-xs text-zinc-500">{row.rowId}</code>
+              <code className="mt-1 block truncate text-xs text-zinc-500">
+                {isNew ? `${catalog} · ${trimmedId || "—"}` : row.rowId}
+              </code>
             </div>
             <button
               type="button"
@@ -114,7 +162,33 @@ export function RowEditor({
             </div>
           )}
 
-          {children?.(draft, set)}
+          {/* The id, first: on a new row everything else is meaningless until
+              it has one, and it is the one field that cannot be changed later. */}
+          {isNew && (
+            <div className="rounded-lg border border-surface-800 bg-surface-950 p-3">
+              <label className="block text-[11px] text-zinc-500">
+                <span className="font-mono text-zinc-400">row_id</span>
+                <span className="ml-1.5 font-mono text-[10px] text-zinc-600">→ data.{idColumn}</span>
+                <input
+                  value={rowId}
+                  autoFocus
+                  maxLength={ROW_ID_MAX}
+                  onChange={(e) => setRowId(e.target.value)}
+                  placeholder={catalog === "shop_catalog" ? "shop_char_olivia" : "new_row_id"}
+                  className={`mt-1 w-full rounded-md border bg-surface-950 px-2.5 py-1.5 font-mono text-xs text-zinc-200 placeholder:text-zinc-700 focus:outline-none ${
+                    trimmedId && !isValidNewRowId(catalog, trimmedId)
+                      ? "border-red-500/60 focus:border-red-500"
+                      : "border-surface-700 focus:border-accent-500"
+                  }`}
+                />
+                <span className="mt-1 block leading-relaxed">
+                  {translate("c.edit.rowIdHint", { column: idColumn, max: ROW_ID_MAX })}
+                </span>
+              </label>
+            </div>
+          )}
+
+          {children?.(draft, set, { rowId, setRowId, isNew })}
 
           <div className="rounded-lg border border-surface-800 bg-surface-950 p-3">
             <label className="flex items-start gap-2 text-xs text-zinc-300">
@@ -177,7 +251,7 @@ export function RowEditor({
           </button>
           <button
             type="button"
-            disabled={busy}
+            disabled={busy || (isNew && !trimmedId)}
             onClick={() => void save()}
             className="rounded-md bg-accent-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-accent-500 disabled:opacity-40"
           >

@@ -12,6 +12,8 @@
  * Errors block. Warnings do not — see `rpCost` at the bottom.
  */
 
+import { SHOP_CATEGORY_STRICT_BUILD } from "./buildGates";
+
 export type Severity = "error" | "warning";
 
 export interface ContentProblem {
@@ -117,6 +119,34 @@ export const ID_COLUMN: Record<string, string> = {
   texts: "key",
   shop_catalog: "entryId",
 };
+
+/**
+ * Row id shape for a NEWLY CREATED row (shop_stocking §2).
+ *
+ * Lower-case snake, because the id is what every other catalog resolves against
+ * and what the exporter writes into the bundled CSV: `Shop_Foo` and `shop_foo`
+ * are the same row to a human and two different rows to everything else.
+ *
+ * `texts` is the one exception, and it is less a special case than a different
+ * convention: localisation keys are UPPER_SNAKE everywhere in the game
+ * (`ROSTER_LEVEL_UP`), so forcing lower-case there would mint keys that match
+ * nothing.
+ *
+ * EXISTING rows are never re-checked — this governs what may be brought into
+ * being, not the 800-odd ids already in the catalogs, one of which would
+ * otherwise become unsavable. Lives HERE, in the pure module, so the row editor
+ * and `upsertDraftRow` check the same rule rather than two copies of it.
+ */
+export const ROW_ID_MAX = 80;
+const ROW_ID_PATTERNS: Record<string, RegExp> = { texts: /^[A-Za-z0-9_]+$/ };
+const DEFAULT_ROW_ID_PATTERN = /^[a-z0-9_]+$/;
+
+export const rowIdPattern = (catalog: string): RegExp =>
+  ROW_ID_PATTERNS[catalog] ?? DEFAULT_ROW_ID_PATTERN;
+
+/** Shape only — collisions need the catalogs and live server-side. */
+export const isValidNewRowId = (catalog: string, rowId: string): boolean =>
+  rowId.length > 0 && rowId.length <= ROW_ID_MAX && rowIdPattern(catalog).test(rowId);
 
 /** The four character stat columns, paired with their cap key. */
 const CHARACTER_STATS: Array<[string, keyof (typeof RARITY_STAT_CAPS)["Common"]]> = [
@@ -261,16 +291,72 @@ export function validateCatalog(
       const refId = text(row.data.refId).trim();
       const target = SHOP_CATEGORY_TO_CATALOG[category];
 
+      // Hoisted so the build gates below can see it too — same lookup, once.
+      const referenced = target && refId ? ctx.otherCatalogs.get(target)?.get(refId) : undefined;
+
       if (!target) {
         err(row.rowId, "category", `Unknown category "${category}". Known: ${Object.keys(SHOP_CATEGORY_TO_CATALOG).join(", ")}.`);
       } else if (!refId) {
         err(row.rowId, "refId", "refId is empty.");
-      } else {
-        const referenced = ctx.otherCatalogs.get(target)?.get(refId);
-        if (!referenced) {
-          err(row.rowId, "refId", `refId "${refId}" does not exist in the ${target} catalog.`);
-        } else if (!referenced.isActive) {
-          err(row.rowId, "refId", `refId "${refId}" is deactivated in ${target} — the shop would offer an item the game hides.`);
+      } else if (!referenced) {
+        err(row.rowId, "refId", `refId "${refId}" does not exist in the ${target} catalog.`);
+      } else if (!referenced.isActive) {
+        err(row.rowId, "refId", `refId "${refId}" is deactivated in ${target} — the shop would offer an item the game hides.`);
+      }
+
+      // ---- The two build gates (shop_stocking §3) --------------------------
+      //
+      // ACTIVE rows only, deliberately. A deactivated row is never rendered by
+      // any client — `GeneralShopCatalog.Admit` drops it on `is_active` before
+      // anything else — so it cannot reach the failure these rules prevent.
+      // Gating it anyway would be a trap rather than a rail: `min_build` is
+      // immutable once published (rule 7 above), so a row published before
+      // these rules existed could never satisfy them again, and the whole
+      // catalog would become unpublishable with no way out. Deactivating IS
+      // the way out (§I6: deactivate is the delete).
+
+      if (row.isActive) {
+        // G1 — a category older builds cannot parse must be withheld from them.
+        //
+        // A build before the strict fix maps ANY non-`ball` category onto
+        // `club` and renders a card it cannot fill. The server-side min_build
+        // filter is the only thing keeping the row away from those builds, and
+        // min_build cannot be corrected after the first publish — so it has to
+        // be right the first time, and this is what makes that automatic
+        // rather than something to remember.
+        if (target && category !== "club" && category !== "ball") {
+          if (SHOP_CATEGORY_STRICT_BUILD === 0) {
+            err(
+              row.rowId,
+              "min_build",
+              `The client build that renders "${category}" rows has not been uploaded yet; ` +
+                "set SHOP_CATEGORY_STRICT_BUILD (lib/buildGates.ts) after the archive, from " +
+                "Docs/Versioning/last_uploaded_build.txt."
+            );
+          } else if (row.minBuild < SHOP_CATEGORY_STRICT_BUILD) {
+            err(
+              row.rowId,
+              "min_build",
+              `min_build ${row.minBuild} is below ${SHOP_CATEGORY_STRICT_BUILD}, the first build that ` +
+                `renders "${category}" rows. Older builds would read this row as a club and show a ` +
+                "card they cannot fill. Raise min_build (it is immutable once published)."
+            );
+          }
+        }
+
+        // G2 — never visible on a build that cannot see what it sells.
+        //
+        // Plan §11.4.6. The referenced row carries its own min_build; a shop
+        // row that reaches a build first is a card whose club/character is not
+        // in that build's catalog at all.
+        if (referenced && row.minBuild < referenced.minBuild) {
+          err(
+            row.rowId,
+            "min_build",
+            `min_build ${row.minBuild} is below the min_build of "${refId}" in ${target} ` +
+              `(${referenced.minBuild}). The shop row would be visible on a build that cannot ` +
+              "see the row it sells."
+          );
         }
       }
 

@@ -8,7 +8,7 @@ import type { ContentCatalogSummary, ContentRowsResponse, ContentStoredRow } fro
 import { DirtyBadge, DisabledBadge, RarityBadge } from "./badges";
 import { fetchCatalogs, fetchRows } from "./client";
 import { PublishDrawer } from "./publish-drawer";
-import { RowEditor } from "./row-editor";
+import { RowEditor, type RowIdContext } from "./row-editor";
 
 /**
  * The shared catalog panel: toolbar → server-paged table → row editor →
@@ -37,11 +37,13 @@ export interface CatalogPanelProps {
   searchKey?: DictKey;
   /** Custom cell renderer; falls back to the raw string. */
   renderCell?: (row: ContentStoredRow, column: string) => React.ReactNode;
-  /** Extra controls in the row editor (Shop's typeahead). */
+  /** Extra controls in the row editor (Shop's typeahead). `rowIdCtx` is how a
+   *  panel prefills the id of a NEW row — Shop derives it from the picked ref. */
   editorExtras?: (
     row: ContentStoredRow,
     draft: Record<string, string>,
-    set: (column: string, value: string) => void
+    set: (column: string, value: string) => void,
+    rowIdCtx: RowIdContext
   ) => React.ReactNode;
   /** Replaces the default column list from CATALOG_VIEWS. */
   columns?: string[];
@@ -84,6 +86,8 @@ export function CatalogPanel({
   const [facetValues, setFacetValues] = useState<Record<string, string[]> | null>(null);
 
   const [editing, setEditing] = useState<ContentStoredRow | null>(null);
+  /** True while `editing` is the blank row from `+ New row` (shop_stocking §2). */
+  const [creating, setCreating] = useState(false);
   const [publishing, setPublishing] = useState(false);
 
   /**
@@ -245,6 +249,24 @@ export function CatalogPanel({
           </span>
         )}
 
+        {/* CREATE. Until this existed, every row in every catalog came from the
+            seed migration: the panel could edit and publish, but not add. The
+            backend was always able — PUT upserts by rowId and content_publish
+            is `on conflict do update` — so this is the missing control, not a
+            new capability. Registered HERE rather than in the Shop panel so all
+            seven catalogs get it (shop_stocking §2). */}
+        <button
+          type="button"
+          onClick={() => {
+            setNotice(null);
+            setCreating(true);
+            setEditing({ catalog, rowId: "", data: {}, minBuild: 0, isActive: true });
+          }}
+          className="ml-auto rounded-md border border-accent-500/50 px-3 py-1.5 text-xs font-semibold text-accent-300 transition hover:bg-accent-500/10"
+        >
+          {translate("c.newRow")}
+        </button>
+
         <button
           type="button"
           onClick={() => {
@@ -252,7 +274,7 @@ export function CatalogPanel({
             setPublishing(true);
           }}
           disabled={!summary}
-          className="ml-auto rounded-md bg-accent-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-accent-500 disabled:opacity-40"
+          className="rounded-md bg-accent-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-accent-500 disabled:opacity-40"
         >
           {translate("c.publishOpen")}
           {summary && summary.dirtyCount > 0 && (
@@ -285,6 +307,7 @@ export function CatalogPanel({
                 key={row.rowId}
                 onClick={() => {
                   setNotice(null);
+                  setCreating(false);
                   setEditing(row);
                 }}
                 className={`cursor-pointer border-t border-surface-800 transition hover:bg-surface-900 ${
@@ -355,14 +378,21 @@ export function CatalogPanel({
           row={editing}
           columns={columns}
           published={editing.version !== undefined}
+          isNew={creating}
           hiddenColumns={editorHiddenColumns}
-          onClose={() => setEditing(null)}
+          onClose={() => {
+            setEditing(null);
+            setCreating(false);
+          }}
           onSaved={async (message) => {
             setEditing(null);
+            setCreating(false);
             await refresh(message);
           }}
         >
-          {editorExtras ? (draft, set) => editorExtras(editing, draft, set) : undefined}
+          {editorExtras
+            ? (draft, set, rowIdCtx) => editorExtras(editing, draft, set, rowIdCtx)
+            : undefined}
         </RowEditor>
       )}
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useT } from "@/components/I18nProvider";
+import { SHOP_CATEGORY_STRICT_BUILD, shopCategoryBuildPending } from "@/lib/buildGates";
 import { SHOP_CATEGORY_TO_CATALOG, shopOnSale, shopState } from "@/lib/contentView";
 import type { ContentStoredRow } from "@/lib/types";
 import { ShopStateBadge } from "../_content/badges";
@@ -22,24 +23,23 @@ import { RefPicker } from "./ref-picker";
  * OLDEST build in the wild: an already-installed client keeps debiting locally
  * at its bundled price until the legacy `/points/spend` shop reason is closed
  * (SPEC §2.6, a separate deploy). That is what {build} in the copy is for.
+ *
+ * The build number itself is NOT declared here any more. It is
+ * `SHOP_CATEGORY_STRICT_BUILD` in `lib/buildGates.ts`, because the publish
+ * validator gates on the same number (rules G1/G2) and a constant that lives in
+ * a panel is a constant the validator cannot see (shop_stocking §3).
  */
 
 const CATEGORIES = Object.keys(SHOP_CATEGORY_TO_CATALOG);
 
-/**
- * The first TestFlight build whose client goes through `POST /shop/purchase`.
- *
- * ⚠️ BUMP THIS if the build that actually ships §3 is not this one. It is the
- * only number in the panel an operator will read as a promise, and a wrong one
- * tells them older installs are enforced when they are not. Last uploaded build
- * at the time of writing (Docs/Versioning/last_uploaded_build.txt) was 2333, so
- * the next upload — the one carrying the client half — is 2334.
- */
-const SERVER_PRICE_ENFORCED_FROM_BUILD = 2334;
-
 export function ShopPanel() {
   const translate = useT();
   const now = Date.now();
+  // Two states, one constant (lib/buildGates.ts). While it is 0 the client half
+  // has not been uploaded, validator rule G1 refuses every character/item row,
+  // and the banner has to say THAT rather than promise a build number that does
+  // not exist yet.
+  const buildPending = shopCategoryBuildPending();
 
   function renderCell(row: ContentStoredRow, column: string) {
     if (column === "category") {
@@ -99,14 +99,18 @@ export function ShopPanel() {
       banner={
         <div className="mb-4 rounded-lg border border-amber-500/50 bg-amber-500/10 px-4 py-3">
           <p className="text-xs font-bold text-amber-300">
-            {translate("sh.notice.headline", { build: SERVER_PRICE_ENFORCED_FROM_BUILD })}
+            {buildPending
+              ? translate("sh.notice.pendingHeadline")
+              : translate("sh.notice.headline", { build: SHOP_CATEGORY_STRICT_BUILD })}
           </p>
           <p className="mt-1 text-[11px] leading-relaxed text-amber-200/85">
-            {translate("sh.notice.body", { build: SERVER_PRICE_ENFORCED_FROM_BUILD })}
+            {buildPending
+              ? translate("sh.notice.pendingBody")
+              : translate("sh.notice.body", { build: SHOP_CATEGORY_STRICT_BUILD })}
           </p>
         </div>
       }
-      editorExtras={(row, draft, set) => (
+      editorExtras={(row, draft, set, rowIdCtx) => (
         <div className="space-y-3 rounded-lg border border-surface-800 bg-surface-950 p-3">
           <div>
             <span className="font-mono text-[11px] text-zinc-500">category</span>
@@ -133,7 +137,14 @@ export function ShopPanel() {
           <RefPicker
             category={draft.category ?? ""}
             refId={draft.refId ?? ""}
-            onPick={(refId) => set("refId", refId)}
+            onPick={(refId) => {
+              set("refId", refId);
+              // Convenience only, and only on a row that has no id yet: a shop
+              // entry is named after what it sells (`shop_char_olivia`), and
+              // typing that a second time is how the two drift. Still editable
+              // — this fills the field, it does not own it.
+              if (rowIdCtx.isNew && !rowIdCtx.rowId.trim()) rowIdCtx.setRowId(`shop_${refId}`);
+            }}
           />
 
           {/* The four §11.2 window fields are rendered EXPLICITLY rather than

@@ -723,4 +723,11 @@ export interface ContentRowInput {
   data: Record<string, string>;
   minBuild?: number;
   isActive?: boolean;
+  /**
+   * The caller believes this row does NOT exist yet (the editor's `+ New row`
+   * drawer). Without it the PUT is an upsert and "create a row whose id is
+   * already taken" is indistinguishable from "edit that row" — the create wins
+   * silently. With it, `upsertDraftRow` answers 409 (shop_stocking §2).
+   */
+  expectNew?: boolean;
 }
