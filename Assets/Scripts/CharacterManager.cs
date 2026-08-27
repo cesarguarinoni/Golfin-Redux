@@ -417,6 +417,56 @@ namespace Golfin.Roster
             Debug.Log($"[CharacterManager] GrantStarter: '{characterId}' granted and selected.");
         }
 
+        /// <summary>
+        /// Unlock a character the player has BOUGHT (shop_server_purchase §3.5).
+        ///
+        /// <para>
+        /// <see cref="GrantStarter"/> minus the two things that are specific to being FIRST:
+        /// it does not write <c>starterCharacterId</c> and it does not
+        /// <see cref="SelectCharacter"/>. A player who buys their fourth character has not changed
+        /// who they are playing as, and stomping the selection would be a bug they would have to undo
+        /// by hand every purchase.
+        /// </para>
+        /// <para>
+        /// Every catalog character is ALREADY a row in <c>ownedCharacters</c> with
+        /// <c>isOwned = false</c> — that is what <see cref="GrantStarter"/> relies on too — so the
+        /// unlock is a flag flip plus a save sync, not an insert. The Roster screen re-renders on
+        /// <see cref="OnRosterChanged"/>, so a bought character appears unlocked with no Roster change.
+        /// </para>
+        /// </summary>
+        /// <returns>False when the id is unknown or the character is already owned — neither is an
+        /// error here: the shop pre-check and the SERVER both refuse an owned character before the
+        /// debit, so reaching this with one means a grant arrived for something already applied, and
+        /// a no-op is exactly right.</returns>
+        public bool UnlockCharacter(string characterId)
+        {
+            if (string.IsNullOrEmpty(characterId))
+            {
+                Debug.LogWarning("[CharacterManager] UnlockCharacter: empty characterId.");
+                return false;
+            }
+
+            if (!ownedCharacters.TryGetValue(characterId, out var playerData))
+            {
+                Debug.LogWarning($"[CharacterManager] UnlockCharacter: character '{characterId}' not in catalog.");
+                return false;
+            }
+
+            if (playerData.isOwned)
+            {
+                Debug.Log($"[CharacterManager] UnlockCharacter: '{characterId}' already owned — no-op.");
+                return false;
+            }
+
+            playerData.isOwned = true;
+            SyncCharacterToSaveData(characterId);
+            SaveDataHost.Instance?.MarkDirty();
+
+            OnRosterChanged?.Invoke();
+            Debug.Log($"[CharacterManager] UnlockCharacter: '{characterId}' unlocked.");
+            return true;
+        }
+
         /// <summary>Returns true if the player owns the specified character.</summary>
         public bool IsOwned(string characterId)
         {

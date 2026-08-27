@@ -3,9 +3,12 @@
 // Reusable purchase seam.  Order 610 (general Shop UI) will reference this same class.
 
 using System;
+using System.Collections.Generic;
 using UnityEngine;
+using Golfin.Content;
 using Golfin.Economy;
 using Golfin.EconomyRuntime;
+using Golfin.InventorySync;
 using Golfin.Roster;
 using Golfin.Save;
 using Golfin.Inventory;
@@ -31,6 +34,18 @@ namespace GolfinRedux.UI.Shop
     /// The gate owns the refusal TOAST (so the "Connection required" / "Not enough Reward Points"
     /// copy stays identical everywhere). Callers must therefore stay silent on
     /// <see cref="PurchaseResult.SpendDenied"/> instead of adding a second toast.
+    ///
+    /// SERVER-PRICED SINCE shop_server_purchase (§3.2), FOR THE CATALOG SHOP ONLY.
+    /// <see cref="TryPurchaseCatalogEntry"/> no longer goes through <see cref="PointsSpendGate"/> when
+    /// the flag is ON: the gate's job is to send the CLIENT's number, and that number is exactly what
+    /// stopped being trusted. It calls <c>POST /shop/purchase</c> with the entry id instead, debits
+    /// its local mirror by whatever the server says it charged, and applies the grant the server
+    /// queued. The gate's two toast CONSTANTS are still reused so the refusal copy does not fork.
+    ///
+    /// <see cref="TryPurchase"/> — the stamina boost — is deliberately UNTOUCHED. Stamina items are
+    /// not a content catalog (they live in <c>stamina_shop_items.csv</c>, which has no server-side
+    /// listing to price against), so there is nothing for a server to be authoritative about yet.
+    /// That is the next spec, not a gap in this one.
     /// </summary>
     public static class ShopTransaction
     {
@@ -109,25 +124,68 @@ namespace GolfinRedux.UI.Shop
 
         // ── Order 610 — general Shop (clubs + balls) ────────────────────────────
 
-        /// <summary>Result of a general (club/ball) catalog purchase.</summary>
+        /// <summary>Result of a general catalog purchase (club / ball / character / item).</summary>
         public enum GeneralPurchaseResult
         {
             Success,
             InsufficientRp,
-            AlreadyOwned, // clubs are unique (B6)
+            AlreadyOwned, // clubs and characters are unique (B6)
             Invalid,      // null entry / unknown ref / grant failure
 
             /// <summary>Server refused or unreachable — the gate already toasted. Caller stays silent.</summary>
-            SpendDenied
+            SpendDenied,
+
+            /// <summary>The server's published price is not the one the card showed. NOTHING was
+            /// written. <see cref="LastServerPrice"/> carries the real number; the caller re-renders
+            /// and lets the player decide again. Only reachable with the flag ON.</summary>
+            PriceChanged,
+
+            /// <summary>The server will not sell this row right now — the window closed, it was
+            /// deactivated, content is killed, or the thing it points at went inactive. Nothing was
+            /// written. Only reachable with the flag ON.</summary>
+            NotListed
         }
 
         /// <summary>
-        /// Buys a general-shop catalog entry (Order 610, B5). Server RP-debit → grant to inventory
-        /// (D5, no auto-equip): a <b>ball</b> increments SaveData.ballQuantities (respecting the -1
-        /// unlimited convention); a <b>club</b> calls ClubManager.GrantClub (Phase A). The owned/RP
-        /// pre-checks run BEFORE the debit so a denied grant never charges the player, and the debit
-        /// runs before the grant so a refused debit never hands one out. The IAP swap (D2) would
-        /// replace only the spend step — the grant dispatch stays identical.
+        /// The price the SERVER published, set alongside a
+        /// <see cref="GeneralPurchaseResult.PriceChanged"/> verdict.
+        ///
+        /// <para>
+        /// A static rather than an out-param because the verdict arrives by CALLBACK — an out-param
+        /// cannot cross that boundary, and widening the callback signature would touch every existing
+        /// call site for a value only one of them reads. It is written immediately before
+        /// <c>onResult</c> is invoked and read synchronously inside it; the in-flight latches (this
+        /// class's callers and <see cref="ShopPurchaseService"/>'s own) mean there is never a second
+        /// purchase in the air to race it.
+        /// </para>
+        /// </summary>
+        public static int LastServerPrice { get; private set; }
+
+        /// <summary>
+        /// Buys a general-shop catalog entry. TWO PATHS, chosen by <see cref="PointsBackendFlag"/>.
+        ///
+        /// <para>
+        /// <b>Flag ON — the server owns the price (shop_server_purchase §3.2).</b> ONE call to
+        /// <c>POST /shop/purchase</c> carrying the ENTRY ID, not a price. The server reads the
+        /// published listing, prices it off its own clock, debits through <c>spend_pts</c> and queues
+        /// the item as a grant in one transaction; the client then debits its LOCAL mirror by the
+        /// SERVER's <c>charged</c> (never <c>entry.EffectiveRpCost</c>) and applies the grant through
+        /// the managers. <see cref="PointsSpendGate"/> is deliberately NOT used on this branch — going
+        /// through it would debit twice, and its whole job (send the client's number) is the thing
+        /// being removed. Its two toast strings ARE reused, so the refusal copy stays identical
+        /// everywhere.
+        /// </para>
+        /// <para>
+        /// <b>Flag OFF — unchanged.</b> The Editor / harness / no-<c>GOLFIN_POINTS_BACKEND</c> path is
+        /// byte-for-byte what it was: <see cref="PointsSpendGate"/> short-circuits synchronously and
+        /// the grant happens locally at the bundled price. That is the offline and dev path and it
+        /// must keep working with no server at all.
+        /// </para>
+        /// <para>
+        /// The owned / unknown-ref / affordability pre-checks run BEFORE either branch on both. They
+        /// answer instantly, never reach the server, and give the player the specific copy ("need N
+        /// RP") instead of a generic refusal.
+        /// </para>
         /// </summary>
         /// <param name="onResult">Verdict callback. ALWAYS invoked exactly once.</param>
         public static void TryPurchaseCatalogEntry(
@@ -143,28 +201,10 @@ namespace GolfinRedux.UI.Shop
             }
 
             // ── Pre-checks (BEFORE any spend) so the grant is guaranteed and no refund is ever needed.
-            if (entry.Category == ShopCategory.Club)
+            if (!PreCheck(entry, out GeneralPurchaseResult preVerdict))
             {
-                if (ClubManager.Instance == null || ClubDatabaseCSV.Instance?.GetClub(entry.RefId) == null)
-                {
-                    Debug.LogWarning($"[ShopTransaction] Unknown club '{entry.RefId}' or no ClubManager.");
-                    onResult?.Invoke(GeneralPurchaseResult.Invalid);
-                    return;
-                }
-                if (ClubManager.Instance.IsOwned(entry.RefId))   // clubs are unique (B6)
-                {
-                    onResult?.Invoke(GeneralPurchaseResult.AlreadyOwned);
-                    return;
-                }
-            }
-            else // Ball
-            {
-                if (SaveDataHost.Instance == null || BallDatabaseCSV.Instance?.GetBall(entry.RefId) == null)
-                {
-                    Debug.LogWarning($"[ShopTransaction] Unknown ball '{entry.RefId}' or no SaveDataHost.");
-                    onResult?.Invoke(GeneralPurchaseResult.Invalid);
-                    return;
-                }
+                onResult?.Invoke(preVerdict);
+                return;
             }
 
             int cost = entry.EffectiveRpCost;
@@ -176,6 +216,163 @@ namespace GolfinRedux.UI.Shop
                 return;
             }
 
+            if (PointsBackendFlag.Enabled)
+                PurchaseServerSide(entry, cost, rpm, onGranted, onResult);
+            else
+                PurchaseLocally(entry, cost, rpm, onGranted, onResult);
+        }
+
+        /// <summary>
+        /// Category pre-checks. Synchronous, and identical on both branches: an unknown ref or an
+        /// already-owned unique is answered instantly and never costs a round trip.
+        /// </summary>
+        private static bool PreCheck(ShopCatalogEntry entry, out GeneralPurchaseResult verdict)
+        {
+            verdict = GeneralPurchaseResult.Success;
+
+            switch (entry.Category)
+            {
+                case ShopCategory.Club:
+                    if (ClubManager.Instance == null || ClubDatabaseCSV.Instance?.GetClub(entry.RefId) == null)
+                    {
+                        Debug.LogWarning($"[ShopTransaction] Unknown club '{entry.RefId}' or no ClubManager.");
+                        verdict = GeneralPurchaseResult.Invalid;
+                        return false;
+                    }
+                    if (ClubManager.Instance.IsOwned(entry.RefId))   // clubs are unique (B6)
+                    {
+                        verdict = GeneralPurchaseResult.AlreadyOwned;
+                        return false;
+                    }
+                    return true;
+
+                case ShopCategory.Character:
+                    if (CharacterManager.Instance == null ||
+                        CharacterDatabaseCSV.Instance?.GetCharacter(entry.RefId) == null)
+                    {
+                        Debug.LogWarning($"[ShopTransaction] Unknown character '{entry.RefId}' or no CharacterManager.");
+                        verdict = GeneralPurchaseResult.Invalid;
+                        return false;
+                    }
+                    if (CharacterManager.Instance.IsOwned(entry.RefId))   // characters are unique too
+                    {
+                        verdict = GeneralPurchaseResult.AlreadyOwned;
+                        return false;
+                    }
+                    return true;
+
+                case ShopCategory.Item:
+                    // Items STACK — there is deliberately no owned check. Buying a second repair kit
+                    // is the normal case, not a mistake.
+                    if (ItemManager.Instance == null || ItemDatabaseCSV.Instance?.GetItem(entry.RefId) == null)
+                    {
+                        Debug.LogWarning($"[ShopTransaction] Unknown item '{entry.RefId}' or no ItemManager.");
+                        verdict = GeneralPurchaseResult.Invalid;
+                        return false;
+                    }
+                    return true;
+
+                default: // Ball — stacks as well (and -1 means unlimited).
+                    if (SaveDataHost.Instance == null || BallDatabaseCSV.Instance?.GetBall(entry.RefId) == null)
+                    {
+                        Debug.LogWarning($"[ShopTransaction] Unknown ball '{entry.RefId}' or no SaveDataHost.");
+                        verdict = GeneralPurchaseResult.Invalid;
+                        return false;
+                    }
+                    return true;
+            }
+        }
+
+        /// <summary>
+        /// Flag-ON path. The client sends WHICH listing and the server answers with what it charged
+        /// and what it queued.
+        /// </summary>
+        private static void PurchaseServerSide(
+            ShopCatalogEntry entry, int shownCost, RewardPointsManager rpm,
+            Action onGranted, Action<GeneralPurchaseResult> onResult)
+        {
+            ShopPurchaseService.Instance.PurchaseAsync(
+                entry.EntryId, shownCost, ContentBuildNumber.Current,
+                outcome =>
+                {
+                    if (outcome == null)
+                    {
+                        Toast(PointsSpendGate.OfflineMessage);
+                        onResult?.Invoke(GeneralPurchaseResult.SpendDenied);
+                        return;
+                    }
+
+                    switch (outcome.Verdict)
+                    {
+                        case ShopPurchaseVerdict.Ok:
+                            // The SERVER's number, never `shownCost`. If they disagree the server would
+                            // have answered price_changed, so reaching here means they agree — but
+                            // debiting the server's value is what makes that structural rather than
+                            // merely true today.
+                            rpm.SpendPoints(outcome.Charged);
+
+                            if (!ApplyPurchaseGrant(outcome.Grant))
+                            {
+                                // The RP is gone and the grant is NOT applied — but it is still QUEUED
+                                // server-side and unacked, so the next boot's drain delivers it. This is
+                                // the exact failure the grants queue exists to make survivable; it is
+                                // loud rather than silent because it should never happen after the
+                                // pre-checks.
+                                Debug.LogError($"[ShopTransaction] Purchased '{entry.EntryId}' but could " +
+                                               $"not apply grant {outcome.Grant} locally. It stays " +
+                                               "pending server-side and the next boot will drain it.");
+                                onResult?.Invoke(GeneralPurchaseResult.Invalid);
+                                return;
+                            }
+
+                            onGranted?.Invoke();
+                            onResult?.Invoke(GeneralPurchaseResult.Success);
+                            return;
+
+                        case ShopPurchaseVerdict.Insufficient:
+                            Toast(PointsSpendGate.InsufficientMessage);
+                            onResult?.Invoke(GeneralPurchaseResult.InsufficientRp);
+                            return;
+
+                        case ShopPurchaseVerdict.PriceChanged:
+                            LastServerPrice = outcome.Server != null ? outcome.Server.Price : 0;
+                            Debug.Log($"[ShopTransaction] '{entry.EntryId}' price moved: card showed " +
+                                      $"{shownCost}, server publishes {LastServerPrice}. Nothing charged.");
+                            onResult?.Invoke(GeneralPurchaseResult.PriceChanged);
+                            return;
+
+                        case ShopPurchaseVerdict.AlreadyOwned:
+                            onResult?.Invoke(GeneralPurchaseResult.AlreadyOwned);
+                            return;
+
+                        case ShopPurchaseVerdict.NotListed:
+                            onResult?.Invoke(GeneralPurchaseResult.NotListed);
+                            return;
+
+                        case ShopPurchaseVerdict.Disabled:
+                            // Unreachable: the flag was checked before this call. If it ever fires, the
+                            // flag changed mid-flight and granting anything would be a guess.
+                            Debug.LogError("[ShopTransaction] ShopPurchaseService answered Disabled on the " +
+                                           "flag-ON branch — the flag moved mid-purchase. Nothing granted.");
+                            onResult?.Invoke(GeneralPurchaseResult.Invalid);
+                            return;
+
+                        default: // Unavailable / Unknown
+                            Toast(PointsSpendGate.OfflineMessage);
+                            Debug.LogWarning($"[ShopTransaction] '{entry.EntryId}' not purchased: {outcome}.");
+                            onResult?.Invoke(GeneralPurchaseResult.SpendDenied);
+                            return;
+                    }
+                });
+        }
+
+        /// <summary>
+        /// Flag-OFF path — the pre-shop_server_purchase body, unchanged. Offline / Editor / harness.
+        /// </summary>
+        private static void PurchaseLocally(
+            ShopCatalogEntry entry, int cost, RewardPointsManager rpm,
+            Action onGranted, Action<GeneralPurchaseResult> onResult)
+        {
             PointsSpendGate.Spend(cost, SpendReasons.ShopPurchase,
                 onApproved: () =>
                 {
@@ -183,15 +380,128 @@ namespace GolfinRedux.UI.Shop
 
                     // Grant dispatch — guaranteed to succeed after the pre-checks (D5: grant to
                     // inventory, no equip).
-                    if (entry.Category == ShopCategory.Club)
-                        ClubManager.Instance.GrantClub(entry.RefId);
-                    else
-                        GrantBall(entry.RefId);
+                    switch (entry.Category)
+                    {
+                        case ShopCategory.Club:      ClubManager.Instance.GrantClub(entry.RefId); break;
+                        case ShopCategory.Character: CharacterManager.Instance.UnlockCharacter(entry.RefId); break;
+                        case ShopCategory.Item:      ItemManager.Instance.AddItems(entry.RefId, 1); break;
+                        default:                     GrantBall(entry.RefId); break;
+                    }
 
                     onGranted?.Invoke();
                     onResult?.Invoke(GeneralPurchaseResult.Success);
                 },
                 onDenied: _ => onResult?.Invoke(GeneralPurchaseResult.SpendDenied));
+        }
+
+        /// <summary>
+        /// Apply a purchased grant through the MANAGERS, then record its id, mark the save and the
+        /// sync dirty, and ack it.
+        ///
+        /// <para>
+        /// ⚠️ NOT <c>InventoryGrants.Apply</c>, and the difference matters. That static writes raw
+        /// <c>SaveData</c>, which is right at BOOT (before the managers have loaded) and wrong
+        /// MID-SESSION: <c>ClubManager</c> / <c>CharacterManager</c> / <c>ItemManager</c> hold their
+        /// own runtime copies built at Awake, so a save-level write would be invisible to the screen
+        /// the player is standing on and would be overwritten the next time a manager synced.
+        /// </para>
+        /// <para>
+        /// ORDERING IS THE GRANTS-QUEUE ORDERING, for the same reason: apply → record the id → ack.
+        /// Die before the record and the boot drain applies it (the id is not in the save, and for a
+        /// club or character the manager's own unique-check makes even that a no-op). Die after the
+        /// record but before the ack and the boot drain sees a duplicate and simply re-acks. Nothing
+        /// is ever applied twice. Ack-then-apply, the other order, loses the item outright.
+        /// </para>
+        /// </summary>
+        /// <returns>False when the grant could not be applied at all — the caller must NOT report
+        /// success, because the item is not there.</returns>
+        private static bool ApplyPurchaseGrant(ShopGrantDto grant)
+        {
+            if (grant == null || string.IsNullOrEmpty(grant.RefId))
+            {
+                Debug.LogError("[ShopTransaction] ApplyPurchaseGrant: the server reported ok with no grant.");
+                return false;
+            }
+
+            int amount = Mathf.Max(1, grant.Amount);
+            bool applied;
+
+            switch (grant.Kind)
+            {
+                case InventoryGrants.KindClub:
+                    if (ClubManager.Instance == null) { Debug.LogError("[ShopTransaction] no ClubManager."); return false; }
+                    ClubManager.Instance.GrantClub(grant.RefId);
+                    applied = true;
+                    break;
+
+                case InventoryGrants.KindCharacter:
+                    if (CharacterManager.Instance == null) { Debug.LogError("[ShopTransaction] no CharacterManager."); return false; }
+                    // False means "already owned", which after a server-side already_owned check can
+                    // only be a re-applied grant — not a failure, and the id still has to be recorded.
+                    CharacterManager.Instance.UnlockCharacter(grant.RefId);
+                    applied = true;
+                    break;
+
+                case InventoryGrants.KindItem:
+                    if (ItemManager.Instance == null) { Debug.LogError("[ShopTransaction] no ItemManager."); return false; }
+                    ItemManager.Instance.AddItems(grant.RefId, amount);
+                    applied = true;
+                    break;
+
+                case InventoryGrants.KindBall:
+                    for (int i = 0; i < amount; i++) GrantBall(grant.RefId);
+                    applied = true;
+                    break;
+
+                default:
+                    Debug.LogError($"[ShopTransaction] Grant kind '{grant.Kind}' is not one the shop can " +
+                                   "apply. It stays pending server-side; the boot drain handles it.");
+                    return false;
+            }
+
+            if (!applied) return false;
+
+            RecordAndAck(grant.Id);
+            return true;
+        }
+
+        /// <summary>
+        /// The three things that must follow a mid-session grant apply: the id goes in the save (so a
+        /// boot drain cannot apply it a second time), the write-behind is told the blob moved, and the
+        /// server is acked.
+        /// </summary>
+        private static void RecordAndAck(string grantId)
+        {
+            if (string.IsNullOrEmpty(grantId)) return;
+
+            var host = SaveDataHost.Instance;
+            if (host != null)
+            {
+                host.Data.appliedGrantIds ??= new List<string>();
+                if (!host.Data.appliedGrantIds.Contains(grantId))
+                    host.Data.appliedGrantIds.Add(grantId);
+                host.MarkDirty();
+            }
+            else
+            {
+                Debug.LogWarning("[ShopTransaction] No SaveDataHost — the grant id was not recorded. " +
+                                 "The boot drain will re-apply it, which the managers' own unique " +
+                                 "checks make harmless for clubs and characters but NOT for stacks.");
+            }
+
+            // Push the new inventory blob. Without this the purchase would sit local until the next
+            // event that happens to dirty the sync.
+            InventorySyncService.Instance?.MarkDirty();
+
+            // Fire-and-forget: the ack is the SERVER's idempotency lock and the id ledger above is the
+            // client's. A lost ack costs one redundant drain next boot, which the ledger absorbs.
+            new ApiInventoryTransport().AckGrants(new[] { grantId }, _ => { });
+        }
+
+        private static void Toast(string message)
+        {
+            var toast = Golfin.UI.Toast.ToastController.Instance;
+            if (toast != null) toast.Show(message, 2f);
         }
 
         /// <summary>Increments a ball's persisted quantity (respects -1 = unlimited; caps at 99).</summary>

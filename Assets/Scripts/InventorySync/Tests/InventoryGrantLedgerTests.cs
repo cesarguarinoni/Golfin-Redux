@@ -103,6 +103,34 @@ namespace Golfin.InventorySync.Tests
         }
 
         [Test]
+        public void A_grant_whose_id_is_already_in_the_ledger_changes_nothing()
+        {
+            // THIS PINS THE MID-SESSION APPLY (shop_server_purchase §3.2). A shop purchase applies
+            // its grant through the MANAGERS while the game is running and then records the id here.
+            // The next boot's drain still sees that grant pending server-side (the ack can have died
+            // on the network), so it MUST come back as a duplicate and touch nothing — otherwise a
+            // bought stackable item would silently double on the launch after every purchase.
+            var save = SaveData.CreateFresh();
+            save.appliedGrantIds = new List<string> { "g-shop-1" };
+            save.itemQuantities["item_repair_kit"] = 3;
+
+            var result = InventoryGrants.Apply(
+                new List<InventoryGrant>
+                {
+                    new InventoryGrant { Id = "g-shop-1", Kind = "item", RefId = "item_repair_kit", Amount = 2 }
+                },
+                save, null);
+
+            Assert.AreEqual(0, result.AppliedCount, "An id already in the ledger applies NOTHING.");
+            Assert.AreEqual(1, result.DuplicateCount);
+            Assert.AreEqual(3, save.itemQuantities["item_repair_kit"],
+                "The quantity must be untouched — the mid-session apply already added it.");
+            Assert.AreEqual(1, save.appliedGrantIds.Count, "…and the id is not recorded twice.");
+            CollectionAssert.Contains(result.AckIds, "g-shop-1",
+                "It is still ACKED, or it comes back on every single boot forever.");
+        }
+
+        [Test]
         public void A_ticket_grant_adds_to_the_right_kind()
         {
             var save = SaveData.CreateFresh();

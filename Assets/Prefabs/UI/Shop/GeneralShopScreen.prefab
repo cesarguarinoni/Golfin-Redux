@@ -549,6 +549,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: GACHA_PULL_X1
+  japaneseFontScale: 0
 --- !u!1 &260985446209095919
 GameObject:
   m_ObjectHideFlags: 0
@@ -934,6 +935,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: MODAL_COST
+  japaneseFontScale: 0
 --- !u!1 &674385891390237226
 GameObject:
   m_ObjectHideFlags: 0
@@ -1085,6 +1087,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: MODAL_COST
+  japaneseFontScale: 0
 --- !u!1 &689891664973878497
 GameObject:
   m_ObjectHideFlags: 0
@@ -1724,6 +1727,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: GACHA_CHARACTERS
+  japaneseFontScale: 0
 --- !u!1 &1220151941578716503
 GameObject:
   m_ObjectHideFlags: 0
@@ -2786,6 +2790,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: MODAL_COST
+  japaneseFontScale: 0
 --- !u!1 &1795880824572793361
 GameObject:
   m_ObjectHideFlags: 0
@@ -3754,6 +3759,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: GACHA_CLUBS
+  japaneseFontScale: 0
 --- !u!1 &2222470554992779643
 GameObject:
   m_ObjectHideFlags: 0
@@ -3926,6 +3932,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: GACHA_PRIZE_PREVIEW
+  japaneseFontScale: 0
 --- !u!1 &2233087126748606988
 GameObject:
   m_ObjectHideFlags: 0
@@ -4320,6 +4327,7 @@ GameObject:
   - component: {fileID: 8919043233444991789}
   - component: {fileID: 6455246357941225667}
   - component: {fileID: 4271517780968229108}
+  - component: {fileID: 6401074394264724102}
   m_Layer: 0
   m_Name: ITEMSChip
   m_TagString: Untagged
@@ -4430,6 +4438,20 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!114 &6401074394264724102
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2319635223395305900}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!1 &2522706891041911356
 GameObject:
   m_ObjectHideFlags: 0
@@ -4581,6 +4603,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: GACHA_PULL_X10
+  japaneseFontScale: 0
 --- !u!1 &2661018209476127051
 GameObject:
   m_ObjectHideFlags: 0
@@ -4593,6 +4616,7 @@ GameObject:
   - component: {fileID: 1636250543476519775}
   - component: {fileID: 1500622317761575828}
   - component: {fileID: 2247500826320932202}
+  - component: {fileID: 6330428947269639702}
   m_Layer: 0
   m_Name: CHARACTERSChip
   m_TagString: Untagged
@@ -4703,6 +4727,20 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!114 &6330428947269639702
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2661018209476127051}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6fe5cc7c7203c48cba1b90b70c6e4737, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
+  _pressedScale: 0.95
+  _duration: 0.12
 --- !u!1 &2703333375453809670
 GameObject:
   m_ObjectHideFlags: 0
@@ -4929,6 +4967,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: GACHA_ITEMS
+  japaneseFontScale: 0
 --- !u!1 &2771990977651226794
 GameObject:
   m_ObjectHideFlags: 0
@@ -5938,6 +5977,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: GACHA_TICKETS
+  japaneseFontScale: 0
 --- !u!1 &3717059105199575931
 GameObject:
   m_ObjectHideFlags: 0
@@ -6430,6 +6470,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: GACHA_PULL_X1
+  japaneseFontScale: 0
 --- !u!1 &3930717608817008379
 GameObject:
   m_ObjectHideFlags: 0
@@ -6904,6 +6945,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: GACHA_RULES_RATES
+  japaneseFontScale: 0
 --- !u!1 &4158544385595310956
 GameObject:
   m_ObjectHideFlags: 0
@@ -7593,6 +7635,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: SHOP_TAB_GACHA
+  japaneseFontScale: 0
 --- !u!1 &4553315788010503152
 GameObject:
   m_ObjectHideFlags: 0
@@ -7744,6 +7787,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: MODAL_COST
+  japaneseFontScale: 0
 --- !u!1 &4606959508616973557
 GameObject:
   m_ObjectHideFlags: 0
@@ -8045,6 +8089,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: RANK_HISTORY
+  japaneseFontScale: 0
 --- !u!1 &4830480006682284331
 GameObject:
   m_ObjectHideFlags: 0
@@ -9011,6 +9056,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: GACHA_PULL_X10
+  japaneseFontScale: 0
 --- !u!1 &5386083102513325680
 GameObject:
   m_ObjectHideFlags: 0
@@ -9662,6 +9708,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: GACHA_PITY_S_RANK
+  japaneseFontScale: 0
 --- !u!1 &5815757471936239227
 GameObject:
   m_ObjectHideFlags: 0
@@ -9909,6 +9956,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: GACHA_PRIZE_PREVIEW
+  japaneseFontScale: 0
 --- !u!1 &5834623004824869336
 GameObject:
   m_ObjectHideFlags: 0
@@ -10124,6 +10172,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: GACHA_BALLS
+  japaneseFontScale: 0
 --- !u!1 &5956753988927287919
 GameObject:
   m_ObjectHideFlags: 0
@@ -10828,6 +10877,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: GACHA_PULL_X10
+  japaneseFontScale: 0
 --- !u!1 &6200458308491129420
 GameObject:
   m_ObjectHideFlags: 0
@@ -10979,6 +11029,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: SHOP_TAB_STORE
+  japaneseFontScale: 0
 --- !u!1 &6202719778049608281
 GameObject:
   m_ObjectHideFlags: 0
@@ -11453,6 +11504,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: TOURN_FILTER_ALL
+  japaneseFontScale: 0
 --- !u!1 &6276082469025986738
 GameObject:
   m_ObjectHideFlags: 0
@@ -11808,6 +11860,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: GACHA_RULES_RATES
+  japaneseFontScale: 0
 --- !u!1 &6476958033703156430
 GameObject:
   m_ObjectHideFlags: 0
@@ -12109,6 +12162,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: TOURN_FILTER_ALL
+  japaneseFontScale: 0
 --- !u!1 &6542520527796043554
 GameObject:
   m_ObjectHideFlags: 0
@@ -12260,6 +12314,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: SHOP_FILTER_OFFERS
+  japaneseFontScale: 0
 --- !u!1 &6557821274833698980
 GameObject:
   m_ObjectHideFlags: 0
@@ -12562,6 +12617,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: MODAL_COST
+  japaneseFontScale: 0
 --- !u!1 &6762072424008230030
 GameObject:
   m_ObjectHideFlags: 0
@@ -13365,6 +13421,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: GACHA_PITY_S_RANK
+  japaneseFontScale: 0
 --- !u!1 &7265420908282095605
 GameObject:
   m_ObjectHideFlags: 0
@@ -13518,6 +13575,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: GACHA_RULES_RATES
+  japaneseFontScale: 0
 --- !u!1 &7295809515532912354
 GameObject:
   m_ObjectHideFlags: 0
@@ -13806,6 +13864,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: GACHA_PITY_A_RANK
+  japaneseFontScale: 0
 --- !u!1 &7346100745488053290
 GameObject:
   m_ObjectHideFlags: 0
@@ -13957,6 +14016,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: GACHA_PITY_S_RANK
+  japaneseFontScale: 0
 --- !u!1 &7415703505119620445
 GameObject:
   m_ObjectHideFlags: 0
@@ -14108,6 +14168,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: GACHA_PITY_A_RANK
+  japaneseFontScale: 0
 --- !u!1 &7469849459711380433
 GameObject:
   m_ObjectHideFlags: 0
@@ -15288,6 +15349,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: SHOP_TAB_GIFTS
+  japaneseFontScale: 0
 --- !u!1 &7993130885615626106
 GameObject:
   m_ObjectHideFlags: 0
@@ -15737,6 +15799,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: MODAL_COST
+  japaneseFontScale: 0
 --- !u!1 &8262387085246095633
 GameObject:
   m_ObjectHideFlags: 0
@@ -15888,6 +15951,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: SHOP_FILTER_POPULAR
+  japaneseFontScale: 0
 --- !u!1 &8325072628753243781
 GameObject:
   m_ObjectHideFlags: 0
@@ -16894,6 +16958,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: GACHA_PRIZE_PREVIEW
+  japaneseFontScale: 0
 --- !u!1 &8895005001958396070
 GameObject:
   m_ObjectHideFlags: 0
@@ -17195,6 +17260,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: GACHA_PULL_X1
+  japaneseFontScale: 0
 --- !u!1 &9021426761971615736
 GameObject:
   m_ObjectHideFlags: 0
@@ -17346,6 +17412,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: GACHA_PITY_A_RANK
+  japaneseFontScale: 0
 --- !u!1 &9057743955151031074
 GameObject:
   m_ObjectHideFlags: 0

@@ -18,11 +18,24 @@ using UnityEngine;
 
 namespace GolfinRedux.UI.Shop
 {
-    /// <summary>Which inventory system an entry grants into (v1: clubs + balls; D1).</summary>
+    /// <summary>
+    /// Which inventory system an entry grants into.
+    ///
+    /// <para>
+    /// Characters and Items joined Clubs and Balls in shop_server_purchase §3.3. The admin Shop panel
+    /// could already publish both (<c>SHOP_CATEGORY_TO_CATALOG</c> has covered them since the panel
+    /// shipped) — the client just parsed every non-<c>ball</c> category as a Club, so a published
+    /// character row rendered as a broken club card. <c>bag</c> is deliberately still absent: the
+    /// grants queue has no bag kind, so the server refuses to sell one and a card for it could only
+    /// ever fail.
+    /// </para>
+    /// </summary>
     public enum ShopCategory
     {
         Club,
-        Ball
+        Ball,
+        Character,
+        Item
     }
 
     /// <summary>
@@ -93,6 +106,12 @@ namespace GolfinRedux.UI.Shop
     {
         private static List<ShopCatalogEntry>? _entries;
 
+        /// <summary>Rows dropped this load because their category is not one this build can sell.
+        /// Reset at the top of every load and folded into the summary line so an operator who
+        /// published a <c>bag</c> (or a typo) can see it went nowhere, rather than wondering why the
+        /// row never appears.</summary>
+        private static int _droppedUnknownCategory;
+
         public static IReadOnlyList<ShopCatalogEntry> Entries
         {
             get { EnsureLoaded(); return _entries!; }
@@ -119,6 +138,7 @@ namespace GolfinRedux.UI.Shop
         private static void LoadFromCsv()
         {
             _entries = new List<ShopCatalogEntry>();
+            _droppedUnknownCategory = 0;
             var asset = Resources.Load<TextAsset>("Data/shop_catalog");
             if (asset == null)
             {
@@ -186,7 +206,8 @@ namespace GolfinRedux.UI.Shop
                       (overlay == null ? " — BUNDLED only, no shop_catalog overlay this launch."
                                        : $" — overlay v{overlay.Version}: {overlaid} row(s) patched/appended.") +
                       $" Withheld: {deactivated} deactivated (I6), {outOfWindow} outside their listing " +
-                      $"window, {failedClosed} dropped for an unparseable bound (§6, fail closed).");
+                      $"window, {failedClosed} dropped for an unparseable bound (§6, fail closed), " +
+                      $"{_droppedUnknownCategory} dropped for an unsellable category (§3.3).");
         }
 
         /// <summary>
@@ -249,10 +270,24 @@ namespace GolfinRedux.UI.Shop
             string entryId = f.Get("entryId");
             if (string.IsNullOrEmpty(entryId)) return null;
 
+            string rawCategory = f.Get("category");
+            ShopCategory? category = ParseCategory(rawCategory);
+            if (category == null)
+            {
+                // Counted and logged by the caller (Admit is never reached), so the operator can find
+                // the row. `bag` lands here on purpose — see ParseCategory.
+                _droppedUnknownCategory++;
+                Debug.LogWarning($"[GeneralShopCatalog] '{entryId}' DROPPED — category " +
+                                 $"'{rawCategory}' is not one this build can sell " +
+                                 "(club | ball | character | item). Fix it in the admin, or ship a " +
+                                 "build that knows the category.");
+                return null;
+            }
+
             return new ShopCatalogEntry
             {
                 EntryId     = entryId,
-                Category    = ParseCategory(f.Get("category")),
+                Category    = category.Value,
                 RefId       = f.Get("refId"),
                 RpCost      = f.GetInt("rpCost"),
                 SaleRpCost  = f.GetInt("saleRpCost"),
@@ -303,8 +338,31 @@ namespace GolfinRedux.UI.Shop
             return fields;
         }
 
-        private static ShopCategory ParseCategory(string s) =>
-            s.Trim().ToLowerInvariant() == "ball" ? ShopCategory.Ball : ShopCategory.Club;
+        /// <summary>
+        /// The four categories this client can render AND the server will sell. Anything else returns
+        /// null and the row is DROPPED.
+        ///
+        /// <para>
+        /// This used to be <c>== "ball" ? Ball : Club</c> — so a typo, a <c>bag</c>, or a category from
+        /// a newer server all became a club card bound to a refId <c>ClubDatabaseCSV</c> has never
+        /// heard of. Falling back to Club is exactly the wrong default: it is the category with the
+        /// most machinery behind it (owned state, durability, level) and therefore the one that fails
+        /// most confusingly. Dropping the row means the operator sees a warning naming the entryId and
+        /// the category, and the player sees nothing — which is the correct outcome for a listing this
+        /// build cannot honour.
+        /// </para>
+        /// </summary>
+        private static ShopCategory? ParseCategory(string s)
+        {
+            switch ((s ?? string.Empty).Trim().ToLowerInvariant())
+            {
+                case "club":      return ShopCategory.Club;
+                case "ball":      return ShopCategory.Ball;
+                case "character": return ShopCategory.Character;
+                case "item":      return ShopCategory.Item;
+                default:          return null;
+            }
+        }
 
         /// <summary>Test/hot-reload hook: forces a re-read on next access.</summary>
         public static void Reload() { _entries = null; }

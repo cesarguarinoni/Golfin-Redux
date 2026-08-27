@@ -30,11 +30,57 @@ namespace GolfinRedux.UI.Shop
 
         // ── Encoding constants (derived from the approved cards) ────────────────
         private const float ClubBarTrackPx = 331f;
+
+        /// <summary>The template's authored Portrait rect, restored by the bindings that want it
+        /// centred (club / ball / item). Only the character binding overrides it.</summary>
+        private static readonly Vector2 PortraitAuthoredSize = new Vector2(150f, 222f);
+
+        /// <summary>`tournament_image` is stretched to the card height minus 6px (274 - 6). Read from
+        /// the live rect when it is resolved; this is the fallback for the first Bind, which can run
+        /// before the layout group has sized anything.</summary>
+        private const float PortraitTileHeightPx = 268f;
+
+        /// <summary>How much taller than the tile the character portrait is drawn. 1.0 exactly fills
+        /// it; above that the extra is cropped off the TOP by the tile's Mask.</summary>
+        private const float CharacterPortraitZoom = 1.12f;
+
+        /// <summary>
+        /// Width of the name box, and therefore the gutter before the rarity/level block.
+        ///
+        /// <para>
+        /// Was 242px, which is EXACTLY where the HDiv sits — so any name long enough to fill the box
+        /// after auto-shrink ended up touching the divider. Measured on the live cards at 242:
+        /// "IRON 9 KLYRO" −0.5px, "P.WEDGE ROYAL SWING" +0.2px, "OLIVIA GUARINONI" −0.3px. Auto-size
+        /// cannot save you here: it shrinks text to fit the BOX, so if the box ends at the divider,
+        /// a full name ends at the divider too. Narrowing the box is what buys the gutter.
+        /// </para>
+        /// </summary>
+        private const float NameBoxWidthPx = 232f;
         private const float ClubBarFullScale = 60f;   // Val 40 → 218.5px, 9 → 49.7px ⇒ ~331/60
         private static readonly Color BallSegOn  = new Color32(0x33, 0x80, 0xE6, 0xFF);
         private static readonly Color BallSegOff = new Color32(0x40, 0x40, 0x4D, 0x80);
 
         private bool _isBall;
+
+        // ── Stat-row icons for the non-club bindings (shop_server_purchase §3.4) ──
+        //
+        // The club template identifies each StatRow by an ICON, not by a text label — there is no
+        // label child to write "STR / CTRL / REC / STA" into (verified against the prefab). So a
+        // character row swaps the icon instead, which is the mechanism the card already has.
+        // StatRow_0 is deliberately absent from this list: Strength is Strength, and the club
+        // template's own IconStrenght is already the right sprite for it.
+        //
+        // These are SERIALIZED rather than Resources.Load'd because the art lives in
+        // Assets/Art/RosterScreen/, outside any Resources folder, and copying four PNGs into
+        // Resources to avoid four Inspector references would duplicate shipped art. Wired on
+        // Resources/Prefabs/Shop/GeneralShopCard_Club.
+        [Header("Character stat icons (wired on GeneralShopCard_Club)")]
+        [SerializeField] private Sprite _iconClubControl;
+        [SerializeField] private Sprite _iconRecovery;
+        [SerializeField] private Sprite _iconStamina;
+
+        [Header("Item row icon (wired on GeneralShopCard_Club)")]
+        [SerializeField] private Sprite _iconItemRestore;
 
         // ── Public API ──────────────────────────────────────────────────────────
 
@@ -44,8 +90,14 @@ namespace GolfinRedux.UI.Shop
             _isBall = entry != null && entry.Category == ShopCategory.Ball;
 
             if (entry == null) return;
-            if (_isBall) BindBall(entry);
-            else         BindClub(entry);
+
+            switch (entry.Category)
+            {
+                case ShopCategory.Ball:      BindBall(entry);      break;
+                case ShopCategory.Character: BindCharacter(entry); break;
+                case ShopCategory.Item:      BindItem(entry);      break;
+                default:                     BindClub(entry);      break;
+            }
 
             ConstrainName();
             BindPrice(entry);
@@ -62,7 +114,7 @@ namespace GolfinRedux.UI.Shop
             var nl = Find("NameLabel") as RectTransform;
             var tmp = nl != null ? nl.GetComponent<TextMeshProUGUI>() : null;
             if (nl == null || tmp == null) return;
-            nl.sizeDelta = new Vector2(242f, nl.sizeDelta.y);
+            nl.sizeDelta = new Vector2(NameBoxWidthPx, nl.sizeDelta.y);
             tmp.enableAutoSizing = true;
             tmp.fontSizeMax = 32f;
             tmp.fontSizeMin = 12f;   // low floor so the FULL name shrinks to fit (no ellipsis, no overlap)
@@ -81,7 +133,17 @@ namespace GolfinRedux.UI.Shop
 
             SetRarityTile(rar);
             SetImage("tournament_image/Portrait", club.portraitSprite != null ? club.portraitSprite : club.portraitFull);
+            ResetPortraitRect();
             SetText("NameLabel", club.name.ToUpperInvariant());
+
+            // Re-show whatever a previous Bind on this same card may have hidden. Bind is called a
+            // SECOND time on the same instance after a purchase (HandleBuy re-binds to show OWNED),
+            // and while a card never changes category today, leaving that as an unstated assumption
+            // is how a re-bind silently ships a card with missing rows.
+            SetActive("DistRow", true);
+            SetActive("HLevel", true);
+            for (int i = 0; i <= 4; i++) SetActive($"StatRow_{i}", true);
+
             SetText("DistRow/Txt", $"{club.baseDistance} yd");
 
             SetClubBar(0, club.basePower);
@@ -125,7 +187,9 @@ namespace GolfinRedux.UI.Shop
 
             SetRarityTile(rar);
             SetImage("tournament_image/Portrait", ball.thumbnailSprite != null ? ball.thumbnailSprite : ball.fullSprite);
+            ResetPortraitRect();
             SetText("NameLabel", ball.name.ToUpperInvariant());
+            for (int i = 0; i <= 4; i++) SetActive($"StatRow_{i}", true);
 
             SetBallBar(0, ball.power);
             SetBallBar(1, ball.rebound);
@@ -157,6 +221,146 @@ namespace GolfinRedux.UI.Shop
             var seg = bg.Find(name);
             var img = seg != null ? seg.GetComponent<Image>() : null;
             if (img != null) img.color = on ? BallSegOn : BallSegOff;
+        }
+
+        // ── Character variant (shop_server_purchase §3.4) ────────────────────────
+        //
+        // Reuses the CLUB template wholesale — there is no character card design and none is coming
+        // (decision of record, Cesar 2026-08-27). Everything the club binding does that a character
+        // has no analogue for is HIDDEN rather than left showing stale club data: DistRow (no yardage)
+        // and StatRow_4 (no durability).
+
+        private void BindCharacter(ShopCatalogEntry entry)
+        {
+            var ch = CharacterDatabaseCSV.Instance != null
+                ? CharacterDatabaseCSV.Instance.GetCharacter(entry.RefId)
+                : null;
+            if (ch == null) { Debug.LogWarning($"[GeneralShopCard] character '{entry.RefId}' missing."); return; }
+
+            var portrait = ch.portraitSprite != null ? ch.portraitSprite : ch.portraitFullSprite;
+
+            SetRarityTile(ch.rarity.ToString());
+            SetImage("tournament_image/Portrait", portrait);
+            FillPortraitFromBottom(portrait, CharacterPortraitZoom);
+
+            // GetLocalizedDisplayName(singleLine: true) returns the FIRST NAME ONLY — which is why
+            // this card used to read just "JAMES". The two-line form is the one that also localises
+            // the LAST name, so take that and flatten its newline to a space: the card wants both
+            // names on ONE line, the way the club cards read "P.WEDGE ROYAL SWING". It already
+            // uppercases. ConstrainName's autosize shrinks a long pair to fit rather than letting it
+            // collide with the rarity/level block.
+            SetText("NameLabel", ch.GetLocalizedDisplayName().Replace("\n", " "));
+
+            // A character has no distance and no durability. Left visible they would show the CLUB
+            // template's authored placeholders ("180 yd", "100/100") as if they were data.
+            SetActive("DistRow", false);
+            SetActive("StatRow_4", false);
+
+            // Full-scale is the character's OWN rarity cap per stat (RarityStatCaps), not the club
+            // template's flat 60. A Common's 25-cap Strength and a Supreme's 50-cap Strength are
+            // different scales, and drawing both against 60 would make every low-rarity character look
+            // uniformly weak rather than "near their ceiling".
+            SetCharacterBar(0, ch.baseStrength,   RarityStatCaps.GetStatCap(ch.rarity, "Strength"),    null);
+            SetCharacterBar(1, ch.baseClubControl, RarityStatCaps.GetStatCap(ch.rarity, "ClubControl"), _iconClubControl);
+            SetCharacterBar(2, ch.baseRecovery,   RarityStatCaps.GetStatCap(ch.rarity, "Recovery"),    _iconRecovery);
+            SetCharacterBar(3, ch.baseStamina,    RarityStatCaps.GetStatCap(ch.rarity, "Stamina"),     _iconStamina);
+
+            SetText("HMid", RarityLetter(ch.rarity));
+            SetText("HLevel", $"Lv {ch.startLevel}/{ch.maxLevel}");
+        }
+
+        /// <summary>
+        /// Draw the portrait so its BOTTOM edge sits on the tile's bottom, scaled to fill the tile's
+        /// height (times <paramref name="zoom"/>).
+        ///
+        /// <para>
+        /// Character art is framed head-and-shoulders with the body running off the bottom of the
+        /// source image, so the template's centred 150×222 rect leaves a visible band of empty tile
+        /// under the chin. Filling from the bottom pushes the overflow off the TOP instead, where
+        /// cropping a little headroom reads as a tighter portrait rather than as a gap. The tile
+        /// carries a Mask, so anything past its bounds is clipped, not drawn over the card.
+        /// </para>
+        /// <para>
+        /// Width comes from the SPRITE's own aspect, not the authored rect, so a portrait with
+        /// different proportions is cropped rather than stretched. Anchors and pivot are deliberately
+        /// left alone (centre/centre) — that is what lets <see cref="ResetPortraitRect"/> put the
+        /// template's framing back with two assignments.
+        /// </para>
+        /// </summary>
+        private void FillPortraitFromBottom(Sprite sprite, float zoom)
+        {
+            var tile = Find("tournament_image") as RectTransform;
+            var p    = Find("tournament_image/Portrait") as RectTransform;
+            if (tile == null || p == null || sprite == null || sprite.rect.height <= 0f) return;
+
+            // Bind can run before the layout group has sized the card, in which case the live rect
+            // is not yet meaningful and the authored height is the better answer.
+            float tileH = tile.rect.height > 1f ? tile.rect.height : PortraitTileHeightPx;
+
+            float h = tileH * zoom;
+            float aspect = sprite.rect.width / sprite.rect.height;
+
+            p.sizeDelta = new Vector2(h * aspect, h);
+            // Centre pivot: lifting the centre by (h - tileH)/2 puts the bottom edge exactly on the
+            // tile's bottom, and the remaining (h - tileH) overflows off the top.
+            p.anchoredPosition = new Vector2(0f, (h - tileH) * 0.5f);
+        }
+
+        /// <summary>Restore the template's centred portrait framing. Called by every binding that is
+        /// NOT the character one, so a card re-bound after a purchase cannot inherit the zoom.</summary>
+        private void ResetPortraitRect()
+        {
+            var p = Find("tournament_image/Portrait") as RectTransform;
+            if (p == null) return;
+            p.sizeDelta = PortraitAuthoredSize;
+            p.anchoredPosition = Vector2.zero;
+        }
+
+        /// <param name="icon">Null leaves the template's own icon in place — correct for StatRow_0,
+        /// whose IconStrenght already means Strength for a character too.</param>
+        private void SetCharacterBar(int i, int value, int cap, Sprite icon)
+        {
+            SetText($"StatRow_{i}/Val", value.ToString());
+            if (icon != null) SetImage($"StatRow_{i}/Icon", icon);
+
+            var fill = Find($"StatRow_{i}/BarBg/Fill") as RectTransform;
+            if (fill == null) return;
+            float frac = cap > 0 ? Mathf.Clamp01((float)value / cap) : 0f;
+            fill.offsetMin = new Vector2(0f, fill.offsetMin.y);
+            fill.offsetMax = new Vector2(frac * ClubBarTrackPx, fill.offsetMax.y);
+        }
+
+        // ── Item variant (shop_server_purchase §3.4) ─────────────────────────────
+        //
+        // An item has ONE number worth showing (how much durability it restores) and no stat lanes at
+        // all, so all five StatRows and the level chip are hidden and DistRow carries the restore
+        // line. Items STACK, so there is deliberately no owned state — see WireBuy.
+
+        private void BindItem(ShopCatalogEntry entry)
+        {
+            var item = ItemDatabaseCSV.Instance != null
+                ? ItemDatabaseCSV.Instance.GetItem(entry.RefId)
+                : null;
+            if (item == null) { Debug.LogWarning($"[GeneralShopCard] item '{entry.RefId}' missing."); return; }
+
+            string rar = string.IsNullOrEmpty(item.rarity) ? "Common" : item.rarity;
+
+            SetRarityTile(rar);
+            SetImage("tournament_image/Portrait",
+                     item.thumbnailSprite != null ? item.thumbnailSprite : item.fullSprite);
+            ResetPortraitRect();
+            SetText("NameLabel", (item.name ?? string.Empty).ToUpperInvariant());
+
+            // "RESTORES 50%" — the two existing keys ItemDetailPanel already uses, rather than a new
+            // literal or a new key that would have to be kept in step with them.
+            SetActive("DistRow", true);
+            SetText("DistRow/Txt", $"{LocalizationManager.Get("ITEM_RESTORES")} {item.restorePercent}%");
+            if (_iconItemRestore != null) SetImage("DistRow/Icon", _iconItemRestore);
+
+            for (int i = 0; i <= 4; i++) SetActive($"StatRow_{i}", false);
+
+            SetText("HMid", rar);
+            SetActive("HLevel", false);
         }
 
         // ── Price ───────────────────────────────────────────────────────────────
@@ -215,8 +419,13 @@ namespace GolfinRedux.UI.Shop
 
             btn.onClick.RemoveAllListeners();
 
-            bool owned = entry.Category == ShopCategory.Club &&
-                         ClubManager.Instance != null && ClubManager.Instance.IsOwned(entry.RefId);
+            // Clubs and characters are UNIQUE, so an owned one shows a disabled OWNED chip. Balls and
+            // items STACK — buying a second is the normal case, so they never reach this state.
+            bool owned =
+                (entry.Category == ShopCategory.Club &&
+                 ClubManager.Instance != null && ClubManager.Instance.IsOwned(entry.RefId)) ||
+                (entry.Category == ShopCategory.Character &&
+                 CharacterManager.Instance != null && CharacterManager.Instance.IsOwned(entry.RefId));
 
             if (owned)
             {
@@ -245,6 +454,12 @@ namespace GolfinRedux.UI.Shop
         {
             var img = Find(path)?.GetComponent<Image>();
             if (img != null && sprite != null) img.sprite = sprite;
+        }
+
+        private void SetActive(string path, bool active)
+        {
+            var t = Find(path);
+            if (t != null) t.gameObject.SetActive(active);
         }
 
         private void SetRarityTile(string rarityName)

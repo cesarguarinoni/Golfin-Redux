@@ -4234,6 +4234,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 02314f9977ca748f5ac07a0cec040db5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GolfinRedux.UI.Shop.GeneralShopCard
+  _iconClubControl: {fileID: 21300000, guid: 938d76d99dc60fa40908ba62866f9b9f, type: 3}
+  _iconRecovery: {fileID: 21300000, guid: 5fe7eafd246bc604fab41959cd04b8cc, type: 3}
+  _iconStamina: {fileID: 21300000, guid: 0b37b24803b8dd8489e5bf0d7d8ff65d, type: 3}
+  _iconItemRestore: {fileID: 21300000, guid: d1b97c9fa4ee34cd9ad3a36916ab03f7, type: 3}
 --- !u!224 &8614554496538471329 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 4449590584901568122, guid: afa7f93918438476eae5712c66071981, type: 3}

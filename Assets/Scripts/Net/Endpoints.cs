@@ -197,6 +197,35 @@ namespace Golfin.Net
         /// </summary>
         public static string UserGolfinGrantsAck => BaseUrl + "/user/golfin-grants/ack";
 
+        // ── Server-authoritative shop purchase (shop_server_purchase SPEC §2.2) ──
+        //
+        // AUTH REQUIRED and the server stamps `user_id` from the bearer token, never from the body —
+        // the same posture as <see cref="UserGolfinInventory"/> and <see cref="TelemetryEvents"/>.
+        //
+        // AND UNLIKE THE INVENTORY ENDPOINTS, THIS ONE *IS* ANTI-CHEAT. The body carries WHICH
+        // LISTING the player tapped, never a price: the server reads the PUBLISHED shop_catalog row,
+        // prices it off its own clock (listing + sale windows), debits through spend_pts and queues
+        // the item as a grant — all in ONE transaction, so the RP can never be gone while the grant
+        // does not exist. `expected_rp_cost` is a GUARD, not a price: if it disagrees with the
+        // published one the call is refused with `price_changed` and nothing is written.
+
+        /// <summary>
+        /// POST <c>{entry_id, idempotency_key, build, expected_rp_cost?}</c> →
+        /// <c>{data:{status, …}}</c> — buy one published shop listing at the SERVER's price.
+        ///
+        /// EVERY BUSINESS OUTCOME IS HTTP <b>200</b>, exactly like <see cref="PointsSpend"/>'s
+        /// "insufficient" and the inventory PUT's "stale": <c>ok</c> · <c>insufficient</c> ·
+        /// <c>price_changed</c> · <c>not_listed</c> (with a <c>reason</c>) · <c>already_owned</c> ·
+        /// <c>unknown_entry</c> · <c>unsupported_category</c>. Only auth, malformed input and genuine
+        /// faults are HTTP errors — so the status code must NEVER be what distinguishes "you cannot
+        /// afford this" from "the server is unreachable".
+        ///
+        /// The <c>ok</c> payload is a SUPERSET of <see cref="PointsSpendResult"/> so the balance can
+        /// be folded with the code that already exists, plus a <c>grant</c> the client applies exactly
+        /// the way it applies an admin grant from <see cref="UserGolfinGrants"/>.
+        /// </summary>
+        public static string ShopPurchase => BaseUrl + "/shop/purchase";
+
         /// <summary>
         /// GET → <c>{data:{fetched_at, period, period_end_utc, entries:[…], player:{…}}}</c> — the ranked
         /// board for one period plus the caller's own row (leaderboard_backend SPEC §1).

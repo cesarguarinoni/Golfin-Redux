@@ -363,6 +363,30 @@ namespace Golfin.Economy
 
         // ── internals ─────────────────────────────────────────────────────────────
 
+        /// <summary>
+        /// Fold a spend payload that came from somewhere OTHER than <see cref="SpendRoutine"/> into the
+        /// cached balance.
+        ///
+        /// <para>
+        /// Added by shop_server_purchase §3.1 for <see cref="ShopPurchaseService"/>: a shop purchase no
+        /// longer goes through <c>/points/spend</c>, but its <c>ok</c> payload is a SUPERSET of
+        /// <see cref="PointsSpendResult"/> precisely so the balance can be folded with this code rather
+        /// than a second copy of it.
+        /// </para>
+        /// <para>
+        /// ⚠️ CALL IT AFTER the local debit, never before — the ordering rule is the one written out
+        /// above <see cref="SpendRoutine"/>'s try/finally, and it applies identically here: fold the
+        /// post-debit server total in first and the local debit subtracts the same amount again, so the
+        /// counter sits one spend too low until the next refresh.
+        /// </para>
+        /// <para>
+        /// Only pass a payload that actually CARRIES balances (an <c>ok</c> or an <c>insufficient</c>).
+        /// A refusal that never reached <c>spend_pts</c> has zeros in those fields, and folding those in
+        /// would wipe the displayed RP.
+        /// </para>
+        /// </summary>
+        public void ApplySpendResult(PointsSpendResult spend) => ApplySpend(spend);
+
         /// <summary>Fold a spend response into the cached balance. Unlike an earn, the spend payload
         /// carries BOTH buckets, so the full balance can be rebuilt. Avatar level/XP are deliberately
         /// carried forward — <c>spend_pts</c> never touches them.</summary>

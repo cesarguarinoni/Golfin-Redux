@@ -43,9 +43,11 @@ namespace GolfinRedux.UI.Shop
             _clubTemplate = Resources.Load<GeneralShopCard>("Prefabs/Shop/GeneralShopCard_Club");
             _ballTemplate = Resources.Load<GeneralShopCard>("Prefabs/Shop/GeneralShopCard_Ball");
 
-            WireChip("ALLChip",   null);
-            WireChip("CLUBSChip", ShopCategory.Club);
-            WireChip("BALLSChip", ShopCategory.Ball);
+            WireChip("ALLChip",        null);
+            WireChip("CLUBSChip",      ShopCategory.Club);
+            WireChip("BALLSChip",      ShopCategory.Ball);
+            WireChip("CHARACTERSChip", ShopCategory.Character);
+            WireChip("ITEMSChip",      ShopCategory.Item);
         }
 
         private void OnEnable()
@@ -89,9 +91,11 @@ namespace GolfinRedux.UI.Shop
 
         private void RestyleChips()
         {
-            SetChipActive("ALLChip",   _activeCategory == null);
-            SetChipActive("CLUBSChip", _activeCategory == ShopCategory.Club);
-            SetChipActive("BALLSChip", _activeCategory == ShopCategory.Ball);
+            SetChipActive("ALLChip",        _activeCategory == null);
+            SetChipActive("CLUBSChip",      _activeCategory == ShopCategory.Club);
+            SetChipActive("BALLSChip",      _activeCategory == ShopCategory.Ball);
+            SetChipActive("CHARACTERSChip", _activeCategory == ShopCategory.Character);
+            SetChipActive("ITEMSChip",      _activeCategory == ShopCategory.Item);
         }
 
         private void SetChipActive(string chipName, bool active)
@@ -114,6 +118,9 @@ namespace GolfinRedux.UI.Shop
 
             foreach (var entry in GeneralShopCatalog.GetByCategory(_activeCategory))
             {
+                // Characters and items ride the CLUB template — there is no character/item card
+                // design and none is coming (decision of record, Cesar 2026-08-27). Only a ball has
+                // its own hierarchy, because only a ball has segmented bars.
                 var template = entry.Category == ShopCategory.Ball ? _ballTemplate : _clubTemplate;
                 var card = Instantiate(template, _grid);
                 card.name = "Card_" + entry.EntryId;
@@ -168,8 +175,30 @@ namespace GolfinRedux.UI.Shop
                         card.Bind(card.Entry);
                         break;
                     case ShopTransaction.GeneralPurchaseResult.SpendDenied:
-                        // PointsSpendGate already toasted the reason — stay silent.
+                        // The seam already toasted the reason (PointsSpendGate's copy, reused so it
+                        // stays identical everywhere) — stay silent rather than stack a second one.
                         break;
+
+                    case ShopTransaction.GeneralPurchaseResult.PriceChanged:
+                        // The card showed a price the server no longer publishes and NOTHING was
+                        // charged. Reload rather than patch the entry in place: the price is not the
+                        // only thing that can have moved, and the catalog is the one place that knows
+                        // how to merge the overlay and re-evaluate the windows. The player taps again
+                        // against the number they can now see.
+                        toast?.Show($"Price updated: {ShopTransaction.LastServerPrice} RP");
+                        GeneralShopCatalog.Reload();
+                        Rebuild();
+                        break;
+
+                    case ShopTransaction.GeneralPurchaseResult.NotListed:
+                        // Withdrawn, out of window, or its reference went inactive — again, nothing
+                        // was charged. A reload is what makes the card go away instead of sitting
+                        // there failing on every tap.
+                        toast?.Show("No longer available");
+                        GeneralShopCatalog.Reload();
+                        Rebuild();
+                        break;
+
                     default:
                         toast?.Show("Purchase unavailable");
                         break;

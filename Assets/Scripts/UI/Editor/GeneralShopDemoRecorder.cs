@@ -181,16 +181,16 @@ namespace Golfin.EditorTools
             yield return ScrollTo(sr, 0.2f, 1f, 2.0f);
             yield return new WaitForSecondsRealtime(0.8f);
 
-            // category filtering: CLUBS → BALLS → ALL
-            var clubs = ChipBtn("CLUBSChip");
-            if (clubs != null) { Debug.Log("[GenShopDemo] Filter CLUBS"); clubs.onClick.Invoke(); }
-            yield return new WaitForSecondsRealtime(2.0f);
-            var balls = ChipBtn("BALLSChip");
-            if (balls != null) { Debug.Log("[GenShopDemo] Filter BALLS"); balls.onClick.Invoke(); }
-            yield return new WaitForSecondsRealtime(2.0f);
-            var all = ChipBtn("ALLChip");
-            if (all != null) { Debug.Log("[GenShopDemo] Filter ALL"); all.onClick.Invoke(); }
-            yield return new WaitForSecondsRealtime(1.5f);
+            // category filtering: CLUBS → BALLS → CHARACTERS → ITEMS → ALL.
+            // CHARACTERS and ITEMS joined the wired set in shop_server_purchase §3.6 — the chips were
+            // already in the prefab, they just had no handler. They are driven through the REAL
+            // widget's onClick, same as the other three, so the clip shows the player's own path.
+            foreach (var chipName in new[] { "CLUBSChip", "BALLSChip", "CHARACTERSChip", "ITEMSChip", "ALLChip" })
+            {
+                var chip = ChipBtn(chipName);
+                if (chip != null) { Debug.Log("[GenShopDemo] Filter " + chipName); chip.onClick.Invoke(); }
+                yield return new WaitForSecondsRealtime(2.0f);
+            }
 
             // buy a not-owned club (P.WEDGE) → BUY flips to OWNED, RP debits
             var buy = Resources.FindObjectsOfTypeAll<GolfinRedux.UI.Shop.GeneralShopCard>()
