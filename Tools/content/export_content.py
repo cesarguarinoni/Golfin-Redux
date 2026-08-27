@@ -195,8 +195,13 @@ def render_csv(catalog: Catalog, published: List[dict], repo_root: str) -> Tuple
     return "\n".join(out) + "\n", warnings
 
 
-def drift_report(catalog: Catalog, published: List[dict], repo_root: str) -> List[str]:
-    """Id-set drift between one catalog and its repo CSV. [] means in sync.
+def drift_report(catalog: Catalog, published: List[dict], repo_root: str) -> Tuple[List[str], int]:
+    """Id-set drift between one catalog and its repo CSV.
+
+    Returns `(lines, csv_ahead_count)`. `lines` is empty when in sync;
+    `csv_ahead_count` counts ONLY the direction an export cannot repair (ids in
+    the CSV that the catalog does not have), which is what decides the exit code
+    of a WRITE run — see main().
 
     (content_cursor_per_catalog §5.) Counts alone are not enough — two files can
     both hold 501 rows and disagree about which 501 — so this compares the ID
@@ -222,7 +227,7 @@ def drift_report(catalog: Catalog, published: List[dict], repo_root: str) -> Lis
     missing = sorted(csv_ids - catalog_ids)   # in the CSV, absent from the catalog
     extra = sorted(catalog_ids - csv_ids)     # in the catalog, absent from the CSV
     if not missing and not extra:
-        return []
+        return [], 0
 
     out = [
         f"{catalog.name}: DRIFT — {len(csv_ids)} row(s) in {catalog.csv_path} vs "
@@ -238,7 +243,7 @@ def drift_report(catalog: Catalog, published: List[dict], repo_root: str) -> Lis
             f"  {len(extra)} id(s) in the catalog but NOT in the CSV "
             f"(the repo is behind the catalog; run this exporter without --check): {_sample(extra)}"
         )
-    return out
+    return out, len(missing)
 
 
 def _sample(ids: List[str], limit: int = 12) -> str:
@@ -290,6 +295,7 @@ def main() -> int:
     changed: List[str] = []
     warnings: List[str] = []
     drift: List[str] = []
+    csv_ahead = 0  # ids the CSV has and the catalog does not — an export cannot fix these
 
     for name in names:
         catalog = CATALOGS_BY_NAME[name]
@@ -297,10 +303,13 @@ def main() -> int:
         if not published:
             warnings.append(f"{name}: content_rows is EMPTY — {catalog.csv_path} left untouched.")
             drift.append(f"{name}: DRIFT — content_rows is EMPTY but {catalog.csv_path} has rows.")
+            csv_ahead += 1
             print(f"  {name:<13} SKIP (catalog empty)")
             continue
 
-        drift.extend(drift_report(catalog, published, args.repo_root))
+        lines, ahead = drift_report(catalog, published, args.repo_root)
+        drift.extend(lines)
+        csv_ahead += ahead
 
         text, warn = render_csv(catalog, published, args.repo_root)
         warnings.extend(warn)
@@ -352,11 +361,29 @@ def main() -> int:
         print("\n--check: clean — no file would change and no catalog has drifted.")
         return 0
 
-    if drift:
-        # A plain export cannot repair drift in the CSV→catalog direction (that
-        # needs a re-seed), so it must not exit 0 and look successful.
-        print("\nexport wrote its files, but the drift above is UNRESOLVED.", file=sys.stderr)
+    if csv_ahead:
+        # A plain export cannot repair the CSV→catalog direction — the row is in
+        # the repo and the catalog has never heard of it, and I6 means the export
+        # keeps the line rather than dropping it. So this must not exit 0 and look
+        # successful. `import_content.py` is what resolves it.
+        print(
+            "\nexport wrote its files, but the drift above is UNRESOLVED: "
+            f"{csv_ahead} id(s) are in a repo CSV and not in its catalog. An export cannot "
+            "repair that direction — run `import_content.py --apply` and publish.",
+            file=sys.stderr,
+        )
         return 1
+
+    if drift:
+        # The OTHER direction, and this run just fixed it: the rows were in the
+        # catalog and missing from the CSV, and the export appended them. Reporting
+        # it is useful; exiting 1 is not — that made every normal "a publish added
+        # rows" export look like a failure.
+        print(
+            "\nthe drift above was catalog-ahead-of-CSV, which this export REPAIRED by "
+            "appending those rows. Re-run --check to confirm.",
+            file=sys.stderr,
+        )
 
     print(f"\n{len(changed)} file(s) written." if changed else "\nno changes.")
     return 0
