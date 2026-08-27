@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using Golfin.Gameplay.Input;
+using Golfin.Gameplay.Session;
 
 namespace Golfin.Gameplay.UI.ShotUI
 {
@@ -21,11 +22,13 @@ namespace Golfin.Gameplay.UI.ShotUI
     ///     null in LabScaffold.unity, so it has never run; wiring it also changes pre-shot
     ///     interaction semantics, which is out of scope here.
     ///   - PutterTrack / PuttPathRoot (owned by PhysicsLabController's putt-mode toggle)
-    ///   - HoleCard/HoleMapContainer — the round map thumbnail (Cesar, 2026-08-25: the map-view
-    ///     icon must NOT be on screen during the ball's flight; flagged in Versus, where
-    ///     VersusHudController hides the ChipStack so the lone icon reads as a live control,
-    ///     but the hide applies in solo too). The rest of the HoleCard (course / hole / par
-    ///     chips) still stays up, per the original scope call.
+    ///   - HoleCard/HoleMapContainer — the round map thumbnail, VERSUS ONLY (Cesar, 2026-08-25:
+    ///     the map-view icon must NOT be on screen during the ball's flight). The defect this
+    ///     fixed is specific to Versus, where VersusHudController hides the ChipStack and
+    ///     repositions the lone icon so it reads as a live control. In Practice/solo the
+    ///     thumbnail sits top-left as part of the full HoleCard and must STAY ON SCREEN for the
+    ///     whole shot (Cesar, 2026-08-27) — it is only made non-clickable, never hidden.
+    ///     The rest of the HoleCard (course / hole / par chips) always stays up.
     ///   - the selector / spin overlays (defensive close; they cannot normally survive a flick)
     ///   - the HoleCard map button, kept inert as well so no tap can land on the frame the
     ///     container goes back on
@@ -58,7 +61,11 @@ namespace Golfin.Gameplay.UI.ShotUI
         /// </summary>
         public static bool ShotInProgress { get; private set; }
 
-        private readonly List<bool> _wasActive = new List<bool>();
+        // Parallel lists of exactly what Apply() switched off and the activeSelf it had — the
+        // hide list is filtered per mode (see IsHoleMapContainer), so an index into
+        // _hideDuringShot is NOT a valid index into the restore state.
+        private readonly List<GameObject> _hidden    = new List<GameObject>();
+        private readonly List<bool>       _wasActive = new List<bool>();
         private bool _gated;
 
         private void OnEnable()
@@ -87,11 +94,20 @@ namespace Golfin.Gameplay.UI.ShotUI
             _gated          = true;
             ShotInProgress  = true;
 
+            // Practice/solo (and tournament) keep the map thumbnail on screen for the whole
+            // shot — only Versus hides it. Everything else in the list hides in every mode.
+            bool hideHoleMap = GameSession.IsVersus;
+
+            _hidden.Clear();
             _wasActive.Clear();
             foreach (var go in _hideDuringShot)
             {
-                _wasActive.Add(go != null && go.activeSelf);
-                if (go != null) go.SetActive(false);
+                if (go == null) continue;
+                if (!hideHoleMap && IsHoleMapContainer(go)) continue;
+
+                _hidden.Add(go);
+                _wasActive.Add(go.activeSelf);
+                go.SetActive(false);
             }
 
             foreach (var cg in _hideGroupsDuringShot)
@@ -115,12 +131,12 @@ namespace Golfin.Gameplay.UI.ShotUI
             if (!_gated) return;
             _gated = false;
 
-            for (int i = 0; i < _hideDuringShot.Count; i++)
+            for (int i = 0; i < _hidden.Count; i++)
             {
-                var go = _hideDuringShot[i];
-                if (go == null) continue;
-                go.SetActive(i < _wasActive.Count && _wasActive[i]);
+                var go = _hidden[i];
+                if (go != null) go.SetActive(_wasActive[i]);
             }
+            _hidden.Clear();
             _wasActive.Clear();
 
             foreach (var cg in _hideGroupsDuringShot)
@@ -135,6 +151,20 @@ namespace Golfin.Gameplay.UI.ShotUI
             if (_actionButtonsFader != null) _actionButtonsFader.RestoreAll();
 
             if (_holeMapButton != null) _holeMapButton.interactable = true;
+        }
+
+        /// <summary>
+        /// True when <paramref name="go"/> is the HoleCard map thumbnail container — i.e. the
+        /// wired <see cref="_holeMapButton"/> is that GameObject or lives under it.
+        ///
+        /// Derived from the button rather than a second serialized reference so the two can
+        /// never drift apart in the scene: the container the gate skips is by construction the
+        /// one that owns the map button it also makes inert.
+        /// </summary>
+        private bool IsHoleMapContainer(GameObject go)
+        {
+            if (go == null || _holeMapButton == null) return false;
+            return _holeMapButton.transform.IsChildOf(go.transform);   // IsChildOf is true for self
         }
 
         private static void CloseIfOpen(GameObject go, System.Action close)

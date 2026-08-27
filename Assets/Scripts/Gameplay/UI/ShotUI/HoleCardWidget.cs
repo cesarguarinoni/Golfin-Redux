@@ -65,10 +65,11 @@ namespace Golfin.Gameplay.UI.ShotUI
         /// </summary>
         public void OpenMapView()
         {
-            // The map thumbnail is hidden for the duration of a shot and is not reachable
-            // until the next shot is armed. ShotInProgressUiGate hides HoleMapContainer and
-            // flips the Button inert; this guard is the belt-and-braces behind it
-            // (Cesar, 2026-08-06; thumbnail hidden as of 2026-08-25).
+            // The map is not reachable for the duration of a shot. ShotInProgressUiGate flips
+            // the Button inert in every mode, and additionally hides HoleMapContainer in Versus
+            // only — in Practice/solo the thumbnail stays on screen top-left and is merely
+            // non-clickable (Cesar, 2026-08-06; Versus-only hide as of 2026-08-27), so this
+            // guard is what actually keeps the map view shut there.
             if (ShotInProgressUiGate.ShotInProgress) return;
 
             var mvc = FindObjectOfType<MapViewController>(includeInactive: false);
