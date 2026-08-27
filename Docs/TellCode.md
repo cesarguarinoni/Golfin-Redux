@@ -36,6 +36,20 @@
 
 ## 📋 SPEC_READY POINTERS
 
+- **`content_two_way`** (filed 2026-08-27, Architect via Cowork) — **SPEC_READY, kickoff pasteable.**
+  Cesar's second content requirement: admin-created characters/clubs/items inform the next build,
+  and CSV edits made in Unity inform the admin. One truth = published Supabase; a CSV edit is a
+  PROPOSAL → `Tools/content/import_content.py` (**already exists**, `0e4fedcaa` — accepted as
+  built: refuses the whole run on a dirty draft, `--overwrite-dirty`; spec adds its TESTS) →
+  publish → export canonicalises. `--check` gains the value-level direction message (id-level
+  already exists). Runtime rail: bundled characters/items/balls whose primary sprite is null get
+  `renderable=false` and leave every visible list (`GetAvailable…`), stay in the save/blob;
+  **clubs keep Placeholder (Cesar decision)**. `Validate Catalog Art` editor gate = report,
+  never fail. Art-by-URL is the NEXT spec (`content_art_urls`), not this one.
+  Spec: `Docs/Specs/Active/content_two_way/SPEC.md`.
+- ~~**`shop_stocking`**~~ / ~~**`shop_server_purchase`**~~ — ✅ **DONE 2026-08-27** (strict build 2350,
+  legacy `/points/spend` shop reason closed, fastlane freshness gate in). Move Active/ → Completed/
+  if not already.
 - ~~**`shop_stocking`**~~ — ✅ **DONE 2026-08-27** (`cd97bdeaa` + follow-ups). All of §8 shipped
   the same day: `+ New row` on every catalog panel, `lib/buildGates.ts`
   `SHOP_CATEGORY_STRICT_BUILD` (set to **2350**, read from `last_uploaded_build.txt` — the old
@@ -153,6 +167,50 @@ this TellCode pointer.
   ARCHITECT_BRIEF.md` into the Active folder (git mv) — it is the Phase 1 hand-off the spec cites.
 - ~~**`perf_phase1_free_wins`**~~ — ✅ **DONE 2026-08-27** (`cca3cfd1a`; every pose 60 fps cold; Option C
   dropped after measurement; the 2314 "flat terrain" proven pre-existing). Move Active/ → Completed/.
+
+### Kickoff · content_two_way (issued 2026-08-27)
+
+```
+Read Docs/Specs/Active/content_two_way/SPEC.md and implement it, in the spec's §8 order
+(Unity + admin first, then the tooling).
+
+Context:
+- Two-way content loop with ONE truth: published Supabase. Admin → build already
+  works for data (+ New row, publish, export, fastlane gate). CSV → admin EXISTS:
+  Tools/content/import_content.py (0e4fedcaa) is accepted as built — refuse-the-run
+  on a dirty draft, --overwrite-dirty, --min-build default count+1 — do NOT redesign
+  it. What is missing: Tools/content/tests/test_import_content.py (stdlib unittest,
+  fake PostgrestClient shared with export) incl. the round-trip property.
+- export_content.py --check: id-level direction already exists; add the VALUE-level
+  half — "imported, not yet published" when a draft equals the CSV, else "if you
+  edited the CSV run import; if not, export". Exit code unchanged. Update
+  Tools/content/README.md + Docs/TESTFLIGHT_RUNBOOK.md.
+- Client rail (the invariant game-wide): CharacterDataRuntime / ItemDataRuntime /
+  BallDataRuntime gain `renderable` = primary sprite resolved (portraitSprite /
+  thumbnailSprite / thumbnailSprite) using the resolution the loaders already do;
+  GetAvailable… = isActive && renderable; GetAll… untouched (owned-but-unrenderable
+  rows must survive the save and InventoryCodec). Switch VISIBLE-list consumers
+  (CharacterManager.cs:82/99 roster seed, MatchmakingModalController.cs:256,
+  ItemManager.cs:56 — grep every GetAll* call site first) to GetAvailable….
+  GeneralShopCatalog.Admit reads `renderable` instead of re-resolving. CLUBS KEEP
+  PLACEHOLDER — do not touch ClubDatabaseCSV's fallback.
+- Editor gate Assets/Editor/ContentArtValidator.cs + CIBuild step beside
+  ValidateTreeBake(): report per catalog of rows with missing sprite columns, written
+  to Docs/Reports/content_art_<build>.txt. WARNING ONLY, never fails the build.
+- Admin: sprite-field hints (EN+JA) in RowEditor for characters/items/balls/clubs
+  naming the Resources folder; amber banner on the Characters panel. No new control.
+- Tests: the importer tests above; EditMode tests for renderable / GetAvailable /
+  InventoryCodec survival of an owned-but-unrenderable character.
+- Minimal diff. Reuse: catalogs.py, rest.py, export_content.drift_report,
+  ContentSpriteGuard, the club loader's summary-log shape, the shop banner component.
+- Out of scope: art by URL / admin art upload (next spec content_art_urls),
+  LevelUpCosts / gacha / bot CSVs as catalogs, any endpoint or blob change.
+
+When done: list changed files with a 1-line summary each, run the acceptance tests in
+the spec (Editor only — no device pass by default), run the import DRY-RUN against
+prod and paste its output (expected: no drift), update STATUS.md +
+IMPLEMENTER_REPORT.md in the spec folder, and update Docs/AI_CONTEXT.md.
+```
 
 ### Kickoff · shop_stocking (issued 2026-08-27) — ✅ SPENT, task DONE 2026-08-27. Kept for history.
 
