@@ -41,5 +41,24 @@ STILL OPEN:
      the kill switch, and already-owned — the last of which is now trivially reachable,
      since char_mike is owned and a second BUY must refuse WITHOUT debiting.
 
-§2.6 (closing the legacy /points/spend shop_purchase reason) is deliberately NOT shipped.
-Separate commit, on Cesar's word only, once testers are on the build carrying §3.
+§2.6 SHIPPED 2026-08-27 on Cesar's word — the cutover is complete. POST /points/spend
+now refuses reason "shop_purchase" with 400 "shop purchases go through /shop/purchase",
+BEFORE the rpc, so nothing is written and no idempotency key is burned. Compared
+case-insensitively against the stripped reason.
+
+Why it was safe to close at that moment, measured rather than assumed: build 2350 (the
+first client that calls /shop/purchase) was on TestFlight, and the ledger's ENTIRE spend
+history was 128 rows — 125 mode_entry_fee, 1 character_level_up, 1 admin test, 1
+shop:shop_char_mike. ZERO shop_purchase debits, ever. The legacy door had never
+successfully sold anything to anyone, so closing it could not break a flow that had ever
+run. What it DOES change: a pre-2350 client that taps BUY now fails cleanly instead of
+self-granting at its bundled price.
+
+Backend: playlife 357ce7f, deployed playlife-api v54 -> v55 (image
+deployment-01M1159SB99179ZMWNJD038X9A, confirmed via flyctl status and live probes, never
+the deploy exit code). /health /notices /banners /tournaments/golfin /content all 200;
+/shop/purchase and /points/spend both 403 unauth. Tests: a NEW 8-test suite, because
+/points/spend had none at all — tripwire-proven (disabling the refusal fails exactly the
+4 refusal tests). Full backend suite 63 passed. NOTE: no interpreter on Cesar's Mac had
+fastapi, so the backend suite had never actually been runnable there; backend/venv (already
+gitignored) now carries the test deps.

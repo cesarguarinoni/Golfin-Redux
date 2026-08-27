@@ -61,10 +61,13 @@ DONE AND VERIFIED
       `shop_item_repairkit_common` (75 RP), both at min_build 2350, both inside
       their economy band; exported and committed so build 2351+ bundles them.
 
+  §8 STEP 6 DONE 2026-08-27 — the legacy `/points/spend` `shop_purchase` reason
+      is CLOSED (playlife 357ce7f, playlife-api v55). The gate was "once testers
+      are on the build carrying §3"; 2350 was on TestFlight and the ledger showed
+      ZERO `shop_purchase` debits across its entire 128-row history, so the door
+      had never sold anything and closing it broke no flow that had ever run.
+
 AWAITING CESAR
-  1. §8 step 6 — closing the legacy `/points/spend` `shop_purchase` reason.
-     Deliberately unshipped, on Cesar's word only, once testers are on 2350:
-     enforcement is only as good as the OLDEST build in the wild.
   2. ~~The endpoint has never sold anything.~~ **CLOSED 2026-08-27** — Cesar ran
      2350 and bought `shop_char_mike` for 150 RP. Purchase row, grant and RP debit
      all landed with the identical microsecond timestamp, the grant applied 148 ms

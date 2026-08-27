@@ -247,9 +247,23 @@
 > `shop_item_repairkit_common` 75 RP, both min_build 2350, both inside their ECONOMY_MASTER band,
 > exported and committed so 2351+ bundles them.
 >
-> **⚠️ WHAT IS LEFT.** §8 step 6 — closing the legacy `/points/spend` `shop_purchase` reason —
-> stays unshipped on Cesar's word only, once testers are on 2350: enforcement is only as good as
-> the OLDEST build in the wild.
+> **§8 STEP 6 DONE — THE CUTOVER IS COMPLETE.** The legacy `/points/spend` `shop_purchase`
+> reason is CLOSED (playlife `357ce7f`, playlife-api **v54 → v55**, image
+> `deployment-01M1159SB99179ZMWNJD038X9A`, confirmed via `flyctl status` + live probes rather
+> than the deploy exit code). `/spend` now answers 400 "shop purchases go through
+> /shop/purchase" BEFORE the rpc, so nothing is written and no idempotency key is burned.
+>
+> The gate was "once testers are on the build carrying §3", and it was settled with a
+> MEASUREMENT rather than a judgement call: 2350 was on TestFlight, and the ledger's entire
+> spend history was 128 rows — 125 `mode_entry_fee`, 1 `character_level_up`, 1 admin test, 1
+> `shop:shop_char_mike`. **Zero `shop_purchase` debits, ever.** The legacy door had never sold
+> anything to anyone, so closing it could not break a flow that had ever run. What it does
+> change: a pre-2350 client that taps BUY now fails cleanly instead of self-granting at its
+> bundled price.
+>
+> ⚠️ **`/points/spend` had NO tests at all** before this. It has 8 now, tripwire-proven. And no
+> interpreter on Cesar's Mac had `fastapi`, so the backend suite had never actually been runnable
+> there — `backend/venv` (gitignored) now carries the deps. Full backend suite 63 passed.
 >
 > **THE CHAIN IS PROVEN END TO END, 2026-08-27.** Cesar ran build 2350 and bought
 > `shop_char_mike` for 150 RP — the first purchase this endpoint has ever made, weeks after it
