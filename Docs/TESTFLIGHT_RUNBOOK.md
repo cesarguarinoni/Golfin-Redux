@@ -117,13 +117,20 @@ git add Assets/Resources/Data Assets/Data Assets/Localization && git commit -m "
 
 - **Repo behind the catalog** (a row was published and never exported) → run the exporter,
   commit, rerun. This is the normal case.
-- **CSV ahead of the catalog** (a key was added in Unity and never put in the admin) → the
-  exporter cannot fix it, because it never deletes (I6) and keeps the extra line verbatim. Add
-  the missing rows in the admin panel with **+ New row**, publish, then export. As of
-  2026-08-27 this is the live state of `texts`: `SETTINGS_GRAPHICS`, `SETTINGS_QUALITY_AUTO`,
-  `SETTINGS_QUALITY_LOW`, `SETTINGS_QUALITY_MID`, `SETTINGS_QUALITY_HIGH` are in
-  `Assets/Localization/LocalizationText.csv` and not in the catalog, so the gate is RED until
-  those five keys are created and published.
+- **CSV ahead of the catalog** (a row was added in Unity and never put in the admin) → the
+  exporter cannot fix it, because it never deletes (I6) and keeps the extra line verbatim. Run
+  the IMPORTER, which proposes those rows as drafts, then publish them:
+
+  ```bash
+  python3 Tools/content/import_content.py --env-file Tools/admin-dashboard/.env.development.local
+  python3 Tools/content/import_content.py --env-file Tools/admin-dashboard/.env.development.local --apply
+  ```
+
+  It plans by default and writes drafts only — nothing reaches a player until you publish in the
+  panel. Then export, commit, rerun the lane. (Before the importer existed this direction was a
+  dead end: on 2026-08-27 five `SETTINGS_QUALITY_*` / `SETTINGS_GRAPHICS` keys had been sitting
+  outside the `texts` catalog since `quality_tiers` and were only caught here, at archive time.
+  They were published as `texts` v12 the same day.)
 
 ### One-time setup
 

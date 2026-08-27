@@ -2835,17 +2835,19 @@ creating that row in the admin panel (`+ New row`, which only exists as of
 publishing it. A task that ships one half and not the other has left a landmine under
 the next release.
 
-**NOT enforced by a hook, deliberately.** A PostToolUse warning was written and wired on
-2026-08-27 and then removed the same day, on Cesar's call: `import_content.py`
-(`content_two_way`, spec §7) was scheduled for that day, and it does not warn about this
-failure — it REMOVES it. A CSV edit becomes a draft PROPOSAL, so "CSV ahead of catalog"
-stops being an error state at all. A guard whose whole job is about to be structurally
-obsolete is a guard that will still be firing, and still be maintained, long after it
-stops meaning anything. (It is in the history at `fd85327c0` if the structural fix ever
-slips.)
+**FIXED STRUCTURALLY, same day: `Tools/content/import_content.py`.** A CSV edit is now a
+draft PROPOSAL — the importer upserts `content_drafts` (never `content_rows`), the publish
+drawer shows the diff, and somebody publishes it or does not. "CSV ahead of catalog" stops
+being an unfixable state and becomes a normal step.
 
-**Until then, `export_content.py --check` is the backstop** — it runs in
-`testflight_build` and refuses the archive. That is late, but it is never silent.
+A PostToolUse warning hook was written and wired first and then removed the same day, on
+Cesar's call, because the structural fix was landing: a guard whose whole job is about to
+be obsolete would still be firing, and still be maintained, long after it stopped meaning
+anything. It is in the history at `fd85327c0` if the importer is ever backed out.
+
+**`export_content.py --check` remains the backstop** — it runs in `testflight_build` and
+refuses the archive. Late, but never silent; and now its failure message points at a tool
+that can actually resolve it.
 
 **The 2026-08 instance is closed.** The five keys were created as drafts and published as
 `texts` v12 on 2026-08-27, after validating the full 506-row draft set through the same

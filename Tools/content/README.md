@@ -6,12 +6,18 @@ CSV, not downstream.* Without the round trip the delta grows forever and the
 bundled floor rots.
 
 ```
-Assets/**/*.csv  ──seed_from_csv.py──►  content_rows / content_drafts (Supabase)
-                                                    │
-                                              admin publishes
-                                                    │
-Assets/**/*.csv  ◄──export_content.py──────────────┘   + content_version.txt
+Assets/**/*.csv  ──seed_from_csv.py────►  content_rows / content_drafts   (once, day one)
+
+Assets/**/*.csv  ──import_content.py──►  content_drafts  ─┐   a CSV edit is a PROPOSAL
+                                                          │
+                                                   admin publishes
+                                                          │
+Assets/**/*.csv  ◄──export_content.py────────────────────┘   + content_version.txt
 ```
+
+The round trip closes in BOTH directions. Published Supabase is the single truth;
+the importer only ever writes drafts, so an edit made in Unity is a proposal
+until somebody publishes it.
 
 | File | What it is |
 |---|---|
@@ -19,6 +25,7 @@ Assets/**/*.csv  ◄──export_content.py────────────�
 | `rest.py` | Stdlib PostgREST client. Service key from the environment. |
 | `seed_from_csv.py` | Repo CSVs → `2026_08_24_content_seed.sql` (and `--apply` runs it). |
 | `export_content.py` | Published Supabase rows → the seven repo CSVs + `content_version.txt`. |
+| `import_content.py` | Repo CSVs → `content_drafts`, as a proposal. The fix for the one drift direction the exporter cannot repair. |
 
 ## Credentials
 
@@ -85,6 +92,41 @@ diff on the first run. Only a line whose values actually changed is re-quoted.
 
 Together those two are why the acceptance test — seed, export, `git diff` — comes
 back empty.
+
+## Importing (when a CSV edit needs to reach the admin)
+
+```bash
+python3 Tools/content/import_content.py --env-file …                    # PLAN only (default)
+python3 Tools/content/import_content.py --env-file … --apply            # write the drafts
+python3 Tools/content/import_content.py --env-file … --catalogs bags --apply
+```
+
+**Drift has two directions and only one is self-healing.** *Repo behind catalog*
+(a row was published and never exported) is what the exporter fixes. *CSV ahead
+of catalog* — a row added in Unity and never created in the admin — was
+unfixable: the exporter never deletes (I6), so it keeps the extra line verbatim,
+reports "unchanged", and the drift persists. That is what this script is for. It
+was written after five `SETTINGS_QUALITY_*` keys sat outside the `texts` catalog
+for weeks and were finally caught by the release lane, at archive time.
+
+It **plans by default** and writes nothing without `--apply`, and it writes
+`content_drafts` only — never `content_rows`. Publish is still the gate, and the
+publish drawer still shows the diff.
+
+Three things it refuses to do:
+
+* **Delete.** A row in the catalog but not in the CSV is reported and left alone
+  (I6). Deactivating in the admin is the delete.
+* **Clobber an in-flight admin edit.** If a draft already differs from published,
+  somebody is mid-edit; those rows are CONFLICTS, and `--apply` refuses the whole
+  run — not just the row — unless `--overwrite-dirty` says otherwise, in which
+  case every clobbered row is named in the output.
+* **Guess a `min_build` low.** A row being ADDED gets
+  `git rev-list --count HEAD` + 1, the first build number that can contain the
+  commit its CSV line is in. Too high is benign (the build renders it from its own
+  bundled floor); too low ships a row to clients that cannot render it. Override
+  with `--min-build`. CHANGED rows never have theirs touched — it is immutable
+  once published (§D1.7).
 
 ## Texts
 

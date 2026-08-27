@@ -133,6 +133,43 @@
 
 ## ✅ RECENTLY LANDED
 
+> **`import_content.py` — THE ROUND TRIP CLOSES IN BOTH DIRECTIONS. DONE 2026-08-27.**
+> Implemented directly by the main Claude Code thread. `Tools/content/import_content.py`,
+> documented in `Tools/content/README.md`.
+>
+> **What it fixes.** Drift between a repo CSV and its catalog has two directions and only one
+> was ever repairable. *Repo behind catalog* (a row was published and never exported) is what
+> `export_content.py` fixes — self-healing. *CSV ahead of catalog* (a row added in Unity and
+> never created in the admin) was a DEAD END: the exporter never deletes (I6), so it keeps the
+> extra line verbatim, reports "unchanged", and the drift persists forever. That is the state
+> that had five `SETTINGS_QUALITY_*` / `SETTINGS_GRAPHICS` keys sitting outside the `texts`
+> catalog since `quality_tiers`, only caught weeks later by `shop_stocking`'s new release-lane
+> gate — at archive time.
+>
+> **The model: a CSV edit is a PROPOSAL, not a fact.** It writes `content_drafts` and NEVER
+> `content_rows`. Publish is still the only way into what players get, and the publish drawer
+> still shows the diff. Published Supabase stays the single truth.
+>
+> **Three things it refuses to do**, each because the alternative is a silent data loss:
+> it never DELETES (a row in the catalog but not in the CSV is reported and left alone — I6);
+> it never CLOBBERS an in-flight admin edit (a draft that already differs from published is a
+> CONFLICT, and `--apply` refuses the WHOLE run, not just the row, unless `--overwrite-dirty`
+> names every clobber); and it never guesses a `min_build` LOW (a row being added gets
+> `git rev-list --count HEAD` + 1 — too high is benign because the build renders from its own
+> bundled floor, too low ships a row to clients that cannot render it. Changed rows keep theirs,
+> which §D1.7 makes immutable anyway). It PLANS by default; `--apply` is opt-in.
+>
+> **Verified against prod, not a fixture.** Plan over all seven catalogs: 1337 rows, zero
+> differences — the importer and the exporter agree on every row in the project. Then a real
+> round trip on `bags`: a local CSV edit produced exactly 1 add + 1 change; `--apply` wrote both
+> drafts with the right `min_build` on each (2349 for the new row, the published 0 preserved on
+> the changed one), the right audit actions, and `content_rows` untouched; a second CSV edit was
+> correctly REFUSED as a conflict with nothing written; `--overwrite-dirty` then took it and
+> named the clobber. **Testing found a real bug**: `--overwrite-dirty` originally suppressed the
+> refusal without actually overwriting — it claimed to do something it did not. Fixed and
+> retested. Prod was restored byte-for-byte afterwards (bags drafts identical to published,
+> 10/10) and both gates are clean.
+
 > **`shop_stocking` — ADMIN + LANE + CLIENT DONE 2026-08-27; ONE MIGRATION AWAITS CESAR.**
 > Implemented DIRECTLY by the main Claude Code thread (no subagent chain), same as
 > `shop_server_purchase`. Spec + report: `Docs/Specs/Active/shop_stocking/`.
