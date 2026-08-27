@@ -121,12 +121,37 @@ namespace GolfinRedux.UI.Shop
             tmp.overflowMode = TextOverflowModes.Overflow;
         }
 
+        /// <summary>
+        /// The referenced row is not in this build's database, so there is nothing to bind.
+        ///
+        /// <para>
+        /// This branch should now be UNREACHABLE: <c>GeneralShopCatalog.Admit</c> resolves the same
+        /// reference and withholds the entry before a card is ever instantiated (shop_stocking §6).
+        /// It stays, and it got louder, because of what it used to do — return half-way through Bind
+        /// and leave an instantiated card on screen with no art, no name and a live BUY button, on a
+        /// row the server refuses anyway. An unreachable branch that still renders the bug it was
+        /// supposed to prevent is not a safety net.
+        /// </para>
+        /// <para>
+        /// So: hide the card outright, and log an ERROR rather than a warning — reaching here means
+        /// Admit and Bind disagree about what is renderable, which is a defect in the pair, not a
+        /// content problem an operator can fix.
+        /// </para>
+        /// </summary>
+        private void HideUnbindable(ShopCatalogEntry entry, string kind)
+        {
+            Debug.LogError($"[GeneralShopCard] {kind} '{entry.RefId}' (entry '{entry.EntryId}') is not in " +
+                           "this build's database, so the card cannot be bound. Hiding it — " +
+                           "GeneralShopCatalog.Admit should have withheld this row (shop_stocking §6).");
+            gameObject.SetActive(false);
+        }
+
         // ── Club variant ──────────────────────────────────────────────────────────
 
         private void BindClub(ShopCatalogEntry entry)
         {
             var club = ClubDatabaseCSV.Instance != null ? ClubDatabaseCSV.Instance.GetClub(entry.RefId) : null;
-            if (club == null) { Debug.LogWarning($"[GeneralShopCard] club '{entry.RefId}' missing."); return; }
+            if (club == null) { HideUnbindable(entry, "club"); return; }
 
             int startLvl = StartingLevel(club.rarity);
             string rar = club.rarity.ToString();
@@ -181,7 +206,7 @@ namespace GolfinRedux.UI.Shop
         private void BindBall(ShopCatalogEntry entry)
         {
             var ball = BallDatabaseCSV.Instance != null ? BallDatabaseCSV.Instance.GetBall(entry.RefId) : null;
-            if (ball == null) { Debug.LogWarning($"[GeneralShopCard] ball '{entry.RefId}' missing."); return; }
+            if (ball == null) { HideUnbindable(entry, "ball"); return; }
 
             string rar = string.IsNullOrEmpty(entry.Rarity) ? "Common" : entry.Rarity;
 
@@ -235,7 +260,7 @@ namespace GolfinRedux.UI.Shop
             var ch = CharacterDatabaseCSV.Instance != null
                 ? CharacterDatabaseCSV.Instance.GetCharacter(entry.RefId)
                 : null;
-            if (ch == null) { Debug.LogWarning($"[GeneralShopCard] character '{entry.RefId}' missing."); return; }
+            if (ch == null) { HideUnbindable(entry, "character"); return; }
 
             var portrait = ch.portraitSprite != null ? ch.portraitSprite : ch.portraitFullSprite;
 
@@ -341,7 +366,7 @@ namespace GolfinRedux.UI.Shop
             var item = ItemDatabaseCSV.Instance != null
                 ? ItemDatabaseCSV.Instance.GetItem(entry.RefId)
                 : null;
-            if (item == null) { Debug.LogWarning($"[GeneralShopCard] item '{entry.RefId}' missing."); return; }
+            if (item == null) { HideUnbindable(entry, "item"); return; }
 
             string rar = string.IsNullOrEmpty(item.rarity) ? "Common" : item.rarity;
 

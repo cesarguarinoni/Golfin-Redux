@@ -14,6 +14,8 @@
 using System;
 using System.Collections.Generic;
 using Golfin.Content;
+using Golfin.Inventory;
+using Golfin.Roster;
 using UnityEngine;
 
 namespace GolfinRedux.UI.Shop
@@ -112,6 +114,28 @@ namespace GolfinRedux.UI.Shop
         /// row never appears.</summary>
         private static int _droppedUnknownCategory;
 
+        /// <summary>Rows withheld this load because the thing they SELL could not be resolved —
+        /// no row in the client's database, a deactivated one, or no usable sprite
+        /// (shop_stocking §6). Same treatment as the counters above: reset per load, reported in
+        /// the summary line.</summary>
+        private static int _unresolvable;
+
+        /// <summary>Databases already reported absent this load, so the EditMode "no scene, no
+        /// singletons" case logs ONCE per database instead of once per row.</summary>
+        private static readonly HashSet<string> _dbAbsentLogged = new HashSet<string>(StringComparer.Ordinal);
+
+        /// <summary>
+        /// TEST SEAM, set by reflection from the EditMode suite and by nothing else.
+        ///
+        /// <para>
+        /// Returns the reason a row is unrenderable, or <c>null</c> when it is fine. The logic under
+        /// test is the SHIPPING <see cref="Admit"/>; what this replaces is only the database lookup,
+        /// which in an EditMode test has no scene to live in and would otherwise take the
+        /// "no database — skip resolution" path on every row and prove nothing.
+        /// </para>
+        /// </summary>
+        private static Func<ShopCatalogEntry, string?>? _resolverOverride;
+
         public static IReadOnlyList<ShopCatalogEntry> Entries
         {
             get { EnsureLoaded(); return _entries!; }
@@ -139,6 +163,8 @@ namespace GolfinRedux.UI.Shop
         {
             _entries = new List<ShopCatalogEntry>();
             _droppedUnknownCategory = 0;
+            _unresolvable = 0;
+            _dbAbsentLogged.Clear();
             var asset = Resources.Load<TextAsset>("Data/shop_catalog");
             if (asset == null)
             {
@@ -207,7 +233,8 @@ namespace GolfinRedux.UI.Shop
                                        : $" — overlay v{overlay.Version}: {overlaid} row(s) patched/appended.") +
                       $" Withheld: {deactivated} deactivated (I6), {outOfWindow} outside their listing " +
                       $"window, {failedClosed} dropped for an unparseable bound (§6, fail closed), " +
-                      $"{_droppedUnknownCategory} dropped for an unsellable category (§3.3).");
+                      $"{_droppedUnknownCategory} dropped for an unsellable category (§3.3), " +
+                      $"{_unresolvable} withheld as unrenderable (shop_stocking §6).");
         }
 
         /// <summary>
@@ -248,12 +275,122 @@ namespace GolfinRedux.UI.Shop
                 return;
             }
 
+            // ---- shop_stocking §6: never list what this build cannot render ----
+            //
+            // The row itself being published is not enough. Rendering a card needs the REFERENCED
+            // row in the client's own database (bundled or overlaid) and a real sprite for it. A
+            // row that is missing either used to be admitted, instantiated, and then early-returned
+            // half-bound by `GeneralShopCard.Bind*` — a blank card with a live BUY button. With
+            // server pricing that card cannot even succeed: `golfin_shop_purchase` refuses the same
+            // row as `not_listed` / `ref_inactive`. So it is withheld here, loudly, and counted.
+            string? unrenderable = UnrenderableReason(entry);
+            if (unrenderable != null)
+            {
+                _unresolvable++;
+                Debug.LogWarning($"[GeneralShopCatalog] '{entry.EntryId}' WITHHELD — {entry.Category} " +
+                                 $"ref '{entry.RefId}' cannot be rendered by this build: {unrenderable}. " +
+                                 "Either the row is not in this build's catalog (publish it and export " +
+                                 "the CSVs), or its art has not shipped yet.");
+                return;
+            }
+
             entry.SaleWindowOpen = verdict.OnSale;
             if (!verdict.OnSale && entry.SaleRpCost > 0)
                 Debug.Log($"[GeneralShopCatalog] '{entry.EntryId}' is listed but OUTSIDE its sale window — " +
                           $"saleRpCost {entry.SaleRpCost} ignored, selling at rpCost {entry.RpCost} (§6).");
 
             _entries!.Add(entry);
+        }
+
+        /// <summary>
+        /// Why <paramref name="entry"/> cannot be rendered by THIS build, or <c>null</c> when it can.
+        ///
+        /// <para>
+        /// Three ways to fail, and they are reported separately because they need different people:
+        /// no row in the client's database is a CONTENT problem (publish + export), a deactivated
+        /// row is an OPERATOR decision the shop row did not follow, and a missing sprite is an ART
+        /// problem. A <c>Placeholder</c> sprite counts as missing: <c>ClubDatabaseCSV</c>
+        /// substitutes the shared placeholder asset for a name the art batches have not produced,
+        /// so "not null" is not the same question as "has art".
+        /// </para>
+        /// <para>
+        /// A NULL DATABASE SINGLETON IS NOT A FAILURE. In an EditMode test — or any lazy first
+        /// access before the scene's singletons exist — there is nothing to resolve against, and
+        /// treating that as unrenderable would withhold every row in the catalog. It logs once per
+        /// database per load and admits, exactly like <c>RequireReady</c> does for a missing
+        /// <c>ContentService</c> further up.
+        /// </para>
+        /// </summary>
+        private static string? UnrenderableReason(ShopCatalogEntry entry)
+        {
+            if (_resolverOverride != null) return _resolverOverride(entry);
+
+            switch (entry.Category)
+            {
+                case ShopCategory.Ball:
+                {
+                    var db = BallDatabaseCSV.Instance;
+                    if (db == null) return NoDatabase(nameof(BallDatabaseCSV));
+                    var ball = db.GetBall(entry.RefId);
+                    if (ball == null) return "no row in the balls catalog";
+                    if (!ball.isActive) return "the balls row is deactivated";
+                    return Usable(ball.thumbnailSprite != null ? ball.thumbnailSprite : ball.fullSprite)
+                        ? null : "no usable ball sprite";
+                }
+
+                case ShopCategory.Character:
+                {
+                    var db = CharacterDatabaseCSV.Instance;
+                    if (db == null) return NoDatabase(nameof(CharacterDatabaseCSV));
+                    var ch = db.GetCharacter(entry.RefId);
+                    if (ch == null) return "no row in the characters catalog";
+                    if (!ch.isActive) return "the characters row is deactivated";
+                    return Usable(ch.portraitSprite != null ? ch.portraitSprite : ch.portraitFullSprite)
+                        ? null : "no usable character portrait";
+                }
+
+                case ShopCategory.Item:
+                {
+                    var db = ItemDatabaseCSV.Instance;
+                    if (db == null) return NoDatabase(nameof(ItemDatabaseCSV));
+                    var item = db.GetItem(entry.RefId);
+                    if (item == null) return "no row in the items catalog";
+                    if (!item.isActive) return "the items row is deactivated";
+                    return Usable(item.thumbnailSprite != null ? item.thumbnailSprite : item.fullSprite)
+                        ? null : "no usable item sprite";
+                }
+
+                default:
+                {
+                    var db = ClubDatabaseCSV.Instance;
+                    if (db == null) return NoDatabase(nameof(ClubDatabaseCSV));
+                    var club = db.GetClub(entry.RefId);
+                    if (club == null) return "no row in the clubs catalog";
+                    if (!club.isActive) return "the clubs row is deactivated";
+                    return Usable(club.portraitSprite != null ? club.portraitSprite : club.portraitFull)
+                        ? null : "no usable club sprite";
+                }
+            }
+        }
+
+        /// <summary>Name of the shared stand-in art every database falls back to. Compared BY NAME
+        /// because that is all the loaded <see cref="Sprite"/> carries — the databases hand back the
+        /// placeholder asset itself, not a marker.</summary>
+        private const string PlaceholderSpriteName = "Placeholder";
+
+        private static bool Usable(Sprite? sprite)
+            => sprite != null &&
+               !string.Equals(sprite.name, PlaceholderSpriteName, StringComparison.OrdinalIgnoreCase);
+
+        /// <summary>Logs once per database per load and admits the row. See the note on
+        /// <see cref="UnrenderableReason"/>.</summary>
+        private static string? NoDatabase(string database)
+        {
+            if (_dbAbsentLogged.Add(database))
+                Debug.Log($"[GeneralShopCatalog] no {database} this load — reference resolution not " +
+                          "checked for its category (shop_stocking §6). Expected in EditMode and on a " +
+                          "lazy first access before the scene singletons exist; NOT expected in the store.");
+            return null;
         }
 
         /// <summary>
@@ -365,6 +502,6 @@ namespace GolfinRedux.UI.Shop
         }
 
         /// <summary>Test/hot-reload hook: forces a re-read on next access.</summary>
-        public static void Reload() { _entries = null; }
+        public static void Reload() { _entries = null; _resolverOverride = null; }
     }
 }
