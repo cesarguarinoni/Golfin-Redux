@@ -445,12 +445,21 @@ namespace GolfinRedux.UI.Shop
             btn.onClick.RemoveAllListeners();
 
             // Clubs and characters are UNIQUE, so an owned one shows a disabled OWNED chip. Balls and
-            // items STACK — buying a second is the normal case, so they never reach this state.
+            // items STACK — buying a second is the normal case — with ONE exception: a stackable the
+            // player already holds an UNLIMITED (-1) supply of. Every add path leaves -1 alone, so a
+            // sale would debit and deliver nothing (unlimited_stackable_refusal, 2026-08-27). Showing BUY
+            // on a card that can only take the player's RP is the bug; OWNED is the truth.
             bool owned =
                 (entry.Category == ShopCategory.Club &&
                  ClubManager.Instance != null && ClubManager.Instance.IsOwned(entry.RefId)) ||
                 (entry.Category == ShopCategory.Character &&
-                 CharacterManager.Instance != null && CharacterManager.Instance.IsOwned(entry.RefId));
+                 CharacterManager.Instance != null && CharacterManager.Instance.IsOwned(entry.RefId)) ||
+                (entry.Category == ShopCategory.Item &&
+                 ItemManager.Instance != null &&
+                 ItemManager.Instance.GetItemData(entry.RefId)?.IsUnlimited == true) ||
+                (entry.Category == ShopCategory.Ball &&
+                 BallManager.Instance != null &&
+                 BallManager.Instance.GetBallData(entry.RefId)?.IsUnlimited == true);
 
             if (owned)
             {

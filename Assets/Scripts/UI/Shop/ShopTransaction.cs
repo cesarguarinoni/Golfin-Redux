@@ -262,12 +262,17 @@ namespace GolfinRedux.UI.Shop
                     return true;
 
                 case ShopCategory.Item:
-                    // Items STACK — there is deliberately no owned check. Buying a second repair kit
-                    // is the normal case, not a mistake.
+                    // Items STACK — buying a second repair kit is the normal case, not a mistake,
+                    // so there is no owned check. UNLIMITED is the one exception: see HoldsUnlimited.
                     if (ItemManager.Instance == null || ItemDatabaseCSV.Instance?.GetItem(entry.RefId) == null)
                     {
                         Debug.LogWarning($"[ShopTransaction] Unknown item '{entry.RefId}' or no ItemManager.");
                         verdict = GeneralPurchaseResult.Invalid;
+                        return false;
+                    }
+                    if (HoldsUnlimited(entry))
+                    {
+                        verdict = GeneralPurchaseResult.AlreadyOwned;
                         return false;
                     }
                     return true;
@@ -279,8 +284,44 @@ namespace GolfinRedux.UI.Shop
                         verdict = GeneralPurchaseResult.Invalid;
                         return false;
                     }
+                    if (HoldsUnlimited(entry))
+                    {
+                        verdict = GeneralPurchaseResult.AlreadyOwned;
+                        return false;
+                    }
                     return true;
             }
+        }
+
+        /// <summary>
+        /// True when the player already holds an UNLIMITED (-1) supply of this stackable.
+        ///
+        /// <para>
+        /// `-1` is a sentinel, not a quantity — the default Golfin ball ships that way. Every add
+        /// path deliberately leaves it alone (<c>AddQuantity</c>, <c>AddBalls</c>, <c>AddItems</c>,
+        /// <c>GrantBall</c>), which is correct for a reward and CATASTROPHIC for a sale: the debit
+        /// happens, the grant is a no-op, and <c>InventoryGrants.Apply</c> has already written
+        /// <c>appliedGrantIds</c> and acked, so the player pays and receives nothing with the grant
+        /// marked delivered.
+        /// </para>
+        /// <para>
+        /// Refusing here is the CLIENT lock and it also covers the flag-OFF local path, where
+        /// <c>GrantBall</c> would no-op with no server involved at all. The server refuses the same
+        /// case independently (2026_08_29_shop_purchase_unlimited_refusal.sql) — two locks,
+        /// neither relying on the other.
+        /// </para>
+        /// </summary>
+        private static bool HoldsUnlimited(ShopCatalogEntry entry)
+        {
+            if (entry.Category == ShopCategory.Item)
+                return ItemManager.Instance != null &&
+                       ItemManager.Instance.GetItemData(entry.RefId)?.IsUnlimited == true;
+
+            if (entry.Category == ShopCategory.Ball)
+                return BallManager.Instance != null &&
+                       BallManager.Instance.GetBallData(entry.RefId)?.IsUnlimited == true;
+
+            return false;
         }
 
         /// <summary>
