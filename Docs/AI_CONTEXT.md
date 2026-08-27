@@ -185,12 +185,19 @@
 > Dashboard `npm run build` green. Import dry-run against prod: nothing to import, all seven
 > catalogs `same`. `export --check` against prod: clean.
 >
-> **Two things still need Cesar, and only Cesar:** §8 step 3's round-trip rehearsal on a
-> throwaway text key against prod (it writes prod drafts and needs a human publish), and the
-> "imported, not yet published" branch of §3 seen live (same reason). Both are pinned by
-> automated tests meanwhile. **Art by URL — the thing that would make an admin-created character
-> render on an ALREADY-INSTALLED build — is deliberately NOT here; it is the next spec,
-> `content_art_urls`.**
+> **§8 step 3 — the prod round-trip rehearsal — is DONE (2026-08-27).** Run on
+> `HOME_CURRENCY_LABEL`, a key `grep -rl` finds in no file under `Assets/` outside the CSV and the
+> generated table, so nothing rendered it mid-rehearsal. Edit in Unity → `--check` said *"if you
+> edited the CSV, import"* → `import --apply` (1 draft, `content_rows` untouched) → `--check`
+> flipped to *"imported, not yet published"* → Cesar published (v12→v13) → **export left the CSV
+> byte-identical** (sha256 identical, `cmp` clean; only `content_version.txt` moved) → `--check`
+> clean. The reverse leg (v13→v14) put prod back exactly where it started. So the property holds
+> against the real database, not just the fake, and the branch where exporting would have silently
+> overwritten an imported edit is the branch that now names the right loop. **Every item in SPEC §9
+> is verified.** Repo delta: `content_version.txt` `texts=12` → `14`.
+>
+> **Art by URL — the thing that would make an admin-created character render on an
+> ALREADY-INSTALLED build — is deliberately NOT here; it is the next spec, `content_art_urls`.**
 
 > **`import_content.py` — THE ROUND TRIP CLOSES IN BOTH DIRECTIONS. DONE 2026-08-27.**
 > Implemented directly by the main Claude Code thread. `Tools/content/import_content.py`,
