@@ -1327,22 +1327,48 @@ between launches, and High went Nominal → Fair during its own ~30 s of navigat
 sample — which argues the heat is its own rather than inherited. That is an argument, not a
 controlled measurement. §12.7 is what settles it.
 
-## 12.7 STILL EMPTY — the cooled protocol
+## 12.7 COOLED PROTOCOL — High, H06 (2026-08-27)
 
-**None of the following has been measured.** §12.6 is a warm triage, not a substitute: it shows
-the signal is real and large, which is what justifies spending the hours below.
+Build 2325 archived `ReleaseForRunning` (`-O3`), iPhone 15 Pro Max, pinned sky + yaw, H06 tee.
+**All three runs booted `thermalAtBoot=Nominal`** — gated by `Tools/perfbot-cooled.sh`, which
+launches, reads the bot's own thermal line, and counts a run ONLY if it says Nominal. 3/3 counted
+in 3 attempts with 300 s cooldowns.
 
-| | Low | Mid | High |
-|---|---|---|---|
-| H08 tee — fps / frameMs / batches / tris / shadow casters | — | — | — |
-| H06 tee | — | — | — |
-| H01 tee | — | — | — |
-| H06 endurance @ 0/1/2/3/4/5 min + thermal | — | — | — |
+High was run **FIRST and alone**, not third in an ascending sweep — see §12.6's confound.
 
-Targets when they are run: High ≥ 58 fps; Mid batches and shadow casters strictly below High;
-Low flat 30.0 fps with tris below Mid; Mid holds ≥ 55 through minute 5; Low holds 30 through
-minute 5. High's endurance curve is reported as-is — the brief expects it not to hold, and that
-is the point of the row.
+| | run 1 | run 2 | run 3 | **median** |
+|---|---|---|---|---|
+| fps @ tee | 61.2 | 60.0 | 59.9 | **60.0** |
+| frameMs @ tee | 16.35 | 16.66 | 16.69 | **16.66** |
+| mainMs | 3.58 | 3.25 | 3.40 | **3.40** |
+| renderMs @ tee | 13.21 | 14.50 | 14.32 | **14.32** |
+| **fps @ +45 s** | 46.9 | 60.0 | 59.9 | **59.9** |
+| thermal @ +45 s | Fair | Nominal | Fair | — |
+
+**High meets the spec's ≥ 58 fps bar (median 60.0) and HOLDS it through the 45 s pose in two runs
+of three (median 59.9).** Degradation is intermittent, not systematic: one run dropped to 46.9 as
+it reached Fair, the other two stayed at 60.
+
+> ⚠️ **A CORRECTION TO AN EARLIER READING OF THIS DATA.** Before the cooled protocol ran, this
+> report and the session notes said "High reaches 60 but cannot hold it." That came from the warm
+> triage — where High always ran third and started hot — plus the first cooled run, which happened
+> to be the one that degraded. **The 3-run median does not support it.** This is exactly the failure
+> the protocol's "3 runs, median" rule exists to prevent, and it caught it.
+
+**Mid and Low were NOT re-run cooled** (Cesar, 2026-08-27: results acceptable, no further device
+time). Their warm numbers are nonetheless credible because both held `thermal=Nominal` for the
+whole run in every warm pass, on both builds — the confound that invalidated warm High simply does
+not apply to them: Low 30.0 fps flat, Mid 60.0 fps flat.
+
+## 12.7b Not measured, and deliberately so
+
+Endurance jobs 20-22 (5-minute holds) were **cancelled by Cesar** — the tier results were accepted
+as-is, with optimisation possibly revisited later. If it is revisited, High is the obvious place
+(shadow distance 60 → 45, or render scale 0.8 → 0.75) and `Tools/perfbot-cooled.sh` makes each
+candidate a ~20-minute measurement.
+
+H08 and H01 per-tier cooled tables were also not run, for the same reason.
+
 
 ## 12.8 Build size — MEASURED
 

@@ -159,9 +159,16 @@
 > - **Home bloom buys nothing.** The flag flips correctly, but High and Low Home frames are
 >   pixel-identical apart from the dev FPS counter (mean abs diff 0.09/255) — Home is a
 >   Screen-Space-Overlay canvas covering the 3D view. No breakage, no saving. Do not count it.
-> - **STILL OPEN — needs a cooled iPhone.** Per-tier H08/H06/H01 tables, the 5-minute H06 endurance
->   curves, thermal states, telemetry-on-the-wire and the build-size delta are all EMPTY CELLS.
->   `PerfBaselineBot` jobs **14–25** are in the build and ready; `job.txt` accepts `tier=low|mid|high|auto`.
+> - **COOLED PROTOCOL RUN for High (report §12.7)** — 3/3 runs booted `Nominal` via
+>   `Tools/perfbot-cooled.sh`: **median 60.0 fps at the tee, 59.9 at +45 s**. High meets the ≥58 bar
+>   AND holds it in two runs of three; degradation is intermittent, not systematic. This CORRECTS an
+>   earlier reading of the warm data that said High could not hold 60 — the 3-run median does not
+>   support it. Mid/Low were not re-run cooled (accepted as-is); both held Nominal throughout every
+>   warm pass, so the confound that invalidated warm High does not apply to them.
+> - **Endurance jobs 20-22 CANCELLED by Cesar** — results accepted, optimisation may be revisited
+>   later. If so, High is the place to look (shadow distance 60→45, render scale 0.8→0.75).
+> - **Sign-off video:** `Docs/Reports/Media/quality_tiers_2026-08-27.mp4` (41s, 1170x2532, EN + JP,
+>   driven through the real Settings widgets).
 > - **Cesar-judged, three items:** High at 2 cascades / 60 m (fallback 4 / 100), the fairness A/B,
 >   and aim-arrow feel at 30 fps on Low. Plus one art call — the Graphics row's icon is a
 >   **placeholder** (the Home gear); `Assets/Art/Settings/` has no display/graphics icon.

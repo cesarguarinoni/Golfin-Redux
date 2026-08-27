@@ -1,0 +1,13 @@
+[cooled] attempt 1: boot=Nominal  COUNTED (1/3)
+    STATS job=19 run=0 label=T_h06_tee_high hole=6 exp=none thermal=Nominal fps=61.2 frameMs=16.35 mainMs=3.58 renderMs=13.21 batches=3062 setpass=50 draws=3062 tris=2823808 verts=2386652 shadowCasters=579 sysMemMB=1086.6 reservedMB=730.4 gcPerFrameB=21506
+    STATS job=19 run=0 label=T_h06_tee_high_late hole=6 exp=none thermal=Fair fps=46.9 frameMs=21.33 mainMs=3.97 renderMs=18.68 batches=3062 setpass=50 draws=3062 tris=2823808 verts=2386652 shadowCasters=579 sysMemMB=1090.7 reservedMB=717.9 gcPerFrameB=21506
+[cooled] cooling 300s before attempt 2…
+[cooled] attempt 2: boot=Nominal  COUNTED (2/3)
+    STATS job=19 run=0 label=T_h06_tee_high hole=6 exp=none thermal=Nominal fps=60.0 frameMs=16.66 mainMs=3.25 renderMs=14.50 batches=3062 setpass=50 draws=3062 tris=2823808 verts=2386652 shadowCasters=579 sysMemMB=1086.6 reservedMB=735.5 gcPerFrameB=21506
+    STATS job=19 run=0 label=T_h06_tee_high_late hole=6 exp=none thermal=Nominal fps=60.0 frameMs=16.67 mainMs=3.08 renderMs=3.95 batches=3062 setpass=50 draws=3062 tris=2823808 verts=2386652 shadowCasters=579 sysMemMB=1064.2 reservedMB=706.6 gcPerFrameB=21506
+[cooled] cooling 300s before attempt 3…
+[cooled] attempt 3: boot=Nominal  COUNTED (3/3)
+    STATS job=19 run=0 label=T_h06_tee_high hole=6 exp=none thermal=Nominal fps=59.9 frameMs=16.69 mainMs=3.40 renderMs=14.32 batches=3062 setpass=50 draws=3062 tris=2823808 verts=2386652 shadowCasters=579 sysMemMB=1083.9 reservedMB=734.3 gcPerFrameB=21506
+    STATS job=19 run=0 label=T_h06_tee_high_late hole=6 exp=none thermal=Fair fps=59.9 frameMs=16.69 mainMs=3.61 renderMs=8.38 batches=3062 setpass=50 draws=3062 tris=2823808 verts=2386652 shadowCasters=579 sysMemMB=1080.0 reservedMB=717.3 gcPerFrameB=21506
+
+[cooled] job=19 tier=high  counted 3/3 cooled runs in 3 attempts
