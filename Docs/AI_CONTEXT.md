@@ -133,6 +133,66 @@
 
 ## ✅ RECENTLY LANDED
 
+> **`shop_stocking` — ADMIN + LANE + CLIENT DONE 2026-08-27; ONE MIGRATION AWAITS CESAR.**
+> Implemented DIRECTLY by the main Claude Code thread (no subagent chain), same as
+> `shop_server_purchase`. Spec + report: `Docs/Specs/Active/shop_stocking/`.
+>
+> Three gaps between "the admin can publish a shop row" and "the shop is stocked":
+>
+> 1. **THE ADMIN COULD NOT ADD A ROW. AT ALL. IN ANY CATALOG.** Every row in every catalog came
+>    from the seed migration; `CatalogPanel` could edit and publish, `RowEditor` showed `rowId` as
+>    read-only `<code>`, and nothing ever called the PUT with an id that did not exist. The
+>    backend was always able (`upsertDraftRow` upserts by rowId, `content_publish` is
+>    `on conflict do update`) — so this is the missing CONTROL, not a new capability. `+ New row`
+>    now sits beside Review & publish on the SHARED panel, so Clubs / Characters / Items / Bags /
+>    Balls / Texts / Shop all have it. The row id is an input only in create mode, validated
+>    server-side (shape, ≤80, 409 on a clash with a draft OR a published row), and the catalog's
+>    id column (`entryId` / `id` / `key`) is WRITTEN FROM it and never shown as a field, so the
+>    two cannot disagree. Shop prefills `shop_<refId>` after a RefPicker pick.
+> 2. **Nothing made the next build carry what was published.** `testflight_build` now runs
+>    `export_content.py --check` right after `assert-unity-closed.sh`; non-zero aborts the lane.
+>    It deliberately does NOT auto-export — the build number is the commit count, so an export
+>    inside the lane would archive content its own build number cannot account for. The loop is
+>    human: export → commit → rerun (new § in `Docs/TESTFLIGHT_RUNBOOK.md`).
+> 3. **The client rendered rows it could not resolve.** `GeneralShopCatalog.Admit` now resolves
+>    the ref in the matching DB and requires an active row AND a non-`Placeholder` primary sprite;
+>    unresolvable ⇒ withheld, warned, counted in the load summary. A null DB singleton (EditMode,
+>    or a lazy access before the scene singletons) logs ONCE and admits — a rail, not a wall.
+>    `GeneralShopCard.Bind*` now hides the card and logs an ERROR instead of leaving a blank card
+>    with a live BUY button on a row the server refuses anyway.
+>
+> **The two build gates became rules, not memory.** New `Tools/admin-dashboard/lib/buildGates.ts`
+> holds `SHOP_CATEGORY_STRICT_BUILD` (the panel's `SERVER_PRICE_ENFORCED_FROM_BUILD = 2334` moved
+> here and the 2334 was a GUESS — the build number is `git rev-list --count HEAD`, so "last upload
+> + 1" is wrong by construction). Validator **G1**: a non-club/ball row needs `minBuild ≥` the
+> constant, and while the constant is `0` it is a hard error naming the fix. **G2**: a shop row's
+> `minBuild` must be ≥ its referenced row's. Both on ACTIVE rows only — `min_build` is immutable
+> once published, so gating deactivated rows would make a catalog permanently unpublishable.
+>
+> **Verified:** the `+ New row` flow driven live in a browser against a mock-mode dev server
+> (character row created with the prefilled id, clubs row created, 409 on a duplicate, localised
+> format error, G1 refusing the publish, audit showing `content.draft.create:<catalog>` with the
+> admin's email, EN + JA banner). Full unfiltered EditMode sweep **1849 / 1846 passed / 0 failed /
+> 3 pre-existing skips**, with the new suite tripwire-proven to run. Dashboard `npm run build`
+> green.
+>
+> **⚠️ TWO THINGS ARE WAITING ON CESAR.**
+> 1. `playlife/backend/migrations/2026_08_28_shop_purchase_ref_min_build.sql` — NOT APPLIED. A
+>    `create or replace` of `golfin_shop_purchase()` carrying the applied body forward with ONE
+>    change: it also refuses when the REFERENCED row's `min_build` is above the caller's build
+>    (`not_listed / ref_min_build`). The 08-27 migration is untouched — migrations are append-only.
+>    No deploy rides with it: no API source changed, so the live v54 image is already correct.
+> 2. **THE CONTENT GATE IS RED TODAY, and it predates this task.**
+>    `export_content.py --check` exits 1 because `SETTINGS_GRAPHICS` and the four
+>    `SETTINGS_QUALITY_*` keys added by `quality_tiers` are in
+>    `Assets/Localization/LocalizationText.csv` and NOT in the published `texts` catalog. That is
+>    the CSV-ahead-of-catalog direction, which the exporter CANNOT fix (it never deletes — I6 —
+>    so it keeps the extra lines verbatim). **The next `testflight_build` will abort until those
+>    five keys are created in the admin and published** — which `+ New row` is now what makes
+>    possible. After that archive: read `Docs/Versioning/last_uploaded_build.txt`, set
+>    `SHOP_CATEGORY_STRICT_BUILD`, redeploy the dashboard (its own surface —
+>    `npm --prefix Tools/admin-dashboard run deploy`), then publish the first character/item rows.
+
 > **`shop_server_purchase` (CONTENT_PIPELINE_PLAN §6 step 4d / §11.5) — BOTH REPOS CODE-COMPLETE
 > 2026-08-27. BACKEND APPLIED + DEPLOYED AND SMOKED; NOT SEEN ON A SCREEN, NEVER SOLD ANYTHING.** Implemented DIRECTLY by the main
 > Claude Code thread — no implementer / self-reviewer / red-team chain ran. Spec + report:
@@ -190,9 +250,18 @@
 > 1. **The endpoint is live but has never sold anything.** Every §6 item marked *(device)* —
 >    price-is-the-server's, sale window on the server clock, delivery-survives-death, idempotent
 >    replay, kill switch, already-owned — needs a real client. "Deployed" is not "exercised".
-> 2. **No UI was ever rendered.** Character/item cards and the six-chip row are code-complete and
->    unit-pinned but visually unverified — another live session held the shared Unity Editor and
->    the test runner. Needs an Editor or device pass with a published `character` and `item` row.
+> 2. **UI VERIFIED 2026-08-27** (was the big open item). Driven through the real entry path —
+>    boot → Home → tap the live `ShopPlusButton` → STORE tab → each filter chip via its own
+>    `onClick`, captured at 1170×2532 through the sanctioned menu item. A `character` row and an
+>    `item` row render on the `GeneralShopCard_Club` hierarchy; the character's bars follow
+>    `RarityStatCaps` exactly (24.0 / 28.0 / 33.3 / 27.3 % against caps 25/25/18/22 — a hard-coded
+>    60 would have put all four at 10–12 %); the four stat icons resolve; `DistRow` / `StatRow_4`
+>    hide for a character and all five rows + `HLevel` hide for an item; BUY flips to a disabled
+>    OWNED on an owned starter and back to BUY on an unowned character. The six-chip row measures
+>    1074.0px with chips at exactly 179.0px and the widest label (`CHARACTERS`) at 149.1px — no
+>    overflow — and every chip filters correctly (CHARACTERS→1, ITEMS→1, CLUBS→4, ALL→7).
+>    Screenshots in the task folder. **Still not done: an actual purchase** — the dev save holds
+>    3 RP, so BUY hits the affordability pre-check, and the flag-ON path needs a device.
 > 3. **§2.6 stays unshipped.** Closing `reason == "shop_purchase"` on the legacy `/points/spend`
 >    is a SEPARATE commit, on Cesar's word only, once testers are on the build carrying §3 —
 >    enforcement is only as good as the oldest build in the wild. **Until then an older installed
@@ -206,7 +275,16 @@
 >
 > The admin Shop banner stopped being a red "prices are NOT enforced" warning and is now amber
 > information, in EN and JA — with the second sentence kept deliberately: older installs still
-> debit locally at their bundled price until item 4 lands.
+> debit locally at their bundled price until the legacy path is closed. **DEPLOYED 2026-08-27** to
+> `admin.golfin.world` (Worker `golfin-admin`, version `dff3d655-0441-48c8-b73f-542585fae843`).
+>
+> ⚠️ **"DEPLOY" IS TWO SURFACES.** `playlife-api` (Fly) and `golfin-admin` (Cloudflare Worker) are
+> separate deploys with separate commands, and the API deploy does NOT ship the dashboard. Missed
+> once already on this task: the API went out, §4 was marked PASS on `tsc --noEmit`, and Cesar
+> found the old red banner still live in the admin. The dashboard command is
+> `npm --prefix Tools/admin-dashboard run deploy`; verify by grepping the new copy out of
+> `.open-next/assets/`, never from the exit code. It stashes `.env.development.local` during the
+> build and shares `.next/` with `next dev`, so stop any dev server first.
 
 > **`quality_tiers` (roadmap 9a, Order 900 — PERF Phase 2) — CODE + ASSETS + UI DONE 2026-08-27,
 > DEVICE NUMBERS NOT RUN.** Implemented DIRECTLY by the main Claude Code thread — no implementer /

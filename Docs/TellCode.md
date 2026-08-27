@@ -36,6 +36,20 @@
 
 ## 📋 SPEC_READY POINTERS
 
+- **`shop_stocking`** (filed 2026-08-27, Architect via Cowork) — **SPEC_READY, kickoff pasteable
+  AFTER the `shop_server_purchase` Unity half is committed (untracked at filing).** Cesar's
+  requirement: stock the shop from the admin and have the next build carry it; a client missing
+  any information must never show a broken item or wrongly spend RP. Three verified gaps closed:
+  (1) NO `+ New row` control exists in the admin for ANY catalog — `RowEditor` shows `rowId`
+  read-only; backend already upserts drafts by rowId + publishes `on conflict do update`;
+  (2) `export_content.py --check` is never run by the release lane → lane aborts on a stale repo
+  (never auto-exports: build number = commit count); (3) `GeneralShopCatalog.Admit` admits rows
+  whose ref/sprite the client cannot resolve → withhold + log. D2/D4 become validator rules:
+  `lib/buildGates.ts` `SHOP_CATEGORY_STRICT_BUILD` = 0 until read from `last_uploaded_build.txt`
+  after the archive (2334 was a guess — HEAD is 2338); G1 character/item rows need
+  `minBuild ≥` it, G2 shop `minBuild ≥` referenced row's. Backend: one added refusal
+  `ref_min_build` via a new migration. Next spec `content_two_way` = admin-created
+  characters/clubs (art) + `import_content.py` CSV → drafts. Spec: `Docs/Specs/Active/shop_stocking/SPEC.md`.
 - **`hole02_tree_bake_drift`** (filed 2026-08-27, Architect via Cowork; **REVISED same day — re-import is
   destructive, do not re-import**) — **kickoff-sized, pasteable (this block is the spec). Hole 02
   collides with 1,495 invisible Spruce.** Root cause verified: the 07-29 re-import (`4b0054069`) ran on
@@ -142,6 +156,55 @@ this TellCode pointer.
   ARCHITECT_BRIEF.md` into the Active folder (git mv) — it is the Phase 1 hand-off the spec cites.
 - ~~**`perf_phase1_free_wins`**~~ — ✅ **DONE 2026-08-27** (`cca3cfd1a`; every pose 60 fps cold; Option C
   dropped after measurement; the 2314 "flat terrain" proven pre-existing). Move Active/ → Completed/.
+
+### Kickoff · shop_stocking (issued 2026-08-27) — run AFTER committing shop_server_purchase
+
+```
+FIRST: commit the shop_server_purchase Unity half (Assets/Scripts/Economy/
+ShopPurchaseService.cs and the rest are untracked in the working tree) — its own
+commit, its own message. Then:
+
+Read Docs/Specs/Active/shop_stocking/SPEC.md and implement it, in the spec's §8 order.
+
+Context:
+- Stocking the shop from the admin, end to end. Three verified gaps: no "+ New row"
+  control in CatalogPanel/RowEditor (backend upsert + publish already handle a new
+  rowId); the testflight_build lane never runs export_content.py --check; the client
+  admits shop rows whose ref or sprite it cannot resolve and renders a blank card.
+- Admin: "+ New row" on the shared CatalogPanel (all catalogs), rowId editable only
+  while exists === false, validated server-side in upsertDraftRow (regex, ≤80,
+  unique across drafts AND published → 409), ID column written from rowId, shop
+  prefill rowId = "shop_" + refId after a RefPicker pick, audit action
+  content_row_create, EN+JA DICT, mock store parity. New lib/buildGates.ts with
+  SHOP_CATEGORY_STRICT_BUILD = 0 (move the panel's SERVER_PRICE_ENFORCED_FROM_BUILD
+  there; the 2334 guess is wrong — build number is commit count). Validator rules
+  G1 (non-club/ball rows need minBuild ≥ the constant; constant 0 → error) and G2
+  (shop minBuild ≥ referenced row's min_build). Banner copy for both states.
+- Backend: NEW migration 2026_08_28_shop_purchase_ref_min_build.sql that
+  create-or-replaces golfin_shop_purchase() with the added ref_min_build refusal.
+  Never edit the applied migration. Print the FULL SQL in chat for Cesar; wait for
+  his verification output; deploy with ~/.fly/bin/flyctl; confirm via flyctl status;
+  §2.5 smoke from shop_server_purchase.
+- fastlane: sh("python3 ../Tools/content/export_content.py --env-file
+  ../Tools/admin-dashboard/.env.development.local --check") right after
+  assert-unity-closed.sh; non-zero aborts; NO auto-export. Update
+  Docs/TESTFLIGHT_RUNBOOK.md with the export → commit → rerun loop.
+- Client: GeneralShopCatalog.Admit resolves the ref in the matching DB
+  (Club/Ball/Character/ItemDatabaseCSV) and requires a non-Placeholder primary
+  sprite; unresolvable → withheld + LogWarning + counted; null DB singleton → skip
+  with one log (EditMode must not become withhold-everything). GeneralShopCard.Bind*
+  null-row branch → SetActive(false) + LogError.
+- Minimal diff. Reuse: upsertDraftRow, writeAudit, RefPicker, ctx.otherCatalogs,
+  export_content.py --check, RequireReady pattern, the existing summary log line.
+- Out of scope: art upload / art-by-URL, import_content.py, golfin_characters
+  mirror, stockLimit/minPlayerLevel, Roster card, stamina shop, closing the legacy
+  /points/spend reason (still on Cesar's word only).
+
+When done: list changed files (both repos) with a 1-line summary each, run the
+acceptance tests in the spec (Editor with a seeded overlay cache — no device pass by
+default), update STATUS.md + IMPLEMENTER_REPORT.md in the spec folder, and update
+Docs/AI_CONTEXT.md.
+```
 
 ### Kickoff · shop_server_purchase (issued 2026-08-27)
 
