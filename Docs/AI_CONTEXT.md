@@ -235,10 +235,22 @@
 > warnings). `content_version.txt` re-exported to `texts=12` and committed. **`--check` now exits
 > 0 and `testflight_build` proceeds.**
 >
-> **⚠️ STILL WAITING ON CESAR: §8 steps 4-6.** Archive, read
-> `Docs/Versioning/last_uploaded_build.txt`, set `SHOP_CATEGORY_STRICT_BUILD`, redeploy the
-> dashboard (its OWN surface — `npm --prefix Tools/admin-dashboard run deploy`; the API deploy
-> does not ship it), then publish the first character/item shop rows.
+> **§8 STEPS 4-5 DONE the same day — the whole chain is live.**
+> **Build 2350 (1.5.7) is on TestFlight**: the lane ran end to end and all four gates passed,
+> including the new content gate on its first real lane run. `last_uploaded_build.txt` 2333 →
+> 2350, and `SHOP_CATEGORY_STRICT_BUILD` was set to **2350 read out of that file** — the panel's
+> old 2334 guess ("last upload + 1") was SIXTEEN commits off, which is the entire argument for
+> reading it. Dashboard redeployed (Cloudflare `b4aa4467`, 100%, confirmed from Cloudflare's
+> deployment list rather than an exit code), so G1 now says "min_build ≥ 2350" instead of
+> refusing outright, and the banner reads "enforced for builds 2350 and later".
+> **`shop_catalog` v4 sells its first non-club rows**: `shop_char_mike` 150 RP and
+> `shop_item_repairkit_common` 75 RP, both min_build 2350, both inside their ECONOMY_MASTER band,
+> exported and committed so 2351+ bundles them.
+>
+> **⚠️ WHAT IS LEFT.** §8 step 6 — closing the legacy `/points/spend` `shop_purchase` reason —
+> stays unshipped on Cesar's word only, once testers are on 2350: enforcement is only as good as
+> the OLDEST build in the wild. And **the endpoint has still never sold anything**; 2350 is the
+> first client that can call it and the shop now has something to sell.
 >
 > **No hook guards this drift, deliberately.** One was written, smoke-fired and wired on
 > 2026-08-27, then removed the same day: `import_content.py` (`content_two_way`, §7) lands today

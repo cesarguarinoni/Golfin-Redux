@@ -101,13 +101,15 @@ backend half (`playlife`).
 - **§4 is applied and smoked** (2026-08-27, Cesar). What is NOT done is a live
   purchase through the new refusal — that needs a real client and rides with the
   device pass alongside the other `shop_server_purchase` §6 *(device)* items.
-- **§8 steps 4-6** (archive → read `last_uploaded_build.txt` → set
-  `SHOP_CATEGORY_STRICT_BUILD` → redeploy the dashboard → publish the first
-  character/item rows) are Cesar's, by construction: the constant must be READ from
-  an archive that does not exist yet.
-- **The dashboard was not redeployed.** The admin half of this task is committed but
-  not live; deploying is a separate, outward-facing action and the constant it would
-  ship is about to change anyway (step 4 above).
+- **§8 steps 4-5 are DONE** (2026-08-27, same day). The lane ran end to end and
+  uploaded **build 2350 (1.5.7)**; `SHOP_CATEGORY_STRICT_BUILD` was set to 2350 read
+  out of `last_uploaded_build.txt`; the dashboard is live at Cloudflare version
+  `b4aa4467`; and `shop_catalog` v4 carries the first character and item rows at
+  min_build 2350. What remains is **§8 step 6 only** — closing the legacy
+  `/points/spend` shop reason, which is deliberately on Cesar's word once testers are
+  on 2350, because enforcement is only as good as the oldest build in the wild.
+- **No purchase has ever completed.** The endpoint went live 2026-08-27 and 2350 is
+  the first client that can call it; the shop now has something for it to sell.
 - **Out of scope, untouched:** art upload / art-by-URL, `import_content.py`, the
   `golfin_characters` mirror on publish, `stockLimit` / `minPlayerLevel`, the locked
   Roster card, the stamina shop, and closing the legacy `/points/spend` shop reason.

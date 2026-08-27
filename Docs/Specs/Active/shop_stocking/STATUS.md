@@ -49,7 +49,26 @@ DONE AND VERIFIED
       today and removes the failure mode rather than warning about it. In the
       history at `fd85327c0` if that slips. Lesson BN carries the reasoning.
 
+  §8 STEPS 4-5 DONE 2026-08-27. Lane run end to end: all four gates passed
+      (clean tree, Unity closed, the NEW content gate green on its first real
+      lane run, then Unity batchmode + xcodebuild), **build 2350 (1.5.7)
+      uploaded to TestFlight** — Apple's own transporter confirmed the upload,
+      not an exit code. `last_uploaded_build.txt` 2333 -> 2350.
+      `SHOP_CATEGORY_STRICT_BUILD` set to **2350**, READ from that file (the old
+      2334 guess was 16 commits off). Dashboard redeployed twice — Cloudflare
+      version `b4aa4467-f9f6-4b8e-8282-2992c7b98bd2` at 100%. First non-club
+      rows published as **shop_catalog v4**: `shop_char_mike` (150 RP) and
+      `shop_item_repairkit_common` (75 RP), both at min_build 2350, both inside
+      their economy band; exported and committed so build 2351+ bundles them.
+
 AWAITING CESAR
-  1. §8 steps 4-6 — archive, read `last_uploaded_build.txt`, set
-     `SHOP_CATEGORY_STRICT_BUILD`, redeploy the dashboard, then publish the first
-     character/item rows.
+  1. §8 step 6 — closing the legacy `/points/spend` `shop_purchase` reason.
+     Deliberately unshipped, on Cesar's word only, once testers are on 2350:
+     enforcement is only as good as the OLDEST build in the wild.
+  2. **The endpoint has still never sold anything.** Build 2350 is the first one
+     that can, and the shop now has a character and an item to sell it. Whoever
+     runs 2350 first exercises price-is-the-server's, the sale window on the
+     server clock, delivery-survives-death, idempotent replay, the kill switch
+     and already-owned — all of `shop_server_purchase` §6.
+  3. Approval + moving this folder to `Docs/Specs/Completed/` — Cesar's, per
+     CLAUDE.md rule 6. No subagent may write DONE.
