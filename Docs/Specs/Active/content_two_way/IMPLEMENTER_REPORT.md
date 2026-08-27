@@ -80,10 +80,10 @@ verbatim in `HEARTBEAT.log`'s baseline block, and nothing in this task reads or 
 
 | Item | Result | Justification |
 |---|---|---|
-| **Round trip** — CSV edit → import → publish → export byte-identical, `--check` clean | PASS | Pinned as an automated property against the REAL `Assets/Data/Balls.csv`: `RoundTripProperty.test_the_loop_is_byte_identical` and `…test_a_value_edited_in_unity_survives_the_loop_in_canonical_form` (import → publish → export reproduces the edit and nothing else, and a second pass proposes 0 changes). The against-prod half of this bullet is §8 step 3 (throwaway text key) — **left to Cesar**, see § Spec deviations. |
+| **Round trip** — CSV edit → import → publish → export byte-identical, `--check` clean | PASS | **Run against PROD** (§8 step 3, 2026-08-27) on `HOME_CURRENCY_LABEL`, a key referenced nowhere outside the CSV so nothing could render it mid-rehearsal. `COINS/コイン` → `RP COINS/RP コイン` → import (1 change, 505 same, 0 conflict, `content_rows` untouched) → Cesar published (texts v12→v13) → export: **CSV byte-identical**, sha256 `96eca1d2…` before and after, `cmp` clean, only `content_version.txt` moved → `--check` clean, exit 0. Then the same loop in REVERSE (v13→v14) put prod back; CSV `cmp`-identical to its pre-rehearsal bytes. Also pinned as an automated property against the real `Balls.csv` (`RoundTripProperty`, 2 tests). |
 | Import refuses the run on a dirty draft, names the rows, exit 1; `--overwrite-dirty` lets the CSV win with an audit row | PASS | `CliRefusal.test_a_dirty_draft_refuses_the_whole_run_and_writes_nothing` drives `main()` and asserts exit 1, "REFUSED", the row id, "--overwrite-dirty", and `client.writes == []` (the CLEAN row is not written either). `test_overwrite_dirty_applies_and_says_what_it_clobbered` asserts exit 0, "OVERWRITING", and the CSV value landing in the draft; `Applying.test_apply_…` asserts the audit row carries `via: import_content.py`. |
 | A row deleted from a CSV is reported, not deactivated | PASS | `PlanVerdicts.test_a_row_deleted_from_the_csv_is_reported_never_deactivated`: `plan.catalog_only == ["ball_retired"]`, `plan.touched == 0`, and every `content_rows` row still `is_active == True`. |
-| `--check` on a value-only CSV edit names the loop; after import "imported, not yet published"; clean after publish+export | PASS | Both branches unit-tested (`ValueDirection`, 6 tests) **and** fired live against prod: with `ball_putt_ace.power` edited 10→9 locally, `--check --catalogs balls` printed `balls: values differ from published for 1 row(s) (ball_putt_ace): if you edited the CSV, run import_content.py --apply then publish; if not, run the exporter.` and exited 1. CSV restored (`git diff` empty). The "imported, not yet published" branch is proven by test, not against prod, because proving it live requires writing prod drafts — see § Spec deviations. |
+| `--check` on a value-only CSV edit names the loop; after import "imported, not yet published"; clean after publish+export | PASS | All three stages fired live against prod during the §8-step-3 rehearsal. Before importing: `texts: values differ from published for 1 row(s) (HOME_CURRENCY_LABEL): if you edited the CSV, run import_content.py --apply then publish; if not, run the exporter.` (exit 1). After `--apply`: `texts: 1 row(s) imported, not yet published — publish texts in the admin: HOME_CURRENCY_LABEL` (exit 1). After publish + export: `--check: clean — no file would change and no catalog has drifted.` (exit 0). Both branches are also unit-tested (`ValueDirection`, 6 tests). |
 | Editor: rename a `portraitSprite` → no owned and no locked card; save still carries it if owned; shop withholds it; warning names it; restore → back | PASS | Measured in play mode. Before: `all=12 available=12 rosterCards=12 unrenderable=[]`. After renaming `char_olivia` → `Olivia_MISSING_two_way`: `all=12 available=11 rosterCards=11 unrenderable=[char_olivia]` and the carousel shows no Olivia card (canonical screenshot). Shop rail via the shipping `GeneralShopCatalog.UnrenderableReason`: `char_olivia → "no usable character portrait"`, `char_james → ADMITTED`. Warning, verbatim from `Editor.log:134839`: `[CharacterDatabaseCSV] 1 character(s) withheld (unrenderable — sprite missing in this build; ships when the art does): char_olivia`. Restored: `all=12 available=12 rosterCards=12 unrenderable=[]`, Olivia back in the carousel. "Save carries it if owned" is pinned by `An_owned_but_unrenderable_character_survives_the_round_trip` (the live save had no `char_olivia` record because that character is *locked*, not owned). |
 | Clubs unchanged — a club with missing art still renders Placeholder in the bag | PASS | Measured in play mode: `clubs=799 placeholderPortraits=150 nullPortraits=0`, sample `club_driver_fairloft_common → Placeholder`. `ClubDatabaseCSV` has **zero** diff; `GeneralShopModel`'s club branch still uses `Usable()`/Placeholder-by-name. |
 | `Validate Catalog Art` lists the renamed character; `CIBuild` still succeeds; the report file is written | PASS | With the rename in place the report read `── characters (12 row(s), 1 with missing art) / char_olivia portraitSprite Olivia_MISSING_two_way → withheld`; after restoring, `every sprite column resolves.` `Docs/Reports/content_art_2361.txt` exists (697 lines, build number from `git rev-list --count HEAD`). CIBuild: the step is `try`-wrapped with **no return path** — it cannot produce a failure message, so the build outcome is unchanged by construction. |
@@ -108,13 +108,34 @@ None.
   quantities for any id are still restored in step 2, so nothing owned is lost.
 - **`LabInventoryStub.cs:180` and `MatchmakingCaptureRunner.cs:127` were left on `GetAll…`.** Both
   are editor/lab diagnostics, not player-facing lists; the lab stub deliberately shows everything.
-- **§8 step 3 (round-trip rehearsal against prod on a throwaway text key) was NOT run.** It requires
-  writing `content_drafts` on prod and a human pressing publish in the admin. Both are Cesar's to
-  authorise; the property is pinned automatically instead. The **read-only** halves were run against
-  prod: import dry-run (below) and `export --check`, both clean.
+- ~~**§8 step 3 was NOT run.**~~ **RESOLVED 2026-08-27** — Cesar authorised it and published both
+  legs. See the first two acceptance rows. Net effect on prod: none (`texts` went v12 → v14 and the
+  value is back where it started); net effect on the repo: `content_version.txt` `texts=12` → `14`.
+  The publish itself was deliberately left to Cesar rather than replicated in a script — "a human
+  publishes it" is the property being rehearsed, and a script that published would have tested the
+  wrong thing.
 - **The admin evidence is DOM text, not a `screenshots/*.png`.** The dashboard renders in a browser,
   not the Game View; the sanctioned capture path does not cover it. The rendered strings are quoted
   verbatim in the checklist instead.
+
+## §8 step 3 — round-trip rehearsal against prod (2026-08-27)
+
+Key: `HOME_CURRENCY_LABEL` — chosen because `grep -rl` finds it in NO file under `Assets/` outside
+`LocalizationText.csv` and the generated `LocalizationTextTable.asset`, so nothing renders it and
+the rehearsal had zero player exposure even between the two publishes.
+
+| Stage | Observed |
+|---|---|
+| Edit in Unity | `HOME_CURRENCY_LABEL,COINS,コイン` → `RP COINS,RP コイン` |
+| `--check` | *"if you edited the CSV, run `import_content.py --apply` then publish; if not, run the exporter."* exit 1 |
+| `import --catalogs texts` (plan) | `0 add / 1 change / 505 same / 0 conflict`; nothing written |
+| `import --catalogs texts --apply` | 1 draft; `content_rows` untouched; audit attributed |
+| `--check` | *"1 row(s) imported, not yet published — publish `texts` in the admin: HOME_CURRENCY_LABEL"* exit 1 |
+| Publish drawer (read from prod) | 506/506 rows, **exactly 1 changed**, both language columns |
+| Cesar publishes | `texts` v12 → v13 |
+| `export --catalogs texts` | CSV `unchanged` — sha256 identical before/after, `cmp` clean; only `content_version.txt` moved |
+| `--check` (all seven) | **clean, exit 0** |
+| Reverse leg | CSV reverted → import → Cesar publishes (v13 → v14) → export → CSV `cmp`-identical to pristine → `--check` clean |
 
 ## Import dry-run against prod (read-only)
 
