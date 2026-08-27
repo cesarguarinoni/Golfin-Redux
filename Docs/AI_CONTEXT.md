@@ -172,7 +172,7 @@
 
 > **`shop_stocking` — ADMIN + LANE + CLIENT DONE 2026-08-27; ONE MIGRATION AWAITS CESAR.**
 > Implemented DIRECTLY by the main Claude Code thread (no subagent chain), same as
-> `shop_server_purchase`. Spec + report: `Docs/Specs/Active/shop_stocking/`.
+> `shop_server_purchase`. Spec + report: `Docs/Specs/Completed/shop_stocking/` (**DONE 2026-08-27**).
 >
 > Three gaps between "the admin can publish a shop row" and "the shop is stocked":
 >
@@ -288,7 +288,7 @@
 > **`shop_server_purchase` (CONTENT_PIPELINE_PLAN §6 step 4d / §11.5) — BOTH REPOS CODE-COMPLETE
 > 2026-08-27. BACKEND APPLIED + DEPLOYED AND SMOKED; NOT SEEN ON A SCREEN, NEVER SOLD ANYTHING.** Implemented DIRECTLY by the main
 > Claude Code thread — no implementer / self-reviewer / red-team chain ran. Spec + report:
-> `Docs/Specs/Active/shop_server_purchase/`.
+> `Docs/Specs/Completed/shop_server_purchase/` (**DONE 2026-08-27**).
 >
 > **The shop price is now the SERVER's.** A purchase is one `POST /api/v1/shop/purchase` carrying
 > the **entry id and never a price**. `public.golfin_shop_purchase()` reads the published

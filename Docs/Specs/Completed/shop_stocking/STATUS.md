@@ -1,4 +1,4 @@
-READY_FOR_SELF_REVIEW
+DONE
 
 Filed 2026-08-27 (Architect via Cowork). Kickoff in Docs/TellCode.md.
 Implemented directly by Claude Code across both repos (no subagent chain — same

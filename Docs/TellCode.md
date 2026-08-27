@@ -36,20 +36,17 @@
 
 ## 📋 SPEC_READY POINTERS
 
-- **`shop_stocking`** (filed 2026-08-27, Architect via Cowork) — **SPEC_READY, kickoff pasteable
-  AFTER the `shop_server_purchase` Unity half is committed (untracked at filing).** Cesar's
-  requirement: stock the shop from the admin and have the next build carry it; a client missing
-  any information must never show a broken item or wrongly spend RP. Three verified gaps closed:
-  (1) NO `+ New row` control exists in the admin for ANY catalog — `RowEditor` shows `rowId`
-  read-only; backend already upserts drafts by rowId + publishes `on conflict do update`;
-  (2) `export_content.py --check` is never run by the release lane → lane aborts on a stale repo
-  (never auto-exports: build number = commit count); (3) `GeneralShopCatalog.Admit` admits rows
-  whose ref/sprite the client cannot resolve → withhold + log. D2/D4 become validator rules:
-  `lib/buildGates.ts` `SHOP_CATEGORY_STRICT_BUILD` = 0 until read from `last_uploaded_build.txt`
-  after the archive (2334 was a guess — HEAD is 2338); G1 character/item rows need
-  `minBuild ≥` it, G2 shop `minBuild ≥` referenced row's. Backend: one added refusal
-  `ref_min_build` via a new migration. Next spec `content_two_way` = admin-created
-  characters/clubs (art) + `import_content.py` CSV → drafts. Spec: `Docs/Specs/Active/shop_stocking/SPEC.md`.
+- ~~**`shop_stocking`**~~ — ✅ **DONE 2026-08-27** (`cd97bdeaa` + follow-ups). All of §8 shipped
+  the same day: `+ New row` on every catalog panel, `lib/buildGates.ts`
+  `SHOP_CATEGORY_STRICT_BUILD` (set to **2350**, read from `last_uploaded_build.txt` — the old
+  2334 guess was 16 commits off) with validator rules G1/G2, the release lane's
+  `export_content.py --check` gate, and the client withholding any row whose ref or sprite it
+  cannot resolve. Build **2350 (1.5.7)** archived and on TestFlight; `shop_catalog` **v4** sells
+  its first character and item rows; the admin is live at Cloudflare `b4aa4467`. `import_content.py`
+  (the `content_two_way` half that made CSV-ahead drift fixable) landed alongside. Cesar bought
+  Mike on 2350 — the endpoint's first-ever sale, verified in the ledger — and §2.6 closed the
+  legacy `/points/spend` shop path (playlife-api v55). Spec moved to
+  `Docs/Specs/Completed/shop_stocking/`.
 - **`hole02_tree_bake_drift`** (filed 2026-08-27, Architect via Cowork; **REVISED same day — re-import is
   destructive, do not re-import**) — **kickoff-sized, pasteable (this block is the spec). Hole 02
   collides with 1,495 invisible Spruce.** Root cause verified: the 07-29 re-import (`4b0054069`) ran on
@@ -157,7 +154,7 @@ this TellCode pointer.
 - ~~**`perf_phase1_free_wins`**~~ — ✅ **DONE 2026-08-27** (`cca3cfd1a`; every pose 60 fps cold; Option C
   dropped after measurement; the 2314 "flat terrain" proven pre-existing). Move Active/ → Completed/.
 
-### Kickoff · shop_stocking (issued 2026-08-27) — run AFTER committing shop_server_purchase
+### Kickoff · shop_stocking (issued 2026-08-27) — ✅ SPENT, task DONE 2026-08-27. Kept for history.
 
 ```
 FIRST: commit the shop_server_purchase Unity half (Assets/Scripts/Economy/
