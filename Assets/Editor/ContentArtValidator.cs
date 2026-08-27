@@ -27,7 +27,6 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -140,8 +139,12 @@ namespace Golfin.EditorTools
             public string ToText(int build)
             {
                 var sb = new StringBuilder();
-                sb.AppendLine($"content_art — build {build}");
-                sb.AppendLine($"generated {DateTime.Now:yyyy-MM-dd HH:mm:ss}  (GOLFIN/Content/Validate Catalog Art)");
+                // Build number: yes — it is what dates the contents, and it costs one line of
+                // diff per build. Wall-clock timestamp: NO. It would change on every
+                // regeneration and make the file dirty on builds whose coverage is identical,
+                // which is the churn the stable filename exists to remove. Git already knows
+                // when the commit happened.
+                sb.AppendLine($"content_art — build {build}   (GOLFIN/Content/Validate Catalog Art)");
                 sb.AppendLine();
                 sb.AppendLine("WARNING-ONLY REPORT. A row whose data is published and whose art ships in a later");
                 sb.AppendLine("build is a legitimate state: content_two_way §4 withholds it from every visible list");
@@ -323,7 +326,15 @@ namespace Golfin.EditorTools
                 string root = Directory.GetParent(Application.dataPath)!.FullName;
                 string dir = Path.Combine(root, ReportDir);
                 Directory.CreateDirectory(dir);
-                string rel = $"{ReportDir}/content_art_{build}.txt";
+                // ONE STABLE FILENAME, not content_art_<build>.txt (Cesar, 2026-08-27).
+                // The build number belongs INSIDE the file, never in the name: a per-build name
+                // makes every archive add a NEW ~700-line blob instead of modifying one, so git
+                // stores near-identical copies and shows no diffs at all — the worst of both
+                // ends. With a stable name an unchanged coverage picture produces NO diff, a
+                // character that starts or stops being withheld produces a two-line one (which
+                // is the signal §5 wanted), and "what did build N withhold" is still answerable,
+                // better than before: `git show <sha>:Docs/Reports/content_art.txt`.
+                string rel = $"{ReportDir}/content_art.txt";
                 File.WriteAllText(Path.Combine(root, rel), report.ToText(build));
                 return rel;
             }
