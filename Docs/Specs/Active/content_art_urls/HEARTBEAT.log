@@ -1,0 +1,7 @@
+=== spec authored 2026-08-27 ===
+Drafted by the main Claude Code thread (not the subagent chain), from a live read of:
+  Assets/Scripts/TournamentsRuntime/TournamentArtService.cs   (ctor already parameterised; 2 instances)
+  Assets/Scripts/BannersRuntime/BannerPolicy.cs               (allowlist shape to mirror)
+  Tools/admin-dashboard/lib/bannerMutations.ts                (uploadBannerArt: hash-named, bucket-on-first-use)
+  Docs/CONTENT_PIPELINE_PLAN.md §10                           (why not Addressables)
+  the ~20 sprite-binding consumers                            (why resolution happens at the LOADER)
