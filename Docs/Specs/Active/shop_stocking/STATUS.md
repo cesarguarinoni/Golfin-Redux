@@ -65,10 +65,13 @@ AWAITING CESAR
   1. §8 step 6 — closing the legacy `/points/spend` `shop_purchase` reason.
      Deliberately unshipped, on Cesar's word only, once testers are on 2350:
      enforcement is only as good as the OLDEST build in the wild.
-  2. **The endpoint has still never sold anything.** Build 2350 is the first one
-     that can, and the shop now has a character and an item to sell it. Whoever
-     runs 2350 first exercises price-is-the-server's, the sale window on the
-     server clock, delivery-survives-death, idempotent replay, the kill switch
-     and already-owned — all of `shop_server_purchase` §6.
+  2. ~~The endpoint has never sold anything.~~ **CLOSED 2026-08-27** — Cesar ran
+     2350 and bought `shop_char_mike` for 150 RP. Purchase row, grant and RP debit
+     all landed with the identical microsecond timestamp, the grant applied 148 ms
+     later, and `char_mike` is in the inventory blob. The end-to-end chain this
+     task built — admin row -> published catalog -> min_build gate -> client card
+     -> server price -> debit + grant in one transaction -> delivery — is proven
+     on a real device. Remaining §6 edges (sale window, replay, kill switch,
+     already-owned, delivery-survives-death) are still unexercised.
   3. Approval + moving this folder to `Docs/Specs/Completed/` — Cesar's, per
      CLAUDE.md rule 6. No subagent may write DONE.

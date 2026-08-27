@@ -249,8 +249,21 @@
 >
 > **⚠️ WHAT IS LEFT.** §8 step 6 — closing the legacy `/points/spend` `shop_purchase` reason —
 > stays unshipped on Cesar's word only, once testers are on 2350: enforcement is only as good as
-> the OLDEST build in the wild. And **the endpoint has still never sold anything**; 2350 is the
-> first client that can call it and the shop now has something to sell.
+> the OLDEST build in the wild.
+>
+> **THE CHAIN IS PROVEN END TO END, 2026-08-27.** Cesar ran build 2350 and bought
+> `shop_char_mike` for 150 RP — the first purchase this endpoint has ever made, weeks after it
+> went live. Verified in the database rather than taken from the device: `golfin_shop_purchases`
+> (charged 150 / list 150 / on_sale false / **build 2350**), `golfin_pending_grants`
+> (character/char_mike, by "shop"), `points_transactions` (-150 activity, the SAME idempotency
+> key), and `golfin_inventory` now carrying char_mike. **All three rows share the identical
+> `created_at` to the microsecond** — that is the one-plpgsql-function-is-one-transaction
+> guarantee visible in the data, i.e. there was no instant where the RP was gone and the grant
+> did not exist. The grant applied 148 ms later. Everything from "an operator adds a row in the
+> admin" to "the player owns the character" has now run for real. Still unexercised: the sale
+> window on the server clock, delivery-survives-death, idempotent replay, the kill switch, and
+> already-owned — the last is trivially reachable now, since a second BUY on Mike must refuse
+> without debiting.
 >
 > **No hook guards this drift, deliberately.** One was written, smoke-fired and wired on
 > 2026-08-27, then removed the same day: `import_content.py` (`content_two_way`, §7) lands today
