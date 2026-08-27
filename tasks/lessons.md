@@ -2835,13 +2835,22 @@ creating that row in the admin panel (`+ New row`, which only exists as of
 publishing it. A task that ships one half and not the other has left a landmine under
 the next release.
 
-**Enforced, not remembered.** `.claude/hooks/warn_catalog_csv_edit.py` (PostToolUse on
-`Write|Edit`) fires the moment one of those CSVs is written, names the catalog and what
-is owed, and exits 2 so the message reaches the session without undoing the write. Once
-per catalog per session. Its path list is IMPORTED from `catalogs.py` — never restated.
+**NOT enforced by a hook, deliberately.** A PostToolUse warning was written and wired on
+2026-08-27 and then removed the same day, on Cesar's call: `import_content.py`
+(`content_two_way`, spec §7) was scheduled for that day, and it does not warn about this
+failure — it REMOVES it. A CSV edit becomes a draft PROPOSAL, so "CSV ahead of catalog"
+stops being an error state at all. A guard whose whole job is about to be structurally
+obsolete is a guard that will still be firing, and still be maintained, long after it
+stops meaning anything. (It is in the history at `fd85327c0` if the structural fix ever
+slips.)
 
-**Still to do structurally:** `import_content.py` (`content_two_way`, spec §7) makes CSV
-edits into draft PROPOSALS instead of drift, which removes the failure mode rather than
-reporting it. Until then the hook is the guard and `--check` is the backstop.
+**Until then, `export_content.py --check` is the backstop** — it runs in
+`testflight_build` and refuses the archive. That is late, but it is never silent.
+
+**The 2026-08 instance is closed.** The five keys were created as drafts and published as
+`texts` v12 on 2026-08-27, after validating the full 506-row draft set through the same
+`validateCatalog` the publish button runs (0 errors, 0 warnings) and confirming the
+drafts were byte-identical to published first, so the publish shipped those five rows and
+nothing else.
 
 Related: [[project_editor_only_seams_break_player_builds]], [[feedback_never_arm_unverified_schedule]].
