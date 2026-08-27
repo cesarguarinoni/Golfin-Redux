@@ -35,8 +35,28 @@
  * Setting it is a one-line commit plus a dashboard redeploy — remember the
  * dashboard is its own deploy surface (`npm --prefix Tools/admin-dashboard run
  * deploy`); the API deploy does not ship it.
+ *
+ * ── SET 2026-08-27 ──────────────────────────────────────────────────────────
+ * Build **2350** (1.5.7) was archived and uploaded to TestFlight that day and is
+ * the first build carrying the `shop_server_purchase` client half. The number was
+ * READ from `Docs/Versioning/last_uploaded_build.txt` after the archive, which is
+ * what `Tools/mark-uploaded.sh` writes from `git rev-list --count HEAD`.
+ *
+ * Note how far off a guess would have been: the panel previously hard-coded 2334
+ * as "last upload (2333) + 1". The real number is 2350 — sixteen commits of
+ * daylight. That is the whole reason this is read and not inferred.
  */
-export const SHOP_CATEGORY_STRICT_BUILD = 0;
+/**
+ * ⚠️ THE `: number` ANNOTATION IS LOAD-BEARING. Do not remove it.
+ *
+ * Without it TypeScript infers the LITERAL type (`2350`), and every
+ * `SHOP_CATEGORY_STRICT_BUILD === 0` check — the pending-state test below and
+ * validator rule G1 — becomes a comparison between two non-overlapping literal
+ * types, i.e. a compile error (TS2367). This is a constant whose whole purpose
+ * is to be edited, and it flipped 0 -> 2350 on 2026-08-27; the annotation is
+ * what lets both states compile.
+ */
+export const SHOP_CATEGORY_STRICT_BUILD: number = 2350;
 
 /** True while the build carrying the strict client half is still unpublished. */
 export const shopCategoryBuildPending = (): boolean => SHOP_CATEGORY_STRICT_BUILD === 0;
