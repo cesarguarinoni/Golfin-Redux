@@ -325,7 +325,8 @@ namespace Golfin.Save.Tests
             Assert.DoesNotThrow(() => SaveSchemaMigrator.Migrate(data!));
 
             // Assert: schemaVersion bumped all the way to CurrentSchemaVersion (v9 now, Order 761) from v2
-            Assert.AreEqual(9, data!.schemaVersion, "schemaVersion must be 9 after full migration from v2 (v2→v3→v4→v5→v6→v7→v8→v9)");
+            Assert.AreEqual(SaveSchemaMigrator.CurrentSchemaVersion, data!.schemaVersion,
+                "a v2 save must run every migration block and land at CurrentSchemaVersion");
 
             // Assert: tournamentEntries is present and empty (not null)
             Assert.IsNotNull(data.tournamentEntries, "tournamentEntries must not be null after migration");
@@ -341,33 +342,40 @@ namespace Golfin.Save.Tests
         }
 
         // ── T5 Test 2: Fail-hard on v10 (future-version guard; v9 is now current per Order 761) ──
-        // Order 761 bumped CurrentSchemaVersion from 8→9 (wedge backfill signal).
-        // v9 is now legal; v10 is the next unknown future version that must throw.
+        // Q2 fail-hard: a save written by a NEWER build must throw rather than be silently
+        // downgraded. "Newer" is CurrentSchemaVersion + 1 BY DEFINITION — this test used to name
+        // the literal 10, which stopped being a future version the day v10 shipped and turned a
+        // real safety guarantee into a red test nobody could read. (content_overlay_catalogs)
 
         [Test]
-        public void T5_FailHard_V10Json_ThrowsSaveSchemaVersionException()
+        public void T5_FailHard_FutureVersionJson_ThrowsSaveSchemaVersionException()
         {
-            // A save written by a future build (v10) must throw, not silently corrupt.
-            // (v9 is now CurrentSchemaVersion after Order 761; v10 is an unknown future version.)
-            const string v10Json = @"{ ""schemaVersion"": 10, ""rewardPoints"": 1 }";
-            var data = JsonConvert.DeserializeObject<SaveData>(v10Json);
+            int futureVersion = SaveSchemaMigrator.CurrentSchemaVersion + 1;
+            string futureJson = "{ \"schemaVersion\": " + futureVersion + ", \"rewardPoints\": 1 }";
+
+            var data = JsonConvert.DeserializeObject<SaveData>(futureJson);
             Assert.IsNotNull(data);
 
             // Expect the Debug.LogError before the throw
             UnityEngine.TestTools.LogAssert.Expect(
                 UnityEngine.LogType.Error,
-                new System.Text.RegularExpressions.Regex(@"\[SaveSchemaMigrator\].*schema version 10"));
+                new System.Text.RegularExpressions.Regex(
+                    @"\[SaveSchemaMigrator\].*schema version " + futureVersion));
 
             Assert.Throws<SaveSchemaVersionException>(() => SaveSchemaMigrator.Migrate(data!));
         }
 
-        // ── T5 Test 3: CurrentSchemaVersion is 9 (bumped by Order 761 wedge backfill) ──
+        // ── T5 Test 3: CurrentSchemaVersion never goes backwards ──────────────
 
         [Test]
-        public void T5_CurrentSchemaVersion_Is9()
+        public void T5_CurrentSchemaVersion_IsMonotonicAndAtLeastV10()
         {
-            Assert.AreEqual(9, SaveSchemaMigrator.CurrentSchemaVersion,
-                "CurrentSchemaVersion must be 9 after Order 761 wedge backfill (gacha_history Stage 1 was 8, v8→v9 added)");
+            // A rollback sentinel, not a pin — see the same reasoning in
+            // GachaTicketTests.CurrentSchemaVersion_IsMonotonicAndAtLeastV10. Raise the floor
+            // deliberately when a migration lands; never to make a red test green.
+            Assert.GreaterOrEqual(SaveSchemaMigrator.CurrentSchemaVersion, 10,
+                "CurrentSchemaVersion must not go backwards. v10 = starting_character_selection " +
+                "(v9 was Order 761's wedge backfill, v8 gacha_history Stage 1).");
         }
 
         // ── T5 Test 5: v3 → v4 migration — condition fields default-safe ─────
@@ -402,7 +410,8 @@ namespace Golfin.Save.Tests
             Assert.DoesNotThrow(() => SaveSchemaMigrator.Migrate(data!));
 
             // schemaVersion bumped to 9 (Order 761 added v9 migration block — empty/safe for unseeded v3 data)
-            Assert.AreEqual(9, data!.schemaVersion, "schemaVersion must be 9 after v3→v4→v5→v6→v7→v8→v9 migration (Order 761)");
+            Assert.AreEqual(SaveSchemaMigrator.CurrentSchemaVersion, data!.schemaVersion,
+                "a v3 save must run every migration block and land at CurrentSchemaVersion");
 
             // All v3 fields still intact
             Assert.AreEqual(7777, data.rewardPoints);

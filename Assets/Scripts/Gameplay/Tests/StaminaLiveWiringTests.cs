@@ -387,7 +387,7 @@ namespace Golfin.Gameplay.Tests
         // task reviews in between.
         //
         // The constant's VALUE is pinned deliberately elsewhere, by
-        // GachaTicketTests.CurrentSchemaVersion_Is9 — that tripwire is what forces a
+        // GachaTicketTests.CurrentSchemaVersion_IsMonotonicAndAtLeastV10 — that tripwire is what forces a
         // human to review the migration chain on a bump. Do not duplicate it here.
         // ══════════════════════════════════════════════════════════════════════════
 

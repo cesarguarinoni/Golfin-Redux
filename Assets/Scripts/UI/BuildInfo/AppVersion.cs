@@ -24,6 +24,14 @@ namespace GolfinRedux.UI.BuildInfo
     /// If the stamp is missing or carries no numeric build (e.g. the editor fallback
     /// "v0.1.0 (editor) · …" when git is unavailable), <see cref="Full"/> degrades to
     /// the plain marketing version rather than printing a bogus number.
+    ///
+    /// SECOND CONSUMER — DO NOT CHANGE THE "(1234)" FORMAT WITHOUT READING THIS.
+    /// <c>Golfin.Content.ContentBuildNumber</c> parses the same parenthesised integer out of the
+    /// same file, and sends it as the <c>build=</c> parameter of the content endpoint. There it is
+    /// not cosmetic: the server withholds any row whose <c>min_build</c> exceeds it, so a format
+    /// change that made the parse fail would silently pin every client to build 0 and stop new
+    /// content reaching anyone. It is pinned by <c>ContentBuildNumberTests</c>, which parses the
+    /// real bundled stamp — a format change breaks a test rather than a shipped build.
     /// </summary>
     public static class AppVersion
     {

@@ -34,6 +34,60 @@
 
 ## 📋 SPEC_READY POINTERS
 
+- **`quality_tiers`** (roadmap `9a`, Order 900; filed 2026-08-27, Architect via Cowork) — **SPEC_READY,
+  kickoff pasteable. Phase 2 of `Docs/PERF_OPTIMIZATION_PLAN.md`.** Low / Mid / High resolved from a
+  device table in code (iOS `deviceModel` generation, Android GPU name + RAM + GLES3 caps, unknown → Mid),
+  Settings → Graphics override (Auto/Low/Mid/High, PlayerPrefs like volume/language), `tier` +
+  `tier_source` on `session_start`. Tiers = presentation only: render scale 0.6/0.7/0.8, fps 30/60/60,
+  shadows 1×512×15 m / 1×1024×40 m / **2×1024×60 m** (High trimmed from 4/100 for thermal headroom —
+  Cesar-judged), `maximumLODLevel` 1/0/0, tree wind off on Low (the approved `Vegetation.shader`
+  `multi_compile _WIND` + per-material keyword via `TreeWindDriver`; Spruce Wind Speed → 0), Home
+  bloom/HDR High only. **Never:** terrain, tree placement, cull distance, `lodBias`, basemap,
+  `drawInstanced` (Option C is dead per Phase 1). Decisions of record 2026-08-27: **no thermal
+  governor / no Adaptive Performance** (static tiers; telemetry decides later); **H06 heightmap density
+  = separate task** `hole_heightmap_density` (Queued, spec written). Acceptance includes the fairness
+  A/B (tree silhouettes identical Low vs High), per-tier cooled tables on H08/H06/H01, and a **5-minute
+  H06 endurance curve per tier** — the number Phase 1 showed the static 60 cannot hold.
+  Spec: `Docs/Specs/Active/quality_tiers/SPEC.md`. Move Code's `Docs/Specs/Queued/9a_quality_tiers/
+  ARCHITECT_BRIEF.md` into the Active folder (git mv) — it is the Phase 1 hand-off the spec cites.
+- ~~**`perf_phase1_free_wins`**~~ — ✅ **DONE 2026-08-27** (`cca3cfd1a`; every pose 60 fps cold; Option C
+  dropped after measurement; the 2314 "flat terrain" proven pre-existing). Move Active/ → Completed/.
+
+### Kickoff · quality_tiers (issued 2026-08-27)
+
+```
+Read Docs/Specs/Active/quality_tiers/SPEC.md and implement it.
+
+Context:
+- Phase 2 of the perf plan: Low/Mid/High tiers. Three URP assets (Mobile_RPAsset becomes
+  High in place — keep its GUID; Low/Mid are duplicates), three Quality levels (Low=0,
+  Mid=1, High=2, PC=3; platform default Mid), QualityTierService + QualityTierResolver in
+  Golfin.Gameplay.UI (Assets/Scripts/Gameplay/UI/ShotUI/Quality/ — verified: Physics.Viewer
+  references Gameplay.UI, and Gameplay.UI already references URP runtime; Assembly-CSharp
+  is NOT reachable from asmdefs). Boot at AfterSceneLoad, after FramePacingBootstrap.
+- Tree wind off on Low: edit the 5 `#pragma shader_feature _WIND` in
+  Assets/Packs/BSP Trees Package/Shaders/Vegetation.shader to `multi_compile _ _WIND`
+  (approved), then toggle PER MATERIAL through TreeWindDriver (a global
+  Shader.DisableKeyword cannot override a material-enabled keyword). Spruce: set
+  Vector1_b0ddedae341d4c7ba1d429299f3078ea (Wind Speed) to 0 on Spruce_1/Spruce_2.mat.
+- Settings UI: duplicate the Language submenu (LanguageSubmenu.cs + prefab) into a Graphics
+  item with Auto/Low/Mid/High; new SETTINGS_GRAPHICS / SETTINGS_QUALITY_* keys EN+JP.
+- Fairness rule is hard: tiers never change terrain, tree placement, cull distance, lodBias.
+  Option C (basemap/drawInstanced) is dead — do not touch terrain settings.
+- Minimal diff. Reuse PerfBaselineBot (jobs from index 14, `tier=` in job.txt, 5-minute H06
+  endurance jobs). Pinned sky + yaw + 3 runs; fps/frameMs are the verdict.
+- Out of scope: thermal governor / Adaptive Performance, H06 heightmap (own task), Spruce
+  conversion, in-game gear control, audio/textures, Hole 02 trees.
+
+When done: list changed files with a 1-line summary each, run the acceptance checklist
+(resolver tests, override round-trip, fairness A/B frames Low vs High, per-tier cooled
+tables H08/H06/H01, 5-min H06 endurance per tier, wind on/off proof, Home bloom, build-size
+delta, telemetry fields), flag the three Cesar-judged items (High shadows 2/60 look, fairness
+A/B, aim-arrow feel at 30 fps on Low), append §12 to Docs/Reports/perf_baseline_2026-08-26.md,
+update STATUS.md + IMPLEMENTER_REPORT.md, and update Docs/AI_CONTEXT.md.
+```
+
+
 - **`perf_phase1_free_wins`** (filed 2026-08-26, Architect via Cowork) — **SPEC_READY, kickoff
   pasteable. Phase 1 of `Docs/PERF_OPTIMIZATION_PLAN.md`.** Phase 0b (`Docs/Reports/
   perf_baseline_2026-08-26.md` §10) measured, cooled + pinned + 3-run + frame-verified, on Hole 08:

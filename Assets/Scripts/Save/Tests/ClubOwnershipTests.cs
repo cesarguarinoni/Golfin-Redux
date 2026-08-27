@@ -207,7 +207,8 @@ namespace Golfin.Save.Tests
             SaveSchemaMigrator.Migrate(data!);
 
             // Must migrate through v6 (grandfather), v7, v8 (gacha), v9 (wedge) → CurrentSchemaVersion 9
-            Assert.AreEqual(9, data!.schemaVersion, "v5 save migrates through v6→v9; must land at CurrentSchemaVersion 9");
+            Assert.AreEqual(SaveSchemaMigrator.CurrentSchemaVersion, data!.schemaVersion,
+                "a v5 save must run every migration block and land at CurrentSchemaVersion");
             Assert.IsTrue(data.grandfatherClubs, "unseeded pre-v6 save must be flagged for grandfather-all (D-A3)");
             Assert.IsFalse(data.clubOwnershipSeeded, "migrator does not seed — ClubManager does");
             // clubOwnershipSeeded=false → v8→v9 must NOT set wedgeBackfillPending (fresh path gets wedge from DefaultBagIds)
@@ -229,7 +230,8 @@ namespace Golfin.Save.Tests
             SaveSchemaMigrator.Migrate(data!);
 
             // Must migrate through v6, v7, v8 (gacha), v9 (wedge) → CurrentSchemaVersion 9
-            Assert.AreEqual(9, data!.schemaVersion, "v2 save migrates through v6→v9; must land at CurrentSchemaVersion 9");
+            Assert.AreEqual(SaveSchemaMigrator.CurrentSchemaVersion, data!.schemaVersion,
+                "a v2 save must run every migration block and land at CurrentSchemaVersion");
             Assert.IsFalse(data.grandfatherClubs, "an already-seeded save must never be grandfathered on migrate");
             Assert.AreEqual(1, data.ownedClubs.Count, "existing owned list preserved");
             // clubOwnershipSeeded=true → v8→v9 MUST set wedgeBackfillPending (grant+equip wedge on next load)
@@ -244,7 +246,8 @@ namespace Golfin.Save.Tests
             // grandfatherClubs must NOT be set (it was already set at v5→v6 time, not re-set here).
             var data = new SaveData { schemaVersion = 6, clubOwnershipSeeded = true };
             SaveSchemaMigrator.Migrate(data);
-            Assert.AreEqual(9, data.schemaVersion, "v6 migrates to v9 (gacha Stage 1 + gacha_history + wedge backfill)");
+            Assert.AreEqual(SaveSchemaMigrator.CurrentSchemaVersion, data.schemaVersion,
+                "a v6 save must run every migration block and land at CurrentSchemaVersion");
             Assert.IsFalse(data.grandfatherClubs, "v5→v6 block does not run on a v6-start; no grandfather signal");
 #pragma warning disable CS0618
             Assert.AreEqual(10, data.gachaTickets, "v6→v7 seeds gachaTickets=10 (test grant); v8 reads it but does not clear it");
@@ -262,7 +265,8 @@ namespace Golfin.Save.Tests
             // The v8→v9 migration sets the backfill signal for both. ClubManager then grants+equips on load.
             var data = new SaveData { schemaVersion = 8, clubOwnershipSeeded = true };
             SaveSchemaMigrator.Migrate(data);
-            Assert.AreEqual(9, data.schemaVersion, "v8 seeded save must migrate to v9");
+            Assert.AreEqual(SaveSchemaMigrator.CurrentSchemaVersion, data.schemaVersion,
+                "v8 seeded save must migrate to v9");
             Assert.IsTrue(data.wedgeBackfillPending,
                 "an already-seeded existing-player save must be flagged for wedge backfill (Order 761)");
         }
@@ -274,7 +278,8 @@ namespace Golfin.Save.Tests
             // (edge case; should not happen in production, but the migrator must be safe).
             var data = new SaveData { schemaVersion = 8, clubOwnershipSeeded = false };
             SaveSchemaMigrator.Migrate(data);
-            Assert.AreEqual(9, data.schemaVersion);
+            Assert.AreEqual(SaveSchemaMigrator.CurrentSchemaVersion, data.schemaVersion,
+                "must land at CurrentSchemaVersion");
             Assert.IsFalse(data.wedgeBackfillPending,
                 "an unseeded save must NOT set the wedge backfill flag (wedge comes from DefaultBagIds + grandfather seed)");
         }

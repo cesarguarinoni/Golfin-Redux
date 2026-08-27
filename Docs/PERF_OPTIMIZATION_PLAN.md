@@ -92,13 +92,13 @@ Detection: iOS by `SystemInfo.deviceModel` → chip generation (table-driven, un
 | Tree shadow casting | off (terrain + trees) | on | on |
 | `maximumLODLevel` | 1 (no LOD0) | 0 | 0 |
 | Tree wind | **off** (`WindSpeedFloat1 = 0` + Spruce `Wind Speed` 0; ideally the `_WIND`-off variant, see §4 Option F) | on | on |
-| Terrain basemap distance | 60 m | 100 m | 150 m |
+| ~~Terrain basemap distance~~ | — | — | — (Option C dead: Phase 1 measured no gain; `drawInstanced` flattens distant terrain + stripping risk) |
 | Post-processing (Shell) | off | off | on |
 | Water | no refl., no edge fade | cubemap refl. | as now |
 | Aniso | off | per-texture | per-texture |
 | MSAA | off | off | off (2× optional later) |
 
-Everything not listed is identical across tiers. Terrain `DrawInstanced` on for all tiers.
+Everything not listed is identical across tiers. (2026-08-27: Option C — basemap distance / `drawInstanced` — is DEAD, see §8.1 and the 9a brief §3. High shadows trimmed to 2 cascades / 60 m in the `quality_tiers` spec for thermal headroom, Cesar-judged.)
 
 Implementation shape (Order 900 — `9a`): three URP assets (`Mobile_Low/Mid/High_RPAsset`) + three Quality levels replacing the single `Mobile` level; a small `QualityTierService` (Assembly-CSharp, `Golfin.Core`) that resolves the tier at boot (after `FramePacingBootstrap`), applies `QualitySettings.SetQualityLevel`, `Application.targetFrameRate`, `Shader.DisableKeyword("_WIND")`, terrain `basemapDistance`/`drawInstanced`/`treeShadows` on hole load (hook: `PhysicsLabController.OnHoleLoaded`, next to `DisableShellDirectionalLight()`), and exposes `Tier` + `OnTierChanged` for the Settings screen. Tier is logged into the existing `session_start` telemetry event.
 
@@ -160,6 +160,8 @@ Implementation shape (Order 900 — `9a`): three URP assets (`Mobile_Low/Mid/Hig
 4. **`Vegetation.shader` `_WIND` multi_compile: APPROVED.** Edit the pack file in place (`Assets/Packs/BSP Trees Package/Shaders/Vegetation.shader`, 5× `#pragma shader_feature _WIND` → `#pragma multi_compile _ _WIND`; it is force-added, GUID `e80a1e91…`, so the edit is tracked). Both variants ship; `Shader.DisableKeyword("_WIND")` is the Low-tier hook. Build-size delta is measured and reported as a number (K5 asked for it). Lifts the K5 "do not modify Packs/" constraint for this one file.
 5. **Home-screen bloom: HIGH only.** Mid/Low run the shell camera with post-processing off. HDR stays on the High asset only; Mid/Low assets ship HDR off.
 6. **Build-size track: IN SCOPE NOW** (Phase 4, Option J).
+7. **No thermal input in 9a** — static tiers only; beta telemetry (`tier` field on `session_start`) decides whether a governor / Adaptive Performance comes later (2026-08-27).
+8. **H06 heightmap density = separate task `hole_heightmap_density`, alongside 9a** (2026-08-27).
 
 ### 6.1 Why those cut lines and why Low runs at 30 fps
 
@@ -219,5 +221,13 @@ Hole 08 tee, iPhone 15 Pro Max, render-thread ms is the GPU proxy (Unity cannot 
 - **Trap:** disabling a renderer feature at runtime renders the terrain black and reads as a 2× win (caught by looking at the phone). Asset edit + rebuild only. Removing the feature also churns `Mobile_RPAsset.m_PrefilterDBufferMRT3` — diff all of `Assets/Settings/`.
 - **Trap:** `LabHoleBinder` is editor-only → `OnHoleUnloaded()` never fires in a player build; anything disabled at hole load must be restored from `PhysicsLabController.OnDestroy()`. (The shell light has been silently never-restored on device.)
 - Consequence for §3: with (a+d+c) the A17 Pro sits at the 60 cap with thermal headroom; the iPhone 15 (A16) is expected to land ~17 ms → High is plausible again, Mid/Low still need (b) + the tier levers. Re-baseline on the A16 after Phase 1.
-- **Phase 1 is specced: `Docs/Specs/Completed/perf_phase1_free_wins/`** = a + d + c + tree-distance normalisation (01/02/06 → 150/80, runtime) + MapView readback guard + console-spam/GC check. (b) stays a tier lever.
+- **Phase 1 is specced: `Docs/Specs/Active/perf_phase1_free_wins/`** = a + d + c + tree-distance normalisation (01/02/06 → 150/80, runtime) + MapView readback guard + console-spam/GC check. (b) stays a tier lever.
 - Still open from Phase 0b: (e) mid-flight, Instruments trace, Memory Profiler top-10, GC call stack (folded into Phase 1 §5 and Phase 4).
+
+### 8.2 Phase 1 shipped (2026-08-27, `cca3cfd1a`) — and what it taught
+
+- Shipped: shell camera off during a hole (+ camera/light restored from `OnDestroy`), `DecalRendererFeature` removed, tree distances 150/80/20 at hole load, MapView readbacks editor-only, console spam fixed. **Every pose 60 fps cold** on the A17 Pro (H08 tee 30.1 → 60.0; batches 7,375 → 3,014).
+- **Option C dropped:** basemap 100 vs 1000 = identical geometry, 13.35 vs 13.48 ms; `drawInstanced` flattens distant terrain and its variants are not guaranteed in a player build (scenes ship it off). Plan §3/§4 corrected.
+- **Thermal is the remaining failure mode:** after 45 s at Serious, H08 47.5 fps, H06 40.7, H01/mid-flight hold. → `quality_tiers` (9a) specced; thermal governor deferred by decision #7.
+- The 'flat terrain' Cesar saw on build 2314 was proven pre-existing (bit-identical vs pre-Phase-1 code) and accepted.
+- Measurement rules now standing: pinned sky (`PinSky`) + pinned yaw + 3 runs; `fps`/`frameMs` are the verdict, `renderMs` only when runs agree; no global image diffs.

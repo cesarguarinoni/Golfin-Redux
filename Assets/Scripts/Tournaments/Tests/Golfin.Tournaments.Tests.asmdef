@@ -5,12 +5,17 @@
         "Golfin.Tournaments",
         "Golfin.UI.Rankings.Core",
         "Golfin.Save",
-        "Golfin.Core.Stamina"
+        "Golfin.Core.Stamina",
+        "Golfin.Content"
     ],
-    "includePlatforms": ["Editor"],
+    "includePlatforms": [
+        "Editor"
+    ],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
-    "optionalUnityReferences": ["TestAssemblies"],
+    "optionalUnityReferences": [
+        "TestAssemblies"
+    ],
     "overrideReferences": true,
     "precompiledReferences": [
         "nunit.framework.dll",
