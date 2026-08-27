@@ -224,6 +224,11 @@ layout value is inherited rather than re-authored. Zero new panels or buttons we
 Read-back off the live objects:
 
 - Order: `SoundSettingsRow · Divider (1) · **GraphicsRow · Divider (Graphics)** · LanguageRow · …`
+- Submenu rows are **Auto / High / Medium / Low** — best-first, changed from Auto/Low/Medium/High
+  by Cesar on 2026-08-27 (`2da66d671`). Best-first reads better under the "Auto (High)" label,
+  which now sits directly above the option it resolved to. Sibling order was moved with the
+  positions, not just the positions, so any future Selectable auto-navigation reads the same order
+  the eye does. Scene diff: 4 lines.
 - `SettingsMenuItem`: button=GraphicsRow, submenuContainer=GraphicsSubmenu, arrowIcon=RightArrow
 - `GraphicsSubmenu`: auto/low/mid/high buttons + autoLabel all bound; `selectedColor` /
   `unselectedColor` copied verbatim from `LanguageSubmenu` (`0.200,0.600,1.000` / `0.149,0.259,0.373`)

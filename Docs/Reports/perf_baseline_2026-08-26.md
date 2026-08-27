@@ -1273,6 +1273,26 @@ exists to answer "is there a signal at all" before spending hours on cooled 3-ru
 it is not a publishable number. Build 2325 (`Dev-iOS`, `GOLFIN_TESTBUILD`), iPhone 15 Pro Max
 (`iPhone16,2`), pinned sky + pinned yaw, H06 tee.
 
+> ⚠️ **AND THE BINARY WAS UNOPTIMISED.** This build was archived with
+> `xcodebuild -configuration Debug`, which compiles the whole IL2CPP output at **`-O0`** with
+> `-D_DEBUG` and `-DIL2CPP_DEBUG=1` — 987 source files, confirmed from the build log. Every line
+> of managed C#, including the fixed-point shot simulation, ran unoptimised. Cesar caught the
+> symptom before the cause: a "noticeable delay between hitting the ball and the ball flying",
+> present *only* on this build.
+>
+> What that does and does not invalidate:
+> - **`mainMs` is inflated across all three tiers** and should not be quoted.
+> - **`renderMs`, batches, SetPass, triangles, vertices and shadow casters are engine-native
+>   counters** and are unaffected by the C# optimisation level, so the tier *ratios* stand.
+> - **The conclusion stands**: main thread was not the limiter at any tier (8.67 ms against a
+>   33.33 ms budget on Low, 5.04/16.67 on Mid, 7.71/16.73 on High), and High's collapse was
+>   `renderMs` climbing 12.29 → 18.33 under thermal load — a GPU effect `-O0` cannot cause.
+>
+> Re-measured on a `ReleaseForRunning` (`-O3`) build; treat the table below as provisional until
+> that lands. The right configuration for any future perf build is `ReleaseForRunning`, never
+> `Debug` — the Unity-side `Dev-iOS` profile supplies `GOLFIN_TESTBUILD` independently of the
+> Xcode configuration, so an optimised binary still carries the bot.
+
 | | **Low** | **Mid** | **High** |
 |---|---|---|---|
 | fps @ sample | 30.0 | 60.0 | 59.8 |

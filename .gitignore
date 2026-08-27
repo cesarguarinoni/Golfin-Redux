@@ -320,3 +320,7 @@ Builds/ipa/
 Assets/Art/Clubs/Full_Masters~/
 tasks/*/video/
 _to_delete/
+
+# Raw PerfBaselineBot device console logs — tens of MB of Unity boot spam per run.
+# The [PerfBot] lines that matter are extracted into the task folder as *_perfbot.txt.
+Docs/Diagnostics/perfbot/

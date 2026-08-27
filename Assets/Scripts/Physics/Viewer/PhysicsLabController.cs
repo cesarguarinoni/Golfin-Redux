@@ -573,6 +573,59 @@ namespace Golfin.Physics.Viewer
             // K11: publish putt mode so the club selector can gate its cards off the
             // SAME §2f decision that put us here (see ClubSelectionBroadcast.IsSelectable).
             ClubSelectionBroadcast.SetPutterMode(true, PutterIndex);
+            SyncClubSelectorToPutter();
+        }
+
+        /// <summary>
+        /// green_putter_portrait (Cesar, 2026-08-27): the putter auto-equips on the green and every
+        /// part of the presentation follows — cone, track, units, gauge, ball selector — EXCEPT the
+        /// club selector's own selection. ClubButtonWidget paints itself from
+        /// <c>ClubContext.SelectedPortrait</c>, which nothing here was writing, so the button kept
+        /// showing whatever club the player last held while the game was actually putting.
+        ///
+        /// Driven through <c>ClubContext.RequestSelection</c> — the SAME path a manual pick takes
+        /// (→ ClubContextPopulator/LabInventoryStub.SelectByIndex) — rather than assigning
+        /// SelectedPortrait directly. That keeps id, label, distance, portrait and index moving
+        /// together and raises OnSelectedChanged exactly once; setting the sprite alone would leave
+        /// SelectedClubId and SelectedDistance describing the previous club.
+        ///
+        /// NOTE the bag index is NOT <see cref="PutterIndex"/>: that is a LAB club index (0..3), and
+        /// the bag is the player's equipped list, which need not contain a putter at all.
+        /// </summary>
+        void SyncClubSelectorToPutter()
+        {
+            var bag = Golfin.Gameplay.UI.HUD.ClubContext.EquippedBag;
+            if (bag == null || bag.Count == 0)
+            {
+                Debug.Log("[PhysicsLab] SyncClubSelectorToPutter: bag empty — club selector left as-is.");
+                return;
+            }
+
+            int putterBagIdx = bag.FindIndex(e => e != null && e.LabClubIndex == PutterIndex);
+            if (putterBagIdx < 0)
+            {
+                Debug.Log("[PhysicsLab] SyncClubSelectorToPutter: no putter in the equipped bag — club selector left as-is.");
+                return;
+            }
+            if (Golfin.Gameplay.UI.HUD.ClubContext.SelectedIndex == putterBagIdx) return;   // already showing it
+
+            _bagIndexBeforePutter = Golfin.Gameplay.UI.HUD.ClubContext.SelectedIndex;
+            Golfin.Gameplay.UI.HUD.ClubContext.RequestSelection(putterBagIdx);
+            Debug.Log($"[PhysicsLab] Club selector → putter (bag index {putterBagIdx}); will restore index {_bagIndexBeforePutter} on leaving the green.");
+        }
+
+        /// <summary>Mirror of <see cref="SyncClubSelectorToPutter"/> — puts the player's club back.</summary>
+        void RestoreClubSelectorAfterPutter()
+        {
+            int idx = _bagIndexBeforePutter;
+            _bagIndexBeforePutter = -1;
+            if (idx < 0) return;
+
+            var bag = Golfin.Gameplay.UI.HUD.ClubContext.EquippedBag;
+            if (bag == null || idx >= bag.Count) return;
+
+            Golfin.Gameplay.UI.HUD.ClubContext.RequestSelection(idx);
+            Debug.Log($"[PhysicsLab] Club selector restored to bag index {idx} on leaving putter mode.");
         }
 
         private void ExitPutterMode()
@@ -606,6 +659,7 @@ namespace Golfin.Physics.Viewer
             if (_centralBall != null) _centralBall.SetPuttMode(false);
             // K11: mirror of EnterPutterMode's publish.
             ClubSelectionBroadcast.SetPutterMode(false, PutterIndex);
+            RestoreClubSelectorAfterPutter();
         }
 
         /// <summary>
@@ -2504,6 +2558,10 @@ namespace Golfin.Physics.Viewer
         // duplicate_eventsystem_fix: the EventSystem we switch off while a hole is loaded, held so
         // the restore paths can bring it back. See ReconcileEventSystems.
         UnityEngine.EventSystems.EventSystem _eventSystemDisabled;
+
+        // green_putter_portrait: the bag index the player had selected before the green auto-equipped
+        // the putter, so leaving the green puts their club back. -1 = nothing to restore.
+        int _bagIndexBeforePutter = -1;
 
         // perf_phase1_free_wins §3: terrain render values applied at hole load.
         //
