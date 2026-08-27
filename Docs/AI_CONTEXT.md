@@ -176,22 +176,35 @@
 > 3 pre-existing skips**, with the new suite tripwire-proven to run. Dashboard `npm run build`
 > green.
 >
-> **⚠️ TWO THINGS ARE WAITING ON CESAR.**
-> 1. `playlife/backend/migrations/2026_08_28_shop_purchase_ref_min_build.sql` — NOT APPLIED. A
->    `create or replace` of `golfin_shop_purchase()` carrying the applied body forward with ONE
->    change: it also refuses when the REFERENCED row's `min_build` is above the caller's build
->    (`not_listed / ref_min_build`). The 08-27 migration is untouched — migrations are append-only.
->    No deploy rides with it: no API source changed, so the live v54 image is already correct.
-> 2. **THE CONTENT GATE IS RED TODAY, and it predates this task.**
+> **§4 APPLIED 2026-08-27.** `2026_08_28_shop_purchase_ref_min_build.sql` — a `create or replace`
+> of `golfin_shop_purchase()` carrying the applied body forward with ONE change: it also refuses
+> when the REFERENCED row's `min_build` is above the caller's build (`not_listed / ref_min_build`).
+> The 08-27 migration is untouched — migrations are append-only. All 10 verification rows exact,
+> including `bound_zoneless_reads_as_utc` (proves `set timezone = 'UTC'` survived the replace) and
+> `fn_still_reads_ref_is_active` (proves the replace did not drop the older refusal). NO DEPLOY
+> rode with it — no API source changed, so the live v54 image was already correct. §2.5 smoke
+> re-run after the apply: all eight probes identical to the baseline.
+>
+> **⚠️ ONE THING IS WAITING ON CESAR.**
+> **THE CONTENT GATE IS RED TODAY, and it predates this task.**
 >    `export_content.py --check` exits 1 because `SETTINGS_GRAPHICS` and the four
 >    `SETTINGS_QUALITY_*` keys added by `quality_tiers` are in
 >    `Assets/Localization/LocalizationText.csv` and NOT in the published `texts` catalog. That is
 >    the CSV-ahead-of-catalog direction, which the exporter CANNOT fix (it never deletes — I6 —
 >    so it keeps the extra lines verbatim). **The next `testflight_build` will abort until those
 >    five keys are created in the admin and published** — which `+ New row` is now what makes
->    possible. After that archive: read `Docs/Versioning/last_uploaded_build.txt`, set
->    `SHOP_CATEGORY_STRICT_BUILD`, redeploy the dashboard (its own surface —
->    `npm --prefix Tools/admin-dashboard run deploy`), then publish the first character/item rows.
+> possible. After that archive: read `Docs/Versioning/last_uploaded_build.txt`, set
+> `SHOP_CATEGORY_STRICT_BUILD`, redeploy the dashboard (its own surface —
+> `npm --prefix Tools/admin-dashboard run deploy`), then publish the first character/item rows.
+>
+> **That drift cannot sit unseen again.** `.claude/hooks/warn_catalog_csv_edit.py` (PostToolUse on
+> `Write`/`Edit`, wired in `.claude/settings.json`) fires the moment any of the seven
+> catalog-backed CSVs is written, names the catalog and says the new rows must also be created in
+> the admin and published — once per catalog per session, exit 2 so the message lands without
+> undoing the write, path list IMPORTED from `Tools/content/catalogs.py` so it can never drift
+> from the exporter. Lesson BN. The structural fix stays `import_content.py`
+> (`content_two_way`, §7): it turns a CSV edit into a draft PROPOSAL, so "CSV ahead of catalog"
+> stops being an error state at all.
 
 > **`shop_server_purchase` (CONTENT_PIPELINE_PLAN §6 step 4d / §11.5) — BOTH REPOS CODE-COMPLETE
 > 2026-08-27. BACKEND APPLIED + DEPLOYED AND SMOKED; NOT SEEN ON A SCREEN, NEVER SOLD ANYTHING.** Implemented DIRECTLY by the main

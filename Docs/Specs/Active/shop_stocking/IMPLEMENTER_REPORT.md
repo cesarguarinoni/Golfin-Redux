@@ -34,13 +34,15 @@ with a live BUY button.
 | `Docs/TESTFLIGHT_RUNBOOK.md` | modified — step table renumbered to 7 steps; new § "Step 3: the content gate" with the export → commit → rerun loop, the two drift directions, and the currently-RED `texts` state. |
 | `Assets/Scripts/UI/Shop/GeneralShopModel.cs` | modified — `Admit` now calls `UnrenderableReason(entry)` after the window verdict: resolves the ref in the matching DB, requires `isActive` and a non-`Placeholder` primary sprite, withholds + `LogWarning`s + counts (`unresolvable` in the summary line). A null DB singleton logs ONCE per database per load and admits. `_resolverOverride` is the reflection-only test seam; `Reload()` clears it. |
 | `Assets/Scripts/UI/Shop/GeneralShopCard.cs` | modified — the four `Bind*` null-row early returns became `HideUnbindable(entry, kind)`: `gameObject.SetActive(false)` + `LogError`, because the branch should now be unreachable and an unreachable branch that still renders the bug is not a safety net. |
+| `.claude/hooks/warn_catalog_csv_edit.py` (+ `.claude/settings.json`) | **created** — PostToolUse guard on `Write`/`Edit` that fires when one of the seven catalog-backed CSVs is written, names the catalog and what the edit still owes, and exits 2 (message reaches the session, write is NOT undone). Once per catalog per session; path list imported from `Tools/content/catalogs.py`. Added after the content gate went red — see § Found while working, and Lesson BN. |
+| `tasks/lessons.md` | modified — Lesson BN: a bundled CSV edit owes a catalog row, the two drift directions, and which one the exporter can never fix. |
 | `Assets/Scripts/UI/Shop/Tests/GeneralShopAdmitResolutionTests.cs` (+ `.meta`) | **created** — 5 EditMode tests over the SHIPPING `Admit` (reflection, like `GeneralShopCategoryTests`): withholds an unresolvable ref, withholds a placeholder sprite, keeps a resolvable row, and the two null-database cases. |
 
 ### playlife
 
 | Path | Change |
 |---|---|
-| `backend/migrations/2026_08_28_shop_purchase_ref_min_build.sql` | **created, NOT YET APPLIED** — `create or replace` of `golfin_shop_purchase()` carrying the applied body forward with ONE change: step 7 also reads the referenced row's `min_build` and refuses `{"status":"not_listed","reason":"ref_min_build"}`. The 08-27 migration is untouched. Verification block re-proves the security posture, the whole bound-parser matrix (including zoneless-reads-as-UTC, which is what would show a lost `set timezone`), and both refusals by source. |
+| `backend/migrations/2026_08_28_shop_purchase_ref_min_build.sql` | **created, APPLIED to prod 2026-08-27** — `create or replace` of `golfin_shop_purchase()` carrying the applied body forward with ONE change: step 7 also reads the referenced row's `min_build` and refuses `{"status":"not_listed","reason":"ref_min_build"}`. The 08-27 migration is untouched. Verification block re-proves the security posture, the whole bound-parser matrix (including zoneless-reads-as-UTC, which is what would show a lost `set timezone`), and both refusals by source. |
 
 Committed alongside, as their own commits, because they were deployed but never
 committed: the `shop_server_purchase` Unity half, its admin banner half, and its
@@ -58,9 +60,9 @@ backend half (`playlife`).
 | 6 | Lane: with a published row not yet exported, `testflight_build` aborts before Unity runs, naming the catalog | **PASS** | `python3 Tools/content/export_content.py --env-file … --check` exits **1** today against prod and names the catalog and ids (`texts: DRIFT — 506 rows in LocalizationText.csv vs 501 in the catalog … SETTINGS_GRAPHICS, SETTINGS_QUALITY_*`). The lane calls exactly that command, and fastlane's `sh` raises on non-zero, so the abort happens before `unity-build-ios.sh`. Not run through fastlane itself — fastlane is not installed on this Mac (RUNBOOK § one-time setup). |
 | 7 | Client: a published shop row whose ref is not in the client's DB is **withheld** with the warning; nothing blank renders; the summary counts it | **PASS** | `GeneralShopAdmitResolutionTests.Admit_withholds_a_row_whose_reference_this_build_cannot_resolve` — the shipping `Admit`, with the DB lookup faked, admits 0 entries and logs `'shop_char_ghost' WITHHELD …`. The counter is folded into the load summary line (`{_unresolvable} withheld as unrenderable`). |
 | 8 | Client: a ref whose sprite resolves to `Placeholder` is withheld | **PASS** | `Admit_withholds_a_row_whose_art_resolved_to_the_placeholder`; the production comparison is by sprite NAME (`Usable()`), because `ClubDatabaseCSV.LoadSprite` substitutes the shared `Placeholder` asset rather than returning null. |
-| 9 | Server: `POST /shop/purchase` for a row whose referenced character has `min_build > build` → `not_listed / ref_min_build` | **NOT RUN — blocked on Cesar** | The migration is written and the diff against the applied function is exactly the intended change (declared `v_ref_min_build`, `select is_active, min_build`, the new refusal). It has not been applied, so nothing has exercised it. |
+| 9 | Server: `POST /shop/purchase` for a row whose referenced character has `min_build > build` → `not_listed / ref_min_build` | **PASS by source; NOT exercised by a live purchase** | Migration **APPLIED to prod by Cesar 2026-08-27**; all 10 verification rows exact. `fn_has_ref_min_build_refusal = 1` proves the new refusal is in the DEPLOYED function body and `fn_still_reads_ref_is_active = 1` proves the replace did not drop the older one; `bound_zoneless_reads_as_utc = 1` proves `set timezone = 'UTC'` survived. A live purchase against it still needs a user with RP, a published shop row and a referenced row with a high `min_build` — it rides with the device pass on the build that carries the client half, together with the other §6 *(device)* items from `shop_server_purchase`. |
 | 10 | Banner copy switches between the two states with the constant; EN + JA | **PASS** | Live, both languages: EN *"Server pricing is live; the client build is pending upload — character and item rows cannot be published yet."*, JA *「サーバー価格は有効です。ただしクライアントビルドが未アップロードのため、キャラクター行とアイテム行はまだ公開できません。」*. The non-pending state is the pre-existing `sh.notice.headline/body` with `{build}`, unchanged except for its source constant. |
-| 11 | `/health`, `/notices`, `/banners`, `/tournaments/golfin` still 200 after deploy | **N/A this pass** | No deploy happened: §4 changes nothing in the API source, so the running image is already correct. To be re-run after the migration is applied, together with the §2.5 smoke. |
+| 11 | `/health`, `/notices`, `/banners`, `/tournaments/golfin` still 200 after deploy | **PASS** | Re-run against prod AFTER the migration was applied (no deploy: §4 changes no API source, so the running v54 image is already correct). All eight probes identical to the `shop_server_purchase` baseline: `/health` 200 · `/notices` 200 · `/banners` 200 · `/tournaments/golfin` 200 · `/content?build=9999` 200 · `POST /shop/purchase` **403** unauth, **401** bad token · `/api/v1/shop/garbage` 404. |
 | 12 | Full unfiltered EditMode sweep green; dashboard `npm run build` green; backend suite green | **PASS** (Unity, dashboard) / **NOT RUN** (backend) | EditMode: **1849 total, 1846 passed, 0 failed, 3 skipped** (the three pre-existing `HoleCompleteDriverTests` skips). Tripwire-proven: an `Assert.Fail` in the new fixture produced exactly 1 failure in the same 1849, then was removed and the suite went green again. Dashboard: `npx tsc --noEmit` clean and `npm run build` green. The backend suite was not run — this task adds no Python; `test_shop_purchase.py` is router-level and cannot see a plpgsql body. |
 
 ## Spec deviations (all deliberate, all flagged)
@@ -96,11 +98,9 @@ backend half (`playlife`).
 
 ## Not done, and why
 
-- **§4 is written but NOT applied or smoked.** The SQL is printed in chat for Cesar
-  (house rule: migrations are applied by him, and the verification output is what
-  proves it took). No deploy is pending with it — `backend/routers/shop.py` is
-  unchanged, so the live image (v54) already serves the right code and the function
-  body is DB-side.
+- **§4 is applied and smoked** (2026-08-27, Cesar). What is NOT done is a live
+  purchase through the new refusal — that needs a real client and rides with the
+  device pass alongside the other `shop_server_purchase` §6 *(device)* items.
 - **§8 steps 4-6** (archive → read `last_uploaded_build.txt` → set
   `SHOP_CATEGORY_STRICT_BUILD` → redeploy the dashboard → publish the first
   character/item rows) are Cesar's, by construction: the constant must be READ from
@@ -122,4 +122,14 @@ the published `texts` catalog. That is the CSV-ahead-of-catalog direction, which
 exporter cannot fix: it never deletes (I6), so it keeps the extra lines verbatim and
 the drift persists. **The next `testflight_build` will abort until those five rows are
 created in the admin and published** — which the `+ New row` control this task adds is
-exactly what makes possible. Documented in the RUNBOOK's new § "Step 3".
+exactly what makes possible. Documented in the RUNBOOK's new § "Step 3", and now GUARDED at the moment it is
+created: `.claude/hooks/warn_catalog_csv_edit.py` (PostToolUse on `Write`/`Edit`, wired
+in `.claude/settings.json`) fires when any of the seven catalog-backed CSVs is written,
+names the catalog and what is owed, and exits 2 so the message reaches the session
+without undoing the write — once per catalog per session, with its path list IMPORTED
+from `Tools/content/catalogs.py` rather than restated. Smoke-fired across six cases
+before wiring (catalog CSV warns, same catalog twice is silent, a second catalog warns,
+a `.cs` file is silent, the deliberately-non-catalog `LevelUpCosts.csv` is silent,
+garbage stdin does not break a session). Written up as Lesson BN. The structural fix
+remains `import_content.py` (`content_two_way`, §7), which turns a CSV edit into a draft
+PROPOSAL and removes the failure mode rather than reporting it.

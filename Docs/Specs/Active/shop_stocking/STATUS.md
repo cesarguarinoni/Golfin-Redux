@@ -24,17 +24,28 @@ DONE AND VERIFIED
       pre-existing skips. The new suite was tripwire-proven to actually run.
   Dashboard `npm run build` green; `tsc --noEmit` clean.
 
+  §4 APPLIED to prod by Cesar 2026-08-27. All 10 verification rows exact —
+      including `bound_zoneless_reads_as_utc`, which is what proves
+      `set timezone = 'UTC'` survived the `create or replace`, and
+      `fn_still_reads_ref_is_active`, which proves the replace did not drop the
+      older refusal. No deploy rode with it (no API source changed). §2.5 smoke
+      re-run against prod after the apply, all eight probes identical to the
+      shop_server_purchase baseline: /health /notices /banners
+      /tournaments/golfin /content?build=9999 all 200, POST /shop/purchase 403
+      unauth and 401 on a bad token, garbage route 404.
+
+  Recurrence guard added 2026-08-27 (see § below): the CSV-ahead-of-catalog drift
+      that made the content gate red is now warned about at the moment it is
+      created — `.claude/hooks/warn_catalog_csv_edit.py`, PostToolUse on
+      Write|Edit, path list imported from `Tools/content/catalogs.py`. Lesson BN.
+
 AWAITING CESAR (blocking, in this order)
-  1. §4 — apply `playlife/backend/migrations/2026_08_28_shop_purchase_ref_min_build.sql`
-     (full SQL printed in chat) and paste the verification output. Nothing is
-     deployed for it: the change is DB-side only, no API source changed, so the
-     live Fly image (v54) is already the right one.
-  2. The content gate is RED TODAY, and it is not this task's doing:
+  1. The content gate is RED TODAY, and it is not this task's doing:
      `export_content.py --check` exits 1 because five `SETTINGS_QUALITY_*` /
      `SETTINGS_GRAPHICS` text keys are in `Assets/Localization/LocalizationText.csv`
      and NOT in the published `texts` catalog. The next `testflight_build` will
      abort until those five rows are created in the admin (the new `+ New row`
      control is exactly the remedy) and published.
-  3. §8 steps 4-6 — archive, read `last_uploaded_build.txt`, set
+  2. §8 steps 4-6 — archive, read `last_uploaded_build.txt`, set
      `SHOP_CATEGORY_STRICT_BUILD`, redeploy the dashboard, then publish the first
      character/item rows.
