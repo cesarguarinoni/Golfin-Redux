@@ -24,8 +24,6 @@ public class ItemManager : MonoBehaviour
     /// <summary>Fired when the item list or any quantity changes.</summary>
     public event System.Action? OnInventoryChanged;
 
-    public const int MAX_STACK = 99;
-
     private readonly Dictionary<string, PlayerItemData> ownedItems = new();
 
     // ── Lifecycle ─────────────────────────────────────────────────────────────
@@ -123,7 +121,8 @@ public class ItemManager : MonoBehaviour
         return true;
     }
 
-    /// <summary>Add items (from mission rewards, etc.). Capped at MAX_STACK. Writes through to SaveData.</summary>
+    /// <summary>Add items (from mission rewards, shop purchases, etc.). UNCAPPED — see below.
+    /// Writes through to SaveData.</summary>
     public void AddItems(string itemId, int count)
     {
         if (!ownedItems.TryGetValue(itemId, out var data))
@@ -132,8 +131,17 @@ public class ItemManager : MonoBehaviour
             ownedItems[itemId] = data;
         }
 
+        // UNCAPPED, deliberately (2026-08-27). This used to clamp to 99, which was a
+        // SILENT SWALLOW on a paid purchase: InventoryGrants.Apply marks a grant applied
+        // and acks it BEFORE attempting delivery, so a clamped add debited the player and
+        // delivered nothing. The server-side grant path (InventoryGrants.AddQuantity) never
+        // capped, so the two disagreed about the same number as well.
+        //
+        // A stackable a player can BUY has to be buyable without a ceiling — Cesar's call,
+        // the same day the shop started selling items. `-1` still means unlimited and is
+        // still left alone; that is a sentinel, not a quantity.
         if (!data.IsUnlimited)
-            data.quantity = Mathf.Min(data.quantity + count, MAX_STACK);
+            data.quantity += count;
 
         SyncItemToSaveData(itemId, data.quantity);
         OnInventoryChanged?.Invoke();

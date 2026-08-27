@@ -504,7 +504,7 @@ namespace GolfinRedux.UI.Shop
             if (toast != null) toast.Show(message, 2f);
         }
 
-        /// <summary>Increments a ball's persisted quantity (respects -1 = unlimited; caps at 99).</summary>
+        /// <summary>Increments a ball's persisted quantity (respects -1 = unlimited; UNCAPPED).</summary>
         private static void GrantBall(string ballId)
         {
             var host = SaveDataHost.Instance;
@@ -513,7 +513,9 @@ namespace GolfinRedux.UI.Shop
             var q = host.Data.ballQuantities;
             if (q.TryGetValue(ballId, out var cur))
             {
-                if (cur >= 0) q[ballId] = Mathf.Min(cur + 1, 99); // -1 unlimited stays unlimited
+                // UNCAPPED (2026-08-27) — a clamp here debited the player and delivered
+                // nothing, and disagreed with InventoryGrants.AddQuantity, which never capped.
+                if (cur >= 0) q[ballId] = cur + 1;   // -1 unlimited stays unlimited
             }
             else
             {

@@ -10,6 +10,80 @@ namespace Golfin.InventorySync.Tests
 {
     public class InventoryGrantLedgerTests
     {
+        /// <summary>
+        /// The SERVER-side delivery path has no stack ceiling, and that is the behaviour the
+        /// local paths were changed to match on 2026-08-27.
+        ///
+        /// <para>
+        /// Until then `ItemManager.AddItems` clamped to 99 and `InventoryGrants.AddQuantity` did
+        /// not, so the same purchase delivered a different number depending on which path ran.
+        /// Worse, the clamp was a SILENT SWALLOW on a paid purchase: `Apply` writes
+        /// `appliedGrantIds` and acks BEFORE calling `ApplyOne`, so a clamped add spent the
+        /// player's RP and delivered nothing, with the grant marked delivered.
+        /// </para>
+        /// </summary>
+        [Test]
+        public void Item_grants_stack_past_the_old_99_ceiling()
+        {
+            var save = new SaveData { schemaVersion = 11 };
+            var grants = new List<InventoryGrant>();
+            for (int i = 0; i < 12; i++)
+                grants.Add(new InventoryGrant
+                {
+                    Id = $"g{i}", Kind = InventoryGrants.KindItem,
+                    RefId = "repairkit_common", Amount = 10,
+                });
+
+            InventoryGrants.Apply(grants, save, null);
+
+            Assert.AreEqual(120, save.itemQuantities["repairkit_common"],
+                "12 distinct grants of 10 must deliver 120. A ceiling here would be a paid " +
+                "purchase that delivers nothing, because Apply acks before it applies.");
+        }
+
+        /// <summary>Balls are the other stackable the shop sells, and had the same clamp.</summary>
+        [Test]
+        public void Ball_grants_stack_past_the_old_99_ceiling()
+        {
+            var save = new SaveData { schemaVersion = 11 };
+            var grants = new List<InventoryGrant>();
+            for (int i = 0; i < 12; i++)
+                grants.Add(new InventoryGrant
+                {
+                    Id = $"b{i}", Kind = InventoryGrants.KindBall,
+                    RefId = "ball_putt_ace", Amount = 10,
+                });
+
+            InventoryGrants.Apply(grants, save, null);
+
+            Assert.AreEqual(120, save.ballQuantities["ball_putt_ace"]);
+        }
+
+        /// <summary>
+        /// `-1` is the UNLIMITED sentinel, not a quantity, and uncapping must not have turned it
+        /// into one. An unlimited ball that started accumulating would become a finite stack of
+        /// 10 — strictly worse than the no-op.
+        /// </summary>
+        [Test]
+        public void An_unlimited_quantity_is_still_left_alone()
+        {
+            var save = new SaveData { schemaVersion = 11 };
+            save.ballQuantities ??= new Dictionary<string, int>();
+            save.ballQuantities["ball_golfin_default"] = -1;
+
+            InventoryGrants.Apply(new List<InventoryGrant>
+            {
+                new InventoryGrant
+                {
+                    Id = "u1", Kind = InventoryGrants.KindBall,
+                    RefId = "ball_golfin_default", Amount = 10,
+                },
+            }, save, null);
+
+            Assert.AreEqual(-1, save.ballQuantities["ball_golfin_default"],
+                "-1 means unlimited; adding to it must stay a no-op.");
+        }
+
         [Test]
         public void The_v10_to_v11_migration_adds_an_empty_ledger()
         {

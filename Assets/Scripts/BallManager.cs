@@ -108,7 +108,7 @@ public class BallManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Add balls (from hole rewards, etc.). Capped at 99.
+    /// Add balls (from hole rewards, shop purchases, etc.). UNCAPPED — see the note in the body.
     /// If the ball is unlimited (quantity == -1), the add is a no-op but
     /// OnInventoryChanged still fires so subscribers can re-render.
     /// Writes through to SaveData and calls MarkDirty.
@@ -121,8 +121,17 @@ public class BallManager : MonoBehaviour
             ownedBalls[ballId] = data;
         }
 
+        // UNCAPPED, deliberately (2026-08-27). This used to clamp to 99, which was a
+        // SILENT SWALLOW on a paid purchase: InventoryGrants.Apply marks a grant applied
+        // and acks it BEFORE attempting delivery, so a clamped add debited the player and
+        // delivered nothing. The server-side grant path (InventoryGrants.AddQuantity) never
+        // capped, so the two disagreed about the same number as well.
+        //
+        // A stackable a player can BUY has to be buyable without a ceiling — Cesar's call,
+        // the same day the shop started selling items. `-1` still means unlimited and is
+        // still left alone; that is a sentinel, not a quantity.
         if (!data.IsUnlimited)
-            data.quantity = Mathf.Min(data.quantity + count, 99);
+            data.quantity += count;
 
         // Sync to SaveData
         SyncBallToSaveData(ballId, data.quantity);
