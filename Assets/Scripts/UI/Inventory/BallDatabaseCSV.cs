@@ -57,6 +57,10 @@ namespace Golfin.Inventory
             var seen = new HashSet<string>(System.StringComparer.Ordinal);
             int overlaid = 0, deactivated = 0;
 
+            // content_two_way §4 — ids this build cannot draw, reported ONCE at the end in the
+            // shape ClubDatabaseCSV already uses for its missing-art line.
+            var withheld = new List<string>();
+
             for (int i = 1; i < lines.Length; i++)
             {
                 string line = lines[i].Trim();
@@ -92,6 +96,7 @@ namespace Golfin.Inventory
                 }
 
                 if (!ball.isActive) deactivated++;
+                if (!ball.renderable) withheld.Add(ball.ballId);
                 ballMap[ball.ballId] = ball;
                 allBalls.Add(ball);
             }
@@ -118,10 +123,22 @@ namespace Golfin.Inventory
                     }
 
                     if (!appended.isActive) deactivated++;
+                    if (!appended.renderable) withheld.Add(appended.ballId);
                     ballMap[appended.ballId] = appended;
                     allBalls.Add(appended);
                     overlaid++;
                 }
+            }
+
+            if (withheld.Count > 0)
+            {
+                // Warning, never an error: data published ahead of its art is a legitimate state
+                // (content_two_way §5). GetAllBalls still carries the row so an owner keeps it.
+                Debug.LogWarning(
+                    $"[BallDatabaseCSV] {withheld.Count} ball(s) withheld (unrenderable — sprite " +
+                    "missing in this build; ships when the art does): " +
+                    string.Join(", ", withheld.OrderBy(n => n).Take(12)) +
+                    (withheld.Count > 12 ? $", +{withheld.Count - 12} more" : ""));
             }
 
             Debug.Log($"[BallDatabaseCSV] Loaded {allBalls.Count} balls" +
@@ -167,6 +184,10 @@ namespace Golfin.Inventory
 
                 ball.thumbnailSprite = LoadSprite(ThumbnailPath, ball.thumbnailSpriteName);
                 ball.fullSprite      = LoadSprite(FullPath,      ball.fullSpriteName);
+
+                // content_two_way §4 — the PRIMARY sprite (the thumbnail the bag draws) is the
+                // renderability test, read off the resolution just performed.
+                ball.renderable = ball.thumbnailSprite != null;
 
                 return ball;
             }
@@ -228,7 +249,9 @@ namespace Golfin.Inventory
         /// <summary>EVERY ball row, deactivated ones included — the bag view (I6).</summary>
         public List<BallDataRuntime> GetAllBalls() => allBalls.ToList();
 
-        /// <summary>Only ACTIVE rows — the shop / "can be acquired" view (I6).</summary>
-        public List<BallDataRuntime> GetAvailableBalls() => allBalls.Where(b => b.isActive).ToList();
+        /// <summary>Only ACTIVE rows this build can DRAW — the shop / bag-seed /
+        /// "can be acquired" view (I6 + content_two_way §4).</summary>
+        public List<BallDataRuntime> GetAvailableBalls()
+            => allBalls.Where(b => b.isActive && b.renderable).ToList();
     }
 }

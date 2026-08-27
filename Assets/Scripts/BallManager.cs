@@ -54,8 +54,11 @@ public class BallManager : MonoBehaviour
         ownedBalls.Clear();
         bool first = true;
 
-        // Step 1: seed defaults from CSV
-        foreach (var template in db.GetAllBalls())
+        // Step 1: seed defaults from CSV.
+        // content_two_way §4 — AVAILABLE, not All: the ball counterpart of ItemManager's seed, and
+        // what the bag renders. Step 2 still restores a saved quantity for any id, renderable or
+        // not, so an owned ball whose art is late is never lost.
+        foreach (var template in db.GetAvailableBalls())
         {
             var playerBall = new PlayerBallData
             {

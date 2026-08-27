@@ -153,6 +153,21 @@ namespace Golfin.EditorTools
             var treeError = ValidateTreeBake();
             if (treeError != null) return treeError;
 
+            // content_two_way §5 — a REPORT, not a gate. Deliberately has no failure path and no
+            // -skip flag: data published ahead of its art is a legitimate state that §4 makes safe,
+            // and a build that fails for it is a validator somebody switches off. It writes
+            // Docs/Reports/content_art_<build>.txt so the archive carries the list of what it
+            // withholds. Wrapped because a REPORT must never be the reason a build dies.
+            try
+            {
+                ContentArtValidator.RunAndReport();
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"{Tag} catalog-art report failed to run ({e.GetType().Name}: " +
+                                 $"{e.Message}) — continuing; it is a report, not a gate.");
+            }
+
             var profile = AssetDatabase.LoadAssetAtPath<BuildProfile>(profilePath);
             if (profile == null)
                 return $"build profile not found: {profilePath}";

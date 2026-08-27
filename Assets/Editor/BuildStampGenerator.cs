@@ -282,7 +282,10 @@ namespace GolfinRedux.BuildEditor
             return n;
         }
 
-        static int GitRevCount()
+        /// <summary>`git rev-list --count HEAD`, or -1 when git cannot answer. Public so the
+        /// build-time reports (ContentArtValidator) file themselves under the SAME number this
+        /// generator will stamp into the binary, rather than deriving a second one.</summary>
+        public static int GitRevCount()
         {
             var outp = GitOutput("rev-list --count HEAD");
             if (outp == null) return -1;

@@ -148,6 +148,57 @@ export function catalogView(catalog: string): CatalogView {
 }
 
 // ---------------------------------------------------------------------------
+// Sprite fields — which columns name ART, and where the build looks for it
+// ---------------------------------------------------------------------------
+
+/**
+ * `catalog → { column: Resources folder }` (content_two_way §6).
+ *
+ * A sprite column holds a FILE NAME, not a URL and not an upload: the build
+ * resolves it with `Resources.Load<Sprite>("<folder>/<name>")`, so a name that
+ * names nothing in that build renders nothing. Since content_two_way §4 the
+ * client WITHHOLDS such a row (clubs excepted — they fall back to a shared
+ * Placeholder sprite), which is safe but silent, and the only place an operator
+ * can find out before publishing is here.
+ *
+ * The folder strings are copies of the loader constants, cited so a rename in
+ * Unity is findable from the dashboard:
+ *
+ *   CharacterDatabaseCSV.cs:36-37   Portraits/Thumbnails, Portraits/FullBody
+ *   ItemDatabaseCSV.cs:25-26        Items/Thumbnails,     Items/Full
+ *   BallDatabaseCSV.cs:25-26        Balls/Thumbnails,     Balls/Full
+ *   ClubDatabaseCSV.cs:39-41        Clubs/Portraits, Clubs/Full, Clubs/Controls
+ *
+ * Art by URL — which would let an admin-created row render on an INSTALLED
+ * build — is the next spec (`content_art_urls`), not this one.
+ */
+export const SPRITE_FIELD_FOLDER: Record<string, Record<string, string>> = {
+  characters: {
+    portraitSprite: "Portraits/Thumbnails",
+    portraitFull: "Portraits/FullBody",
+  },
+  items: {
+    thumbnailSprite: "Items/Thumbnails",
+    fullSprite: "Items/Full",
+  },
+  balls: {
+    thumbnailSprite: "Balls/Thumbnails",
+    fullSprite: "Balls/Full",
+  },
+  clubs: {
+    portraitSprite: "Clubs/Portraits",
+    portraitFull: "Clubs/Full",
+    controlSprite: "Clubs/Controls",
+  },
+};
+
+/** The `Resources/` folder a column's sprite must live in, or null when the
+ *  column does not name art. */
+export function spriteFolder(catalog: string, column: string): string | null {
+  return SPRITE_FIELD_FOLDER[catalog]?.[column] ?? null;
+}
+
+// ---------------------------------------------------------------------------
 // Shop row state
 // ---------------------------------------------------------------------------
 

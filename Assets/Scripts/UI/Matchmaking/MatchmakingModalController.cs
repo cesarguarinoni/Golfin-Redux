@@ -253,7 +253,9 @@ namespace Golfin.UI.Matchmaking
             {
                 Debug.LogWarning("[MatchmakingModalController] Leaderboard roster unavailable — " +
                                  "falling back to character-DB opponents.");
-                var allChars = CharacterDatabaseCSV.Instance?.GetAllCharacters();
+                // content_two_way §4 — an opponent card draws the character's portrait, so this
+                // fallback pool takes the AVAILABLE view rather than every row.
+                var allChars = CharacterDatabaseCSV.Instance?.GetAvailableCharacters();
                 if (allChars != null)
                 {
                     foreach (var c in allChars)

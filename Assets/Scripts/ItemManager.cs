@@ -52,8 +52,11 @@ public class ItemManager : MonoBehaviour
 
         ownedItems.Clear();
 
-        // Step 1: seed defaults from CSV
-        foreach (var template in db.GetAllItems())
+        // Step 1: seed defaults from CSV.
+        // content_two_way §4 — AVAILABLE, not All: this seed is what the inventory grid renders.
+        // A quantity the SAVE carries for an unrenderable id is still restored in step 2, so
+        // nothing an owner holds is lost — it is just not seeded into view here.
+        foreach (var template in db.GetAvailableItems())
         {
             ownedItems[template.itemId] = new PlayerItemData
             {

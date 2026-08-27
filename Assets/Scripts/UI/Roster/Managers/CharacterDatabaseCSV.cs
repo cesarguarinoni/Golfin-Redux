@@ -92,6 +92,10 @@ namespace Golfin.Roster
             var seen = new HashSet<string>(System.StringComparer.Ordinal);
             int vetoed = 0, dropped = 0, deactivated = 0;
 
+            // content_two_way §4 — ids this build cannot draw, reported ONCE at the end in the
+            // shape ClubDatabaseCSV already uses for its missing-art line.
+            var withheld = new List<string>();
+
             // Parse data rows
             for (int i = 1; i < lines.Length; i++)
             {
@@ -138,6 +142,7 @@ namespace Golfin.Roster
                 }
 
                 if (!character.isActive) deactivated++;
+                if (!character.renderable) withheld.Add(character.characterId);
                 characterMap[character.characterId] = character;
                 allCharacters.Add(character);
             }
@@ -170,6 +175,7 @@ namespace Golfin.Roster
                     }
 
                     if (!appended.isActive) deactivated++;
+                    if (!appended.renderable) withheld.Add(appended.characterId);
                     characterMap[appended.characterId] = appended;
                     allCharacters.Add(appended);
                     OverlaidRowCount++;
@@ -177,6 +183,18 @@ namespace Golfin.Roster
             }
 
             IsLoaded = allCharacters.Count > 0;
+
+            if (withheld.Count > 0)
+            {
+                // Warning, never an error: a row whose data is published and whose art lands next
+                // build is a LEGITIMATE state (content_two_way §5). The row stays in
+                // GetAllCharacters so an owner keeps it; only the available view drops it.
+                Debug.LogWarning(
+                    $"[CharacterDatabaseCSV] {withheld.Count} character(s) withheld (unrenderable — " +
+                    "sprite missing in this build; ships when the art does): " +
+                    string.Join(", ", withheld.OrderBy(n => n).Take(12)) +
+                    (withheld.Count > 12 ? $", +{withheld.Count - 12} more" : ""));
+            }
 
             Debug.Log($"[CharacterDatabaseCSV] Loaded {allCharacters.Count} characters from CSV" +
                       (overlay == null
@@ -266,6 +284,10 @@ namespace Golfin.Roster
                 character.portraitSprite = FindSpriteByName(character.portraitSpriteName);
                 character.portraitFullSprite = FindFullBodySpriteByName(character.portraitFullSpriteName);
 
+                // content_two_way §4 — the primary sprite IS the renderability test, and it is read
+                // off the resolution just performed rather than repeated.
+                character.renderable = character.portraitSprite != null;
+
                 return character;
             }
             catch (System.Exception e)
@@ -331,12 +353,13 @@ namespace Golfin.Roster
         }
 
         /// <summary>
-        /// Only rows an operator has left ACTIVE — the "available" view for gacha pools and
-        /// anything else that can hand a player a NEW character (I6).
+        /// Only rows an operator has left ACTIVE <b>and this build can draw</b> — the "available"
+        /// view for gacha pools, the roster seed and anything else that puts a character in front
+        /// of a player (I6 + content_two_way §4).
         /// </summary>
         public List<CharacterDataRuntime> GetAvailableCharacters()
         {
-            return allCharacters.Where(c => c.isActive).ToList();
+            return allCharacters.Where(c => c.isActive && c.renderable).ToList();
         }
     }
 
@@ -358,6 +381,26 @@ namespace Golfin.Roster
         public Sprite? portraitSprite = null;
         public string portraitFullSpriteName = "";
         public Sprite? portraitFullSprite = null;
+
+        /// <summary>
+        /// content_two_way §4 — <b>can THIS build draw this row?</b> False when the PRIMARY sprite
+        /// (<see cref="portraitSprite"/>) did not resolve, which is what a row published in the
+        /// admin looks like until the build that bundles its art ships.
+        ///
+        /// <para>
+        /// A missing FULL-BODY portrait is deliberately NOT a veto: the Roster card needs the
+        /// thumbnail first, and the detail panel degrades to an empty slot rather than to a
+        /// character nobody can select. Set once, at load, from the resolution the loader already
+        /// performs — never a second <c>Resources.Load</c>.
+        /// </para>
+        /// <para>
+        /// It gates the AVAILABLE view only (<see cref="CharacterDatabaseCSV.GetAvailableCharacters"/>).
+        /// <see cref="CharacterDatabaseCSV.GetAllCharacters"/> still carries the row, because a
+        /// player granted a character whose art is late must not LOSE it — the save and
+        /// <c>InventoryCodec</c> round-trip it untouched; they just cannot see it yet.
+        /// </para>
+        /// </summary>
+        public bool renderable = true;
 
         /// <summary>
         /// Characters.csv <c>startLevel</c>. 0 means the column was absent, in which case callers

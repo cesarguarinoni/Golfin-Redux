@@ -903,6 +903,20 @@ export const DICT = {
     en: "Withheld from any build below this number. Immutable once published.",
     ja: "この番号未満のビルドには配信されません。公開後は変更できません。",
   },
+  // content_two_way §6 — a sprite column names a FILE the BUILD must already
+  // ship; it is not an upload and not a URL. Rows whose art is missing are
+  // withheld on that build (§4), which is safe but invisible, so the constraint
+  // is spelled out at the field. Clubs get their own line: they fall back to the
+  // shared Placeholder sprite instead of being withheld (§4, decision of record).
+  "c.edit.spriteHint": {
+    en: "Must match a file under Resources/{folder}/ in the build. Rows whose art is missing are withheld on that build (clubs show Placeholder).",
+    ja: "ビルド内の Resources/{folder}/ にあるファイル名と一致する必要があります。アートが見つからない行は、そのビルドでは非表示になります（クラブは Placeholder が表示されます）。",
+  },
+  "c.edit.spriteHintClubs": {
+    en: "Must match a file under Resources/{folder}/ in the build. A club whose art is missing still shows, using the shared Placeholder sprite.",
+    ja: "ビルド内の Resources/{folder}/ にあるファイル名と一致する必要があります。アートが見つからないクラブも、共通の Placeholder 画像で表示されます。",
+  },
+
   "c.edit.save": { en: "Save draft", ja: "下書きを保存" },
   "c.edit.saving": { en: "Saving…", ja: "保存中…" },
   "c.edit.saved": { en: "Draft saved. Publish to send it to the game.", ja: "下書きを保存しました。ゲームに反映するには公開してください。" },
@@ -1042,6 +1056,18 @@ export const DICT = {
   // ---- clubs / characters / items / texts --------------------------------
   "cl.title": { en: "Clubs", ja: "クラブ" },
   "ch.title": { en: "Characters", ja: "キャラクター" },
+  // content_two_way §6 — the admin can create a character's DATA today; its ART
+  // ships with the next build that bundles the sprites. Until then §4 withholds
+  // it everywhere rather than drawing a blank card. Art by URL, which would make
+  // it render on an installed build, is the next spec (content_art_urls).
+  "ch.notice.headline": {
+    en: "Creating a character here creates its data.",
+    ja: "ここでキャラクターを作成すると、そのデータが作成されます。",
+  },
+  "ch.notice.body": {
+    en: "Its art ships with the next build that bundles the sprites; until then it is withheld on every build — it appears in no roster, no shop and no pool, rather than showing as a blank card. Sprite names must match files under Resources/Portraits/.",
+    ja: "アートは、スプライトを同梱する次のビルドで配信されます。それまでは、どのビルドでも非表示となり、ロスター・ショップ・排出のいずれにも表示されません（空のカードとして表示されることはありません）。スプライト名は Resources/Portraits/ 内のファイル名と一致する必要があります。",
+  },
   "it.title": { en: "Items, Bags & Balls", ja: "アイテム・バッグ・ボール" },
   "it.tab.items": { en: "Items", ja: "アイテム" },
   "it.tab.bags": { en: "Bags", ja: "バッグ" },

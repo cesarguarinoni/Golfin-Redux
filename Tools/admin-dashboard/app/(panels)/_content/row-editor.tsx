@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useT } from "@/components/I18nProvider";
-import { ID_COLUMN, isValidNewRowId, ROW_ID_MAX } from "@/lib/contentView";
+import { ID_COLUMN, isValidNewRowId, ROW_ID_MAX, spriteFolder } from "@/lib/contentView";
 import type { ContentStoredRow } from "@/lib/types";
 import { saveRow } from "./client";
 
@@ -219,25 +219,41 @@ export function RowEditor({
           </div>
 
           <div className="space-y-2">
-            {ordered.map((column) => (
-              <label key={column} className="block">
-                <span className="font-mono text-[11px] text-zinc-500">{column}</span>
-                {(draft[column] ?? "").length > 60 ? (
-                  <textarea
-                    rows={3}
-                    value={draft[column] ?? ""}
-                    onChange={(e) => set(column, e.target.value)}
-                    className="mt-0.5 w-full rounded-md border border-surface-700 bg-surface-950 px-2.5 py-1.5 text-xs text-zinc-200 focus:border-accent-500 focus:outline-none"
-                  />
-                ) : (
-                  <input
-                    value={draft[column] ?? ""}
-                    onChange={(e) => set(column, e.target.value)}
-                    className="mt-0.5 w-full rounded-md border border-surface-700 bg-surface-950 px-2.5 py-1.5 text-xs text-zinc-200 focus:border-accent-500 focus:outline-none"
-                  />
-                )}
-              </label>
-            ))}
+            {ordered.map((column) => {
+              // content_two_way §6 — a sprite column holds a FILE NAME the build
+              // resolves under Resources/. A name this build does not ship renders
+              // nothing, and §4 withholds the row rather than drawing a blank, so
+              // the constraint has to be visible at the point of typing. No new
+              // control: a hint under the field the operator is already using.
+              const folder = spriteFolder(catalog, column);
+              return (
+                <label key={column} className="block">
+                  <span className="font-mono text-[11px] text-zinc-500">{column}</span>
+                  {(draft[column] ?? "").length > 60 ? (
+                    <textarea
+                      rows={3}
+                      value={draft[column] ?? ""}
+                      onChange={(e) => set(column, e.target.value)}
+                      className="mt-0.5 w-full rounded-md border border-surface-700 bg-surface-950 px-2.5 py-1.5 text-xs text-zinc-200 focus:border-accent-500 focus:outline-none"
+                    />
+                  ) : (
+                    <input
+                      value={draft[column] ?? ""}
+                      onChange={(e) => set(column, e.target.value)}
+                      className="mt-0.5 w-full rounded-md border border-surface-700 bg-surface-950 px-2.5 py-1.5 text-xs text-zinc-200 focus:border-accent-500 focus:outline-none"
+                    />
+                  )}
+                  {folder && (
+                    <span className="mt-1 block text-[11px] leading-relaxed text-zinc-500">
+                      {translate(
+                        catalog === "clubs" ? "c.edit.spriteHintClubs" : "c.edit.spriteHint",
+                        { folder }
+                      )}
+                    </span>
+                  )}
+                </label>
+              );
+            })}
           </div>
         </div>
 

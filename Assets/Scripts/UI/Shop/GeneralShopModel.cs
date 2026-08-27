@@ -327,6 +327,12 @@ namespace GolfinRedux.UI.Shop
 
             switch (entry.Category)
             {
+                // content_two_way §4 — balls, characters and items now carry `renderable`, decided
+                // by their own loader from the sprite resolution it already performed. Reading the
+                // flag instead of re-resolving here is what stops the two rails (the shop's and the
+                // game-wide one) from ever disagreeing about the same row. Clubs keep their own
+                // branch below: the Placeholder policy means a club sprite is never null and the
+                // question there is "is it the placeholder", not "is it missing".
                 case ShopCategory.Ball:
                 {
                     var db = BallDatabaseCSV.Instance;
@@ -334,8 +340,7 @@ namespace GolfinRedux.UI.Shop
                     var ball = db.GetBall(entry.RefId);
                     if (ball == null) return "no row in the balls catalog";
                     if (!ball.isActive) return "the balls row is deactivated";
-                    return Usable(ball.thumbnailSprite != null ? ball.thumbnailSprite : ball.fullSprite)
-                        ? null : "no usable ball sprite";
+                    return ball.renderable ? null : "no usable ball sprite";
                 }
 
                 case ShopCategory.Character:
@@ -345,8 +350,7 @@ namespace GolfinRedux.UI.Shop
                     var ch = db.GetCharacter(entry.RefId);
                     if (ch == null) return "no row in the characters catalog";
                     if (!ch.isActive) return "the characters row is deactivated";
-                    return Usable(ch.portraitSprite != null ? ch.portraitSprite : ch.portraitFullSprite)
-                        ? null : "no usable character portrait";
+                    return ch.renderable ? null : "no usable character portrait";
                 }
 
                 case ShopCategory.Item:
@@ -356,8 +360,7 @@ namespace GolfinRedux.UI.Shop
                     var item = db.GetItem(entry.RefId);
                     if (item == null) return "no row in the items catalog";
                     if (!item.isActive) return "the items row is deactivated";
-                    return Usable(item.thumbnailSprite != null ? item.thumbnailSprite : item.fullSprite)
-                        ? null : "no usable item sprite";
+                    return item.renderable ? null : "no usable item sprite";
                 }
 
                 default:
@@ -373,9 +376,11 @@ namespace GolfinRedux.UI.Shop
             }
         }
 
-        /// <summary>Name of the shared stand-in art every database falls back to. Compared BY NAME
-        /// because that is all the loaded <see cref="Sprite"/> carries — the databases hand back the
-        /// placeholder asset itself, not a marker.</summary>
+        /// <summary>Name of the shared stand-in art the CLUB database falls back to. Compared BY
+        /// NAME because that is all the loaded <see cref="Sprite"/> carries — the database hands
+        /// back the placeholder asset itself, not a marker. Only clubs need this: the other three
+        /// catalogs answer with <c>renderable</c> and never substitute a placeholder
+        /// (content_two_way §4).</summary>
         private const string PlaceholderSpriteName = "Placeholder";
 
         private static bool Usable(Sprite? sprite)

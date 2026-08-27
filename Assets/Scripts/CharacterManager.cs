@@ -79,7 +79,11 @@ namespace Golfin.Roster
 
             if (csvDb != null)
             {
-                var allChars = csvDb.GetAllCharacters();
+                // content_two_way §4 — the roster seed is a VISIBLE list (locked cards included),
+                // so it takes the AVAILABLE view: a character this build cannot draw shows neither
+                // as owned nor as locked. GetAllCharacters is still what the clamp definitions and
+                // the save read, so an owned row whose art is late survives untouched.
+                var allChars = csvDb.GetAvailableCharacters();
                 foreach (var charTemplate in allChars)
                 {
                     var playerData = new PlayerCharacterData(charTemplate.characterId);

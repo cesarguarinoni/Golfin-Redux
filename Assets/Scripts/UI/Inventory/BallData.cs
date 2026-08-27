@@ -36,6 +36,19 @@ namespace Golfin.Inventory
         /// </summary>
         public bool isActive = true;
 
+        /// <summary>
+        /// content_two_way §4 — <b>can THIS build draw this row?</b> False when the PRIMARY sprite
+        /// (<see cref="thumbnailSprite"/>) did not resolve, which is what a row published in the
+        /// admin looks like until the build that bundles its art ships. Set once, at load, from the
+        /// resolution the loader already performs — never a second <c>Resources.Load</c>.
+        /// <para>
+        /// It gates the AVAILABLE view only. The <c>GetAll…</c> view still carries the row: a
+        /// player granted a ball whose art is late must not LOSE it — the save and
+        /// <c>InventoryCodec</c> round-trip it untouched; they just cannot see it yet.
+        /// </para>
+        /// </summary>
+        public bool renderable = true;
+
         public override string ToString() =>
             $"{name}: PWR={power} REB={rebound} WIND={windResistance} ROLL={roll} SPIN={spin}";
     }

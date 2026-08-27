@@ -208,6 +208,39 @@ namespace Golfin.InventorySync.Tests
         }
 
         [Test]
+        public void An_owned_but_unrenderable_character_survives_the_round_trip()
+        {
+            // content_two_way §4. A character whose primary sprite this build does not ship is
+            // withheld from every VISIBLE list — and the codec must not follow suit. To this codec
+            // that row looks exactly like an id the catalog cannot place, because a catalog built
+            // from the available view no longer contains it: `char_art_pending` is deliberately
+            // absent from FakeCatalog.
+            //
+            // Losing it here would be the one failure the whole withholding design exists to
+            // avoid: a player GRANTED a character loses it permanently because its art was late.
+            var snap = new InventorySnapshot();
+            snap.Characters.Add(new PersistedCharacter
+            {
+                characterId = "char_art_pending",
+                currentLevel = 42,
+                totalSPEarned = 32,
+                spentStrength = 5,
+                isOwned = true,
+            });
+
+            string json = InventoryCodec.Encode(snap, _catalog);
+            StringAssert.Contains("char_art_pending", json);
+
+            var back = InventoryCodec.Decode(json, _catalog);
+            Assert.AreEqual(1, back.Characters.Count, "the row must survive encode+decode.");
+            Assert.AreEqual("char_art_pending", back.Characters[0].characterId);
+            Assert.AreEqual(42, back.Characters[0].currentLevel, "progress survives with it.");
+            Assert.AreEqual(32, back.Characters[0].totalSPEarned);
+            Assert.AreEqual(5,  back.Characters[0].spentStrength);
+            Assert.IsTrue(back.Characters[0].isOwned, "and it is still OWNED.");
+        }
+
+        [Test]
         public void Garbage_decodes_to_an_empty_snapshot_rather_than_throwing()
         {
             Assert.AreEqual(0, InventoryCodec.Decode("not json at all", _catalog).Clubs.Count);
