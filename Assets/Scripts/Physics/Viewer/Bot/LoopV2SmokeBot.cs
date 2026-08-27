@@ -161,6 +161,10 @@ namespace Golfin.Physics.Viewer
                 case "tree_trunk_normal_play":
                     scenarioRoutine = Bot.Scenarios.TreeTrunkNormalPlay(driver);
                     break;
+                // hole02_tree_bake_drift (2026-08-27): proof the rebuilt Hole 02 trees render AND collide.
+                case "hole02_tree_lines":
+                    scenarioRoutine = Bot.Scenarios.Hole02TreeLines(driver);
+                    break;
                 // Order 350 audio fidelity clips (2026-06-16):
                 case "audio_ui_music_slider":
                     scenarioRoutine = Bot.Scenarios.AudioUiMusicSlider(driver);

@@ -180,7 +180,7 @@ namespace Golfin.CourseImport
         /// Returns list of (worldX, worldZ, baseY, scale, profileName) rows, or null on fatal error.
         /// breakdown = human-readable per-source counts for the log.
         /// </summary>
-        private static List<string> HarvestScene(
+        public static List<string> HarvestScene(
             UnityEngine.SceneManagement.Scene scene, int holeNumber, out string breakdown)
         {
             breakdown = "";
@@ -253,7 +253,7 @@ namespace Golfin.CourseImport
 
             foreach (Transform child in go.transform)
             {
-                string prefabName  = StripSuffix(child.name);
+                string prefabName  = StripInstanceSuffix(child.name);
                 string profileName = NormalizeName(prefabName);
 
                 Vector3 pos   = child.position;
@@ -285,7 +285,7 @@ namespace Golfin.CourseImport
         /// "MESH_01Cedar_12"      → "MESH_01Cedar"
         /// "Spruce 1_brush_7"     → "Spruce 1"
         /// </summary>
-        private static string StripSuffix(string name)
+        public static string StripInstanceSuffix(string name)
         {
             // Remove _brush_<digits> or _<digits> at end.
             // Work right-to-left: find last '_', check if remainder is digits or "brush_digits".
@@ -350,21 +350,24 @@ namespace Golfin.CourseImport
             if (!Directory.Exists(dir))
                 Directory.CreateDirectory(dir);
 
+            // Explicit '\n', never AppendLine: AppendLine emits Environment.NewLine, so a
+            // re-bake on Windows would rewrite every committed CSV as CRLF and read as total
+            // drift. On macOS this is byte-for-byte what AppendLine already produced.
             var sb = new StringBuilder();
-            sb.AppendLine($"# bake_hash={hash}");
-            sb.AppendLine("worldX,worldZ,baseY,scale,profileName");
+            sb.Append($"# bake_hash={hash}").Append('\n');
+            sb.Append("worldX,worldZ,baseY,scale,profileName").Append('\n');
             foreach (var row in rows)
-                sb.AppendLine(row);
+                sb.Append(row).Append('\n');
 
             File.WriteAllText(fullPath, sb.ToString(), Encoding.UTF8);
             AssetDatabase.ImportAsset(csvAssetPath, ImportAssetOptions.ForceSynchronousImport);
             Debug.Log($"[TreeObstacleBaker] Wrote {rows.Count} rows to {csvAssetPath} (hash={hash})");
         }
 
-        private static string GetCsvAssetPath(int holeNumber, string courseSlug)
+        public static string GetCsvAssetPath(int holeNumber, string courseSlug)
             => $"Assets/Resources/HoleData/{courseSlug}/Hole_{holeNumber:D2}/tree_obstacles.csv";
 
-        private static string GetGeoScenePath(int n)
+        public static string GetGeoScenePath(int n)
         {
             string path = $"Assets/Golf/Courses/{CourseId}/Generated/Hole_{n:D2}_Geo.unity";
             string full = Path.GetFullPath(Path.Combine(Application.dataPath, "..", path));
@@ -373,7 +376,7 @@ namespace Golfin.CourseImport
             return null;
         }
 
-        private static int ExtractHoleNumber(string sceneName)
+        public static int ExtractHoleNumber(string sceneName)
         {
             // Match "Hole_01", "Hole_01_Geo", "Hole_1_Geo", etc.
             int i = sceneName.IndexOf("Hole_", StringComparison.OrdinalIgnoreCase);

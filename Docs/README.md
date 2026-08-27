@@ -47,6 +47,7 @@ How holes are built, plus hard-won lessons from the pipeline work.
 - `BUNKER_V2_SPEC.md` — bunker V2 spec (contour-based mesh).
 - `TEE_SKIRT_INVESTIGATION.md` — tee skirt investigation log.
 - `LESSONS_FRINGE_BORDER_MESHES.md` — **Read before touching fairway/tee fringe code.** Submesh baking, dilated CDT, Lite vs Geo importer trap.
+- `TREES_AND_GENERATED_SCENES.md` — **Read before touching hole trees.** Generated scenes are per-machine; trees live in tracked TerrainData + `Data/hole-NN-geo/standalone_trees.csv`. Rebuild + Validate after pulling; never re-import a hole to fix trees.
 
 ### `Reference/` — read-only reference material
 Source-of-truth design documents and reference PDFs.

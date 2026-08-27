@@ -7,6 +7,8 @@
 
 ## ▶ CURRENT STATE — update this block at every session boundary
 
+- **Last updated:** 2026-08-27 (Claude Code — **`hole02_tree_bake_drift` DONE.** Hole 02 collided with 1,495 Spruce the local scene never drew: `tree_obstacles.csv` (committed `4b0054069`) held 2,983 rows — 1,488 terrain + **1,495 standalone** — while the Mac's `Hole_02_Geo.unity` (2026-06-01, gitignored, predating that placement pass) had **no `StandaloneTrees` container at all**. Terrain trees survived because `TerrainData` is tracked; standalone trees lived only in the per-machine scene. **Fix: standalone placement is now TRACKED** — `Assets/Golf/Courses/<course>/Data/hole-NN-geo/standalone_trees.csv` (`prefab,worldX,worldY,worldZ,yawDeg,scale`, sibling order), committed for all 18 holes (16 with trees; 01 and 06 header-only by design so "file absent" always means "never exported"). New `StandaloneTreeCatalog` adds `Import/Standalone Trees/{Export Current Hole, Export All Holes, Rebuild Current Hole}`; `TreePlacer.PlaceTrees` and both `TreeBrushTool` write paths re-export automatically. Hole 02's catalog was seeded FROM the bake and the scene rebuilt (1,495 prefab instances under `HoleRoot/StandaloneTrees`). **New drift gate:** `Import/Bake Tree Obstacles/Validate All Holes` re-harvests every hole with the baker's own harvest fn and diffs vs the committed CSV (per-profile counts + 1 cm positions) plus scene-vs-catalog — **18/18 PASS**, tripwire-verified (a 5 cm move, a deleted row, and 3 removed trees each FAIL, and it returns to PASS on restore). Wired into `CIBuild.BuildIOS` and `BuildIOSDev`; `-skipTreeBakeCheck` disarms it loudly. ⚠️ **Byte-identity to `0519c2f0` was NOT achievable and this is not a tool defect:** the baker does not store `baseY`, it re-derives it via `terrain.SampleHeight(x,z)`, and the CSV only preserves X/Z to 4 decimals — re-sampling at the rounded X/Z flips the 4th decimal of `baseY` on the 73 of 2,983 rows whose true height sits within ~2.5e-5 m of a rounding boundary (0.1 mm each; every X, Z, scale, profile, count and row order identical). All 73 were solvable only by nudging trees to the corner of their rounding cell to steer the printed digit — fitting data to a hash, so it was NOT done. Re-baked to **`687cd578`** and proved `rebuild → save → bake` is now a **fixed point** (twice, byte-identical). Also corrected a spec slip: seeding at `worldY = baseY` would have floated all 1,495 trees 30 cm — every healthy hole has `worldY = baseY − 0.30` (TreePlacer's sink offset), measured. Doc: `Docs/Pipeline/TREES_AND_GENERATED_SCENES.md`. **Two findings worth carrying:** (a) `PlaceBallAt`'s ground-snap raycast lands on TREE capsule colliders — it put a ball 23 m up in foliage; assert the snapped Y against `Terrain.SampleHeight` when scripting placement near trees; (b) **1,365 of Hole 02's 1,495 standalone Spruce (91%) are OB** per the baked mask in `zones.json` — a ball hit into those tree lines terminates `HitOOB` and the loop resets it, so only ~130 trees are actually strikeable in play. ⚠️ **Left open for Cesar:** the device leg (Dev-iOS build + on-device run) — **no physical iPhone was connected** (all real devices offline in `xcrun xctrace list devices`), and a batchmode build needs the Editor closed, which would have disrupted the parallel shop session. Editor evidence is stills + an invariants JSON + a render↔collider overlay; the one recorded clip is unusable (camera sat in a top-down aim state, no trees in frame) and the recorder allows one clip per Editor launch.)
+
 - **Last updated:** 2026-08-18 evening (Architect — **`tournament_async_board` (Phase 4 of `tournaments_server_side`) server half BUILT; Unity spec SPEC_READY, kickoff GATED on deploy.** Cesar's calls: board first / payout (Phase 5) after; bots retire ONE-WAY at 10 human entries and are REMOVED from the ranking (`tournaments.bots_retired_at` latch); leaderboard sends BOTH ranks — display (blended) + `prize_rank` (human-only, bots never paid). Written into playlife (UNCOMMITTED): `migrations/2026_08_18_tournament_async_phase4.sql` (bot latch, `tournament_entries.display_level`, `golfin_bot_fields` + `golfin_bot_brackets` server mirrors of the CSVs), NEW `routers/tournaments_golfin.py` mounted at the same `/api/v1/tournaments` prefix — `POST /golfin/{slug}/enter` (server-side fee debit via `spend_pts` with deterministic uuid5(user:slug) key — self-heals, never double-charges), `POST /golfin/{slug}/submit-hole` (§6b.3 plausibility: hole-in-set, strokes 1–15, window = end+resolve_delay grace, 20s/hole pace tripwire, idempotent replay for the offline queue), `GET /golfin/{slug}/entry` (cross-device resume), `GET /golfin/{slug}/leaderboard` (server bot generation ONCE per tournament — seeded via bot_seed latch, persisted into entries+hole_results with organic-reveal timestamps; ranking is a faithful port of LocalTournamentBackend: provisional score-to-par/thru/earlier-submit no partial ties, final strokes+T-ties+earlier submitted_at; DNF & thru-0 hidden; caller row always in `player`). Logic proven end-to-end against a fake Supabase (enter/replay/pace/retire/final). GPS endpoints in `tournaments.py` untouched. ✅ SHIPPED TO PROD same evening: migration APPLIED (verification 2 new cols / 3 bot fields / 6 brackets / RLS true), `fly deploy` green, smoke: `/health` 200, all four `/golfin/{slug}/…` endpoints **403-not-404** (mounted, auth-gated), the public `/golfin` schedule still 200, garbage routes 404. **The tournament_async_board kickoff below is pasteable NOW.** Phase-4 NOTE: `GetResults`/`ClaimPrize` keep the existing client-side earn-game `tournament_prize` payment path (unchanged behavior) — Phase 5 moves payment into the resolver and re-points ClaimPrize (decision of record #5).)
 - **Last updated:** 2026-08-18 later (Architect — **`leaderboard_backend` server half BUILT; Unity spec SPEC_READY.** Cesar's decisions of record: server-side fake pool (everyone sees the same board), character id+level sync to profiles, Architect builds/deploys backend + Code does Unity. Written into playlife (UNCOMMITTED — Code or Cesar commits): `migrations/2026_08_18_golfin_leaderboards.sql` (profiles.golfin_character_id/level, `golfin_fake_players` seeded with the 120 fake_players.csv rows RLS-on-no-policies, `golfin_leaderboard(p_start,p_end)` aggregation fn — filters by the `game_point_actions` catalog so GPS RP + admin grants never rank, service_role-only), `routers/leaderboards.py` (`GET /api/v1/leaderboards/{daily|weekly|monthly|historic}`, AUTH, ranks+T-ties server-side 1,2,2,4, deterministic fake scores per period key — participation 35/70/90/100%, ranges sized post-÷10 ⚠️ NOTE constants need tuning once real beta scores exist), `user.py` `PUT /golfin-character`, `main.py` mount. ✅ SHIPPED TO PROD same day: migration APPLIED via Supabase SQL editor (Cesar; self-contained verification query returned 2 golfin profile cols / 120 fakes active / RLS true / 0 fn-vs-ledger mismatches), `fly deploy` green (both machines good, via MacOS-MCP shell + nohup — flyctl is NOT in the device_bash VM, it lives on the Mac at ~/.fly/bin), smoke: `/health` 200, all four `/api/v1/leaderboards/{period}` + `PUT /user/golfin-character` respond **403-not-404** (mounted, auth-gated), garbage route 404s. **The Unity kickoff below is pasteable NOW.** Ledger-derived scores mean past periods are queryable for free — the v1.0 "previous period results" popup needs no snapshots when it's wanted. Fake-pool dashboard panel = deliberate follow-up.)
 - **Last updated:** 2026-08-13 (final) (Architect — **THE DASHBOARD IS LIVE AND THE LOOP IS CLOSED.** `admin_dashboard` v1 scope complete: running against production, real Supabase password auth verified, and Cesar performed the first live admin RP adjustments through the UI (+100 then −50 on Cratilo → balance 123→223→**173**). Prod SQL confirms both rpc paths and the audit trail: ledger rows `manual_admin_grant +100` / `spend -50`, plus two `rp_adjust` rows in `admin_audit_log` carrying before/after `total_points` and the admin's email. Two days after "start the admin dashboard", the chain runs end to end: **dashboard → `earn_pts_v2`/`spend_pts` → the one shared ledger → the game's RP.** ⚠️ SECURITY STANDING ITEM: the service_role key was pasted into a chat transcript — rotate it, and when you do, update BOTH `Tools/admin-dashboard/.env.local` and the playlife-api Fly secret in the same sitting or `/points/*` breaks. Still open elsewhere: `points_device_checks` (Cesar-only, 3 checks); dashboard hosting + Google OAuth for admin login; spec §4 v2/v3 panels pending Track B.)
@@ -34,6 +36,94 @@
 
 ## 📋 SPEC_READY POINTERS
 
+- **`hole02_tree_bake_drift`** (filed 2026-08-27, Architect via Cowork; **REVISED same day — re-import is
+  destructive, do not re-import**) — **kickoff-sized, pasteable (this block is the spec). Hole 02
+  collides with 1,495 invisible Spruce.** Root cause verified: the 07-29 re-import (`4b0054069`) ran on
+  another machine; its regenerated scene got Spruce (mixed-mode `TreePlacer`) and the committed bake
+  (`0519c2f0`) carries them, but generated scenes are gitignored (`.gitignore:111`) so the Mac still has
+  the 2026-06-01 `Hole_02_Geo.unity` with zero Spruce. Terrain trees (1,488) are safe — they live in the
+  tracked `TerrainData_Hole02Geo.asset`. Cesar's decision: **rebuild the standalone Spruce from the bake**
+  (position/scale/profile are in the CSV; yaw is not and does not affect collision), make standalone
+  placement a **tracked file** so any machine can rebuild a scene, and add a **build-time drift gate**.
+
+### Kickoff · hole02_tree_bake_drift (issued 2026-08-27, REVISED — supersedes the re-import version)
+
+```
+Task: hole02_tree_bake_drift — Hole 02 collides with 1,495 invisible Spruce. Rebuild them from
+the bake, make standalone tree placement tracked, add a drift gate. This block is the spec.
+
+DO NOT re-import Hole 02 (or any hole): the importer regenerates TerrainData + scene and wipes
+authored tree placement. Do NOT touch TreePlacer weights or TerrainData.
+
+FACTS (verified 2026-08-27):
+- Resources/HoleData/lomond-country-club/Hole_02/tree_obstacles.csv (bake_hash 0519c2f0,
+  committed 4b0054069 on 07-29) = 2,983 rows: 1,495 Spruce_1/Spruce_3 (standalone) + 1,488
+  terrain trees. Columns: worldX,worldZ,baseY,scale,profileName (4 decimals).
+- The Mac's Assets/Golf/Courses/lomond-country-club/Generated/Hole_02_Geo.unity (2026-06-01,
+  gitignored) has no StandaloneTrees container. Its terrain trees match the CSV's 1,488
+  (TerrainData is tracked). All 17 other holes' scenes match their CSVs.
+- TreeObstacleBaker harvests StandaloneTrees children named {prefabName}_{n}, profile =
+  prefab name with spaces→underscores ("Spruce 1" → Spruce_1). Prefabs:
+  Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/European/Spruce/Spruce 1.prefab, Spruce 3.prefab
+  (these are what TreePlacer instantiates — TreePlacer.cs:68-72 ForceStandaloneNames).
+
+PART 1 — tracked standalone placement + rebuild tool:
+1. New tracked file per hole: Assets/Golf/Courses/lomond-country-club/Data/hole-NN-geo/
+   standalone_trees.csv — columns prefab,worldX,worldY,worldZ,yawDeg,scale (one row per
+   StandaloneTrees child). Add "Import/Standalone Trees/Export Current Hole" (writes it from
+   the open scene) and "Import/Standalone Trees/Rebuild Current Hole" (deletes the
+   StandaloneTrees container and re-instantiates every row as a plain prefab instance named
+   {prefab}_{index}, in file order, under a new StandaloneTrees container parented like
+   TreePlacer does). Hook TreePlacer and TreeBrushTool so every placement/brush write also
+   re-exports the file (one call at the end of their apply paths — no other behaviour change).
+2. Export standalone_trees.csv for all 17 holes that HAVE standalone trees from their current
+   scenes (03–05, 07–18). Commit them. This makes every scene reproducible on any machine.
+3. Hole 02: generate its standalone_trees.csv FROM THE BAKE — filter tree_obstacles.csv rows
+   whose profileName is Spruce_1/Spruce_3, map back to prefab "Spruce 1"/"Spruce 3",
+   worldY = baseY, yawDeg = deterministic per row (System.Random(20260827 + rowIndex) × 360),
+   scale = scale, preserving CSV row order. Then Rebuild Current Hole on Hole 02.
+4. ACCEPTANCE (the whole point): Import/Bake Tree Obstacles/Bake Hole 02 → the CSV must be
+   BYTE-IDENTICAL to HEAD, bake_hash 0519c2f0. If the harvest order or 4-decimal round-trip
+   breaks identity, fix the tool (not the CSV) until it is identical; if only ordering
+   differs, sort inside the baker deterministically (by profile, then X, then Z) and re-bake
+   ALL 18 holes so every hash is regenerated consistently — say so in the report.
+5. Visual: Hole 02 tee + two shots into each tree line in the Editor (ball visibly strikes a
+   tree where it stops; frames saved), then a Dev-iOS build and the same on device.
+
+PART 2 — drift gate:
+6. "Import/Bake Tree Obstacles/Validate All Holes": for each Hole_NN_Geo, open additively,
+   re-harvest with the baker's harvest code (refactored into a function, no behaviour change),
+   diff against the committed CSV — count per profile + positions within 1 cm. Table; any
+   mismatch = error. Also flag any hole whose StandaloneTrees differ from standalone_trees.csv.
+7. Wire it into CIBuild (Dev-iOS and iOS-Full): mismatch FAILS the build with hole + counts,
+   like the build-stamp guard. -skipTreeBakeCheck escape hatch, logged loudly.
+8. Docs (Docs/Pipeline or the Course Importer README): "Generated scenes are per-machine.
+   Trees live in TerrainData (tracked) + Data/hole-NN-geo/standalone_trees.csv (tracked).
+   After pulling Data/ or HoleData/ changes: Rebuild Current Hole, then Validate All Holes,
+   before building. Never re-import a hole to fix trees."
+
+Out of scope: any placement change on any hole, TreePlacer weights, Spruce rendering,
+H06 heightmap, re-importing anything.
+
+When done: list changed files; the Hole 02 bake result (hash + byte-identical yes/no); the
+validator table for all 18 holes (expect 18/18 PASS); the standalone_trees.csv row counts
+per hole vs scene LODGroup counts; the Editor + device frames; update Docs/AI_CONTEXT.md and
+this TellCode pointer.
+```
+
+
+- **`shop_server_purchase`** (filed 2026-08-27, Architect via Cowork) — **SPEC_READY, kickoff pasteable.
+  CONTENT_PIPELINE_PLAN §6 step 4d / §11.5: the shop price becomes AUTHORITATIVE.** New
+  `POST /api/v1/shop/purchase` → plpgsql `golfin_shop_purchase()` reads the PUBLISHED `shop_catalog`
+  row, prices it on the server clock (listing + sale windows, same three rules as
+  `ContentShopWindow`), debits via `spend_pts` and inserts the item into `golfin_pending_grants`
+  in ONE transaction; the client applies that grant through the managers, records the id in
+  `appliedGrantIds`, acks. Also: `character` + `item` categories render (club-card hierarchy, no
+  Figma) and buy; `ParseCategory` strict (today anything ≠ ball is a Club — latent bug);
+  CHARACTERS/ITEMS chips; admin banner copy flips to "enforced for builds ≥ N". Cesar's decisions:
+  Code does BOTH repos; Roster-card BUY later; legacy `/points/spend reason=shop_purchase` closed
+  in a SEPARATE commit on Cesar's word. Out: stamina shop, level-ups, stockLimit, bags.
+  Spec: `Docs/Specs/Active/shop_server_purchase/SPEC.md`.
 - **`quality_tiers`** (roadmap `9a`, Order 900; filed 2026-08-27, Architect via Cowork) — **SPEC_READY,
   kickoff pasteable. Phase 2 of `Docs/PERF_OPTIMIZATION_PLAN.md`.** Low / Mid / High resolved from a
   device table in code (iOS `deviceModel` generation, Android GPU name + RAM + GLES3 caps, unknown → Mid),
@@ -52,6 +142,47 @@
   ARCHITECT_BRIEF.md` into the Active folder (git mv) — it is the Phase 1 hand-off the spec cites.
 - ~~**`perf_phase1_free_wins`**~~ — ✅ **DONE 2026-08-27** (`cca3cfd1a`; every pose 60 fps cold; Option C
   dropped after measurement; the 2314 "flat terrain" proven pre-existing). Move Active/ → Completed/.
+
+### Kickoff · shop_server_purchase (issued 2026-08-27)
+
+```
+Read Docs/Specs/Active/shop_server_purchase/SPEC.md and implement it. Two repos, in the
+spec's §5 order: playlife FIRST (/Users/cesar/Documents/playlife), then GolfinRedux.
+
+Context:
+- Makes the shop price authoritative. Today ShopTransaction.TryPurchaseCatalogEntry
+  debits the client-computed EffectiveRpCost through PointsSpendGate and grants
+  locally. New POST /api/v1/shop/purchase (routers/shop.py) → plpgsql
+  golfin_shop_purchase(): published content_rows shop_catalog row, server-clock
+  windows (mirror ContentShopWindow's three rules), spend_pts debit + a
+  golfin_pending_grants insert in ONE transaction, idempotent by key via a new
+  golfin_shop_purchases table. Every business outcome is HTTP 200 (ok /
+  insufficient / price_changed / not_listed / already_owned).
+- Client: new Golfin.Economy ShopPurchaseService (mirror PointsService: flag gate
+  inside the routine, own latch, fold total_points AFTER onDone via a new public
+  PointsService.ApplySpendResult). Flag ON = server call only, no local price;
+  flag OFF = existing path byte-identical. Apply the returned grant through the
+  managers (ClubManager.GrantClub / new CharacterManager.UnlockCharacter /
+  ItemManager.AddItems / GrantBall), record grant.Id in SaveData.appliedGrantIds,
+  InventorySyncService.MarkDirty, ack. Never InventoryGrants.Apply mid-session.
+- ShopCategory += Character, Item; GeneralShopCatalog.ParseCategory becomes strict
+  (drop + warn, never default to Club). GeneralShopCard.BindCharacter/BindItem on the
+  GeneralShopCard_Club hierarchy per SPEC §3.4 (RarityStatCaps for bar scale, no
+  hard-coded 60). CHARACTERSChip + ITEMSChip duplicated from BALLSChip.
+- Admin: only lib/i18n.ts sh.notice.* copy (EN+JA) + amber style + build constant.
+- Minimal diff. Reuse: spend_pts, golfin_pending_grants, InventoryGrants id ledger,
+  ContentBuildNumber.Current, PointsSpendGate's two toast consts, RarityStatCaps.
+- SQL RULE: print the FULL migration SQL in your message for Cesar to paste into the
+  Supabase editor; wait for his verification output before deploying. Deploy with
+  ~/.fly/bin/flyctl from the Mac; confirm the image via flyctl status; smoke per §2.5.
+- Out of scope: stamina shop, level-ups/hole unlocks, Roster-card BUY, stockLimit /
+  minPlayerLevel, bags, IAP. Do NOT close the legacy /points/spend shop_purchase
+  reason in this task (§2.6 is a separate commit on Cesar's word).
+
+When done: list changed files (both repos) with a 1-line summary each, run the
+acceptance tests in the spec, flag which need manual on-device verification, update
+STATUS.md + IMPLEMENTER_REPORT.md in the spec folder, and update Docs/AI_CONTEXT.md.
+```
 
 ### Kickoff · quality_tiers (issued 2026-08-27)
 

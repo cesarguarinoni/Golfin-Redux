@@ -150,6 +150,9 @@ namespace Golfin.EditorTools
 
         static string BuildIOSCore(string profilePath, string outputPath, BuildOptions buildOptions)
         {
+            var treeError = ValidateTreeBake();
+            if (treeError != null) return treeError;
+
             var profile = AssetDatabase.LoadAssetAtPath<BuildProfile>(profilePath);
             if (profile == null)
                 return $"build profile not found: {profilePath}";
@@ -250,6 +253,56 @@ namespace Golfin.EditorTools
             {
                 Debug.LogWarning($"{Tag} could not read {plistPath}: {e.Message}");
             }
+        }
+
+        /// <summary>
+        /// Drift gate: the hole SCENES are gitignored and per-machine, while physics reads the
+        /// TRACKED tree bake. A machine whose scene and bake disagree ships invisible tree
+        /// colliders — Hole 02 shipped 1,495 of them. Refuse to build on any mismatch, the same
+        /// way the build-stamp guard refuses an upload regression.
+        ///
+        /// Escape hatch: -skipTreeBakeCheck on the Unity command line. Logged loudly, because a
+        /// build produced with the gate disarmed is a build nobody verified the holes of.
+        ///
+        /// Returns null when the build may proceed, or the failure message.
+        /// </summary>
+        static string ValidateTreeBake()
+        {
+            if (Array.IndexOf(Environment.GetCommandLineArgs(), "-skipTreeBakeCheck") >= 0)
+            {
+                Debug.LogWarning($"{Tag} ############################################################");
+                Debug.LogWarning($"{Tag} -skipTreeBakeCheck: TREE BAKE DRIFT GATE DISARMED.");
+                Debug.LogWarning($"{Tag} Hole scenes were NOT checked against the committed bake.");
+                Debug.LogWarning($"{Tag} This build may collide with trees it does not render.");
+                Debug.LogWarning($"{Tag} ############################################################");
+                Console.Error.WriteLine($"{Tag} WARNING: -skipTreeBakeCheck — tree bake drift gate disarmed.");
+                return null;
+            }
+
+            Golfin.CourseImport.TreeBakeValidator.Report report;
+            try
+            {
+                report = Golfin.CourseImport.TreeBakeValidator.ValidateAllHoles();
+            }
+            catch (Exception e)
+            {
+                // A gate that cannot run is not a gate that passed.
+                return $"tree bake validation threw {e.GetType().Name}: {e.Message}\n{e.StackTrace}";
+            }
+
+            string table = report.ToTable();
+            if (report.AllPass)
+            {
+                Debug.Log($"{Tag} tree bake drift gate: PASS\n{table}");
+                return null;
+            }
+
+            Debug.LogError($"{Tag} tree bake drift gate: FAIL\n{table}");
+            Console.Error.WriteLine($"{Tag} tree bake drift gate: FAIL\n{table}");
+            return $"tree bake drift: {report.FailCount} of {report.holes.Count} hole(s) disagree with the " +
+                   "committed data. Run Import/Standalone Trees/Rebuild Current Hole on each listed hole " +
+                   "(and Import/Bake Tree Obstacles/Validate All Holes to confirm), or re-run with " +
+                   "-skipTreeBakeCheck if you accept shipping unverified holes.\n" + table;
         }
 
         static void Fail(string msg)

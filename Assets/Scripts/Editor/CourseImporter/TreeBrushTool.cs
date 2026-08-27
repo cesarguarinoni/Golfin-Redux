@@ -512,6 +512,9 @@ namespace Golfin.CourseImport
             EditorUtility.SetDirty(container);
             UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(
                 terrain.gameObject.scene);
+
+            // Keep the tracked standalone catalog in step with the scene (see StandaloneTreeCatalog).
+            StandaloneTreeCatalog.ExportSceneQuiet(terrain.gameObject.scene);
         }
 
         // ─── Erase ────────────────────────────────────────────────────────────
@@ -564,6 +567,9 @@ namespace Golfin.CourseImport
                 Debug.Log($"[TreeBrush] Erased {removedGO} GO + {removedTerrain} terrain trees");
                 UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(
                     terrain.gameObject.scene);
+
+                // Erase can delete StandaloneTrees children too — re-export the tracked catalog.
+                StandaloneTreeCatalog.ExportSceneQuiet(terrain.gameObject.scene);
             }
         }
 

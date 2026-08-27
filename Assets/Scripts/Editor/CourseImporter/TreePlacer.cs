@@ -823,6 +823,11 @@ namespace Golfin.CourseImport
                 $"({activeEntries.Count} types across {folderGroups.Count} folders, " +
                 $"{exclusionPolygons.Count} exclusion polygons)" +
                 $"\n  {summary}");
+
+            // Standalone trees live only in the (gitignored) scene, so every placement pass must
+            // also write the TRACKED catalog — otherwise this hole is unreproducible on any other
+            // machine. See StandaloneTreeCatalog for the Hole 02 drift this prevents.
+            StandaloneTreeCatalog.ExportSceneQuiet(terrain.gameObject.scene);
         }
 
         /// <summary>

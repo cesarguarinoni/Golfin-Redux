@@ -133,6 +133,81 @@
 
 ## ✅ RECENTLY LANDED
 
+> **`shop_server_purchase` (CONTENT_PIPELINE_PLAN §6 step 4d / §11.5) — BOTH REPOS CODE-COMPLETE
+> 2026-08-27. BACKEND APPLIED + DEPLOYED AND SMOKED; NOT SEEN ON A SCREEN, NEVER SOLD ANYTHING.** Implemented DIRECTLY by the main
+> Claude Code thread — no implementer / self-reviewer / red-team chain ran. Spec + report:
+> `Docs/Specs/Active/shop_server_purchase/`.
+>
+> **The shop price is now the SERVER's.** A purchase is one `POST /api/v1/shop/purchase` carrying
+> the **entry id and never a price**. `public.golfin_shop_purchase()` reads the published
+> `shop_catalog` row, prices it off the **server clock** (listing + sale windows, mirroring
+> `ContentShopWindow.Evaluate` rule for rule — the matrix is written into the migration header so
+> the two stay comparable by eye), debits through the existing `spend_pts`, and inserts a
+> `golfin_pending_grants` row plus a `golfin_shop_purchases` ledger row **in one transaction**.
+> There is therefore no window where the RP is gone and the grant does not exist, and if the app
+> dies between debit and apply the next boot's drain delivers it. Every business outcome —
+> `insufficient` / `price_changed` / `not_listed` / `already_owned` / `unknown_entry` /
+> `unsupported_category` — is HTTP **200**, so the status code is never what tells a refusal from
+> an unreachable server. Ledger rows read `shop:<entryId>`, which makes every purchase auditable
+> in the existing Points panel with no admin change.
+>
+> Client: new `Golfin.Economy.ShopPurchaseService` (mirrors `PointsService` — flag gate inside the
+> routine, own in-flight latch, fresh idempotency key per attempt, balance folded through the new
+> `PointsService.ApplySpendResult` **after** `onDone`, the ordering rule `SpendRoutine` documents).
+> `ShopTransaction.TryPurchaseCatalogEntry` branches on the **flag, not the gate**: ON debits the
+> SERVER's `charged` and applies the returned grant through the MANAGERS (never
+> `InventoryGrants.Apply`, which writes raw `SaveData` and would be invisible to managers holding
+> their own runtime copies mid-session), records the id in `appliedGrantIds`, marks the sync dirty
+> and acks. OFF is the pre-existing body, byte-for-byte.
+>
+> Second, smaller fix in the same task: `ShopCategory` gained `Character` and `Item`, and
+> `ParseCategory` became **strict**. It used to read every non-`ball` category as `Club`, so a
+> published `character` row — which the admin panel has been able to publish since it shipped —
+> rendered as a broken club card. Unknown categories (including `bag`, which is publishable but
+> not grantable) are now dropped with a warning naming the entryId. Character and item cards reuse
+> the `GeneralShopCard_Club` hierarchy; `CHARACTERSChip` and `ITEMSChip` **already existed in the
+> prefab with EN+JA labels** and simply had no handler — they are now wired.
+>
+> **Tests.** Backend 55 passed (26 pre-existing + 29 new router-level). Unity EditMode
+> **1844 / 1841 passed / 0 failed / 3 skipped** — and both new suites were proved to actually run
+> with a tripwire (armed → 1846 total, exactly 2 failed, both tripwires), not inferred from a
+> total that `tests-run` never itemises.
+>
+> **LANDED ON PROD 2026-08-27.** Migration applied by Cesar — all 11 verification rows as
+> expected (`purchases_rls 1` / `purchases_policies 0` / `fn_not_client_callable 0` /
+> `shop_catalog_rows 5`), and the bound-parser matrix exact. The load-bearing row was
+> `zoneless_utc`: a bound with NO timezone parsed to `2026-09-01 00:00:00+00`, proving
+> `set timezone = 'UTC'` took — without it a phone in JST would see a different shop window
+> than one in UTC. `garbage` returned `ok=false`, i.e. fails closed. `playlife-api` deployed
+> **v53 → v54** (image `deployment-01M10JFR1RDHHXV72FERYJNKT0`, confirmed via `flyctl status`,
+> never the deploy exit code). §2.5 smoke all green: `/health` `/notices` `/banners`
+> `/tournaments/golfin` `/content` all 200; `POST /shop/purchase` **403** unauth and **401** on
+> a bad token; garbage route 404. The live `/openapi.json` shows the body as
+> `{entry_id, idempotency_key, build, expected_rp_cost}`, bearer-secured, **with no `user_id`
+> field** — so the deployed contract matches `ShopPurchaseService.BuildPurchaseJson` exactly.
+>
+> **WHAT IS STILL OPEN, and none of it is optional:**
+> 1. **The endpoint is live but has never sold anything.** Every §6 item marked *(device)* —
+>    price-is-the-server's, sale window on the server clock, delivery-survives-death, idempotent
+>    replay, kill switch, already-owned — needs a real client. "Deployed" is not "exercised".
+> 2. **No UI was ever rendered.** Character/item cards and the six-chip row are code-complete and
+>    unit-pinned but visually unverified — another live session held the shared Unity Editor and
+>    the test runner. Needs an Editor or device pass with a published `character` and `item` row.
+> 3. **§2.6 stays unshipped.** Closing `reason == "shop_purchase"` on the legacy `/points/spend`
+>    is a SEPARATE commit, on Cesar's word only, once testers are on the build carrying §3 —
+>    enforcement is only as good as the oldest build in the wild. **Until then an older installed
+>    build still self-grants at its bundled CSV price**, which is exactly what the admin banner
+>    now says out loud.
+> 4. `SERVER_PRICE_ENFORCED_FROM_BUILD = 2334` in the admin Shop panel is a guess from
+>    `last_uploaded_build.txt` (2333) + 1. Bump it if the build that ships this is not 2334.
+> 5. **Nothing is committed.** A second live session is working in the same tree (tree-obstacle
+>    workstream, `HEAD` unmoved at `1da6c026e`), so any close-out commit must be scoped to this
+>    task's paths only (CLAUDE.md rule 12).
+>
+> The admin Shop banner stopped being a red "prices are NOT enforced" warning and is now amber
+> information, in EN and JA — with the second sentence kept deliberately: older installs still
+> debit locally at their bundled price until item 4 lands.
+
 > **`quality_tiers` (roadmap 9a, Order 900 — PERF Phase 2) — CODE + ASSETS + UI DONE 2026-08-27,
 > DEVICE NUMBERS NOT RUN.** Implemented DIRECTLY by the main Claude Code thread — no implementer /
 > self-reviewer / red-team chain ran. Spec + report: `Docs/Specs/Active/quality_tiers/`.
@@ -3103,6 +3178,7 @@ Official map → control points → affine transform → heightmap + aerial text
 - `Docs/Physics/LESSONS_PHYSICS_AERO.md`, `Docs/Physics/LESSONS_PHYSICS_SURFACE_MARKERS.md` — hard-won physics lessons
 - `Docs/Pipeline/ADD_HOLE.md` — end-to-end procedure for adding a new hole
 - `Docs/Pipeline/LESSONS_FRINGE_BORDER_MESHES.md` — fringe / submesh baking lessons (read before touching fairway/tee fringe code)
+- `Docs/Pipeline/TREES_AND_GENERATED_SCENES.md` — **read before touching hole trees.** Generated scenes are per-machine; trees live in tracked TerrainData + `Data/hole-NN-geo/standalone_trees.csv`. Rebuild + Validate after pulling.
 - `Docs/Pipeline/BUNKER_RESEARCH.md`, `Docs/Pipeline/BUNKER_V2_SPEC.md`, `Docs/Pipeline/TEE_SKIRT_INVESTIGATION.md`
 - `Docs/Archive/WATER_FINDINGS.md`, `Docs/Archive/WATER_REWORK_PLAN.md`, `Docs/Archive/WATER_REWORK_BRIEF.md` (historical water rework reports)
 - `Docs/TellCode.md` — architect → code instructions (Unity)

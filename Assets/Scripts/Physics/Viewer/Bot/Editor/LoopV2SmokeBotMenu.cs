@@ -222,6 +222,20 @@ namespace Golfin.Physics.Viewer.Editor
         [MenuItem("GOLFIN/Smoke/Loop v2/Tree Trunk Normal Play", isValidateFunction: true)]
         static bool ValidateTreeTrunkNormalPlay() => !EditorApplication.isPlaying;
 
+        // ── hole02_tree_bake_drift (2026-08-27) ───────────────────────────────
+        [MenuItem("GOLFIN/Smoke/Loop v2/Hole 02 Tree Lines")]
+        public static void RunHole02TreeLines()
+        {
+            // Tee frame + four trunk strikes (two per tree line) on the rebuilt Hole 02.
+            // 5s startup + ~6s load/settle + 4 x (~1s place + ~6s flight + 3s settle) ≈ 55s.
+            BotVideoRecorder.MaxRecordSecondsSessionOverride = 120;
+            BotVideoRecorder.ArmDeferred();
+            Launch("hole02_tree_lines");
+        }
+
+        [MenuItem("GOLFIN/Smoke/Loop v2/Hole 02 Tree Lines", isValidateFunction: true)]
+        static bool ValidateHole02TreeLines() => !EditorApplication.isPlaying;
+
         // ── tree_aware_bot (Order 351, 2026-07-20): trunk avoidance BEFORE/AFTER + Hole17 no-op ──
 
         // ── cup_capture_and_lipout §7 acceptance clips (2026-08-05) ─────────────

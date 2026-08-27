@@ -2490,6 +2490,397 @@ namespace Golfin.Physics.Viewer.Bot
             }
         }
 
+        // ── hole02_tree_bake_drift: Hole 02 tree-line strike proof ────────────
+
+        /// <summary>
+        /// Hole 02 rebuilt-tree proof (hole02_tree_bake_drift §5).
+        ///
+        /// Hole 02's 1,495 standalone Spruce existed ONLY in the committed bake — the local
+        /// scene had none, so the player collided with trees that were never drawn. After
+        /// Import/Standalone Trees/Rebuild Current Hole the trees are in the scene again, and
+        /// this scenario proves it the only way that counts: fire at four specific trunks —
+        /// two in each tree line flanking the fairway — and show the ball stopping AT the trunk.
+        ///
+        /// Targets were chosen from standalone_trees.csv by projecting every tree onto the
+        /// tee→pin line (tee 118.09,-129.33 → pin -96.49,137.24). Hole 02 doglegs left, so the
+        /// "right" line sits just off the straight line (perp -6..-11 m) and the "left" line
+        /// sits wide (perp +35..+43 m). Each ball start is 13 m from its trunk on the FAIRWAY
+        /// side, along a corridor verified clear of every other tree by ≥3.5 m, so the only
+        /// thing the ball can hit is the intended trunk.
+        /// </summary>
+        public static IEnumerator Hole02TreeLines(BotDriver d)
+        {
+            d.LogStep("=== Hole 02 tree lines (hole02_tree_bake_drift §5) ===");
+
+            var shellCanvases = Object.FindObjectsOfType<Canvas>();
+            var hiddenCanvases = new System.Collections.Generic.List<Canvas>();
+            foreach (var c in shellCanvases)
+                if (c.gameObject.scene.name == "ShellScene" && c.enabled)
+                { c.enabled = false; hiddenCanvases.Add(c); }
+            d.LogStep($"  Hidden {hiddenCanvases.Count} ShellScene canvases.");
+
+            System.Action restore = () =>
+            {
+                foreach (var c in hiddenCanvases) if (c != null) c.enabled = true;
+            };
+            return Hole02TreeLinesBody(d, restore);
+        }
+
+        private struct TreeShot
+        {
+            public string label;
+            public Vector3 trunk;   // trunk XZ (y = catalog worldY, informational)
+            public float   scale;
+            public Vector3 ball;    // ball start XZ (y filled by PlaceBallAt surface snap)
+        }
+
+        private static IEnumerator Hole02TreeLinesBody(BotDriver d, System.Action restore)
+        {
+            try
+            {
+            d.LogStep("  Loading LabScaffold + Hole_02_Geo (additive, simultaneous)...");
+            var opLab = UnityEngine.SceneManagement.SceneManager.LoadSceneAsync(
+                "LabScaffold", UnityEngine.SceneManagement.LoadSceneMode.Additive);
+            var opHole = UnityEngine.SceneManagement.SceneManager.LoadSceneAsync(
+                "Hole_02_Geo", UnityEngine.SceneManagement.LoadSceneMode.Additive);
+            if (opLab == null || opHole == null)
+            {
+                d.LogStep("=== Hole02TreeLines: FAIL — LabScaffold or Hole_02_Geo not in Build Settings ===");
+                yield break;
+            }
+
+            float lw = 0f;
+            while ((!opLab.isDone || !opHole.isDone) && lw < 60f)
+            { yield return new WaitForSecondsRealtime(0.25f); lw += 0.25f; }
+            if (!opLab.isDone || !opHole.isDone)
+            { d.LogStep($"=== Hole02TreeLines: FAIL — load timeout ({lw:F1}s) ==="); yield break; }
+
+            var ctrl = Object.FindObjectOfType<PhysicsLabController>();
+            if (ctrl == null)
+            { d.LogStep("=== Hole02TreeLines: FAIL — PhysicsLabController not found ==="); yield break; }
+
+            float hw = 0f;
+            while (!ctrl.IsHoleReady && hw < 20f)
+            { yield return new WaitForSecondsRealtime(0.25f); hw += 0.25f; }
+            if (!ctrl.IsHoleReady)
+            { d.LogStep($"=== Hole02TreeLines: FAIL — IsHoleReady never true ({hw:F1}s) ==="); yield break; }
+            d.LogStep($"  IsHoleReady=true ({hw:F1}s). Settling 1.5s...");
+            yield return new WaitForSecondsRealtime(1.5f);
+
+            // Deferred recording: start only once the hole is loaded and stable, which is what
+            // keeps the clip free of the scene-load Y-flip transient. No-op unless the launcher
+            // called ArmDeferred().
+            if (UnityEditor.SessionState.GetBool("LoopV2SmokeBot.DeferredRecord", false))
+            {
+                UnityEditor.SessionState.SetBool("LoopV2SmokeBot.RecordVideo", true);
+                UnityEditor.SessionState.SetBool("LoopV2SmokeBot.DeferredRecord", false);
+                try
+                {
+                    System.Type recType = null;
+                    foreach (var a in System.AppDomain.CurrentDomain.GetAssemblies())
+                    { var t = a.GetType("Golfin.Physics.Viewer.Editor.BotVideoRecorder"); if (t != null) { recType = t; break; } }
+                    recType?.GetMethod("Begin", System.Reflection.BindingFlags.Public |
+                                                System.Reflection.BindingFlags.Static)?.Invoke(null, null);
+                    d.LogStep("  BeginDeferred: BotVideoRecorder.Begin() called — recording started.");
+                }
+                catch (System.Exception ex) { d.LogStep("  BeginDeferred ERROR: " + ex.Message); }
+                yield return new WaitForSecondsRealtime(1f);
+            }
+
+            // Count what is actually in the scene — a rendered tree count of 0 is the whole bug.
+            int standaloneInScene = 0;
+            foreach (var go in Object.FindObjectsOfType<GameObject>())
+                if (go.name == "StandaloneTrees") standaloneInScene += go.transform.childCount;
+            d.LogStep($"  StandaloneTrees children present in the loaded scene: {standaloneInScene} " +
+                      "(committed catalog = 1495; before the rebuild this was 0)");
+
+            // ── 0. Tee frame, looking down the hole at both tree lines ──────────
+            var teePos = new Vector3(118.09f, 0f, -129.33f);
+            var pinPos = new Vector3(-96.49f, 0f, 137.24f);
+            ctrl.PlaceBallAt(teePos, preferredSurfaceTypeValue: null);
+            ctrl.SetCameraYawRadians(Mathf.Atan2(pinPos.x - teePos.x, pinPos.z - teePos.z));
+            yield return new WaitForSecondsRealtime(1.5f);
+            yield return d.Capture("h02_tee_down_the_hole");
+            d.LogStep("  Tee frame captured.");
+            DumpTreeProjection(d, "h02_tee_down_the_hole");
+
+            // ── 1..4. Four trunk strikes, two per tree line ─────────────────────
+            // Shot plan is DATA, not a hard-coded table: Docs/Diagnostics/h02_tree_strike_shot_plan.csv
+            // lists candidate (trunk, ball-start) pairs per tree line, generated from
+            // standalone_trees.csv filtered by Hole 02's baked OB mask.
+            //
+            // WHY A CANDIDATE LIST. 1,365 of Hole 02's 1,495 standalone Spruce (91%) stand in OB
+            // territory — the tree lines are mostly outside the playable corridor. A shot into
+            // one terminates HitOOB and the loop RESETS the ball to its start, so the ball never
+            // appears to move. Only ~130 trees are in bounds, so the scenario works down a ranked
+            // list and keeps the first two VERIFIED strikes per line rather than betting on four
+            // hand-picked trunks.
+            var plan = LoadShotPlan(d);
+            if (plan.Count == 0)
+            { d.LogStep("=== Hole02TreeLines: FAIL — empty shot plan ==="); yield break; }
+
+            var sm      = ctrl.BallSM;
+            var shotCtl = Object.FindObjectOfType<Golfin.Gameplay.Input.ShotController>();
+            var invariants = new System.Text.StringBuilder("[\n");
+
+            Terrain groundTerrain = null;
+            foreach (var tr in Object.FindObjectsOfType<Terrain>())
+                if (tr.gameObject.scene.name == "Hole_02_Geo") { groundTerrain = tr; break; }
+
+            int rightOk = 0, leftOk = 0, attempts = 0;
+            foreach (var shot in plan)
+            {
+                bool isRight = shot.label.StartsWith("right");
+                if (isRight && rightOk >= 2) continue;
+                if (!isRight && leftOk >= 2) continue;
+                if (rightOk >= 2 && leftOk >= 2) break;
+                attempts++;
+
+                float yaw = Mathf.Atan2(shot.trunk.x - shot.ball.x, shot.trunk.z - shot.ball.z);
+                float gap = Mathf.Sqrt(Mathf.Pow(shot.trunk.x - shot.ball.x, 2f) +
+                                       Mathf.Pow(shot.trunk.z - shot.ball.z, 2f));
+
+                ctrl.PlaceBallAt(shot.ball, preferredSurfaceTypeValue: null);
+                ctrl.SetCameraYawRadians(yaw);
+                ctrl.SetClub(0);                        // Driver — lowest loft, keeps the ball low
+                ctrl.InjectLabBundleForCurrentClub();
+                yield return new WaitForSecondsRealtime(1.0f);
+
+                // PlaceBallAt SURFACE-SNAPS, and the snap raycast can land on a neighbouring
+                // tree's collider instead of the ground — that left the ball floating 9 m up in
+                // the canopy on an earlier pass, where it simply never moved. Ball starts are
+                // now chosen clear of every other tree's canopy; this asserts the snap agreed.
+                float placedY = ctrl.BallPosition.y;
+                float terrainYAtBall = groundTerrain != null
+                    ? groundTerrain.SampleHeight(new Vector3(shot.ball.x, 0f, shot.ball.z)) +
+                      groundTerrain.transform.position.y
+                    : float.NaN;
+                if (Mathf.Abs(placedY - terrainYAtBall) > 1.5f)
+                    d.LogStep($"  [{shot.label}] WARNING: ball snapped to y={placedY:F2} but terrain " +
+                              $"is {terrainYAtBall:F2} — the ball is probably resting on foliage.");
+                yield return d.Capture($"h02_{shot.label}_a{attempts:D2}_before");
+                d.LogStep($"  [{shot.label}] ball={ctrl.BallPosition:F2} trunk=({shot.trunk.x:F2},{shot.trunk.z:F2}) " +
+                          $"gap={gap:F2}m scale={shot.scale:F4} yaw={yaw:F3}rad");
+
+                bool done = false;
+                System.Action<Golfin.Gameplay.Loop.ShotResult> onDone = null;
+                if (sm != null) { onDone = r => done = true; sm.OnShotComplete += onDone; }
+
+                // Low, ROLLING shot: at this power the ball stays on the deck and runs into the
+                // trunk, which is both the reliable way to hit a ~0.4 m radius target from 8 m and
+                // the readable one (the ball rebounds and rests in front of the trunk rather than
+                // sailing past it). The external-drag path fired inconsistently — two of four shots
+                // never left the tee — so drive the lab's production FireDebugShot path instead
+                // (Idle → Flicking → Resolving → OnShotResolved, same as a real flick).
+                const float Power = 0.24f;
+                if (shotCtl != null)
+                {
+                    float si = 0f;
+                    while (shotCtl.State != Golfin.Gameplay.Input.ShotState.Idle && si < 10f)
+                    { si += Time.unscaledDeltaTime; yield return null; }
+                }
+
+                // Gate on BallSM == Aiming before firing — BotDriver.PlayHoleToCup does the same.
+                // After a completed shot the state machine takes a moment to return to Aiming, and
+                // a fire issued before it does is silently swallowed: shots 2-4 of an earlier pass
+                // all reported a trajectory yet left the ball exactly on its start position.
+                if (sm != null)
+                {
+                    float g = 0f;
+                    while (sm.State != Golfin.Gameplay.Loop.BallState.Aiming && g < 5f)
+                    { g += Time.unscaledDeltaTime; yield return null; }
+                    d.LogStep($"  [{shot.label}] pre-fire BallSM={sm.State} (gated {g:F2}s), " +
+                              $"ShotController={(shotCtl != null ? shotCtl.State.ToString() : "n/a")}");
+                }
+
+                ctrl.FireViaShotController(Power, Golfin.Gameplay.Input.DebugShotAccuracy.Green);
+
+                // Contact frame: the chase camera is still BEHIND the ball looking forward at the
+                // tree here. The at-rest frame cannot show the strike — by then the camera has
+                // pitched down onto the ball, or is inside the trunk.
+                yield return new WaitForSecondsRealtime(0.75f);
+                yield return d.Capture($"h02_{shot.label}_a{attempts:D2}_contact");
+
+                float el = 0f;
+                while (!done && el < 30f) { el += Time.unscaledDeltaTime; yield return null; }
+                if (sm != null && onDone != null) sm.OnShotComplete -= onDone;
+
+                yield return new WaitForSecondsRealtime(3.0f);
+                yield return d.Capture($"h02_{shot.label}_a{attempts:D2}_atrest");
+
+                Vector3 fin = ctrl.BallPosition;
+                float restDist = Mathf.Sqrt(Mathf.Pow(fin.x - shot.trunk.x, 2f) +
+                                            Mathf.Pow(fin.z - shot.trunk.z, 2f));
+
+                // OBJECTIVE hit test — not a reading of a frame. Walk the ACTUAL flown
+                // trajectory through the very same ITreeObstacleProvider the simulation used,
+                // segment by segment, and count trunk/canopy crossings. Trees are loaded from
+                // the committed tree_obstacles.csv, so a hit here means the ball intersected a
+                // tree the bake declares — and the scene now DRAWS that same tree.
+                int trunkHits = 0, canopyHits = 0;
+                Vector3 firstHit = Vector3.zero;
+                string firstProfile = "";
+                var traj = ctrl.LastTrajectory;
+                var provider = ctrl.GetTreeProvider();
+                if (traj != null && provider != null && traj.samples != null)
+                {
+                    for (int i = 1; i < traj.samples.Count; i++)
+                    {
+                        if (!provider.TestSegment(traj.samples[i - 1].position,
+                                                  traj.samples[i].position,
+                                                  out Golfin.Physics.TreeHit th)) continue;
+                        if (th.IsTrunk) trunkHits++; else canopyHits++;
+                        if (trunkHits + canopyHits == 1)
+                        {
+                            firstHit = new Vector3(th.HitPos.x.ToFloat(), th.HitPos.y.ToFloat(), th.HitPos.z.ToFloat());
+                            firstProfile = th.Profile != null ? th.Profile.ToString() : "?";
+                        }
+                    }
+                }
+
+                // BallPosition reads the ANIMATOR's ball, which can lag or be reset between
+                // strokes. The trajectory's own final position is what the simulation actually
+                // produced, so log both — if they disagree, the shot flew and the visual didn't.
+                Vector3 trajFinal = traj != null
+                    ? new Vector3(traj.finalPosition.x.ToFloat(), traj.finalPosition.y.ToFloat(),
+                                  traj.finalPosition.z.ToFloat())
+                    : Vector3.zero;
+                Vector3 trajStart = (traj != null && traj.samples != null && traj.samples.Count > 0)
+                    ? new Vector3(traj.samples[0].position.x.ToFloat(), traj.samples[0].position.y.ToFloat(),
+                                  traj.samples[0].position.z.ToFloat())
+                    : Vector3.zero;
+                d.LogStep($"  [{shot.label}] traj start={trajStart:F2} final={trajFinal:F2} " +
+                          $"termination={(traj != null ? traj.termination.ToString() : "n/a")} " +
+                          $"animatorBall={ctrl.BallPosition:F2}");
+
+                bool inBounds = traj == null ||
+                                traj.termination != Golfin.Physics.TerminationReason.HitOOB;
+                bool struck = (trunkHits + canopyHits) > 0 && inBounds;
+                if (struck) { if (isRight) rightOk++; else leftOk++; }
+                d.LogStep($"  [{shot.label}] shot done in {el:F1}s. rest={fin:F2} " +
+                          $"xzDistToTrunk={restDist:F2}m (started {gap:F2}m away) " +
+                          $"trajSamples={(traj?.samples?.Count ?? -1)} " +
+                          $"trunkHits={trunkHits} canopyHits={canopyHits} firstHit={firstHit:F2} " +
+                          $"→ {(struck ? "STRUCK A TREE" : "NO TREE CONTACT")}");
+                invariants.Append(string.Format(System.Globalization.CultureInfo.InvariantCulture,
+                    "{{\"shot\":\"{0}\",\"trunkX\":{1:F3},\"trunkZ\":{2:F3},\"scale\":{3:F4}," +
+                    "\"ballStartX\":{4:F3},\"ballStartZ\":{5:F3},\"gapM\":{6:F2}," +
+                    "\"ballStartY\":{7:F3},\"terrainYAtBall\":{8:F3}," +
+                    "\"restX\":{9:F3},\"restY\":{10:F3},\"restZ\":{11:F3},\"restDistToTrunkM\":{12:F3}," +
+                    "\"trajSamples\":{13},\"trunkHits\":{14},\"canopyHits\":{15}," +
+                    "\"firstHitX\":{16:F3},\"firstHitY\":{17:F3},\"firstHitZ\":{18:F3}," +
+                    "\"PASS_struckTree\":{19}}},\n",
+                    shot.label, shot.trunk.x, shot.trunk.z, shot.scale,
+                    shot.ball.x, shot.ball.z, gap, placedY, terrainYAtBall,
+                    fin.x, fin.y, fin.z, restDist,
+                    traj?.samples?.Count ?? -1, trunkHits, canopyHits,
+                    firstHit.x, firstHit.y, firstHit.z,
+                    struck ? "true" : "false"));
+            }
+
+            d.LogStep($"  RESULT: verified strikes — right line {rightOk}/2, left line {leftOk}/2 " +
+                      $"across {attempts} attempt(s).");
+
+            string invPath = System.IO.Path.GetFullPath(System.IO.Path.Combine(
+                Application.dataPath, "..",
+                "tasks/loop_v2_smoke_bot/hole02_tree_lines/screenshots/hole02_tree_invariants.json"));
+            System.IO.File.WriteAllText(invPath,
+                invariants.ToString().TrimEnd('\n', ',') + "\n]\n");
+            d.LogStep("  Invariants written → " + invPath);
+
+            d.LogStep("=== Hole02TreeLines complete ===");
+            }
+            finally
+            {
+                restore();
+                d.FlushLog();
+            }
+        }
+
+        /// <summary>Reads the generated candidate shot plan (see Hole02TreeLinesBody).</summary>
+        private static System.Collections.Generic.List<TreeShot> LoadShotPlan(BotDriver d)
+        {
+            var list = new System.Collections.Generic.List<TreeShot>();
+            string path = System.IO.Path.GetFullPath(System.IO.Path.Combine(
+                Application.dataPath, "..", "Docs/Diagnostics/h02_tree_strike_shot_plan.csv"));
+            if (!System.IO.File.Exists(path))
+            { d.LogStep("  LoadShotPlan: missing " + path); return list; }
+
+            int nRight = 0, nLeft = 0;
+            foreach (string line in System.IO.File.ReadAllLines(path))
+            {
+                if (line.Length == 0 || line[0] == '#') continue;
+                var f = line.Split(',');
+                if (f.Length != 7) continue;
+                var ci = System.Globalization.CultureInfo.InvariantCulture;
+                bool right = f[0] == "right";
+                int idx = right ? ++nRight : ++nLeft;
+                list.Add(new TreeShot
+                {
+                    label = f[0] + idx.ToString("D2"),
+                    trunk = new Vector3(float.Parse(f[2], ci), 0f, float.Parse(f[3], ci)),
+                    scale = float.Parse(f[4], ci),
+                    ball  = new Vector3(float.Parse(f[5], ci), 0f, float.Parse(f[6], ci)),
+                });
+            }
+            d.LogStep($"  LoadShotPlan: {list.Count} candidates ({nRight} right, {nLeft} left) from {path}");
+            return list;
+        }
+
+        /// <summary>
+        /// Render↔collider agreement dump. The Hole 02 defect was trees that COLLIDED but were
+        /// never DRAWN, so the proof that matters is that the rendered trunks stand exactly where
+        /// the committed bake says the colliders are. Projects every StandaloneTrees child within
+        /// 140 m through the live gameplay camera and writes screen-space markers; an overlay
+        /// script then draws them on the captured PNG. Markers landing on rendered trunks =
+        /// render and collider agree.
+        /// </summary>
+        private static void DumpTreeProjection(BotDriver d, string frameLabel)
+        {
+            try
+            {
+                Camera cam = null;
+                foreach (var c in Object.FindObjectsOfType<Camera>())
+                    if (c.isActiveAndEnabled && c.targetTexture == null &&
+                        (cam == null || c.depth > cam.depth)) cam = c;
+                if (cam == null) { d.LogStep("  DumpTreeProjection: no active camera."); return; }
+
+                var sb = new System.Text.StringBuilder();
+                sb.Append("name,worldX,worldY,worldZ,screenX,screenY,distM\n");
+                int n = 0;
+                foreach (var go in Object.FindObjectsOfType<GameObject>())
+                {
+                    if (go.name != "StandaloneTrees") continue;
+                    foreach (Transform t in go.transform)
+                    {
+                        float dist = Vector3.Distance(cam.transform.position, t.position);
+                        if (dist > 140f) continue;
+                        Vector3 sp = cam.WorldToScreenPoint(t.position);
+                        if (sp.z <= 0f) continue;
+                        if (sp.x < 0f || sp.x > cam.pixelWidth || sp.y < 0f || sp.y > cam.pixelHeight) continue;
+                        sb.Append(string.Format(System.Globalization.CultureInfo.InvariantCulture,
+                            "{0},{1:F3},{2:F3},{3:F3},{4:F1},{5:F1},{6:F1}\n",
+                            t.name, t.position.x, t.position.y, t.position.z, sp.x, sp.y, dist));
+                        n++;
+                    }
+                }
+                sb.Append(string.Format(System.Globalization.CultureInfo.InvariantCulture,
+                    "#camPixel,{0},{1}\n", cam.pixelWidth, cam.pixelHeight));
+
+                string path = System.IO.Path.GetFullPath(System.IO.Path.Combine(
+                    Application.dataPath, "..",
+                    "tasks/loop_v2_smoke_bot/hole02_tree_lines/screenshots/" + frameLabel + "_projection.csv"));
+                System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(path));
+                System.IO.File.WriteAllText(path, sb.ToString());
+                d.LogStep($"  DumpTreeProjection: {n} trees within 140 m projected → {path} " +
+                          $"(camera {cam.name} at {cam.transform.position:F1}, {cam.pixelWidth}x{cam.pixelHeight})");
+            }
+            catch (System.Exception e)
+            {
+                d.LogStep("  DumpTreeProjection ERROR: " + e.Message);
+            }
+        }
+
         // ── Audio helper (reflection, cross-assembly) ─────────────────────────
 
         /// <summary>

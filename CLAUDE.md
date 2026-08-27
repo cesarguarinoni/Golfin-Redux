@@ -611,6 +611,7 @@ Quick rules:
 | `Docs/Reference/GAME_DESIGN_AGENT.md` | AI agent for evaluating GDD systems |
 | `Docs/Pipeline/` | Course-pipeline lessons + specs (ADD_HOLE, BUNKER_*, TEE_SKIRT, fringe meshes) |
 | `Docs/Pipeline/LESSONS_FRINGE_BORDER_MESHES.md` | **READ before touching fairway/tee fringe/border code.** Hard-won lessons on submesh baking, dilated CDT, and the Lite vs Geo importer trap. |
+| `Docs/Pipeline/TREES_AND_GENERATED_SCENES.md` | **READ before touching hole trees.** Generated scenes are per-machine; trees live in tracked TerrainData + `Data/hole-NN-geo/standalone_trees.csv`. Rebuild + Validate after pulling; never re-import a hole to fix trees. |
 | `Docs/Physics/` | Physics architecture, tuning targets, and post-mortem lessons |
 | `Docs/Specs/` | Active / Queued / Completed specs |
 | `Docs/Diagnostics/` | In-flight diagnostic outputs (CSVs, milestone done reports) |
