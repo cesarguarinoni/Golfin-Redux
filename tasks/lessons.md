@@ -2775,3 +2775,33 @@ resolve under the wrong root, staging a subset and committing a partial change t
 - **Read back `git diff --cached --name-only` and count it before committing.** The count is the
   cheap assertion — 62 staged paths against ~62 expected is a real check; "the add didn't error" is
   not, because a partial add doesn't error.
+
+## Lesson BM — a hide added for one mode must be gated to that mode, and "where is it?" is a measurement
+
+**Session:** 2026-08-27, `practice_map_during_shot`.
+
+`0eca6a3dd` hid `HoleMapContainer` for the duration of every shot. The defect it fixed was
+real but **Versus-specific** — there `VersusHudController` drops the ChipStack and repositions
+the lone icon, so it reads as a live control mid-flight. The hide shipped unconditionally, so
+Practice lost its map thumbnail on every ball flight. Cesar caught it on sight.
+
+**Rules:**
+- **When a fix is motivated by one mode's layout, gate it on that mode.** Write the motivating
+  mode into the code comment, not just the commit message — the next reader needs to know the
+  hide is conditional *and why*, or they will "simplify" it back to unconditional.
+- **If a hide list is filtered per mode, the restore loop can no longer index the source list.**
+  Track what was actually switched off. `ShotInProgressUiGate` now keeps a parallel `_hidden`
+  list; iterating `_hideDuringShot` by index in `Release()` would have force-activated an object
+  the gate never touched.
+- **Never verify "is it disabled?" with `onClick.Invoke()`.** It bypasses `Button.interactable`
+  entirely, so a broken build passes. Dispatch a genuine `EventSystem.RaycastAll` +
+  `pointerDown/Up/Click` at the element's own screen centre, and report *what was hit* — the
+  in-flight tap here landed on `HoleMap` and still did nothing, which is the actual claim.
+
+**And: a reported position is a hypothesis, not a fact.** The bug report said "map on the top
+left". The HUD's only map thumbnail is top-**right** (`942,2194,180,180` on 1170×2532); top-left
+is the player card. I wrote the invariant as `TOP-LEFT` from the report and it FAILed — correctly,
+against my own wrong expectation. Measure the rect and read the frame before encoding a position
+into an assertion, and when the measurement contradicts the report, say so instead of quietly
+relaxing the assertion to match the story. Related: [[feedback_exact_not_close_enough]],
+[[feedback_verify_ui_metrics_numerically]].
