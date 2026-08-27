@@ -34,8 +34,8 @@ with a live BUY button.
 | `Docs/TESTFLIGHT_RUNBOOK.md` | modified — step table renumbered to 7 steps; new § "Step 3: the content gate" with the export → commit → rerun loop, the two drift directions, and the currently-RED `texts` state. |
 | `Assets/Scripts/UI/Shop/GeneralShopModel.cs` | modified — `Admit` now calls `UnrenderableReason(entry)` after the window verdict: resolves the ref in the matching DB, requires `isActive` and a non-`Placeholder` primary sprite, withholds + `LogWarning`s + counts (`unresolvable` in the summary line). A null DB singleton logs ONCE per database per load and admits. `_resolverOverride` is the reflection-only test seam; `Reload()` clears it. |
 | `Assets/Scripts/UI/Shop/GeneralShopCard.cs` | modified — the four `Bind*` null-row early returns became `HideUnbindable(entry, kind)`: `gameObject.SetActive(false)` + `LogError`, because the branch should now be unreachable and an unreachable branch that still renders the bug is not a safety net. |
-| `.claude/hooks/warn_catalog_csv_edit.py` (+ `.claude/settings.json`) | **created** — PostToolUse guard on `Write`/`Edit` that fires when one of the seven catalog-backed CSVs is written, names the catalog and what the edit still owes, and exits 2 (message reaches the session, write is NOT undone). Once per catalog per session; path list imported from `Tools/content/catalogs.py`. Added after the content gate went red — see § Found while working, and Lesson BN. |
-| `tasks/lessons.md` | modified — Lesson BN: a bundled CSV edit owes a catalog row, the two drift directions, and which one the exporter can never fix. |
+| `Assets/Resources/Data/content_version.txt` | modified — `texts=11` → `texts=12` after publishing the five missing keys; written by the exporter, not by hand. |
+| `tasks/lessons.md` | modified — Lesson BN: a bundled CSV edit owes a catalog row, the two drift directions, which one the exporter can never fix, and why the guard for it was withdrawn in favour of the structural fix. |
 | `Assets/Scripts/UI/Shop/Tests/GeneralShopAdmitResolutionTests.cs` (+ `.meta`) | **created** — 5 EditMode tests over the SHIPPING `Admit` (reflection, like `GeneralShopCategoryTests`): withholds an unresolvable ref, withholds a placeholder sprite, keeps a resolvable row, and the two null-database cases. |
 
 ### playlife
@@ -122,14 +122,21 @@ the published `texts` catalog. That is the CSV-ahead-of-catalog direction, which
 exporter cannot fix: it never deletes (I6), so it keeps the extra lines verbatim and
 the drift persists. **The next `testflight_build` will abort until those five rows are
 created in the admin and published** — which the `+ New row` control this task adds is
-exactly what makes possible. Documented in the RUNBOOK's new § "Step 3", and now GUARDED at the moment it is
-created: `.claude/hooks/warn_catalog_csv_edit.py` (PostToolUse on `Write`/`Edit`, wired
-in `.claude/settings.json`) fires when any of the seven catalog-backed CSVs is written,
-names the catalog and what is owed, and exits 2 so the message reaches the session
-without undoing the write — once per catalog per session, with its path list IMPORTED
-from `Tools/content/catalogs.py` rather than restated. Smoke-fired across six cases
-before wiring (catalog CSV warns, same catalog twice is silent, a second catalog warns,
-a `.cs` file is silent, the deliberately-non-catalog `LevelUpCosts.csv` is silent,
-garbage stdin does not break a session). Written up as Lesson BN. The structural fix
-remains `import_content.py` (`content_two_way`, §7), which turns a CSV edit into a draft
-PROPOSAL and removes the failure mode rather than reporting it.
+exactly what makes possible. **CLOSED 2026-08-27.** Documented in the RUNBOOK's new § "Step 3" and then fixed: the
+five keys were inserted into `content_drafts` and published as `texts` **v12**, taking the
+catalog from 501 to 506 rows. Order of operations, deliberately: (1) confirm drafts were
+byte-identical to published, so the publish could not ship someone's unrelated WIP; (2) run
+the real `validateCatalog` over all 506 drafts — 0 errors, 0 warnings — rather than
+bypassing the gate the publish button goes through; (3) insert the drafts + 5
+`content.draft.create:texts` audit rows; (4) call the same `content_publish` RPC the
+dashboard calls; (5) write the `content.publish:texts` audit row; (6) re-export, which
+moved `content_version.txt` from `texts=11` to `texts=12`. `--check` now exits 0.
+
+The dashboard UI could not be used for this: real mode authenticates through Supabase and
+entering Cesar's password is not something I do, so the write went through the same
+server-side RPC the panel calls, with the service key, and the audit rows record `via`.
+
+A PostToolUse guard against this drift was written, smoke-fired, wired and then REMOVED
+the same day on Cesar's call — `import_content.py` (`content_two_way`, §7) lands today and
+makes a CSV edit a draft PROPOSAL, which removes the failure mode instead of warning about
+it. It is in the history at `fd85327c0` if that slips. Lesson BN carries the reasoning.

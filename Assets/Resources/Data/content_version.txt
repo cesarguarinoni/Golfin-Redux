@@ -4,4 +4,4 @@ characters=5
 clubs=1
 items=1
 shop_catalog=3
-texts=11
+texts=12

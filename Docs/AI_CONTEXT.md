@@ -185,26 +185,29 @@
 > rode with it — no API source changed, so the live v54 image was already correct. §2.5 smoke
 > re-run after the apply: all eight probes identical to the baseline.
 >
-> **⚠️ ONE THING IS WAITING ON CESAR.**
-> **THE CONTENT GATE IS RED TODAY, and it predates this task.**
+> **THE CONTENT GATE WENT RED ON ITS FIRST RUN, AND IS NOW GREEN.** It predated this task.
 >    `export_content.py --check` exits 1 because `SETTINGS_GRAPHICS` and the four
 >    `SETTINGS_QUALITY_*` keys added by `quality_tiers` are in
 >    `Assets/Localization/LocalizationText.csv` and NOT in the published `texts` catalog. That is
 >    the CSV-ahead-of-catalog direction, which the exporter CANNOT fix (it never deletes — I6 —
 >    so it keeps the extra lines verbatim). **The next `testflight_build` will abort until those
 >    five keys are created in the admin and published** — which `+ New row` is now what makes
-> possible. After that archive: read `Docs/Versioning/last_uploaded_build.txt`, set
-> `SHOP_CATEGORY_STRICT_BUILD`, redeploy the dashboard (its own surface —
-> `npm --prefix Tools/admin-dashboard run deploy`), then publish the first character/item rows.
+> possible — and that is exactly how it was closed, same day: the five keys were created as
+> drafts and published as **`texts` v12** (501 → 506 rows), after confirming drafts were
+> byte-identical to published and running the real `validateCatalog` over all 506 (0 errors, 0
+> warnings). `content_version.txt` re-exported to `texts=12` and committed. **`--check` now exits
+> 0 and `testflight_build` proceeds.**
 >
-> **That drift cannot sit unseen again.** `.claude/hooks/warn_catalog_csv_edit.py` (PostToolUse on
-> `Write`/`Edit`, wired in `.claude/settings.json`) fires the moment any of the seven
-> catalog-backed CSVs is written, names the catalog and says the new rows must also be created in
-> the admin and published — once per catalog per session, exit 2 so the message lands without
-> undoing the write, path list IMPORTED from `Tools/content/catalogs.py` so it can never drift
-> from the exporter. Lesson BN. The structural fix stays `import_content.py`
-> (`content_two_way`, §7): it turns a CSV edit into a draft PROPOSAL, so "CSV ahead of catalog"
-> stops being an error state at all.
+> **⚠️ STILL WAITING ON CESAR: §8 steps 4-6.** Archive, read
+> `Docs/Versioning/last_uploaded_build.txt`, set `SHOP_CATEGORY_STRICT_BUILD`, redeploy the
+> dashboard (its OWN surface — `npm --prefix Tools/admin-dashboard run deploy`; the API deploy
+> does not ship it), then publish the first character/item shop rows.
+>
+> **No hook guards this drift, deliberately.** One was written, smoke-fired and wired on
+> 2026-08-27, then removed the same day: `import_content.py` (`content_two_way`, §7) lands today
+> and turns a CSV edit into a draft PROPOSAL, so "CSV ahead of catalog" stops being an error state
+> instead of being warned about. History: `fd85327c0`. Lesson BN. `export_content.py --check` in
+> the release lane remains the backstop — late, but never silent.
 
 > **`shop_server_purchase` (CONTENT_PIPELINE_PLAN §6 step 4d / §11.5) — BOTH REPOS CODE-COMPLETE
 > 2026-08-27. BACKEND APPLIED + DEPLOYED AND SMOKED; NOT SEEN ON A SCREEN, NEVER SOLD ANYTHING.** Implemented DIRECTLY by the main

@@ -34,18 +34,22 @@ DONE AND VERIFIED
       /tournaments/golfin /content?build=9999 all 200, POST /shop/purchase 403
       unauth and 401 on a bad token, garbage route 404.
 
-  Recurrence guard added 2026-08-27 (see § below): the CSV-ahead-of-catalog drift
-      that made the content gate red is now warned about at the moment it is
-      created — `.claude/hooks/warn_catalog_csv_edit.py`, PostToolUse on
-      Write|Edit, path list imported from `Tools/content/catalogs.py`. Lesson BN.
+  CONTENT GATE NOW GREEN. The five `SETTINGS_QUALITY_*` / `SETTINGS_GRAPHICS`
+      keys quality_tiers shipped in the CSV but never created in the admin were
+      created as drafts and published as `texts` **v12** on 2026-08-27 (drafts
+      confirmed byte-identical to published first, so the publish shipped those
+      five rows and nothing else; the full 506-row draft set validated through the
+      same `validateCatalog` the publish button runs — 0 errors, 0 warnings; audit
+      rows written for the five creates and the publish). `content_version.txt`
+      re-exported and committed. `export_content.py --check` now exits **0**, so
+      `testflight_build` proceeds.
 
-AWAITING CESAR (blocking, in this order)
-  1. The content gate is RED TODAY, and it is not this task's doing:
-     `export_content.py --check` exits 1 because five `SETTINGS_QUALITY_*` /
-     `SETTINGS_GRAPHICS` text keys are in `Assets/Localization/LocalizationText.csv`
-     and NOT in the published `texts` catalog. The next `testflight_build` will
-     abort until those five rows are created in the admin (the new `+ New row`
-     control is exactly the remedy) and published.
-  2. §8 steps 4-6 — archive, read `last_uploaded_build.txt`, set
+  A PostToolUse guard against that drift was written, wired and then REMOVED the
+      same day on Cesar's call — `import_content.py` (`content_two_way` §7) lands
+      today and removes the failure mode rather than warning about it. In the
+      history at `fd85327c0` if that slips. Lesson BN carries the reasoning.
+
+AWAITING CESAR
+  1. §8 steps 4-6 — archive, read `last_uploaded_build.txt`, set
      `SHOP_CATEGORY_STRICT_BUILD`, redeploy the dashboard, then publish the first
      character/item rows.
