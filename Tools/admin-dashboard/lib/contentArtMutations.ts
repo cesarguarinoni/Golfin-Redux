@@ -23,9 +23,17 @@ import type { MutationOutcome } from "./mutations";
 
 const CATALOG_ART_BUCKET = "catalog-art";
 
-/** Same MIME / size spec as banners. */
+/**
+ * Same SIZE spec as banners, but NOT the same MIME list — SPEC §5.1, Cesar 2026-08-27.
+ *
+ * NO WebP. A banner is only ever fetched at runtime, so WebP is free there. Catalog art has a
+ * SECOND life: `content_art_bundling` pulls it into `Resources/` so the next build can bundle
+ * it, and Unity does not import WebP natively. Accepting a format the bundling step cannot use
+ * would let an operator upload art that works right up until the build meant to absorb it —
+ * i.e. it would break much later, somewhere else, for reasons nobody would connect back here.
+ */
 const CATALOG_ART_SPEC = {
-  mimeTypes: ["image/jpeg", "image/png", "image/webp"] as const,
+  mimeTypes: ["image/jpeg", "image/png"] as const,
   maxBytes: 500 * 1024,
 } as const;
 
@@ -117,7 +125,7 @@ export async function uploadCatalogArt(
   // --- immutable name ------------------------------------------------------
   const bytes = Buffer.from(await file.arrayBuffer());
   const hash = createHash("sha256").update(bytes).digest("hex").slice(0, 12);
-  const ext = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
+  const ext = file.type === "image/png" ? "png" : "jpg";   // no webp — see CATALOG_ART_SPEC
   // e.g. "characters-char_james-portraitUrl-a1b2c3d4e5f6.jpg"
   const path = `${catalog}-${rowId}-${column}-${hash}.${ext}`;
 

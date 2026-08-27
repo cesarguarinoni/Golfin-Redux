@@ -285,7 +285,7 @@ export function RowEditor({
                         {uploading[column] ? "Uploading…" : "Upload art"}
                         <input
                           type="file"
-                          accept="image/jpeg,image/png,image/webp"
+                          accept="image/jpeg,image/png"
                           className="sr-only"
                           disabled={uploading[column]}
                           onChange={(e) => {
