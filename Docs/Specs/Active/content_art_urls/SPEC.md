@@ -60,17 +60,63 @@ blank-card bug `shop_stocking` §6 exists to prevent.
 Instead: the loaders already turn a NAME into a `Sprite` and hand every consumer the same
 runtime object. Add one more source in front of the name, in that same place.
 
-**Resolution order, per sprite column:**
+**Resolution order, per sprite column** (REVISED 2026-08-27 — see §2.2 for why):
 
 ```
-1. remote URL, ALREADY IN THE DISK CACHE   →  use it
-2. bundled sprite by name                  →  use it            (today's behaviour)
-3. clubs only: Placeholder                 →  use it            (decision of record)
-4. otherwise                               →  null ⇒ renderable=false ⇒ withheld (§4)
+1. URL the OVERLAY CHANGED, already in the disk cache  →  use it   (art re-uploaded since this build)
+2. bundled sprite by name                              →  use it   (the build's own art wins)
+3. URL unchanged since the build, already cached       →  use it   (row is newer than any bundled art)
+4. clubs only: Placeholder                             →  use it   (decision of record)
+5. otherwise                          →  null ⇒ renderable=false ⇒ withheld (§4)
 ```
 
-Every consumer is untouched. A row is renderable exactly when step 1, 2 or 3 produced
-something.
+Every consumer is untouched. A row is renderable exactly when steps 1–4 produced something.
+
+⚠️ **Step 4 must not shadow step 3.** `ClubDatabaseCSV.LoadSprite` never returns null today — it
+returns `Placeholder` — so a naive implementation has the stand-in beating a perfectly good URL,
+which is worse than shipping nothing. The club lookup must distinguish REAL bundled art from the
+Placeholder fallback, and only the real one participates in step 2.
+
+### 2.2 Why bundled art wins, and how a fix still gets through
+
+**Decision of record (Cesar, 2026-08-27): art by URL is a BRIDGE, not a delivery channel.** The
+model is *the admin informs the next build* — a row created in the admin renders by URL until
+the next build bundles its art, and from then on the build's own art is what players see. An
+earlier draft of this spec put the URL first unconditionally; that was wrong, and in a damaging
+way: a build that shipped the art would never draw it, the binary would carry dead weight, and
+players would keep seeing whatever was uploaded first rather than the asset the artist finalised.
+
+But bundled-first alone would make bad art unfixable until the next release. Both are satisfied
+because the client can tell whether the URL is NEWER than the build, with no new concept:
+
+- the **bundled CSV** carries the URL as it stood when the build was cut,
+- the **overlay** carries the URL as it stands now,
+- **they differ ⇒ somebody re-uploaded after this build ⇒ the URL is ahead of the bundled art.**
+
+That is the same comparison `ContentSpriteGuard` already performs on sprite NAMES
+(`SpriteRef.Changed` — "the overlay named something other than what the CSV named"), and all four
+loaders already hold both the bundled row and the overlaid one at the point of resolution. Step 1
+is that comparison applied to the URL column.
+
+It self-heals. Once the next build's export brings the new URL into the bundled CSV, the two
+agree again and resolution falls back to step 2 — the build takes over, the URL goes dormant, and
+nothing has to be cleaned up:
+
+| Situation | Rule | Result |
+|---|---|---|
+| Row created in the admin, no bundled art | 3 | renders by URL |
+| Next build bundles it (export syncs the URL into the bundled CSV) | 2 | **bundled wins, URL dormant** |
+| Art is bad, operator re-uploads (new content hash ⇒ new URL) | 1 | **fix reaches installed builds** |
+| The build after that bundles the fix | 2 | back to bundled |
+
+**One behaviour to document, not to fix:** a re-upload mints a new URL, which is not in the disk
+cache yet, so the first launch after a fix falls through to step 2 and shows the OLD bundled art;
+the fix appears on the next launch. It never withholds the row, because bundled art exists — a
+hotfix degrades to "one more launch", not to a missing card. Consistent with §2.1.
+
+**The URL is never cleared once art is bundled.** Players who have not taken the new build still
+depend on it. It is dormant on builds that have the art and live on builds that do not; that
+asymmetry is the whole mechanism.
 
 ### 2.1 Cache-backed, deliberately — and what that costs
 
@@ -196,9 +242,20 @@ public static Sprite? Cached(string? url);
 ```
 
 Then in each of `CharacterDatabaseCSV.ParseCharacterFromCSV`, `ItemDatabaseCSV.ParseRow`,
-`BallDatabaseCSV.ParseRow`, `ClubDatabaseCSV.ToRuntime` — all four already in Assembly-CSharp
-— resolve each sprite as `CatalogArt.Cached(url) ?? <today's bundled lookup>`. Keep the URL
-string on the runtime object next to the name (`portraitUrlValue` etc.); the prefetch needs it.
+`BallDatabaseCSV.ParseRow`, `ClubDatabaseCSV.ToRuntime` — all four already in Assembly-CSharp —
+resolve each sprite by the §2 ladder, which needs BOTH the bundled row's URL and the overlaid
+one:
+
+```
+CatalogArt.Cached(overlaidUrl, whenChangedFrom: bundledUrl)   // step 1
+  ?? <today's bundled lookup, REAL art only>                  // step 2
+  ?? CatalogArt.Cached(overlaidUrl)                           // step 3
+  ?? <clubs: Placeholder>                                     // step 4
+```
+
+Each loader already parses `bundled` and then `merged` (that is what feeds the sprite guard), so
+both URLs are in hand at that point — do not re-read the CSV to get them. Keep the URL string on
+the runtime object next to the name (`portraitUrlValue` etc.); the prefetch needs it.
 
 `renderable` needs NO new rule: it already asks "is the primary sprite non-null", and the
 ladder now has one more way to say yes.
@@ -243,7 +300,12 @@ like a bug otherwise.
 Reuse `uploadBannerArt`'s shape in a new `lib/contentArtMutations.ts`:
 `uploadCatalogArt(adminEmail, catalog, rowId, column, file)`.
 
-- Same validation: MIME in {jpg, png, webp}, `maxBytes`, non-empty.
+- Same validation shape, **but PNG/JPG only — NO WebP** (Cesar, 2026-08-27). Banners allow WebP
+  because a banner is only ever fetched at runtime; catalog art has a second life, because
+  `content_art_bundling` pulls it into `Resources/` so the next build can bundle it, and Unity
+  does not import WebP natively. Accepting a format the bundling step cannot use would let an
+  operator upload art that works right up until the build that is supposed to absorb it. Reject
+  at upload, where the message can say why. `maxBytes` and non-empty as for banners.
 - Same immutable naming: `{catalog}-{rowId}-{column}-{sha256[:12]}.{ext}` — **the URL is the
   cache key**, so replacing art mints a new URL and the client needs no invalidation story.
 - Same bucket-create-on-first-use, same re-validation of the returned public URL against the
@@ -288,8 +350,13 @@ build"; a URL now means "ships to any build that has this feature". Both EN and 
       store release, no new build. *(Editor is sufficient — Cesar's standing rule.)*
 - [ ] The same character on a build predating this task: withheld, silently, no error, no blank
       card. (Run the previous archive, or a build with the URL columns stripped from the CSV.)
-- [ ] A row with a bundled name AND a URL uses the URL; delete the URL, republish → it falls back
-      to the bundled sprite with no relaunch beyond the usual one.
+- [ ] **Bundled wins when the URLs agree (§2.2 rule 2).** A row with a bundled name AND a URL
+      that matches the bundled CSV's URL renders the BUNDLED sprite, not the remote one. This is
+      the case the earlier draft got wrong; prove it explicitly.
+- [ ] **A changed URL beats bundled (§2.2 rule 1).** Same row, overlay URL differs from the
+      bundled CSV's URL and is cached → the remote sprite is used. Change it back → bundled again.
+- [ ] **Placeholder never shadows a live URL (§2 step 4).** A club with no real bundled art and a
+      cached URL renders the URL, NOT `Placeholder`.
 - [ ] A row with neither is withheld, and the §4 summary warning names it.
 - [ ] Clubs: a club with no bundled art and no URL still renders `Placeholder` in the bag.
 - [ ] **Security.** A URL outside the `catalog-art` bucket is REFUSED and logged: try
@@ -314,8 +381,9 @@ build"; a URL now means "ships to any build that has this feature". Both EN and 
 - **3D / hole content.** That is `CONTENT_PIPELINE_PLAN.md` §10.3 and its trigger is the second
   course, not this.
 - **Addressables.** §10.1 and §10.2 both say no, for different reasons. Do not add the package.
-- **Retiring bundled art.** Tempting (§10.2 measures `Assets/Resources/Clubs` at 122 MB of
-  source PNG, ~50 MB in-build, trending to ~150 MB) but it is a separate decision with an
-  offline-first-launch consequence, and it must not ride along with the mechanism that makes it
-  possible.
+- **Retiring bundled art. NOT THE DIRECTION** (Cesar, 2026-08-27). An earlier draft of this
+  spec called it "tempting"; it is not on the table. Bundled art remains how the game ships art,
+  and §2.2 is built so the build always reclaims a row once it carries the asset. The URL is the
+  bridge across the gap, nothing more. `CONTENT_PIPELINE_PLAN.md` §10.2's in-build size figures
+  are a reason to keep an eye on the roster, not a reason to move art off-build.
 - **Localised art per row.** Banners have it; catalogs have no such requirement today.
