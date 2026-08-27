@@ -11,15 +11,31 @@ import { RefPicker } from "./ref-picker";
  * Shop — RP offers only (CONTENT_PIPELINE_PLAN.md §11: no IAP, no real money,
  * no store SKUs).
  *
- * The loud red notice at the top is not decoration and must not be quietly
- * dropped in a later redesign. §11.5: purchases still debit RP on the CLIENT
- * through `PointsSpendGate` and grant locally. Making the listing
- * admin-editable makes it very easy to assume the price is now authoritative —
- * it is not, and a panel that lets an operator believe otherwise is worse than
- * no panel.
+ * The notice at the top is not decoration and must not be quietly dropped in a
+ * later redesign — but as of `shop_server_purchase` it is INFORMATION rather
+ * than a warning, so it is AMBER, not red. The price IS now authoritative: a
+ * purchase is one `POST /api/v1/shop/purchase` that reads the published row,
+ * prices it off the SERVER clock and debits + queues the grant in one
+ * transaction (SPEC §2).
+ *
+ * What still has to be said out loud is that enforcement is only as good as the
+ * OLDEST build in the wild: an already-installed client keeps debiting locally
+ * at its bundled price until the legacy `/points/spend` shop reason is closed
+ * (SPEC §2.6, a separate deploy). That is what {build} in the copy is for.
  */
 
 const CATEGORIES = Object.keys(SHOP_CATEGORY_TO_CATALOG);
+
+/**
+ * The first TestFlight build whose client goes through `POST /shop/purchase`.
+ *
+ * ⚠️ BUMP THIS if the build that actually ships §3 is not this one. It is the
+ * only number in the panel an operator will read as a promise, and a wrong one
+ * tells them older installs are enforced when they are not. Last uploaded build
+ * at the time of writing (Docs/Versioning/last_uploaded_build.txt) was 2333, so
+ * the next upload — the one carrying the client half — is 2334.
+ */
+const SERVER_PRICE_ENFORCED_FROM_BUILD = 2334;
 
 export function ShopPanel() {
   const translate = useT();
@@ -81,10 +97,12 @@ export function ShopPanel() {
       renderCell={renderCell}
       editorHiddenColumns={["category", "refId", "startAt", "endAt", "saleStartAt", "saleEndAt"]}
       banner={
-        <div className="mb-4 rounded-lg border border-red-500/50 bg-red-500/10 px-4 py-3">
-          <p className="text-xs font-bold text-red-300">⚠ {translate("sh.notice.headline")}</p>
-          <p className="mt-1 text-[11px] leading-relaxed text-red-200/85">
-            {translate("sh.notice.body")}
+        <div className="mb-4 rounded-lg border border-amber-500/50 bg-amber-500/10 px-4 py-3">
+          <p className="text-xs font-bold text-amber-300">
+            {translate("sh.notice.headline", { build: SERVER_PRICE_ENFORCED_FROM_BUILD })}
+          </p>
+          <p className="mt-1 text-[11px] leading-relaxed text-amber-200/85">
+            {translate("sh.notice.body", { build: SERVER_PRICE_ENFORCED_FROM_BUILD })}
           </p>
         </div>
       }

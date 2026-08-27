@@ -1133,10 +1133,20 @@ export const DICT = {
   },
   "ugrant.confirm": { en: "Queue grant", ja: "付与を登録" },
 
-  "sh.notice.headline": { en: "Prices here are NOT enforced by the server.", ja: "ここで設定した価格はサーバーで強制されません。" },
+  // sh.notice.* — INFORMATION now, not a warning (shop_server_purchase §4). The
+  // price became authoritative on {build}: a purchase is one POST /shop/purchase
+  // that reads the PUBLISHED row, prices it off the SERVER clock and debits +
+  // queues the grant in one transaction. It is still worth saying out loud that
+  // enforcement is only as good as the OLDEST build in the wild — an installed
+  // older client keeps debiting locally at its bundled price until the legacy
+  // /points/spend shop reason is closed (§2.6). Do not drop that second sentence.
+  "sh.notice.headline": {
+    en: "Prices are enforced by the server for builds {build} and later.",
+    ja: "ビルド {build} 以降では価格をサーバーが強制します。",
+  },
   "sh.notice.body": {
-    en: "Purchases still debit RP on the client through PointsSpendGate and grant locally. Moving the listing to the server did not make the price authoritative — a modified client can still grant itself the item. Treat this panel as the shop WINDOW, not as the till.",
-    ja: "購入処理は従来どおりクライアント側の PointsSpendGate で RP を消費し、ローカルで付与されます。出品情報をサーバー管理にしても価格が正となるわけではなく、改造クライアントは依然としてアイテムを自己付与できます。この画面は「ショーウィンドウ」であり、レジではありません。",
+    en: "Purchases on build {build} and later go through /shop/purchase, which charges the PUBLISHED price at purchase time (server clock, listing + sale windows) and queues the item as a grant in the same transaction. Older builds still debit locally at their bundled price until the legacy spend path is closed.",
+    ja: "ビルド {build} 以降の購入は /shop/purchase を経由し、購入時点で公開中の価格（サーバー時刻・出品期間とセール期間を適用）を請求したうえで、同一トランザクションでアイテムを付与キューに登録します。それ以前のビルドは、旧来の消費経路が閉じられるまでバンドル価格でローカルに消費し続けます。",
   },
   "sh.col.entry": { en: "Entry", ja: "出品" },
   "sh.col.refers": { en: "Refers to", ja: "参照先" },
