@@ -134,9 +134,10 @@ git add Assets/Resources/Data Assets/Data Assets/Localization && git commit -m "
 
 ### One-time setup
 
-**1. fastlane** (not yet installed on this Mac — Homebrew isn't either). System Ruby is
-**2.6.10**, EOL and Apple-deprecated; never `gem install` against it. Homebrew's fastlane
-vendors its own Ruby:
+**1. fastlane** — ✅ **DONE on this Mac.** Verified 2026-08-27: `/opt/homebrew/bin/fastlane`,
+with Homebrew at `/opt/homebrew/bin/brew`. This section is kept for a new machine only.
+System Ruby is **2.6.10**, EOL and Apple-deprecated; never `gem install` against it.
+Homebrew's fastlane vendors its own Ruby:
 
 ```bash
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
