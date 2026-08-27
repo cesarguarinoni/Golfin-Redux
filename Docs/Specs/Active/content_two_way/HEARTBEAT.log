@@ -1,0 +1,13 @@
+=== iter-1 kickoff baseline 2026-08-27 18:36:30 JST ===
+HEAD 53c6a203ae0fd87424e2feaf93b2dbd0ed8ec330
+DIRTY (git status --porcelain --untracked-files=all at kickoff):
+ M Docs/Versioning/last_uploaded_build.txt
+(that single path was ALREADY modified before this task started — see the session-open
+ git status in the kickoff transcript. Nothing else was dirty.)
+=== iter-1 work log ===
+18:36 §4 client rail: renderable on Character/Item/Ball runtimes + GetAvailable + consumers + shop rail
+18:36 §5 ContentArtValidator + CIBuild report step; first report written (build 2361)
+18:36 §6 admin: SPRITE_FIELD_FOLDER, RowEditor hints, Characters banner, EN+JA strings
+18:36 EditMode sweep 1857 tests: 1854 passed, 0 failed, 3 pre-existing skips
+18:36 §2 importer tests + §3 value-level --check; 26 stdlib tests green
+18:36 play-mode acceptance: rename char_olivia portrait -> withheld; restore -> back

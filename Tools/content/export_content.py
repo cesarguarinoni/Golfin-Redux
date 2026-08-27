@@ -5,11 +5,19 @@
     python3 Tools/content/export_content.py --check               # exit 1 if anything would change OR drifted
     python3 Tools/content/export_content.py --catalogs texts,clubs
 
-`--check` answers TWO questions, and the second one was added by
-content_cursor_per_catalog §5:
+`--check` answers THREE questions. The second was added by
+content_cursor_per_catalog §5, the third by content_two_way §3:
 
   1. IDEMPOTENCE — would exporting change a file? (the repo is behind a publish)
-  2. DRIFT — does each catalog hold exactly the ids the repo CSV holds?
+  2. DRIFT, BY ID — does each catalog hold exactly the ids the repo CSV holds?
+  3. DRIFT, BY VALUE — for an id BOTH sides have, who is newer?
+
+Question 3 exists because 1 and 2 together still cannot say which loop to run.
+A value difference on an existing id is a file difference, so `--check` fails —
+but "would change" is the same answer whether somebody edited the CSV in Unity
+(import, then publish) or published in the admin without exporting (export). The
+DRAFT is what disambiguates: a draft that already equals the CSV means the import
+has run and only the publish is missing. See `value_direction_report`.
 
 Question 2 is not implied by question 1. A row that is in the CSV but NOT in the
 catalog changes no file: the exporter keeps it verbatim (I6 — nothing is ever
@@ -79,7 +87,7 @@ from __future__ import annotations
 import argparse
 import os
 import sys
-from typing import Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional, Tuple
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -252,6 +260,86 @@ def _sample(ids: List[str], limit: int = 12) -> str:
     return head + (f" … (+{len(ids) - limit} more)" if len(ids) > limit else "")
 
 
+def csv_values(catalog: Catalog, repo_root: str) -> Dict[str, dict]:
+    """`{row_id: data}` from the repo CSV, in the shape `content_rows.data` holds.
+
+    Reuses `import_content.csv_rows` rather than re-deriving it: that function
+    already knows the one non-obvious rule — `is_active` is a table COLUMN the
+    exporter appends to the header, not a field of `data` — and two copies of
+    that rule would eventually disagree about whether a deactivated row differs.
+    """
+    from import_content import csv_rows  # local: the CLI paths do not need it
+
+    return {rid: data for rid, (data, _active) in csv_rows(catalog, repo_root).items()}
+
+
+def value_direction_report(
+    catalog: Catalog,
+    published: List[dict],
+    repo_root: str,
+    drafts: Optional[Callable[[], Dict[str, dict]]] = None,
+) -> List[str]:
+    """Who is newer, for ids BOTH sides have but disagree about (content_two_way §3).
+
+    `drift_report` answers by ID and `write_if_changed` answers "would change";
+    neither can name the LOOP to run when an existing row's values differ. The
+    draft is the tie-breaker, and it is a fact rather than a guess:
+
+      a draft EQUALS the CSV  → the import already ran; only the publish is
+                                missing. Saying "run the exporter" here would be
+                                actively wrong — the export would overwrite the
+                                CSV edit with the still-published value.
+      anything else           → cannot be distinguished from the outside, so
+                                both branches are named and the operator picks
+                                the one that matches what they did.
+
+    `drafts` is a CALLABLE, not a dict, so the extra `content_drafts` query is
+    made only for a catalog that actually has a value difference — most runs have
+    none and should cost nothing.
+
+    Returns report lines only. The EXIT CODE is unchanged: a value difference is
+    already a file difference and `--check` was failing on it before this existed.
+    """
+    csv_data = csv_values(catalog, repo_root)
+    pub_data = {str(r["row_id"]): (r.get("data") or {}) for r in published}
+
+    differing = sorted(
+        rid for rid, data in csv_data.items()
+        if rid in pub_data and pub_data[rid] != data
+    )
+    if not differing:
+        return []
+
+    draft_rows = drafts() if drafts is not None else {}
+    imported = [rid for rid in differing
+                if rid in draft_rows and (draft_rows[rid].get("data") or {}) == csv_data[rid]]
+    undecided = [rid for rid in differing if rid not in imported]
+
+    out: List[str] = []
+    if imported:
+        out.append(
+            f"{catalog.name}: {len(imported)} row(s) imported, not yet published — "
+            f"publish `{catalog.name}` in the admin: {_sample(imported)}"
+        )
+    if undecided:
+        out.append(
+            f"{catalog.name}: values differ from published for {len(undecided)} row(s) "
+            f"({_sample(undecided)}): if you edited the CSV, run `import_content.py --apply` "
+            f"then publish; if not, run the exporter."
+        )
+    return out
+
+
+def fetch_drafts(client: PostgrestClient, name: str) -> Dict[str, dict]:
+    """`{row_id: draft}` for one catalog. Only read when a value actually differs
+    — the exporter otherwise has no business looking at drafts at all."""
+    rows = client.select(
+        "content_drafts",
+        {"catalog": f"eq.{name}", "select": "row_id,data,is_active,min_build", "order": "row_id"},
+    )
+    return {str(r["row_id"]): r for r in rows}
+
+
 def render_version_file(versions: Dict[str, int], names: List[str]) -> str:
     return "".join(f"{n}={versions.get(n, 0)}\n" for n in sorted(names))
 
@@ -295,6 +383,7 @@ def main() -> int:
     changed: List[str] = []
     warnings: List[str] = []
     drift: List[str] = []
+    direction: List[str] = []   # content_two_way §3 — WHICH loop to run, per catalog
     csv_ahead = 0  # ids the CSV has and the catalog does not — an export cannot fix these
 
     for name in names:
@@ -317,6 +406,15 @@ def main() -> int:
         did = write_if_changed(path, text, args.check)
         if did:
             changed.append(catalog.csv_path)
+
+        # content_two_way §3 — only on --check, and only when a file WOULD change:
+        # a write run is already resolving the difference, and a clean catalog has
+        # no question to answer. The drafts fetch is the only extra query, and it
+        # happens for the catalogs that earned it.
+        if args.check and did:
+            direction.extend(value_direction_report(
+                catalog, published, args.repo_root,
+                drafts=lambda n=name: fetch_drafts(client, n)))
         print(f"  {name:<13} v{versions.get(name, 0):<4} {len(published):>4} rows  "
               f"{'CHANGED' if did else 'unchanged'}  {catalog.csv_path}")
 
@@ -350,6 +448,13 @@ def main() -> int:
             print(f"\n--check: {len(changed)} file(s) would change:", file=sys.stderr)
             for c in changed:
                 print(f"  {c}", file=sys.stderr)
+        if direction:
+            # content_two_way §3. NOT a separate failure mode — every line here
+            # belongs to a file already counted above. It says which of the two
+            # loops closes it, which "would change" cannot.
+            print("\nCSV-vs-published VALUE differences — which loop to run:", file=sys.stderr)
+            for d in direction:
+                print(f"  {d}", file=sys.stderr)
         if changed or drift:
             reasons = []
             if changed:

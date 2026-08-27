@@ -78,7 +78,7 @@ What the lane does, in order (`fastlane/Fastfile`):
 |---|---|---|
 | 1 | `ensure_git_status_clean` | tree is dirty — the build number is `git rev-list --count HEAD` and would not describe the binary |
 | 2 | `Tools/assert-unity-closed.sh` | the Editor holds `Temp/UnityLockfile` (batchmode can't take it) |
-| 3 | `Tools/content/export_content.py --check` | the bundled CSVs are behind the PUBLISHED catalogs, or a CSV has drifted from its catalog — see § "Step 3: the content gate" |
+| 3 | `Tools/content/export_content.py --check` | the bundled CSVs are behind the PUBLISHED catalogs, or a CSV has drifted from its catalog by id or by value — see § "Step 3: the content gate" |
 | 4 | `Tools/unity-build-ios.sh` → `Golfin.EditorTools.CIBuild.BuildIOS` | Unity's exit code is non-zero, or `Builds/iOS-Full/Unity-iPhone.xcodeproj` is missing |
 | 5 | `build_app` (xcodebuild archive + export, `-allowProvisioningUpdates`) | signing/archive failure |
 | 6 | `upload_to_testflight` (App Store Connect API key) | upload rejected |
@@ -113,11 +113,13 @@ git add Assets/Resources/Data Assets/Data Assets/Localization && git commit -m "
 ./Tools/testflight.sh
 ```
 
-`--check` fails in two directions, and only the first is fixed by exporting:
+`--check` fails in three directions, and only the first is fixed by exporting. **Read what it
+prints before running anything** — the fix for the second and third is not an export, and doing
+one anyway overwrites a CSV edit with the value that is still published.
 
 - **Repo behind the catalog** (a row was published and never exported) → run the exporter,
   commit, rerun. This is the normal case.
-- **CSV ahead of the catalog** (a row was added in Unity and never put in the admin) → the
+- **CSV ahead of the catalog, by ID** (a row was added in Unity and never put in the admin) → the
   exporter cannot fix it, because it never deletes (I6) and keeps the extra line verbatim. Run
   the IMPORTER, which proposes those rows as drafts, then publish them:
 
@@ -131,6 +133,17 @@ git add Assets/Resources/Data Assets/Data Assets/Localization && git commit -m "
   dead end: on 2026-08-27 five `SETTINGS_QUALITY_*` / `SETTINGS_GRAPHICS` keys had been sitting
   outside the `texts` catalog since `quality_tiers` and were only caught here, at archive time.
   They were published as `texts` v12 the same day.)
+- **CSV and catalog disagree about a VALUE on a row both have** (content_two_way §3) → printed
+  under `CSV-vs-published VALUE differences — which loop to run:`, and the line tells you which:
+
+  - *"imported, not yet published — publish `<catalog>` in the admin"* — the importer has already
+    run and the drafts match the CSV. **Do not export**; open the panel, Review & publish, then
+    export and commit.
+  - *"values differ from published for N row(s) … if you edited the CSV, run `import_content.py
+    --apply` then publish; if not, run the exporter."* — nothing on the server can tell those two
+    apart, so it names both and you pick the one that matches what you did.
+
+  The exit code is the same in every case: 1. The block only says which loop closes it.
 
 ### One-time setup
 

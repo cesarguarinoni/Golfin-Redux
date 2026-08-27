@@ -1,6 +1,7 @@
 # `Tools/content` — the CSV ↔ Supabase content pipeline
 
-Two scripts and the shared mapping between them. Together they are invariant
+Three scripts, the shared mapping between them, and a test suite. Together they
+are invariant
 **I3** from `Docs/CONTENT_PIPELINE_PLAN.md` §2: *the admin is upstream of the
 CSV, not downstream.* Without the round trip the delta grows forever and the
 bundled floor rots.
@@ -26,10 +27,11 @@ until somebody publishes it.
 | `seed_from_csv.py` | Repo CSVs → `2026_08_24_content_seed.sql` (and `--apply` runs it). |
 | `export_content.py` | Published Supabase rows → the seven repo CSVs + `content_version.txt`. |
 | `import_content.py` | Repo CSVs → `content_drafts`, as a proposal. The fix for the one drift direction the exporter cannot repair. |
+| `tests/` | `python3 -m unittest discover Tools/content/tests` — stdlib only, no network. A fake PostgREST client (`tests/fakes.py`) stands in for Supabase, shared by the import and export suites. |
 
 ## Credentials
 
-Both scripts read the environment and **never** hold a key in the repo:
+All three scripts read the environment and **never** hold a key in the repo:
 
 ```
 SUPABASE_URL                https://<ref>.supabase.co
@@ -76,6 +78,25 @@ python3 Tools/content/export_content.py --env-file … --catalogs texts
 catalogs. That is the CI-shaped form: a release build whose CSVs are stale ships
 a bundled floor that disagrees with the server, and the client then downloads a
 delta it should never have needed.
+
+**It also says which loop to run.** A failing `--check` used to mean "something
+differs", which is the same message whether somebody published without exporting
+or edited a CSV without importing — and the fixes are opposite. So `--check`
+reports three things:
+
+* **by file** — this export would rewrite N files (the repo is behind a publish).
+* **by id** — an id one side has and the other does not, naming the direction
+  (`drift_report`).
+* **by value** (content_two_way §3) — for an id BOTH sides carry, under
+  `CSV-vs-published VALUE differences — which loop to run:`. The DRAFT decides:
+  a draft that already equals the CSV means *"imported, not yet published —
+  publish `<catalog>` in the admin"*, and anything else prints both branches
+  (*"if you edited the CSV, run `import_content.py --apply` then publish; if not,
+  run the exporter."*). Exporting in the first case would silently overwrite the
+  imported edit with the still-published value, which is why the line exists.
+
+The exit code is unchanged — 1 on any difference. The extra `content_drafts`
+query is made only for a catalog that actually has a value difference.
 
 ## Two things the exporter does that are worth knowing
 
@@ -127,6 +148,12 @@ Three things it refuses to do:
   bundled floor); too low ships a row to clients that cannot render it. Override
   with `--min-build`. CHANGED rows never have theirs touched — it is immutable
   once published (§D1.7).
+
+Covered by `tests/test_import_content.py` (content_two_way §2): the three
+verdicts, both `min_build` rules, the refusal and `--overwrite-dirty`, the
+`is_active` column, "never `content_rows`", and the **round-trip property** —
+import → publish → export leaves the CSV byte-identical, including after a value
+edited in Unity.
 
 ## Texts
 

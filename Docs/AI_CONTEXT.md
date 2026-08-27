@@ -133,6 +133,65 @@
 
 ## ✅ RECENTLY LANDED
 
+> **`content_two_way` — ONE TRUTH, BOTH DIRECTIONS, AND A CLIENT THAT NEVER SHOWS A BROKEN ROW.
+> Implemented 2026-08-27, awaiting Cesar's approval.** Spec + evidence:
+> `Docs/Specs/Active/content_two_way/`. Implemented directly by the main Claude Code thread in
+> the spec's §8 order.
+>
+> **The client rail (§4) is the part that changes what a player sees.**
+> `CharacterDataRuntime` / `ItemDataRuntime` / `BallDataRuntime` now carry `renderable`, set by
+> their own loader from the sprite resolution it already performs (`portraitSprite` for
+> characters, `thumbnailSprite` for items and balls). `GetAvailable…()` became
+> `isActive && renderable`; **`GetAll…()` is untouched on purpose** — a player granted a
+> character whose art is late must not LOSE it, so the row still round-trips through the save
+> and `InventoryCodec`; they simply cannot see it yet. Every visible-list consumer was switched
+> after grepping every call site: the roster seed (`CharacterManager.cs:82`), the inventory seed
+> (`ItemManager.cs:56`), the bag seed (`BallManager.cs:58`) and the 1v1 fallback opponent pool
+> (`MatchmakingModalController.cs:256`). `GeneralShopCatalog.UnrenderableReason` now READS the
+> flag instead of re-resolving, so the shop rail and the game-wide rail cannot disagree.
+> **CLUBS ARE EXCLUDED BY DECISION** — the Placeholder policy stands, `ClubDatabaseCSV` has zero
+> diff (measured in play mode: 799 rows, 150 on Placeholder, zero nulls).
+>
+> Measured end to end through the real player path: renaming `char_olivia`'s portrait to a name
+> Resources does not carry took the roster from `all=12 available=12 rosterCards=12` to
+> `all=12 available=11 rosterCards=11 unrenderable=[char_olivia]` — **no card, owned or locked,
+> and no gap** — the shop answered `"no usable character portrait"` for it while still admitting
+> `char_james`, and one summary warning named it. Restoring the name brought it back.
+>
+> **§5 — `Assets/Editor/ContentArtValidator.cs`**, a `CIBuild` step beside `ValidateTreeBake()`
+> and a `GOLFIN/Content/Validate Catalog Art` menu item. Writes
+> `Docs/Reports/content_art_<build>.txt` so the archive carries the list of what it withholds.
+> **Warning only, no failure path, no skip flag** — data published ahead of its art is a
+> legitimate state that §4 makes safe, and a build that fails for it is a validator somebody
+> switches off. Today: 0 characters/items/balls withheld, 373 club rows on Placeholder.
+>
+> **§6 — the admin says so before you publish.** Sprite-name fields in `characters` / `items` /
+> `balls` / `clubs` carry a hint naming the exact `Resources/` folder (EN + JA), and the
+> Characters panel carries the Shop panel's amber banner: creating a character here creates its
+> DATA; its art ships with the next build that bundles the sprites. No new control.
+>
+> **§2 + §3 — the tooling half.** `Tools/content/tests/` now exists (stdlib `unittest`, a fake
+> PostgREST client shared by both suites, 26 tests) and pins the importer's decisions plus the
+> **round-trip property**: import → publish → export leaves the CSV byte-identical, including
+> after a value edited in Unity. `export_content.py --check` gained the VALUE-level half of its
+> drift answer: for an id both sides carry, the DRAFT decides whether it prints *"imported, not
+> yet published — publish `<catalog>` in the admin"* or *"if you edited the CSV, run
+> `import_content.py --apply` then publish; if not, run the exporter."* Exit code unchanged.
+> Exporting on the first of those would silently overwrite the imported edit, which is the whole
+> reason the line exists. `Tools/content/README.md` + `Docs/TESTFLIGHT_RUNBOOK.md` updated.
+>
+> **Verification.** EditMode 1857 tests / 1854 passed / 0 failed / 3 pre-existing skips (all five
+> new tests confirmed by name). `python3 -m unittest discover Tools/content/tests` 26/26.
+> Dashboard `npm run build` green. Import dry-run against prod: nothing to import, all seven
+> catalogs `same`. `export --check` against prod: clean.
+>
+> **Two things still need Cesar, and only Cesar:** §8 step 3's round-trip rehearsal on a
+> throwaway text key against prod (it writes prod drafts and needs a human publish), and the
+> "imported, not yet published" branch of §3 seen live (same reason). Both are pinned by
+> automated tests meanwhile. **Art by URL — the thing that would make an admin-created character
+> render on an ALREADY-INSTALLED build — is deliberately NOT here; it is the next spec,
+> `content_art_urls`.**
+
 > **`import_content.py` — THE ROUND TRIP CLOSES IN BOTH DIRECTIONS. DONE 2026-08-27.**
 > Implemented directly by the main Claude Code thread. `Tools/content/import_content.py`,
 > documented in `Tools/content/README.md`.
