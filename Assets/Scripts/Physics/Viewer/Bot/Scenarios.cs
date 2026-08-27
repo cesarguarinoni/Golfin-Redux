@@ -2604,6 +2604,28 @@ namespace Golfin.Physics.Viewer.Bot
             d.LogStep("  Tee frame captured.");
             DumpTreeProjection(d, "h02_tee_down_the_hole");
 
+            // ── A/B: the bug, from one fixed camera ────────────────────────────
+            // Toggling the StandaloneTrees container off reproduces the pre-fix scene EXACTLY
+            // (that is precisely what Hole 02 shipped as: the container simply did not exist),
+            // so these two frames are the before/after of the whole task. Physics is unaffected
+            // either way — tree collision comes from the committed tree_obstacles.csv via
+            // ITreeObstacleProvider, not from these GameObjects, which is why the bug was
+            // "invisible trees you still bounce off" rather than "missing trees".
+            // ACTIVE-STATE ONLY, AND NEVER SAVED — the scene must not be written from here.
+            var abContainers = new System.Collections.Generic.List<GameObject>();
+            foreach (var go in Object.FindObjectsOfType<GameObject>())
+                if (go.name == "StandaloneTrees") abContainers.Add(go);
+
+            foreach (var c in abContainers) c.SetActive(false);
+            yield return new WaitForSecondsRealtime(0.75f);
+            yield return d.Capture("h02_AB_1_trees_OFF_the_shipped_bug");
+
+            foreach (var c in abContainers) c.SetActive(true);
+            yield return new WaitForSecondsRealtime(0.75f);
+            yield return d.Capture("h02_AB_2_trees_ON_after_rebuild");
+            d.LogStep($"  A/B captured by toggling {abContainers.Count} StandaloneTrees " +
+                      "container(s); scene NOT saved.");
+
             // ── 1..4. Four trunk strikes, two per tree line ─────────────────────
             // Shot plan is DATA, not a hard-coded table: Docs/Diagnostics/h02_tree_strike_shot_plan.csv
             // lists candidate (trunk, ball-start) pairs per tree line, generated from
