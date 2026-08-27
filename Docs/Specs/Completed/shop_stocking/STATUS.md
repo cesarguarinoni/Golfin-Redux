@@ -67,6 +67,12 @@ DONE AND VERIFIED
       ZERO `shop_purchase` debits across its entire 128-row history, so the door
       had never sold anything and closing it broke no flow that had ever run.
 
+  THE -1 "UNLIMITED" SWALLOW, flagged at close-out as the one known residual, is
+      CLOSED 2026-08-27 — server migration
+      `2026_08_29_shop_purchase_unlimited_refusal.sql` (applied, 11/11 verification
+      rows) plus the client refusing it in `ShopTransaction.HoldsUnlimited` and
+      never rendering a BUY for it. Two locks, neither relying on the other.
+
 AWAITING CESAR
   2. ~~The endpoint has never sold anything.~~ **CLOSED 2026-08-27** — Cesar ran
      2350 and bought `shop_char_mike` for 150 RP. Purchase row, grant and RP debit

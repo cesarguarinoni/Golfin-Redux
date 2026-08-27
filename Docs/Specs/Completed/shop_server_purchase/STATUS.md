@@ -33,6 +33,29 @@ microsecond. That is the one-function-one-transaction guarantee (§2, step 10) v
 in the data: there was no instant at which the RP was gone and the grant did not exist.
 The grant's applied_at is 148 ms later, so the client drained the queue on the spot.
 
+THE -1 "UNLIMITED" SWALLOW IS CLOSED, 2026-08-27. `-1` in a quantity map is a
+SENTINEL, not a quantity (the default Golfin ball ships that way), and every add
+path leaves it alone — right for a reward, catastrophic for a sale: the debit
+happened, the add no-opped, and `InventoryGrants.Apply` had already acked and
+written `appliedGrantIds`, so the player paid and received nothing with the grant
+marked delivered. Reachable, too: balls have no uniqueness check anywhere and the
+shop lists `shop_ball_putt_ace`. Never hit — no ball has ever been bought.
+
+Closed at BOTH locks, neither relying on the other:
+  server  2026_08_29_shop_purchase_unlimited_refusal.sql — step 8b refuses
+          ball/item held at a negative quantity BEFORE the debit, returned as
+          `already_owned` + `reason: "unlimited"` (a NEW status would fall through
+          the client's exact-string verdict mapping). APPLIED to prod 2026-08-27,
+          all 11 verification rows exact — including the three that prove the new
+          refusal is in the deployed body AND that the 08-27 `ref_inactive` and
+          08-28 `ref_min_build` refusals survived the replace. No deploy rode with
+          it (no API source changed; v55 was already correct). §2.5 smoke re-run
+          green on all eight probes.
+  client  ShopTransaction.HoldsUnlimited returns AlreadyOwned, and
+          GeneralShopCard.WireBuy renders the disabled OWNED chip instead of BUY.
+          This also covers the flag-OFF local path, where GrantBall would no-op
+          with no server involved at all.
+
 STILL OPEN:
   1. The HAPPY PATH is what 2350 proved. Of the §6 *(device)* list, "price is the
      server's" is now evidenced (charged == the published price, computed server-side,

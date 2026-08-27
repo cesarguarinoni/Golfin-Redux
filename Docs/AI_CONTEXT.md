@@ -247,6 +247,20 @@
 > `shop_item_repairkit_common` 75 RP, both min_build 2350, both inside their ECONOMY_MASTER band,
 > exported and committed so 2351+ bundles them.
 >
+> **THE -1 "UNLIMITED" SWALLOW IS CLOSED (2026-08-27).** The last known residual on this pair.
+> `-1` in a quantity map is a SENTINEL, not a quantity — the default Golfin ball ships that way —
+> and every add path leaves it alone, which is right for a reward and catastrophic for a sale: the
+> debit happened, the add no-opped, and `InventoryGrants.Apply` had already acked and written
+> `appliedGrantIds`, so the player paid and got nothing with the grant marked delivered. Reachable
+> (balls have no uniqueness check and the shop lists `shop_ball_putt_ace`) but never hit — no ball
+> has ever been bought. Fixed at BOTH locks: migration
+> `2026_08_29_shop_purchase_unlimited_refusal.sql` refuses it BEFORE the debit (applied, 11/11
+> verification rows, and three of those prove the two OLDER refusals survived the replace), and the
+> client refuses it in `ShopTransaction.HoldsUnlimited` while `GeneralShopCard.WireBuy` renders
+> OWNED instead of BUY — which also covers the flag-OFF local path where no server is involved.
+> Returned as `already_owned` + `reason:"unlimited"` because the client matches statuses by exact
+> string and a new one would fall through its verdict mapping.
+>
 > **§8 STEP 6 DONE — THE CUTOVER IS COMPLETE.** The legacy `/points/spend` `shop_purchase`
 > reason is CLOSED (playlife `357ce7f`, playlife-api **v54 → v55**, image
 > `deployment-01M1159SB99179ZMWNJD038X9A`, confirmed via `flyctl status` + live probes rather
