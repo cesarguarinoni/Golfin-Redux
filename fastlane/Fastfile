@@ -30,6 +30,20 @@ platform :ios do
     # take it, and Unity's own error for that is cryptic and buried in the log.
     sh("../Tools/assert-unity-closed.sh")
 
+    # Content freshness (CONTENT_PIPELINE_PLAN.md I3, shop_stocking §5). The bundled CSVs are
+    # the floor every install runs on; a build whose CSVs are behind the PUBLISHED catalogs
+    # ships a floor that disagrees with the server — a row the admin published is missing from
+    # the binary, and only players who reach the network see it. `--check` writes nothing and
+    # exits 1 when the repo is stale OR drifted, naming the catalog and sample ids.
+    #
+    # It deliberately does NOT auto-export. An export inside the lane would bake CSV changes
+    # into a build whose COMMIT does not contain them, and the build number is the commit
+    # count (`git rev-list --count HEAD`) — so the archive would carry content its own build
+    # number cannot account for. The loop is human and stays human:
+    #   python3 Tools/content/export_content.py --env-file Tools/admin-dashboard/.env.development.local
+    #   git commit   ->   rerun this lane.
+    sh("python3 ../Tools/content/export_content.py --env-file ../Tools/admin-dashboard/.env.development.local --check")
+
     # Non-zero here MUST abort the lane: otherwise build_app would archive the Xcode project
     # left over from the PREVIOUS run and upload a stale binary. fastlane's sh raises on a
     # non-zero exit, and the script propagates Unity's exit code verbatim.

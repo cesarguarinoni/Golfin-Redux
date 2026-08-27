@@ -78,13 +78,52 @@ What the lane does, in order (`fastlane/Fastfile`):
 |---|---|---|
 | 1 | `ensure_git_status_clean` | tree is dirty — the build number is `git rev-list --count HEAD` and would not describe the binary |
 | 2 | `Tools/assert-unity-closed.sh` | the Editor holds `Temp/UnityLockfile` (batchmode can't take it) |
-| 3 | `Tools/unity-build-ios.sh` → `Golfin.EditorTools.CIBuild.BuildIOS` | Unity's exit code is non-zero, or `Builds/iOS-Full/Unity-iPhone.xcodeproj` is missing |
-| 4 | `build_app` (xcodebuild archive + export, `-allowProvisioningUpdates`) | signing/archive failure |
-| 5 | `upload_to_testflight` (App Store Connect API key) | upload rejected |
-| 6 | `Tools/mark-uploaded.sh` | never — always exits 0 by design |
+| 3 | `Tools/content/export_content.py --check` | the bundled CSVs are behind the PUBLISHED catalogs, or a CSV has drifted from its catalog — see § "Step 3: the content gate" |
+| 4 | `Tools/unity-build-ios.sh` → `Golfin.EditorTools.CIBuild.BuildIOS` | Unity's exit code is non-zero, or `Builds/iOS-Full/Unity-iPhone.xcodeproj` is missing |
+| 5 | `build_app` (xcodebuild archive + export, `-allowProvisioningUpdates`) | signing/archive failure |
+| 6 | `upload_to_testflight` (App Store Connect API key) | upload rejected |
+| 7 | `Tools/mark-uploaded.sh` | never — always exits 0 by design |
 
 After it finishes, **commit `Docs/Versioning/last_uploaded_build.txt`** with your next change.
 It is the only file the run leaves dirty.
+
+### Step 3: the content gate — run this BEFORE the lane
+
+The bundled CSVs under `Assets/` are the FLOOR every install runs on: a fresh install, an
+offline launch and a killed content pipeline all fall back to them. A build whose CSVs are
+behind what the admin has published ships a floor that disagrees with the server — the row is
+live for anyone who reaches the network and absent for everyone who does not, which is the
+hardest kind of report to read.
+
+So the lane refuses to build a stale repo. `--check` writes nothing and exits 1, naming the
+catalog and a sample of the ids.
+
+```bash
+python3 Tools/content/export_content.py --env-file Tools/admin-dashboard/.env.development.local --check
+```
+
+**The lane never exports for you, deliberately.** An export inside the lane would bake CSV
+changes into a build whose COMMIT does not contain them, and the build number IS the commit
+count — the archive would then carry content its own build number cannot account for. The loop
+is human:
+
+```bash
+python3 Tools/content/export_content.py --env-file Tools/admin-dashboard/.env.development.local
+git add Assets/Resources/Data Assets/Data Assets/Localization && git commit -m "chore(content): export published catalogs"
+./Tools/testflight.sh
+```
+
+`--check` fails in two directions, and only the first is fixed by exporting:
+
+- **Repo behind the catalog** (a row was published and never exported) → run the exporter,
+  commit, rerun. This is the normal case.
+- **CSV ahead of the catalog** (a key was added in Unity and never put in the admin) → the
+  exporter cannot fix it, because it never deletes (I6) and keeps the extra line verbatim. Add
+  the missing rows in the admin panel with **+ New row**, publish, then export. As of
+  2026-08-27 this is the live state of `texts`: `SETTINGS_GRAPHICS`, `SETTINGS_QUALITY_AUTO`,
+  `SETTINGS_QUALITY_LOW`, `SETTINGS_QUALITY_MID`, `SETTINGS_QUALITY_HIGH` are in
+  `Assets/Localization/LocalizationText.csv` and not in the catalog, so the gate is RED until
+  those five keys are created and published.
 
 ### One-time setup
 
