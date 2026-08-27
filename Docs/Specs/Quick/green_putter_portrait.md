@@ -43,7 +43,24 @@ club back when they leave the green.
 - `Assets/Scripts/Physics/Viewer/PhysicsLabController.cs` — `SyncClubSelectorToPutter()`,
   `RestoreClubSelectorAfterPutter()`, `_bagIndexBeforePutter`, and the two call sites.
 
-## Verification still owed
+## Verified in Unity play mode, through the real chain (2026-08-27)
 
-Play a hole to the green and confirm the selector portrait becomes the putter, then that it
-reverts on the next tee. The bag is empty in edit mode, so this cannot be asserted statically.
+Cesar: on-device confirmation not needed, Unity is enough. So this was proven through the actual
+entry point rather than asserted — `SetClub(PutterIndex)` → `OnClubChanged` → `OnClubIndexChanged`
+→ `EnterPutterMode` → `SyncClubSelectorToPutter` → `ClubContext.RequestSelection` → the live
+populator → the bus fields `ClubButtonWidget` paints from. Harness:
+`Assets/Scripts/UI/Editor/PutterSelectorVerify.cs` (GOLFIN ▸ Quality Tiers menu).
+
+A static assertion could have confirmed the bag scan finds the putter, but NOT that
+`RequestSelection` reaches a live populator — and that second half is the part that can actually be
+broken in a real scene.
+
+Hole 06, 7-club bag:
+
+```
+BEFORE (driver)  clubId=club_driver_golfin_common type=DRIVER idx=0 portrait=S_Menu_Driver_GOLFIN
+AFTER  (putter)  clubId=club_putter_golfin_common type=PUTTER idx=6 portrait=S_Menu_Putter_GOLFIN   PASS
+RESTORED         clubId=club_driver_golfin_common type=DRIVER idx=0 portrait=S_Menu_Driver_GOLFIN   PASS
+```
+
+Note the putter is at bag index **6**, not `PutterIndex` (3) — the trap this fix was written around.

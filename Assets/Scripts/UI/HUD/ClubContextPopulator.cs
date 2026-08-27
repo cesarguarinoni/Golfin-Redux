@@ -54,6 +54,9 @@ namespace Golfin.UI.HUD
                     TypeLabel    = t.GetTypeLabel(),
                     Distance     = t.baseDistance,
                     Portrait     = t.portraitSprite,
+                    // The club's own handle sprite, so the on-course handle shows the right BRAND
+                    // and TYPE. Already resolved by ClubDatabaseCSV from Clubs.csv controlSprite.
+                    ControlSprite = t.controlSprite,
                     LabClubIndex = MapClubTypeToLabIndex(t.type),
                     // auto_club_selection: Driver and Wood share lab index 0, so the auto-selector
                     // needs this explicit flag to exclude ONLY the driver off the tee.
@@ -80,6 +83,7 @@ namespace Golfin.UI.HUD
                 ClubContext.SelectedTypeLabel = "DRIVER";
                 ClubContext.SelectedDistance  = 0;
                 ClubContext.SelectedPortrait  = null;
+                ClubContext.SelectedControlSprite = null;
                 ClubContext.SelectedIndex     = 0;
                 ClubContext.RaiseSelectedChanged();
                 return;
@@ -94,6 +98,7 @@ namespace Golfin.UI.HUD
             // club's CSV baseDistance (e.Distance), which is the correct per-club number to display.
             ClubContext.SelectedDistance  = e.Distance;
             ClubContext.SelectedPortrait  = e.Portrait;
+            ClubContext.SelectedControlSprite = e.ControlSprite;
             ClubContext.SelectedIndex     = idx;
             ClubContext.RaiseSelectedChanged();
         }

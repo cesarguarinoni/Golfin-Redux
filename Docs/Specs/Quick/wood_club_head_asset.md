@@ -85,7 +85,29 @@ Verified: all five GOLFIN control sprites load; `Driver` and `Wood` are genuinel
 assets rather than two names for one file; all seven real `GetTypeLabel()` outputs map correctly and
 unknown labels fall through to the lab index.
 
-## Open design question for Cesar — deliberately NOT fixed here
+## Brand accuracy — ANSWERED AND SHIPPED (Cesar, 2026-08-27: "Of course it should follow the brand and club type")
+
+The handle now takes the selected club's OWN `controlSprite` — brand AND type. A Royal wood draws
+`S_Controls_Wood_ROYAL`, not the GOLFIN wood. `ClubDataRuntime.controlSprite` was already a loaded
+`Sprite`; it just had no way across the assembly boundary, so `ClubEntry` gained a `ControlSprite`
+field (same shape as the existing `Portrait`), both populators fill it, and `ClubContext` carries it
+as `SelectedControlSprite`. ~15 lines across 4 files.
+
+The GOLFIN-by-type table is now the FALLBACK for a club row with no control sprite — the behaviour
+this component used to have for everything, so falling back to it can never be a regression.
+
+Verified through the real binder, driving the bus exactly as the populators do — 5/5:
+
+| case | result |
+|---|---|
+| `S_Controls_Wood_ROYAL` (brand+type) | PASS |
+| `S_Controls_Driver_ROYAL` (same brand, other type) | PASS |
+| `S_Controls_Wood_EAGLEZ` (same type, other brand) | PASS |
+| `S_Controls_Putter_ROYAL` | PASS |
+| `S_Controls_Wedge_ROYAL` | PASS |
+| fallback with no control sprite | correct GOLFIN sprite per type, all five |
+
+### Original framing, kept for the record
 
 **The handle brand is hardcoded to GOLFIN for every club**, which is what this component has always
 done. But the CSV carries a per-club `controlSprite` and `Assets/Resources/Clubs/Controls/` holds

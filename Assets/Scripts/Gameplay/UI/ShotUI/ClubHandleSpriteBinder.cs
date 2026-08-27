@@ -18,11 +18,16 @@ namespace Golfin.Gameplay.UI.ShotUI
     /// <see cref="ClubSelectionBroadcast"/> without necessarily populating <see cref="ClubContext"/>,
     /// and a handle that goes blank there would be a worse bug than the one being fixed.
     ///
-    /// BRAND IS HARDCODED TO GOLFIN for every club, which is the behaviour this has always had.
-    /// Clubs.csv carries a per-club <c>controlSprite</c> and Resources/Clubs/Controls holds all five
-    /// types across 15-18 brands, so per-brand handles are possible — but that is a design change,
-    /// not this fix, and it needs a Sprite field plumbed onto ClubEntry (this assembly cannot
-    /// reference ClubDataRuntime in Assembly-CSharp).
+    /// BRAND AND TYPE BOTH COME FROM THE CLUB (Cesar, 2026-08-27). The first choice is the selected
+    /// club's OWN <c>controlSprite</c> from Clubs.csv — <c>S_Controls_Wood_ROYAL</c> for a Royal wood,
+    /// not the GOLFIN wood — carried across the assembly boundary on <c>ClubContext</c> because this
+    /// assembly cannot reference <c>ClubDataRuntime</c> in Assembly-CSharp. Resources/Clubs/Controls
+    /// holds all five types across 15-18 brands, and the CSV has always named the right one; the
+    /// binder simply never read it.
+    ///
+    /// The GOLFIN-by-type table below is now the FALLBACK, for a club whose row carries no control
+    /// sprite. It is the behaviour this component used to have for everything, so falling back to it
+    /// can never be a regression.
     /// </summary>
     [RequireComponent(typeof(Image))]
     public class ClubHandleSpriteBinder : MonoBehaviour
@@ -81,6 +86,11 @@ namespace Golfin.Gameplay.UI.ShotUI
         {
             if (_image == null) return;
 
+            // 1. The club's own sprite — correct brand AND type.
+            var own = ClubContext.SelectedControlSprite;
+            if (own != null) { _image.sprite = own; return; }
+
+            // 2. Fallback: GOLFIN family, keyed by type.
             ClubHandle handle;
             if (TryHandleFromTypeLabel(ClubContext.SelectedTypeLabel, out var fromLabel))
             {

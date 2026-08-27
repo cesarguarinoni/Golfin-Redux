@@ -15,6 +15,13 @@ namespace Golfin.Gameplay.UI.HUD
         public static string  SelectedTypeLabel = "DRIVER";
         public static int     SelectedDistance  = 0;
         public static Sprite? SelectedPortrait  = null;
+
+        /// <summary>
+        /// The selected club's OWN on-course handle sprite (Clubs.csv <c>controlSprite</c>, e.g.
+        /// <c>S_Controls_Wood_ROYAL</c>) — brand AND type, not a hardcoded family.
+        /// Null when the club row has no control sprite; ClubHandleSpriteBinder then falls back.
+        /// </summary>
+        public static Sprite? SelectedControlSprite = null;
         public static System.Collections.Generic.List<ClubEntry> EquippedBag = new();
         public static int     SelectedIndex     = 0;
 
@@ -32,6 +39,7 @@ namespace Golfin.Gameplay.UI.HUD
             SelectedTypeLabel = "DRIVER";
             SelectedDistance  = 0;
             SelectedPortrait  = null;
+            SelectedControlSprite = null;
             EquippedBag.Clear();
             SelectedIndex     = 0;
             RaiseBagChanged();
@@ -43,6 +51,8 @@ namespace Golfin.Gameplay.UI.HUD
     {
         public string  ClubId       = "";
         public string  TypeLabel    = "";
+        /// <summary>The club's own handle sprite — brand and type. See ClubContext.SelectedControlSprite.</summary>
+        public Sprite? ControlSprite = null;
         public int     Distance     = 0;
         public Sprite? Portrait     = null;
         public int     LabClubIndex = 0;

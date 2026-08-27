@@ -107,6 +107,7 @@ namespace Golfin.UI.HUD
             ClubContext.SelectedTypeLabel = e.TypeLabel;
             ClubContext.SelectedDistance  = e.Distance; // iter-37: show the club's distance (see ClubContextPopulator)
             ClubContext.SelectedPortrait  = e.Portrait;
+            ClubContext.SelectedControlSprite = e.ControlSprite;
             ClubContext.SelectedIndex     = idx;
             ClubContext.RaiseSelectedChanged();
             Debug.Log($"[LabInventoryStub] Club selected: {e.TypeLabel} (idx={idx})");
@@ -139,6 +140,7 @@ namespace Golfin.UI.HUD
                     TypeLabel    = rt.GetTypeLabel(),
                     Distance     = rt.baseDistance,
                     Portrait     = rt.portraitSprite,
+                    ControlSprite = rt.controlSprite,   // brand+type handle; mirrors ClubContextPopulator
                     LabClubIndex = MapClubTypeToLabIndex(rt.type),
                     // auto_club_selection: mirrors ClubContextPopulator — Driver and Wood both map
                     // to lab index 0, so the auto-selector keys off this flag, not the lab index.
@@ -156,6 +158,7 @@ namespace Golfin.UI.HUD
                 ClubContext.SelectedTypeLabel = e.TypeLabel;
                 ClubContext.SelectedDistance  = e.Distance; // iter-37: show the club's distance
                 ClubContext.SelectedPortrait  = e.Portrait;
+                ClubContext.SelectedControlSprite = e.ControlSprite;
                 ClubContext.SelectedIndex     = 0;
                 ClubContext.RaiseSelectedChanged();
             }
