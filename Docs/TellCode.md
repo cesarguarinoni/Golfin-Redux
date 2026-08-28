@@ -7,6 +7,17 @@
 
 ## ▶ CURRENT STATE — update this block at every session boundary
 
+- **`progress_server_side` is DONE** (Cesar, 2026-08-28) — folder in `Docs/Specs/Completed/`.
+  Level-ups are server-authoritative: `POST /api/v1/progress/level-up`, cost summed from the
+  PUBLISHED `level_up_costs` catalog (the ninth, with its own admin panel), debited through
+  `spend_pts` with reason `progress:<kind>:<ref>:L<to>`, and the level RECORDED — one transaction.
+  §5 folded in on Cesar's call: `/points/spend` now refuses `character_level_up` and
+  `club_level_up`. API on **v57** (`playlife-api:deployment-01M13MS0R4MDNNNGK94RNFAX04`).
+  ⚠️ **The next build to ship MUST carry `ProgressService`** — the legacy door is shut, so any
+  client older than that gets a clean 400 on LEVEL UP. That was the accepted trade
+  ("they are testers, not real users"), not an oversight.
+  Next up per Cesar: `game_modes_admin` (SPEC_READY, unblocked).
+
 - **LIVE ADMIN: `admin.golfin.world` is at `6ccd4a8a2`** (Cloudflare deployment
   `96e5ad86-8466-466b-a3a4-8d9356ccf694`, 2026-08-28). Three deploys today, in order:
   `577be843-…` (the outstanding backlog, stamped `3df55d58f`), `c927bde9-…` (the Level Costs panel,

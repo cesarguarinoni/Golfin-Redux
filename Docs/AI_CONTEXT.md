@@ -186,7 +186,8 @@
 > live blobs is what closed it.
 
 > **▶ LEVEL-UPS ARE SERVER-AUTHORITATIVE — the last self-grant that touched competition is closed.
-> `progress_server_side`, 2026-08-28, LIVE E2E PASSED on prod.**
+> `progress_server_side` — ✅ **DONE**, Cesar approved 2026-08-28; folder in `Docs/Specs/Completed/`.
+> LIVE E2E PASSED on prod.**
 >
 > A level-up used to be `POST /points/spend {amount: <client-computed>, reason:
 > "character_level_up"}` followed by the client writing the new level into its own save. The server
@@ -239,7 +240,7 @@
 > in the live sidebar footer and was read there. Worth doing only if something headless ever needs to
 > assert the deployed commit.
 >
-> Spec: `Docs/Specs/Active/progress_server_side/`. **Out of scope on purpose:** hole unlocks and SP
+> Spec: `Docs/Specs/Completed/progress_server_side/`. **Out of scope on purpose:** hole unlocks and SP
 > allocation (free and gameplay-derived / derivable from the recorded level), and closing the legacy
 > `character_level_up` / `club_level_up` reasons — §5, a separate commit on Cesar's word, and only as
 > good as the oldest build in the wild.

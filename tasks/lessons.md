@@ -2856,3 +2856,44 @@ drafts were byte-identical to published first, so the publish shipped those five
 nothing else.
 
 Related: [[project_editor_only_seams_break_player_builds]], [[feedback_never_arm_unverified_schedule]].
+
+---
+
+## Lesson AH — `git add <directory>` is how an unrelated task's work lands in your commit (2026-08-28, `progress_server_side` close-out)
+
+**What happened.** Every CODE commit in this task staged explicit paths. Then, on
+the docs commits, I typed `git add Docs/` — and commit `978a71e1e`, whose message
+is entirely about a `golfin_level_up` blob-key fix, actually carried:
+
+| swept in | what it really is |
+|---|---|
+| `Docs/Versioning/last_uploaded_build.txt` (2350→2361) | build bookkeeping, someone else's |
+| `Docs/Specs/Active/club_art_batches/STATUS.md` (+325) | another active task's status |
+| `Docs/Specs/Active/game_modes_admin/*` (5 files, +369) | the QUEUED spec, untracked until then |
+
+Nothing was lost or corrupted — but `game_modes_admin`'s spec now has, as its
+birth commit, a message about a level-up diagnostic. Anyone running
+`git log -- Docs/Specs/Active/game_modes_admin/` gets a lie.
+
+**The sting.** I had ALREADY enumerated those exact paths in the task's own
+IMPLEMENTER_REPORT, under a heading called "Uncommitted paths outside this task's
+folder (Rule 13 disclosure)", describing them as *"all pre-existing, none touched
+by this task."* I wrote the list, then committed the list. Rule 12's pre-flight
+is what caught it, at close-out, one commit too late.
+
+**The rule, and it has no exceptions.** *Never* `git add` a directory. Stage
+explicit file paths, always, even for a docs-only commit — **especially** for a
+docs-only commit, because `Docs/` is the one directory every concurrent task
+writes into. `git add -A` and `git add .` are the same trap wearing different
+hats.
+
+**And run Rule 12's pre-flight BEFORE each commit, not just the close-out one.**
+`git status --porcelain --untracked-files=all` costs one line and would have
+shown 6 unrelated paths going in. I ran it at the end, which is where it is
+mandated — but it is a check that pays for itself every time.
+
+**Do NOT rewrite pushed history to fix this.** The commits were already pushed;
+rewriting shared history to correct an attribution is a worse trade than the
+wrong attribution. Disclose it, and stop doing it.
+
+Related: Lesson AA (close-out commits on top of uncommitted code), Lesson R.
