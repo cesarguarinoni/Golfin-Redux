@@ -10,7 +10,7 @@ One currency: **RP == playlife `total_points`**, one shared ledger (`points_tran
 server-authoritative since 2026-08-12. Earns enter ONLY through the `game_point_actions` catalog;
 spends only through `spend_pts` (row-locked, idempotent). New accounts start at 0.
 
-**Sources:** hole complete **10** · hole replay **5** · 1v1 win **20** · tournament prizes (bands:
+**Sources:** hole complete **10** · hole replay **5** · 1v1 win **20** · **missions (designed 2026-08-28, not live — see §3)** · tournament prizes (bands:
 small 300/150/50, medium 500/300/100, major 2000/1200/500/100 — pool totals 950 / 1,800 / 11,900;
 server cap 2,000 per event) · GPS visit verification **10–50** (partner app, shared ledger, never
 ranks on leaderboards) · admin grants (ops).
@@ -31,7 +31,9 @@ competition — Cesar decision [d]).
 
 **Reference active player** (all editable in the workbook): earns ≈ **300 RP/day**, recurring
 live spend (practice + entries + a stamina boost) ≈ 50/day → **NET ≈ 250 RP/day** → full level
-cap in ~58 days; a Supreme-priced club (proposal below) in ~12 days.
+cap in ~58 days; a Supreme-priced club (proposal below) in ~12 days. **With Missions (§3):
+earn ≈ 361/day post-campaign → net ≈ 311/day → level cap ~47 days, full character roster
+~60 days.**
 
 **The structural takeaway:** with repairs, ball consumption and gacha dormant, the only recurring
 drains are entry fees and stamina — once a player caps their roster the economy leaks upward.
@@ -80,6 +82,21 @@ Decisions of record (Ken-doc §04 as amended by Cesar's comments [a][d][g][i]):
   2026-08-21: both James and Olivia are now Common — see
   `Docs/Game Design/CHARACTER_ROSTER_DESIGN.md`.)
 
+- **Missions (NEW — designed 2026-08-28, `MISSIONS_REDESIGN.md` + `GOLFIN_Missions_Redesign.xlsx`
+  sheet `Economy`):** entry fee **0** (retention loop, not a sink; stamina is the throttle at ≈ 4
+  missions/day). One-off per account: 40-mission campaign first clears 15/25/40/60 per tier =
+  **1,400 RP** + tier-clear bonuses 50/100/200/300 = **650** → **2,050 RP** plus 4 Repair Kits,
+  3 Premium Repair Kits, 6 Gold Tickets. Recurring: Daily Mission **30 RP** once/UTC day +
+  streak 15 (day 3) / 30 + Gold Ticket (day 7) ≈ 36/day averaged; mission replays **5 RP**
+  under a **50/day** cap → **≈ 61 RP/day recurring**. New earn actions: `mission_clear`
+  (pts NULL, max 60), `mission_replay` (5, cap 50/day), `mission_tier_clear` (pts NULL, max
+  300), `daily_mission` (30, once/day), `daily_streak` (pts NULL, max 30); mission RP counts
+  toward the mission leaderboards (Confluence), GPS RP still doesn't. Reward amounts are
+  server truth via a `golfin_mission_rewards` mirror written on publish. Effect on the
+  reference player: net 250 → **311/day**; level cap 58 → **47 days**; roster 74 → **60 days**.
+  Acceptable because the recurring sinks are still dormant — durability wear stays the next
+  sink to ship, and mission item rewards are kits so the two meet.
+
 ## 4. Paid track (future, cosmetics-gated)
 
 When cosmetic content exists: skins/cosmetics with zero stats (usable in competitive as
@@ -114,6 +131,8 @@ revenue model without content would be fiction.
 **方針（合意済み）：** Pay-to-Winなし。レアリティ・育成はRPのみで獲得。RPは購入・換金不可。
 現時点で有償販売はゼロ — 本物のコスメ（3Dアバター／クラブスキン）が完成するまで課金は
 開始しない。B2B収益の配分は 50%リワード / 40% GOLFIN / 10%ゴルフ場。
+
+**ミッション（2026-08-28設計、未実装）：** 参加費0（継続率のためのループ、スタミナが上限）。40ミッションのキャンペーン初回クリア計1,400 RP＋ティア達成ボーナス650 RP＝**2,050 RP**（アカウントごと一回限り）＋修理キット・ゴールドチケット。恒常：デイリーミッション30 RP／日＋連続ボーナス（3日目15、7日目30＋チケット）、リプレイ5 RP（上限50／日）→ 恒常約**61 RP/日**。参考プレイヤーの純増250→約311 RP/日、カンスト約58→約47日、キャラ全解放約74→約60日。修理・ボール・ガチャのシンクが未稼働のため許容範囲。
 
 **次の追加：** クラブ799本のRP価格帯（100〜3,000、レビュー中）、ガチャの実プール化、
 **キャラクター解放（新）**：初回にJamesかOliviaを1体選択、他は全てロック → RPで解放
