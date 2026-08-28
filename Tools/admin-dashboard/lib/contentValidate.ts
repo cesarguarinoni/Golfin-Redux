@@ -87,6 +87,7 @@ const REQUIRED: Record<string, string[]> = {
   balls: ["id", "name", "brand"],
   texts: ["key", "English", "Japanese"],
   shop_catalog: ["entryId", "category", "refId", "rpCost", "sortOrder"],
+  level_up_costs: ["level", "cost_r", "sp_reward"],
 };
 
 /** Columns that must parse as a number wherever they are present (§D1.3). */
@@ -99,6 +100,7 @@ const NUMERIC: Record<string, string[]> = {
   balls: ["power", "rebound", "windResistance", "roll", "spin"],
   texts: [],
   shop_catalog: ["rpCost", "saleRpCost", "sortOrder"],
+  level_up_costs: ["level", "cost_r", "sp_reward"],
 };
 
 /** `shop_catalog.category` → the catalog `refId` resolves in (§D1.6). */
@@ -118,6 +120,7 @@ export const ID_COLUMN: Record<string, string> = {
   balls: "id",
   texts: "key",
   shop_catalog: "entryId",
+  level_up_costs: "level",
 };
 
 /**
@@ -474,6 +477,93 @@ export function validateCatalog(
             "(ECONOMY_MASTER.md §3). Publishing anyway — prices are tuned deliberately."
         );
       }
+    }
+  }
+
+  // 9. level_up_costs — the cost table the SERVER prices from (progress_server_side §2).
+  //
+  // Three rules, all BLOCKING, and the third is the one that earns the section.
+  //
+  //   * cost_r / sp_reward must be non-negative. A negative cost is a level that
+  //     PAYS the player to take it; a negative reward is an SP debit nothing
+  //     implements.
+  //   * `level` must be a positive integer. It is the row id, so it is also what
+  //     `golfin_level_up()` looks a level up BY (`row_id = lv::text`) — "07" and
+  //     "7" would be two rows and neither would be found for level 7.
+  //   * COVERAGE MUST BE CONTIGUOUS from 1 to the highest `maxLevel` any
+  //     character or club can reach. A gap is not a cosmetic hole: the server
+  //     answers `costs_missing` and the client renders a dead LEVEL UP button
+  //     with no explanation, for every player whose ref crosses it. Deactivating
+  //     a row makes the same hole — the function joins on `is_active` — so
+  //     deactivated rows do NOT count as coverage here either.
+  //
+  // The ceiling comes from the characters / clubs drafts when the caller loaded
+  // them (publishCatalog does). When it did not, the highest level present in
+  // this catalog stands in — which still catches an internal gap and is never
+  // vacuous, but cannot know about a ref that reaches higher than the table does.
+  if (catalog === "level_up_costs") {
+    const levels: number[] = [];
+
+    for (const row of rows) {
+      const costR = num(row.data.cost_r);
+      if (costR !== null && costR < 0) err(row.rowId, "cost_r", `cost_r ${costR} is negative.`);
+
+      const spReward = num(row.data.sp_reward);
+      if (spReward !== null && spReward < 0) {
+        err(row.rowId, "sp_reward", `sp_reward ${spReward} is negative.`);
+      }
+
+      const level = num(row.data.level ?? row.rowId);
+      if (level === null || !Number.isInteger(level) || level < 1) {
+        err(row.rowId, "level", `"${row.rowId}" is not a positive whole level number.`);
+        continue;
+      }
+      if (String(level) !== row.rowId.trim()) {
+        err(
+          row.rowId,
+          "level",
+          `The row id "${row.rowId}" is not the plain number ${level}. The server looks a ` +
+            "level up by its row id, so a padded or spaced id is a level it cannot find."
+        );
+        continue;
+      }
+      // Only ACTIVE rows are coverage — see the note above.
+      if (row.isActive) levels.push(level);
+    }
+
+    let ceiling = 0;
+    let ceilingSource = "";
+    for (const refCatalog of ["characters", "clubs"]) {
+      const refRows = ctx.otherCatalogs.get(refCatalog);
+      if (!refRows) continue;
+      for (const refRow of refRows.values()) {
+        const maxLevel = num(refRow.data.maxLevel);
+        if (maxLevel !== null && maxLevel > ceiling) {
+          ceiling = maxLevel;
+          ceilingSource = `${refRow.rowId} (${refCatalog})`;
+        }
+      }
+    }
+    if (ceiling === 0 && levels.length > 0) {
+      ceiling = Math.max(...levels);
+      ceilingSource = "the highest level in this catalog";
+    }
+
+    const present = new Set(levels);
+    const gaps: number[] = [];
+    for (let level = 1; level <= ceiling; level++) {
+      if (!present.has(level)) gaps.push(level);
+    }
+    if (gaps.length > 0) {
+      const shown = gaps.slice(0, 12).join(", ");
+      err(
+        null,
+        "level",
+        `Coverage is not contiguous: ${gaps.length} level(s) between 1 and ${ceiling} have no ` +
+          `active row — ${shown}${gaps.length > 12 ? `, +${gaps.length - 12} more` : ""}. ` +
+          `The ceiling comes from ${ceilingSource}. A missing level is one the server refuses ` +
+          "with costs_missing and the player sees as a dead LEVEL UP button."
+      );
     }
   }
 

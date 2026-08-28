@@ -1083,6 +1083,21 @@ export const DICT = {
     en: "Three catalogs, one panel — each publishes independently.",
     ja: "3 つのカタログを 1 つの画面に集約しています。公開はカタログごとに独立しています。",
   },
+  // ---- level costs (progress_server_side §2) ------------------------------
+  //
+  // The one catalog the SERVER prices from directly: golfin_level_up() sums
+  // `cost_r` over these rows. An edit here changes what every player pays for
+  // their next level on their next launch, and a GAP is a level nobody can buy
+  // — which is why the publish validator refuses one rather than warning.
+  "lu.title": { en: "Level Costs", ja: "レベルアップ費用" },
+  "lu.note": {
+    en: "Shared by characters and clubs. The server prices every level-up from these rows — an edit here changes what players pay.",
+    ja: "キャラクターとクラブで共通です。サーバーはこの行を使ってレベルアップ費用を計算するため、ここでの編集はプレイヤーの支払額に直結します。",
+  },
+  "lu.col.level": { en: "Level", ja: "レベル" },
+  "lu.col.costR": { en: "RP cost", ja: "RP 費用" },
+  "lu.col.spReward": { en: "SP reward", ja: "SP 報酬" },
+
   "tx.title": { en: "Texts", ja: "テキスト" },
   "tx.col.key": { en: "Key", ja: "キー" },
   "tx.col.en": { en: "English", ja: "英語" },

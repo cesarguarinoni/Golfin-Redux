@@ -220,11 +220,20 @@ export async function publishCatalog(
   // §D1.6 needs the OTHER catalogs' drafts to resolve shop refIds. Only load
   // them for the catalog that actually references them.
   const otherCatalogs = new Map<string, Map<string, DraftRow>>();
-  if (catalog === "shop_catalog") {
-    for (const other of REFERENCED_CATALOGS) {
-      const rows = await fetchAllRows("content_drafts", other);
-      otherCatalogs.set(other, new Map(rows.map((r) => [r.rowId, toDraftRow(r)])));
-    }
+  const needs =
+    catalog === "shop_catalog"
+      ? REFERENCED_CATALOGS
+      : // progress_server_side §2 — the level-cost table's contiguity ceiling is
+        // the highest `maxLevel` any character or club can reach, so the rule
+        // cannot be checked without them. Drafts, not published rows, for the
+        // same reason as the shop's refIds: raising a maxLevel and extending the
+        // cost table are normally published together.
+        catalog === "level_up_costs"
+        ? ["characters", "clubs"]
+        : [];
+  for (const other of needs) {
+    const rows = await fetchAllRows("content_drafts", other);
+    otherCatalogs.set(other, new Map(rows.map((r) => [r.rowId, toDraftRow(r)])));
   }
 
   const problems = validateCatalog(catalog, drafts.map(toDraftRow), {

@@ -20,7 +20,8 @@ export type PanelIcon =
   | "character"
   | "box"
   | "text"
-  | "cart";
+  | "cart"
+  | "ladder";
 
 export interface PanelDef {
   id: string;
@@ -38,6 +39,10 @@ export const PANELS: readonly PanelDef[] = [
   { id: "characters", title: "Characters", icon: "character", route: "/characters" },
   { id: "clubs", title: "Clubs", icon: "club", route: "/clubs" },
   { id: "items", title: "Items", icon: "box", route: "/items" },
+  // The level-up cost table. Its own entry rather than a tab inside Characters
+  // or Clubs because it belongs to NEITHER — both price from the same 240 rows,
+  // and hanging it off one of them would imply the other has its own.
+  { id: "level-costs", title: "Level Costs", icon: "ladder", route: "/level-costs" },
   { id: "notices", title: "Notices", icon: "megaphone", route: "/notices" },
   { id: "points", title: "Points", icon: "coins", route: "/points" },
   { id: "shop", title: "Shop", icon: "cart", route: "/shop" },

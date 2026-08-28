@@ -3,5 +3,6 @@ balls=5
 characters=5
 clubs=1
 items=1
+level_up_costs=1
 shop_catalog=4
 texts=14

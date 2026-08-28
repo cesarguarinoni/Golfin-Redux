@@ -31,6 +31,7 @@ export const CONTENT_CATALOGS = [
   "balls",
   "texts",
   "shop_catalog",
+  "level_up_costs",
 ] as const;
 
 export type ContentCatalog = (typeof CONTENT_CATALOGS)[number];
@@ -135,6 +136,16 @@ export const CATALOG_VIEWS: Record<string, CatalogView> = {
     catalog: "shop_catalog",
     columns: ["category", "refId", "rpCost", "saleRpCost", "sortOrder", "popular", "offer"],
     facets: [CATEGORY_FACET],
+    limit: 50,
+  },
+  // 240 rows, three columns, no facet worth having: every row is a level and the
+  // only useful narrowing is the search box (which matches the row id, i.e. the
+  // level). The 50-row page is the same one clubs uses — the reason it exists is
+  // the reason it applies here.
+  level_up_costs: {
+    catalog: "level_up_costs",
+    columns: ["cost_r", "sp_reward"],
+    facets: [],
     limit: 50,
   },
 };

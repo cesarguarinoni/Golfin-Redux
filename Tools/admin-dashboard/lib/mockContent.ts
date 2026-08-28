@@ -20,6 +20,7 @@ export const MOCK_CONTENT_CATALOGS: ContentCatalogSummary[] = [
   { name: "balls", publishedVersion: 9999, isEnabled: false, publishedCount: 2, draftCount: 2, dirtyCount: 0 },
   { name: "texts", publishedVersion: 9999, isEnabled: true, publishedCount: 1, draftCount: 1, dirtyCount: 0 },
   { name: "shop_catalog", publishedVersion: 9999, isEnabled: true, publishedCount: 1, draftCount: 1, dirtyCount: 0 },
+  { name: "level_up_costs", publishedVersion: 9999, isEnabled: true, publishedCount: 3, draftCount: 3, dirtyCount: 0 },
 ];
 
 const row = (
@@ -96,6 +97,18 @@ export const MOCK_CONTENT_PUBLISHED: ContentStoredRow[] = [
     entryId: "mock_shop_entry", category: "club", refId: "mock_club_driver",
     rpCost: "9999", saleRpCost: "9998", sortOrder: "9999", popular: "false", offer: "false", rarity: "",
   }),
+  // Levels 1-3, contiguous. Enough to render the panel, the row editor and the
+  // publish drawer against.
+  //
+  // ⚠️ PUBLISHING level_up_costs IN MOCK MODE FAILS, CORRECTLY. The coverage rule
+  // takes its ceiling from the highest `maxLevel` any character or club can
+  // reach, and the mock club above claims 9999 — so the validator reports ~9996
+  // uncovered levels, which is exactly what it would report against a real
+  // catalog that stopped at 3. That is the rule working, not a broken fixture;
+  // do not "fix" it by loosening the rule.
+  row("level_up_costs", "1", { level: "1", cost_r: "1", sp_reward: "1" }),
+  row("level_up_costs", "2", { level: "2", cost_r: "1", sp_reward: "1" }),
+  row("level_up_costs", "3", { level: "3", cost_r: "2", sp_reward: "1" }),
 ];
 
 /** Drafts start identical to published except one obviously-dirty club row. */

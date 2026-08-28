@@ -84,6 +84,13 @@ const PATHS: Record<PanelIconName, React.ReactNode> = {
       <path d="M2 3h3l2.6 12.4a1 1 0 0 0 1 .8h8.9a1 1 0 0 0 1-.8L21 7H6" />
     </>
   ),
+  // A rising staircase — levels, each one a step you pay for.
+  ladder: (
+    <>
+      <path d="M3 20h5v-5h5v-5h5V5h3" />
+      <path d="M3 20V9" />
+    </>
+  ),
 };
 
 export function PanelIcon({

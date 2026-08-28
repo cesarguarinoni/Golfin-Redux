@@ -19,6 +19,7 @@ CSV FACTS this module encodes, all verified against the live repo 2026-08-25
   balls           2 rows  Assets/Data/Balls.csv
   texts         501 rows  Assets/Localization/LocalizationText.csv   1 MID-FILE `#` line
   shop_catalog    5 rows  Assets/Resources/Data/shop_catalog.csv
+  level_up_costs 240 rows Assets/Data/LevelUpCosts.csv
 
 Two of those facts contradict the SPEC's reference counts and both are handled
 rather than papered over:
@@ -67,8 +68,17 @@ class Catalog:
         return os.path.join(repo_root, self.csv_path)
 
 
-# Order here is the order the seed SQL and the export report use. LevelUpCosts is
-# deliberately absent — CONTENT_PIPELINE_PLAN.md §9 open question 2, unanswered.
+# Order here is the order the seed SQL and the export report use.
+#
+# `level_up_costs` is the NINTH... eighth entry and the ninth catalog counting the
+# two that ride inside the Items panel — added 2026-08-28 by progress_server_side
+# §2, which answered CONTENT_PIPELINE_PLAN.md §9 open question 2 ("should the
+# level-up cost table be admin-tunable?") with yes. It is the one catalog whose
+# rows the SERVER prices from directly: golfin_level_up() sums `cost_r` over the
+# published rows, so a gap here is a level nobody can buy and an edit here moves
+# what every player pays. Its id column is `level` — the only non-`id`/`key`/
+# `entryId` id in the table, and an integer written as text, because a row_id is
+# text everywhere else in the pipeline.
 CATALOGS: Tuple[Catalog, ...] = (
     Catalog("clubs", "Assets/Resources/Data/Clubs.csv", "id"),
     Catalog("characters", "Assets/Data/Characters.csv", "id"),
@@ -77,6 +87,7 @@ CATALOGS: Tuple[Catalog, ...] = (
     Catalog("balls", "Assets/Data/Balls.csv", "id"),
     Catalog("texts", "Assets/Localization/LocalizationText.csv", "key"),
     Catalog("shop_catalog", "Assets/Resources/Data/shop_catalog.csv", "entryId"),
+    Catalog("level_up_costs", "Assets/Data/LevelUpCosts.csv", "level"),
 )
 
 CATALOGS_BY_NAME: Dict[str, Catalog] = {c.name: c for c in CATALOGS}
