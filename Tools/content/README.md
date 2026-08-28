@@ -57,6 +57,35 @@ Day-one parity is exact by construction: the first `export_content.py --catalogs
 after seeding must leave the CSV **byte-identical**. If it does not, the mapping
 is lossy and every later phase inherits it.
 
+## ⚠️ After ANY live publish, rollback or E2E — re-export
+
+A publish or a rollback bumps `content_catalogs.published_version`. The repo's
+`Assets/Resources/Data/content_version.txt` is the BUNDLED CURSOR — what a fresh
+install starts from — and it does not move on its own. So verifying something
+against prod silently desyncs it, and the symptom is invisible until somebody
+runs `--check`.
+
+This has bitten twice on one task (`game_modes_admin`: caught at iter-1, missed
+at iter-2 and failed by the reviewer). Both times the CSV was fine and only the
+cursor was stale, which is exactly what makes it easy to miss — nothing looks
+wrong.
+
+**The rule: any run that publishes or rolls back, including a throwaway
+verification you intend to undo, ends with**
+
+```
+python3 Tools/content/export_content.py --catalogs <name> --env-file <dotenv>
+git add Assets/Resources/Data/content_version.txt
+```
+
+**and then `--check` must exit 0 before you call the work done.** A rollback does
+NOT restore the cursor — it publishes forward, so the version is higher than
+before you started even though the content is identical. That is the counter
+working; the cursor still has to follow it.
+
+`--check` is the mechanical guard and it is cheap. Run it at close-out, not only
+when you suspect something.
+
 ## Credentials
 
 All three scripts read the environment and **never** hold a key in the repo:

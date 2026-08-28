@@ -205,6 +205,47 @@ version. That is the counter working, not drift.
 
 ---
 
+## Rejection follow-up — reviewer iter-2 (`ARCHITECT_REVIEW_FAIL`)
+
+| Defect | Verdict | Evidence |
+|---|---|---|
+| **`--check --catalogs modes` exits 1** — `content_version.txt` reads `modes=4`, prod is at v6 after iter-2's live rollback verification. | **RESOLVED** | Re-exported; manifest now `modes=6`; `--check --catalogs modes` **exit 0**. `modes.csv` md5 `c36e4288…` **unchanged** — only the cursor moved, which is why it was invisible. |
+| Self-review §3 claimed that command exited 0 | **CONFIRMED WRONG** | Re-derived myself before accepting the reviewer's word: disk `modes=4`, prod `6`, `--check` exit 1. The self-review reported a result it did not get. Recorded here rather than quietly fixed — the reviewer catching a false PASS from the gate before it is the two-gate design working. |
+
+### This was the SECOND instance of one shape, so I audited the shape (rule 15)
+
+Iter-1 hit the same thing and I caught it (`8aa71b878`, cursor 1 → 4). Iter-2 hit
+it and I did not. Two instances ⇒ stop fixing instances.
+
+**The shape, as a mechanically checkable question:** *does every catalog's cursor
+in `content_version.txt` equal its `published_version` on prod?* Enumerated all
+nine rather than sampling:
+
+| catalog | disk | prod | |
+|---|---|---|---|
+| bags | 1 | 1 | OK |
+| balls | 5 | 5 | OK |
+| characters | 5 | 5 | OK |
+| clubs | 1 | 1 | OK |
+| items | 1 | 1 | OK |
+| level_up_costs | 3 | 3 | OK |
+| **modes** | **6** | **6** | **OK (was 4 vs 6)** |
+| shop_catalog | 4 | 4 | OK |
+| texts | 14 | 14 | OK |
+
+Only `modes` was stale, and it is now fixed — but the useful output is the
+*question*, not the row. The root cause is structural: **a rollback publishes
+FORWARD**, so undoing a change leaves the version higher than before you started
+even though the content is byte-identical. Anyone verifying against prod and then
+"restoring" reasonably believes they have left no trace, and the cursor is the
+trace.
+
+Written into `Tools/content/README.md` as a standing rule where the next person
+running a live verification will actually read it, rather than left as a lesson
+in a spec folder that moves to `Completed/`.
+
+---
+
 ## 5. One thing NOT fixed, and it is not mine
 
 The full `export_content.py --check` exits 1 on a **pre-existing** `texts`

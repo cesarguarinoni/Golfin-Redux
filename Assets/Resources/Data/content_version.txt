@@ -4,6 +4,6 @@ characters=5
 clubs=1
 items=1
 level_up_costs=3
-modes=4
+modes=6
 shop_catalog=4
 texts=14
