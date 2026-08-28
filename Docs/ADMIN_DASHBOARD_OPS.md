@@ -63,6 +63,26 @@ A **200** there means Access is not protecting it — stop and investigate.
 
 ## 3. Changing things
 
+### 2.x The deploy runs the tests
+
+`npm run deploy` runs `npm test` **before** the build and aborts on failure —
+seconds wasted rather than a full opennextjs build. `SKIP_TESTS=1 npm run deploy`
+disarms it loudly, the same posture as `CIBuild`'s `-skipTreeBakeCheck`: it exists
+because "I cannot ship a hotfix, an unrelated test is flaky" is a real problem,
+and a gate with no escape hatch is a gate somebody deletes. Using it is a
+decision on the record, not a default.
+
+The suite (`Tools/admin-dashboard/lib/__tests__/`, vitest) covers the PURE
+modules only — `contentValidate` (which stops a bad publish), the Rewards number
+guards, and the `golfin_mode_fees` row mapping. It deliberately does not touch
+the React tree or the Supabase-backed mutations: those need a DOM or a database,
+and a suite that needs either is a suite that rots.
+
+⚠️ Two of the three files RESTATE private `server-only` logic rather than
+importing it, and say so in their own docstrings. They pin the rules, not the
+implementation — if `checkNumber` or `mirrorModeFees` changes, change the test
+copy in the same commit or the suite is quietly lying.
+
 ### 3.0 Two kinds of panel, and they are not interchangeable
 
 **Content panels** (Characters, Clubs, Items, Level Costs, Modes, Shop, Texts)

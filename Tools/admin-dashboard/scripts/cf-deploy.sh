@@ -75,6 +75,32 @@ echo "→  passing ${#PUBLIC_ENV[@]} NEXT_PUBLIC_* value(s) to the build (public
 
 PUBLIC_ENV+=("NEXT_PUBLIC_BUILD_COMMIT=${BUILD_COMMIT}")
 
+# ── Tests gate the deploy (game_modes_admin, reviewer iter-4) ────────────────
+#
+# The vitest suite exists because Cesar chose it over shipping the Rewards panel
+# untested — that panel is LIVE ON SAVE and sets every player's payout. A suite
+# that runs only when somebody remembers protects nothing, so it runs here, on
+# the one path that reaches production.
+#
+# BEFORE the build, deliberately: a failing test should cost seconds, not a full
+# opennextjs build first.
+#
+# SKIP_TESTS=1 disarms it, LOUDLY — the same posture as CIBuild's
+# -skipTreeBakeCheck. It exists because "I cannot deploy a hotfix because an
+# unrelated test is flaky" is a real 2am problem, and a gate with no escape hatch
+# is a gate somebody deletes. Using it is a decision you are making on the record,
+# not a default.
+if [ "${SKIP_TESTS:-0}" = "1" ]; then
+  echo "⚠  SKIP_TESTS=1 — deploying WITHOUT running the test suite. On your head."
+else
+  echo "→  running tests…"
+  if ! npm test --silent; then
+    echo "✘  ABORT: tests failed — not deploying." >&2
+    echo "   Fix them, or re-run with SKIP_TESTS=1 if you know why and accept it." >&2
+    exit 1
+  fi
+fi
+
 echo "→  building…"
 env NODE_ENV=production "${PUBLIC_ENV[@]}" npx opennextjs-cloudflare build
 
