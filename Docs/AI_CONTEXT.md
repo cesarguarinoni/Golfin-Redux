@@ -62,9 +62,16 @@ that changes what a catalog SERVES must call it.**
   commit or the suite quietly lies.
   `modes` is published at **v6** — six publishes, not drift; a publish never
   rewinds its version.
-* ⚠️ **STILL OPEN BY DESIGN:** the bare `mode_entry_fee` reason is still accepted,
-  because every build installed today sends it. Closing it is a one-line commit on
-  Cesar's word once the build carrying `SpendReasons.ModeEntryFeeFor` ships.
+* ⚠️ **THE BARE `mode_entry_fee` REASON IS NOW CLOSED** (Cesar, 2026-08-28, after
+  approving the task) — the third and last self-priced door, after `shop_purchase`
+  and the level-ups. **AND NO BUILD CARRYING `SpendReasons.ModeEntryFeeFor` HAS
+  SHIPPED YET** (last uploaded is 2361; the suffix landed after it), so **every
+  client in the field currently gets a 400 on mode entry.** That was the explicit
+  informed call — *"I know there is no build yet. I do not care. I will make one
+  after this."* — the same one taken on the level-up door.
+  **What ends it is SHIPPING THE BUILD, not reverting the closure.** If you are
+  reading this because a tester reports "I can't enter practice", that is why, and
+  the fix is a TestFlight build carrying `ModeEntryFeeFor`.
 
 ⚠️ **Pre-existing, NOT from this task:** the full `export_content.py --check`
 exits 1 on a `texts` drift — `GACHA_PRIZES_TITLE` and `SHOP_HISTORY_COMING_SOON`

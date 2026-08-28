@@ -2979,3 +2979,28 @@ test copy in the same commit or the suite quietly lies.
 
 Related: Lesson AA (close-out on uncommitted code), Lesson AG (never `git add` a
 directory — audited this task's 17 commits at close-out; no sweep).
+
+### Lesson AH addendum — the third door, and why the numbers mattered
+
+Closed the bare `mode_entry_fee` reason the same day, on Cesar's word. All three
+self-priced doors are now shut. The transferable part is that **the same closure
+had wildly different costs each time, and the ledger is what said so**:
+
+  shop_purchase      0 rows, ever                  closing it broke nothing
+  character_level_up 1 row in the life of the game  club_level_up: 0
+  mode_entry_fee     130 rows across 6 users        the game's most-used spend
+
+The first two were free. The third breaks a flow that runs constantly, and no
+build carrying the replacement had shipped — so mode entry 400s in the field
+until one does. **Count the rows before closing a door**; "it is the same pattern
+as last time" is a claim about the mechanism, not about the blast radius.
+
+I surfaced that gap and Cesar overrode it explicitly ("I know there is no build
+yet. I do not care."). That is the right shape for this kind of call: measure it,
+say it in two sentences, then do the work — do not relitigate, and do not
+silently soften the change to be safer than asked.
+
+**The regression that would have hurt most was not the door but the corridor.**
+Matching the bare reason with `startswith` instead of `==` refuses EVERY mode
+entry including the correct suffixed form. Tripwired both directions: reopening
+the door fails 4 tests, the loose match fails 14.

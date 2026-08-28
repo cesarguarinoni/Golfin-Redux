@@ -12,6 +12,8 @@ Dashboard `d35c8706-576f-4bec-ba62-cc9946b77a14`, stamp `3143fd639`.
 `modes` published v6, cursor modes=6, mirror agreeing on all five.
 Tests: dashboard 38 · backend 118 · Unity EditMode 1955/1952/0 · Tools/content 26.
 
-STILL OPEN BY DESIGN: the bare `mode_entry_fee` reason is accepted — every build
-installed today sends it. Closing it is one line, on Cesar's word, once the build
-carrying `SpendReasons.ModeEntryFeeFor` is what testers run.
+FOLLOW-UP DONE THE SAME DAY: the bare `mode_entry_fee` reason is CLOSED (Cesar's
+word, immediately after approving). The last self-priced door in the game is shut.
+⚠️ No build carrying `SpendReasons.ModeEntryFeeFor` had shipped when it closed, so
+mode entry 400s for every client in the field until one does — the explicit,
+informed trade, and the fix is the build rather than a revert. API v60.

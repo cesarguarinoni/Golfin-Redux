@@ -13,9 +13,11 @@
   `golfin_mode_fees`, the mirror a publish writes in the same request. New Modes
   panel + a new Rewards panel over `game_point_actions` (LIVE ON SAVE, no draft).
   API **v59**; dashboard **`d35c8706-576f-4bec-ba62-cc9946b77a14`** stamp `3143fd639`.
-  ⚠️ **The bare `mode_entry_fee` reason is STILL ACCEPTED** — every installed build
-  sends it; closing it is one line on Cesar's word once the build carrying
-  `SpendReasons.ModeEntryFeeFor` ships.
+  ⚠️ **The bare `mode_entry_fee` reason was CLOSED the same day** (Cesar's word,
+  after approval) — the last self-priced door. **No build carrying
+  `SpendReasons.ModeEntryFeeFor` has shipped yet**, so mode entry 400s for every
+  client in the field until one does. Chosen deliberately; the fix is the build,
+  not a revert. API **v60**.
   ⚠️ **New standing rule:** anything that changes what a content catalog SERVES
   must go through `mirrorForCatalog` (`lib/contentMutations.ts`) — rollback was
   the path that did not, and it stranded the charged price behind the served one.
