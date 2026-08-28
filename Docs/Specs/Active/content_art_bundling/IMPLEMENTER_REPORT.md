@@ -7,6 +7,76 @@
 
 ---
 
+## iter-2 — the red-team gate found a real blocker, and it was right
+
+`ARCHITECT_REVIEW_FAIL`, 2026-08-28. **The collision guard was case-SENSITIVE on a
+case-INSENSITIVE filesystem**, so SPEC §4's "a collision is a REFUSAL, never an overwrite" did not
+hold for a case-variant name.
+
+`ExistingAsset` compared with `StringComparison.Ordinal`. It is the ONLY gate in front of
+`File.WriteAllBytes`, and the dev/CI volume is APFS. Verified independently before touching
+anything:
+
+```
+wrote CaseProbe.txt, then caseprobe.txt
+→ ls:       CaseProbe.txt      (ORIGINAL name kept)
+→ content:  overwritten        (bytes replaced)
+→ diskutil info / → File System Personality: APFS
+```
+
+So the failure mode is worse than "a file gets replaced": APFS keeps the original filename, which
+in Unity means **the `.meta` and the GUID survive untouched**. An artist's asset would have been
+silently swapped with no rename, no new file, and no diff except the pixels.
+
+**Why two gates missed it.** Both tested collision with a same-case example (`char_JAMES` → `James`)
+— the one input where `Ordinal` and the filesystem agree.
+
+**Reachable, not theoretical.** `BrandPascal` lower-cases interior letters (`"MireO" → "Mireo"`), so
+the hand-dropped `Clubs/Full/Driver-FairX.png` sitting in the tree today derives as `Driver-Fairx`.
+
+### The fix — four places, one root cause
+
+| Site | Change |
+|---|---|
+| `ExistingAsset` | `Ordinal` → `OrdinalIgnoreCase`. The guard itself. |
+| `produced` dedup dict | `StringComparer.Ordinal` → `OrdinalIgnoreCase` — two rows deriving `Foo`/`foo` are ONE file here, so they must collapse onto one entry or the second overwrites the first. |
+| `FindSibling` exclude | `Ordinal` → `OrdinalIgnoreCase`. `Path.GetFileName` returns the name the FILESYSTEM holds, which after a case-variant write is the original casing — an Ordinal compare would fail to exclude the asset just written and could pick it as its own import reference. |
+| before `File.WriteAllBytes` | A re-check adjacent to the dangerous call, so a future reordering of the steps cannot reopen the hole. |
+
+### Proven, both ways
+
+**Tripwire (§20)** — reverted `OrdinalIgnoreCase` → `Ordinal`, nothing else:
+
+| Run | Result |
+|---|---|
+| Pre-fix comparison restored | **1897 / 1893 / 1 FAILED** — `Collision_IsDetectedRegardlessOfCase`: *"A LOWER-CASE variant did not collide with the shipped James.png … Expected: not null, But was: null"* |
+| Reverted byte-identical | **1897 / 1894 / 0 failed** |
+
+**Live, through the real tool, against a real file.** A club row `type=Driver, brand=FairX` derives
+`Driver-Fairx`, a case variant of the shipped `Driver-FairX.png`:
+
+```
+SUMMARY: 0 asset(s) added, 1 refused
+  [Refused] club_driver_fairx_probe fullUrl -> Clubs/Full/Driver-Fairx
+      Assets/Resources/Clubs/Full/Driver-FairX.png already exists — a collision is never an
+      overwrite. Rename the existing asset, or set the CSV name column to it if the row already
+      has art.
+```
+
+`Driver-FairX.png` md5 `16f50050b7eaf1198717d84a781aa5ab` before AND after; no `Driver-Fairx.png`
+created. Fixture row removed, `Clubs.csv` restored byte-identical.
+
+Three regression tests added (`Collision_IsDetectedRegardlessOfCase`,
+`Collision_CaseVariantIsReachableFromTheRealNamingRules`,
+`Collision_ANameNothingResolvesTo_IsNotAFalsePositive` — the last so the guard cannot be "fixed" by
+refusing everything).
+
+**Everything else the red-team attacked held:** the rule-2 loader fix across empty-URL /
+overlay-name-only / appended-overlay / clubs-Placeholder sub-cases, the CSV splice, the shared
+report seam in all four run orderings, the allowlist, and the stale-sprite disclosure.
+
+---
+
 ## Headline
 
 `GOLFIN/Content/Fetch URL Art` exists, runs outside the build lane, and produces a reviewable
@@ -185,6 +255,54 @@ HALF 2 is the case §8 keeps the URL for and the one most likely to regress sile
 receives a published sprite NAME it does not carry, `ContentSpriteGuard` does **not** veto the
 overlay (because `SpriteRef.HasRemote` is true), and the row renders from the cached URL instead
 of being withheld.
+
+### KNOWN HAZARD found by the reviewer — `ResetForTest` does not clear the sprite dict
+
+`CatalogArtCache.ResetForTest()` resets the session DECODE COUNTERS and nothing else. The URL-keyed
+sprite dict lives on `TournamentArtService` and survives it, so a fixture that writes NEW bytes for
+a URL an earlier test already decoded gets the OLD sprite back from memory and never reaches the
+disk read. The reviewer hit exactly this: seeded 8×8 bytes, read back 170×343.
+
+Confirmed in source, not taken on trust — `ResetForTest` touches `_decodes`, `_bytes`, `Clock`,
+`_capWarned`, `_summaryScheduled`, and `_sprites` appears nowhere in it. `CatalogArtPolicyTests` has
+always worked around it per-test with `CatalogArtCacheReflection.RemoveSprite(url)`.
+
+**It does not affect this task's tests, and it did not affect the reviewer's verdict.** The gate
+those observations turn on is `AssetDatabase.GetAssetPath` — empty for a runtime sprite, a real path
+for a `Resources` asset — and that stays correct whichever sprite the dict hands back. The three
+`ContentArtLadderHandoverTests` are fail-SAFE against it too: they assert the texture size EQUALS
+the 8×8 fixture, so a stale sprite turns them RED, never green. Their URL is unique to the fixture
+and nothing else in the suite touches it. Four independent full sweeps, green.
+
+**I tried to harden it anyway and REVERTED — the obvious fix does not work.** Adding a
+`ForgetCachedSprite(url)` to `[SetUp]`/`[TearDown]`, mirroring `CatalogArtPolicyTests`, turned
+`BundledSpriteWins_EvenWhenTheRowsOwnUrlIsCached` red with
+`InvalidOperationException: The following game object is invoking the DontDestroyOnLoad method:
+[Golfin.Net] … cannot be part of an editor script` — even though `WarmTheCache` already reaches the
+same `TournamentArtService.CatalogArt` property without complaint. Reverted byte-identical to the
+committed file; sweep back to 1894 / 1891 / 0 / 3. Recorded here because "just call RemoveSprite" is
+what the next person will try, and it costs a sweep to learn it does not.
+
+**Filed as a follow-up, not fixed here:** give `CatalogArtCache.ResetForTest` a companion that
+clears the catalog-art sprite dict without tripping the EditMode lifecycle, so future tests stop
+having to remember. Deliberately NOT done in this commit — it is `content_art_urls` test-seam code,
+two gates have already reviewed this diff, and the hazard is latent rather than live.
+
+### ADDENDUM 2026-08-28, after self-review — all four loaders driven individually
+
+The self-review PASSed but named a real gap in my evidence: items and balls got the same one-line
+fix and were covered only by the full sweep, never driven. It rated that low residual risk. Rather
+than carry a known hole into the next gate, I closed it — each loader run directly, cache warm, so
+a URL rung COULD win:
+
+| Loader | Bundled art + a URL | No bundled art + a URL |
+|---|---|---|
+| `CharacterDatabaseCSV` | rung 2 — `Portraits/Thumbnails/Arttest.png` | rung 3 (OLD-build half) |
+| `ClubDatabaseCSV` | rung 2 — `Clubs/Portraits/Driver-G&F.png` | rung 3, **not** rung 4 Placeholder |
+| `ItemDatabaseCSV` | rung 2 — `Items/Thumbnails/RepairKit-Common.png` | rung 3 |
+| `BallDatabaseCSV` | rung 2 — `Balls/Thumbnails/Golfin.png` | rung 3 |
+
+Four for four, both branches. The gap is closed rather than mitigated.
 
 ### Clubs verified separately — the loader that could have differed
 

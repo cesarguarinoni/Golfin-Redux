@@ -391,7 +391,10 @@ namespace Golfin.EditorTools
 
             // (folder, name) → the run's first successful fetch of that asset. Clubs share art
             // across rarities by design (§9 answer 1), so six rows collapse onto one download.
-            var produced = new Dictionary<string, Produced>(StringComparer.Ordinal);
+            // OrdinalIgnoreCase for the same reason ExistingAsset is: on a case-insensitive
+            // filesystem two rows deriving `Foo` and `foo` are one file, so they must collapse
+            // onto one entry here or the second silently overwrites the first.
+            var produced = new Dictionary<string, Produced>(StringComparer.OrdinalIgnoreCase);
 
             try
             {
@@ -618,6 +621,17 @@ namespace Golfin.EditorTools
 
             // 6. WRITE into the catalog's Resources folder.
             string rel = $"Assets/Resources/{o.Folder}/{o.DerivedName}{ext}";
+
+            // Re-check IMMEDIATELY before the write. The collision test above ran before the
+            // download, and this is the one call that can destroy an existing asset — a guard
+            // adjacent to the dangerous operation survives a future reordering of the steps.
+            string? lateClash = ExistingAsset(root, o.Folder, o.DerivedName);
+            if (lateClash != null)
+            {
+                Refuse(o, $"{lateClash} appeared before the write — refusing rather than overwriting.");
+                return false;
+            }
+
             try
             {
                 File.WriteAllBytes(Path.Combine(root, rel), bytes);
@@ -642,7 +656,31 @@ namespace Golfin.EditorTools
             return Path.GetExtension(path).ToLowerInvariant();
         }
 
-        /// <summary>The asset already in the folder under this name, whatever its extension, or null.</summary>
+        /// <summary>
+        /// The asset already in the folder under this name, whatever its extension, or null.
+        ///
+        /// <para>
+        /// ⚠️ <b>CASE-INSENSITIVE, and that is load-bearing.</b> This is the ONLY gate in front of
+        /// <c>File.WriteAllBytes</c>, and the dev/CI filesystem is case-insensitive APFS. With an
+        /// Ordinal comparison a row deriving <c>james</c> did not match an existing
+        /// <c>James.png</c>, sailed past the guard, and the write then REPLACED THAT FILE'S BYTES
+        /// — while APFS kept the original filename, so the <c>.meta</c> and the GUID survived
+        /// untouched. An artist's asset would have been silently swapped with no rename, no new
+        /// file and no diff except the pixels, which is precisely what SPEC §4 says must NEVER
+        /// happen. Found by the red-team gate 2026-08-28; both earlier gates tested collision only
+        /// with a same-case example, the one input where Ordinal and the filesystem agree.
+        /// </para>
+        /// <para>
+        /// It is reachable, not theoretical: <see cref="BrandPascal"/> lower-cases interior letters
+        /// (<c>"MireO" → "Mireo"</c>), so a hand-dropped <c>Driver-FairX.png</c> — one is in the
+        /// tree today — is derived as <c>Driver-Fairx</c>.
+        /// </para>
+        /// <para>
+        /// Comparing WITHOUT the extension is also deliberate and unrelated: <c>Resources.Load</c>
+        /// ignores extensions, so <c>James.png</c> and <c>james.jpg</c> are the same resource name
+        /// even though the filesystem would keep both files.
+        /// </para>
+        /// </summary>
         static string? ExistingAsset(string root, string folder, string name)
         {
             string dir = Path.Combine(root, "Assets", "Resources", folder.Replace('/', Path.DirectorySeparatorChar));
@@ -651,7 +689,7 @@ namespace Golfin.EditorTools
             foreach (string f in Directory.GetFiles(dir))
             {
                 if (f.EndsWith(".meta", StringComparison.OrdinalIgnoreCase)) continue;
-                if (string.Equals(Path.GetFileNameWithoutExtension(f), name, StringComparison.Ordinal))
+                if (string.Equals(Path.GetFileNameWithoutExtension(f), name, StringComparison.OrdinalIgnoreCase))
                     return "Assets/Resources/" + folder + "/" + Path.GetFileName(f);
             }
             return null;
@@ -673,8 +711,12 @@ namespace Golfin.EditorTools
                 if (ext != ".png" && ext != ".jpg" && ext != ".jpeg") continue;
 
                 string rel = "Assets/Resources/" + folder + "/" + Path.GetFileName(f);
+                // OrdinalIgnoreCase: Path.GetFileName returns the name the FILESYSTEM holds, which
+                // after a case-variant write is the ORIGINAL casing, not what we asked for. An
+                // Ordinal compare would fail to exclude the asset we just wrote and could pick it
+                // as its own import reference.
                 if (excludeAssetPath != null &&
-                    string.Equals(rel, excludeAssetPath, StringComparison.Ordinal)) continue;
+                    string.Equals(rel, excludeAssetPath, StringComparison.OrdinalIgnoreCase)) continue;
                 if (AssetImporter.GetAtPath(rel) is TextureImporter) return rel;
             }
             return null;

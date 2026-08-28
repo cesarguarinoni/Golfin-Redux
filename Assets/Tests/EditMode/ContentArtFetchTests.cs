@@ -314,6 +314,64 @@ namespace GolfinRedux.Tests.EditMode
                 "of the string — a copy is how the two drift apart silently.");
         }
 
+        // ── Collision (SPEC §4) ─────────────────────────────────────────────
+        //
+        // "Collision is a REFUSAL, never an overwrite." ExistingAsset is the ONLY gate in front of
+        // File.WriteAllBytes, and the dev/CI filesystem is case-insensitive APFS — so a comparison
+        // that is case-SENSITIVE is not a gate at all for a case-variant name: the guard passes,
+        // the write lands, and APFS replaces the existing file's bytes while KEEPING its original
+        // name, .meta and GUID. Silent asset replacement with no rename and no new file.
+        //
+        // Found by the red-team gate 2026-08-28. Both earlier gates tested collision with a
+        // same-case example (char_JAMES → "James"), the one input where Ordinal and the filesystem
+        // agree, so both passed it.
+
+        /// <summary>Invokes the shipping private <c>ExistingAsset</c>.</summary>
+        string ExistingAsset(string folder, string name)
+        {
+            string root = System.IO.Directory.GetParent(UnityEngine.Application.dataPath).FullName;
+            return (string)_fetcher.GetMethod("ExistingAsset", Statics)
+                .Invoke(null, new object[] { root, folder, name });
+        }
+
+        [Test]
+        public void Collision_IsDetectedRegardlessOfCase()
+        {
+            // Portraits/Thumbnails/James.png ships. All three spellings name the SAME file on a
+            // case-insensitive filesystem, so all three must be refused.
+            Assert.IsNotNull(ExistingAsset("Portraits/Thumbnails", "James"),
+                "The exact name must collide — if this fails the whole guard is broken.");
+
+            Assert.IsNotNull(ExistingAsset("Portraits/Thumbnails", "james"),
+                "A LOWER-CASE variant did not collide with the shipped James.png. On APFS the " +
+                "write would then replace that file's bytes while keeping its name, .meta and " +
+                "GUID — an artist's asset silently swapped. SPEC §4: never an overwrite.");
+
+            Assert.IsNotNull(ExistingAsset("Portraits/Thumbnails", "JAMES"),
+                "An UPPER-CASE variant did not collide either.");
+        }
+
+        [Test]
+        public void Collision_CaseVariantIsReachableFromTheRealNamingRules()
+        {
+            // Not theoretical. BrandPascal lower-cases interior letters, so the hand-dropped
+            // Clubs/Full/Driver-FairX.png in the tree today derives as "Driver-Fairx".
+            var fairx = new Dictionary<string, string>
+            {
+                ["id"] = "club_driver_fairx", ["type"] = "Driver", ["brand"] = "FairX",
+            };
+            Assert.AreEqual("Driver-Fairx", Derive("clubs", "fullUrl", fairx),
+                "If this ever equals 'Driver-FairX' the reachability argument changes, but the " +
+                "guard must stay case-insensitive regardless.");
+        }
+
+        [Test]
+        public void Collision_ANameNothingResolvesTo_IsNotAFalsePositive()
+        {
+            // The guard must not refuse everything — that would be a different way to be broken.
+            Assert.IsNull(ExistingAsset("Portraits/Thumbnails", "NoSuchPortrait_content_art_bundling"));
+        }
+
         [Test]
         public void TheDownloadCeilingIsTheUploadCap_NotTheClientBackstop()
         {

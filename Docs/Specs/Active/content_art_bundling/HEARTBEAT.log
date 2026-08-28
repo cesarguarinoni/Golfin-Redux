@@ -43,3 +43,9 @@ A  Docs/Specs/Completed/content_art_urls/STATUS.md
 11:2x  Tripwires: size cap, WebP content-type, ladder handover -- all observed RED then reverted GREEN.
 11:2x  EditMode 1894 / 1891 passed / 0 failed / 3 pre-existing skips. Tools/content 26 passed. Dashboard build OK.
 === end iter-1 ===
+
+=== iter-2 2026-08-28 ===
+Red-team ARCHITECT_REVIEW_FAIL: collision guard case-sensitive on case-insensitive APFS.
+Fixed 4 sites; 3 regression tests; tripwire red->green; live proof vs Driver-FairX.png (md5 unchanged).
+EditMode 1897 / 1894 / 0 failed / 3 skips.
+=== end iter-2 ===
