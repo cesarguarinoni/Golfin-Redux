@@ -1,13 +1,29 @@
-SELF_REVIEW_PASS
+ARCHITECT_REVIEW_PASS
 
-Iter-4 self-review PASS. The vitest suite that Cesar chose over ship-with-fast-
-follow exists and does what it says: `npm test` runs 3 files / 36 tests green;
-I reproduced the drift-generalisation tripwire myself (test line 156 fires with
-exactly the expected message, then reverted the edit, md5 back to
-`4ca2554…`, `git diff` empty). The two characterisation-test files' restated
-`checkNumber` and `mirrorModeFees` mapping match the current source byte-for-
-byte, and their caveats are in the test files themselves. Every SPEC §6 row
-re-ran clean this pass; rollback-mirror fix intact; disk == deployed
-(HEAD == 04b7bbf84 == wrangler `a28a1a56…` last row); API v59 unchanged; scope
-bans clean; gates 14/16/17/18/19/21 do not engage; `texts` drift is confirmed
-pre-existing. Handing to red-team.
+Red-team iter-4 PASS. I attacked the newest, least-reviewed code — the
+`cf-deploy.sh` test gate and the vitest suite — three ways, and the shipping
+code held every time.
+
+Deploy gate: verified in an isolated shell harness that `set -euo pipefail` +
+`if ! npm test` aborts cleanly (ABORT printed, exit 1, build unreached), the
+env-stash trap restores `.env.development.local` on an aborted deploy, the tests
+are env-independent (no dotenv/setupFiles/process.env — behave identically inside
+the stash window; 36 pass), `SKIP_TESTS=1` is loud and still deploys, and the
+build stamp is computed before the gate so it cannot shift.
+
+Suite: `contentValidate.test.ts` imports real code and is non-vacuous (broke the
+real order check → red). Found one blind spot — the order-uniqueness rule is
+tested only at 2 rows, so a break scoped to 3+ row catalogs stays 36-green; this
+is a suite-thoroughness note, NOT a shipping defect (the real code errors on any
+clash). The two server-only files are self-disclosed characterisation copies,
+faithful to source, backstopped by the live six-probe. Both limits noted for a
+future hardening ticket.
+
+Report integrity clean: 36 tests (ran), tripwire mechanism (reproduced), six-probe
+table (corroborated by empty rewards diff since deployed stamp + structural
+no-create). HandleSpendDenied correct; withhold enforced on both call sites, not
+log-only. HEAD==3143fd639, dashboard diff empty, cursor modes=6, scope bans clean,
+tsc exit 0, content 26 OK. `--check`/backend 118/EditMode 1955 accepted from prior
+gates (access boundary + zero code churn since baseline).
+
+Hands to Cesar for final approval.

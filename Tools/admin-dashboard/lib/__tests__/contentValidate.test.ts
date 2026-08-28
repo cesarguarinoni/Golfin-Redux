@@ -103,6 +103,31 @@ describe("modes — the rules that gate a fee publish", () => {
     expect(problems.map((p) => p.column)).toContain("order");
   });
 
+  it("refuses a duplicate order in a FIVE-row catalog, not just a pair", () => {
+    // Red-team iter-4 found this hole by exploiting it: with the clash only ever
+    // tested at exactly two rows, scoping the real rule to `rows.length < 3`
+    // broke it for the shipped 5-row catalog and kept all 36 tests green. A rule
+    // exercised at one cardinality is a rule tested by coincidence.
+    const five = [
+      mode("versus_1v1", { order: "1" }),
+      mode("practice", { order: "2" }),
+      mode("tournaments", { order: "3" }),
+      mode("driving_range", { order: "4" }),
+      mode("missions", { order: "4" }), // clashes with driving_range
+    ];
+    const problems = errorsFor(five);
+    expect(problems.map((p) => p.column)).toContain("order");
+    // and it must name the SECOND of the pair, so an operator knows which to move
+    expect(problems.some((p) => p.rowId === "missions")).toBe(true);
+  });
+
+  it("accepts five DISTINCT orders — the rule must not fire on the shipped set", () => {
+    // The accepting direction. Without it, a rule that errors on any 5-row
+    // catalog would pass the test above and make the real catalog unpublishable.
+    const five = ["1", "2", "3", "4", "5"].map((order, i) => mode(`m${i}`, { order }));
+    expect(errorsFor(five)).toEqual([]);
+  });
+
   it("refuses a missing required column", () => {
     const bare = row("practice", { id: "practice", title: "PRACTICE" });
     expect(errorsFor([bare]).map((p) => p.column)).toContain("entryFee");

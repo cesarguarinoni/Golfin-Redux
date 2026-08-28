@@ -1,171 +1,111 @@
-# Red-Team Review — `game_modes_admin` (iter-3)
+# Red-Team Review — `game_modes_admin` (iter-4)
 
-**Gate:** `golfin-redteam-reviewer` (adversarial) · **Date:** 2026-08-28 20:20 JST
-**Verdict:** `ARCHITECT_REVIEW_ESCALATE` — no concrete defect found and every SPEC §6
-acceptance item re-verified this pass, BUT the single most dangerous surface (the
-live-on-save Rewards panel that sets every player's payout) has zero automated
-coverage, and this gate had no mechanism to exercise its guards against the live
-system — only source-read + a proof that disk == deployed. Whether an untested,
-no-draft-net, all-player-payout panel ships is a ship-with-known-tradeoff decision
-the implementer explicitly routed to Cesar, and I agree it is his to make.
-
-My recommendation to Cesar is **SHIP with a fast-follow** (a small vitest suite over
-the pure validators), not block — the delivered code is correct and deployed verbatim
-and meets every acceptance row. But I will not write the terminal "a hostile reviewer
-broke nothing, ship it" PASS on a live-on-save payout path I could verify only by
-inspection, so I escalate the tradeoff rather than preempt his call or misroute
-out-of-scope test-infra work back to the implementer.
+**Gate:** `golfin-redteam-reviewer` (adversarial) · **Date:** 2026-08-28 20:55 JST
+**Verdict:** `ARCHITECT_REVIEW_PASS` — I attacked the newest, least-reviewed code
+(the deploy gate + the vitest suite) three ways and the SHIPPING code held every
+time. The one thing I broke is a documentation-worthy suite blind spot that does
+not affect correctness. My iter-3 escalation is resolved: Cesar chose "add the
+suite first," the suite is real and non-vacuous, and the live-probe gap I could
+not close is now closed and corroborated against primary source.
 
 ---
 
-## 1. The rollback fix — one read, not re-derived (per kickoff)
+## 1. The deploy gate (`scripts/cf-deploy.sh`) — the newest code, verified
 
-Confirmed not regressed from primary source, my own grep + read this pass:
-`Tools/admin-dashboard/lib/contentMutations.ts`:
-`MIRRORED_CATALOGS = ["characters","modes"]` (297); `mirrorForCatalog` (298) is the
-sole dispatcher with exactly two callers — `publishCatalog:396` and
-`rollbackCatalog:537`. `rollbackCatalog` body: `fetchVersionSnapshot(toVersion)` (40)
-→ `mirrorForCatalog(catalog, snapshot)` (45) **before** → `fail(502)` on mirror error
-(47) → `content_rollback` rpc (55). Mirror-before-rpc + abort posture intact. Live prod
-corroborates: mirror rows `updated_at 10:41:01.697` precede catalog v6
-`10:41:01.81695` by ~119 ms — read live via service key this pass. Not re-derived
-further.
+Read in full. Reproduced its shell semantics in an isolated harness (not a real
+deploy):
 
-## 2. Primary attack — the declared gap (Rewards panel guards nothing exercises)
-
-**Deployed == disk, proven:** `git diff --stat 7337bdf67..HEAD --
-lib/rewardsMutations.ts app/api/rewards/` → **empty**. The bytes I read ARE the bytes
-serving prod. No runtime/feature-flag config gates a Next.js route handler, so source
-behavior is deployed behavior.
-
-**Every probe from the kickoff, traced against the deployed source (`route.ts` `field()`
-+ `rewardsMutations.ts` `checkNumber`/`updateRewardAction`):**
-
-| Probe | Path | Result | Guard |
-|---|---|---|---|
-| `{"pts": -5}` | `field`→ -5 (number) → `checkNumber` `<0` | **400 refused**, versus_win stays 20 | ✓ |
-| `{"pts": 1.5}` | `field`→ 1.5 → `checkNumber` `!isInteger` | **400 refused** | ✓ |
-| `{"pts": "20"}` (string) | `field` `typeof !== number` → `"bad"` | **400 refused** (never reaches mutation) | ✓ |
-| `PATCH /api/rewards/no_such_action` | `fetchRewardAction`→ null → `fail(404)` | **404, no row created** (upsert-free `.update().eq()`) | ✓ |
-| `{"maxPerEvent": -1}` / `{"dailyCap": -1}` | `checkNumber` `<0` | **400 refused** | ✓ |
-| `{"pts": null}` | `field`→ null → `checkNumber` legal | succeeds → sets NULL (client-amount) | intended |
-
-All guards are correct in the deployed source. **What I could NOT do:** issue these
-against `admin.golfin.world`. The route is `checkAdmin()` behind Cloudflare Access;
-curl 302s (kickoff acknowledges this), the Access service token is unimplemented, and
-this gate has no browser/claude-in-chrome tool available. So "nothing exercises these
-guards" is answered by inspection + deploy-diff, **not by execution** — which is
-exactly the implementer's declared gap, and I could not close it empirically.
-
-**Sharp edge found (documented, not a live bug):** the route normalizes a *missing*
-body key to `null` (`field(undefined) → null`), so a hand-crafted partial
-`PATCH {"pts":25}` on versus_win would null `max_per_event` and `daily_cap` —
-removing the 200/day cap. This is full-replace, not merge, and the code comments it as
-deliberate. The actual panel (`rewards-panel.tsx:186-196`) seeds all three fields from
-the current row and always sends the full trio (`JSON.stringify(parsed)` with
-pts/maxPerEvent/dailyCap), so no cap-wipe is reachable through the UI. A direct
-partial-body caller is the same threat surface the implementer already reasoned about
-("the route is reachable without the panel"). Noted, not a blocker.
-
-## 3. Concurrency / atomicity (#3) — examined, invariant holds
-
-Both `publishCatalog` and `rollbackCatalog` do mirror-write **then** rpc as two round
-trips. Mirror-BEHIND (catalog value newer than mirror value) IS reachable under two
-concurrent `modes` publishes — interleave `mirror_B, mirror_A, publish_A, publish_B`
-leaves mirror = A's value, catalog = B's. But in every reachable interleaving the
-server prices from `golfin_mode_fees` and **echoes that fee via `fee_changed` before
-any debit** (`routers/points.py:480-499`), so the player is never charged an unshown
-amount:
-- mirror-ahead → player shown a *higher* fee, pays it (bounded overcharge-shown),
-- mirror-behind → player shown a *lower* fee, pays less (player benefit).
-
-The skew is transient and self-heals on the next consistent publish. Two operators
-editing `modes` simultaneously is also operationally rare (single admin). The residual
-"mirror-ahead is the safer direction" the code documents is accurate; mirror-behind,
-the case it doesn't name, is harmless. Not a blocker.
-
-## 4. Reason-parse / `MODE_ENTRY_FEE_PREFIX` (#4) — watertight
-
-`routers/points.py:480-501` + `_get_mode_fee` (166). Adversarial cases, all traced:
-- `mode_entry_fee::practice` → suffix `:practice` → `.eq("mode_id",":practice")` no
-  match → `unknown_mode`, **no debit**.
-- colon-in-id `mode_entry_fee:practice:x` → lookup miss → `unknown_mode`, no debit.
-- whitespace `mode_entry_fee:  practice  ` → `.strip()` → prices `practice` correctly;
-  ledger logs the raw reason (cosmetic only) — never prices A while a debit is logged
-  as B.
-- exactly 200 chars → `len(mode_id) > MAX_MODE_ID_LEN (80)` fires **before** the DB
-  lookup → `unknown_mode`, no debit. Truncation (`reason[:200]`) is after the gate, so
-  a suffix can't be silently clipped into a different mode.
-- unicode / case (`PRACTICE`) → `.eq` is exact & case-sensitive → miss → `unknown_mode`.
-- the only "evasion" (drop the colon) → falls through to the **intentional** legacy
-  bare-`mode_entry_fee` debit (SPEC §4, unchanged). A hostile client could underpay
-  regardless — outside the spec's honest-client threat model ("a client never wrongly
-  *spends* RP"), unchanged from the pre-existing client-asserted model.
-
-`MAX_MODE_ID_LEN = 80` now agrees with the dashboard's `ROW_ID_MAX = 80` (the iter-1
-implementer bound fix). No mispricing, no unguarded debit, no injection. Nothing here.
-
-## 5. Report integrity (Rule 6) — re-ran the new numbers myself, no fabrication
-
-| Claim | My re-run this pass | Verdict |
+| Question (kickoff #1) | Verdict | Evidence |
 |---|---|---|
-| backend 118 passed | `pytest tests/ -q` → **118 passed in 0.37s** | matches |
-| `modes` at v6 | PostgREST `content_catalogs` → `published_version=6` | matches |
-| cursor `modes=6` | `grep modes content_version.txt` → `modes=6` | matches |
-| content 26 tests | `unittest discover Tools/content/tests` → **Ran 26 · OK** | matches |
-| versus_win 20 / mirror 10 | live read: `versus_win pts=20 max 20 cap 200`; mirror `practice=10` etc. | matches kickoff |
-| mirror-before-rpc | mirror `10:41:01.697` vs catalog `10:41:01.81695` (live) | matches |
+| Does `set -euo pipefail` + `if ! npm test` abort cleanly, or exit before the ABORT / swallow it? | **Correct** | `if !`-condition context disables errexit for the tested command. Isolated harness: failing test → prints `✘ ABORT`, `exit 1`, **never reaches build**. Passing test → reaches build. |
+| Env-stash trap — do the tests behave differently inside the stash window? | **No — tests are pure** | `vitest.config.ts` sets no `env`/`dotenv`/`setupFiles`; test files have zero `process.env`/`import.meta.env` reads (grep clean); vitest mode is `test`, so it would never load `.env.development.local` (a *development*-mode file) even if it loaded env. Empirically identical: 36 pass standalone. |
+| Does an aborted deploy still restore the env file? | **Yes** | `trap restore EXIT INT TERM`. Harness: stash → failing gate → `exit 1` → trap fires → `.env.development.local` restored, contents intact, no dangling stash. |
+| Is `SKIP_TESTS=1` loud and does it still deploy? | **Yes** | Prints `⚠ SKIP_TESTS=1 … On your head.` and falls through to build+deploy. |
+| Could the gate change the stamp (run before the dirty check)? | **No** | `BUILD_COMMIT` + dirty check are computed at the very top, before the stash AND before the test gate. `npm test` left zero working-tree drift (`git status` clean), so it cannot dirty a future stamp; the stash file is `.gitignore`d anyway. |
 
-No fabricated numbers.
+## 2. The suite as an adversary — one real blind spot found (not a blocker)
 
-## 6. Confirmed cheaply (per kickoff)
+- **`contentValidate.test.ts` is genuinely non-vacuous.** It imports the REAL
+  `@/lib/contentValidate`. Probe A: I disabled the real order-clash `err` →
+  `refuses a duplicate order` went **RED** (1 failed / 35 passed). Reverted.
+- **Blind spot (kickoff #2 confirmed):** the order-uniqueness rule is exercised
+  only at *exactly 2 rows*. Probe B: gating the real check on `rows.length < 3`
+  breaks it for 3+ row catalogs (the shipped `modes` catalog has **5**), yet all
+  **36 stay green**. This is a suite-thoroughness gap, **not a shipping defect** —
+  the real code errors on any clash regardless of row count (verified). Reverted;
+  tree clean; 36 green again.
+- **The two `server-only` files are self-disclosed characterisation tests** —
+  `checkNumber`, `field`, and the mirror row-mapping are re-implemented in-test,
+  so they cannot catch the real modules drifting. I confirmed the copies are
+  **faithful to current source** (byte-for-byte for `checkNumber`; matching logic
+  for `field` and `mirrorModeFees`). The disclosed integration backstop is the
+  six live probes + the prod rollback reproduction. Honest, reasonable tradeoff.
 
-- Scope/bans **verified myself**: `git diff --stat 256f21587..HEAD -- Assets/Scenes/
-  Assets/Scripts/Physics/ .../Scenarios.cs Assets/Materials/M_Splash*` → **empty**. The
-  modes commit touches only `Assets/Resources/Data`, `ContentRuntime`, `Economy(Runtime)`,
-  `UI/ModeSelect`, `Tests`, `Tools/admin-dashboard`, `Tools/content`, `Docs`.
-- Rewards code diff since deployed stamp `7337bdf67` → **empty** (disk == deployed).
-- API v59 / dashboard stamp `7337bdf67` accepted from prior gates; the empty
-  dashboard diff since that stamp proves no code landed.
-- Gates 14/16/17/18/19/21 legitimately do not engage — no Unity UI/prefab/mesh/Figma
-  node/screenshots. Re-confirmed: the deliverable is a server-priced spend + two
-  Next.js panels, no player-facing visual.
-- Pre-existing `texts` drift (`GACHA_PRIZES_TITLE`, `SHOP_HISTORY_COMING_SOON`,
-  `a10f46318`) is genuine, is why FULL `--check` exits 1, and is a different thing from
-  the fixed cursor staleness. Out of scope.
+## 3. Report integrity on the newest claims (Rule 6) — no fabrication
 
-## 7. Three break-attempts and why each failed
+| Claim | My re-run / re-derivation this pass | Verdict |
+|---|---|---|
+| `npm test` = 36 | ran → **36 passed (3 files: 21/10/5)** | matches |
+| cf-deploy.sh tripwire (exit 1, no build) | reproduced the gate abort in isolation → exit 1, build unreached | consistent |
+| six-probe table (400×5 / 404, 4 rows, versus_win 20/20/200) | could not run browser probes (no browser/service key — same boundary as iter-3), but rewards diff `7337bdf67..HEAD` is **empty** (guards I read ARE deployed bytes) and 404-no-create is **structural** (`fetchRewardAction`→404, `.update().eq()`, no upsert/insert) | corroborated |
 
-1. **Visual/geometric — n/a** (non-visual task); instead I attacked the reason-parse
-   for a mispricing/unguarded-debit and the concurrency window for an unshown
-   overcharge. Both held: every non-matching reason yields `unknown_mode` with no
-   debit; every mirror/catalog skew is echoed via `fee_changed` before any charge.
-2. **Guard-bypass on the payout panel** — traced all six kickoff probes plus the
-   partial-body cap-wipe through the deployed source; each is correctly refused, and
-   the UI can't reach the cap-wipe. Could not break the *code*.
-3. **Report fabrication** — re-ran backend/content suites and re-read prod; every new
-   number matches. Nothing invented.
+## 4. Code nobody looked at since iter-1 (kickoff #4)
 
-The reason this is not a clean PASS is not any of these breaking — it is that the one
-surface most worth breaking (live-on-save payouts) is one I could only *read*, not
-*run*, and its zero-coverage/no-draft-net posture is a ship decision the implementer
-handed to Cesar.
+- **`ModeCardController.HandleSpendDenied`** — correct. `FeeChanged` re-renders at
+  `outcome.ServerFee` and does **not** auto-debit (the whole anti-charge-unshown
+  point); `UnknownMode`/`ModeLocked` re-render from DB; null-guarded.
+- **`ModesDatabaseCSV` withhold rule** — **NOT log-only**. `BuildMode` returns
+  `null` on `!CanDispatch(target)`; both call sites (bundled + overlay-append)
+  do `if (mode == null) { withheld++; continue; }`, so an unroutable mode is
+  genuinely excluded, not merely logged.
+- **Fallback fees** — display-only (server prices authoritatively via
+  `golfin_mode_fees`; `fee_changed` corrects any skew before a charge) and they
+  match the prod baseline anyway. Runs only if the CSV fails to load.
 
-## Decision for Cesar
+## 5. Baseline confirmations (all re-run this pass)
 
-The delivered work has **no defect I could find** and meets every SPEC §6 item. The
-open question is policy, not correctness: **do you accept shipping the Rewards panel —
-live on save, no draft/publish net, sets every player's payout — with zero automated
-coverage?** It is pre-existing (every dashboard mutation is untested) and out of this
-SPEC's scope, and the guards are correct + deployed verbatim. My recommendation: **ship
-it**, and file a fast-follow ~1-file vitest over the pure validators (`checkNumber`,
-the route's `field`, `mirrorForCatalog`'s row mapping) — small, high-value, and the
-right home for the coverage this panel's danger profile warrants. Your call to ratify;
-I did not want to make it silently inside a PASS.
+- HEAD == `3143fd639`; `git diff --stat 3143fd639..HEAD -- Tools/admin-dashboard`
+  **empty**.
+- Cursor `Assets/Resources/Data/content_version.txt` → `modes=6`; `modes.csv`
+  md5 `c36e4288a969eb7367d2fe6535382d62` (matches report).
+- Scope bans: `git diff --stat 256f21587..HEAD` over Scenes / Physics /
+  Scenarios.cs / Materials → **empty**. No Unity C# churn since the EditMode
+  baseline commit (only `content_version.txt` changed under `Assets/`), so
+  1955/1952/0/3 remains valid.
+- `tsc --noEmit` **exit 0**; content tests **26 OK**.
+- **Accepted from prior gates** (access boundary, not skipped): `--check
+  --catalogs modes` exit 0 and backend 118 both need prod service key /
+  playlife repo absent from this checkout; API unchanged at v59 (fix is
+  dashboard-only). No code churn invalidates either.
+- Gates 14/16/17/18/19/21 do not engage (server + tests, no Unity UI/mesh/Figma).
+- Pre-existing `texts` drift (`a10f46318`) is genuine and out of scope.
+
+## 6. Three break-attempts and why each failed
+
+1. **Deploy-gate shell semantics** — tried to make a test failure slip through to
+   a real deploy, or leave the developer without their env file. Both held: abort
+   is clean and before the build; the trap restores on abort.
+2. **Green-while-broken** — broke the real validator two ways. The direct break
+   went red (coverage is real); the 3+-row-scoped break stayed green (a blind
+   spot in the suite, reported — but the shipping code is correct).
+3. **Report fabrication** — re-ran the suite, reproduced the gate, and derived the
+   probe results from deployed==disk + structural no-create. Every number
+   consistent; nothing invented.
+
+## Non-blocking note for Cesar
+
+The deploy gate's protective value has two documented limits worth a future
+hardening ticket (neither blocks this task): (a) the order-uniqueness rule is
+only tested at 2 rows, so a regression scoped to realistic 5-row catalogs would
+pass the gate; (b) the two `server-only` modules are characterisation-tested, so
+the gate cannot catch them drifting from their pinned rules. Both are disclosed
+in the code/report and backstopped by the live probes. The suite satisfies your
+"add it first" decision — `contentValidate`, the one place a bad publish is
+stopped, is now genuinely under test.
 
 ## Files touched by this review
 
 | File | Reason |
 |---|---|
-| `Docs/Specs/Active/game_modes_admin/REDTEAM_REVIEW.md` | This adversarial verdict (replaces iter-1) |
-| `Docs/Specs/Active/game_modes_admin/STATUS.md` | Set to `ARCHITECT_REVIEW_ESCALATE` |
+| `Docs/Specs/Active/game_modes_admin/REDTEAM_REVIEW.md` | This verdict (replaces iter-3) |
+| `Docs/Specs/Active/game_modes_admin/STATUS.md` | Set to `ARCHITECT_REVIEW_PASS` |
