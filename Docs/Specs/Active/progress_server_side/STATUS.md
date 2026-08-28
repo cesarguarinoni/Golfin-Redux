@@ -18,3 +18,16 @@ One defect found and fixed inside this iteration: the new panel's sidebar entry
 rendered the raw key `nav.level-costs`. Fixed, redeployed, and the shape closed
 mechanically — PanelDef.id is now derived from the dictionary, so a panel with no
 label is a compile error (proven with a tripwire).
+
+── UPDATE 2026-08-28, later ──────────────────────────────────────────────────
+§5 (legacy closure) is DONE — Cesar chose option A, no build wait. /points/spend
+refuses character_level_up and club_level_up; verified authenticated against prod
+(400 for both, 400 for a case variant, 200 for refund_character_level_up). API
+image playlife-api:deployment-01M13MS0R4MDNNNGK94RNFAX04, v57. The reset Cesar
+offered was measured first and turned out to be a no-op — one legacy ledger row in
+the game's history, zero levelled characters across all 8 prod blobs — so it was
+not run.
+
+ONE THING STILL AWAITING CESAR: 2026_08_29_golfin_level_up_blob_key_fix.sql. The
+grandfather cross-check read `level`; the blob key is `lv`. Diagnostic-only, cannot
+block or mis-charge, but it was silently finding nothing.

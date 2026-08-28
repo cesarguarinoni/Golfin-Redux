@@ -133,6 +133,53 @@
 
 ## ✅ RECENTLY LANDED
 
+> **▶ §5 DONE — `/points/spend` now refuses `character_level_up` and `club_level_up`.**
+> Cesar's call, 2026-08-28: *"I'd rather reset everyone's characters and be done with it. They are
+> testers, not real users."* So unlike the shop closure — which waited for build 2350 to reach
+> TestFlight — this one did **not** wait for a build. Two facts measured on prod first, not assumed:
+> the ledger's entire spend history is 134 rows, of which `character_level_up` is **1** (2026-08-22,
+> −6 RP) and `club_level_up` is **0**; and all 8 profiles with an inventory blob sit at catalog
+> defaults, with not one levelled character or club between them bar the one §21's own E2E created.
+> Nothing to break, nothing to migrate — **the reset turned out to be a no-op, so it was not run.**
+>
+> ⚠️ **If a reset is ever wanted, server-side alone will NOT stick.** `InventoryMerge` is
+> `Max(acc.currentLevel, c.currentLevel)` for characters and clubs alike, so a device still holding
+> the higher level merges it straight back on its next sync. A durable reset needs the device saves
+> gone too (reinstall / save-clear).
+>
+> Refused BEFORE the rpc — no ledger row, no burned idempotency key, so a client that retries the
+> same key against `/progress/level-up` still gets a first-class level-up. Exact match on the
+> stripped, lower-cased reason: a door, not a keyword filter. Verified live and **authenticated**
+> against prod (token lifted from a signed-in play session):
+>
+> | reason | result |
+> |---|---|
+> | `character_level_up` | **400** `level-ups go through /progress/level-up` |
+> | `club_level_up` | **400** |
+> | `Character_Level_Up` | **400** — case is not an escape hatch |
+> | `shop_purchase` | **400** — the older door, still shut |
+> | `refund_character_level_up` | **200** — merely contains it, correctly untouched (cost 1 RP to prove) |
+>
+> API image `playlife-api:deployment-01M13MS0R4MDNNNGK94RNFAX04`, machine **v57**. Tests extended in
+> the existing `test_points_spend_legacy_shop.py` rather than forked — both doors are one mechanism —
+> +3 tests (101 passing), proven to bite by disabling the refusal and watching two fail.
+>
+> **The remaining exposure is not this endpoint.** A build older than the first one carrying
+> `ProgressService` now gets a clean 400 on LEVEL UP instead of a self-priced debit. That is the
+> intended trade, and it is why this needed Cesar's word rather than being safe by default.
+
+> **▶ ALSO FIXED SAME DAY — the grandfather cross-check read a key that does not exist.**
+> `golfin_level_up` compared the claimed `from_level` against `v_elem->>'level'`; the blob key is
+> **`lv`** (`InventoryCodec.cs:135`/`:154`), so the check found nothing every time and every seed
+> reported "no mismatch". It could not block, refuse or mis-charge — the read sits in an exception
+> block whose only outputs are a warning and an optional `blob_level` — but it was a diagnostic gone
+> silent, which is the hardest kind to notice. Fixing only the key would have made it *worse*: the
+> codec omits `lv` for a row at its catalog default, so absent-as-0 would have cried mismatch on
+> every untouched ref. Absent now resolves to the ref's `startLevel`.
+> Migration `2026_08_29_golfin_level_up_blob_key_fix.sql` (playlife `38636d5`) — **awaiting apply.**
+> This was the open item the IMPLEMENTER_REPORT flagged as needing a second pair of eyes; reading the
+> live blobs is what closed it.
+
 > **▶ LEVEL-UPS ARE SERVER-AUTHORITATIVE — the last self-grant that touched competition is closed.
 > `progress_server_side`, 2026-08-28, LIVE E2E PASSED on prod.**
 >
