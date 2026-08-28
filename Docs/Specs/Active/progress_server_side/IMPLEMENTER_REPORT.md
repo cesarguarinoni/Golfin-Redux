@@ -12,7 +12,7 @@
 |---|---|---|---|
 | **(a)** | Dashboard backlog (§6 step 0) | Cloudflare deployment **`577be843-4808-4aad-ade7-648d8a5f7c20`**, 2026-08-28T06:27:21Z, stamped `3df55d58f` | `wrangler deployments list` shows it at 100%; `curl -o /dev/null -w %{http_code} https://admin.golfin.world/` → **302** (Access protecting), same on `/api/version` |
 | **(b)** | API (§6 step 1) | Fly image **`playlife-api:deployment-01M13JGS6V9HWAENJS254ZAKDF`**, machine version **56** (was 55 / `…01M1159SB99179ZMWNJD038X9A`) | `flyctl status` **after** the deploy, not the deploy's exit code (`reference_flyctl_401_false_deploy_failure`) + live smoke below |
-| **(c)** | Dashboard, this task's half (§6 step 3) | Cloudflare deployment **`c927bde9-dc72-478a-9232-5ab78b2c158c`**, 2026-08-28T06:56:01Z, stamped **`0c26421b8` == HEAD** | `wrangler deployments list` at 100%; bundle stamp grepped from `.open-next/…/api/version/route.js`; `/`, `/api/version`, `/level-costs` all **302** |
+| **(c)** | Dashboard, this task's half (§6 step 3) | **`394f4733-8f3c-4510-973d-2cf7df304b63`**, stamped **`da4eee5f9` == HEAD**. Two earlier ones in the same task: `c927bde9-…` (the panel, `0c26421b8`) and `96e5ad86-…` (the sidebar-label fix, `6ccd4a8a2`) | `wrangler deployments list` at 100%; bundle stamp grepped from `.open-next/…/api/version/route.js`; `/`, `/api/version`, `/level-costs` all **302**; and the footer stamp **read off the live page in a browser** at the `96e5ad86` deploy — see below |
 
 ### The API smoke (§6 step 1)
 
@@ -45,10 +45,23 @@ What I did instead, and consider equivalent-or-better:
    100% of traffic.
 3. `curl` → 302 on `/api/version` — proves the route exists behind Access.
 
-(1)+(2) is a stronger claim than (3) alone would be. **Unblocking the literal
-check is a Cesar/Cloudflare-console step**: either an Access service token stored
-as a secret, or a bypass policy on `/api/version` specifically. Worth doing —
-§23 will keep being half-satisfied until then.
+(1)+(2) is a stronger claim than (3) alone would be.
+
+**And then a fourth, better one turned up.** Driving the admin in Chrome for the
+E2E showed that the stamp renders in the SIDEBAR FOOTER of the live page — it
+read `6ccd4a8a2` at that deploy, matching HEAD at the time. So the stamp IS
+verifiable against the running site, just not from a shell. That is the check
+§23 actually wants; it simply needs a browser with an Access session.
+
+**Unblocking the LITERAL shell check is a Cesar/Cloudflare-console step**: either
+an Access service token stored as a secret, or a bypass policy on `/api/version`.
+Worth doing — otherwise "is it deployed?" stays a browser question, and a
+headless/cron run can never answer it.
+
+⚠️ Note on ordering: the docs commit (`da4eee5f9`) landed AFTER the `96e5ad86`
+deploy, which left the stamp one commit behind HEAD even though no dashboard file
+had changed. Rather than argue that, the dashboard was redeployed — `394f4733`,
+stamped `da4eee5f9`, which is HEAD.
 
 ---
 
