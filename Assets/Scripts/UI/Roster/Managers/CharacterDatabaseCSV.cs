@@ -280,7 +280,7 @@ namespace Golfin.Roster
         /// </para>
         /// </summary>
         private CharacterDataRuntime? ParseCharacterFromCSV(ContentFields f,
-            string bundledPortraitUrl = "", string bundledFullUrl = "")
+            string? bundledPortraitUrl = null, string? bundledFullUrl = null)
         {
             try
             {
@@ -290,6 +290,19 @@ namespace Golfin.Roster
                 // Read URL columns (SPEC §3 — new optional columns, additive).
                 string portraitUrl     = f.Get("portraitUrl");
                 string portraitFullUrl = f.Get("fullUrl");
+
+                // ⚠️ NO BUNDLED COUNTERPART ⇒ NOTHING CHANGED ⇒ STEP 1 MUST NOT FIRE.
+                // (content_art_bundling, 2026-08-28.) The overload defaults used to be "", so a
+                // BUNDLED row carrying a URL compared its own URL against "" — always "different"
+                // — and step 1 served the cached download in front of the build's own sprite.
+                // The bundled asset was then dead weight in every build that had it, silently,
+                // which is precisely what this task exists to produce. Comparing the URL against
+                // ITSELF is the correct expression of "the overlay has not changed anything":
+                // step 1 returns null and step 2 wins, exactly as SPEC §2.2 orders them.
+                // Observed live before the fix: char_arttest resolved to a runtime sprite with no
+                // asset path while Resources/Portraits/Thumbnails/Arttest.png sat unused.
+                string bundledPortrait = bundledPortraitUrl ?? portraitUrl;
+                string bundledFull     = bundledFullUrl     ?? portraitFullUrl;
 
                 var character = new CharacterDataRuntime
                 {
@@ -321,12 +334,12 @@ namespace Golfin.Roster
                 //   3. URL unchanged since the build, if cached → row newer than any bundled art
                 //   5. otherwise null ⇒ renderable=false ⇒ withheld (§4)
                 character.portraitSprite =
-                    CatalogArtCache.Cached(portraitUrl, bundledPortraitUrl)       // step 1
+                    CatalogArtCache.Cached(portraitUrl, bundledPortrait)          // step 1
                     ?? FindSpriteByName(character.portraitSpriteName)              // step 2
                     ?? CatalogArtCache.Cached(portraitUrl);                        // step 3
 
                 character.portraitFullSprite =
-                    CatalogArtCache.Cached(portraitFullUrl, bundledFullUrl)       // step 1
+                    CatalogArtCache.Cached(portraitFullUrl, bundledFull)          // step 1
                     ?? FindFullBodySpriteByName(character.portraitFullSpriteName)  // step 2
                     ?? CatalogArtCache.Cached(portraitFullUrl);                    // step 3
 

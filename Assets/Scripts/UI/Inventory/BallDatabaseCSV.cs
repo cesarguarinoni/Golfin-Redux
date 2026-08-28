@@ -174,12 +174,23 @@ namespace Golfin.Inventory
         /// bundled+overlay, or overlay alone. Column names declared once, here (I4).
         /// </summary>
         private BallDataRuntime? ParseRow(ContentFields f,
-            string bundledThumbnailUrl = "", string bundledFullUrl = "")
+            string? bundledThumbnailUrl = null, string? bundledFullUrl = null)
         {
             try
             {
                 string thumbnailUrl = f.Get("thumbnailUrl");
                 string fullUrl      = f.Get("fullUrl");
+
+                // ⚠️ NO BUNDLED COUNTERPART ⇒ NOTHING CHANGED ⇒ STEP 1 MUST NOT FIRE.
+                // (content_art_bundling, 2026-08-28.) The overload defaults used to be "", so a
+                // BUNDLED row carrying a URL compared its own URL against "" — always "different"
+                // — and step 1 served the cached download in front of the build's own sprite.
+                // The bundled asset was then dead weight in every build that had it, silently,
+                // which is precisely what this task exists to produce. Comparing the URL against
+                // ITSELF is the correct expression of "the overlay has not changed anything":
+                // step 1 returns null and step 2 wins, exactly as SPEC §2.2 orders them.
+                string bundledThumbnail = bundledThumbnailUrl ?? thumbnailUrl;
+                string bundledFull      = bundledFullUrl      ?? fullUrl;
 
                 var ball = new BallDataRuntime
                 {
@@ -206,10 +217,10 @@ namespace Golfin.Inventory
                 //   2. bundled sprite by name  →  the build's own art wins
                 //   3. URL unchanged since build, if cached  →  row newer than any bundled art
                 //   5. otherwise null ⇒ renderable=false ⇒ withheld
-                ball.thumbnailSprite = CatalogArtCache.Cached(thumbnailUrl, bundledThumbnailUrl)  // step 1
+                ball.thumbnailSprite = CatalogArtCache.Cached(thumbnailUrl, bundledThumbnail)     // step 1
                                        ?? LoadSprite(ThumbnailPath, ball.thumbnailSpriteName)     // step 2
                                        ?? CatalogArtCache.Cached(thumbnailUrl);                   // step 3
-                ball.fullSprite      = CatalogArtCache.Cached(fullUrl, bundledFullUrl)            // step 1
+                ball.fullSprite      = CatalogArtCache.Cached(fullUrl, bundledFull)               // step 1
                                        ?? LoadSprite(FullPath, ball.fullSpriteName)               // step 2
                                        ?? CatalogArtCache.Cached(fullUrl);                        // step 3
 

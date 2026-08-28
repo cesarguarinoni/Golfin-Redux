@@ -2,7 +2,8 @@
     "name": "GolfinRedux.Tests.EditMode",
     "rootNamespace": "GolfinRedux.Tests.EditMode",
     "references": [
-        "Golfin.Net"
+        "Golfin.Net",
+        "Golfin.Content"
     ],
     "includePlatforms": [
         "Editor"

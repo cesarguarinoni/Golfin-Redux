@@ -1,0 +1,45 @@
+=== iter-1 kickoff baseline 2026-08-28 ===
+HEAD: 632d4241714bbc08444c31972b315e9958e93cda
+DIRTY (git status --porcelain --untracked-files=all):
+ M Docs/PIPELINE_HARDENING.md
+ M Docs/Specs/Active/club_art_batches/STATUS.md
+RM Docs/Specs/Queued/content_art_bundling/SPEC.md -> Docs/Specs/Active/content_art_bundling/SPEC.md
+RM Docs/Specs/Queued/content_art_bundling/STATUS.md -> Docs/Specs/Active/content_art_bundling/STATUS.md
+D  Docs/Specs/Active/content_art_urls/STATUS.md
+R  Docs/Specs/Active/content_art_urls/ARCHITECT_DECISION.md -> Docs/Specs/Completed/content_art_urls/ARCHITECT_DECISION.md
+R  Docs/Specs/Active/content_art_urls/ARCHITECT_REVIEW.md -> Docs/Specs/Completed/content_art_urls/ARCHITECT_REVIEW.md
+R  Docs/Specs/Active/content_art_urls/ARCHITECT_SITREP.md -> Docs/Specs/Completed/content_art_urls/ARCHITECT_SITREP.md
+R  Docs/Specs/Active/content_art_urls/HEARTBEAT.log -> Docs/Specs/Completed/content_art_urls/HEARTBEAT.log
+R  Docs/Specs/Active/content_art_urls/IMPLEMENTER_REPORT.md -> Docs/Specs/Completed/content_art_urls/IMPLEMENTER_REPORT.md
+R  Docs/Specs/Active/content_art_urls/SELF_REVIEW.md -> Docs/Specs/Completed/content_art_urls/SELF_REVIEW.md
+R  Docs/Specs/Active/content_art_urls/SPEC.md -> Docs/Specs/Completed/content_art_urls/SPEC.md
+A  Docs/Specs/Completed/content_art_urls/STATUS.md
+ M Docs/TellCode.md
+ M Docs/Versioning/last_uploaded_build.txt
+?? Assets/Resources/Clubs/Full/Driver-FairX.png
+?? Assets/Resources/Clubs/Full/Driver-FairX.png.meta
+?? Assets/Resources/Clubs/Full/Iron-FairX.png
+?? Assets/Resources/Clubs/Full/Iron-FairX.png.meta
+?? Assets/Resources/Clubs/Full/Putter-FairX.png
+?? Assets/Resources/Clubs/Full/Putter-FairX.png.meta
+?? Assets/Resources/Clubs/Full/Wedge-FairX.png
+?? Assets/Resources/Clubs/Full/Wedge-FairX.png.meta
+?? Assets/Resources/Clubs/Full/Wood-FairX.png
+?? Assets/Resources/Clubs/Full/Wood-FairX.png.meta
+?? Assets/Resources/Clubs/Portraits/S_Menu_Driver_FAIRLOFT.png
+?? Assets/Resources/Clubs/Portraits/S_Menu_Driver_FAIRLOFT.png.meta
+?? Assets/Resources/Clubs/Portraits/S_Menu_Iron_FAIRLOFT.png
+?? Assets/Resources/Clubs/Portraits/S_Menu_Iron_FAIRLOFT.png.meta
+?? Assets/Resources/Clubs/Portraits/S_Menu_Wedge_FAIRLOFT.png
+?? Assets/Resources/Clubs/Portraits/S_Menu_Wedge_FAIRLOFT.png.meta
+?? Assets/Resources/Clubs/Portraits/S_Menu_Wood_FAIRLOFT.png
+?? Assets/Resources/Clubs/Portraits/S_Menu_Wood_FAIRLOFT.png.meta
+?? Docs/Specs/Active/content_art_bundling/HEARTBEAT.log
+=== end baseline ===
+
+=== iter-1 work log 2026-08-28 ===
+11:2x  Tool + validator + admin badge + docs written; acceptance run against the LIVE catalog-art bucket.
+11:2x  Ladder E2E found rule 2 SHADOWED by rule 1 on every bundled row carrying a URL -> fixed in 4 loaders.
+11:2x  Tripwires: size cap, WebP content-type, ladder handover -- all observed RED then reverted GREEN.
+11:2x  EditMode 1894 / 1891 passed / 0 failed / 3 pre-existing skips. Tools/content 26 passed. Dashboard build OK.
+=== end iter-1 ===

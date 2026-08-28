@@ -1,15 +1,14 @@
 # SPEC — `content_art_bundling`
 
-> **Draft, filed 2026-08-27 for review with the Architect.** Queued deliberately: this is not
-> `SPEC_READY` and must not be picked up by the implementer chain until Cesar and the Architect
-> have been through it.
+> **Filed 2026-08-27; Architect review 2026-08-27 APPROVED, corrections folded in (record in §10).**
+> `SPEC_READY`, Queued only because it depends on `content_art_urls` landing first.
 >
 > Depends on `content_art_urls` (in flight) for the URL columns and the resolution ladder.
 > Plan: `Docs/CONTENT_PIPELINE_PLAN.md` §10.2.
 
 ## Status
 
-See `STATUS.md`. `DRAFT` — awaiting architect review.
+See `STATUS.md`. `SPEC_READY` — blocked on `content_art_urls` (IMPLEMENTER_WORKING at filing).
 
 ## Goal
 
@@ -72,7 +71,9 @@ corresponding sprite-NAME column empty:
    that would ship art nobody can trace back to a legitimate upload.
 2. **Refuse WebP** on the response's content type as well as the extension. Belt and braces: the
    upload path blocks it, but this step must not depend on that having held.
-3. **Download** to a temp path, respecting the same 1 MB ceiling the client enforces.
+3. **Download** to a temp path, refusing anything over the **500 KB upload cap**
+   (`contentArtMutations.ts` `maxBytes`) — not the client's 1 MB backstop. A larger file did not
+   come through the admin's upload path, and that alone is a reason to refuse it.
 4. **Derive the deterministic name** (§4).
 5. **Refuse on collision** (§4). Never overwrite an existing asset.
 6. **Write** into the catalog's `Resources` folder — the same folder constant the loader uses
@@ -89,15 +90,24 @@ reuses the loop `content_two_way` built and tested rather than inventing a secon
 ## 4. Naming — deterministic, convention-shaped, collision-refusing
 
 The bucket filename is `{catalog}-{rowId}-{column}-{sha256[:12]}.{ext}`, which is right for a
-cache key and wrong for a repo asset. Derive instead from the row id, following
-`Docs/Game Design/ASSET_NAMING_CONVENTION.md`:
+cache key and wrong for a repo asset. The sprite-NAME columns are **`Resources` filenames**, so
+derive to match the convention the target folder already uses — the *Resources Path / CSV
+Column / Naming Rule* table in `Docs/Game Design/ASSET_NAMING_CONVENTION.md` (§5), **not** the
+`S_Char_*` / `S_Club_*` source-art patterns in its §3, which belong to `Assets/Art`. Verified
+against the folders: `Portraits/Thumbnails/Camila.png`, `Portraits/FullBody/BigRosterCamila.png`,
+`Items/Thumbnails/RepairKit-Common.png`.
 
-| Catalog / column | Rule | `char_zoe` → |
+| Catalog / column | Rule (Resources filename) | `char_zoe` → |
 |---|---|---|
-| characters `portraitUrl` | `S_Char_{Pascal(id minus "char_")}` | `S_Char_Zoe` |
-| characters `fullUrl` | `S_CharFull_{Pascal(...)}` | `S_CharFull_Zoe` |
-| items / balls thumbnail, full | `S_{Item\|Ball}_{Pascal(...)}` / `S_{...}Full_{...}` | |
-| clubs portrait / full / control | follow the existing `S_Club_{Type}-{Brand}` shape, derived from the row's `type` and `brand` columns rather than the id | |
+| characters `portraitUrl` | `{FirstName}` = `Pascal(id minus "char_")` | `Zoe` |
+| characters `fullUrl` | `BigRoster{FirstName}` (legacy, keep) | `BigRosterZoe` |
+| items / balls thumbnail, full | `{Pascal(name)}-{rarity}` from the row's own columns — the existing names (`RepairKit-Common`) are not derivable from the id (`repairkit_common`); add this rule to the naming doc in the same commit | `RepairKit-Rare` |
+| clubs portrait / full / control | `{Type}-{Brand}` from the row's `type` and `brand` columns, exactly as the 799 rows do | `Iron7-Mireo` |
+
+Deterministic + unique is the requirement; matching a hand-made name byte-for-byte is not.
+**Clubs share art across rarities** (`club_driver_fairloft_common` … `_supreme` name the same
+sprite): de-duplicate by derived name within a run, fetch once, and treat a second row that
+derives to the same name with the same bytes as satisfied — not as a collision.
 
 **Deterministic means re-running produces the same name**, which is what makes step 5 a safe
 no-op on a second run.
@@ -150,6 +160,13 @@ already writes — rather than starting a second report nobody reads.
 - [ ] **The ladder hands over.** After fetching + importing + publishing + exporting, load the
       game and confirm the row now resolves via `content_art_urls` §2.2 **rule 2** (bundled), not
       rule 1 or 3 — log the sprite identity, do not infer it. This is the whole point of the task.
+- [ ] **The OLD build still renders it.** Simulate a build without the bundled asset (strip the
+      file, keep the published name + URL): the patched overlay row passes `ContentSpriteGuard`
+      via `HasRemote` and resolves through rule 1 (cached URL). This is why §8 keeps the URL and
+      the case most likely to regress silently.
+- [ ] **Shared club art fetched once.** Six rarity rows deriving to the same name produce one
+      download, one asset, no collision refusals.
+- [ ] Admin: a row with a URL and an empty name shows the `URL-only · not bundled` badge (§9.2).
 - [ ] Size report printed and appended to `Docs/Reports/content_art.txt`.
 - [ ] Full unfiltered EditMode sweep green.
 
@@ -163,8 +180,12 @@ already writes — rather than starting a second report nobody reads.
 - **3D / hole content.** `CONTENT_PIPELINE_PLAN.md` §10.3, triggered by the second course.
 - **Clearing the URL after bundling.** `content_art_urls` §2.2 is explicit that the URL stays —
   players on older builds still depend on it.
+- **Character Homescreen art.** A third slot (`Characters/Homescreen/{FirstName}`,
+  `HomeScreenController.cs:233`, falls back to `Characters/Homescreen/Placeholder`) that neither
+  `content_art_urls` nor this task covers — an admin-created character shows Placeholder on Home
+  when selected. Not broken; filed as a `homeUrl` follow-up on `content_art_urls`.
 
-## 9. Open questions for the Architect
+## 9. Open questions — RESOLVED 2026-08-27 (Architect)
 
 1. **Club naming.** §4 derives club names from `type` + `brand` rather than the row id, because
    that is what the existing 799 rows look like — but club art is SHARED across rarities
@@ -172,11 +193,60 @@ already writes — rather than starting a second report nobody reads.
    would download the same asset up to six times and collide with itself on runs 2–6. Proposal:
    de-duplicate by derived name within a run and fetch once. Worth confirming that shared art is
    still the intent for admin-created clubs.
+   **→ Yes.** Shared art is the intent; de-dup by derived name, fetch once (folded into §4).
 2. **Who sets the URL column to begin with for an admin-created row** — the operator uploads via
    the row editor, which sets the URL. But the sprite NAME column stays empty until this tool
    runs. Should the admin's row editor show that a row is "URL-only, not yet bundled"? A one-line
    badge in the panel would make the pipeline state visible where the operator already is.
+   **→ Yes.** `URL-only · not bundled` badge on any row with a URL set and the name empty, in the
+   row list and the editor (EN + JA). In scope here.
 3. **Frequency.** Is this a release-prep step (run once before cutting a build, alongside
    `export_content.py`) or something run whenever art is uploaded? The runbook currently has one
    content step before a build; adding a second is fine, but they should be adjacent and
    documented together.
+   **→ Release-prep**, adjacent to the exporter, in this order in `Docs/TESTFLIGHT_RUNBOOK.md`:
+   `Fetch URL Art` → `import_content.py --apply` → publish → `export_content.py` → commit → lane.
+   Idempotent, so running it with nothing to fetch costs nothing; the lane's `--check` is what
+   catches a forgotten run.
+
+---
+
+## 10. Architect review (Cowork, 2026-08-27) — APPROVED; corrections FOLDED IN above, kept here as the record
+
+**Verdict: thumbs up.** Right place (Editor, not the lane), right shape (human-run, reviewable
+diff), right refusals (allowlist reused, collision never overwrites, empty folder never guesses,
+WebP refused twice), and the closing instruction reuses the `import → publish → export` loop
+instead of inventing a second way in. Four corrections and the three answers:
+
+1. **§4 names the wrong convention.** `S_Char_*` / `S_ClubFull_*` are the *source-art* patterns
+   (`ASSET_NAMING_CONVENTION.md` §3, `Assets/Art`). The sprite-NAME columns are `Resources`
+   filenames, and those follow the table further down the same doc (Resources Path / CSV Column
+   / Naming Rule): `Portraits/Thumbnails/{FirstName}` (e.g. `James`), `Portraits/FullBody/
+   BigRoster{FirstName}` (legacy, keep), `Clubs/Portraits|Full/{Type}-{Brand}`. Verified against
+   the folders: `Thumbnails/Camila.png`, `FullBody/BigRosterCamila.png`, `Items/Thumbnails/
+   RepairKit-Common.png`. Derive to match THOSE — a `S_Char_Zoe` in `Portraits/Thumbnails` would
+   be the only file in the folder not following the folder's rule. For items/balls the existing
+   names (`RepairKit-Common`) are not mechanically derivable from the id (`repairkit_common`);
+   use `{Pascal(name)}-{rarity}` from the row's own columns, and add that rule to the naming doc
+   in the same commit. Deterministic + unique is the requirement; matching a hand-made name
+   byte-for-byte is not.
+2. **Download ceiling = the upload cap (500 KB), not the client's 1 MB backstop.** Anything
+   larger did not come through the admin's upload path and should be refused for that reason.
+3. **§7 "ladder hands over" needs the OLD-build half too.** After the name is published, a build
+   that lacks the bundled asset receives a patched row whose name does not resolve; it must
+   still render via the URL (`ContentSpriteGuard` `HasRemote` → `content_art_urls` rule 1).
+   Assert it — it is the reason §8 keeps the URL, and it is the case most likely to regress.
+4. **Character Homescreen art is a third slot** (`Characters/Homescreen/{FirstName}`,
+   `HomeScreenController.cs:233`, falls back to `Characters/Homescreen/Placeholder`). Neither
+   `content_art_urls` nor this spec covers it, so an admin-created character shows Placeholder on
+   Home when selected. Not broken, not this task — file it as a `homeUrl` follow-up on
+   `content_art_urls` and say so in this spec's §8.
+
+Answers to §9: **(1)** yes — shared art across rarities is the intent for clubs; de-duplicate by
+derived name within a run, fetch once, and treat a same-name/same-bytes second row as satisfied,
+not as a collision. **(2)** yes — a `URL-only · not bundled` badge on any row with a URL and an
+empty name, in the row list and the editor; it is the pipeline state the operator is acting on.
+**(3)** release-prep, adjacent to the exporter, in this order in the runbook: `Fetch URL Art` →
+`import_content.py --apply` → publish → `export_content.py` → commit → lane. Idempotent, so
+running it when there is nothing to fetch costs nothing; the lane's `--check` is what catches a
+forgotten run.

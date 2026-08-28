@@ -218,9 +218,18 @@ namespace Golfin.Inventory
             //
             // ⚠️ Step 2 uses LoadRealSprite (no Placeholder fallback) so that a club with no
             // real bundled art but a cached URL uses the URL at step 3, not the stand-in at step 4.
-            string bundledPortraitUrl  = row.bundled?.portraitUrl    ?? "";
-            string bundledFullUrl      = row.bundled?.portraitFullUrl ?? "";
-            string bundledControlUrl   = row.bundled?.controlUrl     ?? "";
+            // ⚠️ NO BUNDLED COUNTERPART ⇒ NOTHING CHANGED ⇒ STEP 1 MUST NOT FIRE.
+            // (content_art_bundling, 2026-08-28.) These used to fall back to "", so a
+            // BUNDLED club carrying a URL compared its own URL against "" — always
+            // "different" — and step 1 served the cached download in front of the build's
+            // own sprite. The bundled asset was then dead weight in every build that had
+            // it, silently, which is precisely what content_art_bundling exists to
+            // produce. When there is no overlay, `row` IS the bundled row, so each URL is
+            // compared against ITSELF: step 1 returns null and step 2 wins, as SPEC §2.2
+            // orders them. A genuine re-upload still differs and still takes step 1.
+            string bundledPortraitUrl  = row.bundled?.portraitUrl     ?? row.portraitUrl;
+            string bundledFullUrl      = row.bundled?.portraitFullUrl ?? row.portraitFullUrl;
+            string bundledControlUrl   = row.bundled?.controlUrl      ?? row.controlUrl;
 
             Sprite? portraitSpriteResolved =
                 CatalogArtCache.Cached(row.portraitUrl,  bundledPortraitUrl)  // step 1

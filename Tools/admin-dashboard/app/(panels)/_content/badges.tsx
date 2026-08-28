@@ -100,6 +100,34 @@ export function DisabledBadge() {
 }
 
 /**
+ * `URL-only · not bundled` — content_art_bundling §9.2.
+ *
+ * The row has art (a URL an installed build renders from) but no bundled sprite
+ * name, so no build carries the file yet. That is a legitimate, temporary state,
+ * not an error — it ends when someone runs `GOLFIN/Content/Fetch URL Art`, which
+ * pulls the art into `Resources/` and fills the name column in. Sky, not amber:
+ * it is pipeline state to be aware of, never something failing.
+ *
+ * BOTH the label and the hover explanation are TRANSLATED, unlike LIVE /
+ * SCHEDULED / rarity names. §3.4 leaves those alone because they are the value
+ * stored in the row; this one is descriptive prose about pipeline state, so it
+ * reads as broken in a JA session if it stays English. Verified rendering as
+ * `URL のみ・未同梱` on 2026-08-28.
+ */
+export function UrlOnlyBadge({ columns }: { columns: string[] }) {
+  const translate = useT();
+  if (columns.length === 0) return null;
+  return (
+    <span
+      title={translate("c.badge.urlOnlyHint", { columns: columns.join(", ") })}
+      className="whitespace-nowrap rounded border border-sky-500/40 bg-sky-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-sky-300"
+    >
+      {translate("c.badge.urlOnly")}
+    </span>
+  );
+}
+
+/**
  * The "art thumbnail" of §11.3, as far as the data allows.
  *
  * The catalogs store a Unity SPRITE NAME (`portraitSprite: "Driver-G&F"`), not a

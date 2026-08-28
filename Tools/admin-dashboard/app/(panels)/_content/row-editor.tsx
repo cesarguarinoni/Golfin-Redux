@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { useT } from "@/components/I18nProvider";
-import { ID_COLUMN, isArtUrlColumn, isValidNewRowId, ROW_ID_MAX, spriteFolder } from "@/lib/contentView";
+import { ID_COLUMN, isArtUrlColumn, isValidNewRowId, ROW_ID_MAX, spriteFolder, urlOnlyArtColumns } from "@/lib/contentView";
 import type { ContentStoredRow } from "@/lib/types";
+import { UrlOnlyBadge } from "./badges";
 import { saveRow } from "./client";
 
 /** What a panel's extras need in order to prefill the id of a NEW row. */
@@ -199,6 +200,14 @@ export function RowEditor({
             </button>
           </div>
           <p className="mt-2 text-[11px] text-zinc-500">{translate("c.edit.subtitle")}</p>
+          {/* content_art_bundling §9.2 — read off the LIVE draft, not the saved
+              row, so uploading art (which sets the URL) shows the badge at once
+              and it clears the moment the sprite-name column is filled in. */}
+          {urlOnlyArtColumns(catalog, draft).length > 0 && (
+            <div className="mt-2">
+              <UrlOnlyBadge columns={urlOnlyArtColumns(catalog, draft)} />
+            </div>
+          )}
         </header>
 
         <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4">

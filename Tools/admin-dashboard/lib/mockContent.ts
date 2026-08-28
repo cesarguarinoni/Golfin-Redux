@@ -12,7 +12,7 @@ import type { ContentCatalogSummary, ContentStoredRow, ContentVersionSummary } f
 
 export const MOCK_CONTENT_CATALOGS: ContentCatalogSummary[] = [
   { name: "clubs", publishedVersion: 9999, isEnabled: true, publishedCount: 2, draftCount: 2, dirtyCount: 1 },
-  { name: "characters", publishedVersion: 9999, isEnabled: true, publishedCount: 1, draftCount: 1, dirtyCount: 0 },
+  { name: "characters", publishedVersion: 9999, isEnabled: true, publishedCount: 2, draftCount: 2, dirtyCount: 0 },
   { name: "items", publishedVersion: 9999, isEnabled: true, publishedCount: 2, draftCount: 2, dirtyCount: 0 },
   { name: "bags", publishedVersion: 9999, isEnabled: true, publishedCount: 2, draftCount: 2, dirtyCount: 0 },
   // DISABLED on purpose: the kill-switch badge and the "the game is not being
@@ -41,6 +41,22 @@ export const MOCK_CONTENT_PUBLISHED: ContentStoredRow[] = [
     id: "mock_char", name: "MOCK", lastName: "FIXTURE", rarity: "Common",
     baseStrength: "1", baseClubControl: "1", baseRecovery: "1", baseStamina: "1",
     startLevel: "1", maxLevel: "9999",
+    portraitSprite: "MockFixture", portraitFull: "BigRosterMockFixture",
+  }),
+  // URL SET, SPRITE NAME EMPTY on purpose — the `URL-only · not bundled` badge
+  // (content_art_bundling §9.2) needs a row in that state to render against, for
+  // the same reason `balls` is a disabled catalog above. This is what an
+  // admin-created row looks like between "art uploaded" and "a build bundled it":
+  // installed builds render it over the network, and GOLFIN/Content/Fetch URL Art
+  // is the step that ends it.
+  row("characters", "mock_char_urlonly", {
+    id: "mock_char_urlonly", name: "MOCK", lastName: "URL-ONLY", rarity: "Common",
+    baseStrength: "1", baseClubControl: "1", baseRecovery: "1", baseStamina: "1",
+    startLevel: "1", maxLevel: "9999",
+    portraitSprite: "", portraitFull: "",
+    portraitUrl:
+      "https://wmszyghwwkaptgqdunel.supabase.co/storage/v1/object/public/catalog-art/" +
+      "characters-mock_char_urlonly-portraitUrl-999999999999.png",
   }),
   row("texts", "MOCK_KEY", { key: "MOCK_KEY", English: "MOCK FIXTURE", Japanese: "モックデータ" }),
   // A key with NO Japanese, so the Texts panel's "No Japanese" badge has

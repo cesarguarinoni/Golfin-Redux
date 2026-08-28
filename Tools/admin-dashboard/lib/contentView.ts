@@ -229,6 +229,44 @@ export function isArtUrlColumn(catalog: string, column: string): boolean {
   return (ART_URL_COLUMNS[catalog] ?? []).includes(column);
 }
 
+/**
+ * `catalog → { urlColumn: spriteNameColumn }` — the two halves of one art slot
+ * (content_art_bundling §9.2).
+ *
+ * A row can carry both: the URL is what an INSTALLED build renders from, the
+ * sprite name is what a build that BUNDLED the art renders from, and the client
+ * ladder prefers the bundled one. The pipeline state an operator is acting on is
+ * therefore "URL set, name still empty" — the art exists but no build carries it
+ * yet, until `GOLFIN/Content/Fetch URL Art` pulls it into `Resources/` and fills
+ * the name in.
+ *
+ * Same pairing the Unity fetcher wires up (`ContentArtFetcher.cs` § Catalog
+ * wiring); derived from ART_URL_COLUMNS + SPRITE_FIELD_FOLDER above.
+ */
+export const ART_URL_TO_SPRITE_COLUMN: Record<string, Record<string, string>> = {
+  characters: { portraitUrl: "portraitSprite", fullUrl: "portraitFull" },
+  clubs: { portraitUrl: "portraitSprite", fullUrl: "portraitFull", controlUrl: "controlSprite" },
+  items: { thumbnailUrl: "thumbnailSprite", fullUrl: "fullSprite" },
+  balls: { thumbnailUrl: "thumbnailSprite", fullUrl: "fullSprite" },
+};
+
+/**
+ * The URL columns of this row that carry a URL while their sprite-name column is
+ * still empty — i.e. art no build bundles yet (content_art_bundling §9.2).
+ * Empty array when the row is fully bundled, has no art URLs, or is not an
+ * art-bearing catalog.
+ */
+export function urlOnlyArtColumns(
+  catalog: string,
+  data: Record<string, string>
+): string[] {
+  const pairs = ART_URL_TO_SPRITE_COLUMN[catalog];
+  if (!pairs) return [];
+  return Object.entries(pairs)
+    .filter(([urlCol, nameCol]) => (data[urlCol] ?? "").trim() !== "" && (data[nameCol] ?? "").trim() === "")
+    .map(([urlCol]) => urlCol);
+}
+
 // ---------------------------------------------------------------------------
 // Shop row state
 // ---------------------------------------------------------------------------

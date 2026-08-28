@@ -335,7 +335,22 @@ namespace Golfin.EditorTools
                 // is the signal §5 wanted), and "what did build N withhold" is still answerable,
                 // better than before: `git show <sha>:Docs/Reports/content_art.txt`.
                 string rel = $"{ReportDir}/content_art.txt";
-                File.WriteAllText(Path.Combine(root, rel), report.ToText(build));
+                string full = Path.Combine(root, rel);
+
+                // content_art_bundling §6 — ContentArtFetcher APPENDS its size summary to this
+                // same file rather than starting a second report nobody reads. This method
+                // REWRITES the file, so it must carry that appended history forward or the two
+                // tools would silently erase each other (the fetch log would survive exactly
+                // until the next build).
+                string tail = "";
+                if (File.Exists(full))
+                {
+                    string previous = File.ReadAllText(full);
+                    int marker = previous.IndexOf(ContentArtFetcher.LogMarker, StringComparison.Ordinal);
+                    if (marker >= 0) tail = "\n" + previous.Substring(marker);
+                }
+
+                File.WriteAllText(full, report.ToText(build) + tail);
                 return rel;
             }
             catch (Exception e)

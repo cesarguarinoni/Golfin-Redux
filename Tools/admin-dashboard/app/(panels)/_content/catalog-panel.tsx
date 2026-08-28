@@ -3,9 +3,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useT } from "@/components/I18nProvider";
 import type { DictKey } from "@/lib/i18n";
-import { catalogView, ID_COLUMN, type Facet } from "@/lib/contentView";
+import { catalogView, ID_COLUMN, urlOnlyArtColumns, type Facet } from "@/lib/contentView";
 import type { ContentCatalogSummary, ContentRowsResponse, ContentStoredRow } from "@/lib/types";
-import { DirtyBadge, DisabledBadge, RarityBadge } from "./badges";
+import { DirtyBadge, DisabledBadge, RarityBadge, UrlOnlyBadge } from "./badges";
 import { fetchCatalogs, fetchRows } from "./client";
 import { PublishDrawer } from "./publish-drawer";
 import { RowEditor, type RowIdContext } from "./row-editor";
@@ -328,13 +328,21 @@ export function CatalogPanel({
                   </td>
                 ))}
                 <td className="px-4 py-2.5">
-                  {row.isActive ? (
-                    <span className="text-[11px] text-zinc-600">—</span>
-                  ) : (
-                    <span className="whitespace-nowrap rounded border border-zinc-600 px-1.5 py-0.5 text-[10px] font-bold text-zinc-400">
-                      OFF
-                    </span>
-                  )}
+                  {/* content_art_bundling §9.2 — a row with art by URL and no
+                      bundled sprite name is a pipeline state the operator is
+                      acting on, so it belongs in the same column as OFF rather
+                      than hidden inside the editor. Both can be true at once. */}
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {!row.isActive && (
+                      <span className="whitespace-nowrap rounded border border-zinc-600 px-1.5 py-0.5 text-[10px] font-bold text-zinc-400">
+                        OFF
+                      </span>
+                    )}
+                    <UrlOnlyBadge columns={urlOnlyArtColumns(catalog, row.data)} />
+                    {row.isActive && urlOnlyArtColumns(catalog, row.data).length === 0 && (
+                      <span className="text-[11px] text-zinc-600">—</span>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}

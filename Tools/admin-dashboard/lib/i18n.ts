@@ -852,6 +852,13 @@ export const DICT = {
     en: "The kill switch is off, so the game does not receive this catalog at all and falls back to its bundled CSV.",
     ja: "キルスイッチが OFF のため、ゲームはこのカタログを受信せず、同梱 CSV にフォールバックします。",
   },
+  // content_art_bundling §9.2 — the row has art by URL but no build bundles the
+  // file yet. Not an error: it ends when someone runs GOLFIN/Content/Fetch URL Art.
+  "c.badge.urlOnly": { en: "URL-only · not bundled", ja: "URL のみ・未同梱" },
+  "c.badge.urlOnlyHint": {
+    en: "{columns} carries a URL but the matching sprite-name column is empty, so no build bundles this art yet — installed builds render it over the network. Run GOLFIN/Content/Fetch URL Art in Unity to pull it into Resources/ and fill the name in.",
+    ja: "{columns} には URL がありますが、対応するスプライト名の列が空のため、この画像はまだどのビルドにも同梱されていません（インストール済みビルドはネットワーク経由で表示します）。Unity で GOLFIN/Content/Fetch URL Art を実行すると Resources/ に取り込まれ、名前が入ります。",
+  },
   "c.globalKill.headline": {
     en: "Remote content is OFF for every player",
     ja: "リモートコンテンツはすべてのプレイヤーで OFF です",

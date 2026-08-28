@@ -113,6 +113,28 @@ git add Assets/Resources/Data Assets/Data Assets/Localization && git commit -m "
 ./Tools/testflight.sh
 ```
 
+**Art by URL: bundle it FIRST.** A row an operator created in the admin carries its art as a URL
+(`content_art_urls`) — installed builds fetch it over the network, and it never reaches
+`Resources/` on its own. `GOLFIN/Content/Fetch URL Art` in the Unity Editor is the step that
+pulls it in, names it by the folder's own convention, copies import settings from a sibling, and
+fills the sprite-name column of the repo CSV. That leaves the CSV ahead of the catalog — the
+second `--check` direction above — so the loop is the IMPORTER, not the exporter, and the order
+matters:
+
+1. **Unity → `GOLFIN/Content/Fetch URL Art`** — pulls new URL art into `Resources/`, sets the
+   sprite-name columns, appends its size summary to `Docs/Reports/content_art.txt`.
+2. `python3 Tools/content/import_content.py --env-file … --apply` — the names become drafts.
+3. **Publish** the affected catalogs in the admin panel.
+4. `python3 Tools/content/export_content.py --env-file …` — the usual export.
+5. Review the diff (art + `.meta` + CSV names, and nothing else), commit, run the lane.
+
+It is **idempotent**: a run with nothing to fetch reports `0 fetched`, writes no file and leaves
+no diff, so running it every time costs nothing. It is deliberately NOT in the lane, for the same
+reason the exporter is not — a build must not download assets into a tree whose commit does not
+contain them, and fastlane's `ensure_git_status_clean` would fail on it anyway. Skipping it is not
+silent either: the row is simply still URL-only, which the admin panel marks
+`URL-only · not bundled` and `content_art.txt` records.
+
 `--check` fails in three directions, and only the first is fixed by exporting. **Read what it
 prints before running anything** — the fix for the second and third is not an export, and doing
 one anyway overwrites a CSV edit with the value that is still published.

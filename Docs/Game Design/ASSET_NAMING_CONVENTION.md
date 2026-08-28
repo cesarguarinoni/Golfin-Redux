@@ -190,9 +190,31 @@ Files inside `Resources/` are loaded by name via `Resources.Load<Sprite>("path/n
 | `Portraits/Thumbnails/{Name}` | Characters.csv → `portraitSprite` | Match character's first name exactly |
 | `Portraits/FullBody/{Name}` | Characters.csv → `portraitFull` | `BigRoster{Name}` (legacy, keep) |
 | `Characters/Homescreen/{Name}` | Characters.csv → name match | Match character's first name |
-| `Clubs/Portraits/{Type}-{Brand}` | Clubs.csv → `portraitSprite` | `{ClubType}-{Brand}` |
-| `Clubs/Full/{Type}-{Brand}` | Clubs.csv → `portraitFull` | `{ClubType}-{Brand}` or `Placeholder` |
+| `Clubs/Portraits/S_Menu_{Type}_{BRAND}` | Clubs.csv → `portraitSprite` | `S_Menu_{ArtType}_{BRANDTAG}` — the 792 generated rows; the 4 legacy files use `{ClubType}-{Brand}` |
+| `Clubs/Full/{Type}-{Brand}` | Clubs.csv → `portraitFull` | `{ArtType}-{Brand}` or `Placeholder` |
+| `Clubs/Controls/S_Controls_{Type}_{BRAND}` | Clubs.csv → `controlSprite` | `S_Controls_{ArtType}_{BRANDTAG}` |
+| `Items/Thumbnails/{Name}-{Rarity}` | Items.csv → `thumbnailSprite` | `{Pascal(name)}-{rarity}`, e.g. `RepairKit-Common` |
+| `Items/Full/{Name}-{Rarity}` | Items.csv → `fullSprite` | `{Pascal(name)}-{rarity}` |
+| `Balls/Thumbnails/{Name}` | Balls.csv → `thumbnailSprite` | `{Pascal(name)}` — Balls.csv has no `rarity` column, so the suffix is omitted (`ball_putt_ace` → `PuttAce`) |
+| `Balls/Full/{Name}` | Balls.csv → `fullSprite` | `{Pascal(name)}` |
 | `Rarities/{RarityName}` | RarityHelper.cs code | `Common`, `Uncommon`, `Rare`, `Mythic`, `Legendary`, `Supreme` |
+
+**Items and balls share one rule** (added 2026-08-28 with `content_art_bundling` §4): `{Pascal(name)}-{rarity}`
+from the row's OWN `name` and `rarity` columns, with the `-{rarity}` suffix **omitted when the catalog
+carries no rarity column**. It is stated here because the existing names are *not* derivable from the id —
+`repairkit_common` gives you no way to reach `RepairKit-Common` — so anything generating these names has to
+read the row. One rule reproduces both folders exactly: `("Repair Kit","Common") → RepairKit-Common`,
+`("Putt Ace","") → PuttAce`.
+
+**`ArtType` / `BRANDTAG` for clubs** (`Tools/club-gen/generate_clubs.py:136-143`): `ArtType` is the `type`
+column, except that `A.Wedge` / `P.Wedge` / `S.Wedge` all collapse to `Wedge` — the three wedges share one
+art set. `BRANDTAG` is the brand's alphanumerics, upper-cased (`G&F` → `GF`, `MireO` → `MIREO`); the
+`{Brand}` form used by `Clubs/Full` is the brand title-cased with spaces removed (`ROYAL SWING` →
+`RoyalSwing`). Each of the three club folders keeps its own prefix — a bare `{Type}-{Brand}` file in
+`Clubs/Controls` would be the only one of 78 without `S_Controls_`.
+
+> `Assets/Editor/ContentArtFetcher.cs` (`GOLFIN/Content/Fetch URL Art`) derives names by exactly these
+> rules when it pulls an admin-uploaded URL into `Resources/`. Change a rule here and change it there.
 
 ---
 

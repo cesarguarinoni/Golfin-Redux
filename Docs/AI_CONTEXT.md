@@ -133,10 +133,40 @@
 
 ## ✅ RECENTLY LANDED
 
+> **`content_art_bundling` — THE ADMIN NOW INFORMS THE NEXT BUILD. Built 2026-08-28,
+> `READY_FOR_SELF_REVIEW`.** Spec + evidence: `Docs/Specs/Active/content_art_bundling/`.
+>
+> `GOLFIN/Content/Fetch URL Art` (Editor, deliberately NOT in the build lane, no Supabase
+> credentials) pulls admin-uploaded URL art into `Resources/`, names it by the target folder's
+> own convention, copies import settings from a sibling and VERIFIES them by re-reading the
+> importer, splices the sprite name into the repo CSV, and appends a size summary to
+> `Docs/Reports/content_art.txt`. Then it stops and prints `import_content.py --apply` → publish
+> → export. Release-prep order is now in `TESTFLIGHT_RUNBOOK.md`. Idempotent: a second run
+> reports 0 fetched and leaves no diff. Admin rows in that state carry a
+> `URL-only · not bundled` badge (row list + editor, EN + JA).
+>
+> **AND IT IMMEDIATELY EARNED ITS ACCEPTANCE LIST.** Item 8 ("confirm the row now resolves via
+> rule 2, not rule 1 or 3 — this is the whole point of the task") failed on the first run:
+> **all four loaders had rule 2 SHADOWED**. The bundled parse defaulted "the bundled row's URL"
+> to `""`, so a bundled row carrying a URL compared its own URL against `""` — always
+> "different" — and rule 1 served the cached download in front of the build's own sprite. The
+> asset this whole task exists to produce would have shipped in every build and never been used,
+> silently, and `content_art_urls` would have looked fine forever. Fixed in all four loaders
+> (`?? ""` → `?? <the row's own URL>`), guarded by `ContentArtLadderHandoverTests`, and the
+> guard was tripwire-demonstrated per §20 — reinstating the old default turns it red.
+>
+> Two lessons that generalise: (1) **an acceptance item that names the mechanism, not the
+> outcome, is what caught this** — "renders" would have passed; "resolves via rule 2, log the
+> sprite identity, do not infer it" did not. (2) The identity check that made it decisive was
+> `AssetDatabase.GetAssetPath(sprite)`: a `Resources` asset has one, a cache-decoded sprite is
+> created at runtime and has none. Both sprites looked identical on screen.
+>
+> Also corrected in passing: the catalog-art upload refusal still read *"Use JPG, PNG or WebP"*
+> after WebP was removed in `c15998c30`.
+
 > **`content_art_urls` — ART BY URL: AN ADMIN-CREATED ROW RENDERS WITH NO STORE RELEASE.
 > Landed 2026-08-28 after a defect that eight review passes missed and only an end-to-end run
-> found.** Spec + evidence: `Docs/Specs/Active/content_art_urls/`. STATUS
-> `READY_FOR_ARCHITECT_REVIEW` after the Option A seam fix.
+> found. APPROVED by Cesar 2026-08-28 → `Docs/Specs/Completed/content_art_urls/`.**
 >
 > The resolution ladder (SPEC §2.2) puts the BUILD's own art first: overlay-changed URL if
 > cached → bundled sprite by name → URL unchanged since the build → Placeholder (clubs only).

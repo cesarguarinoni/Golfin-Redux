@@ -16,7 +16,7 @@ import type { MutationOutcome } from "./mutations";
  *     no invalidation needed on the client.
  *   - Re-uploading the same bytes → same URL (upsert: true → no-op rewrite)
  *   - Size cap 500 KB (SPEC §3 — same limit as banners)
- *   - MIME: JPG, PNG, WebP (SPEC §3)
+ *   - MIME: JPG, PNG only — NO WebP (SPEC §5.1, Cesar 2026-08-27; see CATALOG_ART_SPEC)
  *   - Writes an audit row ("content_art_upload") — same as "banner_art_upload"
  *   - Creates the bucket on first use (no manual Supabase step needed)
  */
@@ -110,7 +110,8 @@ export async function uploadCatalogArt(
   if (!(CATALOG_ART_SPEC.mimeTypes as readonly string[]).includes(file.type)) {
     return fail(
       400,
-      `Unsupported type "${file.type || "unknown"}". Use JPG, PNG or WebP.`
+      `Unsupported type "${file.type || "unknown"}". Use JPG or PNG — NOT WebP: ` +
+        `Unity cannot import it, so content_art_bundling could never pull it into a build.`
     );
   }
   if (file.size > CATALOG_ART_SPEC.maxBytes) {
