@@ -36,7 +36,11 @@ namespace Golfin.Dev
     public sealed class DevFpsOverlay : MonoBehaviour
     {
         const float RefreshSeconds = 0.25f;   // rebuild the string 4x/sec, not every frame
-        const string EnabledKey    = "golfin.dev.fpsOverlay";   // 0 hides it; survives relaunch
+        const string EnabledKey    = "golfin.dev.fpsOverlay";   // 1 shows it; survives relaunch
+        // Off by default since 2026-08-28 (Cesar: "not needed anymore, we may use it later").
+        // Nothing writes this pref, so the overlay is re-armed either by flipping this default
+        // back to 1 or by calling PlayerPrefs.SetInt("golfin.dev.fpsOverlay", 1) once.
+        const int    EnabledDefault = 0;
 
         static bool BotIsArmed()
         {
@@ -53,7 +57,7 @@ namespace Golfin.Dev
         {
             // Never draw over an automated run — IMGUI allocations would corrupt gcPerFrameB.
             if (BotIsArmed()) return;
-            if (PlayerPrefs.GetInt(EnabledKey, 1) == 0) return;
+            if (PlayerPrefs.GetInt(EnabledKey, EnabledDefault) == 0) return;
 
             var go = new GameObject("~DevFpsOverlay");
             DontDestroyOnLoad(go);
