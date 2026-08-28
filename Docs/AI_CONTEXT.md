@@ -133,6 +133,30 @@
 
 ## ✅ RECENTLY LANDED
 
+> **Rewards Center / gacha shell fixes — landed 2026-08-28 (direct fixes, no spec folder).**
+> Three commits, all verified in play mode through the player's own entry path (bottom-nav gacha
+> slot → Rewards Center → tab / chip):
+>
+> - `6066af8d9` — **the History chip is tab-aware.** It is a root-level child of GeneralShopScreen
+>   shared by all three tabs and was hardwired to `ScreenId.GachaHistory`, so a player browsing the
+>   STORE was shown the gacha pull log. STORE/GIFTS now toast `SHOP_HISTORY_COMING_SOON` instead of
+>   navigating. The real destination — the Store History screen, Figma `13509:2978` — is still
+>   deferred (`general_shop_ui` SPEC § Deferred) because **there is no purchase log**: ShopTransaction
+>   / ShopPurchaseService debit RP and apply the grant without recording anything, SaveData has no
+>   orders array, and `/shop/purchase` has no history endpoint. Point the STORE branch at
+>   `ScreenId.StoreHistory` when that ships.
+> - `a10f46318` — **GachaHistory and GachaPrizes get their bars back.** Neither id was in
+>   ScreenManager's `showBars`, so `HideBars()` ran and both screens rendered with no top bar and no
+>   navbar — their own TopUI / NavBarContainer children are empty placeholders because both specs
+>   say REUSE the persistent bars. Also adds their nav highlight (Gacha slot) and top-bar titles:
+>   history keeps REWARDS CENTER, prizes uses the new `GACHA_PRIZES_TITLE` (PRIZES / 景品).
+> - `08197df0d` — **the missing GACHA/STORE/GIFTS strip on Gacha History** (node `4079:18306`
+>   §L2.2.a). Cloned from the shipped Rewards Center strip, not rebuilt; the Filters block's
+>   LayoutElement was already sized for it (112 = 56 + 12 + 44). From history a tab means "leave and
+>   open the Rewards Center on that tab"; GIFTS grayed + non-interactable as elsewhere.
+>
+> **Next in this area:** the Store History screen + the purchase-log persistence layer behind it.
+
 > **`content_art_bundling` — THE ADMIN NOW INFORMS THE NEXT BUILD. Built 2026-08-28,
 > `READY_FOR_SELF_REVIEW`.** Spec + evidence: `Docs/Specs/Active/content_art_bundling/`.
 >
