@@ -227,6 +227,26 @@ namespace Golfin.Net
         public static string ShopPurchase => BaseUrl + "/shop/purchase";
 
         /// <summary>
+        /// POST → <c>{data:&lt;golfin_level_up result&gt;}</c> — level ONE character or club, at the
+        /// SERVER's price (progress_server_side SPEC §3.3).
+        ///
+        /// Body <c>{kind, ref_id, from_level, to_level, idempotency_key, build, expected_cost}</c>.
+        /// AUTH REQUIRED and the user id comes from the TOKEN, never the body. The COST is not in the
+        /// request either: the server sums it from the published <c>level_up_costs</c> catalog, debits
+        /// through <c>spend_pts</c> and records the new level in one transaction. <c>expected_cost</c>
+        /// is a GUARD — if it disagrees, the call is refused with <c>cost_changed</c> and NOTHING is
+        /// written.
+        ///
+        /// EVERY BUSINESS OUTCOME IS HTTP <b>200</b>, exactly like <see cref="ShopPurchase"/>:
+        /// <c>ok</c> · <c>insufficient</c> · <c>cost_changed</c> · <c>level_conflict</c> ·
+        /// <c>costs_missing</c> · <c>invalid_range</c> · <c>not_available</c> (with a <c>reason</c>).
+        ///
+        /// The <c>ok</c> payload is a SUPERSET of <see cref="PointsSpendResult"/>, so the balance folds
+        /// through <c>PointsService.ApplySpendResult</c> with the code that already exists.
+        /// </summary>
+        public static string ProgressLevelUp => BaseUrl + "/progress/level-up";
+
+        /// <summary>
         /// GET → <c>{data:{fetched_at, period, period_end_utc, entries:[…], player:{…}}}</c> — the ranked
         /// board for one period plus the caller's own row (leaderboard_backend SPEC §1).
         ///

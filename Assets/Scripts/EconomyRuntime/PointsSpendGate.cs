@@ -37,6 +37,23 @@ namespace Golfin.EconomyRuntime
         /// <summary>Shown when the server says the balance is short.</summary>
         public const string InsufficientMessage = "Not enough Reward Points";
 
+        // The two below belong to LEVEL-UPS, which since progress_server_side (§4) no longer go
+        // through this gate at all — they go through Golfin.Economy.ProgressService. They live HERE
+        // anyway, next to the two above, because the four strings are the complete set of "the server
+        // refused your spend" copy and splitting them across two files is how two of them end up
+        // saying different things. Plain English rather than a localisation key, matching its two
+        // neighbours; the whole set moves together in the localisation pass.
+
+        /// <summary>Shown when the published cost of a level-up run is not the one the modal
+        /// previewed. The modal re-prices at the server's number and the player answers again — so
+        /// this is an INVITATION to tap CONFIRM once more, not a failure.</summary>
+        public const string CostUpdatedMessage = "Level-up cost updated — confirm again";
+
+        /// <summary>Shown when the server's recorded level for a character or club is not the one this
+        /// client believes in. Unlike the other three the player cannot answer this by trying again;
+        /// the modal closes and the next inventory sync reconciles.</summary>
+        public const string LevelConflictMessage = "Your progress is out of date — reopening";
+
         private const float ToastSeconds = 2f;
 
         /// <summary>

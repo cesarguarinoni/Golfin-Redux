@@ -2,10 +2,13 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using Golfin.Content;
 using Golfin.Economy;
 using Golfin.EconomyRuntime;
+using Golfin.InventorySync;
 using Golfin.Roster;       // CharacterLevelUpDatabase, RarityHelper
 using Golfin.UI.Modals;
+using Golfin.UI.Toast;
 
 namespace Golfin.Inventory
 {
@@ -439,11 +442,120 @@ namespace Golfin.Inventory
             var template   = ClubDatabaseCSV.Instance == null ? null : ClubDatabaseCSV.Instance.GetClub(clubId);
             if (playerClub == null || template == null) return;
 
-            // Slice 2: server debit first, then the (unchanged) local commit. Flag OFF → inline and
-            // synchronous, exactly as before. This modal already spent in ONE transaction, so the
-            // server call maps 1:1 onto it.
-            PointsSpendGate.Spend(totalRPCost, SpendReasons.ClubLevelUp,
-                () => CommitLevelUps(playerClub, template));
+            // FLAG OFF — today's path, unchanged and byte-identical. PointsSpendGate.Spend
+            // short-circuits before PointsService is touched and runs the commit on this very stack
+            // frame, so modal timing does not shift.
+            if (!PointsBackendFlag.Enabled)
+            {
+                PointsSpendGate.Spend(totalRPCost, SpendReasons.ClubLevelUp,
+                    () => CommitLevelUps(playerClub, template));
+                return;
+            }
+
+            // FLAG ON — progress_server_side §4. ONE call that prices the whole previewed run from
+            // the PUBLISHED cost table, debits through spend_pts and RECORDS the new level. It
+            // replaces the plain debit rather than adding to it: the old call told the server an
+            // amount the client had computed, which is precisely the hole this closes. This modal
+            // already spent in ONE transaction, so the server call maps 1:1 onto it.
+            ProgressService.Instance.LevelUpAsync(
+                ProgressService.KindClub, clubId,
+                playerClub.currentLevel, previewLevel, totalRPCost, ContentBuildNumber.Current,
+                outcome => OnServerAnswered(outcome, playerClub, template));
+        }
+
+        /// <summary>
+        /// The five things the server can say about a level-up (progress_server_side §4). Identical
+        /// in shape to <c>LevelUpModalController.OnServerAnswered</c> — the two modals are mirrors and
+        /// this is one more pair of mirrored members, not a shared helper: they differ in the types
+        /// they carry, in what CommitLevelUps takes, and in which manager owns the level.
+        ///
+        /// <para>
+        /// Only <c>Ok</c> reaches <see cref="CommitLevelUps"/> — nothing is written locally on any
+        /// refusal.
+        /// </para>
+        /// </summary>
+        private void OnServerAnswered(ProgressLevelUpOutcome outcome,
+                                      PlayerClubData playerClub, ClubDataRuntime template)
+        {
+            if (outcome == null) { Toast(PointsSpendGate.OfflineMessage); return; }
+
+            switch (outcome.Verdict)
+            {
+                case ProgressLevelUpVerdict.Ok:
+                    CommitLevelUps(playerClub, template);
+                    return;
+
+                case ProgressLevelUpVerdict.CostChanged:
+                    RepriceFromServer(playerClub, outcome.Cost);
+                    return;
+
+                case ProgressLevelUpVerdict.LevelConflict:
+                    // Not answerable by trying again: this client's level is not the server's, so any
+                    // preview built on it is wrong too. Close, mark the inventory dirty, and let the
+                    // next sync's additive merge reconcile — the modal reopens on real state.
+                    Debug.LogWarning($"[ClubLevelUpModal] Server holds Lv {outcome.ServerLevel} for " +
+                                     $"'{clubId}', this client claimed Lv {playerClub.currentLevel}. " +
+                                     "Closing and resyncing.");
+                    Toast(PointsSpendGate.LevelConflictMessage);
+                    InventorySyncService.Instance?.MarkDirty();
+                    Hide();
+                    return;
+
+                case ProgressLevelUpVerdict.Insufficient:
+                    Toast(PointsSpendGate.InsufficientMessage);
+                    return;
+
+                default:
+                    // NotAvailable / Unavailable / Disabled. The player cannot act on the difference
+                    // between them and the log already carries it.
+                    Toast(PointsSpendGate.OfflineMessage);
+                    return;
+            }
+        }
+
+        /// <summary>
+        /// Rebuild the preview after a <c>cost_changed</c>, so the second CONFIRM pays.
+        ///
+        /// <para>
+        /// The DB is reloaded so the per-level numbers come from whatever overlay this launch has —
+        /// but the overlay is a next-launch effect (I5), so a cost published seconds ago is NOT in it
+        /// and re-summing locally would produce the same total the server just rejected and loop
+        /// forever. The RUN TOTAL therefore comes from the server's answer, which is authoritative by
+        /// construction: it is the sum <c>golfin_level_up</c> computed for exactly this
+        /// <c>from → to</c> range. Here it is also the number <see cref="CommitLevelUps"/> hands to
+        /// <c>RewardPointsManager.SpendPoints</c>, so the local debit matches the ledger exactly.
+        /// </para>
+        /// </summary>
+        private void RepriceFromServer(PlayerClubData playerClub, int serverCost)
+        {
+            int target = previewLevel;
+
+            var db = CharacterLevelUpDatabase.Instance;
+            if (db != null) db.Reload();
+
+            previewLevel         = playerClub.currentLevel;
+            previewTotalSPEarned = playerClub.totalSPEarned;
+            totalRPCost          = 0;
+
+            for (int level = playerClub.currentLevel + 1; level <= target; level++)
+            {
+                previewLevel          = level;
+                previewTotalSPEarned += db == null ? 0 : db.GetSPReward(level);
+            }
+
+            totalRPCost = serverCost;
+
+            Debug.Log($"[ClubLevelUpModal] Cost changed for '{clubId}' Lv {playerClub.currentLevel} → " +
+                      $"{previewLevel}: the published total is {serverCost} RP. Preview rebuilt; " +
+                      "the next CONFIRM pays that.");
+
+            RefreshDisplay();
+            Toast(PointsSpendGate.CostUpdatedMessage);
+        }
+
+        private static void Toast(string message)
+        {
+            if (ToastController.Instance != null) ToastController.Instance.Show(message, 2f);
         }
 
         /// <summary>The previously-inline body of <see cref="OnConfirmClicked"/>, now gated on the

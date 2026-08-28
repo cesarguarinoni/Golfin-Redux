@@ -316,11 +316,15 @@ namespace Golfin.Content.Tests
         }
 
         [Test]
-        public void TheRequestListNamesEverySevenCatalog()
+        public void TheRequestListNamesEveryCatalogThisBuildKnows()
         {
             // A typo here is invisible: an unknown catalog name is ignored server-side (200, not
             // 400), so a misspelled catalog just never arrives and the game runs bundled forever.
-            Assert.AreEqual("texts,clubs,characters,items,bags,balls,shop_catalog",
+            //
+            // `level_up_costs` joined the list on 2026-08-28 (progress_server_side §2). It is the
+            // one catalog the SERVER also prices from, so a client that stopped asking for it would
+            // preview bundled costs and be answered `cost_changed` on every single level-up.
+            Assert.AreEqual("texts,clubs,characters,items,bags,balls,shop_catalog,level_up_costs",
                             ContentCatalogs.RequestList);
         }
     }

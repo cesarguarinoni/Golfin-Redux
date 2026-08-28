@@ -2,20 +2,32 @@
 using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
+using Golfin.Content;
 
 namespace Golfin.Roster
 {
     /// <summary>
-    /// Loads universal level-up progression from CSV
-    /// All characters share the same level costs and SP rewards
+    /// Loads universal level-up progression from CSV.
+    /// All characters AND clubs share the same level costs and SP rewards
+    /// (ClubLevelUpModalController reads this database too).
     /// Stat caps are determined by rarity (see RarityStatCaps.cs)
-    /// 
+    ///
     /// CSV Format (LevelUpCosts.csv):
     /// level,cost_r,sp_reward
     /// 1,100,1
     /// 2,100,1
     /// ...
     /// 199,300000,1
+    ///
+    /// <para>
+    /// OVERLAID BY THE <c>level_up_costs</c> CONTENT CATALOG since progress_server_side (§2) — the
+    /// standard treatment (bundled row + patch by id, appended rows admitted, <c>RequireReady</c> so
+    /// an EditMode run reads bundled only). What is NOT standard, and is the reason this overlay
+    /// matters more than the others: the SERVER prices from the same catalog. A stale client previews
+    /// the bundled cost and is answered <c>cost_changed</c>; a current one previews the number it will
+    /// actually be charged. The overlay is a next-launch effect (I5), so a cost published mid-session
+    /// shows up on the next boot — until then the server's refusal is what keeps the two honest.
+    /// </para>
     /// </summary>
     public class CharacterLevelUpDatabase : MonoBehaviour
     {
@@ -48,13 +60,35 @@ namespace Golfin.Roster
             }
         }
         
+        /// <summary>Re-read the bundled CSV, applying whatever the content overlay currently holds.
+        /// Called by the level-up modals after a <c>cost_changed</c> refusal so the preview is
+        /// rebuilt against the published costs rather than the ones the player was already
+        /// shown.</summary>
+        public void Reload()
+        {
+            if (levelUpCostsCsv == null)
+            {
+                Debug.LogError("[CharacterLevelUpDatabase] Reload: CSV file not assigned in inspector!");
+                return;
+            }
+            LoadFromCSV(levelUpCostsCsv.text);
+        }
+
         /// <summary>
-        /// Load level-up progression from CSV content
+        /// Load level-up progression from CSV content, patched by the <c>level_up_costs</c> overlay
+        /// when one has been installed.
         /// </summary>
         public void LoadFromCSV(string csvContent)
         {
             levelData.Clear();
-            
+
+            ContentCatalog? overlay = ContentCatalogStore.RequireReady(nameof(CharacterLevelUpDatabase))
+                ? ContentCatalogStore.Catalog(ContentCatalogs.LevelUpCosts)
+                : null;
+
+            var seen = new HashSet<int>();
+            int overlaid = 0, deactivated = 0;
+
             string[] lines = csvContent.Split('\n');
             if (lines.Length < 2)
             {
@@ -97,12 +131,32 @@ namespace Golfin.Roster
                 
                 try
                 {
+                    int level = int.Parse(values[headerDict["level"]].Trim());
+                    seen.Add(level);
+
+                    ContentRow? patch = null;
+                    if (overlay != null) overlay.ById.TryGetValue(level.ToString(), out patch);
+
+                    var fields = ContentFields.Csv(values, headerDict, patch);
+
+                    // I6 — a deactivated cost row is a level nobody can buy. The SERVER honours it
+                    // the same way (its join requires is_active), so dropping it here is what keeps
+                    // the preview and the charge agreeing: the modal stops offering the level rather
+                    // than offering one the server will refuse with costs_missing.
+                    if (!fields.IsActive)
+                    {
+                        deactivated++;
+                        continue;
+                    }
+
                     var data = new CharacterLevelUpData(
-                        level: int.Parse(values[headerDict["level"]].Trim()),
-                        cost_r: int.Parse(values[headerDict["cost_r"]].Trim()),
-                        sp_reward: int.Parse(values[headerDict["sp_reward"]].Trim())
+                        level:     level,
+                        cost_r:    fields.GetInt("cost_r"),
+                        sp_reward: fields.GetInt("sp_reward")
                     );
-                    
+
+                    if (patch != null) overlaid++;
+
                     levelData[data.level] = data;
                     rowCount++;
                 }
@@ -111,9 +165,35 @@ namespace Golfin.Roster
                     Debug.LogWarning($"[CharacterLevelUpDatabase] Error parsing row {i}: {e.Message}");
                 }
             }
-            
+
+            // APPEND — an overlay row for a level the bundled CSV does not carry. This is how a
+            // raised maxLevel becomes buyable without a build: the ref's maxLevel and the cost rows
+            // above 240 are published together, and both halves land on the next launch.
+            if (overlay != null)
+            {
+                foreach (var row in overlay.Rows)
+                {
+                    if (!int.TryParse(row.Id, out int level)) continue;
+                    if (seen.Contains(level)) continue;
+
+                    var fields = ContentFields.OverlayOnly(row);
+                    if (!fields.IsActive) { deactivated++; continue; }
+
+                    levelData[level] = new CharacterLevelUpData(
+                        level:     level,
+                        cost_r:    fields.GetInt("cost_r"),
+                        sp_reward: fields.GetInt("sp_reward"));
+                    rowCount++;
+                    overlaid++;
+                }
+            }
+
             isLoaded = true;
-            Debug.Log($"[CharacterLevelUpDatabase] Loaded {rowCount} level-up records from CSV");
+            Debug.Log($"[CharacterLevelUpDatabase] Loaded {rowCount} level-up records" +
+                      (overlay == null
+                          ? " — BUNDLED only, no level_up_costs overlay this launch."
+                          : $" — overlay v{overlay.Version}: {overlaid} row(s) patched/appended, " +
+                            $"{deactivated} deactivated (unbuyable, as the server also treats them)."));
         }
         
         /// <summary>

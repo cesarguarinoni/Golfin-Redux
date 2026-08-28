@@ -233,4 +233,136 @@ namespace Golfin.Economy
             return $"{Status}{(string.IsNullOrEmpty(RefId) ? "" : $" '{RefId}'")}";
         }
     }
+
+    /// <summary>
+    /// <c>POST /api/v1/progress/level-up</c> → <c>{data: &lt;golfin_level_up result&gt;}</c>.
+    ///
+    /// Field set transcribed from the migration
+    /// (<c>2026_08_28_golfin_progress.sql</c>, <c>public.golfin_level_up</c>) and the router's
+    /// docstring, not guessed. Seven statuses, and EVERY ONE arrives as HTTP <b>200</b>:
+    ///
+    ///   • <c>ok</c>             — debited and RECORDED. Carries the whole
+    ///                             <see cref="PointsSpendResult"/> field set (so the balance folds
+    ///                             with the code that already exists) plus the new
+    ///                             <see cref="Level"/> and what it <see cref="Cost"/>.
+    ///   • <c>insufficient</c>   — short. NOTHING was written; the same key can succeed later.
+    ///   • <c>cost_changed</c>   — the sum the modal showed is not the published one.
+    ///                             <see cref="Cost"/> is the real one. Nothing written, so the modal
+    ///                             re-prices and the player answers again.
+    ///   • <c>level_conflict</c> — the server's recorded level is not the claimed
+    ///                             <see cref="FromLevel"/>. <see cref="ServerLevel"/> is the truth.
+    ///   • <c>costs_missing</c>  — a level in the range has no published, active cost row;
+    ///                             <see cref="Level"/> names the first one. A CONTENT bug.
+    ///   • <c>invalid_range</c>  — <see cref="Reason"/>: order | step_cap | max_level.
+    ///   • <c>not_available</c>  — <see cref="Reason"/>: disabled | ref | min_build |
+    ///                             ref_max_level | invalid_cost.
+    ///
+    /// So <see cref="Status"/>, never the status code, is what distinguishes a refusal from an
+    /// unreachable server — the same rule <see cref="ShopPurchaseResult"/> already carries, for the
+    /// same reason.
+    ///
+    /// <para>
+    /// <see cref="Grandfathered"/> is the visible half of the decision of record: the FIRST server
+    /// level-up for a ref seeds the record at the level the client claimed, because no honest
+    /// server-side history of it exists. <see cref="BlobLevel"/> rides along ONLY when the inventory
+    /// blob disagreed with that claim — it is a diagnostic, never a refusal.
+    /// </para>
+    /// </summary>
+    public sealed class ProgressLevelUpResult
+    {
+        [JsonProperty("status")]     public string Status;
+
+        // ── the level-up ──────────────────────────────────────────────────────────
+        [JsonProperty("kind")]       public string Kind;
+        [JsonProperty("ref_id")]     public string RefId;
+
+        /// <summary>The level the server now RECORDS for this ref. On <c>costs_missing</c> this is
+        /// instead the first level with no published cost row — the two never co-occur.</summary>
+        [JsonProperty("level")]      public int Level;
+
+        [JsonProperty("from_level")] public int FromLevel;
+
+        /// <summary>What the run ACTUALLY cost, summed from published content. On
+        /// <c>cost_changed</c> this is the published sum the modal must re-price at.</summary>
+        [JsonProperty("cost")]       public int Cost;
+
+        /// <summary>True when this call SEEDED the record from the client's claim (the decision of
+        /// record). False on every subsequent level-up of the same ref.</summary>
+        [JsonProperty("grandfathered")] public bool Grandfathered;
+
+        /// <summary>Present only when a grandfathered seed disagreed with the inventory blob. Logged,
+        /// never acted on — a malformed or stale blob must not cost the player a level-up.</summary>
+        [JsonProperty("blob_level")] public int? BlobLevel;
+
+        /// <summary>Set on <c>level_conflict</c> only: the level the server actually holds.</summary>
+        [JsonProperty("server_level")] public int ServerLevel;
+
+        /// <summary>Set on <c>not_available</c> and <c>invalid_range</c> only.</summary>
+        [JsonProperty("reason")]     public string Reason;
+
+        // ── the spend, verbatim from spend_pts ────────────────────────────────────
+        [JsonProperty("spent")]         public int Spent;
+        [JsonProperty("from_activity")] public int FromActivity;
+        [JsonProperty("from_gift")]     public int FromGift;
+        [JsonProperty("requested")]     public int Requested;
+        [JsonProperty("shortfall")]     public int Shortfall;
+        [JsonProperty("activity_pts")]  public int ActivityPts;
+        [JsonProperty("gift_pts")]      public int GiftPts;
+        [JsonProperty("total_points")]  public int TotalPoints;
+        [JsonProperty("replayed")]      public bool Replayed;
+
+        [JsonIgnore] public bool IsOk => Is("ok");
+        [JsonIgnore] public bool IsInsufficient => Is("insufficient");
+        [JsonIgnore] public bool IsCostChanged => Is("cost_changed");
+        [JsonIgnore] public bool IsLevelConflict => Is("level_conflict");
+        [JsonIgnore] public bool IsCostsMissing => Is("costs_missing");
+        [JsonIgnore] public bool IsInvalidRange => Is("invalid_range");
+        [JsonIgnore] public bool IsNotAvailable => Is("not_available");
+
+        /// <summary>True when the operator has pulled the cost table or all remote content — the one
+        /// <c>not_available</c> reason that is a deliberate act rather than a data problem.</summary>
+        [JsonIgnore] public bool IsDisabled
+            => IsNotAvailable && string.Equals(Reason, "disabled", System.StringComparison.Ordinal);
+
+        private bool Is(string s) => string.Equals(Status, s, System.StringComparison.Ordinal);
+
+        /// <summary>
+        /// The spend half of this payload as a <see cref="PointsSpendResult"/>, so
+        /// <c>PointsService.ApplySpendResult</c> can fold the balance with the code it already has.
+        /// Identical in shape and in reasoning to <see cref="ShopPurchaseResult.ToSpendResult"/>:
+        /// <c>status</c> is carried across rather than forced to "ok", because an
+        /// <c>insufficient</c> level-up carries real balances too.
+        /// </summary>
+        public PointsSpendResult ToSpendResult() => new PointsSpendResult
+        {
+            Status       = IsOk || IsInsufficient ? Status : "ok",
+            Spent        = Spent,
+            FromActivity = FromActivity,
+            FromGift     = FromGift,
+            Requested    = Requested,
+            Shortfall    = Shortfall,
+            ActivityPts  = ActivityPts,
+            GiftPts      = GiftPts,
+            TotalPoints  = TotalPoints,
+            Replayed     = Replayed
+        };
+
+        public override string ToString()
+        {
+            if (IsOk)
+                return $"ok {Kind} '{RefId}' → Lv {Level} for {Cost} RP" +
+                       $"{(Grandfathered ? " (grandfathered seed)" : "")}" +
+                       $"{(BlobLevel.HasValue ? $" [blob said Lv {BlobLevel.Value}]" : "")}" +
+                       $" → RP={TotalPoints}{(Replayed ? " (idempotent replay)" : "")}";
+            if (IsInsufficient)
+                return $"insufficient (requested={Requested}, short {Shortfall}, have {TotalPoints})";
+            if (IsCostChanged)
+                return $"cost_changed → {Cost} RP";
+            if (IsLevelConflict)
+                return $"level_conflict (server is at Lv {ServerLevel}, client claimed Lv {FromLevel})";
+            if (IsCostsMissing)
+                return $"costs_missing (no published cost for Lv {Level})";
+            return $"{Status}{(string.IsNullOrEmpty(Reason) ? "" : $" ({Reason})")}";
+        }
+    }
 }
