@@ -1,18 +1,13 @@
-READY_FOR_SELF_REVIEW
+SELF_REVIEW_PASS
 
-Red-team iter-3 ESCALATED (no defect; it declined to rule on shipping an untested
-live-on-save payout path). Cesar chose: add the vitest suite first.
-
-Done. `Tools/admin-dashboard` now has vitest (`npm test`) and 36 tests over the
-pure surfaces — contentValidate (the modes rules + the versus_1v1-only drift
-warning + row-id bounds), the Rewards number guards, and the golfin_mode_fees row
-mapping. Tripwire-verified: generalising the drift warning fails exactly the test
-that forbids it; allowing a negative entryFee fails too; both reverted -> 36 pass.
-
-Also closed the evidence gap red-team could not reach: all six malformed PATCHes
-fired at the DEPLOYED /api/rewards route were refused (-5, 1.5, "20", negative
-caps, unknown action -> 404 with NO row created), and game_point_actions read
-back at baseline with 4 rows.
-
-Scope note for the gates: the dashboard diff since the last deploy is test infra
-only. Redeployed anyway so the live stamp still equals HEAD.
+Iter-4 self-review PASS. The vitest suite that Cesar chose over ship-with-fast-
+follow exists and does what it says: `npm test` runs 3 files / 36 tests green;
+I reproduced the drift-generalisation tripwire myself (test line 156 fires with
+exactly the expected message, then reverted the edit, md5 back to
+`4ca2554…`, `git diff` empty). The two characterisation-test files' restated
+`checkNumber` and `mirrorModeFees` mapping match the current source byte-for-
+byte, and their caveats are in the test files themselves. Every SPEC §6 row
+re-ran clean this pass; rollback-mirror fix intact; disk == deployed
+(HEAD == 04b7bbf84 == wrangler `a28a1a56…` last row); API v59 unchanged; scope
+bans clean; gates 14/16/17/18/19/21 do not engage; `texts` drift is confirmed
+pre-existing. Handing to red-team.
