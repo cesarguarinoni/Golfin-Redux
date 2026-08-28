@@ -468,3 +468,32 @@ per-loader would be redundant). Non-gating.
    proper attribution, not a docs-only close-out.
 4. `_sprites` unbounded (carried from iter-2) and hint-text sharpening remain
    open follow-ups, as previously recorded.
+
+---
+
+# Architect Review — round 2, after ARCHITECT_DECISION §1 (Option A)
+
+Architect (Cowork), 2026-08-28. Verified in the repo, not from the report:
+
+- `TryGetOrLoadCached` (TournamentArtService.cs:150) reuses the existing `Decode()` (:400,
+  also used by the async routine at :288/:336) — one bytes→sprite path. Its only non-test
+  caller is `CatalogArtCache` (CatalogArt.cs:138); banners/tournaments untouched.
+- Cap: `MaxSyncDecodesPerSession = 24` const with the decision's rationale in the doc comment;
+  over-cap warning present. Stopwatch summary logs files / ms / MB (E2E line: 1 file, 3.1 ms,
+  0.08 MB).
+- Tripwire demonstrated per PIPELINE_HARDENING §20 — diff quoted in the report, red observed,
+  byte-identical revert.
+- E2E on the kept fixture: launch 1 withheld + downloaded; launch 2 renders, available 11 → 12,
+  200/200 sampled pixels match the uploaded image. Sweep 1877/1874/0/3; Tools tests 26 OK;
+  dashboard build green; no sprite consumer in the diff (§2 held).
+
+Both deviations accepted: the `Application.isPlaying` guard on `ScheduleSummary` (diagnostics
+must never be able to break resolution) and the third `out int bytesRead` (an honest MB number
+beats an estimated one).
+
+Open question answered: agreed and recorded — the 24 cap's ceiling is calibrated on one
+thumbnail; re-measure with full-body art before ever raising it. No action now; the set is
+self-draining by design.
+
+**Verdict: PASS.** Ready for Cesar's approval → DONE → move to Completed/. This unblocks
+`content_art_bundling` (Queued, SPEC_READY): git mv to Active and kick off.
