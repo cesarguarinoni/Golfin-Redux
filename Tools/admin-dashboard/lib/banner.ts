@@ -130,7 +130,8 @@ export const PLACEMENT_LABEL: Record<BannerPlacement, string> = {
 /**
  * The same rule the endpoint applies (`backend/routers/banners.py::_is_live`):
  * active AND started AND not ended. LIVE is the only state a player can see;
- * every other state means the slot shows its bundled sprite.
+ * in every other state the slot is HIDDEN in the client and the surrounding UI
+ * closes up (game_banners amendment A1) — never a fall back to bundled art.
  *
  * A bound that is PRESENT but unparseable returns "OFF" rather than being
  * ignored — that mirrors the endpoint failing closed, so the panel never claims
@@ -288,9 +289,10 @@ export function validateBannerInput(input: BannerInput): string | null {
   }
 
   // A DRAFT may have no art. A LIVE banner with no art is a slot that silently
-  // does nothing — the client resolves nothing and leaves the bundled sprite.
+  // does nothing — the client resolves no URL, so it hides the slot exactly as
+  // it would with no row at all.
   if (input.isActive && !input.imageUrlEn && !input.imageUrlJa) {
-    return "An active banner needs at least one image (EN or JA) — otherwise it publishes a slot that shows nothing new.";
+    return "An active banner needs at least one image (EN or JA) — otherwise it publishes a row the client cannot resolve, and the slot stays hidden.";
   }
 
   for (const [what, url] of [

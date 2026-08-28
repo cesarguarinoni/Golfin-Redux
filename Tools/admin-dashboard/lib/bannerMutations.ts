@@ -42,7 +42,8 @@ export type BannerLocale = "en" | "ja";
 
 /**
  * Switching a LIVE banner off is player-facing and instant — the next client
- * fetch drops it and the slot snaps back to the bundled sprite. Same shape as
+ * fetch drops it and the slot disappears, with the surrounding UI closing up.
+ * Same shape as
  * the tournament editor's confirmSlug: re-type the label to mean it.
  *
  * Only *deactivation* is guarded. Turning one ON, or editing a draft, is
@@ -250,7 +251,7 @@ export async function setBannerActive(
   return ok(
     active
       ? `"${existing.label}" is on — players see it on their next launch.`
-      : `"${existing.label}" is off — the slot falls back to the bundled sprite.`
+      : `"${existing.label}" is off — the slot is hidden on the next fetch.`
   );
 }
 

@@ -4,8 +4,10 @@
 // warms from the server off the critical path. Nothing on the boot path waits
 // on a socket — a cold launch in airplane mode behaves exactly as it does today.
 //
-// "No banner" ALWAYS means the bundled sprite stays on screen. There is no
-// empty state anywhere in this file.
+// "No banner" ALWAYS means the slot is HIDDEN in the client and the surrounding
+// UI closes up (game_banners amendment A1, Cesar 2026-08-17). The bundled sprite
+// is an authoring placeholder a player never sees — it is never a runtime
+// fallback. See BannerSlotBinder for the behaviour of record.
 // ─────────────────────────────────────────────────────────────────────────────
 #nullable enable
 using System;
@@ -150,7 +152,8 @@ namespace Golfin.Banners
         ///   <item>Still nothing → <b>no banner</b>.</item>
         /// </list>
         /// <para>
-        /// "No banner" always means the bundled sprite stays on screen. There is no empty state.
+        /// "No banner" always means the slot is HIDDEN and the surrounding UI closes up — never
+        /// a fall back to the bundled sprite, which is an authoring placeholder only.
         /// </para>
         /// </summary>
         public bool TryGet(BannerPlacement placement, out BannerDefinition banner)
@@ -177,8 +180,8 @@ namespace Golfin.Banners
         /// socket, so it is directly unit-testable. <see cref="TryGet"/> is the only caller and
         /// supplies the live language and clock.
         /// </summary>
-        /// <returns>The URL to draw, or null for "no banner" — which always means the bundled
-        /// sprite stays on screen.</returns>
+        /// <returns>The URL to draw, or null for "no banner" — which always means the slot is
+        /// hidden.</returns>
         internal static string? ResolveImageUrl(
             string? imageUrlEn,
             string? imageUrlJa,
@@ -282,8 +285,7 @@ namespace Golfin.Banners
                 next[placement] = new Entry
                 {
                     // Refuse off-allowlist art HERE as well as at download time, so a refused URL
-                    // never even reaches the resolution ladder and the slot falls straight back to
-                    // its bundled sprite.
+                    // never even reaches the resolution ladder and the slot is simply hidden.
                     ImageUrlEn   = Accept(row.ImageUrlEn),
                     ImageUrlJa   = Accept(row.ImageUrlJa),
                     LinkUrl      = BannerPolicy.IsLinkAllowed(row.LinkUrl) ? row.LinkUrl : null,
@@ -342,7 +344,7 @@ namespace Golfin.Banners
             {
                 BannerSource.Server    => "SERVER (live fetch)",
                 BannerSource.DiskCache => "DISK CACHE (previous fetch)",
-                _                      => "NONE (bundled sprites)",
+                _                      => "NONE (no banners; every slot hidden)",
             };
             Debug.Log($"{Tag} Banner source: {label}. Placements={_entries.Count}");
         }

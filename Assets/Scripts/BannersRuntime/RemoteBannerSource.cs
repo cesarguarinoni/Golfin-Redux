@@ -17,7 +17,7 @@ namespace Golfin.Banners
     /// <summary>Where the banner set the game is currently showing came from.</summary>
     public enum BannerSource
     {
-        /// <summary>Nothing fetched and nothing cached — every slot shows its bundled sprite.</summary>
+        /// <summary>Nothing fetched and nothing cached — every slot is hidden.</summary>
         None,
         /// <summary>The JSON mirrored to disk by a previous successful fetch.</summary>
         DiskCache,
@@ -82,7 +82,7 @@ namespace Golfin.Banners
             }
         }
 
-        /// <summary>Test/debug helper — drop the cache so the next boot starts from bundled art.</summary>
+        /// <summary>Test/debug helper — drop the cache so the next boot starts with no banners at all.</summary>
         public static void ClearCache()
         {
             try { if (File.Exists(CachePath)) File.Delete(CachePath); }
@@ -95,7 +95,7 @@ namespace Golfin.Banners
         /// GET the live banner set. On success the RAW body is mirrored to disk BEFORE mapping, so
         /// even a payload this build cannot map is available to a later build that can.
         /// <paramref name="onDone"/> receives null on any failure — the caller keeps its current set,
-        /// which at worst means every slot keeps its bundled sprite.
+        /// which at worst means every slot stays hidden.
         /// </summary>
         public static IEnumerator FetchRoutine(Action<string?> onDone)
         {
@@ -112,11 +112,11 @@ namespace Golfin.Banners
                 }
                 else
                 {
-                    // Expected on a cold launch in airplane mode. Warning, not error: falling back
-                    // to the bundled sprite is a designed path, not a malfunction.
+                    // Expected on a cold launch in airplane mode. Warning, not error: a hidden
+                    // slot is a designed path, not a malfunction.
                     Debug.LogWarning(
                         $"{Tag} Banner fetch failed ({result.ErrorKind}, HTTP {result.StatusCode}): " +
-                        $"{result.ErrorMessage}. Keeping the cached/bundled banners.");
+                        $"{result.ErrorMessage}. Keeping the currently cached banners.");
                 }
             });
 

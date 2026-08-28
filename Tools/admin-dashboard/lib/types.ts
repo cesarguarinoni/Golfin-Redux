@@ -266,7 +266,8 @@ export type BannerPlacement = "home_promo" | "rankings" | "store" | "tournament_
 
 /**
  * Derived from is_active + the schedule window — never stored. LIVE is the only
- * state a player can see; the other three all mean "the bundled sprite shows".
+ * state a player can see; the other three all mean "the slot is hidden and the
+ * surrounding UI closes up", per the A1 note on BannerPlacement above.
  */
 export type BannerState = "LIVE" | "SCHEDULED" | "EXPIRED" | "OFF";
 

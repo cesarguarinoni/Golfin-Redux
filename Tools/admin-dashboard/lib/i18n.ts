@@ -328,12 +328,12 @@ export const DICT = {
   "ban.loadFailed": { en: "Failed to load banners", ja: "バナーの読み込みに失敗しました" },
   "ban.switchFailed": { en: "Failed to switch the banner", ja: "バナーの切り替えに失敗しました" },
   "ban.liveNote": {
-    en: "LIVE is the only state a player can see — every other state means the slot shows its bundled sprite.",
-    ja: "プレイヤーに表示されるのは LIVE のみ。それ以外の状態では、同梱のスプライトが表示される。",
+    en: "LIVE is the only state a player can see — in every other state the slot is hidden in the game and the surrounding UI closes up.",
+    ja: "プレイヤーに表示されるのは LIVE のみ。それ以外の状態では、ゲーム側で枠自体が非表示になり、周囲の UI が詰まる。",
   },
   "ban.onePerPlacement": {
-    en: "At most one banner per placement is served, and the bundled sprite is always the fallback.",
-    ja: "1 つの掲載枠につき配信されるバナーは最大 1 件。フォールバックは常に同梱スプライト。",
+    en: "At most one banner per placement is served, and a placement with nothing live is hidden in the game.",
+    ja: "1 つの掲載枠につき配信されるバナーは最大 1 件。配信中のものがない掲載枠は、ゲーム側で非表示になる。",
   },
   "ban.activate": { en: "Activate", ja: "有効にする" },
   "ban.deactivate": { en: "Deactivate", ja: "無効にする" },
@@ -481,8 +481,8 @@ export const DICT = {
   "art.remove": { en: "Remove", ja: "画像を外す" },
   "art.removeBand": { en: "Remove band {n}", ja: "{n} 番目の順位帯を削除" },
   "ban.artNone": {
-    en: "none — falls back to the other locale, then the bundled sprite",
-    ja: "なし — 他言語の画像、次に同梱スプライトにフォールバックする",
+    en: "none — falls back to the other locale; with neither, the slot is hidden",
+    ja: "なし — 他言語の画像にフォールバックする。どちらもない場合、枠は非表示になる",
   },
   "ban.placement.home_promo": { en: "Home — promo strip", ja: "ホーム — プロモ帯" },
   "ban.placement.rankings": { en: "Rankings — banner", ja: "ランキング — バナー" },
@@ -528,12 +528,12 @@ export const DICT = {
   "te.noArtUploaded": { en: "no art uploaded", ja: "画像未アップロード" },
   "te.tapsOpen": { en: "taps open", ja: "タップで開く:" },
   "ban.liveConfirmHint": {
-    en: "Switching it off is instant and player-facing — the slot snaps back to the bundled sprite on the next fetch. Re-type the label to confirm.",
-    ja: "無効にすると即座にプレイヤー側へ反映され、次回の取得で枠は同梱スプライトに戻る。確認のためラベルを再入力してください。",
+    en: "Switching it off is instant and player-facing — on the next fetch the slot disappears and the surrounding UI closes up. Re-type the label to confirm.",
+    ja: "無効にすると即座にプレイヤー側へ反映され、次回の取得で枠は消え、周囲の UI が詰まる。確認のためラベルを再入力してください。",
   },
   "ban.activeHint": {
-    en: "Separate from the schedule window below. Active plus inside the window is the only combination a player sees; everything else leaves the bundled sprite on screen.",
-    ja: "下の配信期間とは別の設定。有効かつ期間内のときだけプレイヤーに表示され、それ以外は同梱スプライトのままになる。",
+    en: "Separate from the schedule window below. Active plus inside the window is the only combination a player sees; in every other case the slot is hidden and the surrounding UI closes up.",
+    ja: "下の配信期間とは別の設定。有効かつ期間内のときだけプレイヤーに表示され、それ以外の場合は枠が非表示になり、周囲の UI が詰まる。",
   },
   "ban.labelHint": {
     en: "So you can find the row. Never sent to the client and never shown to a player — all player-visible copy is baked into the artwork.",
@@ -549,8 +549,8 @@ export const DICT = {
   },
   "ban.assignedNow": { en: "Right now that is {count} tournament(s):", ja: "現在の対象は {count} 件:" },
   "ban.artHint": {
-    en: "One image per locale — there are no text fields, so all copy is baked into the artwork. A JP player gets the JA image and falls back to EN when it is absent (and vice versa); with neither, the slot keeps its bundled {sprite}. JPG / PNG / WebP · max {maxKb} KB · target {w}×{h}. Uploads go to the game-banners bucket under an immutable content-hashed name, so the URL is its own cache key.",
-    ja: "言語ごとに 1 枚。テキスト項目はないため、文言はすべて画像に焼き込む。日本語のプレイヤーには JA 画像が表示され、なければ EN にフォールバックする（逆も同様）。どちらもない場合は同梱の {sprite} のまま。JPG / PNG / WebP · 最大 {maxKb} KB · 推奨 {w}×{h}。アップロード先は game-banners バケットで、内容ハッシュに基づく不変の名前が付くため、URL 自体がキャッシュキーになる。",
+    en: "One image per locale — there are no text fields, so all copy is baked into the artwork. A JP player gets the JA image and falls back to EN when it is absent (and vice versa); with neither, the slot is hidden in the game — the bundled {sprite} is an authoring placeholder a player never sees. JPG / PNG / WebP · max {maxKb} KB · target {w}×{h}. Uploads go to the game-banners bucket under an immutable content-hashed name, so the URL is its own cache key.",
+    ja: "言語ごとに 1 枚。テキスト項目はないため、文言はすべて画像に焼き込む。日本語のプレイヤーには JA 画像が表示され、なければ EN にフォールバックする（逆も同様）。どちらもない場合、ゲーム側では枠が非表示になる — 同梱の {sprite} は編集用のプレースホルダーで、プレイヤーには表示されない。JPG / PNG / WebP · 最大 {maxKb} KB · 推奨 {w}×{h}。アップロード先は game-banners バケットで、内容ハッシュに基づく不変の名前が付くため、URL 自体がキャッシュキーになる。",
   },
   "ban.deleteAssignedWarn": {
     en: "Assigned to {count} tournament(s):",
@@ -567,8 +567,8 @@ export const DICT = {
   "ban.deleteConfirmType": { en: "Type", ja: "入力:" },
   "ban.count": { en: "{live} live · {total} total", ja: "配信中 {live} 件 · 全 {total} 件" },
   "ban.howItWorks": {
-    en: "The game picks the highest sort order that is active and inside its window, then the newest. A placement with nothing live shows exactly what it shows today — nothing here can make a slot go blank. Players pick this up on their next launch, or on their next visit to the screen (the client refetches on screen entry, at most once a minute).",
-    ja: "ゲームは、有効かつ期間内のもののうち表示順が最大のもの、次に新しいものを選ぶ。配信中のものがない掲載枠は現状のまま表示され、ここでの操作で枠が空になることはない。プレイヤーには次回の起動時、または次に画面を開いたときに反映される（クライアントは画面表示時に、最大 1 分に 1 回再取得する）。",
+    en: "The game picks the highest sort order that is active and inside its window, then the newest. With nothing live the slot is removed and the surrounding UI closes up — leaving a placement empty is how you switch a banner off. Players pick this up on their next launch, or on their next visit to the screen (the client refetches on screen entry, at most once a minute).",
+    ja: "ゲームは、有効かつ期間内のもののうち表示順が最大のもの、次に新しいものを選ぶ。配信中のものがなければ枠自体が取り除かれ、周囲の UI が詰まる — 掲載枠を空にすることが、そのバナーをオフにする方法。プレイヤーには次回の起動時、または次に画面を開いたときに反映される（クライアントは画面表示時に、最大 1 分に 1 回再取得する）。",
   },
   "ban.newBanner": { en: "+ New banner", ja: "＋ 新規バナー" },
   "ban.col.art": { en: "Art", ja: "画像" },
@@ -580,7 +580,7 @@ export const DICT = {
   "ban.noExpiry": { en: "no expiry", ja: "無期限" },
   "ban.noWindow": { en: "no window", ja: "期間指定なし" },
   "ban.assignedTo": { en: "Assigned to {count} tournament(s)", ja: "{count} 件のトーナメントに割り当て済み" },
-  "ban.emptyPlacement": { en: "Nothing scheduled — this slot shows the bundled {sprite}.", ja: "予定なし — この枠は同梱の {sprite} を表示する。" },
+  "ban.emptyPlacement": { en: "Nothing scheduled — this slot is hidden in the game. The bundled {sprite} is an authoring placeholder a player never sees.", ja: "予定なし — この枠はゲーム側では非表示になる。同梱の {sprite} は編集用のプレースホルダーで、プレイヤーには表示されない。" },
   "ban.confirmDeactivate": {
     en: "\"{label}\" is LIVE — players are seeing it right now.\nRe-type the label to switch it off:",
     ja: "「{label}」は配信中です — 現在プレイヤーに表示されています。\n無効にするにはラベルを再入力してください:",
