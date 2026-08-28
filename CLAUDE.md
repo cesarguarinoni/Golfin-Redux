@@ -85,6 +85,20 @@ These rules convert previously-advisory lessons into hard stops. Full spec: `Doc
 13. **Fast single-modal render harness** — boot → open one modal → screenshot, without the full loop, for UI-fidelity round-trips (tooling gap tracked). (`PIPELINE_HARDENING.md` §13.)
 14. **Orchestrator scene-mutation guardrail** — never `scene-save` after a render-isolation/probe mutation without diffing GameObject active-state vs HEAD first (boot-critical containers: `ScreensRoot`, `PersistentUI`, active screen). (`PIPELINE_HARDENING.md` §14.)
 
+15. **Second defect of a shape ⇒ audit the shape before the next review** (added 2026-08-28, after
+    `content_art_bundling` spent five iterations and four gate rounds finding SEVEN defects of one
+    shape, one at a time). When two defects in a task rhyme, stop fixing instances: name the shape
+    as a *mechanically checkable question*, enumerate every candidate site in that file or subsystem
+    (grep the operation class, do not sample), publish a per-site verdict table **including the
+    sites that were fine**, fix everything in one commit, and only then re-enter the gates. Rule 5
+    makes reviewers re-run the whole acceptance list, but an acceptance list enumerates *behaviours
+    the spec asked for* — it is instance-level by construction and a shape passes straight through
+    it. The scoreboard on that task: red-team 1 defect, self-review 1 process catch + 1 real
+    candidate, reviewer 0 across three passes — and the implementer 6, by reading the file.
+    **Corollary:** do not dispatch the next gate while holding an unexamined suspicion; two of those
+    six were found while *writing the brief for the next reviewer*, which is a free review. Full
+    spec: `Docs/PIPELINE_HARDENING.md` §22.
+
 ### Hard rules (these are enforced by hooks, not just convention)
 
 1. **Implementer cannot mark itself done.** The `enforce_implementer_done.py` hook blocks any STATUS write to `READY_FOR_SELF_REVIEW` or `READY_FOR_ARCHITECT_REVIEW` unless `IMPLEMENTER_REPORT.md` has every checklist item filled with PASS/FAIL + non-trivial justification + a real screenshot path that points to an actual file. No placeholder text allowed. FAIL items also block the SELF_REVIEW transition (must use ARCHITECT_REVIEW path). **Since 2026-05-26** (green_authoring scar tissue), the hook also blocks the transition unless: (a) HEARTBEAT.log contains an `=== iter-N kickoff baseline … ===` block (HEAD SHA + DIRTY porcelain) for the current iteration, (b) every "pre-existing"/"from previous session"/"not introduced by"/"predates this"/"was already in" claim in IMPLEMENTER_REPORT.md has a backticked or fenced citation within ±5 lines that quotes a path from that DIRTY block, and (c) no PNG/JPG referenced under `screenshots/` has variance < 5.0 on a sampled patch (catches fabricated flat-colour frames). **Since 2026-05-26 21:25 CEST** (spin_and_shape scar tissue — Lesson AA), the hook additionally enforces Rule 13: every uncommitted path reported by `git status --porcelain --untracked-files=all` that lives OUTSIDE the task's `Docs/Specs/Active/<task>/` folder must appear in `IMPLEMENTER_REPORT.md`'s 'Files modified or created' table — implementer either reports the file or restores/discards it before transitioning. Rationale in `feedback_preflight_baseline_attribution.md` (user memory) and `.claude/hooks/test_enforce_implementer_done.py`.

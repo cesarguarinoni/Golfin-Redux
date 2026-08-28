@@ -140,3 +140,86 @@
   - **C10 / P8b (9-slice cap-kink):** any 9-sliced `Image` whose effective corner border (in rendered px, accounting for `pixelsPerUnitMultiplier`) is less than 50% of the estimated cap radius (min-side/4) → WARN `9slice-cap-kink`. Fix: use a true stadium sprite with border ≥ half-height, or increase `pixelsPerUnitMultiplier`.
 - Both surface as linter WARN findings. Because P2 re-runs the linter fresh via the live-editor MCP endpoint at the hook, any W/FAIL in the fresh run blocks the transition — so P8 blind-spots are structurally enforced by P2.
 - **P2 implementation (iter-4, Order-611):** `validate_ui_lint` calls `_rerun_ui_lint_via_editor` after the cached JSON shows `fail == 0`. The live re-run calls `UIFidelityLinter.LintPrefab(prefabPath, null)` via the same `_call_live_editor` MCP seam as P1. If the fresh run returns `fail > 0`, the transition is blocked. **FAIL-CLOSED (iter-4 correction): if the fresh run cannot run (editor unreachable), the transition is BLOCKED — the cited JSON is NOT accepted as evidence (SPEC §1.3 / §0).** iter-3 shipped this fail-OPEN ("quality gate, not security gate"); both parallel reviewers flagged it as the exact self-authored-artifact trust the postmortem forbids. Tests: `TestValidateUILintLiveRerun` — cached-pass + unreachable-editor (**BLOCK**, `test_p2_cached_pass_editor_unreachable_blocks`), + the pass/fail/no-rerun cases.
+
+## 20. Tripwire demonstration for regression-guard tests (content_art_urls, 2026-08-28)
+
+A test whose PURPOSE is to guard a specific behaviour (an ordering, a fallback, a veto) is not
+evidence until it has been shown to FAIL: break the guarded behaviour deliberately, run the
+sweep, show red, revert, show green — and say so in the report with the broken diff quoted.
+Five green runs in `content_art_urls` proved nothing because the fixtures presupposed the very
+step that was missing (sprites injected into `_sprites`, bundled row left null). A green test
+you have never seen red is a comment.
+
+## 21. One named end-to-end against the live dependency (content_art_urls, 2026-08-28)
+
+Any spec whose feature crosses a live dependency (network, Supabase, Storage, the filesystem
+cache) must name ONE end-to-end acceptance item that runs the product against the real thing,
+and ARCHITECT_REVIEW_PASS is not available until it has run. Deferring it requires quoting the
+authorising spec line VERBATIM (file + section), and the quote must be checked to exist — the
+iter-1 deferral cited a "SPEC §0" that does not. Code-reading plus unit tests missed a
+feature that never worked at all; nothing in the gate chain had ever launched the game.
+
+## 22. Second defect of a shape ⇒ audit the shape, before the next review (content_art_bundling, 2026-08-28)
+
+**When two defects in one task share a shape, stop fixing instances. Name the shape, enumerate
+every place it could occur in that file or subsystem, audit them all, fix them in one pass, and
+only then re-enter the gates.**
+
+### Why the gates cannot do this for you
+
+Rule 5 makes every reviewer re-run the ENTIRE acceptance list — and that is instance-level by
+construction. An acceptance list enumerates *behaviours the spec asked for*, so it catches "this
+behaviour is wrong". It has no entry for "there are four more places with the same defect", because
+the spec never mentioned them. The gates are a sieve for instances; a shape passes straight through.
+
+`content_art_bundling` is the evidence. Seven defects, all one shape, found one at a time across
+five iterations and four gate rounds — each fix followed by a full three-gate review that then
+surfaced the next. Cost: roughly two hours of gate time to arrive somewhere a one-hour audit
+reached directly.
+
+| Found by | Defects |
+|---|---|
+| red-team gate | 1 (case-sensitive collision guard) |
+| self-review gate | 1 process catch (no test seam) + 1 candidate that was real |
+| reviewer gate | 0 across three passes, 1 non-blocking observation |
+| **the implementer, reading the file** | **6** |
+
+That distribution is the rule's justification. Gates are good at "is the thing you built the thing
+you were asked for". They are poor at "what else in this file is built the same wrong way".
+
+### What counts as a shape
+
+A shape is only useful if it is **mechanically checkable** — a question you can ask of every
+candidate site and get a yes/no. "Be more careful with files" is not a shape. The one that ran
+`content_art_bundling` was:
+
+> An irreversible side effect is committed before — or independently of — the check that authorises
+> it, and nothing undoes it when a later check fails.
+
+which decomposes into two questions per site: **(A)** is every validation complete before the
+effect, with nothing in between that invalidates them? **(B)** if anything downstream fails, is the
+effect undone? Then you enumerate the sites — every write, delete, mutation — and answer A and B for
+each, in a table, in the report. Eight sites; three of them were defects nobody had looked at, plus
+one unrelated bug the enumeration walked into (a size metric reporting runtime memory instead of
+build size, wrong by ~2× since the first commit).
+
+### The rule
+
+1. **Trigger: the SECOND defect of one shape in a task.** Not the third — by the third you have
+   already paid for two gate rounds. A red-team FAIL and a self-found defect that rhyme is enough.
+2. **Name the shape as a checkable question**, in the report. If you cannot phrase it as something
+   you can ask of a list of sites, you have not found the shape yet — keep looking.
+3. **Enumerate the candidate sites exhaustively** (`grep` for the operation class, not a sample) and
+   publish the table with a verdict per site, including the ones that were fine. A table with only
+   the defects in it does not show the audit was exhaustive.
+4. **Fix everything found in ONE commit**, then re-enter the gates once.
+5. **The audit table is review evidence.** A reviewer's job on the next pass is to check the
+   enumeration was complete — a much cheaper and more reliable question than rediscovering
+   instances.
+
+### Corollary for the orchestrator
+
+Do not dispatch the next review while you have an unexamined suspicion. `content_art_bundling`
+iter-3 and iter-5 were both found while *writing the brief for the next gate* — the act of
+explaining the code to a reviewer is itself a review, and it is free. Finish that thought before
+spending forty minutes of agent time.
