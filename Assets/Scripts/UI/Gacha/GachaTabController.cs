@@ -6,6 +6,9 @@
 // controls content panel visibility + active-tab gold/white styling.
 // Stage 1 stubs: PullX1/PullX10 → ToastController "Coming soon" + log.
 // gacha_history Stage 1: HistoryChip → ScreenId.GachaHistory (no longer a stub).
+// 2026-08-28: the chip is TAB-AWARE. GachaHistory is the gacha pull log, so it may only open
+// from the GACHA tab; on STORE it toasts instead of showing the wrong screen (the Store
+// History screen, Figma 13509:2978, is still deferred — general_shop_ui SPEC § Deferred).
 
 using Golfin.UI.Toast;
 using GolfinRedux.UI;
@@ -70,6 +73,16 @@ namespace GolfinRedux.UI.Gacha
         private TMP_Text? _dailyTabLabel;
         private TMP_Text? _weeklyTabLabel;
         private TMP_Text? _monthlyTabLabel;
+
+        /// <summary>Which tab's content is currently on screen.</summary>
+        private enum RewardsTab { Gacha, Store, Gifts }
+
+        /// <summary>
+        /// The History chip is SHARED across the three tabs — it is a root-level child of
+        /// GeneralShopScreen, not part of either content panel — so its destination has to key off
+        /// the active tab. See <see cref="OnHistoryChipTapped"/>.
+        /// </summary>
+        private RewardsTab _activeTab = RewardsTab.Gacha;
 
         // ── Lifecycle ─────────────────────────────────────────────────────────
 
@@ -153,8 +166,21 @@ namespace GolfinRedux.UI.Gacha
             btn.onClick.AddListener(OnHistoryChipTapped);
         }
 
+        /// <summary>
+        /// GACHA tab → the gacha pull log. STORE / GIFTS → nothing to open yet, so the chip stays
+        /// inert (the icon is present in the Figma store node, so it is toasted rather than hidden)
+        /// instead of sending the player to the gacha log, which is not their purchase history.
+        /// Point the STORE branch at ScreenId.StoreHistory once that screen ships.
+        /// </summary>
         private void OnHistoryChipTapped()
         {
+            if (_activeTab != RewardsTab.Gacha)
+            {
+                Debug.Log($"[GachaTab] HistoryChip tapped on the {_activeTab} tab — no history screen yet.");
+                ToastController.Instance?.Show(LocalizationManager.Get("SHOP_HISTORY_COMING_SOON"), 2f);
+                return;
+            }
+
             if (ScreenManager.Instance != null)
                 ScreenManager.Instance.ShowScreen(ScreenId.GachaHistory);
             else
@@ -202,6 +228,7 @@ namespace GolfinRedux.UI.Gacha
 
         private void ShowGachaTab()
         {
+            _activeTab = RewardsTab.Gacha;
             SetTabActive(_dailyTabLabel,   true);
             SetTabActive(_weeklyTabLabel,  false);
             SetGiftsTabLabel(false);
@@ -212,6 +239,7 @@ namespace GolfinRedux.UI.Gacha
 
         private void ShowStoreTab()
         {
+            _activeTab = RewardsTab.Store;
             SetTabActive(_dailyTabLabel,   false);
             SetTabActive(_weeklyTabLabel,  true);
             SetGiftsTabLabel(false);
@@ -237,6 +265,7 @@ namespace GolfinRedux.UI.Gacha
         /// </summary>
         private void ShowGiftsTab()
         {
+            _activeTab = RewardsTab.Gifts;
             SetTabActive(_dailyTabLabel,   false);
             SetTabActive(_weeklyTabLabel,  false);
             SetGiftsTabLabel(true);

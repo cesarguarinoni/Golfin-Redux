@@ -1349,6 +1349,9 @@ MonoBehaviour:
   - key: SHOP_FILTER_OFFERS
     english: OFFERS
     japanese: "\u30AA\u30D5\u30A1\u30FC"
+  - key: SHOP_HISTORY_COMING_SOON
+    english: Store history is coming soon.
+    japanese: "\u30B9\u30C8\u30A2\u5C65\u6B74\u306F\u8FD1\u65E5\u516C\u958B\u3067\u3059\u3002"
   - key: STAMINA_BUY
     english: BUY
     japanese: "\u8CFC\u5165"
