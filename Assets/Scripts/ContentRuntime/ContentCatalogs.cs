@@ -45,30 +45,41 @@ namespace Golfin.Content
         public const string LevelUpCosts = "level_up_costs";
 
         /// <summary>
+        /// The game-mode table (game_modes_admin §2). The SECOND catalog the server also reads:
+        /// publishing it mirrors <c>entryFee</c>/<c>locked</c> into <c>golfin_mode_fees</c>, and
+        /// <c>POST /points/spend</c> refuses a <c>mode_entry_fee:&lt;id&gt;</c> debit that does not
+        /// match. So the overlay is not cosmetic — it is what keeps the fee on the card and the fee
+        /// the player is charged the same number. When they differ (a publish landed mid-session)
+        /// the server answers <c>fee_changed</c> and the card re-prices, which is correct but is one
+        /// avoidable round trip.
+        /// </summary>
+        public const string Modes = "modes";
+
+        /// <summary>
         /// The catalogs whose ROWS this build overlays onto a bundled CSV — everything except
         /// <see cref="Texts"/>, which merges into <c>LocalizationManager</c> instead and therefore
         /// has its own applier.
         /// </summary>
         public static readonly string[] Data =
         {
-            Clubs, Characters, Items, Bags, Balls, ShopCatalog, LevelUpCosts,
+            Clubs, Characters, Items, Bags, Balls, ShopCatalog, LevelUpCosts, Modes,
         };
 
         /// <summary>Every catalog this build asks the server for, texts included.</summary>
         public static readonly string[] All =
         {
-            Texts, Clubs, Characters, Items, Bags, Balls, ShopCatalog, LevelUpCosts,
+            Texts, Clubs, Characters, Items, Bags, Balls, ShopCatalog, LevelUpCosts, Modes,
         };
 
         /// <summary>
         /// The <c>catalogs=</c> query value:
-        /// "texts,clubs,characters,items,bags,balls,shop_catalog,level_up_costs".
+        /// "texts,clubs,characters,items,bags,balls,shop_catalog,level_up_costs,modes".
         /// Narrowing the request matters — an unnarrowed one returns every catalog the server holds,
-        /// and this build can only apply the eight it knows.
+        /// and this build can only apply the nine it knows.
         /// </summary>
         public static string RequestList => string.Join(",", All);
 
-        /// <summary>True when <paramref name="name"/> is one of the eight. Case-insensitive.</summary>
+        /// <summary>True when <paramref name="name"/> is one of the nine. Case-insensitive.</summary>
         public static bool IsKnown(string? name)
         {
             if (string.IsNullOrWhiteSpace(name)) return false;

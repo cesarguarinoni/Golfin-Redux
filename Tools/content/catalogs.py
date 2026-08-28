@@ -20,6 +20,7 @@ CSV FACTS this module encodes, all verified against the live repo 2026-08-25
   texts         501 rows  Assets/Localization/LocalizationText.csv   1 MID-FILE `#` line
   shop_catalog    5 rows  Assets/Resources/Data/shop_catalog.csv
   level_up_costs 240 rows Assets/Data/LevelUpCosts.csv
+  modes           5 rows  Assets/Resources/Data/modes.csv
 
 Two of those facts contradict the SPEC's reference counts and both are handled
 rather than papered over:
@@ -79,6 +80,16 @@ class Catalog:
 # what every player pays. Its id column is `level` — the only non-`id`/`key`/
 # `entryId` id in the table, and an integer written as text, because a row_id is
 # text everywhere else in the pipeline.
+
+# `modes` is the TENTH — added 2026-08-28 by game_modes_admin §2. It is the
+# SECOND catalog the server reads (level_up_costs was the first): a publish
+# mirrors `entryFee`/`locked` into `golfin_mode_fees`, which POST /points/spend
+# prices a `mode_entry_fee:<id>` debit against. So the same warning applies —
+# an edit here is not display copy, it is what a player is charged to enter.
+#
+# Its CSV is the one with quoted, comma-bearing prose (three of the five
+# `description` fields), which is exactly the case `parse_csv_line` /
+# `write_csv_line` exist for; QUOTE_MINIMAL round-trips it unchanged.
 CATALOGS: Tuple[Catalog, ...] = (
     Catalog("clubs", "Assets/Resources/Data/Clubs.csv", "id"),
     Catalog("characters", "Assets/Data/Characters.csv", "id"),
@@ -88,6 +99,7 @@ CATALOGS: Tuple[Catalog, ...] = (
     Catalog("texts", "Assets/Localization/LocalizationText.csv", "key"),
     Catalog("shop_catalog", "Assets/Resources/Data/shop_catalog.csv", "entryId"),
     Catalog("level_up_costs", "Assets/Data/LevelUpCosts.csv", "level"),
+    Catalog("modes", "Assets/Resources/Data/modes.csv", "id"),
 )
 
 CATALOGS_BY_NAME: Dict[str, Catalog] = {c.name: c for c in CATALOGS}

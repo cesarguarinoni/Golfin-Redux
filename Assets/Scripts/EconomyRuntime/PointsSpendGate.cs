@@ -54,6 +54,23 @@ namespace Golfin.EconomyRuntime
         /// the modal closes and the next inventory sync reconciles.</summary>
         public const string LevelConflictMessage = "Your progress is out of date — reopening";
 
+        // ── Mode entry (game_modes_admin §4) ─────────────────────────────────────────────
+        //
+        // The fee copy deliberately RHYMES with CostUpdatedMessage above and with the shop's
+        // "Price updated: N RP": three surfaces, one idea — the number moved, here is the real one,
+        // tap again. Three different phrasings for the same event is how a player learns to read
+        // one of them as an error.
+
+        /// <summary>Shown when the published entry fee is not the one the card displayed. The card
+        /// re-renders at the server's number and the SECOND tap pays it — so this is an INVITATION
+        /// to tap again, not a failure. Formatted with the fee.</summary>
+        public const string FeeUpdatedFormat = "Entry fee updated: {0} RP";
+
+        /// <summary>Shown when the mode itself is gone or shut server-side (unknown_mode /
+        /// mode_locked). Unlike the fee case the player cannot answer by tapping again; the card
+        /// refreshes and stops offering entry.</summary>
+        public const string ModeUnavailableMessage = "This mode is not available";
+
         private const float ToastSeconds = 2f;
 
         /// <summary>
@@ -107,9 +124,26 @@ namespace Golfin.EconomyRuntime
                     return;
                 }
 
-                string message = outcome != null && outcome.Verdict == SpendVerdict.Insufficient
-                    ? InsufficientMessage
-                    : OfflineMessage;
+                // The refusal copy, by verdict. `default` is OfflineMessage and that is the right
+                // default: an outcome this switch does not recognise is one the server produced and
+                // this build does not understand, which is indistinguishable from not reaching it.
+                string message;
+                switch (outcome != null ? outcome.Verdict : SpendVerdict.Unavailable)
+                {
+                    case SpendVerdict.Insufficient:
+                        message = InsufficientMessage;
+                        break;
+                    case SpendVerdict.FeeChanged:
+                        message = string.Format(FeeUpdatedFormat, outcome.ServerFee);
+                        break;
+                    case SpendVerdict.UnknownMode:
+                    case SpendVerdict.ModeLocked:
+                        message = ModeUnavailableMessage;
+                        break;
+                    default:
+                        message = OfflineMessage;
+                        break;
+                }
 
                 Debug.LogWarning($"[PointsSpendGate] Spend of {amount} RP ({reason}) denied: " +
                                  $"{(outcome != null ? outcome.ToString() : "no outcome")} — action not performed.");

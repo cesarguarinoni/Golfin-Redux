@@ -324,7 +324,11 @@ namespace Golfin.Content.Tests
             // `level_up_costs` joined the list on 2026-08-28 (progress_server_side §2). It is the
             // one catalog the SERVER also prices from, so a client that stopped asking for it would
             // preview bundled costs and be answered `cost_changed` on every single level-up.
-            Assert.AreEqual("texts,clubs,characters,items,bags,balls,shop_catalog,level_up_costs",
+            //
+            // `modes` joined the same day (game_modes_admin §2) and is the SECOND of those: the
+            // server prices a mode entry from the mirror a modes publish writes, so a client that
+            // stopped asking would show the bundled fee and be answered `fee_changed` on every tap.
+            Assert.AreEqual("texts,clubs,characters,items,bags,balls,shop_catalog,level_up_costs,modes",
                             ContentCatalogs.RequestList);
         }
     }

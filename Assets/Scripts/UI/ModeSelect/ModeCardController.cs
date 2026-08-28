@@ -601,13 +601,59 @@ namespace GolfinRedux.UI.ModeSelect
             // Slice 2: the entry fee is debited server-side BEFORE the mode is entered, so a refused
             // or unreachable debit cannot drop the player into a round they never paid for.
             // Flag OFF (or a free mode) → this runs inline and synchronously, exactly as before.
-            PointsSpendGate.Spend(_data.entryFee, SpendReasons.ModeEntryFee, () =>
+            //
+            // The reason carries the MODE ID since game_modes_admin §4, and that is what lets the
+            // server price the entry instead of taking the client's word for it. Everything below
+            // the gate is unchanged; what is new is the onDenied arm.
+            PointsSpendGate.Spend(_data.entryFee, SpendReasons.ModeEntryFeeFor(_data.id), () =>
             {
                 if (_data.entryFee > 0 && RewardPointsManager.Instance != null)
                     RewardPointsManager.Instance.SpendPoints(_data.entryFee);
 
                 OnPlayClicked?.Invoke(this);
-            });
+            },
+            HandleSpendDenied);
+        }
+
+        /// <summary>
+        /// The server refused the entry debit. NOTHING was charged in any of these cases.
+        ///
+        /// The gate has already toasted the copy (kept there so every spend surface says the same
+        /// thing); what is left is the CARD's half — making the next tap correct.
+        ///
+        /// <para>
+        /// FeeChanged is the interesting one, and it is deliberately the same shape as the shop's
+        /// <c>price_changed</c>: re-render at the server's number, do NOT auto-debit, and let the
+        /// player's SECOND tap pay the fee they can now see. Auto-paying would charge a number they
+        /// were never shown, which is the exact thing the whole validation exists to prevent — the
+        /// refusal would have "protected" them by silently doing what it refused.
+        /// </para>
+        ///
+        /// <para>
+        /// unknown_mode / mode_locked mean the mode is gone or shut. There is no number to re-price
+        /// to, so the card simply re-renders from whatever the database now holds; the mode is
+        /// withdrawn on the next launch, when the overlay is applied (I5).
+        /// </para>
+        /// </summary>
+        private void HandleSpendDenied(SpendOutcome outcome)
+        {
+            if (outcome == null || _data == null) return;
+
+            switch (outcome.Verdict)
+            {
+                case SpendVerdict.FeeChanged:
+                    // The published fee, straight onto the card. `_data` is the shared ModeData
+                    // instance the database handed out, so the carousel card and the full-screen
+                    // list card agree without either being told.
+                    _data.entryFee = outcome.ServerFee;
+                    UpdateEconomyRows(_data);
+                    break;
+
+                case SpendVerdict.UnknownMode:
+                case SpendVerdict.ModeLocked:
+                    UpdateEconomyRows(_data);
+                    break;
+            }
         }
 
         // Smoothly expand/collapse a full-screen LIST card. The card is sized by a parent

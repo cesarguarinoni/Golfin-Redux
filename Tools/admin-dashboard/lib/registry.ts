@@ -36,7 +36,9 @@ export type PanelIcon =
   | "box"
   | "text"
   | "cart"
-  | "ladder";
+  | "ladder"
+  | "flagpole"
+  | "gift";
 
 export interface PanelDef {
   id: PanelId;
@@ -58,8 +60,17 @@ export const PANELS: readonly PanelDef[] = [
   // or Clubs because it belongs to NEITHER — both price from the same 240 rows,
   // and hanging it off one of them would imply the other has its own.
   { id: "level-costs", title: "Level Costs", icon: "ladder", route: "/level-costs" },
+  // The `modes` catalog — entry fees, card copy and the Coming Soon flag for the
+  // five game modes. It is the SECOND catalog the server reads (level_up_costs
+  // was the first): publishing here mirrors the fees into `golfin_mode_fees`,
+  // which /points/spend prices a mode entry against.
+  { id: "modes", title: "Modes", icon: "flagpole", route: "/modes" },
   { id: "notices", title: "Notices", icon: "megaphone", route: "/notices" },
   { id: "points", title: "Points", icon: "coins", route: "/points" },
+  // NOT a content catalog and deliberately not shaped like one: this edits
+  // `game_point_actions` — the live server table the earn path reads per
+  // request. No draft, no publish, no version. The panel says so.
+  { id: "rewards", title: "Rewards", icon: "gift", route: "/rewards" },
   { id: "shop", title: "Shop", icon: "cart", route: "/shop" },
   { id: "telemetry", title: "Telemetry", icon: "chart", route: "/telemetry" },
   { id: "texts", title: "Texts", icon: "text", route: "/texts" },

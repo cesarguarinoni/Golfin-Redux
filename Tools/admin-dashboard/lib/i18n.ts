@@ -59,6 +59,8 @@ export const DICT = {
   "nav.texts": { en: "Texts", ja: "テキスト" },
   "nav.shop": { en: "Shop", ja: "ショップ" },
   "nav.level-costs": { en: "Level Costs", ja: "レベルアップ費用" },
+  "nav.modes": { en: "Modes", ja: "ゲームモード" },
+  "nav.rewards": { en: "Rewards", ja: "報酬" },
 
   "mode.mock": {
     en: "MOCK DATA — running on local fixtures, no Supabase connection",
@@ -1094,6 +1096,63 @@ export const DICT = {
   "lu.note": {
     en: "Shared by characters and clubs. The server prices every level-up from these rows — an edit here changes what players pay.",
     ja: "キャラクターとクラブで共通です。サーバーはこの行を使ってレベルアップ費用を計算するため、ここでの編集はプレイヤーの支払額に直結します。",
+  },
+
+  // ---- modes (game_modes_admin §2) ---------------------------------------
+  //
+  // The second catalog the SERVER reads. A publish mirrors entryFee / locked
+  // into golfin_mode_fees, and /points/spend refuses a mode-entry debit that
+  // does not match — so a fee edited here is charged, not merely displayed.
+  "md.title": { en: "Modes", ja: "ゲームモード" },
+  "md.note": {
+    en: "Entry fees are enforced by the server: publishing mirrors them, and a client on the old fee is refused and re-prices.",
+    ja: "エントリー費用はサーバーで検証されます。公開時にミラーへ反映され、古い費用のままのクライアントは拒否されて再取得します。",
+  },
+  "md.rewardsNote": {
+    en: "Reward numbers on the cards are display copy — most modes show an average, not an exact payout. What players are actually paid lives in the Rewards panel.",
+    ja: "カードに表示される報酬は表示用のテキストです（多くのモードは平均値で、確定額ではありません）。実際の支払額は「報酬」パネルで管理します。",
+  },
+
+  // ---- rewards ▸ game_point_actions (game_modes_admin §3) ------------------
+  //
+  // ⚠️ rw.live.* is the disclosure that this panel has NO draft/publish cycle.
+  // Every other economy surface in this dashboard stages an edit and publishes
+  // it; this one writes the table the earn path reads on the very next request.
+  // Do not soften or drop it.
+  "rw.title": { en: "Rewards", ja: "報酬" },
+  "rw.live.headline": {
+    en: "Edits here are LIVE immediately.",
+    ja: "ここでの編集は即時に反映されます。",
+  },
+  "rw.live.body": {
+    en: "There is no draft or publish step. Saving changes what the next earn request pays — no client relaunch, no version bump.",
+    ja: "下書きや公開の手順はありません。保存した内容が次の獲得リクエストの支払額になります（クライアントの再起動もバージョン更新も不要です）。",
+  },
+  "rw.col.action": { en: "Action", ja: "アクション" },
+  "rw.col.pts": { en: "Points", ja: "ポイント" },
+  "rw.col.maxPerEvent": { en: "Max / event", ja: "1回あたり上限" },
+  "rw.col.dailyCap": { en: "Daily cap", ja: "1日あたり上限" },
+  "rw.col.oncePerUser": { en: "Once per user", ja: "ユーザー1回限り" },
+  "rw.blank": { en: "—", ja: "—" },
+  // The hint the SPEC asks for by name: "pts is blank" looks like a bug until
+  // you know that blank is a MODE, not a missing value.
+  "rw.ptsNullHint": {
+    en: "Blank Points = the client supplies the amount, capped by Max / event and Daily cap. That is how variable payouts (hole scores, tournament prizes) work — it is not a missing value.",
+    ja: "ポイントが空欄の場合、金額はクライアントが送信し、「1回あたり上限」と「1日あたり上限」で制限されます。ホールのスコアやトーナメント賞金など変動する報酬の方式であり、値の欠落ではありません。",
+  },
+  "rw.ptsNullBadge": { en: "client amount", ja: "クライアント指定" },
+  "rw.edit": { en: "Edit", ja: "編集" },
+  "rw.save": { en: "Save", ja: "保存" },
+  "rw.saving": { en: "Saving…", ja: "保存中…" },
+  "rw.noDelete": {
+    en: "Actions cannot be added or deleted here. A shipped client refers to them by name, so a removed row silently drops every earn that used it.",
+    ja: "アクションの追加・削除はできません。配信済みのクライアントが名前で参照しているため、行を削除するとその獲得が黙って失われます。",
+  },
+  "rw.loadFailed": { en: "Could not load the reward actions", ja: "報酬アクションを読み込めませんでした" },
+  "rw.saved": { en: "Saved. Live from the next earn request.", ja: "保存しました。次の獲得リクエストから有効です。" },
+  "rw.hint.numbers": {
+    en: "Leave a field empty for “no limit”. Every number must be 0 or more.",
+    ja: "空欄は「制限なし」を意味します。数値は 0 以上で入力してください。",
   },
 
   "tx.title": { en: "Texts", ja: "テキスト" },

@@ -209,6 +209,60 @@ async function mirrorCharacters(drafts: ContentStoredRow[]): Promise<string | nu
   return res.error ? res.error.message : null;
 }
 
+/**
+ * The golfin_mode_fees mirror (game_modes_admin SPEC §4).
+ *
+ * `golfin_mode_fees(mode_id, entry_fee, is_locked)` is what POST /points/spend
+ * prices a `mode_entry_fee:<id>` debit against. It exists for the same reason
+ * `golfin_characters` does — a typed server-side copy of a catalog the spend
+ * path cannot afford to re-derive out of jsonb on every request — and it is
+ * written here, in the publish REQUEST, for the reason golfin_characters
+ * TAUGHT us: a mirror maintained by hand drifts, silently, and the person
+ * editing the panel has no idea it exists.
+ *
+ * THIS ONE IS STRICTER THAN THE CHARACTERS MIRROR, because the stakes differ.
+ * A stale rarity wrongly excluded char_olivia from Common-only tournaments for
+ * three days. A stale FEE means every player is charged the old price — or,
+ * worse, refused at the new one while the card still shows the old — for as
+ * long as it lasts. So the fee is upserted BEFORE `content_publish` and a
+ * failure aborts the publish entirely.
+ *
+ * The residual window is mirror-ahead-of-catalog (the mirror lands, the rpc then
+ * fails). That is the safer of the two directions and it is chosen deliberately:
+ * a mirror holding the fee the admin was TRYING to publish refuses stale clients
+ * at the new price, which is a `fee_changed` and a second tap. The other order
+ * would publish a card saying 15 while the server still charges 10 — a player
+ * charged a number they were never shown.
+ *
+ * NON-NUMERIC / NEGATIVE FEES CANNOT REACH HERE: the validator has already
+ * refused them (contentValidate rule 10), and `golfin_mode_fees` carries its own
+ * `entry_fee >= 0` check as the backstop. `Number(...) || 0` is the third layer
+ * and exists only so a blank cell mirrors as free rather than as NaN.
+ */
+async function mirrorModeFees(drafts: ContentStoredRow[]): Promise<string | null> {
+  if (isMockMode()) return null;
+
+  const rows = drafts
+    // A DEACTIVATED mode is not mirrored as free — it is not mirrored as
+    // ANYTHING new, and the row it already has stays put. Deactivation (I6) is
+    // how a mode is withdrawn from the client; the server should keep refusing
+    // its old price rather than start accepting 0 for a mode nobody can see.
+    .filter((r) => r.isActive)
+    .map((r) => ({
+      mode_id: r.rowId,
+      entry_fee: Math.max(0, Math.trunc(Number(r.data.entryFee) || 0)),
+      is_locked: String(r.data.locked ?? "").trim().toLowerCase() === "true"
+        || String(r.data.locked ?? "").trim() === "1",
+      updated_at: new Date().toISOString(),
+    }));
+  if (rows.length === 0) return null;
+
+  const res = await getSupabaseAdmin()
+    .from("golfin_mode_fees")
+    .upsert(rows, { onConflict: "mode_id" });
+  return res.error ? res.error.message : null;
+}
+
 export async function publishCatalog(
   adminEmail: string,
   catalog: string,
@@ -236,9 +290,30 @@ export async function publishCatalog(
     otherCatalogs.set(other, new Map(rows.map((r) => [r.rowId, toDraftRow(r)])));
   }
 
+  // The ONE cross-surface number a modes publish is checked against: what
+  // `versus_win` actually pays. Read here rather than in the validator because
+  // the validator is pure — and read ONLY for `modes`, because this is one
+  // warning about one pair, not a mapping table (see contentValidate rule 10).
+  let versusWinPts: number | null | undefined;
+  if (catalog === "modes" && !isMockMode()) {
+    const res = await getSupabaseAdmin()
+      .from("game_point_actions")
+      .select("pts")
+      .eq("action", "versus_win")
+      .maybeSingle();
+    // A read failure is NOT a publish failure: this feeds a WARNING. Blocking a
+    // fee change because one advisory lookup blipped would be the tail wagging
+    // the dog. Left undefined ⇒ the warning simply does not run.
+    if (!res.error && res.data) {
+      const pts = (res.data as { pts: number | null }).pts;
+      versusWinPts = pts === null ? null : Number(pts);
+    }
+  }
+
   const problems = validateCatalog(catalog, drafts.map(toDraftRow), {
     publishedMinBuild: new Map(published.map((r) => [r.rowId, r.minBuild])),
     otherCatalogs,
+    versusWinPts,
   });
 
   if (hasErrors(problems)) {
@@ -262,6 +337,18 @@ export async function publishCatalog(
         `golfin_characters mirror write failed, so nothing was published: ${mirrorError}. ` +
           "The mirror is what tournament rarity restrictions read (SPEC §A4); publishing " +
           "characters without it would reintroduce the char_olivia drift."
+      );
+    }
+  }
+
+  if (catalog === "modes") {
+    const mirrorError = await mirrorModeFees(drafts);
+    if (mirrorError) {
+      return fail(
+        502,
+        `golfin_mode_fees mirror write failed, so nothing was published: ${mirrorError}. ` +
+          "The mirror is what /points/spend prices a mode entry against (SPEC §4); publishing " +
+          "modes without it would show players one fee and charge them another."
       );
     }
   }
@@ -308,7 +395,13 @@ export async function publishCatalog(
     null,
     "content_rows",
     { catalog, version: diff.publishedVersion, counts: diff.counts, entries: diff.entries },
-    { catalog, version, note: note ?? null, mirroredToGolfinCharacters: catalog === "characters" }
+    {
+      catalog,
+      version,
+      note: note ?? null,
+      mirroredToGolfinCharacters: catalog === "characters",
+      mirroredToGolfinModeFees: catalog === "modes",
+    }
   );
 
   const warnings = problems.filter((p) => p.severity === "warning");

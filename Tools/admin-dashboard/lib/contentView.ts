@@ -32,6 +32,7 @@ export const CONTENT_CATALOGS = [
   "texts",
   "shop_catalog",
   "level_up_costs",
+  "modes",
 ] as const;
 
 export type ContentCatalog = (typeof CONTENT_CATALOGS)[number];
@@ -145,6 +146,17 @@ export const CATALOG_VIEWS: Record<string, CatalogView> = {
   level_up_costs: {
     catalog: "level_up_costs",
     columns: ["cost_r", "sp_reward"],
+    facets: [],
+    limit: 50,
+  },
+  // Five rows. The columns shown are the OPERATIONAL ones — what a mode costs,
+  // what its card advertises, whether it is open, where PLAY goes and in which
+  // slot the carousel puts it. The prose (tagline, description) and the three
+  // reward pairs are all still editable in the row editor; they are just not
+  // what anyone opens this panel to look at.
+  modes: {
+    catalog: "modes",
+    columns: ["title", "entryFee", "rewards", "locked", "target", "order"],
     facets: [],
     limit: 50,
   },

@@ -461,6 +461,47 @@ export interface NoticesResponse {
 }
 
 // ---------------------------------------------------------------------------
+// Rewards panel — public.game_point_actions (game_modes_admin §3)
+//
+// ⚠️ NOT A CONTENT CATALOG. There is no draft, no publish and no version: the
+// earn path reads this table per request, so a save here is live on the NEXT
+// earn. It sits with the notices/banners shapes rather than the content ones
+// precisely so nobody reaches for `publishCatalog` by muscle memory.
+// ---------------------------------------------------------------------------
+
+export interface RewardActionRow {
+  /** Primary key AND the string a shipped client sends. Never editable. */
+  action: string;
+  /**
+   * NULL is a MODE, not a missing value: the client supplies the amount and the
+   * server validates it against `maxPerEvent` / `dailyCap`. That is how variable
+   * payouts (hole scores, tournament prizes) work. A number here is FIXED and
+   * any client-sent amount is ignored.
+   */
+  pts: number | null;
+  /** Ceiling on one award. NULL = no ceiling (only meaningful when pts is NULL). */
+  maxPerEvent: number | null;
+  /** Ceiling on a UTC day's awards for this action. NULL = uncapped. */
+  dailyCap: number | null;
+  /** The router derives a deterministic idempotency key so "once" is atomic. */
+  oncePerUser: boolean;
+}
+
+/** The four editable numbers. `action` and `oncePerUser` are not in scope
+ *  (game_modes_admin §3: no new actions, no deletions, and once-per-user is a
+ *  grant semantic rather than an economy dial). */
+export interface RewardActionInput {
+  pts: number | null;
+  maxPerEvent: number | null;
+  dailyCap: number | null;
+}
+
+export interface RewardActionsResponse {
+  actions: RewardActionRow[];
+  mock: boolean;
+}
+
+// ---------------------------------------------------------------------------
 // Telemetry panel (SPEC telemetry_admin_panel §3)
 //
 // Read-only. Every shape here is derived in lib/telemetryData.ts from rows of

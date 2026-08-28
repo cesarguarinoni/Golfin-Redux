@@ -84,6 +84,24 @@ const PATHS: Record<PanelIconName, React.ReactNode> = {
       <path d="M2 3h3l2.6 12.4a1 1 0 0 0 1 .8h8.9a1 1 0 0 0 1-.8L21 7H6" />
     </>
   ),
+  // A pin in a green — one flag per mode, the thing you tee off toward.
+  flagpole: (
+    <>
+      <path d="M6 21V3" />
+      <path d="M6 4h11l-2.5 3.5L17 11H6" />
+      <path d="M3 21h8" />
+    </>
+  ),
+  // A wrapped box — what an action pays out.
+  gift: (
+    <>
+      <rect x="3" y="9" width="18" height="12" rx="1" />
+      <path d="M3 13h18" />
+      <path d="M12 9v12" />
+      <path d="M12 9C10 5 4 5 5.5 8.2 6.2 9 12 9 12 9z" />
+      <path d="M12 9c2-4 8-4 6.5-0.8C17.8 9 12 9 12 9z" />
+    </>
+  ),
   // A rising staircase — levels, each one a step you pay for.
   ladder: (
     <>

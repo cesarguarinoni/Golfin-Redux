@@ -1,5 +1,7 @@
+#nullable enable
 using System.Collections.Generic;
 using UnityEngine;
+using Golfin.Content;
 using GolfinRedux.UI;
 
 namespace GolfinRedux.UI.ModeSelect
@@ -12,6 +14,33 @@ namespace GolfinRedux.UI.ModeSelect
     /// The (type,amount) reward pair columns are parsed into ModeData.rewardList (Stage 2).
     /// rewardsTextKey is optional — when present the card's REWARDS row shows that localized
     /// text instead of "x{rewards}" (tournaments: "Varies by tournament").
+    ///
+    /// <para>
+    /// OVERLAID BY THE <c>modes</c> CONTENT CATALOG since game_modes_admin (§2) — the standard
+    /// treatment (bundled row + patch by id, appended rows admitted, <c>is_active=false</c> drops
+    /// the card, <c>RequireReady</c> so an EditMode run reads bundled only, next-launch effect I5).
+    ///
+    /// TWO THINGS HERE ARE NOT STANDARD.
+    ///
+    /// First, <c>entryFee</c> is a PRICE THE SERVER ENFORCES. A modes publish mirrors it into
+    /// <c>golfin_mode_fees</c> and <c>POST /points/spend</c> refuses a <c>mode_entry_fee:&lt;id&gt;</c>
+    /// debit that disagrees. So this overlay is what keeps the number on the card and the number the
+    /// player is charged the same one; when it cannot (a publish landed mid-session), the server
+    /// answers <c>fee_changed</c> and <see cref="ModeCardController"/> re-prices the card.
+    ///
+    /// Second, THE WITHHOLD RULE. An overlay can APPEND a mode — that is the point of appends — but
+    /// a mode is only enterable if this build's <see cref="ModeSelectScreenController"/> knows how to
+    /// route its <c>target</c>. A published <c>target</c> this build does not dispatch would render
+    /// a card whose PLAY button does nothing, which is the one failure the whole content pipeline
+    /// exists to prevent (§2: "a client missing information never shows a broken item"). Such a mode
+    /// is WITHHELD with a warning. The routable set is read from
+    /// <see cref="ModeSelectScreenController.CanDispatch"/> — the same <c>const</c>s its dispatch
+    /// switch uses — so there is exactly one list, not two that drift.
+    ///
+    /// Note what this is NOT: <c>locked=true</c> still renders, as Coming Soon, exactly as today.
+    /// Withheld means "this build cannot enter it at all"; locked means "nobody can enter it yet".
+    /// Which makes flipping Missions live a PUBLISH rather than a build.
+    /// </para>
     /// </summary>
     public class ModesDatabaseCSV : MonoBehaviour
     {
@@ -56,6 +85,13 @@ namespace GolfinRedux.UI.ModeSelect
         {
             _modes.Clear();
 
+            ContentCatalog? overlay = ContentCatalogStore.RequireReady(nameof(ModesDatabaseCSV))
+                ? ContentCatalogStore.Catalog(ContentCatalogs.Modes)
+                : null;
+
+            var seen = new HashSet<string>();
+            int overlaid = 0, deactivated = 0, withheld = 0;
+
             TextAsset csv = Resources.Load<TextAsset>(CsvResourcePath);
             if (csv == null)
             {
@@ -73,27 +109,18 @@ namespace GolfinRedux.UI.ModeSelect
                 return;
             }
 
-            // Parse header
+            // Parse header into the index map ContentFields.Csv reads a bundled column by.
+            //
+            // This REPLACES the previous run of `int i<Column> = Array.IndexOf(...)` locals — one
+            // per column, each re-checked against `cols.Length` at every row. Column names are now
+            // declared once, at the point of use in BuildMode, which is also what lets an overlay
+            // patch any of them without a matching local being added here (I4). Every column stays
+            // OPTIONAL exactly as before: a name the header does not carry reads as "" / 0 / false.
             string[] headers = lines[0].Trim().Split(',');
+            var headerIndex = new Dictionary<string, int>();
+            for (int h = 0; h < headers.Length; h++) headerIndex[headers[h].Trim()] = h;
+
             int iId = System.Array.IndexOf(headers, "id");
-            int iTitle = System.Array.IndexOf(headers, "title");
-            int iTagline = System.Array.IndexOf(headers, "tagline");
-            int iDesc = System.Array.IndexOf(headers, "description");
-            int iFee = System.Array.IndexOf(headers, "entryFee");
-            int iRewards = System.Array.IndexOf(headers, "rewards");
-            int iLocked = System.Array.IndexOf(headers, "locked");
-            int iTarget = System.Array.IndexOf(headers, "target");
-            int iOrder = System.Array.IndexOf(headers, "order");
-            int iCapOverPar = System.Array.IndexOf(headers, "versusStrokeCapOverPar");
-            // Stage 2 reward-pair columns (up to 3 pairs, matching HoleDatabaseLoader precedent)
-            int iReward1Type   = System.Array.IndexOf(headers, "reward1Type");
-            int iReward1Amount = System.Array.IndexOf(headers, "reward1Amount");
-            int iReward2Type   = System.Array.IndexOf(headers, "reward2Type");
-            int iReward2Amount = System.Array.IndexOf(headers, "reward2Amount");
-            int iReward3Type   = System.Array.IndexOf(headers, "reward3Type");
-            int iReward3Amount = System.Array.IndexOf(headers, "reward3Amount");
-            // Optional text-rewards column: a localization key rendered in place of "x{rewards}".
-            int iRewardsTextKey = System.Array.IndexOf(headers, "rewardsTextKey");
 
             for (int i = 1; i < lines.Length; i++)
             {
@@ -104,51 +131,118 @@ namespace GolfinRedux.UI.ModeSelect
                 // by wrapping them in double quotes: id,Title,Tagline,"Desc, with commas",...
                 string[] cols = ParseCsvLine(line);
 
-                var mode = new ModeData();
-                if (iId >= 0 && iId < cols.Length)     mode.id       = cols[iId].Trim();
-                if (iTitle >= 0 && iTitle < cols.Length) mode.title   = cols[iTitle].Trim();
-                if (iTagline >= 0 && iTagline < cols.Length) mode.tagline = cols[iTagline].Trim();
-                if (iDesc >= 0 && iDesc < cols.Length)  mode.description = cols[iDesc].Trim();
-                if (iFee >= 0 && iFee < cols.Length)    int.TryParse(cols[iFee].Trim(), out mode.entryFee);
-                if (iRewards >= 0 && iRewards < cols.Length) int.TryParse(cols[iRewards].Trim(), out mode.rewards);
-                if (iLocked >= 0 && iLocked < cols.Length) bool.TryParse(cols[iLocked].Trim(), out mode.locked);
-                if (iTarget >= 0 && iTarget < cols.Length)  mode.target = cols[iTarget].Trim();
-                if (iOrder >= 0 && iOrder < cols.Length)    int.TryParse(cols[iOrder].Trim(), out mode.order);
-                if (iCapOverPar >= 0 && iCapOverPar < cols.Length) int.TryParse(cols[iCapOverPar].Trim(), out mode.versusStrokeCapOverPar);
-                if (iRewardsTextKey >= 0 && iRewardsTextKey < cols.Length) mode.rewardsTextKey = cols[iRewardsTextKey].Trim();
+                string id = (iId >= 0 && iId < cols.Length) ? cols[iId].Trim() : string.Empty;
+                if (string.IsNullOrEmpty(id)) continue;
+                seen.Add(id);
 
-                // Parse up to 3 reward pairs (Stage 2). Mirror HoleDatabaseLoader.ParseRewardType pattern.
-                ParseAndAddRewardPair(cols, iReward1Type, iReward1Amount, mode);
-                ParseAndAddRewardPair(cols, iReward2Type, iReward2Amount, mode);
-                ParseAndAddRewardPair(cols, iReward3Type, iReward3Amount, mode);
+                ContentRow? patch = null;
+                if (overlay != null) overlay.ById.TryGetValue(id, out patch);
 
-                if (!string.IsNullOrEmpty(mode.id))
-                    _modes.Add(mode);
+                var fields = ContentFields.Csv(cols, headerIndex, patch);
+
+                // I6 — a deactivated mode is withdrawn, not shown greyed out. `locked` is the
+                // Coming Soon treatment; is_active=false is "this mode no longer exists".
+                if (!fields.IsActive) { deactivated++; continue; }
+
+                var mode = BuildMode(id, fields);
+                if (mode == null) { withheld++; continue; }
+
+                if (patch != null) overlaid++;
+                _modes.Add(mode);
+            }
+
+            // APPEND — an overlay row for a mode the bundled CSV does not carry. This is how a new
+            // mode reaches an INSTALLED build: as long as its `target` is one this build already
+            // dispatches, the card is real and its PLAY button works. If it is not, BuildMode
+            // withholds it — which is the whole reason appending a mode is safe to allow at all.
+            if (overlay != null)
+            {
+                foreach (var row in overlay.Rows)
+                {
+                    if (string.IsNullOrEmpty(row.Id) || seen.Contains(row.Id)) continue;
+
+                    var fields = ContentFields.OverlayOnly(row);
+                    if (!fields.IsActive) { deactivated++; continue; }
+
+                    var appended = BuildMode(row.Id, fields);
+                    if (appended == null) { withheld++; continue; }
+
+                    _modes.Add(appended);
+                    overlaid++;
+                }
             }
 
             // Sort by order column
             _modes.Sort((a, b) => a.order.CompareTo(b.order));
 
-            Debug.Log($"[ModesDatabaseCSV] Loaded {_modes.Count} modes");
+            Debug.Log($"[ModesDatabaseCSV] Loaded {_modes.Count} modes" +
+                      (overlay == null
+                          ? " — BUNDLED only, no modes overlay this launch."
+                          : $" — overlay v{overlay.Version}: {overlaid} row(s) patched/appended, " +
+                            $"{deactivated} deactivated, {withheld} withheld (unroutable target)."));
         }
 
         /// <summary>
-        /// Parses one (typeCol, amountCol) reward pair from the CSV columns and appends to mode.rewardList.
-        /// Silently skips if the columns are absent or the values are empty/invalid.
+        /// One mode from a bundled row, an overlay patch, or an overlay row alone — or NULL when
+        /// this build cannot route its <c>target</c>, in which case it has already logged why.
+        ///
+        /// THE WITHHOLD IS THE ONLY PLACE THIS METHOD CAN RETURN NULL, and it is the invariant the
+        /// spec names: a mode whose target this build does not dispatch must never become a card.
+        /// The routable set comes from <see cref="ModeSelectScreenController.CanDispatch"/>, which
+        /// is built from the same <c>const</c>s its dispatch switch uses — so a target added there
+        /// is routable here with no second list to remember.
         /// </summary>
-        private static void ParseAndAddRewardPair(string[] cols, int typeColIdx, int amountColIdx, ModeData mode)
+        private static ModeData? BuildMode(string id, ContentFields fields)
         {
-            if (typeColIdx < 0 || amountColIdx < 0) return;
-            if (typeColIdx >= cols.Length || amountColIdx >= cols.Length) return;
+            string target = fields.Get("target");
 
-            string typeStr   = cols[typeColIdx].Trim();
-            string amountStr = cols[amountColIdx].Trim();
+            if (!ModeSelectScreenController.CanDispatch(target))
+            {
+                Debug.LogWarning(
+                    $"[ModesDatabaseCSV] Mode '{id}' has target '{target}', which this build does " +
+                    "not dispatch — WITHHELD. A card that taps into nothing is worse than no card; " +
+                    "ship a build that routes it, or publish target=none to show it as Coming Soon.");
+                return null;
+            }
+
+            var mode = new ModeData
+            {
+                id                     = id,
+                title                  = fields.Get("title"),
+                tagline                = fields.Get("tagline"),
+                description            = fields.Get("description"),
+                entryFee               = fields.GetInt("entryFee"),
+                rewards                = fields.GetInt("rewards"),
+                locked                 = fields.GetBool("locked"),
+                target                 = target,
+                order                  = fields.GetInt("order"),
+                versusStrokeCapOverPar = fields.GetInt("versusStrokeCapOverPar"),
+                rewardsTextKey         = fields.Get("rewardsTextKey"),
+            };
+
+            // Up to 3 reward pairs (Stage 2). Mirrors HoleDatabaseLoader.ParseRewardType.
+            AddRewardPair(fields, "reward1Type", "reward1Amount", mode);
+            AddRewardPair(fields, "reward2Type", "reward2Amount", mode);
+            AddRewardPair(fields, "reward3Type", "reward3Amount", mode);
+
+            return mode;
+        }
+
+        /// <summary>
+        /// Appends one (typeColumn, amountColumn) reward pair to mode.rewardList, reading through
+        /// the overlay so a published reward pair patches the bundled one. Silently skips when
+        /// either half is empty or the amount is not a positive number — an empty pair is how the
+        /// CSV says "this mode has fewer than three rewards", not a parse failure.
+        /// </summary>
+        private static void AddRewardPair(ContentFields fields, string typeColumn, string amountColumn, ModeData mode)
+        {
+            string typeStr   = fields.Get(typeColumn);
+            string amountStr = fields.Get(amountColumn);
 
             if (string.IsNullOrEmpty(typeStr) || string.IsNullOrEmpty(amountStr)) return;
             if (!int.TryParse(amountStr, out int amount) || amount <= 0) return;
 
-            RewardType rewardType = ParseRewardType(typeStr);
-            mode.rewardList.Add(new HoleReward(rewardType, amount));
+            mode.rewardList.Add(new HoleReward(ParseRewardType(typeStr), amount));
         }
 
         /// <summary>

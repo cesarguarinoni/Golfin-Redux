@@ -12,8 +12,9 @@ Full detail lives in that folder's `README.md`; this file is the operator's view
 
 Next.js 15 (App Router) + TypeScript + Tailwind, deployed to **Cloudflare
 Workers** via the OpenNext adapter, reading the PLAYLIFE Supabase project
-directly with a `service_role` key. Seven panels — Audit Log, Banners, Notices,
-Points, Telemetry, Tournaments, Users — registered in `lib/registry.ts`. The
+directly with a `service_role` key. Panels — Audit Log, Banners, Characters,
+Clubs, Items, Level Costs, Modes, Notices, Points, Rewards, Shop, Telemetry,
+Texts, Tournaments, Users — registered in `lib/registry.ts`. The
 sidebar renders them **sorted by their translated title**, so the order follows
 whichever language is showing and the array order in the registry is not
 load-bearing.
@@ -61,6 +62,33 @@ A **200** there means Access is not protecting it — stop and investigate.
 ---
 
 ## 3. Changing things
+
+### 3.0 Two kinds of panel, and they are not interchangeable
+
+**Content panels** (Characters, Clubs, Items, Level Costs, Modes, Shop, Texts)
+edit `content_drafts` and take effect on **Publish**, then at the player's next
+launch. They are all the shared `CatalogPanel` plus a descriptor in
+`lib/contentView.ts`; their rules live in `lib/contentValidate.ts`.
+
+Two of them mirror into a server table AS PART OF THE PUBLISH REQUEST, and the
+publish FAILS if the mirror write fails (`lib/contentMutations.ts`):
+
+* **Characters** → `golfin_characters` (tournament rarity gates)
+* **Modes** → `golfin_mode_fees` (`/points/spend` prices a mode entry from it)
+
+**Live panels** (Banners, Notices, Points, Rewards, Tournaments, Users) write the
+table the server reads per request. There is no draft, no publish and no version
+— a save is in effect on the next request.
+
+**Rewards is the one to be careful with.** It edits `game_point_actions`, i.e.
+what every earn PAYS, and it is live on save. The panel says so in a banner at
+the top and again in the editor; do not soften that copy. Its `pts` column being
+BLANK is a mode, not a missing value — blank means the client supplies the amount
+bounded by the caps, which is how hole scores and tournament prizes work. Typing
+a number into a blank `pts` silently converts a variable payout into a flat one.
+Actions cannot be created or deleted from the panel (a shipped client refers to
+them by name); `lib/rewardsMutations.ts` enforces that server-side, not just by
+omitting the buttons.
 
 ### 3.1 A new panel
 Add `app/(panels)/<id>/page.tsx` + a client component, an entry in

@@ -88,16 +88,48 @@ namespace Golfin.Economy
         [JsonProperty("total_points")]  public int TotalPoints;
         [JsonProperty("replayed")]      public bool Replayed;
 
+        /// <summary>Mode entry only (game_modes_admin §4). Echoed on every mode-entry refusal so a
+        /// log line names the mode without re-parsing the reason.</summary>
+        [JsonProperty("mode_id")]       public string ModeId;
+
+        /// <summary>The PUBLISHED entry fee, on <c>fee_changed</c>. This is the number the card
+        /// re-renders at and the number the player's second tap pays.</summary>
+        [JsonProperty("fee")]           public int Fee;
+
         [JsonIgnore] public bool IsOk => string.Equals(Status, "ok", System.StringComparison.Ordinal);
 
         [JsonIgnore] public bool IsInsufficient
             => string.Equals(Status, "insufficient", System.StringComparison.Ordinal);
 
+        // ── Mode entry refusals (game_modes_admin §4) ────────────────────────────────
+        //
+        // All three are HTTP 200 with nothing debited, exactly like `insufficient` above and
+        // `price_changed` in /shop/purchase. `fee_changed` is the one a HEALTHY client hits: any
+        // session that began before a publish landed asks to pay the old fee. It is a normal
+        // outcome, not an attack, and it must never surface as "the server is unreachable".
+
+        /// <summary><c>status:"fee_changed"</c> — <see cref="Fee"/> is the published fee.</summary>
+        [JsonIgnore] public bool IsFeeChanged
+            => string.Equals(Status, "fee_changed", System.StringComparison.Ordinal);
+
+        /// <summary><c>status:"unknown_mode"</c> — this mode is not in the published catalog.</summary>
+        [JsonIgnore] public bool IsUnknownMode
+            => string.Equals(Status, "unknown_mode", System.StringComparison.Ordinal);
+
+        /// <summary><c>status:"mode_locked"</c> — published Coming Soon; entry refused.</summary>
+        [JsonIgnore] public bool IsModeLocked
+            => string.Equals(Status, "mode_locked", System.StringComparison.Ordinal);
+
         public override string ToString()
-            => IsInsufficient
-                ? $"insufficient (requested={Requested}, short {Shortfall}, have {TotalPoints})"
-                : $"{Status} spent={Spent} (activity={FromActivity}, gift={FromGift}) " +
-                  $"→ RP={TotalPoints}{(Replayed ? " (idempotent replay)" : "")}";
+        {
+            if (IsInsufficient)
+                return $"insufficient (requested={Requested}, short {Shortfall}, have {TotalPoints})";
+            if (IsFeeChanged)  return $"fee_changed ({ModeId}: published fee {Fee})";
+            if (IsUnknownMode) return $"unknown_mode ({ModeId})";
+            if (IsModeLocked)  return $"mode_locked ({ModeId})";
+            return $"{Status} spent={Spent} (activity={FromActivity}, gift={FromGift}) " +
+                   $"→ RP={TotalPoints}{(Replayed ? " (idempotent replay)" : "")}";
+        }
     }
 
     /// <summary>

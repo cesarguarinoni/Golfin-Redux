@@ -25,9 +25,37 @@ until somebody publishes it.
 | `catalogs.py` | The catalog ↔ CSV table, and the CSV reader that keeps line layout. Run it directly to print the current row counts. |
 | `rest.py` | Stdlib PostgREST client. Service key from the environment. |
 | `seed_from_csv.py` | Repo CSVs → `2026_08_24_content_seed.sql` (and `--apply` runs it). |
-| `export_content.py` | Published Supabase rows → the seven repo CSVs + `content_version.txt`. |
+| `export_content.py` | Published Supabase rows → the nine repo CSVs + `content_version.txt`. |
 | `import_content.py` | Repo CSVs → `content_drafts`, as a proposal. The fix for the one drift direction the exporter cannot repair. |
 | `tests/` | `python3 -m unittest discover Tools/content/tests` — stdlib only, no network. A fake PostgREST client (`tests/fakes.py`) stands in for Supabase, shared by the import and export suites. |
+
+## The catalogs
+
+Nine, and `catalogs.py` is the one place they are listed. Two of them are read by
+the SERVER as well as by the game, which is what makes an edit there a price
+change rather than a display change:
+
+| Catalog | CSV | Also read by |
+|---|---|---|
+| `clubs` | `Assets/Resources/Data/Clubs.csv` | |
+| `characters` | `Assets/Data/Characters.csv` | tournament rarity gates, via the `golfin_characters` mirror |
+| `items` | `Assets/Data/Items.csv` | |
+| `bags` | `Assets/Data/Bags.csv` | |
+| `balls` | `Assets/Data/Balls.csv` | |
+| `texts` | `Assets/Localization/LocalizationText.csv` | |
+| `shop_catalog` | `Assets/Resources/Data/shop_catalog.csv` | `POST /shop/purchase` prices from the published rows |
+| `level_up_costs` | `Assets/Data/LevelUpCosts.csv` | `golfin_level_up()` sums `cost_r` over the published rows |
+| `modes` | `Assets/Resources/Data/modes.csv` | `POST /points/spend` prices a mode entry, via the `golfin_mode_fees` mirror |
+
+Adding one is a row in `CATALOGS` plus a scoped seed:
+
+```
+python3 Tools/content/seed_from_csv.py --catalogs <name> --out ../playlife/backend/migrations/<date>_content_<name>_seed.sql
+```
+
+Day-one parity is exact by construction: the first `export_content.py --catalogs <name>`
+after seeding must leave the CSV **byte-identical**. If it does not, the mapping
+is lossy and every later phase inherits it.
 
 ## Credentials
 

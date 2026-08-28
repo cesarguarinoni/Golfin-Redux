@@ -43,6 +43,14 @@ export interface ValidationContext {
    * published state would reject that correct edit.
    */
   otherCatalogs: Map<string, Map<string, DraftRow>>;
+  /**
+   * `game_point_actions.versus_win.pts` — the amount the server ACTUALLY pays for
+   * a 1v1 win. Loaded only when publishing `modes`, and used by exactly one
+   * warning (see rule 10). `undefined` = not loaded, `null` = the row exists with
+   * a NULL `pts`, which for a fixed-payout action would itself be a problem the
+   * Rewards panel refuses to create.
+   */
+  versusWinPts?: number | null;
 }
 
 /**
@@ -88,6 +96,7 @@ const REQUIRED: Record<string, string[]> = {
   texts: ["key", "English", "Japanese"],
   shop_catalog: ["entryId", "category", "refId", "rpCost", "sortOrder"],
   level_up_costs: ["level", "cost_r", "sp_reward"],
+  modes: ["id", "title", "entryFee", "order"],
 };
 
 /** Columns that must parse as a number wherever they are present (§D1.3). */
@@ -101,6 +110,8 @@ const NUMERIC: Record<string, string[]> = {
   texts: [],
   shop_catalog: ["rpCost", "saleRpCost", "sortOrder"],
   level_up_costs: ["level", "cost_r", "sp_reward"],
+  modes: ["entryFee", "rewards", "order", "reward1Amount", "reward2Amount", "reward3Amount",
+          "versusStrokeCapOverPar"],
 };
 
 /** `shop_catalog.category` → the catalog `refId` resolves in (§D1.6). */
@@ -121,6 +132,7 @@ export const ID_COLUMN: Record<string, string> = {
   texts: "key",
   shop_catalog: "entryId",
   level_up_costs: "level",
+  modes: "id",
 };
 
 /**
@@ -564,6 +576,101 @@ export function validateCatalog(
           `The ceiling comes from ${ceilingSource}. A missing level is one the server refuses ` +
           "with costs_missing and the player sees as a dead LEVEL UP button."
       );
+    }
+  }
+
+  // 10. modes — the catalog that prices MODE ENTRY (game_modes_admin §2).
+  //
+  // Four blocking rules and ONE warning, and the warning is the interesting part.
+  //
+  //   * `entryFee >= 0`. A negative fee is a mode that PAYS you to enter, which
+  //     `golfin_mode_fees`'s own check constraint would refuse anyway — better
+  //     here, where the operator can see which row.
+  //   * `order` UNIQUE. It is the carousel's sort key and the client sorts by it
+  //     with a plain comparison, so a tie is a pair of cards in arbitrary,
+  //     build-dependent order. Not fatal, but it is a layout that changes under
+  //     you for no visible reason, which is worse to debug than a refused publish.
+  //   * `target` NON-EMPTY. An empty target is a card whose PLAY button routes
+  //     nowhere. (An unrecognised-but-non-empty target is NOT an error here: the
+  //     dashboard cannot know what the builds in the wild dispatch. The CLIENT
+  //     withholds such a mode with a warning — ModesDatabaseCSV, §2 — which is
+  //     the right place for a build-specific rule.)
+  //   * `locked` must parse as a bool. `GetBool` treats anything it does not
+  //     recognise as false, so "yes" would silently publish a Coming Soon mode
+  //     as LIVE.
+  //
+  // THE DRIFT WARNING COVERS EXACTLY ONE PAIR, BY DECISION (Cesar, 2026-08-28).
+  // Card reward numbers are DECOUPLED from `game_point_actions`: for every mode
+  // except multiplayer the card shows an AVERAGE over a later selection (which
+  // hole, how it is played), so it is copy the operator words freely and there is
+  // nothing to compare it to. `versus_1v1` is the one card that claims an exact
+  // paid amount, because `versus_win` is a fixed payout. So the check is
+  // `versus_1v1.rewards` / `reward1Amount` vs `versus_win.pts`, and nothing else.
+  // DO NOT GENERALISE THIS INTO A MAPPING TABLE — a table would invent a
+  // relationship for four modes that deliberately do not have one, and every one
+  // of them would warn forever.
+  if (catalog === "modes") {
+    const orderSeen = new Map<number, string>();
+
+    for (const row of rows) {
+      const entryFee = num(row.data.entryFee);
+      if (entryFee !== null && entryFee < 0) {
+        err(row.rowId, "entryFee", `entryFee ${entryFee} is negative.`);
+      }
+
+      const target = text(row.data.target).trim();
+      if (!target) {
+        err(
+          row.rowId,
+          "target",
+          "target is empty — the card's PLAY button would route nowhere. Use \"none\" " +
+            "for a mode that is deliberately not enterable yet (it renders as Coming Soon)."
+        );
+      }
+
+      if ("locked" in row.data) {
+        const locked = text(row.data.locked).trim().toLowerCase();
+        if (locked !== "" && locked !== "true" && locked !== "false" && locked !== "1" && locked !== "0") {
+          err(
+            row.rowId,
+            "locked",
+            `"${text(row.data.locked)}" is not a boolean. The client reads anything it does not ` +
+              "recognise as FALSE, so this would publish the mode as LIVE."
+          );
+        }
+      }
+
+      const order = num(row.data.order);
+      if (order !== null) {
+        const clash = orderSeen.get(order);
+        if (clash !== undefined) {
+          err(
+            row.rowId,
+            "order",
+            `order ${order} is already used by "${clash}". The carousel sorts by this column, ` +
+              "so a tie leaves the two cards in arbitrary order."
+          );
+        } else {
+          orderSeen.set(order, row.rowId);
+        }
+      }
+    }
+
+    // The one drift warning. WARNING, not an error: the operator may be mid-way
+    // through a two-step change (raise the payout here, publish the card copy
+    // next), and blocking would make the intermediate state unpublishable.
+    const versus = rows.find((r) => r.rowId === "versus_1v1");
+    if (versus && ctx.versusWinPts !== undefined && ctx.versusWinPts !== null) {
+      const paid = ctx.versusWinPts;
+      const shown = num(versus.data.reward1Amount) ?? num(versus.data.rewards);
+      if (shown !== null && shown !== paid) {
+        warn(
+          "versus_1v1",
+          "rewards",
+          `The 1v1 card advertises ${shown} RP but versus_win pays ${paid} (Rewards panel). ` +
+            "Unlike every other mode, this card claims an EXACT payout, so the two should agree."
+        );
+      }
     }
   }
 

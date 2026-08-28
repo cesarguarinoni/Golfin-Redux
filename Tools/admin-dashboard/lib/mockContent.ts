@@ -21,6 +21,7 @@ export const MOCK_CONTENT_CATALOGS: ContentCatalogSummary[] = [
   { name: "texts", publishedVersion: 9999, isEnabled: true, publishedCount: 1, draftCount: 1, dirtyCount: 0 },
   { name: "shop_catalog", publishedVersion: 9999, isEnabled: true, publishedCount: 1, draftCount: 1, dirtyCount: 0 },
   { name: "level_up_costs", publishedVersion: 9999, isEnabled: true, publishedCount: 3, draftCount: 3, dirtyCount: 0 },
+  { name: "modes", publishedVersion: 9999, isEnabled: true, publishedCount: 2, draftCount: 2, dirtyCount: 0 },
 ];
 
 const row = (
@@ -109,6 +110,30 @@ export const MOCK_CONTENT_PUBLISHED: ContentStoredRow[] = [
   row("level_up_costs", "1", { level: "1", cost_r: "1", sp_reward: "1" }),
   row("level_up_costs", "2", { level: "2", cost_r: "1", sp_reward: "1" }),
   row("level_up_costs", "3", { level: "3", cost_r: "2", sp_reward: "1" }),
+  // Two modes, and the pair is chosen to exercise the two rules that matter.
+  //
+  // `mock_mode_open` has an ABSURD fee (9999) like every other fixture, plus a
+  // target the real client dispatches — so the withhold rule is NOT what it
+  // demonstrates. `mock_mode_locked` is Coming Soon with target "none".
+  //
+  // ⚠️ THERE IS DELIBERATELY NO `versus_1v1` ROW HERE, so mock mode never fires
+  // the one drift warning. The warning compares the card against the live
+  // `game_point_actions.versus_win.pts`, which mock mode does not have; a
+  // fixture that made it fire would be warning about a number nobody set.
+  row("modes", "mock_mode_open", {
+    id: "mock_mode_open", title: "MOCK MODE", tagline: "MOCK FIXTURE",
+    description: "MOCK FIXTURE", entryFee: "9999", rewards: "9999", locked: "false",
+    target: "hole_select", order: "9998", versusStrokeCapOverPar: "0",
+    reward1Type: "", reward1Amount: "", reward2Type: "", reward2Amount: "",
+    reward3Type: "", reward3Amount: "", rewardsTextKey: "",
+  }),
+  row("modes", "mock_mode_locked", {
+    id: "mock_mode_locked", title: "MOCK LOCKED MODE", tagline: "MOCK FIXTURE",
+    description: "MOCK FIXTURE", entryFee: "0", rewards: "0", locked: "true",
+    target: "none", order: "9999", versusStrokeCapOverPar: "0",
+    reward1Type: "", reward1Amount: "", reward2Type: "", reward2Amount: "",
+    reward3Type: "", reward3Amount: "", rewardsTextKey: "",
+  }),
 ];
 
 /** Drafts start identical to published except one obviously-dirty club row. */
@@ -142,4 +167,6 @@ export const MOCK_CONTENT_VERSIONS: ContentVersionSummary[] = [
   { catalog: "balls", version: 1, publishedBy: null, publishedAt: "2026-08-01T00:00:00Z", note: "MOCK FIXTURE — seeded baseline", rowCount: 2 },
   { catalog: "texts", version: 9999, publishedBy: "mock@example.invalid", publishedAt: "2026-08-25T00:00:00Z", note: "MOCK FIXTURE", rowCount: 2 },
   { catalog: "texts", version: 1, publishedBy: null, publishedAt: "2026-08-01T00:00:00Z", note: "MOCK FIXTURE — seeded baseline", rowCount: 2 },
+  { catalog: "modes", version: 9999, publishedBy: "mock@example.invalid", publishedAt: "2026-08-28T00:00:00Z", note: "MOCK FIXTURE", rowCount: 2 },
+  { catalog: "modes", version: 1, publishedBy: null, publishedAt: "2026-08-01T00:00:00Z", note: "MOCK FIXTURE — seeded baseline", rowCount: 2 },
 ];

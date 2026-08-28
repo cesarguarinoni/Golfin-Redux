@@ -20,6 +20,55 @@ namespace GolfinRedux.UI.ModeSelect
     /// </summary>
     public class ModeSelectScreenController : MonoBehaviour
     {
+        // ── The targets THIS BUILD dispatches (game_modes_admin §2) ──────────────────
+        //
+        // These are `const`, so the `switch` in HandlePlayClicked can use them as case
+        // labels and `DispatchableTargets` can be built from the SAME symbols. That is
+        // the whole trick: the withhold rule in ModesDatabaseCSV needs to know which
+        // targets are routable, and the alternative — a second literal list somewhere —
+        // is a list that silently goes stale the first time a target is added here.
+        // With this, adding a case without adding it to the array does not compile past
+        // the array, and adding it to the array without a case is the one direction that
+        // is safe (a mode that renders and logs "no route" rather than never rendering).
+        //
+        // `TargetNone` is IN the set on purpose. It is not a route — it is the explicit
+        // "deliberately not enterable", and its cards are the Coming Soon ones the game
+        // has always shipped. Withholding it would make Driving Range and Missions
+        // vanish, which is not what "this build cannot enter it" is supposed to mean.
+
+        /// <summary>PLAY opens hole selection (Practice).</summary>
+        public const string TargetHoleSelect = "hole_select";
+
+        /// <summary>PLAY opens the 1v1 matchmaking modal.</summary>
+        public const string TargetMatchmaking1v1 = "matchmaking_1v1";
+
+        /// <summary>PLAY opens the tournament browse screen.</summary>
+        public const string TargetTournaments = "tournaments";
+
+        /// <summary>Deliberately not enterable — the Coming Soon cards.</summary>
+        public const string TargetNone = "none";
+
+        /// <summary>
+        /// Every <c>modes.target</c> this build understands. Read by
+        /// <see cref="ModesDatabaseCSV"/> to withhold a published mode whose target this
+        /// build cannot route — an overlay can add a mode at any time, and a card that
+        /// taps into nothing is worse than no card at all.
+        /// </summary>
+        public static readonly string[] DispatchableTargets =
+        {
+            TargetHoleSelect, TargetMatchmaking1v1, TargetTournaments, TargetNone,
+        };
+
+        /// <summary>Case-insensitive membership in <see cref="DispatchableTargets"/>.</summary>
+        public static bool CanDispatch(string target)
+        {
+            if (string.IsNullOrWhiteSpace(target)) return false;
+            string t = target.Trim();
+            foreach (string known in DispatchableTargets)
+                if (string.Equals(known, t, System.StringComparison.OrdinalIgnoreCase)) return true;
+            return false;
+        }
+
         [Header("Cards List")]
         [SerializeField] private ScrollRect cardsScrollRect;
         [SerializeField] private RectTransform cardsContent;
@@ -149,14 +198,14 @@ namespace GolfinRedux.UI.ModeSelect
 
             switch (mode.target)
             {
-                case "hole_select":
+                case TargetHoleSelect:
                     if (sm != null)
                         sm.ShowScreen(ScreenId.HoleSelection);
                     else
                         Debug.LogWarning("[ModeSelectScreen] ScreenManager not found.");
                     break;
 
-                case "tournaments":
+                case TargetTournaments:
                     // Tournament browse screen (T7). No entry-fee spend here — per-tournament
                     // fees are owned by the signup flow (TournamentSignupModalController).
                     if (sm != null)
@@ -165,7 +214,7 @@ namespace GolfinRedux.UI.ModeSelect
                         Debug.LogWarning("[ModeSelectScreen] Tournaments PLAY — ScreenManager not found.");
                     break;
 
-                case "matchmaking_1v1":
+                case TargetMatchmaking1v1:
                     // 1v1 path: flag the session as versus BEFORE opening matchmaking.
                     GameSession.IsVersus = true;
                     // Pick a random hole (1-18), then open matchmaking modal.
@@ -181,7 +230,7 @@ namespace GolfinRedux.UI.ModeSelect
                     }
                     break;
 
-                case "none":
+                case TargetNone:
                 default:
                     Debug.LogWarning($"[ModeSelectScreen] PLAY on mode '{card.ModeId}' has no route.");
                     break;

@@ -19,7 +19,28 @@ namespace Golfin.Economy
 
         /// <summary><c>PointsBackendEnabled</c> is OFF. No request was made; the caller runs its
         /// unchanged local-only path.</summary>
-        Disabled
+        Disabled,
+
+        // ── Mode entry, server-validated (game_modes_admin §4) ───────────────────────
+        //
+        // Three more DEFINITIVE answers, all HTTP 200 with nothing debited. They are separate
+        // verdicts and not one "Refused" for the same reason Insufficient and Unavailable are
+        // separate: the UI differs. FeeChanged is an INVITATION to tap again at the shown number;
+        // the other two mean the mode is gone or shut and the card should stop offering it.
+
+        /// <summary>HTTP 200, <c>status:"fee_changed"</c>. The card's fee is not the published one.
+        /// Nothing was written — re-render at <see cref="SpendOutcome.ServerFee"/> and let the player
+        /// decide again. A publish landing mid-session produces this for every client still open, so
+        /// it is a NORMAL outcome and not an error.</summary>
+        FeeChanged,
+
+        /// <summary>HTTP 200, <c>status:"unknown_mode"</c>. The published catalog has no such mode —
+        /// this client is stale. Nothing was written.</summary>
+        UnknownMode,
+
+        /// <summary>HTTP 200, <c>status:"mode_locked"</c>. The mode is published Coming Soon, so
+        /// entry is refused server-side too, not only hidden client-side.</summary>
+        ModeLocked
     }
 
     /// <summary>
@@ -41,6 +62,19 @@ namespace Golfin.Economy
 
         public bool MayProceed => Verdict == SpendVerdict.Approved || Verdict == SpendVerdict.Disabled;
 
+        /// <summary>
+        /// The PUBLISHED entry fee on a <see cref="SpendVerdict.FeeChanged"/> outcome, else 0.
+        ///
+        /// This is what makes FeeChanged actionable rather than merely a refusal: the card re-renders
+        /// at this number and the player's SECOND tap pays it. Without it the client would only know
+        /// that its price was wrong, not what the right one is, and the only recovery would be a
+        /// relaunch.
+        /// </summary>
+        public int ServerFee => Server != null ? Server.Fee : 0;
+
+        /// <summary>The mode the server was talking about, on the three mode-entry verdicts.</summary>
+        public string ModeId => Server != null ? Server.ModeId : null;
+
         /// <summary>True when the failure is a connectivity problem rather than a server refusal —
         /// drives the "Connection required" copy instead of "Not enough Reward Points".</summary>
         public bool IsOffline => Api != null &&
@@ -52,6 +86,15 @@ namespace Golfin.Economy
 
         public static SpendOutcome Insufficient(PointsSpendResult server, ApiResult<PointsSpendResult> api)
             => new SpendOutcome { Verdict = SpendVerdict.Insufficient, Server = server, Api = api };
+
+        public static SpendOutcome FeeChanged(PointsSpendResult server, ApiResult<PointsSpendResult> api)
+            => new SpendOutcome { Verdict = SpendVerdict.FeeChanged, Server = server, Api = api };
+
+        public static SpendOutcome UnknownMode(PointsSpendResult server, ApiResult<PointsSpendResult> api)
+            => new SpendOutcome { Verdict = SpendVerdict.UnknownMode, Server = server, Api = api };
+
+        public static SpendOutcome ModeLocked(PointsSpendResult server, ApiResult<PointsSpendResult> api)
+            => new SpendOutcome { Verdict = SpendVerdict.ModeLocked, Server = server, Api = api };
 
         public static SpendOutcome Unavailable(ApiResult<PointsSpendResult> api)
             => new SpendOutcome { Verdict = SpendVerdict.Unavailable, Api = api };

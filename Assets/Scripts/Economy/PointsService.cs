@@ -314,6 +314,39 @@ namespace Golfin.Economy
                 yield break;
             }
 
+            // ── Mode entry, server-validated (game_modes_admin §4) ───────────────────────────
+            //
+            // Three more definitive 200s, and NONE of them calls ApplySpend: nothing was debited,
+            // so the cached balance is already right and folding a payload that carries no
+            // post-debit total would zero it. (`insufficient` above DOES apply, because its payload
+            // carries the real balance — that is how a client that thought it was rich finds out.)
+            //
+            // Falling through to the "unrecognised status" branch instead would report all three as
+            // Unavailable, i.e. as a connection problem, and a `fee_changed` — which every open
+            // session gets when a publish lands — would tell the player they are offline.
+            if (data.IsFeeChanged)
+            {
+                Debug.Log($"[PointsService] Spend of {amount} ({reason}) re-priced by the server: {data}");
+                onDone?.Invoke(SpendOutcome.FeeChanged(data, result));
+                yield break;
+            }
+
+            if (data.IsUnknownMode)
+            {
+                Debug.LogWarning($"[PointsService] Spend of {amount} ({reason}) refused: {data} — " +
+                                 "this client is holding a mode the published catalog does not carry.");
+                onDone?.Invoke(SpendOutcome.UnknownMode(data, result));
+                yield break;
+            }
+
+            if (data.IsModeLocked)
+            {
+                Debug.LogWarning($"[PointsService] Spend of {amount} ({reason}) refused: {data} — " +
+                                 "the mode is published Coming Soon.");
+                onDone?.Invoke(SpendOutcome.ModeLocked(data, result));
+                yield break;
+            }
+
             if (!data.IsOk)
             {
                 Debug.LogWarning($"[PointsService] Spend of {amount} ({reason}) returned an " +

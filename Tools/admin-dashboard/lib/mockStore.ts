@@ -7,6 +7,7 @@ import {
   MOCK_CONTENT_VERSIONS,
 } from "./mockContent";
 import { MOCK_NOTICES } from "./mockNotices";
+import { MOCK_REWARD_ACTIONS } from "./mockRewards";
 import { MOCK_ACTIVITIES, MOCK_TRANSACTIONS, MOCK_USERS } from "./mock";
 import { MOCK_TOURNAMENTS, MOCK_TOURNAMENT_ENTRIES } from "./mockTournaments";
 import type {
@@ -19,6 +20,7 @@ import type {
   ContentVersionSummary,
   NoticeRow,
   PointsTransaction,
+  RewardActionRow,
   TournamentEntryRow,
   TournamentRow,
 } from "./types";
@@ -40,6 +42,9 @@ export interface MockDb {
   tournamentEntries: Record<string, TournamentEntryRow[]>;
   banners: BannerRow[];
   notices: NoticeRow[];
+  /** `game_point_actions` — the LIVE earn catalog (game_modes_admin §3). No
+   *  draft/publish pair here, deliberately: there is none in prod either. */
+  rewardActions: RewardActionRow[];
   /** Admin-managed content (SPEC content_catalog §D2). Fixtures are DELIBERATELY
    *  absurd — every price is 9999 — because §3.5 records mock fixtures being
    *  read as production facts. */
@@ -66,6 +71,7 @@ export function mockDb(): MockDb {
       tournamentEntries: structuredClone(MOCK_TOURNAMENT_ENTRIES),
       banners: structuredClone(MOCK_BANNERS),
       notices: structuredClone(MOCK_NOTICES),
+      rewardActions: structuredClone(MOCK_REWARD_ACTIONS),
       contentCatalogs: structuredClone(MOCK_CONTENT_CATALOGS),
       contentPublished: structuredClone(MOCK_CONTENT_PUBLISHED),
       contentDrafts: structuredClone(MOCK_CONTENT_DRAFTS),

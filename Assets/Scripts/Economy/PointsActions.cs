@@ -43,7 +43,28 @@ namespace Golfin.Economy
         public const string CharacterLevelUp = "character_level_up";
         public const string ClubLevelUp      = "club_level_up";
         public const string TournamentEntry  = "tournament_entry";
+        /// <summary>
+        /// PREFIX ONLY. A mode entry sends <c>mode_entry_fee:&lt;mode id&gt;</c> — see
+        /// <see cref="ModeEntryFeeFor"/>. The bare constant is kept because the SERVER still accepts
+        /// it (every build installed before game_modes_admin sends it), and because closing that
+        /// door is a separate one-line commit once the suffixed build is what testers run.
+        /// </summary>
         public const string ModeEntryFee     = "mode_entry_fee";
+
+        /// <summary>
+        /// The reason for entering <paramref name="modeId"/>: <c>mode_entry_fee:practice</c>.
+        ///
+        /// THIS IS NOT COSMETIC. <c>POST /points/spend</c> parses the mode id out of it and refuses
+        /// the debit unless the amount matches the PUBLISHED fee — so the suffix is what turns a
+        /// client-asserted price into a server-validated one (game_modes_admin §4). It also makes
+        /// the admin ledger per-mode legible, which is the free part.
+        ///
+        /// A blank id falls back to the bare reason rather than sending a dangling
+        /// <c>mode_entry_fee:</c>: the server reads an empty suffix as <c>unknown_mode</c> and
+        /// refuses, and a mode with no id is a client bug that should not also become a failed entry.
+        /// </summary>
+        public static string ModeEntryFeeFor(string modeId)
+            => string.IsNullOrWhiteSpace(modeId) ? ModeEntryFee : ModeEntryFee + ":" + modeId.Trim();
 
         /// <summary>Stamina Boost Shop (points_cutover_followups item 2).</summary>
         public const string StaminaBoost     = "stamina_boost";
