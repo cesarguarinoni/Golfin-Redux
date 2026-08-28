@@ -1,15 +1,12 @@
-READY_FOR_SELF_REVIEW
+SELF_REVIEW_PASS
 
-Reviewer iter-2 FAILED on SPEC item 9: `content_version.txt` read `modes=4` while
-prod was at v6 — my own live rollback verification bumped the version and I did
-not re-export. Re-derived before accepting it (disk 4, prod 6, --check exit 1),
-fixed, and `--check --catalogs modes` is now exit 0 with modes.csv byte-identical.
-
-SECOND instance of one shape (iter-1 caught it, iter-2 missed it), so the shape
-was audited rather than the instance: all nine catalog cursors enumerated against
-prod — only `modes` was stale, now 0 stale. Root cause written into
-Tools/content/README.md: a rollback publishes FORWARD, so "restoring" leaves the
-version higher than it started and the cursor is the only trace.
-
-Also recorded: the iter-2 self-review claimed that command exited 0. It did not.
-The reviewer catching a false PASS from the gate before it is the design working.
+Iter-3 self-review verified from primary sources, not from prior verdicts:
+`--check --catalogs modes` exit 0 with stdout confirming modes.csv unchanged and
+version file unchanged; disk `modes=6` matches prod `published_version=6`; all
+nine catalog cursors enumerated against prod (zero stale); modes.csv md5
+`c36e4288…` unchanged and absent from the iter-3 fix commit (`6f6ce4b44`);
+red-team fix intact (mirrorForCatalog is the sole writer, rollbackCatalog
+mirrors from snapshot BEFORE the rpc at line 537 and aborts on error at
+538-544). Every SPEC §6 item re-derived this pass: backend 118 passed,
+Tools/content 26 OK, dashboard tsc exit 0, EditMode 1955/1952/0/3. Standing
+bans clean, deploy scope clean.
