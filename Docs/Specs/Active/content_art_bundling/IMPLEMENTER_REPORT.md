@@ -7,6 +7,78 @@
 
 ---
 
+## iter-3 — a half-bundled-row hole I found in my own code, and then in my own fix
+
+Found while writing the red-team brief for iter-2, by reading the write ordering rather than by any
+gate. Two defects of one class: **state committed to the repo before the thing that validates it
+has run.**
+
+### 3a. The CSV was written BEFORE the import was verified
+
+`ProcessCatalog` spliced the sprite name and wrote the CSV inside the asset batch (old line 525);
+`ApplyAndVerifyImport` — which can REFUSE — only ran afterwards (line 419). So a refused import left
+the name in the CSV and the file on disk while the run reported "Refused".
+
+Observed under a forced verification failure, BEFORE the fix:
+
+```
+VERDICT REPORTED: [Refused]  import settings did not take
+CSV ROW NOW    : …,7,6,5,7,Ordertest,,80,119,…      ← name written anyway
+ASSET ON DISK  : True                                ← file left behind
+```
+
+That is not cosmetic. A failed import is exactly the case where `Resources.Load<Sprite>` returns
+null, so the row would be **silently withheld at runtime behind a CSV name that looks correct** —
+the failure SPEC §1 decision 2 exists to prevent, reintroduced by the phase ordering. A corrupt
+download that still passes the size and content-type checks reaches it.
+
+**Fix:** splices are held in a `PendingCsv` and `FinalizeCsvs` writes only after verification,
+reverting the splice and deleting the written asset for anything refused. `Outcome.WrittenPath` was
+added because `Refuse` overwrites `Detail`, which the cleanup needs.
+
+Same forced failure, AFTER:
+
+```
+VERDICT REPORTED: [Refused]  … (the written asset … was removed and the CSV name reverted
+                                — a refusal leaves nothing behind)
+CSV ROW NOW    : char_ordertest,…,7,6,5,7,,,80,119,…   ← reverted to empty
+ASSET ON DISK  : False        META ON DISK : False
+```
+
+### 3b. My own fix had the same hole one level down
+
+`FinalizeCsvs` treated `SharedWithSibling` as survived unconditionally. But a shared row names
+ANOTHER row's asset — and clubs share art across six rarities by design (§9 answer 1). So one
+refused `Fetched` row deletes the file that five `SharedWithSibling` rows point at, and all five
+would have kept their names: five repo rows naming a sprite that does not exist.
+
+Fixed by reverting any edit whose TARGET failed, not just whose own verdict failed. Six shared club
+rows under a forced verification failure:
+
+| | Before 3b | After 3b |
+|---|---|---|
+| verdicts | 1 Refused + 5 SharedWithSibling | **6 Refused** |
+| rows still naming the sprite | 5 of 6 | **0 of 6** |
+| asset on disk | deleted | deleted |
+
+### Both happy paths re-proven, because the restructure could have broken them
+
+- Single row: fetched, CSV written, `Resources.Load<Sprite>` non-null, **re-run still a clean
+  no-op** through the new code path.
+- Six shared club rows: `1 asset added, 5 row(s) share fetched art`, 6 of 6 rows named, ONE file on
+  disk, loads as a Sprite, re-run a no-op.
+
+EditMode **1897 / 1894 passed / 0 failed / 3 pre-existing skips**. All fixtures removed; the four
+CSVs and `content_art.txt` byte-identical to the tracked tip; the live collision targets
+`Driver-FairX.png` (`16f50050…`) and `James.png` (`596d962f…`) untouched.
+
+**Not covered by a regression test**, and that is a stated gap: both defects need a forced
+verification failure to reach, which the current tests have no seam for. The evidence above is a
+manual tripwire, not something that will catch a future regression. A seam (an injectable verify
+step, or a test hook that makes `ApplyAndVerifyImport` fail) is the honest follow-up.
+
+---
+
 ## iter-2 — the red-team gate found a real blocker, and it was right
 
 `ARCHITECT_REVIEW_FAIL`, 2026-08-28. **The collision guard was case-SENSITIVE on a

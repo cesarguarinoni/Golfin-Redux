@@ -1,11 +1,14 @@
 READY_FOR_SELF_REVIEW
 
-iter-2 2026-08-28. Red-team FAIL addressed: the collision guard was case-SENSITIVE on
-case-INSENSITIVE APFS, so a case-variant derived name sailed past it and the write would have
-replaced an existing asset's bytes while keeping its name, .meta and GUID. Fixed in four places
-(ExistingAsset, the same-run dedup key, the FindSibling exclude, plus a re-check adjacent to the
-write). Tripwire-demonstrated red then green; proven live against the real Driver-FairX.png, which
-is byte-identical after.
+iter-3 2026-08-28. TWO defects of one class, found by me while briefing the red-team, not by a gate:
+the CSV was written BEFORE import verification (a refused import left the name in the repo and the
+file on disk while reporting "Refused" — a row silently withheld at runtime behind a name that looks
+correct), and my first fix for it treated SharedWithSibling as safe, so one refused club fetch would
+have left five sibling rows naming a deleted sprite. Both fixed, both demonstrated red then green
+under a forced verification failure, both happy paths re-proven.
 
-EditMode 1897 / 1894 passed / 0 failed / 3 pre-existing skips (+3 collision tests).
-See IMPLEMENTER_REPORT.md § iter-2 and REDTEAM_REVIEW.md.
+Known gap: neither defect is covered by a regression test — reaching them needs a forced
+verification failure and there is no seam for that yet. Follow-up, stated not hidden.
+
+EditMode 1897 / 1894 passed / 0 failed / 3 pre-existing skips.
+See IMPLEMENTER_REPORT.md § iter-3.

@@ -49,3 +49,9 @@ Red-team ARCHITECT_REVIEW_FAIL: collision guard case-sensitive on case-insensiti
 Fixed 4 sites; 3 regression tests; tripwire red->green; live proof vs Driver-FairX.png (md5 unchanged).
 EditMode 1897 / 1894 / 0 failed / 3 skips.
 === end iter-2 ===
+
+=== iter-3 2026-08-28 ===
+Self-found: CSV written before import verification; and SharedWithSibling treated as safe in the fix.
+Both fixed + demonstrated red->green under forced verification failure. Happy paths re-proven.
+EditMode 1897 / 1894 / 0 failed / 3 skips.
+=== end iter-3 ===

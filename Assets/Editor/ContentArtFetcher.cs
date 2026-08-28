@@ -292,6 +292,13 @@ namespace Golfin.EditorTools
             public string Detail = "";
             public long SourceBytes;
             public long BuildBytes;
+
+            /// <summary>
+            /// The asset actually written, kept SEPARATELY from <see cref="Detail"/> because a
+            /// later <c>Refuse</c> overwrites Detail with the reason — and the cleanup path still
+            /// needs to know which file to remove.
+            /// </summary>
+            public string WrittenPath = "";
             public string Format = "";
             public int MaxTextureSize;
 
@@ -396,12 +403,14 @@ namespace Golfin.EditorTools
             // onto one entry here or the second silently overwrites the first.
             var produced = new Dictionary<string, Produced>(StringComparer.OrdinalIgnoreCase);
 
+            var allPending = new List<PendingCsv>();
+
             try
             {
                 AssetDatabase.StartAssetEditing();
                 foreach (var spec in Catalogs)
                 {
-                    try { ProcessCatalog(spec, root, report, produced); }
+                    try { ProcessCatalog(spec, root, report, produced, allPending); }
                     catch (Exception e)
                     {
                         report.Errors.Add($"{spec.Name} ({spec.CsvPath}): {e.GetType().Name}: {e.Message}");
@@ -418,9 +427,40 @@ namespace Golfin.EditorTools
             // Start/StopAssetEditing is deferred, and §5 requires the importer to be re-READ.
             foreach (var o in report.Fetched.ToList()) ApplyAndVerifyImport(o, report);
 
+            // ONLY NOW are the CSVs written, and only for names whose asset actually verified.
+            // Writing them earlier is what let a refused import leave a name in the repo (see
+            // PendingCsv).
+            FinalizeCsvs(allPending, report);
+
             AppendToReport(report, root);
             LogSummary(report);
             return report;
+        }
+
+        /// <summary>
+        /// One catalog's pending CSV edits, held in memory until import verification has run.
+        ///
+        /// <para>
+        /// ⚠️ <b>THE CSV MUST NOT BE WRITTEN BEFORE THE IMPORT IS VERIFIED.</b> It used to be:
+        /// <c>ProcessCatalog</c> spliced the name and wrote the file inside the asset batch, and
+        /// <c>ApplyAndVerifyImport</c> — which can REFUSE — only ran afterwards. A refused import
+        /// therefore left the name in the CSV and the file on disk while the run reported
+        /// "Refused". The repo then claimed the row was bundled when it was not, and because a
+        /// failed import means <c>Resources.Load&lt;Sprite&gt;</c> returns null, the row would be
+        /// silently withheld at runtime behind a name that looks perfectly correct — exactly the
+        /// failure SPEC §1 decision 2 exists to prevent. Observed 2026-08-28 under a forced
+        /// verification failure: verdict Refused, CSV carrying `Ordertest`, asset still on disk.
+        /// </para>
+        /// </summary>
+        sealed class PendingCsv
+        {
+            public string FullPath = "";
+            public string RelPath = "";
+            public List<string> Lines = new List<string>();
+
+            /// <summary>Which line and column each outcome spliced, so a refusal can be undone.</summary>
+            public readonly List<(Outcome Outcome, int Line, int Column)> Edits =
+                new List<(Outcome, int, int)>();
         }
 
         sealed class Produced
@@ -433,8 +473,9 @@ namespace Golfin.EditorTools
         // ── One catalog ─────────────────────────────────────────────────────
 
         static void ProcessCatalog(CatalogSpec spec, string root, RunReport report,
-                                   Dictionary<string, Produced> produced)
+                                   Dictionary<string, Produced> produced, List<PendingCsv> allPending)
         {
+            var pending = new PendingCsv();
             string csvFull = Path.Combine(root, spec.CsvPath);
             if (!File.Exists(csvFull))
             {
@@ -512,9 +553,12 @@ namespace Golfin.EditorTools
                     if (TryFetchOne(outcome, root, produced))
                     {
                         // The CSV gains the name (SPEC §3.8) — spliced into the empty field so
-                        // the diff is the name and nothing else.
+                        // the diff is the name and nothing else. NOT written to disk here: the
+                        // import has not been verified yet, and a refusal has to be able to undo
+                        // this. See PendingCsv.
                         lines[i] = SetField(lines[i], fields, index[slot.NameColumn], name);
                         fields = ParseCsvSpans(lines[i]);   // offsets moved; re-index for the next slot
+                        pending.Edits.Add((outcome, i, index[slot.NameColumn]));
                         dirty = true;
                     }
                 }
@@ -522,10 +566,85 @@ namespace Golfin.EditorTools
 
             if (!dirty) return;
 
-            File.WriteAllText(csvFull, string.Join("\n", lines));
-            // Unity reads the IMPORTED TextAsset, not the file on disk: without this the loaders
-            // would keep serving the pre-write text for the rest of the session.
-            AssetDatabase.ImportAsset(spec.CsvPath, ImportAssetOptions.ForceUpdate);
+            pending.FullPath = csvFull;
+            pending.RelPath = spec.CsvPath;
+            pending.Lines = lines;
+            allPending.Add(pending);
+        }
+
+        /// <summary>
+        /// Write the CSVs, but ONLY the names whose asset survived import verification. An outcome
+        /// that flipped to <see cref="Verdict.Refused"/> in <see cref="ApplyAndVerifyImport"/> has
+        /// its splice undone and its written file deleted, so a refusal leaves NOTHING behind — no
+        /// half-bundled row, no orphan asset.
+        /// </summary>
+        static void FinalizeCsvs(List<PendingCsv> allPending, RunReport report)
+        {
+            // Assets that did NOT survive verification, by derived target.
+            //
+            // ⚠️ A SharedWithSibling row is not safe just because IT was not refused — it names
+            // ANOTHER row's asset. Clubs share art across six rarities by design (§9 answer 1), so
+            // one refused Fetched row deletes the file that five SharedWithSibling rows point at.
+            // Keeping their names would leave five rows in the repo naming a sprite that does not
+            // exist, which is the same half-bundled state this whole method exists to prevent —
+            // just spread over more rows. Case-insensitive for the same filesystem reason
+            // ExistingAsset is.
+            var failedTargets = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var o in report.Outcomes)
+                if (o.Verdict == Verdict.Refused && !string.IsNullOrEmpty(o.WrittenPath))
+                    failedTargets.Add(o.Folder + "/" + o.DerivedName);
+
+            foreach (var pending in allPending)
+            {
+                bool anySurvived = false;
+
+                foreach (var (outcome, line, column) in pending.Edits)
+                {
+                    bool ownVerdictOk = outcome.Verdict == Verdict.Fetched ||
+                                        outcome.Verdict == Verdict.SharedWithSibling;
+                    bool targetSurvived = !failedTargets.Contains(outcome.Folder + "/" + outcome.DerivedName);
+
+                    if (ownVerdictOk && targetSurvived)
+                    {
+                        anySurvived = true;
+                        continue;
+                    }
+
+                    // A sibling of a refused fetch: it was never refused itself, so say why it is
+                    // being reverted rather than leaving it reported as satisfied.
+                    if (ownVerdictOk)
+                        Refuse(outcome, $"the shared asset {outcome.Folder}/{outcome.DerivedName} " +
+                                        "did not survive import verification, so this row's name " +
+                                        "was reverted too — it would have named a sprite that is " +
+                                        "no longer in the build.");
+
+                    // Verification refused after the splice — undo it.
+                    var spans = ParseCsvSpans(pending.Lines[line]);
+                    pending.Lines[line] = SetField(pending.Lines[line], spans, column, string.Empty);
+
+                    if (!string.IsNullOrEmpty(outcome.WrittenPath))
+                    {
+                        // Delete through the AssetDatabase so the .meta goes with it.
+                        AssetDatabase.DeleteAsset(outcome.WrittenPath);
+                        outcome.Detail += $" (the written asset {outcome.WrittenPath} was removed " +
+                                          "and the CSV name reverted — a refusal leaves nothing behind)";
+                    }
+                }
+
+                if (!anySurvived) continue;
+
+                try
+                {
+                    File.WriteAllText(pending.FullPath, string.Join("\n", pending.Lines));
+                    // Unity reads the IMPORTED TextAsset, not the file on disk: without this the
+                    // loaders would keep serving the pre-write text for the rest of the session.
+                    AssetDatabase.ImportAsset(pending.RelPath, ImportAssetOptions.ForceUpdate);
+                }
+                catch (Exception e)
+                {
+                    report.Errors.Add($"could not write {pending.RelPath}: {e.GetType().Name}: {e.Message}");
+                }
+            }
         }
 
         static void Refuse(Outcome o, string detail)
@@ -645,6 +764,7 @@ namespace Golfin.EditorTools
             o.Verdict = Verdict.Fetched;
             o.SourceBytes = bytes.Length;
             o.Detail = rel;
+            o.WrittenPath = rel;      // survives a later Refuse overwriting Detail
             produced[key] = new Produced { Sha256 = Sha256(bytes), AssetPath = rel, Url = o.Url };
             return true;
         }
@@ -803,7 +923,7 @@ namespace Golfin.EditorTools
         /// </summary>
         static void ApplyAndVerifyImport(Outcome o, RunReport report)
         {
-            string assetPath = o.Detail;   // set by TryFetchOne on success
+            string assetPath = o.WrittenPath;   // set by TryFetchOne on success
             string root = Directory.GetParent(Application.dataPath)!.FullName;
 
             string? siblingPath = FindSibling(root, o.Folder, assetPath);

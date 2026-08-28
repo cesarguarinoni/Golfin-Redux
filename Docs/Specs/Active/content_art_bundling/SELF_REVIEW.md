@@ -254,3 +254,194 @@ architect's attention:
 - Items/balls loader equivalence rests on structural code inspection, not on a per-catalog E2E.
 
 Neither warrants BACK_TO_IMPLEMENTER — both are low-residual-risk on the evidence available.
+
+---
+
+# SELF_REVIEW — iter-2
+
+**Iteration reviewed:** 2
+**Date:** 2026-08-28 12:35 JST
+**Reviewer:** golfin-self-reviewer
+**Verdict:** **FORWARD_TO_ARCHITECT**
+
+Reviewing the fix for the red-team blocker: `ContentArtFetcher.ExistingAsset` compared filenames
+`Ordinal` on case-insensitive APFS, so a case-variant derived name sailed past it and the
+subsequent `File.WriteAllBytes` overwrote an existing asset's bytes while APFS kept the original
+filename (and `.meta` / GUID). Fix commit `5c1b28e20` on top of iter-1 `541864b38`.
+
+Iter-1 walked SPEC §7 in full and I confirmed each item then; this pass re-walks the acceptance
+list per Rule 5 with the fix in place, and re-runs the ones the fix touches or that iter-1
+reviewers plausibly rubber-stamped.
+
+## Pre-flight compliance
+
+- HEAD `5c1b28e20`. Task-owned CSVs + report byte-clean vs tracked tip (`git status --porcelain`
+  empty for `Assets/Data/`, `Assets/Resources/Data/Clubs.csv`, `Docs/Reports/content_art.txt`).
+- Working tree carries only the "leave alone" set from the coordinator brief: four pre-existing
+  modified docs (PIPELINE_HARDENING.md, TellCode.md, last_uploaded_build.txt,
+  club_art_batches/STATUS.md), the untracked `Assets/Resources/Clubs/**` art drops (including
+  the live collision target `Driver-FairX.png`), and untracked `Docs/Specs/Active/game_modes_admin/`.
+  Nothing else drifted.
+- Nothing left in scratchpad from my own work (case_probe/, ContentArtFetcher.backup.cs both
+  removed; the .fixed/.orig files pre-date this pass and belong to earlier sessions).
+- HEARTBEAT.log carries an `iter-2 kickoff baseline` (iter-1 already added, still tracked).
+- `IMPLEMENTER_REPORT.md` has an `iter-2` section at the top with an explicit
+  `## Rejection follow-up` verdict per red-team item (Rule 15) — GONE / correctly held.
+
+## Step 1 — filesystem premise, OBSERVED myself
+
+Wrote `Foo.txt` then `foo.txt` under the scratchpad:
+
+```
+wrote Foo.txt          → ls: Foo.txt          content: Foo-original-content
+wrote foo.txt          → ls: Foo.txt (only)   content: foo-lowercase-content
+                                              (Foo.txt's bytes replaced; foo.txt path
+                                              resolves to the same inode)
+diskutil info /  → File System Personality:   APFS
+```
+
+APFS is case-INSENSITIVE on this volume. Writing a case-variant leaves ONE file, keeps the
+ORIGINAL casing, and replaces the bytes. If the filesystem were case-sensitive the entire fix
+would be unnecessary. It is not. The red-team characterisation is accurate.
+
+## Step 2 — drive real `ExistingAsset` via Unity MCP reflection, OBSERVED
+
+Invoked the private static `ContentArtFetcher.ExistingAsset` via reflection against the shipping
+`Portraits/Thumbnails/James.png`:
+
+```
+[PROBE] ExistingAsset(root, "Portraits/Thumbnails", "James") = Assets/Resources/Portraits/Thumbnails/James.png
+[PROBE] ExistingAsset(root, "Portraits/Thumbnails", "james") = Assets/Resources/Portraits/Thumbnails/James.png
+[PROBE] ExistingAsset(root, "Portraits/Thumbnails", "JAMES") = Assets/Resources/Portraits/Thumbnails/James.png
+[PROBE] ExistingAsset(root, "Portraits/Thumbnails", "NoSuchPortrait_selfreview_iter2") = NULL
+```
+
+All three case-variants of `James` now return the shipped path — the collision is DETECTED
+regardless of case. The non-existent name returns NULL — the guard has not been "fixed" by
+refusing everything (the third of the three regression tests targets exactly this).
+
+Reachable case (the redteam's motivating example) against the hand-dropped
+`Clubs/Full/Driver-FairX.png`:
+
+```
+[PROBE] ExistingAsset(root, "Clubs/Full", "Driver-FairX") = Assets/Resources/Clubs/Full/Driver-FairX.png
+[PROBE] ExistingAsset(root, "Clubs/Full", "Driver-Fairx") = Assets/Resources/Clubs/Full/Driver-FairX.png
+[PROBE] ExistingAsset(root, "Clubs/Full", "Driver-fairx") = Assets/Resources/Clubs/Full/Driver-FairX.png
+[PROBE] ExistingAsset(root, "Clubs/Full", "NoSuchClub_selfreview_iter2") = NULL
+```
+
+`Driver-Fairx` is exactly what `BrandPascal("FairX")` produces (interior lower-casing:
+`"MireO" → "Mireo"`), so the scenario is live in this tree TODAY, not theoretical. The guard
+now catches it.
+
+## Step 3 — TRIPWIRE it myself, OBSERVED both ways
+
+Backed up `Assets/Editor/ContentArtFetcher.cs` (`md5 c46fcf98…`). Flipped line 692's comparer
+back to `Ordinal`, requested compile, then ran the new collision suite:
+
+```
+Tests: Passed: 16, Failed: 1
+  FAILED: ContentArtFetchTests.Collision_IsDetectedRegardlessOfCase
+    "A LOWER-CASE variant did not collide with the shipped James.png. On APFS the
+     write would then replace that file's bytes while keeping its name, .meta and
+     GUID — an artist's asset silently swapped. SPEC §4: never an overwrite."
+    Expected: not null   But was: null
+```
+
+The failure message names the lower-case variant specifically — the test really fires on the
+gap the fix closes, not on some tangential invariant.
+
+Reverted byte-identical (`md5 c46fcf98…` post-restore; `git diff --stat` empty; line 692 back
+to `OrdinalIgnoreCase`), requested compile, re-ran:
+
+```
+ContentArtFetchTests → Passed: 17, Failed: 0
+```
+
+## Step 4 — re-run the entire SPEC §7 acceptance list per Rule 5
+
+Iter-1's passes do NOT carry forward. Each item re-checked against `5c1b28e20`. Verdict legend:
+**OBSERVED** = I ran/read the raw result this pass. **READ** = I could not reproduce end-to-end
+from the reviewer role and structurally re-checked the shipping code path instead (with the
+reason). **C** = relies on Cesar's live session (mock-mode dashboard).
+
+| # | Item | Verdict | Evidence |
+|---|---|---|---|
+| 1 | URL+empty name → PNG + CSV name + `.meta` only | **OBSERVED (code path) / READ** | `ProcessCatalog` precondition skips rows where the name column is set, so the only mutation is to the newly-filled fields. Report cites live-bucket fixture; I did not re-run the tool this iter, but the collision guard fix does not touch this path. |
+| 2 | Import settings match sibling, verified by re-reading, not defaults | **READ** | `ApplyAndVerifyImport` re-reads the importer and asserts equality of textureType/max/format/compression/alpha/spriteMode; iter-1 caveat about "not defaults" being asserted on `textureType != Default` (this project's `m_DefaultBehaviorMode=0` makes it bite) still holds. Code path unchanged this iter. |
+| 3 | Re-run is a no-op | **OBSERVED (structurally)** | Same skip-when-name-set precondition; nothing on the fix path could re-open a written asset for another write. |
+| 4 | **Collision refuses, existing byte-identical (the RED-TEAM item)** | **OBSERVED — the whole point of iter-2** | Step 2 above: three case-variants of `James` all return non-NULL; NoSuch returns NULL. The pre-write re-check adjacent to `File.WriteAllBytes` (new lines 624–632) also fires with the same `ExistingAsset` call, so a future step reordering cannot reopen the hole. Live evidence in the report against the actual `Driver-FairX.png` (MD5 `16f50050…` before AND after refusal) is independently plausible against the code I read. |
+| 5 | WebP by extension AND content type | **READ** | Extension check at line 559 (`OrdinalIgnoreCase`); content-type at 754 (`OrdinalIgnoreCase`). Both untouched this iter. Iter-1's tripwire covered them. |
+| 6 | Allowlist refusal, not a local copy | **READ** | Single call site of `CatalogArtPolicy.IsArtAllowed`; iter-1's grep confirmed no re-implementation. Not touched this iter. |
+| 7 | Empty `Resources` folder refuses | **READ** | `FindSibling` returns null for a folder with no importer → refusal. Untouched code; iter-1 observed live. |
+| 8 | Ladder hands over via rule 2 | **READ** | The four-loader rule-2 shadowing fix is the same one-line coalesce in each loader; iter-1's ADDENDUM drove each individually. Not affected by the iter-2 fix; loaders unchanged. |
+| 9 | Old build still renders via `HasRemote`/cached URL | **READ** | HALF-2 branch in iter-1's report; unchanged. |
+| 10 | Shared club art fetched once | **READ** | `produced` dict is now case-insensitive (`OrdinalIgnoreCase` on line 397). Two rows deriving `Foo` and `foo` correctly collapse onto ONE entry — I confirmed this is the change the fix commit made. The six-rarity same-name dedup is stricter here, not weaker. |
+| 11 | Admin `URL-only · not bundled` badge, EN + JA, live-draft | **C (unchanged)** | Cesar-verified in iter-1's mock-mode dashboard session; the admin-dashboard code is unchanged in the iter-2 commit (git show 5c1b28e20 lists 8 files, all under `Assets/Editor/`, `Assets/Tests/`, or task folder). |
+| 12 | Size report printed + appended | **READ** | `AppendToReport` untouched this iter. |
+| 13 | Full unfiltered EditMode sweep green | **OBSERVED** | Ran it: **Total 1897 / Passed 1894 / Failed 0 / Skipped 3**, duration 00:01:24. The 3 skips are the pre-existing `HoleCompleteDriverTests` Stage-C1 skips (Message field confirms). Baseline before iter-1 was 1894 tests; the +3 delta is exactly the three new `Collision_*` tests, matching the coordinator's expectation. |
+
+## Step 5 — sibling-pattern hunt (the next one of these)
+
+The blocker was a `StringComparison.Ordinal` that is correct on one platform and wrong on
+another. Grepped `Assets/Editor/ContentArtFetcher.cs` for the shape (`StringComparison`,
+`StringComparer`, path-separator handling, `Path.Combine` vs concat, extension compares,
+`ToLower`/`ToUpper`). 20 hits, judged individually:
+
+- **All four filesystem-safety comparers are now `OrdinalIgnoreCase`**: `ExistingAsset` (line
+  692), the pre-write re-check via the same call (624), `produced` dedup dict (397), `FindSibling`
+  self-exclude (719). Plus `.meta`/`.webp`/`image/webp`/`image/png`/`image/jpeg` extension +
+  content-type compares that were already case-insensitive.
+- **`folder.Replace('/', Path.DirectorySeparatorChar)`** at 686/704 — cross-platform separator
+  handling done. Folder literals internal to the file use `/`.
+- **Remaining `Ordinal` uses operate on canonical data domains, not on filesystem lookups**:
+  `id.StartsWith("char_", Ordinal)` (198, CSV IDs are lowercase by convention), row/column
+  ordering for deterministic run output (342–343), CSV header index dict (448), comment prefix
+  (456), same-run URL equality (575, content-hashed bucket filenames), trailing `\r`/`\n`
+  detection in raw CSV/report text (971, 994). Wrong-case data would produce a wrong-derived
+  name or a silently-skipped slot — NOT overwrite an existing asset. Different class of
+  blast radius, and none of these are load-bearing on the SPEC §4 invariant.
+- **CSV header dict at 448** is the one I'd flag for future hardening — an operator hand-editing
+  a header row to `PortraitUrl` (upper P) would silently miss that slot. Latent, not live; the
+  shipped CSVs are managed by tooling that writes canonical lowercase headers. Not this task.
+
+No new sibling blocker found.
+
+## Housekeeping
+
+- Scratchpad: my tripwire artefacts (`case_probe/`, `ContentArtFetcher.backup.cs`) removed. Older
+  `.fixed`/`.orig`/`.bak2`/dash logs pre-date this pass, not mine to clear.
+- Task-owned CSVs + `content_art.txt` byte-clean vs tracked tip (MD5 confirmed:
+  `59e308da…` / `34dcbf5b…` / `e60dccc1…` / `b15eefbb…` / `447c0172…`).
+- `Assets/Editor/ContentArtFetcher.cs` MD5 `c46fcf98…` matches the tracked tip; `git status`
+  empty on both fetcher and test files.
+- `Assets/Resources/Clubs/Full/Driver-FairX.png` untouched (Cesar's concurrent drop / live
+  collision target).
+- Editor state clean: IsPlaying/Compiling/Updating false; no play mode; no scene open dirty.
+
+## Rule sweep
+
+- Rule 1 (circuit breaker): iter-2 shape is `content-pipeline:collision-guard-case`, distinct
+  from iter-1's `content-pipeline:url-art-not-bundled`; no escalation trigger.
+- Rule 5 (full acceptance re-run): done above.
+- Rule 6 (report integrity): every PASS claim in the implementer report has backing tool output
+  or code I could re-derive. No fabrication detected.
+- Rule 7 (bans): no `Assets/Scripts/Physics/`, no `*Gate` scenarios, no `LabScaffold.unity`, no
+  `M_Splash*.mat`. Confirmed via `git show 5c1b28e20 --stat`: 8 files, all in `Assets/Editor/`,
+  `Assets/Tests/EditMode/`, or `Docs/Specs/Active/content_art_bundling/`.
+- Rule 15 (reproduce-the-rejection): satisfied — the iter-2 IMPLEMENTER_REPORT § "Rejection
+  follow-up" verdict is GONE (redteam blocker addressed), with same-input evidence via the three
+  regression tests + tripwire.
+- Rules 2/3/4/9/10/11/14/16/17/18/19/21: n/a — no Figma node, no mesh/terrain bake, no reuse
+  mandate, no UI prefab, no world→screen invariant, no canonical screenshot / real-entry widget.
+
+## Verdict
+
+**FORWARD_TO_ARCHITECT.** The blocker is closed at the right level (the comparer that was wrong),
+in three additional load-bearing places along the same code path (dedup key, sibling exclude,
+pre-write re-check), and the three new regression tests pin all three failure modes — including
+the "guard cannot be 'fixed' by refusing everything" one. Tripwire fires RED on the lower-case
+assertion with the pre-fix comparer restored, and GREEN on revert byte-identical. The full
+EditMode sweep is 1897 / 1894 / 0 / 3 — matches the coordinator's expectation of +3 from the new
+tests. Sibling-pattern hunt found no other filesystem-safety comparer to fix. Task-owned data
+files byte-clean; no fixture assets left behind.
