@@ -11,15 +11,16 @@ import type { BannerInput, BannerPlacement, BannerRow, BannerState } from "./typ
 export const BANNER_BUCKET = "game-banners";
 
 /**
- * The three slots that exist. All are hard-coded in the build — a placement
+ * The four slots that exist. All are hard-coded in the build — a placement
  * cannot be added from here, and the DB CHECK constraint agrees with this list.
+ * List order is DISPLAY order in the editor dropdown and the grouped list.
  *
- * `tournament_modal` is different in kind from the other two: it is never
+ * `tournament_modal` is different in kind from the other three: it is never
  * auto-served by `GET /api/v1/banners`. It reaches a player only by being
  * ASSIGNED to a tournament in the Tournaments panel, and shows inside that
  * tournament's sign-up modal. See PLACEMENT_IS_ASSIGNED.
  */
-export const BANNER_PLACEMENTS = ["home_promo", "rankings", "tournament_modal"] as const;
+export const BANNER_PLACEMENTS = ["home_promo", "rankings", "store", "tournament_modal"] as const;
 
 /**
  * Placements chosen per-tournament rather than auto-served.
@@ -35,6 +36,7 @@ export const BANNER_PLACEMENTS = ["home_promo", "rankings", "tournament_modal"] 
 export const PLACEMENT_IS_ASSIGNED: Record<BannerPlacement, boolean> = {
   home_promo: false,
   rankings: false,
+  store: false,
   tournament_modal: true,
 };
 
@@ -80,6 +82,22 @@ export const BANNER_ART_SPEC = {
       height: 252,
       aspect: 970 / 252,
     },
+    store: {
+      screen: "Store",
+      where:
+        "GeneralShopScreen/ContentArea/BarsArea/RankingsArea/Modal/Bottom97/" +
+        "ScrollArea/Viewport/GridContent/WinterSaleBanner",
+      // The bundled Winter Sale art is an AUTHORING placeholder, never a
+      // runtime fallback: with no live store row the slot is hidden and the
+      // card list closes up. Measured 2026-08-28 off the prefab's RectTransform
+      // (978x252), which is also the sprite's own size. The Image is Simple
+      // with preserveAspect off, so art authored to another ratio is stretched
+      // — which is what the drift warning is for.
+      sprite: "Assets/Art/Shop/Banner - Winter Sale.png",
+      width: 978,
+      height: 252,
+      aspect: 978 / 252,
+    },
     tournament_modal: {
       screen: "Tournament sign-up modal",
       where: "TournamentSignupModal/Panel/Content/BannerRoot",
@@ -101,6 +119,7 @@ export function bannerSpec(placement: BannerPlacement) {
 export const PLACEMENT_LABEL: Record<BannerPlacement, string> = {
   home_promo: "Home — promo strip",
   rankings: "Rankings — banner",
+  store: "Store — banner",
   tournament_modal: "Tournament — sign-up modal strip",
 };
 

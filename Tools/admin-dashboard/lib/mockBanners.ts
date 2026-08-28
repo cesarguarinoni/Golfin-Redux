@@ -43,6 +43,23 @@ export const MOCK_BANNERS: BannerRow[] = [
     updatedAt: "2026-08-16T09:00:00.000Z",
   },
   {
+    // Store: switched OFF, so mock mode starts exactly where prod starts —
+    // nothing live, and therefore no banner on the Store screen. Toggling this
+    // on is the whole demo of the placement.
+    id: "b1000000-0000-4000-8000-000000000004",
+    placement: "store",
+    label: "Store — winter sale (draft)",
+    imageUrlEn: `${MOCK_STORAGE}/store-en-1234abcd5678.jpg`,
+    imageUrlJa: null,
+    linkUrl: null,
+    startAt: null,
+    endAt: null,
+    sortOrder: 0,
+    isActive: false,
+    createdAt: "2026-08-28T09:00:00.000Z",
+    updatedAt: "2026-08-28T09:00:00.000Z",
+  },
+  {
     // A draft: no art, switched off. Exercises the OFF badge and the
     // "active needs at least one image" validation when toggled on.
     id: "b1000000-0000-4000-8000-000000000003",

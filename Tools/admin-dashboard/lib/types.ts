@@ -250,14 +250,19 @@ export interface TournamentInput {
 // ---------------------------------------------------------------------------
 
 /**
- * The three in-game slots, all hard-coded in the build; none can be added here.
+ * The four in-game slots, all hard-coded in the build; none can be added here.
  *
- * `home_promo` and `rankings` are AUTO-SERVED by GET /api/v1/banners and keep
- * their bundled sprite as the fallback. `tournament_modal` is ASSIGNED per
- * tournament instead (tournaments.modal_banner_id) and has no bundled fallback —
- * with nothing assigned the sign-up modal simply renders its no-banner state.
+ * `home_promo`, `rankings` and `store` are AUTO-SERVED by GET /api/v1/banners.
+ * `tournament_modal` is ASSIGNED per tournament instead
+ * (tournaments.modal_banner_id) — with nothing assigned the sign-up modal
+ * simply renders its no-banner state.
+ *
+ * NONE of them falls back to bundled art. A slot with nothing live is HIDDEN
+ * in the client and the surrounding UI closes up (game_banners amendment A1);
+ * the sprite in the prefab is an authoring placeholder a player never sees.
+ * That is what makes "no row" a complete way to switch a banner off.
  */
-export type BannerPlacement = "home_promo" | "rankings" | "tournament_modal";
+export type BannerPlacement = "home_promo" | "rankings" | "store" | "tournament_modal";
 
 /**
  * Derived from is_active + the schedule window — never stored. LIVE is the only

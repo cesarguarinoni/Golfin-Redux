@@ -236,8 +236,9 @@ function bandRows(tournamentId: string, bands: PrizeBand[]): Record<string, unkn
 
 /**
  * A non-null `modalBannerId` must name an EXISTING `game_banners` row whose
- * placement is `tournament_modal`. A dangling id, or one pointing at a
- * `home_promo` / `rankings` row, is a 400 — never a silent write.
+ * placement is `tournament_modal`. A dangling id, or one pointing at an
+ * auto-served row (`home_promo` / `rankings` / `store`), is a 400 — never a
+ * silent write.
  *
  * Why it is not in `validateInput`: that function is synchronous and pure, and
  * this needs the database. Both create and update call it right after.

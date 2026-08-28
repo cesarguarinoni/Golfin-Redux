@@ -5,6 +5,51 @@
 
 ---
 
+## ✅ LATEST — `store_banner` implemented, awaiting Cesar (2026-08-29)
+
+**The Store banner is now dashboard-controlled.** `WinterSaleBanner` inside
+`Assets/Prefabs/UI/Shop/GeneralShopScreen.prefab` was hard-coded art the admin dashboard could not
+see, swap, schedule or switch off. It is now the **fourth `game_banners` placement, `store`** —
+auto-served like `home_promo` / `rankings`, with `start_at` / `end_at` / `sort_order` all applying.
+Implemented directly, not through the subagent chain. Spec: `Docs/Specs/Active/store_banner/`.
+
+**No new machinery.** One value in the DB CHECK (migration pre-applied by Cesar; archived as
+`2026_08_28_store_banner.sql` in both `playlife/backend/migrations/` and
+`Tools/admin-dashboard/migrations/`), one entry in the backend `PLACEMENTS` tuple, `store` in the
+dashboard's four placement tables, `BannerPlacement.Store` **appended** to the client enum, and
+`Button` + `ButtonPressFeedback` + `BannerSlotBinder` on the prefab object that was already there —
+mirroring the Rankings `Banner` component-for-component. `GeneralShopScreenController.cs` untouched;
+the object keeps the name `WinterSaleBanner`, which that controller finds by name.
+
+⚠️ **THE ONE THING TO CARRY FORWARD:** `BannerPlacement` is **serialized as an int** on every
+`BannerSlotBinder` in every prefab. `Store` is ordinal 2 because it was APPENDED. Reordering that
+enum silently re-points authored slots at the wrong placement — the enum's doc comment now says so.
+
+* **Deployed:** `playlife-api` **v61 → v62** (`fly status` image ID moved, not the exit code).
+  `GET /api/v1/banners` is 200 on the bare path; with a live `store` row it returns
+  `"placement": "store"`, and `is_active=false` makes it absent. Dashboard deploy follows this commit.
+* **Behaviour of record (A1) holds:** **no live `store` row ⇒ the slot is hidden and the card list
+  closes up.** The bundled Winter Sale PNG is an authoring placeholder a player never sees — which is
+  what makes "never create a `store` row" a complete way to turn the banner off. Measured, not
+  eyeballed: hidden → first card's top edge is **0.00 px** below `GridContent`'s top; served → banner
+  at 0.00 and the first card at **276.00** (= 252 + the group's 24 spacing).
+* **Gate:** `Golfin.TournamentsRuntime.Tests` **247/247, 0 failed**, and the new `"store"` assertion
+  was **tripwire-proven** to actually run (a deliberate wrong expectation produced exactly one
+  failure, then was reverted and re-run green).
+* **Verified in live play mode through the player's own entry point** — `NavGachaButton.onClick` →
+  the real `STORE` tab — across the full round trip: nothing live → activate → deactivate, plus a
+  filter-chip rebuild with the banner still first. `[BannerArt] Cache HIT (351 KB), no download` on
+  the second launch. Zero console errors.
+* **Prod left exactly as found:** the smoke `store` row and its art object were created for the
+  acceptance checks and deleted; `?placement=eq.store` → `[]`, bucket listing shows only the four
+  pre-existing objects.
+* **Known gaps (flagged, not claimed):** the dashboard's Banners panel was never opened in a browser
+  — the dropdown label and the audit-log write are argued from the code and a clean `tsc`, not seen;
+  airplane mode was not literally simulated (the identical nothing-live `Hide()` branch was);
+  `OpenLink` was not invoked, to avoid launching a browser.
+
+---
+
 ## ✅ LATEST — `transaction_feedback` DONE (2026-08-29)
 
 **Approved by Cesar 2026-08-29; folder in `Docs/Specs/Completed/`.** Cesar's report:

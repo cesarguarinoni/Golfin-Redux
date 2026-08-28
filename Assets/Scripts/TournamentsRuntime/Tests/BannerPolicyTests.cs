@@ -338,10 +338,11 @@ namespace Golfin.Tournaments.WireupTests
     public sealed class BannerWireParsingTests
     {
         [Test]
-        public void Placement_strings_map_to_the_two_slots()
+        public void Placement_strings_map_to_the_auto_served_slots()
         {
             Assert.AreEqual((true, "HomePromo"), BannerProd.TryParsePlacement("home_promo"));
             Assert.AreEqual((true, "Rankings"),  BannerProd.TryParsePlacement("rankings"));
+            Assert.AreEqual((true, "Store"),     BannerProd.TryParsePlacement("store"));
         }
 
         [Test]
@@ -351,6 +352,10 @@ namespace Golfin.Tournaments.WireupTests
             // draw a banner in the wrong place.
             Assert.IsFalse(BannerProd.TryParsePlacement("home_banner").Matched);
             Assert.IsFalse(BannerProd.TryParsePlacement("HOME_PROMO").Matched, "Case-sensitive.");
+            // The Store slot's object is named WinterSaleBanner and its screen class is
+            // GeneralShopScreenController — neither is the wire value, and neither may be guessed.
+            Assert.IsFalse(BannerProd.TryParsePlacement("shop").Matched);
+            Assert.IsFalse(BannerProd.TryParsePlacement("STORE").Matched, "Case-sensitive.");
             Assert.IsFalse(BannerProd.TryParsePlacement("").Matched);
             Assert.IsFalse(BannerProd.TryParsePlacement(null).Matched);
         }

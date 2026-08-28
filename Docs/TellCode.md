@@ -97,6 +97,69 @@
 
 ## 📋 SPEC_READY POINTERS
 
+- **`missions_v1`** (filed 2026-08-28, Architect via Cowork) — **SPEC_READY, kickoff pasteable.**
+  `Docs/Specs/Active/missions_v1/SPEC.md`. Missions mode end to end: 40 component-built missions
+  (Lomond, 18 holes, 4 tiers, curve verified non-decreasing), server-generated Daily Mission,
+  seven content catalogs + Missions/Components/Daily admin panels, `golfin_mission_rewards`
+  mirror + `/missions/claim`, start-area bake, per-session loadout override, Mission Selection
+  screen cloned from Hole Selection, mode card wired on Home + Mode Select (`target=mission_select`).
+  Design of record: `Docs/Game Design/MISSIONS_REDESIGN.md` + workbook. Decisions: no Home daily
+  surface in v1; `missions.locked` flipped by Cesar from the admin, never in the bundled CSV.
+  Phases A→D in the spec; §21 live E2E at the end of C; §23 deploy ids required.
+
+### Kickoff · missions_v1 (issued 2026-08-28)
+
+```
+Read Docs/Specs/Active/missions_v1/SPEC.md and implement it, Phase A first.
+
+Context:
+- Missions mode, end to end: 7 content catalogs (missions + 6 component tables, CSVs verbatim
+  from reference/), server tables + /api/v1/missions endpoints + daily generator in playlife,
+  Missions/Components/Daily admin panels, then Unity: start-area bake, MissionSession
+  (spawn/pin/wind/stroke-cap/stamina override), BagManager session bag, goal evaluator,
+  Mission Selection screen cloned from Hole Selection, mode card target `mission_select`
+  in BOTH ModeSelectScreenController and ModeCarouselController.
+- Reuse: content catalog machinery (catalogs.py, seed_from_csv.py, ContentCatalogStore overlay),
+  golfin_mode_fees mirror-in-transaction pattern, /earn-game catalog-resolved amounts,
+  GameSession.StrokeCapEnabled (already a Missions opt-in), GreenTopology pin candidates,
+  HoleSelection prefab/controllers, Rewards panel. Minimal diff; no new UI hierarchies where
+  Hole Selection already has one.
+- Phase A is deployable alone with the mode still locked. Full SQL for every migration in
+  chat for Cesar. Dashboard work is not done until deployed (PIPELINE_HARDENING §23 —
+  quote the Cloudflare deployment id). Run the §21 live E2E at the end of Phase C.
+- Out of scope: Home-screen daily badge, mission leaderboards, HoleTees.csv yardage fix,
+  flipping missions.locked in the bundled CSV.
+
+When done: list changed files with a 1-line summary each, run the acceptance
+tests in the spec, flag which need manual on-device verification, update
+STATUS.md + IMPLEMENTER_REPORT.md in the spec folder, and update
+Docs/AI_CONTEXT.md.
+```
+
+- **`store_banner`** — `Docs/Specs/Active/store_banner/SPEC.md` (SPEC_READY, 2026-08-28). The Store screen's hard-coded `WinterSaleBanner` becomes the fourth `game_banners` placement `store`: DB CHECK widened, backend `PLACEMENTS`, dashboard placement tables, client enum + `Button`/`BannerSlotBinder` on the existing prefab object. No live row ⇒ hidden, list closes up (A1). Deploy order: migration → backend → dashboard → client.
+
+### Kickoff · store_banner
+
+```
+Read Docs/Specs/Active/store_banner/SPEC.md and implement it.
+
+Context:
+- Adds a 4th game_banners placement `store` for the Store screen's WinterSaleBanner
+  (Assets/Prefabs/UI/Shop/GeneralShopScreen.prefab, under GridContent).
+- Reuse everything from game_banners: BannerSlotBinder, BannerService, banners.py,
+  the dashboard's BANNER_PLACEMENTS / BANNER_ART_SPEC tables. This is data + wiring,
+  not new machinery. Mirror the Rankings prefab's Banner object component-for-component
+  (Button transition None, ButtonPressFeedback, BannerSlotBinder with empty arrays).
+- GeneralShopScreenController.cs stays untouched; keep the object name WinterSaleBanner.
+- Migration SQL is in SPEC §1 — Cesar runs it in Supabase before backend deploy.
+- Out of scope: other Store art, stamina shop, removing the Winter Sale PNG.
+
+When done: list changed files with a 1-line summary each, run the acceptance
+tests in the spec, flag which need manual on-device verification, update
+STATUS.md + IMPLEMENTER_REPORT.md in the spec folder, and update
+Docs/AI_CONTEXT.md.
+```
+
 - ~~**`transaction_feedback`** — spend round-trips are visible (`PendingSpend` on 6 sites) and the Fly cold start is gone (`auto_stop_machines = "suspend"`, 5.20 s → 1.18 s); `[ApiClient]` now logs one timed line per request. Warm purchase 246 ms → §8 keep-alive follow-up closed.~~ **DONE 2026-08-29** — `Docs/Specs/Completed/transaction_feedback/`.
 
 - **`progress_server_side`** (filed 2026-08-28, Architect via Cowork) — **SPEC_READY, kickoff
@@ -3227,3 +3290,23 @@ build, so a campaign page on a non-`golfin.io` host needs a client release.
 Spec + report: `Docs/Specs/Active/game_banners/`. STATUS = `IMPLEMENTER_BLOCKED`.
 EditMode `Golfin.Tournaments.WireupTests`: 115 passed / 0 failed, every pre-existing
 `TournamentArtPolicy`/`TournamentArtService` test unmodified.
+
+---
+
+## 2026-08-29 · `store_banner` — DONE (awaiting Cesar's approval)
+
+The Store screen's hard-coded `WinterSaleBanner` is now the fourth `game_banners` placement,
+`store` — auto-served, schedulable, and switchable off from the dashboard. Data + wiring only, no
+new machinery: DB CHECK (migration pre-applied by Cesar, archived both sides), backend
+`PLACEMENTS`, the dashboard's four placement tables, `BannerPlacement.Store` **appended** to the
+client enum, and `Button` + `ButtonPressFeedback` + `BannerSlotBinder` on the prefab object that was
+already there. `GeneralShopScreenController.cs` untouched; the object keeps its name.
+
+`playlife-api` deployed **v61 → v62**. `Golfin.TournamentsRuntime.Tests` 247/247, tripwire-proven.
+Verified in live play mode through the player's own entry point across the full
+nothing-live → activate → deactivate round trip; smoke row + art removed from prod afterwards.
+
+⚠️ `BannerPlacement` is serialized as an int in prefabs — `Store` is ordinal 2 because it was
+APPENDED. Never reorder that enum.
+
+Spec + report: `Docs/Specs/Active/store_banner/`. STATUS = `READY_FOR_ARCHITECT_REVIEW`.

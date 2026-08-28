@@ -1,0 +1,19 @@
+=== iter-1 kickoff baseline 2026-08-28T22:33:33Z ===
+HEAD: 807e77fe3c9e5534887b5443a7158ed9497da56c
+DIRTY (git status --porcelain --untracked-files=all):
+ M "Docs/Game Design/MISSIONS_REDESIGN.md"
+ M Docs/Reports/content_art.txt
+ M Docs/TellCode.md
+ M Docs/Versioning/last_uploaded_build.txt
+?? Docs/Specs/Active/store_banner/HEARTBEAT.log
+?? Docs/Specs/Active/store_banner/IMPLEMENTER_REPORT.md
+?? Docs/Specs/Active/store_banner/SPEC.md
+?? Docs/Specs/Active/store_banner/STATUS.md
+=== end baseline ===
+
+=== iter-1 complete 2026-08-28T22:51:07Z ===
+backend  : fly deploy playlife-api v61 -> v62, /api/v1/banners 200
+client   : BannerPlacement.Store appended (ordinal 2); prefab +91 lines on WinterSaleBanner only
+tests    : Golfin.TournamentsRuntime.Tests 247/247, tripwire-proven
+play mode: real entry NavGachaButton -> STORE tab; hidden/served/hidden round trip measured
+prod     : all smoke rows + art deleted; ?placement=eq.store -> []

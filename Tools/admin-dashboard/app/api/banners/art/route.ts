@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { checkAdmin } from "@/lib/auth";
-import { isBannerPlacement } from "@/lib/banner";
+import { BANNER_PLACEMENTS, isBannerPlacement } from "@/lib/banner";
 import { uploadBannerArt } from "@/lib/bannerMutations";
 
 export const dynamic = "force-dynamic";
@@ -31,7 +31,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "file is required." }, { status: 400 });
   }
   if (typeof placement !== "string" || !isBannerPlacement(placement)) {
-    return NextResponse.json({ error: "placement must be home_promo or rankings." }, { status: 400 });
+    return NextResponse.json(
+      { error: `placement must be one of ${BANNER_PLACEMENTS.join(", ")}.` },
+      { status: 400 }
+    );
   }
   if (locale !== "en" && locale !== "ja") {
     return NextResponse.json({ error: "locale must be en or ja." }, { status: 400 });

@@ -21,8 +21,12 @@ using UnityEngine;
 namespace Golfin.Banners
 {
     /// <summary>
-    /// The two in-game banner slots. Both are hard-coded in the build; a placement cannot be added
+    /// The in-game banner slots. All are hard-coded in the build; a placement cannot be added
     /// from the dashboard, and the server's <c>placement</c> CHECK constraint agrees with this enum.
+    /// <para>
+    /// ⚠️ These are serialized as ints on <c>BannerSlotBinder</c> in prefabs. APPEND only —
+    /// reordering silently re-points every authored slot at a different placement.
+    /// </para>
     /// </summary>
     public enum BannerPlacement
     {
@@ -30,6 +34,11 @@ namespace Golfin.Banners
         HomePromo,
         /// <summary><c>RankingsScreen/ContentArea/Banner</c>.</summary>
         Rankings,
+        /// <summary>
+        /// <c>GeneralShopScreen/…/GridContent/WinterSaleBanner</c> — the strip above the Store's
+        /// card list. The object keeps its authoring name; the placement does not.
+        /// </summary>
+        Store,
     }
 
     /// <summary>
@@ -342,7 +351,8 @@ namespace Golfin.Banners
         private string Signature()
         {
             var parts = new List<string>();
-            foreach (BannerPlacement p in new[] { BannerPlacement.HomePromo, BannerPlacement.Rankings })
+            foreach (BannerPlacement p in new[]
+                     { BannerPlacement.HomePromo, BannerPlacement.Rankings, BannerPlacement.Store })
             {
                 if (!_entries.TryGetValue(p, out var e)) continue;
                 parts.Add($"{p}|{e.ImageUrlEn}|{e.ImageUrlJa}|{e.LinkUrl}|{e.ExpiresAtUtc:O}");
@@ -358,6 +368,7 @@ namespace Golfin.Banners
             {
                 case "home_promo": placement = BannerPlacement.HomePromo; return true;
                 case "rankings":   placement = BannerPlacement.Rankings;  return true;
+                case "store":      placement = BannerPlacement.Store;     return true;
                 default:           placement = default;                   return false;
             }
         }

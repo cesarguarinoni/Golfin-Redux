@@ -486,6 +486,7 @@ export const DICT = {
   },
   "ban.placement.home_promo": { en: "Home — promo strip", ja: "ホーム — プロモ帯" },
   "ban.placement.rankings": { en: "Rankings — banner", ja: "ランキング — バナー" },
+  "ban.placement.store": { en: "Store — banner", ja: "ストア — バナー" },
   "ban.placement.tournament_modal": { en: "Tournament — sign-up modal strip", ja: "トーナメント — 参加モーダルの帯" },
   "te.nameKeyHint": {
     en: "Optional, and it overrides the title whenever it resolves in the shipped build. Keys ship inside the app, so a key invented here resolves nowhere and the title is used instead. Leave it empty for anything you name yourself.",
