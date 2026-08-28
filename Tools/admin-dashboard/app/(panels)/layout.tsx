@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BUILD_COMMIT } from "@/lib/buildInfo";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { PanelIcon } from "@/components/PanelIcon";
@@ -76,6 +77,18 @@ export default async function PanelsLayout({
               {t("app.signOut")}
             </button>
           </form>
+
+          {/* The commit this bundle was built from (PIPELINE_HARDENING §23).
+              Untranslated and monospace on purpose: it is an identifier, not
+              copy. "unstamped" means the build did not go through cf-deploy.sh,
+              and a "-DIRTY" suffix means it was built over uncommitted edits —
+              both said plainly rather than shown as a confident hash. */}
+          <div
+            className="mt-2 truncate font-mono text-[10px] text-zinc-600"
+            title="Build commit — /api/version returns the same value"
+          >
+            {BUILD_COMMIT}
+          </div>
         </div>
       </aside>
 

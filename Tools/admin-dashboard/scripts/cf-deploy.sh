@@ -55,6 +55,24 @@ if [ ${#PUBLIC_ENV[@]} -eq 0 ]; then
 fi
 echo "→  passing ${#PUBLIC_ENV[@]} NEXT_PUBLIC_* value(s) to the build (public by design)"
 
+# The build stamps its own commit, so "is this deployed?" is a curl and never a
+# memory (PIPELINE_HARDENING §23). Appended to PUBLIC_ENV rather than exported,
+# so it rides the same one explicit channel as the other NEXT_PUBLIC_* values —
+# see §4.4 for why a Worker secret cannot supply an inlined constant. It is NOT
+# read from the stashed env file: it is derived here, at build time, from the
+# tree actually being built.
+#
+# --short HEAD, and DIRTY when the tree is not clean: a stamp that says a commit
+# hash while the bundle contains uncommitted edits is worse than no stamp, because
+# it is confidently wrong.
+BUILD_COMMIT="$(git rev-parse --short HEAD 2>/dev/null || echo unknown)"
+if [ -n "$(git status --porcelain -- . 2>/dev/null)" ]; then
+  BUILD_COMMIT="${BUILD_COMMIT}-DIRTY"
+  echo "⚠  dashboard tree is DIRTY — stamping ${BUILD_COMMIT} so the live site says so"
+fi
+PUBLIC_ENV+=("NEXT_PUBLIC_BUILD_COMMIT=${BUILD_COMMIT}")
+echo "→  stamping build as ${BUILD_COMMIT}"
+
 echo "→  building…"
 env NODE_ENV=production "${PUBLIC_ENV[@]}" npx opennextjs-cloudflare build
 
