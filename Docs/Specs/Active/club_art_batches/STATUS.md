@@ -2,9 +2,224 @@
 
 `IN_PROGRESS` (2026-08-22, Cowork/Architect runner).
 
-**Coverage: 15 of 19 brands complete — 75 of 95 head designs.**
+**Coverage: 18 of 19 brands complete — 90 of 95 head designs.**
+(Verified against the repo 2026-08-28 by counting `S_Menu_*` per brand. Earlier revisions of this
+line drifted upward by one because the count was incremented rather than re-verified — recount from
+the filesystem, do not trust the running tally.)
 
-## Committed and verified clean (15 brands)
+## ⚠️⚠️ PROMPT RULE CHANGE (Cesar, 2026-08-28): STOP LOCKING THE HEAD SHAPE
+
+**What was wrong.** Every W2/W3 prompt said *"same shape, same size, same camera angle, same
+position"*. That clause existed to stop the BogeyB failure (head rebuilt face-on and mirrored) and
+to keep framing stable for `fitfix.place`. But "same shape" also froze the head SILHOUETTE, so every
+brand's iron is the same KLYRO cavity-back, every driver the same G&F head, and so on. Across 19
+brands the roster reads as one club in 19 paint jobs.
+
+**Cesar:** *"That makes all the clubs look too similar. Some variation is allowed, as long as the
+clubs keep real world designs."*
+
+**The fix - separate POSE (locked) from SHAPE (free).**
+
+LOCKED, always, in every prompt:
+- camera angle, pose and orientation
+- position on the canvas, overall size in frame
+- lighting, and the plain solid white background (W2/W3) or the untouched photograph (W1)
+- never mirror, flip, rotate, move, zoom
+
+FREE TO VARY, and it SHOULD vary brand to brand:
+- crown profile, cavity vs muscle-back vs hollow-body, sole geometry, toe and heel shape,
+  hosel transition, weight-port placement, topline thickness, mallet vs blade massing
+
+The constraint on the variation is realism, not sameness: it must be a believable real-world club of
+that type that a manufacturer could actually make, and it must still read instantly as that type.
+
+### The replacement W3 (portrait) opening - use this verbatim
+> Repaint the FIRST image in the <BRAND> brand shown in the second image.
+> KEEP EXACTLY: the camera angle, the pose and orientation, the position on the canvas, the overall
+> size in frame, the lighting, and the plain solid white background. Do NOT mirror or flip the club,
+> do NOT rotate it, do NOT move it, do NOT zoom in or out.
+> YOU MAY AND SHOULD REDESIGN the head's own silhouette and construction to suit this brand - a
+> different crown profile, a different cavity or muscle-back shape, different sole geometry,
+> different toe and heel shape, a different hosel transition. It must stay a realistic, believable
+> real-world <TYPE> that a real manufacturer could make, and it must still read instantly as a
+> <TYPE>. Give this brand its own head design rather than copying the first image's silhouette.
+> <brand look string>
+> IMPORTANT: do NOT draw any real-world brand logo of any kind. Exactly ONE shaft attached at ONE
+> point, one complete unbroken head, the wordmark printed exactly once.
+
+### W2 (controls) keeps its explicit pose sentence
+Still name the pose in words ("We are looking at the driver from BEHIND AND SLIGHTLY ABOVE, seeing
+the large domed CROWN... the hosel and shaft leave at the TOP-LEFT") - that is what stopped the
+BogeyB mirror. Then add the same "YOU MAY AND SHOULD REDESIGN the silhouette" paragraph.
+
+### W1 (fulls) - the head must match the brand's OWN portrait, not the scene template
+For fulls the second image is the brand's finished portrait, so say:
+*"the club takes the head design shown in the SECOND image - that exact head shape, not the head
+shape from the first image"*, while the photograph, camera angle and framing stay locked to the
+first image. Otherwise Driver-Full and Driver-Portrait end up as two different clubs.
+
+### Scope - DECIDED BY CESAR 2026-08-28: FORWARD ONLY
+TeePit (DONE 2026-08-28), VBOOOT (DONE 2026-08-28) and PUTT ACE use the new rule. The 16 brands committed
+before it stay as they are.
+
+The 9 that were pipeline-generated under the old rule - GOLFINIX, EAGLEZ, FOREFIT, PAR PERFECT,
+BogeyB, Fairway THREADS, GREEN SWING, FairX, FAIRLOFT - are logged for a possible future retrofit
+in the Notion page **club_art_shape_retrofit**:
+https://app.notion.com/p/3cab3e9702b7819685b4ce68872becf5
+That page records which template silhouette each sprite inherited and what a retrofit would cost
+(~85 generations for portraits only, ~220 for everything).
+
+The other 7 - KLYRO, MireO, FYLOE, GOLFIN, G&F, ROYAL SWING, TIFTO - are ORIGINAL hand-made art and
+must never be regenerated; several of them are the templates themselves.
+
+## TeePit - COMPLETE, 13 of 13 new sprites committed (2026-08-28)
+
+**FIRST BRAND BUILT UNDER THE NEW SHAPE RULE.** Putter portrait + putter controls were already in
+the repo; generated Driver/Wood/Iron/Wedge portraits + controls and all five fulls. 15/15 pass
+`qa.py`. Repo names follow the majority convention, not the hand-made-brand variants:
+`Full/{Driver,Wood,Iron,Wedge,Putter}-TeePit.png` (Iron, not Iron7; Wedge, not WedgeA).
+Raws: `~/Downloads/golfin_club_gen/tp_*_{portrait,controls,full}_raw.jpg`.
+
+### Brand look string (audited from the two shipped putter sprites) - use verbatim
+> TeePit is a MATTE GUNMETAL-GREY / CHARCOAL body with gloss black topline and sole edges, and one
+> bold BRIGHT GRASS-GREEN band sweeping across the head. "TeePit" in clean white sans-serif letters
+> with a capital T and a capital P. Two short white vertical alignment bars flanking the green, and
+> a deep black milled grooved insert plate. A black ferrule, a MATTE BLACK shaft and a matte black
+> grip. NO violet, NO purple, NO electric blue, NO crossed flags, NO silver or white cavity panel,
+> NO crossed-clubs emblem - the body is gunmetal grey and the only colour is the one bright
+> grass-green band.
+
+Flattened references: `/mnt/user-data/outputs/tp_up/tp_ref_portrait.jpg` (792x1233) and
+`tp_ref_controls.jpg` (1156x649).
+
+### ✅ THE NEW SHAPE RULE WORKS
+Driver, wood, iron and wedge each came back with a genuinely different silhouette from the KLYRO /
+MireO / GOLFIN template they were built on - different crown profile, different sole vent, different
+toe and heel. Within TeePit the iron and the wedge still resemble each other, which is correct: that
+is family resemblance inside one brand, not the cross-brand sameness Cesar objected to.
+
+### ⚠️ `deshadow=True` EATS LIGHT-GREY CROWNS - only use it on dark-bodied clubs
+`postprocess.controls(..., deshadow=True)` runs `remove_shadow_ghost`, which floods any pixel with
+`min(rgb) >= 125` and low saturation that touches transparency. TeePit's driver is dark enough that
+it only removed the drop shadow (384k -> 334k opaque). The FAIRWAY WOOD's crown is light gunmetal,
+and deshadow bit a large notch out of it (248k -> 195k opaque, visible bite near the hosel).
+**Rule: deshadow only when the head is dark. On any light, silver, chrome or gunmetal crown, run
+with `deshadow=False` and accept the soft shadow, or the crown loses a chunk.** Sanity check: a
+sudden drop in opaque count between deshadow on/off means it ate body, not shadow.
+
+### ⚠️ NEVER CLICK SEND TWICE - THE SEND BUTTON BECOMES STOP
+While a response is generating, the "Send message" button turns into a stop button but KEEPS THE
+SAME accessibility name and ref. Clicking it again to "make sure it sent" cancels the generation
+("You stopped this response"). Cost me two wasted generations (driver full, putter full).
+**Click Send exactly once, then poll with screenshots.** If you did stop it, `find` the "Redo"
+button and click that - it re-runs the same prompt with the same attachments.
+
+### ⚠️ THE ATTACHMENTS ARE OFTEN THERE WHEN THE COMPOSER LOOKS EMPTY
+After typing a long prompt the composer scrolls to the bottom and the thumbnail row scrolls out of
+view. Twice I concluded the attachments had been dropped and re-uploaded, and Gemini answered *"You
+already uploaded a file named Driver-GandF.jpg"*. **Scroll the composer UP before deciding the
+attachments are missing.** Thumbnails can also take ~10s to render as grey placeholders first.
+
+### ⚠️ GEMINI WILL NOT FIX AN UPSIDE-DOWN WORDMARK - FIX IT LOCALLY
+On the iron full and the wedge full, Gemini painted "TeePit" rotated 180 degrees on the head. Three
+increasingly explicit in-chat corrections ("rotate the lettering by 180 degrees", "the capital T on
+the LEFT") all came back still inverted. Do not keep paying for retries.
+**Use `/root/fliptext.py` `flip_wordmark(path, box, fill_thresh, glyph_thresh)`.** It masks the
+glyphs by luminance, inpaints them away by iterated blur so the panel gradient is preserved, rotates
+only the glyph layer 180 degrees, and composites it back. Boxes used:
+- `Iron-TeePit.png` `(412, 828, 478, 851)` at the default thresholds (dark panel, median lum 76)
+- `Wedge-TeePit.png` `(413, 779, 464, 797)` with `fill_thresh=185, glyph_thresh=195`
+  (lighter panel, median lum 132 - the defaults grab the panel itself and leave a grey rectangle)
+**Pick the box so it contains ONLY the lettering and flat body around it** - if it clips the green
+band, the bright sole edge or the topline, the inpaint smears those into a visible rectangle. Check
+the patch's luminance percentiles first and set the thresholds above the panel, below the glyphs.
+
+### W1 invents nothing this time - the "do NOT add anything" list works
+Listing the furniture explicitly (*"no hooks, no brackets, no signs, no extra clubs, no golf balls,
+no bag"*) kept all five scenes clean. Keep that sentence in every W1 prompt.
+
+### Gemini repainted the REFERENCE instead of the TEMPLATE (wedge controls)
+For the wedge controls it ignored the GOLFIN wedge template entirely and repainted the TeePit
+*putter* reference, producing a mallet. One in-chat correction fixed it: name the first image
+concretely (*"the black and green GOLF WEDGE with the shaft going up to the left"*), say
+*"use the SECOND image ONLY as the colour and branding reference, never as the shape"*, and name the
+wrong output (*"not a putter, and never a mallet"*).
+
+## VBOOOT - COMPLETE, 13 of 13 new sprites committed (2026-08-28)
+
+Putter portrait + putter controls were already in the repo; generated Driver/Wood/Iron/Wedge
+portraits + controls and all five fulls. 13/13 pass `qa.py`. Repo names:
+`Full/{Driver,Wood,Iron,Wedge,Putter}-VBOOOT.png`.
+Raws: `~/Downloads/golfin_club_gen/vb_*_{portrait,controls,full}_raw.jpg`.
+
+The identity sheet's VBOOOT row was already correct against the shipped art - no ART-WINS rewrite
+needed. Only nuance: the shipped putter is a BLADE, not a mallet, and the finish is satin rather
+than gloss. Both sprites agree on black + gold, so there is no GREEN SWING-style contradiction.
+
+### Brand look string (audited from the two shipped putter sprites) - use verbatim
+> VBOOOT is a SATIN BLACK / near-black body with gloss black edges and BRIGHT METALLIC GOLD accents.
+> One gold insert panel or gold sole flash set into the head, and a short gold ladder of stripes.
+> The wordmark reads VBOOOOT - V, B, then FOUR letter O's, then T - in bold GOLD block capitals,
+> printed exactly once, reading normally left to right, with the small gold tagline
+> "EAGLE, BIRDIE, SUCCESS" in tiny gold capitals beside it. Round black weight ports with fine
+> concentric rings. A black ferrule, a MATTE BLACK shaft and a matte black grip. NO silver or chrome
+> body, NO white cavity panel, NO blue, NO green, NO purple, NO red, NO neon - the body is black and
+> the ONLY accent colour is metallic gold.
+
+Flattened references: `/mnt/user-data/outputs/vb_up/vb_ref_portrait.jpg` (792x1233) and
+`vb_ref_controls.jpg` (1156x649).
+
+### ⚠️⚠️ GEMINI CANNOT SPELL "VBOOOT" - ASK FOR **FOUR** O's
+Gemini drops the third O and writes VBOOT. Four escalating in-chat corrections all failed:
+naming the misspelling, spelling it letter by letter, "three identical circular O's", and switching
+to wide letter spacing (which gave five widely-spaced glyphs, still two O's).
+
+**The fix that works: write VBOOOOT with FOUR O's in the prompt. It then draws three.**
+This is the standing rule for this brand - it is baked into the look string above.
+
+It is not deterministic. Observed over 13 sprites:
+- correct VBOOOT first try: iron portrait, driver + wood controls, most fulls
+- one O short (VBOOT): needs a re-roll, not a correction
+- one O too many (VBOOOOT): iron controls, twice - a fresh chat with the same prompt fixed it
+- a malformed glyph (VBOOrT): one targeted in-chat correction fixed the glyph but then reverted the
+  count, so **do not chain corrections** - re-roll instead
+
+**Re-roll, do not correct.** Corrections on the letter count reliably make it worse. Use "Try again"
+under the image, or start a fresh chat with the same prompt. Two rolls usually lands it.
+
+### Upside-down wordmarks were the norm on the fulls - fix them locally
+Four of the five fulls (driver, iron, wedge, putter) and the wedge controls came back with the
+wordmark rotated 180 degrees. As with TeePit, Gemini will not fix this on request.
+Use `/root/fliptext.py` `flip_wordmark(path, box, fill_thresh, glyph_thresh)`. Boxes and thresholds
+used - the thresholds must sit ABOVE the panel and BELOW the gold glyphs, so check the patch's
+luminance percentiles first (`np.percentile(lum,[50,70,80,90,95])`):
+- `S_Controls_Wedge_VBOOOT.png` `(646,296,894,343)` fill 85 (dilate 7x7, 60 blur passes) / glyph 125
+- `Driver-VBOOOT.png` `(424,801,489,836)` fill 100 / glyph 110
+- `Iron-VBOOOT.png` `(398,792,480,822)` fill 95 / glyph 105
+- `Wedge-VBOOOT.png` `(415,783,494,806)` fill 105 / glyph 118
+- `Putter-VBOOOT.png` `(333,804,407,830)` fill 120 / glyph 132
+Keep the box off the green/gold band, the bright sole edge, the topline and any background that
+intrudes - anything else inside it gets smeared into a visible rectangle.
+
+**`Wood-VBOOOT.png` was left alone**: its wordmark runs along the crown axis rather than inverted,
+which is how a real fairway wood is branded. Not a defect.
+
+### Stray second-club fragment at the frame edge (iron controls)
+One controls generation painted a sliver of a second club at the extreme right edge, which `qa.py`
+caught as "2 SHAFTS crossing frame". Fix in post - keep only the largest connected alpha component:
+```python
+lbl, n = ndimage.label(a[...,3] > 128)
+keep = int(np.argmax(ndimage.sum(m, lbl, range(1, n+1)))) + 1
+a[...,3] = np.where(lbl == keep, a[...,3], 0)
+```
+
+### ⚠️ THE RENDERER FREEZES AFTER A LONG SESSION - OPEN A FRESH TAB
+Deep into the run, `Page.captureScreenshot` started timing out after 30s on every call while `find`
+still worked. The tab was unrecoverable. **Fix: `tabs_create_mcp`, then `tabs_close_mcp` the old
+tab.** Closing the group's last tab drops the group, so the next `tabs_context_mcp` needs
+`createIfEmpty: true` and returns a NEW tab id - re-read it before the next action.
+
+## Committed and verified clean (18 brands)
 
 **EAGLEZ — DONE, 13 new sprites committed (2026-08-20).** Driver portrait + driver controls were
 already in the repo; generated Wood/Iron/Wedge/Putter portraits + controls and all five fulls
@@ -321,9 +536,109 @@ fill the space with fixed it in one shot with the pose intact. Note this is the 
 FOREFIT Nike-mark case, where in-chat REMOVAL failed - deleting a duplicate of the brand's own mark
 is fine; removing a summoned real-world trademark is not.
 
-## Then, in order (5 brands, ~67 generations)
+## FairX - COMPLETE (13 of 13, 2026-08-28)
 
-~~EAGLEZ~~ → ~~FOREFIT~~ → ~~PAR PERFECT~~ → ~~BogeyB~~ → ~~Fairway THREADS~~ → ~~GREEN SWING~~ → **FairX (next)** → FAIRLOFT →
+Committed: 4 portraits + 4 controls (the putter of each was already shipped) and 5 fulls
+(`Full/{Driver,Wood,Iron,Wedge,Putter}-FairX.png`). All pass qa.py; poses eyeballed against
+templates before committing. Controls post-processed at `thresh=235`.
+
+### IDENTITY SHEET WAS WRONG ON THE SHAFT - corrected from the art
+Both shipped sprites (putter portrait + putter controls) agree, so no contradiction here:
+gloss BLACK body, a WHITE rectangular insert panel, "FairX" in a white italic script printed on
+the BLACK part (never inside the panel), two thin white pinstripe curves sweeping along the topline
+above and below the wordmark, and small brushed-silver weight bars on the sole.
+**The shaft is POLISHED CHROME SILVER, not black** - the sheet said "black shaft" and was wrong.
+Black grip, black ferrule, chrome hosel.
+
+### ⚠️ FairX's CHROME SHAFT SPLITS ON ALMOST EVERY SPRITE - seal.py is routine here
+`remove_white_bg` cuts a slot up the near-white specular highlight of the chrome shaft. Affected the
+driver portrait and the driver, wood AND iron controls - 4 of 8 sprites. `seal.seal(path, radius=4)`
+cleared every one with no visible change and no loss of opaque area (Driver controls 291,856 ->
+292,658). Run qa.py, then seal any FAIL reporting "2 SHAFTS crossing frame", then re-run qa.py.
+Do NOT raise the threshold to 250 for this brand - 235 + seal is cleaner.
+
+### The wordmark drifts INTO the white panel - say where it goes
+The wood portrait came back with "FairX" set inside the white panel instead of on the black body.
+One in-chat correction fixed it (move the script off the panel, shrink the panel back to a plain
+empty white rectangle) and the pose survived. Every later prompt carries the clause
+*"printed directly on the BLACK part of the head and NOT inside the white panel"* and it did not
+recur.
+
+### The GOLFIN wedge controls template leaves "GOLFIN" on the sole
+The wedge controls came back still reading GOLFIN (mirrored) on the sole plus an invented round dot
+in the cavity. One in-chat correction naming both fixed them together. Worth checking the sole text
+on every W2 sprite built from a GOLFIN template.
+
+### W1 can invent scenery furniture - check the WALL, not just the club
+The putter full came back with a **metal club hook bolted to the stucco wall** that is in none of the
+other fulls. "change ONLY the club... absolutely nothing else in the image" does not reliably stop
+this. One in-chat correction removed it cleanly. Add the wall/background to the eyeball check on
+every full before committing.
+
+### ✅ BETTER THAN DOM-COMPUTED COORDINATES: click by element `ref`
+Correcting the earlier note again. Computing the "+" coordinate from `getBoundingClientRect()` still
+missed after Chrome was reopened at a different window size - the click tool applies its own scaling,
+so a coordinate computed in page space can land ~12% off. **`find` the element, then
+`computer{action:"left_click", ref:"ref_NNN"}`** - no arithmetic, works at any window size, first
+try every time. Use it for the "+" (`Upload & tools`), the composer textbox, Send, and the
+`Download full size image` button.
+Caveat on the download button: after an in-chat correction there are TWO download buttons. Refs are
+assigned in the order `find` first saw them, so the LOWER ref number is the OLDER image. Confirm
+with:
+```js
+[...document.querySelectorAll('button')].filter(b=>/download full size/i.test(b.getAttribute('aria-label')||''))
+  .map(b=>Math.round(b.getBoundingClientRect().top+window.scrollY))
+```
+The largest `top` is the newest image; click the higher-numbered ref.
+
+## FAIRLOFT - COMPLETE (13 of 13, 2026-08-28)
+
+Committed: 4 portraits + 4 controls (the putter of each was already shipped) and 5 fulls
+(`Full/{Driver,Wood,Iron,Wedge,Putter}-Fairloft.png`). All pass qa.py; controls at `thresh=235`
+with **no seal needed** - the shaft is black, so there is no chrome-highlight split on this brand.
+
+### ✅ FIRST BRAND WHERE THE IDENTITY SHEET WAS ALREADY RIGHT
+Both shipped sprites agree and both matched the sheet: solid deep teal / petrol-blue, "FAIRLOFT" in
+white block capitals with a small "JAPAN" beneath, black shaft, calm and matte, not sky blue.
+Detail added from the art (not corrections, just precision):
+- The teal carries a **very fine cross-hatch woven texture**, not flat paint.
+- The wordmark sits on a **matte BLACK rectangular insert panel**, not directly on the teal.
+- **Two short white vertical alignment ticks** flank that panel.
+- A **darker near-black teal band** runs along the sole.
+
+Working look string (used verbatim on all 13):
+> a solid MATTE DEEP TEAL / PETROL-BLUE body with a very fine cross-hatch woven texture, a darker
+> near-black teal band along the sole, and a matte BLACK rectangular insert panel carrying
+> "FAIRLOFT" in white block capitals with a small "JAPAN" in white beneath it. Two short white
+> vertical alignment ticks flanking the black insert panel. A black ferrule, a MATTE BLACK shaft
+> and a matte black grip. NO electric blue, NO sky blue, NO cyan - the blue is a deep muted petrol
+> teal, calm and matte, never bright.
+
+### The teal creeps up the shaft on wedges
+The wedge portrait came back with a TEAL hosel and upper shaft. One in-chat correction
+("recolour them MATTE BLACK so the entire shaft from the ferrule all the way up is matte black,
+with only the head itself remaining teal") fixed it with the pose intact. A teal hosel that stops at
+the ferrule is correct and needs no fix - only teal running past the ferrule is a defect.
+
+### A GOLFIN-template sole becomes a SECOND wordmark, not a blank
+On the iron controls, "GOLFIN" on the sole was replaced by a second mirrored "FAIRLOFT" rather than
+deleted, even with `wordmark printed exactly once` in the prompt. Two lessons:
+1. The wording that works is explicit about placement:
+   *"the FAIRLOFT wordmark printed exactly ONCE, inside the black insert panel only"* plus
+   *"the sole must carry NO other lettering - delete any GOLFIN text and do NOT repeat FAIRLOFT
+   anywhere else on the club."* With that clause the wedge controls came back clean first try.
+2. When it still doubles, one in-chat correction naming WHICH copy to delete fixes it.
+
+### Gemini dropped the connection mid-batch
+On the wedge full the sidebar showed **"Couldn't connect / Reload"** and the attached images were
+silently dropped while the typed prompt stayed in the composer. Not a wedge, not a quota - just a
+network blip. Reload the page and redo the upload; the retry worked immediately. Also worth noting:
+after a reload, `file_upload` can fail once with *"Couldn't determine which page this action
+targets"* - call `tabs_context_mcp`, then re-`find` and retry.
+
+## Then, in order (3 brands, ~41 generations)
+
+~~EAGLEZ~~ → ~~FOREFIT~~ → ~~PAR PERFECT~~ → ~~BogeyB~~ → ~~Fairway THREADS~~ → ~~GREEN SWING~~ → ~~FairX~~ → ~~FAIRLOFT~~ → **TeePit (next)** →
 TeePit → VBOOOT (13 each), then **PUTT ACE last** (15 — it has no reference art at all).
 
 ## Identity sheet: ALL 19 ROWS NOW CORRECTED

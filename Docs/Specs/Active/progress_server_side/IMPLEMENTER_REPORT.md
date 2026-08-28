@@ -293,8 +293,33 @@ has already loaded.
 
 Fix: `2026_08_29_golfin_level_up_blob_key_fix.sql` (playlife `38636d5`) — an
 append-only `create or replace`; the diff against the 08-28 body is that one
-block and nothing else, checked with `diff`. Parse-checked with pglast.
-**Awaiting Cesar's apply.**
+block and nothing else, checked with `diff`. **Applied 2026-08-28**, all five
+verification rows matched.
+
+### And then it was proven to FIRE, live, which it had never done
+
+A `prosrc LIKE '%lv%'` check proves the text is deployed, not that the branch
+works. Both halves were exercised on prod through the CLUB modal — which also
+gave that modal its first live run, having only ever been proven by unit tests:
+
+| | what | result |
+|---|---|---|
+| **A — no FALSE mismatch** | `club_driver_golfin_common` 10→11. Its blob entry has **no `lv` key** (the codec compresses a row at its catalog default), so this is exactly the case the naive key-only fix would have read as 0 | `ok … (grandfathered seed) → RP=900` — **no `[blob said …]`**. The fallback resolved absent-`lv` to `startLevel` 10, matched the claim, stayed quiet |
+| **B — a REAL mismatch is reported** | `club_putter_golfin_common`: its blob `lv` was set to **5** server-side, then the club was levelled 10→11 from the app | `ok … (grandfathered seed) **[blob said Lv 5]** → RP=894`, plus `Grandfathered seed for 'club_putter_golfin_common' disagreed … (claimed Lv 10, blob said Lv 5). The level-up went through; the server logged it too.` |
+
+B is the whole point: the disagreement is **reported and the level-up still
+succeeds**. A diagnostic, never a gate.
+
+The `lv: 5` was chosen deliberately LOW — `InventoryMerge` is
+`Max(acc.currentLevel, c.currentLevel)`, so a lower server value is self-healing
+and cannot cost a player a level even if cleanup were forgotten. It was restored
+to 11, the club's real level, and `golfin_progress` reads:
+
+```
+character char_james                 level 12  grandfathered_from 10
+club      club_driver_golfin_common  level 11  grandfathered_from 10
+club      club_putter_golfin_common  level 11  grandfathered_from 10
+```
 
 ## Canonical screenshot
 

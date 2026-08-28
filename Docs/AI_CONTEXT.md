@@ -176,7 +176,12 @@
 > silent, which is the hardest kind to notice. Fixing only the key would have made it *worse*: the
 > codec omits `lv` for a row at its catalog default, so absent-as-0 would have cried mismatch on
 > every untouched ref. Absent now resolves to the ref's `startLevel`.
-> Migration `2026_08_29_golfin_level_up_blob_key_fix.sql` (playlife `38636d5`) — **awaiting apply.**
+> Migration `2026_08_29_golfin_level_up_blob_key_fix.sql` (playlife `38636d5`) — **applied, and then
+> proven to FIRE**, which it never had. Both branches exercised on prod through the CLUB modal (its
+> first live run too): a club whose blob carries **no `lv`** stayed quiet — the case the naive fix
+> would have read as 0 and mis-reported — and a club whose blob `lv` was set to 5 came back
+> `[blob said Lv 5]` **with the level-up still succeeding**. Diagnostic, never a gate. The test value
+> was chosen LOW on purpose: max-of-levels merge makes a low server value self-healing.
 > This was the open item the IMPLEMENTER_REPORT flagged as needing a second pair of eyes; reading the
 > live blobs is what closed it.
 
