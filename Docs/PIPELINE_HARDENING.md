@@ -239,3 +239,26 @@ Do not dispatch the next review while you have an unexamined suspicion. `content
 iter-3 and iter-5 were both found while *writing the brief for the next gate* — the act of
 explaining the code to a reviewer is itself a review, and it is free. Finish that thought before
 spending forty minutes of agent time.
+
+## 23. Dashboard changes ship, or the task is not done (2026-08-28, second occurrence)
+
+A task that touches `Tools/admin-dashboard/` is NOT complete at `npm run build` — that is a
+local artifact nobody can use. Completion requires `npm run deploy` (per
+`ADMIN_DASHBOARD_OPS.md` §2: migration first, deploy second, then the Access curl check) and
+the **Cloudflare deployment id quoted in IMPLEMENTER_REPORT.md**. The architect review checks
+for that id as a standing item; a report without one on a dashboard-touching diff is an
+automatic FAIL on that row. Occurred twice before becoming a rule: the art-urls upload UI, the
+WebP-only fix and the URL-only badge all sat local-only while their tasks closed as DONE.
+Companion change (one-time): the dashboard exposes its own build commit (footer + a tiny
+`/api/version` route) so "is it deployed?" is a curl, never a memory.
+
+**Correction, 2026-08-28, on first use of this rule: the curl does not work, and cannot yet.**
+Cloudflare Access fronts the whole origin — `/api/version` and even the static assets 302 to
+`cloudflareaccess.com` — and `ADMIN_DASHBOARD_OPS.md` prescribes no authenticated-curl path (its
+§2 shell check IS the 302). So the stamp is real and correct, but unreadable from a shell. Until
+an Access **service token** or a **bypass policy scoped to `/api/version`** exists, the honest
+shell check is a `grep` of the built worker
+(`.open-next/server-functions/default/.next/server/app/api/version/route.js`) for the literal,
+with the browser footer as the live confirmation. That grep is not a downgrade: it is what caught
+the stamp's own first bug, where `cf-deploy.sh`'s env stash file — not covered by `.gitignore`'s
+`.env*.local` — made every clean deploy report `<hash>-DIRTY`.

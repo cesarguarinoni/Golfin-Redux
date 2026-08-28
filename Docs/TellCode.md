@@ -7,6 +7,23 @@
 
 ## ▶ CURRENT STATE — update this block at every session boundary
 
+- **LIVE ADMIN: `admin.golfin.world` is at `e309acf20`** (Cloudflare deployment
+  `8272dd2f-7bca-49fc-bf68-4d2d7a3e0a60`, 2026-08-28T05:11Z). Updated 2026-08-28 (Claude Code).
+  It had been stuck at the 2026-08-27T07:47Z deploy with **four** dashboard commits local-only —
+  `1f3450c53` (content_two_way row-editor/panel/i18n), `15f2553f1` (catalog-art upload UI),
+  `c15998c30` (WebP-only), `541864b38` (URL-only badge). The architect brief named three; the
+  fourth surfaced from the deployment records, and its `b4aa4467` reference does not exist in this
+  repo. All four are now live. No migration was pending (the `catalog-art` bucket already existed),
+  so ADMIN_DASHBOARD_OPS §2's migration-first rule was vacuously satisfied.
+  **The dashboard now stamps its own commit** (PIPELINE_HARDENING §23 companion): sidebar footer +
+  `GET /api/version`, baked by `cf-deploy.sh` from `git rev-parse --short HEAD`; a dirty tree
+  stamps `<hash>-DIRTY`, a build that skipped the script stamps `unstamped`.
+  ⚠️ **§23 says "is it deployed?" is a curl — it is not, and cannot be.** Cloudflare Access 302s
+  every request including `/api/version` and the static assets, and ADMIN_DASHBOARD_OPS prescribes
+  no authenticated-curl path. Until an Access service token or a bypass policy on `/api/version`
+  exists, the shell check is `grep` on the built bundle
+  (`.open-next/server-functions/default/.next/server/app/api/version/route.js`) plus a browser.
+
 - **Last updated:** 2026-08-27 (Claude Code — **`hole02_tree_bake_drift` DONE.** Hole 02 collided with 1,495 Spruce the local scene never drew: `tree_obstacles.csv` (committed `4b0054069`) held 2,983 rows — 1,488 terrain + **1,495 standalone** — while the Mac's `Hole_02_Geo.unity` (2026-06-01, gitignored, predating that placement pass) had **no `StandaloneTrees` container at all**. Terrain trees survived because `TerrainData` is tracked; standalone trees lived only in the per-machine scene. **Fix: standalone placement is now TRACKED** — `Assets/Golf/Courses/<course>/Data/hole-NN-geo/standalone_trees.csv` (`prefab,worldX,worldY,worldZ,yawDeg,scale`, sibling order), committed for all 18 holes (16 with trees; 01 and 06 header-only by design so "file absent" always means "never exported"). New `StandaloneTreeCatalog` adds `Import/Standalone Trees/{Export Current Hole, Export All Holes, Rebuild Current Hole}`; `TreePlacer.PlaceTrees` and both `TreeBrushTool` write paths re-export automatically. Hole 02's catalog was seeded FROM the bake and the scene rebuilt (1,495 prefab instances under `HoleRoot/StandaloneTrees`). **New drift gate:** `Import/Bake Tree Obstacles/Validate All Holes` re-harvests every hole with the baker's own harvest fn and diffs vs the committed CSV (per-profile counts + 1 cm positions) plus scene-vs-catalog — **18/18 PASS**, tripwire-verified (a 5 cm move, a deleted row, and 3 removed trees each FAIL, and it returns to PASS on restore). Wired into `CIBuild.BuildIOS` and `BuildIOSDev`; `-skipTreeBakeCheck` disarms it loudly. ⚠️ **Byte-identity to `0519c2f0` was NOT achievable and this is not a tool defect:** the baker does not store `baseY`, it re-derives it via `terrain.SampleHeight(x,z)`, and the CSV only preserves X/Z to 4 decimals — re-sampling at the rounded X/Z flips the 4th decimal of `baseY` on the 73 of 2,983 rows whose true height sits within ~2.5e-5 m of a rounding boundary (0.1 mm each; every X, Z, scale, profile, count and row order identical). All 73 were solvable only by nudging trees to the corner of their rounding cell to steer the printed digit — fitting data to a hash, so it was NOT done. Re-baked to **`687cd578`** and proved `rebuild → save → bake` is now a **fixed point** (twice, byte-identical). Also corrected a spec slip: seeding at `worldY = baseY` would have floated all 1,495 trees 30 cm — every healthy hole has `worldY = baseY − 0.30` (TreePlacer's sink offset), measured. Doc: `Docs/Pipeline/TREES_AND_GENERATED_SCENES.md`. **Two findings worth carrying:** (a) `PlaceBallAt`'s ground-snap raycast lands on TREE capsule colliders — it put a ball 23 m up in foliage; assert the snapped Y against `Terrain.SampleHeight` when scripting placement near trees; (b) **1,365 of Hole 02's 1,495 standalone Spruce (91%) are OB** per the baked mask in `zones.json` — a ball hit into those tree lines terminates `HitOOB` and the loop resets it, so only ~130 trees are actually strikeable in play. **No device pass — not needed** (Cesar, same day: *"If it works in Unity there is no reason for it not to work on device."* Standing rule now, see memory `feedback_no_device_pass_by_default`). Editor evidence: stills + an invariants JSON + a render↔collider overlay projecting the committed collider positions onto the live render. Of the four scripted strikes only 2 landed as verified trunk hits (11 and 10 trunk crossings, tested along the real trajectory through the sim's own provider), both on the right line — see the 91%-OB finding above for why the left line cannot produce an at-rest ball. The one recorded clip is unusable (camera sat in a top-down aim state, no trees in frame) and the recorder allows one clip per Editor launch.)
 
 - **Last updated:** 2026-08-18 evening (Architect — **`tournament_async_board` (Phase 4 of `tournaments_server_side`) server half BUILT; Unity spec SPEC_READY, kickoff GATED on deploy.** Cesar's calls: board first / payout (Phase 5) after; bots retire ONE-WAY at 10 human entries and are REMOVED from the ranking (`tournaments.bots_retired_at` latch); leaderboard sends BOTH ranks — display (blended) + `prize_rank` (human-only, bots never paid). Written into playlife (UNCOMMITTED): `migrations/2026_08_18_tournament_async_phase4.sql` (bot latch, `tournament_entries.display_level`, `golfin_bot_fields` + `golfin_bot_brackets` server mirrors of the CSVs), NEW `routers/tournaments_golfin.py` mounted at the same `/api/v1/tournaments` prefix — `POST /golfin/{slug}/enter` (server-side fee debit via `spend_pts` with deterministic uuid5(user:slug) key — self-heals, never double-charges), `POST /golfin/{slug}/submit-hole` (§6b.3 plausibility: hole-in-set, strokes 1–15, window = end+resolve_delay grace, 20s/hole pace tripwire, idempotent replay for the offline queue), `GET /golfin/{slug}/entry` (cross-device resume), `GET /golfin/{slug}/leaderboard` (server bot generation ONCE per tournament — seeded via bot_seed latch, persisted into entries+hole_results with organic-reveal timestamps; ranking is a faithful port of LocalTournamentBackend: provisional score-to-par/thru/earlier-submit no partial ties, final strokes+T-ties+earlier submitted_at; DNF & thru-0 hidden; caller row always in `player`). Logic proven end-to-end against a fake Supabase (enter/replay/pace/retire/final). GPS endpoints in `tournaments.py` untouched. ✅ SHIPPED TO PROD same evening: migration APPLIED (verification 2 new cols / 3 bot fields / 6 brackets / RLS true), `fly deploy` green, smoke: `/health` 200, all four `/golfin/{slug}/…` endpoints **403-not-404** (mounted, auth-gated), the public `/golfin` schedule still 200, garbage routes 404. **The tournament_async_board kickoff below is pasteable NOW.** Phase-4 NOTE: `GetResults`/`ClaimPrize` keep the existing client-side earn-game `tournament_prize` payment path (unchanged behavior) — Phase 5 moves payment into the resolver and re-points ClaimPrize (decision of record #5).)
@@ -36,6 +53,21 @@
 
 ## 📋 SPEC_READY POINTERS
 
+- **`game_modes_admin`** (filed 2026-08-28, Architect via Cowork) — **SPEC_READY, kickoff pasteable.
+  ✅ GATE LIFTED 2026-08-28: content_art_urls AND content_art_bundling are both DONE/Completed.**
+  Cesar: game-mode entry prices and rewards handled from the admin.** Two truths, two treatments:
+  `modes` becomes the EIGHTH content catalog (fees, card copy, `locked`, reward display —
+  `modes.csv` has never had an overlay; ModesDatabaseCSV joins the machinery; a mode whose
+  `target` this build doesn't know is WITHHELD); rewards stay `game_point_actions` (already
+  server-authoritative) and get a Rewards panel with audit — live-on-save, no publish cycle.
+  Card reward numbers are DECOUPLED by decision (they are AVERAGES over a later selection,
+  except multiplayer) — the drift warning covers exactly one pair, versus_1v1 ↔ versus_win,
+  and nothing else. Cesar chose
+  server-validated fees NOW: `golfin_mode_fees` mirror on publish (fail-the-publish pattern),
+  spend reason becomes `mode_entry_fee:<modeId>`, /points/spend answers `fee_changed`/
+  `mode_locked`/`unknown_mode` as 200 payloads, client handles FeeChanged like the shop's
+  price_changed. Legacy bare reason stays until Cesar closes it (separate commit).
+  Independent of content_art_bundling. Spec: `Docs/Specs/Active/game_modes_admin/SPEC.md`.
 - **`content_two_way`** (filed 2026-08-27, Architect via Cowork) — **SPEC_READY, kickoff pasteable.**
   Cesar's second content requirement: admin-created characters/clubs/items inform the next build,
   and CSV edits made in Unity inform the admin. One truth = published Supabase; a CSV edit is a
@@ -167,6 +199,88 @@ this TellCode pointer.
   ARCHITECT_BRIEF.md` into the Active folder (git mv) — it is the Phase 1 hand-off the spec cites.
 - ~~**`perf_phase1_free_wins`**~~ — ✅ **DONE 2026-08-27** (`cca3cfd1a`; every pose 60 fps cold; Option C
   dropped after measurement; the 2314 "flat terrain" proven pre-existing). Move Active/ → Completed/.
+
+### Kickoff · game_modes_admin (issued 2026-08-28) — gate lifted 2026-08-28, pasteable
+
+```
+Read Docs/Specs/Active/game_modes_admin/SPEC.md and implement it, in the spec's §5 order
+(backend fee validation first, then catalog, admin, Unity).
+
+Context:
+- modes.csv becomes the eighth content catalog: Catalog("modes", ...) in
+  Tools/content/catalogs.py (export/import/--check pick it up from the table),
+  seed migration for content_catalogs + 5 rows at v1, Modes panel via the shared
+  CatalogPanel (+ New row works automatically), ModesDatabaseCSV gains the overlay
+  exactly as content_overlay_catalogs did the others. Withhold rule: a mode whose
+  `target` the build doesn't dispatch is withheld with a warning — read the real
+  target set from ModeSelectScreenController's dispatch, don't hard-code it twice.
+- Rewards: NEW Rewards panel editing game_point_actions directly (checkAdmin +
+  writeAudit, before/after; live on save, the panel says so). pts blank = NULL =
+  client-supplied-under-caps — hint EN+JA. No new/deleted actions. Card reward
+  numbers are DECOUPLED card copy (averages over a later selection) EXCEPT
+  versus_1v1: the drift warning covers only versus_1v1 ↔ versus_win — do not
+  generalise it into a mapping table.
+- Fees, server-validated: migration 2026_08_28_golfin_mode_fees.sql (RLS on/no
+  policies, seeded, verification block — FULL SQL in chat for Cesar, wait for his
+  output). Modes publish upserts the mirror in the same transaction and FAILS if
+  the mirror write fails (golfin_characters pattern). /points/spend: reason prefix
+  mode_entry_fee: → parse mode id; unknown_mode / mode_locked / fee_changed(+fee)
+  as 200 payloads, nothing debited; matching amount falls through to spend_pts
+  unchanged; BARE mode_entry_fee stays accepted (closing it = separate commit on
+  Cesar's word). Client: reason becomes "mode_entry_fee:" + _data.id at
+  ModeCardController.cs:604; new SpendOutcome verdict FeeChanged → update the
+  card's fee, toast, second tap pays; unknown/locked → generic refusal + refresh.
+- PIPELINE_HARDENING §21: the live E2E is acceptance item 1 (publish a fee change,
+  stale client gets fee_changed, second tap debits the new fee) — it must RUN.
+- Minimal diff. Reuse: the shared CatalogPanel/RowEditor, contentValidate patterns,
+  golfin_characters mirror shape, shop price_changed UX, test_golfin_inventory
+  fake-Supabase style, seed_from_csv --catalogs.
+- Out of scope: tournament fees/prizes, new earn actions, stamina/gacha prices,
+  closing the bare reason, LevelUpCosts.
+
+When done: list changed files (both repos) with a 1-line summary each, run the
+acceptance tests incl. the live fee E2E, update STATUS.md + IMPLEMENTER_REPORT.md,
+and update Docs/AI_CONTEXT.md.
+```
+
+### Kickoff · content_art_bundling (issued 2026-08-28) — run after Cesar approves content_art_urls DONE
+
+```
+First: on Cesar's word, move content_art_urls to Docs/Specs/Completed/ (STATUS DONE)
+and git mv Docs/Specs/Queued/content_art_bundling Docs/Specs/Active/content_art_bundling.
+
+Then read Docs/Specs/Active/content_art_bundling/SPEC.md and implement it. The
+Architect's corrections are FOLDED INTO the body (§10 is the record) — the spec as
+written is current.
+
+Context:
+- Editor tool (GOLFIN/Content/Fetch URL Art + a MenuItem-free static entry) that
+  pulls URL-only art into Resources/ as a reviewable git diff. NOT in the build
+  lane; no Supabase credentials (public HTTPS + repo CSVs only).
+- Naming: match the RESOURCES convention per folder (Zoe / BigRosterZoe /
+  {Pascal(name)}-{rarity} for items+balls / {Type}-{Brand} for clubs) — NOT the
+  S_* source-art patterns; add the items/balls rule to ASSET_NAMING_CONVENTION.md
+  in the same commit. De-dup shared club art by derived name, fetch once.
+- Refusals: allowlist via CatalogArtPolicy.IsArtAllowed (never re-implemented);
+  500 KB upload cap (not the 1 MB client backstop); WebP by content type AND
+  extension; collision never overwrites; empty reference folder never guesses.
+- Import settings copied from a sibling in the SAME folder, re-read after import,
+  format + maxTextureSize asserted non-default.
+- CSV gains the sprite name; closing instruction = import_content.py --apply →
+  publish → export. Size summary appended to Docs/Reports/content_art.txt.
+- Admin: "URL-only · not bundled" badge (row list + editor, EN+JA) on any row with
+  a URL and an empty name.
+- Acceptance includes: re-run is a no-op; OLD-build half (strip the bundled file,
+  keep name+URL → renders via HasRemote + cached URL — the case most likely to
+  regress); six club rarity rows → one download; the ladder hands over to rule 2
+  with the sprite identity logged, per PIPELINE_HARDENING §21 this E2E must RUN.
+- Minimal diff. Out of scope: retiring bundled art, homeUrl (filed follow-up),
+  3D/hole content, Addressables, clearing URLs after bundling.
+
+When done: list changed files with a 1-line summary each, run the acceptance tests
+(Editor only — no device pass by default), paste the size summary, update STATUS.md
++ IMPLEMENTER_REPORT.md, and update Docs/AI_CONTEXT.md.
+```
 
 ### Kickoff · content_two_way (issued 2026-08-27)
 

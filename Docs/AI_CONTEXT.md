@@ -133,6 +133,37 @@
 
 ## ✅ RECENTLY LANDED
 
+> **THE LIVE ADMIN WAS FOUR COMMITS BEHIND, AND NOTHING COULD HAVE TOLD US. Fixed 2026-08-28 —
+> `admin.golfin.world` is now at `e309acf20`** (Cloudflare deployment
+> `8272dd2f-7bca-49fc-bf68-4d2d7a3e0a60`).
+>
+> `content_art_urls` and `content_art_bundling` both closed as DONE with their dashboard halves
+> never deployed. Cesar found it by looking for the upload button and not seeing it. The last
+> deploy was 2026-08-27T07:47Z; local-only since then were `1f3450c53`, `15f2553f1`, `c15998c30`
+> and `541864b38` — so **the catalog-art upload UI had been live for zero minutes** despite the
+> task that built it being approved and archived.
+>
+> **The mistake was accepting `npm run build` exit 0 as evidence.** It was quoted in the
+> implementer report and the acceptance table, and it proves compilation, not shipping — and §7 had
+> no acceptance item for *deployed*, so no gate could have caught it either. That is now
+> `PIPELINE_HARDENING` §23, and the companion is that the dashboard stamps its own commit: sidebar
+> footer + `GET /api/version`, baked by `cf-deploy.sh` from `git rev-parse --short HEAD`, with
+> `<hash>-DIRTY` for an unclean tree and `unstamped` for a build that skipped the script.
+>
+> **Two corrections to the brief that drove it**, both worth carrying: it named three local-only
+> commits (there were four — `1f3450c53` also touched the dashboard), and it cited a baseline
+> commit `b4aa4467` that does not exist in this repo. The deployment records, not the brief, were
+> the authority for what was live.
+>
+> ⚠️ **§23's "is it deployed? is a curl" is not achievable today.** Cloudflare Access 302s every
+> request including `/api/version`, and ADMIN_DASHBOARD_OPS prescribes no authenticated-curl path.
+> The working shell check is a `grep` of the built worker for the literal; §23 now says so. It is
+> also what caught the stamp's own first bug — `cf-deploy.sh`'s env stash file is not covered by
+> `.gitignore`'s `.env*.local`, so every clean deploy stamped itself `-DIRTY`, i.e. a warning that
+> fires always and therefore says nothing. Fixed by computing the hash before the stash exists.
+> **Open follow-up:** an Access service token, or a bypass policy scoped to `/api/version`, to make
+> the rule's own check real.
+
 > **Rewards Center / gacha shell fixes — landed 2026-08-28 (direct fixes, no spec folder).**
 > Three commits, all verified in play mode through the player's own entry path (bottom-nav gacha
 > slot → Rewards Center → tab / chip):
