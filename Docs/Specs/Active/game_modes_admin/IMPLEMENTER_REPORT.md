@@ -246,6 +246,37 @@ in a spec folder that moves to `Completed/`.
 
 ---
 
+## The declared gap, now measured (red-team iter-3 escalation)
+
+The red-team escalated rather than passing, and one of its two reasons was that
+it **could not exercise the Rewards guards against the live system** (Access 302s
+curl; it had no browser tool). It verified them by source-read instead and said
+so honestly.
+
+I have browser access, so I closed that gap rather than leaving Cesar to decide
+on an unknown. All six probes against the DEPLOYED `PATCH /api/rewards/<action>`,
+through the live admin session:
+
+| Probe | Result |
+|---|---|
+| `{"pts": -5}` | **400** — "Points must be 0 or more." |
+| `{"pts": 1.5}` | **400** — "Points must be a whole number (no decimals)." |
+| `{"pts": "20"}` (string) | **400** — refused by the route's own type check |
+| `{"maxPerEvent": -1}` | **400** — "Max / event must be 0 or more." |
+| `{"dailyCap": -1}` | **400** — "Daily cap must be 0 or more." |
+| `PATCH /api/rewards/no_such_action` | **404** — "No earn action …" |
+
+`game_point_actions` read back afterwards: **4 rows** (no phantom row from the
+404 probe — the "no create" rule holds against a direct route call, not only in
+the UI), and every value at baseline — `versus_win` 20/20/200, the other three
+untouched.
+
+**So the guards demonstrably work in production.** What remains is not "do they
+work" but "should a live-on-save payout path ship with no automated coverage" —
+which is the actual question, and Cesar's to answer.
+
+---
+
 ## A gap I am declaring rather than leaving to be found
 
 **The Rewards panel's validation has no automated coverage, because the dashboard
