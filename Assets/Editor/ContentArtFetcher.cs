@@ -334,6 +334,9 @@ namespace Golfin.EditorTools
                 var sb = new StringBuilder();
                 sb.AppendLine(LogMarker);
                 sb.AppendLine($"build {build} · {Summary()}");
+                if (StorageFallbackUsed)
+                    sb.AppendLine("   ⚠ in-build sizes are the RUNTIME fallback and OVER-REPORT " +
+                                  "(roughly 2×) — UnityEditor.TextureUtil could not be reached.");
 
                 foreach (var group in Catalogs)
                 {
@@ -431,6 +434,92 @@ namespace Golfin.EditorTools
         /// </summary>
         public static string? VerificationFaultForTest;
 
+        /// <summary>
+        /// Write a text file the way it must be written when the old contents matter:
+        /// staged to <c>.tmp</c>, then swapped in with <c>File.Replace</c>.
+        ///
+        /// <para>
+        /// ⚠️ <c>File.WriteAllText</c> TRUNCATES FIRST. A crash, a full disk or a lock between the
+        /// truncate and the last byte leaves a shipped catalog CSV half-written — and
+        /// <c>Clubs.csv</c> is 799 rows. That is not a rollback problem, it is unrecoverable
+        /// without git. The atomic swap makes the file either wholly old or wholly new.
+        /// </para>
+        /// <para>
+        /// Same idiom, for the same reason, as <c>TournamentArtService</c>'s cache writes
+        /// (TournamentArtService.cs:544-552).
+        /// </para>
+        /// </summary>
+        static void WriteTextAtomic(string path, string text)
+        {
+            string? dir = Path.GetDirectoryName(path);
+            if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir)) Directory.CreateDirectory(dir);
+
+            string tmp = path + ".tmp";
+            File.WriteAllText(tmp, text);
+            if (File.Exists(path)) File.Replace(tmp, path, null);
+            else File.Move(tmp, path);
+        }
+
+        /// <summary>
+        /// Delete an asset and say so when it does not go. <c>AssetDatabase.DeleteAsset</c> returns
+        /// false on a locked or missing file, and an unchecked delete leaves an asset on disk that
+        /// the CSV no longer names — invisible until the NEXT run refuses it as a collision against
+        /// a file nobody asked for.
+        /// </summary>
+        static void DeleteAssetOrReport(string assetPath, RunReport report)
+        {
+            if (string.IsNullOrEmpty(assetPath)) return;
+            if (AssetDatabase.DeleteAsset(assetPath)) return;
+
+            report.Errors.Add($"could not delete {assetPath} after refusing it — the file is still " +
+                              "on disk and no CSV names it. Remove it by hand, or the next run will " +
+                              "refuse that row as a collision.");
+        }
+
+        /// <summary>
+        /// The texture's STORAGE size — what it costs in the build.
+        ///
+        /// <para>
+        /// ⚠️ <b>NOT <c>Profiler.GetRuntimeMemorySizeLong</c></b>, which this used to call and which
+        /// answers a different question: memory once loaded, including a second copy, so it reported
+        /// roughly DOUBLE. Measured on the 170×343 fixture: storage 26,912 B, runtime 54,784 B. The
+        /// hand-check agrees with storage — ASTC_6x6 is ⌈170/6⌉ × ⌈343/6⌉ = 29 × 58 blocks × 16 B =
+        /// 26,912 — and so does §10.2's own ratio: 26,912 / 80,500 = 0.33, in line with its
+        /// 122 MB source ≈ 50 MB in build, where 0.68 is not. The runtime value is also
+        /// state-dependent, so the same asset reported different sizes on different runs.
+        /// </para>
+        /// <para>
+        /// <c>UnityEditor.TextureUtil</c> is internal, hence the reflection. If a Unity upgrade
+        /// moves it, the profiler value is used instead and the report SAYS the number is the
+        /// fallback rather than quietly printing a wrong one.
+        /// </para>
+        /// </summary>
+        static long StorageBytes(Texture2D tex)
+        {
+            try
+            {
+                _storageMethod ??= Type.GetType("UnityEditor.TextureUtil, UnityEditor")
+                    ?.GetMethod("GetStorageMemorySizeLong",
+                                System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+
+                if (_storageMethod != null)
+                    return (long)_storageMethod.Invoke(null, new object[] { tex });
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"{Tag} TextureUtil.GetStorageMemorySizeLong failed ({e.GetType().Name}); " +
+                                 "falling back to the runtime size, which over-reports.");
+            }
+
+            StorageFallbackUsed = true;
+            return Profiler.GetRuntimeMemorySizeLong(tex);
+        }
+
+        static System.Reflection.MethodInfo? _storageMethod;
+
+        /// <summary>True when any size in this run came from the over-reporting fallback (§6).</summary>
+        public static bool StorageFallbackUsed;
+
         static string Kb(long bytes) =>
             bytes < 1024 ? $"{bytes} B"
                          : (bytes / 1024f).ToString("F1", CultureInfo.InvariantCulture) + " KB";
@@ -451,6 +540,7 @@ namespace Golfin.EditorTools
         public static RunReport Run()
         {
             var report = new RunReport();
+            StorageFallbackUsed = false;
             string root = Directory.GetParent(Application.dataPath)!.FullName;
 
             // (folder, name) → the run's first successful fetch of that asset. Clubs share art
@@ -543,9 +633,20 @@ namespace Golfin.EditorTools
             // Read as LINES and splice in place (see SetField). Re-serialising every row would
             // re-quote fields the tool never touched and bury the two-line diff §7 asks for.
             var lines = new List<string>(File.ReadAllText(csvFull).Split('\n'));
+
+            // ⚠️ REGISTERED NOW, NOT AT THE END. This used to be added to allPending only after the
+            // row loop completed — so a throw ANYWHERE in that loop (Run catches it per catalog and
+            // carries on) discarded the pending entirely, and every asset already written for this
+            // catalog was orphaned: still on disk, outcomes still Fetched, counted as bundled by the
+            // report, and named by no CSV. That is the same "state committed before its validator
+            // ran" shape as iter-3a, one level out. Registering up front means the rows that DID
+            // complete are finalized normally and the ones that never ran simply have no edits.
+            pending.FullPath = csvFull;
+            pending.RelPath = spec.CsvPath;
+            pending.Lines = lines;
+            allPending.Add(pending);
             var index = new Dictionary<string, int>(StringComparer.Ordinal);
             bool headerSeen = false;
-            bool dirty = false;
 
             for (int i = 0; i < lines.Count; i++)
             {
@@ -613,20 +714,17 @@ namespace Golfin.EditorTools
                         // the diff is the name and nothing else. NOT written to disk here: the
                         // import has not been verified yet, and a refusal has to be able to undo
                         // this. See PendingCsv.
+                        // `lines` IS `pending.Lines` (same reference), so this edit is
+                        // already visible to FinalizeCsvs.
                         lines[i] = SetField(lines[i], fields, index[slot.NameColumn], name);
                         fields = ParseCsvSpans(lines[i]);   // offsets moved; re-index for the next slot
                         pending.Edits.Add((outcome, i, index[slot.NameColumn]));
-                        dirty = true;
                     }
                 }
             }
 
-            if (!dirty) return;
-
-            pending.FullPath = csvFull;
-            pending.RelPath = spec.CsvPath;
-            pending.Lines = lines;
-            allPending.Add(pending);
+            // No `if (!dirty) return;` here any more: FinalizeCsvs already skips a pending whose
+            // edits did not survive, and returning early would re-create the bug above.
         }
 
         /// <summary>
@@ -678,7 +776,7 @@ namespace Golfin.EditorTools
                     if (!string.IsNullOrEmpty(outcome.WrittenPath))
                     {
                         // Delete through the AssetDatabase so the .meta goes with it.
-                        AssetDatabase.DeleteAsset(outcome.WrittenPath);
+                        DeleteAssetOrReport(outcome.WrittenPath, report);
                         outcome.Detail += $" (the written asset {outcome.WrittenPath} was removed " +
                                           "and the CSV name reverted — a refusal leaves nothing behind)";
                     }
@@ -688,7 +786,7 @@ namespace Golfin.EditorTools
 
                 try
                 {
-                    File.WriteAllText(pending.FullPath, string.Join("\n", pending.Lines));
+                    WriteTextAtomic(pending.FullPath, string.Join("\n", pending.Lines));
                     // Unity reads the IMPORTED TextAsset, not the file on disk: without this the
                     // loaders would keep serving the pre-write text for the rest of the session.
                     AssetDatabase.ImportAsset(pending.RelPath, ImportAssetOptions.ForceUpdate);
@@ -705,8 +803,7 @@ namespace Golfin.EditorTools
                     foreach (var (outcome, _, _) in pending.Edits)
                     {
                         if (!SpliceSurvives(outcome.Verdict, Target(outcome), failedTargets)) continue;
-                        if (!string.IsNullOrEmpty(outcome.WrittenPath))
-                            AssetDatabase.DeleteAsset(outcome.WrittenPath);
+                        DeleteAssetOrReport(outcome.WrittenPath, report);
                         Refuse(outcome, $"{pending.RelPath} could not be written, so this row's " +
                                         "art was removed too — an asset the repo does not name is " +
                                         "worse than no asset.");
@@ -1089,12 +1186,11 @@ namespace Golfin.EditorTools
             o.MaxTextureSize = applied.maxTextureSize;
             o.Detail = assetPath;
 
-            // In-build bytes: the MEASURED runtime size of the imported texture, not an estimate
-            // from the source PNG. §10.2 counts Assets/Resources/Clubs at 122 MB source ≈ 50 MB
-            // in build; a tool whose whole job is adding to that folder must report the number
-            // that side of the ratio.
+            // In-build bytes — the MEASURED compressed payload, not an estimate from the source PNG.
+            // §10.2 counts Assets/Resources/Clubs at 122 MB source ≈ 50 MB in build; a tool whose
+            // whole job is adding to that folder must report the number on that side of the ratio.
             var tex = AssetDatabase.LoadAssetAtPath<Texture2D>(assetPath);
-            o.BuildBytes = tex != null ? Profiler.GetRuntimeMemorySizeLong(tex) : 0;
+            o.BuildBytes = tex != null ? StorageBytes(tex) : 0;
         }
 
         // ── CSV field splice ────────────────────────────────────────────────
@@ -1178,11 +1274,12 @@ namespace Golfin.EditorTools
             try
             {
                 string full = Path.Combine(root, ReportPath);
-                Directory.CreateDirectory(Path.GetDirectoryName(full)!);
                 string existing = File.Exists(full) ? File.ReadAllText(full) : "";
                 if (existing.Length > 0 && !existing.EndsWith("\n", StringComparison.Ordinal))
                     existing += "\n";
-                File.WriteAllText(full, existing + "\n" + report.ToText(ContentArtValidator.BuildNumber()));
+                // Atomic for the same reason the CSVs are: this is a read-modify-write over a file
+                // that also carries ContentArtValidator's whole coverage record.
+                WriteTextAtomic(full, existing + "\n" + report.ToText(ContentArtValidator.BuildNumber()));
             }
             catch (Exception e)
             {

@@ -61,3 +61,9 @@ Self-review FAIL addressed: seam + extracted SpliceSurvives/FailedTargets + 7 te
 Tripwire: reinstating the 3b bug -> 2 failures; reverted -> green.
 EditMode 1904 / 1901 / 0 failed / 3 skips.
 === end iter-4 ===
+
+=== iter-5 2026-08-28 ===
+Shape named; all 8 side effects audited. 3 new instances fixed (S1 orphan-on-throw, S2 non-atomic CSV write, S4 unchecked delete).
+Also: in-build size was runtime memory (~2x over). Now TextureUtil.GetStorageMemorySizeLong = 26912 B, corroborated 2 ways.
+EditMode 1904 / 1901 / 0 failed / 3 skips.
+=== end iter-5 ===

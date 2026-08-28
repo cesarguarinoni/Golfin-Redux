@@ -7,6 +7,86 @@
 
 ---
 
+## iter-5 — stopped patching one at a time; named the shape and swept the whole file
+
+Cesar, mid-review: *"If we had 4 defects of the same shape, why not look for the shape and fixing
+all iterations before reviewing again?"* Correct — four defects had been found one at a time, each
+followed by a three-gate review that then found the next. The in-flight review was stopped and the
+file audited systematically instead.
+
+### The shape
+
+> **An irreversible side effect is committed before — or independently of — the check that
+> authorises it, and nothing undoes it when a later check fails.**
+
+Auditable as two questions per side effect: **(A)** is every validation complete before it, with
+nothing in between that invalidates them? **(B)** if anything downstream fails, is it undone?
+
+### Every side effect in the file, audited
+
+| # | Side effect | A | B | Verdict |
+|---|---|---|---|---|
+| S1 | `File.WriteAllBytes` (the art) | ✅ | ⚠️ | **DEFECT** — see below |
+| S2 | `File.WriteAllText` (a catalog CSV) | ✅ | ⚠️ | **DEFECT** — non-atomic |
+| S3 | `AssetDatabase.ImportAsset` | ✅ | n/a | idempotent |
+| S4 | `AssetDatabase.DeleteAsset` | ✅ | ⚠️ | **DEFECT** — return unchecked |
+| S5 | `SaveAndReimport` | ✅ | ✅ | verified after; asset deleted on failure |
+| S6 | append to `content_art.txt` | ✅ runs after `FinalizeCsvs`, so outcomes are final | ⚠️ | non-atomic (same fix as S2) |
+| S7 | `produced[key]` (dedup) | ✅ | ✅ | no consumer after phase A |
+| S8 | `report.Outcomes.Add` | ✅ | ✅ | in-memory only |
+
+### The three new defects, fixed
+
+**S1 — a throw mid-catalog orphaned everything that catalog had already written.**
+`allPending.Add(pending)` sat at the END of `ProcessCatalog`, and `Run` catches per-catalog and
+carries on. So any exception in the row loop discarded the pending: assets on disk, outcomes still
+`Fetched`, counted as bundled by the report, named by no CSV. Same shape as iter-3a, one level out.
+Registered up front now. Observed with a forced mid-catalog throw:
+
+| | pre-fix | post-fix |
+|---|---|---|
+| CSV name for the row that DID complete | *(empty)* | `S1good` |
+| its asset | on disk | on disk |
+| report | "1 asset(s) added" | "1 asset(s) added" |
+| net | **orphan — counted, not named** | **correctly finalized** |
+
+**S2 — the catalog CSV write was not atomic.** `File.WriteAllText` truncates first; a crash, a full
+disk or a lock between truncate and last byte leaves a half-written `Clubs.csv` — 799 rows, not
+recoverable without git. Now staged to `.tmp` and swapped with `File.Replace`, the idiom this
+codebase already uses for cache writes (`TournamentArtService.cs:544-552`). Applied to
+`content_art.txt` too, which also carries the validator's whole coverage record.
+
+**S4 — `AssetDatabase.DeleteAsset`'s return value was ignored** at both call sites. A failed delete
+left an asset on disk that the CSV no longer names — invisible until the next run refuses it as a
+collision against a file nobody asked for. Now reported.
+
+### And one the audit turned up that is not a rollback bug at all
+
+**The in-build size has been wrong by ~2× all along.** `§6` exists to report what a fetch adds to
+the build, and it called `Profiler.GetRuntimeMemorySizeLong` — which answers a different question
+(memory once loaded, including a second copy) and is state-dependent, so the same asset reported
+different sizes on different runs.
+
+```
+NEW  storage=26912  runtime=54784   (immediately after reimport)
+NEW  storage=26912  runtime=54784   (after Refresh)
+NEW  storage=26912  runtime=54784   (after Unload)
+SRC  storage=26912  runtime=54784   (James.png, identical bytes)
+```
+
+`TextureUtil.GetStorageMemorySizeLong` is stable in every state, and two independent checks agree
+with it: ASTC_6x6 at 170×343 is ⌈170/6⌉ × ⌈343/6⌉ = 29 × 58 blocks × 16 B = **26,912**, and
+26,912 / 80,500 = **0.33**, in line with §10.2's own 122 MB source ≈ 50 MB in-build ratio — where
+0.68 is not. Every "53.5 KB in build" in this report's earlier sections is that overstatement; the
+corrected run prints **26.3 KB**. `TextureUtil` is internal so it is reached by reflection, and if a
+Unity upgrade moves it the report SAYS the number is the over-reporting fallback rather than quietly
+printing a wrong one.
+
+EditMode **1904 / 1901 passed / 0 failed / 3 pre-existing skips**. Four CSVs and `content_art.txt`
+byte-identical to the tracked tip; no fixture assets; live collision targets untouched.
+
+---
+
 ## iter-4 — the self-review FAILED iter-3, correctly, and its fix list is done
 
 `SELF_REVIEW_FAIL`. Its argument: three gates missed 3a; iter-3 restructured the write path most
