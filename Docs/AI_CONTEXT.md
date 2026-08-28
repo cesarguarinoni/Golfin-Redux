@@ -157,8 +157,8 @@
 >
 > **Next in this area:** the Store History screen + the purchase-log persistence layer behind it.
 
-> **`content_art_bundling` — THE ADMIN NOW INFORMS THE NEXT BUILD. Built 2026-08-28,
-> `READY_FOR_SELF_REVIEW`.** Spec + evidence: `Docs/Specs/Active/content_art_bundling/`.
+> **`content_art_bundling` — THE ADMIN NOW INFORMS THE NEXT BUILD. DONE 2026-08-28.**
+> Spec + evidence: `Docs/Specs/Completed/content_art_bundling/`. Six iterations.
 >
 > `GOLFIN/Content/Fetch URL Art` (Editor, deliberately NOT in the build lane, no Supabase
 > credentials) pulls admin-uploaded URL art into `Resources/`, names it by the target folder's
@@ -187,6 +187,27 @@
 >
 > Also corrected in passing: the catalog-art upload refusal still read *"Use JPG, PNG or WebP"*
 > after WebP was removed in `c15998c30`.
+>
+> **TWO MORE THAT WOULD HAVE BITTEN.** The red-team gate found the collision guard comparing
+> filenames case-SENSITIVELY on case-INSENSITIVE APFS — so a derived `Driver-Fairx` would have
+> silently replaced the hand-dropped `Clubs/Full/Driver-FairX.png`, APFS keeping the original
+> filename so the `.meta` and GUID survived: an artist's asset swapped with no rename, no new file,
+> no diff but the pixels. `BrandPascal` lower-cases interior letters, so it was live in the tree
+> that day. And §6's in-build size was `Profiler.GetRuntimeMemorySizeLong` — runtime memory, not
+> build size, ~2× over and state-dependent — wrong on every run since the first commit, in the one
+> number the section exists to produce. Now `TextureUtil.GetStorageMemorySizeLong`, corroborated by
+> ASTC block math and by §10.2's own source:build ratio.
+>
+> **THE PROCESS LESSON, now `PIPELINE_HARDENING` §22.** Seven defects, all one shape, found one at
+> a time across five iterations and four gate rounds — each fix followed by a full three-gate review
+> that then surfaced the next. Cesar stopped it: *"If we had 4 defects of the same shape, why not
+> look for the shape and fixing all iterations before reviewing again?"* Gates re-run the acceptance
+> list, which enumerates behaviours the SPEC asked for — instance-level by construction, so a SHAPE
+> passes straight through. Scoreboard: red-team 1 defect, self-review 1 process catch + 1 real
+> candidate, **reviewer 0 across three passes**, the implementer 6 by reading the file. §22 makes
+> the audit a rule on the SECOND defect of a shape, and requires the enumeration to cover two axes —
+> sites AND failure modes (refuse / throw / process death). That second axis was itself added within
+> the hour, by the red-team catching that the first audit checked ordering and never failure mode.
 
 > **`content_art_urls` — ART BY URL: AN ADMIN-CREATED ROW RENDERS WITH NO STORE RELEASE.
 > Landed 2026-08-28 after a defect that eight review passes missed and only an end-to-end run
