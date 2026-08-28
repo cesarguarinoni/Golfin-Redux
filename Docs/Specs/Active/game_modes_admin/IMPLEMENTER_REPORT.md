@@ -133,6 +133,34 @@ See the two commits: `256f21587` (GolfinRedux) and `f5749d4` (playlife).
 
 ---
 
+## 4b. One defect found by writing this brief
+
+PIPELINE_HARDENING rule 15's corollary — *do not dispatch the next gate while
+holding an unexamined suspicion* — earned its keep before the gate even ran.
+
+`MAX_MODE_ID_LEN` (routers/points.py) was **60**. `ROW_ID_MAX`
+(lib/contentValidate.ts) is **80**. So an operator could create a `modes` row
+with a 61–80 character id, publish it, have it mirrored into `golfin_mode_fees`,
+and have the client render it as a real card — and every tap would be refused
+`unknown_mode`, with nothing anywhere naming the length as the cause. A mode
+nobody can pay for and no way to find out why.
+
+Unlikely to be reached (the longest shipped id is `driving_range`), which is
+precisely why it would have been miserable to diagnose the once it was.
+
+Fixed: bound raised to 80. The regression test asserts `>= 80`, not `== 80` — the
+property is "not tighter than the surface that mints the ids", not "80 is
+correct". **Tripwire-checked:** reverting the constant to 60 fails it (1 failed /
+16 passed); restoring passes 17. Backend suite now **118 passed**.
+
+I swept the other client↔server bounds in this task for the same shape and they
+agree: `entryFee >= 0` (validator) vs the table's `check (entry_fee >= 0)`;
+`locked` accepted as true/false/1/0/blank by the validator, mapped to true on
+`"true"`/`"1"` by the mirror, and read the same way by `ContentFields.GetBool`.
+`order` has no server counterpart to disagree with.
+
+---
+
 ## 5. One thing NOT fixed, and it is not mine
 
 The full `export_content.py --check` exits 1 on a **pre-existing** `texts`
