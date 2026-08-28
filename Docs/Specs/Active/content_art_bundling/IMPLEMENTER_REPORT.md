@@ -7,6 +7,61 @@
 
 ---
 
+## iter-4 — the self-review FAILED iter-3, correctly, and its fix list is done
+
+`SELF_REVIEW_FAIL`. Its argument: three gates missed 3a; iter-3 restructured the write path most
+likely to regress; the fixes were proven only by a MANUAL tripwire, which cannot catch its own
+regression and which no reviewer role may perform (it requires mutating source). It also named a
+plausible third defect of the same shape. All four items are addressed.
+
+### 1. A test seam, so the refusal path is reachable without editing source
+
+`ContentArtFetcher.VerificationFaultForTest` — when non-null, `ApplyAndVerifyImport` records it as a
+problem. Null in every real run; Editor-only tooling. Proven end to end, **no source edit**:
+
+```
+WITH FAULT   : 0 asset(s) added, 1 refused
+               verdict=Refused   CSV: …,7,6,5,7,,,80,119,…   asset=False
+SEAM CLEARED : 1 asset(s) added, 78.6 KB source → 53.5 KB in build
+               verdict=Fetched   CSV: …,7,6,5,7,Seamtest,,80,119,…   asset=True  loads=True
+```
+
+### 2. The decision that was wrong twice is now an extracted, tested function
+
+`SpliceSurvives(verdict, target, failedTargets)` and `FailedTargets(outcomes)`, pulled out of
+`FinalizeCsvs` precisely because inline conditions are what hid both defects. Seven tests, covering
+both halves of the rule and the two ways of getting it wrong:
+
+| Test | Guards |
+|---|---|
+| `Splice_Survives_WhenFetchedAndItsTargetVerified` | the normal path still writes |
+| `Splice_IsReverted_WhenTheRowItselfWasRefused` | **3a** |
+| `Splice_IsReverted_WhenTheSHAREDTargetDied_…` | **3b** — own verdict fine, target gone |
+| `Splice_TargetMatchingIsCaseInsensitive` | the iter-2 filesystem lesson, applied here too |
+| `Splice_AnUnrelatedFailureDoesNotRevertOtherRows` | the guard must not become "revert everything" |
+| `FailedTargets_CountsOnlyRefusalsThatHadALREADYWrittenAFile` | a refusal that never wrote (allowlist, WebP, cap, collision) is NOT a failed target |
+| `TheVerificationFaultSeamExists_…` | the seam cannot be silently removed |
+
+**Tripwire (§20).** Reinstated the 3b bug (`return ownVerdictOk;`, dropping the target check):
+**1904 / 1899 / 2 FAILED** — `Splice_IsReverted_WhenTheSHAREDTargetDied_…` and
+`Splice_TargetMatchingIsCaseInsensitive`. Reverted byte-identical → **1904 / 1901 / 0**.
+
+### 3. The third defect it named — fixed, not deferred
+
+A `File.WriteAllText` throw mid-loop in `FinalizeCsvs` left that catalog's assets on disk with
+outcomes still `Fetched`, so the report counted them as bundled while the CSV did not name them,
+and the next run would refuse them as collisions against files nobody asked for. Same invariant as
+a refused verification, different trigger. The catch now deletes those assets and flips the outcomes
+to Refused: **if the name cannot be recorded, the art does not stay.**
+
+### 4. Sweep + housekeeping
+
+EditMode **1904 / 1901 passed / 0 failed / 3 pre-existing skips** (+7). Four CSVs and
+`content_art.txt` byte-identical to the tracked tip; no fixture assets; live collision targets
+`Driver-FairX.png` (`16f50050…`) and `James.png` (`596d962f…`) untouched.
+
+---
+
 ## iter-3 — a half-bundled-row hole I found in my own code, and then in my own fix
 
 Found while writing the red-team brief for iter-2, by reading the write ordering rather than by any

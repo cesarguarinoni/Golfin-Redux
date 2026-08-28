@@ -374,6 +374,63 @@ namespace Golfin.EditorTools
             }
         }
 
+        /// <summary>The derived target one outcome writes to: <c>Folder/DerivedName</c>.</summary>
+        public static string Target(Outcome o) => o.Folder + "/" + o.DerivedName;
+
+        /// <summary>
+        /// Targets whose asset did NOT survive import verification — i.e. was written and then
+        /// refused. Case-insensitive for the same filesystem reason <see cref="ExistingAsset"/> is.
+        /// <para>
+        /// A Refused outcome with no <c>WrittenPath</c> never wrote anything (allowlist, WebP, cap,
+        /// collision), so it is not a failed TARGET — nothing points at it.
+        /// </para>
+        /// </summary>
+        public static HashSet<string> FailedTargets(IEnumerable<Outcome> outcomes)
+        {
+            var failed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var o in outcomes)
+                if (o.Verdict == Verdict.Refused && !string.IsNullOrEmpty(o.WrittenPath))
+                    failed.Add(Target(o));
+            return failed;
+        }
+
+        /// <summary>
+        /// Whether one CSV splice survives into the written file.
+        ///
+        /// <para>
+        /// ⚠️ <b>This decision has been wrong twice</b>, which is why it is a named function with
+        /// its own tests instead of an inline condition. First it did not exist at all — the CSV
+        /// was written before verification ran, so every splice survived unconditionally (iter-3a).
+        /// Then it checked only the row's OWN verdict, so a <see cref="Verdict.SharedWithSibling"/>
+        /// row survived even when the asset it points at had been deleted (iter-3b) — and clubs
+        /// share one asset across six rarities by design, so that is five repo rows naming a sprite
+        /// that is not in the build.
+        /// </para>
+        /// <para>
+        /// Both halves are load-bearing: the row's own verdict AND the fate of the target it names.
+        /// </para>
+        /// </summary>
+        public static bool SpliceSurvives(Verdict verdict, string target, HashSet<string> failedTargets)
+        {
+            bool ownVerdictOk = verdict == Verdict.Fetched || verdict == Verdict.SharedWithSibling;
+            return ownVerdictOk && !failedTargets.Contains(target);
+        }
+
+        /// <summary>
+        /// TEST SEAM. When non-null, <see cref="ApplyAndVerifyImport"/> records this string as a
+        /// verification problem, so the refusal path can be exercised without corrupting a real
+        /// download.
+        ///
+        /// <para>
+        /// It exists because the iter-3 defects were reachable ONLY through a verification failure,
+        /// and the only way to reach one was to edit the source — which meant the fixes were proven
+        /// by a manual tripwire that cannot catch its own regression, and which no reviewer role is
+        /// allowed to perform. The iter-3 self-review FAILED the task over exactly that.
+        /// </para>
+        /// <para>Editor-only tooling; null in every real run. Tests must clear it in TearDown.</para>
+        /// </summary>
+        public static string? VerificationFaultForTest;
+
         static string Kb(long bytes) =>
             bytes < 1024 ? $"{bytes} B"
                          : (bytes / 1024f).ToString("F1", CultureInfo.InvariantCulture) + " KB";
@@ -589,10 +646,7 @@ namespace Golfin.EditorTools
             // exist, which is the same half-bundled state this whole method exists to prevent —
             // just spread over more rows. Case-insensitive for the same filesystem reason
             // ExistingAsset is.
-            var failedTargets = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            foreach (var o in report.Outcomes)
-                if (o.Verdict == Verdict.Refused && !string.IsNullOrEmpty(o.WrittenPath))
-                    failedTargets.Add(o.Folder + "/" + o.DerivedName);
+            var failedTargets = FailedTargets(report.Outcomes);
 
             foreach (var pending in allPending)
             {
@@ -600,15 +654,14 @@ namespace Golfin.EditorTools
 
                 foreach (var (outcome, line, column) in pending.Edits)
                 {
-                    bool ownVerdictOk = outcome.Verdict == Verdict.Fetched ||
-                                        outcome.Verdict == Verdict.SharedWithSibling;
-                    bool targetSurvived = !failedTargets.Contains(outcome.Folder + "/" + outcome.DerivedName);
-
-                    if (ownVerdictOk && targetSurvived)
+                    if (SpliceSurvives(outcome.Verdict, Target(outcome), failedTargets))
                     {
                         anySurvived = true;
                         continue;
                     }
+
+                    bool ownVerdictOk = outcome.Verdict == Verdict.Fetched ||
+                                        outcome.Verdict == Verdict.SharedWithSibling;
 
                     // A sibling of a refused fetch: it was never refused itself, so say why it is
                     // being reverted rather than leaving it reported as satisfied.
@@ -643,6 +696,21 @@ namespace Golfin.EditorTools
                 catch (Exception e)
                 {
                     report.Errors.Add($"could not write {pending.RelPath}: {e.GetType().Name}: {e.Message}");
+
+                    // The names could not be recorded, so the ASSETS MUST NOT STAY. Leaving them
+                    // would report rows as bundled that the repo does not name, and the next run
+                    // would refuse them as collisions against files nobody asked for. Same
+                    // invariant as a refused verification, different trigger — flagged as a
+                    // candidate by the iter-3 self-review and fixed rather than deferred.
+                    foreach (var (outcome, _, _) in pending.Edits)
+                    {
+                        if (!SpliceSurvives(outcome.Verdict, Target(outcome), failedTargets)) continue;
+                        if (!string.IsNullOrEmpty(outcome.WrittenPath))
+                            AssetDatabase.DeleteAsset(outcome.WrittenPath);
+                        Refuse(outcome, $"{pending.RelPath} could not be written, so this row's " +
+                                        "art was removed too — an asset the repo does not name is " +
+                                        "worse than no asset.");
+                    }
                 }
             }
         }
@@ -980,6 +1048,7 @@ namespace Golfin.EditorTools
             var referenceDefault = reference.GetPlatformTextureSettings("DefaultTexturePlatform");
 
             var problems = new List<string>();
+            if (VerificationFaultForTest != null) problems.Add(VerificationFaultForTest);
             if (applied.textureType != reference.textureType)
                 problems.Add($"textureType {applied.textureType} ≠ reference {reference.textureType}");
             if (applied.maxTextureSize != reference.maxTextureSize)

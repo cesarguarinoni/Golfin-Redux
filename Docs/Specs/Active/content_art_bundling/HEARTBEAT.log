@@ -55,3 +55,9 @@ Self-found: CSV written before import verification; and SharedWithSibling treate
 Both fixed + demonstrated red->green under forced verification failure. Happy paths re-proven.
 EditMode 1897 / 1894 / 0 failed / 3 skips.
 === end iter-3 ===
+
+=== iter-4 2026-08-28 ===
+Self-review FAIL addressed: seam + extracted SpliceSurvives/FailedTargets + 7 tests + write-throw fix.
+Tripwire: reinstating the 3b bug -> 2 failures; reverted -> green.
+EditMode 1904 / 1901 / 0 failed / 3 skips.
+=== end iter-4 ===

@@ -1,14 +1,11 @@
 READY_FOR_SELF_REVIEW
 
-iter-3 2026-08-28. TWO defects of one class, found by me while briefing the red-team, not by a gate:
-the CSV was written BEFORE import verification (a refused import left the name in the repo and the
-file on disk while reporting "Refused" — a row silently withheld at runtime behind a name that looks
-correct), and my first fix for it treated SharedWithSibling as safe, so one refused club fetch would
-have left five sibling rows naming a deleted sprite. Both fixed, both demonstrated red then green
-under a forced verification failure, both happy paths re-proven.
+iter-4 2026-08-28. The iter-3 SELF_REVIEW_FAIL was correct and its whole fix list is done:
+(1) a test seam (`VerificationFaultForTest`) so the refusal path is reachable without mutating
+source — proven end-to-end both ways; (2) the splice decision that was wrong TWICE extracted into
+`SpliceSurvives`/`FailedTargets` with 7 tests, tripwire-demonstrated red (2 failures) then green;
+(3) the third defect it named — a mid-loop CSV write throw leaving orphan assets counted as bundled
+— fixed rather than deferred; (4) sweep + housekeeping re-verified.
 
-Known gap: neither defect is covered by a regression test — reaching them needs a forced
-verification failure and there is no seam for that yet. Follow-up, stated not hidden.
-
-EditMode 1897 / 1894 passed / 0 failed / 3 pre-existing skips.
-See IMPLEMENTER_REPORT.md § iter-3.
+EditMode 1904 / 1901 passed / 0 failed / 3 pre-existing skips.
+See IMPLEMENTER_REPORT.md § iter-4.

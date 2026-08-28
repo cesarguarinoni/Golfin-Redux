@@ -372,6 +372,121 @@ namespace GolfinRedux.Tests.EditMode
             Assert.IsNull(ExistingAsset("Portraits/Thumbnails", "NoSuchPortrait_content_art_bundling"));
         }
 
+        // ── Which splices survive (SPEC §3.8 + iter-3) ──────────────────────
+        //
+        // This decision has been WRONG TWICE. iter-3a: it did not exist — the CSV was written
+        // before ApplyAndVerifyImport ran, so a refused import left the sprite name in the repo and
+        // the file on disk while the run reported "Refused". iter-3b: the first fix checked only
+        // the row's OWN verdict, so a SharedWithSibling row survived even when the asset it points
+        // at had just been deleted — and clubs share one asset across six rarities, so that is five
+        // rows naming a sprite that is not in the build.
+        //
+        // Neither was reachable without forcing a verification failure, which is why the logic is
+        // now an extracted, directly-testable function instead of an inline condition.
+
+        object Verdict(string name) =>
+            Enum.Parse(_fetcher.GetNestedType("Verdict", Statics | BindingFlags.Public), name);
+
+        HashSet<string> Failed(params string[] targets) =>
+            new HashSet<string>(targets, StringComparer.OrdinalIgnoreCase);
+
+        bool SpliceSurvives(string verdict, string target, HashSet<string> failed) =>
+            (bool)_fetcher.GetMethod("SpliceSurvives", Statics)
+                .Invoke(null, new object[] { Verdict(verdict), target, failed });
+
+        [Test]
+        public void Splice_Survives_WhenFetchedAndItsTargetVerified()
+        {
+            Assert.IsTrue(SpliceSurvives("Fetched", "Portraits/Thumbnails/Zoe", Failed()));
+            Assert.IsTrue(SpliceSurvives("SharedWithSibling", "Clubs/Portraits/S_Menu_Driver_X", Failed()));
+        }
+
+        [Test]
+        public void Splice_IsReverted_WhenTheRowItselfWasRefused()
+        {
+            Assert.IsFalse(SpliceSurvives("Refused", "Portraits/Thumbnails/Zoe", Failed()),
+                "iter-3a: a refused import must not leave its name in the CSV.");
+            Assert.IsFalse(SpliceSurvives("Skipped", "Portraits/Thumbnails/Zoe", Failed()));
+        }
+
+        [Test]
+        public void Splice_IsReverted_WhenTheSHAREDTargetDied_evenThoughThisRowWasNotRefused()
+        {
+            // THE iter-3b BUG. This row's own verdict is fine; the asset it NAMES is gone.
+            Assert.IsFalse(
+                SpliceSurvives("SharedWithSibling", "Clubs/Portraits/S_Menu_Driver_X",
+                               Failed("Clubs/Portraits/S_Menu_Driver_X")),
+                "A shared row names ANOTHER row's asset. When that asset does not survive " +
+                "verification, keeping this name leaves the repo pointing at a sprite that is not " +
+                "in the build — five times over for a six-rarity club.");
+
+            // The Fetched row that produced it must go too.
+            Assert.IsFalse(
+                SpliceSurvives("Fetched", "Clubs/Portraits/S_Menu_Driver_X",
+                               Failed("Clubs/Portraits/S_Menu_Driver_X")));
+        }
+
+        [Test]
+        public void Splice_TargetMatchingIsCaseInsensitive()
+        {
+            // Same filesystem reason as the collision guard: Foo and foo are one file.
+            Assert.IsFalse(
+                SpliceSurvives("SharedWithSibling", "Clubs/Full/Driver-Fairx",
+                               Failed("Clubs/Full/Driver-FairX")),
+                "A case-variant target is the SAME file; the splice must not survive.");
+        }
+
+        [Test]
+        public void Splice_AnUnrelatedFailureDoesNotRevertOtherRows()
+        {
+            // The guard must not become "revert everything the moment anything fails".
+            Assert.IsTrue(
+                SpliceSurvives("Fetched", "Portraits/Thumbnails/Zoe",
+                               Failed("Clubs/Portraits/S_Menu_Driver_X")));
+        }
+
+        [Test]
+        public void FailedTargets_CountsOnlyRefusalsThatHadALREADYWrittenAFile()
+        {
+            var outcomeType = _fetcher.GetNestedType("Outcome", Statics | BindingFlags.Public);
+            var list = (IList)Activator.CreateInstance(
+                typeof(List<>).MakeGenericType(outcomeType));
+
+            object Make(string verdict, string folder, string name, string written)
+            {
+                object o = Activator.CreateInstance(outcomeType);
+                outcomeType.GetField("Verdict").SetValue(o, Verdict(verdict));
+                outcomeType.GetField("Folder").SetValue(o, folder);
+                outcomeType.GetField("DerivedName").SetValue(o, name);
+                outcomeType.GetField("WrittenPath").SetValue(o, written);
+                return o;
+            }
+
+            list.Add(Make("Refused", "A", "Wrote",    "Assets/Resources/A/Wrote.png"));
+            list.Add(Make("Refused", "A", "NeverWrote", ""));      // allowlist / WebP / cap / collision
+            list.Add(Make("Fetched", "A", "Fine",     "Assets/Resources/A/Fine.png"));
+
+            var failed = (HashSet<string>)_fetcher.GetMethod("FailedTargets", Statics)
+                .Invoke(null, new object[] { list });
+
+            Assert.IsTrue(failed.Contains("A/Wrote"));
+            Assert.IsFalse(failed.Contains("A/NeverWrote"),
+                "A refusal that never wrote a file is not a failed TARGET — nothing points at it, " +
+                "and treating it as one would revert unrelated rows.");
+            Assert.IsFalse(failed.Contains("A/Fine"));
+        }
+
+        [Test]
+        public void TheVerificationFaultSeamExists_soTheRefusalPathIsReachableWithoutEditingSource()
+        {
+            // The iter-3 self-review FAILED the task because the only way to reach the refusal path
+            // was to mutate the source, which no reviewer role may do — so the fixes were proven by
+            // a manual tripwire that cannot catch its own regression.
+            var f = _fetcher.GetField("VerificationFaultForTest", Statics);
+            Assert.NotNull(f, "The test seam is gone; the refusal path is unreachable again.");
+            Assert.IsNull(f.GetValue(null), "The seam must be null in a normal run.");
+        }
+
         [Test]
         public void TheDownloadCeilingIsTheUploadCap_NotTheClientBackstop()
         {
