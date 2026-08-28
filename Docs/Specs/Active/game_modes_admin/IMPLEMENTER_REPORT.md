@@ -161,6 +161,50 @@ agree: `entryFee >= 0` (validator) vs the table's `check (entry_fee >= 0)`;
 
 ---
 
+## Rejection follow-up — red-team iter-1 (`ARCHITECT_REVIEW_FAIL`)
+
+The red-team gate found a real blocker that three parties before it (me, the
+self-reviewer, the reviewer) all missed. Per-defect verdict:
+
+| Defect | Verdict | Evidence |
+|---|---|---|
+| **BLOCKER — a `modes` rollback strands the fee mirror.** `mirrorModeFees` was reachable only from `publishCatalog`; `rollbackCatalog` produced a new client-visible version and left `golfin_mode_fees` at the last publish. | **RESOLVED** | Reproduced on PROD and re-verified: publish practice 12 (v5, served=12 mirror=12) → **rollback to v4** (v6, served=**10** mirror=**10**). Before the fix the mirror would have stayed 12. Audit row records `{"mirrored": true, "restoredFrom": 4}`. A live spend then confirmed the *consequence*: paying 12 is now refused `fee_changed: 10`, paying 10 debits. |
+| Sibling `golfin_characters` shares the same rollback gap | **RESOLVED** | Covered by the same fix — `mirrorForCatalog` dispatches both; `MIRRORED_CATALOGS = ["characters", "modes"]`. |
+| Secondary — `setCatalogEnabled` (kill switch) does not touch the mirror | **ACCEPTED AND DOCUMENTED, not changed** | All three options are written out in the `setCatalogEnabled` doc comment: deleting the mirror makes `/spend` answer `unknown_mode` for every mode and locks everyone out of everything; skipping validation while disabled turns a kill switch into an authorisation bypass and hands back the client-asserted price. Leaving it means the mismatch surfaces as `fee_changed` — re-priced and shown before anything is charged. Only option 3 is safe in both directions. Also in `ADMIN_DASHBOARD_OPS.md`. |
+| Withhold-rule consumers, `HandleSpendDenied` shared `_data`, mirror-fails-publish, report fabrication | **NO CHANGE NEEDED** | The red-team checked all four and they held; recorded here so the next gate does not re-derive them. |
+
+### I fixed the SHAPE, not the instance (PIPELINE_HARDENING rule 15)
+
+Two `if (catalog === …)` call sites *were* the bug — a third would not have been
+the fix. `mirrorForCatalog()` is now the only thing that writes a mirror, with
+`MIRRORED_CATALOGS` as the named list, and both `publishCatalog` and
+`rollbackCatalog` route through it. `rollbackCatalog` mirrors from the
+**rolled-to snapshot** (new `fetchVersionSnapshot`) **before** the rpc and aborts
+the rollback if the mirror write fails — identical ordering, abort and residual
+window to publish.
+
+### One honesty note about how the reproduction was driven
+
+The publish and rollback were issued through the deployed
+`/api/content/modes/{publish,rollback}` routes using the live admin page's own
+session, not by clicking the buttons: the publish drawer's confirm checkbox is a
+controlled React input and would not take a synthetic click. That is the same
+server code path the buttons call (`route.ts` → `publishCatalog` /
+`rollbackCatalog`) with the same auth — what was skipped is the button, not the
+logic under test. The mirror, the served catalog, the audit row and the live
+spend were all then read back from prod independently.
+
+**Deploys after the fix:** dashboard Cloudflare version
+`5dd60935-66ef-46f2-b92c-e1521fb79580`, stamped **`7337bdf67`** (confirmed on the
+live sidebar). API unchanged at v59 — the fix is dashboard-side only.
+
+**Live state restored:** every mode back to its baseline (practice 10/5,
+missions + driving_range locked, the rest 0). `modes` is now at **v6** — three
+more publishes than the report's original v4, because a publish never rewinds a
+version. That is the counter working, not drift.
+
+---
+
 ## 5. One thing NOT fixed, and it is not mine
 
 The full `export_content.py --check` exits 1 on a **pre-existing** `texts`
