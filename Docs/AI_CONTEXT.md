@@ -5,13 +5,14 @@
 
 ---
 
-## ✅ LATEST — `store_banner` implemented, awaiting Cesar (2026-08-29)
+## ✅ LATEST — `store_banner` DONE (2026-08-29)
 
 **The Store banner is now dashboard-controlled.** `WinterSaleBanner` inside
 `Assets/Prefabs/UI/Shop/GeneralShopScreen.prefab` was hard-coded art the admin dashboard could not
 see, swap, schedule or switch off. It is now the **fourth `game_banners` placement, `store`** —
 auto-served like `home_promo` / `rankings`, with `start_at` / `end_at` / `sort_order` all applying.
-Implemented directly, not through the subagent chain. Spec: `Docs/Specs/Active/store_banner/`.
+**Approved by Cesar 2026-08-29; folder in `Docs/Specs/Completed/`.** Implemented directly, not
+through the subagent chain. Spec + report: `Docs/Specs/Completed/store_banner/`.
 
 **No new machinery.** One value in the DB CHECK (migration pre-applied by Cesar; archived as
 `2026_08_28_store_banner.sql` in both `playlife/backend/migrations/` and
@@ -27,7 +28,12 @@ enum silently re-points authored slots at the wrong placement — the enum's doc
 
 * **Deployed:** `playlife-api` **v61 → v62** (`fly status` image ID moved, not the exit code).
   `GET /api/v1/banners` is 200 on the bare path; with a live `store` row it returns
-  `"placement": "store"`, and `is_active=false` makes it absent. Dashboard deploy follows this commit.
+  `"placement": "store"`, and `is_active=false` makes it absent. Dashboard deployed too —
+  `golfin-admin` version `1c1d5564-dd98-4e6d-815a-bfd48b5972a7`, stamped `926b27ae6` (clean, no
+  `-DIRTY`), 302 at `admin.golfin.world`. Banners panel verified in a browser: the editor
+  `<select>` reads `home_promo / rankings / store / tournament_modal` with **"Store — banner"**,
+  and the list renders a Store group annotated `978×252` + the prefab path, with the Window (UTC)
+  and Sort columns showing the way they do for the other auto-served slots.
 * **Behaviour of record (A1) holds:** **no live `store` row ⇒ the slot is hidden and the card list
   closes up.** The bundled Winter Sale PNG is an authoring placeholder a player never sees — which is
   what makes "never create a `store` row" a complete way to turn the banner off. Measured, not
@@ -43,10 +49,17 @@ enum silently re-points authored slots at the wrong placement — the enum's doc
 * **Prod left exactly as found:** the smoke `store` row and its art object were created for the
   acceptance checks and deleted; `?placement=eq.store` → `[]`, bucket listing shows only the four
   pre-existing objects.
-* **Known gaps (flagged, not claimed):** the dashboard's Banners panel was never opened in a browser
-  — the dropdown label and the audit-log write are argued from the code and a clean `tsc`, not seen;
-  airplane mode was not literally simulated (the identical nothing-live `Hide()` branch was);
-  `OpenLink` was not invoked, to avoid launching a browser.
+* **Known gaps (flagged, not claimed):** the `admin_audit_log` write on activate/deactivate was not
+  observed (mock mode does not persist audit rows; there is no placement branch in `bannerMutations`
+  to get wrong); airplane mode was not literally simulated (the identical nothing-live `Hide()`
+  branch was); `OpenLink` was not invoked, to avoid launching a browser.
+* **Follow-up filed, deliberately NOT fixed here:** the Banners panel's own explainer still promises
+  the **pre-A1** behaviour — *"nothing here can make a slot go blank"* — the opposite of the control
+  this task exists to give Cesar. Found while verifying the panel, and it was the THIRD instance of
+  one shape, so it was audited AS a shape rather than patched where it was noticed: ~20 stale
+  `bundled`/`fallback` sites across the dashboard, the backend and `BannersRuntime`, each with a
+  verdict (including the ~15 that are fine) in the report's § *A1 stale-copy shape audit*. All of it
+  predates `store` and is equally wrong for `home_promo` and `rankings`.
 
 ---
 

@@ -3309,4 +3309,13 @@ nothing-live → activate → deactivate round trip; smoke row + art removed fro
 ⚠️ `BannerPlacement` is serialized as an int in prefabs — `Store` is ordinal 2 because it was
 APPENDED. Never reorder that enum.
 
-Spec + report: `Docs/Specs/Active/store_banner/`. STATUS = `READY_FOR_ARCHITECT_REVIEW`.
+Dashboard deployed too — `golfin-admin` version `1c1d5564-dd98-4e6d-815a-bfd48b5972a7`, Banners
+panel browser-verified (editor dropdown reads `Store — banner`; the list renders a Store group at
+978×252 with Window and Sort columns).
+
+⚠️ **Follow-up, deliberately not fixed here:** the Banners panel explainer still promises the pre-A1
+behaviour ("nothing here can make a slot go blank"). Audited as a SHAPE, not patched in place —
+~20 stale `bundled`/`fallback` sites across the dashboard, the backend and `BannersRuntime`, each
+with a verdict in the report's § *A1 stale-copy shape audit*. All of it predates `store`.
+
+**Approved by Cesar 2026-08-29.** Spec + report: `Docs/Specs/Completed/store_banner/`. STATUS = `DONE`.
