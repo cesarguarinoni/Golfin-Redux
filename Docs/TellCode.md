@@ -7,6 +7,20 @@
 
 ## ▶ CURRENT STATE — update this block at every session boundary
 
+- **`game_modes_admin` is DONE** (Cesar, 2026-08-28) — folder in `Docs/Specs/Completed/`.
+  `modes` is the TENTH content catalog and mode entry fees are SERVER-PRICED:
+  `POST /points/spend` refuses a `mode_entry_fee:<id>` debit that does not match
+  `golfin_mode_fees`, the mirror a publish writes in the same request. New Modes
+  panel + a new Rewards panel over `game_point_actions` (LIVE ON SAVE, no draft).
+  API **v59**; dashboard **`d35c8706-576f-4bec-ba62-cc9946b77a14`** stamp `3143fd639`.
+  ⚠️ **The bare `mode_entry_fee` reason is STILL ACCEPTED** — every installed build
+  sends it; closing it is one line on Cesar's word once the build carrying
+  `SpendReasons.ModeEntryFeeFor` ships.
+  ⚠️ **New standing rule:** anything that changes what a content catalog SERVES
+  must go through `mirrorForCatalog` (`lib/contentMutations.ts`) — rollback was
+  the path that did not, and it stranded the charged price behind the served one.
+  The dashboard now has a vitest suite and `cf-deploy.sh` runs it.
+
 - **`progress_server_side` is DONE** (Cesar, 2026-08-28) — folder in `Docs/Specs/Completed/`.
   Level-ups are server-authoritative: `POST /api/v1/progress/level-up`, cost summed from the
   PUBLISHED `level_up_costs` catalog (the ninth, with its own admin panel), debited through
@@ -93,8 +107,8 @@
   (free/gameplay-derived — reasons in the spec). Legacy `character_level_up`/`club_level_up`
   reasons close later on Cesar's word. §21 live E2E + §23 dashboard deploy id both bind.
   Spec: `Docs/Specs/Active/progress_server_side/SPEC.md`.
-- **`game_modes_admin`** (filed 2026-08-28, Architect via Cowork) — **SPEC_READY, QUEUED BEHIND
-  `progress_server_side` (Cesar priority, 2026-08-28). Paste its kickoff only after that lands.**
+- **`game_modes_admin`** (filed 2026-08-28, Architect via Cowork) — **✅ DONE 2026-08-28.
+  Moved to `Docs/Specs/Completed/`. Shipped as the TENTH catalog, not the eighth.**
   Cesar: game-mode entry prices and rewards handled from the admin.** Two truths, two treatments:
   `modes` becomes the EIGHTH content catalog (fees, card copy, `locked`, reward display —
   `modes.csv` has never had an overlay; ModesDatabaseCSV joins the machinery; a mode whose
@@ -295,7 +309,7 @@ acceptance tests incl. the live E2E, quote the Cloudflare deployment id, update
 STATUS.md + IMPLEMENTER_REPORT.md, and update Docs/AI_CONTEXT.md.
 ```
 
-### Kickoff · game_modes_admin (issued 2026-08-28) — QUEUED behind progress_server_side
+### Kickoff · game_modes_admin (issued 2026-08-28) — ✅ DONE 2026-08-28
 
 ```
 Read Docs/Specs/Active/game_modes_admin/SPEC.md and implement it, in the spec's §5 order

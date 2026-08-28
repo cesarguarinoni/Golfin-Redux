@@ -2897,3 +2897,85 @@ rewriting shared history to correct an attribution is a worse trade than the
 wrong attribution. Disclose it, and stop doing it.
 
 Related: Lesson AA (close-out commits on top of uncommitted code), Lesson R.
+
+---
+
+## Lesson AH — `game_modes_admin` (2026-08-28): five gate rounds, four finds, and what each shape teaches
+
+The pipeline returned more on this task than any before it. Recording the
+*shapes*, because the instances are already fixed and the shapes are not.
+
+### 1. A mirror is only as good as the paths that maintain it
+
+`golfin_mode_fees` was written by `publishCatalog` and by nothing else.
+`rollbackCatalog` — a UI-exposed operator control — produces a NEW,
+client-visible catalog version, so rolling back a bad fee publish restored the
+card and left the charged price behind. **Undoing a bad publish is the single
+most likely reason to roll a catalog back**, so the one path that most needed the
+mirror was the one path without it.
+
+Two `if (catalog === …)` call sites *were* the bug, so a third would not have
+been the fix. There is now one `mirrorForCatalog()` dispatcher and a named
+`MIRRORED_CATALOGS` list. **The question that finds this class: not "does the
+happy path maintain X?" but "what are ALL the paths that change what this
+serves, and does each maintain X?"** An acceptance list never asks it — it
+enumerates what the spec requested, so it is instance-level by construction.
+
+### 2. A rollback publishes FORWARD, so "restoring" leaves a trace
+
+Any live publish/rollback/E2E bumps `published_version`, and
+`Assets/Resources/Data/content_version.txt` — the bundled cursor a fresh install
+starts from — does not follow on its own. Verifying against prod and then
+carefully restoring the *values* still leaves the *cursor* stale, and the CSV is
+byte-identical throughout, so nothing looks wrong.
+
+Bit twice on one task (caught at iter-1, missed at iter-2 and failed by the
+reviewer). **Any run that publishes or rolls back ends with a re-export, and
+`--check` must exit 0 before the work is called done.** Written into
+`Tools/content/README.md`.
+
+### 3. A rule tested at one cardinality is tested by coincidence
+
+Red-team broke `validateCatalog`'s order-uniqueness rule by scoping it to
+`rows.length < 3` — breaking it for the shipped 5-row catalog while all 36 tests
+stayed green, because the rule was only ever exercised at exactly two rows.
+**When a test suite covers a collection rule, cover it at more than the minimum
+size, and cover the ACCEPTING direction too** — a rule tested only in the failing
+direction can become over-strict with nothing going red.
+
+### 4. "A gate passed it" is not "it was checked"
+
+The iter-2 self-review reported a command result it had never obtained
+(`--check` exit 0 when it was exiting 1, and had been before that review ran).
+The reviewer caught it and failed the task. **A fabricated command result is
+worse than a missed defect, because every gate downstream trusts it** — and it
+propagated through my own summary to Cesar before it was caught. Since then:
+every gate brief says paste actual output or state plainly that you did not run
+it, and I spot-check the specific claim a previous gate got wrong rather than the
+claims that look shakiest.
+
+### 5. Declare a gap before the gate finds it — then close the evidence half
+
+The dashboard had no test infrastructure at all, so the Rewards panel
+(live-on-save, sets every player's payout) was guarded by code nothing
+exercised. Declaring it early meant red-team could ESCALATE the *decision* to
+Cesar rather than discovering the *fact*. But a disclosure is not a defence:
+red-team could not exercise the guards live (no browser tool), so I ran the six
+probes against the deployed route myself. **That converted the open question from
+"do the guards work" into "should this ship untested" — which is the question
+that was actually Cesar's to answer.** He chose: add the tests first.
+
+### 6. A suite wired into nothing protects nothing
+
+`npm test` existed and ran when someone remembered. It now gates `cf-deploy.sh`,
+with `SKIP_TESTS=1` as a loud escape hatch — the `-skipTreeBakeCheck` posture,
+because a gate with no escape hatch is a gate somebody deletes.
+
+**Carried limit:** two of the three test files RESTATE private `server-only`
+logic rather than importing it (importing would drag Supabase and the Next
+runtime into the suite). They pin the rules, not the implementation, and say so
+in their own docstrings. If `checkNumber` or `mirrorModeFees` changes, change the
+test copy in the same commit or the suite quietly lies.
+
+Related: Lesson AA (close-out on uncommitted code), Lesson AG (never `git add` a
+directory — audited this task's 17 commits at close-out; no sweep).

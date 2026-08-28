@@ -5,15 +5,20 @@
 
 ---
 
-## 🔄 LATEST — `game_modes_admin` IN REVIEW, iter-2 (2026-08-28)
+## ✅ LATEST — `game_modes_admin` DONE (2026-08-28)
 
-**NOT DONE — awaiting Cesar's approval at the end of the gate chain.** `modes` is
-the TENTH content catalog and mode entry fees are server-priced; the last
-client-asserted price in the game is gone. Built and deployed, but see the
-red-team round below before treating it as finished.
+**Approved by Cesar 2026-08-28; folder in `Docs/Specs/Completed/`.** `modes` is
+the TENTH content catalog and mode entry fees are server-priced — the last
+client-asserted price in the game is gone.
 
-⚠️ **The red-team gate FAILED iter-1 on a real blocker and it is worth knowing
-about even if this task is long closed by the time you read this:** the
+**Five gate rounds, four genuine finds**, which is the most this pipeline has ever
+returned on one task: the rollback mirror (below), a stale bundled cursor, the
+untested-payout-path decision escalated to Cesar, and a blind spot in the test
+suite itself — red-team broke `validateCatalog`'s order rule in a way that kept
+all 36 tests green, because the rule was only ever exercised at exactly two rows.
+*A rule tested at one cardinality is tested by coincidence.*
+
+⚠️ **THE ONE THING TO CARRY FORWARD, even if this task is long closed:** the
 `golfin_mode_fees` mirror was written by `publishCatalog` and by nothing else, so
 `rollbackCatalog` — which produces a new client-visible catalog version — left
 the price behind. Rolling back a bad fee publish restored the card and not the
@@ -48,9 +53,18 @@ that changes what a catalog SERVES must call it.**
   dashboard build green. Full write-up:
   `Docs/Specs/Active/game_modes_admin/IMPLEMENTER_REPORT.md`.
 * **Deploys:** API **v59** (`playlife-api:deployment-01M13XNG9NDT1QM4Z2QJH2K6GB`);
-  dashboard **`5dd60935-66ef-46f2-b92c-e1521fb79580`**, stamp `7337bdf67`.
+  dashboard **`d35c8706-576f-4bec-ba62-cc9946b77a14`**, stamp `3143fd639`.
+* **The dashboard now has tests, and the deploy runs them.** `npm test` (vitest,
+  38 tests over the pure validators) gates `cf-deploy.sh`; `SKIP_TESTS=1` disarms
+  it loudly. ⚠️ Two of the three test files RESTATE private `server-only` logic
+  rather than importing it — they pin the rules, not the implementation, so if
+  `checkNumber` or `mirrorModeFees` changes, change the test copy in the same
+  commit or the suite quietly lies.
   `modes` is published at **v6** — six publishes, not drift; a publish never
   rewinds its version.
+* ⚠️ **STILL OPEN BY DESIGN:** the bare `mode_entry_fee` reason is still accepted,
+  because every build installed today sends it. Closing it is a one-line commit on
+  Cesar's word once the build carrying `SpendReasons.ModeEntryFeeFor` ships.
 
 ⚠️ **Pre-existing, NOT from this task:** the full `export_content.py --check`
 exits 1 on a `texts` drift — `GACHA_PRIZES_TITLE` and `SHOP_HISTORY_COMING_SOON`
