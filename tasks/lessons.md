@@ -3004,3 +3004,53 @@ silently soften the change to be safer than asked.
 Matching the bare reason with `startswith` instead of `==` refuses EVERY mode
 entry including the correct suffixed form. Tripwired both directions: reopening
 the door fails 4 tests, the loose match fails 14.
+
+## Lesson BO — when a filter names a TYPE, ask what the engine actually reports
+
+`PlacementSnapHelper` rejected trees by collider type:
+
+```csharp
+if (col is CapsuleCollider || col is SphereCollider) return false;   // trees / props
+if (col is TerrainCollider) return true;                             // heightmap
+```
+
+The prefabs really do carry ~34 m capsules, so the first line reads as obviously
+correct — and it is dead code. Unity does not surface terrain tree colliders as their
+own GameObjects: a ray that hits a tree on a Terrain returns `collider ==` the
+**TerrainCollider**, on the terrain's own GameObject and layer. The rejected shape never
+arrives, and the very next line accepts the treetop as ground. Measured: the function
+returned a Y >2 m above the baked ground at **1362 of 1362** Hole-1 tree centres, worst
++28.2 m. The ball got dropped onto a canopy.
+
+Three transferable pieces:
+
+1. **A filter written against the ASSET is not a filter against the HIT.** The comment
+   correctly described the prefab (a 34 m capsule) and drew the wrong conclusion about
+   what the raycast reports. Verify the observation, not the source geometry — one
+   `hit.collider.GetType().Name` print would have killed it.
+2. **Identity questions that type can't answer, geometry can.** "Is this hit the ground?"
+   has an objective test that does not care what reports it: the terrain surface at an XZ
+   *is* the heightmap value there, so a TerrainCollider hit above the heightmap is a tree.
+   Prefer the invariant over the taxonomy.
+3. **The half of the fix that "worked" made it worse.** The same 2026-08-05 change also
+   sorted `RaycastAll` by distance — correct in isolation, but with the type guard inert
+   it converted an intermittent bug into a deterministic one: the canopy went from
+   sometimes winning to always winning. A partial fix on a two-part defect can raise the
+   hit rate to 100%.
+
+**Edit Mode cannot test any of this.** Unity generates terrain tree colliders only in Play
+Mode; an Edit-Mode raycast at a tree centre finds nothing *even on a hole whose trees are
+verifiably solid at runtime* (Hole 6's firs were the control that caught me — I had already
+concluded "Hole 1's trees have no colliders" from the Edit-Mode null). Cheap Play-Mode probe
+without booting the game: open `Hole_NN_Geo.unity` in **Single** mode, enter play, probe,
+exit, reopen ShellScene — the hole scene alone has no managers, so no title/login gate.
+
+Also do not infer a "root collider only" rule: Hole 1's four prototypes carry colliders
+only on CHILDREN and Unity still generates tree colliders for them.
+
+**Diagnostic tell worth keeping:** `HoleIndicatorWidget` showing `0 yds` means its cached
+ball Transform was destroyed — which on this codebase means `PlaceAtRest` ran, which means
+an OB/water drop just happened. That readout in a screenshot identified the code path before
+any of the physics had been read.
+
+Related: Lesson AA (verify against the real artifact, not the report of it).
