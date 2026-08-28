@@ -1,19 +1,16 @@
-READY_FOR_SELF_REVIEW
+SELF_REVIEW_PASS
 
-Red-team iter-1 FAILED it on a real blocker: a `modes` rollback left
-`golfin_mode_fees` stranded at the last publish, re-opening the served-catalog-
-vs-charged-price drift the task exists to close. Fixed at the SHAPE — one
-`mirrorForCatalog` dispatcher, `MIRRORED_CATALOGS` as the named list, and
-`rollbackCatalog` now mirrors from the rolled-to snapshot before the rpc and
-aborts if that write fails. Covers `characters` too.
+Rollback fix verified: mirrorForCatalog is the ONLY writer of both
+mirrors; rollbackCatalog mirrors from the rolled-to snapshot BEFORE the
+rpc and aborts on failure. Live golfin_mode_fees rows all carry
+updated_at=2026-08-28T10:41:01.697 — 119ms before the v6 "rollback to
+v4" publish at 10:41:01.816 — direct prod evidence that mirrorForCatalog
+fires on the rollback path. Baseline restored: practice 10/5,
+versus_1v1 0/20, tournaments 0/0, driving_range 0/0 locked, missions
+0/20 locked. Mirror ⇔ catalog agree.
 
-Reproduced and re-verified on PROD: publish 12 (v5, mirror 12) -> rollback to v4
-(v6, served 10, mirror 10), audit `{"mirrored": true}`, and a live spend refusing
-12 with `fee_changed: 10` then debiting 10.
-
-The kill-switch sibling is ACCEPTED AND DOCUMENTED rather than changed — the
-reasoning (all three options, and why only one is safe in both directions) is in
-the `setCatalogEnabled` comment and ADMIN_DASHBOARD_OPS.
-
-Dashboard redeployed: `5dd60935-66ef-46f2-b92c-e1521fb79580`, stamp `7337bdf67`.
-API unchanged at v59. Live state restored; `modes` sits at v6.
+All SPEC §6 items re-verified against primary sources (Rule 5). Backend
+118 pass, Tools/content 26 pass, tsc silent, Unity EditMode 1955/1952/0/3.
+Kill-switch decision is defensible with reasoning documented in code +
+ADMIN_DASHBOARD_OPS.md. Scope discipline clean (only 7337bdf67 dashboard-
+side; API unmoved at v59). Routes to golfin-reviewer.
