@@ -246,6 +246,36 @@ in a spec folder that moves to `Completed/`.
 
 ---
 
+## A gap I am declaring rather than leaving to be found
+
+**The Rewards panel's validation has no automated coverage, because the dashboard
+has no test infrastructure at all.** `Tools/admin-dashboard/package.json` has no
+`test` script and no jest/vitest/playwright dependency; there is no `__tests__`
+or `tests` directory. So `updateRewardAction`'s guards — `pts`/`maxPerEvent`/
+`dailyCap` must be a non-negative integer or null, the row must already exist
+(no create), no delete — are enforced only by code nothing exercises.
+
+That matters more here than it would elsewhere in the dashboard: this panel edits
+`game_point_actions`, it is LIVE ON SAVE with no draft or publish step to catch a
+mistake, and it decides what every player is paid.
+
+**It is not a regression and not specific to this task** — every dashboard
+mutation (`adjustRp`, notices, banners, the content publish path) has always been
+in the same position, and standing up a test framework is scope the SPEC did not
+ask for and I have not silently taken. But "no gate objected" is not the same as
+"it is covered", so it is written down here rather than left implicit.
+
+What DOES cover the equivalent server-side logic: `/points/spend`'s mode-fee
+validation has 17 backend tests, and the Unity spend verdicts have 9. The
+asymmetry is real — the Python service is tested, the TypeScript admin is not.
+
+Suggested follow-up (NOT done here): either a small vitest suite over the pure
+validators (`checkNumber`, `validateCatalog`, `mirrorForCatalog`'s row mapping),
+or a documented decision that the dashboard is verified by use rather than by
+tests. Cesar's call, not mine to make inside this task.
+
+---
+
 ## 5. One thing NOT fixed, and it is not mine
 
 The full `export_content.py --check` exits 1 on a **pre-existing** `texts`
