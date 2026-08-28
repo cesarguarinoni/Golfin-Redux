@@ -263,20 +263,38 @@ server invents lands there too, rather than being mistaken for success.
 
 ---
 
-## One thing I want a second pair of eyes on
+## The one open risk I flagged — it was real, and it is fixed
 
-`golfin_level_up`'s grandfather branch reads `profiles.golfin_inventory` and
-looks for `(v_elem->>'level')` on the **object** form of a characters/clubs
-entry. I transcribed those wire keys from `golfin_shop_purchase`'s step 8 (which
-reads `id` and `own` from the same arrays) and from `InventoryCodec`, but I have
-not seen a real blob with a levelled character in it. If the level lives under a
-different key, the cross-check silently finds nothing and every grandfathered
-seed reports no mismatch. **That is a diagnostic going quiet, not a level-up
-going wrong** — the branch cannot block, refuse or mis-charge — but it is worth
-one `select golfin_inventory from profiles limit 1` during the E2E to confirm the
-key, and I will do exactly that as part of item 1.
+I wrote, before the E2E: *"I have not seen a real blob with a levelled character
+in it. If the level lives under a different key, the cross-check silently finds
+nothing."*
 
----
+It does. Reading the live blobs on 2026-08-28:
+
+```json
+{"id": "char_james", "lv": 12, "sp": 2, "sStr": 2}
+```
+
+The key is **`lv`**, not `level` — `InventoryCodec.cs:135` and `:154`,
+`Put(o, "lv", c.currentLevel, …)`. So the grandfather cross-check found nothing,
+every time, and every seed reported "no mismatch" whether or not one existed.
+
+It could not block, refuse, mis-charge or mis-record anything: the read lives in
+an exception block whose only outputs are a `raise warning` and an optional
+`blob_level` on an already-successful response. A diagnostic that had gone quiet
+— the least harmful shape, and the hardest to notice.
+
+**And fixing only the key would have made it worse.** `InventoryCodec` compresses
+any row equal to its catalog default, so a character at its start level carries
+no `lv` at all, and a fully-default entry is a BARE ID STRING rather than an
+object. Absent-`lv`-as-0 would have reported a mismatch on every untouched ref.
+Absent now resolves to the ref's `startLevel`, off the content row the function
+has already loaded.
+
+Fix: `2026_08_29_golfin_level_up_blob_key_fix.sql` (playlife `38636d5`) — an
+append-only `create or replace`; the diff against the 08-28 body is that one
+block and nothing else, checked with `diff`. Parse-checked with pglast.
+**Awaiting Cesar's apply.**
 
 ## Canonical screenshot
 
