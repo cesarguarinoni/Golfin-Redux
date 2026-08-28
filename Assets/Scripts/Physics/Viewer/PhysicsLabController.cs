@@ -945,6 +945,17 @@ namespace Golfin.Physics.Viewer
             // Update ShotConeView ball transform so targeting line can pivot from the new position.
             if (_shotConeView != null && ballAnimator != null)
                 _shotConeView.SetBallTransform(ballAnimator.CurrentBall);
+
+            // PlaceAtRest DESTROYS the old ball GameObject and spawns a new one, so every cached
+            // ball Transform is now a destroyed reference. HandleShotResolved re-wires the hole
+            // indicator after each shot but this path — the OB / water drop — never did, so the
+            // widget kept a dead Transform and its distance readout fell back to "0 yds" for the
+            // rest of the hole. (That readout is the visible tell that a drop just happened.)
+            if (ballAnimator != null && ballAnimator.CurrentBall != null)
+            {
+                var holeWidgetDrop = FindObjectOfType<Golfin.Gameplay.UI.ShotUI.HoleIndicatorWidget>();
+                if (holeWidgetDrop != null) holeWidgetDrop.SetBallTransform(ballAnimator.CurrentBall);
+            }
             // PutterGreenReader reads ball position via BallPosition each frame — no manual sync needed.
 
             _cameraYaw = Mathf.Atan2(lookDir.z, lookDir.x);
@@ -2008,17 +2019,19 @@ namespace Golfin.Physics.Viewer
         {
             if (chaseCamera == null) return;
 
+            // Route through SurfaceSnap rather than a raw Physics.Raycast: a raw cast takes the
+            // FIRST hit, which under a canopy is the tree, so a ball standing next to any tree
+            // read as "in a 20 m depression" and lifted the camera by the full 3 m clamp. Same
+            // terrain-tree defect as the OB drop (see PlacementSnapHelper).
             float maxSurroundY = ballPos.y;
             float[] offsets = { 2f, -2f };
             foreach (float ox in offsets)
             {
-                if (UnityEngine.Physics.Raycast(
-                    new Vector3(ballPos.x + ox, 500f, ballPos.z), Vector3.down, out RaycastHit hx, 1000f))
-                    if (hx.point.y > maxSurroundY) maxSurroundY = hx.point.y;
+                float yx = SurfaceSnap(ballPos.x + ox, ballPos.z, ballPos.y);
+                if (yx > maxSurroundY) maxSurroundY = yx;
 
-                if (UnityEngine.Physics.Raycast(
-                    new Vector3(ballPos.x, 500f, ballPos.z + ox), Vector3.down, out RaycastHit hz, 1000f))
-                    if (hz.point.y > maxSurroundY) maxSurroundY = hz.point.y;
+                float yz = SurfaceSnap(ballPos.x, ballPos.z + ox, ballPos.y);
+                if (yz > maxSurroundY) maxSurroundY = yz;
             }
 
             float depth = maxSurroundY - ballPos.y;

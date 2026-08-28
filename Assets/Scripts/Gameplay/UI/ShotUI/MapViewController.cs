@@ -949,9 +949,34 @@ namespace Golfin.Gameplay.UI.ShotUI
         private float SampleTerrainHeight(Vector3 worldXZ)
         {
             var origin = new Vector3(worldXZ.x, 2000f, worldXZ.z);
-            if (Physics.Raycast(origin, Vector3.down, out var hit, 4000f))
-                return hit.point.y;
+            // Terrain TREE colliders are reported against the TerrainCollider itself, so the first
+            // hit under a canopy is the treetop and the ring vertex used to float ~10-30 m up.
+            // Type/layer cannot tell tree from ground; only height above the heightmap can.
+            var hits = Physics.RaycastAll(origin, Vector3.down, 4000f, ~0, QueryTriggerInteraction.Ignore);
+            System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+            for (int i = 0; i < hits.Length; i++)
+            {
+                if (IsTerrainTreeHit(hits[i])) continue;
+                return hits[i].point.y;
+            }
             return worldXZ.y;
+        }
+
+        /// <summary>
+        /// True when a TerrainCollider hit is one of the terrain's tree colliders rather than the
+        /// ground. Mirrors <c>Golfin.Physics.Viewer.PlacementSnapHelper.IsTerrainTreeHit</c> —
+        /// duplicated rather than shared because Golfin.Gameplay.UI cannot reference
+        /// Golfin.Physics.Viewer (that assembly references THIS one; a shared helper would need a
+        /// third assembly). Keep the two in step.
+        /// </summary>
+        private static bool IsTerrainTreeHit(RaycastHit hit)
+        {
+            var terrainCollider = hit.collider as TerrainCollider;
+            if (terrainCollider == null) return false;
+            var terrain = terrainCollider.GetComponent<Terrain>();
+            if (terrain == null) return false;
+            float surfaceY = terrain.SampleHeight(hit.point) + terrain.transform.position.y;
+            return hit.point.y > surfaceY + 0.5f;
         }
 
         // ── Hole indicator (HoleIndicatorWidget-style: icon + world line) ──────────

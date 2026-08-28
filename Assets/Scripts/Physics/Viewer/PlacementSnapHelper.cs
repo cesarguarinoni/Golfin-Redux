@@ -21,9 +21,26 @@ namespace Golfin.Physics.Viewer
         //      m_PreserveTreePrototypeLayers only exists to decide their layer). The cast below
         //      uses layer mask ~0, and QueryTriggerInteraction.Ignore does not help because the
         //      capsules are not triggers — so a drop point under a canopy could snap onto the tree.
-        //      Terrain trees are NOT SurfaceMarker zone meshes, so the surface filter now rejects
-        //      them; a capsule/sphere is never a golf surface, which covers the case where the
-        //      generated collider is reported directly.
+        //
+        //      INCOMPLETE — reopened 2026-08-28 (ball came to rest on a canopy on Hole 1, turn 6).
+        //      That fix rejected the tree by COLLIDER TYPE (capsule/sphere), which never fires:
+        //      Unity reports a terrain-tree hit with collider == the *TerrainCollider*, not the
+        //      tree's own capsule, and the very next clause accepted TerrainCollider as a playable
+        //      surface. Verified in Play Mode: every above-ground hit at a Hole 1 tree centre comes
+        //      back as `TerrainCollider 'TerrainRoot'`, and this function returned a Y more than 2 m
+        //      above the baked ground at 1362 of 1362 tree centres (worst +28.2 m). Sorting the hits
+        //      by distance (defect 2 below) only made the canopy win deterministically instead of
+        //      sometimes. Note also that a prototype does NOT need a root collider for Unity to
+        //      generate tree colliders — Hole 1's four prototypes carry colliders only on children.
+        //
+        //      Collider type therefore cannot separate a tree from the ground; only GEOMETRY can.
+        //      The terrain surface at an XZ is the heightmap value there, so a TerrainCollider hit
+        //      meaningfully above the heightmap is a tree — see IsTerrainTreeHit. The capsule/sphere
+        //      rejection is KEPT: standalone (non-terrain) trees are real GameObjects and do arrive
+        //      as their own capsules.
+        //
+        //      Terrain trees are NOT SurfaceMarker zone meshes, so the surface filter also rejects
+        //      them on that count.
         //
         //   2. Physics.RaycastAll does NOT sort its results — Unity documents the order as
         //      undefined. The old code took hits[0] and called it "closest from above", so which
@@ -67,6 +84,11 @@ namespace Golfin.Physics.Viewer
                 if (IsBall(h.collider, ballGO))
                     continue;
 
+                // A terrain tree is never a surface — and must never win the anyY fallback either,
+                // so it is skipped outright rather than merely failing IsPlayableSurface.
+                if (IsTerrainTreeHit(h))
+                    continue;
+
                 bool isPreferred = false;
                 if (preferredSurfaceTypeValue.HasValue && smType != null && stField != null)
                 {
@@ -107,6 +129,40 @@ namespace Golfin.Physics.Viewer
         }
 
         /// <summary>
+        /// How far above the terrain heightmap a TerrainCollider hit may sit and still be treated
+        /// as the ground surface. The tree colliders this separates out stand metres clear of the
+        /// heightmap (measured: 8–28 m on Hole 1), while a genuine surface hit agrees with
+        /// <see cref="Terrain.SampleHeight"/> to well under a centimetre — both are the same
+        /// heightmap — so the exact value is not delicate.
+        /// </summary>
+        const float TerrainSurfaceToleranceMeters = 0.5f;
+
+        /// <summary>
+        /// True when a hit reported against the TerrainCollider is actually one of the terrain's
+        /// TREE colliders rather than the ground itself.
+        ///
+        /// Unity does not surface terrain tree colliders as their own GameObjects: a ray that hits
+        /// a tree on a Terrain comes back with <c>collider == the TerrainCollider</c>, on the
+        /// terrain's own GameObject and layer. No type, name, tag or layer test can tell the two
+        /// apart. What CAN: the terrain surface at an XZ is by definition the heightmap value
+        /// there, so a hit sitting above the heightmap is on a tree, not on the ground.
+        ///
+        /// Also note tree colliders exist ONLY in Play Mode — an Edit-Mode raycast finds none even
+        /// on a hole whose trees are solid at runtime, so this cannot be exercised from Edit Mode.
+        /// </summary>
+        static bool IsTerrainTreeHit(in RaycastHit hit)
+        {
+            var terrainCollider = hit.collider as TerrainCollider;
+            if (terrainCollider == null) return false;
+
+            var terrain = terrainCollider.GetComponent<Terrain>();
+            if (terrain == null) return false;   // no heightmap to compare against — treat as ground
+
+            float surfaceY = terrain.SampleHeight(hit.point) + terrain.transform.position.y;
+            return hit.point.y > surfaceY + TerrainSurfaceToleranceMeters;
+        }
+
+        /// <summary>
         /// True when a collider belongs to the ball and must never be snapped onto.
         ///
         /// Checks the explicit <paramref name="ballGO"/> first, then falls back to walking the
@@ -128,10 +184,11 @@ namespace Golfin.Physics.Viewer
         /// terrain heightmap itself.
         ///
         /// Capsule and sphere colliders are rejected outright — every golf surface in this project
-        /// is a mesh or the TerrainCollider, while trees and scattered props are capsules. That
-        /// guard matters because Unity generates tree colliders straight from the prototype
-        /// prefab's own Collider component, so a fir arrives as a ~34 m CapsuleCollider sitting in
-        /// the ball's raycast column.
+        /// is a mesh or the TerrainCollider, while scattered props and STANDALONE (non-terrain)
+        /// trees are capsules. Terrain-instanced trees do NOT arrive here as capsules, whatever an
+        /// earlier version of this comment claimed — they are reported as the TerrainCollider and
+        /// are filtered upstream by <see cref="IsTerrainTreeHit"/>, which is why accepting
+        /// TerrainCollider below is safe.
         /// </summary>
         static bool IsPlayableSurface(Collider col, System.Type surfaceMarkerType)
         {
