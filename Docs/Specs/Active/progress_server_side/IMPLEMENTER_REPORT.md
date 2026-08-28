@@ -53,10 +53,15 @@ read `6ccd4a8a2` at that deploy, matching HEAD at the time. So the stamp IS
 verifiable against the running site, just not from a shell. That is the check
 §23 actually wants; it simply needs a browser with an Access session.
 
-**Unblocking the LITERAL shell check is a Cesar/Cloudflare-console step**: either
-an Access service token stored as a secret, or a bypass policy on `/api/version`.
-Worth doing — otherwise "is it deployed?" stays a browser question, and a
-headless/cron run can never answer it.
+**And on reflection that is enough, so this is NOT an open debt.** I originally
+wrote up the missing Access service token as something owed; it is not. §23 asks
+whether the deployed commit can be established, and it can — off the running
+site, in a browser, which is where an operator is anyway. A service token (or a
+bypass policy on `/api/version`) buys exactly one thing: making that check
+SCRIPTABLE from a cron / CI / headless run with no browser session. Nothing today
+does that. Recorded as a nice-to-have rather than a blocker, and the same
+correction was made in `PIPELINE_HARDENING.md` §23, `TellCode.md` and
+`AI_CONTEXT.md` so a future session does not inherit a false obligation.
 
 ⚠️ Note on ordering: the docs commit (`da4eee5f9`) landed AFTER the `96e5ad86`
 deploy, which left the stamp one commit behind HEAD even though no dashboard file

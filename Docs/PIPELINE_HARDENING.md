@@ -274,9 +274,17 @@ Companion change (one-time): the dashboard exposes its own build commit (footer 
 **Correction, 2026-08-28, on first use of this rule: the curl does not work, and cannot yet.**
 Cloudflare Access fronts the whole origin — `/api/version` and even the static assets 302 to
 `cloudflareaccess.com` — and `ADMIN_DASHBOARD_OPS.md` prescribes no authenticated-curl path (its
-§2 shell check IS the 302). So the stamp is real and correct, but unreadable from a shell. Until
-an Access **service token** or a **bypass policy scoped to `/api/version`** exists, the honest
-shell check is a `grep` of the built worker
+§2 shell check IS the 302). So the stamp is real and correct, but unreadable from a shell.
+
+**It is readable from a BROWSER, and that closes §23 for a human-in-the-loop session** — the stamp
+renders in the sidebar footer, and Cesar's Chrome normally carries an Access session, so
+`mcp__claude-in-chrome__*` can read the deployed commit off the running site (done 2026-08-28,
+`6ccd4a8a2`). An Access **service token** or a **bypass policy scoped to `/api/version`** is
+therefore not a prerequisite for this rule; it buys SCRIPTABILITY — the check from a cron / CI /
+headless run, where no browser session exists. Treat it as a nice-to-have until something headless
+actually needs to assert the deployed commit.
+
+Absent a browser, the honest shell check is a `grep` of the built worker
 (`.open-next/server-functions/default/.next/server/app/api/version/route.js`) for the literal,
 with the browser footer as the live confirmation. That grep is not a downgrade: it is what caught
 the stamp's own first bug, where `cf-deploy.sh`'s env stash file — not covered by `.gitignore`'s

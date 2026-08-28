@@ -234,7 +234,10 @@
 > ⚠️ **Still open, and it is a Cesar/Cloudflare step:** PIPELINE_HARDENING §23 says "is it deployed?"
 > is a curl, and it still is not — Access 302s `/api/version` and there is no service token. The
 > deployed footer stamp IS readable in a browser (`6ccd4a8a2`, seen live), which is what was used.
-> An Access service token, or a bypass policy on `/api/version`, would make the shell check real.
+> An Access service token, or a bypass policy on `/api/version`, would make the shell check
+> SCRIPTABLE — which is its only remaining value. The check itself is not blocked: the stamp renders
+> in the live sidebar footer and was read there. Worth doing only if something headless ever needs to
+> assert the deployed commit.
 >
 > Spec: `Docs/Specs/Active/progress_server_side/`. **Out of scope on purpose:** hole unlocks and SP
 > allocation (free and gameplay-derived / derivable from the recorded level), and closing the legacy

@@ -14,8 +14,13 @@
   **§23 update:** the footer stamp IS readable — it renders bottom-left in the sidebar and reads
   `6ccd4a8a2`, confirmed in a browser against the live site. The `/api/version` CURL still cannot
   work (Access 302s it, no service token exists), so the shell substitute remains the bundle grep
-  plus `wrangler deployments list`. An Access service token or a `/api/version` bypass policy is the
-  fix and it is a Cesar/Cloudflare-console step. Updated 2026-08-28 (Claude Code, progress_server_side).
+  plus `wrangler deployments list`.
+  **NOT A BLOCKER, and do not carry it as one.** The stamp IS checkable against the running site:
+  it renders in the sidebar footer, and Cesar's Chrome normally holds an Access session, so
+  `mcp__claude-in-chrome__*` reads it directly — that is how `6ccd4a8a2` was confirmed on
+  2026-08-28. An Access service token (or a bypass policy on `/api/version`) buys exactly one thing:
+  the check becomes scriptable, i.e. usable from a cron/CI/headless run where no browser session
+  exists. Nothing today does that, so it is a nice-to-have, not a debt. Updated 2026-08-28 (Claude Code, progress_server_side).
 
 - (superseded) LIVE ADMIN was at `41076c6a3` (Cloudflare deployment
   `dc5097b7-b57b-40da-ac8c-baa181381dd5`, 2026-08-28T05:2xZ). ⚠️ Deploying was NOT enough: the row
