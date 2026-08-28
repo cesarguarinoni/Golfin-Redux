@@ -133,6 +133,62 @@
 
 ## ✅ RECENTLY LANDED
 
+> **▶ LEVEL-UPS ARE SERVER-AUTHORITATIVE — the last self-grant that touched competition is closed.
+> `progress_server_side`, 2026-08-28, LIVE E2E PASSED on prod.**
+>
+> A level-up used to be `POST /points/spend {amount: <client-computed>, reason:
+> "character_level_up"}` followed by the client writing the new level into its own save. The server
+> pays out real RP for tournament play against the stats those levels produce — so a modified client
+> levelled for free, or for 1 RP, and then competed for money.
+>
+> Now it is ONE call. `golfin_level_up()` sums the cost from the **published `level_up_costs`
+> catalog**, debits through `spend_pts` with reason `progress:<kind>:<ref>:L<to>` (every level-up is
+> legible in the admin Points panel with no admin change), and RECORDS the new level — one plpgsql
+> transaction, so a failed record rolls the debit back with it. `golfin_shop_purchase`'s shape,
+> applied to progression.
+>
+> **Grandfathering is the decision of record.** Every existing player's levels live nowhere but their
+> own client-asserted blob, and the RP that paid for them was spent through a reason string that
+> never said what it bought. So the FIRST server level-up per (player, kind, ref) trusts the claimed
+> `from_level` ONCE, seeds the row at it, and stamps `grandfathered_from` so the trust stays visible.
+> The blob is cross-checked only to LOG — proven live: `char_james` seeded at 10 with
+> `grandfathered_from=10`, and the stamp was NOT rewritten by the next paid step.
+>
+> **`LevelUpCosts` is now the ninth content catalog**, answering `CONTENT_PIPELINE_PLAN.md` §9.2
+> ("the tuning knob most likely to be wanted mid-beta"). A **Level Costs panel** is live on
+> `admin.golfin.world`, and the publish validator refuses a **gap** in coverage — blocking, because a
+> level with no active cost row is one the server answers `costs_missing` for and the player sees as
+> a dead LEVEL UP button. Deactivating a row counts as a gap too; the function joins on `is_active`.
+>
+> **The live E2E ran, both halves.** Two real level-ups through the real widgets on prod: 10→11 at
+> 6 RP (grandfathered), then a cost change published FROM THE LIVE ADMIN UI (L12 6→60, v2) made the
+> still-running stale client answer `cost_changed`, re-price to 60 with the modal open and nothing
+> debited, and pay 60 on the second CONFIRM. Six server rows verified by SQL. L12 reverted to 6 (v3);
+> `export --check` clean. Cost: 66 RP off Cesar's account, and `char_james` really is Lv 12.
+>
+> Deploys: API `playlife-api:deployment-01M13JGS6V9HWAENJS254ZAKDF` (v56, smoke: `/progress/level-up`
+> **403 not 404**, with `/progress/nope` → 404 as the control). Dashboard `577be843-…` (the outstanding
+> backlog, first) then `c927bde9-…` (the panel) and `96e5ad86-…` (a fix — see below).
+>
+> ⚠️ **One defect shipped and was caught in the first screenshot of the deployed panel**: the sidebar
+> read the raw key `nav.level-costs`. `layout.tsx` labels panels with
+> `t(\`nav.${id}\` as DictKey)` and `translate` returns the KEY it does not know, so the omission is a
+> literal identifier in production with a clean typecheck — the `as DictKey` cast is what made it
+> silent. Fixed, and closed mechanically: `PanelDef.id` is now DERIVED from the dictionary, so a
+> panel without a label is a compile error (proven with a tripwire). Auditing that shape also found
+> **39 pre-existing dead dict keys** (`sh.col.*`, `tx.col.*`, `cp.tab.*`, `tel.funnel.*`, …) — left
+> alone, noted here so the cleanup is not lost.
+>
+> ⚠️ **Still open, and it is a Cesar/Cloudflare step:** PIPELINE_HARDENING §23 says "is it deployed?"
+> is a curl, and it still is not — Access 302s `/api/version` and there is no service token. The
+> deployed footer stamp IS readable in a browser (`6ccd4a8a2`, seen live), which is what was used.
+> An Access service token, or a bypass policy on `/api/version`, would make the shell check real.
+>
+> Spec: `Docs/Specs/Active/progress_server_side/`. **Out of scope on purpose:** hole unlocks and SP
+> allocation (free and gameplay-derived / derivable from the recorded level), and closing the legacy
+> `character_level_up` / `club_level_up` reasons — §5, a separate commit on Cesar's word, and only as
+> good as the oldest build in the wild.
+
 > **THE LIVE ADMIN WAS FOUR COMMITS BEHIND — AND DEPLOYING THEM STILL DID NOT MAKE THE FEATURE
 > USABLE. Fixed 2026-08-28 — `admin.golfin.world` is at `41076c6a3`** (Cloudflare deployment
 > `dc5097b7-b57b-40da-ac8c-baa181381dd5`).

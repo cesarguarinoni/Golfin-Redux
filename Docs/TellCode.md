@@ -7,7 +7,17 @@
 
 ## ▶ CURRENT STATE — update this block at every session boundary
 
-- **LIVE ADMIN: `admin.golfin.world` is at `41076c6a3`** (Cloudflare deployment
+- **LIVE ADMIN: `admin.golfin.world` is at `6ccd4a8a2`** (Cloudflare deployment
+  `96e5ad86-8466-466b-a3a4-8d9356ccf694`, 2026-08-28). Three deploys today, in order:
+  `577be843-…` (the outstanding backlog, stamped `3df55d58f`), `c927bde9-…` (the Level Costs panel,
+  `0c26421b8`), `96e5ad86-…` (the sidebar-label fix, `6ccd4a8a2`).
+  **§23 update:** the footer stamp IS readable — it renders bottom-left in the sidebar and reads
+  `6ccd4a8a2`, confirmed in a browser against the live site. The `/api/version` CURL still cannot
+  work (Access 302s it, no service token exists), so the shell substitute remains the bundle grep
+  plus `wrangler deployments list`. An Access service token or a `/api/version` bypass policy is the
+  fix and it is a Cesar/Cloudflare-console step. Updated 2026-08-28 (Claude Code, progress_server_side).
+
+- (superseded) LIVE ADMIN was at `41076c6a3` (Cloudflare deployment
   `dc5097b7-b57b-40da-ac8c-baa181381dd5`, 2026-08-28T05:2xZ). ⚠️ Deploying was NOT enough: the row
   editor rendered art fields only when the STORED row already had the key, so no seeded row showed
   `portraitUrl` and art-by-URL was unreachable from the panel — see PIPELINE_HARDENING §2b. Updated 2026-08-28 (Claude Code).
@@ -55,8 +65,20 @@
 
 ## 📋 SPEC_READY POINTERS
 
-- **`game_modes_admin`** (filed 2026-08-28, Architect via Cowork) — **SPEC_READY, kickoff pasteable.
-  ✅ GATE LIFTED 2026-08-28: content_art_urls AND content_art_bundling are both DONE/Completed.**
+- **`progress_server_side`** (filed 2026-08-28, Architect via Cowork) — **SPEC_READY, kickoff
+  pasteable. RUNS BEFORE game_modes_admin (Cesar).** Level-ups become server-authoritative on the
+  shop's shape: `POST /api/v1/progress/level-up` → plpgsql `golfin_level_up()` prices from the
+  PUBLISHED `level_up_costs` (LevelUpCosts.csv becomes the NINTH catalog — admin-tunable costs,
+  plan §9.2 answered), debits via spend_pts, records `golfin_progress` + an idempotent event, one
+  transaction. Grandfathering (Cesar decision): first level-up per (player, ref) trusts the
+  claimed from_level once (`grandfathered_from` stamped, blob cross-check logged); after that,
+  `level_conflict` guards the ladder. Client: ProgressService mirrors ShopPurchaseService; both
+  modals get cost_changed/level_conflict UX; flag OFF byte-identical. Holes + SP allocation OUT
+  (free/gameplay-derived — reasons in the spec). Legacy `character_level_up`/`club_level_up`
+  reasons close later on Cesar's word. §21 live E2E + §23 dashboard deploy id both bind.
+  Spec: `Docs/Specs/Active/progress_server_side/SPEC.md`.
+- **`game_modes_admin`** (filed 2026-08-28, Architect via Cowork) — **SPEC_READY, QUEUED BEHIND
+  `progress_server_side` (Cesar priority, 2026-08-28). Paste its kickoff only after that lands.**
   Cesar: game-mode entry prices and rewards handled from the admin.** Two truths, two treatments:
   `modes` becomes the EIGHTH content catalog (fees, card copy, `locked`, reward display —
   `modes.csv` has never had an overlay; ModesDatabaseCSV joins the machinery; a mode whose
@@ -202,7 +224,62 @@ this TellCode pointer.
 - ~~**`perf_phase1_free_wins`**~~ — ✅ **DONE 2026-08-27** (`cca3cfd1a`; every pose 60 fps cold; Option C
   dropped after measurement; the 2314 "flat terrain" proven pre-existing). Move Active/ → Completed/.
 
-### Kickoff · game_modes_admin (issued 2026-08-28) — gate lifted 2026-08-28, pasteable
+### Kickoff · progress_server_side (issued 2026-08-28) — runs BEFORE game_modes_admin
+
+```
+Read Docs/Specs/Active/progress_server_side/SPEC.md and implement it, in the spec's
+§6 order (backend, content catalog, admin, Unity, live E2E).
+
+Context:
+- Level-ups become server-authoritative on the golfin_shop_purchase shape. Today
+  both modals debit a CLIENT-computed totalRPCost (LevelUpModalController ~:467,
+  ClubLevelUpModalController ~:445) and the level itself is client-asserted.
+- Backend: migration 2026_08_28_golfin_progress.sql (golfin_progress with
+  grandfathered_from + golfin_progress_events unique(user,key), RLS on/no
+  policies — FULL SQL in chat for Cesar, wait for his verification) + plpgsql
+  golfin_level_up(): replay → kill switches → ref active/min_build/maxLevel/
+  step-cap-50 → cost summed from PUBLISHED level_up_costs rows (gap →
+  costs_missing; expected mismatch → cost_changed) → level guard (row exists:
+  from_level must match else level_conflict; absent: GRANDFATHER — seed at the
+  claimed level, stamp grandfathered_from, best-effort blob cross-check in an
+  exception block, log + include blob_level, never block) → spend_pts with reason
+  progress:<kind>:<ref>:L<to> → record, one transaction. routers/progress.py at
+  /api/v1/progress, all business outcomes 200, no _missing_relation courtesy.
+- Content: LevelUpCosts.csv becomes the NINTH catalog ("level_up_costs", id
+  column "level") — catalogs.py row, seed via seed_from_csv --catalogs, Level
+  Costs panel on the shared CatalogPanel (240 rows, pagination), validation:
+  cost_r/sp_reward ≥ 0, level unique, CONTIGUOUS coverage to max(maxLevel) —
+  blocking. CharacterLevelUpDatabase gains the standard overlay.
+- Unity: ProgressService in Golfin.Economy mirroring ShopPurchaseService (flag
+  gate inside the routine, own latch, fold via ApplySpendResult in finally AFTER
+  onDone). Both modals: flag ON → LevelUpAsync(kind, ref, from, to, totalRPCost,
+  ContentBuildNumber.Current); Ok → existing commit body unchanged; CostChanged →
+  reload cost DB + rebuild preview + price-updated toast, second CONFIRM pays;
+  LevelConflict → toast + close + InventorySyncService.MarkDirty; Insufficient/
+  Unavailable → PointsSpendGate's two toast consts. Flag OFF byte-identical.
+- §21: the live E2E is acceptance item 1 (real level-up on prod: ledger row +
+  grandfathered progress row + event verified by SQL; then publish a cost change,
+  stale client gets cost_changed, second tap pays the new sum) — it must RUN.
+- DEPLOYMENT IS PART OF THE TASK (spec §6, three proofs required in the report,
+  each an automatic architect FAIL if missing): STEP 0 = deploy the outstanding
+  dashboard backlog (15f2553f1 upload UI, c15998c30 WebP-only, 541864b38 badge)
+  PLUS the /api/version + footer commit stamp, id quoted, Access curl 302;
+  STEP 1 ends with flyctl deploy + image id via flyctl status; STEP 3 ends with
+  npm run deploy again for the Level Costs panel, id quoted, /api/version == HEAD
+  by curl. Not done without all three.
+- Minimal diff. Reuse: golfin_shop_purchase's function structure and refusal
+  style, spend_pts, the shared CatalogPanel, ApplySpendResult, ContentBuildNumber,
+  PointsSpendGate's toast consts, test_shop_purchase's fake-Supabase style.
+- Out of scope: hole unlocks + SP allocation (reasons in the spec), closing the
+  legacy character_level_up/club_level_up reasons (separate commit on Cesar's
+  word), game_modes_admin, stamina shop, blob/merge changes.
+
+When done: list changed files (both repos) with a 1-line summary each, run the
+acceptance tests incl. the live E2E, quote the Cloudflare deployment id, update
+STATUS.md + IMPLEMENTER_REPORT.md, and update Docs/AI_CONTEXT.md.
+```
+
+### Kickoff · game_modes_admin (issued 2026-08-28) — QUEUED behind progress_server_side
 
 ```
 Read Docs/Specs/Active/game_modes_admin/SPEC.md and implement it, in the spec's §5 order

@@ -1,0 +1,92 @@
+=== iter-1 kickoff baseline 2026-08-28T06:26:45Z ===
+HEAD: 3df55d58f93bd022918805fc336dcf04ca909cc6
+--- git status --porcelain --untracked-files=all (DIRTY) ---
+ M Assets/Plugins/NuGet/.nuget-installed.json
+ M Assets/Plugins/NuGet/McpPlugin.Common.dll
+ M Assets/Plugins/NuGet/McpPlugin.dll
+ M Docs/Specs/Active/club_art_batches/STATUS.md
+ M Docs/TellCode.md
+ M Docs/Versioning/last_uploaded_build.txt
+ M Packages/manifest.json
+ M Packages/packages-lock.json
+ M ProjectSettings/ProjectSettings.asset
+?? Assets/Resources/Clubs/Controls/S_Controls_Driver_FAIRLOFT.png
+?? Assets/Resources/Clubs/Controls/S_Controls_Driver_FAIRLOFT.png.meta
+?? Assets/Resources/Clubs/Controls/S_Controls_Driver_TEEPIT.png
+?? Assets/Resources/Clubs/Controls/S_Controls_Driver_TEEPIT.png.meta
+?? Assets/Resources/Clubs/Controls/S_Controls_Iron_FAIRLOFT.png
+?? Assets/Resources/Clubs/Controls/S_Controls_Iron_FAIRLOFT.png.meta
+?? Assets/Resources/Clubs/Controls/S_Controls_Iron_TEEPIT.png
+?? Assets/Resources/Clubs/Controls/S_Controls_Iron_TEEPIT.png.meta
+?? Assets/Resources/Clubs/Controls/S_Controls_Wedge_FAIRLOFT.png
+?? Assets/Resources/Clubs/Controls/S_Controls_Wedge_FAIRLOFT.png.meta
+?? Assets/Resources/Clubs/Controls/S_Controls_Wedge_TEEPIT.png
+?? Assets/Resources/Clubs/Controls/S_Controls_Wedge_TEEPIT.png.meta
+?? Assets/Resources/Clubs/Controls/S_Controls_Wood_FAIRLOFT.png
+?? Assets/Resources/Clubs/Controls/S_Controls_Wood_FAIRLOFT.png.meta
+?? Assets/Resources/Clubs/Controls/S_Controls_Wood_TEEPIT.png
+?? Assets/Resources/Clubs/Controls/S_Controls_Wood_TEEPIT.png.meta
+?? Assets/Resources/Clubs/Full/Driver-FairX.png
+?? Assets/Resources/Clubs/Full/Driver-FairX.png.meta
+?? Assets/Resources/Clubs/Full/Driver-Fairloft.png
+?? Assets/Resources/Clubs/Full/Driver-Fairloft.png.meta
+?? Assets/Resources/Clubs/Full/Driver-TeePit.png
+?? Assets/Resources/Clubs/Full/Driver-TeePit.png.meta
+?? Assets/Resources/Clubs/Full/Iron-FairX.png
+?? Assets/Resources/Clubs/Full/Iron-FairX.png.meta
+?? Assets/Resources/Clubs/Full/Iron-Fairloft.png
+?? Assets/Resources/Clubs/Full/Iron-Fairloft.png.meta
+?? Assets/Resources/Clubs/Full/Iron-TeePit.png
+?? Assets/Resources/Clubs/Full/Iron-TeePit.png.meta
+?? Assets/Resources/Clubs/Full/Putter-FairX.png
+?? Assets/Resources/Clubs/Full/Putter-FairX.png.meta
+?? Assets/Resources/Clubs/Full/Putter-Fairloft.png
+?? Assets/Resources/Clubs/Full/Putter-Fairloft.png.meta
+?? Assets/Resources/Clubs/Full/Putter-TeePit.png
+?? Assets/Resources/Clubs/Full/Putter-TeePit.png.meta
+?? Assets/Resources/Clubs/Full/Wedge-FairX.png
+?? Assets/Resources/Clubs/Full/Wedge-FairX.png.meta
+?? Assets/Resources/Clubs/Full/Wedge-Fairloft.png
+?? Assets/Resources/Clubs/Full/Wedge-Fairloft.png.meta
+?? Assets/Resources/Clubs/Full/Wedge-TeePit.png
+?? Assets/Resources/Clubs/Full/Wedge-TeePit.png.meta
+?? Assets/Resources/Clubs/Full/Wood-FairX.png
+?? Assets/Resources/Clubs/Full/Wood-FairX.png.meta
+?? Assets/Resources/Clubs/Full/Wood-Fairloft.png
+?? Assets/Resources/Clubs/Full/Wood-Fairloft.png.meta
+?? Assets/Resources/Clubs/Full/Wood-TeePit.png
+?? Assets/Resources/Clubs/Full/Wood-TeePit.png.meta
+?? Assets/Resources/Clubs/Portraits/S_Menu_Driver_FAIRLOFT.png
+?? Assets/Resources/Clubs/Portraits/S_Menu_Driver_FAIRLOFT.png.meta
+?? Assets/Resources/Clubs/Portraits/S_Menu_Driver_TEEPIT.png
+?? Assets/Resources/Clubs/Portraits/S_Menu_Driver_TEEPIT.png.meta
+?? Assets/Resources/Clubs/Portraits/S_Menu_Iron_FAIRLOFT.png
+?? Assets/Resources/Clubs/Portraits/S_Menu_Iron_FAIRLOFT.png.meta
+?? Assets/Resources/Clubs/Portraits/S_Menu_Iron_TEEPIT.png
+?? Assets/Resources/Clubs/Portraits/S_Menu_Iron_TEEPIT.png.meta
+?? Assets/Resources/Clubs/Portraits/S_Menu_Wedge_FAIRLOFT.png
+?? Assets/Resources/Clubs/Portraits/S_Menu_Wedge_FAIRLOFT.png.meta
+?? Assets/Resources/Clubs/Portraits/S_Menu_Wedge_TEEPIT.png
+?? Assets/Resources/Clubs/Portraits/S_Menu_Wedge_TEEPIT.png.meta
+?? Assets/Resources/Clubs/Portraits/S_Menu_Wood_FAIRLOFT.png
+?? Assets/Resources/Clubs/Portraits/S_Menu_Wood_FAIRLOFT.png.meta
+?? Assets/Resources/Clubs/Portraits/S_Menu_Wood_TEEPIT.png
+?? Assets/Resources/Clubs/Portraits/S_Menu_Wood_TEEPIT.png.meta
+?? Docs/Specs/Active/game_modes_admin/ARCHITECT_REVIEW.md
+?? Docs/Specs/Active/game_modes_admin/IMPLEMENTER_REPORT.md
+?? Docs/Specs/Active/game_modes_admin/SELF_REVIEW.md
+?? Docs/Specs/Active/game_modes_admin/SPEC.md
+?? Docs/Specs/Active/game_modes_admin/STATUS.md
+?? Docs/Specs/Active/progress_server_side/ARCHITECT_REVIEW.md
+?? Docs/Specs/Active/progress_server_side/HEARTBEAT.log
+?? Docs/Specs/Active/progress_server_side/IMPLEMENTER_REPORT.md
+?? Docs/Specs/Active/progress_server_side/SELF_REVIEW.md
+?? Docs/Specs/Active/progress_server_side/SPEC.md
+?? Docs/Specs/Active/progress_server_side/STATUS.md
+--- playlife HEAD ---
+f04857e072247a847f02ac47dd3925811911a401
+=== end baseline ===
+
+[06:53Z] EditMode sweep green after tripwire disarm; backend suite 98 passed; dashboard tsc clean.
+[07:01Z] Deploys: dashboard 577be843 (backlog) + c927bde9 (panel, stamp 0c26421b8==HEAD); fly image ...01M13JGS6V9HWAENJS254ZAKDF v56; smoke 403-not-404 OK. Seed applied over PostgREST (240 rows), export round-trip byte-identical, --check clean. Both migrations parse clean via pglast. BLOCKED on Cesar applying the DDL.
+[07:17Z] LIVE E2E PASSED: char_james 10→11 (grandfathered, 6RP) then cost_changed→60 on a stale client, second CONFIRM paid 60 (11→12). All 6 server rows SQL-verified. L12 reverted to 6 (v3), export --check clean. Editor left clean (play mode exited, scene not dirty).
