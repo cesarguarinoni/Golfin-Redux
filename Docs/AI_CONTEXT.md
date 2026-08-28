@@ -5,10 +5,22 @@
 
 ---
 
-## ✅ LATEST — `game_modes_admin` DONE (2026-08-28)
+## 🔄 LATEST — `game_modes_admin` IN REVIEW, iter-2 (2026-08-28)
 
-**The content loop is closed.** `modes` is the TENTH content catalog and mode entry
-fees are server-priced — the last client-asserted price in the game is gone.
+**NOT DONE — awaiting Cesar's approval at the end of the gate chain.** `modes` is
+the TENTH content catalog and mode entry fees are server-priced; the last
+client-asserted price in the game is gone. Built and deployed, but see the
+red-team round below before treating it as finished.
+
+⚠️ **The red-team gate FAILED iter-1 on a real blocker and it is worth knowing
+about even if this task is long closed by the time you read this:** the
+`golfin_mode_fees` mirror was written by `publishCatalog` and by nothing else, so
+`rollbackCatalog` — which produces a new client-visible catalog version — left
+the price behind. Rolling back a bad fee publish restored the card and not the
+charge. Fixed at the shape: `mirrorForCatalog()` is now the only mirror writer,
+`MIRRORED_CATALOGS` is the list, and publish AND rollback both route through it,
+mirroring before the rpc and aborting if that write fails. **Anything added later
+that changes what a catalog SERVES must call it.**
 
 * **API on v58** (`playlife-api:deployment-01M13PM5NTDK20FB5E7HKRKFD5`).
   **Dashboard on `429883ff-99ce-495a-b755-f4d5805a2f57`**, sidebar stamp
@@ -32,9 +44,13 @@ fees are server-priced — the last client-asserted price in the game is gone.
   Live values were restored afterwards; `modes` sits at v4 because a publish
   never rewinds its version.
 * Evidence: 1955 EditMode tests (1952 passed / 0 failed / 3 pre-existing skips,
-  both new suites tripwire-verified) · backend 117 passed · `Tools/content` 26 ·
+  both new suites tripwire-verified) · backend **118** passed · `Tools/content` 26 ·
   dashboard build green. Full write-up:
   `Docs/Specs/Active/game_modes_admin/IMPLEMENTER_REPORT.md`.
+* **Deploys:** API **v59** (`playlife-api:deployment-01M13XNG9NDT1QM4Z2QJH2K6GB`);
+  dashboard **`5dd60935-66ef-46f2-b92c-e1521fb79580`**, stamp `7337bdf67`.
+  `modes` is published at **v6** — six publishes, not drift; a publish never
+  rewinds its version.
 
 ⚠️ **Pre-existing, NOT from this task:** the full `export_content.py --check`
 exits 1 on a `texts` drift — `GACHA_PRIZES_TITLE` and `SHOP_HISTORY_COMING_SOON`
