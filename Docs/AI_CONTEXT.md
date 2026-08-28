@@ -5,6 +5,44 @@
 
 ---
 
+## ✅ LATEST — `game_modes_admin` DONE (2026-08-28)
+
+**The content loop is closed.** `modes` is the TENTH content catalog and mode entry
+fees are server-priced — the last client-asserted price in the game is gone.
+
+* **API on v58** (`playlife-api:deployment-01M13PM5NTDK20FB5E7HKRKFD5`).
+  **Dashboard on `429883ff-99ce-495a-b755-f4d5805a2f57`**, sidebar stamp
+  `256f21587` read back live.
+* `POST /points/spend` prices a `mode_entry_fee:<id>` debit against
+  `golfin_mode_fees`, the mirror a `modes` publish writes IN THE SAME REQUEST
+  (the publish fails if the mirror write fails). `unknown_mode` / `mode_locked` /
+  `fee_changed(+fee)` are 200 payloads with nothing debited.
+  ⚠️ **The bare `mode_entry_fee` reason is STILL ACCEPTED** — every installed
+  build sends it. Closing it is a separate one-line commit on Cesar's word once
+  the build carrying `SpendReasons.ModeEntryFeeFor` is what testers run.
+* **New Modes panel** (shared CatalogPanel) and a **new Rewards panel** over
+  `game_point_actions` — the latter is **LIVE ON SAVE**, no draft, no publish;
+  its banner says so and that copy is load-bearing. A blank `pts` is a MODE
+  ("client supplies the amount"), not a missing value.
+* `ModesDatabaseCSV` gained the overlay **plus the withhold rule**: a mode whose
+  `target` this build cannot dispatch never becomes a card. `locked=true` still
+  renders Coming Soon — so **flipping Missions live is a publish, not a build**.
+* **The live E2E ran on prod**, in the live admin: publish 10 → 15, stale client
+  got `fee_changed`, second tap debited 15 (`mode_entry_fee:practice`, −15).
+  Live values were restored afterwards; `modes` sits at v4 because a publish
+  never rewinds its version.
+* Evidence: 1955 EditMode tests (1952 passed / 0 failed / 3 pre-existing skips,
+  both new suites tripwire-verified) · backend 117 passed · `Tools/content` 26 ·
+  dashboard build green. Full write-up:
+  `Docs/Specs/Active/game_modes_admin/IMPLEMENTER_REPORT.md`.
+
+⚠️ **Pre-existing, NOT from this task:** the full `export_content.py --check`
+exits 1 on a `texts` drift — `GACHA_PRIZES_TITLE` and `SHOP_HISTORY_COMING_SOON`
+are in the CSV (committed in `a10f46318`) but not in the catalog (506 vs 508
+rows). The repo is AHEAD, so it needs a re-seed of those two keys, not an export.
+
+---
+
 ## ⏳ WAITING ON A DEVICE — nothing else blocks these
 
 > **▶ CONTENT PIPELINE — device pass DEFERRED to the end by Cesar (2026-08-26). Batch all of it

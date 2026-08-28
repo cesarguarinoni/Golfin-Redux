@@ -1,57 +1,55 @@
-# points_cutover_followups — 2026-08-12
+# game_modes_admin — DONE 2026-08-28
 
-Three bounded follow-ups from reward_points_backend Slice 2 (Cesar-decided 2026-08-12).
+Implemented in the SPEC's §5 order. Deployment was a step, not an epilogue.
 
-## Baseline
-- HEAD `25292f73d`
-- Pre-existing DIRTY (another session's uncommitted auth-flow work — NOT mine, do not touch):
-  `Assets/Scenes/ShellScene.unity`, `Assets/Scripts/Physics/Viewer/Bot/Scenarios.cs`,
-  `Assets/Scripts/UI/Account/SignUpScreenController.cs`, `Assets/Scripts/UI/SplashScreenController.cs`,
-  `Docs/Architecture/UI_HIERARCHY.md`, `tasks/loop_v2_smoke_bot/**`, `_to_delete/*.stale`
+## 1. Backend — server-validated entry fees ✅
+- [x] `migrations/2026_08_28_golfin_mode_fees.sql` — RLS on / no policies, seeded, verification block. APPLIED.
+- [x] `/spend`: `mode_entry_fee:` prefix → unknown_mode / mode_locked / fee_changed(+fee), all 200, refused BEFORE the rpc
+- [x] `tests/test_mode_entry_fee.py` — 16 tests (backend suite 117 passed)
+- [x] Deployed: **v58**, `playlife-api:deployment-01M13PM5NTDK20FB5E7HKRKFD5`
+- [x] Smoke: /health 200 · friends 403-not-404 · garbage 404
 
-## Plan
+## 2. Content — modes as the TENTH catalog ✅
+- [x] `Tools/content/catalogs.py` += `Catalog("modes", …)`
+- [x] `2026_08_28_content_modes_seed.sql` via `--catalogs modes`. APPLIED.
+- [x] Export byte-identical (md5 `c36e4288…` before AND after four publishes); `--check --catalogs modes` clean
 
-### 1. Bot auth bypass
-- [x] `Assets/Scripts/Dev/BotSessionOverride.cs` — whole-file `#if UNITY_EDITOR || GOLFIN_BOT_HARNESS`.
-      Fake local session into AuthService + PointsBackendFlag forced OFF (session-only, non-persisted).
-      Armed explicitly (`Arm`) or auto-detected from a live `Golfin.Physics.Viewer.Bot` host.
-- [x] `PointsBackendFlag.SessionForcedOff` — non-persisting force-off (must NOT clobber Cesar's PlayerPref).
-- [x] `SplashScreenController.OnStartClicked` — override short-circuits BEFORE RefreshSession (no network).
-- [x] `TournamentLoopCaptureHarness` — explicit `Arm()` at EnteredPlayMode.
-- ZERO edits to `Assets/Scripts/Physics/` (standing ban) — legacy bots covered by auto-detect.
+## 3. Admin dashboard ✅
+- [x] Modes panel (shared CatalogPanel) + registry + icon + EN/JA + validation rules
+- [x] Rewards panel over `game_point_actions` — checkAdmin + writeAudit, live-on-save, no create/delete
+- [x] `golfin_mode_fees` mirror on publish (publish FAILS on mirror error)
+- [x] Drift warning: versus_1v1 ↔ versus_win ONLY
+- [x] `npm run build` green → deployed `429883ff-…`, stamp `256f21587` verified in-browser
 
-### 2. Shop server spend
-- [x] `ShopTransaction.TryPurchase` + `TryPurchaseCatalogEntry` → callback form through `PointsSpendGate.Spend`.
-- [x] New `SpendReasons.StaminaBoost` / `ShopPurchase` (spend reasons are free-form — no backend edit).
-- [x] `StaminaShopDetailScreenController` / `GeneralShopScreenController` — busy state + SpendDenied (no double toast).
+## 4. Unity ✅
+- [x] `ModesDatabaseCSV` overlay + withhold rule (target set read from `ModeSelectScreenController`'s dispatch consts)
+- [x] Suffixed reason at `ModeCardController.cs:604` via `SpendReasons.ModeEntryFeeFor`
+- [x] `SpendVerdict.FeeChanged` / `UnknownMode` / `ModeLocked`; card re-prices, second tap pays
+- [x] EditMode sweep 1955 / 1952 passed / 0 failed; both new suites tripwire-verified
 
-### 3. Hard sign-in gate
-- [x] Delete `DevBypassCatcher_TEMP` from SplashScreenController.
-- [x] `AuthGate` in ScreenManager.ShowScreen, mirroring the existing DemoGate seam.
+## 5. Docs ✅
+- [x] `Tools/content/README.md` catalog table; `Docs/ADMIN_DASHBOARD_OPS.md` §3.0 (content vs live panels)
+- [x] STATUS.md, IMPLEMENTER_REPORT.md, AI_CONTEXT.md
 
-## Verify
-- [x] Compile clean
-- [x] EditMode suite green — FULL unfiltered run (1175 total), not a filtered one, since filtered
-      runs report FailedTests only for the filter. Run twice: once mid-task, once on the final code.
-- [x] TournamentLoopCaptureHarness reaches `=== SEQUENCE COMPLETE ===` from boot
+## Review
 
-## Review (2026-08-12)
+**What went right.** Running the deploys early — the API before the admin work,
+the dashboard before the E2E — meant the live E2E was a 15-minute exercise
+instead of a scramble at the end. Reading the real dispatch `const`s instead of
+re-listing the targets is the one design choice most likely to still be correct
+in a year.
 
-All three items landed; EditMode 1172/0/3 of 1175 (re-run on final code);
-`TournamentLoopCaptureHarness` reached `=== SEQUENCE COMPLETE ===` twice from boot.
+**One surprise worth recording.** Both spend test files patch the SAME
+`routers.points` module global at import time, so whichever imported last owned
+it for the whole pytest session and eleven tests failed on a file that had
+nothing wrong with it. Fixed by re-asserting the fake in each file's autouse
+fixture. Any future test file touching `routers.points` needs the same line.
 
-**What the work actually turned on.** Two constraints shaped item 1 more than the feature itself:
-`Assets/Scripts/Physics/` is a zero-edit zone (so every legacy bot host had to be covered by
-namespace auto-detection rather than an `Arm()` call), and an asmdef cannot reference
-Assembly-CSharp (so the override needed its own `Golfin.DevHarness` assembly for the Editor
-harness to reach it — named around the existing `Golfin.Dev` in `Debug/ScreenshotCapture/`).
+**Left alone deliberately.** The full `export_content.py --check` exits 1 on a
+pre-existing `texts` drift (two gacha keys in the CSV but not the catalog, from
+`a10f46318`). The repo is AHEAD of the catalog, so it needs a re-seed of those
+two keys — not this task's, and not an export.
 
-**The bug worth remembering** is Lesson AW: with domain reload disabled, a "non-persisting" static
-is not self-cleaning. The first acceptance run passed and still left the Editor with the points
-backend silently forced off. Verifying cleanup by *reading state back after play-mode exit* — not
-by reasoning about lifetimes — is what caught it, and it also surfaced a latent `session.Clear()`
-that would have deleted Cesar's real persisted session at the end of every bot run.
-
-**Left for Cesar (device):** the three manual checks listed in IMPLEMENTER_REPORT Part 3.
-**Not mine to commit:** another session's uncommitted auth-flow work shares
-`SplashScreenController.cs` — see the report's drift table before staging.
+**Still open by design.** The bare `mode_entry_fee` reason is still accepted; it
+is what every installed build sends. Closing it is one line, on Cesar's word,
+after the build carrying the suffix ships.
