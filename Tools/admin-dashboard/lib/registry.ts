@@ -8,6 +8,21 @@
  * in English alphabetical order anyway so the two agree at a glance.
  */
 
+import type { DictKey } from "./i18n";
+
+/**
+ * Panel ids that actually have a `nav.<id>` label in the dictionary.
+ *
+ * WHY THIS TYPE EXISTS. `app/(panels)/layout.tsx` renders each entry as
+ * `t(\`nav.${panel.id}\` as DictKey)`, and `translate` falls back to returning the
+ * KEY when it does not know one — so a panel whose label was never added renders
+ * a literal `nav.level-costs` in the sidebar, in production, with a clean
+ * typecheck. That is exactly what shipped on 2026-08-28 and had to be caught by
+ * eye in a screenshot. Deriving the id set FROM the dictionary makes the
+ * omission a compile error instead.
+ */
+type PanelId = Extract<DictKey, `nav.${string}`> extends `nav.${infer Id}` ? Id : never;
+
 export type PanelIcon =
   | "users"
   | "coins"
@@ -24,7 +39,7 @@ export type PanelIcon =
   | "ladder";
 
 export interface PanelDef {
-  id: string;
+  id: PanelId;
   title: string;
   icon: PanelIcon;
   route: string;

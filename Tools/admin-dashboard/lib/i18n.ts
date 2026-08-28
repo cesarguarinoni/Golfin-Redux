@@ -58,6 +58,7 @@ export const DICT = {
   "nav.items": { en: "Items", ja: "アイテム" },
   "nav.texts": { en: "Texts", ja: "テキスト" },
   "nav.shop": { en: "Shop", ja: "ショップ" },
+  "nav.level-costs": { en: "Level Costs", ja: "レベルアップ費用" },
 
   "mode.mock": {
     en: "MOCK DATA — running on local fixtures, no Supabase connection",
@@ -1094,9 +1095,6 @@ export const DICT = {
     en: "Shared by characters and clubs. The server prices every level-up from these rows — an edit here changes what players pay.",
     ja: "キャラクターとクラブで共通です。サーバーはこの行を使ってレベルアップ費用を計算するため、ここでの編集はプレイヤーの支払額に直結します。",
   },
-  "lu.col.level": { en: "Level", ja: "レベル" },
-  "lu.col.costR": { en: "RP cost", ja: "RP 費用" },
-  "lu.col.spReward": { en: "SP reward", ja: "SP 報酬" },
 
   "tx.title": { en: "Texts", ja: "テキスト" },
   "tx.col.key": { en: "Key", ja: "キー" },
