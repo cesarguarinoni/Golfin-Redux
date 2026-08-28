@@ -7,6 +7,49 @@
 
 ---
 
+## iter-6 — the red-team found the site my §22 audit missed. FINAL.
+
+`ARCHITECT_REVIEW_FAIL`, and correct. Asked "was the enumeration complete?", it answered **no** —
+and the miss was in my own reasoning, not a site I overlooked:
+
+> The iter-5 audit answered question **(B)** — "if anything downstream fails, is the effect undone?"
+> — for the **refusal** mode only. Verification can also **throw**, and the whole post-batch phase
+> (`ApplyAndVerifyImport` loop + `FinalizeCsvs`) sat outside every try/catch. The per-catalog catch I
+> cited as protection wraps `ProcessCatalog` alone. So an exception in verification skipped the
+> cleanup entirely, leaving every asset written that run on disk with `Verdict=Fetched`, named by no
+> CSV — the exact residue S1 exists to prevent, via a different trigger.
+
+**The shape was stated too narrowly.** "Committed before the check that authorises it" reads as
+being about *ordering*, and I audited ordering. Failure *modes* — refuse vs throw — are a second
+axis I never enumerated. §22 has been corrected accordingly.
+
+### Fixed
+
+| Change | Why |
+|---|---|
+| `VerifyOne` wraps `ApplyAndVerifyImport`; a throw becomes a **Refuse** | routes the exception through the cleanup that already exists rather than inventing a second one |
+| the verification loop is `try` / `FinalizeCsvs` is in the **`finally`** | the cleanup is the only thing that reverts a splice and deletes an orphan; it must run under every exit |
+| `FinalizeOne` extracted, per-catalog `try` | one bad catalog cannot abort the others' cleanup |
+| `VerificationThrowForTest`, a seam **distinct** from `VerificationFaultForTest` | refusal and exception are different modes; one seam for both lets a test exercise one and believe it covered the other — which is how this survived iter-5 |
+
+### The test caught a flaw in my own seam
+
+First run: **1906 / 1902 / 1 FAILED**. I had placed the throw seam *after* the importer lookups, so
+a synthetic outcome refused before ever reaching it — a seam that models a throw which cannot
+happen, i.e. false confidence. Moved to the top of `ApplyAndVerifyImport`, where the real hazards
+are (`FindSibling`'s `Directory.GetFiles`, `GetAtPath`, `SaveAndReimport`). Green after.
+
+### Severity — the red-team's own call, not mine
+
+*"Low reachability (normal input routes failures through `Refuse`, which is handled) and mild
+residue (writes are deferred, so no CSV/report corruption — just stray untracked files the mandatory
+git review surfaces)."* Agreed. Fringe. Fixed because the fix was already written, not because it
+was going to bite.
+
+EditMode **1906 / 1903 passed / 0 failed / 3 pre-existing skips**.
+
+---
+
 ## iter-5 — stopped patching one at a time; named the shape and swept the whole file
 
 Cesar, mid-review: *"If we had 4 defects of the same shape, why not look for the shape and fixing

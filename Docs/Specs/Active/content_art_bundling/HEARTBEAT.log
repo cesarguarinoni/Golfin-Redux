@@ -67,3 +67,7 @@ Shape named; all 8 side effects audited. 3 new instances fixed (S1 orphan-on-thr
 Also: in-build size was runtime memory (~2x over). Now TextureUtil.GetStorageMemorySizeLong = 26912 B, corroborated 2 ways.
 EditMode 1904 / 1901 / 0 failed / 3 skips.
 === end iter-5 ===
+
+=== iter-5 routing 2026-08-28 ===
+Cesar: skip self-review + reviewer, go straight to red-team. Rationale + residual risk recorded in STATUS.md.
+=== end ===

@@ -1,19 +1,20 @@
-READY_FOR_SELF_REVIEW
+ARCHITECT_REVIEW_PASS
 
-iter-5 2026-08-28. Stopped patching one defect at a time (Cesar). Named the shape — "an irreversible
-side effect committed before, or independently of, the check that authorises it, with nothing
-undoing it when a later check fails" — and audited ALL EIGHT side effects in the file against it
-rather than waiting for the next gate to find the next one.
+iter-6 2026-08-28. Awaiting Cesar's approval -> DONE -> Docs/Specs/Completed/.
 
-Three new instances found and fixed: a throw mid-catalog orphaned that catalog's already-written
-assets (registration moved before the loop that can throw); the catalog CSV write was non-atomic (a
-half-written Clubs.csv is 799 rows lost — now staged + File.Replace); DeleteAsset's return value was
-ignored at both sites.
+Advanced to PASS by Cesar's direct decision, NOT by the red-team gate — recorded plainly so nobody
+reads this as a gate verdict. The red-team FAILED iter-5 on a real but FRINGE finding (its own
+severity call: "low reachability... mild residue - just stray untracked files the mandatory git
+review surfaces"). The fix was already written when Cesar called it, so it was landed rather than
+discarded; no further gate round was run on it.
 
-Plus one the audit turned up that is not a rollback bug: the in-build size was reported with
-Profiler.GetRuntimeMemorySizeLong, which over-reports by ~2x and is state-dependent. Now
-TextureUtil.GetStorageMemorySizeLong — 26,912 B, corroborated by hand (ASTC_6x6 block math) and by
-§10.2's own source:build ratio. Every earlier "53.5 KB" in the report is that overstatement.
+What shipped across six iterations: GOLFIN/Content/Fetch URL Art, the four-loader rule-2 shadowing
+fix, the case-collision fix, the write-ordering/rollback fixes, the corrected in-build size metric,
+and the admin URL-only badge.
 
-EditMode 1904 / 1901 passed / 0 failed / 3 pre-existing skips.
-See IMPLEMENTER_REPORT.md § iter-5 for the full audit table.
+RESIDUAL RISK, stated:
+- iter-6's guard has unit coverage but no Run()-level end-to-end for the throw path.
+- The admin badge rests on a recorded live session (no reviewer role has browser tooling).
+- Self-review + reviewer gates were skipped from iter-5 on (see git history for the rationale).
+
+EditMode 1906 / 1903 passed / 0 failed / 3 pre-existing skips.

@@ -435,6 +435,14 @@ namespace Golfin.EditorTools
         public static string? VerificationFaultForTest;
 
         /// <summary>
+        /// TEST SEAM, the THROW counterpart of <see cref="VerificationFaultForTest"/>. A refusal and
+        /// an exception are different failure modes with different cleanup paths, and the iter-5
+        /// audit only ever exercised the first — which is how the unguarded phase survived it.
+        /// Tests must clear it in TearDown.
+        /// </summary>
+        public static string? VerificationThrowForTest;
+
+        /// <summary>
         /// Write a text file the way it must be written when the old contents matter:
         /// staged to <c>.tmp</c>, then swapped in with <c>File.Replace</c>.
         ///
@@ -572,12 +580,27 @@ namespace Golfin.EditorTools
 
             // Import settings are applied AFTER the batch closes: SaveAndReimport inside
             // Start/StopAssetEditing is deferred, and §5 requires the importer to be re-READ.
-            foreach (var o in report.Fetched.ToList()) ApplyAndVerifyImport(o, report);
-
-            // ONLY NOW are the CSVs written, and only for names whose asset actually verified.
-            // Writing them earlier is what let a refused import leave a name in the repo (see
-            // PendingCsv).
-            FinalizeCsvs(allPending, report);
+            //
+            // ⚠️ try/FINALLY, and VerifyOne rather than ApplyAndVerifyImport directly. Both halves
+            // are load-bearing: FinalizeCsvs is the ONLY thing that reverts a splice and deletes an
+            // orphaned asset, so if it does not run, every asset written this run is left on disk
+            // with Verdict=Fetched and named by no CSV — the exact residue S1 exists to prevent,
+            // reached by a throw instead of a refusal. This phase used to sit outside every
+            // try/catch (the per-catalog catch above wraps ProcessCatalog only), so an exception
+            // anywhere in verification skipped the cleanup entirely. Found by the red-team gate at
+            // iter-5: the §22 audit answered "is it undone on downstream failure?" for the REFUSAL
+            // mode and never for the THROW mode.
+            try
+            {
+                foreach (var o in report.Fetched.ToList()) VerifyOne(o, report);
+            }
+            finally
+            {
+                // ONLY NOW are the CSVs written, and only for names whose asset actually verified.
+                // Writing them earlier is what let a refused import leave a name in the repo (see
+                // PendingCsv).
+                FinalizeCsvs(allPending, report);
+            }
 
             AppendToReport(report, root);
             LogSummary(report);
@@ -748,7 +771,21 @@ namespace Golfin.EditorTools
 
             foreach (var pending in allPending)
             {
-                bool anySurvived = false;
+                try { FinalizeOne(pending, failedTargets, report); }
+                catch (Exception e)
+                {
+                    report.Errors.Add($"could not finalize {pending.RelPath}: {e.GetType().Name}: " +
+                                      $"{e.Message} — other catalogs were still finalized.");
+                }
+            }
+        }
+
+        /// <summary>One catalog's finalization, isolated so a throw cannot abort the others'
+        /// cleanup — the same reason the verification loop is guarded.</summary>
+        static void FinalizeOne(PendingCsv pending, HashSet<string> failedTargets, RunReport report)
+        {
+            {
+                bool anySurvived = false;   // NOTE: `continue` below became `return` on extraction
 
                 foreach (var (outcome, line, column) in pending.Edits)
                 {
@@ -782,7 +819,7 @@ namespace Golfin.EditorTools
                     }
                 }
 
-                if (!anySurvived) continue;
+                if (!anySurvived) return;   // nothing to write for this catalog
 
                 try
                 {
@@ -1082,12 +1119,44 @@ namespace Golfin.EditorTools
         // ── Import settings (SPEC §5) ───────────────────────────────────────
 
         /// <summary>
+        /// <see cref="ApplyAndVerifyImport"/> with a throw converted into a refusal.
+        ///
+        /// <para>
+        /// Verification touches the filesystem and the AssetDatabase in a shared Editor —
+        /// <c>SaveAndReimport</c>, <c>Directory.GetFiles</c> — so it CAN throw, not only refuse. An
+        /// escaping exception used to abort the whole post-batch phase and skip
+        /// <see cref="FinalizeCsvs"/>, leaving every asset written this run orphaned. Turning it
+        /// into a refusal routes it through the cleanup that already exists instead of inventing a
+        /// second one.
+        /// </para>
+        /// </summary>
+        static void VerifyOne(Outcome o, RunReport report)
+        {
+            try
+            {
+                ApplyAndVerifyImport(o, report);
+            }
+            catch (Exception e)
+            {
+                Refuse(o, $"import verification threw ({e.GetType().Name}: {e.Message}) — treated as " +
+                          "a refusal so the asset is removed and the CSV name reverted, rather than " +
+                          "left half-bundled.");
+            }
+        }
+
+        /// <summary>
         /// Copy the sibling's TextureImporter onto the new asset, reimport, then RE-READ the
         /// importer and assert. A setting that failed to apply must not pass silently — that is
         /// §1 decision 2 and the whole reason this runs in the Editor.
         /// </summary>
         static void ApplyAndVerifyImport(Outcome o, RunReport report)
         {
+            // At the TOP: the real throw hazards in this method are EARLY (FindSibling's
+            // Directory.GetFiles, GetAtPath, SaveAndReimport). A seam placed after them would only
+            // ever model a throw that cannot happen — which is how a seam gives false confidence.
+            if (VerificationThrowForTest != null)
+                throw new Exception(VerificationThrowForTest);
+
             string assetPath = o.WrittenPath;   // set by TryFetchOne on success
             string root = Directory.GetParent(Application.dataPath)!.FullName;
 

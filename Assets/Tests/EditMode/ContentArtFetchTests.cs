@@ -487,6 +487,69 @@ namespace GolfinRedux.Tests.EditMode
             Assert.IsNull(f.GetValue(null), "The seam must be null in a normal run.");
         }
 
+        // ── A THROW is a different failure mode from a REFUSAL (iter-6) ─────
+        //
+        // The iter-5 §22 audit asked "if anything downstream fails, is the effect undone?" and
+        // answered it only for the REFUSAL mode. Verification also THROWS — it touches the
+        // filesystem and the AssetDatabase in a shared Editor — and an escaping exception aborted
+        // the whole post-batch phase, skipping FinalizeCsvs: every asset written that run left on
+        // disk with Verdict=Fetched and named by no CSV. The exact residue S1 exists to prevent,
+        // reached by a different trigger. Found by the red-team gate, which was asked whether the
+        // enumeration was complete and correctly answered no.
+
+        [Test]
+        public void AThrowInVerification_BecomesARefusal_soTheNormalCleanupRuns()
+        {
+            var outcomeType = _fetcher.GetNestedType("Outcome", Statics | BindingFlags.Public);
+            object o = Activator.CreateInstance(outcomeType);
+            outcomeType.GetField("Verdict").SetValue(o, Verdict("Fetched"));
+            outcomeType.GetField("Folder").SetValue(o, "Portraits/Thumbnails");
+            outcomeType.GetField("DerivedName").SetValue(o, "ThrowProbe");
+            outcomeType.GetField("WrittenPath").SetValue(o, "Assets/Resources/Portraits/Thumbnails/ThrowProbe.png");
+
+            var reportType = _fetcher.GetNestedType("RunReport", Statics | BindingFlags.Public);
+            object report = Activator.CreateInstance(reportType);
+
+            var throwSeam = _fetcher.GetField("VerificationThrowForTest", Statics);
+            throwSeam.SetValue(null, "seam: simulated verification THROW");
+            try
+            {
+                // Must NOT propagate — that is the whole point.
+                Assert.DoesNotThrow(
+                    () => _fetcher.GetMethod("VerifyOne", Statics).Invoke(null, new[] { o, report }),
+                    "A throw in verification escaped VerifyOne. It would abort the post-batch phase " +
+                    "and skip FinalizeCsvs, leaving every asset written this run orphaned on disk " +
+                    "with Verdict=Fetched and named by no CSV.");
+
+                Assert.AreEqual(Verdict("Refused"), outcomeType.GetField("Verdict").GetValue(o),
+                    "A throw must become a REFUSAL so it routes through the cleanup that already " +
+                    "exists, rather than being a second, unhandled failure mode.");
+
+                string detail = (string)outcomeType.GetField("Detail").GetValue(o);
+                StringAssert.Contains("threw", detail,
+                    "The refusal must say it came from a throw — otherwise the operator cannot tell " +
+                    "a genuine settings mismatch from an Editor hiccup.");
+            }
+            finally
+            {
+                throwSeam.SetValue(null, null);
+            }
+        }
+
+        [Test]
+        public void TheThrowSeamIsDistinctFromTheFaultSeam_andBothDefaultToNull()
+        {
+            var fault = _fetcher.GetField("VerificationFaultForTest", Statics);
+            var thrown = _fetcher.GetField("VerificationThrowForTest", Statics);
+            Assert.NotNull(fault); Assert.NotNull(thrown);
+            Assert.IsNull(fault.GetValue(null), "the fault seam must be null in a normal run");
+            Assert.IsNull(thrown.GetValue(null), "the throw seam must be null in a normal run");
+            Assert.AreNotSame(fault, thrown,
+                "Refusal and exception are different modes with different cleanup paths; one seam " +
+                "for both would let a test exercise only one and believe it covered the other — " +
+                "which is exactly how the unguarded phase survived the iter-5 audit.");
+        }
+
         [Test]
         public void TheDownloadCeilingIsTheUploadCap_NotTheClientBackstop()
         {

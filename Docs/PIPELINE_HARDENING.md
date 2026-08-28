@@ -203,6 +203,22 @@ each, in a table, in the report. Eight sites; three of them were defects nobody 
 one unrelated bug the enumeration walked into (a size metric reporting runtime memory instead of
 build size, wrong by ~2× since the first commit).
 
+### Enumerate failure MODES too, not just sites (added within the hour, by the gate that caught it)
+
+The first run of this rule on `content_art_bundling` enumerated eight side effects and still missed
+one — because the shape as written reads as being about *ordering*, so the audit checked ordering.
+It asked "is the effect undone when a later check FAILS?" and answered it for the **refusal** mode
+only. The same code could also **throw**, and the cleanup sat outside every try/catch.
+
+So the enumeration has two axes, and both must be published:
+
+1. **Sites** — every place the effect happens.
+2. **Failure modes** — every way each site's authorising check can not-succeed. At minimum: it
+   returns a negative verdict; it throws; the process dies. A cleanup that handles the first and not
+   the second is not a cleanup.
+
+A one-axis table looks exhaustive and is not.
+
 ### The rule
 
 1. **Trigger: the SECOND defect of one shape in a task.** Not the third — by the third you have
