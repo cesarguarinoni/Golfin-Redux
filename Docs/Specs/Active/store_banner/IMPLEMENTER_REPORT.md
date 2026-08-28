@@ -134,16 +134,62 @@ own negative-path inputs, not play mode — verified: `BannerPolicyTests.cs:384`
   source — `?placement=eq.store` → `[]`, bucket listing shows only the four pre-existing
   `home_promo`/`tournament_modal` objects, and the endpoint is back to `{"banners":[]}`.
 
+## Dashboard panel — verified in a browser (gap closed after the deploy)
+
+Run locally with `MOCK_MODE=1 next dev -p 3111` (fixtures only, no Supabase connection) and driven
+through the real login:
+
+- **Editor dropdown**, read off the live `<select name="b-placement">`:
+  `home_promo = "Home — promo strip"`, `rankings = "Rankings — banner"`, **`store = "Store — banner"`**,
+  `tournament_modal = "Tournament — sign-up modal strip"` — the four values in the specified order.
+- **List grouping:** a `Store — banner` heading of its own, annotated
+  `store  978×252  GeneralShopScreen/ContentArea/BarsArea/RankingsArea/Modal/Bottom97/ScrollArea/Viewport/GridContent/WinterSaleBanner`,
+  with the mock `Store — winter sale (draft)` row showing an `OFF` badge and an **Activate** button.
+- **Scheduling and sort are visible** for `store`: the row renders the `Window (UTC)` and `Sort`
+  columns exactly as the `home_promo` / `rankings` groups do, unlike `tournament_modal`.
+
 ## Known gaps
 
-- **The dashboard's Banners panel was never opened in a browser.** The four placement tables are
-  correct and `tsc` proves the exhaustive maps compile, but "the dropdown shows Store — banner" and
-  "activate writes an audit row" are argued from the code, not seen. Both are one page load away
-  once the dashboard deploy lands; flagged rather than claimed.
+- **The `admin_audit_log` write on activate/deactivate was not observed in the Audit panel** — mock
+  mode does not persist audit rows. Auditing lives in `bannerMutations` and is keyed off the row,
+  not the placement; there is no placement branch to get wrong.
 - **Airplane mode was not literally simulated** — the nothing-live path was exercised instead
   (identical `Hide()` branch).
 - **`OpenLink` was not invoked**, to avoid launching a browser; the wiring and the allowlist result
   were read back instead.
+
+### A1 stale-copy shape audit (found while verifying the Banners panel)
+
+**Shape (mechanically checkable):** *does this text claim that a banner slot with nothing live
+falls back to its bundled sprite?* False for EVERY placement since `game_banners` amendment A1
+(Cesar, 2026-08-17) — `BannerSlotBinder.Hide()` sets `image.enabled = false` unconditionally.
+Confirmed live this session: with nothing served, `HomeScreen/PromoBanner` and
+`RankingsScreen/ContentArea/Banner` both read `image.enabled=False`.
+
+**Verdict per site** (grep of `bundled` / `fallback` / `go blank` across the three subsystems;
+every candidate listed, including the ones that are fine):
+
+| Site | Verdict |
+|---|---|
+| `backend/routers/banners.py` docstring + `list_banners` | **FIXED this task** (was editing that block) |
+| `admin-dashboard/lib/types.ts:255-260` `BannerPlacement` doc | **FIXED this task** (same) |
+| `admin-dashboard/lib/banner.ts:90-92` `store` spec comment | OK — written correct |
+| `admin-dashboard/lib/banner.ts:104-107` `tournament_modal` | OK — already says "no bundled fallback" |
+| `admin-dashboard/lib/banner.ts:69` home_promo size note | OK — about the sprite's px, not the fallback rule |
+| `admin-dashboard/lib/banner.ts:133` `deriveBannerState` doc | **STALE** — "every other state means the slot shows its bundled sprite" |
+| `admin-dashboard/lib/banner.ts:291` | **STALE** — "leaves the bundled sprite" |
+| `admin-dashboard/lib/bannerMutations.ts:45, 253` | **STALE** ×2 — one is an operator-facing toast |
+| `admin-dashboard/lib/i18n.ts:331, 335, 484, 531, 535, 552, 583` | **STALE** ×7 — all player-operator-facing EN+JA copy |
+| `admin-dashboard/lib/i18n.ts:570` | **STALE, worst one** — "nothing here can make a slot go blank", which is the exact opposite of the control Cesar asked for |
+| `admin-dashboard/lib/i18n.ts:463` (`tournament_modal` empty state) | OK |
+| `Assets/.../BannerService.cs:7, 153, 180, 286, 345` | **STALE** ×5 — file header and `TryGet`/`ResolveImageUrl` docs |
+| `Assets/.../RemoteBannerSource.cs:20, 85, 98, 116, 119` | **STALE** ×5 |
+| `Assets/.../BannerSlotBinder.cs:10` | OK — this file is where A1 is written down correctly |
+| every other `bundled`/`fallback` hit (content catalogs, tournaments art, notices, `num(v, fallback)`) | OK — different subsystem, unrelated meaning |
+
+**Not fixed here, deliberately.** All of it predates `store` and is wrong for `home_promo` and
+`rankings` too; none of it is *caused* by this task. A ~20-site copy rewrite (including bilingual
+operator strings) riding on a wiring commit would be unreviewable. Filed as follow-up.
 
 ## Open questions for Architect
 
