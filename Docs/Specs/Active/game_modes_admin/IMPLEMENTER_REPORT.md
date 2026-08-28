@@ -277,6 +277,51 @@ which is the actual question, and Cesar's to answer.
 
 ---
 
+## The gap is CLOSED — Cesar chose "add the vitest suite first"
+
+Escalation resolved by Cesar (2026-08-28): add the suite before shipping, over
+red-team's ship-with-fast-follow recommendation. Done.
+
+`Tools/admin-dashboard` now has vitest (`npm test`) and **36 tests over the pure
+surfaces**, tripwire-verified:
+
+| File | Covers | Tests |
+|---|---|---|
+| `lib/__tests__/contentValidate.test.ts` | `validateCatalog`'s `modes` rules + the drift warning + `isValidNewRowId` | 21 |
+| `lib/__tests__/rewardsValidation.test.ts` | `checkNumber` and the route's `field()` coercion | 10 |
+| `lib/__tests__/mirrorRowMapping.test.ts` | the `golfin_mode_fees` row mapping | 5 |
+
+**Why `contentValidate` and not just the Rewards guards.** The escalation was
+about the Rewards panel, but writing the suite surfaced the bigger hole:
+`lib/contentValidate.ts` opens with *"PURE… that is deliberate: this is the one
+place where a bad publish is stopped, so it has to be testable without a
+database"* — and had gone 681 lines untested. It is what stops a bad publish
+reaching every player, and this task added the `modes` rules to it. Covering the
+Rewards validation and leaving that untested would have been answering the
+question that was asked rather than the one that mattered.
+
+**Tripwire-verified rather than trusted green** (`reference_tests_run_ignores_class_filters`
+discipline, applied to a new suite):
+
+| Deliberate regression | Result |
+|---|---|
+| Generalise the drift warning to every mode — the exact thing the SPEC forbids | **1 failed**, and it is `"NEVER warns about any other mode"` |
+| Let a negative `entryFee` through | **1 failed** |
+| Both reverted | **36 passed** |
+
+**An honest limit, stated in the test files themselves.** `checkNumber` and
+`mirrorModeFees` are private to `server-only` modules; importing them would drag
+Supabase and the Next server runtime into the suite, and exporting them purely to
+test them would widen a module's surface for the test's convenience. So those two
+files are CHARACTERISATION tests — they pin the rules, not the implementation,
+and cannot catch the real code drifting from them. What covers the real code is
+the live probe below (six malformed PATCHes, all refused, `game_point_actions`
+read back unchanged) and the prod rollback reproduction. Specification half here,
+integration half there; if either rule changes, change both. `contentValidate` has
+no such caveat — it is imported directly and genuinely under test.
+
+---
+
 ## A gap I am declaring rather than leaving to be found
 
 **The Rewards panel's validation has no automated coverage, because the dashboard
