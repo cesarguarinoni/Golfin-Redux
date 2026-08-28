@@ -20,3 +20,7 @@ npm-debug.log*
 .wrangler
 cloudflare-env.d.ts
 .dev.vars
+
+# cf-deploy.sh stages the env file here mid-build. Ignored so the script cannot
+# make the tree look dirty to its own version stamp (PIPELINE_HARDENING §23).
+.env.development.local.deploy-stash
