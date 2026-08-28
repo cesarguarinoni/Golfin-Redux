@@ -436,10 +436,21 @@ namespace GolfinRedux.UI.Shop
 
         // ── BUY ───────────────────────────────────────────────────────────────────
 
+        /// <summary>
+        /// The card's BUY control, so the controller can show the server round-trip on the button the
+        /// player actually tapped (transaction_feedback §3.1). Resolved by the same path
+        /// <see cref="WireBuy"/> uses rather than cached, because <c>Bind</c> can run before the
+        /// template's children are addressable and a stale cache would silently do nothing.
+        /// </summary>
+        public Button BuyButton => Find("CtaGoldButton")?.GetComponent<Button>();
+
+        /// <summary>The BUY label, for the same reason. See <see cref="BuyButton"/>.</summary>
+        public TextMeshProUGUI BuyLabel => Find("CtaGoldButton/PlayLable")?.GetComponent<TextMeshProUGUI>();
+
         private void WireBuy(ShopCatalogEntry entry)
         {
-            var btn   = Find("CtaGoldButton")?.GetComponent<Button>();
-            var label = Find("CtaGoldButton/PlayLable")?.GetComponent<TextMeshProUGUI>();
+            var btn   = BuyButton;
+            var label = BuyLabel;
             if (btn == null) return;
 
             btn.onClick.RemoveAllListeners();

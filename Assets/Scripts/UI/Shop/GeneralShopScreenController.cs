@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using Golfin.UI.Polish;
 using Golfin.UI.Toast;
 using Golfin.Roster;
 
@@ -156,8 +157,19 @@ namespace GolfinRedux.UI.Shop
             if (_purchaseInFlight) return;
             _purchaseInFlight = true;
 
+            // …and SHOW the round-trip on the card that was tapped (transaction_feedback §3.1). The
+            // latch above already made the second tap harmless; what it could not do is tell the
+            // player anything, which is why a purchase read as "nothing happened" until the item
+            // turned up on whatever screen they had walked to.
+            var pending = PendingSpend.Begin(card.BuyButton, card.BuyLabel);
+
             ShopTransaction.TryPurchaseCatalogEntry(card.Entry, onGranted: null, onResult: result =>
             {
+                // Restore FIRST: every arm below either re-Binds this card (which sets the real
+                // OWNED / BUY state) or Rebuilds the grid and destroys it. Disposing afterwards
+                // would put "BUY, enabled" back over an OWNED chip.
+                pending.Dispose();
+
                 _purchaseInFlight = false;
                 var toast = ToastController.Instance;
 

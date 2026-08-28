@@ -49,6 +49,11 @@ namespace Golfin.Net
         /// <summary>Verbose per-request logging. Never logs the token itself.</summary>
         public bool LogRequests = true;
 
+        /// <summary>Above this, a completed request is logged as a WARNING instead of a log line. 1500 ms
+        /// is well past any warm PLAYLIFE round-trip, so it means the machine was asleep (or the link
+        /// is bad) — the cold-start signal this whole line exists to make visible.</summary>
+        public int SlowRequestMs = 1500;
+
         public ApiClient(IHttpTransport transport, IAuthTokenProvider auth, ICoroutineRunner runner)
         {
             Transport = transport;
@@ -101,6 +106,7 @@ namespace Golfin.Net
                 yield break;
             }
 
+            float startedAt = Time.realtimeSinceStartup;
             int calls = 0;
             int transientRetries = 0;
             bool refreshAttempted = false;
@@ -120,6 +126,7 @@ namespace Golfin.Net
 
                 if (response == null)
                 {
+                    LogCompleted(request, 0, startedAt);
                     onResult?.Invoke(ApiResult<T>.Fail(ApiErrorKind.Network,
                         "Transport completed without producing a response.", 0, null, calls, didRefresh));
                     yield break;
@@ -148,6 +155,7 @@ namespace Golfin.Net
                             ? "No internet connection."
                             : response.TransportError);
 
+                    LogCompleted(request, response.StatusCode, startedAt);
                     onResult?.Invoke(ApiResult<T>.Fail(kind, msg, response.StatusCode, response.Body, calls, didRefresh));
                     yield break;
                 }
@@ -170,6 +178,7 @@ namespace Golfin.Net
                         continue;
                     }
 
+                    LogCompleted(request, 401, startedAt);
                     onResult?.Invoke(ApiResult<T>.Fail(ApiErrorKind.Unauthorized,
                         "Session expired and could not be refreshed. Please sign in again.",
                         401, response.Body, calls, false));
@@ -179,10 +188,52 @@ namespace Golfin.Net
                 break;
             }
 
+            LogCompleted(request, response.StatusCode, startedAt);
             onResult?.Invoke(Interpret<T>(response, calls, didRefresh));
         }
 
         // ── helpers ───────────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// ONE line per completed logical call — after the transient retries and the single 401 replay
+        /// have resolved, so the number is what the PLAYER waited, not what one attempt took
+        /// (transaction_feedback §4).
+        ///
+        /// <para>
+        /// This is the permanent way to tell "the backend was slow" from "the UI was slow", which is
+        /// the question the whole task turns on: a purchase that felt like nothing happened for four
+        /// seconds is a cold Fly machine, and a purchase that felt slow at 180 ms is a UI that never
+        /// acknowledged the tap. Both look identical from a screenshot.
+        /// </para>
+        /// <para>
+        /// PATH ONLY — never the body, never the headers, never the query string. The Bearer token is
+        /// in the headers and ids ride the query, and a log line is the easiest place for either to
+        /// escape into a bug report.
+        /// </para>
+        /// </summary>
+        private void LogCompleted(HttpRequest request, long statusCode, float startedAt)
+        {
+            if (!LogRequests) return;
+
+            int ms = Mathf.RoundToInt((Time.realtimeSinceStartup - startedAt) * 1000f);
+            string line = $"{request.Method} {PathOf(request.Url)} → {statusCode} in {ms} ms";
+
+            if (ms > SlowRequestMs) Debug.LogWarning($"[ApiClient] SLOW: {line} (cold start?)");
+            else                    Debug.Log($"[ApiClient] {line}");
+        }
+
+        /// <summary>The URL's path, with the scheme+host and any query string removed.</summary>
+        private static string PathOf(string url)
+        {
+            if (string.IsNullOrEmpty(url)) return string.Empty;
+
+            int scheme = url.IndexOf("://", StringComparison.Ordinal);
+            int start  = scheme >= 0 ? url.IndexOf('/', scheme + 3) : 0;
+            if (start < 0) return "/";
+
+            int query = url.IndexOf('?', start);
+            return query >= 0 ? url.Substring(start, query - start) : url.Substring(start);
+        }
 
         private void ApplyAuthHeader(HttpRequest request)
         {

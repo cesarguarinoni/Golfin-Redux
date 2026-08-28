@@ -53,6 +53,19 @@ namespace GolfinRedux.UI.Shop
         /// <summary>Item data last bound to this row.</summary>
         public ShopItemModel ItemData { get; private set; }
 
+        /// <summary>The row's BUY control, so the controller can show the server round-trip on the
+        /// button the player tapped (transaction_feedback §3.1).</summary>
+        public Button BuyButton => _buyButton;
+
+        /// <summary>
+        /// The BUY label. Resolved from the button's own subtree rather than added as a seventh
+        /// <c>[SerializeField]</c>: the prefab carries exactly one TMP under BuyButton (BuyButtonLabel,
+        /// see the hierarchy comment above), and a new serialized slot would need a prefab edit this
+        /// task does not otherwise require.
+        /// </summary>
+        public TextMeshProUGUI BuyLabel =>
+            _buyButton != null ? _buyButton.GetComponentInChildren<TextMeshProUGUI>(true) : null;
+
         /// <summary>Fires when the player taps BUY on this row.</summary>
         public event Action<StaminaMenuRow> OnBuyClicked;
 

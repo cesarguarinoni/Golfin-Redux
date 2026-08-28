@@ -6,6 +6,7 @@ using Golfin.UI.Toast;
 using Golfin.Economy;
 using Golfin.EconomyRuntime;
 using Golfin.Roster;
+using Golfin.UI.Polish;
 
 namespace GolfinRedux.UI.ModeSelect
 {
@@ -605,14 +606,36 @@ namespace GolfinRedux.UI.ModeSelect
             // The reason carries the MODE ID since game_modes_admin §4, and that is what lets the
             // server price the entry instead of taking the client's word for it. Everything below
             // the gate is unchanged; what is new is the onDenied arm.
+            //
+            // Show the round-trip on the card that was tapped (transaction_feedback §3.1). PLAY is
+            // the one spend the player is most likely to read as "nothing happened" and tap again,
+            // because the answer is a whole screen transition. Both tap surfaces go with it: the
+            // card body and the tagline expand the card, and expanding a card whose entry is being
+            // priced reads as if the tap did something else.
+            //
+            // NOT begun when the gate is already busy — its latch would drop this spend without
+            // calling either callback, and nothing would ever restore the button.
+            var pending = PointsSpendGate.IsSpendInFlight
+                ? null
+                : PendingSpend.Begin(playButton, playButtonLabel, cardTapButton, taglineButton);
+
             PointsSpendGate.Spend(_data.entryFee, SpendReasons.ModeEntryFeeFor(_data.id), () =>
             {
+                // Restore before the mode is entered: OnPlayClicked navigates away, and the card is
+                // reused when the player comes back.
+                pending?.Dispose();
+
                 if (_data.entryFee > 0 && RewardPointsManager.Instance != null)
                     RewardPointsManager.Instance.SpendPoints(_data.entryFee);
 
                 OnPlayClicked?.Invoke(this);
             },
-            HandleSpendDenied);
+            outcome =>
+            {
+                // Restore before HandleSpendDenied re-renders the economy rows at the server's fee.
+                pending?.Dispose();
+                HandleSpendDenied(outcome);
+            });
         }
 
         /// <summary>

@@ -85,6 +85,21 @@ namespace Golfin.EconomyRuntime
         private static bool _inFlight;
 
         /// <summary>
+        /// True while a server-side spend is awaiting its answer, i.e. while the latch above would
+        /// SWALLOW a further <see cref="Spend"/> — neither callback fires and the caller is never told.
+        ///
+        /// <para>
+        /// Read-only and purely advisory; it changes nothing about <see cref="Spend"/>. It exists so a
+        /// call site can decline to put a button into the pending state for a spend that is about to be
+        /// dropped on the floor: a pending affordance is restored by the callback, so beginning one for
+        /// a swallowed spend would leave that button disabled forever (transaction_feedback §3.1).
+        /// Checking it is race-free — the check and <see cref="Spend"/>'s own run back-to-back on the
+        /// same stack frame.
+        /// </para>
+        /// </summary>
+        public static bool IsSpendInFlight => _inFlight;
+
+        /// <summary>
         /// Debit <paramref name="amount"/> RP server-side, then run <paramref name="onApproved"/>.
         ///
         /// On a refusal the player is toasted and <paramref name="onApproved"/> NEVER runs.

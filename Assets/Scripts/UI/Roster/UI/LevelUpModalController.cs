@@ -7,6 +7,7 @@ using Golfin.Economy;
 using Golfin.EconomyRuntime;
 using Golfin.InventorySync;
 using Golfin.UI.Modals;
+using Golfin.UI.Polish;
 using Golfin.UI.Toast;
 
 namespace Golfin.Roster
@@ -493,10 +494,24 @@ namespace Golfin.Roster
             // Still ONE call for an N-level run, for the reason the Slice-2 comment gave: the modal
             // presents this as a single transaction, and N round-trips would be both slow and only
             // partially reversible if the connection dropped mid-run.
+            //
+            // Show the round-trip on CONFIRM, and lock CANCEL with it — the run is already
+            // being priced and recorded server-side, so letting the player discard the preview
+            // mid-flight would hide a level-up that is about to land (transaction_feedback §3.1).
+            // LevelUpAsync answers exactly once on every branch (including its own in-flight
+            // refusal), so this scope is always disposed.
+            var pending = PendingSpend.Begin(confirmButton, confirmButtonLabel, cancelButton);
+
             ProgressService.Instance.LevelUpAsync(
                 ProgressService.KindCharacter, characterId,
                 playerData.currentLevel, previewLevel, totalRPCost, ContentBuildNumber.Current,
-                outcome => OnServerAnswered(outcome, playerData));
+                outcome =>
+                {
+                    // Restore before the verdict is acted on: RepriceFromServer re-derives CONFIRM's
+                    // own enabled state, and the conflict arm closes the modal.
+                    pending.Dispose();
+                    OnServerAnswered(outcome, playerData);
+                });
         }
 
         /// <summary>

@@ -97,6 +97,8 @@
 
 ## 📋 SPEC_READY POINTERS
 
+- ~~**`transaction_feedback`** — spend round-trips are visible (`PendingSpend` on 6 sites) and the Fly cold start is gone (`auto_stop_machines = "suspend"`, 5.20 s → 1.18 s); `[ApiClient]` now logs one timed line per request. Warm purchase 246 ms → §8 keep-alive follow-up closed.~~ **DONE 2026-08-29** — `Docs/Specs/Completed/transaction_feedback/`.
+
 - **`progress_server_side`** (filed 2026-08-28, Architect via Cowork) — **SPEC_READY, kickoff
   pasteable. RUNS BEFORE game_modes_admin (Cesar).** Level-ups become server-authoritative on the
   shop's shape: `POST /api/v1/progress/level-up` → plpgsql `golfin_level_up()` prices from the

@@ -7,7 +7,9 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using Golfin.EconomyRuntime;
 using Golfin.Roster;
+using Golfin.UI.Polish;
 using Golfin.UI.Toast;
 using GolfinRedux.UI;
 
@@ -253,6 +255,16 @@ namespace GolfinRedux.UI.Shop
             if (_purchaseInFlight) return;
             _purchaseInFlight = true;
 
+            // …and SHOW it on the row that was tapped (transaction_feedback §3.1). The latch is the
+            // guard; this is the affordance — without it BUY looked untouched for the whole trip.
+            //
+            // NOT begun when the process-wide gate is already busy: TryPurchase routes through
+            // PointsSpendGate, whose own latch would DROP this spend without calling either callback,
+            // and a pending scope nothing disposes is a BUY button that never comes back.
+            var pending = PointsSpendGate.IsSpendInFlight
+                ? null
+                : PendingSpend.Begin(row.BuyButton, row.BuyLabel);
+
             var item = row.ItemData;
             var pcd  = GetSelectedPcd();
 
@@ -264,7 +276,13 @@ namespace GolfinRedux.UI.Shop
                 },
                 onResult: result =>
                 {
+                    // Restore first, then re-assert the truth. UpdateBuyButtonStates ran INSIDE the
+                    // pending scope (from onGranted above, and from OnRpChanged when the debit fired),
+                    // so the restore would otherwise hand back "enabled" over a stamina-full disable.
+                    pending?.Dispose();
                     _purchaseInFlight = false;
+                    UpdateBuyButtonStates();
+
                     ShowResultToast(result, item);
                 });
         }

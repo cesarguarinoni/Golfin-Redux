@@ -18,6 +18,7 @@ using Golfin.Inventory;
 using Golfin.Roster;
 using Golfin.Tournaments;
 using Golfin.UI.Modals;
+using Golfin.UI.Polish;
 using GolfinRedux.UI;
 using Golfin.UI.Toast;
 
@@ -303,11 +304,27 @@ namespace GolfinRedux.UI.Tournaments
             // connection safe. Running the client's own TrySpendAsync as well would charge the
             // player TWICE for one entry, so on this path the local spend is skipped entirely and
             // the register call IS the payment.
+            //
+            // Both paths below are server round-trips in a flag-ON build — the async-board path posts
+            // /enter, and TrySpendAsync routes through PointsSpendGate — so CONFIRM shows the wait
+            // (transaction_feedback §3.1, sixth call site). CANCEL goes with it: the fee is being
+            // charged, and closing the modal mid-flight would hide an entry that is about to land.
+            //
+            // NOT begun when the gate is already busy on the TrySpendAsync path: its latch would drop
+            // the spend without calling back, and nothing would restore CONFIRM.
+            var pending = PointsSpendGate.IsSpendInFlight
+                ? null
+                : PendingSpend.Begin(_confirmButton, null, _cancelButton);
+
             var remote = TournamentService.Instance.Remote;
             if (remote != null)
             {
                 remote.RegisterAsync(_tournamentId, charId, outcome =>
                 {
+                    // Restore before the verdict is acted on — every arm either navigates away or
+                    // swaps the modal to its denied panel.
+                    pending?.Dispose();
+
                     switch (outcome.Status)
                     {
                         case TournamentRegisterStatus.Entered:
@@ -367,6 +384,8 @@ namespace GolfinRedux.UI.Tournaments
                 SpendReasons.TournamentEntry,
                 paid =>
                 {
+                    pending?.Dispose();
+
                     // The gate has already toasted the reason (insufficient vs connection required).
                     if (!paid)
                     {

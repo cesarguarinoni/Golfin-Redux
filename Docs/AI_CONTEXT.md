@@ -5,6 +5,56 @@
 
 ---
 
+## ✅ LATEST — `transaction_feedback` DONE (2026-08-29)
+
+**Approved by Cesar 2026-08-29; folder in `Docs/Specs/Completed/`.** Cesar's report:
+_"It's weird to change screen and see a club you bought suddenly appear after a bit."_ Two causes,
+both closed. Implemented directly, not through the subagent chain.
+
+**1 — the round-trip was invisible.** The purchase was already pessimistic and applied the grant on
+the server's answer; what was missing was any sign that a tap had been *received*. Every call site
+latched the second tap in a `_purchaseInFlight` bool — correct, and silent. New shared
+`Golfin.UI.Polish.PendingSpend` (Assembly-CSharp, next to `ButtonPressFeedback`): a disposable that
+sets `interactable = false` and swaps the label for `…` from tap to callback. **No new art** — the
+visual is the Button's own Disabled tint. Wired at all six spend sites (general shop, stamina shop,
+character level-up, club level-up, mode-card PLAY, tournament signup). The latches all stay.
+
+**2 — the wait itself was a Fly cold start.** `playlife/backend/fly.toml`
+`auto_stop_machines "stop" → "suspend"` (`min_machines_running` stays `0`, so idle cost is
+unchanged). Measured on `/health`, same endpoint, minutes apart: **5.20 s from `stopped` → 1.18 s
+from `suspended`**; warm 0.039 s either way. Machine confirmed `suspended` (not `stopped`) after
+7 min idle.
+
+⚠️ **THE ONE THING TO CARRY FORWARD:** `ApiClient.SendRoutine` now logs **one line per completed
+logical call** — after retries and the 401 replay resolve — with elapsed ms, and `LogWarning`s above
+1500 ms. `[ApiClient] SLOW: GET /api/v1/content → 200 in 2819 ms (cold start?)` then
+`[ApiClient] GET /api/v1/points/balance → 200 in 220 ms`. **Before reaching for a UI explanation of
+"the game felt slow", read these lines** — they separate a sleeping backend from a UI that never
+acknowledged the tap, which is exactly the confusion that produced this task. Path only; never body,
+headers or query string.
+
+* **Gate:** whole EditMode suite **1964 tests / 1961 passed / 0 failed** (3 pre-existing `[Ignore]`s).
+  New `PendingSpendTests` 9/9; `PointsSpendTests` 13/13 and `ApiClientTests` 18/18 untouched and green.
+* **Verified in live play mode** through the player's own entry point (`ShopPlusButton.onClick`),
+  flag ON, real API. Frame probe around the real BUY `onClick`:
+  `BEFORE interactable=True 'BUY'` → `SAME-FRAME interactable=False '…'` → `SETTLED interactable=True 'BUY'`,
+  with `[ApiClient] POST /api/v1/shop/purchase → 200 in 1080 ms` in between.
+* **Offline refusal restores the button** and charges nothing (transport nulled → `Unavailable` →
+  back to `BUY`, RP unchanged).
+* **Warm purchase = 246 ms**, measured back-to-back on a hot machine (second tap fired on the same
+  editor tick the first answered). Under the §8 400 ms threshold, so the **UnityWebRequest keep-alive
+  follow-up is CLOSED** — everything above a quarter-second in the earlier numbers was the machine
+  waking, which is what Part A shortened.
+* **Known limit of the evidence:** only the general-shop BUY has a live pending-state *screenshot*.
+  The other five sites would each need a real irreversible spend on Cesar's account (a level-up, a
+  mode entry, a tournament entry); the wiring is in the diff and the helper is unit-tested, but those
+  pictures were never taken.
+* **Not done, by decision of record:** optimistic apply-then-rollback (a server refusal is legitimate,
+  so showing-then-yanking is worse than a visible 300 ms wait); equip/bag paths (they never wait on the
+  server); `min_machines_running = 1` (~$2/mo, pre-beta, Cesar's call).
+
+---
+
 ## ✅ LATEST — ball-on-treetop fixed (2026-08-28)
 
 **Cesar hit it in real play: Hole 1, turn 6, ball at rest on a canopy.** Fixed,

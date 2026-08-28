@@ -1,0 +1,25 @@
+=== iter-1 kickoff baseline 2026-08-28 13:20Z ===
+HEAD 40cb025749c87cbcd33732bfdcc6db00749fab00
+DIRTY (git status --porcelain --untracked-files=all at kickoff):
+ M Docs/Reports/content_art.txt
+ M Docs/TellCode.md
+ M Docs/Versioning/last_uploaded_build.txt
+?? Docs/Specs/Active/transaction_feedback/ARCHITECT_REVIEW.md
+?? Docs/Specs/Active/transaction_feedback/IMPLEMENTER_REPORT.md
+?? Docs/Specs/Active/transaction_feedback/SELF_REVIEW.md
+?? Docs/Specs/Active/transaction_feedback/SPEC.md
+?? Docs/Specs/Active/transaction_feedback/STATUS.md
+
+playlife repo baseline: HEAD d4c0cab, DIRTY: M backend/migrations/2026_08_24_content_seed.sql
+=== end baseline ===
+
+13:24Z  Part A: fly.toml auto_stop_machines "stop" -> "suspend". Pre-change baseline captured
+        FIRST (machines were 'stopped'): /health cold 5.201s, warm 0.039s.
+13:29Z  flyctl deploy green (exit 0), image version 60 -> 61.
+13:35Z  First request after deploy 0.037s (deploy health-check left a machine warm). Idle clock start.
+13:42Z  Machine 148e03defe4d38 state = suspended (7m15s idle). Resume probe 1.185s; warm 0.039s.
+13:45Z  Part B: PendingSpend.cs + 6 call sites wired. Part C: ApiClient per-request timing line.
+13:52Z  Editor was CLOSED at session start (no process, port 21573 refused) -> launched it myself.
+        Two compile errors found and fixed (HttpResponse.StatusCode is long; test asmdef needed
+        Unity.TextMeshPro + UnityEngine.UI refs). Editor would not auto-refresh on focus, so the
+        compile check + EditMode suite were run in batchmode instead (lock cleared first).

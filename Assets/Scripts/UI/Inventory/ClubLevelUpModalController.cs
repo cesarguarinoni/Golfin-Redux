@@ -8,6 +8,7 @@ using Golfin.EconomyRuntime;
 using Golfin.InventorySync;
 using Golfin.Roster;       // CharacterLevelUpDatabase, RarityHelper
 using Golfin.UI.Modals;
+using Golfin.UI.Polish;
 using Golfin.UI.Toast;
 
 namespace Golfin.Inventory
@@ -457,10 +458,21 @@ namespace Golfin.Inventory
             // replaces the plain debit rather than adding to it: the old call told the server an
             // amount the client had computed, which is precisely the hole this closes. This modal
             // already spent in ONE transaction, so the server call maps 1:1 onto it.
+            //
+            // Show the round-trip on CONFIRM, and lock CANCEL with it — mirror of
+            // LevelUpModalController (transaction_feedback §3.1). LevelUpAsync answers exactly once
+            // on every branch, so this scope is always disposed.
+            var pending = PendingSpend.Begin(confirmButton, confirmButtonLabel, cancelButton);
+
             ProgressService.Instance.LevelUpAsync(
                 ProgressService.KindClub, clubId,
                 playerClub.currentLevel, previewLevel, totalRPCost, ContentBuildNumber.Current,
-                outcome => OnServerAnswered(outcome, playerClub, template));
+                outcome =>
+                {
+                    // Restore before the verdict is acted on — see the character modal.
+                    pending.Dispose();
+                    OnServerAnswered(outcome, playerClub, template);
+                });
         }
 
         /// <summary>
