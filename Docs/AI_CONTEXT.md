@@ -5,7 +5,57 @@
 
 ---
 
-## ✅ LATEST — `game_modes_admin` DONE (2026-08-28)
+## ✅ LATEST — ball-on-treetop fixed (2026-08-28)
+
+**Cesar hit it in real play: Hole 1, turn 6, ball at rest on a canopy.** Fixed,
+verified in Play Mode, `8619378a7` + `714730abf` on main. Not a spec-pipeline task.
+
+**Root cause — a filter that named a TYPE the engine never reports.**
+`PlacementSnapHelper` (the ball's placement ground-snap) rejected trees with
+`if (col is CapsuleCollider || col is SphereCollider) return false;` and then
+`if (col is TerrainCollider) return true;`. But Unity does not surface terrain tree
+colliders as their own GameObjects — **a ray that hits a tree on a Terrain returns
+`collider == the TerrainCollider`**, on the terrain's own GameObject and layer. The
+rejected shape never arrives; the next line accepted the treetop as playable ground.
+The 2026-08-05 `ob_ball_in_air` fix was written for this exact symptom and did not
+close it — and its other half (sorting `RaycastAll` by distance, correct in isolation)
+turned an intermittent bug into a deterministic one, because the canopy went from
+sometimes winning to always winning.
+
+⚠️ **THE ONE THING TO CARRY FORWARD:** identity questions that collider type cannot
+answer, geometry can. The terrain surface at an XZ *is* the heightmap value there, so
+a `TerrainCollider` hit above the heightmap is a tree (`IsTerrainTreeHit`). **Any new
+downward "find the ground" cast must use that test, not a type check.**
+
+* **Gate (same probe before/after, Play Mode, Hole 1's 1362 trees):** `Snap` lifted the
+  ball >2 m at **1362/1362** tree centres, worst **+28.2 m** → **0/1362**, max lift
+  0.002 m, max `|snapped − bakedGround|` 0.003 m. Tee/green/fairway placement unchanged
+  (delta 0.000 at five control points). Tree colliders still present in the raycast —
+  filtered, not gone.
+* **Reached the ball via the OB/water drop**, `RepositionBallWithLookDir(... preferred:
+  null)` — boundary OB is stroke-and-distance, which is why turn 6 was back at the tee.
+* **Two more sites of the same shape** (PIPELINE_HARDENING §22): `AdjustCameraForDepression`
+  and `MapViewController.SampleTerrainHeight` both took the FIRST raw raycast hit — camera
+  lifted 3 m beside any tree; range-ring vertices sat on treetops.
+* **The "0 yds" pin distance in Cesar's screenshot was the diagnostic**, not a side issue:
+  `PlaceAtRest` destroys/respawns the ball GameObject and the OB/water drop was the one
+  caller that never re-wired `HoleIndicatorWidget`. That readout identifies the code path
+  before any physics is read. Also fixed.
+* ⚠️ **Edit Mode cannot test this class of bug.** Unity generates terrain tree colliders
+  ONLY in Play Mode — an Edit-Mode raycast finds none *even on a hole whose trees are
+  verifiably solid at runtime* (Hole 6's firs were the control that caught a wrong
+  conclusion mid-investigation). Cheap probe without booting the game: open
+  `Hole_NN_Geo.unity` in **Single** mode, enter play, probe, exit, reopen ShellScene.
+  Also: a prototype does **not** need a root collider for Unity to generate tree colliders
+  — Hole 1's four prototypes carry colliders only on children.
+* **Ruled out with evidence, so nobody re-treads it:** the deterministic sim is clean
+  (186 shots into and out of Hole 1's tree line, worst final position 0.03 m above
+  ground), and terrain relief does not explain it (no tree has ground within 3.7 m of
+  its canopy top). Full write-up: Lesson BO in `tasks/lessons.md`.
+
+---
+
+## `game_modes_admin` DONE (2026-08-28)
 
 **Approved by Cesar 2026-08-28; folder in `Docs/Specs/Completed/`.** `modes` is
 the TENTH content catalog and mode entry fees are server-priced — the last
