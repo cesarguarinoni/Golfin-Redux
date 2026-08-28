@@ -33,7 +33,8 @@ namespace GolfinRedux.UI
         // Settings removed - it's an overlay, not a screen
 
         // Order: login_signup_screens — account auth gate (Phase 1 — UI only, no backend)
-        // These screens are excluded from isMenuScreen and showBars (pre-game gates).
+        // These screens are excluded from showBars (pre-game gates); menu music keeps
+        // playing across them so the theme is unbroken from Splash to Home.
         Login,
         CreateUsername,
         SignUp,
@@ -261,7 +262,7 @@ namespace GolfinRedux.UI
             if (_gachaPrizesScreen != null)
                 _gachaPrizesScreen.SetActive(screenId == ScreenId.GachaPrizes);
 
-            // Order: login_signup_screens — account auth gate (excluded from isMenuScreen + showBars)
+            // Order: login_signup_screens — account auth gate (excluded from showBars)
             if (_loginScreen != null)
                 _loginScreen.SetActive(screenId == ScreenId.Login);
             if (_createUsernameScreen != null)
@@ -275,22 +276,15 @@ namespace GolfinRedux.UI
 
             // Settings is an overlay (SettingsController), not managed here
 
-            // Order 350: menu music — start on menu screens, stop during loading/logo/splash.
+            // Order 350: menu music — starts on the Splash gate and runs unbroken through the
+            // auth/starter screens into Home and every other shell screen. Deny-list, not an
+            // allow-list: the old allow-list started the theme on Home only, so the title screen
+            // was silent and every new shell screen had to remember to opt in. Silent on Logo (the
+            // pre-title brand card) and Loading (the gameplay hand-off, which is where the theme
+            // must stop — GameplaySceneLoader shows Loading on its way into a hole).
             // AudioManager is DDOL and lives in Assembly-CSharp, same as ScreenManager.
-            bool isMenuScreen = screenId == ScreenId.Home
-                             || screenId == ScreenId.Roster
-                             || screenId == ScreenId.Inventory
-                             || screenId == ScreenId.HoleSelection
-                             || screenId == ScreenId.ModeSelection
-                             || screenId == ScreenId.Leaderboard
-                             || screenId == ScreenId.TournamentHoleSelection
-                             || screenId == ScreenId.TournamentLeaderboard
-                             || screenId == ScreenId.TournamentSelection
-                             || screenId == ScreenId.StaminaShopSelection
-                             || screenId == ScreenId.StaminaShopDetail
-                             || screenId == ScreenId.GeneralShop
-                             || screenId == ScreenId.GachaHistory
-                             || screenId == ScreenId.GachaPrizes;
+            bool isMenuScreen = screenId != ScreenId.Logo
+                             && screenId != ScreenId.Loading;
             if (AudioManager.Instance != null)
             {
                 if (isMenuScreen && _mainThemeClip != null && !AudioManager.Instance.IsMusicPlaying())
