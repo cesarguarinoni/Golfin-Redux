@@ -133,10 +133,53 @@
 
 ## ✅ RECENTLY LANDED
 
+> **`content_art_urls` — ART BY URL: AN ADMIN-CREATED ROW RENDERS WITH NO STORE RELEASE.
+> Landed 2026-08-28 after a defect that eight review passes missed and only an end-to-end run
+> found.** Spec + evidence: `Docs/Specs/Active/content_art_urls/`. STATUS
+> `READY_FOR_ARCHITECT_REVIEW` after the Option A seam fix.
+>
+> The resolution ladder (SPEC §2.2) puts the BUILD's own art first: overlay-changed URL if
+> cached → bundled sprite by name → URL unchanged since the build → Placeholder (clubs only).
+> Zero sprite consumers were edited; every card reads the same `Sprite` field it always did.
+>
+> **THE LESSON WORTH KEEPING.** The feature passed six implementer iterations, a red-team gate
+> and my own code review while being COMPLETELY NON-FUNCTIONAL. The ladder resolved
+> synchronously in each loader's `Awake`, but the only thing it could read was
+> `TournamentArtService._sprites` — a per-session dict, empty at that moment — while the disk
+> cache was read exclusively inside the async `LoadRoutine`. Art downloaded on one launch was
+> never read on any later launch, so catalog art rendered on NO launch. Every component was
+> individually correct; the defect lived only in the seam between them, and the tests injected
+> sprites straight into `_sprites`, which presupposed the exact step that never happened.
+> **Nothing in the gate chain ran the product against a real dependency.** That is now
+> `PIPELINE_HARDENING` §21.
+>
+> Fixed per `ARCHITECT_DECISION.md` §1 (Option A): one synchronous entry point
+> (`TournamentArtService.TryGetOrLoadCached`) that reads the on-disk cache and decodes through
+> the EXISTING `Decode` path, called only from `CatalogArtCache`, capped at 24 decodes/session,
+> and measured. **Boot delta, finally reported after being owed since iteration 1:
+> `1 file, 3.1 ms, 0.08 MB`** (one 170×343 thumbnail; re-measure with full-body art if the cap
+> is ever raised).
+>
+> Proven end to end against live Supabase Storage, not argued: launch 1 withholds and downloads,
+> launch 2 renders — `GetAvailableCharacters` 11 → 12, `renderable` true, and 200/200 sampled
+> pixels matching the uploaded image versus 32/200 matching the row's own (blank) bundled art.
+> The new disk test was tripwire-demonstrated per §20 — removing the disk read turns it red.
+>
+> Also fixed in passing: catalog-art uploads accepted **WebP** in three places, copied from the
+> banner path, against an explicit bold SPEC §5.1 line. `content_art_bundling` pulls this art
+> into `Resources/` and Unity cannot import WebP, so an operator would have seen it work in-game
+> and fail only at the build meant to absorb it. Missed by the implementer, the red-team gate,
+> and my own review.
+>
+> **Live infrastructure now exists:** the `catalog-art` Supabase bucket (public, 500 KB,
+> `image/jpeg` + `image/png`). One test object is deliberately kept as the E2E fixture.
+
 > **`content_two_way` — ONE TRUTH, BOTH DIRECTIONS, AND A CLIENT THAT NEVER SHOWS A BROKEN ROW.
-> Implemented 2026-08-27, awaiting Cesar's approval.** Spec + evidence:
-> `Docs/Specs/Active/content_two_way/`. Implemented directly by the main Claude Code thread in
-> the spec's §8 order.
+> DONE 2026-08-28 (approved by Cesar); moved to `Docs/Specs/Completed/content_two_way/`.**
+> Implemented directly by the main Claude Code thread in the spec's §8 order. Its evidence was
+> the kind that held up: play-mode measurements against the product (799 clubs / 150 placeholder
+> / 0 withheld) and a round trip against prod (`HOME_CURRENCY_LABEL`, both legs published, export
+> byte-identical).
 >
 > **The client rail (§4) is the part that changes what a player sees.**
 > `CharacterDataRuntime` / `ItemDataRuntime` / `BallDataRuntime` now carry `renderable`, set by

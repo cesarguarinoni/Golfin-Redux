@@ -23,6 +23,7 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Reflection;
 using NUnit.Framework;
 using UnityEngine;
@@ -255,6 +256,23 @@ namespace Golfin.Tournaments.WireupTests
 
         public static void InjectSprite(string url, Sprite s) => GetSpriteDict()[url] = s;
         public static void RemoveSprite(string url)           => GetSpriteDict().Remove(url);
+
+        /// <summary>The catalog-art service's on-disk cache directory.</summary>
+        public static string CacheDir =>
+            (string)ArtServiceType.GetProperty("CacheDir",
+                BindingFlags.Public | BindingFlags.Instance)!
+                .GetValue(GetCatalogArtInstance())!;
+
+        /// <summary>The cache FILE NAME the service derives for a URL (sha of the URL).</summary>
+        public static string CacheFileName(string url) =>
+            (string)Prod.Find("Golfin.Tournaments.TournamentArtPolicy")
+                .GetMethod("CacheFileName", BindingFlags.Public | BindingFlags.Static)!
+                .Invoke(null, new object?[] { url })!;
+
+        /// <summary>Reset CatalogArtCache's per-session decode counters.</summary>
+        public static void ResetCacheCounters() =>
+            CacheType.GetMethod("ResetForTest", BindingFlags.Public | BindingFlags.Static)!
+                .Invoke(null, null);
 
         // ── CatalogArtCache.Cached(url, bundledUrl) — step 1 ──
 
@@ -616,6 +634,90 @@ namespace Golfin.Tournaments.WireupTests
                 "When URLs agree, the REAL bundled sprite ('Driver-G&F') must win at step 2 " +
                 "(LoadRealSprite). This is the 'bundled-wins, URL is a bridge' invariant " +
                 "from SPEC §2.2 that the earlier URL-first ladder violated.");
+        }
+    }
+
+    /// <summary>
+    /// ARCHITECT_DECISION §1.4 — <b>the test goes through the DISK.</b>
+    ///
+    /// <para>
+    /// This is the test whose absence let the feature ship broken. Every earlier ladder test
+    /// injected a sprite straight into <c>_sprites</c> and then exercised the ladder, which is a
+    /// fair test of the ladder and a perfect blind spot for the actual defect: <c>_sprites</c> is
+    /// per-session and empty at <c>Awake</c>, so in production the ladder's URL rungs could never
+    /// hit. The art downloaded on launch 1 sat on disk and was never read again, on any launch.
+    /// Confirmed end-to-end against live Supabase Storage on 2026-08-28.
+    /// </para>
+    /// <para>
+    /// So this one writes real PNG bytes into the real cache directory, leaves <c>_sprites</c>
+    /// EMPTY, and asserts the ladder still resolves — which can only happen if something reads
+    /// the disk synchronously.
+    /// </para>
+    /// </summary>
+    [TestFixture]
+    public sealed class CatalogArtDiskCacheTests
+    {
+        // Any URL under the allowlisted prefix; it is never fetched — only hashed to a filename.
+        private const string DiskUrl =
+            "https://wmszyghwwkaptgqdunel.supabase.co/storage/v1/object/public/catalog-art/" +
+            "characters-char_disktest-portraitUrl-000000000001.png";
+
+        private string _path = "";
+
+        [SetUp]
+        public void WriteRealPngIntoTheCache()
+        {
+            CatalogArtCacheReflection.ResetCacheCounters();
+            CatalogArtCacheReflection.RemoveSprite(DiskUrl);   // _sprites MUST be empty for this URL
+
+            // Real PNG bytes, encoded here rather than copied from Resources so the test owns its
+            // fixture and cannot be broken by an art change.
+            var tex = new Texture2D(8, 8, TextureFormat.RGBA32, false);
+            var px = new Color32[8 * 8];
+            for (int i = 0; i < px.Length; i++) px[i] = new Color32(12, 34, 56, 255);
+            tex.SetPixels32(px);
+            tex.Apply();
+            byte[] png = tex.EncodeToPNG();
+            UnityEngine.Object.DestroyImmediate(tex);
+
+            string dir = CatalogArtCacheReflection.CacheDir;
+            Directory.CreateDirectory(dir);
+            _path = Path.Combine(dir, CatalogArtCacheReflection.CacheFileName(DiskUrl));
+            File.WriteAllBytes(_path, png);
+        }
+
+        [TearDown]
+        public void RemoveFixture()
+        {
+            if (!string.IsNullOrEmpty(_path) && File.Exists(_path)) File.Delete(_path);
+            CatalogArtCacheReflection.RemoveSprite(DiskUrl);
+            CatalogArtCacheReflection.ResetCacheCounters();
+        }
+
+        [Test]
+        public void Step3_Resolves_From_The_ON_DISK_Cache_With_Memory_Empty()
+        {
+            var sprite = CatalogArtCacheReflection.CachedStep3(DiskUrl);
+
+            Assert.IsNotNull(sprite,
+                "Cached(url) returned null with real PNG bytes sitting in the catalog-art cache " +
+                "directory and _sprites empty. That is the production bug this test exists for: " +
+                "the loaders resolve synchronously at Awake, so if nothing reads the disk there, " +
+                "art downloaded on a previous launch is never rendered on any launch.");
+            Assert.AreEqual(8, sprite!.texture.width,
+                "Resolved a sprite, but not the one on disk — the 8x8 fixture should round-trip.");
+        }
+
+        [Test]
+        public void Step1_Also_Resolves_From_Disk_When_The_Overlay_URL_Changed()
+        {
+            // URLs differ ⇒ step 1 is live; it must reach the disk exactly as step 3 does.
+            var sprite = CatalogArtCacheReflection.CachedStep1(DiskUrl, "https://example.invalid/old.png");
+
+            Assert.IsNotNull(sprite,
+                "Step 1 (overlay re-uploaded art since the build) did not reach the on-disk cache. " +
+                "Both URL rungs resolve through the same path; if only step 3 reads the disk, a " +
+                "row whose art was re-uploaded stays broken until the next build.");
         }
     }
 }

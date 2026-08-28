@@ -123,6 +123,74 @@ namespace Golfin.Tournaments
             return _sprites.TryGetValue(url!, out sprite) && sprite != null;
         }
 
+        /// <summary>
+        /// SYNCHRONOUS resolve: in-memory dict, else the on-disk cache, decoded on the spot.
+        /// Returns true and sets <paramref name="sprite"/> when the art is available NOW.
+        ///
+        /// <para>
+        /// <b>Why this exists</b> (content_art_urls, ARCHITECT_DECISION §1). The catalog loaders
+        /// resolve every sprite synchronously inside <c>Awake</c>, but <see cref="TryGet"/> reads
+        /// only <c>_sprites</c>, which is per-session and empty at that point, and the disk read
+        /// lives inside the async <see cref="LoadRoutine"/>. So the ladder's URL rungs could never
+        /// hit at load: the art downloaded on launch 1 sat on disk and was never read on launch 2,
+        /// or any launch after it. Verified end-to-end against live Storage on 2026-08-28 before
+        /// this method existed — the row stayed withheld with the bytes present on disk.
+        /// </para>
+        /// <para>
+        /// <b>Only <c>CatalogArtCache.Cached</c> calls this.</b> Banners and tournament art keep
+        /// their fully async behaviour — they bind through callbacks and have no synchronous
+        /// resolution point, so they have nothing to gain and a boot-time decode to lose.
+        /// </para>
+        /// <para>
+        /// No torn-read handling: cache writes go through an atomic <c>File.Replace</c>, so a file
+        /// is whole or absent. <paramref name="bytesRead"/> reports the file size on a disk hit
+        /// (0 on a dict hit or a miss) so the caller can measure what the boot path paid.
+        /// </para>
+        /// </summary>
+        public bool TryGetOrLoadCached(string? url, out Sprite? sprite, out int bytesRead)
+        {
+            sprite = null;
+            bytesRead = 0;
+            if (string.IsNullOrEmpty(url)) return false;
+
+            // Dict hit — free, and never counted against the caller's decode budget.
+            if (_sprites.TryGetValue(url!, out sprite) && sprite != null) return true;
+
+            // A URL whose decode already failed this session must not be retried per row.
+            if (_failed.Contains(url!)) { sprite = null; return false; }
+
+            byte[] bytes;
+            try
+            {
+                string path = Path.Combine(CacheDir, TournamentArtPolicy.CacheFileName(url!));
+                if (!File.Exists(path)) { sprite = null; return false; }
+                bytes = File.ReadAllBytes(path);
+                // Same explicit stamp LoadRoutine makes: the LRU sweep sorts on last access and
+                // relatime-style mounts do not reliably update it on read.
+                File.SetLastAccessTimeUtc(path, DateTime.UtcNow);
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"{Tag} Could not read cached art for {LeafOf(url!)}: {ex.Message}");
+                sprite = null;
+                return false;
+            }
+
+            // THE existing bytes→sprite path, not a second copy of it: Decode publishes into
+            // _sprites and fires any in-flight waiters, so a later async Request for the same URL
+            // is answered from memory.
+            if (!Decode(url!, bytes))
+            {
+                _failed.Add(url!);
+                Debug.LogWarning($"{Tag} Cached art for {LeafOf(url!)} did not decode; ignoring it.");
+                sprite = null;
+                return false;
+            }
+
+            bytesRead = bytes.Length;
+            return _sprites.TryGetValue(url!, out sprite) && sprite != null;
+        }
+
         // ── Request ───────────────────────────────────────────────────────────
 
         /// <summary>
