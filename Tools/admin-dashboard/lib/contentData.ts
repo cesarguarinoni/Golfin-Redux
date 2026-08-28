@@ -464,6 +464,55 @@ export async function fetchVersions(
   return { catalog, page, limit, total: res.count ?? versions.length, versions, mock: false };
 }
 
+/**
+ * The ROWS of one published version — the snapshot `content_rollback` would
+ * restore, read before it runs.
+ *
+ * Exists for the mirror (REDTEAM_REVIEW §2). A rollback is a publish carrying
+ * old content, so the server-side mirrors have to move with it; to write them
+ * BEFORE the rpc (the ordering publish uses, so a mirror failure means the
+ * rollback never happened) the caller needs the rows the rollback is about to
+ * make live, and `content_rows` still holds the OLD ones at that moment. The
+ * snapshot is the only place those rows exist ahead of time.
+ *
+ * Returns null when the version does not exist — which the caller reports as a
+ * 404 rather than silently mirroring nothing.
+ */
+export async function fetchVersionSnapshot(
+  catalog: string,
+  version: number
+): Promise<ContentStoredRow[] | null> {
+  if (isMockMode()) {
+    // Mock mode has no stored snapshots, only their metadata. Returning the
+    // current published rows keeps the rollback path exercisable in mock without
+    // pretending to a fidelity the fixtures do not have.
+    return mockDb().contentPublished.filter((r) => r.catalog === catalog);
+  }
+
+  const res = await getSupabaseAdmin()
+    .from("content_versions")
+    .select("snapshot")
+    .eq("catalog", catalog)
+    .eq("version", version)
+    .maybeSingle();
+  if (res.error) throw new Error(`content_versions query failed: ${res.error.message}`);
+  if (!res.data) return null;
+
+  const snapshot = (res.data as { snapshot: unknown }).snapshot;
+  if (!Array.isArray(snapshot)) return null;
+
+  return snapshot.map((raw) => {
+    const row = raw as Record<string, unknown>;
+    return {
+      catalog,
+      rowId: String(row.row_id ?? ""),
+      data: (row.data ?? {}) as Record<string, string>,
+      minBuild: Number(row.min_build ?? 0),
+      isActive: row.is_active !== false,
+    };
+  });
+}
+
 /** The catalogs a `shop_catalog` publish has to resolve refIds against. */
 export const REFERENCED_CATALOGS = ["clubs", "balls", "items", "bags", "characters"];
 

@@ -4,6 +4,7 @@ import {
   fetchAllRows,
   fetchDiff,
   fetchGlobalContentEnabled,
+  fetchVersionSnapshot,
   GLOBAL_ENABLED_KEY,
   REFERENCED_CATALOGS,
 } from "./contentData";
@@ -263,6 +264,69 @@ async function mirrorModeFees(drafts: ContentStoredRow[]): Promise<string | null
   return res.error ? res.error.message : null;
 }
 
+/**
+ * THE MIRROR DISPATCHER — the ONE place that knows which catalogs have a
+ * server-side mirror and how to write it.
+ *
+ * ⚠️ WHY THIS EXISTS AS A FUNCTION rather than two `if (catalog === …)` blocks:
+ * because two call sites ARE the bug this was added to fix. `mirrorModeFees`
+ * was called from `publishCatalog` and nowhere else, so `rollbackCatalog` — a
+ * first-class, UI-exposed operator control — produced a NEW client-visible
+ * catalog version while leaving the mirror at whatever the last publish wrote.
+ * Undoing a bad fee publish is the single most likely reason to roll `modes`
+ * back, and it was the one path that silently did not undo the fee.
+ *
+ * Found by the red-team gate (REDTEAM_REVIEW.md §2), not by the two gates
+ * before it, and not by me. Every future path that changes what a catalog
+ * SERVES must call this; routing them all through one function is what makes
+ * "did you remember the mirror?" a question with one answer instead of N.
+ *
+ * `rows` is the row set that is ABOUT TO BECOME PUBLISHED — drafts on a
+ * publish, the rolled-to snapshot on a rollback. Returns an error string, or
+ * null when there was nothing to do or it succeeded.
+ */
+/**
+ * The catalogs that have a SERVER-SIDE MIRROR — a typed copy the game's own
+ * request path reads, which must move whenever what the catalog SERVES moves.
+ *
+ * Exported and named so "does this catalog have a mirror?" is one fact rather
+ * than a pattern of `if (catalog === …)` scattered across the mutation paths.
+ * `mirrorForCatalog` below is the only thing that writes them; anything that
+ * changes what a catalog serves must go through it.
+ */
+export const MIRRORED_CATALOGS = ["characters", "modes"];
+async function mirrorForCatalog(
+  catalog: string,
+  rows: ContentStoredRow[]
+): Promise<{ error: string; detail: string } | null> {
+  if (catalog === "characters") {
+    const error = await mirrorCharacters(rows);
+    return error
+      ? {
+          error,
+          detail:
+            "The mirror is what tournament rarity restrictions read (SPEC §A4); " +
+            "publishing characters without it would reintroduce the char_olivia drift.",
+        }
+      : null;
+  }
+
+  if (catalog === "modes") {
+    const error = await mirrorModeFees(rows);
+    return error
+      ? {
+          error,
+          detail:
+            "The mirror is what /points/spend prices a mode entry against " +
+            "(game_modes_admin §4); serving modes without it would show players " +
+            "one fee and charge them another.",
+        }
+      : null;
+  }
+
+  return null;
+}
+
 export async function publishCatalog(
   adminEmail: string,
   catalog: string,
@@ -329,28 +393,12 @@ export async function publishCatalog(
   // the publish — afterwards drafts and published are identical by definition.
   const diff = await fetchDiff(catalog);
 
-  if (catalog === "characters") {
-    const mirrorError = await mirrorCharacters(drafts);
-    if (mirrorError) {
-      return fail(
-        502,
-        `golfin_characters mirror write failed, so nothing was published: ${mirrorError}. ` +
-          "The mirror is what tournament rarity restrictions read (SPEC §A4); publishing " +
-          "characters without it would reintroduce the char_olivia drift."
-      );
-    }
-  }
-
-  if (catalog === "modes") {
-    const mirrorError = await mirrorModeFees(drafts);
-    if (mirrorError) {
-      return fail(
-        502,
-        `golfin_mode_fees mirror write failed, so nothing was published: ${mirrorError}. ` +
-          "The mirror is what /points/spend prices a mode entry against (SPEC §4); publishing " +
-          "modes without it would show players one fee and charge them another."
-      );
-    }
+  const mirrorProblem = await mirrorForCatalog(catalog, drafts);
+  if (mirrorProblem) {
+    return fail(
+      502,
+      `Mirror write failed, so nothing was published: ${mirrorProblem.error}. ${mirrorProblem.detail}`
+    );
   }
 
   let version: number;
@@ -422,6 +470,25 @@ export async function publishCatalog(
  * decrement. Clients cache by version and ask `since=N`; rewinding the counter
  * would leave a client that already holds v12 permanently unaware of the
  * rollback, still serving the bad content (SPEC §A1.2).
+ *
+ * ⚠️ AND IT RE-MIRRORS, which it did not until 2026-08-28 (REDTEAM_REVIEW §2).
+ *
+ * A rollback produces a new, client-visible catalog version — it is a publish
+ * that happens to carry old content. So every consequence of publishing applies,
+ * including the server-side mirrors. It used not to: `mirrorModeFees` was
+ * reachable only from `publishCatalog`, so an operator who fat-fingered
+ * `practice.entryFee = 150`, published, and then hit ROLLBACK got a card reading
+ * 10 again while `golfin_mode_fees` sat at 150 — every player answered
+ * `fee_changed: 150`, and anyone under 150 RP locked out of the free-tier mode
+ * the operator had just "fixed". Undoing a bad fee publish is the most likely
+ * reason to roll `modes` back at all, so this was the one path that could not
+ * afford to be the one path without a mirror.
+ *
+ * The rows mirrored are the ROLLED-TO SNAPSHOT — what the catalog is about to
+ * serve — read from `content_versions` before the rpc, mirrored before the rpc,
+ * and a mirror failure aborts the rollback. Identical posture to publish,
+ * deliberately: same ordering, same abort, same residual window
+ * (mirror-ahead-of-catalog, which is the safer of the two directions).
  */
 export async function rollbackCatalog(
   adminEmail: string,
@@ -457,6 +524,26 @@ export async function rollbackCatalog(
   }
 
   const before = await fetchDiff(catalog);
+
+  // The rows this rollback is about to make live. Read from the snapshot rather
+  // than from `content_rows` after the fact, so the mirror can be written BEFORE
+  // the rpc — the same ordering publish uses, for the same reason: a mirror
+  // failure must mean the rollback never happened, not that it half happened.
+  const snapshot = await fetchVersionSnapshot(catalog, toVersion);
+  if (snapshot === null) {
+    return fail(404, `${catalog} has no version ${toVersion} to roll back to.`);
+  }
+
+  const mirrorProblem = await mirrorForCatalog(catalog, snapshot);
+  if (mirrorProblem) {
+    return fail(
+      502,
+      `Mirror write failed, so nothing was rolled back: ${mirrorProblem.error}. ` +
+        `${mirrorProblem.detail} A rollback is a publish carrying old content, so it ` +
+        "has to move the mirror too — otherwise the catalog goes back and the price does not."
+    );
+  }
+
   const res = await getSupabaseAdmin().rpc("content_rollback", {
     p_catalog: catalog,
     p_to_version: toVersion,
@@ -471,7 +558,7 @@ export async function rollbackCatalog(
     null,
     "content_rows",
     { catalog, version: before.publishedVersion },
-    { catalog, restoredFrom: toVersion, version }
+    { catalog, restoredFrom: toVersion, version, mirrored: MIRRORED_CATALOGS.includes(catalog) }
   );
   return ok(`Rolled ${catalog} back to v${toVersion}, published forward as v${version}.`, { version });
 }
@@ -485,6 +572,33 @@ export async function rollbackCatalog(
  * /api/v1/content and names it in the response's top-level `disabled` list —
  * never an empty catalog, which a client could reasonably apply as "everything
  * was deleted". That catalog reverts to its bundled CSV; no other is touched.
+ *
+ * ⚠️ IT DELIBERATELY DOES NOT TOUCH THE SERVER-SIDE MIRRORS, and that is a
+ * decision rather than an oversight (REDTEAM_REVIEW §2, secondary finding).
+ *
+ * Killing `modes` reverts clients to their bundled modes.csv, while
+ * `golfin_mode_fees` keeps whatever the last publish wrote. If a fee had been
+ * published but not yet exported into a shipped build, the two disagree. All
+ * three available behaviours were considered:
+ *
+ *   1. DELETE the mirror rows on kill. Then /points/spend answers `unknown_mode`
+ *      for every mode and NOBODY can enter ANY mode. Strictly worse than the
+ *      disagreement it fixes.
+ *   2. Have /spend skip fee validation while the catalog is disabled. That turns
+ *      this button into "switch off fee enforcement", i.e. it hands back the
+ *      client-asserted price the whole of game_modes_admin exists to take away.
+ *      A kill switch must never be an authorisation bypass.
+ *   3. LEAVE IT (what happens today). The client shows the bundled fee, the
+ *      server prices from the published one, and the mismatch surfaces as
+ *      `fee_changed` — the card re-prices to the server's number and the second
+ *      tap pays it. Nobody is locked out and nobody is charged a number they
+ *      were not shown first.
+ *
+ * 3 is the only one that is safe in every direction, so the residual
+ * disagreement is accepted and bounded by the `fee_changed` UX rather than
+ * engineered away. ROLLBACK is a different case and IS fixed — a rollback
+ * changes what the catalog SERVES, so the mirror must follow it; a kill switch
+ * stops serving the catalog at all, so there is nothing for the mirror to follow.
  *
  * ⚠️ IT DOES NOT DROP THE TOP-LEVEL `enabled` FLAG, and the wording that said it
  * did was the bug. Until 2026-08-26 the endpoint ANDed this column across the

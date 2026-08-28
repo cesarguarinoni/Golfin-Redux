@@ -76,6 +76,20 @@ publish FAILS if the mirror write fails (`lib/contentMutations.ts`):
 * **Characters** → `golfin_characters` (tournament rarity gates)
 * **Modes** → `golfin_mode_fees` (`/points/spend` prices a mode entry from it)
 
+⚠️ **A ROLLBACK MOVES THE MIRROR TOO.** A rollback is a publish carrying old
+content — it produces a new, client-visible version — so `rollbackCatalog`
+re-mirrors from the rolled-to snapshot and aborts if that write fails, exactly as
+publish does. It did not until 2026-08-28: rolling back a bad `modes` fee publish
+restored the card to the old price while `golfin_mode_fees` kept the new one, so
+every player was answered `fee_changed` at the fee the operator had just undone.
+Anything added later that changes what a catalog SERVES must go through
+`mirrorForCatalog` (`lib/contentMutations.ts`); `MIRRORED_CATALOGS` is the list.
+
+The per-catalog **kill switch** deliberately does NOT touch the mirror — see the
+`setCatalogEnabled` comment for the three options and why leaving it is the only
+one that is safe in both directions. The residual is bounded by the `fee_changed`
+UX: the player is always shown the price before it is charged.
+
 **Live panels** (Banners, Notices, Points, Rewards, Tournaments, Users) write the
 table the server reads per request. There is no draft, no publish and no version
 — a save is in effect on the next request.
