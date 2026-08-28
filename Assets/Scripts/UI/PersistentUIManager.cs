@@ -534,6 +534,10 @@ namespace Golfin.UI
                 case GolfinRedux.UI.ScreenId.TournamentSelection:      return "NAV_TOURNAMENTS";
                 case GolfinRedux.UI.ScreenId.StaminaShopSelection:     return "NAV_BOOST_STAMINA";
                 case GolfinRedux.UI.ScreenId.GeneralShop:              return "NAV_REWARDS_CENTER";
+                // Gacha pillar sub-screens: the history node keeps the Rewards Center title
+                // (4079:18306), the prizes node overrides it with "PRIZES" (13622:2222).
+                case GolfinRedux.UI.ScreenId.GachaHistory:             return "NAV_REWARDS_CENTER";
+                case GolfinRedux.UI.ScreenId.GachaPrizes:              return "GACHA_PRIZES_TITLE";
                 default:                                               return null;
             }
         }
@@ -562,6 +566,9 @@ namespace Golfin.UI
                 case GolfinRedux.UI.ScreenId.StaminaShopDetail:     currentScreen = Screen.Characters; break;
                 // Order 610 — Rewards Center opened from the Gacha nav slot
                 case GolfinRedux.UI.ScreenId.GeneralShop:           currentScreen = Screen.Gacha; break;
+                // Reached only from the Rewards Center, so the Gacha slot stays lit on both.
+                case GolfinRedux.UI.ScreenId.GachaHistory:          currentScreen = Screen.Gacha; break;
+                case GolfinRedux.UI.ScreenId.GachaPrizes:           currentScreen = Screen.Gacha; break;
                 default:
                     return; // Logo/Splash/Loading/Leaderboard: bars hidden or no nav highlight.
             }

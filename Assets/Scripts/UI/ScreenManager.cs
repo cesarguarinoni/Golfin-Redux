@@ -305,7 +305,14 @@ namespace GolfinRedux.UI
                          || screenId == ScreenId.TournamentSelection
                          || screenId == ScreenId.StaminaShopSelection
                          || screenId == ScreenId.StaminaShopDetail
-                         || screenId == ScreenId.GeneralShop;
+                         || screenId == ScreenId.GeneralShop
+                         // Gacha pillar screens 2 and 3. Both REUSE the shared bars per their
+                         // specs (gacha_history §L2.1/L2.3, gacha_prizes §L2/L4) — their own
+                         // TopUI / NavBarContainer children are empty placeholders — so leaving
+                         // them out of this list rendered both screens with no top bar and no
+                         // navbar, which is what the player saw from the History chip.
+                         || screenId == ScreenId.GachaHistory
+                         || screenId == ScreenId.GachaPrizes;
             // Account / auth screens reuse the shared top bar for their title only
             // (banner + centered title, no bottom nav or logged-in chrome).
             bool isAccountScreen = screenId == ScreenId.Login

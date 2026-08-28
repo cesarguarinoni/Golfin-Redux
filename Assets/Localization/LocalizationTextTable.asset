@@ -1295,6 +1295,9 @@ MonoBehaviour:
   - key: GACHA_HISTORY
     english: GACHA HISTORY
     japanese: "\u30AC\u30C1\u30E3\u5C65\u6B74"
+  - key: GACHA_PRIZES_TITLE
+    english: PRIZES
+    japanese: "\u666F\u54C1"
   - key: GACHA_TICKETS
     english: TICKETS
     japanese: "\u30C1\u30B1\u30C3\u30C8"
