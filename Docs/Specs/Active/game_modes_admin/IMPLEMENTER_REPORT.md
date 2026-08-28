@@ -27,6 +27,38 @@ all **403-not-404** (mounted, auth-gated); a garbage route 404s;
 
 ---
 
+## 1b. The migration's own verification, read back from prod
+
+Cesar applied `2026_08_28_golfin_mode_fees.sql` and returned the grants line
+(`anon_or_authenticated_grants = 0`); the five seeded rows were re-derived
+directly over PostgREST rather than confirmed from the artifact asserting them
+(`feedback_derive_dont_confirm_evidence`):
+
+```
+driving_range 0 / locked    missions 0 / locked    practice 10
+tournaments 0               versus_1v1 0
+```
+
+The RLS half was NOT derivable that way — PostgREST cannot reach `pg_class`, and
+`service_role` bypasses RLS so a successful select proves nothing about it. Read
+back from prod on request, alongside the rest of the RLS-on/no-policies family so
+the new table is checked against the shape it is meant to match:
+
+| table | rls_enabled | policy_count |
+|---|---|---|
+| `content_drafts` | true | 0 |
+| `content_rows` | true | 0 |
+| `game_point_actions` | true | 0 |
+| `golfin_fake_players` | true | 0 |
+| **`golfin_mode_fees`** | **true** | **0** |
+
+Zero policies with RLS on is deny-all for `anon` and `authenticated`; combined
+with the revoked grants, nothing but `service_role` can read or write the fee
+mirror. (`reference_supabase_rls_lint_false_positive` — the Supabase linter warns
+on `create table` read in isolation; `pg_class` is the answer.)
+
+---
+
 ## 2. The live E2E (SPEC §6 item 1, PIPELINE_HARDENING §21) — **RAN**
 
 Driven through the deployed admin UI in a real browser and a real player token.

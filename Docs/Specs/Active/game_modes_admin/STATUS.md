@@ -6,6 +6,10 @@ Deployment is DONE, not pending: playlife-api v58
 Cloudflare version `429883ff-99ce-495a-b755-f4d5805a2f57`, sidebar stamp
 `256f21587` read back in the browser.
 
+RLS confirmed from `pg_class` on prod: `golfin_mode_fees` is `rls_enabled=true`,
+`policy_count=0`, matching `game_point_actions` / `golfin_fake_players` /
+`content_rows` / `content_drafts`. No assertion in this task is now unverified.
+
 The §21 live E2E RAN, in the live admin, against prod: practice 10 → 15
 published (modes v2), a stale client asking to pay 10 got
 `{"status":"fee_changed","fee":15}` with the ledger unchanged, and the second tap
