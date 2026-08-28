@@ -1,8 +1,8 @@
 # STATUS — club_art_batches
 
-`IN_PROGRESS` (2026-08-22, Cowork/Architect runner).
+`COMPLETE` (2026-08-28, Cowork/Architect runner). All 19 brands generated and committed.
 
-**Coverage: 18 of 19 brands complete — 90 of 95 head designs.**
+**Coverage: 19 of 19 brands complete — 95 of 95 head designs.**
 (Verified against the repo 2026-08-28 by counting `S_Menu_*` per brand. Earlier revisions of this
 line drifted upward by one because the count was incremented rather than re-verified — recount from
 the filesystem, do not trust the running tally.)
@@ -59,7 +59,7 @@ shape from the first image"*, while the photograph, camera angle and framing sta
 first image. Otherwise Driver-Full and Driver-Portrait end up as two different clubs.
 
 ### Scope - DECIDED BY CESAR 2026-08-28: FORWARD ONLY
-TeePit (DONE 2026-08-28), VBOOOT (DONE 2026-08-28) and PUTT ACE use the new rule. The 16 brands committed
+TeePit (DONE 2026-08-28), VBOOOT (DONE 2026-08-28) and PUTT ACE (DONE 2026-08-28) use the new rule. The 16 brands committed
 before it stay as they are.
 
 The 9 that were pipeline-generated under the old rule - GOLFINIX, EAGLEZ, FOREFIT, PAR PERFECT,
@@ -219,7 +219,79 @@ still worked. The tab was unrecoverable. **Fix: `tabs_create_mcp`, then `tabs_cl
 tab.** Closing the group's last tab drops the group, so the next `tabs_context_mcp` needs
 `createIfEmpty: true` and returns a NEW tab id - re-read it before the next action.
 
-## Committed and verified clean (18 brands)
+## PUTT ACE - COMPLETE, 15 of 15 new sprites committed (2026-08-28)
+
+The last brand, and the only one with NO reference art at all. Everything below was designed from
+the identity-sheet row: *billiard-felt green body, white panels, white block "PUTT ACE" lettering,
+chalk-blue accent, black shaft; snooker-hall cool.*
+
+**Brand look as shipped (this is now the ART, the sheet was rewritten to match):**
+deep billiard-felt green — a dark, desaturated blue-green like snooker baize — in smooth SATIN
+PAINTED METAL; a crisp matte WHITE badge/panel outlined by one thin chalk-blue line; "PUTT ACE" in a
+clean geometric sans-serif printed exactly ONCE (dark green on the white panel, white on green
+where the panel is absent); black ferrule, matte black or chrome shaft, matte black grip.
+NOT lime (GOLFIN), NOT bright grass green (GREEN SWING / TeePit), NOT emerald (TIFTO), NOT neon.
+
+**Bootstrapping with no reference.** The putter PORTRAIT was generated first, from
+`tpl_portrait_putter.jpg` alone plus a long text description, with no second image. It came back
+correctly framed at 1664x2590 and became BOTH the shipped `S_Menu_Putter_PUTTACE.png` (bbox-width
+fit to 253) and the brand reference for the other 14 sprites. Per-type reference crops were then
+cut from each finished portrait raw into `outputs/pa_up/pa_ref_{driver,wood,iron,wedge,putter}.jpg`
+and used as the SECOND image, so each controls/full generation saw its own club type rather than a
+putter — that alone removed the mallet-bleed failure that hit TeePit and VBOOOT on wedge controls.
+
+**The inverted-wordmark question is settled for putter portraits.** `S_Menu_Putter_PUTTACE.png`
+reads "PUTT ACE" upside down. That is CORRECT and matches shipped `S_Menu_Putter_GOLFIN.png`, whose
+GOLFIN wordmark is inverted the same way — the camera looks at the crown from the far side. Do not
+"fix" it. Same for the mirrored sole wordmark on `Iron-PuttAce.png` and `S_Controls_Wedge_*`.
+
+### New failure modes found on this brand
+
+- **The GOLFIN controls templates carry GOLFIN's own marks, and a plain repaint keeps them.** The
+  first driver-controls attempt shipped the template's large moulded letter **G** on the sole, and
+  the iron/wedge templates carry "GOLFIN", a golf-ball icon and green inserts. Two in-chat
+  corrections failed to remove the G. **Fix: name the mark in the FIRST prompt** — *"the first image
+  has a large letter G moulded into its sole; that emblem must be gone completely, replaced by the
+  PUTT ACE badge"* — and give the wordmark a home (*"a crisp matte WHITE badge on the SOLE"*). This
+  also matches shipped `S_Controls_Driver_VBOOOT.png`, which puts the wordmark on the sole.
+- **"Billiard-felt green" makes Gemini draw actual FELT.** One driver-controls generation came back
+  as a fuzzy green fabric headcover, and the colour drifted bright and warm. **Always pair the
+  colour phrase with a material clause:** *"smooth SATIN PAINTED METAL with clean specular
+  highlights, absolutely no fabric, cloth, felt or fuzzy texture"*, plus *"the same dark desaturated
+  blue-green as the club in the SECOND image, no brighter than the reference"*.
+- **Gemini invents a SECOND head on iron portraits.** The first iron portrait had two stacked iron
+  heads from a single-iron template. One in-chat correction naming the defect ("there are TWO iron
+  heads... there must be exactly ONE") fixed it and kept everything else. Cheaper than a re-roll.
+- **"PUT ACE" (one T).** The first wood-controls generation dropped a T and set the wordmark
+  vertically. Re-rolled from scratch in the same chat with *"the wordmark must read exactly PUTT ACE
+  - two words, P U T T then A C E - set HORIZONTALLY, upright and level, not rotated"*. Correct on
+  the retry. Same class as the VBOOOT letter-count problem: **re-roll, do not correct**.
+- **Gemini's image service was degraded during this run** (2026-08-28 ~08:00-09:00 UTC): several
+  generations spun 90-180s, and two returned *"I seem to be encountering an error"*. A stalled
+  generation usually ends in that error — abandon it and re-send in a FRESH chat rather than
+  waiting past ~2 minutes.
+
+### Local fixes applied after generation
+
+- `pafix.degreen(path)` — new. Recolours leftover BRIGHT green accents (the GOLFIN lime alignment
+  marks that survive a repaint, and the grass-green grip/ferrule bleed from the Fyloe wedge
+  template) while keeping their shading. Chalk-blue `(176,196,214)` on controls; billiard green
+  `(34,74,80)` on the wedge full. Used on `S_Controls_Driver` and `Wedge-PuttAce`.
+- `pafix.largest(path)` — keeps only the largest connected alpha blob. Stripped a stray fragment
+  from the driver portrait and 17 specks from the iron controls.
+- `fliptext_dark.flip_dark(path, box)` — NEW MODULE, the dark-glyph twin of `fliptext.flip_wordmark`.
+  `fliptext` assumes glyphs BRIGHTER than the fill; PUTT ACE prints dark green on a white panel, so
+  the mask is inverted (`lum < glyph_thresh`). Used on `S_Controls_Wedge_PUTTACE.png` box
+  `(445,418,872,498)`, defaults 150/170 — the box measured 2nd-percentile 45 (glyph) vs median 244
+  (panel), a clean separation.
+- Wedge and putter FULLS inherited the template's purple grip/shaft (`WedgeA-Fyloe`,
+  `Putter-GolfinX`). Naming the purple in the first prompt fixed the wedge grip; the putter shaft
+  needed one in-chat correction (*"recolour the whole shaft to plain polished chrome silver"*).
+
+All 15 pass `qa.py`. Raws: `~/Downloads/golfin_club_gen/pa_*_{portrait,controls,full}_raw.jpg`
+plus `pa_putter_ref_raw.jpg`.
+
+## Committed and verified clean (19 brands)
 
 **EAGLEZ — DONE, 13 new sprites committed (2026-08-20).** Driver portrait + driver controls were
 already in the repo; generated Wood/Iron/Wedge/Putter portraits + controls and all five fulls
