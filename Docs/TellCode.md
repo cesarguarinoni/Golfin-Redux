@@ -7,8 +7,10 @@
 
 ## ▶ CURRENT STATE — update this block at every session boundary
 
-- **LIVE ADMIN: `admin.golfin.world` is at `e309acf20`** (Cloudflare deployment
-  `8272dd2f-7bca-49fc-bf68-4d2d7a3e0a60`, 2026-08-28T05:11Z). Updated 2026-08-28 (Claude Code).
+- **LIVE ADMIN: `admin.golfin.world` is at `41076c6a3`** (Cloudflare deployment
+  `dc5097b7-b57b-40da-ac8c-baa181381dd5`, 2026-08-28T05:2xZ). ⚠️ Deploying was NOT enough: the row
+  editor rendered art fields only when the STORED row already had the key, so no seeded row showed
+  `portraitUrl` and art-by-URL was unreachable from the panel — see PIPELINE_HARDENING §2b. Updated 2026-08-28 (Claude Code).
   It had been stuck at the 2026-08-27T07:47Z deploy with **four** dashboard commits local-only —
   `1f3450c53` (content_two_way row-editor/panel/i18n), `15f2553f1` (catalog-art upload UI),
   `c15998c30` (WebP-only), `541864b38` (URL-only badge). The architect brief named three; the

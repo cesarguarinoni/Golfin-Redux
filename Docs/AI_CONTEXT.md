@@ -133,9 +133,20 @@
 
 ## ✅ RECENTLY LANDED
 
-> **THE LIVE ADMIN WAS FOUR COMMITS BEHIND, AND NOTHING COULD HAVE TOLD US. Fixed 2026-08-28 —
-> `admin.golfin.world` is now at `e309acf20`** (Cloudflare deployment
-> `8272dd2f-7bca-49fc-bf68-4d2d7a3e0a60`).
+> **THE LIVE ADMIN WAS FOUR COMMITS BEHIND — AND DEPLOYING THEM STILL DID NOT MAKE THE FEATURE
+> USABLE. Fixed 2026-08-28 — `admin.golfin.world` is at `41076c6a3`** (Cloudflare deployment
+> `dc5097b7-b57b-40da-ac8c-baa181381dd5`).
+>
+> **The second half is the bigger lesson.** After the deploy Cesar said *"I don't see any URL fields
+> in the admin"* — and he was right. The row editor builds its fields from a hardcoded per-catalog
+> column list plus the keys the STORED row already carries. No seeded row has `portraitUrl`, so the
+> field never rendered, the "Upload art" button beside it never rendered, and there was no way to
+> create the column from the UI. `content_art_urls` shipped, cleared three gates, was approved and
+> was archived to `Completed/` **while being unreachable by an operator**. Its end-to-end passed
+> only because the fixture was put in the bucket by hand and the URL written straight into the data.
+> The acceptance list asked whether the client RESOLVED a URL; it never asked whether a human could
+> SET one. Now `PIPELINE_HARDENING` §2b — the real-entry rule, which existed for players since
+> iter-15, extended to operators.
 >
 > `content_art_urls` and `content_art_bundling` both closed as DONE with their dashboard halves
 > never deployed. Cesar found it by looking for the upload button and not seeing it. The last

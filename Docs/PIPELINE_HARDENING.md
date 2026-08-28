@@ -13,6 +13,25 @@
 - Any feature with a player entry point MUST be exercised through the **real UI widget's `onClick`/handler**. Driving a **synthetic/test-only button** that the player never sees = **automatic FAIL**.
 - If the real entry isn't wired, the bot cannot reach the feature → the gate fails by construction. (This is what hid the iter-15 entry-point bug.)
 
+**2b. The same rule for OPERATOR-facing features (added 2026-08-28).** A feature whose entry point
+is the admin dashboard must be exercised through the **real admin control**, not by writing the
+value the control would have written. `content_art_urls` shipped, cleared three gates, was approved
+and was archived — and no operator could use it: the row editor renders fields from a hardcoded
+column list plus the keys the STORED row already has, and no seeded row had `portraitUrl`, so the
+field never appeared and the "Upload art" button beside it never appeared either. There was no way
+to create the column from the UI at all.
+
+Every gate re-ran the acceptance list faithfully. **The list asked whether the client RESOLVED a
+URL; it never asked whether a human could SET one.** The end-to-end passed because the fixture was
+put in the bucket by hand and the URL written straight into the data — the exact "synthetic entry
+point" §2 forbids for players, unnoticed because §2 was written about players.
+
+So: for any admin-facing change, one acceptance item must be **"an operator, starting from the live
+panel with no prior state, can reach and use this"** — and it is READ, not OBSERVED, unless someone
+has actually done it in a browser. Reviewer roles have no browser and cannot authenticate, so this
+item is structurally Cesar's; naming it as his is the point, because an item nobody owns is an item
+nobody runs.
+
 ## 3. Verify the math, not the pixels (visual-fidelity gate)
 - For features producing world→screen visuals (markers, projections, camera framing), the **pass/fail gate is a capture-time invariant dump** (JSON of projected coords + world refs) with **deterministic assertions**, NOT a human-style judgement of a video.
 - The recorded video is an **artifact for the human**, not the gate.
