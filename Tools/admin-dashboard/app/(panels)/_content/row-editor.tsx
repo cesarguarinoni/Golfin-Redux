@@ -2,7 +2,16 @@
 
 import { useState } from "react";
 import { useT } from "@/components/I18nProvider";
-import { ID_COLUMN, isArtUrlColumn, isValidNewRowId, ROW_ID_MAX, spriteFolder, urlOnlyArtColumns } from "@/lib/contentView";
+import {
+  ART_URL_COLUMNS,
+  ID_COLUMN,
+  isArtUrlColumn,
+  isValidNewRowId,
+  ROW_ID_MAX,
+  SPRITE_FIELD_FOLDER,
+  spriteFolder,
+  urlOnlyArtColumns,
+} from "@/lib/contentView";
 import type { ContentStoredRow } from "@/lib/types";
 import { UrlOnlyBadge } from "./badges";
 import { saveRow } from "./client";
@@ -159,11 +168,34 @@ export function RowEditor({
     }
   }
 
+  // ⚠️ ART COLUMNS ARE FORCED IN, and that is the whole reason art-by-URL was
+  // unusable from this panel.
+  //
+  // The field list was `columns` (a hardcoded per-catalog list that names none of
+  // the art columns) plus whatever keys the STORED row happens to carry. Every row
+  // seeded before `content_art_urls` has no `portraitUrl` key — so no field
+  // rendered, the "Upload art" button beside it never appeared, and there was no
+  // way to CREATE the column from the UI at all. The feature shipped, was
+  // approved, and could not be reached: its end-to-end only passed because the
+  // fixture object was put in the bucket by hand and the URL set directly in the
+  // data. Reported by Cesar 2026-08-28: "I don't see any URL fields in the admin."
+  //
+  // Derived from the two maps that already define what art a catalog has, rather
+  // than a third hand-kept list that could drift from them. Editor only — the row
+  // LIST keeps its narrow `columns`, since five more columns would make the table
+  // unreadable for a benefit the editor already provides.
+  const artColumns = [
+    ...Object.keys(SPRITE_FIELD_FOLDER[catalog] ?? {}),
+    ...(ART_URL_COLUMNS[catalog] ?? []),
+  ];
+
   // The id column is written from the row id server-side, so it is never an
   // editable field — showing one would be showing a value that gets overwritten.
-  const ordered = [...columns, ...Object.keys(draft).filter((c) => !columns.includes(c))].filter(
-    (column) => column !== idColumn && !hiddenColumns?.includes(column)
-  );
+  const ordered = [
+    ...columns,
+    ...artColumns.filter((c) => !columns.includes(c)),
+    ...Object.keys(draft).filter((c) => !columns.includes(c) && !artColumns.includes(c)),
+  ].filter((column) => column !== idColumn && !hiddenColumns?.includes(column));
 
   return (
     <div className="fixed inset-0 z-40" role="dialog" aria-modal="true">
