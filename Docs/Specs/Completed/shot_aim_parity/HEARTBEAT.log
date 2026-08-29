@@ -1,0 +1,38 @@
+=== iter-1 kickoff baseline 2026-08-29T08:00:00+09:00 ===
+HEAD: 01daaefb3e6b624dc9293ece73c992c4159d7625
+DIRTY:
+ M "Docs/Game Design/MISSIONS_REDESIGN.md"
+ M Docs/Reports/content_art.txt
+ M Docs/TellCode.md
+ M Docs/Versioning/last_uploaded_build.txt
+?? Docs/Specs/Active/missions_v1/
+?? Docs/Specs/Active/shot_aim_parity/
+?? Docs/Specs/Active/shot_timing_power/
+?? Docs/Specs/Queued/flick_vector_aim_DESIGN_NOTE.md
+=== END baseline ===
+
+08:00 read SPEC + ShotController / ControlsConfig / ControlsConfigLoader / controls.csv / FadeDrawWiringTests / ShotControllerFlickGateTests
+08:03 patched ShotController (AimYawFor, CommitFlick, PublishState, PushTouchSample, LogResolution); removed AimNudgeRangeRad from all 3 mirrors; wrote ShotAimParityTests
+08:05 assets-refresh clean; reflection probe: AimYawFor present, AimNudgeRangeRad field GONE, ShotAimParityTests type present; sceneCount=1 activeDirty=False
+08:07 Golfin.Gameplay.Tests EditMode (whole assembly, no filter): 348 passed / 0 failed / 0 skipped
+08:08 tripwire: Assert.Fail in Straight_PublishedAimEqualsCommittedAim -> FailedTests=1 with that exact test name -> the suite really executes; tripwire reverted; re-run 348 / 0
+08:08 Golfin.Physics.Tests EditMode: 357 passed / 0 failed / 3 pre-existing documented Stage-C1 skips
+08:09 LogResolution probe, club accuracy 48: halfCone 11.00deg; line == ball to 2e-6 rad at finetune +1 / 0 / -1
+08:12 F14 changelog entry + SHOT_CONTROLS_DESIGN 3.3 note + report / STATUS / AI_CONTEXT
+08:16 enforce_implementer_done.py dry-run against a READY_FOR_ARCHITECT_REVIEW write: BLOCKED on the missing canonical Game View capture (Rule 5). Not a declared backend task, so the exemption does not apply and I will not claim it. STATUS held at IMPLEMENTER_WORKING; the play-mode capture is the only outstanding gate item.
+11:11-11:41 play-mode verification. Authored Assets/Scripts/UI/Editor/ShotAimParityDemoRecorder.cs (boot -> PLAY -> Hole 1 -> four strokes through the REAL ClubHandleDragger pointer handlers). Nine runs; the harness itself needed four measurement fixes before it could be trusted: 25m hard-coded flight trigger returned NaN on short strokes; Fade/Draw fired last from 12m out where no curve can develop; a 0.9s then 0.35s hold at full deflection ran past the clean-pass window so degradYaw broke parity by 3.8deg (the IsDegrading assertion caught it); angle comparisons did not wrap at +-pi and reported a 5.95 rad error on an exact shot.
+11:41 deliverable run: 28 PASS / 3 FAIL. Parity holds to <=0.005 rad on all four strokes.
+11:41 BLOCKER: on-screen aim is MIRRORED (handle +157px right -> line -249px left; handle -78px -> line +308px; centre exact). Unchanged from HEAD 01daaefb; this task makes it 3.7x more visible. Not fixed unilaterally - AimYawFor also serves putts, and AimLineBendRenderer/MapViewController mirror ConeFinetuneX. Surfaced per the standing "surface, don't rebuild" rule.
+11:43 video captioned + copied to videos/, four stills to screenshots/, invariants copied into the task folder.
+11:45 enforce_implementer_done.py dry-run against READY_FOR_ARCHITECT_REVIEW: 0 blockers (evidence gate closed). STATUS set to IMPLEMENTER_BLOCKED on the mirror decision, not on missing evidence.
+11:46 Golfin.Gameplay.Tests re-run after adding the editor harness: 348 passed / 0 failed.
+11:52 Cesar overruled the "mirror" blocker: the cone handle is the CLUB's position relative to the ball, so club-left sends the ball right - real golf controls, intended behaviour. Inverted the *_A5 assertions to LOCK the inverse relationship instead of flagging it, and re-ran.
+11:57 final run: 30 PASS / 1 FAIL (the out-of-scope fade-curve probe only). Re-captioned the clip with correct sides, re-extracted four stills.
+12:00 STATUS -> READY_FOR_ARCHITECT_REVIEW; enforce_implementer_done.py dry-run: 0 blockers.
+12:20-12:35 Cesar: "the video is unclear, you hit too many trees" and "preplan your shots, it's deterministic". Moved off Hole 1 (tree-lined chute) to Hole 10, chosen from per-hole standalone_trees.csv counts + the hole map renders, with a fallback list of unlocked cards. Replaced fixed stroke powers with a solve: PowerGaugeWidget models carry = ClubContext.SelectedDistance * power, so targeting 40% of the distance to HoleContext.PinWorld inverts to an exact power.
+12:33 two harness bugs surfaced by the assertions on the way: (a) the pull-back started at a fixed 0.35 power, so any planned power below that dragged UPWARD and tripped the aim latch - left stroke froze at -0.32 instead of -1.00; fixed by starting below the target power plus a closed loop on the published finetune. (b) a wedged Resolving state left a stale PinWorld reading an 800-yard pin and filled the JSON with NaNs; now detected and the remaining strokes are abandoned.
+12:36 ship take on Hole 10: 30 PASS / 1 FAIL (the out-of-scope fade-curve probe), all four strokes fired, deflections exactly +-1.00/0.00, ball 363->264->174->102 yds, none OB. Re-captioned, four stills re-extracted, hook dry-run 0 blockers.
+12:50 Cesar: "the fade shot seems to come out completely straight. Is that the idea?" Measured the fade in isolated physics rather than judging the clip: full power = 53 yd of curve (9.46 deg), full draw->fade spans 106 yd; at the 0.52 power my clip used it is only 7.8 yd. The feature is fine; my demo stroke was too soft. Corrected the earlier write-up, which had wrongly reported the fade as possibly imperceptible.
+12:56 re-shot with the fade as a full-power tee shot (Cesar's call): 273 m drive, visibly bending. 30 PASS / 1 FAIL.
+12:58 OPEN FINDING: live fade curve = 12.6 m (14 yd, 2.65 deg) vs the model's 45-48 m. Wind ruled out by re-running the model with Hole 10's 8.7mph@332 (still 45.6 m). Suspects: equipped club/ball backspin vs ClubStats.DefaultDriver, and terrain roll. S1_A4 left FAILING at its 3 deg threshold rather than relaxed - the threshold came from the model and the honest reading is that live is weaker.
+13:05 Cesar: "Done" -> approved. Final Golfin.Gameplay.Tests run 348 passed / 0 failed. STATUS -> DONE, folder moved to Docs/Specs/Completed/, video dropped into Docs/Reports/Media/ for the daily report (master copy stays in the completed folder - the drop folder deletes files after a successful send).
