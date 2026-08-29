@@ -1,0 +1,62 @@
+# daily_mission_weights — the DailyWeights sheet of GOLFIN_Missions_Redesign.xlsx.
+#
+# The server's daily generator (services/daily_mission.py) draws each component
+# group in turn against these weights, seeded by the UTC date, then scores the
+# result with mission_goal_weights and rerolls until it lands in the day's band.
+# The client carries the same table so it can render an OFFLINE daily from the
+# same seed — it never pays locally; the claim always goes to the server.
+#
+# component=rule rows are PARAMETERS, not draws: `pickWeight` is the value.
+#   noRepeatHole / noRepeatPrimaryGoal / noRepeatLoadout  — days of freshness history
+#   noRepeatDoubleRp                                      — days between DOUBLE_RP dailies
+#   rerollLimit                                           — attempts before the secondary goal is dropped
+#
+# SPEC missions_v1 §A5 overrides the sheet on three values and they are set here:
+# noRepeatHole is 5 days (sheet said 3), the Pro band is Fri-Sun only, and the
+# alternate-pin modifier is ALT_PIN (the sheet called it MIRROR_PIN). ALT_PIN is
+# only drawable on a hole whose start-area row carries pin_count >= 2; until the
+# Phase B bake fills pin_count its effective weight is 0.
+id,component,optionId,pickWeight,note
+band_amateur,band,AMATEUR,60,default band; difficultyScore 6-9
+band_pro,band,PRO,40,Fri/Sat/Sun only; difficultyScore 10-13
+startkind_tee,startKind,tee,55,
+startkind_short,startKind,short,45,cheap on stamina; fast session
+loadout_sup_full,loadout,SUP_FULL,30,daily is always SUPPLIED so the board stays fair
+loadout_sup_full_rare,loadout,SUP_FULL_RARE,10,showcase rarer gear
+loadout_sup_no_driver,loadout,SUP_NO_DRIVER,15,
+loadout_sup_irons,loadout,SUP_IRONS,15,
+loadout_sup_wedge_putter,loadout,SUP_WEDGE_PUTTER,10,short starts only
+loadout_sup_driver_putter,loadout,SUP_DRIVER_PUTTER,10,tee starts only
+loadout_sup_one_iron,loadout,SUP_ONE_IRON,5,
+loadout_sup_wood_only,loadout,SUP_WOOD_ONLY,5,tee only
+wind_calm,wind,CALM,10,
+wind_tail_l,wind,TAIL_L,10,
+wind_cross_l,wind,CROSS_L,20,
+wind_head_l,wind,HEAD_L,20,
+wind_tail_s,wind,TAIL_S,10,
+wind_cross_s,wind,CROSS_S,12,
+wind_head_s,wind,HEAD_S,10,
+wind_quarter_s,wind,QUARTER_S,5,
+wind_gusty,wind,GUSTY,3,Pro band only
+primary_score,primaryGoal,SCORE,40,
+primary_shots,primaryGoal,SHOTS,15,short starts
+primary_near_pin,primaryGoal,NEAR_PIN,10,short/fairway starts
+primary_gir,primaryGoal,GIR,10,tee starts
+primary_dist,primaryGoal,DIST,10,"tee starts, Driver in the bag"
+primary_up_down,primaryGoal,UP_DOWN,10,sand/rough starts
+primary_putts,primaryGoal,PUTTS,5,
+secondary_none,secondaryGoal,NONE,35,
+secondary_no_hazard,secondaryGoal,NO_HAZARD,25,
+secondary_land_tee_fairway,secondaryGoal,LAND_TEE:Fairway,15,tee starts
+secondary_avoid_bunker,secondaryGoal,AVOID:Bunker,10,
+secondary_putts_2,secondaryGoal,PUTTS:2,10,
+secondary_avoid_club,secondaryGoal,AVOID_CLUB,5,OWN loadouts only — never drawn in the daily (v1 is always supplied)
+modifier_none,modifier,NONE,70,
+modifier_low_stamina,modifier,LOW_STAMINA_START,10,character starts the mission at 50% stamina
+modifier_alt_pin,modifier,ALT_PIN,10,alternate pin; needs pin_count >= 2 on the hole
+modifier_double_rp,modifier,DOUBLE_RP,10,reward x2; at most one per 7 days
+rule_no_repeat_hole,rule,noRepeatHole,5,days of hole history the draw avoids
+rule_no_repeat_primary,rule,noRepeatPrimaryGoal,2,days
+rule_no_repeat_loadout,rule,noRepeatLoadout,2,days
+rule_no_repeat_double_rp,rule,noRepeatDoubleRp,7,days between DOUBLE_RP dailies
+rule_reroll_limit,rule,rerollLimit,20,rerolls before the secondary goal is dropped

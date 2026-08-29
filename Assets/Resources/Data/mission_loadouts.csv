@@ -1,0 +1,24 @@
+# mission_loadouts — the Loadouts sheet of GOLFIN_Missions_Redesign.xlsx.
+# kind=supplied  -> `clubs` is the bag the mission HANDS the player: club TYPES,
+#                   each resolved at `rarity` against the first matching Clubs.csv row.
+#                   Supplied clubs are never owned, so they never wear.
+# kind=own       -> the player's equipped bag. `clubs` is `*` (no mask) or
+#                   `ban:Type,Type` (those types are removed for the session).
+# allowedStartKinds: any | tee | short | green — a mission whose start area's kind
+#                   is not admitted here is refused by the publish validator.
+# weight is the difficulty contribution. label is the DESIGNER label; the
+# player-facing line is the templated key `loadout.<id>`.
+id,kind,clubs,rarity,weight,allowedStartKinds,label
+OWN,own,*,,0,any,Player's current bag
+OWN_NO_WOODS,own,"ban:Driver,Wood",,1,tee,"Own bag, no Driver/Wood"
+OWN_NO_IRONS,own,"ban:Iron7,Iron9",,2,any,"Own bag, no irons"
+OWN_NO_WEDGES,own,"ban:AW,PW,SW",,2,any,"Own bag, no wedges"
+SUP_FULL,supplied,"Driver,Wood,Iron7,Iron9,AW,PW,Putter",Common,0,any,Supplied full bag (Common)
+SUP_FULL_RARE,supplied,"Driver,Wood,Iron7,Iron9,AW,PW,Putter",Rare,-1,any,Supplied full bag (Rare)
+SUP_NO_DRIVER,supplied,"Wood,Iron7,Iron9,AW,PW,Putter",Common,1,tee,"Supplied, no Driver"
+SUP_IRONS,supplied,"Iron7,Iron9,Putter",Common,2,any,Supplied irons + putter only
+SUP_WEDGE_PUTTER,supplied,"AW,PW,Putter",Common,1,short,Supplied wedges + putter (short game)
+SUP_PUTTER,supplied,Putter,Common,0,green,Supplied putter only
+SUP_DRIVER_PUTTER,supplied,"Driver,Putter",Common,3,tee,Supplied Driver + Putter
+SUP_ONE_IRON,supplied,"Iron7,Putter",Common,4,any,Supplied 7-iron + putter
+SUP_WOOD_ONLY,supplied,"Wood,Putter",Common,3,tee,Supplied Wood + Putter

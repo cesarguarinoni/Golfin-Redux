@@ -508,3 +508,142 @@ CHAR_NAME_MIKE,Mike,マイク
 CHAR_LASTNAME_MIKE,Millar,ミラー
 CHAR_NAME_ROSHANA,Roshana,ロシャーナ
 CHAR_LASTNAME_ROSHANA,Smith,スミス
+# --- missions_v1: screen chrome -------------------------------------------
+MISSIONS_TITLE,MISSIONS,ミッション
+MISSION_COURSE_LOMOND,Lomond Country Club,ロモンドカントリークラブ
+MISSION_TIER_BEGINNER,BEGINNER,ビギナー
+MISSION_TIER_AMATEUR,AMATEUR,アマチュア
+MISSION_TIER_PRO,PRO,プロ
+MISSION_TIER_LEGEND,LEGEND,レジェンド
+MISSION_TIER_LOCKED,Clear {0} of {1} to unlock,{1}個中{0}個クリアで解放
+MISSION_PILL_NEXT,NEXT MISSION,次のミッション
+MISSION_PILL_REPLAY,REPLAY MISSION,再挑戦
+MISSION_PILL_LOCKED,LOCKED,ロック中
+MISSION_PILL_DAILY,DAILY MISSION,デイリーミッション
+MISSION_PLAY,PLAY,プレイ
+MISSION_REPLAY,REPLAY,リプレイ
+MISSION_GOALS,GOALS,目標
+MISSION_WIND,Wind,風
+MISSION_CLUBS,Clubs,クラブ
+MISSION_START,Start,スタート地点
+MISSION_FIRST_CLEAR,First clear,初回クリア
+MISSION_REPLAY_REWARD,Replay,再挑戦報酬
+MISSION_DAILY_RESETS,Resets in {0},リセットまで {0}
+MISSION_DAILY_STREAK,{0} day streak,{0}日連続
+MISSION_DAILY_CLEARED,CLEARED,クリア済み
+MISSION_TIER_BONUS,Tier bonus,ティアボーナス
+MISSION_WARN_NO_CLUBS,Your bag has no club this mission allows.,このミッションで使えるクラブがバッグにありません。
+MISSION_WARN_UNAVAILABLE,This mission is not available yet.,このミッションはまだプレイできません。
+MISSION_RESULT_CLEARED,MISSION CLEARED,ミッションクリア
+MISSION_RESULT_FAILED,MISSION FAILED,ミッション失敗
+# --- missions_v1: goal line templates ({0} = the goal's param) ------------
+GOAL_SCORE_M2,Score eagle or better,イーグル以上であがる
+GOAL_SCORE_M1,Score birdie or better,バーディー以上であがる
+GOAL_SCORE_0,Score par or better,パー以上であがる
+GOAL_SCORE_1,Score bogey or better,ボギー以上であがる
+GOAL_SCORE_2,Score double bogey or better,ダブルボギー以上であがる
+GOAL_SHOTS,Hole out in {0} strokes or fewer,{0}打以内でホールアウト
+GOAL_PUTTS,Take {0} putts or fewer,{0}パット以内であがる
+GOAL_NO_HAZARD,No water and no out of bounds,池・OBなし
+GOAL_AVOID,Never land in the {0},{0}に入れない
+GOAL_LAND_TEE,Land the tee shot on the {0},ティーショットを{0}に乗せる
+GOAL_LAND_ANY,Land a shot on the {0},いずれかのショットを{0}に乗せる
+GOAL_GIR,Hit the green in regulation,パーオンする
+GOAL_DIST,Hit one shot {0} yd or further,1打で{0}ヤード以上飛ばす
+GOAL_CARRY,Carry one shot {0} yd or further,1打で{0}ヤード以上キャリーさせる
+GOAL_NEAR_PIN,Reach the green within {0} yd of the pin,グリーンオン時にピンまで{0}ヤード以内につける
+GOAL_USE_CLUB,Tee off with the {0},ティーショットは{0}で打つ
+GOAL_AVOID_CLUB,Never use the {0},{0}を使わない
+GOAL_UP_DOWN,Get up and down in two,2打以内で寄せてワンパット
+# --- missions_v1: surface names (goal params) -----------------------------
+SURFACE_FAIRWAY,fairway,フェアウェイ
+SURFACE_GREEN,green,グリーン
+SURFACE_ROUGH,rough,ラフ
+SURFACE_S_ROUGH,semi-rough,セミラフ
+SURFACE_ROUGH_AND_SEMI,rough or semi-rough,ラフ・セミラフ
+SURFACE_BUNKER,bunker,バンカー
+SURFACE_WATER,water,池
+# --- missions_v1: club-type names (goal params) ---------------------------
+CLUBTYPE_DRIVER,Driver,ドライバー
+CLUBTYPE_WOOD,Wood,ウッド
+CLUBTYPE_IRON7,7-iron,7番アイアン
+CLUBTYPE_IRON9,9-iron,9番アイアン
+CLUBTYPE_AW,Approach wedge,アプローチウェッジ
+CLUBTYPE_PW,Pitching wedge,ピッチングウェッジ
+CLUBTYPE_SW,Sand wedge,サンドウェッジ
+CLUBTYPE_PUTTER,Putter,パター
+# --- missions_v1: wind preset lines (wind.<id>) ---------------------------
+WIND_CALM,Calm,無風
+WIND_TAIL_L,Light tailwind,弱い追い風
+WIND_CROSS_L,Light crosswind,弱い横風
+WIND_HEAD_L,Light headwind,弱い向かい風
+WIND_TAIL_S,Strong tailwind,強い追い風
+WIND_CROSS_S,Strong crosswind,強い横風
+WIND_HEAD_S,Strong headwind,強い向かい風
+WIND_QUARTER_S,Strong quartering headwind,強い斜め向かい風
+WIND_GUSTY,Gusty — changes every shot,突風 — 1打ごとに変化
+# --- missions_v1: loadout lines (loadout.<id>) ----------------------------
+LOADOUT_OWN,Your own bag,自分のバッグ
+LOADOUT_OWN_NO_WOODS,Your bag — no Driver or Wood,自分のバッグ — ドライバー・ウッド禁止
+LOADOUT_OWN_NO_IRONS,Your bag — no irons,自分のバッグ — アイアン禁止
+LOADOUT_OWN_NO_WEDGES,Your bag — no wedges,自分のバッグ — ウェッジ禁止
+LOADOUT_SUP_FULL,Supplied: full bag,支給: フルセット
+LOADOUT_SUP_FULL_RARE,Supplied: full bag (Rare),支給: フルセット（レア）
+LOADOUT_SUP_NO_DRIVER,"Supplied: full bag, no Driver",支給: ドライバーなしのフルセット
+LOADOUT_SUP_IRONS,Supplied: irons and putter,支給: アイアンとパター
+LOADOUT_SUP_WEDGE_PUTTER,Supplied: wedges and putter,支給: ウェッジとパター
+LOADOUT_SUP_PUTTER,Supplied: putter only,支給: パターのみ
+LOADOUT_SUP_DRIVER_PUTTER,Supplied: Driver and putter,支給: ドライバーとパター
+LOADOUT_SUP_ONE_IRON,Supplied: 7-iron and putter,支給: 7番アイアンとパター
+LOADOUT_SUP_WOOD_ONLY,Supplied: Wood and putter,支給: ウッドとパター
+# --- missions_v1: start-area lines ----------------------------------------
+START_AREA_GREEN,On the green,グリーン上
+START_AREA_FRINGE,Fringe,カラー
+START_AREA_FAIRWAY,Fairway approach,フェアウェイからのアプローチ
+START_AREA_ROUGH,Rough,ラフ
+START_AREA_SAND,Greenside bunker,グリーンサイドバンカー
+START_AREA_TEE_LADIES,Ladies tee,レディースティー
+START_AREA_TEE_FRONT,Front tee,フロントティー
+START_AREA_TEE_REGULAR,Regular tee,レギュラーティー
+START_AREA_TEE_BACK,Back tee,バックティー
+# --- missions_v1: the 40 campaign mission names ---------------------------
+MISSION_NAME_B_FIRST_PUTT,First Putt,はじめてのパット
+MISSION_NAME_B_SHORT_HOLE,The Short Hole,ショートホール
+MISSION_NAME_B_CHIP_AND_RUN,Chip and Run,チップ＆ラン
+MISSION_NAME_B_FAIRWAY_FINDER,Fairway Finder,フェアウェイキープ
+MISSION_NAME_B_FIRST_150,The First 150,初めての150ヤード
+MISSION_NAME_B_BOGEY_GOLF,Bogey Golf,ボギーゴルフ
+MISSION_NAME_B_SAND_ESCAPE,Sand Escape,バンカー脱出
+MISSION_NAME_B_KEEP_IT_DRY,Keep It Dry,池ポチャ禁止
+MISSION_NAME_B_GRADUATION,Graduation Day,卒業試験
+MISSION_NAME_B_IRON_MAN,Iron Man,アイアンだけで
+MISSION_NAME_A_YOUR_OWN_CLUBS,Your Own Clubs,マイクラブで
+MISSION_NAME_A_PAR_3_PAR,"Par Three, Par",ショートでパー
+MISSION_NAME_A_ROUGH_RECOVERY,Out of the Rough,ラフからのリカバリー
+MISSION_NAME_A_TWO_PUTT,Two-Putt Territory,2パット圏内
+MISSION_NAME_A_APPROACH,The Approach,アプローチ勝負
+MISSION_NAME_A_NO_WOODS,Leave the Woods,ウッド封印
+MISSION_NAME_A_DRIVER_PUTTER,Driver & Putter,ドライバーとパターだけ
+MISSION_NAME_A_CLEAN_CARD,Clean Card,ノーミスで
+MISSION_NAME_A_BIG_DRIVE,Big Drive,ビッグドライブ
+MISSION_NAME_A_AMATEUR_FINAL,Amateur Open,アマチュアオープン
+MISSION_NAME_P_ONE_IRON,One Iron,7番一本勝負
+MISSION_NAME_P_STICK_IT,Stick It,ピンそば
+MISSION_NAME_P_INTO_THE_WIND,Into the Wind,向かい風
+MISSION_NAME_P_NO_IRONS,No Irons Allowed,アイアン禁止
+MISSION_NAME_P_BIRDIE_HUNT,Birdie Hunt,バーディー狙い
+MISSION_NAME_P_PRECISION,Precision Round,精密ラウンド
+MISSION_NAME_P_GUSTS,Reading the Gusts,突風を読め
+MISSION_NAME_P_CROSSWIND_PAR3,Crosswind Par 3,横風のパー3
+MISSION_NAME_P_LONG_PAR5,The Long Eighth,8番ロング攻略
+MISSION_NAME_P_PRO_FINAL,Pro Championship,プロ選手権
+MISSION_NAME_L_TOURNEY_PAR,"Back Tee, Par",バックティーでパー
+MISSION_NAME_L_WOOD_ONLY,Wood & Putter,ウッドとパターのみ
+MISSION_NAME_L_BIRDIE_PAR3,Birdie on Eleven,11番でバーディー
+MISSION_NAME_L_NO_WEDGES,Hands Off the Wedges,ウェッジ禁止
+MISSION_NAME_L_DRIVER_PUTTER_PAR,"Two Clubs, Par",2本でパー
+MISSION_NAME_L_BIRDIE_GUSTS,Birdie in the Gusts,突風の中のバーディー
+MISSION_NAME_L_SAND_UP_DOWN,Sand Save,サンドセーブ
+MISSION_NAME_L_EAGLE_FIVE,Eagle on Eighteen,18番でイーグル
+MISSION_NAME_L_PERFECT_ROUND,Perfect Hole,パーフェクトホール
+MISSION_NAME_L_LEGEND_FINAL,Legend Final,レジェンドファイナル

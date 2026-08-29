@@ -69,6 +69,24 @@ export function RewardsPanel() {
         </p>
       </div>
 
+      {/* Cross-surface drift (missions_v1 §A6). This is the only screen that can
+          see both sides of these two comparisons: a mission paying more than the
+          cap here is a mission a player clears and is paid NOTHING for, and it
+          is reachable by LOWERING the cap long after the mission was published,
+          which no publish validator can catch. */}
+      {(data?.missionDrift ?? []).length > 0 && (
+        <div className="mb-4 space-y-1.5">
+          {(data?.missionDrift ?? []).map((drift) => (
+            <p
+              key={drift.action}
+              className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-[11px] leading-relaxed text-red-200"
+            >
+              <code className="font-semibold text-red-300">{drift.action}</code> — {drift.message}
+            </p>
+          ))}
+        </div>
+      )}
+
       {notice && (
         <p className="mb-4 rounded-md border border-accent-500/40 bg-accent-500/10 px-3 py-2 text-xs text-accent-300">
           {notice}

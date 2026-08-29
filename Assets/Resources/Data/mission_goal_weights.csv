@@ -1,0 +1,54 @@
+# mission_goal_weights — the GoalWeights sheet of GOLFIN_Missions_Redesign.xlsx,
+# expanded from its prose into rows a machine can score.
+#
+# difficultyScore(mission) = HOLE_BASE(par)
+#                          + startArea.weight + wind.weight + loadout.weight
+#                          + sum(goal weight for each of goal1..goal3)
+# The admin RECOMPUTES it on publish; the value stored on a missions row is display.
+#
+# match:
+#   exact    param equals the mission's goal param (string compare)
+#   lte      the FIRST row of that goal, in file order, whose param >= the mission's
+#            numeric param wins
+#   default  the fallback for that goal when no exact/lte row matched
+#   any      the goal takes this weight regardless of its param
+#   as_score the goal is scored through the SCORE ladder (SHOTS from a tee start
+#            is scored as SCORE(strokes - par))
+# `scope` narrows a row to a start-area kind (tee | short); blank = any kind.
+id,goal,match,scope,param,weight,note
+score_dbl,SCORE,exact,,2,0,double bogey
+score_bogey,SCORE,exact,,1,1,bogey
+score_par,SCORE,exact,,0,2,par
+score_birdie,SCORE,exact,,-1,4,birdie
+score_eagle,SCORE,exact,,-2,6,eagle
+shots_tee,SHOTS,as_score,tee,,0,scored as SCORE(n - par) from a tee start
+shots_short_1,SHOTS,exact,short,1,3,
+shots_short_2,SHOTS,exact,short,2,1,
+shots_short_more,SHOTS,default,short,,0,3 or more strokes from a short start
+putts_3,PUTTS,exact,,3,0,
+putts_2,PUTTS,exact,,2,1,
+putts_1,PUTTS,exact,,1,3,
+no_hazard,NO_HAZARD,any,,,1,
+avoid_bunker,AVOID,exact,,Bunker,1,
+avoid_water,AVOID,exact,,Water,1,
+avoid_rough,AVOID,exact,,Rough,2,
+avoid_semi_rough,AVOID,exact,,S.Rough,3,
+avoid_rough_and_semi,AVOID,exact,,Rough&Semi,4,
+land_tee_fairway,LAND_TEE,exact,,Fairway,1,
+land_tee_green,LAND_TEE,exact,,Green,2,
+land_any,LAND_ANY,any,,,1,
+gir,GIR,any,,,3,
+dist_150,DIST,lte,,150,0,
+dist_200,DIST,lte,,200,1,
+dist_more,DIST,default,,,2,
+carry_180,CARRY,lte,,180,1,
+carry_more,CARRY,default,,,3,
+near_pin_5,NEAR_PIN,lte,,5,3,
+near_pin_10,NEAR_PIN,lte,,10,2,
+near_pin_more,NEAR_PIN,default,,,1,
+use_club,USE_CLUB,any,,,0,
+avoid_club,AVOID_CLUB,any,,,1,
+up_down,UP_DOWN,any,,,2,
+hole_par3,HOLE_BASE,exact,,3,0,
+hole_par4,HOLE_BASE,exact,,4,1,
+hole_par5,HOLE_BASE,exact,,5,2,

@@ -1,0 +1,11 @@
+# mission_tiers — the Tiers sheet of GOLFIN_Missions_Redesign.xlsx.
+# A mission's tier is the band its difficultyScore falls in: scoreMin <= score < scoreMaxExcl.
+# `order` is the campaign ladder position (1 = first tier, always unlocked).
+# unlockClears / missionsInTier is the sheet's prose "clear 8 of 10 in previous tier"
+# made machine-readable: tier N+1 opens once `unlockClears` of tier N are cleared.
+# tierClearBonusRP is paid ONCE, by the server, when the tier's 10th clear lands.
+tier,order,scoreMin,scoreMaxExcl,firstClearRP,replayRP,tierClearBonusRP,unlockClears,missionsInTier
+Beginner,1,0,6,15,5,50,0,10
+Amateur,2,6,10,25,5,100,8,10
+Pro,3,10,14,40,5,200,8,10
+Legend,4,14,99,60,5,300,8,10

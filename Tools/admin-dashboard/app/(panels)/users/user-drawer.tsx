@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useT } from "@/components/I18nProvider";
 import { ProviderBadge } from "@/components/ProviderBadge";
 import type { DictKey } from "@/lib/i18n";
+import type { PlayerMissionsResponse } from "@/lib/dailyMissionData";
 import { fmtDateTime } from "@/lib/format";
 import type {
   AdminUserRow,
@@ -20,8 +21,9 @@ import {
   GrantInventoryModal,
 } from "./action-modals";
 import { InventoryTab } from "./inventory-tab";
+import { MissionsTab } from "./missions-tab";
 
-type Tab = "transactions" | "activities" | "inventory";
+type Tab = "transactions" | "activities" | "inventory" | "missions";
 
 type PendingModal =
   | { kind: "action"; action: UserActionKind }
@@ -31,6 +33,11 @@ type PendingModal =
   /** Revoke a grant that has NOT drained yet (PLAN §6.5 decision 3). Carries the whole row so the
    *  confirm can name what is being taken back out of the queue. */
   | { kind: "revokeGrant"; grant: InventoryGrantRow }
+  /** Reset one mission's progress (missions_v1 §A6). Carries the id so the
+   *  confirm can name what is being wiped — a reset makes the player's next
+   *  clear pay the FIRST-CLEAR amount again, which is the whole reason it needs
+   *  a confirm rather than being a one-click button. */
+  | { kind: "resetMission"; missionId: string }
   | null;
 
 const ACTION_COPY: Record<
@@ -129,6 +136,8 @@ export function UserDrawer({
   const [detailError, setDetailError] = useState<string | null>(null);
   const [inventory, setInventory] = useState<PlayerInventoryResponse | null>(null);
   const [inventoryError, setInventoryError] = useState<string | null>(null);
+  const [missions, setMissions] = useState<PlayerMissionsResponse | null>(null);
+  const [missionsError, setMissionsError] = useState<string | null>(null);
   const [detailVersion, setDetailVersion] = useState(0);
   const [tab, setTab] = useState<Tab>("transactions");
 
@@ -192,6 +201,32 @@ export function UserDrawer({
           setInventoryError(
             err instanceof Error ? err.message : t("udrawer.loadFailed")
           );
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user.id, detailVersion]);
+
+  // Fetched with the detail rather than lazily on tab-open, for the reason the
+  // inventory effect gives: the drawer's job is answering a support question,
+  // and a second click before the answer appears is what makes an operator go
+  // query Supabase by hand. Re-runs on detailVersion so a RESET shows at once.
+  useEffect(() => {
+    let cancelled = false;
+    setMissionsError(null);
+    (async () => {
+      try {
+        const res = await fetch(`/api/users/${user.id}/missions`);
+        if (!res.ok) {
+          const body = (await res.json().catch(() => null)) as { error?: string } | null;
+          throw new Error(body?.error ?? `Request failed (${res.status})`);
+        }
+        const json = (await res.json()) as PlayerMissionsResponse;
+        if (!cancelled) setMissions(json);
+      } catch (err) {
+        if (!cancelled)
+          setMissionsError(err instanceof Error ? err.message : t("udrawer.loadFailed"));
       }
     })();
     return () => {
@@ -534,6 +569,7 @@ export function UserDrawer({
                 ["transactions", "udrawer.tab.transactions"],
                 ["activities", "udrawer.tab.activities"],
                 ["inventory", "udrawer.tab.inventory"],
+                ["missions", "udrawer.tab.missions"],
               ] as const
             ).map(([key, labelKey]) => (
               <button
@@ -618,6 +654,29 @@ export function UserDrawer({
                     onRevokeGrant={(grant) => {
                       setNotice(null);
                       setPending({ kind: "revokeGrant", grant });
+                    }}
+                  />
+                )}
+              </>
+            )}
+            {tab === "missions" && (
+              <>
+                {missionsError && (
+                  <p className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-300">
+                    {missionsError}
+                  </p>
+                )}
+                {!missions && !missionsError && (
+                  <p className="py-6 text-center text-xs text-zinc-600">
+                    {t("common.loading")}
+                  </p>
+                )}
+                {missions && (
+                  <MissionsTab
+                    data={missions}
+                    onReset={(missionId) => {
+                      setNotice(null);
+                      setPending({ kind: "resetMission", missionId });
                     }}
                   />
                 )}
@@ -719,6 +778,24 @@ export function UserDrawer({
             runMutation(`/api/users/${user.id}/inventory`, {
               method: "DELETE",
               body: JSON.stringify({ grantId: pending.grant.id }),
+            })
+          }
+        />
+      )}
+      {pending?.kind === "resetMission" && (
+        <ConfirmActionModal
+          title={t("umis.resetTitle").replace("{0}", pending.missionId)}
+          body={t("umis.resetBody")}
+          confirmLabel={t("umis.reset")}
+          destructive
+          mock={mock}
+          busy={busy}
+          error={modalError}
+          onCancel={() => setPending(null)}
+          onConfirm={() =>
+            runMutation(`/api/users/${user.id}/missions`, {
+              method: "DELETE",
+              body: JSON.stringify({ missionId: pending.missionId }),
             })
           }
         />

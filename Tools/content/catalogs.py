@@ -21,6 +21,13 @@ CSV FACTS this module encodes, all verified against the live repo 2026-08-25
   shop_catalog    5 rows  Assets/Resources/Data/shop_catalog.csv
   level_up_costs 240 rows Assets/Data/LevelUpCosts.csv
   modes           5 rows  Assets/Resources/Data/modes.csv
+  missions       40 rows  Assets/Resources/Data/missions.csv
+  mission_start_areas 162 rows  Assets/Resources/Data/mission_start_areas.csv
+  mission_wind_presets  9 rows  Assets/Resources/Data/mission_wind_presets.csv
+  mission_loadouts     13 rows  Assets/Resources/Data/mission_loadouts.csv
+  mission_goal_weights 36 rows  Assets/Resources/Data/mission_goal_weights.csv
+  mission_tiers         4 rows  Assets/Resources/Data/mission_tiers.csv
+  daily_mission_weights 43 rows Assets/Resources/Data/daily_mission_weights.csv
 
 Two of those facts contradict the SPEC's reference counts and both are handled
 rather than papered over:
@@ -90,6 +97,29 @@ class Catalog:
 # Its CSV is the one with quoted, comma-bearing prose (three of the five
 # `description` fields), which is exactly the case `parse_csv_line` /
 # `write_csv_line` exist for; QUOTE_MINIMAL round-trips it unchanged.
+# The SEVEN MISSIONS catalogs (#11-#17) — missions_v1 §A2, added 2026-08-29.
+#
+# `missions` is the THIRD catalog the server reads, after level_up_costs and
+# modes, and it is read the same way modes is: a publish MIRRORS every row's
+# tier and RP into `golfin_mission_rewards` in the same transaction, and
+# POST /api/v1/missions/claim pays from THAT, never from the client's number.
+# `mission_tiers` mirrors alongside it into `golfin_mission_tier_bonus`. So an
+# edit to either is not card copy — it is what a player is actually paid.
+#
+# The other five are COMPONENTS a mission is composed from (hole start area,
+# wind, loadout, the difficulty curve, the daily draw weights). They are pure
+# client/​generator data with no server mirror, but they are not inert: the
+# admin RECOMPUTES every mission's difficultyScore from `mission_goal_weights`
+# on publish, so a weight edit re-tiers the campaign.
+#
+# `mission_tiers`'s id column is `tier` ("Beginner"), the second non-`id` id in
+# the table after level_up_costs' `level`. Four rows, and the tier NAME is what
+# a missions row references, so a synthetic id would be a second name for the
+# same thing.
+#
+# ⚠️ `mission_start_areas` ships PARTLY BLANK on purpose: its 162 rows are the
+# slots the Phase B bake fills with coordinates. See the CSV's own header.
+
 CATALOGS: Tuple[Catalog, ...] = (
     Catalog("clubs", "Assets/Resources/Data/Clubs.csv", "id"),
     Catalog("characters", "Assets/Data/Characters.csv", "id"),
@@ -100,6 +130,13 @@ CATALOGS: Tuple[Catalog, ...] = (
     Catalog("shop_catalog", "Assets/Resources/Data/shop_catalog.csv", "entryId"),
     Catalog("level_up_costs", "Assets/Data/LevelUpCosts.csv", "level"),
     Catalog("modes", "Assets/Resources/Data/modes.csv", "id"),
+    Catalog("missions", "Assets/Resources/Data/missions.csv", "id"),
+    Catalog("mission_start_areas", "Assets/Resources/Data/mission_start_areas.csv", "id"),
+    Catalog("mission_wind_presets", "Assets/Resources/Data/mission_wind_presets.csv", "id"),
+    Catalog("mission_loadouts", "Assets/Resources/Data/mission_loadouts.csv", "id"),
+    Catalog("mission_goal_weights", "Assets/Resources/Data/mission_goal_weights.csv", "id"),
+    Catalog("mission_tiers", "Assets/Resources/Data/mission_tiers.csv", "tier"),
+    Catalog("daily_mission_weights", "Assets/Resources/Data/daily_mission_weights.csv", "id"),
 )
 
 CATALOGS_BY_NAME: Dict[str, Catalog] = {c.name: c for c in CATALOGS}

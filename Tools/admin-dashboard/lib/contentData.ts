@@ -221,6 +221,13 @@ const FILTERABLE: Record<string, string[]> = {
   balls: ["brand"],
   texts: [],
   shop_catalog: ["category"],
+  // missions_v1. Every one is a real `data->>'<field>'` query, so a facet on a
+  // 162-row start-area table narrows server-side rather than filtering a page.
+  missions: ["tier", "startAreaId", "loadoutId", "windPresetId"],
+  mission_start_areas: ["areaId", "kind"],
+  mission_loadouts: ["kind"],
+  mission_goal_weights: ["goal"],
+  daily_mission_weights: ["component"],
 };
 
 export function filterableFields(catalog: string): string[] {

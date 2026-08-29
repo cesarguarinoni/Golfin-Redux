@@ -13,6 +13,7 @@
  */
 
 import { SHOP_CATEGORY_STRICT_BUILD } from "./buildGates";
+import { holeBase, scoreGoal, type WeightRow } from "./missionScore";
 
 export type Severity = "error" | "warning";
 
@@ -51,6 +52,18 @@ export interface ValidationContext {
    * Rewards panel refuses to create.
    */
   versusWinPts?: number | null;
+  /**
+   * `game_point_actions.mission_clear.max_per_event` — the ceiling the claim
+   * path enforces. Loaded only when publishing `missions`, and used by exactly
+   * one BLOCKING rule (missions rule 11): a `firstClearRP` above it is a mission
+   * that pays less than its card promises, every time, forever.
+   */
+  missionClearMax?: number | null;
+  /**
+   * `game_point_actions.daily_mission.pts` — what the daily actually pays.
+   * Loaded only when publishing `daily_mission_weights`, for one WARNING.
+   */
+  dailyMissionPts?: number | null;
 }
 
 /**
@@ -97,6 +110,18 @@ const REQUIRED: Record<string, string[]> = {
   shop_catalog: ["entryId", "category", "refId", "rpCost", "sortOrder"],
   level_up_costs: ["level", "cost_r", "sp_reward"],
   modes: ["id", "title", "entryFee", "order"],
+  // missions_v1 §A1. `id` is the campaign number as text; `key` is the stable
+  // slug the localization key `MISSION_NAME_<KEY>` is built from.
+  missions: ["id", "order", "tier", "key", "holeId", "par", "startAreaId",
+             "windPresetId", "loadoutId", "goal1Type", "firstClearRP", "replayRP",
+             "courseId", "pinIndex", "staminaDrain"],
+  mission_start_areas: ["id", "courseId", "holeId", "areaId", "kind", "weight"],
+  mission_wind_presets: ["id", "label", "relDirDeg", "speed", "weight"],
+  mission_loadouts: ["id", "kind", "clubs", "weight", "allowedStartKinds"],
+  mission_goal_weights: ["id", "goal", "match", "weight"],
+  mission_tiers: ["tier", "order", "scoreMin", "scoreMaxExcl", "firstClearRP",
+                  "replayRP", "tierClearBonusRP", "unlockClears", "missionsInTier"],
+  daily_mission_weights: ["id", "component", "optionId", "pickWeight"],
 };
 
 /** Columns that must parse as a number wherever they are present (§D1.3). */
@@ -112,6 +137,17 @@ const NUMERIC: Record<string, string[]> = {
   level_up_costs: ["level", "cost_r", "sp_reward"],
   modes: ["entryFee", "rewards", "order", "reward1Amount", "reward2Amount", "reward3Amount",
           "versusStrokeCapOverPar"],
+  missions: ["order", "holeId", "par", "difficultyScore", "firstClearRP", "replayRP",
+             "pinIndex", "staminaDrain"],
+  // x/y/z/pin_count are BLANK until the Phase B bake fills them, and `num("")`
+  // is null, so a blank never reaches the parse check. A non-numeric one does.
+  mission_start_areas: ["holeId", "weight", "x", "y", "z", "pin_count"],
+  mission_wind_presets: ["relDirDeg", "speed", "weight"],
+  mission_loadouts: ["weight"],
+  mission_goal_weights: ["weight"],
+  mission_tiers: ["order", "scoreMin", "scoreMaxExcl", "firstClearRP", "replayRP",
+                  "tierClearBonusRP", "unlockClears", "missionsInTier"],
+  daily_mission_weights: ["pickWeight"],
 };
 
 /** `shop_catalog.category` → the catalog `refId` resolves in (§D1.6). */
@@ -133,6 +169,15 @@ export const ID_COLUMN: Record<string, string> = {
   shop_catalog: "entryId",
   level_up_costs: "level",
   modes: "id",
+  missions: "id",
+  mission_start_areas: "id",
+  mission_wind_presets: "id",
+  mission_loadouts: "id",
+  mission_goal_weights: "id",
+  // The tier NAME is the id, the way level_up_costs' `level` is: a missions row
+  // references "Beginner", so a synthetic id would be a second name for it.
+  mission_tiers: "tier",
+  daily_mission_weights: "id",
 };
 
 /**
@@ -153,7 +198,18 @@ export const ID_COLUMN: Record<string, string> = {
  * and `upsertDraftRow` check the same rule rather than two copies of it.
  */
 export const ROW_ID_MAX = 80;
-const ROW_ID_PATTERNS: Record<string, RegExp> = { texts: /^[A-Za-z0-9_]+$/ };
+const ROW_ID_PATTERNS: Record<string, RegExp> = {
+  texts: /^[A-Za-z0-9_]+$/,
+  // A mission id is the campaign number ("41"), the way a level_up_costs id is
+  // the level. Lower-case snake would forbid the only shape this catalog uses.
+  missions: /^[0-9]+$/,
+  // Component ids are the workbook's own UPPER_SNAKE (`TEE_BACK`, `SUP_FULL`,
+  // `CROSS_S`) — they are what a missions row references BY NAME, so forcing
+  // lower case here would mint ids that resolve against nothing.
+  mission_wind_presets: /^[A-Z0-9_]+$/,
+  mission_loadouts: /^[A-Z0-9_]+$/,
+  mission_tiers: /^[A-Za-z][A-Za-z0-9_]*$/,
+};
 const DEFAULT_ROW_ID_PATTERN = /^[a-z0-9_]+$/;
 
 export const rowIdPattern = (catalog: string): RegExp =>
@@ -162,6 +218,36 @@ export const rowIdPattern = (catalog: string): RegExp =>
 /** Shape only — collisions need the catalogs and live server-side. */
 export const isValidNewRowId = (catalog: string, rowId: string): boolean =>
   rowId.length > 0 && rowId.length <= ROW_ID_MAX && rowIdPattern(catalog).test(rowId);
+
+/**
+ * Goal types whose param is a NUMBER (rule 11c). A "hole out in ≤ fairway"
+ * mission is not hard, it is meaningless.
+ */
+const NUMERIC_GOALS = new Set(["SCORE", "SHOTS", "PUTTS", "DIST", "CARRY", "NEAR_PIN"]);
+
+/** Goal types whose param names a SURFACE or a CLUB TYPE. */
+const SURFACE_GOALS = new Set(["AVOID", "LAND_TEE", "LAND_ANY", "USE_CLUB", "AVOID_CLUB"]);
+
+/**
+ * Every goal type the game can evaluate — the Goals sheet of
+ * GOLFIN_Missions_Redesign.xlsx, and the set `MissionGoalEvaluator` implements.
+ * `mission_goal_weights` must carry a row for each (rule 15).
+ */
+export const ALL_GOAL_TYPES = [
+  "SCORE", "SHOTS", "PUTTS", "NO_HAZARD", "AVOID", "LAND_TEE", "LAND_ANY",
+  "GIR", "DIST", "CARRY", "NEAR_PIN", "USE_CLUB", "AVOID_CLUB", "UP_DOWN",
+] as const;
+
+/** The component groups the daily generator draws from (rule 17). */
+export const DAILY_COMPONENTS = [
+  "band", "startKind", "loadout", "wind", "primaryGoal", "secondaryGoal", "modifier",
+] as const;
+
+/**
+ * DailyRewards.baseRP from the design workbook. WARNING-only reference point —
+ * the Rewards panel is where the number that is actually paid lives.
+ */
+export const DAILY_BASE_RP = 30;
 
 /** The four character stat columns, paired with their cap key. */
 const CHARACTER_STATS: Array<[string, keyof (typeof RARITY_STAT_CAPS)["Common"]]> = [
@@ -671,6 +757,517 @@ export function validateCatalog(
             "Unlike every other mode, this card claims an EXACT payout, so the two should agree."
         );
       }
+    }
+  }
+
+
+  // 11. missions — the catalog the SERVER PAYS FROM (missions_v1 §A6).
+  //
+  // Publishing this catalog mirrors every row's tier and RP into
+  // `golfin_mission_rewards`, and `golfin_mission_claim()` pays from THAT. So a
+  // number here is not card copy: it is what a player is credited. The rules are
+  // the compatibility ones a composed mission can get wrong, and they are
+  // blocking because every one of them produces a card that is dead, unpayable,
+  // or paying the wrong amount — the two halves of the standing invariant.
+  if (catalog === "missions") {
+    const areas = ctx.otherCatalogs.get("mission_start_areas");
+    const winds = ctx.otherCatalogs.get("mission_wind_presets");
+    const loadouts = ctx.otherCatalogs.get("mission_loadouts");
+    const weights = ctx.otherCatalogs.get("mission_goal_weights");
+    const tiers = ctx.otherCatalogs.get("mission_tiers");
+
+    const weightRows: WeightRow[] = weights
+      ? [...weights.values()].map((r) => ({
+          goal: text(r.data.goal),
+          match: text(r.data.match),
+          scope: text(r.data.scope),
+          param: text(r.data.param),
+          weight: text(r.data.weight),
+        }))
+      : [];
+
+    // Start areas are keyed per (hole, areaId) — the same area id means a
+    // different row on a different hole, because the coordinates are baked
+    // per hole. Index by the pair the mission actually names.
+    const areaByHoleAndId = new Map<string, DraftRow>();
+    if (areas) {
+      for (const row of areas.values()) {
+        areaByHoleAndId.set(`${text(row.data.holeId)}:${text(row.data.areaId)}`, row);
+      }
+    }
+
+    const orderSeen = new Map<number, string>();
+    let previousOrder: number | null = null;
+
+    for (const row of rows) {
+      const holeId = num(row.data.holeId);
+      const par = num(row.data.par);
+      const startAreaId = text(row.data.startAreaId);
+      const windId = text(row.data.windPresetId);
+      const loadoutId = text(row.data.loadoutId);
+
+      // --- 11a. the three components resolve ------------------------------
+      const area = areaByHoleAndId.get(`${text(row.data.holeId)}:${startAreaId}`);
+      if (areas && !area) {
+        err(
+          row.rowId,
+          "startAreaId",
+          `No mission_start_areas row for hole ${text(row.data.holeId)} area "${startAreaId}". ` +
+            "The mission would have nowhere to put the ball."
+        );
+      } else if (area && !area.isActive) {
+        err(
+          row.rowId,
+          "startAreaId",
+          `Start area "${startAreaId}" on hole ${text(row.data.holeId)} is deactivated ` +
+            "(no bunker on that hole, usually). Pick another area or reactivate the row."
+        );
+      }
+
+      const wind = winds?.get(windId);
+      if (winds && !wind) {
+        err(row.rowId, "windPresetId", `Wind preset "${windId}" does not exist.`);
+      }
+
+      const loadout = loadouts?.get(loadoutId);
+      if (loadouts && !loadout) {
+        err(row.rowId, "loadoutId", `Loadout "${loadoutId}" does not exist.`);
+      }
+
+      // --- 11b. start <-> loadout compatibility ----------------------------
+      //
+      // `allowedStartKinds` is `any | tee | short | green`, and `green` is the
+      // NARROWER short kind: SUP_PUTTER (putter only) is playable from ON the
+      // green and nowhere else. A putter-only mission from the fairway is not a
+      // hard mission, it is an unfinishable one.
+      if (area && loadout) {
+        const allowed = text(loadout.data.allowedStartKinds).toLowerCase() || "any";
+        const kind = text(area.data.kind).toLowerCase();
+        const areaId = text(area.data.areaId).toUpperCase();
+        const ok =
+          allowed === "any" ||
+          allowed === kind ||
+          (allowed === "green" && areaId === "GREEN");
+        if (!ok) {
+          err(
+            row.rowId,
+            "loadoutId",
+            `Loadout "${loadoutId}" allows ${allowed} starts, but "${startAreaId}" is a ` +
+              `${kind} start${allowed === "green" ? " (this loadout is green-only)" : ""}.`
+          );
+        }
+      }
+
+      // --- 11c. goals: typed, present, and never duplicated ----------------
+      //
+      // A DUPLICATE GOAL TYPE IS INVALID, explicitly (SPEC "Reference": the
+      // mockup's three bullets with a repeated line are FILLER). Two SCORE goals
+      // are either contradictory or redundant, and the card would render the
+      // same sentence twice.
+      const goalTypes: string[] = [];
+      for (const slot of [1, 2, 3]) {
+        const goalType = text(row.data[`goal${slot}Type`]);
+        const goalParam = text(row.data[`goal${slot}Param`]);
+        if (!goalType) {
+          if (goalParam) {
+            err(row.rowId, `goal${slot}Param`, `goal${slot}Param is set but goal${slot}Type is empty.`);
+          }
+          continue;
+        }
+        if (goalTypes.includes(goalType)) {
+          err(
+            row.rowId,
+            `goal${slot}Type`,
+            `Goal type "${goalType}" appears twice. A mission may not repeat a goal type — ` +
+              "the card would show the same line twice and the evaluator would double-count it."
+          );
+        }
+        goalTypes.push(goalType);
+
+        // The goal must be one the weights table knows, or it scores 0 and the
+        // mission silently lands in the wrong tier.
+        if (weightRows.length > 0 && !weightRows.some((w) => w.goal === goalType)) {
+          err(
+            row.rowId,
+            `goal${slot}Type`,
+            `Goal type "${goalType}" has no row in mission_goal_weights, so it would score 0 ` +
+              "and the mission would be tiered as if the goal were not there."
+          );
+        }
+
+        if (NUMERIC_GOALS.has(goalType) && num(goalParam) === null) {
+          err(row.rowId, `goal${slot}Param`, `"${goalType}" needs a numeric param (got "${goalParam}").`);
+        }
+        if (SURFACE_GOALS.has(goalType) && !goalParam) {
+          err(row.rowId, `goal${slot}Param`, `"${goalType}" needs a surface param.`);
+        }
+      }
+      if (goalTypes.length === 0) {
+        err(row.rowId, "goal1Type", "A mission needs at least one goal.");
+      }
+
+      // --- 11d. difficultyScore is RECOMPUTED; the stored value is display --
+      if (area && wind && loadout && weightRows.length > 0 && par !== null) {
+        let score = holeBase(weightRows, par);
+        score += num(area.data.weight) ?? 0;
+        score += num(wind.data.weight) ?? 0;
+        score += num(loadout.data.weight) ?? 0;
+        for (const slot of [1, 2, 3]) {
+          const goalType = text(row.data[`goal${slot}Type`]);
+          if (!goalType) continue;
+          score += scoreGoal(
+            weightRows, goalType, text(row.data[`goal${slot}Param`]),
+            text(area.data.kind), par
+          );
+        }
+
+        const stored = num(row.data.difficultyScore);
+        if (stored !== null && stored !== score) {
+          warn(
+            row.rowId,
+            "difficultyScore",
+            `difficultyScore is stored as ${stored} but the components score ${score}. ` +
+              "The recomputed value is the one that counts; publish updates the display."
+          );
+        }
+
+        // --- 11e. the tier BAND has to contain the score -------------------
+        const tierName = text(row.data.tier);
+        const tier = tiers?.get(tierName);
+        if (tiers && !tier) {
+          err(row.rowId, "tier", `Tier "${tierName}" does not exist in mission_tiers.`);
+        } else if (tier) {
+          const low = num(tier.data.scoreMin);
+          const high = num(tier.data.scoreMaxExcl);
+          if (low !== null && high !== null && (score < low || score >= high)) {
+            warn(
+              row.rowId,
+              "tier",
+              `Scores ${score}, which is outside the ${tierName} band ${low}-${high - 1}. ` +
+                "Publishing anyway — a mission may be placed against its band deliberately."
+            );
+          }
+        }
+      }
+
+      // --- 11f. RP within the ceiling the claim path enforces --------------
+      const firstClear = num(row.data.firstClearRP);
+      if (firstClear !== null && firstClear < 0) {
+        err(row.rowId, "firstClearRP", `firstClearRP ${firstClear} is negative.`);
+      }
+      const replayRp = num(row.data.replayRP);
+      if (replayRp !== null && replayRp < 0) {
+        err(row.rowId, "replayRP", `replayRP ${replayRp} is negative.`);
+      }
+      if (
+        firstClear !== null &&
+        ctx.missionClearMax !== undefined &&
+        ctx.missionClearMax !== null &&
+        firstClear > ctx.missionClearMax
+      ) {
+        err(
+          row.rowId,
+          "firstClearRP",
+          `firstClearRP ${firstClear} is above mission_clear.max_per_event ` +
+            `(${ctx.missionClearMax}, Rewards panel). The claim would be refused and the ` +
+            "player would clear the mission and be paid nothing. Raise the cap first."
+        );
+      }
+
+      // --- 11g. campaign order ---------------------------------------------
+      const order = num(row.data.order);
+      if (order !== null) {
+        const clash = orderSeen.get(order);
+        if (clash !== undefined) {
+          err(row.rowId, "order", `order ${order} is already used by "${clash}".`);
+        } else {
+          orderSeen.set(order, row.rowId);
+        }
+      }
+
+      if (holeId !== null && (holeId < 1 || holeId > 18)) {
+        err(row.rowId, "holeId", `holeId ${holeId} is not a Lomond hole (1-18).`);
+      }
+      const pinIndex = num(row.data.pinIndex);
+      if (pinIndex !== null && pinIndex < 0) {
+        err(row.rowId, "pinIndex", `pinIndex ${pinIndex} is negative.`);
+      }
+      const drain = num(row.data.staminaDrain);
+      if (drain !== null && drain < 0) {
+        err(row.rowId, "staminaDrain", `staminaDrain ${drain} is negative.`);
+      }
+
+      // --- 11h. the unlock chain resolves -----------------------------------
+      const unlock = text(row.data.unlock);
+      if (unlock && unlock !== "start" && unlock.startsWith("clear:")) {
+        const target = unlock.slice("clear:".length).trim();
+        if (!rows.some((r) => r.rowId === target)) {
+          err(
+            row.rowId,
+            "unlock",
+            `unlock "${unlock}" names mission "${target}", which is not in this catalog. ` +
+              "The mission would never unlock."
+          );
+        }
+      } else if (unlock && unlock !== "start") {
+        err(row.rowId, "unlock", `unlock "${unlock}" is not "start" or "clear:<mission id>".`);
+      }
+    }
+
+    // Campaign order NON-DECREASING by difficulty — a WARNING, because a
+    // deliberately-placed showcase mission is a real editorial choice.
+    const ordered = [...rows].sort((a, b) => (num(a.data.order) ?? 0) - (num(b.data.order) ?? 0));
+    for (const row of ordered) {
+      const stored = num(row.data.difficultyScore);
+      if (stored === null) continue;
+      if (previousOrder !== null && stored < previousOrder) {
+        warn(
+          row.rowId,
+          "order",
+          `Difficulty drops from ${previousOrder} to ${stored} at campaign order ` +
+            `${text(row.data.order)}. The ladder is meant to climb.`
+        );
+      }
+      previousOrder = stored;
+    }
+  }
+
+  // 12. mission_loadouts — a supplied bag must be a bag that EXISTS.
+  //
+  // BLOCKING, and it is the rule that stops the invariant's worst case: a
+  // supplied loadout naming a club type+rarity with no `clubs` row hands the
+  // player an empty bag, on a mission they cannot then play. Better to refuse
+  // the publish than to ship a card that dead-ends.
+  if (catalog === "mission_loadouts") {
+    const clubs = ctx.otherCatalogs.get("clubs");
+    for (const row of rows) {
+      const kind = text(row.data.kind).toLowerCase();
+      if (kind !== "supplied" && kind !== "own") {
+        err(row.rowId, "kind", `kind "${text(row.data.kind)}" is not "supplied" or "own".`);
+        continue;
+      }
+
+      const allowed = text(row.data.allowedStartKinds).toLowerCase() || "any";
+      if (!["any", "tee", "short", "green"].includes(allowed)) {
+        err(
+          row.rowId,
+          "allowedStartKinds",
+          `"${allowed}" is not one of any, tee, short, green.`
+        );
+      }
+
+      const mask = text(row.data.clubs);
+      if (kind === "own") {
+        if (mask !== "*" && !mask.startsWith("ban:")) {
+          err(row.rowId, "clubs", `An "own" loadout's clubs must be "*" or "ban:Type,Type" (got "${mask}").`);
+        }
+        continue;
+      }
+
+      if (!mask) {
+        err(row.rowId, "clubs", "A supplied loadout must list its club types.");
+        continue;
+      }
+      const rarity = text(row.data.rarity);
+      if (!rarity) {
+        err(row.rowId, "rarity", "A supplied loadout must name the rarity its clubs resolve at.");
+        continue;
+      }
+      if (!clubs) continue;
+
+      for (const type of mask.split(",").map((t) => t.trim()).filter(Boolean)) {
+        const match = [...clubs.values()].some(
+          (club) =>
+            club.isActive &&
+            text(club.data.type).toLowerCase() === type.toLowerCase() &&
+            text(club.data.rarity).toLowerCase() === rarity.toLowerCase()
+        );
+        if (!match) {
+          err(
+            row.rowId,
+            "clubs",
+            `No active clubs row is type "${type}" at rarity "${rarity}", so this supplied bag ` +
+              "would be missing that club and the mission would be unplayable."
+          );
+        }
+      }
+    }
+  }
+
+  // 13. mission_start_areas — the baked table.
+  if (catalog === "mission_start_areas") {
+    const byArea = new Map<string, { kind: string; weight: number; rowId: string }>();
+    for (const row of rows) {
+      const kind = text(row.data.kind).toLowerCase();
+      if (kind !== "tee" && kind !== "short") {
+        err(row.rowId, "kind", `kind "${text(row.data.kind)}" is not "tee" or "short".`);
+      }
+
+      const holeId = num(row.data.holeId);
+      if (holeId === null || holeId < 1 || holeId > 18) {
+        err(row.rowId, "holeId", `holeId "${text(row.data.holeId)}" is not a Lomond hole (1-18).`);
+      }
+
+      const hasCoords = ["x", "y", "z"].every((axis) => text(row.data[axis]) !== "");
+      if (kind === "tee" && hasCoords) {
+        err(
+          row.rowId,
+          "x",
+          "A tee area must NOT carry coordinates — it resolves to the scene's " +
+            "TeeMarker_<label>_L/R midpoint at runtime, and a baked point would override it."
+        );
+      }
+      // NOT an error: a short area with no coordinates is the state every one of
+      // them ships in until `Golfin/Missions/Bake Start Areas` runs. It is a
+      // WARNING because the campaign is not playable yet and blocking here would
+      // make the catalog unpublishable before Phase B — but a mission naming it
+      // is refused by rule 11a's active check, so nothing dead can reach a player.
+      if (kind === "short" && row.isActive && !hasCoords) {
+        warn(
+          row.rowId,
+          "x",
+          "Not baked yet — run Golfin/Missions/Bake Start Areas in Unity. Missions cannot " +
+            "start here until x/y/z are filled."
+        );
+      }
+
+      // The per-kind facts are denormalised onto every hole's row so a bunker on
+      // one hole can be tuned apart from a bunker on another. That is a licence
+      // to differ DELIBERATELY, not to drift — so disagreement is surfaced.
+      const areaId = text(row.data.areaId);
+      const weight = num(row.data.weight) ?? 0;
+      const seenArea = byArea.get(areaId);
+      if (!seenArea) {
+        byArea.set(areaId, { kind, weight, rowId: row.rowId });
+      } else if (seenArea.kind !== kind) {
+        err(
+          row.rowId,
+          "kind",
+          `Area "${areaId}" is "${kind}" here but "${seenArea.kind}" on "${seenArea.rowId}". ` +
+            "The kind is a property of the AREA, not of the hole."
+        );
+      } else if (seenArea.weight !== weight) {
+        warn(
+          row.rowId,
+          "weight",
+          `Area "${areaId}" weighs ${weight} here but ${seenArea.weight} on "${seenArea.rowId}". ` +
+            "Per-hole tuning is allowed; check this is deliberate."
+        );
+      }
+    }
+  }
+
+  // 14. mission_wind_presets.
+  if (catalog === "mission_wind_presets") {
+    for (const row of rows) {
+      const dir = num(row.data.relDirDeg);
+      if (dir !== null && (dir < 0 || dir > 359)) {
+        err(row.rowId, "relDirDeg", `relDirDeg ${dir} is not in 0-359.`);
+      }
+      const speed = num(row.data.speed);
+      if (speed !== null && speed < 0) err(row.rowId, "speed", `speed ${speed} is negative.`);
+    }
+  }
+
+  // 15. mission_goal_weights — the difficulty curve.
+  if (catalog === "mission_goal_weights") {
+    const MATCHES = ["exact", "lte", "default", "any", "as_score"];
+    const goalsSeen = new Set<string>();
+    for (const row of rows) {
+      const match = text(row.data.match);
+      if (!MATCHES.includes(match)) {
+        err(row.rowId, "match", `match "${match}" is not one of ${MATCHES.join(", ")}.`);
+      }
+      const scope = text(row.data.scope);
+      if (scope && scope !== "tee" && scope !== "short") {
+        err(row.rowId, "scope", `scope "${scope}" is not blank, "tee" or "short".`);
+      }
+      goalsSeen.add(text(row.data.goal));
+    }
+    // EVERY goal type needs a row (AdminCatalogs sheet). A goal with no weight
+    // scores 0, which silently mis-tiers every mission that uses it.
+    for (const goal of ALL_GOAL_TYPES) {
+      if (!goalsSeen.has(goal)) {
+        err(null, "goal", `Goal type "${goal}" has no weight row — missions using it would score 0.`);
+      }
+    }
+    for (const par of ["3", "4", "5"]) {
+      if (!rows.some((r) => text(r.data.goal) === "HOLE_BASE" && text(r.data.param) === par)) {
+        err(null, "goal", `No HOLE_BASE row for par ${par}.`);
+      }
+    }
+  }
+
+  // 16. mission_tiers — bands contiguous and non-overlapping.
+  if (catalog === "mission_tiers") {
+    const ladder = [...rows].sort((a, b) => (num(a.data.order) ?? 0) - (num(b.data.order) ?? 0));
+    let previousMax: number | null = null;
+    for (const row of ladder) {
+      const low = num(row.data.scoreMin);
+      const high = num(row.data.scoreMaxExcl);
+      if (low !== null && high !== null && low >= high) {
+        err(row.rowId, "scoreMaxExcl", `Band ${low}-${high} is empty (scoreMaxExcl is exclusive).`);
+      }
+      if (previousMax !== null && low !== null && low !== previousMax) {
+        err(
+          row.rowId,
+          "scoreMin",
+          `Band starts at ${low} but the previous tier ends at ${previousMax}. Bands must be ` +
+            "contiguous — a gap is a difficulty score that belongs to no tier."
+        );
+      }
+      if (high !== null) previousMax = high;
+
+      const unlockClears = num(row.data.unlockClears);
+      const size = num(row.data.missionsInTier);
+      if (unlockClears !== null && size !== null && unlockClears > size) {
+        err(
+          row.rowId,
+          "unlockClears",
+          `unlockClears ${unlockClears} is more than the ${size} missions in the previous tier — ` +
+            "the next tier could never open."
+        );
+      }
+      const bonus = num(row.data.tierClearBonusRP);
+      if (bonus !== null && bonus < 0) {
+        err(row.rowId, "tierClearBonusRP", `tierClearBonusRP ${bonus} is negative.`);
+      }
+    }
+  }
+
+  // 17. daily_mission_weights — every draw group must be able to draw.
+  if (catalog === "daily_mission_weights") {
+    const groupTotal = new Map<string, number>();
+    for (const row of rows) {
+      const weight = num(row.data.pickWeight);
+      if (weight !== null && weight < 0) {
+        err(row.rowId, "pickWeight", `pickWeight ${weight} is negative.`);
+      }
+      const component = text(row.data.component);
+      if (component && component !== "rule") {
+        groupTotal.set(component, (groupTotal.get(component) ?? 0) + (weight ?? 0));
+      }
+    }
+    for (const component of DAILY_COMPONENTS) {
+      const total = groupTotal.get(component);
+      if (total === undefined) {
+        err(null, "component", `No "${component}" rows — the daily generator has nothing to draw.`);
+      } else if (total <= 0) {
+        err(
+          null,
+          "pickWeight",
+          `Every "${component}" option has weight 0, so the generator cannot draw one and the ` +
+            "daily mission would fail to generate."
+        );
+      }
+    }
+    if (ctx.dailyMissionPts !== undefined && ctx.dailyMissionPts !== null && ctx.dailyMissionPts !== DAILY_BASE_RP) {
+      warn(
+        null,
+        "pickWeight",
+        `daily_mission pays ${ctx.dailyMissionPts} RP (Rewards panel) but the design's base is ` +
+          `${DAILY_BASE_RP} (DailyRewards.baseRP). Check which one is meant to have moved.`
+      );
     }
   }
 

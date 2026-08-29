@@ -1,0 +1,18 @@
+# mission_wind_presets — the WindPresets sheet of GOLFIN_Missions_Redesign.xlsx.
+# relDirDeg is RELATIVE to the tee->pin bearing: 0 = tailwind (behind the player),
+# 180 = headwind, 90/270 = crosswind. MissionSession turns it into an absolute
+# WindContext.DirectionDegrees as bearing(spawn -> pin) + relDirDeg.
+# speed is mph. GUSTY re-rolls its speed in [6,18] on every shot; `speed` is its ceiling.
+# weight is the difficulty contribution this preset adds to a mission's difficultyScore.
+# label is the DESIGNER label (admin display). The player-facing line is the
+# templated localization key `wind.<id>` in LocalizationText.csv.
+id,label,relDirDeg,speed,weight
+CALM,Calm,0,0,0
+TAIL_L,Light tailwind,0,6,0
+CROSS_L,Light crosswind,90,6,1
+HEAD_L,Light headwind,180,6,1
+TAIL_S,Strong tailwind,0,12,1
+CROSS_S,Strong crosswind,270,12,3
+HEAD_S,Strong headwind,180,12,3
+QUARTER_S,Strong quartering headwind,135,12,3
+GUSTY,Gusty,90,18,4

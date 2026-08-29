@@ -102,6 +102,29 @@ const PATHS: Record<PanelIconName, React.ReactNode> = {
       <path d="M12 9c2-4 8-4 6.5-0.8C17.8 9 12 9 12 9z" />
     </>
   ),
+  // Concentric rings — a mission is a target you either hit or you do not.
+  target: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <circle cx="12" cy="12" r="5" />
+      <circle cx="12" cy="12" r="1.5" />
+    </>
+  ),
+  // Two interlocking pieces — the parts a mission is composed from.
+  puzzle: (
+    <>
+      <path d="M4 6a2 2 0 0 1 2-2h3a2 2 0 1 1 4 0h3a2 2 0 0 1 2 2v3a2 2 0 1 1 0 4v3a2 2 0 0 1-2 2h-3a2 2 0 1 0-4 0H6a2 2 0 0 1-2-2v-3a2 2 0 1 0 0-4z" />
+    </>
+  ),
+  // A month grid — the daily is one row per UTC date.
+  calendar: (
+    <>
+      <rect x="3" y="5" width="18" height="16" rx="2" />
+      <path d="M3 10h18" />
+      <path d="M8 3v4" />
+      <path d="M16 3v4" />
+    </>
+  ),
   // A rising staircase — levels, each one a step you pay for.
   ladder: (
     <>

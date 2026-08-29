@@ -88,3 +88,87 @@ describe("what a modes publish writes into golfin_mode_fees", () => {
     ]);
   });
 });
+
+/**
+ * The `golfin_mission_rewards` / `golfin_mission_tier_bonus` mappings
+ * (missions_v1 §A3), pinned the same way and for a sharper reason: this mirror
+ * is not what a player is CHARGED, it is what they are PAID. A row that mirrors
+ * the wrong number credits the wrong number, silently, on every clear.
+ *
+ * The asymmetry with `mirrorModeFees` below is deliberate and is the thing most
+ * likely to be "tidied" by a later reader, so it is asserted rather than only
+ * commented: a DEACTIVATED MODE is skipped (its old price stays, so a stale
+ * client is refused at the number it knew), while a DEACTIVATED MISSION is
+ * mirrored WITH is_active=false (so a stale client that clears it is told
+ * `inactive` and paid nothing, instead of `unknown_mission`).
+ */
+
+/** Mirrors `mirrorMissionRewards` (lib/contentMutations.ts). */
+function toMissionRewardRows(rows: Row[]) {
+  return rows.map((r) => ({
+    mission_id: r.rowId,
+    tier: String(r.data.tier ?? "").trim(),
+    first_clear_rp: Math.max(0, Math.trunc(Number(r.data.firstClearRP) || 0)),
+    replay_rp: Math.max(0, Math.trunc(Number(r.data.replayRP) || 0)),
+    is_active: r.isActive,
+  }));
+}
+
+/** Mirrors `mirrorMissionTierBonus` (lib/contentMutations.ts). */
+function toTierBonusRows(rows: Row[]) {
+  return rows
+    .filter((r) => r.isActive)
+    .map((r) => ({
+      tier: r.rowId,
+      bonus_rp: Math.max(0, Math.trunc(Number(r.data.tierClearBonusRP) || 0)),
+      missions_in_tier: Math.max(1, Math.trunc(Number(r.data.missionsInTier) || 10)),
+    }));
+}
+
+describe("what a missions publish writes into golfin_mission_rewards", () => {
+  it("carries both payouts and the tier across as typed columns", () => {
+    expect(
+      toMissionRewardRows([row("11", { tier: "Amateur", firstClearRP: "25", replayRP: "5" })])
+    ).toEqual([{ mission_id: "11", tier: "Amateur", first_clear_rp: 25, replay_rp: 5, is_active: true }]);
+  });
+
+  it("KEEPS a deactivated mission, flagged inactive — unlike a deactivated MODE", () => {
+    const rows = toMissionRewardRows([
+      row("7", { tier: "Beginner", firstClearRP: "15", replayRP: "5" }, false),
+    ]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.is_active).toBe(false);
+  });
+
+  it("never mirrors a negative or fractional payout", () => {
+    expect(
+      toMissionRewardRows([row("1", { tier: "Beginner", firstClearRP: "-5", replayRP: "2.7" })])[0]
+    ).toMatchObject({ first_clear_rp: 0, replay_rp: 2 });
+  });
+
+  it("mirrors a blank payout as free rather than as NaN", () => {
+    expect(toMissionRewardRows([row("1", { tier: "Beginner" })])[0]).toMatchObject({
+      first_clear_rp: 0,
+      replay_rp: 0,
+    });
+  });
+});
+
+describe("what a mission_tiers publish writes into golfin_mission_tier_bonus", () => {
+  it("carries the bonus AND the tier size — the size is what 'complete' means", () => {
+    expect(
+      toTierBonusRows([row("Pro", { tierClearBonusRP: "200", missionsInTier: "10" })])
+    ).toEqual([{ tier: "Pro", bonus_rp: 200, missions_in_tier: 10 }]);
+  });
+
+  it("never mirrors a tier size of 0 — the bonus would be paid on the first clear", () => {
+    expect(
+      toTierBonusRows([row("Pro", { tierClearBonusRP: "200", missionsInTier: "0" })])[0]!
+        .missions_in_tier
+    ).toBe(10);
+  });
+
+  it("skips a deactivated tier", () => {
+    expect(toTierBonusRows([row("Pro", { tierClearBonusRP: "200" }, false)])).toEqual([]);
+  });
+});

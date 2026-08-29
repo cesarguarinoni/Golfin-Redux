@@ -265,6 +265,75 @@ async function mirrorModeFees(drafts: ContentStoredRow[]): Promise<string | null
 }
 
 /**
+ * The golfin_mission_rewards mirror (missions_v1 SPEC §A3).
+ *
+ * The THIRD server-read mirror, and the one with the most direct line to a
+ * player's balance: `golfin_mission_claim()` reads `first_clear_rp` /
+ * `replay_rp` out of it and credits exactly that. Not "the card will say 25" —
+ * 25 is what lands in the ledger.
+ *
+ * SAME ORDERING AS THE FEES, FOR THE SAME REASON. Written from the DRAFTS,
+ * BEFORE `content_publish`, so a mirror failure means the publish never
+ * happened. The residual window is mirror-ahead-of-catalog, which pays the
+ * amount the admin was TRYING to publish; the other order would show a card
+ * promising 40 and pay 25.
+ *
+ * A DEACTIVATED MISSION IS MIRRORED AS INACTIVE, not skipped — which is the
+ * opposite of what `mirrorModeFees` does with a deactivated mode, and the
+ * difference is deliberate. A withdrawn MODE keeps its old price because a
+ * stale client might still try to pay it and should be refused at the number it
+ * knew. A withdrawn MISSION has the opposite need: a stale client that clears it
+ * must be told `inactive` and paid nothing, and `is_active = false` is the only
+ * thing that says so. Dropping the row instead would answer `unknown_mission`,
+ * which reads to the client as "you are out of date" rather than "this mission
+ * is gone".
+ */
+async function mirrorMissionRewards(drafts: ContentStoredRow[]): Promise<string | null> {
+  if (isMockMode()) return null;
+
+  const rows = drafts.map((r) => ({
+    mission_id: r.rowId,
+    tier: String(r.data.tier ?? "").trim(),
+    first_clear_rp: Math.max(0, Math.trunc(Number(r.data.firstClearRP) || 0)),
+    replay_rp: Math.max(0, Math.trunc(Number(r.data.replayRP) || 0)),
+    is_active: r.isActive,
+    updated_at: new Date().toISOString(),
+  }));
+  if (rows.length === 0) return null;
+
+  const res = await getSupabaseAdmin()
+    .from("golfin_mission_rewards")
+    .upsert(rows, { onConflict: "mission_id" });
+  return res.error ? res.error.message : null;
+}
+
+/**
+ * The golfin_mission_tier_bonus mirror (missions_v1 SPEC §A3).
+ *
+ * `missions_in_tier` is mirrored alongside the bonus because it is what "the
+ * tier is complete" MEANS to `golfin_mission_claim()`. Hard-coding 10 there
+ * would make re-tiering the campaign from this panel silently unable to pay.
+ */
+async function mirrorMissionTierBonus(drafts: ContentStoredRow[]): Promise<string | null> {
+  if (isMockMode()) return null;
+
+  const rows = drafts
+    .filter((r) => r.isActive)
+    .map((r) => ({
+      tier: r.rowId,
+      bonus_rp: Math.max(0, Math.trunc(Number(r.data.tierClearBonusRP) || 0)),
+      missions_in_tier: Math.max(1, Math.trunc(Number(r.data.missionsInTier) || 10)),
+      updated_at: new Date().toISOString(),
+    }));
+  if (rows.length === 0) return null;
+
+  const res = await getSupabaseAdmin()
+    .from("golfin_mission_tier_bonus")
+    .upsert(rows, { onConflict: "tier" });
+  return res.error ? res.error.message : null;
+}
+
+/**
  * THE MIRROR DISPATCHER — the ONE place that knows which catalogs have a
  * server-side mirror and how to write it.
  *
@@ -294,7 +363,7 @@ async function mirrorModeFees(drafts: ContentStoredRow[]): Promise<string | null
  * `mirrorForCatalog` below is the only thing that writes them; anything that
  * changes what a catalog serves must go through it.
  */
-export const MIRRORED_CATALOGS = ["characters", "modes"];
+export const MIRRORED_CATALOGS = ["characters", "modes", "missions", "mission_tiers"];
 async function mirrorForCatalog(
   catalog: string,
   rows: ContentStoredRow[]
@@ -324,6 +393,30 @@ async function mirrorForCatalog(
       : null;
   }
 
+  if (catalog === "missions") {
+    const error = await mirrorMissionRewards(rows);
+    return error
+      ? {
+          error,
+          detail:
+            "The mirror is what golfin_mission_claim() pays from (missions_v1 §A3); " +
+            "serving missions without it would credit the OLD amount, or nothing at all.",
+        }
+      : null;
+  }
+
+  if (catalog === "mission_tiers") {
+    const error = await mirrorMissionTierBonus(rows);
+    return error
+      ? {
+          error,
+          detail:
+            "The mirror carries the tier-completion bonus AND how many missions a tier " +
+            "holds (missions_v1 §A3); without it the 10-of-10 bonus is never paid.",
+        }
+      : null;
+  }
+
   return null;
 }
 
@@ -348,7 +441,18 @@ export async function publishCatalog(
         // cost table are normally published together.
         catalog === "level_up_costs"
         ? ["characters", "clubs"]
-        : [];
+        : // missions_v1 §A6 — a mission is COMPOSED, so nothing about it can be
+          // checked without the components it names. Drafts, not published
+          // rows, for the same reason as the shop's refIds: a new mission and
+          // the start area it uses are normally published together.
+          catalog === "missions"
+          ? ["mission_start_areas", "mission_wind_presets", "mission_loadouts",
+             "mission_goal_weights", "mission_tiers"]
+          : // A supplied loadout must resolve every club type+rarity to a real
+            // Clubs.csv row, or it hands the player an empty bag (rule 12).
+            catalog === "mission_loadouts"
+            ? ["clubs"]
+            : [];
   for (const other of needs) {
     const rows = await fetchAllRows("content_drafts", other);
     otherCatalogs.set(other, new Map(rows.map((r) => [r.rowId, toDraftRow(r)])));
@@ -374,10 +478,38 @@ export async function publishCatalog(
     }
   }
 
+  // The two cross-surface numbers the mission publishes are checked against.
+  // Read here rather than in the validator because the validator is pure, and
+  // read ONLY for the catalog that needs each — the same discipline as
+  // versusWinPts above.
+  let missionClearMax: number | null | undefined;
+  let dailyMissionPts: number | null | undefined;
+  if (!isMockMode() && (catalog === "missions" || catalog === "daily_mission_weights")) {
+    const action = catalog === "missions" ? "mission_clear" : "daily_mission";
+    const res = await getSupabaseAdmin()
+      .from("game_point_actions")
+      .select("pts, max_per_event")
+      .eq("action", action)
+      .maybeSingle();
+    // A read failure leaves both undefined, so the rule simply does not run.
+    // For `missions` that means one BLOCKING rule is skipped — which is the
+    // right trade: refusing every mission publish because an advisory lookup
+    // blipped would make the panel unusable, and the claim path enforces the
+    // same ceiling anyway. The rule exists to tell the operator BEFORE a player
+    // clears a mission and is paid less than the card promised.
+    if (!res.error && res.data) {
+      const row = res.data as { pts: number | null; max_per_event: number | null };
+      missionClearMax = row.max_per_event === null ? null : Number(row.max_per_event);
+      dailyMissionPts = row.pts === null ? null : Number(row.pts);
+    }
+  }
+
   const problems = validateCatalog(catalog, drafts.map(toDraftRow), {
     publishedMinBuild: new Map(published.map((r) => [r.rowId, r.minBuild])),
     otherCatalogs,
     versusWinPts,
+    missionClearMax: catalog === "missions" ? missionClearMax : undefined,
+    dailyMissionPts: catalog === "daily_mission_weights" ? dailyMissionPts : undefined,
   });
 
   if (hasErrors(problems)) {
@@ -449,6 +581,8 @@ export async function publishCatalog(
       note: note ?? null,
       mirroredToGolfinCharacters: catalog === "characters",
       mirroredToGolfinModeFees: catalog === "modes",
+      mirroredToGolfinMissionRewards: catalog === "missions",
+      mirroredToGolfinMissionTierBonus: catalog === "mission_tiers",
     }
   );
 

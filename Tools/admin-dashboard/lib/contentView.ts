@@ -33,6 +33,13 @@ export const CONTENT_CATALOGS = [
   "shop_catalog",
   "level_up_costs",
   "modes",
+  "missions",
+  "mission_start_areas",
+  "mission_wind_presets",
+  "mission_loadouts",
+  "mission_goal_weights",
+  "mission_tiers",
+  "daily_mission_weights",
 ] as const;
 
 export type ContentCatalog = (typeof CONTENT_CATALOGS)[number];
@@ -66,13 +73,33 @@ export interface Facet {
   /** `data` field this facet filters on. Must be on the route's allow-list. */
   column: string;
   /** i18n key for the label. */
-  labelKey: "c.facet.brand" | "c.facet.type" | "c.facet.rarity" | "c.facet.category";
+  labelKey:
+    | "c.facet.brand"
+    | "c.facet.type"
+    | "c.facet.rarity"
+    | "c.facet.category"
+    | "c.facet.tier"
+    | "c.facet.startArea"
+    | "c.facet.loadout"
+    | "c.facet.kind"
+    | "c.facet.goal"
+    | "c.facet.component";
 }
 
 const BRAND_FACET: Facet = { column: "brand", labelKey: "c.facet.brand" };
 const TYPE_FACET: Facet = { column: "type", labelKey: "c.facet.type" };
 const RARITY_FACET: Facet = { column: "rarity", labelKey: "c.facet.rarity" };
 const CATEGORY_FACET: Facet = { column: "category", labelKey: "c.facet.category" };
+
+// missions_v1. Each is a real server query over `data->>'<field>'`, same as the
+// four above — see the Facet doc comment for why these are not client filters.
+const MISSION_TIER_FACET: Facet = { column: "tier", labelKey: "c.facet.tier" };
+const MISSION_START_FACET: Facet = { column: "startAreaId", labelKey: "c.facet.startArea" };
+const MISSION_LOADOUT_FACET: Facet = { column: "loadoutId", labelKey: "c.facet.loadout" };
+const MISSION_AREA_FACET: Facet = { column: "areaId", labelKey: "c.facet.startArea" };
+const MISSION_KIND_FACET: Facet = { column: "kind", labelKey: "c.facet.kind" };
+const MISSION_GOAL_FACET: Facet = { column: "goal", labelKey: "c.facet.goal" };
+const MISSION_COMPONENT_FACET: Facet = { column: "component", labelKey: "c.facet.component" };
 
 // ---------------------------------------------------------------------------
 // One descriptor per panel
@@ -158,6 +185,61 @@ export const CATALOG_VIEWS: Record<string, CatalogView> = {
     catalog: "modes",
     columns: ["title", "entryFee", "rewards", "locked", "target", "order"],
     facets: [],
+    limit: 50,
+  },
+
+  // ---- missions_v1 -------------------------------------------------------
+  //
+  // 40 rows across 26 columns. The table shows the SHAPE of a mission — where it
+  // starts, in what wind, with which clubs, for how much — because that is what
+  // an operator scans for when a tier feels wrong. The 40 names, the JA names,
+  // the three goal slots and the item rewards are all still editable in the row
+  // editor; they are just not what anyone opens the panel to compare.
+  missions: {
+    catalog: "missions",
+    columns: ["order", "tier", "name_en", "holeId", "startAreaId", "windPresetId",
+              "loadoutId", "goal1Type", "difficultyScore", "firstClearRP"],
+    facets: [MISSION_TIER_FACET, MISSION_START_FACET, MISSION_LOADOUT_FACET],
+    limit: 50,
+  },
+  // 162 rows — 18 holes x 9 areas — and the ONE catalog whose values are
+  // written by a Unity bake rather than typed. The table leads with the
+  // coordinates so an unbaked row is visible at a glance.
+  mission_start_areas: {
+    catalog: "mission_start_areas",
+    columns: ["holeId", "areaId", "kind", "weight", "x", "y", "z", "pin_count"],
+    facets: [MISSION_AREA_FACET, MISSION_KIND_FACET],
+    limit: 50,
+  },
+  mission_wind_presets: {
+    catalog: "mission_wind_presets",
+    columns: ["label", "relDirDeg", "speed", "weight"],
+    facets: [],
+    limit: 50,
+  },
+  mission_loadouts: {
+    catalog: "mission_loadouts",
+    columns: ["label", "kind", "clubs", "rarity", "weight", "allowedStartKinds"],
+    facets: [MISSION_KIND_FACET],
+    limit: 50,
+  },
+  mission_goal_weights: {
+    catalog: "mission_goal_weights",
+    columns: ["goal", "match", "scope", "param", "weight", "note"],
+    facets: [MISSION_GOAL_FACET],
+    limit: 50,
+  },
+  mission_tiers: {
+    catalog: "mission_tiers",
+    columns: ["order", "scoreMin", "scoreMaxExcl", "firstClearRP", "replayRP",
+              "tierClearBonusRP", "unlockClears", "missionsInTier"],
+    facets: [],
+    limit: 50,
+  },
+  daily_mission_weights: {
+    catalog: "daily_mission_weights",
+    columns: ["component", "optionId", "pickWeight", "note"],
+    facets: [MISSION_COMPONENT_FACET],
     limit: 50,
   },
 };

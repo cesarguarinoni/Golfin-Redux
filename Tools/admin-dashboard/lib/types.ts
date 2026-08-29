@@ -504,6 +504,17 @@ export interface RewardActionInput {
 export interface RewardActionsResponse {
   actions: RewardActionRow[];
   mock: boolean;
+  /**
+   * Cross-surface drift the Rewards panel warns about (missions_v1 §A6). These
+   * are the two places where a number in THIS table has to agree with a number
+   * somewhere else, and the panel is the only screen that can see both.
+   */
+  missionDrift?: RewardDrift[];
+}
+
+export interface RewardDrift {
+  action: string;
+  message: string;
 }
 
 // ---------------------------------------------------------------------------

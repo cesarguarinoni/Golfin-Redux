@@ -1,0 +1,41 @@
+id,order,tier,key,name_en,name_ja,holeId,par,startAreaId,windPresetId,loadoutId,goal1Type,goal1Param,goal2Type,goal2Param,goal3Type,goal3Param,difficultyScore,firstClearRP,replayRP,itemRewards,dailyEligible,unlock,courseId,pinIndex,staminaDrain
+1,1,Beginner,b_first_putt,First Putt,はじめてのパット,4,3,GREEN,CALM,SUP_PUTTER,SHOTS,3,,,,,0,15,5,,yes,start,lomond-country-club,0,3
+2,2,Beginner,b_short_hole,The Short Hole,ショートホール,15,3,TEE_LADIES,CALM,SUP_FULL,SCORE,2,,,,,1,15,5,RepairKit x1,yes,clear:1,lomond-country-club,0,8
+3,3,Beginner,b_chip_and_run,Chip and Run,チップ＆ラン,6,3,FRINGE,CALM,SUP_WEDGE_PUTTER,SHOTS,3,,,,,2,15,5,,yes,clear:2,lomond-country-club,0,3
+4,4,Beginner,b_fairway_finder,Fairway Finder,フェアウェイキープ,2,4,TEE_LADIES,CALM,SUP_FULL,LAND_TEE,Fairway,,,,,3,15,5,,yes,clear:3,lomond-country-club,0,8
+5,5,Beginner,b_first_150,The First 150,初めての150ヤード,1,5,TEE_LADIES,TAIL_L,SUP_FULL,DIST,150,,,,,3,15,5,,yes,clear:4,lomond-country-club,0,8
+6,6,Beginner,b_bogey_golf,Bogey Golf,ボギーゴルフ,11,3,TEE_LADIES,CROSS_L,SUP_FULL,SCORE,1,,,,,3,15,5,,yes,clear:5,lomond-country-club,0,8
+7,7,Beginner,b_sand_escape,Sand Escape,バンカー脱出,9,4,SAND,CALM,SUP_WEDGE_PUTTER,SHOTS,4,,,,,4,15,5,,yes,clear:6,lomond-country-club,0,3
+8,8,Beginner,b_keep_it_dry,Keep It Dry,池ポチャ禁止,13,5,TEE_LADIES,CALM,SUP_FULL,SCORE,2,NO_HAZARD,,,,4,15,5,RepairKit x1,yes,clear:7,lomond-country-club,0,8
+9,9,Beginner,b_graduation,Graduation Day,卒業試験,7,4,TEE_LADIES,CALM,SUP_FULL,SCORE,1,NO_HAZARD,,,,4,15,5,GoldTicket x1,yes,clear:8,lomond-country-club,0,8
+10,10,Beginner,b_iron_man,Iron Man,アイアンだけで,5,4,TEE_FRONT,CALM,SUP_IRONS,SCORE,2,,,,,5,15,5,,yes,clear:9,lomond-country-club,0,8
+11,11,Amateur,a_your_own_clubs,Your Own Clubs,マイクラブで,10,4,TEE_REGULAR,CALM,OWN,SCORE,1,NO_HAZARD,,,,6,25,5,,no,clear:10,lomond-country-club,0,8
+12,12,Amateur,a_par_3_par,"Par Three, Par",ショートでパー,6,3,TEE_REGULAR,HEAD_L,SUP_FULL,SCORE,0,,,,,6,25,5,,yes,clear:11,lomond-country-club,0,8
+13,13,Amateur,a_rough_recovery,Out of the Rough,ラフからのリカバリー,12,4,ROUGH,CROSS_S,OWN,SHOTS,3,,,,,6,25,5,,no,clear:12,lomond-country-club,0,3
+14,14,Amateur,a_two_putt,Two-Putt Territory,2パット圏内,9,4,TEE_FRONT,CALM,OWN,SCORE,0,PUTTS,2,,,6,25,5,,no,clear:13,lomond-country-club,0,8
+15,15,Amateur,a_approach,The Approach,アプローチ勝負,5,4,FAIRWAY,CROSS_S,OWN,NEAR_PIN,10,SHOTS,3,,,7,25,5,,no,clear:14,lomond-country-club,0,3
+16,16,Amateur,a_no_woods,Leave the Woods,ウッド封印,3,4,TEE_REGULAR,CALM,OWN_NO_WOODS,SCORE,1,LAND_TEE,Fairway,,,7,25,5,RepairKit x1,no,clear:15,lomond-country-club,0,8
+17,17,Amateur,a_driver_putter,Driver & Putter,ドライバーとパターだけ,4,3,TEE_REGULAR,CALM,SUP_DRIVER_PUTTER,SCORE,1,,,,,7,25,5,RepairKit x1,yes,clear:16,lomond-country-club,0,8
+18,18,Amateur,a_clean_card,Clean Card,ノーミスで,16,4,TEE_REGULAR,CROSS_L,OWN,SCORE,1,NO_HAZARD,,,,7,25,5,,no,clear:17,lomond-country-club,0,8
+19,19,Amateur,a_big_drive,Big Drive,ビッグドライブ,13,5,TEE_REGULAR,TAIL_S,SUP_FULL,DIST,200,SCORE,1,,,8,25,5,,yes,clear:18,lomond-country-club,0,8
+20,20,Amateur,a_amateur_final,Amateur Open,アマチュアオープン,14,4,TEE_REGULAR,HEAD_L,OWN,SCORE,0,NO_HAZARD,,,,8,25,5,GoldTicket x1,no,clear:19,lomond-country-club,0,8
+21,21,Pro,p_one_iron,One Iron,7番一本勝負,10,4,TEE_REGULAR,CROSS_L,SUP_ONE_IRON,SCORE,1,,,,,10,40,5,PremiumRepairKit x1,yes,clear:20,lomond-country-club,0,8
+22,22,Pro,p_stick_it,Stick It,ピンそば,16,4,FAIRWAY,GUSTY,OWN,NEAR_PIN,5,SHOTS,2,,,10,40,5,,no,clear:21,lomond-country-club,0,3
+23,23,Pro,p_into_the_wind,Into the Wind,向かい風,17,4,TEE_BACK,HEAD_S,OWN,SCORE,0,,,,,11,40,5,,no,clear:22,lomond-country-club,0,8
+24,24,Pro,p_no_irons,No Irons Allowed,アイアン禁止,9,4,TEE_BACK,CROSS_L,OWN_NO_IRONS,SCORE,0,,,,,11,40,5,,no,clear:23,lomond-country-club,0,8
+25,25,Pro,p_birdie_hunt,Birdie Hunt,バーディー狙い,15,3,TEE_BACK,HEAD_L,OWN,SCORE,-1,NO_HAZARD,,,,11,40,5,PremiumRepairKit x1,no,clear:24,lomond-country-club,0,8
+26,26,Pro,p_precision,Precision Round,精密ラウンド,5,4,TEE_BACK,CROSS_L,OWN,SCORE,0,AVOID,Rough,LAND_TEE,Fairway,12,40,5,,no,clear:25,lomond-country-club,0,8
+27,27,Pro,p_gusts,Reading the Gusts,突風を読め,1,5,TEE_BACK,GUSTY,OWN,SCORE,1,,,,,12,40,5,,no,clear:26,lomond-country-club,0,8
+28,28,Pro,p_crosswind_par3,Crosswind Par 3,横風のパー3,11,3,TEE_BACK,CROSS_S,OWN,SCORE,0,GIR,,,,13,40,5,,no,clear:27,lomond-country-club,0,8
+29,29,Pro,p_long_par5,The Long Eighth,8番ロング攻略,8,5,TEE_BACK,QUARTER_S,OWN_NO_WOODS,SCORE,1,NO_HAZARD,,,,13,40,5,,no,clear:28,lomond-country-club,0,8
+30,30,Pro,p_pro_final,Pro Championship,プロ選手権,7,4,TEE_BACK,HEAD_S,OWN,SCORE,0,NO_HAZARD,,LAND_TEE,Fairway,13,40,5,GoldTicket x1,no,clear:29,lomond-country-club,0,8
+31,31,Legend,l_tourney_par,"Back Tee, Par",バックティーでパー,3,4,TEE_BACK,CROSS_S,OWN,SCORE,0,GIR,,,,14,60,5,,no,clear:30,lomond-country-club,0,8
+32,32,Legend,l_wood_only,Wood & Putter,ウッドとパターのみ,2,4,TEE_BACK,HEAD_S,SUP_WOOD_ONLY,SCORE,0,,,,,14,60,5,,yes,clear:31,lomond-country-club,0,8
+33,33,Legend,l_birdie_par3,Birdie on Eleven,11番でバーディー,11,3,TEE_BACK,GUSTY,OWN,SCORE,-1,NO_HAZARD,,,,14,60,5,PremiumRepairKit x1,no,clear:32,lomond-country-club,0,8
+34,34,Legend,l_no_wedges,Hands Off the Wedges,ウェッジ禁止,12,4,TEE_BACK,CROSS_S,OWN_NO_WEDGES,SCORE,0,NO_HAZARD,,,,14,60,5,,no,clear:33,lomond-country-club,0,8
+35,35,Legend,l_driver_putter_par,"Two Clubs, Par",2本でパー,6,3,TEE_BACK,CROSS_S,SUP_DRIVER_PUTTER,SCORE,0,NO_HAZARD,,,,14,60,5,,yes,clear:34,lomond-country-club,0,8
+36,36,Legend,l_birdie_gusts,Birdie in the Gusts,突風の中のバーディー,14,4,TEE_BACK,GUSTY,OWN,SCORE,-1,,,,,14,60,5,GoldTicket x1,no,clear:35,lomond-country-club,0,8
+37,37,Legend,l_sand_up_down,Sand Save,サンドセーブ,13,5,SAND,GUSTY,OWN_NO_WEDGES,UP_DOWN,,PUTTS,1,,,15,60,5,,no,clear:36,lomond-country-club,0,3
+38,38,Legend,l_eagle_five,Eagle on Eighteen,18番でイーグル,18,5,TEE_BACK,TAIL_S,OWN,SCORE,-2,LAND_TEE,Fairway,,,15,60,5,,no,clear:37,lomond-country-club,0,8
+39,39,Legend,l_perfect_round,Perfect Hole,パーフェクトホール,4,3,TEE_BACK,CROSS_S,OWN,SCORE,-1,LAND_TEE,Green,PUTTS,1,17,60,5,,no,clear:38,lomond-country-club,0,8
+40,40,Legend,l_legend_final,Legend Final,レジェンドファイナル,1,5,TEE_BACK,GUSTY,OWN,SCORE,-1,NO_HAZARD,,LAND_TEE,Fairway,17,60,5,GoldTicket x2,no,clear:39,lomond-country-club,0,8

@@ -61,6 +61,9 @@ export const DICT = {
   "nav.level-costs": { en: "Level Costs", ja: "レベルアップ費用" },
   "nav.modes": { en: "Modes", ja: "ゲームモード" },
   "nav.rewards": { en: "Rewards", ja: "報酬" },
+  "nav.missions": { en: "Missions", ja: "ミッション" },
+  "nav.mission-components": { en: "Mission Components", ja: "ミッション部品" },
+  "nav.daily-missions": { en: "Daily Missions", ja: "デイリーミッション" },
 
   "mode.mock": {
     en: "MOCK DATA — running on local fixtures, no Supabase connection",
@@ -314,6 +317,7 @@ export const DICT = {
   "udrawer.tab.transactions": { en: "Points ledger", ja: "ポイント履歴" },
   "udrawer.tab.activities": { en: "Activities", ja: "アクティビティ" },
   "udrawer.tab.inventory": { en: "Inventory", ja: "インベントリ" },
+  "udrawer.tab.missions": { en: "Missions", ja: "ミッション" },
 
   "loginPage.title": { en: "GOLFIN Admin", ja: "GOLFIN 管理画面" },
   "loginPage.subtitle": { en: "Internal dashboard — admins only", ja: "社内管理画面 — 管理者専用" },
@@ -886,6 +890,12 @@ export const DICT = {
   "c.facet.type": { en: "Type", ja: "種別" },
   "c.facet.rarity": { en: "Rarity", ja: "レアリティ" },
   "c.facet.category": { en: "Category", ja: "カテゴリ" },
+  "c.facet.tier": { en: "Tier", ja: "ティア" },
+  "c.facet.startArea": { en: "Start area", ja: "スタート地点" },
+  "c.facet.loadout": { en: "Loadout", ja: "クラブ構成" },
+  "c.facet.kind": { en: "Kind", ja: "種別" },
+  "c.facet.goal": { en: "Goal", ja: "目標" },
+  "c.facet.component": { en: "Component", ja: "コンポーネント" },
   "c.facet.any": { en: "Any {label}", ja: "{label}: すべて" },
   "c.facet.serverNote": {
     en: "Runs as a server query over the whole catalog, combined with the other filters — not a narrowing of the loaded page.",
@@ -1120,6 +1130,96 @@ export const DICT = {
     en: "Reward numbers on the cards are display copy — most modes show an average, not an exact payout. What players are actually paid lives in the Rewards panel.",
     ja: "カードに表示される報酬は表示用のテキストです（多くのモードは平均値で、確定額ではありません）。実際の支払額は「報酬」パネルで管理します。",
   },
+
+  // ---- missions (missions_v1 §A6) -----------------------------------------
+  //
+  // The THIRD catalog the server reads, after level_up_costs and modes, and the
+  // one closest to a player's balance: publishing mirrors every row's tier and
+  // RP into golfin_mission_rewards, and golfin_mission_claim() credits exactly
+  // that. An edit here is not card copy.
+  "ms.title": { en: "Missions", ja: "ミッション" },
+  "ms.note": {
+    en: "Publishing mirrors every mission's payout to the server — a player is credited what is published here, not what their client shows.",
+    ja: "公開するとすべてのミッションの報酬がサーバーへ反映されます。プレイヤーに支払われるのはここで公開した金額であり、クライアントの表示額ではありません。",
+  },
+  "ms.recomputed": {
+    en: "Difficulty is RECOMPUTED from the component weights on publish — the stored difficultyScore is display only, and tuning a weight re-tiers the campaign.",
+    ja: "難易度は公開時にコンポーネントの重みから再計算されます。保存されている difficultyScore は表示用で、重みを調整するとキャンペーンのティアが変わります。",
+  },
+  "ms.tiers.title": { en: "Tiers", ja: "ティア" },
+  "ms.tiers.note": {
+    en: "Bands must be contiguous. A tier's bonus is paid once, by the server, when its last mission is first cleared.",
+    ja: "バンドは連続している必要があります。ティアボーナスは、そのティアの最後のミッションを初めてクリアした時にサーバーが一度だけ支払います。",
+  },
+
+  // ---- mission components --------------------------------------------------
+  "mc.title": { en: "Mission Components", ja: "ミッション部品" },
+  "mc.note": {
+    en: "A mission is composed from these: where it starts, in what wind, with which clubs, and how each goal is weighted.",
+    ja: "ミッションはこれらの部品から構成されます — スタート地点・風・使用クラブ、そして各目標の重み付けです。",
+  },
+  "mc.tab.startAreas": { en: "Start areas", ja: "スタート地点" },
+  "mc.tab.wind": { en: "Wind presets", ja: "風プリセット" },
+  "mc.tab.loadouts": { en: "Loadouts", ja: "クラブ構成" },
+  "mc.tab.goalWeights": { en: "Goal weights", ja: "目標の重み" },
+  "mc.tab.dailyWeights": { en: "Daily weights", ja: "デイリーの重み" },
+  "mc.startAreas.note": {
+    en: "Coordinates are written by the Unity bake (Golfin ▸ Missions ▸ Bake Start Areas), not typed. A short area with no coordinates has not been baked yet; tee areas never carry any.",
+    ja: "座標は Unity のベイク（Golfin ▸ Missions ▸ Bake Start Areas）が書き込むもので、手入力しません。座標が空のショート地点は未ベイクです。ティー地点は座標を持ちません。",
+  },
+  "mc.goalWeights.note": {
+    en: "The difficulty curve. Changing a weight re-scores every mission that uses that goal, and can move it into another tier — the re-scored table is shown before you publish.",
+    ja: "難易度カーブです。重みを変更すると、その目標を使うすべてのミッションが再計算され、別のティアへ移動する場合があります。公開前に再計算後の一覧を表示します。",
+  },
+  "mc.rescore.title": { en: "Re-scored missions", ja: "再計算されたミッション" },
+  "mc.rescore.none": { en: "No mission changes tier under the current draft weights.", ja: "現在の下書きの重みでは、ティアが変わるミッションはありません。" },
+  "mc.rescore.moved": { en: "{0} → {1}", ja: "{0} → {1}" },
+  "mc.loadouts.note": {
+    en: "A supplied loadout hands the player a bag. Every club type must resolve to a real Clubs row at the stated rarity, or the publish is refused.",
+    ja: "支給構成はプレイヤーにバッグを渡します。すべてのクラブ種別が指定レアリティの実在するクラブ行に解決できない場合、公開は拒否されます。",
+  },
+
+  // ---- daily missions ------------------------------------------------------
+  "dm.title": { en: "Daily Missions", ja: "デイリーミッション" },
+  "dm.note": {
+    en: "One recipe per UTC date, generated on first read and then frozen. A recipe that changed under a player mid-round would be unclaimable.",
+    ja: "UTC の日付ごとに1つのレシピを、最初のアクセス時に生成して固定します。プレイ中にレシピが変わると報酬を受け取れなくなるためです。",
+  },
+  "dm.preview": { en: "Preview next 14 days", ja: "今後14日をプレビュー" },
+  "dm.previewNote": {
+    en: "Preview runs the generator without inserting anything. What it shows is what will be generated, because the generator is deterministic in the date.",
+    ja: "プレビューは生成器を実行するだけで、データは登録しません。生成器は日付に対して決定的なので、表示された内容がそのまま生成されます。",
+  },
+  "dm.pin": { en: "Pin recipe", ja: "レシピを固定" },
+  "dm.pinned": { en: "Pinned", ja: "固定済み" },
+  "dm.generated": { en: "Generated", ja: "自動生成" },
+  "dm.notYet": { en: "Not generated yet", ja: "未生成" },
+  "dm.pastRefused": { en: "A past date cannot be pinned.", ja: "過去の日付は固定できません。" },
+  "dm.claims": { en: "Claims", ja: "クリア数" },
+  "dm.clearRate": { en: "Clear rate", ja: "クリア率" },
+  "dm.recipe": { en: "Recipe", ja: "レシピ" },
+  "dm.hash": { en: "Recipe hash", ja: "レシピハッシュ" },
+  "dm.band": { en: "Band", ja: "バンド" },
+  "dm.modifier": { en: "Modifier", ja: "修飾" },
+  "dm.date": { en: "Date (UTC)", ja: "日付（UTC）" },
+  "dm.loadFailed": { en: "Could not load the daily calendar.", ja: "デイリーカレンダーを読み込めませんでした。" },
+  "dm.pinFailed": { en: "Could not pin that recipe.", ja: "レシピを固定できませんでした。" },
+  "dm.pinOk": { en: "Recipe pinned for {0}.", ja: "{0} のレシピを固定しました。" },
+
+  // ---- users drawer ▸ missions tab -----------------------------------------
+  "umis.none": { en: "This player has not attempted a mission.", ja: "このプレイヤーはミッションに挑戦していません。" },
+  "umis.clears": { en: "clears", ja: "クリア" },
+  "umis.attempts": { en: "attempts", ja: "挑戦" },
+  "umis.best": { en: "best", ja: "ベスト" },
+  "umis.reset": { en: "Reset mission", ja: "ミッションをリセット" },
+  "umis.resetTitle": { en: "Reset mission {0}?", ja: "ミッション {0} をリセットしますか？" },
+  "umis.resetBody": {
+    en: "Clears, attempts and the best score are erased, so the next clear pays the FIRST-CLEAR amount again. Points already credited are not taken back. Audited.",
+    ja: "クリア数・挑戦回数・ベストスコアを消去します。次のクリアで再び初回クリア報酬が支払われます。すでに付与されたポイントは回収されません。監査ログに記録されます。",
+  },
+  "umis.resetOk": { en: "Mission {0} reset.", ja: "ミッション {0} をリセットしました。" },
+  "umis.dailyClaims": { en: "Daily claims", ja: "デイリー受取" },
+  "umis.streak": { en: "streak", ja: "連続" },
 
   // ---- rewards ▸ game_point_actions (game_modes_admin §3) ------------------
   //

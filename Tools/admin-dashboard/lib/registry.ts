@@ -38,7 +38,10 @@ export type PanelIcon =
   | "cart"
   | "ladder"
   | "flagpole"
-  | "gift";
+  | "gift"
+  | "target"
+  | "puzzle"
+  | "calendar";
 
 export interface PanelDef {
   id: PanelId;
@@ -65,6 +68,15 @@ export const PANELS: readonly PanelDef[] = [
   // was the first): publishing here mirrors the fees into `golfin_mode_fees`,
   // which /points/spend prices a mode entry against.
   { id: "modes", title: "Modes", icon: "flagpole", route: "/modes" },
+  // ---- missions_v1 -------------------------------------------------------
+  // Three entries, not one panel with tabs, because they are three different
+  // JOBS. `missions` is the campaign an operator tunes; `mission-components` is
+  // the parts bin those missions are composed from (and the difficulty curve
+  // that re-tiers them); `daily-missions` is a LIVE table with a calendar, not a
+  // catalog at all — the same reason Tournaments is its own panel and not a tab.
+  { id: "daily-missions", title: "Daily Missions", icon: "calendar", route: "/daily-missions" },
+  { id: "mission-components", title: "Mission Components", icon: "puzzle", route: "/mission-components" },
+  { id: "missions", title: "Missions", icon: "target", route: "/missions" },
   { id: "notices", title: "Notices", icon: "megaphone", route: "/notices" },
   { id: "points", title: "Points", icon: "coins", route: "/points" },
   // NOT a content catalog and deliberately not shaped like one: this edits
