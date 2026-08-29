@@ -97,6 +97,13 @@
 
 ## 📋 SPEC_READY POINTERS
 
+- ~~`shot_aim_parity`~~ **DONE 2026-08-28** (`b3d0c5d95` → `2b0cd5cb2`, Completed/). One `AimYawFor()` for line + shot; `AimNudgeRangeRad` removed; latch unlatches on a new low; F14.
+- ~~`shot_timing_power`~~ **DONE 2026-08-29** (`4210c0891`, Completed/). Slab progress sampled at the aim latch → power ×0.70/0.90/1.0; band edges in `controls.csv`; sampleless drivers ×1.0; F15. Open for Cesar on feel: D5 putts pay the penalty (one `IsPutt` guard to exempt), band/multiplier values, HUD `× 0.xx` keep/drop. Deviation accepted: HUD branch fires in `Timing` (no `Flicking` state is ever published).
+- ~~`shot_timing_telemetry`~~ **DONE 2026-08-29** (`c77c7732b` → `135442309`, Completed/). `shot_taken` carries `timing01`/`timing_mul`/`timing_band`; dashboard Flick-timing card deployed (Cloudflare version `cc9b9dd3`, stamp `c77c7732`); prod rows verified by query. Cesar step: one look at admin.golfin.world → Telemetry → Shot quality (Cloudflare Access — Code cannot sign in). Shot-controls track is closed; D5 putt + F15 tuning now decided by data.
+
+- Parked: `Docs/Specs/Queued/flick_vector_aim_DESIGN_NOTE.md` — scheme C (aim = flick vector), Cesar leaning, revisit after the two above are felt on device.
+
+
 - **`missions_v1`** (filed 2026-08-28, Architect via Cowork) — **SPEC_READY, kickoff pasteable.**
   `Docs/Specs/Active/missions_v1/SPEC.md`. Missions mode end to end: 40 component-built missions
   (Lomond, 18 holes, 4 tiers, curve verified non-decreasing), server-generated Daily Mission,
@@ -127,6 +134,10 @@ Context:
 - Phase A is deployable alone with the mode still locked. Full SQL for every migration in
   chat for Cesar. Dashboard work is not done until deployed (PIPELINE_HARDENING §23 —
   quote the Cloudflare deployment id). Run the §21 live E2E at the end of Phase C.
+- Strings: every new player-facing string goes into LocalizationText.csv (EN + JA) and
+  reaches the `texts` catalog via Tools/content/import_content.py (plan → apply → publish →
+  --check clean) — SPEC §A7. Same importer path for the modes.csv row edit. Dashboard
+  strings go in lib/i18n.ts DICT (en + ja). No hardcoded .text literals.
 - Out of scope: Home-screen daily badge, mission leaderboards, HoleTees.csv yardage fix,
   flipping missions.locked in the bundled CSV.
 
