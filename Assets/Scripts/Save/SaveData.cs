@@ -71,6 +71,25 @@ namespace Golfin.Save
     /// IMPORTANT: Do NOT serialize PlayerCharacterData, PlayerBallData, etc. directly.
     /// Use the flat DTO types (PersistedCharacter, etc.) to decouple storage from runtime.
     /// </summary>
+    /// <summary>
+    /// One mission's progress, as the SERVER last reported it (missions_v1 §B4).
+    /// </summary>
+    [System.Serializable]
+    public class PersistedMissionProgress
+    {
+        /// <summary>The `missions` catalog row id — the campaign number as text.</summary>
+        public string missionId = "";
+
+        /// <summary>How many times cleared. 0 with <see cref="attempts"/> &gt; 0 is a real
+        /// state: tried and failed, which the card renders differently from never opened.</summary>
+        public int clears;
+
+        public int attempts;
+
+        /// <summary>Lowest stroke count on a CLEARED attempt. 0 = none yet.</summary>
+        public int bestStrokes;
+    }
+
     public class SaveData
     {
         /// <summary>
@@ -112,6 +131,22 @@ namespace Golfin.Save
         public List<int> unlockedHoles = new List<int>();
 
         public List<int> playedHoles = new List<int>();
+
+        // ── Mission progress (missions_v1 §B4) ───────────────────────────────
+        /// <summary>
+        /// A LOCAL MIRROR of `mission_progress` on the server, and nothing more.
+        ///
+        /// ⚠️ IT IS WRITTEN ONLY FROM A CLAIM RESPONSE, NEVER FROM LOCAL PLAY. That is the
+        /// whole discipline: the server decides what a clear is worth and how many the player
+        /// has, and this is a cache of what it said so the Mission Selection screen can render
+        /// before the round trip lands. A client that incremented `clears` itself would be
+        /// back to the pre-`golfin_shop_purchase` world — deciding its own economy — and the
+        /// screen would show a first-clear reward the server was never going to pay.
+        ///
+        /// Absent in saves before schema v12; an empty list is the correct state for a player
+        /// who has never played a mission, so no migration has to invent anything.
+        /// </summary>
+        public List<PersistedMissionProgress> missionProgress = new List<PersistedMissionProgress>();
 
         // ── Leaderboard: RP earned per rolling period (UTC) ──────────────────
         // lifetimeRpEarned is monotonic (never reset). rpDaily/rpWeekly/rpMonthly

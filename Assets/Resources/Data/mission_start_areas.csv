@@ -10,180 +10,186 @@
 # `TeeMarker_<label>_L/R` midpoint, the same scan PhysicsLabController.OnHoleLoaded
 # already does. x/y/z/bake_hash stay blank for them, deliberately and forever.
 #
-# SHORT kinds (GREEN, FRINGE, FAIRWAY, ROUGH, SAND) are BAKED, and the rows below
-# are the SLOTS the bake fills: `Golfin/Missions/Bake Start Areas` (Phase B)
-# derives each one from its Hole_NN_Geo scene and writes x/y/z, `pin_count` from
-# GreenTopology.GetPinCandidates(), and a `bake_hash` the `Validate All Holes`
-# drift gate checks. Until it runs they are BLANK, the publish validator WARNS
-# (never blocks — the mode is locked and the campaign is not playable yet), and
-# the client refuses to start a mission whose short start has no coordinates
-# rather than dropping the ball at the tee.
+# SHORT kinds (GREEN, FRINGE, FAIRWAY, ROUGH, SAND) are BAKED — do NOT hand-edit a
+# coordinate here. `Golfin ▸ Missions ▸ Bake Start Areas` derives each one from the
+# TRACKED hole data (Resources/HoleData/<course>/Hole_NN/{zones,green}.json plus
+# heightmap.bytes) and writes x/y/z, `pin_count`, and a `bake_hash` computed FROM
+# those coordinates. `Import ▸ Bake Tree Obstacles ▸ Validate All Holes` recomputes
+# that hash, so an edited coordinate fails its hole until the bake is re-run.
 #
-# SAND does not exist on every hole (H3/H4/H5/H8 have no greenside bunker on the
-# StartAreas sheet). The bake DEACTIVATES those rows; it does not delete them, so
-# the slot comes back if a bunker is ever authored.
+# WHY THE JSON AND NOT THE SCENE: Assets/Golf/Courses/*/Generated/* is gitignored
+# and per-machine, so a scene-driven bake would produce a drift gate that only
+# means something on the machine that ran it. The JSON is the same geometry, is
+# what the runtime itself classifies against, and is reproducible on any clone.
+#
+# A BLANK SHORT ROW IS DELIBERATE: that kind does not exist on that hole. Today
+# that is hole 13's SAND — its nearest bunker is 156 m from the green, so there
+# is no greenside bunker to start in (every real one on this course is 14-33 m).
+# The publish validator refuses a mission that names a coordinate-less start, so
+# a blank row cannot become a card that dead-ends.
 #
 # `pin_count` on a hole's GREEN row is what gates the daily ALT_PIN modifier
 # (SPEC missions_v1 §A5): fewer than 2 pin candidates and ALT_PIN's weight is 0.
+# Only hole 1 has more than one pin today (3); every other hole has exactly 1.
 id,courseId,holeId,areaId,label,kind,weight,x,y,z,pin_count,bake_hash
-lomond_h01_green,lomond-country-club,1,GREEN,Green (10 yd putt),short,0,,,,,
-lomond_h01_fringe,lomond-country-club,1,FRINGE,Fringe / sub-green,short,1,,,,,
-lomond_h01_fairway,lomond-country-club,1,FAIRWAY,Fairway approach,short,1,,,,,
-lomond_h01_rough,lomond-country-club,1,ROUGH,Rough recovery,short,2,,,,,
-lomond_h01_sand,lomond-country-club,1,SAND,Greenside bunker,short,2,,,,,
+lomond_h01_green,lomond-country-club,1,GREEN,Green (10 yd putt),short,0,-221.662,9.916,-70.327,3,a0188f39
+lomond_h01_fringe,lomond-country-club,1,FRINGE,Fringe / sub-green,short,1,-216.098,9.662,-68.877,3,6837a8fb
+lomond_h01_fairway,lomond-country-club,1,FAIRWAY,Fairway approach,short,1,-127.878,8.077,-16.230,3,fb32ece7
+lomond_h01_rough,lomond-country-club,1,ROUGH,Rough recovery,short,2,-124.033,7.804,-23.245,3,21f96544
+lomond_h01_sand,lomond-country-club,1,SAND,Greenside bunker,short,2,-228.001,9.662,-53.819,3,d16798ed
 lomond_h01_tee_ladies,lomond-country-club,1,TEE_LADIES,Ladies tee (red),tee,1,,,,,
 lomond_h01_tee_front,lomond-country-club,1,TEE_FRONT,Front tee (white),tee,2,,,,,
 lomond_h01_tee_regular,lomond-country-club,1,TEE_REGULAR,Regular tee (green),tee,3,,,,,
 lomond_h01_tee_back,lomond-country-club,1,TEE_BACK,Back tee (blue),tee,5,,,,,
-lomond_h02_green,lomond-country-club,2,GREEN,Green (10 yd putt),short,0,,,,,
-lomond_h02_fringe,lomond-country-club,2,FRINGE,Fringe / sub-green,short,1,,,,,
-lomond_h02_fairway,lomond-country-club,2,FAIRWAY,Fairway approach,short,1,,,,,
-lomond_h02_rough,lomond-country-club,2,ROUGH,Rough recovery,short,2,,,,,
-lomond_h02_sand,lomond-country-club,2,SAND,Greenside bunker,short,2,,,,,
+lomond_h02_green,lomond-country-club,2,GREEN,Green (10 yd putt),short,0,-91.615,19.553,130.147,1,23f0bf41
+lomond_h02_fringe,lomond-country-club,2,FRINGE,Fringe / sub-green,short,1,-86.942,19.282,123.964,1,6ebb2214
+lomond_h02_fairway,lomond-country-club,2,FAIRWAY,Fairway approach,short,1,-53.368,17.550,36.172,1,2521191a
+lomond_h02_rough,lomond-country-club,2,ROUGH,Rough recovery,short,2,-64.405,18.067,31.462,1,7553312f
+lomond_h02_sand,lomond-country-club,2,SAND,Greenside bunker,short,2,-110.813,17.134,124.270,1,54725e47
 lomond_h02_tee_ladies,lomond-country-club,2,TEE_LADIES,Ladies tee (red),tee,1,,,,,
 lomond_h02_tee_front,lomond-country-club,2,TEE_FRONT,Front tee (white),tee,2,,,,,
 lomond_h02_tee_regular,lomond-country-club,2,TEE_REGULAR,Regular tee (green),tee,3,,,,,
 lomond_h02_tee_back,lomond-country-club,2,TEE_BACK,Back tee (blue),tee,5,,,,,
-lomond_h03_green,lomond-country-club,3,GREEN,Green (10 yd putt),short,0,,,,,
-lomond_h03_fringe,lomond-country-club,3,FRINGE,Fringe / sub-green,short,1,,,,,
-lomond_h03_fairway,lomond-country-club,3,FAIRWAY,Fairway approach,short,1,,,,,
-lomond_h03_rough,lomond-country-club,3,ROUGH,Rough recovery,short,2,,,,,
-lomond_h03_sand,lomond-country-club,3,SAND,Greenside bunker,short,2,,,,,
+lomond_h03_green,lomond-country-club,3,GREEN,Green (10 yd putt),short,0,-14.600,17.701,-150.829,1,2703247e
+lomond_h03_fringe,lomond-country-club,3,FRINGE,Fringe / sub-green,short,1,-14.162,17.461,-145.848,1,35239d11
+lomond_h03_fairway,lomond-country-club,3,FAIRWAY,Fairway approach,short,1,19.119,15.821,-54.815,1,df5f8c02
+lomond_h03_rough,lomond-country-club,3,ROUGH,Rough recovery,short,2,26.719,16.851,-57.316,1,06780665
+lomond_h03_sand,lomond-country-club,3,SAND,Greenside bunker,short,2,-29.434,15.460,-159.443,1,0576b413
 lomond_h03_tee_ladies,lomond-country-club,3,TEE_LADIES,Ladies tee (red),tee,1,,,,,
 lomond_h03_tee_front,lomond-country-club,3,TEE_FRONT,Front tee (white),tee,2,,,,,
 lomond_h03_tee_regular,lomond-country-club,3,TEE_REGULAR,Regular tee (green),tee,3,,,,,
 lomond_h03_tee_back,lomond-country-club,3,TEE_BACK,Back tee (blue),tee,5,,,,,
-lomond_h04_green,lomond-country-club,4,GREEN,Green (10 yd putt),short,0,,,,,
-lomond_h04_fringe,lomond-country-club,4,FRINGE,Fringe / sub-green,short,1,,,,,
-lomond_h04_fairway,lomond-country-club,4,FAIRWAY,Fairway approach,short,1,,,,,
-lomond_h04_rough,lomond-country-club,4,ROUGH,Rough recovery,short,2,,,,,
-lomond_h04_sand,lomond-country-club,4,SAND,Greenside bunker,short,2,,,,,
+lomond_h04_green,lomond-country-club,4,GREEN,Green (10 yd putt),short,0,-31.198,16.345,24.485,1,51477c7c
+lomond_h04_fringe,lomond-country-club,4,FRINGE,Fringe / sub-green,short,1,-25.981,15.827,21.044,1,de7fe205
+lomond_h04_fairway,lomond-country-club,4,FAIRWAY,Fairway approach,short,1,-1.183,15.914,15.483,1,12664216
+lomond_h04_rough,lomond-country-club,4,ROUGH,Rough recovery,short,2,-3.904,14.949,7.960,1,9a308c15
+lomond_h04_sand,lomond-country-club,4,SAND,Greenside bunker,short,2,-33.661,12.346,9.770,1,b49cc5b9
 lomond_h04_tee_ladies,lomond-country-club,4,TEE_LADIES,Ladies tee (red),tee,1,,,,,
 lomond_h04_tee_front,lomond-country-club,4,TEE_FRONT,Front tee (white),tee,2,,,,,
 lomond_h04_tee_regular,lomond-country-club,4,TEE_REGULAR,Regular tee (green),tee,3,,,,,
 lomond_h04_tee_back,lomond-country-club,4,TEE_BACK,Back tee (blue),tee,5,,,,,
-lomond_h05_green,lomond-country-club,5,GREEN,Green (10 yd putt),short,0,,,,,
-lomond_h05_fringe,lomond-country-club,5,FRINGE,Fringe / sub-green,short,1,,,,,
-lomond_h05_fairway,lomond-country-club,5,FAIRWAY,Fairway approach,short,1,,,,,
-lomond_h05_rough,lomond-country-club,5,ROUGH,Rough recovery,short,2,,,,,
-lomond_h05_sand,lomond-country-club,5,SAND,Greenside bunker,short,2,,,,,
+lomond_h05_green,lomond-country-club,5,GREEN,Green (10 yd putt),short,0,115.279,17.267,-131.175,1,b0db7049
+lomond_h05_fringe,lomond-country-club,5,FRINGE,Fringe / sub-green,short,1,109.391,17.183,-125.044,1,1e2ad356
+lomond_h05_fairway,lomond-country-club,5,FAIRWAY,Fairway approach,short,1,31.506,16.996,-75.126,1,82e9be72
+lomond_h05_rough,lomond-country-club,5,ROUGH,Rough recovery,short,2,36.046,17.590,-68.539,1,5cc34623
+lomond_h05_sand,lomond-country-club,5,SAND,Greenside bunker,short,2,104.740,15.277,-146.000,1,d8cc50ad
 lomond_h05_tee_ladies,lomond-country-club,5,TEE_LADIES,Ladies tee (red),tee,1,,,,,
 lomond_h05_tee_front,lomond-country-club,5,TEE_FRONT,Front tee (white),tee,2,,,,,
 lomond_h05_tee_regular,lomond-country-club,5,TEE_REGULAR,Regular tee (green),tee,3,,,,,
 lomond_h05_tee_back,lomond-country-club,5,TEE_BACK,Back tee (blue),tee,5,,,,,
-lomond_h06_green,lomond-country-club,6,GREEN,Green (10 yd putt),short,0,,,,,
-lomond_h06_fringe,lomond-country-club,6,FRINGE,Fringe / sub-green,short,1,,,,,
-lomond_h06_fairway,lomond-country-club,6,FAIRWAY,Fairway approach,short,1,,,,,
-lomond_h06_rough,lomond-country-club,6,ROUGH,Rough recovery,short,2,,,,,
-lomond_h06_sand,lomond-country-club,6,SAND,Greenside bunker,short,2,,,,,
+lomond_h06_green,lomond-country-club,6,GREEN,Green (10 yd putt),short,0,-63.558,10.117,-9.531,1,e16eb7c4
+lomond_h06_fringe,lomond-country-club,6,FRINGE,Fringe / sub-green,short,1,-59.071,9.661,-9.876,1,9a036e07
+lomond_h06_fairway,lomond-country-club,6,FAIRWAY,Fairway approach,short,1,-54.473,9.035,9.562,1,42cbb028
+lomond_h06_rough,lomond-country-club,6,ROUGH,Rough recovery,short,2,-48.763,8.578,3.959,1,1863285a
+lomond_h06_sand,lomond-country-club,6,SAND,Greenside bunker,short,2,-52.163,7.691,-7.714,1,1f424f8f
 lomond_h06_tee_ladies,lomond-country-club,6,TEE_LADIES,Ladies tee (red),tee,1,,,,,
 lomond_h06_tee_front,lomond-country-club,6,TEE_FRONT,Front tee (white),tee,2,,,,,
 lomond_h06_tee_regular,lomond-country-club,6,TEE_REGULAR,Regular tee (green),tee,3,,,,,
 lomond_h06_tee_back,lomond-country-club,6,TEE_BACK,Back tee (blue),tee,5,,,,,
-lomond_h07_green,lomond-country-club,7,GREEN,Green (10 yd putt),short,0,,,,,
-lomond_h07_fringe,lomond-country-club,7,FRINGE,Fringe / sub-green,short,1,,,,,
-lomond_h07_fairway,lomond-country-club,7,FAIRWAY,Fairway approach,short,1,,,,,
-lomond_h07_rough,lomond-country-club,7,ROUGH,Rough recovery,short,2,,,,,
-lomond_h07_sand,lomond-country-club,7,SAND,Greenside bunker,short,2,,,,,
+lomond_h07_green,lomond-country-club,7,GREEN,Green (10 yd putt),short,0,168.131,28.411,-29.006,1,24f6328a
+lomond_h07_fringe,lomond-country-club,7,FRINGE,Fringe / sub-green,short,1,164.443,28.041,-28.324,1,7a713a5f
+lomond_h07_fairway,lomond-country-club,7,FAIRWAY,Fairway approach,short,1,27.495,25.821,-24.835,1,d9abe96e
+lomond_h07_rough,lomond-country-club,7,ROUGH,Rough recovery,short,2,26.894,26.212,-40.824,1,97181387
+lomond_h07_sand,lomond-country-club,7,SAND,Greenside bunker,short,2,155.984,25.989,-40.345,1,8602dc31
 lomond_h07_tee_ladies,lomond-country-club,7,TEE_LADIES,Ladies tee (red),tee,1,,,,,
 lomond_h07_tee_front,lomond-country-club,7,TEE_FRONT,Front tee (white),tee,2,,,,,
 lomond_h07_tee_regular,lomond-country-club,7,TEE_REGULAR,Regular tee (green),tee,3,,,,,
 lomond_h07_tee_back,lomond-country-club,7,TEE_BACK,Back tee (blue),tee,5,,,,,
-lomond_h08_green,lomond-country-club,8,GREEN,Green (10 yd putt),short,0,,,,,
-lomond_h08_fringe,lomond-country-club,8,FRINGE,Fringe / sub-green,short,1,,,,,
-lomond_h08_fairway,lomond-country-club,8,FAIRWAY,Fairway approach,short,1,,,,,
-lomond_h08_rough,lomond-country-club,8,ROUGH,Rough recovery,short,2,,,,,
-lomond_h08_sand,lomond-country-club,8,SAND,Greenside bunker,short,2,,,,,
+lomond_h08_green,lomond-country-club,8,GREEN,Green (10 yd putt),short,0,129.216,28.075,158.226,1,11fc70a0
+lomond_h08_fringe,lomond-country-club,8,FRINGE,Fringe / sub-green,short,1,125.208,27.796,153.108,1,59548aa4
+lomond_h08_fairway,lomond-country-club,8,FAIRWAY,Fairway approach,short,1,59.110,26.277,84.080,1,7750f415
+lomond_h08_rough,lomond-country-club,8,ROUGH,Rough recovery,short,2,64.999,25.617,78.665,1,d501564b
+lomond_h08_sand,lomond-country-club,8,SAND,Greenside bunker,short,2,133.525,25.694,145.615,1,4564eea9
 lomond_h08_tee_ladies,lomond-country-club,8,TEE_LADIES,Ladies tee (red),tee,1,,,,,
 lomond_h08_tee_front,lomond-country-club,8,TEE_FRONT,Front tee (white),tee,2,,,,,
 lomond_h08_tee_regular,lomond-country-club,8,TEE_REGULAR,Regular tee (green),tee,3,,,,,
 lomond_h08_tee_back,lomond-country-club,8,TEE_BACK,Back tee (blue),tee,5,,,,,
-lomond_h09_green,lomond-country-club,9,GREEN,Green (10 yd putt),short,0,,,,,
-lomond_h09_fringe,lomond-country-club,9,FRINGE,Fringe / sub-green,short,1,,,,,
-lomond_h09_fairway,lomond-country-club,9,FAIRWAY,Fairway approach,short,1,,,,,
-lomond_h09_rough,lomond-country-club,9,ROUGH,Rough recovery,short,2,,,,,
-lomond_h09_sand,lomond-country-club,9,SAND,Greenside bunker,short,2,,,,,
+lomond_h09_green,lomond-country-club,9,GREEN,Green (10 yd putt),short,0,173.473,17.752,38.278,1,df94960b
+lomond_h09_fringe,lomond-country-club,9,FRINGE,Fringe / sub-green,short,1,164.409,17.012,36.428,1,6137baf0
+lomond_h09_fairway,lomond-country-club,9,FAIRWAY,Fairway approach,short,1,72.363,12.393,41.023,1,092e7ad5
+lomond_h09_rough,lomond-country-club,9,ROUGH,Rough recovery,short,2,72.386,13.135,49.023,1,ef9682e7
+lomond_h09_sand,lomond-country-club,9,SAND,Greenside bunker,short,2,165.018,14.990,53.993,1,fb7eeef8
 lomond_h09_tee_ladies,lomond-country-club,9,TEE_LADIES,Ladies tee (red),tee,1,,,,,
 lomond_h09_tee_front,lomond-country-club,9,TEE_FRONT,Front tee (white),tee,2,,,,,
 lomond_h09_tee_regular,lomond-country-club,9,TEE_REGULAR,Regular tee (green),tee,3,,,,,
 lomond_h09_tee_back,lomond-country-club,9,TEE_BACK,Back tee (blue),tee,5,,,,,
-lomond_h10_green,lomond-country-club,10,GREEN,Green (10 yd putt),short,0,,,,,
-lomond_h10_fringe,lomond-country-club,10,FRINGE,Fringe / sub-green,short,1,,,,,
-lomond_h10_fairway,lomond-country-club,10,FAIRWAY,Fairway approach,short,1,,,,,
-lomond_h10_rough,lomond-country-club,10,ROUGH,Rough recovery,short,2,,,,,
-lomond_h10_sand,lomond-country-club,10,SAND,Greenside bunker,short,2,,,,,
+lomond_h10_green,lomond-country-club,10,GREEN,Green (10 yd putt),short,0,-78.718,12.588,-133.284,1,2af73a4c
+lomond_h10_fringe,lomond-country-club,10,FRINGE,Fringe / sub-green,short,1,-77.551,12.581,-131.073,1,f7d0a4d3
+lomond_h10_fairway,lomond-country-club,10,FAIRWAY,Fairway approach,short,1,-49.848,21.750,-33.255,1,2c95ba96
+lomond_h10_rough,lomond-country-club,10,ROUGH,Rough recovery,short,2,-38.396,23.338,-36.838,1,1b72cd28
+lomond_h10_sand,lomond-country-club,10,SAND,Greenside bunker,short,2,-90.240,9.919,-154.480,1,a950ad62
 lomond_h10_tee_ladies,lomond-country-club,10,TEE_LADIES,Ladies tee (red),tee,1,,,,,
 lomond_h10_tee_front,lomond-country-club,10,TEE_FRONT,Front tee (white),tee,2,,,,,
 lomond_h10_tee_regular,lomond-country-club,10,TEE_REGULAR,Regular tee (green),tee,3,,,,,
 lomond_h10_tee_back,lomond-country-club,10,TEE_BACK,Back tee (blue),tee,5,,,,,
-lomond_h11_green,lomond-country-club,11,GREEN,Green (10 yd putt),short,0,,,,,
-lomond_h11_fringe,lomond-country-club,11,FRINGE,Fringe / sub-green,short,1,,,,,
-lomond_h11_fairway,lomond-country-club,11,FAIRWAY,Fairway approach,short,1,,,,,
-lomond_h11_rough,lomond-country-club,11,ROUGH,Rough recovery,short,2,,,,,
-lomond_h11_sand,lomond-country-club,11,SAND,Greenside bunker,short,2,,,,,
+lomond_h11_green,lomond-country-club,11,GREEN,Green (10 yd putt),short,0,-47.302,13.308,-42.823,1,70373af5
+lomond_h11_fringe,lomond-country-club,11,FRINGE,Fringe / sub-green,short,1,-42.027,13.002,-37.145,1,a01e2d8a
+lomond_h11_fairway,lomond-country-club,11,FAIRWAY,Fairway approach,short,1,-40.196,13.416,-24.647,1,5e446ea3
+lomond_h11_rough,lomond-country-club,11,ROUGH,Rough recovery,short,2,-33.140,12.438,-28.417,1,824d72b8
+lomond_h11_sand,lomond-country-club,11,SAND,Greenside bunker,short,2,-63.486,11.574,-35.049,1,73fda468
 lomond_h11_tee_ladies,lomond-country-club,11,TEE_LADIES,Ladies tee (red),tee,1,,,,,
 lomond_h11_tee_front,lomond-country-club,11,TEE_FRONT,Front tee (white),tee,2,,,,,
 lomond_h11_tee_regular,lomond-country-club,11,TEE_REGULAR,Regular tee (green),tee,3,,,,,
 lomond_h11_tee_back,lomond-country-club,11,TEE_BACK,Back tee (blue),tee,5,,,,,
-lomond_h12_green,lomond-country-club,12,GREEN,Green (10 yd putt),short,0,,,,,
-lomond_h12_fringe,lomond-country-club,12,FRINGE,Fringe / sub-green,short,1,,,,,
-lomond_h12_fairway,lomond-country-club,12,FAIRWAY,Fairway approach,short,1,,,,,
-lomond_h12_rough,lomond-country-club,12,ROUGH,Rough recovery,short,2,,,,,
-lomond_h12_sand,lomond-country-club,12,SAND,Greenside bunker,short,2,,,,,
+lomond_h12_green,lomond-country-club,12,GREEN,Green (10 yd putt),short,0,102.646,40.277,150.154,1,4f8cdec1
+lomond_h12_fringe,lomond-country-club,12,FRINGE,Fringe / sub-green,short,1,97.634,39.590,142.379,1,334ae389
+lomond_h12_fairway,lomond-country-club,12,FAIRWAY,Fairway approach,short,1,66.741,33.047,56.027,1,6cdaea9f
+lomond_h12_rough,lomond-country-club,12,ROUGH,Rough recovery,short,2,74.194,34.494,53.117,1,6ad56ee8
+lomond_h12_sand,lomond-country-club,12,SAND,Greenside bunker,short,2,81.222,36.284,145.035,1,96d6f575
 lomond_h12_tee_ladies,lomond-country-club,12,TEE_LADIES,Ladies tee (red),tee,1,,,,,
 lomond_h12_tee_front,lomond-country-club,12,TEE_FRONT,Front tee (white),tee,2,,,,,
 lomond_h12_tee_regular,lomond-country-club,12,TEE_REGULAR,Regular tee (green),tee,3,,,,,
 lomond_h12_tee_back,lomond-country-club,12,TEE_BACK,Back tee (blue),tee,5,,,,,
-lomond_h13_green,lomond-country-club,13,GREEN,Green (10 yd putt),short,0,,,,,
-lomond_h13_fringe,lomond-country-club,13,FRINGE,Fringe / sub-green,short,1,,,,,
-lomond_h13_fairway,lomond-country-club,13,FAIRWAY,Fairway approach,short,1,,,,,
-lomond_h13_rough,lomond-country-club,13,ROUGH,Rough recovery,short,2,,,,,
-lomond_h13_sand,lomond-country-club,13,SAND,Greenside bunker,short,2,,,,,
+lomond_h13_green,lomond-country-club,13,GREEN,Green (10 yd putt),short,0,-187.537,11.619,-172.969,1,fde42536
+lomond_h13_fringe,lomond-country-club,13,FRINGE,Fringe / sub-green,short,1,-181.551,11.114,-166.586,1,9bffede6
+lomond_h13_fairway,lomond-country-club,13,FAIRWAY,Fairway approach,short,1,-132.880,11.826,-88.847,1,1651ad4c
+lomond_h13_rough,lomond-country-club,13,ROUGH,Rough recovery,short,2,-139.503,12.039,-84.359,1,ae528ea2
+lomond_h13_sand,lomond-country-club,13,SAND,Greenside bunker,short,2,,,,1,
 lomond_h13_tee_ladies,lomond-country-club,13,TEE_LADIES,Ladies tee (red),tee,1,,,,,
 lomond_h13_tee_front,lomond-country-club,13,TEE_FRONT,Front tee (white),tee,2,,,,,
 lomond_h13_tee_regular,lomond-country-club,13,TEE_REGULAR,Regular tee (green),tee,3,,,,,
 lomond_h13_tee_back,lomond-country-club,13,TEE_BACK,Back tee (blue),tee,5,,,,,
-lomond_h14_green,lomond-country-club,14,GREEN,Green (10 yd putt),short,0,,,,,
-lomond_h14_fringe,lomond-country-club,14,FRINGE,Fringe / sub-green,short,1,,,,,
-lomond_h14_fairway,lomond-country-club,14,FAIRWAY,Fairway approach,short,1,,,,,
-lomond_h14_rough,lomond-country-club,14,ROUGH,Rough recovery,short,2,,,,,
-lomond_h14_sand,lomond-country-club,14,SAND,Greenside bunker,short,2,,,,,
+lomond_h14_green,lomond-country-club,14,GREEN,Green (10 yd putt),short,0,-105.724,13.688,120.733,1,65b081dc
+lomond_h14_fringe,lomond-country-club,14,FRINGE,Fringe / sub-green,short,1,-102.000,13.174,116.352,1,dc4c5140
+lomond_h14_fairway,lomond-country-club,14,FAIRWAY,Fairway approach,short,1,-21.172,9.727,66.384,1,df8f0c24
+lomond_h14_rough,lomond-country-club,14,ROUGH,Rough recovery,short,2,-14.468,9.803,76.337,1,61332cfe
+lomond_h14_sand,lomond-country-club,14,SAND,Greenside bunker,short,2,-87.542,12.504,124.725,1,4126cb63
 lomond_h14_tee_ladies,lomond-country-club,14,TEE_LADIES,Ladies tee (red),tee,1,,,,,
 lomond_h14_tee_front,lomond-country-club,14,TEE_FRONT,Front tee (white),tee,2,,,,,
 lomond_h14_tee_regular,lomond-country-club,14,TEE_REGULAR,Regular tee (green),tee,3,,,,,
 lomond_h14_tee_back,lomond-country-club,14,TEE_BACK,Back tee (blue),tee,5,,,,,
-lomond_h15_green,lomond-country-club,15,GREEN,Green (10 yd putt),short,0,,,,,
-lomond_h15_fringe,lomond-country-club,15,FRINGE,Fringe / sub-green,short,1,,,,,
-lomond_h15_fairway,lomond-country-club,15,FAIRWAY,Fairway approach,short,1,,,,,
-lomond_h15_rough,lomond-country-club,15,ROUGH,Rough recovery,short,2,,,,,
-lomond_h15_sand,lomond-country-club,15,SAND,Greenside bunker,short,2,,,,,
+lomond_h15_green,lomond-country-club,15,GREEN,Green (10 yd putt),short,0,12.517,16.573,59.485,1,776945ee
+lomond_h15_fringe,lomond-country-club,15,FRINGE,Fringe / sub-green,short,1,10.607,16.095,53.534,1,a6ac181a
+lomond_h15_fairway,lomond-country-club,15,FAIRWAY,Fairway approach,short,1,-4.162,14.522,28.148,1,cda85bba
+lomond_h15_rough,lomond-country-club,15,ROUGH,Rough recovery,short,2,-11.339,15.011,31.683,1,fe65aa80
+lomond_h15_sand,lomond-country-club,15,SAND,Greenside bunker,short,2,1.540,16.145,85.280,1,f8b2b672
 lomond_h15_tee_ladies,lomond-country-club,15,TEE_LADIES,Ladies tee (red),tee,1,,,,,
 lomond_h15_tee_front,lomond-country-club,15,TEE_FRONT,Front tee (white),tee,2,,,,,
 lomond_h15_tee_regular,lomond-country-club,15,TEE_REGULAR,Regular tee (green),tee,3,,,,,
 lomond_h15_tee_back,lomond-country-club,15,TEE_BACK,Back tee (blue),tee,5,,,,,
-lomond_h16_green,lomond-country-club,16,GREEN,Green (10 yd putt),short,0,,,,,
-lomond_h16_fringe,lomond-country-club,16,FRINGE,Fringe / sub-green,short,1,,,,,
-lomond_h16_fairway,lomond-country-club,16,FAIRWAY,Fairway approach,short,1,,,,,
-lomond_h16_rough,lomond-country-club,16,ROUGH,Rough recovery,short,2,,,,,
-lomond_h16_sand,lomond-country-club,16,SAND,Greenside bunker,short,2,,,,,
+lomond_h16_green,lomond-country-club,16,GREEN,Green (10 yd putt),short,0,22.483,9.768,-140.158,1,3c859eaf
+lomond_h16_fringe,lomond-country-club,16,FRINGE,Fringe / sub-green,short,1,21.270,9.463,-133.264,1,3be03788
+lomond_h16_fairway,lomond-country-club,16,FAIRWAY,Fairway approach,short,1,11.036,9.208,-39.978,1,a2bfc01d
+lomond_h16_rough,lomond-country-club,16,ROUGH,Rough recovery,short,2,18.980,10.537,-39.038,1,1dc819fc
+lomond_h16_sand,lomond-country-club,16,SAND,Greenside bunker,short,2,40.745,8.033,-150.518,1,fc6da6ec
 lomond_h16_tee_ladies,lomond-country-club,16,TEE_LADIES,Ladies tee (red),tee,1,,,,,
 lomond_h16_tee_front,lomond-country-club,16,TEE_FRONT,Front tee (white),tee,2,,,,,
 lomond_h16_tee_regular,lomond-country-club,16,TEE_REGULAR,Regular tee (green),tee,3,,,,,
 lomond_h16_tee_back,lomond-country-club,16,TEE_BACK,Back tee (blue),tee,5,,,,,
-lomond_h17_green,lomond-country-club,17,GREEN,Green (10 yd putt),short,0,,,,,
-lomond_h17_fringe,lomond-country-club,17,FRINGE,Fringe / sub-green,short,1,,,,,
-lomond_h17_fairway,lomond-country-club,17,FAIRWAY,Fairway approach,short,1,,,,,
-lomond_h17_rough,lomond-country-club,17,ROUGH,Rough recovery,short,2,,,,,
-lomond_h17_sand,lomond-country-club,17,SAND,Greenside bunker,short,2,,,,,
+lomond_h17_green,lomond-country-club,17,GREEN,Green (10 yd putt),short,0,65.073,30.627,122.979,1,b0bc5514
+lomond_h17_fringe,lomond-country-club,17,FRINGE,Fringe / sub-green,short,1,62.785,30.396,118.816,1,75d74a07
+lomond_h17_fairway,lomond-country-club,17,FAIRWAY,Fairway approach,short,1,-22.370,25.842,67.578,1,98feb5a2
+lomond_h17_rough,lomond-country-club,17,ROUGH,Rough recovery,short,2,-26.937,26.297,74.146,1,dd3de037
+lomond_h17_sand,lomond-country-club,17,SAND,Greenside bunker,short,2,51.510,29.675,136.401,1,52e8f26e
 lomond_h17_tee_ladies,lomond-country-club,17,TEE_LADIES,Ladies tee (red),tee,1,,,,,
 lomond_h17_tee_front,lomond-country-club,17,TEE_FRONT,Front tee (white),tee,2,,,,,
 lomond_h17_tee_regular,lomond-country-club,17,TEE_REGULAR,Regular tee (green),tee,3,,,,,
 lomond_h17_tee_back,lomond-country-club,17,TEE_BACK,Back tee (blue),tee,5,,,,,
-lomond_h18_green,lomond-country-club,18,GREEN,Green (10 yd putt),short,0,,,,,
-lomond_h18_fringe,lomond-country-club,18,FRINGE,Fringe / sub-green,short,1,,,,,
-lomond_h18_fairway,lomond-country-club,18,FAIRWAY,Fairway approach,short,1,,,,,
-lomond_h18_rough,lomond-country-club,18,ROUGH,Rough recovery,short,2,,,,,
-lomond_h18_sand,lomond-country-club,18,SAND,Greenside bunker,short,2,,,,,
+lomond_h18_green,lomond-country-club,18,GREEN,Green (10 yd putt),short,0,212.894,6.600,27.747,1,78961643
+lomond_h18_fringe,lomond-country-club,18,FRINGE,Fringe / sub-green,short,1,202.393,6.077,25.443,1,a41a79a7
+lomond_h18_fairway,lomond-country-club,18,FAIRWAY,Fairway approach,short,1,113.692,6.092,41.442,1,16fa62f2
+lomond_h18_rough,lomond-country-club,18,ROUGH,Rough recovery,short,2,112.681,5.750,31.493,1,89c607f4
+lomond_h18_sand,lomond-country-club,18,SAND,Greenside bunker,short,2,240.651,5.819,46.041,1,441be527
 lomond_h18_tee_ladies,lomond-country-club,18,TEE_LADIES,Ladies tee (red),tee,1,,,,,
 lomond_h18_tee_front,lomond-country-club,18,TEE_FRONT,Front tee (white),tee,2,,,,,
 lomond_h18_tee_regular,lomond-country-club,18,TEE_REGULAR,Regular tee (green),tee,3,,,,,

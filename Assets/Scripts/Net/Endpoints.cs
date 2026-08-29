@@ -40,6 +40,29 @@ namespace Golfin.Net
         /// <summary>POST <c>{amount, reason, idempotency_key}</c> — the game spend path (Slice 2; unused here).</summary>
         public static string PointsSpend => BaseUrl + "/points/spend";
 
+        // ── Missions (missions_v1 §A4) ────────────────────────────────────────
+        //
+        // AUTH REQUIRED on all four, and the amount is NEVER in the request: the client says
+        // which mission it cleared and in how many strokes, and the server reads what that is
+        // worth out of `golfin_mission_rewards`. That is the whole reason these are their own
+        // endpoints rather than another `/points/earn-game` action.
+
+        /// <summary>GET → <c>{data:{missions:[…], cleared_by_tier, tier_sizes}}</c> — this
+        /// player's campaign progress and which tiers are open to them.</summary>
+        public static string MissionsCatalogState => BaseUrl + "/missions/catalog-state";
+
+        /// <summary>POST <c>{mission_id, strokes, goals_met, idempotency_key}</c> → the server
+        /// prices and pays the clear. Every business outcome is a 200 payload.</summary>
+        public static string MissionsClaim => BaseUrl + "/missions/claim";
+
+        /// <summary>GET → <c>{data:{date, recipe, recipe_hash, claimed, streak}}</c> — today's
+        /// daily, generated on first read and then frozen for the day.</summary>
+        public static string MissionsDaily => BaseUrl + "/missions/daily";
+
+        /// <summary>POST <c>{date, recipe_hash, strokes, idempotency_key}</c>. The hash guard is
+        /// what stops a client that cached yesterday's recipe being paid for it today.</summary>
+        public static string MissionsDailyClaim => BaseUrl + "/missions/daily/claim";
+
         /// <summary>
         /// GET → <c>{data:{fetched_at, tournaments:[…]}}</c> — the GOLFIN tournament schedule with each
         /// tournament's prize bands joined into the same payload (one round trip).

@@ -1,0 +1,20 @@
+{
+    "name": "Golfin.Gameplay.Missions",
+    "rootNamespace": "Golfin.Gameplay.Missions",
+    "references": [
+        "Golfin.Physics.Core",
+        "Golfin.Physics.Math",
+        "Golfin.Gameplay.Loop",
+        "Golfin.Course.Runtime",
+        "Golfin.Core.Stamina"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

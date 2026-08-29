@@ -6,6 +6,7 @@ using System.IO;
 using System.Text;
 using UnityEditor;
 using UnityEditor.SceneManagement;
+using Golfin.EditorTools.Missions;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -47,6 +48,8 @@ namespace Golfin.CourseImport
             public int hole;
             public string bakeStatus = "-";
             public string standaloneStatus = "-";
+            /// <summary>missions_v1 §B1 — the baked mission start areas for this hole.</summary>
+            public string startAreaStatus = "-";
             public int bakeRows;
             public int sceneRows;
             public int standaloneCsvRows;
@@ -70,11 +73,12 @@ namespace Golfin.CourseImport
             public string ToTable()
             {
                 var sb = new StringBuilder();
-                sb.Append("  hole | bake                         | standalone\n");
-                sb.Append("  -----+------------------------------+-----------------------------\n");
+                sb.Append("  hole | bake                         | standalone                    | start areas\n");
+                sb.Append("  -----+------------------------------+-------------------------------+-----------------------------\n");
                 foreach (var h in holes)
                     sb.Append(string.Format(CultureInfo.InvariantCulture,
-                        "  {0:D2}   | {1,-28} | {2}\n", h.hole, h.bakeStatus, h.standaloneStatus));
+                        "  {0:D2}   | {1,-28} | {2,-29} | {3}\n",
+                        h.hole, h.bakeStatus, h.standaloneStatus, h.startAreaStatus));
                 foreach (var h in holes)
                     foreach (var e in h.errors)
                         sb.Append($"  Hole {h.hole:D2}: {e}\n");
@@ -131,6 +135,9 @@ namespace Golfin.CourseImport
             {
                 result.bakeStatus = "FAIL scene missing";
                 result.standaloneStatus = "FAIL scene missing";
+                // The start-area check reads TRACKED JSON + CSV, so it is meaningful even on a
+                // machine that has not generated the scenes. Run it before returning.
+                ValidateStartAreas(holeNumber, result);
                 result.errors.Add($"no Hole_{holeNumber:D2}_Geo.unity on this machine — the hole cannot render. " +
                                   "Generate it, then Rebuild Current Hole.");
                 return result;
@@ -157,6 +164,7 @@ namespace Golfin.CourseImport
 
                 ValidateBake(scene, holeNumber, slug, result);
                 ValidateStandalone(scene, holeNumber, slug, result);
+                ValidateStartAreas(holeNumber, result);
             }
             catch (Exception e)
             {
@@ -409,6 +417,140 @@ namespace Golfin.CourseImport
             else
             {
                 result.standaloneStatus = $"PASS {committed.Count} rows";
+            }
+        }
+
+        // ── 3. mission start areas (missions_v1 §B1) ─────────────────────────────
+
+        /// <summary>
+        /// The drift gate over `mission_start_areas.csv`.
+        ///
+        /// WHAT IT CATCHES, and why it is a hash rather than a re-bake. Re-deriving the points
+        /// here would only prove the baker is deterministic — it would pass just as happily
+        /// over a CSV somebody had hand-edited, because the comparison would be against the
+        /// freshly-derived value, not against what is committed. `bake_hash` is computed FROM
+        /// the row's own coordinates, so the only way for it to agree is for those coordinates
+        /// to be the ones the baker wrote. Change an x by a metre in a text editor and this
+        /// fails the hole, which is the §20 tripwire the spec asks for.
+        ///
+        /// It also checks the two invariants the file's own header states: a TEE row never
+        /// carries coordinates (it resolves to the scene's TeeMarker at runtime), and a SHORT
+        /// row either carries a full coordinate set or is deliberately blank.
+        ///
+        /// This is the ONE check in this file that does not need the Hole_NN_Geo scene: it
+        /// reads the tracked CSV, so it means the same thing on every clone.
+        /// </summary>
+        private static void ValidateStartAreas(int holeNumber, HoleResult result)
+        {
+            string csv = MissionStartAreaBaker.CsvPath;
+            string full = Path.GetFullPath(csv);
+            if (!File.Exists(full))
+            {
+                result.startAreaStatus = "FAIL csv missing";
+                result.errors.Add($"no {csv} — run Golfin ▸ Missions ▸ Bake Start Areas.");
+                return;
+            }
+
+            string[] lines;
+            try { lines = File.ReadAllLines(full); }
+            catch (Exception e)
+            {
+                result.startAreaStatus = "FAIL csv read";
+                result.errors.Add($"could not read {csv}: {e.Message}");
+                return;
+            }
+
+            string[] header = Array.Empty<string>();
+            int checkedRows = 0, drifted = 0, blank = 0;
+            string firstDetail = null;
+
+            foreach (string line in lines)
+            {
+                if (line.Length == 0 || line.TrimStart().StartsWith("#")) continue;
+                string[] cells = MissionStartAreaBaker.SplitCsv(line);
+                if (header.Length == 0) { header = cells; continue; }
+
+                int iHole = Array.IndexOf(header, "holeId");
+                int iArea = Array.IndexOf(header, "areaId");
+                int iKind = Array.IndexOf(header, "kind");
+                int iX = Array.IndexOf(header, "x");
+                int iY = Array.IndexOf(header, "y");
+                int iZ = Array.IndexOf(header, "z");
+                int iPin = Array.IndexOf(header, "pin_count");
+                int iHash = Array.IndexOf(header, "bake_hash");
+                if (iHole < 0 || iArea < 0 || iKind < 0 || iX < 0 || iY < 0 || iZ < 0 || iPin < 0 || iHash < 0)
+                {
+                    result.startAreaStatus = "FAIL header";
+                    result.errors.Add($"{csv} is missing one of holeId/areaId/kind/x/y/z/pin_count/bake_hash.");
+                    return;
+                }
+
+                if (!int.TryParse(cells[iHole], NumberStyles.Integer, CultureInfo.InvariantCulture, out int h)
+                    || h != holeNumber) continue;
+
+                string areaId = cells[iArea];
+                bool isTee = string.Equals(cells[iKind], "tee", StringComparison.OrdinalIgnoreCase);
+                bool hasCoords = cells[iX].Length > 0 && cells[iY].Length > 0 && cells[iZ].Length > 0;
+
+                if (isTee)
+                {
+                    checkedRows++;
+                    if (hasCoords || cells[iHash].Length > 0)
+                    {
+                        drifted++;
+                        firstDetail ??= $"{areaId} is a TEE row but carries coordinates — tees resolve " +
+                                        "to the scene's TeeMarker_<label>_L/R midpoint and must stay blank";
+                    }
+                    continue;
+                }
+
+                checkedRows++;
+                if (!hasCoords)
+                {
+                    // Deliberately blank: the kind does not exist on this hole (hole 13 has no
+                    // greenside bunker). A blank row with a leftover hash would be the real bug.
+                    blank++;
+                    if (cells[iHash].Length > 0)
+                    {
+                        drifted++;
+                        firstDetail ??= $"{areaId} has no coordinates but still carries a bake_hash";
+                    }
+                    continue;
+                }
+
+                if (!TryF(cells[iX], out float x) || !TryF(cells[iY], out float y) || !TryF(cells[iZ], out float z)
+                    || !int.TryParse(cells[iPin], NumberStyles.Integer, CultureInfo.InvariantCulture, out int pins))
+                {
+                    drifted++;
+                    firstDetail ??= $"{areaId} has an unparseable coordinate or pin_count";
+                    continue;
+                }
+
+                string expected = MissionStartAreaBaker.ComputeBakeHash(
+                    holeNumber, areaId, new Vector3(x, y, z), pins);
+                if (!string.Equals(expected, cells[iHash], StringComparison.Ordinal))
+                {
+                    drifted++;
+                    firstDetail ??= $"{areaId} bake_hash is {cells[iHash]} but its coordinates hash to " +
+                                    $"{expected} — the row was edited without re-baking";
+                }
+            }
+
+            if (checkedRows == 0)
+            {
+                result.startAreaStatus = "FAIL no rows";
+                result.errors.Add($"{csv} has no rows for hole {holeNumber:D2}.");
+            }
+            else if (drifted > 0)
+            {
+                result.startAreaStatus = $"FAIL {drifted}/{checkedRows} drifted";
+                result.errors.Add($"mission start areas: {firstDetail}. Re-run Golfin ▸ Missions ▸ Bake Start Areas.");
+            }
+            else
+            {
+                result.startAreaStatus = blank > 0
+                    ? $"PASS {checkedRows} rows ({blank} blank)"
+                    : $"PASS {checkedRows} rows";
             }
         }
 

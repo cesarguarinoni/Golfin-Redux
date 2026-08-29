@@ -78,12 +78,69 @@ public class BagManager : MonoBehaviour
 
     public bool IsBagFull(int bagSlot) => GetClubCountInBag(bagSlot) >= MAX_CLUBS_PER_BAG;
 
+    /// <summary>
+    /// The clubs in a bag — or, while a MISSION is running, the clubs that mission handed the
+    /// player (missions_v1 §B3).
+    ///
+    /// ⚠️ THE OVERRIDE IS READ HERE AND NOWHERE ELSE, and that is what makes it cheap. The
+    /// in-game club selector, the HUD and everything else already ask BagManager rather than
+    /// walking ClubManager themselves, so one read covers all of them and no caller needed a
+    /// line changed. `PlayerClubData.equippedBagSlot` — the real source of truth — is never
+    /// written by a mission, so nothing about a supplied bag can outlive the hole.
+    ///
+    /// A `supplied:` loadout may name clubs the player does not own, so those are materialised
+    /// from the CATALOG rather than from owned clubs; an `own:` mask filters what they have.
+    /// Either way the returned list is the mission's, in the mission's order.
+    /// </summary>
     public List<PlayerClubData> GetClubsInBag(int bagSlot)
     {
+        var session = Golfin.Gameplay.Missions.MissionSessionBag.Current;
+        if (session != null) return ResolveSessionClubs(session);
+
         if (ClubManager.Instance == null) return new List<PlayerClubData>();
         var result = new List<PlayerClubData>();
         foreach (var club in ClubManager.Instance.GetAllOwnedClubs())
             if (club.equippedBagSlot == bagSlot) result.Add(club);
+        return result;
+    }
+
+    /// <summary>
+    /// Turn the mission's club ids into PlayerClubData, preferring the player's OWN instance
+    /// when they happen to own that club — so an `own:` loadout keeps their levels and
+    /// durability, while a `supplied:` one falls back to a transient instance at the catalog
+    /// default. A transient instance is never persisted and never wears: it is not owned.
+    /// </summary>
+    private List<PlayerClubData> ResolveSessionClubs(System.Collections.Generic.IReadOnlyList<string> clubIds)
+    {
+        var result = new List<PlayerClubData>();
+        foreach (string id in clubIds)
+        {
+            PlayerClubData? owned = null;
+            if (ClubManager.Instance != null)
+                foreach (var club in ClubManager.Instance.GetAllOwnedClubs())
+                    if (club.clubId == id) { owned = club; break; }
+
+            if (owned != null) { result.Add(owned); continue; }
+
+            var runtime = ClubDatabaseCSV.Instance?.GetClub(id);
+            if (runtime == null)
+            {
+                // Surfaced, never silently dropped: a missing club is a mission with a hole in
+                // its bag, and the screen's warning path is what should have caught it.
+                Debug.LogWarning($"[BagManager] mission bag names '{id}', which is not in the club catalog.");
+                continue;
+            }
+            result.Add(new PlayerClubData
+            {
+                clubId            = id,
+                currentLevel      = runtime.startLevel,
+                maxDurability     = runtime.maxDurability,
+                // Full, and it stays full: a supplied club is not owned, so nothing persists
+                // its wear and the player is never charged for a repair they did not cause.
+                currentDurability = runtime.maxDurability,
+                equippedBagSlot   = EquippedBagSlot,
+            });
+        }
         return result;
     }
 

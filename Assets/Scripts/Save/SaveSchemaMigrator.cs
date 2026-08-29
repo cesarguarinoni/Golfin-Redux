@@ -15,7 +15,7 @@ namespace Golfin.Save
     /// </summary>
     public static class SaveSchemaMigrator
     {
-        public const int CurrentSchemaVersion = 11;
+        public const int CurrentSchemaVersion = 12;
 
         /// <summary>
         /// Apply any needed migrations to bring data from its on-disk schemaVersion
@@ -179,6 +179,20 @@ namespace Golfin.Save
                 data.appliedGrantIds ??= new List<string>();
                 data.schemaVersion = 11;
                 Debug.Log("[SaveSchemaMigrator] Migrated v10 -> v11 (appliedGrantIds added, default empty).");
+            }
+
+            // v11 → v12: add the local mission-progress mirror (missions_v1 §B4).
+            //
+            // Nothing to transform and nothing to backfill, deliberately. An EMPTY list is the
+            // correct state for every existing save: the mirror is written only from a server
+            // claim response, so a player who has never cleared a mission has nothing to
+            // mirror — and inventing rows here would tell the Mission Selection screen the
+            // player had already cleared things the server has never heard of.
+            if (data.schemaVersion < 12)
+            {
+                data.missionProgress ??= new List<PersistedMissionProgress>();
+                data.schemaVersion = 12;
+                Debug.Log("[SaveSchemaMigrator] Migrated v11 -> v12 (missionProgress added, default empty).");
             }
 
             // Ensure schemaVersion is current after all migrations

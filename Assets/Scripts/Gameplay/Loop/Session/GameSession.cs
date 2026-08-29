@@ -181,6 +181,33 @@ namespace Golfin.Gameplay.Session
             StrokeCapOverPar    = 0;
             TournamentRoundContext.EndRound();
             ResetForNewHole();
+            RaiseSessionReset();
+        }
+
+        // ── Teardown signal (missions_v1 §B2) ─────────────────────────────────
+        /// <summary>
+        /// Fired at the END of <see cref="ResetSession"/>, once every field above is already
+        /// cleared. Subscribers use it to drop state this assembly cannot see.
+        ///
+        /// ⚠️ IT IS AN EVENT RATHER THAN A DIRECT CALL BECAUSE THE DEPENDENCY ONLY GOES ONE
+        /// WAY. `Golfin.Gameplay.Missions` references THIS assembly — it reads
+        /// <see cref="ShotHistory"/> and writes <see cref="StrokeCapEnabled"/> — so Loop
+        /// cannot reference Missions back without closing a cycle. `MissionSession` subscribes
+        /// on load and clears itself here, which is the same outcome with the arrow the right
+        /// way round.
+        ///
+        /// A subscriber must never be able to break a teardown, so it is wrapped: a mode that
+        /// could not be exited is worse than any state a subscriber failed to drop.
+        /// </summary>
+        public static event System.Action OnSessionReset;
+
+        private static void RaiseSessionReset()
+        {
+            try { OnSessionReset?.Invoke(); }
+            catch (System.Exception e)
+            {
+                UnityEngine.Debug.LogError($"[GameSession] OnSessionReset subscriber threw: {e}");
+            }
         }
 
         // ── Round-start signal (beta_telemetry SPEC §1 #4) ────────────────────

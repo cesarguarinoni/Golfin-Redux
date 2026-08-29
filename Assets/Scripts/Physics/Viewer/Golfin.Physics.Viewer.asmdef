@@ -10,6 +10,7 @@
         "Golfin.Gameplay.Input",
         "Golfin.Gameplay.UI",
         "Golfin.Gameplay.Loop",
+        "Golfin.Gameplay.Missions",
         "Golfin.Diagnostics.Runtime",
         "Golfin.Localization",
         "Golfin.Save",

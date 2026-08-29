@@ -494,14 +494,19 @@ namespace GolfinRedux.UI.ModeSelect
 
             switch (mode.target)
             {
-                case "hole_select":
+                // missions_v1 §C1: these were string literals, which is how the carousel and
+                // the mode-select screen were free to disagree about what a target is called.
+                // They are the SAME constants now, and `DispatchableTargets` — the list
+                // ModesDatabaseCSV withholds against — is built from them too, so "routable"
+                // means one thing in all three places.
+                case ModeSelectScreenController.TargetHoleSelect:
                     if (ScreenManager.Instance != null)
                         ScreenManager.Instance.ShowScreen(ScreenId.HoleSelection);
                     else
                         Debug.LogWarning("[ModeCarousel] ScreenManager not found.");
                     break;
 
-                case "tournaments":
+                case ModeSelectScreenController.TargetTournaments:
                     // Tournament browse screen (T7). No entry-fee spend here — per-tournament
                     // fees are owned by the signup flow (TournamentSignupModalController).
                     if (ScreenManager.Instance != null)
@@ -510,7 +515,7 @@ namespace GolfinRedux.UI.ModeSelect
                         Debug.LogWarning("[ModeCarousel] Tournaments PLAY — ScreenManager not found.");
                     break;
 
-                case "matchmaking_1v1":
+                case ModeSelectScreenController.TargetMatchmaking1v1:
                     // 1v1 path: flag the session as versus BEFORE opening matchmaking.
                     GameSession.IsVersus = true;
                     // Pick a random hole (1-18), then open matchmaking modal.
@@ -524,6 +529,16 @@ namespace GolfinRedux.UI.ModeSelect
                     {
                         Debug.LogWarning("[ModeCarousel] 1v1 PLAY — matchmakingModal1v1 not wired in Inspector.");
                     }
+                    break;
+
+                case ModeSelectScreenController.TargetMissionSelect:
+                    // missions_v1 §C1. Both entry points route the same way — the Home carousel
+                    // and the Mode Select screen are two views of one mode list, and a player
+                    // who reaches Missions from one must land where the other one lands.
+                    if (ScreenManager.Instance != null)
+                        ScreenManager.Instance.ShowScreen(ScreenId.MissionSelection);
+                    else
+                        Debug.LogWarning("[ModeCarousel] Missions PLAY — ScreenManager not found.");
                     break;
 
                 default:

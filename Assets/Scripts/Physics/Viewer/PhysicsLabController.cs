@@ -1676,6 +1676,12 @@ namespace Golfin.Physics.Viewer
                       (result.OBReason.HasValue ? $" OBReason={result.OBReason.Value}" : "") +
                       $" end={result.EndPosition}");
 
+            // missions_v1 §B2: GUSTY re-rolls its speed on every completed shot. Here rather
+            // than at aim time so the player SEES the new number before they set up the next
+            // one — a wind that changed after the aim was committed would be a lie, not a
+            // difficulty. No-op for every other preset and every other mode.
+            AdvanceMissionGust(Golfin.Gameplay.Session.GameSession.ShotHistory.Count);
+
             // Reset orbit center to final ball position.
             if (ballAnimator?.CurrentBall != null)
                 _orbitCenter = ballAnimator.CurrentBall.position;
@@ -2454,7 +2460,90 @@ namespace Golfin.Physics.Viewer
                 _obSkirt = GetComponent<ObGroundSkirt>() ?? gameObject.AddComponent<ObGroundSkirt>();
             _obSkirt.Rebuild(chaseCamera != null ? chaseCamera.GetComponent<Camera>() : null);
 
+            // missions_v1 §B2 — LAST, deliberately. Everything above has already placed the
+            // ball at the tee, set HoleContext.PinWorld from the Flag GO and populated
+            // WindContext from the hole's CSV row. A mission overrides all three, and doing it
+            // here means the normal path is completely untouched: no mission, no change.
+            ApplyMissionOverrides(sceneName);
+
             DiagAero($"OnHoleLoaded.end[{sceneName}]");
+        }
+
+        /// <summary>
+        /// Apply the active mission's spawn / pin / wind over what the hole load just set
+        /// (missions_v1 §B2). A no-op when no mission is running, which is every other mode.
+        ///
+        /// THIS IS THE ONLY PLACE MISSIONS TOUCHES THE VIEWER, and it is one call rather than
+        /// five edits scattered through OnHoleLoaded's scan. That matters for the reason the
+        /// spec words it as "spawn/pin/wind override entry points only": the tee scan, the
+        /// Flag lookup and the wind CSV read are load-bearing for Practice, 1v1 and
+        /// tournaments, and a mission has no business inside any of them.
+        /// </summary>
+        private void ApplyMissionOverrides(string sceneName)
+        {
+            var mission = Golfin.Gameplay.Missions.MissionSession.Active;
+            if (mission == null) return;
+
+            // ── Pin ──────────────────────────────────────────────────────────────
+            // MissionSession resolved this from GreenTopology's candidate list. Vector3.zero
+            // means it could not, in which case the Flag GO the scan already found is better
+            // than nothing — never worse.
+            Vector3 pin = Golfin.Gameplay.Missions.MissionSession.PinWorld;
+            if (pin != Vector3.zero)
+                Golfin.Gameplay.UI.HUD.HoleContext.PinWorld = pin;
+
+            // ── Spawn ────────────────────────────────────────────────────────────
+            // A SHORT start has baked coordinates; a TEE start keeps whatever the tee scan
+            // found, because the markers are scene objects and there is nothing to override.
+            Vector3? spawn = Golfin.Gameplay.Missions.MissionSession.SpawnWorld;
+            if (spawn.HasValue)
+            {
+                Transform anchor = null;
+                foreach (Transform child in transform)
+                    if (child.name == "_MissionSpawnAnchor") { anchor = child; break; }
+                if (anchor == null)
+                {
+                    var go = new GameObject("_MissionSpawnAnchor");
+                    go.transform.SetParent(transform);
+                    anchor = go.transform;
+                }
+                anchor.position = spawn.Value;
+                _ballSpawnPoint = anchor;
+                // Re-place: SetupAtTee already ran, at the tee. Calling it again with the
+                // anchor swapped is what actually moves the ball.
+                SetupAtTee();
+            }
+
+            // ── Wind ─────────────────────────────────────────────────────────────
+            Golfin.Gameplay.UI.HUD.WindContext.SpeedMph =
+                Golfin.Gameplay.Missions.MissionSession.WindSpeedMph;
+            Golfin.Gameplay.UI.HUD.WindContext.DirectionDegrees =
+                Golfin.Gameplay.Missions.MissionSession.WindDirectionDegrees;
+            Golfin.Gameplay.UI.HUD.WindContext.Raise();
+            WindCfg = WindConfigFromContext(
+                Golfin.Gameplay.UI.HUD.WindContext.SpeedMph,
+                Golfin.Gameplay.UI.HUD.WindContext.DirectionDegrees);
+
+            Debug.Log($"[PhysicsLab] MISSION {mission.Id} on {sceneName}: " +
+                      $"start={mission.StartAreaId}{(spawn.HasValue ? $" @{spawn.Value:F1}" : " (tee)")} " +
+                      $"pin={mission.PinIndex}@{pin:F1} " +
+                      $"wind={Golfin.Gameplay.UI.HUD.WindContext.SpeedMph:F0}mph@" +
+                      $"{Golfin.Gameplay.UI.HUD.WindContext.DirectionDegrees:F0}deg");
+        }
+
+        /// <summary>
+        /// Re-roll a GUSTY mission's wind after a completed shot (missions_v1 §B2). No-op for
+        /// every other preset and every other mode — "gusty" is the only wind on the table
+        /// that is meant to move between shots, and a wind that changed under a player mid-aim
+        /// would be a bug rather than a difficulty.
+        /// </summary>
+        private void AdvanceMissionGust(int shotNumber)
+        {
+            if (!Golfin.Gameplay.Missions.MissionSession.TryAdvanceGust(shotNumber, out float mph)) return;
+            Golfin.Gameplay.UI.HUD.WindContext.SpeedMph = mph;
+            Golfin.Gameplay.UI.HUD.WindContext.Raise();
+            WindCfg = WindConfigFromContext(mph, Golfin.Gameplay.UI.HUD.WindContext.DirectionDegrees);
+            Debug.Log($"[PhysicsLab] MISSION gust -> {mph:F1} mph after shot {shotNumber}");
         }
 
         void BuildPlacementEntries(

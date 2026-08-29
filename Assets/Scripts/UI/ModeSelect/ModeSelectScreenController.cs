@@ -45,6 +45,9 @@ namespace GolfinRedux.UI.ModeSelect
         /// <summary>PLAY opens the tournament browse screen.</summary>
         public const string TargetTournaments = "tournaments";
 
+        /// <summary>PLAY opens the Missions campaign browse screen (missions_v1 §C1).</summary>
+        public const string TargetMissionSelect = "mission_select";
+
         /// <summary>Deliberately not enterable — the Coming Soon cards.</summary>
         public const string TargetNone = "none";
 
@@ -56,7 +59,7 @@ namespace GolfinRedux.UI.ModeSelect
         /// </summary>
         public static readonly string[] DispatchableTargets =
         {
-            TargetHoleSelect, TargetMatchmaking1v1, TargetTournaments, TargetNone,
+            TargetHoleSelect, TargetMatchmaking1v1, TargetTournaments, TargetMissionSelect, TargetNone,
         };
 
         /// <summary>Case-insensitive membership in <see cref="DispatchableTargets"/>.</summary>
@@ -228,6 +231,16 @@ namespace GolfinRedux.UI.ModeSelect
                     {
                         Debug.LogWarning("[ModeSelectScreen] 1v1 PLAY — matchmakingModal1v1 not wired in Inspector.");
                     }
+                    break;
+
+                case TargetMissionSelect:
+                    // missions_v1 §C1. The entry FEE is unchanged and still spent on the card
+                    // path before this runs — Missions is free today, but nothing here assumes
+                    // that, and a fee added from the admin would just work.
+                    if (sm != null)
+                        sm.ShowScreen(ScreenId.MissionSelection);
+                    else
+                        Debug.LogWarning("[ModeSelectScreen] Missions PLAY — ScreenManager not found.");
                     break;
 
                 case TargetNone:

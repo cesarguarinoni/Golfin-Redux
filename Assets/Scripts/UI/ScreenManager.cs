@@ -14,6 +14,8 @@ namespace GolfinRedux.UI
         Inventory,
         HoleSelection,
         ModeSelection,
+        // missions_v1 §C1 — the Missions campaign browse screen, cloned from HoleSelection.
+        MissionSelection,
         Leaderboard,
         // Tournament screens (Stage 1 scaffolds — separate full screens from the
         // non-tournament HoleSelection / Leaderboard above).

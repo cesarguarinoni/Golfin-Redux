@@ -104,6 +104,12 @@ namespace Golfin.UI.Modals.Result
             _wasReplay       = _progression.HasPlayed(sessionData.HoleNumber);
             _rewardsGranted  = false;
 
+            // missions_v1 §B4 — FIRST, before anything reads the reward pool. A mission does
+            // not pay the hole's rewards at all: it pays what `golfin_mission_rewards` says,
+            // through its own claim. Settling that here keeps the two economies from both
+            // firing on one hole-out.
+            SettleMissionIfActive(sessionData);
+
             if (_widget == null)
             {
                 Debug.LogWarning("[HoleCompleteModalController] _widget is null — wire HoleCompleteWidget in Inspector.");
@@ -234,10 +240,115 @@ namespace Golfin.UI.Modals.Result
             );
         }
 
+        // ── Missions (missions_v1 §B4) ────────────────────────────────────────
+
+        /// <summary>The verdict for the hole just finished, or null when it was not a mission.
+        /// Read by the modal's goal strip and by tests.</summary>
+        internal Golfin.Gameplay.Missions.MissionResult LastMissionResult { get; private set; }
+
+        /// <summary>
+        /// Evaluate the active mission's goals and claim it. No-op in every other mode.
+        ///
+        /// THE ORDER MATTERS AND IT IS NOT THE OBVIOUS ONE. The goals are evaluated and the
+        /// mission session is ENDED before the claim's response comes back, because ending the
+        /// session is what pops the supplied bag and clears the stroke cap — and those must not
+        /// depend on a network round trip. If the claim fails the player keeps their own clubs
+        /// and simply has not been paid yet; if ending waited on the response, a dropped
+        /// connection would strand them in a mission's bag.
+        ///
+        /// THE CLIENT NEVER CREDITS ANYTHING HERE. It sends what it did (`goals_met`, strokes)
+        /// and writes back only what the server SAYS — see the mirror below. That is the same
+        /// discipline `/shop/purchase` and `/progress/level-up` were built on, and the reason
+        /// Missions never needed a `LEGACY_*` constant of its own.
+        /// </summary>
+        void SettleMissionIfActive(HoleCompletionData sessionData)
+        {
+            LastMissionResult = null;
+
+            var session = Golfin.Gameplay.Missions.MissionSession.Active;
+            var evaluator = Golfin.Gameplay.Missions.MissionSession.Evaluator;
+            if (session == null || evaluator == null) return;
+
+            var result = evaluator.EvaluateFinal(sessionData, System.Guid.NewGuid().ToString());
+            LastMissionResult = result;
+            Debug.Log($"[HoleCompleteModal] MISSION {result.MissionId}: cleared={result.Cleared} " +
+                      $"strokes={result.Strokes} putts={result.Putts} " +
+                      $"goals=[{string.Join(", ", result.Goals.ConvertAll(g => $"{g.Type}:{g.Met}"))}]");
+
+            // The daily has its own endpoint and its own hash guard; it is claimed by the
+            // Mission Selection screen, which is the only place that holds the recipe hash.
+            bool isDaily = session.IsDaily;
+
+            Golfin.Gameplay.Missions.MissionSession.End();
+
+            if (isDaily) return;
+            StartCoroutine(ClaimMissionRoutine(result));
+        }
+
+        System.Collections.IEnumerator ClaimMissionRoutine(Golfin.Gameplay.Missions.MissionResult result)
+        {
+            yield return Golfin.Economy.MissionsClient.Instance.ClaimRoutine(
+                result.MissionId, result.Strokes, result.Cleared, result.IdempotencyKey,
+                r =>
+                {
+                    if (!r.Success || r.Data == null)
+                    {
+                        // Online-only by design (see MissionsClient). A failed claim is a clear
+                        // the player has not been PAID for yet, not one they did not achieve —
+                        // the same key succeeds on a retry.
+                        Debug.LogWarning($"[HoleCompleteModal] mission claim failed for {result.MissionId}: " +
+                                         $"{r.ErrorMessage}");
+                        return;
+                    }
+
+                    var payload = r.Data.Effective;
+                    Debug.Log($"[HoleCompleteModal] mission claim {payload.Status}: awarded={payload.Awarded} " +
+                              $"(mission {payload.MissionRp} + tier {payload.TierBonus}) " +
+                              $"firstClear={payload.FirstClear} clears={payload.Clears}");
+
+                    MirrorMissionProgress(payload);
+
+                    // The balance moved server-side; pull it rather than adding locally, so the
+                    // number on screen is the server's and not this client's arithmetic.
+                    if (payload.Paid) Golfin.Economy.PointsService.Instance?.RefreshBalanceAsync();
+                });
+        }
+
+        /// <summary>
+        /// Write the server's answer into the local mirror (`SaveData.missionProgress`).
+        ///
+        /// ⚠️ ONLY FROM A RESPONSE. Nothing here increments anything: `clears`, `attempts` and
+        /// `bestStrokes` are copied from what the server reported. A client that counted its
+        /// own clears would show a first-clear reward the server was never going to pay again.
+        /// </summary>
+        static void MirrorMissionProgress(Golfin.Economy.MissionClaimResult payload)
+        {
+            var save = Golfin.Save.SaveDataHost.Instance?.Data;
+            if (save == null || string.IsNullOrEmpty(payload.MissionId)) return;
+
+            save.missionProgress ??= new System.Collections.Generic.List<Golfin.Save.PersistedMissionProgress>();
+            var row = save.missionProgress.Find(m => m.missionId == payload.MissionId);
+            if (row == null)
+            {
+                row = new Golfin.Save.PersistedMissionProgress { missionId = payload.MissionId };
+                save.missionProgress.Add(row);
+            }
+            row.clears = payload.Clears;
+            row.attempts = payload.Attempts;
+            if (payload.BestStrokes.HasValue) row.bestStrokes = payload.BestStrokes.Value;
+
+            Golfin.Save.SaveDataHost.Instance?.MarkDirty();
+        }
+
         // ── Reward grant (executed on action button press) ────────────────────
 
         void GrantRewards()
         {
+            // A MISSION pays through its own claim, not the hole's reward pool. Without this
+            // guard a cleared mission would pay twice — once server-priced, once from the
+            // hole's own table — and the second one is exactly the client-decided credit this
+            // whole feature was built to avoid.
+            if (LastMissionResult != null) return;
             if (!_lastSuccess || _rewardsGranted) return;
             _rewardsGranted = true;
 

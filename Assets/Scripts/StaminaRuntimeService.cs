@@ -98,8 +98,13 @@ public static class StaminaRuntimeService
         // Accrue any offline / between-hole regen first (D2: bring current before draining).
         AccrueRegen(pcd, nowUtc);
 
-        // Drain for the completed hole.
-        pcd.currentStaminaEnergy = Mathf.Max(0f, pcd.currentStaminaEnergy - StaminaModel.DrainForHole());
+        // Drain for the completed hole. A MISSION sets its own cost (missions_v1 §B2): a
+        // short-game mission that starts 10 yards from the pin must not cost the same
+        // Condition as a full hole from the back tee, or the cheapest content in the game
+        // would be the most expensive to play. `DrainOverride` returns the configured flat
+        // drain unchanged whenever no mission is active, so every other mode is untouched.
+        float drain = Golfin.Gameplay.Missions.MissionSession.DrainOverride(StaminaModel.DrainForHole());
+        pcd.currentStaminaEnergy = Mathf.Max(0f, pcd.currentStaminaEnergy - drain);
         pcd.conditionUpdatedUtc  = nowUtc;
 
         // Flush to SaveData.
@@ -107,7 +112,7 @@ public static class StaminaRuntimeService
 
         Debug.Log($"[StaminaRuntimeService] Hole/match complete: char={charId} " +
                   $"energy={pcd.currentStaminaEnergy:F1}/{pcd.maxStaminaEnergy:F1} " +
-                  $"drain={StaminaModel.DrainForHole():F1}");
+                  $"drain={drain:F1}");
     }
 
     // ─── AccrueRegen (public so CharacterManager.LoadRoster can call it on load) ──
