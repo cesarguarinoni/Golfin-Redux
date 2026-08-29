@@ -52,19 +52,32 @@ the card grew 374 → 826 and `daily >= expanded` — it fits its own content.
      DontDestroyOnLoad.** Same shape: `Awake()` sets the static and does not re-run for an object
      that is already alive. `MissionLoadoutResolver` now falls back to the live object.
 
-## Bug 4 — OPEN — `ClubDatabaseCSV.Instance` goes null while the component lives
+## Bug 4 — CLOSED, NOT A BUG (2026-08-29, same evening)
 
-The fallback above repairs the mission path only. **`ClubManager` asserts on this same database**,
-so the null static is worth its own look — it is not a missions bug, it is a singleton bug, and
-whatever wipes it will be wiping others.
+Filed here earlier as "`ClubDatabaseCSV.Instance` goes null while the component lives", on the
+strength of a probe that reported one live, active, enabled component in DontDestroyOnLoad
+alongside a null static — with `LocalizationManager` simultaneously returning raw keys.
 
-Observed: `scene components of that type: 1`, `activeInHierarchy=True`, `enabled=True`,
-`ClubDatabaseCSV.Instance = NULL`. `LocalizationManager` was simultaneously returning raw keys
-(`MISSION_PILL_NEXT` rendered literally), which is the same failure in another static.
+**It does not reproduce, and the observation was worthless.** Two separate artefacts produced it:
 
-**Caveat on that observation:** it was taken while the project had an unnoticed compile error, so
-Unity was serving the last good assemblies. That is a plausible explanation for the whole cluster
-and has to be ruled out first — reproduce on a clean, error-free Editor before treating it as real.
+1. The first sighting came while the project had an unnoticed `CS0104` compile error, so Unity was
+   serving the last good assemblies (see the Lesson below).
+2. The "clean Editor" re-test that seemed to confirm it was taken after a hard kill of the Editor,
+   which **reopened an untitled empty scene** — `scene-list-opened` returned one scene with an
+   empty name and empty path. Nothing was running, so every static was legitimately null and
+   `ScreenManager` was null too. That should have been the first thing checked and was not.
+
+Opening `Assets/Scenes/ShellScene.unity` and entering play gave, immediately:
+
+    MISSION_PILL_NEXT -> 'NEXT MISSION'   ClubDatabaseCSV.Instance=present
+
+Do not re-open this. **The two robustness fixes in `MissionLoadoutResolver` and
+`MissionSelectionScreenController.OnEnable` stay** — they are cheap, idempotent, and correct
+regardless; they simply are not fixing the bug this section claimed.
+
+**The check that would have saved the whole detour:** before concluding anything from null statics
+in play mode, confirm a scene is actually loaded. `scene-list-opened` returning an empty `Name`
+and `path` means there is no app to reason about.
 
 ## Lesson — "the type exists" is not "it compiled"
 
