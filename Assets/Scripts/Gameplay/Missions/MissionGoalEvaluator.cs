@@ -155,7 +155,7 @@ namespace Golfin.Gameplay.Missions
                 Strokes = strokes,
                 Putts = putts,
                 FailedOnStrokeCap = completion.TerminalState != BallState.InCup,
-                IdempotencyKey = $"mission:{_mission.Id}:{sessionGuid}",
+                IdempotencyKey = DeterministicUuid($"mission:{_mission.Id}:{sessionGuid}"),
             };
 
             foreach (var goal in _mission.Goals)
@@ -262,6 +262,34 @@ namespace Golfin.Gameplay.Missions
             int n = 0;
             foreach (var s in shots) n += 1 + s.PenaltyStrokes;
             return n;
+        }
+
+        /// <summary>
+        /// A UUID derived from a namespaced string.
+        ///
+        /// The server casts `idempotency_key` straight to a uuid and rejects anything else with
+        /// 400 "idempotency_key must be a UUID" (routers/missions.py `_parse_key`, the same helper
+        /// shop.py and progress.py use). The key here used to be "mission:{id}:{sessionGuid}",
+        /// which reads beautifully in a log and was refused by every single claim — a cleared
+        /// mission never paid out. Found by clearing mission 1 and watching the POST come back 400.
+        ///
+        /// Hashing, rather than just sending the session GUID, keeps the property the prefix was
+        /// there for: the same mission in the same session always yields the same key, so a retry
+        /// is the same claim, and two missions can never collide on one.
+        ///
+        /// Formatted big-endian from the digest so the version nibble lands where a strict parser
+        /// looks for it — `new Guid(byte[])` would reorder the first three fields.
+        /// </summary>
+        internal static string DeterministicUuid(string namespaced)
+        {
+            using (var md5 = System.Security.Cryptography.MD5.Create())
+            {
+                byte[] h = md5.ComputeHash(System.Text.Encoding.UTF8.GetBytes(namespaced));
+                h[6] = (byte)((h[6] & 0x0F) | 0x30);   // version 3 (name-based, MD5)
+                h[8] = (byte)((h[8] & 0x3F) | 0x80);   // RFC 4122 variant
+                string x = System.BitConverter.ToString(h).Replace("-", "").ToLowerInvariant();
+                return $"{x.Substring(0,8)}-{x.Substring(8,4)}-{x.Substring(12,4)}-{x.Substring(16,4)}-{x.Substring(20,12)}";
+            }
         }
 
         private static int CountPutts(IReadOnlyList<ShotRecord> shots)
