@@ -415,15 +415,37 @@ namespace GolfinRedux.UI.MissionSelection
             }
         }
 
-        /// <summary>Place the start marker over the hole thumbnail, at a 0..1 position.
-        /// Currently unused — see <c>MissionSelectionScreenController.PlaceStartMarker</c> for
-        /// the calibration that does not exist yet. Kept because the marker object is wired and
-        /// the day that data is authored this is all that is needed.</summary>
+        /// <summary>
+        /// Place the start marker over the hole thumbnail, at a 0..1 position IN SPRITE SPACE.
+        ///
+        /// Sprite space, not rect space — the two are not the same and assuming they were put
+        /// the first marker in open water beside the hole. `holeImage` is 300×280 with
+        /// preserveAspect on, and the art is 103×400: the drawing is letterboxed to a 72×280
+        /// column down the middle, so it only occupies u 0.38–0.62 of the rect. A caller that
+        /// says "69% across the hole" means 69% across the DRAWING.
+        /// </summary>
         public void SetStartMarkerNormalised(Vector2 normalised)
         {
             if (startMarker == null || holeImage == null) return;
+
+            Vector2 uv = normalised;
+            var sprite = holeImage.sprite;
+            if (holeImage.preserveAspect && sprite != null)
+            {
+                Rect  r  = holeImage.rectTransform.rect;
+                float sa = sprite.rect.width / sprite.rect.height;   // sprite aspect
+                float ra = r.width / r.height;                       // rect aspect
+                float dw, dh;
+                if (sa < ra) { dh = r.height; dw = dh * sa; }        // tall art: height-limited
+                else         { dw = r.width;  dh = dw / sa; }
+                // The fitted drawing is centred, so scale about the middle.
+                uv = new Vector2(
+                    0.5f + (normalised.x - 0.5f) * (dw / r.width),
+                    0.5f + (normalised.y - 0.5f) * (dh / r.height));
+            }
+
             startMarker.gameObject.SetActive(true);
-            startMarker.anchorMin = startMarker.anchorMax = normalised;
+            startMarker.anchorMin = startMarker.anchorMax = uv;
             startMarker.anchoredPosition = Vector2.zero;
         }
 
