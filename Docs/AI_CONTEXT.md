@@ -5,7 +5,7 @@
 
 ---
 
-## 🟡 IN FLIGHT — `missions_v1` **Phases A + B landed** (2026-08-29)
+## 🟡 IN FLIGHT — `missions_v1` **Phases A + B LIVE ON PROD** (2026-08-29)
 
 **Missions has a server-authoritative economy before it has a door.** Seven content catalogs, the
 tables and endpoints that decide and pay what a mission clear is worth, the deterministic daily
@@ -74,6 +74,30 @@ session bag and the goal evaluator. Commit `c0733f1f4`. **Unity EditMode 2021 te
 * **C1 was pulled forward**: `mission_select` is a routable target in both switches, because Phase
   A's `modes.csv` edit had made the bundled row unroutable and correctly broke four
   ModesOverlayTests (the client withholds a mode it cannot route).
+
+**Shipped to prod the same day.** Schema applied, all seven catalogs seeded, `missions` and
+`mission_tiers` published, both mirrors filled (`golfin_mission_rewards` 40, 10 per tier;
+`golfin_mission_tier_bonus` 4 at 50/100/200/300) and verified to AGREE with each other, so the
+10-of-10 bonus is reachable in every tier. API deployed (image
+`deployment-01M16C18A8ETDJ6HRPVJ0PNRWR`) — `/api/v1/missions/*` answer 403, not 404. Dashboard
+`d1f9befc-b216-4b42-b34d-798d8789ef43`. **The mode is still locked and has no screen, so none of
+it is reachable by a player** — which is the point of the ordering.
+
+**Mission 37 was re-sited hole 13 → hole 8** and published. Hole 13 has no greenside bunker
+(nearest sand 156 m from the green vs 14-33 m everywhere else), and the constraints pinned the
+replacement to one hole: it needs a bunker, and only a PAR 5 keeps the score at 15 and the
+campaign's 14 → 15 → 17 ladder intact. Holes 18 and 1 carry name-bound Legend missions, leaving 8
+— which was also the least-used hole in the campaign, so the spread tightened.
+
+**⚠️ A REAL HOLE THE ROLLOUT FOUND, now fixed and worth remembering.** `seed_from_csv.py --apply`
+writes `content_rows` and stamps `published_version = 1` but does NOT write server mirrors — only
+a publish does. So a freshly-seeded `mission_tiers` read v1 with an EMPTY diff while its mirror
+had zero rows; `golfin_mission_claim()` found no tier row and would have silently paid no
+completion bonus, and the publish drawer refused a no-op publish so there was no button that
+could fix it. A no-op publish on a MIRRORED catalog is now allowed and explained as a re-sync
+(`MIRRORED_CATALOGS` moved to a client-safe module so the drawer can read it). Anything seeded
+from CSV that has a mirror needs one publish before its mirror exists.
+
 * **Next:** Phase C — the Mission Selection screen cloned from Hole Selection, the daily card, and
   the two things Phase B could not finish without a screen: the Hole Complete modal's goal strip
   and the per-start-kind position trace on Hole 01.
