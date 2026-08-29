@@ -3123,3 +3123,23 @@ he had used **"Offload App"** instead of **Delete**. Offload keeps the data cont
 save survives, `NeedsStarter` is false from the start, and the test proves nothing while appearing to
 pass. When an acceptance step depends on a clean install, say *delete*, and say what the near-miss
 gesture does.
+
+## Lesson AI — do not refresh assets while play mode is running (2026-08-30)
+
+`TreeWindDriver` writes the hole's wind onto shared Custom/Vegetation materials, which in the
+Editor are the `.mat` ASSETS. `TreeWindDriverEditorGuard` restores the authored values on
+`ExitingPlayMode` and is correct — but the values it restores live in STATIC dictionaries, so any
+domain reload mid-play throws them away and play mode exits with nothing to put back. Eleven tree
+materials were left at `WindSpeedFloat1 = 0` this way, repeatedly, and reverted by hand each time.
+
+The trigger was mine: calling `assets-refresh` (or editing a `.cs`) while the Editor was still in
+play mode. The rule is simply **stop play first, then refresh** — which the project already knew
+for a different reason (`reference_no_recompile_during_play`: a domain reload nulls
+`LocalizationManager`'s statics and the UI falls back to raw keys). Same cause, second victim.
+
+The guard now warns when its constructor re-runs during play, because that IS the moment the
+snapshot is lost. It cannot repair it. Treat the warning as "check `git status` before you commit".
+
+**Generalisation worth carrying:** an editor-side "restore on exit" guard is only as durable as
+where it keeps its snapshot. A static field is not durable. If a guard must survive a reload, its
+snapshot belongs somewhere that survives one too — `SessionState`, or the asset itself.
