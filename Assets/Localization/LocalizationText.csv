@@ -530,6 +530,10 @@ MISSION_START,Start,スタート地点
 MISSION_FIRST_CLEAR,First clear,初回クリア
 MISSION_REPLAY_REWARD,Replay,再挑戦報酬
 MISSION_DAILY_RESETS,Resets in {0},リセットまで {0}
+MISSION_RULES,RULES,ルール
+MISSION_LABEL_START,Start,スタート
+MISSION_LABEL_WIND,Wind,風
+MISSION_LABEL_GEAR,Gear,クラブ
 MISSION_DAILY_STREAK,{0} day streak,{0}日連続
 MISSION_DAILY_CLEARED,CLEARED,クリア済み
 MISSION_TIER_BONUS,Tier bonus,ティアボーナス
@@ -588,15 +592,15 @@ LOADOUT_OWN,Your own bag,自分のバッグ
 LOADOUT_OWN_NO_WOODS,Your bag — no Driver or Wood,自分のバッグ — ドライバー・ウッド禁止
 LOADOUT_OWN_NO_IRONS,Your bag — no irons,自分のバッグ — アイアン禁止
 LOADOUT_OWN_NO_WEDGES,Your bag — no wedges,自分のバッグ — ウェッジ禁止
-LOADOUT_SUP_FULL,Supplied: full bag,支給: フルセット
-LOADOUT_SUP_FULL_RARE,Supplied: full bag (Rare),支給: フルセット（レア）
-LOADOUT_SUP_NO_DRIVER,"Supplied: full bag, no Driver",支給: ドライバーなしのフルセット
-LOADOUT_SUP_IRONS,Supplied: irons and putter,支給: アイアンとパター
-LOADOUT_SUP_WEDGE_PUTTER,Supplied: wedges and putter,支給: ウェッジとパター
-LOADOUT_SUP_PUTTER,Supplied: putter only,支給: パターのみ
-LOADOUT_SUP_DRIVER_PUTTER,Supplied: Driver and putter,支給: ドライバーとパター
-LOADOUT_SUP_ONE_IRON,Supplied: 7-iron and putter,支給: 7番アイアンとパター
-LOADOUT_SUP_WOOD_ONLY,Supplied: Wood and putter,支給: ウッドとパター
+LOADOUT_SUP_FULL,full bag,フルセット
+LOADOUT_SUP_FULL_RARE,full bag (Rare),フルセット（レア）
+LOADOUT_SUP_NO_DRIVER,"full bag, no Driver",ドライバーなしのフルセット
+LOADOUT_SUP_IRONS,irons and putter,アイアンとパター
+LOADOUT_SUP_WEDGE_PUTTER,wedges and putter,ウェッジとパター
+LOADOUT_SUP_PUTTER,putter only,パターのみ
+LOADOUT_SUP_DRIVER_PUTTER,Driver and putter,ドライバーとパター
+LOADOUT_SUP_ONE_IRON,7-iron and putter,7番アイアンとパター
+LOADOUT_SUP_WOOD_ONLY,Wood and putter,ウッドとパター
 # --- missions_v1: start-area lines ----------------------------------------
 START_AREA_GREEN,On the green,グリーン上
 START_AREA_FRINGE,Fringe,カラー

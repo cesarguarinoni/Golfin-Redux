@@ -1725,6 +1725,18 @@ MonoBehaviour:
   - key: MISSION_DAILY_RESETS
     english: Resets in {0}
     japanese: "\u30EA\u30BB\u30C3\u30C8\u307E\u3067 {0}"
+  - key: MISSION_RULES
+    english: RULES
+    japanese: "\u30EB\u30FC\u30EB"
+  - key: MISSION_LABEL_START
+    english: Start
+    japanese: "\u30B9\u30BF\u30FC\u30C8"
+  - key: MISSION_LABEL_WIND
+    english: Wind
+    japanese: "\u98A8"
+  - key: MISSION_LABEL_GEAR
+    english: Gear
+    japanese: "\u30AF\u30E9\u30D6"
   - key: MISSION_DAILY_STREAK
     english: '{0} day streak'
     japanese: "{0}\u65E5\u9023\u7D9A"
@@ -1885,32 +1897,32 @@ MonoBehaviour:
     english: "Your bag \u2014 no wedges"
     japanese: "\u81EA\u5206\u306E\u30D0\u30C3\u30B0 \u2014 \u30A6\u30A7\u30C3\u30B8\u7981\u6B62"
   - key: LOADOUT_SUP_FULL
-    english: 'Supplied: full bag'
-    japanese: "\u652F\u7D66: \u30D5\u30EB\u30BB\u30C3\u30C8"
+    english: full bag
+    japanese: "\u30D5\u30EB\u30BB\u30C3\u30C8"
   - key: LOADOUT_SUP_FULL_RARE
-    english: 'Supplied: full bag (Rare)'
-    japanese: "\u652F\u7D66: \u30D5\u30EB\u30BB\u30C3\u30C8\uFF08\u30EC\u30A2\uFF09"
+    english: full bag (Rare)
+    japanese: "\u30D5\u30EB\u30BB\u30C3\u30C8\uFF08\u30EC\u30A2\uFF09"
   - key: LOADOUT_SUP_NO_DRIVER
-    english: 'Supplied: full bag, no Driver'
-    japanese: "\u652F\u7D66: \u30C9\u30E9\u30A4\u30D0\u30FC\u306A\u3057\u306E\u30D5\u30EB\u30BB\u30C3\u30C8"
+    english: full bag, no Driver
+    japanese: "\u30C9\u30E9\u30A4\u30D0\u30FC\u306A\u3057\u306E\u30D5\u30EB\u30BB\u30C3\u30C8"
   - key: LOADOUT_SUP_IRONS
-    english: 'Supplied: irons and putter'
-    japanese: "\u652F\u7D66: \u30A2\u30A4\u30A2\u30F3\u3068\u30D1\u30BF\u30FC"
+    english: irons and putter
+    japanese: "\u30A2\u30A4\u30A2\u30F3\u3068\u30D1\u30BF\u30FC"
   - key: LOADOUT_SUP_WEDGE_PUTTER
-    english: 'Supplied: wedges and putter'
-    japanese: "\u652F\u7D66: \u30A6\u30A7\u30C3\u30B8\u3068\u30D1\u30BF\u30FC"
+    english: wedges and putter
+    japanese: "\u30A6\u30A7\u30C3\u30B8\u3068\u30D1\u30BF\u30FC"
   - key: LOADOUT_SUP_PUTTER
-    english: 'Supplied: putter only'
-    japanese: "\u652F\u7D66: \u30D1\u30BF\u30FC\u306E\u307F"
+    english: putter only
+    japanese: "\u30D1\u30BF\u30FC\u306E\u307F"
   - key: LOADOUT_SUP_DRIVER_PUTTER
-    english: 'Supplied: Driver and putter'
-    japanese: "\u652F\u7D66: \u30C9\u30E9\u30A4\u30D0\u30FC\u3068\u30D1\u30BF\u30FC"
+    english: Driver and putter
+    japanese: "\u30C9\u30E9\u30A4\u30D0\u30FC\u3068\u30D1\u30BF\u30FC"
   - key: LOADOUT_SUP_ONE_IRON
-    english: 'Supplied: 7-iron and putter'
-    japanese: "\u652F\u7D66: 7\u756A\u30A2\u30A4\u30A2\u30F3\u3068\u30D1\u30BF\u30FC"
+    english: 7-iron and putter
+    japanese: "7\u756A\u30A2\u30A4\u30A2\u30F3\u3068\u30D1\u30BF\u30FC"
   - key: LOADOUT_SUP_WOOD_ONLY
-    english: 'Supplied: Wood and putter'
-    japanese: "\u652F\u7D66: \u30A6\u30C3\u30C9\u3068\u30D1\u30BF\u30FC"
+    english: Wood and putter
+    japanese: "\u30A6\u30C3\u30C9\u3068\u30D1\u30BF\u30FC"
   - key: START_AREA_GREEN
     english: On the green
     japanese: "\u30B0\u30EA\u30FC\u30F3\u4E0A"

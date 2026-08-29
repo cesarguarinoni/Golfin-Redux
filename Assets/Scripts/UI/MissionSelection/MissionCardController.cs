@@ -110,8 +110,14 @@ namespace GolfinRedux.UI.MissionSelection
         [Header("Daily")]
         [SerializeField] private GameObject? dailyHeaderTint;
         [SerializeField] private TextMeshProUGUI? dailyCountdownText;
-        [SerializeField] private GameObject? streakChip;
+        [SerializeField] private GameObject? streakChip;          // legacy: the chip in RewardsRow, no longer used
         [SerializeField] private TextMeshProUGUI? streakText;
+        [SerializeField] private TextMeshProUGUI? streakTextExp;
+        [SerializeField] private TextMeshProUGUI? dailyCountdownTextExp;
+        [SerializeField] private TextMeshProUGUI? rulesHeader;
+
+        /// <summary>Last streak we were told about, so expand/collapse cannot disagree with it.</summary>
+        private int _dailyStreak;
 
         // ── State ───────────────────────────────────────────────────────────────
         public MissionDefinition? Mission { get; private set; }
@@ -233,21 +239,39 @@ namespace GolfinRedux.UI.MissionSelection
                     continue;
                 }
                 line.gameObject.SetActive(true);
-                line.text = GoalLineText(m.Goals[i]);
+                line.text = Bullet(GoalLineText(m.Goals[i]));
             }
 
+            // A heading, so the block reads as the mission's terms rather than loose sentences.
+            if (rulesHeader != null) rulesHeader.text = LocalizationManager.Get("MISSION_RULES");
+
+            // The last three lines are CONDITIONS, not objectives, and were indistinguishable
+            // from the goals above them: "Ladies tee" and "Light tailwind" read like things to
+            // achieve. Naming the axis fixes that in three words.
             if (windLine != null)
-                windLine.text = string.IsNullOrEmpty(m.WindKey) ? "" : LocalizationManager.Get(m.WindKey);
+                windLine.text = Labelled("MISSION_LABEL_WIND", m.WindKey);
 
             if (loadoutLine != null)
-                loadoutLine.text = string.IsNullOrEmpty(m.LoadoutKey) ? "" : LocalizationManager.Get(m.LoadoutKey);
+                loadoutLine.text = Labelled("MISSION_LABEL_GEAR", m.LoadoutKey);
 
             // WHERE the ball starts, in words. This carries the information the start MARKER
             // was meant to — and carries it exactly, which the marker could not (see
             // MissionSelectionScreenController.PlaceStartMarker for why it is off).
             if (startLine != null)
-                startLine.text = string.IsNullOrEmpty(m.StartAreaKey) ? "" : LocalizationManager.Get(m.StartAreaKey);
+                startLine.text = Labelled("MISSION_LABEL_START", m.StartAreaKey);
         }
+
+        /// <summary>A rule line. The bullet is text, not a layout child: the lines are a plain
+        /// VerticalLayoutGroup of TMP fields and a glyph column would have to be kept in step
+        /// with which of them are active.</summary>
+        private static string Bullet(string body) =>
+            string.IsNullOrEmpty(body) ? "" : "\u2022  " + body;
+
+        /// <summary>A rule line that names its axis — "Start: Ladies tee".</summary>
+        private static string Labelled(string labelKey, string valueKey) =>
+            string.IsNullOrEmpty(valueKey)
+                ? ""
+                : Bullet(LocalizationManager.Get(labelKey) + ": " + LocalizationManager.Get(valueKey));
 
         /// <summary>One goal as a sentence. The param is substituted, and a SURFACE or CLUB
         /// param is itself localized — "Never land in the bunker", not "…in the Bunker".</summary>
@@ -387,26 +411,57 @@ namespace GolfinRedux.UI.MissionSelection
             if (actionButton != null) actionButton.interactable = !isLocked && IsPlayable;
 
             // Daily chrome — off for every campaign card.
+            //
+            // The streak used to be decided in TWO places that disagreed: here it was shown for
+            // any daily card, and in SetDailyStatus it was shown only when streak > 0. Expanding
+            // re-runs this method, so the chip blinked on and off as the card opened and closed.
+            // One rule now, applied from one place, to both the collapsed and expanded copies.
             bool daily = Mode == MissionCardMode.Daily;
             if (dailyHeaderTint != null) dailyHeaderTint.SetActive(daily);
-            if (dailyCountdownText != null) dailyCountdownText.gameObject.SetActive(daily);
-            if (streakChip != null) streakChip.SetActive(daily);
+            ApplyDailyChrome(daily);
 
             RefreshLocalizedText();
 
             if (rootRect != null) LayoutRebuilder.ForceRebuildLayoutImmediate(rootRect);
         }
 
+        /// <summary>
+        /// The one place that decides whether the daily chrome is on screen, so expanding a card
+        /// can never contradict what binding it decided.
+        ///
+        /// The countdown and the streak are shown on BOTH the collapsed and the expanded copy.
+        /// They used to exist only on the collapsed one, so opening the card threw away the two
+        /// pieces of information that are unique to the daily.
+        ///
+        /// A streak of zero is not a streak, so it is hidden rather than reading "0 day streak".
+        /// </summary>
+        private void ApplyDailyChrome(bool daily)
+        {
+            if (dailyCountdownText    != null) dailyCountdownText.gameObject.SetActive(daily);
+            if (dailyCountdownTextExp != null) dailyCountdownTextExp.gameObject.SetActive(daily);
+
+            bool showStreak = daily && _dailyStreak > 0;
+            if (streakText    != null) streakText.gameObject.SetActive(showStreak);
+            if (streakTextExp != null) streakTextExp.gameObject.SetActive(showStreak);
+
+            // The old chip lived in the rewards row, next to the prize, with an empty icon slot.
+            // It is gone from the layout; this keeps any stale reference switched off.
+            if (streakChip != null) streakChip.SetActive(false);
+        }
+
         /// <summary>Countdown to UTC midnight + the streak, on the daily card only.</summary>
         public void SetDailyStatus(System.TimeSpan untilReset, int streak, bool claimed)
         {
-            if (dailyCountdownText != null)
-                dailyCountdownText.text = LocalizationManager.Get("MISSION_DAILY_RESETS")
-                    .Replace("{0}", $"{(int)untilReset.TotalHours:00}:{untilReset.Minutes:00}:{untilReset.Seconds:00}");
+            string resetLine = LocalizationManager.Get("MISSION_DAILY_RESETS")
+                .Replace("{0}", $"{(int)untilReset.TotalHours:00}:{untilReset.Minutes:00}:{untilReset.Seconds:00}");
+            if (dailyCountdownText    != null) dailyCountdownText.text    = resetLine;
+            if (dailyCountdownTextExp != null) dailyCountdownTextExp.text = resetLine;
 
-            if (streakText != null)
-                streakText.text = LocalizationManager.Get("MISSION_DAILY_STREAK").Replace("{0}", streak.ToString());
-            if (streakChip != null) streakChip.SetActive(streak > 0);
+            _dailyStreak = streak;
+            string streakLine = LocalizationManager.Get("MISSION_DAILY_STREAK").Replace("{0}", streak.ToString());
+            if (streakText    != null) streakText.text    = streakLine;
+            if (streakTextExp != null) streakTextExp.text = streakLine;
+            ApplyDailyChrome(Mode == MissionCardMode.Daily);
 
             if (claimed && actionButtonLabel != null)
             {
