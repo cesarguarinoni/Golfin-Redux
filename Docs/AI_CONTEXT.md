@@ -5,7 +5,58 @@
 
 ---
 
-## ✅ LATEST — `shot_aim_parity` DONE (2026-08-29)
+## ✅ LATEST — `shot_timing_power` DONE (2026-08-29)
+
+**The coloured timing slab now does something.** Its position and colour at the moment of the flick
+were never read: `CommitFlick` looked at `PowerNormalized` and `_degradationYawRad` and nothing
+else, so **flicking on green and flicking on red produced a byte-identical shot**. Cesar
+(2026-08-28): *"I am not sure the colored arrows going through the ball right now are having any
+effect either."* They were not — the only timing consequence in the game was the pass counter's aim
+degradation (F13), a different mechanic. `SHOT_CONTROLS_DESIGN §3.4` had always specified the
+missing half; this wires it. **Approved by Cesar 2026-08-29; folder in `Docs/Specs/Completed/`.** Spec + report:
+`Docs/Specs/Completed/shot_timing_power/`. Changelog entry
+**F15**. Implemented directly, not through the subagent chain.
+
+**The model.** `flickMag = PowerNormalized × timingMul`, piecewise-linear through the *same band
+edges the slab is drawn with*: red base **0.70** → gold line (0.45) **0.90** → green line (0.85)
+and above **1.00**. Applied **after** the overpower clamp (D6), so a 120 % pull on red is 84 % —
+overpowering does not buy you out of bad timing.
+
+**The one non-obvious decision (D1): the timing is sampled at the aim latch, not at release.** The
+player reacts to the slab by *starting* the flick; the finger leaves 50–150 ms later, which at the
+CC-0 arrow speed of 2.0 Hz is **10–30 % of the cone — a whole band**. Sampling `_arrowProgress` at
+the upswing reversal (the same instant `shot_aim_parity` latches the aim) is what makes "flick when
+it is green" mean what it says. An unlatch discards the sample; the re-latch re-samples.
+
+**Bots and carries cannot move (D4).** Sampleless drivers — bots, capture drivers, `FireDebugShot`,
+EditMode tests, the legacy `IInputSource` path — never latch, so `_timingAtLatch` stays `NaN` and
+the multiplier is exactly 1.0. Hole 1 completability is untouched. `DebugFlags.ForcePerfectTiming`
+also forces 1.0, so that flag finally does what its name says.
+
+**Band edges are now config (D3).** `TimingBandGoldY01` / `TimingBandGreenY01` moved out of
+`ConeBandPalette` literals into `ControlsConfig`; the palette reads them back and `ConeMeshGraphic`
+re-syncs its serialized fields in `OnEnable`. The line the player reads and the penalty they pay
+are one number. Values are byte-identical to the literals, so nothing moves visually.
+
+* **Gate:** whole EditMode suite, no filter — **1977 total / 1974 passed / 0 failed / 3 pre-existing
+  skips**. New `ShotTimingPowerTests` (8 tests).
+* **Tripwire-proven twice, not asserted.** (A) Flipping a palette assertion produced exactly that
+  named failure — the suite really runs. (B) Commenting out `flickMag *= timingMul` failed
+  `LatchOnRedBase_RedMultiplier` with `Expected 65.637, But was 93.768` (= 93.768 × 0.70) — the
+  multiplier really reaches the resolved velocity, not just the debug log. Both reverted, re-run green.
+* **Four acceptance items were flagged MANUAL and never claimed PASS** — they require a real
+  down-then-up gesture on the club handle, which by construction (D4) no automation in this project
+  produces: the green/gold/red carry ordering with `LogResolution` on, the same three with
+  `ForcePerfectTiming`, the putter red-vs-green comparison, and the HUD `× 0.xx` readout. No
+  screenshots were cited anywhere in the report. **Cesar approved on the code + test evidence.**
+* **Still open (deliberately undecided, revisit by feel):** (1) **D5 — should putts pay the penalty?** They do now; exempting them is one
+  `if (IsPutt) return 1f;`. (2) The four numbers are the spec's proposals, not measured — tune in
+  `controls.csv` *and* `ControlsConfig.Default` together. (3) The HUD `× 0.87` can be dropped if it
+  reads as clutter.
+
+---
+
+## ✅ `shot_aim_parity` DONE (2026-08-29)
 
 **The ball now goes where the targeting line points.** `ShotController.PublishState` (the line) and
 `ShotController.CommitFlick` (the shot) had used **two different aim formulas** since
