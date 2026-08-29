@@ -393,6 +393,26 @@ public class ClubManager : MonoBehaviour
                                    totalSP, template.type.ToString());
     }
 
+    /// <summary>
+    /// Re-read the runtime club dict from the save (starter_restore_gate §4).
+    ///
+    /// <para>
+    /// DELIBERATELY NOT <c>InitializeClubs</c>. That method carries the ONE-SHOT seeding
+    /// (<c>clubOwnershipSeeded</c>, the grandfather branch) and the v9 wedge backfill; re-running it
+    /// after a server restore would re-open decisions that are meant to be taken exactly once in a
+    /// save's life. All this needs is the hydration step — the restore has already written the
+    /// persisted list.
+    /// </para>
+    /// </summary>
+    public void RehydrateFromSave()
+    {
+        var host = SaveDataHost.Instance;
+        if (host == null) return;
+        HydrateFrom(host.Data);
+        Debug.Log($"[ClubManager] Re-hydrated {ownedClubs.Count} clubs from the save (server restore/merge).");
+        OnInventoryChanged?.Invoke();
+    }
+
     /// <summary>Hydrate the runtime dict from a save's persisted club list.</summary>
     private void HydrateFrom(SaveData save)
     {

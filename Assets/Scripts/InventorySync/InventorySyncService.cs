@@ -12,6 +12,25 @@ using UnityEngine;
 namespace Golfin.InventorySync
 {
     /// <summary>
+    /// What the boot read answered. The distinction that matters is
+    /// <see cref="NotRun"/> vs <see cref="Failed"/>: "the server has not spoken yet" and "the
+    /// server could not be reached" route differently, and collapsing them is exactly how a
+    /// reinstalled player got asked to pick a starter they already own
+    /// (starter_restore_gate §Diagnosis).
+    /// </summary>
+    public enum BootOutcome
+    {
+        /// <summary>No boot read has completed. Nothing may be concluded from the local save yet.</summary>
+        NotRun,
+        /// <summary>The server answered. The local save now carries whatever it holds — including
+        /// "it holds nothing", which is a real answer and the only one that may show the picker.</summary>
+        Succeeded,
+        /// <summary>The request failed. The local save is untouched and says nothing about the
+        /// account.</summary>
+        Failed,
+    }
+
+    /// <summary>
     /// Two-way inventory sync: read at boot, merge, apply; then write behind at most once per 30 s
     /// plus once on pause/quit.
     ///
@@ -113,6 +132,31 @@ namespace Golfin.InventorySync
 
         public bool HasPushedThisSession { get; private set; }
 
+        /// <summary>What the last boot read answered. <see cref="BootCompleted"/> says a boot
+        /// finished; this says WHAT it finished as, which is the half the starter gate needs.</summary>
+        public BootOutcome LastBootOutcome { get; private set; } = BootOutcome.NotRun;
+
+        /// <summary>True while a boot fetch is out. Lets <c>InventorySyncBehaviour.TryBoot</c>
+        /// be called from several places (bind, sign-in, the starter-gate retry) without any of them
+        /// firing a second, redundant GET over one that is already in flight.</summary>
+        public bool BootInFlight { get; private set; }
+
+        /// <summary>
+        /// Raised after <see cref="Boot"/> finishes — success OR failure — once the grants are
+        /// drained. THE SIGNAL THE POST-AUTH ROUTERS WAIT ON: before this, the local save's
+        /// <c>starterCharacterId</c> is only "what this device happens to have", not the account's
+        /// answer. Main thread (see the note in <see cref="Boot"/>).
+        /// </summary>
+        public event Action<BootOutcome>? OnBootFinished;
+
+        /// <summary>
+        /// Raised after a merge CHANGED the local save — the boot restore or the stale-PUT merge.
+        /// The runtime managers build their dictionaries once, in Awake, so without this a restored
+        /// roster stays invisible until the next launch. Subscribed from Assembly-CSharp by
+        /// <c>InventoryCatalogAdapter</c>, the one place that can see all four managers.
+        /// </summary>
+        public event Action? OnRestored;
+
         private bool _inFlight;
         private bool _grantsDrained;
 
@@ -140,13 +184,24 @@ namespace Golfin.InventorySync
             if (!SendsEnabled || !SafeAuthed())
             {
                 // Not authenticated is a normal state (a tester who has not signed in yet), not an
-                // error. Leave BootCompleted false so a later sign-in can run the real boot.
+                // error. Leave BootCompleted false — and LastBootOutcome at NotRun — so a later
+                // sign-in can run the real boot and the starter gate keeps waiting for it.
                 done?.Invoke();
                 return;
             }
 
+            // A RETRY RE-OPENS THE QUESTION. Clearing this here (not in the callback) is what makes
+            // a StarterGate.Resolve issued right after RetryBoot() WAIT for the new answer instead
+            // of reading the previous failure and showing the offline error again forever.
+            LastBootOutcome = BootOutcome.NotRun;
+            BootInFlight = true;
+
             Transport.GetInventory(fetch =>
             {
+                // ⚠️ MAIN THREAD. ApiClient completes its callbacks on the main thread (RestoreFrom
+                // below already touches SaveDataHost from here, and has since this shipped), so the
+                // OnBootFinished/OnRestored handlers below may touch Unity objects. No dispatcher.
+                BootInFlight = false;
                 try
                 {
                     if (fetch.Ok)
@@ -163,9 +218,31 @@ namespace Golfin.InventorySync
                     Debug.LogError($"{Tag} Boot restore threw and was swallowed: {ex}");
                 }
 
+                LastBootOutcome = fetch.Ok ? BootOutcome.Succeeded : BootOutcome.Failed;
                 BootCompleted = true;
-                DrainGrants(done);
+                DrainGrants(() =>
+                {
+                    RaiseBootFinished();
+                    done?.Invoke();
+                });
             });
+        }
+
+        /// <summary>Announce the boot outcome. A throwing subscriber must never break the sync that
+        /// produced it — same contract as <c>AuthService.RaiseSignedIn</c>.</summary>
+        private void RaiseBootFinished()
+        {
+            try { OnBootFinished?.Invoke(LastBootOutcome); }
+            catch (Exception ex) { Debug.LogError($"{Tag} OnBootFinished subscriber threw: {ex}"); }
+        }
+
+        /// <summary>Announce that a merge changed the save, so the runtime managers can re-read it.
+        /// Swallows, for the same reason: the save is already correct at this point and losing that
+        /// to a UI subscriber's bug would be the expensive half.</summary>
+        private void RaiseRestored()
+        {
+            try { OnRestored?.Invoke(); }
+            catch (Exception ex) { Debug.LogError($"{Tag} OnRestored subscriber threw: {ex}"); }
         }
 
         private void RestoreFrom(string serverJson)
@@ -181,6 +258,7 @@ namespace Golfin.InventorySync
             }
 
             MarkSaveDirty();
+            RaiseRestored();
             // The merged state is now strictly bigger than what the server holds, so it is owed a
             // push. Marking dirty here (rather than waiting for a mutation) is what makes the
             // restore round-trip converge in one session instead of on the next purchase.
@@ -331,7 +409,13 @@ namespace Golfin.InventorySync
                 // the local save too, or the next projection would drop it again and the two devices
                 // would ping-pong forever.
                 SaveData? save = SaveProvider();
-                if (save != null && ApplyAndCount(theirs, save, "stale-merge")) MarkSaveDirty();
+                if (save != null && ApplyAndCount(theirs, save, "stale-merge"))
+                {
+                    MarkSaveDirty();
+                    // A level another device raised must show on THIS device's roster too, not only
+                    // in the blob — same reason the boot restore raises it.
+                    RaiseRestored();
+                }
             }
             catch (Exception ex)
             {
@@ -400,6 +484,8 @@ namespace Golfin.InventorySync
         {
             Rev = 0;
             BootCompleted = false;
+            LastBootOutcome = BootOutcome.NotRun;
+            BootInFlight = false;
             HasPushedThisSession = false;
             _inFlight = false;
             _grantsDrained = false;

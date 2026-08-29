@@ -86,6 +86,22 @@ public class ItemManager : MonoBehaviour
         Debug.Log($"[ItemManager] Initialized {ownedItems.Count} items.");
     }
 
+    /// <summary>
+    /// Re-read quantities from the save (starter_restore_gate §4).
+    ///
+    /// <para>
+    /// This manager CACHES — <c>ownedItems</c> is built once in <c>Awake</c> and every read goes to
+    /// the dict, not to <c>SaveData</c> — so a server restore that raised a quantity is invisible
+    /// until it is re-read. <see cref="InitializeItems"/> is safe to re-run: it seeds from the CSV
+    /// and overlays the save, and carries no one-shot state (unlike <c>ClubManager</c>'s seeding).
+    /// </para>
+    /// </summary>
+    public void ReloadFromSave()
+    {
+        InitializeItems();
+        OnInventoryChanged?.Invoke();
+    }
+
     // ── Query API ─────────────────────────────────────────────────────────────
 
     public PlayerItemData? GetItemData(string itemId)

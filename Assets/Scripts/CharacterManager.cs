@@ -384,6 +384,28 @@ namespace Golfin.Roster
                 .ToList();
         }
 
+        /// <summary>
+        /// Rebuild the runtime roster from the save (starter_restore_gate §4).
+        ///
+        /// <para>
+        /// THE RESTORE PATH NEEDS THIS. <c>InventorySyncService</c> merges the server blob straight
+        /// into <c>SaveData</c> and marks it dirty; <c>ownedCharacters</c> is built ONCE, in
+        /// <c>Awake</c>. Without a re-read a reinstalled player lands on Home with a roster that
+        /// says they own nothing until the next launch. <see cref="LoadRoster"/> already re-applies
+        /// the save overlay, the starter invariant repair and the selection fallback, and already
+        /// raises <see cref="OnRosterChanged"/> at its end — nothing is duplicated here.
+        /// </para>
+        /// <para>
+        /// It does NOT save: the caller (the merge) has already marked the save dirty, and a second
+        /// write would be a disk flush for zero new state.
+        /// </para>
+        /// </summary>
+        public void ReloadFromSave()
+        {
+            Debug.Log("[CharacterManager] Re-reading the roster from the save (server restore/merge).");
+            LoadRoster();
+        }
+
         /// <summary>True if the player has never chosen a starting character.</summary>
         public bool NeedsStarter
         {

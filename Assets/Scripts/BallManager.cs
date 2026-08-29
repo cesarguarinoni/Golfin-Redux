@@ -90,6 +90,16 @@ public class BallManager : MonoBehaviour
         Debug.Log($"[BallManager] Initialized {ownedBalls.Count} balls.");
     }
 
+    /// <summary>
+    /// Re-read quantities from the save (starter_restore_gate §4). The ball counterpart of
+    /// <c>ItemManager.ReloadFromSave</c> — same cache, same reason, same safe re-run.
+    /// </summary>
+    public void ReloadFromSave()
+    {
+        InitializeBalls();
+        OnInventoryChanged?.Invoke();
+    }
+
     // ── Public API ────────────────────────────────────────────────────
 
     public PlayerBallData? GetBallData(string ballId)

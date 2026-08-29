@@ -34,9 +34,14 @@ namespace Golfin.InventorySync.Tests
         /// <summary>Every call fails — the offline case.</summary>
         public bool Offline;
 
+        /// <summary>Observed at the instant the boot request goes out, before it answers
+        /// (starter_restore_gate: the retry must leave LastBootOutcome at NotRun while in flight).</summary>
+        public Action OnGetInventory;
+
         public void GetInventory(Action<InventoryFetch> done)
         {
             GetCount++;
+            OnGetInventory?.Invoke();
             done(Offline ? InventoryFetch.Failed : new InventoryFetch(true, ServerJson, ServerRev));
         }
 

@@ -513,6 +513,56 @@ rows). The repo is AHEAD, so it needs a re-seed of those two keys, not an export
 
 ---
 
+## 🟢 BUILT, WAITING ON CESAR'S PHONE — `starter_restore_gate` (2026-08-30)
+
+> **A signed-in tester who deleted and reinstalled was asked to pick a starting character they had
+> owned for weeks. The server was never the problem.** `content_player_inventory` has written
+> `starterCharacterId` into `profiles.golfin_inventory` under the `starter` key since 2026-08-26, and
+> `InventoryProjector.Apply` fills it back on restore. **Two client gaps did it, and both are now
+> closed.** Spec + report: `Docs/Specs/Active/starter_restore_gate/`. Implemented directly by the
+> main Claude Code thread at Cesar's instruction — no implementer / self-reviewer / red-team chain.
+>
+> - **Gap 1 — routing raced the restore.** `InventorySyncService.Boot()` is asynchronous and nothing
+>   waited on it, while all three post-auth routers read `CharacterManager.NeedsStarter` —
+>   `string.IsNullOrEmpty(save.starterCharacterId)`, a question about THIS DEVICE'S FILE — in the
+>   same callback as the sign-in success. On a fresh install that file is empty, so the picker won
+>   every time and the restore landed a moment later, underneath it, with nothing to re-route.
+> - **Gap 2 — the managers never re-read.** `RestoreFrom` mutates `SaveData`, but `CharacterManager`
+>   builds `ownedCharacters` once in `Awake → LoadRoster()` and `ClubManager` once in
+>   `Awake → InitializeClubs → HydrateFrom`. Even with gap 1 fixed, a restored player landed on Home
+>   with a roster that disagreed with their own save until the next launch. (`ItemManager` and
+>   `BallManager` cache too — the spec's diagnosis suspected they might not; they do, and both got a
+>   reload. `GachaTicketManager` genuinely reads through and was left alone.)
+> - **The fix is one gate, not three patched call sites.** `InventorySyncService` now reports WHAT
+>   its boot answered — `LastBootOutcome` ∈ {`NotRun`, `Succeeded`, `Failed`} — and raises
+>   `OnBootFinished`. `StarterGate.Resolve` (`Assets/Scripts/UI/Account/StarterGate.cs`) is the one
+>   place that answers "picker, or not?", and Login / CreateUsername / Splash all go through it.
+> - **D1 (Cesar): a FAILED fetch never shows the picker.** An empty save plus silence is
+>   indistinguishable from a brand-new account, and guessing wrong costs a player their roster. Only
+>   a SUCCESSFUL fetch whose blob carries no starter may open it. **There is deliberately no safety
+>   timeout** — a second clock is exactly the thing that would resolve `Ready` on an empty save. The
+>   transport's own timeout ends the wait, as a failure, and the player gets `AUTH_ERR_OFFLINE`
+>   (EN + JA already shipped) plus a retry that re-runs the fetch, not the sign-in.
+> - **It costs nothing on the common path.** A device that already has a starter answers `Ready`
+>   synchronously — measured live on Cesar's own signed-in save: frame delta **0**, zero fetches
+>   awaited. Bot harness and demo builds bypass the gate entirely and route byte-identically.
+> - **`OnRestored` is the second half.** It fires when — and only when — a merge actually changed the
+>   save (boot restore AND the stale-PUT merge, so a level another device raised shows here too), and
+>   `InventoryCatalogAdapter` re-reads all four managers. Verified in play mode against the live save:
+>   roster 1 → 2 owned on a restore with `OnRosterChanged` firing exactly once; a club at level 11 →
+>   14 with `clubOwnershipSeeded` untouched and no re-seed (7 clubs before and after); both reverted.
+> - **Evidence.** Full unfiltered EditMode sweep **2063 / 2060 / 0 fail / 3 pre-existing skips**
+>   (baseline 2037; +26 = exactly this task's tests). `tests-run`'s class filters error out on this
+>   setup, so a **tripwire run** proves the new classes actually execute: one `Assert.Fail` per new
+>   class gave 2065/2 failed naming both, then removed and re-run green. No prefab, scene, CSV,
+>   localization or playlife edits — zero new `.text` literals (grep quoted in the report).
+> - **⏳ THE WORLD-CHECK IS CESAR'S:** delete the app, install from TestFlight, sign in with an
+>   account that has a starter → Home, never the picker, roster and bag intact in the SAME session.
+>   This is the `content_player_inventory` "restore-after-reinstall device pass" — see the batched
+>   device-pass list below, item (a), which now names what to look for.
+
+---
+
 ## ⏳ WAITING ON A DEVICE — nothing else blocks these
 
 > **▶ CONTENT PIPELINE — device pass DEFERRED to the end by Cesar (2026-08-26). Batch all of it
@@ -532,6 +582,14 @@ rows). The repo is AHEAD, so it needs a re-seed of those two keys, not an export
 >   the bag comes back. (b) A grant: issue one from the admin Users drawer, relaunch, confirm it
 >   applied EXACTLY once and did not come back on the launch after that. Both are blocked on the
 >   migration being applied + `playlife-api` deployed — see the entry below.
+>   ⚠️ **(a) WOULD HAVE FAILED ON THE CLIENT, AND THAT IS NOW FIXED — re-run it against a build
+>   carrying `starter_restore_gate` (2026-08-30), not an older one.** The blob was always right; the
+>   client asked `NeedsStarter` before the fetch answered and re-showed the starter picker, and the
+>   runtime managers never re-read the save after the restore, so the roster and bag stayed empty
+>   for the session. **What to look for on the pass:** `[InventorySync] Restored/merged server
+>   inventory (rev N)` must appear BEFORE `[ScreenManager] ApplyScreen: Home`, the picker must never
+>   appear, and Roster/Bag must show the pre-delete contents in the SAME session (not after a second
+>   launch). Airplane mode mid-sign-in must give `AUTH_ERR_OFFLINE` + a retry — never the picker.
 > - ⚠️ **BRIEF THE TESTERS BEFORE THE PASS, not after.** Two things will otherwise arrive as bug
 >   reports: (1) **the save schema is now v11 and the migrator fails hard on a newer-than-code
 >   file** — a tester who rolls a TestFlight build BACK to a v10 binary cannot read their v11 save.
@@ -1768,10 +1826,11 @@ rows). The repo is AHEAD, so it needs a re-seed of those two keys, not an export
 >   player out of their entire roster with no route back (`NeedsStarter` false, nothing owned).
 >   Hydration now self-repairs and logs it.
 >
-> **Known gaps, deliberately out of scope:** no acquisition path (locked stays locked); ownership is
-> local-save only — a reinstall loses the starter and the player re-picks (server-side is a future
-> migration); the Roster tab header shows the username where Figma shows "ROSTER" (pre-existing
-> top-bar behaviour).
+> **Known gaps, deliberately out of scope:** no acquisition path (locked stays locked); ~~ownership is
+> local-save only — a reinstall loses the starter and the player re-picks~~ **— CLOSED. The server
+> has carried the starter since `content_player_inventory` (2026-08-26), and `starter_restore_gate`
+> (2026-08-30) made the three post-auth routers WAIT for it, so a reinstall no longer re-asks;** the
+> Roster tab header shows the username where Figma shows "ROSTER" (pre-existing top-bar behaviour).
 >
 > **Process note:** ten iterations, and the pipeline's two review gates were NOT run — the architect
 > rejected each iteration directly on evidence re-derived from primary sources (live MCP runs,

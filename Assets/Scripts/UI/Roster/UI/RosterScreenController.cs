@@ -24,6 +24,10 @@ namespace Golfin.Roster
         private bool _isStarterMode = false;
         private string currentCharacterId = "";
 
+        /// <summary>starter_restore_gate §5: true while this screen is listening for a starter that
+        /// arrives from the server AFTER the picker was already shown.</summary>
+        private bool _watchingForLateStarter;
+
         private void Start()
         {
             InitializeScreen();
@@ -79,6 +83,46 @@ namespace Golfin.Roster
                 RewardPointsManager.Instance.OnPointsChanged -= UpdateRewardPointsDisplay;
             if (CharacterManager.Instance != null)
                 CharacterManager.Instance.OnCharacterSelected -= OnCharacterSelected;
+
+            StopWatchingForLateStarter();   // project convention: nothing outlives OnDisable
+        }
+
+        // ── starter_restore_gate §5: leave if the answer arrives late ─────────
+
+        /// <summary>
+        /// Belt and braces for the one path <c>StarterGate</c> cannot own: a player who reaches the
+        /// picker WITHOUT going through one of the three post-auth routers — Reset Starter Choice in
+        /// <c>RosterDebugTools</c>, or a restore that lands a beat after the picker opened. If the
+        /// roster changes and the save now names a starter, this screen has nothing left to ask.
+        /// </summary>
+        private void StartWatchingForLateStarter()
+        {
+            if (_watchingForLateStarter || CharacterManager.Instance == null) return;
+            CharacterManager.Instance.OnRosterChanged += OnRosterChangedWhileInStarterMode;
+            _watchingForLateStarter = true;
+        }
+
+        private void StopWatchingForLateStarter()
+        {
+            if (!_watchingForLateStarter) return;
+            if (CharacterManager.Instance != null)
+                CharacterManager.Instance.OnRosterChanged -= OnRosterChangedWhileInStarterMode;
+            _watchingForLateStarter = false;
+        }
+
+        private void OnRosterChangedWhileInStarterMode()
+        {
+            if (!_isStarterMode) { StopWatchingForLateStarter(); return; }
+            if (CharacterManager.Instance == null || CharacterManager.Instance.NeedsStarter) return;
+
+            Debug.Log("[RosterScreenController] A starter arrived while the picker was open " +
+                      "(server restore) — nothing left to ask; leaving for Home.");
+            StopWatchingForLateStarter();
+            _isStarterMode = false;
+
+            var manager = FindFirstObjectByType<GolfinRedux.UI.ScreenManager>();
+            if (manager != null) manager.ShowScreen(GolfinRedux.UI.ScreenId.Home);
+            else Debug.LogWarning("[RosterScreenController] ScreenManager not found — cannot leave starter mode.");
         }
 
         /// <summary>
@@ -162,6 +206,11 @@ namespace Golfin.Roster
             // Hide confirm modal when entering starter mode (may be leftover)
             if (_starterConfirmModal != null)
                 _starterConfirmModal.SetActive(false);
+
+            // starter_restore_gate §5 — while the picker is up, a late server answer must be able
+            // to close it.
+            if (isStarterMode) StartWatchingForLateStarter();
+            else StopWatchingForLateStarter();
         }
 
         /// <summary>Called by SelectButton in starter mode — opens the confirm modal.</summary>

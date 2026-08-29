@@ -5,7 +5,8 @@
         "Golfin.Net",
         "Golfin.Content",
         "Golfin.Gameplay.Missions",
-        "Golfin.Save"
+        "Golfin.Save",
+        "Golfin.InventorySync"
     ],
     "includePlatforms": [
         "Editor"

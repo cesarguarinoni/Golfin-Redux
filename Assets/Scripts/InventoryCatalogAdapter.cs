@@ -74,6 +74,14 @@ namespace GolfinRedux.InventorySync
             // Build() succeeds, which is exactly the EmptyInventoryCatalog behaviour — so there is
             // no window where the sync holds a half-built catalog.
             InventorySyncService.Instance.Catalog = this;
+
+            // starter_restore_gate §4 — the OTHER half of the sync that Assembly-CSharp has to own.
+            // The service merges the server blob into SaveData; the four managers below each built
+            // their runtime dictionary once, in their own Awake, and would otherwise keep serving
+            // the pre-restore answer until the next launch. This component already holds all four,
+            // so the subscription lives here rather than in a fifth self-bootstrapping object.
+            InventorySyncService.Instance.OnRestored += OnInventoryRestored;
+
             StartCoroutine(BuildWhenReady());
         }
 
@@ -81,8 +89,27 @@ namespace GolfinRedux.InventorySync
         {
             if (_instance != this) return;
             _instance = null;
+            InventorySyncService.Instance.OnRestored -= OnInventoryRestored;
             if (InventorySyncService.Instance.Catalog == (IInventoryCatalog)this)
                 InventorySyncService.Instance.Catalog = EmptyInventoryCatalog.Instance;
+        }
+
+        /// <summary>
+        /// A merge (boot restore or stale-PUT) changed the save — re-read it everywhere.
+        ///
+        /// <para>
+        /// Main thread: <c>ApiClient</c> completes its callbacks there, which is what makes touching
+        /// these MonoBehaviour singletons legal from a network callback at all.
+        /// <c>GachaTicketManager</c> is deliberately absent — it reads <c>SaveDataHost.Data</c>
+        /// through on every call and caches nothing, so it has nothing to re-read.
+        /// </para>
+        /// </summary>
+        private static void OnInventoryRestored()
+        {
+            if (CharacterManager.Instance != null) CharacterManager.Instance.ReloadFromSave();
+            if (ClubManager.Instance      != null) ClubManager.Instance.RehydrateFromSave();
+            if (ItemManager.Instance      != null) ItemManager.Instance.ReloadFromSave();
+            if (BallManager.Instance      != null) BallManager.Instance.ReloadFromSave();
         }
 
         /// <summary>Poll the databases into place, the same shape as

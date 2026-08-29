@@ -5,6 +5,7 @@ using UnityEngine.UI;
 using TMPro;
 using GolfinRedux.UI;
 using Golfin.Auth;
+using Golfin.InventorySync;
 
 namespace Golfin.UI.Account
 {
@@ -32,6 +33,10 @@ namespace Golfin.UI.Account
 
         private bool _busy;
 
+        /// <summary>starter_restore_gate: the last gate answer was ServerUnreachable. The username is
+        /// already claimed at that point, so the next CREATE tap only re-runs the gate.</summary>
+        private bool _starterRetryPending;
+
         private void Awake()
         {
             // Mobile: type directly into the field — hide the OS keyboard's own input bar,
@@ -42,12 +47,14 @@ namespace Golfin.UI.Account
         private void OnEnable()
         {
             ClearError();
+            _starterRetryPending = false;
             if (_createButton != null) _createButton.onClick.AddListener(OnCreateClicked);
             if (_cancelButton != null) _cancelButton.onClick.AddListener(OnCancelClicked);
         }
 
         private void OnDisable()
         {
+            _starterRetryPending = false;
             if (_createButton != null) _createButton.onClick.RemoveListener(OnCreateClicked);
             if (_cancelButton != null) _cancelButton.onClick.RemoveListener(OnCancelClicked);
         }
@@ -55,6 +62,17 @@ namespace Golfin.UI.Account
         private void OnCreateClicked()
         {
             if (_busy) return;
+
+            // starter_restore_gate D1: the name is already claimed and the display name already
+            // written — only the inventory fetch failed. This tap retries THAT, not the claim.
+            if (_starterRetryPending)
+            {
+                ClearError();
+                InventorySyncBehaviour.RetryBoot();
+                RouteAfterAuth();
+                return;
+            }
+
             string username = _usernameInput != null ? _usernameInput.text.Trim() : "";
             if (!UsernameRules.IsValid(username))
             { SetError(UsernameRules.Requirement); return; }
@@ -76,21 +94,44 @@ namespace Golfin.UI.Account
 
                 AuthService.Instance.UpdateDisplayName(username, result =>
                 {
-                    SetBusy(false);
                     if (result.Success)
                     {
                         AccountUiBridge.SyncUsername();
-                        if (_screenManager != null)
-                        {
-                            // starting_character_selection: first-run players pick a starter before Home
-                            if (CharacterManager.Instance != null && CharacterManager.Instance.NeedsStarter)
-                                _screenManager.ShowScreen(GolfinRedux.UI.ScreenId.StartingCharacterSelection);
-                            else
-                                _screenManager.ShowScreen(GolfinRedux.UI.ScreenId.Home);
-                        }
+                        RouteAfterAuth();   // stays busy until the gate answers
+                        return;
                     }
-                    else SetError(result.Message);
+                    SetBusy(false);
+                    SetError(result.Message);
                 });
+            });
+        }
+
+        /// <summary>
+        /// Post-auth routing, gated on the SERVER's inventory answer (starter_restore_gate §3).
+        /// The NeedsStarter branch is unchanged — only WHEN it may be read is.
+        /// </summary>
+        private void RouteAfterAuth()
+        {
+            SetBusy(true);
+            Golfin.UI.Account.StarterGate.Resolve(route =>
+            {
+                SetBusy(false);
+
+                if (route == Golfin.UI.Account.StarterRoute.ServerUnreachable)
+                {
+                    // D1: never the picker on a failed fetch.
+                    _starterRetryPending = true;
+                    SetError(LocalizationManager.Get("AUTH_ERR_OFFLINE"));
+                    return;
+                }
+
+                _starterRetryPending = false;
+                if (_screenManager == null) return;
+                // starting_character_selection: first-run players pick a starter before Home
+                if (CharacterManager.Instance != null && CharacterManager.Instance.NeedsStarter)
+                    _screenManager.ShowScreen(GolfinRedux.UI.ScreenId.StartingCharacterSelection);
+                else
+                    _screenManager.ShowScreen(GolfinRedux.UI.ScreenId.Home);
             });
         }
 

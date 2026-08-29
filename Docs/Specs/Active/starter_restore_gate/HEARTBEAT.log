@@ -1,0 +1,18 @@
+=== iter-1 kickoff baseline (architect thread, direct implementation — not the subagent chain) ===
+HEAD 73898206eca572dd4eecccecc7d79639de1ae0e4
+DIRTY (git status --porcelain --untracked-files=all):
+ M Assets/Scripts/Gameplay/Tests/MissionGoalEvaluatorTests.cs
+(that one file belongs to the concurrent Missions session and was NOT touched here; it landed
+ as d31ec142f "MissionGoalEvaluatorTests: assert the claim key's contract, not its spelling"
+ while this work was in progress.)
+===
+
+2026-08-30 — read SPEC + the three routers + InventorySyncService/Behaviour + the four managers.
+2026-08-30 — InventorySyncService: BootOutcome, LastBootOutcome, BootInFlight, OnBootFinished, OnRestored.
+2026-08-30 — InventorySyncBehaviour: static RetryBoot(); TryBoot re-runs a FAILED boot, never double-fetches.
+2026-08-30 — StarterGate.cs written (5 rules + seams). Three call sites moved onto it.
+2026-08-30 — CharacterManager.ReloadFromSave, ClubManager.RehydrateFromSave, Item/BallManager.ReloadFromSave.
+2026-08-30 — InventoryCatalogAdapter subscribes OnRestored. RosterScreenController late-answer exit.
+2026-08-30 — 26 EditMode tests written; tripwire run proves both new classes execute (2065/2 failed).
+2026-08-30 — full unfiltered EditMode sweep: 2063 total / 2060 passed / 0 failed / 3 pre-existing skips.
+2026-08-30 — play-mode verification of §4 and §5 against the live save; save + scene restored, editor clean.

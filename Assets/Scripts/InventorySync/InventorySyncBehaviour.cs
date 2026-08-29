@@ -118,11 +118,31 @@ namespace Golfin.InventorySync
         /// </summary>
         private void OnSignedIn(AuthSession session) => TryBoot();
 
+        /// <summary>
+        /// Re-run the boot read after a FAILED one (starter_restore_gate §1).
+        ///
+        /// <para>
+        /// Static because the caller is <c>StarterGate</c>, which is a static helper on the far side
+        /// of the assembly line and has no handle on this component. A no-op when the behaviour has
+        /// not bootstrapped yet — in that case <see cref="BindWhenReady"/> is about to boot anyway.
+        /// </para>
+        /// </summary>
+        public static void RetryBoot() => _instance?.TryBoot();
+
         private void TryBoot()
         {
             var service = InventorySyncService.Instance;
-            if (_booted && service.BootCompleted) return;
             if (_subscribedTo == null) return;
+
+            // A request is already out — every caller here (bind, sign-in, the starter-gate retry)
+            // can fire in the same frame, and a second GET would answer the same question twice.
+            if (service.BootInFlight) return;
+
+            // A FAILED boot is re-runnable: that IS the retry the starter gate offers, and it is
+            // also what makes a second sign-in after an offline first one restore properly. A
+            // SUCCEEDED one is not — the answer is already in the save.
+            if (_booted && service.BootCompleted &&
+                service.LastBootOutcome != BootOutcome.Failed) return;
 
             _booted = true;
             service.Boot();
