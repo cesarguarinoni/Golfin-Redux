@@ -258,8 +258,8 @@ namespace Golfin.Physics.Viewer
                 _shotController.OnShotResolved += HandleShotResolved;
 
             // ball_flight_trail: wire trail controller to the ball SM + shot controller.
-            // _shotConeView is passed so the ribbon can be painted in the timing slab's own
-            // colour at the flick — the view owns those three stops (they are serialized).
+            // _shotConeView is passed so the ribbon can be painted in the timing BAND colour the
+            // flick landed in — the live cone owns those three colours (they are serialized).
             _ballTrail?.Configure(ballAnimator, _ballSM, _shotController, _shotConeView);
 
             // water_splash_fx (Order 349): wire splash controller entirely in code so the scene

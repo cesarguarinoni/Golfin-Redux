@@ -384,15 +384,7 @@ namespace Golfin.Gameplay.UI.ShotUI
             _timingSlab.color      = SlabColorFromProgress(prog);
         }
 
-        /// <summary>
-        /// The colour the timing slab is painted at slab progress <paramref name="p"/> — the one
-        /// place the arrow's colour is decided. PUBLIC because the ball trail reads it back to
-        /// paint the ribbon in the colour of the arrow the player actually flicked on
-        /// (<see cref="Golfin.Physics.Viewer.BallTrailController"/>): asking the live view is what
-        /// stops the ribbon and the arrow from disagreeing, since the three stops are serialized
-        /// per-scene and the scene's values are NOT the field defaults in this file.
-        /// </summary>
-        public Color SlabColorFromProgress(float p)
+        private Color SlabColorFromProgress(float p)
         {
             if (p <= ConeBandPalette.BandGoldY01)
             {
@@ -405,6 +397,28 @@ namespace Golfin.Gameplay.UI.ShotUI
                 return Color.Lerp(_slabColorMid, _slabColorTop, t);
             }
             return _slabColorTop;
+        }
+
+        /// <summary>
+        /// The RED / GOLD / GREEN band colour at slab progress <paramref name="p"/> — the zone
+        /// colours the player reads the cone by, straight off the live
+        /// <see cref="ConeMeshGraphic"/> so a scene that has tuned them cannot disagree with the
+        /// ribbon that quotes them back.
+        ///
+        /// NOT <see cref="SlabColorFromProgress"/>: that is the sweeping slab's own translucent
+        /// tint, whose stops in LabScaffold are white → amber → green. The band lines are what
+        /// make the bottom of the cone read RED, and the red band is the one the ball trail has
+        /// to be able to show.
+        ///
+        /// Falls back to the <see cref="ConeBandPalette"/> constants only when no cone graphic is
+        /// wired (putt mode disables it; test scaffolds may omit it).
+        /// </summary>
+        public Color BandColorFromProgress(float p)
+        {
+            if (_coneGraphic != null) return _coneGraphic.BandColorFor(p);
+            if (p >= ConeBandPalette.BandGreenY01) return ConeBandPalette.ColorGreen;
+            if (p >= ConeBandPalette.BandGoldY01)  return ConeBandPalette.ColorGold;
+            return ConeBandPalette.ColorRed;
         }
 
         // ── HUD ───────────────────────────────────────────────────────────────

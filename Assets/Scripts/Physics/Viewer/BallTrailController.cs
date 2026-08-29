@@ -12,15 +12,16 @@ namespace Golfin.Physics.Viewer
     /// Wire via PhysicsLabController.Awake() → Configure(anim, sm, shot).
     ///
     /// Color states:
-    ///   Timing colour — the colour the timing slab was showing at the instant the player
-    ///                   flicked, read back from the live ShotConeView so the ribbon and the
-    ///                   arrow can never disagree. This is the normal case for a touch swing.
+    ///   Red / Gold / Green — the timing band the flick landed in, read back from the live cone
+    ///                   so the ribbon and the cone can never disagree. The normal case for a
+    ///                   touch swing.
     ///   Blue (#2E9BFF) — fallback for a swing with no timing sample at all: bots, capture
     ///                   drivers, FireDebugShot, the legacy IInputSource path.
     ///   Black          — ball ended OB (whole ribbon flips at the OB transition).
     ///
     /// OB overrides the timing colour: a green-timed shot that still lands OB flips black.
-    /// Black rather than the old red because red now belongs to a badly-timed flick.
+    /// Black rather than the old red because red now belongs to a badly-timed flick — a red-band
+    /// trail and a red OB trail would have been the same ribbon meaning two different things.
     /// </summary>
     public class BallTrailController : MonoBehaviour
     {
@@ -131,16 +132,16 @@ namespace Golfin.Physics.Viewer
         }
 
         /// <summary>
-        /// The colour this shot's ribbon starts in: the timing slab's own colour at the slab
-        /// position the flick was judged on, so the ribbon in the air is the colour of the arrow
-        /// the player hit the ball with.
+        /// The colour this shot's ribbon starts in: the RED / GOLD / GREEN band the flick landed
+        /// in, so the ribbon in the air is the colour of the timing zone the player hit the ball
+        /// on. Red band ⇒ red trail — which is exactly why OB had to move off red.
         ///
-        /// Two deliberate choices. (1) The colour is ASKED OF the live <see cref="ShotConeView"/>
-        /// rather than rebuilt from <c>ConeBandPalette</c>: the three slab stops are serialized
-        /// per-scene and LabScaffold's are nothing like the palette constants, so a local copy
-        /// would paint a ribbon the player never saw. (2) Alpha is forced to 1 — the slab is
-        /// half-transparent by design, but the ribbon's own fade is owned by its alpha gradient
-        /// (0.65 → 0), and multiplying the two would wash the trail out.
+        /// Two deliberate choices. (1) The colour is ASKED OF the live cone
+        /// (<see cref="ShotConeView.BandColorFromProgress"/> → <c>ConeMeshGraphic</c>) rather than
+        /// rebuilt from <c>ConeBandPalette</c>: the band colours are serialized per-scene and can
+        /// drift from those constants, and a local copy would paint a ribbon the player never saw.
+        /// (2) Alpha is forced to 1 — the ribbon's fade is owned by its own alpha gradient
+        /// (0.65 → 0), and multiplying a second alpha into it would wash the trail out.
         ///
         /// Falls back to <see cref="_flightColor"/> when there is no timing to show: a sampleless
         /// swing (NaN) or a scene with no cone view wired.
@@ -152,7 +153,7 @@ namespace Golfin.Physics.Viewer
             float timing01 = _shot.LastCommittedTiming01;
             if (float.IsNaN(timing01)) return _flightColor;
 
-            Color c = _coneView.SlabColorFromProgress(Mathf.Clamp01(timing01));
+            Color c = _coneView.BandColorFromProgress(Mathf.Clamp01(timing01));
             c.a = 1f;
             return c;
         }

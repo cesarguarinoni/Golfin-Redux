@@ -54,6 +54,22 @@ namespace Golfin.Gameplay.UI.ShotUI
         public float HalfBasePx => _heightPx * Mathf.Tan(_halfAngleDeg * Mathf.Deg2Rad);
 
         /// <summary>
+        /// The band colour drawn at slab progress <paramref name="y01"/> — red, gold or green, the
+        /// three zone colours the player actually reads the cone by. Discrete, not a gradient:
+        /// these are the band LINES, and a flick either landed in a band or it did not.
+        ///
+        /// Public because the ball trail paints its ribbon in the colour of the band the flick
+        /// landed in, and it has to ask THIS object rather than ConeBandPalette — the colours are
+        /// serialized per-scene and can drift from the constants in that file.
+        /// </summary>
+        public Color BandColorFor(float y01)
+        {
+            if (y01 >= _bandGreenY01) return _bandGreenColor;
+            if (y01 >= _bandGoldY01)  return _bandGoldColor;
+            return _bandRedColor;
+        }
+
+        /// <summary>
         /// F15 (shot_timing_power, D3): re-sync the band lines from <see cref="ConeBandPalette"/>
         /// — i.e. from ControlsConfig — before the first mesh build. The three fields below are
         /// serialized, so a prefab authored before the edges moved into config would keep drawing
