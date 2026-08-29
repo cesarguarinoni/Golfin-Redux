@@ -261,6 +261,43 @@ namespace GolfinRedux.UI.MissionSelection
                 startLine.text = Labelled("MISSION_LABEL_START", m.StartAreaKey);
         }
 
+        /// <summary>
+        /// Re-dress a bound card as the VERDICT on a mission just played, for the Hole Complete
+        /// modal. The modal shows this same card rather than a result card of its own, so a player
+        /// reads the mission they attempted in the layout they chose it from.
+        ///
+        /// Only the pill and the rule marks change: the hole, the map, the wind, the gear and the
+        /// reward are the mission's, and they are as true after the round as before it.
+        /// </summary>
+        public void ShowResult(MissionResult result)
+        {
+            if (result == null) return;
+
+            bool cleared = result.Cleared;
+            string pill = LocalizationManager.Get(cleared ? "MISSION_PILL_SUCCESS" : "MISSION_PILL_FAILED");
+            var colour = cleared ? new Color32(0x50, 0xC8, 0x78, 0xFF)    // the modal's own SUCCESS green
+                                 : new Color32(0xD1, 0x6A, 0x47, 0xFF);  // ...and its FAILED red
+            foreach (var label in new[] { titleTextCollapsed, titleTextExpanded })
+            {
+                if (label == null) continue;
+                label.text = pill;
+                label.color = colour;
+            }
+
+            // Each rule gets the verdict it earned, in place of its bullet. A goal the evaluator
+            // never decided (Met == null, when the hole ended before it could settle) reads as
+            // unmet: the mission was not cleared, and a bare line would look like a lost record.
+            for (int i = 0; i < goalLines.Length && i < result.Goals.Count; i++)
+            {
+                var line = goalLines[i];
+                if (line == null || !line.gameObject.activeSelf) continue;
+                bool met = result.Goals[i].Met == true;
+                line.text = (met ? "\u2713  " : "\u2717  ") + GoalLineText(result.Goals[i]);
+                line.color = met ? new Color32(0x50, 0xC8, 0x78, 0xFF)
+                                 : new Color32(0xD1, 0x6A, 0x47, 0xFF);
+            }
+        }
+
         /// <summary>A rule line. The bullet is text, not a layout child: the lines are a plain
         /// VerticalLayoutGroup of TMP fields and a glyph column would have to be kept in step
         /// with which of them are active.</summary>

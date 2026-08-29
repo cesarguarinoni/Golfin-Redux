@@ -128,6 +128,11 @@ namespace Golfin.UI.Modals.Result
             // Show the full two-card widget.
             _widget.Show(uiData, () => { /* close handled per-button below */ });
 
+            // A mission is presented on the SAME cards the player chose it from, not on a result
+            // card wearing a SUCCESS title. When that takes, the hole-complete cards are hidden and
+            // the rest of this wiring has nothing to hook.
+            if (TryShowMissionCards()) return;
+
             // Hole 18: hide Card 2 entirely — there is no Hole 19.
             if (isHole18 && _widget.Card2 != null)
                 _widget.Card2.gameObject.SetActive(false);
@@ -272,7 +277,6 @@ namespace Golfin.UI.Modals.Result
         void SettleMissionIfActive(HoleCompletionData sessionData)
         {
             LastMissionResult = null;
-            ShowMissionGoals(null);
 
             var session = Golfin.Gameplay.Missions.MissionSession.Active;
             var evaluator = Golfin.Gameplay.Missions.MissionSession.Evaluator;
@@ -280,7 +284,6 @@ namespace Golfin.UI.Modals.Result
 
             var result = evaluator.EvaluateFinal(sessionData, System.Guid.NewGuid().ToString());
             LastMissionResult = result;
-            ShowMissionGoals(result);
             Debug.Log($"[HoleCompleteModal] MISSION {result.MissionId}: cleared={result.Cleared} " +
                       $"strokes={result.Strokes} putts={result.Putts} " +
                       $"goals=[{string.Join(", ", result.Goals.ConvertAll(g => $"{g.Type}:{g.Met}"))}]");
@@ -295,91 +298,92 @@ namespace Golfin.UI.Modals.Result
             StartCoroutine(ClaimMissionRoutine(result));
         }
 
+        readonly System.Collections.Generic.List<GameObject> _missionCards = new System.Collections.Generic.List<GameObject>();
+
         /// <summary>
-        /// Draw the goal strip: one row per goal, a tick or a cross against the same wording the
-        /// mission card used before the round.
+        /// Show the round on Mission Selection's own card: the mission just played, with its pill
+        /// reading SUCCESS or FAILED and a tick or cross against each rule, and beneath it the NEXT
+        /// mission on an identical card.
         ///
-        /// The wording comes from <c>MissionCardController.GoalLineText</c> rather than being
-        /// re-derived here, so "Hole out in 3 strokes or fewer" reads identically on the card that
-        /// sold the mission and on the card that judges it. A player should never have to wonder
-        /// whether the thing they failed is the thing they were asked to do.
+        /// WHY NOT THE HOLE-COMPLETE CARD. It answered the wrong questions. Its second card offered
+        /// the next HOLE, which is not what a mission player is doing next, and the first stacked a
+        /// SUCCESS banner and a goal strip on top of a layout already sized for neither: ContentRoot
+        /// carries a ContentSizeFitter and grew to 802pt inside a Card1 fixed at 855 whose VLG has
+        /// childControlHeight off, so the title bled over the top edge and REPLAY over the bottom.
+        /// Reusing the mission card removes the mismatch rather than tuning it.
         ///
-        /// The icons and their colours are the modal's own SUCCESS and FAILED marks
-        /// (`Icon - Check` #50C878, `Icon - X` #D16A47), so a met goal is the same green as the
-        /// header that says SUCCESS.
+        /// The prefab is borrowed from the live MissionSelectionScreenController rather than wired
+        /// as a second serialized reference, so there is exactly one answer to "which card is the
+        /// mission card" and no way for the two to drift apart.
         ///
-        /// A goal the evaluator never decided (`Met == null`, which happens when the hole ended
-        /// before the goal could be settled) is shown as unmet: the mission was not cleared, and
-        /// a blank row would read as "we lost track of this one".
+        /// Returns false for every non-mission hole, which keeps the ordinary path untouched.
         /// </summary>
-        void ShowMissionGoals(Golfin.Gameplay.Missions.MissionResult result)
+        bool TryShowMissionCards()
         {
-            if (_goalStrip == null) ResolveGoalStrip();
-            if (_goalStrip == null) return;
+            var result = LastMissionResult;
+            if (result == null) return false;
 
-            if (result == null || result.Goals.Count == 0)
-            {
-                _goalStrip.SetActive(false);
-                return;
-            }
+            var selection = FindObjectOfType<GolfinRedux.UI.MissionSelection.MissionSelectionScreenController>(true);
+            var prefab = selection != null ? selection.CardPrefab : null;
+            if (prefab == null) return false;
 
-            _goalStrip.SetActive(true);
-            for (int i = 0; i < _goalRows.Length; i++)
-            {
-                bool used = i < result.Goals.Count;
-                _goalRows[i].SetActive(used);
-                if (!used) continue;
+            Golfin.Gameplay.Missions.MissionDefinition played = null;
+            foreach (var m in Golfin.Gameplay.Missions.MissionCatalog.All)
+                if (m.Id == result.MissionId) { played = m; break; }
+            if (played == null) return false;
 
-                var goal = result.Goals[i];
-                bool met = goal.Met == true;
-                if (_goalLabels[i] != null)
-                    _goalLabels[i].text = GolfinRedux.UI.MissionSelection.MissionCardController.GoalLineText(goal);
-                if (_goalIcons[i] != null)
-                {
-                    _goalIcons[i].sprite = met ? _tickSprite : _crossSprite;
-                    _goalIcons[i].color  = met ? new Color32(0x50, 0xC8, 0x78, 0xFF)
-                                               : new Color32(0xD1, 0x6A, 0x47, 0xFF);
-                }
-            }
+            var root = transform.root.GetComponentsInChildren<RectTransform>(true)
+                .FirstOrDefault(r => r.name == "Root" && r.GetComponentInParent<Golfin.Gameplay.UI.ShotUI.HoleCompleteWidget>() != null);
+            if (root == null) return false;
+
+            foreach (var old in _missionCards) if (old != null) Destroy(old);
+            _missionCards.Clear();
+            if (_widget.Card1 != null) _widget.Card1.gameObject.SetActive(false);
+            if (_widget.Card2 != null) _widget.Card2.gameObject.SetActive(false);
+
+            // The verdict, on the card that set the terms.
+            var verdict = Spawn(prefab, root, played,
+                GolfinRedux.UI.MissionSelection.MissionCardMode.Replay);
+            if (verdict != null) verdict.ShowResult(result);
+
+            // ...and what comes next, which for a mission player is the next MISSION.
+            var next = NextMissionAfter(played);
+            if (next != null)
+                Spawn(prefab, root, next, GolfinRedux.UI.MissionSelection.MissionCardMode.Play);
+
+            return true;
         }
 
-        GameObject _goalStrip;
-        GameObject[] _goalRows = new GameObject[0];
-        TMPro.TextMeshProUGUI[] _goalLabels = new TMPro.TextMeshProUGUI[0];
-        UnityEngine.UI.Image[] _goalIcons = new UnityEngine.UI.Image[0];
-        Sprite _tickSprite, _crossSprite;
+        GolfinRedux.UI.MissionSelection.MissionCardController Spawn(
+            GolfinRedux.UI.MissionSelection.MissionCardController prefab,
+            RectTransform parent,
+            Golfin.Gameplay.Missions.MissionDefinition m,
+            GolfinRedux.UI.MissionSelection.MissionCardMode mode)
+        {
+            var card = Instantiate(prefab, parent);
+            Golfin.Gameplay.Missions.MissionCatalog.Warnings.TryGetValue(m.Id, out string warning);
+            card.Bind(m, mode, GolfinRedux.UI.MissionSelection.MissionCardState.Expanded, warning ?? "");
+            card.OnActionButtonClicked += c =>
+            {
+                _widget.Hide();
+                GolfinRedux.UI.MissionSelection.MissionLauncher.TryStart(c.Mission, c.IsPlayable);
+            };
+            _missionCards.Add(card.gameObject);
+            return card;
+        }
 
         /// <summary>
-        /// Find the strip by name rather than by a serialized field: the widget is built in the
-        /// scene and this controller is reached through several prefab paths, so a missing
-        /// reference would be a silent null on exactly one of them.
+        /// The first mission that is unlocked and not yet cleared — the same rule the selection
+        /// screen uses to decide which card reads NEXT, so the two never disagree about what is
+        /// next. Null once the campaign is finished, and then the modal simply shows the verdict.
         /// </summary>
-        void ResolveGoalStrip()
+        static Golfin.Gameplay.Missions.MissionDefinition NextMissionAfter(
+            Golfin.Gameplay.Missions.MissionDefinition played)
         {
-            var content = transform.root.GetComponentsInChildren<RectTransform>(true)
-                .FirstOrDefault(r => r.name == "MissionGoals");
-            if (content == null) return;
-
-            _goalStrip = content.gameObject;
-            int n = content.childCount;
-            _goalRows   = new GameObject[n];
-            _goalLabels = new TMPro.TextMeshProUGUI[n];
-            _goalIcons  = new UnityEngine.UI.Image[n];
-            for (int i = 0; i < n; i++)
-            {
-                var row = content.GetChild(i);
-                _goalRows[i]   = row.gameObject;
-                _goalIcons[i]  = row.Find("Icon")?.GetComponent<UnityEngine.UI.Image>();
-                _goalLabels[i] = row.Find("Label")?.GetComponent<TMPro.TextMeshProUGUI>();
-            }
-
-            // The same two marks the SUCCESS and FAILED headers use.
-            var success = transform.root.GetComponentsInChildren<RectTransform>(true)
-                .FirstOrDefault(r => r.name == "SuccessHeader");
-            var failed = transform.root.GetComponentsInChildren<RectTransform>(true)
-                .FirstOrDefault(r => r.name == "FailedHeader");
-            _tickSprite  = success?.Find("Icon")?.GetComponent<UnityEngine.UI.Image>()?.sprite;
-            _crossSprite = failed?.Find("Icon")?.GetComponent<UnityEngine.UI.Image>()?.sprite;
+            var p = Golfin.Gameplay.Missions.MissionProgressionService.Instance;
+            foreach (var m in Golfin.Gameplay.Missions.MissionCatalog.All)
+                if (!p.HasCleared(m.Id) && p.IsUnlocked(m)) return m;
+            return null;
         }
 
         System.Collections.IEnumerator ClaimMissionRoutine(Golfin.Gameplay.Missions.MissionResult result)

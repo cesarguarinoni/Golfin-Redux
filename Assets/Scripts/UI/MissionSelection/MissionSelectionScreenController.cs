@@ -387,32 +387,12 @@ namespace GolfinRedux.UI.MissionSelection
             var m = card?.Mission;
             if (m == null) return;
 
-            // §C3 — a card that could not assemble its bag never starts a round. The button is
-            // already non-interactable; this is the second lock, because a disabled button is a
-            // UI state and this is a correctness rule.
-            if (!card!.IsPlayable)
-            {
-                Debug.LogWarning($"[MissionSelection] mission {m.Id} is not playable: " +
-                                 $"{(MissionCatalog.Warnings.TryGetValue(m.Id, out var w) ? w : "unknown")}");
-                return;
-            }
-
-            if (!MissionSession.Begin(m))
-            {
-                // Begin refuses an empty bag or an unbaked short start and changes nothing.
-                Debug.LogError($"[MissionSelection] MissionSession refused mission {m.Id}.");
-                return;
-            }
-
-            GameSession.SeedSession(m.HoleNumber, GameSession.SelectedCharacterId, GameSession.EquippedBagSlot);
-
-            var loading = FindObjectOfType<LoadingScreenController>(includeInactive: true);
-            if (loading != null) loading.PrepareForHoleLoad(m.HoleNumber);
-
-            var loader = GameplaySceneLoader.Instance;
-            if (loader != null) loader.BeginGameplayLoad(m.HoleNumber);
-            else Debug.LogError("[MissionSelection] GameplaySceneLoader not found.");
+            MissionLauncher.TryStart(m, card.IsPlayable);
         }
+
+        /// <summary>The card prefab, so the Hole Complete modal can present its result on the very
+        /// same card rather than a result card of its own.</summary>
+        public MissionCardController? CardPrefab => cardPrefab;
 
         // ── The start marker ────────────────────────────────────────────────────
 
