@@ -35,7 +35,7 @@ id,order,tier,key,name_en,name_ja,holeId,par,startAreaId,windPresetId,loadoutId,
 34,34,Legend,l_no_wedges,Hands Off the Wedges,ウェッジ禁止,12,4,TEE_BACK,CROSS_S,OWN_NO_WEDGES,SCORE,0,NO_HAZARD,,,,14,60,5,,no,clear:33,lomond-country-club,0,8
 35,35,Legend,l_driver_putter_par,"Two Clubs, Par",2本でパー,6,3,TEE_BACK,CROSS_S,SUP_DRIVER_PUTTER,SCORE,0,NO_HAZARD,,,,14,60,5,,yes,clear:34,lomond-country-club,0,8
 36,36,Legend,l_birdie_gusts,Birdie in the Gusts,突風の中のバーディー,14,4,TEE_BACK,GUSTY,OWN,SCORE,-1,,,,,14,60,5,GoldTicket x1,no,clear:35,lomond-country-club,0,8
-37,37,Legend,l_sand_up_down,Sand Save,サンドセーブ,13,5,SAND,GUSTY,OWN_NO_WEDGES,UP_DOWN,,PUTTS,1,,,15,60,5,,no,clear:36,lomond-country-club,0,3
+37,37,Legend,l_sand_up_down,Sand Save,サンドセーブ,8,5,SAND,GUSTY,OWN_NO_WEDGES,UP_DOWN,,PUTTS,1,,,15,60,5,,no,clear:36,lomond-country-club,0,3
 38,38,Legend,l_eagle_five,Eagle on Eighteen,18番でイーグル,18,5,TEE_BACK,TAIL_S,OWN,SCORE,-2,LAND_TEE,Fairway,,,15,60,5,,no,clear:37,lomond-country-club,0,8
 39,39,Legend,l_perfect_round,Perfect Hole,パーフェクトホール,4,3,TEE_BACK,CROSS_S,OWN,SCORE,-1,LAND_TEE,Green,PUTTS,1,17,60,5,,no,clear:38,lomond-country-club,0,8
 40,40,Legend,l_legend_final,Legend Final,レジェンドファイナル,1,5,TEE_BACK,GUSTY,OWN,SCORE,-1,NO_HAZARD,,LAND_TEE,Fairway,17,60,5,GoldTicket x2,no,clear:39,lomond-country-club,0,8
