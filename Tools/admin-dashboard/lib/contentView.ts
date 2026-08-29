@@ -44,6 +44,35 @@ export const CONTENT_CATALOGS = [
 
 export type ContentCatalog = (typeof CONTENT_CATALOGS)[number];
 
+/**
+ * The catalogs that have a SERVER-SIDE MIRROR — a typed copy the game's own
+ * request path reads (`golfin_characters`, `golfin_mode_fees`,
+ * `golfin_mission_rewards`, `golfin_mission_tier_bonus`).
+ *
+ * ⚠️ IT LIVES HERE, IN A CLIENT-SAFE MODULE, BECAUSE THE PUBLISH DRAWER NEEDS IT.
+ * `lib/contentMutations.ts` owns the WRITING of these mirrors and is
+ * `server-only`, so it cannot hand the fact to a panel. It imports this instead,
+ * so there is still exactly one list.
+ *
+ * What the drawer does with it: a mirrored catalog may be published even when
+ * NOTHING CHANGED. That is not a loophole, it is the only way to fill a mirror
+ * that is empty — and it can be empty while the catalog reads v1, because
+ * `seed_from_csv.py` seeds `content_rows` and stamps `published_version` but
+ * does not write mirrors. Only a publish does. Without this a seeded
+ * `mission_tiers` is stuck: the catalog says v1, the mirror says 0 rows, the
+ * diff is empty and the button is dead.
+ */
+export const MIRRORED_CATALOGS: readonly string[] = [
+  "characters",
+  "modes",
+  "missions",
+  "mission_tiers",
+];
+
+/** Does publishing this catalog also write a server-side mirror? */
+export const hasServerMirror = (catalog: string): boolean =>
+  MIRRORED_CATALOGS.includes(catalog);
+
 // ---------------------------------------------------------------------------
 // Facets — and the honest limit on them
 // ---------------------------------------------------------------------------

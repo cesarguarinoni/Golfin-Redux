@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useT } from "@/components/I18nProvider";
+import { hasServerMirror } from "@/lib/contentView";
 import { fmtDateTime } from "@/lib/format";
 import type { ContentProblem } from "@/lib/contentValidate";
 import type {
@@ -113,9 +114,24 @@ export function PublishDrawer({
     ? diff.counts.added + diff.counts.changed + diff.counts.deactivated + diff.counts.reactivated
     : 0;
 
-  // The gate, in one expression. A diff that has not loaded, an empty diff, an
-  // unticked box, or an in-flight request all mean "not yet".
-  const canPublish = Boolean(diff) && changeCount > 0 && acknowledged && !busy;
+  /**
+   * A MIRRORED catalog may be published with NOTHING CHANGED, and that is the
+   * only way to fill a server mirror that is empty.
+   *
+   * The case that forced this: `seed_from_csv.py --apply` writes `content_rows`
+   * and stamps `published_version = 1`, but it does NOT write mirrors — only a
+   * publish does. So a freshly-seeded `mission_tiers` reads v1, has an empty
+   * diff, and its `golfin_mission_tier_bonus` mirror has zero rows. The claim
+   * path then finds no tier row and silently pays no completion bonus, and the
+   * operator has no button that would fix it. A no-op publish is a re-sync.
+   */
+  const mirrored = hasServerMirror(catalog);
+
+  // The gate, in one expression. A diff that has not loaded, an unticked box, or
+  // an in-flight request all mean "not yet"; an EMPTY diff means "not yet" too,
+  // unless publishing would still do something — which, for a mirrored catalog,
+  // it would.
+  const canPublish = Boolean(diff) && (changeCount > 0 || mirrored) && acknowledged && !busy;
 
   async function doPublish() {
     setBusy(true);
@@ -343,9 +359,14 @@ export function PublishDrawer({
                   )}
 
                   {changeCount === 0 ? (
-                    <p className="rounded-md border border-surface-700 bg-surface-850 px-3 py-6 text-center text-sm text-zinc-500">
-                      {translate("cp.diff.none")}
-                    </p>
+                    <div className="rounded-md border border-surface-700 bg-surface-850 px-3 py-6 text-center">
+                      <p className="text-sm text-zinc-500">{translate("cp.diff.none")}</p>
+                      {mirrored && (
+                        <p className="mx-auto mt-2 max-w-md text-[11px] leading-relaxed text-amber-300/90">
+                          {translate("cp.diff.mirrorResync")}
+                        </p>
+                      )}
+                    </div>
                   ) : (
                     <>
                       {diff.entries.length > DIFF_ROW_CAP && (
@@ -637,7 +658,7 @@ export function PublishDrawer({
                 <input
                   type="checkbox"
                   checked={acknowledged}
-                  disabled={!diff || changeCount === 0}
+                  disabled={!diff || (changeCount === 0 && !mirrored)}
                   onChange={(e) => setAcknowledged(e.target.checked)}
                   className="h-3.5 w-3.5 accent-amber-500 disabled:opacity-40"
                 />

@@ -17,6 +17,7 @@ import {
   type ContentProblem,
   type DraftRow,
 } from "./contentValidate";
+import { MIRRORED_CATALOGS as MIRRORED } from "./contentView";
 import { mockDb } from "./mockStore";
 import { isMockMode } from "./mode";
 import { getSupabaseAdmin } from "./supabaseAdmin";
@@ -355,15 +356,15 @@ async function mirrorMissionTierBonus(drafts: ContentStoredRow[]): Promise<strin
  * null when there was nothing to do or it succeeded.
  */
 /**
- * The catalogs that have a SERVER-SIDE MIRROR — a typed copy the game's own
- * request path reads, which must move whenever what the catalog SERVES moves.
+ * `MIRRORED_CATALOGS` is DEFINED IN lib/contentView.ts and re-exported here.
  *
- * Exported and named so "does this catalog have a mirror?" is one fact rather
- * than a pattern of `if (catalog === …)` scattered across the mutation paths.
- * `mirrorForCatalog` below is the only thing that writes them; anything that
+ * The list has to be readable by the publish drawer, which is a client
+ * component, and this module is `server-only`. Re-exporting keeps every
+ * existing import working while there is still exactly one list.
+ * `mirrorForCatalog` below is the only thing that WRITES them; anything that
  * changes what a catalog serves must go through it.
  */
-export const MIRRORED_CATALOGS = ["characters", "modes", "missions", "mission_tiers"];
+export { MIRRORED_CATALOGS } from "./contentView";
 async function mirrorForCatalog(
   catalog: string,
   rows: ContentStoredRow[]
@@ -692,7 +693,7 @@ export async function rollbackCatalog(
     null,
     "content_rows",
     { catalog, version: before.publishedVersion },
-    { catalog, restoredFrom: toVersion, version, mirrored: MIRRORED_CATALOGS.includes(catalog) }
+    { catalog, restoredFrom: toVersion, version, mirrored: MIRRORED.includes(catalog) }
   );
   return ok(`Rolled ${catalog} back to v${toVersion}, published forward as v${version}.`, { version });
 }

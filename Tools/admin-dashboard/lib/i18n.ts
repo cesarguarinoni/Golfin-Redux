@@ -962,6 +962,10 @@ export const DICT = {
     en: "Drafts match what is published. There is nothing to publish.",
     ja: "下書きは公開中の内容と一致しています。公開する変更はありません。",
   },
+  "cp.diff.mirrorResync": {
+    en: "This catalog also writes a SERVER MIRROR, and only a publish writes it. If the mirror is empty — a freshly seeded catalog reads v1 but its mirror has no rows — publish anyway to re-sync it. Nothing served to players changes.",
+    ja: "このカタログは公開時にサーバー側のミラーも書き込みます。ミラーへ書き込むのは公開のみです。ミラーが空の場合（シード直後はバージョン1でもミラーは0件です）、変更がなくても公開して同期してください。プレイヤーに配信される内容は変わりません。",
+  },
   "cp.diff.added": { en: "added", ja: "追加" },
   "cp.diff.changed": { en: "changed", ja: "変更" },
   "cp.diff.deactivated": { en: "deactivated", ja: "無効化" },
