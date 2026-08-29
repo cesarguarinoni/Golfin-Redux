@@ -36,7 +36,8 @@ export async function GET(request: Request) {
       unavailable: true,
       reason:
         "Preview needs PLAYLIFE_API_URL and PLAYLIFE_ADMIN_KEY set on this deployment. " +
-        "The calendar, clear rates and pinning work without them.",
+        "The calendar and clear rates work without them. PINNING DOES NOT: the Pin button " +
+        "is rendered per preview row, so with no preview there is no future date to pin.",
       data: [],
     });
   }
