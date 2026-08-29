@@ -282,6 +282,26 @@ def main() -> int:
                 f"unknown catalog(s): {unknown}. Known: {[c.name for c in CATALOGS]}")
         cats = tuple(CATALOGS_BY_NAME[n] for n in names)
 
+        # A scoped seed must never land on DEFAULT_OUT. The day-one migration is
+        # the applied record of that day (see the module docstring); writing a
+        # subset there replaces seven catalogs with however few `--catalogs`
+        # named, and the loss is silent — the run reports success either way.
+        # `generate()` already draws this line for the FILENAME it stamps in the
+        # header (`scoped` -> content_seed_<names>.sql); this is the same line,
+        # drawn for the path actually written. `--stdout` writes no file and so
+        # is deliberately not guarded.
+        if not args.stdout and os.path.abspath(args.out) == os.path.abspath(DEFAULT_OUT):
+            raise SystemExit(
+                f"refusing to write a scoped seed ({', '.join(names)}) over "
+                f"{DEFAULT_OUT}\n"
+                "  That file is the day-one migration — the applied record of that "
+                "day — and is not re-generated.\n"
+                "  A catalog added after day one arrives as its OWN seed file: "
+                "pass --out <new migration path>\n"
+                "  (e.g. --out " + os.path.join(os.path.dirname(DEFAULT_OUT),
+                                                "content_seed_" + "_".join(names) + ".sql") + ")"
+            )
+
     if args.stdout:
         counts = generate(sys.stdout, args.repo_root, cats)
         return 0
