@@ -5,7 +5,7 @@
 
 ---
 
-## 🟡 IN FLIGHT — `missions_v1` **Phase A landed** (2026-08-29)
+## 🟡 IN FLIGHT — `missions_v1` **Phases A + B landed** (2026-08-29)
 
 **Missions has a server-authoritative economy before it has a door.** Seven content catalogs, the
 tables and endpoints that decide and pay what a mission clear is worth, the deterministic daily
@@ -47,9 +47,36 @@ fixed point is what stops the two implementations drifting.
   from the admin, which is the surface §A7 requires every string to pass through; and
   `daily_mission`'s caps are 60, not 30, because the `DOUBLE_RP` modifier pays 2× base and a cap of
   30 would make a DOUBLE_RP day silently unpayable.
-* **Next:** Phase B — the Unity start-area bake (`Golfin/Missions/Bake Start Areas`) fills the 162
-  slot rows' coordinates and `pin_count`, then `MissionSession` (spawn / pin / wind / stroke cap /
-  stamina), the session bag, and the goal evaluator.
+
+**Phase B: the layer under the screen.** The start-area bake, `MissionSession`, the transient
+session bag and the goal evaluator. Commit `c0733f1f4`. **Unity EditMode 2021 tests / 2018 passed /
+0 failed / 3 pre-existing skips**, with both new mission suites proven live by a tripwire (2021 →
+2023, both named) rather than inferred from a count.
+
+* **The bake reads the TRACKED JSON, not the `Hole_NN_Geo` scenes**, and that is the one decision
+  worth carrying forward. Those scenes are gitignored and per-machine, so a scene-driven bake would
+  have produced a `bake_hash` drift gate that only meant something on the machine that ran it.
+  `Resources/HoleData/<course>/Hole_NN/{zones,green}.json` is the same geometry, tracked, and is
+  what the runtime itself classifies against. 89 of 90 short rows baked; `Validate All Holes` gained
+  a third column and fails a hole whose coordinate was hand-edited (verified by nudging one 1 m).
+* **⚠️ HOLE 13 HAS NO GREENSIDE BUNKER** — nearest sand 156 m from the green, where every real one
+  on this course is 14-33 m. Its SAND row is deliberately blank, which makes **mission 37
+  (`l_sand_up_down`, "Sand Save", hole 13) unpublishable until it is re-sited or a bunker is
+  authored**. A design call, and the one thing blocking the campaign that is not a migration.
+* **The whole ROUGH column was baking to y = 0** — a ball under the course — because rough has no
+  polygons in `zones.json` at all (it is the classifier's DEFAULT surface). Fixed by wiring the
+  baked heightmap as the height source for probes that are not on a zone overlay.
+* **A test caught a real fragility**: the teardown hook was armed from a
+  `[RuntimeInitializeOnLoadMethod]`, which does not run in EditMode and whose existence had nothing
+  to do with whether a mission was in progress. It is armed from `Begin()` now.
+* **ALT_PIN is near-inert and the data says so** — only hole 1 has more than one pin candidate (3);
+  every other hole has exactly 1. The generator already gates on `pin_count >= 2`.
+* **C1 was pulled forward**: `mission_select` is a routable target in both switches, because Phase
+  A's `modes.csv` edit had made the bundled row unroutable and correctly broke four
+  ModesOverlayTests (the client withholds a mode it cannot route).
+* **Next:** Phase C — the Mission Selection screen cloned from Hole Selection, the daily card, and
+  the two things Phase B could not finish without a screen: the Hole Complete modal's goal strip
+  and the per-start-kind position trace on Hole 01.
 
 ---
 

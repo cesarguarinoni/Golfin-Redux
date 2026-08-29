@@ -1,8 +1,10 @@
-# Implementer Report — `missions_v1` (Phase A)
+# Implementer Report — `missions_v1` (Phases A + B)
 
-> Phase A only. B (Unity bake + gameplay hooks), C (mode card + Mission Selection screen) and
-> D (telemetry + docs) are not started. Phase A is deployable on its own with the mode still
-> locked, which is exactly the state it is in now.
+> Phases A and B. C (the Mission Selection screen) and D (telemetry + docs) are not started —
+> except C1, the mode-card target wiring, which was pulled forward into B because Phase A's
+> `modes.csv` edit had made the bundled `missions` row unroutable and broke four
+> ModesOverlayTests. The mode is still locked and still has no screen: nothing built so far is
+> reachable by a player.
 
 ## Implementation summary
 
@@ -202,3 +204,109 @@ Every one of these is flagged rather than silently taken.
    migration is the applied record of that day. Left untouched and uncommitted per the close-out
    rule. Restore with:
    `git -C ~/Documents/playlife checkout -- backend/migrations/2026_08_24_content_seed.sql`
+
+
+---
+
+# Phase B — start-area bake, session, session bag, goal evaluator
+
+## Implementation summary
+
+The layer under the screen: where a mission puts the ball, what it changes while it runs, and
+how it decides whether you cleared it. A new leaf assembly `Golfin.Gameplay.Missions` owns the
+state; the Viewer applies it in one call; the Hole Complete modal settles it. Full Unity
+EditMode sweep green — **2021 tests, 2018 passed, 0 failed, 3 pre-existing skips**.
+
+## Files (Phase B)
+
+| Path | Change |
+|---|---|
+| `Assets/Scripts/Editor/CourseImporter/MissionStartAreaBaker.cs` | created — `Golfin ▸ Missions ▸ Bake Start Areas` |
+| `Assets/Scripts/Editor/CourseImporter/TreeBakeValidator.cs` | modified — third status column: the start-area drift gate |
+| `Assets/Resources/Data/mission_start_areas.csv` | baked — 89/90 short rows + `pin_count` + `bake_hash`; header rewritten |
+| `Assets/Scripts/Gameplay/Missions/*` | created — asmdef, `MissionDefinition`, `MissionGoal`, `MissionSession`, `MissionSessionBag`, `MissionGoalEvaluator`, `MissionResult` |
+| `Assets/Scripts/Gameplay/Loop/Session/GameSession.cs` | modified — `OnSessionReset` event (the inverted dependency) |
+| `Assets/Scripts/Physics/Viewer/PhysicsLabController.cs` | modified — `ApplyMissionOverrides` + `AdvanceMissionGust` |
+| `Assets/Scripts/BagManager.cs` | modified — `GetClubsInBag` reads the session bag |
+| `Assets/Scripts/StaminaRuntimeService.cs` | modified — the mission's own drain |
+| `Assets/Scripts/Save/SaveData.cs`, `SaveSchemaMigrator.cs` | modified — `missionProgress`, schema v12 |
+| `Assets/Scripts/Economy/MissionsClient.cs`, `Net/Endpoints.cs` | created/modified — the claim path |
+| `Assets/Scripts/UI/Modals/Result/HoleCompleteModalController.cs` | modified — settle, claim, mirror, and suppress the hole's own rewards |
+| `Assets/Scripts/UI/ScreenManager.cs`, `ModeSelect/*` | modified — C1: `ScreenId.MissionSelection`, `TargetMissionSelect`, both switches |
+| `Assets/Scripts/Gameplay/Tests/MissionGoalEvaluatorTests.cs`, `MissionSessionTests.cs` | created — 40 tests |
+
+## Acceptance checklist (Phase B items)
+
+| Item | Result | Justification |
+|---|---|---|
+| Bake: GREEN/FRINGE/FAIRWAY/ROUGH on all 18, SAND where a bunker exists, `pin_count` filled | **PASS** | 89 of 90 short rows baked, y range 5.75–40.28 m with **zero** at 0, all 72 tee rows coordinate-less, `pin_count` and `bake_hash` on every row. The one blank is hole 13's SAND — see below. |
+| `Validate All Holes` fails on a hand-edited coordinate (tripwire, §20) | **PASS** | 18/18 PASS baked. Nudging hole 5's FAIRWAY x by 1 m and leaving the hash produced `05 FAIL 1/9 drifted — FAIRWAY bake_hash is 82e9be72 but its coordinates hash to 906b2291`. Restored; 18/18 again. |
+| Gameplay: start at the mission's area, pin index honoured, wind = preset, GUSTY changes between shots, stroke cap, stamina drain | **PARTIAL** | Implemented and unit-tested (cap = the tightest goal; GUSTY stays in 6–18 and is deterministic per (mission, shot); `DrainOverride` returns the config value with no mission). The position-trace assertion on Hole 01 per start kind needs a **play-mode round**, which is Phase C work — there is no screen to start a mission from yet. |
+| Loadout: supplied bag shows only the listed clubs, never persists, pops on end and on `ResetSession`; `own:` mask; Practice/1v1/tournaments unaffected | **PASS** | `MissionSessionBag` is a stack in front of `PlayerClubData`, which is never written. Push/pop balance, the double-Begin case, `ResetSession` clearing a running mission, and "1v1 and tournaments are never in a mission" each have a test. |
+| Goals: one EditMode test per goal type (pass and fail) | **PASS** | 24 tests over all 14 types, both directions each, driven through `GameSession.RecordShot` — the same path the game writes. Plus the yard/metre conversion, the two vocabulary mappings (Bunker→Sand, `SW`→"Sand Wedge"), progressive-fail, and "progressive never marks a goal MET". |
+| Mode card: PLAY opens `MissionSelection` from Home carousel AND Mode Select | **PARTIAL** | Both switches route `mission_select` and both use the shared constants. Cannot be exercised end-to-end until the screen exists (Phase C) — `ShowScreen(ScreenId.MissionSelection)` currently has nothing to show. |
+| Full EditMode sweep green; no Console errors | **PASS** | 2021 / 2018 passed / 0 failed / 3 pre-existing skips. Both new suites proven live with a tripwire: 2021 → 2023 with both named, then removed. |
+
+## What Phase B found
+
+**Hole 13 has no greenside bunker.** Its nearest sand is 156 m from the green; every real
+greenside bunker on this course is 14–33 m. The bake leaves its SAND row blank, which is §B1's
+own "skip kind if the hole has none" — and it makes **mission 37 (`l_sand_up_down`, "Sand Save",
+hole 13, `startAreaId=SAND`) unpublishable** until it is re-sited or a bunker is authored. A
+design call, not mine.
+
+**The entire ROUGH column was baking to y = 0** — a ball under the course. Rough has no polygons
+in `zones.json` at all (it is the classifier's DEFAULT surface), so there is no zone mesh under
+the probe and `TrySampleMeshY` correctly failed. Fixed by wiring the baked `heightmap.bytes` as
+the height source for probes that are not on an overlay, which is the same pairing
+`PhysicsLabController` wires at runtime.
+
+**A test caught a real fragility in the teardown wiring.** The first version armed
+`GameSession.OnSessionReset` from a `[RuntimeInitializeOnLoadMethod]` — which does not run in
+EditMode at all, and in a player runs once at load, so the subscription's existence had nothing
+to do with whether a mission was in progress. Armed from `Begin()` instead, which ties the
+guarantee to the state it guards.
+
+**ALT_PIN is near-inert, and the data says so.** Only hole 1 has more than one pin candidate (3);
+every other hole has exactly 1. The daily generator already gates ALT_PIN on `pin_count >= 2`,
+so it will almost never draw — correct behaviour, but worth knowing before anyone tunes its
+weight. New pin authoring is explicitly out of scope.
+
+## Phase B deviations
+
+7. **The bake reads the TRACKED JSON, not the `Hole_NN_Geo` scenes.** §B1 says scenes; those are
+   gitignored and per-machine (`.gitignore:111`), so a scene-driven bake would produce
+   coordinates and a `bake_hash` drift gate that only mean something on the machine that ran it —
+   the next person to run `Validate All Holes` would see 18 failures caused by nothing.
+   `Resources/HoleData/<course>/Hole_NN/{zones,green}.json` is the same geometry, tracked, and is
+   what the runtime itself classifies against.
+8. **ROUGH steps outward past 8 m when it has to.** §B1 says 8 m lateral; on holes 2, 7, 10, 14
+   and 18 both sides at 8 m are still fairway. The search steps out (8 → 40 m) until the probe
+   leaves every zone polygon, and the row's note records the distance actually used. A missing
+   ROUGH row would have been worse than an 12 m one.
+9. **A greenside radius (50 m) gates SAND.** §B1 says "the bunker nearest the green"; taken
+   literally that gives hole 13 a bunker 156 m away. The threshold separates two clusters that
+   are 123 m apart on this course.
+10. **CARRY is evaluated as total distance.** `ShotRecord` has `DistanceXZMeters` and nothing
+    separating flight from roll, so a true carry cannot be read from it. No campaign mission uses
+    CARRY and the daily never draws it, so nothing ships on the approximation — but a CARRY goal
+    authored in the admin would be easier than it reads. Flagged in the evaluator itself.
+11. **The mission claim is online-only — no offline queue**, which is the opposite call from
+    `/points/earn-game`. That queues earns because the amount is already known and replaying it
+    is exact; a mission claim's amount is decided BY THE SERVER at claim time, so a queued claim
+    is a deferred DECISION made against whatever the catalog says days later. The idempotency key
+    makes retrying safe, which is the property that matters.
+
+## Phase B — not done
+
+* **The Hole Complete modal's goal strip.** The data path is complete and `LastMissionResult`
+  is exposed on the controller, but the widget does not yet DRAW the ticks and crosses — that is
+  prefab work on the mission card family, which is what Phase C builds. Called out rather than
+  quietly folded into "done".
+* **The position-trace assertion per start kind on Hole 01** (§B acceptance). It needs a play-mode
+  round, and there is no screen to start a mission from until Phase C.
+
+## Phase B open questions
+
+4. **Mission 37 needs a decision** — re-site `l_sand_up_down` to a hole with a greenside bunker,
+   or author one on 13. It blocks the `missions` publish either way.
