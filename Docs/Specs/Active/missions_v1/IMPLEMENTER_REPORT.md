@@ -390,3 +390,53 @@ is why the capture reads **x60** against a campaign card's x15.
 * **Offline daily generation (§C2)** — deliberately not attempted. It would mean a second C#
   implementation of the deterministic draw, and two implementations of one seeded algorithm drift
   silently. The card shows a retry state instead when `/daily` is unreachable.
+
+## The tier strip spilled off both screen edges — root cause and the shape it belongs to
+
+Cesar: *"Top tabs are spilling on the side of the screen (Lomond too), no consistent separators
+between tabs."*
+
+Measured before the fix: `Filters` rendered **1196px wide at worldX −13..1183**, inside a `Content`
+that is 1074px at worldX 48..1122. Both filter rows therefore ran 13px past each edge of a 1170px
+screen.
+
+The cause is not the row's width — it is `LayoutElement.minWidth = 280` on each of the four tier
+tabs. A layout group hands a child *at least* its minimum, so those four minimums summed upward as
+`Filters.minWidth = 20 + 4×280 + 3×12 + 20 = 1196`, and the group honoured that minimum over the
+1074px it actually had. The tabs were never asked to share the row.
+
+Fixed by making them share it: row padding 20/20 → 0, each tab `minWidth 280 → 120` with
+`flexibleWidth = 1`, and `Tab_COURSE` the same, so the surplus is distributed by weight. Measured
+after: `Filters` 1074px at worldX 48..1122, four tabs of exactly 249px, three 2px dividers at
+x=309, 584, 859 — evenly spaced by construction.
+
+Two smaller defects rode along:
+
+* **`Tab_AMATEUR`'s padlock was parented to the tab, not to `Inner`.** The tab is not a layout
+  group, so the icon floated at the tab's edge and read as a stray separator between AMATEUR and
+  PRO — one of the "inconsistent separators". Every other tab keeps its lock inside `Inner`.
+* **Four tabs, four different font sizes** — 30.0 / 26.9 / 26.4 / 23.5, because per-tab autosizing
+  resolves against per-tab space and a padlock eats 36px of it. Capped at the size the tightest tab
+  can hold, all four now render exactly **24.0** with every label's preferred width inside its rect
+  (201≤225, 193≤195, 121≤195, 172≤195). The 16pt floor stays as the JA safety net.
+
+`childForceExpandWidth` was the wrong lever and was tried first: it hands *every* child an equal
+share of the surplus, dividers included, and they came out 76px wide. `flexibleWidth` on the tabs
+alone distributes by weight and leaves the dividers at 2px.
+
+### The shape, enumerated (PIPELINE_HARDENING §22)
+
+The shape is *"a `LayoutElement.minWidth` larger than the space available propagates up and forces
+the container wider than its parent."* Every `HorizontalLayoutGroup` in `ShellScene` was scored
+mechanically — sum of declared child minimums plus spacing plus padding, against the 1074px
+standard content width — rather than sampled. Three exceed it:
+
+| Group | Declared minimum | Verdict |
+|---|---|---|
+| `RosterScreen/CarouselSection/ScrollView/Viewport/Content` | 2095px | **Fine** — horizontal scroll content, wider than the viewport by design |
+| `HoleSelectionScreen/Content/Filters/FilterRow2` | 1156px | **Same defect**, 41px off each edge — not fixed, out of scope |
+| `TournamentHoleSelectionScreen/Content/Filters/FilterRow2` | 1156px | **Same defect**, 41px off each edge — not fixed, out of scope |
+
+`MissionSelectionScreen/Content/Filters/FilterRow2` no longer appears in the list. The other two
+are the screens this one was cloned from and they carry the bug inherited from; both are shipped,
+so the spill is reported rather than silently restyled.
