@@ -1,0 +1,32 @@
+# shot_timing_telemetry — live Editor E2E
+
+telemetry: SendsEnabled=True session=047cd2c9-3a04-42f0-94df-e947129f72cc
+hole: 1
+resolution: 1170x2532
+driver: real ClubHandleDragger IPointerDown/IDrag/IPointerUp events
+green_arrow_at_flick: 0.784 (predicting 0.904 with lead 0.120)
+green_latched_timing01: 0.908
+green_lead_refit: 0.123
+green_committed_timing01: 0.908
+green_committed_mul: 1.000
+green_record: club=Driver terminal=AtRest dist=57.9m Timing01=0.908 TimingPowerMul=1.000
+green_payload: timing01=0.91 timing_mul=1 timing_band=green
+green_ACCEPTED: attempt 1 landed in the green band
+red_arrow_at_flick: 0.001 (predicting 0.124 with lead 0.123)
+red_latched_timing01: 0.122
+red_lead_refit: 0.121
+red_committed_timing01: 0.122
+red_committed_mul: 0.754
+red_record: club=Driver terminal=AtRest dist=45.4m Timing01=0.122 TimingPowerMul=0.754
+red_payload: timing01=0.12 timing_mul=0.75 timing_band=red
+red_ACCEPTED: attempt 1 landed in the red band
+debug_record: club=Driver terminal=AtRest dist=34.1m Timing01=NaN TimingPowerMul=1.000
+debug_payload: timing01=null timing_mul=1 timing_band=null
+queued_after_flush: 0
+batches_sent: 2
+
+## Wire batches
+{"session_id":"047cd2c9-3a04-42f0-94df-e947129f72cc","app_version":"1.5.7","build_number":2437,"platform":"OSXEditor","device_model":"Mac15,3","os":"Mac OS X 26.6.0","events":[{"event_id":"3fed177a-d5be-4764-ae84-a9607529f2a3","name":"session_start","ts":"2026-08-29T06:33:35.794Z","payload":{"device_model":"Mac15,3","os":"Mac OS X 26.6.0","memory_mb":24576,"screen":"1170x2532","tier":"Mid","tier_source":"auto"}},{"event_id":"2b1ddc3b-4cfb-4f17-844d-200372c6d0f4","name":"screen_view","ts":"2026-08-29T06:33:35.877Z","payload":{"screen":"Logo","since_boot_s":4.69}},{"event_id":"012242f7-c49f-4a01-aaed-17526221e628","name":"screen_view","ts":"2026-08-29T06:33:41.934Z","payload":{"screen":"Splash","since_boot_s":10.75}}]}
+
+{"session_id":"047cd2c9-3a04-42f0-94df-e947129f72cc","app_version":"1.5.7","build_number":2437,"platform":"OSXEditor","device_model":"Mac15,3","os":"Mac OS X 26.6.0","events":[{"event_id":"0b85f9d2-013d-4f22-b223-30ed77368cff","name":"screen_view","ts":"2026-08-29T06:33:43.731Z","payload":{"screen":"Home","since_boot_s":12.54}},{"event_id":"ee73f53b-7ffd-4265-a6da-667b0ed0a624","name":"points_changed","ts":"2026-08-29T06:33:45.259Z","payload":{"balance":508,"delta":-10}},{"event_id":"428777f7-b265-4445-b65d-1bc46ef076b0","name":"screen_view","ts":"2026-08-29T06:33:45.660Z","payload":{"screen":"HoleSelection","since_boot_s":14.47}},{"event_id":"3946598b-bb86-428f-91e5-9034da3cfdc8","name":"round_start","ts":"2026-08-29T06:33:47.639Z","payload":{"hole":1,"character_id":"char_james","bag_slot":1,"is_tournament":false,"tournament_id":null}},{"event_id":"d2328756-51b3-422a-9614-0090fddacf05","name":"screen_view","ts":"2026-08-29T06:33:47.900Z","payload":{"screen":"Loading","since_boot_s":16.71}},{"event_id":"9c3d9ac2-2944-4674-acb2-eea78cbb053d","name":"shot_taken","ts":"2026-08-29T06:33:56.416Z","payload":{"shot_number":2,"club":"Driver","distance_m":57.9,"terminal":"AtRest","ob_reason":null,"surface":"Rough","penalty":0,"hole":1,"timing01":0.91,"timing_mul":1.0,"timing_band":"green"}},{"event_id":"5da34d5f-5521-4470-96a2-1a9e70090721","name":"shot_taken","ts":"2026-08-29T06:33:59.520Z","payload":{"shot_number":3,"club":"Driver","distance_m":45.4,"terminal":"AtRest","ob_reason":null,"surface":"Rough","penalty":0,"hole":1,"timing01":0.12,"timing_mul":0.75,"timing_band":"red"}},{"event_id":"e859cf07-3d23-45ad-a050-bcc7f0ceb3a5","name":"shot_taken","ts":"2026-08-29T06:34:02.043Z","payload":{"shot_number":4,"club":"Driver","distance_m":34.1,"terminal":"AtRest","ob_reason":null,"surface":"Rough","penalty":0,"hole":1,"timing01":null,"timing_mul":1.0,"timing_band":null}}]}
+

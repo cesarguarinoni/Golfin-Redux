@@ -1,0 +1,13 @@
+=== iter-1 kickoff baseline 2026-08-29 ===
+HEAD: bbd8fcb49 shot_timing_power: DONE — approved, folder moved to Completed/
+DIRTY (git status --porcelain --untracked-files=all) at kickoff:
+```
+ M "Docs/Game Design/MISSIONS_REDESIGN.md"
+ M Docs/Reports/content_art.txt
+ M Docs/TellCode.md
+ M Docs/Versioning/last_uploaded_build.txt
+?? Docs/Specs/Active/missions_v1/
+?? Docs/Specs/Active/shot_timing_telemetry/
+?? Docs/Specs/Queued/flick_vector_aim_DESIGN_NOTE.md
+```
+Zero `Assets/` and zero `Tools/` paths dirty at kickoff — every source change below is this task's.

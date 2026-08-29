@@ -5,7 +5,43 @@
 
 ---
 
-## ✅ LATEST — `shot_timing_power` DONE (2026-08-29)
+## ✅ LATEST — `shot_timing_telemetry` (2026-08-29, awaiting Cesar)
+
+**The flick timing now reaches analytics.** F15 made the coloured slab cost power and then the
+number died in `ShotController` — nothing about it left the client, so the two decisions it exists
+for (the F15 tuning: 0.70 / 0.90 and the band edges; and D5 "should putts pay?") had no data behind
+them. Every `shot_taken` now carries `timing01` / `timing_mul` / `timing_band`, and the admin
+dashboard's **Shot quality** section shows the green/gold/red distribution plus the average
+multiplier. Spec + report: `Docs/Specs/Active/shot_timing_telemetry/`. Implemented directly, not
+through the subagent chain. Commit `c77c7732b`; dashboard deploy `cc9b9dd3-4e00-4598-b0cf-4d6a692f0999`.
+
+**The one non-obvious decision (D1): snapshot at commit, not at complete.**
+`ShotController.LastTimingAtLatch` is wiped by `ResetSwingSamples()` at `CompleteShot()`, and the
+`ShotRecord` is built *after* that — reading it there would have reported NaN for every shot ever.
+`CommitFlick` now latches `LastCommittedTiming01` next to `LastTimingPowerMul`. `ShotRecord` carries
+both via a new 11-arg ctor; the 8/9-arg ctors forward with `(NaN, 1f)`, so nothing else moved.
+
+**A sampleless swing sends `null`, never 0** (bots, capture drivers, `FireDebugShot`, EditMode). A
+fake 0 would read as a botched flick and poison the red share the tuning gets decided on. The band
+is named client-side from the same `ControlsConfig` edges the shot paid, so the dashboard never
+re-derives them — `GameSession.TimingBand()` (Loop gained a ref to the leaf `Golfin.Gameplay.Config`;
+Assembly-CSharp cannot see it, so `TelemetryHooks` could not have done this itself).
+
+* **Gate:** `Golfin.Gameplay.Tests` **360 passed / 0 failed**, whole assembly, no filter; the 4 new
+  `ShotTimingTelemetryTests` observed *by name*, not inferred from a count. `Golfin.Physics.Tests`
+  (the other `ShotRecord` consumer) 357 passed / 3 pre-existing skips.
+* **Live E2E, driven not asserted.** New editor-only harness
+  `Assets/Scripts/UI/Editor/ShotTimingTelemetryVerify.cs` boots ShellScene → PLAY → Hole 1 and
+  drives the real `ClubHandleDragger` pointer handlers. A green flick (`timing01 0.91`, mul `1.0`,
+  band `green`) and a red one (`0.12`, `0.75`, `red`) plus a `FireDebugShot` (`null`, `1.0`, `null`)
+  are in the production `telemetry_events` table, read back to confirm the null is a real SQL null.
+  This is the gesture F15 declared no automation in this project could produce — it can now.
+* **Still open for Cesar:** one look at admin.golfin.world → Telemetry → Shot quality (the card
+  render + the sidebar commit stamp are behind the Cloudflare Access login).
+
+---
+
+## ✅ `shot_timing_power` DONE (2026-08-29)
 
 **The coloured timing slab now does something.** Its position and colour at the moment of the flick
 were never read: `CommitFlick` looked at `PowerNormalized` and `_degradationYawRad` and nothing
