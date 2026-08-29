@@ -25,6 +25,36 @@ namespace Golfin.Gameplay.Missions
         /// <summary>Localization key for the display name, or "" for the daily.</summary>
         public string NameKey = "";
 
+        /// <summary>Campaign ladder position. The screen sorts by this.</summary>
+        public int Order;
+
+        /// <summary>`Beginner` | `Amateur` | `Pro` | `Legend`.</summary>
+        public string Tier = "";
+
+        /// <summary>The stable slug (`b_first_putt`) the name key is built from.</summary>
+        public string Key = "";
+
+        /// <summary>What the card ADVERTISES. What is actually paid is decided by the server
+        /// from `golfin_mission_rewards`; these two agreeing is the publish validator's job,
+        /// not this client's.</summary>
+        public int FirstClearRP;
+        public int ReplayRP;
+
+        /// <summary>Display only — the publish RECOMPUTES it from the component weights.</summary>
+        public int DifficultyScore;
+
+        /// <summary>`start` or `clear:&lt;mission id&gt;`.</summary>
+        public string Unlock = "";
+
+        /// <summary>Raw `itemRewards` cell, e.g. `RepairKit x1`. "" when there are none.</summary>
+        public string ItemRewards = "";
+
+        /// <summary>The wind preset's id, for the card's wind line.</summary>
+        public string WindPresetId = "";
+
+        /// <summary>The loadout's id, for the card's clubs line.</summary>
+        public string LoadoutId = "";
+
         public int HoleNumber = 1;
         public int Par = 4;
 
@@ -119,5 +149,11 @@ namespace Golfin.Gameplay.Missions
         }
 
         public bool IsDaily => Id.StartsWith("daily:", System.StringComparison.Ordinal);
+
+        /// <summary>Localization key for this mission's wind line (`WIND_CROSS_S`).</summary>
+        public string WindKey => string.IsNullOrEmpty(WindPresetId) ? "" : "WIND_" + WindPresetId;
+
+        /// <summary>Localization key for this mission's start-area line (`START_AREA_SAND`).</summary>
+        public string StartAreaKey => string.IsNullOrEmpty(StartAreaId) ? "" : "START_AREA_" + StartAreaId;
     }
 }

@@ -1,0 +1,313 @@
+#nullable enable
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using Golfin.Content;
+using Golfin.Gameplay.Missions;
+using UnityEngine;
+
+namespace GolfinRedux.UI.MissionSelection
+{
+    /// <summary>
+    /// Reads the seven mission catalogs and RESOLVES a campaign row into the handful of facts a
+    /// session needs. Spec: missions_v1 §A1/§B2.
+    ///
+    /// ⚠️ RESOLUTION HAPPENS HERE, ONCE, AND NOT AT PLAY TIME. A `missions` row says
+    /// `startAreaId=GREEN, windPresetId=CROSS_S, loadoutId=SUP_PUTTER` — three names that mean
+    /// nothing until three more catalogs have been read. Doing that lookup when the player taps
+    /// PLAY would mean discovering a broken mission at the one moment there is no good way to
+    /// fail. Resolving at screen-build time instead means a mission that cannot be assembled
+    /// renders as a warned, un-playable card — the standing invariant, which is that a client
+    /// missing information never shows a broken card and never wrongly spends or earns.
+    ///
+    /// BUNDLED CSV IS THE FLOOR, THE PUBLISHED CATALOG IS THE OVERLAY — the same contract
+    /// `ModesDatabaseCSV` follows, and for the same reason: a build must be playable with no
+    /// network, and an admin edit must reach it without one.
+    ///
+    /// ⚠️ IT LIVES IN Assembly-CSharp, NOT IN `Golfin.Gameplay.Missions`, and that is a
+    /// deliberate placement. The Missions assembly is a LEAF — it is what the Viewer and the
+    /// Hole Complete modal reference, so it may not reference back into Assembly-CSharp. But
+    /// resolving a mission needs two things that only live there: the CONTENT overlay
+    /// (`Golfin.Content`) and the CLUB catalog (`ClubDatabaseCSV`, which a supplied loadout
+    /// resolves club types against). So the leaf owns the SESSION and the plain
+    /// `MissionDefinition`; this owns turning catalog rows into one. Same split, and same
+    /// direction, as `HoleDatabaseLoader` vs `GameSession`.
+    /// </summary>
+    public static class MissionCatalog
+    {
+        private const string Tag = "[MissionCatalog]";
+
+        /// <summary>Every campaign mission, in campaign order.</summary>
+        public static IReadOnlyList<MissionDefinition> All => _all;
+
+        /// <summary>Why a mission cannot be played, or "" when it can. Keyed by mission id.</summary>
+        public static IReadOnlyDictionary<string, string> Warnings => _warnings;
+
+        private static readonly List<MissionDefinition> _all = new List<MissionDefinition>();
+        private static readonly Dictionary<string, string> _warnings = new Dictionary<string, string>();
+        private static readonly List<MissionTier> _tiers = new List<MissionTier>();
+        private static bool _loaded;
+
+        public sealed class MissionTier
+        {
+            public string Tier = "";
+            public int Order;
+            public int ScoreMin;
+            public int ScoreMaxExcl;
+            public int FirstClearRP;
+            public int ReplayRP;
+            public int TierClearBonusRP;
+            /// <summary>Clears of the PREVIOUS tier that open this one. 0 = always open.</summary>
+            public int UnlockClears;
+            public int MissionsInTier = 10;
+        }
+
+        public static IReadOnlyList<MissionTier> Tiers { get { EnsureLoaded(); return _tiers; } }
+
+        public static void Reload() { _loaded = false; EnsureLoaded(); }
+
+        public static void EnsureLoaded()
+        {
+            if (_loaded) return;
+            _loaded = true;
+            _all.Clear();
+            _warnings.Clear();
+            _tiers.Clear();
+
+            var areas    = Index(ContentCatalogs.MissionStartAreas, "id");
+            var winds    = Index(ContentCatalogs.MissionWindPresets, "id");
+            var loadouts = Index(ContentCatalogs.MissionLoadouts, "id");
+            var tierRows = Index(ContentCatalogs.MissionTiers, "tier");
+            var missions = Rows(ContentCatalogs.Missions);
+
+            foreach (var t in tierRows.Values)
+            {
+                _tiers.Add(new MissionTier
+                {
+                    Tier = Str(t, "tier"),
+                    Order = Int(t, "order"),
+                    ScoreMin = Int(t, "scoreMin"),
+                    ScoreMaxExcl = Int(t, "scoreMaxExcl"),
+                    FirstClearRP = Int(t, "firstClearRP"),
+                    ReplayRP = Int(t, "replayRP"),
+                    TierClearBonusRP = Int(t, "tierClearBonusRP"),
+                    UnlockClears = Int(t, "unlockClears"),
+                    MissionsInTier = Math.Max(1, Int(t, "missionsInTier", 10)),
+                });
+            }
+            _tiers.Sort((a, b) => a.Order.CompareTo(b.Order));
+
+            // Index the per-hole start areas by (holeId, areaId) — the pair a mission names.
+            // The same areaId is a DIFFERENT point on a different hole, so indexing by areaId
+            // alone would silently start a mission on another hole's green.
+            var areaByHoleAndId = new Dictionary<string, Dictionary<string, string>>();
+            foreach (var a in areas.Values)
+                areaByHoleAndId[$"{Str(a, "holeId")}:{Str(a, "areaId")}"] = a;
+
+            foreach (var row in missions)
+            {
+                var def = Resolve(row, areaByHoleAndId, winds, loadouts, out string warning);
+                if (def == null) continue;
+                _all.Add(def);
+                if (!string.IsNullOrEmpty(warning)) _warnings[def.Id] = warning;
+            }
+            _all.Sort((a, b) => a.Order.CompareTo(b.Order));
+
+            int warned = _warnings.Count;
+            Debug.Log($"{Tag} {_all.Count} missions, {_tiers.Count} tiers" +
+                      (warned > 0 ? $", {warned} un-playable (see warnings)" : ", all playable"));
+        }
+
+        // ── Resolution ──────────────────────────────────────────────────────────
+
+        private static MissionDefinition? Resolve(
+            Dictionary<string, string> row,
+            Dictionary<string, Dictionary<string, string>> areaByHoleAndId,
+            Dictionary<string, Dictionary<string, string>> winds,
+            Dictionary<string, Dictionary<string, string>> loadouts,
+            out string warning)
+        {
+            warning = "";
+            string id = Str(row, "id");
+            if (string.IsNullOrEmpty(id)) return null;
+
+            var def = new MissionDefinition
+            {
+                Id = id,
+                Order = Int(row, "order"),
+                Tier = Str(row, "tier"),
+                Key = Str(row, "key"),
+                NameKey = "MISSION_NAME_" + Str(row, "key").ToUpperInvariant(),
+                HoleNumber = Int(row, "holeId", 1),
+                Par = Int(row, "par", 4),
+                StartAreaId = Str(row, "startAreaId"),
+                PinIndex = Int(row, "pinIndex"),
+                StaminaDrain = Float(row, "staminaDrain", 8f),
+                FirstClearRP = Int(row, "firstClearRP"),
+                ReplayRP = Int(row, "replayRP"),
+                DifficultyScore = Int(row, "difficultyScore"),
+                Unlock = Str(row, "unlock"),
+                ItemRewards = Str(row, "itemRewards"),
+            };
+
+            for (int slot = 1; slot <= 3; slot++)
+            {
+                string type = Str(row, $"goal{slot}Type");
+                if (string.IsNullOrEmpty(type)) continue;
+                var parsed = MissionGoal.Parse(type);
+                if (parsed == MissionGoalType.None)
+                {
+                    warning = $"goal{slot} type '{type}' is not one this build understands";
+                    continue;
+                }
+                def.Goals.Add(new MissionGoal(parsed, Str(row, $"goal{slot}Param")));
+            }
+
+            // ── Start area ───────────────────────────────────────────────────────
+            if (!areaByHoleAndId.TryGetValue($"{def.HoleNumber}:{def.StartAreaId}", out var area))
+            {
+                warning = $"start area '{def.StartAreaId}' has no row for hole {def.HoleNumber}";
+                return def;
+            }
+            def.StartKind = Str(area, "kind").ToLowerInvariant();
+            if (def.StartKind == "tee")
+            {
+                // TEE_BACK -> "back". The scene's own TeeMarker_<label>_L/R is the spawn; there
+                // is nothing to bake and nothing to resolve here.
+                def.TeeLabel = def.StartAreaId.StartsWith("TEE_", StringComparison.Ordinal)
+                    ? def.StartAreaId.Substring(4).ToLowerInvariant()
+                    : "regular";
+            }
+            else
+            {
+                string sx = Str(area, "x"), sy = Str(area, "y"), sz = Str(area, "z");
+                if (sx.Length == 0 || sy.Length == 0 || sz.Length == 0)
+                {
+                    // The Phase-A state of every short area, and the state hole 13's SAND is in
+                    // permanently — it has no greenside bunker to bake.
+                    warning = $"start area '{def.StartAreaId}' on hole {def.HoleNumber} has not been " +
+                              "baked (Golfin ▸ Missions ▸ Bake Start Areas)";
+                    return def;
+                }
+                def.StartWorld = new Vector3(F(sx), F(sy), F(sz));
+            }
+
+            // ── Wind ─────────────────────────────────────────────────────────────
+            string windId = Str(row, "windPresetId");
+            if (!winds.TryGetValue(windId, out var wind))
+            {
+                warning = $"wind preset '{windId}' does not exist";
+                return def;
+            }
+            def.WindPresetId = windId;
+            def.WindRelDirDeg = Float(wind, "relDirDeg");
+            def.WindSpeedMph = Float(wind, "speed");
+            def.WindGusty = string.Equals(windId, "GUSTY", StringComparison.OrdinalIgnoreCase);
+
+            // ── Loadout ──────────────────────────────────────────────────────────
+            string loadoutId = Str(row, "loadoutId");
+            if (!loadouts.TryGetValue(loadoutId, out var loadout))
+            {
+                warning = $"loadout '{loadoutId}' does not exist";
+                return def;
+            }
+            def.LoadoutId = loadoutId;
+            def.LoadoutKey = "LOADOUT_" + loadoutId.ToUpperInvariant();
+            def.LoadoutSupplied = string.Equals(Str(loadout, "kind"), "supplied", StringComparison.OrdinalIgnoreCase);
+
+            var clubs = MissionLoadoutResolver.Resolve(loadout, out string loadoutWarning);
+            if (clubs.Count == 0)
+            {
+                // §C3 — never a dead card. The screen renders this with the Hole Selection
+                // "missing equipment" style and PLAY disabled, rather than letting the player
+                // into a hole with an empty bag.
+                warning = loadoutWarning.Length > 0 ? loadoutWarning : $"loadout '{loadoutId}' resolved to an empty bag";
+                return def;
+            }
+            def.ClubIds.AddRange(clubs);
+            if (loadoutWarning.Length > 0) warning = loadoutWarning;
+
+            return def;
+        }
+
+        // ── Catalog access (bundled floor + published overlay) ──────────────────
+
+        private static List<Dictionary<string, string>> Rows(string catalog)
+        {
+            var outRows = new List<Dictionary<string, string>>();
+
+            // The BUNDLED CSV is the floor — a build with no network still has every mission.
+            var csv = Resources.Load<TextAsset>($"Data/{catalog}");
+            if (csv == null)
+            {
+                Debug.LogError($"{Tag} no bundled Resources/Data/{catalog}.csv — the catalog is empty.");
+                return outRows;
+            }
+            var parsed = MissionCsv.Parse(csv.text);
+            Resources.UnloadAsset(csv);
+            foreach (var r in parsed) outRows.Add(r);
+
+            // The PUBLISHED catalog is the overlay — an admin edit reaches an installed build.
+            ContentCatalog? overlay = ContentCatalogStore.RequireReady(nameof(MissionCatalog))
+                ? ContentCatalogStore.Catalog(catalog)
+                : null;
+            if (overlay == null) return outRows;
+
+            string idCol = catalog == ContentCatalogs.MissionTiers ? "tier" : "id";
+            var byId = new Dictionary<string, Dictionary<string, string>>();
+            foreach (var r in outRows) if (r.TryGetValue(idCol, out var v)) byId[v] = r;
+
+            int patched = 0, appended = 0, dropped = 0;
+            foreach (var orow in overlay.Rows)
+            {
+                if (!orow.IsActive)
+                {
+                    // I6 — deactivation is how a mission is withdrawn. Dropping it here is what
+                    // makes the card disappear rather than becoming unclaimable.
+                    if (byId.TryGetValue(orow.Id, out var gone)) { outRows.Remove(gone); byId.Remove(orow.Id); dropped++; }
+                    continue;
+                }
+                if (byId.TryGetValue(orow.Id, out var existing))
+                {
+                    foreach (var kv in orow.Data)
+                        if (kv.Value != null) existing[kv.Key] = kv.Value;
+                    patched++;
+                }
+                else
+                {
+                    var added = new Dictionary<string, string>();
+                    foreach (var kv in orow.Data) added[kv.Key] = kv.Value ?? "";
+                    added[idCol] = orow.Id;
+                    outRows.Add(added);
+                    appended++;
+                }
+            }
+            if (patched + appended + dropped > 0)
+                Debug.Log($"{Tag} {catalog}: overlay v{overlay.Version} — {patched} patched, " +
+                          $"{appended} appended, {dropped} withdrawn.");
+            return outRows;
+        }
+
+        private static Dictionary<string, Dictionary<string, string>> Index(string catalog, string idCol)
+        {
+            var map = new Dictionary<string, Dictionary<string, string>>();
+            foreach (var r in Rows(catalog))
+                if (r.TryGetValue(idCol, out var id) && id.Length > 0) map[id] = r;
+            return map;
+        }
+
+        // ── Field helpers ───────────────────────────────────────────────────────
+
+        private static string Str(Dictionary<string, string> r, string col)
+            => r.TryGetValue(col, out var v) ? (v ?? "").Trim() : "";
+
+        private static int Int(Dictionary<string, string> r, string col, int def = 0)
+            => int.TryParse(Str(r, col), NumberStyles.Integer, CultureInfo.InvariantCulture, out int v) ? v : def;
+
+        private static float Float(Dictionary<string, string> r, string col, float def = 0f)
+            => float.TryParse(Str(r, col), NumberStyles.Float, CultureInfo.InvariantCulture, out float v) ? v : def;
+
+        private static float F(string s)
+            => float.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out float v) ? v : 0f;
+    }
+}

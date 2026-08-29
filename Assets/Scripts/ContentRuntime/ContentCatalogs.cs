@@ -55,6 +55,22 @@ namespace Golfin.Content
         /// </summary>
         public const string Modes = "modes";
 
+        // ── missions_v1 §A2 — the seven mission catalogs ──────────────────────
+        //
+        // `Missions` and `MissionTiers` are the two the SERVER also reads: publishing
+        // either mirrors it into `golfin_mission_rewards` / `golfin_mission_tier_bonus`,
+        // and `golfin_mission_claim()` pays from the mirror. The other five are
+        // components a mission is composed from — client and generator data with no
+        // server mirror, but not inert: the admin recomputes every mission's
+        // difficultyScore from `MissionGoalWeights` on publish.
+        public const string Missions            = "missions";
+        public const string MissionStartAreas   = "mission_start_areas";
+        public const string MissionWindPresets  = "mission_wind_presets";
+        public const string MissionLoadouts     = "mission_loadouts";
+        public const string MissionGoalWeights  = "mission_goal_weights";
+        public const string MissionTiers        = "mission_tiers";
+        public const string DailyMissionWeights = "daily_mission_weights";
+
         /// <summary>
         /// The catalogs whose ROWS this build overlays onto a bundled CSV — everything except
         /// <see cref="Texts"/>, which merges into <c>LocalizationManager</c> instead and therefore
