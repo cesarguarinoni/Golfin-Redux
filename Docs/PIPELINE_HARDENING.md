@@ -289,3 +289,15 @@ Absent a browser, the honest shell check is a `grep` of the built worker
 with the browser footer as the live confirmation. That grep is not a downgrade: it is what caught
 the stamp's own first bug, where `cf-deploy.sh`'s env stash file — not covered by `.gitignore`'s
 `.env*.local` — made every clean deploy report `<hash>-DIRTY`.
+
+## 24. New player-facing strings go through the two-way importer, or the admin cannot see them (Cesar, 2026-08-28)
+
+Since `content_two_way`, `Assets/Localization/LocalizationText.csv` is a PROPOSAL and the admin is the publisher. A key added only in code, only in a migration, or hand-inserted into `content_rows` is invisible to the admin, drifts, and surfaces at release time (`SETTINGS_QUALITY_*`, `Tools/content/README.md`). Every spec that adds text must therefore require, and every review must verify:
+
+1. Key added to `LocalizationText.csv` with EN **and** JA in the same commit.
+2. `Tools/content/import_content.py --catalogs texts` — plan read, `--apply`, publish from the admin, `export_content.py --check` clean. CONFLICTS ⇒ stop and report; never `--overwrite-dirty` on the implementer's own judgment.
+3. Same importer path for any edit to an existing catalog CSV (`modes.csv`, …). New catalogs seed via migration instead.
+4. Dashboard strings: `lib/i18n.ts` `DICT`, `en` + `ja` (ADMIN_DASHBOARD_OPS §3.4). Never mixed with game strings.
+5. Report quotes the `--check` output and a grep showing zero new hardcoded `.text` literals.
+
+An IMPLEMENTER_REPORT that shows a new key in a prefab binder but no importer run is an automatic SELF_REVIEW_FAIL.
