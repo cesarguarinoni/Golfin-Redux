@@ -529,6 +529,7 @@ namespace Golfin.UI
                 case GolfinRedux.UI.ScreenId.Inventory:                return "NAV_INVENTORY";
                 case GolfinRedux.UI.ScreenId.Leaderboard:              return "NAV_LEADERBOARD";
                 case GolfinRedux.UI.ScreenId.ModeSelection:            return "NAV_MODE_SELECTION";
+                case GolfinRedux.UI.ScreenId.MissionSelection:         return "MISSIONS_TITLE";
                 case GolfinRedux.UI.ScreenId.TournamentHoleSelection:  return "NAV_SELECT_HOLE";
                 case GolfinRedux.UI.ScreenId.TournamentLeaderboard:    return "NAV_TOURNAMENT_LEADERBOARD";
                 case GolfinRedux.UI.ScreenId.TournamentSelection:      return "NAV_TOURNAMENTS";
@@ -558,6 +559,9 @@ namespace Golfin.UI
                 case GolfinRedux.UI.ScreenId.Inventory:     currentScreen = Screen.Inventory; break;
                 case GolfinRedux.UI.ScreenId.HoleSelection:  currentScreen = Screen.MainPlay; break;
                 case GolfinRedux.UI.ScreenId.ModeSelection:  currentScreen = Screen.MainPlay; break;
+                // missions_v1 §C2 — Missions is entered from the PLAY pillar, so the
+                // same nav slot stays lit as it does for Practice and Tournaments.
+                case GolfinRedux.UI.ScreenId.MissionSelection: currentScreen = Screen.MainPlay; break;
                 case GolfinRedux.UI.ScreenId.TournamentHoleSelection: currentScreen = Screen.MainPlay; break;
                 case GolfinRedux.UI.ScreenId.TournamentLeaderboard:   currentScreen = Screen.MainPlay; break;
                 case GolfinRedux.UI.ScreenId.TournamentSelection:     currentScreen = Screen.MainPlay; break;

@@ -67,6 +67,8 @@ namespace GolfinRedux.UI
         [SerializeField] private GameObject _inventoryScreen;
         [SerializeField] private GameObject _holeSelectionScreen;
         [SerializeField] private GameObject _modeSelectionScreen;
+        // missions_v1 §C1 — the Missions campaign browse screen.
+        [SerializeField] private GameObject _missionSelectionScreen;
         [SerializeField] private GameObject _leaderboardScreen;
         [SerializeField] private GameObject _tournamentHoleSelectionScreen;
         [SerializeField] private GameObject _tournamentLeaderboardScreen;
@@ -234,6 +236,9 @@ namespace GolfinRedux.UI
             if (_modeSelectionScreen != null)
                 _modeSelectionScreen.SetActive(screenId == ScreenId.ModeSelection);
 
+            if (_missionSelectionScreen != null)
+                _missionSelectionScreen.SetActive(screenId == ScreenId.MissionSelection);
+
             if (_leaderboardScreen != null)
                 _leaderboardScreen.SetActive(screenId == ScreenId.Leaderboard);
 
@@ -301,6 +306,7 @@ namespace GolfinRedux.UI
                          || screenId == ScreenId.Inventory
                          || screenId == ScreenId.HoleSelection
                          || screenId == ScreenId.ModeSelection
+                         || screenId == ScreenId.MissionSelection
                          || screenId == ScreenId.Leaderboard
                          || screenId == ScreenId.TournamentHoleSelection
                          || screenId == ScreenId.TournamentLeaderboard
