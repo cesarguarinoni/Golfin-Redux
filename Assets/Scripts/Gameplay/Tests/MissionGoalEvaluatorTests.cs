@@ -347,11 +347,42 @@ namespace Golfin.Gameplay.Tests
         // ── The idempotency key ─────────────────────────────────────────────────
 
         [Test]
-        public void the_claim_key_is_mission_id_plus_session_guid()
+        public void the_claim_key_is_a_uuid()
         {
+            // This test used to assert "mission:test:guid" — and that string is exactly why no
+            // mission ever paid out. The server casts idempotency_key straight to a uuid and
+            // 400s anything else, so the test was pinning the bug in place. What matters is the
+            // CONTRACT, not the spelling.
             Shot("Driver", "Fairway");
             var r = Evaluate(Mission(MissionGoalType.SCORE, "0"), strokes: 4);
-            Assert.AreEqual("mission:test:guid", r.IdempotencyKey);
+            Assert.IsTrue(System.Guid.TryParse(r.IdempotencyKey, out _),
+                $"the claim key must parse as a UUID, got '{r.IdempotencyKey}'");
+        }
+
+        [Test]
+        public void the_claim_key_is_stable_for_one_mission_and_session()
+        {
+            // A retry has to be the SAME claim, which is the whole point of an idempotency key.
+            Shot("Driver", "Fairway");
+            var a = Evaluate(Mission(MissionGoalType.SCORE, "0"), strokes: 4);
+            Shot("Driver", "Fairway");
+            var b = Evaluate(Mission(MissionGoalType.SCORE, "0"), strokes: 4);
+            Assert.AreEqual(a.IdempotencyKey, b.IdempotencyKey);
+        }
+
+        [Test]
+        public void a_different_session_gets_a_different_claim_key()
+        {
+            // ...and two attempts must never collide onto one key, or the second would be
+            // swallowed by the server as a duplicate of the first. Driven through EvaluateFinal
+            // rather than the hash helper, so it is the real path that is under test.
+            var m = Mission(MissionGoalType.SCORE, "0");
+            Shot("Driver", "Fairway");
+            var a = new MissionGoalEvaluator(m, Pin)
+                .EvaluateFinal(new HoleCompletionData(BallState.InCup, 4, 0, 1), "session-a");
+            var b = new MissionGoalEvaluator(m, Pin)
+                .EvaluateFinal(new HoleCompletionData(BallState.InCup, 4, 0, 1), "session-b");
+            Assert.AreNotEqual(a.IdempotencyKey, b.IdempotencyKey);
         }
     }
 }

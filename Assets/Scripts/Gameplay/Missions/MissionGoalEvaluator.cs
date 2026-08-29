@@ -280,7 +280,7 @@ namespace Golfin.Gameplay.Missions
         /// Formatted big-endian from the digest so the version nibble lands where a strict parser
         /// looks for it — `new Guid(byte[])` would reorder the first three fields.
         /// </summary>
-        internal static string DeterministicUuid(string namespaced)
+        private static string DeterministicUuid(string namespaced)
         {
             using (var md5 = System.Security.Cryptography.MD5.Create())
             {
