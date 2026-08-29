@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -264,6 +265,7 @@ namespace Golfin.UI.Modals.Result
         void SettleMissionIfActive(HoleCompletionData sessionData)
         {
             LastMissionResult = null;
+            ShowMissionGoals(null);
 
             var session = Golfin.Gameplay.Missions.MissionSession.Active;
             var evaluator = Golfin.Gameplay.Missions.MissionSession.Evaluator;
@@ -271,6 +273,7 @@ namespace Golfin.UI.Modals.Result
 
             var result = evaluator.EvaluateFinal(sessionData, System.Guid.NewGuid().ToString());
             LastMissionResult = result;
+            ShowMissionGoals(result);
             Debug.Log($"[HoleCompleteModal] MISSION {result.MissionId}: cleared={result.Cleared} " +
                       $"strokes={result.Strokes} putts={result.Putts} " +
                       $"goals=[{string.Join(", ", result.Goals.ConvertAll(g => $"{g.Type}:{g.Met}"))}]");
@@ -283,6 +286,93 @@ namespace Golfin.UI.Modals.Result
 
             if (isDaily) return;
             StartCoroutine(ClaimMissionRoutine(result));
+        }
+
+        /// <summary>
+        /// Draw the goal strip: one row per goal, a tick or a cross against the same wording the
+        /// mission card used before the round.
+        ///
+        /// The wording comes from <c>MissionCardController.GoalLineText</c> rather than being
+        /// re-derived here, so "Hole out in 3 strokes or fewer" reads identically on the card that
+        /// sold the mission and on the card that judges it. A player should never have to wonder
+        /// whether the thing they failed is the thing they were asked to do.
+        ///
+        /// The icons and their colours are the modal's own SUCCESS and FAILED marks
+        /// (`Icon - Check` #50C878, `Icon - X` #D16A47), so a met goal is the same green as the
+        /// header that says SUCCESS.
+        ///
+        /// A goal the evaluator never decided (`Met == null`, which happens when the hole ended
+        /// before the goal could be settled) is shown as unmet: the mission was not cleared, and
+        /// a blank row would read as "we lost track of this one".
+        /// </summary>
+        void ShowMissionGoals(Golfin.Gameplay.Missions.MissionResult result)
+        {
+            if (_goalStrip == null) ResolveGoalStrip();
+            if (_goalStrip == null) return;
+
+            if (result == null || result.Goals.Count == 0)
+            {
+                _goalStrip.SetActive(false);
+                return;
+            }
+
+            _goalStrip.SetActive(true);
+            for (int i = 0; i < _goalRows.Length; i++)
+            {
+                bool used = i < result.Goals.Count;
+                _goalRows[i].SetActive(used);
+                if (!used) continue;
+
+                var goal = result.Goals[i];
+                bool met = goal.Met == true;
+                if (_goalLabels[i] != null)
+                    _goalLabels[i].text = GolfinRedux.UI.MissionSelection.MissionCardController.GoalLineText(goal);
+                if (_goalIcons[i] != null)
+                {
+                    _goalIcons[i].sprite = met ? _tickSprite : _crossSprite;
+                    _goalIcons[i].color  = met ? new Color32(0x50, 0xC8, 0x78, 0xFF)
+                                               : new Color32(0xD1, 0x6A, 0x47, 0xFF);
+                }
+            }
+        }
+
+        GameObject _goalStrip;
+        GameObject[] _goalRows = new GameObject[0];
+        TMPro.TextMeshProUGUI[] _goalLabels = new TMPro.TextMeshProUGUI[0];
+        UnityEngine.UI.Image[] _goalIcons = new UnityEngine.UI.Image[0];
+        Sprite _tickSprite, _crossSprite;
+
+        /// <summary>
+        /// Find the strip by name rather than by a serialized field: the widget is built in the
+        /// scene and this controller is reached through several prefab paths, so a missing
+        /// reference would be a silent null on exactly one of them.
+        /// </summary>
+        void ResolveGoalStrip()
+        {
+            var content = transform.root.GetComponentsInChildren<RectTransform>(true)
+                .FirstOrDefault(r => r.name == "MissionGoals");
+            if (content == null) return;
+
+            _goalStrip = content.gameObject;
+            int n = content.childCount;
+            _goalRows   = new GameObject[n];
+            _goalLabels = new TMPro.TextMeshProUGUI[n];
+            _goalIcons  = new UnityEngine.UI.Image[n];
+            for (int i = 0; i < n; i++)
+            {
+                var row = content.GetChild(i);
+                _goalRows[i]   = row.gameObject;
+                _goalIcons[i]  = row.Find("Icon")?.GetComponent<UnityEngine.UI.Image>();
+                _goalLabels[i] = row.Find("Label")?.GetComponent<TMPro.TextMeshProUGUI>();
+            }
+
+            // The same two marks the SUCCESS and FAILED headers use.
+            var success = transform.root.GetComponentsInChildren<RectTransform>(true)
+                .FirstOrDefault(r => r.name == "SuccessHeader");
+            var failed = transform.root.GetComponentsInChildren<RectTransform>(true)
+                .FirstOrDefault(r => r.name == "FailedHeader");
+            _tickSprite  = success?.Find("Icon")?.GetComponent<UnityEngine.UI.Image>()?.sprite;
+            _crossSprite = failed?.Find("Icon")?.GetComponent<UnityEngine.UI.Image>()?.sprite;
         }
 
         System.Collections.IEnumerator ClaimMissionRoutine(Golfin.Gameplay.Missions.MissionResult result)
