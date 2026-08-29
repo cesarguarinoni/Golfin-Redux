@@ -2511,8 +2511,26 @@ namespace Golfin.Physics.Viewer
                 }
                 anchor.position = spawn.Value;
                 _ballSpawnPoint = anchor;
+
+                // AND the saved tee position, which is the one SetupAtTee actually trusts:
+                //
+                //     spRaw = _savedTeePosValid ? _savedTeeWorldPos : _ballSpawnPoint.position
+                //
+                // _savedTeeWorldPos wins whenever it is valid — deliberately, because it is
+                // [SerializeField] and survives a Play Mode reload while the spawn-point
+                // GameObject may not. By the time a mission gets here the tee has already been
+                // set up, so it IS valid, and swapping only the anchor left the ball exactly
+                // where it was: mission 1 asks for a 10-yard putt and started 123 yards out at
+                // the regular tee, holding a putter.
+                //
+                // Writing both keeps SetupAtTee's single source of truth intact rather than
+                // teaching it a mission special case. Runtime-only: a [SerializeField] assigned
+                // in play mode is not persisted to the scene.
+                _savedTeeWorldPos = spawn.Value;
+                _savedTeePosValid = true;
+
                 // Re-place: SetupAtTee already ran, at the tee. Calling it again with the
-                // anchor swapped is what actually moves the ball.
+                // spawn swapped is what actually moves the ball.
                 SetupAtTee();
             }
 

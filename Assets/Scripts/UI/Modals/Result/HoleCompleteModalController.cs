@@ -170,6 +170,13 @@ namespace Golfin.UI.Modals.Result
             bool   isFailed   = sessionData.TerminalState != BallState.InCup;
             string scoreLabel = ScoreLabelFor(score);
 
+            // On a MISSION, holing out is not success — clearing the goals is. SettleMissionIfActive
+            // has already run (line ~112), so the verdict is in hand here. Without this the modal
+            // read "✓ SUCCESS" in green directly above "✗ Hole out in 3 strokes or fewer" in red,
+            // which is not a near-miss in wording: it tells the player they passed and failed the
+            // same round. A mission that is not cleared is FAILED, whatever the ball did.
+            if (LastMissionResult != null && !LastMissionResult.Cleared) isFailed = true;
+
             // HoleCompleteCardWidget.BindCurrentHole formats the subhead as:
             //   "{ToTitleCase(CourseName)} Country Club  - Hole {N} - Par {P}"
             // So CourseName must be the RAW course name (e.g. "LOMOND"), NOT the
