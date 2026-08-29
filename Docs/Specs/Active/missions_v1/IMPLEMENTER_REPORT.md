@@ -473,3 +473,24 @@ Verified in play mode through the real entry path on both screens (Practice's mo
 Selection, the Missions card for Mission Selection). EditMode 2035 / 2032 passed / 0 failed.
 ShellScene vs HEAD: 0 fileIDs lost, 0 active-state flips, 30 added — six dividers and their
 components.
+
+## Video
+
+`Docs/Reports/Media/missions_v1_mission_selection.mp4` — 1170×2532, 29.7s, captioned.
+Recorder: `Assets/Scripts/UI/Editor/MissionsDemoRecorder.cs`, menu
+**GOLFIN > Missions > Record Demo Video**, cloned from `TournamentDemoRecorder` (same Unity
+Recorder + SessionState-across-play-mode + coroutine-bot shape).
+
+The clip is the real path end to end: the title gate is tapped as a player must, Home,
+the bottom-nav tee button, then the PLAY button on the Missions mode card itself. The
+carousel keeps three copies of every card and subscribes exactly one, so the recorder finds
+the copy with a live `OnPlayClicked` — driving any other copy fires a button nothing listens
+to, which is precisely what a `ShowScreen` shortcut would hide. It then holds on the daily
+card, scrolls the campaign list down and back, taps the one unlocked tier, and backs out.
+
+The run spends the real 50 RP `mode_entry_fee:missions` — same code path, so it charges.
+That is why the RP counter reads 458 in the clip rather than 508.
+
+Captions were burned in with `Docs/Scripts/build_bot_video.py --mode captionsjson`
+(`--caption-fontsize 40 --caption-wrap 38`; the default `h//32` = 79px overflowed the
+1170px frame on the first pass).

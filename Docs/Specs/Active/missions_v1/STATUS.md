@@ -50,3 +50,15 @@ publishes.
     baked per-hole table (both recorded as deviations in IMPLEMENTER_REPORT.md)
   * still to build: the Figma fidelity table + UI lint, the JA capture, the Hole Complete goal
     strip, §21's live end-to-end run, and the start-marker thumbnail calibration
+
+## Video deliverable (2026-08-29)
+
+  raw          Docs/Specs/Active/missions_v1/videos/raw.mp4 — 1170x2532, 29.7s, 30fps
+  captioned    Docs/Specs/Active/missions_v1/videos/missions_v1_mission_selection.mp4
+  report copy  Docs/Reports/Media/missions_v1_mission_selection.mp4
+  recorder     Assets/Scripts/UI/Editor/MissionsDemoRecorder.cs
+               (GOLFIN > Missions > Record Demo Video)
+
+Driven through the real entry path: the title gate is tapped, then Home, then the PLAY
+button on the Missions mode card itself — not ScreenManager.ShowScreen. The run spends the
+real 50 RP entry fee, which is why the RP counter reads 458 rather than 508.
