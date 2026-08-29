@@ -104,6 +104,47 @@
 - Parked: `Docs/Specs/Queued/flick_vector_aim_DESIGN_NOTE.md` — scheme C (aim = flick vector), Cesar leaning, revisit after the two above are felt on device.
 
 
+- **`starter_restore_gate`** (filed 2026-08-29, Architect via Cowork) — **SPEC_READY, kickoff pasteable.**
+  `Docs/Specs/Active/starter_restore_gate/SPEC.md`. Cesar: the starter pick must survive a TestFlight
+  update AND delete+reinstall. Diagnosis: the starter IS already in the `golfin_inventory` blob
+  (`starter` key, `content_player_inventory`); the client races it — Login/Splash/CreateUsername read
+  `NeedsStarter` from the empty local save before `InventorySyncService.Boot()` answers, and
+  `CharacterManager`/`ClubManager` never re-hydrate after a restore. Fix: `StarterGate` (route only
+  after the boot restore answered), `ReloadFromSave`/`RehydrateFromSave`, starter screen exits on a
+  late answer. D1 (Cesar): a FAILED fetch never shows the picker — `AUTH_ERR_OFFLINE` + retry.
+  No playlife change, no new strings, no prefab edits. Closes the open
+  `content_player_inventory` restore-after-reinstall device pass.
+
+### Kickoff · starter_restore_gate (issued 2026-08-29)
+
+```
+Read Docs/Specs/Active/starter_restore_gate/SPEC.md and implement it.
+
+Context:
+- Bug: after delete+reinstall a signed-in tester is asked to pick a starter again although the
+  server blob already carries it. Read the Diagnosis section first — the server side is correct;
+  the three post-auth routers (LoginScreenController :137/:185, CreateUsernameScreenController :85,
+  SplashScreenController.RouteAuthenticated) read CharacterManager.NeedsStarter before
+  InventorySyncService.Boot() has answered, and CharacterManager.LoadRoster / ClubManager.HydrateFrom
+  are private one-shots that never re-run after RestoreFrom.
+- Build: InventorySyncService.LastBootOutcome + OnBootFinished + OnRestored; StarterGate.Resolve
+  (Assets/Scripts/UI/Account/StarterGate.cs); the three call sites go through it;
+  CharacterManager.ReloadFromSave + ClubManager.RehydrateFromSave wired from InventoryCatalogAdapter;
+  RosterScreenController leaves starter mode on a late answer.
+- D1: a failed fetch NEVER shows the picker — reuse AUTH_ERR_OFFLINE (EN+JA exist) + retry via
+  RetryBoot(). No safety timeout that could resolve Ready on an empty save.
+- Minimal diff. Reuse Boot(done), BootCompleted, OnRosterChanged, OnInventoryChanged, the
+  Login SetBusy/SetError pattern. Do not re-run InitializeClubs (one-shot seeding). No prefab,
+  scene, CSV or playlife edits. Bot harness + demo paths must stay byte-identical.
+- Out of scope: blob authority/anti-cheat, the fill-if-empty starter rule, grants mid-session.
+
+When done: list changed files with a 1-line summary each, run the acceptance
+tests in the spec, flag which need manual on-device verification (the delete+reinstall
+run on Cesar's iPhone is the world-check), update STATUS.md + IMPLEMENTER_REPORT.md in
+the spec folder, and update Docs/AI_CONTEXT.md (also close the content_player_inventory
+"restore-after-reinstall device pass" item there).
+```
+
 - **`missions_v1`** (filed 2026-08-28, Architect via Cowork) — **SPEC_READY, kickoff pasteable.**
   `Docs/Specs/Active/missions_v1/SPEC.md`. Missions mode end to end: 40 component-built missions
   (Lomond, 18 holes, 4 tiers, curve verified non-decreasing), server-generated Daily Mission,
