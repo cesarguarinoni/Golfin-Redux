@@ -440,3 +440,36 @@ standard content width — rather than sampled. Three exceed it:
 `MissionSelectionScreen/Content/Filters/FilterRow2` no longer appears in the list. The other two
 are the screens this one was cloned from and they carry the bug inherited from; both are shipped,
 so the spill is reported rather than silently restyled.
+
+### The same fix applied to Hole Selection and Tournament Hole Selection
+
+Cesar: *"Apply in the other too."* Both `FilterRow2`s now share their row the same way
+(minWidth 280 → 120, flexibleWidth 1), so `Filters` measures 1074px at worldX 48..1122 on all
+three screens instead of 1156px at 7..1163.
+
+Two things only showed up once those screens were rendered:
+
+* **The row-1 art already draws a separator.** `Background - Filter 1.png` carries a 1px rule at
+  sprite x=535 → screen x=584. Row 1's pills are 80px tall over a 56px row, so they cover the whole
+  background except the gap between them — the baked rule is visible exactly there, and the divider
+  I had added was a *second* line 58px to its left. The added one is gone and the pills are sized
+  528 / 530 so their 16px gap centres on the art's rule. `Background - Filter 2.png` has three
+  baked rules too (x=251, 510, 828) but is 9-sliced and never draws them, so row 2 keeps explicit
+  ones — restyled to 1px at 55% white to match row 1's art rather than out-weigh it.
+* **The padlock sat a different distance from the text on every tab** — measured 8.3px on REGULAR,
+  31.0px on YAITA, 34.7px on BACK. Cause: the label carried `flexibleWidth = 1`, so it swallowed
+  all the leftover width in its cell and then centred its glyphs inside that oversized rect; the
+  shorter the label, the wider the apparent gap. Fixed by letting the label take TMP's own
+  preferred width (`LayoutElement.preferredWidth = -1`, `flexibleWidth = 0`, `childControlWidth =
+  true`) and centring `[lock][6px][label]` as one run. Measured after, on every tab of every
+  screen: **gap = 6.0**, run inside its Inner.
+
+  A `ContentSizeFitter` on the label was tried first and is the wrong tool: a fitter INSIDE a
+  layout group fights the group — the group positions from the old width, the fitter resizes around
+  the pivot, and the pair never settles. That attempt is what produced the 8.3 / 31.0 / 34.7
+  numbers above.
+
+Verified in play mode through the real entry path on both screens (Practice's mode card for Hole
+Selection, the Missions card for Mission Selection). EditMode 2035 / 2032 passed / 0 failed.
+ShellScene vs HEAD: 0 fileIDs lost, 0 active-state flips, 30 added — six dividers and their
+components.
