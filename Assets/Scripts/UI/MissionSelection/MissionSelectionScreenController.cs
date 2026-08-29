@@ -417,28 +417,25 @@ namespace GolfinRedux.UI.MissionSelection
         // ── The start marker ────────────────────────────────────────────────────
 
         /// <summary>
-        /// The start marker on the hole thumbnail — DISABLED, and the reason is a missing input
-        /// rather than a missing implementation.
+        /// Put a marker on the hole thumbnail where the mission starts.
         ///
-        /// §C2 says to project the start point "using the same transform the MapView uses".
-        /// There isn't one. `MapViewController` frames a live 3D CAMERA over the real hole
-        /// (bounds-fit around ball + flag + landing zone); the card shows a PRE-RENDERED PNG
-        /// from `HoleImages/`. Nothing anywhere records what world rectangle each of those 18
-        /// PNGs covers, so there is no honest way to turn a world XZ into a pixel on them.
+        /// Only for starts that are NOT the tee: a tee start needs no marker, the words already
+        /// name which tee, and every hole draws its tee in the same place anyway.
         ///
-        /// The first attempt derived a box from the hole's five baked start areas. It produced
-        /// a marker, and the marker was WRONG — those five points are a small cluster near the
-        /// green, not the extent of the hole the PNG draws, so every start projected to a
-        /// corner. A marker in the wrong place is worse than no marker: it tells the player
-        /// something false about where they will tee off.
-        ///
-        /// So the start is conveyed in WORDS on the card (`START_AREA_*`, e.g. "Greenside
-        /// bunker"), which is exact, and the marker waits for a per-hole thumbnail calibration
-        /// — the world rect each PNG covers — that has to be authored once alongside the art.
+        /// The thumbnails are stylised illustrations rather than renders, so the mapping is a
+        /// per-hole fit rather than maths — see <see cref="HoleMapCalibration"/> for how it is
+        /// derived and, more importantly, for how accurate it is NOT. Holes whose fit does not
+        /// survive the bunker check return null and keep the words-only treatment, which is
+        /// exact.
         /// </summary>
         private void PlaceStartMarker(MissionCardController card, MissionDefinition m)
         {
             card.HideStartMarker();
+            if (m == null || m.StartWorld == null) return;
+            if (string.Equals(m.StartKind, "tee", System.StringComparison.OrdinalIgnoreCase)) return;
+
+            Vector2? uv = HoleMapCalibration.Normalised(m.HoleNumber, m.StartWorld.Value);
+            if (uv != null) card.SetStartMarkerNormalised(uv.Value);
         }
 
         // ── Daily ───────────────────────────────────────────────────────────────
