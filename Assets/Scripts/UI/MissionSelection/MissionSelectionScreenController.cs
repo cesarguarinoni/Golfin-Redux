@@ -483,7 +483,58 @@ namespace GolfinRedux.UI.MissionSelection
 
                 System.DateTime utc = System.DateTime.UtcNow;
                 dailyCard.SetDailyStatus(utc.Date.AddDays(1) - utc, r.Data.Streak, r.Data.Claimed);
+
+                // The hash the server will check a claim against. Kept from THIS response, not
+                // re-fetched at claim time: re-fetching would defeat the check, which exists to
+                // stop a client holding yesterday's recipe from being paid after midnight.
+                _dailyDate = r.Data.Date;
+                _dailyHash = r.Data.RecipeHash;
+                if (!r.Data.Claimed) StartCoroutine(ClaimPendingDailyRoutine());
             });
+        }
+
+        private string _dailyDate = "";
+        private string _dailyHash = "";
+
+        /// <summary>
+        /// Claim a daily round that finished while this screen was away.
+        ///
+        /// The Hole Complete modal parks the round on MissionSession.PendingDaily because it does
+        /// not hold the recipe hash; this screen does, so the claim lands here. It runs on every
+        /// return to the screen, which is also the recovery path: a daily left unclaimed because
+        /// the app died is claimed the next time the player opens Missions.
+        ///
+        /// A FAILED daily is not sent. The mission claim posts its failures so "tried and failed"
+        /// is a real state, but the daily endpoint has no goals_met — it pays or it does not — so
+        /// there is nothing for a failed attempt to say.
+        /// </summary>
+        private IEnumerator ClaimPendingDailyRoutine()
+        {
+            var pending = MissionSession.PendingDaily;
+            if (pending == null || !pending.Cleared) yield break;
+            if (string.IsNullOrEmpty(_dailyHash) || pending.Date != _dailyDate)
+            {
+                // A round from another day, or a recipe we no longer hold the hash for. Dropping
+                // it is right: the server would refuse it as recipe_mismatch anyway.
+                MissionSession.PendingDaily = null;
+                yield break;
+            }
+
+            MissionSession.PendingDaily = null;   // one attempt; the server is the record
+            string key = System.Guid.NewGuid().ToString("D");
+
+            yield return Golfin.Economy.MissionsClient.Instance.ClaimDailyRoutine(
+                pending.Date, _dailyHash, pending.Strokes, key, res =>
+                {
+                    if (!res.Success || res.Data == null)
+                    {
+                        Debug.LogWarning($"[MissionSelection] daily claim failed: {res.ErrorMessage}");
+                        return;
+                    }
+                    var d = res.Data;
+                    Debug.Log($"[MissionSelection] daily claim {d.Status}: awarded={d.Awarded} streak={d.Streak}");
+                    if (d.Ok) RefreshDaily();   // repaint with the streak and the claimed state
+                });
         }
 
         /// <summary>

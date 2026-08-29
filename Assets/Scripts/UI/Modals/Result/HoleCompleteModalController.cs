@@ -292,6 +292,18 @@ namespace Golfin.UI.Modals.Result
             // Mission Selection screen, which is the only place that holds the recipe hash.
             bool isDaily = session.IsDaily;
 
+            // The daily is claimed by the Mission Selection screen, which is the only place
+            // holding the recipe hash the server checks. Park the round for it; End() is next
+            // and takes the session with it.
+            if (isDaily)
+                Golfin.Gameplay.Missions.MissionSession.PendingDaily =
+                    new Golfin.Gameplay.Missions.MissionSession.FinishedDaily
+                    {
+                        MissionId = result.MissionId,
+                        Strokes   = result.Strokes,
+                        Cleared   = result.Cleared,
+                    };
+
             Golfin.Gameplay.Missions.MissionSession.End();
 
             if (isDaily) return;

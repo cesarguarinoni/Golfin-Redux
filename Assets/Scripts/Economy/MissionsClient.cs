@@ -68,6 +68,25 @@ namespace Golfin.Economy
         [JsonProperty("streak")]      public int Streak;
     }
 
+    /// <summary>
+    /// <c>POST /api/v1/missions/daily/claim</c> → what the server decided.
+    ///
+    /// `status` carries the refusals that are not errors: `recipe_mismatch` when the client held
+    /// a stale recipe, `no_recipe` for a date nothing was generated for, `already_claimed` on a
+    /// second attempt at the same day. None of them is an exception; all of them mean nothing
+    /// was written.
+    /// </summary>
+    public sealed class DailyClaimResult
+    {
+        [JsonProperty("status")]  public string Status;
+        [JsonProperty("date")]    public string Date;
+        [JsonProperty("awarded")] public int Awarded;
+        [JsonProperty("streak")]  public int Streak;
+
+        [JsonIgnore] public bool Paid => Awarded > 0;
+        [JsonIgnore] public bool Ok => string.Equals(Status, "ok", StringComparison.Ordinal);
+    }
+
     /// <summary>One generated daily, as `services/daily_mission.py` composes it.</summary>
     public sealed class DailyRecipe
     {
@@ -143,6 +162,47 @@ namespace Golfin.Economy
         /// </summary>
         public IEnumerator FetchDailyRoutine(Action<ApiResult<DailyMissionResult>> onResult)
             => _client.Get(Endpoints.MissionsDaily, onResult);
+
+        /// <summary>
+        /// Claim the daily for one UTC date. Once per player per date.
+        ///
+        /// ⚠️ `recipeHash` IS THE WHOLE POINT AND IT IS NOT CEREMONY. The server compares it
+        /// against the recipe it stored for that date, and a client holding yesterday's cached
+        /// recipe after midnight would otherwise be paid for a mission it never played. A
+        /// mismatch comes back `recipe_mismatch` and writes nothing — so the hash must be the one
+        /// that arrived with the recipe the player actually played, not one re-fetched later.
+        ///
+        /// The payout is NOT sent. DOUBLE_RP is read server-side out of the stored recipe the
+        /// hash just proved the client is holding, which is the same discipline the mission claim
+        /// follows: the client says what it did, never what it is owed.
+        /// </summary>
+        public IEnumerator ClaimDailyRoutine(string dateUtc, string recipeHash, int strokes,
+                                             string idempotencyKey,
+                                             Action<ApiResult<DailyClaimResult>> onResult)
+        {
+            string body = BuildDailyClaimJson(dateUtc, recipeHash, strokes, idempotencyKey);
+            return _client.Post(Endpoints.MissionsDailyClaim, body, onResult);
+        }
+
+        /// <summary>Exposed so a test can assert the wire shape without a transport.</summary>
+        public static string BuildDailyClaimJson(string dateUtc, string recipeHash, int strokes, string key)
+            => JsonConvert.SerializeObject(new DailyClaimBody
+            {
+                date = dateUtc,
+                recipe_hash = recipeHash ?? "",
+                // Same bound as the mission claim; the server refuses a claim with no count.
+                strokes = Mathf.Clamp(strokes, 1, 60),
+                idempotency_key = key,
+            });
+
+        [Serializable]
+        private sealed class DailyClaimBody
+        {
+            public string date;
+            public string recipe_hash;
+            public int? strokes;
+            public string idempotency_key;
+        }
 
         /// <summary>Exposed so a test can assert the wire shape without a transport.</summary>
         public static string BuildClaimJson(string missionId, int strokes, bool goalsMet, string key)

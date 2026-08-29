@@ -51,6 +51,36 @@ namespace Golfin.Gameplay.Missions
         /// <summary>The goal evaluator for the run in progress. Null when no mission is active.</summary>
         public static MissionGoalEvaluator? Evaluator { get; private set; }
 
+        /// <summary>
+        /// A finished DAILY round waiting to be claimed, handed from the Hole Complete modal to
+        /// the Mission Selection screen.
+        ///
+        /// The two halves of a daily claim live in different places and neither can do it alone:
+        /// the modal knows what the player just did, and the SELECTION SCREEN holds the
+        /// `recipe_hash` that came down with the recipe. The server compares that hash against
+        /// the day it stored, so a re-fetched one would defeat the check it exists for — a client
+        /// holding yesterday's recipe after midnight must not be paid. So the round is parked
+        /// here and claimed by whoever holds the hash.
+        ///
+        /// Deliberately NOT persisted. A daily unclaimed because the app died is a daily the
+        /// player can still claim by opening the screen: the server, not this field, is the record
+        /// of what was played.
+        /// </summary>
+        public sealed class FinishedDaily
+        {
+            /// <summary>The daily's mission id, "daily:YYYY-MM-DD" — it carries its own date.</summary>
+            public string MissionId = "";
+            public int  Strokes;
+            public bool Cleared;
+
+            /// <summary>The UTC date the id encodes, or "" if it is not a daily id.</summary>
+            public string Date =>
+                MissionId.StartsWith("daily:", StringComparison.Ordinal) ? MissionId.Substring(6) : "";
+        }
+
+        /// <summary>Set when a daily round ends; cleared once the claim has been attempted.</summary>
+        public static FinishedDaily? PendingDaily;
+
         private static int _gustSeed;
 
         /// <summary>
