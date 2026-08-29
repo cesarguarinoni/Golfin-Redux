@@ -258,7 +258,9 @@ namespace Golfin.Physics.Viewer
                 _shotController.OnShotResolved += HandleShotResolved;
 
             // ball_flight_trail: wire trail controller to the ball SM + shot controller.
-            _ballTrail?.Configure(ballAnimator, _ballSM, _shotController);
+            // _shotConeView is passed so the ribbon can be painted in the timing slab's own
+            // colour at the flick — the view owns those three stops (they are serialized).
+            _ballTrail?.Configure(ballAnimator, _ballSM, _shotController, _shotConeView);
 
             // water_splash_fx (Order 349): wire splash controller entirely in code so the scene
             // carries no baked reference. Add the component to the BallAnimator GO (same host as
@@ -1773,7 +1775,7 @@ namespace Golfin.Physics.Viewer
                     else
                     {
                         // ball_trail_shot_isolation §9: boundary OB gets a brief hold BEFORE
-                        // repositioning so the red ribbon (set by BallTrailController on →OB)
+                        // repositioning so the black ribbon (set by BallTrailController on →OB)
                         // renders for a visible beat. Reposition + ReArm happen after the hold;
                         // ReArm fires →Aiming which clears the ribbon — so the aiming phase is
                         // always clean. Mirror the water-path coroutine structure rather than
@@ -1796,12 +1798,12 @@ namespace Golfin.Physics.Viewer
         // VFX is visible before the ball drops + the camera re-aims to the penalty shot.
         const float WaterOBDwellSeconds = 1.2f;
 
-        // ball_trail_shot_isolation §9: brief pause for boundary OB so the red ribbon renders
+        // ball_trail_shot_isolation §9: brief pause for boundary OB so the black ribbon renders
         // for a visible beat before RepositionBallWithLookDir + ReArm wipe it. No camera freeze
         // needed (unlike water: there is no VFX to frame, and the chase camera naturally holds
         // near the landing area). 2.0s gives the player a clear read of the red OB feedback;
         // longer than water (1.2s) because water has dramatic VFX so less time is needed —
-        // boundary OB has no VFX so the red ribbon alone carries the feedback signal.
+        // boundary OB has no VFX so the black ribbon alone carries the feedback signal.
         const float BoundaryOBDwellSeconds = 2.0f;
 
         // Freezes the camera at its current transform (it was chasing the ball into the water, so it is
@@ -1834,7 +1836,7 @@ namespace Golfin.Physics.Viewer
             _ballSM.ReArm();
         }
 
-        // ball_trail_shot_isolation §9: holds BoundaryOBDwellSeconds so the red ribbon that
+        // ball_trail_shot_isolation §9: holds BoundaryOBDwellSeconds so the black ribbon that
         // BallTrailController painted on →OB is actually visible for a beat, THEN does the
         // normal OB drop + spin-reset + re-arm (which triggers →Aiming and wipes the ribbon).
         // Holds BEFORE RepositionBallWithLookDir so the ribbon stays at the OB landing spot

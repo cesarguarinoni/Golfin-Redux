@@ -129,7 +129,13 @@ namespace Golfin.Gameplay.Input
 
         /// <summary>True if the most recent committed flick was a full-swing shot with zero aim
         /// degradation (committed inside the clean-pass window). Putts are never "clean" for trail
-        /// purposes (see spec NOTE P). Latched in CommitFlick; read by BallTrailController on Flying.</summary>
+        /// purposes (see spec NOTE P). Latched in CommitFlick.
+        ///
+        /// NOTE: currently has NO readers. It used to drive the ball trail's gold "perfect shot"
+        /// ribbon; the trail is now painted in the timing slab's own colour at the flick
+        /// (BallTrailController.LaunchColor), so gold there means "flicked on the gold band", not
+        /// "clean pass". Kept because it is the only surviving handle on clean-pass-ness — delete
+        /// it deliberately, not by accident.</summary>
         public bool LastShotWasClean { get; private set; }
 
         /// <summary>Arrow progress (0..1) sampled when the aim latched on the current swing,
@@ -554,7 +560,7 @@ namespace Golfin.Gameplay.Input
             PublishShotSfx();
 
             float degradYaw = DebugFlags.ForcePerfectAim ? 0f : _degradationYawRad;
-            LastShotWasClean = !IsPutt && Mathf.Approximately(degradYaw, 0f);   // latched for BallTrailController
+            LastShotWasClean = !IsPutt && Mathf.Approximately(degradYaw, 0f);   // latched; no reader today (see the property doc)
             float finetune  = DebugFlags.DisableConeFineTune ? 0f : _aimFinetune;
 
             // shot_aim_parity D1/D2: ONE formula, shared with PublishState (the targeting line).

@@ -384,7 +384,15 @@ namespace Golfin.Gameplay.UI.ShotUI
             _timingSlab.color      = SlabColorFromProgress(prog);
         }
 
-        private Color SlabColorFromProgress(float p)
+        /// <summary>
+        /// The colour the timing slab is painted at slab progress <paramref name="p"/> — the one
+        /// place the arrow's colour is decided. PUBLIC because the ball trail reads it back to
+        /// paint the ribbon in the colour of the arrow the player actually flicked on
+        /// (<see cref="Golfin.Physics.Viewer.BallTrailController"/>): asking the live view is what
+        /// stops the ribbon and the arrow from disagreeing, since the three stops are serialized
+        /// per-scene and the scene's values are NOT the field defaults in this file.
+        /// </summary>
+        public Color SlabColorFromProgress(float p)
         {
             if (p <= ConeBandPalette.BandGoldY01)
             {

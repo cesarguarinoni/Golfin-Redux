@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.Rendering;
 using Golfin.Gameplay.Loop;
 using Golfin.Gameplay.Input;
+using Golfin.Gameplay.UI.ShotUI;
 
 namespace Golfin.Physics.Viewer
 {
@@ -11,18 +12,30 @@ namespace Golfin.Physics.Viewer
     /// Wire via PhysicsLabController.Awake() → Configure(anim, sm, shot).
     ///
     /// Color states:
-    ///   Blue  (#2E9BFF) — normal flight + roll
-    ///   Red   (#FF2E2E) — ball ended OB (whole ribbon flips at OB transition)
-    ///   Gold  (#FFD24A) — perfect shot (full-swing, zero aim degradation, not a putt)
+    ///   Timing colour — the colour the timing slab was showing at the instant the player
+    ///                   flicked, read back from the live ShotConeView so the ribbon and the
+    ///                   arrow can never disagree. This is the normal case for a touch swing.
+    ///   Blue (#2E9BFF) — fallback for a swing with no timing sample at all: bots, capture
+    ///                   drivers, FireDebugShot, the legacy IInputSource path.
+    ///   Black          — ball ended OB (whole ribbon flips at the OB transition).
     ///
-    /// OB overrides perfect: a perfect-tempo shot that still lands OB flips red.
+    /// OB overrides the timing colour: a green-timed shot that still lands OB flips black.
+    /// Black rather than the old red because red now belongs to a badly-timed flick.
     /// </summary>
     public class BallTrailController : MonoBehaviour
     {
         [Header("Trail Colors")]
-        [SerializeField] Color _flightColor  = new Color(0x2E / 255f, 0x9B / 255f, 0xFF / 255f, 1f);  // #2E9BFF blue
-        [SerializeField] Color _obColor      = new Color(0xFF / 255f, 0x2E / 255f, 0x2E / 255f, 1f);  // #FF2E2E red
-        [SerializeField] Color _perfectColor = new Color(0xFF / 255f, 0xD2 / 255f, 0x4A / 255f, 1f);  // #FFD24A gold
+        /// <summary>Only used when the swing carried no timing sample (bot / capture / debug).</summary>
+        [SerializeField] Color _flightColor = new Color(0x2E / 255f, 0x9B / 255f, 0xFF / 255f, 1f);  // #2E9BFF blue
+
+        /// <summary>
+        /// OB ribbon colour. Deliberately a CONSTANT and not a `[SerializeField]`: the old
+        /// serialized value in LabScaffold.unity was red, and a serialized field beats a changed
+        /// C# default, so making this black as a field default would have silently done nothing.
+        /// Black also has to stay distinct from every timing colour — that is the whole point of
+        /// moving off red.
+        /// </summary>
+        static readonly Color ObColor = Color.black;
 
         [Header("Trail Material")]
         [SerializeField] Material _trailMaterial;
@@ -37,6 +50,7 @@ namespace Golfin.Physics.Viewer
         BallAnimator      _anim;
         BallStateMachine  _sm;
         ShotController    _shot;
+        ShotConeView      _coneView;
         TrailRenderer     _tr;
 
         // MPB used for whole-ribbon recolor (hits all already-laid segments)
@@ -49,10 +63,12 @@ namespace Golfin.Physics.Viewer
         /// Called by PhysicsLabController.Awake() after creating the BallStateMachine.
         /// Idempotent: safe to call on re-wire after domain reload.
         /// </summary>
-        public void Configure(BallAnimator anim, BallStateMachine sm, ShotController shot)
+        public void Configure(BallAnimator anim, BallStateMachine sm, ShotController shot,
+                              ShotConeView coneView = null)
         {
-            _anim = anim;
-            _shot = shot;
+            _anim     = anim;
+            _shot     = shot;
+            _coneView = coneView;
 
             // Idempotent re-wire: unsubscribe first to avoid double-subscribe.
             if (_sm != null) _sm.OnStateChanged -= HandleStateChanged;
@@ -82,19 +98,16 @@ namespace Golfin.Physics.Viewer
                     {
                         _tr.Clear();
                         _tr.emitting = true;
-                        Color startColor = (_shot != null && _shot.LastShotWasClean)
-                            ? _perfectColor
-                            : _flightColor;
-                        SetRibbonColor(startColor);
+                        SetRibbonColor(LaunchColor());
                     }
                 }
             }
             else if (c.Next == BallState.OB)
             {
-                // Whole ribbon flips red; stop emitting new segments.
+                // Whole ribbon flips black; stop emitting new segments.
                 if (_tr != null)
                 {
-                    SetRibbonColor(_obColor);
+                    SetRibbonColor(ObColor);
                     _tr.emitting = false;
                 }
             }
@@ -115,6 +128,33 @@ namespace Golfin.Physics.Viewer
                     _tr.emitting = false;
                 }
             }
+        }
+
+        /// <summary>
+        /// The colour this shot's ribbon starts in: the timing slab's own colour at the slab
+        /// position the flick was judged on, so the ribbon in the air is the colour of the arrow
+        /// the player hit the ball with.
+        ///
+        /// Two deliberate choices. (1) The colour is ASKED OF the live <see cref="ShotConeView"/>
+        /// rather than rebuilt from <c>ConeBandPalette</c>: the three slab stops are serialized
+        /// per-scene and LabScaffold's are nothing like the palette constants, so a local copy
+        /// would paint a ribbon the player never saw. (2) Alpha is forced to 1 — the slab is
+        /// half-transparent by design, but the ribbon's own fade is owned by its alpha gradient
+        /// (0.65 → 0), and multiplying the two would wash the trail out.
+        ///
+        /// Falls back to <see cref="_flightColor"/> when there is no timing to show: a sampleless
+        /// swing (NaN) or a scene with no cone view wired.
+        /// </summary>
+        Color LaunchColor()
+        {
+            if (_shot == null || _coneView == null) return _flightColor;
+
+            float timing01 = _shot.LastCommittedTiming01;
+            if (float.IsNaN(timing01)) return _flightColor;
+
+            Color c = _coneView.SlabColorFromProgress(Mathf.Clamp01(timing01));
+            c.a = 1f;
+            return c;
         }
 
         // ── Trail lifecycle ────────────────────────────────────────────────────
@@ -234,15 +274,15 @@ namespace Golfin.Physics.Viewer
         /// <summary>
         /// Capture seam: force the OB recolor on the currently-laid ribbon without
         /// needing a real OB zone in the scene. Simulates the exact same code path
-        /// HandleStateChanged takes on c.Next==OB (SetRibbonColor(_obColor) + emitting=false).
+        /// HandleStateChanged takes on c.Next==OB (SetRibbonColor(ObColor) + emitting=false).
         /// Used ONLY by BallTrailCaptureRunner to demonstrate the whole-ribbon recolor.
         /// </summary>
         public void ForceOBRecolorForCapture()
         {
             if (_tr == null) return;
-            SetRibbonColor(_obColor);
+            SetRibbonColor(ObColor);
             _tr.emitting = false;
-            Debug.Log("[BallTrail] ForceOBRecolorForCapture: ribbon flipped to red, emitting=false");
+            Debug.Log("[BallTrail] ForceOBRecolorForCapture: ribbon flipped to black, emitting=false");
         }
 #endif
     }
