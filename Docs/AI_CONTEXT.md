@@ -5,14 +5,15 @@
 
 ---
 
-## ✅ LATEST — `shot_timing_telemetry` (2026-08-29, awaiting Cesar)
+## ✅ LATEST — `shot_timing_telemetry` DONE (2026-08-29)
 
 **The flick timing now reaches analytics.** F15 made the coloured slab cost power and then the
 number died in `ShotController` — nothing about it left the client, so the two decisions it exists
 for (the F15 tuning: 0.70 / 0.90 and the band edges; and D5 "should putts pay?") had no data behind
 them. Every `shot_taken` now carries `timing01` / `timing_mul` / `timing_band`, and the admin
 dashboard's **Shot quality** section shows the green/gold/red distribution plus the average
-multiplier. Spec + report: `Docs/Specs/Active/shot_timing_telemetry/`. Implemented directly, not
+multiplier. **Approved by Cesar 2026-08-29; folder in `Docs/Specs/Completed/`.** Spec + report:
+`Docs/Specs/Completed/shot_timing_telemetry/`. Implemented directly, not
 through the subagent chain. Commit `c77c7732b`; dashboard deploy `cc9b9dd3-4e00-4598-b0cf-4d6a692f0999`.
 
 **The one non-obvious decision (D1): snapshot at commit, not at complete.**
@@ -36,8 +37,14 @@ Assembly-CSharp cannot see it, so `TelemetryHooks` could not have done this itse
   band `green`) and a red one (`0.12`, `0.75`, `red`) plus a `FireDebugShot` (`null`, `1.0`, `null`)
   are in the production `telemetry_events` table, read back to confirm the null is a real SQL null.
   This is the gesture F15 declared no automation in this project could produce — it can now.
-* **Still open for Cesar:** one look at admin.golfin.world → Telemetry → Shot quality (the card
-  render + the sidebar commit stamp are behind the Cloudflare Access login).
+* **The one thing never machine-verified:** the card *render* on admin.golfin.world and the sidebar
+  commit stamp — both behind the Cloudflare Access login. The data path underneath was verified
+  against production (the deployed panel's own aggregation over the live rows returns
+  `timingSampled 4, green 25 % / gold 0 % / red 75 %, avgTimingMul 0.83`). **Cesar approved on that.**
+* **What this unblocks:** the F15 tuning (are the band edges and 0.70 / 0.90 right?) and D5 (should
+  putts pay the timing penalty?) now have a number to be decided from instead of a feel. Give the
+  beta a few days of rows before reading the distribution — a red share over 40 % turns the card
+  amber and means the window is too tight, not that the testers are bad.
 
 ---
 
