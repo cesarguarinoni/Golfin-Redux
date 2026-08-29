@@ -132,6 +132,14 @@ namespace Golfin.Gameplay.Input
         /// purposes (see spec NOTE P). Latched in CommitFlick; read by BallTrailController on Flying.</summary>
         public bool LastShotWasClean { get; private set; }
 
+        /// <summary>Arrow progress (0..1) sampled when the aim latched on the current swing,
+        /// or NaN when no touch swing latched. Read by tests and the resolution log.</summary>
+        public float LastTimingAtLatch => _timingAtLatch;
+
+        /// <summary>Power multiplier the last committed flick paid for its timing (F15).
+        /// 1.0 for every sampleless driver and whenever ForcePerfectTiming is on.</summary>
+        public float LastTimingPowerMul { get; private set; } = 1f;
+
         // --- Internal state ---
         private float _pullDistancePx;
         private float _arrowProgress;
@@ -149,6 +157,11 @@ namespace Golfin.Gameplay.Input
         private int   _sampleCount;          // total pushed this swing (may exceed buffer size)
         private bool  _aimLocked;
         private float _lowestTouchY = float.NaN;
+
+        /// <summary>Arrow progress captured at the instant the aim latched — the moment the
+        /// player reacted to the slab (F15 D1). NaN = this swing never latched (programmatic
+        /// driver, or the latch was re-opened), which means no timing penalty.</summary>
+        private float _timingAtLatch = float.NaN;
 
         // --- Events ---
         public event Action<ShotInputState>                     OnStateChanged;
@@ -200,8 +213,9 @@ namespace Golfin.Gameplay.Input
                 {
                     // The "reversal" was a wobble: the thumb came back down. Re-open the aim so
                     // lateral aiming at the cone base keeps steering the line (shot_aim_parity D3).
-                    _aimLocked   = false;
-                    _aimFinetune = _coneFinetune;
+                    _aimLocked     = false;
+                    _aimFinetune   = _coneFinetune;
+                    _timingAtLatch = float.NaN;   // F15: the timing sample died with the latch
                 }
                 return;
             }
@@ -210,7 +224,11 @@ namespace Golfin.Gameplay.Input
             if (h <= 0f) return;
             if ((screenPosPx.y - _lowestTouchY) / h >= _reversalThreshold)
             {
-                _aimLocked = true;   // _aimFinetune already holds the bottom-of-swing value
+                _aimLocked     = true;   // _aimFinetune already holds the bottom-of-swing value
+                // F15 D1: the slab as the player saw it when they started the upflick. Sampling
+                // here rather than at release matters — the finger leaves 50–150 ms later, and at
+                // 2 Hz that is 10–30% of the cone, i.e. a whole band.
+                _timingAtLatch = _arrowProgress;
             }
         }
 
@@ -283,6 +301,7 @@ namespace Golfin.Gameplay.Input
             _aimLocked    = false;
             _aimFinetune  = 0f;
             _lowestTouchY   = float.NaN;
+            _timingAtLatch  = float.NaN;
         }
 
 #if UNITY_EDITOR
@@ -534,8 +553,14 @@ namespace Golfin.Gameplay.Input
             // time and spends the handle on the curve instead. Degradation is the only extra term.
             _aimYawRadians = AimYawFor(finetune) + degradYaw;
 
+            // F15 D6: the timing multiplier lands AFTER the overpower clamp, so a 120% pull
+            // flicked on red is 84% — overpowering does not buy you out of bad timing.
+            float timingMul = TimingPowerMultiplier();
+            LastTimingPowerMul = timingMul;
+
             float flickMag = PowerNormalized;
             if (IsPutt || DebugFlags.DisableOverpower) flickMag = Mathf.Min(flickMag, 1f);
+            flickMag *= timingMul;
 
             // Putt mode: pass PuttBaseVelocityMps as explicit override so ControlsConfig
             // drives the velocity, not whatever is in the StatBundle.
@@ -555,6 +580,7 @@ namespace Golfin.Gameplay.Input
                     $"PuttBaseVelocityMps={_config.PuttBaseVelocityMps:F2} " +
                     $"baseVelOverride={baseVelOverride.ToFloat():F2}m/s " +
                     $"halfCone={HalfConeAngleRad() * Mathf.Rad2Deg:F1}deg finetune={finetune:F3} " +
+                    $"timing01={_timingAtLatch:F2} timingMul={timingMul:F2} " +
                     $"aimYawRadians={_aimYawRadians:F3}rad");
             }
 #endif
@@ -603,6 +629,33 @@ namespace Golfin.Gameplay.Input
         }
 
         // ─────────────────────────────── Arrow / timing ─────────────────────
+
+        /// <summary>
+        /// Power multiplier for the timing of this swing (F15, SHOT_CONTROLS_DESIGN §3.4:
+        /// "off-time flicks reduce power"). Piecewise-linear through the SAME band edges the
+        /// slab is coloured with, so the colour under the ball at the moment of the upflick is
+        /// literally the multiplier: red base → <c>TimingPowerMulRed</c>, gold line →
+        /// <c>TimingPowerMulGold</c>, green line and above → 1.0.
+        ///
+        /// Returns 1.0 — a byte-identical shot — when there is no timing to judge (D4): bots,
+        /// capture drivers, FireDebugShot, the legacy IInputSource path and EditMode tests push
+        /// no touch samples so they never latch, and ForcePerfectTiming opts out explicitly.
+        /// </summary>
+        private float TimingPowerMultiplier()
+        {
+            if (DebugFlags.ForcePerfectTiming || float.IsNaN(_timingAtLatch)) return 1f;
+
+            float t     = Mathf.Clamp01(_timingAtLatch);
+            float gold  = _config.TimingBandGoldY01;
+            float green = _config.TimingBandGreenY01;
+
+            if (t >= green) return 1f;
+            if (t >= gold)
+                return Mathf.Lerp(_config.TimingPowerMulGold, 1f,
+                                  (t - gold) / Mathf.Max(1e-4f, green - gold));
+            return Mathf.Lerp(_config.TimingPowerMulRed, _config.TimingPowerMulGold,
+                              t / Mathf.Max(1e-4f, gold));
+        }
 
         private void TickArrow(float dt)
         {
@@ -767,7 +820,8 @@ namespace Golfin.Gameplay.Input
             OnStateChanged.Invoke(new ShotInputState(
                 State, PowerNormalized, _aimFinetune, _arrowProgress,
                 _passIndex, _passIndex >= cleanPasses,
-                IsPutt, liveAim, CameraHeadingRadians));
+                IsPutt, liveAim, CameraHeadingRadians,
+                TimingPowerMultiplier()));
         }
     }
 }

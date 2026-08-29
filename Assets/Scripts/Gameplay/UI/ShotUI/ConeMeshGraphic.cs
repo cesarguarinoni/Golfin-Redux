@@ -53,6 +53,28 @@ namespace Golfin.Gameplay.UI.ShotUI
 
         public float HalfBasePx => _heightPx * Mathf.Tan(_halfAngleDeg * Mathf.Deg2Rad);
 
+        /// <summary>
+        /// F15 (shot_timing_power, D3): re-sync the band lines from <see cref="ConeBandPalette"/>
+        /// — i.e. from ControlsConfig — before the first mesh build. The three fields below are
+        /// serialized, so a prefab authored before the edges moved into config would keep drawing
+        /// its baked-in values while the gameplay multiplier used the config's. Reading them back
+        /// here means the drawn band and the power penalty can never disagree.
+        /// </summary>
+        protected override void OnEnable()
+        {
+            base.OnEnable();
+
+            bool changed = !Mathf.Approximately(_bandRedY01,   ConeBandPalette.BandRedY01)
+                        || !Mathf.Approximately(_bandGoldY01,  ConeBandPalette.BandGoldY01)
+                        || !Mathf.Approximately(_bandGreenY01, ConeBandPalette.BandGreenY01);
+            if (!changed) return;
+
+            _bandRedY01   = ConeBandPalette.BandRedY01;
+            _bandGoldY01  = ConeBandPalette.BandGoldY01;
+            _bandGreenY01 = ConeBandPalette.BandGreenY01;
+            SetVerticesDirty();
+        }
+
         protected override void OnPopulateMesh(VertexHelper vh)
         {
             vh.Clear();

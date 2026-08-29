@@ -19,6 +19,10 @@ MaxCleanPassesAtCC0,1,passes before degradation at CC=0
 CleanPassesPerCC,0.08,additive passes per CC point. Order 732 (2026-07-17): 0.04 -> 0.08 so the reachable CC 0-50 gives 1->5 passes (Common cap 3, Supreme cap 5); MaxTotalPasses stays 10 (Cesar).
 MaxTotalPasses,10,total before auto-cancel
 DegradationYawDegPerPass,2,aim error widening per pass past clean
+TimingBandGoldY01,0.45,slab progress (0=cone base 1=apex) at the GOLD band line. F15 (shot_timing_power 2026-08-29): moved out of ConeBandPalette so the drawn band the player reads and the power penalty they pay share one number. Consumed by ConeBandPalette.BandGoldY01 (drawing) and ShotController.TimingPowerMultiplier (gameplay).
+TimingBandGreenY01,0.85,slab progress at the GREEN band line — flicking at or above it costs nothing. F15. Same shared consumers as TimingBandGoldY01.
+TimingPowerMulRed,0.70,power multiplier when the aim latches at the very bottom of the cone (timing01=0). F15 (D2): flickMag = PowerNormalized * mul is applied AFTER the overpower clamp (D6) so a 120% pull on red is 84%. Feel knob — Cesar tunes.
+TimingPowerMulGold,0.90,power multiplier when the aim latches exactly on the gold line. F15 (D2): mul lerps red->gold below the gold line and gold->1.0 between gold and green. Feel knob — Cesar tunes.
 PuttArrowSpeedMultiplier,0.8,putts get slower arrows. Order 732 (2026-07-17): 0.5 -> 0.8 so the rescaled arrow doesn't compound into absurdly slow putts (Supreme putt was 0.25 Hz/4.0s at 0.5; now 0.40 Hz/2.5s). Kept < 1.0 so putts stay slower/easier than the swing arrow.
 PuttBaseVelocityMps,5,override default putter velocity
 SpinMagScaleSlope,1.5,spin.y magnitude slope (1.5 allows sign-flip topspin at y=+1)

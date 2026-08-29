@@ -414,7 +414,13 @@ namespace Golfin.Gameplay.UI.ShotUI
 
             int   pct = Mathf.RoundToInt(state.PowerNormalized * 100f);
             float yds = _maxCarryYards * state.PowerNormalized;
-            _powerHUD.text = $"{pct}%\n{yds:F0} yd";
+
+            // F15 (shot_timing_power §4): PowerNormalized is still the pull — the swing FELT
+            // full-power, the ball just goes shorter. The timing penalty is shown alongside it
+            // and only once it bites, so a well-timed shot reads exactly as it did before.
+            _powerHUD.text = state.TimingPowerMul < 1f
+                ? $"{pct}% \u00d7 {state.TimingPowerMul:F2}\n{yds:F0} yd"
+                : $"{pct}%\n{yds:F0} yd";
         }
 
         // ── Targeting line ────────────────────────────────────────────────────

@@ -1,4 +1,5 @@
 using UnityEngine;
+using Golfin.Gameplay.Config;
 
 namespace Golfin.Gameplay.UI.ShotUI
 {
@@ -7,10 +8,17 @@ namespace Golfin.Gameplay.UI.ShotUI
     // Edit here to change the visual language without hunting two files.
     public static class ConeBandPalette
     {
-        // Y positions within the cone (0 = base, 1 = apex)
-        public const float BandRedY01   = 0.00f;
-        public const float BandGoldY01  = 0.45f;
-        public const float BandGreenY01 = 0.85f;
+        // Y positions within the cone (0 = base, 1 = apex).
+        //
+        // F15 (shot_timing_power, D3): the gold/green edges are no longer literals here — they
+        // are read from ControlsConfig, which is also what ShotController.TimingPowerMultiplier
+        // reads. The band the player sees and the power penalty they pay are now one number, so
+        // they cannot drift apart. ControlsConfig.Default (not the CSV-loaded config) is the
+        // right source: ShotController's _config is ControlsConfig.Default in production too —
+        // nothing calls InjectConfig outside tests, so controls.csv is documentation today.
+        public const  float BandRedY01   = 0.00f;
+        public static float BandGoldY01  => ControlsConfig.Default.TimingBandGoldY01;
+        public static float BandGreenY01 => ControlsConfig.Default.TimingBandGreenY01;
 
         // Band line half-height in canvas pixels (2px = 4px total — matches Figma reference line weight)
         public const float BandHalfHeightPx = 2f;

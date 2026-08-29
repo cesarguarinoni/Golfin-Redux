@@ -53,6 +53,10 @@ namespace Golfin.Gameplay.Config
                     case "CleanPassesPerCC":               cfg.CleanPassesPerCC               = val; break;
                     case "MaxTotalPasses":                 cfg.MaxTotalPasses                 = val; break;
                     case "DegradationYawDegPerPass":       cfg.DegradationYawDegPerPass       = val; break;
+                    case "TimingBandGoldY01":              cfg.TimingBandGoldY01              = val; break;
+                    case "TimingBandGreenY01":             cfg.TimingBandGreenY01             = val; break;
+                    case "TimingPowerMulRed":              cfg.TimingPowerMulRed              = val; break;
+                    case "TimingPowerMulGold":             cfg.TimingPowerMulGold             = val; break;
                     case "PuttArrowSpeedMultiplier":       cfg.PuttArrowSpeedMultiplier       = val; break;
                     case "PuttBaseVelocityMps":            cfg.PuttBaseVelocityMps            = val; break;
                     case "SpinMagScaleSlope":              cfg.SpinMagScaleSlope              = val; break;

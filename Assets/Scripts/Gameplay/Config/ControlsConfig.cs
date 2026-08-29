@@ -46,6 +46,18 @@ namespace Golfin.Gameplay.Config
         public float MaxTotalPasses;        // treat as int at use site
         public float DegradationYawDegPerPass;
 
+        // Timing bands + off-time power penalty (shot_timing_power, F15)
+        // Band edges are shared by the drawn cone bands (ConeBandPalette), the timing slab
+        // colour (ShotConeView.SlabColorFromProgress) and the power multiplier
+        // (ShotController.TimingPowerMultiplier) so the colour the player reads and the
+        // penalty they pay can never drift apart (D3).
+        public float TimingBandGoldY01;    // slab progress at the gold band line (0 = cone base, 1 = apex)
+        public float TimingBandGreenY01;   // slab progress at the green band line; at/above it = full power
+
+        // Power multiplier at the two band edges (D2). timing01 >= green always yields 1.0.
+        public float TimingPowerMulRed;    // multiplier at timing01 = 0 (bottom of the cone)
+        public float TimingPowerMulGold;   // multiplier at timing01 = TimingBandGoldY01
+
         // Putt mode
         public float PuttArrowSpeedMultiplier;
         public float PuttBaseVelocityMps;
@@ -110,6 +122,10 @@ namespace Golfin.Gameplay.Config
             CleanPassesPerCC               = 0.08f,    // Order 732: 0.04 → 0.08 (mirror controls.csv); CC 0–50 → 1–5 clean passes
             MaxTotalPasses                 = 10f,
             DegradationYawDegPerPass       = 2f,
+            TimingBandGoldY01              = 0.45f,   // F15: was ConeBandPalette.BandGoldY01 (same value)
+            TimingBandGreenY01             = 0.85f,   // F15: was ConeBandPalette.BandGreenY01 (same value)
+            TimingPowerMulRed              = 0.70f,   // F15: flick at the very bottom of the cone = 70% power
+            TimingPowerMulGold             = 0.90f,   // F15: flick on the gold line = 90% power
             PuttArrowSpeedMultiplier       = 0.8f,     // Order 732: 0.5 → 0.8 (mirror controls.csv); avoids compounding into 4 s putt cycles
             PuttBaseVelocityMps            = 5f,
             SpinMagScaleSlope              = 1.5f,

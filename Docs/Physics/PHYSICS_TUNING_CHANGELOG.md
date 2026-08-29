@@ -6,6 +6,114 @@ against the Hole 1 par-5 completability baseline (≤7 strokes with default char
 
 ---
 
+## F15 — Timing slab drives a power multiplier (0.70 / 0.90 / 1.0) (2026-08-29)
+
+**Task:** `shot_timing_power`
+**Reason:** The coloured slab travelling through the ball was **decoration**. Its position and
+colour at the moment of the flick were never read — `CommitFlick` looked at `PowerNormalized` and
+`_degradationYawRad` and nothing else, so flicking on green and flicking on red produced a
+byte-identical shot. Cesar (2026-08-28): *"I am not sure the colored arrows going through the ball
+right now are having any effect either."* They were not. The only timing consequence in the game
+was the pass counter's aim degradation (F13), which is a different mechanic entirely.
+`SHOT_CONTROLS_DESIGN.md §3.4` has always specified the missing half: *"The player flicks when an
+arrow reaches the apex (= perfect timing). Off-time flicks reduce power."*
+**Locked by:** Architect decisions D1–D6 (Cesar tunes by feel via the four `controls.csv` keys).
+
+### The model
+
+`flickMag = PowerNormalized × timingMul`, piecewise-linear through the **same band edges the slab
+is coloured with**, so the colour under the ball at the moment of the upflick *is* the multiplier:
+
+| `timing01` (slab progress, 0 = cone base, 1 = apex) | Multiplier |
+|---|---|
+| `0` (deep red) | `TimingPowerMulRed` = **0.70** |
+| `0 → 0.45` | lerp 0.70 → 0.90 |
+| `0.45` (gold line) | `TimingPowerMulGold` = **0.90** |
+| `0.45 → 0.85` | lerp 0.90 → 1.00 |
+| `≥ 0.85` (green line and above) | **1.00** |
+
+Because velocity is linear in `flickMag` below 1.0 (`ShotInputBuilder`:
+`velMagnitude = baseVel × effectiveFlick × VelocityMultiplier`), the multiplier is a direct
+launch-speed scale: a full-pull driver measured **93.77 m/s** on green and **65.64 m/s** on red.
+
+### Decisions
+
+- **D1 — timing is sampled at the aim latch, not at release.** The player reacts to the slab by
+  *starting* the flick; the finger leaves the screen 50–150 ms later. At the CC-0 arrow speed of
+  2.0 Hz that is **10–30 % of the cone — a whole band**. Sampling `_arrowProgress` at the instant
+  `_aimLocked` flips true is what makes "flick when it is green" mean what it says. The latch is
+  already the bottom-of-swing reversal that `shot_aim_parity` uses for aim, so timing and aim are
+  now read from the same instant.
+- **D2 — the effect is power, not aim.** Per §3.4. The pass counter already owns aim error; adding
+  a second aim term would double-charge the player for one mistake.
+- **D3 — band edges are config, shared by gameplay and drawing.** `TimingBandGoldY01` /
+  `TimingBandGreenY01` moved from `ConeBandPalette` literals into `ControlsConfig`;
+  `ConeBandPalette.BandGoldY01/BandGreenY01` are now getters over `ControlsConfig.Default`, and
+  `ConeMeshGraphic` re-syncs its three serialized band fields from the palette in `OnEnable`. The
+  line the player reads and the penalty they pay cannot drift apart.
+- **D4 — no penalty without a touch swing.** Bots, capture drivers, `FireDebugShot`, EditMode tests
+  and the legacy `IInputSource` path push no touch samples, so they never latch, so
+  `_timingAtLatch` stays `NaN` and the multiplier is exactly 1.0. **Their shots are unchanged.**
+  `DebugFlags.ForcePerfectTiming` also forces 1.0 — the flag finally does what its name says
+  (it previously only bypassed the flick-velocity check).
+- **D5 — applies to putts too.** The putter slab uses the same bands; §3.4 exempts putts only from
+  *degradation* (§4), not from off-time power. **Open for Cesar:** if putts should be exempt it is
+  one `IsPutt` guard at the top of `TimingPowerMultiplier()`.
+- **D6 — the multiplier lands AFTER the overpower clamp.** A 120 % pull flicked on red is 84 %;
+  on green it stays 120 %. Overpowering does not buy you out of bad timing.
+
+### Config added (`ControlsConfig` + `controls.csv`)
+
+| Key | Value | Meaning |
+|---|---|---|
+| `TimingBandGoldY01` | 0.45 | slab progress at the gold band line (was a `ConeBandPalette` literal) |
+| `TimingBandGreenY01` | 0.85 | slab progress at the green band line (was a `ConeBandPalette` literal) |
+| `TimingPowerMulRed` | 0.70 | multiplier at the cone base |
+| `TimingPowerMulGold` | 0.90 | multiplier on the gold line |
+
+The two band values are byte-identical to the literals they replaced, so **nothing moves visually**.
+Note that `ShotController._config` is `ControlsConfig.Default` in production — nothing calls
+`InjectConfig` outside tests — so `controls.csv` remains documentation for these keys as it is for
+every other key (see memory `project_controls_csv_is_inert`); tuning means editing both, as F13 did.
+
+### Completability
+
+**Unaffected.** The Hole 1 par-5 baseline is driven by bots and the FALLBACK path, which push no
+touch samples and therefore multiply by exactly 1.0 (D4). Verified by
+`ShotTimingPowerTests.NoTouchSamples_MultiplierIsOne` and `FireDebugShot_Unaffected`, which assert
+the resolved launch speed is identical to the pre-F15 baseline shot.
+
+### Files
+
+- `Assets/Scripts/Gameplay/Input/ShotController.cs` — `_timingAtLatch`, `TimingPowerMultiplier()`,
+  the `CommitFlick` application, the latch/unlatch/reset sample sites, `LastTimingAtLatch` /
+  `LastTimingPowerMul`, and `timing01=` / `timingMul=` in the `LogResolution` line.
+- `Assets/Scripts/Gameplay/Input/ShotInputState.cs` — `TimingPowerMul` field (defaulted, so the
+  single existing constructor call site is the only one that had to change).
+- `Assets/Scripts/Gameplay/Config/ControlsConfig.cs`, `ControlsConfigLoader.cs`,
+  `Assets/Resources/Gameplay/controls.csv` — the four keys above.
+- `Assets/Scripts/Gameplay/UI/ShotUI/ConeBandPalette.cs` — gold/green become getters over config.
+- `Assets/Scripts/Gameplay/UI/ShotUI/ConeMeshGraphic.cs` — `OnEnable` re-sync of the band fields.
+- `Assets/Scripts/Gameplay/UI/ShotUI/ShotConeView.cs` — one HUD string branch.
+
+### Tests added — `Assets/Scripts/Gameplay/Tests/ShotTimingPowerTests.cs`
+
+- `NoTouchSamples_MultiplierIsOne` — bots/capture/tests pay nothing, at any arrow position.
+- `LatchOnGreen_FullPower` — a latch at 0.9 is exactly a full-power shot.
+- `LatchOnRedBase_RedMultiplier` — a latch at 0.0 resolves at baseline × 0.70.
+- `LatchMidGold_Interpolates` — halfway gold→green is lerp(0.90, 1, 0.5) = 0.95.
+- `ForcePerfectTiming_OverridesRed` — the debug flag waives the penalty.
+- `Unlatch_ClearsSample` — dipping below the swing's low discards the stale sample; the re-latch
+  is what the shot is judged on.
+- `FireDebugShot_Unaffected` — debug/bot shots stay byte-identical.
+- `ConeBandPalette_MatchesConfig` — the drawn bands and the gameplay bands are one number (D3).
+
+Whole `EditMode` suite green: **1977 tests, 1974 passed, 0 failed, 3 pre-existing skips.** Both the
+suite's execution and the multiplier's reach into the resolved velocity were proven with
+tripwires (see `IMPLEMENTER_REPORT.md`), not asserted.
+
+---
+
 ## F14 — Straight-mode aim honours the cone (`AimNudgeRangeRad` removed) (2026-08-28)
 
 **Task:** `shot_aim_parity`

@@ -12,9 +12,15 @@ namespace Golfin.Gameplay.Input
         public readonly float     AimYawRadians;
         public readonly float     CameraHeadingRadians;
 
+        /// <summary>Power multiplier this swing's timing would currently pay (F15,
+        /// shot_timing_power). 1.0 until the aim latches below the green band — and 1.0 for
+        /// every driver that pushes no touch samples. The HUD shows it only when it bites.</summary>
+        public readonly float     TimingPowerMul;
+
         public ShotInputState(ShotState state, float power, float coneFinetune,
                               float arrowProgress, int passIndex, bool isDegrading,
-                              bool isPutt, float aimYaw, float cameraHeading)
+                              bool isPutt, float aimYaw, float cameraHeading,
+                              float timingPowerMul = 1f)
         {
             State               = state;
             PowerNormalized     = power;
@@ -25,6 +31,7 @@ namespace Golfin.Gameplay.Input
             IsPutt              = isPutt;
             AimYawRadians       = aimYaw;
             CameraHeadingRadians = cameraHeading;
+            TimingPowerMul      = timingPowerMul;
         }
     }
 }

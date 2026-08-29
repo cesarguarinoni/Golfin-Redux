@@ -135,6 +135,10 @@ Where:
 
 Arrows travel up the cone. The player flicks when an arrow reaches the apex (= "perfect timing"). Off-time flicks reduce power (existing physics already supports a `flickMagnitude01 < 1.0` reduction).
 
+**IMPLEMENTED 2026-08-29 — `shot_timing_power`, F15.** Until then this paragraph was aspirational: the slab's position and colour at the flick were never read, so a red flick and a green flick produced identical shots. The power reduction now exists as a piecewise-linear multiplier through the same band edges the slab is drawn with (red base 0.70 → gold line 0.90 → green line and above 1.00; `TimingPowerMulRed` / `TimingPowerMulGold` / `TimingBandGoldY01` / `TimingBandGreenY01` in `controls.csv`).
+
+The sample is taken **at the upswing reversal** — the instant the aim latches — not at release. The player reacts to the slab by *starting* the flick; the finger leaves 50–150 ms later, which at the CC-0 arrow speed of 2.0 Hz is 10–30 % of the cone, i.e. a whole band. Sampling at the latch is what makes "flick when it is green" mean what it says. Drivers that push no touch samples (bots, capture, debug shots) never latch and pay nothing. Full rationale: `Docs/Physics/PHYSICS_TUNING_CHANGELOG.md` § F15.
+
 **Pass model (decision Q2b — multi-pass with degradation):**
 
 - First N passes are "clean" — no accuracy degradation. N scales with Club Control: `N = MaxCleanPassesAtCC0 + (charClubControl * CleanPassesPerCC)`, e.g. 1 pass at CC0 → 5 passes at CC100.
