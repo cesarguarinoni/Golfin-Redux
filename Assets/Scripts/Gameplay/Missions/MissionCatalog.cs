@@ -82,6 +82,33 @@ namespace Golfin.Gameplay.Missions
 
         public static void Reload() { _loaded = false; EnsureLoaded(); }
 
+        /// <summary>
+        /// The world XZ extent of one hole, for projecting a start point into its top-down
+        /// thumbnail (§C2's start marker).
+        ///
+        /// It is derived from the hole's OWN BAKED START AREAS rather than from a second table
+        /// of hole extents. Those five points — green, fringe, a 110 m fairway spot, the rough
+        /// beside it, the greenside bunker — already span the part of the hole a player looks
+        /// at, and they are the only per-hole world coordinates this feature has that are
+        /// tracked, drift-gated and reproducible. Inventing a second source would be one more
+        /// thing to keep in step with the bake.
+        ///
+        /// Padded by 15 % so a start ON the boundary does not render on the very edge of the
+        /// thumbnail. False when the hole has no baked areas at all — the caller then draws no
+        /// marker, which is better than one in the wrong place.
+        /// </summary>
+        public static bool TryGetHoleBounds(int holeNumber, out Vector2 min, out Vector2 max)
+        {
+            EnsureLoaded();
+            min = max = Vector2.zero;
+            if (!_holeBounds.TryGetValue(holeNumber, out var b)) return false;
+            min = b.min; max = b.max;
+            return true;
+        }
+
+        private static readonly Dictionary<int, (Vector2 min, Vector2 max)> _holeBounds =
+            new Dictionary<int, (Vector2, Vector2)>();
+
         public static void EnsureLoaded()
         {
             if (_loaded) return;
@@ -117,8 +144,31 @@ namespace Golfin.Gameplay.Missions
             // The same areaId is a DIFFERENT point on a different hole, so indexing by areaId
             // alone would silently start a mission on another hole's green.
             var areaByHoleAndId = new Dictionary<string, Dictionary<string, string>>();
+            _holeBounds.Clear();
+            var boundsAcc = new Dictionary<int, (float minX, float minZ, float maxX, float maxZ)>();
             foreach (var a in areas.Values)
+            {
                 areaByHoleAndId[$"{Str(a, "holeId")}:{Str(a, "areaId")}"] = a;
+
+                // Accumulate the hole's extent from whatever IS baked. Tee rows carry no
+                // coordinates by design, so a hole's box is its short areas — which is the part
+                // of the hole the thumbnail is mostly showing anyway.
+                string sx = Str(a, "x"), sz = Str(a, "z");
+                if (sx.Length == 0 || sz.Length == 0) continue;
+                int hole = Int(a, "holeId");
+                float x = F(sx), z = F(sz);
+                if (!boundsAcc.TryGetValue(hole, out var acc)) boundsAcc[hole] = (x, z, x, z);
+                else boundsAcc[hole] = (Mathf.Min(acc.minX, x), Mathf.Min(acc.minZ, z),
+                                        Mathf.Max(acc.maxX, x), Mathf.Max(acc.maxZ, z));
+            }
+            foreach (var kv in boundsAcc)
+            {
+                var a = kv.Value;
+                float padX = Mathf.Max(1f, (a.maxX - a.minX) * 0.15f);
+                float padZ = Mathf.Max(1f, (a.maxZ - a.minZ) * 0.15f);
+                _holeBounds[kv.Key] = (new Vector2(a.minX - padX, a.minZ - padZ),
+                                       new Vector2(a.maxX + padX, a.maxZ + padZ));
+            }
 
             foreach (var row in missions)
             {

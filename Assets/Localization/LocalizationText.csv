@@ -511,6 +511,7 @@ CHAR_LASTNAME_ROSHANA,Smith,スミス
 # --- missions_v1: screen chrome -------------------------------------------
 MISSIONS_TITLE,MISSIONS,ミッション
 MISSION_COURSE_LOMOND,Lomond Country Club,ロモンドカントリークラブ
+MISSION_HOLE,Hole,ホール
 MISSION_TIER_BEGINNER,BEGINNER,ビギナー
 MISSION_TIER_AMATEUR,AMATEUR,アマチュア
 MISSION_TIER_PRO,PRO,プロ
