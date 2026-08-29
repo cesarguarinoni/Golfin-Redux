@@ -140,6 +140,15 @@ namespace Golfin.Gameplay.Input
         /// 1.0 for every sampleless driver and whenever ForcePerfectTiming is on.</summary>
         public float LastTimingPowerMul { get; private set; } = 1f;
 
+        /// <summary>Arrow progress the LAST COMMITTED flick was judged on (shot_timing_telemetry D1).
+        /// NaN when that flick had no touch sample (bots, capture drivers, EditMode tests).
+        ///
+        /// Distinct from <see cref="LastTimingAtLatch"/>, which reads the LIVE swing sample and is
+        /// wiped by <c>ResetSwingSamples()</c> as soon as the shot completes — by the time the ball
+        /// rests and the telemetry record is built, it is always NaN. This one is latched next to
+        /// <see cref="LastTimingPowerMul"/> in CommitFlick and survives until the next commit.</summary>
+        public float LastCommittedTiming01 { get; private set; } = float.NaN;
+
         // --- Internal state ---
         private float _pullDistancePx;
         private float _arrowProgress;
@@ -557,6 +566,8 @@ namespace Golfin.Gameplay.Input
             // flicked on red is 84% — overpowering does not buy you out of bad timing.
             float timingMul = TimingPowerMultiplier();
             LastTimingPowerMul = timingMul;
+            // Snapshot for telemetry: _timingAtLatch dies with ResetSwingSamples at CompleteShot.
+            LastCommittedTiming01 = _timingAtLatch;
 
             float flickMag = PowerNormalized;
             if (IsPutt || DebugFlags.DisableOverpower) flickMag = Mathf.Min(flickMag, 1f);

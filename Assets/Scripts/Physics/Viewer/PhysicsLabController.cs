@@ -178,6 +178,11 @@ namespace Golfin.Physics.Viewer
         internal Vector3                               LastShotLaunchDir => _lastShotLaunchDir;
         internal Transform                             CurrentBall    => ballAnimator?.CurrentBall;
         internal bool                                  CurrentShotIsPutt => _shotController != null && _shotController.IsPutt;
+
+        /// <summary>The live shot controller, for same-assembly consumers that need the last
+        /// committed swing's state (HoleSessionDriver reads the flick timing for telemetry).
+        /// Null in scaffolds that never wired one.</summary>
+        internal ShotController                        ShotController => _shotController;
         /// <summary>Bot seam: current ball world position (Vector3.zero if ball not yet spawned).</summary>
         public Vector3 BallPosition => ballAnimator != null && ballAnimator.CurrentBall != null
             ? ballAnimator.CurrentBall.position

@@ -381,10 +381,29 @@ function buildShotQuality(rows: Row[]): ShotQuality {
   const cancelled = byName(rows, "shot_cancelled").length;
 
   let obShots = 0;
+  // shot_timing_telemetry: the client owns the band edges and ships the verdict on the
+  // event. A row with a timing01 but no timing_band is NOT re-derived here — re-deriving
+  // would silently fork the tuning numbers the moment ControlsConfig moves.
+  let timingSampled = 0;
+  let timingGreen = 0;
+  let timingGold = 0;
+  let timingRed = 0;
+  const timingMuls: number[] = [];
   const clubs = new Map<string, { shots: number; distances: number[] }>();
   for (const r of taken) {
     const p = payloadOf(r);
     if (str(p.terminal)?.toUpperCase() === "OB") obShots += 1;
+
+    const band = str(p.timing_band)?.toLowerCase() ?? null;
+    if (band === "green" || band === "gold" || band === "red") {
+      timingSampled += 1;
+      if (band === "green") timingGreen += 1;
+      else if (band === "gold") timingGold += 1;
+      else timingRed += 1;
+      const mul = num(p.timing_mul);
+      if (mul !== null) timingMuls.push(mul);
+    }
+
     const club = str(p.club) ?? "(unknown)";
     let c = clubs.get(club);
     if (!c) {
@@ -408,6 +427,11 @@ function buildShotQuality(rows: Row[]): ShotQuality {
     cancelRate: rate(cancelled, cancelled + taken.length),
     obShots,
     obRate: rate(obShots, taken.length),
+    timingSampled,
+    timingGreenRate: rate(timingGreen, timingSampled),
+    timingGoldRate: rate(timingGold, timingSampled),
+    timingRedRate: rate(timingRed, timingSampled),
+    avgTimingMul: mean(timingMuls),
     clubs: clubStats,
   };
 }

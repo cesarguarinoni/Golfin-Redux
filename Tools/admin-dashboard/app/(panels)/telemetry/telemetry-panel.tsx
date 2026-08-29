@@ -495,6 +495,24 @@ export function TelemetryPanel() {
           <Card label={t("tel.shots.taken")} value={shots.shotsTaken.toLocaleString()} />
         </div>
 
+        {/* shot_timing_telemetry: how testers are hitting the coloured slab. Amber when the
+            red share passes 40% — that reads "the window is too tight", not "testers are bad". */}
+        <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          <Card
+            label={t("tel.shots.timing")}
+            value={`${pct(shots.timingGreenRate)} / ${pct(shots.timingGoldRate)} / ${pct(
+              shots.timingRedRate
+            )}`}
+            sub={`${shots.timingSampled.toLocaleString()} ${t("tel.shots.timingSub")}`}
+            hint={t("tel.shots.timingHint")}
+            tone={
+              shots.timingRedRate !== null && shots.timingRedRate > 0.4 ? "amber" : "accent"
+            }
+            wide
+          />
+          <Card label={t("tel.shots.timingMul")} value={dec(shots.avgTimingMul, 2)} />
+        </div>
+
         <div className="mt-3 overflow-x-auto rounded-lg border border-surface-800">
           <table className="w-full min-w-[420px] text-left text-sm">
             <thead className="bg-surface-900 text-xs text-zinc-500">

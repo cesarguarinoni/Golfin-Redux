@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Golfin.Gameplay.Config;
 using UnityEngine;
 
 namespace Golfin.Gameplay.Session
@@ -205,6 +206,43 @@ namespace Golfin.Gameplay.Session
         /// when the ball state machine reaches BallState.InCup.
         /// </summary>
         public static void MarkHoleComplete(HoleCompletionData data) => OnHoleComplete?.Invoke(data);
+
+        // ── shot_timing_telemetry: the flick-timing keys every shot_taken carries ──
+
+        /// <summary>
+        /// The band the player's flick landed in, named with the SAME edges the shot was
+        /// judged with (<see cref="ControlsConfig.Default"/>) so no consumer — dashboard
+        /// included — has to know or re-derive the tuning numbers.
+        ///
+        /// Returns null for a sampleless swing (NaN): bots, capture drivers, FireDebugShot
+        /// and EditMode tests never latch a timing sample. Null, never "red" and never 0 —
+        /// a fake 0 would read as a botched flick in the aggregate.
+        /// </summary>
+        public static string TimingBand(float timing01)
+        {
+            if (float.IsNaN(timing01)) return null;
+            var cfg = ControlsConfig.Default;
+            if (timing01 >= cfg.TimingBandGreenY01) return "green";
+            if (timing01 >= cfg.TimingBandGoldY01)  return "gold";
+            return "red";
+        }
+
+        /// <summary>
+        /// Writes the three timing keys of a <c>shot_taken</c> payload. Lives here rather than
+        /// inline in TelemetryHooks for two reasons: Golfin.Gameplay.Config is not
+        /// auto-referenced (Assembly-CSharp cannot see <c>ControlsConfig</c>), and the keys are
+        /// then reachable from Golfin.Gameplay.Tests — the production shaping is what the tests
+        /// assert, not a copy of it.
+        /// </summary>
+        public static void AppendShotTimingKeys(IDictionary<string, object> payload, in ShotRecord shot)
+        {
+            if (payload == null) return;
+            payload["timing01"]   = float.IsNaN(shot.Timing01)
+                                        ? null
+                                        : (object)System.Math.Round(shot.Timing01, 2);
+            payload["timing_mul"] = System.Math.Round(shot.TimingPowerMul, 2);
+            payload["timing_band"] = TimingBand(shot.Timing01);
+        }
     }
 
     /// <summary>
@@ -223,13 +261,20 @@ namespace Golfin.Gameplay.Session
         public readonly string  FinalSurface;       // best-effort; "Unknown" if not derivable
         public readonly int     PenaltyStrokes;     // §2e: 0 normally, 1 on OB
 
-        // §2e: 9-arg constructor with PenaltyStrokes.
+        /// <summary>Slab progress (0..1) the committed flick was judged on, or NaN when the
+        /// swing pushed no touch sample (bot / capture / debug shot). shot_timing_telemetry D2.</summary>
+        public readonly float   Timing01;
+        /// <summary>Power multiplier that timing cost the shot (F15). 1.0 = no penalty.</summary>
+        public readonly float   TimingPowerMul;
+
+        // shot_timing_telemetry: 11-arg constructor with the flick-timing pair.
         public ShotRecord(
             int shotNumber, string clubLabel,
             Vector3 originPosition, Vector3 finalPosition,
             float distanceXZMeters,
             string terminalState, string obReason, string finalSurface,
-            int penaltyStrokes)
+            int penaltyStrokes,
+            float timing01, float timingPowerMul)
         {
             ShotNumber       = shotNumber;
             ClubLabel        = clubLabel;
@@ -240,7 +285,21 @@ namespace Golfin.Gameplay.Session
             OBReason         = obReason;
             FinalSurface     = finalSurface;
             PenaltyStrokes   = penaltyStrokes;
+            Timing01         = timing01;
+            TimingPowerMul   = timingPowerMul;
         }
+
+        // §2e: 9-arg constructor preserved — forwards with "no timing sample, no penalty".
+        public ShotRecord(
+            int shotNumber, string clubLabel,
+            Vector3 originPosition, Vector3 finalPosition,
+            float distanceXZMeters,
+            string terminalState, string obReason, string finalSurface,
+            int penaltyStrokes)
+            : this(shotNumber, clubLabel, originPosition, finalPosition,
+                   distanceXZMeters, terminalState, obReason, finalSurface, penaltyStrokes,
+                   float.NaN, 1f)
+        { }
 
         // §2c: existing 8-arg constructor preserved — forwards to new ctor with PenaltyStrokes=0.
         public ShotRecord(

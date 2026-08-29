@@ -113,6 +113,13 @@ namespace Golfin.Physics.Viewer
             // §2e: OB shots get +1 penalty stroke.
             int penaltyStrokes = (result.TerminalState == BallState.OB) ? 1 : 0;
 
+            // shot_timing_telemetry: read the flick timing the shot was JUDGED on. These are
+            // the CommitFlick snapshots, not the live swing state — by now the ball has come to
+            // rest and TransitionToIdle has already wiped ShotController.LastTimingAtLatch.
+            var sc = controller != null ? controller.ShotController : null;
+            float timing01 = sc != null ? sc.LastCommittedTiming01 : float.NaN;
+            float timingMul = sc != null ? sc.LastTimingPowerMul : 1f;
+
             return new ShotRecord(
                 shotNumber: GameSession.TurnCount,
                 clubLabel: clubLabel,
@@ -122,7 +129,9 @@ namespace Golfin.Physics.Viewer
                 terminalState: result.TerminalState.ToString(),
                 obReason: obReason,
                 finalSurface: finalSurface,
-                penaltyStrokes: penaltyStrokes);
+                penaltyStrokes: penaltyStrokes,
+                timing01: timing01,
+                timingPowerMul: timingMul);
         }
 
         /// <summary>

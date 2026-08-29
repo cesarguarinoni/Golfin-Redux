@@ -297,7 +297,7 @@ namespace GolfinRedux.TelemetryRuntime
                 TelemetryService.Instance.RecordSafe(TelemetryEventNames.ShotTaken, () =>
                 {
                     var shot = GameSession.ShotHistory[GameSession.ShotHistory.Count - 1];
-                    return new Dictionary<string, object>
+                    var payload = new Dictionary<string, object>
                     {
                         ["shot_number"] = shot.ShotNumber,
                         ["club"]        = shot.ClubLabel,
@@ -308,6 +308,13 @@ namespace GolfinRedux.TelemetryRuntime
                         ["penalty"]     = shot.PenaltyStrokes,
                         ["hole"]        = GameSession.CurrentHoleNumber,
                     };
+                    // shot_timing_telemetry: timing01 / timing_mul / timing_band. Written by
+                    // GameSession (which can see ControlsConfig's band edges — this assembly
+                    // cannot, Golfin.Gameplay.Config is not auto-referenced). timing01 and
+                    // timing_band are null, never 0/"red", for a sampleless swing — same
+                    // nullable path ob_reason already uses.
+                    GameSession.AppendShotTimingKeys(payload, shot);
+                    return payload;
                 });
             });
         }

@@ -120,24 +120,58 @@ const PLAN: SessionPlan[] = [
 ];
 
 /** Per-hole shot script — fixed, so avg strokes / OB rate never move. */
-const SHOTS: Record<number, { club: string; distance: number; terminal: string; surface: string; penalty: number }[]> = {
+/**
+ * shot_timing_telemetry: `timing` is the slab progress the flick was judged on, exactly as
+ * the client ships it — null for the shots a bot/debug driver took (no touch sample). The
+ * band and the multiplier are derived from it with the shipped ControlsConfig edges below,
+ * so the fixture cannot drift from the client's own verdict by hand-editing one of the three.
+ */
+const SHOTS: Record<
+  number,
+  { club: string; distance: number; terminal: string; surface: string; penalty: number; timing: number | null }[]
+> = {
   1: [
-    { club: "Driver", distance: 214.4, terminal: "AtRest", surface: "Fairway", penalty: 0 },
-    { club: "7 Iron", distance: 132.1, terminal: "AtRest", surface: "Green", penalty: 0 },
-    { club: "Putter", distance: 6.3, terminal: "InCup", surface: "Green", penalty: 0 },
+    { club: "Driver", distance: 214.4, terminal: "AtRest", surface: "Fairway", penalty: 0, timing: 0.91 },
+    { club: "7 Iron", distance: 132.1, terminal: "AtRest", surface: "Green", penalty: 0, timing: 0.62 },
+    { club: "Putter", distance: 6.3, terminal: "InCup", surface: "Green", penalty: 0, timing: 0.88 },
   ],
   2: [
-    { club: "Driver", distance: 231.8, terminal: "OB", surface: "OOB", penalty: 1 },
-    { club: "Driver", distance: 198.2, terminal: "AtRest", surface: "Rough", penalty: 0 },
-    { club: "9 Iron", distance: 96.7, terminal: "AtRest", surface: "Green", penalty: 0 },
-    { club: "Putter", distance: 4.1, terminal: "InCup", surface: "Green", penalty: 0 },
+    { club: "Driver", distance: 231.8, terminal: "OB", surface: "OOB", penalty: 1, timing: 0.18 },
+    { club: "Driver", distance: 198.2, terminal: "AtRest", surface: "Rough", penalty: 0, timing: 0.47 },
+    { club: "9 Iron", distance: 96.7, terminal: "AtRest", surface: "Green", penalty: 0, timing: null },
+    { club: "Putter", distance: 4.1, terminal: "InCup", surface: "Green", penalty: 0, timing: 0.93 },
   ],
   3: [
-    { club: "Driver", distance: 205.9, terminal: "AtRest", surface: "Bunker", penalty: 0 },
-    { club: "S.Wedge", distance: 61.4, terminal: "AtRest", surface: "Green", penalty: 0 },
-    { club: "Putter", distance: 9.8, terminal: "InCup", surface: "Green", penalty: 0 },
+    { club: "Driver", distance: 205.9, terminal: "AtRest", surface: "Bunker", penalty: 0, timing: 0.31 },
+    { club: "S.Wedge", distance: 61.4, terminal: "AtRest", surface: "Green", penalty: 0, timing: 0.72 },
+    { club: "Putter", distance: 9.8, terminal: "InCup", surface: "Green", penalty: 0, timing: null },
   ],
 };
+
+/** The shipped ControlsConfig.Default band edges + multipliers (F15). Kept here only so the
+ *  fixture's three keys stay mutually consistent — the real client is the source of truth. */
+const TIMING_GOLD_Y01 = 0.45;
+const TIMING_GREEN_Y01 = 0.85;
+const TIMING_MUL_RED = 0.7;
+const TIMING_MUL_GOLD = 0.9;
+
+function timingBand(t: number | null): string | null {
+  if (t === null) return null;
+  if (t >= TIMING_GREEN_Y01) return "green";
+  if (t >= TIMING_GOLD_Y01) return "gold";
+  return "red";
+}
+
+function timingMul(t: number | null): number {
+  if (t === null) return 1;
+  if (t >= TIMING_GREEN_Y01) return 1;
+  const mul =
+    t >= TIMING_GOLD_Y01
+      ? TIMING_MUL_GOLD +
+        ((1 - TIMING_MUL_GOLD) * (t - TIMING_GOLD_Y01)) / (TIMING_GREEN_Y01 - TIMING_GOLD_Y01)
+      : TIMING_MUL_RED + ((TIMING_MUL_GOLD - TIMING_MUL_RED) * t) / TIMING_GOLD_Y01;
+  return Math.round(mul * 100) / 100;
+}
 
 const PAR: Record<number, number> = { 1: 4, 2: 5, 3: 4 };
 /**
@@ -252,6 +286,9 @@ function buildRows(): MockEventRow[] {
           surface: shot.surface,
           penalty: shot.penalty,
           hole,
+          timing01: shot.timing,
+          timing_mul: timingMul(shot.timing),
+          timing_band: timingBand(shot.timing),
         });
       });
 

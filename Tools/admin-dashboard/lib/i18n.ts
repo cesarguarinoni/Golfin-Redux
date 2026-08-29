@@ -790,6 +790,13 @@ export const DICT = {
   "tel.shots.col.club": { en: "Club", ja: "クラブ" },
   "tel.shots.col.shots": { en: "Shots", ja: "ショット数" },
   "tel.shots.col.distance": { en: "Avg distance", ja: "平均飛距離" },
+  "tel.shots.timing": { en: "Flick timing — green / gold / red", ja: "フリックのタイミング — 緑 / 金 / 赤" },
+  "tel.shots.timingSub": { en: "sampled shots", ja: "計測ショット数" },
+  "tel.shots.timingHint": {
+    en: "Share of touch flicks landing in each band of the coloured slab, as judged by the client with the same edges the shot paid for. Bot, capture and debug shots carry no timing and are excluded. Amber over 40% red: testers cannot hit the window — widen TimingBandGreenY01.",
+    ja: "タッチフリックが色付きスラブの各バンドに入った割合。ショットに適用されたのと同じ境界値でクライアントが判定する。ボット・キャプチャ・デバッグショットはタイミングを持たないため除外。赤が40%を超えると警告色：テスターがウィンドウに合わせられていない → TimingBandGreenY01 を広げる。",
+  },
+  "tel.shots.timingMul": { en: "Avg power multiplier", ja: "平均パワー倍率" },
   "tel.shots.none": { en: "No shots recorded in this range.", ja: "この期間に記録されたショットはありません。" },
 
   "tel.testers.title": { en: "Testers", ja: "テスター" },

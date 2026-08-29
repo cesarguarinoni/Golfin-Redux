@@ -594,6 +594,15 @@ export interface ShotQuality {
   cancelRate: number | null;
   obShots: number;
   obRate: number | null;
+  /** shot_taken rows that carried a timing_band — i.e. real touch flicks. Bots,
+   *  capture drivers and debug shots send null and are excluded from the shares. */
+  timingSampled: number;
+  /** Each ÷ timingSampled; null when nothing was sampled in range. */
+  timingGreenRate: number | null;
+  timingGoldRate: number | null;
+  timingRedRate: number | null;
+  /** Mean timing_mul over the sampled rows. 1.0 = nobody is paying for their timing. */
+  avgTimingMul: number | null;
   clubs: ClubStat[];
 }
 
