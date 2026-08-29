@@ -513,14 +513,16 @@ rows). The repo is AHEAD, so it needs a re-seed of those two keys, not an export
 
 ---
 
-## 🟢 BUILT, WAITING ON CESAR'S PHONE — `starter_restore_gate` (2026-08-30)
+## ✅ DONE — `starter_restore_gate`, approved by Cesar 2026-08-30
 
 > **A signed-in tester who deleted and reinstalled was asked to pick a starting character they had
 > owned for weeks. The server was never the problem.** `content_player_inventory` has written
 > `starterCharacterId` into `profiles.golfin_inventory` under the `starter` key since 2026-08-26, and
 > `InventoryProjector.Apply` fills it back on restore. **Two client gaps did it, and both are now
-> closed.** Spec + report: `Docs/Specs/Active/starter_restore_gate/`. Implemented directly by the
-> main Claude Code thread at Cesar's instruction — no implementer / self-reviewer / red-team chain.
+> closed.** Spec + report: `Docs/Specs/Completed/starter_restore_gate/`. Commits `317dc608c` +
+> `d950e2ec3`. Implemented directly by the main Claude Code thread at Cesar's instruction — no
+> implementer / self-reviewer / red-team chain ran, so `SELF_REVIEW.md` and `ARCHITECT_REVIEW.md`
+> were never created.
 >
 > - **Gap 1 — routing raced the restore.** `InventorySyncService.Boot()` is asynchronous and nothing
 >   waited on it, while all three post-auth routers read `CharacterManager.NeedsStarter` —
@@ -556,10 +558,19 @@ rows). The repo is AHEAD, so it needs a re-seed of those two keys, not an export
 >   setup, so a **tripwire run** proves the new classes actually execute: one `Assert.Fail` per new
 >   class gave 2065/2 failed naming both, then removed and re-run green. No prefab, scene, CSV,
 >   localization or playlife edits — zero new `.text` literals (grep quoted in the report).
-> - **⏳ THE WORLD-CHECK IS CESAR'S:** delete the app, install from TestFlight, sign in with an
->   account that has a starter → Home, never the picker, roster and bag intact in the SAME session.
->   This is the `content_player_inventory` "restore-after-reinstall device pass" — see the batched
->   device-pass list below, item (a), which now names what to look for.
+> - **The `content_player_inventory` "restore-after-reinstall device pass" is CLOSED as an open
+>   item** — not because it was run, but because it has been ANSWERED. That pass existed to find out
+>   whether a reinstalled player gets their inventory back; the answer was "no, and here is exactly
+>   why", found by reading the code, and the two defects are fixed and verified. What remains is
+>   ordinary on-device confirmation, which now rides with the batched content-pipeline device pass
+>   below (item (a)) rather than standing as its own open question. No item was lost — it was
+>   deduplicated.
+> - **A correction worth keeping.** The device criterion first written here demanded a LOG-LINE
+>   ORDERING (`Restored/merged server inventory` before `ApplyScreen: Home`) from a TestFlight build
+>   on a phone — which means cabling it to a Mac and streaming Console.app. Cesar rejected it, and he
+>   was right: it is redundant with what the screen already shows. **If the restore had not beaten
+>   the routing the picker WOULD appear; if the managers had not re-read, Home WOULD be empty.**
+>   Acceptance for a device has to be checkable on the device. See `tasks/lessons.md` Lesson BP.
 
 ---
 
@@ -582,8 +593,10 @@ rows). The repo is AHEAD, so it needs a re-seed of those two keys, not an export
 >   the bag comes back. (b) A grant: issue one from the admin Users drawer, relaunch, confirm it
 >   applied EXACTLY once and did not come back on the launch after that. Both are blocked on the
 >   migration being applied + `playlife-api` deployed — see the entry below.
->   ⚠️ **(a) WOULD HAVE FAILED ON THE CLIENT, AND THAT IS NOW FIXED — re-run it against a build
->   carrying `starter_restore_gate` (2026-08-30), not an older one.** The blob was always right; the
+>   ⚠️ **(a) WOULD HAVE FAILED ON THE CLIENT, AND THAT IS NOW FIXED (`starter_restore_gate`, DONE
+>   2026-08-30) — run it against a build carrying that fix, not an older one.** This is also where
+>   the `content_player_inventory` "restore-after-reinstall device pass" now lives; it is no longer
+>   tracked separately. The blob was always right; the
 >   client asked `NeedsStarter` before the fetch answered and re-showed the starter picker, and the
 >   runtime managers never re-read the save after the restore, so the roster and bag stayed empty
 >   for the session.

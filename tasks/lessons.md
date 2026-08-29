@@ -3079,3 +3079,47 @@ real bugs, one of them chased for a long time.
 Corollary — when several unrelated things break at once in play mode (raw localization keys, null
 statics on live singletons, a feature that worked an hour ago), suspect ONE stale-assembly cause
 before investigating them separately. The cluster is the tell.
+
+---
+
+## Lesson BP — acceptance for a device has to be checkable on that device (2026-08-30, `starter_restore_gate`)
+
+I closed the task by telling Cesar to confirm, on his phone, that
+`[InventorySync] Restored/merged server inventory (rev N)` appeared **before**
+`[ScreenManager] ApplyScreen: Home`. His reply: *"How the fuck do you expect me to check ... in a
+build?"*
+
+He was right twice over.
+
+**First, it isn't practical.** Reading a Unity `Debug.Log` out of a TestFlight build means cabling
+the phone to the Mac and streaming Console.app filtered on process `Golfin`. That is a real cost
+imposed on the one person whose time the whole pipeline exists to protect, and I imposed it in a
+sentence, without noticing.
+
+**Second, and worse, it wasn't even necessary.** The two log lines were redundant with what the
+screen already showed:
+
+* If the restore had NOT beaten the routing, the starter picker WOULD appear. Its absence *is* the
+  ordering proof.
+* If the managers had NOT re-read the restored save, Home WOULD show an empty roster. A populated
+  roster and bag *is* the re-hydrate proof.
+
+I had reached for the log line because it was the mechanism I had been staring at for an hour, not
+because it was the best available evidence. **The mechanism you debugged with is rarely the evidence
+the reviewer should be handed.**
+
+**The rule.** Before writing any acceptance item, ask: *on the surface this person will actually be
+holding, can they execute this?* A device criterion must be observable on the device — something
+seen, tapped, or counted on screen. If the only proof you can think of needs a cable, a log stream,
+or a debugger, you have not finished thinking about the proof.
+
+**Where it came from.** The SPEC's own § Smoke evidence asked for the log ordering, and I propagated
+it verbatim into `Docs/AI_CONTEXT.md` as the device instruction. Inheriting a criterion from the spec
+does not exempt it from being checkable — the spec author was describing the mechanism, and turning
+that into a human's checklist was my job to do properly.
+
+**Sister trap, found while fixing this and worth as much:** the run would have been silently void if
+he had used **"Offload App"** instead of **Delete**. Offload keeps the data container, so the local
+save survives, `NeedsStarter` is false from the start, and the test proves nothing while appearing to
+pass. When an acceptance step depends on a clean install, say *delete*, and say what the near-miss
+gesture does.
