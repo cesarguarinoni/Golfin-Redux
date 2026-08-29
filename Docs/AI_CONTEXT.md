@@ -5,7 +5,55 @@
 
 ---
 
-## ✅ LATEST — `shot_timing_telemetry` DONE (2026-08-29)
+## 🟡 IN FLIGHT — `missions_v1` **Phase A landed** (2026-08-29)
+
+**Missions has a server-authoritative economy before it has a door.** Seven content catalogs, the
+tables and endpoints that decide and pay what a mission clear is worth, the deterministic daily
+generator, and three admin panels. **Nothing here is reachable by a player** — `modes.missions.locked`
+is still `true` in the bundled CSV, and Cesar opens the mode with a publish, not a build. Spec and
+report: `Docs/Specs/Active/missions_v1/`. Commits `0ef3bd912` (GolfinRedux) + `56195af` (playlife);
+dashboard deploy `4ccabd61-e47c-402b-a9b8-1ac49f890088`.
+
+**Why this order matters.** The shop, the level-up and the mode entry fee each had to be made
+server-authoritative *after* players were already walking through them — `routers/points.py`'s three
+`LEGACY_*` constants are the record of what that cost (the mode-entry closure 400s every installed
+client until the next build ships). Missions is the first mode where the economy is closed before
+the door opens. A client says "I cleared mission 7 in 4 strokes"; `golfin_mission_claim()` reads what
+mission 7 pays out of the `golfin_mission_rewards` mirror, decides first-clear vs replay from
+`mission_progress`, credits through `earn_pts_v2` and records the clear — one transaction, one key.
+`goals_met` stays a client claim (the server cannot re-simulate a golf hole); the AMOUNT never is.
+
+**The check that keeps the whole thing honest.** `mission_goal_weights.csv` is an *expansion* of the
+design workbook's prose (`"≤150→0, ≤200→1, else 2"` became rows with a `match` column), so the only
+real proof the expansion is faithful is that scoring the 40 shipped missions with it reproduces the
+40 `difficultyScore` values the designer wrote by hand. It does — **in both languages**, because the
+dashboard cannot import Python and the daily generator cannot import TypeScript, and that shared
+fixed point is what stops the two implementations drifting.
+
+* **Gates:** backend **172 passed** (51 new), dashboard **126 passed** (88 new), `Tools/content`
+  **26 passed**, `tsc --noEmit` clean, `next build` green, deployed from a clean tree.
+* **Round-trip proven offline:** the generated seed SQL parsed back into rows and re-rendered
+  through the real `export_content.render_csv` — all 7 catalogs byte-identical, without a live DB.
+* **One real bug the tests found:** with short start areas unbaked (the actual Phase A state) the
+  daily generator drew `startKind=short` ~45 % of days and then raised, taking the daily down for
+  half of every week. It now draws only from kinds that have a usable area.
+* **⚠️ THREE STEPS ARE CESAR'S**, and Phase A is not complete without them: apply
+  `2026_08_29_missions.sql` then `2026_08_29_content_missions_seed.sql`, publish `texts`, then
+  publish `missions` + `mission_tiers` (that publish is what writes the two mirrors, so it needs the
+  migration first). `export_content.py --check` comes back clean only after all three; today it
+  correctly reports the seven catalogs as empty server-side.
+* **Two spec deviations worth knowing** (full list in the report): localization keys are
+  `UPPER_SNAKE`, not the spec's dotted `mission.<key>.name` — a dotted key could never be created
+  from the admin, which is the surface §A7 requires every string to pass through; and
+  `daily_mission`'s caps are 60, not 30, because the `DOUBLE_RP` modifier pays 2× base and a cap of
+  30 would make a DOUBLE_RP day silently unpayable.
+* **Next:** Phase B — the Unity start-area bake (`Golfin/Missions/Bake Start Areas`) fills the 162
+  slot rows' coordinates and `pin_count`, then `MissionSession` (spawn / pin / wind / stroke cap /
+  stamina), the session bag, and the goal evaluator.
+
+---
+
+## ✅ PREVIOUS — `shot_timing_telemetry` DONE (2026-08-29)
 
 **The flick timing now reaches analytics.** F15 made the coloured slab cost power and then the
 number died in `ShotController` — nothing about it left the client, so the two decisions it exists
