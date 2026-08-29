@@ -121,8 +121,14 @@ namespace GolfinRedux.Tests.EditMode
             Assert.AreEqual("hole_select", Field<string>(practice, "target"));
             Assert.IsFalse(Field<bool>(practice, "locked"));
 
+            // Missions shipped locked until 2026-08-29, when the mode opened (bundled floor
+            // locked=false, published as `modes` v8). Asserting the ROUTE as well as the flag:
+            // an unlocked card pointing at a target no build can reach is the failure mode this
+            // suite caught once already, when Phase A set target=none.
             object missions = Find(modes, "missions")!;
-            Assert.IsTrue(Field<bool>(missions, "locked"), "Missions ships Coming Soon");
+            Assert.IsFalse(Field<bool>(missions, "locked"), "Missions ships unlocked");
+            Assert.AreEqual("mission_select", Field<string>(missions, "target"),
+                "an unlocked Missions card must route at the screen that exists");
 
             object versus = Find(modes, "versus_1v1")!;
             Assert.AreEqual(5, Field<int>(versus, "versusStrokeCapOverPar"));
