@@ -586,10 +586,24 @@ rows). The repo is AHEAD, so it needs a re-seed of those two keys, not an export
 >   carrying `starter_restore_gate` (2026-08-30), not an older one.** The blob was always right; the
 >   client asked `NeedsStarter` before the fetch answered and re-showed the starter picker, and the
 >   runtime managers never re-read the save after the restore, so the roster and bag stayed empty
->   for the session. **What to look for on the pass:** `[InventorySync] Restored/merged server
->   inventory (rev N)` must appear BEFORE `[ScreenManager] ApplyScreen: Home`, the picker must never
->   appear, and Roster/Bag must show the pre-delete contents in the SAME session (not after a second
->   launch). Airplane mode mid-sign-in must give `AUTH_ERR_OFFLINE` + a retry — never the picker.
+>   for the session.
+>   **What to look for on the pass — EYES ONLY, no log reading.** Three things on screen, and each
+>   one IS the proof of one half of the fix:
+>     1. **The starter picker never appears.** If the restore had not beaten the routing, it would —
+>        that is exactly the bug. Not seeing it is the ordering proof.
+>     2. **Home lands with the roster and bag already populated, in the SAME session** (not after a
+>        second launch). If the managers had not re-read the restored save, Home would show an empty
+>        roster. Seeing the pre-delete characters + levels + clubs is the re-hydrate proof.
+>     3. **Airplane mode mid-sign-in shows "No internet connection. Please try again."** and a retry
+>        that works when you turn it back on — and NEVER the picker.
+>   ⚠️ **DELETE the app, do not "Offload App".** Offload keeps the data container, so the local save
+>   survives, `NeedsStarter` is false from the start and the test proves nothing.
+>   *(The `[InventorySync] Restored/merged server inventory (rev N)` line the SPEC's § Smoke evidence
+>   asks for is NOT a requirement of this pass — reading it from a TestFlight build means cabling the
+>   phone to the Mac and streaming Console.app, and it says nothing the three checks above do not.
+>   If you happen to want it: Console.app ▸ pick the iPhone in the sidebar ▸ Start streaming ▸ filter
+>   on process `Golfin`. If the lines do not show there, that is a log-visibility question about
+>   release builds, not a failure of the feature.)*
 > - ⚠️ **BRIEF THE TESTERS BEFORE THE PASS, not after.** Two things will otherwise arrive as bug
 >   reports: (1) **the save schema is now v11 and the migrator fails hard on a newer-than-code
 >   file** — a tester who rolls a TestFlight build BACK to a v10 binary cannot read their v11 save.

@@ -54,8 +54,8 @@ above (see § Console output).
 | **EditMode:** `CharacterManager.ReloadFromSave` after a projector `Apply` (starter=X, ownedCharacters=[X]) → owned + `OnRosterChanged` once | PASS (play-mode, see deviation 1) | Live play mode against the real save: added `char_olivia` to `save.ownedCharacters`, fired `OnRestored` → `GetAllOwnedCharacters()` 1 → 2, contains `char_olivia` with `isOwned`, `OnRosterChanged` fired exactly **1**; reverted to 1. The EditMode half of the contract (`OnRestored` fires once, only when the merge changed something, and *before* `OnBootFinished`) is `InventoryBootOutcomeTests`. |
 | **EditMode:** `ClubManager.RehydrateFromSave` → level matches, `clubOwnershipSeeded` untouched, no second seed | PASS (play-mode, see deviation 1) | Live: `club_driver_golfin_common` persisted lv 11 → set 14 → `OnRestored` → runtime lv **14**, `OnInventoryChanged` fired **1**, `clubOwnershipSeeded` still `True`, club count unchanged at **7** (no re-seed); reverted to 11. |
 | **EditMode:** `RosterScreenController` starter mode + `OnRosterChanged` with a starter set → Home; without → stays | PASS (play-mode, see deviation 1) | Live: `ShowScreen(StartingCharacterSelection)`; with `starterCharacterId=""` a roster change left `CurrentScreen = StartingCharacterSelection`; restoring `char_james` and firing again gave `CurrentScreen = Home`. |
-| **Device:** delete + reinstall on Cesar's iPhone → Home, never the picker; roster + bag match | **OPEN — Cesar** | Cannot be run from here. This is the world-check and the reason the task exists; the two log lines to look for are `[InventorySync] Restored/merged server inventory (rev N)` **before** `[ScreenManager] ApplyScreen: Home`. |
-| **Device:** airplane mode before the gate resolves → `AUTH_ERR_OFFLINE`, no picker; retry → Home | **OPEN — Cesar** | The logic is covered by `A_failed_fetch_resolves_ServerUnreachable` + `Retry_after_a_failure_...`; the on-device surfacing of the message is his to see. |
+| **Device:** delete + reinstall on Cesar's iPhone → Home, never the picker; roster + bag match | **OPEN — Cesar** | Cannot be run from here. This is the world-check and the reason the task exists. **Checked by eye, not by log** — see § Deviation 7: the picker not appearing IS the ordering proof, and a populated roster/bag on Home in the same session IS the re-hydrate proof. Delete the app; do NOT "Offload App" (that keeps the data container and the test proves nothing). |
+| **Device:** airplane mode before the gate resolves → `AUTH_ERR_OFFLINE`, no picker; retry → Home | **OPEN — Cesar** | The logic is covered by `A_failed_fetch_resolves_ServerUnreachable` + `Retry_after_a_failure_...`; on device it reads "No internet connection. Please try again." and the next tap retries the fetch. Eyes only. |
 | **Device:** brand-new account → picker once; pick; delete + reinstall → Home | **OPEN — Cesar** | Same run as above, second account. |
 | Existing device with a local starter: no network wait on Login → Home | PASS | Live play mode on Cesar's own signed-in save: `StarterGate.Resolve` returned `[Ready]` **synchronously**, frame delta **0**, with `NeedsStarter=False`. Test (a) asserts the same with a fetch counter. |
 | Bot harness + demo path byte-identical | PASS | `A_bypassed_path_resolves_Ready_immediately_with_no_fetch` — `Ready`, 0 fetches, 0 boot requests. `StarterGate.BypassProbe` short-circuits on `BotSessionOverride.Active` (inside the existing `#if UNITY_EDITOR \|\| GOLFIN_BOT_HARNESS` guard), `DemoGate.IsDemo`, and `SendsEnabled == false`, before any service state is read. Splash's bot branch still calls `RouteAuthenticated()` unchanged. |
@@ -108,6 +108,18 @@ above (see § Console output).
    (`CharacterManager.LoadRoster`'s existing clamp). That is pre-existing behaviour, not introduced
    here, but it means "the roster matches what it was before the delete" is only true up to the
    catalog's own clamps.
+7. **The SPEC's § Smoke evidence asks for a LOG-LINE ORDERING that the device pass cannot reasonably
+   produce, so the device criterion is stated as an on-screen one instead.** The spec wants
+   `[InventorySync] Restored/merged server inventory (rev N)` quoted *before* the `ShowScreen(Home)`
+   line. Reading either from a TestFlight build on a phone means cabling it to the Mac and streaming
+   Console.app — a real cost for evidence that is **redundant with what the screen already shows**:
+   if the restore had not beaten the routing the picker WOULD appear (so its absence is the ordering
+   proof), and if the managers had not re-read the restored save Home WOULD show an empty roster (so
+   a populated roster/bag in the same session is the re-hydrate proof). The pass is therefore: no
+   picker, Home populated in the same session, airplane-mode shows the offline message and retries.
+   The log-line check is kept as optional colour, not a gate. `Docs/AI_CONTEXT.md`'s device-pass
+   entry carries the same wording, plus the trap that matters: **delete the app, do not "Offload
+   App"** — offload keeps the data container, so the local save survives and the test proves nothing.
 
 ## Console output
 
