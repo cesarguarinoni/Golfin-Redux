@@ -5,7 +5,7 @@
 
 ---
 
-## 🟡 IN FLIGHT — `missions_v1` **Phases A + B LIVE ON PROD** (2026-08-29)
+## 🟡 IN FLIGHT — `missions_v1` **Phases A + B LIVE ON PROD, Phase C built** (2026-08-29)
 
 **Missions has a server-authoritative economy before it has a door.** Seven content catalogs, the
 tables and endpoints that decide and pay what a mission clear is worth, the deterministic daily
@@ -13,6 +13,20 @@ generator, and three admin panels. **Nothing here is reachable by a player** —
 is still `true` in the bundled CSV, and Cesar opens the mode with a publish, not a build. Spec and
 report: `Docs/Specs/Active/missions_v1/`. Commits `0ef3bd912` (GolfinRedux) + `56195af` (playlife);
 dashboard deploy `4ccabd61-e47c-402b-a9b8-1ac49f890088`.
+
+**Phase C — the door itself is built (not yet open).** `MissionSelectionScreen` is a clone of
+`HoleSelectionScreen` and `MissionCard.prefab` a clone of `HoleCard.prefab`; the Missions mode card
+routes at `mission_select` from both `ModeSelectScreenController` and `ModeCarouselController`, and
+that wiring was proven by invoking the real `ModeCardController.playButton.onClick` — the carousel
+keeps three copies of every card, so calling `ShowScreen` would have proven nothing. The daily card
+binds `GET /api/v1/missions/daily` live: hole, reset countdown, and the reward the server decided.
+Three rounds of Cesar's feedback landed on the same Unity trap twice — `childControlWidth` and
+`childControlHeight` both `false` on the cloned layout groups, so `LayoutElement` was inert and
+`sizeDelta` was the real lever. The daily card's gold rim is `S_GachaCardBorder3` (a real
+stroke-on-transparency 9-slice atom) tinted `#EEDC9A` at ppu 0.5 — overlaying the card's OWN panel
+sprite with `fillCenter=false` does not work, because that sprite's 9-slice border is solid navy art.
+EditMode 2035/2032/0 fail. **Still to build:** the Figma fidelity table + UI lint, the JA capture, the
+Hole Complete goal strip, and §21's live end-to-end run.
 
 **Why this order matters.** The shop, the level-up and the mode entry fee each had to be made
 server-authoritative *after* players were already walking through them — `routers/points.py`'s three

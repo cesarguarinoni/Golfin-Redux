@@ -51,6 +51,48 @@ namespace Golfin.Economy
     }
 
     /// <summary>
+    /// <c>GET /api/v1/missions/daily</c> → today's UTC recipe.
+    ///
+    /// The recipe is COMPOSED SERVER-SIDE and frozen for the day: once a date's row exists the
+    /// server never regenerates it, because a recipe that changed under a player mid-round
+    /// would fail their claim's `recipe_hash` check and pay them nothing.
+    /// </summary>
+    public sealed class DailyMissionResult
+    {
+        [JsonProperty("date")]        public string Date;
+        [JsonProperty("recipe")]      public DailyRecipe Recipe;
+        [JsonProperty("recipe_hash")] public string RecipeHash;
+        [JsonProperty("pinned")]      public bool Pinned;
+        [JsonProperty("claimed")]     public bool Claimed;
+        [JsonProperty("claimed_rp")]  public int ClaimedRp;
+        [JsonProperty("streak")]      public int Streak;
+    }
+
+    /// <summary>One generated daily, as `services/daily_mission.py` composes it.</summary>
+    public sealed class DailyRecipe
+    {
+        [JsonProperty("holeId")]          public int HoleId;
+        [JsonProperty("par")]             public int Par;
+        [JsonProperty("courseId")]        public string CourseId;
+        [JsonProperty("startAreaId")]     public string StartAreaId;
+        [JsonProperty("startKind")]       public string StartKind;
+        [JsonProperty("windPresetId")]    public string WindPresetId;
+        [JsonProperty("loadoutId")]       public string LoadoutId;
+        [JsonProperty("goals")]           public DailyGoal[] Goals;
+        [JsonProperty("modifier")]        public string Modifier;
+        [JsonProperty("band")]            public string Band;
+        [JsonProperty("difficultyScore")] public int DifficultyScore;
+        [JsonProperty("pinIndex")]        public int PinIndex;
+        [JsonProperty("staminaDrain")]    public float StaminaDrain;
+    }
+
+    public sealed class DailyGoal
+    {
+        [JsonProperty("type")]  public string Type;
+        [JsonProperty("param")] public string Param;
+    }
+
+    /// <summary>
     /// The mission claim, and nothing else.
     ///
     /// ⚠️ IT TAKES PRIMITIVES, NOT A `MissionResult`, AND THAT IS ON PURPOSE. Accepting the
@@ -93,6 +135,14 @@ namespace Golfin.Economy
             string body = BuildClaimJson(missionId, strokes, goalsMet, idempotencyKey);
             return _client.Post(Endpoints.MissionsClaim, body, onResult);
         }
+
+        /// <summary>
+        /// Today's daily. AUTH REQUIRED, so this only answers for a signed-in player; a
+        /// failure leaves the card HIDDEN rather than showing an empty one, which is the
+        /// standing invariant (never a dead card).
+        /// </summary>
+        public IEnumerator FetchDailyRoutine(Action<ApiResult<DailyMissionResult>> onResult)
+            => _client.Get(Endpoints.MissionsDaily, onResult);
 
         /// <summary>Exposed so a test can assert the wire shape without a transport.</summary>
         public static string BuildClaimJson(string missionId, int strokes, bool goalsMet, string key)

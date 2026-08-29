@@ -297,6 +297,86 @@ namespace Golfin.Gameplay.Missions
             return def;
         }
 
+        /// <summary>
+        /// Compose a <see cref="MissionDefinition"/> from loose component ids — the DAILY's
+        /// path in, where the "row" was generated this morning rather than authored.
+        ///
+        /// It reuses the SAME resolution the campaign uses (the same start-area lookup by
+        /// (hole, area), the same wind preset, the same club resolver), so a daily and a
+        /// campaign mission are indistinguishable to everything downstream. Returns null when
+        /// any component fails to resolve — the caller then hides the card rather than showing
+        /// one nobody can play.
+        /// </summary>
+        public static MissionDefinition? BuildFromRecipe(
+            string id, int holeNumber, int par, string startAreaId, string windPresetId,
+            string loadoutId, int pinIndex, float staminaDrain)
+        {
+            EnsureLoaded();
+
+            var areas = Index(ContentCatalogs.MissionStartAreas, "id");
+            var winds = Index(ContentCatalogs.MissionWindPresets, "id");
+            var loadouts = Index(ContentCatalogs.MissionLoadouts, "id");
+
+            Dictionary<string, string>? area = null;
+            foreach (var a in areas.Values)
+                if (Str(a, "holeId") == holeNumber.ToString() && Str(a, "areaId") == startAreaId) { area = a; break; }
+            if (area == null || !winds.TryGetValue(windPresetId, out var wind)
+                             || !loadouts.TryGetValue(loadoutId, out var loadout))
+            {
+                Debug.LogWarning($"{Tag} daily recipe names a component that does not resolve " +
+                                 $"(hole {holeNumber} / {startAreaId} / {windPresetId} / {loadoutId}).");
+                return null;
+            }
+
+            var def = new MissionDefinition
+            {
+                Id = id,
+                // NOT the pill's key — the pill already says DAILY MISSION, and reusing it
+                // here printed the words twice on the card. The daily's subtitle is its HOLE,
+                // which is the one thing a player needs before tapping PLAY.
+                NameKey = "",
+                // The daily's base payout, so the card can advertise something. What is
+                // actually paid is decided by `golfin_daily_claim` from `daily_mission.pts`
+                // (plus any streak bonus and the DOUBLE_RP modifier) — this is the card's
+                // number, and the server's is the one that lands.
+                FirstClearRP = 30,
+                HoleNumber = holeNumber,
+                Par = par,
+                StartAreaId = startAreaId,
+                StartKind = Str(area, "kind").ToLowerInvariant(),
+                PinIndex = pinIndex,
+                StaminaDrain = staminaDrain,
+                WindPresetId = windPresetId,
+                WindRelDirDeg = Float(wind, "relDirDeg"),
+                WindSpeedMph = Float(wind, "speed"),
+                WindGusty = string.Equals(windPresetId, "GUSTY", StringComparison.OrdinalIgnoreCase),
+                LoadoutId = loadoutId,
+                LoadoutKey = "LOADOUT_" + loadoutId.ToUpperInvariant(),
+                LoadoutSupplied = string.Equals(Str(loadout, "kind"), "supplied", StringComparison.OrdinalIgnoreCase),
+                Tier = "",
+            };
+
+            if (def.StartKind != "tee")
+            {
+                string sx = Str(area, "x"), sy = Str(area, "y"), sz = Str(area, "z");
+                if (sx.Length == 0 || sy.Length == 0 || sz.Length == 0)
+                {
+                    Debug.LogWarning($"{Tag} the daily's start area {startAreaId} on hole {holeNumber} is not baked.");
+                    return null;
+                }
+                def.StartWorld = new Vector3(F(sx), F(sy), F(sz));
+            }
+            else
+            {
+                def.TeeLabel = startAreaId.StartsWith("TEE_", StringComparison.Ordinal)
+                    ? startAreaId.Substring(4).ToLowerInvariant() : "regular";
+            }
+
+            var clubs = ClubResolver != null ? ClubResolver(loadout, out _) : new List<string>();
+            def.ClubIds.AddRange(clubs);
+            return def;
+        }
+
         // ── Catalog access (bundled floor + published overlay) ──────────────────
 
         private static List<Dictionary<string, string>> Rows(string catalog)

@@ -356,16 +356,88 @@ namespace GolfinRedux.UI.MissionSelection
         // ── Daily ───────────────────────────────────────────────────────────────
 
         /// <summary>
-        /// The daily card. v1 renders it from the LOCAL bundled tables so it is never blank;
-        /// the server's copy replaces it when `GET /missions/daily` answers, and the CLAIM
-        /// always goes to the server — the client never pays itself (§C2).
+        /// The daily card.
+        ///
+        /// ⚠️ IT STARTS HIDDEN AND ONLY APPEARS WITH A REAL RECIPE. A daily card with nothing
+        /// in it is the "dead card" the standing invariant exists to prevent — and it is worse
+        /// than the campaign version, because a player who taps a blank daily has no idea what
+        /// they are being asked to do. So: hidden, fetch, and shown only if the server answers.
+        ///
+        /// The recipe is composed SERVER-SIDE (`services/daily_mission.py`) and frozen for the
+        /// UTC day. §C2 also asks for an OFFLINE fallback that generates the same recipe locally
+        /// from the bundled tables — deliberately NOT done here, and flagged: it needs a C#
+        /// port of the generator, and a second implementation of a deterministic draw is the
+        /// one thing that would break the property the whole design rests on (server, admin
+        /// preview and client agreeing about what a date produces). Offline, the card is absent
+        /// rather than wrong.
+        ///
+        /// The CLAIM always goes to the server regardless — the client never pays itself.
         /// </summary>
         private void RefreshDaily()
         {
             if (dailyCard == null) return;
-            System.DateTime utc = System.DateTime.UtcNow;
-            System.TimeSpan untilReset = utc.Date.AddDays(1) - utc;
-            dailyCard.SetDailyStatus(untilReset, streak: 0, claimed: false);
+            dailyCard.gameObject.SetActive(false);
+            StartCoroutine(FetchDailyRoutine());
+        }
+
+        private IEnumerator FetchDailyRoutine()
+        {
+            yield return Golfin.Economy.MissionsClient.Instance.FetchDailyRoutine(r =>
+            {
+                if (!r.Success || r.Data?.Recipe == null)
+                {
+                    Debug.Log($"[MissionSelection] no daily today ({r.ErrorMessage ?? "no recipe"}) — card stays hidden.");
+                    return;
+                }
+                var def = BuildDailyDefinition(r.Data);
+                if (def == null || def.ClubIds.Count == 0)
+                {
+                    Debug.LogWarning("[MissionSelection] the daily recipe could not be resolved — card stays hidden.");
+                    return;
+                }
+
+                dailyCard!.gameObject.SetActive(true);
+                dailyCard.Bind(def, MissionCardMode.Daily, MissionCardState.Collapsed);
+
+                System.DateTime utc = System.DateTime.UtcNow;
+                dailyCard.SetDailyStatus(utc.Date.AddDays(1) - utc, r.Data.Streak, r.Data.Claimed);
+            });
+        }
+
+        /// <summary>
+        /// Turn a server recipe into the same <see cref="MissionDefinition"/> a campaign row
+        /// produces, so everything downstream — the card, MissionSession, the evaluator —
+        /// cannot tell the two apart. That is the point: the daily is not a second kind of
+        /// mission, it is a mission whose row was composed this morning.
+        /// </summary>
+        private MissionDefinition? BuildDailyDefinition(Golfin.Economy.DailyMissionResult daily)
+        {
+            var r = daily.Recipe;
+            var def = MissionCatalog.BuildFromRecipe(
+                id: $"daily:{daily.Date}",
+                holeNumber: r.HoleId,
+                par: r.Par,
+                startAreaId: r.StartAreaId,
+                windPresetId: r.WindPresetId,
+                loadoutId: r.LoadoutId,
+                pinIndex: r.PinIndex,
+                staminaDrain: r.StaminaDrain);
+            if (def == null) return null;
+
+            if (r.Goals != null)
+                foreach (var g in r.Goals)
+                {
+                    var type = MissionGoal.Parse(g.Type);
+                    if (type != MissionGoalType.None) def.Goals.Add(new MissionGoal(type, g.Param ?? ""));
+                }
+
+            def.DoubleRp = r.Modifier == "DOUBLE_RP";
+            // DOUBLE_RP is the one modifier that changes the payout, so the card must show the
+            // doubled number — the server applies it from the stored recipe, not from us.
+            if (def.DoubleRp) def.FirstClearRP *= 2;
+            def.LowStaminaStart = r.Modifier == "LOW_STAMINA_START";
+            def.DifficultyScore = r.DifficultyScore;
+            return def;
         }
     }
 }

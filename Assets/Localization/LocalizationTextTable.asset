@@ -1662,3 +1662,399 @@ MonoBehaviour:
   - key: CHAR_LASTNAME_ROSHANA
     english: Smith
     japanese: "\u30B9\u30DF\u30B9"
+  - key: MISSIONS_TITLE
+    english: MISSIONS
+    japanese: "\u30DF\u30C3\u30B7\u30E7\u30F3"
+  - key: MISSION_COURSE_LOMOND
+    english: Lomond Country Club
+    japanese: "\u30ED\u30E2\u30F3\u30C9\u30AB\u30F3\u30C8\u30EA\u30FC\u30AF\u30E9\u30D6"
+  - key: MISSION_HOLE
+    english: Hole
+    japanese: "\u30DB\u30FC\u30EB"
+  - key: MISSION_TIER_BEGINNER
+    english: BEGINNER
+    japanese: "\u30D3\u30AE\u30CA\u30FC"
+  - key: MISSION_TIER_AMATEUR
+    english: AMATEUR
+    japanese: "\u30A2\u30DE\u30C1\u30E5\u30A2"
+  - key: MISSION_TIER_PRO
+    english: PRO
+    japanese: "\u30D7\u30ED"
+  - key: MISSION_TIER_LEGEND
+    english: LEGEND
+    japanese: "\u30EC\u30B8\u30A7\u30F3\u30C9"
+  - key: MISSION_TIER_LOCKED
+    english: Clear {0} of {1} to unlock
+    japanese: "{1}\u500B\u4E2D{0}\u500B\u30AF\u30EA\u30A2\u3067\u89E3\u653E"
+  - key: MISSION_PILL_NEXT
+    english: NEXT MISSION
+    japanese: "\u6B21\u306E\u30DF\u30C3\u30B7\u30E7\u30F3"
+  - key: MISSION_PILL_REPLAY
+    english: REPLAY MISSION
+    japanese: "\u518D\u6311\u6226"
+  - key: MISSION_PILL_LOCKED
+    english: LOCKED
+    japanese: "\u30ED\u30C3\u30AF\u4E2D"
+  - key: MISSION_PILL_DAILY
+    english: DAILY MISSION
+    japanese: "\u30C7\u30A4\u30EA\u30FC\u30DF\u30C3\u30B7\u30E7\u30F3"
+  - key: MISSION_PLAY
+    english: PLAY
+    japanese: "\u30D7\u30EC\u30A4"
+  - key: MISSION_REPLAY
+    english: REPLAY
+    japanese: "\u30EA\u30D7\u30EC\u30A4"
+  - key: MISSION_GOALS
+    english: GOALS
+    japanese: "\u76EE\u6A19"
+  - key: MISSION_WIND
+    english: Wind
+    japanese: "\u98A8"
+  - key: MISSION_CLUBS
+    english: Clubs
+    japanese: "\u30AF\u30E9\u30D6"
+  - key: MISSION_START
+    english: Start
+    japanese: "\u30B9\u30BF\u30FC\u30C8\u5730\u70B9"
+  - key: MISSION_FIRST_CLEAR
+    english: First clear
+    japanese: "\u521D\u56DE\u30AF\u30EA\u30A2"
+  - key: MISSION_REPLAY_REWARD
+    english: Replay
+    japanese: "\u518D\u6311\u6226\u5831\u916C"
+  - key: MISSION_DAILY_RESETS
+    english: Resets in {0}
+    japanese: "\u30EA\u30BB\u30C3\u30C8\u307E\u3067 {0}"
+  - key: MISSION_DAILY_STREAK
+    english: '{0} day streak'
+    japanese: "{0}\u65E5\u9023\u7D9A"
+  - key: MISSION_DAILY_CLEARED
+    english: CLEARED
+    japanese: "\u30AF\u30EA\u30A2\u6E08\u307F"
+  - key: MISSION_TIER_BONUS
+    english: Tier bonus
+    japanese: "\u30C6\u30A3\u30A2\u30DC\u30FC\u30CA\u30B9"
+  - key: MISSION_WARN_NO_CLUBS
+    english: Your bag has no club this mission allows.
+    japanese: "\u3053\u306E\u30DF\u30C3\u30B7\u30E7\u30F3\u3067\u4F7F\u3048\u308B\u30AF\u30E9\u30D6\u304C\u30D0\u30C3\u30B0\u306B\u3042\u308A\u307E\u305B\u3093\u3002"
+  - key: MISSION_WARN_UNAVAILABLE
+    english: This mission is not available yet.
+    japanese: "\u3053\u306E\u30DF\u30C3\u30B7\u30E7\u30F3\u306F\u307E\u3060\u30D7\u30EC\u30A4\u3067\u304D\u307E\u305B\u3093\u3002"
+  - key: MISSION_RESULT_CLEARED
+    english: MISSION CLEARED
+    japanese: "\u30DF\u30C3\u30B7\u30E7\u30F3\u30AF\u30EA\u30A2"
+  - key: MISSION_RESULT_FAILED
+    english: MISSION FAILED
+    japanese: "\u30DF\u30C3\u30B7\u30E7\u30F3\u5931\u6557"
+  - key: GOAL_SCORE_M2
+    english: Score eagle or better
+    japanese: "\u30A4\u30FC\u30B0\u30EB\u4EE5\u4E0A\u3067\u3042\u304C\u308B"
+  - key: GOAL_SCORE_M1
+    english: Score birdie or better
+    japanese: "\u30D0\u30FC\u30C7\u30A3\u30FC\u4EE5\u4E0A\u3067\u3042\u304C\u308B"
+  - key: GOAL_SCORE_0
+    english: Score par or better
+    japanese: "\u30D1\u30FC\u4EE5\u4E0A\u3067\u3042\u304C\u308B"
+  - key: GOAL_SCORE_1
+    english: Score bogey or better
+    japanese: "\u30DC\u30AE\u30FC\u4EE5\u4E0A\u3067\u3042\u304C\u308B"
+  - key: GOAL_SCORE_2
+    english: Score double bogey or better
+    japanese: "\u30C0\u30D6\u30EB\u30DC\u30AE\u30FC\u4EE5\u4E0A\u3067\u3042\u304C\u308B"
+  - key: GOAL_SHOTS
+    english: Hole out in {0} strokes or fewer
+    japanese: "{0}\u6253\u4EE5\u5185\u3067\u30DB\u30FC\u30EB\u30A2\u30A6\u30C8"
+  - key: GOAL_PUTTS
+    english: Take {0} putts or fewer
+    japanese: "{0}\u30D1\u30C3\u30C8\u4EE5\u5185\u3067\u3042\u304C\u308B"
+  - key: GOAL_NO_HAZARD
+    english: No water and no out of bounds
+    japanese: "\u6C60\u30FBOB\u306A\u3057"
+  - key: GOAL_AVOID
+    english: Never land in the {0}
+    japanese: "{0}\u306B\u5165\u308C\u306A\u3044"
+  - key: GOAL_LAND_TEE
+    english: Land the tee shot on the {0}
+    japanese: "\u30C6\u30A3\u30FC\u30B7\u30E7\u30C3\u30C8\u3092{0}\u306B\u4E57\u305B\u308B"
+  - key: GOAL_LAND_ANY
+    english: Land a shot on the {0}
+    japanese: "\u3044\u305A\u308C\u304B\u306E\u30B7\u30E7\u30C3\u30C8\u3092{0}\u306B\u4E57\u305B\u308B"
+  - key: GOAL_GIR
+    english: Hit the green in regulation
+    japanese: "\u30D1\u30FC\u30AA\u30F3\u3059\u308B"
+  - key: GOAL_DIST
+    english: Hit one shot {0} yd or further
+    japanese: "1\u6253\u3067{0}\u30E4\u30FC\u30C9\u4EE5\u4E0A\u98DB\u3070\u3059"
+  - key: GOAL_CARRY
+    english: Carry one shot {0} yd or further
+    japanese: "1\u6253\u3067{0}\u30E4\u30FC\u30C9\u4EE5\u4E0A\u30AD\u30E3\u30EA\u30FC\u3055\u305B\u308B"
+  - key: GOAL_NEAR_PIN
+    english: Reach the green within {0} yd of the pin
+    japanese: "\u30B0\u30EA\u30FC\u30F3\u30AA\u30F3\u6642\u306B\u30D4\u30F3\u307E\u3067{0}\u30E4\u30FC\u30C9\u4EE5\u5185\u306B\u3064\u3051\u308B"
+  - key: GOAL_USE_CLUB
+    english: Tee off with the {0}
+    japanese: "\u30C6\u30A3\u30FC\u30B7\u30E7\u30C3\u30C8\u306F{0}\u3067\u6253\u3064"
+  - key: GOAL_AVOID_CLUB
+    english: Never use the {0}
+    japanese: "{0}\u3092\u4F7F\u308F\u306A\u3044"
+  - key: GOAL_UP_DOWN
+    english: Get up and down in two
+    japanese: "2\u6253\u4EE5\u5185\u3067\u5BC4\u305B\u3066\u30EF\u30F3\u30D1\u30C3\u30C8"
+  - key: SURFACE_FAIRWAY
+    english: fairway
+    japanese: "\u30D5\u30A7\u30A2\u30A6\u30A7\u30A4"
+  - key: SURFACE_GREEN
+    english: green
+    japanese: "\u30B0\u30EA\u30FC\u30F3"
+  - key: SURFACE_ROUGH
+    english: rough
+    japanese: "\u30E9\u30D5"
+  - key: SURFACE_S_ROUGH
+    english: semi-rough
+    japanese: "\u30BB\u30DF\u30E9\u30D5"
+  - key: SURFACE_ROUGH_AND_SEMI
+    english: rough or semi-rough
+    japanese: "\u30E9\u30D5\u30FB\u30BB\u30DF\u30E9\u30D5"
+  - key: SURFACE_BUNKER
+    english: bunker
+    japanese: "\u30D0\u30F3\u30AB\u30FC"
+  - key: SURFACE_WATER
+    english: water
+    japanese: "\u6C60"
+  - key: CLUBTYPE_DRIVER
+    english: Driver
+    japanese: "\u30C9\u30E9\u30A4\u30D0\u30FC"
+  - key: CLUBTYPE_WOOD
+    english: Wood
+    japanese: "\u30A6\u30C3\u30C9"
+  - key: CLUBTYPE_IRON7
+    english: 7-iron
+    japanese: "7\u756A\u30A2\u30A4\u30A2\u30F3"
+  - key: CLUBTYPE_IRON9
+    english: 9-iron
+    japanese: "9\u756A\u30A2\u30A4\u30A2\u30F3"
+  - key: CLUBTYPE_AW
+    english: Approach wedge
+    japanese: "\u30A2\u30D7\u30ED\u30FC\u30C1\u30A6\u30A7\u30C3\u30B8"
+  - key: CLUBTYPE_PW
+    english: Pitching wedge
+    japanese: "\u30D4\u30C3\u30C1\u30F3\u30B0\u30A6\u30A7\u30C3\u30B8"
+  - key: CLUBTYPE_SW
+    english: Sand wedge
+    japanese: "\u30B5\u30F3\u30C9\u30A6\u30A7\u30C3\u30B8"
+  - key: CLUBTYPE_PUTTER
+    english: Putter
+    japanese: "\u30D1\u30BF\u30FC"
+  - key: WIND_CALM
+    english: Calm
+    japanese: "\u7121\u98A8"
+  - key: WIND_TAIL_L
+    english: Light tailwind
+    japanese: "\u5F31\u3044\u8FFD\u3044\u98A8"
+  - key: WIND_CROSS_L
+    english: Light crosswind
+    japanese: "\u5F31\u3044\u6A2A\u98A8"
+  - key: WIND_HEAD_L
+    english: Light headwind
+    japanese: "\u5F31\u3044\u5411\u304B\u3044\u98A8"
+  - key: WIND_TAIL_S
+    english: Strong tailwind
+    japanese: "\u5F37\u3044\u8FFD\u3044\u98A8"
+  - key: WIND_CROSS_S
+    english: Strong crosswind
+    japanese: "\u5F37\u3044\u6A2A\u98A8"
+  - key: WIND_HEAD_S
+    english: Strong headwind
+    japanese: "\u5F37\u3044\u5411\u304B\u3044\u98A8"
+  - key: WIND_QUARTER_S
+    english: Strong quartering headwind
+    japanese: "\u5F37\u3044\u659C\u3081\u5411\u304B\u3044\u98A8"
+  - key: WIND_GUSTY
+    english: "Gusty \u2014 changes every shot"
+    japanese: "\u7A81\u98A8 \u2014 1\u6253\u3054\u3068\u306B\u5909\u5316"
+  - key: LOADOUT_OWN
+    english: Your own bag
+    japanese: "\u81EA\u5206\u306E\u30D0\u30C3\u30B0"
+  - key: LOADOUT_OWN_NO_WOODS
+    english: "Your bag \u2014 no Driver or Wood"
+    japanese: "\u81EA\u5206\u306E\u30D0\u30C3\u30B0 \u2014 \u30C9\u30E9\u30A4\u30D0\u30FC\u30FB\u30A6\u30C3\u30C9\u7981\u6B62"
+  - key: LOADOUT_OWN_NO_IRONS
+    english: "Your bag \u2014 no irons"
+    japanese: "\u81EA\u5206\u306E\u30D0\u30C3\u30B0 \u2014 \u30A2\u30A4\u30A2\u30F3\u7981\u6B62"
+  - key: LOADOUT_OWN_NO_WEDGES
+    english: "Your bag \u2014 no wedges"
+    japanese: "\u81EA\u5206\u306E\u30D0\u30C3\u30B0 \u2014 \u30A6\u30A7\u30C3\u30B8\u7981\u6B62"
+  - key: LOADOUT_SUP_FULL
+    english: 'Supplied: full bag'
+    japanese: "\u652F\u7D66: \u30D5\u30EB\u30BB\u30C3\u30C8"
+  - key: LOADOUT_SUP_FULL_RARE
+    english: 'Supplied: full bag (Rare)'
+    japanese: "\u652F\u7D66: \u30D5\u30EB\u30BB\u30C3\u30C8\uFF08\u30EC\u30A2\uFF09"
+  - key: LOADOUT_SUP_NO_DRIVER
+    english: 'Supplied: full bag, no Driver'
+    japanese: "\u652F\u7D66: \u30C9\u30E9\u30A4\u30D0\u30FC\u306A\u3057\u306E\u30D5\u30EB\u30BB\u30C3\u30C8"
+  - key: LOADOUT_SUP_IRONS
+    english: 'Supplied: irons and putter'
+    japanese: "\u652F\u7D66: \u30A2\u30A4\u30A2\u30F3\u3068\u30D1\u30BF\u30FC"
+  - key: LOADOUT_SUP_WEDGE_PUTTER
+    english: 'Supplied: wedges and putter'
+    japanese: "\u652F\u7D66: \u30A6\u30A7\u30C3\u30B8\u3068\u30D1\u30BF\u30FC"
+  - key: LOADOUT_SUP_PUTTER
+    english: 'Supplied: putter only'
+    japanese: "\u652F\u7D66: \u30D1\u30BF\u30FC\u306E\u307F"
+  - key: LOADOUT_SUP_DRIVER_PUTTER
+    english: 'Supplied: Driver and putter'
+    japanese: "\u652F\u7D66: \u30C9\u30E9\u30A4\u30D0\u30FC\u3068\u30D1\u30BF\u30FC"
+  - key: LOADOUT_SUP_ONE_IRON
+    english: 'Supplied: 7-iron and putter'
+    japanese: "\u652F\u7D66: 7\u756A\u30A2\u30A4\u30A2\u30F3\u3068\u30D1\u30BF\u30FC"
+  - key: LOADOUT_SUP_WOOD_ONLY
+    english: 'Supplied: Wood and putter'
+    japanese: "\u652F\u7D66: \u30A6\u30C3\u30C9\u3068\u30D1\u30BF\u30FC"
+  - key: START_AREA_GREEN
+    english: On the green
+    japanese: "\u30B0\u30EA\u30FC\u30F3\u4E0A"
+  - key: START_AREA_FRINGE
+    english: Fringe
+    japanese: "\u30AB\u30E9\u30FC"
+  - key: START_AREA_FAIRWAY
+    english: Fairway approach
+    japanese: "\u30D5\u30A7\u30A2\u30A6\u30A7\u30A4\u304B\u3089\u306E\u30A2\u30D7\u30ED\u30FC\u30C1"
+  - key: START_AREA_ROUGH
+    english: Rough
+    japanese: "\u30E9\u30D5"
+  - key: START_AREA_SAND
+    english: Greenside bunker
+    japanese: "\u30B0\u30EA\u30FC\u30F3\u30B5\u30A4\u30C9\u30D0\u30F3\u30AB\u30FC"
+  - key: START_AREA_TEE_LADIES
+    english: Ladies tee
+    japanese: "\u30EC\u30C7\u30A3\u30FC\u30B9\u30C6\u30A3\u30FC"
+  - key: START_AREA_TEE_FRONT
+    english: Front tee
+    japanese: "\u30D5\u30ED\u30F3\u30C8\u30C6\u30A3\u30FC"
+  - key: START_AREA_TEE_REGULAR
+    english: Regular tee
+    japanese: "\u30EC\u30AE\u30E5\u30E9\u30FC\u30C6\u30A3\u30FC"
+  - key: START_AREA_TEE_BACK
+    english: Back tee
+    japanese: "\u30D0\u30C3\u30AF\u30C6\u30A3\u30FC"
+  - key: MISSION_NAME_B_FIRST_PUTT
+    english: First Putt
+    japanese: "\u306F\u3058\u3081\u3066\u306E\u30D1\u30C3\u30C8"
+  - key: MISSION_NAME_B_SHORT_HOLE
+    english: The Short Hole
+    japanese: "\u30B7\u30E7\u30FC\u30C8\u30DB\u30FC\u30EB"
+  - key: MISSION_NAME_B_CHIP_AND_RUN
+    english: Chip and Run
+    japanese: "\u30C1\u30C3\u30D7\uFF06\u30E9\u30F3"
+  - key: MISSION_NAME_B_FAIRWAY_FINDER
+    english: Fairway Finder
+    japanese: "\u30D5\u30A7\u30A2\u30A6\u30A7\u30A4\u30AD\u30FC\u30D7"
+  - key: MISSION_NAME_B_FIRST_150
+    english: The First 150
+    japanese: "\u521D\u3081\u3066\u306E150\u30E4\u30FC\u30C9"
+  - key: MISSION_NAME_B_BOGEY_GOLF
+    english: Bogey Golf
+    japanese: "\u30DC\u30AE\u30FC\u30B4\u30EB\u30D5"
+  - key: MISSION_NAME_B_SAND_ESCAPE
+    english: Sand Escape
+    japanese: "\u30D0\u30F3\u30AB\u30FC\u8131\u51FA"
+  - key: MISSION_NAME_B_KEEP_IT_DRY
+    english: Keep It Dry
+    japanese: "\u6C60\u30DD\u30C1\u30E3\u7981\u6B62"
+  - key: MISSION_NAME_B_GRADUATION
+    english: Graduation Day
+    japanese: "\u5352\u696D\u8A66\u9A13"
+  - key: MISSION_NAME_B_IRON_MAN
+    english: Iron Man
+    japanese: "\u30A2\u30A4\u30A2\u30F3\u3060\u3051\u3067"
+  - key: MISSION_NAME_A_YOUR_OWN_CLUBS
+    english: Your Own Clubs
+    japanese: "\u30DE\u30A4\u30AF\u30E9\u30D6\u3067"
+  - key: MISSION_NAME_A_PAR_3_PAR
+    english: Par Three, Par
+    japanese: "\u30B7\u30E7\u30FC\u30C8\u3067\u30D1\u30FC"
+  - key: MISSION_NAME_A_ROUGH_RECOVERY
+    english: Out of the Rough
+    japanese: "\u30E9\u30D5\u304B\u3089\u306E\u30EA\u30AB\u30D0\u30EA\u30FC"
+  - key: MISSION_NAME_A_TWO_PUTT
+    english: Two-Putt Territory
+    japanese: "2\u30D1\u30C3\u30C8\u570F\u5185"
+  - key: MISSION_NAME_A_APPROACH
+    english: The Approach
+    japanese: "\u30A2\u30D7\u30ED\u30FC\u30C1\u52DD\u8CA0"
+  - key: MISSION_NAME_A_NO_WOODS
+    english: Leave the Woods
+    japanese: "\u30A6\u30C3\u30C9\u5C01\u5370"
+  - key: MISSION_NAME_A_DRIVER_PUTTER
+    english: Driver & Putter
+    japanese: "\u30C9\u30E9\u30A4\u30D0\u30FC\u3068\u30D1\u30BF\u30FC\u3060\u3051"
+  - key: MISSION_NAME_A_CLEAN_CARD
+    english: Clean Card
+    japanese: "\u30CE\u30FC\u30DF\u30B9\u3067"
+  - key: MISSION_NAME_A_BIG_DRIVE
+    english: Big Drive
+    japanese: "\u30D3\u30C3\u30B0\u30C9\u30E9\u30A4\u30D6"
+  - key: MISSION_NAME_A_AMATEUR_FINAL
+    english: Amateur Open
+    japanese: "\u30A2\u30DE\u30C1\u30E5\u30A2\u30AA\u30FC\u30D7\u30F3"
+  - key: MISSION_NAME_P_ONE_IRON
+    english: One Iron
+    japanese: "7\u756A\u4E00\u672C\u52DD\u8CA0"
+  - key: MISSION_NAME_P_STICK_IT
+    english: Stick It
+    japanese: "\u30D4\u30F3\u305D\u3070"
+  - key: MISSION_NAME_P_INTO_THE_WIND
+    english: Into the Wind
+    japanese: "\u5411\u304B\u3044\u98A8"
+  - key: MISSION_NAME_P_NO_IRONS
+    english: No Irons Allowed
+    japanese: "\u30A2\u30A4\u30A2\u30F3\u7981\u6B62"
+  - key: MISSION_NAME_P_BIRDIE_HUNT
+    english: Birdie Hunt
+    japanese: "\u30D0\u30FC\u30C7\u30A3\u30FC\u72D9\u3044"
+  - key: MISSION_NAME_P_PRECISION
+    english: Precision Round
+    japanese: "\u7CBE\u5BC6\u30E9\u30A6\u30F3\u30C9"
+  - key: MISSION_NAME_P_GUSTS
+    english: Reading the Gusts
+    japanese: "\u7A81\u98A8\u3092\u8AAD\u3081"
+  - key: MISSION_NAME_P_CROSSWIND_PAR3
+    english: Crosswind Par 3
+    japanese: "\u6A2A\u98A8\u306E\u30D1\u30FC3"
+  - key: MISSION_NAME_P_LONG_PAR5
+    english: The Long Eighth
+    japanese: "8\u756A\u30ED\u30F3\u30B0\u653B\u7565"
+  - key: MISSION_NAME_P_PRO_FINAL
+    english: Pro Championship
+    japanese: "\u30D7\u30ED\u9078\u624B\u6A29"
+  - key: MISSION_NAME_L_TOURNEY_PAR
+    english: Back Tee, Par
+    japanese: "\u30D0\u30C3\u30AF\u30C6\u30A3\u30FC\u3067\u30D1\u30FC"
+  - key: MISSION_NAME_L_WOOD_ONLY
+    english: Wood & Putter
+    japanese: "\u30A6\u30C3\u30C9\u3068\u30D1\u30BF\u30FC\u306E\u307F"
+  - key: MISSION_NAME_L_BIRDIE_PAR3
+    english: Birdie on Eleven
+    japanese: "11\u756A\u3067\u30D0\u30FC\u30C7\u30A3\u30FC"
+  - key: MISSION_NAME_L_NO_WEDGES
+    english: Hands Off the Wedges
+    japanese: "\u30A6\u30A7\u30C3\u30B8\u7981\u6B62"
+  - key: MISSION_NAME_L_DRIVER_PUTTER_PAR
+    english: Two Clubs, Par
+    japanese: "2\u672C\u3067\u30D1\u30FC"
+  - key: MISSION_NAME_L_BIRDIE_GUSTS
+    english: Birdie in the Gusts
+    japanese: "\u7A81\u98A8\u306E\u4E2D\u306E\u30D0\u30FC\u30C7\u30A3\u30FC"
+  - key: MISSION_NAME_L_SAND_UP_DOWN
+    english: Sand Save
+    japanese: "\u30B5\u30F3\u30C9\u30BB\u30FC\u30D6"
+  - key: MISSION_NAME_L_EAGLE_FIVE
+    english: Eagle on Eighteen
+    japanese: "18\u756A\u3067\u30A4\u30FC\u30B0\u30EB"
+  - key: MISSION_NAME_L_PERFECT_ROUND
+    english: Perfect Hole
+    japanese: "\u30D1\u30FC\u30D5\u30A7\u30AF\u30C8\u30DB\u30FC\u30EB"
+  - key: MISSION_NAME_L_LEGEND_FINAL
+    english: Legend Final
+    japanese: "\u30EC\u30B8\u30A7\u30F3\u30C9\u30D5\u30A1\u30A4\u30CA\u30EB"

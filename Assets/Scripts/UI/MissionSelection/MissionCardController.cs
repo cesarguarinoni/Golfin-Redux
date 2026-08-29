@@ -185,7 +185,7 @@ namespace GolfinRedux.UI.MissionSelection
             // "{order} - {name} - Hole {n}" per the Figma fidelity table.
             string name = string.IsNullOrEmpty(m.NameKey) ? "" : LocalizationManager.Get(m.NameKey);
             string subtitle = Mode == MissionCardMode.Daily
-                ? name
+                ? $"{LocalizationManager.Get("MISSION_COURSE_LOMOND")} - {LocalizationManager.Get("MISSION_HOLE")} {m.HoleNumber}"
                 : $"{m.Order} - {name} - {LocalizationManager.Get("MISSION_HOLE")} {m.HoleNumber}";
             if (subtitleTextCollapsed != null) subtitleTextCollapsed.text = subtitle;
             if (subtitleTextExpanded  != null) subtitleTextExpanded.text  = subtitle;

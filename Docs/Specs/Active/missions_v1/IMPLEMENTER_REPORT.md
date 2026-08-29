@@ -310,3 +310,83 @@ weight. New pin authoring is explicitly out of scope.
 
 4. **Mission 37 needs a decision** — re-site `l_sand_up_down` to a hole with a greenside bunker,
    or author one on 13. It blocks the `missions` publish either way.
+
+---
+
+# Phase C — the Mission Selection screen
+
+## What it is
+
+`MissionSelectionScreen` is a clone of `HoleSelectionScreen`, and `MissionCard.prefab` a clone of
+`HoleCard.prefab` (guid `6717663c8484640909c58d78cd02f8c2`) — §1's reuse mandate taken literally.
+The screen shows, top to bottom: a course-progress line (`Lomond Country Club 0/40`), a tier strip
+with per-tier counts and locks, the **daily mission** card, and the campaign list with the first
+unlocked mission expanded and everything after it collapsed and locked.
+
+`ScreenId.MissionSelection` was added to `ScreenManager`, the persistent bars show on it
+(`MISSIONS_TITLE`, MainPlay nav slot), and both `ModeSelectScreenController` and
+`ModeCarouselController` route the Missions card at `mission_select` — the two of them are the
+only entry points a player has, and the carousel keeps three copies of every card, so the wiring
+was proven by invoking the real `ModeCardController.playButton.onClick`, not by calling
+`ShowScreen` directly.
+
+## The daily card
+
+`GET /api/v1/missions/daily` returns the day's generated recipe; `MissionCatalog.BuildFromRecipe`
+resolves it against the seven catalogs into the same `MissionDefinition` shape a campaign row
+produces, so one card controller draws both. The card shows the hole, the live reset countdown,
+and the reward the server actually decided — today's draw included the `DOUBLE_RP` modifier, which
+is why the capture reads **x60** against a campaign card's x15.
+
+## Cesar's three rounds of feedback, and what each one actually was
+
+1. **"mission title goes outside the panel. Goals are not shown, neither map."** Three separate
+   causes, not one: `CourseLine` had been cloned into `SubtitleRowExp`, which is a *horizontal*
+   group; `Tutorial` is also horizontal, so the map and five text lines laid out ~3250px across an
+   830px row; and the map stayed a sliver even after that because the group's `childControlWidth`
+   was `False`, so the `LayoutElement` was ignored outright (trap C4).
+2. **"Daily mission card does not have appropiate gap with the bottom of the pannel."** The daily
+   card has four content rows where a campaign card has three (it adds the reset countdown), so its
+   `CollapsedContainer` measured 374px inside a 340px card and overflowed its own 24px bottom
+   padding. Fixed by sizing the card to exactly what the container measures. The lever is
+   `sizeDelta`, **not** `LayoutElement` — `Content`'s VerticalLayoutGroup has
+   `childControlHeight = false`, so preferredHeight is inert (trap C3/C4 again). `CardsContainer`
+   gives back the same 34px, so its bottom edge stays at worldY 344 — byte-identical to
+   `HoleSelectionScreen`'s, which is the design reference.
+3. **"make outline for Daily mission golden."** The first attempt overlaid the card's own
+   `Background - Next Hole` sprite tinted `#EEDC9A` with `fillCenter=false`. That does not work and
+   the frame proves why: the sprite's 48px 9-slice border is *solid navy art*, so the ring painted
+   gold-tinted navy over navy — a muddy band, not an outline. A red-tint probe confirmed the ring
+   was rendering and covering x=48..96 with dark art. The fix is a real stroke-on-transparency atom:
+   `Assets/Art/Gacha/S_GachaCardBorder3.png` (48×48, 3px white stroke, transparent centre, already
+   9-sliced at 23px), tinted `#EEDC9A`, `pixelsPerUnitMultiplier = 0.5` so its corner radius matches
+   the card's. Measured on the shipped frame: `(238,220,154)` at the card edge — exactly `#EEDC9A`.
+
+   `pixelsPerUnitMultiplier` was swept rather than guessed. Blue peek-through of the card's own
+   corner arc, counted in a 32×34px box at the top-left corner: ppu 0.7 → 88px, 0.6 → 85, 0.55 → 75,
+   **0.5 → 25**, 0.45 → 0. 0.45 rendered a visibly stepped arc at 4× zoom; 0.5 is the knee.
+
+## Gates
+
+  Unity EditMode   2035 tests / 2032 passed / 0 failed / 3 pre-existing skips
+  Scene guardrail  ShellScene vs HEAD: 0 fileIDs lost, 0 active-state flips, 5 added
+                   (the GoldOutline GameObject and its three components)
+
+## Phase C deviations
+
+12. **The start marker is not drawn on the card thumbnail.** There is no world→thumbnail
+    calibration in the project — `MapViewController` is a live 3D camera, not a projected still —
+    so a marker can only be placed by eye. It rendered as a white box in the wrong place and was
+    removed; the start area is conveyed in words instead (`START_AREA_*`). Restoring it needs a
+    calibration decision, not more code.
+
+## Phase C — not done
+
+* **The Figma fidelity table (Rule 18) and the UI fidelity lint (Rule 21)** against nodes
+  `4065:7960` / `4065:7961`.
+* **EN + JA screenshots.** Only EN has been captured.
+* **The Hole Complete modal's goal strip** — still carried from Phase B.
+* **§21's live E2E** — play a mission end to end, clear it, watch the claim settle.
+* **Offline daily generation (§C2)** — deliberately not attempted. It would mean a second C#
+  implementation of the deterministic draw, and two implementations of one seeded algorithm drift
+  silently. The card shows a retry state instead when `/daily` is unreachable.
