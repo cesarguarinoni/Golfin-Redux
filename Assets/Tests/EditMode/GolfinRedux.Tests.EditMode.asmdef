@@ -3,7 +3,9 @@
     "rootNamespace": "GolfinRedux.Tests.EditMode",
     "references": [
         "Golfin.Net",
-        "Golfin.Content"
+        "Golfin.Content",
+        "Golfin.Gameplay.Missions",
+        "Golfin.Save"
     ],
     "includePlatforms": [
         "Editor"

@@ -6,7 +6,9 @@
         "Golfin.Physics.Math",
         "Golfin.Gameplay.Loop",
         "Golfin.Course.Runtime",
-        "Golfin.Core.Stamina"
+        "Golfin.Core.Stamina",
+        "Golfin.Content",
+        "Golfin.Save"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

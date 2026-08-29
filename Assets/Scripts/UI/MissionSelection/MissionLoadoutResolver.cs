@@ -1,6 +1,7 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
+using Golfin.Gameplay.Missions;
 using Golfin.Inventory;
 using UnityEngine;
 
@@ -27,6 +28,17 @@ namespace GolfinRedux.UI.MissionSelection
     public static class MissionLoadoutResolver
     {
         private const string Tag = "[MissionLoadout]";
+
+        /// <summary>
+        /// Install this as `MissionCatalog.ClubResolver`, before the first screen builds.
+        ///
+        /// `MissionCatalog` is a LEAF assembly and cannot reference Assembly-CSharp, where the
+        /// club catalog and the player's bag live. So the direction is inverted: this registers
+        /// itself, exactly the way `MissionSession` subscribes to `GameSession.OnSessionReset`
+        /// rather than being called by it.
+        /// </summary>
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+        public static void Install() => MissionCatalog.ClubResolver = Resolve;
 
         public static List<string> Resolve(Dictionary<string, string> loadout, out string warning)
         {

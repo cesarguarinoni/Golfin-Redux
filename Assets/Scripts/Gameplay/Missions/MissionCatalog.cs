@@ -3,10 +3,9 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using Golfin.Content;
-using Golfin.Gameplay.Missions;
 using UnityEngine;
 
-namespace GolfinRedux.UI.MissionSelection
+namespace Golfin.Gameplay.Missions
 {
     /// <summary>
     /// Reads the seven mission catalogs and RESOLVES a campaign row into the handful of facts a
@@ -24,14 +23,17 @@ namespace GolfinRedux.UI.MissionSelection
     /// `ModesDatabaseCSV` follows, and for the same reason: a build must be playable with no
     /// network, and an admin edit must reach it without one.
     ///
-    /// ⚠️ IT LIVES IN Assembly-CSharp, NOT IN `Golfin.Gameplay.Missions`, and that is a
-    /// deliberate placement. The Missions assembly is a LEAF — it is what the Viewer and the
-    /// Hole Complete modal reference, so it may not reference back into Assembly-CSharp. But
-    /// resolving a mission needs two things that only live there: the CONTENT overlay
-    /// (`Golfin.Content`) and the CLUB catalog (`ClubDatabaseCSV`, which a supplied loadout
-    /// resolves club types against). So the leaf owns the SESSION and the plain
-    /// `MissionDefinition`; this owns turning catalog rows into one. Same split, and same
-    /// direction, as `HoleDatabaseLoader` vs `GameSession`.
+    /// ⚠️ THE CLUB LOOKUP IS INJECTED, and that is what keeps this class testable. Resolving a
+    /// `supplied:` loadout needs `ClubDatabaseCSV`, and an `own:` one needs the player's bag —
+    /// both in Assembly-CSharp, which this LEAF assembly may not reference (it is what the
+    /// Viewer and the Hole Complete modal reference, so the arrow only goes one way).
+    ///
+    /// The first version put the whole catalog in Assembly-CSharp to reach them, and the cost
+    /// showed up immediately: EditMode tests would have had to drive it by REFLECTION, the way
+    /// ModesOverlayTests reaches ModesDatabaseCSV. Injecting one delegate instead
+    /// (<see cref="ClubResolver"/>, installed at boot by `MissionLoadoutResolver`) moves the
+    /// ONE Assembly-CSharp dependency out and leaves everything else — the overlay, the seven
+    /// catalogs, the unlock rules — directly testable.
     /// </summary>
     public static class MissionCatalog
     {
@@ -47,6 +49,20 @@ namespace GolfinRedux.UI.MissionSelection
         private static readonly Dictionary<string, string> _warnings = new Dictionary<string, string>();
         private static readonly List<MissionTier> _tiers = new List<MissionTier>();
         private static bool _loaded;
+
+        /// <summary>
+        /// Turns a `mission_loadouts` row into the club ids a mission plays with, plus a
+        /// warning when it cannot. Installed at boot by `MissionLoadoutResolver`
+        /// (Assembly-CSharp), which is the only code that can see the club catalog and the
+        /// player's bag.
+        ///
+        /// NULL is a real state, not a bug: in EditMode, and before the databases have woken
+        /// up, there is nothing to resolve against. Every mission still resolves its hole,
+        /// start, wind and goals — only the bag is missing, and the card says so.
+        /// </summary>
+        public delegate List<string> ClubResolverFn(Dictionary<string, string> loadoutRow, out string warning);
+
+        public static ClubResolverFn? ClubResolver;
 
         public sealed class MissionTier
         {
@@ -215,7 +231,8 @@ namespace GolfinRedux.UI.MissionSelection
             def.LoadoutKey = "LOADOUT_" + loadoutId.ToUpperInvariant();
             def.LoadoutSupplied = string.Equals(Str(loadout, "kind"), "supplied", StringComparison.OrdinalIgnoreCase);
 
-            var clubs = MissionLoadoutResolver.Resolve(loadout, out string loadoutWarning);
+            string loadoutWarning = "the club catalog is not loaded yet";
+            var clubs = ClubResolver != null ? ClubResolver(loadout, out loadoutWarning) : new List<string>();
             if (clubs.Count == 0)
             {
                 // §C3 — never a dead card. The screen renders this with the Hole Selection

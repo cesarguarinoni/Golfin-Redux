@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace GolfinRedux.UI.MissionSelection
+namespace Golfin.Gameplay.Missions
 {
     /// <summary>
     /// The mission CSVs, parsed. Spec: missions_v1 §A1.
