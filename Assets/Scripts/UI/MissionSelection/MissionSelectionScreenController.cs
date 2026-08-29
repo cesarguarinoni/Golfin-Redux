@@ -329,25 +329,28 @@ namespace GolfinRedux.UI.MissionSelection
         // ── The start marker ────────────────────────────────────────────────────
 
         /// <summary>
-        /// Project the mission's start point into the hole thumbnail.
+        /// The start marker on the hole thumbnail — DISABLED, and the reason is a missing input
+        /// rather than a missing implementation.
         ///
-        /// The thumbnail is a top-down render of the hole, so the mapping is the hole's world
-        /// XZ bounds → the image's 0..1 rect. Bounds come from the hole's own baked start areas
-        /// — the four tee points and the green are, between them, the extent of the hole that
-        /// matters — which keeps this from needing a second source of truth about hole extents.
+        /// §C2 says to project the start point "using the same transform the MapView uses".
+        /// There isn't one. `MapViewController` frames a live 3D CAMERA over the real hole
+        /// (bounds-fit around ball + flag + landing zone); the card shows a PRE-RENDERED PNG
+        /// from `HoleImages/`. Nothing anywhere records what world rectangle each of those 18
+        /// PNGs covers, so there is no honest way to turn a world XZ into a pixel on them.
         ///
-        /// A TEE start is not marked: it has no baked point, and "from the back tee" is already
-        /// what the card says in words.
+        /// The first attempt derived a box from the hole's five baked start areas. It produced
+        /// a marker, and the marker was WRONG — those five points are a small cluster near the
+        /// green, not the extent of the hole the PNG draws, so every start projected to a
+        /// corner. A marker in the wrong place is worse than no marker: it tells the player
+        /// something false about where they will tee off.
+        ///
+        /// So the start is conveyed in WORDS on the card (`START_AREA_*`, e.g. "Greenside
+        /// bunker"), which is exact, and the marker waits for a per-hole thumbnail calibration
+        /// — the world rect each PNG covers — that has to be authored once alongside the art.
         /// </summary>
         private void PlaceStartMarker(MissionCardController card, MissionDefinition m)
         {
-            if (!m.StartWorld.HasValue) return;
-            if (!MissionCatalog.TryGetHoleBounds(m.HoleNumber, out Vector2 min, out Vector2 max)) return;
-
-            Vector3 p = m.StartWorld.Value;
-            float u = Mathf.InverseLerp(min.x, max.x, p.x);
-            float v = Mathf.InverseLerp(min.y, max.y, p.z);
-            card.SetStartMarkerNormalised(new Vector2(Mathf.Clamp01(u), Mathf.Clamp01(v)));
+            card.HideStartMarker();
         }
 
         // ── Daily ───────────────────────────────────────────────────────────────

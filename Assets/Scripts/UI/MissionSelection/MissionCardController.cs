@@ -67,6 +67,7 @@ namespace GolfinRedux.UI.MissionSelection
         [SerializeField] private TextMeshProUGUI[] goalLines = new TextMeshProUGUI[3];
         [SerializeField] private TextMeshProUGUI? windLine;
         [SerializeField] private TextMeshProUGUI? loadoutLine;
+        [SerializeField] private TextMeshProUGUI? startLine;
 
         // ── Rewards ─────────────────────────────────────────────────────────────
         [Header("Rewards — Collapsed")]
@@ -231,6 +232,12 @@ namespace GolfinRedux.UI.MissionSelection
 
             if (loadoutLine != null)
                 loadoutLine.text = string.IsNullOrEmpty(m.LoadoutKey) ? "" : LocalizationManager.Get(m.LoadoutKey);
+
+            // WHERE the ball starts, in words. This carries the information the start MARKER
+            // was meant to — and carries it exactly, which the marker could not (see
+            // MissionSelectionScreenController.PlaceStartMarker for why it is off).
+            if (startLine != null)
+                startLine.text = string.IsNullOrEmpty(m.StartAreaKey) ? "" : LocalizationManager.Get(m.StartAreaKey);
         }
 
         /// <summary>One goal as a sentence. The param is substituted, and a SURFACE or CLUB
@@ -275,10 +282,10 @@ namespace GolfinRedux.UI.MissionSelection
             if (img == null) img = Resources.Load<Sprite>("HoleImages/Missing");
             if (img != null) holeImage.sprite = img;
 
-            // The start marker is positioned by the screen controller, which owns the world→
-            // thumbnail transform. A TEE start has no baked point, so the marker is hidden and
-            // the card reads as "from the tee", which is what the tee label already says.
-            if (startMarker != null) startMarker.gameObject.SetActive(m.StartWorld.HasValue);
+            // The marker is hidden by the screen controller — there is no calibration that
+            // maps a world point onto these pre-rendered thumbnails. The start is on the card
+            // in words instead.
+            if (startMarker != null) startMarker.gameObject.SetActive(false);
         }
 
         // ── Rewards ─────────────────────────────────────────────────────────────
@@ -399,13 +406,21 @@ namespace GolfinRedux.UI.MissionSelection
             }
         }
 
-        /// <summary>Place the start marker over the hole thumbnail. The screen owns the
-        /// world→thumbnail transform; the card only draws where it is told.</summary>
+        /// <summary>Place the start marker over the hole thumbnail, at a 0..1 position.
+        /// Currently unused — see <c>MissionSelectionScreenController.PlaceStartMarker</c> for
+        /// the calibration that does not exist yet. Kept because the marker object is wired and
+        /// the day that data is authored this is all that is needed.</summary>
         public void SetStartMarkerNormalised(Vector2 normalised)
         {
             if (startMarker == null || holeImage == null) return;
+            startMarker.gameObject.SetActive(true);
             startMarker.anchorMin = startMarker.anchorMax = normalised;
             startMarker.anchoredPosition = Vector2.zero;
+        }
+
+        public void HideStartMarker()
+        {
+            if (startMarker != null) startMarker.gameObject.SetActive(false);
         }
 
         // ── Helpers ─────────────────────────────────────────────────────────────
