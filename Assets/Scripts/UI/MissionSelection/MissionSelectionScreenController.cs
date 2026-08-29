@@ -60,6 +60,12 @@ namespace GolfinRedux.UI.MissionSelection
 
         private readonly List<MissionCardController> _cards = new List<MissionCardController>();
 
+        /// <summary>Daily card + campaign list, measured once while the daily card is collapsed.</summary>
+        private float _columnTotal;
+
+        /// <summary>Floor for the campaign viewport, so an expanded daily can never erase the list.</summary>
+        private const float MinCardsViewport = 420f;
+
         /// <summary>
         /// The tier tab in view. Defaults to the FURTHEST UNLOCKED tier and PERSISTS across
         /// navigation round-trips (§C2) — a player working through Legend should not be dropped
@@ -85,6 +91,14 @@ namespace GolfinRedux.UI.MissionSelection
 
         private void OnEnable()
         {
+            // MissionLoadoutResolver installs itself from [RuntimeInitializeOnLoadMethod], which
+            // does NOT re-run after a mid-session domain reload — statics come back null and the
+            // attribute has already fired for this play session. MissionCatalog then resolves
+            // every loadout to zero clubs, and the daily card, which is dropped when its bag is
+            // empty, silently disappears. Re-installing here is idempotent (a plain assignment)
+            // and costs nothing. Observed 2026-08-29: 'SUP_IRONS resolved to no clubs — no
+            // ClubResolver is installed'.
+            MissionLoadoutResolver.Install();
             MissionCatalog.EnsureLoaded();
             if (string.IsNullOrEmpty(_activeTier)) _activeTier = FurthestUnlockedTier();
             BuildTierPillListeners();
@@ -255,22 +269,96 @@ namespace GolfinRedux.UI.MissionSelection
             if (card.State == MissionCardState.Expanded)
             {
                 card.SetState(MissionCardState.Collapsed);
+                if (isActiveAndEnabled) StartCoroutine(RebalanceNextFrame());
                 return;
             }
             SetExpanded(card);
-            StartCoroutine(ScrollToNextFrame(card));
+            // ScrollTo measures against cardsContent; the daily card is not parented to it, so
+            // scrolling "to" it would move the campaign list to a meaningless position.
+            if (_cards.Contains(card)) StartCoroutine(ScrollToNextFrame(card));
+        }
+
+        /// <summary>
+        /// The daily card and the campaign list share one fixed column: `Content` is a plain
+        /// VerticalLayoutGroup, not a scroll view, so anything the daily card grows by is pushed
+        /// straight off the bottom of the screen. Expanding it more than doubles its height
+        /// (374 -> ~878), which would shove the whole list past the nav bar.
+        ///
+        /// So the column total is held constant and the campaign list absorbs the difference.
+        /// The list IS a scroll view, so it loses viewport, not content.
+        ///
+        /// `Content`'s group has childControlHeight = false, which makes LayoutElement inert
+        /// there — sizeDelta is the only lever that moves anything.
+        /// </summary>
+        private void RebalanceColumn()
+        {
+            if (dailyCard == null || cardsScrollRect == null) return;
+            var daily = dailyCard.rootRect;
+            if (daily == null) return;
+            var column = daily.parent as RectTransform;
+            if (column == null) return;
+
+            // The ScrollRect lives on CardsContainer/CardsScrollView, a GRANDchild of the column
+            // -- resizing the ScrollRect's own transform moves the viewport inside the container
+            // and leaves the container itself the same height, which is exactly the no-op this
+            // first shipped as. Walk up to whichever ancestor is the column's own child.
+            var cards = cardsScrollRect.transform as RectTransform;
+            while (cards != null && cards.parent != column) cards = cards.parent as RectTransform;
+            if (cards == null) return;
+
+            // An INACTIVE daily card occupies no space in the column, but its RectTransform still
+            // reports whatever height it last had -- so it has to be read as zero here, and it can
+            // never be the thing the budget is measured from.
+            bool dailyShowing = dailyCard.gameObject.activeInHierarchy;
+            float dailyHeight = dailyShowing ? daily.rect.height : 0f;
+
+            if (_columnTotal <= 0f)
+            {
+                // The budget is only readable from a daily card that is on screen AND collapsed.
+                // Banking it while expanded would freeze the expanded height as the budget;
+                // banking it while inactive would bank a stale rect nothing is laying out.
+                if (!dailyShowing || dailyCard.State == MissionCardState.Expanded) return;
+                _columnTotal = daily.rect.height + cards.rect.height;
+                if (_columnTotal <= 0f) return;
+            }
+
+            float target = Mathf.Max(MinCardsViewport, _columnTotal - dailyHeight);
+            if (!Mathf.Approximately(cards.sizeDelta.y, target))
+                cards.sizeDelta = new Vector2(cards.sizeDelta.x, target);
+        }
+
+        private IEnumerator RebalanceNextFrame()
+        {
+            // The card's own height comes from a ContentSizeFitter, which has not run yet on the
+            // frame the state changed — measuring now would rebalance against the OLD height.
+            yield return null;
+            Canvas.ForceUpdateCanvases();
+            RebalanceColumn();
         }
 
         /// <summary>The single-expanded invariant lives HERE, not on the card — a card cannot
         /// know what its siblings are doing.</summary>
         private void SetExpanded(MissionCardController card)
         {
-            foreach (var c in _cards)
+            foreach (var c in AllCards())
             {
                 if (c == null) continue;
                 if (c == card) c.SetState(MissionCardState.Expanded);
                 else if (c.State == MissionCardState.Expanded) c.SetState(MissionCardState.Collapsed);
             }
+            if (isActiveAndEnabled) StartCoroutine(RebalanceNextFrame());
+        }
+
+        /// <summary>
+        /// Every card the invariant governs: the instantiated campaign rows PLUS the daily card,
+        /// which lives outside <c>_cards</c> because it is a scene object rather than a row.
+        /// Naming it here is what stops "expand a campaign card" from leaving the daily one open
+        /// beside it — and vice versa.
+        /// </summary>
+        private IEnumerable<MissionCardController?> AllCards()
+        {
+            foreach (var c in _cards) yield return c;
+            if (dailyCard != null) yield return dailyCard;
         }
 
         private IEnumerator ScrollToNextFrame(MissionCardController card)
@@ -397,7 +485,24 @@ namespace GolfinRedux.UI.MissionSelection
                 }
 
                 dailyCard!.gameObject.SetActive(true);
+
+                // The daily card is a SERIALIZED SCENE OBJECT, not one of the rows RebuildCards
+                // instantiates — so it never passed through the subscribe site there, and its two
+                // events had no listeners at all. The card rendered correctly and did nothing:
+                // tapping it could not expand it and its PLAY button could not start the round.
+                // Subscribe here, where the card is bound, so a real recipe is always wired.
+                // `-=` first because OnEnable calls RefreshDaily on every return to the screen;
+                // without it a second visit would double-subscribe and one tap would expand and
+                // immediately collapse again.
+                dailyCard.OnCardTapped -= HandleCardTapped;
+                dailyCard.OnCardTapped += HandleCardTapped;
+                dailyCard.OnActionButtonClicked -= HandleActionClicked;
+                dailyCard.OnActionButtonClicked += HandleActionClicked;
+
                 dailyCard.Bind(def, MissionCardMode.Daily, MissionCardState.Collapsed);
+
+                // Bank the collapsed column budget now, while it is still readable.
+                if (isActiveAndEnabled) StartCoroutine(RebalanceNextFrame());
 
                 System.DateTime utc = System.DateTime.UtcNow;
                 dailyCard.SetDailyStatus(utc.Date.AddDays(1) - utc, r.Data.Streak, r.Data.Claimed);

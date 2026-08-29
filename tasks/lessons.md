@@ -3054,3 +3054,28 @@ an OB/water drop just happened. That readout in a screenshot identified the code
 any of the physics had been read.
 
 Related: Lesson AA (verify against the real artifact, not the report of it).
+
+## Lesson AH — "the type resolves" is not "it compiled" (2026-08-29, missions daily card)
+
+Verifying a C# edit by reflecting for the type — `AppDomain.CurrentDomain.GetAssemblies()
+.Select(a => a.GetType("...")).FirstOrDefault(x => x != null)` — passes happily against the LAST
+GOOD assembly. Unity keeps serving it when the new compile fails, so the probe says "COMPILED ok"
+while the editor is running yesterday's code.
+
+That cost several verification rounds on `missions_locked_on_device`. A `CS0104` ambiguity between
+`UnityEngine.Object` and `System.Object` sat unnoticed while play-mode sessions showed raw
+localization keys and null singletons — all downstream of the stale assemblies, all of it read as
+real bugs, one of them chased for a long time.
+
+**The honest gates, in order:**
+
+1. `tests-run` — it REFUSES to start on compile errors and says which file and line. It is the
+   cheapest true signal there is.
+2. `console-get-logs` filtered to `Error`.
+3. `editor-application-get-state` → `IsCompiling` false, *after* an `assets-refresh` has settled.
+
+**Never** treat type-presence, method-presence, or "no exception thrown" as proof of compilation.
+
+Corollary — when several unrelated things break at once in play mode (raw localization keys, null
+statics on live singletons, a feature that worked an hour ago), suspect ONE stale-assembly cause
+before investigating them separately. The cluster is the tell.

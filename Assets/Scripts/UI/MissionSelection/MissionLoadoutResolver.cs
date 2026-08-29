@@ -57,6 +57,27 @@ namespace GolfinRedux.UI.MissionSelection
             return outIds;
         }
 
+        /// <summary>
+        /// <see cref="ClubDatabaseCSV.Instance"/> with a live-object fallback.
+        ///
+        /// The static can be null while the COMPONENT is alive, active and enabled in
+        /// DontDestroyOnLoad — observed 2026-08-29, and it is what made the daily mission card
+        /// disappear: an empty supplied bag drops the card, and the only symptom was the card
+        /// not being there. Awake() sets the static and does not re-run for an object that is
+        /// already alive, so anything that wipes statics mid-session (a domain reload) leaves the
+        /// two disagreeing permanently.
+        ///
+        /// Reaching for the live object is the cheap, honest repair for THIS consumer. The
+        /// singleton itself is a separate problem and a wider one — ClubManager asserts on this
+        /// same database.
+        /// </summary>
+        private static ClubDatabaseCSV? ClubDb()
+        {
+            var db = ClubDatabaseCSV.Instance;
+            if (db != null) return db;
+            return UnityEngine.Object.FindFirstObjectByType<ClubDatabaseCSV>(UnityEngine.FindObjectsInactive.Include);
+        }
+
         // ── supplied: the mission's own bag ─────────────────────────────────────
 
         private static List<string> ResolveSupplied(string id, string mask, string rarity, out string warning)
@@ -64,7 +85,7 @@ namespace GolfinRedux.UI.MissionSelection
             warning = "";
             var outIds = new List<string>();
 
-            var db = ClubDatabaseCSV.Instance;
+            var db = ClubDb();
             if (db == null)
             {
                 warning = "the club catalog is not loaded yet";
@@ -117,7 +138,7 @@ namespace GolfinRedux.UI.MissionSelection
 
             foreach (var owned in bag.GetClubsInBag(bag.EquippedBagSlot))
             {
-                var template = ClubDatabaseCSV.Instance?.GetClub(owned.clubId);
+                var template = ClubDb()?.GetClub(owned.clubId);
                 if (template == null) continue;
                 if (banned.Contains(ClubTypeName(template))) continue;
                 outIds.Add(owned.clubId);

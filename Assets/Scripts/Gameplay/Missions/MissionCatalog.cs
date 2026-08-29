@@ -372,7 +372,19 @@ namespace Golfin.Gameplay.Missions
                     ? startAreaId.Substring(4).ToLowerInvariant() : "regular";
             }
 
-            var clubs = ClubResolver != null ? ClubResolver(loadout, out _) : new List<string>();
+            // NOT `out _`. The caller drops the whole card when ClubIds is empty, so discarding
+            // the resolver's reason meant the daily card could vanish with nothing in the log
+            // saying why -- which is exactly how it vanished on 2026-08-29. The campaign path
+            // above already keeps its warning; this one now does too.
+            string loadoutWhy = "";
+            var clubs = ClubResolver != null
+                ? ClubResolver(loadout, out loadoutWhy)
+                : new List<string>();
+            if (clubs.Count == 0)
+                Debug.LogWarning($"{Tag} the daily's loadout '{loadoutId}' resolved to no clubs" +
+                                 (ClubResolver == null
+                                     ? " — no ClubResolver is installed."
+                                     : (loadoutWhy.Length > 0 ? $" — {loadoutWhy}." : ".")));
             def.ClubIds.AddRange(clubs);
             return def;
         }

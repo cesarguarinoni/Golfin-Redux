@@ -1167,8 +1167,8 @@ MonoBehaviour:
       experiment with different clubs.
     japanese: "\u30ED\u30F3\u30B0\u30B7\u30E7\u30C3\u30C8\u306E\u7DF4\u7FD2\u3084\u3001\u3055\u307E\u3056\u307E\u306A\u30AF\u30E9\u30D6\u3092\u8A66\u305B\u308B\u5C02\u7528\u306E\u30C9\u30E9\u30A4\u30D3\u30F3\u30B0\u30EC\u30F3\u30B8\u30E2\u30FC\u30C9\u3002"
   - key: MODE_MISSIONS_TAGLINE
-    english: "Coming Soon \u2014 complete challenges."
-    japanese: "\u8FD1\u65E5\u516C\u958B \u2014 \u30C1\u30E3\u30EC\u30F3\u30B8\u306B\u6311\u6226\u3057\u3088\u3046\u3002"
+    english: Take on 40 hole challenges.
+    japanese: "40\u306E\u30DB\u30FC\u30EB\u30C1\u30E3\u30EC\u30F3\u30B8\u306B\u6311\u6226\u3057\u3088\u3046\u3002"
   - key: MODE_MISSIONS_DESC
     english: Complete special challenges and objectives to earn bonus rewards and
       exclusive items.

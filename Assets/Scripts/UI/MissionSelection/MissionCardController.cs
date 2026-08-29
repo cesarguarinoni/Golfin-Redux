@@ -190,9 +190,18 @@ namespace GolfinRedux.UI.MissionSelection
             if (subtitleTextCollapsed != null) subtitleTextCollapsed.text = subtitle;
             if (subtitleTextExpanded  != null) subtitleTextExpanded.text  = subtitle;
 
+            // The daily card's SUBTITLE is already "<course> - Hole n" (there is no mission order
+            // or name to show), so drawing the course line under it repeats the same sentence
+            // twice. Campaign cards keep it: their subtitle is "3 - Chip and Run - Hole 6", which
+            // never names the course.
             if (courseLineText != null)
-                courseLineText.text = $"{LocalizationManager.Get("MISSION_COURSE_LOMOND")} - " +
-                                      $"{LocalizationManager.Get("MISSION_HOLE")} {m.HoleNumber}";
+            {
+                bool duplicate = Mode == MissionCardMode.Daily;
+                courseLineText.gameObject.SetActive(!duplicate);
+                if (!duplicate)
+                    courseLineText.text = $"{LocalizationManager.Get("MISSION_COURSE_LOMOND")} - " +
+                                          $"{LocalizationManager.Get("MISSION_HOLE")} {m.HoleNumber}";
+            }
 
             BindGoalLines(m);
 
