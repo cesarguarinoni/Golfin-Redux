@@ -129,6 +129,8 @@ Where:
 - `flickDeviation` = angle between flick vector and cone center axis (off-axis flick adds error)
 - `perPassDegradation` = RNG-seeded ± up to `(passIndex - cleanPasses) * DegradationYawDegPerPass`
 
+> **2026-08-28 — the D4 3° nudge (Order 356, `fade_draw_core_wiring`) is reverted** by `shot_aim_parity`: the handle maps to ±halfCone for the **shot** as well as the line, so the formula above is again the single truth. `AimNudgeRangeRad` is removed from `ControlsConfig` / `controls.csv`; both `ShotController.PublishState` and `ShotController.CommitFlick` now route through one private `AimYawFor(finetune)`. Fade/Draw mode is the one exception (aim locked at arming, handle buys curve instead).
+
 ### 3.4 Timing arrows
 
 Arrows travel up the cone. The player flicks when an arrow reaches the apex (= "perfect timing"). Off-time flicks reduce power (existing physics already supports a `flickMagnitude01 < 1.0` reduction).

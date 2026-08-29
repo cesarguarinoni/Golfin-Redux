@@ -6,6 +6,122 @@ against the Hole 1 par-5 completability baseline (≤7 strokes with default char
 
 ---
 
+## F14 — Straight-mode aim honours the cone (`AimNudgeRangeRad` removed) (2026-08-28)
+
+**Task:** `shot_aim_parity`
+**Reason:** The targeting line and the committed shot used **two different aim formulas**, so the
+ball never went where the line pointed. Players read it as "the flick always fires centered".
+**Locked by:** Architect decision D1 (Cesar to overrule by tuning `ConeHalfAngleAtAcc100Deg`, not code).
+
+### Symptom
+
+Pull the club handle to the far edge of the cone and the targeting line swings out to ~11° at the
+median club (up to 20° at Accuracy 120). Flick, and the ball launches at most **3°** off the camera
+heading. At 200 yd the line implies ~38 yd of lateral movement; the ball moves ~10 yd. The aim
+input looked broken, so players stopped using it.
+
+### The two formulas
+
+| Consumer | Formula (before) | Full deflection @ median club |
+|---|---|---|
+| `ShotController.PublishState` → targeting line | `heading + finetune * HalfConeAngleRad()` | **±11.25°** |
+| `ShotController.CommitFlick` → the shot (Straight) | `heading + finetune * AimNudgeRangeRad` | **±3.0°** |
+
+Ratio **≈ 3.7×** at the median shipped club (`baseAccuracy` 48 → half-cone ≈ 11°). The 3° nudge
+came from `fade_draw_core_wiring` (Order 356) decision D4; the line kept the `SHOT_CONTROLS_DESIGN
+§3.3` formula. Nothing tested the two against each other, which is how it shipped.
+
+### Decisions
+
+- **D1 — the shot honours the cone.** Committed aim in Straight mode is now
+  `finetune * HalfConeAngleRad()`, matching the line and §3.3. The cone is defined as "aim range
+  AND error tolerance" (§3.3/§4) — a cone you cannot aim across has no reason to be wide, and this
+  makes Club Accuracy matter for aiming, not just for the safe zone. `AimNudgeRangeRad` is
+  **removed** (config field, `Default` initialiser, loader `case`, `controls.csv` row 27).
+  *Tuning knob if ±20° at Accuracy 120 feels wide: `ConeHalfAngleAtAcc100Deg` — one number, no code.*
+- **D2 — one formula, one place.** New private `ShotController.AimYawFor(float finetune)` is the
+  single source of truth; `PublishState` calls it directly, `CommitFlick` calls it and adds
+  `degradYaw`. `ShotAimParityTests` is the regression gate.
+- **D3 — the aim latch re-opens on a new low.** `PushTouchSample` previously latched on 1 % of
+  `Screen.height` of cumulative upward travel (~28 px on a 15 Pro Max) and **never** unlatched
+  within a swing, so a thumb wobbling while aiming at the cone base froze the aim silently. It now
+  unlatches and re-syncs to the live handle whenever the finger goes below the swing's lowest
+  point. `_reversalThreshold` stays 0.01 (the unlatch is what makes it forgiving). A real flick
+  never comes back down, so the latch still holds through a genuine upswing.
+- **D4 — Fade/Draw line rotates to the locked heading only.** Falls out of D2: `PublishState` now
+  returns `FadeDrawLockedAimRad` in Fade/Draw mode instead of rotating with the handle. The line
+  previously both rotated *and* bent while the ball only bent. Bend still comes from
+  `AimLineBendRenderer.FinetuneX`.
+
+**Putts are unchanged in value** — they already used the half-cone formula on both sides; they
+simply route through the same helper now.
+
+### Files changed
+
+- `Assets/Scripts/Gameplay/Input/ShotController.cs` — `AimYawFor` (new), `CommitFlick`,
+  `PublishState`, `PushTouchSample`, `LogResolution` snapshot (now prints `halfCone` + `finetune`).
+- `Assets/Scripts/Gameplay/Config/ControlsConfig.cs`, `ControlsConfigLoader.cs`,
+  `Assets/Resources/Gameplay/controls.csv` — `AimNudgeRangeRad` removed from all three mirrors
+  (see the F13 correction above: `ControlsConfig.Default` is runtime truth, the CSV is
+  documentation — but an orphan CSV row would make `ControlsConfigLoader` log an unknown-key
+  warning, so the row goes with the field).
+
+### Tests — `Golfin.Gameplay.Tests`, 348 passed / 0 failed / 0 skipped
+
+- **`ShotAimParityTests` (new, 5 tests).** `Straight_PublishedAimEqualsCommittedAim` sweeps
+  finetune ∈ {−1, −0.6, 0, 0.35, 1} and asserts the yaw recovered from the committed velocity
+  equals the last published `AimYawRadians` *and* equals `heading + f * halfCone`, to 1e-3 rad.
+  Plus `FadeDraw_PublishedAimIsLockedHeading`, `Putt_PublishedAimEqualsCommittedAim`,
+  `Latch_ReopensWhenFingerGoesLower` (D3), `Latch_HoldsThroughUpswing_NoNewLow` (D3 does not
+  weaken the latch). Proven to actually execute with a deliberate `Assert.Fail` tripwire, because
+  `tests-run` silently ignores class filters on this project.
+- **`FadeDrawWiringTests`** tests 1–2 renamed `StraightMode_HandleRight_AimsRightByHalfCone` /
+  `..._HandleLeft_AimsLeftByHalfCone`; expectation changed from `_cfg.AimNudgeRangeRad` to
+  `_sc.ConeHalfAngleDeg * Mathf.Deg2Rad`.
+- `Golfin.Physics.Tests`: 357 passed / 0 failed / 3 pre-existing documented skips.
+
+### The control scheme, confirmed in play: club left ⇒ ball right
+
+Worth recording because F14 makes it far more visible. The cone handle is the **club's position
+relative to the ball**, not a pointer at the target, so the ball leaves on the opposite side —
+real golf controls (Cesar, 2026-08-29). Measured on Hole 1 by reproducing `ShotConeView`'s own
+world→screen projection:
+
+| stroke | club offset on screen | drawn line lean | ball |
+|---|---|---|---|
+| club RIGHT | +157.5 px | −249.1 px | LEFT |
+| club CENTRED | 0.0 px | −0.001 px | dead ahead |
+| club LEFT | −78.3 px | +307.6 px | RIGHT |
+
+The sign is unchanged from HEAD `01daaefb`; F14 only changed the magnitude, so the same control
+now moves the ball ±8–11° instead of ±3°. `ShotAimParityDemoRecorder`'s `*_A5` assertions lock
+the inverse relationship in so a future change cannot flip it by accident.
+
+### Fade/Draw curve — measured while verifying F14 (not changed by F14)
+
+Cesar asked whether the fade was meant to come out straight. It is not, and it is not broken.
+Isolated physics (driver, seed 42, flat ground, `FadeDrawMaxTiltRad` 0.3): a full-power fade
+curves **53 yd** (9.46°), full draw to full fade spans **106 yd**. At 0.52 power it curves only
+**7.8 yd** — which is why the first verification clip, whose fade stroke was sized at 0.52 to keep
+the ball out of trouble, looked dead straight.
+
+**Open, and worth its own task:** the same shot in live play measured **12.6 m (14 yd), 2.65°**
+over a 273 m tee shot — ~3.6× less than the model. Wind is not the cause (re-running with Hole
+10's 8.7 mph @ 332° still gives 45.6 m). Remaining candidates: the equipped club/ball stats (the
+live driver is a `Clubs.csv` player club, not `ClubStats.DefaultDriver`, and backspin rate is what
+the tilted axis converts into side force) and terrain roll after landing. Tilt sweep for
+reference, at full power: 0.3 → 53 yd; 0.6 → 90 yd; 1.0 → 99 yd but carry drops 291→229 m; 1.5 →
+curve falls back to 60 yd with carry down to 170 m. 0.3 sits on the well-behaved part of the
+curve.
+
+### Bots and carry baselines: unaffected
+
+The Loop-v2 bot fires via `FireDebugShot()`, which sets `_aimFinetune = 0` in Straight mode. At
+finetune 0 both the old and new formulas reduce to `heading + degradYaw` — byte-identical. No
+carry baseline moves.
+
+---
+
 ## F13 — Low-CC arrow speed retune + arrowHz floor clamp (2026-08-04)
 
 **Task:** `arrow_speed_retune`

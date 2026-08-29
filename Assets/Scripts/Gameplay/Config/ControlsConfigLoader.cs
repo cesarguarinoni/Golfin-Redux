@@ -58,7 +58,6 @@ namespace Golfin.Gameplay.Config
                     case "SpinMagScaleSlope":              cfg.SpinMagScaleSlope              = val; break;
                     case "SpinMaxTiltRad":                 cfg.SpinMaxTiltRad                 = val; break;
                     case "FadeDrawMaxTiltRad":             cfg.FadeDrawMaxTiltRad             = val; break;
-                    case "AimNudgeRangeRad":               cfg.AimNudgeRangeRad               = val; break;
                     case "SpinSelectorFloorRadius01":      cfg.SpinSelectorFloorRadius01      = val; break;
                     case "BallSpriteVisualRadiusFrac":     cfg.BallSpriteVisualRadiusFrac     = val; break;
                     case "AimLineDefaultReachPx":          cfg.AimLineDefaultReachPx          = val; break;

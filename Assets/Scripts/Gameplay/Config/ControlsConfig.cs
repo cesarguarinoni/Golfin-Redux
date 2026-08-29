@@ -62,7 +62,6 @@ namespace Golfin.Gameplay.Config
 
         // Fade/Draw shaping (fade_draw_core_wiring Order 356, D1–D5)
         public float FadeDrawMaxTiltRad;  // dominant curve term: max tilt when handle at ±1 (propose = old SpinMaxTiltRad = 0.3)
-        public float AimNudgeRangeRad;    // aim yaw nudge at full handle deflection (Straight mode), propose ~3deg = 0.052rad
 
         // Spin selector UX (spin_selector_ux Order 354)
         public float SpinSelectorFloorRadius01;    // min selectable disc radius at spin=-10; default 0.20
@@ -116,7 +115,6 @@ namespace Golfin.Gameplay.Config
             SpinMagScaleSlope              = 1.5f,
             SpinMaxTiltRad                 = 0.075f,   // D3 trim: ~1/4 of prior 0.3 ≈ 4.3° max sidespin curve
             FadeDrawMaxTiltRad             = 0.3f,     // D1 dominant: 0.3 ≈ 17° max at full handle deflection
-            AimNudgeRangeRad               = 0.0524f,  // D4 Straight mode aim nudge: ~3° full deflection
             SpinSelectorFloorRadius01      = 0.20f,
             BallSpriteVisualRadiusFrac     = 0.957f,
             AimLineDefaultReachPx          = 500f,   // canvas px at rest (iter-2: increased from 400 for readability)

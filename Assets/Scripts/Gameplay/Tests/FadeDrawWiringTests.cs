@@ -13,7 +13,7 @@ namespace Golfin.Gameplay.Tests
     /// EditMode tests for fade/draw core wiring (Order 356, fade_draw_core_wiring).
     ///
     /// Covers:
-    ///   1. Aim-nudge mapping: Straight mode, handle deflection nudges aim yaw by AimNudgeRangeRad.
+    ///   1. Aim mapping: Straight mode, handle deflection aims by ±halfCone (shot_aim_parity D1).
     ///   2. FadeDraw mode: aim stays locked; handle offset drives curve (fadeDrawInput).
     ///   3. Mode-transition aim-lock: arming locks CameraHeadingRadians as locked aim.
     ///   4. Mode-transition re-center: arming zeroes the finetune handle.
@@ -102,9 +102,10 @@ namespace Golfin.Gameplay.Tests
         // ── Test 1: Straight mode aim nudge ──────────────────────────────────────
 
         [Test]
-        public void StraightMode_HandleRight_NudgesAimRight()
+        public void StraightMode_HandleRight_AimsRightByHalfCone()
         {
-            // Straight mode, handle at +1 → aim = heading + AimNudgeRangeRad
+            // Straight mode, handle at +1 → aim = heading + halfCone (shot_aim_parity D1;
+            // the D4 3° AimNudgeRangeRad from Order 356 was reverted 2026-08-28).
             float heading   = 0f;
             float finetune  = 1f;
 
@@ -115,13 +116,13 @@ namespace Golfin.Gameplay.Tests
             float yawCenter = Mathf.Atan2(shotCenter.velocity.z.ToFloat(), shotCenter.velocity.x.ToFloat());
             float yawRight  = Mathf.Atan2(shotRight.velocity.z.ToFloat(),  shotRight.velocity.x.ToFloat());
 
-            float expectedNudge = _cfg.AimNudgeRangeRad;
+            float expectedNudge = _sc.ConeHalfAngleDeg * Mathf.Deg2Rad;
             Assert.AreEqual(expectedNudge, yawRight - yawCenter, 0.005f,
-                $"Aim nudge at finetune=+1 should be +AimNudgeRangeRad ({expectedNudge:F4} rad)");
+                $"Aim at finetune=+1 should be +halfCone ({expectedNudge:F4} rad)");
         }
 
         [Test]
-        public void StraightMode_HandleLeft_NudgesAimLeft()
+        public void StraightMode_HandleLeft_AimsLeftByHalfCone()
         {
             float heading  = 0f;
             float finetune = -1f;
@@ -132,9 +133,9 @@ namespace Golfin.Gameplay.Tests
             float yawCenter = Mathf.Atan2(shotCenter.velocity.z.ToFloat(), shotCenter.velocity.x.ToFloat());
             float yawLeft   = Mathf.Atan2(shotLeft.velocity.z.ToFloat(),   shotLeft.velocity.x.ToFloat());
 
-            float expectedNudge = -_cfg.AimNudgeRangeRad;
+            float expectedNudge = -_sc.ConeHalfAngleDeg * Mathf.Deg2Rad;
             Assert.AreEqual(expectedNudge, yawLeft - yawCenter, 0.005f,
-                $"Aim nudge at finetune=-1 should be -AimNudgeRangeRad ({expectedNudge:F4} rad)");
+                $"Aim at finetune=-1 should be -halfCone ({expectedNudge:F4} rad)");
         }
 
         // ── Test 2: FadeDraw mode — aim locked, handle drives curve ─────────────

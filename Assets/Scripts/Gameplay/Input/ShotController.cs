@@ -188,7 +188,7 @@ namespace Golfin.Gameplay.Input
             _sampleTime[_sampleCount % SampleBufferSize] = Time.unscaledTime;
             _sampleCount++;
 
-            if (_debugDisableAimLock || _aimLocked) return;
+            if (_debugDisableAimLock) return;
 
             // Latch on cumulative upward travel since the LOWEST point of the swing, so
             // micro-jitter (up 2px, down 2px) never latches but a real upswing latches
@@ -196,6 +196,13 @@ namespace Golfin.Gameplay.Input
             if (float.IsNaN(_lowestTouchY) || screenPosPx.y < _lowestTouchY)
             {
                 _lowestTouchY = screenPosPx.y;
+                if (_aimLocked)
+                {
+                    // The "reversal" was a wobble: the thumb came back down. Re-open the aim so
+                    // lateral aiming at the cone base keeps steering the line (shot_aim_parity D3).
+                    _aimLocked   = false;
+                    _aimFinetune = _coneFinetune;
+                }
                 return;
             }
 
@@ -522,29 +529,10 @@ namespace Golfin.Gameplay.Input
             LastShotWasClean = !IsPutt && Mathf.Approximately(degradYaw, 0f);   // latched for BallTrailController
             float finetune  = DebugFlags.DisableConeFineTune ? 0f : _aimFinetune;
 
-            // Phase D/E (fade_draw_core_wiring Order 356):
-            // FadeDraw mode: aim is LOCKED at arming time (pushed by ShotConeView as FadeDrawLockedAimRad).
-            //   If lock was cleared (NaN, e.g. after a shot reset), re-lock to camera heading now.
-            //   finetune drives the fade/draw curve, NOT aim.
-            // Straight mode: finetune drives aim nudge within ±AimNudgeRangeRad (D4).
-            //   The legacy formula (finetune * HalfConeAngleRad) is REPLACED by aim nudge.
-            // Putts: unchanged (D6) — legacy formula retained.
-            if (!IsPutt && FadeDrawActive)
-            {
-                // FadeDraw armed: use locked aim. Re-lock if NaN (per-shot re-arm after reset).
-                float lockedAim = float.IsNaN(FadeDrawLockedAimRad) ? CameraHeadingRadians : FadeDrawLockedAimRad;
-                _aimYawRadians = lockedAim + degradYaw;
-            }
-            else if (!IsPutt && !FadeDrawActive)
-            {
-                // Straight mode: aim nudge = finetune * AimNudgeRangeRad (D4).
-                _aimYawRadians = CameraHeadingRadians + finetune * _config.AimNudgeRangeRad + degradYaw;
-            }
-            else
-            {
-                // Putt: unchanged (D6) — legacy formula retained.
-                _aimYawRadians = CameraHeadingRadians + finetune * HalfConeAngleRad() + degradYaw;
-            }
+            // shot_aim_parity D1/D2: ONE formula, shared with PublishState (the targeting line).
+            // Straight + putt map the handle to ±halfCone; FadeDraw uses the aim locked at arming
+            // time and spends the handle on the curve instead. Degradation is the only extra term.
+            _aimYawRadians = AimYawFor(finetune) + degradYaw;
 
             float flickMag = PowerNormalized;
             if (IsPutt || DebugFlags.DisableOverpower) flickMag = Mathf.Min(flickMag, 1f);
@@ -566,6 +554,7 @@ namespace Golfin.Gameplay.Input
                     $"PowerNormalized={PowerNormalized:F3} flickMag={flickMag:F3} " +
                     $"PuttBaseVelocityMps={_config.PuttBaseVelocityMps:F2} " +
                     $"baseVelOverride={baseVelOverride.ToFloat():F2}m/s " +
+                    $"halfCone={HalfConeAngleRad() * Mathf.Rad2Deg:F1}deg finetune={finetune:F3} " +
                     $"aimYawRadians={_aimYawRadians:F3}rad");
             }
 #endif
@@ -674,6 +663,23 @@ namespace Golfin.Gameplay.Input
             return Mathf.Clamp(dx / 150f, -1f, 1f);  // 150px = approx half-cone width; refined in Part D
         }
 
+        /// <summary>
+        /// Aim yaw WITHOUT per-pass degradation — the SINGLE source of truth for where the ball
+        /// goes. Used by PublishState (the live targeting line) and CommitFlick (which adds
+        /// degradYaw). If these ever disagree the line lies — see ShotAimParityTests.
+        /// </summary>
+        private float AimYawFor(float finetune)
+        {
+            if (!IsPutt && FadeDrawActive)
+            {
+                // Aim was locked when the toggle was armed (D5, Order 356). Handle = curve, not aim.
+                // NaN = lock cleared by a shot reset → re-lock to the live camera heading now.
+                return float.IsNaN(FadeDrawLockedAimRad) ? CameraHeadingRadians : FadeDrawLockedAimRad;
+            }
+            // Straight swing AND putt: handle position maps to ±halfCone (SHOT_CONTROLS_DESIGN §3.3).
+            return CameraHeadingRadians + finetune * HalfConeAngleRad();
+        }
+
         private float HalfConeAngleRad()
         {
             float accNorm = GetClubAccuracyNorm();
@@ -756,7 +762,7 @@ namespace Golfin.Gameplay.Input
             // can pivot during Idle/Aiming/Pulling/Timing. Final committed aim still uses
             // the same formula at CommitFlick (which adds degradation).
             float finetune = DebugFlags.DisableConeFineTune ? 0f : _aimFinetune;
-            float liveAim  = CameraHeadingRadians + finetune * HalfConeAngleRad();
+            float liveAim  = AimYawFor(finetune);
 
             OnStateChanged.Invoke(new ShotInputState(
                 State, PowerNormalized, _aimFinetune, _arrowProgress,
