@@ -13,8 +13,9 @@
   (`e86edd10a`, `texts` v17 — Home pill, `StreakFlame` on the daily card, shared
   `DailyMissionState`). Design of record `Docs/Game Design/MISSIONS_REDESIGN.md`; economy in
   `Docs/Economy/ECONOMY_MASTER.md` §3. Open follow-ups, not blocking: `HoleTees.csv` yardages
-  disagree with pars on 10 holes (display-only); mission leaderboards (Rankings button = coming
-  soon); Nishikawa frame for the daily card on Mission Selection. Nothing in flight.
+  disagree with pars on 10 holes (data only — `HoleData.tees` is loaded but nothing renders it
+  yet). Rankings button on Mission Selection: REMOVE for now — Quick task
+  `Docs/Specs/Quick/missions_rankings_button_removal.md`.
 - **`game_modes_admin` is DONE** (Cesar, 2026-08-28) — folder in `Docs/Specs/Completed/`.
   `modes` is the TENTH content catalog and mode entry fees are SERVER-PRICED:
   `POST /points/spend` refuses a `mode_entry_fee:<id>` debit that does not match
