@@ -5,16 +5,39 @@
 
 ---
 
-## 🟡 IN FLIGHT — `missions_v1` **Phases A + B LIVE ON PROD, Phase C built** (2026-08-29)
+## ✅ SHIPPED — `missions_v1` **A + B + C live, the mode is OPEN, §21 proven** (2026-08-30)
 
-**Missions has a server-authoritative economy before it has a door.** Seven content catalogs, the
-tables and endpoints that decide and pay what a mission clear is worth, the deterministic daily
-generator, and three admin panels. **Nothing here is reachable by a player** — `modes.missions.locked`
-is still `true` in the bundled CSV, and Cesar opens the mode with a publish, not a build. Spec and
-report: `Docs/Specs/Active/missions_v1/`. Commits `0ef3bd912` (GolfinRedux) + `56195af` (playlife);
-dashboard deploy `4ccabd61-e47c-402b-a9b8-1ac49f890088`.
+**Missions got a server-authoritative economy before it got a door, and now the door is open.**
+Seven content catalogs, the tables and endpoints that decide and pay what a mission clear is
+worth, the deterministic daily generator, three admin panels, and the Mission Selection screen.
+`modes` v8 flipped `missions.locked` to false and `texts` v16 shipped the 131 keys Phase C
+renders — the mode opened with a publish, not with a build. Approved by Cesar 2026-08-30. Spec
+and report: `Docs/Specs/Completed/missions_v1/`. Commits `0ef3bd912` (GolfinRedux) + `56195af`
+(playlife); dashboard deploy `4ccabd61-e47c-402b-a9b8-1ac49f890088`.
 
-**Phase C — the door itself is built (not yet open).** `MissionSelectionScreen` is a clone of
+**§21's live end-to-end is closed, every row read back from the database:** `mission_clear:1`
++15, `mission_replay:1` +5, `daily_mission` +30 with `daily_mission_claims 2026-08-30
+streak=1 strokes=4`. The daily claim had **never fired before that run** —
+`Endpoints.MissionsDailyClaim` shipped in Phase A as a string with no sender, so no daily had
+ever paid. Harness: `Assets/Scripts/Editor/Missions/DailyClearHarness.cs`, which deliberately
+does NOT arm `BotSessionOverride` the way every capture harness does, because that override
+forces the points backend OFF — exactly wrong when the point is to prove a payout.
+
+**Determinism was demonstrated, not asserted:** 2026-08-30's recipe was computed locally before
+the server had ever seen the date, and the server's first generation matched field for field
+(`H10 par4 TEE_FRONT CROSS_L SUP_FULL [SHOTS 5 · AVOID Bunker]`). The preview, the server and
+the offline client really are one generator.
+
+**⚠️ THREE THINGS ARE CARRIED FORWARD, none of them blocking play.** (1) **Recipe pinning** is
+blocked on `PLAYLIFE_API_URL` + `PLAYLIFE_ADMIN_KEY` on the `golfin-admin` Worker — the Pin
+button renders only inside a Daily-preview row, so no preview means no pin; nothing in the repo
+unblocks it. (2) **The daily's result card wants one look** — `77436c36a` fixed the daily
+falling through to the generic hole cards, but the daily is once-per-date so today's is claimed
+and its card could not be re-entered to see it render. (3) **The daily claim trusts the client**:
+`golfin_daily_claim` records strokes and never checks them against the recipe's goals, so
+whether the daily was cleared is the client's word. Surfaced as a product decision, not patched.
+
+**Phase C — the door, now open.** `MissionSelectionScreen` is a clone of
 `HoleSelectionScreen` and `MissionCard.prefab` a clone of `HoleCard.prefab`; the Missions mode card
 routes at `mission_select` from both `ModeSelectScreenController` and `ModeCarouselController`, and
 that wiring was proven by invoking the real `ModeCardController.playButton.onClick` — the carousel
@@ -25,8 +48,10 @@ Three rounds of Cesar's feedback landed on the same Unity trap twice — `childC
 `sizeDelta` was the real lever. The daily card's gold rim is `S_GachaCardBorder3` (a real
 stroke-on-transparency 9-slice atom) tinted `#EEDC9A` at ppu 0.5 — overlaying the card's OWN panel
 sprite with `fillCenter=false` does not work, because that sprite's 9-slice border is solid navy art.
-EditMode 2035/2032/0 fail. **Still to build:** the Figma fidelity table + UI lint, the JA capture, the
-Hole Complete goal strip, and §21's live end-to-end run.
+EditMode 2063 / 2060 passed / 0 failed. §21's end-to-end run, the start-marker thumbnail
+calibration and the Hole Complete mission cards all landed after that note was written; the JA
+capture and the Figma fidelity table remain unbuilt, the latter waived by Cesar ("Design looks
+right. No fidelity pass needed until I give it a proper eye").
 
 **Why this order matters.** The shop, the level-up and the mode entry fee each had to be made
 server-authoritative *after* players were already walking through them — `routers/points.py`'s three

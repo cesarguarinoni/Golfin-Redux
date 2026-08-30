@@ -1,9 +1,11 @@
-READY_FOR_SELF_REVIEW
+DONE
 
-Phases A, B and C are built. A and B are LIVE ON PROD. C is built and verified in the Editor
-through the real player entry path, but the mode is still LOCKED — the door opens with the
-`modes` publish, not with a build, so nothing here is reachable by a player until Cesar
-publishes.
+Approved by Cesar 2026-08-30. Phases A, B, C and the §21 end-to-end run are live on prod and
+the mode is OPEN — `modes` v8 unlocked it, `texts` v16 carries the 131 keys Phase C renders.
+
+Phases A, B and C are live. The door is OPEN: `modes` v8 flipped `missions.locked` to false,
+which is what makes any of this reachable by a player — the mode opened with a publish, not
+with a build.
 
 ## Deployed state (verified 2026-08-29)
 
@@ -41,15 +43,6 @@ publishes.
   Dashboard        126 passed, tsc clean, next build green
   Tools/content     35 passed
 
-## Still open
-
-  * publish `texts` (131 keys) — Phase C renders them now, so this one matters
-  * publish `modes` — this is what opens the door; hold it until you have signed off on C
-  * PLAYLIFE_API_URL + PLAYLIFE_ADMIN_KEY on Cloudflare — only the Daily preview needs them
-  * two design confirmations: UPPER_SNAKE localization keys, and mission_start_areas as the
-    baked per-hole table (both recorded as deviations in IMPLEMENTER_REPORT.md)
-  * still to build: the Figma fidelity table + UI lint, the JA capture, the Hole Complete goal
-    strip, §21's live end-to-end run, and the start-marker thumbnail calibration
 
 ## Video deliverable (2026-08-29)
 
@@ -62,3 +55,47 @@ publishes.
 Driven through the real entry path: the title gate is tapped, then Home, then the PLAY
 button on the Missions mode card itself — not ScreenManager.ShowScreen. The run spends the
 real 50 RP entry fee, which is why the RP counter reads 458 rather than 508.
+
+## §21 live end-to-end (2026-08-30) — the last gate, now closed
+
+Every ledger row below was read back from the database, not from a client log.
+
+  mission_clear:1      +15 RP   idempotency 6baf8da4-c27b-3215-8590-50a72f501a02
+  mission_replay:1      +5 RP   idempotency 8d26dd77-8db8-3dc6-ae4b-392127369959
+  daily_mission         +30 RP  idempotency 8d7a291a-062d-4a5a-85b7-5a0683be398b
+                                daily_mission_claims 2026-08-30 streak=1 strokes=4
+
+The daily round: `daily:2026-08-30 cleared=True strokes=4 putts=1
+goals=[SHOTS:True, AVOID:True]` — four strokes against a cap of five, no bunker — played
+through the mode card and then the daily card's own `actionButton.onClick`.
+
+**The claim had never fired before this run.** `Endpoints.MissionsDailyClaim` had shipped in
+Phase A as a string with no sender, so no daily had ever paid. Harness:
+`Assets/Scripts/Editor/Missions/DailyClearHarness.cs`, which deliberately does NOT arm
+`BotSessionOverride` the way every capture harness does — that override forces the points
+backend OFF, which is exactly wrong when the point is to prove a payout.
+
+**Determinism, demonstrated rather than asserted.** 2026-08-30's recipe was computed locally
+before the server had ever seen the date, and the server's first generation matched field for
+field: `H10 par4 TEE_FRONT CROSS_L SUP_FULL [SHOTS 5 · AVOID Bunker] NONE`.
+
+**Recovery path walked.** `MissionSession.Clear()` does not null `PendingDaily`, so the
+finished round survived a real quit-to-Home teardown (`ResetSession` + scene unload) and was
+claimed on the next visit to Missions.
+
+## Carried forward — NOT done, deliberately
+
+  * **Recipe pinning** — blocked on `PLAYLIFE_API_URL` + `PLAYLIFE_ADMIN_KEY` on the
+    `golfin-admin` Worker. The Pin button renders only inside a Daily-preview row, so no
+    preview means no pin. Cesar's step; nothing in the repo unblocks it.
+  * **The daily's result card wants one look.** `77436c36a` fixed the daily falling through to
+    the generic hole cards (the played mission was resolved by scanning `MissionCatalog.All`,
+    which holds campaign CSV rows only — the daily's runtime-composed definition was never in
+    it). The daily is once-per-date and today's is claimed, so its card is disabled and could
+    not be re-entered to see it render.
+  * **The daily claim trusts the client.** `golfin_daily_claim` records `p_strokes` and never
+    checks it against the recipe's goals; it enforces the hash, the once-per-date lock, the
+    streak and DOUBLE_RP. Whether the daily was cleared is the client's word. Surfaced as a
+    product decision, not patched.
+  * **JA capture** and the **Figma fidelity table + UI lint** — Cesar waived the fidelity pass
+    ("Design looks right. No fidelity pass needed until I give it a proper eye").
