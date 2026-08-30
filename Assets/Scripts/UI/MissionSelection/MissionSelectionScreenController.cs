@@ -452,8 +452,16 @@ namespace GolfinRedux.UI.MissionSelection
                 if (!r.Success || r.Data?.Recipe == null)
                 {
                     Debug.Log($"[MissionSelection] no daily today ({r.ErrorMessage ?? "no recipe"}) — card stays hidden.");
+                    // Tell the Home pill too: it must not advertise a daily this screen just
+                    // failed to find (daily_mission_home_pill §2).
+                    Golfin.Gameplay.Missions.DailyMissionState.SetNoDaily();
                     return;
                 }
+
+                // One shared fact, so the Home pill and this card can never disagree about
+                // whether today's daily is waiting (daily_mission_home_pill §2).
+                Golfin.Gameplay.Missions.DailyMissionState.Set(
+                    r.Data.Date, r.Data.Streak, r.Data.Claimed, hasRecipe: true);
                 var def = BuildDailyDefinition(r.Data);
                 if (def == null || def.ClubIds.Count == 0)
                 {
@@ -533,7 +541,14 @@ namespace GolfinRedux.UI.MissionSelection
                     }
                     var d = res.Data;
                     Debug.Log($"[MissionSelection] daily claim {d.Status}: awarded={d.Awarded} streak={d.Streak}");
-                    if (d.Ok) RefreshDaily();   // repaint with the streak and the claimed state
+                    if (d.Ok)
+                    {
+                        // The pill leaves NOW, not on Home's next fetch — a player who claims and
+                        // taps Home must not find the pill still inviting them to a mission they
+                        // just finished (daily_mission_home_pill §2).
+                        Golfin.Gameplay.Missions.DailyMissionState.MarkClaimed(d.Streak);
+                        RefreshDaily();   // repaint with the streak and the claimed state
+                    }
                 });
         }
 

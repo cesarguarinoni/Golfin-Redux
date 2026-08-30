@@ -63,6 +63,16 @@ namespace Golfin.Telemetry
         public const string LevelUp        = "level_up";
 
         /// <summary>
+        /// The Home "NEW DAILY MISSION!" pill was tapped (daily_mission_home_pill §2).
+        ///
+        /// It exists to answer whether the Home surface is what actually drives daily
+        /// engagement, or whether players were already reaching Missions from the mode carousel
+        /// anyway. Carries the streak and the UTC date, so a tap can be joined to whether it
+        /// became a claim.
+        /// </summary>
+        public const string DailyPillTap   = "daily_pill_tap";
+
+        /// <summary>
         /// The additive inventory merge put a quantity the player already held back UP — i.e. it may
         /// have refunded something they consumed (CONTENT_PIPELINE_PLAN §6.5 decision 1).
         ///

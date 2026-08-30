@@ -1,0 +1,44 @@
+{
+  "elements": [
+    {
+      "name": "Panel",
+      "w": 549.0,
+      "h": 122.0,
+      "radius": 50.0,
+      "requireSprite": true,
+      "color": "",
+      "fontSize": -1.0,
+      "fontWeight": ""
+    },
+    {
+      "name": "Flame",
+      "w": 58.0,
+      "h": 90.0,
+      "radius": -1.0,
+      "requireSprite": true,
+      "color": "",
+      "fontSize": -1.0,
+      "fontWeight": ""
+    },
+    {
+      "name": "Label",
+      "w": -1.0,
+      "h": -1.0,
+      "radius": -1.0,
+      "requireSprite": false,
+      "color": "#EEDC9A",
+      "fontSize": 40.0,
+      "fontWeight": "SemiBold"
+    },
+    {
+      "name": "Number",
+      "w": -1.0,
+      "h": -1.0,
+      "radius": -1.0,
+      "requireSprite": false,
+      "color": "",
+      "fontSize": 40.0,
+      "fontWeight": "SemiBold"
+    }
+  ]
+}

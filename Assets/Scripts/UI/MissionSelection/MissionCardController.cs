@@ -110,9 +110,13 @@ namespace GolfinRedux.UI.MissionSelection
         [Header("Daily")]
         [SerializeField] private GameObject? dailyHeaderTint;
         [SerializeField] private TextMeshProUGUI? dailyCountdownText;
-        [SerializeField] private GameObject? streakChip;          // legacy: the chip in RewardsRow, no longer used
-        [SerializeField] private TextMeshProUGUI? streakText;
-        [SerializeField] private TextMeshProUGUI? streakTextExp;
+        /// <summary>
+        /// The streak, drawn as the SHARED flame badge (daily_mission_home_pill §3) rather than
+        /// the sentence "{0} day streak" it used to be. One prefab, so the Home pill and this
+        /// card can never render the same number two different ways.
+        /// </summary>
+        [SerializeField] private Golfin.UI.Common.StreakFlameView? streakFlame;
+        [SerializeField] private Golfin.UI.Common.StreakFlameView? streakFlameExp;
         [SerializeField] private TextMeshProUGUI? dailyCountdownTextExp;
         [SerializeField] private TextMeshProUGUI? rulesHeader;
 
@@ -477,13 +481,11 @@ namespace GolfinRedux.UI.MissionSelection
             if (dailyCountdownText    != null) dailyCountdownText.gameObject.SetActive(daily);
             if (dailyCountdownTextExp != null) dailyCountdownTextExp.gameObject.SetActive(daily);
 
-            bool showStreak = daily && _dailyStreak > 0;
-            if (streakText    != null) streakText.gameObject.SetActive(showStreak);
-            if (streakTextExp != null) streakTextExp.gameObject.SetActive(showStreak);
-
-            // The old chip lived in the rewards row, next to the prize, with an empty icon slot.
-            // It is gone from the layout; this keeps any stale reference switched off.
-            if (streakChip != null) streakChip.SetActive(false);
+            // The badge owns the zero rule (StreakFlameView): passing 0 hides it. Passing the
+            // streak only when this is a daily keeps a campaign card free of daily chrome.
+            int shown = daily ? _dailyStreak : 0;
+            if (streakFlame    != null) streakFlame.SetStreak(shown);
+            if (streakFlameExp != null) streakFlameExp.SetStreak(shown);
         }
 
         /// <summary>Countdown to UTC midnight + the streak, on the daily card only.</summary>
@@ -495,9 +497,6 @@ namespace GolfinRedux.UI.MissionSelection
             if (dailyCountdownTextExp != null) dailyCountdownTextExp.text = resetLine;
 
             _dailyStreak = streak;
-            string streakLine = LocalizationManager.Get("MISSION_DAILY_STREAK").Replace("{0}", streak.ToString());
-            if (streakText    != null) streakText.text    = streakLine;
-            if (streakTextExp != null) streakTextExp.text = streakLine;
             ApplyDailyChrome(Mode == MissionCardMode.Daily);
 
             if (claimed && actionButtonLabel != null)

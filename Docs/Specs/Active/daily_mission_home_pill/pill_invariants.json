@@ -1,0 +1,16 @@
+{
+  "task": "daily_mission_home_pill",
+  "fail": 0,
+  "assertions": [
+    {"assert": "pill_present", "result": "PASS", "detail": "found under HomeScreen"},
+    {"assert": "pill_size_549x122", "result": "PASS", "detail": "rect=(549.00, 122.00) (node 549x122)"},
+    {"assert": "rest_x_36", "result": "PASS", "detail": "x=36.00 (node 36)"},
+    {"assert": "y_with_notice_is_24_under_it", "result": "PASS", "detail": "y=-737.0 expected=-737.0 (noticeTop=-361 h=352); Figma 725 for a 340-tall notice block"},
+    {"assert": "y_no_notice_is_361", "result": "PASS", "detail": "y=-361.0 (Figma 13994:1935 -> -361)"},
+    {"assert": "glow_loop_no_per_frame_alloc", "result": "PASS", "detail": "12288 B over 180 frames = 68 B/frame (whole-screen upper bound), glowState=Shown=True"},
+    {"assert": "daily_pill_tap_queued", "result": "PASS", "detail": "'daily_pill_tap' is in TelemetryService._queue (queued); queue 4->6"},
+    {"assert": "tap_opens_mission_selection", "result": "PASS", "detail": "screen=MissionSelection"},
+    {"assert": "streakflame_shared_prefab", "result": "PASS", "detail": "pill='Assets/Prefabs/UI/Common/StreakFlame.prefab' cardCollapsed='Assets/Prefabs/UI/Common/StreakFlame.prefab' cardExpanded='Assets/Prefabs/UI/Common/StreakFlame.prefab'"},
+    {"assert": "streak_zero_hides_flame", "result": "PASS", "detail": "hiddenAt0=True, shownAt9=True"}
+  ]
+}

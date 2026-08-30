@@ -13,4 +13,4 @@ mission_wind_presets=1
 missions=2
 modes=8
 shop_catalog=4
-texts=16
+texts=17

@@ -12,7 +12,7 @@ node-exact geometry (1:1 Figma px on the shell canvas). Never ship a null-sprite
 shows a sprite/border/gradient — **Rule 21 hard-fails it**.
 
 **How to maintain.** When a task discovers or creates a new reusable atom, add its row here **in the
-same commit**. Paths + GUIDs below verified against the repo on **2026-07-06** (shop-card atoms added
+same commit**. Paths + GUIDs below verified against the repo on **2026-08-30** (shop-card atoms added
 from the Order-610 card rebuild — see `Docs/Reports/POSTMORTEM_general_shop_ui_fabricated_provenance.md` Part 2).
 
 ---
@@ -27,6 +27,20 @@ from the Order-610 card rebuild — see `Docs/Reports/POSTMORTEM_general_shop_ui
 |---|---|---|---|---|
 | RP value pill (navy) | `Assets/Art/RankingsScreen/RPContainer.png` | `9106f5ea13a81ca4c8dc7b2671c853bf` | dark rounded RP-cost/amount container (coin + number) | Rankings, stamina-shop RP chips |
 | Stadium pill (badge base) | `Assets/Art/Tournaments/S_PillStadium.png` | `bb07d102185aa4f1ca51da13de9eeac6` | outer rim of tier / entry-fee / status badges | Tournaments `PaidEntryBadge`, shop tier badges |
+| Gold-bordered navy pill (549×122, baked) | `Assets/Art/HomeScreen/S_DailyPillPanel.png` | `448cb5f34eebb4b38962e7959d0a11ed` | a **fixed-size** navy pill with the Figma 3px `#FCF195` gold border + `#133453→#091B33` gradient, r=50. `Image.Type.Simple` — do NOT 9-slice it | Home daily-mission pill |
+| Soft gold halo for the above | `Assets/Art/HomeScreen/S_DailyPillGlow.png` | `086acc78ed8a34ce090a7cec8d2d5aea` | the pulsing glow behind that pill — the silhouette in border-gold, Gaussian-blurred, 36px bleed. Additive (`TapSparkle_Additive.mat`) | Home daily-mission pill |
+
+> **Why the pill is baked, not 9-sliced** (`daily_mission_home_pill`, 2026-08-30). A whole-project
+> scan of all 44 nine-sliced UI sprites found **no navy panel with a gold border**: the two navy
+> panels carry steel-blue (`Background - Next Hole.png`, `#3E7CA8`) and silver-white
+> (`Next Hole Panel.png`, `#FFFFFF→#C0C6CE`) edges, and every gold-edged sprite is a solid-gold
+> BUTTON. Reuse would have shipped the wrong border colour. Both sprites are regenerated from the
+> node's four tokens by `Docs/Scripts/make_daily_pill_panel.py` — edit that, not the PNGs.
+
+## Streak / badge prefabs
+| Atom | Path | GUID | Use for | Seen in |
+|---|---|---|---|---|
+| Streak flame badge | `Assets/Prefabs/UI/Common/StreakFlame.prefab` | `230e9bb6e94a845d281d127f4c72460f` | the daily-streak flame with the auto-sized number in it. `StreakFlameView.SetStreak(n)`; **it owns the "0 is not a streak" rule** — hidden below 1. The `Flame` child is fixed-aspect and centred, so a layout group may stretch the ROOT freely | Home daily pill, Mission Selection daily card (collapsed + expanded) |
 
 ## Buttons
 | Atom | Path | GUID | Use for | Seen in |

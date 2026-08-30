@@ -1,0 +1,14 @@
+=== iter-1 kickoff baseline 2026-08-30T03:40:47Z ===
+HEAD: 66ba8de7e770a7d84e881d60128a9c5bead49f91
+DIRTY (git status --porcelain --untracked-files=all) at kickoff:
+ M Docs/TellCode.md
+?? Assets/Art/HomeScreen/Flame.svg
+?? Assets/Art/HomeScreen/flame.png
+?? Docs/Specs/Active/daily_mission_home_pill/
+=== notes ===
+Docs/TellCode.md was ALREADY modified at kickoff (pre-existing, not introduced by this task).
+Flame.svg + flame.png were added by Cesar on 2026-08-30 as the task's art drop.
+
+=== iter-1 complete 2026-08-30T04:28:22Z ===
+Stills pass, video pass and invariant pass all green. texts catalog published v17, --check clean.
+Editor left in edit mode on ShellScene, not dirty.

@@ -58,6 +58,15 @@ namespace GolfinRedux.UI
         /// at 5 rows, so capping again here would silently swallow a notice an operator published.
         /// The count comes from <see cref="NewsPageCount"/>.
         /// </summary>
+        /// <summary>
+        /// The daily-mission pill (daily_mission_home_pill §2). Home owns the reference for one
+        /// reason only: the pill's Y is COMPUTED from <see cref="newsPanelRoot"/>, and Home is the
+        /// only object that knows when that panel's visibility changed. Everything else the pill
+        /// does — fetching, animating, its own tap — it owns itself.
+        /// <para>Unassigned is not an error: no pill, and Home behaves exactly as before.</para>
+        /// </summary>
+        [SerializeField] private Golfin.UI.Home.DailyMissionPillController dailyMissionPill;
+
         [SerializeField] private int totalNewsPages = 3;
         [SerializeField] private float newsAutoCycleInterval = 5f; // seconds
 
@@ -425,8 +434,15 @@ namespace GolfinRedux.UI
         /// </summary>
         private void SetNewsPanelVisible(bool visible)
         {
-            if (newsPanelRoot == null) return;
-            if (newsPanelRoot.activeSelf != visible) newsPanelRoot.SetActive(visible);
+            if (newsPanelRoot != null && newsPanelRoot.activeSelf != visible)
+                newsPanelRoot.SetActive(visible);
+
+            // The daily pill sits UNDER this panel and Home has no vertical layout group to
+            // reflow it, so the move has to be told, not inferred (daily_mission_home_pill §2).
+            // Every path that paints the notice reaches here, which is why the hook is here and
+            // not repeated at each RefreshNewsPanel/NextNewsPage call site. The panel's height is
+            // fixed (no ContentSizeFitter), so it is already final at this point.
+            if (dailyMissionPill != null) dailyMissionPill.RefreshPlacement();
         }
 
         // ---------- Promo Banner (GPS) ----------

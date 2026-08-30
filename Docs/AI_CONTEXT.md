@@ -5,6 +5,48 @@
 
 ---
 
+## 🟡 IN REVIEW — `daily_mission_home_pill` (2026-08-30)
+
+**The daily finally has a door on Home.** A `NEW DAILY MISSION!` pill slides in from the left,
+pulses a soft gold halo, sits 24px under the maintenance notice (or at the notice's own top when
+there is none), carries a flame with the streak number in it, and opens Mission Selection when
+tapped. `missions_v1` shipped the daily with no Home surface because it had no design; this is
+that surface. Spec + evidence: `Docs/Specs/Active/daily_mission_home_pill/`. STATUS
+`READY_FOR_SELF_REVIEW`.
+
+**The one architectural piece is `DailyMissionState`** — a static Date/Streak/Claimed/HasRecipe
+that the pill AND the Mission Selection daily card both read and write. Before it, each screen
+fetched independently, so claiming on one left the other advertising an unclaimed daily until its
+own next fetch. It is not a cache with a policy: every screen still fetches on entry, and what the
+static adds is that a claim or a UTC rollover propagates INSTANTLY to whatever is already on
+screen. The card's text streak (`"{0} day streak"`) is now the same `StreakFlame` prefab the pill
+uses — one prefab, so the two surfaces cannot render the same number two different ways.
+
+**The Figma node's panel does not exist in this project, and that was worth proving.** A scan of
+ALL 44 nine-sliced UI sprites found no navy panel with a pale-gold border: the two navy panels
+carry steel-blue (`#3E7CA8`) and silver-white (`#FFFFFF→#C0C6CE`) edges, and every gold-edged
+sprite is a solid-gold BUTTON. Reusing either would have shipped the wrong border against an
+explicit `#FCF195` token. So the panel and its glow are baked from the node's four tokens by
+`Docs/Scripts/make_daily_pill_panel.py` and catalogued in `UI_ELEMENT_PALETTE.md` — generated, not
+approximated, and regenerable from the tokens rather than hand-painted.
+
+**Gates:** invariant JSON `pill_invariants.json` **10 assertions / 0 FAIL** (placement against both
+Figma frames, 68 B/frame whole-screen allocation with the glow running, `daily_pill_tap` actually
+in the telemetry queue, the shared-prefab identity, the zero-streak rule); UI fidelity lint 0 FAIL
+/ 0 WARN on both new prefabs, with a tripwire run proving the spec layer asserts; EditMode
+**1939 passed / 0 failed / 3 skipped** (pre-existing). `texts` published **v17**,
+`export_content.py --check` clean.
+
+**⚠️ TWO THINGS TO KNOW.** (1) **Offline shows no pill**, contradicting the spec, because the
+"deterministic local daily recipe" it assumes was never shipped — `RefreshDaily`'s own comment
+says the offline generator was deliberately skipped to avoid a second implementation of a
+deterministic draw. Surfaced, not patched. (2) The mandated `import_content.py` run carried **15
+rows that were not this task's** — `MISSION_*` and `LOADOUT_SUP_*` keys from `missions_v1` whose
+importer step was never run. Zero conflicts and the values already matched the shipping CSV, so
+publishing made the server agree with the bundle; flagged because v17 covers more than this task.
+
+---
+
 ## ✅ SHIPPED — `missions_v1` **A + B + C live, the mode is OPEN, §21 proven** (2026-08-30)
 
 **Missions got a server-authoritative economy before it got a door, and now the door is open.**
