@@ -260,6 +260,20 @@ namespace Golfin.UI.Modals.Result
         internal Golfin.Gameplay.Missions.MissionResult LastMissionResult { get; private set; }
 
         /// <summary>
+        /// The definition of the mission just played, kept because the RESULT alone cannot find it
+        /// again. <see cref="Golfin.Gameplay.Missions.MissionCatalog.All"/> holds the campaign CSV
+        /// rows and nothing else; the daily's definition is composed at runtime by
+        /// `BuildFromRecipe` and was never added to it, so looking the played mission up by id
+        /// silently failed for every daily and the modal fell back to the generic hole cards —
+        /// the one thing the mission-card work exists to prevent.
+        ///
+        /// Captured in <see cref="SettleMissionIfActive"/> because that runs while
+        /// `MissionSession.Active` is still standing; `MissionSession.End()` is called moments
+        /// later and takes the session with it.
+        /// </summary>
+        internal Golfin.Gameplay.Missions.MissionDefinition LastMissionPlayed { get; private set; }
+
+        /// <summary>
         /// Evaluate the active mission's goals and claim it. No-op in every other mode.
         ///
         /// THE ORDER MATTERS AND IT IS NOT THE OBVIOUS ONE. The goals are evaluated and the
@@ -277,6 +291,7 @@ namespace Golfin.UI.Modals.Result
         void SettleMissionIfActive(HoleCompletionData sessionData)
         {
             LastMissionResult = null;
+            LastMissionPlayed = null;
 
             var session = Golfin.Gameplay.Missions.MissionSession.Active;
             var evaluator = Golfin.Gameplay.Missions.MissionSession.Evaluator;
@@ -284,6 +299,7 @@ namespace Golfin.UI.Modals.Result
 
             var result = evaluator.EvaluateFinal(sessionData, System.Guid.NewGuid().ToString());
             LastMissionResult = result;
+            LastMissionPlayed = session;   // MissionSession.Active IS the definition
             Debug.Log($"[HoleCompleteModal] MISSION {result.MissionId}: cleared={result.Cleared} " +
                       $"strokes={result.Strokes} putts={result.Putts} " +
                       $"goals=[{string.Join(", ", result.Goals.ConvertAll(g => $"{g.Type}:{g.Met}"))}]");
@@ -339,9 +355,13 @@ namespace Golfin.UI.Modals.Result
             var prefab = selection != null ? selection.CardPrefab : null;
             if (prefab == null) return false;
 
-            Golfin.Gameplay.Missions.MissionDefinition played = null;
-            foreach (var m in Golfin.Gameplay.Missions.MissionCatalog.All)
-                if (m.Id == result.MissionId) { played = m; break; }
+            // The definition captured at settle time, NOT a catalog lookup: the daily is a real
+            // mission with a runtime-composed definition that MissionCatalog.All has never heard
+            // of, and searching by id there is what used to drop every daily onto the hole cards.
+            var played = LastMissionPlayed;
+            if (played == null)
+                foreach (var m in Golfin.Gameplay.Missions.MissionCatalog.All)
+                    if (m.Id == result.MissionId) { played = m; break; }
             if (played == null) return false;
 
             var root = transform.root.GetComponentsInChildren<RectTransform>(true)
