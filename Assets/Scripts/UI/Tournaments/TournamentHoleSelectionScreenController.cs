@@ -327,9 +327,10 @@ namespace GolfinRedux.UI.Tournaments
             ScreenManager.Instance?.ShowScreen(ScreenId.TournamentLeaderboard);
         }
 
+        // nav_back_memory §3 — history first, serialized _backScreen as the fallback.
         private void Close()
         {
-            ScreenManager.Instance?.ShowScreen(_backScreen);
+            ScreenManager.Instance?.GoBack(_backScreen);
         }
     }
 }

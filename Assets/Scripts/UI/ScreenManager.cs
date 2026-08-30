@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using Golfin.Audio;
 using GolfinRedux.Demo;
@@ -101,6 +102,18 @@ namespace GolfinRedux.UI
         /// <summary>Returns the currently active ScreenId.</summary>
         public ScreenId CurrentScreen => _currentScreen;
 
+        // ── nav_back_memory §2 — same-pillar history + per-pillar "last screen" ───────
+        // Session-only, in-memory (SPEC § Out of scope: no cross-launch persistence).
+
+        /// <summary>Newest-last stack of same-pillar screens the player pushed through.</summary>
+        private readonly List<ScreenId> _history = new List<ScreenId>();
+
+        /// <summary>Deepest screen the player last stood on inside each pillar.</summary>
+        private readonly Dictionary<Golfin.UI.PersistentUIManager.Screen, ScreenId> _lastInPillar =
+            new Dictionary<Golfin.UI.PersistentUIManager.Screen, ScreenId>();
+
+        private const int HistoryCap = 16;
+
         /// <summary>
         /// Fired at the end of every ApplyScreen call (after SetActive calls and _currentScreen update).
         /// Used by TournamentResultPresenter to know when an eligible screen is active.
@@ -156,8 +169,20 @@ namespace GolfinRedux.UI
         /// <summary>
         /// Show the given screen. If instant=false and FadeController exists,
         /// performs fade-out -> swap -> fade-in.
+        /// Every FORWARD navigation goes through here; it pushes the screen being left
+        /// onto the same-pillar history stack (nav_back_memory §2).
         /// </summary>
         public void ShowScreen(ScreenId screenId, bool instant = false)
+        {
+            Navigate(screenId, instant, push: true);
+        }
+
+        /// <summary>
+        /// The one real navigation entry point. <paramref name="push"/> = false for BACK
+        /// (<see cref="GoBack"/>) and nav-bar jumps (<see cref="NavigateToPillar"/>), which
+        /// manage <see cref="_history"/> themselves.
+        /// </summary>
+        private void Navigate(ScreenId screenId, bool instant, bool push)
         {
             // Demo gate (demo_build_slice §3.2): deny-by-default screen allowlist.
             // No-op outside a GOLFIN_DEMO build.
@@ -173,7 +198,7 @@ namespace GolfinRedux.UI
             if (!AuthGate.IsScreenAllowed(screenId))
             {
                 Debug.LogWarning($"[AuthGate] blocked {screenId} — not signed in. Routing to Login.");
-                ShowScreen(ScreenId.Login, instant);
+                Navigate(ScreenId.Login, instant, push);
                 return;
             }
 
@@ -183,6 +208,23 @@ namespace GolfinRedux.UI
             {
                 Debug.Log($"[ScreenManager] Already on {screenId}, ignoring");
                 return;
+            }
+
+            // nav_back_memory §2 — history bookkeeping, BEFORE the swap so _currentScreen is
+            // still the screen being left. A forward push inside one pillar stacks; anything
+            // else (pillar change, or leaving the shell for Loading/Login/gameplay) resets,
+            // because a lateral or hard-boundary move has no meaningful "back".
+            if (push && _currentScreen != screenId)
+            {
+                if (IsShell(_currentScreen) && IsShell(screenId) && SamePillar(_currentScreen, screenId))
+                {
+                    _history.Add(_currentScreen);
+                    if (_history.Count > HistoryCap) _history.RemoveAt(0);
+                }
+                else
+                {
+                    _history.Clear();
+                }
             }
 
             // If no fade system, or caller requests instant, just swap
@@ -199,6 +241,178 @@ namespace GolfinRedux.UI
             }
         }
 
+        // ── nav_back_memory §1 — pillar model ────────────────────────────────────────
+
+        /// <summary>
+        /// Which bottom-nav pillar a shell screen belongs to, or null when the screen is not a
+        /// pillar screen (Logo/Splash/Loading, the account gate, the starter picker) or has no
+        /// nav slot at all (Leaderboard — see <see cref="IsShell"/>).
+        /// Single source of truth: PersistentUIManager.HighlightScreen calls this.
+        /// </summary>
+        public static Golfin.UI.PersistentUIManager.Screen? PillarOf(ScreenId id)
+        {
+            switch (id)
+            {
+                case ScreenId.Home:
+                    return Golfin.UI.PersistentUIManager.Screen.Home;
+
+                case ScreenId.Roster:
+                // Order 517 — Shop screens entered from Roster; keep Characters nav tab highlighted
+                case ScreenId.StaminaShopSelection:
+                case ScreenId.StaminaShopDetail:
+                    return Golfin.UI.PersistentUIManager.Screen.Characters;
+
+                case ScreenId.Inventory:
+                    return Golfin.UI.PersistentUIManager.Screen.Inventory;
+
+                case ScreenId.HoleSelection:
+                case ScreenId.ModeSelection:
+                // missions_v1 §C2 — Missions is entered from the PLAY pillar, so the
+                // same nav slot stays lit as it does for Practice and Tournaments.
+                case ScreenId.MissionSelection:
+                case ScreenId.TournamentSelection:
+                case ScreenId.TournamentHoleSelection:
+                case ScreenId.TournamentLeaderboard:
+                    return Golfin.UI.PersistentUIManager.Screen.MainPlay;
+
+                // Order 610 — Rewards Center opened from the Gacha nav slot; History and
+                // Prizes are reached only from it, so the Gacha slot stays lit on all three.
+                case ScreenId.GeneralShop:
+                case ScreenId.GachaHistory:
+                case ScreenId.GachaPrizes:
+                    return Golfin.UI.PersistentUIManager.Screen.Gacha;
+
+                default:
+                    // Logo/Splash/Loading, auth screens, StartingCharacterSelection, and
+                    // Leaderboard (no nav slot — it rides the history stack instead).
+                    return null;
+            }
+        }
+
+        /// <summary>The screen a pillar's nav slot opens when there is nothing remembered.</summary>
+        public static ScreenId RootOf(Golfin.UI.PersistentUIManager.Screen pillar)
+        {
+            switch (pillar)
+            {
+                case Golfin.UI.PersistentUIManager.Screen.Characters: return ScreenId.Roster;
+                case Golfin.UI.PersistentUIManager.Screen.Inventory:  return ScreenId.Inventory;
+                // Bottom-nav tee button → Mode Select screen (mode_select_system spec)
+                case Golfin.UI.PersistentUIManager.Screen.MainPlay:   return ScreenId.ModeSelection;
+                // Order 610 — the Gacha nav slot opens the Rewards Center hub.
+                case Golfin.UI.PersistentUIManager.Screen.Gacha:      return ScreenId.GeneralShop;
+                default:                                              return ScreenId.Home;
+            }
+        }
+
+        /// <summary>A shell screen — one that shows the persistent bars and can enter history.</summary>
+        public static bool IsShell(ScreenId id) => PillarOf(id) != null || id == ScreenId.Leaderboard;
+
+        /// <summary>
+        /// Leaderboard has no pillar but is reachable from three of them, so it counts as
+        /// "same pillar" as whatever opened it — that is what lets BACK return there.
+        /// </summary>
+        private static bool SamePillar(ScreenId a, ScreenId b)
+        {
+            if (a == ScreenId.Leaderboard || b == ScreenId.Leaderboard) return true;
+            return PillarOf(a) == PillarOf(b);
+        }
+
+        // ── nav_back_memory §2 — BACK and nav-bar jumps ──────────────────────────────
+
+        /// <summary>
+        /// BACK. Pops the most recent same-pillar screen; when the stack is empty falls back to
+        /// <paramref name="fallback"/> (the screen's serialized target), then the pillar root,
+        /// then Home. Entries that are no longer reachable (DemoGate / AuthGate) are skipped.
+        /// Returns false when there was nowhere to go (already on the Home root).
+        /// </summary>
+        public bool GoBack(ScreenId? fallback = null, bool instant = false)
+        {
+            while (_history.Count > 0)
+            {
+                ScreenId candidate = _history[_history.Count - 1];
+                _history.RemoveAt(_history.Count - 1);
+
+                if (candidate == _currentScreen) continue;
+                if (!DemoGate.IsScreenAllowed(candidate)) continue;
+                if (!AuthGate.IsScreenAllowed(candidate)) continue;
+
+                Navigate(candidate, instant, push: false);
+                return true;
+            }
+
+            ScreenId target;
+            if (fallback.HasValue && fallback.Value != _currentScreen)
+            {
+                target = fallback.Value;
+            }
+            else
+            {
+                var pillar = PillarOf(_currentScreen);
+                ScreenId root = pillar.HasValue ? RootOf(pillar.Value) : ScreenId.Home;
+                // On a pillar root there is nothing above to fall back to except Home.
+                target = (root == _currentScreen) ? ScreenId.Home : root;
+            }
+
+            if (target == _currentScreen) return false;   // Home root: BACK is a no-op, never a quit.
+
+            Navigate(target, instant, push: false);
+            return true;
+        }
+
+        /// <summary>
+        /// Bottom-nav slot tap (nav_back_memory D1). The pillar you are already in → its root
+        /// (iOS tab-bar convention). A different pillar → the screen you were last on inside it,
+        /// or its root the first time. Never a forward push; the history stack resets.
+        /// </summary>
+        public void NavigateToPillar(Golfin.UI.PersistentUIManager.Screen pillar)
+        {
+            var current = PillarOf(_currentScreen);
+
+            ScreenId target;
+            if (current.HasValue && current.Value == pillar) target = RootOf(pillar);
+            else if (_lastInPillar.TryGetValue(pillar, out ScreenId remembered)) target = remembered;
+            else target = RootOf(pillar);
+
+            _history.Clear();
+            Navigate(target, instant: false, push: false);
+        }
+
+        // ── nav_back_memory §7 — Android hardware / gesture back ─────────────────────
+
+        private void Update()
+        {
+            if (!BackPressedThisFrame()) return;
+
+            // Modals own their own dismissal (backdrop tap / CANCEL).
+            if (Golfin.UI.Modals.ModalController.OpenModalCount > 0) return;
+
+            // Settings is an overlay that leaves the screen enabled underneath it.
+            var settings = Golfin.UI.SettingsController.Instance;
+            if (settings != null && settings.IsOpen)
+            {
+                settings.CloseSettings();
+                return;
+            }
+
+            // Gameplay, the auth gate and Loading are not ours — in-game back is handled by the
+            // in-game settings modal (SPEC D2 / § Out of scope).
+            if (!IsShell(_currentScreen)) return;
+
+            // Never Application.Quit(): on the Home root GoBack returns false and nothing happens.
+            GoBack();
+        }
+
+        /// <summary>
+        /// ProjectSettings.activeInputHandler == 1 (Input System package only), so the legacy
+        /// UnityEngine.Input path would throw at runtime. Unity surfaces the Android hardware /
+        /// gesture back button as Keyboard.escapeKey. Fully qualified so no new using is needed.
+        /// </summary>
+        private static bool BackPressedThisFrame()
+        {
+            var keyboard = UnityEngine.InputSystem.Keyboard.current;
+            return keyboard != null && keyboard.escapeKey.wasPressedThisFrame;
+        }
+
         /// <summary>
         /// Actually activates/deactivates screen GameObjects.
         /// </summary>
@@ -206,6 +420,11 @@ namespace GolfinRedux.UI
         {
             Debug.Log($"[ScreenManager] ApplyScreen: {screenId}");
             _currentScreen = screenId;
+
+            // nav_back_memory §2 — per-pillar memory. Non-pillar screens (Leaderboard, the
+            // auth gate, Loading) are deliberately never remembered as a nav-slot destination.
+            var pillarOfScreen = PillarOf(screenId);
+            if (pillarOfScreen.HasValue) _lastInPillar[pillarOfScreen.Value] = screenId;
 
             if (_logoScreen != null) _logoScreen.SetActive(screenId == ScreenId.Logo);
             if (_splashScreen != null) _splashScreen.SetActive(screenId == ScreenId.Splash);

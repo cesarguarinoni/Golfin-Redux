@@ -158,9 +158,12 @@ namespace GolfinRedux.UI.Tournaments
             });
         }
 
+        // nav_back_memory §3 / F2 — the history stack answers first (Hole Selection when the
+        // board was opened from there), and _backScreen is the fallback for an empty stack —
+        // e.g. arriving straight here from a finished round via ExitToScreen.
         private void Close()
         {
-            ScreenManager.Instance?.ShowScreen(_backScreen);
+            ScreenManager.Instance?.GoBack(_backScreen);
         }
 
         // ── Live data fill ────────────────────────────────────────────────────

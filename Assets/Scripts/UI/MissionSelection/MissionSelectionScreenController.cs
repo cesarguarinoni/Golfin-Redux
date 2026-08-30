@@ -73,14 +73,10 @@ namespace GolfinRedux.UI.MissionSelection
         /// </summary>
         private static string _activeTier = "";
 
-        /// <summary>Where PLAY came from, so BACK returns there rather than always to Home.</summary>
-        private static ScreenId _openedFrom = ScreenId.Home;
-
-        public static void OpenFrom(ScreenId from)
-        {
-            _openedFrom = from;
-            ScreenManager.Instance?.ShowScreen(ScreenId.MissionSelection);
-        }
+        // nav_back_memory F1 — the _openedFrom / OpenFrom pair was deleted: no entry point ever
+        // called OpenFrom (Mode Select, the Home carousel and the daily pill all ShowScreen
+        // straight to MissionSelection), so it was permanently Home. ScreenManager's history
+        // stack now supplies the real answer; see OnBackClicked.
 
         private MissionProgressionService P => MissionProgressionService.Instance;
 
@@ -115,8 +111,12 @@ namespace GolfinRedux.UI.MissionSelection
             else ScreenManager.Instance?.ShowScreen(ScreenId.Leaderboard);
         }
 
-        /// <summary>BACK goes where the player came from (§C2).</summary>
-        public void OnBackClicked() => ScreenManager.Instance?.ShowScreen(_openedFrom);
+        /// <summary>
+        /// BACK goes where the player came from (§C2) — now via the shell history stack
+        /// (nav_back_memory §3) rather than the static _openedFrom, which no entry point ever
+        /// set, so BACK from Mode Select always landed on Home.
+        /// </summary>
+        public void OnBackClicked() => ScreenManager.Instance?.GoBack(ScreenId.Home);
 
         // ── Tier tabs ───────────────────────────────────────────────────────────
 

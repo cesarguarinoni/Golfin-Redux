@@ -178,6 +178,9 @@ namespace Golfin.Inventory
             }
 
             LocalizationManager.OnLanguageChanged -= RefreshLocalizedText;
+
+            // nav_back_memory D3 / F6 — see CompareController.OnDisable.
+            if (_isCompareMode) ForceExitImmediate();
         }
 
         private void OnClubLeveledUp(string leveledClubId)

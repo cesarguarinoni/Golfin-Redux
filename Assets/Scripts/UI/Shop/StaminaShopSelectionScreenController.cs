@@ -196,9 +196,10 @@ namespace GolfinRedux.UI.Shop
             ScreenManager.Instance?.ShowScreen(ScreenId.StaminaShopDetail);
         }
 
+        // nav_back_memory §3 — history first, serialized _returnTarget as the fallback.
         private void OnCancelClicked()
         {
-            ScreenManager.Instance?.ShowScreen(_returnTarget);
+            ScreenManager.Instance?.GoBack(_returnTarget);
         }
     }
 }

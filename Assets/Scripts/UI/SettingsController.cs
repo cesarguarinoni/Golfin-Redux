@@ -154,6 +154,13 @@ namespace Golfin.UI
         }
 
         /// <summary>
+        /// True while the settings overlay is on screen. Used by ScreenManager's Android
+        /// back handler (nav_back_memory §7) — Settings leaves the screen underneath enabled,
+        /// so back has to close the overlay before it can mean "go back a screen".
+        /// </summary>
+        public bool IsOpen => settingsPanel != null && settingsPanel.activeSelf;
+
+        /// <summary>
         /// Open the settings panel.
         /// </summary>
         public void OpenSettings()

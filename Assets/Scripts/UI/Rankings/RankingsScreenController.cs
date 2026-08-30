@@ -117,9 +117,11 @@ namespace Golfin.UI.Rankings
             _monthlyTabLabel = _monthlyTab?.transform.Find("Label")?.GetComponent<TextMeshProUGUI>();
             _historyTabLabel = _historyTab?.transform.Find("Label")?.GetComponent<TextMeshProUGUI>();
 
-            // Wire back button — returns to whichever screen opened the leaderboard
+            // Wire back button — returns to whichever screen opened the leaderboard.
+            // nav_back_memory §3: the history stack is the source of truth; _returnScreen
+            // (set by OpenFrom) stays as the fallback for an empty stack.
             if (_backButton != null)
-                _backButton.onClick.AddListener(() => ScreenManager.Instance?.ShowScreen(_returnScreen));
+                _backButton.onClick.AddListener(() => ScreenManager.Instance?.GoBack(_returnScreen));
         }
 
         private void OnEnable()
@@ -131,12 +133,16 @@ namespace Golfin.UI.Rankings
             // Invalidate cached rankings so the board reflects current RP
             LeaderboardManager.Instance?.InvalidateAllCache();
 
-            _activePeriod = LeaderboardPeriod.Daily;
+            // nav_back_memory F4 — _activePeriod is NOT reset here: the period tab the player
+            // last chose is remembered for the session, like every other tab in the shell.
             ApplyBanner();
             ApplyLeagueLabel();
             // Renders the disk-cached board instantly on the backend provider; the refresh below
             // replaces it in place once the server answers.
             RebuildList();
+            // RebuildList early-returns on an empty ranking, so the remembered tab would not be
+            // lit on a cold re-entry. Light it unconditionally (nav_back_memory F4).
+            UpdateTabIndicators();
             StartCountdown();
             RequestRefresh(_activePeriod);
 

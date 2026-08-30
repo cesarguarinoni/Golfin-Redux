@@ -104,22 +104,40 @@ namespace GolfinRedux.UI.Gacha
             ApplyPendingOrDefaultTab();
         }
 
+        /// <summary>
+        /// nav_back_memory §5 / F3 — the Rewards Center REMEMBERS its tab for the session instead
+        /// of snapping back to GACHA on every entry. A one-shot request (the top-bar "+", the
+        /// history strip) still wins for that single open. First entry of the session is GACHA,
+        /// the unchanged default (Cesar 2026-07-08; the bottom-nav slot IS the gacha icon).
+        /// </summary>
         private void ApplyPendingOrDefaultTab()
         {
-            // Default tab on nav open = GACHA (Cesar 2026-07-08; the bottom-nav slot IS the gacha icon).
-            // A caller can override for a single open via RequestStoreTab() — used by the top-bar "+".
-            if (_pendingStoreTab) ShowStoreTab();
-            else                  ShowGachaTab();
+            if      (_pendingStoreTab) ShowStoreTab();
+            else if (_pendingGachaTab) ShowGachaTab();
+            // GIFTS has no content panel, so a remembered Gifts would blank the screen. It is
+            // unreachable today (the tab is inert) — guarded so re-enabling it can't strand us.
+            else if (_activeTab == RewardsTab.Store) ShowStoreTab();
+            else if (_activeTab == RewardsTab.Gifts && GiftsTabEnabled) ShowGiftsTab();
+            else                                     ShowGachaTab();
+
             _pendingStoreTab = false;
+            _pendingGachaTab = false;
         }
 
         /// <summary>
-        /// Ask the Rewards Center to open on the STORE tab instead of GACHA for the next open.
-        /// Consumed once. Call immediately before <c>ScreenManager.ShowScreen(ScreenId.GeneralShop)</c>.
+        /// Ask the Rewards Center to open on the STORE tab regardless of the remembered tab.
+        /// Consumed once. Call immediately before navigating to <c>ScreenId.GeneralShop</c>.
         /// </summary>
-        public static void RequestStoreTab() => _pendingStoreTab = true;
+        public static void RequestStoreTab() { _pendingStoreTab = true; _pendingGachaTab = false; }
+
+        /// <summary>
+        /// Symmetric counterpart of <see cref="RequestStoreTab"/> — forces GACHA over the
+        /// remembered tab. Used by the Gacha History strip's GACHA chip.
+        /// </summary>
+        public static void RequestGachaTab() { _pendingGachaTab = true; _pendingStoreTab = false; }
 
         private static bool _pendingStoreTab;
+        private static bool _pendingGachaTab;
 
         // ── Tab wiring ────────────────────────────────────────────────────────
 

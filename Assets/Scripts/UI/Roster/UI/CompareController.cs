@@ -147,6 +147,11 @@ namespace Golfin.Roster
                 carousel.OnCharacterSelected -= OnCarouselSelection;
 
             LocalizationManager.OnLanguageChanged -= RefreshLocalizedText;
+
+            // nav_back_memory D3 / F6 — compare is a transient action, not a place, so leaving
+            // the screen exits it. ForceExitImmediate StopAllCoroutines() first, which also kills
+            // the enter/exit slide+fade that would otherwise be frozen mid-way by the SetActive.
+            if (_isCompareMode) ForceExitImmediate();
         }
 
         private void RefreshLocalizedText()

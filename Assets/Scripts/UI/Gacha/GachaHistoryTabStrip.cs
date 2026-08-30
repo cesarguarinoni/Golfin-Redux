@@ -87,10 +87,12 @@ namespace GolfinRedux.UI.Gacha
                 return;
             }
 
-            // Consumed once by GachaTabController.OnEnable; without it the Rewards Center always
-            // opens on GACHA.
+            // Consumed once by GachaTabController.OnEnable. Both directions are explicit now
+            // (nav_back_memory §3): the Rewards Center remembers its last tab, so without a
+            // RequestGachaTab() the GACHA chip could land the player back on a remembered STORE.
             if (storeTab) GachaTabController.RequestStoreTab();
-            ScreenManager.Instance.ShowScreen(ScreenId.GeneralShop);
+            else          GachaTabController.RequestGachaTab();
+            ScreenManager.Instance.GoBack(ScreenId.GeneralShop);
         }
 
         private static void SetLabel(TMP_Text? label, Color color)

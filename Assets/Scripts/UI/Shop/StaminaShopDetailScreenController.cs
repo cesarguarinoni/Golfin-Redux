@@ -338,9 +338,10 @@ namespace GolfinRedux.UI.Shop
                 return now >= open || now < close; // overnight
         }
 
+        // nav_back_memory §3 — history first, serialized _backTarget as the fallback.
         private void OnCancelClicked()
         {
-            ScreenManager.Instance?.ShowScreen(_backTarget);
+            ScreenManager.Instance?.GoBack(_backTarget);
         }
     }
 }

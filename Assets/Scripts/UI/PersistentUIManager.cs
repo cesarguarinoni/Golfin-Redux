@@ -423,9 +423,11 @@ namespace Golfin.UI
             }
 
             // The "+" sits next to the ticket counter, so it opens the Rewards Center STORE tab
-            // rather than the GACHA tab the bottom-nav slot defaults to.
+            // rather than the GACHA tab the bottom-nav slot defaults to. It is a jump to the
+            // Gacha pillar with the tab forced, not a forward push (nav_back_memory §4), so it
+            // lands on the Rewards Center root even from GachaHistory / GachaPrizes.
             GolfinRedux.UI.Gacha.GachaTabController.RequestStoreTab();
-            sm.ShowScreen(GolfinRedux.UI.ScreenId.GeneralShop);
+            sm.NavigateToPillar(Screen.Gacha);
         }
 
         private void OnSettingsButtonClick()
@@ -440,6 +442,11 @@ namespace Golfin.UI
             }
         }
 
+        /// <summary>
+        /// Bottom-nav slot tap. Routing lives in ScreenManager.NavigateToPillar (nav_back_memory
+        /// §4 / D1): the pillar you are already in reopens at its root, a different pillar reopens
+        /// at the screen you were last on inside it.
+        /// </summary>
         public void NavigateTo(Screen screen)
         {
             currentScreen = screen;
@@ -452,31 +459,15 @@ namespace Golfin.UI
                 return;
             }
 
-            switch (screen)
+            if (screen == Screen.Settings)
             {
-                case Screen.Home:
-                    sm.ShowScreen(GolfinRedux.UI.ScreenId.Home);
-                    break;
-                case Screen.Inventory:
-                    sm.ShowScreen(GolfinRedux.UI.ScreenId.Inventory);
-                    break;
-                case Screen.Characters:
-                    sm.ShowScreen(GolfinRedux.UI.ScreenId.Roster);
-                    break;
-                case Screen.MainPlay:
-                    // Bottom-nav tee button → Mode Select screen (mode_select_system spec)
-                    sm.ShowScreen(GolfinRedux.UI.ScreenId.ModeSelection);
-                    break;
-                case Screen.Gacha:
-                    // Order 610 — the (previously no-op) Gacha nav button opens the Rewards Center
-                    // hub (GACHA | STORE | GIFTS tabs; STORE live). Forward-compatible with the future
-                    // gacha pillar via the hub's GACHA tab. Nav-slot choice — see general_shop_ui fork #6.
-                    sm.ShowScreen(GolfinRedux.UI.ScreenId.GeneralShop);
-                    break;
-                default:
-                    Debug.LogWarning($"[PersistentUI] Navigation to {screen} not yet implemented.");
-                    break;
+                Debug.LogWarning($"[PersistentUI] Navigation to {screen} not yet implemented.");
+                return;
             }
+
+            // HighlightScreen re-runs from ApplyScreen, so the slot lights from the real
+            // destination rather than the optimistic value set above.
+            sm.NavigateToPillar(screen);
         }
 
         /// <summary>
@@ -552,30 +543,13 @@ namespace Golfin.UI
             ApplyTopBarCenterText(screenId);
 
             // ── Bottom-nav icon highlight ─────────────────────────────────────────
-            switch (screenId)
-            {
-                case GolfinRedux.UI.ScreenId.Home:          currentScreen = Screen.Home; break;
-                case GolfinRedux.UI.ScreenId.Roster:        currentScreen = Screen.Characters; break;
-                case GolfinRedux.UI.ScreenId.Inventory:     currentScreen = Screen.Inventory; break;
-                case GolfinRedux.UI.ScreenId.HoleSelection:  currentScreen = Screen.MainPlay; break;
-                case GolfinRedux.UI.ScreenId.ModeSelection:  currentScreen = Screen.MainPlay; break;
-                // missions_v1 §C2 — Missions is entered from the PLAY pillar, so the
-                // same nav slot stays lit as it does for Practice and Tournaments.
-                case GolfinRedux.UI.ScreenId.MissionSelection: currentScreen = Screen.MainPlay; break;
-                case GolfinRedux.UI.ScreenId.TournamentHoleSelection: currentScreen = Screen.MainPlay; break;
-                case GolfinRedux.UI.ScreenId.TournamentLeaderboard:   currentScreen = Screen.MainPlay; break;
-                case GolfinRedux.UI.ScreenId.TournamentSelection:     currentScreen = Screen.MainPlay; break;
-                // Order 517 — Shop screens entered from Roster; keep Characters nav tab highlighted
-                case GolfinRedux.UI.ScreenId.StaminaShopSelection:  currentScreen = Screen.Characters; break;
-                case GolfinRedux.UI.ScreenId.StaminaShopDetail:     currentScreen = Screen.Characters; break;
-                // Order 610 — Rewards Center opened from the Gacha nav slot
-                case GolfinRedux.UI.ScreenId.GeneralShop:           currentScreen = Screen.Gacha; break;
-                // Reached only from the Rewards Center, so the Gacha slot stays lit on both.
-                case GolfinRedux.UI.ScreenId.GachaHistory:          currentScreen = Screen.Gacha; break;
-                case GolfinRedux.UI.ScreenId.GachaPrizes:           currentScreen = Screen.Gacha; break;
-                default:
-                    return; // Logo/Splash/Loading/Leaderboard: bars hidden or no nav highlight.
-            }
+            // nav_back_memory §1 — the ScreenId→pillar mapping lives in ScreenManager.PillarOf
+            // (one mapping, shared with the history stack), not in a second switch here.
+            var pillar = GolfinRedux.UI.ScreenManager.PillarOf(screenId);
+            if (!pillar.HasValue)
+                return; // Logo/Splash/Loading/Leaderboard/auth/starter: bars hidden or no nav highlight.
+
+            currentScreen = pillar.Value;
             UpdateScreenHighlight();
         }
 

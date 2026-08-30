@@ -112,10 +112,11 @@ namespace GolfinRedux.UI.Gacha
 
         // ── Close ──────────────────────────────────────────────────────────────
 
+        // nav_back_memory §3 — history first, the Rewards Center as the fallback.
         private void OnClose()
         {
             if (ScreenManager.Instance != null)
-                ScreenManager.Instance.ShowScreen(ScreenId.GeneralShop);
+                ScreenManager.Instance.GoBack(ScreenId.GeneralShop);
             else
                 Debug.LogWarning("[GachaHistoryScreenController] ScreenManager not found.");
         }

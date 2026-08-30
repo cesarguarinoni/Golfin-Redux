@@ -131,6 +131,9 @@ namespace Golfin.Inventory
         {
             if (carousel != null)
                 carousel.OnBallSelected -= OnCarouselSelection;
+
+            // nav_back_memory D3 / F6 — see CompareController.OnDisable.
+            if (_isCompareMode) ForceExitImmediate();
         }
 
         // ── Enter / Exit ─────────────────────────────────────────────────────────
