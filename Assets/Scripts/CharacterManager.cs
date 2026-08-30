@@ -268,7 +268,17 @@ namespace Golfin.Roster
                 else if (ownedCharacters.Count > 0)
                 {
                     selectedCharacterId = ownedCharacters.Keys.First();
-                    ownedCharacters[selectedCharacterId].isSelected = true;
+                }
+
+                // ONE id, ONE flag. isSelected is hydrated per-character in the loop above and can
+                // disagree with selectedCharacterId — an older save, or the F8 repair a few lines up
+                // that backfills selectedCharacterId without touching any isSelected. The id is
+                // authoritative, so reconcile the flags to it; otherwise the SELECT button and the
+                // selected-icon (which read isSelected) contradict who is actually selected.
+                if (!string.IsNullOrEmpty(selectedCharacterId))
+                {
+                    foreach (var kv in ownedCharacters)
+                        kv.Value.isSelected = kv.Key == selectedCharacterId;
                 }
 
                 Debug.Log($"[CharacterManager] Overlaid SaveData — selectedChar={selectedCharacterId}");

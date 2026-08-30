@@ -47,9 +47,26 @@ namespace Golfin.Roster
             var characters = CharacterManager.Instance.GetAllOwnedCharacters();
             if (characters.Count > 0)
             {
-                currentCharacterId = characters[0].characterId;
-                CharacterManager.Instance.SelectCharacter(currentCharacterId);
-                Debug.Log($"[RosterScreenController] Selected first character: {currentCharacterId}");
+                // Opening this screen must NOT change who is selected. The player's choice is
+                // restored from the save by CharacterManager.LoadRoster; unconditionally calling
+                // SelectCharacter(characters[0]) here overwrote it (and persisted the overwrite),
+                // so the selection never survived a relaunch once the roster had been visited.
+                // Only pick a default when the restored selection is missing or no longer owned.
+                var restoredId = CharacterManager.Instance.GetSelectedCharacterId();
+                bool restoredIsOwned = !string.IsNullOrEmpty(restoredId) &&
+                                       characters.Exists(c => c.characterId == restoredId);
+
+                if (restoredIsOwned)
+                {
+                    currentCharacterId = restoredId;
+                    Debug.Log($"[RosterScreenController] Kept restored selection: {currentCharacterId}");
+                }
+                else
+                {
+                    currentCharacterId = characters[0].characterId;
+                    CharacterManager.Instance.SelectCharacter(currentCharacterId);
+                    Debug.Log($"[RosterScreenController] No valid saved selection; selected first character: {currentCharacterId}");
+                }
             }
             else
             {

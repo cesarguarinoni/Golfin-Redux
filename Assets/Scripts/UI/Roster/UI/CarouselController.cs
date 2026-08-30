@@ -62,6 +62,9 @@ namespace Golfin.Roster
             PopulateCarousel();
             SetupArrowButtons();
             SetupPagination();
+
+            // SetupPagination resets to page 0; the restored selection may live on a later page.
+            SnapToPageOf(selectedCharacterId);
         }
         
         /// <summary>
@@ -164,9 +167,10 @@ namespace Golfin.Roster
                 }
             }
             
-            // Select first character by default
+            // Open on the character the player actually has selected (restored from the save),
+            // not blindly on card 0.
             if (cards.Count > 0)
-                SelectCharacter(cards[0].GetCharacterId());
+                SelectCharacter(ResolveInitialCardId());
 
             Debug.Log($"[CarouselController] Populated with {cards.Count} cards");
         }
@@ -376,6 +380,51 @@ namespace Golfin.Roster
         }
 
         /// <summary>
+        /// The card the carousel should open on: the character the player actually has selected
+        /// (CharacterManager, restored from the save), falling back to the first card when that
+        /// character has no card here — a locked-out starter picker, or a save naming a character
+        /// the catalog no longer has.
+        /// </summary>
+        private string ResolveInitialCardId()
+        {
+            var activeId = CharacterManager.Instance?.GetSelectedCharacterId();
+            if (!string.IsNullOrEmpty(activeId) &&
+                cards.Find(c => c.GetCharacterId() == activeId) != null)
+                return activeId!;
+
+            return cards[0].GetCharacterId();
+        }
+
+        /// <summary>
+        /// Put the page holding <paramref name="characterId"/> on screen, instantly (no smooth
+        /// scroll — this runs at open, not as a navigation). Deferred one frame so the
+        /// ContentSizeFitter has sized Content before the normalized position is written.
+        /// </summary>
+        private void SnapToPageOf(string characterId)
+        {
+            if (scrollRect == null || totalPages <= 1 || string.IsNullOrEmpty(characterId)) return;
+
+            int index = cards.FindIndex(c => c.GetCharacterId() == characterId);
+            if (index < 0) return;
+
+            int page = Mathf.Clamp(index / cardsPerPage, 0, totalPages - 1);
+            if (page == currentPage) return;
+
+            currentPage = page;
+            RefreshDotColors();
+            UpdateArrowButtonStates();
+            StartCoroutine(ApplyPagePositionNextFrame(page));
+        }
+
+        private System.Collections.IEnumerator ApplyPagePositionNextFrame(int page)
+        {
+            yield return null;   // let the layout settle so Content has its real width
+
+            if (scrollRect == null || totalPages <= 1 || page != currentPage) yield break;
+            scrollRect.horizontalNormalizedPosition = (float)page / (totalPages - 1);
+        }
+
+        /// <summary>
         /// Get currently selected character ID
         /// </summary>
         public string GetSelectedCharacterId() => selectedCharacterId;
@@ -451,14 +500,18 @@ namespace Golfin.Roster
                 cards.Add(card);
             }
 
+            // Starter mode is a picker over candidates, so it always opens on the first card;
+            // normal Roster mode opens on the player's selected character.
             if (cards.Count > 0)
-                SelectCharacter(cards[0].GetCharacterId());
+                SelectCharacter(_starterMode ? cards[0].GetCharacterId() : ResolveInitialCardId());
 
             // Rebuild pagination for the new card set
             totalPages = Mathf.CeilToInt((float)cards.Count / cardsPerPage);
             currentPage = 0;
             _dots?.Rebuild(totalPages, currentPage);
             UpdateArrowButtonStates();
+
+            SnapToPageOf(selectedCharacterId);
         }
     }
 }
