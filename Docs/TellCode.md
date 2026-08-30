@@ -7,6 +7,14 @@
 
 ## ▶ CURRENT STATE — update this block at every session boundary
 
+- **Missions track CLOSED (Cesar, 2026-08-30).** `missions_v1` DONE (`8a4275064`, mode OPEN on
+  prod — `modes` v8, `texts` v16, 40 component-built missions on Lomond, server-generated Daily
+  Mission, seven catalogs + Missions/Components/Daily panels) and `daily_mission_home_pill` DONE
+  (`e86edd10a`, `texts` v17 — Home pill, `StreakFlame` on the daily card, shared
+  `DailyMissionState`). Design of record `Docs/Game Design/MISSIONS_REDESIGN.md`; economy in
+  `Docs/Economy/ECONOMY_MASTER.md` §3. Open follow-ups, not blocking: `HoleTees.csv` yardages
+  disagree with pars on 10 holes (display-only); mission leaderboards (Rankings button = coming
+  soon); Nishikawa frame for the daily card on Mission Selection. Nothing in flight.
 - **`game_modes_admin` is DONE** (Cesar, 2026-08-28) — folder in `Docs/Specs/Completed/`.
   `modes` is the TENTH content catalog and mode entry fees are SERVER-PRICED:
   `POST /points/spend` refuses a `mode_entry_fee:<id>` debit that does not match
@@ -97,6 +105,42 @@
 
 ## 📋 SPEC_READY POINTERS
 
+- **`daily_mission_home_pill`** (filed 2026-08-30, Architect via Cowork) — ✅ **DONE 2026-08-30 (`e86edd10a`, Completed; texts v17). Kickoff below is SPENT.**
+  `Docs/Specs/Active/daily_mission_home_pill/SPEC.md`. The Home-screen Daily Mission pill that
+  `missions_v1` deferred: Figma `2098:8490` (with notice) / `13994:1935` (without), flame art in
+  `Assets/Art/HomeScreen/`. Enters from the left, pulsing glow, y follows the notice panel, flame +
+  auto-sized streak number only at streak ≥ 1, leaves on claim, old-out/new-in at UTC rollover,
+  tap → Mission Selection. Same `StreakFlame` prefab replaces the text streak on the Mission
+  Selection daily card. ⚠️ The Home mockups are the OLD Home layout — pill only, carousel untouched.
+
+### Kickoff · daily_mission_home_pill (issued 2026-08-30) — ✅ SPENT, task DONE 2026-08-30. Kept for history.
+
+```
+Read Docs/Specs/Active/daily_mission_home_pill/SPEC.md and implement it.
+
+Context:
+- Home-screen "NEW DAILY MISSION!" pill (Figma 2098:8490 with notice / 13994:1935 without,
+  renders in reference/). Slides in from the left, pulsing glow, y follows newsPanelRoot,
+  flame + auto-sized streak number only when streak >= 1, leaves when the daily is claimed,
+  old-out/new-in at UTC rollover, tap opens MissionSelection. Flame art:
+  Assets/Art/HomeScreen/Flame.svg + flame.png.
+- Reuse: MissionsClient.FetchDailyRoutine (DailyMissionResult: Date/RecipeHash/Claimed/Streak),
+  MissionSelectionScreenController.RefreshDaily + MissionCardController.SetDailyStatus (the
+  card's text streak becomes the shared StreakFlame prefab), HomeScreenController.newsPanelRoot,
+  the SnapAndExpandCoroutine eased-coroutine pattern (no tween lib). Introduce one shared
+  DailyMissionState so pill and card never disagree. Minimal diff.
+- The Home mockups are the OLD Home layout: take only the pill and its position relative to
+  the notice. Do not touch the mode carousel, promo banner or notice logic.
+- Strings: HOME_DAILY_PILL (EN + JA) in LocalizationText.csv -> Tools/content/import_content.py
+  (plan -> --apply -> publish -> --check clean), PIPELINE_HARDENING §24. No hardcoded .text.
+- Out of scope: daily rewards/streak rules/server changes, leaderboards.
+
+When done: list changed files with a 1-line summary each, run the acceptance
+tests in the spec, flag which need manual on-device verification, update
+STATUS.md + IMPLEMENTER_REPORT.md in the spec folder, and update
+Docs/AI_CONTEXT.md.
+```
+
 - ~~`shot_aim_parity`~~ **DONE 2026-08-28** (`b3d0c5d95` → `2b0cd5cb2`, Completed/). One `AimYawFor()` for line + shot; `AimNudgeRangeRad` removed; latch unlatches on a new low; F14.
 - ~~`shot_timing_power`~~ **DONE 2026-08-29** (`4210c0891`, Completed/). Slab progress sampled at the aim latch → power ×0.70/0.90/1.0; band edges in `controls.csv`; sampleless drivers ×1.0; F15. Open for Cesar on feel: D5 putts pay the penalty (one `IsPutt` guard to exempt), band/multiplier values, HUD `× 0.xx` keep/drop. Deviation accepted: HUD branch fires in `Timing` (no `Flicking` state is ever published).
 - ~~`shot_timing_telemetry`~~ **DONE 2026-08-29** (`c77c7732b` → `135442309`, Completed/). `shot_taken` carries `timing01`/`timing_mul`/`timing_band`; dashboard Flick-timing card deployed (Cloudflare version `cc9b9dd3`, stamp `c77c7732`); prod rows verified by query. Cesar step: one look at admin.golfin.world → Telemetry → Shot quality (Cloudflare Access — Code cannot sign in). Shot-controls track is closed; D5 putt + F15 tuning now decided by data.
@@ -153,6 +197,7 @@ the spec folder, and update Docs/AI_CONTEXT.md (also close the content_player_in
   screen cloned from Hole Selection, mode card wired on Home + Mode Select (`target=mission_select`).
   Design of record: `Docs/Game Design/MISSIONS_REDESIGN.md` + workbook. Decisions: no Home daily
   surface in v1; `missions.locked` flipped by Cesar from the admin, never in the bundled CSV.
+  ✅ **DONE 2026-08-30 — moved to `Docs/Specs/Completed/missions_v1/`. Kickoff below is SPENT.** Follow-up: `daily_mission_home_pill`.
   Phases A→D in the spec; §21 live E2E at the end of C; §23 deploy ids required.
 
 ### Kickoff · missions_v1 (issued 2026-08-28)
