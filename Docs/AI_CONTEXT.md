@@ -5,6 +5,28 @@
 
 ---
 
+## ✅ SHIPPED — `selected_character_persistence` (quick) **approved by Cesar** (2026-08-30)
+
+**Your selected character survives a relaunch.** The save layer was never the bug —
+`SaveData.selectedCharacterId` was written by `SelectCharacter` and restored by `LoadRoster` all
+along. It was overwritten AFTER the restore: `RosterScreenController.InitializeScreen` (from
+`Start`, i.e. the first activation of the screen — and `RosterScreen` is `m_IsActive: 1` in
+`ShellScene`, so during boot) ran `SelectCharacter(characters[0])` unconditionally, and that call
+persists + `MarkDirty()`s. Merely opening the Roster rewrote the save to "first owned character",
+which is what the next launch dutifully restored.
+
+Fix: the Roster screen now keeps the restored selection and only defaults to `characters[0]` when
+the saved one is missing or no longer owned; `CarouselController` opens on the selected character
+and snaps to its page (starter mode still opens on card 0, it is a picker); and `LoadRoster`
+reconciles the per-character `isSelected` flags to the authoritative id — the F8 starter repair
+can backfill the id without touching a flag, and the SELECT button reads the flag.
+
+Verified in play mode on ShellScene (save backed up + restored): selection survived a play-mode
+restart, `save.json` on disk carried it, and the old line reproduced the clobber. Commit
+`3d0370719`. Record: `Docs/Specs/Quick/Completed/selected_character_persistence.md`.
+
+---
+
 ## ✅ SHIPPED — `nav_back_memory` **approved by Cesar** (2026-08-30)
 
 **BACK now returns to where the player actually was, and the nav bar remembers.** Every
