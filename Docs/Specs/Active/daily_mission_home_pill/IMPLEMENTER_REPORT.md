@@ -2,6 +2,21 @@
 
 **Iteration shape:** `home_ui:daily_pill_placement_and_motion`
 
+## Iteration 2 — Cesar's three follow-ups (2026-08-30)
+
+| Ask | What changed | Proof |
+|---|---|---|
+| "Adjust the pill length when no streak so there is not an empty space to the right" | The pill now HUGS its content the way the node's auto-layout row does: `24 + (58 + 10 if flame) + 433 + 24` → **549 with the flame, 481 without**, with the label moving from x 92 to x 24. Both baked sprites were re-imported as **9-slices** (border 100 / 172 sprite-px at 2×, `pixelsPerUnitMultiplier = 2` → 50 / 86 UI px) so neither width squashes the 50px corners | `pill_width_549_with_flame` and `pill_width_481_without_flame` PASS; the streak-0 frame's gold border measures **68px shorter** than the streak-5 frame's, which is exactly flame + gap. Corner-collapse maths checked at both widths for both sprites |
+| "Move the streak marker to the left of the Daily Mission title (so it appears in contracted and expanded mode)" | The badge moved out of its own row and into the TITLE row, first sibling. Collapsed reuses the existing `TitleHRow`; expanded got a `TitleHRowExp` cloned component-for-component from it, with `TitleExp` moved inside. Riding the title is what makes "both states" structural rather than something to remember | `streak_badge_beside_title` PASS (`collapsed parent='TitleHRow'`, `expanded parent='TitleHRowExp'`); `missioncard_collapsed_flame.png` + `missioncard_expanded_flame.png` |
+| "Pressing the pill takes you to the mission screen with Daily mission expanded" | `MissionSelectionScreenController.ExpandDailyOnOpen`, a one-shot static the pill sets before navigating and the screen consumes as the daily binds. It also **suppresses the default NEXT expand** for that one visit, so a campaign card does not open and snap shut when the daily fetch lands | `pill_tap_expands_daily` PASS (`State=Expanded`) and `expand_request_consumed` PASS — both driven by the real `Button.onClick`. `missionselection_after_pill_tap.png` shows rules + reward + PLAY on arrival, every campaign card collapsed |
+
+A failed daily fetch clears the request and hands the default expansion back to the NEXT card
+(`ExpandNextFallback`), so a request can never leak into the following visit or leave the screen
+with nothing open.
+
+Gates after iteration 2: **15 assertions / 0 FAIL**, lint 0 FAIL on both new prefabs, EditMode
+1939 / 0 / 3.
+
 ## Implementation summary
 
 A `NEW DAILY MISSION!` pill now lives on Home: it slides in from the left, pulses a soft gold
@@ -17,19 +32,19 @@ prefab the pill uses, on both the collapsed and the expanded copy.
 | Path | Change |
 |---|---|
 | `Assets/Scripts/Gameplay/Missions/DailyMissionState.cs` | **created** — the one shared fact (Date / Streak / Claimed / HasRecipe / Known + `OnChanged`) that stops the pill and the daily card disagreeing |
-| `Assets/Scripts/UI/Home/DailyMissionPillController.cs` | **created** — Hidden/Entering/Shown/Leaving state machine, eased slide, sine glow, 1 s UTC-rollover tick, tap + telemetry, notice-relative Y |
+| `Assets/Scripts/UI/Home/DailyMissionPillController.cs` | **created** — Hidden/Entering/Shown/Leaving state machine, eased slide, sine glow, 1 s UTC-rollover tick, notice-relative Y, content-hugging width, tap → telemetry + expand request |
 | `Assets/Scripts/UI/Common/StreakFlameView.cs` | **created** — `SetStreak(n)`; owns the "0 is not a streak" rule for every host |
 | `Assets/Prefabs/UI/Common/StreakFlame.prefab` | **created** — flame Image + auto-sized navy-gradient number; the shared badge |
 | `Assets/Prefabs/UI/HomeScreen/DailyMissionPill.prefab` | **created** — Glow / Panel / StreakFlame / Label(+`LocalizedText`) / Button + `ButtonPressFeedback` |
-| `Assets/Art/HomeScreen/S_DailyPillPanel.png` | **created** — baked 549×122 @2x pill panel from the node's tokens (3px `#FCF195`, r50, `#133453→#091B33`) |
-| `Assets/Art/HomeScreen/S_DailyPillGlow.png` | **created** — the blurred gold halo for the glow layer |
+| `Assets/Art/HomeScreen/S_DailyPillPanel.png` | **created** — baked 549×122 @2x pill panel from the node's tokens (3px `#FCF195`, r50, `#133453→#091B33`); 9-sliced (border 100 @2x, ppum 2) so it serves 549 and 481 without corner squash |
+| `Assets/Art/HomeScreen/S_DailyPillGlow.png` | **created** — the blurred gold halo for the glow layer; 9-sliced the same way (border 172 @2x) |
 | `Assets/Art/HomeScreen/flame.png` | **imported** — Cesar's 58×90 art, set to Sprite (2D/UI), uncompressed |
 | `Assets/Art/HomeScreen/Flame.svg` | untracked source added by Cesar; committed alongside the PNG, not used at runtime |
 | `Docs/Scripts/make_daily_pill_panel.py` | **created** — regenerates both baked sprites from the node's four tokens |
 | `Assets/Scripts/UI/HomeScreenController.cs` | **modified** — one `[SerializeField] dailyMissionPill` + one `RefreshPlacement()` call in `SetNewsPanelVisible` |
 | `Assets/Scripts/UI/MissionSelection/MissionCardController.cs` | **modified** — `streakText`/`streakTextExp`/`streakChip` → two `StreakFlameView`s; `MISSION_DAILY_STREAK` no longer read |
-| `Assets/Scripts/UI/MissionSelection/MissionSelectionScreenController.cs` | **modified** — writes `DailyMissionState` on fetch success/failure and on a successful claim |
-| `Assets/Prefabs/UI/MissionSelection/MissionCard.prefab` | **modified** — the two streak TMPs replaced by `StreakFlame` instances (row 46→72px) |
+| `Assets/Scripts/UI/MissionSelection/MissionSelectionScreenController.cs` | **modified** — writes `DailyMissionState` on fetch success/failure and on a successful claim; adds the one-shot `ExpandDailyOnOpen` request + its NEXT-card fallback |
+| `Assets/Prefabs/UI/MissionSelection/MissionCard.prefab` | **modified** — the two streak TMPs replaced by `StreakFlame` instances, now 41×64 inside the TITLE row (`TitleHRow` / the new `TitleHRowExp`) rather than a row of their own |
 | `Assets/Scenes/ShellScene.unity` | **modified** — `DailyMissionPill` instanced under `HomeScreen`, wired; the two orphaned streak TMPs on `DailyMissionCard` removed |
 | `Assets/Scripts/Telemetry/TelemetryConfig.cs` | **modified** — `TelemetryEventNames.DailyPillTap = "daily_pill_tap"` |
 | `Assets/Localization/LocalizationText.csv` | **modified** — `HOME_DAILY_PILL` (EN + JA), one added line |
@@ -46,8 +61,8 @@ prefab the pill uses, on both the collapsed and the expanded copy.
 - **Captured at:** the same file (the harness writes straight into `screenshots/`)
 - **Scene loaded:** `Assets/Scenes/ShellScene.unity`
 - **Play mode:** Yes — booted through the real Logo → Splash → `StartButton` → Home path
-- **Canonical video:** `videos/daily_mission_home_pill_demo.mp4` (1170×2532, 33.1 s, captioned)
-- **Invariant JSON:** `pill_invariants.json` — **10 assertions, 0 FAIL**
+- **Canonical video:** `videos/daily_mission_home_pill_demo.mp4` (1170×2532, 33.9 s, captioned)
+- **Invariant JSON:** `pill_invariants.json` — **15 assertions, 0 FAIL**
 
 ## Figma fidelity
 
@@ -58,7 +73,7 @@ sample of `screenshots/home_notice_streak5_en.png`), never eyeballed.
 
 | Element | Figma node | Figma value | Built value | Result |
 |---|---|---|---|---|
-| Pill root size | `13994:1963` | 549 × 122 | `rect=(549.00, 122.00)` (`pill_invariants.json`) | PASS |
+| Pill root size | `13994:1963` | 549 × 122 | `rect=(549.00, 122.00)` (`pill_invariants.json`); **481 × 122 when the flame is hidden**, which is what the node's auto-layout row hugs to without it | PASS |
 | Pill x in the 1170 frame | `13994:1963` under `13994:1940` | 96 + 10 − 70 = **36** | `anchoredPosition.x = 36.00` | PASS |
 | Pill y, no notice | frame `13994:1935` | **361** | `anchoredPosition.y = −361.0` | PASS |
 | Pill y, with notice | frame `2098:8490` | **725** (= 361 + 340 + 24) | **−737.0** = live notice top 361 + its height **352** + 24 | PASS\* |
@@ -71,7 +86,7 @@ sample of `screenshots/home_notice_streak5_en.png`), never eyeballed.
 | Streak number | `I13994:1963;13994:2115` | Rubik SemiBold 45px, lh 60, tracking −0.69, **navy gradient `#133453→#091B33`**, 29 × 60 at centre-x 52.5 | Rubik-SemiBold SDF, **40px**, `characterSpacing −1.53`, `enableVertexGradient` `#133453→#091B33`; `"5"` measures **27.2 × 52.2** | PASS |
 | Streak number, 2 digits | — | must fit | `"12"` auto-sizes to **34.7px**, 41.4px wide, inside the flame bulb (art is 43px across at y=78) | PASS |
 | Label | `I13994:1963;13994:1745` | Rubik SemiBold 45px, lh 60, tracking −0.69, `#EEDC9A`, 433 × 60 at (92, 31) | Rubik-SemiBold SDF **40px**, `#EEDC9A`, rect 433 × 60 at `(92,−31)`; glyphs measure **423.6 wide** vs the node's 433 box | PASS |
-| Label keeps its x at streak 0 | spec § Figma Fidelity | must NOT re-centre | glyph left edge = **348.9 at streak 5 and 348.9 at streak 0** — identical to 0.1px | PASS |
+| Label x at streak 0 | spec § Figma Fidelity said "keeps its x" | — | **SUPERSEDED by Cesar's iter-2 ask.** Keeping x 92 in a 549 pill is what left the dead space he flagged; the pill now shrinks to 481 and the label takes the 24px pad, which is what the node's auto-layout does with the flame absent | PASS\* |
 | Label colour, JA | — | node is EN-only | pixel-sampled `(238,220,154)` = **`#EEDC9A`** — gold, not white | PASS |
 | Glow | — (motion only) | additive, alpha 0.25 ↔ 0.65, 1.6 s sine | `S_DailyPillGlow.png` on `TapSparkle_Additive.mat` (`UI/Additive`), alpha lerped 0.25↔0.65 over 1.6 s, only in `Shown` | PASS |
 | Tap target | whole pill | opens `ScreenId.MissionSelection` | `tap_opens_mission_selection` PASS via the real `Button.onClick` | PASS |
@@ -118,9 +133,9 @@ sample above instead.
 | Enter animation from off-screen left, glow loop running in `Shown`, no per-frame allocation | PASS | `videos/daily_mission_home_pill_demo.mp4`; `screenshots/home_enter_frame1_offscreen.png` + `home_enter_frame2_sliding.png` + `_contact_enter_animation.png` are consecutive decoded mp4 frames showing the pill part-way on. `glow_loop_no_per_frame_alloc`: **68 B/frame over 180 frames for the WHOLE Home screen** — an upper bound that the pill's `Update` cannot exceed |
 | Claiming the daily → pill leaves; next launch with a claimed daily → no pill | PASS | The account this ran on **has genuinely claimed today's daily on prod**: the unseeded boot fetch returned `date='2026-08-30' streak=1 claimed=True hasRecipe=True → showPill=False` and the pill stayed parked at x=−585 (`home_live_fetch_claimed_no_pill.png`, verified by pixel: no gold border at the pill row). The claim→leave transition is `MarkClaimed` → `home_after_claim_no_pill.png` and the video |
 | Simulated UTC rollover → old pill leaves, fetch, new pill enters with the new streak | PASS | `home_rollover_old_shown.png` (pill present, pixel-verified) → `home_rollover_old_leaving.png` (x=−585) → `home_rollover_after_real_refetch.png` (the **real** re-fetch ran and answered `claimed=True` for this account, so correctly no pill) → `home_rollover_new_pill_in.png` (x=36, streak 4). Seam: `DailyMissionState.Date` written directly, exactly as the spec specifies |
-| Flame + number hidden at streak 0; shown at 5 and at 12 (two digits fit) | PASS | `home_nonotice_streak0_en.png` / `..._streak5_en.png` / `..._streak12_en.png`; `streak_zero_hides_flame` PASS; `"12"` auto-sizes to 34.7px and measures 41.4px inside a 43px bulb |
+| Flame + number hidden at streak 0; shown at 5 and at 12 (two digits fit) | PASS | `home_nonotice_streak0_en.png` / `..._streak5_en.png` / `..._streak12_en.png`; `streak_zero_hides_flame` PASS; `"12"` auto-sizes to 34.7px and measures 41.4px inside a 43px bulb. At streak 0 the pill also **shortens to 481** rather than leaving the flame's slot empty |
 | Same `StreakFlame` prefab on the Mission Selection daily card, collapsed + expanded; the old fields removed | PASS | `streakflame_shared_prefab` PASS — pill, collapsed card and expanded card all resolve to `Assets/Prefabs/UI/Common/StreakFlame.prefab`. `streakText` / `streakTextExp` / `streakChip` are gone from the class (`SerializedObject.FindProperty("streakText") == null`), from the prefab YAML, and their two orphaned scene copies were deleted. `missioncard_collapsed_flame.png`, `missioncard_expanded_flame.png` |
-| Tap opens Mission Selection with the daily card present; `daily_pill_tap` lands | PASS | `tap_opens_mission_selection` PASS and `daily_pill_tap_queued` PASS (`'daily_pill_tap'` found in `TelemetryService._queue`, queue 4→6) — both driven by the **real** `DailyMissionPill Button.onClick.Invoke()`, never `ShowScreen` directly (Real-entry rule). `missionselection_after_pill_tap.png` |
+| Tap opens Mission Selection with the daily card present **and expanded**; `daily_pill_tap` lands | PASS | `tap_opens_mission_selection`, `pill_tap_expands_daily` and `daily_pill_tap_queued` all PASS (`'daily_pill_tap'` found in `TelemetryService._queue`, queue 4→6) — both driven by the **real** `DailyMissionPill Button.onClick.Invoke()`, never `ShowScreen` directly (Real-entry rule). `missionselection_after_pill_tap.png` |
 | `HOME_DAILY_PILL` reached the `texts` catalog; `--check` clean; zero new hardcoded `.text` | PASS | plan → `--apply` (16 drafts) → published (`content_publish` → **v17**) → `export_content.py --check` **exits 0, "clean — no file would change and no catalog has drifted"**. Grep of the three new `.cs` files finds no `.text =` at all; the only text write is `SetText("{0}", streak)`, a number. The string is bound by the sanctioned `LocalizedText` component on the prefab |
 | Mode carousel, promo banner, notice panel untouched; full EditMode sweep green; no Console errors | PASS | `ShellScene.unity`'s first diff was **+119 / −0 lines, 0 `m_IsActive` and 0 `m_SizeDelta` changes**; the only other scene edits are the `DailyMissionCard` orphan removal and its sibling order. `ModeCarouselSection`, `PromoBanner` and `NoticePanel` are not touched by any diff hunk. EditMode: **1939 passed / 0 failed / 3 skipped** (the 3 are pre-existing documented `Stage C1` skips). No errors in the Console for this task |
 
@@ -155,9 +170,11 @@ None.
    per-language size override) and would have fought it on a language switch. `labelText` was
    removed from the controller.
 
-5. **The Mission Selection flame row grew 46 → 72px.** Matching the old text row's 46px made the
-   badge a speck in a 1026-wide centred row. The spec constrains what the streak *is*, not the row
-   height.
+5. **The Mission Selection badge moved into the title row (Cesar, iter 2).** It was its own
+   46px row below the countdown, which made it a speck in a 1026-wide centred row; it is now 41 ×
+   64 immediately left of the title, in both the collapsed and the expanded card. The expanded
+   card gained a `TitleHRowExp` wrapper cloned from the collapsed side's `TitleHRow` so both
+   states lay the badge out the same way.
 
 6. **Offline does NOT show the pill.** SPEC §2 says "the deterministic local daily recipe
    `missions_v1` already builds counts as `HasRecipe`, so the pill shows". There is no local

@@ -12,3 +12,8 @@ Flame.svg + flame.png were added by Cesar on 2026-08-30 as the task's art drop.
 === iter-1 complete 2026-08-30T04:28:22Z ===
 Stills pass, video pass and invariant pass all green. texts catalog published v17, --check clean.
 Editor left in edit mode on ShellScene, not dirty.
+
+=== iter-2 complete 2026-08-30T04:57:53Z ===
+Cesar's three follow-ups: pill hugs its content (549/481, both sprites 9-sliced),
+streak badge into the title row of both card states, pill tap expands the daily on arrival.
+Gate 15 assertions / 0 FAIL. EditMode 1939/0/3. Editor left clean, ShellScene not dirty.

@@ -115,9 +115,14 @@ MonoBehaviour:
   pillRect: {fileID: 5097494159076056247}
   glowImage: {fileID: 3790097149843131204}
   streakFlame: {fileID: 1281153140288808706}
+  labelRect: {fileID: 2142415251067971250}
   tapButton: {fileID: 3466257117559033078}
   noticePanelRoot: {fileID: 0}
   fallbackTopY: -361
+  padX: 24
+  flameW: 58
+  flameGap: 10
+  labelW: 433
   restX: 36
   enterDuration: 0.45
   leaveDuration: 0.3
@@ -192,7 +197,7 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   m_Sprite: {fileID: 21300000, guid: 086acc78ed8a34ce090a7cec8d2d5aea, type: 3}
-  m_Type: 0
+  m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
   m_FillMethod: 4
@@ -200,7 +205,7 @@ MonoBehaviour:
   m_FillClockwise: 1
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
-  m_PixelsPerUnitMultiplier: 1
+  m_PixelsPerUnitMultiplier: 2
 --- !u!1 &7127201558843215717
 GameObject:
   m_ObjectHideFlags: 0
@@ -267,7 +272,7 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   m_Sprite: {fileID: 21300000, guid: 448cb5f34eebb4b38962e7959d0a11ed, type: 3}
-  m_Type: 0
+  m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
   m_FillMethod: 4
@@ -275,7 +280,7 @@ MonoBehaviour:
   m_FillClockwise: 1
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
-  m_PixelsPerUnitMultiplier: 1
+  m_PixelsPerUnitMultiplier: 2
 --- !u!1 &7915083824899783437
 GameObject:
   m_ObjectHideFlags: 0

@@ -108,8 +108,8 @@ namespace Golfin.EditorTools
             return string.Join("|", new[]
             {
                 Src(pill, "StreakFlame"),
-                Src(card, "CollapsedContainer/TitleArea/DailyStreak"),
-                Src(card, "ExpandedContainer/TitleAreaExp/DailyStreakExp"),
+                Src(card, "CollapsedContainer/TitleArea/TitleHRow/DailyStreak"),
+                Src(card, "ExpandedContainer/TitleAreaExp/TitleHRowExp/DailyStreakExp"),
             });
         }
 
@@ -387,7 +387,7 @@ namespace Golfin.EditorTools
             // ── 3. Streak 0 — no flame, and the label keeps its x ────────────
             DailyMissionState.Set(today, 0, claimed: false, hasRecipe: true);
             yield return Wait(0.8f);
-            Report("streak 0"); Mark("Streak 0 — no flame, and the label\\nkeeps its x (it does not re-centre)"); yield return Snap("home_nonotice_streak0_en");
+            Report("streak 0"); Mark("Streak 0 — no flame, and the pill SHORTENS\\nto 481 so it does not end in empty navy"); yield return Snap("home_nonotice_streak0_en");
 
             // ── 4. Streak 12 — two digits, auto-size ─────────────────────────
             DailyMissionState.Set(today, 12, claimed: false, hasRecipe: true);
@@ -527,6 +527,7 @@ namespace Golfin.EditorTools
             var ctrl = pill.GetComponent<Golfin.UI.Home.DailyMissionPillController>();
             var notice = GameObject.Find("Canvas/ScreensRoot/HomeScreen/NoticePanel");
             var nrt = (RectTransform)notice.transform;
+            var labelRt = (RectTransform)pill.transform.Find("Label");
             string today = Golfin.UI.Home.DailyMissionPillController.UtcToday();
 
             // ── Geometry, both Figma frames ─────────────────────────────────
@@ -552,6 +553,22 @@ namespace Golfin.EditorTools
             yield return Wait(0.6f);
             Assert("y_no_notice_is_361", !notice.activeInHierarchy && Mathf.Abs(prt.anchoredPosition.y + 361f) < 0.5f,
                    $"y={prt.anchoredPosition.y:F1} (Figma 13994:1935 -> -361)");
+
+            // ── The pill hugs its content: no dead space when there is no streak ──
+            DailyMissionState.Set(today, 5, claimed: false, hasRecipe: true);
+            yield return Wait(0.9f);
+            float wWith = prt.rect.width;
+            float lxWith = labelRt != null ? labelRt.anchoredPosition.x : -1f;
+            DailyMissionState.Set(today, 0, claimed: false, hasRecipe: true);
+            yield return Wait(0.9f);
+            float wNo = prt.rect.width;
+            float lxNo = labelRt != null ? labelRt.anchoredPosition.x : -1f;
+            Assert("pill_width_549_with_flame", Mathf.Abs(wWith - 549f) < 0.5f && Mathf.Abs(lxWith - 92f) < 0.5f,
+                   $"width={wWith:F1} labelX={lxWith:F1} (node 549 / 92)");
+            Assert("pill_width_481_without_flame", Mathf.Abs(wNo - 481f) < 0.5f && Mathf.Abs(lxNo - 24f) < 0.5f,
+                   $"width={wNo:F1} labelX={lxNo:F1} (24+433+24 = 481, label at the 24px pad) — the flame's 58+10 is removed, not left empty");
+            DailyMissionState.Set(today, 5, claimed: false, hasRecipe: true);
+            yield return Wait(0.9f);
 
             // ── The glow must not allocate per frame ────────────────────────
             yield return Wait(0.5f);
@@ -591,6 +608,31 @@ namespace Golfin.EditorTools
             Assert("tap_opens_mission_selection",
                    GolfinRedux.UI.ScreenManager.Instance?.CurrentScreen == GolfinRedux.UI.ScreenId.MissionSelection,
                    $"screen={GolfinRedux.UI.ScreenManager.Instance?.CurrentScreen}");
+
+            // ── The pill's tap must land on the daily ALREADY OPEN ─────────
+            var dailyCardGo = GameObject.Find("Canvas/ScreensRoot/MissionSelectionScreen/Content/DailyMissionCard");
+            var dailyCtrl = dailyCardGo != null
+                ? dailyCardGo.GetComponent<GolfinRedux.UI.MissionSelection.MissionCardController>() : null;
+            float waitExp = 0f;
+            while (waitExp < 6f && (dailyCtrl == null || dailyCtrl.State != GolfinRedux.UI.MissionSelection.MissionCardState.Expanded))
+            { waitExp += Time.unscaledDeltaTime; yield return null; }
+            Assert("pill_tap_expands_daily",
+                   dailyCtrl != null && dailyCtrl.State == GolfinRedux.UI.MissionSelection.MissionCardState.Expanded,
+                   $"dailyCard.State={dailyCtrl?.State} after {waitExp:F1}s; the request flag is consumed on bind, and it is now {GolfinRedux.UI.MissionSelection.MissionSelectionScreenController.ExpandDailyOnOpen}");
+            Assert("expand_request_consumed",
+                   !GolfinRedux.UI.MissionSelection.MissionSelectionScreenController.ExpandDailyOnOpen,
+                   "ExpandDailyOnOpen is false again, so every other route into Missions still lands on NEXT");
+
+            // ── The streak badge rides the TITLE row, so it is in both states ─
+            string ParentOf(string path)
+            {
+                var t = dailyCardGo != null ? dailyCardGo.transform.Find(path) : null;
+                return t != null ? t.parent.name : "<missing>";
+            }
+            string pc = ParentOf("CollapsedContainer/TitleArea/TitleHRow/DailyStreak");
+            string pe = ParentOf("ExpandedContainer/TitleAreaExp/TitleHRowExp/DailyStreakExp");
+            Assert("streak_badge_beside_title", pc == "TitleHRow" && pe == "TitleHRowExp",
+                   $"collapsed parent='{pc}', expanded parent='{pe}' — both are the title row, so the badge shows in both states");
 
             // ── The card's flame is the SAME prefab as the pill's ───────────
             // Read in EDIT mode before entering play — PrefabUtility answers "" for a running

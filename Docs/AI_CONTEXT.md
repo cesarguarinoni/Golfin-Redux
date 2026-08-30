@@ -30,7 +30,17 @@ explicit `#FCF195` token. So the panel and its glow are baked from the node's fo
 `Docs/Scripts/make_daily_pill_panel.py` and catalogued in `UI_ELEMENT_PALETTE.md` — generated, not
 approximated, and regenerable from the tokens rather than hand-painted.
 
-**Gates:** invariant JSON `pill_invariants.json` **10 assertions / 0 FAIL** (placement against both
+**Iteration 2 closed Cesar's three follow-ups.** The pill now HUGS its content — hiding the flame
+takes its 58 + 10 out of the pill (549 -> 481) instead of leaving dead navy at the right end, which
+meant re-importing both baked sprites as 9-slices with the border tuned to the 50px radius so
+neither width squashes a corner. The streak badge moved out of its own row and into the TITLE row
+of the daily card, first sibling, in both the collapsed and the expanded copy — riding the title is
+what makes "shows in both states" structural rather than something to remember. And tapping the
+pill now lands on Mission Selection with the daily ALREADY EXPANDED, via a one-shot
+`ExpandDailyOnOpen` static that also suppresses the default NEXT expand for that one visit, so a
+campaign card does not open and snap shut when the daily fetch arrives.
+
+**Gates:** invariant JSON `pill_invariants.json` **15 assertions / 0 FAIL** (placement against both
 Figma frames, 68 B/frame whole-screen allocation with the glow running, `daily_pill_tap` actually
 in the telemetry queue, the shared-prefab identity, the zero-streak rule); UI fidelity lint 0 FAIL
 / 0 WARN on both new prefabs, with a tripwire run proving the spec layer asserts; EditMode

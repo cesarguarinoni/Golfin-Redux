@@ -225,6 +225,7 @@ namespace GolfinRedux.UI.MissionSelection
             cleared.Reverse();   // most recently cleared reads first
 
             MissionCardController? nextCard = null;
+            _nextCard = null;
             foreach (var list in new[] { cleared, open, locked })
             {
                 foreach (var m in list)
@@ -244,13 +245,26 @@ namespace GolfinRedux.UI.MissionSelection
                     card.OnActionButtonClicked += HandleActionClicked;
                     _cards.Add(card);
 
-                    if (nextCard == null && !isCleared && isUnlocked) nextCard = card;
+                    if (nextCard == null && !isCleared && isUnlocked) { nextCard = card; _nextCard = card; }
                 }
             }
 
             // NEXT is expanded by default and scrolled to (§C2). After the layout settles —
             // expanding before the content rect has a height scrolls to the wrong place.
-            if (nextCard != null) StartCoroutine(ExpandNextAfterLayout(nextCard));
+            //
+            // Suppressed when the screen was opened FROM the Home daily pill: the daily is what
+            // the player asked for, and expanding NEXT first would visibly open a campaign card
+            // and snap it shut again a moment later when the daily fetch lands.
+            if (nextCard != null && !ExpandDailyOnOpen) StartCoroutine(ExpandNextAfterLayout(nextCard));
+        }
+
+        /// <summary>The NEXT card this rebuild picked, so a daily fetch that fails can hand the
+        /// default expansion back to it rather than leaving the screen with nothing open.</summary>
+        private MissionCardController? _nextCard;
+
+        private void ExpandNextFallback()
+        {
+            if (_nextCard != null && isActiveAndEnabled) StartCoroutine(ExpandNextAfterLayout(_nextCard));
         }
 
         private IEnumerator ExpandNextAfterLayout(MissionCardController card)
@@ -438,6 +452,20 @@ namespace GolfinRedux.UI.MissionSelection
         ///
         /// The CLAIM always goes to the server regardless — the client never pays itself.
         /// </summary>
+        /// <summary>
+        /// Open this screen with the daily card already EXPANDED, not collapsed.
+        ///
+        /// Set by the Home daily pill immediately before it navigates. It is a one-shot request,
+        /// consumed the moment the daily binds, so reaching Missions any other way — the mode
+        /// carousel, the Mode Select screen, a back-navigation — still lands on the default NEXT
+        /// card. A player who tapped "NEW DAILY MISSION!" asked for the daily; nobody else did.
+        ///
+        /// A static rather than a parameter because <c>ScreenManager.ShowScreen</c> takes a
+        /// <c>ScreenId</c> and nothing else, and widening that signature for one screen's one
+        /// option would touch every caller of every screen.
+        /// </summary>
+        public static bool ExpandDailyOnOpen;
+
         private void RefreshDaily()
         {
             if (dailyCard == null) return;
@@ -455,6 +483,9 @@ namespace GolfinRedux.UI.MissionSelection
                     // Tell the Home pill too: it must not advertise a daily this screen just
                     // failed to find (daily_mission_home_pill §2).
                     Golfin.Gameplay.Missions.DailyMissionState.SetNoDaily();
+                    // The request must not survive a failed fetch — otherwise the NEXT card stays
+                    // suppressed on THIS visit and the daily opens unbidden on the next one.
+                    if (ExpandDailyOnOpen) { ExpandDailyOnOpen = false; ExpandNextFallback(); }
                     return;
                 }
 
@@ -491,6 +522,17 @@ namespace GolfinRedux.UI.MissionSelection
 
                 System.DateTime utc = System.DateTime.UtcNow;
                 dailyCard.SetDailyStatus(utc.Date.AddDays(1) - utc, r.Data.Streak, r.Data.Claimed);
+
+                // Arrived from the Home pill — open the daily rather than making the player tap
+                // it a second time. Bind collapsed FIRST and expand here, not by binding
+                // Expanded: SetExpanded is what enforces the one-card-open invariant against the
+                // campaign list, and it rebalances the shared column budget afterwards. Consumed
+                // one-shot so a later visit is unaffected.
+                if (ExpandDailyOnOpen)
+                {
+                    ExpandDailyOnOpen = false;
+                    SetExpanded(dailyCard);
+                }
 
                 // The hash the server will check a claim against. Kept from THIS response, not
                 // re-fetched at claim time: re-fetching would defeat the check, which exists to

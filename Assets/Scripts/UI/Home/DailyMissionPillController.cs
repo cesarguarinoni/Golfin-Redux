@@ -35,6 +35,7 @@ namespace Golfin.UI.Home
         [SerializeField] private RectTransform pillRect;
         [SerializeField] private Image glowImage;
         [SerializeField] private StreakFlameView streakFlame;
+        [SerializeField] private RectTransform labelRect;
         [SerializeField] private Button tapButton;
 
         [Header("Notice panel it follows")]
@@ -46,6 +47,16 @@ namespace Golfin.UI.Home
         [SerializeField] private float fallbackTopY = -361f;
 
         // ── Motion (SPEC §2; Cesar signs off on device) ─────────────────────────
+        // ── Node auto-layout (Figma `13994:1963` -> `Mission Title`: px-24 py-16 gap-10) ──
+        // The pill HUGS its content the way that auto-layout row does, so hiding the flame has
+        // to take the flame's width AND the gap out of the pill — otherwise the right end is
+        // 68px of empty navy.
+        [Header("Layout (Figma auto-layout)")]
+        [SerializeField] private float padX     = 24f;
+        [SerializeField] private float flameW   = 58f;
+        [SerializeField] private float flameGap = 10f;
+        [SerializeField] private float labelW   = 433f;
+
         [Header("Motion")]
         [SerializeField] private float restX          = 36f;
         [SerializeField] private float enterDuration  = 0.45f;
@@ -180,6 +191,9 @@ namespace Golfin.UI.Home
             if (want)
             {
                 if (streakFlame != null) streakFlame.SetStreak(DailyMissionState.Streak);
+                // Width follows the flame, so it must be settled BEFORE the slide reads
+                // OffscreenX off it.
+                ApplyWidth(DailyMissionState.Streak >= 1);
                 if (_state == PillState.Shown || _state == PillState.Entering) { RefreshPlacement(); return; }
                 Enter(animate);
             }
@@ -187,6 +201,35 @@ namespace Golfin.UI.Home
             {
                 if (_state == PillState.Hidden || _state == PillState.Leaving) return;
                 Leave(animate);
+            }
+        }
+
+        // ── Width ───────────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Resize the pill to hug its content, and move the label to sit after whatever is left.
+        ///
+        /// With the flame: 24 + 58 + 10 + 433 + 24 = <b>549</b>, the node's own width, label at
+        /// x 92. Without it: 24 + 433 + 24 = <b>481</b>, label at x 24. Reproducing the auto
+        /// layout rather than hiding the flame in place is what keeps a streak-less pill from
+        /// ending in 68px of empty navy.
+        ///
+        /// The panel and glow are 9-SLICED for exactly this reason — a baked sprite stretched
+        /// between two widths would squash its 50px corners (PIPELINE_HARDENING C3 / Rule 21
+        /// corner-distortion).
+        /// </summary>
+        private void ApplyWidth(bool flameShown)
+        {
+            if (pillRect == null) return;
+            float lead  = flameShown ? flameW + flameGap : 0f;
+            float width = padX + lead + labelW + padX;
+            var sd = pillRect.sizeDelta;
+            if (!Mathf.Approximately(sd.x, width)) pillRect.sizeDelta = new Vector2(width, sd.y);
+            if (labelRect != null)
+            {
+                var ap = labelRect.anchoredPosition;
+                float x = padX + lead;
+                if (!Mathf.Approximately(ap.x, x)) labelRect.anchoredPosition = new Vector2(x, ap.y);
             }
         }
 
@@ -346,8 +389,13 @@ namespace Golfin.UI.Home
                     { "date",    DailyMissionState.Date },
                 });
 
+            // A player who tapped "NEW DAILY MISSION!" asked for the daily, not for the mission
+            // list — so ask the screen to open it EXPANDED. One-shot: MissionSelection consumes
+            // the flag as the daily binds, and every other route in still lands on NEXT.
+            GolfinRedux.UI.MissionSelection.MissionSelectionScreenController.ExpandDailyOnOpen = true;
+
             // The same route the Missions mode card takes — one mode, one destination
-            // (missions_v1 §C1). The daily card there is expanded by RefreshDaily.
+            // (missions_v1 §C1).
             if (ScreenManager.Instance != null)
                 ScreenManager.Instance.ShowScreen(ScreenId.MissionSelection);
             else

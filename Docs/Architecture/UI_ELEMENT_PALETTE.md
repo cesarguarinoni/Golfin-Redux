@@ -27,8 +27,8 @@ from the Order-610 card rebuild — see `Docs/Reports/POSTMORTEM_general_shop_ui
 |---|---|---|---|---|
 | RP value pill (navy) | `Assets/Art/RankingsScreen/RPContainer.png` | `9106f5ea13a81ca4c8dc7b2671c853bf` | dark rounded RP-cost/amount container (coin + number) | Rankings, stamina-shop RP chips |
 | Stadium pill (badge base) | `Assets/Art/Tournaments/S_PillStadium.png` | `bb07d102185aa4f1ca51da13de9eeac6` | outer rim of tier / entry-fee / status badges | Tournaments `PaidEntryBadge`, shop tier badges |
-| Gold-bordered navy pill (549×122, baked) | `Assets/Art/HomeScreen/S_DailyPillPanel.png` | `448cb5f34eebb4b38962e7959d0a11ed` | a **fixed-size** navy pill with the Figma 3px `#FCF195` gold border + `#133453→#091B33` gradient, r=50. `Image.Type.Simple` — do NOT 9-slice it | Home daily-mission pill |
-| Soft gold halo for the above | `Assets/Art/HomeScreen/S_DailyPillGlow.png` | `086acc78ed8a34ce090a7cec8d2d5aea` | the pulsing glow behind that pill — the silhouette in border-gold, Gaussian-blurred, 36px bleed. Additive (`TapSparkle_Additive.mat`) | Home daily-mission pill |
+| Gold-bordered navy pill | `Assets/Art/HomeScreen/S_DailyPillPanel.png` | `448cb5f34eebb4b38962e7959d0a11ed` | navy pill with the Figma 3px `#FCF195` gold border + `#133453→#091B33` gradient, r=50. Baked at 2× and **9-sliced**: border 100 sprite-px with `pixelsPerUnitMultiplier = 2` → 50 UI px, which fits any width ≥ 101 at the authored 122 height | Home daily-mission pill (549 with the streak flame, 481 without) |
+| Soft gold halo for the above | `Assets/Art/HomeScreen/S_DailyPillGlow.png` | `086acc78ed8a34ce090a7cec8d2d5aea` | the pulsing glow behind that pill — the silhouette in border-gold, Gaussian-blurred, 36px bleed. Additive (`TapSparkle_Additive.mat`), 9-sliced at border 172 sprite-px / ppum 2 → 86 UI px | Home daily-mission pill |
 
 > **Why the pill is baked, not 9-sliced** (`daily_mission_home_pill`, 2026-08-30). A whole-project
 > scan of all 44 nine-sliced UI sprites found **no navy panel with a gold border**: the two navy
@@ -36,11 +36,17 @@ from the Order-610 card rebuild — see `Docs/Reports/POSTMORTEM_general_shop_ui
 > (`Next Hole Panel.png`, `#FFFFFF→#C0C6CE`) edges, and every gold-edged sprite is a solid-gold
 > BUTTON. Reuse would have shipped the wrong border colour. Both sprites are regenerated from the
 > node's four tokens by `Docs/Scripts/make_daily_pill_panel.py` — edit that, not the PNGs.
+>
+> **Why 9-sliced and not `Type.Simple`.** The pill has TWO widths — it hugs its content, so hiding
+> the streak flame takes 68px (flame + gap) out of it rather than leaving dead space at the right
+> end. A baked sprite stretched between 549 and 481 would squash its 50px corners; 9-slicing with
+> the border tuned to the radius keeps them exact at both. Check the maths before changing either
+> sprite's size: `2 × effectiveBorder` must stay under BOTH the narrowest width and the height.
 
 ## Streak / badge prefabs
 | Atom | Path | GUID | Use for | Seen in |
 |---|---|---|---|---|
-| Streak flame badge | `Assets/Prefabs/UI/Common/StreakFlame.prefab` | `230e9bb6e94a845d281d127f4c72460f` | the daily-streak flame with the auto-sized number in it. `StreakFlameView.SetStreak(n)`; **it owns the "0 is not a streak" rule** — hidden below 1. The `Flame` child is fixed-aspect and centred, so a layout group may stretch the ROOT freely | Home daily pill, Mission Selection daily card (collapsed + expanded) |
+| Streak flame badge | `Assets/Prefabs/UI/Common/StreakFlame.prefab` | `230e9bb6e94a845d281d127f4c72460f` | the daily-streak flame with the auto-sized number in it. `StreakFlameView.SetStreak(n)`; **it owns the "0 is not a streak" rule** — hidden below 1. The `Flame` child is fixed-aspect and centred, so a layout group may stretch the ROOT freely | Home daily pill (58×90); Mission Selection daily card, 41×64 as the first child of the TITLE row in BOTH the collapsed and expanded copies — riding the title is what makes "shows in both states" structural |
 
 ## Buttons
 | Atom | Path | GUID | Use for | Seen in |
