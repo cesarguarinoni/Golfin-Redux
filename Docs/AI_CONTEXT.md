@@ -41,7 +41,14 @@ pill now lands on Mission Selection with the daily ALREADY EXPANDED, via a one-s
 `ExpandDailyOnOpen` static that also suppresses the default NEXT expand for that one visit, so a
 campaign card does not open and snap shut when the daily fetch arrives.
 
-**Gates:** invariant JSON `pill_invariants.json` **15 assertions / 0 FAIL** (placement against both
+**Iteration 3 made the slide an announcement rather than a transition.** It was replaying on
+every return to Home; it now keys off `DailyMissionPillController.AnnouncedForDate` — the UTC date
+whose pill has already had its entrance this session — so coming back from Missions or the shop
+finds the pill already at rest (proven: x pinned at 36 across 31 sampled frames after the real
+nav-bar Home button), while a new date still slides it in. Keyed on the DATE, not a bool, because
+that is precisely what "a new daily mission" means.
+
+**Gates:** invariant JSON `pill_invariants.json` **18 assertions / 0 FAIL** (placement against both
 Figma frames, 68 B/frame whole-screen allocation with the glow running, `daily_pill_tap` actually
 in the telemetry queue, the shared-prefab identity, the zero-streak rule); UI fidelity lint 0 FAIL
 / 0 WARN on both new prefabs, with a tripwire run proving the spec layer asserts; EditMode

@@ -76,6 +76,25 @@ namespace Golfin.UI.Home
         private float _rolloverTimer;
         private float _glowPhase;
 
+        /// <summary>
+        /// The UTC date whose pill has ALREADY slid in once, this session.
+        ///
+        /// ⚠️ THE SLIDE IS AN ANNOUNCEMENT, NOT A TRANSITION, and that is the whole rule. It says
+        /// "there is a new daily" — so it plays the first time a given day's pill appears, and
+        /// again when midnight brings a different one. Coming back from Missions or the shop is
+        /// neither: the pill was already announced and must simply BE there, at rest, with no
+        /// re-entry to sit through every time Home is opened.
+        ///
+        /// Keyed on the DATE rather than a bool, because that is exactly what "a new daily
+        /// mission" means — the rollover writes a new date and the announcement is owed again,
+        /// with no extra flag to keep in sync. Static, so it survives the screen being disabled
+        /// and re-enabled; per-session, so a relaunch announces once more.
+        /// </summary>
+        public static string AnnouncedForDate { get; private set; } = "";
+
+        /// <summary>Test seam — a fresh session has announced nothing.</summary>
+        public static void ResetAnnouncedForTest() => AnnouncedForDate = "";
+
         /// <summary>Exposed for the placement test — no reflection needed to assert the Y rule.</summary>
         public float CurrentY => pillRect != null ? pillRect.anchoredPosition.y : 0f;
 
@@ -100,9 +119,20 @@ namespace Golfin.UI.Home
             DailyMissionState.OnChanged += OnDailyStateChanged;
             RefreshPlacement();
 
-            // Park off-screen and hidden until a fetch says otherwise. Home can be re-entered
-            // many times a session; each entry re-plays the arrival, which is the intent.
-            SetHiddenInstant();
+            if (AlreadyAnnounced)
+            {
+                // Re-entering Home. Show it AT REST immediately — parking it off-screen and
+                // waiting for the fetch would blank the pill for the length of a round trip and
+                // then pop it back in, which is the flicker this branch exists to remove.
+                if (streakFlame != null) streakFlame.SetStreak(DailyMissionState.Streak);
+                ApplyWidth(DailyMissionState.Streak >= 1);
+                Enter(animate: false);
+            }
+            else
+            {
+                // Nothing announced yet: park off-screen until a fetch says there is a daily.
+                SetHiddenInstant();
+            }
 
             _rolloverTimer = 0f;
             _fetch = StartCoroutine(FetchThenPresent(withEnterDelay: true));
@@ -173,7 +203,7 @@ namespace Golfin.UI.Home
 
             _fetch = null;
 
-            if (withEnterDelay && DailyMissionState.ShouldShowPill && enterDelay > 0f)
+            if (withEnterDelay && DailyMissionState.ShouldShowPill && enterDelay > 0f && !AlreadyAnnounced)
             {
                 // The arrival must land AFTER the screen fade, not under it.
                 float wait = 0f;
@@ -195,7 +225,9 @@ namespace Golfin.UI.Home
                 // OffscreenX off it.
                 ApplyWidth(DailyMissionState.Streak >= 1);
                 if (_state == PillState.Shown || _state == PillState.Entering) { RefreshPlacement(); return; }
-                Enter(animate);
+                // The slide is owed once per daily. Re-entering Home gets the pill at rest.
+                Enter(animate && !AlreadyAnnounced);
+                AnnouncedForDate = DailyMissionState.Date;
             }
             else
             {
@@ -203,6 +235,15 @@ namespace Golfin.UI.Home
                 Leave(animate);
             }
         }
+
+        /// <summary>
+        /// True when today's pill has already had its entrance — so this appearance is a return
+        /// to Home, not an announcement. False after a rollover, because the date has moved.
+        /// </summary>
+        private static bool AlreadyAnnounced
+            => DailyMissionState.ShouldShowPill
+               && DailyMissionState.Date.Length > 0
+               && AnnouncedForDate == DailyMissionState.Date;
 
         // ── Width ───────────────────────────────────────────────────────────────
 

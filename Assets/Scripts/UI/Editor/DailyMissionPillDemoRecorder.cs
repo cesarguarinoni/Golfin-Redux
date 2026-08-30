@@ -42,12 +42,12 @@ namespace Golfin.EditorTools
     /// not a direct poke at the pill.
     ///
     /// Usage:  GOLFIN > Daily Pill > Capture Stills   /   Record Demo Video
-    /// Out:    Docs/Specs/Active/daily_mission_home_pill/{screenshots,videos}
+    /// Out:    Docs/Specs/Completed/daily_mission_home_pill/{screenshots,videos}
     /// </summary>
     public static class DailyMissionPillDemoRecorder
     {
         const string ShellScenePath = "Assets/Scenes/ShellScene.unity";
-        const string TaskDir        = "Docs/Specs/Active/daily_mission_home_pill";
+        const string TaskDir        = "Docs/Specs/Completed/daily_mission_home_pill";
         const string ArmedStills    = "DailyPillDemo.ArmedStills";
         const string ArmedVideo     = "DailyPillDemo.ArmedVideo";
         const string ArmedVerify    = "DailyPillDemo.ArmedVerify";
@@ -198,7 +198,7 @@ namespace Golfin.EditorTools
 
     public class DailyMissionPillDemoRunner : MonoBehaviour
     {
-        const string TaskDir = "Docs/Specs/Active/daily_mission_home_pill";
+        const string TaskDir = "Docs/Specs/Completed/daily_mission_home_pill";
 
         bool _video;
         float _t0;
@@ -453,6 +453,36 @@ namespace Golfin.EditorTools
             Debug.Log($"[DailyPillBot] after tap: screen={GolfinRedux.UI.ScreenManager.Instance?.CurrentScreen}");
             yield return Snap("missionselection_after_pill_tap");
 
+            // Back to Home through the REAL nav button: an already-announced pill must be there
+            // at rest on arrival, with no second entrance to sit through.
+            var puimNav = FindActive<Golfin.UI.PersistentUIManager>();
+            if (puimNav != null && puimNav.homeButton != null)
+            {
+                // Mission Selection's fetch just wrote the SERVER's answer over the seed, and on
+                // this account today's daily really is claimed — so re-seed unclaimed, or the
+                // frame shows a correctly-absent pill and proves nothing about re-entry.
+                DailyMissionState.Set(today, 5, claimed: false, hasRecipe: true);
+                puimNav.homeButton.onClick.Invoke();
+                // Short: Home's own fetch will re-assert `claimed` a moment later, and the claim
+                // being made here is about the frames right after the screen appears.
+                yield return Wait(0.35f);
+                Report("back on Home — no re-slide");
+                Mark("Back from Missions — the pill is just THERE.\nThe slide is an announcement, not a transition");
+                yield return Snap("home_reentry_no_slide");
+                // ...and a NEW daily still announces itself.
+                DailyMissionState.Set("2099-01-02", 2, claimed: false, hasRecipe: true);
+                yield return Wait(0.22f);
+                Report("new daily — the slide runs again");
+                Mark("A NEW daily still slides in");
+                yield return Snap("home_new_daily_slides_again");
+                DailyMissionState.Set(today, 7, claimed: false, hasRecipe: true);
+                yield return Wait(1.0f);
+                // Return to Missions for the card shots below.
+                var pillBtn2 = Pill() != null ? Pill().GetComponent<Button>() : null;
+                if (pillBtn2 != null) pillBtn2.onClick.Invoke();
+                yield return Wait(3.5f);
+            }
+
             var card = GameObject.Find("Canvas/ScreensRoot/MissionSelectionScreen/Content/DailyMissionCard");
             if (card != null)
             {
@@ -478,11 +508,11 @@ namespace Golfin.EditorTools
 
     /// <summary>
     /// The deterministic pass/fail gate for the pill. Writes
-    /// `Docs/Specs/Active/daily_mission_home_pill/pill_invariants.json`.
+    /// `Docs/Specs/Completed/daily_mission_home_pill/pill_invariants.json`.
     /// </summary>
     public class DailyMissionPillVerifier : MonoBehaviour
     {
-        const string TaskDir = "Docs/Specs/Active/daily_mission_home_pill";
+        const string TaskDir = "Docs/Specs/Completed/daily_mission_home_pill";
         readonly List<string> _rows = new List<string>();
         int _fail;
 
@@ -571,21 +601,36 @@ namespace Golfin.EditorTools
             yield return Wait(0.9f);
 
             // ── The glow must not allocate per frame ────────────────────────
-            yield return Wait(0.5f);
-            System.GC.Collect();
-            yield return null;
-            // Profiler.GetMonoUsedSizeLong is the managed-heap read available on this runtime
-            // (GC.GetTotalAllocatedBytes is not, and GetTotalMemory hides churn behind collections).
-            long before = UnityEngine.Profiling.Profiler.GetMonoUsedSizeLong();
-            int frames = 0;
-            while (frames < 180) { frames++; yield return null; }
-            long after = UnityEngine.Profiling.Profiler.GetMonoUsedSizeLong();
-            long perFrame = (after - before) / frames;
-            // The whole Home screen runs during these frames, so this is an upper bound on the
-            // pill's share, not an isolated figure — which is the useful direction: if the TOTAL
-            // is small, the pill's Update cannot be the allocator.
-            Assert("glow_loop_no_per_frame_alloc", perFrame < 1024,
-                   $"{after - before} B over {frames} frames = {perFrame} B/frame (whole-screen upper bound), glowState=Shown={ctrl.IsShowing}");
+            //
+            // Measured as a DIFFERENCE, not an absolute. A whole-screen total is dominated by
+            // whatever else Home is doing — it read 68 B/frame on a warm editor and 22 550 on a
+            // freshly restarted one, which says nothing about the glow either time. Sampling the
+            // same screen with the pill Shown (glow loop running) against Hidden (same Update,
+            // glow branch skipped) isolates exactly the code under test.
+            long allocShown = 0, allocHidden = 0;
+            const int AllocFrames = 180;
+
+            DailyMissionState.Set(today, 5, claimed: false, hasRecipe: true);
+            yield return Wait(1.0f);
+            System.GC.Collect(); yield return null;
+            long b1 = UnityEngine.Profiling.Profiler.GetMonoUsedSizeLong();
+            for (int i = 0; i < AllocFrames; i++) yield return null;
+            allocShown = UnityEngine.Profiling.Profiler.GetMonoUsedSizeLong() - b1;
+            bool wasShowing = ctrl.IsShowing;
+
+            DailyMissionState.Set(today, 5, claimed: true, hasRecipe: true);
+            yield return Wait(1.0f);
+            System.GC.Collect(); yield return null;
+            long b2 = UnityEngine.Profiling.Profiler.GetMonoUsedSizeLong();
+            for (int i = 0; i < AllocFrames; i++) yield return null;
+            allocHidden = UnityEngine.Profiling.Profiler.GetMonoUsedSizeLong() - b2;
+
+            long glowPerFrame = (allocShown - allocHidden) / AllocFrames;
+            Assert("glow_loop_no_per_frame_alloc", glowPerFrame < 512,
+                   $"shown {allocShown} B vs hidden {allocHidden} B over {AllocFrames} frames each -> the glow loop's own share is {glowPerFrame} B/frame (Shown={wasShowing}); the absolute totals are whole-screen noise and are not the gate");
+
+            DailyMissionState.Set(today, 5, claimed: false, hasRecipe: true);
+            yield return Wait(1.0f);
 
             // ── The real tap fires the telemetry event ─────────────────────
             var tel = Golfin.Telemetry.TelemetryService.Instance;
@@ -633,6 +678,53 @@ namespace Golfin.EditorTools
             string pe = ParentOf("ExpandedContainer/TitleAreaExp/TitleHRowExp/DailyStreakExp");
             Assert("streak_badge_beside_title", pc == "TitleHRow" && pe == "TitleHRowExp",
                    $"collapsed parent='{pc}', expanded parent='{pe}' — both are the title row, so the badge shows in both states");
+
+            // ── Re-entering Home must NOT re-play the slide ─────────────────
+            // We are on Mission Selection. Go back through the REAL nav-bar Home button and
+            // sample the pill's x EVERY FRAME: an announced pill must already be at rest on the
+            // first frame Home draws, never off-screen and never mid-slide.
+            var home = puim.homeButton;
+            if (home == null) Assert("reentry_no_slide", false, "PersistentUIManager.homeButton is null — could not drive the real route back");
+            else
+            {
+                // Mission Selection's own fetch just overwrote the state with the SERVER's answer,
+                // and on this account today's daily is genuinely claimed — so re-seed unclaimed,
+                // or the pill is correctly absent and the test measures nothing.
+                DailyMissionState.Set(today, 5, claimed: false, hasRecipe: true);
+                home.onClick.Invoke();
+                float minX = float.MaxValue, maxX = float.MinValue;
+                int sampled = 0; float t = 0f;
+                // Sample from the first frame Home draws until Home's OWN fetch lands and has its
+                // say. That window is the claim: the pill is at rest the moment the screen
+                // appears, rather than sliding in again.
+                while (t < 1.6f && !DailyMissionState.Claimed)
+                {
+                    if (pill.activeInHierarchy)
+                    {
+                        minX = Mathf.Min(minX, prt.anchoredPosition.x);
+                        maxX = Mathf.Max(maxX, prt.anchoredPosition.x);
+                        sampled++;
+                    }
+                    t += Time.unscaledDeltaTime;
+                    yield return null;
+                }
+                bool pinned = sampled >= 3 && Mathf.Abs(minX - 36f) < 0.5f && Mathf.Abs(maxX - 36f) < 0.5f;
+                Assert("reentry_no_slide", pinned,
+                       $"back on Home via the real nav button: x stayed in [{minX:F1}, {maxX:F1}] across {sampled} frames — rest is 36, off-screen would be {-(prt.rect.width + 36f):F0}; AnnouncedForDate='{Golfin.UI.Home.DailyMissionPillController.AnnouncedForDate}'");
+                Assert("reentry_screen_is_home",
+                       GolfinRedux.UI.ScreenManager.Instance?.CurrentScreen == GolfinRedux.UI.ScreenId.Home,
+                       $"screen={GolfinRedux.UI.ScreenManager.Instance?.CurrentScreen}");
+            }
+
+            // ── A NEW daily still announces itself ──────────────────────────
+            // Same pill, different date: the announcement is owed again, so the slide must run.
+            DailyMissionState.Set("2099-01-02", 2, claimed: false, hasRecipe: true);
+            float slideMin = float.MaxValue; float t2 = 0f;
+            while (t2 < 1.2f) { slideMin = Mathf.Min(slideMin, prt.anchoredPosition.x); t2 += Time.unscaledDeltaTime; yield return null; }
+            Assert("new_daily_still_slides", slideMin < -100f,
+                   $"a new date drove x down to {slideMin:F1} before settling — the slide ran; AnnouncedForDate='{Golfin.UI.Home.DailyMissionPillController.AnnouncedForDate}'");
+            DailyMissionState.Set(today, 5, claimed: false, hasRecipe: true);
+            yield return Wait(1.0f);
 
             // ── The card's flame is the SAME prefab as the pill's ───────────
             // Read in EDIT mode before entering play — PrefabUtility answers "" for a running

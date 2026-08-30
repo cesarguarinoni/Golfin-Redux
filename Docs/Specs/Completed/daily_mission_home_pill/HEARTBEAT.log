@@ -20,3 +20,8 @@ Gate 15 assertions / 0 FAIL. EditMode 1939/0/3. Editor left clean, ShellScene no
 
 === DONE 2026-08-30T05:07:20Z ===
 Cesar approved. Deliverables copied to Docs/Reports/Media/. Folder moving to Docs/Specs/Completed/.
+
+=== iter-3 2026-08-30T05:58:13Z ===
+Slide is now an announcement, not a transition (AnnouncedForDate, keyed on the UTC date).
+Gate 18 assertions / 0 FAIL. Alloc assertion rewritten as a Shown-vs-Hidden delta.
+Harness TaskDir repointed Active/ -> Completed/ after the close-out move.

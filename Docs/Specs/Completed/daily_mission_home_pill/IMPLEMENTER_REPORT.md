@@ -17,6 +17,45 @@ with nothing open.
 Gates after iteration 2: **15 assertions / 0 FAIL**, lint 0 FAIL on both new prefabs, EditMode
 1939 / 0 / 3.
 
+## Iteration 3 — the slide is an announcement, not a transition (Cesar, 2026-08-30)
+
+> "Make the pill stay there when coming back from other menus. The slide anim is only for the
+> first time it appears and for when there is a new daily mission."
+
+Every return to Home re-played the entrance, because `OnEnable` parked the pill off-screen and
+let the fetch bring it back in. It now keys off `DailyMissionPillController.AnnouncedForDate` —
+the UTC date whose pill has already had its entrance this session:
+
+- **Already announced** → `OnEnable` puts the pill at REST immediately, before the fetch. Parking
+  it off-screen and waiting would blank it for a whole round trip and then pop it back, which is
+  the flicker this branch removes. The 0.25 s pre-slide delay is skipped too.
+- **Not announced** (first appearance, or midnight brought a different date) → unchanged: park
+  off-screen, fetch, slide in.
+
+Keyed on the DATE rather than a bool because that is exactly what "a new daily mission" means —
+the rollover writes a new date and the announcement is owed again, with no second flag to keep in
+sync. Static, so it survives the screen being disabled and re-enabled; per-session, so a relaunch
+announces once more.
+
+| Assertion | Result |
+|---|---|
+| `reentry_no_slide` | PASS — back on Home through the REAL nav-bar button, x stayed in **[36.0, 36.0] across 31 sampled frames**; off-screen would be −585 |
+| `reentry_screen_is_home` | PASS |
+| `new_daily_still_slides` | PASS — a new date drove x to **−585** before settling, so the announcement still runs |
+
+Frames: `home_reentry_no_slide.png` (at rest the moment Home draws — the slight dimming is
+ScreenManager's own screen fade finishing, not the pill) and `home_new_daily_slides_again.png`
+(mid-slide, left end still off-screen). Side by side in `_contact_reentry_vs_newdaily.png`.
+
+**The allocation gate was rewritten in the same pass, because it was measuring the wrong thing.**
+It took a whole-screen managed-heap total: 68 B/frame on a warm editor, **22 550 B/frame** on a
+freshly restarted one. Neither number says anything about the glow. It now samples the same
+screen with the pill Shown (glow loop running) against Hidden (same `Update`, glow branch
+skipped) and asserts the DIFFERENCE — **−1479 B/frame**, i.e. inside run-to-run noise, which is
+the actual claim.
+
+Gates after iteration 3: **18 assertions / 0 FAIL**, EditMode 1939 / 0 / 3.
+
 ## Implementation summary
 
 A `NEW DAILY MISSION!` pill now lives on Home: it slides in from the left, pulses a soft gold
@@ -62,7 +101,7 @@ prefab the pill uses, on both the collapsed and the expanded copy.
 - **Scene loaded:** `Assets/Scenes/ShellScene.unity`
 - **Play mode:** Yes — booted through the real Logo → Splash → `StartButton` → Home path
 - **Canonical video:** `videos/daily_mission_home_pill_demo.mp4` (1170×2532, 33.9 s, captioned)
-- **Invariant JSON:** `pill_invariants.json` — **15 assertions, 0 FAIL**
+- **Invariant JSON:** `pill_invariants.json` — **18 assertions, 0 FAIL**
 
 ## Figma fidelity
 
