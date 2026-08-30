@@ -1,0 +1,15 @@
+{
+  "allPass": true,
+  "rows": [
+    {"test":"A10","action":"reached Hole Selection","via":"Keyboard.escapeKey (the Android back seam)","expected":"HoleSelection","actual":"HoleSelection","pass":true},
+    {"test":"A10","action":"back on Hole Selection","via":"Keyboard.escapeKey (the Android back seam)","expected":"ModeSelection","actual":"ModeSelection","pass":true},
+    {"test":"A10","action":"back on Home (must never quit)","via":"Keyboard.escapeKey (the Android back seam)","expected":"Home","actual":"Home","pass":true},
+    {"test":"A10","action":"app still running","via":"Keyboard.escapeKey (the Android back seam)","expected":"True","actual":"True","pass":true},
+    {"test":"A10","action":"settings opened","via":"Keyboard.escapeKey (the Android back seam)","expected":"True","actual":"True","pass":true},
+    {"test":"A10","action":"back closes Settings","via":"Keyboard.escapeKey (the Android back seam)","expected":"False","actual":"False","pass":true},
+    {"test":"A10","action":"screen unchanged under Settings","via":"Keyboard.escapeKey (the Android back seam)","expected":"Home","actual":"Home","pass":true},
+    {"test":"A10","action":"a modal is open","via":"Keyboard.escapeKey (the Android back seam)","expected":"True","actual":"True","pass":true},
+    {"test":"A10","action":"back with a modal open leaves the screen alone","via":"Keyboard.escapeKey (the Android back seam)","expected":"Roster","actual":"Roster","pass":true},
+    {"test":"A10","action":"modal still open","via":"Keyboard.escapeKey (the Android back seam)","expected":"True","actual":"True","pass":true}
+  ]
+}

@@ -5,6 +5,52 @@
 
 ---
 
+## ✅ SHIPPED — `nav_back_memory` **approved by Cesar** (2026-08-30)
+
+**BACK now returns to where the player actually was, and the nav bar remembers.** Every
+back/close in the shell was a hard-coded target, which is wrong the moment a screen has two ways
+in: BACK out of Missions always landed on Home even when you came from Mode Select (its
+`OpenFrom` was never called by ANY entry point), and the tournament leaderboard skipped straight
+over the Hole Selection screen that opened it. `ScreenManager` now owns a pillar model
+(`PillarOf` / `RootOf` — the ScreenId→nav-slot switch moved out of `PersistentUIManager` so there
+is ONE mapping), a per-pillar "last screen" memory, and a 16-deep same-pillar history stack.
+`ShowScreen` became a wrapper over `Navigate(id, instant, push)`; `GoBack(fallback)` and
+`NavigateToPillar(pillar)` are the two new doors.
+
+**The stack is deliberately same-pillar only.** A push stacks only when both screens are shell
+screens in the same pillar; a pillar switch or a hop out of the shell (Loading, Login, gameplay)
+CLEARS it, because those moves are lateral or hard boundaries with no meaningful "back". So a
+round of golf returns to an empty stack and the serialized `_backScreen` / `_returnTarget` /
+`_backTarget` fields — all kept, all now fallbacks rather than the answer — take over.
+`Leaderboard` is the one shell screen with no pillar: it rides the stack (BACK returns to
+whoever opened it) but is never a nav slot's remembered destination.
+
+**Nav bar follows iOS convention (Cesar's D1):** the slot of the pillar you are already in goes
+to that pillar's ROOT; a different pillar's slot reopens the screen you left it on. In-game QUIT
+still lands on Home (D2 — no `ExitToScreen` caller was touched). Compare mode now exits when its
+screen is left (D3), in all three of Roster / Clubs / Balls. The Rewards Center and the
+Leaderboard remember their tab for the session instead of snapping back to GACHA / DAILY, and
+`GachaTabController` gained `RequestGachaTab()` so the history strip's GACHA chip can still beat
+a remembered STORE. Android's hardware/gesture back is handled for the first time
+(`Keyboard.escapeKey`; `activeInputHandler: 1`, so the legacy path was never an option) — it
+closes Settings, is swallowed by open modals, and on Home does nothing rather than quitting.
+
+**Gates:** EditMode **2081 / 2078 passed / 0 failed / 3 skipped** with a new 18-test suite
+(`NavBackMemoryTests`) proven to actually run by a tripwire; play-mode acceptance driven through
+REAL widget `onClick`s **50/50 rows PASS**; the Escape/back-key path **10/10 PASS**. Zero prefab
+or scene edits, no new strings.
+
+**⚠️ THREE SHELL SCREENS HAVE NO BACK AFFORDANCE AT ALL** — found while verifying, all
+pre-existing: Mission Selection has no BACK button in the scene (its `OnBackClicked` has zero
+call sites), `RankingsScreen/BackButton` is `activeSelf == false`, and
+`StaminaShopSelectionScreenController._cancelButton` is null. Authoring those is a scene/layout
+change and out of this task's scope. Also pre-existing:
+`TournamentLeaderboardScreenController._backScreen` is serialized to `Leaderboard`, not
+`TournamentSelection` as the spec assumed. All four are in
+`Docs/Specs/Completed/nav_back_memory/IMPLEMENTER_REPORT.md` § Open questions.
+
+---
+
 ## ✅ SHIPPED — `daily_mission_home_pill` **approved by Cesar** (2026-08-30)
 
 **The daily finally has a door on Home.** A `NEW DAILY MISSION!` pill slides in from the left,

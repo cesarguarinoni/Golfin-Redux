@@ -1,0 +1,7 @@
+RankingsScreen active=Leaderboard  _backButton.activeSelf=False  activeInHierarchy=False
+compare entered=True
+after leave+return: screen=Roster compareMode=False selectedBefore=char_james selectedAfter=char_james
+club compare entered=True
+club compare after leave=False
+ball compare entered=True
+ball compare after leave=False
