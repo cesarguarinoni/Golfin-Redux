@@ -1,6 +1,6 @@
 DONE
 
-Approved by Cesar 2026-08-30 after iteration 2.
+Approved by Cesar 2026-08-30 after iteration 3.
 
 Iteration 1 — the pill itself: slide-in from the left, pulsing gold halo, y that
 follows the maintenance notice, flame + auto-sized streak, tap to Mission
