@@ -528,6 +528,62 @@ ScreensRoot
 
 ---
 
+## Home daily-mission pill (daily_mission_home_pill — ShellScene, `Golfin.UI.Home`)
+
+`Canvas/ScreensRoot/HomeScreen` is a PLAIN SCENE OBJECT, not an instance of
+`Assets/Prefabs/UI/HomeScreen.prefab` — that prefab is referenced by nothing and is stale. Edit
+Home in `ShellScene`.
+
+```
+Canvas/ScreensRoot/HomeScreen
+├── Background
+├── NoticePanel                                  (the pill reads THIS rect for its y — see below)
+├── PageDots
+├── CharacterRoot
+├── DailyMissionPill                             (NEW — DailyMissionPillController + Button + ButtonPressFeedback)
+│   ├── Glow                                     (Image, S_DailyPillGlow 9-sliced, TapSparkle_Additive; alpha 0.25↔0.65 / 1.6 s while Shown)
+│   ├── Panel                                    (Image, S_DailyPillPanel 9-sliced ppum 2; the Button's targetGraphic)
+│   ├── StreakFlame                              (StreakFlame.prefab, 58×90 at 24,16 — hidden below streak 1)
+│   │   └── Flame → Number                       (TMP auto-size 24–40, navy vertex gradient)
+│   └── Label                                    (TMP 40px #EEDC9A + LocalizedText `HOME_DAILY_PILL`)
+├── PromoBanner
+├── NextHolePanel
+├── ModeCarouselSection
+└── LeaderboardButton
+```
+
+- **Its Y is computed, not laid out.** Home has no vertical layout group, so the pill reads
+  `NoticePanel`'s own rect: the notice's top (`y −361`) when the notice is hidden, and
+  `noticeTop − noticeHeight − 24` when it is shown. `HomeScreenController.SetNewsPanelVisible`
+  calls `dailyMissionPill.RefreshPlacement()` — that ONE hook is the whole wiring.
+- **Its WIDTH is computed too.** It hugs its content like the Figma auto-layout row:
+  `24 + (58 + 10 when the flame shows) + 433 + 24` → **549 with a streak, 481 without**, label at
+  x 92 or x 24. Both sprites are 9-sliced precisely so the two widths cost no corner fidelity.
+- **Tap** → `ScreenId.MissionSelection` with `MissionSelectionScreenController.ExpandDailyOnOpen`
+  set, so the daily card is already expanded on arrival (one-shot; every other route lands on NEXT).
+
+### MissionCard daily chrome (`Assets/Prefabs/UI/MissionSelection/MissionCard.prefab`)
+
+The streak badge rides the TITLE row in both states — that is what makes "shows collapsed AND
+expanded" structural rather than something to remember:
+
+```
+CollapsedContainer/TitleArea/TitleHRow            (HorizontalLayoutGroup + ContentSizeFitter)
+├── DailyStreak                                   (StreakFlame.prefab, 41×64)
+├── LockIconCollapsed
+└── Title
+
+ExpandedContainer/TitleAreaExp/TitleHRowExp       (NEW — cloned component-for-component from TitleHRow)
+├── DailyStreakExp                                (StreakFlame.prefab, 41×64)
+└── TitleExp
+```
+
+⚠️ `MissionCard.prefab` has exactly ONE scene instance (`MissionSelectionScreen/Content/DailyMissionCard`);
+every other card is instantiated at runtime. After any structural edit here, check that instance for
+orphans and stale overrides — see `tasks/lessons.md` Lesson AJ.
+
+---
+
 ## Key Notes
 
 - **Character stat rows** use `Name+Bar/StatsName`, `Name+Bar/Bar`, `DiffLabel`, `StatNumber`

@@ -5,14 +5,15 @@
 
 ---
 
-## 🟡 IN REVIEW — `daily_mission_home_pill` (2026-08-30)
+## ✅ SHIPPED — `daily_mission_home_pill` **approved by Cesar** (2026-08-30)
 
 **The daily finally has a door on Home.** A `NEW DAILY MISSION!` pill slides in from the left,
 pulses a soft gold halo, sits 24px under the maintenance notice (or at the notice's own top when
 there is none), carries a flame with the streak number in it, and opens Mission Selection when
 tapped. `missions_v1` shipped the daily with no Home surface because it had no design; this is
-that surface. Spec + evidence: `Docs/Specs/Active/daily_mission_home_pill/`. STATUS
-`READY_FOR_SELF_REVIEW`.
+that surface. Spec + evidence: `Docs/Specs/Completed/daily_mission_home_pill/`. Commits
+`bf554491e` (the pill) + `9c139d6c4` (Cesar's three follow-ups). Deliverables in
+`Docs/Reports/Media/daily_mission_home_pill_*`.
 
 **The one architectural piece is `DailyMissionState`** — a static Date/Streak/Claimed/HasRecipe
 that the pill AND the Mission Selection daily card both read and write. Before it, each screen

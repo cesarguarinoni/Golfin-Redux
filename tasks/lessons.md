@@ -3143,3 +3143,33 @@ snapshot is lost. It cannot repair it. Treat the warning as "check `git status` 
 **Generalisation worth carrying:** an editor-side "restore on exit" guard is only as durable as
 where it keeps its snapshot. A static field is not durable. If a guard must survive a reload, its
 snapshot belongs somewhere that survives one too — `SessionState`, or the asset itself.
+
+## Lesson AJ — deleting a child from a prefab ORPHANS the copy on every scene instance (2026-08-30)
+
+`daily_mission_home_pill` replaced the mission card's two streak TMPs with the shared
+`StreakFlame` prefab. The prefab edit was clean. The SCENE was not: `DailyMissionCard` is a prefab
+instance, and Unity does not remove an instance's copy of a child whose source object was
+deleted — it **unlinks it and leaves it in place, still rendering**. The card shipped a stray
+"DailyStreak" placeholder label under the new flame, and it only surfaced because the screenshot
+was actually looked at. `PrefabUtility.IsAddedGameObjectOverride` returns **false** for these, so
+the obvious API check does not find them either.
+
+**The rule: after deleting a child from a prefab, enumerate every instance of that prefab and
+delete the orphan too.** The enumeration is a grep for the prefab's GUID across `*.unity` and
+`*.prefab` — do it, do not assume you know where the instances are. Here it was exactly one file.
+
+**Sister trap in the same change:** the instance also kept a stale sibling-ORDER override from the
+object that was replaced, so the badge sat above the countdown on the expanded card and below it
+on the collapsed one. Overrides survive their target; check `GetPropertyModifications` after any
+structural prefab edit, not just the object list.
+
+**Third, and the one with the widest blast radius:** an edit-mode `SaveScene` after a play-mode
+capture pass baked **1297 lines of anchor churn into `RankingsScreen`** — an unrelated screen that
+had run layout while playing. Nothing of that change belonged to the task. The reason it was
+caught is that the close-out diff was read line-by-line rather than by file name
+(`project_scene_save_bakes_layout_churn`, and now twice). **A prefab edit that instances inherit
+needs no scene save at all** — the scene was reverted whole and everything still passed.
+
+**Generalisation:** a prefab is the unit of authoring, but an instance is a separate serialisation
+that remembers what the prefab used to be. Every structural prefab edit deserves a look at the
+instances AND at the scene diff, and the scene diff deserves reading, not counting.
