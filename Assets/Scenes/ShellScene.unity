@@ -48169,7 +48169,7 @@ PrefabInstance:
       insertIndex: -1
       addedObject: {fileID: 812496302}
     - targetCorrespondingSourceObject: {fileID: 368435724262486938, guid: 142430ba996e44d5ba60b43354b1eb78, type: 3}
-      insertIndex: 3
+      insertIndex: -1
       addedObject: {fileID: 829226502}
     - targetCorrespondingSourceObject: {fileID: 7032673618141978867, guid: 142430ba996e44d5ba60b43354b1eb78, type: 3}
       insertIndex: 0
@@ -55110,7 +55110,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &855013770
 MonoBehaviour:
   m_ObjectHideFlags: 0
