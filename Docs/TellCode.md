@@ -106,6 +106,47 @@
 
 ## 📋 SPEC_READY POINTERS
 
+- **`nav_back_memory`** (filed 2026-08-30, Architect via Cowork) — **SPEC_READY, kickoff pasteable.**
+  `Docs/Specs/Active/nav_back_memory/SPEC.md`. Sweep of every back/close and every OnEnable reset in the
+  shell. Bugs: Missions BACK always → Home (`OpenFrom` never called); Tournament Hole Selection →
+  Leaderboard → CLOSE skips to Tournament Selection; Rewards Center resets to GACHA and Leaderboard to
+  DAILY on every entry; Android back does nothing. Fix: history stack + pillar memory in
+  `ScreenManager` (`GoBack(fallback)`, `NavigateToPillar`), every back/close routed through it with the
+  serialized target as fallback, nav slots reopen the pillar's last screen (same-pillar tap → root, D1),
+  remembered tabs, compare mode exits on leave (D3), Android back → `GoBack`. In-game QUIT stays Home (D2).
+  No strings, no prefab/scene edits.
+
+### Kickoff · nav_back_memory (issued 2026-08-30)
+
+```
+Read Docs/Specs/Active/nav_back_memory/SPEC.md and implement it.
+
+Context:
+- Back/close buttons and the nav bar must return to where the player actually was.
+  Add a same-pillar history stack + per-pillar "last screen" memory to ScreenManager
+  (GoBack(fallback), NavigateToPillar, PillarOf/RootOf) and route every back/close
+  through GoBack with the screen's existing serialized target as the fallback.
+  Look at: ScreenManager.ShowScreen/ApplyScreen, PersistentUIManager.NavigateTo +
+  HighlightScreen (move its ScreenId->Screen switch into ScreenManager.PillarOf),
+  GachaTabController.ApplyPendingOrDefaultTab, RankingsScreenController.OnEnable,
+  TournamentLeaderboard/TournamentHoleSelection.Close, MissionSelection.OnBackClicked,
+  the three *CompareController.OnDisable (ForceExitImmediate), SettingsController.
+- Decisions already taken (do not reopen): same-pillar nav tap -> pillar root; in-game
+  QUIT keeps landing on Home (ExitToScreen callers untouched); compare mode exits on leave.
+- Minimal diff. Reuse ModalController.OpenModalCount, GachaTabController.RequestStoreTab
+  (add the symmetric RequestGachaTab), the existing _backScreen/_returnTarget/_backTarget
+  fields as fallbacks. No new strings, no prefab or scene edits.
+- Out of scope: gameplay exit routing, cross-launch persistence, scroll memory,
+  Settings accordion memory.
+
+When done: list changed files with a 1-line summary each, run the acceptance
+tests in the spec (A1-A16; only A10 needs a device), flag which need manual on-device
+verification, quote the Mission Selection BACK control you found and the input path chosen
+for Android back, update STATUS.md + IMPLEMENTER_REPORT.md in the spec folder, and update
+Docs/AI_CONTEXT.md.
+```
+
+
 - **`daily_mission_home_pill`** (filed 2026-08-30, Architect via Cowork) — ✅ **DONE 2026-08-30 (`e86edd10a`, Completed; texts v17). Kickoff below is SPENT.**
   `Docs/Specs/Active/daily_mission_home_pill/SPEC.md`. The Home-screen Daily Mission pill that
   `missions_v1` deferred: Figma `2098:8490` (with notice) / `13994:1935` (without), flame art in
