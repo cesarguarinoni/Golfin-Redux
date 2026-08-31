@@ -141,10 +141,6 @@ namespace GolfinRedux.UI.Gacha
         /// — the bag is shaking but no prize is known yet.</summary>
         private bool        _waiting;
 
-        /// <summary>The scale the live reveal card rests at — 1 for a club card, and
-        /// the wrapper's 1 for a scaled-to-fit non-club one (the fit lives on the wrapper's child).</summary>
-        private float       _cardHomeScale = 1f;
-
         /// <summary>True once StepEnter has dropped the bag in. Continue reads it so the bag is not
         /// dropped a second time when it is already on screen.</summary>
         private bool        _bagHasEntered;
@@ -529,9 +525,7 @@ namespace GolfinRedux.UI.Gacha
                     pos.x += Mathf.Sin(k * Mathf.PI) * arcX;
                     cardRt.anchoredPosition = pos;
 
-                    // 0.25 → the card's HOME scale. A scaled-to-fit prize arrives already wrapped, so
-                    // scaled-to-fit one). Landing on a hard 1 would undo the fit mid-reveal.
-                    float s = Mathf.LerpUnclamped(0.25f * _cardHomeScale, _cardHomeScale, eased);
+                    float s = Mathf.LerpUnclamped(0.25f, 1f, eased);   // ease-out-back overshoots past 1
                     cardRt.localScale = new Vector3(s, s, 1f);
                 }
 
@@ -548,7 +542,7 @@ namespace GolfinRedux.UI.Gacha
             if (cardRt != null)
             {
                 cardRt.anchoredPosition = Vector2.zero;
-                cardRt.localScale = new Vector3(_cardHomeScale, _cardHomeScale, 1f);
+                cardRt.localScale = Vector3.one;
             }
             if (_liveCardGroup != null) _liveCardGroup.alpha = 1f;
             SetBagScale(1f, 1f);
@@ -639,20 +633,12 @@ namespace GolfinRedux.UI.Gacha
                 return;
             }
 
-            // A prize is no longer always a club, so the binder picks the prefab. The CardAnchor's
-            // own rect is the slot a non-club card is scaled to fit (SPEC §4.3) — the same rule the
-            // Prizes grid uses, so the card popping out of the bag and the card on the result
-            // screen are the same size as well as the same object.
-            var anchorRt = _cardAnchor;
-            Vector2? slot = anchorRt.rect.width > 0f && anchorRt.rect.height > 0f
-                ? (Vector2?)anchorRt.rect.size
-                : null;
-
-            _liveCard = GachaPrizeCardBinder.Instantiate(record, _cardAnchor, _cardPrefab, slot);
+            // Every prize kind draws on the SAME club card (Cesar, 2026-08-31), so the reveal card
+            // is one shape whatever pops out of the bag — and it is the same object the Prizes
+            // screen shows, built by the same binder.
+            _liveCard = GachaPrizeCardBinder.Instantiate(record, _cardAnchor, _cardPrefab);
             if (_liveCard == null) return;
             _liveCard.name = "RevealCard";
-
-            _cardHomeScale = GachaPrizeCardBinder.HomeScaleOf(_liveCard);
 
             var rt = _liveCard.transform as RectTransform;
             if (rt != null)
@@ -660,7 +646,7 @@ namespace GolfinRedux.UI.Gacha
                 rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
                 rt.pivot = new Vector2(0.5f, 0.5f);
                 rt.anchoredPosition = _cardSpawnOffset;
-                rt.localScale = new Vector3(0.25f * _cardHomeScale, 0.25f * _cardHomeScale, 1f);
+                rt.localScale = new Vector3(0.25f, 0.25f, 1f);
             }
 
             _liveCardGroup = _liveCard.GetComponent<CanvasGroup>();

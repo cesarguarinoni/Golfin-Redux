@@ -114,13 +114,49 @@ showed, the server shows too.
    bypass the Prizes screen reads a bag the grant has not reached until the next launch. Nothing
    else passes `true`.
 
-5. **The non-club prize card is scaled to 0.19 and is not readable.** Measured: the club card is
-   181×374, the Rewards-Center card 978×274. §4.3 anticipated this and instructed scale-to-fit
-   rather than a rebuild. **This is the item to accept or reject** — `06_prizes_x10_mixed_kinds.png`.
+5. **~~The non-club prize card is scaled to 0.19~~ — REJECTED BY CESAR, and replaced.**
+   §4.3 said to render a non-club prize on the Rewards-Center shop card and scale it to fit the
+   slot. It does not fit (978×274 into 183×410 is a uniform 0.19) and the result was legible as a
+   shape, not as text. Cesar's call: *"They should be the same size and shape as club."*
+
+   **Every prize kind now draws on the CLUB card**, through a new
+   `BagClubCard.InitializePrize(PrizeView)`. That is not a new design: `GachaHistoryRowBall.prefab`
+   has nested a `BagClubCard` and bound ball data into it since gacha_history Stage 1 — portrait,
+   name, an "x3" badge, the five stat lanes re-pointed at the ball's stats. This gives that pattern
+   a name on the card itself, so four kinds share one shell instead of four hand-bound copies of
+   its child paths. Per kind: **ball** → thumbnail, name, `x N` badge, its five stats at max 10;
+   **character** → portrait, name, its four stats; **item** → sprite, name, `RESTORES N%` on the
+   card's one free-text line, no stat lanes; **ticket** → icon, name, `x N`. The rarity frame is
+   the SERVER's rarity in every case. Measured live: every card in a mixed x10 is **181×374 at
+   scale 1.00**, identical to a club card. `06_prizes_x10_mixed_kinds.png`.
+
+   `GeneralShopCard.BindTicket` / `BindForDisplay` and `ShopCategory.Ticket` STAY — they are what
+   spec B's `category = ticket` shop rows bind with (§4.4), which is a separate surface from the
+   prize grid.
 
 6. **Two stale `LocalizedText` components removed** from the pity labels. They were bound to the old
    `GACHA_PITY_A_RANK` / `GACHA_PITY_S_RANK` placeholders and would have repainted over the
    row-bound text on every language change. The keys stay in the CSV, unused, as §3 says.
+
+---
+
+## Part 4b — Three more bugs, found by rebuilding the card
+
+7. **A clone of an inactive scene object is born inactive.** The Prizes screen hands the binder the
+   authored club card of the slot as its template, and hides that card BEFORE cloning it — so every
+   non-club card was instantiated inactive and its slot rendered EMPTY. Measured: slots 6 and 7 of a
+   mixed x10 blank, both the club card and its replacement inactive. `Instantiate` copies
+   `activeSelf`; the binder now calls `SetActive(true)` on the clone.
+
+8. **A slot returning to a club left its old card parked inactive** in `_spawnedCards` — which the
+   next non-club prize in that slot would then clone from, reproducing bug 7. Those cards are
+   destroyed and the dictionary entry dropped.
+
+9. **Two text defects on the rebuilt cards,** both caught by reading the render rather than the
+   code: the ball name printed twice (`ball_golfin` is named "Golfin" by brand "GOLFIN", so
+   `name\nbrand` read "GOLFIN / GOLFIN" — an equal second line is now dropped), and the item's
+   `RESTORES 75%` WRAPPED to three lines in a label sized for "250 yd" (auto-size + no-wrap now
+   shrinks it to one line, leaving a club's own "250 yd" pixel-identical because it already fits).
 
 ---
 

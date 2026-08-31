@@ -7,12 +7,18 @@
 // makes the card the player sees pop out of the bag and the card on the Prizes screen the same
 // object built by the same code — the reason it was shared in the first place.
 //
-// TWO PREFAB FAMILIES, NO NEW ART:
-//   club                          → BagClubCard.prefab (unchanged; the reveal's serialized prefab)
-//   ball | character | item | ticket → GeneralShopCard_Club, the Rewards-Center card, in DISPLAY
-//                                   mode: price row and BUY hidden, nothing interactable.
-// The shop card already renders the first three kinds (shop_server_purchase §3.4). Reusing it is
-// SPEC §4.3's instruction and is not a Figma-approved design — Cesar may replace it later.
+// ONE PREFAB, EVERY KIND: BagClubCard.prefab.
+//
+// ⚠️ THIS REPLACES THE SPEC'S INSTRUCTION, ON CESAR'S CALL (2026-08-31). §4.3 said to render a
+// non-club prize on the Rewards-Center shop card and, if it did not fit the slot, to scale it to
+// fit. It does not fit — 978x274 into 183x410 is a uniform 0.19 — and the result was legible as a
+// shape and not as text. Cesar rejected it on sight: "They should be the same size and shape as
+// club." So every kind now draws on the CLUB card, through BagClubCard.InitializePrize.
+//
+// That is not a new design either. `GachaHistoryRowBall.prefab` has nested a BagClubCard and bound
+// BALL data into it since gacha_history Stage 1 — portrait, name, an "x3" badge, the five stat
+// lanes re-pointed at the ball's stats. This is that pattern, given a name on the card itself so
+// four kinds share one shell instead of four hand-bound copies of its child paths.
 #nullable enable
 using Golfin.Inventory;
 using Golfin.Roster;
@@ -26,10 +32,6 @@ namespace GolfinRedux.UI.Gacha
     /// <summary>Builds and binds the card for one prize, whatever kind it is.</summary>
     public static class GachaPrizeCardBinder
     {
-        /// <summary>Resources path of the non-club prize card (the Rewards-Center club template,
-        /// which is also the one the shop binds characters and items onto).</summary>
-        private const string ShopCardPath = "Prefabs/Shop/GeneralShopCard_Club";
-
         /// <summary>Paths inside BagClubCard.prefab whose action row is hidden on a prize card.</summary>
         private static readonly string[] ClubActionButtonPaths =
         {
@@ -38,134 +40,47 @@ namespace GolfinRedux.UI.Gacha
             "SwapBtn",
         };
 
+        /// <summary>Ball stats are 0..10, not the club scale.</summary>
+        private const int BallStatMax = 10;
+
+        /// <summary>Character stats share the club bar scale closely enough to read; the roster's
+        /// own caps are rarity-dependent and a prize card is not a stat sheet.</summary>
+        private const int CharacterStatMax = 50;
+
         /// <summary>
-        /// Instantiate the right card for <paramref name="record"/> under <paramref name="parent"/>
-        /// and bind it. Returns null when the prefab for that kind cannot be loaded.
+        /// Instantiate the card for <paramref name="record"/> under <paramref name="parent"/> and
+        /// bind it. EVERY kind uses <paramref name="clubPrefab"/>, so a mixed pull is a grid of
+        /// identically-shaped cards.
         /// </summary>
-        /// <param name="clubPrefab">The caller's BagClubCard prefab. The reveal modal has it
-        /// serialized; the Prizes screen reads it off one of its authored grid cards.</param>
-        /// <param name="slotSize">The footprint the card must occupy, when the caller has one.
-        /// See <see cref="WrapToFit"/> — this is SPEC §4.3's scale-to-fit.</param>
+        /// <param name="clubPrefab">The BagClubCard prefab. The reveal modal has it serialized; the
+        /// Prizes screen reads it off one of its authored grid cards.</param>
         /// <param name="siblingIndex">Where in the parent to insert it, so a spawned card takes the
         /// place of the authored card it replaces instead of being appended after all of them.</param>
         public static GameObject? Instantiate(PrizeRecord record, Transform parent, GameObject? clubPrefab,
-                                              Vector2? slotSize = null, int siblingIndex = -1)
+                                              int siblingIndex = -1)
         {
-            GameObject? prefab = record.Kind == PrizeRecord.KindClub
-                ? clubPrefab
-                : Resources.Load<GameObject>(ShopCardPath);
-
-            if (prefab == null)
+            if (clubPrefab == null)
             {
-                Debug.LogError($"[GachaPrizeCardBinder] No prefab for prize kind '{record.Kind}' " +
-                               $"({record.RefId}) — the prize is granted but cannot be shown.");
+                Debug.LogError($"[GachaPrizeCardBinder] No BagClubCard prefab to build the " +
+                               $"{record.Kind} prize '{record.RefId}' on — the prize is granted but " +
+                               "cannot be shown.");
                 return null;
             }
 
-            // A CLUB card is authored at the slot's size, so it goes straight in.
-            if (record.Kind == PrizeRecord.KindClub || !slotSize.HasValue)
-            {
-                var plain = Object.Instantiate(prefab, parent);
-                plain.name = "PrizeCard_" + record.Kind + "_" + record.RefId;
-                if (siblingIndex >= 0) plain.transform.SetSiblingIndex(siblingIndex);
-                Bind(plain, record);
-                return plain;
-            }
+            var go = Object.Instantiate(clubPrefab, parent);
+            go.name = "PrizeCard_" + record.Kind + "_" + record.RefId;
 
-            return WrapToFit(prefab, record, parent, slotSize.Value, siblingIndex);
-        }
+            // ⚠️ THE TEMPLATE IS OFTEN AN INACTIVE SCENE OBJECT, NOT A PROJECT PREFAB. The Prizes
+            // screen passes the authored club card of the slot this prize replaces, and it hides
+            // that card BEFORE cloning it — so the clone is born inactive and the slot renders
+            // empty. Measured: slots 6 and 7 of a mixed x10 were blank, both the club card and its
+            // replacement inactive. Instantiate copies activeSelf; only this makes the clone show.
+            go.SetActive(true);
 
-        /// <summary>
-        /// SPEC §4.3's scale-to-fit: put the card inside a slot-sized WRAPPER and scale it down to
-        /// fit, centred.
-        ///
-        /// <para>
-        /// ⚠️ <b>THE TWO CARDS ARE DIFFERENT SHAPES, AND THIS IS THE CONSEQUENCE.</b> Measured live
-        /// on the Prizes grid: the club card is <b>181×374</b> (a tall portrait card) and the
-        /// Rewards-Center card is <b>978×274</b> (a wide row card). Fitting one into the other is a
-        /// uniform scale of about <b>0.19</b> — legible as a shape, not as text. The spec
-        /// anticipated exactly this ("if it does not fit, scale-to-fit inside the slot and say so
-        /// with a screenshot — do NOT rebuild a card"), so it is the instructed outcome, flagged in
-        /// the implementer report. A real design for a non-club prize card is out of scope here.
-        /// </para>
-        /// <para>
-        /// <b>Why a wrapper rather than scaling the card in place.</b> Two reasons, both measured.
-        /// First, the rows are HorizontalLayoutGroups and <c>localScale</c> is invisible to layout —
-        /// an unconstrained 978px child pushes every sibling, and the row's own COST/PULL block,
-        /// off the panel. Second, the shop card carries its OWN anchors and pivot from the shop
-        /// prefab, so scaling it around that pivot slid it out of its slot even once the layout was
-        /// pinned. The wrapper is a plain slot-sized rect the layout understands, and the card is
-        /// centred inside it with a pivot the wrapper controls — so neither problem can come back.
-        /// </para>
-        /// <para>
-        /// The wrapper also restores the entrance animation for free: it rests at scale 1 like an
-        /// authored card, so PopIn animates it 0 → 1 and the fit lives on the child, untouched.
-        /// </para>
-        /// </summary>
-        private static GameObject WrapToFit(GameObject prefab, PrizeRecord record, Transform parent,
-                                            Vector2 slot, int siblingIndex)
-        {
-            var slotGo = new GameObject("PrizeSlot_" + record.Kind + "_" + record.RefId,
-                                        typeof(RectTransform));
-            var slotRt = (RectTransform)slotGo.transform;
-            slotRt.SetParent(parent, worldPositionStays: false);
-            slotRt.anchorMin = slotRt.anchorMax = new Vector2(0.5f, 0.5f);
-            slotRt.pivot     = new Vector2(0.5f, 0.5f);
-            slotRt.sizeDelta = slot;
-            slotRt.localScale = Vector3.one;
+            if (siblingIndex >= 0) go.transform.SetSiblingIndex(siblingIndex);
 
-            var le = slotGo.AddComponent<LayoutElement>();
-            le.preferredWidth  = slot.x;
-            le.preferredHeight = slot.y;
-            le.minWidth        = slot.x;
-            le.minHeight       = slot.y;
-            le.flexibleWidth   = 0f;
-            le.flexibleHeight  = 0f;
-
-            if (siblingIndex >= 0) slotRt.SetSiblingIndex(siblingIndex);
-
-            var card   = Object.Instantiate(prefab, slotRt);
-            card.name  = "PrizeCard_" + record.Kind + "_" + record.RefId;
-            var cardRt = card.transform as RectTransform;
-
-            if (cardRt != null)
-            {
-                cardRt.anchorMin = cardRt.anchorMax = new Vector2(0.5f, 0.5f);
-                cardRt.pivot     = new Vector2(0.5f, 0.5f);
-                cardRt.anchoredPosition = Vector2.zero;
-
-                Vector2 own = cardRt.rect.size;
-                if (own.x > 0f && own.y > 0f)
-                {
-                    float scale = Mathf.Min(slot.x / own.x, slot.y / own.y);
-                    cardRt.localScale = new Vector3(scale, scale, 1f);
-
-                    Debug.Log($"[GachaPrizeCardBinder] '{card.name}' is {own.x:F0}x{own.y:F0} in a " +
-                              $"{slot.x:F0}x{slot.y:F0} slot — scaled to {scale:F2} to fit (SPEC §4.3).");
-                }
-            }
-
-            Bind(card, record);
-            return slotGo;
-        }
-
-        /// <summary>
-        /// The scale a prize card rests at, for anything that animates it.
-        ///
-        /// <para>
-        /// It is 1 for everything the binder returns today: a club card is authored at its slot's
-        /// size, and a scaled-to-fit one comes back WRAPPED (see <see cref="WrapToFit"/>), so the
-        /// object the animations touch is a slot-sized wrapper and the fit lives on its child.
-        /// The question stays asked rather than assumed because assuming 1 is exactly what undid
-        /// the fit before the wrapper existed — the entrance animation landed every card on a hard
-        /// <c>Vector3.one</c> and the card overflowed its slot again, measured.
-        /// </para>
-        /// </summary>
-        public static float HomeScaleOf(GameObject? card)
-        {
-            if (card == null) return 1f;
-            var home = card.GetComponent<PrizeCardHomeScale>();
-            return home != null ? home.Scale : 1f;
+            Bind(go, record);
+            return go;
         }
 
         /// <summary>
@@ -178,13 +93,18 @@ namespace GolfinRedux.UI.Gacha
             if (cardGo == null) return;
 
             var club = cardGo.GetComponent<BagClubCard>();
-            if (club != null) { BindClubCard(club, record); return; }
+            if (club == null)
+            {
+                Debug.LogWarning($"[GachaPrizeCardBinder] '{cardGo.name}' carries no BagClubCard — " +
+                                 "nothing to bind.");
+                return;
+            }
 
-            var shop = cardGo.GetComponent<GeneralShopCard>();
-            if (shop != null) { BindShopCard(shop, record); return; }
+            if (record.Kind == PrizeRecord.KindClub) BindClubCard(club, record);
+            else                                    BindOtherKind(club, record);
 
-            Debug.LogWarning($"[GachaPrizeCardBinder] '{cardGo.name}' carries neither BagClubCard nor " +
-                             "GeneralShopCard — nothing to bind.");
+            HideActionRow(club);
+            ApplyDupePill(club.transform, record);
         }
 
         // ── Club ───────────────────────────────────────────────────────────────
@@ -202,6 +122,9 @@ namespace GolfinRedux.UI.Gacha
                 return;
             }
 
+            // A card re-bound from a ball back to a club has hidden rows to put back.
+            card.RestoreClubRows();
+
             var playerClub = new PlayerClubData
             {
                 clubId            = record.RefId,
@@ -211,13 +134,134 @@ namespace GolfinRedux.UI.Gacha
             };
 
             card.Initialize(playerClub, template, "");
+        }
 
-            // Display-only. Hiding the action row is not cosmetic tidying: the Prizes screen's grid
-            // cards ship with LevelUpBtn / RepairBtn / SwapBtn DEACTIVATED in the prefab, while a
-            // fresh BagClubCard instance (which is what the reveal modal spawns) has them active —
-            // so the same prize rendered two different ways depending on where it was shown. Doing
-            // it here, in the one shared binder, is what makes them agree, and it matches the Figma
-            // reveal card (13997:4503), which has no action row.
+        // ── Ball / character / item / ticket, on the SAME card ─────────────────
+
+        /// <summary>
+        /// Draw a non-club prize on the club card. Each kind fills the same five slots — portrait,
+        /// name, rarity frame, badge, one free-text line — and supplies stat lanes only when it has
+        /// stats worth a bar.
+        ///
+        /// <para>
+        /// The RARITY is the SERVER's, off the record, never the local database's: a prize rolled
+        /// at a tier this build has not seen still shows the frame it was actually rolled at.
+        /// </para>
+        /// </summary>
+        private static void BindOtherKind(BagClubCard card, PrizeRecord record)
+        {
+            string qty = record.Quantity > 1 ? "x" + record.Quantity : string.Empty;
+
+            switch (record.Kind)
+            {
+                case PrizeRecord.KindBall:
+                {
+                    var ball = BallDatabaseCSV.Instance?.GetBall(record.RefId);
+                    if (ball == null) { Missing(record, "ball"); return; }
+
+                    card.InitializePrize(new BagClubCard.PrizeView(
+                        ball.thumbnailSprite != null ? ball.thumbnailSprite : ball.fullSprite,
+                        BuildName(ball.name, ball.brand),
+                        record.Rarity,
+                        badge:   qty,
+                        detail:  string.Empty,
+                        stats:   new[] { ball.power, ball.rebound, ball.windResistance, ball.roll, ball.spin },
+                        statMax: BallStatMax));
+                    return;
+                }
+
+                case PrizeRecord.KindCharacter:
+                {
+                    var ch = Golfin.Roster.CharacterDatabaseCSV.Instance?.GetCharacter(record.RefId);
+                    if (ch == null) { Missing(record, "character"); return; }
+
+                    card.InitializePrize(new BagClubCard.PrizeView(
+                        ch.portraitSprite,
+                        BuildName(ch.characterName, ch.characterLastName),
+                        record.Rarity,
+                        badge:   qty,
+                        detail:  string.Empty,
+                        stats:   new[] { ch.baseStrength, ch.baseClubControl, ch.baseRecovery, ch.baseStamina },
+                        statMax: CharacterStatMax));
+                    return;
+                }
+
+                case PrizeRecord.KindItem:
+                {
+                    var item = ItemDatabaseCSV.Instance?.GetItem(record.RefId);
+                    if (item == null) { Missing(record, "item"); return; }
+
+                    // An item has ONE number worth showing, and it goes on the free-text line —
+                    // the same two keys ItemDetailPanel and the shop card already use for it.
+                    card.InitializePrize(new BagClubCard.PrizeView(
+                        item.thumbnailSprite != null ? item.thumbnailSprite : item.fullSprite,
+                        (item.name ?? string.Empty).ToUpperInvariant(),
+                        record.Rarity,
+                        badge:  qty,
+                        detail: $"{LocalizationManager.Get("ITEM_RESTORES")} {item.restorePercent}%",
+                        stats:  null));
+                    return;
+                }
+
+                case PrizeRecord.KindTicket:
+                {
+                    if (!int.TryParse(record.RefId, out int id)) { Missing(record, "ticket"); return; }
+                    var type = TicketTypeCatalog.Get(id);
+                    if (type == null) { Missing(record, "ticket"); return; }
+
+                    var icon = Golfin.CatalogArt.CatalogArtCache.Cached(type.IconUrl, type.IconUrl)
+                            ?? (string.IsNullOrWhiteSpace(type.IconSprite)
+                                    ? null
+                                    : Resources.Load<Sprite>("Art/Gacha/Tickets/" + type.IconSprite.Trim()))
+                            ?? Golfin.CatalogArt.CatalogArtCache.Cached(type.IconUrl);
+
+                    card.InitializePrize(new BagClubCard.PrizeView(
+                        icon,
+                        (type.DisplayName ?? string.Empty).ToUpperInvariant(),
+                        record.Rarity,
+                        badge:  qty,
+                        detail: string.Empty,
+                        stats:  null));
+                    return;
+                }
+
+                default:
+                    Missing(record, record.Kind);
+                    return;
+            }
+        }
+
+        /// <summary>
+        /// Two lines when there is a second part, one when there is not — the shape the club
+        /// binding gives a name.
+        ///
+        /// <para>
+        /// A second part EQUAL to the first is dropped, not printed twice. `ball_golfin` is named
+        /// "Golfin" by brand "GOLFIN", and the card read "GOLFIN / GOLFIN".
+        /// </para>
+        /// </summary>
+        private static string BuildName(string? first, string? second)
+        {
+            string a = (first ?? string.Empty).Trim().ToUpperInvariant();
+            string b = (second ?? string.Empty).Trim().ToUpperInvariant();
+            return string.IsNullOrEmpty(b) || b == a ? a : a + "\n" + b;
+        }
+
+        /// <summary>The prize was granted server-side but this build has no row for it. Loud, and
+        /// the card is hidden rather than left showing the previous prize.</summary>
+        private static void Missing(PrizeRecord record, string kind)
+            => Debug.LogWarning($"[GachaPrizeCardBinder] {kind} '{record.RefId}' is not in this " +
+                                "build's database. The prize IS granted server-side; the card " +
+                                "cannot render it.");
+
+        /// <summary>Display-only. Hiding the action row is not cosmetic tidying: the Prizes screen's
+        /// grid cards ship with LevelUpBtn / RepairBtn / SwapBtn DEACTIVATED in the prefab, while a
+        /// fresh BagClubCard instance (which is what the reveal modal spawns) has them active — so
+        /// the same prize rendered two different ways depending on where it was shown. Doing it here,
+        /// in the one shared binder, is what makes them agree, and it matches the Figma reveal card
+        /// (13997:4503), which has no action row.</summary>
+        private static void HideActionRow(BagClubCard card)
+        {
             foreach (var n in ClubActionButtonPaths)
             {
                 var t = card.transform.Find(n);
@@ -226,35 +270,7 @@ namespace GolfinRedux.UI.Gacha
 
             foreach (var btn in card.GetComponentsInChildren<Button>(includeInactive: true))
                 btn.interactable = false;
-
-            ApplyDupePill(card.transform, record);
         }
-
-        // ── Ball / character / item / ticket ───────────────────────────────────
-
-        private static void BindShopCard(GeneralShopCard card, PrizeRecord record)
-        {
-            switch (record.Kind)
-            {
-                case PrizeRecord.KindTicket:
-                    card.BindTicket(record.RefId, record.Quantity);
-                    break;
-
-                default:
-                    card.BindForDisplay(ToShopCategory(record.Kind), record.RefId);
-                    break;
-            }
-
-            ApplyDupePill(card.transform, record);
-        }
-
-        private static ShopCategory ToShopCategory(string kind) => kind switch
-        {
-            PrizeRecord.KindBall      => ShopCategory.Ball,
-            PrizeRecord.KindCharacter => ShopCategory.Character,
-            PrizeRecord.KindItem      => ShopCategory.Item,
-            _                         => ShopCategory.Club,
-        };
 
         // ── The duplicate pill ─────────────────────────────────────────────────
 
@@ -335,20 +351,5 @@ namespace GolfinRedux.UI.Gacha
         /// <summary>The gold the rest of the Rewards Center uses for a "you gained" chip
         /// (GachaTabController's ActiveTabColor).</summary>
         private static readonly Color DupePillColor = new Color(1f, 0.816f, 0.137f, 1f);
-    }
-
-    /// <summary>
-    /// Records the scale a prize card rests at, for anything that animates it.
-    ///
-    /// <para>
-    /// Nothing attaches one today: since <see cref="GachaPrizeCardBinder"/> fits a card by WRAPPING
-    /// it, the object the animations touch is a slot-sized wrapper that rests at 1. The component
-    /// stays as the declared answer to "what scale does this card rest at", so the two animation
-    /// paths keep ASKING — assuming 1 is precisely what undid the fit before the wrapper existed.
-    /// </para>
-    /// </summary>
-    public sealed class PrizeCardHomeScale : MonoBehaviour
-    {
-        public float Scale = 1f;
     }
 }

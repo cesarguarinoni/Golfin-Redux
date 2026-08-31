@@ -14,15 +14,20 @@ agrees with the client on every number: 6 pulls, 2 300 tickets spent, 1 160 dupe
 WHAT CESAR SHOULD LOOK AT FIRST — two visuals and one judgement call:
   screenshots/01_banner_card_numeric_costs.png   the card: title, art, COST x50 / COST x450,
                                                  and the two guarantee lines bound to the row
-  screenshots/06_prizes_x10_mixed_kinds.png      a mixed x10 — and the SPEC §4.3 consequence:
-                                                 a ball / item prize is the Rewards-Center card
-                                                 scaled to 0.19 to fit a club-shaped slot. It is
-                                                 legible as a shape, not as text. The spec
-                                                 instructed exactly this ("scale-to-fit … do NOT
-                                                 rebuild a card") and said Cesar may replace it.
-                                                 THIS IS THE ONE THING TO ACCEPT OR REJECT.
+  screenshots/06_prizes_x10_mixed_kinds.png      a mixed x10 — every kind on the CLUB card, all
+                                                 ten measured at 181x374 scale 1.00. Rebuilt after
+                                                 Cesar rejected the scaled-down shop card.
 
-TWO REAL BUGS FELL OUT AND ARE FIXED (both found by running it, neither by a test):
+REJECTED ONCE AND REBUILT. §4.3 said to put a non-club prize on the Rewards-Center shop card and
+scale it to fit. It does not fit — 978x274 into 183x410 is 0.19 — and Cesar rejected it on sight:
+"They should be the same size and shape as club." Every kind now draws on the CLUB card via a new
+`BagClubCard.InitializePrize`, which is the pattern `GachaHistoryRowBall` has used to put BALL data
+on a BagClubCard since gacha_history Stage 1. Three more bugs fell out of that rebuild (a clone of
+an inactive scene object is born inactive, so two slots rendered EMPTY; a slot returning to a club
+left a stale card behind; and the ball name printed twice while the item detail wrapped to three
+lines). All fixed and re-verified live.
+
+TWO EARLIER BUGS ALSO FIXED (both found by running it, neither by a test):
   • the 5b re-apply was subscribed LAZILY, so the boot refresh fired before anything listened
     and a mid-session publish never landed — the disk cache held gacha_banners v4 while the
     store still served v3. Now [RuntimeInitializeOnLoadMethod(BeforeSceneLoad)].
