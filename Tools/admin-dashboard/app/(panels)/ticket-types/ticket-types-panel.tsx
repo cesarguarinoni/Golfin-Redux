@@ -12,10 +12,13 @@ import { CatalogPanel } from "../_content/catalog-panel";
  * (`TicketType.Standard = 0`), so renumbering a row does not rename a ticket —
  * it silently converts everyone's balance into a different kind. Append only.
  *
- * Icon columns are NOT registered for upload in this task: the bundled ticket
- * icon is authored in the card prefab today, and naming its replacement is
- * `gacha_client_real_pull`'s call, not this one. `iconSprite` / `iconUrl` are
- * present as plain text fields so the columns exist to be filled later.
+ * `iconUrl` IS registered for upload now (gacha_ops_polish §4). The two bundled
+ * icons — `Ticket_Standard`, `Ticket_Gold` — are DERIVED placeholders, a re-tint
+ * of the store ticket, so the Gold ticket renders as something other than the
+ * Standard one while real art does not exist. Uploading here replaces either of
+ * them on installed builds with no client release: `TicketTypeCatalog`'s ladder
+ * puts a cached `iconUrl` ahead of `iconSprite`. Target size is the Standard
+ * icon's own, measured off the top bar: 118 x 131 px.
  */
 export function TicketTypesPanel() {
   const translate = useT();

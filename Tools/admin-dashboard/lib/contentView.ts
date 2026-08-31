@@ -357,6 +357,10 @@ export const SPRITE_FIELD_FOLDER: Record<string, Record<string, string>> = {
   gacha_banners: {
     artSprite: "Art/Gacha/Banners",
   },
+  // GachaBannerCard / GachaPrizeCardBinder — Resources.Load<Sprite>("Art/Gacha/Tickets/" + IconSprite)
+  ticket_types: {
+    iconSprite: "Art/Gacha/Tickets",
+  },
   characters: {
     portraitSprite: "Portraits/Thumbnails",
     portraitFull: "Portraits/FullBody",
@@ -407,6 +411,12 @@ export const ART_URL_COLUMNS: Record<string, readonly string[]> = {
   // (decision 7: every word a player reads on a banner is UI-authored from
   // nameEn/nameJa/taglineEn/taglineJa). `artSprite` stays the bundled floor.
   gacha_banners: ["artUrl"],
+  // gacha_ops_polish §4 — the two bundled ticket icons are DERIVED placeholders
+  // (the store ticket, re-tinted). `iconUrl` is how real art reaches the banner
+  // cost rows, the reveal card and the shop card with no build at all, because
+  // TicketTypeCatalog's ladder puts a cached upload ahead of `iconSprite`.
+  // Target size is the Standard icon's own, measured: 118 x 131 px.
+  ticket_types: ["iconUrl"],
 } as const;
 
 /**
@@ -437,6 +447,7 @@ export const ART_URL_TO_SPRITE_COLUMN: Record<string, Record<string, string>> = 
   clubs: { portraitUrl: "portraitSprite", fullUrl: "portraitFull", controlUrl: "controlSprite" },
   items: { thumbnailUrl: "thumbnailSprite", fullUrl: "fullSprite" },
   balls: { thumbnailUrl: "thumbnailSprite", fullUrl: "fullSprite" },
+  ticket_types: { iconUrl: "iconSprite" },
 };
 
 /**

@@ -51,6 +51,12 @@ const ALLOWED_CATALOGS = [
   // artwork is a backdrop the card draws over. `artSprite` stays the bundled
   // floor; this is what an installed build fetches.
   "gacha_banners",
+  // gacha_ops_polish §4. The two bundled ticket icons are DERIVED placeholders
+  // (a re-tint of the store ticket), so `iconUrl` is how real art reaches the
+  // banner cost rows, the reveal card and the shop card without a build —
+  // `TicketTypeCatalog`'s ladder puts the uploaded URL ahead of `iconSprite`.
+  // Target size is the Standard icon's own: 118 x 131 px.
+  "ticket_types",
 ] as const;
 export type AllowedCatalog = (typeof ALLOWED_CATALOGS)[number];
 
@@ -65,6 +71,8 @@ const ALLOWED_COLUMNS = [
   "thumbnailUrl",
   "controlUrl",
   "artUrl",
+  // gacha_ops_polish §4 — ticket_types.iconUrl.
+  "iconUrl",
 ] as const;
 export type AllowedColumn = (typeof ALLOWED_COLUMNS)[number];
 

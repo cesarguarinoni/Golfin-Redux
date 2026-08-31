@@ -324,6 +324,19 @@ namespace GolfinRedux.UI.Gacha
                       (overlay != null
                           ? $" ({overlaid} overlaid from the published catalog v{overlay.Version})."
                           : " (bundled only)."));
+
+            // gacha_ops_polish §4 (found while wiring ticket_types) — WARM THE CACHE.
+            //
+            // `GachaBannerArt.Resolve` asks `CatalogArtCache` for `artUrl`, and that never starts
+            // a download: it reads memory, then the on-disk cache, and something has to have put
+            // the bytes there. The four inventory/roster catalogs each end their load with this
+            // call; NEITHER gacha catalog did, so `artUrl` — the whole point of the admin's banner
+            // upload since gacha_admin_catalogs §5.2 — was a URL nothing on the device ever
+            // fetched, and every banner fell through to its bundled `artSprite`. Fire-and-forget,
+            // allowlisted inside Request, effective on the next launch.
+            var artUrls = new List<string>(_entries.Count);
+            foreach (var e in _entries) if (!string.IsNullOrWhiteSpace(e.ArtUrl)) artUrls.Add(e.ArtUrl);
+            Golfin.Tournaments.TournamentArtService.CatalogArt.Prefetch(artUrls);
         }
 
         /// <summary>Bundled-only parse. Kept as its own overload because GachaStage2Tests drives
@@ -627,7 +640,12 @@ namespace GolfinRedux.UI.Gacha
                         var db = Golfin.Inventory.BallDatabaseCSV.Instance;
                         if (db == null) return true;
                         var ball = db.GetBall(refId);
-                        return ball != null && ball.isActive && ball.renderable;
+                        // gacha_ops_polish §4e — the DEFAULT ball is never a prize. Every player
+                        // already owns it (RewardGranter grants ball_golfin for any "a ball"
+                        // reward, and a fresh save starts with one), so a slot that pays it pays
+                        // nothing. This is the CLIENT half of the guard; the admin validator
+                        // refuses the pool row and the server refuses the roll.
+                        return ball != null && ball.isActive && ball.renderable && !ball.isDefault;
                     }
                     case "character":
                     {

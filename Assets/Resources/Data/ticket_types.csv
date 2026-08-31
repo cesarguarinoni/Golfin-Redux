@@ -1,3 +1,3 @@
 id,key,nameEn,nameJa,iconSprite,iconUrl
-0,standard,Ticket,チケット,,
-1,gold,Gold Ticket,ゴールドチケット,,
+0,standard,Ticket,チケット,Ticket_Standard,
+1,gold,Gold Ticket,ゴールドチケット,Ticket_Gold,

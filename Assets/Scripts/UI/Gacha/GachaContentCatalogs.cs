@@ -273,6 +273,20 @@ namespace GolfinRedux.UI.Gacha
             var map = new Dictionary<int, TicketTypeEntry>();
             foreach (var r in Parse(asset.text, overlay)) map[r.Id] = r;
             _byId = map;
+
+            // gacha_ops_polish §4 — WARM THE CACHE, or the admin's iconUrl upload is inert.
+            //
+            // `CatalogArtCache.Cached` never starts a download; it reads memory and then the
+            // on-disk cache, and something has to have put the bytes there. The four
+            // inventory/roster catalogs each end their load with this exact call
+            // (CharacterDatabaseCSV:220, ClubDatabaseCSV:199, ItemDatabaseCSV:164,
+            // BallDatabaseCSV:161); the two gacha catalogs never did, which made every
+            // `iconUrl`/`artUrl` an operator uploads a URL nothing on the device ever fetches.
+            // Fire-and-forget, allowlisted inside Request, and it lands for the NEXT launch —
+            // which is exactly what §4 promises.
+            var iconUrls = new List<string?>(map.Count);
+            foreach (var r in map.Values) if (!string.IsNullOrWhiteSpace(r.IconUrl)) iconUrls.Add(r.IconUrl);
+            Golfin.Tournaments.TournamentArtService.CatalogArt.Prefetch(iconUrls);
         }
 
         /// <summary>Testable seam: bundled text + optional overlay → rows. Pure.</summary>
