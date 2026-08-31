@@ -5,7 +5,7 @@
 
 ---
 
-## 🟡 BUILT, AWAITING CESAR — `gacha_reveal_animation` (2026-08-31)
+## ✅ SHIPPED — `gacha_reveal_animation` **approved by Cesar** (2026-08-31)
 
 **A gacha pull now has a reveal moment.** PULL x1 / x10 on a banner card — and PULL ("pull again")
 on the Prizes screen — go through the new `GachaPullFlow.Pull(count)`, which opens a reveal modal
@@ -50,9 +50,10 @@ Prizes screen enters with its cards staggered in.
   `ModalController.Awake()` forces them inactive costs 4 `MissingReferenceException` per play-mode
   entry per `UIParticle`, thrown from inside the package's `OnDisable`. Author them inactive.
 
-Evidence: `Docs/Specs/Active/gacha_reveal_animation/` — `IMPLEMENTER_REPORT.md`, 8 screenshots at
+Approved on the x10 + SKIP recording. Evidence in
+`Docs/Specs/Completed/gacha_reveal_animation/` — `IMPLEMENTER_REPORT.md`, 8 screenshots at
 1170×2532, and `videos/gacha_reveal_x10_and_skip.mp4` (48.9 s, **with audio**, captions generated
-from the SfxBus trace). STATUS = `READY_FOR_SELF_REVIEW`.
+from the SfxBus trace; also copied to `Docs/Reports/Media/`).
 
 ---
 
