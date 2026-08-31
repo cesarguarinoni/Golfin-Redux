@@ -257,27 +257,46 @@ export function simulate(
     // the published comparison) and visible in `pityHits`, which is exactly the
     // number the parity check reads.
     const pityForces = pityOn && counter + 1 >= banner.pityThreshold;
-    // The guarantee lands on the LAST slot of a block of ten, and only when the
-    // nine before it did not already produce the rarity. Firing it on slot 0
-    // would make every x10 open on its best prize, which is the opposite of how
-    // a guarantee reads — and would double-count against the published rates.
-    const guaranteeForces =
-      guaranteeOn &&
-      slotInBlock === 9 &&
-      blockBest < rarityRank(banner.guaranteeMinRarityX10);
-
-    let minRarity: string | undefined;
-    if (pityForces) minRarity = banner.pityMinRarity;
-    else if (guaranteeForces) minRarity = banner.guaranteeMinRarityX10;
 
     // A forced minimum no rollable rarity can satisfy falls back to an unforced
     // draw rather than paying nothing. The validator refuses that banner
     // (rule 13), so this is the belt to that braces — never the normal path.
-    const rarity = drawRarity(candidates, rnd, minRarity) ?? drawRarity(candidates, rnd);
+    let rarity =
+      drawRarity(candidates, rnd, pityForces ? banner.pityMinRarity : undefined) ??
+      drawRarity(candidates, rnd);
     if (!rarity) {
       empty += 1;
       continue;
     }
+
+    // ── The x10 guarantee, exactly as the server applies it ────────────────
+    //
+    // ⚠️ CORRECTED 2026-08-31 (gacha_ops_polish §4b, from the spec-B review).
+    // This decided the guarantee from the first NINE slots and forced slot 9
+    // whenever they had missed. `golfin_gacha_pull()` (B §3) rolls slot 9
+    // NORMALLY and re-rolls it only when all TEN missed — so slot 9 getting
+    // there by luck is a block that never fired the guarantee at all.
+    //
+    // The prize distribution is identical either way; the FLAG RATE is not
+    // (~13.4 % of blocks versus ~10.7 % on a 12 %-Rare pool), and the flag is
+    // what the admin's "guarantee hits" shows and what the server writes to the
+    // pull log. Two numbers describing one event had to stop disagreeing.
+    //
+    // The re-roll is applied AFTER pity, and counted as a guarantee rather than
+    // a pity hit, because that is the server's order: pity steers the roll, the
+    // guarantee is a correction made once the block is known.
+    let guaranteeForces = false;
+    if (guaranteeOn && slotInBlock === 9) {
+      const floor = rarityRank(banner.guaranteeMinRarityX10);
+      if (Math.max(blockBest, rarityRank(rarity)) < floor) {
+        const forced = drawRarity(candidates, rnd, banner.guaranteeMinRarityX10);
+        if (forced) {
+          rarity = forced;
+          guaranteeForces = true;
+        }
+      }
+    }
+
     const entry = drawEntry(pool, rarity, rnd);
     if (!entry) {
       empty += 1;
@@ -288,8 +307,8 @@ export function simulate(
     byEntry[entry.id] = (byEntry[entry.id] ?? 0) + 1;
     blockBest = Math.max(blockBest, rarityRank(rarity));
 
-    if (pityForces) pityHits += 1;
-    else if (guaranteeForces) guaranteeHits += 1;
+    if (guaranteeForces) guaranteeHits += 1;
+    else if (pityForces) pityHits += 1;
 
     // The counter resets on a pull that REACHED the rarity, however it got
     // there — a pity that fires resets itself, and so does a lucky Legendary.

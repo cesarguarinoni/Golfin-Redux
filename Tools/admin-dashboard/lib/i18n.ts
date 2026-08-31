@@ -754,6 +754,7 @@ export const DICT = {
   "tel.tab.funnel": { en: "Funnel", ja: "ファネル" },
   "tel.tab.holes": { en: "Holes", ja: "ホール" },
   "tel.tab.shots": { en: "Shot quality", ja: "ショット品質" },
+  "tel.tab.gacha": { en: "Gacha funnel", ja: "ガチャファネル" },
   "tel.tab.testers": { en: "Testers", ja: "テスター" },
   "tel.tab.events": { en: "Events", ja: "イベント" },
 
@@ -810,6 +811,61 @@ export const DICT = {
   },
   "tel.shots.timingMul": { en: "Avg power multiplier", ja: "平均パワー倍率" },
   "tel.shots.none": { en: "No shots recorded in this range.", ja: "この期間に記録されたショットはありません。" },
+
+  // gacha_ops_polish §3 — the behaviour view. The pull LOG says what was won; this
+  // says what happened to everyone who looked and did not pull.
+  "tel.gacha.title": {
+    en: "Gacha funnel — does anyone pull",
+    ja: "ガチャファネル — 実際に引かれているか",
+  },
+  "tel.gacha.views": { en: "Banner views", ja: "バナー表示" },
+  "tel.gacha.viewsSub": { en: "{n} players", ja: "{n}人のプレイヤー" },
+  "tel.gacha.taps": { en: "PULL taps", ja: "PULLタップ" },
+  "tel.gacha.tapsHint": {
+    en: "gacha_pull_tap ÷ gacha_banner_view. Recorded before the server is asked, so a tap the server then refuses still counts here.",
+    ja: "gacha_pull_tap ÷ gacha_banner_view。サーバーに問い合わせる前に記録するため、サーバーに拒否されたタップもここには計上されます。",
+  },
+  "tel.gacha.pulls": { en: "Pulls completed", ja: "成立した排出" },
+  "tel.gacha.pullsHint": {
+    en: "status=ok ÷ taps. Everything between a tap and a pull is a refusal — see the insufficient rate and the per-status counts. Amber below 70%.",
+    ja: "status=ok ÷ タップ数。タップと排出の差はすべて拒否です（チケット不足率とステータス別の内訳を参照）。70%未満で警告色になります。",
+  },
+  "tel.gacha.latency": { en: "Mean pull latency", ja: "平均応答時間" },
+  "tel.gacha.latencySub": { en: "over {n} answers", ja: "{n}件の応答" },
+  "tel.gacha.latencyHint": {
+    en: "Measured from the tap to the server's answer — what the player waits, refusals included.",
+    ja: "タップからサーバー応答までの実測値です。拒否された場合も含みます。",
+  },
+  "tel.gacha.insufficient": { en: "Insufficient tickets", ja: "チケット不足" },
+  "tel.gacha.insufficientHint": {
+    en: "status=insufficient ÷ all answers. The one refusal that is an economy signal rather than a configuration mistake.",
+    ja: "status=insufficient ÷ 全応答。設定ミスではなく経済バランスのシグナルとなる唯一の拒否理由です。",
+  },
+  "tel.gacha.skip": { en: "Reveal skipped", ja: "演出スキップ" },
+  "tel.gacha.skipHint": {
+    en: "gacha_reveal_skip ÷ completed pulls. A statement about the animation, not about the pull.",
+    ja: "gacha_reveal_skip ÷ 成立した排出。排出内容ではなく演出そのものへの評価です。",
+  },
+  "tel.gacha.rules": { en: "Rates opened", ja: "確率表示" },
+  "tel.gacha.rulesHint": {
+    en: "gacha_rules_open ÷ banner views — whether the in-app odds disclosure is read at all.",
+    ja: "gacha_rules_open ÷ バナー表示。アプリ内の確率表示が実際に読まれているかを示します。",
+  },
+  "tel.gacha.forced": { en: "Pity / x10 forced", ja: "天井 / 10連確定" },
+  "tel.gacha.forcedSub": { en: "{n} duplicates", ja: "重複{n}件" },
+  "tel.gacha.forcedHint": {
+    en: "Pulls where the server forced a rarity floor, as the client saw it. The pull log is the authority; this is here to show the two agree.",
+    ja: "サーバーがレアリティ下限を強制した排出の件数（クライアント側から見た値）。正となるのは排出ログで、ここは両者の一致を確認するためのものです。",
+  },
+  "tel.gacha.col.banner": { en: "Banner", ja: "バナー" },
+  "tel.gacha.col.views": { en: "Views", ja: "表示" },
+  "tel.gacha.col.taps": { en: "Taps", ja: "タップ" },
+  "tel.gacha.col.pulls": { en: "Pulls", ja: "排出" },
+  "tel.gacha.col.conv": { en: "View → pull", ja: "表示→排出" },
+  "tel.gacha.none": {
+    en: "No gacha activity in this range.",
+    ja: "この期間にガチャの利用はありません。",
+  },
 
   "tel.testers.title": { en: "Testers", ja: "テスター" },
   "tel.testers.col.tester": { en: "Tester", ja: "テスター" },
@@ -1457,8 +1513,8 @@ export const DICT = {
     ja: "バナーはカタログの行です。",
   },
   "gb.notice.body": {
-    en: "Publishing makes a banner the next build's bundled floor and the overlay for installed builds (gacha_client_real_pull). Pulls still run on the client-side mock until gacha_server_pull ships — nothing here changes what a pull pays out yet.",
-    ja: "公開すると、そのバナーは次のビルドに同梱される基準データとなり、インストール済みビルドにはオーバーレイとして配信されます（gacha_client_real_pull）。ただしガチャの抽選は gacha_server_pull が入るまでクライアント側のモックのままで、ここでの編集が排出内容を変えることはまだありません。",
+    en: "Publishing makes a banner the next build's bundled floor and the overlay for installed builds. The server rolls every pull from these rows — a change here is live on the next pull.",
+    ja: "公開すると、そのバナーは次のビルドに同梱される基準データとなり、インストール済みビルドにはオーバーレイとして配信されます。ガチャの抽選はサーバーがこれらの行から行うため、ここでの変更は次の排出から反映されます。",
   },
   "gb.state.hint": {
     en: "Derived from startUtc / endUtc on the server clock (endUtc is EXCLUSIVE). A row with active=false reads OFF regardless of its window.",

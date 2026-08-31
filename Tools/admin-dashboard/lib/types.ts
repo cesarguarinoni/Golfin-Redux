@@ -1,5 +1,7 @@
 /** Shared domain types for the GOLFIN admin dashboard. */
 
+import type { GachaFunnel } from "./telemetryGacha";
+
 export type AuthProvider = "email" | "google" | "apple";
 
 /** One row in the Users panel list — auth.users joined with public.profiles. */
@@ -637,6 +639,9 @@ export interface TelemetrySummaryResponse extends TelemetryReadMeta {
   funnel: FunnelStage[];
   holes: HoleStat[];
   shots: ShotQuality;
+  /** gacha_ops_polish §3 — the five gacha_* events, folded. Shape in
+   *  `lib/telemetryGacha.ts`, which is where it is computed and tested. */
+  gacha: GachaFunnel;
   /** Distinct event names seen in range — populates the explorer's filter. */
   eventNames: string[];
 }

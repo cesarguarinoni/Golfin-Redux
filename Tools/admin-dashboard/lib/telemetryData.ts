@@ -3,6 +3,7 @@ import { fetchUserDirectory, type UserIdentity } from "./data";
 import { MOCK_NOW, MOCK_TELEMETRY_EVENTS, type MockEventRow } from "./mockTelemetry";
 import { isMockMode } from "./mode";
 import { getSupabaseAdmin } from "./supabaseAdmin";
+import { buildGachaFunnel, type GachaEventRow } from "./telemetryGacha";
 import type {
   ClubStat,
   FunnelStage,
@@ -450,6 +451,9 @@ export async function fetchTelemetrySummary(
     funnel: buildFunnel(rows),
     holes: buildHoles(rows),
     shots: buildShotQuality(rows),
+    // §3 — folded from the SAME scan every other section reads, so the gacha card
+    // can never describe a different window than the KPIs above it.
+    gacha: buildGachaFunnel(rows as GachaEventRow[]),
     eventNames: [...new Set(rows.map((r) => String(r.name ?? "")))].filter(Boolean).sort(),
   };
 }

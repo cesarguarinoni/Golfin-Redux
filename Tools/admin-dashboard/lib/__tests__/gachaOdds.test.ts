@@ -151,10 +151,22 @@ describe("simulate", () => {
     // distribution ON PURPOSE — every pity hit converts a would-be Common into
     // a Legendary or better. 1.5 points is the acceptance's threshold for
     // "the published table still describes what players get".
-    const result = simulate(RATES, POOL, WITH_PITY, 10000, SEED);
+    //
+    // AVERAGED OVER FIVE SEEDS, not measured on one (gacha_ops_polish §4b). At
+    // 10 000 pulls a single seed's Common share swings between −0.7 and −1.7
+    // points, so a one-seed assertion at 1.5 was a coin toss dressed as a gate:
+    // §4b changed how many random draws a guaranteed block consumes — which
+    // changes NO distribution — and that alone was enough to move the fixture's
+    // seed from −1.50 to −1.69 and fail it. The mean is the number the threshold
+    // was always describing.
+    const seeds = [SEED, 1234, 7, 99, 555];
     for (const rate of RATES) {
-      const observed = (result.observed[rate.rarity] ?? 0) / result.pulls;
-      expect(Math.abs(observed - rate.rateBp / 10000)).toBeLessThanOrEqual(0.015);
+      const deltas = seeds.map((seed) => {
+        const result = simulate(RATES, POOL, WITH_PITY, 10000, seed);
+        return (result.observed[rate.rarity] ?? 0) / result.pulls - rate.rateBp / 10000;
+      });
+      const mean = deltas.reduce((sum, d) => sum + d, 0) / deltas.length;
+      expect(Math.abs(mean)).toBeLessThanOrEqual(0.015);
     }
   });
 
@@ -222,7 +234,12 @@ describe("simulate", () => {
     expect(result.pityHits).toBeGreaterThan(450);
   });
 
-  it("fires the x10 guarantee only on blocks that did not already reach the rarity", () => {
+  it("fires the x10 guarantee only on blocks where all TEN slots missed the rarity", () => {
+    // gacha_ops_polish §4b. This asserted ~0.8^9 (the first NINE slots) because
+    // that is what the old implementation did; `golfin_gacha_pull()` (B §3)
+    // rolls slot 9 normally and re-rolls it only when all TEN missed, which is
+    // 0.8^10 ≈ 0.107. The prizes are the same either way — the FLAG is not, and
+    // the flag is what the admin shows and what the pull log records.
     const guaranteeOnly: BannerRoll = {
       poolId: "pool_standard_club1",
       pityThreshold: 0,
@@ -230,15 +247,37 @@ describe("simulate", () => {
       guaranteeMinRarityX10: "Rare",
     };
     const result = simulate(RATES, POOL, guaranteeOnly, 10000, SEED);
-    // 1000 blocks of ten. P(no Rare+ in the first nine) = 0.8^9 ≈ 0.134, so the
-    // guarantee should fire on roughly 134 of them and NEVER on all 1000.
-    expect(result.guaranteeHits).toBeGreaterThan(60);
-    expect(result.guaranteeHits).toBeLessThan(250);
+    // 1000 blocks of ten. P(no Rare+ in all TEN) = 0.8^10 ≈ 0.107, so roughly
+    // 107 blocks — and the window excludes the 0.8^9 ≈ 134 the old rule gave.
+    expect(result.guaranteeHits).toBeGreaterThan(70);
+    expect(result.guaranteeHits).toBeLessThan(145);
     // And it must lift the Rare-or-better share above the published 20 %.
     const rarePlus = Object.entries(result.observed)
       .filter(([rarity]) => rarityRank(rarity) >= rarityRank("Rare"))
       .reduce((sum, [, n]) => sum + n, 0);
     expect(rarePlus / result.pulls).toBeGreaterThan(0.2);
+  });
+
+  it("never fires the guarantee on a block whose slot 9 reached the rarity by luck", () => {
+    // The sharp edge of §4b, stated as an invariant rather than as a rate: a
+    // block that ends on a Rare+ is a block the guarantee did NOT rescue, so the
+    // number of flagged blocks can never exceed the number of blocks whose every
+    // slot would otherwise have missed. Re-deriving that from `observed` is not
+    // possible (the forced slot IS a Rare), so the bound used here is the one
+    // fact the old rule violated: guaranteeHits < blocks × 0.8^9.
+    const guaranteeOnly: BannerRoll = {
+      poolId: "pool_standard_club1",
+      pityThreshold: 0,
+      pityMinRarity: "",
+      guaranteeMinRarityX10: "Rare",
+    };
+    const blocks = 2000;
+    const result = simulate(RATES, POOL, guaranteeOnly, blocks * 10, SEED);
+    const nineSlotRate = Math.pow(0.8, 9);   // 0.1342 — what the old code produced
+    const tenSlotRate  = Math.pow(0.8, 10);  // 0.1074 — what the server produces
+    const observedRate = result.guaranteeHits / blocks;
+    expect(observedRate).toBeLessThan((nineSlotRate + tenSlotRate) / 2);
+    expect(Math.abs(observedRate - tenSlotRate)).toBeLessThan(0.02);
   });
 
   it("does not carry guarantee state from one call into the next", () => {

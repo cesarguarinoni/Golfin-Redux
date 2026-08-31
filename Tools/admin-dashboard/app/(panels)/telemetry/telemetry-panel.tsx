@@ -29,6 +29,7 @@ const SECTIONS = [
   { id: "funnel", key: "tel.tab.funnel" },
   { id: "holes", key: "tel.tab.holes" },
   { id: "shots", key: "tel.tab.shots" },
+  { id: "gacha", key: "tel.tab.gacha" },
   { id: "testers", key: "tel.tab.testers" },
   { id: "events", key: "tel.tab.events" },
 ] as const satisfies readonly { id: string; key: DictKey }[];
@@ -258,7 +259,7 @@ export function TelemetryPanel() {
     );
   }
 
-  const { kpis, funnel, holes, shots } = summary;
+  const { kpis, funnel, holes, shots, gacha } = summary;
   const truncatedHint = t("tel.truncatedHint");
   const isEmpty = summary.rowCount === 0;
 
@@ -536,6 +537,106 @@ export function TelemetryPanel() {
                 <tr>
                   <td colSpan={3} className="px-4 py-10 text-center text-sm text-zinc-600">
                     {t("tel.shots.none")}
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </Section>
+
+      {/* gacha_ops_polish §3 — the gacha funnel. views → taps → pulls, plus the two rates
+          that say WHY the drop-off happened (refusals, skips). The server's pull log has a row
+          per pull and therefore cannot see anyone who looked and did not pull; this can. */}
+      <Section id="gacha" title={t("tel.gacha.title")}>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          <Card
+            label={t("tel.gacha.views")}
+            value={gacha.views.toLocaleString()}
+            sub={t("tel.gacha.viewsSub", { n: gacha.players.toLocaleString() })}
+          />
+          <Card
+            label={t("tel.gacha.taps")}
+            value={gacha.taps.toLocaleString()}
+            sub={pct(gacha.tapRate, 1)}
+            hint={t("tel.gacha.tapsHint")}
+          />
+          <Card
+            label={t("tel.gacha.pulls")}
+            value={gacha.pulls.toLocaleString()}
+            sub={`${pct(gacha.pullRate, 1)} · ${gacha.pullsX1.toLocaleString()} ×1 / ${gacha.pullsX10.toLocaleString()} ×10`}
+            hint={t("tel.gacha.pullsHint")}
+            // Amber below 70%: more than three taps in ten ending in a refusal is a
+            // configuration problem (price, cap, pause), not player indecision.
+            tone={gacha.pullRate !== null && gacha.pullRate < 0.7 ? "amber" : "accent"}
+            wide
+          />
+          <Card
+            label={t("tel.gacha.latency")}
+            value={gacha.meanLatencyMs === null ? "—" : `${Math.round(gacha.meanLatencyMs)} ms`}
+            sub={t("tel.gacha.latencySub", { n: gacha.results.toLocaleString() })}
+            hint={t("tel.gacha.latencyHint")}
+          />
+        </div>
+
+        <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          <Card
+            label={t("tel.gacha.insufficient")}
+            value={pct(gacha.insufficientRate, 1)}
+            sub={(gacha.byStatus.insufficient ?? 0).toLocaleString()}
+            hint={t("tel.gacha.insufficientHint")}
+            tone={
+              gacha.insufficientRate !== null && gacha.insufficientRate > 0.2 ? "amber" : "normal"
+            }
+          />
+          <Card
+            label={t("tel.gacha.skip")}
+            value={pct(gacha.skipRate, 1)}
+            sub={gacha.skips.toLocaleString()}
+            hint={t("tel.gacha.skipHint")}
+            tone={gacha.skipRate !== null && gacha.skipRate > 0.5 ? "amber" : "normal"}
+          />
+          <Card
+            label={t("tel.gacha.rules")}
+            value={pct(gacha.rulesRate, 1)}
+            sub={gacha.rulesOpens.toLocaleString()}
+            hint={t("tel.gacha.rulesHint")}
+          />
+          <Card
+            label={t("tel.gacha.forced")}
+            value={`${gacha.pityForced.toLocaleString()} / ${gacha.guaranteeForced.toLocaleString()}`}
+            sub={t("tel.gacha.forcedSub", { n: gacha.dupes.toLocaleString() })}
+            hint={t("tel.gacha.forcedHint")}
+          />
+        </div>
+
+        <div className="mt-3 overflow-x-auto rounded-lg border border-surface-800">
+          <table className="w-full min-w-[520px] text-left text-sm">
+            <thead className="bg-surface-900 text-xs text-zinc-500">
+              <tr>
+                <th className="whitespace-nowrap px-4 py-2.5 font-medium">{t("tel.gacha.col.banner")}</th>
+                <th className="whitespace-nowrap px-4 py-2.5 text-right font-medium">{t("tel.gacha.col.views")}</th>
+                <th className="whitespace-nowrap px-4 py-2.5 text-right font-medium">{t("tel.gacha.col.taps")}</th>
+                <th className="whitespace-nowrap px-4 py-2.5 text-right font-medium">{t("tel.gacha.col.pulls")}</th>
+                <th className="whitespace-nowrap px-4 py-2.5 text-right font-medium">{t("tel.gacha.col.conv")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {gacha.perBanner.map((row) => (
+                <tr key={row.bannerId} className="border-t border-surface-800 bg-surface-950">
+                  <td className="px-4 py-2.5 font-mono text-xs text-zinc-300">{row.bannerId}</td>
+                  <td className="px-4 py-2.5 text-right tabular-nums text-zinc-300">{row.views}</td>
+                  <td className="px-4 py-2.5 text-right tabular-nums text-zinc-300">{row.taps}</td>
+                  <td className="px-4 py-2.5 text-right tabular-nums text-zinc-300">{row.pulls}</td>
+                  <td className="px-4 py-2.5 text-right tabular-nums text-zinc-400">
+                    {pct(row.views > 0 ? row.pulls / row.views : null, 1)}
+                  </td>
+                </tr>
+              ))}
+              {gacha.perBanner.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="px-4 py-10 text-center text-sm text-zinc-600">
+                    {t("tel.gacha.none")}
                   </td>
                 </tr>
               )}
