@@ -5,7 +5,7 @@
 
 ---
 
-## 🟡 AWAITING APPROVAL — `gacha_admin_catalogs` (2026-08-31)
+## ✅ SHIPPED — `gacha_admin_catalogs` **approved by Cesar** (2026-08-31)
 
 **Gacha is now admin-managed content.** Spec A of `Docs/GACHA_ADMIN_PLAN.md`. `gacha_banners`
 (extended in place, 13 new columns), `gacha_rates`, `gacha_pools` and `ticket_types` are content
@@ -38,8 +38,18 @@ upload, and three panels on the shared `CatalogPanel` — Gacha Banners, Gacha P
   `taglineJa` live in the row and the card draws them over the image, like the countdown already
   does. The editor says so in amber at the point of upload.
 
+Verified live in the admin before approval (Architect via Cesar's session): footer stamp
+`b42c8bff7`, the four banner rows with their badges and pity column, the effective-odds table at
+100.00 %, Simulate reproducing the report's numbers, `Σ = 10000 ✓`.
+
 Next: **B** `gacha_server_pull` (the migration, `golfin_gacha_pull()`, the ticket ledger, the ops
-panel) and **C** `gacha_client_real_pull` (overlay, withhold, real spend) — specs already filed.
+panel) — unblocked now that the seed is on prod — then **C** `gacha_client_real_pull` (overlay,
+withhold, real spend) and **D** `gacha_ops_polish`. Specs for all three are filed in
+`Docs/Specs/Active/`.
+
+One follow-up quick task fell out of this: `ALLOWED_COLUMNS` in `contentArtMutations.ts` is a flat
+list rather than per-catalog, so an upload names a valid catalog and a valid column independently.
+Pre-existing, admin-only, audited; not blocking.
 
 ---
 
