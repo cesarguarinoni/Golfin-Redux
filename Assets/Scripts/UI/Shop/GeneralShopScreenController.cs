@@ -49,6 +49,11 @@ namespace GolfinRedux.UI.Shop
             WireChip("BALLSChip",      ShopCategory.Ball);
             WireChip("CHARACTERSChip", ShopCategory.Character);
             WireChip("ITEMSChip",      ShopCategory.Item);
+            // gacha_ops_polish §5. The prefab has always carried a TICKETS chip — whoever authored
+            // the row anticipated this category — but it was never wired, so tapping it did
+            // nothing and `_activeCategory` stayed null. Harmless while no ticket row existed;
+            // a dead filter the moment one did.
+            WireChip("TICKETSChip",    ShopCategory.Ticket);
         }
 
         private void OnEnable()
@@ -97,6 +102,7 @@ namespace GolfinRedux.UI.Shop
             SetChipActive("BALLSChip",      _activeCategory == ShopCategory.Ball);
             SetChipActive("CHARACTERSChip", _activeCategory == ShopCategory.Character);
             SetChipActive("ITEMSChip",      _activeCategory == ShopCategory.Item);
+            SetChipActive("TICKETSChip",    _activeCategory == ShopCategory.Ticket);
         }
 
         private void SetChipActive(string chipName, bool active)

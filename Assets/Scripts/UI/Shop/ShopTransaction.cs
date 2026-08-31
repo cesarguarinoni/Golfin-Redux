@@ -277,7 +277,22 @@ namespace GolfinRedux.UI.Shop
                     }
                     return true;
 
-                default: // Ball — stacks as well (and -1 means unlimited).
+                // gacha_ops_polish §5 — TICKETS have nothing to pre-check.
+                //
+                // They stack without limit, and the balance is the SERVER's ledger
+                // (`golfin_tickets`): there is no local row to look up, no owned state, and no
+                // unlimited sentinel. `golfin_shop_purchase` resolves the refId in `ticket_types`
+                // and credits the ledger in its own transaction, so admitting here and letting the
+                // server answer is the whole check.
+                //
+                // ⚠️ It needs its own case because the fallthrough below MEANT BALL. A ticket
+                // reached it, `GetBall("0")` returned null, and the purchase was refused with
+                // "Unknown ball '0'" before the server was ever asked — the first ticket listing
+                // was unbuyable for a reason that named the wrong category entirely.
+                case ShopCategory.Ticket:
+                    return true;
+
+                case ShopCategory.Ball: // stacks as well (and -1 means unlimited).
                     if (SaveDataHost.Instance == null || BallDatabaseCSV.Instance?.GetBall(entry.RefId) == null)
                     {
                         Debug.LogWarning($"[ShopTransaction] Unknown ball '{entry.RefId}' or no SaveDataHost.");
@@ -290,6 +305,15 @@ namespace GolfinRedux.UI.Shop
                         return false;
                     }
                     return true;
+
+                // NOT `default: // Ball`, which is what this was. A category the switch has never
+                // heard of must fail LOUDLY rather than quietly become a ball — the same reasoning
+                // GeneralShopModel.ParseCategory records for its own default.
+                default:
+                    Debug.LogError($"[ShopTransaction] Category '{entry.Category}' has no pre-check. " +
+                                   "Refusing rather than guessing which one it resembles.");
+                    verdict = GeneralPurchaseResult.Invalid;
+                    return false;
             }
         }
 
@@ -414,6 +438,23 @@ namespace GolfinRedux.UI.Shop
             ShopCatalogEntry entry, int cost, RewardPointsManager rpm,
             Action onGranted, Action<GeneralPurchaseResult> onResult)
         {
+            // gacha_ops_polish §5 — REFUSE BEFORE SPENDING, not inside the grant switch.
+            //
+            // A TICKET has no client-side grant: the balance lives in `golfin_tickets` and only
+            // `golfin_shop_purchase` writes it. The switch below used to end in
+            // `default: GrantBall(entry.RefId)`, so a ticket on this path would have charged RP and
+            // handed the player a BALL with the refId "0". Refusing inside the switch would be no
+            // better — `rpm.SpendPoints` runs first — so the guard has to be here, ahead of the
+            // spend gate entirely.
+            if (entry.Category == ShopCategory.Ticket)
+            {
+                Debug.LogWarning($"[ShopTransaction] '{entry.EntryId}' is a ticket listing and the " +
+                                 "backend flag is OFF. Tickets exist only in the server ledger, so " +
+                                 "there is nothing to grant locally — refusing without spending.");
+                onResult?.Invoke(GeneralPurchaseResult.Invalid);
+                return;
+            }
+
             PointsSpendGate.Spend(cost, SpendReasons.ShopPurchase,
                 onApproved: () =>
                 {
@@ -426,7 +467,16 @@ namespace GolfinRedux.UI.Shop
                         case ShopCategory.Club:      ClubManager.Instance.GrantClub(entry.RefId); break;
                         case ShopCategory.Character: CharacterManager.Instance.UnlockCharacter(entry.RefId); break;
                         case ShopCategory.Item:      ItemManager.Instance.AddItems(entry.RefId, 1); break;
-                        default:                     GrantBall(entry.RefId); break;
+                        case ShopCategory.Ball:      GrantBall(entry.RefId); break;
+
+                        // Unreachable — the guard at the top of this method refuses anything with
+                        // no local grant BEFORE a point is spent. Loud rather than silent, because
+                        // reaching it would mean RP has already left the player's balance.
+                        default:
+                            Debug.LogError($"[ShopTransaction] '{entry.Category}' reached the local " +
+                                           "grant switch with no case, AFTER the spend. The guard at " +
+                                           "the top of PurchaseLocally is out of step with this switch.");
+                            break;
                     }
 
                     onGranted?.Invoke();

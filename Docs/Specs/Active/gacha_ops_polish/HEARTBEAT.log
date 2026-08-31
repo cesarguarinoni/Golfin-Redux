@@ -20,3 +20,11 @@ DIRTY:
   (default-ball guard) built: derived PNGs, ticket_types v2 published, balls v6 published with
   isDefault, admin validator rules + tests (47 in gachaValidate), server migration written and
   parse-checked. EditMode 2146/0. Dashboard vitest 233. Next: deploy, then §5.
+
+2026-08-31T13:06:16Z §5 CLOSED. Build 2534 then 2537 uploaded to TestFlight (Cesar approved
+  both runs). TICKET_SHOP_BUILD=2534 read from the guard file; shop_catalog v5 published with
+  shop_ticket_standard_50 (50 tickets / 100 RP / minBuild 2536) through the SHIPPED validateCatalog.
+  Live purchase verified by SQL: golfin_shop_purchases amount=50 charged_rp=100, tickets 2840->2890,
+  pending_grants unchanged at 52. FOUR defects found and fixed in the ticket path along the way
+  (quantity unparsed, price/BUY hidden, TICKETS chip unwired, PreCheck default==Ball).
+  EditMode 2146/0. Scene reverted from disk after play mode — never saved.

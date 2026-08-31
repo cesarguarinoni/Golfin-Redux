@@ -448,8 +448,31 @@ namespace GolfinRedux.UI.Shop
             SetText("HMid", string.Empty);
             SetActive("HLevel", false);
 
+            // The two `HDiv` pipes bracket the rarity/level block — "IRON 9 KLYRO | U | Lv 40/79".
+            // A ticket has neither, so HMid is blank and HLevel is off, and leaving the dividers on
+            // renders a bare "TICKET | |". They are two SIBLINGS SHARING ONE NAME, so `Find` (which
+            // returns the first) cannot hide them both — hence the explicit child walk.
+            //
+            // Same correction the prize card already took on this exact shape: gacha_client_real_pull
+            // was rejected for leaving a distance arc on a non-club prize (5d412a17d). `DistRow/Icon`
+            // is that arc; BindItem swaps it for the restore glyph and BindCharacter hides the whole
+            // row. A "×50" needs no icon at all.
+            SetActive("DistRow/Icon", false);
+            for (int i = 0; i < transform.childCount; i++)
+            {
+                var child = transform.GetChild(i);
+                if (child.name == "HDiv") child.gameObject.SetActive(false);
+            }
+
             ConstrainName();
-            HidePriceAndBuy();
+
+            // ⚠️ NO HidePriceAndBuy() HERE (gacha_ops_polish §5). It used to be — copied from
+            // BindForDisplay's ending, which is the DISPLAY path and where it belongs — and it
+            // made a ticket listing UNBUYABLE. `Bind` calls BindPrice/WireBuy AFTER this switch,
+            // and neither re-activated a GameObject that had been switched off, so the first
+            // ticket card rendered "TICKET ×50" with no price and no BUY at all. None of the other
+            // four per-category binders hides anything; BindTicket is only ever reached from
+            // `Bind`, i.e. the shop.
         }
 
         /// <summary>
@@ -509,6 +532,11 @@ namespace GolfinRedux.UI.Shop
 
         private void BindPrice(ShopCatalogEntry entry)
         {
+            // A card instance is reused, and BindForDisplay switches PriceBox off. Re-showing it
+            // here — rather than trusting whatever the previous bind left — is what makes `Bind`
+            // idempotent: the SHOP path shows a price, always, whatever this instance was last.
+            SetActive("PriceBox", true);
+
             var box     = Find("PriceBox")?.GetComponent<Image>();
             var orig    = Find("PriceBox/Orig");
             var saleBg  = Find("PriceBox/SaleBG");
@@ -564,6 +592,9 @@ namespace GolfinRedux.UI.Shop
 
         private void WireBuy(ShopCatalogEntry entry)
         {
+            // Same reason as BindPrice's first line: the SHOP path always has a BUY control.
+            SetActive("CtaGoldButton", true);
+
             var btn   = BuyButton;
             var label = BuyLabel;
             if (btn == null) return;
