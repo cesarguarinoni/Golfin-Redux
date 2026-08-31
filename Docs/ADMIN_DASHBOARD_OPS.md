@@ -13,8 +13,9 @@ Full detail lives in that folder's `README.md`; this file is the operator's view
 Next.js 15 (App Router) + TypeScript + Tailwind, deployed to **Cloudflare
 Workers** via the OpenNext adapter, reading the PLAYLIFE Supabase project
 directly with a `service_role` key. Panels — Audit Log, Banners, Characters,
-Clubs, Items, Level Costs, Modes, Notices, Points, Rewards, Shop, Telemetry,
-Texts, Tournaments, Users — registered in `lib/registry.ts`. The
+Clubs, Daily Missions, Gacha Banners, Gacha Pools, Items, Level Costs, Mission
+Components, Missions, Modes, Notices, Points, Rewards, Shop, Telemetry, Texts,
+Ticket Types, Tournaments, Users — registered in `lib/registry.ts`. The
 sidebar renders them **sorted by their translated title**, so the order follows
 whichever language is showing and the array order in the registry is not
 load-bearing.

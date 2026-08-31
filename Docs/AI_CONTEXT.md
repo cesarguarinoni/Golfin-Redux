@@ -5,6 +5,44 @@
 
 ---
 
+## 🟡 AWAITING APPROVAL — `gacha_admin_catalogs` (2026-08-31)
+
+**Gacha is now admin-managed content.** Spec A of `Docs/GACHA_ADMIN_PLAN.md`. `gacha_banners`
+(extended in place, 13 new columns), `gacha_rates`, `gacha_pools` and `ticket_types` are content
+catalogs **#17–#20**: CSV ↔ admin two-way, drafts/publish/rollback, publish validation, art
+upload, and three panels on the shared `CatalogPanel` — Gacha Banners, Gacha Pools
+(`Pools` | `Rates` tabs) and Ticket Types. **The game's behaviour does not change.** Deployed:
+`222a318d-e5eb-4d25-98cb-81a816e9570c`, stamped `b42c8bff7`.
+
+- **The only client edit is a parser rail.** `GachaBannerCatalog.ParseCsv` is header-indexed and
+  quote-aware, so the exporter's QUOTE_MINIMAL canonical form — a `taglineEn` containing a comma —
+  cannot shift the nine columns the shipped build reads. The 15 existing `GachaStage2Tests` pass
+  **unmodified** (proven by a tripwire, since a green run hides which tests ran); three were added.
+  The Rewards Center still shows the same three live banners, captured through the real nav button.
+- **`lib/gachaOdds.ts` is the reference the server roll gets checked against** in spec B —
+  `effectiveOdds` + a seeded `simulate` (mulberry32), pure, unit-tested. Roll order is pity /
+  x10-guarantee → rarity by `rateBp` → item by `weight`; changing it here means changing
+  `golfin_gacha_pull()` too. At 10 000 pulls on the seed pool the observed distribution is within
+  **1.00 pt** of published, pity fires 89× on `banner_standard_club1` and **0×** on
+  `banner_test_a` (decision 2: blank and `0` both mean no pity).
+- **Twenty rules gate a publish** (`lib/contentValidate.ts`, 44 vitest cases): rates sum to 10 000
+  per pool with one row per rarity; every rarity with a rate has a prize and vice-versa, checked
+  from BOTH publishes so no publish ORDER can leave the pair inconsistent; a pool entry's rarity
+  must EQUAL the referenced club's; a LIVE banner needs both locales and some artwork; a ticket
+  type an active banner charges cannot be deactivated.
+- **Both round trips ran on prod and are pasted in the report.** CSV edit → import → the drawer
+  diff shows exactly that one field → publish → export byte-identical; then a `rateBp` edited in
+  the admin → publish → export → the CSV carries it. `export_content.py --check` covers twenty
+  catalogs and is clean.
+- **Banner text is never in the artwork** (decision 7): `nameEn` / `nameJa` / `taglineEn` /
+  `taglineJa` live in the row and the card draws them over the image, like the countdown already
+  does. The editor says so in amber at the point of upload.
+
+Next: **B** `gacha_server_pull` (the migration, `golfin_gacha_pull()`, the ticket ledger, the ops
+panel) and **C** `gacha_client_real_pull` (overlay, withhold, real spend) — specs already filed.
+
+---
+
 ## ✅ SHIPPED — `gacha_reveal_animation` **approved by Cesar** (2026-08-31)
 
 **A gacha pull now has a reveal moment.** PULL x1 / x10 on a banner card — and PULL ("pull again")

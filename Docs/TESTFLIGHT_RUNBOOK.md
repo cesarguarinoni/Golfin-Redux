@@ -96,7 +96,11 @@ live for anyone who reaches the network and absent for everyone who does not, wh
 hardest kind of report to read.
 
 So the lane refuses to build a stale repo. `--check` writes nothing and exits 1, naming the
-catalog and a sample of the ids.
+catalog and a sample of the ids. It covers **twenty** catalogs as of `gacha_admin_catalogs`
+(2026-08-31): the sixteen it already had plus `gacha_banners`, `gacha_rates`, `gacha_pools` and
+`ticket_types`. The gacha four are the ones a stale export hurts most on the next build — the
+server rolls a pull from the PUBLISHED rows, so a bundled floor that disagrees shows a banner
+whose price or odds are not the ones the pull will use.
 
 ```bash
 python3 Tools/content/export_content.py --env-file Tools/admin-dashboard/.env.development.local --check
