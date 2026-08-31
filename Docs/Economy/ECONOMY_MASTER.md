@@ -68,7 +68,28 @@ Decisions of record (Ken-doc §04 as amended by Cesar's comments [a][d][g][i]):
   Recommendation: rotating shop subset; consider Supreme earn-only (tournament prizes) for
   scarcity. All within "RP only" — no money path.
 - **Gacha realization:** wire a real prize pool (club variants are the natural filler) before
-  treating gacha as a sink; odds published per banner `rulesUrl`.
+  treating gacha as a sink; odds published per banner `rulesUrl`. **SHIPPED 2026-08-31** — the
+  server rolls every pull from the published `gacha_rates` x `gacha_pools`, and the odds are now
+  disclosed IN THE APP (RATES & RULES modal, `gacha_ops_polish` §2) rather than at a URL.
+- **Gacha tickets — the RP sink is LIVE (NEW, `gacha_ops_polish` §5, 2026-08-31).** This is the
+  first line item that converts RP into gacha pulls, and until now §3 had none.
+
+  | | |
+  |---|---|
+  | Listing | `shop_ticket_standard_50` — 50 Standard tickets for **100 RP** (`minBuild` 2536) |
+  | Pull price | 50 tickets per x1, 450 per x10 (`gacha_banners.costX1` / `costX10`, operator-set) |
+  | So | **100 RP = one x1 pull**; a x10 costs 900 RP if bought entirely with RP |
+
+  Anchors it sits between: the ball listing (50 RP) and the Common club (100 RP). At the ≈61
+  RP/day recurring earn (Daily Mission 30 + streak + replays, §3 missions above) that is **~1.6
+  days per pull**, or ~15 days for a x10 — deliberately slower than the mission loop pays, so
+  tickets stay a considered purchase rather than an idle one.
+
+  Tickets also have a NON-RP earn path already designed: the 40-mission campaign grants 6 Gold
+  Tickets one-off and the day-7 streak grants one, so the shop is the accelerator and not the
+  only tap. Cesar set both numbers; revisit once there is pull-rate data — the
+  `gacha_pull_tap` / `gacha_pull_result` funnel (§3 of that spec) exists to answer exactly
+  "is 100 RP the right price".
 - **Repairs:** keep item-based; if a direct RP repair price ships, anchor at ~10–30 RP per use
   so it stays below replay earn rates.
 - **Character unlocks (NEW — flow shipped 2026-08-20):** new players pick ONE starter (James or
