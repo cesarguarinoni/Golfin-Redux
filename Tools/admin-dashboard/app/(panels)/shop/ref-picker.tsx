@@ -28,13 +28,22 @@ export function RefPicker({
   category,
   refId,
   onPick,
+  catalogFor,
 }: {
   category: string;
   refId: string;
-  onPick: (refId: string) => void;
+  /** The resolved row is handed back too — the gacha pool editor copies its
+   *  rarity onto the entry, which it cannot do from an id alone (§5.3). */
+  onPick: (refId: string, resolved?: ResolvedRef) => void;
+  /** Overrides `category → catalog`. The gacha pools panel passes its own map
+   *  (GACHA_KIND_TO_CATALOG): a pool can pay out a TICKET and cannot pay out a
+   *  BAG, so the two maps differ and merging them would offer each editor an
+   *  option the other's validator refuses. Defaults to the shop's map — the
+   *  picker itself is unchanged and unforked. */
+  catalogFor?: Record<string, string>;
 }) {
   const translate = useT();
-  const catalog = SHOP_CATEGORY_TO_CATALOG[category] ?? "";
+  const catalog = (catalogFor ?? SHOP_CATEGORY_TO_CATALOG)[category] ?? "";
 
   const [term, setTerm] = useState("");
   const [open, setOpen] = useState(false);
@@ -117,7 +126,7 @@ export function RefPicker({
                   type="button"
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => {
-                    onPick(option.rowId);
+                    onPick(option.rowId, option);
                     setOpen(false);
                   }}
                   className="flex w-full items-center gap-2 px-2.5 py-1.5 text-left transition hover:bg-surface-800"

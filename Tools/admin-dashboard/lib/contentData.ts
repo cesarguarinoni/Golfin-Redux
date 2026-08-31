@@ -41,6 +41,11 @@ const SEARCH_COLUMN: Record<string, string> = {
   balls: "name",
   texts: "English",
   shop_catalog: "refId",
+  // gacha_admin_catalogs. A banner is searched by its English card title, a
+  // pool entry by what it pays out, a ticket type by its key.
+  gacha_banners: "nameEn",
+  gacha_pools: "refId",
+  ticket_types: "key",
 };
 
 function mapRow(catalog: string, r: Row): ContentStoredRow {
@@ -228,6 +233,10 @@ const FILTERABLE: Record<string, string[]> = {
   mission_loadouts: ["kind"],
   mission_goal_weights: ["goal"],
   daily_mission_weights: ["component"],
+  // gacha_admin_catalogs. `poolId` is the one every gacha panel scopes by.
+  gacha_banners: ["poolId", "ticketType"],
+  gacha_rates: ["poolId", "rarity"],
+  gacha_pools: ["poolId", "kind", "rarity"],
 };
 
 export function filterableFields(catalog: string): string[] {
@@ -522,5 +531,15 @@ export async function fetchVersionSnapshot(
 
 /** The catalogs a `shop_catalog` publish has to resolve refIds against. */
 export const REFERENCED_CATALOGS = ["clubs", "balls", "items", "bags", "characters"];
+
+/**
+ * The catalogs a `gacha_pools` publish resolves `refId` against (§5.5 rule 5).
+ *
+ * Not `REFERENCED_CATALOGS`: a pool entry can pay out a TICKET, which resolves
+ * in `ticket_types`, and cannot pay out a BAG. See GACHA_KIND_TO_CATALOG.
+ */
+export const GACHA_REFERENCED_CATALOGS = [
+  "clubs", "balls", "items", "characters", "ticket_types",
+];
 
 export { ID_COLUMN };

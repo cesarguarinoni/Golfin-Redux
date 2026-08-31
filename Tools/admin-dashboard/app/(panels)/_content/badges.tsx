@@ -1,7 +1,13 @@
 "use client";
 
 import { useT } from "@/components/I18nProvider";
-import { RARITY_STYLE, monogram, monogramHue, type ShopState } from "@/lib/contentView";
+import {
+  RARITY_STYLE,
+  monogram,
+  monogramHue,
+  type GachaBannerState,
+  type ShopState,
+} from "@/lib/contentView";
 import type { ContentDiffKind } from "@/lib/types";
 
 /**
@@ -25,6 +31,26 @@ const SHOP_STATE_STYLE: Record<ShopState, string> = {
 };
 
 export function ShopStateBadge({ state, title }: { state: ShopState; title?: string }) {
+  return (
+    <span
+      title={title}
+      className={`whitespace-nowrap rounded border px-1.5 py-0.5 text-[10px] font-bold ${SHOP_STATE_STYLE[state]}`}
+    >
+      {state}
+    </span>
+  );
+}
+
+/**
+ * The gacha banner state badge (gacha_admin_catalogs §5.2).
+ *
+ * The same five states and the same palette as the shop's, on purpose: an
+ * operator reading LIVE / SCHEDULED / ENDED / OFF / BROKEN in two panels is
+ * reading the same fact about a scheduling window, and giving the gacha its own
+ * colours would suggest otherwise. `GachaBannerState` is a separate type only
+ * because the two are derived from different columns.
+ */
+export function GachaStateBadge({ state, title }: { state: GachaBannerState; title?: string }) {
   return (
     <span
       title={title}

@@ -25,15 +25,15 @@ until somebody publishes it.
 | `catalogs.py` | The catalog ↔ CSV table, and the CSV reader that keeps line layout. Run it directly to print the current row counts. |
 | `rest.py` | Stdlib PostgREST client. Service key from the environment. |
 | `seed_from_csv.py` | Repo CSVs → `2026_08_24_content_seed.sql` (and `--apply` runs it). |
-| `export_content.py` | Published Supabase rows → the nine repo CSVs + `content_version.txt`. |
+| `export_content.py` | Published Supabase rows → the twenty repo CSVs + `content_version.txt`. |
 | `import_content.py` | Repo CSVs → `content_drafts`, as a proposal. The fix for the one drift direction the exporter cannot repair. |
 | `tests/` | `python3 -m unittest discover Tools/content/tests` — stdlib only, no network. A fake PostgREST client (`tests/fakes.py`) stands in for Supabase, shared by the import and export suites. |
 
 ## The catalogs
 
-Nine, and `catalogs.py` is the one place they are listed. Two of them are read by
-the SERVER as well as by the game, which is what makes an edit there a price
-change rather than a display change:
+Twenty, and `catalogs.py` is the one place they are listed. The right-hand column
+names everything that reads a catalog BESIDES the game client; an edit to one of
+those is a price or a payout change, not a display change:
 
 | Catalog | CSV | Also read by |
 |---|---|---|
@@ -46,6 +46,22 @@ change rather than a display change:
 | `shop_catalog` | `Assets/Resources/Data/shop_catalog.csv` | `POST /shop/purchase` prices from the published rows |
 | `level_up_costs` | `Assets/Data/LevelUpCosts.csv` | `golfin_level_up()` sums `cost_r` over the published rows |
 | `modes` | `Assets/Resources/Data/modes.csv` | `POST /points/spend` prices a mode entry, via the `golfin_mode_fees` mirror |
+| `missions` | `Assets/Resources/Data/missions.csv` | `POST /missions/claim` pays from the `golfin_mission_rewards` mirror |
+| `mission_start_areas` | `Assets/Resources/Data/mission_start_areas.csv` | |
+| `mission_wind_presets` | `Assets/Resources/Data/mission_wind_presets.csv` | |
+| `mission_loadouts` | `Assets/Resources/Data/mission_loadouts.csv` | |
+| `mission_goal_weights` | `Assets/Resources/Data/mission_goal_weights.csv` | |
+| `mission_tiers` | `Assets/Resources/Data/mission_tiers.csv` | the tier-clear bonus, via the `golfin_mission_tier_bonus` mirror |
+| `daily_mission_weights` | `Assets/Resources/Data/daily_mission_weights.csv` | |
+| `gacha_banners` | `Assets/Resources/Data/gacha_banners.csv` | `golfin_gacha_pull()` prices the pull from the published row (spec B) |
+| `gacha_rates` | `Assets/Resources/Data/gacha_rates.csv` | `golfin_gacha_pull()` rolls the rarity from the published rows (spec B) |
+| `gacha_pools` | `Assets/Resources/Data/gacha_pools.csv` | `golfin_gacha_pull()` picks the prize from the published rows (spec B) |
+| `ticket_types` | `Assets/Resources/Data/ticket_types.csv` | the ticket ledger (spec B); `id` is the `ticketTypeInt` in player saves |
+
+The four gacha catalogs are read by the server **without a mirror** — the pull
+function reads `content_rows` directly, the way `golfin_shop_purchase()` does
+(`Docs/GACHA_ADMIN_PLAN.md` §2). `ticket_types.id` is the integer persisted in
+saves: append only, never renumber.
 
 Adding one is a row in `CATALOGS` plus a scoped seed:
 

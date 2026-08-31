@@ -1,6 +1,7 @@
 // Assets/Scripts/UI/Gacha/GachaBannerModel.cs
 // gacha_screen Stage 2 — §3a Banner Catalog
-// Mirrors GeneralShopCatalog exactly: static, Resources.Load<TextAsset>, header-skip parse,
+// Mirrors GeneralShopCatalog exactly: static, Resources.Load<TextAsset>, header-INDEXED quote-aware
+// parse (gacha_admin_catalogs §3 — was positional Split(',') through gacha_screen Stage 2),
 // Reload() hook, malformed rows skipped, GetLiveBanners() = Active && EndUtc > UtcNow by SortOrder.
 //
 // Internal testable seams (stage2 iter-3):
@@ -19,8 +20,13 @@ using UnityEngine;
 namespace GolfinRedux.UI.Gacha
 {
     /// <summary>
-    /// One row of gacha_banners.csv. Columns (locked D4):
+    /// One row of gacha_banners.csv. The nine columns this build reads (locked D4):
     ///   bannerId, nameKey, artSprite, costX1, costX10, endUtc, rulesUrl, sortOrder, active
+    ///
+    /// The CSV also carries thirteen admin-catalog columns (startUtc, poolId, ticketType,
+    /// pityThreshold, pityMinRarity, guaranteeMinRarityX10, maxPullsPerPlayer, artUrl,
+    /// nameEn, nameJa, taglineEn, taglineJa, featuredRefIds) which ParseCsv deliberately
+    /// IGNORES — they land on this type in `gacha_client_real_pull` (plan §6), not here.
     /// </summary>
     [Serializable]
     public class GachaBannerEntry
@@ -100,36 +106,69 @@ namespace GolfinRedux.UI.Gacha
 
         /// <summary>
         /// Testable seam: parse a CSV string into a list of GachaBannerEntry objects.
-        /// Header row (index 0) is skipped. Malformed rows (fewer than 9 columns) are skipped
-        /// without throwing. If endUtc is unparseable, the entry defaults to DateTime.MaxValue.
+        ///
+        /// HEADER-INDEXED AND QUOTE-AWARE since `gacha_admin_catalogs` (§3). The nine fields
+        /// below are read BY COLUMN NAME off line 0, not by position, and unknown columns are
+        /// ignored — so the thirteen columns the admin catalog added (startUtc, poolId,
+        /// ticketType, pity*, art/name/tagline per locale, featuredRefIds) pass straight
+        /// through this parser without it knowing they exist. Reading them is spec C's job.
+        ///
+        /// Why it had to change: `export_content.py` writes QUOTE_MINIMAL canonical form, and
+        /// the bundled floor of the next build is whatever the exporter wrote. A `taglineEn`
+        /// containing a comma is one quoted field to the exporter and two columns to
+        /// `line.Split(',')` — every later column would shift by one and `active` would be
+        /// read out of `featuredRefIds`. Same reasoning as GeneralShopCatalog.ParseCsvLine.
+        ///
+        /// A row is SKIPPED when its bannerId is blank, or when it carries fewer fields than
+        /// the header (a truncated row is malformed — the behaviour the old `cols.Length &lt; 9`
+        /// guard had, kept). A column the HEADER does not name defaults to empty (I4) rather
+        /// than dropping the row: a narrower published header must not blank the catalog.
+        /// If endUtc is unparseable, the entry defaults to DateTime.MaxValue.
+        ///
         /// Called by LoadFromCsv() and by GachaStage2Tests via reflection.
         /// </summary>
         internal static List<GachaBannerEntry> ParseCsv(string csvText)
         {
             var result = new List<GachaBannerEntry>();
-            var lines  = csvText.Split('\n');
-            for (int i = 1; i < lines.Length; i++) // skip header row
+            var lines  = (csvText ?? string.Empty).Split('\n');
+            if (lines.Length < 2) return result;
+
+            var header = ParseCsvLine(lines[0].Trim());
+            var index  = new Dictionary<string, int>(StringComparer.Ordinal);
+            for (int c = 0; c < header.Count; c++) index[header[c].Trim()] = c;
+
+            for (int i = 1; i < lines.Length; i++)
             {
                 var line = lines[i].Trim();
                 if (string.IsNullOrEmpty(line)) continue;
-                var cols = line.Split(',');
-                if (cols.Length < 9) continue; // malformed row — skip without throwing
+
+                var cols = ParseCsvLine(line);
+                if (cols.Count < header.Count) continue; // truncated row — skip without throwing
+
+                string Field(string column)
+                {
+                    if (!index.TryGetValue(column, out int at)) return string.Empty; // absent column
+                    return at < cols.Count ? cols[at].Trim() : string.Empty;
+                }
+
+                var bannerId = Field("bannerId");
+                if (string.IsNullOrEmpty(bannerId)) continue; // a row with no id is not a banner
 
                 var entry = new GachaBannerEntry
                 {
-                    BannerId  = cols[0].Trim(),
-                    NameKey   = cols[1].Trim(),
-                    ArtSprite = cols[2].Trim(),
-                    CostX1    = int.TryParse(cols[3], out var cx1)  ? cx1  : 0,
-                    CostX10   = int.TryParse(cols[4], out var cx10) ? cx10 : 0,
-                    // cols[5] = endUtc ISO-8601 (parsed below)
-                    RulesUrl  = cols[6].Trim(),
-                    SortOrder = int.TryParse(cols[7], out var so)   ? so   : 0,
-                    Active    = string.Equals(cols[8].Trim(), "true", StringComparison.OrdinalIgnoreCase),
+                    BannerId  = bannerId,
+                    NameKey   = Field("nameKey"),
+                    ArtSprite = Field("artSprite"),
+                    CostX1    = int.TryParse(Field("costX1"),    out var cx1) ? cx1 : 0,
+                    CostX10   = int.TryParse(Field("costX10"),   out var cx10) ? cx10 : 0,
+                    RulesUrl  = Field("rulesUrl"),
+                    SortOrder = int.TryParse(Field("sortOrder"), out var so) ? so : 0,
+                    Active    = string.Equals(Field("active"), "true", StringComparison.OrdinalIgnoreCase),
                 };
 
                 // Parse EndUtc — on malformed date, default to MaxValue (never expires) rather than throwing.
-                if (DateTime.TryParse(cols[5].Trim(),
+                var endRaw = Field("endUtc");
+                if (DateTime.TryParse(endRaw,
                         System.Globalization.CultureInfo.InvariantCulture,
                         System.Globalization.DateTimeStyles.AssumeUniversal,
                         out var endUtc))
@@ -138,13 +177,45 @@ namespace GolfinRedux.UI.Gacha
                 }
                 else
                 {
-                    Debug.LogWarning($"[GachaBannerCatalog] Row {i}: could not parse endUtc '{cols[5]}'; using DateTime.MaxValue.");
+                    Debug.LogWarning($"[GachaBannerCatalog] Row {i}: could not parse endUtc '{endRaw}'; using DateTime.MaxValue.");
                     entry.EndUtc = DateTime.MaxValue;
                 }
 
                 result.Add(entry);
             }
             return result;
+        }
+
+        /// <summary>
+        /// Splits one CSV line on commas, honouring double-quoted fields so a field may itself
+        /// contain commas. A literal quote inside a quoted field is <c>""</c>.
+        ///
+        /// Same logic as <c>ModesDatabaseCSV.ParseCsvLine</c> / <c>GeneralShopCatalog.ParseCsvLine</c>
+        /// / <c>TournamentCsvLoader</c>. Copied rather than shared because there is still no public
+        /// splitter to share: <c>Golfin.Content.ContentFields</c> reads an ALREADY-SPLIT field list
+        /// and the other two copies are private to their loaders. Lifting all four into one helper
+        /// is a refactor of four files, which this task is not.
+        /// </summary>
+        private static List<string> ParseCsvLine(string line)
+        {
+            var fields  = new List<string>();
+            var current = new System.Text.StringBuilder();
+            bool inQuotes = false;
+
+            for (int i = 0; i < line.Length; i++)
+            {
+                char c = line[i];
+                if (c == '"')
+                {
+                    if (inQuotes && i + 1 < line.Length && line[i + 1] == '"') { current.Append('"'); i++; }
+                    else inQuotes = !inQuotes;
+                }
+                else if (c == ',' && !inQuotes) { fields.Add(current.ToString()); current.Clear(); }
+                else current.Append(c);
+            }
+
+            fields.Add(current.ToString());
+            return fields;
         }
 
         /// <summary>Test / hot-reload hook: forces re-read on next access.</summary>

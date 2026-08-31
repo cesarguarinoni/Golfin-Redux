@@ -6,6 +6,7 @@ import {
   fetchGlobalContentEnabled,
   fetchVersionSnapshot,
   GLOBAL_ENABLED_KEY,
+  GACHA_REFERENCED_CATALOGS,
   REFERENCED_CATALOGS,
 } from "./contentData";
 import {
@@ -453,7 +454,23 @@ export async function publishCatalog(
             // Clubs.csv row, or it hands the player an empty bag (rule 12).
             catalog === "mission_loadouts"
             ? ["clubs"]
-            : [];
+            : // gacha_admin_catalogs §5.5. The four gacha catalogs are ONE
+              // system checked as a whole: the rate table and the pool are
+              // validated against each other from BOTH publishes (rules 2-4, 9),
+              // a banner is checked against both plus ticket_types (rules 10,
+              // 13, 18), and deactivating a ticket type is checked against the
+              // banners that charge it (rule 20). Drafts, not published rows,
+              // for the same reason as the shop's refIds — a new pool and the
+              // banner that rolls it are normally published together.
+              catalog === "gacha_rates"
+              ? ["gacha_pools"]
+              : catalog === "gacha_pools"
+                ? ["gacha_rates", ...GACHA_REFERENCED_CATALOGS]
+                : catalog === "gacha_banners"
+                  ? ["gacha_pools", "gacha_rates", "ticket_types"]
+                  : catalog === "ticket_types"
+                    ? ["gacha_banners"]
+                    : [];
   for (const other of needs) {
     const rows = await fetchAllRows("content_drafts", other);
     otherCatalogs.set(other, new Map(rows.map((r) => [r.rowId, toDraftRow(r)])));

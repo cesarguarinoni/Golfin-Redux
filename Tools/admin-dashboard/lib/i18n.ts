@@ -64,6 +64,9 @@ export const DICT = {
   "nav.missions": { en: "Missions", ja: "ミッション" },
   "nav.mission-components": { en: "Mission Components", ja: "ミッション部品" },
   "nav.daily-missions": { en: "Daily Missions", ja: "デイリーミッション" },
+  "nav.gacha-banners": { en: "Gacha Banners", ja: "ガチャバナー" },
+  "nav.gacha-pools": { en: "Gacha Pools", ja: "ガチャ排出プール" },
+  "nav.ticket-types": { en: "Ticket Types", ja: "チケット種別" },
 
   "mode.mock": {
     en: "MOCK DATA — running on local fixtures, no Supabase connection",
@@ -896,6 +899,7 @@ export const DICT = {
   "c.facet.kind": { en: "Kind", ja: "種別" },
   "c.facet.goal": { en: "Goal", ja: "目標" },
   "c.facet.component": { en: "Component", ja: "コンポーネント" },
+  "c.facet.pool": { en: "Pool", ja: "プール" },
   "c.facet.any": { en: "Any {label}", ja: "{label}: すべて" },
   "c.facet.serverNote": {
     en: "Runs as a server query over the whole catalog, combined with the other filters — not a narrowing of the loaded page.",
@@ -1434,6 +1438,121 @@ export const DICT = {
   "sh.windows.help": {
     en: "startAt / endAt set the listing window and saleStartAt / saleEndAt the sale window, as ISO-8601 UTC (2026-09-01T00:00:00Z). endAt is EXCLUSIVE. Empty means no bound. The sale window must sit inside the listing window, and publish blocks on an unreadable or inverted one.",
     ja: "startAt / endAt で出品期間を、saleStartAt / saleEndAt でセール期間を指定します（ISO-8601 UTC 形式、例: 2026-09-01T00:00:00Z）。endAt はその時刻を含みません。空欄は「期限なし」です。セール期間は出品期間の内側に収める必要があり、読み取れない値や前後が逆の場合は公開時にブロックされます。",
+  },
+
+  // ---- gacha catalogs (gacha_admin_catalogs §5) --------------------------
+  //
+  // Operator-facing only. There are deliberately NO player strings here: the
+  // banner's title and tagline are CATALOG DATA (nameEn / nameJa on the row),
+  // not dictionary keys, because the whole point of decision 7 is that the
+  // admin controls every word a player reads on a banner.
+  "gb.title": { en: "Gacha Banners", ja: "ガチャバナー" },
+  "gb.notice.headline": {
+    en: "Banners are catalog rows.",
+    ja: "バナーはカタログの行です。",
+  },
+  "gb.notice.body": {
+    en: "Publishing makes a banner the next build's bundled floor and the overlay for installed builds (gacha_client_real_pull). Pulls still run on the client-side mock until gacha_server_pull ships — nothing here changes what a pull pays out yet.",
+    ja: "公開すると、そのバナーは次のビルドに同梱される基準データとなり、インストール済みビルドにはオーバーレイとして配信されます（gacha_client_real_pull）。ただしガチャの抽選は gacha_server_pull が入るまでクライアント側のモックのままで、ここでの編集が排出内容を変えることはまだありません。",
+  },
+  "gb.state.hint": {
+    en: "Derived from startUtc / endUtc on the server clock (endUtc is EXCLUSIVE). A row with active=false reads OFF regardless of its window.",
+    ja: "サーバー時刻で startUtc / endUtc から判定します（endUtc はその時刻を含みません）。active=false の行は期間に関係なく OFF と表示されます。",
+  },
+  "gb.pool": { en: "Prize pool", ja: "排出プール" },
+  "gb.pool.hint": {
+    en: "The gacha_pools pool this banner rolls from. Publish blocks if the pool has no complete rate table.",
+    ja: "このバナーが抽選に使う gacha_pools のプールです。レート表が揃っていないプールを指定すると公開時にブロックされます。",
+  },
+  "gb.ticket": { en: "Ticket type", ja: "チケット種別" },
+  "gb.ticket.hint": {
+    en: "costX1 / costX10 are counted in THIS ticket. The id is the integer persisted in player saves.",
+    ja: "costX1 / costX10 はこの種別のチケット枚数です。id はプレイヤーのセーブに保存される整数値です。",
+  },
+  "gb.pity": { en: "Pity and guarantee", ja: "天井と確定枠" },
+  "gb.pity.hint": {
+    en: "pityThreshold blank or 0 means NO pity, and then pityMinRarity must be blank too. A rarity used here must have rateBp > 0 in the pool.",
+    ja: "pityThreshold が空欄または 0 の場合は天井なしで、pityMinRarity も空欄にしてください。ここで指定するレアリティは、そのプールで rateBp > 0 である必要があります。",
+  },
+  "gb.text": { en: "Card text", ja: "カードの文言" },
+  "gb.text.hint": {
+    en: "Rendered by the card as UI text. Do not bake any text into the artwork.",
+    ja: "カード側が UI テキストとして描画します。画像に文字を焼き込まないでください。",
+  },
+  "gb.art": { en: "Artwork", ja: "バナー画像" },
+  "gb.art.hint": {
+    en: "One image, {w}×{h}, JPG or PNG. artSprite stays the bundled floor; artUrl is what an installed build fetches. No text in the image — the title and tagline above are drawn over it.",
+    ja: "画像は 1 枚、{w}×{h}、JPG または PNG。artSprite は同梱される基準画像のままで、artUrl はインストール済みビルドが取得する画像です。画像内に文字を入れないでください（上のタイトルとキャッチコピーが上に描画されます）。",
+  },
+  "gb.art.sizeDrift": {
+    en: "This image is {w}×{h}. The banner frame is {tw}×{th} — it will be scaled to fit.",
+    ja: "この画像は {w}×{h} です。バナー枠は {tw}×{th} のため、拡大縮小して表示されます。",
+  },
+  "gb.featured": { en: "Featured refs", ja: "ピックアップ" },
+  "gb.featured.hint": {
+    en: "Semicolon-separated refIds the card and the rates screen highlight. Display only — it does not change the odds.",
+    ja: "カードや確率画面で強調する refId をセミコロン区切りで指定します。表示のみで、確率には影響しません。",
+  },
+
+  "gp.title": { en: "Gacha Pools", ja: "ガチャ排出プール" },
+  "gp.tab.pools": { en: "Pools", ja: "排出プール" },
+  "gp.tab.rates": { en: "Rates", ja: "レアリティ確率" },
+  "gp.note": {
+    en: "A pool is WHAT a pull can pay out; the rates are HOW OFTEN each rarity comes up. Both are published separately, and the reachability rule is checked from both — so neither publish order can leave a rarity with a rate and no prize.",
+    ja: "プールは「何が出るか」、レートは「どのレアリティがどれだけ出るか」です。公開はそれぞれ別ですが、到達性チェックは両方から実行されるため、どちらを先に公開しても「確率はあるのに景品がない」レアリティは発生しません。",
+  },
+  "gp.kind": { en: "Kind", ja: "種別" },
+  "gp.kind.hint": {
+    en: "Which catalog refId resolves in. Changing it clears refId — a club id is not a ball id.",
+    ja: "refId をどのカタログで解決するかを決めます。変更すると refId はクリアされます（クラブの id はボールの id ではありません）。",
+  },
+  "gp.rarity.locked": {
+    en: "Taken from the referenced row and locked: a {kind} entry must carry the rarity the catalog gives it, or the roll lands in the wrong rarity bucket.",
+    ja: "参照先の行から取得され、変更できません。{kind} のエントリはカタログ上のレアリティと一致している必要があります（一致しないと別のレアリティ枠で抽選されます）。",
+  },
+  "gp.rarity.free": {
+    en: "Balls and tickets have no rarity of their own, so this one is the operator's choice — it decides which rarity bucket the entry sits in.",
+    ja: "ボールとチケットは固有のレアリティを持たないため、ここは運用者が決めます。この値がエントリの属するレアリティ枠になります。",
+  },
+  "gp.featured": { en: "Featured in this pool", ja: "このプールのピックアップ" },
+  "gp.odds.title": { en: "Effective odds", ja: "実効確率" },
+  "gp.odds.formula": {
+    en: "rate(rarity) ÷ 10000 × weight ÷ Σ weight(pool, rarity). Computed, never stored.",
+    ja: "rate(rarity) ÷ 10000 × weight ÷ Σ weight(プール, レアリティ)。計算値であり保存はされません。",
+  },
+  "gp.odds.total": { en: "Total {pct}", ja: "合計 {pct}" },
+  "gp.odds.unreachable": {
+    en: "rateBp is 0 for this rarity — nothing here can be rolled.",
+    ja: "このレアリティの rateBp が 0 のため、ここからは何も排出されません。",
+  },
+  "gp.odds.noRates": {
+    en: "No rate table for pool \"{pool}\" — add one on the Rates tab before publishing.",
+    ja: "プール「{pool}」のレート表がありません。公開前に Rates タブで作成してください。",
+  },
+  "gp.sim.run": { en: "Simulate 10 000 pulls", ja: "10,000 回シミュレーション" },
+  "gp.sim.running": { en: "Simulating…", ja: "シミュレーション中…" },
+  "gp.sim.banner": { en: "As banner", ja: "バナー設定" },
+  "gp.sim.note": {
+    en: "Seeded and deterministic — the same seed always gives the same numbers. This is the SAME roll order the server will use (pity and guarantee first, then rarity by rateBp, then item by weight), so a surprise here is a surprise the players would have had.",
+    ja: "シードを固定した決定的なシミュレーションで、同じシードなら常に同じ結果になります。サーバーと同じ抽選順（天井・確定枠 → rateBp によるレアリティ → weight によるアイテム）で回すため、ここで意外な結果が出た場合はプレイヤーにも同じことが起こります。",
+  },
+  "gp.sim.col.rarity": { en: "Rarity", ja: "レアリティ" },
+  "gp.sim.col.published": { en: "Published", ja: "設定値" },
+  "gp.sim.col.observed": { en: "Observed", ja: "実測値" },
+  "gp.sim.pityHits": { en: "Pity hits: {n}", ja: "天井発動: {n} 回" },
+  "gp.sim.guaranteeHits": { en: "x10 guarantee hits: {n}", ja: "10 連確定枠の発動: {n} 回" },
+  "gp.sim.pulls": { en: "{n} pulls", ja: "{n} 回抽選" },
+  "gp.rates.sum.ok": { en: "Σ = {sum} ✓", ja: "合計 = {sum} ✓" },
+  "gp.rates.sum.bad": { en: "Σ = {sum} ✗ (must be 10000)", ja: "合計 = {sum} ✗（10000 である必要があります）" },
+  "gp.rates.sum.hint": {
+    en: "Basis points over the ACTIVE rows of each pool. Publish blocks unless every pool sums to exactly 10 000 and carries one row per rarity.",
+    ja: "各プールの有効な行の合計をベーシスポイントで表示しています。すべてのプールがちょうど 10000 で、レアリティごとに 1 行ずつ揃っていないと公開できません。",
+  },
+
+  "tt.title": { en: "Ticket Types", ja: "チケット種別" },
+  "tt.note": {
+    en: "id is the integer persisted in player saves (TicketType.Standard = 0). Never renumber; append only. Deactivating a type an active banner charges is refused at publish.",
+    ja: "id はプレイヤーのセーブに保存される整数です（TicketType.Standard = 0）。番号の振り直しは絶対に行わず、追加のみとしてください。有効なバナーが使用している種別を無効化しようとすると公開時に拒否されます。",
   },
 } as const satisfies Record<string, Entry>;
 

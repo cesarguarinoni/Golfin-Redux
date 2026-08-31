@@ -22,6 +22,12 @@ export const MOCK_CONTENT_CATALOGS: ContentCatalogSummary[] = [
   { name: "shop_catalog", publishedVersion: 9999, isEnabled: true, publishedCount: 1, draftCount: 1, dirtyCount: 0 },
   { name: "level_up_costs", publishedVersion: 9999, isEnabled: true, publishedCount: 3, draftCount: 3, dirtyCount: 0 },
   { name: "modes", publishedVersion: 9999, isEnabled: true, publishedCount: 2, draftCount: 2, dirtyCount: 0 },
+  // gacha_admin_catalogs §5.1 — all four, so every gacha panel is exercisable
+  // with MOCK_MODE=1 (tabs, badges, pickers, the odds table and the simulator).
+  { name: "gacha_banners", publishedVersion: 9999, isEnabled: true, publishedCount: 3, draftCount: 3, dirtyCount: 0 },
+  { name: "gacha_rates", publishedVersion: 9999, isEnabled: true, publishedCount: 6, draftCount: 6, dirtyCount: 0 },
+  { name: "gacha_pools", publishedVersion: 9999, isEnabled: true, publishedCount: 6, draftCount: 6, dirtyCount: 0 },
+  { name: "ticket_types", publishedVersion: 9999, isEnabled: true, publishedCount: 2, draftCount: 2, dirtyCount: 0 },
 ];
 
 const row = (
@@ -133,6 +139,70 @@ export const MOCK_CONTENT_PUBLISHED: ContentStoredRow[] = [
     target: "none", order: "9999", versusStrokeCapOverPar: "0",
     reward1Type: "", reward1Amount: "", reward2Type: "", reward2Amount: "",
     reward3Type: "", reward3Amount: "", rewardsTextKey: "",
+  }),
+
+  // ---- gacha (gacha_admin_catalogs §5.1) ----------------------------------
+  //
+  // Visibly fake like everything else here — MOCK titles, and 9999 nowhere it
+  // would break arithmetic the panel does. The rates DO sum to 10 000 and every
+  // rated rarity DOES have an entry, because a fixture that fails its own
+  // validator teaches nothing about the panel and the effective-odds table
+  // would read 0 % everywhere.
+  //
+  // Three banners, chosen so the STATE BADGE has one of each to render:
+  // LIVE (open window), SCHEDULED (starts in 2099) and OFF (active=false).
+  // ENDED is reachable by editing endUtc in the drawer, which is exactly what
+  // the acceptance asks an operator to do.
+  row("ticket_types", "0", { id: "0", key: "standard", nameEn: "MOCK Ticket", nameJa: "モックチケット", iconSprite: "", iconUrl: "" }),
+  row("ticket_types", "1", { id: "1", key: "gold", nameEn: "MOCK Gold Ticket", nameJa: "モックゴールドチケット", iconSprite: "", iconUrl: "" }),
+
+  row("gacha_rates", "mock_pool_common", { id: "mock_pool_common", poolId: "mock_pool", rarity: "Common", rateBp: "5500" }),
+  row("gacha_rates", "mock_pool_uncommon", { id: "mock_pool_uncommon", poolId: "mock_pool", rarity: "Uncommon", rateBp: "2500" }),
+  row("gacha_rates", "mock_pool_rare", { id: "mock_pool_rare", poolId: "mock_pool", rarity: "Rare", rateBp: "1200" }),
+  row("gacha_rates", "mock_pool_mythic", { id: "mock_pool_mythic", poolId: "mock_pool", rarity: "Mythic", rateBp: "550" }),
+  row("gacha_rates", "mock_pool_legendary", { id: "mock_pool_legendary", poolId: "mock_pool", rarity: "Legendary", rateBp: "200" }),
+  row("gacha_rates", "mock_pool_supreme", { id: "mock_pool_supreme", poolId: "mock_pool", rarity: "Supreme", rateBp: "50" }),
+
+  // One entry per rated rarity — the reachability rule (§5.5 rule 9) is
+  // satisfied, so mock mode never shows an error that is only a fixture gap.
+  // Both mock clubs are Common, so the four higher rarities reference the ball,
+  // which HAS no rarity of its own and therefore takes the operator's choice —
+  // which is also what demonstrates the editable-rarity half of §5.3.
+  row("gacha_pools", "mock_entry_driver", { id: "mock_entry_driver", poolId: "mock_pool", kind: "club", refId: "mock_club_driver", rarity: "Common", weight: "100", quantity: "1", dupeRp: "20", featured: "false" }),
+  row("gacha_pools", "mock_entry_ball_u", { id: "mock_entry_ball_u", poolId: "mock_pool", kind: "ball", refId: "mock_ball_default", rarity: "Uncommon", weight: "100", quantity: "3", dupeRp: "0", featured: "false" }),
+  row("gacha_pools", "mock_entry_ball_r", { id: "mock_entry_ball_r", poolId: "mock_pool", kind: "ball", refId: "mock_ball_default", rarity: "Rare", weight: "100", quantity: "3", dupeRp: "0", featured: "false" }),
+  row("gacha_pools", "mock_entry_ball_m", { id: "mock_entry_ball_m", poolId: "mock_pool", kind: "ball", refId: "mock_ball_default", rarity: "Mythic", weight: "100", quantity: "3", dupeRp: "0", featured: "false" }),
+  row("gacha_pools", "mock_entry_ball_l", { id: "mock_entry_ball_l", poolId: "mock_pool", kind: "ball", refId: "mock_ball_default", rarity: "Legendary", weight: "100", quantity: "3", dupeRp: "0", featured: "true" }),
+  row("gacha_pools", "mock_entry_ball_s", { id: "mock_entry_ball_s", poolId: "mock_pool", kind: "ball", refId: "mock_ball_default", rarity: "Supreme", weight: "100", quantity: "3", dupeRp: "0", featured: "true" }),
+
+  row("gacha_banners", "mock_banner_live", {
+    bannerId: "mock_banner_live", nameKey: "MOCK LIVE BANNER", artSprite: "MOCK-Banner",
+    costX1: "9999", costX10: "9999", endUtc: "2099-01-01T00:00:00Z", rulesUrl: "", sortOrder: "1",
+    active: "true", startUtc: "2020-01-01T00:00:00Z", poolId: "mock_pool", ticketType: "0",
+    pityThreshold: "50", pityMinRarity: "Legendary", guaranteeMinRarityX10: "Rare",
+    maxPullsPerPlayer: "", artUrl: "", nameEn: "MOCK LIVE BANNER", nameJa: "モック開催中バナー",
+    taglineEn: "MOCK FIXTURE", taglineJa: "モックデータ", featuredRefIds: "mock_ball_default",
+  }),
+  // SCHEDULED — the window has not opened. No pity at all (pityThreshold 0),
+  // which is decision 2's acceptance case: blank and 0 mean the same thing.
+  row("gacha_banners", "mock_banner_scheduled", {
+    bannerId: "mock_banner_scheduled", nameKey: "MOCK SCHEDULED BANNER", artSprite: "MOCK-Banner",
+    costX1: "9999", costX10: "9999", endUtc: "2099-06-01T00:00:00Z", rulesUrl: "", sortOrder: "2",
+    active: "true", startUtc: "2099-01-01T00:00:00Z", poolId: "mock_pool", ticketType: "1",
+    pityThreshold: "0", pityMinRarity: "", guaranteeMinRarityX10: "",
+    maxPullsPerPlayer: "", artUrl: "", nameEn: "MOCK SCHEDULED BANNER", nameJa: "モック開催予定バナー",
+    taglineEn: "", taglineJa: "", featuredRefIds: "",
+  }),
+  // OFF — `active=false` in the DATA. Deliberately NOT `isActive: false`: the
+  // two switches are different things (see gachaBannerState) and the fixture
+  // that proves the badge reads the column is one where only the column is off.
+  row("gacha_banners", "mock_banner_off", {
+    bannerId: "mock_banner_off", nameKey: "MOCK OFF BANNER", artSprite: "MOCK-Banner",
+    costX1: "9999", costX10: "9999", endUtc: "2099-01-01T00:00:00Z", rulesUrl: "", sortOrder: "3",
+    active: "false", startUtc: "2020-01-01T00:00:00Z", poolId: "mock_pool", ticketType: "0",
+    pityThreshold: "", pityMinRarity: "", guaranteeMinRarityX10: "",
+    maxPullsPerPlayer: "", artUrl: "", nameEn: "MOCK OFF BANNER", nameJa: "モック停止中バナー",
+    taglineEn: "", taglineJa: "", featuredRefIds: "",
   }),
 ];
 

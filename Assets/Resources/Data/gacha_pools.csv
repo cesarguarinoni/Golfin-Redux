@@ -1,0 +1,12 @@
+id,poolId,kind,refId,rarity,weight,quantity,dupeRp,featured
+psc1_driver_gf,pool_standard_club1,club,club_driver_gf,Common,100,1,20,false
+psc1_wood_gf,pool_standard_club1,club,club_wood_gf,Common,100,1,20,false
+psc1_ball_golfin,pool_standard_club1,ball,ball_golfin,Common,60,3,0,false
+psc1_iron9_klyro,pool_standard_club1,club,club_iron9_klyro,Uncommon,100,1,40,false
+psc1_repairkit_common,pool_standard_club1,item,repairkit_common,Common,40,1,0,false
+psc1_iron7_mireo,pool_standard_club1,club,club_iron7_mireo,Rare,100,1,80,false
+psc1_repairkit_rare,pool_standard_club1,item,repairkit_rare,Rare,40,1,0,false
+psc1_awedge_fyloe,pool_standard_club1,club,club_awedge_fyloe,Mythic,100,1,160,false
+psc1_repairkit_mythic,pool_standard_club1,item,repairkit_mythic,Mythic,30,1,0,false
+psc1_pwedge_royal,pool_standard_club1,club,club_pwedge_royal,Legendary,100,1,300,true
+psc1_putter_golfinx,pool_standard_club1,club,club_putter_golfinx,Supreme,100,1,600,true

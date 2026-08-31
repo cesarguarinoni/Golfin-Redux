@@ -41,7 +41,8 @@ export type PanelIcon =
   | "gift"
   | "target"
   | "puzzle"
-  | "calendar";
+  | "calendar"
+  | "ticket";
 
 export interface PanelDef {
   id: PanelId;
@@ -84,6 +85,16 @@ export const PANELS: readonly PanelDef[] = [
   // request. No draft, no publish, no version. The panel says so.
   { id: "rewards", title: "Rewards", icon: "gift", route: "/rewards" },
   { id: "shop", title: "Shop", icon: "cart", route: "/shop" },
+  // ---- gacha_admin_catalogs ----------------------------------------------
+  // Three entries for four catalogs: `gacha_rates` is edited INSIDE the Pools
+  // panel as a second tab, because a rate table is meaningless without the pool
+  // it prices — the two are published separately but read together, and the
+  // reachability rule spans both. `ticket_types` is its own entry rather than a
+  // third tab: it is not part of a pool, it is what a pull COSTS, and its ids
+  // are persisted in player saves.
+  { id: "gacha-banners", title: "Gacha Banners", icon: "ticket", route: "/gacha-banners" },
+  { id: "gacha-pools", title: "Gacha Pools", icon: "ticket", route: "/gacha-pools" },
+  { id: "ticket-types", title: "Ticket Types", icon: "ticket", route: "/ticket-types" },
   { id: "telemetry", title: "Telemetry", icon: "chart", route: "/telemetry" },
   { id: "texts", title: "Texts", icon: "text", route: "/texts" },
   { id: "tournaments", title: "Tournaments", icon: "flag", route: "/tournaments" },

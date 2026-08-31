@@ -40,6 +40,10 @@ export const CONTENT_CATALOGS = [
   "mission_goal_weights",
   "mission_tiers",
   "daily_mission_weights",
+  "gacha_banners",
+  "gacha_rates",
+  "gacha_pools",
+  "ticket_types",
 ] as const;
 
 export type ContentCatalog = (typeof CONTENT_CATALOGS)[number];
@@ -112,7 +116,8 @@ export interface Facet {
     | "c.facet.loadout"
     | "c.facet.kind"
     | "c.facet.goal"
-    | "c.facet.component";
+    | "c.facet.component"
+    | "c.facet.pool";
 }
 
 const BRAND_FACET: Facet = { column: "brand", labelKey: "c.facet.brand" };
@@ -129,6 +134,11 @@ const MISSION_AREA_FACET: Facet = { column: "areaId", labelKey: "c.facet.startAr
 const MISSION_KIND_FACET: Facet = { column: "kind", labelKey: "c.facet.kind" };
 const MISSION_GOAL_FACET: Facet = { column: "goal", labelKey: "c.facet.goal" };
 const MISSION_COMPONENT_FACET: Facet = { column: "component", labelKey: "c.facet.component" };
+
+// gacha_admin_catalogs. `poolId` is the facet all three gacha catalogs share —
+// with more than one pool live, everything an operator does is scoped to one.
+const GACHA_POOL_FACET: Facet = { column: "poolId", labelKey: "c.facet.pool" };
+const GACHA_KIND_FACET: Facet = { column: "kind", labelKey: "c.facet.kind" };
 
 // ---------------------------------------------------------------------------
 // One descriptor per panel
@@ -271,6 +281,38 @@ export const CATALOG_VIEWS: Record<string, CatalogView> = {
     facets: [MISSION_COMPONENT_FACET],
     limit: 50,
   },
+
+  // ---- gacha_admin_catalogs ----------------------------------------------
+  //
+  // The banners table leads with the STATE badge and the two references,
+  // because "is this live, what does it roll, and what does it cost" is the
+  // whole reason anyone opens the panel. `nameKey` is deliberately absent: it
+  // is the pre-catalog fallback, and `nameEn` is what the card now shows.
+  gacha_banners: {
+    catalog: "gacha_banners",
+    columns: ["nameEn", "state", "poolId", "ticketType", "costX1", "costX10",
+              "startUtc", "endUtc", "pityThreshold", "sortOrder", "active"],
+    facets: [GACHA_POOL_FACET],
+    limit: 50,
+  },
+  gacha_rates: {
+    catalog: "gacha_rates",
+    columns: ["poolId", "rarity", "rateBp"],
+    facets: [GACHA_POOL_FACET, RARITY_FACET],
+    limit: 50,
+  },
+  gacha_pools: {
+    catalog: "gacha_pools",
+    columns: ["poolId", "kind", "refId", "rarity", "weight", "quantity", "dupeRp", "featured"],
+    facets: [GACHA_POOL_FACET, GACHA_KIND_FACET, RARITY_FACET],
+    limit: 50,
+  },
+  ticket_types: {
+    catalog: "ticket_types",
+    columns: ["key", "nameEn", "nameJa", "iconSprite"],
+    facets: [],
+    limit: 50,
+  },
 };
 
 /** The view for a catalog. Throws on an unregistered name — a panel pointed at
@@ -307,6 +349,10 @@ export function catalogView(catalog: string): CatalogView {
  * build — is the next spec (`content_art_urls`), not this one.
  */
 export const SPRITE_FIELD_FOLDER: Record<string, Record<string, string>> = {
+  // GachaBannerModel.cs — Resources.Load<Sprite>("Art/Gacha/Banners/" + ArtSprite)
+  gacha_banners: {
+    artSprite: "Art/Gacha/Banners",
+  },
   characters: {
     portraitSprite: "Portraits/Thumbnails",
     portraitFull: "Portraits/FullBody",
@@ -353,6 +399,10 @@ export const ART_URL_COLUMNS: Record<string, readonly string[]> = {
   clubs:      ["portraitUrl", "fullUrl", "controlUrl"],
   items:      ["thumbnailUrl", "fullUrl"],
   balls:      ["thumbnailUrl", "fullUrl"],
+  // gacha_admin_catalogs §5.2 — ONE image per banner, and no text baked into it
+  // (decision 7: every word a player reads on a banner is UI-authored from
+  // nameEn/nameJa/taglineEn/taglineJa). `artSprite` stays the bundled floor.
+  gacha_banners: ["artUrl"],
 } as const;
 
 /**
@@ -378,6 +428,7 @@ export function isArtUrlColumn(catalog: string, column: string): boolean {
  * wiring); derived from ART_URL_COLUMNS + SPRITE_FIELD_FOLDER above.
  */
 export const ART_URL_TO_SPRITE_COLUMN: Record<string, Record<string, string>> = {
+  gacha_banners: { artUrl: "artSprite" },
   characters: { portraitUrl: "portraitSprite", fullUrl: "portraitFull" },
   clubs: { portraitUrl: "portraitSprite", fullUrl: "portraitFull", controlUrl: "controlSprite" },
   items: { thumbnailUrl: "thumbnailSprite", fullUrl: "fullSprite" },
@@ -487,6 +538,72 @@ export function shopOnSale(row: ContentStoredRow, now: number = Date.now()): boo
 }
 
 // ---------------------------------------------------------------------------
+// Gacha banner state (gacha_admin_catalogs §5.2)
+// ---------------------------------------------------------------------------
+
+export type GachaBannerState = "LIVE" | "SCHEDULED" | "ENDED" | "OFF" | "BROKEN";
+
+/**
+ * The untranslated badge, from `startUtc` / `endUtc` on the SERVER clock.
+ *
+ * Same shape and the same fail-closed posture as `shopState`, and deliberately
+ * so — an unreadable bound reads BROKEN, never LIVE, because "we could not read
+ * the schedule" must never collapse into "so run it forever".
+ *
+ * TWO switches feed OFF: the row's own `active` COLUMN (what the CSV and the
+ * shipped client read) and the catalog row's `is_active` FLAG (what publish and
+ * the overlay read). They are different things and either one being false hides
+ * the banner, so both are checked here — a row whose column says true while the
+ * flag says false is not live, and a badge that only read one of them would say
+ * so.
+ */
+export function gachaBannerState(
+  row: ContentStoredRow,
+  now: number = Date.now()
+): GachaBannerState {
+  if (!row.isActive) return "OFF";
+  if ((row.data.active ?? "").trim().toLowerCase() !== "true") return "OFF";
+
+  let start: number | null;
+  let end: number | null;
+  try {
+    start = parseWindowBound(row.data.startUtc);
+    end = parseWindowBound(row.data.endUtc);
+  } catch {
+    return "BROKEN";
+  }
+
+  if (start !== null && now < start) return "SCHEDULED";
+  if (end !== null && now >= end) return "ENDED";
+  return "LIVE";
+}
+
+/**
+ * `gacha_pools.kind` → the catalog `refId` resolves in (§5.3).
+ *
+ * A SIBLING of SHOP_CATEGORY_TO_CATALOG rather than an extension of it: the two
+ * maps have four names in common and one that differs in kind — a gacha pool can
+ * pay out a TICKET (resolving in `ticket_types`), which the shop cannot sell,
+ * and the shop can sell a BAG, which the gacha does not drop. Merging them would
+ * put a `bag` option in the pool editor and a `ticket` option in the shop
+ * editor, each of which the other's validator refuses.
+ */
+export const GACHA_KIND_TO_CATALOG: Record<string, string> = {
+  club: "clubs",
+  ball: "balls",
+  character: "characters",
+  item: "items",
+  ticket: "ticket_types",
+};
+
+/** Kinds whose referenced row carries the rarity the entry must copy (§5.5 rule 6). */
+export const GACHA_RARITY_BEARING_KINDS: readonly string[] = ["club", "character", "item"];
+
+/** The banner artwork frame, measured from the bundled
+ *  Resources/Art/Gacha/Banners/GachaBanner_StandardClub1.png on 2026-08-31. */
+export const GACHA_BANNER_ART = { width: 882, height: 1448 } as const;
+
+// ---------------------------------------------------------------------------
 // Resolved reference preview
 // ---------------------------------------------------------------------------
 
@@ -497,6 +614,9 @@ const NAME_COLUMN: Record<string, string> = {
   items: "name",
   bags: "name",
   balls: "name",
+  // A gacha pool can pay out a ticket, so the picker resolves against this
+  // catalog too. `nameEn` rather than `key`: the key is the id's twin.
+  ticket_types: "nameEn",
 };
 
 /**

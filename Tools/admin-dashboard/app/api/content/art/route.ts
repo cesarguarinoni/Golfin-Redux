@@ -42,7 +42,7 @@ export async function POST(request: Request) {
   }
   if (typeof catalog !== "string" || !catalog) {
     return NextResponse.json(
-      { error: "catalog is required (characters | clubs | items | balls)." },
+      { error: "catalog is required (characters | clubs | items | balls | gacha_banners)." },
       { status: 400 }
     );
   }
@@ -51,7 +51,7 @@ export async function POST(request: Request) {
   }
   if (typeof column !== "string" || !column) {
     return NextResponse.json(
-      { error: "column is required (portraitUrl | fullUrl | thumbnailUrl | controlUrl)." },
+      { error: "column is required (portraitUrl | fullUrl | thumbnailUrl | controlUrl | artUrl)." },
       { status: 400 }
     );
   }

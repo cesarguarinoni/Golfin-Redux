@@ -1,0 +1,220 @@
+import { describe, expect, it } from "vitest";
+import {
+  effectiveOdds,
+  mulberry32,
+  rarityRank,
+  simulate,
+  totalOdds,
+  type BannerRoll,
+  type PoolEntry,
+  type RateRow,
+} from "@/lib/gachaOdds";
+
+/**
+ * `lib/gachaOdds.ts` is the REFERENCE the server roll is checked against
+ * (gacha_admin_catalogs §5.3, plan §5 step 7). It decides what an operator is
+ * told a pull will do, and in the next spec it decides whether the plpgsql
+ * function agrees — so it is the one module here whose numbers have to be
+ * pinned rather than eyeballed.
+ *
+ * The fixture is the SEED POOL from SPEC §2.2 / §2.3, unmodified, because the
+ * acceptance criteria are stated about that pool.
+ */
+
+const RATES: RateRow[] = [
+  { poolId: "pool_standard_club1", rarity: "Common", rateBp: 5500 },
+  { poolId: "pool_standard_club1", rarity: "Uncommon", rateBp: 2500 },
+  { poolId: "pool_standard_club1", rarity: "Rare", rateBp: 1200 },
+  { poolId: "pool_standard_club1", rarity: "Mythic", rateBp: 550 },
+  { poolId: "pool_standard_club1", rarity: "Legendary", rateBp: 200 },
+  { poolId: "pool_standard_club1", rarity: "Supreme", rateBp: 50 },
+];
+
+const entry = (
+  id: string,
+  rarity: string,
+  weight: number,
+  over: Partial<PoolEntry> = {}
+): PoolEntry => ({
+  id,
+  poolId: "pool_standard_club1",
+  kind: "club",
+  refId: id,
+  rarity,
+  weight,
+  quantity: 1,
+  dupeRp: 0,
+  featured: false,
+  ...over,
+});
+
+const POOL: PoolEntry[] = [
+  entry("psc1_driver_gf", "Common", 100),
+  entry("psc1_wood_gf", "Common", 100),
+  entry("psc1_ball_golfin", "Common", 60, { kind: "ball", quantity: 3 }),
+  entry("psc1_iron9_klyro", "Uncommon", 100),
+  entry("psc1_repairkit_common", "Common", 40, { kind: "item" }),
+  entry("psc1_iron7_mireo", "Rare", 100),
+  entry("psc1_repairkit_rare", "Rare", 40, { kind: "item" }),
+  entry("psc1_awedge_fyloe", "Mythic", 100),
+  entry("psc1_repairkit_mythic", "Mythic", 30, { kind: "item" }),
+  entry("psc1_pwedge_royal", "Legendary", 100, { featured: true }),
+  entry("psc1_putter_golfinx", "Supreme", 100, { featured: true }),
+];
+
+/** banner_standard_club1 — pity Legendary at 50, x10 guarantees Rare. */
+const WITH_PITY: BannerRoll = {
+  poolId: "pool_standard_club1",
+  pityThreshold: 50,
+  pityMinRarity: "Legendary",
+  guaranteeMinRarityX10: "Rare",
+};
+
+/** banner_test_a — the NO-PITY acceptance case for decision 2. */
+const NO_PITY: BannerRoll = {
+  poolId: "pool_standard_club1",
+  pityThreshold: 0,
+  pityMinRarity: "",
+  guaranteeMinRarityX10: "",
+};
+
+const SEED = 20260831;
+
+describe("effectiveOdds", () => {
+  it("sums to 1 for a pool whose rates sum to 10000 and whose rarities all have entries", () => {
+    expect(totalOdds(effectiveOdds(RATES, POOL))).toBeCloseTo(1, 12);
+  });
+
+  it("splits a rarity's rate across its entries by weight", () => {
+    const odds = effectiveOdds(RATES, POOL);
+    const byId = new Map(odds.map((o) => [o.entry.id, o.p]));
+    // Common is 5500 bp over weights 100 + 100 + 60 + 40 = 300.
+    expect(byId.get("psc1_driver_gf")).toBeCloseTo(0.55 * (100 / 300), 12);
+    expect(byId.get("psc1_ball_golfin")).toBeCloseTo(0.55 * (60 / 300), 12);
+    expect(byId.get("psc1_repairkit_common")).toBeCloseTo(0.55 * (40 / 300), 12);
+    // A rarity with ONE entry gets the whole rate.
+    expect(byId.get("psc1_putter_golfinx")).toBeCloseTo(0.005, 12);
+  });
+
+  it("gives an entry in a rarity with rateBp 0 a probability of 0 rather than dropping it", () => {
+    const shelved = RATES.map((r) =>
+      r.rarity === "Supreme" ? { ...r, rateBp: 0 } : r.rarity === "Common" ? { ...r, rateBp: 5550 } : r
+    );
+    const odds = effectiveOdds(shelved, POOL);
+    const supreme = odds.find((o) => o.entry.id === "psc1_putter_golfinx");
+    expect(supreme).toBeDefined();
+    expect(supreme?.p).toBe(0);
+    // The pool as a whole still adds up — the shelved rate went to Common.
+    expect(totalOdds(odds)).toBeCloseTo(1, 12);
+  });
+
+  it("does not divide by zero on a rarity with no rate row", () => {
+    const odds = effectiveOdds([], POOL);
+    expect(totalOdds(odds)).toBe(0);
+    expect(odds.every((o) => o.p === 0)).toBe(true);
+  });
+});
+
+describe("mulberry32", () => {
+  it("is deterministic for a seed and returns values in [0, 1)", () => {
+    const a = mulberry32(SEED);
+    const b = mulberry32(SEED);
+    for (let i = 0; i < 100; i += 1) {
+      const value = a();
+      expect(value).toBe(b());
+      expect(value).toBeGreaterThanOrEqual(0);
+      expect(value).toBeLessThan(1);
+    }
+  });
+
+  it("gives different streams for different seeds", () => {
+    expect(mulberry32(1)()).not.toBe(mulberry32(2)());
+  });
+});
+
+describe("simulate", () => {
+  it("is deterministic for a fixed seed", () => {
+    const a = simulate(RATES, POOL, WITH_PITY, 10000, SEED);
+    const b = simulate(RATES, POOL, WITH_PITY, 10000, SEED);
+    expect(a).toEqual(b);
+  });
+
+  it("resolves every pull on a valid pool", () => {
+    const result = simulate(RATES, POOL, WITH_PITY, 10000, SEED);
+    expect(result.empty).toBe(0);
+    const total = Object.values(result.observed).reduce((sum, n) => sum + n, 0);
+    expect(total).toBe(10000);
+  });
+
+  it("lands within 1.5 points of the published rates at 10 000 pulls", () => {
+    // ⚠️ THE DELTA IS NOT NOISE. Pity and the x10 guarantee move the
+    // distribution ON PURPOSE — every pity hit converts a would-be Common into
+    // a Legendary or better. 1.5 points is the acceptance's threshold for
+    // "the published table still describes what players get".
+    const result = simulate(RATES, POOL, WITH_PITY, 10000, SEED);
+    for (const rate of RATES) {
+      const observed = (result.observed[rate.rarity] ?? 0) / result.pulls;
+      expect(Math.abs(observed - rate.rateBp / 10000)).toBeLessThanOrEqual(0.015);
+    }
+  });
+
+  it("hits pity on a banner that has one and never on a banner that does not", () => {
+    expect(simulate(RATES, POOL, WITH_PITY, 10000, SEED).pityHits).toBeGreaterThan(0);
+    expect(simulate(RATES, POOL, NO_PITY, 10000, SEED).pityHits).toBe(0);
+  });
+
+  it("treats a blank pityMinRarity as no pity even when a threshold is set", () => {
+    // Decision 2 is that a half-filled banner never silently acquires a pity.
+    const halfFilled: BannerRoll = { ...NO_PITY, pityThreshold: 10, pityMinRarity: "" };
+    expect(simulate(RATES, POOL, halfFilled, 1000, SEED).pityHits).toBe(0);
+  });
+
+  it("forces the rarity at the threshold", () => {
+    // A pity of 1 on a Supreme floor: after ANY pull below Supreme the next one
+    // is forced, so more than half the pulls must be Supreme — a number no
+    // 0.5 % rate could produce by luck.
+    const brutal: BannerRoll = {
+      poolId: "pool_standard_club1",
+      pityThreshold: 1,
+      pityMinRarity: "Supreme",
+      guaranteeMinRarityX10: "",
+    };
+    const result = simulate(RATES, POOL, brutal, 2000, SEED);
+    expect(result.observed.Supreme ?? 0).toBeGreaterThan(900);
+    expect(result.pityHits).toBeGreaterThan(900);
+  });
+
+  it("fires the x10 guarantee only on blocks that did not already reach the rarity", () => {
+    const guaranteeOnly: BannerRoll = {
+      poolId: "pool_standard_club1",
+      pityThreshold: 0,
+      pityMinRarity: "",
+      guaranteeMinRarityX10: "Rare",
+    };
+    const result = simulate(RATES, POOL, guaranteeOnly, 10000, SEED);
+    // 1000 blocks of ten. P(no Rare+ in the first nine) = 0.8^9 ≈ 0.134, so the
+    // guarantee should fire on roughly 134 of them and NEVER on all 1000.
+    expect(result.guaranteeHits).toBeGreaterThan(60);
+    expect(result.guaranteeHits).toBeLessThan(250);
+    // And it must lift the Rare-or-better share above the published 20 %.
+    const rarePlus = Object.entries(result.observed)
+      .filter(([rarity]) => rarityRank(rarity) >= rarityRank("Rare"))
+      .reduce((sum, [, n]) => sum + n, 0);
+    expect(rarePlus / result.pulls).toBeGreaterThan(0.2);
+  });
+
+  it("does not carry guarantee state from one call into the next", () => {
+    // The old game's "two pities coincide" bug was shared state. Running a
+    // 5-pull simulation (half a block) must not change what the next call does.
+    const first = simulate(RATES, POOL, WITH_PITY, 5, SEED);
+    const second = simulate(RATES, POOL, WITH_PITY, 10000, SEED);
+    expect(first.pulls).toBe(5);
+    expect(second).toEqual(simulate(RATES, POOL, WITH_PITY, 10000, SEED));
+  });
+
+  it("reports empty pulls instead of throwing when nothing is rollable", () => {
+    const result = simulate(RATES, [], NO_PITY, 10, SEED);
+    expect(result.empty).toBe(10);
+    expect(Object.keys(result.observed)).toHaveLength(0);
+  });
+});

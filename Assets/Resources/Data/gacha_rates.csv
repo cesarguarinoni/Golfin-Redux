@@ -1,0 +1,7 @@
+id,poolId,rarity,rateBp
+pool_standard_club1_common,pool_standard_club1,Common,5500
+pool_standard_club1_uncommon,pool_standard_club1,Uncommon,2500
+pool_standard_club1_rare,pool_standard_club1,Rare,1200
+pool_standard_club1_mythic,pool_standard_club1,Mythic,550
+pool_standard_club1_legendary,pool_standard_club1,Legendary,200
+pool_standard_club1_supreme,pool_standard_club1,Supreme,50

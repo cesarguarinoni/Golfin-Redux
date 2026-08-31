@@ -28,6 +28,10 @@ CSV FACTS this module encodes, all verified against the live repo 2026-08-25
   mission_goal_weights 36 rows  Assets/Resources/Data/mission_goal_weights.csv
   mission_tiers         4 rows  Assets/Resources/Data/mission_tiers.csv
   daily_mission_weights 43 rows Assets/Resources/Data/daily_mission_weights.csv
+  gacha_banners   4 rows  Assets/Resources/Data/gacha_banners.csv
+  gacha_rates     6 rows  Assets/Resources/Data/gacha_rates.csv
+  gacha_pools    11 rows  Assets/Resources/Data/gacha_pools.csv
+  ticket_types    2 rows  Assets/Resources/Data/ticket_types.csv
 
 Two of those facts contradict the SPEC's reference counts and both are handled
 rather than papered over:
@@ -120,6 +124,31 @@ class Catalog:
 # ⚠️ `mission_start_areas` ships PARTLY BLANK on purpose: its 162 rows are the
 # slots the Phase B bake fills with coordinates. See the CSV's own header.
 
+# The FOUR GACHA catalogs (#17-#20) — gacha_admin_catalogs §4, added 2026-08-31.
+#
+# `gacha_banners` is not new data: the CSV has shipped since gacha_screen Stage 2
+# and the client has always read it. What is new is that it is now a CATALOG —
+# export/import/`--check`, an admin panel, publish validation — plus thirteen
+# columns (§2.1: the scheduling window's start, the pool and ticket it rolls,
+# pity, the x10 guarantee, the per-player cap, admin art, per-locale title and
+# tagline, featured refs). The build in the wild ignores all thirteen; reading
+# them is `gacha_client_real_pull`.
+#
+# `gacha_rates`, `gacha_pools` and `ticket_types` are new files. Together they
+# are WHAT A PULL PAYS OUT and WHAT IT COSTS, so all four are catalogs the
+# SERVER will read — `golfin_gacha_pull()` reads the published `content_rows`
+# rows DIRECTLY, the way `golfin_shop_purchase()` prices from `shop_catalog`.
+# There is deliberately NO mirror table (plan §2), so nothing here needs a
+# `mirrorForCatalog` entry — but the same warning applies as to `modes` and
+# `missions`: an edit to a rate or a weight is not display copy, it is what a
+# player actually receives for a ticket.
+#
+# Two id columns are worth naming. `gacha_banners` keeps `bannerId` (the client
+# has always resolved banners by it). `ticket_types` uses `id`, and that id is
+# an INTEGER WRITTEN AS TEXT — it is the `ticketTypeInt` persisted in player
+# saves (`TicketType.Standard = 0`), which is why the catalog may be appended to
+# but never renumbered.
+
 CATALOGS: Tuple[Catalog, ...] = (
     Catalog("clubs", "Assets/Resources/Data/Clubs.csv", "id"),
     Catalog("characters", "Assets/Data/Characters.csv", "id"),
@@ -137,6 +166,10 @@ CATALOGS: Tuple[Catalog, ...] = (
     Catalog("mission_goal_weights", "Assets/Resources/Data/mission_goal_weights.csv", "id"),
     Catalog("mission_tiers", "Assets/Resources/Data/mission_tiers.csv", "tier"),
     Catalog("daily_mission_weights", "Assets/Resources/Data/daily_mission_weights.csv", "id"),
+    Catalog("gacha_banners", "Assets/Resources/Data/gacha_banners.csv", "bannerId"),
+    Catalog("gacha_rates", "Assets/Resources/Data/gacha_rates.csv", "id"),
+    Catalog("gacha_pools", "Assets/Resources/Data/gacha_pools.csv", "id"),
+    Catalog("ticket_types", "Assets/Resources/Data/ticket_types.csv", "id"),
 )
 
 CATALOGS_BY_NAME: Dict[str, Catalog] = {c.name: c for c in CATALOGS}

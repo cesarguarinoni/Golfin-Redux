@@ -12,6 +12,7 @@
  * Errors block. Warnings do not — see `rpCost` at the bottom.
  */
 
+import { validateArtUrlUnderBucket } from "./banner";
 import { SHOP_CATEGORY_STRICT_BUILD } from "./buildGates";
 import { holeBase, scoreGoal, type WeightRow } from "./missionScore";
 
@@ -122,6 +123,16 @@ const REQUIRED: Record<string, string[]> = {
   mission_tiers: ["tier", "order", "scoreMin", "scoreMaxExcl", "firstClearRP",
                   "replayRP", "tierClearBonusRP", "unlockClears", "missionsInTier"],
   daily_mission_weights: ["id", "component", "optionId", "pickWeight"],
+  // gacha_admin_catalogs §5.1. `poolId` and `ticketType` are REQUIRED on a
+  // banner even though the shipped client reads neither: a banner with no pool
+  // is a banner the server cannot roll (spec B), and one with no ticket type is
+  // a price in no currency. `rulesUrl` is NOT required — plan §7 replaces it
+  // with an in-app rates modal.
+  gacha_banners: ["bannerId", "nameKey", "artSprite", "costX1", "costX10", "endUtc",
+                  "sortOrder", "active", "poolId", "ticketType"],
+  gacha_rates: ["id", "poolId", "rarity", "rateBp"],
+  gacha_pools: ["id", "poolId", "kind", "refId", "rarity", "weight", "quantity"],
+  ticket_types: ["id", "key", "nameEn", "nameJa"],
 };
 
 /** Columns that must parse as a number wherever they are present (§D1.3). */
@@ -148,6 +159,12 @@ const NUMERIC: Record<string, string[]> = {
   mission_tiers: ["order", "scoreMin", "scoreMaxExcl", "firstClearRP", "replayRP",
                   "tierClearBonusRP", "unlockClears", "missionsInTier"],
   daily_mission_weights: ["pickWeight"],
+  // `pityThreshold` and `maxPullsPerPlayer` are blank on most rows and `num("")`
+  // is null, so a blank never reaches the parse check — a non-numeric one does.
+  gacha_banners: ["costX1", "costX10", "sortOrder", "pityThreshold", "maxPullsPerPlayer"],
+  gacha_rates: ["rateBp"],
+  gacha_pools: ["weight", "quantity", "dupeRp"],
+  ticket_types: ["id"],
 };
 
 /** `shop_catalog.category` → the catalog `refId` resolves in (§D1.6). */
@@ -178,6 +195,14 @@ export const ID_COLUMN: Record<string, string> = {
   // references "Beginner", so a synthetic id would be a second name for it.
   mission_tiers: "tier",
   daily_mission_weights: "id",
+  // The client has resolved banners by `bannerId` since gacha_screen Stage 2;
+  // a synthetic `id` would be a second name for the same row.
+  gacha_banners: "bannerId",
+  gacha_rates: "id",
+  gacha_pools: "id",
+  // An INTEGER written as text, the way level_up_costs' `level` is — it is the
+  // `ticketTypeInt` persisted in player saves. Append only, never renumber.
+  ticket_types: "id",
 };
 
 /**
@@ -209,6 +234,10 @@ const ROW_ID_PATTERNS: Record<string, RegExp> = {
   mission_wind_presets: /^[A-Z0-9_]+$/,
   mission_loadouts: /^[A-Z0-9_]+$/,
   mission_tiers: /^[A-Za-z][A-Za-z0-9_]*$/,
+  // A ticket type id is the integer a save holds ("0", "1"), the way a
+  // level_up_costs id is the level. Lower-case snake would forbid the only
+  // shape this catalog can have.
+  ticket_types: /^[0-9]+$/,
 };
 const DEFAULT_ROW_ID_PATTERN = /^[a-z0-9_]+$/;
 
@@ -1268,6 +1297,464 @@ export function validateCatalog(
         `daily_mission pays ${ctx.dailyMissionPts} RP (Rewards panel) but the design's base is ` +
           `${DAILY_BASE_RP} (DailyRewards.baseRP). Check which one is meant to have moved.`
       );
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // gacha — rules 1-20 (gacha_admin_catalogs §5.5)
+  //
+  // Four catalogs, one system. What makes this section different from every
+  // other one above is that NOTHING HERE IS DISPLAY COPY: `golfin_gacha_pull()`
+  // (spec B) reads these published rows directly and pays a player out of them,
+  // the way `golfin_shop_purchase()` prices from `shop_catalog`. A rate table
+  // that does not sum, a rarity with a rate and no prize, or a pool entry whose
+  // club was deactivated are not cosmetic — they are, in order: published odds
+  // that are a lie, a roll that lands on nothing, and a prize the game cannot
+  // render.
+  //
+  // THE PAIR RULES RUN FROM BOTH SIDES. `gacha_rates` and `gacha_pools` are
+  // published separately, so a rule that only ran on one of them could always
+  // be defeated by publishing in the other order. `checkRatesAgainstPool` is
+  // therefore called from BOTH publishes, with the catalog being published as
+  // the draft rows and its partner read from `ctx.otherCatalogs`.
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  const GACHA_KINDS: Record<string, string> = {
+    club: "clubs",
+    ball: "balls",
+    character: "characters",
+    item: "items",
+    ticket: "ticket_types",
+  };
+  /** Kinds whose referenced row CARRIES a rarity the entry must match (rule 6). */
+  const RARITY_BEARING_KINDS = new Set(["club", "character", "item"]);
+  /** The bucket admin-uploaded catalog art lives in (lib/contentArtMutations.ts). */
+  const CATALOG_ART_BUCKET = "catalog-art";
+
+  const otherRows = (catalogName: string): DraftRow[] =>
+    Array.from(ctx.otherCatalogs.get(catalogName)?.values() ?? []);
+
+  /** The rate rows of one pool, active only — a deactivated rate is not served. */
+  const ratesOfPool = (rateRows: DraftRow[], poolId: string): DraftRow[] =>
+    rateRows.filter((r) => r.isActive && text(r.data.poolId).trim() === poolId);
+
+  /** The pool entries of one pool, active only. */
+  const entriesOfPool = (poolRows: DraftRow[], poolId: string): DraftRow[] =>
+    poolRows.filter((r) => r.isActive && text(r.data.poolId).trim() === poolId);
+
+  /**
+   * Rules 2, 3, 4 and 9 — the ones that need BOTH catalogs.
+   *
+   * Called from BOTH publishes with the same arguments in the same order, so the
+   * pair is checked identically whichever half an operator publishes first.
+   * Per-pool problems are reported with a null rowId: the offending fact is
+   * "pool X does not add up", which is not any one row's fault and would be
+   * hidden if it were hung off a row the operator's panel may not be showing.
+   */
+  function checkRatesAgainstPool(rateRows: DraftRow[], poolRows: DraftRow[]) {
+    const poolIds = new Set<string>();
+    for (const r of rateRows) if (r.isActive) poolIds.add(text(r.data.poolId).trim());
+    for (const r of poolRows) if (r.isActive) poolIds.add(text(r.data.poolId).trim());
+    poolIds.delete("");
+
+    for (const poolId of Array.from(poolIds).sort()) {
+      const rates = ratesOfPool(rateRows, poolId);
+      const entries = entriesOfPool(poolRows, poolId);
+
+      // 2. Exactly one active rate row per rarity, and all six present.
+      if (rates.length > 0) {
+        const byRarity = new Map<string, DraftRow[]>();
+        for (const r of rates) {
+          const rarity = text(r.data.rarity).trim();
+          byRarity.set(rarity, [...(byRarity.get(rarity) ?? []), r]);
+        }
+        for (const rarity of RARITIES) {
+          const hits = byRarity.get(rarity) ?? [];
+          if (hits.length === 0) {
+            err(null, "rarity",
+              `Pool "${poolId}" has no ${rarity} rate row. Every rarity needs one — a missing ` +
+                "row is not the same as a zero rate, and the roll would have nothing to normalise against.");
+          } else if (hits.length > 1) {
+            err(hits[1]!.rowId, "rarity",
+              `Pool "${poolId}" has ${hits.length} active ${rarity} rate rows. Exactly one is allowed.`);
+          }
+        }
+
+        // 3. The active rows of a pool sum to exactly 10 000 bp.
+        const sum = rates.reduce((acc, r) => acc + (num(r.data.rateBp) ?? 0), 0);
+        if (sum !== 10000) {
+          err(null, "rateBp",
+            `Pool "${poolId}" rates sum to ${sum} basis points, not 10000. The published odds ` +
+              "would not add up to 100 %.");
+        }
+
+        // 4. A rate table for a pool with no entries is odds on an empty box.
+        if (entries.length === 0) {
+          err(null, "poolId",
+            `Pool "${poolId}" has a rate table but no active gacha_pools entries — a pull would ` +
+              "land on nothing.");
+        }
+      }
+
+      // 9. Reachability, both directions.
+      const rateBpOf = new Map<string, number>();
+      for (const r of rates) rateBpOf.set(text(r.data.rarity).trim(), num(r.data.rateBp) ?? 0);
+      const rarityHasEntry = new Set(entries.map((e) => text(e.data.rarity).trim()));
+
+      // a) a rarity with a rate > 0 and no entry — a roll that lands on nothing. ERROR.
+      for (const [rarity, bp] of rateBpOf) {
+        if (bp > 0 && !rarityHasEntry.has(rarity)) {
+          err(null, "refId",
+            `Pool "${poolId}": ${rarity} has a rate of ${bp} bp but no active entry. ` +
+              `${Math.round((bp / 100) * 10) / 10} % of pulls would resolve to nothing.`);
+        }
+      }
+      // b) an entry in a rarity with rate 0 — unreachable, but harmless. WARN.
+      if (rates.length > 0) {
+        for (const entry of entries) {
+          const rarity = text(entry.data.rarity).trim();
+          if ((rateBpOf.get(rarity) ?? 0) === 0) {
+            warn(entry.rowId, "rarity",
+              `Unreachable: ${rarity} has a rate of 0 in pool "${poolId}", so this entry can ` +
+                "never be rolled. Publishing anyway — a rate of 0 is a legitimate way to shelve a rarity.");
+          }
+        }
+      }
+    }
+  }
+
+  // ---- gacha_rates ---------------------------------------------------------
+  if (catalog === "gacha_rates") {
+    for (const row of rows) {
+      // 1. rarity is one of the six; rateBp is an integer 0…10000.
+      const rarity = text(row.data.rarity).trim();
+      if (!(RARITIES as readonly string[]).includes(rarity)) {
+        err(row.rowId, "rarity", `Rarity "${rarity}" is not one of ${RARITIES.join(", ")}.`);
+      }
+      const bp = num(row.data.rateBp);
+      if (bp === null) {
+        err(row.rowId, "rateBp", "rateBp is empty — a rarity with no rate has no odds at all.");
+      } else if (!Number.isInteger(bp) || bp < 0 || bp > 10000) {
+        err(row.rowId, "rateBp",
+          `rateBp ${text(row.data.rateBp)} must be a whole number of basis points between 0 and 10000.`);
+      }
+      if (!text(row.data.poolId).trim()) {
+        err(row.rowId, "poolId", "poolId is empty — a rate belongs to exactly one pool.");
+      }
+    }
+    checkRatesAgainstPool(rows, otherRows("gacha_pools"));
+  }
+
+  // ---- gacha_pools ---------------------------------------------------------
+  if (catalog === "gacha_pools") {
+    for (const row of rows) {
+      const kind = text(row.data.kind).trim();
+      const refId = text(row.data.refId).trim();
+      const target = GACHA_KINDS[kind];
+      const referenced = target && refId ? ctx.otherCatalogs.get(target)?.get(refId) : undefined;
+
+      // 5. kind resolves, refId exists in that catalog, and that row is active.
+      if (!target) {
+        err(row.rowId, "kind",
+          `Unknown kind "${kind}". Known: ${Object.keys(GACHA_KINDS).join(", ")}.`);
+      } else if (!refId) {
+        err(row.rowId, "refId", "refId is empty.");
+      } else if (!ctx.otherCatalogs.has(target)) {
+        // The caller did not load the catalog this row references. Silence here
+        // would be a rule that quietly does not run, so say so.
+        err(row.rowId, "refId",
+          `The ${target} catalog was not loaded, so refId "${refId}" could not be checked.`);
+      } else if (!referenced) {
+        err(row.rowId, "refId", `refId "${refId}" does not exist in the ${target} catalog.`);
+      } else if (!referenced.isActive) {
+        err(row.rowId, "refId",
+          `refId "${refId}" is deactivated in ${target} — the pull would grant a prize the game hides.`);
+      }
+
+      // 6. rarity is one of the six, and EQUALS the ref's rarity where the ref has one.
+      const rarity = text(row.data.rarity).trim();
+      if (!(RARITIES as readonly string[]).includes(rarity)) {
+        err(row.rowId, "rarity", `Rarity "${rarity}" is not one of ${RARITIES.join(", ")}.`);
+      } else if (referenced && RARITY_BEARING_KINDS.has(kind)) {
+        const refRarity = text(referenced.data.rarity).trim();
+        if (refRarity && refRarity !== rarity) {
+          err(row.rowId, "rarity",
+            `rarity is "${rarity}" but "${refId}" is ${refRarity} in ${target}. The entry would ` +
+              `sit in the ${rarity} bucket and be rolled at ${rarity} odds while the game shows it as ${refRarity}.`);
+        }
+      }
+
+      // 7. weight ≥ 1, quantity ≥ 1, dupeRp ≥ 0 (blank = 0), featured parses as bool.
+      const weight = num(row.data.weight);
+      if (weight === null) {
+        err(row.rowId, "weight", "weight is empty — an entry with no weight is never picked.");
+      } else if (weight < 1) {
+        err(row.rowId, "weight", `weight ${weight} is below 1 — the entry could never be rolled.`);
+      }
+      const quantity = num(row.data.quantity);
+      if (quantity === null) {
+        err(row.rowId, "quantity", "quantity is empty. Clubs and characters are 1.");
+      } else if (quantity < 1) {
+        err(row.rowId, "quantity", `quantity ${quantity} is below 1 — the prize would be nothing.`);
+      }
+      const dupeRp = num(row.data.dupeRp);
+      if (dupeRp !== null && dupeRp < 0) {
+        err(row.rowId, "dupeRp", `dupeRp ${dupeRp} is negative — a duplicate would CHARGE the player.`);
+      }
+      const featured = text(row.data.featured).trim().toLowerCase();
+      if (featured !== "" && featured !== "true" && featured !== "false") {
+        err(row.rowId, "featured", `featured "${text(row.data.featured)}" is not true or false.`);
+      }
+
+      // 8. min_build ≥ the ref's min_build — shop G2, verbatim (§5.5 rule 8).
+      //    ACTIVE rows only, for the reason the shop gives: min_build is
+      //    immutable once published, so gating a deactivated row would make the
+      //    catalog permanently unpublishable with no way out.
+      if (row.isActive && referenced && row.minBuild < referenced.minBuild) {
+        err(row.rowId, "min_build",
+          `min_build ${row.minBuild} is below the min_build of "${refId}" in ${target} ` +
+            `(${referenced.minBuild}). The pull could grant a prize the build cannot see.`);
+      }
+    }
+    checkRatesAgainstPool(otherRows("gacha_rates"), rows);
+  }
+
+  // ---- gacha_banners -------------------------------------------------------
+  if (catalog === "gacha_banners") {
+    const rateRows = otherRows("gacha_rates");
+    const poolRows = otherRows("gacha_pools");
+    const ticketRows = ctx.otherCatalogs.get("ticket_types");
+
+    /** Rarities this pool can actually pay out (rate > 0), for rules 13. */
+    const rolledRarities = (poolId: string): Set<string> => {
+      const out = new Set<string>();
+      for (const r of ratesOfPool(rateRows, poolId)) {
+        if ((num(r.data.rateBp) ?? 0) > 0) out.add(text(r.data.rarity).trim());
+      }
+      return out;
+    };
+
+    const sortOrders = new Map<string, string[]>();
+
+    for (const row of rows) {
+      const poolId = text(row.data.poolId).trim();
+      const ticketType = text(row.data.ticketType).trim();
+
+      // 10. poolId resolves to a pool with a COMPLETE rate table; ticketType
+      //     resolves to an active ticket_types row.
+      if (!poolId) {
+        err(row.rowId, "poolId", "poolId is empty — the server would not know what to roll.");
+      } else {
+        const rates = ratesOfPool(rateRows, poolId);
+        if (rates.length === 0) {
+          err(row.rowId, "poolId",
+            `Pool "${poolId}" has no active rate table. Publish gacha_rates for it first.`);
+        } else {
+          const missing = RARITIES.filter(
+            (rarity) => !rates.some((r) => text(r.data.rarity).trim() === rarity)
+          );
+          const sum = rates.reduce((acc, r) => acc + (num(r.data.rateBp) ?? 0), 0);
+          if (missing.length > 0) {
+            err(row.rowId, "poolId",
+              `Pool "${poolId}" is missing rate rows for ${missing.join(", ")}.`);
+          }
+          if (sum !== 10000) {
+            err(row.rowId, "poolId",
+              `Pool "${poolId}" rates sum to ${sum} basis points, not 10000.`);
+          }
+        }
+        if (entriesOfPool(poolRows, poolId).length === 0) {
+          err(row.rowId, "poolId", `Pool "${poolId}" has no active entries — a pull would pay nothing.`);
+        }
+      }
+
+      if (!ticketType) {
+        err(row.rowId, "ticketType", "ticketType is empty — the cost is in no currency.");
+      } else if (!ticketRows) {
+        err(row.rowId, "ticketType",
+          "The ticket_types catalog was not loaded, so ticketType could not be checked.");
+      } else {
+        const ticket = ticketRows.get(ticketType);
+        if (!ticket) {
+          err(row.rowId, "ticketType", `ticketType "${ticketType}" is not a ticket_types id.`);
+        } else if (!ticket.isActive) {
+          err(row.rowId, "ticketType",
+            `ticketType "${ticketType}" is deactivated — the banner would charge a ticket kind the game hides.`);
+        }
+      }
+
+      // 11. costs non-negative; a x10 dearer than ten x1s is almost certainly a typo.
+      const costX1 = num(row.data.costX1);
+      const costX10 = num(row.data.costX10);
+      if (costX1 !== null && costX1 < 0) err(row.rowId, "costX1", `costX1 ${costX1} is negative.`);
+      if (costX10 !== null && costX10 < 0) err(row.rowId, "costX10", `costX10 ${costX10} is negative.`);
+      if (costX1 !== null && costX10 !== null && costX10 > 10 * costX1) {
+        warn(row.rowId, "costX10",
+          `costX10 ${costX10} is more than ten x1s (${10 * costX1}) — a x10 that costs MORE than ` +
+            "pulling ten times. A discount is normal; a premium is probably a typo.");
+      }
+
+      // 12. the scheduling window parses and is well-ordered. Fails CLOSED, the
+      //     way shop_catalog's does: an unreadable bound must never mean "show
+      //     it forever", so it is an error here rather than a runtime surprise.
+      const bound = (column: string): number | null | "invalid" => {
+        const raw = text(row.data[column]).trim();
+        if (raw === "") return null;
+        const ms = Date.parse(raw.replace(" ", "T"));
+        return Number.isNaN(ms) ? "invalid" : ms;
+      };
+      const startMs = bound("startUtc");
+      const endMs = bound("endUtc");
+      for (const [column, value] of [["startUtc", startMs], ["endUtc", endMs]] as const) {
+        if (value === "invalid") {
+          err(row.rowId, column,
+            `"${text(row.data[column])}" is not a readable timestamp. Use an ISO-8601 UTC instant ` +
+              "like 2026-09-01T00:00:00Z, or leave it empty for \"no bound\".");
+        }
+      }
+      if (typeof startMs === "number" && typeof endMs === "number" && endMs <= startMs) {
+        err(row.rowId, "endUtc",
+          `The window ends at or before it starts (${text(row.data.startUtc)} → ${text(row.data.endUtc)}). ` +
+            "endUtc is EXCLUSIVE, so this banner would never be live.");
+      }
+
+      // 13. pity, and the x10 guarantee. Decision 2: blank and 0 mean the same
+      //     thing — NO pity — so a half-filled banner never acquires one.
+      const pityThreshold = num(row.data.pityThreshold);
+      const pityMinRarity = text(row.data.pityMinRarity).trim();
+      const guarantee = text(row.data.guaranteeMinRarityX10).trim();
+      const rolled = poolId ? rolledRarities(poolId) : new Set<string>();
+
+      if (pityThreshold === null || pityThreshold === 0) {
+        if (pityMinRarity) {
+          warn(row.rowId, "pityMinRarity",
+            `pityThreshold is ${pityThreshold === null ? "blank" : "0"} (no pity), so ` +
+              `pityMinRarity "${pityMinRarity}" is ignored. Clear it, or set a threshold.`);
+        }
+      } else if (pityThreshold < 0) {
+        err(row.rowId, "pityThreshold", `pityThreshold ${pityThreshold} is negative.`);
+      } else if (!pityMinRarity) {
+        err(row.rowId, "pityMinRarity",
+          `pityThreshold is ${pityThreshold}, so pityMinRarity is required — a pity with no ` +
+            "rarity to guarantee guarantees nothing.");
+      } else if (!(RARITIES as readonly string[]).includes(pityMinRarity)) {
+        err(row.rowId, "pityMinRarity", `Rarity "${pityMinRarity}" is not one of ${RARITIES.join(", ")}.`);
+      } else if (poolId && rolled.size > 0 && !rolled.has(pityMinRarity)) {
+        err(row.rowId, "pityMinRarity",
+          `${pityMinRarity} has a rate of 0 in pool "${poolId}", so the pity could never be paid.`);
+      }
+
+      if (guarantee) {
+        if (!(RARITIES as readonly string[]).includes(guarantee)) {
+          err(row.rowId, "guaranteeMinRarityX10",
+            `Rarity "${guarantee}" is not one of ${RARITIES.join(", ")}.`);
+        } else if (poolId && rolled.size > 0 && !rolled.has(guarantee)) {
+          err(row.rowId, "guaranteeMinRarityX10",
+            `${guarantee} has a rate of 0 in pool "${poolId}", so the x10 guarantee could never be paid.`);
+        }
+      }
+
+      // 14. a per-player cap of 0 is a banner nobody may pull; blank = unlimited.
+      const cap = num(row.data.maxPullsPerPlayer);
+      if (cap !== null && cap < 1) {
+        err(row.rowId, "maxPullsPerPlayer",
+          `maxPullsPerPlayer ${cap} would let nobody pull. Leave it BLANK for unlimited.`);
+      }
+
+      // 15. A LIVE banner must be renderable and readable — the texts rule-5
+      //     analogue. Checked on the ROW's own state, not the clock: `now` is
+      //     not available to a pure validator, and a banner that is active and
+      //     inside its window at ANY point is one a player will see.
+      if (row.isActive) {
+        for (const column of ["nameEn", "nameJa"] as const) {
+          if (!text(row.data[column]).trim()) {
+            err(row.rowId, column,
+              `"${column}" is empty on an active banner. The card renders the title as UI text ` +
+                "from the row (decision 7), so a missing locale is a blank card in that language.");
+          }
+        }
+        if (!text(row.data.artSprite).trim() && !text(row.data.artUrl).trim()) {
+          err(row.rowId, "artSprite",
+            "An active banner needs artSprite (bundled) or artUrl (uploaded) — the card withholds " +
+              "a banner it cannot draw rather than showing a blank one.");
+        }
+      }
+
+      // 16. an uploaded art URL passes the same allowlist the client enforces.
+      const artUrl = text(row.data.artUrl).trim();
+      if (artUrl) {
+        const urlErr = validateArtUrlUnderBucket(artUrl, CATALOG_ART_BUCKET);
+        if (urlErr) err(row.rowId, "artUrl", urlErr);
+      }
+
+      // 17. sortOrder unique among active rows — WARN. Two banners at the same
+      //     position is a stable-sort coin toss, not a broken card.
+      if (row.isActive) {
+        const key = text(row.data.sortOrder).trim();
+        if (key) sortOrders.set(key, [...(sortOrders.get(key) ?? []), row.rowId]);
+      }
+
+      // 18. every featured ref is actually IN the banner's pool.
+      const featured = text(row.data.featuredRefIds).trim();
+      if (featured && poolId) {
+        const inPool = new Set(entriesOfPool(poolRows, poolId).map((e) => text(e.data.refId).trim()));
+        for (const token of featured.split(";").map((t) => t.trim()).filter(Boolean)) {
+          if (!inPool.has(token)) {
+            warn(row.rowId, "featuredRefIds",
+              `"${token}" is featured but is not an active entry of pool "${poolId}" — the card ` +
+                "would advertise a prize this banner cannot drop.");
+          }
+        }
+      }
+    }
+
+    for (const [sortOrder, ids] of sortOrders) {
+      if (ids.length > 1) {
+        warn(null, "sortOrder",
+          `sortOrder ${sortOrder} is shared by ${ids.join(", ")} — their order on the carousel is arbitrary.`);
+      }
+    }
+  }
+
+  // ---- ticket_types --------------------------------------------------------
+  if (catalog === "ticket_types") {
+    const seenKeys = new Map<string, string>();
+    for (const row of rows) {
+      // 19. id is a non-negative integer (it is the row id, so uniqueness is
+      //     rule 1's job); key is lower-snake and unique; both names non-empty.
+      const id = num(row.data.id);
+      if (id === null || !Number.isInteger(id) || id < 0) {
+        err(row.rowId, "id",
+          `id "${text(row.data.id)}" must be a whole number ≥ 0 — it is the ticketTypeInt ` +
+            "persisted in every player's save.");
+      }
+      const key = text(row.data.key).trim();
+      if (!key) {
+        err(row.rowId, "key", "key is empty.");
+      } else if (!/^[a-z0-9_]+$/.test(key)) {
+        err(row.rowId, "key", `key "${key}" must be lower-case snake ([a-z0-9_]).`);
+      } else if (seenKeys.has(key)) {
+        err(row.rowId, "key", `key "${key}" is already used by ticket type ${seenKeys.get(key)}.`);
+      } else {
+        seenKeys.set(key, row.rowId);
+      }
+      for (const column of ["nameEn", "nameJa"] as const) {
+        if (!text(row.data[column]).trim()) {
+          err(row.rowId, column, `"${column}" is empty — every ticket type needs both locales.`);
+        }
+      }
+
+      // 20. deactivating a type an ACTIVE banner charges.
+      if (!row.isActive) {
+        const chargedBy = otherRows("gacha_banners")
+          .filter((b) => b.isActive && text(b.data.ticketType).trim() === row.rowId)
+          .map((b) => b.rowId);
+        if (chargedBy.length > 0) {
+          err(row.rowId, "id",
+            `Ticket type ${row.rowId} is charged by active banner(s) ${chargedBy.join(", ")}. ` +
+              "Deactivate or re-point those banners first — otherwise their cost is in a currency the game hides.");
+        }
+      }
     }
   }
 

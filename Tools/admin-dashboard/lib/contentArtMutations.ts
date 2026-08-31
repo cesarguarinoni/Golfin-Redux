@@ -16,6 +16,9 @@ import type { MutationOutcome } from "./mutations";
  *     no invalidation needed on the client.
  *   - Re-uploading the same bytes → same URL (upsert: true → no-op rewrite)
  *   - Size cap 500 KB (SPEC §3 — same limit as banners)
+ *   - Banner artwork targets 882 x 1448 (the bundled GachaBanner_StandardClub1,
+ *     measured 2026-08-31). Dimensions are NOT enforced here — see the amber
+ *     drift hint in the panel; a wrong-sized banner scales, it does not break.
  *   - MIME: JPG, PNG only — NO WebP (SPEC §5.1, Cesar 2026-08-27; see CATALOG_ART_SPEC)
  *   - Writes an audit row ("content_art_upload") — same as "banner_art_upload"
  *   - Creates the bucket on first use (no manual Supabase step needed)
@@ -43,6 +46,11 @@ const ALLOWED_CATALOGS = [
   "clubs",
   "items",
   "balls",
+  // gacha_admin_catalogs §5.2. ONE image per banner, and it must carry NO TEXT:
+  // the title and tagline are UI-authored from the row (decision 7), so the
+  // artwork is a backdrop the card draws over. `artSprite` stays the bundled
+  // floor; this is what an installed build fetches.
+  "gacha_banners",
 ] as const;
 export type AllowedCatalog = (typeof ALLOWED_CATALOGS)[number];
 
@@ -56,6 +64,7 @@ const ALLOWED_COLUMNS = [
   "fullUrl",
   "thumbnailUrl",
   "controlUrl",
+  "artUrl",
 ] as const;
 export type AllowedColumn = (typeof ALLOWED_COLUMNS)[number];
 

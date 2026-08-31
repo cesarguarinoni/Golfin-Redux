@@ -13,6 +13,11 @@
 //   Both are REAL production methods (internal seams added to GachaBannerModel.cs in this iteration).
 //   The local EntryRow / ParseCsvDirect / FilterLive mirrors have been DELETED — no copy remains.
 //   The 8 FormatCountdown_* tests call GachaCarouselController.FormatCountdown via reflection (unchanged).
+//
+// gacha_admin_catalogs §3: three tests added (CsvParse_QuotedFieldWithComma_DoesNotShiftColumns,
+//   CsvParse_WideHeader_ReadsTheNineShippedFieldsUnchanged, CsvParse_RowWithNoBannerId_Skipped).
+//   The 15 pre-existing tests are UNMODIFIED — the header-indexed parser must read the 9-column
+//   form byte-for-byte the way the positional one did.
 
 using System;
 using System.Collections;
@@ -197,6 +202,102 @@ namespace GolfinRedux.Tests.EditMode
             Assert.AreEqual(1, entries.Count);
             Assert.AreEqual(DateTime.MaxValue, GetProp<DateTime>(entries[0], "EndUtc"),
                 "Bad date must default to DateTime.MaxValue");
+        }
+
+        // ─────────────────────────────────────────────────────────────────────────
+        // Test 1b — the header-indexed, quote-aware parser (gacha_admin_catalogs §3)
+        //
+        // The three tests above pin the 9-column form the game shipped with; these three pin
+        // what changed. `export_content.py` writes QUOTE_MINIMAL canonical form and the
+        // bundled floor of the next build is whatever it wrote, so the parser has to survive
+        // (a) a quoted field containing a comma and (b) the 22-column header the admin
+        // catalog added — reading the same nine values out of both.
+        // ─────────────────────────────────────────────────────────────────────────
+
+        /// The 22-column header the `gacha_banners` catalog publishes (SPEC §2.1).
+        private const string WideHeader =
+            "bannerId,nameKey,artSprite,costX1,costX10,endUtc,rulesUrl,sortOrder,active," +
+            "startUtc,poolId,ticketType,pityThreshold,pityMinRarity,guaranteeMinRarityX10," +
+            "maxPullsPerPlayer,artUrl,nameEn,nameJa,taglineEn,taglineJa,featuredRefIds\n";
+
+        [Test]
+        public void CsvParse_QuotedFieldWithComma_DoesNotShiftColumns()
+        {
+            // A tagline with a comma in it is ONE quoted field to the exporter and TWO columns
+            // to Split(','). Under the old parser `active` would have been read out of the
+            // column after it; the entry below must come out identical to the unquoted case.
+            const string csv = WideHeader +
+                "banner_q,KEY,Sprite,50,450,2027-01-01T00:00:00Z,https://rules/q,7,true," +
+                "2026-01-01T00:00:00Z,pool_standard_club1,0,50,Legendary,Rare,,," +
+                "QUOTED,クオート,\"Pull now, win big\",\"引いて、勝つ\",club_pwedge_royal\n";
+
+            var entries = ParseCsvViaProd(csv);
+            Assert.AreEqual(1, entries.Count, "The quoted comma must not produce a ragged row");
+
+            var e = entries[0];
+            Assert.AreEqual("banner_q",        GetProp<string>(e, "BannerId"));
+            Assert.AreEqual("KEY",             GetProp<string>(e, "NameKey"));
+            Assert.AreEqual("Sprite",          GetProp<string>(e, "ArtSprite"));
+            Assert.AreEqual(50,                GetProp<int>   (e, "CostX1"));
+            Assert.AreEqual(450,               GetProp<int>   (e, "CostX10"));
+            Assert.AreEqual("https://rules/q", GetProp<string>(e, "RulesUrl"));
+            Assert.AreEqual(7,                 GetProp<int>   (e, "SortOrder"));
+            Assert.IsTrue(GetProp<bool>(e, "Active"),
+                "active read out of the wrong column is exactly what quote-awareness prevents");
+        }
+
+        [Test]
+        public void CsvParse_WideHeader_ReadsTheNineShippedFieldsUnchanged()
+        {
+            // The four seed rows of the extended gacha_banners.csv, verbatim.
+            const string csv = WideHeader +
+                "banner_standard_club1,STANDARD CLUB 1,GachaBanner_StandardClub1,50,450,2027-01-01T00:00:00Z," +
+                "https://golfin.example.com/gacha-rules/standard-club1,1,true,2026-01-01T00:00:00Z," +
+                "pool_standard_club1,0,50,Legendary,Rare,,,STANDARD CLUB 1,X,,,club_pwedge_royal;club_putter_golfinx\n" +
+                "banner_test_a,TEST BANNER A,GachaBanner_StandardClub1,50,450,2026-12-31T23:59:00Z," +
+                "https://golfin.example.com/gacha-rules/test-a,2,true,2026-01-01T00:00:00Z," +
+                "pool_standard_club1,0,,,,,,TEST BANNER A,X,,,\n" +
+                "banner_test_b,TEST BANNER B,GachaBanner_StandardClub1,75,675,2026-11-30T00:00:00Z," +
+                "https://golfin.example.com/gacha-rules/test-b,3,true,2026-01-01T00:00:00Z," +
+                "pool_standard_club1,0,30,Rare,Uncommon,,,TEST BANNER B,X,,,club_awedge_fyloe\n" +
+                "banner_inactive,INACTIVE BANNER,GachaBanner_StandardClub1,50,450,2027-06-01T00:00:00Z," +
+                "https://golfin.example.com/gacha-rules/inactive,10,false,2026-01-01T00:00:00Z," +
+                "pool_standard_club1,0,,,,,,INACTIVE BANNER,X,,,\n";
+
+            var entries = ParseCsvViaProd(csv);
+            Assert.AreEqual(4, entries.Count, "All four seed rows must parse under the 22-column header");
+
+            var expectedIds   = new[] { "banner_standard_club1", "banner_test_a", "banner_test_b", "banner_inactive" };
+            var expectedX1    = new[] { 50, 50, 75, 50 };
+            var expectedX10   = new[] { 450, 450, 675, 450 };
+            var expectedEnd   = new[] { "2027-01-01T00:00:00Z", "2026-12-31T23:59:00Z",
+                                        "2026-11-30T00:00:00Z", "2027-06-01T00:00:00Z" };
+            var expectedLive  = new[] { true, true, true, false };
+
+            for (int i = 0; i < 4; i++)
+            {
+                Assert.AreEqual(expectedIds[i],  GetProp<string>(entries[i], "BannerId"));
+                Assert.AreEqual(expectedX1[i],   GetProp<int>   (entries[i], "CostX1"));
+                Assert.AreEqual(expectedX10[i],  GetProp<int>   (entries[i], "CostX10"));
+                Assert.AreEqual(expectedLive[i], GetProp<bool>  (entries[i], "Active"));
+                Assert.AreEqual(
+                    DateTime.Parse(expectedEnd[i], System.Globalization.CultureInfo.InvariantCulture,
+                                   System.Globalization.DateTimeStyles.AssumeUniversal).ToUniversalTime(),
+                    GetProp<DateTime>(entries[i], "EndUtc"));
+            }
+        }
+
+        [Test]
+        public void CsvParse_RowWithNoBannerId_Skipped()
+        {
+            const string csv =
+                "bannerId,nameKey,artSprite,costX1,costX10,endUtc,rulesUrl,sortOrder,active\n" +
+                ",KEY,Sprite,100,900,2027-01-01T00:00:00Z,url,1,true\n" +
+                "banner_ok,KEY,Sprite,100,900,2027-01-01T00:00:00Z,url,2,true\n";
+
+            var entries = ParseCsvViaProd(csv);
+            Assert.AreEqual(1, entries.Count, "A row with a blank bannerId is not a banner");
+            Assert.AreEqual("banner_ok", GetProp<string>(entries[0], "BannerId"));
         }
 
         // ─────────────────────────────────────────────────────────────────────────

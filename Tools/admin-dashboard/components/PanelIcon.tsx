@@ -125,6 +125,15 @@ const PATHS: Record<PanelIconName, React.ReactNode> = {
       <path d="M16 3v4" />
     </>
   ),
+  // A torn stub with a perforation — one pull, one ticket.
+  ticket: (
+    <>
+      <path d="M3 8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v1.5a2.5 2.5 0 0 0 0 5V16a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1.5a2.5 2.5 0 0 0 0-5z" />
+      <path d="M14 7v2" />
+      <path d="M14 11v2" />
+      <path d="M14 15v2" />
+    </>
+  ),
   // A rising staircase — levels, each one a step you pay for.
   ladder: (
     <>
