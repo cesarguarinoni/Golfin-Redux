@@ -7,7 +7,9 @@
 
 using System;
 using System.Collections.Generic;
+using Golfin.Content;
 using GolfinRedux.UI.Gacha;
+using Golfin.Telemetry;
 using Golfin.UI.Common;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -74,9 +76,21 @@ namespace GolfinRedux.UI.Gacha
         /// </summary>
         public static GachaCarouselController Instance { get; private set; }
 
+        // §3 — one gacha_banner_view per banner per Rewards Center open. The set is cleared on
+        // OnEnable, which IS "per open": the screen is deactivated when the player leaves.
+        private readonly HashSet<string> _viewedThisOpen = new();
+
         private void OnEnable()
         {
             Instance = this;
+            _viewedThisOpen.Clear();
+
+            // gacha_ops_polish §4c — ASK for a fresh catalog on the way in. Without this the fetch
+            // ran once, at boot, so 5b's live re-install could only ever see a publish that landed
+            // before launch. Throttled to one request a minute and off the critical path, so it
+            // costs this open nothing: the reload below still serves whatever is already cached,
+            // and the newer one lands on the NEXT open.
+            ContentService.Instance?.RefreshNow();
 
             // Reload() is ALSO where the 5b same-session re-apply happens: a content refresh that
             // landed while the player was elsewhere is installed here, so a banner published
@@ -261,6 +275,10 @@ namespace GolfinRedux.UI.Gacha
 
         private void UpdateDots()
         {
+            // FIRST, and before the dot-container guard: the telemetry is about which banner is
+            // centred, not about whether this scene wired a dot strip.
+            RecordCentredBannerView();
+
             if (_dotContainer == null) return;
 
             // Ensure the circular dot sprite (Resources fallback — the controller lives in the
@@ -359,6 +377,40 @@ namespace GolfinRedux.UI.Gacha
         }
 
         // ── Empty state ───────────────────────────────────────────────────────
+
+        /// <summary>
+        /// <c>gacha_banner_view</c> for whichever card is now centred (gacha_ops_polish §3).
+        ///
+        /// <para>
+        /// It hangs off <see cref="UpdateDots"/> because that is called by EVERY path that changes
+        /// which card is centred — the initial build, a swipe, a tap-to-centre and an expiry — and
+        /// by nothing else. Wiring it to the three call sites separately is how one of them ends up
+        /// missing it.
+        /// </para>
+        /// <para>
+        /// ONCE PER BANNER PER OPEN. A player swiping back and forth is one player looking at two
+        /// banners, and counting every pass would inflate the denominator of every conversion rate
+        /// on the funnel card by however restless they were.
+        /// </para>
+        /// </summary>
+        private void RecordCentredBannerView()
+        {
+            if (_currentIndex < 0 || _currentIndex >= _entries.Count) return;
+
+            var entry = _entries[_currentIndex];
+            if (entry == null || string.IsNullOrEmpty(entry.BannerId)) return;
+            if (!_viewedThisOpen.Add(entry.BannerId)) return;
+
+            int position = _currentIndex;
+            int liveCount = _entries.Count;
+            TelemetryService.Instance.RecordSafe(TelemetryEventNames.GachaBannerView,
+                () => new Dictionary<string, object>
+                {
+                    ["banner_id"]  = entry.BannerId,
+                    ["position"]   = position,
+                    ["live_count"] = liveCount,
+                });
+        }
 
         private void ShowEmptyState(bool show)
         {

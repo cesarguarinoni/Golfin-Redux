@@ -1,8 +1,19 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// TournamentsRuntime — ScheduleRefreshThrottle
+// ContentRuntime — ScheduleRefreshThrottle
 // The "is another fetch allowed right now?" decision, extracted from
 // TournamentService so it is unit-testable without a MonoBehaviour, a clock, or
 // a socket. Pure C#: no UnityEngine dependency, time is passed in.
+//
+// ⚠️ IT LIVES IN Golfin.Content, AND ITS NAMESPACE IS STILL Golfin.Tournaments.
+// gacha_ops_polish §4c gave it a SECOND caller — `ContentService.RefreshNow()`
+// — and ContentService is in the `Golfin.Content` asmdef, which cannot see
+// Assembly-CSharp, where this file used to sit (Assets/Scripts/TournamentsRuntime
+// has no asmdef). Moving the FILE and keeping the namespace is what let both
+// callers share ONE implementation instead of growing a second copy of an
+// in-flight guard and a cooldown: `Golfin.Content` is autoReferenced, so
+// `TournamentService` still compiles untouched, `Golfin.Tournaments.Tests`
+// already references Golfin.Content, and `ScheduleRefreshTests` resolves it by
+// scanning every loaded assembly for the full type name.
 // ─────────────────────────────────────────────────────────────────────────────
 #nullable enable
 using System;

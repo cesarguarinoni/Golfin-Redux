@@ -146,6 +146,16 @@ namespace GolfinRedux.UI.Gacha
         private bool        _bagHasEntered;
 
         private IReadOnlyList<PrizeRecord> _prizes = Array.Empty<PrizeRecord>();
+
+        // ── §3 telemetry context (gacha_ops_polish) ────────────────────────────
+        //
+        // The reveal has never needed to know WHICH pull it is showing — it is handed prizes and
+        // plays them. `gacha_reveal_skip` does need it: "players skip" is only actionable per
+        // banner and per x1-vs-x10, and the modal is the only place that knows how many cards had
+        // actually been seen when the button was hit.
+        private string _telemetryBannerId = string.Empty;
+        private int    _telemetryCount;
+        private int    _cardsShown;
         private Action?     _onFinished;
         private QualityTier _quality = QualityTier.High;
         private Vector2     _panelHome;
@@ -219,6 +229,17 @@ namespace GolfinRedux.UI.Gacha
         /// yet, so the button would have nothing to cut to.
         /// </para>
         /// </summary>
+        /// <summary>
+        /// Tell the modal which pull it is about to reveal. Called by <c>GachaPullFlow.Pull</c>
+        /// immediately before <see cref="BeginWaiting"/>; it feeds <c>gacha_reveal_skip</c> and
+        /// nothing else, so a caller that omits it costs one telemetry field and no behaviour.
+        /// </summary>
+        public void SetPullContext(string bannerId, int count)
+        {
+            _telemetryBannerId = bannerId ?? string.Empty;
+            _telemetryCount    = count;
+        }
+
         public void BeginWaiting()
         {
             if (_running)
@@ -231,6 +252,7 @@ namespace GolfinRedux.UI.Gacha
             _onFinished      = null;
             _finishedInvoked = false;
             _waiting         = true;
+            _cardsShown      = 0;
 
             // Read the tier ONCE per pull: a mid-reveal Settings change must not restyle
             // card 7 of 10 differently from card 6.
@@ -329,6 +351,18 @@ namespace GolfinRedux.UI.Gacha
             // cut to before the server answers, and skipping to one would open an empty screen.
             if (_waiting) return;
 
+            // gacha_ops_polish §3 — a high skip rate is a statement about the ANIMATION, not about
+            // the pull, and `cards_shown` is what separates "skipped immediately" from "watched
+            // nine and cut the tenth".
+            Golfin.Telemetry.TelemetryService.Instance.RecordSafe(
+                Golfin.Telemetry.TelemetryEventNames.GachaRevealSkip,
+                () => new Dictionary<string, object>
+                {
+                    ["banner_id"]   = _telemetryBannerId,
+                    ["count"]       = _telemetryCount,
+                    ["cards_shown"] = _cardsShown,
+                });
+
             SfxBus.Play(SfxId.GachaSkip);
             StopSequence();
             ResetToIdle();
@@ -416,6 +450,7 @@ namespace GolfinRedux.UI.Gacha
 
                 yield return StepShake(tier, isFirst ? tier.shakeFirst : tier.shakeNext, tint);  // B
                 yield return StepPop(record, tier, i);                                           // C
+                _cardsShown = i + 1;   // §3 — what SKIP reports as already seen
                 StepLand(tier, tint);                                                            // D
                 yield return StepHold(tier);                                                     // E
 

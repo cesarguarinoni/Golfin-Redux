@@ -59,6 +59,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using Golfin.Tournaments;   // ScheduleRefreshThrottle — see its header for why the namespace differs
 using UnityEngine;
 using Debug = UnityEngine.Debug;
 
@@ -149,8 +150,69 @@ namespace Golfin.Content
 
             // Then warm from the server, off the critical path. Nothing above this line and
             // nothing below it waits on a socket.
+            _refreshThrottle.TryBegin(Time.realtimeSinceStartupAsDouble);
             StartCoroutine(RefreshRoutine());
         }
+
+        // ── 4c: the foreground refresh ────────────────────────────────────────
+
+        /// <summary>
+        /// The boot fetch, again, on demand — the other half of decision 5b.
+        ///
+        /// <para>
+        /// Until this existed the fetch ran EXACTLY ONCE, in <see cref="Awake"/>. So
+        /// <c>GachaBannerCatalog</c>'s <c>OnCacheRefreshed</c> subscription could only ever fire
+        /// for a publish that landed BEFORE the app launched: a rate or cost published while the
+        /// player was in the app waited for the next launch, which is precisely the "no build" claim
+        /// 5b makes and could not keep.
+        /// </para>
+        /// <para>
+        /// Guarded by the tournament schedule's own <see cref="ScheduleRefreshThrottle"/>, reused
+        /// rather than re-implemented, for the same two reasons it exists there: a re-entry during
+        /// a slow request must not queue a second one, and bouncing Home → Rewards Center → Home is
+        /// ordinary play. The cooldown is armed when an attempt SETTLES, success or failure, so
+        /// airplane mode cannot turn screen entry into a retry storm.
+        /// </para>
+        /// <para>
+        /// It changes NOTHING about what is applied. The refresh writes caches exactly as the boot
+        /// one does, and only the four gacha catalogs re-install live
+        /// (<see cref="TryReinstallFromCache"/>'s allowlist); every other catalog still takes
+        /// effect at the next launch (I5).
+        /// </para>
+        /// </summary>
+        public void RefreshNow()
+        {
+            if (!isActiveAndEnabled) return;
+
+            if (!_refreshThrottle.TryBegin(Time.realtimeSinceStartupAsDouble))
+            {
+                Debug.Log($"{Tag} RefreshNow ignored — " +
+                          (_refreshThrottle.InFlight
+                              ? "a fetch is already in flight."
+                              : $"cooled down for another " +
+                                $"{_refreshThrottle.SecondsUntilAllowed(Time.realtimeSinceStartupAsDouble):F0}s."));
+                return;
+            }
+
+            Debug.Log($"{Tag} RefreshNow — re-fetching the content delta off the critical path.");
+            StartCoroutine(RefreshRoutine());
+        }
+
+        /// <summary>
+        /// Foregrounding is the other moment a publish can have landed unseen — the player was
+        /// away long enough for an operator to change something, and comes back to a card priced
+        /// from a catalog fetched at launch. The cooldown makes an app that is tabbed in and out
+        /// repeatedly cost one request a minute, not one per switch.
+        /// </summary>
+        private void OnApplicationFocus(bool hasFocus)
+        {
+            if (hasFocus) RefreshNow();
+        }
+
+        /// <summary>One instance, so BOTH callers — the Rewards Center and foregrounding — share a
+        /// single cooldown rather than each getting their own.</summary>
+        private readonly ScheduleRefreshThrottle _refreshThrottle =
+            new ScheduleRefreshThrottle(ScheduleRefreshThrottle.DefaultCooldownSeconds);
 
         private void OnDestroy()
         {
@@ -309,6 +371,31 @@ namespace Golfin.Content
         /// Deliberately does not re-apply (I5) — see the file header.
         /// </summary>
         private IEnumerator RefreshRoutine()
+        {
+            // The cooldown is armed when the attempt SETTLES, whatever it settled as — see
+            // ScheduleRefreshThrottle on why a failure has to arm it too.
+            try
+            {
+                var inner = RefreshRoutineCore();
+                while (true)
+                {
+                    object current;
+                    try { if (!inner.MoveNext()) break; current = inner.Current; }
+                    catch (Exception ex)
+                    {
+                        Debug.LogError($"{Tag} RefreshRoutine threw: {ex}");
+                        break;
+                    }
+                    yield return current;
+                }
+            }
+            finally
+            {
+                _refreshThrottle.Settle(Time.realtimeSinceStartupAsDouble);
+            }
+        }
+
+        private IEnumerator RefreshRoutineCore()
         {
             // THE CURSOR IS THE BUNDLED ONE, EVERY TIME — never the version from a previous
             // response, even though the endpoint would accept it.

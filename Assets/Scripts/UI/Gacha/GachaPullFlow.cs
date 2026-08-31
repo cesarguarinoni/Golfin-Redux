@@ -23,6 +23,7 @@ using System.Collections.Generic;
 using Golfin.Content;
 using Golfin.Economy;
 using Golfin.InventorySync;
+using Golfin.Telemetry;
 using Golfin.UI.Toast;
 using UnityEngine;
 
@@ -60,15 +61,119 @@ namespace GolfinRedux.UI.Gacha
 
             int expectedCost = count == 1 ? entry.CostX1 : entry.CostX10;
 
+            // gacha_ops_polish §3 — recorded BEFORE the server is asked, so a tap the server then
+            // refuses still appears. Taps minus ok results is the abandonment the pull log cannot
+            // see: it has a row per PULL, so every player who tapped and was turned away is
+            // invisible to it.
+            TelemetryService.Instance.RecordSafe(TelemetryEventNames.GachaPullTap,
+                () => new Dictionary<string, object>
+                {
+                    ["banner_id"]      = entry.BannerId,
+                    ["count"]          = count,
+                    ["cost"]           = expectedCost,
+                    ["ticket_type"]    = entry.TicketType,
+                    ["balance_before"] = GachaTicketManager.Instance != null
+                        ? GachaTicketManager.Instance.GetTickets((TicketType)entry.TicketType)
+                        : 0,
+                });
+
             var modal = GachaRevealModalController.Instance;
 
             // No modal in the scene is today's degrade, kept: the pull still happens, the prizes
             // still land, and the Prizes screen opens without the reveal.
-            if (modal != null) modal.BeginWaiting();
+            if (modal != null)
+            {
+                // The reveal has no idea which banner it is revealing; SKIP needs one (§3).
+                modal.SetPullContext(entry.BannerId, count);
+                modal.BeginWaiting();
+            }
+
+            // The round trip is timed from HERE — what the player waits, not what the socket
+            // waits — because the number is being read as "is the pull slow enough to abandon".
+            float startedAt = Time.realtimeSinceStartup;
 
             GachaPullService.Instance.PullAsync(
                 entry.BannerId, count, expectedCost, ContentBuildNumber.Current,
-                outcome => OnPullAnswered(entry, count, modal, outcome));
+                outcome =>
+                {
+                    RecordResult(entry, count, startedAt, outcome);
+                    OnPullAnswered(entry, count, modal, outcome);
+                });
+        }
+
+        // ── §3 — the outcome event ─────────────────────────────────────────────
+
+        /// <summary>
+        /// <c>gacha_pull_result</c>, one per answered pull.
+        ///
+        /// <para>
+        /// It lives HERE and not in <see cref="GachaPullService"/> for the same reason
+        /// <see cref="ApplyOk"/> does: that class is in <c>Golfin.Economy</c>, which references
+        /// only <c>Golfin.Net</c> and must not learn that a telemetry queue exists. This is the
+        /// first place the outcome is visible to an assembly that can see both.
+        /// </para>
+        /// <para>
+        /// The prize detail stops at the six-int rarity histogram, deliberately. The server's pull
+        /// log is the authority on WHAT WAS WON; duplicating rows into telemetry would create a
+        /// second, weaker copy of a ledger and invite the two to disagree.
+        /// </para>
+        /// </summary>
+        private static void RecordResult(GachaBannerEntry entry, int count, float startedAt,
+                                         GachaPullOutcome? outcome)
+        {
+            TelemetryService.Instance.RecordSafe(TelemetryEventNames.GachaPullResult, () =>
+            {
+                var payload = new Dictionary<string, object>
+                {
+                    ["banner_id"]  = entry.BannerId,
+                    ["count"]      = count,
+                    ["status"]     = StatusOf(outcome),
+                    ["latency_ms"] = Mathf.RoundToInt((Time.realtimeSinceStartup - startedAt) * 1000f),
+                };
+
+                var server = outcome?.Server;
+                if (outcome?.Verdict != GachaPullVerdict.Ok || server == null) return payload;
+
+                // Six ints, ladder order — Common first. A histogram rather than a list keeps the
+                // row a fixed shape whether the pull was x1 or x10.
+                var rarities = new int[6];
+                int dupes = 0;
+                foreach (var prize in outcome.Prizes)
+                {
+                    if (prize == null) continue;
+                    if (Enum.TryParse(prize.Rarity, ignoreCase: true, out Golfin.Roster.CharacterRarity r))
+                    {
+                        int i = (int)r;
+                        if (i >= 0 && i < rarities.Length) rarities[i]++;
+                    }
+                    if (prize.IsDupe) dupes++;
+                }
+
+                payload["rarities"]          = rarities;
+                payload["dupes"]             = dupes;
+                payload["pity_forced"]       = server.Pity != null && server.Pity.Forced;
+                payload["guarantee_forced"]  = server.GuaranteeForced;
+                return payload;
+            });
+        }
+
+        /// <summary>The verdict as the funnel card spells it. <c>unavailable</c> covers offline,
+        /// timeout, 5xx and the backend flag being off — one bucket, because from the player's
+        /// side they are one experience.</summary>
+        private static string StatusOf(GachaPullOutcome? outcome)
+        {
+            if (outcome == null) return "unavailable";
+            switch (outcome.Verdict)
+            {
+                case GachaPullVerdict.Ok:           return "ok";
+                case GachaPullVerdict.Insufficient: return "insufficient";
+                case GachaPullVerdict.CostChanged:  return "cost_changed";
+                case GachaPullVerdict.PullCap:      return "pull_cap";
+                case GachaPullVerdict.Paused:       return "paused";
+                case GachaPullVerdict.NotAvailable: return "not_available";
+                case GachaPullVerdict.Unavailable:  return "unavailable";
+                default:                            return "unknown";
+            }
         }
 
         /// <summary>
