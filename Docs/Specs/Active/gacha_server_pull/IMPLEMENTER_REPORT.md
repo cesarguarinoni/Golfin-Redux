@@ -436,3 +436,79 @@ RP back to 823 through the ledger so the correction is itself auditable).
 | 10 | three deploy proofs | **PASS** — table at the top; #2 explained rather than faked |
 | 11 | suites green, zero player strings | **PASS** — 233 / 216 / build green; no Unity file touched |
 | 12 | deviations flagged | **PASS** — Part 1 §Deviations, plus the guarantee-flag note above |
+
+---
+
+# PART 3 — acceptance #6 closed, and the prod account reverted (2026-08-31)
+
+## Acceptance #6 `pool_for_build` — now a live PASS
+
+Cesar's correction, and it was right: **my own §5.2 shop probe already showed the safe
+pattern** — write throwaway rows straight into `content_rows`, exercise the server, delete
+them — and I had failed to apply it to the one item I left PARTIAL. Publishing to prod was
+never necessary; `content_rows` is what the function reads, and a row can live there for a
+second.
+
+Throwaway pool `pool_probe_mb`, built to the acceptance shape exactly:
+
+* rates: **Common 9500 + Supreme 500 = 10 000**. The other four tiers carry no rate row, so
+  `rateBp = 0` and the "every rated tier must be payable" rule does not demand entries.
+* entries: Common → `club_driver_gf` at `min_build 0`; **Supreme → `club_putter_golfinx` at
+  `min_build 9999`, the ONLY Supreme entry**.
+* banner `banner_probe_mb`, `costX1 = 0` — a FREE banner, so the probe never touches the
+  ticket ledger at all. (That the function accepts cost 0 is itself the §2.3 step 7 rule.)
+
+```
+build  2000 → {"status":"not_available","reason":"pool_for_build","rarity":"Supreme"}
+build  9998 → {"status":"not_available","reason":"pool_for_build","rarity":"Supreme"}
+build  9999 → ok   prize Supreme club_putter_golfinx   charged 0
+```
+
+9998 is the boundary and it is the row that matters: the refusal is `min_build > build`, not
+a coarse "high build" check. Catalog rows removed after a **1.0 s** window; `gacha_pools`
+verified back to 11 rows; throwaway user and its rows deleted.
+
+**Acceptance #6: PASS.** Every item in SPEC §10 is now PASS.
+
+## The §8 footprint is REVERTED
+
+Cesar asked for the revert. A full backup of all nine affected tables was written first
+(`/tmp/cesar_backup.json`, 1 579 rows) so the revert was itself reversible.
+
+**What made an exact restore possible rather than a guess:** replaying the level-up loop
+over the lifetime positive XP in `points_transactions` reproduced the LIVE `profiles` row
+exactly — `replay(24 073 XP) → (level 10, xp 1 573)` and `profiles` said `(10, 1 573)`. That
+validated the model, so `replay(24 073 − 21 940) → (level 3, xp 633)` is the pre-test avatar
+state, not an estimate. Independently, the 102 pre-existing transactions sum to **823**,
+which is exactly the baseline `total_points` captured before any of this ran.
+
+| | before revert | after revert | pre-test baseline |
+|---|---|---|---|
+| `activity_pts` / `gift_pts` / `total_points` | 22 663 / 0 / 22 663 | **823 / 0 / 823** | 823 / 0 / 823 |
+| `avatar_level` / `avatar_xp` | 10 / 1 573 | **3 / 633** | 3 / 633 |
+| `points_transactions` | 423 | **102** | 102 |
+| pending grants | 121 (117 gacha) | **4** | 4 |
+| tickets | 49 945 | **none** | none |
+| pull / prize / ledger / pity rows | 293 / 437 / 297 / 2 | **0** | 0 |
+
+Deleted: 320 `gacha_dupe` rows + 1 shop-probe `spend` row, 117 gacha pending grants, all
+gacha rows, the probe's `golfin_shop_purchases` row. **Kept, and verified by id:** the four
+pre-existing pending grants (`shop_char_mike`, `shop_club_iron9_klyro`, two
+`shop_ball_putt_ace`) and the four pre-existing shop purchases.
+
+The grant delete carried **both** filters `note like 'gacha:%'` AND `applied_at is null` —
+the same pair `revokeInventoryGrant` uses, for the same reason: a grant the client had
+already drained must not be deleted, because deleting the queue row would not take the item
+back. It was asserted up front that 0 of the 117 were applied.
+
+Three independent checks after the fact, none of which is "I set it back":
+* the surviving ledger **sums to 823** and `profiles.total_points` **is** 823;
+* the surviving ledger **replays to (3, 633)** and `profiles` **is** (3, 633);
+* the four surviving grant **ids are identical** to the pre-test set.
+
+All five gacha tables are now **globally empty** — nothing but this task ever wrote to them,
+so the tables are in the state the migration created. The four gacha catalogs are untouched
+(4 / 6 / 11 / 2 rows) and both `content_settings` flags read `true`.
+
+**What is deliberately NOT reverted:** the migrations, the deploys, and the two schema
+changes. Those are the feature.

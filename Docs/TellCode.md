@@ -7,20 +7,15 @@
 
 ## ▶ CURRENT STATE — update this block at every session boundary
 
-- **⚠️ CESAR: TWO MIGRATIONS ARE WAITING FOR YOU (2026-08-31, `gacha_server_pull`).** Paste them
-  into the Supabase SQL editor (project `wmszyghwwkaptgqdunel`) **in this order**, then run each
-  file's VERIFICATION block and paste the output back:
-  **1.** `playlife/backend/migrations/2026_09_01_golfin_gacha.sql` — the five gacha tables, the
-  ticket ledger, `golfin_ticket_credit()` / `golfin_ref_owned()` / `golfin_gacha_pull()`, the
-  `gacha_enabled` pause row and the `gacha_dupe` earn action.
-  **2.** `playlife/backend/migrations/2026_09_01_shop_purchase_tickets.sql` — `create or replace
-  golfin_shop_purchase` with `category = ticket`, and it CALLS two functions from file 1, so the
-  order is not optional.
-  Nothing else is blocked on anything else: the API is already deployed (image
-  `deployment-01M1B5F2YV1ZJT84RX7RSGN5WW`) and the dashboard build is green. Until they land,
-  `/api/v1/gacha/pull` 500s, the Gacha panel shows its `notMigrated` notice, and an admin ticket
-  grant answers **503 naming the file** (the old grants-queue path for tickets is gone on purpose).
-  The SPEC §7 roll-parity harness and the §8 live E2E run in one pass afterwards.
+- **`gacha_server_pull` (B): both migrations APPLIED, §7 + §8 RUN, awaiting Cesar's approval
+  (2026-08-31).** Verification 16/16 and 11/11. All three deploy surfaces live (API
+  `deployment-01M1B5F2YV1ZJT84RX7RSGN5WW` v64; dashboard `bbfdb132-…` stamped `83564c011`;
+  Access 302). **Every SPEC §10 acceptance item is PASS** — parity worst 0.90 pt against a
+  ±1.5 tolerance, the full eight-step live E2E, the §5.2 shop ticket sale, and
+  `pool_for_build` closed with a throwaway `content_rows` probe. Nothing is outstanding.
+  ⚠️ Every row the tests wrote to prod has been deleted, including the §8 footprint on
+  cesar.guarinoni@wonderwall-g.com (RP back to 823, avatar back to level 3 / xp 633) — so
+  the five gacha tables are globally EMPTY and the first real row will come from spec C.
 
 - **`gacha_server_pull` (B) is BUILT — backend + dashboard, no Unity change (2026-08-31).**
   `golfin_gacha_pull()` prices the banner on the server clock, debits the new ticket ledger, rolls
@@ -138,10 +133,9 @@
   round trip, three admin panels + validation + art upload, one client parser rail. Game behaviour
   unchanged. Specs B (`gacha_server_pull`), C (`gacha_client_real_pull`), D follow.
 
-- **`gacha_server_pull`** (filed 2026-08-31, Architect via Cowork) — **BUILT 2026-08-31, STATUS
-  `AWAITING_MIGRATION`.** ⚠️ Do NOT re-dispatch an implementer on this: the code is written, the
-  API is deployed and the suites are green. What is outstanding is Cesar pasting the two
-  migrations (see CURRENT STATE above) and then the §7 parity + §8 E2E run.
+- **`gacha_server_pull`** (filed 2026-08-31, Architect via Cowork) — **DONE_PENDING_CESAR_APPROVAL.**
+  ⚠️ Do NOT re-dispatch an implementer on this: migrations applied, deploys out, §7 + §8 run,
+  every acceptance item PASS. It needs Cesar's approval and then the move to `Completed/`.
   `Docs/Specs/Active/gacha_server_pull/SPEC.md`. Spec B: `golfin_gacha_pull()` reads the PUBLISHED
   gacha catalogs (no mirror), ticket ledger `golfin_tickets` + `golfin_ticket_credit()`, roll with
   pity / x10 guarantee (§3 — must match `lib/gachaOdds.ts` from spec A), `routers/gacha.py`

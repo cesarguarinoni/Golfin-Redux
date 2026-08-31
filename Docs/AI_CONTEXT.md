@@ -5,19 +5,17 @@
 
 ---
 
-## 🟡 BUILT, AWAITING THE MIGRATION — `gacha_server_pull` (2026-08-31)
+## ✅ BUILT + PROVEN ON PROD — `gacha_server_pull`, awaiting Cesar's approval (2026-08-31)
 
 **The pull becomes one server function that reads the published catalogs.** Spec B of
 `Docs/GACHA_ADMIN_PLAN.md`. Backend + dashboard only — **no Unity change**; `GachaPullFlow` still
 plays its mock until spec C.
 
-**⚠️ ONE THING IS OUTSTANDING AND EVERYTHING ELSE WAITS ON IT: Cesar must apply
-`playlife/backend/migrations/2026_09_01_golfin_gacha.sql` and then
-`2026_09_01_shop_purchase_tickets.sql` in the Supabase SQL editor.** DDL has no path from this
-machine (ADMIN_DASHBOARD_OPS §3.2). Until they land: `/api/v1/gacha/*` answers a loud 500 on a
-pull, the Gacha panel renders its `notMigrated` notice, and an admin ticket grant answers 503 with
-the filename. Once they land, SPEC §7 (roll parity) and §8 (the live E2E) can be run from here in
-one pass — the service key reaches prod over PostgREST.
+**Both migrations are APPLIED** (Cesar, same day; verification 16/16 and 11/11). **§7 roll
+parity and §8 live E2E are RUN on prod and pasted** in the implementer report; **every SPEC §10
+acceptance item is PASS**. All three deploy surfaces are live: API
+`deployment-01M1B5F2YV1ZJT84RX7RSGN5WW` (v64), dashboard `bbfdb132-…` stamped `83564c011`,
+Access 302.
 
 - **`golfin_gacha_pull(user, banner, count, expected_cost, key, build)`** — modelled on
   `golfin_shop_purchase()` step for step: replay by `(user, key)` → kill switches (`content_enabled`,
@@ -44,6 +42,28 @@ one pass — the service key reaches prod over PostgREST.
   and **no such row may be published yet**: validator rule **G1-T** hard-errors while
   `TICKET_SHOP_BUILD = 0`, because the shipped client's `ShopTransaction.ApplyPurchaseGrant` has no
   `ticket` case and would charge the player then report a failure. That client half is spec C's.
+- **§7 parity PASS, and the control is the point.** Run on `banner_test_a` FIRST — it has neither
+  pity nor a guarantee, so every slot is unforced on both sides and the comparison is exact.
+  2 000 × x10 = 20 000 slots: worst |SQL − published| **0.63 pt**, worst |SQL − `simulate()`|
+  **0.90 pt** against a ±1.50 tolerance; pity 0 and guarantee 0 on both sides (which also proves
+  "blank threshold means none" at scale). `banner_standard_club1`, same volume: worst
+  |non-forced − published| **0.36 pt**, pity **9.40 %/pull vs the simulator's 9.35 %**. The
+  guarantee FLAG counts differ by design (TS decides from the first nine slots, the server
+  re-rolls only if the block missed) while the OUTCOMES are identical — written up, not smoothed.
+- **§8 live E2E PASS**, all eight steps through the real API with a real bearer token: replay
+  returns the same `pull_id` with the ledger unchanged; `cost_changed` and `insufficient` assert
+  byte-identical row counts; a rate change written to `content_rows` moved the next 200 pulls from
+  Rare 1.3 % to **59.5 % against a published 62 %, with no deploy and no build**; pause refused the
+  very next pull. The §5.2 shop ticket sale is proven live too (`grant.id null`, RP −100, ledger
+  +5, **zero** pending grants).
+- **`pool_for_build` closed with a throwaway probe** (Cesar's steer — the shop probe had already
+  shown the pattern): a pool whose ONLY Supreme entry sits at `min_build 9999` refuses at build
+  2000 AND at the boundary 9998, and pays the Supreme club at 9999. 1.0 s window, rows deleted.
+- **Everything the tests wrote to prod is gone.** The §7 throwaway user and its 4 000+ rows, and —
+  at Cesar's request — the whole §8 footprint on his account (RP back to 823, avatar back to
+  level 3 / xp 633, 117 gacha grants removed, the 4 pre-existing ones kept by id). All five gacha
+  tables are globally empty again. Verified three ways that do not depend on the write: the
+  surviving ledger SUMS to 823, REPLAYS to (3, 633), and the surviving grant ids match.
 - **API deployed** — `playlife-api` image `deployment-01M1B5F2YV1ZJT84RX7RSGN5WW` (v64). Smoke:
   `/health` 200, `/api/v1/content` 200, all three `/api/v1/gacha/*` **403 not 404**, an unknown path
   404 (so the 403s are auth, not routing). Backend suite 233 green, dashboard vitest 216 green,

@@ -20,11 +20,15 @@ user and all 4 000+ of its rows deleted, 0 orphans.
 SPEC §8 live E2E: PASS, all eight steps through the real API with a real bearer token,
 plus the §5.2 shop ticket sale. Pasted in IMPLEMENTER_REPORT.md Part 2.
 
-ONE ITEM SHORT OF FULL, FLAGGED NOT HIDDEN: acceptance #6 (`pool_for_build`) is
-implemented and reviewed but NOT exercised live — proving it needs a pool entry published
-to prod at min_build 9999, and publishing one to prove a refusal was not worth the blast
-radius. Every sibling refusal on that code path is covered.
+EVERY SPEC §10 ACCEPTANCE ITEM IS NOW PASS. Acceptance #6 (`pool_for_build`) was closed
+with the throwaway-rows-in-content_rows pattern Cesar pointed at (my own shop probe had
+already shown it): build 2000 and the boundary 9998 both refuse `pool_for_build / Supreme`,
+9999 pays the Supreme club. 1.0 s window, all rows deleted.
 
-AWAITING CESAR: (a) approval, and (b) a decision on the §8 footprint left on
-cesar.guarinoni@wonderwall-g.com — RP 823 -> 22 663, 49 945 tickets, 117 unapplied gacha
-grants. Not reverted: adjusting a live RP balance is Cesar's call. The revert is ready.
+THE §8 PROD FOOTPRINT IS REVERTED (Cesar asked). cesar.guarinoni@wonderwall-g.com is back
+to activity 823 / gift 0 / total 823, avatar level 3 / xp 633, 102 points_transactions and
+its 4 pre-existing pending grants. All five gacha tables are globally empty again. Verified
+three ways that do not depend on the write: the surviving ledger SUMS to 823, REPLAYS to
+(3, 633), and the surviving grant ids are identical to the pre-test set. Full backup kept.
+
+AWAITING CESAR: approval only. Nothing is outstanding.
