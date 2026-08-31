@@ -2,6 +2,9 @@
 // gacha_prizes Stage 1 — EditMode unit tests
 // Tests: mock pool count, SetPendingPullCount, ApplyMode x1/x10 row visibility,
 //        x1Card centering in prefab.
+// gacha_reveal_animation §1 — the pending pull is now a RESULT LIST (s_result), not an int
+// count, and SetPendingPullCount is a wrapper that rolls a result of that size. The pull-count
+// test asserts the same contract through the new field.
 //
 // Production types (GachaMockPrizePool, GachaPrizesScreenController) live in
 // Assembly-CSharp and are accessed via reflection, matching the project pattern.
@@ -45,9 +48,9 @@ namespace GolfinRedux.Tests.EditMode
                 BindingFlags.NonPublic | BindingFlags.Instance,
                 null, new[] { typeof(int) }, null);
 
-        // GachaPrizesScreenController.s_pendingPullCount — private static field
-        private static readonly FieldInfo _s_pendingPullCount =
-            _ctrlType?.GetField("s_pendingPullCount",
+        // GachaPrizesScreenController.s_result — private static IReadOnlyList<PrizeRecord>
+        private static readonly FieldInfo _s_result =
+            _ctrlType?.GetField("s_result",
                 BindingFlags.NonPublic | BindingFlags.Static);
 
         // ── Helpers ───────────────────────────────────────────────────────────
@@ -114,26 +117,36 @@ namespace GolfinRedux.Tests.EditMode
         {
             Assert.IsNotNull(_ctrlType, "GachaPrizesScreenController not found");
             Assert.IsNotNull(_setPendingPullCount, "SetPendingPullCount not found");
-            Assert.IsNotNull(_s_pendingPullCount, "s_pendingPullCount field not found");
+            Assert.IsNotNull(_s_result, "s_result field not found");
 
             // Save original
-            int original = (int)_s_pendingPullCount.GetValue(null);
+            object original = _s_result.GetValue(null);
 
             try
             {
                 _setPendingPullCount.Invoke(null, new object[] { 1 });
-                Assert.AreEqual(1, (int)_s_pendingPullCount.GetValue(null),
-                    "After SetPendingPullCount(1), s_pendingPullCount must be 1");
+                Assert.AreEqual(1, ResultCount(),
+                    "After SetPendingPullCount(1), the pending result must hold 1 prize");
 
                 _setPendingPullCount.Invoke(null, new object[] { 10 });
-                Assert.AreEqual(10, (int)_s_pendingPullCount.GetValue(null),
-                    "After SetPendingPullCount(10), s_pendingPullCount must be 10");
+                Assert.AreEqual(10, ResultCount(),
+                    "After SetPendingPullCount(10), the pending result must hold 10 prizes");
             }
             finally
             {
                 // Restore so other tests are not affected
-                _setPendingPullCount.Invoke(null, new object[] { original });
+                _s_result.SetValue(null, original);
             }
+        }
+
+        private static int ResultCount()
+        {
+            // s_result is an IReadOnlyList<PrizeRecord> whose runtime type is PrizeRecord[];
+            // Count on an array is an explicit interface implementation, so go through the
+            // non-generic ICollection instead of reflecting for a "Count" property.
+            var list = _s_result.GetValue(null) as System.Collections.ICollection;
+            Assert.IsNotNull(list, "s_result must never be null");
+            return list.Count;
         }
 
         // ── ApplyMode row-visibility tests ────────────────────────────────────

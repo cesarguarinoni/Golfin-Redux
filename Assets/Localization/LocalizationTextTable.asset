@@ -1337,6 +1337,9 @@ MonoBehaviour:
   - key: GACHA_RULES_RATES
     english: RULES & RATES
     japanese: "\u30EB\u30FC\u30EB\u3068\u78BA\u7387"
+  - key: GACHA_SKIP
+    english: SKIP
+    japanese: "\u30B9\u30AD\u30C3\u30D7"
   - key: GACHA_BUY
     english: BUY
     japanese: "\u8CFC\u5165"

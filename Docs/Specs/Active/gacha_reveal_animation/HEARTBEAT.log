@@ -1,0 +1,84 @@
+=== iter-1 kickoff baseline 2026-08-31 12:05 JST ===
+HEAD: 27f4b0741d52d2c70c871c8a22dec2f662beb479
+DIRTY (git status --porcelain --untracked-files=all at kickoff):
+ M Assets/Audio/SfxLibrary.asset
+ M Assets/Localization/LocalizationText.csv
+ M Assets/Localization/LocalizationTextTable.asset
+ M Assets/Resources/Data/content_version.txt
+ M Assets/Resources/Data/sfx.csv
+ M Assets/Scenes/ShellScene.unity
+ M Assets/Scripts/Audio/Events/SfxId.cs
+ M Assets/Scripts/UI/Gacha/GachaBannerCard.cs
+ M Assets/Scripts/UI/Gacha/GachaPrizesScreenController.cs
+ M Assets/Tests/EditMode/GachaPrizesStage1Tests.cs
+ M Docs/Reports/content_art.txt
+ M Docs/Scripts/build_bot_video.py
+ M Docs/TellCode.md
+ M Docs/Versioning/last_uploaded_build.txt
+?? Assets/Art/Gacha/Bag.png
+?? Assets/Art/Gacha/Bag.png.meta
+?? Assets/Art/Gacha/FX.meta
+?? Assets/Art/Gacha/FX/M_Gacha_Confetti_Additive.mat
+?? Assets/Art/Gacha/FX/M_Gacha_Confetti_Additive.mat.meta
+?? Assets/Art/Gacha/FX/M_Gacha_Spark_Additive.mat
+?? Assets/Art/Gacha/FX/M_Gacha_Spark_Additive.mat.meta
+?? Assets/Art/Gacha/FX/S_Gacha_Confetti.png
+?? Assets/Art/Gacha/FX/S_Gacha_Confetti.png.meta
+?? Assets/Art/Gacha/FX/S_Gacha_Glow.png
+?? Assets/Art/Gacha/FX/S_Gacha_Glow.png.meta
+?? Assets/Art/Gacha/FX/S_Gacha_Rays.png
+?? Assets/Art/Gacha/FX/S_Gacha_Rays.png.meta
+?? Assets/Art/Gacha/FX/S_Gacha_Spark.png
+?? Assets/Art/Gacha/FX/S_Gacha_Spark.png.meta
+?? Assets/Prefabs/UI/Modals/GachaRevealModal.prefab
+?? Assets/Prefabs/UI/Modals/GachaRevealModal.prefab.meta
+?? Assets/Scripts/UI/Editor/GachaRevealDemoRecorder.cs
+?? Assets/Scripts/UI/Editor/GachaRevealDemoRecorder.cs.meta
+?? Assets/Scripts/UI/Gacha/GachaPullFlow.cs
+?? Assets/Scripts/UI/Gacha/GachaPullFlow.cs.meta
+?? Assets/Scripts/UI/Gacha/GachaRevealModalController.cs
+?? Assets/Scripts/UI/Gacha/GachaRevealModalController.cs.meta
+?? Assets/Sounds/Gacha.meta
+?? Assets/Sounds/Gacha/CREDITS.md
+?? Assets/Sounds/Gacha/CREDITS.md.meta
+?? Assets/Sounds/Gacha/Gacha_BagDrop.ogg
+?? Assets/Sounds/Gacha/Gacha_BagDrop.ogg.meta
+?? Assets/Sounds/Gacha/Gacha_BagShake.ogg
+?? Assets/Sounds/Gacha/Gacha_BagShake.ogg.meta
+?? Assets/Sounds/Gacha/Gacha_CardExit.ogg
+?? Assets/Sounds/Gacha/Gacha_CardExit.ogg.meta
+?? Assets/Sounds/Gacha/Gacha_CardLand.ogg
+?? Assets/Sounds/Gacha/Gacha_CardLand.ogg.meta
+?? Assets/Sounds/Gacha/Gacha_CardPop.ogg
+?? Assets/Sounds/Gacha/Gacha_CardPop.ogg.meta
+?? Assets/Sounds/Gacha/Gacha_RevealComplete.ogg
+?? Assets/Sounds/Gacha/Gacha_RevealComplete.ogg.meta
+?? Assets/Sounds/Gacha/Gacha_RevealLegendary.ogg
+?? Assets/Sounds/Gacha/Gacha_RevealLegendary.ogg.meta
+?? Assets/Sounds/Gacha/Gacha_RevealMythic.ogg
+?? Assets/Sounds/Gacha/Gacha_RevealMythic.ogg.meta
+?? Assets/Sounds/Gacha/Gacha_RevealRare.ogg
+?? Assets/Sounds/Gacha/Gacha_RevealRare.ogg.meta
+?? Assets/Sounds/Gacha/Gacha_RevealSupreme.ogg
+?? Assets/Sounds/Gacha/Gacha_RevealSupreme.ogg.meta
+?? Assets/Sounds/Gacha/Gacha_RevealUncommon.ogg
+?? Assets/Sounds/Gacha/Gacha_RevealUncommon.ogg.meta
+?? Assets/Sounds/Gacha/Gacha_Skip.ogg
+?? Assets/Sounds/Gacha/Gacha_Skip.ogg.meta
+?? Docs/Scripts/gen_gacha_fx_sprites.py
+?? Docs/Specs/Active/gacha_reveal_animation/ARCHITECT_REVIEW.md
+?? Docs/Specs/Active/gacha_reveal_animation/HEARTBEAT.log
+?? Docs/Specs/Active/gacha_reveal_animation/IMPLEMENTER_REPORT.md
+?? Docs/Specs/Active/gacha_reveal_animation/KICKOFF.md
+?? Docs/Specs/Active/gacha_reveal_animation/SELF_REVIEW.md
+?? Docs/Specs/Active/gacha_reveal_animation/SPEC.md
+?? Docs/Specs/Active/gacha_reveal_animation/STATUS.md
+?? Docs/Specs/Active/gacha_reveal_animation/reference/.gitkeep
+?? Docs/Specs/Active/gacha_reveal_animation/reference/README.md
+?? Docs/Specs/Active/gacha_reveal_animation/reference/figma_13997-4298_gacha_animation.png
+=== end baseline ===
+
+[12:05] iter-1: code + data files written, verified by a real Roslyn compile of Assembly-CSharp, Assembly-CSharp-Editor and GolfinRedux.Tests.EditMode.
+[12:05] iter-1: localization published (texts v18), export --check clean.
+[12:05] iter-1: GachaRevealModal.prefab built + ShellScene instance wired (18/18 refs).
+[12:05] iter-1: stills, timing and video passes recorded; Cesar flagged the missing panel mid-run, added RevealPanel.

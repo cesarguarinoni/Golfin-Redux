@@ -5,6 +5,57 @@
 
 ---
 
+## 🟡 BUILT, AWAITING CESAR — `gacha_reveal_animation` (2026-08-31)
+
+**A gacha pull now has a reveal moment.** PULL x1 / x10 on a banner card — and PULL ("pull again")
+on the Prizes screen — go through the new `GachaPullFlow.Pull(count)`, which opens a reveal modal
+before the Prizes screen instead of jumping straight to it. Bag alone behind a full scrim, bag
+shakes, each prize card pops out of the bag mouth one at a time with rarity-scaled FX, then the
+Prizes screen enters with its cards staggered in.
+
+- **`GachaPullFlow.BuildResult` is the one seam for the real pull.** Ticket spend, server call,
+  odds, pity and history all stay out (blocked on content); everything else now routes through
+  that single function, so the reveal and the result screen can never disagree about what was
+  pulled. `GachaPrizesScreenController` binds from the *result list*, not from the mock pool, and
+  derives x1/x10 mode from its length.
+- **`GachaRevealModalController : ModalController`**, scene instance on the shell `Canvas`, static
+  `Instance` (banner cards are carousel clones, so a serialized ref is impossible). Coroutines on
+  `Time.unscaledDeltaTime` — no tween library. A six-entry `RarityFxTier` table (index =
+  `CharacterRarity`) drives shake/hold length, burst density, glow/rays/flash/rain/panel-shake and
+  the stinger; every tint comes from `RarityHelper.GetRarityColor`, never a literal.
+- **The scrim was the easy half; input was the other half.** `ModalScrim.Apply` already lifts a
+  modal to sortingOrder 500 so it covers the PersistentUI bars. Verified numerically rather than by
+  eye: the nav bar goes 242 → 117 (ratio 0.49, matching `ModalScrim`'s documented ~123/255 at 0.80
+  alpha), and `EventSystem.RaycastAll` at the nav button's centre returns the modal's `TapCatcher`,
+  not `NavGachaButton`.
+- **Cesar caught the missing panel mid-build.** The Figma runs the reveal inside the Rewards
+  Center's bordered navy panel; the first build had the bag floating on the bare scrim. `RevealPanel`
+  is cloned from the shipping `GachaTabContent/WrapPanel` atom at the measured node geometry
+  (880×1832 @ canvas (0, −51)).
+- **The shared binder now hides the card's action row** — not tidying: the Prizes grid cards ship
+  with `LevelUpBtn`/`RepairBtn`/`SwapBtn` deactivated in the prefab while a fresh `BagClubCard`
+  instance has them active, so the same prize rendered two different ways depending on where it
+  appeared. One binder, one look.
+- **12 new `SfxId`s** (`GachaBagDrop` … `GachaRevealComplete`) wired through `sfx.csv` +
+  `SfxLibrary.asset` to the CC0 clips in `Assets/Sounds/Gacha/`. Zero `No clip mapped` warnings.
+  The SFX bus doubles as the phase-timing instrument, so the evidence needed no temporary
+  `Debug.Log` in production code.
+- **`GACHA_SKIP`** (EN `SKIP` / JA `スキップ`) went the full importer path — PLAN (1 add, 0
+  conflicts) → `--apply` → published **texts v18** → `export_content.py --check` clean, cursor moved.
+- **Low vs High timings measured over 3 reps per tier**, not one sample: total 3.917 s vs 3.962 s,
+  |Δmean| **0.045 s**. (A single sample had shown 0.27 s — step A's `while (t < duration)`
+  accumulates `Time.unscaledDeltaTime`, which is *not* clamped the way `deltaTime` is, so a hitch on
+  the frame the modal opens can retire the whole 0.35 s enter in one frame. Noise, not a tier effect.)
+- **Scar tissue worth keeping:** authoring a modal's `Panel`/`Scrim` **active** when
+  `ModalController.Awake()` forces them inactive costs 4 `MissingReferenceException` per play-mode
+  entry per `UIParticle`, thrown from inside the package's `OnDisable`. Author them inactive.
+
+Evidence: `Docs/Specs/Active/gacha_reveal_animation/` — `IMPLEMENTER_REPORT.md`, 8 screenshots at
+1170×2532, and `videos/gacha_reveal_x10_and_skip.mp4` (48.9 s, **with audio**, captions generated
+from the SfxBus trace). STATUS = `READY_FOR_SELF_REVIEW`.
+
+---
+
 ## ✅ SHIPPED — `bridge_transplant` **approved by Cesar** (2026-08-31)
 
 **Hole 7's bridge now exists in the live scene and the ball can stand on it.** The 7 bridges only

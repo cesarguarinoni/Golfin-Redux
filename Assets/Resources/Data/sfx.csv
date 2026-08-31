@@ -28,3 +28,15 @@ LevelUp,1.0,false,0,99.0,0
 MatchWin,1.0,false,0,99.0,0
 MatchLose,0.9,false,0,99.0,0
 MatchDraw,0.8,false,0,99.0,0
+GachaBagDrop,0.85,false,0,99.0,0
+GachaBagShake,0.8,false,0,99.0,0
+GachaCardPop,0.9,false,0,99.0,0
+GachaCardLand,0.85,false,0,99.0,0
+GachaRevealUncommon,0.85,false,0,99.0,0
+GachaRevealRare,0.9,false,0,99.0,0
+GachaRevealMythic,0.9,false,0,99.0,0
+GachaRevealLegendary,0.95,false,0,99.0,0
+GachaRevealSupreme,1.0,false,0,99.0,0
+GachaCardExit,0.8,false,0,99.0,0
+GachaSkip,0.6,false,0,99.0,0
+GachaRevealComplete,1.0,false,0,99.0,0

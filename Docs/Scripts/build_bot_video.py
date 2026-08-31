@@ -561,6 +561,10 @@ def main():
                     help="Hard-wrap captions at N characters. Use with portrait clips so long "
                          "captions stack instead of running off both edges.")
     ap.add_argument("--keep-raw", action="store_true", help="keep the raw Recorder mp4 + sidecar")
+    ap.add_argument("--keep-audio", action="store_true",
+                    help="copy the raw recording's audio track into the captioned output. Off by "
+                         "default because every recorder before gacha_reveal set "
+                         "AudioInputSettings.PreserveAudio=false, so the raw mp4 had no audio to keep.")
     ap.add_argument("--title-seconds", type=float, default=3.6,
                     help="How long the centered title card stays on screen (seconds). Lower it for "
                          "short clips where the title would otherwise overlap the action (e.g. a 5s "
@@ -677,9 +681,10 @@ def main():
             ffmpeg, "-y", "-i", raw,
             "-vf", vf,
             "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "medium", "-crf", "23",
-            "-movflags", "+faststart", "-an",
-            out_path,
+            "-movflags", "+faststart",
         ]
+        cmd += ["-c:a", "aac", "-b:a", "192k"] if args.keep_audio else ["-an"]
+        cmd += [out_path]
         print(f"Encoding -> {out_path}")
         subprocess.run(cmd, check=True)
         size_mb = os.path.getsize(out_path) / 1e6

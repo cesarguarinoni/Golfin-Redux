@@ -51,5 +51,22 @@ namespace Golfin.Audio.Events
         MatchWin,
         MatchLose,
         MatchDraw,
+
+        // ── Gacha reveal (gacha_reveal_animation) ──────────────────────────────
+        // Appended at the end: enum ORDER is what sfx.csv rows and SfxLibrary.asset
+        // entries serialize against, so inserting anywhere else would silently
+        // re-map every id after the insertion point.
+        GachaBagDrop,          // A — bag drops in
+        GachaBagShake,         // B — bag rocks before each card
+        GachaCardPop,          // C — card launches out of the bag mouth
+        GachaCardLand,         // D — card arrives (every card, every rarity)
+        GachaRevealUncommon,   // D — rarity stingers, escalating
+        GachaRevealRare,
+        GachaRevealMythic,
+        GachaRevealLegendary,
+        GachaRevealSupreme,
+        GachaCardExit,         // F — card leaves to make room for the next
+        GachaSkip,             // SKIP button
+        GachaRevealComplete,   // G — end of the whole pull
     }
 }

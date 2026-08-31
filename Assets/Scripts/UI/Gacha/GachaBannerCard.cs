@@ -1,11 +1,10 @@
 // Assets/Scripts/UI/Gacha/GachaBannerCard.cs
 // gacha_screen Stage 2 — §3c Bind script for GachaBannerCard.prefab
 // Binds one GachaBannerEntry to all visual slots on the card.
-// Pull buttons are stub (Stage 2 — ToastController "Coming soon").
+// Pull buttons route through GachaPullFlow.Pull (reveal modal → Prizes screen).
 // Rules button → Application.OpenURL(rulesUrl).
 // CountdownLabel is updated each frame by GachaCarouselController (no coroutine here).
 
-using Golfin.UI.Toast;
 using GolfinRedux.UI;
 using TMPro;
 using UnityEngine;
@@ -99,30 +98,19 @@ namespace GolfinRedux.UI.Gacha
 
         // ── Private handlers ───────────────────────────────────────────────────
 
+        // gacha_reveal_animation §1 — both PULL buttons hand off to GachaPullFlow, which owns
+        // the reveal-then-Prizes order. The ScreenManager-missing fallback (and the "Coming soon"
+        // toast) moved with it into GachaPullFlow.ShowPrizes.
         private void OnPullX1()
         {
-            Debug.Log($"[GachaBannerCard] Pull x1 tapped on {_entry?.BannerId} — opening Prizes x1.");
-            GachaPrizesScreenController.SetPendingPullCount(1);
-            if (ScreenManager.Instance != null)
-                ScreenManager.Instance.ShowScreen(ScreenId.GachaPrizes);
-            else
-            {
-                Debug.LogWarning("[GachaBannerCard] ScreenManager not found — cannot open GachaPrizes.");
-                ToastController.Instance?.Show("Coming soon");
-            }
+            Debug.Log($"[GachaBannerCard] Pull x1 tapped on {_entry?.BannerId} — starting reveal.");
+            GachaPullFlow.Pull(1);
         }
 
         private void OnPullX10()
         {
-            Debug.Log($"[GachaBannerCard] Pull x10 tapped on {_entry?.BannerId} — opening Prizes x10.");
-            GachaPrizesScreenController.SetPendingPullCount(10);
-            if (ScreenManager.Instance != null)
-                ScreenManager.Instance.ShowScreen(ScreenId.GachaPrizes);
-            else
-            {
-                Debug.LogWarning("[GachaBannerCard] ScreenManager not found — cannot open GachaPrizes.");
-                ToastController.Instance?.Show("Coming soon");
-            }
+            Debug.Log($"[GachaBannerCard] Pull x10 tapped on {_entry?.BannerId} — starting reveal.");
+            GachaPullFlow.Pull(10);
         }
 
         private void OnRules()
