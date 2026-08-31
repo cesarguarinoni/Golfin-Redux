@@ -306,6 +306,14 @@ function text(v: unknown): string {
   return v === null || v === undefined ? "" : String(v);
 }
 
+/** A boolean CSV cell. Bags.csv writes TRUE, shop_catalog.csv writes true, and the wire echoes
+ *  whichever the CSV held — so both spellings have to work, exactly as ContentFields.GetBool
+ *  does on the client. Absent or anything else is false. */
+function isTrue(v: unknown): boolean {
+  const s = text(v).trim();
+  return s.toLowerCase() === "true" || s === "1";
+}
+
 /** A numeric CSV field. Empty means "absent", which is not a parse failure. */
 function num(v: unknown): number | null {
   const s = text(v).trim();
@@ -448,6 +456,13 @@ export function validateCatalog(
         err(row.rowId, "refId", `refId "${refId}" does not exist in the ${target} catalog.`);
       } else if (!referenced.isActive) {
         err(row.rowId, "refId", `refId "${refId}" is deactivated in ${target} — the shop would offer an item the game hides.`);
+      } else if (category === "ball" && isTrue(referenced.data.isDefault)) {
+        // gacha_ops_polish §4e, the listing half. Same column, same reasoning as the gacha rule:
+        // every player already owns the default ball, so a shop row that sells it sells something
+        // the buyer is holding.
+        err(row.rowId, "refId",
+          `"${refId}" is the DEFAULT ball — every player already owns one, so this row would sell ` +
+            "something the buyer is already holding.");
       }
 
       // ---- The two build gates (shop_stocking §3) --------------------------
@@ -1545,6 +1560,15 @@ export function validateCatalog(
       } else if (!referenced.isActive) {
         err(row.rowId, "refId",
           `refId "${refId}" is deactivated in ${target} — the pull would grant a prize the game hides.`);
+      } else if (kind === "ball" && isTrue(referenced.data.isDefault)) {
+        // 21. gacha_ops_polish §4e — the DEFAULT ball is never a prize. Every player already owns
+        // `ball_golfin` (RewardGranter grants it for any "a ball" reward, and a fresh save starts
+        // with one), so a slot that pays it pays NOTHING. `psc1_ball_golfin` sat in the standard
+        // pool at 60 weight — 11 % of every Common pull was a no-op — until an operator noticed
+        // and deactivated it by hand. The column exists so the next one is refused, not noticed.
+        err(row.rowId, "refId",
+          `"${refId}" is the DEFAULT ball — every player already owns one, so a slot that pays it ` +
+            "pays nothing. Point this entry at another ball, or clear isDefault on that row.");
       }
 
       // 6. rarity is one of the six, and EQUALS the ref's rarity where the ref has one.

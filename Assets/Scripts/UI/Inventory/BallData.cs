@@ -61,6 +61,26 @@ namespace Golfin.Inventory
         /// </summary>
         public bool renderable = true;
 
+        /// <summary>
+        /// gacha_ops_polish §4e — <b>every player already owns this one</b>.
+        ///
+        /// <para>
+        /// <c>RewardGranter</c> grants <c>ball_golfin</c> for every reward that says "a ball", and
+        /// a fresh save starts with it. So it is the one ball that can never be a PRIZE and can
+        /// never be a SHOP LISTING: a gacha slot that pays it pays nothing, and a shop row that
+        /// sells it sells something the player is holding. <c>psc1_ball_golfin</c> sat in the
+        /// standard pool at 60 weight until the operator noticed and deactivated it by hand — the
+        /// column exists so the next one is refused rather than noticed.
+        /// </para>
+        /// <para>
+        /// It is NOT <c>isActive</c>: the row is entirely live, playable and equippable. It is a
+        /// statement about what it may be USED FOR, which is why the three guards
+        /// (<c>GachaBannerCatalog.IsRollable</c>, the admin validator, and the server) read it and
+        /// nothing else does.
+        /// </para>
+        /// </summary>
+        public bool isDefault;
+
         public override string ToString() =>
             $"{name}: PWR={power} REB={rebound} WIND={windResistance} ROLL={roll} SPIN={spin}";
     }

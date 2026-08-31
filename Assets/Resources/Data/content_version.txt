@@ -1,5 +1,5 @@
 bags=1
-balls=5
+balls=6
 characters=5
 clubs=1
 daily_mission_weights=1
@@ -17,4 +17,4 @@ missions=2
 modes=8
 shop_catalog=4
 texts=20
-ticket_types=1
+ticket_types=2

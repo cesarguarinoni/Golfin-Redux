@@ -208,6 +208,7 @@ namespace Golfin.Inventory
                     fullUrl             = fullUrl,
                     info                = f.Get("info"),
                     isActive            = f.IsActive,
+                    isDefault           = f.GetBool("isDefault"),
                 };
 
                 if (string.IsNullOrEmpty(ball.ballId)) return null;

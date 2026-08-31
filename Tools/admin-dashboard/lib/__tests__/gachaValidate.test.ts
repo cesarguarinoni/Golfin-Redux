@@ -626,3 +626,79 @@ describe("the shared rules still apply to the gacha catalogs", () => {
     expect(hasErrors(validateCatalog("gacha_pools", [], ctx()))).toBe(true);
   });
 });
+
+// ---------------------------------------------------------------------------
+// gacha_ops_polish §4e — the default-ball guard
+// ---------------------------------------------------------------------------
+
+describe("rule 21 — the default ball is never a prize", () => {
+  const ballRows = (isDefault: boolean) =>
+    new Map([
+      [
+        "ball_golfin",
+        {
+          rowId: "ball_golfin",
+          isActive: true,
+          minBuild: 0,
+          data: { id: "ball_golfin", name: "Golfin", isDefault: isDefault ? "true" : "false" },
+        },
+      ],
+    ]);
+
+  const poolRow = {
+    rowId: "psc1_ball_golfin",
+    isActive: true,
+    minBuild: 0,
+    data: {
+      id: "psc1_ball_golfin",
+      poolId: "p1",
+      kind: "ball",
+      refId: "ball_golfin",
+      rarity: "Common",
+      weight: "60",
+      quantity: "3",
+      dupeRp: "0",
+    },
+  };
+
+  it("refuses a pool entry that points at a ball flagged isDefault", () => {
+    const problems = validateCatalog("gacha_pools", [poolRow], {
+      publishedMinBuild: new Map(),
+      otherCatalogs: new Map([["balls", ballRows(true)]]),
+    });
+    const refIdErrors = problems.filter((p) => p.column === "refId" && p.severity === "error");
+    expect(refIdErrors).toHaveLength(1);
+    expect(refIdErrors[0]!.message).toContain("DEFAULT ball");
+  });
+
+  it("allows the same entry once the flag is cleared", () => {
+    const problems = validateCatalog("gacha_pools", [poolRow], {
+      publishedMinBuild: new Map(),
+      otherCatalogs: new Map([["balls", ballRows(false)]]),
+    });
+    expect(problems.filter((p) => p.column === "refId" && p.severity === "error")).toHaveLength(0);
+  });
+
+  it("refuses a shop_catalog ball listing for the default ball too", () => {
+    const shopRow = {
+      rowId: "shop_ball_golfin",
+      isActive: true,
+      minBuild: 0,
+      data: {
+        entryId: "shop_ball_golfin",
+        category: "ball",
+        refId: "ball_golfin",
+        rpCost: "100",
+        quantity: "1",
+        sortOrder: "1",
+      },
+    };
+    const problems = validateCatalog("shop_catalog", [shopRow], {
+      publishedMinBuild: new Map(),
+      otherCatalogs: new Map([["balls", ballRows(true)]]),
+    });
+    const refIdErrors = problems.filter((p) => p.column === "refId" && p.severity === "error");
+    expect(refIdErrors).toHaveLength(1);
+    expect(refIdErrors[0]!.message).toContain("DEFAULT ball");
+  });
+});

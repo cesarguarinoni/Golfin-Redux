@@ -355,6 +355,10 @@ namespace GolfinRedux.UI.Shop
                     var ball = db.GetBall(entry.RefId);
                     if (ball == null) return "no row in the balls catalog";
                     if (!ball.isActive) return "the balls row is deactivated";
+                    // gacha_ops_polish §4e — the DEFAULT ball is never a LISTING either. Every
+                    // player already owns it, so a shop row that sells it sells something the
+                    // buyer is holding. Same column, same reasoning, as the gacha withhold rule.
+                    if (ball.isDefault) return "it is the default ball — every player already owns one";
                     return ball.renderable ? null : "no usable ball sprite";
                 }
 
