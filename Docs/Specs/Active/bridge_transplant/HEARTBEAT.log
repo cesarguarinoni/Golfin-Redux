@@ -125,3 +125,56 @@ TESTS — 22 EditMode assemblies, 1962 passed, 0 failed, 3 pre-existing skips. 2
 PROTECTED — all five holes' tree_obstacles.csv and heightmap.bytes still md5-identical to iter-1.
 Editor restored to ShellScene, no dirty scenes, never entered play mode.
 === EOF
+
+=== iter-4 2026-08-31 — ALL 7 BRIDGES, holes 8 / 9 / 12 / 17 batched ===
+
+TRANSPLANT — 6 remaining instances, all at max |dpos|=0.000000 m, max dangle=0.000000 deg,
+  max |dscale|=0.000000 against the Video source (33/17/27/27/14 transforms compared, 0 unmatched).
+  Positions and scales match the SPEC ground-truth table row for row, x-tilts included
+  (hole 12: 5.22 and 1.79 deg; hole 17: 0.36 deg).
+
+zones.json — every hole gained EXACTLY one Bridge group (hole 8 and 12 with 2 polygons, one per
+  bridge); no other group's polygon/vert/tri counts moved and every obMask is byte-identical.
+
+TWO MORE DEFECTS, both only reachable through the x-tilt — which is exactly why hole 12 mattered:
+  4. Classification sampled the deck ONCE at each box's centre. On a tilted bridge a 40.8 m deck
+     slab has its global maxY at the high END, 4.5 m above the deck under its middle, so the DECK
+     SLAB ITSELF was filed as a railing: 3 boxes of halfX 2.404 (exactly the deck half-width) and
+     halfZ 20.4, a solid block standing on the walkway. Fixed by measuring each corner against the
+     deck directly beneath THAT corner.
+  5. That per-corner sample then fell through to the deck's MEAN Y outside the footprint — and the
+     slab's corners sit exactly ON the boundary, so the tilt error came straight back. Fixed by
+     falling back to the nearest deck vertex, which carries the tilt with it.
+  Regression proof: holes 7, 8 and 9 (level decks) re-bake BYTE-IDENTICAL through both fixes.
+
+SEAL CHECK — whether a model's own colliders stop a ball ROLLING off its deck turned out to vary
+  per model, so it is now measured per side per bridge and repaired only where it fails:
+    Bridge_withLODs  sealed by model  (kerbs at +/-2.004 inside edges +/-2.404)
+    bridgeLODs       sealed by model  (railing slab at +/-2.256 / +/-1.128)
+    Bridge_part_1    UNSEALED         (colliders -2.555/2.488, outboard of +/-2.404) -> hole 17
+      measured 0 of 8 rolls staying on the deck. Its railing IS baked at inner face 2.269, but its
+      BASE is 23.791 over a deck of 23.62-23.71, so it floats 0.10-0.17 m up and a 43 mm ball rolls
+      underneath. Repaired with 2 SYNTHESIZED KERB boxes spanning deck -> railing base over the
+      railing's own footprint. This is the ONE piece of geometry in this task not taken from the
+      art; logged by the baker and flagged in the report.
+
+CONTAINMENT, all 7 bridges: 8/8 perpendicular rolls (3/6/10/16 m/s x both directions) end ON the
+  bridge, mid-deck classifies as Bridge, SampleHeight returns the deck.
+
+RISK 1 (nothing can pass UNDER a deck) — measured, deck-over-terrain clearance:
+    hole 07  4.48 .. 24.07 m (mean 15.75)   hole 12 #1  0.53 .. 5.71 m (mean 3.65)
+    hole 08  0.17 ..  1.68 m                hole 12 #2 -0.86 .. 5.38 m (mean 3.03)
+    hole 09  0.35 ..  1.44 m                hole 17     0.14 .. 1.77 m
+  Holes 8/9/17 sit under 1.8 m — no one was ever going to play a ball under them, so Risk 1 is
+  moot there. Holes 7 and 12 have real height, but both span WATER, so a ball that "should" have
+  passed underneath was going in the water anyway. Net: Risk 1 is real but benign on all 5 holes.
+  SEPARATE FINDING: 7% of hole 12's second deck sits BELOW the terrain (down to -0.86 m). The
+  Bridge polygon outranks terrain, so that patch reads as a shallow trench at the abutment.
+  Cosmetic/feel, flagged for Cesar, not touched.
+
+PROTECTED — all five holes' tree_obstacles.csv and heightmap.bytes still md5-identical to iter-1.
+=== EOF
+TREE DRIFT — TreeBakeValidator.ValidateAllHoles(): 18/18 PASS (fourth run this session).
+TESTS — 22 EditMode assemblies, 1962 passed, 0 failed, 3 pre-existing skips.
+Editor restored to ShellScene, no dirty scenes, never entered play mode.
+=== EOF

@@ -22,11 +22,12 @@ namespace Golfin.CourseImport
     /// weight at runtime — BallSimulation is a fixed-point integrator that never touches PhysX —
     /// but they are excellent AUTHORING data, so this baker reads them and emits fixed-point boxes.
     ///
-    /// CLASSIFICATION, relative to the deck plane sampled AT EACH BOX'S OWN XZ (not a single
-    /// deck Y — the hole 12 and 17 bridges are x-tilted and the hole 7 deck is cambered):
-    ///   box top ABOVE  deckY + 0.02 → `railing`  (this includes the KERBS — see below)
-    ///   box top BELOW  deckY − 0.15 → `pier`
-    ///   box top at the deck plane   → EXCLUDED — that is the deck slab itself, already owned by
+    /// CLASSIFICATION, by how far the box rises above the deck — measured PER CORNER against the
+    /// deck directly beneath that corner, never once at the box centre (the hole 12 bridges are
+    /// x-tilted, so a long box's global maxY sits metres above the deck under its middle):
+    ///   max corner rise ABOVE +0.02 → `railing`  (this includes the KERBS — see below)
+    ///   max corner rise BELOW −0.15 → `pier`
+    ///   otherwise                   → EXCLUDED — that is the deck slab itself, already owned by
     ///                                 the Stage-B zone mesh. Double-representing it would fight
     ///                                 the ground solver.
     ///
@@ -228,6 +229,9 @@ namespace Golfin.CourseImport
                 var candidates = CollectCandidates(bridge, out string sourceKind);
                 sourceLabel = sourceKind;
 
+                // Collected per bridge, so the seal check below can measure THIS bridge's output.
+                var bridgeRows = new List<string>();
+
                 foreach (var cand in candidates)
                 {
                     // Full local-to-world was already applied by CollectCandidates.
@@ -257,6 +261,22 @@ namespace Golfin.CourseImport
                     float minLx = float.MaxValue, maxLx = float.MinValue;
                     float minLz = float.MaxValue, maxLz = float.MinValue;
 
+                    // How far the box rises above the deck, measured PER CORNER against the deck
+                    // directly under THAT corner.
+                    //
+                    // Sampling the deck once at the box centre is only correct on a level bridge.
+                    // Hole 12's two bridges are x-tilted 5.22 deg and 1.79 deg, so the deck slab's
+                    // own collider — 40.8 m long — has its global maxY at the HIGH END, 4.5 m above
+                    // the deck at its centre. Centre-sampling therefore read "4.5 m proud of the
+                    // deck" and filed the DECK SLAB ITSELF as a railing: a solid block the length
+                    // and width of the bridge, standing on the walkway. Measured on the first
+                    // hole-12 bake: 3 such boxes, halfX 2.404 (exactly the deck half-width) and
+                    // halfZ 20.4 (exactly half the deck length).
+                    //
+                    // Per-corner sampling is tilt-invariant, and on a level deck it reduces to the
+                    // old numbers exactly — hole 7 re-bakes byte-identical.
+                    float maxDeltaOverDeck = float.MinValue;
+
                     for (int sx = -1; sx <= 1; sx += 2)
                     for (int sy = -1; sy <= 1; sy += 2)
                     for (int sz = -1; sz <= 1; sz += 2)
@@ -268,6 +288,10 @@ namespace Golfin.CourseImport
                         float lz = -p.x * sn + p.z * cs;
                         if (lx < minLx) minLx = lx; if (lx > maxLx) maxLx = lx;
                         if (lz < minLz) minLz = lz; if (lz > maxLz) maxLz = lz;
+
+                        float deckAtCorner = SampleDeckY(deckTris, p.x, p.z, deckMeanY);
+                        float delta = p.y - deckAtCorner;
+                        if (delta > maxDeltaOverDeck) maxDeltaOverDeck = delta;
                     }
 
                     float halfX  = (maxLx - minLx) * 0.5f;
@@ -278,12 +302,10 @@ namespace Golfin.CourseImport
                     float cX = midLx * cs - midLz * sn;
                     float cZ = midLx * sn + midLz * cs;
 
-                    float deckY = SampleDeckY(deckTris, cX, cZ, deckMeanY);
-
                     string profile;
-                    if (maxY > deckY + AboveDeckM)      { profile = "railing"; railing++; }
-                    else if (maxY < deckY - BelowDeckM) { profile = "pier";    pier++;    }
-                    else                                { deck++; continue; }  // the deck slab — Stage B owns it
+                    if (maxDeltaOverDeck > AboveDeckM)       { profile = "railing"; railing++; }
+                    else if (maxDeltaOverDeck < -BelowDeckM) { profile = "pier";    pier++;    }
+                    else                                     { deck++; continue; }  // the deck slab — Stage B owns it
 
                     string row = FormatRow(cX, cZ, minY, maxY, halfX, halfZ, NormalizeYaw(bridgeYawDeg), profile);
 
@@ -295,16 +317,175 @@ namespace Golfin.CourseImport
                     // an identical row carries no information. Dedupe on the formatted row so the
                     // test is exactly "same box", at full CSV precision.
                     if (!seen.Add(row)) { duplicates++; continue; }
-                    rows.Add(row);
+                    bridgeRows.Add(row);
                 }
 
+                // ── Seal check ────────────────────────────────────────────────────────
+                int sealAdded = SealDeckEdges(bridge, deckTris, deckMeanY, bridgeRows, seen,
+                                              cs, sn, bridgeYawDeg, out string sealNote);
+                railing += sealAdded;
+
+                rows.AddRange(bridgeRows);
                 sb.Append($"  '{bridge.name}' [{sourceLabel}]: railing={railing} pier={pier} "
                         + $"deck-excluded={deck} lod-duplicates-dropped={duplicates} "
-                        + $"kept={rows.Count} deckMeanY={deckMeanY:F3}\n");
+                        + $"kept={bridgeRows.Count} deckMeanY={deckMeanY:F3}  seal: {sealNote}\n");
             }
 
             breakdown = sb.ToString().TrimEnd();
             return rows.Count > 0 ? rows : null;
+        }
+
+        // ── Seal check ───────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Does anything actually stop a ball ROLLING off this deck? Measured, per side, and only
+        /// repaired when the answer is no.
+        ///
+        /// WHY THIS EXISTS. Whether a model's authored colliders seal its own deck is not a given —
+        /// it varies per model, and each of the three behaves differently:
+        ///   Bridge_withLODs  — truss colliders start OUTBOARD of the deck (inner face 2.499 vs a
+        ///                      deck edge of 2.404), but the model also ships KERB boxes at 2.004,
+        ///                      so it seals.
+        ///   bridgeLODs       — no colliders at all; the renderer-AABB fallback derives a railing
+        ///                      slab whose inner face is 2.26, inboard of 2.404, so it seals.
+        ///   Bridge_part_1    — colliders start at 2.488 / -2.555, and this model has NO kerb.
+        ///                      Measured on hole 17: 0 of 8 perpendicular rolls stayed on the deck.
+        ///                      Every ball rolling to the edge fell, having visibly passed THROUGH
+        ///                      railing art whose own inner face is 2.269.
+        ///
+        /// The repair adds the railing RENDERER's box — the art's own extent, not an invented lip —
+        /// and only on a side the colliders leave open. A bridge that already seals is untouched,
+        /// which is what keeps holes 7 / 8 / 9 / 12 byte-identical across this change.
+        /// </summary>
+        private static int SealDeckEdges(Transform bridge, List<Vector3> deckTris, float deckMeanY,
+                                         List<string> bridgeRows, HashSet<string> seen,
+                                         float cs, float sn, float bridgeYawDeg, out string note)
+        {
+            note = "n/a";
+            var deck = bridge.Find(DeckChild);
+            var mf = deck == null ? null : deck.GetComponent<MeshFilter>();
+            if (mf == null || mf.sharedMesh == null) return 0;
+
+            Vector3 centre = deck.TransformPoint(mf.sharedMesh.bounds.center);
+            Vector3 across = bridge.rotation * Vector3.right;
+            Vector3 c0 = new Vector3(centre.x, 0f, centre.z);
+
+            float edgeNeg = 0f, edgePos = 0f;
+            foreach (var v in mf.sharedMesh.vertices)
+            {
+                float o = Vector3.Dot(deck.TransformPoint(v) - centre, across);
+                if (o < edgeNeg) edgeNeg = o;
+                if (o > edgePos) edgePos = o;
+            }
+
+            // Nearest inner face, among boxes that could block a ball rolling on the deck.
+            float innerNeg = float.NegativeInfinity, innerPos = float.PositiveInfinity;
+            foreach (var row in bridgeRows) Accumulate(row, centre.y, c0, across, ref innerNeg, ref innerPos);
+
+            bool negOpen = !(innerNeg > edgeNeg);
+            bool posOpen = !(innerPos < edgePos);
+            if (!negOpen && !posOpen)
+            {
+                note = $"sealed by model ({innerNeg:F3}/{innerPos:F3} inside {edgeNeg:F3}/{edgePos:F3})";
+                return 0;
+            }
+
+            int added = 0;
+            foreach (var r in bridge.GetComponentsInChildren<MeshFilter>(true))
+            {
+                if (r.sharedMesh == null) continue;
+                if (r.name.EndsWith("_LOD1", StringComparison.Ordinal)) continue;
+                if (r.name.EndsWith("_LOD2", StringComparison.Ordinal)) continue;
+                if (!r.name.StartsWith("Railing_", StringComparison.Ordinal)) continue;
+
+                var t = r.transform;
+                Bounds b = r.sharedMesh.bounds;
+                Vector3 c  = t.TransformPoint(b.center);
+                Vector3 ex = t.TransformVector(new Vector3(b.extents.x, 0f, 0f));
+                Vector3 ey = t.TransformVector(new Vector3(0f, b.extents.y, 0f));
+                Vector3 ez = t.TransformVector(new Vector3(0f, 0f, b.extents.z));
+
+                float minY = float.MaxValue, maxY = float.MinValue;
+                float minLx = float.MaxValue, maxLx = float.MinValue;
+                float minLz = float.MaxValue, maxLz = float.MinValue;
+                float maxDelta = float.MinValue, side = 0f;
+                float minDeckUnder = float.MaxValue;
+                for (int sx = -1; sx <= 1; sx += 2)
+                for (int sy = -1; sy <= 1; sy += 2)
+                for (int sz = -1; sz <= 1; sz += 2)
+                {
+                    Vector3 p = c + ex * sx + ey * sy + ez * sz;
+                    if (p.y < minY) minY = p.y;
+                    if (p.y > maxY) maxY = p.y;
+                    float lx =  p.x * cs + p.z * sn;
+                    float lz = -p.x * sn + p.z * cs;
+                    if (lx < minLx) minLx = lx; if (lx > maxLx) maxLx = lx;
+                    if (lz < minLz) minLz = lz; if (lz > maxLz) maxLz = lz;
+                    float deckUnder = SampleDeckY(deckTris, p.x, p.z, deckMeanY);
+                    if (deckUnder < minDeckUnder) minDeckUnder = deckUnder;
+                    float d = p.y - deckUnder;
+                    if (d > maxDelta) maxDelta = d;
+                    side += Vector3.Dot(new Vector3(p.x, 0f, p.z) - c0, across);
+                }
+                if (maxDelta <= AboveDeckM) continue;                 // not a railing after all
+                if (side < 0f && !negOpen) continue;                  // that side already seals
+                if (side > 0f && !posOpen) continue;
+
+                // What actually leaks on Bridge_part_1 is not a missing railing — the railing IS
+                // baked, inner face 2.269, inboard of the deck edge. It is that the railing's base
+                // sits at 23.791 over a deck surface of 23.62–23.71, so it floats 0.10–0.17 m up
+                // and a 43 mm ball rolls straight UNDER it and off the bridge. The model has no
+                // kerb to close that gap; Bridge_withLODs does, and bridgeLODs' railing slab
+                // reaches the deck.
+                //
+                // So the repair is a SYNTHESIZED KERB — the railing's own XZ footprint, spanning
+                // from just under the deck up to the railing's base. That is the minimal geometry
+                // that seals, it is 0.10–0.17 m tall at the very edge of the deck (invisible in
+                // play), and it is the one thing here that is NOT taken from the art: flagged in
+                // the bake log and in the report so it is a decision on the record, not a silent
+                // fudge.
+                float halfX = (maxLx - minLx) * 0.5f, halfZ = (maxLz - minLz) * 0.5f;
+                float midLx = (maxLx + minLx) * 0.5f, midLz = (maxLz + minLz) * 0.5f;
+                float kerbBase = minDeckUnder - 0.10f;
+                float kerbTop  = Mathf.Max(minY, minDeckUnder + AboveDeckM + 0.01f);
+                string row = FormatRow(midLx * cs - midLz * sn, midLx * sn + midLz * cs,
+                                       kerbBase, kerbTop, halfX, halfZ, NormalizeYaw(bridgeYawDeg), "railing");
+                if (!seen.Add(row)) continue;
+                bridgeRows.Add(row);
+                added++;
+            }
+
+            float n2 = float.NegativeInfinity, p2 = float.PositiveInfinity;
+            foreach (var row in bridgeRows) Accumulate(row, centre.y, c0, across, ref n2, ref p2);
+            note = $"UNSEALED by model ({innerNeg:F3}/{innerPos:F3} vs edge {edgeNeg:F3}/{edgePos:F3}) "
+                 + $"-> SYNTHESIZED {added} kerb box(es) under the railing, now {n2:F3}/{p2:F3}";
+            return added;
+        }
+
+        /// <summary>Fold one baked row into the running nearest-inner-face pair, per side.</summary>
+        private static void Accumulate(string row, float deckY, Vector3 c0, Vector3 across,
+                                       ref float innerNeg, ref float innerPos)
+        {
+            var f = row.Split(',');
+            float cx = float.Parse(f[0], CultureInfo.InvariantCulture);
+            float cz = float.Parse(f[1], CultureInfo.InvariantCulture);
+            float y0 = float.Parse(f[2], CultureInfo.InvariantCulture);
+            float y1 = float.Parse(f[3], CultureInfo.InvariantCulture);
+            float hx = float.Parse(f[4], CultureInfo.InvariantCulture);
+            float hz = float.Parse(f[5], CultureInfo.InvariantCulture);
+            float yaw = float.Parse(f[6], CultureInfo.InvariantCulture) * Mathf.Deg2Rad;
+            // Only a box whose Y band brackets a ball sitting on the deck can stop it rolling.
+            if (!(y0 <= deckY + 0.10f && y1 >= deckY + 0.02f)) return;
+            float c = Mathf.Cos(yaw), s = Mathf.Sin(yaw);
+            for (int k = 0; k < 4; k++)
+            {
+                float sx = ((k & 1) == 0) ? -hx : hx;
+                float sz = ((k & 2) == 0) ? -hz : hz;
+                float wx = cx + sx * c - sz * s, wz = cz + sx * s + sz * c;
+                float o = Vector3.Dot(new Vector3(wx, 0f, wz) - c0, across);
+                if (o < 0f) { if (o > innerNeg) innerNeg = o; }
+                else        { if (o < innerPos) innerPos = o; }
+            }
         }
 
         // ── Candidate boxes ──────────────────────────────────────────────────────
@@ -433,9 +614,19 @@ namespace Golfin.CourseImport
         }
 
         /// <summary>
-        /// Deck Y directly above/below (x,z), by point-in-triangle over the deck soup. Falls back
-        /// to the deck's mean Y outside the footprint — piers and railing ends overhang the deck
-        /// rectangle, and a fallback of 0 would classify every one of them as "railing".
+        /// Deck Y directly above/below (x,z), by point-in-triangle over the deck soup.
+        ///
+        /// OUTSIDE the footprint it falls back to the NEAREST DECK VERTEX, not to the deck's mean
+        /// Y. On a level bridge the two are the same; on a tilted one they are not, and the mean
+        /// silently reintroduces the very error the per-corner sampling exists to remove. Hole 12
+        /// showed it: the deck slab collider is exactly as wide as the deck (halfX 2.404 vs a deck
+        /// spanning ±2.404), so its corners land ON the boundary, point-in-triangle rejects them,
+        /// and a mean-Y fallback made the slab's high end read 1.8 m "above the deck" — filing the
+        /// DECK ITSELF as a railing, a solid 4.5 m block down the whole 40 m walkway. The nearest
+        /// vertex is at the same end of the bridge, so it carries the tilt with it.
+        ///
+        /// <paramref name="fallback"/> now only applies to an empty deck soup, which cannot happen
+        /// (callers check hasDeck first) but is kept so the method is total.
         /// </summary>
         private static float SampleDeckY(List<Vector3> tris, float x, float z, float fallback)
         {
@@ -454,7 +645,17 @@ namespace Golfin.CourseImport
                 float py = w0 * a.y + w1 * b.y + w2 * c.y;
                 if (!any || py > best) { best = py; any = true; }
             }
-            return any ? best : fallback;
+            if (any) return best;
+
+            // Nearest deck vertex in XZ.
+            float bestD2 = float.MaxValue, bestY = fallback;
+            for (int i = 0; i < tris.Count; i++)
+            {
+                float dx = tris[i].x - x, dz = tris[i].z - z;
+                float d2 = dx * dx + dz * dz;
+                if (d2 < bestD2) { bestD2 = d2; bestY = tris[i].y; }
+            }
+            return bestY;
         }
 
         // ── Helpers (mirrors of TreeObstacleBaker) ───────────────────────────────

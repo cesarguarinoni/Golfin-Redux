@@ -1,0 +1,372 @@
+{
+    "note": "Tracked bridge placement — see BridgeInstanceCatalog.cs. NOT bridges.json (that is BridgeExporter's cart-path anchor export).",
+    "hole": 8,
+    "instances": [
+        {
+            "name": "bridgeLODs",
+            "sourcePrefabGuid": "d507e412d40cbc44db1839dae98011e6",
+            "sourcePrefabPath": "Assets/Packs/PBR Bridge/3D Art/Mesh/bridgeLODs.fbx",
+            "modifications": [
+                {
+                    "targetGuid": "d507e412d40cbc44db1839dae98011e6",
+                    "targetFileId": -8679921383154817045,
+                    "propertyPath": "m_LocalScale.x",
+                    "value": "0.5",
+                    "objectRefGuid": "",
+                    "objectRefFileId": 0
+                },
+                {
+                    "targetGuid": "d507e412d40cbc44db1839dae98011e6",
+                    "targetFileId": -8679921383154817045,
+                    "propertyPath": "m_LocalScale.y",
+                    "value": "0.5",
+                    "objectRefGuid": "",
+                    "objectRefFileId": 0
+                },
+                {
+                    "targetGuid": "d507e412d40cbc44db1839dae98011e6",
+                    "targetFileId": -8679921383154817045,
+                    "propertyPath": "m_LocalScale.z",
+                    "value": "0.14",
+                    "objectRefGuid": "",
+                    "objectRefFileId": 0
+                },
+                {
+                    "targetGuid": "d507e412d40cbc44db1839dae98011e6",
+                    "targetFileId": -8679921383154817045,
+                    "propertyPath": "m_LocalPosition.x",
+                    "value": "-94.34",
+                    "objectRefGuid": "",
+                    "objectRefFileId": 0
+                },
+                {
+                    "targetGuid": "d507e412d40cbc44db1839dae98011e6",
+                    "targetFileId": -8679921383154817045,
+                    "propertyPath": "m_LocalPosition.y",
+                    "value": "24.68",
+                    "objectRefGuid": "",
+                    "objectRefFileId": 0
+                },
+                {
+                    "targetGuid": "d507e412d40cbc44db1839dae98011e6",
+                    "targetFileId": -8679921383154817045,
+                    "propertyPath": "m_LocalPosition.z",
+                    "value": "-37.56",
+                    "objectRefGuid": "",
+                    "objectRefFileId": 0
+                },
+                {
+                    "targetGuid": "d507e412d40cbc44db1839dae98011e6",
+                    "targetFileId": -8679921383154817045,
+                    "propertyPath": "m_LocalRotation.w",
+                    "value": "0.7586463",
+                    "objectRefGuid": "",
+                    "objectRefFileId": 0
+                },
+                {
+                    "targetGuid": "d507e412d40cbc44db1839dae98011e6",
+                    "targetFileId": -8679921383154817045,
+                    "propertyPath": "m_LocalRotation.x",
+                    "value": "0",
+                    "objectRefGuid": "",
+                    "objectRefFileId": 0
+                },
+                {
+                    "targetGuid": "d507e412d40cbc44db1839dae98011e6",
+                    "targetFileId": -8679921383154817045,
+                    "propertyPath": "m_LocalRotation.y",
+                    "value": "-0.65150267",
+                    "objectRefGuid": "",
+                    "objectRefFileId": 0
+                },
+                {
+                    "targetGuid": "d507e412d40cbc44db1839dae98011e6",
+                    "targetFileId": -8679921383154817045,
+                    "propertyPath": "m_LocalRotation.z",
+                    "value": "0",
+                    "objectRefGuid": "",
+                    "objectRefFileId": 0
+                },
+                {
+                    "targetGuid": "d507e412d40cbc44db1839dae98011e6",
+                    "targetFileId": -8679921383154817045,
+                    "propertyPath": "m_LocalEulerAnglesHint.x",
+                    "value": "0",
+                    "objectRefGuid": "",
+                    "objectRefFileId": 0
+                },
+                {
+                    "targetGuid": "d507e412d40cbc44db1839dae98011e6",
+                    "targetFileId": -8679921383154817045,
+                    "propertyPath": "m_LocalEulerAnglesHint.y",
+                    "value": "-81.31",
+                    "objectRefGuid": "",
+                    "objectRefFileId": 0
+                },
+                {
+                    "targetGuid": "d507e412d40cbc44db1839dae98011e6",
+                    "targetFileId": -8679921383154817045,
+                    "propertyPath": "m_LocalEulerAnglesHint.z",
+                    "value": "0",
+                    "objectRefGuid": "",
+                    "objectRefFileId": 0
+                },
+                {
+                    "targetGuid": "d507e412d40cbc44db1839dae98011e6",
+                    "targetFileId": 919132149155446097,
+                    "propertyPath": "m_Name",
+                    "value": "bridgeLODs",
+                    "objectRefGuid": "",
+                    "objectRefFileId": 0
+                }
+            ]
+        },
+        {
+            "name": "bridgeLODs (1)",
+            "sourcePrefabGuid": "d507e412d40cbc44db1839dae98011e6",
+            "sourcePrefabPath": "Assets/Packs/PBR Bridge/3D Art/Mesh/bridgeLODs.fbx",
+            "modifications": [
+                {
+                    "targetGuid": "d507e412d40cbc44db1839dae98011e6",
+                    "targetFileId": -8679921383154817045,
+                    "propertyPath": "m_LocalScale.x",
+                    "value": "0.5",
+                    "objectRefGuid": "",
+                    "objectRefFileId": 0
+                },
+                {
+                    "targetGuid": "d507e412d40cbc44db1839dae98011e6",
+                    "targetFileId": -8679921383154817045,
+                    "propertyPath": "m_LocalScale.y",
+                    "value": "0.5",
+                    "objectRefGuid": "",
+                    "objectRefFileId": 0
+                },
+                {
+                    "targetGuid": "d507e412d40cbc44db1839dae98011e6",
+                    "targetFileId": -8679921383154817045,
+                    "propertyPath": "m_LocalScale.z",
+                    "value": "0.26",
+                    "objectRefGuid": "",
+                    "objectRefFileId": 0
+                },
+                {
+                    "targetGuid": "d507e412d40cbc44db1839dae98011e6",
+                    "targetFileId": -8679921383154817045,
+                    "propertyPath": "m_LocalPosition.x",
+                    "value": "92.5",
+                    "objectRefGuid": "",
+                    "objectRefFileId": 0
+                },
+                {
+                    "targetGuid": "d507e412d40cbc44db1839dae98011e6",
+                    "targetFileId": -8679921383154817045,
+                    "propertyPath": "m_LocalPosition.y",
+                    "value": "26.77",
+                    "objectRefGuid": "",
+                    "objectRefFileId": 0
+                },
+                {
+                    "targetGuid": "d507e412d40cbc44db1839dae98011e6",
+                    "targetFileId": -8679921383154817045,
+                    "propertyPath": "m_LocalPosition.z",
+                    "value": "179.1",
+                    "objectRefGuid": "",
+                    "objectRefFileId": 0
+                },
+                {
+                    "targetGuid": "d507e412d40cbc44db1839dae98011e6",
+                    "targetFileId": -8679921383154817045,
+                    "propertyPath": "m_LocalRotation.w",
+                    "value": "0.93358046",
+                    "objectRefGuid": "",
+                    "objectRefFileId": 0
+                },
+                {
+                    "targetGuid": "d507e412d40cbc44db1839dae98011e6",
+                    "targetFileId": -8679921383154817045,
+                    "propertyPath": "m_LocalRotation.x",
+                    "value": "0",
+                    "objectRefGuid": "",
+                    "objectRefFileId": 0
+                },
+                {
+                    "targetGuid": "d507e412d40cbc44db1839dae98011e6",
+                    "targetFileId": -8679921383154817045,
+                    "propertyPath": "m_LocalRotation.y",
+                    "value": "-0.35836798",
+                    "objectRefGuid": "",
+                    "objectRefFileId": 0
+                },
+                {
+                    "targetGuid": "d507e412d40cbc44db1839dae98011e6",
+                    "targetFileId": -8679921383154817045,
+                    "propertyPath": "m_LocalRotation.z",
+                    "value": "0",
+                    "objectRefGuid": "",
+                    "objectRefFileId": 0
+                },
+                {
+                    "targetGuid": "d507e412d40cbc44db1839dae98011e6",
+                    "targetFileId": -8679921383154817045,
+                    "propertyPath": "m_LocalEulerAnglesHint.x",
+                    "value": "0",
+                    "objectRefGuid": "",
+                    "objectRefFileId": 0
+                },
+                {
+                    "targetGuid": "d507e412d40cbc44db1839dae98011e6",
+                    "targetFileId": -8679921383154817045,
+                    "propertyPath": "m_LocalEulerAnglesHint.y",
+                    "value": "-42",
+                    "objectRefGuid": "",
+                    "objectRefFileId": 0
+                },
+                {
+                    "targetGuid": "d507e412d40cbc44db1839dae98011e6",
+                    "targetFileId": -8679921383154817045,
+                    "propertyPath": "m_LocalEulerAnglesHint.z",
+                    "value": "0",
+                    "objectRefGuid": "",
+                    "objectRefFileId": 0
+                },
+                {
+                    "targetGuid": "d507e412d40cbc44db1839dae98011e6",
+                    "targetFileId": 919132149155446097,
+                    "propertyPath": "m_Name",
+                    "value": "bridgeLODs (1)",
+                    "objectRefGuid": "",
+                    "objectRefFileId": 0
+                },
+                {
+                    "targetGuid": "d507e412d40cbc44db1839dae98011e6",
+                    "targetFileId": 4742473837712756890,
+                    "propertyPath": "m_LODs.Array.data[0].renderers.Array.data[4].renderer",
+                    "value": "",
+                    "objectRefGuid": "",
+                    "objectRefFileId": 0
+                },
+                {
+                    "targetGuid": "d507e412d40cbc44db1839dae98011e6",
+                    "targetFileId": 4742473837712756890,
+                    "propertyPath": "m_LODs.Array.data[0].renderers.Array.data[5].renderer",
+                    "value": "",
+                    "objectRefGuid": "",
+                    "objectRefFileId": 0
+                },
+                {
+                    "targetGuid": "d507e412d40cbc44db1839dae98011e6",
+                    "targetFileId": 4742473837712756890,
+                    "propertyPath": "m_LODs.Array.data[0].renderers.Array.data[8].renderer",
+                    "value": "",
+                    "objectRefGuid": "",
+                    "objectRefFileId": 0
+                },
+                {
+                    "targetGuid": "d507e412d40cbc44db1839dae98011e6",
+                    "targetFileId": 4742473837712756890,
+                    "propertyPath": "m_LODs.Array.data[1].renderers.Array.data[4].renderer",
+                    "value": "",
+                    "objectRefGuid": "",
+                    "objectRefFileId": 0
+                },
+                {
+                    "targetGuid": "d507e412d40cbc44db1839dae98011e6",
+                    "targetFileId": 4742473837712756890,
+                    "propertyPath": "m_LODs.Array.data[1].renderers.Array.data[5].renderer",
+                    "value": "",
+                    "objectRefGuid": "",
+                    "objectRefFileId": 0
+                },
+                {
+                    "targetGuid": "d507e412d40cbc44db1839dae98011e6",
+                    "targetFileId": 4742473837712756890,
+                    "propertyPath": "m_LODs.Array.data[1].renderers.Array.data[8].renderer",
+                    "value": "",
+                    "objectRefGuid": "",
+                    "objectRefFileId": 0
+                },
+                {
+                    "targetGuid": "d507e412d40cbc44db1839dae98011e6",
+                    "targetFileId": 4742473837712756890,
+                    "propertyPath": "m_LODs.Array.data[0].renderers.Array.data[11].renderer",
+                    "value": "",
+                    "objectRefGuid": "",
+                    "objectRefFileId": 0
+                },
+                {
+                    "targetGuid": "d507e412d40cbc44db1839dae98011e6",
+                    "targetFileId": 4742473837712756890,
+                    "propertyPath": "m_LODs.Array.data[0].renderers.Array.data[12].renderer",
+                    "value": "",
+                    "objectRefGuid": "",
+                    "objectRefFileId": 0
+                },
+                {
+                    "targetGuid": "d507e412d40cbc44db1839dae98011e6",
+                    "targetFileId": 4742473837712756890,
+                    "propertyPath": "m_LODs.Array.data[0].renderers.Array.data[13].renderer",
+                    "value": "",
+                    "objectRefGuid": "",
+                    "objectRefFileId": 0
+                },
+                {
+                    "targetGuid": "d507e412d40cbc44db1839dae98011e6",
+                    "targetFileId": 4742473837712756890,
+                    "propertyPath": "m_LODs.Array.data[0].renderers.Array.data[14].renderer",
+                    "value": "",
+                    "objectRefGuid": "",
+                    "objectRefFileId": 0
+                },
+                {
+                    "targetGuid": "d507e412d40cbc44db1839dae98011e6",
+                    "targetFileId": 4742473837712756890,
+                    "propertyPath": "m_LODs.Array.data[0].renderers.Array.data[15].renderer",
+                    "value": "",
+                    "objectRefGuid": "",
+                    "objectRefFileId": 0
+                },
+                {
+                    "targetGuid": "d507e412d40cbc44db1839dae98011e6",
+                    "targetFileId": 4742473837712756890,
+                    "propertyPath": "m_LODs.Array.data[1].renderers.Array.data[11].renderer",
+                    "value": "",
+                    "objectRefGuid": "",
+                    "objectRefFileId": 0
+                },
+                {
+                    "targetGuid": "d507e412d40cbc44db1839dae98011e6",
+                    "targetFileId": 4742473837712756890,
+                    "propertyPath": "m_LODs.Array.data[1].renderers.Array.data[12].renderer",
+                    "value": "",
+                    "objectRefGuid": "",
+                    "objectRefFileId": 0
+                },
+                {
+                    "targetGuid": "d507e412d40cbc44db1839dae98011e6",
+                    "targetFileId": 4742473837712756890,
+                    "propertyPath": "m_LODs.Array.data[1].renderers.Array.data[13].renderer",
+                    "value": "",
+                    "objectRefGuid": "",
+                    "objectRefFileId": 0
+                },
+                {
+                    "targetGuid": "d507e412d40cbc44db1839dae98011e6",
+                    "targetFileId": 4742473837712756890,
+                    "propertyPath": "m_LODs.Array.data[1].renderers.Array.data[14].renderer",
+                    "value": "",
+                    "objectRefGuid": "",
+                    "objectRefFileId": 0
+                },
+                {
+                    "targetGuid": "d507e412d40cbc44db1839dae98011e6",
+                    "targetFileId": 4742473837712756890,
+                    "propertyPath": "m_LODs.Array.data[1].renderers.Array.data[15].renderer",
+                    "value": "",
+                    "objectRefGuid": "",
+                    "objectRefFileId": 0
+                }
+            ]
+        }
+    ]
+}

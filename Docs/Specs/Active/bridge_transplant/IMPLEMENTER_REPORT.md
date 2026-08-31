@@ -1,6 +1,11 @@
 # IMPLEMENTER_REPORT — `bridge_transplant`
 
 **Iteration shape:** `course-scene:bridge-transplant-and-deck-zone`
+**Scope, iteration 4:** all four remaining holes batched — **8, 9, 12 and 17**. All 7 bridges from
+the SPEC's ground-truth table are now transplanted, decked, zoned and obstacle-baked. See
+§ Iteration 4 below; it found two more baker defects that only the x-tilt could reach, and a third
+model whose colliders do not seal its own deck.
+
 **Scope, iteration 3:** Cesar's call on the two open decisions — *"Add bots + bridges, author
 railing boxes, explain hole 12, re-run tree drift and then commit if everything checks out."*
 `VersusBot.IsAvoidSurface` now includes `Bridge` (the one authorised edit to the bot), and
@@ -434,6 +439,93 @@ Bot *shots* do get bridge collision: `PhysicsLabController.RunSimFromController`
 shot path for player and bot alike, and it now passes `_bridgeProvider`.
 
 
+---
+
+## Iteration 4 — holes 8, 9, 12, 17
+
+All 6 remaining instances transplanted at **max |Δpos| = 0.000000 m, max Δangle = 0.000000°,
+max |Δscale| = 0.000000** against the Video source (33 / 17 / 27 / 27 / 14 transforms compared,
+0 unmatched), matching the SPEC ground-truth table row for row including the x-tilts. Every hole's
+`zones.json` gained **exactly one** `Bridge` group and nothing else moved — polygon, vertex and
+triangle counts unchanged on every other group, `obMask` byte-identical.
+
+| hole | bridges | deck polys | obstacle boxes | source |
+|---|---:|---:|---:|---|
+| 07 | 1 | 1 | 95 | colliders ×134 |
+| 08 | 2 | 2 | 24 | renderer-AABB fallback |
+| 09 | 1 | 1 | 12 | renderer-AABB fallback |
+| 12 | 2 | 2 | 191 | colliders ×134 each |
+| 17 | 1 | 1 | 34 | colliders ×36 + 2 synthesized kerbs |
+
+### Two more baker defects — both reachable only through the x-tilt
+
+Hole 12 is the only tilted hole, and it earned its reputation immediately.
+
+4. **The deck slab was being filed as a railing.** Classification sampled the deck once at each
+   box's *centre*. On a 5.22°-tilted bridge a 40.8 m deck-slab collider has its global `maxY` at
+   the high **end**, 4.5 m above the deck under its middle — so it read as "4.5 m proud of the
+   deck". Three such boxes, `halfX 2.404` (exactly the deck half-width) and `halfZ 20.4`: a solid
+   block standing the full length and width of the walkway. **Fixed** by measuring every corner
+   against the deck directly beneath *that* corner.
+5. **The per-corner sample then fell through to the deck's mean Y** outside the footprint — and the
+   slab's corners sit exactly *on* the boundary, so point-in-triangle rejected them and the tilt
+   error came straight back, unchanged. **Fixed** by falling back to the nearest deck vertex, which
+   carries the tilt with it.
+
+**Regression proof:** holes 7, 8 and 9 have level decks, where per-corner sampling reduces to the
+old rule exactly — and all three re-bake **byte-identical** through both fixes
+(`16583aa6` / `aac1e956` / `5e91fee7`). Only 12 and 17 changed, and only by shedding misclassified
+deck slabs.
+
+### A third model that does not seal its own deck
+
+Whether a model's authored colliders stop a ball *rolling* off its deck varies per model, so it is
+now measured per side, per bridge, and repaired only where it fails:
+
+| model | verdict | inner faces vs deck edge |
+|---|---|---|
+| `Bridge_withLODs` | sealed by model | kerbs ±2.004 inside ±2.404 |
+| `bridgeLODs` | sealed by model | railing slab ±2.256 / ±1.128 |
+| `Bridge_part_1` | **UNSEALED** | colliders −2.555 / +2.488, *outboard* of ±2.404 |
+
+Hole 17 measured **0 of 8** rolls staying on the deck. The cause is not a missing railing — the
+railing *is* baked, inner face 2.269, inboard of the edge. It is that its **base sits at 23.791
+over a deck surface of 23.62–23.71**, so it floats 0.10–0.17 m up and a 43 mm ball rolls straight
+underneath. `Bridge_part_1` has no kerb; the other two models do, one way or another.
+
+Repaired with **2 synthesized kerb boxes**, spanning deck→railing-base over the railing's own XZ
+footprint. **This is the one piece of geometry in this task not taken from the art** — 0.10–0.17 m
+tall at the very edge of the deck, invisible in play. It is logged by the baker on every bake and
+called out here so it is a decision on the record.
+
+### Containment, all 7 bridges
+
+**8/8** perpendicular rolls each (3 / 6 / 10 / 16 m/s × both directions) end **on the bridge**;
+mid-deck classifies as `Bridge`; `SampleHeight` returns the deck. 56 shots, 56 contained.
+
+### Risk 1 — nothing can pass under a deck
+
+Measured deck-over-terrain clearance across each footprint:
+
+| hole | clearance (min … max, mean) | deck below terrain |
+|---|---|---:|
+| 07 | 4.48 … 24.07 m (15.75) | 0% |
+| 08 | 0.17 … 1.68 m | 0% |
+| 09 | 0.35 … 1.44 m | 0% |
+| 12 #1 | 0.53 … 5.71 m (3.65) | 0% |
+| 12 #2 | −0.86 … 5.38 m (3.03) | **7%** |
+| 17 | 0.14 … 1.77 m | 0% |
+
+Holes 8, 9 and 17 sit under 1.8 m — nobody was going to play a ball under those, so Risk 1 is moot
+there. Holes 7 and 12 have real height, but both span **water**, so a ball that "should" have
+passed underneath was going in the water anyway. **Net: Risk 1 is real but benign on all five
+holes.**
+
+**Separate finding:** 7% of hole 12's second deck sits *below* the terrain, down to −0.86 m. The
+`Bridge` polygon outranks terrain, so that patch reads as a shallow trench at the abutment.
+Cosmetic/feel rather than a collision fault — flagged, not touched.
+
+
 ## For Cesar
 
 1. **Bridge surface coefficients are a guess and need your feel pass** (SPEC B2, Risk 3).
@@ -460,11 +552,17 @@ shot path for player and bot alike, and it now passes `_bridgeProvider`.
    includes `Bridge`. Side effect worth knowing: on hole 12 this makes `TrySafeLanding` fail more
    often and fall back to the original line — safe, but it means bots will sometimes just play
    through rather than lay up.
-7. **Piers are baked but currently unreachable.** 10 pier boxes sit at Y 13.07–23.50, under the
+7. **Hole 17 carries 2 synthesized kerb boxes** — the only invented geometry in the task, 0.10–0.17 m
+   at the deck edge, because `Bridge_part_1`'s railing floats above its own deck and the model has
+   no kerb. Without them hole 17 lost every ball that rolled to the edge. Say the word if you'd
+   rather ship it unsealed and fix the art instead.
+8. **Hole 12's second bridge has 7% of its deck below the terrain** (down to −0.86 m), which reads
+   as a shallow trench at the abutment. Art placement, not collision — flagged for your eye.
+9. **Piers are baked but currently unreachable.** 10 pier boxes sit at Y 13.07–23.50, under the
    deck. SPEC Risk 1 stands: the height field is 2.5D and the deck now wins over its own
    footprint, so nothing can pass beneath a bridge to reach them. They cost nothing and become
    live if a 3D collision path ever lands.
-8. **Risk 2 (`bridgeLODs.fbx` has no BoxColliders) is untouched and still open** — it bites Stage C
+10. **Risk 2 (`bridgeLODs.fbx` has no BoxColliders) is untouched and still open** — it bites Stage C
    on holes 8 (×2) and 9, not hole 7. No decision taken; do not read this iteration as having
    chosen the deck-only route.
 

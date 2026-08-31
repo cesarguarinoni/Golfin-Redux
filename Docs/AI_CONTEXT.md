@@ -5,7 +5,7 @@
 
 ---
 
-## 🔍 IN REVIEW — `bridge_transplant` iter-3: Stage A+B+C on **hole 7**, bots + FBX railings (2026-08-31)
+## 🔍 IN REVIEW — `bridge_transplant` iter-4: **all 7 bridges**, holes 7/8/9/12/17 (2026-08-31)
 
 **Hole 7's bridge now exists in the live scene and the ball can stand on it.** The 7 bridges only
 ever existed in the archived capture scenes (`Generated/Video/Hole_NN_Geo.unity`); the live play
@@ -81,6 +81,29 @@ no kerb equivalent needed. Hole 7's bake through the refactored path is byte-ide
 (5.22° / 1.79°) so it is the first exercise of the tilt handling, and where SPEC Risk 1 (nothing
 can pass *under* a deck) will be most visible. The SPEC's bot-deadlock worry is structurally
 impossible — `TrySafeLanding` is a bounded search with an explicit "no safe landing found" fallback.
+
+**Iter-4 batched the remaining four holes — 8, 9, 12 and 17 — so all 7 bridges are in.** Every
+instance transplanted at max Δ 0.000000 on position, angle and scale; every hole's `zones.json`
+gained exactly one `Bridge` group with nothing else moved; containment is **8/8 perpendicular rolls
+on all 7 bridges** (56 shots, 56 contained).
+
+**Hole 12's x-tilt earned its reputation immediately, finding two more baker defects.** Classification
+sampled the deck once at each box's *centre* — on a 5.22°-tilted bridge a 40.8 m deck-slab collider
+has its `maxY` at the high *end*, 4.5 m above the deck under its middle, so **the deck slab itself
+was filed as a railing**: a solid block the full length and width of the walkway. Fixed by measuring
+each corner against the deck beneath *that* corner — which then fell through to the deck's mean Y on
+the footprint boundary and brought the same error straight back, fixed again with a nearest-vertex
+fallback. Regression proof: holes 7/8/9 (level decks) re-bake **byte-identical** through both.
+
+**A third model doesn't seal its own deck.** Whether authored colliders stop a ball *rolling* off
+varies per model, so it is now measured per side and repaired only where it fails. `Bridge_part_1`
+(hole 17) measured **0 of 8** — its railing is baked at the right place but its base floats
+0.10–0.17 m above the walkway and a 43 mm ball rolls underneath. Repaired with 2 synthesized kerb
+boxes: the only invented geometry in the task, flagged as such.
+
+**Risk 1 measured**: real but benign. Holes 8/9/17 have under 1.8 m clearance (nobody plays a ball
+under those); 7 and 12 have real height but span water. Separate cosmetic finding: 7% of hole 12's
+second deck sits *below* terrain, reading as a shallow trench at the abutment.
 
 Evidence: 111-transform hierarchy diff against the Video source at max Δ 0.000000 on position,
 angle and scale; a 1:1 overlay of the baked `Bridge` polygon on the rendered bridge; a cross-section
