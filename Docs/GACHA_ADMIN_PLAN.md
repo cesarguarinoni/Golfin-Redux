@@ -1,5 +1,14 @@
 # Gacha — admin-managed, server-rolled · implementation plan
 
+> **STATUS 2026-08-31 — DELIVERED (D pending three operational items).** A `gacha_admin_catalogs`
+> DONE (`b42c8bff7`); B `gacha_server_pull` DONE (API v64, ticket ledger, ops panel); C
+> `gacha_client_real_pull` DONE (`18d035cfb` — the game pulls the server; every prize kind on the
+> club card). D `gacha_ops_polish` code-complete (`c0dfbaab1`…`8c2c34d1e`): rates modal, telemetry
+> funnel, Gold ticket, simulate parity, foreground refresh (5b complete), default-ball guard,
+> first ticket listing (100 RP / 50 tickets, deactivated until the post-`2afaf0ad5` build).
+> Outstanding: Cesar applies `2026_09_02_default_ball_guard.sql`; next archive → reactivate
+> `shop_ticket_standard_50`; Code refreshes the D report. Details per spec folder.
+
 **2026-08-31 · Architect (Cowork).** Cesar's requirement, same day: *"move Gacha management to the
 online admin like we did all the rest — banners, dates, prizes and drop rates from the admin,
 working without a new build; Unity/CSV edits (rates, for example) inform the admin and vice versa,
