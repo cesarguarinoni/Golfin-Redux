@@ -410,6 +410,15 @@ GACHA_PULL_X10,PULL x10,10回引く
 GACHA_RULES_RATES,RULES & RATES,ルールと確率
 GACHA_SKIP,SKIP,スキップ
 GACHA_BUY,BUY,購入
+GACHA_INSUFFICIENT_TICKETS,Not enough tickets,チケットが足りません
+GACHA_COST_CHANGED,Price updated — tap again to pull,価格が更新されました。もう一度タップしてください
+GACHA_PULL_CAP,Pull limit reached for this banner,このバナーの上限に達しました
+GACHA_PAUSED,Gacha is paused. Please try again later,ガチャは一時停止中です。しばらくしてからお試しください
+GACHA_UNAVAILABLE,This banner is no longer available,このバナーは終了しました
+GACHA_DUPE_RP,+{0} RP,+{0} RP
+GACHA_CARD_PITY,Guaranteed {0} or higher within,{0}以上が確定・最大
+GACHA_CARD_PULLS,{0} pulls,{0}回
+GACHA_CARD_GUARANTEE_X10,Every 10-pull includes at least one {0},10連ごとに{0}以上が1枚確定
 SHOP_TAB_GACHA,GACHA,ガチャ
 SHOP_TAB_STORE,STORE,ストア
 SHOP_TAB_GIFTS,GIFTS,ギフト

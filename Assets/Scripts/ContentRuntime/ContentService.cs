@@ -110,7 +110,12 @@ namespace Golfin.Content
         private readonly Dictionary<string, double> _bootCostByCatalog = ContentCatalogs.NewMap<double>();
 
         /// <summary>Raised after a fetch has written a NEW cache — i.e. next launch will differ.
-        /// Nothing consumes it yet; it exists so a future live-swap spec has a seam.</summary>
+        /// <para>
+        /// The live-swap seam it was reserved for now has one consumer: <c>GachaBannerCatalog</c>
+        /// arms a pending flag here and calls <see cref="TryReinstallFromCache"/> for the four
+        /// gacha catalogs on its next <c>Reload()</c> (gacha_client_real_pull §2, plan 5b). Every
+        /// other catalog still takes effect at the NEXT launch — see <see cref="LiveSwappable"/>.
+        /// </para></summary>
         public static event Action? OnCacheRefreshed;
 
         // ── Lifecycle ─────────────────────────────────────────────────────────
@@ -521,6 +526,73 @@ namespace Golfin.Content
         {
             try { OnCacheRefreshed?.Invoke(); }
             catch (Exception ex) { Debug.LogError($"{Tag} OnCacheRefreshed subscriber threw: {ex}"); }
+        }
+
+        // ── 5b: the gacha-only same-session re-apply ──────────────────────────
+
+        /// <summary>
+        /// The catalogs <see cref="TryReinstallFromCache"/> will re-install mid-session, and the
+        /// ONLY ones.
+        ///
+        /// <para>
+        /// I5 ("the fetch does not re-apply this session") is not a stylistic rule — it exists
+        /// because re-parsing the club DB with a bag equipped, or the modes table with a round in
+        /// flight, mutates state the player is standing on. THESE FOUR HAVE NO OWNED STATE. A
+        /// banner is drawn from scratch every time the Rewards Center opens, the rates and pool
+        /// tables are read-only inputs to a withhold decision, and a ticket type is a name and an
+        /// icon. Nothing holds a reference to a row of any of them across a frame, so swapping
+        /// them cannot pull the rug out from under anything — which is exactly what makes the
+        /// carve-out safe here and unsafe everywhere else.
+        /// </para>
+        /// </summary>
+        private static readonly HashSet<string> LiveSwappable = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ContentCatalogs.GachaBanners,
+            ContentCatalogs.GachaRates,
+            ContentCatalogs.GachaPools,
+            ContentCatalogs.TicketTypes,
+        };
+
+        /// <summary>
+        /// Re-read ONE catalog's on-disk cache and install it into <see cref="ContentCatalogStore"/>
+        /// mid-session (gacha_client_real_pull §2, plan decision 5b).
+        ///
+        /// <para>
+        /// This is the same work <see cref="ApplyCachedCatalogs"/> does at boot, for one catalog,
+        /// callable after <see cref="OnCacheRefreshed"/> has said a NEWER cache landed. It is
+        /// refused for anything outside <see cref="LiveSwappable"/> — see that field for why the
+        /// carve-out is safe for the four gacha catalogs and for nothing else.
+        /// </para>
+        /// </summary>
+        /// <returns>True when a catalog was installed. False when the name is not live-swappable,
+        /// when there is no cache on disk, or when the cache cannot be mapped — in every false case
+        /// the store keeps whatever it already held, so the caller simply keeps rendering that.</returns>
+        public static bool TryReinstallFromCache(string catalog)
+        {
+            if (string.IsNullOrWhiteSpace(catalog)) return false;
+
+            if (!LiveSwappable.Contains(catalog))
+            {
+                Debug.LogWarning($"{Tag} TryReinstallFromCache('{catalog}') refused: only the gacha " +
+                                 "catalogs may be re-installed mid-session (I5 — every other catalog " +
+                                 "has owned state and takes effect at the NEXT launch).");
+                return false;
+            }
+
+            string? cached = RemoteContentSource.ReadCache(catalog);
+            if (cached == null) return false;   // never fetched / killed — bundled, silently and correctly
+
+            ContentPayload payload = ContentCatalogMapper.Map(cached);
+            if (!payload.Parsed || !payload.Enabled || payload.IsDisabled(catalog)) return false;
+
+            ContentCatalog? rows = payload.Catalog(catalog);
+            if (rows == null) return false;
+
+            ContentCatalogStore.Install(rows);
+
+            Debug.Log($"{Tag} '{catalog}' overlay RE-INSTALLED mid-session from the disk cache: " +
+                      $"{rows.Rows.Count} row(s) ({rows.ActiveCount} active) at catalog v{rows.Version}.");
+            return true;
         }
     }
 }

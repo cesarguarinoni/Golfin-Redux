@@ -38,7 +38,17 @@ namespace GolfinRedux.UI.Gacha
 
         private void OnEnable()
         {
+            // Draw the disk mirror immediately, then re-draw when the server answers. The screen
+            // never waits on a socket — an offline open shows the last log the server confirmed
+            // rather than an empty list that reads as "you have never pulled".
+            GachaHistoryStore.OnChanged += RebuildList;
             RebuildList();
+            GachaHistoryStore.Refresh();
+        }
+
+        private void OnDisable()
+        {
+            GachaHistoryStore.OnChanged -= RebuildList;
         }
 
         private void OnDestroy()
@@ -104,10 +114,75 @@ namespace GolfinRedux.UI.Gacha
                     row.Bind(record);
                     break;
                 }
+                // Character / item / ticket. They render on the CLUB row prefab with its club card
+                // hidden (GachaHistoryRow.BindGeneric): the row is only club-specific in that one
+                // image, and a prefab per kind would be four to keep in step for one difference.
+                // Skipping them — which is what this branch used to do — meant a real pull could
+                // pay a prize the log silently omitted.
                 default:
-                    Debug.Log($"[GachaHistoryScreenController] Skipping unsupported reward type: {record.RewardType}");
+                {
+                    if (_clubRowPrefab == null)
+                    {
+                        Debug.LogWarning("[GachaHistoryScreenController] _clubRowPrefab not wired.");
+                        return;
+                    }
+                    var go = Instantiate(_clubRowPrefab, _scrollContent);
+                    var row = go.GetComponent<GachaHistoryRow>();
+                    if (row == null) row = go.AddComponent<GachaHistoryRow>();
+                    row.BindGeneric(record, ResolveName(record), ResolveRarityLine(record));
                     break;
+                }
             }
+        }
+
+        /// <summary>
+        /// The prize's display name, resolved against whichever database owns its kind. Falls back
+        /// to the raw ref id — a prize this build cannot name is still a prize the player won, and
+        /// the id is more useful in the log than a blank line.
+        /// </summary>
+        private static string ResolveName(GachaHistoryRecord record)
+        {
+            switch (record.RewardType)
+            {
+                case GachaRewardType.Character:
+                {
+                    var ch = Golfin.Roster.CharacterDatabaseCSV.Instance?.GetCharacter(record.RewardId);
+                    return ch != null ? ch.characterName : record.RewardId;
+                }
+                case GachaRewardType.Item:
+                {
+                    var item = Golfin.Inventory.ItemDatabaseCSV.Instance?.GetItem(record.RewardId);
+                    return item != null ? item.name : record.RewardId;
+                }
+                case GachaRewardType.Ticket:
+                {
+                    if (int.TryParse(record.RewardId, out int id))
+                    {
+                        var type = TicketTypeCatalog.Get(id);
+                        if (type != null) return type.DisplayName;
+                    }
+                    return record.RewardId;
+                }
+                default:
+                    return record.RewardId;
+            }
+        }
+
+        /// <summary>The coloured rarity line, matching the club row's format. Empty for a ticket,
+        /// which has no rarity of its own.</summary>
+        private static string ResolveRarityLine(GachaHistoryRecord record)
+        {
+            Golfin.Roster.CharacterRarity? rarity = record.RewardType switch
+            {
+                GachaRewardType.Character =>
+                    Golfin.Roster.CharacterDatabaseCSV.Instance?.GetCharacter(record.RewardId)?.rarity,
+                _ => null,
+            };
+
+            if (rarity == null) return string.Empty;
+
+            string hex = ColorUtility.ToHtmlStringRGB(Golfin.Roster.RarityHelper.GetRarityColor(rarity.Value));
+            return $"<color=#{hex}>{rarity.Value.ToString().ToUpper()}</color>";
         }
 
         // ── Close ──────────────────────────────────────────────────────────────

@@ -250,7 +250,10 @@ namespace Golfin.Save.Tests
                 "a v6 save must run every migration block and land at CurrentSchemaVersion");
             Assert.IsFalse(data.grandfatherClubs, "v5→v6 block does not run on a v6-start; no grandfather signal");
 #pragma warning disable CS0618
-            Assert.AreEqual(10, data.gachaTickets, "v6→v7 seeds gachaTickets=10 (test grant); v8 reads it but does not clear it");
+            Assert.AreEqual(0, data.gachaTickets,
+                "the v6→v7 test grant of 10 is GONE (gacha_client_real_pull §4.4): `golfin_tickets` " +
+                "is the ledger and it starts at 0 for every player, so a client-seeded balance is " +
+                "one /gacha/pull would refuse to spend. v8 still reads the (now zero) legacy value.");
 #pragma warning restore CS0618
             // clubOwnershipSeeded=true → v8→v9 must set wedgeBackfillPending
             Assert.IsTrue(data.wedgeBackfillPending, "a v6 seeded save must be flagged for wedge backfill after v8→v9 (Order 761)");

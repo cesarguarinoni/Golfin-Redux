@@ -97,27 +97,33 @@ namespace Golfin.Save
             }
 
             // v6 → v7: add gacha tickets (gacha_screen Stage 1).
-            // Test grant = 10 so dev can exercise the counter and pull stubs immediately.
-            // Applies to both existing saves (migration path) and effectively to fresh saves
-            // (GachaTicketManager.Awake seeds 10 if gachaTickets == 0 after first load).
-            // TODO: revert test grant to 0 before ship.
-            //       ALSO revert the paired seed in GachaTicketManager.Awake
-            //       (the `gachaTickets == 0 → DEFAULT_STARTING_TICKETS` guard, ~line 51).
-            //       Both sites must be reverted together — reverting only one leaves
-            //       emptied balances silently refilling to 10.
+            //
+            // THE TEST GRANT OF 10 IS GONE (gacha_client_real_pull §4.4). It seeded a balance the
+            // client owned; the ledger is now `golfin_tickets` server-side and it starts at 0 for
+            // every player by decision (plan §9 — the blob counter is deliberately NOT migrated
+            // into it). Seeding 10 here would show a balance /gacha/pull answers `insufficient`
+            // for. The paired seeds in GachaTicketManager.Awake and the v7→v8 block below went in
+            // the same change; all three were always documented as having to move together.
+            //
+            // The block itself stays: a v6 save still has to reach v7 for the chain below to run.
             if (data.schemaVersion < 7)
             {
-                data.gachaTickets = 10; // TODO: revert to 0 before ship (test grant only)
+                data.gachaTickets = 0;
                 data.schemaVersion = 7;
-                Debug.Log("[SaveSchemaMigrator] Migrated v6 → v7 (gachaTickets seeded to 10 — test grant).");
+                Debug.Log("[SaveSchemaMigrator] Migrated v6 → v7 (gachaTickets = 0 — the server " +
+                          "ledger is the truth; see gacha_client_real_pull §4.4).");
             }
 
             // v7 → v8: per-kind ticket balances (gacha_history Stage 1).
             // Moves the single gachaTickets int → ticketBalances List.
             // gachaTickets is the v7 balance (Standard kind, int value 0).
-            // The v6→v7 test grant seeds 10 — carry that value forward.
             // After migration, gachaTickets is ignored at runtime (marked [Obsolete]).
-            // TODO: revert the grant to 0 before ship — see paired TODO in GachaTicketManager.Awake.
+            //
+            // It carries the legacy value FORWARD unchanged, which is now purely cosmetic: since
+            // gacha_client_real_pull §4.4 `ticketBalances` is a display cache of the server ledger,
+            // overwritten by the first /gacha/tickets read of the session. The block stays because
+            // a v7 save must still reach v8, and because the counter has to draw SOMETHING before
+            // that read lands.
             if (data.schemaVersion < 8)
             {
                 data.ticketBalances ??= new List<PersistedTicketBalance>();

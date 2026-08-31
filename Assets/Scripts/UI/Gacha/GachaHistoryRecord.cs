@@ -20,11 +20,24 @@ namespace GolfinRedux.UI.Gacha
         public int             PullCount   = 1;    // 1 or 10
         public string          PulledUtc   = "";   // ISO-8601
 
+        /// <summary>
+        /// The RP a duplicate paid instead of the prize (gacha_client_real_pull §4.5). 0 when the
+        /// prize was granted.
+        ///
+        /// <para>
+        /// A duplicate also carries <see cref="Quantity"/> 0, and the two say different things: the
+        /// quantity is what reached the inventory (nothing), the RP is what reached the balance. A
+        /// row with quantity 0 and no dupeRp would be a prize that vanished.
+        /// </para>
+        /// </summary>
+        public int             DupeRp;
+
         public GachaHistoryRecord() { }
 
         public GachaHistoryRecord(
             GachaRewardType rewardType, string rewardId, int quantity,
-            string bannerId, TicketType ticketType, int pullCount, string pulledUtc)
+            string bannerId, TicketType ticketType, int pullCount, string pulledUtc,
+            int dupeRp = 0)
         {
             RewardType = rewardType;
             RewardId   = rewardId;
@@ -33,6 +46,7 @@ namespace GolfinRedux.UI.Gacha
             TicketType = ticketType;
             PullCount  = pullCount;
             PulledUtc  = pulledUtc;
+            DupeRp     = dupeRp;
         }
     }
 }

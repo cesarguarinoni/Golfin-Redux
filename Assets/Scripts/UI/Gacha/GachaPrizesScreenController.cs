@@ -29,7 +29,10 @@ namespace GolfinRedux.UI.Gacha
 
         // The last pull's prizes. NOT cleared on read: a BACK-navigation return to this screen
         // must re-bind the SAME result it showed before, not a freshly rolled one.
-        private static IReadOnlyList<PrizeRecord> s_result = GachaPullFlow.BuildResult(10);
+        // Empty until a pull happens. It used to be seeded with ten mock prizes so the screen
+        // rendered something when opened directly; there is no mock any more, and a screen showing
+        // prizes nobody won is exactly what this task removed.
+        private static IReadOnlyList<PrizeRecord> s_result = System.Array.Empty<PrizeRecord>();
 
         // Consumed once by the next OnEnable — only a real pull earns the entrance animation.
         private static bool s_pendingEntrance;
@@ -50,12 +53,6 @@ namespace GolfinRedux.UI.Gacha
             s_result = result;
             s_pendingEntrance = true;
         }
-
-        /// <summary>
-        /// Thin wrapper kept for GachaTabController's (dead) x1/x10 entry points — it rolls a
-        /// result of the requested size and defers to <see cref="SetPendingResult"/>.
-        /// </summary>
-        public static void SetPendingPullCount(int n) => SetPendingResult(GachaPullFlow.BuildResult(n));
 
         // ── Inspector refs ─────────────────────────────────────────────────────
 
@@ -78,13 +75,31 @@ namespace GolfinRedux.UI.Gacha
 
         // ── Runtime ───────────────────────────────────────────────────────────
 
-        private BagClubCard[] _gridCards = System.Array.Empty<BagClubCard>();
+        /// <summary>
+        /// The ten authored grid SLOTS — the parent transform of each card, not the card itself.
+        ///
+        /// <para>
+        /// The prefab ships ten <c>BagClubCard</c> children, one per slot, and that was fine while
+        /// every prize was a club. A pull can now pay a ball, an item or a ticket, which is a
+        /// different prefab family — so the authored card is kept as the slot's CLUB card and a
+        /// non-club prize gets its own card instantiated INTO the same slot transform. The ten
+        /// slot rects, their positions and the row layout are untouched (SPEC §4.3: keep the slot
+        /// transforms, parent the right prefab under each).
+        /// </para>
+        /// </summary>
+        private Transform[] _gridSlots = System.Array.Empty<Transform>();
+
+        /// <summary>The authored club card of each slot, hidden when that slot shows another kind.</summary>
+        private BagClubCard[] _gridClubCards = System.Array.Empty<BagClubCard>();
+
+        /// <summary>The non-club card spawned into each slot, if any. Destroyed on re-bind.</summary>
+        private readonly Dictionary<int, GameObject> _spawnedCards = new Dictionary<int, GameObject>();
 
         // ── Lifecycle ──────────────────────────────────────────────────────────
 
         private void Awake()
         {
-            _gridCards = CollectGridCards();
+            CollectGridCards();
 
             if (_backButton != null)
             {
@@ -175,84 +190,95 @@ namespace GolfinRedux.UI.Gacha
 
         private void BindGridCards()
         {
-            for (int i = 0; i < _gridCards.Length; i++)
+            for (int i = 0; i < _gridSlots.Length; i++)
             {
-                var card = _gridCards[i];
-                if (card == null) continue;
-
-                // A result shorter than the grid (never today, but the real pull may vary)
-                // hides the surplus slots rather than leaving stale prizes on screen.
+                // A result shorter than the grid (a refused pull, or a server that paid fewer
+                // slots than the grid holds) hides the surplus rather than leaving stale prizes on
+                // screen.
                 bool hasPrize = i < s_result.Count;
-                card.gameObject.SetActive(hasPrize);
-                if (hasPrize) BindCard(card, s_result[i]);
+                BindSlot(i, hasPrize ? (PrizeRecord?)s_result[i] : null);
             }
         }
 
-        private void BindX1Card()
-        {
-            if (_x1Card == null || s_result.Count == 0) return;
-            _x1Card.gameObject.SetActive(true);
-            BindCard(_x1Card, s_result[0]);
-        }
-
         /// <summary>
-        /// The one binder for a prize card — shared with the reveal modal so the card the player
-        /// sees pop out of the bag and the card on this screen are built by the same code.
+        /// Put ONE prize in slot <paramref name="index"/>: the authored club card when it is a
+        /// club, a freshly instantiated shop card when it is not, and nothing when the slot has no
+        /// prize. Exactly one of the two is ever active in a slot.
         /// </summary>
-        internal static void BindCard(BagClubCard card, PrizeRecord record)
+        private void BindSlot(int index, PrizeRecord? prize)
         {
-            if (card == null) return;
+            var club = index < _gridClubCards.Length ? _gridClubCards[index] : null;
+            _spawnedCards.TryGetValue(index, out GameObject? spawned);
 
-            var template = ClubDatabaseCSV.Instance?.GetClub(record.ClubId);
-            if (template == null)
+            if (prize == null)
             {
-                Debug.LogWarning($"[GachaPrizesScreenController] Club not found: {record.ClubId}");
+                if (club != null) club.gameObject.SetActive(false);
+                if (spawned != null) spawned.SetActive(false);
                 return;
             }
 
-            var playerClub = new PlayerClubData
-            {
-                clubId            = record.ClubId,
-                currentLevel      = 1,
-                currentDurability = template.maxDurability,
-                maxDurability     = template.maxDurability,
-            };
+            PrizeRecord record = prize.Value;
 
-            card.Initialize(playerClub, template, "");
-
-            // Display-only. Hiding the action row is not cosmetic tidying: the Prizes screen's
-            // grid cards ship with LevelUpBtn / RepairBtn / SwapBtn DEACTIVATED in the prefab,
-            // while a fresh BagClubCard instance (which is what the reveal modal spawns) has
-            // them active — so the same prize rendered two different ways depending on where it
-            // was shown. Doing it here, in the one shared binder, is what makes them agree, and
-            // it matches the Figma reveal card (13997:4503), which has no action row.
-            foreach (var n in ActionButtonPaths)
+            if (record.Kind == PrizeRecord.KindClub)
             {
-                var t = card.transform.Find(n);
-                if (t != null) t.gameObject.SetActive(false);
+                if (spawned != null) spawned.SetActive(false);
+                if (club == null) return;
+                club.gameObject.SetActive(true);
+                GachaPrizeCardBinder.Bind(club.gameObject, record);
+                return;
             }
 
-            foreach (var btn in card.GetComponentsInChildren<Button>(includeInactive: true))
-                btn.interactable = false;
+            if (club != null) club.gameObject.SetActive(false);
+
+            // The spawned card is rebuilt per bind rather than pooled: a slot can hold a ball on
+            // one pull and an item on the next, and the shop card's per-category bind leaves rows
+            // hidden that the other category needs. One Instantiate per non-club prize, at most ten
+            // per pull, on a screen that is already instantiating a reveal card per slot.
+            if (spawned != null) Destroy(spawned);
+
+            var go = GachaPrizeCardBinder.Instantiate(record, _gridSlots[index], ClubPrefabFor(index));
+            if (go != null) _spawnedCards[index] = go;
+            else            _spawnedCards.Remove(index);
         }
 
-        // Paths inside BagClubCard.prefab, verified against the prefab hierarchy.
-        private static readonly string[] ActionButtonPaths =
-        {
-            "Mask/Background/ButtonRow/LevelUpBtn",
-            "Mask/Background/ButtonRow/RepairBtn",
-            "SwapBtn",
-        };
+        /// <summary>The BagClubCard prefab a slot's authored card came from — the binder needs it
+        /// for the club case, and reading it off the authored instance is what keeps this screen
+        /// from carrying a second serialized reference to a prefab it already holds.</summary>
+        private GameObject? ClubPrefabFor(int index)
+            => index < _gridClubCards.Length && _gridClubCards[index] != null
+                ? _gridClubCards[index]!.gameObject
+                : null;
 
-        /// <summary>
-        /// The rarity of a prize, resolved through the club template. Used by the reveal modal
-        /// to pick its FX tier and tint.
-        /// </summary>
-        internal static CharacterRarity ResolveRarity(PrizeRecord record)
+        private void BindX1Card()
         {
-            var template = ClubDatabaseCSV.Instance?.GetClub(record.ClubId);
-            return template != null ? template.rarity : CharacterRarity.Common;
+            if (s_result.Count == 0) return;
+
+            PrizeRecord record = s_result[0];
+
+            if (record.Kind == PrizeRecord.KindClub)
+            {
+                if (_x1SpawnedCard != null) _x1SpawnedCard.SetActive(false);
+                if (_x1Card == null) return;
+                _x1Card.gameObject.SetActive(true);
+                GachaPrizeCardBinder.Bind(_x1Card.gameObject, record);
+                return;
+            }
+
+            if (_x1Card != null) _x1Card.gameObject.SetActive(false);
+            if (_x1SpawnedCard != null) Destroy(_x1SpawnedCard);
+
+            Transform parent = _x1Card != null ? _x1Card.transform.parent : transform;
+            _x1SpawnedCard = GachaPrizeCardBinder.Instantiate(
+                record, parent, _x1Card != null ? _x1Card.gameObject : null);
         }
+
+        /// <summary>The non-club card spawned into the x1 slot, if any.</summary>
+        private GameObject? _x1SpawnedCard;
+
+        // The prize-card binder moved to GachaPrizeCardBinder (gacha_client_real_pull §4.3): a
+        // prize is no longer always a club, so choosing the prefab is part of binding and this
+        // screen is no longer the natural owner of it. ResolveRarity went with it and then went
+        // away entirely — the rarity is on the record now, straight from the server.
 
         // ── Entrance animation (gacha_reveal_animation §3) ─────────────────────
 
@@ -262,15 +288,23 @@ namespace GolfinRedux.UI.Gacha
         {
             bool isX10 = _pullCount != 1;
 
-            var cards = new List<BagClubCard>();
+            // Whatever is actually SHOWING in each slot — the authored club card or the card
+            // spawned over it — so a mixed pull staggers all ten, not just the clubs.
+            var cards = new List<GameObject>();
             if (isX10)
             {
-                foreach (var c in _gridCards)
-                    if (c != null && c.gameObject.activeSelf) cards.Add(c);
+                for (int i = 0; i < _gridSlots.Length; i++)
+                {
+                    var go = ActiveCardInSlot(i);
+                    if (go != null) cards.Add(go);
+                }
             }
-            else if (_x1Card != null)
+            else
             {
-                cards.Add(_x1Card);
+                var go = _x1SpawnedCard != null && _x1SpawnedCard.activeSelf
+                    ? _x1SpawnedCard
+                    : (_x1Card != null ? _x1Card.gameObject : null);
+                if (go != null) cards.Add(go);
             }
 
             // Prime every card BEFORE the first pop, otherwise card 10 would be visible at full
@@ -314,23 +348,45 @@ namespace GolfinRedux.UI.Gacha
 
         private void ResetCardVisuals()
         {
-            foreach (var c in _gridCards) ResetCardVisual(c);
+            foreach (var c in _gridClubCards) ResetCardVisual(c);
             ResetCardVisual(_x1Card);
+
+            foreach (var go in _spawnedCards.Values) ResetSpawnedVisual(go);
+            ResetSpawnedVisual(_x1SpawnedCard);
+        }
+
+        private static void ResetSpawnedVisual(GameObject? go)
+        {
+            if (go == null) return;
+            go.transform.localScale = Vector3.one;
+            EnsureGroup(go).alpha = 1f;
         }
 
         private static void ResetCardVisual(BagClubCard? card)
         {
             if (card == null) return;
             card.transform.localScale = Vector3.one;
-            EnsureGroup(card).alpha = 1f;
+            EnsureGroup(card.gameObject).alpha = 1f;
+        }
+
+        /// <summary>The card currently visible in grid slot <paramref name="index"/>, or null when
+        /// the slot has no prize.</summary>
+        private GameObject? ActiveCardInSlot(int index)
+        {
+            if (_spawnedCards.TryGetValue(index, out GameObject? spawned) &&
+                spawned != null && spawned.activeSelf)
+                return spawned;
+
+            var club = index < _gridClubCards.Length ? _gridClubCards[index] : null;
+            return club != null && club.gameObject.activeSelf ? club.gameObject : null;
         }
 
         // The prize cards ship without a CanvasGroup; adding it at runtime keeps the prefab
         // untouched (SPEC §3).
-        private static CanvasGroup EnsureGroup(BagClubCard card)
+        private static CanvasGroup EnsureGroup(GameObject card)
         {
             var g = card.GetComponent<CanvasGroup>();
-            if (g == null) g = card.gameObject.AddComponent<CanvasGroup>();
+            if (g == null) g = card.AddComponent<CanvasGroup>();
             return g;
         }
 
@@ -353,29 +409,42 @@ namespace GolfinRedux.UI.Gacha
                 Debug.LogWarning("[GachaPrizesScreenController] ScreenManager not found — cannot go back.");
         }
 
-        // PULL on the RESULT screen means "pull again": same count, full reveal, then this
-        // screen re-binds to the new result. No ticket spend yet (blocked on content).
+        // PULL on the RESULT screen means "pull again": same banner, same count, full reveal, then
+        // this screen re-binds to the new result — and it now costs real tickets.
         private void OnPull()
         {
             Debug.Log($"[GachaPrizesScreenController] Pull again tapped (x{_pullCount}).");
-            GachaPullFlow.Pull(_pullCount);
+            // The banner and the count both come from the last pull — the screen deliberately does
+            // not know what a banner is, and re-deriving one here is how the "again" would end up
+            // rolling a different one than the player just pulled.
+            GachaPullFlow.PullAgain();
         }
 
         // ── Helpers ────────────────────────────────────────────────────────────
 
         /// <summary>
-        /// Collects all BagClubCard components from the direct children of each prize row.
-        /// Iterates Row1 (4 cards), Row2 (4 cards), Row3 (2 cards) in order.
+        /// Collects the ten authored grid cards from the direct children of each prize row —
+        /// Row1 (4), Row2 (4), Row3 (2), in order — and remembers each one's PARENT as the slot a
+        /// non-club prize is instantiated into.
         /// </summary>
-        private BagClubCard[] CollectGridCards()
+        private void CollectGridCards()
         {
-            var list = new List<BagClubCard>();
-            AppendChildCards(_prizeRow1, list);
-            AppendChildCards(_prizeRow2, list);
-            AppendChildCards(_prizeRow3, list);
-            if (list.Count != 10)
-                Debug.LogWarning($"[GachaPrizesScreenController] Expected 10 grid cards, found {list.Count}.");
-            return list.ToArray();
+            var cards = new List<BagClubCard>();
+            AppendChildCards(_prizeRow1, cards);
+            AppendChildCards(_prizeRow2, cards);
+            AppendChildCards(_prizeRow3, cards);
+
+            if (cards.Count != 10)
+                Debug.LogWarning($"[GachaPrizesScreenController] Expected 10 grid cards, found {cards.Count}.");
+
+            _gridClubCards = cards.ToArray();
+
+            var slots = new Transform[_gridClubCards.Length];
+            for (int i = 0; i < _gridClubCards.Length; i++)
+                slots[i] = _gridClubCards[i].transform.parent != null
+                    ? _gridClubCards[i].transform.parent
+                    : _gridClubCards[i].transform;
+            _gridSlots = slots;
         }
 
         private static void AppendChildCards(GameObject? row, List<BagClubCard> list)

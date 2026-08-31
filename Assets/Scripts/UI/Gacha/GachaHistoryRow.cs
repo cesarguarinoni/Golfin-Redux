@@ -40,7 +40,25 @@ namespace GolfinRedux.UI.Gacha
             }
 
             BindClubCard(record.RewardId);
-            BindMetadata(record);
+            BindMetadata(record, ClubName(record.RewardId), ClubRarityLine(record.RewardId));
+            BindCurrency(record);
+        }
+
+        /// <summary>
+        /// Bind a NON-club record onto this same row (gacha_client_real_pull §4.5).
+        ///
+        /// <para>
+        /// The row is only club-specific in ONE place — the <c>BagClubCard</c> in Col1 — and
+        /// everything else on it (six metadata lines, the ticket chip) is kind-agnostic. So a
+        /// character, an item or a ticket binds the metadata and leaves Col1's card hidden rather
+        /// than getting a third prefab: a prefab per kind is four prefabs to keep in step for a
+        /// row whose only difference is one image.
+        /// </para>
+        /// </summary>
+        public void BindGeneric(GachaHistoryRecord record, string displayName, string rarityLine)
+        {
+            if (_clubCard != null) _clubCard.gameObject.SetActive(false);
+            BindMetadata(record, displayName, rarityLine);
             BindCurrency(record);
         }
 
@@ -74,20 +92,26 @@ namespace GolfinRedux.UI.Gacha
 
         // ── Metadata lines ────────────────────────────────────────────────────────
 
-        private void BindMetadata(GachaHistoryRecord record)
+        /// <summary>The club's display name, or the raw id when this build has no row for it.</summary>
+        private static string ClubName(string clubId)
         {
-            // Line_0: club name (look up via ClubDatabaseCSV)
-            var template = ClubDatabaseCSV.Instance?.GetClub(record.RewardId);
-            string clubName = template != null ? template.name : record.RewardId;
+            var template = ClubDatabaseCSV.Instance?.GetClub(clubId);
+            return template != null ? template.name : clubId;
+        }
 
-            // Line_1: rarity with color + level, e.g. "<color=#RRGGBB>RARE</color> - Lv 1"
-            string rarity = "";
-            if (template != null)
-            {
-                var rarityColor = RarityHelper.GetRarityColor(template.rarity);
-                string colorHex = ColorUtility.ToHtmlStringRGB(rarityColor);
-                rarity = $"<color=#{colorHex}>{template.rarity.ToString().ToUpper()}</color> - Lv 1";
-            }
+        /// <summary>"&lt;color=#RRGGBB&gt;RARE&lt;/color&gt; - Lv 1", or empty when unresolvable.</summary>
+        private static string ClubRarityLine(string clubId)
+        {
+            var template = ClubDatabaseCSV.Instance?.GetClub(clubId);
+            if (template == null) return "";
+            string colorHex = ColorUtility.ToHtmlStringRGB(RarityHelper.GetRarityColor(template.rarity));
+            return $"<color=#{colorHex}>{template.rarity.ToString().ToUpper()}</color> - Lv 1";
+        }
+
+        private void BindMetadata(GachaHistoryRecord record, string displayName, string rarityLine)
+        {
+            string clubName = displayName;
+            string rarity   = rarityLine;
 
             // Line_2 / Line_3: date & time from ISO-8601 UTC
             // Format: Line_2 = "PULLED yyyy/MM/dd", Line_3 = "HH:MM:SS AM/PM" (12-hour uppercase)
@@ -105,14 +129,21 @@ namespace GolfinRedux.UI.Gacha
                 }
             }
 
-            // Line_4: banner name key → display text
+            // Line_4: the banner's AUTHORED title, in the player's language — the same ladder the
+            // card's title uses, so the log and the card never name the same banner differently.
             string bannerName = "";
             var bannerEntry = GachaBannerCatalog.Entries.FirstOrDefault(e => e.BannerId == record.BannerId);
             if (bannerEntry != null)
-                bannerName = bannerEntry.NameKey; // TODO: run through LocalizationManager once wired
+            {
+                bannerName = GachaCsvMerge.PickLocalised(bannerEntry.NameEn, bannerEntry.NameJa);
+                if (string.IsNullOrWhiteSpace(bannerName))
+                    bannerName = LocalizationManager.Get(bannerEntry.NameKey);
+            }
 
-            // Line_5: pull count e.g. "PULLS: 10"
+            // Line_5: pull count e.g. "PULLS: 10", and — for a duplicate — what it paid instead.
             string pulls = "PULLS: " + record.PullCount;
+            if (record.DupeRp > 0)
+                pulls += "   " + string.Format(LocalizationManager.Get("GACHA_DUPE_RP"), record.DupeRp);
 
             SetLine(0, clubName.ToUpper());
             SetLine(1, rarity);

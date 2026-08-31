@@ -37,7 +37,22 @@ namespace GolfinRedux.UI.Shop
         Club,
         Ball,
         Character,
-        Item
+        Item,
+
+        /// <summary>
+        /// A gacha ticket bundle. <c>RefId</c> is the <c>ticket_types</c> id as a decimal string.
+        ///
+        /// <para>
+        /// The SERVER already sells this (gacha_server_pull §5.2 — <c>golfin_shop_purchase</c>
+        /// credits the ticket ledger and returns a grant with a null id). The client half is the
+        /// card binder (<see cref="GachaBannerCard"/>'s sibling,
+        /// <c>GeneralShopCard.BindTicket</c>) and <c>ShopTransaction</c>'s ticket case, both added
+        /// by gacha_client_real_pull. NOTHING PUBLISHES A TICKET LISTING YET: the shop's
+        /// <c>TICKET_SHOP_BUILD</c> gate stays at 0 until this build is archived (spec D), so this
+        /// value is reachable only from a prize card until then.
+        /// </para>
+        /// </summary>
+        Ticket
     }
 
     /// <summary>
@@ -353,6 +368,17 @@ namespace GolfinRedux.UI.Shop
                     return ch.renderable ? null : "no usable character portrait";
                 }
 
+                // A ticket resolves against the PUBLISHED ticket_types catalog rather than a
+                // database singleton, so it has no "no database this load" case — the catalog is a
+                // static table that reads bundled rows in EditMode exactly as it does in the game.
+                case ShopCategory.Ticket:
+                {
+                    if (!int.TryParse(entry.RefId, out int ticketType))
+                        return "ticket refId is not an integer ticket_types id";
+                    return GolfinRedux.UI.Gacha.TicketTypeCatalog.Get(ticketType) != null
+                        ? null : "no row in the ticket_types catalog";
+                }
+
                 case ShopCategory.Item:
                 {
                     var db = ItemDatabaseCSV.Instance;
@@ -502,6 +528,9 @@ namespace GolfinRedux.UI.Shop
                 case "ball":      return ShopCategory.Ball;
                 case "character": return ShopCategory.Character;
                 case "item":      return ShopCategory.Item;
+                // Reachable only once an operator publishes one, which spec D does — the server
+                // has sold tickets since gacha_server_pull §5.2 and this build can now render one.
+                case "ticket":    return ShopCategory.Ticket;
                 default:          return null;
             }
         }

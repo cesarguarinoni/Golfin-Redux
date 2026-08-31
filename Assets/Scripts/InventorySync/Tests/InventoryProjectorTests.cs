@@ -69,7 +69,12 @@ namespace Golfin.InventorySync.Tests
             Assert.AreEqual(1, snap.Characters.Count);
             Assert.AreEqual(3, snap.Items["item_repair_kit"]);
             Assert.AreEqual(-1, snap.Balls["ball_standard"]);
-            Assert.AreEqual(10, snap.Tickets[0]);
+            // TICKETS ARE NO LONGER PROJECTED (gacha_client_real_pull §4.4): `golfin_tickets` is
+            // the ledger, and uploading a balance the client does not own is how the additive
+            // max-merge resurrects a pre-spend number. RP was never in the blob for the same
+            // reason; tickets joined it.
+            Assert.AreEqual(0, snap.Tickets.Count,
+                "tickets are server-owned — the blob must not carry a balance the ledger owns");
             CollectionAssert.AreEqual(new[] { 1, 2 }, snap.UnlockedHoles);
             Assert.AreEqual("char_ken", snap.StarterCharacterId);
             Assert.AreEqual("char_ken", snap.SelectedCharacterId);
@@ -94,7 +99,10 @@ namespace Golfin.InventorySync.Tests
             Assert.IsTrue(fresh.ownedCharacters[0].isOwned);
             Assert.AreEqual(3, fresh.itemQuantities["item_repair_kit"]);
             Assert.AreEqual(-1, fresh.ballQuantities["ball_standard"]);
-            Assert.AreEqual(10, fresh.ticketBalances[0].balance);
+            // A restore brings back everything the blob carries, and the blob no longer carries
+            // tickets (§4.4). The counter is re-read from /gacha/tickets at boot instead.
+            Assert.AreEqual(0, fresh.ticketBalances.Count,
+                "a restore must not invent a ticket balance — the ledger is the truth");
             CollectionAssert.AreEquivalent(new[] { 1, 2 }, fresh.unlockedHoles);
             Assert.AreEqual("char_ken", fresh.starterCharacterId);
             Assert.AreEqual("char_ken", fresh.selectedCharacterId);
@@ -246,7 +254,7 @@ namespace Golfin.InventorySync.Tests
         }
 
         [Test]
-        public void Balls_and_tickets_are_counted_too_and_a_no_op_merge_counts_nothing()
+        public void Balls_are_counted_too_and_an_incoming_ticket_balance_is_ignored()
         {
             var save = Populated();                       // ticket 0 = 10, ball_standard = -1
             save.ballQuantities["ball_pro"] = 1;
@@ -254,15 +262,22 @@ namespace Golfin.InventorySync.Tests
             var theirs = new InventorySnapshot();
             theirs.Balls["ball_pro"]   = 4;               // raised   -> counted
             theirs.Balls["ball_standard"] = 5;            // unlimited stays unlimited -> not counted
-            theirs.Tickets[0]          = 12;              // raised   -> counted
+            theirs.Tickets[0]          = 12;              // IGNORED  -> see below
             theirs.Items["item_repair_kit"] = 1;          // lower than ours -> not counted
 
             var raises = new List<InventoryRaise>();
             Assert.IsTrue(InventoryProjector.Apply(theirs, save, raises));
 
+            // gacha_client_real_pull §4.4 — the incoming ticket balance is a number THIS client
+            // (or an older build of it) uploaded, never the ledger. Folding it in with the
+            // max-merge is exactly how a spent ticket comes back: pull takes the ledger 500 → 450,
+            // a stale blob still says 500, and the merge would put 500 back on screen for a
+            // balance the next pull is refused against.
             CollectionAssert.AreEquivalent(
-                new[] { "Ball:ball_pro 1->4", "Ticket:0 10->12" },
+                new[] { "Ball:ball_pro 1->4" },
                 raises.ConvertAll(r => r.ToString()));
+            Assert.AreEqual(10, save.ticketBalances[0].balance,
+                "the local display cache must be left exactly as it was");
         }
 
         [Test]

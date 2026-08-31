@@ -494,6 +494,35 @@ namespace GolfinRedux.UI.Shop
                     applied = true;
                     break;
 
+                // gacha_client_real_pull §4.4 — found in the gacha_server_pull review: without this
+                // case a TICKET purchase fell through to `default → Invalid`, so a sale the server
+                // had already completed (RP debited, ledger credited) reported as a FAILURE and the
+                // card said the purchase did not happen.
+                //
+                // NOTHING IS CREDITED LOCALLY, and that is the whole case: `golfin_shop_purchase`
+                // credits `golfin_tickets` inside its own transaction, so the ticket is already in
+                // the ledger. The grant's id is NULL by design (spec B §5.2) precisely because
+                // there is no queued row to ack — which is why RecordAndAck below is skipped for
+                // it. Re-reading the ledger is what moves the counter.
+                case InventoryGrants.KindTicket:
+                {
+                    var tickets = GolfinRedux.UI.Gacha.GachaTicketManager.Instance;
+                    if (tickets == null)
+                    {
+                        // The purchase SUCCEEDED — refusing here would tell the player it failed
+                        // over a counter that will be correct on the next Rewards Center open.
+                        Debug.LogWarning("[ShopTransaction] No GachaTicketManager to refresh after a " +
+                                         "ticket purchase. The ledger already holds the ticket; the " +
+                                         "counter catches up on the next read.");
+                    }
+                    else
+                    {
+                        tickets.RefreshFromServer();
+                    }
+
+                    return true;   // no grant id to record, nothing to ack
+                }
+
                 default:
                     Debug.LogError($"[ShopTransaction] Grant kind '{grant.Kind}' is not one the shop can " +
                                    "apply. It stays pending server-side; the boot drain handles it.");

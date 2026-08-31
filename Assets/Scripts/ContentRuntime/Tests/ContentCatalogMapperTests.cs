@@ -328,7 +328,13 @@ namespace Golfin.Content.Tests
             // `modes` joined the same day (game_modes_admin §2) and is the SECOND of those: the
             // server prices a mode entry from the mirror a modes publish writes, so a client that
             // stopped asking would show the bundled fee and be answered `fee_changed` on every tap.
-            Assert.AreEqual("texts,clubs,characters,items,bags,balls,shop_catalog,level_up_costs,modes",
+            //
+            // The four gacha catalogs joined on 2026-08-31 (gacha_client_real_pull §2). Three of
+            // them — banners, rates, pools — are read by the SERVER's `golfin_gacha_pull()` too, so
+            // a client that stopped asking would price and withhold banners off the bundled floor
+            // and be answered `cost_changed` / `not_available` on taps it thought were fine.
+            Assert.AreEqual("texts,clubs,characters,items,bags,balls,shop_catalog,level_up_costs,modes," +
+                            "gacha_banners,gacha_rates,gacha_pools,ticket_types",
                             ContentCatalogs.RequestList);
         }
     }

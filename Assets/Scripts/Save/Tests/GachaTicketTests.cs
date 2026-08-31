@@ -2,7 +2,11 @@
 // Assets/Scripts/Save/Tests/GachaTicketTests.cs
 // gacha_screen Stage 1 + gacha_history Stage 1 — EditMode Tests
 // Pure save-layer tests: SaveData schema, SaveSchemaMigrator migration, JSON round-trip,
-// and arithmetic simulation of GachaTicketManager add/spend/insufficient behavior.
+// and arithmetic simulation of GachaTicketManager's add behaviour.
+//
+// gacha_client_real_pull §4.4: SpendTickets is gone and the dev grant of 10 is gone from all
+// three sites, so the spend simulations and the "seeded to 10" migration assertions went with
+// them — ticketBalances is now a DISPLAY CACHE of the server ledger, which starts at 0.
 //
 // NOTE: GachaTicketManager is a DontDestroyOnLoad MonoBehaviour that depends on
 // SaveDataHost.Instance — not directly unit-testable in EditMode without Unity runtime.
@@ -50,39 +54,21 @@ namespace Golfin.Save.Tests
                 "AddTickets(5) on balance 10 should yield 15");
         }
 
-        [Test]
-        public void SpendTickets_Sufficient_DecrementsAndReturnsTrue()
-        {
-            var save = new SaveData();
-            SetStandard(save, 10);
-            bool canAfford = GetStandard(save) >= 1; // mirrors GTM.CanAfford(TicketType.Standard, 1)
-            if (canAfford) SetStandard(save, GetStandard(save) - 1);
-            Assert.IsTrue(canAfford, "Should be able to afford 1 ticket from balance of 10");
-            Assert.AreEqual(9, GetStandard(save), "Balance should be 9 after spending 1");
-        }
+        // SpendTickets is DELETED (gacha_client_real_pull §4.4), and with it the three tests that
+        // simulated its arithmetic. They are not replaced by SetFromServer equivalents here: a
+        // client-side subtraction is exactly the behaviour the task removed, so a test asserting
+        // one would be a test defending the bug. What replaces it is the server's own coverage
+        // (golfin_ticket_credit's insufficient path, gacha_server_pull §7) plus the §7 live E2E.
+        //
+        // The one client-side invariant left worth pinning is that a fresh save starts at ZERO.
 
         [Test]
-        public void SpendTickets_Insufficient_ReturnsFalseAndLeavesBalanceUnchanged()
+        public void FreshSave_HasNoTickets()
         {
             var save = new SaveData();
-            SetStandard(save, 3);
-            int before = GetStandard(save);
-            bool canAfford = GetStandard(save) >= 10; // mirrors GTM.CanAfford(TicketType.Standard, 10)
-            if (canAfford) SetStandard(save, GetStandard(save) - 10);
-            Assert.IsFalse(canAfford, "Balance of 3 cannot cover cost of 10");
-            Assert.AreEqual(before, GetStandard(save),
-                "Balance must be unchanged when spend is rejected");
-        }
-
-        [Test]
-        public void SpendTickets_ExactBalance_SucceedsAndLeavesZero()
-        {
-            var save = new SaveData();
-            SetStandard(save, 10);
-            bool canAfford = GetStandard(save) >= 10;
-            if (canAfford) SetStandard(save, GetStandard(save) - 10);
-            Assert.IsTrue(canAfford, "Exact balance should succeed");
-            Assert.AreEqual(0, GetStandard(save), "Balance should be 0 after spending exact amount");
+            Assert.AreEqual(0, GetStandard(save),
+                "A fresh save must hold NO tickets — the ledger starts at 0 for every player " +
+                "(plan §9) and a client-seeded balance is one the server refuses to spend.");
         }
 
         // ── JSON round-trip ───────────────────────────────────────────────────
@@ -131,7 +117,7 @@ namespace Golfin.Save.Tests
         }
 
         [Test]
-        public void Migration_V6ToV8_SetsStandardTicketsTo10()
+        public void Migration_V6ToV8_LeavesStandardTicketsAtZero()
         {
             // Simulate an existing v6 save file.
             const string v6Json = "{\"schemaVersion\":6,\"rewardPoints\":1234,\"selectedCharacterId\":\"char_nova\"}";
@@ -141,9 +127,11 @@ namespace Golfin.Save.Tests
 
             Assert.AreEqual(SaveSchemaMigrator.CurrentSchemaVersion, data.schemaVersion,
                 "A v6 save must migrate all the way to CurrentSchemaVersion");
-            // v6→v7 seeds gachaTickets=10, v7→v8 carries that to ticketBalances[Standard]=10
-            Assert.AreEqual(10, GetStandard(data),
-                "Migration v6→v8 must seed Standard balance to 10 (test grant, carried from v6→v7)");
+            // The v6→v7 test grant of 10 is GONE (gacha_client_real_pull §4.4) — the ledger is
+            // server-side and starts at 0. v7→v8 carries the (now zero) legacy value forward.
+            Assert.AreEqual(0, GetStandard(data),
+                "Migration v6→v8 must leave the Standard balance at 0: the client no longer grants " +
+                "itself tickets, and a seeded balance is one /gacha/pull would refuse to spend.");
         }
 
         [Test]
@@ -220,7 +208,8 @@ namespace Golfin.Save.Tests
 
             Assert.AreEqual(SaveSchemaMigrator.CurrentSchemaVersion, data.schemaVersion,
                 "A v5 save must migrate all the way to CurrentSchemaVersion");
-            Assert.AreEqual(10, GetStandard(data), "Standard balance seeded by v6→v7→v8 chain");
+            Assert.AreEqual(0, GetStandard(data),
+                "The v6→v7→v8 chain no longer seeds a test grant (gacha_client_real_pull §4.4).");
             Assert.IsTrue(data.grandfatherClubs, "v5→v6 must still set grandfatherClubs for unseeded save");
             Assert.AreEqual(500, data.rewardPoints, "rewardPoints must survive chain migration");
         }

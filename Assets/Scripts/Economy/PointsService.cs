@@ -420,6 +420,36 @@ namespace Golfin.Economy
         /// </summary>
         public void ApplySpendResult(PointsSpendResult spend) => ApplySpend(spend);
 
+        /// <summary>
+        /// The EARN-side twin of <see cref="ApplySpendResult"/> (gacha_client_real_pull §4.1).
+        ///
+        /// <para>
+        /// A gacha pull spends TICKETS, so its payload is not a <see cref="PointsSpendResult"/>
+        /// superset the way a shop purchase's is — but a duplicate prize pays RP, and that credit
+        /// arrives as both buckets plus the total. This folds those three numbers through the SAME
+        /// <see cref="ApplyBalance"/> every other path uses; it is an entry point, NOT a second
+        /// balance path, and that distinction is the whole reason it exists rather than a
+        /// gacha-shaped copy of ApplySpend.
+        /// </para>
+        /// <para>
+        /// Avatar level/XP are carried forward: an RP credit from a duplicate never touches them.
+        /// </para>
+        /// <para>
+        /// ⚠️ Only call it with numbers from a payload that CARRIES balances. A pull that granted no
+        /// duplicate has no <c>rp</c> block at all, and folding its zeros in would wipe the
+        /// displayed RP — the caller checks for the block, not for a non-zero total.
+        /// </para>
+        /// </summary>
+        public void ApplyEarnedBalance(int activityPts, int giftPts, int totalPoints)
+            => ApplyBalance(new PointsBalance
+            {
+                ActivityPts = activityPts,
+                GiftPts     = giftPts,
+                TotalPoints = totalPoints,
+                AvatarLevel = LastBalance != null ? LastBalance.AvatarLevel : 0,
+                AvatarXp    = LastBalance != null ? LastBalance.AvatarXp : 0
+            });
+
         /// <summary>Fold a spend response into the cached balance. Unlike an earn, the spend payload
         /// carries BOTH buckets, so the full balance can be rebuilt. Avatar level/XP are deliberately
         /// carried forward — <c>spend_pts</c> never touches them.</summary>

@@ -1,7 +1,11 @@
 // Assets/Tests/EditMode/GachaStage1Tests.cs
 // gacha_history Stage 1 — EditMode unit tests
-// Pure C# tests: TicketCatalog CSV parse, GachaHistoryStore ordering/filter,
-// GachaHistoryRecord construction.
+// Pure C# tests: TicketCatalog CSV parse, GachaHistoryStore mapping, GachaHistoryRecord
+// construction.
+//
+// gacha_client_real_pull §4.5 — the mock history store is DELETED. The nine tests that asserted
+// the twelve hard-coded records are replaced by tests of the production `Map` seam (server page →
+// flat newest-first records), which is the store's own logic and the part worth pinning.
 //
 // ASSEMBLY: GolfinRedux.Tests.EditMode (asmdef, overrideReferences:false)
 // All production types live in Assembly-CSharp — accessed via System.Reflection,
@@ -149,108 +153,137 @@ namespace GolfinRedux.Tests.EditMode
             Assert.AreEqual(0, entries.Count, "Header-only CSV must yield empty list");
         }
 
-        // ── GachaHistoryStore ordering + filter ───────────────────────────────
+        // ── GachaHistoryStore mapping (gacha_client_real_pull §4.5) ───────────
+        //
+        // The twelve hard-coded mock records are GONE, and with them the nine tests that asserted
+        // their shape: `All` now reads a disk mirror of GET /gacha/history, which in EditMode is
+        // legitimately empty. What survived is the part that is still the store's own logic — the
+        // MAPPING from one server page to the flat, newest-first record list — driven through the
+        // production `Map` seam with a fabricated page.
 
-        [Test]
-        public void GachaHistoryStore_All_IsNotEmpty()
+        private static readonly MethodInfo _mapMethod =
+            _historyStoreType?.GetMethod("Map",
+                BindingFlags.NonPublic | BindingFlags.Static);
+
+        /// <summary>One server page: two pulls, newest first, with their prizes nested — the shape
+        /// routers/gacha.py::history returns.</summary>
+        private static Golfin.Economy.GachaHistoryPage FakePage() => new Golfin.Economy.GachaHistoryPage
         {
-            var all = GetAllRecords();
-            Assert.IsNotNull(all);
-            Assert.Greater(all.Count, 0, "Mock store must contain at least one record");
+            Pulls = new[]
+            {
+                new Golfin.Economy.GachaHistoryPullDto
+                {
+                    Id = "p2", BannerId = "banner_test_a", PullCount = 10, TicketType = 0,
+                    CreatedAt = "2026-07-14T23:00:00Z",
+                    Prizes = new[]
+                    {
+                        new Golfin.Economy.GachaPrizeDto
+                        { Slot = 0, Kind = "ball", RefId = "ball_putt_ace", Quantity = 3, Rarity = "Common" },
+                        new Golfin.Economy.GachaPrizeDto
+                        { Slot = 1, Kind = "club", RefId = "club_driver_gf", Quantity = 1,
+                          Rarity = "Common", IsDupe = true, DupeRp = 20 },
+                    },
+                },
+                new Golfin.Economy.GachaHistoryPullDto
+                {
+                    Id = "p1", BannerId = "banner_standard_club1", PullCount = 1, TicketType = 0,
+                    CreatedAt = "2026-07-13T18:05:00Z",
+                    Prizes = new[]
+                    {
+                        new Golfin.Economy.GachaPrizeDto
+                        { Slot = 0, Kind = "club", RefId = "club_iron9_klyro", Quantity = 1, Rarity = "Uncommon" },
+                    },
+                },
+            },
+        };
+
+        private static IList MapPage()
+        {
+            Assert.IsNotNull(_historyStoreType, "GachaHistoryStore not found in Assembly-CSharp");
+            Assert.IsNotNull(_mapMethod, "GachaHistoryStore.Map(GachaHistoryPage) seam not found");
+            return (IList)_mapMethod.Invoke(null, new object[] { FakePage() });
         }
 
         [Test]
-        public void GachaHistoryStore_All_IsSortedNewestFirst()
+        public void GachaHistoryStore_Map_ProducesOneRecordPerPrize()
         {
-            var all = GetAllRecords();
+            // The screen is a list of things you WON, so an x10 that paid ten prizes is ten rows.
+            Assert.AreEqual(3, MapPage().Count,
+                "two pulls carrying 2 + 1 prizes must flatten to 3 records");
+        }
+
+        [Test]
+        public void GachaHistoryStore_Map_IsNewestFirst()
+        {
+            var all = MapPage();
             for (int i = 1; i < all.Count; i++)
             {
                 string prev = GetField(all[i - 1]!, "PulledUtc");
                 string curr = GetField(all[i]!,     "PulledUtc");
                 Assert.GreaterOrEqual(
                     string.Compare(prev, curr, StringComparison.Ordinal), 0,
-                    $"Record[{i-1}] ({prev}) must be >= Record[{i}] ({curr}) — list must be newest-first");
+                    $"Record[{i-1}] ({prev}) must be >= Record[{i}] ({curr}) — the server already " +
+                    "orders pulls newest-first and prizes by slot, so flattening in that order is " +
+                    "what keeps the list sorted without a second sort");
             }
         }
 
         [Test]
-        public void GachaHistoryStore_All_ContainsAtLeastTwelveRecords()
+        public void GachaHistoryStore_Map_CarriesThePullsMetadataOntoEveryRow()
         {
-            var all = GetAllRecords();
-            Assert.GreaterOrEqual(all.Count, 12, "Mock store must contain >=12 records (7 clubs + 5 balls)");
+            var all = MapPage();
+            Assert.AreEqual("banner_test_a", GetField(all[0]!, "BannerId"));
+            Assert.AreEqual(10, GetFieldInt(all[0]!, "PullCount"));
+            Assert.AreEqual("banner_standard_club1", GetField(all[2]!, "BannerId"));
+            Assert.AreEqual(1, GetFieldInt(all[2]!, "PullCount"));
         }
 
         [Test]
-        public void GachaHistoryStore_All_ContainsClubAndBallRecords()
+        public void GachaHistoryStore_Map_MapsTheKindToARewardType()
         {
-            var all = GetAllRecords();
-            bool hasClub = false, hasBall = false;
-            foreach (var r in all)
+            var all = MapPage();
+            Assert.AreEqual(1, GetFieldInt(all[0]!, "RewardType"), "kind 'ball' → GachaRewardType.Ball");
+            Assert.AreEqual(0, GetFieldInt(all[1]!, "RewardType"), "kind 'club' → GachaRewardType.Club");
+        }
+
+        [Test]
+        public void GachaHistoryStore_Map_ADuplicateHasQuantityZeroAndItsRp()
+        {
+            // The two say different things: the quantity is what reached the INVENTORY (nothing),
+            // the RP is what reached the BALANCE. A row with quantity 0 and no dupeRp would be a
+            // prize that simply vanished.
+            var dupe = MapPage()[1]!;
+            Assert.AreEqual(0, GetFieldInt(dupe, "Quantity"), "a duplicate granted nothing");
+            Assert.AreEqual(20, GetFieldInt(dupe, "DupeRp"), "and paid 20 RP instead");
+        }
+
+        [Test]
+        public void GachaHistoryStore_Map_KeepsAGrantedPrizesQuantity()
+        {
+            Assert.AreEqual(3, GetFieldInt(MapPage()[0]!, "Quantity"),
+                "a granted stack keeps the quantity the server recorded");
+        }
+
+        [Test]
+        public void GachaHistoryStore_Map_EveryRecordHasARewardIdAndAValidPullCount()
+        {
+            foreach (var r in MapPage())
             {
-                int rt = GetFieldInt(r!, "RewardType");
-                if (rt == 0) hasClub = true; // GachaRewardType.Club = 0
-                if (rt == 1) hasBall = true; // GachaRewardType.Ball = 1
-            }
-            Assert.IsTrue(hasClub, "Mock store must contain at least one Club record");
-            Assert.IsTrue(hasBall, "Mock store must contain at least one Ball record");
-        }
-
-        [Test]
-        public void GachaHistoryStore_Filter_ByClub_OnlyReturnsClubs()
-        {
-            // GachaRewardType.Club = int 0
-            var clubs = FilterByRewardTypeInt(0);
-            Assert.Greater(clubs.Count, 0, "At least one Club record expected");
-            foreach (var r in clubs)
-            {
-                int rt = GetFieldInt(r!, "RewardType");
-                Assert.AreEqual(0, rt, $"Filter(Club) returned non-Club record: {GetField(r!, "RewardId")}");
-            }
-        }
-
-        [Test]
-        public void GachaHistoryStore_Filter_ByBall_OnlyReturnsBalls()
-        {
-            // GachaRewardType.Ball = int 1
-            var balls = FilterByRewardTypeInt(1);
-            Assert.Greater(balls.Count, 0, "At least one Ball record expected");
-            foreach (var r in balls)
-            {
-                int rt = GetFieldInt(r!, "RewardType");
-                Assert.AreEqual(1, rt, $"Filter(Ball) returned non-Ball record: {GetField(r!, "RewardId")}");
-            }
-        }
-
-        [Test]
-        public void GachaHistoryStore_BallRecords_UseKnownBallIds()
-        {
-            var balls = FilterByRewardTypeInt(1);
-            var knownIds = new[] { "ball_golfin", "ball_putt_ace" };
-            foreach (var r in balls)
-            {
-                string id = GetField(r!, "RewardId");
-                CollectionAssert.Contains(knownIds, id,
-                    $"Ball record uses unknown ballId '{id}' — must be one of: ball_golfin, ball_putt_ace");
-            }
-        }
-
-        [Test]
-        public void GachaHistoryStore_AllRecords_HaveNonEmptyRewardId()
-        {
-            foreach (var r in GetAllRecords())
                 Assert.IsFalse(string.IsNullOrEmpty(GetField(r!, "RewardId")),
-                    "Every history record must have a non-empty RewardId");
-        }
-
-        [Test]
-        public void GachaHistoryStore_AllRecords_HaveValidPullCount()
-        {
-            foreach (var r in GetAllRecords())
-            {
+                    "every history record must have a non-empty RewardId");
                 int pc = GetFieldInt(r!, "PullCount");
                 Assert.IsTrue(pc == 1 || pc == 10,
                     $"PullCount must be 1 or 10, got {pc} for RewardId='{GetField(r!, "RewardId")}'");
             }
+        }
+
+        [Test]
+        public void GachaHistoryStore_All_IsEmptyWithNoMirrorAndNoServer()
+        {
+            // The honest EditMode state, and the one that matters: `All` must never throw and must
+            // never invent records. A cold open with no mirror shows an empty log, and Refresh()
+            // fills it — it does NOT fall back to a mock, because there is no mock any more.
+            Assert.IsNotNull(GetAllRecords(), "All must never be null");
         }
 
         // ── GachaHistoryRecord construction ───────────────────────────────────

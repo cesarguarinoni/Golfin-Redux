@@ -9,6 +9,7 @@ using UnityEngine.UI;
 using TMPro;
 using Golfin.Inventory;
 using Golfin.Roster;
+using GolfinRedux.UI.Gacha;   // TicketTypeCatalog — the published ticket_types rows
 
 namespace GolfinRedux.UI.Shop
 {
@@ -96,6 +97,10 @@ namespace GolfinRedux.UI.Shop
                 case ShopCategory.Ball:      BindBall(entry);      break;
                 case ShopCategory.Character: BindCharacter(entry); break;
                 case ShopCategory.Item:      BindItem(entry);      break;
+                // A ticket listing sells N of one ticket type (gacha_server_pull §5.2, behind
+                // TICKET_SHOP_BUILD). RefId is the ticket_types id as a decimal string, and the
+                // quantity comes off the catalog row — the shop sells one bundle per listing.
+                case ShopCategory.Ticket:    BindTicket(entry.RefId, 1); break;
                 default:                     BindClub(entry);      break;
             }
 
@@ -386,6 +391,116 @@ namespace GolfinRedux.UI.Shop
 
             SetText("HMid", rar);
             SetActive("HLevel", false);
+        }
+
+        // ── Ticket variant (gacha_client_real_pull §4.3) ─────────────────────────
+        //
+        // A ticket has no stats and no level: it is an icon, a name and a count. Every StatRow and
+        // the level chip are hidden and DistRow carries the quantity, exactly the shape BindItem
+        // uses for a restore percentage.
+        //
+        // This is the SAME method the shop's `category = ticket` rows bind with (spec B §5.2), so
+        // a ticket bought in the store and a ticket won from a pull render identically by
+        // construction rather than by two lists of paths agreeing.
+
+        /// <summary>
+        /// Bind a ticket. <paramref name="ticketTypeId"/> is the <c>ticket_types</c> id as a
+        /// decimal string — the same string the grants queue uses as a ticket grant's <c>ref_id</c>.
+        /// </summary>
+        public void BindTicket(string ticketTypeId, int quantity)
+        {
+            if (!int.TryParse(ticketTypeId, out int id))
+            {
+                Debug.LogError($"[GeneralShopCard] Ticket ref '{ticketTypeId}' is not an integer " +
+                               "ticket_types id — the card cannot be bound.");
+                gameObject.SetActive(false);
+                return;
+            }
+
+            var type = TicketTypeCatalog.Get(id);
+            if (type == null)
+            {
+                Debug.LogError($"[GeneralShopCard] Ticket type {id} is not published in this build — " +
+                               "hiding the card.");
+                gameObject.SetActive(false);
+                return;
+            }
+
+            // Tickets carry no rarity of their own. Common keeps the frame the shared tile expects
+            // rather than leaving whatever the previous bind on this instance left behind.
+            SetRarityTile("Common");
+
+            var icon = Golfin.CatalogArt.CatalogArtCache.Cached(type.IconUrl, type.IconUrl)
+                    ?? (string.IsNullOrWhiteSpace(type.IconSprite)
+                            ? null
+                            : Resources.Load<Sprite>("Art/Gacha/Tickets/" + type.IconSprite.Trim()))
+                    ?? Golfin.CatalogArt.CatalogArtCache.Cached(type.IconUrl);
+            if (icon != null) SetImage("tournament_image/Portrait", icon);
+            ResetPortraitRect();
+
+            SetText("NameLabel", (type.DisplayName ?? string.Empty).ToUpperInvariant());
+
+            SetActive("DistRow", true);
+            SetText("DistRow/Txt", "×" + Mathf.Max(1, quantity));
+
+            for (int i = 0; i <= 4; i++) SetActive($"StatRow_{i}", false);
+
+            SetText("HMid", string.Empty);
+            SetActive("HLevel", false);
+
+            ConstrainName();
+            HidePriceAndBuy();
+        }
+
+        /// <summary>
+        /// Bind a ball / character / item for DISPLAY only — no price, no BUY, nothing interactable
+        /// (gacha_client_real_pull §4.3).
+        ///
+        /// <para>
+        /// It routes through the SAME per-category binders <see cref="Bind"/> uses, on a synthetic
+        /// entry, rather than through a second set of paths: a prize card and a shop card of the
+        /// same thing must not be able to drift apart. What it deliberately does NOT do is call
+        /// <c>BindPrice</c> or <c>WireBuy</c> — a prize has no price, and a BUY on it would be a
+        /// purchase of something the player already owns.
+        /// </para>
+        /// </summary>
+        public void BindForDisplay(ShopCategory category, string refId)
+        {
+            var entry = new ShopCatalogEntry
+            {
+                EntryId  = "prize:" + refId,
+                Category = category,
+                RefId    = refId,
+                RpCost   = 0,
+            };
+
+            Entry = entry;
+            _isBall = category == ShopCategory.Ball;
+
+            switch (category)
+            {
+                case ShopCategory.Ball:      BindBall(entry);      break;
+                case ShopCategory.Character: BindCharacter(entry); break;
+                case ShopCategory.Item:      BindItem(entry);      break;
+                default:                     BindClub(entry);      break;
+            }
+
+            ConstrainName();
+            HidePriceAndBuy();
+        }
+
+        /// <summary>The price box and the BUY button, hidden the way the club prize card hides its
+        /// action row — by path, on the instance, leaving the prefab untouched.</summary>
+        private void HidePriceAndBuy()
+        {
+            SetActive("PriceBox", false);
+            SetActive("CtaGoldButton", false);
+
+            foreach (var btn in GetComponentsInChildren<Button>(includeInactive: true))
+            {
+                btn.onClick.RemoveAllListeners();
+                btn.interactable = false;
+            }
         }
 
         // ── Price ───────────────────────────────────────────────────────────────

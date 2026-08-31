@@ -269,6 +269,51 @@ namespace Golfin.Net
         /// </summary>
         public static string ProgressLevelUp => BaseUrl + "/progress/level-up";
 
+        // ── GOLFIN gacha (gacha_server_pull SPEC §4, client half gacha_client_real_pull §4.1) ──
+        //
+        // All three REQUIRE AUTH and the user id comes from the TOKEN, never the body — the same
+        // posture as ShopPurchase. There is deliberately no user id in any request model.
+
+        /// <summary>
+        /// POST <c>{banner_id, count, expected_cost?, idempotency_key, build}</c> →
+        /// <c>{data:{status, …}}</c> — pull one published banner, at the SERVER's cost, for the
+        /// SERVER's prizes.
+        ///
+        /// NEITHER THE PRICE NOR THE PRIZE IS IN THE REQUEST. <c>golfin_gacha_pull()</c> reads the
+        /// published banner, checks its window on the SERVER clock, debits the ticket ledger, rolls
+        /// against the published rates × pool with pity and the x10 floor, and queues the grants —
+        /// one transaction, idempotent by key. <c>expected_cost</c> is a GUARD, not a price: if it
+        /// disagrees with the published cost the call is refused with <c>cost_changed</c> and
+        /// NOTHING is written.
+        ///
+        /// EVERY BUSINESS OUTCOME IS HTTP <b>200</b>, exactly like <see cref="ShopPurchase"/>:
+        /// <c>ok</c> · <c>insufficient</c> · <c>cost_changed</c> · <c>pull_cap</c> ·
+        /// <c>unknown_banner</c> · <c>invalid_count</c> · <c>not_available</c> (with a
+        /// <c>reason</c>: disabled | paused | inactive | min_build | window | unparseable_bound |
+        /// ticket_type | invalid_price | rates | pool_for_build). Only auth, malformed input and
+        /// genuine faults are HTTP errors.
+        /// </summary>
+        public static string GachaPull => BaseUrl + "/gacha/pull";
+
+        /// <summary>
+        /// GET <c>?limit=&amp;before=</c> → <c>{data:{pulls:[{…, prizes:[…]}], next_before}}</c> —
+        /// the caller's own pulls, newest first, with their prizes nested.
+        ///
+        /// Keyset pagination on <c>created_at</c> (<c>before</c>), not offset, so a pull landing
+        /// mid-scroll cannot shift the page under the reader. <c>next_before</c> is null when the
+        /// page was not full.
+        /// </summary>
+        public static string GachaHistory => BaseUrl + "/gacha/history";
+
+        /// <summary>
+        /// GET → <c>{data:{balances:[{ticket_type, balance}]}}</c> — the caller's ticket balances.
+        ///
+        /// A MISSING ROW IS A REAL BALANCE OF ZERO and the server says so by omission: the ledger
+        /// starts empty for every player by decision (plan §9 — the client's old save-blob counter
+        /// is deliberately not migrated), so an absent type renders 0 rather than "unknown".
+        /// </summary>
+        public static string GachaTickets => BaseUrl + "/gacha/tickets";
+
         /// <summary>
         /// GET → <c>{data:{fetched_at, period, period_end_utc, entries:[…], player:{…}}}</c> — the ranked
         /// board for one period plus the caller's own row (leaderboard_backend SPEC §1).

@@ -60,12 +60,18 @@ namespace Golfin.InventorySync
             if (save.ballQuantities != null)
                 foreach (var kv in save.ballQuantities) snap.Balls[kv.Key] = kv.Value;
 
-            if (save.ticketBalances != null)
-                foreach (var t in save.ticketBalances)
-                {
-                    if (t == null) continue;
-                    snap.Tickets[t.ticketTypeInt] = t.balance;
-                }
+            // ⚠️ TICKETS ARE NOT PROJECTED (gacha_client_real_pull §4.4).
+            //
+            // `golfin_tickets` is the ledger, and the blob's merge is an additive MAX (a ball count
+            // may only go up — that is what makes a restore safe). Projecting a ticket balance into
+            // it would mean the client uploading a number the server owns, and the max-merge would
+            // then RESURRECT a pre-spend balance the moment a stale blob came back: pull, ledger
+            // goes 500 → 450, blob still says 500, merge takes the higher one, counter shows 500
+            // for a balance the next pull is refused against. Tickets are server-owned like RP, and
+            // RP is not in the blob either.
+            //
+            // `save.ticketBalances` is kept as the last-known server value so the counter has
+            // something to draw before /gacha/tickets answers — see GachaTicketManager.
 
             if (save.unlockedHoles != null)
                 foreach (int h in save.unlockedHoles)
@@ -180,34 +186,13 @@ namespace Golfin.InventorySync
                 changed |= RaiseQuantity(save.ballQuantities, kv.Key, kv.Value,
                                          InventoryRaiseKind.Ball, raises);
 
+            // ⚠️ TICKETS ARE IGNORED ON MERGE, the twin of not projecting them above. An incoming
+            // snapshot's ticket balance is a number this client (or an older build of it) uploaded,
+            // never the ledger — folding it in with the max-merge is precisely how a spent ticket
+            // comes back. `snap.Tickets` is still POPULATED when a blob carries the key, so a later
+            // build that wants to reconcile them has the data; this build deliberately does not act
+            // on it, and the ledger read at boot overwrites the local value either way.
             save.ticketBalances ??= new List<PersistedTicketBalance>();
-            foreach (var kv in snap.Tickets)
-            {
-                PersistedTicketBalance? mine = null;
-                foreach (var t in save.ticketBalances)
-                    if (t != null && t.ticketTypeInt == kv.Key) { mine = t; break; }
-
-                if (mine == null)
-                {
-                    save.ticketBalances.Add(new PersistedTicketBalance
-                        { ticketTypeInt = kv.Key, balance = kv.Value });
-                    changed = true;
-                }
-                else
-                {
-                    int merged = InventoryMerge.MergeQuantity(mine.balance, kv.Value);
-                    if (merged != mine.balance)
-                    {
-                        // The save HELD this ticket type — see InventoryRaise: an existing key
-                        // going up is the refund path, a new one is a restore.
-                        raises?.Add(new InventoryRaise(InventoryRaiseKind.Ticket,
-                            kv.Key.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                            mine.balance, merged));
-                        mine.balance = merged;
-                        changed = true;
-                    }
-                }
-            }
 
             // ── Unlocked holes ───────────────────────────────────────────────
             save.unlockedHoles ??= new List<int>();

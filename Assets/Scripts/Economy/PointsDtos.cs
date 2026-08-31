@@ -397,4 +397,188 @@ namespace Golfin.Economy
             return $"{Status}{(string.IsNullOrEmpty(Reason) ? "" : $" ({Reason})")}";
         }
     }
+
+    // ── GOLFIN gacha (gacha_client_real_pull §4.1) ───────────────────────────
+    //
+    // Transcribed from the DEPLOYED `golfin_gacha_pull()` return shape (backend/migrations/
+    // 2026_09_01_golfin_gacha.sql, both the fresh-roll and the replay branch, which are
+    // field-for-field identical) and from routers/gacha.py's two GET payloads — not guessed.
+
+    /// <summary>One prize of one pull, as the server recorded it.</summary>
+    public sealed class GachaPrizeDto
+    {
+        /// <summary>Reveal order, 0-based. The array already arrives ordered by it.</summary>
+        [JsonProperty("slot")]     public int    Slot;
+
+        /// <summary><c>club</c> | <c>ball</c> | <c>character</c> | <c>item</c> | <c>ticket</c>.</summary>
+        [JsonProperty("kind")]     public string Kind = "";
+        [JsonProperty("ref_id")]   public string RefId = "";
+        [JsonProperty("quantity")] public int    Quantity = 1;
+
+        /// <summary>The rarity BY NAME ("Legendary"). The server's word — the client never
+        /// re-derives it from its own database, so a prize whose rarity was published after this
+        /// build still reveals at the tier it was actually rolled at.</summary>
+        [JsonProperty("rarity")]   public string Rarity = "";
+
+        /// <summary>True when the player already owned this unique prize and it paid RP instead.</summary>
+        [JsonProperty("is_dupe")]  public bool   IsDupe;
+
+        /// <summary>The RP a duplicate paid out. 0 when it is not a duplicate.</summary>
+        [JsonProperty("dupe_rp")]  public int    DupeRp;
+
+        /// <summary>The queued grant's id, or null for a duplicate (which grants nothing).</summary>
+        [JsonProperty("grant_id")] public string GrantId;
+
+        public override string ToString()
+            => $"[{Slot}] {Kind} '{RefId}' x{Quantity} ({Rarity})" + (IsDupe ? $" DUPE +{DupeRp} RP" : "");
+    }
+
+    /// <summary>The pity block of a pull result. Display only — the counter that matters lives
+    /// server-side and is re-read on every pull.</summary>
+    public sealed class GachaPityDto
+    {
+        [JsonProperty("counter")]    public int    Counter;
+
+        /// <summary>Null when the banner has no pity at all (plan §9 — pity may be none).</summary>
+        [JsonProperty("threshold")]  public int?   Threshold;
+
+        /// <summary>Null alongside a null threshold.</summary>
+        [JsonProperty("min_rarity")] public string MinRarity;
+
+        /// <summary>True when pity FORCED a floor on at least one slot of this pull.</summary>
+        [JsonProperty("forced")]     public bool   Forced;
+    }
+
+    /// <summary>The RP block, present only when a duplicate paid out. Both buckets, so
+    /// <c>PointsService</c> can rebuild the whole balance from it.</summary>
+    public sealed class GachaRpDto
+    {
+        [JsonProperty("earned")]       public int Earned;
+        [JsonProperty("activity_pts")] public int ActivityPts;
+        [JsonProperty("gift_pts")]     public int GiftPts;
+        [JsonProperty("total_points")] public int TotalPoints;
+    }
+
+    /// <summary>
+    /// <c>POST /api/v1/gacha/pull</c> → <c>{data:{status, …}}</c>.
+    ///
+    /// <para>
+    /// UNLIKE <see cref="ShopPurchaseResult"/> THIS IS NOT A <see cref="PointsSpendResult"/>
+    /// SUPERSET, and it should not be made one: a pull spends TICKETS, not RP. Its only RP
+    /// movement is the EARN a duplicate pays, which arrives in its own <see cref="Rp"/> block and
+    /// is folded through <c>PointsService.ApplyEarnedBalance</c> — the earn-side twin of
+    /// <c>ApplySpendResult</c>, not a second balance path.
+    /// </para>
+    /// </summary>
+    public sealed class GachaPullResult
+    {
+        [JsonProperty("status")]           public string Status;
+
+        [JsonProperty("pull_id")]          public string PullId;
+        [JsonProperty("banner_id")]        public string BannerId;
+        [JsonProperty("count")]            public int    Count;
+        [JsonProperty("ticket_type")]      public int    TicketType;
+
+        /// <summary>What the player was actually charged — the SERVER's number.</summary>
+        [JsonProperty("charged")]          public int    Charged;
+
+        /// <summary>The ticket balance AFTER the debit. Authoritative; the client stores it and
+        /// never arithmetics its own.</summary>
+        [JsonProperty("ticket_balance")]   public int    TicketBalance;
+
+        [JsonProperty("prizes")]           public GachaPrizeDto[] Prizes;
+        [JsonProperty("pity")]             public GachaPityDto    Pity;
+        [JsonProperty("guarantee_forced")] public bool   GuaranteeForced;
+
+        [JsonProperty("pulls_used")]       public int    PullsUsed;
+        [JsonProperty("pull_limit")]       public int?   PullLimit;
+
+        /// <summary>Null unless a duplicate paid RP.</summary>
+        [JsonProperty("rp")]               public GachaRpDto Rp;
+
+        /// <summary>True when the idempotency key replayed a pull that had already happened. The
+        /// prizes are the SAME ones the player already saw, rebuilt from the stored rows.</summary>
+        [JsonProperty("replayed")]         public bool   Replayed;
+
+        // ── Refusal fields ────────────────────────────────────────────────────
+
+        /// <summary><c>not_available</c> only: disabled | paused | inactive | min_build | window |
+        /// unparseable_bound | ticket_type | invalid_price | rates | pool_for_build.</summary>
+        [JsonProperty("reason")]           public string Reason;
+
+        /// <summary><c>cost_changed</c>: the REAL published cost.</summary>
+        [JsonProperty("cost")]             public int    Cost;
+
+        /// <summary><c>insufficient</c>: the balance that was not enough, what was asked, the gap.</summary>
+        [JsonProperty("balance")]          public int    Balance;
+        [JsonProperty("requested")]        public int    Requested;
+        [JsonProperty("shortfall")]        public int    Shortfall;
+
+        /// <summary><c>pull_cap</c>: the banner's cap and how many the player has already used.</summary>
+        [JsonProperty("limit")]            public int    Limit;
+        [JsonProperty("used")]             public int    Used;
+
+        private bool Is(string s) => string.Equals(Status, s, System.StringComparison.Ordinal);
+
+        [JsonIgnore] public bool IsOk            => Is("ok");
+        [JsonIgnore] public bool IsInsufficient  => Is("insufficient");
+        [JsonIgnore] public bool IsCostChanged   => Is("cost_changed");
+        [JsonIgnore] public bool IsPullCap       => Is("pull_cap");
+        [JsonIgnore] public bool IsUnknownBanner => Is("unknown_banner");
+        [JsonIgnore] public bool IsInvalidCount  => Is("invalid_count");
+        [JsonIgnore] public bool IsNotAvailable  => Is("not_available");
+
+        /// <summary>The two <c>not_available</c> reasons that mean "the operator turned it off",
+        /// which the UI says differently from "this banner ended".</summary>
+        [JsonIgnore] public bool IsPaused
+            => IsNotAvailable && (string.Equals(Reason, "paused", System.StringComparison.Ordinal) ||
+                                  string.Equals(Reason, "disabled", System.StringComparison.Ordinal));
+
+        public override string ToString()
+        {
+            if (IsOk)
+                return $"ok x{Count} on '{BannerId}' for {Charged} → {Prizes?.Length ?? 0} prize(s), " +
+                       $"tickets={TicketBalance}{(Replayed ? " (idempotent replay)" : "")}";
+            if (IsInsufficient) return $"insufficient (have {Balance}, need {Requested}, short {Shortfall})";
+            if (IsCostChanged)  return $"cost_changed → {Cost}";
+            if (IsPullCap)      return $"pull_cap ({Used}/{Limit})";
+            return $"{Status}{(string.IsNullOrEmpty(Reason) ? "" : $" ({Reason})")}";
+        }
+    }
+
+    /// <summary><c>GET /api/v1/gacha/tickets</c> → <c>{data:{balances:[…]}}</c>.</summary>
+    public sealed class GachaTicketBalances
+    {
+        [JsonProperty("balances")] public GachaTicketBalanceDto[] Balances;
+    }
+
+    /// <summary>One row of the ticket ledger, as the server reports it.</summary>
+    public sealed class GachaTicketBalanceDto
+    {
+        [JsonProperty("ticket_type")] public int TicketType;
+        [JsonProperty("balance")]     public int Balance;
+    }
+
+    /// <summary><c>GET /api/v1/gacha/history</c> → <c>{data:{pulls:[…], next_before}}</c>.</summary>
+    public sealed class GachaHistoryPage
+    {
+        [JsonProperty("pulls")]       public GachaHistoryPullDto[] Pulls;
+
+        /// <summary>The oldest <c>created_at</c> on this page, or null when the page was not full.
+        /// Null means "there is nothing older" — NOT "start again".</summary>
+        [JsonProperty("next_before")] public string NextBefore;
+    }
+
+    /// <summary>One recorded pull, with its prizes nested.</summary>
+    public sealed class GachaHistoryPullDto
+    {
+        [JsonProperty("id")]          public string          Id;
+        [JsonProperty("banner_id")]   public string          BannerId = "";
+        [JsonProperty("pool_id")]     public string          PoolId;
+        [JsonProperty("pull_count")]  public int             PullCount = 1;
+        [JsonProperty("ticket_type")] public int             TicketType;
+        [JsonProperty("cost")]        public int             Cost;
+        [JsonProperty("created_at")]  public string          CreatedAt = "";
+        [JsonProperty("prizes")]      public GachaPrizeDto[] Prizes;
+    }
 }

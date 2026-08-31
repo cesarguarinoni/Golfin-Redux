@@ -1,13 +1,14 @@
 // Assets/Tests/EditMode/GachaPrizesStage1Tests.cs
 // gacha_prizes Stage 1 — EditMode unit tests
-// Tests: mock pool count, SetPendingPullCount, ApplyMode x1/x10 row visibility,
-//        x1Card centering in prefab.
-// gacha_reveal_animation §1 — the pending pull is now a RESULT LIST (s_result), not an int
-// count, and SetPendingPullCount is a wrapper that rolls a result of that size. The pull-count
-// test asserts the same contract through the new field.
+// Tests: SetPendingResult, ApplyMode x1/x10 row visibility, x1Card centering in prefab.
+// gacha_reveal_animation §1 — the pending pull is a RESULT LIST (s_result), not an int count.
 //
-// Production types (GachaMockPrizePool, GachaPrizesScreenController) live in
-// Assembly-CSharp and are accessed via reflection, matching the project pattern.
+// gacha_client_real_pull §4.2/§4.3 — GachaMockPrizePool and SetPendingPullCount are DELETED, so
+// the three mock-pool tests and the pull-count test went with them: there is no local prize table
+// to assert the shape of any more, and a test that rolled one would be a test defending the mock.
+// SetPendingResult is driven directly instead, which is the contract that survived.
+//
+// Production types live in Assembly-CSharp and are accessed via reflection, matching the pattern.
 
 using System;
 using System.Reflection;
@@ -21,26 +22,15 @@ namespace GolfinRedux.Tests.EditMode
     {
         // ── Reflection: production types ──────────────────────────────────────
 
-        private static readonly Type _mockPoolType =
-            Type.GetType("GolfinRedux.UI.Gacha.GachaMockPrizePool, Assembly-CSharp");
-
         private static readonly Type _ctrlType =
             Type.GetType("GolfinRedux.UI.Gacha.GachaPrizesScreenController, Assembly-CSharp");
 
         private static readonly Type _prizeRecordType =
             Type.GetType("GolfinRedux.UI.Gacha.PrizeRecord, Assembly-CSharp");
 
-        // GachaMockPrizePool.GetMockPrizes() → PrizeRecord[]
-        private static readonly MethodInfo _getMockPrizes =
-            _mockPoolType?.GetMethod("GetMockPrizes", BindingFlags.Public | BindingFlags.Static);
-
-        // GachaMockPrizePool.GetX1Prize() → PrizeRecord
-        private static readonly MethodInfo _getX1Prize =
-            _mockPoolType?.GetMethod("GetX1Prize", BindingFlags.Public | BindingFlags.Static);
-
-        // GachaPrizesScreenController.SetPendingPullCount(int)
-        private static readonly MethodInfo _setPendingPullCount =
-            _ctrlType?.GetMethod("SetPendingPullCount", BindingFlags.Public | BindingFlags.Static);
+        // GachaPrizesScreenController.SetPendingResult(IReadOnlyList<PrizeRecord>)
+        private static readonly MethodInfo _setPendingResult =
+            _ctrlType?.GetMethod("SetPendingResult", BindingFlags.Public | BindingFlags.Static);
 
         // GachaPrizesScreenController.ApplyMode(int) — private
         private static readonly MethodInfo _applyMode =
@@ -62,79 +52,69 @@ namespace GolfinRedux.Tests.EditMode
             f?.SetValue(obj, value);
         }
 
-        private static string GetClubId(object prizeRecord)
+        /// <summary>Builds a <c>PrizeRecord[]</c> of <paramref name="n"/> club prizes through the
+        /// production constructor — the multi-kind one added by gacha_client_real_pull §4.3.</summary>
+        private static Array MakeResult(int n)
         {
-            var f = _prizeRecordType?.GetField("ClubId",
-                BindingFlags.Public | BindingFlags.Instance);
-            return (string)(f?.GetValue(prizeRecord) ?? string.Empty);
-        }
+            var rarityType = Type.GetType("Golfin.Roster.CharacterRarity, Assembly-CSharp");
+            Assert.IsNotNull(rarityType, "CharacterRarity not found in Assembly-CSharp");
 
-        // ── Mock pool tests ───────────────────────────────────────────────────
-
-        [Test]
-        public void GachaMockPrizePool_GetMockPrizes_Returns10Entries()
-        {
-            Assert.IsNotNull(_mockPoolType, "GachaMockPrizePool not found in Assembly-CSharp");
-            Assert.IsNotNull(_getMockPrizes, "GachaMockPrizePool.GetMockPrizes not found");
-
-            var prizes = (Array)_getMockPrizes.Invoke(null, null);
-            Assert.IsNotNull(prizes);
-            Assert.AreEqual(10, prizes.Length, "Mock pool must contain exactly 10 prize records");
-        }
-
-        [Test]
-        public void GachaMockPrizePool_AllEntries_HaveNonEmptyClubId()
-        {
-            Assert.IsNotNull(_getMockPrizes, "GachaMockPrizePool.GetMockPrizes not found");
-            var prizes = (Array)_getMockPrizes.Invoke(null, null);
-            foreach (var p in prizes)
+            var ctor = _prizeRecordType?.GetConstructor(new[]
             {
-                string id = GetClubId(p);
-                Assert.IsFalse(string.IsNullOrEmpty(id),
-                    "Every PrizeRecord must have a non-empty ClubId");
-            }
+                typeof(string), typeof(string), typeof(int), rarityType, typeof(bool), typeof(int)
+            });
+            Assert.IsNotNull(ctor, "PrizeRecord(kind, refId, quantity, rarity, isDupe, dupeRp) not found");
+
+            var arr = Array.CreateInstance(_prizeRecordType, n);
+            for (int i = 0; i < n; i++)
+                arr.SetValue(ctor.Invoke(new object[]
+                    { "club", "club_driver_gf", 1, Enum.ToObject(rarityType, 0), false, 0 }), i);
+            return arr;
         }
 
-        [Test]
-        public void GachaMockPrizePool_GetX1Prize_ReturnsIndex0()
-        {
-            Assert.IsNotNull(_getX1Prize, "GachaMockPrizePool.GetX1Prize not found");
-            Assert.IsNotNull(_getMockPrizes, "GachaMockPrizePool.GetMockPrizes not found");
-
-            var x1 = _getX1Prize.Invoke(null, null);
-            var all = (Array)_getMockPrizes.Invoke(null, null);
-
-            string x1Id  = GetClubId(x1);
-            string idx0Id = GetClubId(all.GetValue(0));
-            Assert.AreEqual(idx0Id, x1Id,
-                "GetX1Prize() must return the same ClubId as pool[0]");
-        }
-
-        // ── SetPendingPullCount ───────────────────────────────────────────────
+        // ── SetPendingResult ──────────────────────────────────────────────────
 
         [Test]
-        public void GachaPrizesScreenController_SetPendingPullCount_UpdatesStaticField()
+        public void GachaPrizesScreenController_SetPendingResult_UpdatesStaticField()
         {
             Assert.IsNotNull(_ctrlType, "GachaPrizesScreenController not found");
-            Assert.IsNotNull(_setPendingPullCount, "SetPendingPullCount not found");
+            Assert.IsNotNull(_setPendingResult, "SetPendingResult not found");
             Assert.IsNotNull(_s_result, "s_result field not found");
 
-            // Save original
             object original = _s_result.GetValue(null);
-
             try
             {
-                _setPendingPullCount.Invoke(null, new object[] { 1 });
+                _setPendingResult.Invoke(null, new object[] { MakeResult(1) });
                 Assert.AreEqual(1, ResultCount(),
-                    "After SetPendingPullCount(1), the pending result must hold 1 prize");
+                    "After SetPendingResult with 1 prize, the pending result must hold 1");
 
-                _setPendingPullCount.Invoke(null, new object[] { 10 });
+                _setPendingResult.Invoke(null, new object[] { MakeResult(10) });
                 Assert.AreEqual(10, ResultCount(),
-                    "After SetPendingPullCount(10), the pending result must hold 10 prizes");
+                    "After SetPendingResult with 10 prizes, the pending result must hold 10");
             }
             finally
             {
-                // Restore so other tests are not affected
+                _s_result.SetValue(null, original);
+            }
+        }
+
+        [Test]
+        public void GachaPrizesScreenController_SetPendingResult_IgnoresAnEmptyResult()
+        {
+            // A refused pull must not blank the screen: the previous result stands, because the
+            // player can navigate BACK to it and it is still what they won.
+            Assert.IsNotNull(_setPendingResult, "SetPendingResult not found");
+
+            object original = _s_result.GetValue(null);
+            try
+            {
+                _setPendingResult.Invoke(null, new object[] { MakeResult(3) });
+                _setPendingResult.Invoke(null, new object[] { MakeResult(0) });
+                Assert.AreEqual(3, ResultCount(),
+                    "An empty result must be IGNORED, leaving the previous one in place");
+            }
+            finally
+            {
                 _s_result.SetValue(null, original);
             }
         }

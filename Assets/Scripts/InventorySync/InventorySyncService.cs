@@ -276,10 +276,18 @@ namespace Golfin.InventorySync
         /// at the bag screen is a UI-refresh problem with no upside, and the same reasoning as I5
         /// ("catalog changes take effect on NEXT LAUNCH") applies unchanged.
         /// </para>
+        /// <para>
+        /// <paramref name="force"/> is the ONE exception, added by gacha_client_real_pull §4.1. A
+        /// gacha pull queues its grants server-side DURING the session, and the player is watching
+        /// the reveal of the very clubs it queued — so the once-per-session latch would leave the
+        /// Prizes screen reading a bag that does not hold them until the next launch. The rule
+        /// above is "do not change the bag under the player"; a pull IS the player asking for it.
+        /// Nothing else may pass true: every other caller is a boot path.
+        /// </para>
         /// </summary>
-        public void DrainGrants(Action? done = null)
+        public void DrainGrants(Action? done = null, bool force = false)
         {
-            if (_grantsDrained || !SendsEnabled || !SafeAuthed()) { done?.Invoke(); return; }
+            if ((_grantsDrained && !force) || !SendsEnabled || !SafeAuthed()) { done?.Invoke(); return; }
 
             Transport.GetGrants(grants =>
             {
@@ -312,9 +320,32 @@ namespace Golfin.InventorySync
                 Debug.Log($"{Tag} Drained {grants.Count} grant(s): {result.AppliedCount} applied, " +
                           $"{result.DuplicateCount} already applied.");
 
+                // gacha_client_real_pull §4.4 — a ticket grant's local write is a display-cache
+                // bump over a ledger this assembly cannot read. Whoever owns the counter re-reads
+                // /gacha/tickets from here, so it converges instead of drifting.
+                if (result.AppliedTicketCount > 0) RaiseTicketGrantsApplied(result.AppliedTicketCount);
+
                 if (result.AckIds.Count == 0) { done?.Invoke(); return; }
                 Transport.AckGrants(result.AckIds, _ => done?.Invoke());
             });
+        }
+
+        /// <summary>
+        /// Raised after a drain APPLIED at least one ticket grant. The argument is how many.
+        ///
+        /// <para>
+        /// It is an event rather than a direct call because <c>GachaTicketManager</c> lives in
+        /// Assembly-CSharp, which this assembly must not reference — the same split as
+        /// <c>IServerBalanceSink</c>. Nothing here knows what a ticket counter is; it only knows
+        /// that a number it wrote is a guess.
+        /// </para>
+        /// </summary>
+        public static event Action<int>? OnTicketGrantsApplied;
+
+        private static void RaiseTicketGrantsApplied(int count)
+        {
+            try { OnTicketGrantsApplied?.Invoke(count); }
+            catch (Exception ex) { Debug.LogError($"{Tag} OnTicketGrantsApplied subscriber threw: {ex}"); }
         }
 
         // ── Write-behind push (SPEC §3) ───────────────────────────────────────

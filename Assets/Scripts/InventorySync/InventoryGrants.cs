@@ -72,11 +72,24 @@ namespace Golfin.InventorySync
             /// <summary>How many were skipped because their id was already recorded.</summary>
             public readonly int DuplicateCount;
 
-            public ApplyResult(List<string> ackIds, int applied, int duplicates)
+            /// <summary>
+            /// How many of the applied grants were TICKETS (gacha_client_real_pull §4.4).
+            ///
+            /// <para>
+            /// Reported separately because a ticket grant is the one kind whose local write is a
+            /// GUESS: `golfin_tickets` is the ledger, and applying a queued ticket row bumps a
+            /// display cache that the ledger may already disagree with. The caller re-reads
+            /// /gacha/tickets when this is non-zero, so the counter converges instead of drifting.
+            /// </para>
+            /// </summary>
+            public readonly int AppliedTicketCount;
+
+            public ApplyResult(List<string> ackIds, int applied, int duplicates, int appliedTickets = 0)
             {
                 AckIds = ackIds;
                 AppliedCount = applied;
                 DuplicateCount = duplicates;
+                AppliedTicketCount = appliedTickets;
             }
 
             public bool Changed => AppliedCount > 0;
@@ -96,7 +109,7 @@ namespace Golfin.InventorySync
                                         IInventoryCatalog? catalog)
         {
             var ack = new List<string>();
-            int applied = 0, duplicates = 0;
+            int applied = 0, duplicates = 0, appliedTickets = 0;
             if (grants == null || save == null) return new ApplyResult(ack, 0, 0);
 
             catalog ??= EmptyInventoryCatalog.Instance;
@@ -113,10 +126,13 @@ namespace Golfin.InventorySync
                 if (!seen.Add(g.Id)) { duplicates++; continue; }
                 save.appliedGrantIds.Add(g.Id);
 
-                if (ApplyOne(g, save, catalog)) applied++;
+                if (!ApplyOne(g, save, catalog)) continue;
+
+                applied++;
+                if (g.Kind == KindTicket) appliedTickets++;
             }
 
-            return new ApplyResult(ack, applied, duplicates);
+            return new ApplyResult(ack, applied, duplicates, appliedTickets);
         }
 
         private static bool ApplyOne(InventoryGrant g, SaveData save, IInventoryCatalog catalog)
@@ -168,6 +184,11 @@ namespace Golfin.InventorySync
                     save.ballQuantities ??= new Dictionary<string, int>();
                     return AddQuantity(save.ballQuantities, g.RefId, g.Amount);
 
+                // A queued ticket grant still applies — old rows exist and a grant queued before
+                // gacha_client_real_pull must not be silently dropped. But the write is only a
+                // DISPLAY CACHE bump: the caller re-reads /gacha/tickets after a drain that
+                // applied one (see ApplyResult.AppliedTicketCount), so the counter converges on
+                // the ledger rather than on this arithmetic.
                 case KindTicket:
                 {
                     if (!int.TryParse(g.RefId, out int kind)) return false;

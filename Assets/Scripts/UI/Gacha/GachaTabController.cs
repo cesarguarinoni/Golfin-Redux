@@ -4,7 +4,6 @@
 // Sits alongside GeneralShopScreenController on the GeneralShopScreen GameObject.
 // Wires the three tabs (DailyTab=GACHA, WeeklyTab=STORE, MonthlyTab=GIFTS) and
 // controls content panel visibility + active-tab gold/white styling.
-// Stage 1 stubs: PullX1/PullX10 → ToastController "Coming soon" + log.
 // gacha_history Stage 1: HistoryChip → ScreenId.GachaHistory (no longer a stub).
 // 2026-08-28: the chip is TAB-AWARE. GachaHistory is the gacha pull log, so it may only open
 // from the GACHA tab; on STORE it toasts instead of showing the wrong screen (the Store
@@ -44,10 +43,6 @@ namespace GolfinRedux.UI.Gacha
 
         // ── HistoryChip path (direct child of GeneralShopScreen, not inside GachaTabContent) ──
         private const string HistoryChipPath = "HistoryChip";
-
-        // ── Pull button paths — Stage 2 only; PullSection does not exist yet ───
-        private const string PullX1Path  = "ContentArea/GachaTabContent/PullSection/PullX1Button";
-        private const string PullX10Path = "ContentArea/GachaTabContent/PullSection/PullX10Button";
 
         // ── Tab colour tokens ─────────────────────────────────────────────────
         private static readonly Color ActiveTabColor   = new Color(1f, 0.816f, 0.137f); // gold
@@ -90,7 +85,6 @@ namespace GolfinRedux.UI.Gacha
         {
             WireTabs();
             WireHistoryChip();
-            WirePullButtons();
         }
 
         /// <summary>
@@ -205,42 +199,16 @@ namespace GolfinRedux.UI.Gacha
                 Debug.LogWarning("[GachaTab] ScreenManager not found — cannot open GachaHistory.");
         }
 
-        // ── Pull buttons (stub) ───────────────────────────────────────────────
-
-        private void WirePullButtons()
-        {
-            var pull1  = GetButtonAt(PullX1Path);
-            var pull10 = GetButtonAt(PullX10Path);
-
-            if (pull1  != null) pull1.onClick.AddListener(OnPullX1);
-            if (pull10 != null) pull10.onClick.AddListener(OnPullX10);
-        }
-
-        private void OnPullX1()
-        {
-            Debug.Log("[GachaTab] PullX1 tapped — opening Prizes x1.");
-            GachaPrizesScreenController.SetPendingPullCount(1);
-            if (ScreenManager.Instance != null)
-                ScreenManager.Instance.ShowScreen(ScreenId.GachaPrizes);
-            else
-            {
-                Debug.LogWarning("[GachaTab] ScreenManager not found — cannot open GachaPrizes.");
-                ToastController.Instance?.Show("Coming soon!", 2f);
-            }
-        }
-
-        private void OnPullX10()
-        {
-            Debug.Log("[GachaTab] PullX10 tapped — opening Prizes x10.");
-            GachaPrizesScreenController.SetPendingPullCount(10);
-            if (ScreenManager.Instance != null)
-                ScreenManager.Instance.ShowScreen(ScreenId.GachaPrizes);
-            else
-            {
-                Debug.LogWarning("[GachaTab] ScreenManager not found — cannot open GachaPrizes.");
-                ToastController.Instance?.Show("Coming soon!", 2f);
-            }
-        }
+        // ── Pull buttons ──────────────────────────────────────────────────────
+        //
+        // DELETED by gacha_client_real_pull §4.2, with WirePullButtons.
+        //
+        // OnPullX1/OnPullX10 opened the Prizes screen with a freshly-rolled MOCK result and no
+        // banner, no ticket spend and no server. They have been dead since gacha_screen Stage 2 —
+        // the paths they wire (ContentArea/GachaTabContent/PullSection/PullX1Button) do not exist
+        // in the hierarchy, so GetButtonAt returned null and nothing was ever listening. The real
+        // PULL buttons live on GachaBannerCard and route through GachaPullFlow, which is the only
+        // way a pull happens now.
 
         // ── Tab show/hide ─────────────────────────────────────────────────────
 

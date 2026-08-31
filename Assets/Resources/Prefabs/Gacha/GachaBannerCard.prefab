@@ -75,11 +75,19 @@ MonoBehaviour:
   _artImage: {fileID: 7362249451183327736}
   _titleText: {fileID: 7790449178095496042}
   _countdownLabel: {fileID: 6778582700946127555}
-  _costX1Text: {fileID: 1306095671804379228}
-  _costX10Text: {fileID: 3814810825792712781}
+  _costX1Text: {fileID: 3000124341648651946}
+  _costX10Text: {fileID: 5751565261829432064}
   _pullX1Button: {fileID: 8978773871188785926}
   _pullX10Button: {fileID: 3971503019516812339}
   _rulesButton: {fileID: 6825570499349008894}
+  _ticketIconX1: {fileID: 6829252420750583370}
+  _ticketIconX10: {fileID: 3848982282332184592}
+  _pityRow: {fileID: 1794901779331476218}
+  _pityLabel: {fileID: 597222980676033919}
+  _pityCount: {fileID: 2671147910295113381}
+  _guaranteeRow: {fileID: 2774682072883545160}
+  _guaranteeLabel: {fileID: 299825573990073209}
+  _guaranteePill: {fileID: 3018978890416268653}
 --- !u!1 &448264155321663694
 GameObject:
   m_ObjectHideFlags: 0
@@ -969,7 +977,6 @@ GameObject:
   - component: {fileID: 3434139215585090881}
   - component: {fileID: 1118016118075795440}
   - component: {fileID: 597222980676033919}
-  - component: {fileID: 8780088141589168296}
   m_Layer: 0
   m_Name: PityLabel
   m_TagString: Untagged
@@ -1096,19 +1103,6 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
---- !u!114 &8780088141589168296
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3146410919120240009}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
-  key: GACHA_PITY_A_RANK
 --- !u!1 &3234581487069433101
 GameObject:
   m_ObjectHideFlags: 0
@@ -1262,6 +1256,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: GACHA_RULES_RATES
+  japaneseFontScale: 0
 --- !u!1 &3765404831491261002
 GameObject:
   m_ObjectHideFlags: 0
@@ -1636,6 +1631,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: MODAL_COST
+  japaneseFontScale: 0
 --- !u!1 &4410641649605719841
 GameObject:
   m_ObjectHideFlags: 0
@@ -2175,7 +2171,6 @@ GameObject:
   - component: {fileID: 236680606711059991}
   - component: {fileID: 6157427623182628083}
   - component: {fileID: 299825573990073209}
-  - component: {fileID: 6249513586447625724}
   m_Layer: 0
   m_Name: PityLabel
   m_TagString: Untagged
@@ -2302,19 +2297,6 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
---- !u!114 &6249513586447625724
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5881849838464329969}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 82815e97506b3ee47a82fe099019729c, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
-  key: GACHA_PITY_S_RANK
 --- !u!1 &5902670713545520736
 GameObject:
   m_ObjectHideFlags: 0
@@ -2531,6 +2513,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: GACHA_PULL_X10
+  japaneseFontScale: 0
 --- !u!1 &6156260829549157634
 GameObject:
   m_ObjectHideFlags: 0
@@ -3020,6 +3003,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: GACHA_PULL_X1
+  japaneseFontScale: 0
 --- !u!1 &7075452980229243261
 GameObject:
   m_ObjectHideFlags: 0
@@ -3267,6 +3251,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: GACHA_PRIZE_PREVIEW
+  japaneseFontScale: 0
 --- !u!1 &7934059424108999958
 GameObject:
   m_ObjectHideFlags: 0
@@ -3515,6 +3500,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: MODAL_COST
+  japaneseFontScale: 0
 --- !u!1 &8797896520212405964
 GameObject:
   m_ObjectHideFlags: 0

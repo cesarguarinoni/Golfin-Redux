@@ -137,6 +137,14 @@ namespace GolfinRedux.UI.Gacha
         private GameObject? _liveCard;
         private CanvasGroup? _liveCardGroup;
 
+        /// <summary>True between <see cref="BeginWaiting"/> and <see cref="Continue"/>/<see cref="Abort"/>
+        /// — the bag is shaking but no prize is known yet.</summary>
+        private bool        _waiting;
+
+        /// <summary>True once StepEnter has dropped the bag in. Continue reads it so the bag is not
+        /// dropped a second time when it is already on screen.</summary>
+        private bool        _bagHasEntered;
+
         private IReadOnlyList<PrizeRecord> _prizes = Array.Empty<PrizeRecord>();
         private Action?     _onFinished;
         private QualityTier _quality = QualityTier.High;
@@ -184,12 +192,6 @@ namespace GolfinRedux.UI.Gacha
         /// </summary>
         public void Play(IReadOnlyList<PrizeRecord> prizes, Action? onFinished)
         {
-            if (_running)
-            {
-                Debug.Log("[GachaRevealModal] Play ignored — a reveal is already running.");
-                return;
-            }
-
             if (prizes == null || prizes.Count == 0)
             {
                 Debug.LogWarning("[GachaRevealModal] Play called with an empty prize list — " +
@@ -198,12 +200,41 @@ namespace GolfinRedux.UI.Gacha
                 return;
             }
 
-            _prizes          = prizes;
-            _onFinished      = onFinished;
+            BeginWaiting();
+            Continue(prizes, onFinished);
+        }
+
+        /// <summary>
+        /// Open the modal and start shaking the bag with NO prizes yet
+        /// (gacha_client_real_pull §4.2).
+        ///
+        /// <para>
+        /// This is what covers the server round trip. There is no spinner and no new UI: the
+        /// player already spent a second watching the bag shake before the first card, so waiting
+        /// inside that shake is indistinguishable from the reveal they know — right up until the
+        /// prizes arrive and <see cref="Continue"/> takes over mid-animation.
+        /// </para>
+        /// <para>
+        /// SKIP is hidden while waiting. Skipping a reveal cuts to the result; there is no result
+        /// yet, so the button would have nothing to cut to.
+        /// </para>
+        /// </summary>
+        public void BeginWaiting()
+        {
+            if (_running)
+            {
+                Debug.Log("[GachaRevealModal] BeginWaiting ignored — a reveal is already running.");
+                return;
+            }
+
+            _prizes          = Array.Empty<PrizeRecord>();
+            _onFinished      = null;
             _finishedInvoked = false;
+            _waiting         = true;
+
             // Read the tier ONCE per pull: a mid-reveal Settings change must not restyle
             // card 7 of 10 differently from card 6.
-            _quality         = QualityTierService.Current;
+            _quality = QualityTierService.Current;
 
             // The previous run's trailing teardown (it waits out the hide fade) would otherwise
             // reset THIS one mid-flight if a second pull arrives inside that window.
@@ -212,14 +243,91 @@ namespace GolfinRedux.UI.Gacha
             Show();          // base: scrim over the persistent bars (ModalScrim), panel fade-in
             ResetToIdle();   // in case a previous run was force-closed
 
-            _running  = true;
-            _sequence = StartCoroutine(RevealSequence());
+            if (_skipButton != null) _skipButton.gameObject.SetActive(false);
+
+            _running = true;
+            _sequence = StartCoroutine(WaitingSequence());
+        }
+
+        /// <summary>
+        /// The server answered: reveal <paramref name="prizes"/> in order and invoke
+        /// <paramref name="onFinished"/> exactly once, at the natural end or on SKIP.
+        ///
+        /// <para>
+        /// Called while <see cref="BeginWaiting"/>'s idle shake is running. It does NOT restart the
+        /// modal — the bag is already on screen mid-shake, and re-entering would drop it in again.
+        /// </para>
+        /// </summary>
+        public void Continue(IReadOnlyList<PrizeRecord> prizes, Action? onFinished)
+        {
+            if (prizes == null || prizes.Count == 0)
+            {
+                Debug.LogWarning("[GachaRevealModal] Continue called with an empty prize list — " +
+                                 "skipping straight to the result.");
+                Abort();
+                onFinished?.Invoke();
+                return;
+            }
+
+            _prizes          = prizes;
+            _onFinished      = onFinished;
+            _finishedInvoked = false;
+            _waiting         = false;
+
+            if (_skipButton != null) _skipButton.gameObject.SetActive(true);
+
+            if (!_running)
+            {
+                // Nothing was waiting — a caller went straight to Continue, or the wait was
+                // aborted. Open from scratch, which is what Play() used to do.
+                _quality = QualityTierService.Current;
+                if (_sequence != null) { StopCoroutine(_sequence); _sequence = null; }
+                Show();
+                ResetToIdle();
+                _running = true;
+            }
+            else if (_sequence != null)
+            {
+                // Hand the bag over from the idle loop to the real sequence. The bag stays where
+                // it is; only the coroutine driving it changes.
+                StopCoroutine(_sequence);
+            }
+
+            _sequence = StartCoroutine(RevealSequence(skipEnter: _bagHasEntered));
+        }
+
+        /// <summary>
+        /// The server refused, or could not be reached. Close the modal with NO cards and WITHOUT
+        /// invoking a finished callback — the Prizes screen must not open on a pull that did not
+        /// happen. The caller shows the toast.
+        /// </summary>
+        public void Abort()
+        {
+            if (!_running && !_waiting) return;
+
+            _waiting = false;
+            StopSequence();
+            ResetToIdle();
+
+            // Deliberately NOT InvokeFinishedOnce: BeginWaiting stored no callback, and on the
+            // Continue path a refusal means there is nothing to show. Clearing it makes that
+            // structural rather than merely true today.
+            _onFinished      = null;
+            _finishedInvoked = true;
+
+            if (_skipButton != null) _skipButton.gameObject.SetActive(true);
+
+            Hide();
         }
 
         /// <summary>SKIP — cut straight to the result. Wired to the SKIP button.</summary>
         public void OnSkip()
         {
             if (!_running) return;
+
+            // The button is hidden while waiting, so this is belt-and-braces: there is no result to
+            // cut to before the server answers, and skipping to one would open an empty screen.
+            if (_waiting) return;
 
             SfxBus.Play(SfxId.GachaSkip);
             StopSequence();
@@ -245,6 +353,12 @@ namespace GolfinRedux.UI.Gacha
             // The natural end clears _running BEFORE calling Hide(), so this does not double up.
             if (!_running) return;
 
+            // A modal closed while it was still WAITING never had a result to hand over, so
+            // InvokeFinishedOnce would fire a callback that does not exist — clearing the flag
+            // first is what stops a force-close during the round trip from opening an empty
+            // Prizes screen.
+            _waiting = false;
+
             StopSequence();
             ResetToIdle();
             InvokeFinishedOnce();
@@ -253,6 +367,8 @@ namespace GolfinRedux.UI.Gacha
         protected override void OnDisable()
         {
             base.OnDisable();
+
+            _waiting = false;
 
             if (_running)
             {
@@ -264,14 +380,35 @@ namespace GolfinRedux.UI.Gacha
 
         // ── The sequence ───────────────────────────────────────────────────────
 
-        private IEnumerator RevealSequence()
+        /// <summary>
+        /// The idle loop that covers the server round trip: the bag drops in once, then rocks in
+        /// place until <see cref="Continue"/> or <see cref="Abort"/> takes over. It never spawns a
+        /// card and never finishes on its own — a pull that never answers leaves the player looking
+        /// at a shaking bag, which is why every branch of GachaPullFlow.OnPullAnswered ends in
+        /// Continue or Abort.
+        /// </summary>
+        private IEnumerator WaitingSequence()
         {
             yield return StepEnter();                                       // A
+
+            // The FIRST-card shake, looped. Reusing it (rather than a new animation) is what makes
+            // the wait invisible: this is exactly what the player sees before card 1 either way.
+            var tier = TierFor(CharacterRarity.Common);
+            while (_waiting)
+                yield return StepShake(tier, tier.shakeFirst, Color.white);
+        }
+
+        private IEnumerator RevealSequence(bool skipEnter = false)
+        {
+            if (!skipEnter) yield return StepEnter();                       // A
 
             for (int i = 0; i < _prizes.Count; i++)
             {
                 PrizeRecord record   = _prizes[i];
-                CharacterRarity rar  = GachaPrizesScreenController.ResolveRarity(record);
+                // The SERVER's rarity, carried on the record — never a database lookup. A prize
+                // whose row was published after this build shipped still gets the FX tier it was
+                // actually rolled at, and the reveal can never disagree with the pull log.
+                CharacterRarity rar  = record.Rarity;
                 RarityFxTier tier    = TierFor(rar);
                 Color tint           = RarityHelper.GetRarityColor(rar);
                 bool isFirst         = i == 0;
@@ -304,6 +441,7 @@ namespace GolfinRedux.UI.Gacha
         private IEnumerator StepEnter()
         {
             _phase = Phase.Enter;
+            _bagHasEntered = true;
             SfxBus.Play(SfxId.GachaBagDrop);
 
             float t = 0f;
@@ -511,9 +649,7 @@ namespace GolfinRedux.UI.Gacha
             if (_liveCardGroup == null) _liveCardGroup = _liveCard.AddComponent<CanvasGroup>();
             _liveCardGroup.alpha = 0f;
 
-            var card = _liveCard.GetComponent<BagClubCard>();
-            if (card != null)
-                GachaPrizesScreenController.BindCard(card, record);   // the shared binder
+            GachaPrizeCardBinder.Bind(_liveCard, record);   // the shared binder
         }
 
         private void DestroyCard()
@@ -707,8 +843,12 @@ namespace GolfinRedux.UI.Gacha
 
             if (_panelRect != null) _panelRect.anchoredPosition = _panelHome;
 
-            _phase       = Phase.Idle;
-            _holdSkipped = false;
+            _phase         = Phase.Idle;
+            _holdSkipped   = false;
+
+            // The bag is back at rest, so the next sequence has to drop it in again. Missing this
+            // would make a SECOND pull in the same session start with the bag already on screen.
+            _bagHasEntered = false;
         }
 
         private void InvokeFinishedOnce()

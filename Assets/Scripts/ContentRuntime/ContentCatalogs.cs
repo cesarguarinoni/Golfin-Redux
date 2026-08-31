@@ -2,8 +2,9 @@
 // ContentRuntime — ContentCatalogs
 //
 // The catalog names, in one place. Phase 1 hard-coded "texts" in
-// RemoteContentSource; Phase 2 read seven and progress_server_side (2026-08-28)
-// added an eighth, and a typo in any one of
+// RemoteContentSource; Phase 2 read seven, progress_server_side (2026-08-28)
+// added an eighth, game_modes_admin a ninth and gacha_client_real_pull
+// (2026-08-31) four more, and a typo in any one of
 // them is INVISIBLE — an unknown catalog name is ignored server-side (not a
 // 400), so a misspelled "charcters" simply comes back absent and the game runs
 // bundled forever with no error anywhere.
@@ -71,6 +72,27 @@ namespace Golfin.Content
         public const string MissionTiers        = "mission_tiers";
         public const string DailyMissionWeights = "daily_mission_weights";
 
+        // ── gacha_client_real_pull §2 — the four gacha catalogs ───────────────
+        //
+        // `GachaBanners`, `GachaRates` and `GachaPools` are read by the SERVER as well
+        // (`golfin_gacha_pull()` prices the banner, rolls the tier and picks the entry from the
+        // PUBLISHED rows). The client overlay is therefore not cosmetic: it is what keeps the
+        // number on the banner and the number the player is charged the same one, and what keeps
+        // the client's withhold rule (SPEC §3.1) agreeing with the server's step 8. When they
+        // differ the server answers `cost_changed` / `not_available` and the card re-renders —
+        // correct, but one avoidable round trip.
+        //
+        // `TicketTypes` is client-and-admin data with no server mirror; the pull reads
+        // `ticket_types` only to confirm the banner's type is published and active.
+        //
+        // ⚠️ These four ARE in `All` — unlike the seven `Mission*` names above, which are declared
+        // but never requested (missions_v1 fetches nothing for them, so `MissionCatalog` reads an
+        // empty store and runs bundled). That is pre-existing and is NOT changed here.
+        public const string GachaBanners = "gacha_banners";
+        public const string GachaRates   = "gacha_rates";
+        public const string GachaPools   = "gacha_pools";
+        public const string TicketTypes  = "ticket_types";
+
         /// <summary>
         /// The catalogs whose ROWS this build overlays onto a bundled CSV — everything except
         /// <see cref="Texts"/>, which merges into <c>LocalizationManager</c> instead and therefore
@@ -79,23 +101,26 @@ namespace Golfin.Content
         public static readonly string[] Data =
         {
             Clubs, Characters, Items, Bags, Balls, ShopCatalog, LevelUpCosts, Modes,
+            GachaBanners, GachaRates, GachaPools, TicketTypes,
         };
 
         /// <summary>Every catalog this build asks the server for, texts included.</summary>
         public static readonly string[] All =
         {
             Texts, Clubs, Characters, Items, Bags, Balls, ShopCatalog, LevelUpCosts, Modes,
+            GachaBanners, GachaRates, GachaPools, TicketTypes,
         };
 
         /// <summary>
         /// The <c>catalogs=</c> query value:
-        /// "texts,clubs,characters,items,bags,balls,shop_catalog,level_up_costs,modes".
+        /// "texts,clubs,characters,items,bags,balls,shop_catalog,level_up_costs,modes,
+        /// gacha_banners,gacha_rates,gacha_pools,ticket_types".
         /// Narrowing the request matters — an unnarrowed one returns every catalog the server holds,
-        /// and this build can only apply the nine it knows.
+        /// and this build can only apply the thirteen it knows.
         /// </summary>
         public static string RequestList => string.Join(",", All);
 
-        /// <summary>True when <paramref name="name"/> is one of the nine. Case-insensitive.</summary>
+        /// <summary>True when <paramref name="name"/> is one of the thirteen. Case-insensitive.</summary>
         public static bool IsKnown(string? name)
         {
             if (string.IsNullOrWhiteSpace(name)) return false;

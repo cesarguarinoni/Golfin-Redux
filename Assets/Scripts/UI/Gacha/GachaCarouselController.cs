@@ -67,7 +67,37 @@ namespace GolfinRedux.UI.Gacha
 
         // ── Unity lifecycle ───────────────────────────────────────────────────
 
+        /// <summary>
+        /// The carousel currently on screen, so <c>GachaPullFlow</c> can rebuild it when the server
+        /// refuses a banner this build was still showing (gacha_client_real_pull §4.2).
+        /// Null whenever the Rewards Center is not open, which is the normal state.
+        /// </summary>
+        public static GachaCarouselController Instance { get; private set; }
+
         private void OnEnable()
+        {
+            Instance = this;
+
+            // Reload() is ALSO where the 5b same-session re-apply happens: a content refresh that
+            // landed while the player was elsewhere is installed here, so a banner published
+            // mid-session appears the next time the Rewards Center opens.
+            GachaBannerCatalog.Reload();
+            RebuildCarousel();
+
+            // The counter above the carousel must be the LEDGER's number, not the last one this
+            // client happened to write — a pull on another device, or an admin grant, moves it with
+            // nothing local to notice (gacha_client_real_pull §4.4).
+            GachaTicketManager.Instance?.RefreshFromServer();
+        }
+
+        private void OnDisable()
+        {
+            if (ReferenceEquals(Instance, this)) Instance = null;
+        }
+
+        /// <summary>Re-read the catalog and rebuild the strip. Called after the server has told the
+        /// client its copy of the catalog is stale.</summary>
+        public void Rebuild()
         {
             GachaBannerCatalog.Reload();
             RebuildCarousel();
