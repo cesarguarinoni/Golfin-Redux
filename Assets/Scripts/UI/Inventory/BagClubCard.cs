@@ -221,7 +221,21 @@ namespace Golfin.Inventory
                 distanceValue.fontSizeMax       = distanceValue.fontSize;
                 distanceValue.fontSizeMin       = 8f;
             }
-            SetActiveAt(DistanceRowPath, !string.IsNullOrEmpty(view.Detail));
+
+            // ⚠️ THE ROW STAYS FOR A CARD THAT HAS STAT LANES, EVEN WITH NOTHING TO SAY.
+            //
+            // StatsPanel is a vertical layout, so hiding this row pulls every stat lane up by its
+            // height — and a ball's five bars then sat one row HIGHER than a club's, which is
+            // exactly what they are meant to be compared against side by side in the grid. Kept as
+            // a blank spacer, the lanes line up across kinds. A card with no lanes at all (item,
+            // ticket) has nothing to align, so there the row goes when it has no text.
+            bool hasDetail = !string.IsNullOrEmpty(view.Detail);
+            SetActiveAt(DistanceRowPath, hasDetail || view.Stats != null);
+
+            // The icon is a DISTANCE arc. No prize kind that reaches this method has a distance —
+            // a repair kit read "⌒ RESTORES 100%" — so it is hidden here and put back by
+            // RestoreClubRows for the one kind that does.
+            SetActiveAt(DistanceIconPath, false);
 
             // Stat lanes.
             var bars = new[] { statBarPower, statBarAccuracy, statBarLieRes, statBarLoft, statBarDurability };
@@ -248,6 +262,7 @@ namespace Golfin.Inventory
         {
             BindDescription(string.Empty);
             SetActiveAt(DistanceRowPath, true);
+            SetActiveAt(DistanceIconPath, true);   // a club DOES have a distance
             foreach (var path in StatRowPaths) SetActiveAt(path, true);
             if (levelText != null) levelText.gameObject.SetActive(true);
             if (portraitImage != null) portraitImage.enabled = true;
@@ -257,8 +272,9 @@ namespace Golfin.Inventory
         /// creating one so a re-bind reuses it.</summary>
         private const string DescriptionName = "PrizeDescription";
 
-        private const string StatsPanelPath  = "Mask/Background/StatsPanel";
-        private const string DistanceRowPath = "Mask/Background/StatsPanel/DistanceRow";
+        private const string StatsPanelPath   = "Mask/Background/StatsPanel";
+        private const string DistanceRowPath  = "Mask/Background/StatsPanel/DistanceRow";
+        private const string DistanceIconPath = "Mask/Background/StatsPanel/DistanceRow/Image";
 
         /// <summary>
         /// Fill the space the hidden stat lanes leave with the prize's own description — the same

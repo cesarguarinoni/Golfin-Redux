@@ -182,6 +182,21 @@ component that derives it before the container that positions it.
 
 ---
 
+## Part 4d — Distance icon and stat alignment (Cesar, 2026-08-31)
+
+Two corrections to the prize card, both verified side by side in a mixed x10:
+
+- **The distance arc is gone from a non-club card.** A repair kit read `⌒ RESTORES 100%`; the arc
+  means DISTANCE and nothing that reaches `InitializePrize` has one. The icon is hidden there and
+  put back by `RestoreClubRows` for the one kind that does have a distance.
+- **A ball's stat lanes now line up with a club's.** StatsPanel is a vertical layout, so hiding the
+  (empty) distance row pulled the five bars up by its height and a ball sat one row higher than the
+  club beside it in the grid — which is exactly what it is meant to be compared against. The row is
+  now KEPT as a blank spacer whenever the card has stat lanes, and only dropped on a card that has
+  none to align (item, ticket).
+
+---
+
 ## Part 5 — For spec D
 
 - The Gacha Banners panel still says *"Pulls still run on the client-side mock until
