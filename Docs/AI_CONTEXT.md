@@ -5,7 +5,7 @@
 
 ---
 
-## ✅ BUILT + PROVEN ON PROD — `gacha_client_real_pull`, awaiting Cesar's approval (2026-08-31)
+## ✅ SHIPPED — `gacha_client_real_pull` **approved by Cesar** (2026-08-31)
 
 **The gacha is real on the client.** Spec C of `Docs/GACHA_ADMIN_PLAN.md` — the Unity half of A + B.
 `POST /api/v1/gacha/pull` is what rolls a banner now; `GachaMockPrizePool`, the client-side ticket
@@ -39,16 +39,24 @@ the boot refresh it exists to hear (now `BeforeSceneLoad`), and the prize-card e
 landed on a hard `localScale = 1` and silently undid the scale-to-fit (the fit now lives on a
 wrapper the animation cannot reach).
 
-⚠️ **One thing for Cesar to accept or reject:** a ball / item / ticket prize is the Rewards-Center
-card scaled to **0.19** to fit a club-shaped slot (181×374 vs 978×274) — legible as a shape, not as
-text. SPEC §4.3 instructed exactly that ("scale-to-fit … do NOT rebuild a card") and said a real
-design may replace it. `Docs/Specs/Active/gacha_client_real_pull/screenshots/06_prizes_x10_mixed_kinds.png`.
+**The prize card was rejected twice before approval, and the spec lost the argument.** §4.3 said to
+render a non-club prize on the Rewards-Center shop card, scaled to fit. It does not fit (978×274 into
+183×410 is 0.19) and Cesar rejected it on sight: *"They should be the same size and shape as club."*
+Every kind now draws on the CLUB card through a new `BagClubCard.InitializePrize` — which is the
+pattern `GachaHistoryRowBall` has used to put BALL data on a BagClubCard since gacha_history Stage 1.
+Then: a stat-less prize carries the item's description from the Item screen (same `ITEM_INFO_<ID>`
+key, already EN + JA) instead of a blank lower half; the distance arc is hidden on a kind that has no
+distance; and the empty distance row is KEPT as a spacer so a ball's five bars line up with the
+club's beside it. Six bugs fell out of those three rounds, every one found by looking at the render.
 
 ⚠️ **Nothing triggers a content refresh mid-session** — `ContentService` fetches once at `Awake` —
 so 5b takes effect on the launch after a publish. The seam is proven; the trigger is a
 `ContentService` change and belongs in its own spec.
 
-Next: **D** `gacha_ops_polish`.
+Spec folder in `Docs/Specs/Completed/`. Next: **D** `gacha_ops_polish` — the last of the four.
+
+Carried forward, NOT blocking: `ball_golfin`'s bars all read 0 (that ball genuinely has zero stats),
+and balls/characters carry `info` copy their stat lanes displace. Neither was asked for.
 
 ---
 

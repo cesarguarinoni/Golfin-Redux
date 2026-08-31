@@ -7,20 +7,21 @@
 
 ## ▶ CURRENT STATE — update this block at every session boundary
 
-- **`gacha_client_real_pull` (C): BUILT + PROVEN ON PROD, awaiting Cesar's approval (2026-08-31).**
-  The gacha is REAL on the client — `POST /gacha/pull` rolls the banner, the mock pool / client
-  ticket spend / mock history are DELETED. Four gacha catalogs in `ContentCatalogs.All` + the 5b
-  mid-session re-apply; the §3.1 withhold rule; the card renders the admin's title, art, NUMERIC
-  costs and the two guarantee lines; tickets are the server ledger and left the inventory blob;
-  history is the server's. **EditMode 2129 pass / 0 fail.** §7 run live on prod, 7 of 8 steps —
-  the ops panel agrees with the client on all six pulls, 2 300 tickets and 1 160 dupe RP, and
-  `costX1 60` proved the whole loop (refused → re-priced → charged 60, no build). Two real bugs
-  fell out and are fixed (lazy 5b subscription missed the boot refresh; the card entrance
-  animation undid the scale-to-fit). ⚠️ **ONE THING TO ACCEPT OR REJECT:** a non-club prize is the
-  Rewards-Center card scaled to 0.19 to fit a club-shaped slot — SPEC §4.3 instructed that and said
-  a real design may replace it (`screenshots/06_prizes_x10_mixed_kinds.png`). ⚠️ Nothing triggers a
-  content refresh mid-session (`ContentService` fetches once at Awake), so 5b lands on the NEXT
-  launch after a publish — the seam is proven, the trigger is its own spec.
+- **`gacha_client_real_pull` (C): DONE — approved by Cesar 2026-08-31, folder in
+  `Docs/Specs/Completed/`. THE GAME NOW PULLS THE SERVER.** `POST /gacha/pull` rolls the banner;
+  the mock pool, the client-side ticket spend and the mock history are DELETED. Four gacha catalogs
+  in `ContentCatalogs.All` + the 5b mid-session re-apply; the §3.1 withhold rule; the card renders
+  the admin's title, art, NUMERIC costs and the two guarantee lines; tickets are the server ledger
+  and left the inventory blob; history is the server's. EditMode 2129 pass / 0 fail. §7 run live on
+  prod, 7 of 8 steps — the ops panel agreed with the client on all six pulls, and `costX1 60` proved
+  the loop (refused → re-priced → charged 60, no build). **Cesar rejected the prize card twice
+  before approving:** the scaled-down shop card (§4.3's own instruction) is gone — every kind now
+  draws on the CLUB card via `BagClubCard.InitializePrize`, a stat-less prize carries the item
+  description from the Item screen, and the distance arc / ball stat alignment were corrected.
+  Prod state after C: `texts` v19, `gacha_banners` v5, ~6 000 tickets granted to
+  cesar.guarinoni@gmail.com and spent down through real pulls. ⚠️ Nothing triggers a content refresh
+  MID-SESSION (`ContentService` fetches once at `Awake`), so 5b lands on the NEXT launch after a
+  publish — the seam is proven, the trigger is its own spec.
 
 - **`gacha_server_pull` (B): DONE, approved by Cesar 2026-08-31 (Architect review PASS; its one condition — the `pool_for_build` probe + the §8 revert — was met the same session). Folder is in `Docs/Specs/Completed/`. Next: C (kickoff in SPEC_READY POINTERS).** Detail: Verification 16/16 and 11/11. All three deploy surfaces live (API
   `deployment-01M1B5F2YV1ZJT84RX7RSGN5WW` v64; dashboard `bbfdb132-…` stamped `83564c011`;
@@ -41,7 +42,7 @@
   that is spec C. **One real bug fell out:** `lib/gachaOdds.ts` fired pity at
   `counter >= threshold`, one pull LATE; both implementations now use `counter + 1 >= threshold`.
 
-- **Gacha → admin (2026-08-31): A DONE (`150ce9449`), B DONE, C BUILT + PROVEN ON PROD (awaiting approval). Next: D `gacha_ops_polish`.** Plan `Docs/GACHA_ADMIN_PLAN.md`. State after B: four gacha catalogs live (banners v3 / rates v3 / pools v1 / ticket_types v1), `golfin_gacha_pull()` on API **v64** reading the PUBLISHED rows (no mirror), ticket ledger `golfin_tickets` (truth from 0; admin grants write the ledger, never `golfin_pending_grants`), Gacha ops panel on dashboard **`83564c011`** (pause switch `content_settings.gacha_enabled`, pull log, odds audit, per-user tickets + pity reset), shop `category=ticket` server-side behind G1-T (`TICKET_SHOP_BUILD = 0` until the C archive). Roll parity SQL vs TS ±0.9 pt; live E2E incl. rate + cost change with no build; `pool_for_build` probe PASS; Cesar's prod footprint reverted to 823 RP. ✅ The game now pulls the SERVER (C, 2026-08-31); texts v19, gacha_banners v5.
+- **Gacha → admin (2026-08-31): A, B and C are all DONE. Next: D `gacha_ops_polish` — the last of the four.** Plan `Docs/GACHA_ADMIN_PLAN.md`. State after B: four gacha catalogs live (banners v3 / rates v3 / pools v1 / ticket_types v1), `golfin_gacha_pull()` on API **v64** reading the PUBLISHED rows (no mirror), ticket ledger `golfin_tickets` (truth from 0; admin grants write the ledger, never `golfin_pending_grants`), Gacha ops panel on dashboard **`83564c011`** (pause switch `content_settings.gacha_enabled`, pull log, odds audit, per-user tickets + pity reset), shop `category=ticket` server-side behind G1-T (`TICKET_SHOP_BUILD = 0` until the C archive). Roll parity SQL vs TS ±0.9 pt; live E2E incl. rate + cost change with no build; `pool_for_build` probe PASS; Cesar's prod footprint reverted to 823 RP. ✅ The game now pulls the SERVER (C, 2026-08-31); texts v19, gacha_banners v5.
 - **Missions track CLOSED (Cesar, 2026-08-30).** `missions_v1` DONE (`8a4275064`, mode OPEN on
   prod — `modes` v8, `texts` v16, 40 component-built missions on Lomond, server-generated Daily
   Mission, seven catalogs + Missions/Components/Daily panels) and `daily_mission_home_pill` DONE

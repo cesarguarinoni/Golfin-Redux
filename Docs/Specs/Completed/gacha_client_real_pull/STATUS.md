@@ -1,4 +1,4 @@
-DONE_PENDING_CESAR_APPROVAL
+DONE
 
 Built and PROVEN ON PROD 2026-08-31 (Claude Code, direct implementation — the same route
 gacha_admin_catalogs and gacha_server_pull took, not the subagent pipeline).
@@ -47,4 +47,16 @@ what this task exists to produce:
   6 pulls + their prizes in golfin_gacha_pulls / _prizes, pity 49/50
   texts v18 → v19 (nine GACHA_* keys), gacha_banners v3 → v4 → v5 (costX1 60, then back to 50)
 
-AWAITING CESAR: approval, and a verdict on the scaled-to-fit non-club prize card.
+APPROVED BY CESAR 2026-08-31 ("Done"), after three rounds of card corrections he called:
+  1. the scaled-down shop card REJECTED -> every prize kind now draws on the club card
+  2. the Repair Kit's empty lower half -> it carries the item description from the Item screen
+  3. the distance arc on a kit that has no distance, and a ball's bars sitting one row high
+
+Folder moved to Docs/Specs/Completed/. Nothing outstanding.
+
+⚠️ Carried forward, NOT blocking: `ball_golfin`'s five bars all read 0 because that ball
+genuinely has zero stats — truthful, but it reads oddly beside a club's numbers. And balls and
+characters carry `info` copy their stat lanes displace. Neither was asked for; both are spec D
+candidates if Cesar wants them.
+
+NEXT: spec D `gacha_ops_polish` (`Docs/Specs/Active/gacha_ops_polish/`).
