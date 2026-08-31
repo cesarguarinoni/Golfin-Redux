@@ -185,6 +185,49 @@ class CheckExitCode(unittest.TestCase):
         self.assertIn("VALUE differences", text)
         self.assertIn("imported, not yet published", text)
 
+    def test_is_active_survives_a_SECOND_export(self):
+        """The exporter must be IDEMPOTENT for a catalog carrying a deactivated row.
+
+        `is_active` is a table COLUMN, never a field of `data`. The first export
+        appends the column and writes `false`; the second used to fall through to
+        `data.get("is_active")` — because the column was now in the file's header —
+        which is None, so every cell came back BLANK. A blank reads as ACTIVE
+        downstream, silently re-admitting a row the operator had turned off.
+        Found on gacha_pools by `--check` (gacha_ops_polish, 2026-08-31).
+        """
+        client = FakePostgrestClient({
+            "content_catalogs": [{"name": "balls", "published_version": 3}],
+            "content_rows": [published_row("balls", "ball_golfin", data_golfin(), is_active=False)],
+        })
+        vpath = os.path.join(self.root, export_content.VERSION_FILE)
+        os.makedirs(os.path.dirname(vpath), exist_ok=True)
+        with open(vpath, "w", encoding="utf-8") as fh:
+            fh.write("balls=3\n")
+
+        argv = ["export_content.py", "--repo-root", self.root, "--catalogs", "balls"]
+
+        def run_export():
+            out, err = io.StringIO(), io.StringIO()
+            with mock.patch.object(sys, "argv", argv), \
+                 mock.patch.object(export_content.PostgrestClient, "from_env",
+                                   classmethod(lambda cls, env=None: client)), \
+                 redirect_stdout(out), redirect_stderr(err):
+                export_content.main()
+
+        run_export()
+        first = open(self.path, encoding="utf-8").read()
+        self.assertIn("is_active", first.splitlines()[0])
+        self.assertTrue(first.splitlines()[1].endswith(",false"), first)
+
+        run_export()
+        second = open(self.path, encoding="utf-8").read()
+        self.assertEqual(first, second,
+                         "the second export must be byte-identical — it blanked is_active")
+
+        # And --check must now agree that nothing is stale.
+        code, _ = self.run_check(client)
+        self.assertEqual(0, code, "a re-exported file must pass --check")
+
     def test_the_version_file_is_left_alone_by_check(self):
         # (and, by construction, that a repo which has never been exported at all
         # still fails --check — the version file is part of what must be current.)

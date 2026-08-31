@@ -75,7 +75,9 @@ one failure mode this script must not have.
 an `is_active` column appended at the END of the header — the only safe position
 under I4. The column appears ONLY when at least one exported row is inactive;
 adding it unconditionally would put a phantom column on all seven CSVs on day
-one and, again, break the round-trip test.
+one and, again, break the round-trip test. Its value ALWAYS comes from the
+`content_rows.is_active` COLUMN — it is never a field of `data`, on either side
+of the round trip (`import_content.py` splits it back out the same way).
 
 LINE ENDINGS: `\\n` and a trailing newline, per §C. Six of the seven files are
 already LF. `Assets/Data/Bags.csv` is CRLF today, so its first export is a
@@ -153,7 +155,13 @@ def render_csv(catalog: Catalog, published: List[dict], repo_root: str) -> Tuple
 
         values: List[str] = []
         for col in header:
-            if col == IS_ACTIVE_COLUMN and col not in existing.header:
+            if col == IS_ACTIVE_COLUMN:
+                # ALWAYS from the table column, never from `data` — see the module docstring.
+                # This used to read `data` once the column already existed in the file, which made
+                # the SECOND export of a catalog carrying a deactivated row blank every cell:
+                # `is_active` is not a field of `data`, so `data.get` returned None. The blanks then
+                # read as ACTIVE downstream, silently re-admitting a row the operator had turned
+                # off. Caught by `--check` on gacha_pools (gacha_ops_polish, 2026-08-31).
                 values.append("true" if row.get("is_active") is not False else "false")
             else:
                 values.append("" if data.get(col) is None else str(data[col]))
