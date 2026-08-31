@@ -13,9 +13,9 @@ Full detail lives in that folder's `README.md`; this file is the operator's view
 Next.js 15 (App Router) + TypeScript + Tailwind, deployed to **Cloudflare
 Workers** via the OpenNext adapter, reading the PLAYLIFE Supabase project
 directly with a `service_role` key. Panels — Audit Log, Banners, Characters,
-Clubs, Daily Missions, Gacha Banners, Gacha Pools, Items, Level Costs, Mission
-Components, Missions, Modes, Notices, Points, Rewards, Shop, Telemetry, Texts,
-Ticket Types, Tournaments, Users — registered in `lib/registry.ts`. The
+Clubs, Daily Missions, Gacha, Gacha Banners, Gacha Pools, Items, Level Costs,
+Mission Components, Missions, Modes, Notices, Points, Rewards, Shop, Telemetry,
+Texts, Ticket Types, Tournaments, Users — registered in `lib/registry.ts`. The
 sidebar renders them **sorted by their translated title**, so the order follows
 whichever language is showing and the array order in the registry is not
 load-bearing.
@@ -111,9 +111,43 @@ The per-catalog **kill switch** deliberately does NOT touch the mirror — see t
 one that is safe in both directions. The residual is bounded by the `fee_changed`
 UX: the player is always shown the price before it is charged.
 
-**Live panels** (Banners, Notices, Points, Rewards, Tournaments, Users) write the
-table the server reads per request. There is no draft, no publish and no version
-— a save is in effect on the next request.
+**Live panels** (Banners, Gacha, Notices, Points, Rewards, Tournaments, Users)
+write the table the server reads per request. There is no draft, no publish and
+no version — a save is in effect on the next request.
+
+**Gacha is the newest live panel and the one with the sharpest switch.** It reads
+`golfin_gacha_pulls` / `golfin_gacha_prizes` / `golfin_tickets` /
+`golfin_ticket_transactions` / `golfin_gacha_pity` — everything the server
+recorded, none of it client-asserted, which is why it carries no red notice (the
+Inventory tab's blob does). Three things live on it:
+
+* **The pause switch** — `content_settings.gacha_enabled`, written by
+  `POST /api/gacha/enabled`. ⚠️ **It is INSTANT.** `golfin_gacha_pull()` reads the
+  flag on every call, so there is no 60 s response cache and no
+  apply-at-next-launch: pausing refuses the very next pull with
+  `not_available / paused`, and banners stay visible. That is why pausing needs a
+  typed `PAUSE` and resuming does not. It is deliberately NOT
+  `content_settings.content_enabled` — that one closes the shop, the missions and
+  the mode fees as well.
+* **The pull log**, filterable by player email / banner / date, expanding to
+  prizes, with an **Export CSV** of the filtered set (one row per prize).
+* **The odds audit** per banner — rolled distribution vs the pool's published
+  `gacha_rates`, amber beyond ±2 points. ⚠️ **Slots forced by pity or the x10
+  guarantee are EXCLUDED from the comparison**, not merely labelled: they are
+  drawn from a renormalised subset and are supposed to skew, so counting them
+  would flag exactly the banners that are working. The arithmetic is pure and
+  vitest-covered (`lib/gachaAudit.ts`).
+
+**Tickets are a LEDGER now, and the admin grant no longer uses the grants queue.**
+The Users drawer's **Gacha** tab grants and adjusts through
+`POST /api/gacha/users/:id/tickets` → `golfin_ticket_credit()`, the only writer of
+`golfin_tickets`. The old path queued a `kind = 'ticket'`
+`golfin_pending_grants` row for the client to apply into its save blob, which made
+the DEVICE the authority on a currency the server now sells and spends. The
+Inventory tab still shows the blob's ticket map, labelled **"Device counter
+(legacy)"** next to the real balance; it retires when the client moves to the
+ledger. `issueInventoryGrant` refuses `kind = 'ticket'` outright so the old path
+cannot be reintroduced by a second caller.
 
 **Rewards is the one to be careful with.** It edits `game_point_actions`, i.e.
 what every earn PAYS, and it is live on save. The panel says so in a banner at

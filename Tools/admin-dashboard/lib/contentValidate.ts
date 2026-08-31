@@ -13,7 +13,7 @@
  */
 
 import { validateArtUrlUnderBucket } from "./banner";
-import { SHOP_CATEGORY_STRICT_BUILD } from "./buildGates";
+import { SHOP_CATEGORY_STRICT_BUILD, TICKET_SHOP_BUILD } from "./buildGates";
 import { holeBase, scoreGoal, type WeightRow } from "./missionScore";
 
 export type Severity = "error" | "warning";
@@ -144,7 +144,9 @@ const NUMERIC: Record<string, string[]> = {
   bags: [],
   balls: ["power", "rebound", "windResistance", "roll", "spin"],
   texts: [],
-  shop_catalog: ["rpCost", "saleRpCost", "sortOrder"],
+  // `quantity` (gacha_server_pull §5.2) is optional and blank means 1; `num("")`
+  // is null, so a blank never reaches the parse check. A non-numeric one does.
+  shop_catalog: ["rpCost", "saleRpCost", "sortOrder", "quantity"],
   level_up_costs: ["level", "cost_r", "sp_reward"],
   modes: ["entryFee", "rewards", "order", "reward1Amount", "reward2Amount", "reward3Amount",
           "versusStrokeCapOverPar"],
@@ -167,13 +169,27 @@ const NUMERIC: Record<string, string[]> = {
   ticket_types: ["id"],
 };
 
-/** `shop_catalog.category` → the catalog `refId` resolves in (§D1.6). */
+/**
+ * `shop_catalog.category` → the catalog `refId` resolves in (§D1.6).
+ *
+ * `ticket` (gacha_server_pull §5.2) is the fifth SELLABLE category and the only
+ * one that is not delivered through `golfin_pending_grants`: the server credits
+ * `golfin_tickets` directly. It is listed here because it is a real category the
+ * server accepts — rule G1-T below is what keeps one from being PUBLISHED before
+ * a client exists that can apply it.
+ *
+ * ⚠️ NOT the same map as `GACHA_KIND_TO_CATALOG` in contentView.ts, and they are
+ * deliberately separate: the shop can sell a `bag`, which the gacha never drops,
+ * and both can hand out a `ticket`. Merging them would put a `bag` option in the
+ * pool editor, which the gacha validator refuses.
+ */
 export const SHOP_CATEGORY_TO_CATALOG: Record<string, string> = {
   club: "clubs",
   ball: "balls",
   item: "items",
   bag: "bags",
   character: "characters",
+  ticket: "ticket_types",
 };
 
 export const ID_COLUMN: Record<string, string> = {
@@ -454,7 +470,12 @@ export function validateCatalog(
         // min_build cannot be corrected after the first publish — so it has to
         // be right the first time, and this is what makes that automatic
         // rather than something to remember.
-        if (target && category !== "club" && category !== "ball") {
+        //
+        // `ticket` is EXCLUDED here and handled by G1-T below. It would trip
+        // this rule too (it is neither club nor ball), but the message would
+        // name the wrong constant and the wrong build, and two errors on one
+        // row for one cause is how an operator learns to skim them.
+        if (target && category !== "club" && category !== "ball" && category !== "ticket") {
           if (SHOP_CATEGORY_STRICT_BUILD === 0) {
             err(
               row.rowId,
@@ -471,6 +492,61 @@ export function validateCatalog(
                 `renders "${category}" rows. Older builds would read this row as a club and show a ` +
                 "card they cannot fill. Raise min_build (it is immutable once published)."
             );
+          }
+        }
+
+        // G1-T — a TICKET row must be withheld from every build that cannot
+        // APPLY one (gacha_server_pull §5.2).
+        //
+        // The server half works today: `golfin_shop_purchase` credits
+        // `golfin_tickets` and returns `grant.kind = "ticket"` with
+        // `grant.id = null`. The CLIENT half does not exist —
+        // `ShopTransaction.ApplyPurchaseGrant` switches on `grant.kind` over
+        // club/character/item/ball and falls to a `default:` that logs an error
+        // and returns false. Publishing a ticket row today would therefore
+        // charge the player, credit the ledger correctly, and show them a
+        // failure. `min_build` is immutable once published (rule 7), so this has
+        // to be right the FIRST time — which is what makes it a gate and not a
+        // note. Same mechanism as G1, verbatim, against its own constant.
+        if (category === "ticket") {
+          if (TICKET_SHOP_BUILD === 0) {
+            err(
+              row.rowId,
+              "min_build",
+              "The client build that can apply a ticket purchase has not been uploaded yet " +
+                "(gacha_server_pull spec C). Set TICKET_SHOP_BUILD (lib/buildGates.ts) after " +
+                "the archive, from Docs/Versioning/last_uploaded_build.txt."
+            );
+          } else if (row.minBuild < TICKET_SHOP_BUILD) {
+            err(
+              row.rowId,
+              "min_build",
+              `min_build ${row.minBuild} is below ${TICKET_SHOP_BUILD}, the first build that can ` +
+                "apply a ticket purchase. Older builds would charge the player, credit the " +
+                "ledger and then report a failure. Raise min_build (it is immutable once published)."
+            );
+          }
+        }
+
+        // G3-Q — `quantity` means something for a TICKET row and nothing for
+        // any other, so it must not be set on one.
+        //
+        // `golfin_shop_purchase` reads `quantity` only in the ticket branch;
+        // every other category still delivers exactly 1, because honouring it
+        // for balls and items would change what already-published listings
+        // deliver. A column that silently means nothing on four of five
+        // categories is a trap, and this is the cheap way to close it.
+        const quantity = num(row.data.quantity);
+        if (quantity !== null) {
+          if (category !== "ticket" && quantity !== 1) {
+            err(
+              row.rowId,
+              "quantity",
+              `quantity ${quantity} is only honoured for category "ticket" — a "${category}" row ` +
+                "always delivers 1. Leave it blank."
+            );
+          } else if (quantity < 1) {
+            err(row.rowId, "quantity", `quantity ${quantity} must be at least 1.`);
           }
         }
 

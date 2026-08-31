@@ -85,6 +85,14 @@ export const PANELS: readonly PanelDef[] = [
   // request. No draft, no publish, no version. The panel says so.
   { id: "rewards", title: "Rewards", icon: "gift", route: "/rewards" },
   { id: "shop", title: "Shop", icon: "cart", route: "/shop" },
+  // ---- gacha_server_pull §6 ----------------------------------------------
+  // The OPS panel, and it sits BEFORE the three gacha content panels on purpose
+  // (the array is alphabetical, and "Gacha" sorts before "Gacha Banners" in both
+  // languages). It is a different KIND of panel from them: they edit drafts an
+  // operator publishes, this one reads what the server did and carries the pause
+  // switch. Same distinction as Telemetry vs the content catalogs.
+  { id: "gacha", title: "Gacha", icon: "ticket", route: "/gacha" },
+
   // ---- gacha_admin_catalogs ----------------------------------------------
   // Three entries for four catalogs: `gacha_rates` is edited INSIDE the Pools
   // panel as a second tab, because a rate table is meaningless without the pool

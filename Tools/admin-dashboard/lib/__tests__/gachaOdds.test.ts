@@ -184,6 +184,44 @@ describe("simulate", () => {
     expect(result.pityHits).toBeGreaterThan(900);
   });
 
+  it("forces the THRESHOLD-th pull, not the one after it", () => {
+    // The off-by-one this pins is the one gacha_server_pull §3 had to correct:
+    // `counter >= threshold` fires one pull LATE. With a threshold of 1 and a
+    // Supreme floor, EVERY pull must be forced — the counter starts at 0 and
+    // 0 + 1 >= 1 — so a run of N produces N pity hits and N Supremes. Under the
+    // old rule the first pull of every reset would slip through unforced, and
+    // `pityHits` would come back materially below N.
+    //
+    // This is the number the SPEC §7 parity harness compares against
+    // `golfin_gacha_pull()`, so a drift here is a drift between the two
+    // implementations of the roll.
+    const everyPull: BannerRoll = {
+      poolId: "pool_standard_club1",
+      pityThreshold: 1,
+      pityMinRarity: "Supreme",
+      guaranteeMinRarityX10: "",
+    };
+    const result = simulate(RATES, POOL, everyPull, 500, SEED);
+    expect(result.pityHits).toBe(500);
+    expect(result.observed.Supreme ?? 0).toBe(500);
+  });
+
+  it("allows exactly threshold - 1 sub-minimum prizes before forcing", () => {
+    // Threshold 2 on a Supreme floor. Slot 0 is unforced (0 + 1 >= 2 is false);
+    // if it misses, slot 1 is forced (1 + 1 >= 2). So no more than one
+    // consecutive non-Supreme can ever appear, and at least half the pulls are
+    // Supreme however unlucky the seed.
+    const two: BannerRoll = {
+      poolId: "pool_standard_club1",
+      pityThreshold: 2,
+      pityMinRarity: "Supreme",
+      guaranteeMinRarityX10: "",
+    };
+    const result = simulate(RATES, POOL, two, 1000, SEED);
+    expect(result.observed.Supreme ?? 0).toBeGreaterThanOrEqual(500);
+    expect(result.pityHits).toBeGreaterThan(450);
+  });
+
   it("fires the x10 guarantee only on blocks that did not already reach the rarity", () => {
     const guaranteeOnly: BannerRoll = {
       poolId: "pool_standard_club1",

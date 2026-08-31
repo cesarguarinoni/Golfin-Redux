@@ -5,6 +5,52 @@
 
 ---
 
+## 🟡 BUILT, AWAITING THE MIGRATION — `gacha_server_pull` (2026-08-31)
+
+**The pull becomes one server function that reads the published catalogs.** Spec B of
+`Docs/GACHA_ADMIN_PLAN.md`. Backend + dashboard only — **no Unity change**; `GachaPullFlow` still
+plays its mock until spec C.
+
+**⚠️ ONE THING IS OUTSTANDING AND EVERYTHING ELSE WAITS ON IT: Cesar must apply
+`playlife/backend/migrations/2026_09_01_golfin_gacha.sql` and then
+`2026_09_01_shop_purchase_tickets.sql` in the Supabase SQL editor.** DDL has no path from this
+machine (ADMIN_DASHBOARD_OPS §3.2). Until they land: `/api/v1/gacha/*` answers a loud 500 on a
+pull, the Gacha panel renders its `notMigrated` notice, and an admin ticket grant answers 503 with
+the filename. Once they land, SPEC §7 (roll parity) and §8 (the live E2E) can be run from here in
+one pass — the service key reaches prod over PostgREST.
+
+- **`golfin_gacha_pull(user, banner, count, expected_cost, key, build)`** — modelled on
+  `golfin_shop_purchase()` step for step: replay by `(user, key)` → kill switches (`content_enabled`,
+  the new `gacha_enabled`, all four catalogs) → banner window/min_build **on the server clock** →
+  `maxPullsPerPlayer` → `cost_changed` guard → the pool **rollable for this build** → ticket debit →
+  roll → grants / dupe RP / ticket prizes → record. One transaction: any failure after the debit
+  rolls the debit back. Every business outcome is a 200 payload; only faults raise.
+- **Tickets are a server ledger now.** `golfin_tickets` + `golfin_ticket_transactions`, written
+  ONLY by `golfin_ticket_credit()`. The ledger **starts at zero for everyone** (plan §9) — the
+  client blob counter is deliberately not migrated, because importing client-asserted numbers
+  would launder invented tickets into the authoritative ledger. The admin grant writes the LEDGER,
+  never `golfin_pending_grants`; `issueInventoryGrant` refuses `kind = 'ticket'` outright.
+- **The roll is written twice and pinned by distribution.** `lib/gachaOdds.ts::simulate` is the TS
+  reference; SPEC §7 compares it to the plpgsql at ±1.5 pt. Writing the server half surfaced a real
+  off-by-one in the TS: pity fired at `counter >= threshold`, one pull LATE. Both now use
+  `counter + 1 >= threshold`, i.e. the threshold-th pull is the forced one (two new vitest cases).
+- **The Gacha ops panel** (live, not content): the **pause switch**
+  (`content_settings.gacha_enabled` — instant, read per pull, typed `PAUSE` to arm), the **pull log**
+  with player/banner/date filters, expandable prizes and CSV export, and the **odds audit** per
+  banner. Forced slots are EXCLUDED from the odds comparison, not just labelled — they are drawn
+  from a renormalised subset and are supposed to skew, so counting them would flag exactly the
+  banners that are working. The arithmetic is pure and vitest-covered (`lib/gachaAudit.ts`, 20 cases).
+- **The shop can sell a ticket** (`category = ticket` → `golfin_ticket_credit`, no pending grant),
+  and **no such row may be published yet**: validator rule **G1-T** hard-errors while
+  `TICKET_SHOP_BUILD = 0`, because the shipped client's `ShopTransaction.ApplyPurchaseGrant` has no
+  `ticket` case and would charge the player then report a failure. That client half is spec C's.
+- **API deployed** — `playlife-api` image `deployment-01M1B5F2YV1ZJT84RX7RSGN5WW` (v64). Smoke:
+  `/health` 200, `/api/v1/content` 200, all three `/api/v1/gacha/*` **403 not 404**, an unknown path
+  404 (so the 403s are auth, not routing). Backend suite 233 green, dashboard vitest 216 green,
+  `npm run build` green.
+
+---
+
 ## ✅ SHIPPED — `gacha_admin_catalogs` **approved by Cesar** (2026-08-31)
 
 **Gacha is now admin-managed content.** Spec A of `Docs/GACHA_ADMIN_PLAN.md`. `gacha_banners`

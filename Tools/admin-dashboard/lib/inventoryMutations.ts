@@ -64,10 +64,30 @@ export async function issueInventoryGrant(
     return fail(400, `refId is required (1–${MAX_REF_ID} characters).`);
   }
 
-  // `ticket` and `hole` address their target by NUMBER (a TicketType int, a hole
-  // number). A non-numeric refId there is a grant the client would silently drop
-  // as unapplicable — better refused here, where someone is watching.
-  if ((kind === "ticket" || kind === "hole") && !/^\d+$/.test(ref)) {
+  // ⚠️ A TICKET IS NO LONGER A GRANT (gacha_server_pull §5.1).
+  //
+  // Until 2026-09-01 an admin ticket grant queued a `kind = 'ticket'` row that
+  // the client applied into `SaveData.ticketBalances` — which made the DEVICE
+  // the authority on how many tickets a player held, and left the server unable
+  // to answer "how many do they have" at all. `golfin_tickets` is that authority
+  // now, and `golfin_ticket_credit()` is its only writer.
+  //
+  // Refused HERE and not only in the route, so a second caller cannot
+  // reintroduce the old path by calling this function directly. The queue's
+  // CHECK constraint keeps `'ticket'` for the rows that already exist and are
+  // still draining; nothing new writes one.
+  if (kind === "ticket") {
+    return fail(
+      400,
+      "Tickets are no longer delivered through the grants queue. Use the Gacha tab " +
+        "(or POST /api/gacha/users/:id/tickets), which writes the golfin_tickets ledger."
+    );
+  }
+
+  // `hole` addresses its target by NUMBER (a hole number). A non-numeric refId
+  // there is a grant the client would silently drop as unapplicable — better
+  // refused here, where someone is watching.
+  if (kind === "hole" && !/^\d+$/.test(ref)) {
     return fail(400, `A '${kind}' grant addresses its target by number, so refId must be an integer.`);
   }
 

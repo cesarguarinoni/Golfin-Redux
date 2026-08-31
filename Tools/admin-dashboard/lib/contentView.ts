@@ -201,7 +201,11 @@ export const CATALOG_VIEWS: Record<string, CatalogView> = {
   },
   shop_catalog: {
     catalog: "shop_catalog",
-    columns: ["category", "refId", "rpCost", "saleRpCost", "sortOrder", "popular", "offer"],
+    // `quantity` (gacha_server_pull §5.2) is in the TABLE, not only the editor:
+    // it is the difference between selling one ticket and selling ten for the
+    // same price, and a column an operator has to open a row to see is a column
+    // that gets published wrong. Blank means 1 on every non-ticket row.
+    columns: ["category", "refId", "rpCost", "saleRpCost", "quantity", "sortOrder", "popular", "offer"],
     facets: [CATEGORY_FACET],
     limit: 50,
   },

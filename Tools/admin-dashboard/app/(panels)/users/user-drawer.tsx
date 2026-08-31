@@ -10,6 +10,7 @@ import type {
   AdminUserRow,
   InventoryGrantRow,
   MutationResponse,
+  PlayerGachaResponse,
   PlayerInventoryResponse,
   UserActionKind,
   UserDetailResponse,
@@ -20,10 +21,11 @@ import {
   DeleteUserModal,
   GrantInventoryModal,
 } from "./action-modals";
+import { GachaTab } from "./gacha-tab";
 import { InventoryTab } from "./inventory-tab";
 import { MissionsTab } from "./missions-tab";
 
-type Tab = "transactions" | "activities" | "inventory" | "missions";
+type Tab = "transactions" | "activities" | "inventory" | "missions" | "gacha";
 
 type PendingModal =
   | { kind: "action"; action: UserActionKind }
@@ -38,6 +40,10 @@ type PendingModal =
    *  clear pay the FIRST-CLEAR amount again, which is the whole reason it needs
    *  a confirm rather than being a one-click button. */
   | { kind: "resetMission"; missionId: string }
+  /** Reset one banner's pity counter (gacha_server_pull §6). Carries the banner
+   *  id so the confirm can name it — and so the copy can say what is NOT reset
+   *  (total_pulls, which is what maxPullsPerPlayer is measured against). */
+  | { kind: "resetPity"; bannerId: string }
   | null;
 
 const ACTION_COPY: Record<
@@ -138,6 +144,8 @@ export function UserDrawer({
   const [inventoryError, setInventoryError] = useState<string | null>(null);
   const [missions, setMissions] = useState<PlayerMissionsResponse | null>(null);
   const [missionsError, setMissionsError] = useState<string | null>(null);
+  const [gacha, setGacha] = useState<PlayerGachaResponse | null>(null);
+  const [gachaError, setGachaError] = useState<string | null>(null);
   const [detailVersion, setDetailVersion] = useState(0);
   const [tab, setTab] = useState<Tab>("transactions");
 
@@ -227,6 +235,30 @@ export function UserDrawer({
       } catch (err) {
         if (!cancelled)
           setMissionsError(err instanceof Error ? err.message : t("udrawer.loadFailed"));
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user.id, detailVersion]);
+
+  // Fetched with the detail, for the reason the two effects above give. Re-runs
+  // on detailVersion so a ticket grant or a pity reset shows at once.
+  useEffect(() => {
+    let cancelled = false;
+    setGachaError(null);
+    (async () => {
+      try {
+        const res = await fetch(`/api/gacha/users/${user.id}/tickets`);
+        if (!res.ok) {
+          const body = (await res.json().catch(() => null)) as { error?: string } | null;
+          throw new Error(body?.error ?? `Request failed (${res.status})`);
+        }
+        const json = (await res.json()) as PlayerGachaResponse;
+        if (!cancelled) setGacha(json);
+      } catch (err) {
+        if (!cancelled)
+          setGachaError(err instanceof Error ? err.message : t("udrawer.loadFailed"));
       }
     })();
     return () => {
@@ -570,6 +602,7 @@ export function UserDrawer({
                 ["activities", "udrawer.tab.activities"],
                 ["inventory", "udrawer.tab.inventory"],
                 ["missions", "udrawer.tab.missions"],
+                ["gacha", "udrawer.tab.gacha"],
               ] as const
             ).map(([key, labelKey]) => (
               <button
@@ -677,6 +710,41 @@ export function UserDrawer({
                     onReset={(missionId) => {
                       setNotice(null);
                       setPending({ kind: "resetMission", missionId });
+                    }}
+                  />
+                )}
+              </>
+            )}
+            {tab === "gacha" && (
+              <>
+                {gachaError && (
+                  <p className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-300">
+                    {gachaError}
+                  </p>
+                )}
+                {!gacha && !gachaError && (
+                  <p className="py-6 text-center text-xs text-zinc-600">
+                    {t("common.loading")}
+                  </p>
+                )}
+                {gacha && (
+                  <GachaTab
+                    data={gacha}
+                    onCredit={(ticketType, amount, adjust) => {
+                      setNotice(null);
+                      // No confirm modal: the ledger is append-only and every
+                      // movement is reversible with the opposite adjust, so a
+                      // second click here would be ceremony. The REFUSAL that
+                      // matters (below zero) happens server-side and comes back
+                      // as a 409 the drawer surfaces.
+                      void runMutation(`/api/gacha/users/${user.id}/tickets`, {
+                        method: "POST",
+                        body: JSON.stringify({ ticketType, amount, adjust }),
+                      });
+                    }}
+                    onResetPity={(bannerId) => {
+                      setNotice(null);
+                      setPending({ kind: "resetPity", bannerId });
                     }}
                   />
                 )}
@@ -796,6 +864,24 @@ export function UserDrawer({
             runMutation(`/api/users/${user.id}/missions`, {
               method: "DELETE",
               body: JSON.stringify({ missionId: pending.missionId }),
+            })
+          }
+        />
+      )}
+      {pending?.kind === "resetPity" && (
+        <ConfirmActionModal
+          title={t("ugac.resetPity.title", { banner: pending.bannerId })}
+          body={t("ugac.resetPity.body")}
+          confirmLabel={t("ugac.resetPity")}
+          destructive
+          mock={mock}
+          busy={busy}
+          error={modalError}
+          onCancel={() => setPending(null)}
+          onConfirm={() =>
+            runMutation(`/api/gacha/users/${user.id}/pity`, {
+              method: "DELETE",
+              body: JSON.stringify({ bannerId: pending.bannerId }),
             })
           }
         />

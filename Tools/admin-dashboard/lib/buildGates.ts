@@ -60,3 +60,47 @@ export const SHOP_CATEGORY_STRICT_BUILD: number = 2350;
 
 /** True while the build carrying the strict client half is still unpublished. */
 export const shopCategoryBuildPending = (): boolean => SHOP_CATEGORY_STRICT_BUILD === 0;
+
+/**
+ * The first uploaded build whose client can APPLY a `category = ticket` shop
+ * purchase (`gacha_server_pull` §5.2 — the client half is spec C).
+ *
+ * WHY THIS IS A SECOND CONSTANT AND NOT `SHOP_CATEGORY_STRICT_BUILD`. That one
+ * marks the build that PARSES every category strictly; this one marks the build
+ * that knows what to DO with a ticket once it arrives. They are different
+ * capabilities shipped in different releases, and folding them together would
+ * either let a ticket row reach a build that cannot apply it (if this reused
+ * 2350) or retroactively re-gate the character/item rows already published
+ * against 2350 (if that one were raised).
+ *
+ * WHAT BREAKS WITHOUT THE GATE, precisely. `golfin_shop_purchase` credits
+ * `golfin_tickets` server-side and returns `grant.kind = "ticket"` with
+ * `grant.id = null`. The shipped `ShopTransaction.ApplyPurchaseGrant`
+ * (Assets/Scripts/UI/Shop/ShopTransaction.cs) switches on `grant.kind` over
+ * club / character / item / ball and falls through to a `default:` that logs an
+ * error and returns false — so the player is charged, the ledger is correct,
+ * and the UI tells them the purchase failed. (`grant.id = null` on its own IS
+ * tolerated: `ShopGrantDto.Id` defaults to `""` and `RecordAndAck` returns early
+ * on an empty id. It is the missing KIND that breaks.)
+ *
+ * ⚠️ HOW TO SET IT — read it, never infer it. Identical rule to
+ * `SHOP_CATEGORY_STRICT_BUILD`:
+ *
+ *   0  = the build carrying the client half has NOT been uploaded yet. Rule
+ *        G1-T turns into a hard error on every active `category = ticket` row.
+ *        This is the correct value until the spec-C archive exists.
+ *
+ *   N  = the number in `Docs/Versioning/last_uploaded_build.txt` AFTER that
+ *        archive. That file is written by `Tools/mark-uploaded.sh` from
+ *        `git rev-list --count HEAD`, so it is the COMMIT COUNT — "last upload
+ *        + 1" is wrong by construction.
+ *
+ * The `: number` annotation is load-bearing for the same reason it is on
+ * `SHOP_CATEGORY_STRICT_BUILD`: without it TypeScript infers the literal `0`
+ * and every `=== 0` check becomes a non-overlapping-literal compile error the
+ * day someone sets a real build number.
+ */
+export const TICKET_SHOP_BUILD: number = 0;
+
+/** True while the build that can apply a ticket purchase is still unpublished. */
+export const ticketShopBuildPending = (): boolean => TICKET_SHOP_BUILD === 0;

@@ -64,6 +64,10 @@ export const DICT = {
   "nav.missions": { en: "Missions", ja: "ミッション" },
   "nav.mission-components": { en: "Mission Components", ja: "ミッション部品" },
   "nav.daily-missions": { en: "Daily Missions", ja: "デイリーミッション" },
+  // The OPS panel (gacha_server_pull §6) — the live pull log, the odds audit and
+  // the pause switch. Distinct from the three gacha CONTENT panels below it: this
+  // one edits nothing an operator publishes, it reads what the server did.
+  "nav.gacha": { en: "Gacha", ja: "ガチャ" },
   "nav.gacha-banners": { en: "Gacha Banners", ja: "ガチャバナー" },
   "nav.gacha-pools": { en: "Gacha Pools", ja: "ガチャ排出プール" },
   "nav.ticket-types": { en: "Ticket Types", ja: "チケット種別" },
@@ -321,6 +325,7 @@ export const DICT = {
   "udrawer.tab.activities": { en: "Activities", ja: "アクティビティ" },
   "udrawer.tab.inventory": { en: "Inventory", ja: "インベントリ" },
   "udrawer.tab.missions": { en: "Missions", ja: "ミッション" },
+  "udrawer.tab.gacha": { en: "Gacha", ja: "ガチャ" },
 
   "loginPage.title": { en: "GOLFIN Admin", ja: "GOLFIN 管理画面" },
   "loginPage.subtitle": { en: "Internal dashboard — admins only", ja: "社内管理画面 — 管理者専用" },
@@ -1547,6 +1552,148 @@ export const DICT = {
   "gp.rates.sum.hint": {
     en: "Basis points over the ACTIVE rows of each pool. Publish blocks unless every pool sums to exactly 10 000 and carries one row per rarity.",
     ja: "各プールの有効な行の合計をベーシスポイントで表示しています。すべてのプールがちょうど 10000 で、レアリティごとに 1 行ずつ揃っていないと公開できません。",
+  },
+
+
+  // ---- Gacha ops panel (gacha_server_pull §6) ----------------------------
+  "ga.title": { en: "Gacha", ja: "ガチャ" },
+  "ga.note": {
+    en: "Live server tables — every pull the server rolled, the tickets it charged and the prizes it queued. Nothing here is published or versioned; the banners, rates, pools and ticket types are edited in their own panels.",
+    ja: "サーバーのライブテーブルです。サーバーが実際に抽選した内容、消費されたチケット、付与された景品がそのまま表示されます。ここには公開・バージョン管理の概念はありません。バナー・排出率・プール・チケット種別はそれぞれ専用パネルで編集します。",
+  },
+  "ga.notMigrated": {
+    en: "The gacha tables do not exist on this project yet. Apply {file} in the Supabase SQL editor, then reload.",
+    ja: "このプロジェクトにはガチャ用テーブルがまだ存在しません。Supabase の SQL エディタで {file} を適用してから再読み込みしてください。",
+  },
+
+  "ga.state.live": { en: "LIVE", ja: "稼働中" },
+  "ga.state.paused": { en: "PAUSED", ja: "停止中" },
+  "ga.pause": { en: "Pause the gacha", ja: "ガチャを停止" },
+  "ga.resume": { en: "Resume the gacha", ja: "ガチャを再開" },
+  "ga.pause.title": { en: "Pause the gacha?", ja: "ガチャを停止しますか？" },
+  "ga.pause.body": {
+    en: "Paused: every pull is refused with not_available / paused; banners stay visible. This is instant — the server reads the flag on every pull, so there is no cache to wait for and no next launch. Type PAUSE to confirm.",
+    ja: "停止中はすべての抽選が not_available / paused で拒否されます。バナー自体は表示されたままです。サーバーは抽選のたびにこのフラグを読むため、この操作は即時に反映されます（キャッシュ待ちも再起動待ちもありません）。確認のため PAUSE と入力してください。",
+  },
+  "ga.pause.confirmWord": { en: "PAUSE", ja: "PAUSE" },
+  "ga.pause.confirm": { en: "Pause", ja: "停止する" },
+  "ga.resume.title": { en: "Resume the gacha?", ja: "ガチャを再開しますか？" },
+  "ga.resume.body": {
+    en: "Pulls are accepted again, immediately.",
+    ja: "抽選が即座に再び受け付けられるようになります。",
+  },
+  "ga.resume.confirm": { en: "Resume", ja: "再開する" },
+  "ga.pausedBanner": {
+    en: "The gacha is PAUSED. Every pull is being refused with not_available / paused right now.",
+    ja: "ガチャは現在停止中です。すべての抽選が not_available / paused で拒否されています。",
+  },
+
+  "ga.stat.pullsToday": { en: "Pulls (24 h)", ja: "抽選数（24 時間）" },
+  "ga.stat.pulls7d": { en: "Pulls (7 d)", ja: "抽選数（7 日）" },
+  "ga.stat.sunkToday": { en: "Tickets spent (24 h)", ja: "消費チケット（24 時間）" },
+  "ga.stat.sunk7d": { en: "Tickets spent (7 d)", ja: "消費チケット（7 日）" },
+  "ga.stat.dupeRp7d": { en: "Dupe RP paid (7 d)", ja: "重複 RP 支払（7 日）" },
+
+  "ga.log.title": { en: "Pull log", ja: "抽選ログ" },
+  "ga.log.empty": { en: "No pulls match these filters.", ja: "条件に一致する抽選はありません。" },
+  "ga.log.filter.email": { en: "Player email", ja: "プレイヤーのメール" },
+  "ga.log.filter.emailPlaceholder": { en: "partial match", ja: "部分一致" },
+  "ga.log.filter.banner": { en: "Banner", ja: "バナー" },
+  "ga.log.filter.all": { en: "All", ja: "すべて" },
+  "ga.log.filter.from": { en: "From", ja: "開始日" },
+  "ga.log.filter.to": { en: "To", ja: "終了日" },
+  "ga.log.filter.apply": { en: "Apply", ja: "適用" },
+  "ga.log.filter.clear": { en: "Clear", ja: "クリア" },
+  "ga.log.export": { en: "Export CSV", ja: "CSV 出力" },
+  "ga.log.exportHint": {
+    en: "Exports the filtered set, one row per prize, up to 200 pulls.",
+    ja: "絞り込んだ結果を景品 1 件につき 1 行で出力します（最大 200 抽選）。",
+  },
+  "ga.log.more": { en: "Load older", ja: "さらに読み込む" },
+  "ga.log.col.when": { en: "When", ja: "日時" },
+  "ga.log.col.player": { en: "Player", ja: "プレイヤー" },
+  "ga.log.col.banner": { en: "Banner", ja: "バナー" },
+  "ga.log.col.count": { en: "Pull", ja: "回数" },
+  "ga.log.col.cost": { en: "Cost", ja: "消費" },
+  "ga.log.col.pity": { en: "Pity", ja: "天井" },
+  "ga.log.prizes": { en: "Prizes", ja: "景品" },
+  "ga.log.dupe": { en: "DUPE", ja: "重複" },
+  "ga.log.pityForced": { en: "PITY", ja: "天井" },
+  "ga.log.guaranteeForced": { en: "GUARANTEE", ja: "確定枠" },
+  "ga.log.expand": { en: "Show prizes", ja: "景品を表示" },
+  "ga.log.collapse": { en: "Hide prizes", ja: "景品を隠す" },
+
+  "ga.odds.title": { en: "Odds audit", ja: "排出率監査" },
+  "ga.odds.body": {
+    en: "What the server actually rolled, against what the pool published. Slots forced by pity or the x10 guarantee are counted separately and EXCLUDED from the comparison — they are drawn from a restricted subset and are supposed to skew.",
+    ja: "サーバーが実際に抽選した結果と、プールで公開している排出率との比較です。天井や 10 連確定枠によって強制された枠は別途集計し、比較からは除外しています（これらは限定された範囲から抽選されるため、偏るのが正常です）。",
+  },
+  "ga.odds.sample": { en: "Sample", ja: "サンプル" },
+  "ga.odds.sampleAll": { en: "All", ja: "すべて" },
+  "ga.odds.col.rarity": { en: "Rarity", ja: "レアリティ" },
+  "ga.odds.col.published": { en: "Published", ja: "公開値" },
+  "ga.odds.col.observed": { en: "Observed", ja: "実測値" },
+  "ga.odds.col.delta": { en: "Delta", ja: "差分" },
+  "ga.odds.sampled": { en: "{pulls} pulls · {slots} comparable slots", ja: "{pulls} 抽選 ・ 比較対象 {slots} 枠" },
+  "ga.odds.forced": { en: "{n} forced slots excluded ({pity} pity, {guarantee} guarantee)", ja: "強制枠 {n} 件を除外（天井 {pity} 件、確定枠 {guarantee} 件）" },
+  "ga.odds.notSignificant": {
+    en: "Under {n} comparable slots a 2-point delta is noise, so nothing is flagged yet.",
+    ja: "比較対象が {n} 枠未満の場合、2 ポイント程度の差は誤差の範囲であるため、警告は表示しません。",
+  },
+  "ga.odds.amberHint": {
+    en: "Beyond ±2 points on a significant sample.",
+    ja: "十分なサンプル数で ±2 ポイントを超えています。",
+  },
+  "ga.odds.empty": { en: "No pulls on this banner yet.", ja: "このバナーの抽選履歴はまだありません。" },
+
+  // ---- Users drawer → Gacha tab (gacha_server_pull §6) --------------------
+  "ugac.tickets": { en: "Ticket balances", ja: "チケット残高" },
+  "ugac.ledgerNote": {
+    en: "The server ledger — golfin_tickets, written only by golfin_ticket_credit(). This is the number the game charges against.",
+    ja: "サーバー側の台帳（golfin_tickets）です。書き込めるのは golfin_ticket_credit() のみで、ゲームが実際に消費判定に使う数値はこちらです。",
+  },
+  "ugac.noTickets": { en: "No ticket balance — that is a real balance of zero.", ja: "チケット残高の行はありません（残高 0 という正しい状態です）。" },
+  "ugac.grant": { en: "Grant", ja: "付与" },
+  "ugac.adjust": { en: "Adjust", ja: "調整" },
+  "ugac.grant.title": { en: "Grant tickets", ja: "チケットを付与" },
+  "ugac.adjust.title": { en: "Adjust tickets", ja: "チケットを調整" },
+  "ugac.type": { en: "Ticket type", ja: "チケット種別" },
+  "ugac.amount": { en: "Amount", ja: "数量" },
+  "ugac.grantHint": {
+    en: "Additive only. Writes the ledger, never the grants queue — the player's device is told, not asked.",
+    ja: "加算のみです。付与キューではなく台帳に直接書き込みます（プレイヤー端末には通知するだけで、値を尋ねません）。",
+  },
+  "ugac.adjustHint": {
+    en: "A negative amount is allowed. One that would take the balance below zero is REFUSED, not clamped.",
+    ja: "マイナスの数量も指定できます。残高が 0 を下回る調整は切り捨てではなく拒否されます。",
+  },
+  "ugac.ledger": { en: "Recent ticket movements", ja: "最近のチケット履歴" },
+  "ugac.noLedger": { en: "No ticket movements.", ja: "チケットの履歴はありません。" },
+  "ugac.pity": { en: "Pity", ja: "天井" },
+  "ugac.noPity": { en: "No pity counters — this player has not pulled yet.", ja: "天井カウンターはありません（まだ抽選していません）。" },
+  "ugac.pityNone": { en: "no pity", ja: "天井なし" },
+  "ugac.pityOf": { en: "{counter} / {threshold} to {rarity}", ja: "{rarity} まで {counter} / {threshold}" },
+  "ugac.totalPulls": { en: "{used} pulls", ja: "{used} 回抽選" },
+  "ugac.totalPullsCapped": { en: "{used} / {limit} pulls", ja: "{used} / {limit} 回抽選" },
+  "ugac.resetPity": { en: "Reset", ja: "リセット" },
+  "ugac.resetPity.title": { en: "Reset the pity counter on {banner}?", ja: "{banner} の天井カウンターをリセットしますか？" },
+  "ugac.resetPity.body": {
+    en: "Sets the counter to 0. Total pulls are NOT reset — those are what maxPullsPerPlayer is measured against, and clearing them would hand the player a fresh allowance of a capped banner.",
+    ja: "カウンターを 0 に戻します。累計抽選回数はリセットされません（これは maxPullsPerPlayer の判定に使われる値であり、消去すると上限付きバナーの回数制限が実質的にリセットされてしまうためです）。",
+  },
+  "ugac.recentPulls": { en: "Recent pulls", ja: "最近の抽選" },
+  "ugac.noPulls": { en: "No pulls.", ja: "抽選履歴はありません。" },
+
+  // ---- Inventory tab, ticket section (gacha_server_pull §5.1) -------------
+  "uinv.ticketsLedger": { en: "Gacha tickets (server ledger)", ja: "ガチャチケット（サーバー台帳）" },
+  "uinv.ticketsDevice": { en: "Device counter (legacy)", ja: "端末側カウンター（旧仕様）" },
+  "uinv.ticketsDeviceHint": {
+    en: "The count the client still keeps in its save blob. It is NOT what the server charges against and it is not kept in step — it is retired when the client moves to the ledger.",
+    ja: "クライアントがセーブデータ内に保持している旧来のカウンターです。サーバーの消費判定には使われず、同期もされません。クライアントが台帳に移行した時点で廃止されます。",
+  },
+  "uinv.ticketsNotMigrated": {
+    en: "The ticket ledger does not exist on this project yet ({file}).",
+    ja: "このプロジェクトにはチケット台帳がまだ存在しません（{file}）。",
   },
 
   "tt.title": { en: "Ticket Types", ja: "チケット種別" },

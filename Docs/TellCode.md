@@ -7,7 +7,32 @@
 
 ## ▶ CURRENT STATE — update this block at every session boundary
 
-- **Gacha → admin: PLAN filed + spec A SPEC_READY (Architect, 2026-08-31)** — `Docs/GACHA_ADMIN_PLAN.md` §9 decisions taken by Cesar the same day (rates = rarity bp table + weights; pity per banner, may be none; dupes → RP; ticket ledger from 0; 5b overlay + gacha-only re-apply; banner text UI-authored, never in the artwork). **`Docs/Specs/Active/gacha_admin_catalogs/` is SPEC_READY** — kickoff below.
+- **⚠️ CESAR: TWO MIGRATIONS ARE WAITING FOR YOU (2026-08-31, `gacha_server_pull`).** Paste them
+  into the Supabase SQL editor (project `wmszyghwwkaptgqdunel`) **in this order**, then run each
+  file's VERIFICATION block and paste the output back:
+  **1.** `playlife/backend/migrations/2026_09_01_golfin_gacha.sql` — the five gacha tables, the
+  ticket ledger, `golfin_ticket_credit()` / `golfin_ref_owned()` / `golfin_gacha_pull()`, the
+  `gacha_enabled` pause row and the `gacha_dupe` earn action.
+  **2.** `playlife/backend/migrations/2026_09_01_shop_purchase_tickets.sql` — `create or replace
+  golfin_shop_purchase` with `category = ticket`, and it CALLS two functions from file 1, so the
+  order is not optional.
+  Nothing else is blocked on anything else: the API is already deployed (image
+  `deployment-01M1B5F2YV1ZJT84RX7RSGN5WW`) and the dashboard build is green. Until they land,
+  `/api/v1/gacha/pull` 500s, the Gacha panel shows its `notMigrated` notice, and an admin ticket
+  grant answers **503 naming the file** (the old grants-queue path for tickets is gone on purpose).
+  The SPEC §7 roll-parity harness and the §8 live E2E run in one pass afterwards.
+
+- **`gacha_server_pull` (B) is BUILT — backend + dashboard, no Unity change (2026-08-31).**
+  `golfin_gacha_pull()` prices the banner on the server clock, debits the new ticket ledger, rolls
+  against the published rates × pool with pity and the x10 guarantee, and queues the grants — one
+  transaction, idempotent by key, every business outcome a 200. `routers/gacha.py` at
+  `/api/v1/gacha` (`pull` / `history` / `tickets`), a Gacha ops panel (pause switch + pull log +
+  CSV + odds audit), a Users-drawer **Gacha** tab, and the admin ticket grant moved off
+  `golfin_pending_grants` onto the ledger. `GachaPullFlow` is untouched and still plays its mock —
+  that is spec C. **One real bug fell out:** `lib/gachaOdds.ts` fired pity at
+  `counter >= threshold`, one pull LATE; both implementations now use `counter + 1 >= threshold`.
+
+- **Gacha → admin: PLAN filed + spec A SPEC_READY (Architect, 2026-08-31)** — `Docs/GACHA_ADMIN_PLAN.md` §9 decisions taken by Cesar the same day (rates = rarity bp table + weights; pity per banner, may be none; dupes → RP; ticket ledger from 0; 5b overlay + gacha-only re-apply; banner text UI-authored, never in the artwork). **`gacha_admin_catalogs` (A) and `gacha_server_pull` (B) are both SPEC_READY** — kickoffs below; Code is on A. B starts once A is seeded; C (`gacha_client_real_pull`, blocked on A + B) and D (`gacha_ops_polish`, blocked on C) are SPEC_READY too — all four specs filed; run A → B → C → D.
 - **Missions track CLOSED (Cesar, 2026-08-30).** `missions_v1` DONE (`8a4275064`, mode OPEN on
   prod — `modes` v8, `texts` v16, 40 component-built missions on Lomond, server-generated Daily
   Mission, seven catalogs + Missions/Components/Daily panels) and `daily_mission_home_pill` DONE
@@ -112,6 +137,135 @@
   content catalogs (`gacha_banners` extended, `gacha_rates`, `gacha_pools`, `ticket_types`), seed,
   round trip, three admin panels + validation + art upload, one client parser rail. Game behaviour
   unchanged. Specs B (`gacha_server_pull`), C (`gacha_client_real_pull`), D follow.
+
+- **`gacha_server_pull`** (filed 2026-08-31, Architect via Cowork) — **BUILT 2026-08-31, STATUS
+  `AWAITING_MIGRATION`.** ⚠️ Do NOT re-dispatch an implementer on this: the code is written, the
+  API is deployed and the suites are green. What is outstanding is Cesar pasting the two
+  migrations (see CURRENT STATE above) and then the §7 parity + §8 E2E run.
+  `Docs/Specs/Active/gacha_server_pull/SPEC.md`. Spec B: `golfin_gacha_pull()` reads the PUBLISHED
+  gacha catalogs (no mirror), ticket ledger `golfin_tickets` + `golfin_ticket_credit()`, roll with
+  pity / x10 guarantee (§3 — must match `lib/gachaOdds.ts` from spec A), `routers/gacha.py`
+  (`/pull`, `/history`, `/tickets`), `gacha_enabled` pause, Gacha ops panel, shop `category=ticket`.
+  No Unity change. Run AFTER spec A's seed is applied (the live E2E needs the rows).
+
+- **`gacha_client_real_pull`** (filed 2026-08-31, Architect via Cowork) — `SPEC_READY`, **blocked on A + B DONE**.
+  `Docs/Specs/Active/gacha_client_real_pull/SPEC.md`. Spec C: overlay + 5b same-session re-apply
+  (`ContentService.TryReinstallFromCache`, gacha catalogs only), card title (EN/JA from the row,
+  TITLE ONLY — Cesar), art-by-URL ladder, numeric costs, withhold rule, `GachaPullService` →
+  `POST /gacha/pull` with the reveal modal covering the round trip, multi-kind prizes on
+  `BagClubCard` / `GeneralShopCard` (+ `BindTicket`), dupe "+N RP" pill, ledger-backed tickets,
+  server history, mocks + dev grant removed.
+
+- **`gacha_ops_polish`** (filed 2026-08-31, Architect via Cowork) — `SPEC_READY`, **blocked on C DONE**.
+  `Docs/Specs/Active/gacha_ops_polish/SPEC.md`. Spec D (last): in-app RATES modal built from the
+  overlaid rates/pools (signup-modal rules shell), five-event telemetry funnel + Telemetry-panel
+  card, Gold ticket placeholder icon + admin `iconUrl` upload, `TICKET_SHOP_BUILD` + the first
+  `category=ticket` shop row (Cesar sets price/quantity) once the C archive exists.
+
+### Kickoff · gacha_ops_polish (issued 2026-08-31 — start ONLY when gacha_client_real_pull is DONE)
+
+```
+Read Docs/Specs/Active/gacha_ops_polish/SPEC.md and implement it.
+
+Context:
+- Spec D (last) of Docs/GACHA_ADMIN_PLAN.md. Four independent pieces, one commit each:
+  (1) GachaRatesModalController + GachaRatesModal.prefab cloned from the TournamentSignupModal
+  rules shell (Figma 13892:3254 family), body generated at show time from GachaRatesCatalog /
+  GachaPoolCatalog / the banner row via a pure GachaRatesText.Build seam (featured, rates by
+  rarity, per-item effective odds = rateBp/10000 x weight/sum(tier), pity / x10 guarantee /
+  dupe lines, Full-rules link gated by BannerPolicy.IsLinkAllowed); RULES button always opens
+  it. (2) Telemetry: gacha_banner_view / gacha_pull_tap / gacha_pull_result /
+  gacha_reveal_skip / gacha_rules_open via TelemetryService.Instance.RecordSafe + a Gacha
+  funnel card on the Telemetry panel (lib/telemetryGacha.ts, vitest). (3) Gold ticket:
+  Ticket_Standard/Ticket_Gold placeholder PNGs derived by an Editor script from the top-bar
+  ticket sprite, ticket_types.csv iconSprite through the importer, admin iconUrl upload
+  (contentArtMutations ALLOWED_CATALOGS/COLUMNS). (4) After the C archive is uploaded:
+  TICKET_SHOP_BUILD from last_uploaded_build.txt, first category=ticket shop row from the
+  admin (Cesar gives quantity + rpCost), export, live purchase verified by SQL.
+- Look at: TournamentSignupModalController + prefab (modal shell), TelemetryHooks.cs +
+  TelemetryService.RecordSafe, telemetry-panel.tsx Flick-timing card (the card precedent),
+  contentArtMutations.ts, lib/buildGates.ts, GachaBannerCard.OnRules.
+- Strings: seven GACHA_RATES_* keys EN+JA via LocalizationText.csv -> import_content.py ->
+  publish texts -> --check clean; dashboard strings in lib/i18n.ts DICT en + ja.
+- Minimal diff. Reuse existing systems (named above). Screenshot the modal for Cesar.
+- Out of scope: a Gold ticket top-bar counter, any card/modal redesign, deleting old keys,
+  mission/tournament ticket grants, choosing the ticket price.
+
+When done: list changed files with a 1-line summary each, run the acceptance
+tests in the spec, flag which need manual verification, update STATUS.md +
+IMPLEMENTER_REPORT.md in the spec folder, and update Docs/AI_CONTEXT.md.
+```
+
+### Kickoff · gacha_client_real_pull (issued 2026-08-31 — start ONLY when gacha_admin_catalogs and gacha_server_pull are both DONE and deployed)
+
+```
+Read Docs/Specs/Active/gacha_client_real_pull/SPEC.md and implement it.
+
+Context:
+- Spec C of Docs/GACHA_ADMIN_PLAN.md — the Unity half of A + B. Banners/rates/pools/ticket
+  types get the ContentCatalogStore overlay (ClubDatabaseCSV.LoadCSV shape) plus a gacha-only
+  same-session re-apply on ContentService.OnCacheRefreshed (5b); GachaBannerCard renders the
+  row's title (JA/EN, title only), art via CatalogArtCache.Cached(artUrl, bundled), numeric
+  costX1/costX10, and the card's two guarantee lines bound to pityThreshold /
+  pityMinRarity / guaranteeMinRarityX10 (hidden when none — SPEC §3, amended 2026-08-31
+  pre-kickoff); a banner is WITHHELD unless window open + pool rollable for this build +
+  ticket type + art resolve (SPEC §3.1, pure seam IsRollable). GachaPullFlow.Pull opens the
+  reveal modal in a waiting state, calls the new GachaPullService (ShopPurchaseService
+  shape, PointsBackendFlag gate inside the routine) and continues the reveal with the
+  SERVER's prizes; PrizeRecord becomes multi-kind; tickets come from GET /gacha/tickets and
+  the pull response (SpendTickets + the 3 dev-grant sites deleted; tickets leave the blob
+  merge); history from GET /gacha/history; mocks deleted.
+- Look at: ClubDatabaseCSV.cs:92-97 + :235 (overlay + art ladder), ShopPurchaseService.cs
+  (service shape), GachaRevealModalController.Play (split into BeginWaiting / Continue /
+  Abort), GachaPrizesScreenController.BindCard (becomes GachaPrizeCardBinder),
+  GeneralShopCard.Bind* (non-club prize cards + new BindTicket), InventoryProjector
+  (ticket exclusion), ContentService.OnCacheRefreshed + RemoteContentSource.ReadCache.
+- Strings: nine GACHA_* keys EN+JA via LocalizationText.csv -> import_content.py (plan ->
+  --apply) -> publish texts -> --check clean. Zero hardcoded .text literals.
+- Live E2E from the Editor against prod (SPEC §7) is part of the task; screenshots listed
+  there, especially the card with numeric costs (Cesar approves that visual).
+- Minimal diff. Reuse existing systems (named above). No backend / dashboard change.
+- Out of scope: tagline, new card designs, rates modal, telemetry, TICKET_SHOP_BUILD,
+  mission/tournament ticket grants.
+
+When done: list changed files with a 1-line summary each, run the acceptance
+tests in the spec, flag which need manual verification, update STATUS.md +
+IMPLEMENTER_REPORT.md in the spec folder, and update Docs/AI_CONTEXT.md.
+```
+
+### Kickoff · gacha_server_pull (issued 2026-08-31 — start when gacha_admin_catalogs is DONE or at least seeded)
+
+```
+Read Docs/Specs/Active/gacha_server_pull/SPEC.md and implement it.
+
+Context:
+- Spec B of Docs/GACHA_ADMIN_PLAN.md. Backend + dashboard only, NO Unity change.
+  playlife: migration 2026_09_01_golfin_gacha.sql (golfin_tickets, golfin_ticket_transactions,
+  golfin_gacha_pulls, golfin_gacha_prizes, golfin_gacha_pity, content_settings.gacha_enabled,
+  game_point_actions.gacha_dupe) + golfin_ticket_credit() + golfin_ref_owned() +
+  golfin_gacha_pull() modelled on golfin_shop_purchase() (replay -> kill switches -> banner
+  window/min_build on the server clock -> cost_changed guard -> pool rollable for this build ->
+  ticket debit -> roll per SPEC §3 -> grants/dupe RP/ticket prizes -> record, one transaction);
+  routers/gacha.py at /api/v1/gacha (pull/history/tickets); shop migration adding
+  category=ticket. Dashboard: Gacha ops panel (pause switch, pull log + CSV, odds audit
+  excluding forced slots, per-user tickets grant/adjust + pity reset in a Users-drawer Gacha
+  tab); admin ticket grants now write the LEDGER, never golfin_pending_grants.
+- Look at: migrations/2026_08_27_golfin_shop_purchase.sql (the template, step for step),
+  routers/shop.py + tests/test_shop_purchase.py (router + fake-Supabase harness),
+  app/api/content/enabled/route.ts (pause switch), app/api/users/[id]/inventory/route.ts +
+  users/action-modals.tsx (ticket grant path to redirect), lib/gachaOdds.ts (spec A) for the
+  §3 roll parity.
+- Every migration: FULL SQL in chat for Cesar; verification block; RLS on / no policies.
+- The §7 roll-parity tables and the §8 live E2E (curl with a real token + SQL) are part of
+  the task, not an epilogue. Three deploy proofs (§23).
+- Minimal diff. Reuse existing systems (named above). Dashboard strings via lib/i18n.ts DICT
+  en + ja; no player strings.
+- Out of scope: everything under the spec's Out of scope list (all Unity work is spec C).
+
+When done: list changed files with a 1-line summary each, run the acceptance
+tests in the spec, flag which need manual verification, update STATUS.md +
+IMPLEMENTER_REPORT.md in the spec folder, and update Docs/AI_CONTEXT.md.
+```
 
 ### Kickoff · gacha_admin_catalogs (issued 2026-08-31)
 

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { checkAdmin } from "@/lib/auth";
 import { fetchPlayerInventory } from "@/lib/inventoryData";
+import { creditTickets } from "@/lib/gachaMutations";
 import { issueInventoryGrant, revokeInventoryGrant } from "@/lib/inventoryMutations";
 
 export const dynamic = "force-dynamic";
@@ -80,15 +81,40 @@ export async function POST(
     );
   }
 
-  try {
-    const outcome = await issueInventoryGrant(
-      check.email,
-      id,
-      body.kind,
-      body.refId,
-      body.amount,
-      typeof body.note === "string" ? body.note : ""
+  // A ticket addresses its target by NUMBER (the `ticket_types` row id, which is
+  // the client's TicketType int). Checked before the Number() cast below so a
+  // typo is a message naming the field rather than a NaN reaching the ledger.
+  if (body.kind === "ticket" && !/^\d+$/.test(body.refId.trim())) {
+    return NextResponse.json(
+      { error: "A ticket grant addresses its type by number, so refId must be an integer." },
+      { status: 400 }
     );
+  }
+
+  try {
+    // ⚠️ A TICKET IS NOT A GRANT ANY MORE (gacha_server_pull §5.1). It is routed
+    // to `golfin_ticket_credit()` — the only writer of the `golfin_tickets`
+    // ledger — instead of being queued for the client to apply into its save
+    // blob. The old path made the DEVICE the authority on a currency the server
+    // now sells and spends.
+    //
+    // Routed HERE rather than by asking the caller to use a different endpoint,
+    // because the grant modal is where an operator already goes and a modal that
+    // says "wrong door" is a modal people work around. The response message says
+    // where the tickets actually went. `note` is dropped on this path: the ledger
+    // row carries `reason` and `created_by`, and a free-text note with nowhere to
+    // live would silently vanish.
+    const outcome =
+      body.kind === "ticket"
+        ? await creditTickets(check.email, id, Number(body.refId), body.amount, false)
+        : await issueInventoryGrant(
+            check.email,
+            id,
+            body.kind,
+            body.refId,
+            body.amount,
+            typeof body.note === "string" ? body.note : ""
+          );
     if (!outcome.ok) {
       return NextResponse.json({ error: outcome.message }, { status: outcome.status });
     }

@@ -43,7 +43,7 @@ those is a price or a payout change, not a display change:
 | `bags` | `Assets/Data/Bags.csv` | |
 | `balls` | `Assets/Data/Balls.csv` | |
 | `texts` | `Assets/Localization/LocalizationText.csv` | |
-| `shop_catalog` | `Assets/Resources/Data/shop_catalog.csv` | `POST /shop/purchase` prices from the published rows |
+| `shop_catalog` | `Assets/Resources/Data/shop_catalog.csv` | `POST /shop/purchase` prices from the published rows; `category = ticket` credits the ticket ledger (spec B §5.2) |
 | `level_up_costs` | `Assets/Data/LevelUpCosts.csv` | `golfin_level_up()` sums `cost_r` over the published rows |
 | `modes` | `Assets/Resources/Data/modes.csv` | `POST /points/spend` prices a mode entry, via the `golfin_mode_fees` mirror |
 | `missions` | `Assets/Resources/Data/missions.csv` | `POST /missions/claim` pays from the `golfin_mission_rewards` mirror |
@@ -58,10 +58,23 @@ those is a price or a payout change, not a display change:
 | `gacha_pools` | `Assets/Resources/Data/gacha_pools.csv` | `golfin_gacha_pull()` picks the prize from the published rows (spec B) |
 | `ticket_types` | `Assets/Resources/Data/ticket_types.csv` | the ticket ledger (spec B); `id` is the `ticketTypeInt` in player saves |
 
-The four gacha catalogs are read by the server **without a mirror** — the pull
-function reads `content_rows` directly, the way `golfin_shop_purchase()` does
-(`Docs/GACHA_ADMIN_PLAN.md` §2). `ticket_types.id` is the integer persisted in
-saves: append only, never renumber.
+The four gacha catalogs are read by the server **without a mirror**, and this is
+now LIVE rather than planned: `golfin_gacha_pull()`
+(`2026_09_01_golfin_gacha.sql`) reads `content_rows` directly on every pull, the
+way `golfin_shop_purchase()` does (`Docs/GACHA_ADMIN_PLAN.md` §2).
+
+⚠️ **`mirrorForCatalog` DOES NOT APPLY to any of the four.** There is nothing to
+mirror — no `golfin_gacha_*` config table is derived at publish time — so
+`MIRRORED_CATALOGS` in `Tools/admin-dashboard/lib/contentMutations.ts` must stay
+without them. Adding one would create a second copy of the rate table that a
+rollback could leave behind, which is precisely the `golfin_mode_fees` incident
+of 2026-08-28. **A publish or a rollback of these four takes effect on the NEXT
+PULL**, with no deploy and no client build: the function reads the published row
+at call time.
+
+`ticket_types.id` is the integer persisted in saves: append only, never renumber.
+It is also the primary key of `golfin_tickets`, so renumbering would silently
+re-attribute every balance.
 
 Adding one is a row in `CATALOGS` plus a scoped seed:
 

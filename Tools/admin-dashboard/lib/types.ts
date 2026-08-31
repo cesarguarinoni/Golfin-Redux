@@ -408,6 +408,21 @@ export interface PlayerInventoryResponse {
   rev: number;
   updatedAt: string | null;
   grants: InventoryGrantRow[];
+  /**
+   * The AUTHORITATIVE ticket balances + the last 20 ledger movements
+   * (gacha_server_pull §5.1).
+   *
+   * Carried on the inventory response, not fetched separately, because the tab
+   * that renders it is the Inventory tab: the blob's `tickets` map is now a
+   * DEVICE COUNTER shown next to the real number, and putting the two behind
+   * two round trips would let one render before the other and read as a
+   * disagreement. Undefined only while the migration has not been applied.
+   */
+  tickets?: {
+    balances: TicketBalanceRow[];
+    transactions: TicketTransactionRow[];
+    notMigrated?: string;
+  };
   mock: boolean;
 }
 
@@ -796,4 +811,132 @@ export interface ContentRowInput {
    * silently. With it, `upsertDraftRow` answers 409 (shop_stocking §2).
    */
   expectNew?: boolean;
+}
+
+// ---------------------------------------------------------------------------
+// Gacha ops (gacha_server_pull §6)
+// ---------------------------------------------------------------------------
+//
+// LIVE tables, not content: `golfin_gacha_pulls`, `golfin_gacha_prizes`,
+// `golfin_tickets`, `golfin_ticket_transactions`, `golfin_gacha_pity`. There is
+// no draft and no publish — a row is what the server recorded, from the moment
+// it happened. The four gacha CATALOGS (banners, rates, pools, ticket types)
+// are the other half and live in the content panels.
+
+export interface GachaPrizeRow {
+  slot: number;
+  kind: string;
+  refId: string;
+  quantity: number;
+  rarity: string;
+  isDupe: boolean;
+  /** RP ACTUALLY credited after the game_point_actions cap, not the catalog's number. */
+  dupeRp: number;
+  /** golfin_pending_grants.id. Null for a dupe and for a ticket prize. */
+  grantId: string | null;
+  /** Resolved from the referenced catalog for display; null when it no longer exists. */
+  refName: string | null;
+}
+
+export interface GachaPullRow {
+  id: string;
+  userId: string;
+  userEmail: string | null;
+  bannerId: string;
+  poolId: string;
+  pullCount: number;
+  ticketType: number;
+  cost: number;
+  pityBefore: number;
+  pityAfter: number;
+  pityForced: boolean;
+  guaranteeForced: boolean;
+  build: number;
+  createdAt: string;
+  prizes: GachaPrizeRow[];
+}
+
+export interface GachaPullsResponse {
+  pulls: GachaPullRow[];
+  /** Distinct banner ids present in the published catalog, for the filter. */
+  banners: string[];
+  /** Oldest `createdAt` on this page when it was full, else null. */
+  nextBefore: string | null;
+  /** Live `content_settings.gacha_enabled`. */
+  gachaEnabled: boolean;
+  stats: GachaStats;
+  mock: boolean;
+  /** Set while 2026_09_01_golfin_gacha.sql has not been applied here. */
+  notMigrated?: string;
+}
+
+export interface GachaStats {
+  pullsToday: number;
+  pulls7d: number;
+  ticketsSunkToday: number;
+  ticketsSunk7d: number;
+  dupeRp7d: number;
+}
+
+export interface GachaOddsResponse {
+  bannerId: string;
+  poolId: string;
+  /** Pulls the audit sampled — the selector's 100 / 1000 / all. */
+  sampledPulls: number;
+  comparableSlots: number;
+  forcedSlots: number;
+  pityPulls: number;
+  guaranteePulls: number;
+  significant: boolean;
+  tiers: Array<{
+    rarity: string;
+    publishedPct: number;
+    observed: number;
+    observedPct: number;
+    deltaPt: number;
+    amber: boolean;
+  }>;
+  mock: boolean;
+  notMigrated?: string;
+}
+
+export interface TicketBalanceRow {
+  ticketType: number;
+  /** ticket_types.nameEn, or null when the type is no longer published. */
+  label: string | null;
+  balance: number;
+  updatedAt: string | null;
+}
+
+export interface TicketTransactionRow {
+  id: string;
+  ticketType: number;
+  delta: number;
+  balanceAfter: number;
+  reason: string;
+  createdBy: string | null;
+  createdAt: string;
+}
+
+export interface PlayerPityRow {
+  bannerId: string;
+  counter: number;
+  totalPulls: number;
+  /** The banner's published `pityThreshold`, or null when it has no pity. */
+  threshold: number | null;
+  minRarity: string | null;
+  /** The banner's published `maxPullsPerPlayer`, or null when uncapped. */
+  pullLimit: number | null;
+  updatedAt: string | null;
+}
+
+export interface PlayerGachaResponse {
+  balances: TicketBalanceRow[];
+  transactions: TicketTransactionRow[];
+  pity: PlayerPityRow[];
+  pulls: GachaPullRow[];
+  /** Published ticket types, so the grant modal can offer every one. */
+  ticketTypes: Array<{ id: number; label: string }>;
+  mock: boolean;
+  notMigrated?: string;
 }

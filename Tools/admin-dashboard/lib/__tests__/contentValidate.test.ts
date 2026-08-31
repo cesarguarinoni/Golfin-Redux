@@ -204,3 +204,135 @@ describe("row ids a `+ New row` may mint", () => {
     expect(isValidNewRowId("modes", "m".repeat(81))).toBe(false);
   });
 });
+
+/**
+ * shop_catalog — the TWO ticket rules (gacha_server_pull §5.2).
+ *
+ * SCOPE, deliberately narrow for the same reason the header states: this covers
+ * the two rules THIS task added (G1-T and G3-Q) and nothing else about
+ * shop_catalog. Retro-covering G1, G2 and the sale-price rules would be scope
+ * this task did not take.
+ *
+ * WHY THESE TWO ARE WORTH PINNING. G1-T is the ONLY thing standing between an
+ * operator and a live ticket listing that the shipped client cannot apply — the
+ * server would charge the RP, credit the ledger correctly, and the player would
+ * be shown a failure. And `min_build` is immutable once published, so there is
+ * no fixing it afterwards. G3-Q closes the trap that `quantity` opens: the
+ * server reads it for `ticket` only, so a `quantity: 5` on a ball row is a
+ * number an operator wrote that means nothing.
+ */
+
+const shopRow = (rowId: string, data: Record<string, unknown>, over: Partial<DraftRow> = {}): DraftRow => ({
+  rowId,
+  data: { entryId: rowId, sortOrder: "1", ...data },
+  minBuild: 0,
+  isActive: true,
+  ...over,
+});
+
+/**
+ * `otherCatalogs` entries so the referential-integrity rule is satisfied.
+ *
+ * The referenced rows are full `DraftRow`s, `data` included: rule 8's RP-band
+ * WARNING reads `…?.get(refId)?.data.rarity` with no guard on `.data`, so a
+ * stub without one throws inside the validator rather than failing the
+ * assertion. (Worth knowing: a caller that builds this map by hand and omits
+ * `data` gets a TypeError from `validateCatalog`, not a validation problem.)
+ */
+const refCtx = () =>
+  ctx({
+    otherCatalogs: new Map([
+      ["ticket_types", new Map([["0", row("0", { id: "0", key: "standard", nameEn: "Ticket" })]])],
+      ["balls", new Map([["ball_golfin", row("ball_golfin", { id: "ball_golfin", name: "Golfin Ball" })]])],
+      ["clubs", new Map([["club_driver_gf", row("club_driver_gf", { id: "club_driver_gf", name: "Driver", rarity: "Common" })]])],
+    ]),
+  });
+
+const shopErrors = (rows: DraftRow[]) =>
+  validateCatalog("shop_catalog", rows, refCtx()).filter((p) => p.severity === "error");
+
+describe("shop_catalog — G1-T, the ticket build gate", () => {
+  it("refuses an ACTIVE ticket row while TICKET_SHOP_BUILD is 0", () => {
+    // ⚠️ This test asserts the CURRENT value of the constant on purpose. When
+    // the spec-C build is archived and TICKET_SHOP_BUILD is set, this test
+    // SHOULD fail — and the person setting it is exactly the person who should
+    // be told to revisit the ticket rules. A test written to pass in both
+    // states would gate nothing.
+    const problems = shopErrors([
+      shopRow("shop_ticket_5", { category: "ticket", refId: "0", rpCost: "100", quantity: "5" }),
+    ]);
+    expect(problems.map((p) => p.column)).toContain("min_build");
+    expect(problems.find((p) => p.column === "min_build")!.message).toMatch(/ticket purchase/i);
+  });
+
+  it("leaves a DEACTIVATED ticket row alone", () => {
+    // Same carve-out G1 and G2 make, for the same reason: no client renders a
+    // deactivated row, and min_build is immutable once published — so gating one
+    // would make a catalog permanently unpublishable with deactivation as the
+    // only way out.
+    const problems = shopErrors([
+      shopRow(
+        "shop_ticket_5",
+        { category: "ticket", refId: "0", rpCost: "100" },
+        { isActive: false }
+      ),
+    ]);
+    expect(problems.map((p) => p.column)).not.toContain("min_build");
+  });
+
+  it("does not double-report a ticket row under G1 as well", () => {
+    // `ticket` is neither club nor ball, so it would trip G1 too. Two errors on
+    // one row for one cause — naming two different constants and two different
+    // builds — is how an operator learns to skim them.
+    const minBuildProblems = shopErrors([
+      shopRow("shop_ticket_5", { category: "ticket", refId: "0", rpCost: "100" }),
+    ]).filter((p) => p.column === "min_build");
+    expect(minBuildProblems).toHaveLength(1);
+  });
+
+  it("still refuses a ticket row that points at nothing", () => {
+    const problems = shopErrors([
+      shopRow("shop_ticket_x", { category: "ticket", refId: "nope", rpCost: "100" }),
+    ]);
+    expect(problems.map((p) => p.column)).toContain("refId");
+  });
+});
+
+describe("shop_catalog — G3-Q, quantity means something only for a ticket", () => {
+  it("refuses quantity > 1 on a ball row", () => {
+    const problems = shopErrors([
+      shopRow("shop_ball_x", { category: "ball", refId: "ball_golfin", rpCost: "50", quantity: "3" }),
+    ]);
+    expect(problems.map((p) => p.column)).toContain("quantity");
+  });
+
+  it("accepts an explicit quantity of 1 on a non-ticket row", () => {
+    // 1 is what a blank means, so writing it changes nothing and refusing it
+    // would be pedantry.
+    const problems = shopErrors([
+      shopRow("shop_ball_x", { category: "ball", refId: "ball_golfin", rpCost: "50", quantity: "1" }),
+    ]);
+    expect(problems.map((p) => p.column)).not.toContain("quantity");
+  });
+
+  it("accepts a blank quantity on every category", () => {
+    const problems = shopErrors([
+      shopRow("shop_ball_x", { category: "ball", refId: "ball_golfin", rpCost: "50", quantity: "" }),
+    ]);
+    expect(problems.map((p) => p.column)).not.toContain("quantity");
+  });
+
+  it("refuses quantity 0 on a ticket row — a listing that sells nothing", () => {
+    const problems = shopErrors([
+      shopRow("shop_ticket_0", { category: "ticket", refId: "0", rpCost: "100", quantity: "0" }),
+    ]);
+    expect(problems.map((p) => p.column)).toContain("quantity");
+  });
+
+  it("refuses a non-numeric quantity (the NUMERIC column rule)", () => {
+    const problems = shopErrors([
+      shopRow("shop_ticket_x", { category: "ticket", refId: "0", rpCost: "100", quantity: "five" }),
+    ]);
+    expect(problems.map((p) => p.column)).toContain("quantity");
+  });
+});

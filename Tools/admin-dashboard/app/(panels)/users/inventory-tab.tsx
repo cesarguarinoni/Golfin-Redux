@@ -232,6 +232,68 @@ export function InventoryTab({
         )}
       </div>
 
+      {/* THE SERVER LEDGER, and it is OUTSIDE the `inv` guard on purpose: a
+          player who has never synced an inventory blob can still have been
+          granted tickets, and hiding their balance behind "never synced" would
+          answer the support question with a blank. */}
+      {data.tickets && (
+        <Section
+          title={t("uinv.ticketsLedger")}
+          count={data.tickets.balances.length}
+        >
+          {data.tickets.notMigrated ? (
+            <p className="py-2 text-center text-[11px] text-amber-300">
+              {t("uinv.ticketsNotMigrated", { file: data.tickets.notMigrated })}
+            </p>
+          ) : data.tickets.balances.length === 0 ? (
+            <Empty label={t("ugac.noTickets")} />
+          ) : (
+            <ul className="space-y-1">
+              {data.tickets.balances.map((b) => (
+                <li
+                  key={b.ticketType}
+                  className="flex items-center justify-between gap-2 rounded border border-surface-800/70 bg-surface-900/60 px-2 py-1"
+                >
+                  <span className="truncate text-[11px] text-zinc-300">
+                    <code className="mr-1.5 text-zinc-500">#{b.ticketType}</code>
+                    {b.label ?? "—"}
+                  </span>
+                  <span className="shrink-0 text-[11px] font-semibold tabular-nums text-accent-300">
+                    {b.balance.toLocaleString()}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {(data.tickets.transactions.length > 0) && (
+            <ul className="mt-2 space-y-1 border-t border-surface-800 pt-2">
+              {data.tickets.transactions.map((tx) => (
+                <li key={tx.id} className="flex items-baseline justify-between gap-2 text-[10px]">
+                  <span className="truncate text-zinc-500">
+                    <code className="mr-1 text-zinc-600">#{tx.ticketType}</code>
+                    {tx.reason}
+                  </span>
+                  <span
+                    className={`shrink-0 tabular-nums ${
+                      tx.delta < 0 ? "text-red-400" : "text-accent-400"
+                    }`}
+                  >
+                    {tx.delta > 0 ? "+" : ""}
+                    {tx.delta}
+                    <span className="ml-1 text-zinc-600">→ {tx.balanceAfter}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <p className="mt-1.5 text-[10px] leading-relaxed text-zinc-600">
+            {t("ugac.ledgerNote")}
+          </p>
+        </Section>
+      )}
+
       {!inv ? (
         <p className="mt-4 rounded-lg border border-surface-800 bg-surface-950 px-3 py-6 text-center text-xs text-zinc-500">
           {t("uinv.neverSynced")}
@@ -270,12 +332,26 @@ export function InventoryTab({
             />
           </Section>
 
-          <Section title={t("uinv.tickets")} count={Object.keys(inv.tickets).length}>
+          {/* ⚠️ THE BLOB'S TICKET MAP IS A DEVICE COUNTER, NOT A BALANCE
+              (gacha_server_pull §5.1). `golfin_tickets` is the authority the
+              server charges against; this map is what the client still keeps in
+              its save and it is NOT kept in step with the ledger. The two are
+              rendered together, labelled, because an operator comparing them is
+              exactly the support question — and a panel that showed only one of
+              them would answer it wrongly whichever one it picked. The device
+              copy retires when the client moves to the ledger (spec C). */}
+          <Section
+            title={t("uinv.ticketsDevice")}
+            count={Object.keys(inv.tickets).length}
+          >
             <CountList
               counts={inv.tickets}
               emptyLabel={t("uinv.noTickets")}
               unlimitedLabel={t("uinv.unlimited")}
             />
+            <p className="mt-1.5 text-[10px] leading-relaxed text-zinc-600">
+              {t("uinv.ticketsDeviceHint")}
+            </p>
           </Section>
 
           <section className="mt-3 grid grid-cols-1 gap-2 rounded-lg border border-surface-800 bg-surface-950 p-3 sm:grid-cols-3">

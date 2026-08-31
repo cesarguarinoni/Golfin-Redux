@@ -1,4 +1,5 @@
 import "server-only";
+import { fetchPlayerGacha } from "./gachaData";
 import { isMockMode } from "./mode";
 import {
   MOCK_INVENTORY_GRANTS,
@@ -128,11 +129,13 @@ export async function fetchPlayerInventory(
   userId: string
 ): Promise<PlayerInventoryResponse> {
   if (isMockMode()) {
+    const gacha = await fetchPlayerGacha(userId);
     return {
       inventory: MOCK_PLAYER_INVENTORY,
       rev: MOCK_INVENTORY_REV,
       updatedAt: "2026-08-26T00:00:00.000Z",
       grants: MOCK_INVENTORY_GRANTS,
+      tickets: { balances: gacha.balances, transactions: gacha.transactions },
       mock: true,
     };
   }
@@ -171,11 +174,33 @@ export async function fetchPlayerInventory(
     grants = (grantRes.data as Row[]).map(toGrantRow);
   }
 
+  // THE TICKET LEDGER IS A THIRD, SEPARATE DEGRADATION (gacha_server_pull §5.1).
+  // The blob can be readable while `golfin_tickets` does not exist yet — that is
+  // exactly the window between deploying this dashboard and applying
+  // 2026_09_01_golfin_gacha.sql — and the drawer must still open. `fetchPlayerGacha`
+  // already answers `notMigrated` rather than throwing for that case; anything
+  // else it throws is caught here for the same reason the grants read is.
+  let tickets: PlayerInventoryResponse["tickets"];
+  try {
+    const gacha = await fetchPlayerGacha(userId);
+    tickets = {
+      balances: gacha.balances,
+      transactions: gacha.transactions,
+      ...(gacha.notMigrated ? { notMigrated: gacha.notMigrated } : {}),
+    };
+  } catch (err) {
+    console.warn(
+      "golfin_tickets read failed:",
+      err instanceof Error ? err.message : String(err)
+    );
+  }
+
   return {
     inventory: decodeInventory(profile.golfin_inventory),
     rev: num(profile.golfin_inventory_rev),
     updatedAt: str(profile.golfin_inventory_at),
     grants,
+    tickets,
     mock: false,
   };
 }

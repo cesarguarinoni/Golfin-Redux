@@ -205,11 +205,12 @@ export interface SimulateResult {
  * ten, which is what a x10 is. The pity counter carries across blocks, as it
  * does per user × banner on the server.
  *
- * PITY, PRECISELY (decision 2): after `pityThreshold` pulls that did NOT reach
- * `pityMinRarity`, the NEXT pull is forced to at least that rarity and the
- * counter resets. A threshold of 0 or a blank `pityMinRarity` means no pity —
- * the two are treated identically, so a half-filled banner never silently
- * acquires one.
+ * PITY, PRECISELY (decision 2): the `pityThreshold`-th pull is forced to at
+ * least `pityMinRarity`, i.e. at most `threshold - 1` sub-minimum prizes can
+ * occur in a row, and the counter resets on any pull that reaches the rarity —
+ * whether it was forced there or got there by luck. A threshold of 0 or a blank
+ * `pityMinRarity` means no pity; the two are treated identically, so a
+ * half-filled banner never silently acquires one.
  */
 export function simulate(
   rates: RateRow[],
@@ -245,7 +246,17 @@ export function simulate(
     const slotInBlock = i % 10;
     if (slotInBlock === 0) blockBest = -1;
 
-    const pityForces = pityOn && counter >= banner.pityThreshold;
+    // `counter + 1 >= threshold`, i.e. the THRESHOLD-th pull is the forced one:
+    // a threshold of 3 allows at most two sub-minimum prizes in a row.
+    //
+    // ⚠️ CORRECTED 2026-08-31 (gacha_server_pull §3 step 1). This shipped as
+    // `counter >= threshold`, which fires one pull LATE — threshold 3 forced the
+    // fourth. `golfin_gacha_pull()` implements the spec's rule, and the two must
+    // agree or the SPEC §7 parity harness is comparing two different algorithms.
+    // The difference is invisible in a rate table (pity slots are excluded from
+    // the published comparison) and visible in `pityHits`, which is exactly the
+    // number the parity check reads.
+    const pityForces = pityOn && counter + 1 >= banner.pityThreshold;
     // The guarantee lands on the LAST slot of a block of ten, and only when the
     // nine before it did not already produce the rarity. Firing it on slot 0
     // would make every x10 open on its best prize, which is the opposite of how
