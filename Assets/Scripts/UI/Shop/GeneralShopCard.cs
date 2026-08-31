@@ -100,7 +100,7 @@ namespace GolfinRedux.UI.Shop
                 // A ticket listing sells N of one ticket type (gacha_server_pull §5.2, behind
                 // TICKET_SHOP_BUILD). RefId is the ticket_types id as a decimal string, and the
                 // quantity comes off the catalog row — the shop sells one bundle per listing.
-                case ShopCategory.Ticket:    BindTicket(entry.RefId, 1); break;
+                case ShopCategory.Ticket:    BindTicket(entry.RefId, entry.Quantity); break;
                 default:                     BindClub(entry);      break;
             }
 

@@ -73,6 +73,24 @@ namespace GolfinRedux.UI.Shop
         public bool         Offer      { get; set; }   // v1 unused (OFFERS curation grayed)
         public string       Rarity     { get; set; } = string.Empty; // ball display-rarity (clubs use DB rarity)
 
+        /// <summary>
+        /// How many of <see cref="RefId"/> one purchase delivers. <b>Only a TICKET listing may set
+        /// it</b> — `golfin_shop_purchase` reads `quantity` in its ticket branch and nowhere else,
+        /// so every other category delivers exactly 1 and the admin validator (rule G3-Q) refuses a
+        /// value on one. Absent or blank is 1.
+        ///
+        /// <para>
+        /// gacha_ops_polish §5. Before this the column was not parsed at all and
+        /// <c>GeneralShopCard</c> passed a hard-coded <c>1</c> to <c>BindTicket</c> — while the
+        /// comment above that call already said "the quantity comes off the catalog row". So the
+        /// first ticket listing would have rendered "×1" on a card that credits fifty. Not a money
+        /// bug (the ledger was always right), but a card that lies about what it sells, and
+        /// `min_build` is immutable once published — so it had to be right before the row existed,
+        /// not after.
+        /// </para>
+        /// </summary>
+        public int          Quantity   { get; set; } = 1;
+
         // ── Scheduling (content_panels_gaps columns; honoured since content_overlay_catalogs §6) ──
 
         /// <summary>ISO-8601 listing start, INCLUSIVE. Empty = unbounded.</summary>
@@ -467,6 +485,9 @@ namespace GolfinRedux.UI.Shop
                 Popular     = f.GetBool("popular"),
                 Offer       = f.GetBool("offer"),
                 Rarity      = f.Get("rarity"),
+                // Clamped at 1: a blank column, a zero and a negative all mean "one bundle", and
+                // the card renders this number verbatim.
+                Quantity    = Mathf.Max(1, f.GetInt("quantity", 1)),
                 StartAt     = f.Get("startAt"),
                 EndAt       = f.Get("endAt"),
                 SaleStartAt = f.Get("saleStartAt"),
