@@ -85,5 +85,34 @@ namespace Golfin.Telemetry
         /// </para>
         /// </summary>
         public const string InventoryMergeRaise = "inventory_merge_raise";
+
+        // ── The gacha funnel (gacha_ops_polish §3) ────────────────────────────
+        //
+        // Five events, ALL carrying `banner_id`, that answer one question the server-side pull log
+        // structurally cannot: what happened to the players who did NOT pull. The log has a row per
+        // pull, so it can say what was won and never why a banner was seen a thousand times and
+        // tapped twice. These are the BEHAVIOUR view — views, taps, refusals, skips — and they stop
+        // at the six-int rarity histogram: duplicating prize detail into telemetry would create a
+        // second, weaker copy of a ledger that is already authoritative.
+
+        /// <summary>A banner card became the centred one, once per banner per Rewards Center open.
+        /// The denominator of every conversion rate below.</summary>
+        public const string GachaBannerView = "gacha_banner_view";
+
+        /// <summary>A PULL button was tapped — BEFORE the server is asked, so a tap that the
+        /// server then refuses still appears here. Taps minus results is the abandonment.</summary>
+        public const string GachaPullTap = "gacha_pull_tap";
+
+        /// <summary>The server answered. <c>status</c> distinguishes a pull from each of the six
+        /// refusals, which is what makes "insufficient tickets" measurable as a funnel step rather
+        /// than as a silent drop.</summary>
+        public const string GachaPullResult = "gacha_pull_result";
+
+        /// <summary>SKIP on the reveal. A high skip rate is a statement about the animation, not
+        /// about the pull.</summary>
+        public const string GachaRevealSkip = "gacha_reveal_skip";
+
+        /// <summary>The in-app RATES &amp; RULES modal was opened (§2).</summary>
+        public const string GachaRulesOpen = "gacha_rules_open";
     }
 }

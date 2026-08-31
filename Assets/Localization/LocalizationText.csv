@@ -419,6 +419,13 @@ GACHA_DUPE_RP,+{0} RP,+{0} RP
 GACHA_CARD_PITY,Guaranteed {0} or higher within,{0}以上が確定・最大
 GACHA_CARD_PULLS,{0} pulls,{0}回
 GACHA_CARD_GUARANTEE_X10,Every 10-pull includes at least one {0},10連ごとに{0}以上が1枚確定
+GACHA_RATES_TITLE,RATES & RULES,確率とルール
+GACHA_RATES_FEATURED,FEATURED,ピックアップ
+GACHA_RATES_FULL_RULES,Full rules,詳細ルール
+GACHA_RATES_PITY,Guaranteed {0} or higher within {1} pulls,{1}回以内に{0}以上が確定
+GACHA_RATES_GUARANTEE_X10,Every 10-pull includes at least one {0},10連ごとに{0}以上が1枚確定
+GACHA_RATES_DUPE,Duplicate clubs and characters are converted to Reward Points,重複したクラブとキャラクターはリワードポイントに変換されます
+GACHA_RATES_FOOTER,Rates apply to every pull on this banner.,確率はこのバナーのすべての排出に適用されます。
 SHOP_TAB_GACHA,GACHA,ガチャ
 SHOP_TAB_STORE,STORE,ストア
 SHOP_TAB_GIFTS,GIFTS,ギフト

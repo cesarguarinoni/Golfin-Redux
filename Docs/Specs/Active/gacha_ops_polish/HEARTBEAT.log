@@ -1,0 +1,12 @@
+=== iter-1 kickoff baseline 2026-08-31T10:56:46Z ===
+HEAD: 9d16a10ebdfb99dc85e01bcabe495ba9efa7a2f7
+DIRTY:
+ M Docs/Specs/Active/gacha_ops_polish/SPEC.md
+ M Docs/TellCode.md
+?? Docs/Specs/Active/gacha_ops_polish/HEARTBEAT.log
+?? Docs/Specs/Completed/gacha_client_real_pull/ARCHITECT_REVIEW.md
+=== end baseline ===
+
+2026-08-31T11:16:21Z §2 done: GachaRatesText + modal controller + prefab clone + scene instance + 13 EditMode tests.
+  Full EditMode suite 2146 tests, 0 failed, 3 pre-existing skips. Tripwire proved the new suite runs
+  (RarityTiers_AreListedRarestFirst failed on demand, production line = "LEGENDARY  2.00%").

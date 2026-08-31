@@ -283,9 +283,14 @@ namespace GolfinRedux.UI.Gacha
             {
                 _rulesButton.onClick.RemoveAllListeners();
                 _rulesButton.onClick.AddListener(OnRules);
-                // An empty rulesUrl hides the button rather than showing one that does nothing
-                // (the in-app RULES & RATES modal is spec D).
-                _rulesButton.gameObject.SetActive(!string.IsNullOrWhiteSpace(entry.RulesUrl));
+
+                // ALWAYS VISIBLE AGAIN (gacha_ops_polish §2). The button used to hide itself when
+                // rulesUrl was blank, because opening a browser was the only thing it could do.
+                // It now opens the in-app RATES modal, whose whole body is generated from the
+                // banner's own published pool — so there is no configuration under which it has
+                // nothing to show, and the odds disclosure must not be hideable by leaving a
+                // free-text URL column empty.
+                _rulesButton.gameObject.SetActive(true);
             }
         }
 
@@ -308,13 +313,27 @@ namespace GolfinRedux.UI.Gacha
             GachaPullFlow.Pull(_entry, 10);
         }
 
+        /// <summary>
+        /// RULES &amp; RATES opens the in-app modal (gacha_ops_polish §2), never the browser. The
+        /// <c>rulesUrl</c> still has a job — the modal turns it into a "Full rules" row when it
+        /// survives <c>BannerPolicy.IsLinkAllowed</c> — but it is no longer the button's ONLY
+        /// destination, which is what let a blank column hide the odds.
+        /// </summary>
         private void OnRules()
         {
-            if (_entry != null && !string.IsNullOrEmpty(_entry.RulesUrl))
+            if (_entry == null) return;
+
+            var modal = GachaRatesModalController.Instance;
+            if (modal == null)
             {
-                Debug.Log($"[GachaBannerCard] Opening rules URL: {_entry.RulesUrl}");
-                Application.OpenURL(_entry.RulesUrl);
+                // No modal in the scene. Loud rather than silent: the rates screen is a disclosure
+                // obligation, so a build that cannot show it is a defect and not a degraded mode.
+                Debug.LogError("[GachaBannerCard] RULES tapped but there is no GachaRatesModalController " +
+                               "in the scene — the rates cannot be shown. Check the ShellScene modal root.");
+                return;
             }
+
+            modal.Show(_entry);
         }
     }
 }

@@ -7,7 +7,8 @@
         "Golfin.Gameplay.Missions",
         "Golfin.Save",
         "Golfin.InventorySync",
-        "Golfin.Economy"
+        "Golfin.Economy",
+        "Golfin.Localization"
     ],
     "includePlatforms": [
         "Editor"

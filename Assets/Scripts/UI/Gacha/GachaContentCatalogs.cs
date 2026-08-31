@@ -194,10 +194,20 @@ namespace GolfinRedux.UI.Gacha
                 Quantity = f.GetInt("quantity", 1),
                 DupeRp   = f.GetInt("dupeRp"),
                 Featured = f.GetBool("featured"),
+
+                // The BUNDLED `is_active` cell (gacha_ops_polish). `export_content.py` appends an
+                // `is_active` column to a CSV the first time that catalog carries a deactivated
+                // row, and gacha_pools.csv now has one: `psc1_ball_golfin` was deactivated in the
+                // admin. Reading it here is what makes a FRESH INSTALL — which has no overlay yet
+                // — agree with the server about what the pool can pay. Without it the bundled
+                // floor listed, and admitted as payable, a prize `golfin_gacha_pull()` refuses.
+                IsActive = f.GetBool("is_active", true),
             },
             (row, overlayRow) =>
             {
-                row.IsActive = overlayRow?.IsActive ?? true;
+                // An overlay row still WINS — it is the newer word, and `is_active` lives there as
+                // a table COLUMN rather than a data field, so the factory above cannot see it.
+                if (overlayRow != null) row.IsActive = overlayRow.IsActive;
                 row.MinBuild = overlayRow?.MinBuild ?? 0;
             });
     }
