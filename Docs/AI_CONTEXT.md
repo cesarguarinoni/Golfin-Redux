@@ -5,7 +5,7 @@
 
 ---
 
-## 🔍 IN REVIEW — `bridge_transplant` iter-4: **all 7 bridges**, holes 7/8/9/12/17 (2026-08-31)
+## ✅ SHIPPED — `bridge_transplant` **approved by Cesar** (2026-08-31)
 
 **Hole 7's bridge now exists in the live scene and the ball can stand on it.** The 7 bridges only
 ever existed in the archived capture scenes (`Generated/Video/Hole_NN_Geo.unity`); the live play
@@ -109,8 +109,13 @@ Evidence: 111-transform hierarchy diff against the Video source at max Δ 0.0000
 angle and scale; a 1:1 overlay of the baked `Bridge` polygon on the rendered bridge; a cross-section
 of every baked collision volume; per-assembly EditMode sweep **1 962 passed / 0 failed** (23 bridge
 tests); tree drift gate 18/18 PASS, run three times. Surface coefficients (0.45 / 0.35 / 0.12 / 0.10) and part coefficients (railing 0.35/0.75,
-pier 0.45/0.85) are explicit tuning knobs awaiting Cesar's feel pass. Spec + report:
-`Docs/Specs/Active/bridge_transplant/`.
+pier 0.45/0.85) are explicit tuning knobs awaiting Cesar's feel pass. Commits `9c059425b` (hole 7) and `877e609d7` (holes 8/9/12/17). Record:
+`Docs/Specs/Completed/bridge_transplant/`. Lessons BQ and BR in `tasks/lessons.md`.
+
+Carried forward, not blocking: Cesar's feel pass on the coefficients; hole 17's 2
+synthesized kerb boxes (the only invented geometry, because `Bridge_part_1`'s railing
+floats above its own deck); and 7% of hole 12's second deck sitting below the terrain,
+which reads as a shallow trench at the abutment.
 
 ---
 

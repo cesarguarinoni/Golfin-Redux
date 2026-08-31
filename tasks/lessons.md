@@ -3173,3 +3173,62 @@ needs no scene save at all** — the scene was reverted whole and everything sti
 **Generalisation:** a prefab is the unit of authoring, but an instance is a separate serialisation
 that remembers what the prefab used to be. Every structural prefab edit deserves a look at the
 instances AND at the scene diff, and the scene diff deserves reading, not counting.
+
+---
+
+## Lesson BQ — a baked-collision reduction is one shape; audit it, and let the odd geometry find it
+
+`bridge_transplant` (2026-08-31). Turning authored colliders into fixed-point boxes went wrong
+**five times**, every one in the same reduction step, and every one invisible in the artefact I
+had just produced. The scoreboard matters: the CSV looked plausible after each bake, the tests
+were green, and only firing a ball found any of it.
+
+1. **Per-collider yaw frame.** Reducing each box in its own `eulerAngles.y` inflates a diagonal
+   truss member across the perpendicular axis. Blocking faces landed at +1.82 / −2.48 against art
+   symmetric at ±2.26. Fix: reduce every box in the PARENT's frame, and derive the yaw the same
+   way the runtime reads it back (`atan2(across.z, across.x)`), never from `eulerAngles`.
+2. **A tolerance band that swallowed the thing that mattered.** A ±0.15 m "this is the deck"
+   band ate the KERBS — 0.060 m proud of the deck, and the only thing stopping a ball rolling off.
+3. **Duplicate LOD colliders.** These prefabs carry colliders on both LOD levels; a naive harvest
+   baked every box twice.
+4. **Sampling a reference plane once, at the centre.** On a 5.22°-tilted bridge a 40.8 m slab has
+   its global `maxY` at the high END, 4.5 m above the plane under its middle — so the DECK ITSELF
+   was filed as an obstacle, a solid block the length of the walkway.
+5. **The fallback that undid the fix.** Sampling per corner then fell through to a MEAN when the
+   corner sat outside the footprint — and the slab's corners sit exactly ON the boundary, so the
+   error returned unchanged. Fix: fall back to the nearest vertex, which carries the tilt.
+
+**Rule 15 worked, and did not go far enough.** After defect 2 I audited the shape and found 3 in
+one pass — good. But I audited it on the only hole I had, which was FLAT. Defects 4 and 5 were
+structurally unreachable there and waited for hole 12's tilt. **An audit is only as wide as the
+geometry you audit it against: enumerate the degenerate cases (tilt, non-uniform scale, zero
+colliders, boundary-coincident extents) and check the shape against each, or the audit is a
+sample.**
+
+**The gate that actually caught things was behavioural, not structural.** "95 boxes, 90 railing,
+5 pier" looks identical whether or not the deck is sealed. What found defects 2 and the hole-17
+leak was firing a ball and counting how many stayed on the bridge — 0/8 and 14/14 are unarguable.
+**For baked collision, the acceptance test is a shot, not a row count.**
+
+**A byte-identical regression on the unaffected case is the cheapest proof you can buy.** Every
+fix here was justified by "holes 7/8/9 re-bake byte-identical" — level decks, where the new rule
+reduces to the old one exactly. It converts "I think this is safe" into a hash comparison.
+
+**Corollary — assume each source asset behaves differently.** Three bridge models, three different
+answers to "do your own colliders stop a ball rolling off your deck": one sealed via kerbs, one via
+a railing slab, one not at all. Do not generalise from the first asset you wire up; measure the
+property per asset and repair only where it fails.
+
+## Lesson BR — `Assets/Packs/` is gitignored, so never author project data into vendor art
+
+Same task. SPEC Risk 2 offered "author a prefab variant with railing/pier boxes" for a model that
+ships no colliders. That route cannot work: `.gitignore:107` is `Assets/Packs/`, so a hand-built
+variant beside the FBX never leaves the machine that made it. The same trap one level up had
+already bitten the task — `Assets/Golf/Courses/*/Generated/*` is gitignored too, so the transplanted
+bridges themselves needed a tracked `bridge_instances.json` catalog to survive the repo boundary,
+mirroring `standalone_trees.csv`.
+
+**Before authoring anything that other machines must see, run `git check-ignore -v` on the path.**
+Vendor art folders and generated scenes are per-machine by design; project data derived from them
+belongs in a tracked location (`Data/hole-NN-geo/`, `Resources/HoleData/`), derived by a repeatable
+tool rather than placed by hand.
