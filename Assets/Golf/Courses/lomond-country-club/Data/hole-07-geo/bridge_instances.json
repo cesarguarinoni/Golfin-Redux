@@ -1,0 +1,125 @@
+{
+    "note": "Tracked bridge placement — see BridgeInstanceCatalog.cs. NOT bridges.json (that is BridgeExporter's cart-path anchor export).",
+    "hole": 7,
+    "instances": [
+        {
+            "name": "Bridge_withLODs",
+            "sourcePrefabGuid": "639c38cdd1b018048adf44fe9cbe8db4",
+            "sourcePrefabPath": "Assets/Packs/PBR Bridge/Prefab/Bridge_withLODs.prefab",
+            "modifications": [
+                {
+                    "targetGuid": "639c38cdd1b018048adf44fe9cbe8db4",
+                    "targetFileId": 2560872485283614753,
+                    "propertyPath": "m_LocalScale.y",
+                    "value": "4.09",
+                    "objectRefGuid": "",
+                    "objectRefFileId": 0
+                },
+                {
+                    "targetGuid": "639c38cdd1b018048adf44fe9cbe8db4",
+                    "targetFileId": 2560872485283614753,
+                    "propertyPath": "m_LocalPosition.y",
+                    "value": "-6.74",
+                    "objectRefGuid": "",
+                    "objectRefFileId": 0
+                },
+                {
+                    "targetGuid": "639c38cdd1b018048adf44fe9cbe8db4",
+                    "targetFileId": 5040228712461725804,
+                    "propertyPath": "m_LocalScale.z",
+                    "value": "1.37",
+                    "objectRefGuid": "",
+                    "objectRefFileId": 0
+                },
+                {
+                    "targetGuid": "639c38cdd1b018048adf44fe9cbe8db4",
+                    "targetFileId": 5040228712461725804,
+                    "propertyPath": "m_LocalPosition.x",
+                    "value": "75.72",
+                    "objectRefGuid": "",
+                    "objectRefFileId": 0
+                },
+                {
+                    "targetGuid": "639c38cdd1b018048adf44fe9cbe8db4",
+                    "targetFileId": 5040228712461725804,
+                    "propertyPath": "m_LocalPosition.y",
+                    "value": "23.2",
+                    "objectRefGuid": "",
+                    "objectRefFileId": 0
+                },
+                {
+                    "targetGuid": "639c38cdd1b018048adf44fe9cbe8db4",
+                    "targetFileId": 5040228712461725804,
+                    "propertyPath": "m_LocalPosition.z",
+                    "value": "-53.11",
+                    "objectRefGuid": "",
+                    "objectRefFileId": 0
+                },
+                {
+                    "targetGuid": "639c38cdd1b018048adf44fe9cbe8db4",
+                    "targetFileId": 5040228712461725804,
+                    "propertyPath": "m_LocalRotation.w",
+                    "value": "0.6832738",
+                    "objectRefGuid": "",
+                    "objectRefFileId": 0
+                },
+                {
+                    "targetGuid": "639c38cdd1b018048adf44fe9cbe8db4",
+                    "targetFileId": 5040228712461725804,
+                    "propertyPath": "m_LocalRotation.x",
+                    "value": "0",
+                    "objectRefGuid": "",
+                    "objectRefFileId": 0
+                },
+                {
+                    "targetGuid": "639c38cdd1b018048adf44fe9cbe8db4",
+                    "targetFileId": 5040228712461725804,
+                    "propertyPath": "m_LocalRotation.y",
+                    "value": "0.7301623",
+                    "objectRefGuid": "",
+                    "objectRefFileId": 0
+                },
+                {
+                    "targetGuid": "639c38cdd1b018048adf44fe9cbe8db4",
+                    "targetFileId": 5040228712461725804,
+                    "propertyPath": "m_LocalRotation.z",
+                    "value": "0",
+                    "objectRefGuid": "",
+                    "objectRefFileId": 0
+                },
+                {
+                    "targetGuid": "639c38cdd1b018048adf44fe9cbe8db4",
+                    "targetFileId": 5040228712461725804,
+                    "propertyPath": "m_LocalEulerAnglesHint.x",
+                    "value": "0",
+                    "objectRefGuid": "",
+                    "objectRefFileId": 0
+                },
+                {
+                    "targetGuid": "639c38cdd1b018048adf44fe9cbe8db4",
+                    "targetFileId": 5040228712461725804,
+                    "propertyPath": "m_LocalEulerAnglesHint.y",
+                    "value": "93.8",
+                    "objectRefGuid": "",
+                    "objectRefFileId": 0
+                },
+                {
+                    "targetGuid": "639c38cdd1b018048adf44fe9cbe8db4",
+                    "targetFileId": 5040228712461725804,
+                    "propertyPath": "m_LocalEulerAnglesHint.z",
+                    "value": "0",
+                    "objectRefGuid": "",
+                    "objectRefFileId": 0
+                },
+                {
+                    "targetGuid": "639c38cdd1b018048adf44fe9cbe8db4",
+                    "targetFileId": 5672756399670635222,
+                    "propertyPath": "m_Name",
+                    "value": "Bridge_withLODs",
+                    "objectRefGuid": "",
+                    "objectRefFileId": 0
+                }
+            ]
+        }
+    ]
+}

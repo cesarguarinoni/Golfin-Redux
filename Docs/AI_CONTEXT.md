@@ -5,6 +5,92 @@
 
 ---
 
+## 🔍 IN REVIEW — `bridge_transplant` iter-3: Stage A+B+C on **hole 7**, bots + FBX railings (2026-08-31)
+
+**Hole 7's bridge now exists in the live scene and the ball can stand on it.** The 7 bridges only
+ever existed in the archived capture scenes (`Generated/Video/Hole_NN_Geo.unity`); the live play
+scenes had none, and a bridge is physically invisible to the sim anyway — `BallSimulation` is a
+fixed-point integrator that never touches PhysX, so a dropped-in prefab collides with nothing.
+
+Stages A (transplant), B (the deck surface) and C (railings and piers as fixed-point obstacles)
+are all in, for **hole 7 alone** — the SPEC's own review gate. Holes 8/9/12/17 are next.
+
+- **`SurfaceType.Bridge = 11`**, priority **95** in `BakedZoneClassifier` — above Water (80) and
+  Sand (90), below Green (100). This is the whole trick: both `Classify` and `TrySampleMeshY`
+  return the FIRST polygon containing the XZ point, so a `CartPath` deck (priority 50) drawn over
+  water would have been shadowed completely — ball on the bridge, classified as Water, penalty.
+  It also stops bots targeting a deck: `Bridge` is absent from `VersusBot.IsPlayableSurface`.
+  That turned out to be only half of "bots avoid bridges" — see iter-3 below.
+- **The deck reaches the sim without re-baking `heightmap.bytes`.** `BakedHeightProvider.SampleHeight`
+  tries `TrySampleMeshY` first, so a deck baked as a zone mesh becomes the authoritative ground Y
+  over its footprint. Measured on hole 7: `23.902 m` on the deck against a raw heightmap of
+  `−0.081 m` (the gorge floor) — a 24 m correction, with all five holes' `heightmap.bytes` and
+  `tree_obstacles.csv` byte-identical afterwards (hole 17's `79f0eae4` / 1663 rows untouched).
+- **`Main_LOD0` is the deck, not `Top_L_*`.** The SPEC pointed at `Top_L_*`/`Top_R_*`; measured,
+  those are the 35 cm handrail caps 3.1 m above the walkway. Following the SPEC literally would
+  have floated the collision deck over the railings.
+- **Found while implementing: `Assets/Golf/Courses/*/Generated/*` is gitignored.** A scene-only
+  transplant reaches no other machine, while the `zones.json` the same task commits does — a solid
+  Bridge deck 24 m in the air with no bridge drawn under it, i.e. the Hole 02 drift inverted
+  (`Docs/Pipeline/TREES_AND_GENERATED_SCENES.md`). Closed with a tracked
+  `Data/hole-07-geo/bridge_instances.json` catalog + `Rebuild Current Hole` menu item, mirroring
+  `StandaloneTreeCatalog`/`standalone_trees.csv`; deck meshes moved to the tracked `Data/` folder
+  too. Destroy → rebuild-from-catalog → re-bake round-trips byte-identically.
+
+**Iter-2 added Stage C — the railings and piers are solid now.** After A+B a ball could stand on
+the deck but flew straight through the railings: `bridge_obstacles.csv` did not exist. Stage C
+mirrors the tree system beat for beat — `BridgeObstacleData` / `BridgeObstacleProvider` (same XZ
+grid, same deterministic candidate ordering, same containment guard) / `BridgeObstacleLoader` /
+`BridgeObstacleBaker`, with `bridges` threaded through `BallSimulation`'s flight, roll and putt
+phases behind a `bridges=null` gate that is bit-exact with the old path.
+
+**Three defects in my own baker, found by auditing the shape rather than the instances**
+(CLAUDE.md rule 15): a per-collider yaw frame that inflated diagonal truss members and put the
+blocking faces at +1.82 / −2.48 against art symmetric at ±2.26; a ±0.15 m "straddling" band that
+swallowed the KERB boxes (top only 0.060 m proud of the deck) and let the ball roll off the deck
+edge 0.095 m short of the railing and fall 23.7 m into the water; and colliders on both LOD levels
+baking every box twice. All three fixed; the kerbs were recovered, not invented.
+
+**Measured after**: 14 perpendicular rolls (2–20 m/s, both directions) all end ON the bridge at
+Y 23.92–23.98, stopped at |perp| ≈ 2.00 m — the same 14 with `bridges=null` all end in the water.
+Approach shots landing 0–2.0 m off-centre stay on the deck. Two identical shots are bit-identical.
+
+**Trees**: none were transplanted by this task, and `Import/Bake Tree Obstacles/Validate All Holes`
+— the CI-wired drift gate that re-harvests every scene and diffs it against the committed bake
+within 1 cm — is **18/18 PASS**, run before and after. All five bridge holes' `tree_obstacles.csv`
+and `heightmap.bytes` are md5-identical to the session baseline.
+
+**Bots — the SPEC's Stage D claim is only half true, measured.** Fact 3 predicted "zero change to
+bot behaviour". A/B over 205 footprint points: `IsPlayableSurface` flips on 26 (intended — bots
+won't target a deck) but `IsAvoidSurface` flips on 20 (not intended). The H2 hazard/lay-up path
+keys off `IsAvoidSurface`, so **bots no longer lay up short of a bridge**. Arguably better, but a
+change, and it leaves decision 2 half-implemented. Fixing it is a one-line `VersusBot` edit the
+SPEC puts out of scope — flagged for Cesar, not taken.
+
+**Iter-3 took Cesar's two decisions.** `VersusBot.IsAvoidSurface` now includes `Bridge` — being
+absent from `IsPlayableSurface` only stopped bots *targeting* a deck, while `IsAvoidSurface` is
+what the H2 hazard/lay-up path actually reads, so decision 2 ("bots avoid bridges") is now really
+implemented rather than half. And `bridgeLODs.fbx` (holes 8 ×2, 9), which ships **zero colliders**,
+gets real railing/pier collision — SPEC Risk 2 closed. Not as a prefab variant: `Assets/Packs/` is
+gitignored, so a variant beside the FBX would never leave this machine. `BridgeObstacleBaker` falls
+back to renderer AABBs per railing/pier member into the tracked CSV instead. Verified on the real
+asset: 12 boxes, railing inner faces ±2.26 m inside deck edges ±2.404 m — contained both sides,
+no kerb equivalent needed. Hole 7's bake through the refactored path is byte-identical.
+
+**Hole 12 (not transplanted yet) is the stress case**: the only two-bridge hole, both x-tilted
+(5.22° / 1.79°) so it is the first exercise of the tilt handling, and where SPEC Risk 1 (nothing
+can pass *under* a deck) will be most visible. The SPEC's bot-deadlock worry is structurally
+impossible — `TrySafeLanding` is a bounded search with an explicit "no safe landing found" fallback.
+
+Evidence: 111-transform hierarchy diff against the Video source at max Δ 0.000000 on position,
+angle and scale; a 1:1 overlay of the baked `Bridge` polygon on the rendered bridge; a cross-section
+of every baked collision volume; per-assembly EditMode sweep **1 962 passed / 0 failed** (23 bridge
+tests); tree drift gate 18/18 PASS, run three times. Surface coefficients (0.45 / 0.35 / 0.12 / 0.10) and part coefficients (railing 0.35/0.75,
+pier 0.45/0.85) are explicit tuning knobs awaiting Cesar's feel pass. Spec + report:
+`Docs/Specs/Active/bridge_transplant/`.
+
+---
+
 ## ✅ SHIPPED — `selected_character_persistence` (quick) **approved by Cesar** (2026-08-30)
 
 **Your selected character survives a relaunch.** The save layer was never the bug —

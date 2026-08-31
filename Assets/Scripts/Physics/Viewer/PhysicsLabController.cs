@@ -51,6 +51,7 @@ namespace Golfin.Physics.Viewer
         Golfin.Physics.CupSpec _cupSpec = Golfin.Physics.CupSpec.Disabled;
         // Phase 7: tree obstacle provider — null = no trees.
         Golfin.Physics.ITreeObstacleProvider _treeProvider;
+        Golfin.Physics.IBridgeObstacleProvider _bridgeProvider;
 
         [Header("References")]
         [SerializeField] TrajectoryRenderer trajectoryRenderer;
@@ -544,6 +545,8 @@ namespace Golfin.Physics.Viewer
         // tree_aware_bot (Order 351): read-only exposure of the per-hole tree provider for bot
         // trunk-avoidance. Null on treeless holes / lab flat-ground. Read-side only — no sim change.
         public Golfin.Physics.ITreeObstacleProvider GetTreeProvider() => _treeProvider;
+        /// <summary>Bridge railings/piers for this hole; null on the 13 holes without a bridge.</summary>
+        public Golfin.Physics.IBridgeObstacleProvider GetBridgeProvider() => _bridgeProvider;
 
         // cup_capture_and_lipout: read-only accessor so diagnostics/tests can reproduce the
         // exact sim call this controller makes without reaching into private state.
@@ -1867,7 +1870,7 @@ namespace Golfin.Physics.Viewer
             var surface = BuildSurfaceProvider(default(ShotPreset));
             // cup_capture_and_lipout: production shot path — pass the loaded hole's cup so the
             // sim can capture / lip-out. _cupSpec is Disabled when no hole is loaded.
-            return BallSimulation.Simulate(input, ground, AeroCfg, WindCfg, surface, SurfaceCfg, PuttCfg, ballMods, _treeProvider, _cupSpec);
+            return BallSimulation.Simulate(input, ground, AeroCfg, WindCfg, surface, SurfaceCfg, PuttCfg, ballMods, _treeProvider, _bridgeProvider, _cupSpec);
         }
 
         bool _configsLoaded;
@@ -1995,7 +1998,7 @@ namespace Golfin.Physics.Viewer
             var ground  = BuildGroundProvider();
             var surface = BuildSurfaceProvider(preset);
             // cup_capture_and_lipout: preset/lab shot path gets the same cup as production.
-            return BallSimulation.Simulate(input, ground, AeroCfg, preset.Wind, surface, SurfaceCfg, PuttCfg, BallPhysicsModifiers.Neutral, _treeProvider, _cupSpec);
+            return BallSimulation.Simulate(input, ground, AeroCfg, preset.Wind, surface, SurfaceCfg, PuttCfg, BallPhysicsModifiers.Neutral, _treeProvider, _bridgeProvider, _cupSpec);
         }
 
         // Returns current ball position snapped to terrain, or fallback if no ball.
@@ -2076,6 +2079,7 @@ namespace Golfin.Physics.Viewer
             _bakedClassifier = null;
             _bakedGround     = null;
             _treeProvider    = null;
+            _bridgeProvider  = null;
 
             // Both files live under Assets/Resources/HoleData/<courseSlug>/<holeId>/ so they
             // ship with built players AND survive cross-PC pulls (Tools/UHoleGeo/output/
@@ -2116,6 +2120,16 @@ namespace Golfin.Physics.Viewer
                 var treeAsset = Resources.Load<TextAsset>($"HoleData/{courseSlug}/{holeId}/tree_obstacles");
                 var instances = Golfin.Physics.Runtime.TreeObstacleLoader.LoadInstances(treeAsset);
                 _treeProvider = Golfin.Physics.Runtime.TreeObstacleProvider.Create(instances);
+
+                // Stage C (bridge_transplant): railings + piers for the 5 bridge holes.
+                // Absent CSV → null provider → BallSimulation's bridges=null path, which is
+                // bit-exact with the pre-Stage-C behaviour on the other 13 holes.
+                var bridgeAsset = Resources.Load<TextAsset>($"HoleData/{courseSlug}/{holeId}/bridge_obstacles");
+                var bridgeBoxes = Golfin.Physics.Runtime.BridgeObstacleLoader.LoadBoxes(bridgeAsset);
+                _bridgeProvider = Golfin.Physics.Runtime.BridgeObstacleProvider.Create(bridgeBoxes);
+                if (_bridgeProvider != null)
+                    Debug.Log($"[PhysicsLab] Bridge obstacles loaded for {holeId}: {bridgeBoxes.Count} parts.");
+
                 if (_treeProvider != null)
                     Debug.Log($"[PhysicsLab] Tree obstacles loaded for {holeId}: {instances.Count} trees.");
                 else

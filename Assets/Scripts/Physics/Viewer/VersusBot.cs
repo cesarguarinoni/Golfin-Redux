@@ -377,7 +377,18 @@ namespace Golfin.Physics.Viewer
 
         // ── H2: surface probe helpers ─────────────────────────────────────
 
-        private bool IsAvoidSurface(SurfaceType s)  => s == SurfaceType.Water;
+        // bridge_transplant decision 2, Cesar 2026-08-31: bots avoid bridges.
+        //
+        // Bridge has to be named HERE, not only left out of IsPlayableSurface. The two predicates
+        // drive different things: IsPlayableSurface gates what the bot will TARGET (so leaving
+        // Bridge out already stopped it aiming at a deck), while IsAvoidSurface is what the H2
+        // hazard / lay-up path keys off (below, ~line 545/563/575). Measured on hole 7 before this
+        // line existed: 20 of 205 sampled deck points flipped from Water to Bridge, so the bot
+        // stopped seeing a hazard and no longer laid up short of the bridge. The SPEC predicted
+        // "zero change to bot behaviour" from the IsPlayableSurface omission alone; that was half
+        // the story.
+        private bool IsAvoidSurface(SurfaceType s)  => s == SurfaceType.Water
+                                                    || s == SurfaceType.Bridge;
         private bool IsPlayableSurface(SurfaceType s) =>
             s == SurfaceType.Fairway || s == SurfaceType.Green || s == SurfaceType.GreenCollar ||
             s == SurfaceType.Semirough || s == SurfaceType.Rough || s == SurfaceType.Tee ||

@@ -1,0 +1,127 @@
+=== iter-1 kickoff baseline 2026-08-31 ===
+HEAD: cb48171d5f58d2bdbcc23eb0ef8832acfd1a478b docs: TellCode + content_art syncs; guard records 1.5.7 (2500)
+DIRTY (git status --porcelain --untracked-files=all):
+ M Assets/Scripts/Editor/CourseImporter/BakeZoneJsonTool.cs
+ M Assets/Scripts/Physics/Core/PuttConfig.cs
+ M Assets/Scripts/Physics/Core/SurfaceConfig.cs
+ M Assets/Scripts/Physics/Core/SurfaceType.cs
+ M Assets/Scripts/Physics/Runtime/Baked/BakedZoneClassifier.cs
+ M Docs/Reports/content_art.txt
+ M Docs/Versioning/last_uploaded_build.txt
+?? Assets/Art/Gacha/Bag.png
+?? Assets/Art/Gacha/Bag.png.meta
+?? Assets/Scripts/Editor/CourseImporter/BridgeTransplantTool.cs
+?? Assets/Scripts/Editor/CourseImporter/BridgeTransplantTool.cs.meta
+?? Assets/Scripts/Physics/Tests/BridgeCollisionTests.cs
+?? Docs/Specs/Active/bridge_transplant/HEARTBEAT.log
+Protected-file baseline (must be unchanged at close):
+  Hole_07 tree_obstacles.csv md5=4647b27058dc730305f2088e1b278070 hash-header=# bake_hash=8e48deb8 rows=1343
+  Hole_07 heightmap.bytes md5=fa4d0ecdc0e2737e9e4f378a76e907c9
+  Hole_08 tree_obstacles.csv md5=263e492022329e01e1e3de82789b5763 hash-header=# bake_hash=9fa7e851 rows=3926
+  Hole_08 heightmap.bytes md5=8a1e671f750f0114547031c06c703fc8
+  Hole_09 tree_obstacles.csv md5=c9f490865799f5ce0814e938d8fe1235 hash-header=# bake_hash=11fff70b rows=711
+  Hole_09 heightmap.bytes md5=2f6238050c7c52fe1373986129b95882
+  Hole_12 tree_obstacles.csv md5=6b1e00be5474c2764145a8e305994972 hash-header=# bake_hash=7e5e8ed9 rows=3026
+  Hole_12 heightmap.bytes md5=d4a9bfde50cf55692dacfe6a37fb259e
+  Hole_17 tree_obstacles.csv md5=7e5bf743c222488f6d8db81cfb6b47a1 hash-header=# bake_hash=79f0eae4 rows=1663
+  Hole_17 heightmap.bytes md5=55ea877e3b69d72366a6d3ded93f9adf
+Hole_07 zones.json groups at baseline: Fairway 7, Green 3, Tee 15, Sand 6, CartPath 5, Water 2
+Unity: 6000.3.9f1, Editor launched by me (was closed); MCP driven via Tools/unity-mcp-call.py HTTP fallback.
+=== EOF
+
+=== iter-1 close 2026-08-31 ===
+Protected files re-hashed after ALL scene saves + bakes:
+  Hole_07 tree=4647b27058dc730305f2088e1b278070 hm=fa4d0ecdc0e2737e9e4f378a76e907c9
+  Hole_08 tree=263e492022329e01e1e3de82789b5763 hm=8a1e671f750f0114547031c06c703fc8
+  Hole_09 tree=c9f490865799f5ce0814e938d8fe1235 hm=2f6238050c7c52fe1373986129b95882
+  Hole_12 tree=6b1e00be5474c2764145a8e305994972 hm=d4a9bfde50cf55692dacfe6a37fb259e
+  Hole_17 tree=7e5bf743c222488f6d8db81cfb6b47a1 hm=55ea877e3b69d72366a6d3ded93f9adf
+All ten match the iter-1 kickoff baseline above.
+zones.json Hole_07 md5=52ad7fde60ed8bdabca130a3fd39e117 (one NEW Bridge group; all other groups + obMask unchanged)
+deck mesh md5=7c067d5520767c2e126536e821cda66a
+EditMode sweep: 22 assemblies, 1950 passed, 0 failed, 3 pre-existing skips.
+Editor restored to ShellScene, no dirty scenes, never entered play mode.
+=== EOF
+
+=== iter-2 (Stage C: bridge railings/piers) 2026-08-31 ===
+Requested by Cesar: "Make sure all collisions work correctly for any transplanted trees and the
+bridge, and that they are all baked for the bots to take them into account."
+
+TREES — no trees were transplanted by this task (bridges only; scenery_transplant is queued).
+  TreeBakeValidator.ValidateAllHoles(): 18/18 PASS, run TWICE (before Stage C and after every
+  scene save). Hole 07 1343 baked rows / 677 standalone. All five holes' tree_obstacles.csv and
+  heightmap.bytes md5-identical to the iter-1 baseline above.
+
+BRIDGE — Stage C built: BridgeObstacleData / Provider / Loader / Baker + BallSimulation wiring
+  at all three phases + PhysicsLabController. bridge_obstacles.csv hole 07 = 95 boxes
+  (bake_hash 16583aa6): 118 railing + 10 pier harvested, 6 deck-slab excluded, 33 LOD duplicates
+  dropped.
+
+THREE DEFECTS FOUND AND FIXED IN MY OWN BAKER (audited as one shape, per CLAUDE.md rule 15):
+  1. per-collider yaw frame -> inflated diagonal truss members; blocking faces landed at
+     +1.820 / -2.484 against railing art symmetric at +/-2.26. Fixed: reduce every box in the
+     BRIDGE's frame, and derive yaw as atan2(across.z, across.x) to match BridgeBox.ToLocalXZ.
+  2. +/-0.15 m "straddling" band swallowed the KERB boxes (top 24.007 vs deck 23.947, 0.060 m
+     proud). Ball rolled off at 2.404 m, 0.095 m short of the railing, and fell 23.7 m.
+     Fixed: above-deck band tightened to +0.02 m.
+  3. colliders exist on BOTH LOD levels -> every box baked twice (124 rows / 93 unique).
+     Fixed: dedupe on the formatted row.
+
+MEASURED AFTER THE FIXES (deck half-width 2.404 m):
+  ball rolled off the centreline at 2/4/6/8/10/14/20 m/s, BOTH directions: 14/14 end ON the
+  bridge at Y 23.92-23.98, stopped at |perp| ~2.00 m. Same 14 with bridges=null: 14/14 in Water
+  at Y 0.24. Approach shots landing at 0.0/0.5/1.0/1.5/2.0 m off-centre: all end on the bridge.
+  Determinism: two identical shots bit-identical (242 samples, raw fp equal).
+
+TESTS: 22 EditMode assemblies, 1962 passed, 0 failed, 3 pre-existing skips.
+  23 BridgeCollisionTests, incl. Sim_BridgesNull_IsBitExactWithThePreStageCPath.
+
+BOTS — measured A/B over 205 points on the bridge footprint (current zones.json vs the same bake
+  with the Bridge group removed): IsPlayableSurface changed on 26 points, IsAvoidSurface on 20.
+  So the SPEC's "zero change to bot behaviour" claim is NOT what happens. See report.
+
+Editor restored to ShellScene, no dirty scenes, never entered play mode.
+NOTE: Docs/TellCode.md, Assets/Sounds/Gacha/* and Docs/Specs/Active/gacha_reveal_animation/*
+appeared in the working tree during this session. Not mine, not touched.
+=== EOF
+
+=== iter-3 2026-08-31 (Cesar: "Add bots + bridges, author railing boxes, explain hole 12,
+    re-run tree drift and then commit if everything checks out") ===
+
+BOTS + BRIDGES — decision taken. VersusBot.IsAvoidSurface now returns true for Bridge as well as
+  Water. Being absent from IsPlayableSurface was only half the job: that governs what the bot
+  TARGETS, while IsAvoidSurface is what the H2 hazard/lay-up path keys off. Test renamed to
+  Bots_TreatABridgeAsAHazardAndNeverTargetIt and now asserts BOTH predicates plus that Water /
+  Fairway / Sand are unaffected. This is the one edit to VersusBot; the SPEC listed it out of
+  scope and Cesar authorised it explicitly.
+
+RAILING BOXES for bridgeLODs.fbx (holes 8 x2, 9) — SPEC Risk 2 closed, but NOT by a prefab
+  variant. Assets/Packs/ is gitignored (.gitignore:107), so a hand-authored variant beside the
+  FBX would never leave this machine — same class of bug as the gitignored hole scenes. Instead
+  BridgeObstacleBaker gained a renderer-AABB fallback: when a model ships zero BoxColliders it
+  derives one box per railing/pier member (Railing_/Top_/Beams_L_/Beams_R_/Pier_/End_/Bottom_),
+  skipping sparse geometry (StreetLight_Poles 0.97x8.21x46.5 of mostly air, Line, the 1 mm
+  Fence planes) and the deck. Output lands in the TRACKED bridge_obstacles.csv, no new asset.
+  VERIFIED on the real FBX in a throwaway in-memory scene at hole 9's ground-truth TRS:
+    0 BoxColliders confirmed; 12 boxes derived (8 railing + 4 pier);
+    deck edges -2.404..+2.404 m, railing inner faces -2.256 / +2.260 m
+    -> CONTAINED on both sides, without needing the kerbs hole 7 depended on.
+  Temp deck asset deleted, scene discarded unsaved.
+
+REGRESSION — hole 7 bridge_obstacles.csv re-baked after the refactor: md5
+  3b23c5dfbe5fd6bd7a0ea03b2638cf98, bake_hash 16583aa6 — IDENTICAL. The collider path is
+  untouched by the fallback.
+
+HOLE 12 — no deadlock is structurally possible: TrySafeLanding is a bounded search (walk back in
+  LayupStep increments, then OffsetDegrees rotated lines) with an explicit else branch that logs
+  "no safe landing found - using original line (reactive OBReason will catch)". So the SPEC's
+  deadlock worry cannot hang the bot. What the IsAvoidSurface change DOES do is make that
+  fallback fire more often on hole 12. Still outstanding for hole 12 (not transplanted yet):
+  two bridges, both x-tilted (5.22 deg and 1.79 deg) - the first exercise of tilt in the deck
+  generator and the per-box BaseY/TopY fold - and SPEC Risk 1 (nothing can pass UNDER a deck).
+
+TREE DRIFT — TreeBakeValidator.ValidateAllHoles(): 18/18 PASS (third run this session).
+TESTS — 22 EditMode assemblies, 1962 passed, 0 failed, 3 pre-existing skips. 23 bridge tests.
+PROTECTED — all five holes' tree_obstacles.csv and heightmap.bytes still md5-identical to iter-1.
+Editor restored to ShellScene, no dirty scenes, never entered play mode.
+=== EOF

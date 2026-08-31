@@ -17,7 +17,7 @@ namespace Golfin.Physics.Runtime.Baked
     ///
     /// Priority order (highest first; first matching polygon wins):
     ///
-    ///   Green &gt; Sand &gt; Water &gt; GreenCollar &gt; Tee &gt; CartPath &gt; Fairway &gt; Rough (default)
+    ///   Green &gt; Bridge &gt; Sand &gt; Water &gt; GreenCollar &gt; Tee &gt; CartPath &gt; Fairway &gt; Rough (default)
     ///
     /// Implementation: flat-scan point-in-polygon for now. The spec calls out
     /// "spatial index is M2 if needed" — not needed at this scale (single hole,
@@ -343,6 +343,10 @@ namespace Golfin.Physics.Runtime.Baked
             switch (t)
             {
                 case SurfaceType.Green:       return 100;
+                // Bridge deck outranks Water (80) and Sand (90): a deck polygon is drawn
+                // ON TOP of the water it spans, and both Classify and TrySampleMeshY return
+                // the FIRST containing polygon. Below Green — a green is never on a bridge.
+                case SurfaceType.Bridge:      return 95;
                 case SurfaceType.Sand:        return 90;
                 case SurfaceType.BunkerLip:   return 89;  // submesh of Sand; same priority band
                 case SurfaceType.Water:       return 80;

@@ -194,6 +194,41 @@ namespace Golfin.Physics
             BallPhysicsModifiers ballMods,
             ITreeObstacleProvider trees,
             in CupSpec cup)
+            => Simulate(input, ground, aero, wind, surfaces, surfaceCfg, puttCfg, ballMods,
+                        trees, null, cup);
+
+        // ── Phase 9 (bridge railing / pier collisions) ────────────────────────────────
+
+        /// <summary>
+        /// Phase 9 entry (bridge_transplant Stage C). Adds <see cref="IBridgeObstacleProvider"/>
+        /// for deterministic collision against the railings and piers of a transplanted bridge.
+        ///
+        /// bridges=null → behaviour is bit-exact identical to the Phase 8 10-arg path. That is
+        /// the blocking determinism gate for this phase, mirroring the trees=null gate of Phase 7
+        /// and the cup.Enabled=false gate of Phase 8, and it is what keeps all 17 bridge-free
+        /// holes byte-for-byte unchanged.
+        ///
+        /// The DECK is deliberately NOT here: it is a SurfaceType.Bridge zone polygon
+        /// (priority 95, above Water's 80), so the ground solver already returns the deck's mesh Y
+        /// and the surface classifier already returns Bridge. This provider carries only the
+        /// parts a ball can hit SIDEWAYS.
+        ///
+        /// PRECEDENCE within a step: a bridge box hit outranks a tree CANOPY hit outright
+        /// (specific geometry beats soft volume — the same rule the two-pass tree logic already
+        /// encodes), and resolves against a tree TRUNK hit by earliest Frac.
+        /// </summary>
+        public static Trajectory Simulate(
+            ShotInput input,
+            IGroundProvider ground,
+            AeroConfig aero,
+            WindConfig wind,
+            ISurfaceProvider surfaces,
+            SurfaceConfig surfaceCfg,
+            PuttConfig puttCfg,
+            BallPhysicsModifiers ballMods,
+            ITreeObstacleProvider trees,
+            IBridgeObstacleProvider bridges,
+            in CupSpec cup)
         {
 #if UNITY_EDITOR
             if (DiagShotLogger != null)
@@ -236,11 +271,11 @@ namespace Golfin.Physics
 
                 return RunPuttPhase(startPos, startVel, fp.Zero,
                                     ground, surfaces, surfaceCfg, puttCfg,
-                                    aero.BallRadius, samples, hits, ballMods, trees, cup);
+                                    aero.BallRadius, samples, hits, ballMods, trees, bridges, cup);
             }
 
             // ── Airborne phase ────────────────────────────────────────────────────────
-            var airborne = SimulateAirborne(input, ground, aero, wind, ballMods, trees);
+            var airborne = SimulateAirborne(input, ground, aero, wind, ballMods, trees, bridges);
 
             if (airborne.termination != TerminationReason.HitGround)
             {
@@ -351,11 +386,11 @@ namespace Golfin.Physics
                 {
                     fp3 vRoll = vel - normal * fpMath.Dot(vel, normal);
                     return RunRollPhase(pos, vRoll, t, ground, surfaces, surfaceCfg,
-                                        aero.BallRadius, samplesList, hitsList, ballMods, trees, cup);
+                                        aero.BallRadius, samplesList, hitsList, ballMods, trees, bridges, cup);
                 }
 
                 var nextInput    = new ShotInput(pos, vel, fp.FromInt(30), new SpinState(input.Spin.Axis, fp.Zero));
-                var nextAirborne = SimulateAirborne(nextInput, ground, aero, wind, ballMods, trees);
+                var nextAirborne = SimulateAirborne(nextInput, ground, aero, wind, ballMods, trees, bridges);
 
                 for (int i = 1; i < nextAirborne.samples.Count; i++)
                 {
@@ -398,13 +433,78 @@ namespace Golfin.Physics
         /// less. With BallPhysicsModifiers.Neutral (WindCutFraction=0), wind is unchanged
         /// and results are bit-exact with the original Phase 3 path.
         /// </summary>
+        // ── Bridge obstacle helpers (bridge_transplant Stage C) ──────────────────────
+
+        /// <summary>
+        /// Does a bridge-part hit beat the tree hit in the same step?
+        ///
+        /// A bridge box outranks a tree CANOPY outright — specific geometry beats a soft volume,
+        /// the same rule the two-pass tree logic already encodes internally. Against a tree
+        /// TRUNK the earlier Frac wins. Ties go to the bridge, which matters because the
+        /// containment guards on both sides report Frac=0.
+        ///
+        /// Cost when <paramref name="bridges"/> is null (every hole but 7/8/9/12/17): one null
+        /// check. The extra tree probe only runs when a bridge hit actually exists.
+        /// </summary>
+        private static bool BridgeWins(
+            ITreeObstacleProvider trees, fp3 p0, fp3 p1, in BridgeHit bridgeHit)
+        {
+            if (trees == null) return true;
+            if (!trees.TestSegment(p0, p1, out TreeHit t)) return true;
+            if (!t.IsTrunk) return true;                 // canopy never masks a railing
+            return bridgeHit.Frac <= t.Frac;
+        }
+
+        /// <summary>
+        /// Velocity after striking a bridge part: the XZ velocity is split about the face normal,
+        /// the NORMAL component is reflected and scaled by the profile restitution, and the
+        /// TANGENTIAL component is scaled by the profile tangent damping. Y is untouched — a
+        /// railing is a vertical face; vertical motion stays the ground solver's business.
+        ///
+        /// This differs from the tree trunk handler, which scales the whole reflected XZ vector
+        /// by one restitution. A railing that a ball hits at a glancing angle should keep most of
+        /// its along-the-deck speed, which one shared coefficient cannot express.
+        /// </summary>
+        private static fp3 ReflectOffBridge(fp3 vel, in BridgeHit hit)
+        {
+            fp nx = hit.NormalXZ.x, nz = hit.NormalXZ.z;
+            fp vn = vel.x * nx + vel.z * nz;             // signed normal component
+            fp vtx = vel.x - vn * nx;                    // tangential remainder
+            fp vtz = vel.z - vn * nz;
+
+            fp r = hit.Profile.Restitution;
+            fp d = hit.Profile.TangentDamping;
+
+            return new fp3(
+                (-vn * r) * nx + vtx * d,
+                vel.y,
+                (-vn * r) * nz + vtz * d);
+        }
+
+        /// <summary>
+        /// Where the ball ends the step after a bridge strike. A Frac=0 hit is the containment
+        /// guard firing — p0 was already inside the box — so the ball is pushed clear along the
+        /// face normal instead of being parked on the hit point, which would make zero
+        /// position progress and stall the integrator (the PROBE7 stuck-ball defect the tree
+        /// trunk handler had to fix at red-team iter-6).
+        /// </summary>
+        private static fp3 BridgeExitPos(in BridgeHit hit, fp3 posNext)
+        {
+            if (hit.Frac != fp.Zero) return hit.HitPos;
+            fp push = fp.FromFloat(0.02f);
+            return new fp3(hit.HitPos.x + hit.NormalXZ.x * push,
+                           posNext.y,
+                           hit.HitPos.z + hit.NormalXZ.z * push);
+        }
+
         private static Trajectory SimulateAirborne(
             ShotInput input,
             IGroundProvider ground,
             AeroConfig aero,
             WindConfig wind,
             BallPhysicsModifiers ballMods,
-            ITreeObstacleProvider trees = null)
+            ITreeObstacleProvider trees = null,
+            IBridgeObstacleProvider bridges = null)
         {
             var samples = new List<TrajectorySample>(capacity: 1536);
             fp3 pos = input.origin;
@@ -455,13 +555,32 @@ namespace Golfin.Physics
                 fp3 velNext = vel + (k1v + k2v * Two + k3v * Two + k4v) * Dt / Six;
                 fp  tNext   = t + Dt;
 
+                // ── Bridge part collision (airborne) ──────────────────────────────────
+                // Railings and piers only — the DECK is a SurfaceType.Bridge zone polygon and
+                // the ground solver owns it (Stage B). Like the tree test, this runs BEFORE the
+                // ground check so a deflection cannot tunnel through terrain.
+                //
+                // Deliberately NOT a `continue`: the step's posNext/velNext are amended in place
+                // and the rest of the step — ground crossing, world bounds, spin decay, advance —
+                // runs normally. Short-circuiting the step would let a ball that clips a railing
+                // AND crosses the ground in the same step skip its own landing.
+                BridgeHit airBridgeHit = default;
+                bool airBridgeStruck = bridges != null
+                                    && bridges.TestSegment(pos, posNext, out airBridgeHit)
+                                    && BridgeWins(trees, pos, posNext, airBridgeHit);
+                if (airBridgeStruck)
+                {
+                    velNext = ReflectOffBridge(velNext, airBridgeHit);
+                    posNext = BridgeExitPos(airBridgeHit, posNext);
+                }
+
                 // ── Tree collision (airborne) ─────────────────────────────────────────
                 // Run BEFORE the ground check so a trunk stop doesn't tunnel through terrain.
                 // Trunk: earliest XZ crossing → M5b-style interpolate to hit, reflect XZ vel.
                 // Canopy (ENTRY crossing: outside p0 → inside p1): one-time vel *= canopyHitDamping;
                 //   normal ballistics (gravity/drag/magnus) resume immediately. Not applied
                 //   per-step while inside; not applied on exit. Each fresh re-entry fires one cut.
-                if (trees != null && trees.TestSegment(pos, posNext, out TreeHit treeHit))
+                if (!airBridgeStruck && trees != null && trees.TestSegment(pos, posNext, out TreeHit treeHit))
                 {
                     if (treeHit.IsTrunk)
                     {
@@ -1037,7 +1156,8 @@ namespace Golfin.Physics
             fp3 startPos, fp3 startVel, fp startT,
             IGroundProvider ground, ISurfaceProvider surfaces, SurfaceConfig surfaceCfg,
             fp ballRadius, List<TrajectorySample> samples, List<TerrainHit> hits,
-            BallPhysicsModifiers ballMods, ITreeObstacleProvider trees, in CupSpec cup)
+            BallPhysicsModifiers ballMods, ITreeObstacleProvider trees,
+            IBridgeObstacleProvider bridges, in CupSpec cup)
         {
             fp3 pos = startPos;
             fp3 vel = startVel;
@@ -1144,7 +1264,19 @@ namespace Golfin.Physics
                 // ── Tree trunk collision (roll phase) ─────────────────────────────────
                 // Canopy damping is airborne-only (a rolling ball's height < canopy floor in
                 // typical layouts). Only trunk XZ reflect is tested here.
-                if (trees != null && trees.TestSegment(pos, posNext, out TreeHit rollTreeHit)
+                // ── Bridge part collision (roll phase) ────────────────────────────────
+                BridgeHit rollBridgeHit = default;
+                if (bridges != null
+                    && bridges.TestSegment(pos, posNext, out rollBridgeHit)
+                    && BridgeWins(trees, pos, posNext, rollBridgeHit))
+                {
+                    vel     = ReflectOffBridge(vel, rollBridgeHit);
+                    posNext = BridgeExitPos(rollBridgeHit, posNext);
+                    posNext = new fp3(posNext.x,
+                        ground.SampleHeight(posNext.x, posNext.z, surface) + ballRadius,
+                        posNext.z);
+                }
+                else if (trees != null && trees.TestSegment(pos, posNext, out TreeHit rollTreeHit)
                     && rollTreeHit.IsTrunk)
                 {
                     fp dotXZ = vel.x * rollTreeHit.NormalXZ.x + vel.z * rollTreeHit.NormalXZ.z;
@@ -1252,7 +1384,8 @@ namespace Golfin.Physics
             IGroundProvider ground, ISurfaceProvider surfaces,
             SurfaceConfig surfaceCfg, PuttConfig puttCfg,
             fp ballRadius, List<TrajectorySample> samples, List<TerrainHit> hits,
-            BallPhysicsModifiers ballMods, ITreeObstacleProvider trees, in CupSpec cup)
+            BallPhysicsModifiers ballMods, ITreeObstacleProvider trees,
+            IBridgeObstacleProvider bridges, in CupSpec cup)
         {
             fp3 pos = startPos;
             fp3 vel = startVel;
@@ -1354,7 +1487,19 @@ namespace Golfin.Physics
                 }
 
                 // ── Tree trunk collision (putt phase) ─────────────────────────────────
-                if (trees != null && trees.TestSegment(pos, posNext, out TreeHit puttTreeHit)
+                // ── Bridge part collision (putt phase) ────────────────────────────────
+                BridgeHit puttBridgeHit = default;
+                if (bridges != null
+                    && bridges.TestSegment(pos, posNext, out puttBridgeHit)
+                    && BridgeWins(trees, pos, posNext, puttBridgeHit))
+                {
+                    vel     = ReflectOffBridge(vel, puttBridgeHit);
+                    posNext = BridgeExitPos(puttBridgeHit, posNext);
+                    posNext = new fp3(posNext.x,
+                        ground.SampleHeight(posNext.x, posNext.z, surface) + ballRadius,
+                        posNext.z);
+                }
+                else if (trees != null && trees.TestSegment(pos, posNext, out TreeHit puttTreeHit)
                     && puttTreeHit.IsTrunk)
                 {
                     fp dotXZ = vel.x * puttTreeHit.NormalXZ.x + vel.z * puttTreeHit.NormalXZ.z;

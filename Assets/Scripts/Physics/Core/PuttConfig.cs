@@ -92,6 +92,18 @@ namespace Golfin.Physics
                     RollingResistance = fp.FromFloat(0.14f),
                     StopSpeed         = fp.FromFloat(0.05f),
                 };
+                // Bridge: timber deck (bridge_transplant SPEC B3). The loop above already
+                // seeds every index with the conservative default, so this row is not
+                // rescuing a zero — it just makes a putt across a deck roll like the smooth
+                // surface it is (RollingResistance matches SurfaceConfig's Bridge row).
+                // DESIGN-FEEL, ARCHITECT-TUNABLE — pending Cesar's feel pass.
+                c[(int)SurfaceType.Bridge] = new SurfaceCoefficients
+                {
+                    Restitution       = fp.Zero,
+                    TangentFriction   = fp.One,
+                    RollingResistance = fp.FromFloat(0.12f),
+                    StopSpeed         = fp.FromFloat(0.05f),
+                };
                 // CupCaptureSpeed: 1.5 m/s — USGA lip-out anchor (≈5 ft/s).
                 // See Penner, A.R. (2002) "The physics of putting." Canadian Journal of Physics 80(2): 83–96 (see lip-out analysis).
                 // Architect-locked 2026-05-14. Tunable via putt.csv "cup_capture_speed".

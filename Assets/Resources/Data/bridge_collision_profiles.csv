@@ -1,0 +1,13 @@
+# One row per class of bridge part emitted by BridgeObstacleBaker; `default` is the fallback.
+# restitution    = bounce applied to the reflected NORMAL component of XZ velocity.
+# tangentDamping = fraction of TANGENTIAL XZ speed retained after the strike (1 = frictionless).
+#
+# DESIGN-FEEL STARTING VALUES, ARCHITECT-TUNABLE — pending Cesar's feel pass, exactly like the
+# SurfaceType.Bridge row in SurfaceConfig. Anchors: a tree trunk is 0.15 (soft bark, kills the
+# ball). A steel truss railing should kick the ball back onto the deck, so it sits well above
+# that; a concrete pier higher still. Both below a hard wall (~0.6) because these are open
+# lattice members that absorb on contact.
+profileName,restitution,tangentDamping
+default,0.35,0.75
+railing,0.35,0.75
+pier,0.45,0.85

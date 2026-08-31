@@ -62,6 +62,9 @@ namespace Golfin.Editor.CourseImporter
             { SurfaceType.Rough,       0.00f  },
             { SurfaceType.Water,       0.00f  },
             { SurfaceType.OOB,         0.00f  },
+            // Bridge: the deck mesh IS the surface. TrySampleMeshY (Path β) returns the
+            // deck's own barycentric vertex Y, so no offset-above-terrain applies.
+            { SurfaceType.Bridge,      0.00f  },
         };
 
         // Output path constants
