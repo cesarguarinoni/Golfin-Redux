@@ -7,8 +7,7 @@
 
 ## ▶ CURRENT STATE — update this block at every session boundary
 
-- **`gacha_server_pull` (B): both migrations APPLIED, §7 + §8 RUN, awaiting Cesar's approval
-  (2026-08-31).** Verification 16/16 and 11/11. All three deploy surfaces live (API
+- **`gacha_server_pull` (B): DONE, approved by Cesar 2026-08-31 (Architect review PASS; its one condition — the `pool_for_build` probe + the §8 revert — was met the same session). Folder is in `Docs/Specs/Completed/`. Next: C (kickoff in SPEC_READY POINTERS).** Detail: Verification 16/16 and 11/11. All three deploy surfaces live (API
   `deployment-01M1B5F2YV1ZJT84RX7RSGN5WW` v64; dashboard `bbfdb132-…` stamped `83564c011`;
   Access 302). **Every SPEC §10 acceptance item is PASS** — parity worst 0.90 pt against a
   ±1.5 tolerance, the full eight-step live E2E, the §5.2 shop ticket sale, and
@@ -27,7 +26,7 @@
   that is spec C. **One real bug fell out:** `lib/gachaOdds.ts` fired pity at
   `counter >= threshold`, one pull LATE; both implementations now use `counter + 1 >= threshold`.
 
-- **Gacha → admin: PLAN filed + spec A SPEC_READY (Architect, 2026-08-31)** — `Docs/GACHA_ADMIN_PLAN.md` §9 decisions taken by Cesar the same day (rates = rarity bp table + weights; pity per banner, may be none; dupes → RP; ticket ledger from 0; 5b overlay + gacha-only re-apply; banner text UI-authored, never in the artwork). **`gacha_admin_catalogs` (A) and `gacha_server_pull` (B) are both SPEC_READY** — kickoffs below; Code is on A. B starts once A is seeded; C (`gacha_client_real_pull`, blocked on A + B) and D (`gacha_ops_polish`, blocked on C) are SPEC_READY too — all four specs filed; run A → B → C → D.
+- **Gacha → admin (2026-08-31): A DONE (`150ce9449`), B DONE (`gacha_server_pull` in `Docs/Specs/Completed/`). Next: C `gacha_client_real_pull` (kickoff below; SPEC carries the card guarantee-lines and `ApplyPurchaseGrant` ticket-case additions), then D `gacha_ops_polish`.** Plan `Docs/GACHA_ADMIN_PLAN.md`. State after B: four gacha catalogs live (banners v3 / rates v3 / pools v1 / ticket_types v1), `golfin_gacha_pull()` on API **v64** reading the PUBLISHED rows (no mirror), ticket ledger `golfin_tickets` (truth from 0; admin grants write the ledger, never `golfin_pending_grants`), Gacha ops panel on dashboard **`83564c011`** (pause switch `content_settings.gacha_enabled`, pull log, odds audit, per-user tickets + pity reset), shop `category=ticket` server-side behind G1-T (`TICKET_SHOP_BUILD = 0` until the C archive). Roll parity SQL vs TS ±0.9 pt; live E2E incl. rate + cost change with no build; `pool_for_build` probe PASS; Cesar's prod footprint reverted to 823 RP. ⚠️ The game still pulls the MOCK until C ships.
 - **Missions track CLOSED (Cesar, 2026-08-30).** `missions_v1` DONE (`8a4275064`, mode OPEN on
   prod — `modes` v8, `texts` v16, 40 component-built missions on Lomond, server-generated Daily
   Mission, seven catalogs + Missions/Components/Daily panels) and `daily_mission_home_pill` DONE
@@ -133,9 +132,8 @@
   round trip, three admin panels + validation + art upload, one client parser rail. Game behaviour
   unchanged. Specs B (`gacha_server_pull`), C (`gacha_client_real_pull`), D follow.
 
-- **`gacha_server_pull`** (filed 2026-08-31, Architect via Cowork) — **DONE_PENDING_CESAR_APPROVAL.**
-  ⚠️ Do NOT re-dispatch an implementer on this: migrations applied, deploys out, §7 + §8 run,
-  every acceptance item PASS. It needs Cesar's approval and then the move to `Completed/`.
+- ~~**`gacha_server_pull`**~~ — **DONE 2026-08-31**, approved by Cesar, folder in
+  `Docs/Specs/Completed/gacha_server_pull/`. Do NOT re-dispatch.
   `Docs/Specs/Active/gacha_server_pull/SPEC.md`. Spec B: `golfin_gacha_pull()` reads the PUBLISHED
   gacha catalogs (no mirror), ticket ledger `golfin_tickets` + `golfin_ticket_credit()`, roll with
   pity / x10 guarantee (§3 — must match `lib/gachaOdds.ts` from spec A), `routers/gacha.py`

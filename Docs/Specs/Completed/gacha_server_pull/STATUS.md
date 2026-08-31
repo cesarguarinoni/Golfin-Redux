@@ -1,4 +1,4 @@
-DONE_PENDING_CESAR_APPROVAL
+DONE
 
 Built and PROVEN ON PROD 2026-08-31 (Claude Code, direct implementation — no subagent
 pipeline: this task touches zero Unity assets, so there is no screenshot, no Figma node
@@ -31,4 +31,6 @@ its 4 pre-existing pending grants. All five gacha tables are globally empty agai
 three ways that do not depend on the write: the surviving ledger SUMS to 823, REPLAYS to
 (3, 633), and the surviving grant ids are identical to the pre-test set. Full backup kept.
 
-AWAITING CESAR: approval only. Nothing is outstanding.
+APPROVED BY CESAR 2026-08-31. Folder moved to Docs/Specs/Completed/. Nothing outstanding.
+The five gacha tables are still globally EMPTY — the first real rows come from spec C
+(gacha_client_real_pull) §7 E2E.

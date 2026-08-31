@@ -5,7 +5,7 @@
 
 ---
 
-## ✅ BUILT + PROVEN ON PROD — `gacha_server_pull`, awaiting Cesar's approval (2026-08-31)
+## ✅ SHIPPED — `gacha_server_pull` **approved by Cesar** (2026-08-31)
 
 **The pull becomes one server function that reads the published catalogs.** Spec B of
 `Docs/GACHA_ADMIN_PLAN.md`. Backend + dashboard only — **no Unity change**; `GachaPullFlow` still
@@ -68,6 +68,18 @@ Access 302.
   `/health` 200, `/api/v1/content` 200, all three `/api/v1/gacha/*` **403 not 404**, an unknown path
   404 (so the 403s are auth, not routing). Backend suite 233 green, dashboard vitest 216 green,
   `npm run build` green.
+
+Architect review: **PASS** with one condition (run the `pool_for_build` probe + the §8 revert) —
+both done the same session, pasted in the report. Spec folder in `Docs/Specs/Completed/`.
+
+⚠️ **The game still pulls the MOCK.** `GachaPullFlow` is untouched; nothing calls
+`/api/v1/gacha/*` yet, and all five gacha tables are EMPTY — the first real row comes from
+spec C. **One item carried into spec D:** `simulate()` decides the x10 guarantee from the first
+NINE slots while the server re-rolls slot 9 only if all ten missed. Prize law identical, FLAG
+rate differs (~13.4 % vs ~10.7 %), so the admin's "guarantee hits" will not match the server's
+log until D's two-line fix. Not a server bug.
+
+Next: **C** `gacha_client_real_pull` — unblocked.
 
 ---
 
