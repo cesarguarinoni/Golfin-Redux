@@ -7,6 +7,7 @@
 
 ## ▶ CURRENT STATE — update this block at every session boundary
 
+- **Gacha → admin: PLAN filed + spec A SPEC_READY (Architect, 2026-08-31)** — `Docs/GACHA_ADMIN_PLAN.md` §9 decisions taken by Cesar the same day (rates = rarity bp table + weights; pity per banner, may be none; dupes → RP; ticket ledger from 0; 5b overlay + gacha-only re-apply; banner text UI-authored, never in the artwork). **`Docs/Specs/Active/gacha_admin_catalogs/` is SPEC_READY** — kickoff below.
 - **Missions track CLOSED (Cesar, 2026-08-30).** `missions_v1` DONE (`8a4275064`, mode OPEN on
   prod — `modes` v8, `texts` v16, 40 component-built missions on Lomond, server-generated Daily
   Mission, seven catalogs + Missions/Components/Daily panels) and `daily_mission_home_pill` DONE
@@ -105,6 +106,44 @@
 ---
 
 ## 📋 SPEC_READY POINTERS
+
+- **`gacha_admin_catalogs`** (filed 2026-08-31, Architect via Cowork) — `SPEC_READY`.
+  `Docs/Specs/Active/gacha_admin_catalogs/SPEC.md`. Spec A of `Docs/GACHA_ADMIN_PLAN.md`: four
+  content catalogs (`gacha_banners` extended, `gacha_rates`, `gacha_pools`, `ticket_types`), seed,
+  round trip, three admin panels + validation + art upload, one client parser rail. Game behaviour
+  unchanged. Specs B (`gacha_server_pull`), C (`gacha_client_real_pull`), D follow.
+
+### Kickoff · gacha_admin_catalogs (issued 2026-08-31)
+
+```
+Read Docs/Specs/Active/gacha_admin_catalogs/SPEC.md and implement it.
+
+Context:
+- Spec A of Docs/GACHA_ADMIN_PLAN.md (read §2-§4, §9 for the why). Makes gacha_banners
+  (extend Assets/Resources/Data/gacha_banners.csv in place, 13 new columns), gacha_rates,
+  gacha_pools and ticket_types content catalogs #17-#20: Tools/content/catalogs.py, seed via
+  seed_from_csv.py -> playlife/backend/migrations/2026_08_31_content_gacha_seed.sql (FULL SQL
+  in chat for Cesar), export byte-identical + --check clean, three panels
+  (gacha-banners / gacha-pools with Pools|Rates tabs / ticket-types) on the shared
+  CatalogPanel, validation rules 1-20 in lib/contentValidate.ts with vitest, artUrl upload
+  via contentArtMutations.ts (bucket catalog-art, 882x1448 target), lib/gachaOdds.ts
+  (effectiveOdds + seeded simulate) - this is the reference the server roll is checked
+  against in spec B.
+- Look at: components-panel.tsx (tabs pattern), shop-panel.tsx + ref-picker (RefPicker,
+  resolved preview, rowId prefill), contentValidate.ts (REQUIRED_COLUMNS / NUMERIC /
+  ID_COLUMN / warn), contentArtMutations.ts (ALLOWED_CATALOGS / ALLOWED_COLUMNS),
+  ModesDatabaseCSV.ParseCsvLine (quote-aware splitter for the one client rail in
+  GachaBannerModel.ParseCsv - header-indexed, the 15 GachaStage2Tests pass UNMODIFIED).
+- Game behaviour does NOT change: no overlay, no pull, no ticket changes - specs B/C.
+- Minimal diff. Reuse existing systems (named above). Dashboard strings via lib/i18n.ts DICT
+  en + ja; no player strings in this task.
+- Out of scope: everything under the spec's Out of scope list.
+
+When done: list changed files with a 1-line summary each, run the acceptance
+tests in the spec (both prod round trips pasted, vitest run quoted, deployment id +
+footer stamp quoted, Access curl 302), flag which need manual verification, update
+STATUS.md + IMPLEMENTER_REPORT.md in the spec folder, and update Docs/AI_CONTEXT.md.
+```
 
 - **`gacha_reveal_animation`** (filed 2026-08-31, Architect via Cowork) — ✅ **DONE, approved by Cesar 2026-08-31** (`6514fd8a6`).
   `Docs/Specs/Completed/gacha_reveal_animation/SPEC.md`. PULL x1/x10 on a banner card (and PULL-again on
