@@ -192,14 +192,19 @@ namespace GolfinRedux.UI.Gacha
                     if (item == null) { Missing(record, "item"); return; }
 
                     // An item has ONE number worth showing, and it goes on the free-text line —
-                    // the same two keys ItemDetailPanel and the shop card already use for it.
+                    // the same two keys ItemDetailPanel and the shop card already use for it. It
+                    // has no stat lanes, so its DESCRIPTION fills the space they would have taken:
+                    // the same copy the Item screen prints under ITEM INFO, through the same
+                    // key-with-CSV-fallback ladder, so the two screens cannot describe the same
+                    // item differently.
                     card.InitializePrize(new BagClubCard.PrizeView(
                         item.thumbnailSprite != null ? item.thumbnailSprite : item.fullSprite,
                         (item.name ?? string.Empty).ToUpperInvariant(),
                         record.Rarity,
-                        badge:  qty,
-                        detail: $"{LocalizationManager.Get("ITEM_RESTORES")} {item.restorePercent}%",
-                        stats:  null));
+                        badge:       qty,
+                        detail:      $"{LocalizationManager.Get("ITEM_RESTORES")} {item.restorePercent}%",
+                        stats:       null,
+                        description: LocalizedBody("ITEM_INFO_" + Upper(item.itemId), item.info)));
                     return;
                 }
 
@@ -230,6 +235,21 @@ namespace GolfinRedux.UI.Gacha
                     return;
             }
         }
+
+        /// <summary>
+        /// A localized body string with the raw CSV copy as its fallback — the ladder
+        /// <c>ItemDetailPanel</c> and <c>BallDetailPanel</c> both use for prose. A key the table
+        /// does not carry resolves to ITSELF, and that is what distinguishes "translated" from
+        /// "missing": on missing, the English CSV column is shown rather than a bare key.
+        /// </summary>
+        private static string LocalizedBody(string key, string? fallback)
+        {
+            if (string.IsNullOrEmpty(key)) return fallback ?? string.Empty;
+            string v = LocalizationManager.Get(key);
+            return string.Equals(v, key, System.StringComparison.Ordinal) ? (fallback ?? string.Empty) : v;
+        }
+
+        private static string Upper(string? s) => string.IsNullOrEmpty(s) ? string.Empty : s!.ToUpperInvariant();
 
         /// <summary>
         /// Two lines when there is a second part, one when there is not — the shape the club

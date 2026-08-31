@@ -160,6 +160,28 @@ showed, the server shows too.
 
 ---
 
+## Part 4c — The item description on the card (Cesar, 2026-08-31)
+
+A stat-less prize (item, ticket) left the lower two thirds of the card blank. It now carries the
+item's own description — the same copy the **Item screen** prints under ITEM INFO, resolved through
+the same ladder (`ITEM_INFO_<ID>` with the Items.csv `info` column as fallback), so the two screens
+cannot describe the same item differently. It is already translated EN + JA for all three repair
+kits, so it swaps language with everything else. Balls and characters keep their stat lanes and pass
+no description; the space is only filled when it would otherwise be empty.
+
+**It took four attempts, and the first three were wrong for the same reason: I kept blaming the
+layout.** The label rendered as one long unwrapped line running off the card. In order I tried an
+explicit width (came back 1228×14), stretch anchors (rewritten to (0,1) by the VerticalLayoutGroup),
+and re-parenting outside the group (still 955×14 — a different number, same shape). The actual cause
+was `TextMeshProUGUI.autoSizeTextContainer`, which resizes the component's OWN RectTransform to the
+text's preferred size; every width written was correct and then immediately overwritten by TMP.
+Measuring the live rect three times is what eventually named it — the second measurement, with a
+different parent AND different anchors and still the width of the whole string, is what ruled the
+layout out. Lesson for the shape: when a written value comes back as a DERIVED one, suspect the
+component that derives it before the container that positions it.
+
+---
+
 ## Part 5 — For spec D
 
 - The Gacha Banners panel still says *"Pulls still run on the client-side mock until

@@ -148,13 +148,19 @@ namespace Golfin.Inventory
             public readonly int[]?          Stats;
             /// <summary>What a full bar means for <see cref="Stats"/> — 10 for a ball, 60 for a club.</summary>
             public readonly int             StatMax;
+            /// <summary>Body copy for a prize that has NO stat lanes, filling the space they would
+            /// have taken. Empty leaves that space blank, which is what a stat-less card looked
+            /// like before. See <see cref="DescriptionName"/>.</summary>
+            public readonly string          Description;
 
             public PrizeView(Sprite? portrait, string name, CharacterRarity rarity,
-                             string badge = "", string detail = "", int[]? stats = null, int statMax = 60)
+                             string badge = "", string detail = "", int[]? stats = null, int statMax = 60,
+                             string description = "")
             {
                 Portrait = portrait; Name = name ?? string.Empty; Rarity = rarity;
                 Badge = badge ?? string.Empty; Detail = detail ?? string.Empty;
                 Stats = stats; StatMax = statMax > 0 ? statMax : 60;
+                Description = description ?? string.Empty;
             }
         }
 
@@ -228,6 +234,8 @@ namespace Golfin.Inventory
                 if (has) SetBar(bars[i], nums[i], view.Stats![i], view.StatMax, StatBarColor);
             }
 
+            BindDescription(view.Description);
+
             // Display only, always — a prize card is never actionable.
             if (levelUpButton != null) levelUpButton.interactable = false;
             if (repairButton  != null) repairButton.interactable  = false;
@@ -238,13 +246,132 @@ namespace Golfin.Inventory
         /// have hidden, so re-binding this card to a CLUB shows a whole club card again.</summary>
         public void RestoreClubRows()
         {
+            BindDescription(string.Empty);
             SetActiveAt(DistanceRowPath, true);
             foreach (var path in StatRowPaths) SetActiveAt(path, true);
             if (levelText != null) levelText.gameObject.SetActive(true);
             if (portraitImage != null) portraitImage.enabled = true;
         }
 
+        /// <summary>Name of the description label this card builds on demand. Looked up before
+        /// creating one so a re-bind reuses it.</summary>
+        private const string DescriptionName = "PrizeDescription";
+
+        private const string StatsPanelPath  = "Mask/Background/StatsPanel";
         private const string DistanceRowPath = "Mask/Background/StatsPanel/DistanceRow";
+
+        /// <summary>
+        /// Fill the space the hidden stat lanes leave with the prize's own description — the same
+        /// copy the Item screen shows under ITEM INFO.
+        ///
+        /// <para>
+        /// It is BUILT rather than cloned because BagClubCard carries no body-copy label to clone:
+        /// every text on it (NameText, RarityBadge, LevelBadge, the five StatNums, DistanceValue)
+        /// is a short single-line field that is already bound. Rule 19 asks for provenance on a
+        /// MANDATED clone; there is nothing here to clone, so it is stated rather than claimed.
+        /// </para>
+        /// <para>
+        /// It goes in as the LAST child of StatsPanel, which is a VerticalLayoutGroup — so it lands
+        /// under the distance row and takes the height the hidden rows freed, with no arithmetic
+        /// here about how much that is.
+        /// </para>
+        /// </summary>
+        private void BindDescription(string description)
+        {
+            var panel = transform.Find(StatsPanelPath) as RectTransform;
+            if (panel == null) return;
+
+            // ⚠️ THE LABEL IS A SIBLING OF StatsPanel, NOT A CHILD OF IT.
+            //
+            // StatsPanel is a VerticalLayoutGroup, and a LayoutGroup REWRITES its children's
+            // anchors and sizeDelta on every layout pass — measured: whatever anchors and width
+            // this method wrote came back as (0,1)..(0,1) at 1228x14, the width of the whole
+            // unwrapped string, so the text never wrapped and ran off the side of the card. There
+            // is no combination of sizeDelta, anchors or LayoutElement that survives that while the
+            // group does not control size, so the label is parented OUTSIDE the group and
+            // positioned over the area the hidden stat rows vacated.
+            var host = panel.parent as RectTransform;
+            if (host == null) return;
+
+            var existing = host.Find(DescriptionName) as RectTransform;
+
+            if (string.IsNullOrWhiteSpace(description))
+            {
+                if (existing != null) existing.gameObject.SetActive(false);
+                return;
+            }
+
+            TextMeshProUGUI? label;
+            RectTransform rt;
+
+            if (existing != null)
+            {
+                existing.gameObject.SetActive(true);
+                rt    = existing;
+                label = existing.GetComponent<TextMeshProUGUI>();
+            }
+            else
+            {
+                var go = new GameObject(DescriptionName, typeof(RectTransform));
+                rt = (RectTransform)go.transform;
+                rt.SetParent(host, worldPositionStays: false);
+
+                label = go.AddComponent<TextMeshProUGUI>();
+                label.alignment        = TextAlignmentOptions.TopLeft;
+                label.textWrappingMode = TextWrappingModes.Normal;
+                label.enableAutoSizing = true;
+                label.fontSizeMax      = 11f;
+                label.fontSizeMin      = 6f;
+                label.color            = DescriptionColor;
+                label.raycastTarget    = false;
+
+                // ⚠️ THE ONE THAT ACTUALLY CAUSED IT. TMP resizes its OWN RectTransform to the
+                // text's preferred size when this is on, which is why every width written here
+                // came back as the width of the whole unwrapped string (1228, then 955 — measured
+                // twice, with different parents and anchors) and the text never wrapped. Layout
+                // groups and anchors were never the culprit.
+                label.autoSizeTextContainer = false;
+            }
+
+            // Sit exactly where StatsPanel sits, minus the height of whatever is still visible in
+            // it (the distance row) off the top. Copying the panel's own anchoring is what keeps
+            // this correct without hard-coding the card's geometry.
+            float inset = VisibleRowsHeight(panel, null);
+
+            if (label != null)
+            {
+                label.autoSizeTextContainer = false;   // also for a label built by an older build
+                label.text = description;
+            }
+
+            rt.anchorMin        = panel.anchorMin;
+            rt.anchorMax        = panel.anchorMax;
+            rt.pivot            = panel.pivot;
+            rt.sizeDelta        = new Vector2(panel.sizeDelta.x, Mathf.Max(0f, panel.sizeDelta.y - inset));
+            rt.anchoredPosition = new Vector2(panel.anchoredPosition.x,
+                                              panel.anchoredPosition.y - inset * 0.5f);
+        }
+
+        /// <summary>Height of the panel's VISIBLE children plus the spacing between them — the
+        /// strip at the top of StatsPanel the description must sit below.</summary>
+        private static float VisibleRowsHeight(Transform panel, RectTransform? ignore)
+        {
+            var vlg = panel.GetComponent<VerticalLayoutGroup>();
+            float spacing = vlg != null ? vlg.spacing : 0f;
+
+            float used = 0f;
+            int counted = 0;
+            foreach (RectTransform child in panel)
+            {
+                if (child == ignore || !child.gameObject.activeSelf) continue;
+                used += child.rect.height;
+                counted++;
+            }
+            return counted == 0 ? 0f : used + spacing * counted;
+        }
+
+        /// <summary>Muted against the card's dark stats panel — body copy, not a headline.</summary>
+        private static readonly Color DescriptionColor = new Color(0.78f, 0.82f, 0.88f, 1f);
 
         private static readonly string[] StatRowPaths =
         {
