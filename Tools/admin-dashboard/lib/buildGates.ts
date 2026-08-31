@@ -100,7 +100,7 @@ export const shopCategoryBuildPending = (): boolean => SHOP_CATEGORY_STRICT_BUIL
  * and every `=== 0` check becomes a non-overlapping-literal compile error the
  * day someone sets a real build number.
  */
-export const TICKET_SHOP_BUILD: number = 0;
+export const TICKET_SHOP_BUILD: number = 2534;
 
 /** True while the build that can apply a ticket purchase is still unpublished. */
 export const ticketShopBuildPending = (): boolean => TICKET_SHOP_BUILD === 0;
