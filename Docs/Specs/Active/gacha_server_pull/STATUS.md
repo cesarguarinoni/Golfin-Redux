@@ -1,24 +1,30 @@
-AWAITING_MIGRATION
+DONE_PENDING_CESAR_APPROVAL
 
-Built 2026-08-31 (Claude Code, direct implementation — no subagent pipeline: this task
-touches zero Unity assets, so there is no screenshot, no Figma node and no scene to review).
+Built and PROVEN ON PROD 2026-08-31 (Claude Code, direct implementation — no subagent
+pipeline: this task touches zero Unity assets, so there is no screenshot, no Figma node
+and no scene to review).
 
-BLOCKED ON CESAR, and only on this: apply the two migrations in the Supabase SQL editor,
-in order, then paste each VERIFICATION block back.
+Both migrations APPLIED by Cesar and verified: file 1 16/16 rows as expected, file 2 11/11.
 
-  1. playlife/backend/migrations/2026_09_01_golfin_gacha.sql
-  2. playlife/backend/migrations/2026_09_01_shop_purchase_tickets.sql   (calls functions from 1)
+All three deploy surfaces are live:
+  API       playlife-api:deployment-01M1B5F2YV1ZJT84RX7RSGN5WW (v64)
+  Dashboard version bbfdb132-ed74-4507-9f4b-ee7bb2b99536, stamped 83564c011
+  Access    https://admin.golfin.world/ -> 302 cloudflareaccess.com
 
-DDL has no path from this machine — Supabase's REST API has no DDL endpoint and there is no
-Postgres connection string here (ADMIN_DASHBOARD_OPS §3.2). Both files are parse-checked with
-pglast (statement level AND every plpgsql body) and pasted in full in the session.
+SPEC §7 roll parity: PASS. banner_test_a (no pity, no guarantee — every slot comparable
+on both sides) 2 000 x10 = 20 000 slots; worst |SQL - published| 0.63 pt, worst |SQL - TS
+simulate| 0.90 pt against a ±1.50 tolerance. banner_standard_club1 2 000 x10: worst
+|non-forced - published| 0.36 pt; pity 9.40 %/pull vs the simulator's 9.35 %. Throwaway
+user and all 4 000+ of its rows deleted, 0 orphans.
 
-DONE and verifiable now: the migrations, routers/gacha.py + main.py, tests/test_gacha.py (58),
-the extended tests/test_shop_purchase.py, the whole dashboard half, the docs. Backend suite 233
-green, dashboard vitest 216 green, `npm run build` green, API deployed
-(playlife-api:deployment-01M1B5F2YV1ZJT84RX7RSGN5WW, v64) and smoke-tested.
+SPEC §8 live E2E: PASS, all eight steps through the real API with a real bearer token,
+plus the §5.2 shop ticket sale. Pasted in IMPLEMENTER_REPORT.md Part 2.
 
-STILL TO RUN, all of it in one pass once the migrations land (see IMPLEMENTER_REPORT.md
-§ "What is outstanding"): the two VERIFICATION blocks, SPEC §7 roll parity, SPEC §8 live E2E
-steps 1–8. The service key reaches prod over PostgREST from here, so none of it needs Cesar
-beyond the paste.
+ONE ITEM SHORT OF FULL, FLAGGED NOT HIDDEN: acceptance #6 (`pool_for_build`) is
+implemented and reviewed but NOT exercised live — proving it needs a pool entry published
+to prod at min_build 9999, and publishing one to prove a refusal was not worth the blast
+radius. Every sibling refusal on that code path is covered.
+
+AWAITING CESAR: (a) approval, and (b) a decision on the §8 footprint left on
+cesar.guarinoni@wonderwall-g.com — RP 823 -> 22 663, 49 945 tickets, 117 unapplied gacha
+grants. Not reverted: adjusting a live RP balance is Cesar's call. The revert is ready.

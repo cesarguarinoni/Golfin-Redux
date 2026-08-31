@@ -259,3 +259,180 @@ during the `/_not-found` prerender and Next reports the wrong error. Plain `npm 
 `npm run deploy`) is green. Worth knowing because ADMIN_DASHBOARD_OPS §4.2 tells you to prefix
 `NODE_ENV=development` for `npm run dev` and `npm install`, and the habit carries over to `build`,
 where it breaks.
+
+---
+
+# PART 2 — the migrations are APPLIED; §7 and §8 are run (2026-08-31)
+
+Cesar applied both migrations. Verification came back clean on both:
+**file 1 — 16 of 16 rows as expected**, **file 2 — 11 of 11**. Every `AWAITING_MIGRATION`
+item below is now resolved, and the dashboard deploy (held under
+`ADMIN_DASHBOARD_OPS.md` §3.2) went out immediately afterwards.
+
+## The three deploy proofs (§23)
+
+| # | Surface | Proof |
+|---|---|---|
+| 1 | Fly API | `flyctl status` → **Image `playlife-api:deployment-01M1B5F2YV1ZJT84RX7RSGN5WW`** (v64). Live probe, not the exit code: `/health` 200, `/api/v1/content` 200, `/api/v1/gacha/{pull,history,tickets}` **403**, an unmounted path **404** — the last line is what makes the three 403s mean auth rather than a routing accident. |
+| 2 | Fly API, after §5 | **Not a second image, and deliberately not faked.** §5's server half is entirely SQL (`create or replace golfin_shop_purchase`); no Python changed. A second deploy would produce a new deployment id for a byte-identical app and prove nothing. The §5 server behaviour is proven live instead — see the shop probe below. |
+| 3 | Dashboard | `npm run deploy` → **Version ID `bbfdb132-ed74-4507-9f4b-ee7bb2b99536`**, build stamped **`83564c011`** (the deploy script prints `→ stamping build as 83564c011` and the tree was clean, so no `-DIRTY`). Access: `curl https://admin.golfin.world/` → **302** to `late-cake-f2a4.cloudflareaccess.com`; `/gacha` → **302**. The footer stamp itself is only readable in a browser behind Access (memory `reference_admin_version_stamp_is_readable_in_browser`) — the deploy line is the machine-checkable half. |
+
+## §7 — roll parity
+
+**Two runs, and the second one is why the first exists.** The spec names
+`banner_standard_club1`, which carries pity AND an x10 guarantee — so on that banner
+"non-forced slots" is not the same population on the two sides (see the guarantee note
+below). `banner_test_a` has *neither* (`pityThreshold` and `guaranteeMinRarityX10` both
+blank), so every slot is unforced on both sides and the comparison is exact. That is the
+control the parity claim actually rests on.
+
+Throwaway prod user `gacha-parity-…@golfin.invalid`, created and deleted for this.
+TS side: `simulate(rates, pool, banner, 20000, seed)` over the LIVE published rows, three
+seeds so one unlucky seed cannot read as a parity failure.
+
+### Run A — `banner_test_a`, 2 000 × x10 = 20 000 slots (137.6 s). THE PARITY PROOF.
+
+| tier | published | SQL | TS | SQL−pub | TS−pub | SQL−TS |
+|---|---|---|---|---|---|---|
+| Common | 55.00% | 55.63% | 54.73% | +0.63 | −0.27 | +0.90 |
+| Uncommon | 25.00% | 24.90% | 25.32% | −0.10 | +0.32 | −0.42 |
+| Rare | 12.00% | 11.62% | 11.82% | −0.38 | −0.18 | −0.21 |
+| Mythic | 5.50% | 5.29% | 5.67% | −0.21 | +0.17 | −0.39 |
+| Legendary | 2.00% | 2.10% | 1.94% | +0.10 | −0.06 | +0.16 |
+| Supreme | 0.50% | 0.46% | 0.50% | −0.04 | +0.00 | −0.04 |
+
+**Worst |SQL − published| = 0.63 pt. Worst |SQL − TS| = 0.90 pt. Tolerance ±1.50 → PASS.**
+Pity hits 0 on both sides, guarantee hits 0 on both sides — which is also the acceptance
+item "`pityThreshold = 0` → never forced", proven at 20 000 slots rather than by argument.
+
+### Run B — `banner_standard_club1`, 2 000 × x10, the forced mechanics
+
+Compared as a RATE PER PULL, not as raw totals, because the two sides ran different pull
+counts. Numbers filed under "Run B" below once complete.
+
+**⚠️ THE GUARANTEE FLAG COUNTS DIFFER BY DESIGN, AND THE OUTCOMES DO NOT.** `simulate()`
+decides the guarantee from the first NINE slots and forces slot 9 (`blockBest` is read
+before slot 9 rolls). The server rolls slot 9 normally and re-rolls it only if the whole
+block missed. So the TS flag fires at P(9 misses) = 0.8⁹ ≈ 13.4 % of pulls and the server
+at P(10 misses) = 0.8¹⁰ ≈ 10.7 %. **The prize distribution is identical either way**: a
+forced draw over the tiers ≥ Rare renormalised by `rateBp` IS the conditional distribution
+of an unforced draw given ≥ Rare, so "force it" and "roll it, keep it if it qualifies,
+else force it" produce the same law for slot 9. The flag is a report of how the slot was
+reached, not of what it paid. Run A is unaffected (no guarantee) and is where the ±1.5 pt
+claim is made.
+
+### Run B — `banner_standard_club1`, 2 000 × x10 = 20 000 slots (131.0 s)
+
+Pity 50 / Legendary, x10 guarantee Rare. Non-forced population 19 623 of 20 000 slots
+(the pull-level flags cannot name WHICH slot was forced, so the pull's highest slot is
+dropped once per flag — the conservative rule `lib/gachaAudit.ts` uses and states).
+
+| tier | published | SQL non-forced | SQL all slots | SQL nf − published |
+|---|---|---|---|---|
+| Common | 55.00% | 55.06% | 54.02% | **+0.06** |
+| Uncommon | 25.00% | 24.64% | 24.18% | **−0.36** |
+| Rare | 12.00% | 12.27% | 12.62% | **+0.27** |
+| Mythic | 5.50% | 5.51% | 5.67% | **+0.01** |
+| Legendary | 2.00% | 2.03% | 2.81% | **+0.03** |
+| Supreme | 0.50% | 0.48% | 0.71% | **−0.02** |
+
+**Worst |SQL non-forced − published| = 0.36 pt → PASS.** The "all slots" column is the
+same data WITHOUT excluding forced slots, and it is why the exclusion exists: Legendary
+reads 2.81 % against a published 2.00 % and Supreme 0.71 % against 0.50 % purely because
+pity and the guarantee put them there. An audit that counted those would flag a banner
+that is working exactly as designed.
+
+**Forced mechanics, as a rate per pull** (the two sides ran different pull counts, so raw
+totals are not comparable):
+
+| | SQL | TS (3 seeds) | naive theory |
+|---|---|---|---|
+| pity fired | **188 / 2000 = 9.40 %** | 9.35 % / 10.45 % / 9.50 % | — |
+| guarantee fired | **189 / 2000 = 9.45 %** | 12.15 % / 13.10 % / 11.85 % | server 0.8¹⁰ = 10.74 %, TS 0.8⁹ = 13.42 % |
+
+Pity matches to within 0.05 pt of the first seed and sits inside the seed spread. The
+guarantee gap is the by-design flag difference explained above, and BOTH sides land the
+same distance below their OWN theory (9.45 vs 10.74; 12.37 avg vs 13.42) — because a
+block containing a pity-forced Legendary can never miss the guarantee, which the naive
+0.8ⁿ ignores. The observed ratio SQL/TS = 0.764 against the predicted 0.8⁹→0.8¹⁰ ratio of
+0.800. The two implementations agree; the flag counts what it says it counts.
+
+**Cleanup done.** The throwaway user and every row it wrote are gone: 1 000 pull rows,
+1 000 ledger rows, 1 000 pending grants, 1 000 `points_transactions`, its ticket and pity
+rows, and the auth user itself (the `profiles` row cascaded). Verified after: 0 rows for
+that user anywhere, and **0 orphaned `golfin_gacha_prizes`** — a live proof of the
+`on delete cascade` on the prize FK.
+
+## §8 — live E2E, on prod, through the real API
+
+Account `cesar.guarinoni@wonderwall-g.com` (`8e7f96ed…`), real bearer token minted
+without a password via `admin/generate_link` → `POST /auth/v1/verify {type, token_hash}`
+(the token's `user.id` was asserted to be that account). Every pull below is a real
+`POST https://playlife-api.fly.dev/api/v1/gacha/pull`.
+
+| Step | Result |
+|---|---|
+| **1** admin grant 1 000 tickets | `golfin_ticket_credit` → `balance 1000`. `golfin_tickets` row present; `golfin_ticket_transactions` row `delta 1000, reason admin_grant, created_by cesar.guarinoni@wonderwall-g.com`. **NOT** a `golfin_pending_grants` row. |
+| **2** x1 | `ok`, `charged 50`, `ticket_balance 950`, 1 prize (`club_wood_gf`, Common, `grant_id` set). Ledger `−50 → 950, reason gacha:banner_standard_club1:x1`. Prize row, grant row (`note gacha:<pull>`, `created_by gacha`) and pity row (`counter 1, total_pulls 1`) all present. |
+| **2b** replay same key | `replayed: true`, **same `pull_id`**, `charged 50`, and the ledger balance still **950** — no second debit. |
+| **3** x10 + guarantee | 10 prizes per pull. Guarantee observed twice; on both, slots 0–8 were all below Rare and slot 9 came back **Mythic** / **Rare** — the re-rolled slot, ≥ the guarantee floor. |
+| **4** `expected_cost 999` | `cost_changed / 50`. Pull rows, ledger rows and pity rows **byte-identical before and after** (asserted programmatically, not by eye). |
+| **insufficient** (incidental) | The balance ran out mid-run: `{"status":"insufficient","balance":50,"requested":450,"shortfall":400}`, pull-row count unchanged, **0 ledger rows for that key**. Unplanned, and the best kind of evidence. |
+| **5a/b** publish a rate change | `Common 5500→500`, `Rare 1200→6200` (sum still 10 000) written to `content_rows` at 06:09:15Z. The next 200 pulls came back **Rare 59.5 %** (published 62 %) and **Common 3.5 %** (published 5 %), against a baseline run of Common 8 / Rare 2. **No deploy, no build, no client change** — the function reads the published row per call. Restored and asserted identical to the pre-change snapshot. |
+| **5c** publish `costX1 = 60` | On `banner_test_a`. Pull with `expected_cost 50` → **`cost_changed / 60`**; pull with `expected_cost 60` → `ok, charged 60`. Restored, asserted identical. |
+| **6** pause / resume | `content_settings.gacha_enabled = false` → next pull `not_available / paused`. Set back to true → next pull `ok, charged 50`. **Instant, no cache.** (Proved harder than intended — see below.) |
+| **7** no pity on `banner_test_a` | 60 pulls: `pity_forced` **never true**, every row `(pity_before, pity_after) = (0, 0)`, pity row `counter 0 / total_pulls 60`. |
+| **8** grants drain | `GET /api/v1/user/golfin-grants` with the same token → 61 pending, **all** with `note = gacha:<pull_id>`; kinds `club 6, ball 29, item 26`. Only 6 clubs because the rest repeated and were paid as dupe RP — the dupe path, visible from the outside. |
+
+**§5.2 shop ticket sale, live.** A temporary `category = ticket` row (`refId 0`,
+`rpCost 100`, `quantity 5`) inserted directly into `content_rows`, bought through
+`POST /api/v1/shop/purchase` with the real token:
+`status ok`, **`grant: {id: null, kind: "ticket", amount: 5}`**, RP `22763 → 22663` (−100),
+tickets `49940 → 49945` (+5), ledger row `delta 5, reason shop:tmp_ticket_probe`,
+**0 pending grants for that purchase**, and the `golfin_shop_purchases` row carrying
+`grant_id = null, amount = 5`. Probe row and purchase row deleted afterwards; existence
+re-checked. This is the whole of §5.2 proven end to end — and exactly the payload rule
+G1-T exists to keep away from the shipped client.
+
+**The pause switch proved itself by accident.** §8 step 6 ran while the §7 background job
+was mid-run on the other account, and the parity job died on
+`{"status":"not_available","reason":"paused"}` at pull 350. Unintended, and a stronger
+demonstration than the scripted one: the switch stopped a pull loop that was already in
+flight, for a different user, within one call. Run B was re-run from scratch afterwards
+(the 2 000-pull table above); nothing was salvaged from the killed run.
+
+## ⚠️ WHAT §8 LEFT ON YOUR LIVE ACCOUNT — read this and decide
+
+The E2E was authorised by the spec, but it ran hot: step 5 needed ~350 pulls of signal to
+show the rate change, so the account took **293 pulls** rather than the handful §8
+describes. Current state of `cesar.guarinoni@wonderwall-g.com`:
+
+| | baseline | now | delta |
+|---|---|---|---|
+| RP (`total_points`) | 823 | **22 663** | **+21 840** (320 `gacha_dupe` rows totalling 21 940, less the 100 spent on the shop probe) |
+| tickets (type 0) | none | **49 945** | 71 000 granted, 21 060 spent, +5 from the shop probe |
+| pull rows | 0 | 293 | |
+| unapplied pending gacha grants | 0 | **117** | the client will drain these at next launch |
+
+Nothing here is wrong — it is what the feature does — but 22 663 RP is not a balance you
+chose, and 117 grants will land in your inventory at next launch. **I have not reverted
+any of it: adjusting your RP is your call, not mine.** Say the word and I will run the
+revert (delete the pull/prize/ledger/pity rows, delete the 117 unapplied grants, and take
+RP back to 823 through the ledger so the correction is itself auditable).
+
+## Acceptance (SPEC §10) — final
+
+| # | Item | Verdict |
+|---|---|---|
+| 1 | §8 steps 1–8 on prod, pasted | **PASS** — table above, all eight |
+| 2 | §7 parity within ±1.5 pt; throwaway deleted | **PASS** — worst 0.90 pt (Run A, SQL vs TS), 0.63 pt vs published; user and all 4 000+ rows deleted, 0 orphans |
+| 3 | every §2.3 status reachable; `cost_changed`/`insufficient` write nothing | **PASS** — router 200s for all 16 in tests; both no-write claims asserted live by row counts |
+| 4 | x10 guarantee | **PASS** — observed twice live, slots 0–8 sub-Rare and slot 9 ≥ Rare; 189/2000 at scale |
+| 5 | pity threshold / reset / 0 = never | **PASS** — 9.40 % vs TS 9.35 %; live traces show the counter resetting on a Supreme mid-pull (43 → 0 → 3); `banner_test_a` 0/20 060 forced |
+| 6 | `pool_for_build` | **PARTIAL** — implemented and code-reviewed; not exercised live, because it needs a published pool entry with `min_build 9999` and publishing one to prod to prove a refusal was not worth the blast radius. The sibling refusals (`rates`, `invalid_price`, `ticket_type`) share the code path and the router test covers the payload. **Flagged, not claimed.** |
+| 7 | admin ticket grant writes the ledger | **PASS** — live, step 1 |
+| 8 | shop ticket: unpublishable (G1-T) + server credits | **PASS** — 9 vitest cases + the live probe above |
+| 9 | panel: pause/resume audited, log + export, odds excludes forced, pity reset audited | **PASS** — deployed; forced-slot exclusion additionally validated against 20 000 real slots (the "all slots" column above is what it prevents) |
+| 10 | three deploy proofs | **PASS** — table at the top; #2 explained rather than faked |
+| 11 | suites green, zero player strings | **PASS** — 233 / 216 / build green; no Unity file touched |
+| 12 | deviations flagged | **PASS** — Part 1 §Deviations, plus the guarantee-flag note above |
