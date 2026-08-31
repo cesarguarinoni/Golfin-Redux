@@ -116,6 +116,29 @@ literally: roll all ten, then if `blockBest < guarantee` re-roll slot 9 from the
 subset and set the flag. Update the affected vitest case; the parity note in B's report becomes
 moot.
 
+## 4c. Foreground content refresh — the other half of 5b (from the C review)
+
+`ContentService` fetches exactly once, in `Awake` (`RefreshRoutine`, `:152`). C's
+`TryReinstallFromCache` + `OnCacheRefreshed` subscription therefore fires only for a publish that
+landed BEFORE the launch; a publish while the app is foregrounded waits for the next launch.
+Add `public void RefreshNow()` on `ContentService`: guarded by a `ScheduleRefreshThrottle(60.0)`
+(the tournament/banner cooldown class, reused verbatim), runs the same `RefreshRoutine`, off the
+critical path, no-op while one is in flight. Call it from `GachaCarouselController.OnEnable`
+and from `OnApplicationFocus(true)` on the `ContentService` GameObject. Nothing else changes:
+the refresh writes caches for every catalog exactly as the boot one does, and only the four
+gacha catalogs re-install live (`TryReinstallFromCache`'s allowlist) — every other catalog still
+applies at next launch (I5). Test: a second `RefreshNow()` inside the cooldown is a no-op; the
+gacha reinstall fires after a foreground refresh that wrote a newer cache. Live check: publish a
+`costX1` change while the Editor is running → background/foreground or re-open the Rewards
+Center → the card re-prices with no relaunch.
+
+## 4d. Dashboard copy (from the C review)
+
+`lib/i18n.ts:1460` (Gacha Banners panel banner) still says pulls run on the client-side mock.
+Replace with (en + ja): *"Publishing makes a banner the next build's bundled floor and the
+overlay for installed builds. The server rolls every pull from these rows — a change here is
+live on the next pull."* One deploy with the rest of D.
+
 ## 5. `TICKET_SHOP_BUILD` + the first ticket shop row
 
 Only after the archive that carries C is uploaded (`Docs/Versioning/last_uploaded_build.txt`):

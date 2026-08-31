@@ -42,7 +42,7 @@
   that is spec C. **One real bug fell out:** `lib/gachaOdds.ts` fired pity at
   `counter >= threshold`, one pull LATE; both implementations now use `counter + 1 >= threshold`.
 
-- **Gacha → admin (2026-08-31): A, B and C are all DONE. Next: D `gacha_ops_polish` — the last of the four.** Plan `Docs/GACHA_ADMIN_PLAN.md`. State after B: four gacha catalogs live (banners v3 / rates v3 / pools v1 / ticket_types v1), `golfin_gacha_pull()` on API **v64** reading the PUBLISHED rows (no mirror), ticket ledger `golfin_tickets` (truth from 0; admin grants write the ledger, never `golfin_pending_grants`), Gacha ops panel on dashboard **`83564c011`** (pause switch `content_settings.gacha_enabled`, pull log, odds audit, per-user tickets + pity reset), shop `category=ticket` server-side behind G1-T (`TICKET_SHOP_BUILD = 0` until the C archive). Roll parity SQL vs TS ±0.9 pt; live E2E incl. rate + cost change with no build; `pool_for_build` probe PASS; Cesar's prod footprint reverted to 823 RP. ✅ The game now pulls the SERVER (C, 2026-08-31); texts v19, gacha_banners v5.
+- **Gacha → admin (2026-08-31): A, B and C are all DONE. Next: D `gacha_ops_polish` — the last of the four (SPEC amended 2026-08-31 with §4b simulate parity, §4c foreground content refresh — the missing half of 5b — and §4d panel copy; kickoff below).** Plan `Docs/GACHA_ADMIN_PLAN.md`. State after B: four gacha catalogs live (banners v3 / rates v3 / pools v1 / ticket_types v1), `golfin_gacha_pull()` on API **v64** reading the PUBLISHED rows (no mirror), ticket ledger `golfin_tickets` (truth from 0; admin grants write the ledger, never `golfin_pending_grants`), Gacha ops panel on dashboard **`83564c011`** (pause switch `content_settings.gacha_enabled`, pull log, odds audit, per-user tickets + pity reset), shop `category=ticket` server-side behind G1-T (`TICKET_SHOP_BUILD = 0` until the C archive). Roll parity SQL vs TS ±0.9 pt; live E2E incl. rate + cost change with no build; `pool_for_build` probe PASS; Cesar's prod footprint reverted to 823 RP. ✅ The game now pulls the SERVER (C, 2026-08-31); texts v19, gacha_banners v5.
 - **Missions track CLOSED (Cesar, 2026-08-30).** `missions_v1` DONE (`8a4275064`, mode OPEN on
   prod — `modes` v8, `texts` v16, 40 component-built missions on Lomond, server-generated Daily
   Mission, seven catalogs + Missions/Components/Daily panels) and `daily_mission_home_pill` DONE
@@ -190,6 +190,15 @@ Context:
   (contentArtMutations ALLOWED_CATALOGS/COLUMNS). (4) After the C archive is uploaded:
   TICKET_SHOP_BUILD from last_uploaded_build.txt, first category=ticket shop row from the
   admin (Cesar gives quantity + rpCost), export, live purchase verified by SQL.
+  PLUS, from the B and C reviews (SPEC §4b/§4c/§4d): simulate() x10-guarantee slot aligned
+  with the server; ContentService.RefreshNow() (ScheduleRefreshThrottle 60 s) called from
+  GachaCarouselController.OnEnable + OnApplicationFocus so a mid-session publish lands on
+  the next Rewards Center open; Gacha Banners panel copy no longer says "mock"; §4e the
+  default-ball guard (Balls.csv isDefault column via the importer, validator + server +
+  IsRollable refuse a default ball as prize/listing). psc1_ball_golfin is ALREADY deactivated
+  and published (gacha_pools v2, Architect via the admin 2026-08-31) — the repo CSV is now
+  behind prod: run export_content.py first thing and commit gacha_pools.csv (--check will
+  flag it until you do).
 - Look at: TournamentSignupModalController + prefab (modal shell), TelemetryHooks.cs +
   TelemetryService.RecordSafe, telemetry-panel.tsx Flick-timing card (the card precedent),
   contentArtMutations.ts, lib/buildGates.ts, GachaBannerCard.OnRules.
