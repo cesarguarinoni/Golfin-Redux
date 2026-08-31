@@ -236,7 +236,16 @@ namespace GolfinRedux.UI.Gacha
             // per pull, on a screen that is already instantiating a reveal card per slot.
             if (spawned != null) Destroy(spawned);
 
-            var go = GachaPrizeCardBinder.Instantiate(record, _gridSlots[index], ClubPrefabFor(index));
+            // The "slot" is the ROW — the authored cards are direct children of PrizeRow1/2/3, so
+            // the spawned card goes in at the SAME sibling index the hidden club card occupies, and
+            // is pinned to that card's footprint. Without both, a 978px-wide shop card lands as an
+            // extra child at the end of a HorizontalLayoutGroup and pushes the whole row (and the
+            // COST/PULL block under it) off the panel — which is exactly what it did, measured.
+            var slot   = SlotSizeFor(index);
+            int sibling = ClubSiblingIndexFor(index);
+
+            var go = GachaPrizeCardBinder.Instantiate(record, _gridSlots[index], ClubPrefabFor(index),
+                                                      slot, sibling);
             if (go != null) _spawnedCards[index] = go;
             else            _spawnedCards.Remove(index);
         }
@@ -248,6 +257,21 @@ namespace GolfinRedux.UI.Gacha
             => index < _gridClubCards.Length && _gridClubCards[index] != null
                 ? _gridClubCards[index]!.gameObject
                 : null;
+
+        /// <summary>The authored club card's footprint — the size a non-club prize must fit into.</summary>
+        private Vector2? SlotSizeFor(int index)
+        {
+            if (index >= _gridClubCards.Length || _gridClubCards[index] == null) return null;
+            var rt = _gridClubCards[index]!.transform as RectTransform;
+            return rt != null && rt.rect.width > 0f && rt.rect.height > 0f ? (Vector2?)rt.rect.size : null;
+        }
+
+        /// <summary>Where the authored club card sits in the row, so its replacement takes the same
+        /// position rather than being appended after every other card.</summary>
+        private int ClubSiblingIndexFor(int index)
+            => index < _gridClubCards.Length && _gridClubCards[index] != null
+                ? _gridClubCards[index]!.transform.GetSiblingIndex()
+                : -1;
 
         private void BindX1Card()
         {
@@ -268,8 +292,12 @@ namespace GolfinRedux.UI.Gacha
             if (_x1SpawnedCard != null) Destroy(_x1SpawnedCard);
 
             Transform parent = _x1Card != null ? _x1Card.transform.parent : transform;
+            var x1Rt   = _x1Card != null ? _x1Card.transform as RectTransform : null;
+            Vector2? x1Slot = x1Rt != null && x1Rt.rect.width > 0f ? (Vector2?)x1Rt.rect.size : null;
+
             _x1SpawnedCard = GachaPrizeCardBinder.Instantiate(
-                record, parent, _x1Card != null ? _x1Card.gameObject : null);
+                record, parent, _x1Card != null ? _x1Card.gameObject : null,
+                x1Slot, x1Rt != null ? x1Rt.GetSiblingIndex() : -1);
         }
 
         /// <summary>The non-club card spawned into the x1 slot, if any.</summary>
@@ -310,10 +338,12 @@ namespace GolfinRedux.UI.Gacha
             // Prime every card BEFORE the first pop, otherwise card 10 would be visible at full
             // size for 400 ms while the stagger walks down to it.
             var groups = new CanvasGroup[cards.Count];
+            var homes  = new float[cards.Count];
             for (int i = 0; i < cards.Count; i++)
             {
                 groups[i] = EnsureGroup(cards[i]);
                 groups[i].alpha = 0f;
+                homes[i]  = GachaPrizeCardBinder.HomeScaleOf(cards[i]);
                 cards[i].transform.localScale = Vector3.zero;
             }
 
@@ -321,7 +351,7 @@ namespace GolfinRedux.UI.Gacha
 
             for (int i = 0; i < cards.Count; i++)
             {
-                StartCoroutine(PopIn(cards[i].transform, groups[i], duration));
+                StartCoroutine(PopIn(cards[i].transform, groups[i], duration, homes[i]));
                 if (i < cards.Count - 1)
                     yield return new WaitForSecondsRealtime(EntranceStaggerSec);
             }
@@ -330,19 +360,23 @@ namespace GolfinRedux.UI.Gacha
             _entranceRoutine = null;
         }
 
-        private static IEnumerator PopIn(Transform t, CanvasGroup group, float duration)
+        /// <param name="home">The scale the card RESTS at — 1 for an authored card, and
+        /// the wrapper's 1 for a scaled-to-fit prize card, whose fit lives on its child. The
+        /// pop animates 0 → home, and lands on home; landing on 1 unconditionally is what wiped
+        /// the fit and let the card overflow its slot.</param>
+        private static IEnumerator PopIn(Transform t, CanvasGroup group, float duration, float home = 1f)
         {
             float e = 0f;
             while (e < duration)
             {
                 e += Time.unscaledDeltaTime;
                 float k = Mathf.Clamp01(e / duration);
-                float s = Mathf.LerpUnclamped(0f, 1f, EaseOutBack(k));
+                float s = Mathf.LerpUnclamped(0f, home, EaseOutBack(k));
                 if (t != null) t.localScale = new Vector3(s, s, 1f);
                 if (group != null) group.alpha = k;
                 yield return null;
             }
-            if (t != null) t.localScale = Vector3.one;
+            if (t != null) t.localScale = new Vector3(home, home, 1f);
             if (group != null) group.alpha = 1f;
         }
 
@@ -358,7 +392,10 @@ namespace GolfinRedux.UI.Gacha
         private static void ResetSpawnedVisual(GameObject? go)
         {
             if (go == null) return;
-            go.transform.localScale = Vector3.one;
+            // The card's OWN home scale, not 1 — a scale-to-fit prize card (SPEC §4.3) rests
+            // below 1 and priming it to 1 is what made it overflow its slot again.
+            float home = GachaPrizeCardBinder.HomeScaleOf(go);
+            go.transform.localScale = new Vector3(home, home, 1f);
             EnsureGroup(go).alpha = 1f;
         }
 

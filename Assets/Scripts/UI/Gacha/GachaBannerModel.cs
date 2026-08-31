@@ -529,6 +529,28 @@ namespace GolfinRedux.UI.Gacha
         private static bool s_subscribed;
         private static bool s_refreshPending;
 
+        /// <summary>
+        /// Subscribe BEFORE ANY SCENE LOADS, not on first use.
+        ///
+        /// <para>
+        /// ⚠️ This is the whole 5b path, and a lazy subscription silently disabled it. The boot
+        /// refresh is started by <c>ContentService.Awake</c> (order -900) and raises
+        /// <c>OnCacheRefreshed</c> when it lands — typically a second or two into the session, and
+        /// always LONG before the player opens the Rewards Center. A catalog that only subscribed
+        /// on its first read therefore attached AFTER the event it exists to hear, missed it, and
+        /// went on serving the cache installed at boot. Measured on prod: the disk cache held
+        /// <c>gacha_banners</c> v4 with <c>costX1: 60</c> while the store still held v3, and the
+        /// card kept showing 50 — the exact failure the re-apply was written to prevent.
+        /// </para>
+        /// <para>
+        /// <c>BeforeSceneLoad</c> runs ahead of every <c>Awake</c>, so the listener is in place
+        /// before the fetch can possibly complete. It only ARMS a flag; the swap still happens on
+        /// the next <see cref="Reload"/>, so nothing changes under a player mid-pull.
+        /// </para>
+        /// </summary>
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+        private static void SubscribeAtBoot() => EnsureSubscribed();
+
         private static void EnsureSubscribed()
         {
             if (s_subscribed) return;

@@ -5,6 +5,53 @@
 
 ---
 
+## ✅ BUILT + PROVEN ON PROD — `gacha_client_real_pull`, awaiting Cesar's approval (2026-08-31)
+
+**The gacha is real on the client.** Spec C of `Docs/GACHA_ADMIN_PLAN.md` — the Unity half of A + B.
+`POST /api/v1/gacha/pull` is what rolls a banner now; `GachaMockPrizePool`, the client-side ticket
+spend and the mock history are DELETED, not disabled, so there is no local roll left to fall back to.
+
+- **Catalog.** The four gacha catalogs join `ContentCatalogs.All` and overlay onto the bundled CSVs
+  in the `ClubDatabaseCSV` shape. `ContentService.TryReinstallFromCache` is the 5b carve-out — those
+  four alone may be re-installed mid-session, because none of them has owned state.
+- **Withhold (§3.1).** `GetLiveBanners` now asks whether this build could COMPLETE the pull it is
+  offering: window open, rates summing to 10 000 with a payable entry behind every rated tier, a
+  published ticket type, resolvable art. The client's copy of `golfin_gacha_pull()` step 8.
+- **The card** renders the admin's row: authored title (JA/EN), art through the CatalogArtCache
+  ladder, NUMERIC costs, the banner's ticket icon, and two guarantee lines bound to
+  `pityThreshold` / `pityMinRarity` / `guaranteeMinRarityX10` (hidden when the banner has none).
+- **Tickets** are the server ledger; they left the inventory blob (the additive max-merge would have
+  resurrected a pre-spend balance). `ShopTransaction.ApplyPurchaseGrant` gained the `ticket` case the
+  B review found missing.
+- **History** is `GET /gacha/history`, mirrored to disk, and the non-club kinds render instead of
+  being silently skipped.
+
+**Full unfiltered EditMode sweep: 2129 passed, 0 failed, 3 skipped** (pre-existing). 30 new tests.
+
+**Live §7 E2E on prod, 7 of 8 steps** (step 5's brand-new-banner half skipped on purpose — I6 means
+the row could never be removed). The server's ops panel agrees with the client on every number:
+6 pulls, 2 300 tickets spent, 1 160 dupe RP paid, pity 49/50, a GUARANTEE badge on the last x10.
+The one that proves the design: publish `costX1 = 60` → first tap refused with the toast and NOTHING
+debited → card re-priced to 60 → second tap debits 60, **with no build**.
+
+**Two real bugs fell out, both found by running it:** the 5b re-apply subscribed lazily and missed
+the boot refresh it exists to hear (now `BeforeSceneLoad`), and the prize-card entrance animation
+landed on a hard `localScale = 1` and silently undid the scale-to-fit (the fit now lives on a
+wrapper the animation cannot reach).
+
+⚠️ **One thing for Cesar to accept or reject:** a ball / item / ticket prize is the Rewards-Center
+card scaled to **0.19** to fit a club-shaped slot (181×374 vs 978×274) — legible as a shape, not as
+text. SPEC §4.3 instructed exactly that ("scale-to-fit … do NOT rebuild a card") and said a real
+design may replace it. `Docs/Specs/Active/gacha_client_real_pull/screenshots/06_prizes_x10_mixed_kinds.png`.
+
+⚠️ **Nothing triggers a content refresh mid-session** — `ContentService` fetches once at `Awake` —
+so 5b takes effect on the launch after a publish. The seam is proven; the trigger is a
+`ContentService` change and belongs in its own spec.
+
+Next: **D** `gacha_ops_polish`.
+
+---
+
 ## ✅ SHIPPED — `gacha_server_pull` **approved by Cesar** (2026-08-31)
 
 **The pull becomes one server function that reads the published catalogs.** Spec B of

@@ -44,7 +44,12 @@ namespace GolfinRedux.UI.Gacha
         /// </summary>
         /// <param name="clubPrefab">The caller's BagClubCard prefab. The reveal modal has it
         /// serialized; the Prizes screen reads it off one of its authored grid cards.</param>
-        public static GameObject? Instantiate(PrizeRecord record, Transform parent, GameObject? clubPrefab)
+        /// <param name="slotSize">The footprint the card must occupy, when the caller has one.
+        /// See <see cref="WrapToFit"/> — this is SPEC §4.3's scale-to-fit.</param>
+        /// <param name="siblingIndex">Where in the parent to insert it, so a spawned card takes the
+        /// place of the authored card it replaces instead of being appended after all of them.</param>
+        public static GameObject? Instantiate(PrizeRecord record, Transform parent, GameObject? clubPrefab,
+                                              Vector2? slotSize = null, int siblingIndex = -1)
         {
             GameObject? prefab = record.Kind == PrizeRecord.KindClub
                 ? clubPrefab
@@ -57,10 +62,110 @@ namespace GolfinRedux.UI.Gacha
                 return null;
             }
 
-            var go = Object.Instantiate(prefab, parent);
-            go.name = "PrizeCard_" + record.Kind + "_" + record.RefId;
-            Bind(go, record);
-            return go;
+            // A CLUB card is authored at the slot's size, so it goes straight in.
+            if (record.Kind == PrizeRecord.KindClub || !slotSize.HasValue)
+            {
+                var plain = Object.Instantiate(prefab, parent);
+                plain.name = "PrizeCard_" + record.Kind + "_" + record.RefId;
+                if (siblingIndex >= 0) plain.transform.SetSiblingIndex(siblingIndex);
+                Bind(plain, record);
+                return plain;
+            }
+
+            return WrapToFit(prefab, record, parent, slotSize.Value, siblingIndex);
+        }
+
+        /// <summary>
+        /// SPEC §4.3's scale-to-fit: put the card inside a slot-sized WRAPPER and scale it down to
+        /// fit, centred.
+        ///
+        /// <para>
+        /// ⚠️ <b>THE TWO CARDS ARE DIFFERENT SHAPES, AND THIS IS THE CONSEQUENCE.</b> Measured live
+        /// on the Prizes grid: the club card is <b>181×374</b> (a tall portrait card) and the
+        /// Rewards-Center card is <b>978×274</b> (a wide row card). Fitting one into the other is a
+        /// uniform scale of about <b>0.19</b> — legible as a shape, not as text. The spec
+        /// anticipated exactly this ("if it does not fit, scale-to-fit inside the slot and say so
+        /// with a screenshot — do NOT rebuild a card"), so it is the instructed outcome, flagged in
+        /// the implementer report. A real design for a non-club prize card is out of scope here.
+        /// </para>
+        /// <para>
+        /// <b>Why a wrapper rather than scaling the card in place.</b> Two reasons, both measured.
+        /// First, the rows are HorizontalLayoutGroups and <c>localScale</c> is invisible to layout —
+        /// an unconstrained 978px child pushes every sibling, and the row's own COST/PULL block,
+        /// off the panel. Second, the shop card carries its OWN anchors and pivot from the shop
+        /// prefab, so scaling it around that pivot slid it out of its slot even once the layout was
+        /// pinned. The wrapper is a plain slot-sized rect the layout understands, and the card is
+        /// centred inside it with a pivot the wrapper controls — so neither problem can come back.
+        /// </para>
+        /// <para>
+        /// The wrapper also restores the entrance animation for free: it rests at scale 1 like an
+        /// authored card, so PopIn animates it 0 → 1 and the fit lives on the child, untouched.
+        /// </para>
+        /// </summary>
+        private static GameObject WrapToFit(GameObject prefab, PrizeRecord record, Transform parent,
+                                            Vector2 slot, int siblingIndex)
+        {
+            var slotGo = new GameObject("PrizeSlot_" + record.Kind + "_" + record.RefId,
+                                        typeof(RectTransform));
+            var slotRt = (RectTransform)slotGo.transform;
+            slotRt.SetParent(parent, worldPositionStays: false);
+            slotRt.anchorMin = slotRt.anchorMax = new Vector2(0.5f, 0.5f);
+            slotRt.pivot     = new Vector2(0.5f, 0.5f);
+            slotRt.sizeDelta = slot;
+            slotRt.localScale = Vector3.one;
+
+            var le = slotGo.AddComponent<LayoutElement>();
+            le.preferredWidth  = slot.x;
+            le.preferredHeight = slot.y;
+            le.minWidth        = slot.x;
+            le.minHeight       = slot.y;
+            le.flexibleWidth   = 0f;
+            le.flexibleHeight  = 0f;
+
+            if (siblingIndex >= 0) slotRt.SetSiblingIndex(siblingIndex);
+
+            var card   = Object.Instantiate(prefab, slotRt);
+            card.name  = "PrizeCard_" + record.Kind + "_" + record.RefId;
+            var cardRt = card.transform as RectTransform;
+
+            if (cardRt != null)
+            {
+                cardRt.anchorMin = cardRt.anchorMax = new Vector2(0.5f, 0.5f);
+                cardRt.pivot     = new Vector2(0.5f, 0.5f);
+                cardRt.anchoredPosition = Vector2.zero;
+
+                Vector2 own = cardRt.rect.size;
+                if (own.x > 0f && own.y > 0f)
+                {
+                    float scale = Mathf.Min(slot.x / own.x, slot.y / own.y);
+                    cardRt.localScale = new Vector3(scale, scale, 1f);
+
+                    Debug.Log($"[GachaPrizeCardBinder] '{card.name}' is {own.x:F0}x{own.y:F0} in a " +
+                              $"{slot.x:F0}x{slot.y:F0} slot — scaled to {scale:F2} to fit (SPEC §4.3).");
+                }
+            }
+
+            Bind(card, record);
+            return slotGo;
+        }
+
+        /// <summary>
+        /// The scale a prize card rests at, for anything that animates it.
+        ///
+        /// <para>
+        /// It is 1 for everything the binder returns today: a club card is authored at its slot's
+        /// size, and a scaled-to-fit one comes back WRAPPED (see <see cref="WrapToFit"/>), so the
+        /// object the animations touch is a slot-sized wrapper and the fit lives on its child.
+        /// The question stays asked rather than assumed because assuming 1 is exactly what undid
+        /// the fit before the wrapper existed — the entrance animation landed every card on a hard
+        /// <c>Vector3.one</c> and the card overflowed its slot again, measured.
+        /// </para>
+        /// </summary>
+        public static float HomeScaleOf(GameObject? card)
+        {
+            if (card == null) return 1f;
+            var home = card.GetComponent<PrizeCardHomeScale>();
+            return home != null ? home.Scale : 1f;
         }
 
         /// <summary>
@@ -230,5 +335,20 @@ namespace GolfinRedux.UI.Gacha
         /// <summary>The gold the rest of the Rewards Center uses for a "you gained" chip
         /// (GachaTabController's ActiveTabColor).</summary>
         private static readonly Color DupePillColor = new Color(1f, 0.816f, 0.137f, 1f);
+    }
+
+    /// <summary>
+    /// Records the scale a prize card rests at, for anything that animates it.
+    ///
+    /// <para>
+    /// Nothing attaches one today: since <see cref="GachaPrizeCardBinder"/> fits a card by WRAPPING
+    /// it, the object the animations touch is a slot-sized wrapper that rests at 1. The component
+    /// stays as the declared answer to "what scale does this card rest at", so the two animation
+    /// paths keep ASKING — assuming 1 is precisely what undid the fit before the wrapper existed.
+    /// </para>
+    /// </summary>
+    public sealed class PrizeCardHomeScale : MonoBehaviour
+    {
+        public float Scale = 1f;
     }
 }

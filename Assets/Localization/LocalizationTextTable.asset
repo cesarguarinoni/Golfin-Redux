@@ -1343,6 +1343,33 @@ MonoBehaviour:
   - key: GACHA_BUY
     english: BUY
     japanese: "\u8CFC\u5165"
+  - key: GACHA_INSUFFICIENT_TICKETS
+    english: Not enough tickets
+    japanese: "\u30C1\u30B1\u30C3\u30C8\u304C\u8DB3\u308A\u307E\u305B\u3093"
+  - key: GACHA_COST_CHANGED
+    english: "Price updated \u2014 tap again to pull"
+    japanese: "\u4FA1\u683C\u304C\u66F4\u65B0\u3055\u308C\u307E\u3057\u305F\u3002\u3082\u3046\u4E00\u5EA6\u30BF\u30C3\u30D7\u3057\u3066\u304F\u3060\u3055\u3044"
+  - key: GACHA_PULL_CAP
+    english: Pull limit reached for this banner
+    japanese: "\u3053\u306E\u30D0\u30CA\u30FC\u306E\u4E0A\u9650\u306B\u9054\u3057\u307E\u3057\u305F"
+  - key: GACHA_PAUSED
+    english: Gacha is paused. Please try again later
+    japanese: "\u30AC\u30C1\u30E3\u306F\u4E00\u6642\u505C\u6B62\u4E2D\u3067\u3059\u3002\u3057\u3070\u3089\u304F\u3057\u3066\u304B\u3089\u304A\u8A66\u3057\u304F\u3060\u3055\u3044"
+  - key: GACHA_UNAVAILABLE
+    english: This banner is no longer available
+    japanese: "\u3053\u306E\u30D0\u30CA\u30FC\u306F\u7D42\u4E86\u3057\u307E\u3057\u305F"
+  - key: GACHA_DUPE_RP
+    english: +{0} RP
+    japanese: +{0} RP
+  - key: GACHA_CARD_PITY
+    english: Guaranteed {0} or higher within
+    japanese: "{0}\u4EE5\u4E0A\u304C\u78BA\u5B9A\u30FB\u6700\u5927"
+  - key: GACHA_CARD_PULLS
+    english: '{0} pulls'
+    japanese: "{0}\u56DE"
+  - key: GACHA_CARD_GUARANTEE_X10
+    english: Every 10-pull includes at least one {0}
+    japanese: "10\u9023\u3054\u3068\u306B{0}\u4EE5\u4E0A\u304C1\u679A\u78BA\u5B9A"
   - key: SHOP_TAB_GACHA
     english: GACHA
     japanese: "\u30AC\u30C1\u30E3"
