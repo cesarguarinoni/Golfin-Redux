@@ -42,7 +42,7 @@
   that is spec C. **One real bug fell out:** `lib/gachaOdds.ts` fired pity at
   `counter >= threshold`, one pull LATE; both implementations now use `counter + 1 >= threshold`.
 
-- **Gacha → admin (2026-08-31): A, B and C are all DONE. Next: D `gacha_ops_polish` — the last of the four (SPEC amended 2026-08-31 with §4b simulate parity, §4c foreground content refresh — the missing half of 5b — and §4d panel copy; kickoff below).** Plan `Docs/GACHA_ADMIN_PLAN.md`. State after B: four gacha catalogs live (banners v3 / rates v3 / pools v1 / ticket_types v1), `golfin_gacha_pull()` on API **v64** reading the PUBLISHED rows (no mirror), ticket ledger `golfin_tickets` (truth from 0; admin grants write the ledger, never `golfin_pending_grants`), Gacha ops panel on dashboard **`83564c011`** (pause switch `content_settings.gacha_enabled`, pull log, odds audit, per-user tickets + pity reset), shop `category=ticket` server-side behind G1-T (`TICKET_SHOP_BUILD = 0` until the C archive). Roll parity SQL vs TS ±0.9 pt; live E2E incl. rate + cost change with no build; `pool_for_build` probe PASS; Cesar's prod footprint reverted to 823 RP. ✅ The game now pulls the SERVER (C, 2026-08-31); texts v19, gacha_banners v5.
+- **Gacha → admin: THE TRACK IS CLOSED (2026-09-01). A, B, C and D are all DONE.** Plan `Docs/GACHA_ADMIN_PLAN.md`; four spec folders in `Docs/Specs/Completed/`. D `gacha_ops_polish` (approved by Cesar): the RATES & RULES modal generated from the same published rows the server rolls from; a five-event telemetry funnel + its dashboard card; the Gold ticket rendering from derived placeholders; `simulate()` aligned with the server's x10 guarantee; `ContentService.RefreshNow()` closing 5b (proven live — costX1 50→60 with play mode running, the card re-priced with no relaunch); the default-ball guard in all three locks; and `TICKET_SHOP_BUILD = 2534` with the first ticket listing (50 tickets / 100 RP, Cesar's numbers), purchase verified by SQL. TestFlight 2534 and 2537. ⚠️ ONE FLAG LEFT, no code: `shop_ticket_standard_50` is `is_active = false` because 2537 predates the four ticket-path fixes in `2afaf0ad5` — set it active in the admin Shop panel on the next build that carries them. Nine defects found on the way, six only findable by running it; report §11 has the ledger AND the four things that were not verified.
 - **Missions track CLOSED (Cesar, 2026-08-30).** `missions_v1` DONE (`8a4275064`, mode OPEN on
   prod — `modes` v8, `texts` v16, 40 component-built missions on Lomond, server-generated Daily
   Mission, seven catalogs + Missions/Components/Daily panels) and `daily_mission_home_pill` DONE
@@ -142,7 +142,8 @@
 
 ## 📋 SPEC_READY POINTERS
 
-- **`gacha_admin_catalogs`** (filed 2026-08-31, Architect via Cowork) — `SPEC_READY`.
+- ~~**`gacha_admin_catalogs`**~~ — **DONE 2026-08-31**, approved by Cesar, folder in
+  `Docs/Specs/Completed/gacha_admin_catalogs/`. Do NOT re-dispatch.
   `Docs/Specs/Active/gacha_admin_catalogs/SPEC.md`. Spec A of `Docs/GACHA_ADMIN_PLAN.md`: four
   content catalogs (`gacha_banners` extended, `gacha_rates`, `gacha_pools`, `ticket_types`), seed,
   round trip, three admin panels + validation + art upload, one client parser rail. Game behaviour
@@ -156,7 +157,8 @@
   (`/pull`, `/history`, `/tickets`), `gacha_enabled` pause, Gacha ops panel, shop `category=ticket`.
   No Unity change. Run AFTER spec A's seed is applied (the live E2E needs the rows).
 
-- **`gacha_client_real_pull`** (filed 2026-08-31, Architect via Cowork) — `SPEC_READY`, **blocked on A + B DONE**.
+- ~~**`gacha_client_real_pull`**~~ — **DONE 2026-08-31**, approved by Cesar, folder in
+  `Docs/Specs/Completed/gacha_client_real_pull/`. Do NOT re-dispatch.
   `Docs/Specs/Active/gacha_client_real_pull/SPEC.md`. Spec C: overlay + 5b same-session re-apply
   (`ContentService.TryReinstallFromCache`, gacha catalogs only), card title (EN/JA from the row,
   TITLE ONLY — Cesar), art-by-URL ladder, numeric costs, withhold rule, `GachaPullService` →
@@ -164,7 +166,9 @@
   `BagClubCard` / `GeneralShopCard` (+ `BindTicket`), dupe "+N RP" pill, ledger-backed tickets,
   server history, mocks + dev grant removed.
 
-- **`gacha_ops_polish`** (filed 2026-08-31, Architect via Cowork) — `SPEC_READY`, **blocked on C DONE**.
+- ~~**`gacha_ops_polish`**~~ — **DONE 2026-09-01**, approved by Cesar, folder in
+  `Docs/Specs/Completed/gacha_ops_polish/`. Do NOT re-dispatch. ONE flag left, no code:
+  `shop_ticket_standard_50` is `is_active = false` until a build carrying `2afaf0ad5` ships.
   `Docs/Specs/Active/gacha_ops_polish/SPEC.md`. Spec D (last): in-app RATES modal built from the
   overlaid rates/pools (signup-modal rules shell), five-event telemetry funnel + Telemetry-panel
   card, Gold ticket placeholder icon + admin `iconUrl` upload, `TICKET_SHOP_BUILD` + the first

@@ -5,10 +5,13 @@
 
 ---
 
-## 🟡 IN FLIGHT — `gacha_ops_polish` (spec D, the last of the four) — 2026-08-31
+## ✅ SHIPPED — `gacha_ops_polish` **approved by Cesar** (2026-09-01) — the gacha track is CLOSED
 
-**Everything but §5 is done, verified and committed; the dashboard is deployed.** §5 is BLOCKED on
-an archive that does not exist yet, which is exactly what SPEC §6 said to expect.
+**All four specs of `Docs/GACHA_ADMIN_PLAN.md` are delivered.** D was the last.
+
+Odds shown in-app, a telemetry funnel, a Gold ticket that renders, a publish that lands
+mid-session, a default ball that can never be a prize, and the RP → ticket shop row the `GACHA_BUY`
+text had been waiting for since Stage 1.
 
 - **§2 — the odds are in the app.** RULES & RATES was `Application.OpenURL` on a
   `golfin.example.com` placeholder and hid itself when the column was blank. It now opens
@@ -40,17 +43,35 @@ export (a deactivated row silently re-admitted into every future bundled floor);
 at 11 %); and **neither gacha catalog ever prefetched its art URLs**, so the admin's banner upload —
 live since `gacha_admin_catalogs` §5.2 — was a URL nothing on a device had ever fetched.
 
-⏳ **Blocked, needs Cesar:**
-1. **§5** — `Docs/Versioning/last_uploaded_build.txt` reads 2511, stamped BEFORE C's DONE commit, so
-   that archive does not carry C. `TICKET_SHOP_BUILD` stays 0 (never inferred). §5.2 also needs
-   Cesar's quantity + rpCost.
-2. **`../playlife/backend/migrations/2026_09_02_default_ball_guard.sql`** — §4e's server lock, a
-   two-hunk `create or replace` of `golfin_gacha_pull` + `golfin_shop_purchase`, through the
-   Supabase SQL editor.
+- **§5 — the RP → ticket sink is live.** `TICKET_SHOP_BUILD = 2534`, READ from
+  `last_uploaded_build.txt` and never inferred. Cesar asked me to run `Tools/testflight.sh`, which
+  produced **2534** (unblocking the gate) and **2537** (carrying the ticket card fix); both
+  uploaded to App Store Connect. `shop_ticket_standard_50` — 50 Standard tickets for 100 RP, Cesar's
+  numbers — published and proven live by SQL: `golfin_shop_purchases` amount 50 / charged_rp 100,
+  `golfin_tickets` 2840 → 2890, and NO pending grant row (B §5.2's design).
 
-Spec folder: `Docs/Specs/Active/gacha_ops_polish/`. Dashboard deployed at `87ad42357`
-(version id `a71683bd-8328-46c8-a7b7-906cda179cbf`). Catalogs published: texts **v20**,
-ticket_types **v2**, balls **v6**, gacha_banners **v7**. `export_content.py --check` clean.
+⚠️ **ONE OPERATIONAL THREAD, and it is a flag, not code.** That row is currently
+`is_active = false`. Build 2537 was archived BEFORE the four ticket-path fixes in `2afaf0ad5`, and
+on 2537 the card has no price, no BUY, and the purchase is refused as an unknown ball. `min_build`
+is immutable so the floor could not be raised — `is_active` is the reversible lever. **On the next
+build carrying `2afaf0ad5`, set the row active in the admin Shop panel.** Nothing else is left.
+
+**Nine defects found, six of them only findable by running it** — the exporter blanking `is_active`
+on a second export, the bundled `is_active` cell being ignored, a duplicated club name, a stray
+layout group collapsing the scroll viewport to zero width, NEITHER gacha catalog ever prefetching
+its art URLs (so the admin's banner upload had never once been fetched onto a device, since spec A),
+and four in the shop's ticket path — one shape: the category was wired at every layer written for
+it and missing from every switch that predates it. Ledger in the report's §11.
+
+**Closing audit (§11) also records what was NOT verified:** the §4e migration's behaviour (the
+failing case needs a row all three locks refuse), an `iconUrl` upload round trip, the funnel card's
+pixels (Access-gated — the aggregation is verified against real rows), and a `RefreshNow` unit test
+(substituted by the live re-price).
+
+Spec folder: `Docs/Specs/Completed/gacha_ops_polish/`. Dashboard deployed twice — `87ad42357`
+(`a71683bd-…`) and `d6db2d4c7` (`14a538c6-…`). Catalogs published: texts **v20**, ticket_types
+**v2**, balls **v6**, gacha_banners **v7**, shop_catalog **v6**. `export_content.py --check` clean.
+Full EditMode sweep 2146/0; dashboard vitest 233; `Tools/content` 44.
 
 ---
 

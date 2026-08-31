@@ -1,13 +1,21 @@
 # Gacha — admin-managed, server-rolled · implementation plan
 
-> **STATUS 2026-08-31 — DELIVERED (D pending three operational items).** A `gacha_admin_catalogs`
-> DONE (`b42c8bff7`); B `gacha_server_pull` DONE (API v64, ticket ledger, ops panel); C
-> `gacha_client_real_pull` DONE (`18d035cfb` — the game pulls the server; every prize kind on the
-> club card). D `gacha_ops_polish` code-complete (`c0dfbaab1`…`8c2c34d1e`): rates modal, telemetry
-> funnel, Gold ticket, simulate parity, foreground refresh (5b complete), default-ball guard,
-> first ticket listing (100 RP / 50 tickets, deactivated until the post-`2afaf0ad5` build).
-> Outstanding: Cesar applies `2026_09_02_default_ball_guard.sql`; next archive → reactivate
-> `shop_ticket_standard_50`; Code refreshes the D report. Details per spec folder.
+> **STATUS 2026-09-01 — ALL FOUR SPECS DELIVERED.** A `gacha_admin_catalogs` DONE (`b42c8bff7`);
+> B `gacha_server_pull` DONE (API v64, ticket ledger, ops panel); C `gacha_client_real_pull` DONE
+> (`18d035cfb` — the game pulls the server; every prize kind on the club card); D
+> `gacha_ops_polish` DONE, approved by Cesar (`c0dfbaab1`…`8c2c34d1e`): rates modal, telemetry
+> funnel, Gold ticket, simulate parity, foreground refresh (5b complete), default-ball guard
+> (migration applied by Cesar), first ticket listing (100 RP / 50 tickets).
+>
+> **One operational thread remains, and it is a flag, not code:**
+> `shop_ticket_standard_50` is published but `is_active = false`, because TestFlight build 2537 was
+> archived BEFORE the four ticket-path fixes in `2afaf0ad5`. Set it active in the admin Shop panel
+> on the next build that carries them. The listing is already proven end to end — the live purchase
+> wrote `golfin_shop_purchases` amount 50 / charged_rp 100, moved `golfin_tickets` 2840 → 2890 and
+> created no pending grant row.
+>
+> Spec folders in `Docs/Specs/Completed/`. D's `IMPLEMENTER_REPORT.md` §11 is the closing audit:
+> the nine-defect ledger, and the four things that were NOT verified.
 
 **2026-08-31 · Architect (Cowork).** Cesar's requirement, same day: *"move Gacha management to the
 online admin like we did all the rest — banners, dates, prizes and drop rates from the admin,

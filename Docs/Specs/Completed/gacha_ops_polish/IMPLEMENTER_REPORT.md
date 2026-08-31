@@ -34,9 +34,15 @@ That export is what surfaced the exporter bug in §6 below.
 | 4b — `simulate()` guarantee parity | **DONE** | `87ad42357` |
 | 4c — foreground content refresh | **DONE**, proven live (x50 → x60, no relaunch) | `e1996ccc9` |
 | 4d — Gacha Banners panel copy | **DONE**, deployed | `87ad42357` |
-| 4e — default-ball guard | **DONE** client + admin; **server migration NEEDS CESAR** | `19f0c8c2b` |
-| 5 — `TICKET_SHOP_BUILD` + first ticket row | **BLOCKED — the C archive does not exist yet** | — |
+| 4e — default-ball guard | **DONE** — all three locks; migration applied by Cesar 2026-09-01 | `19f0c8c2b` |
+| 5 — `TICKET_SHOP_BUILD` + first ticket row | **DONE** — 2534 read from the guard file; row published and proven live, currently OFF SALE pending a build (STATUS.md) | `d6db2d4c7` `4c9954069` `b42812bdd` `2afaf0ad5` `8c2c34d1e` |
 | — exporter `is_active` idempotence bug | **FIXED** (found by §0) | `832992d5c` |
+| — four ticket-path defects in the shop | **FIXED** (§11 ledger) | `2afaf0ad5` |
+
+> §5 was blocked at first draft: `last_uploaded_build.txt` read 2511, stamped at `2260f48ad`, an
+> ANCESTOR of C's DONE commit — so that archive predated C. Cesar then asked me to run
+> `Tools/testflight.sh`, which produced **2534** (unblocking the gate) and later **2537** (carrying
+> the ticket card fix). Both uploaded to App Store Connect.
 
 ---
 
@@ -350,3 +356,61 @@ not reachable from here):
 One x1 pull (50 tickets) and one x10 (450) on Cesar's account, needed for §3's acceptance.
 Tickets 3340 → **2840**; RP 6,618 → **6,938** (dupes paid out). Grants applied normally.
 `gacha_banners` is back at `costX1 = 50` and the cursor is exported. Nothing else was touched.
+
+---
+
+## 11. Closing audit — what was verified at the end, and what was not
+
+Written after Cesar asked, correctly, whether anything had been left out before spending
+more builds. Everything below was checked with NO further build and no further prod writes.
+
+### Closed at close-out
+
+| Acceptance line | Was | Now |
+|---|---|---|
+| "lines match `effectiveOdds` in the admin to the second decimal" | done by hand, no admin screenshot | ran the **shipped** `effectiveOdds` over the LIVE published rows: `22.92 / 22.92 / 9.17 · 25.00 · 8.57 / 3.43 · 4.23 / 1.27 · 2.00 · 0.50 → 100.00 %` — digit-for-digit the modal's strings |
+| "the funnel card shows them" | events proven in `telemetry_events`, card unchecked | `buildGachaFunnel` over the REAL rows: 4 views → 2 taps (50.0 %) → 2 pulls (100.0 %), 1×1 / 1×10, 1 skip, 1 rules open, 356 ms mean, rarities `[8,1,2,0,0,0]`, 9 dupes, 1 player, per-banner table populated |
+| "opens from EVERY live banner" | only the centred one | all three, each through its own `RulesButton.onClick` — and they cover all three featured shapes: `banner_test_a` none (20 lines), `banner_test_b` one (25), `banner_standard_club1` two (26) |
+| "Full rules row only when `rulesUrl` is set AND allowlisted" | only the HIDDEN branch | both. `IsLinkAllowed` refuses the live placeholder, `http://golfin.io`, `evil-golfin.io`; accepts `golfin.io` and `www.golfin.world`. Driven through the shipping `Show(entry)` with an allowlisted URL the row appears, label "Full rules" |
+| the §4 prefetch could have been inert | unchecked | the client's `CatalogArtPolicy.AllowedArtPrefix` is exactly the `catalog-art` public-URL prefix `uploadCatalogArt` produces, so an uploaded `iconUrl` passes the policy and is fetched |
+
+### NOT verified — stated plainly rather than claimed
+
+1. **The §4e migration's BEHAVIOUR.** It applied (`create or replace` returned "Success. No rows
+   returned"). The guard cannot be exercised: triggering it needs an ACTIVE pool row pointing at a
+   default ball, and the validator, the client and now the server all refuse one. Constructing the
+   failing case means deliberately writing a bad row to prod.
+2. **`iconUrl` upload → replaces the icon at next launch.** The resolution ladder is the same code
+   path already shipping for clubs / balls / items / characters, and the prefix check above closes
+   the one link this task actually broke — but no real upload was performed.
+3. **The funnel card RENDERED.** Cloudflare Access fronts the dashboard. The aggregation is
+   verified against real rows; the pixels are not.
+4. **A `RefreshNow` unit test.** Substituted by the live x50 → x60 re-price. The cooldown decision
+   itself is already pinned by `ScheduleRefreshThrottleTests`; `RefreshNow` delegates to it.
+
+### On the builds
+
+Two were justified: 2534 unblocked `TICKET_SHOP_BUILD`, 2537 carried the card fix Cesar chose. A
+third was NOT — it would have papered over four defects found only after archiving. Taking the row
+off sale costs nothing, guarantees no build ever shows a broken card, and leaves the listing intact
+for whenever the next build ships. That is the open thread in STATUS.md.
+
+### Defect ledger for the task
+
+Nine defects found, all fixed, **six of them only findable by running the thing**:
+
+| # | Defect | Found by |
+|---|---|---|
+| 1 | `export_content.py` blanked `is_active` on the SECOND export | `--check` at §0 |
+| 2 | `GachaPoolCatalog` ignored the bundled `is_active` cell | reading the modal's own output |
+| 3 | `Join(name, brand)` printed "P.Wedge Royal Swing Royal Swing" | reading the modal's own output |
+| 4 | `RulesRow`'s `HorizontalLayoutGroup` drove the scroll Viewport to zero | measuring live geometry |
+| 5 | NEITHER gacha catalog prefetched its art URLs (banner uploads never fetched, since spec A) | asking what would make §4's last acceptance line true |
+| 6 | `GeneralShopCard` passed a literal `1` to `BindTicket` | reading the code before publishing |
+| 7 | `BindTicket` hid price and BUY — the listing was unbuyable | looking at the rendered card |
+| 8 | the TICKETS filter chip was never wired | tapping it |
+| 9 | `ShopTransaction.PreCheck`'s `default:` meant BALL — "Unknown ball '0'" | pressing BUY |
+
+6–9 are one shape: the ticket category was wired at every layer written for it and missing from
+every switch that predates it. §7 above records the per-site verdict, including the sites that were
+already correct.
