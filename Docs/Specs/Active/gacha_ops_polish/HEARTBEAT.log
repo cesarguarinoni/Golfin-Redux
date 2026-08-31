@@ -10,3 +10,13 @@ DIRTY:
 2026-08-31T11:16:21Z §2 done: GachaRatesText + modal controller + prefab clone + scene instance + 13 EditMode tests.
   Full EditMode suite 2146 tests, 0 failed, 3 pre-existing skips. Tripwire proved the new suite runs
   (RarityTiers_AreListedRarestFirst failed on demand, production line = "LEGENDARY  2.00%").
+
+2026-08-31T11:31:15Z §2 committed (c0dfbaab1). texts published v20 over PostgREST
+  (dashboard is behind Cloudflare Access; ran the same validation + content_publish RPC + audit row).
+  Found and fixed an export_content.py idempotence bug that blanked is_active on the second export
+  (832992d5c). export --check clean. Next: §3 telemetry.
+
+2026-08-31T11:55:32Z §3 client + §4c committed (e1996ccc9). §4 (gold ticket) and §4e
+  (default-ball guard) built: derived PNGs, ticket_types v2 published, balls v6 published with
+  isDefault, admin validator rules + tests (47 in gachaValidate), server migration written and
+  parse-checked. EditMode 2146/0. Dashboard vitest 233. Next: deploy, then §5.

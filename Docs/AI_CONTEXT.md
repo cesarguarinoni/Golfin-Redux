@@ -5,6 +5,55 @@
 
 ---
 
+## 🟡 IN FLIGHT — `gacha_ops_polish` (spec D, the last of the four) — 2026-08-31
+
+**Everything but §5 is done, verified and committed; the dashboard is deployed.** §5 is BLOCKED on
+an archive that does not exist yet, which is exactly what SPEC §6 said to expect.
+
+- **§2 — the odds are in the app.** RULES & RATES was `Application.OpenURL` on a
+  `golfin.example.com` placeholder and hid itself when the column was blank. It now opens
+  `GachaRatesModal`, whose whole body is generated at show time from the SAME published rows the
+  server rolls from, so a rate change published in the admin is disclosed at the next open with no
+  build. The button is unconditionally visible again — an odds disclosure must not be switchable off
+  by leaving a free-text URL empty. Shell CLONED from TournamentSignupModal's rules block.
+  13 EditMode tests on a pure `GachaRatesText.Build` seam.
+- **§3 — the funnel.** Five events (`gacha_banner_view` / `pull_tap` / `pull_result` /
+  `reveal_skip` / `rules_open`), all verified in prod `telemetry_events` from one Editor session,
+  plus a Gacha funnel card on the Telemetry panel. The pull LOG says what was won; this says what
+  happened to everyone who looked and did not pull.
+- **§4 — the Gold ticket** renders as something other than the Standard one. Two derived
+  placeholders from the top bar's own sprite; `iconUrl` upload registered in the admin.
+- **§4b** `simulate()` now decides the x10 guarantee from all TEN slots, as the server does
+  (~10.7 % of blocks, not ~13.4 %) — same prizes, a flag rate that finally agrees with the pull log.
+- **§4c — a publish can land mid-session.** `ContentService` fetched EXACTLY ONCE, in `Awake`, so
+  C's 5b live re-install could only ever see a publish from before launch. `RefreshNow()` (one
+  shared `ScheduleRefreshThrottle(60s)`) is called from the Rewards Center and from foregrounding.
+  **Proven live: `costX1` published 50 → 60 with play mode running, and the card re-priced to x60
+  with no relaunch.**
+- **§4e — the default ball can never be a prize or a listing.** `psc1_ball_golfin` sat in the
+  standard pool at weight 60 — 11 % of every Common pull was a no-op — until an operator noticed and
+  deactivated it by hand. `Balls.csv` gains `isDefault`; three locks, none trusting the others.
+
+**Three bugs found by running it, all fixed:** `export_content.py` blanked `is_active` on the SECOND
+export (a deactivated row silently re-admitted into every future bundled floor);
+`GachaPoolCatalog` ignored the bundled `is_active` cell (the modal was showing the deactivated ball
+at 11 %); and **neither gacha catalog ever prefetched its art URLs**, so the admin's banner upload —
+live since `gacha_admin_catalogs` §5.2 — was a URL nothing on a device had ever fetched.
+
+⏳ **Blocked, needs Cesar:**
+1. **§5** — `Docs/Versioning/last_uploaded_build.txt` reads 2511, stamped BEFORE C's DONE commit, so
+   that archive does not carry C. `TICKET_SHOP_BUILD` stays 0 (never inferred). §5.2 also needs
+   Cesar's quantity + rpCost.
+2. **`../playlife/backend/migrations/2026_09_02_default_ball_guard.sql`** — §4e's server lock, a
+   two-hunk `create or replace` of `golfin_gacha_pull` + `golfin_shop_purchase`, through the
+   Supabase SQL editor.
+
+Spec folder: `Docs/Specs/Active/gacha_ops_polish/`. Dashboard deployed at `87ad42357`
+(version id `a71683bd-8328-46c8-a7b7-906cda179cbf`). Catalogs published: texts **v20**,
+ticket_types **v2**, balls **v6**, gacha_banners **v7**. `export_content.py --check` clean.
+
+---
+
 ## ✅ SHIPPED — `gacha_client_real_pull` **approved by Cesar** (2026-08-31)
 
 **The gacha is real on the client.** Spec C of `Docs/GACHA_ADMIN_PLAN.md` — the Unity half of A + B.
