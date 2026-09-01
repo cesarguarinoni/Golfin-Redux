@@ -32,6 +32,7 @@ export type PanelIcon =
   | "image"
   | "megaphone"
   | "club"
+  | "ball"
   | "character"
   | "box"
   | "text"
@@ -55,10 +56,12 @@ export const PANELS: readonly PanelDef[] = [
   { id: "audit", title: "Audit Log", icon: "shield", route: "/audit" },
   { id: "banners", title: "Banners", icon: "image", route: "/banners" },
   // Admin-managed game content (content_admin_panels). `items` covers the
-  // items / bags / balls catalogs behind three tabs: 15 rows between them does
-  // not justify three sidebar entries.
+  // items / bags catalogs behind two tabs: 13 rows between them does not justify
+  // two sidebar entries. Balls LEFT that panel on 2026-08-31 (ball_data_wiring)
+  // when the catalog went from 2 rows to 20 and gained a rarity facet.
   { id: "characters", title: "Characters", icon: "character", route: "/characters" },
   { id: "clubs", title: "Clubs", icon: "club", route: "/clubs" },
+  { id: "balls", title: "Balls", icon: "ball", route: "/balls" },
   { id: "items", title: "Items", icon: "box", route: "/items" },
   // The level-up cost table. Its own entry rather than a tab inside Characters
   // or Clubs because it belongs to NEITHER — both price from the same 240 rows,

@@ -1,5 +1,5 @@
 bags=1
-balls=6
+balls=7
 characters=5
 clubs=1
 daily_mission_weights=1

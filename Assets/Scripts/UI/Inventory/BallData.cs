@@ -1,4 +1,5 @@
 #nullable enable
+using Golfin.Roster;
 using UnityEngine;
 
 namespace Golfin.Inventory
@@ -14,6 +15,15 @@ namespace Golfin.Inventory
         public string ballId            = "";
         public string name              = "";
         public string brand             = "";
+
+        /// <summary>
+        /// ball_data_wiring §4.1 — the same <see cref="CharacterRarity"/> the club and character
+        /// rows carry, parsed with the same <c>ClubCsvParser.ParseRarity</c>. Template data: read
+        /// from the row at load, never persisted per instance. Nothing draws it yet — rarity
+        /// framing on the Balls screen is a later task — but the gacha/shop listings and the
+        /// admin already speak in these six tiers, so the ball now does too.
+        /// </summary>
+        public CharacterRarity rarity   = CharacterRarity.Common;
 
         // Stats — range: -10 to +10
         public int power          = 0;

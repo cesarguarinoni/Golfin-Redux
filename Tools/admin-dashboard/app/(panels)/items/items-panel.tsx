@@ -6,19 +6,23 @@ import type { DictKey } from "@/lib/i18n";
 import { CatalogPanel } from "../_content/catalog-panel";
 
 /**
- * Items, Bags and Balls — THREE catalogs behind three tabs in ONE panel.
+ * Items and Bags — TWO catalogs behind two tabs in ONE panel.
  *
- * They are 3 + 10 + 2 = 15 rows between them; three sidebar entries for that
- * would cost more attention than it returns. They stay three separate catalogs
+ * They are 3 + 10 = 13 rows between them; two sidebar entries for that would
+ * cost more attention than it returns. They stay two separate catalogs
  * underneath — each has its own version, its own dirty count, its own kill
  * switch and its own publish, and the drawer is scoped to whichever tab is
  * open. The tab is a navigation convenience, not a merge.
+ *
+ * Balls was the third tab until 2026-08-31 (ball_data_wiring), when the catalog
+ * went from 2 rows to 20 and gained a rarity facet; it moved to its own sidebar
+ * entry at `/balls`. Nothing else changed — the users drawer and the gacha and
+ * shop panels reach the `balls` catalog by NAME, not through this panel.
  */
 
 const TABS = [
   { catalog: "items", labelKey: "it.tab.items" },
   { catalog: "bags", labelKey: "it.tab.bags" },
-  { catalog: "balls", labelKey: "it.tab.balls" },
 ] as const;
 
 export function ItemsPanel() {
@@ -55,7 +59,7 @@ export function ItemsPanel() {
       <CatalogPanel
         key={active}
         catalog={active}
-        titleKey={`it.tab.${active === "items" ? "items" : active === "bags" ? "bags" : "balls"}` as DictKey}
+        titleKey={`it.tab.${active === "items" ? "items" : "bags"}` as DictKey}
         hideTitle
       />
     </div>

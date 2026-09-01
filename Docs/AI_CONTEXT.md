@@ -5,33 +5,50 @@
 
 ---
 
-## 🟡 HANDED TO CODE — `ball_data_wiring` (2026-08-31) · `ball_art_and_stats` ART DONE
+## 🟢 BUILT, AWAITING CESAR — `ball_data_wiring` (2026-09-01) · balls 2 rows → 20
 
-**Balls are the last catalog on 2 rows, and the art half is finished.** The Cowork runner generated
-the 18 missing `Assets/Resources/Balls/Full/<Name>.png` (537×900 RGBA, 30px corners — a W1 scene
-swap off `Full/Golfin.png`, 20 generations for 18 keepers, 0 misspellings, 2 oversized-ball
-re-rolls) and copied the two missing thumbnails into `Resources/Balls/Thumbnails/`. **All of it is
-UNCOMMITTED in the working tree** — Cowork never commits; Code's first `ball_data_wiring` commit
-picks it up (spec §9).
+**The ball catalog is live at 20 rows with a `rarity` column, end to end.** `Balls.csv` replaced
+from `reference/Balls.csv` (15 cols, `rarity` after `brand`; the two old rows byte-identical apart
+from it), 18 `BALL_INFO_*` rows added EN+JA, `BallDataRuntime.rarity` parsed by the existing
+`ClubCsvParser.ParseRarity`, and the whole thing imported → published (`balls` v6→v7,
+`texts` v20→v21) with `export_content.py --check` clean.
 
-**Decisions taken with Cesar (2026-08-31):** ball rarity lives in a new `rarity` column on
-`Balls.csv` (and balls stay admin-managed — they already are, as a tab in the Items panel);
-`BallWindCutPerPoint` 0.01 → **0.02**; the 20-ball stat table is APPROVED
-(`Docs/Specs/Active/ball_art_and_stats/BALL_IDENTITY.md`, wind balls trimmed to pay for the doubled
-stat, every line rule-checked by script). EN+JA blurbs written for all 18.
+**Caught on the way in:** the 18 Cowork fulls + 2 thumbnails had auto-imported as **Default
+textures, not Sprites** (`textureType: 0`, `spriteMode: 0`). `Resources.Load<Sprite>` returns null
+for those, so all 20 new balls would have been withheld as non-renderable. Import settings copied
+off `Golfin.png` / `S_Controls_Ball_GOLFIN.png`; all 20 balls now resolve **both** sprites
+(20/20, 0 unresolved).
 
-**Code's task — `Docs/Specs/Active/ball_data_wiring/SPEC.md` (SPEC_READY):** replace `Balls.csv`
-with `reference/Balls.csv`, +18 `BALL_INFO_*` rows from `reference/texts_rows.csv`,
-`BallDataRuntime.rarity` via `ClubCsvParser.ParseRarity`, wind coefficient + test + `stats.csv`,
-admin rarity column/facet/validation, importer `--catalogs balls,texts` → publish → `--check`.
-**Finding worth knowing:** `Assets/Resources/Physics/stats.csv` is loaded by nobody
-(`LoadStatCoefficients()` has no callers; `ShotController` passes `StatCoefficients.Default`) and
-its rebound value has been stale since Order 417 — the spec fixes the file, Cesar decides whether
-to wire the loader or retire it. Open question for Cesar: a dedicated **Balls** admin panel
-(currently a tab under Items) — not built, flagged in spec §5.
+**Physics:** `BallWindCutPerPoint` 0.01 → **0.02** (F16). `Assets/Resources/Physics/stats.csv` and
+`PhysicsConfigLoader.LoadStatCoefficients()` are **deleted** — the loader had zero callers, so the
+CSV was documentation that had already drifted (rebound 0.01 vs the Default's 0.02, stale since
+Order 417). `StatCoefficients.Default` is now the single source of truth.
+`StaminaLiveWiringTests.T8` read that CSV and was **retired**, not re-pointed: `Default`'s
+`StaminaFloorFraction` is 0.20 not 1.0, and the field has been dead since Order 731 — the invariant
+is covered by `StatResolverTests.Stats_Resolver_IsStaminaAgnostic`. **459 pass / 0 fail / 3
+pre-existing skips** across `Golfin.Physics.Tests` + `Golfin.Inventory.Tests`.
 
-Still out of scope after this: per-ball 3D skins (one Golfin-skinned prefab for everything),
-gacha/shop listings for the 18, rarity framing on the Balls screen.
+**Wind perceptibility (reported, no bar invented — Cesar's call on 0.02 vs 0.03):** at an 8 m/s
+crosswind a max-Wind ball recovers **0.98 m** of lateral push at 0.01 and **1.96 m** at 0.02
+(2.92 m at 0.03, which is where +10 exactly saturates the 0.30 `WindCutMax`). Carry is
+unaffected (~0.2 m). A *negative* Wind stat is inert at every coefficient — `windCutFraction`
+clamps at zero, so those balls are not penalised, merely unhelped.
+
+**Admin:** Balls has its **own sidebar panel** at `/balls` (new `ball` glyph, `CatalogPanel` over
+the existing catalog) with brand **and** rarity facets; the balls tab left Items, now "Items &
+Bags". `rarity` is REQUIRED + FILTERABLE + a view column. A real gap surfaced: a **blank** rarity
+passed both the REQUIRED check and the rarity rule, so the blank carve-out is now scoped to
+`shop_catalog` by name (the only catalog that uses it — 7 of 8 rows; every other has zero).
+245 admin tests green, typecheck clean.
+
+**Three items left, all needing an uncontended Editor** (it was shared with the GPS-hub and banners
+sessions throughout): the play-mode Balls carousel + detail-panel EN/JA shot, a
+`Golfin.Gameplay.Tests` run (only a deleted test method there), and — **the one needing Cesar's
+eyes** — the §7 device-resolution thumbnail check: 18 of 20 balls now feed a **1000×1000** sprite
+into a carousel that has only ever seen 200×200 / 178×178.
+
+Report: `Docs/Specs/Active/ball_data_wiring/IMPLEMENTER_REPORT.md`.
+Still out of scope: per-ball 3D skins, gacha/shop listings for the 18, rarity framing on the Balls screen.
 
 ---
 

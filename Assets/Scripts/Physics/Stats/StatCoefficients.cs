@@ -16,14 +16,23 @@ namespace Golfin.Physics.Stats
 
         public fp CharStrengthPerPoint;               // overpower forgiveness per Character Strength point
         public fp CharStrengthVelocityPerPoint;       // velocity multiplier per Character Strength point (swing only)
-        public fp CharClubControlPerPoint;            // DEAD — retired by Order 731 (2026-07-16); field kept so csv loader doesn't error
+        public fp CharClubControlPerPoint;            // DEAD — retired by Order 731 (2026-07-16); read by nothing (the csv loader that kept it alive was deleted 2026-08-31, ball_data_wiring)
 
         public fp PutterControlPerPoint;        // off-center forgiveness per Putter Control point
         public fp PutterAccuracyPerPoint;       // gravity well radius per Putter Accuracy point (assist)
         public fp PutterWeightPerPoint;         // aim cycles per Putter Weight point (UI layer)
 
-        public fp StaminaFloorFraction;         // DEAD — retired by Order 731 (2026-07-16); field kept so csv loader doesn't error
+        public fp StaminaFloorFraction;         // DEAD — retired by Order 731 (2026-07-16); read by nothing (the csv loader that kept it alive was deleted 2026-08-31, ball_data_wiring)
 
+        /// <summary>
+        /// The single source of truth for every stat coefficient — the shot path passes this
+        /// straight in (<c>ShotController</c>, <c>PhysicsLabController</c>,
+        /// <c>BotClubCalibrationHarness</c>).
+        /// <para>
+        /// The <c>Physics/stats.csv</c> mirror was retired 2026-08-31 (ball_data_wiring); it was
+        /// never loaded by the shot path and had drifted (rebound 0.01 vs 0.02).
+        /// </para>
+        /// </summary>
         public static StatCoefficients Default => new StatCoefficients
         {
             ClubPowerPerPoint         = fp.FromFloat(0.005f),
@@ -32,7 +41,7 @@ namespace Golfin.Physics.Stats
 
             BallPowerPerPoint   = fp.FromFloat(0.01f),
             BallReboundPerPoint = fp.FromFloat(0.02f),  // raised from 0.01 (ball_rebound_perceptibility / Order 417, 2026-07-17): ±10 Rebound now spans the full 0.80–1.20 cap band → ~10.7m total-distance delta (clears the 10m perceptibility bar); was ~4.8m at 0.01
-            BallWindCutPerPoint = fp.FromFloat(0.01f),
+            BallWindCutPerPoint = fp.FromFloat(0.02f),  // raised from 0.01 (ball_data_wiring, 2026-08-31, Cesar): +10 Wind now buys 0.20 of the 0.30 WindCutMax instead of 0.10 — wind was worth a third of its cap
             BallRollPerPoint    = fp.FromFloat(0.02f),  // raised from 0.01 (ball_roll_coefficient_retune, 2026-06-02)
             BallSpinPerPoint    = fp.FromFloat(0.01f),
 

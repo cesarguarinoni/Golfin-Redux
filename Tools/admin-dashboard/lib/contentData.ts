@@ -223,7 +223,7 @@ const FILTERABLE: Record<string, string[]> = {
   characters: ["rarity"],
   items: ["category", "rarity"],
   bags: ["rarity"],
-  balls: ["brand"],
+  balls: ["brand", "rarity"],
   texts: [],
   shop_catalog: ["category"],
   // missions_v1. Every one is a real `data->>'<field>'` query, so a facet on a

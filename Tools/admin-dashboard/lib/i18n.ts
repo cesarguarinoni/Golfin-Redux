@@ -54,6 +54,7 @@ export const DICT = {
   "nav.telemetry": { en: "Telemetry", ja: "テレメトリ" },
   "nav.audit": { en: "Audit Log", ja: "監査ログ" },
   "nav.clubs": { en: "Clubs", ja: "クラブ" },
+  "nav.balls": { en: "Balls", ja: "ボール" },
   "nav.characters": { en: "Characters", ja: "キャラクター" },
   "nav.items": { en: "Items", ja: "アイテム" },
   "nav.texts": { en: "Texts", ja: "テキスト" },
@@ -1152,6 +1153,7 @@ export const DICT = {
 
   // ---- clubs / characters / items / texts --------------------------------
   "cl.title": { en: "Clubs", ja: "クラブ" },
+  "bl.title": { en: "Balls", ja: "ボール" },
   "ch.title": { en: "Characters", ja: "キャラクター" },
   // content_two_way §6 — the admin can create a character's DATA today; its ART
   // ships with the next build that bundles the sprites. Until then §4 withholds
@@ -1165,13 +1167,12 @@ export const DICT = {
     en: "Its art ships with the next build that bundles the sprites; until then it is withheld on every build — it appears in no roster, no shop and no pool, rather than showing as a blank card. Sprite names must match files under Resources/Portraits/.",
     ja: "アートは、スプライトを同梱する次のビルドで配信されます。それまでは、どのビルドでも非表示となり、ロスター・ショップ・排出のいずれにも表示されません（空のカードとして表示されることはありません）。スプライト名は Resources/Portraits/ 内のファイル名と一致する必要があります。",
   },
-  "it.title": { en: "Items, Bags & Balls", ja: "アイテム・バッグ・ボール" },
+  "it.title": { en: "Items & Bags", ja: "アイテム・バッグ" },
   "it.tab.items": { en: "Items", ja: "アイテム" },
   "it.tab.bags": { en: "Bags", ja: "バッグ" },
-  "it.tab.balls": { en: "Balls", ja: "ボール" },
   "it.oneCatalogNote": {
-    en: "Three catalogs, one panel — each publishes independently.",
-    ja: "3 つのカタログを 1 つの画面に集約しています。公開はカタログごとに独立しています。",
+    en: "Two catalogs, one panel — each publishes independently.",
+    ja: "2 つのカタログを 1 つの画面に集約しています。公開はカタログごとに独立しています。",
   },
   // ---- level costs (progress_server_side §2) ------------------------------
   //

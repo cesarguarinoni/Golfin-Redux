@@ -197,6 +197,10 @@ namespace Golfin.Inventory
                     ballId              = f.Get("id"),
                     name                = f.Get("name"),
                     brand               = f.Get("brand"),
+                    // ball_data_wiring §4.1 — the club parser, reused verbatim: it already
+                    // defaults unknown/blank to Common, which is exactly what a published
+                    // content_rows row that predates the column must parse as.
+                    rarity              = ClubCsvParser.ParseRarity(f.Get("rarity", "Common")),
                     power               = f.GetInt("power"),
                     rebound             = f.GetInt("rebound"),
                     windResistance      = f.GetInt("windResistance"),

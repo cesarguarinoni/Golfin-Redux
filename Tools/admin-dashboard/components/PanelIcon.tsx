@@ -57,6 +57,16 @@ const PATHS: Record<PanelIconName, React.ReactNode> = {
       <circle cx="6" cy="20" r="1.5" />
     </>
   ),
+  // A dimpled circle — the ball itself, in the same stroke style as `club`.
+  ball: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <circle cx="9" cy="9.5" r="1" />
+      <circle cx="14.5" cy="9" r="1" />
+      <circle cx="11.5" cy="14" r="1" />
+      <circle cx="16" cy="13.5" r="1" />
+    </>
+  ),
   character: (
     <>
       <circle cx="12" cy="7" r="4" />

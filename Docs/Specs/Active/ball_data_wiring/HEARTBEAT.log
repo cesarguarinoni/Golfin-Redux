@@ -1,0 +1,42 @@
+=== iter-1 kickoff baseline 2026-09-01T11:38:56+0900 ===
+HEAD d5366b06ab320a5ca05cc7d7e5d396e931cb5be8
+DIRTY (porcelain, at kickoff — everything below outside Docs/Specs/Active/ball_data_wiring/
+       belongs to the in-flight gps_trust_core / GPS-hub work, NOT to this task):
+ M Assets/Localization/LocalizationText.csv
+ M Assets/Localization/LocalizationTextTable.asset
+ M Assets/Scripts/BannersRuntime/BannerPolicy.cs
+ M Assets/Scripts/BannersRuntime/BannerSlotBinder.cs
+ M Assets/Scripts/Gps/GpsDtos.cs
+ M Assets/Scripts/Net/Endpoints.cs
+ M Assets/Scripts/TournamentsRuntime/Tests/BannerPolicyTests.cs
+ M Assets/Scripts/UI/PersistentUIManager.cs
+ M Assets/Scripts/UI/ScreenManager.cs
+ M Docs/AI_CONTEXT.md
+ M Docs/Specs/Active/gps_trust_core/ARCHITECT_REVIEW.md
+ M Docs/Specs/Active/gps_trust_core/STATUS.md
+ M Docs/TellCode.md
+?? Assets/Art/UI/Gps/ (13 files + metas)
+?? Assets/Scripts/Gps/ScoreHistoryService.cs
+?? Assets/Scripts/Social/ (asmdef + 2 files)
+?? Assets/Scripts/UI/Gps/ (GpsHubScreenController.cs, GpsHubRoundRow.cs)
+?? Assets/Resources/Balls/Full/*.png (18 + metas)     <- THIS TASK (Cowork art, §9)
+?? Assets/Resources/Balls/Thumbnails/S_Controls_Ball_{GOLFINMK2,PUTTACE}.png  <- THIS TASK (§9)
+=== end baseline ===
+
+11:38 texture import settings: the 18 Full + 2 Thumbnail .meta files had imported as
+      textureType:0 / spriteMode:0 (DEFAULT, not Sprite) — Resources.Load<Sprite> would have
+      returned null for all 20. Fixed via TextureImporter ReadTextureSettings/SetTextureSettings
+      copied from Golfin.png and S_Controls_Ball_GOLFIN.png; all 20 metas now byte-identical to
+      their reference apart from guid + spriteID.
+11:38 Balls.csv replaced from reference/ (byte-identical); 18 BALL_INFO_* rows inserted
+      after BALL_INFO_PUTT_ACE; BallDataRuntime.rarity + ParseRow via ClubCsvParser.ParseRarity.
+11:38 Physics: BallWindCutPerPoint 0.02; stats.csv + LoadStatCoefficients() deleted;
+      StaminaLiveWiringTests T8 retired (it read the deleted CSV); StatResolverTests 0.10 -> 0.20;
+      changelog F16.
+11:38 Admin: rarity REQUIRED/FILTERABLE/column/facet; /balls panel; balls tab out of Items.
+      npm test 237 pass, tsc --noEmit clean.
+11:38 Importer: staged-root plan balls 18 NEW + 2 CHANGED, texts 18 NEW + 0 CHANGED,
+      0 conflicts; --apply; published balls v6->v7, texts v20->v21; export --check clean.
+11:38 BLOCKED on the Unity EditMode sweep: another live session is driving this Editor
+      in play mode (74 GpsHub* script-executes I did not run). tests-run aborted with
+      RestoreSceneSetupTask errors. Waiting rather than forcing play mode off.

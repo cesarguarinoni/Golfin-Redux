@@ -494,36 +494,23 @@ namespace Golfin.Gameplay.Tests
         }
 
         // ══════════════════════════════════════════════════════════════════════════
-        // Test 8 — Neutralization parity: physics CSV stamina_floor_fraction = 1.0
-        // ══════════════════════════════════════════════════════════════════════════
-
-        [Test]
-        public void T8_NeutralizationParity_StatsCSV_FloorFractionIs1()
-        {
-            var csv = Resources.Load<TextAsset>("Physics/stats");
-            Assert.IsNotNull(csv, "Physics/stats.csv must exist in Resources");
-
-            float floorFraction = float.NaN;
-            foreach (var line in csv!.text.Split('\n'))
-            {
-                var trimmed = line.Trim();
-                if (!trimmed.StartsWith("stamina_floor_fraction")) continue;
-                var parts = trimmed.Split(',');
-                if (parts.Length >= 2 && float.TryParse(parts[1],
-                    System.Globalization.NumberStyles.Float,
-                    System.Globalization.CultureInfo.InvariantCulture,
-                    out float val))
-                {
-                    floorFraction = val;
-                    break;
-                }
-            }
-
-            Assert.IsFalse(float.IsNaN(floorFraction),
-                "stamina_floor_fraction row must exist in Physics/stats.csv");
-            Assert.AreEqual(1.0f, floorFraction, delta: 0.001f,
-                "stamina_floor_fraction must be 1.0 (Option C neutralization) — resolver is identity");
-        }
+        // Test 8 — RETIRED 2026-08-31 (ball_data_wiring §4.2).
+        //
+        // T8_NeutralizationParity_StatsCSV_FloorFractionIs1 read
+        // Resources.Load<TextAsset>("Physics/stats") and asserted stamina_floor_fraction == 1.0,
+        // i.e. "the resolver-side stamina lane is neutralized". That CSV is now deleted: it had
+        // exactly one reader, PhysicsConfigLoader.LoadStatCoefficients(), which itself had ZERO
+        // callers — so the value it asserted never reached the shot path in the first place.
+        //
+        // The test is NOT re-pointed at StatCoefficients.Default: Default.StaminaFloorFraction is
+        // 0.20f, not 1.0 — and the field has been DEAD since Order 731 (2026-07-16) removed the
+        // resolver's staminaMultiplier lane. Nothing reads it. Asserting either number would be
+        // asserting a dead field's arbitrary value.
+        //
+        // The invariant T8 was proxying for is covered directly, and better, by
+        // StatResolverTests.Stats_Resolver_IsStaminaAgnostic: the same CharacterStats with three
+        // different CurrentStamina values must resolve bit-identical modifiers. Degradation is
+        // applied exactly once, at the LiveStatProviderHost seam — which is what T7 above covers.
 
         // ══════════════════════════════════════════════════════════════════════════
         // Test 9 — Versus drain: D5 — OnMatchComplete wire exercises DrainForCompletedHole

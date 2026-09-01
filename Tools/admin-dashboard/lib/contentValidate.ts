@@ -106,7 +106,7 @@ const REQUIRED: Record<string, string[]> = {
   characters: ["id", "name", "lastName", "rarity", "baseStrength", "baseClubControl", "baseRecovery", "baseStamina", "startLevel", "maxLevel"],
   items: ["id", "name", "category", "rarity"],
   bags: ["id", "name", "rarity"],
-  balls: ["id", "name", "brand"],
+  balls: ["id", "name", "brand", "rarity"],
   texts: ["key", "English", "Japanese"],
   shop_catalog: ["entryId", "category", "refId", "rpCost", "sortOrder"],
   level_up_costs: ["level", "cost_r", "sp_reward"],
@@ -374,8 +374,20 @@ export function validateCatalog(
     // 2. rarity is one of the six, wherever the column exists.
     if ("rarity" in row.data) {
       const rarity = text(row.data.rarity).trim();
-      // shop_catalog.rarity is an optional display override and may be blank.
-      if (rarity !== "" && !(RARITIES as readonly string[]).includes(rarity)) {
+      // shop_catalog.rarity is an optional display override and may be blank —
+      // 7 of its 8 shipped rows are. That carve-out is scoped to it BY NAME
+      // since ball_data_wiring (2026-08-31): it used to exempt a blank rarity in
+      // EVERY catalog, which meant `rarity` could be REQUIRED and still publish
+      // empty — the key was present, so the required-column rule passed, and the
+      // blank exemption let the value through. Every other rarity-bearing
+      // catalog (clubs, characters, items, bags, balls, gacha_pools,
+      // gacha_rates) has ZERO blank rows, so nothing shipped relies on it.
+      const blankAllowed = catalog === "shop_catalog";
+      if (rarity === "") {
+        if (!blankAllowed) {
+          err(row.rowId, "rarity", `Rarity is required and must be one of ${RARITIES.join(", ")}.`);
+        }
+      } else if (!(RARITIES as readonly string[]).includes(rarity)) {
         err(row.rowId, "rarity", `Rarity "${rarity}" is not one of ${RARITIES.join(", ")}.`);
       }
     }

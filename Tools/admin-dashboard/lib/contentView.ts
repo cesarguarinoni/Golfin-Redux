@@ -189,8 +189,8 @@ export const CATALOG_VIEWS: Record<string, CatalogView> = {
   },
   balls: {
     catalog: "balls",
-    columns: ["name", "brand", "power", "rebound", "windResistance", "roll", "spin"],
-    facets: [BRAND_FACET],
+    columns: ["name", "brand", "rarity", "power", "rebound", "windResistance", "roll", "spin"],
+    facets: [BRAND_FACET, RARITY_FACET],
     limit: 50,
   },
   texts: {

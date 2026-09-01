@@ -205,7 +205,10 @@ namespace Golfin.Physics.Tests
                 $"Ball Rebound +10 → ReboundMultiplier ~1.20 (got {actual:F5})");
         }
 
-        // ── Test 8: Ball WindCut +10 → WindCutFraction == 0.10 ───────────────────
+        // ── Test 8: Ball WindCut +10 → WindCutFraction == 0.20 ───────────────────
+        // Updated for ball_data_wiring (2026-08-31): BallWindCutPerPoint raised from 0.01 to
+        // 0.02, so windCut = 10 × 0.02 = 0.20 — two thirds of the 0.30 WindCutMax cap, where
+        // it used to be one third.
 
         [Test]
         public void Stats_BallWindCut_FractionCorrect()
@@ -214,8 +217,8 @@ namespace Golfin.Physics.Tests
             var bundle = new StatBundle(IronClub(), ball, NeutralChar, FullCur, FullMax);
             var r = StatModifierResolver.Resolve(bundle, Coeffs, Caps);
             float actual = r.BallPhysics.WindCutFraction.ToFloat();
-            Assert.IsTrue(System.Math.Abs(actual - 0.10f) < 0.001f,
-                $"Ball WindCut +10 → WindCutFraction ~0.10 (got {actual:F5})");
+            Assert.IsTrue(System.Math.Abs(actual - 0.20f) < 0.001f,
+                $"Ball WindCut +10 → WindCutFraction ~0.20 (got {actual:F5})");
         }
 
         // ── Test 9: Ball Roll +10 → RollResistanceMultiplier == 0.80 ─────────────

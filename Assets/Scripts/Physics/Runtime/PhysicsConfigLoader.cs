@@ -334,51 +334,12 @@ namespace Golfin.Physics.Runtime
             return cfg;
         }
 
-        public static StatCoefficients LoadStatCoefficients()
-        {
-            var cfg = StatCoefficients.Default;
-            var ta = Resources.Load<TextAsset>("Physics/stats");
-            if (ta == null)
-            {
-                Debug.LogWarning("[PhysicsConfigLoader] Physics/stats.csv not found — using defaults");
-                return cfg;
-            }
-
-            bool headerSkipped = false;
-            foreach (var raw in ta.text.Split('\n'))
-            {
-                var line = raw.Trim();
-                if (line.Length == 0 || line.StartsWith("#")) continue;
-                if (!headerSkipped) { headerSkipped = true; continue; }
-
-                var parts = line.Split(',');
-                if (parts.Length < 2) continue;
-                string key = parts[0].Trim();
-                if (!float.TryParse(parts[1].Trim(),
-                        System.Globalization.NumberStyles.Float,
-                        System.Globalization.CultureInfo.InvariantCulture,
-                        out float val)) continue;
-
-                switch (key)
-                {
-                    case "club_power_per_point":        cfg.ClubPowerPerPoint          = fp.FromFloat(val); break;
-                    case "club_accuracy_per_point":     cfg.ClubAccuracyPerPoint       = fp.FromFloat(val); break;
-                    case "club_lie_resistance_per_point": cfg.ClubLieResistancePerPoint = fp.FromFloat(val); break;
-                    case "ball_power_per_point":        cfg.BallPowerPerPoint          = fp.FromFloat(val); break;
-                    case "ball_rebound_per_point":      cfg.BallReboundPerPoint        = fp.FromFloat(val); break;
-                    case "ball_wind_cut_per_point":     cfg.BallWindCutPerPoint        = fp.FromFloat(val); break;
-                    case "ball_roll_per_point":         cfg.BallRollPerPoint           = fp.FromFloat(val); break;
-                    case "ball_spin_per_point":         cfg.BallSpinPerPoint           = fp.FromFloat(val); break;
-                    case "char_strength_per_point":     cfg.CharStrengthPerPoint       = fp.FromFloat(val); break;
-                    case "char_club_control_per_point": cfg.CharClubControlPerPoint    = fp.FromFloat(val); break;
-                    case "putter_control_per_point":    cfg.PutterControlPerPoint      = fp.FromFloat(val); break;
-                    case "putter_accuracy_per_point":   cfg.PutterAccuracyPerPoint     = fp.FromFloat(val); break;
-                    case "putter_weight_per_point":     cfg.PutterWeightPerPoint       = fp.FromFloat(val); break;
-                    case "stamina_floor_fraction":      cfg.StaminaFloorFraction       = fp.FromFloat(val); break;
-                }
-            }
-            return cfg;
-        }
+        // LoadStatCoefficients() was REMOVED 2026-08-31 (ball_data_wiring §4.2, Cesar's decision).
+        // It read Assets/Resources/Physics/stats.csv and had ZERO callers — the shot path passes
+        // StatCoefficients.Default straight in (ShotController, PhysicsLabController,
+        // BotClubCalibrationHarness), so the CSV was documentation that had already drifted
+        // (ball_rebound_per_point 0.01 vs the Default's 0.02, stale since Order 417). The CSV is
+        // deleted too; StatCoefficients.Default is the single source of truth.
 
         public static StatCaps LoadStatCaps()
         {

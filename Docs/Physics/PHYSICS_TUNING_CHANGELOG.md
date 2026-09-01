@@ -6,6 +6,64 @@ against the Hole 1 par-5 completability baseline (≤7 strokes with default char
 
 ---
 
+## F16 — BallWindCutPerPoint 0.01 → 0.02, and `Physics/stats.csv` retired (2026-08-31)
+
+**Task:** `ball_data_wiring`
+**Reason:** At 0.01, a ball's Wind stat was worth a THIRD of its own cap: `windCut = 10 × 0.01 =
+0.10` against a `WindCutMax` of 0.30, so the most wind-resistant ball in the game could only ever
+claim a third of the reduction the cap allows. Every other ball lane already fills its cap band at
+±10 (Rebound F-Order 417, Roll F8). Raising to 0.02 puts +10 Wind at 0.20 — two thirds of the cap —
+which is the range the 20-ball catalog's Wind spread (−4 … +10) was written against.
+**Locked by:** Cesar, 2026-08-31.
+
+### StatCoefficients changes
+
+| Field | Before | After | Notes |
+|---|---|---|---|
+| `BallWindCutPerPoint` | `0.01f` | `0.02f` | +10 Wind → 0.20 of the 0.30 `WindCutMax` |
+
+### StatCaps (unchanged)
+
+| Field | Value | Notes |
+|---|---|---|
+| `WindCutMax` | `0.30f` | Unchanged — still the clamp; 0.02 does not reach it at +10 |
+
+### Expected windCutFraction at stat extremes
+
+| Ball.WindResistance | Formula | Unclamped | Clamped |
+|---|---|---|---|
+| +10 (max in catalog: `ball_soralis`) | 10 × 0.02 | 0.20 | 0.20 |
+| 0 (neutral) | 0 × 0.02 | 0.00 | 0.00 |
+| −4 (min in catalog: `ball_ace_attire`, `ball_cirq`) | −4 × 0.02 | −0.08 | 0.00 (clamped at zero) |
+
+Note the low end: `windCutFraction` is clamped to `[0, WindCutMax]`, so a NEGATIVE Wind stat has
+never done anything — it clamps to zero at 0.01 and still clamps to zero at 0.02. This change moves
+the top of the lane only.
+
+### Retired in the same change: `Assets/Resources/Physics/stats.csv`
+
+Cesar's decision (2026-08-31), and the direct opposite of F8's "also updated the CSV mirror". The
+mirror was **never read by the shot path**: its only reader,
+`PhysicsConfigLoader.LoadStatCoefficients()`, had ZERO callers — `ShotController`,
+`PhysicsLabController` and `BotClubCalibrationHarness` all pass `StatCoefficients.Default` straight
+in. F8 dutifully kept the mirror in sync to "prevent a config-load revert" that could not happen,
+and the file had already drifted anyway (`ball_rebound_per_point` still read 0.01 after Order 417
+raised the Default to 0.02 — stale for six weeks, invisible, because nothing loaded it).
+
+Deleted: the CSV (+ `.meta`) and `LoadStatCoefficients()`. `StatCoefficients.Default` is now the
+single source of truth and this changelog is the tuning record. `LoadStatCaps()` and the
+terrain/aero/putt loaders are untouched — they have real callers.
+
+### Regression tests updated
+
+- `StatResolverTests.Stats_BallWindCut_FractionCorrect`: expected 0.10 → 0.20.
+- `StaminaLiveWiringTests.T8_NeutralizationParity_StatsCSV_FloorFractionIs1`: **retired**, not
+  re-pointed. It read the deleted CSV to assert `stamina_floor_fraction == 1.0`; `Default` carries
+  0.20f, and the field has been dead since Order 731 removed the resolver's stamina lane. The
+  invariant it proxied for is covered directly by `StatResolverTests.Stats_Resolver_IsStaminaAgnostic`.
+
+---
+
 ## F15 — Timing slab drives a power multiplier (0.70 / 0.90 / 1.0) (2026-08-29)
 
 **Task:** `shot_timing_power`

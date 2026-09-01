@@ -89,14 +89,16 @@ export const MOCK_CONTENT_PUBLISHED: ContentStoredRow[] = [
     thumbnail: "MOCK-Thumb", fullImage: "MOCK-Full", description: "MOCK FIXTURE", unlocked: "false",
   }),
   row("balls", "mock_ball_default", {
-    id: "mock_ball_default", name: "MOCK Ball", brand: "MOCK", power: "9999", rebound: "9999",
+    id: "mock_ball_default", name: "MOCK Ball", brand: "MOCK", rarity: "Common",
+    power: "9999", rebound: "9999",
     windResistance: "9999", roll: "9999", spin: "9999", thumbnailSprite: "MOCK-Thumb",
     fullSprite: "MOCK-Full", info: "MOCK FIXTURE",
   }),
   // Deactivated on purpose: the shop typeahead must be seen NOT offering it,
   // and the diff's `deactivated` category needs a row to be about.
   { ...row("balls", "mock_ball_retired", {
-      id: "mock_ball_retired", name: "MOCK Retired Ball", brand: "MOCK", power: "9999",
+      id: "mock_ball_retired", name: "MOCK Retired Ball", brand: "MOCK", rarity: "Rare",
+      power: "9999",
       rebound: "9999", windResistance: "9999", roll: "9999", spin: "9999",
       thumbnailSprite: "MOCK-Thumb", fullSprite: "MOCK-Full", info: "MOCK FIXTURE",
     }), isActive: false },

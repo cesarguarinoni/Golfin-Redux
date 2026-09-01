@@ -336,3 +336,58 @@ describe("shop_catalog — G3-Q, quantity means something only for a ticket", ()
     expect(problems.map((p) => p.column)).toContain("quantity");
   });
 });
+
+/**
+ * ball_data_wiring §5 — `rarity` became a REQUIRED column on `balls` when the
+ * catalog went from 2 rows to 20 and every new ball was assigned a tier.
+ *
+ * Two rules meet on this column and neither one alone is enough: REQUIRED says
+ * the KEY must be present, and the generic rarity rule says the VALUE must be
+ * one of the six. A row can satisfy either while failing the other, so both are
+ * asserted here.
+ */
+const ball = (rowId: string, over: Record<string, unknown> = {}): DraftRow =>
+  row(rowId, {
+    id: rowId,
+    name: "Test Ball",
+    brand: "TEST",
+    rarity: "Common",
+    power: "0",
+    rebound: "0",
+    windResistance: "0",
+    roll: "0",
+    spin: "0",
+    ...over,
+  });
+
+const ballErrors = (rows: DraftRow[]) =>
+  validateCatalog("balls", rows, ctx()).filter((p) => p.severity === "error");
+
+describe("balls — rarity is required and must be one of the six", () => {
+  it("accepts a row carrying a real tier", () => {
+    expect(ballErrors([ball("ball_golfin")])).toEqual([]);
+    expect(ballErrors([ball("ball_shimmer_g", { rarity: "Legendary" })])).toEqual([]);
+  });
+
+  it("refuses a row with NO rarity key — the pre-column shape", () => {
+    // What a `content_rows` row published before 2026-08-31 looks like. It parses
+    // client-side (ClubCsvParser.ParseRarity defaults to Common) but it must not
+    // PUBLISH: an unstated tier is an operator omission, not a Common ball.
+    const { rarity: _omitted, ...noRarity } = ball("ball_legacy").data;
+    const problems = ballErrors([row("ball_legacy", noRarity)]);
+    expect(problems.map((p) => p.column)).toContain("rarity");
+    expect(problems.find((p) => p.column === "rarity")!.message).toMatch(/required/i);
+  });
+
+  it("refuses a BLANK rarity", () => {
+    const problems = ballErrors([ball("ball_blank", { rarity: "" })]);
+    expect(problems.map((p) => p.column)).toContain("rarity");
+  });
+
+  it("refuses a tier that is not one of the six", () => {
+    const problems = ballErrors([ball("ball_bogus", { rarity: "Platinum" })]);
+    const rarityProblem = problems.find((p) => p.column === "rarity");
+    expect(rarityProblem).toBeDefined();
+    expect(rarityProblem!.message).toMatch(/Platinum/);
+  });
+});
