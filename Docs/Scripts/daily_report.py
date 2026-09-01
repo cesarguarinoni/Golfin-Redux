@@ -13,13 +13,19 @@ Media attachments (added 2026-05-28, Mac setup):
        never committed, so this auto-path CANNOT see them. To attach a task
        video (orbit clip, trail capture, etc.), copy it into the media drop
        folder below — that is the only reliable path for task videos.
-    2. ANY file you drop into the media folder (default: Docs/Reports/Media/) —
-       videos/images are sent as media, everything else (docx, pdf, csv, zip, …)
-       is sent via Telegram's sendDocument. Drop-folder files are DELETED after a
-       successful send (README.md/.gitkeep are kept).
+    2. ANY file you drop into the media folder (default: Docs/Reports/Media/),
+       INCLUDING files inside subfolders of it (the scan recurses, so grouping a
+       day's media as Media/GPS/*.png works) — videos/images are sent as media,
+       everything else (docx, pdf, csv, zip, …) is sent via Telegram's
+       sendDocument. Drop-folder files are DELETED after a successful send, and
+       a subfolder left empty by that is removed (README.md/.gitkeep are kept).
   Telegram's Bot API caps uploads at 50 MB. Oversize VIDEOS are auto-compressed
   (two-pass, same resolution) to fit and then sent; oversize non-video files are
-  skipped (and reported), never deleted. Auto-compress needs ffmpeg/ffprobe —
+  skipped (and reported), never deleted. IMAGES have a second, much tighter set
+  of limits that apply only to sendPhoto (10 MB, width+height <= 10000 px) — one
+  that breaches them is re-encoded down (scaled only as far as the dimension rule
+  demands, then JPEG quality walked down until it fits) and still sent as a
+  PHOTO. Images are never downgraded to documents. Auto-compress needs ffmpeg/ffprobe —
   found via PATH or the common install dirs (incl. ~/.local/bin), or override
   with GOLFIN_FFMPEG_PATH / GOLFIN_FFPROBE_PATH.
 
@@ -198,6 +204,16 @@ ANIM_EXTS = {".gif"}
 MEDIA_EXTS = VIDEO_EXTS | IMAGE_EXTS | ANIM_EXTS
 # Files in the drop folder that are part of the repo scaffold, never sent/deleted.
 DROP_FOLDER_KEEP = {"README.md", ".gitkeep", ".DS_Store"}
+# sendPhoto is FAR stricter than the 50 MB generic upload cap: a photo must be
+# <= 10 MB AND width+height <= 10000 px, and a breach is a non-retryable HTTP
+# 400. An oversize image is re-encoded down to fit (see _compress_image) and
+# still sent as a photo — Cesar's call, 2026-09-01: review images must land in
+# the chat as inline photos, never as document file cards, so a shrink that costs
+# some detail is the right trade.
+# Added 2026-09-01: four GPS review PNGs (up to 12.7 MB / 9451x2972) would have
+# bounced with a 400 had the recursive-scan fix below landed on its own.
+TELEGRAM_PHOTO_MAX_BYTES = 10 * 1024 * 1024
+TELEGRAM_PHOTO_MAX_DIM_SUM = 10000
 
 # --- Media send pacing / rate-limit handling ---
 # Telegram throttles bulk media to a group/channel (~20 messages per minute).
@@ -322,24 +338,60 @@ def get_todays_videos(since: str = "24 hours ago") -> list:
 
 def collect_drop_media(media_dir: str) -> list:
     """
-    Return absolute paths of EVERY file dropped into `media_dir` (non-recursive),
-    not just videos/images. Videos and images are sent as such; anything else
-    (docx, pdf, csv, zip, …) is sent via Telegram's sendDocument (see
-    send_media_file). Only the repo scaffold (README.md, .gitkeep, .DS_Store) and
-    hidden dotfiles are skipped — the whole point of the drop folder is "attach
-    whatever I put here," so we don't filter by extension.
+    Return absolute paths of EVERY file dropped into `media_dir`, RECURSIVELY —
+    not just videos/images, and not just the top level. Videos and images are
+    sent as such; anything else (docx, pdf, csv, zip, …) is sent via Telegram's
+    sendDocument (see send_media_file). Only the repo scaffold (README.md,
+    .gitkeep, .DS_Store) and hidden dot-entries are skipped — the whole point of
+    the drop folder is "attach whatever I put here," so we don't filter by
+    extension.
+
+    Recursion added 2026-09-01. The previous flat os.listdir version skipped any
+    entry failing os.path.isfile, so a subfolder was silently invisible: a batch
+    dropped as Media/GPS/*.png was never collected AND — because nothing reached
+    the failure list — never reported as unattached either. The run just logged
+    "No media to attach today" and the images were lost. Grouping a day's media
+    in a named subfolder is the natural thing to do, so the scan now matches the
+    contract this docstring always claimed.
     """
     if not os.path.isdir(media_dir):
         return []
     found = []
-    for name in sorted(os.listdir(media_dir)):
-        if name in DROP_FOLDER_KEEP or name.startswith("."):
-            continue
-        path = os.path.join(media_dir, name)
-        if not os.path.isfile(path):
-            continue
-        found.append(path)
+    for dirpath, dirnames, filenames in os.walk(media_dir):
+        # Prune hidden dirs in place so os.walk never descends into them.
+        dirnames[:] = sorted(d for d in dirnames if not d.startswith("."))
+        for name in sorted(filenames):
+            if name in DROP_FOLDER_KEEP or name.startswith("."):
+                continue
+            path = os.path.join(dirpath, name)
+            if not os.path.isfile(path):
+                continue
+            found.append(path)
     return found
+
+
+def _prune_empty_drop_dirs(start_dir: str) -> None:
+    """
+    Walk up from `start_dir` removing drop-folder subfolders left empty by a
+    successful send, stopping at the first non-empty parent and never touching
+    the drop root itself. Without this, recursive collection would leave an empty
+    husk dir behind after every grouped batch.
+    """
+    root = os.path.realpath(REPORT_MEDIA_DIR)
+    cur = os.path.realpath(start_dir)
+    while cur != root and cur.startswith(root + os.sep):
+        # A stray .DS_Store alone should not keep a husk alive.
+        if [n for n in os.listdir(cur) if n != ".DS_Store"]:
+            return
+        try:
+            for n in os.listdir(cur):
+                os.remove(os.path.join(cur, n))
+            os.rmdir(cur)
+            print(f"[OK] Removed empty drop-folder dir: "
+                  f"{os.path.relpath(cur, root)}")
+        except OSError:
+            return
+        cur = os.path.dirname(cur)
 
 
 def read_ai_context() -> str:
@@ -664,6 +716,9 @@ def send_media_file(path: str, caption: str) -> bool:
     if ext in ANIM_EXTS:
         return _send_telegram_file("sendAnimation", "animation", path, caption)
     if ext in IMAGE_EXTS:
+        # Always a photo, never a document (Cesar, 2026-09-01). Anything that
+        # breached the photo limits was already re-encoded to fit by
+        # send_all_media before reaching here.
         return _send_telegram_file("sendPhoto", "photo", path, caption)
     # Unknown — send as a generic document so nothing silently disappears.
     return _send_telegram_file("sendDocument", "document", path, caption)
@@ -687,6 +742,114 @@ def _find_media_tool(name: str, env_var: str):
         p = os.path.join(os.path.expanduser(d), name)
         if os.path.isfile(p) and os.access(p, os.X_OK):
             return p
+    return None
+
+
+def _image_dimensions(path: str):
+    """
+    Return (width, height) for an image via ffprobe, or None when it can't be
+    determined (ffprobe missing, unreadable file). Pillow is deliberately NOT
+    used: the report venv carries only anthropic/requests/python-dotenv, whereas
+    ffprobe is already a dependency of the video-compression path.
+    """
+    ffprobe = _find_media_tool("ffprobe", "GOLFIN_FFPROBE_PATH")
+    if not ffprobe:
+        return None
+    try:
+        out = subprocess.run(
+            [ffprobe, "-v", "error", "-select_streams", "v:0",
+             "-show_entries", "stream=width,height",
+             "-of", "csv=s=x:p=0", path],
+            capture_output=True, text=True, timeout=30,
+        )
+        w, h = out.stdout.strip().split("x")[:2]
+        return int(w), int(h)
+    except Exception:
+        return None
+
+
+def _photo_send_is_safe(path: str):
+    """
+    Decide whether `path` may go out via sendPhoto. Returns (ok, reason); reason
+    is a short log string when ok is False. When the dimensions can't be probed
+    we only enforce the size rule — degrading to today's behaviour (a 400 that
+    lands in the unattached notice) rather than needlessly downgrading every
+    image to a document.
+    """
+    size = os.path.getsize(path)
+    if size > TELEGRAM_PHOTO_MAX_BYTES:
+        return False, (f"{size / 1024 / 1024:.1f} MB is over sendPhoto's 10 MB "
+                       f"limit")
+    dims = _image_dimensions(path)
+    if dims and sum(dims) > TELEGRAM_PHOTO_MAX_DIM_SUM:
+        return False, (f"{dims[0]}x{dims[1]} is over sendPhoto's 10000 px "
+                       f"width+height limit")
+    return True, ""
+
+
+def _compress_image(src: str):
+    """
+    Re-encode `src` down until it satisfies BOTH sendPhoto limits
+    (TELEGRAM_PHOTO_MAX_BYTES and TELEGRAM_PHOTO_MAX_DIM_SUM).
+
+    Scales only as far as the dimension rule demands, then walks JPEG quality
+    down until the bytes fit; if even the lowest quality won't fit it takes
+    another 15% off the dimensions and retries. Cesar's call (2026-09-01):
+    oversize review images go out as PHOTOS, never documents — a shrink that
+    costs some detail beats an attachment that arrives as a file card. Note this
+    is the opposite trade from _compress_video, which never downscales.
+
+    Returns a temp .jpg path under a fresh temp dir, or None on any failure.
+    Caller owns cleanup of the returned file's temp dir.
+    """
+    ffmpeg = _find_media_tool("ffmpeg", "GOLFIN_FFMPEG_PATH")
+    if not ffmpeg:
+        print("[WARN] ffmpeg not found — cannot resize an oversize image.")
+        return None
+    dims = _image_dimensions(src)
+    if not dims:
+        print("[WARN] Could not probe image dimensions — cannot resize safely.")
+        return None
+    w, h = dims
+    src_mb = os.path.getsize(src) / 1024 / 1024
+
+    # Only scale when the dimension rule demands it, and keep a 2% margin so
+    # rounding never lands us back exactly on the limit.
+    scale = 1.0
+    if w + h > TELEGRAM_PHOTO_MAX_DIM_SUM:
+        scale = (TELEGRAM_PHOTO_MAX_DIM_SUM * 0.98) / (w + h)
+
+    tmp_dir = tempfile.mkdtemp(prefix="golfin_img_")
+    out = os.path.join(tmp_dir,
+                       os.path.splitext(os.path.basename(src))[0] + ".jpg")
+    for _ in range(4):
+        tw = max(2, int(w * scale) // 2 * 2)
+        th = max(2, int(h * scale) // 2 * 2)
+        # ffmpeg mjpeg -q:v runs 2 (best) .. 31 (worst).
+        for q in (2, 4, 6, 9, 14):
+            try:
+                subprocess.run(
+                    [ffmpeg, "-v", "error", "-y", "-i", src,
+                     "-vf", f"scale={tw}:{th}:flags=lanczos",
+                     "-q:v", str(q), out],
+                    capture_output=True, timeout=300, check=True,
+                )
+            except Exception as e:
+                print(f"[WARN] ffmpeg image re-encode failed: {e}")
+                shutil.rmtree(tmp_dir, ignore_errors=True)
+                return None
+            out_bytes = os.path.getsize(out)
+            if (out_bytes <= TELEGRAM_PHOTO_MAX_BYTES
+                    and tw + th <= TELEGRAM_PHOTO_MAX_DIM_SUM):
+                print(f"[OK] Re-encoded {os.path.basename(src)}: "
+                      f"{w}x{h} {src_mb:.1f} MB -> {tw}x{th} "
+                      f"{out_bytes / 1024 / 1024:.1f} MB (jpeg q={q})")
+                return out
+        scale *= 0.85
+
+    print(f"[WARN] Could not bring {os.path.basename(src)} under the photo "
+          f"limits — not sent.")
+    shutil.rmtree(tmp_dir, ignore_errors=True)
     return None
 
 
@@ -807,15 +970,47 @@ def send_all_media(git_videos: list, drop_media: list) -> None:
         if real in sent_real_paths:
             return  # de-dupe across git + drop folder
         size = os.path.getsize(path)
+        # Drop-folder files can now live in subfolders, so label them by their
+        # path relative to the drop root: "GPS/Score Upload flow.png" is far more
+        # use in the chat (and in the unattached notice) than a bare basename.
         name = os.path.basename(path)
+        if is_drop:
+            try:
+                name = os.path.relpath(path, REPORT_MEDIA_DIR)
+            except ValueError:
+                pass
         send_path = path           # what we actually upload (may be a compressed temp)
         tmp_dir_to_clean = None
         caption_suffix = ""
-        if size > TELEGRAM_MAX_UPLOAD_BYTES:
+        ext = os.path.splitext(name)[1].lower()
+
+        # Images are checked against sendPhoto's limits (10 MB, width+height
+        # <= 10000 px) rather than the generic 50 MB cap — they are strictly
+        # tighter, so this also covers an image over 50 MB. Oversize images are
+        # re-encoded down and still sent as photos, never downgraded to a
+        # document (Cesar, 2026-09-01).
+        if ext in IMAGE_EXTS:
+            photo_ok, photo_reason = _photo_send_is_safe(path)
+            if not photo_ok:
+                print(f"[INFO] {name}: {photo_reason} — re-encoding to fit.")
+                shrunk = _compress_image(path)
+                if not shrunk:
+                    failed.append((name, f"{photo_reason}, and it could not be "
+                                         f"re-encoded down to fit"))
+                    return
+                send_path = shrunk
+                tmp_dir_to_clean = os.path.dirname(shrunk)
+                new_dims = _image_dimensions(shrunk)
+                caption_suffix = (f" (resized {size / 1024 / 1024:.0f}MB→"
+                                  f"{os.path.getsize(shrunk) / 1024 / 1024:.1f}MB")
+                if new_dims:
+                    caption_suffix += f", {new_dims[0]}x{new_dims[1]}"
+                caption_suffix += ")"
+        elif size > TELEGRAM_MAX_UPLOAD_BYTES:
             mb = size / (1024 * 1024)
-            ext = os.path.splitext(name)[1].lower()
             if ext not in VIDEO_EXTS:
-                # Only videos can be transcoded down; images/anims just skip.
+                # Images never reach here (handled above); only videos can be
+                # transcoded down, so anims/other oversize files just skip.
                 print(f"[SKIP] {name} is {mb:.1f} MB > 50 MB Telegram limit — not sent.")
                 failed.append((name, f"{mb:.0f} MB, over the 50 MB limit and not a "
                                      f"video, so it can't be compressed"))
@@ -848,6 +1043,7 @@ def send_all_media(git_videos: list, drop_media: list) -> None:
                 try:
                     os.remove(path)
                     print(f"[OK] Removed drop-folder file after send: {name}")
+                    _prune_empty_drop_dirs(os.path.dirname(path))
                 except OSError as e:
                     print(f"[WARN] Could not delete {name} after send: {e}")
         else:
@@ -886,10 +1082,15 @@ def main():
     parser.add_argument("--dry-run", action="store_true", help="Print the report + planned media to stdout; do NOT post to Telegram or delete anything")
     parser.add_argument("--test", action="store_true", help="Real send, but to TELEGRAM_TEST_CHAT_ID instead of the production channel")
     parser.add_argument("--force", action="store_true", help="Send even on a weekend (bypass the Sat/Sun skip)")
+    parser.add_argument("--media-only", action="store_true", help="Send ONLY the attachments (no report text, no Claude call, idempotency marker untouched) — recovery path when the text went out but the media did not")
     args = parser.parse_args()
 
+    if args.media_only and args.no_media:
+        parser.error("--media-only and --no-media are contradictory.")
+
     weekday = date.today().weekday()          # Mon=0 .. Sun=6
-    manual_override = args.force or args.test or args.since is not None
+    manual_override = (args.force or args.test or args.media_only
+                       or args.since is not None)
     automatic = not manual_override and not args.dry_run
 
     # --- Silent poll gate (poll model, 2026-07-15) ---
@@ -988,10 +1189,10 @@ def main():
     # --test routes everything to the test channel so production only ever gets
     # the scheduled report.
     global ACTIVE_CHAT_ID
-    needed = {
-        "ANTHROPIC_API_KEY": ANTHROPIC_API_KEY,
-        "TELEGRAM_BOT_TOKEN": TELEGRAM_BOT_TOKEN,
-    }
+    needed = {"TELEGRAM_BOT_TOKEN": TELEGRAM_BOT_TOKEN}
+    # --media-only never reaches summarize_with_claude, so don't demand its key.
+    if not args.media_only:
+        needed["ANTHROPIC_API_KEY"] = ANTHROPIC_API_KEY
     if args.test:
         needed["TELEGRAM_TEST_CHAT_ID"] = TELEGRAM_TEST_CHAT_ID
         ACTIVE_CHAT_ID = TELEGRAM_TEST_CHAT_ID
@@ -1005,6 +1206,18 @@ def main():
               f"(see DAILY_REPORT_SETUP.md).")
         sys.exit(1)
     print(f"[INFO] Target channel: {'TEST' if args.test else 'PRODUCTION'} ({ACTIVE_CHAT_ID})")
+
+    if args.media_only:
+        # Recovery path (added 2026-09-01 after the GPS drop-folder miss): the
+        # text report went out fine and only the attachments were lost. Re-running
+        # with --force to carry the media would post a second copy of the same
+        # day's report into the channel, which is exactly what the dedupe guard
+        # exists to prevent — so send the attachments alone and leave the
+        # idempotency marker and any staged note untouched.
+        print("[INFO] --media-only: sending attachments only, no report text.")
+        send_all_media(git_videos, drop_media)
+        print("Done.")
+        return
 
     if not has_commits and not has_notion:
         today = datetime.now().strftime("%Y-%m-%d (%A)")

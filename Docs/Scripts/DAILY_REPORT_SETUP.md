@@ -51,21 +51,29 @@ it works under `launchd` (whose working directory differs).
   is git-ignored (large, regenerable — `.gitignore`, 2026-06-02), so it is never
   committed and the git auto-path can't see it. Orbit clips, trail captures, and
   any other task video must go through the manual drop folder below.
-- **Manual drop folder** — `Docs/Reports/Media/`. Drop **any file** there
-  (videos and images go as media; `.docx`/`.pdf`/`.csv`/`.zip`/… go as
-  documents — no extension filter) and it'll be attached to the next report,
+- **Manual drop folder** — `Docs/Reports/Media/`, **scanned recursively**. Drop
+  **any file** there or in a subfolder of it (videos and images go as media;
+  `.docx`/`.pdf`/`.csv`/`.zip`/… go as documents — no extension filter) and it'll
+  be attached to the next report,
   then **deleted after a successful send** (`README.md`/`.gitkeep` are
   preserved). This is also the reliable path for task videos. See that folder's
   README.
 - Telegram caps uploads at **50 MB**. Oversize **videos** are **auto-compressed**
   (two-pass, *same resolution* — only the bitrate drops, ~42 MB target) and then
-  sent; oversize non-video files are skipped and reported, never deleted. Auto-
+  sent; oversize non-video files are skipped and reported, never deleted.
+  **Images** additionally must clear Telegram's photo limits — **10 MB** and
+  **width+height ≤ 10000 px** — and one that doesn't is **re-encoded down and
+  still sent as a photo** (scaled only as far as the px rule forces, then JPEG
+  quality reduced until it fits); images are never downgraded to documents. Auto-
   compress needs `ffmpeg`/`ffprobe`: found via `PATH` or common install dirs
   (incl. `~/.local/bin`), or set `GOLFIN_FFMPEG_PATH` / `GOLFIN_FFPROBE_PATH`.
   Because the launchd plist's `PATH` is minimal, the script probes `~/.local/bin`
   and Homebrew dirs directly so the scheduled run still finds ffmpeg.
 - Bulk drops are paced (~20/min) and retry on HTTP 429, so a big batch sends
   fully instead of half-failing.
+- **`--media-only`** re-sends just the attachments — no report text, no Claude
+  call, idempotency marker and staged note untouched. Use it when the text report
+  went out but the media didn't; `--force` would post a duplicate report.
 - **Unattached-media notice** — if anything still can't be attached (an
   uncompressible oversize file, or an upload that failed after retries), the
   tool posts a short follow-up message to the chat listing it, so recipients
