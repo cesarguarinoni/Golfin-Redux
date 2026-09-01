@@ -410,3 +410,120 @@ describe("balls — rarity is required and must be one of the six", () => {
     expect(rarityProblem!.message).toMatch(/Platinum/);
   });
 });
+
+// ── mission_loadouts — the mask VOCABULARY (publish_blocked_catalogs) ────────
+//
+// The grammar itself, and its parity with the C# resolver, live in
+// loadoutTokens.test.ts. What is here is the two rules the validator gained: a
+// token it does not know, and a ban that bans nothing. Both are errors, because
+// a mission whose card promises a restriction and then does not apply it is
+// broken content — `ban:Iron7,Iron9` named the two iron models the design
+// workbook knew and let Iron 4/5/6/8, 96 of the 114 shipped irons, straight through.
+
+const loadoutClubs = () =>
+  new Map([
+    ["club_iron_gf", row("club_iron_gf", { id: "club_iron_gf", name: "Iron 5 G&F", type: "Iron", rarity: "Common" })],
+    ["club_putter_gf", row("club_putter_gf", { id: "club_putter_gf", name: "Putter G&F", type: "Putter", rarity: "Common" })],
+    ["club_wood_old", row("club_wood_old", { id: "club_wood_old", name: "Wood G&F", type: "Wood", rarity: "Common" }, false)],
+  ]);
+
+const loadoutErrors = (rows: DraftRow[]) =>
+  validateCatalog("mission_loadouts", rows, ctx({ otherCatalogs: new Map([["clubs", loadoutClubs()]]) })).filter(
+    (p) => p.severity === "error"
+  );
+
+const ownLoadout = (rowId: string, clubs: string): DraftRow =>
+  row(rowId, { id: rowId, kind: "own", clubs, rarity: "", weight: "0", allowedStartKinds: "any" });
+
+describe("mission_loadouts — club tokens", () => {
+  it("accepts ban:Iron, the family token", () => {
+    expect(loadoutErrors([ownLoadout("OWN_NO_IRONS", "ban:Iron")])).toEqual([]);
+  });
+
+  it("reports an unknown club token", () => {
+    // "Hybrid" is a club a designer might reasonably type. Nothing in the grammar
+    // answers to it, so the ban would be silently inert — the exact failure mode
+    // this rule exists to make loud.
+    const problems = loadoutErrors([ownLoadout("OWN_NO_HYBRIDS", "ban:Hybrid")]);
+    expect(problems).toHaveLength(1);
+    expect(problems[0]!.column).toBe("clubs");
+    expect(problems[0]!.message).toMatch(/Unknown club token "Hybrid"/);
+  });
+
+  it("reports a ban that bans nothing", () => {
+    // `Iron9` is a KNOWN token — it just matches no active row in this catalog
+    // (the only iron here is a 5). A ban nobody feels is a mission lying on its card.
+    const problems = loadoutErrors([ownLoadout("OWN_NO_NINES", "ban:Iron9")]);
+    expect(problems).toHaveLength(1);
+    expect(problems[0]!.message).toMatch(/bans nothing/);
+  });
+
+  it("counts only ACTIVE clubs when deciding a ban bans nothing", () => {
+    // The only Wood in the catalog is deactivated, so `ban:Wood` reaches nothing
+    // a player can hold. Same rule as the supplied side, which has always been
+    // active-only.
+    expect(loadoutErrors([ownLoadout("OWN_NO_WOODS", "ban:Wood")])[0]!.message).toMatch(/bans nothing/);
+  });
+
+  it("leaves `*` alone", () => {
+    expect(loadoutErrors([ownLoadout("OWN", "*")])).toEqual([]);
+  });
+
+  it("resolves a supplied bag through the same grammar", () => {
+    // `Iron5` against a row whose `type` column is the bare "Iron" — the compare
+    // that used to be `type === token`, and the reason all 17 errors were false.
+    const supplied = row("SUP", {
+      id: "SUP", kind: "supplied", clubs: "Iron5,Putter", rarity: "Common",
+      weight: "0", allowedStartKinds: "any",
+    });
+    expect(loadoutErrors([supplied])).toEqual([]);
+  });
+});
+
+// ── gacha_pools — the deactivated-row carve-out ─────────────────────────────
+
+const poolCtx = () =>
+  ctx({
+    otherCatalogs: new Map([
+      ["balls", new Map([["ball_golfin", row("ball_golfin", { id: "ball_golfin", name: "Golfin", rarity: "Common", isDefault: "true" })]])],
+    ]),
+  });
+
+const poolRow = (over: Record<string, unknown> = {}, isActive = true): DraftRow =>
+  row(
+    "psc1_ball_golfin",
+    {
+      id: "psc1_ball_golfin", poolId: "pool_standard_club1", kind: "ball",
+      refId: "ball_golfin", rarity: "Common", weight: "60", quantity: "3",
+      dupeRp: "0", featured: "false", ...over,
+    },
+    isActive
+  );
+
+const poolErrors = (rows: DraftRow[]) =>
+  validateCatalog("gacha_pools", rows, poolCtx()).filter((p) => p.severity === "error");
+
+describe("gacha_pools — leaves a DEACTIVATED pool row alone", () => {
+  it("still refuses the default ball while the row is ACTIVE", () => {
+    // The control. Without it the carve-out below could pass by the rule simply
+    // having been deleted.
+    expect(poolErrors([poolRow()])[0]!.message).toMatch(/DEFAULT ball/);
+  });
+
+  it("says nothing about refId once the row is deactivated", () => {
+    // `psc1_ball_golfin` is the row an operator switched off BY HAND when they
+    // noticed 11 % of every Common pull was a no-op. Rule 21 then fired on the
+    // switched-off row: one error, and gacha_pools could not be published at all,
+    // with no remedy the rule itself would accept. Same carve-out, same reason, as
+    // "leaves a DEACTIVATED ticket row alone" above.
+    expect(poolErrors([poolRow({}, false)]).map((p) => p.column)).not.toContain("refId");
+  });
+
+  it("but a deactivated row must still be a SANE row", () => {
+    // Rules 6 and 7 stay outside the guard on purpose: reactivating a row is one
+    // click, and no publish gate runs in between.
+    const problems = poolErrors([poolRow({ rarity: "Platinum" }, false)]);
+    expect(problems.map((p) => p.column)).toContain("rarity");
+    expect(poolErrors([poolRow({ weight: "0" }, false)]).map((p) => p.column)).toContain("weight");
+  });
+});

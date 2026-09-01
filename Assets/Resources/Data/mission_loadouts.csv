@@ -11,7 +11,7 @@
 id,kind,clubs,rarity,weight,allowedStartKinds,label
 OWN,own,*,,0,any,Player's current bag
 OWN_NO_WOODS,own,"ban:Driver,Wood",,1,tee,"Own bag, no Driver/Wood"
-OWN_NO_IRONS,own,"ban:Iron7,Iron9",,2,any,"Own bag, no irons"
+OWN_NO_IRONS,own,ban:Iron,,2,any,"Own bag, no irons"
 OWN_NO_WEDGES,own,"ban:AW,PW,SW",,2,any,"Own bag, no wedges"
 SUP_FULL,supplied,"Driver,Wood,Iron7,Iron9,AW,PW,Putter",Common,0,any,Supplied full bag (Common)
 SUP_FULL_RARE,supplied,"Driver,Wood,Iron7,Iron9,AW,PW,Putter",Rare,-1,any,Supplied full bag (Rare)

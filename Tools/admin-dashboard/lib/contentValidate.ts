@@ -14,6 +14,7 @@
 
 import { validateArtUrlUnderBucket } from "./banner";
 import { SHOP_CATEGORY_STRICT_BUILD, TICKET_SHOP_BUILD } from "./buildGates";
+import { KNOWN_TOKENS_HINT, isKnown as isKnownClubToken, matches as clubMatchesToken } from "./loadoutTokens";
 import { holeBase, scoreGoal, type WeightRow } from "./missionScore";
 
 export type Severity = "error" | "warning";
@@ -1179,6 +1180,11 @@ export function validateCatalog(
   // the publish than to ship a card that dead-ends.
   if (catalog === "mission_loadouts") {
     const clubs = ctx.otherCatalogs.get("clubs");
+    /** A mask's tokens, trimmed, with the `*` wildcard dropped — Split() in the C# resolver. */
+    const maskTokens = (csv: string): string[] =>
+      csv.split(",").map((t) => t.trim()).filter((t) => t.length > 0 && t !== "*");
+    const unknownTokenMessage = (token: string) =>
+      `Unknown club token "${token}". Known: ${KNOWN_TOKENS_HINT}.`;
     for (const row of rows) {
       const kind = text(row.data.kind).toLowerCase();
       if (kind !== "supplied" && kind !== "own") {
@@ -1199,6 +1205,28 @@ export function validateCatalog(
       if (kind === "own") {
         if (mask !== "*" && !mask.startsWith("ban:")) {
           err(row.rowId, "clubs", `An "own" loadout's clubs must be "*" or "ban:Type,Type" (got "${mask}").`);
+        } else if (mask.startsWith("ban:") && clubs) {
+          // A ban that bans nothing is a mission whose card promises a restriction and then
+          // does not apply it. `ban:Iron7,Iron9` was exactly that for four years' worth of
+          // roster: it named the only two iron MODELS the design workbook knew, and let
+          // Iron 4/5/6/8 — 96 of the 114 shipped irons — straight through.
+          for (const token of maskTokens(mask.slice(4))) {
+            if (!isKnownClubToken(token)) {
+              err(row.rowId, "clubs", unknownTokenMessage(token));
+              continue;
+            }
+            const bans = [...clubs.values()].some(
+              (club) =>
+                club.isActive &&
+                clubMatchesToken(
+                  { id: club.rowId, name: text(club.data.name), type: text(club.data.type) },
+                  token
+                )
+            );
+            if (!bans) {
+              err(row.rowId, "clubs", `"ban:${token}" bans nothing — no active clubs row matches it.`);
+            }
+          }
         }
         continue;
       }
@@ -1214,11 +1242,23 @@ export function validateCatalog(
       }
       if (!clubs) continue;
 
-      for (const type of mask.split(",").map((t) => t.trim()).filter(Boolean)) {
+      for (const type of maskTokens(mask)) {
+        if (!isKnownClubToken(type)) {
+          err(row.rowId, "clubs", unknownTokenMessage(type));
+          continue;
+        }
+        // `loadoutTokens.matches` is the SAME grammar MissionLoadoutResolver resolves with —
+        // shared through Tools/content/tests/loadout_tokens_fixture.csv, which both suites read.
+        // Before it, this compared the token to the raw `type` column, so every `Iron7` /
+        // `Iron9` / `AW` / `PW` in the shipped catalog was reported as a club nobody makes:
+        // 17 errors, and mission_loadouts could not be published at all.
         const match = [...clubs.values()].some(
           (club) =>
             club.isActive &&
-            text(club.data.type).toLowerCase() === type.toLowerCase() &&
+            clubMatchesToken(
+              { id: club.rowId, name: text(club.data.name), type: text(club.data.type) },
+              type
+            ) &&
             text(club.data.rarity).toLowerCase() === rarity.toLowerCase()
         );
         if (!match) {
@@ -1564,30 +1604,43 @@ export function validateCatalog(
       const referenced = target && refId ? ctx.otherCatalogs.get(target)?.get(refId) : undefined;
 
       // 5. kind resolves, refId exists in that catalog, and that row is active.
-      if (!target) {
-        err(row.rowId, "kind",
-          `Unknown kind "${kind}". Known: ${Object.keys(GACHA_KINDS).join(", ")}.`);
-      } else if (!refId) {
-        err(row.rowId, "refId", "refId is empty.");
-      } else if (!ctx.otherCatalogs.has(target)) {
-        // The caller did not load the catalog this row references. Silence here
-        // would be a rule that quietly does not run, so say so.
-        err(row.rowId, "refId",
-          `The ${target} catalog was not loaded, so refId "${refId}" could not be checked.`);
-      } else if (!referenced) {
-        err(row.rowId, "refId", `refId "${refId}" does not exist in the ${target} catalog.`);
-      } else if (!referenced.isActive) {
-        err(row.rowId, "refId",
-          `refId "${refId}" is deactivated in ${target} — the pull would grant a prize the game hides.`);
-      } else if (kind === "ball" && isTrue(referenced.data.isDefault)) {
-        // 21. gacha_ops_polish §4e — the DEFAULT ball is never a prize. Every player already owns
-        // `ball_golfin` (RewardGranter grants it for any "a ball" reward, and a fresh save starts
-        // with one), so a slot that pays it pays NOTHING. `psc1_ball_golfin` sat in the standard
-        // pool at 60 weight — 11 % of every Common pull was a no-op — until an operator noticed
-        // and deactivated it by hand. The column exists so the next one is refused, not noticed.
-        err(row.rowId, "refId",
-          `"${refId}" is the DEFAULT ball — every player already owns one, so a slot that pays it ` +
-            "pays nothing. Point this entry at another ball, or clear isDefault on that row.");
+      //
+      // ACTIVE ROWS ONLY — the same carve-out the shop makes ("leaves a DEACTIVATED ticket row
+      // alone", contentValidate.test.ts), for the same reason. A deactivated pool row is invisible
+      // to the client (GachaBannerModel :262/:416) and to the server (golfin_gacha_pull §8 rolls
+      // ACTIVE rows), so none of these five can reach a player through it. And deactivation has to
+      // stay a valid REMEDY: `psc1_ball_golfin` was the default-ball slot an operator switched off
+      // by hand, and rule 21 then fired on the switched-off row — one error that made the whole
+      // catalog permanently unpublishable, with no way out that the rule itself would accept.
+      //
+      // Rules 6 and 7 below deliberately stay OUTSIDE this guard: a deactivated row must still be
+      // a sane row, because reactivating it is one click and no publish gate runs in between.
+      if (row.isActive) {
+        if (!target) {
+          err(row.rowId, "kind",
+            `Unknown kind "${kind}". Known: ${Object.keys(GACHA_KINDS).join(", ")}.`);
+        } else if (!refId) {
+          err(row.rowId, "refId", "refId is empty.");
+        } else if (!ctx.otherCatalogs.has(target)) {
+          // The caller did not load the catalog this row references. Silence here
+          // would be a rule that quietly does not run, so say so.
+          err(row.rowId, "refId",
+            `The ${target} catalog was not loaded, so refId "${refId}" could not be checked.`);
+        } else if (!referenced) {
+          err(row.rowId, "refId", `refId "${refId}" does not exist in the ${target} catalog.`);
+        } else if (!referenced.isActive) {
+          err(row.rowId, "refId",
+            `refId "${refId}" is deactivated in ${target} — the pull would grant a prize the game hides.`);
+        } else if (kind === "ball" && isTrue(referenced.data.isDefault)) {
+          // 21. gacha_ops_polish §4e — the DEFAULT ball is never a prize. Every player already owns
+          // `ball_golfin` (RewardGranter grants it for any "a ball" reward, and a fresh save starts
+          // with one), so a slot that pays it pays NOTHING. `psc1_ball_golfin` sat in the standard
+          // pool at 60 weight — 11 % of every Common pull was a no-op — until an operator noticed
+          // and deactivated it by hand. The column exists so the next one is refused, not noticed.
+          err(row.rowId, "refId",
+            `"${refId}" is the DEFAULT ball — every player already owns one, so a slot that pays it ` +
+              "pays nothing. Point this entry at another ball, or clear isDefault on that row.");
+        }
       }
 
       // 6. rarity is one of the six, and EQUALS the ref's rarity where the ref has one.

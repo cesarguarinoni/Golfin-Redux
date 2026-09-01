@@ -1,0 +1,37 @@
+# loadout_tokens_fixture — the PARITY fixture for the loadout mask vocabulary.
+#
+# The grammar has two implementations: Assets/Scripts/UI/MissionSelection/LoadoutTokens.cs
+# (runtime — builds the bag) and Tools/admin-dashboard/lib/loadoutTokens.ts (publish — refuses
+# a mask no club row can fill). They are allowed to exist only because BOTH read this file:
+#   vitest   Tools/admin-dashboard/lib/__tests__/loadoutTokens.test.ts
+#   EditMode Assets/Scripts/UI/Inventory/Tests/LoadoutTokensTests.cs
+# The day they disagree, one of those two goes red.
+#
+# clubId / name / type are the three `clubs` columns the grammar reads (`type` is the CSV
+# spelling). token is a mask token. expected is whether that token names that club.
+#
+# The rows that matter are the anchored-parse ones: `Iron 5 X7` is a 5-iron, not a 7-iron
+# (its predecessor asked "contains 7"); `FAIRLOFT Iron` gets its loft from the id; and
+# `GOLFIN Iron` has no loft at all, so it answers only to the family token `Iron`.
+clubId,name,type,token,expected
+club_iron_mireo_common,Iron 7 MireO,Iron,Iron7,true
+club_iron_mireo_common,Iron 7 MireO,Iron,Iron,true
+club_iron_mireo_common,Iron 7 MireO,Iron,Iron9,false
+club_iron_mireo_common,Iron 7 MireO,Iron,IRON7,true
+club_iron9_klyro,Iron 9 Klyro,Iron,Iron9,true
+club_iron_x,Iron 5 X7,Iron,Iron7,false
+club_iron_x,Iron 5 X7,Iron,Iron5,true
+club_iron_x,Iron 5 X7,Iron,Iron,true
+club_iron7_y,FAIRLOFT Iron,Iron,Iron7,true
+club_iron_z,GOLFIN Iron,Iron,Iron7,false
+club_iron_z,GOLFIN Iron,Iron,Iron,true
+club_aw_gf,A.Wedge G&F,A.Wedge,AW,true
+club_aw_gf,A.Wedge G&F,A.Wedge,A.Wedge,false
+club_pw_gf,P.Wedge G&F,P.Wedge,PW,true
+club_sw_gf,S.Wedge G&F,S.Wedge,SW,true
+club_sw_gf,S.Wedge G&F,S.Wedge,PW,false
+club_driver_gf,Driver G&F,Driver,driver,true
+club_driver_gf,Driver G&F,Driver,Iron,false
+club_wood_gf,Wood G&F,Wood,Wood,true
+club_putter_gf,Putter G&F,Putter,Iron,false
+club_putter_gf,Putter G&F,Putter,Putter,true

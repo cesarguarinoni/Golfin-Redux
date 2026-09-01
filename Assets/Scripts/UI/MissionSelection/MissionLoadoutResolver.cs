@@ -100,7 +100,7 @@ namespace GolfinRedux.UI.MissionSelection
                 // same supplied mission the same mission everywhere.
                 foreach (var club in all)
                 {
-                    if (!string.Equals(ClubTypeName(club), type, StringComparison.OrdinalIgnoreCase)) continue;
+                    if (!LoadoutTokens.Matches(club, type)) continue;
                     if (!string.Equals(club.rarity.ToString(), rarity, StringComparison.OrdinalIgnoreCase)) continue;
                     hit = club;
                     break;
@@ -132,7 +132,10 @@ namespace GolfinRedux.UI.MissionSelection
                 return outIds;
             }
 
-            var banned = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            // A LIST, not a set of names: a ban token is a QUESTION asked of each club
+            // (`LoadoutTokens.Matches`), not a name to look up. `ban:Iron` has no single
+            // name to compare against — it is every iron, whatever its loft.
+            var banned = new List<string>();
             if (mask.StartsWith("ban:", StringComparison.OrdinalIgnoreCase))
                 foreach (string t in Split(mask.Substring(4))) banned.Add(t);
 
@@ -140,7 +143,7 @@ namespace GolfinRedux.UI.MissionSelection
             {
                 var template = ClubDb()?.GetClub(owned.clubId);
                 if (template == null) continue;
-                if (banned.Contains(ClubTypeName(template))) continue;
+                if (IsBanned(banned, template)) continue;
                 outIds.Add(owned.clubId);
             }
 
@@ -156,33 +159,14 @@ namespace GolfinRedux.UI.MissionSelection
 
         // ── helpers ─────────────────────────────────────────────────────────────
 
-        /// <summary>
-        /// `ClubType` as the loadout mask spells it. The enum and the design vocabulary differ
-        /// on the wedges (`A.Wedge` vs `AW`), so the mapping is explicit rather than a ToString.
-        /// </summary>
-        private static string ClubTypeName(ClubDataRuntime club)
+        /// <summary>A club is out when ANY ban token names it. The vocabulary is
+        /// <see cref="LoadoutTokens"/>'s — the validator refuses to publish a token it does not
+        /// know, so an unknown one here simply matches nothing.</summary>
+        private static bool IsBanned(List<string> banned, ClubDataRuntime club)
         {
-            switch (club.type)
-            {
-                case ClubType.Driver:  return "Driver";
-                case ClubType.Wood:    return "Wood";
-                case ClubType.A_Wedge: return "AW";
-                case ClubType.P_Wedge: return "PW";
-                case ClubType.S_Wedge: return "SW";
-                case ClubType.Putter:  return "Putter";
-                case ClubType.Iron:    return IronName(club);
-                default:               return club.type.ToString();
-            }
-        }
-
-        /// <summary>The mask distinguishes Iron7 from Iron9; `ClubType.Iron` does not, so the
-        /// number comes from the club's own id/name.</summary>
-        private static string IronName(ClubDataRuntime club)
-        {
-            string probe = ((club.clubId ?? "") + " " + (club.name ?? "")).ToLowerInvariant();
-            if (probe.Contains("9")) return "Iron9";
-            if (probe.Contains("7")) return "Iron7";
-            return "Iron";
+            foreach (string t in banned)
+                if (LoadoutTokens.Matches(club, t)) return true;
+            return false;
         }
 
         private static IEnumerable<string> Split(string csv)

@@ -4,7 +4,8 @@
     "references": [
         "Golfin.Content",
         "Golfin.Localization",
-        "Golfin.Save"
+        "Golfin.Save",
+        "Golfin.Gameplay.Missions"
     ],
     "includePlatforms": [
         "Editor"
