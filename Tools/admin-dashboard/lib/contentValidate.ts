@@ -374,15 +374,22 @@ export function validateCatalog(
     // 2. rarity is one of the six, wherever the column exists.
     if ("rarity" in row.data) {
       const rarity = text(row.data.rarity).trim();
-      // shop_catalog.rarity is an optional display override and may be blank —
-      // 7 of its 8 shipped rows are. That carve-out is scoped to it BY NAME
-      // since ball_data_wiring (2026-08-31): it used to exempt a blank rarity in
-      // EVERY catalog, which meant `rarity` could be REQUIRED and still publish
-      // empty — the key was present, so the required-column rule passed, and the
-      // blank exemption let the value through. Every other rarity-bearing
-      // catalog (clubs, characters, items, bags, balls, gacha_pools,
-      // gacha_rates) has ZERO blank rows, so nothing shipped relies on it.
-      const blankAllowed = catalog === "shop_catalog";
+      // A blank rarity is an ERROR exactly where `rarity` is a REQUIRED column,
+      // and fine everywhere else.
+      //
+      // This used to exempt a blank in EVERY catalog, which meant `rarity` could
+      // be REQUIRED and still publish empty: the key was present, so the
+      // required-column rule passed, and the blank exemption let the value
+      // through. ball_data_wiring closed that — but by naming `shop_catalog`
+      // directly, which was the wrong shape: it also failed `mission_loadouts`,
+      // whose 4 blank-rarity rows are legitimate (rarity is not required there,
+      // it is an optional filter on a club loadout). Keying off REQUIRED says
+      // what is actually meant, and needs no list to be maintained.
+      //
+      // Today: rarity is REQUIRED in clubs, characters, items, bags, balls,
+      // gacha_rates and gacha_pools — all of which have ZERO blank rows — and
+      // optional in shop_catalog (7 of 8 blank) and mission_loadouts (4 of 13).
+      const blankAllowed = !(REQUIRED[catalog] ?? []).includes("rarity");
       if (rarity === "") {
         if (!blankAllowed) {
           err(row.rowId, "rarity", `Rarity is required and must be one of ${RARITIES.join(", ")}.`);

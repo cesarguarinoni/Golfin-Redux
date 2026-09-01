@@ -384,6 +384,25 @@ describe("balls — rarity is required and must be one of the six", () => {
     expect(problems.map((p) => p.column)).toContain("rarity");
   });
 
+  it("still ALLOWS a blank rarity where the column is optional", () => {
+    // The blank rule keys off REQUIRED, not off a hardcoded catalog list. Two
+    // shipped catalogs legitimately carry blank rarities — shop_catalog (7 of 8
+    // rows; it is a display override) and mission_loadouts (4 of 13; it is an
+    // optional filter on a club loadout). Naming shop_catalog directly, as the
+    // first cut of this rule did, broke mission_loadouts' publish.
+    const shop = validateCatalog("shop_catalog", [
+      row("shop_x", { entryId: "shop_x", category: "club", refId: "club_driver_gf",
+                      rpCost: "100", sortOrder: "1", rarity: "" }),
+    ], refCtx()).filter((p) => p.severity === "error");
+    expect(shop.map((p) => p.column)).not.toContain("rarity");
+
+    const loadout = validateCatalog("mission_loadouts", [
+      row("OWN", { id: "OWN", kind: "own", clubs: "driver", weight: "1",
+                   allowedStartKinds: "tee", rarity: "" }),
+    ], ctx()).filter((p) => p.severity === "error");
+    expect(loadout.map((p) => p.column)).not.toContain("rarity");
+  });
+
   it("refuses a tier that is not one of the six", () => {
     const problems = ballErrors([ball("ball_bogus", { rarity: "Platinum" })]);
     const rarityProblem = problems.find((p) => p.column === "rarity");

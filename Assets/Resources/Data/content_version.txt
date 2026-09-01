@@ -1,7 +1,7 @@
 bags=1
 balls=8
 characters=5
-clubs=1
+clubs=2
 daily_mission_weights=1
 gacha_banners=7
 gacha_pools=2
