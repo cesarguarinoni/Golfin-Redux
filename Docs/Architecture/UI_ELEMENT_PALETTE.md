@@ -21,7 +21,7 @@ from the Order-610 card rebuild — see `Docs/Reports/POSTMORTEM_general_shop_ui
 | Atom | Path | GUID | Use for | Seen in |
 |---|---|---|---|---|
 | Navy card panel | `Assets/Art/HoleSelectScreen/Background - Next Hole.png` | `d162244f2dd5e8646afef2518d902a8e` | dark rounded card / list-item / panel background | Hole Select cards, stamina-shop cards + menu rows |
-| **Pop-up panel (silver-edged navy)** | `Assets/Art/HomeScreen/Next Hole Panel.png` | `3663aafeba2bd1f42a04eabf9d34c220` | the Figma **`Pop-up`** panel style (`4192:31365`): `#133453→#091B33` gradient, 3px `#FFF→#C0C6CE` gradient stroke, drop shadow. 1020×470, **9-sliced border 64** → set `pixelsPerUnitMultiplier = 64 / targetRadius` (1.28 for r=50, 2.0 for r=32). See the drawn-body note below. | Home Next Hole panel; every GPS-hub panel (hero, how-it-works strip, action tiles, list panels) |
+| **Pop-up panel (silver-edged navy)** | `Assets/Art/HomeScreen/Next Hole Panel.png` | `3663aafeba2bd1f42a04eabf9d34c220` | the Figma **`Pop-up`** panel style (`4192:31365`): `#133453→#091B33` gradient, 3px `#FFF→#C0C6CE` gradient stroke, drop shadow. 1020×470, **9-sliced border 64** → set `pixelsPerUnitMultiplier = 64 / targetRadius` (1.28 for r=50, 2.0 for r=32). See the drawn-body note below. | Home Next Hole panel |
 
 > **⚠️ This sprite draws INSIDE its RectTransform** (`gps_hub_entry`, 2026-09-01). Its drop shadow is
 > baked into the slice border: the SOLID BODY is 980×430 of the 1020×470 sprite — margins **L20 R20
@@ -32,7 +32,27 @@ from the Order-610 card rebuild — see `Docs/Reports/POSTMORTEM_general_shop_ui
 > `Docs/Specs/Active/gps_hub_entry/reference/nodes/GpsHubScreen_geometry.json` (`inset_rule`).
 >
 > **Circles:** `S_PillStadium.png` at a SQUARE size with `Image.Type.Simple` is a perfect circle —
-> that is how the GPS hub draws its avatar discs and icon rings, rather than importing a new ellipse.
+> that is how the GPS hub draws its avatar discs, rather than importing a new ellipse. It is NOT
+> right for a disc with a gradient: a tinted sprite is one flat colour by definition. See the bakers
+> below.
+
+## Baked-from-tokens sprites (the alternative to a Figma export)
+When a node's fill is a GRADIENT, neither a tinted sprite nor a stacked pair of discs can reproduce
+it — the result is a flat fill that reads wrong next to the reference. Bake it from the node's tokens
+with a script that lives in the repo, so a token change is a one-line edit and a re-run. Edit the
+SCRIPT, never the PNG.
+
+| Script | Bakes | Tokens it reads from the node |
+|---|---|---|
+| `Docs/Scripts/make_daily_pill_panel.py` | `S_DailyPillPanel` + `S_DailyPillGlow` | gold border, navy gradient, radius |
+| `Docs/Scripts/make_gps_hub_panels.py` | the six `S_HUB_*` GPS-hub panels | size, radius, fill + stroke gradients |
+| `Docs/Scripts/make_gps_icon_ring.py` | `S_GpsIconRing_Step` / `_Tile` | circle r, stroke width, fill gradient `#204B76→#0B203D`, stroke (solid `#F3ECC2` on the 64, gradient `#F3ECC2→#98855B` on the 88) |
+
+> **The GPS hub is the worked example** (2026-09-01). Its panels and icon rings were first built by
+> tinting `Next Hole Panel.png` and `S_PillStadium.png`; both shipped as flat colour where the node
+> has a gradient, and Cesar caught the rings by eye — *"the rounded icons like GPS Proof and Earn PTS
+> have a flat blue background when the figma ones have a gradient."* Read the node's SVG (`fill=
+> "url(#paint0_linear...)"` is the tell) before reaching for a tint.
 
 ## Pills & containers
 | Atom | Path | GUID | Use for | Seen in |

@@ -211,16 +211,6 @@
       "fontWeight": ""
     },
     {
-      "name": "IconFill",
-      "w": -1,
-      "h": -1,
-      "radius": -1,
-      "requireSprite": true,
-      "color": "",
-      "fontSize": -1,
-      "fontWeight": ""
-    },
-    {
       "name": "Icon",
       "w": -1,
       "h": -1,
@@ -331,5 +321,5 @@
       "fontWeight": ""
     }
   ],
-  "_note": "w/h are RectTransform sizes. Panels use a 9-sliced sprite whose shadow lives inside the slice border, so rect = node box + drawn-body inset; the DRAWN body matches the node exactly."
+  "_note": "w/h are RectTransform sizes. Panels use a 9-sliced sprite whose shadow lives inside the slice border, so rect = node box + drawn-body inset; the DRAWN body matches the node exactly. IconFill removed 2026-09-01: the icon rings are single gradient sprites baked by Docs/Scripts/make_gps_icon_ring.py, not two stacked discs."
 }
