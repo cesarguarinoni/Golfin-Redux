@@ -1,0 +1,55 @@
+=== iter-1 kickoff baseline 2026-09-01T01:52:56Z ===
+HEAD: d5366b06ab320a5ca05cc7d7e5d396e931cb5be8
+DIRTY (git status --porcelain --untracked-files=all):
+ M Docs/AI_CONTEXT.md
+ M Docs/Specs/Active/gps_trust_core/ARCHITECT_REVIEW.md
+ M Docs/Specs/Active/gps_trust_core/STATUS.md
+ M Docs/TellCode.md
+?? Assets/Resources/Balls/Full/AceAttire.png
+?? Assets/Resources/Balls/Full/BirdieV1.png
+?? Assets/Resources/Balls/Full/Cirq.png
+?? Assets/Resources/Balls/Full/CloverPro.png
+?? Assets/Resources/Balls/Full/Fairloft.png
+?? Assets/Resources/Balls/Full/FairwayThreads.png
+?? Assets/Resources/Balls/Full/FyloeAim.png
+?? Assets/Resources/Balls/Full/FyloeSoft.png
+?? Assets/Resources/Balls/Full/GF.png
+?? Assets/Resources/Balls/Full/GolfinIX.png
+?? Assets/Resources/Balls/Full/GolfinMK2.png
+?? Assets/Resources/Balls/Full/Klyro.png
+?? Assets/Resources/Balls/Full/MireO.png
+?? Assets/Resources/Balls/Full/ParPerfect.png
+?? Assets/Resources/Balls/Full/RoyalSwing.png
+?? Assets/Resources/Balls/Full/ShimmerG.png
+?? Assets/Resources/Balls/Full/Soralis.png
+?? Assets/Resources/Balls/Full/Tifto.png
+?? Assets/Resources/Balls/Thumbnails/S_Controls_Ball_GOLFINMK2.png
+?? Assets/Resources/Balls/Thumbnails/S_Controls_Ball_PUTTACE.png
+?? Docs/Specs/Active/ball_art_and_stats/BALL_IDENTITY.md
+?? Docs/Specs/Active/ball_art_and_stats/KICKOFF.md
+?? Docs/Specs/Active/ball_art_and_stats/SPEC.md
+?? Docs/Specs/Active/ball_art_and_stats/STATUS.md
+?? Docs/Specs/Active/ball_art_and_stats/reference/ball_roster_contact_sheet.png
+?? Docs/Specs/Active/ball_art_and_stats/reference/build_docs.py
+?? Docs/Specs/Active/ball_art_and_stats/reference/prompts.py
+?? Docs/Specs/Active/ball_data_wiring/SPEC.md
+?? Docs/Specs/Active/ball_data_wiring/STATUS.md
+?? Docs/Specs/Active/ball_data_wiring/reference/Balls.csv
+?? Docs/Specs/Active/ball_data_wiring/reference/texts_rows.csv
+?? Docs/Specs/Active/gps_hub_entry/ARCHITECT_REVIEW.md
+?? Docs/Specs/Active/gps_hub_entry/HEARTBEAT.log
+?? Docs/Specs/Active/gps_hub_entry/IMPLEMENTER_REPORT.md
+?? Docs/Specs/Active/gps_hub_entry/SELF_REVIEW.md
+?? Docs/Specs/Active/gps_hub_entry/SPEC.md
+?? Docs/Specs/Active/gps_hub_entry/STATUS.md
+=== end baseline ===
+
+02:03:29Z iter-1: code written (banner route, endpoints, Golfin.Social, ScoreHistoryService, ScreenId.GpsHub, controller, 27 CSV rows). Compiling.
+02:17:32Z iter-1: prefab built + wired into ShellScene (113-line pure-insert diff, 0 active-state drift). Next: play-mode capture.
+02:25:03Z iter-1: real-entry proven (banner tap -> GpsHub, /user/detail 200, /score/history 200). Rule-15 geometry sweep 73 sites 0 FAIL. Fixed hero stats offset + disabledColor.
+02:32:41Z iter-1: 3rd defect of the panel-bounds shape found (9-slice drawn-body inset) -> corrected on ALL 9 panels; geometry 73/0 FAIL; lint fail=0. Re-capturing.
+02:38:57Z iter-1: texts published v22 (27 rows), export --check clean; dashboard 245 tests green + tsc clean. Running EditMode suite.
+02:42:38Z iter-1: Editor test-runner lock held by request 44d1f240 (not mine); untitled scene open, ShellScene closed by that run. Waiting before the capture/telemetry pass.
+02:47:53Z iter-1: JA capture exposed stale imperative strings on a live language switch -> controller now re-binds on OnLanguageChanged. Re-verifying.
+02:50:06Z iter-1: all captures taken (1170x2532, three distinct frames), telemetry row verified then deleted, editor left clean. Writing reports.
+02:54:23Z iter-1: reports written; STATUS=READY_FOR_SELF_REVIEW.

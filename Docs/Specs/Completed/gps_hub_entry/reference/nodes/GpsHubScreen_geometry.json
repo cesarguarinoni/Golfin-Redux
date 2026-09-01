@@ -1,0 +1,1008 @@
+{
+  "prefab": "Assets/Prefabs/UI/Gps/GpsHubScreen.prefab",
+  "note": "Rule-15 shape sweep: EVERY RectTransform the Figma frame declares, x/y Figma-style (right, DOWN from parent top-left).",
+  "sites": [
+    {
+      "path": "ContentContainer",
+      "node": "14011:32824",
+      "figma": [
+        0,
+        0,
+        978,
+        1860
+      ],
+      "note": "anchored at canvas (96,361)"
+    },
+    {
+      "path": "ContentContainer/BackRow",
+      "node": "14043:33799",
+      "figma": [
+        10,
+        0,
+        958,
+        45
+      ]
+    },
+    {
+      "path": "ContentContainer/HeroPanel",
+      "node": "14012:32489",
+      "figma": [
+        10,
+        65,
+        958,
+        296
+      ],
+      "adj": [
+        -15.625,
+        -7.8125,
+        31.25,
+        31.25
+      ],
+      "note": "rect = node box + the sprite's drawn-body inset; the DRAWN panel equals the node box exactly (Next Hole Panel.png bakes its shadow into the 9-slice border)"
+    },
+    {
+      "path": "ContentContainer/HowItWorksStrip",
+      "node": "14017:32692",
+      "figma": [
+        10,
+        381,
+        958,
+        118
+      ],
+      "adj": [
+        -10.0,
+        -5.0,
+        20.0,
+        20.0
+      ],
+      "note": "rect = node box + the sprite's drawn-body inset; the DRAWN panel equals the node box exactly (Next Hole Panel.png bakes its shadow into the 9-slice border)"
+    },
+    {
+      "path": "ContentContainer/ActionTiles",
+      "node": "14012:98859",
+      "figma": [
+        10,
+        519,
+        958,
+        153
+      ]
+    },
+    {
+      "path": "ContentContainer/RecentGiftsPanel",
+      "node": "14012:98880",
+      "figma": [
+        10,
+        692,
+        958,
+        334
+      ],
+      "adj": [
+        -15.625,
+        -7.8125,
+        31.25,
+        31.25
+      ],
+      "note": "rect = node box + the sprite's drawn-body inset; the DRAWN panel equals the node box exactly (Next Hole Panel.png bakes its shadow into the 9-slice border)"
+    },
+    {
+      "path": "ContentContainer/LiveVotesPanel",
+      "node": "14012:98914",
+      "figma": [
+        10,
+        1046,
+        958,
+        306
+      ],
+      "adj": [
+        -15.625,
+        -7.8125,
+        31.25,
+        31.25
+      ],
+      "note": "rect = node box + the sprite's drawn-body inset; the DRAWN panel equals the node box exactly (Next Hole Panel.png bakes its shadow into the 9-slice border)"
+    },
+    {
+      "path": "ContentContainer/RecentRoundsPanel",
+      "node": "14012:98941",
+      "figma": [
+        10,
+        1372,
+        958,
+        472
+      ],
+      "adj": [
+        -15.625,
+        -7.8125,
+        31.25,
+        31.25
+      ],
+      "note": "rect = node box + the sprite's drawn-body inset; the DRAWN panel equals the node box exactly (Next Hole Panel.png bakes its shadow into the 9-slice border)"
+    },
+    {
+      "path": "ContentContainer/BackRow/BackButton/BackLabel",
+      "node": "14043:33800",
+      "figma": [
+        8,
+        6,
+        218,
+        33
+      ],
+      "note": "built 340x45 hit-slop (node 218x33)"
+    },
+    {
+      "path": "ContentContainer/HeroPanel/AvatarRing",
+      "node": "14012:32492",
+      "figma": [
+        40,
+        20,
+        140,
+        140
+      ],
+      "adj": [
+        15.625,
+        7.8125,
+        0,
+        0
+      ],
+      "note": "shifted by the parent panel's drawn-body inset so it keeps its node-relative position"
+    },
+    {
+      "path": "ContentContainer/HeroPanel/AvatarInitial",
+      "node": "14012:32493",
+      "figma": [
+        40,
+        52,
+        140,
+        76
+      ],
+      "adj": [
+        15.625,
+        7.8125,
+        0,
+        0
+      ],
+      "note": "shifted by the parent panel's drawn-body inset so it keeps its node-relative position"
+    },
+    {
+      "path": "ContentContainer/HeroPanel/PlayerName",
+      "node": "14012:32495",
+      "figma": [
+        208,
+        36,
+        149,
+        64
+      ],
+      "note": "built w500 - live name, node w149 is the mock 'MAYA'",
+      "adj": [
+        15.625,
+        7.8125,
+        0,
+        0
+      ]
+    },
+    {
+      "path": "ContentContainer/HeroPanel/PlayerSub",
+      "node": "14012:32496",
+      "figma": [
+        208,
+        106,
+        373,
+        38
+      ],
+      "note": "built w600 - live sub, node w373 is the mock string",
+      "adj": [
+        15.625,
+        7.8125,
+        0,
+        0
+      ]
+    },
+    {
+      "path": "ContentContainer/HeroPanel/Separator",
+      "node": "14012:32497",
+      "figma": [
+        40,
+        174,
+        878,
+        2
+      ],
+      "adj": [
+        15.625,
+        7.8125,
+        0,
+        0
+      ],
+      "note": "shifted by the parent panel's drawn-body inset so it keeps its node-relative position"
+    },
+    {
+      "path": "ContentContainer/HeroPanel/StatsRow",
+      "node": "14012:32498",
+      "figma": [
+        40,
+        188,
+        878,
+        92
+      ],
+      "adj": [
+        15.625,
+        7.8125,
+        0,
+        0
+      ],
+      "note": "shifted by the parent panel's drawn-body inset so it keeps its node-relative position"
+    },
+    {
+      "path": "ContentContainer/HeroPanel/StatsRow/StatPOINTS",
+      "node": "14012:32499",
+      "figma": [
+        0,
+        0,
+        219.5,
+        92
+      ]
+    },
+    {
+      "path": "ContentContainer/HeroPanel/StatsRow/StatBEST",
+      "node": "14012:32502",
+      "figma": [
+        219.5,
+        0,
+        219.5,
+        92
+      ]
+    },
+    {
+      "path": "ContentContainer/HeroPanel/StatsRow/StatTRUST",
+      "node": "14012:32505",
+      "figma": [
+        439,
+        0,
+        219.5,
+        92
+      ]
+    },
+    {
+      "path": "ContentContainer/HeroPanel/StatsRow/StatAVATAR",
+      "node": "14012:32508",
+      "figma": [
+        658.5,
+        0,
+        219.5,
+        92
+      ]
+    },
+    {
+      "path": "ContentContainer/HeroPanel/StatsRow/StatPOINTS/Value",
+      "node": "14012:32500",
+      "figma": [
+        0,
+        0,
+        219.5,
+        57
+      ],
+      "note": "node x39.75 w140; built full-column centred"
+    },
+    {
+      "path": "ContentContainer/HeroPanel/StatsRow/StatPOINTS/Label",
+      "node": "14012:32501",
+      "figma": [
+        0,
+        61,
+        219.5,
+        31
+      ],
+      "note": "node x62.75 w94; built full-column centred"
+    },
+    {
+      "path": "ContentContainer/HowItWorksStrip/Step1",
+      "node": "14017:32693",
+      "figma": [
+        24,
+        10,
+        159,
+        98
+      ],
+      "adj": [
+        10.0,
+        5.0,
+        0,
+        0
+      ],
+      "note": "shifted by the parent panel's drawn-body inset so it keeps its node-relative position"
+    },
+    {
+      "path": "ContentContainer/HowItWorksStrip/Step2",
+      "node": "14017:32699",
+      "figma": [
+        304.333,
+        10,
+        137,
+        98
+      ],
+      "adj": [
+        10.0,
+        5.0,
+        0,
+        0
+      ],
+      "note": "shifted by the parent panel's drawn-body inset so it keeps its node-relative position"
+    },
+    {
+      "path": "ContentContainer/HowItWorksStrip/Step3",
+      "node": "14017:32705",
+      "figma": [
+        562.667,
+        10,
+        134,
+        98
+      ],
+      "adj": [
+        10.0,
+        5.0,
+        0,
+        0
+      ],
+      "note": "shifted by the parent panel's drawn-body inset so it keeps its node-relative position"
+    },
+    {
+      "path": "ContentContainer/HowItWorksStrip/Step4",
+      "node": "14017:32711",
+      "figma": [
+        818,
+        10,
+        116,
+        98
+      ],
+      "adj": [
+        10.0,
+        5.0,
+        0,
+        0
+      ],
+      "note": "shifted by the parent panel's drawn-body inset so it keeps its node-relative position"
+    },
+    {
+      "path": "ContentContainer/HowItWorksStrip/Step1/IconRing",
+      "node": "14017:32694",
+      "figma": [
+        47.5,
+        0,
+        64,
+        64
+      ]
+    },
+    {
+      "path": "ContentContainer/HowItWorksStrip/Step2/IconRing",
+      "node": "14017:32700",
+      "figma": [
+        36.5,
+        0,
+        64,
+        64
+      ]
+    },
+    {
+      "path": "ContentContainer/HowItWorksStrip/Step3/IconRing",
+      "node": "14017:32706",
+      "figma": [
+        35,
+        0,
+        64,
+        64
+      ]
+    },
+    {
+      "path": "ContentContainer/HowItWorksStrip/Step4/IconRing",
+      "node": "14017:32712",
+      "figma": [
+        26,
+        0,
+        64,
+        64
+      ]
+    },
+    {
+      "path": "ContentContainer/HowItWorksStrip/Step1/Icon",
+      "node": "14019:33080",
+      "figma": [
+        62.5,
+        15,
+        34,
+        34
+      ]
+    },
+    {
+      "path": "ContentContainer/HowItWorksStrip/Step2/Icon",
+      "node": "14019:33085",
+      "figma": [
+        51.5,
+        15,
+        34,
+        34
+      ]
+    },
+    {
+      "path": "ContentContainer/HowItWorksStrip/Step3/Icon",
+      "node": "14019:33089",
+      "figma": [
+        50,
+        15,
+        34,
+        34
+      ]
+    },
+    {
+      "path": "ContentContainer/HowItWorksStrip/Step4/Icon",
+      "node": "14019:33092",
+      "figma": [
+        41,
+        15,
+        34,
+        34
+      ]
+    },
+    {
+      "path": "ContentContainer/HowItWorksStrip/Step1/Label",
+      "node": "14017:32697",
+      "figma": [
+        0,
+        70,
+        159,
+        28
+      ]
+    },
+    {
+      "path": "ContentContainer/HowItWorksStrip/Step2/Label",
+      "node": "14017:32703",
+      "figma": [
+        0,
+        70,
+        137,
+        28
+      ]
+    },
+    {
+      "path": "ContentContainer/HowItWorksStrip/Step3/Label",
+      "node": "14017:32709",
+      "figma": [
+        0,
+        70,
+        134,
+        28
+      ]
+    },
+    {
+      "path": "ContentContainer/HowItWorksStrip/Step4/Label",
+      "node": "14017:32715",
+      "figma": [
+        0,
+        70,
+        116,
+        28
+      ]
+    },
+    {
+      "path": "ContentContainer/HowItWorksStrip/Arrow1",
+      "node": "14017:32698",
+      "figma": [
+        223.667,
+        39,
+        40,
+        40
+      ],
+      "note": "node 12x40, widened to 40 for the glyph box",
+      "adj": [
+        10.0,
+        5.0,
+        0,
+        0
+      ]
+    },
+    {
+      "path": "ContentContainer/HowItWorksStrip/Arrow2",
+      "node": "14017:32704",
+      "figma": [
+        482,
+        39,
+        40,
+        40
+      ],
+      "note": "node 12x40, widened to 40",
+      "adj": [
+        10.0,
+        5.0,
+        0,
+        0
+      ]
+    },
+    {
+      "path": "ContentContainer/HowItWorksStrip/Arrow3",
+      "node": "14017:32710",
+      "figma": [
+        737.333,
+        39,
+        40,
+        40
+      ],
+      "note": "node 12x40, widened to 40",
+      "adj": [
+        10.0,
+        5.0,
+        0,
+        0
+      ]
+    },
+    {
+      "path": "ContentContainer/ActionTiles/Tile_SCREENSHOT",
+      "node": "14012:98860",
+      "figma": [
+        0,
+        0,
+        226,
+        153
+      ],
+      "adj": [
+        -10.0,
+        -5.0,
+        20.0,
+        20.0
+      ],
+      "note": "rect = node box + the sprite's drawn-body inset; the DRAWN panel equals the node box exactly (Next Hole Panel.png bakes its shadow into the 9-slice border)"
+    },
+    {
+      "path": "ContentContainer/ActionTiles/Tile_CHECKIN",
+      "node": "14012:98865",
+      "figma": [
+        244,
+        0,
+        226,
+        153
+      ],
+      "adj": [
+        -10.0,
+        -5.0,
+        20.0,
+        20.0
+      ],
+      "note": "rect = node box + the sprite's drawn-body inset; the DRAWN panel equals the node box exactly (Next Hole Panel.png bakes its shadow into the 9-slice border)"
+    },
+    {
+      "path": "ContentContainer/ActionTiles/Tile_VOTE",
+      "node": "14012:98870",
+      "figma": [
+        488,
+        0,
+        226,
+        153
+      ],
+      "adj": [
+        -10.0,
+        -5.0,
+        20.0,
+        20.0
+      ],
+      "note": "rect = node box + the sprite's drawn-body inset; the DRAWN panel equals the node box exactly (Next Hole Panel.png bakes its shadow into the 9-slice border)"
+    },
+    {
+      "path": "ContentContainer/ActionTiles/Tile_GIFT",
+      "node": "14012:98875",
+      "figma": [
+        732,
+        0,
+        226,
+        153
+      ],
+      "adj": [
+        -10.0,
+        -5.0,
+        20.0,
+        20.0
+      ],
+      "note": "rect = node box + the sprite's drawn-body inset; the DRAWN panel equals the node box exactly (Next Hole Panel.png bakes its shadow into the 9-slice border)"
+    },
+    {
+      "path": "ContentContainer/ActionTiles/Tile_SCREENSHOT/IconRing",
+      "node": "14012:98862",
+      "figma": [
+        69,
+        12,
+        88,
+        88
+      ],
+      "adj": [
+        10.0,
+        5.0,
+        0,
+        0
+      ],
+      "note": "shifted by the parent panel's drawn-body inset so it keeps its node-relative position"
+    },
+    {
+      "path": "ContentContainer/ActionTiles/Tile_CHECKIN/IconRing",
+      "node": "14012:98867",
+      "figma": [
+        69,
+        12,
+        88,
+        88
+      ],
+      "adj": [
+        10.0,
+        5.0,
+        0,
+        0
+      ],
+      "note": "shifted by the parent panel's drawn-body inset so it keeps its node-relative position"
+    },
+    {
+      "path": "ContentContainer/ActionTiles/Tile_VOTE/IconRing",
+      "node": "14012:98872",
+      "figma": [
+        69,
+        12,
+        88,
+        88
+      ],
+      "adj": [
+        10.0,
+        5.0,
+        0,
+        0
+      ],
+      "note": "shifted by the parent panel's drawn-body inset so it keeps its node-relative position"
+    },
+    {
+      "path": "ContentContainer/ActionTiles/Tile_GIFT/IconRing",
+      "node": "14012:98877",
+      "figma": [
+        69,
+        12,
+        88,
+        88
+      ],
+      "adj": [
+        10.0,
+        5.0,
+        0,
+        0
+      ],
+      "note": "shifted by the parent panel's drawn-body inset so it keeps its node-relative position"
+    },
+    {
+      "path": "ContentContainer/ActionTiles/Tile_SCREENSHOT/Icon",
+      "node": "14019:33095",
+      "figma": [
+        89,
+        32,
+        48,
+        48
+      ],
+      "adj": [
+        10.0,
+        5.0,
+        0,
+        0
+      ],
+      "note": "shifted by the parent panel's drawn-body inset so it keeps its node-relative position"
+    },
+    {
+      "path": "ContentContainer/ActionTiles/Tile_CHECKIN/Icon",
+      "node": "14019:33100",
+      "figma": [
+        89,
+        32,
+        48,
+        48
+      ],
+      "adj": [
+        10.0,
+        5.0,
+        0,
+        0
+      ],
+      "note": "shifted by the parent panel's drawn-body inset so it keeps its node-relative position"
+    },
+    {
+      "path": "ContentContainer/ActionTiles/Tile_VOTE/Icon",
+      "node": "14019:33103",
+      "figma": [
+        89,
+        32,
+        48,
+        48
+      ],
+      "adj": [
+        10.0,
+        5.0,
+        0,
+        0
+      ],
+      "note": "shifted by the parent panel's drawn-body inset so it keeps its node-relative position"
+    },
+    {
+      "path": "ContentContainer/ActionTiles/Tile_GIFT/Icon",
+      "node": "14019:33106",
+      "figma": [
+        89,
+        32,
+        48,
+        48
+      ],
+      "adj": [
+        10.0,
+        5.0,
+        0,
+        0
+      ],
+      "note": "shifted by the parent panel's drawn-body inset so it keeps its node-relative position"
+    },
+    {
+      "path": "ContentContainer/ActionTiles/Tile_SCREENSHOT/Label",
+      "node": "14012:98864",
+      "figma": [
+        0,
+        112,
+        226,
+        31
+      ],
+      "note": "node x25.5 w175; built full-tile centred",
+      "adj": [
+        10.0,
+        5.0,
+        0,
+        0
+      ]
+    },
+    {
+      "path": "ContentContainer/ActionTiles/Tile_CHECKIN/Label",
+      "node": "14012:98869",
+      "figma": [
+        0,
+        112,
+        226,
+        31
+      ],
+      "note": "node x50 w126; built full-tile centred",
+      "adj": [
+        10.0,
+        5.0,
+        0,
+        0
+      ]
+    },
+    {
+      "path": "ContentContainer/ActionTiles/Tile_VOTE/Label",
+      "node": "14012:98874",
+      "figma": [
+        0,
+        112,
+        226,
+        31
+      ],
+      "note": "node x79 w68; built full-tile centred",
+      "adj": [
+        10.0,
+        5.0,
+        0,
+        0
+      ]
+    },
+    {
+      "path": "ContentContainer/ActionTiles/Tile_GIFT/Label",
+      "node": "14012:98879",
+      "figma": [
+        0,
+        112,
+        226,
+        31
+      ],
+      "note": "node x83.5 w59; built full-tile centred",
+      "adj": [
+        10.0,
+        5.0,
+        0,
+        0
+      ]
+    },
+    {
+      "path": "ContentContainer/RecentRoundsPanel/PanelHeader",
+      "node": "14012:98942",
+      "figma": [
+        0,
+        0,
+        958,
+        80
+      ],
+      "adj": [
+        15.625,
+        7.8125,
+        0,
+        0
+      ],
+      "note": "shifted by the parent panel's drawn-body inset so it keeps its node-relative position"
+    },
+    {
+      "path": "ContentContainer/RecentRoundsPanel/PanelHeader/PanelTitle",
+      "node": "14012:98943",
+      "figma": [
+        32,
+        18,
+        421,
+        50
+      ],
+      "note": "built w600 - localized JA is longer"
+    },
+    {
+      "path": "ContentContainer/RecentRoundsPanel/Separator",
+      "node": "14012:98945",
+      "figma": [
+        0,
+        80,
+        958,
+        2
+      ],
+      "adj": [
+        15.625,
+        7.8125,
+        0,
+        0
+      ],
+      "note": "shifted by the parent panel's drawn-body inset so it keeps its node-relative position"
+    },
+    {
+      "path": "ContentContainer/RecentRoundsPanel/RoundRows",
+      "node": "14012:98946",
+      "figma": [
+        0,
+        80,
+        958,
+        392
+      ],
+      "adj": [
+        15.625,
+        7.8125,
+        0,
+        0
+      ],
+      "note": "shifted by the parent panel's drawn-body inset so it keeps its node-relative position"
+    },
+    {
+      "path": "ContentContainer/RecentRoundsPanel/RoundRows/RoundRow0",
+      "node": "14012:98947",
+      "figma": [
+        0,
+        0,
+        958,
+        130
+      ]
+    },
+    {
+      "path": "ContentContainer/RecentRoundsPanel/RoundRows/RoundRow1",
+      "node": "14012:98960",
+      "figma": [
+        0,
+        130,
+        958,
+        128
+      ],
+      "note": "built h130 - rows are uniform (every row can carry a BEST tag)"
+    },
+    {
+      "path": "ContentContainer/RecentRoundsPanel/RoundRows/RoundRow2",
+      "node": "14012:98972",
+      "figma": [
+        0,
+        258,
+        958,
+        128
+      ],
+      "note": "built y260 h130 - uniform rows"
+    },
+    {
+      "path": "ContentContainer/RecentRoundsPanel/RoundRows/RoundRow0/AvatarRing",
+      "node": "14012:98948",
+      "figma": [
+        32,
+        25,
+        80,
+        80
+      ]
+    },
+    {
+      "path": "ContentContainer/RecentRoundsPanel/RoundRows/RoundRow0/Initial",
+      "node": "14012:98950",
+      "figma": [
+        32,
+        45,
+        80,
+        40
+      ]
+    },
+    {
+      "path": "ContentContainer/RecentRoundsPanel/RoundRows/RoundRow0/Info",
+      "node": "14012:98951",
+      "figma": [
+        132,
+        15,
+        702,
+        100
+      ]
+    },
+    {
+      "path": "ContentContainer/RecentRoundsPanel/RoundRows/RoundRow0/Info/Venue",
+      "node": "14012:98952",
+      "figma": [
+        0,
+        0,
+        702,
+        36
+      ],
+      "note": "node w46 is the mock name; built full-width for live venue names"
+    },
+    {
+      "path": "ContentContainer/RecentRoundsPanel/RoundRows/RoundRow0/Info/Date",
+      "node": "14012:98953",
+      "figma": [
+        0,
+        40,
+        702,
+        28
+      ],
+      "note": "node w206; built full-width"
+    },
+    {
+      "path": "ContentContainer/RecentRoundsPanel/RoundRows/RoundRow0/Info/Trust",
+      "node": "14012:98954",
+      "figma": [
+        0,
+        72,
+        702,
+        28
+      ],
+      "note": "node w155; built full-width"
+    },
+    {
+      "path": "ContentContainer/RecentRoundsPanel/RoundRows/RoundRow0/Score",
+      "node": "14012:98955",
+      "figma": [
+        836,
+        8,
+        90,
+        114
+      ],
+      "note": "node row0 is x854 w72 (no pts line); rows 1-2 are x836 w90 - built uniform 836/90"
+    },
+    {
+      "path": "ContentContainer/RecentRoundsPanel/RoundRows/RoundRow0/Score/Score",
+      "node": "14012:98956",
+      "figma": [
+        0,
+        0,
+        90,
+        52
+      ]
+    },
+    {
+      "path": "ContentContainer/RecentRoundsPanel/RoundRows/RoundRow0/Score/Holes",
+      "node": "14012:98957",
+      "figma": [
+        0,
+        54,
+        90,
+        28
+      ]
+    },
+    {
+      "path": "ContentContainer/RecentRoundsPanel/RoundRows/RoundRow0/Score/BestTag",
+      "node": "14012:98958",
+      "figma": [
+        18,
+        84,
+        72,
+        30
+      ],
+      "note": "node x0 inside a 72-wide Score; centred inside the 90-wide uniform one"
+    }
+  ],
+  "inset_rule": "Panels use Assets/Art/HomeScreen/Next Hole Panel.png (1020x470, 9-slice border 64). Its SOLID BODY is 980x430 - margins L20 R20 T10 B30 sprite-px - so a 9-sliced Image draws inside its RectTransform. `adj` = [dx,dy,dw,dh] added to the node box to get the expected RECT; the DRAWN body still equals the node box."
+}

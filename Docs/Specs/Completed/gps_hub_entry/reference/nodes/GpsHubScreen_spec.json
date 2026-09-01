@@ -1,0 +1,335 @@
+{
+  "elements": [
+    {
+      "name": "HeroPanel",
+      "w": 989.3,
+      "h": 327.3,
+      "radius": 50,
+      "requireSprite": true,
+      "color": "",
+      "fontSize": -1,
+      "fontWeight": ""
+    },
+    {
+      "name": "HowItWorksStrip",
+      "w": 978,
+      "h": 138,
+      "radius": 32,
+      "requireSprite": true,
+      "color": "",
+      "fontSize": -1,
+      "fontWeight": ""
+    },
+    {
+      "name": "ActionTiles",
+      "w": 958,
+      "h": 153,
+      "radius": -1,
+      "requireSprite": false,
+      "color": "",
+      "fontSize": -1,
+      "fontWeight": ""
+    },
+    {
+      "name": "Tile_SCREENSHOT",
+      "w": 246,
+      "h": 173,
+      "radius": 32,
+      "requireSprite": true,
+      "color": "",
+      "fontSize": -1,
+      "fontWeight": ""
+    },
+    {
+      "name": "Tile_CHECKIN",
+      "w": 246,
+      "h": 173,
+      "radius": 32,
+      "requireSprite": true,
+      "color": "",
+      "fontSize": -1,
+      "fontWeight": ""
+    },
+    {
+      "name": "Tile_VOTE",
+      "w": 246,
+      "h": 173,
+      "radius": 32,
+      "requireSprite": true,
+      "color": "",
+      "fontSize": -1,
+      "fontWeight": ""
+    },
+    {
+      "name": "Tile_GIFT",
+      "w": 246,
+      "h": 173,
+      "radius": 32,
+      "requireSprite": true,
+      "color": "",
+      "fontSize": -1,
+      "fontWeight": ""
+    },
+    {
+      "name": "RecentGiftsPanel",
+      "w": 989.3,
+      "h": 365.3,
+      "radius": 50,
+      "requireSprite": true,
+      "color": "",
+      "fontSize": -1,
+      "fontWeight": ""
+    },
+    {
+      "name": "LiveVotesPanel",
+      "w": 989.3,
+      "h": 337.3,
+      "radius": 50,
+      "requireSprite": true,
+      "color": "",
+      "fontSize": -1,
+      "fontWeight": ""
+    },
+    {
+      "name": "RecentRoundsPanel",
+      "w": 989.3,
+      "h": 503.3,
+      "radius": 50,
+      "requireSprite": true,
+      "color": "",
+      "fontSize": -1,
+      "fontWeight": ""
+    },
+    {
+      "name": "PanelHeader",
+      "w": 958,
+      "h": 80,
+      "radius": -1,
+      "requireSprite": false,
+      "color": "",
+      "fontSize": -1,
+      "fontWeight": ""
+    },
+    {
+      "name": "RoundRows",
+      "w": 958,
+      "h": 392,
+      "radius": -1,
+      "requireSprite": false,
+      "color": "",
+      "fontSize": -1,
+      "fontWeight": ""
+    },
+    {
+      "name": "BackRow",
+      "w": 958,
+      "h": 45,
+      "radius": -1,
+      "requireSprite": false,
+      "color": "",
+      "fontSize": -1,
+      "fontWeight": ""
+    },
+    {
+      "name": "StatsRow",
+      "w": 878,
+      "h": 92,
+      "radius": -1,
+      "requireSprite": false,
+      "color": "",
+      "fontSize": -1,
+      "fontWeight": ""
+    },
+    {
+      "name": "StatPOINTS",
+      "w": 219.5,
+      "h": 92,
+      "radius": -1,
+      "requireSprite": false,
+      "color": "",
+      "fontSize": -1,
+      "fontWeight": ""
+    },
+    {
+      "name": "StatBEST",
+      "w": 219.5,
+      "h": 92,
+      "radius": -1,
+      "requireSprite": false,
+      "color": "",
+      "fontSize": -1,
+      "fontWeight": ""
+    },
+    {
+      "name": "StatTRUST",
+      "w": 219.5,
+      "h": 92,
+      "radius": -1,
+      "requireSprite": false,
+      "color": "",
+      "fontSize": -1,
+      "fontWeight": ""
+    },
+    {
+      "name": "StatAVATAR",
+      "w": 219.5,
+      "h": 92,
+      "radius": -1,
+      "requireSprite": false,
+      "color": "",
+      "fontSize": -1,
+      "fontWeight": ""
+    },
+    {
+      "name": "AvatarRing",
+      "w": -1,
+      "h": -1,
+      "radius": -1,
+      "requireSprite": true,
+      "color": "",
+      "fontSize": -1,
+      "fontWeight": ""
+    },
+    {
+      "name": "AvatarFill",
+      "w": -1,
+      "h": -1,
+      "radius": -1,
+      "requireSprite": true,
+      "color": "",
+      "fontSize": -1,
+      "fontWeight": ""
+    },
+    {
+      "name": "IconRing",
+      "w": -1,
+      "h": -1,
+      "radius": -1,
+      "requireSprite": true,
+      "color": "",
+      "fontSize": -1,
+      "fontWeight": ""
+    },
+    {
+      "name": "IconFill",
+      "w": -1,
+      "h": -1,
+      "radius": -1,
+      "requireSprite": true,
+      "color": "",
+      "fontSize": -1,
+      "fontWeight": ""
+    },
+    {
+      "name": "Icon",
+      "w": -1,
+      "h": -1,
+      "radius": -1,
+      "requireSprite": true,
+      "color": "",
+      "fontSize": -1,
+      "fontWeight": ""
+    },
+    {
+      "name": "BestTag",
+      "w": 72,
+      "h": 30,
+      "radius": -1,
+      "requireSprite": true,
+      "color": "",
+      "fontSize": -1,
+      "fontWeight": ""
+    },
+    {
+      "name": "AvatarInitial",
+      "w": -1,
+      "h": -1,
+      "radius": -1,
+      "requireSprite": false,
+      "color": "#FFFFFF",
+      "fontSize": 53.3,
+      "fontWeight": "SemiBold"
+    },
+    {
+      "name": "PlayerName",
+      "w": -1,
+      "h": -1,
+      "radius": -1,
+      "requireSprite": false,
+      "color": "#EEDC9A",
+      "fontSize": 45,
+      "fontWeight": "SemiBold"
+    },
+    {
+      "name": "PlayerSub",
+      "w": -1,
+      "h": -1,
+      "radius": -1,
+      "requireSprite": false,
+      "color": "#B7C3D3",
+      "fontSize": 26.7,
+      "fontWeight": ""
+    },
+    {
+      "name": "PanelTitle",
+      "w": -1,
+      "h": -1,
+      "radius": -1,
+      "requireSprite": false,
+      "color": "#EEDC9A",
+      "fontSize": 35,
+      "fontWeight": "SemiBold"
+    },
+    {
+      "name": "BackLabel",
+      "w": -1,
+      "h": -1,
+      "radius": -1,
+      "requireSprite": false,
+      "color": "#B7C3D3",
+      "fontSize": 23.3,
+      "fontWeight": ""
+    },
+    {
+      "name": "Venue",
+      "w": -1,
+      "h": -1,
+      "radius": -1,
+      "requireSprite": false,
+      "color": "#FFFFFF",
+      "fontSize": 25,
+      "fontWeight": "SemiBold"
+    },
+    {
+      "name": "Date",
+      "w": -1,
+      "h": -1,
+      "radius": -1,
+      "requireSprite": false,
+      "color": "#B7C3D3",
+      "fontSize": 20,
+      "fontWeight": ""
+    },
+    {
+      "name": "Trust",
+      "w": -1,
+      "h": -1,
+      "radius": -1,
+      "requireSprite": false,
+      "color": "#7ED488",
+      "fontSize": 20,
+      "fontWeight": ""
+    },
+    {
+      "name": "Holes",
+      "w": -1,
+      "h": -1,
+      "radius": -1,
+      "requireSprite": false,
+      "color": "#B7C3D3",
+      "fontSize": 20,
+      "fontWeight": ""
+    }
+  ],
+  "_note": "w/h are RectTransform sizes. Panels use a 9-sliced sprite whose shadow lives inside the slice border, so rect = node box + drawn-body inset; the DRAWN body matches the node exactly."
+}
