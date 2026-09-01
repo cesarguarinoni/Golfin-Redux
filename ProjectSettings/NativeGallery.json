@@ -1,0 +1,6 @@
+{
+    "AutomatedSetup": true,
+    "PhotoLibraryUsageDescription": "GOLFIN reads scorecard screenshots you choose from your library.",
+    "PhotoLibraryAdditionsUsageDescription": "",
+    "DontAskLimitedPhotosPermissionAutomaticallyOnIos14": true
+}
