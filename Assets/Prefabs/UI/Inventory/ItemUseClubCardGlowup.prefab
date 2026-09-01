@@ -86,7 +86,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 1614545952, guid: ee77d6edddec759439e3d38e5e61bafa, type: 3}
+  m_Sprite: {fileID: 21300000, guid: ee77d6edddec759439e3d38e5e61bafa, type: 3}
   m_Type: 3
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -340,7 +340,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 1614545952, guid: ee77d6edddec759439e3d38e5e61bafa, type: 3}
+  m_Sprite: {fileID: 21300000, guid: ee77d6edddec759439e3d38e5e61bafa, type: 3}
   m_Type: 3
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -638,6 +638,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: CLUB_REPAIR
+  japaneseFontScale: 0
 --- !u!1 &1127845360113265015
 GameObject:
   m_ObjectHideFlags: 0
@@ -799,7 +800,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 1614545952, guid: ee77d6edddec759439e3d38e5e61bafa, type: 3}
+  m_Sprite: {fileID: 21300000, guid: ee77d6edddec759439e3d38e5e61bafa, type: 3}
   m_Type: 3
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -2215,7 +2216,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 1614545952, guid: ee77d6edddec759439e3d38e5e61bafa, type: 3}
+  m_Sprite: {fileID: 21300000, guid: ee77d6edddec759439e3d38e5e61bafa, type: 3}
   m_Type: 3
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -2448,7 +2449,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 1614545952, guid: ee77d6edddec759439e3d38e5e61bafa, type: 3}
+  m_Sprite: {fileID: 21300000, guid: ee77d6edddec759439e3d38e5e61bafa, type: 3}
   m_Type: 1
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -3921,6 +3922,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: ROSTER_LEVEL_UP
+  japaneseFontScale: 0
 --- !u!1 &7688228356321140374
 GameObject:
   m_ObjectHideFlags: 0

@@ -2833,6 +2833,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: RESULT_NEXT
+  japaneseFontScale: 0
 --- !u!1 &5182163242235628948
 GameObject:
   m_ObjectHideFlags: 0
@@ -3747,6 +3748,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: TOURN_NEXT_SECTION
+  japaneseFontScale: 0
 --- !u!1 &6931505667505284275
 GameObject:
   m_ObjectHideFlags: 0
@@ -3994,7 +3996,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 4933cc96cc21042ebaa79592e3fd80bd, type: 3}
+  m_Sprite: {fileID: 0}
   m_Type: 0
   m_PreserveAspect: 1
   m_FillCenter: 1
@@ -5030,6 +5032,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LocalizedText
   key: BTN_START
+  japaneseFontScale: 0
 --- !u!1 &8519528545397771011
 GameObject:
   m_ObjectHideFlags: 0

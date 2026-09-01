@@ -5039,7 +5039,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 4933cc96cc21042ebaa79592e3fd80bd, type: 3}
+  m_Sprite: {fileID: 0}
   m_Type: 0
   m_PreserveAspect: 1
   m_FillCenter: 1
@@ -5914,6 +5914,7 @@ MonoBehaviour:
   titleActiveColor: {r: 0.93333334, g: 0.8627451, b: 0.6039216, a: 1}
   titleCollapsedColor: {r: 0.81960785, g: 0.8352941, b: 0.85882354, a: 1}
   insufficientRpColor: {r: 0.7529412, g: 0.2509804, b: 0, a: 1}
+  textRewardsGap: 12
   titleText: {fileID: 3186222657097703891}
   titleTextExpanded: {fileID: 2717265052213506436}
   explanationText: {fileID: 5507226125149766526}
