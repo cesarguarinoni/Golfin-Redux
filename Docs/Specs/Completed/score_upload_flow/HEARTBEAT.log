@@ -1,0 +1,36 @@
+=== iter-1 kickoff baseline 2026-09-01T03:22:52Z ===
+HEAD: 78c796ad6ccc8226054194a14de341f50dcc9109
+DIRTY (git status --porcelain --untracked-files=all):
+ D Docs/Specs/Active/gps_trust_core/ARCHITECT_REVIEW.md
+ D Docs/Specs/Active/gps_trust_core/HEARTBEAT.log
+ D Docs/Specs/Active/gps_trust_core/IMPLEMENTER_REPORT.md
+ D Docs/Specs/Active/gps_trust_core/SELF_REVIEW.md
+ D Docs/Specs/Active/gps_trust_core/SPEC.md
+ D Docs/Specs/Active/gps_trust_core/STATUS.md
+ M Docs/TellCode.md
+?? .claude/launch.json
+?? Docs/Specs/Active/score_upload_flow/ARCHITECT_REVIEW.md
+?? Docs/Specs/Active/score_upload_flow/HEARTBEAT.log
+?? Docs/Specs/Active/score_upload_flow/IMPLEMENTER_REPORT.md
+?? Docs/Specs/Active/score_upload_flow/SELF_REVIEW.md
+?? Docs/Specs/Active/score_upload_flow/SPEC.md
+?? Docs/Specs/Active/score_upload_flow/STATUS.md
+?? Docs/Specs/Completed/gps_trust_core/ARCHITECT_REVIEW.md
+?? Docs/Specs/Completed/gps_trust_core/HEARTBEAT.log
+?? Docs/Specs/Completed/gps_trust_core/IMPLEMENTER_REPORT.md
+?? Docs/Specs/Completed/gps_trust_core/SELF_REVIEW.md
+?? Docs/Specs/Completed/gps_trust_core/SPEC.md
+?? Docs/Specs/Completed/gps_trust_core/STATUS.md
+=== end baseline ===
+
+[03:42:10Z] module (RecognitionService/ScoreService/ScoreDtos) + 13 EditMode tests green (2204 total, 0 fail, 3 pre-existing skips); Endpoints.RecognitionAnalyze; 81 loc rows; ScreenId.ScoreUpload wired; 2 UPM plugins pinned + plist strings; controllers written, compile clean. Next: prefabs.
+
+[04:08:39Z] prefabs built (ScoreUploadScreen + VenuePickerModal), ShellScene wired (isolated hunks: 254 insertions, 0 anchor churn), 5 generated sprites, glyph probe done (× / ✓ / ○ / X / ∞ in, ✕ / ✎ / 𝕏 / ⛓ out), LocalizationTextTable regenerated (790 rows). Next: play-mode real-flow run.
+
+[04:21:42Z] play-mode run green end-to-end vs prod: both entry onClicks, AI 92/TOKYO GOLF CLUB/18/72 conf .98, /venue/list 60 rows, manual venue reaches the wire (venue_id 1), one POST from a double tap, 400 mapped w/ JA detail, RP pill +50. 11 shots at 1170x2532.
+
+[04:28:48Z] lint 0 FAIL both prefabs; telemetry 3 event types landed in prod; prod cleanup done (7 activities + 7 points_transactions + 7 feed_items + 5 telemetry rows deleted; profile restored to the gps_hub_entry baseline 6838/0/null/null/0/Lv.6). Next: content publish, EditMode, iOS sim.
+
+[05:24:45Z] iOS Simulator build green (BUILD SUCCEEDED, all 3 plist strings in Info.plist). TWO real build-only defects found: (1) WebCamTexture refuses an iOS build with an empty cameraUsageDescription; (2) UnityClientPlatformProbe labelled the SIMULATOR as 'ios' — deviceModel reads 'iPhone14,7' on Apple Silicon, so the model heuristic gps_trust_core shipped is false. Fixed both; probe now keys off SIMULATOR_* env + GPU name, pinned by a new EditMode test. 2205 tests / 0 fail.
+
+[05:36:39Z] STATUS=READY_FOR_SELF_REVIEW. Report + AI_CONTEXT written. Editor left clean: ShellScene alone, not dirty, not playing, ProjectSettings restored (DeviceSDK, buildNumber 2113) with only cameraUsageDescription changed.
