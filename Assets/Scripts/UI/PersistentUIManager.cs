@@ -530,6 +530,10 @@ namespace Golfin.UI
                 // (4079:18306), the prizes node overrides it with "PRIZES" (13622:2222).
                 case GolfinRedux.UI.ScreenId.GachaHistory:             return "NAV_REWARDS_CENTER";
                 case GolfinRedux.UI.ScreenId.GachaPrizes:              return "GACHA_PRIZES_TITLE";
+                // gps_hub_entry §4 — the GPS / PLAYLIFE hub. It has no bottom-nav pillar, so
+                // HighlightScreen returns right after ApplyTopBarCenterText; this case is the
+                // whole reason the shared top bar can carry the hub's title without a new API.
+                case GolfinRedux.UI.ScreenId.GpsHub:                   return "GPS_HUB_TITLE";
                 default:                                               return null;
             }
         }

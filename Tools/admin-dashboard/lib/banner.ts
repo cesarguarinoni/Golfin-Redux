@@ -256,8 +256,28 @@ export const ALLOWED_LINK_HOSTS = [
   "www.golfin.world",
 ] as const;
 
+/**
+ * 🔒 In-app routes a banner may point at INSTEAD of a web URL, kept in step with
+ * `BannerPolicy.TryGetInternalRoute` in the Unity client (gps_hub_entry §1).
+ *
+ * Matched EXACTLY, after lower-casing — no path, no query, no userinfo. The
+ * client enumerates its routes in a `switch`, so anything not listed here is a
+ * link the operator can save and the device silently refuses.
+ *
+ * ⚠️ Like `ALLOWED_LINK_HOSTS`, this list SHIPS IN THE BUILD on the client side.
+ * A build that predates `golfin://gps` refuses it and leaves the strip
+ * non-tappable — harmless, which is why the row needs no `min_build` gate.
+ */
+export const INTERNAL_LINK_ROUTES = ["golfin://gps"] as const;
+
 /** @returns an error message, or null when the link URL is acceptable. */
 export function validateBannerLinkUrl(url: string): string | null {
+  // In-app routes are checked BEFORE the https branch: `new URL("golfin://gps")`
+  // parses, but its protocol is not https and it would fail that check first.
+  if ((INTERNAL_LINK_ROUTES as readonly string[]).includes(url.trim().toLowerCase())) {
+    return null;
+  }
+
   let parsed: URL;
   try {
     parsed = new URL(url);
@@ -268,7 +288,7 @@ export function validateBannerLinkUrl(url: string): string | null {
   if (parsed.username || parsed.password) return "Link URL must not carry userinfo.";
   if (parsed.port) return "Link URL must use the default https port.";
   if (!(ALLOWED_LINK_HOSTS as readonly string[]).includes(parsed.hostname)) {
-    return `"${parsed.hostname}" is not an allowlisted link host. The client refuses anything outside ${ALLOWED_LINK_HOSTS.join(", ")} — adding a host needs a client release.`;
+    return `"${parsed.hostname}" is not an allowlisted link host. The client refuses anything outside ${ALLOWED_LINK_HOSTS.join(", ")}, or one of the in-app routes ${INTERNAL_LINK_ROUTES.join(", ")} — adding a host needs a client release.`;
   }
   return null;
 }

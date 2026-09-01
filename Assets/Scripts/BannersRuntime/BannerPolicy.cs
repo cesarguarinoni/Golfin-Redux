@@ -11,6 +11,7 @@
 #nullable enable
 using System;
 using Golfin.Tournaments;
+using GolfinRedux.UI;
 
 namespace Golfin.Banners
 {
@@ -85,6 +86,71 @@ namespace Golfin.Banners
         };
 
         /// <summary>
+        /// The scheme that means "this link stays inside the app" (gps_hub_entry §1).
+        ///
+        /// <para>
+        /// A banner link is free text written in the dashboard, so an in-app destination needs the
+        /// same fail-closed posture as an external one: a route is EXPLICITLY enumerated in
+        /// <see cref="TryGetInternalRoute"/> or it is refused, exactly as a host is.
+        /// </para>
+        /// </summary>
+        public const string InternalScheme = "golfin";
+
+        /// <summary>
+        /// <c>golfin://gps</c> → <see cref="ScreenId.GpsHub"/>. The ONLY internal route today.
+        ///
+        /// <para>
+        /// Add routes HERE and nowhere else. A second ad-hoc parse at a call site is how the two
+        /// copies drift, and this one is a navigation grant: whatever it returns, a server-supplied
+        /// string gets to open.
+        /// </para>
+        /// <para>
+        /// <see cref="Uri"/> lower-cases scheme and host, so <c>GOLFIN://GPS</c> matches and the
+        /// ordinal compares below are exact rather than lenient. A route with a path, query or
+        /// userinfo is refused: nothing in the switch consumes one, so accepting it would silently
+        /// widen what a link may say.
+        /// </para>
+        /// <para>
+        /// AN OLDER BUILD REFUSES <c>golfin://gps</c> and simply leaves the strip non-interactable —
+        /// which is why the dashboard row can be activated without a <c>min_build</c> gate.
+        /// </para>
+        /// </summary>
+        public static bool TryGetInternalRoute(string? url, out ScreenId screen)
+        {
+            screen = default;
+
+            if (string.IsNullOrWhiteSpace(url)) return false;
+            if (!Uri.TryCreate(url, UriKind.Absolute, out Uri? uri) || uri == null) return false;
+            if (!string.Equals(uri.Scheme, InternalScheme, StringComparison.Ordinal)) return false;
+            if (!string.IsNullOrEmpty(uri.UserInfo)) return false;
+
+            // `golfin://gps` parses with an EMPTY path in .NET, `golfin://gps/x` with "/x".
+            if (!string.IsNullOrEmpty(uri.AbsolutePath) && uri.AbsolutePath != "/") return false;
+            if (!string.IsNullOrEmpty(uri.Query) || !string.IsNullOrEmpty(uri.Fragment)) return false;
+
+            switch (uri.Host)
+            {
+                case "gps":
+                    screen = ScreenId.GpsHub;
+                    return true;
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// True when the banner's link may be followed at all — either an in-app route
+        /// (<see cref="TryGetInternalRoute"/>) or an allowlisted external URL
+        /// (<see cref="IsExternalLinkAllowed"/>).
+        /// <para>
+        /// This is what gates the Button's <c>interactable</c>, so a route this refuses shows the
+        /// artwork with nothing to tap rather than doing something unexpected.
+        /// </para>
+        /// </summary>
+        public static bool IsLinkAllowed(string? url) =>
+            TryGetInternalRoute(url, out _) || IsExternalLinkAllowed(url);
+
+        /// <summary>
         /// True when <paramref name="url"/> is an absolute https URL on an allowlisted host, with
         /// no userinfo and the default port. Everything unrecognised fails closed.
         /// <para>
@@ -92,7 +158,7 @@ namespace Golfin.Banners
         /// interactable: the two are separated by a refresh that can swap the banner underneath.
         /// </para>
         /// </summary>
-        public static bool IsLinkAllowed(string? url)
+        public static bool IsExternalLinkAllowed(string? url)
         {
             if (string.IsNullOrWhiteSpace(url)) return false;
             if (!Uri.TryCreate(url, UriKind.Absolute, out Uri? uri) || uri == null) return false;

@@ -36,6 +36,51 @@ gacha/shop listings for the 18, rarity framing on the Balls screen.
 ---
 
 
+## 🟡 IN REVIEW — `gps_hub_entry` (2026-09-01) — the GPS front door exists
+
+**The GPS / PLAYLIFE features have a way in from the game.** The Home promo banner stops opening a
+web URL and instead navigates to a new `ScreenId.GpsHub` — the Figma frame `14011:32819` built as
+`Assets/Prefabs/UI/Gps/GpsHubScreen.prefab`, showing the player's real profile numbers and their
+real recent rounds.
+
+**The one route.** `BannerPolicy` now parses a `golfin://` scheme against an ENUMERATED table —
+`golfin://gps` → `ScreenId.GpsHub`, and nothing else. `IsLinkAllowed` is the union of that and the
+old host allowlist (renamed `IsExternalLinkAllowed`), so one decision gates both destinations.
+A build that predates this refuses `golfin://gps` and leaves the strip non-tappable, which is why
+the admin row needs no `min_build` gate. The dashboard's `validateBannerLinkUrl` accepts the route
+too (`INTERNAL_LINK_ROUTES`) — **prepared, not deployed**.
+
+**What is live on the hub:** the hero panel (name, HC, followers, POINTS / BEST / TRUST / AVATAR)
+from a NEW `Golfin.Social` assembly (`UserService` + `UserDetailDto`, refs `Golfin.Net` only, the
+third module on that layer after `Golfin.Gps`), and MY RECENT ROUNDS from
+`Golfin.Gps.ScoreHistoryService` (`/score/history?limit=3`). A null stat renders `—`, never `0`.
+
+**What is deliberately inert in v1:** the four action tiles and four of the five hub nav slots log
+and do nothing — no "coming soon" modal, because none was asked for. RECENT GIFTS and LIVE VOTES
+ship in the prefab as INACTIVE GameObjects. The hub draws its OWN bottom nav (cloned from
+`PersistentUI › BottomNavBar`) and hides the shared one via `ShowTopBarOnly()`.
+
+**Strings:** 27 `GPS_HUB_*` keys (the spec's 23 plus 4 relative-date keys, so no date word is
+hardcoded), EN + JA, published as **`texts` v22**; `export_content.py --check` clean.
+
+**Verified:** EditMode 345 / 0 failed · dashboard vitest 245 / 0 + `tsc` clean · UI fidelity lint
+`fail = 0` · a 73-site node-geometry sweep with 0 FAIL · the banner tap driven through the REAL
+`PromoBanner.onClick`. Screenshots + the full evidence trail:
+`Docs/Specs/Active/gps_hub_entry/IMPLEMENTER_REPORT.md`.
+
+**Two things this task did NOT do (spec § Out of scope):** activating the prod `home_promo` row
+(Architect + Cesar) and deploying the admin dashboard (Architect). Next GPS spec is
+`gps_checkin_screen` — the first tile to become real.
+
+**Scar worth keeping:** `Assets/Art/HomeScreen/Next Hole Panel.png` (the Figma `Pop-up` panel style,
+now a palette atom) bakes its drop shadow INSIDE the 9-slice border — its solid body is 980×430 of a
+1020×470 sprite. A plain RectTransform containment check says "inside" while the last row of content
+is crossed by the drawn bottom border. The rule and the fix are written up in
+`Docs/Architecture/UI_ELEMENT_PALETTE.md`.
+
+---
+
+
 ## 🟡 IN REVIEW — `gps_trust_core` (2026-09-01) — `Golfin.Gps` exists
 
 The PLAYLIFE **GPS Trust subsystem** is ported to a new, game-free assembly

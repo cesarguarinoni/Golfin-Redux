@@ -33,6 +33,8 @@ namespace GolfinRedux.UI
         GachaHistory,
         // Gacha pillar screen 3 — Gacha Prizes / pool preview (Figma 13622:2222)
         GachaPrizes,
+        // gps_hub_entry — GPS / PLAYLIFE hub (Figma 14011:32819), reached from the Home promo banner
+        GpsHub,
         // Settings removed - it's an overlay, not a screen
 
         // Order: login_signup_screens — account auth gate (Phase 1 — UI only, no backend)
@@ -83,6 +85,9 @@ namespace GolfinRedux.UI
         [SerializeField] private GameObject _gachaHistoryScreen;
         // Gacha pillar screen 3 — Gacha Prizes / pool preview
         [SerializeField] private GameObject _gachaPrizesScreen;
+        // gps_hub_entry — GPS / PLAYLIFE hub. Draws its OWN bottom nav, so it is deliberately
+        // absent from the showBars list below and shown with ShowTopBarOnly() instead.
+        [SerializeField] private GameObject _gpsHubScreen;
         // _settingsScreen removed - Settings is an overlay managed by SettingsController, not ScreenManager
 
         // Order: login_signup_screens — account auth gate screens
@@ -488,6 +493,10 @@ namespace GolfinRedux.UI
             if (_gachaPrizesScreen != null)
                 _gachaPrizesScreen.SetActive(screenId == ScreenId.GachaPrizes);
 
+            // gps_hub_entry — GPS / PLAYLIFE hub
+            if (_gpsHubScreen != null)
+                _gpsHubScreen.SetActive(screenId == ScreenId.GpsHub);
+
             // Order: login_signup_screens — account auth gate (excluded from showBars)
             if (_loginScreen != null)
                 _loginScreen.SetActive(screenId == ScreenId.Login);
@@ -549,6 +558,11 @@ namespace GolfinRedux.UI
                                 || screenId == ScreenId.ResetPassword;
             // SPEC decision 6: starter selection shows top bar (RP + gear) but hides bottom nav.
             bool isStarterScreen = screenId == ScreenId.StartingCharacterSelection;
+            // gps_hub_entry §4 — the GPS hub takes the same shape for a different reason: the top
+            // bar is shared (RP + gear + the "GOLFIN GPS" title), and the SHARED bottom nav is
+            // hidden because the hub draws its own GPS nav bar inside its prefab. Showing both
+            // would stack two nav bars at the bottom of one screen.
+            bool isGpsHub = screenId == ScreenId.GpsHub;
 
             if (Golfin.UI.PersistentUIManager.Instance != null)
             {
@@ -566,6 +580,14 @@ namespace GolfinRedux.UI
                 {
                     // Top bar visible (RP balance + gear); bottom nav hidden (replaced by instruction block).
                     Golfin.UI.PersistentUIManager.Instance.ShowTopBarOnly();
+                }
+                else if (isGpsHub)
+                {
+                    // HighlightScreen is what resolves the centre title through NavTitleKeyFor;
+                    // it returns early on a screen with no bottom-nav pillar, which GpsHub is,
+                    // AFTER the title has already been applied.
+                    Golfin.UI.PersistentUIManager.Instance.ShowTopBarOnly();
+                    Golfin.UI.PersistentUIManager.Instance.HighlightScreen(ScreenId.GpsHub);
                 }
                 else if (showBars)
                 {

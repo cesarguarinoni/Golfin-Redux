@@ -437,6 +437,30 @@ namespace Golfin.Net
         public static string ActivityHistory(int skip = 0, int limit = 20)
             => BaseUrl + "/activity/history?skip=" + skip + "&limit=" + limit;
 
+        /// <summary>
+        /// GET → <c>{data: &lt;profiles row&gt;}</c> — the caller's own PLAYLIFE profile
+        /// (user.py:78-86, a <c>select("*")</c>). AUTH REQUIRED; the row is chosen by the
+        /// bearer token's user id, never by anything in the request.
+        ///
+        /// <c>select("*")</c> means the server can grow a column without a client release, so the
+        /// DTO (<c>Golfin.Social.UserDetailDto</c>) maps a SUBSET and leaves Newtonsoft's default
+        /// <c>MissingMemberHandling.Ignore</c> alone. Read by the GPS hub's hero panel
+        /// (gps_hub_entry §3).
+        /// </summary>
+        public static string UserDetail => BaseUrl + "/user/detail";
+
+        /// <summary>
+        /// GET → <c>{data: [&lt;activities row&gt;]}</c> — the caller's own posted scores, newest
+        /// first by <c>check_in_at</c> (score.py:419-436). AUTH REQUIRED, same posture as
+        /// <see cref="UserDetail"/>.
+        ///
+        /// Distinct from <see cref="ActivityHistory"/>: that one is the CHECK-IN ledger, this one is
+        /// the SCORE history. The GPS hub's "MY RECENT ROUNDS" panel reads this with
+        /// <c>limit = 3</c>.
+        /// </summary>
+        public static string ScoreHistory(int skip = 0, int limit = 20)
+            => BaseUrl + "/score/history?skip=" + skip + "&limit=" + limit;
+
         /// <summary>Restore the shipping host (used by tests that retarget <see cref="RootUrl"/>).</summary>
         public static void ResetToDefault() => RootUrl = DefaultRootUrl;
 

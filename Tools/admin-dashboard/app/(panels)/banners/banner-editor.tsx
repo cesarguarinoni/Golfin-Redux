@@ -7,6 +7,7 @@ import {
   BANNER_PLACEMENTS,
   bannerSpec,
   deriveBannerState,
+  INTERNAL_LINK_ROUTES,
   isAssignedPlacement,
   validateBannerLinkUrl,
 } from "@/lib/banner";
@@ -300,7 +301,7 @@ export function BannerEditor({
                 id="b-link"
                 value={draft.linkUrl ?? ""}
                 onChange={(e) => patch({ linkUrl: e.target.value || null })}
-                placeholder="https://golfin.io/campaign/august"
+                placeholder="https://golfin.io/campaign/august  ·  golfin://gps"
                 className={field}
               />
               {linkError ? (
@@ -309,7 +310,10 @@ export function BannerEditor({
                 </p>
               ) : (
                 <p className="mt-1 text-[11px] leading-relaxed text-zinc-600">
-                  {t("ban.linkHint", { hosts: ALLOWED_LINK_HOSTS.join(", ") })}
+                  {t("ban.linkHint", {
+                    hosts: ALLOWED_LINK_HOSTS.join(", "),
+                    routes: INTERNAL_LINK_ROUTES.join(", "),
+                  })}
                 </p>
               )}
             </div>

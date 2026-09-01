@@ -317,6 +317,11 @@ namespace Golfin.Banners
         /// The allowlist is re-checked HERE rather than trusting the flag set when the banner was
         /// applied: a refresh can swap the banner between those two moments.
         /// </para>
+        /// <para>
+        /// gps_hub_entry §1 — an INTERNAL route (<c>golfin://gps</c>) navigates instead of leaving
+        /// the app. The branch sits after the same re-check, so the two destinations are gated by
+        /// one decision rather than by two that can disagree.
+        /// </para>
         /// </summary>
         public void OpenLink()
         {
@@ -325,6 +330,13 @@ namespace Golfin.Banners
             {
                 if (!string.IsNullOrEmpty(link))
                     Debug.LogWarning($"{Tag} Refusing to open a link outside the allowlisted hosts.");
+                return;
+            }
+
+            if (BannerPolicy.TryGetInternalRoute(link, out GolfinRedux.UI.ScreenId screen))
+            {
+                Debug.Log($"{Tag} Routing banner link for {_placement} \u2192 {screen}.");
+                GolfinRedux.UI.ScreenManager.Instance?.ShowScreen(screen);
                 return;
             }
 

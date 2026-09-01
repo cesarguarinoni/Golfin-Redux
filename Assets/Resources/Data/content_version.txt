@@ -16,5 +16,5 @@ mission_wind_presets=1
 missions=2
 modes=8
 shop_catalog=6
-texts=20
+texts=22
 ticket_types=2

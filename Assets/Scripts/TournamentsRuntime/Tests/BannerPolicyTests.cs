@@ -56,6 +56,27 @@ namespace Golfin.Tournaments.WireupTests
             (bool)Policy.GetMethod("IsLinkAllowed", BindingFlags.Public | BindingFlags.Static)!
                 .Invoke(null, new object?[] { url })!;
 
+        internal static bool IsExternalLinkAllowed(string? url) =>
+            (bool)Policy.GetMethod("IsExternalLinkAllowed", BindingFlags.Public | BindingFlags.Static)!
+                .Invoke(null, new object?[] { url })!;
+
+        /// <summary>
+        /// <c>BannerPolicy.TryGetInternalRoute</c>. Returns the ScreenId as its NAME, so this test
+        /// assembly never has to reference the Assembly-CSharp enum.
+        /// </summary>
+        internal static (bool Matched, string Screen) TryGetInternalRoute(string? url)
+        {
+            var m = Policy.GetMethod("TryGetInternalRoute", BindingFlags.Public | BindingFlags.Static)
+                    ?? throw new InvalidOperationException("BannerPolicy.TryGetInternalRoute not found.");
+            object?[] args = { url, null };
+            bool matched = (bool)m.Invoke(null, args)!;
+            return (matched, args[1]?.ToString() ?? "");
+        }
+
+        internal static string InternalScheme =>
+            (string)Policy.GetField("InternalScheme", BindingFlags.Public | BindingFlags.Static)!
+                .GetRawConstantValue()!;
+
         /// <summary>The production ladder, called exactly as <c>TryGet</c> calls it.</summary>
         internal static string? Resolve(
             string? en, string? ja, bool japanese, DateTime? expiresAtUtc, DateTime nowUtc)
@@ -234,6 +255,58 @@ namespace Golfin.Tournaments.WireupTests
         {
             Assert.IsTrue(BannerProd.IsLinkAllowed("https://golfin.io"));
             Assert.IsTrue(BannerProd.IsLinkAllowed("https://golfin.io/campaign/august?utm=banner#top"));
+        }
+
+        // ── gps_hub_entry §1 — in-app routes ──────────────────────────────────
+
+        [Test]
+        public void Accepts_the_gps_hub_internal_route_and_resolves_it_to_GpsHub()
+        {
+            Assert.AreEqual("golfin", BannerProd.InternalScheme);
+
+            Assert.IsTrue(BannerProd.IsLinkAllowed("golfin://gps"),
+                "The Home promo banner's whole purpose in gps_hub_entry is this one link.");
+
+            var (matched, screen) = BannerProd.TryGetInternalRoute("golfin://gps");
+            Assert.IsTrue(matched);
+            Assert.AreEqual("GpsHub", screen,
+                "The route must resolve to ScreenId.GpsHub, not merely be 'allowed'.");
+        }
+
+        [Test]
+        public void Internal_route_is_case_insensitive_because_Uri_lower_cases_scheme_and_host()
+        {
+            Assert.IsTrue(BannerProd.IsLinkAllowed("GOLFIN://GPS"));
+            Assert.AreEqual((true, "GpsHub"), BannerProd.TryGetInternalRoute("GOLFIN://GPS"));
+        }
+
+        [Test]
+        public void An_unenumerated_internal_route_is_refused_not_guessed()
+        {
+            // A newer dashboard may be ahead of this build. Guessing would hand a server-supplied
+            // string a navigation grant to a screen this build never vetted.
+            Assert.IsFalse(BannerProd.IsLinkAllowed("golfin://shop"));
+            Assert.IsFalse(BannerProd.TryGetInternalRoute("golfin://shop").Matched);
+
+            // A path, query or userinfo means the link is saying something the switch does not read.
+            Assert.IsFalse(BannerProd.TryGetInternalRoute("golfin://gps/checkin").Matched);
+            Assert.IsFalse(BannerProd.TryGetInternalRoute("golfin://gps?tab=1").Matched);
+            Assert.IsFalse(BannerProd.TryGetInternalRoute("golfin://a@gps").Matched);
+
+            // A near-miss scheme is not the internal scheme.
+            Assert.IsFalse(BannerProd.TryGetInternalRoute("golfinx://gps").Matched);
+            Assert.IsFalse(BannerProd.TryGetInternalRoute("https://gps").Matched);
+            Assert.IsFalse(BannerProd.TryGetInternalRoute(null).Matched);
+            Assert.IsFalse(BannerProd.TryGetInternalRoute("").Matched);
+        }
+
+        [Test]
+        public void The_external_allowlist_never_accepts_an_internal_route()
+        {
+            // IsLinkAllowed is the UNION of the two; the halves must stay separable, or a future
+            // change to the host list could silently start opening golfin:// in a browser.
+            Assert.IsFalse(BannerProd.IsExternalLinkAllowed("golfin://gps"));
+            Assert.IsTrue(BannerProd.IsExternalLinkAllowed("https://golfin.io/x"));
         }
 
         [Test]

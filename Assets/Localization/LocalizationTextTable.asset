@@ -2130,3 +2130,84 @@ MonoBehaviour:
   - key: MISSION_NAME_L_LEGEND_FINAL
     english: Legend Final
     japanese: "\u30EC\u30B8\u30A7\u30F3\u30C9\u30D5\u30A1\u30A4\u30CA\u30EB"
+  - key: GPS_HUB_TITLE
+    english: GOLFIN GPS
+    japanese: GOLFIN GPS
+  - key: GPS_HUB_BACK
+    english: "\u2039 BACK TO GAME"
+    japanese: "\u2039 \u30B2\u30FC\u30E0\u306B\u623B\u308B"
+  - key: GPS_HUB_SUB_FORMAT
+    english: "HC {0} \xB7 {1} followers"
+    japanese: "HC {0} \xB7 \u30D5\u30A9\u30ED\u30EF\u30FC {1}"
+  - key: GPS_HUB_STAT_POINTS
+    english: POINTS
+    japanese: "\u30DD\u30A4\u30F3\u30C8"
+  - key: GPS_HUB_STAT_BEST
+    english: BEST
+    japanese: "\u30D9\u30B9\u30C8"
+  - key: GPS_HUB_STAT_TRUST
+    english: TRUST
+    japanese: "\u4FE1\u983C\u5EA6"
+  - key: GPS_HUB_STAT_AVATAR
+    english: AVATAR
+    japanese: "\u30A2\u30D0\u30BF\u30FC"
+  - key: GPS_HUB_HOW_1
+    english: SCREENSHOT
+    japanese: "\u30B9\u30AF\u30B7\u30E7\u3092\u8CBC\u308B"
+  - key: GPS_HUB_HOW_2
+    english: AI READS IT
+    japanese: "AI\u304C\u8A8D\u8B58"
+  - key: GPS_HUB_HOW_3
+    english: GPS PROOF
+    japanese: "GPS\u3067\u8A3C\u660E"
+  - key: GPS_HUB_HOW_4
+    english: EARN PTS
+    japanese: "\u30DD\u30A4\u30F3\u30C8GET"
+  - key: GPS_HUB_TILE_SCREENSHOT
+    english: SCREENSHOT
+    japanese: "\u30B9\u30AF\u30B7\u30E7"
+  - key: GPS_HUB_TILE_CHECKIN
+    english: CHECK-IN
+    japanese: "\u30C1\u30A7\u30C3\u30AF\u30A4\u30F3"
+  - key: GPS_HUB_TILE_VOTE
+    english: VOTE
+    japanese: Vote
+  - key: GPS_HUB_TILE_GIFT
+    english: GIFT
+    japanese: Gift
+  - key: GPS_HUB_RECENT_ROUNDS
+    english: MY RECENT ROUNDS
+    japanese: "\u6700\u8FD1\u306E\u30E9\u30A6\u30F3\u30C9"
+  - key: GPS_HUB_TRUST_FORMAT
+    english: "\u25CF Trust {0}%"
+    japanese: "\u25CF \u4FE1\u983C\u5EA6 {0}%"
+  - key: GPS_HUB_HOLES_FORMAT
+    english: ({0} holes)
+    japanese: "({0}\u30DB\u30FC\u30EB)"
+  - key: GPS_HUB_BEST_TAG
+    english: BEST
+    japanese: "\u30D9\u30B9\u30C8"
+  - key: GPS_HUB_NAV_HOME
+    english: HOME
+    japanese: "\u30DB\u30FC\u30E0"
+  - key: GPS_HUB_NAV_ROUNDS
+    english: ROUNDS
+    japanese: "\u30E9\u30A6\u30F3\u30C9"
+  - key: GPS_HUB_NAV_GIFT
+    english: GIFT
+    japanese: Gift
+  - key: GPS_HUB_NAV_PROFILE
+    english: PROFILE
+    japanese: "\u30D7\u30ED\u30D5\u30A3\u30FC\u30EB"
+  - key: GPS_HUB_DATE_TODAY
+    english: today
+    japanese: "\u4ECA\u65E5"
+  - key: GPS_HUB_DATE_YESTERDAY
+    english: yesterday
+    japanese: "\u6628\u65E5"
+  - key: GPS_HUB_DATE_DAYS_AGO
+    english: '{0} days ago'
+    japanese: "{0}\u65E5\u524D"
+  - key: GPS_HUB_DATE_WEEKS_AGO
+    english: '{0} weeks ago'
+    japanese: "{0}\u9031\u9593\u524D"

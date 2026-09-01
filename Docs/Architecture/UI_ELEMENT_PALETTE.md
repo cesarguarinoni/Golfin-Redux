@@ -21,6 +21,18 @@ from the Order-610 card rebuild — see `Docs/Reports/POSTMORTEM_general_shop_ui
 | Atom | Path | GUID | Use for | Seen in |
 |---|---|---|---|---|
 | Navy card panel | `Assets/Art/HoleSelectScreen/Background - Next Hole.png` | `d162244f2dd5e8646afef2518d902a8e` | dark rounded card / list-item / panel background | Hole Select cards, stamina-shop cards + menu rows |
+| **Pop-up panel (silver-edged navy)** | `Assets/Art/HomeScreen/Next Hole Panel.png` | `3663aafeba2bd1f42a04eabf9d34c220` | the Figma **`Pop-up`** panel style (`4192:31365`): `#133453→#091B33` gradient, 3px `#FFF→#C0C6CE` gradient stroke, drop shadow. 1020×470, **9-sliced border 64** → set `pixelsPerUnitMultiplier = 64 / targetRadius` (1.28 for r=50, 2.0 for r=32). See the drawn-body note below. | Home Next Hole panel; every GPS-hub panel (hero, how-it-works strip, action tiles, list panels) |
+
+> **⚠️ This sprite draws INSIDE its RectTransform** (`gps_hub_entry`, 2026-09-01). Its drop shadow is
+> baked into the slice border: the SOLID BODY is 980×430 of the 1020×470 sprite — margins **L20 R20
+> T10 B30 sprite-px**, which scale by `effectiveBorder / 64`. At r=50 that is L/R 15.6, T 7.8, **B
+> 23.4 UI px**. A Figma node's box is the *drawn* panel, so build the rect as `node + inset` and shift
+> the panel up-left by (L, T); otherwise the last row of content is crossed by the bottom border while
+> a plain RectTransform containment check still says "inside". Worked example + a re-runnable audit:
+> `Docs/Specs/Active/gps_hub_entry/reference/nodes/GpsHubScreen_geometry.json` (`inset_rule`).
+>
+> **Circles:** `S_PillStadium.png` at a SQUARE size with `Image.Type.Simple` is a perfect circle —
+> that is how the GPS hub draws its avatar discs and icon rings, rather than importing a new ellipse.
 
 ## Pills & containers
 | Atom | Path | GUID | Use for | Seen in |

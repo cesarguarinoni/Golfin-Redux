@@ -90,6 +90,22 @@ namespace Golfin.Gps
         [JsonProperty("client_platform")] public string ClientPlatform;
         [JsonProperty("points")]          public int? Points;
 
+        // ── Score columns, written by score.py:206-230 (gps_hub_entry §3) ──
+        //
+        // Only a SCORE SUBMIT writes these; a bare check-in leaves every one null, which is why
+        // Score is nullable rather than 0. GET /score/history returns rows carrying them, and the
+        // GPS hub's MY RECENT ROUNDS panel renders exactly these four.
+        //
+        // ⚠️ There is NO `par` on this row, so a "+N vs par" cannot be computed from it. The hub
+        // shows the hole count instead — see gps_hub_entry's § Figma Fidelity, Friends' Rounds row.
+        [JsonProperty("score")]           public int? Score;
+        /// <summary>"18" / "9" — how many holes the score covers, as free text from the app.</summary>
+        [JsonProperty("score_type")]      public string ScoreType;
+        /// <summary>"manual" / "ocr" — how the score reached the server.</summary>
+        [JsonProperty("input_method")]    public string InputMethod;
+        /// <summary>The course as the player typed/OCR'd it; may differ from <see cref="VenueName"/>.</summary>
+        [JsonProperty("course_name")]     public string CourseName;
+
         public override string ToString() => $"ActivityDto #{Id} {VenueName} ({Status})";
     }
 }

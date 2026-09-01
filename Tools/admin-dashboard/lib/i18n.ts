@@ -552,8 +552,8 @@ export const DICT = {
     ja: "行を探すための管理用の名前。クライアントには送られず、プレイヤーにも表示されない。プレイヤーが見る文言はすべて画像に焼き込む。",
   },
   "ban.linkHint": {
-    en: "Opens in the device browser. Only {hosts} — the client ships its own copy of that list, so a new host needs a client release, not a dashboard change. Leave empty for an informational banner: the slot is then not tappable.",
-    ja: "端末のブラウザで開く。許可されるのは {hosts} のみ。クライアント側も同じ一覧を持つため、ホストの追加にはダッシュボードではなくクライアントのリリースが必要。告知だけのバナーは空のままにすると、タップできなくなる。",
+    en: "Opens in the device browser. Only {hosts} — the client ships its own copy of that list, so a new host needs a client release, not a dashboard change. Or one of the in-app routes {routes}, which opens a screen inside the game instead of a browser. Leave empty for an informational banner: the slot is then not tappable.",
+    ja: "端末のブラウザで開く。許可されるのは {hosts} のみ。クライアント側も同じ一覧を持つため、ホストの追加にはダッシュボードではなくクライアントのリリースが必要。またはアプリ内ルート {routes} を指定すると、ブラウザではなくゲーム内の画面が開く。告知だけのバナーは空のままにすると、タップできなくなる。",
   },
   "ban.assignedHint": {
     en: "Schedule and sort order do not apply — each tournament's own window decides when its strip is on screen, and a tournament shows exactly the one banner it is assigned in the Tournaments panel. Active is still the kill switch: switching this off removes it from every tournament using it, at once.",
