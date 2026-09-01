@@ -5,6 +5,40 @@
 
 ---
 
+## ✅ DONE (pending Cesar) — `publish_blocked_catalogs` (2026-09-01) · both blocked publishes unblocked
+
+**Two catalogs could not be published from the admin, and all 18 errors were false.**
+`mission_loadouts` reported 17: the supplied rule compared a mask token to the raw `clubs.type`
+column, so `Iron7`, `Iron9`, `AW` and `PW` were each "a club nobody makes". `gacha_pools` reported
+1: rule 21 (the default ball is never a prize) fired on `psc1_ball_golfin` — a row Cesar had
+already DEACTIVATED, which is the only remedy the rule leaves and one it then refused. Version
+history dates it exactly: Cesar published that deactivation as `gacha_pools v2` at 2026-08-31
+10:54 UTC, and rule 21 landed at 11:56 UTC — one hour later, permanently blocking the next publish.
+
+**Fixing the first uncovered a real gameplay bug.** `OWN_NO_IRONS` said `ban:Iron7,Iron9` — the two
+iron MODELS the design workbook knew — so mission 24 *"No Irons Allowed / アイアン禁止"* let 96 of
+the 114 shipped irons (Iron 4/5/6/8) play. Proven live in play mode: with the real save's bag, which
+holds an **Iron 4 GOLFIN**, the production resolver returned 7 clubs including that iron under the
+old mask and 6 clubs with no iron under `ban:Iron`.
+
+**One grammar, written twice, with a fixture that proves the two agree.** `LoadoutTokens.cs`
+(runtime) and `loadoutTokens.ts` (validator) both implement it; `Iron` is now a FAMILY token and
+`IronN` reads an ANCHORED loft (`^Iron <N>` in the name, `^club_iron<N>` in the id) rather than
+asking whether id+name "contains 7" — `Iron 5 X7` was a 7-iron under the old probe. Over the
+shipped 114 irons old and new agree exactly, so nothing that ships today moves.
+`Tools/content/tests/loadout_tokens_fixture.csv` is read by vitest AND an EditMode fixture;
+corrupting one row turns both red (verified, then reverted). Ban masks are now validated too:
+an unknown token, or a ban that reaches zero active clubs, blocks the publish.
+
+**286 vitest / 11 files · EditMode 2209 passed, 0 failed, 3 pre-existing skips · Cloudflare
+`33d07d75-705c-404d-9ad3-624cf10e8ed9`, live admin footer `bbf9996e3` · `mission_loadouts` v1 → v2
+· `export_content.py --check` clean.** `gacha_pools` was not re-published: it already sits at v2
+with drafts matching published, so the fix is proven on the live draft rows instead (1 error → 0).
+`§7`'s in-round screenshot was not taken — mission 24 is behind `unlock=clear:23` and `Tab_PRO` is
+non-interactable on this save; the resolver A/B above stands in its place.
+
+---
+
 ## ✅ DONE — `score_upload_flow` (2026-09-01) · the first real PLAYLIFE feature
 
 **A player can photograph a scorecard and have it become points and Trust, inside the game.** One
