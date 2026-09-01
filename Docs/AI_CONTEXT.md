@@ -5,6 +5,92 @@
 
 ---
 
+## ✅ DONE — `score_upload_flow` (2026-09-01) · the first real PLAYLIFE feature
+
+**A player can photograph a scorecard and have it become points and Trust, inside the game.** One
+`ScreenId.ScoreUpload` — one prefab, six step roots, a `ScoreUploadFlowController` state machine —
+built at node-exact geometry from the seven Figma frames (33/33 measured sites PASS) on the GPS-hub
+atoms. `Golfin.Gps` gains `RecognitionService` (`/recognition/analyze`, 90 s timeout for that call
+only, image downscaled ≤1600 px / q80) and `ScoreService` (`/score/submit` = the screen's request
+with `GpsScoreAttachment.ToJson()` merged **over** it, 400/429 mapped, in-flight latch). The two hub
+affordances that had been inert since `gps_hub_entry` — the camera centre button and the SCREENSHOT
+tile — now open it. 82 localization rows EN+JA, published (`texts` v24), `--check` clean.
+
+**Driven end to end against the LIVE API from Editor play mode, through the real widgets' own
+`onClick`.** AI read `92 / TOKYO GOLF CLUB / 18 / par 72 / conf 0.98` off a real card in 1.8 s;
+`/venue/list` returned 60 courses; the post came back `points_earned 50` and the RP pill moved
+6,938 → 6,988 in-frame; a double-tapped POST produced exactly one request; the 400 path rendered the
+server's own `スコアが低すぎます (最小 25)`. Twelve 1170×2532 frames in the spec folder.
+
+**Four defects, each found by running it rather than reading it:**
+1. **The iOS build was broken** — `WebCamTexture` refuses to build with an empty
+   `cameraUsageDescription`, and the NativeCamera plugin writes the plist in a *post*-process hook.
+2. **A hand-picked venue never reached the wire** — it lived on the draft while the *attachment*
+   owns `venue_id` on the body.
+3. The "no course nearby" dot stayed green (two objects, one state).
+4. **`UnityClientPlatformProbe` called the Simulator `ios`.** `gps_trust_core` inferred it from
+   `SystemInfo.deviceModel`, on the documented assumption that the simulator reports the host CPU.
+   On Apple Silicon it reports `iPhone14,7` — the hardware identifier — so **every simulator build
+   was walking past the server's simulator Trust penalty**. Now keyed off the `SIMULATOR_*`
+   environment variables plus the GPU name, pinned by a test carrying the measured values.
+
+**iOS Simulator: `** BUILD SUCCEEDED **`,** installed and booted on iPhone 14 / iOS 18.6; all three
+plist strings read back off the *built* `Info.plist`; the boot log prints `… -> ios-simulator`.
+**Not proven:** the native library-picker sheet — a fresh install boots to LOGIN (`DevAutoSignIn` is
+Editor-only) and I do not enter passwords. The sim is booted with the build installed; one sign-in
+closes it. **2205 EditMode tests, 0 fail, 3 pre-existing skips.**
+
+All seven prod test rounds (`activities` 29–35) and their `points_transactions`, `feed_items` and
+telemetry rows are deleted and the profile is back to the `gps_hub_entry` baseline (6,838 pts,
+0 rounds, `best_score` null, trust 0) — SQL quoted in the report.
+
+**Approved by Cesar after a fidelity rework** he sent it back for twice. The rework found one
+root cause behind most of it: the builder's `A(colour, alpha)` solved the linear-vs-sRGB
+translucency correction by dropping the `a·F` term, which is exact for a BLACK overlay and
+maximally wrong for a white one — it inflated every light chip's alpha ~2x where the correct solve
+shrinks it ~2.7x. Replaced with `a' = (lin(T) - lin(B)) / (lin(F) - lin(B))`, which needs the
+backdrop, so `A()` now takes one and the F≈0 case is a separate `ADark()`. Same bug fixed in the
+sprite baker. Swept every site rather than the reported ones (PIPELINE_HARDENING §22): the trust
+track went +78/+60/+77 -> +1/-7/0, the hole badges +89/+76/+65 -> +15/+7/+1, the steppers from a
+solid puck to the node's ring.
+
+Two more shapes fell out of the same sweep: three circular badges (GPS marker, posted star, the
+four share discs) were built as accent tints instead of the node's navy-disc-in-a-gold-ring, and
+three GPS icons carried a 230-px corner artifact from the earlier alpha recovery — found by
+connected-component analysis over all eight, not by eye. Plus: the main button was a constant
+1.122x too wide on every screen (label 66 -> 59, calibrated against the render), the trust bar's
+fill used `Image.Type.Filled` which silently discards 9-slicing and turned the cap into a wedge
+(now width-driven), step 3's score cells now carry the node's exact score-vs-par colouring
+(`HoleRowView.ColourFor`), and two real bugs surfaced: the buttons kept saying RETRY after a
+SUCCESSFUL retry, and the "23rd round" pill could never appear (the builder hid the pill, the
+controller only toggled its child label).
+
+Full-frame mean |ΔRGB| vs the node renders, top bar excluded: **3.2 / 8.7 / 7.0 / 6.4 / 13.2 / 5.9**
+(was 3.2 / 14.3 / 9.7 / 10.8 / 14.3 / 7.2). Step 5 is the outlier and it is not layout — its
+background PHOTO measures 20.7 where every other screen is under 2.3, because the node's image is
+not in the project (all 335 candidates scored; nearest is `HoleSelectScreen/Background.png` at
+22.1 vs the spec-mapped `MissionsBackground.png` at 30.0). Left as the spec mapped it.
+
+**The same fixes were then run on the GPS Hub**, which had the identical defect: every panel used
+the opaque `Next Hole Panel` sprite where nodes `14012:32489` / `14012:98859` draw
+`rgba(19,52,83,0.6)` -> `rgba(9,27,51,0.6)` with a 3px white border. Six sprites baked by a new
+`Docs/Scripts/make_gps_hub_panels.py` (fitted per panel — one shared fit measured worse, 25.1 vs
+22.6), hub dE 27.4 -> 22.6 with its background matching at 0.9. MY RECENT ROUNDS no longer hides
+itself at zero rows; it shows a `GPS_HUB_NO_ROUNDS` empty state. Recent Gifts and Live Votes still
+hide with no data — the same call, not yet revisited.
+
+Localization published to `texts` **v25** (793 rows): the two new keys plus two rows edited after
+v24 that would otherwise have shipped stale. `--check` clean, `LocalizationTextTable.asset`
+regenerated.
+
+Report: `Docs/Specs/Completed/score_upload_flow/IMPLEMENTER_REPORT.md`.
+Still out of scope: the native share sheet, creating a VOTE, per-hole par/yards, maps, check-in,
+Android. Known gap this exposed but did not fix: `activities` has no `score` column, so the hub's
+MY RECENT ROUNDS renders `—` in every score cell (`/score/history` is a raw `select("*")`).
+
+---
+
+
 ## 🟢 BUILT, AWAITING CESAR — `ball_data_wiring` (2026-09-01) · balls 2 rows → 20
 
 **The ball catalog is live at 20 rows with a `rarity` column, end to end.** `Balls.csv` replaced

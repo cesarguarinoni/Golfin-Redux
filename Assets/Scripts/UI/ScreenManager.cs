@@ -35,6 +35,9 @@ namespace GolfinRedux.UI
         GachaPrizes,
         // gps_hub_entry — GPS / PLAYLIFE hub (Figma 14011:32819), reached from the Home promo banner
         GpsHub,
+        // score_upload_flow — Figma 14022:32576…14024:101792. ONE screen, six step roots toggled by
+        // ScoreUploadFlowController; reached from the hub's camera centre button and SCREENSHOT tile.
+        ScoreUpload,
         // Settings removed - it's an overlay, not a screen
 
         // Order: login_signup_screens — account auth gate (Phase 1 — UI only, no backend)
@@ -88,6 +91,9 @@ namespace GolfinRedux.UI
         // gps_hub_entry — GPS / PLAYLIFE hub. Draws its OWN bottom nav, so it is deliberately
         // absent from the showBars list below and shown with ShowTopBarOnly() instead.
         [SerializeField] private GameObject _gpsHubScreen;
+        // score_upload_flow — the six-step score upload. Same top-bar-only shape as the hub: it
+        // carries the hub's own GPS nav bar inside its prefab, so the shared bottom nav stays hidden.
+        [SerializeField] private GameObject _scoreUploadScreen;
         // _settingsScreen removed - Settings is an overlay managed by SettingsController, not ScreenManager
 
         // Order: login_signup_screens — account auth gate screens
@@ -497,6 +503,10 @@ namespace GolfinRedux.UI
             if (_gpsHubScreen != null)
                 _gpsHubScreen.SetActive(screenId == ScreenId.GpsHub);
 
+            // score_upload_flow — the six-step score upload
+            if (_scoreUploadScreen != null)
+                _scoreUploadScreen.SetActive(screenId == ScreenId.ScoreUpload);
+
             // Order: login_signup_screens — account auth gate (excluded from showBars)
             if (_loginScreen != null)
                 _loginScreen.SetActive(screenId == ScreenId.Login);
@@ -562,7 +572,8 @@ namespace GolfinRedux.UI
             // bar is shared (RP + gear + the "GOLFIN GPS" title), and the SHARED bottom nav is
             // hidden because the hub draws its own GPS nav bar inside its prefab. Showing both
             // would stack two nav bars at the bottom of one screen.
-            bool isGpsHub = screenId == ScreenId.GpsHub;
+            // score_upload_flow joins it for the same reason — one group, not two rules.
+            bool isGpsScreen = screenId == ScreenId.GpsHub || screenId == ScreenId.ScoreUpload;
 
             if (Golfin.UI.PersistentUIManager.Instance != null)
             {
@@ -581,13 +592,14 @@ namespace GolfinRedux.UI
                     // Top bar visible (RP balance + gear); bottom nav hidden (replaced by instruction block).
                     Golfin.UI.PersistentUIManager.Instance.ShowTopBarOnly();
                 }
-                else if (isGpsHub)
+                else if (isGpsScreen)
                 {
                     // HighlightScreen is what resolves the centre title through NavTitleKeyFor;
-                    // it returns early on a screen with no bottom-nav pillar, which GpsHub is,
-                    // AFTER the title has already been applied.
+                    // it returns early on a screen with no bottom-nav pillar, which both of these
+                    // are, AFTER the title has already been applied. Passing screenId (not a
+                    // hardcoded GpsHub) is what gives ScoreUpload its own title.
                     Golfin.UI.PersistentUIManager.Instance.ShowTopBarOnly();
-                    Golfin.UI.PersistentUIManager.Instance.HighlightScreen(ScreenId.GpsHub);
+                    Golfin.UI.PersistentUIManager.Instance.HighlightScreen(screenId);
                 }
                 else if (showBars)
                 {

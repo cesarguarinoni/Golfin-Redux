@@ -56,6 +56,32 @@ namespace Golfin.Gps.Tests
         }
 
         [Test]
+        public void IsSimulator_TheAppleSiliconSimulatorLooksLikeHardwareAndIsCaughtByTheEnvironment()
+        {
+            // Measured on the iPhone 14 simulator, Unity 6000.3.9f1, iOS 18.6
+            // (score_upload_flow, Docs/Diagnostics/_capture/score_upload/sim_probe.log):
+            //   deviceModel='iPhone14,7'  gpu='Apple iOS simulator GPU'
+            //   SIMULATOR_UDID='CB1B2849-…'  SIMULATOR_MODEL_IDENTIFIER='iPhone14,7'
+            // The model alone says "hardware" — which is exactly why the model alone is not the rule.
+            Assert.IsTrue(UnityClientPlatformProbe.IsSimulator(
+                "CB1B2849-80AC-4E35-87DB-7810B690442C", "iPhone14,7",
+                "Apple iOS simulator GPU", "iPhone14,7"));
+
+            // Real hardware: no SIMULATOR_* in the environment, a real GPU name, a real model.
+            Assert.IsFalse(UnityClientPlatformProbe.IsSimulator(
+                null, null, "Apple A16 GPU", "iPhone15,2"));
+
+            // Each signal on its own is enough.
+            Assert.IsTrue(UnityClientPlatformProbe.IsSimulator(null, null, "Apple iOS simulator GPU", "iPhone14,7"));
+            Assert.IsTrue(UnityClientPlatformProbe.IsSimulator(null, "iPhone14,7", "Apple A16 GPU", "iPhone14,7"));
+
+            // Last resort, with the environment stripped and no GPU hint: an unrecognised model
+            // resolves to "simulator", which costs Trust rather than granting it.
+            Assert.IsTrue(UnityClientPlatformProbe.IsSimulator(null, null, "", "x86_64"));
+            Assert.IsFalse(UnityClientPlatformProbe.IsSimulator(null, null, "", "iPad13,1"));
+        }
+
+        [Test]
         public void PlatformProbe_ReportsEditorInTheEditor()
         {
             Assert.AreEqual("editor", new UnityClientPlatformProbe().Label());

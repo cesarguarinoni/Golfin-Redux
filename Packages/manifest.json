@@ -56,7 +56,9 @@
     "com.unity.modules.video": "1.0.0",
     "com.unity.modules.vr": "1.0.0",
     "com.unity.modules.wind": "1.0.0",
-    "com.unity.modules.xr": "1.0.0"
+    "com.unity.modules.xr": "1.0.0",
+    "com.yasirkula.nativecamera": "https://github.com/yasirkula/UnityNativeCamera.git#beb6cec17b9fb3ee324a337222b76a314321d3b6",
+    "com.yasirkula.nativegallery": "https://github.com/yasirkula/UnityNativeGallery.git#ad95306866219140e1e8067788b4427e67abe747"
   },
   "scopedRegistries": [
     {

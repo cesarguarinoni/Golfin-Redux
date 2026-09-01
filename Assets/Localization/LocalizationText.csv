@@ -717,3 +717,91 @@ GPS_HUB_DATE_TODAY,today,今日
 GPS_HUB_DATE_YESTERDAY,yesterday,昨日
 GPS_HUB_DATE_DAYS_AGO,{0} days ago,{0}日前
 GPS_HUB_DATE_WEEKS_AGO,{0} weeks ago,{0}週間前
+SCORE_UPLOAD_TITLE,SCORE UPLOAD,スコアアップロード
+SCORE_POSTED_TITLE,SCORE POSTED,スコア投稿完了
+SU_STEP_CAPTURE,CAPTURE,撮影
+SU_STEP_READING,AI READING,AI認識
+SU_STEP_EDIT,EDIT SCORE,スコア編集
+SU_STEP_GPS,GPS PROOF,GPS証明
+SU_STEP_CONFIRM,CONFIRM,確認
+SU_BACK,‹ BACK,‹ 戻る
+SU_CLOSE,× CLOSE,× 閉じる
+SU_ALIGN_HINT,Align the scorecard inside the frame,枠内にスコアカードを合わせてください
+SU_SRC_CAMERA,CAMERA,カメラ
+SU_SRC_LIBRARY,LIBRARY,ライブラリ
+SU_SRC_MANUAL,MANUAL ENTRY,手入力
+SU_READING,Reading your scorecard...,スコアカードを読み取っています…
+SU_READING_SUB,Usually takes a few seconds,通常は数秒で完了します
+SU_READ_FAIL,Could not read the scorecard,スコアが認識できませんでした
+SU_ROW_TOTAL,TOTAL SCORE,合計スコア
+SU_SUM_TOTAL,TOTAL,合計
+SU_ROW_OUT,OUT,アウト
+SU_ROW_IN,IN,イン
+SU_ROW_PUTTS,PUTTS,パット
+SU_ROW_COURSE,COURSE,コース
+SU_ROW_CONFIDENCE,CONFIDENCE,認識精度
+SU_CONF_HIGH,✓ HIGH,✓ 高
+SU_CONF_MED,MEDIUM,中
+SU_CONF_LOW,LOW,低
+SU_BTN_CONFIRM_SCORE,CONFIRM SCORE,スコアを確認
+SU_BTN_RETAKE,RETAKE,撮り直す
+SU_BTN_RETRY,RETRY,再試行
+SU_BTN_ENTER_MANUALLY,ENTER MANUALLY,手入力する
+SU_HOLES_18,18 HOLES,18ホール
+SU_HOLES_9,9 HOLES,9ホール
+SU_SECTION_OUT,OUT,アウト
+SU_SECTION_IN,IN,イン
+SU_TOTAL_FROM_HOLES,Total is the sum of the holes you entered,合計は入力したホールの合算です
+SU_BTN_VERIFY_GPS,VERIFY WITH GPS,GPSで証明する
+SU_GPS_ON,● GPS ON,● GPS ON
+SU_GPS_OFF,● GPS OFF,● GPS OFF
+SU_LOCATING,Locating you...,現在地を取得しています…
+SU_ACCURACY_FMT,Locating you… accuracy ±{0} m,現在地を取得中… 精度 ±{0} m
+SU_COURSE_FOUND,Golf course detected,ゴルフ場を検出しました
+SU_COURSE_NONE,No golf course nearby,近くにゴルフ場が見つかりません
+SU_ADDRESS_UNKNOWN,Address unavailable,住所は取得できません
+SU_WITHIN_FMT,Within {0} m of your position,現在地から {0} m 以内
+GPS_HUB_NO_ROUNDS,No rounds yet — upload a scorecard to start,まだラウンドがありません — スコアカードをアップロードしましょう
+SU_HOLE_PAR_FMT,Par {0},パー {0}
+SU_FACT_PAR,PAR,パー
+SU_FACT_YARDS,YARDS,ヤード
+SU_FACT_HOLES,HOLES,ホール
+SU_BTN_CONFIRM_COURSE,CONFIRM THIS COURSE,このコースで確定
+SU_BTN_CHOOSE_MANUAL,CHOOSE MANUALLY,手動で選ぶ
+SU_RETRY_GPS,Retry GPS,GPSを再試行
+SU_PICK_COURSE,PICK A COURSE,コースを選択
+SU_SEARCH_COURSE,Search courses,コース名で検索
+SU_NO_COURSE,Post without a course,コースなしで投稿
+SU_TRUST_LEVEL,TRUST LEVEL,信頼度
+SU_CHK_SCREENSHOT,Scorecard verified by AI,AIがスコアカードを認証
+SU_CHK_GPS,GPS proof recorded,GPS証明を記録
+SU_CHK_FRIEND,Friend confirmation (pending),友達の確認（未実装）
+SU_POINTS_EARNED,POINTS EARNED,獲得ポイント
+SU_POINTS_FMT,+{0} pts,+{0} pts
+SU_BTN_POST_SCORE,POST SCORE,スコアを投稿
+SU_POSTED,SCORE POSTED!,スコアを投稿しました！
+SU_POSTED_PTS_FMT,+{0} activity pts earned,Activity pts +{0} を獲得
+SU_SHARE_BRAND,GOLFIN GPS,GOLFIN GPS
+SU_SHARE_TRUST_FMT,TRUST {0}%,信頼度 {0}%
+SU_ROUND_N_FMT,★ {0}{1} round,★ {0}ラウンド目
+SU_VOTE_PROMPT,Create a VOTE about this round?,このラウンドでVOTEを作成しますか？
+SU_VOTE_QUESTION_DEFAULT,"""Will I break 90 next round?""",「次のラウンドで90を切れる？」
+SU_BTN_CREATE_VOTE,CREATE VOTE,VOTEを作成
+SU_BTN_SKIP,SKIP,スキップ
+SU_SHARE_TO,SHARE TO,シェア
+SU_SHARE_COPY,Copy link,リンクをコピー
+SU_BTN_BACK_HOME,BACK TO HOME,ホームに戻る
+SU_ERR_SCORE_RANGE,That score is outside the allowed range.,スコアが入力可能な範囲外です。
+SU_ERR_RATE_LIMIT,You have posted too many scores in the last 24 hours.,24時間以内の投稿数が上限に達しました。
+SU_ERR_GENERIC,Could not post the score. Check your connection and try again.,スコアの投稿に失敗しました。通信環境を確認して、もう一度お試しください。
+SU_ERR_CAMERA_PERM,Camera access is needed to photograph a scorecard.,スコアカードの撮影にはカメラの許可が必要です。
+SU_ERR_LIBRARY_PERM,Photo library access is needed to pick a screenshot.,スクリーンショットの選択には写真へのアクセス許可が必要です。
+GPS_ERR_SERVICE_DISABLED,Location Services are off. Turn them on in Settings.,端末の位置情報サービスがOFFです。設定アプリからONにしてください。
+GPS_ERR_PERMISSION_DENIED,Location permission is required.,位置情報の許可が必要です。
+GPS_ERR_PERMISSION_DENIED_FOREVER,"Location is denied. Set GOLFIN's location to ""While Using the App"" in Settings.",位置情報が拒否されています。設定アプリから GOLFIN の位置情報を「このAppの使用中のみ」に設定してください。
+GPS_ERR_TIMEOUT,Getting your location is taking a while. Try again where the signal is better.,位置情報の取得に時間がかかっています。電波の良い場所で再度お試しください。
+GPS_ERR_UNKNOWN,Could not get your location.,位置情報の取得に失敗しました。
+GPS_HUB_RECENT_GIFTS,RECENT GIFTS,最近のギフト
+GPS_HUB_LIVE_VOTES,LIVE VOTES,開催中の投票
+GPS_HUB_NO_GIFTS,No gifts yet,まだギフトはありません
+GPS_HUB_NO_VOTES,No votes yet,まだ投票はありません

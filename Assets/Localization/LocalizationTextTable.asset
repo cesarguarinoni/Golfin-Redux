@@ -2301,3 +2301,272 @@ MonoBehaviour:
   - key: GPS_HUB_DATE_WEEKS_AGO
     english: '{0} weeks ago'
     japanese: "{0}\u9031\u9593\u524D"
+  - key: SCORE_UPLOAD_TITLE
+    english: SCORE UPLOAD
+    japanese: "\u30B9\u30B3\u30A2\u30A2\u30C3\u30D7\u30ED\u30FC\u30C9"
+  - key: SCORE_POSTED_TITLE
+    english: SCORE POSTED
+    japanese: "\u30B9\u30B3\u30A2\u6295\u7A3F\u5B8C\u4E86"
+  - key: SU_STEP_CAPTURE
+    english: CAPTURE
+    japanese: "\u64AE\u5F71"
+  - key: SU_STEP_READING
+    english: AI READING
+    japanese: "AI\u8A8D\u8B58"
+  - key: SU_STEP_EDIT
+    english: EDIT SCORE
+    japanese: "\u30B9\u30B3\u30A2\u7DE8\u96C6"
+  - key: SU_STEP_GPS
+    english: GPS PROOF
+    japanese: "GPS\u8A3C\u660E"
+  - key: SU_STEP_CONFIRM
+    english: CONFIRM
+    japanese: "\u78BA\u8A8D"
+  - key: SU_BACK
+    english: "\u2039 BACK"
+    japanese: "\u2039 \u623B\u308B"
+  - key: SU_CLOSE
+    english: "\xD7 CLOSE"
+    japanese: "\xD7 \u9589\u3058\u308B"
+  - key: SU_ALIGN_HINT
+    english: Align the scorecard inside the frame
+    japanese: "\u67A0\u5185\u306B\u30B9\u30B3\u30A2\u30AB\u30FC\u30C9\u3092\u5408\u308F\u305B\u3066\u304F\u3060\u3055\u3044"
+  - key: SU_SRC_CAMERA
+    english: CAMERA
+    japanese: "\u30AB\u30E1\u30E9"
+  - key: SU_SRC_LIBRARY
+    english: LIBRARY
+    japanese: "\u30E9\u30A4\u30D6\u30E9\u30EA"
+  - key: SU_SRC_MANUAL
+    english: MANUAL ENTRY
+    japanese: "\u624B\u5165\u529B"
+  - key: SU_READING
+    english: Reading your scorecard...
+    japanese: "\u30B9\u30B3\u30A2\u30AB\u30FC\u30C9\u3092\u8AAD\u307F\u53D6\u3063\u3066\u3044\u307E\u3059\u2026"
+  - key: SU_READING_SUB
+    english: Usually takes a few seconds
+    japanese: "\u901A\u5E38\u306F\u6570\u79D2\u3067\u5B8C\u4E86\u3057\u307E\u3059"
+  - key: SU_READ_FAIL
+    english: Could not read the scorecard
+    japanese: "\u30B9\u30B3\u30A2\u304C\u8A8D\u8B58\u3067\u304D\u307E\u305B\u3093\u3067\u3057\u305F"
+  - key: SU_ROW_TOTAL
+    english: TOTAL SCORE
+    japanese: "\u5408\u8A08\u30B9\u30B3\u30A2"
+  - key: SU_SUM_TOTAL
+    english: TOTAL
+    japanese: "\u5408\u8A08"
+  - key: SU_ROW_OUT
+    english: OUT
+    japanese: "\u30A2\u30A6\u30C8"
+  - key: SU_ROW_IN
+    english: IN
+    japanese: "\u30A4\u30F3"
+  - key: SU_ROW_PUTTS
+    english: PUTTS
+    japanese: "\u30D1\u30C3\u30C8"
+  - key: SU_ROW_COURSE
+    english: COURSE
+    japanese: "\u30B3\u30FC\u30B9"
+  - key: SU_ROW_CONFIDENCE
+    english: CONFIDENCE
+    japanese: "\u8A8D\u8B58\u7CBE\u5EA6"
+  - key: SU_CONF_HIGH
+    english: "\u2713 HIGH"
+    japanese: "\u2713 \u9AD8"
+  - key: SU_CONF_MED
+    english: MEDIUM
+    japanese: "\u4E2D"
+  - key: SU_CONF_LOW
+    english: LOW
+    japanese: "\u4F4E"
+  - key: SU_BTN_CONFIRM_SCORE
+    english: CONFIRM SCORE
+    japanese: "\u30B9\u30B3\u30A2\u3092\u78BA\u8A8D"
+  - key: SU_BTN_RETAKE
+    english: RETAKE
+    japanese: "\u64AE\u308A\u76F4\u3059"
+  - key: SU_BTN_RETRY
+    english: RETRY
+    japanese: "\u518D\u8A66\u884C"
+  - key: SU_BTN_ENTER_MANUALLY
+    english: ENTER MANUALLY
+    japanese: "\u624B\u5165\u529B\u3059\u308B"
+  - key: SU_HOLES_18
+    english: 18 HOLES
+    japanese: "18\u30DB\u30FC\u30EB"
+  - key: SU_HOLES_9
+    english: 9 HOLES
+    japanese: "9\u30DB\u30FC\u30EB"
+  - key: SU_SECTION_OUT
+    english: OUT
+    japanese: "\u30A2\u30A6\u30C8"
+  - key: SU_SECTION_IN
+    english: IN
+    japanese: "\u30A4\u30F3"
+  - key: SU_TOTAL_FROM_HOLES
+    english: Total is the sum of the holes you entered
+    japanese: "\u5408\u8A08\u306F\u5165\u529B\u3057\u305F\u30DB\u30FC\u30EB\u306E\u5408\u7B97\u3067\u3059"
+  - key: SU_BTN_VERIFY_GPS
+    english: VERIFY WITH GPS
+    japanese: "GPS\u3067\u8A3C\u660E\u3059\u308B"
+  - key: SU_GPS_ON
+    english: "\u25CF GPS ON"
+    japanese: "\u25CF GPS ON"
+  - key: SU_GPS_OFF
+    english: "\u25CF GPS OFF"
+    japanese: "\u25CF GPS OFF"
+  - key: SU_LOCATING
+    english: Locating you...
+    japanese: "\u73FE\u5728\u5730\u3092\u53D6\u5F97\u3057\u3066\u3044\u307E\u3059\u2026"
+  - key: SU_ACCURACY_FMT
+    english: "Locating you\u2026 accuracy \xB1{0} m"
+    japanese: "\u73FE\u5728\u5730\u3092\u53D6\u5F97\u4E2D\u2026 \u7CBE\u5EA6 \xB1{0}
+      m"
+  - key: SU_COURSE_FOUND
+    english: Golf course detected
+    japanese: "\u30B4\u30EB\u30D5\u5834\u3092\u691C\u51FA\u3057\u307E\u3057\u305F"
+  - key: SU_COURSE_NONE
+    english: No golf course nearby
+    japanese: "\u8FD1\u304F\u306B\u30B4\u30EB\u30D5\u5834\u304C\u898B\u3064\u304B\u308A\u307E\u305B\u3093"
+  - key: SU_ADDRESS_UNKNOWN
+    english: Address unavailable
+    japanese: "\u4F4F\u6240\u306F\u53D6\u5F97\u3067\u304D\u307E\u305B\u3093"
+  - key: SU_WITHIN_FMT
+    english: Within {0} m of your position
+    japanese: "\u73FE\u5728\u5730\u304B\u3089 {0} m \u4EE5\u5185"
+  - key: GPS_HUB_NO_ROUNDS
+    english: "No rounds yet \u2014 upload a scorecard to start"
+    japanese: "\u307E\u3060\u30E9\u30A6\u30F3\u30C9\u304C\u3042\u308A\u307E\u305B\u3093
+      \u2014 \u30B9\u30B3\u30A2\u30AB\u30FC\u30C9\u3092\u30A2\u30C3\u30D7\u30ED\u30FC\u30C9\u3057\u307E\u3057\u3087\u3046"
+  - key: SU_HOLE_PAR_FMT
+    english: Par {0}
+    japanese: "\u30D1\u30FC {0}"
+  - key: SU_FACT_PAR
+    english: PAR
+    japanese: "\u30D1\u30FC"
+  - key: SU_FACT_YARDS
+    english: YARDS
+    japanese: "\u30E4\u30FC\u30C9"
+  - key: SU_FACT_HOLES
+    english: HOLES
+    japanese: "\u30DB\u30FC\u30EB"
+  - key: SU_BTN_CONFIRM_COURSE
+    english: CONFIRM THIS COURSE
+    japanese: "\u3053\u306E\u30B3\u30FC\u30B9\u3067\u78BA\u5B9A"
+  - key: SU_BTN_CHOOSE_MANUAL
+    english: CHOOSE MANUALLY
+    japanese: "\u624B\u52D5\u3067\u9078\u3076"
+  - key: SU_RETRY_GPS
+    english: Retry GPS
+    japanese: "GPS\u3092\u518D\u8A66\u884C"
+  - key: SU_PICK_COURSE
+    english: PICK A COURSE
+    japanese: "\u30B3\u30FC\u30B9\u3092\u9078\u629E"
+  - key: SU_SEARCH_COURSE
+    english: Search courses
+    japanese: "\u30B3\u30FC\u30B9\u540D\u3067\u691C\u7D22"
+  - key: SU_NO_COURSE
+    english: Post without a course
+    japanese: "\u30B3\u30FC\u30B9\u306A\u3057\u3067\u6295\u7A3F"
+  - key: SU_TRUST_LEVEL
+    english: TRUST LEVEL
+    japanese: "\u4FE1\u983C\u5EA6"
+  - key: SU_CHK_SCREENSHOT
+    english: Scorecard verified by AI
+    japanese: "AI\u304C\u30B9\u30B3\u30A2\u30AB\u30FC\u30C9\u3092\u8A8D\u8A3C"
+  - key: SU_CHK_GPS
+    english: GPS proof recorded
+    japanese: "GPS\u8A3C\u660E\u3092\u8A18\u9332"
+  - key: SU_CHK_FRIEND
+    english: Friend confirmation (pending)
+    japanese: "\u53CB\u9054\u306E\u78BA\u8A8D\uFF08\u672A\u5B9F\u88C5\uFF09"
+  - key: SU_POINTS_EARNED
+    english: POINTS EARNED
+    japanese: "\u7372\u5F97\u30DD\u30A4\u30F3\u30C8"
+  - key: SU_POINTS_FMT
+    english: +{0} pts
+    japanese: +{0} pts
+  - key: SU_BTN_POST_SCORE
+    english: POST SCORE
+    japanese: "\u30B9\u30B3\u30A2\u3092\u6295\u7A3F"
+  - key: SU_POSTED
+    english: SCORE POSTED!
+    japanese: "\u30B9\u30B3\u30A2\u3092\u6295\u7A3F\u3057\u307E\u3057\u305F\uFF01"
+  - key: SU_POSTED_PTS_FMT
+    english: +{0} activity pts earned
+    japanese: "Activity pts +{0} \u3092\u7372\u5F97"
+  - key: SU_SHARE_BRAND
+    english: GOLFIN GPS
+    japanese: GOLFIN GPS
+  - key: SU_SHARE_TRUST_FMT
+    english: TRUST {0}%
+    japanese: "\u4FE1\u983C\u5EA6 {0}%"
+  - key: SU_ROUND_N_FMT
+    english: "\u2605 {0}{1} round"
+    japanese: "\u2605 {0}\u30E9\u30A6\u30F3\u30C9\u76EE"
+  - key: SU_VOTE_PROMPT
+    english: Create a VOTE about this round?
+    japanese: "\u3053\u306E\u30E9\u30A6\u30F3\u30C9\u3067VOTE\u3092\u4F5C\u6210\u3057\u307E\u3059\u304B\uFF1F"
+  - key: SU_VOTE_QUESTION_DEFAULT
+    english: '"Will I break 90 next round?"'
+    japanese: "\u300C\u6B21\u306E\u30E9\u30A6\u30F3\u30C9\u306790\u3092\u5207\u308C\u308B\uFF1F\u300D"
+  - key: SU_BTN_CREATE_VOTE
+    english: CREATE VOTE
+    japanese: "VOTE\u3092\u4F5C\u6210"
+  - key: SU_BTN_SKIP
+    english: SKIP
+    japanese: "\u30B9\u30AD\u30C3\u30D7"
+  - key: SU_SHARE_TO
+    english: SHARE TO
+    japanese: "\u30B7\u30A7\u30A2"
+  - key: SU_SHARE_COPY
+    english: Copy link
+    japanese: "\u30EA\u30F3\u30AF\u3092\u30B3\u30D4\u30FC"
+  - key: SU_BTN_BACK_HOME
+    english: BACK TO HOME
+    japanese: "\u30DB\u30FC\u30E0\u306B\u623B\u308B"
+  - key: SU_ERR_SCORE_RANGE
+    english: That score is outside the allowed range.
+    japanese: "\u30B9\u30B3\u30A2\u304C\u5165\u529B\u53EF\u80FD\u306A\u7BC4\u56F2\u5916\u3067\u3059\u3002"
+  - key: SU_ERR_RATE_LIMIT
+    english: You have posted too many scores in the last 24 hours.
+    japanese: "24\u6642\u9593\u4EE5\u5185\u306E\u6295\u7A3F\u6570\u304C\u4E0A\u9650\u306B\u9054\u3057\u307E\u3057\u305F\u3002"
+  - key: SU_ERR_GENERIC
+    english: Could not post the score. Check your connection and try again.
+    japanese: "\u30B9\u30B3\u30A2\u306E\u6295\u7A3F\u306B\u5931\u6557\u3057\u307E\u3057\u305F\u3002\u901A\u4FE1\u74B0\u5883\u3092\u78BA\u8A8D\u3057\u3066\u3001\u3082\u3046\u4E00\u5EA6\u304A\u8A66\u3057\u304F\u3060\u3055\u3044\u3002"
+  - key: SU_ERR_CAMERA_PERM
+    english: Camera access is needed to photograph a scorecard.
+    japanese: "\u30B9\u30B3\u30A2\u30AB\u30FC\u30C9\u306E\u64AE\u5F71\u306B\u306F\u30AB\u30E1\u30E9\u306E\u8A31\u53EF\u304C\u5FC5\u8981\u3067\u3059\u3002"
+  - key: SU_ERR_LIBRARY_PERM
+    english: Photo library access is needed to pick a screenshot.
+    japanese: "\u30B9\u30AF\u30EA\u30FC\u30F3\u30B7\u30E7\u30C3\u30C8\u306E\u9078\u629E\u306B\u306F\u5199\u771F\u3078\u306E\u30A2\u30AF\u30BB\u30B9\u8A31\u53EF\u304C\u5FC5\u8981\u3067\u3059\u3002"
+  - key: GPS_ERR_SERVICE_DISABLED
+    english: Location Services are off. Turn them on in Settings.
+    japanese: "\u7AEF\u672B\u306E\u4F4D\u7F6E\u60C5\u5831\u30B5\u30FC\u30D3\u30B9\u304COFF\u3067\u3059\u3002\u8A2D\u5B9A\u30A2\u30D7\u30EA\u304B\u3089ON\u306B\u3057\u3066\u304F\u3060\u3055\u3044\u3002"
+  - key: GPS_ERR_PERMISSION_DENIED
+    english: Location permission is required.
+    japanese: "\u4F4D\u7F6E\u60C5\u5831\u306E\u8A31\u53EF\u304C\u5FC5\u8981\u3067\u3059\u3002"
+  - key: GPS_ERR_PERMISSION_DENIED_FOREVER
+    english: Location is denied. Set GOLFIN's location to "While Using the App" in
+      Settings.
+    japanese: "\u4F4D\u7F6E\u60C5\u5831\u304C\u62D2\u5426\u3055\u308C\u3066\u3044\u307E\u3059\u3002\u8A2D\u5B9A\u30A2\u30D7\u30EA\u304B\u3089
+      GOLFIN \u306E\u4F4D\u7F6E\u60C5\u5831\u3092\u300C\u3053\u306EApp\u306E\u4F7F\u7528\u4E2D\u306E\u307F\u300D\u306B\u8A2D\u5B9A\u3057\u3066\u304F\u3060\u3055\u3044\u3002"
+  - key: GPS_ERR_TIMEOUT
+    english: Getting your location is taking a while. Try again where the signal
+      is better.
+    japanese: "\u4F4D\u7F6E\u60C5\u5831\u306E\u53D6\u5F97\u306B\u6642\u9593\u304C\u304B\u304B\u3063\u3066\u3044\u307E\u3059\u3002\u96FB\u6CE2\u306E\u826F\u3044\u5834\u6240\u3067\u518D\u5EA6\u304A\u8A66\u3057\u304F\u3060\u3055\u3044\u3002"
+  - key: GPS_ERR_UNKNOWN
+    english: Could not get your location.
+    japanese: "\u4F4D\u7F6E\u60C5\u5831\u306E\u53D6\u5F97\u306B\u5931\u6557\u3057\u307E\u3057\u305F\u3002"
+  - key: GPS_HUB_RECENT_GIFTS
+    english: RECENT GIFTS
+    japanese: "\u6700\u8FD1\u306E\u30AE\u30D5\u30C8"
+  - key: GPS_HUB_LIVE_VOTES
+    english: LIVE VOTES
+    japanese: "\u958B\u50AC\u4E2D\u306E\u6295\u7968"
+  - key: GPS_HUB_NO_GIFTS
+    english: No gifts yet
+    japanese: "\u307E\u3060\u30AE\u30D5\u30C8\u306F\u3042\u308A\u307E\u305B\u3093"
+  - key: GPS_HUB_NO_VOTES
+    english: No votes yet
+    japanese: "\u307E\u3060\u6295\u7968\u306F\u3042\u308A\u307E\u305B\u3093"

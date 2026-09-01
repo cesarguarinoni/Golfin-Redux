@@ -393,6 +393,19 @@ namespace Golfin.Net
         // every /activity/* call require a Bearer token and the server stamps user_id from it, never
         // from the body — the same posture as TelemetryEvents above.
 
+        /// <summary>
+        /// POST <c>{image_base64, sport_type?}</c> → <c>{data:{id, sport_type, extracted_data,
+        /// confidence, recognized_at, user_id, raw_response}}</c> (recognition.py:26-28, :405-414) —
+        /// Claude Vision reads a scorecard photo. <c>image_base64</c> takes a bare base64 string OR a
+        /// <c>data:image/jpeg;base64,…</c> URL; the router sniffs the media type off the prefix
+        /// (:270-290).
+        ///
+        /// ⚠️ SLOW BY NATURE. This is the one call in the app that runs an LLM, and 20–40 s is a
+        /// normal answer on a cold Fly machine — <c>Golfin.Gps.RecognitionService</c> raises the
+        /// timeout to 90 s on THIS request only, never on the shared <c>ApiClient</c>.
+        /// </summary>
+        public static string RecognitionAnalyze => BaseUrl + "/recognition/analyze";
+
         /// <summary>POST <c>{latitude, longitude}</c> → <c>{data:{venue_id, name, latitude,
         /// longitude, distance_m, created}}</c>, or <c>{data:null, message}</c> when no golf course
         /// is nearby (venue.py:246-282). THE NULL BRANCH IS A 200 AND NOT AN ERROR — see

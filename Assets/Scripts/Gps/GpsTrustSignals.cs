@@ -1,4 +1,5 @@
 // Order: gps_trust_core §3 — port of gps_trust_signals.dart (M1 mock detection, M2 simulator label).
+using System;
 using UnityEngine;
 
 namespace Golfin.Gps
@@ -54,11 +55,75 @@ namespace Golfin.Gps
         public string Label()
         {
             if (Application.platform == RuntimePlatform.IPhonePlayer)
-                return LooksLikeIosHardware(SystemInfo.deviceModel) ? Ios : IosSimulator;
+                return IsSimulator(EnvOrNull("SIMULATOR_UDID"),
+                                   EnvOrNull("SIMULATOR_MODEL_IDENTIFIER"),
+                                   SystemInfo.graphicsDeviceName,
+                                   SystemInfo.deviceModel)
+                       ? IosSimulator : Ios;
 
             if (Application.platform == RuntimePlatform.Android) return Android;
             if (Application.isEditor) return Editor;
             return Unknown;
+        }
+
+        /// <summary>
+        /// Print the resolved label ONCE at boot.
+        ///
+        /// <para>
+        /// The label decides a Trust penalty (score.py:183 docks a submit tagged
+        /// <c>ios-simulator</c>) and it is derived by INFERENCE — Unity has no
+        /// <c>isPhysicalDevice</c>, so this is INFERRED — and the inputs it infers from are worth
+        /// having on the record, since the first rule this project shipped read one of them wrong.
+        /// A guess that costs a player Trust has to be observable on the surface it runs on, and a
+        /// TestFlight build has no console to read: one line in the device log, at boot, before any
+        /// submit, is the whole cost of being able to answer "what did it think it was?".
+        /// </para>
+        /// </summary>
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+        private static void LogPlatformAtBoot()
+        {
+            Debug.Log("[UnityClientPlatformProbe] deviceModel='" + SystemInfo.deviceModel +
+                      "' os='" + SystemInfo.operatingSystem +
+                      "' gpu='" + SystemInfo.graphicsDeviceName +
+                      "' SIMULATOR_MODEL_IDENTIFIER='" + (Environment.GetEnvironmentVariable("SIMULATOR_MODEL_IDENTIFIER") ?? "<null>") +
+                      "' SIMULATOR_DEVICE_NAME='" + (Environment.GetEnvironmentVariable("SIMULATOR_DEVICE_NAME") ?? "<null>") +
+                      "' SIMULATOR_UDID='" + (Environment.GetEnvironmentVariable("SIMULATOR_UDID") ?? "<null>") +
+                      "' platform=" + Application.platform +
+                      " -> " + new UnityClientPlatformProbe().Label());
+        }
+
+        /// <summary>
+        /// The simulator rule, as a pure function so a test can pin it without an iOS build.
+        ///
+        /// <para>
+        /// Three signals, most certain first: the CoreSimulator environment variables (injected
+        /// into every process the simulator hosts, absent on a device), the software GPU's name,
+        /// and finally the model identifier — which on Apple Silicon is NOT distinguishing and is
+        /// kept only for the case where the environment is somehow stripped. That last one still
+        /// errs toward "simulator" for an unrecognised model, which is the safe direction.
+        /// </para>
+        /// </summary>
+        public static bool IsSimulator(string simulatorUdidEnv,
+                                       string simulatorModelEnv,
+                                       string graphicsDeviceName,
+                                       string deviceModel)
+        {
+            if (!string.IsNullOrEmpty(simulatorUdidEnv) || !string.IsNullOrEmpty(simulatorModelEnv))
+                return true;
+
+            if (!string.IsNullOrEmpty(graphicsDeviceName) &&
+                graphicsDeviceName.IndexOf("simulator", StringComparison.OrdinalIgnoreCase) >= 0)
+                return true;
+
+            return !LooksLikeIosHardware(deviceModel);
+        }
+
+        /// <summary>Environment reads are sandboxed on iOS and can throw; a probe must never be the
+        /// thing that breaks a submit.</summary>
+        private static string EnvOrNull(string name)
+        {
+            try { return Environment.GetEnvironmentVariable(name); }
+            catch (Exception) { return null; }
         }
 
         /// <summary>Exposed for the report's device/simulator evidence, and so a test can pin the rule.</summary>

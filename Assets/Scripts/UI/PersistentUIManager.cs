@@ -534,6 +534,9 @@ namespace Golfin.UI
                 // HighlightScreen returns right after ApplyTopBarCenterText; this case is the
                 // whole reason the shared top bar can carry the hub's title without a new API.
                 case GolfinRedux.UI.ScreenId.GpsHub:                   return "GPS_HUB_TITLE";
+                // score_upload_flow — the Posted step (6/6) overrides this to SCORE_POSTED_TITLE
+                // through the existing transient SetUsername path, and restores it on the way out.
+                case GolfinRedux.UI.ScreenId.ScoreUpload:              return "SCORE_UPLOAD_TITLE";
                 default:                                               return null;
             }
         }

@@ -586,7 +586,7 @@ PlayerSettings:
   enableInternalProfiler: 0
   logObjCUncaughtExceptions: 1
   enableCrashReportAPI: 0
-  cameraUsageDescription: 
+  cameraUsageDescription: GOLFIN uses the camera to photograph your scorecard.
   locationUsageDescription: GOLFIN uses your location to verify rounds at the golf
     course you are playing.
   microphoneUsageDescription: 

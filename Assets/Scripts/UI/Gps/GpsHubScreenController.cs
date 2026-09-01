@@ -60,6 +60,9 @@ namespace Golfin.Gps.UI
                  "/score/history fails — v1 ships no empty state (SPEC § Figma Fidelity).")]
         [SerializeField] private GameObject? _roundsPanel;
 
+        /// <summary>The one-line "no rounds yet" label inside <see cref="_roundsPanel"/>.</summary>
+        [SerializeField] private TextMeshProUGUI? _roundsEmpty;
+
         [Tooltip("Exactly three authored rows, top to bottom. A row with no data is deactivated.")]
         [SerializeField] private GpsHubRoundRow[] _roundRows = new GpsHubRoundRow[0];
 
@@ -80,6 +83,18 @@ namespace Golfin.Gps.UI
         [Tooltip("The hub's own HOME nav button — interactable, and a deliberate no-op: it is the " +
                  "screen you are already on.")]
         [SerializeField] private Button? _navHomeButton;
+
+        // ── Live affordances (score_upload_flow) ──────────────────────────────
+        [Header("Live")]
+        [Tooltip("The camera centre button of the hub nav bar. The FIRST live nav slot: it opens " +
+                 "the score upload flow. Must NOT also appear in _navButtons, which makes its " +
+                 "entries non-interactable.")]
+        [SerializeField] private Button? _navCameraButton;
+
+        [Tooltip("The SCREENSHOT action tile — the same destination as the camera button, and the " +
+                 "reason the tile row is no longer entirely inert. Must NOT also appear in " +
+                 "_tileButtons.")]
+        [SerializeField] private Button? _tileScreenshotButton;
 
         // ── Navigation ────────────────────────────────────────────────────────
         [Header("Navigation")]
@@ -171,6 +186,28 @@ namespace Golfin.Gps.UI
             // screen the player is standing on, and a lit slot that does nothing reads correctly.
             if (_navHomeButton != null)
                 _navHomeButton.onClick.AddListener(() => Debug.Log($"{Tag} nav HOME — already here"));
+
+            // score_upload_flow §2 — the two entry points that were inert at gps_hub_entry. Both go
+            // to the same screen: the camera button is the affordance a player reaches for, the
+            // tile is the one the "how it works" strip has been promising since the hub shipped.
+            // Wired here rather than through _navButtons/_tileButtons because those two loops
+            // set interactable = false, which is exactly what these must not be.
+            if (_navCameraButton != null)
+            {
+                _navCameraButton.interactable = true;
+                _navCameraButton.onClick.AddListener(OpenScoreUpload);
+            }
+            if (_tileScreenshotButton != null)
+            {
+                _tileScreenshotButton.interactable = true;
+                _tileScreenshotButton.onClick.AddListener(OpenScoreUpload);
+            }
+        }
+
+        private void OpenScoreUpload()
+        {
+            Debug.Log($"{Tag} opening the score upload flow.");
+            ScreenManager.Instance?.ShowScreen(ScreenId.ScoreUpload);
         }
 
         // ═════════════════════════════════════════════════════════════════════
@@ -305,8 +342,9 @@ namespace Golfin.Gps.UI
         }
 
         /// <summary>
-        /// Bind up to three rows, or hide the whole panel. There is no empty state in v1 by
-        /// decision — an empty panel with a headline is worse than no panel.
+        /// Bind up to three rows. With no rounds the panel STAYS UP and shows a one-line empty
+        /// state: hiding it made a brand-new player's hub look broken — a headline with nothing
+        /// under it is better than a hole in the layout where a panel should be.
         /// </summary>
         private void ShowRounds(List<ActivityDto>? rows)
         {
@@ -329,7 +367,12 @@ namespace Golfin.Gps.UI
             for (int i = count; i < _roundRows.Length; i++)
                 if (_roundRows[i] != null) _roundRows[i].gameObject.SetActive(false);
 
-            if (_roundsPanel != null) _roundsPanel.SetActive(count > 0);
+            if (_roundsEmpty != null)
+            {
+                _roundsEmpty.gameObject.SetActive(count == 0);
+                if (count == 0) _roundsEmpty.text = LocalizationManager.Get("GPS_HUB_NO_ROUNDS");
+            }
+            if (_roundsPanel != null) _roundsPanel.SetActive(true);
         }
 
         /// <summary>

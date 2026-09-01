@@ -24,6 +24,12 @@ namespace Golfin.Net.Tests
         public readonly List<string> SentBodies = new List<string>();
         public readonly List<string> SentMethods = new List<string>();
 
+        /// <summary>Per-request <c>TimeoutSeconds</c>. Recorded because a call can legitimately
+        /// override the client-wide default (<c>Golfin.Gps.RecognitionService</c> raises it to 90 s
+        /// for the Vision call), and "did the override actually reach the request" is otherwise
+        /// unobservable from a test.</summary>
+        public readonly List<int> SentTimeouts = new List<int>();
+
         public int CallCount => SentUrls.Count;
 
         public FakeHttpTransport Enqueue(params HttpResponse[] responses)
@@ -37,6 +43,7 @@ namespace Golfin.Net.Tests
             SentMethods.Add(request.Method);
             SentUrls.Add(request.Url);
             SentBodies.Add(request.Body);
+            SentTimeouts.Add(request.TimeoutSeconds);
             SentAuthHeaders.Add(request.Headers.TryGetValue("Authorization", out var a) ? a : null);
 
             onResponse?.Invoke(_responses.Count > 0 ? _responses.Dequeue() : Fallback);

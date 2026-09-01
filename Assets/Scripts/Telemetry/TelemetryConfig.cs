@@ -86,6 +86,23 @@ namespace Golfin.Telemetry
         /// </summary>
         public const string InventoryMergeRaise = "inventory_merge_raise";
 
+        // ── The score upload flow (score_upload_flow §2) ─────────────────────
+        //
+        // The three moments that answer "does the first real PLAYLIFE feature convert": how many
+        // players open it, how many finish, and — from the abandon step number — WHERE the ones
+        // who do not finish stop. `score_upload_abandon` carries the 1-5 step so the drop-off is a
+        // funnel and not a single count.
+
+        /// <summary>Score Upload was opened. Payload: source.</summary>
+        public const string ScoreUploadOpen   = "score_upload_open";
+
+        /// <summary>The flow was left before posting. Payload: step (1-5).</summary>
+        public const string ScoreUploadAbandon = "score_upload_abandon";
+
+        /// <summary>A score reached the server. Payload: input_method, gps_verified, trust,
+        /// points_earned, holes — the SERVER's numbers, so the funnel and the ledger agree.</summary>
+        public const string ScoreUploadPosted = "score_upload_posted";
+
         // ── The gacha funnel (gacha_ops_polish §3) ────────────────────────────
         //
         // Five events, ALL carrying `banner_id`, that answer one question the server-side pull log
