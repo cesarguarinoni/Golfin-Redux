@@ -91,69 +91,50 @@ MY RECENT ROUNDS renders `—` in every score cell (`/score/history` is a raw `s
 ---
 
 
-## 🟢 BUILT, AWAITING CESAR — `ball_data_wiring` (2026-09-01) · balls 2 rows → 20
+## ✅ DONE — `ball_data_wiring` + `ball_art_and_stats` (2026-09-01, approved by Cesar)
 
-**The ball catalog is live at 20 rows with a `rarity` column, end to end.** `Balls.csv` replaced
-from `reference/Balls.csv` (15 cols, `rarity` after `brand`; the two old rows byte-identical apart
-from it), 18 `BALL_INFO_*` rows added EN+JA, `BallDataRuntime.rarity` parsed by the existing
-`ClubCsvParser.ParseRarity`, and the whole thing imported → published (`balls` v6→v7,
-`texts` v20→v21) with `export_content.py --check` clean.
+**Balls: 2 rows → 20, end to end.** `Balls.csv` + `rarity`, 18 `BALL_INFO_*` EN+JA,
+`BallDataRuntime.rarity` via the existing `ClubCsvParser.ParseRarity`, `BallWindCutPerPoint`
+0.01 → **0.02** (F16) with `Physics/stats.csv` + the never-called `LoadStatCoefficients()` retired,
+a dedicated `/balls` admin panel (brand + rarity facets; balls left the Items panel), and the
+importer round trip — **balls v6 → v7 → v8, texts v20 → v21**, `--check` clean. Both spec folders
+moved to `Docs/Specs/Completed/`.
 
-**Caught on the way in:** the 18 Cowork fulls + 2 thumbnails had auto-imported as **Default
-textures, not Sprites** (`textureType: 0`, `spriteMode: 0`). `Resources.Load<Sprite>` returns null
-for those, so all 20 new balls would have been withheld as non-renderable. Import settings copied
-off `Golfin.png` / `S_Controls_Ball_GOLFIN.png`; all 20 balls now resolve **both** sprites
-(20/20, 0 unresolved).
+**Three defects the spec did not anticipate, found and fixed:** the 18 fulls had imported as
+**Default textures, not Sprites** (all 20 balls would have shipped non-renderable); **§7 was real
+but not as predicted** — layout does not move, the 1000×1000 thumbnails were a 5.95× downscale with
+no mip chain (aliasing on the Balls card, the shot-UI centre ball AND the ball button), fixed with
+200×200 LANCZOS copies, 68 MB → 2 MB of VRAM; and a **blank `rarity` passed validation** despite
+being REQUIRED.
 
-**Physics:** `BallWindCutPerPoint` 0.01 → **0.02** (F16). `Assets/Resources/Physics/stats.csv` and
-`PhysicsConfigLoader.LoadStatCoefficients()` are **deleted** — the loader had zero callers, so the
-CSV was documentation that had already drifted (rebound 0.01 vs the Default's 0.02, stale since
-Order 417). `StatCoefficients.Default` is now the single source of truth.
-`StaminaLiveWiringTests.T8` read that CSV and was **retired**, not re-pointed: `Default`'s
-`StaminaFloorFraction` is 0.20 not 1.0, and the field has been dead since Order 731 — the invariant
-is covered by `StatResolverTests.Stats_Resolver_IsStaminaAgnostic`. **459 pass / 0 fail / 3
-pre-existing skips** across `Golfin.Physics.Tests` + `Golfin.Inventory.Tests`.
+**NOT verified, stated plainly:** the play-mode carousel/detail-panel pass and a
+`Golfin.Gameplay.Tests` run (only a deleted test method there). The Editor was shared with two other
+live sessions all day. Everything else was measured — 459 pass / 0 fail / 3 pre-existing skips,
+20/20 sprites, the wind perceptibility table, 246 admin tests, clean typecheck.
 
-**Wind perceptibility (reported, no bar invented — Cesar's call on 0.02 vs 0.03):** at an 8 m/s
-crosswind a max-Wind ball recovers **0.98 m** of lateral push at 0.01 and **1.96 m** at 0.02
-(2.92 m at 0.03, which is where +10 exactly saturates the 0.30 `WindCutMax`). Carry is
-unaffected (~0.2 m). A *negative* Wind stat is inert at every coefficient — `windCutFraction`
-clamps at zero, so those balls are not penalised, merely unhelped.
+### Spun out of it
 
-**Admin:** Balls has its **own sidebar panel** at `/balls` (new `ball` glyph, `CatalogPanel` over
-the existing catalog) with brand **and** rarity facets; the balls tab left Items, now "Items &
-Bags". `rarity` is REQUIRED + FILTERABLE + a view column. A real gap surfaced: a **blank** rarity
-passed both the REQUIRED check and the rarity rule, so the blank carve-out is now scoped to
-`shop_catalog` by name (the only catalog that uses it — 7 of 8 rows; every other has zero).
-245 admin tests green, typecheck clean.
+- **`Docs/Specs/Quick/broken_sprite_refs.md` — DONE.** 86 broken `Image.sprite` refs, three root
+  causes, 0 remain. The visible one: `BagClubCard`'s active stat bars drew a flat white block
+  because `LevelUpWhite.png` was duplicated to Sprite Mode Single, killing the sub-sprite 75 refs
+  pointed at.
+- **`Docs/Specs/Quick/club_full_art_repoint.md` — DONE.** 205 club `portraitFull` values named art
+  that did not exist. Not missing art — a naming bug (`G&F`→`GandF`, `Golfinix`→`GolfinX`,
+  `TeepitWndrwll`→`TeePit`, `Iron-Klyro`→`Iron9-Klyro`…). Published **clubs v1 → v2**; every club
+  sprite column now resolves **799/799**. Also corrected a regression from `ball_data_wiring`: the
+  blank-rarity rule had been scoped to `shop_catalog` by name, which broke `mission_loadouts`'
+  publish; it now keys off `REQUIRED`.
+- **`Docs/Specs/Queued/publish_blocked_catalogs/ARCHITECT_BRIEF.md` — HANDED OFF.**
+  `mission_loadouts` (17 errors) and `gacha_pools` (1) cannot be published. Both are **validator
+  false positives with zero runtime impact**; the brief warns that the obvious "fix the data" for
+  the first would hand every supplied mission an empty bag. **Cesar is taking these in another
+  session** (its `lib/loadoutTokens.ts` work was already in the tree at close-out).
 
-**SPEC §7 closed (second pass) — it was a real defect, but not the predicted one.** Layout does not
-move: the card's `Portrait` is a pinned 168×261 rect and measures identical with a 200px or a
-1000px sprite. But the 1000×1000 thumbnails were a **5.95× downscale with no mip chain** — aliasing
-on the Balls card (168px), the shot UI centre ball (150px) *and* the ball button. (§7's caveat
-guarded the wrong path: both shot-UI widgets read the CSV column as PRIMARY, so they were aliasing
-too.) Fixed per §7: 200×200 LANCZOS copies named `<PascalName>.png`, `thumbnailSprite` repointed for
-the 18, originals untouched, §6 re-run (0 NEW / 18 CHANGED / 0 conflicts), **balls v7 → v8**,
-`--check` clean. Worst-case downscale is now **1.19×**, aliasing risk 0/20, and 68 MB → 2 MB of VRAM.
-**And the orphans are gone.** The repoint left 19 of the 20 `S_Controls_Ball_*.png` referenced by
-nothing, and `Resources/` ships in full regardless — so they were deleted. They turned out to be
-**byte-identical duplicates** of files already in `Assets/Art/Original UI/Ball Sprites/` (the
-documented home for source art not loaded at runtime), so there was nowhere to move them TO; the
-`Art/` masters are untouched. `S_Controls_Ball_GOLFIN` stays — it is the only one referenced
-(hardcoded `Resources.Load` + a `LabScaffold` GUID). `Resources/Balls` went **60 → 41 png,
-−16.1 MB on disk / −72 MB uncompressed**, with 20/20 balls still resolving and `--check` clean.
-
-Separate pre-existing finding, **not** actioned: a project-wide scan reports **86 broken
-`Image.sprite` references** (`Bar`, `ChevronIcon`, `Map`, `BG`, `Handle`) across ~15 prefabs in
-Gacha / Inventory / HoleSelection / ModeSelect / Tournaments, pointing at GUIDs not in the project.
-Proven unrelated to this task. Worth its own task.
-
-**Two items left, both needing an uncontended Editor** (it was shared with the GPS-hub and banners
-sessions throughout): the play-mode Balls carousel + detail-panel EN/JA shot, and a
-`Golfin.Gameplay.Tests` run (only a deleted test method there).
-
-Report: `Docs/Specs/Active/ball_data_wiring/IMPLEMENTER_REPORT.md`.
-Still out of scope: per-ball 3D skins, gacha/shop listings for the 18, rarity framing on the Balls screen.
+**Shape worth naming (PIPELINE_HARDENING rule 15):** three defects in one session were the same
+shape — *an identifier minted in one system and re-derived by convention in another, with no shared
+registry and no gate proving the two agree* (ball sprite names, club art brand tokens, loadout club
+types). The mechanical check that caught two of them — "every cross-catalog name reference resolves
+against what the build actually bundles" — is cheap enough to run in CI.
 
 ---
 

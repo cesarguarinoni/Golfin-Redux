@@ -1,6 +1,17 @@
 # STATUS — ball_art_and_stats
 
-`ART_DONE / DATA_HANDED_TO_CODE` (2026-08-31, Cowork/Architect runner). D1–D5 delivered; the
+`DONE` (closed 2026-09-01 with `ball_data_wiring`, per this file's own "This folder closes when
+that one does").
+
+> **Close-out amendment to D2.** The 18 fulls imported as DEFAULT textures rather than Sprites and
+> had to be re-imported before they would resolve at all. And the `thumbnailSprite` decision below
+> — the existing `S_Controls_Ball_<TOKEN>` stem — was SUPERSEDED by `ball_data_wiring` §7: those
+> files are 1000x1000 against a 168px draw (a 5.95x downscale with no mip chain, which aliases), so
+> each ball now points at a 200x200 LANCZOS copy named after its `fullSprite`. The 1000x1000
+> originals were removed from `Resources/` afterwards, being byte-identical duplicates of
+> `Assets/Art/Original UI/Ball Sprites/`.
+
+Originally `ART_DONE / DATA_HANDED_TO_CODE` (2026-08-31, Cowork/Architect runner). D1–D5 delivered; the
 data half is `Docs/Specs/Active/ball_data_wiring/` (SPEC_READY). This folder closes when that one
 does — the 18 fulls are uncommitted in the working tree until Code's first commit (see
 `ball_data_wiring/SPEC.md` §9).
