@@ -49,8 +49,18 @@ guarded the wrong path: both shot-UI widgets read the CSV column as PRIMARY, so 
 too.) Fixed per §7: 200×200 LANCZOS copies named `<PascalName>.png`, `thumbnailSprite` repointed for
 the 18, originals untouched, §6 re-run (0 NEW / 18 CHANGED / 0 conflicts), **balls v7 → v8**,
 `--check` clean. Worst-case downscale is now **1.19×**, aliasing risk 0/20, and 68 MB → 2 MB of VRAM.
-Follow-up flagged, not actioned: **19 of the 20 `S_Controls_Ball_*.png` are now referenced by
-nothing** (~15 MB of dead `Resources/` build weight); 17 predate this task.
+**And the orphans are gone.** The repoint left 19 of the 20 `S_Controls_Ball_*.png` referenced by
+nothing, and `Resources/` ships in full regardless — so they were deleted. They turned out to be
+**byte-identical duplicates** of files already in `Assets/Art/Original UI/Ball Sprites/` (the
+documented home for source art not loaded at runtime), so there was nowhere to move them TO; the
+`Art/` masters are untouched. `S_Controls_Ball_GOLFIN` stays — it is the only one referenced
+(hardcoded `Resources.Load` + a `LabScaffold` GUID). `Resources/Balls` went **60 → 41 png,
+−16.1 MB on disk / −72 MB uncompressed**, with 20/20 balls still resolving and `--check` clean.
+
+Separate pre-existing finding, **not** actioned: a project-wide scan reports **86 broken
+`Image.sprite` references** (`Bar`, `ChevronIcon`, `Map`, `BG`, `Handle`) across ~15 prefabs in
+Gacha / Inventory / HoleSelection / ModeSelect / Tournaments, pointing at GUIDs not in the project.
+Proven unrelated to this task. Worth its own task.
 
 **Two items left, both needing an uncontended Editor** (it was shared with the GPS-hub and banners
 sessions throughout): the play-mode Balls carousel + detail-panel EN/JA shot, and a

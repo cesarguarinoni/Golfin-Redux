@@ -390,12 +390,53 @@ catalog         add  change   same  conflict  csv
 (20 rows, 0 errors, 0 warnings), published **balls v7 → v8**, `export_content.py --check` **clean**.
 Draft `min_build` values remain `{0, 2544}` — CHANGED rows never have it re-derived.
 
-**Follow-up, NOT actioned (flagged for your call).** With `thumbnailSprite` repointed, **19 of the
-20 `S_Controls_Ball_*.png` files are now referenced by nothing** — only `S_Controls_Ball_GOLFIN`
-survives, via the hardcoded literal. `Resources/` ships every asset in it regardless of references,
-so that is roughly **15 MB of dead build weight**. I did not delete them: §7 says not to touch the
-originals, 17 of the 19 predate this task, and two (`S_Controls_Ball_GOLFINMK2`,
-`S_Controls_Ball_PUTTACE`) were added by this task's own commit at SPEC §9's instruction.
+### I-b. The orphaned `S_Controls_Ball_*` in `Resources/` — REMOVED (Cesar, "move them so they don't ship")
+
+`Resources/` is included in the player build in full, referenced or not, so the 19 orphans left by
+the repoint were shipping dead weight. Removed.
+
+**They were byte-identical duplicates, so there was nowhere to move them TO.** All 20
+`S_Controls_Ball_*.png` already exist in `Assets/Art/Original UI/Ball Sprites/` — which is the
+documented home for exactly this (`ASSET_NAMING_CONVENTION.md`: *"Art/ — Source art (not loaded at
+runtime)"*). `cmp` reports **20/20 byte-identical**. A literal move would have either clobbered an
+identical file or created a third copy, so the redundant `Resources/` copies were **deleted** and
+the `Art/` masters left untouched (`git status` on that folder: no changes).
+
+**Kept: `S_Controls_Ball_GOLFIN`.** It is the only one that is actually referenced — a hardcoded
+`Resources.Load<Sprite>("Balls/Thumbnails/S_Controls_Ball_GOLFIN")` in `CentralBallWidget` and
+`BallButtonWidget`, plus a GUID reference from `LabScaffold.unity`. It must stay in `Resources/`.
+
+**Unreferenced proof before deleting**, for all 19:
+
+| check | result |
+|---|---|
+| GUID referenced anywhere in `Assets/` `Packages/` `ProjectSettings/` | none (only `…GOLFIN` had hits) |
+| string-literal `Resources.Load("Balls/Thumbnails/…")` in any `.cs` | only `…GOLFIN` |
+| named by any shipped CSV (`Assets/Data/`, `Assets/Resources/Data/`) | none |
+
+**Deleted via `AssetDatabase.DeleteAsset`**, not `rm`, so no orphaned `.meta` is left behind
+(verified: every remaining `.meta` in the folder has its asset). `git status` shows exactly
+**19 png + 19 meta** deleted and nothing else.
+
+**Causation check on the 86 broken sprite references a project-wide scan reports.** None are ball
+art — they are `Bar`, `ChevronIcon`, `Map`, `Border`, `BG`, `BGBall`, `Handle` in Gacha, Inventory,
+HoleSelection, ModeSelect and Tournaments prefabs. Proven not mine: I recovered the 19 deleted
+GUIDs from `HEAD` and grepped every `.prefab` / `.unity` / `.asset` for them — **zero hits** — and I
+modified **zero** prefabs this session. They are pre-existing and real (spot-check:
+`HoleCard.prefab`'s `ChevronIcon` points at guid `4933cc96cc21042ebaa79592e3fd80bd`, which is not in
+the project at all). **Flagged for a separate task; not touched here.**
+
+**After:**
+
+```
+Resources/Balls: 60 png -> 41 png   (-19, -16.1 MB on disk, -72 MB uncompressed)
+20/20 balls resolve both sprites AND have a <=200px thumbnail
+Resources.Load("Balls/Thumbnails/S_Controls_Ball_GOLFIN") = OK (1000x1000)
+export_content.py --check (balls) = clean, v8, no drift
+```
+
+No CSV change and no re-publish: `thumbnailSprite` already pointed at the PascalCase files, and no
+catalog ever named a deleted asset.
 
 ### J. Zero new hardcoded player-facing `.text` literals — **PASS**
 
