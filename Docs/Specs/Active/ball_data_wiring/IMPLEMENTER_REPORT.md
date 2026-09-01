@@ -314,12 +314,88 @@ The catalog-level facts that this change *is* responsible for are proven above: 
 veto (this item), and 20 rows are published at `balls` v7 (item G). If you want the 20-card carousel
 shot, say so and I will grant the balls in a throwaway save and restore it after.
 
-### I. §7 thumbnail check at device resolution — **NOT DONE**
+### I. §7 thumbnail check — **PASS, and it needed the fix** (second pass)
 
-Requires the Editor. See § Blocker. **Needs manual on-device / device-resolution verification**: the
-18 new rows point `thumbnailSprite` at the 1000×1000 `S_Controls_Ball_*` files, and the Balls
-carousel and compare panel have only ever been shown 200×200 / 178×178. If they push the layout, the
-fix is downscaled 200×200 copies per §7 plus a re-run of §6 for `balls`.
+§7 asked: do the 1000×1000 thumbnails render at the right size with no layout push?
+**Layout: no push. Filtering: yes, a real defect.** §7's prescribed remedy was applied.
+
+**Layout — no push, measured.** `BallThumbnailCard.prefab`'s `Portrait` is authored at
+`sizeDelta 168×261`, anchors pinned `(0.5,0.5)-(0.5,0.5)`, a `LayoutElement` of `pref 170×343` on
+the root and **no** `ContentSizeFitter` anywhere. `BallThumbnailCard.cs` never calls
+`SetNativeSize()` or writes `sizeDelta` — it only assigns `Image.sprite`. A/B on a 1170×2532 probe
+canvas at scale 1:
+
+| sprite | portrait drawn | card root |
+|---|---|---|
+| `Golfin` 200×200 | 168.0 × 261.0 | 170.0 × 343.0 |
+| `S_Controls_Ball_ACEATTIRE` 1000×1000 | 168.0 × 261.0 | 170.0 × 343.0 |
+
+Identical. Texture size cannot move this layout.
+
+**Filtering — the actual defect.** `Portrait` has `preserveAspect=true` in a 168×261 rect, so a
+square sprite draws at **168×168**. Every consumer of `thumbnailSprite`, measured:
+
+| surface | image | draws at |
+|---|---|---|
+| Balls carousel card | `Portrait` (168×261, preserveAspect) | **168 px** |
+| Shot UI centre ball | `CentralBall` (150×150, `LabScaffold.unity`) | **150 px** |
+| Shot UI ball button | `Icon` (stretched, parent −66px) | **≲100 px** |
+
+At a 1000×1000 source that is a **5.95× downscale with `mipmapEnabled = false` and bilinear
+filtering** — undersampling with no mip chain, which aliases and, in a scrolling carousel,
+shimmers. 18 of 20 rows were in that state; the two originals sit at ~1.1× and were always fine.
+
+This also means the SHOT UI was aliasing, which §7 did not anticipate: its "the shot UI's hardcoded
+`S_Controls_Ball_GOLFIN` load must keep working" caveat guards the wrong path. Both shot-UI widgets
+take `BallContext.SelectedThumbnail` — the CSV column — as PRIMARY and only fall back to the
+hardcoded literal. So the repoint below improves the shot UI too rather than threatening it.
+
+**Fix applied, exactly as §7 prescribes.** 200×200 LANCZOS downscales of each 1000×1000 source,
+written to `Resources/Balls/Thumbnails/<PascalName>.png` — the naming the two wired balls already
+use (`Golfin.png`, `PuttAce.png`), which is `fullSprite`'s value. Imported with
+`Thumbnails/Golfin.png`'s settings (all 18 `.meta` files byte-identical to it apart from
+`guid`/`spriteID`). `thumbnailSprite` repointed for the 18; a column-aware diff confirms **18 fields
+changed, all in `thumbnailSprite`, no other column touched**. The originals are **not renamed and
+not deleted**, so `S_Controls_Ball_GOLFIN` keeps resolving.
+
+After:
+
+```
+20 rows | both sprites resolved: 20/20 | aliasing risk: 0
+worst-case downscale 1.19x (was 5.95x)
+Layout re-check at 1170x2532:
+  Golfin       portrait 168.0x261.0   card 170.0x343.0
+  AceAttire    portrait 168.0x261.0   card 170.0x343.0
+  ShimmerG     portrait 168.0x261.0   card 170.0x343.0
+```
+
+Visual proof at the real 168px draw, 4× nearest-neighbour zoom, left = 1000px source (v7), right =
+200px source (v8): `screenshots/s7_thumbnail_before_after.png`. Mean |RGB| delta **10.03/765**, with
+**26.0%** of pixels differing by more than 8. The dimple grid, the thin red pinstripes and the
+"ATTIRE / ACE" letterforms all resolve cleanly on the right where the left is crunchy and broken.
+The right reads slightly softer — that is what correct filtering at a 6× downscale looks like, and
+the aliased left is the version that shimmers when the carousel scrolls.
+
+Side benefit, not the motivation: **68 MB → 2 MB** of uncompressed VRAM for these 18
+(15.6 MB → 1.0 MB on disk).
+
+**§6 re-run for `balls`, as §7 requires:**
+
+```
+catalog         add  change   same  conflict  csv
+  balls           0      18      2         0  Assets/Data/Balls.csv
+```
+
+0 NEW / 18 CHANGED / 2 SAME / 0 CONFLICTS — applied, publish gate re-run against the live drafts
+(20 rows, 0 errors, 0 warnings), published **balls v7 → v8**, `export_content.py --check` **clean**.
+Draft `min_build` values remain `{0, 2544}` — CHANGED rows never have it re-derived.
+
+**Follow-up, NOT actioned (flagged for your call).** With `thumbnailSprite` repointed, **19 of the
+20 `S_Controls_Ball_*.png` files are now referenced by nothing** — only `S_Controls_Ball_GOLFIN`
+survives, via the hardcoded literal. `Resources/` ships every asset in it regardless of references,
+so that is roughly **15 MB of dead build weight**. I did not delete them: §7 says not to touch the
+originals, 17 of the 19 predate this task, and two (`S_Controls_Ball_GOLFINMK2`,
+`S_Controls_Ball_PUTTACE`) were added by this task's own commit at SPEC §9's instruction.
 
 ### J. Zero new hardcoded player-facing `.text` literals — **PASS**
 
@@ -340,17 +416,17 @@ claimed.
 
 ## 3. What is NOT verified, and why
 
-Three things did not get done. All three need the Unity Editor, which is **shared with at least two
-other live sessions** and was contended for most of this task.
+Two things did not get done (§7 was CLOSED on a second pass — see item I). Both need the Unity
+Editor, which is **shared with other live sessions** and was contended for most of this task.
 
 | Not done | Why it matters |
 |---|---|
 | Play-mode Balls carousel + detail panel in EN/JA (part of item H) | Needs play mode. The carousel half is *also* unreachable as specified — see item H. |
-| §7 thumbnail check at device resolution (item I) | **The one item that genuinely needs your eyes.** 18 of 20 balls now feed a 1000×1000 sprite into a carousel that has only ever seen 200×200 / 178×178. |
 | `Golfin.Gameplay.Tests` assembly run | The assembly holding `StaminaLiveWiringTests`, where my only change is **deleting one test method** and replacing it with comments. It compiles, and no other test in the assembly is touched — but I did not get a green run to point at, so I am not claiming one. |
 
-Everything else that needs the Editor **was** measured, in the short uncontended windows: the
-459-test sweep (item D), the 20/20 sprite resolution (item H), and the perceptibility table (item E).
+Everything else that needs the Editor **was** measured: the 459-test sweep (item D), the 20/20
+sprite resolution (item H), the perceptibility table (item E), and the full §7 geometry + filtering
+audit and its fix (item I).
 
 ### Evidence of the contention, for the record
 - `tests-run` (EditMode, `Golfin.Physics.Tests`) aborted inside the test framework:

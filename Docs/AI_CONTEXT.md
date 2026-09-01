@@ -41,11 +41,20 @@ passed both the REQUIRED check and the rarity rule, so the blank carve-out is no
 `shop_catalog` by name (the only catalog that uses it — 7 of 8 rows; every other has zero).
 245 admin tests green, typecheck clean.
 
-**Three items left, all needing an uncontended Editor** (it was shared with the GPS-hub and banners
-sessions throughout): the play-mode Balls carousel + detail-panel EN/JA shot, a
-`Golfin.Gameplay.Tests` run (only a deleted test method there), and — **the one needing Cesar's
-eyes** — the §7 device-resolution thumbnail check: 18 of 20 balls now feed a **1000×1000** sprite
-into a carousel that has only ever seen 200×200 / 178×178.
+**SPEC §7 closed (second pass) — it was a real defect, but not the predicted one.** Layout does not
+move: the card's `Portrait` is a pinned 168×261 rect and measures identical with a 200px or a
+1000px sprite. But the 1000×1000 thumbnails were a **5.95× downscale with no mip chain** — aliasing
+on the Balls card (168px), the shot UI centre ball (150px) *and* the ball button. (§7's caveat
+guarded the wrong path: both shot-UI widgets read the CSV column as PRIMARY, so they were aliasing
+too.) Fixed per §7: 200×200 LANCZOS copies named `<PascalName>.png`, `thumbnailSprite` repointed for
+the 18, originals untouched, §6 re-run (0 NEW / 18 CHANGED / 0 conflicts), **balls v7 → v8**,
+`--check` clean. Worst-case downscale is now **1.19×**, aliasing risk 0/20, and 68 MB → 2 MB of VRAM.
+Follow-up flagged, not actioned: **19 of the 20 `S_Controls_Ball_*.png` are now referenced by
+nothing** (~15 MB of dead `Resources/` build weight); 17 predate this task.
+
+**Two items left, both needing an uncontended Editor** (it was shared with the GPS-hub and banners
+sessions throughout): the play-mode Balls carousel + detail-panel EN/JA shot, and a
+`Golfin.Gameplay.Tests` run (only a deleted test method there).
 
 Report: `Docs/Specs/Active/ball_data_wiring/IMPLEMENTER_REPORT.md`.
 Still out of scope: per-ball 3D skins, gacha/shop listings for the 18, rarity framing on the Balls screen.
