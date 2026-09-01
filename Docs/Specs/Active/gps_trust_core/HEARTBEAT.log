@@ -1,0 +1,36 @@
+=== iter-1 kickoff baseline 2026-09-01 07:30 JST ===
+HEAD: 40e9bb8692df56d08eea40c701aeb8c59837f1f9  (gacha_ops_polish: DONE — approved by Cesar, spec to Completed)
+
+DIRTY (git status --porcelain --untracked-files=all, BEFORE any work on this task):
+ M Docs/TellCode.md
+?? Docs/Specs/Active/ball_art_and_stats/BALL_IDENTITY.md
+?? Docs/Specs/Active/ball_art_and_stats/KICKOFF.md
+?? Docs/Specs/Active/ball_art_and_stats/SPEC.md
+?? Docs/Specs/Active/ball_art_and_stats/STATUS.md
+?? Docs/Specs/Active/ball_art_and_stats/reference/ball_roster_contact_sheet.png
+?? Docs/Specs/Active/gps_trust_core/ARCHITECT_REVIEW.md
+?? Docs/Specs/Active/gps_trust_core/IMPLEMENTER_REPORT.md
+?? Docs/Specs/Active/gps_trust_core/SELF_REVIEW.md
+?? Docs/Specs/Active/gps_trust_core/SPEC.md
+?? Docs/Specs/Active/gps_trust_core/STATUS.md
+
+Nothing under Assets/ or ProjectSettings/ was dirty at kickoff, so every Assets/ + ProjectSettings
+path in this iteration's file table is unambiguously mine.
+=== end baseline ===
+
+07:30 Read SPEC.md, the four Dart originals, backend score.py / venue.py / activity.py, and the
+      Golfin.Net + Golfin.Economy patterns to copy.
+07:34 Verified the geohash vector by re-running backend/routers/venue.py::_geohash_encode in python3
+      at precisions 4/9/12 → xn76 / xn76urx66 / xn76urx6606p.
+07:38 Probed Input.location in the Editor: works despite ProjectSettings activeInputHandler:1
+      (LocationService is not gated by the legacy input manager). deviceModel here = "Mac15,3".
+07:40 Wrote Golfin.Gps.asmdef + Golfin.Gps.Tests.asmdef and the eight runtime files.
+07:44 Appended the GPS section to Endpoints.cs (additive only, 54 insertions, 0 deletions).
+07:45 Set PlayerSettings.iOS.locationUsageDescription (was empty).
+07:46 Both assemblies compiled. Golfin.Gps referenced assemblies = Golfin.Net only.
+07:48 Fixed the VenueServiceTests URL assertion: UnityWebRequest.EscapeURL emits lowercase %2c.
+07:52 EditMode full suite: 2185 total / 2182 passed / 0 failed / 3 pre-existing skips.
+      Golfin.Gps.Tests filter: 39 / 39 passed.
+07:55 Play mode probe: GpsScoreAttachment.Capture logged
+      {"gps_verified":false,"gps_is_mock":false,"client_platform":"editor"} with no exception.
+07:56 Exited play mode. ShellScene not dirty. Editor left clean.

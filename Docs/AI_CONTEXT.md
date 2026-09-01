@@ -5,6 +5,85 @@
 
 ---
 
+## 🟡 HANDED TO CODE — `ball_data_wiring` (2026-08-31) · `ball_art_and_stats` ART DONE
+
+**Balls are the last catalog on 2 rows, and the art half is finished.** The Cowork runner generated
+the 18 missing `Assets/Resources/Balls/Full/<Name>.png` (537×900 RGBA, 30px corners — a W1 scene
+swap off `Full/Golfin.png`, 20 generations for 18 keepers, 0 misspellings, 2 oversized-ball
+re-rolls) and copied the two missing thumbnails into `Resources/Balls/Thumbnails/`. **All of it is
+UNCOMMITTED in the working tree** — Cowork never commits; Code's first `ball_data_wiring` commit
+picks it up (spec §9).
+
+**Decisions taken with Cesar (2026-08-31):** ball rarity lives in a new `rarity` column on
+`Balls.csv` (and balls stay admin-managed — they already are, as a tab in the Items panel);
+`BallWindCutPerPoint` 0.01 → **0.02**; the 20-ball stat table is APPROVED
+(`Docs/Specs/Active/ball_art_and_stats/BALL_IDENTITY.md`, wind balls trimmed to pay for the doubled
+stat, every line rule-checked by script). EN+JA blurbs written for all 18.
+
+**Code's task — `Docs/Specs/Active/ball_data_wiring/SPEC.md` (SPEC_READY):** replace `Balls.csv`
+with `reference/Balls.csv`, +18 `BALL_INFO_*` rows from `reference/texts_rows.csv`,
+`BallDataRuntime.rarity` via `ClubCsvParser.ParseRarity`, wind coefficient + test + `stats.csv`,
+admin rarity column/facet/validation, importer `--catalogs balls,texts` → publish → `--check`.
+**Finding worth knowing:** `Assets/Resources/Physics/stats.csv` is loaded by nobody
+(`LoadStatCoefficients()` has no callers; `ShotController` passes `StatCoefficients.Default`) and
+its rebound value has been stale since Order 417 — the spec fixes the file, Cesar decides whether
+to wire the loader or retire it. Open question for Cesar: a dedicated **Balls** admin panel
+(currently a tab under Items) — not built, flagged in spec §5.
+
+Still out of scope after this: per-ball 3D skins (one Golfin-skinned prefab for everything),
+gacha/shop listings for the 18, rarity framing on the Balls screen.
+
+---
+
+
+## 🟡 IN REVIEW — `gps_trust_core` (2026-09-01) — `Golfin.Gps` exists
+
+The PLAYLIFE **GPS Trust subsystem** is ported to a new, game-free assembly
+**`Golfin.Gps`** (`Assets/Scripts/Gps/`), the layer every GPS/PLAYLIFE screen will sit on. It
+references **`Golfin.Net` and nothing else** — never `Assembly-CSharp`, never anything under
+`Assets/Scripts/UI` — because the same module is meant to deploy twice: inside the game, and later
+as a standalone PLAYLIFE app.
+
+No UI, no `ScreenManager` state, no prefab, no CSV row. It is pure logic plus two seams, proven by
+**39 EditMode tests** (full suite 2185 / 0 failed).
+
+**What it provides**
+
+| Type | What it is for |
+|---|---|
+| `GpsSessionTracker` + `IGpsFixStore` | The fix log and the session trace. Every constant transcribed from `gps_session_tracker.dart` and asserted by a test — 12 h retention, 100 fixes, 5 min AND 100 m record throttle, 10 min count gap, 5 km / 8 h session window. PlayerPrefs key `gps_session_fixes_v1`, wire schema `{"lat","lon","t"}`, both shared with the Flutter app. |
+| `GpsTrustSignals` | `gps_is_mock` + `client_platform`. |
+| `ILocationProvider` / `UnityLocationProvider` | The one native seam. 10 s high-accuracy fetch, `LocationFailReason`, always `Stop()`s the service. |
+| `Geohash` | `Encode` / `Neighbors` / `NearbyPrefixes`, verified character-for-character against `backend/routers/venue.py::_geohash_encode` (`xn76urx66` at precision 9). |
+| `VenueService` | `/venue/auto-register`, `/nearby`, `/list` over the EXISTING `ApiClient` — no second HTTP path. |
+| `GpsScoreAttachment` | The orchestrator: fetch → signals → record + trace → auto-register → the 11 GPS fields to merge into `/score/submit`. Every step degrades, none aborts. |
+
+`Endpoints.cs` gained one appended GPS section (venue, score-submit, activity URLs — registered now
+so the next spec need not reopen the file). `ProjectSettings` `locationUsageDescription` is filled.
+
+**Seams deliberately left open**
+
+- `IMockLocationDetector` — `NeverMockDetector` ships everywhere; the Android mock-location native
+  plugin is its own task. The iOS simulator is already covered because the server treats
+  `client_platform == "ios-simulator"` as mock itself (`score.py:183`).
+- `GPS_ERR_*` localization keys are NAMED in `LocationFailReasonKeys` but have **no CSV rows** — the
+  check-in screen spec adds them with the UI that shows them.
+- `ScoreSubmitRequest` / the actual `POST /score/submit` call belongs to `score_submit_flow`.
+
+**Two open items for Cesar**
+
+1. `UnityClientPlatformProbe`'s iOS branch has NOT been run on a simulator or a device — it needs a
+   full iOS build. The `SystemInfo.deviceModel` heuristic is unit-tested; the actual simulator string
+   is still an assumption.
+2. `RecordFix` has exactly one caller (`Capture`), matching the Dart J2 rule — but the Dart app also
+   recorded a fix on every Rounds-tab read, which is how `gps_check_count >= 3` was ever reached.
+   As shipped, the K4 `MULTI_GPS_BONUS` is effectively unreachable. Which screen owns the second
+   call site?
+
+Spec + report: `Docs/Specs/Active/gps_trust_core/`.
+
+---
+
 ## ✅ SHIPPED — `gacha_ops_polish` **approved by Cesar** (2026-09-01) — the gacha track is CLOSED
 
 **All four specs of `Docs/GACHA_ADMIN_PLAN.md` are delivered.** D was the last.

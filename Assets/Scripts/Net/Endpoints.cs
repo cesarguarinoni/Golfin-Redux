@@ -383,6 +383,60 @@ namespace Golfin.Net
             return url;
         }
 
+        // ── GPS / PLAYLIFE (gps_trust_core §8) ────────────────────────────────
+        //
+        // The PLAYLIFE side of the API: venues, the GPS-verified score post, and the check-in
+        // ledger. Registered together on purpose — the URLs cost nothing and it means the screens
+        // that follow (gps_checkin_screen, score_submit_flow) never have to reopen this file.
+        //
+        // AUTH: /venue/list, /nearby and /{id} are open; /venue/auto-register, /score/submit and
+        // every /activity/* call require a Bearer token and the server stamps user_id from it, never
+        // from the body — the same posture as TelemetryEvents above.
+
+        /// <summary>POST <c>{latitude, longitude}</c> → <c>{data:{venue_id, name, latitude,
+        /// longitude, distance_m, created}}</c>, or <c>{data:null, message}</c> when no golf course
+        /// is nearby (venue.py:246-282). THE NULL BRANCH IS A 200 AND NOT AN ERROR — see
+        /// <c>Golfin.Gps.VenueAutoRegisterResult</c>.</summary>
+        public static string VenueAutoRegister => BaseUrl + "/venue/auto-register";
+
+        /// <summary>GET → <c>{data:[VenueDto]}</c> — venues whose <c>geohash</c> starts with any of
+        /// the comma-separated <paramref name="prefixes"/> (server-side <c>like 'prefix%'</c>,
+        /// venue.py:61-86). Build the value with <c>Golfin.Gps.Geohash.NearbyPrefixes</c>.</summary>
+        public static string VenueNearby(string prefixes, string languageCode = "ja")
+            => BaseUrl + "/venue/nearby?prefixes=" + UnityWebRequest.EscapeURL(prefixes ?? "") +
+               "&language_code=" + UnityWebRequest.EscapeURL(languageCode ?? "ja");
+
+        /// <summary>GET → <c>{data:[VenueDto]}</c> — every venue. The manual-selection fallback for
+        /// when GPS resolves nothing.</summary>
+        public static string VenueList(string languageCode = "ja")
+            => BaseUrl + "/venue/list?language_code=" + UnityWebRequest.EscapeURL(languageCode ?? "ja");
+
+        /// <summary>GET → <c>{data: VenueDto}</c> — one venue by id (venue.py:100-113).</summary>
+        public static string VenueById(int venueId, string languageCode = "ja")
+            => BaseUrl + "/venue/" + venueId + "?language_code=" + UnityWebRequest.EscapeURL(languageCode ?? "ja");
+
+        /// <summary>POST <c>ScorePostRequest</c> (score.py:117-140) — the GPS-verified score post.
+        /// The GPS half of that body is produced by <c>Golfin.Gps.GpsScoreAttachment.ToJson()</c>;
+        /// the other 14 fields and the call itself belong to <c>score_submit_flow</c>. The URL is
+        /// registered here so that spec does not have to touch this file.</summary>
+        public static string ScoreSubmit => BaseUrl + "/score/submit";
+
+        /// <summary>POST <c>{venue_id, check_in_at?}</c> → <c>{data: ActivityDto}</c>
+        /// (activity.py:27-58).</summary>
+        public static string ActivityCheckin => BaseUrl + "/activity/checkin";
+
+        /// <summary>POST <c>{check_out_at?}</c> → the closed activity row.</summary>
+        public static string ActivityCheckout(string activityId)
+            => BaseUrl + "/activity/" + UnityWebRequest.EscapeURL(activityId ?? "") + "/checkout";
+
+        /// <summary>POST → cancel an open check-in.</summary>
+        public static string ActivityCancel(string activityId)
+            => BaseUrl + "/activity/" + UnityWebRequest.EscapeURL(activityId ?? "") + "/cancel";
+
+        /// <summary>GET → the caller's check-in history page.</summary>
+        public static string ActivityHistory(int skip = 0, int limit = 20)
+            => BaseUrl + "/activity/history?skip=" + skip + "&limit=" + limit;
+
         /// <summary>Restore the shipping host (used by tests that retarget <see cref="RootUrl"/>).</summary>
         public static void ResetToDefault() => RootUrl = DefaultRootUrl;
 
