@@ -5,7 +5,7 @@
 
 ---
 
-## ✅ DONE (pending Cesar) — `publish_blocked_catalogs` (2026-09-01) · both blocked publishes unblocked
+## ✅ DONE — `publish_blocked_catalogs` (2026-09-01) · both blocked publishes unblocked
 
 **Two catalogs could not be published from the admin, and all 18 errors were false.**
 `mission_loadouts` reported 17: the supplied rule compared a mask token to the raw `clubs.type`
