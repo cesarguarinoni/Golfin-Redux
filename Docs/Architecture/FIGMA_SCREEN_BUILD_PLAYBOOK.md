@@ -48,6 +48,12 @@ A wrong measuring instrument costs more than a wrong build, because it makes you
 - [ ] **Pick the right alpha helper.** Builder-local `A(overlay, α, backdrop)` PRE-COMPOSITES to an
       opaque colour (right for a chip on a known panel). `GpsUiColor.A(c, α)` / `ADark()` are truly
       translucent (right for anything over a photo).
+      *Measured cost of getting this wrong (`auth_golf_profile`, 2026-09-02):* the node's
+      `fill-opacity="0.35"` white pager dots authored with `GpsUiColor.A(White, 0.35f)` rendered
+      **(161,170,180)** against the node's **(103,137,158)** — 45 per channel, plainly visible as
+      four pale dots instead of dim ones. The direction FLIPS with the overlay (a white one lands
+      too bright, a dark one too dark), so there is no blanket correction. On a known backdrop,
+      sample the node's own composite at 1:1 and author it OPAQUE: `#67899E` here, Δ 0.3.
 - [ ] Need a per-instance colour (rarity border, level pill)? **Bake it WHITE and tint at runtime** —
       `bake_frame` / `bake_pill`. A solid capsule tinted as a "border" paints over the fill.
 - [ ] **Force `TextureImporterType.Sprite` on every freshly baked PNG.** A default-imported texture
@@ -59,6 +65,10 @@ A wrong measuring instrument costs more than a wrong build, because it makes you
 - [ ] **Read the localized VALUE before adding a glyph** — `GPS_PROFILE_TRUST` already contains `✓`.
 - [ ] **Confirm the font has the glyph** (`TMP_FontAsset.HasCharacters`). Rubik has no U+1F512.
 - [ ] Check **weight** and **rendered size** against the node, not the arithmetic.
+- [ ] **The `Main Buttons` 66→59 calibration is a property of the FONT, not of buttons.** Every
+      SemiBold run authored at the node's nominal px comes out 10–12 % oversize (measured across
+      four runs on `auth_golf_profile`). Author SemiBold as `node_px * 59/66` everywhere and let the
+      button's 59 derive from the same constant.
 - [ ] **Never hard-code the x of a text run.** The node's mock is usually the SHORT case; a longer
       string or Japanese overflows. Centre/right-align with a content-sized `HorizontalLayoutGroup`.
 
@@ -81,6 +91,11 @@ A wrong measuring instrument costs more than a wrong build, because it makes you
       `(-82.7,-400) 725.4x1569.84` crop suits Figma's character; our sprite is 1090x1907, so it
       stretched and framed the torso. Compute a cover-crop from the REAL sprite dimensions.
 - [ ] Reuse project atoms (`S_HUB_*`, `S_GpsIconRing_*`, `ICO_Gps*`) before baking anything new.
+- [ ] **`S_GpsIconRing_*` is a FILLED circle, not an annulus** — `make_gps_icon_ring.bake()` paints
+      its fill to the OUTER radius and strokes over it. Anything placed BEHIND one is completely
+      invisible. A coloured disc under the ring rendered identically navy in all four colours while
+      every inspection (sprite, serialized array, prefab overrides) read as correct. Put the colour
+      on the ring's OWN fill and collapse the two Images into one.
 
 ## 7 · Before you surface it
 

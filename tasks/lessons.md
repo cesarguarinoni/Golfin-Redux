@@ -3306,3 +3306,71 @@ defect that actually shipped to his screen at least once.
     `(-82.7,-400) 725.4x1569.84` crop is correct for Figma's "Main Menu Character"; our
     `Characters/Homescreen` sprite is 1090x1907, so those numbers stretched it and framed the
     torso. Compute a cover-crop from the real sprite's dimensions instead.
+
+---
+
+## Lesson BT — `auth_golf_profile` (2026-09-02): three traps that pass every gate
+
+Four defects on this task. **All four gates were green while all four were present**, and every
+one was found by capturing through real navigation and then *measuring* the frame. Three of them
+generalise well past this task.
+
+### 1. A calibration constant that was scoped too narrowly
+
+Build rule 4 says "`Main Buttons` labels are size 59" — the node says 66, and Rubik SemiBold
+renders ~12 % wider than the face Figma draws with. That correction was written as a fact about
+*buttons*. It is actually a fact about **the font**. Every SemiBold run on both screens, authored
+at the node's nominal px, came out 10–12 % oversize:
+
+| run | node px | width ratio | cap-height ratio |
+|---|---|---|---|
+| Intro Title | 36 | 1.109 | 1.120 |
+| Welcome Title | 40 | 1.103 | 1.107 |
+| Feature Name | 30 | 1.106 | 1.095 |
+| Chip Label | 24 | 1.101 | 1.059 |
+| Main Button **(at the calibrated 59)** | 66 | **1.014** | **0.978** |
+
+The fix is one named constant, `SemiBoldSize = 59f/66f`, applied to every SemiBold site — and the
+button's own 59 now *derives* from it (`66 * 0.8939 = 59.0`), so the number cannot drift and a
+new SemiBold run cannot forget it. **When you find yourself writing a magic number with a
+one-element scope, ask what it is really a property of.**
+
+### 2. `GpsUiColor.A()` is the wrong helper for anything on a known panel
+
+The node's `fill-opacity="0.35"` white pager dots were authored with `GpsUiColor.A(White, 0.35f)`
+and rendered at (161,170,180) against the node's (103,137,158) — 45 per channel, plainly visible.
+`A()` stays genuinely translucent, so Unity composites it in LINEAR light while Figma composited
+in sRGB, and a **white** overlay lands far too bright (a dark one lands too dark; the direction
+flips with the overlay, which is why one blanket rule never worked).
+
+On a known backdrop the honest authoring is the composite the node actually renders, as an OPAQUE
+colour sampled at 1:1 — here `#67899E`, which measured Δ 0.3. Keep `A()` for things that must
+genuinely see through, like a text selection highlight. This is `FIGMA_SCREEN_BUILD_PLAYBOOK` §3
+and it cost a round anyway; the playbook entry now has a measured example.
+
+### 3. `S_GpsIconRing_Tile` is a FILLED circle, not an annulus
+
+The GPS Profile hero avatar was a navy `AvatarBg` capsule with a `GoldRing` overlay on top.
+Swapping the disc's sprite for a coloured one produced **no visible change in any of the four
+colours** — `make_gps_icon_ring.bake()` paints its fill out to the OUTER radius and then draws the
+stroke over it, so the ring sprite covered the disc completely. The wiring read as correct at
+every level: right sprite on the right Image, right serialized array, no prefab overrides.
+
+Two things follow. **Read the whole captured frame, not the property you changed** — the
+diagnostic that found this was looking at the screenshot, not at four consecutive correct
+inspections. And **collapse the pair**: the colour now lives on the ring's own fill
+(`S_AUTH_AvatarRing_*` — the same atom geometry with the swatch gradient), one Image instead of
+two, so the invisible-layer failure mode is gone rather than fixed.
+
+### 4. The cheap one: a key referenced by the builder but absent from the CSV
+
+Renders as the raw key on device and in the Editor. `grep` every `localizeKey` the task's files
+reference against the CSV — it is one command and it caught the only miss.
+
+### The process point
+
+Each of the four was then treated as a **shape**, per PIPELINE_HARDENING §15: all 19 text sites
+enumerated with a per-site verdict *including the 13 that were fine*, both translucency sites
+audited, every referenced key cross-checked. That is what turns "I fixed the title" into "no run
+on either screen has this problem", and it is cheaper than the second and third round-trip through
+the gates.

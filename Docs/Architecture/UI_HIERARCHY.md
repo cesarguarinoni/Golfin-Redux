@@ -480,6 +480,75 @@ StaminaShopDetailScreen           (StaminaShopDetailScreenController)
 
 ---
 
+## GPS / PLAYLIFE screens (gps_hub_entry … auth_golf_profile)
+
+Seven screens under `Canvas > ScreensRoot`, all registered in `ScreenManager` and all listed in
+`Golfin.Gps.UI.GpsGate.GpsScreens` — that list is the single source of truth for BOTH reachability
+("punch it" builds refuse to open them) and shared chrome (`ScreenManager` reads
+`GpsGate.IsGpsScreen`, it does not keep a second copy). **A new GPS screen missing from that list
+ships REACHABLE in a non-GPS build, silently.** `GpsGateTests.EveryGpsNamedScreenId_IsOnTheGpsList`
+is the tripwire.
+
+| ScreenId | Prefab | Controller | Built by |
+|---|---|---|---|
+| `GpsHub` | `GpsHubScreen.prefab` | `GpsHubScreenController` | — |
+| `ScoreUpload` | `ScoreUploadScreen.prefab` | `ScoreUploadFlowController` (six step roots in ONE screen) | `ScoreUploadScreenBuilder` |
+| `GpsProfile` | `GpsProfileScreen.prefab` | `GpsProfileScreenController` | `GpsProfilePackBuilder` |
+| `GpsAvatar` | `GpsAvatarScreen.prefab` | `GpsAvatarScreenController` | `GpsProfilePackBuilder` |
+| `GpsBadges` | `GpsBadgesScreen.prefab` | `GpsBadgesScreenController` | `GpsProfilePackBuilder` |
+| `GpsGolfProfile` | `GpsGolfProfileScreen.prefab` | `GpsGolfProfileScreenController` | `GpsAuthExtrasBuilder` |
+| `GpsWelcome` | `GpsWelcomeScreen.prefab` | `GpsWelcomeScreenController` | `GpsAuthExtrasBuilder` |
+
+All seven take `ShowTopBarOnly()` chrome: the shared top bar carries the title (via
+`PersistentUIManager.NavTitleKeyFor`) and the shared bottom nav is hidden — the hub and the score
+upload draw their OWN GPS nav bar inside their prefabs, and the two auth-extras frames hide it
+entirely (`GPS Nav Bar Container` is `hidden` on both Figma nodes). None of the seven has a
+bottom-nav pillar, so `ScreenManager.PillarOf` returns null for all of them and nav-back memory
+treats them uniformly.
+
+**The prefabs are builder OUTPUT, never hand-edited.** Re-running a builder overwrites its
+prefabs; the scene holds plain prefab instances stretched to full screen and inactive at rest.
+
+### auth_golf_profile (2026-09-02) — the post-signup pair
+
+```
+ScreensRoot
+├── GpsGolfProfileScreen        (GpsGolfProfileScreenController)
+│   ├── Background              (Splash - Background.png, full-screen)
+│   └── ContentContainer        (96,361, 978x2111 — NOTE 2111, not the 1860 the profile pack uses)
+│       ├── GolfProfilePanel    (S_AUTH_GolfProfilePanel, 958x731 r50)
+│       │   ├── IntroTitle / IntroSub
+│       │   ├── Colours         (492 wide, centred; Colour0..3 — the SELECTED slot is the 120px
+│       │   │                    disc, the rest 100px. Re-spaced at runtime by LayoutSwatches;
+│       │   │                    the row's total width is 492 whichever slot is selected.)
+│       │   ├── ColourLabel
+│       │   ├── NicknameLabel / NicknameInput   (TMP_InputField > TextArea > Placeholder + Text)
+│       │   ├── ExperienceLabel / Chips (Chip0..2, sprite swapped per selection)
+│       │   └── HandicapLabel / HandicapInput
+│       ├── ErrorLabel          (#E5484D, INACTIVE at rest; sits in the Spacer band BELOW the
+│       │                        panel so it can never disturb the panel's own layout)
+│       ├── SaveProfileButtonRow > SaveProfileButton   (Main Buttons Gold, content-hugging)
+│       └── SkipRow             (the whole row is the button; label centred)
+└── GpsWelcomeScreen            (GpsWelcomeScreenController)
+    ├── Background              (Splash - Background.png)
+    └── ContentContainer
+        ├── SkipRow             (label RIGHT-aligned; whole row is the button)
+        ├── WelcomePanel        (S_AUTH_WelcomePanel, 958x385 r50)
+        │   ├── IconRing > RoundsIcon
+        │   ├── WelcomeTitle / WelcomeSub  (the ONLY wrapping text on either screen)
+        │   └── Dots            (Dot0 active gold pill 40x14 + Dot1..3 — DECORATIVE, one page)
+        ├── FeatureGrid         (Feature0..3, 470x228, 2x2, gap 18)
+        │   └── Feature*        > IconRing > Icon, Name, Desc
+        └── GetStartedButtonRow > GetStartedButton
+```
+
+**Text sizes here are NOT the node's px.** Every SemiBold run is authored as
+`node_px * GpsAuthExtrasBuilder.SemiBoldSize` (= 59/66): the project's Rubik SemiBold renders ~11 %
+larger than the face the node draws with. Build rule 4's calibrated Main-Buttons 59 is the same
+constant, and now derives from it. Medium runs are NOT scaled — they measure correct.
+
+---
+
 ## Account / Auth Screens (login_signup_screens — 2026-07-21)
 
 Four screens under `Canvas > ScreensRoot`, registered in `ScreenManager` (ScreenId: Login, CreateUsername, SignUp, EmailConfirmation). Prefabs at `Assets/Prefabs/UI/Account/`. Controllers at `Assets/Scripts/UI/Account/` (namespace `Golfin.UI.Account`).

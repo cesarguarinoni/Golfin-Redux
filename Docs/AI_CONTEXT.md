@@ -5,7 +5,7 @@
 
 ---
 
-## 🟡 AWAITING CESAR — `auth_golf_profile` (2026-09-02) · the post-signup capture + welcome tutorial
+## ✅ DONE — `auth_golf_profile` **approved by Cesar** (2026-09-02) · the post-signup capture is live
 
 **The last two Auth-extras frames, from Figma `14029:33628` / `14029:33929`.** After a player first
 reaches Home signed in, GPS builds offer — once per device — a Golf Profile screen (avatar colour,
@@ -44,6 +44,9 @@ every referenced loc key was enumerated with a per-site verdict before fixing.
    Medium runs render ~5 % narrow and the Welcome sub wraps one word later than the node.
 3. Needs manual verification: the 409 duplicate-nickname path (wants a second account), on-device
    keyboard behaviour, and a look at the Japanese strings in a JA build.
+
+Shipped: GolfinRedux `e5964a46f` + `0afbb32f5`, playlife `22e79b6`. Spec archived at
+`Docs/Specs/Completed/auth_golf_profile/`.
 
 ---
 
