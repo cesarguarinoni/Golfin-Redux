@@ -42,6 +42,12 @@ namespace GolfinRedux.UI
         GpsProfile,
         GpsAvatar,
         GpsBadges,
+        // auth_golf_profile — the post-signup Golf Profile capture (Figma 14029:33628) and the
+        // one-page Welcome tutorial (14029:33929). GPS surface, so both are on GpsGate's list:
+        // in a "punch it" build neither is reachable and the Home trigger that offers them is a
+        // no-op. Offered ONCE per device on the first Home entry after sign-in.
+        GpsGolfProfile,
+        GpsWelcome,
         // Settings removed - it's an overlay, not a screen
 
         // Order: login_signup_screens — account auth gate (Phase 1 — UI only, no backend)
@@ -101,6 +107,11 @@ namespace GolfinRedux.UI
         [SerializeField] private GameObject _gpsProfileScreen;
         [SerializeField] private GameObject _gpsAvatarScreen;
         [SerializeField] private GameObject _gpsBadgesScreen;
+        // auth_golf_profile — post-signup Golf Profile capture + Welcome tutorial. Same
+        // top-bar-only chrome as the rest of the GPS surface (via GpsGate.IsGpsScreen), even
+        // though neither draws the GPS nav bar: the two frames hide it (SPEC § Reference).
+        [SerializeField] private GameObject _gpsGolfProfileScreen;
+        [SerializeField] private GameObject _gpsWelcomeScreen;
         // _settingsScreen removed - Settings is an overlay managed by SettingsController, not ScreenManager
 
         // Order: login_signup_screens — account auth gate screens
@@ -529,6 +540,11 @@ namespace GolfinRedux.UI
                 _gpsAvatarScreen.SetActive(screenId == ScreenId.GpsAvatar);
             if (_gpsBadgesScreen != null)
                 _gpsBadgesScreen.SetActive(screenId == ScreenId.GpsBadges);
+            // auth_golf_profile — post-signup capture + welcome tutorial
+            if (_gpsGolfProfileScreen != null)
+                _gpsGolfProfileScreen.SetActive(screenId == ScreenId.GpsGolfProfile);
+            if (_gpsWelcomeScreen != null)
+                _gpsWelcomeScreen.SetActive(screenId == ScreenId.GpsWelcome);
 
 
             // Order: login_signup_screens — account auth gate (excluded from showBars)

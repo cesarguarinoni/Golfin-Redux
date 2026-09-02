@@ -56,6 +56,17 @@ namespace Golfin.Gps.UI.Editor
         const string SprSectionPanel    = "Assets/Art/UI/Gps/S_PROF_SectionPanel.png";
 
         // ── Icons ─────────────────────────────────────────────────────────────
+        // auth_golf_profile §5 — the four hero avatar rings, in ColorIds order
+        // (pink, green, blue, gold). Each is the icon-ring atom with the swatch gradient as its
+        // fill; baked by Docs/Scripts/make_gps_auth_swatches.py.
+        static readonly string[] AvatarRings =
+        {
+            "Assets/Art/UI/Gps/S_AUTH_AvatarRing_Pink.png",
+            "Assets/Art/UI/Gps/S_AUTH_AvatarRing_Green.png",
+            "Assets/Art/UI/Gps/S_AUTH_AvatarRing_Blue.png",
+            "Assets/Art/UI/Gps/S_AUTH_AvatarRing_Gold.png",
+        };
+
         const string IcoStar    = "Assets/Art/UI/Gps/ICO_GpsStar.png";
         const string IcoHeart   = "Assets/Art/UI/Gps/ICO_GpsHeart.png";
         const string IcoPin     = "Assets/Art/UI/Gps/ICO_GpsPin.png";
@@ -184,9 +195,23 @@ namespace Golfin.Gps.UI.Editor
 
             // Avatar 170x170 at node (394, 30) — TOP of the column, NOT vertically centred.
             var avatarCircle = Rect("AvatarCircle", hero.transform, 394f, 30f, 170f, 170f);
-            Panel("AvatarBg", avatarCircle.transform, 0, 0, 170, 170, GpsUiColor.BadgeNavy, 85f);
-            var ringOverlay = Rect("GoldRing", avatarCircle.transform, 0, 0, 170, 170);
-            Img(ringOverlay, SprIconRingTile, new Color(Gold.r, Gold.g, Gold.b, 1f));
+            // auth_golf_profile §5 — ONE Image, carrying both the fill and the gold rim.
+            //
+            // It used to be two: a navy `AvatarBg` capsule with a `GoldRing` overlay on top. That
+            // could never show an avatar colour, because S_GpsIconRing_Tile is a FILLED navy
+            // circle with a gold rim (make_gps_icon_ring bakes the fill out to the outer radius),
+            // not an annulus — so the disc underneath it was completely covered. The first
+            // attempt at this feature swapped that hidden disc and rendered identically navy in
+            // all four colours. The colour now lives on the ring's own fill, which is the same
+            // atom at the same geometry with a different fill token.
+            var avatarBg = Rect("GoldRing", avatarCircle.transform, 0, 0, 170, 170);
+            Img(avatarBg, AvatarRings[3], White);           // gold — the null/unknown fallback
+            Set(so, "_avatarDisc", avatarBg.GetComponent<Image>());
+            var discSprites = so.FindProperty("_avatarDiscSprites");
+            discSprites.arraySize = AvatarRings.Length;
+            for (int i = 0; i < AvatarRings.Length; i++)
+                discSprites.GetArrayElementAtIndex(i).objectReferenceValue =
+                    AssetDatabase.LoadAssetAtPath<Sprite>(AvatarRings[i]);
             // Node 14025:33347: 71px, WHITE (the build had 84px gold).
             var avatarInitial = TMP("AvatarInitial", avatarCircle.transform, 0, 43, 170, 84,
                 "C", F(71), White, FontSemi, TextAlignmentOptions.Top);
@@ -1086,6 +1111,7 @@ namespace Golfin.Gps.UI.Editor
                 SprEvolutionPanel, SprStatusPanel, SprCollectionPanel, SprSectionPanel,
                 SprPill, SprHero, SprIconRingTile, SprSilver,
                 IcoStar, IcoHeart, IcoPin, IcoSparkle, IcoRounds, IcoGift,
+                AvatarRings[0], AvatarRings[1], AvatarRings[2], AvatarRings[3],
             };
             bool dirty = false;
             foreach (var p in paths)

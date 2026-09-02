@@ -22,6 +22,11 @@ namespace Golfin.Gps.UI
 
         // ── Hero panel ────────────────────────────────────────────────────────
         [Header("Hero panel")]
+        // auth_golf_profile §5 — the hero disc, so its gradient can follow the player's chosen
+        // avatar_color. Sprite slot order matches GpsGolfProfileScreenController.ColorIds:
+        // pink, green, blue, gold.
+        [SerializeField] private Image?   _avatarDisc;
+        [SerializeField] private Sprite[] _avatarDiscSprites = new Sprite[0];
         [SerializeField] private TextMeshProUGUI? _avatarInitial;
         [SerializeField] private TextMeshProUGUI? _playerName;
         [SerializeField] private TextMeshProUGUI? _playerSub;
@@ -139,6 +144,7 @@ namespace Golfin.Gps.UI
 
             SetText(_avatarInitial, string.IsNullOrEmpty(d.DisplayName) ? "?" :
                 d.DisplayName.Substring(0, 1).ToUpperInvariant());
+            ApplyAvatarColor(d.AvatarColor);
             SetText(_playerName, (d.DisplayName ?? Unknown).ToUpperInvariant());
 
             // v1 sub-line: "HC {handicap}" + "{activities_count} rounds" (no handle/home-course)
@@ -206,6 +212,7 @@ namespace Golfin.Gps.UI
         private void ShowPlaceholders()
         {
             SetText(_avatarInitial,    "?");
+            ApplyAvatarColor(null);
             SetText(_playerName,       Unknown);
             SetText(_playerSub,        Unknown);
             SetText(_statFollowers,    Unknown);
@@ -227,6 +234,32 @@ namespace Golfin.Gps.UI
             }
             for (int i = 0; i < _roundRows.Length; i++)
                 if (_roundRows[i] != null) _roundRows[i].gameObject.SetActive(false);
+        }
+
+        /// <summary>
+        /// auth_golf_profile §5 — repaint the hero disc in the colour the player picked on the
+        /// Golf Profile screen. One switch, no layout change: the disc keeps its size, its
+        /// position and the gold ring overlay drawn on top of it; only the fill sprite changes.
+        ///
+        /// <para>
+        /// GOLD IS THE FALLBACK, and it is reached often, not rarely: every account that predates
+        /// the Golf Profile screen and everyone who tapped "Skip for now" has a NULL
+        /// <c>avatar_color</c>. It is also what an unrecognised value falls back to, so a future
+        /// fifth colour on the server degrades to a real disc rather than to an empty Image.
+        /// </para>
+        /// </summary>
+        private void ApplyAvatarColor(string? avatarColor)
+        {
+            if (_avatarDisc == null || _avatarDiscSprites == null || _avatarDiscSprites.Length == 0)
+                return;
+
+            int slot = 3;  // gold
+            var ids = GpsGolfProfileScreenController.ColorIds;
+            for (int i = 0; i < ids.Length && i < _avatarDiscSprites.Length; i++)
+                if (ids[i] == avatarColor) { slot = i; break; }
+
+            if (slot < _avatarDiscSprites.Length && _avatarDiscSprites[slot] != null)
+                _avatarDisc.sprite = _avatarDiscSprites[slot];
         }
 
         private static void SetText(TextMeshProUGUI? t, string value)

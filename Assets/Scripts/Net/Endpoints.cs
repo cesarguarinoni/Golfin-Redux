@@ -463,6 +463,21 @@ namespace Golfin.Net
         public static string UserDetail => BaseUrl + "/user/detail";
 
         /// <summary>
+        /// PUT → <c>{data: &lt;profiles row&gt;}</c> — writes the caller's own profile
+        /// (user.py <c>update_profile</c>). AUTH REQUIRED; the row is chosen by the bearer token.
+        ///
+        /// <c>display_name</c> is REQUIRED in the body; <c>bio</c>, <c>avatar_url</c>,
+        /// <c>handicap</c>, <c>golf_experience</c> and <c>avatar_color</c> are optional and are
+        /// written only when present, so a partial body never blanks a field it omits.
+        ///
+        /// <c>409</c> means the display name is already taken (the
+        /// <c>profiles_display_name_lower_key</c> unique index); <c>422</c> means
+        /// <c>golf_experience</c> / <c>avatar_color</c> was outside its enum. Written by the
+        /// post-signup Golf Profile screen (auth_golf_profile §3).
+        /// </summary>
+        public static string UserUpdate => BaseUrl + "/user/update";
+
+        /// <summary>
         /// GET → <c>{data: [&lt;activities row&gt;]}</c> — the caller's own posted scores, newest
         /// first by <c>check_in_at</c> (score.py:419-436). AUTH REQUIRED, same posture as
         /// <see cref="UserDetail"/>.

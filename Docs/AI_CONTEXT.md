@@ -5,6 +5,48 @@
 
 ---
 
+## 🟡 AWAITING CESAR — `auth_golf_profile` (2026-09-02) · the post-signup capture + welcome tutorial
+
+**The last two Auth-extras frames, from Figma `14029:33628` / `14029:33929`.** After a player first
+reaches Home signed in, GPS builds offer — once per device — a Golf Profile screen (avatar colour,
+nickname, experience band, optional handicap), then a one-page Welcome tutorial whose GET STARTED
+lands in the GPS hub. Two new ScreenIds (`GpsGolfProfile`, `GpsWelcome`), both on `GpsGate`'s
+deny-list, so in a "punch it" build neither is reachable and the Home trigger is a no-op.
+
+**This build's FIRST backend change.** `profiles` gained `golf_experience` and `avatar_color`
+(nullable, CHECK-constrained), and `PUT /user/update` gained optional `handicap` /
+`golf_experience` / `avatar_color` with 422 enum validation. Additive only — Flutter untouched.
+Deployed to Fly (`playlife-api` v64 → v65) and round-tripped against the live API.
+
+**Gates:** geometry `45 sites 0 FAIL 0 GONE`; UI fidelity lint `fail=0` on both prefabs; EditMode
+sweep `326 passed / 0 failed` with a tripwire proving this task's 11 tests actually executed; 28
+localization keys published (`texts` v29), `export --check` clean. Every non-text A/B region is
+≤ 11.3 mean |ΔRGB|.
+
+### What the gates did not catch — and what did
+
+All four defects came from measuring and then *looking at the whole captured frame*, not from the
+gates: a missing loc key rendering as a raw label; **every SemiBold run ~11 % oversize** (Build
+rule 4's 66→59 calibration applies to the whole face, not just Main Buttons — now one named
+constant `SemiBoldSize = 59/66` from which the button's 59 derives); pager dots far too bright
+(`GpsUiColor.A` is genuinely translucent, so Unity composited in linear where Figma composited in
+sRGB — the playbook §3 trap); and a hero avatar disc that was **invisible**, because
+`S_GpsIconRing_Tile` is a filled circle rather than an annulus and covered the colour disc behind
+it entirely. Each was then treated as a *shape*: every text site, every translucency site and
+every referenced loc key was enumerated with a per-site verdict before fixing.
+
+### Known-unequal / open
+
+1. **`PUT /user/update` cannot clear a field to NULL** — the flip side of "an omitted field is
+   preserved" (both proven in the round trip). The Settings screen that "you can change all of
+   this later" promises will need an explicit-null contract if a player may un-set a handicap.
+2. `Rubik:Medium` still resolves to the variable face (no Medium TMP asset in the project), so
+   Medium runs render ~5 % narrow and the Welcome sub wraps one word later than the node.
+3. Needs manual verification: the 409 duplicate-nickname path (wants a second account), on-device
+   keyboard behaviour, and a look at the Japanese strings in a JA build.
+
+---
+
 ## ✅ DONE — `gps_profile_pack` **approved by Cesar** (2026-09-02) · the PROFILE tab is live
 
 **Three read-only GPS screens — Profile / My Avatar / Badges — from Figma `14025:33087` /
@@ -51,9 +93,10 @@ boot), then silently ignored the node's background plate because the screen pref
 
 ### Known-unequal / still open
 
-1. **The 79 new localization rows are NOT published to the server.** They resolve in the Editor
-   because the table was regenerated, but a device build renders raw keys. Needs importer
-   PLAN → APPLY → publish `texts` → `export_content.py --check`.
+1. ~~The 79 new localization rows are NOT published to the server.~~ **RESOLVED** — published in
+   `c5558a400` (`texts` v26 → v28). Verified 2026-09-02: `import_content.py` reports
+   `add 28 change 0 same 876` for `auth_golf_profile`'s own rows only, i.e. nothing of
+   `gps_profile_pack`'s was left behind.
 2. Badges' locked rings still read gold: `S_GpsIconRing_Tile` IS gold artwork, so a multiply-tint
    cannot grey it (dimmed to 0.35 alpha as a stopgap). A white ring variant from the baker fixes it.
 3. `/badges/progress` returns nothing for this account, so the Collection panel shows `—` and the

@@ -1,0 +1,33 @@
+=== iter-1 kickoff baseline 2026-09-02 ===
+HEAD 0296efad6ad3528027be1cb8d2b492e60d0f4ef9
+DIRTY (git status --porcelain --untracked-files=all at kickoff):
+ M .claude/alerts.log
+ M .claude/review_misses.log
+ M Docs/Reports/content_art.txt
+ M Docs/Specs/Completed/gps_profile_pack/ARCHITECT_REVIEW.md
+ M Docs/TellCode.md
+?? .claude/launch.json
+?? Docs/GPS/GPS_BACKLOG.md
+?? Docs/Specs/Active/auth_golf_profile/
+?? Docs/Specs/Active/gps_gifts_votes/
+?? Docs/Specs/Completed/ball_data_wiring/ARCHITECT_REVIEW.md
+
+12:20  Unity Editor was closed -> launched it; MCP reachable via unity-mcp-cli (config port 21573).
+12:30  Nodes 14029:33628 / :33929 re-pulled with get_metadata + get_design_context (Rule 9).
+       Node values differ from the SPEC table in three places: panel stroke is SOLID 3px white
+       (not a gradient), chip labels are SemiBold 24 (not "Medium 28ish"), selected chip ink is
+       #2a1a00. Built against the NODE.
+12:40  Backend: migration file + user.py validators; model verified against real pydantic 2.9.
+12:45  Bakes: 13 S_AUTH_* sprites + 2 icon-ring sizes. Builders + controllers compile clean.
+12:46  First real-navigation capture. Home trigger fired by itself. DEFECT: GET STARTED rendered
+       the raw key -> GPS_WELCOME_GET_STARTED missing from the CSV. Key-shape audit run across
+       every touched file; exactly one miss.
+12:54  Backend round trip PASS (200 / 422 / 422 / omit-preserves).
+13:00  DEFECT: every SemiBold run ~11% oversize. Enumerated all 19 text sites, 6 FAIL / 13 PASS,
+       fixed with one constant (59/66) from which the button's calibrated 59 now derives.
+13:05  DEFECT: pager dots far too bright (wrong alpha helper). Both translucency sites audited;
+       one fixed, one confirmed correct.
+13:17  DEFECT: hero avatar disc invisible under the opaque icon-ring atom. Moved the colour onto
+       the ring's own fill; two Images collapsed to one.
+13:25  Gates green: 45 sites 0 FAIL 0 GONE; lint fail=0 x2; EditMode 326/0 with tripwire.
+       Dev account row restored to NULL. Editor left clean (not playing, ShellScene not dirty).

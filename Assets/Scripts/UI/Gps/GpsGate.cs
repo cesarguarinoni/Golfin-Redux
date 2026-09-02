@@ -46,6 +46,12 @@ namespace Golfin.Gps.UI
             ScreenId.GpsProfile,
             ScreenId.GpsAvatar,
             ScreenId.GpsBadges,
+            // auth_golf_profile — the post-signup capture + welcome tutorial. On the list for the
+            // same two reasons as the rest: they are GPS surface (top-bar-only chrome), and in a
+            // "punch it" build they must not be reachable — which also makes HomeScreenController's
+            // first-entry trigger a no-op there, since it tests GpsGate.Enabled before offering.
+            ScreenId.GpsGolfProfile,
+            ScreenId.GpsWelcome,
         };
 
         /// <summary>Membership of the GPS surface, independent of <see cref="Enabled"/>. Used by

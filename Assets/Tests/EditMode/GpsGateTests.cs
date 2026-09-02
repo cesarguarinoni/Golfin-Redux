@@ -23,7 +23,9 @@ namespace GolfinRedux.Tests.EditMode
         const string ScreenIdTypeName = "GolfinRedux.UI.ScreenId";
 
         static readonly string[] GpsScreenNames =
-            { "GpsHub", "ScoreUpload", "GpsProfile", "GpsAvatar", "GpsBadges" };
+            { "GpsHub", "ScoreUpload", "GpsProfile", "GpsAvatar", "GpsBadges",
+              // auth_golf_profile — the post-signup capture + welcome tutorial.
+              "GpsGolfProfile", "GpsWelcome" };
 
         // A sample of the rest of the app. These must be reachable in EVERY variant — the gate is
         // a deny-list, so anything not on the GPS list is allowed by construction, and a bug that
@@ -102,7 +104,7 @@ namespace GolfinRedux.Tests.EditMode
 
         // ── The list ScreenManager's chrome rule shares ─────────────────────────────────────
         [Test]
-        public void IsGpsScreen_MatchesExactlyTheFiveGpsScreens()
+        public void IsGpsScreen_MatchesExactlyTheGpsScreens()
         {
             foreach (var name in GpsScreenNames)
                 Assert.IsTrue(IsGps(name), $"{name} must be on the GPS list.");

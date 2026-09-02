@@ -1,0 +1,30 @@
+{
+  "prefab": "Assets/Prefabs/UI/Gps/GpsGolfProfileScreen.prefab",
+  "node": "14029:33628",
+  "pulled": "2026-09-02 via get_metadata",
+  "note": "Rule-15 shape sweep: every RectTransform the Figma frame declares, x/y Figma-style (right, DOWN from the parent's top-left). Sizes are the node's own; a site whose rect is state-dependent carries a `state` note.",
+  "sites": [
+    { "path": "ContentContainer", "node": "14029:33632", "figma": [96, 361, 978, 2111], "note": "anchored at canvas (96,361); parent is the full-screen root" },
+    { "path": "ContentContainer/GolfProfilePanel", "node": "14029:33885", "figma": [10, 0, 958, 731] },
+    { "path": "ContentContainer/GolfProfilePanel/IntroTitle", "node": "14029:33887", "figma": [40, 30, 878, 43], "note": "node text run is 491 wide at x=193.5, i.e. centred in the 878 content box; built as a full-width centred TMP" },
+    { "path": "ContentContainer/GolfProfilePanel/IntroSub", "node": "14029:33888", "figma": [40, 79, 878, 28], "note": "node run 483 @ x=197.5, centred" },
+    { "path": "ContentContainer/GolfProfilePanel/Colours", "node": "14029:33890", "figma": [233, 133, 492, 120] },
+    { "path": "ContentContainer/GolfProfilePanel/Colours/Colour0", "node": "14029:33891", "figma": [0, 10, 100, 100], "state": "unselected" },
+    { "path": "ContentContainer/GolfProfilePanel/Colours/Colour1", "node": "14029:33894", "figma": [124, 0, 120, 120], "state": "selected (the state the node renders)" },
+    { "path": "ContentContainer/GolfProfilePanel/Colours/Colour2", "node": "14029:33897", "figma": [268, 10, 100, 100], "state": "unselected" },
+    { "path": "ContentContainer/GolfProfilePanel/Colours/Colour3", "node": "14029:33900", "figma": [392, 10, 100, 100], "state": "unselected" },
+    { "path": "ContentContainer/GolfProfilePanel/ColourLabel", "node": "14029:33903", "figma": [40, 265, 878, 28], "note": "node run 264 @ x=307, centred" },
+    { "path": "ContentContainer/GolfProfilePanel/NicknameLabel", "node": "14029:33905", "figma": [40, 319, 878, 28], "note": "node run 124, left-aligned" },
+    { "path": "ContentContainer/GolfProfilePanel/NicknameInput", "node": "14029:33906", "figma": [40, 355, 878, 80] },
+    { "path": "ContentContainer/GolfProfilePanel/ExperienceLabel", "node": "14029:33909", "figma": [40, 461, 878, 28], "note": "node run 216, left-aligned" },
+    { "path": "ContentContainer/GolfProfilePanel/Chips", "node": "14029:33910", "figma": [40, 499, 878, 60] },
+    { "path": "ContentContainer/GolfProfilePanel/Chips/Chip0", "node": "14029:33911", "figma": [0, 0, 284.6667, 60] },
+    { "path": "ContentContainer/GolfProfilePanel/Chips/Chip1", "node": "14029:33913", "figma": [296.6667, 0, 284.6667, 60] },
+    { "path": "ContentContainer/GolfProfilePanel/Chips/Chip2", "node": "14029:33915", "figma": [593.3333, 0, 284.6667, 60] },
+    { "path": "ContentContainer/GolfProfilePanel/HandicapLabel", "node": "14029:33918", "figma": [40, 585, 878, 28], "note": "node run 264, left-aligned" },
+    { "path": "ContentContainer/GolfProfilePanel/HandicapInput", "node": "14029:33919", "figma": [40, 621, 878, 80] },
+    { "path": "ContentContainer/SaveProfileButtonRow", "node": "14029:33922", "figma": [10, 1896, 958, 120] },
+    { "path": "ContentContainer/SkipRow", "node": "14029:33927", "figma": [10, 2040, 958, 71] },
+    { "path": "ContentContainer/SkipRow/SkipLabel", "node": "14029:33928", "figma": [0, 0, 958, 31], "note": "node run 155 @ x=401.5 within the 958 row, i.e. centred" }
+  ]
+}

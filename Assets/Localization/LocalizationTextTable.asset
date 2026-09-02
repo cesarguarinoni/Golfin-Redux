@@ -2807,3 +2807,88 @@ MonoBehaviour:
   - key: GPS_AVATAR_UNLOCK_FX
     english: FLAME FX
     japanese: "\u30D5\u30EC\u30A4\u30E0FX"
+  - key: GPS_GOLFPROF_TITLE
+    english: GOLF PROFILE
+    japanese: "\u30B4\u30EB\u30D5\u30D7\u30ED\u30D5\u30A3\u30FC\u30EB"
+  - key: GPS_GOLFPROF_TITLE_INTRO
+    english: SET UP YOUR GOLF PROFILE
+    japanese: "\u30B4\u30EB\u30D5\u30D7\u30ED\u30D5\u30A3\u30FC\u30EB\u3092\u8A2D\u5B9A"
+  - key: GPS_GOLFPROF_SUB
+    english: You can change all of this later in Settings
+    japanese: "\u3053\u308C\u3089\u306F\u3059\u3079\u3066\u5F8C\u304B\u3089\u8A2D\u5B9A\u3067\u5909\u66F4\u3067\u304D\u307E\u3059"
+  - key: GPS_GOLFPROF_COLOUR_LABEL
+    english: Pick your avatar colour
+    japanese: "\u30A2\u30D0\u30BF\u30FC\u306E\u8272\u3092\u9078\u629E"
+  - key: GPS_GOLFPROF_NICKNAME
+    english: NICKNAME
+    japanese: "\u30CB\u30C3\u30AF\u30CD\u30FC\u30E0"
+  - key: GPS_GOLFPROF_NICKNAME_HINT
+    english: Your nickname
+    japanese: "\u30CB\u30C3\u30AF\u30CD\u30FC\u30E0\u3092\u5165\u529B"
+  - key: GPS_GOLFPROF_EXPERIENCE
+    english: GOLF EXPERIENCE
+    japanese: "\u30B4\u30EB\u30D5\u6B74"
+  - key: GPS_GOLFPROF_EXP_BEGINNER
+    english: BEGINNER
+    japanese: "\u521D\u5FC3\u8005"
+  - key: GPS_GOLFPROF_EXP_INTERMEDIATE
+    english: INTERMEDIATE
+    japanese: "\u4E2D\u7D1A\u8005"
+  - key: GPS_GOLFPROF_EXP_ADVANCED
+    english: ADVANCED
+    japanese: "\u4E0A\u7D1A\u8005"
+  - key: GPS_GOLFPROF_HANDICAP
+    english: HANDICAP (OPTIONAL)
+    japanese: "\u30CF\u30F3\u30C7\u30A3\u30AD\u30E3\u30C3\u30D7\uFF08\u4EFB\u610F\uFF09"
+  - key: GPS_GOLFPROF_HANDICAP_HINT
+    english: e.g. 18.4
+    japanese: "\u4F8B\uFF1A18.4"
+  - key: GPS_GOLFPROF_HANDICAP_BAD
+    english: Enter a handicap between -10 and 60, or leave it blank.
+    japanese: "\u30CF\u30F3\u30C7\u30A3\u30AD\u30E3\u30C3\u30D7\u306F-10\u301C60\u306E\u7BC4\u56F2\u3067\u5165\u529B\u3059\u308B\u304B\u3001\u7A7A\u6B04\u306B\u3057\u3066\u304F\u3060\u3055\u3044\u3002"
+  - key: GPS_GOLFPROF_SAVE
+    english: SAVE PROFILE
+    japanese: "\u30D7\u30ED\u30D5\u30A3\u30FC\u30EB\u3092\u4FDD\u5B58"
+  - key: GPS_GOLFPROF_SKIP
+    english: Skip for now
+    japanese: "\u5F8C\u3067\u8A2D\u5B9A\u3059\u308B"
+  - key: GPS_WELCOME_TITLE
+    english: WELCOME
+    japanese: "\u3088\u3046\u3053\u305D"
+  - key: GPS_WELCOME_TITLE_HEAD
+    english: WELCOME TO GOLFIN GPS
+    japanese: "GOLFIN GPS \u3078\u3088\u3046\u3053\u305D"
+  - key: GPS_WELCOME_SUB
+    english: Earn points just by playing golf. Prove your rounds with GPS, get gifts
+      from fans, and grow your avatar.
+    japanese: "\u30B4\u30EB\u30D5\u3092\u30D7\u30EC\u30A4\u3059\u308B\u3060\u3051\u3067\u30DD\u30A4\u30F3\u30C8\u304C\u8CAF\u307E\u308A\u307E\u3059\u3002GPS\u3067\u30E9\u30A6\u30F3\u30C9\u3092\u8A3C\u660E\u3057\u3001\u30D5\u30A1\u30F3\u304B\u3089\u30AE\u30D5\u30C8\u3092\u53D7\u3051\u53D6\u308A\u3001\u30A2\u30D0\u30BF\u30FC\u3092\u80B2\u3066\u307E\u3057\u3087\u3046\u3002"
+  - key: GPS_WELCOME_SKIP
+    english: SKIP
+    japanese: "\u30B9\u30AD\u30C3\u30D7"
+  - key: GPS_WELCOME_GET_STARTED
+    english: GET STARTED
+    japanese: "\u306F\u3058\u3081\u308B"
+  - key: GPS_WELCOME_FEAT_SS
+    english: SCREENSHOT
+    japanese: "\u30B9\u30AF\u30EA\u30FC\u30F3\u30B7\u30E7\u30C3\u30C8"
+  - key: GPS_WELCOME_FEAT_SS_DESC
+    english: AI reads your scorecard
+    japanese: "AI\u304C\u30B9\u30B3\u30A2\u30AB\u30FC\u30C9\u3092\u8AAD\u307F\u53D6\u308A\u307E\u3059"
+  - key: GPS_WELCOME_FEAT_CHECKIN
+    english: CHECK IN
+    japanese: "\u30C1\u30A7\u30C3\u30AF\u30A4\u30F3"
+  - key: GPS_WELCOME_FEAT_CHECKIN_DESC
+    english: Prove it with GPS
+    japanese: "GPS\u3067\u30E9\u30A6\u30F3\u30C9\u3092\u8A3C\u660E"
+  - key: GPS_WELCOME_FEAT_VOTE
+    english: VOTE
+    japanese: "\u6295\u7968"
+  - key: GPS_WELCOME_FEAT_VOTE_DESC
+    english: Predict and win points
+    japanese: "\u4E88\u60F3\u3057\u3066\u30DD\u30A4\u30F3\u30C8\u3092\u7372\u5F97"
+  - key: GPS_WELCOME_FEAT_GIFT
+    english: GIFT
+    japanese: "\u30AE\u30D5\u30C8"
+  - key: GPS_WELCOME_FEAT_GIFT_DESC
+    english: Support your favourite golfers
+    japanese: "\u597D\u304D\u306A\u30B4\u30EB\u30D5\u30A1\u30FC\u3092\u5FDC\u63F4"

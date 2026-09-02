@@ -884,3 +884,31 @@ GPS_AVATAR_UNLOCKS_FMT,UNLOCKS AT Lv.{0},Lv.{0}で解放
 GPS_AVATAR_UNLOCK_CAP,CAMO CAP,カモキャップ
 GPS_AVATAR_UNLOCK_AURA,GOLD AURA,ゴールドオーラ
 GPS_AVATAR_UNLOCK_FX,FLAME FX,フレイムFX
+GPS_GOLFPROF_TITLE,GOLF PROFILE,ゴルフプロフィール
+GPS_GOLFPROF_TITLE_INTRO,SET UP YOUR GOLF PROFILE,ゴルフプロフィールを設定
+GPS_GOLFPROF_SUB,You can change all of this later in Settings,これらはすべて後から設定で変更できます
+GPS_GOLFPROF_COLOUR_LABEL,Pick your avatar colour,アバターの色を選択
+GPS_GOLFPROF_NICKNAME,NICKNAME,ニックネーム
+GPS_GOLFPROF_NICKNAME_HINT,Your nickname,ニックネームを入力
+GPS_GOLFPROF_EXPERIENCE,GOLF EXPERIENCE,ゴルフ歴
+GPS_GOLFPROF_EXP_BEGINNER,BEGINNER,初心者
+GPS_GOLFPROF_EXP_INTERMEDIATE,INTERMEDIATE,中級者
+GPS_GOLFPROF_EXP_ADVANCED,ADVANCED,上級者
+GPS_GOLFPROF_HANDICAP,HANDICAP (OPTIONAL),ハンディキャップ（任意）
+GPS_GOLFPROF_HANDICAP_HINT,e.g. 18.4,例：18.4
+GPS_GOLFPROF_HANDICAP_BAD,"Enter a handicap between -10 and 60, or leave it blank.",ハンディキャップは-10〜60の範囲で入力するか、空欄にしてください。
+GPS_GOLFPROF_SAVE,SAVE PROFILE,プロフィールを保存
+GPS_GOLFPROF_SKIP,Skip for now,後で設定する
+GPS_WELCOME_TITLE,WELCOME,ようこそ
+GPS_WELCOME_TITLE_HEAD,WELCOME TO GOLFIN GPS,GOLFIN GPS へようこそ
+GPS_WELCOME_SUB,"Earn points just by playing golf. Prove your rounds with GPS, get gifts from fans, and grow your avatar.",ゴルフをプレイするだけでポイントが貯まります。GPSでラウンドを証明し、ファンからギフトを受け取り、アバターを育てましょう。
+GPS_WELCOME_SKIP,SKIP,スキップ
+GPS_WELCOME_GET_STARTED,GET STARTED,はじめる
+GPS_WELCOME_FEAT_SS,SCREENSHOT,スクリーンショット
+GPS_WELCOME_FEAT_SS_DESC,AI reads your scorecard,AIがスコアカードを読み取ります
+GPS_WELCOME_FEAT_CHECKIN,CHECK IN,チェックイン
+GPS_WELCOME_FEAT_CHECKIN_DESC,Prove it with GPS,GPSでラウンドを証明
+GPS_WELCOME_FEAT_VOTE,VOTE,投票
+GPS_WELCOME_FEAT_VOTE_DESC,Predict and win points,予想してポイントを獲得
+GPS_WELCOME_FEAT_GIFT,GIFT,ギフト
+GPS_WELCOME_FEAT_GIFT_DESC,Support your favourite golfers,好きなゴルファーを応援

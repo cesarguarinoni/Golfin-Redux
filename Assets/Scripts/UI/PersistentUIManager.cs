@@ -541,6 +541,9 @@ namespace Golfin.UI
                 case GolfinRedux.UI.ScreenId.GpsProfile:               return "GPS_PROFILE_TITLE";
                 case GolfinRedux.UI.ScreenId.GpsAvatar:                return "GPS_AVATAR_TITLE";
                 case GolfinRedux.UI.ScreenId.GpsBadges:                return "GPS_BADGES_TITLE";
+                // auth_golf_profile — post-signup capture + welcome tutorial
+                case GolfinRedux.UI.ScreenId.GpsGolfProfile:           return "GPS_GOLFPROF_TITLE";
+                case GolfinRedux.UI.ScreenId.GpsWelcome:               return "GPS_WELCOME_TITLE";
                 default:                                               return null;
             }
         }

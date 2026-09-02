@@ -1,0 +1,198 @@
+{
+  "elements": [
+    {
+      "name": "Background",
+      "requireSprite": true,
+      "w": -1,
+      "h": -1,
+      "radius": -1,
+      "fontSize": -1,
+      "color": "",
+      "fontWeight": ""
+    },
+    {
+      "name": "SkipLabel",
+      "requireSprite": false,
+      "w": -1,
+      "h": -1,
+      "radius": -1,
+      "fontSize": 26,
+      "color": "#B7C3D3",
+      "fontWeight": ""
+    },
+    {
+      "name": "WelcomePanel",
+      "requireSprite": true,
+      "w": 958,
+      "h": 385,
+      "radius": -1,
+      "fontSize": -1,
+      "color": "",
+      "fontWeight": ""
+    },
+    {
+      "name": "IconRing",
+      "requireSprite": true,
+      "w": -1,
+      "h": -1,
+      "radius": -1,
+      "fontSize": -1,
+      "color": "",
+      "fontWeight": ""
+    },
+    {
+      "name": "RoundsIcon",
+      "requireSprite": true,
+      "w": 74,
+      "h": 74,
+      "radius": -1,
+      "fontSize": -1,
+      "color": "",
+      "fontWeight": ""
+    },
+    {
+      "name": "WelcomeTitle",
+      "requireSprite": false,
+      "w": -1,
+      "h": -1,
+      "radius": -1,
+      "fontSize": 35.76,
+      "color": "#EEDC9A",
+      "fontWeight": "SemiBold",
+      "_nodeFontSize": 40,
+      "_note": "SemiBold: node px x 59/66. The project's Rubik SemiBold renders ~11% larger than the node's face; measured cap-height ratio was 1.10-1.12 at the nominal size. Same calibration Build rule 4 applies to Main Buttons (66 -> 59)."
+    },
+    {
+      "name": "WelcomeSub",
+      "requireSprite": false,
+      "w": 860,
+      "h": -1,
+      "radius": -1,
+      "fontSize": 28,
+      "color": "#FFFFFF",
+      "fontWeight": ""
+    },
+    {
+      "name": "Dot0",
+      "requireSprite": true,
+      "w": 40,
+      "h": 14,
+      "radius": -1,
+      "fontSize": -1,
+      "color": "#EEDC9A",
+      "fontWeight": ""
+    },
+    {
+      "name": "Dot1",
+      "requireSprite": true,
+      "w": 14,
+      "h": 14,
+      "radius": -1,
+      "fontSize": -1,
+      "color": "",
+      "fontWeight": ""
+    },
+    {
+      "name": "Dot2",
+      "requireSprite": true,
+      "w": 14,
+      "h": 14,
+      "radius": -1,
+      "fontSize": -1,
+      "color": "",
+      "fontWeight": ""
+    },
+    {
+      "name": "Dot3",
+      "requireSprite": true,
+      "w": 14,
+      "h": 14,
+      "radius": -1,
+      "fontSize": -1,
+      "color": "",
+      "fontWeight": ""
+    },
+    {
+      "name": "Feature0",
+      "requireSprite": true,
+      "w": 470,
+      "h": 228,
+      "radius": -1,
+      "fontSize": -1,
+      "color": "",
+      "fontWeight": ""
+    },
+    {
+      "name": "Feature1",
+      "requireSprite": true,
+      "w": 470,
+      "h": 228,
+      "radius": -1,
+      "fontSize": -1,
+      "color": "",
+      "fontWeight": ""
+    },
+    {
+      "name": "Feature2",
+      "requireSprite": true,
+      "w": 470,
+      "h": 228,
+      "radius": -1,
+      "fontSize": -1,
+      "color": "",
+      "fontWeight": ""
+    },
+    {
+      "name": "Feature3",
+      "requireSprite": true,
+      "w": 470,
+      "h": 228,
+      "radius": -1,
+      "fontSize": -1,
+      "color": "",
+      "fontWeight": ""
+    },
+    {
+      "name": "Icon",
+      "requireSprite": true,
+      "w": 48,
+      "h": 48,
+      "radius": -1,
+      "fontSize": -1,
+      "color": "",
+      "fontWeight": ""
+    },
+    {
+      "name": "Name",
+      "requireSprite": false,
+      "w": -1,
+      "h": -1,
+      "radius": -1,
+      "fontSize": 26.82,
+      "color": "#FFFFFF",
+      "fontWeight": "SemiBold",
+      "_nodeFontSize": 30,
+      "_note": "SemiBold: node px x 59/66. The project's Rubik SemiBold renders ~11% larger than the node's face; measured cap-height ratio was 1.10-1.12 at the nominal size. Same calibration Build rule 4 applies to Main Buttons (66 -> 59)."
+    },
+    {
+      "name": "Desc",
+      "requireSprite": false,
+      "w": 400,
+      "h": -1,
+      "radius": -1,
+      "fontSize": 22,
+      "color": "#B7C3D3",
+      "fontWeight": ""
+    },
+    {
+      "name": "GetStartedButton",
+      "requireSprite": true,
+      "w": -1,
+      "h": 120,
+      "radius": -1,
+      "fontSize": -1,
+      "color": "",
+      "fontWeight": ""
+    }
+  ]
+}

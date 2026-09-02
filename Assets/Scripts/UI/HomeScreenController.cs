@@ -5,6 +5,7 @@ using Golfin.UI;
 using Golfin.Roster;
 using Golfin.UI.Matchmaking;
 using Golfin.UI.Common;
+using Golfin.Gps.UI;
 
 namespace GolfinRedux.UI
 {
@@ -216,6 +217,29 @@ namespace GolfinRedux.UI
 
             // Next hole panel
             LoadNextHole();
+
+            // auth_golf_profile §2 — the once-per-device post-signup offer. Deferred by a frame
+            // rather than shown from inside OnEnable: ScreenManager is still part-way through
+            // ApplyScreen at this point (Home's SetActive is what ran us), and calling ShowScreen
+            // re-entrantly from there would leave the rest of that pass operating on a screen id
+            // it has already moved off. One frame later the pass has finished and the swap is an
+            // ordinary navigation.
+            if (GpsAuthExtrasFlow.ShouldOffer())
+                StartCoroutine(OfferGolfProfileNextFrame());
+        }
+
+        /// <summary>
+        /// Hand off to the Golf Profile capture on the frame AFTER Home comes up. The condition is
+        /// re-tested here because a frame is long enough for the flag to have been set by another
+        /// path — and because a coroutine that outlives its reason to run is how a screen ends up
+        /// being shown twice.
+        /// </summary>
+        private System.Collections.IEnumerator OfferGolfProfileNextFrame()
+        {
+            yield return null;
+            if (!GpsAuthExtrasFlow.ShouldOffer()) yield break;
+            Debug.Log("[HomeScreen] auth_golf_profile — offering the post-signup Golf Profile capture.");
+            GolfinRedux.UI.ScreenManager.Instance?.ShowScreen(GolfinRedux.UI.ScreenId.GpsGolfProfile);
         }
 
         private void OnDisable()
