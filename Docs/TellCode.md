@@ -7,16 +7,17 @@
 
 ## ▶ CURRENT STATE — update this block at every session boundary
 
-- **GPS→Unity build, 2026-09-02 (Architect, Cowork session).** DONE and on main: `gps_trust_core`,
-  `gps_hub_entry`, `score_upload_flow`, `gps_profile_pack`, `punch_it_gps_variants`,
-  `auth_golf_profile` (API v65, texts v29), `gps_gifts_votes` (API v66, texts v31, gift economy
-  atomic via `golfin_gift_pts` / `golfin_gift_purchase`). `gps_pill_entry` (the Home GPS pill is
-  the GPS door, banner restored; `e2db982c0`, texts v30) is BUILT but its folder is still
-  `READY_FOR_SELF_REVIEW` in Active — close it as the first commit of `gps_polish`.
-  **NEXT: `gps_polish` (SPEC_READY, kickoff below).** Then the on-device pass on a "Punch it GPS"
-  build (test venues 1992/1993 are live, `source='test_fixture'`), then `gps_standalone_shell`
+- **GPS→Unity build, status 2026-09-03 (Architect, Cowork session).** DONE and on main:
+  `gps_trust_core`, `gps_hub_entry`, `score_upload_flow`, `gps_profile_pack`,
+  `punch_it_gps_variants`, `auth_golf_profile` (API v65, texts v29), `gps_gifts_votes` (API v66,
+  texts v31, gift economy atomic via `golfin_gift_pts` / `golfin_gift_purchase`), `gps_pill_entry`
+  (Home GPS pill is the GPS door, banner restored; `96d60fab4`), `gps_polish` (`5506d2c67`; layered
+  push approved; full two-gate chain ran — one red-team FAIL on a false A7 measurement, retracted
+  and repaired). **NEXT: the on-device pass on a "Punch it GPS" build — checklist
+  `Docs/GPS/GPS_DEVICE_PASS.md`** (Cesar runs it; test venues 1992/1993 live with
+  `source='test_fixture'`; defects come back as quick specs). Then `gps_standalone_shell`
   (decision 2026-09-02: Unity thin-shell, Flutter retired). Deferred scope lives in
-  `Docs/GPS/GPS_BACKLOG.md` (Architect-maintained). Roadmap rows: Notion Orders 2110–2112, 2130.
+  `Docs/GPS/GPS_BACKLOG.md` (Architect-maintained). Roadmap rows: Notion Orders 2104–2114, 2130.
 
 - **`publish_blocked_catalogs`: DONE — approved by Cesar 2026-09-02, folder in
   `Docs/Specs/Completed/`.** Both admin publishes unblocked (impl `bbf9996e3`, Worker
@@ -215,6 +216,30 @@
   overlaid rates/pools (signup-modal rules shell), five-event telemetry funnel + Telemetry-panel
   card, Gold ticket placeholder icon + admin `iconUrl` upload, `TICKET_SHOP_BUILD` + the first
   `category=ticket` shop row (Cesar sets price/quantity) once the C archive exists.
+
+### Kickoff · gps_polish — CONTINUATION (issued 2026-09-02 evening; the push is approved, finish the rest before the device pass)
+
+```
+Read Docs/Specs/Active/gps_polish/KICKOFF_ADDENDUM.md and finish gps_polish.
+
+Context:
+- The push is approved by Cesar and stays; deviations D-1..D-7 accepted (the nav-bar
+  wiring off the hub is welcome). SPEC.md is unchanged; the addendum's R1-R9 table
+  (= your own report's "Not done" table) is the checklist.
+- R1 staggers on fetch-paint (never cache-paint), R2 gift/vote panel fades + filter
+  cross-fade, R3 selection bumps (two-Image alpha, no tinting), R4 count-ups + badge
+  pulse + vote-bar fill, R5 ShimmerBlock placed at the five cold-fetch sites with the
+  cache-hit gate, R6 keyboard offset (device-only; EditMode the math), R7 videos
+  (c)(e)(f) + a short (d') and re-record (b), R8 a pending "..." frame, R9 a REAL
+  profiler measurement of the push (GC alloc/frame, worst ms).
+- Burn ONE of the four seeded GOLFIN AI votes for video (f); name its id.
+- Re-run A1 (fail=0) and A2 (0 px on all 7 screens) at the end; FadeController and
+  non-GPS prefabs untouched (quote git status).
+
+When done: STATUS -> READY_FOR_SELF_REVIEW with every A-item filled, list changed
+files with a 1-line summary each, flag which items need the on-device pass, update
+IMPLEMENTER_REPORT.md, and update Docs/AI_CONTEXT.md.
+```
 
 ### Kickoff · gps_polish (issued 2026-09-02 — start now; gps_gifts_votes is DONE)
 

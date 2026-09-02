@@ -2,7 +2,7 @@
 
 > Everything consciously left OUT of the 2026-09 GPS build, in one place, with where it was
 > deferred and what it needs. Maintained by the Architect — every future GPS spec that defers
-> something adds a row here in the same session. Last updated: 2026-09-02 (gps_gifts_votes review).
+> something adds a row here in the same session. Last updated: 2026-09-03 (gps_polish DONE, device pass queued).
 
 ## Player-visible promises (highest priority — the UI already implies them)
 
@@ -26,7 +26,7 @@
 | **Vote NO path** | `gps_gifts_votes` deviation 8 | The node has ONE gold VOTE button, so v1 always casts the first (YES) option. Needs a YES/NO control design before a NO can be cast |
 | `/points/earn?action=vote_cast` is unkeyed | `gps_gifts_votes` deviation 10 | Only reachable from the successful-cast branch today; a keyed earn action (idempotency like `golfin_gift_pts`) is a server change |
 | Top Supporters merges `/gifts/received` + `/points/history?currency=gift` by name | `gps_gifts_votes` deviation 2 | RP gifts exist only as ledger rows; `SenderId` null for RP supporters, follower counts shown as em dash. The `/gifts/supporters` aggregation endpoint above closes all three |
-| Four seeded test votes still uncast on prod | `gps_gifts_votes` | Only `e47a04bc` was burned; prune the other four (`GOLFIN AI`, 144d old) before real users see the Vote tab |
+| Two seeded test votes still uncast on prod | `gps_gifts_votes` / `gps_polish` | `e47a04bc` and `541bcde9` were burned by the pipeline; the device pass uses one, keep one for Ken, then prune all `GOLFIN AI` rows before real users see the Vote tab |
 | AI vote generator (`/vote-generator/generate`) | never wired | Backend exists (Claude API); nothing schedules it — decide if daily auto-votes ship |
 | PLAYLIFE `feed_items` | untouched | Gifts/votes write feed rows nobody in the game reads; a feed/notifications surface is unspecced |
 
