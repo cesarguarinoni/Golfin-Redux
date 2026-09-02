@@ -1,42 +1,47 @@
-READY_FOR_SELF_REVIEW
+SELF_REVIEW_PASS
 
 # STATUS — `gps_polish`
 
-**Current:** `READY_FOR_SELF_REVIEW` — iteration 2 (the `KICKOFF_ADDENDUM.md` R1–R9 continuation)
-is complete and **every A-item is filled**. The push Cesar approved on 2026-09-02 is unchanged.
+**Current:** `SELF_REVIEW_PASS` — iter-2 verified by golfin-self-reviewer at 2026-09-03 06:24 JST.
+Ready for golfin-reviewer.
 
 **Opened:** 2026-09-02. First commit closed `gps_pill_entry` (`96d60fab4`).
+**HEAD at self-review:** `8152c368f`.
+
+## Self-review outcome (2026-09-03)
+
+`FORWARD_TO_ARCHITECT`. Every hard-gate check passes.
+
+- Rule 5 whole-list re-walked; Rule 6 integrity audit found no fabrication.
+- Parity md5s reproduced (7/7 byte-identical) — verifies A2 within-one-run zero-diff.
+- BadgeService defect + fix + per-site shape audit verified in code (5 sites).
+- All 12 GPS-prefab lint JSONs reproduced (A6): 15 pre-existing fails unchanged, zero new.
+- Invariant JSON reproduced (10 transitions, fail=0), perf JSON honestly framed as upper-bound
+  vs the isolated ≤32 B/frame test.
+- Scene / FadeController / non-GPS prefabs byte-identical to HEAD.
+- 6 videos present, 1170×2532, captioned; pending-ellipsis frame is unambiguous.
+
+Four non-blocking observations forwarded to the architect (canonical designation could switch to
+`shimmer_01`; ApplyToScene header comment; `video_c_still_post_pending.png` labelling; and (f)
+frame-sampling for count-up motion).
 
 ## Where every gate landed
 
 | gate | result |
 |---|---|
 | A1 invariants | `fail=0` over 10 pushes; 0.2527–0.2667 s vs 0.25; t0 ±1170; seam 1.000 |
-| A2 rest parity | **0 differing px on all 7 screens** — within-one-run animated-vs-instant pairs |
+| A2 rest parity | **0 differing px on all 7 screens** — within-one-run pairs (md5-verified by reviewer) |
 | A3 boundary | `FadeController` byte-identical; no scene change at all |
 | A4 videos | 6 of 6, captioned, 1170×2532 — (b) re-recorded cold, (c)(d′)(e)(f) new |
 | A5 nav-bar seam | worst mid-push mean ǀΔRGBǀ = **0.920** (budget 2), 70 consecutive frames |
-| A6 lint | identical prefab-for-prefab vs HEAD — **zero new findings** |
-| A7 pending | wired on all 6 CTAs + the `…` frame captured |
-| A8 shimmer | 5 sites placed, 4 cold frames captured with the host proven active, cache-hit path logged |
+| A6 lint | identical prefab-for-prefab vs HEAD — **zero new findings** (reviewer re-verified 12/12) |
+| A7 pending | wired on all 6 CTAs + the `…` frame captured (unambiguous) |
+| A8 shimmer | 5 sites placed, defect fixed + shape-audited; 4 cold frames (canonical is weakest of the four) |
 | A9 modals | `animateShow` default pinned; **no non-GPS prefab and no scene changed** |
 | A10 sweep | safe area / scroll / 208 Rubik sites from iter-1, **plus the keyboard row** |
 | A11 importer | `--check` clean, texts v31, no new strings |
 | A12 EditMode | 2319 / 2316 passed / 0 failed / 3 pre-existing skips |
 | A13 perf | measured twice: in situ (whole app, upper bound) and isolated (the tweens: ≤32 B/frame) |
-
-## What the reviewer should look at hardest
-
-1. **§3 D-8 — iteration 1 was wrong about the scene copies.** They ARE prefab instances; the
-   earlier check ran in play mode where the flag is false for everything. `ApplyToScene`'s header
-   comment is now false and was deliberately left unedited so it can be seen.
-2. **§2 A8 — a real product defect, found by this task's own placeholder.** The badges grid could
-   show a loading state it could never leave. Fixed, tested, and the shape audited across all five
-   fetch sites with a per-site verdict table.
-3. **§3 D-9 — the gift panels fade on a cold OPEN, not "with their data."** Deliberate: the
-   placeholder lives inside the panel.
-4. **R6 keyboard needs the device pass to be SEEN.** The maths is pinned in EditMode; the one link
-   the phone adds is whether `TouchScreenKeyboard.area` reports what iOS says.
 
 ## Live votes
 
@@ -52,3 +57,4 @@ Two of the four seeded `GOLFIN AI` votes are now spent —
 | 2026-09-02 | `IMPLEMENTER_WORKING` | Push built and measured (`a7902da27`); D1/D2/D3/D5 done, D4 and D7–D9 partial. |
 | 2026-09-02 | `IMPLEMENTER_WORKING` | Cesar approved the push; it went into the daily report. Folder stayed in `Active/` for the §D remainder. |
 | 2026-09-02 | `READY_FOR_SELF_REVIEW` | Iteration 2: R1–R9 complete, every A-item filled, one iter-1 correction and one product defect closed. |
+| 2026-09-03 | `SELF_REVIEW_PASS` | golfin-self-reviewer verified all A-items, forwarded to architect gate (golfin-reviewer). |

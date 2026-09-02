@@ -3,7 +3,7 @@
 **Iteration shape:** `gps-motion:paint-state-polish`
 **Iteration:** 2 (continuation — `KICKOFF_ADDENDUM.md` R1–R9)
 **HEAD at kickoff:** `1cc4fe6e1` (iter-2 baseline block in `HEARTBEAT.log`)
-**Canonical screenshot:** `screenshots/shimmer_03_gift_supporters_and_golfers.png` (1170×2532)
+**Canonical screenshot:** `screenshots/shimmer_01_hub_rounds.png` (1170×2532)
 **Canonical video:** `videos/gps_polish_b_nav_sweep_cold.mp4` (7.6 MB, 1170×2532, 45.7 s)
 
 > Iteration 1's layered push is unchanged and still green. This iteration is the remainder the
@@ -119,8 +119,9 @@ All 1170×2532, drawtext-captioned via `build_bot_video.py --mode captionsjson`,
 | (e) | `gps_polish_e_golfprofile_welcome_hub.mp4` | 3.7 MB | 26.9 s | swatch + chip selection, Golf Profile → Welcome → hub |
 | (f) | `gps_polish_f_live_cast.mp4` | 3.4 MB | 33.8 s | a live cast: bar fill old→new, top-bar RP count-up |
 
-Stills in `screenshots/`: `video_b_still_*` (4), `video_c_still_*` (4), `video_d2_still_*` (3),
-`video_e_still_*` (3), `pending_ellipsis_vote_button.png`, `shimmer_01..04_*`.
+Stills in `screenshots/`: `video_b_still_*` (4), `video_c_still_*` (4 — one of them renamed, see
+A7), `video_d2_still_*` (3), `video_e_still_*` (3), `pending_ellipsis_vote_button.png`,
+`shimmer_01..04_*`.
 
 **Two takes were thrown away rather than shipped, and the reason is the same both times: the
 recorder could press a button the player cannot.** `TapIn`/`TapFirstIn` called
@@ -198,12 +199,22 @@ The six CTAs are unchanged from iteration 1 (`PendingSpend.BeginOn`, disposed **
 result is acted on); iteration 1's table stands. What was missing was the frame, and here it is:
 
 `screenshots/pending_ellipsis_vote_button.png` — the vote card's VOTE button mid-call, showing the
-`…` and dimmed by its own `Disabled` transition.
+`…` and dimmed by its own `Disabled` transition. **This is the A7 frame.**
 
 **Found by measurement, not by eye.** The pending window is ~0.6 s; the frame was located by
 decoding (f) frame-by-frame across the tap and measuring the glyph coverage inside the button's
 label box: `ink 0.121` (the word VOTE) for frames 1–8, then `ink 0.009` (one ellipsis glyph) for
 frames 9–28 while the fill dimmed 192→164→137, then `ink 0.139` for the settled voted state.
+
+**There is NO equivalent frame for POST SCORE, and a still was briefly mislabelled as one.**
+`video_c_still_post_pending.png` was named for the state I expected it to hold; it actually shows
+step 4, GPS PROOF. It is renamed `video_c_still_step4_gps_proof.png`. The self-reviewer caught the
+name; measuring it afterwards showed the frame does not exist to be captured: decoding (c)
+consecutively across the POST SCORE tap, the Confirm step occupies frames 001–004 and the Posted
+step is up from frame 005 — the whole round trip and step cross-fade take **fewer than five frames
+at 30 fps (< 170 ms)**, and no frame in that window carries the ellipsis. The wiring is the same
+`PendingSpend.BeginOn(_postScoreButton)` scope as the other five CTAs and is unchanged from
+iteration 1; what this account cannot supply is a server slow enough to photograph.
 
 ### A8 · Shimmer — **PASS, one cold frame per site — and it found a real defect**
 
@@ -277,12 +288,21 @@ every frame, **concurrently with the navigation**, and captures on the first fra
 
 | file | site(s) | host active at |
 |---|---|---|
-| `shimmer_01_hub_rounds.png` | `hub.rounds` | t+271 ms |
+| `shimmer_01_hub_rounds.png` — **the canonical frame** | `hub.rounds` | t+271 ms |
 | `shimmer_02_badges_grid.png` | `badges.grid` | t+24 ms |
 | `shimmer_03_gift_supporters_and_golfers.png` | `gift.supporters` + `gift.golfers` | t+26 ms |
 | `shimmer_04_vote_list.png` | `vote.list` | t+30 ms |
 
 (Re-captured after the vote block took the card's own silhouette — see A6.)
+
+**The hub frame is the canonical one because it is the only legible one, and that is worth stating
+rather than hiding.** It arrives through the boundary FADE, which is slower than the push, so its
+placeholder is caught with the screen essentially settled and the three round-row blocks plainly
+readable under MY RECENT ROUNDS. `shimmer_03` was the first pick and it is a poor canonical: at
+t+26 ms the Gift screen is barely a third on and composited over the hub, so the two placeholders
+are present but hard to read. It stays as A8 evidence for that site; it is not the frame to judge
+the work by.
+
 The three at ~t+25 ms are caught mid-arrival — a screen reached by a push shows its placeholder in
 `OnEnable`, DURING the 0.25 s push, and the fetch answers before it lands. The first version of
 this mode waited for the push to settle and photographed nothing but the hub; the wait was removed.

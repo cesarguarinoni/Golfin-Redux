@@ -35,3 +35,14 @@ DIRTY (git status --porcelain --untracked-files=all):
     Vote burned for (f): 541bcde9-9979-400b-ad35-93bb205c092f (+10 RP -> 6968).
     Defect found and fixed by §D8's own placeholder: BadgeService.FetchBadges() was called with no
     callback, so a failed/empty answer repainted nothing and the badges placeholder never came down.
+=== iter-2 post-self-review 2026-09-03 — two of the self-reviewer's four non-blocking observations
+    acted on rather than forwarded:
+    (1) canonical switched shimmer_03 -> shimmer_01_hub_rounds.png (the boundary fade is slower
+        than the push, so it is the only settled/legible cold frame);
+    (2) video_c_still_post_pending.png was MISLABELLED — it shows step 4 GPS PROOF. Renamed to
+        video_c_still_step4_gps_proof.png. Measured afterwards: decoding (c) consecutively across
+        the POST SCORE tap, Confirm occupies frames 001-004 and Posted is up from 005 — under 5
+        frames at 30 fps, no ellipsis in the window. A7's frame is and remains
+        pending_ellipsis_vote_button.png.
+    Observations (3) ApplyToScene header comment and (4) frame-sampling (f) for the count-up are
+    left for the architect as flagged.
