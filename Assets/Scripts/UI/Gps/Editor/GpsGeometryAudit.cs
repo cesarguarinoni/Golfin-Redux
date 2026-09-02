@@ -18,7 +18,7 @@ namespace Golfin.Gps.UI.Editor
     public static class GpsGeometryAudit
     {
         const string Dir = "Docs/Specs/Completed/auth_golf_profile/reference/nodes";
-        const string GiftVoteDir = "Docs/Specs/Active/gps_gifts_votes/reference/nodes";
+        const string GiftVoteDir = "Docs/Specs/Completed/gps_gifts_votes/reference/nodes";
         const string OutDir = "Docs/Diagnostics/_capture";
 
         /// <summary>Half a pixel: the sheet carries the node's own fractional widths

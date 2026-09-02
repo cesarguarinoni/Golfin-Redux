@@ -357,3 +357,27 @@ The escalation is procedural. The diagnosis above says the actual shape shifted 
 iter-3 (elements-absent → data-doesn't-flow), so Cesar's call on whether the escalation should
 translate into a new task (`gps_profile_data_wiring`) or a scope-extension of this one is the
 unblock.
+
+---
+
+## Post-DONE Architect verification (Cowork Architect, 2026-09-02)
+
+Cesar approved iter-4 (`b9c95f97e`, spec to Completed in `5183768af`, texts published in
+`c5558a400` v26→v28 + re-export). Independent spot-check of the four mechanical causes from
+`ARCHITECT_ESCALATION.md`, against HEAD — this task's history of optimistic PASS rows earned it:
+
+1. **Fetch wiring** — PASS. All three controllers fire their fetch:
+   `GpsProfileScreenController.cs:119` + `:171` (Detail + ScoreStatsService.FetchStats),
+   `GpsAvatarScreenController.cs:105`, `GpsBadgesScreenController.cs:75` (FetchBadges).
+2. **Badge key case** — PASS. Builder emits `"BADGE_" + badgeId + "_NAME"` raw (`:865`, no
+   ToUpper); CSV carries the 24 `BADGE_<id>_NAME` rows in seed case.
+3. **Localization publish** — PASS. All 79 GPS rows are IN the committed CSV at HEAD, and
+   `c5558a400` is the publish commit (texts v26→v28, re-export).
+4. **Badge cell over-paint** — PASS. Cells now carry genuinely-translucent fills
+   (`GpsUiColor.A(White,0.10)` earned / `ADark(black,0.25)` locked, `:820-821`) with the border
+   as a sliced outline; the builder comment at `:803` documents the old solid-S_PillStadium bug.
+   Bonus: `StatPutts` seeds `—` (`:265`) — the `33.2`/`24` literal leak is gone at the source.
+
+No further action. The one open thread this task leaves is operational, not code: the three
+screens' live-data pass happens in Cesar's single on-device run (with the score-upload camera
+items), unblocked once `punch_it_gps_variants` ships the "Punch it GPS" lane.

@@ -34,7 +34,7 @@ namespace Golfin.Gps.EditorTools
         /// `user_votes` row and mints 10 RP against a real vote — irreversible from this account,
         /// which is why it is not part of the default capture run.</summary>
         internal const string CastKey = "gps_gifts_votes.editor_run.cast";
-        const string ShotDir  = "Docs/Specs/Active/gps_gifts_votes/screenshots";
+        const string ShotDir  = "Docs/Specs/Completed/gps_gifts_votes/screenshots";
         const string LogPath  = "Docs/Diagnostics/_capture/gps_gifts_votes_run.log";
 
         [MenuItem("GOLFIN/Diagnostics/Gift + Vote — Editor Run", priority = 224)]

@@ -4,7 +4,7 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
-## ✅ DONE (pending Cesar's approval) — `gps_gifts_votes` · the last two GPS screens, and the gift economy made atomic
+## ✅ DONE — `gps_gifts_votes` **approved by Cesar** (2026-09-02) · the GPS surface is complete
 
 **Gift (Figma `14027:101843`) and Vote (`14028:33534`) — the GPS surface is complete.** Both are
 reached the way a player reaches them: the hub's GIFT nav slot and its GIFT / VOTE action tiles
@@ -83,7 +83,8 @@ the rim measures 1px on all four sides.
    under any ordering the live catalog supports.
 4. Full deviation list (11 items) in `Docs/Specs/Active/gps_gifts_votes/IMPLEMENTER_REPORT.md`.
 
-Shipped: GolfinRedux `b823510d5`, playlife `4206a56` (committed, not deployed).
+Shipped: GolfinRedux `b823510d5` + `d289ae399` + `f45b44425`, playlife `4206a56` (deployed v66).
+Spec archived at `Docs/Specs/Completed/gps_gifts_votes/`.
 
 ---
 
