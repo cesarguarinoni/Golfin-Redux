@@ -14,55 +14,31 @@
       "note": "anchored at canvas (96,361)"
     },
     {
-      "path": "ContentContainer/BackRow",
-      "node": "14043:33799",
-      "figma": [
-        10,
-        0,
-        958,
-        45
-      ]
-    },
-    {
       "path": "ContentContainer/HeroPanel",
       "node": "14012:32489",
       "figma": [
         10,
-        65,
+        0,
         958,
         296
-      ],
-      "adj": [
-        -15.625,
-        -7.8125,
-        31.25,
-        31.25
-      ],
-      "note": "rect = node box + the sprite's drawn-body inset; the DRAWN panel equals the node box exactly (Next Hole Panel.png bakes its shadow into the 9-slice border)"
+      ]
     },
     {
       "path": "ContentContainer/HowItWorksStrip",
       "node": "14017:32692",
       "figma": [
         10,
-        381,
+        316,
         958,
         118
-      ],
-      "adj": [
-        -10.0,
-        -5.0,
-        20.0,
-        20.0
-      ],
-      "note": "rect = node box + the sprite's drawn-body inset; the DRAWN panel equals the node box exactly (Next Hole Panel.png bakes its shadow into the 9-slice border)"
+      ]
     },
     {
       "path": "ContentContainer/ActionTiles",
       "node": "14012:98859",
       "figma": [
         10,
-        519,
+        454,
         958,
         153
       ]
@@ -72,62 +48,30 @@
       "node": "14012:98880",
       "figma": [
         10,
-        692,
+        627,
         958,
         334
-      ],
-      "adj": [
-        -15.625,
-        -7.8125,
-        31.25,
-        31.25
-      ],
-      "note": "rect = node box + the sprite's drawn-body inset; the DRAWN panel equals the node box exactly (Next Hole Panel.png bakes its shadow into the 9-slice border)"
+      ]
     },
     {
       "path": "ContentContainer/LiveVotesPanel",
       "node": "14012:98914",
       "figma": [
         10,
-        1046,
+        981,
         958,
         306
-      ],
-      "adj": [
-        -15.625,
-        -7.8125,
-        31.25,
-        31.25
-      ],
-      "note": "rect = node box + the sprite's drawn-body inset; the DRAWN panel equals the node box exactly (Next Hole Panel.png bakes its shadow into the 9-slice border)"
+      ]
     },
     {
       "path": "ContentContainer/RecentRoundsPanel",
       "node": "14012:98941",
       "figma": [
         10,
-        1372,
+        1307,
         958,
         472
-      ],
-      "adj": [
-        -15.625,
-        -7.8125,
-        31.25,
-        31.25
-      ],
-      "note": "rect = node box + the sprite's drawn-body inset; the DRAWN panel equals the node box exactly (Next Hole Panel.png bakes its shadow into the 9-slice border)"
-    },
-    {
-      "path": "ContentContainer/BackRow/BackButton/BackLabel",
-      "node": "14043:33800",
-      "figma": [
-        8,
-        6,
-        218,
-        33
-      ],
-      "note": "built 340x45 hit-slop (node 218x33)"
+      ]
     },
     {
       "path": "ContentContainer/HeroPanel/AvatarRing",
@@ -137,14 +81,7 @@
         20,
         140,
         140
-      ],
-      "adj": [
-        15.625,
-        7.8125,
-        0,
-        0
-      ],
-      "note": "shifted by the parent panel's drawn-body inset so it keeps its node-relative position"
+      ]
     },
     {
       "path": "ContentContainer/HeroPanel/AvatarInitial",
@@ -154,14 +91,7 @@
         52,
         140,
         76
-      ],
-      "adj": [
-        15.625,
-        7.8125,
-        0,
-        0
-      ],
-      "note": "shifted by the parent panel's drawn-body inset so it keeps its node-relative position"
+      ]
     },
     {
       "path": "ContentContainer/HeroPanel/PlayerName",
@@ -172,13 +102,7 @@
         149,
         64
       ],
-      "note": "built w500 - live name, node w149 is the mock 'MAYA'",
-      "adj": [
-        15.625,
-        7.8125,
-        0,
-        0
-      ]
+      "note": "built w500 - live name, node w149 is the mock 'MAYA'"
     },
     {
       "path": "ContentContainer/HeroPanel/PlayerSub",
@@ -189,13 +113,7 @@
         373,
         38
       ],
-      "note": "built w600 - live sub, node w373 is the mock string",
-      "adj": [
-        15.625,
-        7.8125,
-        0,
-        0
-      ]
+      "note": "built w600 - live sub, node w373 is the mock string"
     },
     {
       "path": "ContentContainer/HeroPanel/Separator",
@@ -205,14 +123,7 @@
         174,
         878,
         2
-      ],
-      "adj": [
-        15.625,
-        7.8125,
-        0,
-        0
-      ],
-      "note": "shifted by the parent panel's drawn-body inset so it keeps its node-relative position"
+      ]
     },
     {
       "path": "ContentContainer/HeroPanel/StatsRow",
@@ -222,14 +133,7 @@
         188,
         878,
         92
-      ],
-      "adj": [
-        15.625,
-        7.8125,
-        0,
-        0
-      ],
-      "note": "shifted by the parent panel's drawn-body inset so it keeps its node-relative position"
+      ]
     },
     {
       "path": "ContentContainer/HeroPanel/StatsRow/StatPOINTS",
@@ -301,14 +205,7 @@
         10,
         159,
         98
-      ],
-      "adj": [
-        10.0,
-        5.0,
-        0,
-        0
-      ],
-      "note": "shifted by the parent panel's drawn-body inset so it keeps its node-relative position"
+      ]
     },
     {
       "path": "ContentContainer/HowItWorksStrip/Step2",
@@ -318,14 +215,7 @@
         10,
         137,
         98
-      ],
-      "adj": [
-        10.0,
-        5.0,
-        0,
-        0
-      ],
-      "note": "shifted by the parent panel's drawn-body inset so it keeps its node-relative position"
+      ]
     },
     {
       "path": "ContentContainer/HowItWorksStrip/Step3",
@@ -335,14 +225,7 @@
         10,
         134,
         98
-      ],
-      "adj": [
-        10.0,
-        5.0,
-        0,
-        0
-      ],
-      "note": "shifted by the parent panel's drawn-body inset so it keeps its node-relative position"
+      ]
     },
     {
       "path": "ContentContainer/HowItWorksStrip/Step4",
@@ -352,14 +235,7 @@
         10,
         116,
         98
-      ],
-      "adj": [
-        10.0,
-        5.0,
-        0,
-        0
-      ],
-      "note": "shifted by the parent panel's drawn-body inset so it keeps its node-relative position"
+      ]
     },
     {
       "path": "ContentContainer/HowItWorksStrip/Step1/IconRing",
@@ -490,13 +366,7 @@
         40,
         40
       ],
-      "note": "node 12x40, widened to 40 for the glyph box",
-      "adj": [
-        10.0,
-        5.0,
-        0,
-        0
-      ]
+      "note": "node 12x40, widened to 40 for the glyph box"
     },
     {
       "path": "ContentContainer/HowItWorksStrip/Arrow2",
@@ -507,13 +377,7 @@
         40,
         40
       ],
-      "note": "node 12x40, widened to 40",
-      "adj": [
-        10.0,
-        5.0,
-        0,
-        0
-      ]
+      "note": "node 12x40, widened to 40"
     },
     {
       "path": "ContentContainer/HowItWorksStrip/Arrow3",
@@ -524,13 +388,7 @@
         40,
         40
       ],
-      "note": "node 12x40, widened to 40",
-      "adj": [
-        10.0,
-        5.0,
-        0,
-        0
-      ]
+      "note": "node 12x40, widened to 40"
     },
     {
       "path": "ContentContainer/ActionTiles/Tile_SCREENSHOT",
@@ -540,12 +398,6 @@
         0,
         226,
         153
-      ],
-      "adj": [
-        -10.0,
-        -5.0,
-        20.0,
-        20.0
       ],
       "note": "rect = node box + the sprite's drawn-body inset; the DRAWN panel equals the node box exactly (Next Hole Panel.png bakes its shadow into the 9-slice border)"
     },
@@ -558,12 +410,6 @@
         226,
         153
       ],
-      "adj": [
-        -10.0,
-        -5.0,
-        20.0,
-        20.0
-      ],
       "note": "rect = node box + the sprite's drawn-body inset; the DRAWN panel equals the node box exactly (Next Hole Panel.png bakes its shadow into the 9-slice border)"
     },
     {
@@ -574,12 +420,6 @@
         0,
         226,
         153
-      ],
-      "adj": [
-        -10.0,
-        -5.0,
-        20.0,
-        20.0
       ],
       "note": "rect = node box + the sprite's drawn-body inset; the DRAWN panel equals the node box exactly (Next Hole Panel.png bakes its shadow into the 9-slice border)"
     },
@@ -592,12 +432,6 @@
         226,
         153
       ],
-      "adj": [
-        -10.0,
-        -5.0,
-        20.0,
-        20.0
-      ],
       "note": "rect = node box + the sprite's drawn-body inset; the DRAWN panel equals the node box exactly (Next Hole Panel.png bakes its shadow into the 9-slice border)"
     },
     {
@@ -608,14 +442,7 @@
         12,
         88,
         88
-      ],
-      "adj": [
-        10.0,
-        5.0,
-        0,
-        0
-      ],
-      "note": "shifted by the parent panel's drawn-body inset so it keeps its node-relative position"
+      ]
     },
     {
       "path": "ContentContainer/ActionTiles/Tile_CHECKIN/IconRing",
@@ -625,14 +452,7 @@
         12,
         88,
         88
-      ],
-      "adj": [
-        10.0,
-        5.0,
-        0,
-        0
-      ],
-      "note": "shifted by the parent panel's drawn-body inset so it keeps its node-relative position"
+      ]
     },
     {
       "path": "ContentContainer/ActionTiles/Tile_VOTE/IconRing",
@@ -642,14 +462,7 @@
         12,
         88,
         88
-      ],
-      "adj": [
-        10.0,
-        5.0,
-        0,
-        0
-      ],
-      "note": "shifted by the parent panel's drawn-body inset so it keeps its node-relative position"
+      ]
     },
     {
       "path": "ContentContainer/ActionTiles/Tile_GIFT/IconRing",
@@ -659,14 +472,7 @@
         12,
         88,
         88
-      ],
-      "adj": [
-        10.0,
-        5.0,
-        0,
-        0
-      ],
-      "note": "shifted by the parent panel's drawn-body inset so it keeps its node-relative position"
+      ]
     },
     {
       "path": "ContentContainer/ActionTiles/Tile_SCREENSHOT/Icon",
@@ -676,14 +482,7 @@
         32,
         48,
         48
-      ],
-      "adj": [
-        10.0,
-        5.0,
-        0,
-        0
-      ],
-      "note": "shifted by the parent panel's drawn-body inset so it keeps its node-relative position"
+      ]
     },
     {
       "path": "ContentContainer/ActionTiles/Tile_CHECKIN/Icon",
@@ -693,14 +492,7 @@
         32,
         48,
         48
-      ],
-      "adj": [
-        10.0,
-        5.0,
-        0,
-        0
-      ],
-      "note": "shifted by the parent panel's drawn-body inset so it keeps its node-relative position"
+      ]
     },
     {
       "path": "ContentContainer/ActionTiles/Tile_VOTE/Icon",
@@ -710,14 +502,7 @@
         32,
         48,
         48
-      ],
-      "adj": [
-        10.0,
-        5.0,
-        0,
-        0
-      ],
-      "note": "shifted by the parent panel's drawn-body inset so it keeps its node-relative position"
+      ]
     },
     {
       "path": "ContentContainer/ActionTiles/Tile_GIFT/Icon",
@@ -727,14 +512,7 @@
         32,
         48,
         48
-      ],
-      "adj": [
-        10.0,
-        5.0,
-        0,
-        0
-      ],
-      "note": "shifted by the parent panel's drawn-body inset so it keeps its node-relative position"
+      ]
     },
     {
       "path": "ContentContainer/ActionTiles/Tile_SCREENSHOT/Label",
@@ -745,13 +523,7 @@
         226,
         31
       ],
-      "note": "node x25.5 w175; built full-tile centred",
-      "adj": [
-        10.0,
-        5.0,
-        0,
-        0
-      ]
+      "note": "node x25.5 w175; built full-tile centred"
     },
     {
       "path": "ContentContainer/ActionTiles/Tile_CHECKIN/Label",
@@ -762,13 +534,7 @@
         226,
         31
       ],
-      "note": "node x50 w126; built full-tile centred",
-      "adj": [
-        10.0,
-        5.0,
-        0,
-        0
-      ]
+      "note": "node x50 w126; built full-tile centred"
     },
     {
       "path": "ContentContainer/ActionTiles/Tile_VOTE/Label",
@@ -779,13 +545,7 @@
         226,
         31
       ],
-      "note": "node x79 w68; built full-tile centred",
-      "adj": [
-        10.0,
-        5.0,
-        0,
-        0
-      ]
+      "note": "node x79 w68; built full-tile centred"
     },
     {
       "path": "ContentContainer/ActionTiles/Tile_GIFT/Label",
@@ -796,13 +556,7 @@
         226,
         31
       ],
-      "note": "node x83.5 w59; built full-tile centred",
-      "adj": [
-        10.0,
-        5.0,
-        0,
-        0
-      ]
+      "note": "node x83.5 w59; built full-tile centred"
     },
     {
       "path": "ContentContainer/RecentRoundsPanel/PanelHeader",
@@ -812,14 +566,7 @@
         0,
         958,
         80
-      ],
-      "adj": [
-        15.625,
-        7.8125,
-        0,
-        0
-      ],
-      "note": "shifted by the parent panel's drawn-body inset so it keeps its node-relative position"
+      ]
     },
     {
       "path": "ContentContainer/RecentRoundsPanel/PanelHeader/PanelTitle",
@@ -840,14 +587,7 @@
         80,
         958,
         2
-      ],
-      "adj": [
-        15.625,
-        7.8125,
-        0,
-        0
-      ],
-      "note": "shifted by the parent panel's drawn-body inset so it keeps its node-relative position"
+      ]
     },
     {
       "path": "ContentContainer/RecentRoundsPanel/RoundRows",
@@ -857,14 +597,7 @@
         80,
         958,
         392
-      ],
-      "adj": [
-        15.625,
-        7.8125,
-        0,
-        0
-      ],
-      "note": "shifted by the parent panel's drawn-body inset so it keeps its node-relative position"
+      ]
     },
     {
       "path": "ContentContainer/RecentRoundsPanel/RoundRows/RoundRow0",
@@ -1002,7 +735,29 @@
         30
       ],
       "note": "node x0 inside a 72-wide Score; centred inside the 90-wide uniform one"
+    },
+    {
+      "path": "BackPill",
+      "node": "14060:4722",
+      "figma": [
+        1007,
+        250,
+        140,
+        94
+      ],
+      "note": "node box 138x92 at (1008,251) PLUS the 1px #0A1D35 rule the child Pop-Up draws outside it; Figma exports the pill at 140x94"
+    },
+    {
+      "path": "BackPill/Label",
+      "node": "14060:4726",
+      "figma": [
+        19.5,
+        17,
+        101,
+        60
+      ],
+      "note": "node text 14060:4726 is 101x60 at (18.5,16) in the 138x92 pill \u2014 centred; +1 here because the pill rect includes the 1px rule. Autosized 18..30 so a longer locale shrinks the TEXT, never the pill (Cesar 2026-09-01)."
     }
   ],
-  "inset_rule": "Panels use Assets/Art/HomeScreen/Next Hole Panel.png (1020x470, 9-slice border 64). Its SOLID BODY is 980x430 - margins L20 R20 T10 B30 sprite-px - so a 9-sliced Image draws inside its RectTransform. `adj` = [dx,dy,dw,dh] added to the node box to get the expected RECT; the DRAWN body still equals the node box."
+  "inset_rule": "RETIRED 2026-09-01. The hub's panels are purpose-baked S_HUB_* sprites that draw EDGE TO EDGE (measured: zero transparent padding), so rect == node box. The old adj[] carried the drawn-body inset of Next Hole Panel.png, whose shadow lived inside its 9-slice border; keeping it after the re-skin made every panel draw 31px too big and ate the frame's 20px gaps."
 }

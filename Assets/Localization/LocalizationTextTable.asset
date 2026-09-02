@@ -2227,8 +2227,8 @@ MonoBehaviour:
     english: GOLFIN GPS
     japanese: GOLFIN GPS
   - key: GPS_HUB_BACK
-    english: "\u2039 BACK TO GAME"
-    japanese: "\u2039 \u30B2\u30FC\u30E0\u306B\u623B\u308B"
+    english: GAME
+    japanese: "\u30B2\u30FC\u30E0"
   - key: GPS_HUB_SUB_FORMAT
     english: "HC {0} \xB7 {1} followers"
     japanese: "HC {0} \xB7 \u30D5\u30A9\u30ED\u30EF\u30FC {1}"
