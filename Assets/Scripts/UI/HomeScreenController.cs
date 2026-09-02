@@ -139,6 +139,13 @@ namespace GolfinRedux.UI
         [Header("Leaderboard")]
         [SerializeField] private Button _leaderboardButton;
 
+        // ── GPS entry (gps_pill_entry) ────────────────────────────────────────
+        // The pill IS the GPS door, and the thing GpsGate turns on and off. It replaced the
+        // cross-promotion banner in that role: the banner is now an ordinary banner again and
+        // shows whatever the admin publishes, in both variants.
+        [Header("GPS")]
+        [SerializeField] private Button gpsPillButton;
+
         private void Awake()
         {
             // Top bar
@@ -161,6 +168,22 @@ namespace GolfinRedux.UI
             // (Leaderboard is not on the DemoGate allowlist). No-op in the full game.
             if (_leaderboardButton != null && !GolfinRedux.Demo.DemoGate.IsScreenAllowed(ScreenId.Leaderboard))
                 _leaderboardButton.gameObject.SetActive(false);
+
+            // gps_pill_entry: the GPS pill, same shape as the Leaderboard gate above. Hidden
+            // outright in a "punch it" build (no GOLFIN_GPS) — not shown-and-dead, which is the
+            // failure mode this whole variant split exists to avoid. Always on in the Editor and
+            // in "punch it GPS" builds.
+            if (gpsPillButton != null)
+            {
+                gpsPillButton.onClick.AddListener(OnGpsPillClicked);
+                gpsPillButton.gameObject.SetActive(Golfin.Gps.UI.GpsGate.IsScreenAllowed(ScreenId.GpsHub));
+            }
+        }
+
+        /// <summary>The pill's tap — the only GPS entry point on Home now.</summary>
+        private void OnGpsPillClicked()
+        {
+            GolfinRedux.UI.ScreenManager.Instance?.ShowScreen(GolfinRedux.UI.ScreenId.GpsHub);
         }
 
         private void OnLeaderboardClicked()

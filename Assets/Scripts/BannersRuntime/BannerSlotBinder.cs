@@ -136,19 +136,6 @@ namespace Golfin.Banners
                 return;
             }
 
-            // punch_it_gps_variants — a banner whose link routes INTO a surface this build gates
-            // off has no business on screen. HIDE (the slot collapses and what follows moves up)
-            // rather than show-it-dead: an inert strip is the old-build behaviour BannerPolicy
-            // documents, and it is exactly what Cesar did not want here. Written against any
-            // internal route, not against golfin://gps specifically, so a future gated surface
-            // needs no change here. The server row stays LIVE — GPS builds still show it.
-            if (BannerPolicy.TryGetInternalRoute(banner.LinkUrl, out GolfinRedux.UI.ScreenId routeScreen)
-                && !Golfin.Gps.UI.GpsGate.IsScreenAllowed(routeScreen))
-            {
-                Hide();
-                return;
-            }
-
             _link = banner.LinkUrl;
 
             // Stay hidden until the artwork has actually decoded. Revealing first would flash the

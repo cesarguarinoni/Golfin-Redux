@@ -67,6 +67,9 @@ MonoBehaviour:
   - key: HOME_DAILY_PILL
     english: NEW DAILY MISSION!
     japanese: "\u65B0\u3057\u3044\u30C7\u30A4\u30EA\u30FC\u30DF\u30C3\u30B7\u30E7\u30F3\uFF01"
+  - key: HOME_GPS_PILL
+    english: GPS
+    japanese: GPS
   - key: HOME_MAINTENANCE_TITLE
     english: MAINTENANCE NOTICE
     japanese: "\u30E1\u30F3\u30C6\u30CA\u30F3\u30B9\u60C5\u5831"
