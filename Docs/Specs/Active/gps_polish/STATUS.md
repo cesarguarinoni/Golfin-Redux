@@ -1,53 +1,29 @@
-SELF_REVIEW_PASS
+READY_FOR_REDTEAM
 
 # STATUS — `gps_polish`
 
-**Current:** `SELF_REVIEW_PASS` — iter-2 verified by golfin-self-reviewer at 2026-09-03 06:24 JST.
-Ready for golfin-reviewer.
+**Current:** `READY_FOR_REDTEAM` — iter-2 architect-gate PASS at 2026-09-03 06:38 JST by golfin-reviewer.
+Handing to golfin-redteam-reviewer for the adversarial second gate.
 
 **Opened:** 2026-09-02. First commit closed `gps_pill_entry` (`96d60fab4`).
-**HEAD at self-review:** `8152c368f`.
+**HEAD at architect review:** `189e653df`.
 
-## Self-review outcome (2026-09-03)
+## Architect review outcome (2026-09-03)
 
-`FORWARD_TO_ARCHITECT`. Every hard-gate check passes.
+`READY_FOR_REDTEAM`. Every hard gate my scope covers passes on independent re-verification.
 
-- Rule 5 whole-list re-walked; Rule 6 integrity audit found no fabrication.
-- Parity md5s reproduced (7/7 byte-identical) — verifies A2 within-one-run zero-diff.
-- BadgeService defect + fix + per-site shape audit verified in code (5 sites).
-- All 12 GPS-prefab lint JSONs reproduced (A6): 15 pre-existing fails unchanged, zero new.
-- Invariant JSON reproduced (10 transitions, fail=0), perf JSON honestly framed as upper-bound
-  vs the isolated ≤32 B/frame test.
-- Scene / FadeController / non-GPS prefabs byte-identical to HEAD.
-- 6 videos present, 1170×2532, captioned; pending-ellipsis frame is unambiguous.
+- A1 invariants JSON re-derived from `records[]` — 10/10 pass every per-record check (duration inside tolerance, seam cover 1.0, chrome alpha 1, raycasts restored, ranToCompletion).
+- A2 parity md5 pairs re-computed — 7/7 byte-identical, distinct sizes (rules out one-file-copied-seven-times fabrication).
+- A6 lint totals re-derived from `<prefab>_lint.json` — 15 pre-existing fails match iter-1's HEAD numbers row-for-row.
+- D-8 prefab-instance status re-verified in EDIT mode via my own `script-execute` — all 9 GPS scene copies confirmed prefab instances (iter-1 was wrong; iter-2's correction is right).
+- BadgeService defect and its per-site shape audit verified in source across all 5 sites.
+- Scene byte-identical vs iter-2 baseline (`1cc4fe6e1`) and impl commit (`8152c368f`); FadeController byte-identical; non-GPS prefabs untouched.
+- 6 videos ffprobed (all 1170×2532, all ≥3.4 MB, drawtext captions burned in — verified by extracting one frame from (f)).
+- Vote 541bcde9-9979-400b-ad35-93bb205c092f burn evidenced by real `[PointsService] earn vote_cast: +10 -> RP 6968` log + RP delta visible in stills.
+- Perf JSON's `note` field cleanly separates in-situ (whole app, 307 KB/frame upper bound) from isolated (tween loops, ≤32 B/frame threshold) — no flattering number passed off as the answer.
+- A7 pending frame (`pending_ellipsis_vote_button.png`) unambiguous; POST-SCORE gap argued honestly (<5 frames at 30 fps).
 
-Four non-blocking observations forwarded to the architect (canonical designation could switch to
-`shimmer_01`; ApplyToScene header comment; `video_c_still_post_pending.png` labelling; and (f)
-frame-sampling for count-up motion).
-
-## Where every gate landed
-
-| gate | result |
-|---|---|
-| A1 invariants | `fail=0` over 10 pushes; 0.2527–0.2667 s vs 0.25; t0 ±1170; seam 1.000 |
-| A2 rest parity | **0 differing px on all 7 screens** — within-one-run pairs (md5-verified by reviewer) |
-| A3 boundary | `FadeController` byte-identical; no scene change at all |
-| A4 videos | 6 of 6, captioned, 1170×2532 — (b) re-recorded cold, (c)(d′)(e)(f) new |
-| A5 nav-bar seam | worst mid-push mean ǀΔRGBǀ = **0.920** (budget 2), 70 consecutive frames |
-| A6 lint | identical prefab-for-prefab vs HEAD — **zero new findings** (reviewer re-verified 12/12) |
-| A7 pending | wired on all 6 CTAs + the `…` frame captured (unambiguous) |
-| A8 shimmer | 5 sites placed, defect fixed + shape-audited; 4 cold frames (canonical is weakest of the four) |
-| A9 modals | `animateShow` default pinned; **no non-GPS prefab and no scene changed** |
-| A10 sweep | safe area / scroll / 208 Rubik sites from iter-1, **plus the keyboard row** |
-| A11 importer | `--check` clean, texts v31, no new strings |
-| A12 EditMode | 2319 / 2316 passed / 0 failed / 3 pre-existing skips |
-| A13 perf | measured twice: in situ (whole app, upper bound) and isolated (the tweens: ≤32 B/frame) |
-
-## Live votes
-
-Two of the four seeded `GOLFIN AI` votes are now spent —
-`e47a04bc-bed3-43c6-bc53-0d92b18eef5a` (iteration 1) and
-`541bcde9-9979-400b-ad35-93bb205c092f` (video (f), +10 RP → 6968). **Two remain** for the device pass.
+One non-blocking flag forwarded: `GpsPolishBuilder.ApplyToScene`'s header comment still reads "THE SCENE COPIES ARE NOT PREFAB INSTANCES" while D-8 (verified) says the opposite. Not scoped by the addendum, not a functional bug (the method is unnecessary and idempotent), but worth a one-line follow-up before the folder moves to Completed.
 
 ## History
 
@@ -57,4 +33,5 @@ Two of the four seeded `GOLFIN AI` votes are now spent —
 | 2026-09-02 | `IMPLEMENTER_WORKING` | Push built and measured (`a7902da27`); D1/D2/D3/D5 done, D4 and D7–D9 partial. |
 | 2026-09-02 | `IMPLEMENTER_WORKING` | Cesar approved the push; it went into the daily report. Folder stayed in `Active/` for the §D remainder. |
 | 2026-09-02 | `READY_FOR_SELF_REVIEW` | Iteration 2: R1–R9 complete, every A-item filled, one iter-1 correction and one product defect closed. |
-| 2026-09-03 | `SELF_REVIEW_PASS` | golfin-self-reviewer verified all A-items, forwarded to architect gate (golfin-reviewer). |
+| 2026-09-03 | `SELF_REVIEW_PASS` | golfin-self-reviewer verified all A-items, forwarded to architect gate. |
+| 2026-09-03 | `READY_FOR_REDTEAM` | golfin-reviewer PASS on independent re-verification; handing to adversarial red-team. |

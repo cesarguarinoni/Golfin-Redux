@@ -87,11 +87,21 @@ namespace Golfin.Gps.EditorTools
         /// <summary>
         /// Apply the same pass to the LIVE SCENE copies under <c>Canvas/ScreensRoot</c>.
         ///
-        /// <para>THE SCENE COPIES ARE NOT PREFAB INSTANCES. Every GPS screen was unpacked into
-        /// ShellScene when it was deployed (verified: <c>IsPartOfPrefabInstance</c> is false for
-        /// all nine), so a prefab edit reaches the asset and NOTHING the player runs. That is the
-        /// single most important fact about changing a GPS screen in this project, and it is why
-        /// this menu item exists rather than a re-deploy.</para>
+        /// <para>YOU ALMOST CERTAINLY DO NOT NEED THIS. It was written on a belief that turned
+        /// out to be false — that the GPS screens had been unpacked into ShellScene, so a prefab
+        /// edit would reach the asset and nothing the player runs. All nine are ordinary PREFAB
+        /// INSTANCES, and the prefab pass alone reaches the live scene.</para>
+        ///
+        /// <para>The belief came from checking <c>IsPartOfPrefabInstance</c> IN PLAY MODE, where
+        /// it returns false for every object in the scene. Re-checked in EDIT mode (gps_polish
+        /// iteration 2, and again by the review gate) it is true for all nine, each resolving to
+        /// its own <c>Assets/Prefabs/UI/Gps/*.prefab</c>. Running this menu item on top of a
+        /// prefab pass that has already landed adds nothing and cost 1,296 lines of
+        /// prefab-override churn in <c>ShellScene.unity</c> the one time it was used.</para>
+        ///
+        /// <para>It is kept because it is idempotent and harmless, and because a screen that is
+        /// ever genuinely unpacked would need it. Check <c>PrefabUtility.IsPartOfPrefabInstance</c>
+        /// in EDIT MODE before reaching for it.</para>
         ///
         /// <para>IN PLACE, never replaced. Re-instantiating the prefab over the scene copy would
         /// break every serialized reference pointing INTO it — ScreenManager's nine screen fields
