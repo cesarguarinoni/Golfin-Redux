@@ -42,6 +42,56 @@ namespace Golfin.Social
             Options != null && Options.Count == 2;
 
         /// <summary>
+        /// The YES option, matched BY LABEL — never by index.
+        ///
+        /// <para>
+        /// ⚠️ THE SERVER'S OPTION ORDER IS NOT STABLE. <c>voting.py::_format_vote</c> re-emits a
+        /// PostgREST embed (<c>vote_options(*)</c>) with no <c>order</c> clause, so the array comes
+        /// back in whatever order Postgres produced. Observed on ONE vote within minutes:
+        /// <c>[Yes, No]</c> during a play-mode run and <c>[No, Yes]</c> from the next request. So
+        /// binding <c>Options[0]</c> to the bar labelled YES puts the wrong count under the wrong
+        /// label, and casting <c>Options[0]</c> casts the wrong way — both intermittently, which is
+        /// the worst kind.
+        /// </para>
+        /// <para>
+        /// Matching covers what every writer produces: the seeded rows say <c>Yes</c> / <c>No</c>,
+        /// and this build's CREATE modal sends the LOCALIZED labels, so a vote created in Japanese
+        /// says <c>はい</c> / <c>いいえ</c>. An unmatched vote falls back to index order, which is
+        /// no worse than before and keeps a non-Yes/No poll rendering.
+        /// </para>
+        /// </summary>
+        public VoteOptionDto YesOption => Match(true);
+
+        /// <summary>The NO option, by the same rule as <see cref="YesOption"/>.</summary>
+        public VoteOptionDto NoOption => Match(false);
+
+        private VoteOptionDto Match(bool wantYes)
+        {
+            if (Options == null || Options.Count == 0) return null;
+            foreach (VoteOptionDto o in Options)
+                if (o != null && IsYesLabel(o.Label) == wantYes && IsKnownLabel(o.Label))
+                    return o;
+            // No recognisable pair — fall back to the array's own order.
+            int i = wantYes ? 0 : 1;
+            return i < Options.Count ? Options[i] : null;
+        }
+
+        /// <summary>Public so an EditMode test can pin the vocabulary without a vote.</summary>
+        public static bool IsYesLabel(string label)
+        {
+            string l = (label ?? string.Empty).Trim();
+            return l.Equals("yes", StringComparison.OrdinalIgnoreCase) || l == "はい";
+        }
+
+        public static bool IsNoLabel(string label)
+        {
+            string l = (label ?? string.Empty).Trim();
+            return l.Equals("no", StringComparison.OrdinalIgnoreCase) || l == "いいえ";
+        }
+
+        private static bool IsKnownLabel(string label) => IsYesLabel(label) || IsNoLabel(label);
+
+        /// <summary>
         /// Whole days from now until <see cref="ExpiresAt"/>, or null when there is no expiry or
         /// it does not parse. NEGATIVE is possible and is left as-is: an active row whose expiry
         /// has passed is a real state (nothing sweeps them), and the caller renders it as 0.

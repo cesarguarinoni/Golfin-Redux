@@ -44,7 +44,7 @@ around them.
 ### Gates
 
 Geometry `97 sites 0 FAIL 0 GONE`; UI fidelity lint `fail=0` on both prefabs; EditMode sweep
-`2258 / 2255 passed / 0 failed` with a tripwire proving the 19 new `Golfin.Social.Tests` execute;
+`2263 / 2260 passed / 0 failed` with a tripwire proving the 24 new `Golfin.Social.Tests` execute;
 53 localization keys published (`texts` v31), `export --check` clean; 18 non-text A/B regions
 against the node renders at mean |ΔRGB| **2.8** (gift) and **3.7** (vote), worst 6.1.
 
@@ -59,16 +59,26 @@ diagnosis. A pill whose opaque rim hid its own translucent fill (interior measur
 every pill 60 % too wide. And TMP drawing story labels as *nothing*, because `Ellipsis` needs
 wrapping on and a wrapped 18px line does not fit the node's 21px box.
 
+**And one the eye caught that no gate did** (Cesar, 2026-09-02): the pill and chip rims were
+thinner top-and-bottom than left-and-right. Every 9-sliced atom in this project is 176x176 with an
+88px border — a middle band of exactly ZERO pixels. Harmless for a solid capsule, because the seam
+column Unity replicates is opaque; fatal for a RING, whose horizontal middle band is what supplies
+the top and bottom strokes. The two ring sprites are now 208x208 (88 + 32 straight run + 88), and
+the rim measures 1px on all four sides.
+
 ### Known-unequal / open
 
 1. **TOP SUPPORTERS reads two sources.** `/gifts/received` reads the `gifts` table, which only the
    out-of-scope item-gifting path writes and which holds **zero rows** in production; an RP gift is
    recorded solely as a `points_transactions` row. The panel merges both, by NAME — the ledger has
    no counterparty column.
-2. **No cast was performed against production.** The five live votes are April GOLFIN AI seeds that
-   have already expired; casting would write a `user_votes` row and mint 10 RP against a dead poll,
-   and that vote could not then be re-tested from this account. Covered by EditMode tests over the
-   real service.
+2. **The live cast found a real bug, which is why it was worth burning a seed for.** `voting.py`
+   re-emits its `vote_options` embed with **no `order` clause**, so the array order is arbitrary —
+   the same vote returned `[Yes, No]` and then `[No, Yes]` minutes apart. The card bound
+   `Options[0]` to the bar labelled YES and cast `Options[0]`, so it showed the wrong count under
+   the wrong label AND cast the wrong way, intermittently. Now matched by LABEL
+   (`VoteDto.YesOption`), with five EditMode tests, one built from the live payload. The cast
+   itself was correct: YES, one `user_votes` row, one `vote_cast` ledger row, +10 exactly once.
 3. **The BUY strip is the three CHEAPEST basic rows.** The SPEC's named trio is not the first three
    under any ordering the live catalog supports.
 4. Full deviation list (11 items) in `Docs/Specs/Active/gps_gifts_votes/IMPLEMENTER_REPORT.md`.

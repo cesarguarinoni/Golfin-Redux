@@ -30,14 +30,27 @@ namespace Golfin.Gps.EditorTools
     public static class GpsGiftVoteEditorRun
     {
         const string ArmedKey = "gps_gifts_votes.editor_run.armed";
+        /// <summary>Set by <see cref="ArmWithCast"/>. The cast is opt-in because it writes a
+        /// `user_votes` row and mints 10 RP against a real vote — irreversible from this account,
+        /// which is why it is not part of the default capture run.</summary>
+        internal const string CastKey = "gps_gifts_votes.editor_run.cast";
         const string ShotDir  = "Docs/Specs/Active/gps_gifts_votes/screenshots";
         const string LogPath  = "Docs/Diagnostics/_capture/gps_gifts_votes_run.log";
 
         [MenuItem("GOLFIN/Diagnostics/Gift + Vote — Editor Run", priority = 224)]
-        public static void Arm()
+        public static void Arm() => Arm(false);
+
+        /// <summary>The same run, plus a REAL cast on the first card — a `user_votes` row and 10
+        /// real RP, through the card's own VOTE button. Cesar-approved per vote (2026-09-02: "burn
+        /// it, those votes are just test votes").</summary>
+        [MenuItem("GOLFIN/Diagnostics/Gift + Vote — Editor Run (LIVE CAST)", priority = 225)]
+        public static void ArmWithCast() => Arm(true);
+
+        public static void Arm(bool withCast)
         {
             Directory.CreateDirectory(Path.GetDirectoryName(LogPath));
             File.WriteAllText(LogPath, "");
+            EditorPrefs.SetBool(CastKey, withCast);
             EditorPrefs.SetBool(ArmedKey, true);
             if (!EditorApplication.isPlaying) EditorApplication.EnterPlaymode();
             else Spawn();
@@ -135,6 +148,12 @@ namespace Golfin.Gps.EditorTools
                 GameObject vote = GameObject.Find("Canvas/ScreensRoot/GpsVoteScreen");
                 DumpVote(vote);
 
+                if (EditorPrefs.GetBool(CastKey, false))
+                {
+                    IEnumerator cast = CastOnFirstCard(vote);
+                    while (cast.MoveNext()) yield return cast.Current;
+                }
+
                 // MINE — the one filter that is client-side, and the one that can be wrong
                 // silently (it matches creator_id against the session id).
                 yield return TapIn(vote, "ContentContainer/ChipsRow/Chip3", "chip MINE");
@@ -154,6 +173,66 @@ namespace Golfin.Gps.EditorTools
                 Line("=== done ===");
                 Flush();
                 EditorApplication.isPlaying = false;
+            }
+
+            /// <summary>
+            /// Cast on the first card through its OWN VoteButton, then tap it again.
+            ///
+            /// <para>
+            /// The second tap is the point of the whole exercise. The first proves the happy path
+            /// — server repaint, disabled button, +10. The second proves the branch that CANNOT be
+            /// reached any other way: `user_votes` refuses it with a 400, the client has to read
+            /// that as a STATE rather than a failure, and — critically — must NOT earn again,
+            /// because `/points/earn` is unkeyed and would credit a second 10.
+            /// </para>
+            /// </summary>
+            IEnumerator CastOnFirstCard(GameObject vote)
+            {
+                Transform content = vote.transform.Find("ContentContainer/VoteList/Content");
+                Transform card = null;
+                foreach (Transform c in content) if (c.gameObject.activeSelf) { card = c; break; }
+                if (card == null) { Line("CAST: no card on screen"); yield break; }
+
+                var view = card.GetComponent<VoteCardView>();
+                var button = card.Find("VoteBody/VoteFooter/VoteButton").GetComponent<Button>();
+                Line("\n=== LIVE CAST on " + (view.Vote != null ? view.Vote.Id : "?") +
+                     " \"" + (view.Vote != null ? view.Vote.Question : "?") + "\" ===");
+                Line("  RP before   = " + Golfin.Economy.PointsService.Instance.DisplayBalance);
+                Line("  VOTE interactable before = " + button.interactable);
+
+                button.onClick.Invoke();
+                yield return new WaitForSecondsRealtime(6f);
+
+                Line("  VOTE interactable after  = " + button.interactable);
+                Line("  RP after    = " + Golfin.Economy.PointsService.Instance.DisplayBalance);
+                Line("  bars now    : YES=" + Pct(card, "BarYes") + " NO=" + Pct(card, "BarNo") +
+                     "  meta=\"" + Txt(card, "VoteBody/VoteFooter/Meta") + "\"");
+                yield return Shot("vote_cast");
+
+                // The already-voted branch. Force the button back on so the tap actually reaches
+                // the server — this is exactly what a NEXT SESSION does, which has no local memory
+                // of having voted.
+                Line("\n=== SECOND TAP — the already-voted branch ===");
+                VoteService.Instance.ClearVotedForTest();
+                button.interactable = true;
+                button.onClick.Invoke();
+                yield return new WaitForSecondsRealtime(6f);
+                Line("  VOTE interactable after  = " + button.interactable);
+                Line("  RP after second tap      = " + Golfin.Economy.PointsService.Instance.DisplayBalance +
+                     "   (MUST be unchanged — /points/earn is unkeyed)");
+                yield return Shot("vote_already_voted");
+            }
+
+            static string Pct(Transform card, string bar)
+            {
+                Transform t = card.Find("VoteBody/" + bar + "/Pct");
+                return t != null ? t.GetComponent<TMPro.TextMeshProUGUI>().text : "-";
+            }
+
+            static string Txt(Transform card, string path)
+            {
+                Transform t = card.Find(path);
+                return t != null ? t.GetComponent<TMPro.TextMeshProUGUI>().text : "-";
             }
 
             // ── evidence ──────────────────────────────────────────────────────

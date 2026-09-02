@@ -97,10 +97,11 @@ namespace Golfin.Gps.UI
         {
             if (_yesFill != null || _noFill != null)
             {
-                VoteOptionDto? yes = OptionAt(vote, 0);
-                VoteOptionDto? no  = OptionAt(vote, 1);
-                SetBar(_yesFill, _yesPct, yes);
-                SetBar(_noFill, _noPct, no);
+                // BY LABEL, not by index — the server's option order is not stable, so
+                // Options[0] is not reliably the one the YES bar is labelled for. See
+                // VoteDto.YesOption.
+                SetBar(_yesFill, _yesPct, vote.YesOption);
+                SetBar(_noFill, _noPct, vote.NoOption);
             }
 
             for (int i = 0; i < _optionPills.Length; i++)

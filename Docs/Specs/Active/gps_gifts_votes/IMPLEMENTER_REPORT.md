@@ -40,12 +40,12 @@ Then deployed: `playlife-api` **v65 → v66**, image `deployment-01M1GKCHV15EH5S
 | 3 | Migration applied before deploy; deployed; live send E2E quoted | **PASS** | § Live economy E2E — RPC and HTTP, both quoted |
 | 4 | Purchase E2E | **PASS** | § Live economy E2E |
 | 5 | Invariant audit after both E2Es | **PASS** | `19 profiles, 0 violations` before AND after |
-| 6 | Vote E2E: list renders, cast handled, +10 once, create, MINE | **PARTIAL** | list/MINE/create-modal proven live (§ Live evidence); a CAST was NOT performed — see § Not done |
+| 6 | Vote E2E: list renders, cast handled, +10 once, create, MINE | **PASS** | § Live cast — Cesar-approved 2026-09-02; server state quoted |
 | 7 | Play-mode screenshots of both screens signed in, with service log lines | **PASS** | 7 frames in `screenshots/`, every one through real `onClick` |
 | 8 | Both ScreenIds in GpsGate; hub Gift tab and Vote affordance navigate | **PASS** | `gate=True/True`; run log `nav GIFT interactable=True → ok GpsGift`, `tile VOTE interactable=True → ok GpsVote` |
 | 9 | Balance in Top UI refreshes after send/purchase/cast | **PASS** | `GiftSendModalController.Committed` / `OnEarned` call `RefreshBalanceAsync`; `/points/balance` tracked every write in the HTTP round-trip (7078 → 7028 → 6998 → 6948) |
 | 10 | Importer PLAN → APPLY → publish → `--check` clean; no hardcoded literals | **PASS** | `texts` v31, 958 rows, `--check: clean`; grep below |
-| 11 | Full EditMode sweep green | **PASS** | `2258 total / 2255 passed / 0 failed / 3 skipped` |
+| 11 | Full EditMode sweep green | **PASS** | `2263 total / 2260 passed / 0 failed / 3 skipped` |
 | 12 | Deviations flagged | **PASS** | § Deviations |
 
 ---
@@ -175,6 +175,56 @@ non-replayed purchases, and every ledger row keyed.
 The Flutter-compatibility line is the one worth keeping: `/gifts/send-pts` with NO
 `idempotency_key` still returns 200 and moves points, exactly as it does today, with the server
 minting the key. Nothing the PLAYLIFE app does had to change.
+
+## Live cast (Cesar-approved: "burn it, those votes are just test votes")
+
+Through the card's OWN `VoteButton.onClick`, on `e47a04bc` "パット数30以下でラウンドできる？".
+
+```
+=== LIVE CAST ===
+  RP before   = 6948          VOTE interactable before = True
+  RP after    = 6958          VOTE interactable after  = False
+  bars now    : YES=100% NO=0%   meta="1 votes · 0 days left"
+
+=== SECOND TAP — the already-voted branch ===
+  (VotedLocally cleared first, so the tap really reaches the server — this is what a
+   NEXT SESSION does, having no local memory of the cast)
+  VOTE interactable after  = False
+  RP after second tap      = 6958   <- UNCHANGED. /points/earn is unkeyed; a second
+                                       earn here would have credited another 10.
+```
+
+Server state, read straight from Postgres:
+
+```
+user_votes    : [{"vote_id":"e47a04bc-…","option_id":"a10948a9-…"}]      <- the YES option
+vote_options  : [{"label":"No","vote_count":0,"percentage":0},
+                 {"label":"Yes","vote_count":1,"percentage":100}]
+votes         : total_votes 1
+points_transactions: [{"type":"vote_cast","amount":10,"currency":"activity",
+                       "description":"VOTE参加 +10pts"}]                  <- exactly ONE row
+profile       : {"activity_pts":6958,"gift_pts":0,"total_points":6958}
+```
+
+One `user_votes` row, one ledger row, `+10` once, and the invariant still holds.
+
+### ⚠️ The cast found a bug — and it was the reason to do it
+
+The first run repainted the card as **`YES=0% NO=100%`** while the database said the YES option had
+the single vote at 100 %. Cause: `voting.py::_format_vote` re-emits a PostgREST embed
+(`vote_options(*)`) with **no `order` clause**, so the array comes back in whatever order Postgres
+produced — the SAME vote returned `[Yes, No]` during the run and `[No, Yes]` from the very next
+request. Binding `Options[0]` to the bar labelled YES therefore put the wrong count under the wrong
+label, and `OnVote` casting `Options[0].Id` cast the wrong way — **both intermittently**.
+
+Fixed by matching on LABEL (`VoteDto.YesOption` / `NoOption`, covering `Yes`/`No` and the localized
+`はい`/`いいえ` this build's CREATE modal sends, falling back to index order for a non-Yes/No poll).
+Five EditMode tests pin it, one of them built from the exact live payload above. Re-verified: the
+card now reads `yes=100%`, matching the row.
+
+Nothing on the server needed changing, and nothing was mis-cast — the cast that landed went to YES,
+which is what a YES button should do.
+
 
 ## A/B — node render vs live capture
 
@@ -397,12 +447,8 @@ $ grep -nE '\.text\s*=\s*"' Assets/Scripts/UI/Gps/Gps{Gift,Vote}ScreenController
 
 ## Not done
 
-* **No cast was performed against production.** The five live votes are GOLFIN AI seeds from April
-  that are already expired; casting on one would write a `user_votes` row and mint 10 RP against a
-  dead poll, and the cast path cannot then be re-tested on that vote from this account. The
-  already-voted branch, the repaint and the earn are covered by EditMode tests over the real service
-  and the real `ApiClient`. Cesar's call whether to burn one.
 * **No device pass**, per standing rule.
+* Four of the five seeded votes are still uncast; only `e47a04bc` was burned.
 
 ## Files modified or created
 

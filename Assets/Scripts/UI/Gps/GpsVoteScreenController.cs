@@ -331,7 +331,7 @@ namespace Golfin.Gps.UI
         // ═════════════════════════════════════════════════════════════════════
 
         /// <summary>
-        /// v1 casts YES — the first option. The card draws two bars and one VOTE button, which is
+        /// v1 casts YES — the option LABELLED yes, not the first one. The card draws two bars and one VOTE button, which is
         /// the node's own shape (14028:33864: a single Gold-Small labelled VOTE, not a YES button
         /// and a NO button), so "vote" means "agree". A NO path needs a second button the design
         /// does not have and is a design question, not an implementation gap.
@@ -347,7 +347,16 @@ namespace Golfin.Gps.UI
             }
 
             card!.SetVoteInteractable(false);
-            string optionId = v.Options[0].Id;
+            // The YES option BY LABEL. Options[0] is not it — the server's order is not stable
+            // (see VoteDto.YesOption), so casting by index casts the wrong way at random.
+            VoteOptionDto? yes = v.YesOption;
+            if (yes == null || string.IsNullOrEmpty(yes.Id))
+            {
+                Debug.LogWarning($"{Tag} vote {v.Id} has no castable YES option.");
+                card.SetVoteInteractable(true);
+                return;
+            }
+            string optionId = yes.Id;
             Debug.Log($"{Tag} casting on {v.Id} -> option {optionId}.");
 
             ApiClient.Instance.Run(VoteService.Instance.Cast(v.Id, optionId, r => OnCast(card, v, r)));

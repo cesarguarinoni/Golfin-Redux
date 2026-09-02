@@ -205,20 +205,34 @@ def bake_top_rounded(path, w, h, radius, top, bottom, scale=SCALE):
     return W, H
 
 
-def bake_chip_ring(path, size=176, border=88, stroke=3.385, aa=4):
+def bake_chip_ring(path, border=88, straight=32, stroke=3.385, aa=4):
     """A 9-SLICEABLE capsule outline in white, tinted at runtime.
 
-    Baked 176x176 with an 88px border — the same construction `S_SU_GoldSegment.png` uses — so
-    `Image.Type.Sliced` + `pixelsPerUnitMultiplier = 88 / radius` renders it at any width with a
-    true capsule cap at each end.
+    ⚠️ THE SPRITE IS BIGGER THAN 2x THE BORDER, AND THAT IS THE WHOLE POINT.
+
+    Every other 9-sliced atom in this project is 176x176 with an 88px border —
+    `S_PillStadium`, `S_SU_GoldSegment` — which leaves a middle band of EXACTLY ZERO pixels in
+    both axes. For a SOLID capsule that is harmless: the seam column Unity replicates across the
+    stretched middle is fully opaque, so a solid fill comes out solid.
+
+    For a RING it is fatal. The horizontal middle band is what supplies the TOP and BOTTOM strokes
+    of a wide pill, and with a zero-width source Unity replicates a single column taken at the
+    arc's tangent point — where the stroke is at its most oblique and its coverage lowest. The
+    result is a rim visibly thinner along the top and bottom than down the sides, which is
+    precisely what Cesar caught on the vote option pills and the gift item chips (2026-09-02).
+
+    So the sprite is `border*2 + straight` on a side: 88 + 32 + 88 = 208. The corner blocks are
+    still 88x88 arcs, the border still slices exactly at the tangent points, and the 32px straight
+    runs in between carry a TRUE constant-width stroke for Unity to stretch.
 
     STROKE IS PRE-DIVIDED BY THE SLICE FACTOR. 9-slicing scales the corner blocks by
-    `radius / 88`, and the stroke rides along: at the filter chip's r26 a sprite stroke of S px
+    `radius / border`, and the stroke rides along: at the filter chip's r26 a sprite stroke of S px
     arrives as `S * 26 / 88`. The node wants 1px (14028:33830 `border border-[#818ea1]`), so
     S = 88/26 = 3.385. A "1px" stroke in the sprite would have rendered at 0.3px and vanished.
     """
+    size = border * 2 + straight
     W = size * aa
-    R = (size // 2) * aa
+    R = border * aa
     S = max(1, int(round(stroke * aa)))
     m = Image.new("L", (W, W), 0)
     d = ImageDraw.Draw(m)
@@ -296,8 +310,8 @@ def main():
     for name, radius in (("S_GV_ChipRing.png", 26), ("S_GV_PillRing.png", 19)):
         stroke = 88.0 / radius
         W, H, B = bake_chip_ring(os.path.join(OUT_DIR, name), stroke=stroke)
-        print("%-24s %4dx%-4d border %d — sprite stroke %.3f -> 1px at r%d"
-              % (name, W, H, B, stroke, radius))
+        print("%-24s %4dx%-4d border %d (+%d straight run) — sprite stroke %.3f -> 1px at r%d"
+              % (name, W, H, B, W - 2 * B, stroke, radius))
 
     W, H = bake_separator(os.path.join(OUT_DIR, "S_GV_Separator.png"))
     print("%-24s %4dx%-4d white alpha 0 -> 0.9 -> 0 (node 14027:102118)" % ("S_GV_Separator.png", W, H))

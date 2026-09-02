@@ -350,6 +350,84 @@ namespace Golfin.Social.Tests
             }.IsYesNo);
         }
 
+        // ════════════════════════════════════════════════════════════════════
+        // Option order — the server's is NOT stable, and index-binding is a bug
+        // ════════════════════════════════════════════════════════════════════
+
+        [Test]
+        public void YesNoOptions_AreMatchedByLabel_NotByIndex()
+        {
+            // The order the LIVE API actually returned for vote e47a04bc on 2026-09-02, which is
+            // the REVERSE of the order the same endpoint returned minutes earlier: voting.py
+            // re-emits a PostgREST embed with no `order` clause.
+            var v = new VoteDto
+            {
+                VoteType = "yesNo",
+                Options = new List<VoteOptionDto>
+                {
+                    new VoteOptionDto { Id = "no-id",  Label = "No",  VoteCount = 0, Percentage = 0f },
+                    new VoteOptionDto { Id = "yes-id", Label = "Yes", VoteCount = 1, Percentage = 100f },
+                }
+            };
+
+            Assert.AreEqual("yes-id", v.YesOption.Id, "the YES bar must show the YES count, not Options[0]");
+            Assert.AreEqual("no-id", v.NoOption.Id);
+            Assert.AreEqual(100f, v.YesOption.Percentage, 1e-3f);
+        }
+
+        [Test]
+        public void YesNoOptions_MatchTheLocalizedLabelsTheCreateModalSends()
+        {
+            // A vote created in a Japanese build carries はい / いいえ, because the modal sends the
+            // LOCALIZED strings so the card's own bars read in the creator's language.
+            var v = new VoteDto
+            {
+                Options = new List<VoteOptionDto>
+                {
+                    new VoteOptionDto { Id = "j-no",  Label = "いいえ" },
+                    new VoteOptionDto { Id = "j-yes", Label = "はい" },
+                }
+            };
+            Assert.AreEqual("j-yes", v.YesOption.Id);
+            Assert.AreEqual("j-no", v.NoOption.Id);
+        }
+
+        [Test]
+        public void YesNoOptions_FallBackToIndexWhenTheLabelsAreNotAPair()
+        {
+            // A poll that is not Yes/No must still render rather than returning nulls.
+            var v = new VoteDto
+            {
+                Options = new List<VoteOptionDto>
+                {
+                    new VoteOptionDto { Id = "a", Label = "Misaki" },
+                    new VoteOptionDto { Id = "b", Label = "Yui" },
+                }
+            };
+            Assert.AreEqual("a", v.YesOption.Id);
+            Assert.AreEqual("b", v.NoOption.Id);
+        }
+
+        [Test]
+        public void YesNoLabels_AreCaseInsensitiveAndTrimmed()
+        {
+            Assert.IsTrue(VoteDto.IsYesLabel("YES"));
+            Assert.IsTrue(VoteDto.IsYesLabel(" yes "));
+            Assert.IsTrue(VoteDto.IsYesLabel("はい"));
+            Assert.IsTrue(VoteDto.IsNoLabel("No"));
+            Assert.IsTrue(VoteDto.IsNoLabel("いいえ"));
+            Assert.IsFalse(VoteDto.IsYesLabel(null));
+            Assert.IsFalse(VoteDto.IsYesLabel("Yui"));
+        }
+
+        [Test]
+        public void SingleOptionVote_HasAYesAndNoNo()
+        {
+            var v = new VoteDto { Options = new List<VoteOptionDto> { new VoteOptionDto { Id = "only" } } };
+            Assert.AreEqual("only", v.YesOption.Id);
+            Assert.IsNull(v.NoOption, "there is no second option to bind the NO bar to");
+        }
+
         // ── helper ───────────────────────────────────────────────────────────
 
         private static GiftItemDto Item(string id, string name, string cat, string tier,
