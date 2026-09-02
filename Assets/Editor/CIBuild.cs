@@ -46,6 +46,12 @@ namespace Golfin.EditorTools
         const string DevProfilePath = "Assets/Settings/Build Profiles/Dev-iOS.asset";
         const string DevOutputPath = "Builds/iOS-Dev";
 
+        // punch_it_gps_variants — "punch it GPS". Identical to iOS-Full except for the
+        // GOLFIN_GPS scripting define, and it writes to the SAME OutputPath: the Fastfile's
+        // build_app archives Builds/iOS-Full whichever variant Unity just produced.
+        const string GpsProfilePath = "Assets/Settings/Build Profiles/iOS-Full-GPS.asset";
+        const string GpsDefine = "GOLFIN_GPS";
+
         /// <summary>
         /// -executeMethod Golfin.EditorTools.CIBuild.BuildIOS
         /// Produces Builds/iOS-Full/Unity-iPhone.xcodeproj. Exits 1 on any failure.
@@ -121,6 +127,72 @@ namespace Golfin.EditorTools
             RestoreBuildNumbers(prevIosBuildNumber, prevAndroidVersionCode);
 
             if (error != null) Fail(error);
+        }
+
+        /// <summary>
+        /// -executeMethod Golfin.EditorTools.CIBuild.BuildIOSGps
+        /// The "punch it GPS" variant: same output, same options, same guard — only the profile
+        /// differs, and with it the GOLFIN_GPS define that GpsGate reads.
+        ///
+        /// BuildOptions.None, NOT Development: the upload-regression guard must stay armed for
+        /// GPS uploads exactly as it is for ordinary ones (BuildStampGenerator.GuardApplies skips
+        /// the refusal for development builds).
+        ///
+        /// Same PlayerSettings snapshot/restore as BuildIOS() — a failed batchmode build must not
+        /// leave ProjectSettings.asset dirty and strand the next lane at ensure_git_status_clean.
+        /// </summary>
+        public static void BuildIOSGps()
+        {
+            var prevIosBuildNumber = PlayerSettings.iOS.buildNumber;
+            var prevAndroidVersionCode = PlayerSettings.Android.bundleVersionCode;
+
+            string error;
+            try
+            {
+                // Assert the define BEFORE building. A GPS build whose profile silently lost the
+                // define compiles, archives and uploads as an ordinary build — indistinguishable
+                // from "punch it" output except by opening the app. That is the stale-binary class
+                // of failure this pipeline exists to make impossible, so it fails loudly instead.
+                error = AssertGpsDefine(GpsProfilePath) ??
+                        BuildIOSCore(GpsProfilePath, OutputPath, BuildOptions.None);
+            }
+            catch (Exception e)
+            {
+                error = $"unhandled exception during build: {e.GetType().Name}: {e.Message}\n{e.StackTrace}";
+            }
+
+            RestoreBuildNumbers(prevIosBuildNumber, prevAndroidVersionCode);
+
+            if (error != null) Fail(error);
+        }
+
+        /// <summary>
+        /// Null when the profile at <paramref name="profilePath"/> carries GOLFIN_GPS; otherwise
+        /// the failure message. Read through SerializedObject rather than a typed property:
+        /// BuildProfile.scriptingDefines is not public API in 6000.3, and m_ScriptingDefines is
+        /// what the .asset actually stores (see iOS-Demo.asset, which carries GOLFIN_DEMO the
+        /// same way).
+        /// </summary>
+        static string AssertGpsDefine(string profilePath)
+        {
+            var profile = AssetDatabase.LoadAssetAtPath<BuildProfile>(profilePath);
+            if (profile == null) return $"GPS build profile not found: {profilePath}";
+
+            var so = new SerializedObject(profile);
+            var defines = so.FindProperty("m_ScriptingDefines");
+            if (defines == null || !defines.isArray)
+                return $"{profilePath} exposes no m_ScriptingDefines array — cannot verify {GpsDefine}.";
+
+            for (int i = 0; i < defines.arraySize; i++)
+            {
+                if (defines.GetArrayElementAtIndex(i).stringValue != GpsDefine) continue;
+                Debug.Log($"{Tag} GPS variant — {GpsDefine} defined on {profile.name}.");
+                return null;
+            }
+
+            return $"{profilePath} does NOT define {GpsDefine} — refusing to build a GPS variant " +
+                   $"that would ship with the GPS surface gated OFF and be indistinguishable from " +
+                   $"an ordinary build.";
         }
 
         static void RestoreBuildNumbers(string iosBuildNumber, int androidVersionCode)

@@ -29,7 +29,18 @@ set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT="$(cd "$SCRIPT_DIR/.." && pwd)"
-METHOD="Golfin.EditorTools.CIBuild.BuildIOS"
+
+# punch_it_gps_variants — `./Tools/unity-build-ios.sh gps` builds the GPS variant: the
+# iOS-Full-GPS profile, which carries the GOLFIN_GPS define GpsGate reads. Same OUT path, so
+# everything downstream (build_app, the archive, the upload) is unchanged; the only difference
+# is which profile Unity activated. No argument = the ordinary "punch it" build, unchanged.
+VARIANT="${1:-}"
+case "$VARIANT" in
+  gps) METHOD="Golfin.EditorTools.CIBuild.BuildIOSGps" ;;
+  "")  METHOD="Golfin.EditorTools.CIBuild.BuildIOS" ;;
+  *)   echo "ERROR: unknown variant '$VARIANT' (expected: gps, or no argument)" >&2; exit 2 ;;
+esac
+
 OUT="$PROJECT/Builds/iOS-Full"
 LOG="$PROJECT/Builds/unity-build-ios.log"
 

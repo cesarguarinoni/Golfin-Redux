@@ -65,6 +65,12 @@ human currently picks the wrong thing are gone.
 ./Tools/testflight.sh
 ```
 
+**GPS variant** (`punch_it_gps_variants`): `./Tools/testflight.sh testflight_build_gps` runs the
+same lane body against the `iOS-Full-GPS` profile, whose `GOLFIN_GPS` define makes the GPS surface
+reachable. Without it the five GPS screens are blocked by `GpsGate` and the Home GPS banner hides
+(the slot collapses). Both variants archive `Builds/iOS-Full`, so shipping both of one commit is
+sequential: punch it → commit the guard file → punch it GPS. See `Docs/PUNCH_IT_ROUTINE.md`.
+
 That wrapper is one line of `exec fastlane ios testflight_build`, plus the two environment
 facts the run cannot survive without: `LC_ALL`/`LANG` set to UTF-8, and Homebrew's `bin` on
 `PATH`. `fastlane ios testflight_build` directly works too — **from a shell whose locale is

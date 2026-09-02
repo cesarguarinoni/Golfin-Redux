@@ -19,8 +19,33 @@
 default_platform(:ios)
 
 platform :ios do
-  desc "Unity build -> archive -> TestFlight"
+  # ── The two variants ──────────────────────────────────────────────────────────────────────
+  # punch_it_gps_variants. Both lanes run the SAME body — clean-tree gate, unity-closed assert,
+  # content --check, build_app, upload, mark-uploaded — and differ in exactly one argument to
+  # the Unity step. Keeping one body is the point: a gate added for one variant cannot go
+  # missing from the other, which is precisely how two near-identical lanes rot apart.
+  #
+  #   "punch it"      ./Tools/testflight.sh                      -> iOS-Full     (no GOLFIN_GPS)
+  #   "punch it GPS"  ./Tools/testflight.sh testflight_build_gps -> iOS-Full-GPS (GOLFIN_GPS)
+  #
+  # Both write Builds/iOS-Full and upload from there, so the build number is the commit count
+  # either way. App Store Connect requires that number to be unique, so shipping BOTH variants
+  # of one commit means: punch it -> commit the guard file it dirties -> punch it GPS.
+
+  desc "Unity build -> archive -> TestFlight (no GPS surface)"
   lane :testflight_build do
+    testflight_build_shared(gps: false)
+  end
+
+  desc "Unity build -> archive -> TestFlight (WITH the GPS surface)"
+  lane :testflight_build_gps do
+    testflight_build_shared(gps: true)
+  end
+
+  private_lane :testflight_build_shared do |options|
+    gps = options[:gps] ? true : false
+    UI.message(gps ? "Variant: GPS (iOS-Full-GPS, GOLFIN_GPS defined)"
+                   : "Variant: standard (iOS-Full, GPS surface gated off)")
     # BuildStampGenerator derives the build number from `git rev-list --count HEAD`. On a
     # dirty tree that number does not describe what is in the binary, and the number is the
     # only handle App Store Connect gives you on a build. Refuse rather than guess.
@@ -47,7 +72,12 @@ platform :ios do
     # Non-zero here MUST abort the lane: otherwise build_app would archive the Xcode project
     # left over from the PREVIOUS run and upload a stale binary. fastlane's sh raises on a
     # non-zero exit, and the script propagates Unity's exit code verbatim.
-    sh("../Tools/unity-build-ios.sh")
+    # The ONLY line that differs between the variants.
+    if gps
+      sh("../Tools/unity-build-ios.sh", "gps")
+    else
+      sh("../Tools/unity-build-ios.sh")
+    end
 
     api_key = app_store_connect_api_key(
       key_id:       ENV.fetch("ASC_KEY_ID"),
@@ -88,6 +118,7 @@ platform :ios do
     # commit it with your next change (the script deliberately does not commit).
     sh("../Tools/mark-uploaded.sh", "..")
 
-    UI.success("Uploaded to TestFlight. Commit Docs/Versioning/last_uploaded_build.txt.")
+    UI.success("Uploaded #{gps ? 'the GPS variant' : 'the standard variant'} to TestFlight. " \
+               "Commit Docs/Versioning/last_uploaded_build.txt.")
   end
 end
