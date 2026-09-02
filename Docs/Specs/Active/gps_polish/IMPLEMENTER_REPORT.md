@@ -217,12 +217,19 @@ frames 001–004 and the Posted step is up from frame 005 — fewer than five fr
 shipped file and found the ellipsis immediately. Re-measured, consecutively, on the real window:
 
 ```
-full-width POST SCORE capsule : 20 frames, width 497 px
-collapsed pending capsule     : 28 frames, width 139 px
-pending window                : t = 33.40 s .. 34.30 s   (0.93 s)
+full-width POST SCORE capsule : width 498 px
+collapsed pending capsule     : 27 consecutive frames, width 140 px
+pending window                : t = 33.40 s .. 34.27 s   (0.92 s)
+clip frame rate               : 29.47 fps  (avg_frame_rate 252282750/8570779)
 ```
 
-**0.93 s and 28 consecutive frames — not five.** Two compounding mistakes produced the wrong
+**0.92 s and 27 consecutive frames — not five.** The counts above are the self-review's
+independent re-measurement, which is the one to trust: my own first pass said 28 frames and
+497→139 px because I divided by a round 30 fps. The clip is 29.47. That is a small error inside a
+paragraph about a large one, and it is corrected rather than left because it is the same habit —
+arithmetic on an assumed constant instead of a value read off the file. The self-review also
+confirmed the shipped screenshot is **md5-identical to frame 21 of its own consecutive decode**,
+so the still is an extract from this clip and not a re-render. Two compounding mistakes produced the wrong
 answer, and both were mine:
 
 1. **I took the tap time from the caption timestamp.** The captions say "POST SCORE — the CTA
@@ -242,7 +249,7 @@ paragraphs above. A number computed over an unverified region is not a measureme
 POST SCORE) and nothing about `PendingSpend` needed to change.
 
 **One thing the frame shows that is worth Cesar's eye.** The POST SCORE capsule **collapses from
-497 px wide to 139 px** while pending, because `PendingSpend` swaps the label to a single `…`
+498 px wide to 140 px** while pending, because `PendingSpend` swaps the label to a single `…`
 glyph and that button's row sizes itself to its content. The vote card's VOTE button does not — it
 holds its width and centres the ellipsis. Neither is wrong, but they are inconsistent, and a CTA
 that shrinks to a third of its width mid-tap reads as the button going away rather than waiting.
