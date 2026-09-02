@@ -3232,3 +3232,77 @@ mirroring `standalone_trees.csv`.
 Vendor art folders and generated scenes are per-machine by design; project data derived from them
 belongs in a tracked location (`Data/hole-NN-geo/`, `Resources/HoleData/`), derived by a repeatable
 tool rather than placed by hand.
+
+## Lesson BS — Figma→Unity screen builds: fourteen defects that all cost a rejection round
+
+`gps_profile_pack` (2026-09-02, Profile / My Avatar / Badges). Three iterations of the subagent
+pipeline all passed their gates and Cesar rejected each on sight; the work only converged once it
+was driven by real navigation with a per-element diff against the node. Every item below is a
+defect that actually shipped to his screen at least once.
+
+### The instrument
+
+1. **Use real play-mode navigation, never a render harness.** A purpose-built preview-scene
+   renderer produced TWO false readings in twenty minutes: every label came back as a raw
+   `GPS_*` key (LocalizationManager is only `Initialize()`d at boot, so `Get()` returns the key in
+   edit mode), and then the node background plate silently did nothing because **the screen prefab
+   paints its own `Background` child on top of anything the harness puts behind it**. Both bugs
+   were in the instrument, not the product. Boot the app, tap PLAY, drive the real widget
+   `onClick`, screenshot. It cannot drift.
+2. **A ΔRGB number against the node is meaningless until the backdrop matches.** Profile measured
+   23.03% with the shipped hub background and **8.17%** over the node's own plate — same UI. At
+   0.6 panel alpha the photo dominates every translucent surface.
+3. **Per-frame backgrounds are real and are worth measuring.** `ScoreUploadScreenBuilder:82-86`
+   maps each of its six steps to a real project asset. Diff the node's `Backgrounds` node render
+   against every candidate before importing a new one — the Badges plate turned out
+   **byte-identical (mean |ΔRGB| 0.000, max 0)** to a `BG_SU_GpsProof.png` an earlier task had
+   already added.
+4. **Sample colours at 1:1, never off a downscaled crop.** A section title read as white at 0.42
+   scale and is gold at full size; the "fix" was a regression.
+
+### The recurring authoring traps
+
+5. **Never copy a sibling node's dimensions.** The hero panel was built 958x296 — the *hub's* hero
+   height — where this node's is 449. That one wrong number vertically centred the 170px avatar
+   disc at y=63 with the name at y=66, i.e. stacked on top of each other, and read as "the image
+   renders behind the name".
+6. **Progress bars are driven by WIDTH, never `Image.Type.Filled`.** Filled discards 9-slicing
+   outright — it squashes the capsule into the bar's height and clips, so the cap arrives as a thin
+   wedge. Already documented at `ScoreUploadScreenBuilder:844-847`; six bars shipped wrong anyway
+   because nobody reused it. There is now a shared `Bar()` builder + `GpsUiColor.SetBarFill()`.
+7. **Two different `A()` helpers, and picking the wrong one makes panels opaque.** The builder's
+   local `A(overlay, alpha, backdrop)` *pre-composites* against an assumed surface and returns an
+   OPAQUE colour — correct for a chip on a known panel, wrong for anything over a photo.
+   `GpsUiColor.A(c, alpha)` / `ADark()` are genuinely translucent. Badge cells used the former and
+   every earned cell rendered as a solid navy box.
+8. **A freshly baked PNG imports as a plain texture, not a Sprite** → `LoadAssetAtPath<Sprite>`
+   returns null → Unity draws a **white box**. Force `TextureImporterType.Sprite` after every bake.
+   This bit three times in one session.
+9. **Never bake `LocalizationManager.Get()` into a prefab at build time.** Pass a `localizeKey` and
+   let `LocalizedText.Refresh()` resolve at runtime; a build-time `Get()` stamps the raw key.
+10. **Check the localized VALUE before adding a decorative glyph.** `GPS_PROFILE_TRUST` is already
+    `"✓ TRUST LEVEL"`, so a separate mark rendered `✓ ✓`. And confirm the font HAS the glyph —
+    Rubik has no U+1F512, so the node's padlock rendered as tofu (`TMP_FontAsset.HasCharacters`).
+11. **Unity's default `disabledColor` is alpha 128.** `interactable = false` on a button the design
+    draws solid makes it translucent. Set an opaque `disabledColor` — the hub already did this on
+    its nav slots.
+12. **Don't bake runtime state into the prefab.** The evolution "current stage" size (88/44 vs
+    68/32) was decided at build time, so the emphasis sat on whatever stage was seeded rather than
+    the player's actual level. State the runtime owns belongs in the controller.
+13. **A `Populate()` that destroys only what it created leaves builder-seeded children on screen.**
+    Clear every child of the container. This is why the live Badges grid showed raw keys and a fake
+    "first two earned" state underneath the real cells.
+14. **Fixed-width text boxes overflow in the other language or with a longer string.** The node's
+    own mock is often the short case. Centre/right-align with a `HorizontalLayoutGroup` that sizes
+    to content — needed on the gift tiles, the level row, and the XP CTA.
+
+### Process
+
+15. **Do the region-by-region diff yourself; do not let the reviewer be the human.** Crop matched
+    regions from the node render and the live capture, stack them, and enumerate. Cesar named four
+    defects; the same crop sheet then yielded six more in one pass, including the rarity table
+    being wrong on six of 24 badges.
+16. **Image-instance offsets in a node are authored for FIGMA's art.** The avatar's
+    `(-82.7,-400) 725.4x1569.84` crop is correct for Figma's "Main Menu Character"; our
+    `Characters/Homescreen` sprite is 1090x1907, so those numbers stretched it and framed the
+    torso. Compute a cover-crop from the real sprite's dimensions instead.

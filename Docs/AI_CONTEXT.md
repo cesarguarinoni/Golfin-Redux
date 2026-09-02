@@ -5,6 +5,67 @@
 
 ---
 
+## ✅ DONE — `gps_profile_pack` **approved by Cesar** (2026-09-02) · the PROFILE tab is live
+
+**Three read-only GPS screens — Profile / My Avatar / Badges — from Figma `14025:33087` /
+`14026:33187` / `14027:33298`, reached through the hub's Profile nav slot and the Profile screen's
+own BADGES / MY AVATAR shortcuts.** `Golfin.Gps` gained `ScoreStatsService`, `BadgeService` and
+`ProfileDtos` (+ EditMode tests); three ScreenIds joined the `ShowTopBarOnly` group; the avatar
+screen is the first visible bridge between the PLAYLIFE avatar level and the player's GOLFIN
+character.
+
+**Final fidelity vs the node, captured through real navigation:** Profile **4.67%** mean |ΔRGB|,
+Avatar **7.30%**, Badges **18.88%** (that last is dominated by DATA — the node mocks four earned
+GOLF badges and a populated collection bar where this account has none — not by layout).
+
+### How it got there, and why that matters more than the numbers
+
+Three full pipeline iterations passed every gate and **Cesar rejected each on sight**; the
+circuit-breaker fired at iteration 3. It converged in one sitting once the work was driven by
+**real play-mode navigation plus a per-element crop diff against the node**, done directly rather
+than delegated. Two of Cesar's corrections mid-flight were the turning points: *"use normal
+navigation instead of a harness"* and *"stop waiting for my feedback and be proactive."*
+
+**Four rejections were REUSE failures, not design problems** — the fix already existed in the repo:
+- the bar-fill wedge is documented verbatim at `ScoreUploadScreenBuilder:844-847`
+  (`Image.Type.Filled` discards 9-slicing);
+- "Main Buttons Silver" is `ButtonCancel.png`, declared `SprSilver` in that same builder;
+- the rounds empty-state pattern already shipped on the hub (`GPS_HUB_NO_ROUNDS`);
+- the Badges background is **byte-identical** (mean |ΔRGB| 0.000, max 0) to a `BG_SU_GpsProof.png`
+  an earlier task had already imported.
+
+**The measuring instrument produced two false readings** before it was abandoned: a preview-scene
+renderer showed every label as a raw loc key (`LocalizationManager` is only `Initialize()`d at
+boot), then silently ignored the node's background plate because the screen prefab paints its own
+`Background` child on top. A wrong instrument costs more than a wrong build — it makes you confident.
+
+### Captured so the next screen does not repeat it
+
+- **`Docs/Architecture/FIGMA_SCREEN_BUILD_PLAYBOOK.md`** — 8-section checklist (instrument,
+  per-screen backgrounds, geometry, panels/fills/bars, text, controller-owned state, node-asset
+  traps, self-diff before surfacing).
+- Wired so a future session is *made* to check it: `CLAUDE.md` startup step 6b + docs table +
+  pipeline rule 16; a mandatory step-0 block in all four pipeline agents (reviewers must re-run the
+  crop diff — "matches Figma" is not a verdict); the spec template; `tasks/lessons.md` Lesson BS;
+  and six memory entries.
+
+### Known-unequal / still open
+
+1. **The 79 new localization rows are NOT published to the server.** They resolve in the Editor
+   because the table was regenerated, but a device build renders raw keys. Needs importer
+   PLAN → APPLY → publish `texts` → `export_content.py --check`.
+2. Badges' locked rings still read gold: `S_GpsIconRing_Tile` IS gold artwork, so a multiply-tint
+   cannot grey it (dimmed to 0.35 alpha as a stopgap). A white ring variant from the baker fixes it.
+3. `/badges/progress` returns nothing for this account, so the Collection panel shows `—` and the
+   seeded grid stands in for live cells.
+4. Approved SPEC deviations: AVG PUTTS and GIFTS SENT render `—` permanently (no source), equip
+   slots all "off", Status shows the character's four roster stats rather than the node's three
+   avatar stats, no remote badge icons, EDIT PROFILE inert.
+5. Cesar removed the `‹ BACK TO GAME` row from all three screens (hub only) and restored the
+   Unlocks panel the SPEC had hidden — both are now the node-accurate behaviour.
+
+---
+
 ## ✅ DONE — `publish_blocked_catalogs` (2026-09-01) · both blocked publishes unblocked
 
 **Two catalogs could not be published from the admin, and all 18 errors were false.**
@@ -2703,6 +2764,8 @@ rows). The repo is AHEAD, so it needs a re-seed of those two keys, not an export
 
 ## 🟢 PRIORITY QUEUED — pick up immediately
 
+> **▶ 2026-08-31 · `punch_it_gps_variants` — 🟡 BUILT, three items blocked on a free Editor. Two TestFlight variants from one codebase: "punch it" ships WITHOUT the GPS surface, "punch it GPS" with it.** Spec + report: `Docs/Specs/Active/punch_it_gps_variants/`; STATUS `READY_FOR_SELF_REVIEW`. **Mechanism** mirrors the demo builds: a `GOLFIN_GPS` define carried by a new `iOS-Full-GPS` profile, read by a new `GpsGate` (modeled on `DemoGate` but INVERTED — a deny-list, because the full game is the default and only the GPS surface is conditional). Nothing is stripped and no asmdef gained a `defineConstraint`: GPS code compiles and ships in both variants, and **the Editor is always GPS-on** regardless of active profile, so daily GPS development cannot be broken by whichever profile happens to be selected. Only *reachability* changes. **Three gate points:** `ScreenManager.Navigate` (logs `[GpsGate] blocked <id>`), the back-stack skip, and `isGpsScreen` — that last one now READS the gate's list instead of keeping its own five-way OR, so the chrome rule and the deny-list cannot drift. **The Home banner hides rather than sits dead:** `BannerSlotBinder.Apply` resolves the banner's internal route and, if that screen is gated, calls `Hide()` so the slot collapses and content moves up — written against ANY internal route, not `golfin://gps` specifically. `BannerPolicy` untouched, and the server row stays LIVE (GPS builds still show it). **`iOS-Full.asset` is byte-identical** — verified clean in git; the new profile was created through the Editor and differs by exactly the name and the define. `CIBuild.BuildIOSGps()` asserts the define is present before building, because a GPS build whose profile silently lost it is indistinguishable from an ordinary one. **EditMode 2234 tests, 2231 passed, 0 failed** — and the new tests were proven to run via a tripwire that turned the suite red by name before being reverted, since this runner ignores class filters. **⏭ Needs a free Editor** (another session was driving Unity for the GPS Profile screens throughout, so I deliberately did not take it): the `./Tools/unity-build-ios.sh gps` batchmode run, the play-mode GPS-on pass, and the disabled-branch visual (Console line + collapsed-banner screenshot). Then the device pass is your punch-it runs, in order — **punch it → commit the guard file → punch it GPS** (the build number is the commit count and App Store Connect requires it unique). On device the tell is the Home banner: absent = standard, present = GPS.
+>
 > **▶ 2026-08-26 · ⚠️ VERIFIED PROD BUG — THE PER-CATALOG KILL SWITCH IS GLOBAL IN EFFECT.
 > Found by the Architect actually flipping it against prod (nobody had). Fix before any device
 > pass; it makes the kill switch unusable as designed.**

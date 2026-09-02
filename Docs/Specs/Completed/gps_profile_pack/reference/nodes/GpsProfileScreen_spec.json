@@ -1,0 +1,52 @@
+{
+  "elements": [
+    {
+      "name": "Background",
+      "type": "Image",
+      "requireSprite": true,
+      "spritePath": "Assets/Art/HomeScreen/Home Background.png"
+    },
+    {
+      "name": "HeroPanel",
+      "requireSprite": true,
+      "w": -1,
+      "h": -1
+    },
+    {
+      "name": "BadgesShortcut",
+      "requireSprite": true,
+      "w": -1,
+      "h": -1
+    },
+    {
+      "name": "GiftShortcut",
+      "requireSprite": true,
+      "w": -1,
+      "h": -1
+    },
+    {
+      "name": "AvatarShortcut",
+      "requireSprite": true,
+      "w": -1,
+      "h": -1
+    },
+    {
+      "name": "EditProfileButton",
+      "requireSprite": true,
+      "w": -1,
+      "h": -1
+    },
+    {
+      "name": "GoldRing",
+      "requireSprite": true,
+      "w": -1,
+      "h": -1
+    },
+    {
+      "name": "IconRing",
+      "requireSprite": true,
+      "w": -1,
+      "h": -1
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "elements": [
+    {
+      "name": "Background",
+      "type": "Image",
+      "requireSprite": true,
+      "spritePath": "Assets/Art/HomeScreen/Home Background.png"
+    },
+    {
+      "name": "CollectionStar",
+      "requireSprite": true,
+      "w": -1,
+      "h": -1
+    },
+    {
+      "name": "SectionIcon",
+      "requireSprite": true,
+      "w": -1,
+      "h": -1
+    },
+    {
+      "name": "IconRing",
+      "requireSprite": true,
+      "w": -1,
+      "h": -1
+    }
+  ]
+}

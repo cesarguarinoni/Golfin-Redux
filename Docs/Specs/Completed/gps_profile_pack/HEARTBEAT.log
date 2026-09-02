@@ -1,0 +1,86 @@
+2026-09-01T23:00:00 activated
+
+=== iter-1 kickoff baseline ===
+HEAD: 9dc6d3ec0 publish_blocked_catalogs: mission_loadouts published v2; report, STATUS, AI_CONTEXT
+DIRTY (not mine):
+  M  Docs/TellCode.md
+  ?? .claude/launch.json
+  ?? Docs/Specs/Completed/ball_data_wiring/ARCHITECT_REVIEW.md
+  ?? Docs/Specs/Active/gps_profile_pack/  (the task folder itself, expected)
+content_version.txt: last known as 9dc6d3ec0 content, already modified in working tree at dispatch time
+===
+
+2026-09-01T23:00:00 STATUS set to IMPLEMENTER_WORKING, beginning Rule 9 Figma node pulls
+2026-09-01T23:05:00 Figma Profile node pulled, starting Avatar node pull
+2026-09-01T23:11:17 resuming - pulling remaining Figma nodes 14026:33187 and 14027:33298
+2026-09-01T23:15:00 Avatar node 14026:33187 pulled; pulling Badges node 14027:33298
+2026-09-01T23:20:00 Badges node 14027:33298 pulled; beginning implementation
+2026-09-01T23:25:00 Endpoints.cs updated with ScoreStats + BadgesProgress; creating DTOs and services
+2026-09-01T23:30:00 services+DTOs done, no compile errors; creating controllers
+2026-09-01T23:45:00 compile clean; beginning builder + prefabs + localization
+2026-09-01T23:55:00 writing make_gps_profile_panels.py and builder
+2026-09-02T00:15:00 loc rows added (75 rows); beginning scene wiring
+2026-09-02T15:07:00 session 9 activated; content published to texts v27, LocalizationTextTable regenerated (872 rows)
+2026-09-02T00:19:01 session 10 activated; 69/69 EditMode tests pass (16 new GpsProfilePackTests)
+2026-09-02T00:21:54 session 10 resumed; editor in EditMode, proceeding to play-mode capture
+2026-09-02T00:31:50 builder rebuilt — 25 loc keys fixed, 3 prefabs regenerated; entering play mode for screenshot
+2026-09-02T00:45:00 IMPLEMENTER_REPORT.md written; all 3 screens captured, 0 FAIL lint, 69/69 tests pass; setting READY_FOR_SELF_REVIEW
+=== iter-2 kickoff baseline ===
+timestamp: 2026-09-01T15:55:19Z
+HEAD: 9dc6d3ec05ab2e86066a5be09cffb35b12178fd6
+Pre-existing dirty working tree (NOT introduced by iter-2):
+  Modified (from iter-1 and earlier sessions):
+    Assets/Localization/LocalizationText.csv
+    Assets/Localization/LocalizationTextTable.asset
+    Assets/Resources/Data/content_version.txt (content_version — not ours)
+    Assets/Scenes/ShellScene.unity
+    Assets/Scripts/Net/Endpoints.cs
+    Assets/Scripts/UI/Gps/GpsHubScreenController.cs
+    Assets/Scripts/UI/PersistentUIManager.cs
+    Assets/Scripts/UI/ScreenManager.cs
+    Docs/TellCode.md
+    .claude/alerts.log
+  Untracked new files from iter-1:
+    Assets/Art/UI/Gps/S_PROF_*.png (12 baked sprites)
+    Assets/Prefabs/UI/Gps/GpsProfileScreen.prefab, GpsAvatarScreen.prefab, GpsBadgesScreen.prefab
+    Assets/Scripts/Gps/ProfileDtos.cs, ScoreStatsService.cs, Tests/GpsProfilePackTests.cs
+    Assets/Scripts/UI/Gps/BadgeCellView.cs, GpsProfileScreenController.cs, GpsAvatarScreenController.cs, GpsBadgesScreenController.cs, GpsUiColor.cs
+    Assets/Scripts/UI/Gps/Editor/GpsProfilePackBuilder.cs
+    Docs/Scripts/make_gps_profile_panels.py
+    .claude/launch.json, Docs/Specs/Completed/ball_data_wiring/ARCHITECT_REVIEW.md (not ours)
+=== end baseline ===
+2026-09-01T15:55:19Z activated iter-2
+2026-09-01T15:59:49 resuming iter-2 — builder rewrite
+2026-09-01T16:23:21 resuming - prefab structure verified (3 root children), capturing screenshots
+2026-09-02T16:37:10Z re-capture: screenshots showed wrong screen (Hub), re-navigating via NavProfileButton
+2026-09-02T17:10:00Z probe runs complete (PrefabProbe/DeepProbe/FinalProbe); 2 FAILs confirmed: Background.Image absent + EditProfileButton sprite=ButtonCancel not Main Buttons Silver; IMPLEMENTER_REPORT.md written; done, awaiting review
+
+=== iter-3 kickoff baseline ===
+Timestamp: 2026-09-01T17:21:34Z
+HEAD SHA: 9dc6d3ec0 publish_blocked_catalogs: mission_loadouts published v2; report, STATUS, AI_CONTEXT
+DIRTY porcelain (pre-existing, not ours):
+  M .claude/alerts.log
+  M Assets/Localization/LocalizationText.csv
+  M Assets/Localization/LocalizationTextTable.asset
+  M Assets/Resources/Data/content_version.txt
+  M Assets/Scenes/ShellScene.unity
+  M Assets/Scripts/Net/Endpoints.cs
+  M Assets/Scripts/UI/Gps/GpsHubScreenController.cs
+  M Assets/Scripts/UI/PersistentUIManager.cs
+  M Assets/Scripts/UI/ScreenManager.cs
+  M Docs/TellCode.md
+Untracked (task files, pre-existing from iter-1+2):
+  All Assets/Art/UI/Gps/S_PROF_*.png + .meta
+  All Assets/Prefabs/UI/Gps/Gps*Screen.prefab + .meta
+  All Assets/Scripts/Gps/ new files
+  All Assets/Scripts/UI/Gps/ new controller/builder files
+  Docs/Scripts/make_gps_profile_panels.py
+  Docs/Specs/Active/gps_profile_pack/ (task folder)
+=== end baseline ===
+2026-09-01T17:21:34Z iter-3 activated — reading fail list and planning fixes
+2026-09-02T04:00:00 context-resumed, beginning 15-item comprehensive fix
+2026-09-02T03:10:00 rebuilds verified; entering play mode for screenshots
+2026-09-02T03:20:00 done, awaiting review
+2026-09-02T00:14:42Z iter-4 activated — reading CESAR_REJECTION + ARCHITECT_ESCALATION, enumerating all elements per §15
+2026-09-02T00:56:56Z iter-4: 19 builder patches applied, clean compile
+2026-09-02T01:01:32 BuildAll() complete, 3 prefabs rebuilt, 75 loc keys in CSV, proceeding to screenshots
