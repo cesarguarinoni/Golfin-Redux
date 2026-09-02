@@ -58,6 +58,9 @@ namespace Golfin.Gps.UI
         [Header("List")]
         [SerializeField] private RectTransform? _listContent;
         [SerializeField] private ScrollRect? _listScroll;
+        [Tooltip("The empty-state CARD. A bare muted line on this screen's open-sky background " +
+                 "was effectively invisible, so the message rides a panel like everything else.")]
+        [SerializeField] private GameObject? _emptyPanel;
         [SerializeField] private TextMeshProUGUI? _emptyLabel;
 
         [Header("Card templates (authored inactive)")]
@@ -281,13 +284,11 @@ namespace Golfin.Gps.UI
                 _listContent.sizeDelta = new Vector2(_listContent.sizeDelta.x, Mathf.Max(y, 1f));
             if (_listScroll != null) _listScroll.verticalNormalizedPosition = 1f;
 
-            if (_emptyLabel != null)
-            {
-                _emptyLabel.gameObject.SetActive(shown.Count == 0);
-                if (shown.Count == 0)
-                    _emptyLabel.text = LocalizationManager.Get(
-                        _filter == Filter.Mine ? "GPS_VOTE_EMPTY_MINE" : "GPS_VOTE_EMPTY");
-            }
+            bool empty = shown.Count == 0;
+            if (_emptyPanel != null) _emptyPanel.SetActive(empty);
+            if (_emptyLabel != null && empty)
+                _emptyLabel.text = LocalizationManager.Get(
+                    _filter == Filter.Mine ? "GPS_VOTE_EMPTY_MINE" : "GPS_VOTE_EMPTY");
         }
 
         /// <summary>PUBLIC is the whole list; MINE is the rows this account created, matched on

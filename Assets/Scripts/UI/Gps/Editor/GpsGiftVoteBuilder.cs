@@ -543,9 +543,19 @@ namespace Golfin.Gps.UI.Editor
             Set(so, "_cardMultiTemplate",
                 VoteCard(content.transform, "CardMultiTemplate", 200, VoteCardKind.Multi));
 
+            // The empty state gets a CARD, not a bare line of text.
+            //
+            // The first version was a muted #B7C3D3 run floating on the raw background, and on the
+            // Vote screen that background is open sky — the message was legible only if you knew
+            // it was there. It reads as one more card in the feed now, which is both visible and
+            // the language the rest of the screen already speaks. Drawn at the sprite's NATIVE
+            // 958x200 so its baked gradient is not squashed (the linter's `nonuniform-stretch`).
+            GameObject empty = Card("EmptyPanel", listView.transform, 0, 0, 958, 200, SprCardMulti);
+            Set(so, "_emptyPanel", empty);
             Set(so, "_emptyLabel",
-                TMP("EmptyLabel", listView.transform, 0, 40, 958, 40, "", 26f, Muted, FontMed,
-                    TextAlignmentOptions.Top));
+                TMP("EmptyLabel", empty.transform, 32, 0, 894, 200, "", 26f, White, FontMed,
+                    TextAlignmentOptions.Midline));
+            empty.SetActive(false);
 
             // The 48px author discs, in avatar_color order. Handed to each cloned card so
             // VoteCardView never touches an asset path either.
