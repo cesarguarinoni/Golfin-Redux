@@ -4,6 +4,80 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
+## ⏸ BLOCKED ON CESAR — `gps_gifts_votes` · the last two GPS screens are built, the economy is not applied
+
+**Gift (Figma `14027:101843`) and Vote (`14028:33534`) — the GPS surface is complete.** Both are
+reached the way a player reaches them: the hub's GIFT nav slot and its GIFT / VOTE action tiles
+were the last inert affordances on that screen and are now live. Two new ScreenIds
+(`GpsGift`, `GpsVote`), both on `GpsGate`'s deny-list.
+
+Gift is live end to end — GIFTS RECEIVED from the profile's own `gift_pts`, POPULAR GOLFERS from
+`/user/discover`, a BUY GIFT ITEMS strip from the real 21-row catalog, and one modal that performs
+both economy writes under an idempotency key minted per open. Vote is live for its core —
+`/vote/list` drives five real cards, a cast repaints from the server's own answer and earns +10,
+CREATE prepends without a second fetch, MINE filters on `creator_id`.
+
+**⛔ The economy half is written, committed and NOT LIVE.** `backend/migrations/2026_09_02_gift_atomic.sql`
+is DDL, so applying it is Cesar's step, and the Fly deploy is gated behind it in that order:
+`gifts.py` now calls `golfin_gift_pts` / `golfin_gift_purchase` **by name**, so deploying first
+would take `/gifts/send-pts` and `/gifts/purchase` down. Verified rather than assumed — both RPCs
+answer `404 PGRST202` today.
+
+⚠️ **The migration moves a live balance.** Its §1 reconciliation (the same statement
+`2026_08_12_gift_pts_total_points_fix.sql` ran) writes only rows that are ALREADY inconsistent, and
+exactly one production profile is: **Cratilo, activity 7158 + gift 0 vs total 6808 → total becomes
+7158 (+350 RP)**. That is the repair, not a side effect, but it should not be a surprise.
+
+After apply + deploy the two blocked acceptance items close with one command:
+`python3 Docs/Specs/Active/gps_gifts_votes/e2e_gift_economy.py --env-file Tools/admin-dashboard/.env.development.local`
+
+### What was actually broken in the backend
+
+All three gift write paths updated `activity_pts` / `gift_pts` **without** `total_points` — the
+invariant every post-unification writer maintains. Under the one-value decision `total_points` IS
+the game's RP balance, so it was live in both directions: a SENDER's total never fell, leaving
+points the game would let them spend again, and a RECEIVER's total never rose, so a gift was
+invisible to GOLFIN. The fix is the house pattern (one SECURITY DEFINER function per flow, one
+transaction, idempotent on `points_transactions(user_id, idempotency_key)`, refusals as return
+values), not two extra columns in the router's UPDATE — the read-modify-write there is the same
+lost-update race ISSUE-05 removed from `points.py`, run across two profiles with no transaction
+around them.
+
+### Gates
+
+Geometry `97 sites 0 FAIL 0 GONE`; UI fidelity lint `fail=0` on both prefabs; EditMode sweep
+`2258 / 2255 passed / 0 failed` with a tripwire proving the 19 new `Golfin.Social.Tests` execute;
+53 localization keys published (`texts` v31), `export --check` clean; 18 non-text A/B regions
+against the node renders at mean |ΔRGB| **2.8** (gift) and **3.7** (vote), worst 6.1.
+
+### What the gates caught that the eye would not have
+
+A `??` on `GetComponent` that Unity's fake-null defeated — it threw on the Vote screen's first
+frame, took `OnEnable` down with it, and left `/vote/list` unrequested and the list empty. Every
+translucent overlay pre-composited against an assumed opaque backdrop and rendering up to **64
+units too dark**, with the opaque baked gradients at ΔRGB 1.0 as the control that made it a
+diagnosis. A pill whose opaque rim hid its own translucent fill (interior measured solid gold). An
+`Image` on a `ContentSizeFitter` root reporting its 176px native width as a preferred size, making
+every pill 60 % too wide. And TMP drawing story labels as *nothing*, because `Ellipsis` needs
+wrapping on and a wrapped 18px line does not fit the node's 21px box.
+
+### Known-unequal / open
+
+1. **TOP SUPPORTERS reads two sources.** `/gifts/received` reads the `gifts` table, which only the
+   out-of-scope item-gifting path writes and which holds **zero rows** in production; an RP gift is
+   recorded solely as a `points_transactions` row. The panel merges both, by NAME — the ledger has
+   no counterparty column.
+2. **No cast was performed against production.** The five live votes are April GOLFIN AI seeds that
+   have already expired; casting would write a `user_votes` row and mint 10 RP against a dead poll,
+   and that vote could not then be re-tested from this account. Covered by EditMode tests over the
+   real service.
+3. **The BUY strip is the three CHEAPEST basic rows.** The SPEC's named trio is not the first three
+   under any ordering the live catalog supports.
+4. Full deviation list (11 items) in `Docs/Specs/Active/gps_gifts_votes/IMPLEMENTER_REPORT.md`.
+
+Shipped: GolfinRedux `b823510d5`, playlife `4206a56` (committed, not deployed).
+
+---
 
 ## ✅ DONE — `auth_golf_profile` **approved by Cesar** (2026-09-02) · the post-signup capture is live
 

@@ -1,0 +1,324 @@
+{
+  "elements": [
+    {
+      "name": "Background",
+      "requireSprite": true,
+      "w": -1,
+      "h": -1,
+      "radius": -1,
+      "fontSize": -1,
+      "color": "",
+      "fontWeight": ""
+    },
+    {
+      "name": "StoriesRow",
+      "requireSprite": true,
+      "w": 958,
+      "h": 143,
+      "radius": -1,
+      "fontSize": -1,
+      "color": "",
+      "fontWeight": ""
+    },
+    {
+      "name": "Disc",
+      "requireSprite": true,
+      "w": 88,
+      "h": 88,
+      "radius": -1,
+      "fontSize": -1,
+      "color": "",
+      "fontWeight": ""
+    },
+    {
+      "name": "Plus",
+      "requireSprite": false,
+      "w": -1,
+      "h": -1,
+      "radius": -1,
+      "fontSize": 39.33,
+      "color": "#EEDC9A",
+      "fontWeight": "SemiBold"
+    },
+    {
+      "name": "Avatar",
+      "requireSprite": true,
+      "w": 88,
+      "h": 88,
+      "radius": -1,
+      "fontSize": -1,
+      "color": "",
+      "fontWeight": ""
+    },
+    {
+      "name": "ChipsRow",
+      "requireSprite": true,
+      "w": 958,
+      "h": 78,
+      "radius": -1,
+      "fontSize": -1,
+      "color": "",
+      "fontWeight": ""
+    },
+    {
+      "name": "Chip0",
+      "requireSprite": false,
+      "w": 171,
+      "h": 52,
+      "radius": -1,
+      "fontSize": -1,
+      "color": "",
+      "fontWeight": ""
+    },
+    {
+      "name": "Chip1",
+      "requireSprite": false,
+      "w": 152,
+      "h": 52,
+      "radius": -1,
+      "fontSize": -1,
+      "color": "",
+      "fontWeight": ""
+    },
+    {
+      "name": "Chip2",
+      "requireSprite": false,
+      "w": 137,
+      "h": 52,
+      "radius": -1,
+      "fontSize": -1,
+      "color": "",
+      "fontWeight": ""
+    },
+    {
+      "name": "Chip3",
+      "requireSprite": false,
+      "w": 108,
+      "h": 52,
+      "radius": -1,
+      "fontSize": -1,
+      "color": "",
+      "fontWeight": ""
+    },
+    {
+      "name": "Off",
+      "requireSprite": true,
+      "w": -1,
+      "h": -1,
+      "radius": -1,
+      "fontSize": -1,
+      "color": "",
+      "fontWeight": ""
+    },
+    {
+      "name": "On",
+      "requireSprite": true,
+      "w": -1,
+      "h": -1,
+      "radius": -1,
+      "fontSize": -1,
+      "color": "",
+      "fontWeight": ""
+    },
+    {
+      "name": "CardPhotoTemplate",
+      "requireSprite": true,
+      "w": 958,
+      "h": 530,
+      "radius": -1,
+      "fontSize": -1,
+      "color": "",
+      "fontWeight": ""
+    },
+    {
+      "name": "CardPhoto2Template",
+      "requireSprite": true,
+      "w": 958,
+      "h": 450,
+      "radius": -1,
+      "fontSize": -1,
+      "color": "",
+      "fontWeight": ""
+    },
+    {
+      "name": "CardSimpleTemplate",
+      "requireSprite": true,
+      "w": 958,
+      "h": 232,
+      "radius": -1,
+      "fontSize": -1,
+      "color": "",
+      "fontWeight": ""
+    },
+    {
+      "name": "CardMultiTemplate",
+      "requireSprite": true,
+      "w": 958,
+      "h": 200,
+      "radius": -1,
+      "fontSize": -1,
+      "color": "",
+      "fontWeight": ""
+    },
+    {
+      "name": "Photo",
+      "requireSprite": true,
+      "w": -1,
+      "h": -1,
+      "radius": -1,
+      "fontSize": -1,
+      "color": "",
+      "fontWeight": ""
+    },
+    {
+      "name": "ScreenshotIcon",
+      "requireSprite": true,
+      "w": 80,
+      "h": 80,
+      "radius": -1,
+      "fontSize": -1,
+      "color": "",
+      "fontWeight": ""
+    },
+    {
+      "name": "AuthorName",
+      "requireSprite": false,
+      "w": -1,
+      "h": -1,
+      "radius": -1,
+      "fontSize": 23.24,
+      "color": "#FFFFFF",
+      "fontWeight": "SemiBold"
+    },
+    {
+      "name": "When",
+      "requireSprite": false,
+      "w": -1,
+      "h": -1,
+      "radius": -1,
+      "fontSize": 22,
+      "color": "#B7C3D3",
+      "fontWeight": ""
+    },
+    {
+      "name": "Question",
+      "requireSprite": false,
+      "w": -1,
+      "h": -1,
+      "radius": -1,
+      "fontSize": 26.82,
+      "color": "#FFFFFF",
+      "fontWeight": "SemiBold"
+    },
+    {
+      "name": "Track",
+      "requireSprite": true,
+      "w": -1,
+      "h": 16,
+      "radius": -1,
+      "fontSize": -1,
+      "color": "",
+      "fontWeight": ""
+    },
+    {
+      "name": "Fill",
+      "requireSprite": true,
+      "w": -1,
+      "h": -1,
+      "radius": -1,
+      "fontSize": -1,
+      "color": "",
+      "fontWeight": ""
+    },
+    {
+      "name": "BarLabel",
+      "requireSprite": false,
+      "w": -1,
+      "h": -1,
+      "radius": -1,
+      "fontSize": 26,
+      "color": "#FFFFFF",
+      "fontWeight": ""
+    },
+    {
+      "name": "Pct",
+      "requireSprite": false,
+      "w": -1,
+      "h": -1,
+      "radius": -1,
+      "fontSize": 23.24,
+      "color": "#FFFFFF",
+      "fontWeight": "SemiBold"
+    },
+    {
+      "name": "Meta",
+      "requireSprite": false,
+      "w": -1,
+      "h": -1,
+      "radius": -1,
+      "fontSize": 24,
+      "color": "#B7C3D3",
+      "fontWeight": ""
+    },
+    {
+      "name": "Pill",
+      "requireSprite": false,
+      "w": -1,
+      "h": 38,
+      "radius": -1,
+      "fontSize": -1,
+      "color": "",
+      "fontWeight": ""
+    },
+    {
+      "name": "Option0",
+      "requireSprite": false,
+      "w": -1,
+      "h": 38,
+      "radius": -1,
+      "fontSize": -1,
+      "color": "",
+      "fontWeight": ""
+    },
+    {
+      "name": "Option1",
+      "requireSprite": false,
+      "w": -1,
+      "h": 38,
+      "radius": -1,
+      "fontSize": -1,
+      "color": "",
+      "fontWeight": ""
+    },
+    {
+      "name": "Option2",
+      "requireSprite": false,
+      "w": -1,
+      "h": 38,
+      "radius": -1,
+      "fontSize": -1,
+      "color": "",
+      "fontWeight": ""
+    },
+    {
+      "name": "Option3",
+      "requireSprite": false,
+      "w": -1,
+      "h": 38,
+      "radius": -1,
+      "fontSize": -1,
+      "color": "",
+      "fontWeight": ""
+    },
+    {
+      "name": "Rim",
+      "requireSprite": true,
+      "w": -1,
+      "h": -1,
+      "radius": -1,
+      "fontSize": -1,
+      "color": "",
+      "fontWeight": ""
+    }
+  ]
+}
