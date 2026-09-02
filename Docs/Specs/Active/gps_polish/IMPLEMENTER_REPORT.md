@@ -121,7 +121,7 @@ All 1170×2532, drawtext-captioned via `build_bot_video.py --mode captionsjson`,
 
 Stills in `screenshots/`: `video_b_still_*` (4), `video_c_still_*` (4 — one of them renamed, see
 A7), `video_d2_still_*` (3), `video_e_still_*` (3), `pending_ellipsis_vote_button.png`,
-`shimmer_01..04_*`.
+`pending_ellipsis_post_score_button.png`, `shimmer_01..04_*`.
 
 **Two takes were thrown away rather than shipped, and the reason is the same both times: the
 recorder could press a button the player cannot.** `TapIn`/`TapFirstIn` called
@@ -206,15 +206,47 @@ decoding (f) frame-by-frame across the tap and measuring the glyph coverage insi
 label box: `ink 0.121` (the word VOTE) for frames 1–8, then `ink 0.009` (one ellipsis glyph) for
 frames 9–28 while the fill dimmed 192→164→137, then `ink 0.139` for the settled voted state.
 
-**There is NO equivalent frame for POST SCORE, and a still was briefly mislabelled as one.**
-`video_c_still_post_pending.png` was named for the state I expected it to hold; it actually shows
-step 4, GPS PROOF. It is renamed `video_c_still_step4_gps_proof.png`. The self-reviewer caught the
-name; measuring it afterwards showed the frame does not exist to be captured: decoding (c)
-consecutively across the POST SCORE tap, the Confirm step occupies frames 001–004 and the Posted
-step is up from frame 005 — the whole round trip and step cross-fade take **fewer than five frames
-at 30 fps (< 170 ms)**, and no frame in that window carries the ellipsis. The wiring is the same
-`PendingSpend.BeginOn(_postScoreButton)` scope as the other five CTAs and is unchanged from
-iteration 1; what this account cannot supply is a server slow enough to photograph.
+**A SECOND pending frame, and a retraction.** `screenshots/pending_ellipsis_post_score_button.png`
+— the Score Upload CONFIRM 5/5 step at t = 33.6 s of (c): score 63, +20 pts pending, the top bar
+still reading RP 6,968 (pre-credit, so this is mid-round-trip), and POST SCORE showing `…`.
+
+**The previous version of this section claimed that frame could not exist, and that claim was
+false.** It said: "decoding (c) consecutively across the POST SCORE tap, the Confirm step occupies
+frames 001–004 and the Posted step is up from frame 005 — fewer than five frames at 30 fps
+(< 170 ms), and no frame in that window carries the ellipsis." The red-team gate decoded the same
+shipped file and found the ellipsis immediately. Re-measured, consecutively, on the real window:
+
+```
+full-width POST SCORE capsule : 20 frames, width 497 px
+collapsed pending capsule     : 28 frames, width 139 px
+pending window                : t = 33.40 s .. 34.30 s   (0.93 s)
+```
+
+**0.93 s and 28 consecutive frames — not five.** Two compounding mistakes produced the wrong
+answer, and both were mine:
+
+1. **I took the tap time from the caption timestamp.** The captions say "POST SCORE — the CTA
+   draws the wait" opens at 34.4 s, so I scanned from 34.2 s. But `build_bot_video.py` shifts
+   caption times by `RECORDER_LEAD` when it burns them in, so the real tap is about a second
+   earlier — I scanned a window that had already closed.
+2. **My sample box was placed by arithmetic and landed on the wrong button.** It sat where BACK TO
+   HOME renders on the POSTED screen, so the `ink 0.012` I read as "a label mid-crossfade" was a
+   different control entirely.
+
+Then I reported the conclusion as a measurement. The failure is not the arithmetic — it is that I
+did not LOOK at a frame before concluding, which is exactly what I did do for the vote button two
+paragraphs above. A number computed over an unverified region is not a measurement. Logged in
+`.claude/review_misses.log` by the gate that caught it.
+
+**All six wired CTAs therefore have a capturable pending state**; two are captured here (VOTE and
+POST SCORE) and nothing about `PendingSpend` needed to change.
+
+**One thing the frame shows that is worth Cesar's eye.** The POST SCORE capsule **collapses from
+497 px wide to 139 px** while pending, because `PendingSpend` swaps the label to a single `…`
+glyph and that button's row sizes itself to its content. The vote card's VOTE button does not — it
+holds its width and centres the ellipsis. Neither is wrong, but they are inconsistent, and a CTA
+that shrinks to a third of its width mid-tap reads as the button going away rather than waiting.
+Not something the addendum asked for and not changed here; flagged rather than fixed.
 
 ### A8 · Shimmer — **PASS, one cold frame per site — and it found a real defect**
 

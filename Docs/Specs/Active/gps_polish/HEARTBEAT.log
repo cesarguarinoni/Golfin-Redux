@@ -46,3 +46,12 @@ DIRTY (git status --porcelain --untracked-files=all):
         pending_ellipsis_vote_button.png.
     Observations (3) ApplyToScene header comment and (4) frame-sampling (f) for the count-up are
     left for the architect as flagged.
+=== iter-2 redo 2026-09-03 — red-team ARCHITECT_REVIEW_FAIL, one blocker, fixed.
+    A7's "no POST SCORE pending frame exists" was FALSE. Re-measured consecutively on the real
+    window: 28 frames, t=33.40-34.30s, 0.93s; capsule collapses 497px -> 139px while pending.
+    Root cause of my wrong answer: (1) tap time taken from a caption timestamp, which
+    build_bot_video.py shifts by RECORDER_LEAD, so I scanned a window that had already closed;
+    (2) sample box placed by arithmetic landed on BACK TO HOME on the Posted screen. I reported
+    the conclusion as a measurement without looking at a frame. Frame now captured; claim retracted
+    in A7 with both mistakes named. No code change. New non-blocking observation flagged: the
+    POST SCORE capsule shrinks while pending where VOTE keeps its width.
