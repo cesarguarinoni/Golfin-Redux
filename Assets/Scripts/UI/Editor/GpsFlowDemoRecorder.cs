@@ -34,6 +34,10 @@ namespace Golfin.EditorTools
         const string OutputDir      = "Docs/Reports/Media/gps_flow";
         const string ArmedKey       = "GpsFlowDemoRecorder.Armed";
 
+        /// <summary>Which clip this run records. Survives the domain reload that entering play
+        /// mode causes, which SessionState alone would not on every Unity version.</summary>
+        const string ScenarioKey    = "GpsFlowDemoRecorder.Scenario";
+
         static RecorderController _recorder;
 
         [InitializeOnLoadMethod]
@@ -43,9 +47,29 @@ namespace Golfin.EditorTools
             EditorApplication.playModeStateChanged += OnPlayModeChanged;
         }
 
-        [MenuItem("GOLFIN/Gps/Record GPS Flow Video", priority = 230)]
-        public static void LaunchDemo()
+        [MenuItem("GOLFIN/Gps/Record — (a+d) whole GPS surface", priority = 230)]
+        public static void LaunchA() => LaunchDemo("a");
+
+        /// <summary>(b) — the nav-bar sweep, re-recorded for the continuation: it now shows the
+        /// cold-fetch shimmer and the staggered first paint on every screen it visits.</summary>
+        [MenuItem("GOLFIN/Gps/Record — (b) nav sweep, cold", priority = 231)]
+        public static void LaunchB() => LaunchDemo("b");
+
+        [MenuItem("GOLFIN/Gps/Record — (c) Score Upload step walk", priority = 232)]
+        public static void LaunchC() => LaunchDemo("c");
+
+        [MenuItem("GOLFIN/Gps/Record — (d2) gift + vote panel fades", priority = 233)]
+        public static void LaunchD2() => LaunchDemo("d2");
+
+        [MenuItem("GOLFIN/Gps/Record — (e) Golf Profile to Welcome to hub", priority = 234)]
+        public static void LaunchE() => LaunchDemo("e");
+
+        [MenuItem("GOLFIN/Gps/Record — (f) a live cast", priority = 235)]
+        public static void LaunchF() => LaunchDemo("f");
+
+        public static void LaunchDemo(string scenario = "a")
         {
+            EditorPrefs.SetString(ScenarioKey, scenario);
             if (EditorApplication.isPlaying)
             {
                 Debug.LogWarning("[GpsFlowDemo] Already in play mode — stop first.");
@@ -107,7 +131,7 @@ namespace Golfin.EditorTools
             movie.OutputFormat = MovieRecorderSettings.VideoRecorderOutputFormat.MP4;
             movie.ImageInputSettings = new GameViewInputSettings { OutputWidth = w, OutputHeight = h };
             movie.AudioInputSettings.PreserveAudio = false;
-            movie.OutputFile = $"{OutputDir}/raw";
+            movie.OutputFile = $"{OutputDir}/raw_{EditorPrefs.GetString(ScenarioKey, "a")}";
 
             var settings = ScriptableObject.CreateInstance<RecorderControllerSettings>();
             settings.AddRecorderSettings(movie);
@@ -139,6 +163,21 @@ namespace Golfin.EditorTools
 
     public class GpsFlowDemoRunner : MonoBehaviour
     {
+        /// <summary>Set by <see cref="OnEarnLog"/> when /points/earn actually credits (f).</summary>
+        bool _earned;
+
+        void OnEarnLog(string message, string stack, LogType type)
+        {
+            // "[GpsVote] vote_cast earn -> +10 (total 6968)" — a ZERO award is the router refusing
+            // (daily cap, unknown action), so only a positive one counts as a real cast.
+            if (message == null || !message.Contains("vote_cast earn -> +")) return;
+            int i = message.IndexOf("-> +", System.StringComparison.Ordinal) + 4;
+            int j = i;
+            while (j < message.Length && char.IsDigit(message[j])) j++;
+            if (j > i && int.TryParse(message.Substring(i, j - i), out int awarded) && awarded > 0)
+                _earned = true;
+        }
+
         /// <summary>Bot-clock time at StartRecording(), so every caption below is stamped in
         /// seconds since the first frame — which is exactly what build_bot_video.py's
         /// `--mode captionsjson` expects, and why this clip needs no hand-timed caption list
@@ -179,7 +218,417 @@ namespace Golfin.EditorTools
             // Without this the Editor stops rendering the moment it loses focus and the recording
             // becomes a still of whatever it drew last.
             Application.runInBackground = true;
-            StartCoroutine(Sequence());
+            string scenario = EditorPrefs.GetString("GpsFlowDemoRecorder.Scenario", "a");
+            Debug.Log("[GpsFlowDemo] scenario = " + scenario);
+            switch (scenario)
+            {
+                case "b":  StartCoroutine(SequenceB());  break;
+                case "c":  StartCoroutine(SequenceC());  break;
+                case "d2": StartCoroutine(SequenceD2()); break;
+                case "e":  StartCoroutine(SequenceE());  break;
+                case "f":  StartCoroutine(SequenceF());  break;
+                default:   StartCoroutine(Sequence());   break;
+            }
+        }
+
+        /// <summary>
+        /// Boot through the title gate and land on Home. Shared by every scenario — the app boots
+        /// to a Start screen ScreenManager does NOT manage, so a ShowScreen before this leaves the
+        /// frame on the title (CLAUDE.md Capture rule 0).
+        /// </summary>
+        IEnumerator Boot()
+        {
+            yield return Until(() => ScreenManager.Instance != null, 30f);
+            yield return TapAnywhere("StartButton", 90f);
+            yield return Until(() => ScreenManager.Instance.CurrentScreen == ScreenId.Home, 90f);
+            yield return new WaitForSecondsRealtime(2f);
+        }
+
+        void Finish()
+        {
+            WriteCaptions();
+            Debug.Log("[GpsFlowDemo] Sequence done — exiting play mode.");
+            EditorApplication.ExitPlaymode();
+        }
+
+        // ═════════════════════════════════════════════════════════════════════
+        // (b) — the nav-bar sweep, COLD
+        //
+        // Re-recorded for the continuation. Nothing about the route changed; what
+        // changed is what it shows. Every service cache is a per-play-session
+        // singleton, so a fresh play mode starts with all five paint caches EMPTY
+        // and the first open of each screen is a genuine cold fetch: shimmer up,
+        // then the rows stagger in behind it. The clip then RE-VISITS the hub, where
+        // the same panels repaint from cache instantly — that contrast is the whole
+        // point, and the log carries the paint(cache)/paint(fetch) line for each.
+        // ═════════════════════════════════════════════════════════════════════
+
+        IEnumerator SequenceB()
+        {
+            yield return Boot();
+            Cap("Fresh session \u2014 every paint cache is empty");
+
+            yield return TapAnywhere("GpsPill", 20f);
+            yield return Until(() => ScreenManager.Instance.CurrentScreen == ScreenId.GpsHub, 20f);
+            Cap("Hub \u2014 cold: rounds shimmer, then stagger in");
+            yield return new WaitForSecondsRealtime(Hold + 1.5f);
+
+            GameObject hub = GameObject.Find("Canvas/ScreensRoot/GpsHubScreen");
+
+            Cap("Nav slot 1 \u2014 SCORE UPLOAD");
+            yield return TapIn(hub, "NavSafeArea/GpsNavBar/NavCameraButton");
+            yield return Until(() => ScreenManager.Instance.CurrentScreen == ScreenId.ScoreUpload, 20f);
+            yield return new WaitForSecondsRealtime(Hold);
+
+            GameObject su = GameObject.Find("Canvas/ScreensRoot/ScoreUploadScreen");
+            Cap("Nav slot 2 \u2014 GIFT, cold: supporters + golfers shimmer");
+            yield return TapIn(su, "NavSafeArea/GpsNavBar/NavGiftButton");
+            yield return Until(() => ScreenManager.Instance.CurrentScreen == ScreenId.GpsGift, 20f);
+            yield return new WaitForSecondsRealtime(Hold + 2f);
+
+            GameObject gift = GameObject.Find("Canvas/ScreensRoot/GpsGiftScreen");
+            Cap("Nav slot 3 \u2014 VOTE, cold: two card placeholders");
+            yield return TapIn(gift, "NavSafeArea/GpsNavBar/NavVoteButton");
+            if (ScreenManager.Instance.CurrentScreen != ScreenId.GpsVote)
+                Show(ScreenId.GpsVote);
+            yield return Until(() => ScreenManager.Instance.CurrentScreen == ScreenId.GpsVote, 20f);
+            yield return new WaitForSecondsRealtime(Hold + 2f);
+
+            GameObject vote = GameObject.Find("Canvas/ScreensRoot/GpsVoteScreen");
+            Cap("Nav slot 4 \u2014 PROFILE");
+            yield return TapIn(vote, "NavSafeArea/GpsNavBar/NavProfileButton");
+            yield return Until(() => ScreenManager.Instance.CurrentScreen == ScreenId.GpsProfile, 20f);
+            yield return new WaitForSecondsRealtime(Hold + 1f);
+
+            GameObject profile = GameObject.Find("Canvas/ScreensRoot/GpsProfileScreen");
+            Cap("Badges \u2014 cold: six cells shimmer, then stagger");
+            yield return TapFirstIn(profile, "BadgesShortcut");
+            yield return Until(() => ScreenManager.Instance.CurrentScreen == ScreenId.GpsBadges, 20f);
+            yield return new WaitForSecondsRealtime(Hold + 2f);
+
+            GameObject badges = GameObject.Find("Canvas/ScreensRoot/GpsBadgesScreen");
+            Cap("Back to the hub \u2014 WARM: paints from cache, instantly");
+            yield return TapIn(badges, "NavSafeArea/GpsNavBar/NavHomeButton");
+            if (ScreenManager.Instance.CurrentScreen != ScreenId.GpsHub) Show(ScreenId.GpsHub);
+            yield return Until(() => ScreenManager.Instance.CurrentScreen == ScreenId.GpsHub, 20f);
+            yield return new WaitForSecondsRealtime(Hold);
+
+            Cap("Gift again \u2014 WARM: no shimmer, no stagger");
+            yield return TapIn(hub, "NavSafeArea/GpsNavBar/NavGiftButton");
+            yield return Until(() => ScreenManager.Instance.CurrentScreen == ScreenId.GpsGift, 20f);
+            yield return new WaitForSecondsRealtime(Hold + 1f);
+
+            Finish();
+        }
+
+        // ═════════════════════════════════════════════════════════════════════
+        // (c) — the Score Upload step walk
+        //
+        // Every advance is a REAL widget onClick, including the 36 stepper taps that
+        // build a legal 9-hole card: MANUAL ENTRY -> 9 HOLES -> nine rows of +4 ->
+        // VERIFY GPS -> CONFIRM COURSE -> POST SCORE -> Posted. What the clip is
+        // evidence for is D4: the step roots CROSS-FADE and the strip's indicator
+        // SLIDES between segments instead of jumping, and the Posted total POPS.
+        // ═════════════════════════════════════════════════════════════════════
+
+        IEnumerator SequenceC()
+        {
+            yield return Boot();
+            yield return TapAnywhere("GpsPill", 20f);
+            yield return Until(() => ScreenManager.Instance.CurrentScreen == ScreenId.GpsHub, 20f);
+            yield return new WaitForSecondsRealtime(2f);
+
+            GameObject hub = GameObject.Find("Canvas/ScreensRoot/GpsHubScreen");
+            Cap("Step 1 \u2014 CAPTURE");
+            yield return TapIn(hub, "NavSafeArea/GpsNavBar/NavCameraButton");
+            yield return Until(() => ScreenManager.Instance.CurrentScreen == ScreenId.ScoreUpload, 20f);
+            yield return new WaitForSecondsRealtime(Hold);
+
+            GameObject su = GameObject.Find("Canvas/ScreensRoot/ScoreUploadScreen");
+
+            Cap("MANUAL ENTRY \u2192 step 3, EDIT (the strip indicator slides)");
+            yield return TapFirstIn(su, "SourceMANUAL");
+            yield return new WaitForSecondsRealtime(Hold);
+
+            Cap("9 HOLES, then nine rows of +4 \u2014 a legal 36");
+            yield return TapFirstIn(su, "Seg9");
+            yield return new WaitForSecondsRealtime(0.8f);
+            yield return StepHoles(su, holes: 9, strokes: 4);
+            yield return new WaitForSecondsRealtime(1.2f);
+
+            Cap("VERIFY GPS \u2192 step 4");
+            yield return TapFirstIn(su, "VerifyGpsButton");
+            yield return new WaitForSecondsRealtime(Hold + 1.5f);
+
+            // THE EDITOR HAS NO GPS. Step 4 comes up "Could not get your location / No golf course
+            // nearby" and CONFIRM THIS COURSE is correctly disabled — so the walk takes the same
+            // door a player without a fix takes: CHOOSE MANUALLY, pick a venue, then confirm.
+            // (The first take pressed CONFIRM anyway, which is exactly the dishonesty `Press`
+            // now refuses.)
+            if (!Interactable(su, "ConfirmCourseButton"))
+            {
+                Cap("No GPS fix in the Editor \u2014 CHOOSE MANUALLY");
+                yield return TapFirstIn(su, "ChooseManuallyButton");
+                yield return new WaitForSecondsRealtime(2f);
+                yield return TapFirstVenue(su);
+                yield return new WaitForSecondsRealtime(1.5f);
+            }
+
+            Cap("CONFIRM COURSE \u2192 step 5");
+            yield return TapFirstIn(su, "ConfirmCourseButton");
+            yield return new WaitForSecondsRealtime(Hold);
+
+            Cap("POST SCORE \u2014 the CTA draws the wait");
+            yield return TapFirstIn(su, "PostScoreButton");
+            yield return new WaitForSecondsRealtime(Hold + 2.5f);
+
+            Cap("POSTED \u2014 the server's numbers, and the total pops in");
+            yield return new WaitForSecondsRealtime(Hold + 1f);
+
+            Finish();
+        }
+
+        /// <summary>Is a named button on screen AND pressable? The venue detour keys off this.</summary>
+        static bool Interactable(GameObject root, string name)
+        {
+            if (root == null) return false;
+            foreach (Button b in root.GetComponentsInChildren<Button>(true))
+                if (b.gameObject.name == name)
+                    return b.gameObject.activeInHierarchy && b.interactable;
+            return false;
+        }
+
+        /// <summary>Tap the first REAL venue row in the picker — never the authored template,
+        /// which is inactive and carries no venue.</summary>
+        IEnumerator TapFirstVenue(GameObject su)
+        {
+            Transform rows = su != null
+                ? su.transform.Find("VenuePickerModal/ModalPanel/List/Rows") : null;
+            if (rows == null) { Debug.LogWarning("[GpsFlowDemo] no venue rows"); yield break; }
+
+            foreach (Transform child in rows)
+            {
+                if (child.name.Contains("Template")) continue;
+                var b = child.GetComponent<Button>();
+                if (b == null || !child.gameObject.activeInHierarchy) continue;
+                Press(b, "venue " + child.name);
+                yield return null;
+                yield break;
+            }
+            Debug.LogWarning("[GpsFlowDemo] the venue picker offered no row to tap.");
+        }
+
+        /// <summary>Tap every visible hole row's + stepper <paramref name="strokes"/> times. The
+        /// REAL stepper, on the real row — the totals gate on the draft these write into.</summary>
+        IEnumerator StepHoles(GameObject su, int holes, int strokes)
+        {
+            var rows = su.GetComponentsInChildren<Golfin.Gps.UI.HoleRowView>(true);
+            int done = 0;
+            foreach (var row in rows)
+            {
+                if (done >= holes) break;
+                if (!row.gameObject.activeInHierarchy) continue;
+                foreach (Button b in row.GetComponentsInChildren<Button>(true))
+                {
+                    if (b.name != "StepperPlus") continue;
+                    for (int i = 0; i < strokes; i++) { Press(b, "StepperPlus"); yield return null; }
+                    break;
+                }
+                done++;
+                yield return new WaitForSecondsRealtime(0.10f);
+            }
+            Debug.Log($"[GpsFlowDemo] stepped {done} holes by {strokes}.");
+        }
+
+        // ═════════════════════════════════════════════════════════════════════
+        // (d2) — the panel fades and the filter cross-fade
+        // ═════════════════════════════════════════════════════════════════════
+
+        IEnumerator SequenceD2()
+        {
+            yield return Boot();
+            yield return TapAnywhere("GpsPill", 20f);
+            yield return Until(() => ScreenManager.Instance.CurrentScreen == ScreenId.GpsHub, 20f);
+            yield return new WaitForSecondsRealtime(1.5f);
+
+            GameObject hub = GameObject.Find("Canvas/ScreensRoot/GpsHubScreen");
+            Cap("GIFT, cold \u2014 the three panels fade in with their placeholders");
+            yield return TapIn(hub, "NavSafeArea/GpsNavBar/NavGiftButton");
+            yield return Until(() => ScreenManager.Instance.CurrentScreen == ScreenId.GpsGift, 20f);
+            yield return new WaitForSecondsRealtime(Hold + 2.5f);
+
+            GameObject gift = GameObject.Find("Canvas/ScreensRoot/GpsGiftScreen");
+            Cap("SEND GIFT \u2014 the amount pills bump and cross-fade");
+            yield return TapIn(gift, "ContentContainer/Golfers/Golfer0/SendGiftButton");
+            yield return new WaitForSecondsRealtime(1.6f);
+            yield return TapAmounts(gift);
+            yield return new WaitForSecondsRealtime(1.0f);
+            yield return TapIn(gift, "GiftSendModal/ModalPanel/CancelButtonRow/CancelButton");
+            yield return new WaitForSecondsRealtime(Settle);
+
+            Cap("VOTE \u2014 PUBLIC / MINE cross-fades the list");
+            yield return TapIn(gift, "NavSafeArea/GpsNavBar/NavVoteButton");
+            if (ScreenManager.Instance.CurrentScreen != ScreenId.GpsVote) Show(ScreenId.GpsVote);
+            yield return Until(() => ScreenManager.Instance.CurrentScreen == ScreenId.GpsVote, 20f);
+            yield return new WaitForSecondsRealtime(Hold + 2f);
+
+            GameObject vote = GameObject.Find("Canvas/ScreensRoot/GpsVoteScreen");
+            for (int i = 0; i < 2; i++)
+            {
+                yield return TapIn(vote, "ContentContainer/ChipsRow/Chip3");   // MINE
+                yield return new WaitForSecondsRealtime(2.0f);
+                yield return TapIn(vote, "ContentContainer/ChipsRow/Chip2");   // PUBLIC
+                yield return new WaitForSecondsRealtime(2.0f);
+            }
+
+            Finish();
+        }
+
+        IEnumerator TapAmounts(GameObject gift)
+        {
+            Transform modal = gift.transform.Find("GiftSendModal");
+            if (modal == null) yield break;
+            foreach (Button b in modal.GetComponentsInChildren<Button>(true))
+            {
+                if (!b.name.StartsWith("Amount")) continue;
+                Press(b, b.name);
+                yield return new WaitForSecondsRealtime(0.55f);
+            }
+        }
+
+        // ═════════════════════════════════════════════════════════════════════
+        // (e) — Golf Profile -> Welcome -> hub
+        // ═════════════════════════════════════════════════════════════════════
+
+        IEnumerator SequenceE()
+        {
+            yield return Boot();
+            Cap("Golf Profile \u2014 the post-signup capture");
+            Show(ScreenId.GpsGolfProfile);
+            yield return Until(() => ScreenManager.Instance.CurrentScreen == ScreenId.GpsGolfProfile, 20f);
+            yield return new WaitForSecondsRealtime(Hold);
+
+            GameObject gp = GameObject.Find("Canvas/ScreensRoot/GpsGolfProfileScreen");
+
+            Cap("Avatar colour \u2014 the disc bumps and the sprites cross-fade");
+            yield return TapSwatches(gp);
+            yield return new WaitForSecondsRealtime(1.0f);
+
+            Cap("Experience chips \u2014 the same treatment, no tinting");
+            yield return TapChips(gp);
+            yield return new WaitForSecondsRealtime(1.2f);
+
+            Cap("Skip for now \u2192 Welcome");
+            yield return TapFirstIn(gp, "SkipRow");
+            yield return Until(() => ScreenManager.Instance.CurrentScreen == ScreenId.GpsWelcome, 20f);
+            yield return new WaitForSecondsRealtime(Hold + 1f);
+
+            GameObject wel = GameObject.Find("Canvas/ScreensRoot/GpsWelcomeScreen");
+            Cap("GET STARTED \u2192 the hub");
+            yield return TapFirstIn(wel, "GetStartedButton");
+            yield return Until(() => ScreenManager.Instance.CurrentScreen == ScreenId.GpsHub, 20f);
+            yield return new WaitForSecondsRealtime(Hold);
+
+            Finish();
+        }
+
+        IEnumerator TapSwatches(GameObject gp)
+        {
+            foreach (Button b in gp.GetComponentsInChildren<Button>(true))
+            {
+                if (!b.name.StartsWith("Colour")) continue;
+                Press(b, b.name);
+                yield return new WaitForSecondsRealtime(0.7f);
+            }
+        }
+
+        IEnumerator TapChips(GameObject gp)
+        {
+            foreach (Button b in gp.GetComponentsInChildren<Button>(true))
+            {
+                if (!b.name.StartsWith("Chip") && !b.name.StartsWith("Exp")) continue;
+                Press(b, b.name);
+                yield return new WaitForSecondsRealtime(0.7f);
+            }
+        }
+
+        // ═════════════════════════════════════════════════════════════════════
+        // (f) — a live cast
+        //
+        // Burns ONE of the four seeded GOLFIN AI votes on prod, which Cesar
+        // approved. The cast is a real onClick on a real card's VOTE button; the
+        // controller logs the vote id it casts on, which is what the report names.
+        // ═════════════════════════════════════════════════════════════════════
+
+        IEnumerator SequenceF()
+        {
+            yield return Boot();
+            yield return TapAnywhere("GpsPill", 20f);
+            yield return Until(() => ScreenManager.Instance.CurrentScreen == ScreenId.GpsHub, 20f);
+            yield return new WaitForSecondsRealtime(1.5f);
+
+            GameObject hub = GameObject.Find("Canvas/ScreensRoot/GpsHubScreen");
+            yield return TapIn(hub, "ContentContainer/ActionTiles/Tile_VOTE");
+            yield return Until(() => ScreenManager.Instance.CurrentScreen == ScreenId.GpsVote, 20f);
+            Cap("The live feed \u2014 five votes from /vote/list");
+            yield return new WaitForSecondsRealtime(Hold + 2.5f);
+
+            GameObject vote = GameObject.Find("Canvas/ScreensRoot/GpsVoteScreen");
+
+            Cap("The RP in the top bar, before");
+            yield return new WaitForSecondsRealtime(1.6f);
+
+            Cap("VOTE \u2014 the button draws the wait");
+
+            // WALK THE CARDS UNTIL ONE ACTUALLY EARNS, and this is not belt-and-braces: a card's
+            // VOTE button is enabled from `VotedLocally`, which is per-SESSION memory. A vote this
+            // account cast in an EARLIER session therefore looks castable, the server answers "you
+            // already voted", and nothing moves — which is exactly what the first take of this
+            // clip recorded, under a caption promising a bar fill and an RP count-up. So the cast
+            // is confirmed by the EARN, not by the tap.
+            _earned = false;
+            Application.logMessageReceived += OnEarnLog;
+            try
+            {
+                foreach (var card in vote.GetComponentsInChildren<Golfin.Gps.UI.VoteCardView>(true))
+                {
+                    if (card == null || !card.gameObject.activeInHierarchy) continue;
+                    Button b = card.VoteButton;
+                    if (b == null || !b.interactable) continue;
+
+                    Debug.Log("[GpsFlowDemo] trying card '" + card.name + "' vote id=" +
+                              (card.Vote != null ? card.Vote.Id : "?") + " question=\"" +
+                              (card.Vote != null ? card.Vote.Question : "?") + "\"");
+                    if (!Press(b, "VOTE on " + card.name)) continue;
+
+                    float deadline = Time.realtimeSinceStartup + 6f;
+                    while (!_earned && Time.realtimeSinceStartup < deadline) yield return null;
+                    if (_earned)
+                    {
+                        Debug.Log("[GpsFlowDemo] CAST LANDED on vote id=" +
+                                  (card.Vote != null ? card.Vote.Id : "?"));
+                        break;
+                    }
+                    Debug.LogWarning("[GpsFlowDemo] '" + card.name + "' did not earn " +
+                                     "(already voted in an earlier session) — trying the next card.");
+                    yield return new WaitForSecondsRealtime(0.6f);
+                }
+            }
+            finally { Application.logMessageReceived -= OnEarnLog; }
+
+            if (!_earned)
+                Debug.LogWarning("[GpsFlowDemo] no uncast vote left on this account — " +
+                                 "the clip shows no earn.");
+
+            Cap(_earned
+                ? "Bars animate old \u2192 new; the top-bar RP counts up"
+                : "Every vote on this account was already cast \u2014 no earn to show");
+            yield return new WaitForSecondsRealtime(Hold + 4f);
+
+            Cap("Settled");
+            yield return new WaitForSecondsRealtime(2f);
+
+            Finish();
         }
 
         IEnumerator Sequence()
@@ -312,8 +761,35 @@ namespace Golfin.EditorTools
             Transform t = root != null ? root.transform.Find(path) : null;
             var b = t != null ? t.GetComponent<Button>() : null;
             if (b == null) { Debug.LogWarning($"[GpsFlowDemo] no button at {path}"); yield break; }
-            b.onClick.Invoke();
+            if (!Press(b, path)) yield break;
             yield return null;
+        }
+
+        /// <summary>
+        /// Invoke a button's onClick — but ONLY if a player could have.
+        ///
+        /// <para>The first take of the Score Upload walk called <c>onClick.Invoke()</c>
+        /// unconditionally, which walked straight past VERIFY GPS while it was disabled for an
+        /// EMPTY scorecard: the clip reached CONFIRM with every figure showing an em dash and the
+        /// server refused the post. A recording that can press a button the player cannot is not
+        /// evidence of anything.</para>
+        /// </summary>
+        static bool Press(Button b, string what)
+        {
+            if (!b.gameObject.activeInHierarchy)
+            {
+                Debug.LogWarning($"[GpsFlowDemo] '{what}' is not on screen — not pressed.");
+                return false;
+            }
+            if (!b.interactable)
+            {
+                Debug.LogWarning($"[GpsFlowDemo] '{what}' is DISABLED — not pressed. " +
+                                 "The step before it did not leave the screen in a state that " +
+                                 "allows this tap.");
+                return false;
+            }
+            b.onClick.Invoke();
+            return true;
         }
 
         /// <summary>Tap the first of these names that exists anywhere under <paramref name="root"/>.
@@ -325,7 +801,7 @@ namespace Golfin.EditorTools
                 foreach (Button b in root.GetComponentsInChildren<Button>(true))
                     if (names.Contains(b.gameObject.name))
                     {
-                        b.onClick.Invoke();
+                        Press(b, b.gameObject.name);
                         yield return null;
                         yield break;
                     }
@@ -341,7 +817,7 @@ namespace Golfin.EditorTools
                                                                FindObjectsSortMode.None))
                     if (b.name == name && b.gameObject.activeInHierarchy)
                     {
-                        b.onClick.Invoke();
+                        Press(b, name);
                         yield return new WaitForSecondsRealtime(1f);
                         yield break;
                     }

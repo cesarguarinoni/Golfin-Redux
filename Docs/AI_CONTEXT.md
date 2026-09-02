@@ -6,38 +6,57 @@
 ---
 ## 🔨 IN FLIGHT — `gps_polish` · the GPS surface moves like the rest of the game
 
-**Iteration 1 shipped the layered push and its gates (`a7902da27`); the polish tail is not done.**
+**Iteration 1 shipped the layered push (`a7902da27`, approved by Cesar); iteration 2 finished the
+polish tail and the folder is now `READY_FOR_SELF_REVIEW`.**
+
 Inside the GPS surface, screens no longer go through black to move one room sideways: the
 Background / GpsNavBar / BackPill cross-fade in place and only the two `ContentContainer`s slide
 (Forward from +W, Back mirrored, 0.3 parallax on the leaver). Home ↔ GpsHub and every GPS →
 non-GPS boundary keep the game-wide `FadeController` fade, untouched.
 
-One helper does all of it: `Golfin.UI.Polish.UiMotion` — seven primitives, one copy of every
+One helper does all of it: `Golfin.UI.Polish.UiMotion` — now nine primitives, one copy of every
 duration, unscaled time, interruption-safe, and settled on its final value when Unity kills the
-coroutine because the host was disabled (`UiMotionRunner`). That last part is load-bearing:
-`ApplyScreen` disables the screen being left, so without it a screen swapped out mid-push comes
-back parked at +1170 px, permanently. The four existing tween loops (Versus, Daily pill, Gacha,
-Toast) are deliberately NOT retrofitted — that is `game_polish`.
+coroutine because the host was disabled (`UiMotionRunner`). The four existing tween loops (Versus,
+Daily pill, Gacha, Toast) are deliberately NOT retrofitted — that is `game_polish`.
 
-**Measured, not asserted.** `gps_polish_invariants.json`: 10 pushes, `fail=0`, durations
-0.251–0.267 s against 0.25, t0 offsets exactly ±1170, `blocksRaycasts` restored, and
-`seamWorstCover` 1.000 on every frame. Rest state after an animated arrival is **0 differing
-pixels vs HEAD on all seven GPS screens**. EditMode 2296 / 2293 passed / 0 failed. Lint is
-identical prefab-for-prefab vs HEAD (0 new findings).
+**Iteration 2 added the paint-state layer.** Every GPS list now knows which of its three paints it
+is doing — from cache, from a fetch, or a repaint — and one `PaintGate` per site drives both the
+staggered first entrance (§D3) and the cold-fetch placeholder (§D8), so the two can never disagree
+about what "cold" means. Around that: gift panel fades and the vote filter cross-fade (§D4),
+selection bumps as a two-Image alpha swap with no tinting (§D6), six count-ups plus the badge pulse
+and the vote bar animating old→new (§D7), and the iOS keyboard offset (§D9, device-only to observe).
 
-**One deviation Cesar should rule on.** The real-navigation probe found that the GPS nav bar is
-cloned onto every GPS screen and wired on **none but the hub**, and `_backButton` is NULL on all
-three profile-pack prefabs — so at HEAD a player who reaches Profile, Badges or Avatar has no way
-back. `GpsNavBarBinder` wires the bar that is already drawn (no new screen, art or string; ROUNDS
-left inert). One-line revert if unwanted.
+**Measured, not asserted.** A1 `fail=0` over 10 pushes (0.2527–0.2667 s vs 0.25, t0 ±1170, seam
+1.000). A2 **0 differing pixels on all seven screens** — and the method changed: these screens
+render live data and relative time, so the comparison is now a within-ONE-RUN pair (animated
+arrival vs the instant fade) rather than two runs an hour apart, which diffed "2h ago" against "3h
+ago" and reported 315k meaningless pixels. A5 seam 0.920. A6 identical prefab-for-prefab, zero new
+lint findings. EditMode 2319 / 2316 passed / 0 failed / 3 pre-existing skips. A13 measured twice —
+the whole app during a push (307 KB/frame, worst 59 ms, Editor + profiler + live server: an upper
+bound) and the tween loops in isolation (≤32 B/frame, which is the number the SPEC actually asks
+for).
 
-**Still open:** staggered row entrances, gift/vote panel fades, selection-pill bumps, 5 of 6
-count-ups, shimmer placement at the five cold-fetch sites, the keyboard offset, videos (c)(e)(f),
-and the GC/perf pass. Full list in `Docs/Specs/Active/gps_polish/IMPLEMENTER_REPORT.md` § Not done.
+**Two things worth carrying forward.**
+
+*The placeholder found a real defect.* `BadgeService.FetchBadges()` fires its change event only on
+success, and the badges screen called it with no callback — so a failed or empty answer repainted
+nothing. Invisible while the grid was merely empty; once §D8 put a shimmer over it, the screen had
+a loading state it could never leave. Fixed, pinned by a test, and the shape audited across all
+five fetch sites with a per-site verdict table (the other four were already correct).
+
+*Iteration 1 was wrong about the scene copies, and the correction matters.* The GPS screens in
+ShellScene **are** prefab instances — the earlier check ran in play mode, where
+`IsPartOfPrefabInstance` is false for every object. So a prefab edit reaches the live scene and
+`GpsPolishBuilder.ApplyToScene` is unnecessary; running it produced 1,296 lines of prefab-override
+churn in `ShellScene.unity`, which was discarded. **ShellScene is byte-identical to HEAD.**
+
+**Needs the device pass:** the keyboard offset (§D9) — the arithmetic is pinned in EditMode, but
+whether `TouchScreenKeyboard.area` reports what iOS says can only be seen on the phone.
 
 **Backlog fed by this task:** 208 GPS labels render `Rubik-VariableFont_wght SDF` rather than a
 Medium face (per-prefab table in the report); 15 pre-existing UI-lint FAILs, all
-`9slice-collapse-x` on bars whose width is set at runtime.
+`9slice-collapse-x` on bars whose width is set at runtime; `ApplyToScene`'s header comment is now
+factually wrong and should be rewritten.
 
 ---
 ## ✅ DONE — `gps_pill_entry` **approved by Cesar** (2026-09-02)

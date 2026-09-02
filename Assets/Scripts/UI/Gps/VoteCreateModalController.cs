@@ -83,6 +83,13 @@ namespace Golfin.Gps.UI
             if (_submitButton != null) _submitButton.onClick.AddListener(OnSubmit);
             if (_cancelButton != null) _cancelButton.onClick.AddListener(Hide);
             if (_question != null) _question.onValueChanged.AddListener(_ => Repaint());
+
+            // gps_polish §D9 — the question field is near the modal's bottom edge and is under
+            // the iOS keyboard while it is being typed into. The whole modal panel lifts, so the
+            // header and the expiry row travel with the field. No-op in the Editor.
+            KeyboardInsetBinder.Attach(_question, modalPanel != null
+                ? modalPanel.transform as RectTransform
+                : null);
         }
 
         private void Repaint()

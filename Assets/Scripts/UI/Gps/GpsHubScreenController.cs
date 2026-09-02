@@ -140,6 +140,14 @@ namespace Golfin.Gps.UI
             ApplyIdentityFallback();
             ApplyDetail(UserService.Instance.LastDetail);
 
+            // gps_polish §D3/§D8 — the rounds list gets the same treatment. ScoreHistoryService
+            // caches NOTHING (it is a paged endpoint), so the paint cache here is this
+            // controller's own `_lastRows` from the previous visit: a second entry repaints the
+            // three rows instantly and the refetch lands without re-animating them, while a
+            // first-ever entry is genuinely cold and gets the shimmer.
+            _roundsGate.Rearm();
+            ShowRounds(_lastRows, PaintKind.Cache);
+
             PointsService.Instance.OnDisplayBalanceChanged += OnDisplayBalanceChanged;
             UserService.Instance.OnDetailChanged += ApplyDetail;
             LocalizationManager.OnLanguageChanged += OnLanguageChanged;
@@ -356,7 +364,7 @@ namespace Golfin.Gps.UI
             ApplyDetail(UserService.Instance.LastDetail);
             if (_playerSub != null && UserService.Instance.LastDetail == null)
                 _playerSub.text = FormatSub(null, null);
-            ShowRounds(_lastRows);
+            ShowRounds(_lastRows, PaintKind.Repaint);
         }
 
         private Coroutine? _pointsCount;
@@ -414,11 +422,11 @@ namespace Golfin.Gps.UI
             {
                 if (result != null)
                     Debug.LogWarning($"{Tag} /score/history failed ({result.ErrorKind}) — rounds panel hidden.");
-                ShowRounds(null);
+                ShowRounds(null, PaintKind.Fetch);
                 return;
             }
 
-            ShowRounds(result.Data);
+            ShowRounds(result.Data, PaintKind.Fetch);
         }
 
         /// <summary>
@@ -426,10 +434,11 @@ namespace Golfin.Gps.UI
         /// state: hiding it made a brand-new player's hub look broken — a headline with nothing
         /// under it is better than a hole in the layout where a panel should be.
         /// </summary>
-        private void ShowRounds(List<ActivityDto>? rows)
+        private void ShowRounds(List<ActivityDto>? rows, PaintKind kind)
         {
             _lastRows = rows;
             int count = 0;
+            var painted = new List<Transform>(_roundRows.Length);
             if (rows != null)
             {
                 foreach (ActivityDto r in rows)
@@ -440,6 +449,7 @@ namespace Golfin.Gps.UI
                     if (row == null) continue;
                     row.gameObject.SetActive(true);
                     row.Bind(r, IsBest(r));
+                    painted.Add(row.transform);
                     count++;
                 }
             }
@@ -447,13 +457,32 @@ namespace Golfin.Gps.UI
             for (int i = count; i < _roundRows.Length; i++)
                 if (_roundRows[i] != null) _roundRows[i].gameObject.SetActive(false);
 
+            bool stagger = _roundsGate.Should(kind, count);
+            bool cold    = _roundsGate.IsCold;
+
+            // §D8 — the placeholder stands in for the rows, so it and the empty line are mutually
+            // exclusive: showing "no rounds yet" while still fetching would tell a player who HAS
+            // rounds that they have none, for as long as the request takes.
+            GpsPaintMotion.Shimmer(gameObject, ShimmerHost.HubRounds, cold);
+
             if (_roundsEmpty != null)
             {
-                _roundsEmpty.gameObject.SetActive(count == 0);
-                if (count == 0) _roundsEmpty.text = LocalizationManager.Get("GPS_HUB_NO_ROUNDS");
+                bool showEmpty = count == 0 && !cold;
+                bool wasEmpty  = _roundsEmpty.gameObject.activeSelf;
+                _roundsEmpty.gameObject.SetActive(showEmpty);
+                if (showEmpty) _roundsEmpty.text = LocalizationManager.Get("GPS_HUB_NO_ROUNDS");
+                // The empty label FADES in rather than appearing (§D8) — but only the first time
+                // it replaces a shimmer, not on every repaint of a list that is still empty.
+                if (showEmpty && !wasEmpty && kind == PaintKind.Fetch)
+                    GpsPaintMotion.FadeInPanel(this, _roundsEmpty.gameObject, true);
             }
             if (_roundsPanel != null) _roundsPanel.SetActive(true);
+
+            if (stagger) GpsPaintMotion.StaggerRise(this, painted);
         }
+
+        /// <summary>§D3/§D8 — cache-vs-fetch memory for MY RECENT ROUNDS.</summary>
+        private readonly PaintGate _roundsGate = new PaintGate(Tag, "rounds");
 
         /// <summary>
         /// The BEST tag marks the row whose score EQUALS the profile's <c>best_score</c> — the

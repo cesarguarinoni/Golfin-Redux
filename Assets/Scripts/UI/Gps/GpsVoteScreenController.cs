@@ -82,6 +82,15 @@ namespace Golfin.Gps.UI
         private readonly List<VoteDto> _all = new List<VoteDto>();
         private readonly List<VoteCardView> _cards = new List<VoteCardView>();
 
+        // ── gps_polish §D3 / §D4 / §D6 / §D8 ─────────────────────────────────
+        /// <summary>Cache-vs-fetch memory for the vote feed.</summary>
+        private readonly PaintGate _gate = new PaintGate(Tag, "votes");
+
+        /// <summary>The list's own group, so a filter change can cross-fade it (§D4). Added at
+        /// runtime and always settled at alpha 1 — nothing is authored.</summary>
+        private CanvasGroup? _listGroup;
+        private Coroutine? _listFade;
+
         // ═════════════════════════════════════════════════════════════════════
         // Lifecycle
         // ═════════════════════════════════════════════════════════════════════
@@ -89,10 +98,11 @@ namespace Golfin.Gps.UI
         private void OnEnable()
         {
             WireOnce();
-            ApplyChips();
+            ApplyChips(animate: false);
 
             // Paint from cache first — the same posture as every other GPS screen.
-            if (VoteService.Instance.LastVotes != null) Rebuild(VoteService.Instance.LastVotes!);
+            _gate.Rearm();
+            Rebuild(VoteService.Instance.LastVotes ?? new List<VoteDto>(), PaintKind.Cache);
             ApplyStories(UserService.Instance.LastDiscover);
 
             LocalizationManager.OnLanguageChanged += OnLanguageChanged;
@@ -139,8 +149,33 @@ namespace Golfin.Gps.UI
             if (which != Filter.Public && which != Filter.Mine) return;   // belt and braces
             if (_filter == which) return;
             _filter = which;
-            ApplyChips();
-            Rebuild(_all);
+            ApplyChips(animate: true);
+
+            // §D4 — the list CROSS-FADES between the two filters rather than swapping under the
+            // player's thumb. Out on the old set, rebuild while invisible, in on the new one: a
+            // rebuild destroys and re-instantiates every card, so doing it mid-fade is the only
+            // point at which nothing is on screen to tear.
+            CanvasGroup? group = ListGroup();
+            if (group == null) { Rebuild(_all, PaintKind.Repaint); return; }
+
+            UiMotion.Run(this, ref _listFade, UiMotion.Then(
+                UiMotion.Fade(group, group.alpha, 0f),
+                () =>
+                {
+                    Rebuild(_all, PaintKind.Repaint);
+                    UiMotion.Run(this, ref _listFade, UiMotion.Fade(group, 0f, 1f));
+                }));
+        }
+
+        /// <summary>The list content's CanvasGroup, added on first use.</summary>
+        private CanvasGroup? ListGroup()
+        {
+            if (_listGroup != null) return _listGroup;
+            if (_listContent == null) return null;
+            var cg = _listContent.GetComponent<CanvasGroup>();
+            if (cg == null) cg = _listContent.gameObject.AddComponent<CanvasGroup>();
+            _listGroup = cg;
+            return cg;
         }
 
         /// <summary>
@@ -149,7 +184,7 @@ namespace Golfin.Gps.UI
         /// dims the ring, the fill and the label together — setting <c>Image.color</c> would have
         /// dimmed only whichever one it was called on.
         /// </summary>
-        private void ApplyChips()
+        private void ApplyChips(bool animate)
         {
             for (int i = 0; i < _chipRoots.Length; i++)
             {
@@ -162,8 +197,19 @@ namespace Golfin.Gps.UI
 
                 Transform? off = chip.transform.Find("Off");
                 Transform? onGo = chip.transform.Find("On");
-                if (off != null) off.gameObject.SetActive(!on);
-                if (onGo != null) onGo.gameObject.SetActive(on);
+
+                // §D6 — the chip already carries BOTH states as two authored objects, so the
+                // selection is a two-Image alpha cross-fade with no tinting at all: the Off ring
+                // dissolves into the On capsule in place.
+                bool changed = onGo != null && onGo.gameObject.activeSelf != on;
+                UiSelection.CrossFade(this,
+                                      show: on ? onGo?.gameObject : off?.gameObject,
+                                      hide: on ? off?.gameObject  : onGo?.gameObject,
+                                      animate: animate && changed);
+
+                // …and the one that just became selected bumps. Only that one: bumping the chip
+                // being deselected would read as two things being pressed.
+                if (animate && changed && on) UiSelection.Bump(this, chip.transform);
 
                 Transform? label = chip.transform.Find("Label");
                 var tmp = label != null ? label.GetComponent<TextMeshProUGUI>() : null;
@@ -226,12 +272,14 @@ namespace Golfin.Gps.UI
             {
                 if (result != null)
                     Debug.LogWarning($"{Tag} /vote/list failed ({result.ErrorKind}) — list left as it was.");
-                if (_all.Count == 0) Rebuild(new List<VoteDto>());
+                // The gate has to be spent even on a failure, or the shimmer would sweep forever
+                // over a list that is never coming (§D8: hidden on error in favour of the label).
+                Rebuild(_all.Count == 0 ? new List<VoteDto>() : _all, PaintKind.Fetch);
                 return;
             }
 
             Debug.Log($"{Tag} /vote/list -> {result.Data.Count} active votes.");
-            Rebuild(result.Data);
+            Rebuild(result.Data, PaintKind.Fetch);
         }
 
         /// <summary>
@@ -239,7 +287,7 @@ namespace Golfin.Gps.UI
         /// and a diffing rebuild would have to reason about a card whose vote moved position
         /// between two fetches, which is a bug surface for no gain at this size.
         /// </summary>
-        private void Rebuild(List<VoteDto> votes)
+        private void Rebuild(List<VoteDto> votes, PaintKind kind)
         {
             if (!ReferenceEquals(votes, _all))
             {
@@ -285,11 +333,27 @@ namespace Golfin.Gps.UI
                 _listContent.sizeDelta = new Vector2(_listContent.sizeDelta.x, Mathf.Max(y, 1f));
             if (_listScroll != null) _listScroll.verticalNormalizedPosition = 1f;
 
-            bool empty = shown.Count == 0;
+            bool stagger = _gate.Should(kind, _cards.Count);
+            bool cold    = _gate.IsCold;
+            GpsPaintMotion.Shimmer(gameObject, ShimmerHost.VoteList, cold);
+
+            // The empty card and the placeholder are mutually exclusive, for the same reason as
+            // the hub's: "no votes yet" over a fetch that has not answered is a lie.
+            bool empty = shown.Count == 0 && !cold;
+            bool wasEmpty = _emptyPanel != null && _emptyPanel.activeSelf;
             if (_emptyPanel != null) _emptyPanel.SetActive(empty);
             if (_emptyLabel != null && empty)
                 _emptyLabel.text = LocalizationManager.Get(
                     _filter == Filter.Mine ? "GPS_VOTE_EMPTY_MINE" : "GPS_VOTE_EMPTY");
+            if (empty && !wasEmpty && kind == PaintKind.Fetch && _emptyPanel != null)
+                GpsPaintMotion.FadeInPanel(this, _emptyPanel, true);
+
+            if (stagger)
+            {
+                var rows = new List<Transform>(_cards.Count);
+                foreach (VoteCardView c in _cards) if (c != null) rows.Add(c.transform);
+                GpsPaintMotion.StaggerRise(this, rows);
+            }
         }
 
         /// <summary>PUBLIC is the whole list; MINE is the rows this account created, matched on
@@ -386,6 +450,10 @@ namespace Golfin.Gps.UI
                 // +10 RP, and ONLY here. /points/earn is not idempotent (it calls the unkeyed
                 // earn_activity_pts), so it must never be reachable from the already-voted branch
                 // below — the cast is what makes it unrepeatable, not the earn.
+                // §D7 — the +10 that is about to land in the SHARED top bar counts up instead of
+                // snapping. Armed here, at the GPS action that causes it, so the game's own RP
+                // changes stay unanimated (`game_polish` owns those).
+                Golfin.UI.PersistentUIManager.Instance?.ArmRewardPointsCountUp();
                 PointsService.Instance.EarnActionAsync("vote_cast", OnEarned);
                 return;
             }
@@ -420,6 +488,9 @@ namespace Golfin.Gps.UI
 
             // EarnActionRoutine already folded the new balance into the cache; this makes the
             // top bar agree with the server rather than with the response's partial payload.
+            // Re-arm: the refresh is a SECOND balance change from the same GPS action, and the
+            // arm was consumed by the first one.
+            if (awarded > 0) Golfin.UI.PersistentUIManager.Instance?.ArmRewardPointsCountUp();
             PointsService.Instance.RefreshBalanceAsync();
         }
 
@@ -465,7 +536,7 @@ namespace Golfin.Gps.UI
         {
             if (created == null) return;
             _all.Insert(0, created);
-            Rebuild(_all);
+            Rebuild(_all, PaintKind.Repaint);
         }
 
         // ═════════════════════════════════════════════════════════════════════
@@ -475,7 +546,7 @@ namespace Golfin.Gps.UI
         private void OnLanguageChanged()
         {
             ApplyStories(UserService.Instance.LastDiscover);
-            Rebuild(_all);
+            Rebuild(_all, PaintKind.Repaint);
         }
 
         /// <summary>

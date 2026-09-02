@@ -14,6 +14,7 @@ using Golfin.Economy;
 using Golfin.Net;
 using Golfin.Social;
 using Golfin.Telemetry;
+using Golfin.UI.Polish;
 using GolfinRedux.UI;
 using TMPro;
 using UnityEngine;
@@ -64,6 +65,30 @@ namespace Golfin.Gps.UI
 
         private bool _wired;
 
+        // ── gps_polish §D3 / §D4 / §D7 / §D8 ─────────────────────────────────
+        /// <summary>Cache-vs-fetch memory, one per fetched region.</summary>
+        private readonly PaintGate _supportersGate = new PaintGate(Tag, "supporters");
+        private readonly PaintGate _golfersGate    = new PaintGate(Tag, "golfers");
+        /// <summary>The catalog strip has no placeholder and no stagger — its gate exists only so
+        /// the BUY GIFT ITEMS panel knows whether this open is a cold one.</summary>
+        private readonly PaintGate _itemsGate      = new PaintGate(Tag, "items", staggers: false);
+
+        /// <summary>
+        /// §D4 — the three data panels. They FADE IN on a cold open, alongside the placeholder
+        /// that stands in for their rows, and are instant on a cache hit. One rule for all three,
+        /// and every paint path ends by showing them: a panel that could be stranded at alpha 0
+        /// by a failed fetch would be a worse defect than no fade.
+        /// </summary>
+        private readonly PanelReveal _supportersPanel = new PanelReveal("ContentContainer/Supporters");
+        private readonly PanelReveal _golfersPanel    = new PanelReveal("ContentContainer/Golfers");
+        private readonly PanelReveal _itemsPanel      = new PanelReveal("ContentContainer/BuyGifts");
+
+        /// <summary>The last GIFTS RECEIVED figure, so §D7 counts from a REAL previous number
+        /// rather than parsing one back out of a localized run.</summary>
+        private int? _lastGiftPts;
+
+        private Coroutine? _heroCount;
+
         // ═════════════════════════════════════════════════════════════════════
         // Lifecycle
         // ═════════════════════════════════════════════════════════════════════
@@ -74,10 +99,17 @@ namespace Golfin.Gps.UI
 
             // Paint from cache BEFORE any request, so re-entering never flashes "—" over numbers
             // that were correct a moment ago (the hub's posture, for the same reason).
+            _supportersGate.Rearm();
+            _golfersGate.Rearm();
+            _itemsGate.Rearm();
+            _supportersPanel.Rearm(gameObject);
+            _golfersPanel.Rearm(gameObject);
+            _itemsPanel.Rearm(gameObject);
+
             ApplyDetail(UserService.Instance.LastDetail);
-            ApplyGolfers(UserService.Instance.LastDiscover);
-            ApplyItems(GiftService.Instance.LastItems);
-            ApplySupporters(GiftService.Instance.LastSupporters);
+            ApplyGolfers(UserService.Instance.LastDiscover, PaintKind.Cache);
+            ApplyItems(GiftService.Instance.LastItems, PaintKind.Cache);
+            ApplySupporters(GiftService.Instance.LastSupporters, PaintKind.Cache);
 
             UserService.Instance.OnDetailChanged += ApplyDetail;
             LocalizationManager.OnLanguageChanged += OnLanguageChanged;
@@ -86,7 +118,7 @@ namespace Golfin.Gps.UI
             client.Run(UserService.Instance.Detail(OnDetailResult));
             client.Run(UserService.Instance.Discover(OnDiscoverResult));
             client.Run(GiftService.Instance.Items(OnItemsResult));
-            client.Run(GiftService.Instance.Supporters(ApplySupporters));
+            client.Run(GiftService.Instance.Supporters(OnSupportersResult));
 
             // The modal reads the SENDABLE balance off PointsService's cache, so it has to be
             // fresh before the player can open it — not after they have picked an amount.
@@ -134,10 +166,30 @@ namespace Golfin.Gps.UI
         private void ApplyDetail(UserDetailDto? d)
         {
             if (_heroValue != null)
-                _heroValue.text = d != null && d.GiftPts.HasValue
-                    ? string.Format(LocalizationManager.Get("GPS_GIFT_HERO_VALUE"),
-                                    d.GiftPts.Value.ToString("N0", CultureInfo.InvariantCulture))
-                    : Unknown;
+            {
+                int? pts = d != null ? d.GiftPts : null;
+                if (!pts.HasValue)
+                {
+                    _heroValue.text = Unknown;
+                    _lastGiftPts = null;
+                }
+                else
+                {
+                    // §D7 — count UP, and only up, and only from a number that was really on
+                    // screen. The first paint of the session comes from the em dash, and counting
+                    // from 0 there would show a player a lifetime gift total climbing every time
+                    // they open the screen. A total that went DOWN cannot happen on this column,
+                    // but if it ever does it snaps rather than counting backwards.
+                    string wrap = LocalizationManager.Get("GPS_GIFT_HERO_VALUE");
+                    if (_lastGiftPts.HasValue && pts.Value > _lastGiftPts.Value)
+                        UiMotion.Run(this, ref _heroCount,
+                                     UiMotion.CountUp(_heroValue, _lastGiftPts.Value, pts.Value,
+                                                      wrap: wrap));
+                    else
+                        _heroValue.text = UiMotion.Render(pts.Value, wrap: wrap);
+                    _lastGiftPts = pts.Value;
+                }
+            }
             RepaintHeroSub();
         }
 
@@ -168,9 +220,15 @@ namespace Golfin.Gps.UI
         /// hidden panel: a headline with nothing under it reads better than a hole in the layout
         /// (the same call the hub's rounds panel makes).
         /// </summary>
-        private void ApplySupporters(List<SupporterTotal>? supporters)
+        /// <summary>The /gifts/received answer — a FETCH paint, unlike the cache paint that
+        /// runs the same binder from <c>OnEnable</c>.</summary>
+        private void OnSupportersResult(List<SupporterTotal>? supporters)
+            => ApplySupporters(supporters, PaintKind.Fetch);
+
+        private void ApplySupporters(List<SupporterTotal>? supporters, PaintKind kind)
         {
             int count = 0;
+            var painted = new List<Transform>(_supporterRows.Length);
             if (supporters != null)
             {
                 foreach (SupporterTotal s in supporters)
@@ -178,6 +236,7 @@ namespace Golfin.Gps.UI
                     if (count >= _supporterRows.Length) break;
                     if (s == null || string.IsNullOrWhiteSpace(s.DisplayName)) continue;
                     BindSupporterRow(_supporterRows[count], s, count);
+                    painted.Add(_supporterRows[count].transform);
                     count++;
                 }
             }
@@ -185,6 +244,12 @@ namespace Golfin.Gps.UI
                 if (_supporterRows[i] != null) _supporterRows[i].SetActive(false);
 
             RepaintHeroSub();
+
+            bool stagger = _supportersGate.Should(kind, count);
+            GpsPaintMotion.Shimmer(gameObject, ShimmerHost.Supporters, _supportersGate.IsCold);
+            _supportersPanel.Reveal(this, _supportersGate.IsCold);
+            if (stagger) GpsPaintMotion.StaggerRise(this, painted);
+
             Debug.Log($"{Tag} supporters: {count} bound (of {(supporters != null ? supporters.Count : 0)}).");
         }
 
@@ -213,16 +278,17 @@ namespace Golfin.Gps.UI
             {
                 if (result != null)
                     Debug.LogWarning($"{Tag} /user/discover failed ({result.ErrorKind}) — golfer rows hidden.");
-                ApplyGolfers(null);
+                ApplyGolfers(null, PaintKind.Fetch);
                 return;
             }
-            ApplyGolfers(result.Data);
+            ApplyGolfers(result.Data, PaintKind.Fetch);
         }
 
-        private void ApplyGolfers(List<DiscoverUserDto>? rows)
+        private void ApplyGolfers(List<DiscoverUserDto>? rows, PaintKind kind)
         {
             _golfers.Clear();
             int count = 0;
+            var painted = new List<Transform>(_golferRows.Length);
             if (rows != null)
             {
                 foreach (DiscoverUserDto u in rows)
@@ -230,12 +296,18 @@ namespace Golfin.Gps.UI
                     if (count >= _golferRows.Length) break;
                     if (u == null || string.IsNullOrWhiteSpace(u.DisplayName)) continue;
                     BindGolferRow(_golferRows[count], u, count);
+                    painted.Add(_golferRows[count].transform);
                     _golfers.Add(u);
                     count++;
                 }
             }
             for (int i = count; i < _golferRows.Length; i++)
                 if (_golferRows[i] != null) _golferRows[i].SetActive(false);
+
+            bool stagger = _golfersGate.Should(kind, count);
+            GpsPaintMotion.Shimmer(gameObject, ShimmerHost.Golfers, _golfersGate.IsCold);
+            _golfersPanel.Reveal(this, _golfersGate.IsCold);
+            if (stagger) GpsPaintMotion.StaggerRise(this, painted);
 
             Debug.Log($"{Tag} discover: {count} golfers bound.");
         }
@@ -275,13 +347,13 @@ namespace Golfin.Gps.UI
             {
                 if (result != null)
                     Debug.LogWarning($"{Tag} /gifts/items failed ({result.ErrorKind}) — strip hidden.");
-                ApplyItems(null);
+                ApplyItems(null, PaintKind.Fetch);
                 return;
             }
-            ApplyItems(result.Data);
+            ApplyItems(result.Data, PaintKind.Fetch);
         }
 
-        private void ApplyItems(List<GiftItemDto>? catalog)
+        private void ApplyItems(List<GiftItemDto>? catalog, PaintKind kind)
         {
             _items.Clear();
             List<GiftItemDto> strip = GiftService.BuyStrip(catalog, _itemCells.Length);
@@ -301,6 +373,9 @@ namespace Golfin.Gps.UI
                                       (item.PriceActivityPts ?? 0).ToString("N0", CultureInfo.InvariantCulture)));
                 SetIcon(_itemCells[i], item.Category);
             }
+
+            _itemsGate.Should(kind, strip.Count);
+            _itemsPanel.Reveal(this, _itemsGate.IsCold);
 
             Debug.Log($"{Tag} catalog: {strip.Count} of " +
                       $"{(catalog != null ? catalog.Count : 0)} rows on the strip.");
@@ -366,7 +441,7 @@ namespace Golfin.Gps.UI
         {
             ApiClient client = ApiClient.Instance;
             client.Run(UserService.Instance.Detail(null));
-            client.Run(GiftService.Instance.Supporters(ApplySupporters));
+            client.Run(GiftService.Instance.Supporters(OnSupportersResult));
         }
 
         // ═════════════════════════════════════════════════════════════════════
@@ -383,9 +458,9 @@ namespace Golfin.Gps.UI
         private void OnLanguageChanged()
         {
             ApplyDetail(UserService.Instance.LastDetail);
-            ApplySupporters(GiftService.Instance.LastSupporters);
-            ApplyGolfers(UserService.Instance.LastDiscover);
-            ApplyItems(GiftService.Instance.LastItems);
+            ApplySupporters(GiftService.Instance.LastSupporters, PaintKind.Repaint);
+            ApplyGolfers(UserService.Instance.LastDiscover, PaintKind.Repaint);
+            ApplyItems(GiftService.Instance.LastItems, PaintKind.Repaint);
         }
 
         private static void SetText(GameObject row, string child, string? value)

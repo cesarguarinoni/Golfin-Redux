@@ -146,6 +146,15 @@ namespace Golfin.Gps.UI
                 _handicapInput.shouldHideMobileInput = true;
                 _handicapInput.contentType = TMP_InputField.ContentType.DecimalNumber;
             }
+
+            // §D9 — both fields sit under the iOS keyboard, and `shouldHideMobileInput = true`
+            // means there is no OS input bar echoing the text either: without this the player
+            // types blind. The container that moves is the screen's own ContentContainer, so the
+            // labels above each field travel with it. No-op in the Editor.
+            RectTransform? content = GpsScreenTransition.FindLayer(gameObject, "ContentContainer")
+                                     as RectTransform;
+            KeyboardInsetBinder.Attach(_nicknameInput, content);
+            KeyboardInsetBinder.Attach(_handicapInput, content);
         }
 
         private void OnEnable()
@@ -201,26 +210,39 @@ namespace Golfin.Gps.UI
 
         private void SelectColor(int slot)
         {
-            _colorIndex = Mathf.Clamp(slot, 0, ColorIds.Length - 1);
-            ApplySelection();
+            int next = Mathf.Clamp(slot, 0, ColorIds.Length - 1);
+            bool changed = next != _colorIndex;
+            _colorIndex = next;
+            ApplySelection(animate: changed);
+            // §D6 — only the disc that just became selected bumps.
+            if (changed && _colorIndex < _swatchButtons.Length && _swatchButtons[_colorIndex] != null)
+                UiSelection.Bump(this, _swatchButtons[_colorIndex].transform);
         }
 
         private void SelectExperience(int slot)
         {
-            _experienceIndex = Mathf.Clamp(slot, 0, ExperienceIds.Length - 1);
-            ApplySelection();
+            int next = Mathf.Clamp(slot, 0, ExperienceIds.Length - 1);
+            bool changed = next != _experienceIndex;
+            _experienceIndex = next;
+            ApplySelection(animate: changed);
+            if (changed && _experienceIndex < _chipButtons.Length && _chipButtons[_experienceIndex] != null)
+                UiSelection.Bump(this, _chipButtons[_experienceIndex].transform);
         }
 
-        private void ApplySelection()
+        private void ApplySelection() => ApplySelection(animate: false);
+
+        private void ApplySelection(bool animate)
         {
-            LayoutSwatches();
+            LayoutSwatches(animate);
             ApplyInitial();
 
             for (int i = 0; i < _chipImages.Length; i++)
             {
                 bool on = i == _experienceIndex;
-                if (_chipImages[i] != null)
-                    _chipImages[i].sprite = on ? _chipOnSprite : _chipOffSprite;
+                // §D6 — two Images, alpha-swapped: the incoming chip sprite rides a transient
+                // overlay and dissolves in, then the base Image takes it. NEVER a colour tint —
+                // these sprites carry their own baked rims (Build rule 2, gps_profile_pack).
+                UiSelection.SetSprite(this, _chipImages[i], on ? _chipOnSprite : _chipOffSprite, animate);
                 if (_chipLabels[i] != null)
                     _chipLabels[i].color = on ? ChipInkOn : ChipInkOff;
             }
@@ -231,7 +253,7 @@ namespace Golfin.Gps.UI
         /// centred. Positions are recomputed rather than authored per state because the selected
         /// slot moves: authoring one fixed layout would leave the 120px disc stranded on slot 1.
         /// </summary>
-        private void LayoutSwatches()
+        private void LayoutSwatches(bool animate = false)
         {
             float x = 0f;
             for (int i = 0; i < _swatchImages.Length; i++)
@@ -239,12 +261,9 @@ namespace Golfin.Gps.UI
                 bool on = i == _colorIndex;
                 float size = on ? SwatchOn : SwatchOff;
 
-                if (_swatchImages[i] != null)
-                {
-                    _swatchImages[i].sprite = on
-                        ? Get(_swatchOnSprites, i)
-                        : Get(_swatchOffSprites, i);
-                }
+                UiSelection.SetSprite(this, _swatchImages.Length > i ? _swatchImages[i] : null,
+                                      on ? Get(_swatchOnSprites, i) : Get(_swatchOffSprites, i),
+                                      animate);
 
                 if (_swatchButtons.Length > i && _swatchButtons[i] != null)
                 {

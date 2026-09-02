@@ -353,12 +353,51 @@ namespace Golfin.UI
                 button.gameObject.SetActive(false);
         }
 
+        // ── gps_polish §D7 — GPS-originated RP deltas count up ────────────────
+
+        /// <summary>
+        /// How long an armed count-up stays armed. The GPS earn is a round trip
+        /// (/points/earn, then a balance refresh), so the arm cannot be consumed on the same
+        /// frame — but an arm that never fired must not sit waiting to animate the NEXT RP change,
+        /// which would be a level-up or a shop refund and belongs to `game_polish`.
+        /// </summary>
+        private const float RpCountUpArmSeconds = 5f;
+
+        private float _rpCountUpArmedUntil = -1f;
+        private Coroutine _rpCountUp;
+
+        /// <summary>
+        /// gps_polish §D7 — make the NEXT upward RP change count up rather than snap.
+        ///
+        /// <para>The top bar is shared with the whole game, and the SPEC is explicit that only a
+        /// delta a GPS action caused may animate: the game's own RP updates are `game_polish`.
+        /// So this is a one-shot ARM, set by the GPS call site immediately before it spends or
+        /// earns, consumed by the first <see cref="SetRewardPoints"/> that follows and expiring on
+        /// its own if none does.</para>
+        /// </summary>
+        public void ArmRewardPointsCountUp()
+        {
+            _rpCountUpArmedUntil = Time.unscaledTime + RpCountUpArmSeconds;
+        }
+
         public void SetRewardPoints(int points)
         {
-            if (rewardPointsText != null)
+            if (rewardPointsText == null) return;
+
+            bool armed = Time.unscaledTime <= _rpCountUpArmedUntil;
+            if (armed &&
+                int.TryParse(rewardPointsText.text,
+                             System.Globalization.NumberStyles.Number,
+                             System.Globalization.CultureInfo.InvariantCulture, out int from) &&
+                points > from)
             {
-                rewardPointsText.text = points.ToString("N0");
+                _rpCountUpArmedUntil = -1f;
+                Golfin.UI.Polish.UiMotion.Run(this, ref _rpCountUp,
+                    Golfin.UI.Polish.UiMotion.CountUp(rewardPointsText, from, points));
+                return;
             }
+
+            rewardPointsText.text = points.ToString("N0");
         }
 
         /// <summary>

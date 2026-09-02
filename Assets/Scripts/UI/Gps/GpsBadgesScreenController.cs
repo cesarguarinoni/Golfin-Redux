@@ -5,6 +5,7 @@ using System.Collections;
 using System.Collections.Generic;
 using Golfin.Gps;
 using Golfin.Net;
+using Golfin.UI.Polish;
 using Golfin.Telemetry;
 using GolfinRedux.UI;
 using TMPro;
@@ -41,6 +42,22 @@ namespace Golfin.Gps.UI
 
         private bool _wiredOnce;
 
+        /// <summary>§D3/§D8 — cache-vs-fetch memory for the badge grid.</summary>
+        private readonly PaintGate _gate = new PaintGate(Tag, "badges");
+
+        /// <summary>
+        /// The ids that were EARNED at the previous paint, so §D7's "flips true between two
+        /// paints" is a real comparison and not a guess. Null until the first paint: the very
+        /// first list a player ever sees must not pulse every badge they already had.
+        /// </summary>
+        private HashSet<string>? _earnedBefore;
+
+        /// <summary>Every cell created by the last paint, in SECTION order — which is not the
+        /// server's order, so the row it was bound from is kept alongside it rather than looked
+        /// up by index into the raw list.</summary>
+        private readonly List<BadgeCellView>     _painted     = new List<BadgeCellView>();
+        private readonly List<BadgeProgressDto>  _paintedDtos = new List<BadgeProgressDto>();
+
         // ═══════════════════════════════════════════════════════════════════
         // Lifecycle
         // ═══════════════════════════════════════════════════════════════════
@@ -65,14 +82,27 @@ namespace Golfin.Gps.UI
             TelemetryService.Instance.RecordSafe("gps_badges_open", () => null);
             BadgeService.Instance.OnBadgesChanged += OnBadgesChanged;
 
+            _gate.Rearm();
             if (BadgeService.Instance.HasData)
-                BindBadges(BadgeService.Instance.LastBadges);
+                BindBadges(BadgeService.Instance.LastBadges, PaintKind.Cache);
             else
+            {
                 ShowPlaceholders();
+                _gate.Should(PaintKind.Cache, 0);
+                GpsPaintMotion.Shimmer(gameObject, ShimmerHost.Badges, _gate.IsCold);
+            }
 
-            // Always fire live fetch (copy GpsHubScreenController:128-136 pattern)
+            // Always fire live fetch (copy GpsHubScreenController:128-136 pattern).
+            //
+            // WITH A CALLBACK, and that is the fix for a real defect this task's own placeholder
+            // exposed. `FetchBadges()` fires OnBadgesChanged only on SUCCESS, so a failed or
+            // empty answer repainted nothing — and once §D8 put a shimmer over the grid, "nothing"
+            // stopped being invisible: the placeholder swept forever over a screen that was never
+            // going to fill. Every other GPS fetch site already routes its FAILURE arm back into
+            // the paint (the hub's /score/history, discover, supporters, /vote/list); this was the
+            // one that did not.
             var client = ApiClient.Instance;
-            client.Run(BadgeService.Instance.FetchBadges());
+            client.Run(BadgeService.Instance.FetchBadges(OnBadgesFetched));
         }
 
         private void OnDisable()
@@ -84,11 +114,32 @@ namespace Golfin.Gps.UI
         // Data binding
         // ═══════════════════════════════════════════════════════════════════
 
-        private void OnBadgesChanged() => BindBadges(BadgeService.Instance.LastBadges);
+        private void OnBadgesChanged() => BindBadges(BadgeService.Instance.LastBadges, PaintKind.Fetch);
 
-        private void BindBadges(List<BadgeProgressDto>? badges)
+        /// <summary>
+        /// The badge fetch ANSWERED — successfully or not. A success has already repainted through
+        /// <see cref="OnBadgesChanged"/>; every other outcome has to spend the gate here, or the
+        /// screen keeps a loading state it can never leave.
+        /// </summary>
+        private void OnBadgesFetched(ApiResult<List<BadgeProgressDto>> result)
         {
-            if (badges == null) { ShowPlaceholders(); return; }
+            if (result != null && result.Success && result.Data != null) return;
+
+            Debug.LogWarning($"{Tag} /badges/progress did not answer with a list " +
+                             $"({(result != null ? result.ErrorKind.ToString() : "no result")}) — " +
+                             "placeholder cleared, grid left as it stands.");
+            BindBadges(BadgeService.Instance.LastBadges, PaintKind.Fetch);
+        }
+
+        private void BindBadges(List<BadgeProgressDto>? badges, PaintKind kind)
+        {
+            if (badges == null)
+            {
+                ShowPlaceholders();
+                _gate.Should(kind, 0);
+                GpsPaintMotion.Shimmer(gameObject, ShimmerHost.Badges, _gate.IsCold);
+                return;
+            }
 
             int earned = 0;
             foreach (var b in badges) if (b.Earned) earned++;
@@ -116,16 +167,67 @@ namespace Golfin.Gps.UI
                 bySection[sec].Add(b);
             }
 
+            _painted.Clear();
+            _paintedDtos.Clear();
             PopulateSection(_sectionGolf,    bySection["GOLF"]);
             PopulateSection(_sectionSocial,  bySection["SOCIAL"]);
             PopulateSection(_sectionTrust,   bySection["TRUST"]);
             PopulateSection(_sectionSpecial, bySection["SPECIAL"]);
+
+            bool stagger = _gate.Should(kind, _painted.Count);
+            GpsPaintMotion.Shimmer(gameObject, ShimmerHost.Badges, _gate.IsCold);
+
+            PulseNewlyEarned(badges);
+
+            if (stagger)
+            {
+                var rows = new List<Transform>(_painted.Count);
+                foreach (BadgeCellView c in _painted) if (c != null) rows.Add(c.transform);
+                GpsPaintMotion.StaggerRise(this, rows);
+            }
+        }
+
+        /// <summary>
+        /// §D7 — pulse the cells whose <c>earned</c> flipped true since the previous paint.
+        ///
+        /// <para>Skipped on the FIRST paint of a session (<see cref="_earnedBefore"/> null): with
+        /// no previous set every earned badge looks new, and a player opening the screen would
+        /// watch their whole collection light up as if they had just won it.</para>
+        ///
+        /// <para>It therefore never coincides with the stagger: the stagger runs on the first
+        /// cold fetch paint, which is exactly the paint this returns early from. A cell cannot be
+        /// at alpha 0 and pulsing at once.</para>
+        /// </summary>
+        private void PulseNewlyEarned(List<BadgeProgressDto> badges)
+        {
+            var now = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var b in badges)
+            {
+                string id = b.Id ?? b.NameKey ?? string.Empty;
+                if (b.Earned && id.Length > 0) now.Add(id);
+            }
+
+            HashSet<string>? before = _earnedBefore;
+            _earnedBefore = now;
+            if (before == null) return;
+
+            int pulsed = 0;
+            for (int i = 0; i < _painted.Count && i < _paintedDtos.Count; i++)
+            {
+                BadgeCellView cell = _painted[i];
+                BadgeProgressDto b = _paintedDtos[i];
+                string id = b.Id ?? b.NameKey ?? string.Empty;
+                if (cell == null || !b.Earned || id.Length == 0 || before.Contains(id)) continue;
+                cell.PlayEarnedPulse();
+                pulsed++;
+            }
+            if (pulsed > 0) Debug.Log($"{Tag} {pulsed} newly earned badge(s) pulsed.");
         }
 
         private void PopulateSection(GpsBadgeSectionView? section, List<BadgeProgressDto> items)
         {
             if (section == null) return;
-            section.Populate(items, _badgeCellPrefab);
+            section.Populate(items, _badgeCellPrefab, _painted, _paintedDtos);
         }
 
         private void ShowPlaceholders()
@@ -153,7 +255,9 @@ namespace Golfin.Gps.UI
 
         private readonly List<BadgeCellView> _live = new List<BadgeCellView>();
 
-        public void Populate(List<BadgeProgressDto> items, BadgeCellView? prefab)
+        public void Populate(List<BadgeProgressDto> items, BadgeCellView? prefab,
+                             List<BadgeCellView>? painted = null,
+                             List<BadgeProgressDto>? paintedDtos = null)
         {
             if (CellContainer == null || prefab == null) return;
 
@@ -174,6 +278,8 @@ namespace Golfin.Gps.UI
                 var cell = UnityEngine.Object.Instantiate(prefab, CellContainer);
                 cell.Bind(item);
                 _live.Add(cell);
+                painted?.Add(cell);
+                paintedDtos?.Add(item);
             }
         }
     }

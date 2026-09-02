@@ -9,3 +9,29 @@ DIRTY (git status --porcelain --untracked-files=all):
 === end baseline ===
 === iter-1 progress 10:08:00Z — UiMotion + UiMotionRunner + GpsScreenTransition + ScreenManager branch + ModalController.animateShow written and compiling clean in the loaded assembly.
 === iter-1 progress 10:17:47Z — GpsPolishBuilder + ShimmerBlock + GpsPolishProbe written; all compile. Next: baseline probe run (pre-polish rest captures).
+=== iter-2 kickoff baseline 2026-09-02T20:30:00Z ===
+HEAD: 1cc4fe6e1
+DIRTY (git status --porcelain --untracked-files=all):
+   M .claude/alerts.log
+   M .claude/review_misses.log
+   M Docs/Reports/content_art.txt
+   M Docs/TellCode.md
+  ?? .claude/launch.json
+  ?? Docs/Specs/Active/gps_polish/KICKOFF_ADDENDUM.md
+=== end baseline ===
+=== iter-2 progress 20:50Z — R1..R6 code written and compiling. Builder placed all 5 shimmer hosts.
+    CORRECTION to iter-1's D-7/A6 note: the GPS screens in ShellScene ARE prefab instances.
+    Verified in EDIT mode: IsPartOfPrefabInstance=True for all 9, each resolving to its own
+    Assets/Prefabs/UI/Gps/*.prefab. iter-1 measured this in PLAY mode, where the flag is false for
+    EVERY object (reference_playmode_hides_prefab_instance). Consequence: the prefab pass alone
+    reaches the live scene — after reverting the scene and reloading from disk, all 5 hosts are
+    present with a ZERO scene diff. GpsPolishBuilder.ApplyToScene is unnecessary and its save
+    produced 1296 lines of prefab-override churn, which was discarded.
+    Also discarded: a 7756 -> 2105970 byte NotoSansJP SDF atlas bake (known JA-preview scar).
+=== iter-2 close 2026-09-02T13:00Z — R1..R9 complete.
+    A1 fail=0 (10 pushes) · A2 0 px on 7/7 (within-run parity pairs) · A5 0.920 · A6 identical
+    prefab-for-prefab · A11 --check clean · A12 2319/2316/0/3 · A13 measured in situ AND isolated.
+    Videos b/c/d2/e/f recorded + captioned; 4 shimmer stills + the pending-ellipsis frame captured.
+    Vote burned for (f): 541bcde9-9979-400b-ad35-93bb205c092f (+10 RP -> 6968).
+    Defect found and fixed by §D8's own placeholder: BadgeService.FetchBadges() was called with no
+    callback, so a failed/empty answer repainted nothing and the badges placeholder never came down.

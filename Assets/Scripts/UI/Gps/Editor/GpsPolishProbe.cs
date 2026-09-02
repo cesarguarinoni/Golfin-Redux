@@ -61,6 +61,50 @@ namespace Golfin.Gps.EditorTools
         [MenuItem("GOLFIN/Gps/Polish Probe — push (motion on, writes invariants)", priority = 242)]
         public static void ArmPush() => Arm("push");
 
+        /// <summary>
+        /// A2, WITHIN ONE RUN. The route is walked twice in a single play session — once with
+        /// motion ON (every GPS move is a push) and once with it OFF (every move falls through to
+        /// the untouched fade, which is the `instant` arrival the SPEC asks to compare against) —
+        /// and each screen is captured on both passes.
+        ///
+        /// <para>WHY WITHIN ONE RUN, and this is the whole reason the mode exists: these screens
+        /// render LIVE data and RELATIVE time. Comparing a capture taken now against one taken an
+        /// hour ago diffs "2h ago" against "3h ago", a moved RP balance and a ticking clock in the
+        /// shared top bar, and reports tens of thousands of differing pixels that have nothing to
+        /// do with the animation. Forty seconds apart, in one session, none of that moves.</para>
+        /// </summary>
+        [MenuItem("GOLFIN/Gps/Polish Probe — parity (A2: animated vs instant, one run)", priority = 243)]
+        public static void ArmParity() => Arm("parity");
+
+        /// <summary>
+        /// A13, and it is a SEPARATE PASS on purpose.
+        ///
+        /// <para>The first attempt sampled the profiler counters during the `push` run, and it
+        /// broke that run's own gate: turning the Editor profiler on cost one frame of the
+        /// GpsVote→GpsHub push 392 ms, which stretched a 0.25 s tween to 0.410 s and failed A1's
+        /// duration assertion. The instrument changed the thing it was measuring — the same
+        /// lesson as iter-1's probe bug, wearing a different hat. So A1 runs with the profiler
+        /// OFF and this mode runs with it ON, and this mode also takes NO SCREENSHOTS: a
+        /// 1170x2532 ReadPixels + PNG encode allocates ~100 MB, which swamped every push it
+        /// happened to sit next to.</para>
+        /// </summary>
+        [MenuItem("GOLFIN/Gps/Polish Probe — perf (A13: GC + frame ms, no captures)", priority = 244)]
+        public static void ArmPerf() => Arm("perf");
+
+        /// <summary>
+        /// A8 — one frame per shimmer site, taken WHILE the placeholder is up.
+        ///
+        /// <para>Sampling a video for these frames does not work and it is worth saying why: the
+        /// cold window is the gap between a screen activating and its fetch answering, which
+        /// against this server is 120–260 ms — three to eight frames at 30 fps. Seven timestamps
+        /// 200 ms apart across the gift screen's cold window all decoded to the same settled
+        /// frame. So this mode does not sample: it polls the site's own <c>ShimmerHost</c> every
+        /// frame and captures on the first one where it is genuinely active, and LOGS that fact
+        /// beside the file name — the still is provably a cold frame rather than a hopeful one.</para>
+        /// </summary>
+        [MenuItem("GOLFIN/Gps/Polish Probe — shimmer (A8: a cold frame per site)", priority = 245)]
+        public static void ArmShimmer() => Arm("shimmer");
+
         public static void Arm(string mode)
         {
             Directory.CreateDirectory(Path.GetDirectoryName(LogPath)!);
@@ -68,8 +112,38 @@ namespace Golfin.Gps.EditorTools
             File.WriteAllText(LogPath, "");
             EditorPrefs.SetString(ModeKey, mode);
             EditorPrefs.SetBool(ArmedKey, true);
-            if (!EditorApplication.isPlaying) EditorApplication.EnterPlaymode();
-            else Spawn();
+
+            if (EditorApplication.isPlaying) { Spawn(); return; }
+
+            // ENTER PLAY MODE ONLY WHEN THE EDITOR IS IDLE, and this is a scar, not caution.
+            // Calling EnterPlaymode() straight after an AssetDatabase refresh — which every code
+            // change causes — starts a play session on a HALF-RESTORED scene: ShellScene came up
+            // with 11 of its 25 roots, ScreenManager's GameObject existed but its Awake never ran,
+            // and the probe sat for 30 s timing out on a boot that had not happened. It cost three
+            // wasted runs before the pattern (always the FIRST arm after a recompile) was visible.
+            // Same shape as the delayCall-races-scene-restore scar: poll EditorApplication.update
+            // until it is quiet, never fire a one-shot into the middle of a reload.
+            EditorApplication.update -= EnterWhenIdle;
+            EditorApplication.update += EnterWhenIdle;
+        }
+
+        static void EnterWhenIdle()
+        {
+            if (EditorApplication.isCompiling || EditorApplication.isUpdating) return;
+            if (EditorApplication.isPlayingOrWillChangePlaymode) return;
+
+            // …AND the scene must be FULLY restored, not merely open. The compile/update flags
+            // clear before the hierarchy is rebuilt, and a play session started in that gap comes
+            // up with a PARTIAL scene — ShellScene arrived with 11 of its 25 roots, ScreenManager's
+            // GameObject present but its Awake never run, and the probe timed out on a boot that
+            // had not happened. The root count is the cheapest honest proxy for "the scene is
+            // really back".
+            UnityEngine.SceneManagement.Scene sc =
+                UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+            if (!sc.IsValid() || !sc.isLoaded || sc.rootCount < 20) return;
+
+            EditorApplication.update -= EnterWhenIdle;
+            EditorApplication.EnterPlaymode();
         }
 
         [InitializeOnLoadMethod]
@@ -108,7 +182,20 @@ namespace Golfin.Gps.EditorTools
             readonly StringBuilder _log = new StringBuilder();
             readonly List<Record>  _records = new List<Record>();
             string _mode = "push";
+
+            /// <summary>What the capture files are named after. Normally the mode; the parity mode
+            /// walks the route twice and renames the pass instead.</summary>
+            string _shotPrefix = "push";
             int _shot;
+
+            // ── A13 · the perf counters ──────────────────────────────────────
+            // Sampled ONLY inside the push loop, so what they measure is the push and not the
+            // screen's own first-activation frame or the fetches behind it.
+            Unity.Profiling.ProfilerRecorder _gcRec;
+            Unity.Profiling.ProfilerRecorder _frameRec;
+            bool _perf;
+            readonly List<(string pair, long allocBytes, double worstMs, int frames)> _perfRows
+                = new List<(string, long, double, int)>();
 
             void Start()
             {
@@ -116,23 +203,214 @@ namespace Golfin.Gps.EditorTools
                 // capture comes back as whatever it drew last — the splash, usually.
                 Application.runInBackground = true;
                 _mode = EditorPrefs.GetString(ModeKey, "push");
+                _shotPrefix = _mode;
+
+                // MIRROR THE PAINT DECISIONS INTO THIS RUN'S OWN LOG. The Editor console keeps
+                // only the last ~100 entries and a full route emits thousands, so the
+                // paint(cache)/paint(fetch) and [Shimmer] lines — which ARE the acceptance
+                // evidence for R1 and R5 — were being trimmed away before they could be read.
+                // A log that is gone by the time you look at it is not evidence.
+                Application.logMessageReceived += OnLog;
+
+                // A13 — real counters, not a code-reading claim. "GC Allocated In Frame" is bytes
+                // the managed heap took THIS frame; "Main Thread" is that frame's wall time in ns.
+                _perf = _mode == "perf";
+                if (_perf)
+                {
+                    UnityEngine.Profiling.Profiler.enabled = true;
+                    _gcRec    = Unity.Profiling.ProfilerRecorder.StartNew(
+                                    Unity.Profiling.ProfilerCategory.Memory, "GC Allocated In Frame");
+                    _frameRec = Unity.Profiling.ProfilerRecorder.StartNew(
+                                    Unity.Profiling.ProfilerCategory.Internal, "Main Thread");
+                }
                 StartCoroutine(Run());
+            }
+
+            void OnLog(string message, string stack, LogType type)
+            {
+                if (message == null) return;
+                if (message.StartsWith("[Shimmer]") || message.Contains(" paint(")) Line("    " + message);
+            }
+
+            void OnDestroy()
+            {
+                Application.logMessageReceived -= OnLog;
+                if (_gcRec.Valid)    _gcRec.Dispose();
+                if (_frameRec.Valid) _frameRec.Dispose();
             }
 
             IEnumerator Run()
             {
                 Line("=== gps_polish probe (" + _mode + ") " + DateTime.UtcNow.ToString("u") + " ===");
 
+                if (_mode == "shimmer")
+                {
+                    yield return Boot();
+                    yield return SequenceShimmer();
+                    Line("=== done: shimmer pass complete ===");
+                    yield break;
+                }
+
+                if (_mode == "parity")
+                {
+                    // Pass 1: motion ON — every GPS move is a push.
+                    UiMotion.Enabled = true;
+                    _shotPrefix = "parity_anim";
+                    _shot = 0;
+                    Line("--- pass 1: UiMotion.Enabled = true (animated arrivals) ---");
+                    yield return Boot();
+                    yield return Route();
+
+                    // Pass 2: motion OFF — CanPush is false everywhere, so every arrival is the
+                    // untouched boundary fade, which is the instant path A2 compares against.
+                    UiMotion.Enabled = false;
+                    _shotPrefix = "parity_instant";
+                    _shot = 0;
+                    Line("--- pass 2: UiMotion.Enabled = false (instant arrivals) ---");
+                    yield return Route();
+
+                    UiMotion.Enabled = true;
+                    Line("=== done: parity pass complete ===");
+                    yield break;
+                }
+
                 // Motion OFF for the two rest-capture modes: CanPush returns false, every
                 // navigation falls through to the untouched fade, and what lands on screen is the
                 // screen at rest with nothing this task added having moved.
-                UiMotion.Enabled = _mode == "push";
+                UiMotion.Enabled = _mode == "push" || _mode == "perf";
                 Line("UiMotion.Enabled = " + UiMotion.Enabled);
 
+                yield return Boot();
+                yield return Route();
+
+                if (_mode == "push") WriteJson();
+                if (_mode == "perf") WritePerfJson();
+                Line("=== done: " + _records.Count + " push(es) recorded ===");
+            }
+
+            // ═════════════════════════════════════════════════════════════════
+            // A8 · a cold frame per site
+            // ═════════════════════════════════════════════════════════════════
+
+            IEnumerator SequenceShimmer()
+            {
+                // THE WATCHER IS STARTED BEFORE THE NAVIGATION, not after it, and that is the
+                // whole trick. The cold window on the hub was over inside the tap helper's own
+                // 1 s wait — the log showed shown->hidden before the poll had even begun. A
+                // watcher that runs CONCURRENTLY with the navigation sees the frame the
+                // placeholder is actually up.
+                StartCoroutine(Watch(ShimmerHost.HubRounds, "hub_rounds"));
+                yield return TapNamed("GpsPill", "the Home GPS pill");
+                yield return new WaitForSecondsRealtime(4f);
+
+                GameObject? hub = GameObject.Find("Canvas/ScreensRoot/GpsHubScreen");
+                if (hub == null) { Line("FATAL: no hub"); yield break; }
+
+                yield return Go(hub, "NavProfileButton", ScreenId.GpsProfile, "hub nav PROFILE");
+                GameObject? prof = GameObject.Find("Canvas/ScreensRoot/GpsProfileScreen");
+
+                // STRAIGHT THROUGH, with no settle. The Profile screen fetches badges itself
+                // (FetchLiveData chains /score/stats, /badges/progress, /score/history), so
+                // pausing here would warm BadgeService and the grid would open with a cache hit —
+                // correctly showing no placeholder, and giving A8 nothing to photograph. A player
+                // who taps BADGES the moment Profile appears beats that fetch, and that is the
+                // only moment the badge grid is genuinely cold.
+                StartCoroutine(Watch(ShimmerHost.Badges, "badges_grid"));
+                yield return GoPath(prof, "ContentContainer/BadgesShortcut", ScreenId.GpsBadges, "profile BADGES");
+                yield return new WaitForSecondsRealtime(4f);
+
+                yield return GoBackReal(ScreenId.GpsProfile, "badges back");
+                yield return GoBackReal(ScreenId.GpsHub, "profile back");
+                yield return new WaitForSecondsRealtime(1f);
+
+                // ONE frame covers both gift sites — they are two panels of one screen and both
+                // are cold at the same moment.
+                StartCoroutine(Watch(ShimmerHost.Supporters, "gift_supporters_and_golfers",
+                                     alsoRequire: ShimmerHost.Golfers));
+                yield return Go(hub, "NavGiftButton", ScreenId.GpsGift, "hub nav GIFT");
+                yield return new WaitForSecondsRealtime(4f);
+                yield return GoBackReal(ScreenId.GpsHub, "gift back");
+                yield return new WaitForSecondsRealtime(1f);
+
+                StartCoroutine(Watch(ShimmerHost.VoteList, "vote_list"));
+                yield return GoPath(hub, "ContentContainer/ActionTiles/Tile_VOTE", ScreenId.GpsVote, "hub tile VOTE");
+                yield return new WaitForSecondsRealtime(4f);
+                yield return GoBackReal(ScreenId.GpsHub, "vote back");
+            }
+
+            /// <summary>Poll for the site's host to be genuinely active, then capture ONE frame.
+            /// Logs whether it ever was — a still with no such line proves nothing.</summary>
+            IEnumerator Watch(string site, string label, string? alsoRequire = null,
+                              float timeout = 10f)
+            {
+                float t0 = Time.realtimeSinceStartup;
+                float deadline = t0 + timeout;
+                while (Time.realtimeSinceStartup < deadline)
+                {
+                    ShimmerHost? a = Anywhere(site);
+                    ShimmerHost? b = alsoRequire != null ? Anywhere(alsoRequire) : null;
+                    bool up = a != null && a.gameObject.activeInHierarchy &&
+                              (alsoRequire == null || (b != null && b.gameObject.activeInHierarchy));
+
+                    // NO "wait for the push to land" GUARD. The first version had one, and it
+                    // blocked exactly the window it was trying to photograph: a screen reached by
+                    // a push shows its placeholder in OnEnable — DURING the 0.25 s push — and the
+                    // fetch answers ~250 ms later, so the site was already cold-over by the time
+                    // the guard let go. Only the hub, reached through the slower boundary fade,
+                    // ever got through. A frame of a screen still sliding in with its placeholder
+                    // up is the honest evidence; a missed frame is not.
+                    if (up)
+                    {
+                        Line($"SHIMMER {site}{(alsoRequire != null ? " + " + alsoRequire : "")} " +
+                             $"ACTIVE at t+{(Time.realtimeSinceStartup - t0) * 1000f:0} ms — capturing");
+                        yield return Shot(label);
+                        yield break;
+                    }
+                    yield return null;
+                }
+                Line($"SHIMMER {site} was NEVER active in {timeout:0} s — no frame captured");
+            }
+
+            /// <summary>A shimmer host by site, ANYWHERE in the loaded scenes. The watcher starts
+            /// before the navigation, so at that moment the screen it belongs to is not the
+            /// current one yet — looking it up under CurrentScreen would find nothing.</summary>
+            static ShimmerHost? Anywhere(string site)
+            {
+                foreach (ShimmerHost h in FindObjectsByType<ShimmerHost>(
+                             FindObjectsInactive.Include, FindObjectsSortMode.None))
+                    if (h != null && h.Site == site) return h;
+                return null;
+            }
+
+            /// <summary>Through the title gate and onto Home. The app boots to a Start screen
+            /// ScreenManager does not manage, so nothing below may run before this.</summary>
+            IEnumerator Boot()
+            {
                 yield return Until(() => ScreenManager.Instance != null, 30f, "ScreenManager");
                 yield return TapStart();
-                yield return Until(() => ScreenManager.Instance!.CurrentScreen == ScreenId.Home, 90f, "Home");
+
+                // DO NOT BLOCK ON HOME. The title gate is not always there: a session that has
+                // already passed it boots straight onto a screen — this run came up on GpsHub with
+                // no StartButton at all, and a 90 s hard wait for Home sat through the whole
+                // probe. Route() puts us on Home either way, through the untouched boundary
+                // navigation, so this is a short courtesy wait rather than a precondition.
+                yield return Until(() => ScreenManager.Instance!.CurrentScreen == ScreenId.Home, 20f, "Home");
                 yield return new WaitForSecondsRealtime(2f);
+            }
+
+            /// <summary>The route itself: seven screens, every forward move a real widget's
+            /// onClick. Walked once by the three single-pass modes and twice by `parity`.</summary>
+            IEnumerator Route()
+            {
+                if (ScreenManager.Instance!.CurrentScreen != ScreenId.Home)
+                {
+                    // Between the parity passes only. Home <-> GpsHub is a BOUNDARY move, which
+                    // this task does not touch, so reaching Home this way changes nothing the
+                    // comparison is about.
+                    ScreenManager.Instance.ShowScreen(ScreenId.Home);
+                    yield return Until(() => ScreenManager.Instance!.CurrentScreen == ScreenId.Home, 20f, "Home");
+                    yield return new WaitForSecondsRealtime(1.5f);
+                }
 
                 yield return TapNamed("GpsPill", "the Home GPS pill");
                 yield return Arrive(ScreenId.GpsHub, 3f);
@@ -168,9 +446,6 @@ namespace Golfin.Gps.EditorTools
                 yield return Go(hub, "NavCameraButton", ScreenId.ScoreUpload, "hub nav CAMERA");
                 yield return Shot("scoreupload");
                 yield return GoBackReal(ScreenId.GpsHub, "score upload back");
-
-                if (_mode == "push") WriteJson();
-                Line("=== done: " + _records.Count + " push(es) recorded ===");
             }
 
             // ═════════════════════════════════════════════════════════════════
@@ -281,13 +556,27 @@ namespace Golfin.Gps.EditorTools
 
                 // Only the SEAM needs per-frame observation, and it is sign-free: one frame of
                 // observer lag cannot manufacture a covered frame that did not happen.
+                long   allocBytes = 0;
+                double worstMs    = 0;
+                int    perfFrames = 0;
+
                 while (GpsScreenTransition.IsPushing)
                 {
                     float cover = Mathf.Max(toBg != null ? toBg.alpha : 1f,
                                             fromBg != null ? fromBg.alpha : 1f);
                     if (cover < r.SeamWorstCover) r.SeamWorstCover = cover;
+
+                    if (_perf)
+                    {
+                        if (_gcRec.Valid)    allocBytes += _gcRec.LastValue;
+                        if (_frameRec.Valid) worstMs = Math.Max(worstMs, _frameRec.LastValue * 1e-6);
+                        perfFrames++;
+                    }
                     yield return null;
                 }
+
+                if (_perf)
+                    _perfRows.Add((from + "->" + to, allocBytes, worstMs, perfFrames));
 
                 r.MeasuredDur      = GpsScreenTransition.LastPushElapsed;
                 r.Frames           = GpsScreenTransition.LastPushFrames;
@@ -398,6 +687,62 @@ namespace Golfin.Gps.EditorTools
                 Line("invariants -> " + JsonPath + "  fail=" + fails);
             }
 
+            /// <summary>A13 — the perf pass's own file. Never mixed into the invariants JSON: the
+            /// two are measured under different conditions and a reader must not think one run
+            /// produced both.</summary>
+            void WritePerfJson()
+            {
+                long   warmAlloc = 0, firstAlloc = 0, worstAllocPush = 0;
+                double worstMs = 0, firstMs = 0;
+                int    warmFrames = 0;
+                string worstPair = "-", worstMsPair = "-";
+                for (int i = 0; i < _perfRows.Count; i++)
+                {
+                    var row = _perfRows[i];
+                    // The FIRST push is warm-up and is excluded: it is the one that creates the
+                    // coroutines, adds UiMotionRunner and the on-demand CanvasGroups, and boxes
+                    // the enumerators. Every push after it runs on objects that already exist.
+                    if (i == 0) { firstAlloc = row.allocBytes; firstMs = row.worstMs; continue; }
+                    warmAlloc  += row.allocBytes;
+                    warmFrames += row.frames;
+                    if (row.allocBytes > worstAllocPush) { worstAllocPush = row.allocBytes; worstPair = row.pair; }
+                    if (row.worstMs > worstMs)           { worstMs = row.worstMs;           worstMsPair = row.pair; }
+                }
+                double perFrame = warmFrames > 0 ? warmAlloc / (double)warmFrames : 0;
+
+                var sb = new StringBuilder();
+                sb.AppendLine("{");
+                sb.AppendLine("  \"task\": \"gps_polish\", \"pass\": \"perf\",");
+                sb.AppendLine("  \"generated\": \"" + DateTime.UtcNow.ToString("u") + "\",");
+                sb.AppendLine("  \"note\": \"ProfilerRecorder sampled ONLY on the frames a push is running: 'GC Allocated In Frame' (Memory) and 'Main Thread' (Internal). No screenshots are taken on this pass. Editor play mode, profiler enabled, live server behind every screen — so these figures are an upper bound on the whole app during a push, not the tween alone. UiMotionAllocationTests measures the tween loops in isolation.\",");
+                sb.AppendLine("  \"pushesSampled\": " + _perfRows.Count + ",");
+                sb.AppendLine("  \"firstPushAllocBytes\": " + firstAlloc + ",");
+                sb.AppendLine("  \"firstPushWorstFrameMs\": " + firstMs.ToString("0.###", CultureInfo.InvariantCulture) + ",");
+                sb.AppendLine("  \"warmFrames\": " + warmFrames + ",");
+                sb.AppendLine("  \"warmTotalAllocBytes\": " + warmAlloc + ",");
+                sb.AppendLine("  \"warmAllocBytesPerFrame\": " + perFrame.ToString("0.##", CultureInfo.InvariantCulture) + ",");
+                sb.AppendLine("  \"worstPushAllocBytes\": " + worstAllocPush + ", \"worstPushAllocPair\": \"" + worstPair + "\",");
+                sb.AppendLine("  \"worstFrameMs\": " + worstMs.ToString("0.###", CultureInfo.InvariantCulture) + ", \"worstFramePair\": \"" + worstMsPair + "\",");
+                sb.Append    ("  \"perPush\": [");
+                for (int i = 0; i < _perfRows.Count; i++)
+                {
+                    var row = _perfRows[i];
+                    sb.Append(i > 0 ? ",\n    " : "\n    ");
+                    sb.Append("{\"pair\": \"" + row.pair + "\", \"frames\": " + row.frames +
+                              ", \"allocBytes\": " + row.allocBytes +
+                              ", \"worstFrameMs\": " + row.worstMs.ToString("0.###", CultureInfo.InvariantCulture) + "}");
+                }
+                sb.AppendLine("\n  ]");
+                sb.AppendLine("}");
+
+                string path = "Docs/Diagnostics/_capture/gps_polish_perf.json";
+                Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+                File.WriteAllText(path, sb.ToString());
+                File.WriteAllText(Path.Combine(TaskDir, "gps_polish_perf.json"), sb.ToString());
+                Line("perf -> " + path + "  worstFrameMs=" + worstMs.ToString("0.###") +
+                     "  allocPerFrame=" + perFrame.ToString("0"));
+            }
+
             static string F(float v) => v.ToString("0.####", CultureInfo.InvariantCulture);
 
             // ═════════════════════════════════════════════════════════════════
@@ -454,13 +799,19 @@ namespace Golfin.Gps.EditorTools
             IEnumerator Arrive(ScreenId id, float settle)
             {
                 yield return Until(() => ScreenManager.Instance!.CurrentScreen == id, 30f, id.ToString());
-                yield return new WaitForSecondsRealtime(settle);
+                // The shimmer pass has to start looking on the FIRST frame after arrival — the
+                // cold window is a few hundred milliseconds and a settle would sleep through it.
+                yield return new WaitForSecondsRealtime(_mode == "shimmer" ? 0f : settle);
             }
 
             IEnumerator Shot(string label)
             {
+                // The perf pass takes none: a full-resolution ReadPixels + PNG encode allocates
+                // about 100 MB and would be charged to whichever push it lands beside.
+                if (_mode == "perf") { Line("SHOT " + label + " skipped (perf pass)"); yield break; }
+
                 _shot++;
-                string name = string.Format("{0}_{1:00}_{2}", _mode, _shot, label);
+                string name = string.Format("{0}_{1:00}_{2}", _shotPrefix, _shot, label);
                 string path = Path.Combine(ShotDir, name + ".png");
                 Directory.CreateDirectory(ShotDir);
 

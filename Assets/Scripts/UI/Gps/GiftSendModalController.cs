@@ -69,6 +69,23 @@ namespace Golfin.Gps.UI
         private bool _wired;
         private Action? _onCommitted;
 
+        // ── gps_polish §D6 / §D7 ─────────────────────────────────────────────
+        /// <summary>The amount slot whose Selected overlay is currently up, so the cross-fade
+        /// knows which pair actually changed and only the newly-picked one bumps.</summary>
+        private int _shownAmountSlot = -1;
+
+        /// <summary>The balance figure last DRAWN, so §D7's count-up runs from a real previous
+        /// number instead of parsing one back out of a localized run.</summary>
+        private int? _shownBalance;
+
+        private Coroutine? _balanceCount;
+
+        /// <summary>Subscribed on the first <see cref="Open"/> and never dropped — the modal's
+        /// root stays active for the life of the scene (ModalController toggles the child panel),
+        /// so an OnEnable/OnDisable pair would fire once at load and never again. The handler
+        /// no-ops while the modal is not visible.</summary>
+        private bool _balanceSubscribed;
+
         // ═════════════════════════════════════════════════════════════════════
         // Entry points
         // ═════════════════════════════════════════════════════════════════════
@@ -102,6 +119,9 @@ namespace Golfin.Gps.UI
         {
             WireOnce();
             _inFlight = false;
+            // Instant on open: the modal has no previous frame to count from.
+            _shownBalance = null;
+            _shownAmountSlot = -1;
             // A FRESH key per OPEN — see the class remarks. Two separate gifts to the same player
             // must not share one, or the second would be swallowed as a replay of the first.
             _key = GiftService.NewKey();
@@ -123,6 +143,26 @@ namespace Golfin.Gps.UI
             }
             if (_confirmButton != null) _confirmButton.onClick.AddListener(OnConfirm);
             if (_cancelButton != null) _cancelButton.onClick.AddListener(Hide);
+
+            if (!_balanceSubscribed)
+            {
+                _balanceSubscribed = true;
+                PointsService.Instance.OnDisplayBalanceChanged += OnBalanceChanged;
+            }
+        }
+
+        /// <summary>A balance refresh landing WHILE the modal is open — the one moment the
+        /// player can watch the number they are about to spend from move (§D7).</summary>
+        private void OnBalanceChanged(int _)
+        {
+            if (!IsVisible()) return;
+            Repaint();
+        }
+
+        private void OnDestroy()
+        {
+            if (!_balanceSubscribed) return;
+            PointsService.Instance.OnDisplayBalanceChanged -= OnBalanceChanged;
         }
 
         private void OnAmountPicked(int index)
@@ -130,14 +170,16 @@ namespace Golfin.Gps.UI
             if (_inFlight) return;
             if (index < 0 || index >= Presets.Length) return;
             _amount = Presets[index];
-            Repaint();
+            Repaint(animate: true);
         }
 
         // ═════════════════════════════════════════════════════════════════════
         // Paint
         // ═════════════════════════════════════════════════════════════════════
 
-        private void Repaint()
+        private void Repaint() => Repaint(animate: false);
+
+        private void Repaint(bool animate)
         {
             bool send = _mode == Mode.SendPts;
 
@@ -147,19 +189,45 @@ namespace Golfin.Gps.UI
                     : (_item != null ? _item.Name : "—");
 
             if (_balance != null)
-                _balance.text = string.Format(LocalizationManager.Get("GPS_GIFT_MODAL_BALANCE"),
-                                              Balance().ToString("N0", CultureInfo.InvariantCulture));
+            {
+                int b = Balance();
+                string wrap = LocalizationManager.Get("GPS_GIFT_MODAL_BALANCE");
+                // §D7 — count only when there is a previous number really on screen and it moved.
+                // Both directions: the balance is what the player spends FROM, so watching it
+                // fall after a purchase is exactly as informative as watching it rise.
+                if (_shownBalance.HasValue && _shownBalance.Value != b)
+                    UiMotion.Run(this, ref _balanceCount,
+                                 UiMotion.CountUp(_balance, _shownBalance.Value, b, wrap: wrap));
+                else
+                    _balance.text = UiMotion.Render(b, wrap: wrap);
+                _shownBalance = b;
+            }
 
             // The amount row is the player's choice only when they are sending; a purchase costs
             // what the item costs.
+            int picked = -1;
             for (int i = 0; i < _amountRoots.Length; i++)
             {
                 if (_amountRoots[i] == null) continue;
                 _amountRoots[i].SetActive(send);
+                bool on = send && i < Presets.Length && Presets[i] == _amount;
+                if (on) picked = i;
+
                 Transform? sel = _amountRoots[i].transform.Find("Selected");
-                if (sel != null)
-                    sel.gameObject.SetActive(send && i < Presets.Length && Presets[i] == _amount);
+                if (sel == null) continue;
+
+                // §D6 — the Selected overlay is the design's SECOND image for this control, so
+                // the state change is an alpha cross-fade between two authored objects. Nothing
+                // is tinted: the gold capsule dissolves in over the plain one.
+                bool changed = sel.gameObject.activeSelf != on;
+                if (!animate || !changed) { sel.gameObject.SetActive(on); continue; }
+                UiSelection.CrossFade(this, show: on ? sel.gameObject : null,
+                                            hide: on ? null : sel.gameObject, animate: true);
             }
+
+            if (animate && picked >= 0 && picked != _shownAmountSlot)
+                UiSelection.Bump(this, _amountRoots[picked].transform);
+            _shownAmountSlot = picked;
 
             if (_confirmButton != null)
                 _confirmButton.interactable = !_inFlight && _amount > 0 && _amount <= Balance();

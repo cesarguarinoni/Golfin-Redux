@@ -1128,6 +1128,9 @@ namespace Golfin.Gps.UI
         // 6 · Posted
         // ═════════════════════════════════════════════════════════════════════
 
+        /// <summary>gps_polish §D7 — the Posted total's pop.</summary>
+        private Coroutine? _postedScorePop;
+
         private void EnterPosted()
         {
             ScoreSubmitResult? r = _draft.Result;
@@ -1142,6 +1145,18 @@ namespace Golfin.Gps.UI
 
             int? total = _draft.Total;
             SetText(_shareScore, total.HasValue ? total.Value.ToString() : Unknown);
+
+            // gps_polish §D7 — the number the whole flow was about POPS in (scale 0.9 -> 1 with
+            // its own alpha), so the Posted step lands on the score rather than merely displaying
+            // it. The CanvasGroup is added at runtime and settles at alpha 1: nothing is authored
+            // and the rest frame is unchanged.
+            if (_shareScore != null && total.HasValue)
+            {
+                var scoreRect = _shareScore.rectTransform;
+                var scoreGroup = scoreRect.GetComponent<CanvasGroup>();
+                if (scoreGroup == null) scoreGroup = scoreRect.gameObject.AddComponent<CanvasGroup>();
+                UiMotion.Run(this, ref _postedScorePop, UiMotion.Pop(scoreRect, scoreGroup));
+            }
 
             int? vsPar = _draft.VsPar;
             if (_shareVsPar != null)

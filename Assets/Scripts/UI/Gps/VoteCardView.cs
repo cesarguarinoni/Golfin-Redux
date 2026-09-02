@@ -3,6 +3,7 @@
 using System;
 using System.Globalization;
 using Golfin.Social;
+using Golfin.UI.Polish;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -60,6 +61,10 @@ namespace Golfin.Gps.UI
         /// player has already cast on this one and the server would answer 400.
         /// </summary>
         public void Bind(VoteDto vote, bool voted, string rewardText, DateTime utcNow)
+            => Bind(vote, voted, rewardText, utcNow, animateBars: false);
+
+        private void Bind(VoteDto vote, bool voted, string rewardText, DateTime utcNow,
+                          bool animateBars)
         {
             Vote = vote;
             if (vote == null) return;
@@ -69,7 +74,7 @@ namespace Golfin.Gps.UI
             if (_rewardPill != null) _rewardPill.SetActive(!string.IsNullOrEmpty(rewardText));
 
             BindAuthor(vote);
-            BindResults(vote);
+            BindResults(vote, animateBars);
             BindMeta(vote, utcNow);
 
             if (_voteButton != null) _voteButton.interactable = !voted;
@@ -93,15 +98,15 @@ namespace Golfin.Gps.UI
         /// this client divided, because <c>_update_percentages</c> rounds to one decimal and two
         /// different roundings on one screen would not add to 100.
         /// </summary>
-        private void BindResults(VoteDto vote)
+        private void BindResults(VoteDto vote, bool animateBars)
         {
             if (_yesFill != null || _noFill != null)
             {
                 // BY LABEL, not by index — the server's option order is not stable, so
                 // Options[0] is not reliably the one the YES bar is labelled for. See
                 // VoteDto.YesOption.
-                SetBar(_yesFill, _yesPct, vote.YesOption);
-                SetBar(_noFill, _noPct, vote.NoOption);
+                SetBar(_yesFill, _yesPct, vote.YesOption, animateBars, this, ref _yesTween, ref _yesShown);
+                SetBar(_noFill,  _noPct,  vote.NoOption,  animateBars, this, ref _noTween,  ref _noShown);
             }
 
             for (int i = 0; i < _optionPills.Length; i++)
@@ -117,13 +122,43 @@ namespace Golfin.Gps.UI
         private static VoteOptionDto? OptionAt(VoteDto vote, int i)
             => vote.Options != null && i < vote.Options.Count ? vote.Options[i] : null;
 
-        private static void SetBar(Image? fill, TextMeshProUGUI? pct, VoteOptionDto? option)
+        /// <summary>The percentages currently DRAWN, so §D7 can animate from the old value to the
+        /// new one after a cast rather than from wherever the rect happens to be mid-tween.</summary>
+        private float _yesShown, _noShown;
+        private Coroutine? _yesTween;
+        private Coroutine? _noTween;
+
+        /// <summary>The two width setters, allocated once each — the tween must not allocate a
+        /// delegate per call, let alone per frame (A13).</summary>
+        private Action<float>? _setYes, _setNo;
+
+        private void SetBar(Image? fill, TextMeshProUGUI? pct, VoteOptionDto? option,
+                            bool animate, MonoBehaviour host,
+                            ref Coroutine? handle, ref float shown)
         {
             float p = option != null ? option.Percentage : 0f;
+
+            if (pct != null) pct.text = Mathf.RoundToInt(p).ToString(CultureInfo.InvariantCulture) + "%";
+
+            if (fill == null) { shown = p; return; }
+
             // WIDTH, not fillAmount: Image.Type.Filled throws the 9-slice away and renders the
             // cap as a thin wedge. GpsUiColor.SetBarFill is the one implementation.
-            GpsUiColor.SetBarFill(fill, p / 100f);
-            if (pct != null) pct.text = Mathf.RoundToInt(p).ToString(CultureInfo.InvariantCulture) + "%";
+            if (!animate || Mathf.Approximately(shown, p))
+            {
+                GpsUiColor.SetBarFill(fill, p / 100f);
+                shown = p;
+                return;
+            }
+
+            // §D7 — after a cast the bar GROWS from what the player was looking at to what the
+            // server recomputed, over CountDur, so the result reads as a consequence of the tap.
+            Action<float> apply = fill == _yesFill
+                ? (_setYes ??= v => GpsUiColor.SetBarFill(_yesFill!, v / 100f))
+                : (_setNo  ??= v => GpsUiColor.SetBarFill(_noFill!,  v / 100f));
+
+            UiMotion.Run(host, ref handle, UiMotion.Tween(shown, p, UiMotion.CountDur, apply));
+            shown = p;
         }
 
         private void BindMeta(VoteDto vote, DateTime utcNow)
@@ -155,7 +190,14 @@ namespace Golfin.Gps.UI
         /// rather than incrementing a local count.</summary>
         public void Repaint(VoteDto vote, string rewardText)
         {
-            Bind(vote, voted: true, rewardText, DateTime.UtcNow);
+            // The ONE call site that animates the bars: this is the repaint that follows a cast.
+            Bind(vote, voted: true, rewardText, DateTime.UtcNow, animateBars: true);
+        }
+
+        private void OnDisable()
+        {
+            UiMotion.Stop(this, ref _yesTween);
+            UiMotion.Stop(this, ref _noTween);
         }
 
         /// <summary>The card's VOTE control, so the screen can draw the server wait on it

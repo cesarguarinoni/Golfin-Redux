@@ -7,6 +7,7 @@ using Golfin.Gps;
 using Golfin.Net;
 using Golfin.Social;
 using Golfin.Telemetry;
+using Golfin.UI.Polish;
 using GolfinRedux.UI;
 using TMPro;
 using UnityEngine;
@@ -74,6 +75,11 @@ namespace Golfin.Gps.UI
         [SerializeField] private Button? _editProfileButton;  // inert v1
 
         private bool _wiredOnce;
+
+        /// <summary>gps_polish §D7 — the badge count last DRAWN, so the count-up runs from a real
+        /// previous number rather than from a parse of "N / M earned".</summary>
+        private int? _lastBadgesEarned;
+        private Coroutine? _badgeCount;
 
         // ═══════════════════════════════════════════════════════════════════
         // Lifecycle
@@ -187,7 +193,19 @@ namespace Golfin.Gps.UI
                 if (!r.Success || r.Data == null) return;
                 int earned = 0;
                 foreach (var b in r.Data) if (b.Earned) earned++;
-                SetText(_badgesShortcutSub, $"{earned} / {r.Data.Count} earned");
+
+                // §D7 — the badge count counts up when it has grown since the last paint. The
+                // first paint of a session has nothing to count from (the label reads "—") and
+                // snaps; earning a badge while the screen is open is the moment this exists for.
+                string wrap = $"{{0}} / {r.Data.Count} earned";
+                if (_badgesShortcutSub != null && _lastBadgesEarned.HasValue
+                    && earned > _lastBadgesEarned.Value)
+                    UiMotion.Run(this, ref _badgeCount,
+                                 UiMotion.CountUp(_badgesShortcutSub, _lastBadgesEarned.Value,
+                                                  earned, wrap: wrap));
+                else
+                    SetText(_badgesShortcutSub, UiMotion.Render(earned, wrap: wrap));
+                _lastBadgesEarned = earned;
             });
 
             yield return ScoreHistoryService.Instance.History(0, 2, r =>
@@ -224,6 +242,7 @@ namespace Golfin.Gps.UI
             SetText(_statAvgScore,     Unknown);
             SetText(_giftsReceived,    Unknown);
             SetText(_badgesShortcutSub, Unknown);
+            _lastBadgesEarned = null;
             SetText(_avatarShortcutSub, Unknown);
             if (_trustTrackFill != null) GpsUiColor.SetBarFill(_trustTrackFill, 0f);
             if (_roundsPanel != null) _roundsPanel.SetActive(true);

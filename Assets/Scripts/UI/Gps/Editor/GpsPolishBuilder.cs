@@ -35,6 +35,9 @@ namespace Golfin.Gps.EditorTools
         private const string PrefabDir = "Assets/Prefabs/UI/Gps/";
         private const string SprPill   = "Assets/Art/Tournaments/S_PillStadium.png";
 
+        /// <summary>The vote list's own card silhouette — see <c>ShimmerSite.Shape</c>.</summary>
+        private const string SprVoteCard = "Assets/Art/UI/Gps/S_GV_CardSimple.png";
+
         /// <summary>The nine GPS screen prefabs, in nav order.</summary>
         public static readonly string[] ScreenPrefabs =
         {
@@ -173,7 +176,157 @@ namespace Golfin.Gps.EditorTools
             EnsureEntryMotion(root);
             ApplyScrollFeel(root);
             EnsureStepPolish(root);
+            EnsureShimmerHosts(root);
         }
+
+        // ═════════════════════════════════════════════════════════════════════
+        // §D8 — the five cold-fetch placeholders
+        // ═════════════════════════════════════════════════════════════════════
+
+        /// <summary>One placeholder site: where it hangs, how many blocks, and their geometry.</summary>
+        private readonly struct ShimmerSite
+        {
+            public readonly string Screen;      // prefab / scene-copy root name
+            public readonly string ParentPath;  // under the root
+            public readonly string Site;        // ShimmerHost.Site
+            public readonly int    Count;
+            public readonly Vector2 Origin;     // host anchoredPosition, top-left
+            public readonly Vector2 Block;      // one block's size
+            public readonly Vector2 Step;       // per-index offset (x right, y DOWN, positive)
+            public readonly int    Columns;
+
+            /// <summary>Optional: the SHAPE this site's rows actually are, as a sprite asset path
+            /// rendered <see cref="Image.Type.Simple"/>. The default pill is a 9-slice and suits a
+            /// row; a vote card is a 232-tall baked panel, and standing a 9-sliced capsule in for
+            /// it both looks wrong and trips the fidelity linter's cap-radius heuristic (it
+            /// estimates a 58 px cap where the sprite gives 24). Using the card's OWN sprite is
+            /// the honest placeholder and the warning goes with it.</summary>
+            public readonly string? Shape;
+
+            public ShimmerSite(string screen, string parentPath, string site, int count,
+                               Vector2 origin, Vector2 block, Vector2 step, int columns = 1,
+                               string? shape = null)
+            {
+                Screen = screen; ParentPath = parentPath; Site = site; Count = count;
+                Origin = origin; Block = block; Step = step; Columns = columns; Shape = shape;
+            }
+        }
+
+        /// <summary>
+        /// The five sites the SPEC names, with geometry read off the prefabs rather than guessed:
+        /// each block stands where a real row will stand, so the list does not jump when the data
+        /// replaces the placeholder.
+        ///
+        /// <para>The badge grid hangs off the SECTION, not off <c>CellContainer</c> — that
+        /// container carries a <see cref="GridLayoutGroup"/> and would lay the host itself out as
+        /// a 220x153 cell, collapsing all six blocks into one.</para>
+        /// </summary>
+        private static readonly ShimmerSite[] Sites =
+        {
+            // Hub: RoundRows is 958x392 with three 958x130 rows at y 0 / -130 / -260.
+            new ShimmerSite("GpsHubScreen", "ContentContainer/RecentRoundsPanel/RoundRows",
+                            ShimmerHost.HubRounds, 3,
+                            new Vector2(32f, -12f), new Vector2(894f, 106f), new Vector2(0f, 130f)),
+
+            // Badges: CellContainer is at (20,-62) in the section; grid cell 220.5x153, spacing 12.
+            new ShimmerSite("GpsBadgesScreen", "ContentContainer/Section_GOLF",
+                            ShimmerHost.Badges, 6,
+                            new Vector2(20f, -62f), new Vector2(220.5f, 153f),
+                            new Vector2(232.5f, 165f), columns: 4),
+
+            // Gift: Supporter0..2 are 958x96 at y -80 / -176 / -272.
+            new ShimmerSite("GpsGiftScreen", "ContentContainer/Supporters",
+                            ShimmerHost.Supporters, 3,
+                            new Vector2(32f, -92f), new Vector2(894f, 72f), new Vector2(0f, 96f)),
+
+            // Gift: Golfer0..4 share that shape; the placeholder stands in for the first three.
+            new ShimmerSite("GpsGiftScreen", "ContentContainer/Golfers",
+                            ShimmerHost.Golfers, 3,
+                            new Vector2(32f, -92f), new Vector2(894f, 72f), new Vector2(0f, 96f)),
+
+            // Vote: the simple card is 958x232 and the list's own gap is 24.
+            new ShimmerSite("GpsVoteScreen", "ContentContainer/VoteList/Content",
+                            ShimmerHost.VoteList, 2,
+                            new Vector2(0f, 0f), new Vector2(958f, 232f), new Vector2(0f, 256f),
+                            shape: SprVoteCard),
+        };
+
+        /// <summary>
+        /// Author (or re-author) the placeholder groups for whichever sites belong to this root.
+        ///
+        /// <para>THE HOST IS SAVED INACTIVE. That is the whole reason A2 can still read 0 px: a
+        /// screen at rest draws exactly what it drew at HEAD, and a cold fetch is one
+        /// <c>SetActive</c> away rather than an <c>Instantiate</c> away — which matters because
+        /// <c>ShimmerBlock.prefab</c> does not live under <c>Resources/</c>, so a runtime load
+        /// would return null and the panel would stay blank.</para>
+        /// </summary>
+        private static void EnsureShimmerHosts(GameObject root)
+        {
+            foreach (ShimmerSite site in Sites)
+            {
+                if (!root.name.StartsWith(site.Screen)) continue;
+
+                Transform? parent = root.transform.Find(site.ParentPath);
+                if (parent == null)
+                {
+                    Debug.LogWarning($"[GpsPolishBuilder] {root.name}: no {site.ParentPath} — " +
+                                     $"shimmer site '{site.Site}' not placed.");
+                    continue;
+                }
+
+                Transform? hostT = parent.Find(ShimmerHostName);
+                if (hostT == null)
+                {
+                    var go = new GameObject(ShimmerHostName, typeof(RectTransform), typeof(ShimmerHost));
+                    hostT = go.transform;
+                    hostT.SetParent(parent, worldPositionStays: false);
+                }
+
+                var hrt = (RectTransform)hostT;
+                hrt.anchorMin        = new Vector2(0f, 1f);
+                hrt.anchorMax        = new Vector2(0f, 1f);
+                hrt.pivot            = new Vector2(0f, 1f);
+                hrt.anchoredPosition = site.Origin;
+                hrt.localScale       = Vector3.one;
+                int rows = Mathf.CeilToInt(site.Count / (float)site.Columns);
+                hrt.sizeDelta = new Vector2(site.Block.x + site.Step.x * (site.Columns - 1),
+                                            site.Block.y + site.Step.y * (rows - 1));
+
+                var marker = hostT.GetComponent<ShimmerHost>();
+                if (marker == null) marker = hostT.gameObject.AddComponent<ShimmerHost>();
+                var so = new SerializedObject(marker);
+                so.FindProperty("_site").stringValue = site.Site;
+                so.ApplyModifiedPropertiesWithoutUndo();
+                EditorUtility.SetDirty(marker);
+
+                // Re-author the blocks only when the count is wrong, so a second run of this pass
+                // preserves every fileID (A6's reason for not re-running the screen builders).
+                if (hostT.childCount != site.Count)
+                {
+                    for (int i = hostT.childCount - 1; i >= 0; i--)
+                        Object.DestroyImmediate(hostT.GetChild(i).gameObject);
+                    for (int i = 0; i < site.Count; i++)
+                        CreateShimmerBlock(hostT, "Block" + i, site.Shape);
+                }
+
+                for (int i = 0; i < site.Count; i++)
+                {
+                    var brt = hostT.GetChild(i) as RectTransform;
+                    if (brt == null) continue;
+                    brt.anchorMin        = new Vector2(0f, 1f);
+                    brt.anchorMax        = new Vector2(0f, 1f);
+                    brt.pivot            = new Vector2(0f, 1f);
+                    brt.sizeDelta        = site.Block;
+                    brt.anchoredPosition = new Vector2(site.Step.x * (i % site.Columns),
+                                                       -site.Step.y * (i / site.Columns));
+                    brt.localScale       = Vector3.one;
+                }
+
+                hostT.gameObject.SetActive(false);
+            }
+        }
+
+        private const string ShimmerHostName = "ShimmerHost";
 
         /// <summary>
         /// A CanvasGroup on each layer the push cross-fades. Alpha 1, interactable, raycasts on —
@@ -414,21 +567,58 @@ namespace Golfin.Gps.EditorTools
         public static void BuildShimmerBlock()
         {
             const string path = PrefabDir + "ShimmerBlock.prefab";
-            var pill = AssetDatabase.LoadAssetAtPath<Sprite>(SprPill);
+            GameObject root = CreateShimmerBlock(null, "ShimmerBlock");
+            PrefabUtility.SaveAsPrefabAsset(root, path);
+            Object.DestroyImmediate(root);
+            AssetDatabase.SaveAssets();
+            Debug.Log("[GpsPolishBuilder] ShimmerBlock.prefab written to " + path);
+        }
 
-            var root = new GameObject("ShimmerBlock",
+        /// <summary>
+        /// ONE construction, used by the prefab above and by every in-screen host.
+        ///
+        /// <para>The in-screen blocks are BUILT rather than instantiated from the prefab on
+        /// purpose: nesting a prefab instance inside each screen prefab would put a
+        /// <c>m_CorrespondingSourceObject</c> chain into nine assets whose scene copies are
+        /// unpacked, and re-running this pass would then reshuffle the nested instance's fileIDs.
+        /// Same object, no provenance chain to break.</para>
+        ///
+        /// <para>The band carries the pill SPRITE, not a flat fill. A null-sprite Image is what
+        /// the fidelity linter fails as a fabricated flat box (Rule 21 render-health), and these
+        /// blocks now live inside prefabs the linter reads.</para>
+        /// </summary>
+        private static GameObject CreateShimmerBlock(Transform? parent, string name,
+                                                     string? shapePath = null)
+        {
+            var pill = AssetDatabase.LoadAssetAtPath<Sprite>(SprPill);
+            var shape = shapePath != null ? AssetDatabase.LoadAssetAtPath<Sprite>(shapePath) : null;
+
+            var root = new GameObject(name,
                 typeof(RectTransform), typeof(CanvasRenderer), typeof(Image),
                 typeof(RectMask2D), typeof(ShimmerBlock));
             var rrt = root.GetComponent<RectTransform>();
+            if (parent != null) rrt.SetParent(parent, worldPositionStays: false);
             rrt.anchorMin = new Vector2(0f, 1f);
             rrt.anchorMax = new Vector2(0f, 1f);
             rrt.pivot     = new Vector2(0f, 1f);
             rrt.sizeDelta = new Vector2(900f, 120f);
+            rrt.localScale = Vector3.one;
 
             var bg = root.GetComponent<Image>();
-            bg.sprite = pill;
-            bg.type   = Image.Type.Sliced;
-            bg.pixelsPerUnitMultiplier = 88f / 24f;      // S_PillStadium border 88 -> r24
+            if (shape != null)
+            {
+                // The row this block stands in for is a baked panel, not a capsule: use its own
+                // silhouette, Simple, so the placeholder is the shape of the thing that replaces it.
+                bg.sprite = shape;
+                bg.type   = Image.Type.Simple;
+                bg.pixelsPerUnitMultiplier = 1f;
+            }
+            else
+            {
+                bg.sprite = pill;
+                bg.type   = Image.Type.Sliced;
+                bg.pixelsPerUnitMultiplier = 88f / 24f;  // S_PillStadium border 88 -> r24
+            }
             bg.color  = GpsUiColor.ADark(Color.black, 0.35f);
             bg.raycastTarget = false;
 
@@ -442,17 +632,16 @@ namespace Golfin.Gps.EditorTools
             brt.offsetMax = new Vector2(0f, 0f);
             brt.sizeDelta = new Vector2(180f, 0f);
             var band = bandGo.GetComponent<Image>();
+            band.sprite = pill;
+            band.type   = Image.Type.Sliced;
+            band.pixelsPerUnitMultiplier = 88f / 24f;
             band.color = GpsUiColor.A(Color.white, 0.08f);
             band.raycastTarget = false;
 
             var so = new SerializedObject(root.GetComponent<ShimmerBlock>());
             so.FindProperty("_band").objectReferenceValue = brt;
             so.ApplyModifiedPropertiesWithoutUndo();
-
-            PrefabUtility.SaveAsPrefabAsset(root, path);
-            Object.DestroyImmediate(root);
-            AssetDatabase.SaveAssets();
-            Debug.Log("[GpsPolishBuilder] ShimmerBlock.prefab written to " + path);
+            return root;
         }
 
         // ═════════════════════════════════════════════════════════════════════

@@ -64,6 +64,12 @@ namespace Golfin.UI.Polish
         /// <summary>Integer count-up on a number that changed.</summary>
         public const float CountDur = 0.40f;
 
+        /// <summary>A selection bump — 1.0 → <see cref="BumpPeak"/> → 1.0 (§D6).</summary>
+        public const float BumpDur = 0.10f;
+
+        /// <summary>How far a selection bump overshoots. The SPEC's own number.</summary>
+        public const float BumpPeak = 1.06f;
+
         /// <summary>Delay between consecutive items of a staggered group.</summary>
         public const float StaggerDelay = 0.03f;
 
@@ -373,19 +379,25 @@ namespace Golfin.UI.Polish
         /// render "N0" and a locale that swaps the thousands separator mid-tween would be a
         /// flicker.
         /// </summary>
+        /// <param name="wrap">Optional composite format the counted number is dropped INTO —
+        /// "{0} pts", "{0} / 24 earned", "Your balance: {0}". The GPS labels are rarely a bare
+        /// number: <c>GIFTS RECEIVED</c>, the gift modal's balance line and the profile's badge
+        /// count are all localized runs with the figure inside them, and counting up a label
+        /// while dropping its surrounding words would be a worse bug than not counting at all.
+        /// Null means the label IS the number.</param>
         public static IEnumerator CountUp(TMP_Text label, int from, int to,
-                                          float dur = CountDur, string format = "N0")
+                                          float dur = CountDur, string format = "N0",
+                                          string? wrap = null)
         {
             if (label == null) return Register(Empty(), Noop);
-            string final = to.ToString(format, System.Globalization.CultureInfo.InvariantCulture);
-            return Register(CountUpRoutine(label, from, to, dur, format),
+            string final = Render(to, format, wrap);
+            return Register(CountUpRoutine(label, from, to, dur, format, wrap),
                             () => { if (label != null) label.text = final; });
         }
 
         private static IEnumerator CountUpRoutine(TMP_Text label, int from, int to,
-                                                  float dur, string format)
+                                                  float dur, string format, string? wrap)
         {
-            var culture = System.Globalization.CultureInfo.InvariantCulture;
             float elapsed = 0f;
             int last = int.MinValue;
             while (elapsed < dur)
@@ -397,10 +409,74 @@ namespace Golfin.UI.Polish
                 // Only touch the mesh when the integer actually moved: a TMP_Text assignment
                 // rebuilds the mesh, and at 60 fps a 0.4 s count over 12 points would rebuild
                 // 24 times to draw 12 distinct values.
-                if (v != last) { label.text = v.ToString(format, culture); last = v; }
+                if (v != last) { label.text = Render(v, format, wrap); last = v; }
                 yield return null;
             }
-            if (label != null) label.text = to.ToString(format, culture);
+            if (label != null) label.text = Render(to, format, wrap);
+        }
+
+        /// <summary>One value, formatted and (optionally) dropped into its surrounding run.</summary>
+        public static string Render(int value, string format = "N0", string? wrap = null)
+        {
+            var culture = System.Globalization.CultureInfo.InvariantCulture;
+            string n = value.ToString(format, culture);
+            return string.IsNullOrEmpty(wrap) ? n : string.Format(culture, wrap!, n);
+        }
+
+        /// <summary>
+        /// Selection bump — scale 1 → <paramref name="peak"/> → 1 (§D6). Half the duration up,
+        /// half down, and ALWAYS settling on <see cref="Vector3.one"/>: an interrupted bump that
+        /// stranded a chip at 1.04 would be a permanently mis-sized control, and these are the
+        /// controls a player taps repeatedly.
+        /// </summary>
+        public static IEnumerator Bump(RectTransform rect, float peak = BumpPeak, float dur = BumpDur)
+        {
+            if (rect == null) return Register(Empty(), Noop);
+            return Register(BumpRoutine(rect, peak, dur),
+                            () => { if (rect != null) rect.localScale = Vector3.one; });
+        }
+
+        private static IEnumerator BumpRoutine(RectTransform rect, float peak, float dur)
+        {
+            float half = Mathf.Max(0.0001f, dur * 0.5f);
+            float elapsed = 0f;
+            while (elapsed < dur)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                if (rect == null) yield break;
+                float s = elapsed < half
+                    ? Mathf.Lerp(1f, peak, EaseOut(elapsed / half))
+                    : Mathf.Lerp(peak, 1f, EaseOut((elapsed - half) / half));
+                rect.localScale = new Vector3(s, s, 1f);
+                yield return null;
+            }
+            if (rect != null) rect.localScale = Vector3.one;
+        }
+
+        /// <summary>
+        /// The generic scalar tween: <paramref name="apply"/> is called with the eased value each
+        /// frame. Exists for the one animated quantity that is neither a position, an alpha nor a
+        /// label — a progress bar's WIDTH, which has to go through
+        /// <c>GpsUiColor.SetBarFill</c> because <c>Image.Type.Filled</c> throws the 9-slice away.
+        ///
+        /// <para>ONE delegate allocation, at creation, never inside the loop — A13's budget.</para>
+        /// </summary>
+        public static IEnumerator Tween(float from, float to, float dur, Action<float> apply)
+        {
+            if (apply == null) return Register(Empty(), Noop);
+            return Register(TweenRoutine(from, to, dur, apply), () => apply(to));
+        }
+
+        private static IEnumerator TweenRoutine(float from, float to, float dur, Action<float> apply)
+        {
+            float elapsed = 0f;
+            while (elapsed < dur)
+            {
+                elapsed += Time.unscaledDeltaTime;
+                apply(Mathf.Lerp(from, to, EaseOut(dur <= 0f ? 1f : elapsed / dur)));
+                yield return null;
+            }
+            apply(to);
         }
 
         /// <summary>
