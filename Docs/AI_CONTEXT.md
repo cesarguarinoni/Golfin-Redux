@@ -4,7 +4,7 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
-## ⏸ BLOCKED ON CESAR — `gps_gifts_votes` · the last two GPS screens are built, the economy is not applied
+## ✅ DONE (pending Cesar's approval) — `gps_gifts_votes` · the last two GPS screens, and the gift economy made atomic
 
 **Gift (Figma `14027:101843`) and Vote (`14028:33534`) — the GPS surface is complete.** Both are
 reached the way a player reaches them: the hub's GIFT nav slot and its GIFT / VOTE action tiles
@@ -17,19 +17,17 @@ both economy writes under an idempotency key minted per open. Vote is live for i
 `/vote/list` drives five real cards, a cast repaints from the server's own answer and earns +10,
 CREATE prepends without a second fetch, MINE filters on `creator_id`.
 
-**⛔ The economy half is written, committed and NOT LIVE.** `backend/migrations/2026_09_02_gift_atomic.sql`
-is DDL, so applying it is Cesar's step, and the Fly deploy is gated behind it in that order:
-`gifts.py` now calls `golfin_gift_pts` / `golfin_gift_purchase` **by name**, so deploying first
-would take `/gifts/send-pts` and `/gifts/purchase` down. Verified rather than assumed — both RPCs
-answer `404 PGRST202` today.
+**The economy half is LIVE.** Cesar applied `2026_09_02_gift_atomic.sql` (both functions SECURITY
+DEFINER, EXECUTE to `service_role` only), its §1 reconciliation repaired the one out-of-balance
+profile (Cratilo `total_points` 6808 → 7158), and `playlife-api` deployed **v65 → v66**.
 
-⚠️ **The migration moves a live balance.** Its §1 reconciliation (the same statement
-`2026_08_12_gift_pts_total_points_fix.sql` ran) writes only rows that are ALREADY inconsistent, and
-exactly one production profile is: **Cratilo, activity 7158 + gift 0 vs total 6808 → total becomes
-7158 (+350 RP)**. That is the repair, not a side effect, but it should not be a surprise.
-
-After apply + deploy the two blocked acceptance items close with one command:
-`python3 Docs/Specs/Active/gps_gifts_votes/e2e_gift_economy.py --env-file Tools/admin-dashboard/.env.development.local`
+E2E green through BOTH surfaces. Through the RPCs (`e2e_gift_economy.py`, ALL PASS) and through the
+deployed HTTP routers with a real JWT: a 50-pt send moves the sender's `activity_pts` **and**
+`total_points` down and the receiver's `gift_pts` **and** `total_points` up — the half the old
+router skipped on each side; a same-key replay returns `replayed:true` and moves nothing; self-gift
+is a 400; a purchase debits and writes one `user_inventory` row, and its replay writes none.
+**19 profiles / 0 invariant violations** before and after. `/gifts/send-pts` with NO
+`idempotency_key` still returns 200 — the Flutter path is untouched.
 
 ### What was actually broken in the backend
 

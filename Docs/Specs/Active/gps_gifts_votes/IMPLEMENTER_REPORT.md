@@ -8,31 +8,26 @@
 
 ---
 
-## ⛔ BLOCKED — two acceptance items cannot be closed by me
+## ✅ APPLIED, DEPLOYED, E2E GREEN
 
-`backend/migrations/2026_09_02_gift_atomic.sql` **has not been applied**, and it is DDL, so
-applying it is Cesar's step. Verified, not assumed:
-
-```
-POST /rest/v1/rpc/golfin_gift_pts       -> 404 PGRST202 "no matches were found in the schema cache"
-POST /rest/v1/rpc/golfin_gift_purchase  -> 404 PGRST202 "no matches were found in the schema cache"
-```
-
-The Fly deploy is gated on it in that order and not the other way round: `gifts.py` now calls both
-functions **by name**, so deploying first would take `/gifts/send-pts` and `/gifts/purchase` down
-entirely. **I have therefore NOT deployed.** The two blocked items are the live gift E2E and the
-live purchase E2E. Everything else on the checklist is closed below.
-
-⚠️ **The migration will change a live balance.** §1 is the one-time reconciliation (the same
-statement `2026_08_12_gift_pts_total_points_fix.sql` ran). Exactly one production profile is out of
-balance today and it is Cesar's own:
+Cesar applied `2026_09_02_gift_atomic.sql` 2026-09-02 08:2x UTC. His verification output:
 
 ```
-{"display_name": "Cratilo", "activity_pts": 7158, "gift_pts": 0, "total_points": 6808}
+proname              | prosecdef | proacl
+---------------------+-----------+-----------------------------------------------
+golfin_gift_pts      | true      | {postgres=X/postgres,service_role=X/postgres}
+golfin_gift_purchase | true      | {postgres=X/postgres,service_role=X/postgres}
 ```
 
-Applying the migration restores `total_points` to **7158 (+350 RP)**. That is the invariant repair,
-not a side effect — but it is a real balance change and it should not be a surprise.
+SECURITY DEFINER on both, and EXECUTE granted to `service_role` only — no `public`, `anon` or
+`authenticated`, which is the posture that keeps a logged-in client from draining an account
+through PostgREST.
+
+§1 reconciliation landed: **19 profiles, 0 invariant violations** (Cratilo `total_points`
+6808 → 7158, the one row that was out of balance).
+
+Then deployed: `playlife-api` **v65 → v66**, image `deployment-01M1GKCHV15EH5S2BXZHYMCGK2`,
+`/health` → `{"status":"ok","version":"0.1.0"}`.
 
 ---
 
@@ -42,13 +37,13 @@ not a side effect — but it is a real balance change and it should not be a sur
 |---|---|---|---|
 | 1 | Per-element A/B crops vs both renders; ΔRGB incl. plum hero, chips, bar fills | **PASS** | § A/B below — 18 non-text regions, gift mean 2.8, vote mean 3.7, worst 6.1 |
 | 2 | Geometry JSON + invariants + lint `fail=0`, both screens | **PASS** | geometry `97 sites 0 FAIL 0 GONE`; lint `0 FAIL` on both prefabs |
-| 3 | Migration applied before deploy; deployed; live send E2E quoted | **BLOCKED** | see above — DDL is Cesar's step; `e2e_gift_economy.py` is written and smoke-run |
-| 4 | Purchase E2E | **BLOCKED** | same gate; covered by the same script |
-| 5 | Invariant audit after both E2Es | **PARTIAL** | the BEFORE audit ran and found the one violation quoted above; the AFTER audit is inside the blocked script |
-| 6 | Vote E2E: list renders, cast handled, +10 once, create, MINE | **PARTIAL** | list/MINE/create-modal proven live (§ Live evidence); a CAST was NOT performed — see § Deviations |
+| 3 | Migration applied before deploy; deployed; live send E2E quoted | **PASS** | § Live economy E2E — RPC and HTTP, both quoted |
+| 4 | Purchase E2E | **PASS** | § Live economy E2E |
+| 5 | Invariant audit after both E2Es | **PASS** | `19 profiles, 0 violations` before AND after |
+| 6 | Vote E2E: list renders, cast handled, +10 once, create, MINE | **PARTIAL** | list/MINE/create-modal proven live (§ Live evidence); a CAST was NOT performed — see § Not done |
 | 7 | Play-mode screenshots of both screens signed in, with service log lines | **PASS** | 7 frames in `screenshots/`, every one through real `onClick` |
 | 8 | Both ScreenIds in GpsGate; hub Gift tab and Vote affordance navigate | **PASS** | `gate=True/True`; run log `nav GIFT interactable=True → ok GpsGift`, `tile VOTE interactable=True → ok GpsVote` |
-| 9 | Balance in Top UI refreshes after send/purchase/cast | **PASS (code)** | `GiftSendModalController.Committed` and `OnEarned` both call `RefreshBalanceAsync`; not observable until item 3 unblocks |
+| 9 | Balance in Top UI refreshes after send/purchase/cast | **PASS** | `GiftSendModalController.Committed` / `OnEarned` call `RefreshBalanceAsync`; `/points/balance` tracked every write in the HTTP round-trip (7078 → 7028 → 6998 → 6948) |
 | 10 | Importer PLAN → APPLY → publish → `--check` clean; no hardcoded literals | **PASS** | `texts` v31, 958 rows, `--check: clean`; grep below |
 | 11 | Full EditMode sweep green | **PASS** | `2258 total / 2255 passed / 0 failed / 3 skipped` |
 | 12 | Deviations flagged | **PASS** | § Deviations |
@@ -98,7 +93,8 @@ The five questions are the five live `votes` rows, and the six story names are t
 The modal's balance line reads **"Your balance: 7,158 pts"** while the top bar reads **6,808 RP**.
 That is not a bug and it is the reason the line exists: the modal shows `activity_pts`, which is
 what `golfin_gift_pts` will actually accept, and the top bar shows `total_points`. (The two differ
-today only because of the invariant violation the migration repairs.)
+at capture time only because of the invariant violation the migration has since repaired —
+after it, Cratilo reads 7,158 in both places.)
 
 ### Requests observed (Editor.log)
 
@@ -110,6 +106,75 @@ GET /api/v1/vote/list      → 200 (5 rows)
 ```
 
 ---
+
+## Live economy E2E
+
+### Through the RPCs — `e2e_gift_economy.py`, **ALL PASS**
+
+```
+  PASS  invariant total_points = activity_pts + gift_pts (before)   19 profiles, 0 violations
+sender   Cratilo   {"activity_pts": 7158, "gift_pts": 0,   "total_points": 7158}
+receiver ken       {"activity_pts": 510,  "gift_pts": 100, "total_points": 610}
+
+-- golfin_gift_pts(50, key=7157929a-…)
+   -> {"ok":true,"replayed":false,"amount":50,"sender_activity_pts":7108,
+       "sender_total_points":7108,"receiver_gift_pts":150,"receiver_total_points":660}
+  PASS  sender activity_pts -50    7158 -> 7108
+  PASS  sender total_points -50    7158 -> 7108        <- the half the old router skipped
+  PASS  receiver gift_pts    +50    100 -> 150
+  PASS  receiver total_points +50    610 -> 660        <- and the other half
+   sender ledger  : gift_sent     -50 activity  "ギフト送付: ken"      key 7157929a-…
+   receiver ledger: gift_received +50 gift      "ギフト受取: Cratilo"  key abbeb4fc-…
+  PASS  receiver row carries a DERIVED key, not the sender's
+
+-- REPLAY with the SAME key
+   -> {"ok":true,"replayed":true, …identical balances…}
+  PASS  replay moved NOTHING
+
+-- refusals
+   self-gift  -> {"ok":false,"reason":"self_gift"}
+   over-spend -> {"ok":false,"reason":"insufficient","required":999999999,…}
+  PASS  refusals moved NOTHING
+
+-- purchase グローブ (30 pts)
+   -> {"ok":true,"price":30,"activity_pts":7078,"total_points":7078,
+       "inventory_id":"7d07caa3-…"}
+  PASS  purchase debited activity_pts + total_points   -30
+   replay -> {"ok":true,"replayed":true,…}
+  PASS  replay wrote NO second inventory row
+
+  PASS  invariant (after)   19 profiles, 0 violations
+=== ALL PASS ===
+```
+
+### Through the deployed routers — real JWT, real HTTP
+
+Signed in as `cesar.guarinoni@gmail.com` / `f2636482-…`; `/points/balance` read before and after.
+
+```
+balance before: {"activity_pts":7078,"gift_pts":0,"total_points":7078}
+
+POST /gifts/send-pts -> 200 {"amount":50,"receiver":"ken","remaining_activity_pts":7028,
+                             "total_points":7028,"replayed":false}
+REPLAY same key      -> 200 {…,"replayed":true}      balances IDENTICAL
+self-gift            -> 400 {"detail":"Cannot gift yourself"}
+
+POST /gifts/purchase -> 200 {"item":"グローブ","price":30,"activity_pts":6998,
+                             "total_points":6998,"inventory_id":"8ef21344-…"}
+REPLAY same key      -> 200 {…,"replayed":true,"inventory_id":null}   no second row
+
+no key at all        -> 200 {…,"replayed":false,"idempotency_key":"43080075-…"}
+                        <- the FLUTTER path: server-generated uuid4, still works
+balance after:  {"activity_pts":6948,"gift_pts":0,"total_points":6948}
+```
+
+Final state — `ken` `{activity 510, gift 250, total 760}`, `Cratilo` `{activity 6948, gift 0,
+total 6948}`, **19 profiles / 0 invariant violations**, two `user_inventory` rows for the two
+non-replayed purchases, and every ledger row keyed.
+
+The Flutter-compatibility line is the one worth keeping: `/gifts/send-pts` with NO
+`idempotency_key` still returns 200 and moves points, exactly as it does today, with the server
+minting the key. Nothing the PLAYLIFE app does had to change.
 
 ## A/B — node render vs live capture
 
