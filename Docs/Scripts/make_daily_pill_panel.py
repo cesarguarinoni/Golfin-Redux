@@ -42,7 +42,18 @@ from PIL import Image, ImageDraw, ImageFilter
 # ── The node's tokens, 1x ────────────────────────────────────────────────────
 W, H = 549, 122
 RADIUS = 50
-GOLD = (0xFC, 0xF1, 0x95, 255)   # border-3 #FCF195
+GOLD = (0xFC, 0xF1, 0x95, 255)   # the border's TOP stop; still the flat colour the glow uses
+
+# ⚠️ THE BORDER IS A THREE-STOP VERTICAL GRADIENT, AND `get_design_context` DOES NOT SAY SO.
+# Its Tailwind output renders this stroke as `border-[#fcf195]` — the first stop, silently — and
+# that is what this script baked (flat) until 2026-09-02. The node's own SVG export is the truth:
+#   <rect ... stroke="url(#paint1_linear...)" stroke-width="3"/>
+#   <linearGradient id="paint1_linear..."> #FCF195 @0 · #D6AB42 @0.6 · #BB7F1D @1
+# Verified on all three instances of this component: 13994:1963 (this pill), 14060:4638 (the Home
+# GPS pill) and 14060:4722 (the GPS hub back pill). Read the SVG, never the CSS.
+GOLD_STOPS = ((0.0, (0xFC, 0xF1, 0x95)),
+              (0.6, (0xD6, 0xAB, 0x42)),
+              (1.0, (0xBB, 0x7F, 0x1D)))
 INNER = (0x0A, 0x1D, 0x35, 255)  # Pop-Up border-1 #0A1D35
 TOP = (0x13, 0x34, 0x53)         # gradient from
 BOT = (0x09, 0x1B, 0x33)         # gradient to
@@ -65,12 +76,36 @@ def rounded(size, radius, fill):
     return img
 
 
+def _ramp(stops, t):
+    """Multi-stop linear colour ramp, clamped."""
+    t = min(1.0, max(0.0, t))
+    for i in range(len(stops) - 1):
+        t0, c0 = stops[i]
+        t1, c1 = stops[i + 1]
+        if t0 <= t <= t1:
+            f = 0.0 if t1 == t0 else (t - t0) / (t1 - t0)
+            return tuple(round(a + (b - a) * f) for a, b in zip(c0, c1))
+    return stops[-1][1]
+
+
+def gold_plate(size, radius):
+    """The border plate as a VERTICAL gradient, masked to the pill silhouette."""
+    w, h = size
+    col = Image.new("RGBA", (1, h))
+    for y in range(h):
+        col.putpixel((0, y), _ramp(GOLD_STOPS, y / max(1, h - 1)) + (255,))
+    plate = col.resize((w, h), Image.NEAREST)
+    plate.putalpha(rounded(size, radius, (255, 255, 255, 255)).getchannel("A"))
+    return plate
+
+
 def build() -> Image.Image:
     s = SCALE * SS
     w, h = W * s, H * s
 
     # 1. The gold plate — the outermost 3px ring is whatever of this stays uncovered.
-    out = rounded((w, h), RADIUS * s, GOLD)
+    #    Graded top-to-bottom, per the node's three-stop stroke (see GOLD_STOPS).
+    out = gold_plate((w, h), RADIUS * s)
 
     # 2. The 1px inner rule, inset by the gold border.
     i1 = GOLD_PX * s

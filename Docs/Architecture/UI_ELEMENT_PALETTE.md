@@ -56,16 +56,19 @@ SCRIPT, never the PNG.
 > `#FCF195 → #D6AB42 (0.6) → #BB7F1D`. All three came from trusting the tool's Tailwind output,
 > which renders that stroke as `border-[#fcf195]` — the first stop, silently.
 >
-> | sprite | baker | rim |
-> |---|---|---|
-> | `S_DailyPillPanel.png` (Home daily pill) | `make_daily_pill_panel.py` | flat — **wrong** |
-> | `S_GpsPill.png` (Home GPS entry pill) | `make_gps_pill.py` | flat — **wrong** |
-> | `S_GpsBackPill.png` (GPS hub back pill) | `make_gps_back_pill.py` | 3-stop gradient — correct |
+> | sprite | baker | node | rim |
+> |---|---|---|---|
+> | `S_DailyPillPanel.png` (Home daily pill) | `make_daily_pill_panel.py` | `13994:1963` | 3-stop gradient ✓ |
+> | `S_GpsPill.png` (Home GPS entry pill) | `make_gps_pill.py` | `14060:4638` | 3-stop gradient ✓ |
+> | `S_GpsBackPill.png` (GPS hub back pill) | `make_gps_back_pill.py` | `14060:4722` | 3-stop gradient ✓ |
 >
-> Proof for the middle row is in that task's own folder: sample
-> `Docs/Specs/Active/gps_pill_entry/reference/gps_pill_14060-4638_4x.png` and the rim reads
-> `#FBF094 / #DBB54E / #BB7F1D` top/middle/bottom, while the shipped sprite reads `#FCF195`
-> throughout. Both are one `GOLD = ...` line away from correct.
+> **All three were flat until 2026-09-02**, and each was one `GOLD = ...` line from correct. Every
+> one of the three instances carries the identical stroke, verified from its own SVG export. Fixed
+> together; measured as RENDERED on Home afterwards, not just in the PNGs — the GPS pill's rim reads
+> `#FBEF95` at the top and `#BB801E` at the bottom, the daily pill's `#FCF095` → `#BB801E`.
+>
+> `S_DailyPillGlow.png` deliberately stays FLAT. It is an additive halo, not a rim, and its baker
+> already documents why the colour is held flat while alpha carries the falloff.
 >
 > **Rule: before baking any stroke or fill, read the node's SVG, not the CSS.**
 > `download_assets(nodeId, defaultFormat="svg")` and look for `stroke="url(#paint…)"` /
@@ -83,7 +86,7 @@ SCRIPT, never the PNG.
 |---|---|---|---|---|
 | RP value pill (navy) | `Assets/Art/RankingsScreen/RPContainer.png` | `9106f5ea13a81ca4c8dc7b2671c853bf` | dark rounded RP-cost/amount container (coin + number) | Rankings, stamina-shop RP chips |
 | Stadium pill (badge base) | `Assets/Art/Tournaments/S_PillStadium.png` | `bb07d102185aa4f1ca51da13de9eeac6` | outer rim of tier / entry-fee / status badges | Tournaments `PaidEntryBadge`, shop tier badges |
-| Gold-bordered navy pill | `Assets/Art/HomeScreen/S_DailyPillPanel.png` | `448cb5f34eebb4b38962e7959d0a11ed` | navy pill with the Figma 3px gold border (**see the gradient-stroke warning below — this sprite bakes it FLAT**) + `#133453→#091B33` gradient, r=50. Baked at 2× and **9-sliced**: border 100 sprite-px with `pixelsPerUnitMultiplier = 2` → 50 UI px, which fits any width ≥ 101 at the authored 122 height | Home daily-mission pill (549 with the streak flame, 481 without) |
+| Gold-bordered navy pill | `Assets/Art/HomeScreen/S_DailyPillPanel.png` | `448cb5f34eebb4b38962e7959d0a11ed` | navy pill with the Figma 3px gold border (a **3-stop gradient** — see the warning below) + `#133453→#091B33` gradient, r=50. Baked at 2× and **9-sliced**: border 100 sprite-px with `pixelsPerUnitMultiplier = 2` → 50 UI px, which fits any width ≥ 101 at the authored 122 height | Home daily-mission pill (549 with the streak flame, 481 without) |
 | Soft gold halo for the above | `Assets/Art/HomeScreen/S_DailyPillGlow.png` | `086acc78ed8a34ce090a7cec8d2d5aea` | the pulsing glow behind that pill — the silhouette in border-gold, Gaussian-blurred, 36px bleed. Additive (`TapSparkle_Additive.mat`), 9-sliced at border 172 sprite-px / ppum 2 → 86 UI px | Home daily-mission pill |
 
 > **Why the pill is baked, not 9-sliced** (`daily_mission_home_pill`, 2026-08-30). A whole-project
