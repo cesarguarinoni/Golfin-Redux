@@ -1,9 +1,10 @@
-READY_FOR_REDTEAM
+ARCHITECT_REVIEW_PASS
 
 # STATUS — `gps_polish`
 
-**Current:** `READY_FOR_REDTEAM` — iter-2 redo (docs-only fix pass) architect-reviewed at
-2026-09-03 07:15 JST by golfin-reviewer (2nd pass). Hands to golfin-redteam-reviewer.
+**Current:** `ARCHITECT_REVIEW_PASS` — red-team (2nd pass) re-derived every gate from primary
+sources, decoded the score-upload clip itself, and could not break the repair. 2026-09-03 07:20 JST.
+Hands to Cesar for final approval.
 
 **Opened:** 2026-09-02. First commit closed `gps_pill_entry` (`96d60fab4`).
 **HEAD at review:** `4329789dd`.
@@ -54,3 +55,4 @@ Full section: `ARCHITECT_REVIEW.md` § "ARCHITECT REVIEW REDO (golfin-reviewer, 
 | 2026-09-03 | `READY_FOR_SELF_REVIEW` | docs-only fix on top of iter-2 (`5664848d8`): A7 retracted, POST SCORE frame captured, both mistakes named. |
 | 2026-09-03 | `SELF_REVIEW_PASS` | self-reviewer redo — decoded the video, matched retraction to within 1 frame / 1 px, re-walked whole acceptance list. |
 | 2026-09-03 | `READY_FOR_REDTEAM` | golfin-reviewer redo — decoded the video myself this pass, retraction verified against primary source; hands to adversarial gate. |
+| 2026-09-03 | `ARCHITECT_REVIEW_PASS` | red-team redo — pending window (27f) / capsule (496→138px) / shipped-png md5-in-window all reproduced from the clip; A1/A2/A6/A12/A13/scope re-run clean; POST SCORE 496→140px collapse surfaced for Cesar. |

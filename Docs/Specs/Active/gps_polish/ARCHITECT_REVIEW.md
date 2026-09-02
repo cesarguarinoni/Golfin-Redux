@@ -363,3 +363,105 @@ I did not enter play mode on this pass (docs-only redo; no scene mutation to ver
 ## Verdict
 
 `READY_FOR_REDTEAM`. Every gate my scope covers passes on primary-source verification this pass, and the A7 blocker is repaired with a genuine retraction whose numbers I independently reproduced to within a frame and a pixel. The 498 → 140 width-collapse observation the redo surfaces is real and legitimately flagged-not-fixed. Handing to `golfin-redteam-reviewer` for the adversarial second look — the red-team caught what I missed last time, and it is the right agent to check that I have not missed something else this time.
+
+---
+
+# RED-TEAM REVIEW — REDO (golfin-redteam-reviewer, 2nd pass) — 2026-09-03 07:20 JST
+
+HEAD `76016280a`. I previously FAILed this task on the A7 false measurement. This pass I
+re-derived every gate from primary sources and attacked the repair itself. **Verdict:
+`ARCHITECT_REVIEW_PASS`** — with one design observation surfaced for Cesar's eye (not a blocker).
+
+## The A7 repair — decoded the clip myself, every number holds
+
+Consecutive decode of `videos/gps_polish_c_score_upload_steps.mp4` (ffprobe: 1170×2532,
+avg 29.435 fps, 1279 frames, 43.385 s), frames selected `between(t,32.8,34.7)`, mapped to
+`pts_time` via `showinfo`, POST SCORE capsule width measured per frame (gold-border detector):
+
+| frames | t | capsule width |
+|---|---|---|
+| f_00994 … f_01011 | 32.82 – 33.38 s | **496 px** (full "POST SCORE") |
+| f_01012 | 33.414 s | 138 px (collapse begins) |
+| f_01015 … f_01039 | 33.51 – 34.31 s | collapsed "…" square (~140 px) |
+| f_01040 … | 34.34 s + | 572 px ("BACK TO HOME", next screen) |
+
+- **Pending window = 27 collapsed frames**, f_01012 (t=33.414) → f_01039 (t=34.305), ≈0.89–0.92 s.
+  Report/self-review/reviewer claim 27 frames, t≈33.41–34.29, ≈0.917 s. Reconciles to within one
+  frame at each edge.
+- **Capsule 496 → ~138 px.** Report says 498 → 140. Within 2 px (border-vs-edge).
+- **Shipped `pending_ellipsis_post_score_button.png` md5 `af1927b3bf9bf2124af5bd2059f7e421`
+  = my own consecutive-decode frame f_01018 (t=33.612 s), which sits squarely inside the
+  pending window.** Both halves of the md5-identity claim hold: it is a genuine extract AND it is
+  inside the window. (Minor: the report tags it t=33.579; my decode puts the md5-match at 33.612,
+  a one-frame label difference from a different decode start — immaterial.)
+- Visually confirmed: f_01006 shows the full-width gold "POST SCORE"; f_01018 and f_01030 show the
+  collapsed "…" square. The prior "<5 frames / no ellipsis" claim is contradicted by the file it
+  cited. **The retraction is honest and complete**; it names both compounding errors
+  (caption-timestamp `RECORDER_LEAD` offset + a sample box that landed on BACK TO HOME) and logs to
+  `review_misses.log`. A7 blocker: **GONE.**
+
+## Every other gate re-run by me this pass (not read from the report)
+
+- **A1** — `gps_polish_invariants.json`: `"transitions": 10, "fail": 0`; every record carries
+  `"fails": []`, `ranToCompletion: true`, `blocksRaycastsRestored: true`, `seamWorstCover: 1`. PASS.
+- **A2** — I recomputed md5 on all 7 parity pairs: **7/7 byte-identical**, and the 7 hashes are
+  distinct (not one image copied). Motion leaves zero residue at rest — which also **empirically
+  proves the placeholders are down at rest** (if any were stranded active, its anim capture would
+  differ from instant). PASS.
+- **A6** — I RE-RAN `UIFidelityLinter.LintPrefab` myself over the changed prefabs (not the cited
+  JSON): GpsHubScreen 0F/0W, ScoreUploadScreen 8F/25W, GpsBadgesScreen 1F/27W, GpsGiftScreen 0F/1W,
+  GpsVoteScreen 0F/14W, **ShimmerBlock 0F/0W**. Total 15 pre-existing fails across the 12 GPS
+  prefabs — matches the report row-for-row. Zero new findings after 17 shimmer blocks. PASS.
+- **A12** — I re-ran EditMode `Golfin.UI.Polish.Tests`: **65 passed / 0 failed / 0 skipped**
+  (TotalTests 2319). PASS.
+- **A13** — `Invoke` reflects into the PRODUCTION type `Golfin.UI.Polish.UiMotion` via
+  `Probe.Type(...)`; `BytesPerFrame` steps the real Slide/Fade/Rise/Tween/CountUp coroutines and
+  asserts `≤ 32 B/frame` after a 3-step warmup. Not circular. PASS.
+- **A11** — `git diff 96d64…HEAD -- Assets/Localization Assets/Data` is empty; the 3 added
+  `Get()` calls all reference keys that already exist in the catalog (1 row each). No new
+  player-facing string. PASS.
+- **R1** — `PaintGate` in code: `Cache()` always returns false (never staggers); `Fetch()`
+  staggers only on `first = !_cacheHit && !_spent && count>0`. A cache hit sets `_cacheHit`, so the
+  fetch behind it logs "instant (cache hit)". The per-paint log line is decoration; the gate is
+  this deterministic logic + the passing tests. PASS.
+- **Code scope** — `git diff 609bf768f HEAD -- Assets/` is **empty**; `609bf768f` is `///`
+  comment-only on `GpsPolishBuilder.cs`; FadeController never touched; no haptics/vibrate; every
+  changed prefab is under `Assets/Prefabs/UI/Gps/`; `ShellScene.unity` byte-identical (no `.unity`
+  drift). PASS.
+- **Videos** — all six are 1170×2532, 3.3–12.5 MB (≥50 KB floor), captioned. Frame-scanned (a) and
+  (f): upright, full-res, nav bar with icons intact, captions burned in and unobtrusive. The (b)
+  cold-shimmer clip is a captioned cold→warm walkthrough ("Hub cold: rounds shimmer", "VOTE cold:
+  two card placeholders", "Badges cold: six cells shimmer", "Back to hub WARM: paints from cache,
+  instantly") — strong evidence for A8/R1. PASS.
+- **(f) burn** — `541bcde9-…` with `[PointsService] earn vote_cast: +10 -> RP 6968`; RP numbers
+  reconcile across the pending frame (6,958 pre-earn → 6,968). Real earn. PASS.
+- **Editor** — not playing, not paused, ShellScene not dirty, no auto-run script. Clean.
+
+## Three break-attempts, all failed
+
+1. **Visual.** The one real oddity is the POST SCORE capsule collapsing 496→~138 px (28 % width)
+   mid-tap while pending. Could not turn it into a blocker: it is a deliberate `PendingSpend`
+   affordance, it is **pre-existing** (this task did not introduce it — A7 says the six CTAs are
+   unchanged from iter-1), and it is **explicitly flagged for Cesar** in A7, not hidden. Videos and
+   stills otherwise clean.
+2. **Geometric / numeric.** Re-derived the pending window, capsule widths, parity md5s, lint
+   counts, invariant fail-count and allocation bound. Every number reconciles to primary source;
+   none sits fragilely near a failing threshold.
+3. **Spec-intent.** The redo's job was an honest A7 retraction + a real pending frame; it delivered
+   both. "All six wired CTAs have a capturable pending state" is an inference explicitly labelled
+   as such (2 captured, all 6 share `PendingSpend`), not a fabricated measurement. Placeholders
+   proven down-at-rest by parity byte-identity.
+
+## Surfaced for Cesar (not a blocker)
+
+The POST SCORE pending capsule **collapses from ~496 px to a ~140 px "…" square** while the score
+uploads, whereas the VOTE button holds its width and centres the ellipsis. Inconsistent, and a CTA
+that shrinks to ~28 % mid-tap can read as the button vanishing rather than waiting. It is
+pre-existing `PendingSpend` behaviour, out of this task's scope, and the implementer flagged it for
+your eye. Screenshot: `screenshots/pending_ellipsis_post_score_button.png`.
+
+## Verdict
+
+`ARCHITECT_REVIEW_PASS`. I genuinely tried to break this on all three axes and could not. The A7
+blocker I raised is repaired with a retraction whose every number I reproduced from the clip
+myself, and every other gate passes on independent re-derivation. Advancing to Cesar's approval.
