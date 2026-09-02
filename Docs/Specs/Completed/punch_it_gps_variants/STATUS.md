@@ -1,8 +1,8 @@
-READY_FOR_SELF_REVIEW
+DONE
 
 # STATUS — `punch_it_gps_variants`
 
-**Current:** `READY_FOR_SELF_REVIEW`
+**Current:** `DONE` — approved by Cesar, 2026-09-02
 
 **Spec written:** 2026-08-31 (Architect)
 **Implemented:** 2026-08-31 (Claude Code, main thread — build tooling + a compile-time gate, no UI
@@ -45,3 +45,4 @@ The three previously-blocked items all ran:
 | 2026-08-31 | `SPEC_READY` | Spec authored. |
 | 2026-08-31 | `READY_FOR_SELF_REVIEW` | Implemented. 8 of 11 acceptance items PASS, 1 PARTIAL, 2 BLOCKED on exclusive Editor access. One flake seen and not reproduced: `RealHoleTerrainTests` on Hole_05/13 during a run concurrent with the other session's asset imports — no terrain file is touched by this task. |
 | 2026-09-02 | `READY_FOR_SELF_REVIEW` | Editor freed; the three blocked items completed. **11 of 11 PASS.** Caught a capture trap en route: the GOLFIN menu item writes to `Docs/Diagnostics/_capture/`, not `Assets/Screenshots/`, so the first before/after pair were the SAME file — found by md5-comparing them rather than trusting filenames. |
+| 2026-09-02 | `DONE` | Cesar approved. Folder moved to `Docs/Specs/Completed/`. Implementation shipped in `042df2e9d`, which also repaired main — an earlier parallel commit (`b9c95f97e`) had swept the `ScreenManager` edits in while `GpsGate.cs` was still untracked, leaving `HEAD` referencing a type the repo did not contain. Remaining work is Cesar's device pass: punch it → commit the guard → punch it GPS. |
