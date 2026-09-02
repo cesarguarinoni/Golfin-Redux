@@ -91,6 +91,9 @@ namespace Golfin.Gps.UI
                  "entries non-interactable.")]
         [SerializeField] private Button? _navCameraButton;
 
+        [Tooltip("Hub Profile nav slot — wired outside the inert _navButtons loop (gps_profile_pack).")]
+        [SerializeField] private Button? _navProfileButton;
+
         [Tooltip("The SCREENSHOT action tile — the same destination as the camera button, and the " +
                  "reason the tile row is no longer entirely inert. Must NOT also appear in " +
                  "_tileButtons.")]
@@ -196,6 +199,14 @@ namespace Golfin.Gps.UI
             {
                 _navCameraButton.interactable = true;
                 _navCameraButton.onClick.AddListener(OpenScoreUpload);
+            }
+
+            // gps_profile_pack — Profile nav slot (lifted out of the inert _navButtons loop)
+            if (_navProfileButton != null)
+            {
+                _navProfileButton.interactable = true;
+                _navProfileButton.onClick.AddListener(() =>
+                    GolfinRedux.UI.ScreenManager.Instance?.ShowScreen(GolfinRedux.UI.ScreenId.GpsProfile));
             }
             if (_tileScreenshotButton != null)
             {

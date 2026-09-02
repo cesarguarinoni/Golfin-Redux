@@ -474,6 +474,20 @@ namespace Golfin.Net
         public static string ScoreHistory(int skip = 0, int limit = 20)
             => BaseUrl + "/score/history?skip=" + skip + "&limit=" + limit;
 
+        /// <summary>
+        /// GET → <c>{data: &lt;stats row&gt;}</c> — caller's aggregate score stats (handicap,
+        /// rounds played, birdies, pars, bogeys, etc.). AUTH REQUIRED, same posture as
+        /// <see cref="UserDetail"/>. Read by the GPS Profile screen (gps_profile_pack §5.1).
+        /// </summary>
+        public static string ScoreStats => BaseUrl + "/score/stats";
+
+        /// <summary>
+        /// GET → <c>{data: &lt;progress array&gt;}</c> — caller's badge progress (all badge
+        /// definitions + per-badge earned state / count). AUTH REQUIRED. Read by the GPS Badges
+        /// screen (gps_profile_pack §5.3).
+        /// </summary>
+        public static string BadgesProgress => BaseUrl + "/badges/progress";
+
         /// <summary>Restore the shipping host (used by tests that retarget <see cref="RootUrl"/>).</summary>
         public static void ResetToDefault() => RootUrl = DefaultRootUrl;
 

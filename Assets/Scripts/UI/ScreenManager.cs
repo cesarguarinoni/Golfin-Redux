@@ -38,6 +38,10 @@ namespace GolfinRedux.UI
         // score_upload_flow — Figma 14022:32576…14024:101792. ONE screen, six step roots toggled by
         // ScoreUploadFlowController; reached from the hub's camera centre button and SCREENSHOT tile.
         ScoreUpload,
+        // gps_profile_pack — three GPS sub-screens
+        GpsProfile,
+        GpsAvatar,
+        GpsBadges,
         // Settings removed - it's an overlay, not a screen
 
         // Order: login_signup_screens — account auth gate (Phase 1 — UI only, no backend)
@@ -94,6 +98,9 @@ namespace GolfinRedux.UI
         // score_upload_flow — the six-step score upload. Same top-bar-only shape as the hub: it
         // carries the hub's own GPS nav bar inside its prefab, so the shared bottom nav stays hidden.
         [SerializeField] private GameObject _scoreUploadScreen;
+        [SerializeField] private GameObject _gpsProfileScreen;
+        [SerializeField] private GameObject _gpsAvatarScreen;
+        [SerializeField] private GameObject _gpsBadgesScreen;
         // _settingsScreen removed - Settings is an overlay managed by SettingsController, not ScreenManager
 
         // Order: login_signup_screens — account auth gate screens
@@ -200,6 +207,14 @@ namespace GolfinRedux.UI
             if (!DemoGate.IsScreenAllowed(screenId))
             {
                 Debug.Log($"[DemoGate] blocked {screenId}");
+                return;
+            }
+
+            // GPS gate (punch_it_gps_variants): the GPS surface is unreachable in a "punch it"
+            // build (no GOLFIN_GPS). No-op in the Editor and in "punch it GPS" builds.
+            if (!Golfin.Gps.UI.GpsGate.IsScreenAllowed(screenId))
+            {
+                Debug.Log($"[GpsGate] blocked {screenId}");
                 return;
             }
 
@@ -345,6 +360,7 @@ namespace GolfinRedux.UI
 
                 if (candidate == _currentScreen) continue;
                 if (!DemoGate.IsScreenAllowed(candidate)) continue;
+                if (!Golfin.Gps.UI.GpsGate.IsScreenAllowed(candidate)) continue;
                 if (!AuthGate.IsScreenAllowed(candidate)) continue;
 
                 Navigate(candidate, instant, push: false);
@@ -506,6 +522,14 @@ namespace GolfinRedux.UI
             // score_upload_flow — the six-step score upload
             if (_scoreUploadScreen != null)
                 _scoreUploadScreen.SetActive(screenId == ScreenId.ScoreUpload);
+            // gps_profile_pack — three GPS sub-screens
+            if (_gpsProfileScreen != null)
+                _gpsProfileScreen.SetActive(screenId == ScreenId.GpsProfile);
+            if (_gpsAvatarScreen != null)
+                _gpsAvatarScreen.SetActive(screenId == ScreenId.GpsAvatar);
+            if (_gpsBadgesScreen != null)
+                _gpsBadgesScreen.SetActive(screenId == ScreenId.GpsBadges);
+
 
             // Order: login_signup_screens — account auth gate (excluded from showBars)
             if (_loginScreen != null)
@@ -573,7 +597,10 @@ namespace GolfinRedux.UI
             // hidden because the hub draws its own GPS nav bar inside its prefab. Showing both
             // would stack two nav bars at the bottom of one screen.
             // score_upload_flow joins it for the same reason — one group, not two rules.
-            bool isGpsScreen = screenId == ScreenId.GpsHub || screenId == ScreenId.ScoreUpload;
+            // punch_it_gps_variants — the five-way OR moved into GpsGate so the chrome rule and
+            // the reachability deny-list are the same list; a GPS screen added to one is added to
+            // both, and they cannot drift.
+            bool isGpsScreen = Golfin.Gps.UI.GpsGate.IsGpsScreen(screenId);
 
             if (Golfin.UI.PersistentUIManager.Instance != null)
             {

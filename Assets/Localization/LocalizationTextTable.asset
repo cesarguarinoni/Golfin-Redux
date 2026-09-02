@@ -2570,3 +2570,240 @@ MonoBehaviour:
   - key: GPS_HUB_NO_VOTES
     english: No votes yet
     japanese: "\u307E\u3060\u6295\u7968\u306F\u3042\u308A\u307E\u305B\u3093"
+  - key: GPS_PROFILE_TITLE
+    english: PROFILE
+    japanese: "\u30D7\u30ED\u30D5\u30A3\u30FC\u30EB"
+  - key: GPS_AVATAR_TITLE
+    english: MY AVATAR
+    japanese: "\u30DE\u30A4\u30A2\u30D0\u30BF\u30FC"
+  - key: GPS_BADGES_TITLE
+    english: BADGES
+    japanese: "\u30D0\u30C3\u30B8"
+  - key: GPS_PROFILE_SUB_FMT
+    english: "HC {0} \xB7 {1} rounds"
+    japanese: "HC {0} \xB7 {1}\u30E9\u30A6\u30F3\u30C9"
+  - key: GPS_PROFILE_STAT_FOLLOWERS
+    english: FOLLOWERS
+    japanese: "\u30D5\u30A9\u30ED\u30EF\u30FC"
+  - key: GPS_PROFILE_STAT_ROUNDS
+    english: ROUNDS
+    japanese: "\u30E9\u30A6\u30F3\u30C9"
+  - key: GPS_PROFILE_STAT_AVATAR
+    english: AVATAR
+    japanese: "\u30A2\u30D0\u30BF\u30FC"
+  - key: GPS_PROFILE_STAT_POINTS
+    english: POINTS
+    japanese: "\u30DD\u30A4\u30F3\u30C8"
+  - key: GPS_PROFILE_TRUST
+    english: "\u2713 TRUST LEVEL"
+    japanese: "\u2713 \u4FE1\u983C\u5EA6"
+  - key: GPS_PROFILE_TRUST_NOTE
+    english: "Verified by GPS \xB7 post scores to increase"
+    japanese: "GPS\u3067\u8A8D\u8A3C\u6E08\u307F \xB7 \u30B9\u30B3\u30A2\u3092\u6295\u7A3F\u3057\u3066\u4FE1\u983C\u5EA6\u30A2\u30C3\u30D7"
+  - key: GPS_PROFILE_BEST
+    english: BEST
+    japanese: "\u30D9\u30B9\u30C8"
+  - key: GPS_PROFILE_AVERAGE
+    english: AVERAGE
+    japanese: "\u5E73\u5747"
+  - key: GPS_PROFILE_AVG_PUTTS
+    english: AVG PUTTS
+    japanese: "\u5E73\u5747\u30D1\u30C3\u30C8\u6570"
+  - key: GPS_PROFILE_GIFTS_IN
+    english: GIFTS RECEIVED
+    japanese: "\u53D7\u3051\u53D6\u3063\u305F\u30AE\u30D5\u30C8"
+  - key: GPS_PROFILE_GIFTS_OUT
+    english: GIFTS SENT
+    japanese: "\u9001\u3063\u305F\u30AE\u30D5\u30C8"
+  - key: GPS_PROFILE_SHORTCUT_BADGES
+    english: BADGES
+    japanese: "\u30D0\u30C3\u30B8"
+  - key: GPS_PROFILE_SHORTCUT_SHOP
+    english: GIFT SHOP
+    japanese: "\u30AE\u30D5\u30C8\u30B7\u30E7\u30C3\u30D7"
+  - key: GPS_PROFILE_SHORTCUT_AVATAR
+    english: MY AVATAR
+    japanese: "\u30DE\u30A4\u30A2\u30D0\u30BF\u30FC"
+  - key: GPS_PROFILE_SHOP_SUB
+    english: Browse & send gifts
+    japanese: "\u30AE\u30D5\u30C8\u3092\u898B\u3066\u9001\u308B"
+  - key: GPS_PROFILE_BADGES_SUB_FMT
+    english: '{0} / {1} earned'
+    japanese: "{0} / {1} \u7372\u5F97\u6E08\u307F"
+  - key: GPS_PROFILE_AVATAR_SUB_FMT
+    english: "Lv.{0} \xB7 {1}/{2} XP"
+    japanese: "Lv.{0} \xB7 {1}/{2} XP"
+  - key: GPS_PROFILE_RECENT
+    english: MY RECENT ROUNDS
+    japanese: "\u6700\u8FD1\u306E\u30E9\u30A6\u30F3\u30C9"
+  - key: GPS_PROFILE_EDIT
+    english: EDIT PROFILE
+    japanese: "\u30D7\u30ED\u30D5\u30A3\u30FC\u30EB\u7DE8\u96C6"
+  - key: GPS_AVATAR_SLOT_CAP
+    english: CAP
+    japanese: "\u30AD\u30E3\u30C3\u30D7"
+  - key: GPS_AVATAR_SLOT_SHIRT
+    english: SHIRT
+    japanese: "\u30B7\u30E3\u30C4"
+  - key: GPS_AVATAR_SLOT_GLOVE
+    english: GLOVE
+    japanese: "\u30B0\u30ED\u30FC\u30D6"
+  - key: GPS_AVATAR_SLOT_SHOES
+    english: SHOES
+    japanese: "\u30B7\u30E5\u30FC\u30BA"
+  - key: GPS_AVATAR_SLOT_CLUB
+    english: CLUB
+    japanese: "\u30AF\u30E9\u30D6"
+  - key: GPS_AVATAR_RANK_BEGINNER
+    english: BEGINNER
+    japanese: "\u30D3\u30AE\u30CA\u30FC"
+  - key: GPS_AVATAR_RANK_ROOKIE
+    english: ROOKIE
+    japanese: "\u30EB\u30FC\u30AD\u30FC"
+  - key: GPS_AVATAR_RANK_AMATEUR
+    english: AMATEUR
+    japanese: "\u30A2\u30DE\u30C1\u30E5\u30A2"
+  - key: GPS_AVATAR_RANK_SINGLE
+    english: SINGLE
+    japanese: "\u30B7\u30F3\u30B0\u30EB"
+  - key: GPS_AVATAR_RANK_PRO
+    english: PRO
+    japanese: "\u30D7\u30ED"
+  - key: GPS_AVATAR_LEVEL_FMT
+    english: Lv.{0}
+    japanese: Lv.{0}
+  - key: GPS_AVATAR_NEXT_FMT
+    english: Lv.{0}
+    japanese: Lv.{0}
+  - key: GPS_AVATAR_XP_HINT_FMT
+    english: '{0} more rounds (est.)'
+    japanese: "\u3042\u3068{0}\u30E9\u30A6\u30F3\u30C9\uFF08\u76EE\u5B89\uFF09"
+  - key: GPS_AVATAR_XP_FMT
+    english: '{0} / {1} XP'
+    japanese: '{0} / {1} XP'
+  - key: GPS_AVATAR_XP_CTA
+    english: Keep posting scores to level up!
+    japanese: "\u30B9\u30B3\u30A2\u3092\u6295\u7A3F\u3057\u3066\u30EC\u30D9\u30EB\u30A2\u30C3\u30D7\uFF01"
+  - key: GPS_AVATAR_EVOLUTION
+    english: AVATAR EVOLUTION
+    japanese: "\u9032\u5316"
+  - key: GPS_AVATAR_STATUS
+    english: STATUS
+    japanese: "\u30AD\u30E3\u30E9\u30AF\u30BF\u30FC \u30B9\u30C6\u30FC\u30BF\u30B9"
+  - key: GPS_AVATAR_STATUS_NOTE
+    english: Your selected GOLFIN character stats
+    japanese: "\u9078\u629E\u4E2D\u306EGOLFIN\u30AD\u30E3\u30E9\u30AF\u30BF\u30FC\u306E\u30B9\u30C6\u30FC\u30BF\u30B9"
+  - key: GPS_BADGES_COLLECTION
+    english: BADGE COLLECTION
+    japanese: "\u30D0\u30C3\u30B8\u30B3\u30EC\u30AF\u30B7\u30E7\u30F3"
+  - key: GPS_BADGES_EARNED_FMT
+    english: '{0} / {1} badges earned'
+    japanese: "{0} / {1} \u30D0\u30C3\u30B8\u7372\u5F97\u6E08\u307F"
+  - key: GPS_BADGES_SEC_GOLF
+    english: GOLF
+    japanese: "\u30B4\u30EB\u30D5"
+  - key: GPS_BADGES_SEC_SOCIAL
+    english: SOCIAL
+    japanese: "\u30BD\u30FC\u30B7\u30E3\u30EB"
+  - key: GPS_BADGES_SEC_TRUST
+    english: TRUST
+    japanese: "\u4FE1\u983C\u5EA6"
+  - key: GPS_BADGES_SEC_SPECIAL
+    english: SPECIAL
+    japanese: "\u30B9\u30DA\u30B7\u30E3\u30EB"
+  - key: GPS_BADGES_RARITY_COMMON
+    english: COMMON
+    japanese: "\u30B3\u30E2\u30F3"
+  - key: GPS_BADGES_RARITY_RARE
+    english: RARE
+    japanese: "\u30EC\u30A2"
+  - key: GPS_BADGES_RARITY_EPIC
+    english: EPIC
+    japanese: "\u30A8\u30D4\u30C3\u30AF"
+  - key: GPS_BADGES_RARITY_LEGEND
+    english: LEGEND
+    japanese: "\u30EC\u30B8\u30A7\u30F3\u30C9"
+  - key: BADGE_first_round_NAME
+    english: First Round
+    japanese: "\u521D\u30E9\u30A6\u30F3\u30C9"
+  - key: BADGE_break_110_NAME
+    english: Break 110
+    japanese: "110\u5207\u308A"
+  - key: BADGE_break_100_NAME
+    english: Break 100
+    japanese: "100\u5207\u308A"
+  - key: BADGE_break_90_NAME
+    english: Break 90
+    japanese: "90\u5207\u308A"
+  - key: BADGE_break_80_NAME
+    english: Break 80
+    japanese: "80\u5207\u308A"
+  - key: BADGE_streak_5_NAME
+    english: 5 in a Row
+    japanese: "5\u9023\u7D9A"
+  - key: BADGE_streak_10_NAME
+    english: 10 in a Row
+    japanese: "10\u9023\u7D9A"
+  - key: BADGE_courses_10_NAME
+    english: 10 Courses
+    japanese: "10\u30B3\u30FC\u30B9"
+  - key: BADGE_first_gift_recv_NAME
+    english: First Gift In
+    japanese: "\u521D\u30AE\u30D5\u30C8\u53D7\u53D6"
+  - key: BADGE_first_gift_send_NAME
+    english: First Gift Out
+    japanese: "\u521D\u30AE\u30D5\u30C8\u9001\u4FE1"
+  - key: BADGE_gifts_100_NAME
+    english: 100 Gifts In
+    japanese: "\u30AE\u30D5\u30C8100\u53D7\u53D6"
+  - key: BADGE_followers_100_NAME
+    english: 100 Followers
+    japanese: "\u30D5\u30A9\u30ED\u30EF\u30FC100"
+  - key: BADGE_followers_1000_NAME
+    english: 1K Followers
+    japanese: "\u30D5\u30A9\u30ED\u30EF\u30FC1000"
+  - key: BADGE_followers_10000_NAME
+    english: 10K Followers
+    japanese: "\u30D5\u30A9\u30ED\u30EF\u30FC10000"
+  - key: BADGE_first_vote_NAME
+    english: First Vote
+    japanese: "\u521D\u6295\u7968"
+  - key: BADGE_vote_hits_10_NAME
+    english: 10 Vote Hits
+    japanese: "\u6295\u796810\u30D2\u30C3\u30C8"
+  - key: BADGE_first_gps_NAME
+    english: First GPS Proof
+    japanese: "\u521DGPS\u8A3C\u660E"
+  - key: BADGE_trust_80_NAME
+    english: Trust 80%
+    japanese: "\u4FE1\u983C\u5EA680%"
+  - key: BADGE_trust_100_NAME
+    english: Trust 100%
+    japanese: "\u4FE1\u983C\u5EA6100%"
+  - key: BADGE_social_verify_5_NAME
+    english: 5 Friend Confirms
+    japanese: "5\u4EBA\u78BA\u8A8D"
+  - key: BADGE_monthly_mvp_NAME
+    english: Monthly MVP
+    japanese: "\u6708\u9593MVP"
+  - key: BADGE_tournament_win_NAME
+    english: Tournament Win
+    japanese: "\u30C8\u30FC\u30CA\u30E1\u30F3\u30C8\u512A\u52DD"
+  - key: BADGE_gift_king_NAME
+    english: Gift Top 10
+    japanese: "\u30AE\u30D5\u30C8TOP10"
+  - key: BADGE_all_badges_NAME
+    english: All Badges
+    japanese: "\u5168\u30D0\u30C3\u30B8"
+  - key: GPS_AVATAR_UNLOCKS_FMT
+    english: UNLOCKS AT Lv.{0}
+    japanese: "Lv.{0}\u3067\u89E3\u653E"
+  - key: GPS_AVATAR_UNLOCK_CAP
+    english: CAMO CAP
+    japanese: "\u30AB\u30E2\u30AD\u30E3\u30C3\u30D7"
+  - key: GPS_AVATAR_UNLOCK_AURA
+    english: GOLD AURA
+    japanese: "\u30B4\u30FC\u30EB\u30C9\u30AA\u30FC\u30E9"
+  - key: GPS_AVATAR_UNLOCK_FX
+    english: FLAME FX
+    japanese: "\u30D5\u30EC\u30A4\u30E0FX"

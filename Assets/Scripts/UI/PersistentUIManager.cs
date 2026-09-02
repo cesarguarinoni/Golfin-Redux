@@ -537,6 +537,10 @@ namespace Golfin.UI
                 // score_upload_flow — the Posted step (6/6) overrides this to SCORE_POSTED_TITLE
                 // through the existing transient SetUsername path, and restores it on the way out.
                 case GolfinRedux.UI.ScreenId.ScoreUpload:              return "SCORE_UPLOAD_TITLE";
+                // gps_profile_pack
+                case GolfinRedux.UI.ScreenId.GpsProfile:               return "GPS_PROFILE_TITLE";
+                case GolfinRedux.UI.ScreenId.GpsAvatar:                return "GPS_AVATAR_TITLE";
+                case GolfinRedux.UI.ScreenId.GpsBadges:                return "GPS_BADGES_TITLE";
                 default:                                               return null;
             }
         }
