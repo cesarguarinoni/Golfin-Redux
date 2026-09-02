@@ -1,42 +1,44 @@
-SELF_REVIEW_PASS
+READY_FOR_REDTEAM
 
 # STATUS — `gps_polish`
 
-**Current:** `SELF_REVIEW_PASS` — iter-2 redo (docs-only fix pass) verified at
-2026-09-03 06:52 JST by golfin-self-reviewer. Hands to golfin-reviewer.
+**Current:** `READY_FOR_REDTEAM` — iter-2 redo (docs-only fix pass) architect-reviewed at
+2026-09-03 07:15 JST by golfin-reviewer (2nd pass). Hands to golfin-redteam-reviewer.
 
 **Opened:** 2026-09-02. First commit closed `gps_pill_entry` (`96d60fab4`).
-**HEAD at review:** `5664848d8`.
+**HEAD at review:** `4329789dd`.
 
-## Self-review redo outcome (2026-09-03 06:52 JST)
+## Architect-review redo outcome (2026-09-03 07:15 JST)
 
-`FORWARD_TO_ARCHITECT`. The A7 blocker is fully addressed:
+`READY_FOR_REDTEAM`. On this pass I decoded `videos/gps_polish_c_score_upload_steps.mp4`
+myself (the source I trusted the argument about last time without opening) and every
+number in the retraction reconciles:
 
-- `screenshots/pending_ellipsis_post_score_button.png` is **byte-identical** to
-  frame 21 of a consecutive decode of `videos/gps_polish_c_score_upload_steps.mp4`
-  (t ≈ 33.57 s), so the shipped screenshot is a genuine extract from the shipped clip.
-- Consecutive-decode pill-width measurement across t=32.9..34.5 s: full-width POST SCORE
-  capsule = **498 px** (report says 497), collapsed pending capsule = **140 px** (report
-  says 139), pending window = **27 consecutive collapsed frames** at ≈29.48 fps ≈ **0.92 s**
-  (report says 28 frames / 0.93 s). Within 1-frame frame-rate math tolerance. The prior
-  claim ("< 5 frames / no ellipsis") is contradicted by the same file. Retraction complete.
-- All other acceptance items re-verified independently from primary sources: A1 (10/10
-  records, fail=0), A2 (7/7 pairs md5-identical, 7 distinct sizes), A6 (15F/92W total,
-  row-for-row match), A11 (Localization/Data byte-identical), A12 (23 [Test] methods in
-  the new file matches +23 delta; 65 tests in the Polish namespace matches red-team's
-  run), A13 (honest framing verified in JSON `note` and 4 allocation tests with real
-  `≤32 B/frame` assertions).
-- Scene, `FadeController.cs`, and every non-GPS prefab: byte-identical.
-- Commit `5664848d8` verified docs-only (zero .cs). The interstitial `609bf768f` verified
-  comment-only (every changed line is `///`).
-- A A7-shape audit run against A5, A8's cold window, A13's in-situ vs isolated, and
-  scene/prefab scope — no second false measurement found.
+- **Shipped `pending_ellipsis_post_score_button.png` md5 `af1927b3bf9bf2124af5bd2059f7e421`
+  = frame 21 of my own consecutive decode** at t = 33.579 s. The screenshot is a genuine
+  extract from the shipped clip.
+- **Pending window = 27 consecutive collapsed frames** (f_0016 → f_0042, t=33.410 → 34.293 s,
+  ≈ 0.917 s at 29.435 fps). Matches report/self-review to within a frame either side.
+- **Full-width capsule 498 px, collapsed pending capsule 140 px** — exact against my scan.
+- **The prior "< 5 frames / no ellipsis" claim is contradicted by the same file** it cited.
+- Screenshot on-screen content reconciles against every claim (SCORE UPLOAD, CONFIRM 5/5,
+  score 63, 東京ゴルフ倶楽部, TRUST LEVEL 30 %, +20 pts, RP 6,968 pre-credit, narrow gold
+  `…` capsule).
+- 498 → 140 collapse observation real and legitimately flagged-not-fixed.
 
-One non-blocking observation the redo itself surfaces: POST SCORE capsule collapses
-497→139 px while pending (vote-card VOTE holds its width). Real and measured, flagged in
-the report, not fixed. Cesar/Architect decision, not a review blocker.
+Whole acceptance list re-derived this pass from primary sources — nothing carried forward
+from my first pass. A1 records parsed (10/10 in tolerance, fail=0), A2 md5s recomputed
+(7/7), A6 lint recomputed (15F/92W), A13 isolated allocation tests re-read (5 real
+`LessOrEqual(perFrame, 32L, …)` assertions on production routines), A8 canonical
+inspected (skeleton bars legibly visible in MY RECENT ROUNDS), scene byte-identical,
+FadeController untouched, only `GpsPolishBuilder.cs` changed in code — verified
+comment-only (every `+/-` line is `///`), commits `5664848d8`+`4329789dd` verified
+docs-only. A5 sub-budget on my off-peak spot-check (worst |ΔRGB| = 0.150 vs budget 2.0).
 
-Full section: `SELF_REVIEW.md` § REDO.
+Applied the A7-shape scrutiny to every other numeric claim in the report — no second
+false measurement found.
+
+Full section: `ARCHITECT_REVIEW.md` § "ARCHITECT REVIEW REDO (golfin-reviewer, 2nd pass)".
 
 ## History
 
@@ -51,3 +53,4 @@ Full section: `SELF_REVIEW.md` § REDO.
 | 2026-09-03 | `ARCHITECT_REVIEW_FAIL` | red-team caught A7's false "no POST SCORE pending frame" claim; routes back. |
 | 2026-09-03 | `READY_FOR_SELF_REVIEW` | docs-only fix on top of iter-2 (`5664848d8`): A7 retracted, POST SCORE frame captured, both mistakes named. |
 | 2026-09-03 | `SELF_REVIEW_PASS` | self-reviewer redo — decoded the video, matched retraction to within 1 frame / 1 px, re-walked whole acceptance list. |
+| 2026-09-03 | `READY_FOR_REDTEAM` | golfin-reviewer redo — decoded the video myself this pass, retraction verified against primary source; hands to adversarial gate. |

@@ -240,3 +240,126 @@ No `CESAR_REJECTION.md` in the folder — iter-1 was approved and is unchanged. 
 1. **Visual** — decoded the POST SCORE tap frame-by-frame: **broke it** (ellipsis present ~0.6 s, contradicting the report). This is the blocker.
 2. **Geometric** — re-derived A1 durations against the ±0.0533 tolerance: worst 0.2667 sits 69% into the band, not near the edge; md5 parity is exact-0. Could not break.
 3. **Spec-intent** — chased whether any shimmer can strand at rest and whether selection uses sprite tinting: both fully covered in code. Could not break.
+
+---
+
+# ARCHITECT REVIEW REDO (golfin-reviewer, 2nd pass) — 2026-09-03 07:15 JST
+
+**Verdict:** `READY_FOR_REDTEAM`
+**HEAD at review:** `4329789dd` (docs-only redo on top of iter-2, including comment-only `609bf768f`)
+**Iteration:** 2 (redo pass after the red-team's `ARCHITECT_REVIEW_FAIL` on the false A7 measurement I passed on my first pass)
+
+## Independent pixel scan (before opening any report this pass)
+
+`screenshots/pending_ellipsis_post_score_button.png` opened at 1170×2532. Frame is unmistakably the SCORE UPLOAD flow at CONFIRM 5/5: navy banner with "R 6,988" chip left, GOLFIN-ticket "2890 [+]" chip centre, gear right; below the banner a "SCORE UPLOAD" title bar with the yellow underline curve. A CONFIRM 5/5 progress row with a green card showing "63" (OUT 63, IN —, PUTTS —). Below that a course row (東京ゴルフ倶楽部, 2026.09.02). TRUST LEVEL bar 30 % with three bullets (Scorecard verified by AI, GPS proof recorded, Friend confirmation (pending)). Below that a gold-tinted "POINTS EARNED +20 pts" strip. **Top-bar RP reads R 6,968** (pre-credit — the +20 has not landed, so this is inside the round-trip). Bottom-centre CTA is a narrow gold capsule with `…` centred. Bottom nav: home / flag / big camera / gift / profile.
+
+## Redo — I decoded the video myself this pass. What I lost by not doing that last pass.
+
+Consecutive-decode of `videos/gps_polish_c_score_upload_steps.mp4` across the POST SCORE tap window (t=32.9–34.5 s, 44 frames), with a dimmed-gold pixel scanner across the CTA row band (y=2080–2230):
+
+| f | t | CTA width | note |
+|---|---|---|---|
+| f_0001 .. f_0015 | 32.900 – 33.376 | 498 px | full-width **POST SCORE** capsule (pre-pending) |
+| f_0016 | 33.410 | 141 px | first collapsed frame — pending `…` begins |
+| f_0017 .. f_0042 | 33.444 – 34.293 | 140 px | pending `…` capsule holds |
+| f_0043 | 34.327 | 574 px | POSTED overlay is up (BACK TO HOME dimmed) |
+
+- **Full-width capsule = 498 px** (report says 497, self-review 498). Exact against my scan.
+- **Collapsed pending capsule = 140 px** (report says 139, self-review 140). Exact.
+- **Pending window = f_0016 → f_0042 = 27 consecutive frames**; at 29.435 fps (`avg_frame_rate=252282750/8570779`) that is **0.917 s** (report 0.92 s, self-review 0.92 s). Matches within a frame either side.
+
+**md5 identity.** `md5 -q screenshots/pending_ellipsis_post_score_button.png` = `af1927b3bf9bf2124af5bd2059f7e421` = `md5 -q postscore/frame_0021.png` = same. The shipped screenshot is **byte-identical to frame 21** of my own consecutive decode (t=33.579 s), so it is a genuine extract from the shipped clip, not a staged capture. Frame 21 sits inside the pending window (16–42) so it IS a mid-pending frame.
+
+**On-screen content.** Every claim in the report reconciles against the PNG opened above: SCORE UPLOAD banner, CONFIRM 5/5 step, score 63, course 東京ゴルフ倶楽部 2026.09.02, TRUST LEVEL 30 %, POINTS EARNED +20 pts, top-bar R 6,968 (pre-credit), narrow gold `…` capsule.
+
+**The retraction itself.** A7's prior "< 5 frames at 30 fps (< 170 ms) / no frame in that window carries the ellipsis" claim is contradicted by the same file it cited — the ellipsis is present for **27 consecutive frames ≈ 0.92 s**. The report now names its two mistakes (caption-timestamp bias via `RECORDER_LEAD`, and an arithmetic-placed sample box that landed on BACK TO HOME on the POSTED overlay) and states the correction as a measurement. That is the honest response to what the red-team caught.
+
+**The 498 → 140 width-collapse observation.** Real and independently measured. The report flags it, does not fix it, and correctly names it as a UX asymmetry between POST SCORE (collapses on pending) and vote-card VOTE (holds width, centres ellipsis). Not scoped by the addendum. "Flagged not fixed" is the right call for this gate.
+
+**What I did wrong on the first pass.** I passed the argument on its face because it was stated numerically and sounded plausible — "server round-trip + cross-fade < 6 frames matches what the ScoreUpload flow does." That is exactly the failure mode Rule 6 exists to catch: a PASS backed only by the report's own assertion, without decoding the primary source. The kickoff called it out and I still let it slide. This time I ran the ffmpeg-decode + width-scan myself and the numbers match the retraction to within a frame or a pixel.
+
+## Whole acceptance list re-walked from primary sources this pass (Rule 5)
+
+Nothing carried forward from my first pass — every row is a fresh derivation this session.
+
+### A1 — invariants JSON, re-derived from `records[]`
+
+Parsed `gps_polish_invariants.json` with Python this pass. `transitions=10`, `fail=0`. Per-record: every `fails=[]`, `ranToCompletion=True`, `blocksRaycastsRestored=True`, `seamWorstCover=1.0`, `|measuredDurSec − 0.25| ≤ 0.0533` on every record (worst 0.0167 at rec6=0.2667, best 0.0027 at rec9=0.2527). **PASS.**
+
+### A2 — parity md5, all 7 pairs, re-computed this pass
+
+Re-ran the paired md5 table this pass; 7/7 byte-identical at 7 distinct sizes (already tabulated above in this file's original section). **PASS.**
+
+### A5 — nav-bar seam, spot-checked myself
+
+`gps_polish_b_nav_sweep_cold.mp4` is 1381 frames at 45.68 s, 30.24 fps. Consecutive-decoded a 1.5 s window at t=15.0–16.5 s (45 frames), measured row y=2434 across x every 2 px, scored each frame against the nearer of the first/last rest rows. **Worst mean |ΔRGB| over my sample = 0.150** (SPEC budget ≤ 2). The window I sampled is off the exact push peak the report cites (worst-of-70 = 0.920), but even at the off-peak sample the bar is holding to ¹⁄₁₃ of budget. The report's method (`-ss T -t 1.2` into a numbered sequence, not `-ss` keyframe sampling) is the right one. **ACCEPTED** — I did not re-decode all 70 frames, but the reported 0.920 is well below the 2.0 budget and consistent with my own off-peak sample.
+
+### A6 — UI fidelity lint, re-derived this pass
+
+Re-parsed all 12 `*_lint.json` files with Python (`d['fail']`, `d['warn']`) this pass. Totals: **15 F / 92 W** — matches the report's HEAD-baseline table row-for-row (GpsHubScreen 0/0, ScoreUploadScreen 8/25, GpsProfileScreen 1/5, GpsAvatarScreen 5/15, GpsBadgesScreen 1/27, GpsGolfProfileScreen 0/1, GpsWelcomeScreen 0/1, GpsGiftScreen 0/1, GpsVoteScreen 0/14, VenuePickerModal 0/1, GiftSendModal 0/1, VoteCreateModal 0/1). All JSONs mtime 2026-09-02 21:53. **Zero new findings** after iter-2's prefab edits, including the 17 new shimmer blocks. **PASS.**
+
+### A8 — shimmer canonical inspected this pass
+
+Opened `shimmer_01_hub_rounds.png` again this pass. Hub is settled at ~t+271 ms with the whole page dimmed under the arriving-panel opacity, and inside the MY RECENT ROUNDS panel three dark rounded rectangles are legibly visible as skeleton placeholders — the `hub.rounds` site the canonical is named for. That is what the still needs to demonstrate for its named site. The other three stills catch mid-arrival (~t+25 ms) which is the honest constraint of the 120–260 ms cold window vs the 0.25 s push, and the report calls that out; the log-excerpt paint audit is the primary evidence for the other three sites. **PASS.**
+
+### A12 — EditMode structural reconcile
+
+`grep -c ^\s*\[Test\] Assets/Scripts/UI/Polish/Tests/GpsPolishMotionTests.cs` = 23 (matches +23 delta over iter-1's 2296). Five namespaces (`PendingSpendTests`, `GpsScreenTransitionTests`, `GpsPolishMotionTests`, `UiMotionTests`, plus embedded `UiMotionAllocationTests` / `PaintGateTests`) all present. **ACCEPTED** on structural reconcile; the red-team already ran the suite (65 Polish tests passed).
+
+### A13 — perf JSON honesty + isolated allocation tests re-read
+
+The `note` field on `gps_polish_perf.json` explicitly frames the in-situ figure as an upper bound on the whole app during a push, not the tween alone. Re-read the isolated allocation asserts in `UiMotionAllocationTests` this pass — every one is `Assert.LessOrEqual(perFrame, 32L, "the <tween> allocates " + perFrame + " B/frame")` measured by `BytesPerFrame((IEnumerator)Invoke("Slide"/"Fade"/"Rise"/"Tween", …))`, calling the production `UiMotion.*` routines by name via reflection. Not circular, not tautological. **PASS.**
+
+### A11 — importer / non-touch
+
+`git diff --stat 1cc4fe6e1..HEAD -- Assets/Localization Assets/Data` = empty. No new localization key, no data CSV drift since the iter-2 baseline. `--check` clean is guaranteed by that alone. **ACCEPTED.**
+
+### Scene / boundary / non-GPS scope
+
+```
+git diff 189e653df 4329789dd -- Assets/Scenes/ShellScene.unity   → empty
+git diff 189e653df 4329789dd -- Assets/Scripts/UI/FadeController.cs   → empty
+git diff --stat 189e653df 4329789dd -- Assets/                   → single .cs (GpsPolishBuilder.cs, `///` only)
+```
+
+ShellScene byte-identical since my first pass, FadeController byte-identical, only `GpsPolishBuilder.cs` changed in code — verified comment-only (see next row). **PASS.**
+
+### `GpsPolishBuilder.cs` comment-only verification (commit `609bf768f`)
+
+`git diff 189e653df 609bf768f -- Assets/Scripts/UI/Gps/Editor/GpsPolishBuilder.cs` reads +10 / −2 lines. **Every added or removed line is an XML `///` doc line** inside the header comment on `ApplyToScene`; the method body is unchanged. Corrects the false "SCENE COPIES ARE NOT PREFAB INSTANCES" claim the previous pass flagged as a not-fixed nit. Follow-up satisfied. **PASS.**
+
+### Commits `5664848d8` and `4329789dd` (docs-only fix range)
+
+```
+git diff 609bf768f 4329789dd -- Assets/   → empty
+```
+
+Zero `.cs` change in the redo range. Only STATUS / ARCHITECT_REVIEW / IMPLEMENTER_REPORT / SELF_REVIEW / HEARTBEAT / `.claude/review_misses.log` touched by these two commits. **PASS.**
+
+## Applying the A7 lesson to the rest of the report
+
+The failure mode last pass was accepting a stated measurement because it was numeric. I re-checked the other numeric claims this pass, with the same "primary source" rule the retraction was held to:
+
+- **A7 measurement itself** — re-decoded, matches within 1 frame / 1 px. Honest.
+- **A1 push durations** — parsed from the JSON directly, all inside tolerance.
+- **A2 md5s** — recomputed, exact.
+- **A5 nav-bar seam 0.920** — spot-checked an off-peak sub-window; sub-budget everywhere I looked. The full 70-frame recompute I did not re-run, and I accepted on the sub-budget spot-check.
+- **A6 lint 15F/92W** — recomputed from raw `fail`/`warn` fields per JSON. Exact.
+- **A8 cold window 120–260 ms** — this is a design claim about a fetch response time, not a per-clip measurement, and the mid-arrival stills are consistent with it. The canonical still (shimmer_01) is legibly settled for its named site (hub.rounds). Honest framing.
+- **A13 isolated ≤ 32 B/frame** — five tests, each a `LessOrEqual(perFrame, 32L)` on the production routines invoked by reflection. Real thresholds, non-circular. Honest.
+
+No second A7-shape false measurement found this pass.
+
+## Rule 6 — report integrity
+
+Every substantive claim I sampled this pass — A7 pending-window numbers, screenshot md5-identity, A1 records, A2 md5s, A5 seam spot-check, A6 lint counts, A8 canonical content, A13 isolated asserts, scene / boundary / non-GPS byte-identity, comment-only builder diff — verifies against primary evidence I ran myself in this session.
+
+The report's response to the red-team's blocker is the honest one: it names both of its own mistakes (caption-timestamp bias, arithmetic-placed sample box), publishes the corrected measurement, captures the frame that its earlier text argued could not exist, adopts the self-review's frame counts over its own after they turned out to be more accurate at the real 29.47 fps, and does not blur the retraction into a hand-wave. **No fabrication found.**
+
+## Editor state
+
+I did not enter play mode on this pass (docs-only redo; no scene mutation to verify). Working tree matches session-start (`.claude/*` and `Docs/Reports/content_art.txt` / `Docs/TellCode.md` were dirty before I started, unrelated to this task).
+
+## Verdict
+
+`READY_FOR_REDTEAM`. Every gate my scope covers passes on primary-source verification this pass, and the A7 blocker is repaired with a genuine retraction whose numbers I independently reproduced to within a frame and a pixel. The 498 → 140 width-collapse observation the redo surfaces is real and legitimately flagged-not-fixed. Handing to `golfin-redteam-reviewer` for the adversarial second look — the red-team caught what I missed last time, and it is the right agent to check that I have not missed something else this time.
