@@ -4,59 +4,58 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
-## 🔨 IN FLIGHT — `gps_polish` · the GPS surface moves like the rest of the game
-
-**Iteration 1 shipped the layered push (`a7902da27`, approved by Cesar); iteration 2 finished the
-polish tail and the folder is now `READY_FOR_SELF_REVIEW`.**
+## ✅ DONE — `gps_polish` **approved by Cesar** (2026-09-03) · the GPS surface moves like the rest of the game
 
 Inside the GPS surface, screens no longer go through black to move one room sideways: the
 Background / GpsNavBar / BackPill cross-fade in place and only the two `ContentContainer`s slide
 (Forward from +W, Back mirrored, 0.3 parallax on the leaver). Home ↔ GpsHub and every GPS →
 non-GPS boundary keep the game-wide `FadeController` fade, untouched.
 
-One helper does all of it: `Golfin.UI.Polish.UiMotion` — now nine primitives, one copy of every
+One helper does all of it: `Golfin.UI.Polish.UiMotion` — nine primitives, one copy of every
 duration, unscaled time, interruption-safe, and settled on its final value when Unity kills the
 coroutine because the host was disabled (`UiMotionRunner`). The four existing tween loops (Versus,
 Daily pill, Gacha, Toast) are deliberately NOT retrofitted — that is `game_polish`.
 
-**Iteration 2 added the paint-state layer.** Every GPS list now knows which of its three paints it
-is doing — from cache, from a fetch, or a repaint — and one `PaintGate` per site drives both the
-staggered first entrance (§D3) and the cold-fetch placeholder (§D8), so the two can never disagree
-about what "cold" means. Around that: gift panel fades and the vote filter cross-fade (§D4),
-selection bumps as a two-Image alpha swap with no tinting (§D6), six count-ups plus the badge pulse
-and the vote bar animating old→new (§D7), and the iOS keyboard offset (§D9, device-only to observe).
+**The paint-state layer.** Every GPS list knows which of its three paints it is doing — from
+cache, from a fetch, or a repaint — and ONE `PaintGate` per site drives both the staggered first
+entrance and the cold-fetch placeholder, so the two can never disagree about what "cold" means.
+Around that: gift panel fades and the vote filter cross-fade, selection bumps as a two-Image alpha
+swap with no tinting, six count-ups plus the badge pulse and the vote bar animating old→new, and
+the iOS keyboard offset.
 
-**Measured, not asserted.** A1 `fail=0` over 10 pushes (0.2527–0.2667 s vs 0.25, t0 ±1170, seam
-1.000). A2 **0 differing pixels on all seven screens** — and the method changed: these screens
-render live data and relative time, so the comparison is now a within-ONE-RUN pair (animated
-arrival vs the instant fade) rather than two runs an hour apart, which diffed "2h ago" against "3h
-ago" and reported 315k meaningless pixels. A5 seam 0.920. A6 identical prefab-for-prefab, zero new
-lint findings. EditMode 2319 / 2316 passed / 0 failed / 3 pre-existing skips. A13 measured twice —
-the whole app during a push (307 KB/frame, worst 59 ms, Editor + profiler + live server: an upper
-bound) and the tween loops in isolation (≤32 B/frame, which is the number the SPEC actually asks
-for).
+**Gates.** A1 `fail=0` over 10 pushes (0.2527–0.2667 s vs 0.25, t0 ±1170, seam 1.000). A2 **0
+differing px on all seven screens** — as a within-ONE-RUN animated-vs-instant pair, because these
+screens render live data and relative time and captures an hour apart diff "2h ago" against "3h
+ago". A5 seam 0.920. A6 zero new lint findings. EditMode 2319 / 2316 / 0 failed. A13 measured
+twice: the whole app during a push (307 KB/frame, an upper bound) and the tween loops in isolation
+(≤32 B/frame, which is what the SPEC actually asks). Six captioned videos at 1170×2532.
 
-**Two things worth carrying forward.**
+**Three things worth carrying forward.**
 
-*The placeholder found a real defect.* `BadgeService.FetchBadges()` fires its change event only on
-success, and the badges screen called it with no callback — so a failed or empty answer repainted
-nothing. Invisible while the grid was merely empty; once §D8 put a shimmer over it, the screen had
-a loading state it could never leave. Fixed, pinned by a test, and the shape audited across all
-five fetch sites with a per-site verdict table (the other four were already correct).
+*A placeholder found a real product defect.* `BadgeService.FetchBadges()` fires its change event
+only on success, and the badges screen called it with no callback — so a failed or empty answer
+repainted nothing. Invisible while the grid was merely empty; once a shimmer covered it, the
+screen had a loading state it could never leave. Fixed, pinned by a test, and the shape audited
+across all five fetch sites.
 
-*Iteration 1 was wrong about the scene copies, and the correction matters.* The GPS screens in
-ShellScene **are** prefab instances — the earlier check ran in play mode, where
-`IsPartOfPrefabInstance` is false for every object. So a prefab edit reaches the live scene and
-`GpsPolishBuilder.ApplyToScene` is unnecessary; running it produced 1,296 lines of prefab-override
-churn in `ShellScene.unity`, which was discarded. **ShellScene is byte-identical to HEAD.**
+*Iteration 1 was wrong about the scene copies.* The GPS screens in ShellScene **are** prefab
+instances — the earlier check ran in play mode, where `IsPartOfPrefabInstance` is false for every
+object. A prefab edit reaches the live scene; `GpsPolishBuilder.ApplyToScene` is unnecessary and
+its one run cost 1,296 lines of override churn. Its header comment now says so.
 
-**Needs the device pass:** the keyboard offset (§D9) — the arithmetic is pinned in EditMode, but
-whether `TouchScreenKeyboard.area` reports what iOS says can only be seen on the phone.
+*The red-team caught a false measurement in my own report.* A7 claimed as fact that no POST SCORE
+pending frame existed in the clip it cited. It did — 27 frames, 0.92 s. The cause was arithmetic
+on an assumed constant over an unverified screen region, written up as if it had been observed.
+Retracted in place; logged in `.claude/review_misses.log`. No code was wrong.
+
+**Open, deliberately:** the keyboard offset needs the device pass to be SEEN (the arithmetic is
+pinned in EditMode; whether `TouchScreenKeyboard.area` reports what iOS says is only visible on the
+phone). Two of the four seeded GOLFIN AI votes remain for it.
 
 **Backlog fed by this task:** 208 GPS labels render `Rubik-VariableFont_wght SDF` rather than a
-Medium face (per-prefab table in the report); 15 pre-existing UI-lint FAILs, all
-`9slice-collapse-x` on bars whose width is set at runtime; `ApplyToScene`'s header comment is now
-factually wrong and should be rewritten.
+Medium face; 15 pre-existing UI-lint FAILs, all `9slice-collapse-x` on bars sized at runtime; and
+the POST SCORE pending capsule collapses ~496 → ~140 px where the vote button holds its width —
+flagged by both the implementer and the red-team, out of this task's scope.
 
 ---
 ## ✅ DONE — `gps_pill_entry` **approved by Cesar** (2026-09-02)

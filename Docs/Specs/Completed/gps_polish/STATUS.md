@@ -1,10 +1,13 @@
-ARCHITECT_REVIEW_PASS
+DONE
 
 # STATUS — `gps_polish`
 
-**Current:** `ARCHITECT_REVIEW_PASS` — red-team (2nd pass) re-derived every gate from primary
-sources, decoded the score-upload clip itself, and could not break the repair. 2026-09-03 07:20 JST.
-Hands to Cesar for final approval.
+**Current:** `DONE` — **Cesar approved on 2026-09-03.** Archived to `Docs/Specs/Completed/`.
+
+The full chain: self-review PASS → reviewer PASS → **red-team FAIL** → fix → self-review PASS →
+reviewer PASS → red-team `ARCHITECT_REVIEW_PASS` → Cesar. The one failure was a false measurement
+in the implementer report (A7), not a code defect; it is retracted in place with the two mistakes
+that produced it named, and logged in `.claude/review_misses.log`.
 
 **Opened:** 2026-09-02. First commit closed `gps_pill_entry` (`96d60fab4`).
 **HEAD at review:** `4329789dd`.
