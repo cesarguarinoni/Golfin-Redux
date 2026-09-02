@@ -280,7 +280,7 @@ against what the build actually bundles" — is cheap enough to run in CI.
 ---
 
 
-## 🟡 IN REVIEW — `gps_hub_entry` (2026-09-01) — the GPS front door exists
+## ✅ DONE — `gps_hub_entry` (2026-09-01, extended 2026-09-02) — the GPS front door
 
 **The GPS / PLAYLIFE features have a way in from the game.** The Home promo banner stops opening a
 web URL and instead navigates to a new `ScreenId.GpsHub` — the Figma frame `14011:32819` built as
@@ -316,11 +316,27 @@ hardcoded), EN + JA, published as **`texts` v22**; `export_content.py --check` c
 (Architect + Cesar) and deploying the admin dashboard (Architect). Next GPS spec is
 `gps_checkin_screen` — the first tile to become real.
 
-**Scar worth keeping:** `Assets/Art/HomeScreen/Next Hole Panel.png` (the Figma `Pop-up` panel style,
-now a palette atom) bakes its drop shadow INSIDE the 9-slice border — its solid body is 980×430 of a
-1020×470 sprite. A plain RectTransform containment check says "inside" while the last row of content
-is crossed by the drawn bottom border. The rule and the fix are written up in
-`Docs/Architecture/UI_ELEMENT_PALETTE.md`.
+**Since shipped (2026-09-02).** The banner is no longer the door — `gps_pill_entry` moved that to a
+Home pill — and the hub's own `‹ BACK TO GAME` link became the pill from node `14060:4722`, sitting
+top-right at (1008,251). The frame dropped its Back Row, so every panel moved up exactly 65px. The
+pill is a FIXED 140×94 with the label autosized 18..30: `GAME` / `ゲーム` both render at the full 30
+and the pill never moves. `GPS_HUB_BACK` repointed and published as texts v30.
+
+**Two scars, both now palette rules.**
+
+1. *A 9-sliced sprite draws INSIDE its RectTransform.* `Next Hole Panel.png` hides its drop shadow in
+   its slice border — solid body 980×430 of a 1020×470 sprite — so a plain containment check says
+   "inside" while the last row of content is crossed by the drawn edge. **And the compensation
+   outlived the sprite:** when `score_upload_flow` re-skinned the hub with `S_HUB_*` sprites that draw
+   edge to edge, the rects were left at node+inset and every panel drew 31px too big, eating the
+   frame's 20px gaps (Gifts/Votes overlapped 11.3px). `rect == node box` now, and the retired inset
+   model is kept in the geometry expectations so nobody reintroduces it.
+
+2. *`get_design_context` reports only the FIRST stop of a gradient.* The gold pill rim is
+   `#FCF195 → #D6AB42 @0.6 → #BB7F1D`; the tool renders it as `border-[#fcf195]`. Three sprites
+   shipped flat because of it — the daily pill, the Home GPS pill and nearly this one. All three are
+   fixed and verified as RENDERED. **Read the node's SVG, never the CSS**
+   (`download_assets(nodeId, defaultFormat="svg")`; more than one `<stop>` means the CSS is lying).
 
 ---
 
