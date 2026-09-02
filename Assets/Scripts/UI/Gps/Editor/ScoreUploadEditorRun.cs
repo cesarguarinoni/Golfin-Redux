@@ -115,7 +115,7 @@ namespace Golfin.Gps.EditorTools
                 // the fidelity pass shoots it too rather than leaving it unmeasured next door.
                 yield return Shot("fid_hub");
 
-                Child<Button>(hub, "GpsNavBar/NavCameraButton").onClick.Invoke();
+                Child<Button>(hub, "NavSafeArea/GpsNavBar/NavCameraButton").onClick.Invoke();
                 yield return Until(() => ScreenManager.Instance.CurrentScreen == ScreenId.ScoreUpload, 20f, "ScoreUpload");
 
                 var flow = FindFirstObjectByType<ScoreUploadFlowController>(FindObjectsInactive.Include);
@@ -262,7 +262,7 @@ namespace Golfin.Gps.EditorTools
                 yield return new WaitForSecondsRealtime(2f);
 
                 GameObject hub = Find("Canvas/ScreensRoot/GpsHubScreen");
-                var camera = Child<Button>(hub, "GpsNavBar/NavCameraButton");
+                var camera = Child<Button>(hub, "NavSafeArea/GpsNavBar/NavCameraButton");
                 var tile = Child<Button>(hub, "ContentContainer/ActionTiles/Tile_SCREENSHOT");
                 Line("hub camera interactable=" + camera.interactable + "  tile interactable=" + tile.interactable);
 

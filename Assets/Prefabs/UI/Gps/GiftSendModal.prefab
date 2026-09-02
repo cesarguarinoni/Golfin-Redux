@@ -1933,6 +1933,7 @@ MonoBehaviour:
   closeButton: {fileID: 0}
   useAnimation: 1
   animationDuration: 0.2
+  animateShow: 1
   _recipient: {fileID: 3253444996059259635}
   _balance: {fileID: 2821612029535950061}
   _status: {fileID: 6891387988865249068}

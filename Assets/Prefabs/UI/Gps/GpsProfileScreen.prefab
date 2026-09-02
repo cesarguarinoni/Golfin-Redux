@@ -534,6 +534,7 @@ GameObject:
   - component: {fileID: 7908293634889669772}
   - component: {fileID: 146219174269137804}
   - component: {fileID: 7332159329564667781}
+  - component: {fileID: 8253663001935046839}
   m_Layer: 0
   m_Name: Background
   m_TagString: Untagged
@@ -598,6 +599,18 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!225 &8253663001935046839
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 367028982798460426}
+  m_Enabled: 1
+  m_Alpha: 1
+  m_Interactable: 1
+  m_BlocksRaycasts: 1
+  m_IgnoreParentGroups: 0
 --- !u!1 &500226426655427613
 GameObject:
   m_ObjectHideFlags: 0
@@ -2738,6 +2751,7 @@ GameObject:
   m_Component:
   - component: {fileID: 2482852954310664736}
   - component: {fileID: 1807982162055233349}
+  - component: {fileID: 7329653556274856926}
   m_Layer: 0
   m_Name: GpsProfileScreen
   m_TagString: Untagged
@@ -2759,7 +2773,7 @@ RectTransform:
   m_Children:
   - {fileID: 7908293634889669772}
   - {fileID: 5179610271377019799}
-  - {fileID: 6510445654535548133}
+  - {fileID: 8435357518144090713}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -2809,6 +2823,18 @@ MonoBehaviour:
   _roundsEmpty: {fileID: 4888246289303316711}
   _backButton: {fileID: 0}
   _editProfileButton: {fileID: 1886648422075979067}
+--- !u!114 &7329653556274856926
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2416595081369017875}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 12d254f84efd44b8b8b7d763006e317d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.Gps.UI.GpsNavBarBinder
 --- !u!1 &2825521050201318388
 GameObject:
   m_ObjectHideFlags: 0
@@ -6777,6 +6803,7 @@ GameObject:
   - component: {fileID: 6510445654535548133}
   - component: {fileID: 6683337900242620217}
   - component: {fileID: 499184640448042357}
+  - component: {fileID: 3008873597992345859}
   m_Layer: 5
   m_Name: GpsNavBar
   m_TagString: Untagged
@@ -6801,7 +6828,7 @@ RectTransform:
   - {fileID: 9104409462584693756}
   - {fileID: 1291325829350317985}
   - {fileID: 1854028702914383824}
-  m_Father: {fileID: 2482852954310664736}
+  m_Father: {fileID: 8435357518144090713}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0}
   m_AnchorMax: {x: 0.5, y: 0}
@@ -6846,6 +6873,18 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!225 &3008873597992345859
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7237309966213814224}
+  m_Enabled: 1
+  m_Alpha: 1
+  m_Interactable: 1
+  m_BlocksRaycasts: 1
+  m_IgnoreParentGroups: 0
 --- !u!1 &7367891998242618547
 GameObject:
   m_ObjectHideFlags: 0
@@ -7947,6 +7986,57 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!1 &8318669013319048557
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 8435357518144090713}
+  - component: {fileID: 1954981188177255988}
+  m_Layer: 0
+  m_Name: NavSafeArea
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &8435357518144090713
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8318669013319048557}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 6510445654535548133}
+  m_Father: {fileID: 2482852954310664736}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 1}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &1954981188177255988
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8318669013319048557}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3380b2d48492d427b8989e759e3ac5f6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GolfinRedux.UI.Core.SafeAreaFitter
+  _pollEveryFrame: 1
+  _baselineInsetPixels: 0
 --- !u!1 &8360659650422531062
 GameObject:
   m_ObjectHideFlags: 0
@@ -7956,6 +8046,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 5179610271377019799}
+  - component: {fileID: 1930688365513453986}
   m_Layer: 0
   m_Name: ContentContainer
   m_TagString: Untagged
@@ -7994,6 +8085,18 @@ RectTransform:
   m_AnchoredPosition: {x: 96, y: -361}
   m_SizeDelta: {x: 978, y: 1860}
   m_Pivot: {x: 0, y: 1}
+--- !u!225 &1930688365513453986
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8360659650422531062}
+  m_Enabled: 1
+  m_Alpha: 1
+  m_Interactable: 1
+  m_BlocksRaycasts: 1
+  m_IgnoreParentGroups: 0
 --- !u!1 &8394919215013913456
 GameObject:
   m_ObjectHideFlags: 0

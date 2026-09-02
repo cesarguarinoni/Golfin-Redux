@@ -10,6 +10,8 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.UI;
 
+using Golfin.Gps.EditorTools;
+
 namespace Golfin.Gps.UI.Editor
 {
     public static class GpsProfilePackBuilder
@@ -114,6 +116,10 @@ namespace Golfin.Gps.UI.Editor
             {
                 var root = BuildProfileScreen();
                 UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(root, scene);
+                // gps_polish — the shared polish pass. Runs LAST, on the finished root, so it sees
+                // every layer this builder authored (SPEC § Architecture: the additions go INTO
+                // the existing builders, which stay the prefab source of truth).
+                GpsPolishBuilder.Apply(root);
                 PrefabUtility.SaveAsPrefabAsset(root, PrefabProfile);
                 Debug.Log("[GpsProfilePackBuilder] Built " + PrefabProfile);
             }
@@ -131,6 +137,10 @@ namespace Golfin.Gps.UI.Editor
             {
                 var root = BuildAvatarScreen();
                 UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(root, scene);
+                // gps_polish — the shared polish pass. Runs LAST, on the finished root, so it sees
+                // every layer this builder authored (SPEC § Architecture: the additions go INTO
+                // the existing builders, which stay the prefab source of truth).
+                GpsPolishBuilder.Apply(root);
                 PrefabUtility.SaveAsPrefabAsset(root, PrefabAvatar);
                 Debug.Log("[GpsProfilePackBuilder] Built " + PrefabAvatar);
             }
@@ -148,6 +158,10 @@ namespace Golfin.Gps.UI.Editor
             {
                 var root = BuildBadgesScreen();
                 UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(root, scene);
+                // gps_polish — the shared polish pass. Runs LAST, on the finished root, so it sees
+                // every layer this builder authored (SPEC § Architecture: the additions go INTO
+                // the existing builders, which stay the prefab source of truth).
+                GpsPolishBuilder.Apply(root);
                 PrefabUtility.SaveAsPrefabAsset(root, PrefabBadges);
                 Debug.Log("[GpsProfilePackBuilder] Built " + PrefabBadges);
             }
@@ -906,7 +920,7 @@ namespace Golfin.Gps.UI.Editor
             GameObject hub = PrefabUtility.LoadPrefabContents(HubPrefab);
             try
             {
-                Transform nav = hub.transform.Find("GpsNavBar");
+                Transform nav = GpsPolishBuilder.FindNavBar(hub);
                 if (nav == null) { Debug.LogWarning("[GpsProfilePackBuilder] no GpsNavBar in hub"); return; }
                 var clone = UnityEngine.Object.Instantiate(nav.gameObject, parent);
                 clone.name = "GpsNavBar";

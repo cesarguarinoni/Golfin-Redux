@@ -16,6 +16,8 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.UI;
 
+using Golfin.Gps.EditorTools;
+
 namespace Golfin.Gps.UI.Editor
 {
     public static class GpsGiftVoteBuilder
@@ -176,6 +178,10 @@ namespace Golfin.Gps.UI.Editor
             {
                 GameObject root = BuildGiftScreen(modal);
                 UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(root, scene);
+                // gps_polish — the shared polish pass. Runs LAST, on the finished root, so it sees
+                // every layer this builder authored (SPEC § Architecture: the additions go INTO
+                // the existing builders, which stay the prefab source of truth).
+                GpsPolishBuilder.Apply(root);
                 PrefabUtility.SaveAsPrefabAsset(root, PrefabGift);
                 Debug.Log("[GpsGiftVoteBuilder] Built " + PrefabGift);
             }
@@ -194,6 +200,10 @@ namespace Golfin.Gps.UI.Editor
             {
                 GameObject root = BuildVoteScreen(modal);
                 UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(root, scene);
+                // gps_polish — the shared polish pass. Runs LAST, on the finished root, so it sees
+                // every layer this builder authored (SPEC § Architecture: the additions go INTO
+                // the existing builders, which stay the prefab source of truth).
+                GpsPolishBuilder.Apply(root);
                 PrefabUtility.SaveAsPrefabAsset(root, PrefabVote);
                 Debug.Log("[GpsGiftVoteBuilder] Built " + PrefabVote);
             }
@@ -1046,7 +1056,7 @@ namespace Golfin.Gps.UI.Editor
             GameObject hub = PrefabUtility.LoadPrefabContents(HubPrefab);
             try
             {
-                Transform nav = hub.transform.Find("GpsNavBar");
+                Transform nav = GpsPolishBuilder.FindNavBar(hub);
                 if (nav == null) { Debug.LogWarning("[GpsGiftVoteBuilder] no GpsNavBar in hub"); return; }
                 var clone = Object.Instantiate(nav.gameObject, parent);
                 clone.name = "GpsNavBar";

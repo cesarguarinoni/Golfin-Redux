@@ -273,17 +273,66 @@ namespace GolfinRedux.UI
                 }
             }
 
+            // gps_polish §D2 — a push already in flight is finished INSTANTLY (rest state written,
+            // its deferred ApplyScreen run) before anything else starts. No queue: the player who
+            // taps two nav slots in 200 ms gets the second screen, not both animations in order.
+            if (Golfin.Gps.UI.GpsScreenTransition.IsPushing)
+                Golfin.Gps.UI.GpsScreenTransition.CompleteActiveNow();
+
             // If no fade system, or caller requests instant, just swap
             if (instant || FadeController.Instance == null)
             {
                 Debug.Log($"[ScreenManager] Applying screen immediately: {screenId}");
                 ApplyScreen(screenId);
+                return;
             }
-            else
+
+            // gps_polish §D2 — the ONE branch. Both ends inside the GPS surface, both prefabs
+            // carrying the Background / ContentContainer split, and motion on: the screens push
+            // laterally instead of going through black. Everything else — Home ↔ GpsHub, any GPS
+            // screen to Login or Loading, ScoreUpload in either direction — falls through to the
+            // untouched FadeController path below, which is the game-wide boundary convention.
+            GameObject? fromGo = GpsScreenObject(_currentScreen);
+            GameObject? toGo   = GpsScreenObject(screenId);
+            if (Golfin.Gps.UI.GpsScreenTransition.CanPush(_currentScreen, screenId, fromGo, toGo)
+                && isActiveAndEnabled && fromGo != null && toGo != null)
             {
-                Debug.Log($"[ScreenManager] Fading to {screenId}");
-                // Fade to black, swap at midpoint, fade back in
-                FadeController.Instance.FadeOutThenIn(() => ApplyScreen(screenId));
+                var dir = Golfin.Gps.UI.GpsScreenTransition.DirectionFor(_currentScreen, screenId, push);
+                ScreenId target = screenId;
+                StartCoroutine(Golfin.Gps.UI.GpsScreenTransition.Push(
+                    fromGo, toGo, dir, () => ApplyScreen(target)));
+                return;
+            }
+
+            Debug.Log($"[ScreenManager] Fading to {screenId}");
+            // Fade to black, swap at midpoint, fade back in
+            FadeController.Instance.FadeOutThenIn(() => ApplyScreen(screenId));
+        }
+
+        /// <summary>
+        /// The screen GameObject for a GPS <see cref="ScreenId"/>, or null for anything else.
+        ///
+        /// <para>Deliberately NOT a general id → GameObject map. <see cref="ApplyScreen"/> is a
+        /// flat wall of <c>SetActive</c> calls, several of which do more than toggle (Roster
+        /// switches starter mode from the same branch), and a general accessor would invite
+        /// callers to reach past that logic. This one answers the single question the GPS push
+        /// asks — "which two objects am I sliding?" — and returns null the moment the id leaves
+        /// the surface <see cref="Golfin.Gps.UI.GpsGate.IsGpsScreen"/> defines.</para>
+        /// </summary>
+        private GameObject? GpsScreenObject(ScreenId id)
+        {
+            switch (id)
+            {
+                case ScreenId.GpsHub:         return _gpsHubScreen;
+                case ScreenId.ScoreUpload:    return _scoreUploadScreen;
+                case ScreenId.GpsProfile:     return _gpsProfileScreen;
+                case ScreenId.GpsAvatar:      return _gpsAvatarScreen;
+                case ScreenId.GpsBadges:      return _gpsBadgesScreen;
+                case ScreenId.GpsGolfProfile: return _gpsGolfProfileScreen;
+                case ScreenId.GpsWelcome:     return _gpsWelcomeScreen;
+                case ScreenId.GpsGift:        return _gpsGiftScreen;
+                case ScreenId.GpsVote:        return _gpsVoteScreen;
+                default:                      return null;
             }
         }
 

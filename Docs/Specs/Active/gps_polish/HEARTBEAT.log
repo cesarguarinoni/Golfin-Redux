@@ -1,0 +1,11 @@
+=== iter-1 kickoff baseline 2026-09-02T09:56:23Z ===
+HEAD: 96d60fab4b310fe166c66932e9087c3174e17e15
+DIRTY (git status --porcelain --untracked-files=all):
+   M .claude/alerts.log
+   M .claude/review_misses.log
+   M Docs/Reports/content_art.txt
+  ?? .claude/launch.json
+  ?? Docs/Specs/Active/gps_polish/HEARTBEAT.log
+=== end baseline ===
+=== iter-1 progress 10:08:00Z — UiMotion + UiMotionRunner + GpsScreenTransition + ScreenManager branch + ModalController.animateShow written and compiling clean in the loaded assembly.
+=== iter-1 progress 10:17:47Z — GpsPolishBuilder + ShimmerBlock + GpsPolishProbe written; all compile. Next: baseline probe run (pre-polish rest captures).

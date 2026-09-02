@@ -1670,6 +1670,7 @@ MonoBehaviour:
   closeButton: {fileID: 0}
   useAnimation: 1
   animationDuration: 0.2
+  animateShow: 1
   _search: {fileID: 2770186864648833984}
   _rowsParent: {fileID: 2070138005263890775}
   _rowTemplate: {fileID: 2983830145430625561}

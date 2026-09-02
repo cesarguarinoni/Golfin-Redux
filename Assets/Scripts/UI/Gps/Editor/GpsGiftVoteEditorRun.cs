@@ -108,7 +108,7 @@ namespace Golfin.Gps.EditorTools
                 if (hub == null) { Line("FATAL: no hub in the scene"); yield break; }
 
                 // ── GIFT, through the hub's own nav slot ─────────────────────
-                Button navGift = hub.transform.Find("GpsNavBar/NavGiftButton").GetComponent<Button>();
+                Button navGift = hub.transform.Find("NavSafeArea/GpsNavBar/NavGiftButton").GetComponent<Button>();
                 Line("nav GIFT interactable=" + navGift.interactable);
                 navGift.onClick.Invoke();
                 yield return Until(() => ScreenManager.Instance.CurrentScreen == ScreenId.GpsGift, 30f, "GpsGift");

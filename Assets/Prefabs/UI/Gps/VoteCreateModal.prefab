@@ -629,6 +629,7 @@ MonoBehaviour:
   closeButton: {fileID: 0}
   useAnimation: 1
   animationDuration: 0.2
+  animateShow: 1
   _question: {fileID: 6058955686312707980}
   _status: {fileID: 9220458299085323095}
   _expiryButtons:

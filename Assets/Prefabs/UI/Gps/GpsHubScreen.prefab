@@ -2095,6 +2095,7 @@ GameObject:
   - component: {fileID: 7831118475156391162}
   - component: {fileID: 4708290598059778152}
   - component: {fileID: 8449005369801095704}
+  - component: {fileID: 7309646944008811346}
   m_Layer: 0
   m_Name: BackPill
   m_TagString: Untagged
@@ -2218,6 +2219,18 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Golfin.UI.Polish.ButtonPressFeedback
   _pressedScale: 0.95
   _duration: 0.12
+--- !u!225 &7309646944008811346
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1595360532280126753}
+  m_Enabled: 1
+  m_Alpha: 1
+  m_Interactable: 1
+  m_BlocksRaycasts: 1
+  m_IgnoreParentGroups: 0
 --- !u!1 &1646054380269751620
 GameObject:
   m_ObjectHideFlags: 0
@@ -3120,6 +3133,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2912673989269315479}
+  - component: {fileID: 1290867772859137492}
   m_Layer: 0
   m_Name: ContentContainer
   m_TagString: Untagged
@@ -3152,6 +3166,18 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: -361}
   m_SizeDelta: {x: 978, y: 1860}
   m_Pivot: {x: 0.5, y: 1}
+--- !u!225 &1290867772859137492
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2259064984010062207}
+  m_Enabled: 1
+  m_Alpha: 1
+  m_Interactable: 1
+  m_BlocksRaycasts: 1
+  m_IgnoreParentGroups: 0
 --- !u!1 &2291403400267418845
 GameObject:
   m_ObjectHideFlags: 0
@@ -4382,7 +4408,7 @@ RectTransform:
   m_Children:
   - {fileID: 363666117991913598}
   - {fileID: 2912673989269315479}
-  - {fileID: 3044292437805427615}
+  - {fileID: 6120021483202548297}
   - {fileID: 4958747243276760039}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -4440,6 +4466,9 @@ MonoBehaviour:
   _navCameraButton: {fileID: 0}
   _navProfileButton: {fileID: 0}
   _tileScreenshotButton: {fileID: 0}
+  _navGiftButton: {fileID: 0}
+  _tileGiftButton: {fileID: 0}
+  _tileVoteButton: {fileID: 0}
   _backButton: {fileID: 4708290598059778152}
 --- !u!1 &3082496701467164626
 GameObject:
@@ -5958,6 +5987,7 @@ GameObject:
   - component: {fileID: 363666117991913598}
   - component: {fileID: 8221723206384888572}
   - component: {fileID: 8305313986175582767}
+  - component: {fileID: 2220547701579175405}
   m_Layer: 0
   m_Name: Background
   m_TagString: Untagged
@@ -6022,6 +6052,18 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!225 &2220547701579175405
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4288376219473380481}
+  m_Enabled: 1
+  m_Alpha: 1
+  m_Interactable: 1
+  m_BlocksRaycasts: 1
+  m_IgnoreParentGroups: 0
 --- !u!1 &4320910251047149658
 GameObject:
   m_ObjectHideFlags: 0
@@ -6183,6 +6225,7 @@ GameObject:
   - component: {fileID: 3044292437805427615}
   - component: {fileID: 4048000643486443863}
   - component: {fileID: 333237742721529577}
+  - component: {fileID: 6300210460487321334}
   m_Layer: 5
   m_Name: GpsNavBar
   m_TagString: Untagged
@@ -6207,7 +6250,7 @@ RectTransform:
   - {fileID: 2465603774040844138}
   - {fileID: 7470038558491103056}
   - {fileID: 8475630138050607815}
-  m_Father: {fileID: 5871135638267237871}
+  m_Father: {fileID: 6120021483202548297}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0}
   m_AnchorMax: {x: 0.5, y: 0}
@@ -6252,6 +6295,18 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!225 &6300210460487321334
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4362002662827153971}
+  m_Enabled: 1
+  m_Alpha: 1
+  m_Interactable: 1
+  m_BlocksRaycasts: 1
+  m_IgnoreParentGroups: 0
 --- !u!1 &4375663921475326210
 GameObject:
   m_ObjectHideFlags: 0
@@ -11402,6 +11457,57 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 2
+--- !u!1 &8417133326312065507
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 6120021483202548297}
+  - component: {fileID: 1520938049248761737}
+  m_Layer: 0
+  m_Name: NavSafeArea
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &6120021483202548297
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8417133326312065507}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 3044292437805427615}
+  m_Father: {fileID: 5871135638267237871}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 1}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &1520938049248761737
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8417133326312065507}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3380b2d48492d427b8989e759e3ac5f6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GolfinRedux.UI.Core.SafeAreaFitter
+  _pollEveryFrame: 1
+  _baselineInsetPixels: 0
 --- !u!1 &8432499541505356967
 GameObject:
   m_ObjectHideFlags: 0

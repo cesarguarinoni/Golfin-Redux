@@ -445,6 +445,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 7678899290519224627}
+  - component: {fileID: 8345591839260043682}
   m_Layer: 0
   m_Name: ContentContainer
   m_TagString: Untagged
@@ -475,6 +476,18 @@ RectTransform:
   m_AnchoredPosition: {x: 96, y: -361}
   m_SizeDelta: {x: 978, y: 2111}
   m_Pivot: {x: 0, y: 1}
+--- !u!225 &8345591839260043682
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 931725675272134352}
+  m_Enabled: 1
+  m_Alpha: 1
+  m_Interactable: 1
+  m_BlocksRaycasts: 1
+  m_IgnoreParentGroups: 0
 --- !u!1 &1796336875263542552
 GameObject:
   m_ObjectHideFlags: 0
@@ -2050,6 +2063,7 @@ GameObject:
   - component: {fileID: 7052944013547847899}
   - component: {fileID: 4487702460197955805}
   - component: {fileID: 4327710731044071609}
+  - component: {fileID: 7205515649648522661}
   m_Layer: 0
   m_Name: Background
   m_TagString: Untagged
@@ -2114,6 +2128,18 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!225 &7205515649648522661
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5144710146727964785}
+  m_Enabled: 1
+  m_Alpha: 1
+  m_Interactable: 1
+  m_BlocksRaycasts: 1
+  m_IgnoreParentGroups: 0
 --- !u!1 &5610754761053832987
 GameObject:
   m_ObjectHideFlags: 0

@@ -11,6 +11,8 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.UI;
 
+using Golfin.Gps.EditorTools;
+
 namespace Golfin.Gps.UI.Editor
 {
     public static class GpsAuthExtrasBuilder
@@ -138,6 +140,10 @@ namespace Golfin.Gps.UI.Editor
             {
                 var root = build();
                 UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(root, scene);
+                // gps_polish — the shared polish pass. Runs LAST, on the finished root, so it sees
+                // every layer this builder authored (SPEC § Architecture: the additions go INTO
+                // the existing builders, which stay the prefab source of truth).
+                GpsPolishBuilder.Apply(root);
                 PrefabUtility.SaveAsPrefabAsset(root, prefabPath);
                 Debug.Log("[GpsAuthExtrasBuilder] Built " + prefabPath);
             }

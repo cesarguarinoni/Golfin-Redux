@@ -202,7 +202,7 @@ namespace Golfin.EditorTools
             GameObject hub = GameObject.Find("Canvas/ScreensRoot/GpsHubScreen");
 
             // ── the PROFILE pillar: Profile → My Avatar → Badges ─────────────
-            yield return TapIn(hub, "GpsNavBar/NavProfileButton");
+            yield return TapIn(hub, "NavSafeArea/GpsNavBar/NavProfileButton");
             yield return Until(() => ScreenManager.Instance.CurrentScreen == ScreenId.GpsProfile, 20f);
             Cap("Profile \u2014 /score/stats + /badges/progress");
             yield return new WaitForSecondsRealtime(Hold + 1f);
@@ -224,7 +224,7 @@ namespace Golfin.EditorTools
             Show(ScreenId.GpsHub);
             yield return new WaitForSecondsRealtime(Settle + 0.4f);
 
-            yield return TapIn(hub, "GpsNavBar/NavGiftButton");
+            yield return TapIn(hub, "NavSafeArea/GpsNavBar/NavGiftButton");
             yield return Until(() => ScreenManager.Instance.CurrentScreen == ScreenId.GpsGift, 20f);
             Cap("GIFTS \u2014 gift_pts, discover, the live catalog");
             yield return new WaitForSecondsRealtime(Hold + 2f);   // four requests land here
