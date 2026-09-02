@@ -1,8 +1,9 @@
-READY_FOR_SELF_REVIEW
+DONE
 
 # STATUS — `gps_pill_entry`
 
-**Current:** `READY_FOR_SELF_REVIEW` — built, verified both ways, shipped in `e2db982c0`.
+**Current:** `DONE` — built, verified both ways, shipped in `e2db982c0`; approved by Cesar
+2026-09-02 and closed as the first commit of `gps_polish`.
 
 **Opened:** 2026-09-02 (Cesar: move the GPS entry point to the Figma pill, restore the banner)
 **Amends:** `punch_it_gps_variants` (Completed)
@@ -62,3 +63,4 @@ design. One line.
 |---|---|---|
 | 2026-09-02 | `SPEC_READY` | Design pulled, sprite baked and numerically verified, spec written. No Unity touched — another session holds the Editor. |
 | 2026-09-02 | `READY_FOR_SELF_REVIEW` | Built and shipped in `e2db982c0`. Podium moved left per Cesar after the crop-diff exposed a 100% overlap. One measured deviation: glyph width, inherent to the project's Rubik SDF. |
+| 2026-09-02 | `DONE` | Approved by Cesar. Folder moved to `Docs/Specs/Completed/`; closed as the first commit of `gps_polish`. |
