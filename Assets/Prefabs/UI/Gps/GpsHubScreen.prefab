@@ -4387,6 +4387,7 @@ GameObject:
   m_Component:
   - component: {fileID: 5871135638267237871}
   - component: {fileID: 1648152460533820149}
+  - component: {fileID: 2699071833735741746}
   m_Layer: 0
   m_Name: GpsHubScreen
   m_TagString: Untagged
@@ -4470,6 +4471,18 @@ MonoBehaviour:
   _tileGiftButton: {fileID: 0}
   _tileVoteButton: {fileID: 0}
   _backButton: {fileID: 4708290598059778152}
+--- !u!114 &2699071833735741746
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3063552672009964780}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8384120901be44e508db678833383822, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.Gps.UI.GpsScreenEntryMotion
 --- !u!1 &3082496701467164626
 GameObject:
   m_ObjectHideFlags: 0

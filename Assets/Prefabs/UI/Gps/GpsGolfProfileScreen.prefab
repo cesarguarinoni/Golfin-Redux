@@ -4296,6 +4296,7 @@ GameObject:
   m_Component:
   - component: {fileID: 6118128873614163247}
   - component: {fileID: 3113128798343059326}
+  - component: {fileID: 5602349608717871237}
   m_Layer: 0
   m_Name: GpsGolfProfileScreen
   m_TagString: Untagged
@@ -4380,6 +4381,18 @@ MonoBehaviour:
   _chipOnSprite: {fileID: 21300000, guid: 1757dede370564181aece990255abb4c, type: 3}
   _saveButton: {fileID: 3797168151883597603}
   _skipButton: {fileID: 2656904201364464343}
+--- !u!114 &5602349608717871237
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6741303442594765005}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8384120901be44e508db678833383822, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.Gps.UI.GpsScreenEntryMotion
 --- !u!1 &6928133697150228709
 GameObject:
   m_ObjectHideFlags: 0

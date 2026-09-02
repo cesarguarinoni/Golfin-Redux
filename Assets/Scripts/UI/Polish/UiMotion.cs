@@ -95,9 +95,16 @@ namespace Golfin.UI.Polish
         /// Finalizers, keyed by the enumerator each helper returns. The helper registers the
         /// final state at CREATION time so <see cref="Run"/> can settle the tween without
         /// knowing what kind of tween it is — that is what makes interruption generic.
+        ///
+        /// <para>A ConditionalWeakTable, not a Dictionary, and the difference is not academic: a
+        /// Dictionary KEYED ON THE ENUMERATOR keeps that enumerator alive forever, and through its
+        /// closure the CanvasGroup, the RectTransform and the whole screen behind them. Every
+        /// routine that was created and then not handed to <see cref="Run"/> — a guard clause that
+        /// returned early, a test that stepped the enumerator itself — would pin a screen's worth
+        /// of objects for the life of the session. Weak keys make an unrun routine cost nothing.</para>
         /// </summary>
-        private static readonly Dictionary<IEnumerator, Action> Finalizers =
-            new Dictionary<IEnumerator, Action>();
+        private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<IEnumerator, Action>
+            Finalizers = new System.Runtime.CompilerServices.ConditionalWeakTable<IEnumerator, Action>();
 
         /// <summary>
         /// Run <paramref name="routine"/> on <paramref name="host"/>, replacing whatever was
@@ -162,10 +169,16 @@ namespace Golfin.UI.Polish
         /// helper below, never by a call site.</summary>
         private static IEnumerator Register(IEnumerator routine, Action finalize)
         {
-            Finalizers[routine] = finalize;
+            Finalizers.Remove(routine);
+            Finalizers.Add(routine, finalize);
             return routine;
         }
 
+        /// <summary>
+        /// Hand the routine's final state to the caller, ONCE. A second <see cref="Run"/> of the
+        /// same enumerator gets nothing, which is what stops an already-settled tween from being
+        /// settled again over whatever the result handler has since written.
+        /// </summary>
         private static Action? TakeFinalizer(IEnumerator routine)
         {
             if (!Finalizers.TryGetValue(routine, out Action f)) return null;
@@ -173,9 +186,9 @@ namespace Golfin.UI.Polish
             return f;
         }
 
-        /// <summary>Number of routines created but never handed to <see cref="Run"/>. Tests
-        /// assert this stays at 0 — a growing count would be a slow leak.</summary>
-        internal static int PendingFinalizerCount => Finalizers.Count;
+        /// <summary>Test seam: whether this routine still owes a final state.</summary>
+        internal static bool HasFinalizer(IEnumerator routine)
+            => Finalizers.TryGetValue(routine, out _);
 
         // ═════════════════════════════════════════════════════════════════════
         // Easing

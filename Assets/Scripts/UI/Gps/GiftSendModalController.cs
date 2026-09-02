@@ -8,6 +8,7 @@ using Golfin.Social;
 using Golfin.UI.Modals;
 using Golfin.UI.Toast;
 using TMPro;
+using Golfin.UI.Polish;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -62,6 +63,9 @@ namespace Golfin.Gps.UI
         private int _amount;
         private string? _key;
         private bool _inFlight;
+
+        /// <summary>The scope that draws the wait on CONFIRM (gps_polish §D6).</summary>
+        private PendingSpend? _pending;
         private bool _wired;
         private Action? _onCommitted;
 
@@ -198,6 +202,13 @@ namespace Golfin.Gps.UI
             }
 
             _inFlight = true;
+            // gps_polish §D6 — draw the wait on CONFIRM, and take CANCEL with it: a gift is a real
+            // debit, and the window between the tap and the answer is exactly when a player who
+            // sees nothing happen taps again.
+            _pending?.Dispose();
+            _pending = _cancelButton != null
+                ? PendingSpend.BeginOn(_confirmButton, _cancelButton)
+                : PendingSpend.BeginOn(_confirmButton);
             Repaint();
             SetStatus(LocalizationManager.Get("GPS_GIFT_MODAL_SENDING"));
 
@@ -220,6 +231,8 @@ namespace Golfin.Gps.UI
         private void OnSendResult(ApiResult<GiftSendResultDto> result)
         {
             _inFlight = false;
+            _pending?.Dispose();
+            _pending = null;
 
             if (result == null || !result.Success)
             {
@@ -251,6 +264,8 @@ namespace Golfin.Gps.UI
         private void OnPurchaseResult(ApiResult<GiftPurchaseResultDto> result)
         {
             _inFlight = false;
+            _pending?.Dispose();
+            _pending = null;
 
             if (result == null || !result.Success)
             {

@@ -3,6 +3,7 @@
 #nullable enable
 using System;
 using TMPro;
+using UnityEngine;
 using UnityEngine.UI;
 
 namespace Golfin.UI.Polish
@@ -104,6 +105,19 @@ namespace Golfin.UI.Polish
         /// flight — a modal's CANCEL, a card's tap-to-expand.</param>
         public static PendingSpend Begin(Button? button, TMP_Text? label = null, params Button[] alsoDisable)
             => new PendingSpend(button, label, alsoDisable);
+
+        /// <summary>
+        /// <see cref="Begin"/> with the label resolved from the button's own hierarchy.
+        ///
+        /// <para>Added by gps_polish: the GPS CTAs do not carry a serialized reference to their
+        /// label — every one of them is a plain TMP child of the button — and five call sites each
+        /// doing their own <c>GetComponentInChildren</c> is five chances to pass the wrong text
+        /// (a price sub-label, say) and have the ellipsis land on it.</para>
+        /// </summary>
+        public static PendingSpend BeginOn(Button? button, params Button[] alsoDisable)
+            => new PendingSpend(button,
+                                button != null ? button.GetComponentInChildren<TMP_Text>(true) : null,
+                                alsoDisable);
 
         /// <summary>
         /// Restore everything <see cref="Begin"/> changed. Idempotent, and safe on a control that has

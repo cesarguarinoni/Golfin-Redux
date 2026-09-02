@@ -158,6 +158,10 @@ namespace Golfin.Gps.UI
             Bind(vote, voted: true, rewardText, DateTime.UtcNow);
         }
 
+        /// <summary>The card's VOTE control, so the screen can draw the server wait on it
+        /// (gps_polish §D6). Read-only: the card owns its own wiring.</summary>
+        public Button? VoteButton => _voteButton;
+
         public void SetVoteInteractable(bool on)
         {
             if (_voteButton != null) _voteButton.interactable = on;

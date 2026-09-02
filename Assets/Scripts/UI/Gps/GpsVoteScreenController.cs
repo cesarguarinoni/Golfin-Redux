@@ -17,6 +17,7 @@ using Golfin.Net;
 using Golfin.Social;
 using Golfin.Telemetry;
 using Golfin.UI.Toast;
+using Golfin.UI.Polish;
 using GolfinRedux.UI;
 using TMPro;
 using UnityEngine;
@@ -360,11 +361,22 @@ namespace Golfin.Gps.UI
             string optionId = yes.Id;
             Debug.Log($"{Tag} casting on {v.Id} -> option {optionId}.");
 
+            // gps_polish §D6 — the card's own VOTE button carries the wait. SetVoteInteractable
+            // above already latched it; this is what makes the latch VISIBLE.
+            _castPending?.Dispose();
+            _castPending = PendingSpend.BeginOn(card.VoteButton);
+
             ApiClient.Instance.Run(VoteService.Instance.Cast(v.Id, optionId, r => OnCast(card, v, r)));
         }
 
+        /// <summary>The scope that draws the wait on a card's VOTE button (gps_polish §D6).</summary>
+        private PendingSpend? _castPending;
+
         private void OnCast(VoteCardView card, VoteDto original, ApiResult<VoteDto> result)
         {
+            _castPending?.Dispose();
+            _castPending = null;
+
             if (result != null && result.Success && result.Data != null)
             {
                 // Repaint from the SERVER's copy — it has already recomputed every percentage.

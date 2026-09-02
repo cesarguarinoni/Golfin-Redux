@@ -99,6 +99,15 @@ namespace Golfin.Gps.EditorTools
         [MenuItem("GOLFIN/Gps/Apply GPS Polish to SCENE copies", priority = 232)]
         public static void ApplyToScene()
         {
+            // Play-mode edits are discarded when play stops, and MarkSceneDirty throws outright.
+            // Refusing loudly beats "it said it worked" followed by nothing being saved.
+            if (EditorApplication.isPlaying)
+            {
+                Debug.LogError("[GpsPolishBuilder] stop play mode first — scene edits made in play " +
+                               "mode are discarded.");
+                return;
+            }
+
             GameObject? screensRoot = GameObject.Find("Canvas/ScreensRoot");
             if (screensRoot == null)
             {
@@ -161,6 +170,7 @@ namespace Golfin.Gps.EditorTools
             EnsureLayerGroups(root);
             EnsureNavBarSafeArea(root);
             EnsureNavBarBinder(root);
+            EnsureEntryMotion(root);
             ApplyScrollFeel(root);
             EnsureStepPolish(root);
         }
@@ -269,6 +279,16 @@ namespace Golfin.Gps.EditorTools
             if (root.name.StartsWith("GpsHubScreen")) return;
             if (FindNavBar(root) == null) return;                 // Golf Profile / Welcome
             Ensure<GpsNavBarBinder>(root);
+        }
+
+        /// <summary>
+        /// §D3 — the boundary-entry rise, as one component rather than eight OnEnable edits.
+        /// See <see cref="GpsScreenEntryMotion"/> for why it must not fire after a push.
+        /// </summary>
+        private static void EnsureEntryMotion(GameObject root)
+        {
+            if (GpsScreenTransition.FindLayer(root, "ContentContainer") == null) return;
+            Ensure<GpsScreenEntryMotion>(root);
         }
 
         /// <summary>§D9 — the Inventory screen's scroll feel, applied to every GPS scroll rect.

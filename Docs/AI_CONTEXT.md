@@ -4,6 +4,48 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
+## 🔨 IN FLIGHT — `gps_polish` · the GPS surface moves like the rest of the game
+
+**Iteration 1 shipped the layered push and its gates (`a7902da27`); the polish tail is not done.**
+Inside the GPS surface, screens no longer go through black to move one room sideways: the
+Background / GpsNavBar / BackPill cross-fade in place and only the two `ContentContainer`s slide
+(Forward from +W, Back mirrored, 0.3 parallax on the leaver). Home ↔ GpsHub and every GPS →
+non-GPS boundary keep the game-wide `FadeController` fade, untouched.
+
+One helper does all of it: `Golfin.UI.Polish.UiMotion` — seven primitives, one copy of every
+duration, unscaled time, interruption-safe, and settled on its final value when Unity kills the
+coroutine because the host was disabled (`UiMotionRunner`). That last part is load-bearing:
+`ApplyScreen` disables the screen being left, so without it a screen swapped out mid-push comes
+back parked at +1170 px, permanently. The four existing tween loops (Versus, Daily pill, Gacha,
+Toast) are deliberately NOT retrofitted — that is `game_polish`.
+
+**Measured, not asserted.** `gps_polish_invariants.json`: 10 pushes, `fail=0`, durations
+0.251–0.267 s against 0.25, t0 offsets exactly ±1170, `blocksRaycasts` restored, and
+`seamWorstCover` 1.000 on every frame. Rest state after an animated arrival is **0 differing
+pixels vs HEAD on all seven GPS screens**. EditMode 2296 / 2293 passed / 0 failed. Lint is
+identical prefab-for-prefab vs HEAD (0 new findings).
+
+**One deviation Cesar should rule on.** The real-navigation probe found that the GPS nav bar is
+cloned onto every GPS screen and wired on **none but the hub**, and `_backButton` is NULL on all
+three profile-pack prefabs — so at HEAD a player who reaches Profile, Badges or Avatar has no way
+back. `GpsNavBarBinder` wires the bar that is already drawn (no new screen, art or string; ROUNDS
+left inert). One-line revert if unwanted.
+
+**Still open:** staggered row entrances, gift/vote panel fades, selection-pill bumps, 5 of 6
+count-ups, shimmer placement at the five cold-fetch sites, the keyboard offset, videos (c)(e)(f),
+and the GC/perf pass. Full list in `Docs/Specs/Active/gps_polish/IMPLEMENTER_REPORT.md` § Not done.
+
+**Backlog fed by this task:** 208 GPS labels render `Rubik-VariableFont_wght SDF` rather than a
+Medium face (per-prefab table in the report); 15 pre-existing UI-lint FAILs, all
+`9slice-collapse-x` on bars whose width is set at runtime.
+
+---
+## ✅ DONE — `gps_pill_entry` **approved by Cesar** (2026-09-02)
+
+The Home GPS pill is the GPS door (`e2db982c0`, texts v30); closed and archived to
+`Docs/Specs/Completed/` as the first commit of `gps_polish`.
+
+---
 ## ✅ DONE — `gps_gifts_votes` **approved by Cesar** (2026-09-02) · the GPS surface is complete
 
 **Gift (Figma `14027:101843`) and Vote (`14028:33534`) — the GPS surface is complete.** Both are

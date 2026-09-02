@@ -10,6 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 4978128056103941382}
   - component: {fileID: 4496829724579017586}
+  - component: {fileID: 1744894101655018626}
   m_Layer: 0
   m_Name: GpsWelcomeScreen
   m_TagString: Untagged
@@ -52,6 +53,18 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Golfin.Gps.UI.GpsWelcomeScreenController
   _getStartedButton: {fileID: 8187054438289019457}
   _skipButton: {fileID: 3158000589578744642}
+--- !u!114 &1744894101655018626
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 33782023068305457}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8384120901be44e508db678833383822, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.Gps.UI.GpsScreenEntryMotion
 --- !u!1 &349662858542451378
 GameObject:
   m_ObjectHideFlags: 0

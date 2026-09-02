@@ -5206,6 +5206,7 @@ GameObject:
   - component: {fileID: 2411302936108629223}
   - component: {fileID: 7944353787013028580}
   - component: {fileID: 3391309320429235391}
+  - component: {fileID: 8370801181231854774}
   m_Layer: 0
   m_Name: GpsAvatarScreen
   m_TagString: Untagged
@@ -5295,6 +5296,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 12d254f84efd44b8b8b7d763006e317d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Golfin.Gps.UI.GpsNavBarBinder
+--- !u!114 &8370801181231854774
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4278341207900276415}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8384120901be44e508db678833383822, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.Gps.UI.GpsScreenEntryMotion
 --- !u!1 &4363865456084914865
 GameObject:
   m_ObjectHideFlags: 0

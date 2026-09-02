@@ -8,6 +8,7 @@ using Golfin.Social;
 using Golfin.UI.Modals;
 using Golfin.UI.Toast;
 using TMPro;
+using Golfin.UI.Polish;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -41,6 +42,9 @@ namespace Golfin.Gps.UI
 
         private int _expiryIndex = 1;      // 3 days — the middle choice, and the node's own default
         private bool _inFlight;
+
+        /// <summary>The scope that draws the wait on CREATE (gps_polish §D6).</summary>
+        private PendingSpend? _pending;
         private bool _wired;
         private Action<VoteDto>? _onCreated;
 
@@ -51,6 +55,8 @@ namespace Golfin.Gps.UI
             _onCreated = onCreated;
             WireOnce();
             _inFlight = false;
+            _pending?.Dispose();
+            _pending = null;
             _expiryIndex = 1;
             if (_question != null) _question.text = string.Empty;
             Show();
@@ -105,6 +111,12 @@ namespace Golfin.Gps.UI
             if (q.Length == 0) return;
 
             _inFlight = true;
+            // gps_polish §D6 — CREATE posts a vote; CANCEL goes with it so the modal cannot be
+            // dismissed out from under an in-flight write.
+            _pending?.Dispose();
+            _pending = _cancelButton != null
+                ? PendingSpend.BeginOn(_submitButton, _cancelButton)
+                : PendingSpend.BeginOn(_submitButton);
             Repaint();
             SetStatus(LocalizationManager.Get("GPS_VOTE_CREATE_SENDING"));
 
@@ -127,6 +139,10 @@ namespace Golfin.Gps.UI
         private void OnResult(ApiResult<VoteDto> result)
         {
             _inFlight = false;
+            // Dispose FIRST, before the result is acted on: restoring means "put back what was
+            // there before the tap", and the handler below overwrites that with the new truth.
+            _pending?.Dispose();
+            _pending = null;
 
             if (result == null || !result.Success || result.Data == null)
             {

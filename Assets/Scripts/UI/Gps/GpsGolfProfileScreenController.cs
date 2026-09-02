@@ -4,6 +4,7 @@ using System.Globalization;
 using Golfin.Net;
 using Golfin.Social;
 using Golfin.UI.Account;
+using Golfin.UI.Polish;
 using GolfinRedux.UI;
 using TMPro;
 using UnityEngine;
@@ -378,11 +379,35 @@ namespace Golfin.Gps.UI
         // Feedback
         // ═══════════════════════════════════════════════════════════════════
 
+        /// <summary>The scope that draws the wait on SAVE PROFILE (gps_polish §D6).</summary>
+        private PendingSpend? _pending;
+
+        /// <summary>
+        /// gps_polish §D6 — the wait is now DRAWN, not merely latched.
+        ///
+        /// <para>The latch stays exactly as it was; what changes is that SAVE reads as busy
+        /// instead of looking untouched for the whole round-trip. /user/update against a real
+        /// server is not instant, and a button that does not react is a button a player taps
+        /// again.</para>
+        /// </summary>
         private void SetBusy(bool busy)
         {
             _busy = busy;
-            if (_saveButton != null) _saveButton.interactable = !busy;
-            if (_skipButton != null) _skipButton.interactable = !busy;
+
+            if (busy)
+            {
+                _pending?.Dispose();
+                _pending = _skipButton != null
+                    ? PendingSpend.BeginOn(_saveButton, _skipButton)
+                    : PendingSpend.BeginOn(_saveButton);
+                return;
+            }
+
+            if (_pending != null) { _pending.Dispose(); _pending = null; return; }
+
+            // No scope to restore (SetBusy(false) on a path that never began one).
+            if (_saveButton != null) _saveButton.interactable = true;
+            if (_skipButton != null) _skipButton.interactable = true;
         }
 
         private void SetError(string message)

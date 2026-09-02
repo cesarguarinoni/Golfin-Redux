@@ -18,6 +18,7 @@ using Golfin.Economy;
 using Golfin.Net;
 using Golfin.Social;
 using Golfin.Telemetry;
+using Golfin.UI.Polish;
 using GolfinRedux.UI;
 using TMPro;
 using UnityEngine;
@@ -358,10 +359,40 @@ namespace Golfin.Gps.UI
             ShowRounds(_lastRows);
         }
 
+        private Coroutine? _pointsCount;
+
+        /// <summary>
+        /// gps_polish §D7 — POINTS counts up to the new balance instead of swapping to it.
+        ///
+        /// <para>Only when there is a real previous number to count FROM. The first paint of the
+        /// screen goes from the em dash placeholder, and counting up from 0 there would show a
+        /// player a balance they do not have, climbing, every time they open the hub. Same for a
+        /// balance that went DOWN (a gift purchase): the count-up shape is a reward, so a spend
+        /// snaps.</para>
+        /// </summary>
         private void OnDisplayBalanceChanged(int display)
         {
-            if (_statPoints != null)
+            if (_statPoints == null) return;
+
+            if (!TryReadNumber(_statPoints.text, out int from) || display <= from)
+            {
                 _statPoints.text = display.ToString("N0", CultureInfo.InvariantCulture);
+                return;
+            }
+
+            UiMotion.Run(this, ref _pointsCount, UiMotion.CountUp(_statPoints, from, display));
+        }
+
+        /// <summary>
+        /// Read back a number this screen itself formatted with "N0". Returns false for the
+        /// em dash placeholder, for an empty label, and for anything else unparseable — every one
+        /// of which means "there is nothing to count up from".
+        /// </summary>
+        internal static bool TryReadNumber(string? text, out int value)
+        {
+            value = 0;
+            if (string.IsNullOrWhiteSpace(text)) return false;
+            return int.TryParse(text, NumberStyles.Number, CultureInfo.InvariantCulture, out value);
         }
 
         private void OnDetailResult(ApiResult<UserDetailDto> result)
