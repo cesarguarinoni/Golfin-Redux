@@ -3,6 +3,9 @@
 **Iteration shape:** `gps_gift_vote:first-build`
 **Canonical screenshot:** `screenshots/gv_02_gift.png` (1170×2532)
 **Second canonical:** `screenshots/gv_05_vote.png` (1170×2532)
+**Frames:** `screenshots/gv_01…gv_09` are ONE coherent post-fix run (all 17:46). The two pre-fix
+frames that show the inverted-bar defect are kept, deliberately and separately, in
+`evidence_prefix_bug/` — they are the proof of the bug, not evidence of the build.
 **Run log:** `Docs/Diagnostics/_capture/gps_gifts_votes_run.log`
 **Shipped:** GolfinRedux `b823510d5`, playlife `4206a56`
 
@@ -219,8 +222,20 @@ label, and `OnVote` casting `Options[0].Id` cast the wrong way — **both interm
 
 Fixed by matching on LABEL (`VoteDto.YesOption` / `NoOption`, covering `Yes`/`No` and the localized
 `はい`/`いいえ` this build's CREATE modal sends, falling back to index order for a non-Yes/No poll).
-Five EditMode tests pin it, one of them built from the exact live payload above. Re-verified: the
-card now reads `yes=100%`, matching the row.
+Five EditMode tests pin it, one of them built from the exact live payload above.
+
+Re-verified by PIXEL, not by reading the log — the two frames measured at the bar rows:
+
+```
+evidence_prefix_bug/cast_with_inverted_bars_BEFORE_FIX.png
+   YES bar x=230 (135,141,145)  <- empty track      NO bar x=230 (112,165,232) <- FULL blue
+screenshots/gv_06_vote_cast.png (post-fix)
+   YES bar x=230 (126,212,136)  <- FULL green       NO bar x=230 (138,143,148) <- empty track
+```
+
+The post-fix frame is a SECOND session against the same already-cast vote, so it also re-proves the
+already-voted branch from a client with no local memory of having voted: `RP before 6958 → RP after
+6958`, unchanged across both taps.
 
 Nothing on the server needed changing, and nothing was mis-cast — the cast that landed went to YES,
 which is what a YES button should do.
