@@ -913,3 +913,56 @@ GPS_WELCOME_FEAT_VOTE,VOTE,投票
 GPS_WELCOME_FEAT_VOTE_DESC,Predict and win points,予想してポイントを獲得
 GPS_WELCOME_FEAT_GIFT,GIFT,ギフト
 GPS_WELCOME_FEAT_GIFT_DESC,Support your favourite golfers,好きなゴルファーを応援
+GPS_GIFT_TITLE,GIFTS,ギフト
+GPS_GIFT_HERO_TITLE,GIFTS RECEIVED,受け取ったギフト
+GPS_GIFT_HERO_SUB,from {0} supporters,{0}人のサポーターから
+GPS_GIFT_HERO_VALUE,{0} pts,{0} pts
+GPS_GIFT_HERO_NOTE,total gift earnings,ギフト獲得ポイント合計
+GPS_GIFT_SUPPORTERS,TOP SUPPORTERS,トップサポーター
+GPS_GIFT_POPULAR,POPULAR GOLFERS,人気のゴルファー
+GPS_GIFT_SEE_ALL,SEE ALL ›,すべて見る ›
+GPS_GIFT_SEND_GIFT,SEND GIFT,ギフトを贈る
+GPS_GIFT_FOLLOWERS,{0} followers,フォロワー{0}人
+GPS_GIFT_PTS,{0} pts,{0} pts
+GPS_GIFT_BUY_TITLE,BUY GIFT ITEMS,ギフトアイテムを買う
+GPS_GIFT_BUY_SUB,Support your favourite golfer,好きなゴルファーを応援しよう
+GPS_GIFT_MODAL_TITLE,SEND A GIFT,ギフトを贈る
+GPS_GIFT_MODAL_BALANCE,Your balance: {0} pts,残高：{0} pts
+GPS_GIFT_MODAL_CONFIRM,CONFIRM,確定する
+GPS_GIFT_MODAL_CANCEL,CANCEL,キャンセル
+GPS_GIFT_MODAL_SENDING,Sending…,送信中…
+GPS_GIFT_SENT,Sent {0} pts to {1},{1}に{0} ptsを贈りました
+GPS_GIFT_PURCHASED,Purchased {0},{0}を購入しました
+GPS_GIFT_INSUFFICIENT,Not enough points.,ポイントが足りません。
+GPS_GIFT_FAILED,Something went wrong. Try again.,エラーが発生しました。もう一度お試しください。
+GPS_VOTE_TITLE,VOTES,投票
+GPS_VOTE_NEW,NEW,新規
+GPS_VOTE_TRENDING,TRENDING,人気
+GPS_VOTE_FRIENDS,FRIENDS,フレンド
+GPS_VOTE_PUBLIC,PUBLIC,公開
+GPS_VOTE_MINE,MINE,自分
+GPS_VOTE_CREATE,+ CREATE,＋作成
+GPS_VOTE_VOTE,VOTE,投票する
+GPS_VOTE_GIFT,GIFT,ギフト
+GPS_VOTE_YES,YES,はい
+GPS_VOTE_NO,NO,いいえ
+GPS_VOTE_META,{0} votes · {1} days left,{0}票・残り{1}日
+GPS_VOTE_REWARD_PILL,+10 pts,+10 pts
+GPS_VOTE_ALREADY,You have already voted on this.,この投票にはすでに参加しています。
+GPS_VOTE_CAST_TOAST,+{0} pts for voting,投票で+{0} pts
+GPS_VOTE_CAST_FAILED,Could not cast your vote. Try again.,投票できませんでした。もう一度お試しください。
+GPS_VOTE_EMPTY,No votes right now.,現在、投票はありません。
+GPS_VOTE_EMPTY_MINE,You have not created a vote yet.,まだ投票を作成していません。
+GPS_VOTE_AGO_MIN,{0}m ago,{0}分前
+GPS_VOTE_AGO_HOUR,{0}h ago,{0}時間前
+GPS_VOTE_AGO_DAY,{0}d ago,{0}日前
+GPS_VOTE_CREATE_TITLE,CREATE A VOTE,投票を作成
+GPS_VOTE_CREATE_HINT,Ask something about your round,ラウンドについて質問してみよう
+GPS_VOTE_CREATE_OPTIONS,Answers are YES and NO.,選択肢は「はい」と「いいえ」です。
+GPS_VOTE_EXPIRY_24H,24 HOURS,24時間
+GPS_VOTE_EXPIRY_3D,3 DAYS,3日間
+GPS_VOTE_EXPIRY_7D,7 DAYS,7日間
+GPS_VOTE_CREATE_SUBMIT,CREATE VOTE,投票を作成
+GPS_VOTE_CREATE_SENDING,Creating…,作成中…
+GPS_VOTE_CREATE_FAILED,Could not create the vote. Try again.,投票を作成できませんでした。もう一度お試しください。
+GPS_VOTE_CREATED,Vote created.,投票を作成しました。

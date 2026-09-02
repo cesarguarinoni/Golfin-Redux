@@ -48,6 +48,11 @@ namespace GolfinRedux.UI
         // no-op. Offered ONCE per device on the first Home entry after sign-in.
         GpsGolfProfile,
         GpsWelcome,
+        // gps_gifts_votes — the last two GPS screens (Figma 14027:101843 / 14028:33534).
+        // Gift is reached from the hub's GIFT nav slot and its GIFT action tile; Vote from the
+        // hub's VOTE tile and from a vote card's own GIFT button in the other direction.
+        GpsGift,
+        GpsVote,
         // Settings removed - it's an overlay, not a screen
 
         // Order: login_signup_screens — account auth gate (Phase 1 — UI only, no backend)
@@ -112,6 +117,10 @@ namespace GolfinRedux.UI
         // though neither draws the GPS nav bar: the two frames hide it (SPEC § Reference).
         [SerializeField] private GameObject _gpsGolfProfileScreen;
         [SerializeField] private GameObject _gpsWelcomeScreen;
+        // gps_gifts_votes — same top-bar-only chrome as the rest of the GPS surface; both draw
+        // the hub's own GPS nav bar inside their prefab, so the shared bottom nav stays hidden.
+        [SerializeField] private GameObject _gpsGiftScreen;
+        [SerializeField] private GameObject _gpsVoteScreen;
         // _settingsScreen removed - Settings is an overlay managed by SettingsController, not ScreenManager
 
         // Order: login_signup_screens — account auth gate screens
@@ -545,6 +554,11 @@ namespace GolfinRedux.UI
                 _gpsGolfProfileScreen.SetActive(screenId == ScreenId.GpsGolfProfile);
             if (_gpsWelcomeScreen != null)
                 _gpsWelcomeScreen.SetActive(screenId == ScreenId.GpsWelcome);
+            // gps_gifts_votes — Gift + Vote
+            if (_gpsGiftScreen != null)
+                _gpsGiftScreen.SetActive(screenId == ScreenId.GpsGift);
+            if (_gpsVoteScreen != null)
+                _gpsVoteScreen.SetActive(screenId == ScreenId.GpsVote);
 
 
             // Order: login_signup_screens — account auth gate (excluded from showBars)

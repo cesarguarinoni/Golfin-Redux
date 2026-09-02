@@ -52,6 +52,12 @@ namespace Golfin.Gps.UI
             // first-entry trigger a no-op there, since it tests GpsGate.Enabled before offering.
             ScreenId.GpsGolfProfile,
             ScreenId.GpsWelcome,
+            // gps_gifts_votes — the Gift and Vote screens. On the list for the same two reasons
+            // as the rest: they are GPS surface (top-bar-only chrome), and in a "punch it" build
+            // they must not be reachable — which also makes the hub's GIFT / VOTE affordances
+            // dead there, since the hub itself is already on this list.
+            ScreenId.GpsGift,
+            ScreenId.GpsVote,
         };
 
         /// <summary>Membership of the GPS surface, independent of <see cref="Enabled"/>. Used by

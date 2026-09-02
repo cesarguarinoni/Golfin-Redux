@@ -2895,3 +2895,162 @@ MonoBehaviour:
   - key: GPS_WELCOME_FEAT_GIFT_DESC
     english: Support your favourite golfers
     japanese: "\u597D\u304D\u306A\u30B4\u30EB\u30D5\u30A1\u30FC\u3092\u5FDC\u63F4"
+  - key: GPS_GIFT_TITLE
+    english: GIFTS
+    japanese: "\u30AE\u30D5\u30C8"
+  - key: GPS_GIFT_HERO_TITLE
+    english: GIFTS RECEIVED
+    japanese: "\u53D7\u3051\u53D6\u3063\u305F\u30AE\u30D5\u30C8"
+  - key: GPS_GIFT_HERO_SUB
+    english: from {0} supporters
+    japanese: "{0}\u4EBA\u306E\u30B5\u30DD\u30FC\u30BF\u30FC\u304B\u3089"
+  - key: GPS_GIFT_HERO_VALUE
+    english: '{0} pts'
+    japanese: '{0} pts'
+  - key: GPS_GIFT_HERO_NOTE
+    english: total gift earnings
+    japanese: "\u30AE\u30D5\u30C8\u7372\u5F97\u30DD\u30A4\u30F3\u30C8\u5408\u8A08"
+  - key: GPS_GIFT_SUPPORTERS
+    english: TOP SUPPORTERS
+    japanese: "\u30C8\u30C3\u30D7\u30B5\u30DD\u30FC\u30BF\u30FC"
+  - key: GPS_GIFT_POPULAR
+    english: POPULAR GOLFERS
+    japanese: "\u4EBA\u6C17\u306E\u30B4\u30EB\u30D5\u30A1\u30FC"
+  - key: GPS_GIFT_SEE_ALL
+    english: "SEE ALL \u203A"
+    japanese: "\u3059\u3079\u3066\u898B\u308B \u203A"
+  - key: GPS_GIFT_SEND_GIFT
+    english: SEND GIFT
+    japanese: "\u30AE\u30D5\u30C8\u3092\u8D08\u308B"
+  - key: GPS_GIFT_FOLLOWERS
+    english: '{0} followers'
+    japanese: "\u30D5\u30A9\u30ED\u30EF\u30FC{0}\u4EBA"
+  - key: GPS_GIFT_PTS
+    english: '{0} pts'
+    japanese: '{0} pts'
+  - key: GPS_GIFT_BUY_TITLE
+    english: BUY GIFT ITEMS
+    japanese: "\u30AE\u30D5\u30C8\u30A2\u30A4\u30C6\u30E0\u3092\u8CB7\u3046"
+  - key: GPS_GIFT_BUY_SUB
+    english: Support your favourite golfer
+    japanese: "\u597D\u304D\u306A\u30B4\u30EB\u30D5\u30A1\u30FC\u3092\u5FDC\u63F4\u3057\u3088\u3046"
+  - key: GPS_GIFT_MODAL_TITLE
+    english: SEND A GIFT
+    japanese: "\u30AE\u30D5\u30C8\u3092\u8D08\u308B"
+  - key: GPS_GIFT_MODAL_BALANCE
+    english: 'Your balance: {0} pts'
+    japanese: "\u6B8B\u9AD8\uFF1A{0} pts"
+  - key: GPS_GIFT_MODAL_CONFIRM
+    english: CONFIRM
+    japanese: "\u78BA\u5B9A\u3059\u308B"
+  - key: GPS_GIFT_MODAL_CANCEL
+    english: CANCEL
+    japanese: "\u30AD\u30E3\u30F3\u30BB\u30EB"
+  - key: GPS_GIFT_MODAL_SENDING
+    english: "Sending\u2026"
+    japanese: "\u9001\u4FE1\u4E2D\u2026"
+  - key: GPS_GIFT_SENT
+    english: Sent {0} pts to {1}
+    japanese: "{1}\u306B{0} pts\u3092\u8D08\u308A\u307E\u3057\u305F"
+  - key: GPS_GIFT_PURCHASED
+    english: Purchased {0}
+    japanese: "{0}\u3092\u8CFC\u5165\u3057\u307E\u3057\u305F"
+  - key: GPS_GIFT_INSUFFICIENT
+    english: Not enough points.
+    japanese: "\u30DD\u30A4\u30F3\u30C8\u304C\u8DB3\u308A\u307E\u305B\u3093\u3002"
+  - key: GPS_GIFT_FAILED
+    english: Something went wrong. Try again.
+    japanese: "\u30A8\u30E9\u30FC\u304C\u767A\u751F\u3057\u307E\u3057\u305F\u3002\u3082\u3046\u4E00\u5EA6\u304A\u8A66\u3057\u304F\u3060\u3055\u3044\u3002"
+  - key: GPS_VOTE_TITLE
+    english: VOTES
+    japanese: "\u6295\u7968"
+  - key: GPS_VOTE_NEW
+    english: NEW
+    japanese: "\u65B0\u898F"
+  - key: GPS_VOTE_TRENDING
+    english: TRENDING
+    japanese: "\u4EBA\u6C17"
+  - key: GPS_VOTE_FRIENDS
+    english: FRIENDS
+    japanese: "\u30D5\u30EC\u30F3\u30C9"
+  - key: GPS_VOTE_PUBLIC
+    english: PUBLIC
+    japanese: "\u516C\u958B"
+  - key: GPS_VOTE_MINE
+    english: MINE
+    japanese: "\u81EA\u5206"
+  - key: GPS_VOTE_CREATE
+    english: + CREATE
+    japanese: "\uFF0B\u4F5C\u6210"
+  - key: GPS_VOTE_VOTE
+    english: VOTE
+    japanese: "\u6295\u7968\u3059\u308B"
+  - key: GPS_VOTE_GIFT
+    english: GIFT
+    japanese: "\u30AE\u30D5\u30C8"
+  - key: GPS_VOTE_YES
+    english: YES
+    japanese: "\u306F\u3044"
+  - key: GPS_VOTE_NO
+    english: NO
+    japanese: "\u3044\u3044\u3048"
+  - key: GPS_VOTE_META
+    english: "{0} votes \xB7 {1} days left"
+    japanese: "{0}\u7968\u30FB\u6B8B\u308A{1}\u65E5"
+  - key: GPS_VOTE_REWARD_PILL
+    english: +10 pts
+    japanese: +10 pts
+  - key: GPS_VOTE_ALREADY
+    english: You have already voted on this.
+    japanese: "\u3053\u306E\u6295\u7968\u306B\u306F\u3059\u3067\u306B\u53C2\u52A0\u3057\u3066\u3044\u307E\u3059\u3002"
+  - key: GPS_VOTE_CAST_TOAST
+    english: +{0} pts for voting
+    japanese: "\u6295\u7968\u3067+{0} pts"
+  - key: GPS_VOTE_CAST_FAILED
+    english: Could not cast your vote. Try again.
+    japanese: "\u6295\u7968\u3067\u304D\u307E\u305B\u3093\u3067\u3057\u305F\u3002\u3082\u3046\u4E00\u5EA6\u304A\u8A66\u3057\u304F\u3060\u3055\u3044\u3002"
+  - key: GPS_VOTE_EMPTY
+    english: No votes right now.
+    japanese: "\u73FE\u5728\u3001\u6295\u7968\u306F\u3042\u308A\u307E\u305B\u3093\u3002"
+  - key: GPS_VOTE_EMPTY_MINE
+    english: You have not created a vote yet.
+    japanese: "\u307E\u3060\u6295\u7968\u3092\u4F5C\u6210\u3057\u3066\u3044\u307E\u305B\u3093\u3002"
+  - key: GPS_VOTE_AGO_MIN
+    english: '{0}m ago'
+    japanese: "{0}\u5206\u524D"
+  - key: GPS_VOTE_AGO_HOUR
+    english: '{0}h ago'
+    japanese: "{0}\u6642\u9593\u524D"
+  - key: GPS_VOTE_AGO_DAY
+    english: '{0}d ago'
+    japanese: "{0}\u65E5\u524D"
+  - key: GPS_VOTE_CREATE_TITLE
+    english: CREATE A VOTE
+    japanese: "\u6295\u7968\u3092\u4F5C\u6210"
+  - key: GPS_VOTE_CREATE_HINT
+    english: Ask something about your round
+    japanese: "\u30E9\u30A6\u30F3\u30C9\u306B\u3064\u3044\u3066\u8CEA\u554F\u3057\u3066\u307F\u3088\u3046"
+  - key: GPS_VOTE_CREATE_OPTIONS
+    english: Answers are YES and NO.
+    japanese: "\u9078\u629E\u80A2\u306F\u300C\u306F\u3044\u300D\u3068\u300C\u3044\u3044\u3048\u300D\u3067\u3059\u3002"
+  - key: GPS_VOTE_EXPIRY_24H
+    english: 24 HOURS
+    japanese: "24\u6642\u9593"
+  - key: GPS_VOTE_EXPIRY_3D
+    english: 3 DAYS
+    japanese: "3\u65E5\u9593"
+  - key: GPS_VOTE_EXPIRY_7D
+    english: 7 DAYS
+    japanese: "7\u65E5\u9593"
+  - key: GPS_VOTE_CREATE_SUBMIT
+    english: CREATE VOTE
+    japanese: "\u6295\u7968\u3092\u4F5C\u6210"
+  - key: GPS_VOTE_CREATE_SENDING
+    english: "Creating\u2026"
+    japanese: "\u4F5C\u6210\u4E2D\u2026"
+  - key: GPS_VOTE_CREATE_FAILED
+    english: Could not create the vote. Try again.
+    japanese: "\u6295\u7968\u3092\u4F5C\u6210\u3067\u304D\u307E\u305B\u3093\u3067\u3057\u305F\u3002\u3082\u3046\u4E00\u5EA6\u304A\u8A66\u3057\u304F\u3060\u3055\u3044\u3002"
+  - key: GPS_VOTE_CREATED
+    english: Vote created.
+    japanese: "\u6295\u7968\u3092\u4F5C\u6210\u3057\u307E\u3057\u305F\u3002"

@@ -99,6 +99,18 @@ namespace Golfin.Gps.UI
                  "_tileButtons.")]
         [SerializeField] private Button? _tileScreenshotButton;
 
+        [Tooltip("gps_gifts_votes — the hub's GIFT nav slot. Lifted out of the inert _navButtons " +
+                 "loop, which sets interactable = false.")]
+        [SerializeField] private Button? _navGiftButton;
+
+        [Tooltip("gps_gifts_votes — the GIFT action tile. Same destination as the nav slot. Must " +
+                 "NOT also appear in _tileButtons.")]
+        [SerializeField] private Button? _tileGiftButton;
+
+        [Tooltip("gps_gifts_votes — the VOTE action tile (the frame's LIVE VOTES affordance). " +
+                 "Must NOT also appear in _tileButtons.")]
+        [SerializeField] private Button? _tileVoteButton;
+
         // ── Navigation ────────────────────────────────────────────────────────
         [Header("Navigation")]
         [SerializeField] private Button? _backButton;
@@ -213,6 +225,32 @@ namespace Golfin.Gps.UI
                 _tileScreenshotButton.interactable = true;
                 _tileScreenshotButton.onClick.AddListener(OpenScoreUpload);
             }
+
+            // gps_gifts_votes — the last two inert affordances on the hub. Both the nav slot and
+            // the tile go to the same screen, for the same reason the camera button and the
+            // SCREENSHOT tile do: the nav slot is what a player reaches for, the tile is what the
+            // frame has been promising since the hub shipped.
+            if (_navGiftButton != null)
+            {
+                _navGiftButton.interactable = true;
+                _navGiftButton.onClick.AddListener(() => Open(ScreenId.GpsGift, "nav GIFT"));
+            }
+            if (_tileGiftButton != null)
+            {
+                _tileGiftButton.interactable = true;
+                _tileGiftButton.onClick.AddListener(() => Open(ScreenId.GpsGift, "tile GIFT"));
+            }
+            if (_tileVoteButton != null)
+            {
+                _tileVoteButton.interactable = true;
+                _tileVoteButton.onClick.AddListener(() => Open(ScreenId.GpsVote, "tile VOTE"));
+            }
+        }
+
+        private void Open(ScreenId id, string source)
+        {
+            Debug.Log($"{Tag} {source} -> {id}.");
+            ScreenManager.Instance?.ShowScreen(id);
         }
 
         private void OpenScoreUpload()

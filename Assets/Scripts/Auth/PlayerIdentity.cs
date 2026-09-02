@@ -49,6 +49,29 @@ namespace Golfin.Auth
         }
 
         /// <summary>
+        /// The signed-in player's Supabase user id, or an empty string when there is no session.
+        ///
+        /// <para>
+        /// This is the SAME id every <c>profiles</c> row and every <c>creator_id</c> is keyed on,
+        /// so it is what a client-side "is this mine?" test compares against (the Vote screen's
+        /// MINE filter). Same null-safety and the same edit-mode guard as
+        /// <see cref="DisplayName"/>: outside play mode there is no session and this is empty,
+        /// which every caller must treat as "cannot tell", never as "not mine".
+        /// </para>
+        /// </summary>
+        public static string UserId
+        {
+            get
+            {
+                if (!Application.isPlaying) return string.Empty;
+
+                var service = AuthService.Instance;
+                if (service == null || service.Session == null) return string.Empty;
+                return service.Session.UserId ?? string.Empty;
+            }
+        }
+
+        /// <summary>
         /// The player's display name, falling back to <paramref name="fallback"/> when none is set.
         /// Pass whatever that surface used to show — a localised "YOU", "Player", and so on — so a
         /// signed-out player sees exactly what they saw before.

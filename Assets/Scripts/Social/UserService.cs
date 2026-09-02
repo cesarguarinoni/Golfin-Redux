@@ -71,6 +71,34 @@ namespace Golfin.Social
             });
         }
 
+        /// <summary>The last discover page the server returned this session, or null.</summary>
+        public System.Collections.Generic.List<DiscoverUserDto> LastDiscover { get; private set; }
+
+        /// <summary>Raised after <see cref="LastDiscover"/> is replaced.</summary>
+        public event Action OnDiscoverChanged;
+
+        /// <summary>
+        /// <c>GET /user/discover</c> → up to 20 suggested players, ordered by
+        /// <c>followers_count</c> descending (user.py <c>discover_users</c>).
+        ///
+        /// <para>
+        /// AUTH REQUIRED, and the exclusion list is server-side: the caller and everyone they
+        /// already follow are filtered out. An EMPTY list is therefore a legitimate answer for an
+        /// account that follows everybody, and is not an error — the POPULAR GOLFERS panel that
+        /// reads this hides its rows rather than showing a failure.
+        /// </para>
+        /// </summary>
+        public IEnumerator Discover(Action<ApiResult<System.Collections.Generic.List<DiscoverUserDto>>> onResult = null)
+            => _client.Get<System.Collections.Generic.List<DiscoverUserDto>>(Endpoints.UserDiscover, result =>
+            {
+                if (result != null && result.Success && result.Data != null)
+                {
+                    LastDiscover = result.Data;
+                    OnDiscoverChanged?.Invoke();
+                }
+                onResult?.Invoke(result);
+            });
+
         /// <summary>
         /// <c>PUT /user/update</c> → the caller's own <c>profiles</c> row, after the write.
         ///

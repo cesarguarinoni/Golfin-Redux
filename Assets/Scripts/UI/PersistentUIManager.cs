@@ -544,6 +544,9 @@ namespace Golfin.UI
                 // auth_golf_profile — post-signup capture + welcome tutorial
                 case GolfinRedux.UI.ScreenId.GpsGolfProfile:           return "GPS_GOLFPROF_TITLE";
                 case GolfinRedux.UI.ScreenId.GpsWelcome:               return "GPS_WELCOME_TITLE";
+                // gps_gifts_votes
+                case GolfinRedux.UI.ScreenId.GpsGift:                  return "GPS_GIFT_TITLE";
+                case GolfinRedux.UI.ScreenId.GpsVote:                  return "GPS_VOTE_TITLE";
                 default:                                               return null;
             }
         }

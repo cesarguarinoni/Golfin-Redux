@@ -151,6 +151,69 @@ namespace Golfin.Economy
             onResult?.Invoke(result);
         }
 
+        // ── PLAYLIFE action earns (gps_gifts_votes) ───────────────────────────────
+
+        /// <summary>
+        /// Fire-and-forget <c>POST /points/earn?action=&lt;name&gt;</c> — the PLAYLIFE earn path,
+        /// whose amounts are server-side (<c>ACTIVITY_PTS_REWARDS</c>).
+        ///
+        /// <para>
+        /// DISTINCT FROM <see cref="EnqueueEarn"/>, and deliberately not queued. A queued earn is
+        /// replayable because <c>earn_pts_v2</c> is keyed; this endpoint calls the UNKEYED
+        /// <c>earn_activity_pts</c>, so replaying it would credit twice. It is therefore only ever
+        /// called immediately after an action the SERVER has already made unrepeatable — a vote
+        /// cast, which <c>user_votes</c> refuses a second time. If it is lost to a dropped
+        /// connection the player loses the 10 pts, and that is the correct trade against paying
+        /// them twice.
+        /// </para>
+        /// </summary>
+        public void EarnActionAsync(string action, Action<ApiResult<PointsEarnResult>> onResult = null)
+            => _client.Run(EarnActionRoutine(action, onResult));
+
+        /// <summary>Coroutine form of <see cref="EarnActionAsync"/>. The flag gate lives HERE, so
+        /// neither entry point can reach the network with the backend off.</summary>
+        public IEnumerator EarnActionRoutine(string action, Action<ApiResult<PointsEarnResult>> onResult)
+        {
+            if (!PointsBackendFlag.Enabled)
+            {
+                onResult?.Invoke(Disabled<PointsEarnResult>());
+                yield break;
+            }
+
+            if (string.IsNullOrEmpty(action))
+            {
+                Debug.LogError("[PointsService] EarnActionRoutine called with no action — ignored.");
+                onResult?.Invoke(Disabled<PointsEarnResult>());
+                yield break;
+            }
+
+            ApiResult<PointsEarnResult> result = null;
+            // `action` is a QUERY parameter on the router (points.py `earn_activity_pts(action: str)`),
+            // not a body field — so the body is an empty object, not the action.
+            IEnumerator call = _client.Post<PointsEarnResult>(Endpoints.PointsEarn(action), "{}", r => result = r);
+            while (call.MoveNext()) yield return call.Current;
+
+            if (result != null && result.Success && result.Data != null && !result.Data.WasRefused)
+            {
+                // The response carries activity_pts + total_points but NOT gift_pts, so the gift
+                // bucket is carried forward from the cache rather than zeroed.
+                ApplyEarnedBalance(result.Data.ActivityPts,
+                                   LastBalance != null ? LastBalance.GiftPts : 0,
+                                   result.Data.TotalPoints);
+                Debug.Log($"[PointsService] earn {action}: +{result.Data.Awarded} -> RP {result.Data.TotalPoints}");
+            }
+            else if (result != null && result.Success && result.Data != null)
+            {
+                Debug.LogWarning($"[PointsService] earn {action} refused: {result.Data.Reason}");
+            }
+            else if (result != null)
+            {
+                Debug.LogWarning($"[PointsService] earn {action} failed: {result}");
+            }
+
+            onResult?.Invoke(result);
+        }
+
         // ── queued earns ──────────────────────────────────────────────────────────
 
         /// <summary>

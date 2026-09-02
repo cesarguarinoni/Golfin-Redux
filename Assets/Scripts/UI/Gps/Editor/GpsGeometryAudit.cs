@@ -17,7 +17,8 @@ namespace Golfin.Gps.UI.Editor
 {
     public static class GpsGeometryAudit
     {
-        const string Dir = "Docs/Specs/Active/auth_golf_profile/reference/nodes";
+        const string Dir = "Docs/Specs/Completed/auth_golf_profile/reference/nodes";
+        const string GiftVoteDir = "Docs/Specs/Active/gps_gifts_votes/reference/nodes";
         const string OutDir = "Docs/Diagnostics/_capture";
 
         /// <summary>Half a pixel: the sheet carries the node's own fractional widths
@@ -26,14 +27,25 @@ namespace Golfin.Gps.UI.Editor
 
         [MenuItem("GOLFIN/Gps/Audit Auth Extras Geometry", priority = 214)]
         public static void Run()
+            => Audit(Dir, "auth_golf_profile_geometry_audit.txt",
+                     "GpsGolfProfileScreen_geometry.json", "GpsWelcomeScreen_geometry.json");
+
+        /// <summary>gps_gifts_votes — the same audit over the two new sheets. A second menu item
+        /// rather than a second copy of the routine: the sheet format is identical, so only the
+        /// directory and the file list differ.</summary>
+        [MenuItem("GOLFIN/Gps/Audit Gift + Vote Geometry", priority = 223)]
+        public static void RunGiftVote()
+            => Audit(GiftVoteDir, "gps_gifts_votes_geometry_audit.txt",
+                     "GpsGiftScreen_geometry.json", "GpsVoteScreen_geometry.json");
+
+        static void Audit(string dir, string outFile, params string[] sheets)
         {
             var lines = new StringBuilder();
             int totalSites = 0, totalFail = 0, totalGone = 0;
 
-            foreach (string sheet in new[] { "GpsGolfProfileScreen_geometry.json",
-                                             "GpsWelcomeScreen_geometry.json" })
+            foreach (string sheet in sheets)
             {
-                string path = Path.Combine(Dir, sheet);
+                string path = Path.Combine(dir, sheet);
                 if (!File.Exists(path)) { Debug.LogError("[GeometryAudit] missing " + path); continue; }
 
                 var doc = MiniJson.Parse(File.ReadAllText(path)) as Dictionary<string, object>;
@@ -86,7 +98,7 @@ namespace Golfin.Gps.UI.Editor
             lines.Append("\n").Append(verdict).Append('\n');
 
             Directory.CreateDirectory(OutDir);
-            string outPath = Path.Combine(OutDir, "auth_golf_profile_geometry_audit.txt");
+            string outPath = Path.Combine(OutDir, outFile);
             File.WriteAllText(outPath, lines.ToString());
             Debug.Log("[GeometryAudit] " + verdict + "\n" + lines);
         }
