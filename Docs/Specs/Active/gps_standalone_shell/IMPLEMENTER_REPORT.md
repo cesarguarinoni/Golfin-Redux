@@ -93,11 +93,15 @@ addendum says. Confirmed in the build log: `[StandaloneIdentity] icon → Assets
 
 ## R2 · The size — **PASS, target beaten**
 
-| | Build 2635 | This build (2636) |
-|---|---|---|
-| Total User Assets | **555 MB** | **98.3 MB** |
-| of which `Resources/HoleData` | 385 MB | 0 |
-| Textures / Other / Sounds / Levels | — | 79.7 / 11.6 / 4.3 / 1.5 MB |
+| | Build 2635 (shipped) | Verification build 2636 | Build 2637 (shipped) |
+|---|---|---|---|
+| Total User Assets | **555 MB** | 98.3 MB | **98.6 MB** |
+| of which `Resources/HoleData` | 385 MB | 0 | 0 |
+| Textures / Other / Sounds / Levels | — | 79.7 / 11.6 / 4.3 / 1.5 MB | — |
+
+2636 was a local verification build, never uploaded — it exists to prove the numbers before an
+upload was spent on them. 2637 is the one on TestFlight; the 0.3 MB between them is the round-2
+docs/lessons commits changing nothing but the build stamp.
 
 Mechanism: `StandaloneBuildPreprocessor.MoveGolfResourcesOut()` / `RestoreGolfResources()`, called
 from a `try`/`finally` in `CIBuild.BuildIOSStandalone`, with the sentinel
@@ -144,6 +148,35 @@ exits the process (a batchmode `delayCall` never gets a frame), and an `[Initial
 that repairs on the next editor load. That last one matters most: a missing `Resources` folder is
 not a build error, so a stashed `HoleData` would otherwise make the next **game** build ship
 without its holes, silently.
+
+### The .ipa, measured — and the target read two ways
+
+`Builds/ipa/GOLFINGPS.ipa` = **196.2 MB**, against **427 MB** for build 2635 (same path, same
+measure): a 54 % cut. **That misses the addendum's literal "≤ 150 MB .ipa".** Unpacking it says why,
+and the answer is not the assets:
+
+| Inside the .ipa | Compressed | Uncompressed |
+|---|---|---|
+| `Symbols/` (dSYM) | **121.1 MB** | 503 MB |
+| `Payload/GOLFINGPS.app` | **75.0 MB** | 224 MB |
+| — of which `Data/` (Unity assets) | | 117 MB |
+| — of which `Frameworks/UnityFramework` | | 106 MB |
+
+Two honest readings, and I am not going to pick the flattering one silently:
+
+- **As the .ipa FILE: missed** — 196.2 MB vs 150. Most of it (121 MB) is debug symbols, which Apple
+  keeps for crash symbolication and strips from what a tester downloads; `Docs/BUILD_SIZE_AUDIT.md`
+  makes the same point about the game's 711 MB.
+- **As the app: met** — the Payload is **75.0 MB** compressed. The addendum's own model for the
+  target was "≈ 100 MB assets + the framework", i.e. the Payload, not the symbols.
+
+The asset half landed exactly where the addendum predicted (98.6 MB ≈ "100 MB assets"). What did not
+shrink is `UnityFramework` at 106 MB uncompressed: the whole golf codebase is still compiled into the
+shell, because §D2 says code is deliberately not refactored out and IL2CPP stripping does the work.
+Getting the .ipa FILE under 150 would mean attacking that binary — assembly splitting or a higher
+managed-stripping level — which is exactly what this task's § Out of scope excludes and what
+`build_size_diet` owns. **Flagging rather than deciding: if the ≤150 MB was meant as the .ipa file,
+that is a scope call for Cesar, not one for me to take silently.**
 
 ## R3 · Once per account — **PASS, and it found a round-1 defect**
 
