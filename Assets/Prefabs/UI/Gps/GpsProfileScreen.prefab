@@ -6817,6 +6817,7 @@ GameObject:
   - component: {fileID: 6683337900242620217}
   - component: {fileID: 499184640448042357}
   - component: {fileID: 3008873597992345859}
+  - component: {fileID: 6448668140722948056}
   m_Layer: 5
   m_Name: GpsNavBar
   m_TagString: Untagged
@@ -6898,6 +6899,18 @@ CanvasGroup:
   m_Interactable: 1
   m_BlocksRaycasts: 1
   m_IgnoreParentGroups: 0
+--- !u!114 &6448668140722948056
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7237309966213814224}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 59f882c2bf9a04379895561e8ecef578, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.Gps.UI.GpsNavBarSafeArea
 --- !u!1 &7367891998242618547
 GameObject:
   m_ObjectHideFlags: 0
@@ -8008,7 +8021,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 8435357518144090713}
-  - component: {fileID: 1954981188177255988}
   m_Layer: 0
   m_Name: NavSafeArea
   m_TagString: Untagged
@@ -8036,20 +8048,6 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
---- !u!114 &1954981188177255988
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8318669013319048557}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 3380b2d48492d427b8989e759e3ac5f6, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::GolfinRedux.UI.Core.SafeAreaFitter
-  _pollEveryFrame: 1
-  _baselineInsetPixels: 0
 --- !u!1 &8360659650422531062
 GameObject:
   m_ObjectHideFlags: 0

@@ -402,17 +402,27 @@ namespace Golfin.Gps.EditorTools
             wrt.offsetMin        = Vector2.zero;
             wrt.offsetMax        = Vector2.zero;
             wrt.localScale       = Vector3.one;
-            Ensure<SafeAreaFitter>(wrapper.gameObject);
+
+            // THE FITTER COMES OFF. It was the bug: a full-screen SafeAreaFitter at baseline 0
+            // inset the wrapper's BOTTOM edge by the home indicator, and the bar — pinned to the
+            // wrapper's bottom — floated 102 px up the screen with the background showing under
+            // it. The wrapper stays (it keeps the `NavSafeArea/GpsNavBar` path every caller,
+            // recorder and probe already resolves) but it is now an inert full-screen
+            // pass-through, so the bar's bottom is the screen's bottom again.
+            var stale = wrapper.GetComponent<SafeAreaFitter>();
+            if (stale != null) Object.DestroyImmediate(stale, allowDestroyingAssets: true);
 
             if (nav.parent != wrapper)
             {
-                // The nav bar keeps its own anchors and anchoredPosition (bottom-centre, 0) — the
-                // wrapper is exactly the screen rect until a real inset shrinks it, so nothing
-                // moves at the reference resolution.
                 int order = nav.GetSiblingIndex();
                 nav.SetParent(wrapper, worldPositionStays: false);
                 wrapper.SetSiblingIndex(order);
             }
+
+            // The inset is handled ON THE BAR instead: it grows upward from a pinned bottom, so
+            // the background still reaches the screen edge and only the content clears the
+            // indicator. See GpsNavBarSafeArea's header.
+            Ensure<GpsNavBarSafeArea>(nav.gameObject);
         }
 
         /// <summary>

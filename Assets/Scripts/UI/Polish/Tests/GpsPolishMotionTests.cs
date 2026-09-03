@@ -345,6 +345,119 @@ namespace Golfin.UI.Polish.Tests
     }
 
     // ═════════════════════════════════════════════════════════════════════════
+    // The GPS nav bar and the home indicator
+    //
+    // Added after the FIRST DEVICE PASS found what the Editor structurally
+    // cannot: gps_polish §D9 inset the whole bar instead of only its content, so
+    // on a phone with a home indicator the bar floated 102 px up the screen with
+    // background showing underneath. At the 1170x2532 Editor reference
+    // `Screen.safeArea` is the whole screen, the inset is zero, and every gate
+    // saw a bar that had not moved.
+    //
+    // The geometry is now a pure function of three numbers, so the part that CAN
+    // be pinned here is pinned here, and only "does iOS report the inset we think
+    // it does" is left to the phone.
+    // ═════════════════════════════════════════════════════════════════════════
+
+    [TestFixture]
+    public class GpsNavBarSafeAreaTests
+    {
+        static Type T => Probe.Type("Golfin.Gps.UI.GpsNavBarSafeArea");
+
+        /// <summary>The authored bar, read off GpsHubScreen.prefab.</summary>
+        const float BarHeight = 196f;
+
+        /// <summary>The centre camera button, bottom-anchored at this y.</summary>
+        const float CameraY = 155f;
+
+        /// <summary>iPhone home indicator: 34 pt at @3x.</summary>
+        const float Indicator = 102f;
+
+        /// <summary>The four icon buttons are TOP-anchored 98 px below the top edge, 156 tall —
+        /// so their lower edge sits (barHeight − 98 − 78) above the bar's bottom.</summary>
+        const float IconCentreFromTop = 98f, IconSize = 156f;
+
+        static (float height, float bottomChildY) For(float h, float y, float inset)
+        {
+            object l = T.GetMethod("For", BindingFlags.Public | BindingFlags.Static)!
+                        .Invoke(null, new object[] { h, y, inset })!;
+            Type lt = l.GetType();
+            return ((float)lt.GetField("Height")!.GetValue(l)!,
+                    (float)lt.GetField("BottomChildY")!.GetValue(l)!);
+        }
+
+        [Test]
+        public void NoIndicator_LeavesTheAuthoredGeometryUntouched()
+        {
+            // The Editor case, and the reason this component cannot move a rest pixel there —
+            // which is what keeps gps_polish's A2 0-px parity result valid.
+            var (h, y) = For(BarHeight, CameraY, 0f);
+            Assert.AreEqual(BarHeight, h, 1e-4f);
+            Assert.AreEqual(CameraY, y, 1e-4f);
+        }
+
+        [Test]
+        public void ANegativeInset_IsTreatedAsNone()
+        {
+            var (h, y) = For(BarHeight, CameraY, -50f);
+            Assert.AreEqual(BarHeight, h, 1e-4f);
+            Assert.AreEqual(CameraY, y, 1e-4f);
+        }
+
+        [Test]
+        public void WithAnIndicator_TheBarGROWS_ItDoesNotMOVE()
+        {
+            // The whole point. The bar's pivot and anchor are both y = 0, so a taller bar extends
+            // UPWARD and its bottom stays welded to the screen edge — the background still covers
+            // the indicator instead of floating above it.
+            var (h, _) = For(BarHeight, CameraY, Indicator);
+            Assert.AreEqual(BarHeight + Indicator, h, 1e-4f,
+                "the bar must absorb the inset as HEIGHT; anything else lifts it off the edge");
+        }
+
+        [Test]
+        public void TheBottomAnchoredCameraButton_RidesUpWithTheIndicator()
+        {
+            // It is the one child anchored to the bottom, so it does not follow the rising top
+            // edge the way the four icon buttons do and has to be moved explicitly.
+            var (_, y) = For(BarHeight, CameraY, Indicator);
+            Assert.AreEqual(CameraY + Indicator, y, 1e-4f);
+
+            // And it must actually clear the indicator afterwards: centre 257, radius 119.
+            Assert.Greater(y - 238f / 2f, Indicator,
+                "the camera button's lower edge is still inside the home indicator");
+        }
+
+        [Test]
+        public void TheTopAnchoredIconRow_ClearsTheIndicatorWithoutBeingTouched()
+        {
+            // The icons are anchored to the bar's TOP, so growing the bar lifts them for free.
+            // Authored, their lower edge is 196 − 98 − 78 = 20 px above the bottom — inside a
+            // 102 px indicator, which is the defect §D9 was trying to fix in the first place.
+            float authoredIconBottom = BarHeight - IconCentreFromTop - IconSize / 2f;
+            Assert.Less(authoredIconBottom, Indicator,
+                "if this ever passes, the bar no longer needs a safe-area inset at all");
+
+            var (h, _) = For(BarHeight, CameraY, Indicator);
+            float insetIconBottom = h - IconCentreFromTop - IconSize / 2f;
+            Assert.Greater(insetIconBottom, Indicator,
+                "the icon row is still inside the home indicator after the inset");
+            Assert.AreEqual(authoredIconBottom + Indicator, insetIconBottom, 1e-4f);
+        }
+
+        [Test]
+        public void TheComponentIsRuntimeOnly_SoItCannotBakeGrownValuesIntoThePrefab()
+        {
+            // The trap this avoids: an [ExecuteAlways] version would rewrite the height in the
+            // open prefab, a later save would serialise the GROWN value as the authored one, and
+            // the next run would grow it again from there — cumulative asset drift.
+            Assert.IsNull(T.GetCustomAttribute<ExecuteAlways>(),
+                "GpsNavBarSafeArea must NOT be [ExecuteAlways] — see its header");
+            Assert.IsNotNull(T.GetCustomAttribute<DisallowMultipleComponent>());
+        }
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
     // R1 / R5 · the cache-vs-fetch gate
     // ═════════════════════════════════════════════════════════════════════════
 
