@@ -231,7 +231,8 @@ namespace Golfin.EditorTools
                     // since profile defines never reach editor assemblies.
                     StandaloneSceneProcessor.ForceStandaloneStrip = true;
 
-                    error = BuildIOSCore(StandaloneProfilePath, OutputPath, BuildOptions.None);
+                    error = BuildIOSCore(StandaloneProfilePath, OutputPath, BuildOptions.None,
+                                         validateTreeBake: false);
                 }
             }
             catch (Exception e)
@@ -312,10 +313,32 @@ namespace Golfin.EditorTools
         /// restores PlayerSettings first, then exits.</summary>
         static string BuildIOSCore() => BuildIOSCore(ProfilePath, OutputPath, BuildOptions.None);
 
-        static string BuildIOSCore(string profilePath, string outputPath, BuildOptions buildOptions)
+        /// <param name="validateTreeBake">
+        /// gps_standalone_shell R2. The tree-bake drift gate reads
+        /// <c>Assets/Resources/HoleData/**/tree_obstacles.csv</c>, and the standalone build has
+        /// deliberately moved <c>HoleData</c> out of the tree by the time it gets here — so the
+        /// gate reported 18/18 holes missing and failed a build that is CORRECT.
+        ///
+        /// <para>Skipped for the standalone rather than reordered, because for that variant the
+        /// gate protects nothing: it exists to stop shipping holes whose invisible tree colliders
+        /// disagree with what the hole renders, and the standalone's scene list is ShellScene
+        /// alone — it ships no hole to disagree about. Every other lane keeps the gate armed;
+        /// this is a parameter with one caller, not a global switch.</para>
+        /// </param>
+        static string BuildIOSCore(string profilePath, string outputPath, BuildOptions buildOptions,
+                                   bool validateTreeBake = true)
         {
-            var treeError = ValidateTreeBake();
-            if (treeError != null) return treeError;
+            if (validateTreeBake)
+            {
+                var treeError = ValidateTreeBake();
+                if (treeError != null) return treeError;
+            }
+            else
+            {
+                Debug.Log($"{Tag} tree bake drift gate SKIPPED — this variant ships no hole scenes " +
+                          $"(scene list is ShellScene only), so there is no baked hole data for it " +
+                          $"to disagree with. Every other lane still runs it.");
+            }
 
             // content_two_way §5 — a REPORT, not a gate. Deliberately has no failure path and no
             // -skip flag: data published ahead of its art is a legitimate state that §4 makes safe,

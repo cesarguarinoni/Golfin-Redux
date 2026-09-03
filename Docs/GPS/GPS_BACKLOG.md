@@ -45,6 +45,7 @@
 | Background GPS trail during a round | `gps_checkin` D3 | Foreground-only in v1 (no "Always" entitlement); add the background location mode + entitlement if K4 counts prove too low on device |
 | Partner offers redemption / coupons | `gps_checkin` | `partner_offer` is display text only; redemption flow, QR, partner reporting are unspecced |
 | Unity Recorder hard-locks the Mac on the Rounds screen | `gps_checkin` (KNOWN_ISSUE_recorder_lockup.md) | Tooling only, video waived by Cesar; the encoder + Rounds screen together stall below the app (no crash report). Investigate with a smaller GameView / software encoder / capture outside Unity before the next Rounds video |
+| Standalone launch image / brand assets from Ken | `gps_standalone_shell` | Icon supplied by Cesar 2026-09-03; launch screen still the GPS Splash background |
 | Android GPS build variants | `punch_it_gps_variants` | One `Android-Full-GPS` profile clone + lane when Android builds resume |
 | Android mock-GPS detection plugin | decision 2026-09-01 | `IMockLocationDetector` seam exists; iOS first |
 | In-app build-variant watermark | `punch_it_gps_variants` | The Home **GPS pill** is the tell since `gps_pill_entry` (banner restored to plain admin behaviour); revisit only if Cesar asks |
@@ -54,7 +55,7 @@
 | Standalone PLAYLIFE shell | DECIDED 2026-09-02 | Unity thin-shell, Flutter retired (one codebase). Spec `gps_standalone_shell` after `gps_gifts_votes` + `gps_polish` |
 | Haptics (game + GPS) with Settings on/off toggle | `gps_polish` map, 2026-09-02 | Cesar: not yet — must land in the game AND GPS together, with a toggle. Notion Order 2130 `haptics_option` |
 | Avatar photo upload (`/user/avatar`) | `auth_golf_profile` | Endpoint exists; game uses character art + colour instead |
-| Golf-profile prompt is per-device | `auth_golf_profile` | PlayerPrefs flag: a second device re-prompts once. Server-side "prompted" flag if it annoys |
+| Golf-profile prompt is per-device | TAKEN UP by `gps_profile_prompt_server_flag` (2026-09-03) | — |
 | Badge names JA-only in seeds | `gps_profile_pack` | EN localization of the 24 badge names rides the existing keys; verify EN column quality |
 | bioKey/nameKey localization wiring | pre-GPS | Long-standing partial wiring, unrelated to GPS but adjacent |
 

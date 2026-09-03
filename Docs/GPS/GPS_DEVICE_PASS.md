@@ -31,6 +31,22 @@
 | 1.8 | Kill the app, relaunch, sit on Home, tap the pill again | Home stays Home; the pill goes **straight to the hub** — Golf Profile NOT offered again |
 | 1.9 | Still on that launch: tap the **home_promo banner** (its `golfin://gps` route) | the hub, no second offer. On a fresh install with the flag unset, this same tap is the OTHER way into the one-time Golf Profile offer — the intercept is in `ScreenManager.Navigate`, not on the pill |
 
+### 1b · Once per ACCOUNT, not per device (`gps_profile_prompt_server_flag`)
+
+The Golf Profile offer is recorded on the account (`profiles.golf_profile_prompted_at`), so
+completing OR skipping it anywhere means nowhere else ever offers it again. These rows need **two
+installs** — the game and the standalone GOLFIN GPS app, side by side — and cannot be checked in
+the Editor. Do 1b.1 and 1b.2 in whichever order you have the installs for; they are the same claim
+in both directions.
+
+| # | Check | Expect |
+|---|---|---|
+| 1b.1 | Answer the Golf Profile in the **GAME** (SAVE or "Skip for now"), then install the **standalone** and sign in with the same account | the shell boots **straight to the hub**. The Golf Profile is NOT offered. Expect a brief hold (~0.2 s) on the first launch only, while it asks the server — the second launch is instant because the answer is cached locally |
+| 1b.2 | The reverse: answer it in the **standalone**, then open the **game** and tap the GPS pill | the hub, no capture. "Skip for now" counts as answering — that is the half that used to leave no trace at all |
+| 1b.3 | A genuinely NEW account, in whichever app you open first | offered **exactly once**, in that app; the other app never offers it |
+| 1b.4 | Airplane mode, on a device that has already answered | still no offer (the local cache covers it; the server is never consulted) |
+| 1b.5 | Airplane mode, on a **fresh install** that has never answered | no offer, no hang — it gives up after ~2.5 s and goes to the hub. Turn the network back on, relaunch: now it decides properly |
+
 ## 2 · Navigation and motion (the gamble, on glass)
 
 | # | Check | Expect |

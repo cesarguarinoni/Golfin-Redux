@@ -20,7 +20,7 @@
   `backend/pgrest.py` (Supabase's edge 500s on a bare `%` — venue nearby/search AND user search were
   down for every client until v68), `ApiEnvelope` DateParseHandling.None (ISO timestamps were shifted
   twice). Unity Recorder hard-locks the Mac on the Rounds screen — KNOWN_ISSUE, video waived.
-  **NOW: Cesar runs the device pass (§1–§6 + §3b); Code starts `gps_standalone_shell` (SPEC_READY, kickoff below)**
+  **NOW: Cesar runs the device pass (§1–§6 + §3b); `gps_standalone_shell` round 1 BUILT + reviewed PASS, build 2635 (1.0.0, 427 MB) on the GOLFIN GPS TestFlight; NEXT for Code: `gps_profile_prompt_server_flag` → shell round 2 (real icon, Resources exclusion → ≤150 MB, re-upload)**
   (decision 2026-09-02: Unity thin-shell, Flutter retired). Deferred scope lives in
   `Docs/GPS/GPS_BACKLOG.md` (Architect-maintained). Roadmap rows: Notion Orders 2104–2114, 2130.
 
@@ -170,6 +170,10 @@
 
 ## 📋 SPEC_READY POINTERS
 
+- **`build_size_diet`: SPEC_READY (2026-09-03 evening, GAME track — Notion 2121, P1).** `Docs/Specs/Active/build_size_diet/SPEC.md` — the 1.9 GB install / 711 MB .ipa diet, brief in `Docs/BUILD_SIZE_AUDIT.md`. Five phases, each its own commit with Build Report numbers: (1) iPhone overrides on the vegetation-pack textures (leaves 1024 / bark 2048, ASTC, no `None`) + terrain tree-prototype audit (only `Spruce 1/3` are placed) + dead files off disk; (2) `HoleData` **lossless**: `heightmap.bytes` is int32 Q16.16 (`GHM1`) → `GHM2` = row-delta + Deflate, loader reads both, one-shot converter proves SHA-256 of decoded heights unchanged; `zones.json` → gzip-minified `zones.bytes` behind one `HoleDataIO.LoadZones` with a `ZoneData` equality test; smoke-bot AtRest positions must be bit-identical; `Resources/Clubs` → 512 ASTC; (3) the 93 `compression: None` textures → ASTC with before/after captures; (4) NotoSansJP static atlas from the CSV glyph set + kana — honest verdict on whether the TTF still ships (fallback for out-of-CSV names), Cesar picks; (5) terrain resolution table + Hole 6 alphamap A/B — **measurement only**, no terrain edit without Cesar's "go". Target install ≤ 1.0 GB, .ipa ≤ 350 MB, zero visible change.
+
+- **`gps_profile_prompt_server_flag`: SPEC_READY (2026-09-03, Quick).** `Docs/Specs/Active/gps_profile_prompt_server_flag/SPEC.md` — the Golf Profile / Welcome offer becomes once per ACCOUNT: `profiles.golf_profile_prompted_at` (migration + backfill from Cesar), `PUT /user/update golf_profile_prompted`, `ShouldOffer` reads the server flag via the cached `/user/detail` (waits for the fetch, never offers offline), SAVE and Skip both stamp it. Run BEFORE the standalone shell's first device check.
+
 - **`gps_standalone_shell`: SPEC_READY (2026-09-03).** `Docs/Specs/Active/gps_standalone_shell/SPEC.md` — PLAYLIFE as a Unity thin-shell from this project ("punch it standalone"): build profile `iOS-Standalone` (defines `GOLFIN_GPS;GOLFIN_STANDALONE`, ShellScene-only scene list), `StandaloneGate` (allowlist = pre-auth + GPS screens; `Home` REWRITTEN to `GpsHub`), Splash boots to `InterceptHubEntry(GpsHub)` skipping the starter gate, game nav bar + ticket cluster hidden, hub BackPill hidden, Settings modal in shell layout, `golfingps://` scheme, `client_platform ios-playlife`, third fastlane lane `testflight_build_standalone` ("punch it standalone") through a `variant:` refactor of the shared lane. D1 read from ASC: existing app "GOLFIN GPS" `com.nextinnovation.golfingps` (Apple ID 6737145432, same team), ships as 1.0.0. Can start now.
 
 - **`design_consistency_audit`: SPEC_READY (2026-09-03, GAME polish track — Notion 2112).** `Docs/Specs/Active/design_consistency_audit/SPEC.md` — audit-only pass over every shell-canvas game screen, tab, submenu and result modal (Home, Mode Select, Hole/Mission/Tournament selection, Rankings, Roster, Inventory tabs, General/Stamina shop, Gacha History/Prizes, Settings, PersistentUI, the result + gate modals; auth screens Tier 2) against the Figma variables (`Docs/Design/DESIGN_TOKENS.md`, seeded) on six dimensions — fonts, colours, hierarchy, sizes, outlines, drop shadows — plus the linter's render-health rules. Instruments: `DesignAuditDumper` (rendered px, not serialized), `UIFidelityLinter.LintRoot` (extraction only), `figma_node_to_spec.py`, crop sheets. Output = `Docs/Reports/DESIGN_CONSISTENCY_AUDIT.md` + fix list grouped by shape (§22); the Architect writes the approved fixes as Quick specs. Changes NOTHING in production. **Run AFTER `gps_checkin`** (Code works one task at a time; GPS track first). `game_polish` (2111) follows the audit; its per-screen map is at `Docs/Specs/Queued/game_polish/MAP.md` pending Cesar's approval.
@@ -297,6 +301,112 @@ Docs/AI_CONTEXT.md.
   card, Gold ticket placeholder icon + admin `iconUrl` upload, `TICKET_SHOP_BUILD` + the first
   `category=ticket` shop row (Cesar sets price/quantity) once the C archive exists.
 
+### Kickoff · build_size_diet (issued 2026-09-03 evening — GAME track; runs after the GPS queue or in the game session)
+
+```
+Read Docs/Specs/Active/build_size_diet/SPEC.md and implement it.
+
+Context:
+- Cesar: "app is like 700 MB, seems excessive." The real number is the ~1.9 GB INSTALL
+  (Data folder 1.74 GB); the 711 MB .ipa is half symbols Apple strips. Brief with every
+  bucket and file: Docs/BUILD_SIZE_AUDIT.md. Target: install <= 1.0 GB, .ipa <= 350 MB,
+  ZERO visible change, byte-identical physics.
+- Phase 0 first: build once, keep the Build Report + per-file Data sizes as reference/
+  *_before.txt. Every "-N MB" you claim later cites them. Five phases, five commits, each
+  ending with the numbers.
+- Phase 1: sharedassets8.assets.resS is 480 MB of tree-pack textures (Leave_4K_.psd
+  4096 compression None; Simple Trees leaves at 8192; Mobile_Tree_Bundle). iPhone
+  overrides: leaves 1024 / bark 2048, ASTC 6x6 (4x4 only where a cutout frays — capture
+  it). Then the terrain tree-PROTOTYPE audit: placed trees are Spruce 1/3 only, so a
+  prototype nothing places leaves the list — prove treeInstances count + index->prefab
+  map unchanged per hole. Delete HDRPversion.unitypackage (215 MB) and the Original~
+  EXRs from disk.
+- Phase 2: HoleData is 389 MB on disk and ships whole. heightmap.bytes is GHM1 = int32
+  Q16.16 (NOT float — the physics is fp-deterministic), so compress LOSSLESSLY: GHM2 =
+  same header v2 + Deflate(row deltas). HeightmapLoader reads GHM1 and GHM2; a one-shot
+  converter decodes -> encodes -> decodes and asserts the int[] is identical (SHA-256
+  table in the report). zones.json (2-10 MB pretty JSON each) -> gzip-minified
+  zones.bytes behind HoleDataIO.LoadZones (fallback to .json), ZoneData equality test
+  over all 18 holes + _test. Keep every Resources.Load PATH; only the bytes change.
+  Gate: all physics suites same pass count, Validate All Holes green, smoke-bot AtRest
+  positions on Hole 1 + 6 bit-identical before/after (quote the fp values). Load time:
+  hole-load wall time Hole 1 + 6, 3 runs before/after, after <= before + 100 ms (decode
+  lives inside the hole-load, off the main thread if it shows). Resources/Clubs -> 512 ASTC.
+- Phase 3: the 93 compression-None textures -> ASTC 6x6 (4x4 where gradients band),
+  max 2048; S_SocialPillBordered 2680x600 -> 1024. Captures of Home/Account/Gacha/Daily
+  pill before/after; UIFidelityLinter green.
+- Phase 4: NotoSansJP is Dynamic so the 9.1 MB TTF ships. Static atlas from the CSV JA
+  glyphs + ASCII + full kana; keep asset name+GUID; a small dynamic fallback for
+  out-of-CSV kanji in display names (test with a name like 齋藤). If the fallback means
+  the TTF still ships, SAY SO — Cesar picks (a) keep dynamic / (b) static+fallback.
+- Phase 5: MEASURE ONLY — per-hole TerrainData resolution table + a Hole 6 alphamap
+  1024-vs-512 A/B capture pair. No terrain is edited without Cesar's "go" in STATUS.md.
+  The heightmap stays 2049 (perf-pass rule).
+- The standalone build (iOS-Standalone) must still build after Phase 2 — its
+  preprocessor moves HoleData out; don't break the sentinel/restore. Build it once.
+- No re-serialized scenes in the diff except the Phase 1 prototype edits (list them).
+
+When done: list changed files with a 1-line summary each, run the acceptance
+tests in the spec, flag which need manual on-device verification, update
+STATUS.md + IMPLEMENTER_REPORT.md in the spec folder, and update
+Docs/AI_CONTEXT.md.
+```
+
+### Kickoff · gps_standalone_shell — ROUND 2 (issued 2026-09-03 evening; after gps_profile_prompt_server_flag)
+
+```
+Read Docs/Specs/Active/gps_standalone_shell/KICKOFF_ADDENDUM.md and do round 2.
+
+Context:
+- Round 1 is reviewed PASS and build 2635 (1.0.0, 427 MB) is on the GOLFIN GPS
+  TestFlight. Cesar's three asks from installing it are R1-R3 in the addendum.
+- R1: the real icon — Assets/Art/Standalone/AppIcon_GolfinGps_1024_opaque.png replaces
+  the baked placeholder in StandaloneBuildPreprocessor (keep it opaque; delete the bake).
+- R2: Resources/ ships whole — the 427 MB is 18 heightmaps + zones.json from
+  Assets/Resources/HoleData. The preprocessor moves golf-only Resources subfolders out
+  for the build and restores them (try/finally + sentinel); enumerate Resources.Load
+  call sites reachable from the GPS surface to decide what stays. Target <= 150 MB;
+  quote the Build Report + .ipa size beside 427 MB. Do not change how the GAME loads
+  HoleData (that is build_size_diet, the other session).
+- R3: re-run the first-run proof after gps_profile_prompt_server_flag (server-stamped
+  account -> hub; clean account -> capture once).
+- R4: ShellScene still carries every GAME screen as an inactive instance, so their art
+  (~35 MB) + 9 skyboxes + music ship in the standalone: an IProcessSceneWithReport
+  (standalone define only) destroys the refused screens' roots, nulls ScreenManager's
+  fields, clears skybox/music refs; prove every GPS screen still opens.
+- R5: iPhone ASTC overrides for the uncompressed textures the GPS surface ships
+  (S_SocialPillBordered 6 MB raw, daily pill, S_Top_Area); list every >500 KB texture
+  in the standalone Build Report with its import setting.
+- Target after R2+R4+R5: <= 150 MB .ipa. Stop before the upload; "punch it standalone"
+  is Cesar's phrase.
+
+When done: update the report's rows 6/8 status, list changed files with a 1-line
+summary each, update STATUS.md + IMPLEMENTER_REPORT.md, and update Docs/AI_CONTEXT.md.
+```
+
+### Kickoff · gps_profile_prompt_server_flag (issued 2026-09-03 — Quick; do it FIRST, then continue gps_standalone_shell)
+
+```
+Read Docs/Specs/Active/gps_profile_prompt_server_flag/SPEC.md and implement it.
+
+Context:
+- Cesar: if the Golf Profile (colour/nickname) was completed OR skipped in the game, the
+  standalone app, or another phone, no install may offer it again — once per ACCOUNT.
+- Backend: the column + backfill are ALREADY APPLIED on prod by Cesar (3 of 19 profiles
+  stamped) — write migrations/2026_09_03_golf_profile_prompted.sql as the idempotent
+  record only; PUT /user/update gains golf_profile_prompted (stamps now()); Fly deploy.
+- Unity: UserDetailDto.GolfProfilePromptedAt (DateParseHandling.None); ShouldOffer =
+  local flag || server flag, waits for /user/detail, never offers when the fetch failed;
+  SAVE and Skip both send golf_profile_prompted:true; server flag re-caches the local one.
+- EditMode truth table (local x server x fetched); no prefab/string change; update
+  GPS_DEVICE_PASS.md §1 with the cross-app rows.
+
+When done: list changed files with a 1-line summary each, run the acceptance
+tests in the spec, flag which need manual on-device verification, update
+STATUS.md + IMPLEMENTER_REPORT.md in the spec folder, and update
+Docs/AI_CONTEXT.md.
+```
+
 ### Kickoff · gps_standalone_shell (issued 2026-09-03 — start now; device-pass quick specs may interleave)
 
 ```
@@ -308,8 +418,13 @@ Context:
   no shop/gacha/tournaments/missions — PLAYLIFE features only, and NO change to any
   GPS screen.
 - Build profile iOS-Standalone = clone of iOS-Full-GPS + GOLFIN_STANDALONE + a
-  ShellScene-only scene list (report the .ipa size vs the GPS variant). Identity via
-  a build preprocessor that sets AND restores bundle id / product name / icons.
+  ShellScene-only scene list. The 20:59 standalone build shipped ALL of
+  Assets/Resources/HoleData (18 x 16.8 MB heightmaps + zones.json = ~390 MB) because
+  Resources/ always ships: the build preprocessor MOVES golf-only Resources subfolders
+  out for the build and RESTORES them (try/finally + sentinel). Target standalone .ipa
+  <= 150 MB; quote the Build Report. Identity via the same preprocessor (bundle id /
+  product name / icon set from Assets/Art/Standalone/AppIcon_GolfinGps_1024_opaque.png —
+  Cesar's icon, corners filled for ASC).
 - StandaloneGate (fourth gate in ScreenManager.Navigate): allowlist = AuthGate's
   pre-auth screens + GpsGate.GpsScreens; Home -> GpsHub is a REWRITE, not a refusal
   (Welcome Skip, hub BackPill, GoBack fallbacks). Splash skips StarterGate and boots
@@ -328,7 +443,6 @@ Context:
   TestFlight build 0.7.6 (12). standalone variant: app_identifier com.nextinnovation.golfingps,
   bundleVersion 1.0.0, display name "GOLFIN GPS", URL scheme golfingps://. NOT
   com.wonderwall.playlife (that is the Flutter project, not this record).
-  Placeholder icon/launch bakes (make_standalone_icon.py); real branding is a backlog row.
 - Editor proof with the profile ACTIVE (its defines apply), then INACTIVE to prove the
   game boot is untouched. EditMode: StandaloneGateTests, flow + BannerPolicy cases.
 

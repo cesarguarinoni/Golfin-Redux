@@ -4,6 +4,51 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
+## 2026-09-04 — standalone round 2: 427 MB → 98 MB of assets, and the Golf Profile is once per ACCOUNT
+
+Two things landed together, because the second is what the first's first launch needed.
+
+**`gps_profile_prompt_server_flag`.** The Golf Profile offer is now recorded on the ACCOUNT
+(`profiles.golf_profile_prompted_at`), not in PlayerPrefs — answer it (or skip it) in the game and
+the standalone never asks, and vice versa. The local flag survives as a cache. Backend deployed and
+verified (Fly 68 → 69; PUT stamps, fresh GET echoes, `false` does not clear — a one-way latch).
+Skip **writes** now; it used to issue nothing at all, which is exactly why "vice versa" did not hold.
+A device with no local flag holds ONE `/user/detail` before deciding, bounded at 2.5 s and failing
+to "do not offer" — a missed offer costs one entry, a wrong offer is the defect.
+
+**Building it found a defect in the shell's own boot.** `StandaloneShellBoot` resolved the offer
+itself, which looked like honesty and jumped straight over the wait — so a fresh shell install of an
+already-answered account *still* showed the capture. The boot now names `GpsHub` and `Navigate`
+decides. Found by running the proof, not by reading the diff.
+
+**The size.** Build 2635 was 427 MB because `Resources/` ships whole regardless of scene usage —
+385 MB of it was `HoleData` heightmaps in an app with one scene. The standalone build now moves the
+golf-only `Resources` subfolders out and back (`AssetDatabase.MoveAsset`, so it is a GUID-preserving
+rename, not a 545 MB re-import) and destroys the 15 refused game screens out of ShellScene's
+in-memory copy. **Total User Assets 555 MB → 98.3 MB.**
+
+Three things worth keeping from it:
+
+- **Enumerate, don't reason.** The folder list came from grepping every `Resources.Load` call site,
+  which is the only reason `Characters/` stayed: `GpsAvatarScreenController` loads
+  `Characters/Homescreen/{name}`, a PLAYLIFE screen reaching into golf art. No amount of thinking
+  about "golf folders" would have caught that.
+- **The repair has to run at the build ENTRY points**, not inside `BuildIOSCore` — that runs *inside*
+  the moved window, so a repair there would un-stash what the build just moved and ship 427 MB again
+  while the log claimed the diet had run. And a missing `Resources` folder is not a build error, so
+  an aborted standalone build would otherwise make the next GAME build ship without its holes,
+  silently. Hence: `finally`, plus `RestoreNow()` before `Fail()` exits, plus an
+  `[InitializeOnLoadMethod]` that repairs on the next editor load.
+- **The first build attempt failing was useful.** It died on the tree-bake gate (which reads
+  `Resources/HoleData`, now moved) *inside* the window — and the restore put all 13 folders back,
+  clean. The gate is now skipped for the standalone alone, because a variant that ships no hole has
+  no hole to disagree about.
+
+Icon is Cesar's real one now (the generated placeholder and its baker are deleted, so a generated
+icon can never outrank real artwork later). Four uncompressed textures the shell ships got an ASTC
+6x6 iPhone override. EditMode 2398 / 2395 pass / 0 fail.
+
+---
 ## 2026-09-03 — gps_standalone_shell BUILT — PLAYLIFE ships from THIS project
 
 A **third TestFlight variant** beside "punch it" / "punch it GPS": **"punch it standalone"**

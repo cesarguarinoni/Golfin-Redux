@@ -12,3 +12,10 @@ DIRTY (git status --porcelain --untracked-files=all):
 ?? Docs/Specs/Active/gps_profile_prompt_server_flag/SPEC.md
 ?? Docs/Specs/Active/gps_profile_prompt_server_flag/STATUS.md
 === end baseline ===
+
+07:22 — backend DEPLOYED and verified three ways: flyctl image
+       deployment-01M1MNKVRKBW4SGFQTAPC316DD, machines version 68 -> 69, and the LIVE openapi now
+       lists golf_profile_prompted on UpdateProfileRequest. End-to-end against the deployed API:
+       column cleared -> PUT {display_name, golf_profile_prompted:true} -> 200 and the row stamped
+       2026-09-03T22:21:00.729192+00:00; a fresh GET echoes the same value; a follow-up PUT with
+       golf_profile_prompted:false leaves it UNCHANGED (the one-way latch).
