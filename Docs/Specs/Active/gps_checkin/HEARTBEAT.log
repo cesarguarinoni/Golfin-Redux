@@ -61,3 +61,9 @@ DIRTY (git status --porcelain --untracked-files=all):
 [02:22:20Z] Router-layer E2E over HTTPS: balance 7063 -> +30 -> 7108, replay awarded 0, 409 already_active naming the round, /active flips, history correct.
 [02:22:20Z] /venue/map: route live, 502 surfacing Google's 403 'This API is not activated' -> Cesar still needs to enable Maps Static API.
 [02:22:20Z] Admin deployed to Cloudflare (golfin-admin, version 61b9e03e). Three round-trips proven twice: live data layer (client /venue/nearby reflects create/edit/deactivate) AND through the real panel UI in mock mode. Found+fixed a real mock-mode bug: venue fixtures were module-level state, which Next dev does not share across route bundles -> a created row failed its next edit with 'not found'. Moved onto mockStore (globalThis), the pattern every other panel already uses.
+
+[02:37:24Z] MAPS STATIC API ENABLED (drove Chrome, Cesar authorised). Project was NOT wonderwall-g.com's Golfin/GOLFIN — the Places key lives in project PLAYLIFE (playlife-app). TWO gates, both cleared:
+  gate 1: static-maps-backend.googleapis.com was not enabled on playlife-app -> Enable -> 'API Enabled'. Error then CHANGED to 'This API key is not authorized to use this service or API', confirming gate 2.
+  gate 2: 'PLAYLIFE Backend Server Key' was restricted to Places API (New) ONLY -> added Maps Static API -> now '2 APIs'. Application restrictions left at None (a referrer restriction would break server calls).
+  No ToS or billing prompt appeared. Cesar entered his own password for Google's re-auth challenge; I did not.
+[02:37:24Z] ACCEPTANCE ITEM 4 CLOSED: call 1 200 image/png 104508 bytes X-Map-Cache: MISS; call 2 200 X-Map-Cache: HIT, byte-identical (md5 6e05ff9523c3). PNG is 918x420, real dark-styled Google map centred on 35.690,139.625.

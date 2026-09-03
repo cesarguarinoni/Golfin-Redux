@@ -15,7 +15,7 @@ backend + admin half. It is now DEPLOYED AND PROVEN LIVE.
 |---|---|
 | A1–A3 migration + the two atomic RPCs | **APPLIED + verified live** |
 | A2 `/venue/nearby` category + server-side distance | **DEPLOYED, 200, nearest-first** |
-| A4 `/venue/map` Static Maps proxy | **DEPLOYED**; 502 surfacing Google's `403 This API is not activated` — the one pre-req still on Cesar |
+| A4 `/venue/map` Static Maps proxy | **DEPLOYED + LIVE** — 200 `image/png` 918×420, `MISS` then `HIT` |
 | A5 `/score/submit` `activity_id` closes the live round | **DEPLOYED**, asserted by the E2E |
 | A6 `e2e_activity_economy.py` | **ALL PASS — 38 assertions** |
 | A6 Fly deploy | **v68**, `/health` ok |
@@ -338,7 +338,7 @@ position, because the field does not exist there.
 | 1 | Per-element A/B crops + ΔRGB table | **BLOCKED** (Unity) — nodes re-pulled per §9, geometry transcribed from `get_metadata`; the bake's own ΔRGB table is above |
 | 2 | Geometry JSON + invariants + lint `fail=0` | **BLOCKED** (Unity) |
 | 3 | Migration applied + `e2e_activity_economy.py` ALL PASS | **PASS** — applied by Cesar; 38 assertions, quoted above |
-| 4 | Static Maps 200 + cache hit + pin projection ≤2 px | **PARTIAL** — route deployed and reached; it returns Google's `403 This API is not activated`, so the 200 + cache-hit pair waits on the key. Projection test written against independently-computed values |
+| 4 | Static Maps 200 + cache hit + pin projection ≤2 px | **PASS (server half)** — 200 + `MISS`/`HIT` quoted below, tile saved to `screenshots/venue_map_live_tile.png`. The client-side ≤2 px projection test is written against independently-computed values; running it needs Unity |
 | 5 | Editor play-mode, real navigation, live API | **BLOCKED** (Unity) |
 | 6 | `already_active` + force-quit replay | **PASS** — both at the RPC layer (E2E) and through the routers (`409 already_active`, `replayed:true awarded:0`) |
 | 7 | Admin panel deployed + 3 round-trips | **PASS** — deployed (`golfin-admin` version `e92cc304`); all three driven through the real UI AND proven against live data + the client's fetch |
@@ -349,6 +349,54 @@ position, because the field does not exist there.
 | 12 | Motion parity with `gps_polish` + video + A13 | **BLOCKED** (Unity) |
 | 13 | Too-far and no-GPS toasts | **PARTIAL** — implemented and localized; the frame + log is BLOCKED (Unity) |
 | 14 | Deviations flagged; device-pass rows added | **PASS** — D-1…D-4; `GPS_DEVICE_PASS.md` § 3b, 20 rows |
+
+## Maps Static API — enabled, and it was TWO gates
+
+Driven in Chrome with Cesar's go-ahead (he entered Google's password re-auth himself; I don't type
+into password fields). No Terms-of-Service or billing prompt appeared, so nothing needed escalating.
+
+**The project was not where anyone would have guessed.** `wonderwall-g.com` holds a `Golfin`
+(`gen-lang-client-…`, Gemini keys only) and a `GOLFIN` (`golfin-505209`, one OAuth client, **no API
+keys at all**). The Places key lives in a third project, **PLAYLIFE** (`playlife-app`) — which makes
+sense: `venue.py::auto_register` is PLAYLIFE's own feature and predates GOLFIN.
+
+**Gate 1 — the API was not enabled on the project.** `static-maps-backend.googleapis.com` showed an
+**Enable** button on `playlife-app`. Enabled → *API Enabled*.
+
+That alone did NOT fix it, and the error changing is what proved gate 2 existed:
+
+```
+before:  403 This API is not activated on your API project.              ← project gate
+after:   403 This API key is not authorized to use this service or API.  ← key gate
+```
+
+**Gate 2 — the key was restricted to one API.** `PLAYLIFE Backend Server Key` had
+*API restrictions → Places API (New)* and nothing else. It is the only key on the project that can
+work from Fly at all: the others are iOS-app-restricted, HTTP-referrer-restricted (referrers do not
+exist for server calls), or Firebase auto-created. Added **Maps Static API** alongside Places —
+widened, not replaced — now reading **2 APIs**.
+
+*Application restrictions* was left at **None** deliberately. Google nags to restrict it, but a
+Websites/referrer restriction would break every server call including Places, and IP-restricting to
+Fly's egress is a separate hardening decision worth making on purpose rather than in passing.
+
+### Acceptance item 4, closed
+
+```
+call 1  HTTP/2 200  content-type: image/png  content-length: 104508  x-map-cache: MISS
+call 2  HTTP/2 200                           content-length: 104508  x-map-cache: HIT
+        byte-identical across the cache hit: True   (md5 6e05ff9523c3)
+        PNG 918x420 — exactly the node's Map Surface
+```
+
+The tile is a real dark-styled Google map centred on the requested point (35.690, 139.625 →
+Suginami/Kugayama, which is 焼肉 GREEN's location), with the `_MAP_STYLE` navy applied. Saved as
+`screenshots/venue_map_live_tile.png`.
+
+One thing to expect on screen: the tile carries Google's own mandatory logo and "Map data ©2026",
+*and* the design puts a "Map · Google" line in the legend below it. Both are correct — Google
+requires the on-tile credit, the legend line is the frame's own — but that is two attributions in
+one panel, so it is a deliberate outcome rather than a bug if it looks doubled.
 
 ## The production bug this deploy uncovered (and fixed)
 

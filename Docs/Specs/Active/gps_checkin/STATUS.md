@@ -3,16 +3,18 @@ IMPLEMENTER_WORKING
 # STATUS — `gps_checkin`
 
 **Current:** `IMPLEMENTER_WORKING` — iter-1, 2026-09-03. **The backend and admin halves are DONE,
-DEPLOYED AND PROVEN LIVE.** One gate remains, plus one small pre-req:
+DEPLOYED AND PROVEN LIVE, and the map is real.** Exactly one gate remains:
 
 1. **Unity is held by another session.** Every Unity-side artefact — running `GpsRoundsBuilder`,
    the two prefabs, the ShellScene `_gpsRoundsScreen` wire, play-mode capture, the
    geometry/invariants JSON, the UI-fidelity lint, `tests-run`, and the motion-parity video —
    waits on Cesar's say-so. All five affected assemblies compile clean.
-2. **"Maps Static API" is still not enabled** on the Google key `playlife-api` uses. `/venue/map`
-   is deployed and reachable; it returns Google's `403 This API is not activated`, surfaced
-   verbatim. Everything else works without it — the Rounds panel falls back to the stylised
-   placeholder with the attribution hidden, exactly as §C4 specifies.
+
+**Maps Static API is enabled** (2026-09-03, driven in Chrome with Cesar's authorisation). It was
+TWO gates, not one: the API was not enabled on project **PLAYLIFE** (`playlife-app` — not either
+`wonderwall-g.com` project), and `PLAYLIFE Backend Server Key` was additionally restricted to
+Places API (New) alone. Both cleared; `/venue/map` returns 200 `image/png` 918×420 with
+`X-Map-Cache: MISS` then `HIT`, byte-identical. Acceptance item 4's server half is closed.
 
 **Shipped and verified this session:** both migrations applied by Cesar; `e2e_activity_economy.py`
 **ALL PASS** (38 assertions, invariant 0 violations before and after); Fly **v68**; the same flow
@@ -37,3 +39,4 @@ to another session's `GpsNavBarHighlight.cs`). Decisions D1–D6 are implemented
 | 2026-09-03 | `SPEC_READY` | Backend A1–A6, admin B1–B2, Unity C1–C5; decisions D1–D6. |
 | 2026-09-03 | `IMPLEMENTER_WORKING` | Backend + admin + all Unity C# written and compile-clean; texts published v32. Awaiting Cesar's migrations and a free Unity. |
 | 2026-09-03 | `IMPLEMENTER_WORKING` | Migrations applied. E2E ALL PASS, Fly v68, admin deployed, all three panel round-trips proven. Two production bugs found + fixed. Only Unity (and the Maps key) left. |
+| 2026-09-03 | `IMPLEMENTER_WORKING` | Maps Static API enabled (two gates: project + key restriction). `/venue/map` live, 200 + MISS/HIT. **Only Unity left.** |

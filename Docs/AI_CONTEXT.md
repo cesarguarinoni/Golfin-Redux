@@ -48,10 +48,16 @@ and **user search** for every user. All seven `like`/`ilike` call sites in the b
 enumerated and routed through a new `backend/pgrest.py` that uses PostgREST's `*` wildcard, so no
 `%` reaches the URL.
 
-**Left:** a free Unity for the prefab build, the play-mode capture, the fidelity lint and the
-motion video — and Cesar enabling "Maps Static API" on the API's Google key (`/venue/map` is
-deployed and returns Google's own `403 This API is not activated`; without it the panel falls back
-to the stylised placeholder, by design). Full state in `Docs/Specs/Active/gps_checkin/STATUS.md`.
+**The map is real now too.** Enabling Maps Static API turned out to be TWO gates, and the second
+is the one that would have eaten an afternoon: the API was not enabled on project **PLAYLIFE**
+(`playlife-app` — not either `wonderwall-g.com` project; the Places key predates GOLFIN), and
+`PLAYLIFE Backend Server Key` was *also* restricted to Places API (New) alone. Enabling the API
+only changed the error from "This API is not activated on your API project" to "This API key is
+not authorized to use this service or API". Both cleared: `/venue/map` returns a real dark-styled
+918×420 tile, `X-Map-Cache: MISS` then `HIT`, byte-identical.
+
+**Left: a free Unity** — the prefab build, the play-mode capture, the fidelity lint and the motion
+video. Nothing else. Full state in `Docs/Specs/Active/gps_checkin/STATUS.md`.
 
 ---
 ## ✅ DONE — GPS nav bar, both halves (2026-09-03) · device-pass finding #1
