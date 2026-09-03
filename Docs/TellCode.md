@@ -13,9 +13,14 @@
   texts v31, gift economy atomic via `golfin_gift_pts` / `golfin_gift_purchase`), `gps_pill_entry`
   (Home GPS pill is the GPS door, banner restored; `96d60fab4`), `gps_polish` (`5506d2c67`; layered
   push approved; full two-gate chain ran — one red-team FAIL on a false A7 measurement, retracted
-  and repaired). **NEXT: the on-device pass on a "Punch it GPS" build — checklist
-  `Docs/GPS/GPS_DEVICE_PASS.md`** (Cesar runs it; test venues 1992/1993 live with
-  `source='test_fixture'`; defects come back as quick specs). Then `gps_standalone_shell`
+  and repaired). Device pass STARTED 2026-09-03 (checklist `Docs/GPS/GPS_DEVICE_PASS.md`; venues
+  1992/1993 live). Findings closed the same day: nav-bar height (`464e3c90a`), `gps_profile_prompt_on_entry`
+  DONE, `gps_checkin` DONE (`2d7b19228`; API v68, texts v36, admin Partners panel live, demo spots
+  seeded; full two-gate chain; Architect review PASS 2026-09-03). Side fixes worth knowing:
+  `backend/pgrest.py` (Supabase's edge 500s on a bare `%` — venue nearby/search AND user search were
+  down for every client until v68), `ApiEnvelope` DateParseHandling.None (ISO timestamps were shifted
+  twice). Unity Recorder hard-locks the Mac on the Rounds screen — KNOWN_ISSUE, video waived.
+  **NEXT: resume the device pass (§1–§6 + the §3b Rounds rows), then `gps_standalone_shell`**
   (decision 2026-09-02: Unity thin-shell, Flutter retired). Deferred scope lives in
   `Docs/GPS/GPS_BACKLOG.md` (Architect-maintained). Roadmap rows: Notion Orders 2104–2114, 2130.
 
@@ -165,6 +170,79 @@
 
 ## 📋 SPEC_READY POINTERS
 
+- **`design_consistency_audit`: SPEC_READY (2026-09-03, GAME polish track — Notion 2112).** `Docs/Specs/Active/design_consistency_audit/SPEC.md` — audit-only pass over every shell-canvas game screen, tab, submenu and result modal (Home, Mode Select, Hole/Mission/Tournament selection, Rankings, Roster, Inventory tabs, General/Stamina shop, Gacha History/Prizes, Settings, PersistentUI, the result + gate modals; auth screens Tier 2) against the Figma variables (`Docs/Design/DESIGN_TOKENS.md`, seeded) on six dimensions — fonts, colours, hierarchy, sizes, outlines, drop shadows — plus the linter's render-health rules. Instruments: `DesignAuditDumper` (rendered px, not serialized), `UIFidelityLinter.LintRoot` (extraction only), `figma_node_to_spec.py`, crop sheets. Output = `Docs/Reports/DESIGN_CONSISTENCY_AUDIT.md` + fix list grouped by shape (§22); the Architect writes the approved fixes as Quick specs. Changes NOTHING in production. **Run AFTER `gps_checkin`** (Code works one task at a time; GPS track first). `game_polish` (2111) follows the audit; its per-screen map is at `Docs/Specs/Queued/game_polish/MAP.md` pending Cesar's approval.
+
+- **`game_polish_a`: SPEC_READY (2026-09-03, GAME polish track — Notion 2111, slice a of three).** `Docs/Specs/Active/game_polish_a/SPEC.md` — navigation & structure motion: a screen-agnostic `LayeredPush` (`Assets/Scripts/UI/Polish/`) for same-pillar SAME-background pairs (Play `2e5476ee…` group, Tournaments/Rankings `0d425c0a…` group, Gacha `5ec22d10…` group), 16 px entry `Rise` on fade-path arrivals, cross-fades for Inventory/Rankings/GachaHistory tabs and the Settings overlay + accordion, `UiSelection` bumps on tabs, and the NEW bottom-nav selected state (§D7: gold halo + brighter ring replaces the cyan tint, on the game bar AND the GPS bar — the one authorised `Gps/` touch is `GpsNavBarHighlight.cs`); fade-to-black kept for Home, cross-pillar and background-changing moves (Cesar). Option (b) push-with-background-cross-fade only as a 5 s video behind an OFF flag. Gates as gps_polish (invariants JSON, 0 px parity vs first-commit baselines, chrome seam ≤ 2, GC ≤ 32 B). Map approved 2026-09-03: `Docs/Specs/Queued/game_polish/MAP.md` (b = content & modals, c = sweep — specs follow). **Run AFTER `design_consistency_audit` is DONE and its approved Quick fixes have landed.**
+
+### Kickoff · game_polish_a (issued 2026-09-03 — after design_consistency_audit + its Quick fixes)
+
+```
+Read Docs/Specs/Active/game_polish_a/SPEC.md and implement it.
+
+Context:
+- Slice a of game_polish (Notion 2111): the GAME shell moves like the GPS surface —
+  LayeredPush (new, Assets/Scripts/UI/Polish/, screen-agnostic; GpsScreenTransition is
+  the model, read-only) for same-pillar, SAME-BACKGROUND pairs only; 16 px entry Rise on
+  fade-path arrivals; cross-fades where tabs / filters / Settings snap today; UiSelection
+  bumps on tabs. Fade-to-black stays for Home, cross-pillar and every background-changing
+  move (Cesar's rule).
+- Option (b) — push with background cross-fade — exists ONLY as a ~5 s captioned video
+  behind LayeredPush.AllowBackgroundCrossFade, default false, pinned by test, never set
+  in production. Cesar judges it from the clip.
+- Take the `baseline` captures on the FIRST commit, before any change (A2 parity is
+  measured against them and against instant navigation). Probe = GamePolishProbe
+  (GpsPolishProbe shape): baseline / push / parity / perf / option_b, real onClick.Invoke()
+  navigation, invariants JSON fail=0 with the flag OFF.
+- §D7 bottom-nav selected state (Cesar: the cyan tint "looks ugly"): gold halo behind
+  the selected disc + a #FCF195 ring overlay, glyph white, cross-faded + one pulse; baked
+  by Docs/Scripts/make_nav_selected.py (pill-glow pattern); one shared NavSlotHighlight
+  drives BOTH bars. The ONLY Gps/ file you may edit is GpsNavBarHighlight.cs (+ the GPS
+  bar builder hook it needs) — quote that diff in full.
+- Otherwise untouched: Assets/Scripts/UI/Gps/**, Assets/Prefabs/UI/Gps/**,
+  FadeController, UiMotion's public API, ModalController.
+- Out of scope: modals/retrofits/count-ups/shimmer/PendingSpend (game_polish_b),
+  scroll/safe-area/font sweep (game_polish_c), haptics.
+
+When done: list changed files with a 1-line summary each, run the acceptance
+tests in the spec, flag which need manual on-device verification, update
+STATUS.md + IMPLEMENTER_REPORT.md in the spec folder, and update
+Docs/AI_CONTEXT.md.
+```
+
+### Kickoff · design_consistency_audit (issued 2026-09-03 — after gps_checkin)
+
+```
+Read Docs/Specs/Active/design_consistency_audit/SPEC.md and implement it.
+
+Context:
+- AUDIT ONLY — no production change. Output = Docs/Reports/DESIGN_CONSISTENCY_AUDIT.md
+  (findings + per-screen fix list grouped by SHAPE, PIPELINE_HARDENING §22) + the
+  machine evidence: DesignAuditDumper JSON per screen/tab/modal (EN + JA, real
+  navigation), UIFidelityLinter on every prefab AND live root (new LintRoot overload —
+  pure extraction, LintPrefab output byte-identical), figma_node_to_spec.py node specs,
+  one crop sheet per Tier-1 screen. Fixes are NOT yours: the Architect turns approved
+  groups into Quick specs.
+- Phase 0 first: complete Docs/Design/DESIGN_TOKENS.md from get_variable_defs (+ SVG
+  stops for the EMPTY gradient variables), pull one node render per row of the SPEC's
+  node table into reference/, tripwire the dumper (§20) before the first real dump.
+- Baseline to reproduce or correct: 46 in-scope LiberationSans sites (Inventory 27,
+  Roster 8, Settings 1, CharacterThumbnailCard 3, StatBar 4); ÷1.2-era and 59/66
+  serialized sizes — RENDERED px vs node px decides, never the serialized number.
+- Do not touch: UIFidelityLinter rules/thresholds, Assets/Prefabs/UI/Gps/**,
+  Assets/Scripts/UI/Gps/**, any prefab/scene/CSV/font. git status must show only
+  Assets/Editor/UIFidelity/* and Docs/** (A10).
+- Out of scope: fixing anything, in-game HUD, auth screens beyond Tier 2, motion.
+
+When done: list changed files with a 1-line summary each, run the acceptance
+tests in the spec, flag which need manual on-device verification, update
+STATUS.md + IMPLEMENTER_REPORT.md in the spec folder, and update
+Docs/AI_CONTEXT.md.
+```
+
+- **`gps_checkin`: SPEC_READY (2026-09-03).** `Docs/Specs/Active/gps_checkin/SPEC.md` — the Rounds nav slot becomes PLAYLIFE's Rounds tab (Figma 14076:33800 list, 14077:100447 active round, 14080:34097 check-in confirm, 14078:33991 round complete; renders in reference/), wired for REAL: `golfin_activity_checkin` (+30 iff inside the venue radius, server-verified) / `golfin_activity_checkout` (+10/+5, atomic, replaces the invariant-breaking path), one active round per player, foreground GPS trail feeding K4, score submit with `activity_id` updates the round's row, Static-Maps proxy `/venue/map` + Mercator pins, `venues` gains category/partner/offer columns, admin **Partners** panel (§23 deploy proofs), demo range/food spots seeded from the Flutter mocks. Migrations to Cesar via the Architect BEFORE deploy; Cesar enables Maps Static API on the key. Start after `gps_navbar_height_fix` + `gps_profile_prompt_on_entry`.
+
+- **`gps_profile_prompt_on_entry`: SPEC_READY (2026-09-03, Quick).** `Docs/Specs/Active/gps_profile_prompt_on_entry/SPEC.md` — device-pass finding #2: first run defaults to the GAME; the Golf Profile + Welcome intercept moves from Home entry to the first `ShowScreen(GpsHub)` (pill, banner deep link, later the standalone boot) via a pure `GpsAuthExtrasFlow.InterceptHubEntry` seam in `ScreenManager.Navigate`. No prefab/string/backend change. Run right after the nav-bar height fix.
+
 - **`gps_polish`: SPEC_READY (2026-09-02).** `Docs/Specs/Active/gps_polish/SPEC.md` — transitions, button effects and general polish for the whole GPS surface. One `UiMotion` helper (coroutines only, no packages); a LAYERED PUSH between GPS screens inside `ScreenManager.Navigate` (backgrounds + nav bar cross-fade in place, only `ContentContainer` slides — Cesar's "let's gamble it"); fade-to-black kept at the game↔GPS boundary; Score Upload steps and vote filters cross-fade; modals pop via an opt-in `ModalController.animateShow`; `PendingSpend` on every GPS network CTA; count-ups, one-shot badge pulse, shimmer placeholders on five cold-fetch sites; safe-area / scroll / keyboard sweep. No Figma nodes — gates are a motion-invariants JSON + rest-state pixel parity; six captioned videos are the artifact Cesar judges the push on. No haptics (Notion 2130). Start NOW; first commit closes `gps_pill_entry`.
 
 - **`gps_gifts_votes`: SPEC_READY (2026-09-02).** `Docs/Specs/Active/gps_gifts_votes/SPEC.md` — the last two GPS screens (Figma Gift 14027:101843, Vote 14028:33534; renders in reference/). Cesar's scope calls: gift RP sends LIVE (server fix — /gifts/send-pts and /gifts/purchase break the total_points = activity_pts + gift_pts invariant on both sides; new atomic idempotent RPCs `golfin_gift_pts` + `golfin_gift_purchase`, migration + Fly deploy), Buy Gifts strip LIVE from the real /gifts/items basic catalog, Top Supporters aggregated client-side from /gifts/received, Popular Golfers from /user/discover; Vote = live list/cast(+10 via /points/earn)/create, stories + photo areas static, filters PUBLIC/MINE only. New GpsGift/GpsVote ScreenIds join GpsGate. ~34 loc keys via importer + publish. Start AFTER auth_golf_profile (queue: punch_it → auth_golf_profile → this).
@@ -216,6 +294,67 @@
   overlaid rates/pools (signup-modal rules shell), five-event telemetry funnel + Telemetry-panel
   card, Gold ticket placeholder icon + admin `iconUrl` upload, `TICKET_SHOP_BUILD` + the first
   `category=ticket` shop row (Cesar sets price/quantity) once the C archive exists.
+
+### Kickoff · gps_checkin (issued 2026-09-03 — after gps_navbar_height_fix and gps_profile_prompt_on_entry)
+
+```
+Read Docs/Specs/Active/gps_checkin/SPEC.md and implement it.
+
+Context:
+- The hub's Rounds nav slot becomes the Rounds tab: chips / REAL map / nearby spots /
+  CHECK IN -> live round card -> SCORE UPLOAD or CHECK OUT, four Figma frames in
+  reference/ (Rule 18 table in the spec). PLAYLIFE's Flutter tab was a facade —
+  build the look AND the mechanic.
+- Backend first: migration 2026_09_03_venue_partners.sql (additive venues columns) +
+  the two atomic RPCs modelled on golfin_gift_pts (SECURITY DEFINER, service_role
+  only, locks, idempotency, invariant) + /activity/active + /venue/nearby category &
+  distance + /venue/map Static-Maps proxy + /venue/geocode + score submit activity_id.
+  Hand BOTH migrations (partners + demo seed) to the Architect for Cesar BEFORE the Fly
+  deploy. e2e_activity_economy.py ALL PASS quoted.
+- Admin: Partners panel (app/(panels)/venues) with §23 proofs; geohash computed by the
+  API on save, never typed; deactivate not delete.
+- Unity: ScreenId.GpsRounds + two modals, ActivityService, RoundSession (one active
+  round, foreground GpsSessionTracker trail, persisted idempotency keys), MapProjection
+  (EditMode-tested), ScoreUploadDraft prefill with activity_id, GpsGate/NavBarBinder/
+  transition-table wiring, ~30 loc keys via importer + publish, gps_polish motion applied.
+- D1 approved by Cesar: check-in only inside the radius — but the button stays tappable
+  and TOASTS why (too far / no GPS). Motion parity with gps_polish is an acceptance
+  item: push, rise, staggers, shimmer, cross-fades on chip change and list<->active
+  flip, modal pops, PendingSpend, count-ups, invariants JSON + parity + video.
+- Decisions D1–D6 are baked in (inside-radius check-in, one active round, foreground
+  only, PLAYLIFE points, static-map proxy, score post updates the round row) — flag any
+  deviation with its reason.
+- Editor evidence with the location mocked at TEST Office (venue 1993); add the real
+  on-device rows to Docs/GPS/GPS_DEVICE_PASS.md §3.
+
+When done: list changed files with a 1-line summary each, run the acceptance
+tests in the spec, flag which need manual on-device verification, update
+STATUS.md + IMPLEMENTER_REPORT.md in the spec folder, and update
+Docs/AI_CONTEXT.md.
+```
+
+### Kickoff · gps_profile_prompt_on_entry (issued 2026-09-03 — Quick; after the nav-bar height fix)
+
+```
+Read Docs/Specs/Active/gps_profile_prompt_on_entry/SPEC.md and implement it.
+
+Context:
+- Cesar's device pass: a fresh install must land on Home and STAY there. The Golf
+  Profile -> Welcome flow is offered once, on the FIRST entry into GPS (pill tap,
+  home_promo deep link, later the standalone shell's boot), not on Home entry.
+- Remove both HomeScreenController call sites; add ONE intercept in
+  ScreenManager.Navigate for ScreenId.GpsHub through the pure
+  GpsAuthExtrasFlow.InterceptHubEntry(requested) seam; exits unchanged
+  (GET STARTED -> GpsHub is now a push).
+- No prefab, string or backend change (PLAN verdict add 0; git status Assets/Prefabs empty).
+- Update GpsAuthExtrasFlowTests (Home never offers; intercept table pinned) and the
+  device-pass checklist rows 1.3 / 1.8 in Docs/GPS/GPS_DEVICE_PASS.md.
+
+When done: list changed files with a 1-line summary each, run the acceptance
+tests in the spec, flag which need manual on-device verification, update
+STATUS.md + IMPLEMENTER_REPORT.md in the spec folder, and update
+Docs/AI_CONTEXT.md.
+```
 
 ### Kickoff · gps_polish — CONTINUATION (issued 2026-09-02 evening; the push is approved, finish the rest before the device pass)
 

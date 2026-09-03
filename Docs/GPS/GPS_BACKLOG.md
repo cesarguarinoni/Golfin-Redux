@@ -2,14 +2,14 @@
 
 > Everything consciously left OUT of the 2026-09 GPS build, in one place, with where it was
 > deferred and what it needs. Maintained by the Architect — every future GPS spec that defers
-> something adds a row here in the same session. Last updated: 2026-09-03 (gps_polish DONE, device pass queued).
+> something adds a row here in the same session. Last updated: 2026-09-03 (gps_checkin DONE).
 
 ## Player-visible promises (highest priority — the UI already implies them)
 
 | Item | Implied by | Needs |
 |---|---|---|
 | **Settings: edit golf profile** (nickname, colour, experience, handicap) | Golf Profile copy: "You can change all of this later in Settings" (`auth_golf_profile`) | A Settings entry or GPS-profile edit screen reusing the same panel + `PUT /user/update`. NOTE: `PUT /user/update` cannot clear a field to NULL (omitted = preserved) — un-setting a handicap needs an explicit-null contract or a clear endpoint (auth_golf_profile deviation 7) |
-| **Rounds tab destination** | Hub nav bar has a Rounds tab; no Rounds screen was ever designed or built (hub shows only the latest rounds inline) | Design round (no Ken mockup), then a spec: full score history list over `/score/history` paging |
+| **Rounds tab destination** | TAKEN UP by `gps_checkin` (2026-09-03): the Rounds tab is the Check-in screen and carries MY RECENT ROUNDS | Remaining: a full "ALL ROUNDS" history screen if none exists at build time |
 | **SEE ALL ›** on Top Supporters / Popular Golfers | Gift screen headers (hidden in v1) | Full-list screens or modals; supporters wants the backend aggregation below |
 | **Share row on Score Posted** | Score Upload step 6 pill strip (static) | iOS share sheet (native activity VC) — small task |
 
@@ -42,7 +42,11 @@
 
 | Item | Deferred in | Notes |
 |---|---|---|
-| `gps_checkin_screen` | roadmap | Next GPS feature after current queue; needs a design round (no Ken mockup); adds `GPS_ERR_*` keys EN+JA; second `RecordFix` call site — makes trust-core K4 reachable |
+| Background GPS trail during a round | `gps_checkin` D3 | Foreground-only in v1 (no "Always" entitlement); add the background location mode + entitlement if K4 counts prove too low on device |
+| Partner offers redemption / coupons | `gps_checkin` | `partner_offer` is display text only; redemption flow, QR, partner reporting are unspecced |
+| Unity Recorder hard-locks the Mac on the Rounds screen | `gps_checkin` (KNOWN_ISSUE_recorder_lockup.md) | Tooling only, video waived by Cesar; the encoder + Rounds screen together stall below the app (no crash report). Investigate with a smaller GameView / software encoder / capture outside Unity before the next Rounds video |
+| Two venues with drifted geohash (#1 東京ゴルフ倶楽部, #7 Lomond CC) | `gps_checkin` admin panel flags them | Pre-existing rows whose stored geohash ≠ encode(lat,lon); re-save each in the Partners panel (the API recomputes) |
+| Test rounds on the dev account | `gps_checkin` E2E + device pass | Several `activities` rows against TEST Office/Home (ids 41+ and the Editor runs) — delete them BEFORE the `test_fixture` venues (FK) |
 | Android GPS build variants | `punch_it_gps_variants` | One `Android-Full-GPS` profile clone + lane when Android builds resume |
 | Android mock-GPS detection plugin | decision 2026-09-01 | `IMockLocationDetector` seam exists; iOS first |
 | In-app build-variant watermark | `punch_it_gps_variants` | The Home **GPS pill** is the tell since `gps_pill_entry` (banner restored to plain admin behaviour); revisit only if Cesar asks |
@@ -55,6 +59,14 @@
 | Golf-profile prompt is per-device | `auth_golf_profile` | PlayerPrefs flag: a second device re-prompts once. Server-side "prompted" flag if it annoys |
 | Badge names JA-only in seeds | `gps_profile_pack` | EN localization of the 24 badge names rides the existing keys; verify EN column quality |
 | bioKey/nameKey localization wiring | pre-GPS | Long-standing partial wiring, unrelated to GPS but adjacent |
+
+## Shared with the GAME polish track (Architect, game_polish session — 2026-09-03)
+
+| Item | Deferred in | Notes |
+|---|---|---|
+| `UiMotion` gains an optional `Ease` parameter (Pop / Tween / Slide; default = today's ease-out cubic) | `game_polish_b` (Cesar decision 2026-09-03) | GPS call sites unchanged; `UiMotionTests` easing-endpoint cases must still pass with the default. The gacha reveal's ease-out-back is the consumer. GPS session: no action, FYI. |
+| Bottom-nav SELECTED state changes on both bars: cyan tint → gold halo + `#FCF195` ring overlay via a shared `NavSlotHighlight` (`Assets/Scripts/UI/Polish/`) | `game_polish_a` §D7 (Cesar 2026-09-03: "this should also be done in GPS when changed") | The game task edits `GpsNavBarHighlight.cs` (stops reading `iconActiveColor`, calls `NavSlotHighlight.SetSelected`) and adds the Glow/Ring children to the GPS bar through the builder hook — the ONE authorised game-track touch under `Gps/`. GPS session: do not re-tint; if `gps_checkin`'s Rounds slot lands first, its selected state comes for free once §D7 ships. |
+| `ShimmerBlock.prefab` moves `Assets/Prefabs/UI/Gps/` → `Assets/Prefabs/UI/Common/` | `game_polish_b` (Cesar decision 2026-09-03) | ONE line in `GpsPolishBuilder` (the prefab path constant) changes — the only GPS-folder touch the game track will make; GUID preserved by `git mv`, so scene/prefab references survive. GPS session: expect that diff. |
 
 ## How this file is used
 When a spec defers something: add the row in the same session (Architect). When an item is taken up: move its row into the new spec's Goal and delete it here. Cesar prunes anything he decides is never-do.

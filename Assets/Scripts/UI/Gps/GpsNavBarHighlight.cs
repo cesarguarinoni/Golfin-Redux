@@ -53,12 +53,16 @@ namespace Golfin.Gps.UI
         /// Shop screens entered from Roster.</para>
         ///
         /// <para>Vote lights NOTHING: the bar has no vote slot (Vote is reached from a hub tile),
-        /// and lighting an unrelated slot would be a lie about where the player is. Rounds is
-        /// never lit — its screen was never designed and its slot is deliberately dead.</para>
+        /// and lighting an unrelated slot would be a lie about where the player is.</para>
+        ///
+        /// <para>gps_checkin: Rounds USED to be the other "never lit" case, because its screen
+        /// did not exist. It does now, and its slot behaves like every other one.</para>
         /// </summary>
         public static string? SlotFor(string screenName) => screenName switch
         {
             "GpsHubScreen"      => "NavHomeButton",
+            // gps_checkin — the Rounds tab exists now, so its slot lights like any other.
+            "GpsRoundsScreen"   => "NavRoundsButton",
             "ScoreUploadScreen" => "NavCameraButton",
             "GpsGiftScreen"     => "NavGiftButton",
             "GpsProfileScreen"  => "NavProfileButton",

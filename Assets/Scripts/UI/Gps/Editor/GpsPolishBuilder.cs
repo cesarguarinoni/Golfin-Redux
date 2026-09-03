@@ -260,6 +260,16 @@ namespace Golfin.Gps.EditorTools
                             ShimmerHost.VoteList, 2,
                             new Vector2(0f, 0f), new Vector2(958f, 232f), new Vector2(0f, 256f),
                             shape: SprVoteCard),
+
+            // gps_checkin — the Rounds tab's two lists. Both are the hub's own 958x130 row
+            // shape, so both take the hub's geometry verbatim rather than a second set of
+            // numbers that would have to be kept in step with it.
+            new ShimmerSite("GpsRoundsScreen", "ContentContainer/SpotListPanel/SpotRows",
+                            ShimmerHost.RoundsSpots, 3,
+                            new Vector2(32f, -12f), new Vector2(894f, 106f), new Vector2(0f, 130f)),
+            new ShimmerSite("GpsRoundsScreen", "ContentContainer/MyRecentRoundsPanel/RoundRows",
+                            ShimmerHost.RoundsHistory, 3,
+                            new Vector2(32f, -12f), new Vector2(894f, 106f), new Vector2(0f, 130f)),
         };
 
         /// <summary>
