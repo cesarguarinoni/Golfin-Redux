@@ -948,6 +948,7 @@ GameObject:
   - component: {fileID: 477442068121510269}
   - component: {fileID: 3113541328785161390}
   - component: {fileID: 2165447198480833654}
+  - component: {fileID: 1296300340305150229}
   m_Layer: 0
   m_Name: GpsBadgesScreen
   m_TagString: Untagged
@@ -1026,6 +1027,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8384120901be44e508db678833383822, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Golfin.Gps.UI.GpsScreenEntryMotion
+--- !u!114 &1296300340305150229
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 359454277229824627}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a5d006340a6c5400ebab5dc6c5ef9d4a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Golfin.Gps.UI.GpsNavBarHighlight
 --- !u!1 &394105498264689915
 GameObject:
   m_ObjectHideFlags: 0

@@ -345,6 +345,69 @@ namespace Golfin.UI.Polish.Tests
     }
 
     // ═════════════════════════════════════════════════════════════════════════
+    // Which GPS nav slot is lit
+    //
+    // The tint itself is one Image.color assignment and is not worth a test; the
+    // MAPPING is, because it encodes two judgement calls that are easy to
+    // "tidy" into being wrong later.
+    // ═════════════════════════════════════════════════════════════════════════
+
+    [TestFixture]
+    public class GpsNavBarHighlightTests
+    {
+        static string? SlotFor(string screen)
+            => (string?)Probe.Type("Golfin.Gps.UI.GpsNavBarHighlight")
+                             .GetMethod("SlotFor", BindingFlags.Public | BindingFlags.Static)!
+                             .Invoke(null, new object[] { screen });
+
+        [Test]
+        public void EachPillarLightsItsOwnSlot()
+        {
+            Assert.AreEqual("NavHomeButton",    SlotFor("GpsHubScreen"));
+            Assert.AreEqual("NavCameraButton",  SlotFor("ScoreUploadScreen"));
+            Assert.AreEqual("NavGiftButton",    SlotFor("GpsGiftScreen"));
+            Assert.AreEqual("NavProfileButton", SlotFor("GpsProfileScreen"));
+        }
+
+        [Test]
+        public void BadgesAndAvatarLightPROFILE_BecauseTheyHaveNoSlotOfTheirOwn()
+        {
+            // Reached from Profile, no nav slot of their own. The Game bar makes the same call
+            // when it keeps Characters lit for the Shop screens entered from Roster — a lit slot
+            // says which PILLAR you are in, not which screen.
+            Assert.AreEqual("NavProfileButton", SlotFor("GpsBadgesScreen"));
+            Assert.AreEqual("NavProfileButton", SlotFor("GpsAvatarScreen"));
+        }
+
+        [Test]
+        public void VoteLightsNOTHING_BecauseTheBarHasNoVoteSlot()
+        {
+            // Vote is reached from a hub tile; there is no vote slot to light. Lighting some other
+            // slot would tell the player they are somewhere they are not.
+            Assert.IsNull(SlotFor("GpsVoteScreen"));
+        }
+
+        [Test]
+        public void RoundsIsNeverLit_ItsScreenWasNeverDesigned()
+        {
+            foreach (string s in new[]{ "GpsHubScreen","ScoreUploadScreen","GpsGiftScreen",
+                                        "GpsProfileScreen","GpsBadgesScreen","GpsAvatarScreen",
+                                        "GpsVoteScreen" })
+                Assert.AreNotEqual("NavRoundsButton", SlotFor(s),
+                    $"{s} lit the deliberately-dead ROUNDS slot");
+        }
+
+        [Test]
+        public void AScreenWithNoBarLightsNothing()
+        {
+            Assert.IsNull(SlotFor("GpsGolfProfileScreen"));
+            Assert.IsNull(SlotFor("GpsWelcomeScreen"));
+            Assert.IsNull(SlotFor("HomeScreen"));
+            Assert.IsNull(SlotFor(""));
+        }
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
     // The GPS nav bar and the home indicator
     //
     // Added after the FIRST DEVICE PASS found what the Editor structurally

@@ -183,6 +183,7 @@ namespace Golfin.Gps.EditorTools
             EnsureLayerGroups(root);
             EnsureNavBarSafeArea(root);
             EnsureNavBarBinder(root);
+            EnsureNavBarHighlight(root);
             EnsureEntryMotion(root);
             ApplyScrollFeel(root);
             EnsureStepPolish(root);
@@ -452,6 +453,20 @@ namespace Golfin.Gps.EditorTools
             if (root.name.StartsWith("GpsHubScreen")) return;
             if (FindNavBar(root) == null) return;                 // Golf Profile / Welcome
             Ensure<GpsNavBarBinder>(root);
+        }
+
+        /// <summary>
+        /// The lit-slot tint, on EVERY GPS screen that draws the bar — the hub INCLUDED.
+        ///
+        /// <para>Unlike <see cref="EnsureNavBarBinder"/> this does not skip the hub. The binder is
+        /// skipped there because <c>GpsHubScreenController</c> already wires the hub's own slots
+        /// and a second listener would fire every tap twice. A tint has no such problem, and the
+        /// hub is precisely the screen whose HOME slot should be lit.</para>
+        /// </summary>
+        private static void EnsureNavBarHighlight(GameObject root)
+        {
+            if (FindNavBar(root) == null) return;      // Golf Profile / Welcome draw no bar
+            Ensure<GpsNavBarHighlight>(root);
         }
 
         /// <summary>

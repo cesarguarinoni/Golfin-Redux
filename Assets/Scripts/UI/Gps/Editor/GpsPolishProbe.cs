@@ -105,6 +105,17 @@ namespace Golfin.Gps.EditorTools
         [MenuItem("GOLFIN/Gps/Polish Probe — shimmer (A8: a cold frame per site)", priority = 245)]
         public static void ArmShimmer() => Arm("shimmer");
 
+        /// <summary>
+        /// The lit nav slot, per screen, as RENDERED COLOUR rather than as a mapping table.
+        ///
+        /// <para>`GpsNavBarHighlightTests` already pins which slot SHOULD light; this pins that the
+        /// pixel actually changed on the real screen — the two failure modes it catches are a
+        /// component that never ran (OnEnable not reached on a cloned bar) and a tint that the
+        /// Button's own ColorTint transition swallowed.</para>
+        /// </summary>
+        [MenuItem("GOLFIN/Gps/Polish Probe — nav tint (the lit slot, per screen)", priority = 246)]
+        public static void ArmNavTint() => Arm("navtint");
+
         public static void Arm(string mode)
         {
             Directory.CreateDirectory(Path.GetDirectoryName(LogPath)!);
@@ -243,6 +254,14 @@ namespace Golfin.Gps.EditorTools
             {
                 Line("=== gps_polish probe (" + _mode + ") " + DateTime.UtcNow.ToString("u") + " ===");
 
+                if (_mode == "navtint")
+                {
+                    yield return Boot();
+                    yield return SequenceNavTint();
+                    Line("=== done: navtint pass complete ===");
+                    yield break;
+                }
+
                 if (_mode == "shimmer")
                 {
                     yield return Boot();
@@ -286,6 +305,81 @@ namespace Golfin.Gps.EditorTools
                 if (_mode == "push") WriteJson();
                 if (_mode == "perf") WritePerfJson();
                 Line("=== done: " + _records.Count + " push(es) recorded ===");
+            }
+
+            // ═════════════════════════════════════════════════════════════════
+            // The lit nav slot, per screen
+            // ═════════════════════════════════════════════════════════════════
+
+            static readonly string[] NavSlots =
+            {
+                "NavHomeButton", "NavRoundsButton", "NavCameraButton",
+                "NavGiftButton", "NavProfileButton",
+            };
+
+            IEnumerator SequenceNavTint()
+            {
+                yield return TapNamed("GpsPill", "the Home GPS pill");
+                yield return Arrive(ScreenId.GpsHub, 2.5f);
+                yield return TintReport("GpsHubScreen");
+
+                GameObject? hub = GameObject.Find("Canvas/ScreensRoot/GpsHubScreen");
+                if (hub == null) { Line("FATAL: no hub"); yield break; }
+
+                yield return Go(hub, "NavProfileButton", ScreenId.GpsProfile, "hub nav PROFILE");
+                yield return new WaitForSecondsRealtime(1.5f);
+                yield return TintReport("GpsProfileScreen");
+
+                GameObject? prof = GameObject.Find("Canvas/ScreensRoot/GpsProfileScreen");
+                yield return GoPath(prof, "ContentContainer/BadgesShortcut", ScreenId.GpsBadges, "profile BADGES");
+                yield return new WaitForSecondsRealtime(1.5f);
+                yield return TintReport("GpsBadgesScreen");
+                yield return GoBackReal(ScreenId.GpsProfile, "badges back");
+                yield return GoBackReal(ScreenId.GpsHub, "profile back");
+                yield return new WaitForSecondsRealtime(1f);
+
+                yield return Go(hub, "NavGiftButton", ScreenId.GpsGift, "hub nav GIFT");
+                yield return new WaitForSecondsRealtime(1.5f);
+                yield return TintReport("GpsGiftScreen");
+                yield return GoBackReal(ScreenId.GpsHub, "gift back");
+                yield return new WaitForSecondsRealtime(1f);
+
+                yield return GoPath(hub, "ContentContainer/ActionTiles/Tile_VOTE", ScreenId.GpsVote, "hub tile VOTE");
+                yield return new WaitForSecondsRealtime(1.5f);
+                yield return TintReport("GpsVoteScreen");
+                yield return GoBackReal(ScreenId.GpsHub, "vote back");
+                yield return new WaitForSecondsRealtime(1f);
+
+                yield return Go(hub, "NavCameraButton", ScreenId.ScoreUpload, "hub nav CAMERA");
+                yield return new WaitForSecondsRealtime(1.5f);
+                yield return TintReport("ScoreUploadScreen");
+            }
+
+            /// <summary>Read all five slot colours off the LIVE bar and say which one is lit.</summary>
+            IEnumerator TintReport(string screenName)
+            {
+                GameObject? cur = Obj(ScreenManager.Instance!.CurrentScreen);
+                Transform? bar = GpsScreenTransition.FindLayer(cur, "GpsNavBar");
+                if (bar == null) { Line("TINT " + screenName + ": no bar"); yield break; }
+
+                string expected = GpsNavBarHighlight.SlotFor(screenName) ?? "(none)";
+                var sb = new StringBuilder("TINT " + screenName + "  expected=" + expected + "  ");
+                string litFound = "(none)";
+                foreach (string slot in NavSlots)
+                {
+                    Transform? t = bar.Find(slot);
+                    var img = t != null ? t.GetComponent<UnityEngine.UI.Image>() : null;
+                    if (img == null) continue;
+                    Color c = img.color;
+                    bool lit = c.r < 0.5f && c.g > 0.5f && c.b > 0.5f;   // cyan-ish, not white
+                    if (lit) litFound = slot;
+                    sb.Append(slot.Replace("Nav","").Replace("Button",""))
+                      .Append("=#").Append(ColorUtility.ToHtmlStringRGB(c)).Append(' ');
+                }
+                bool ok = litFound == expected;
+                sb.Append(" -> lit=").Append(litFound).Append(ok ? "  PASS" : "  ***FAIL***");
+                Line(sb.ToString());
+                yield return Shot("navtint_" + screenName);
             }
 
             // ═════════════════════════════════════════════════════════════════
