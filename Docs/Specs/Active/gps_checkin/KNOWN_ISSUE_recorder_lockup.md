@@ -21,8 +21,24 @@ Three explanations were tested and eliminated:
 | Hypothesis | Test | Result |
 |---|---|---|
 | The recorder is inherently too heavy | Scenarios `a`–`f` encode fine, same `GameViewInputSettings`, same 1170x2532, same VideoToolbox path | **Eliminated** — six existing clips in `Docs/Reports/Media/gps_flow/` |
-| The scenario `(g)` is bad (bad taps, runaway coroutine) | `GOLFIN/Gps/Record — DRY RUN (g), no encoder` — identical flow, `StartRecording()` never called | **Eliminated** — reached `GpsRounds`, `POST /activity/checkin -> 200`, Unity stable at ~2 GB RSS, machine healthy |
+| The scenario `(g)` is bad (bad taps, runaway coroutine) | `GOLFIN/Gps/Record — DRY RUN (g), no encoder` — identical flow, `StartRecording()` never called | **Eliminated up to check-in** — see coverage note below |
 | Memory exhaustion | `memory_pressure` / `vm.swapusage` after the crash | **Eliminated** — 67-74% free, ZERO swap used |
+
+### Coverage of the dry run — read this before trusting the row above
+
+The dry run reached `GpsRounds` and performed a REAL check-in
+(`POST /api/v1/activity/checkin -> 200 in 177 ms`), with Unity stable at ~2 GB
+RSS and the machine healthy throughout.
+
+It did **NOT** cover the second half of the loop — check-out, the receipt modal,
+DONE. I stopped play mode while it was still running, so there is no evidence
+either way for those steps. The trace ends with the editor idle on Home at 2%
+CPU, which is me having terminated it, not the scenario finishing.
+
+So the honest scope: the scenario is proven safe through boot -> hub -> Rounds ->
+CHECK IN -> confirm modal -> live card. If a future investigation wants the
+"bad scenario" hypothesis fully eliminated, re-run the dry run and let it reach
+`wrote N captions` in the log, which is the completion marker.
 
 ## What is left
 
