@@ -3166,11 +3166,11 @@ MonoBehaviour:
     english: BY NAME
     japanese: "\u540D\u524D\u9806"
   - key: GPS_ROUNDS_SORT_DISTANCE
-    english: "DISTANCE  \u25BE"
-    japanese: "\u8DDD\u96E2  \u25BE"
+    english: DISTANCE
+    japanese: "\u8DDD\u96E2"
   - key: GPS_ROUNDS_SORT_NAME_TOGGLE
-    english: "NAME  \u25BE"
-    japanese: "\u540D\u524D  \u25BE"
+    english: NAME
+    japanese: "\u540D\u524D"
   - key: GPS_ROUNDS_NEAR_YOU
     english: NEAR YOU
     japanese: "\u8FD1\u304F\u306E\u30B9\u30DD\u30C3\u30C8"

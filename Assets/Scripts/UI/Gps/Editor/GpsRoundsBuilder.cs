@@ -75,6 +75,11 @@ namespace Golfin.Gps.UI.Editor
         const string SprSilver    = "Assets/Art/RosterScreen/ButtonCancel.png";  // Main Buttons Silver
         const string SprSeparator = "Assets/Art/UI/Gps/S_GV_Separator.png";
         const string IcoPin       = "Assets/Art/UI/Gps/ICO_GpsPin.png";
+        // The node's "DISTANCE ▾" caret. It CANNOT be a character: U+25BE is absent from
+        // Rubik AND from the only global fallback (NotoSansJP), so it renders as tofu —
+        // and so do ▼ / › / ⌄. Only LiberationSans has any of them and it is not in the
+        // chain. The existing white chevron atom is tinted instead.
+        const string IcoCaret     = "Assets/Art/Original UI/Common/S_Common_Icon_ArrowBottom.png";
 
         // ── Fonts ─────────────────────────────────────────────────────────────
         const string FontSemi = "Assets/Fonts/Rubik-SemiBold SDF.asset";
@@ -433,9 +438,15 @@ namespace Golfin.Gps.UI.Editor
 
             GameObject toggle = Rect("SortToggle", bar.transform, 613, 0, 337, 40);
             Set(so, "_sortToggle", Btn(toggle));
+            // The label stops 30px short so the caret sits after it, right-aligned as a pair.
             Set(so, "_sortToggleLabel",
-                TMP("Label", toggle.transform, 0, 6, 337, 28, "", 24f, Gold, FontMed,
+                TMP("Label", toggle.transform, 0, 6, 307, 28, "", 24f, Gold, FontMed,
                     TextAlignmentOptions.TopRight));
+            // SQUARE, even though the chevron is wide: the glyph is 48x28 inside a 72x72
+            // canvas, so only a square rect renders it at its native 1.71 aspect. At
+            // 22x14 the linter measured it 57% off — a visibly flattened chevron.
+            GameObject caret = Rect("Caret", toggle.transform, 313, 9, 22, 22);
+            Img(caret, IcoCaret, Gold);
         }
 
         // ── Spot List Panel — node 14077:33961, 958x470 ───────────────────────

@@ -500,10 +500,19 @@ mocked at TEST Office (venue 1993, 35.654103/139.779219, acc 8 m) via
 | 8 | Receipt end time came from the device clock | `DateTimeOffset.UtcNow` | server's `check_out_at` |
 
 **Defect 6 was not a GPS bug.** It corrupted every timestamp *string* passing
-through the shared envelope, so it is fixed there. All 11 JSON parse sites in
-`Assets/Scripts` were enumerated; the three carrying string timestamps
-(`ActivityDto`, `GachaHistoryPage`, `SaveData.lastHoleUtc`) were fixed with it and
-the other seven verified to carry none. `Elapsed` had been going NEGATIVE, with a
+through the shared envelope, so it is fixed there.
+
+**Correction (self-review caught this).** An earlier draft said "all 11 JSON parse
+sites". That 11 was the count for one narrow grep — four Newtonsoft entry points
+(`JToken.Parse`, `JObject.Parse`, `JArray.Parse`, `JsonConvert.DeserializeObject`),
+tests excluded. Broadening it to include `ToObject<>` and `JsonUtility.FromJson`
+gives ~103 call sites across `Assets/Scripts`. The number was wrong; the substance
+was not. What actually matters is which sites carry a `string` field holding an ISO
+timestamp, and that set is three — `ActivityDto.CheckInAt`/`CheckOutAt`,
+`GachaHistoryPage.CreatedAt`/`NextBefore`, `SaveData.lastHoleUtc` — all three fixed
+here. Twelve files now reference `DateParseHandling`; eight already did before this
+task (BannerService, NoticeService, the Content and Tournament mappers,
+BackendLeaderboardProvider), which is why the blast radius is small. `Elapsed` had been going NEGATIVE, with a
 clamp printing a plausible `0:00` over it — the same reading feeds the 8-hour
 expiry rule.
 
@@ -524,3 +533,60 @@ skips. Two new timezone-independent regression tests
 they were in that run.
 
 Texts published **v35**; `export_content.py --check` clean.
+
+Canonical screenshot: `screenshots/01_rounds_list_nearby.png`
+
+## Figma fidelity
+
+Per-element, against the four node renders in `reference/`. Font WEIGHT and
+rendered size A/B'd at matched scale, not by divisor arithmetic.
+
+| Element | Node | Built | Verdict |
+|---|---|---|---|
+| Rounds list — CHECK IN pill (in radius) | `14076-33800` gold Small 230x54 | gold sprite, ppum 18/20, no rim | PASS |
+| Rounds list — out-of-radius action | dark pill "N KM AWAY" | dark sprite, ppum 88/20, rim on | PASS |
+| Spot row — Name / Subtitle / Distance | SemiBold 30 #ffffff / Medium 24 #b7c3d3 / Medium 24 #7ed488 | same; Info clipped by `RectMask2D` (node `overflow-clip`) | PASS |
+| Spot row — PARTNER tag | 112x30 r100 #7ed488@0.18 | same; Name narrows 540→330 when present | PASS |
+| Sort toggle caret | small down caret after "DISTANCE" | `S_Common_Icon_ArrowBottom` tinted #EEDC9A, 22x22 | PASS (was tofu — see below) |
+| Confirm modal — stat 1 `+30` | White | #FFFFFF | PASS |
+| Confirm modal — stat 2 `+10` | Gold | #EEDC9A | PASS |
+| Confirm modal — stat 3 accuracy | Green `● HIGH` | #7ED488, reads HIGH | PASS |
+| Confirm modal — note | 2 lines, line 1 ends "finish —" | same; wrap width 790 | PASS |
+| ROUND COMPLETE — venue name | present, between pin and sub | `_venueName`, glyph band 252 vs node 252 | PASS |
+| ROUND COMPLETE — order | pin → name → sub | same (was sub → pin, no name) | PASS |
+| ROUND COMPLETE — bands | ring 167 / name 268 / sub 310 / stats 385 | 168 / 274 / 316 / 383 | PASS (≤6px) |
+| Receipt — sub-line | "{start} – {end} · GPS verified" | `12:41 – 12:41 · GPS verified` | PASS |
+| Receipt — buttons | POST SCORE / DONE | same | PASS |
+
+**Sort caret — a defect the self-review surfaced, now fixed.** The node's `▾` was
+authored as the literal character. `TMP_FontAsset.HasCharacter` says Rubik has
+neither U+25BE nor ▼ / › / ⌄, and neither does the ONLY global fallback
+(NotoSansJP); LiberationSans has some but is not in the chain. So it rendered as
+tofu (`□`) in every frame. No character can fix it — it is now the existing white
+chevron atom `S_Common_Icon_ArrowBottom`, tinted gold.
+
+(An earlier attempt at `<rotate=-90>›</rotate>` was both wrong — `›` is absent from
+Rubik too — and lost: it was uncommitted when the CSV was restored from HEAD to
+undo an unrelated re-quoting, and the restore took it with it.)
+
+## UI fidelity lint
+
+`UIFidelityLinter.LintPrefab` re-run after the final rebuild. **`fail == 0` on all
+three.**
+
+| Prefab | JSON | fail | warn |
+|---|---|---|---|
+| `GpsRoundsScreen.prefab` | `Docs/Diagnostics/_capture/GpsRoundsScreen_lint.json` | **0** | 5 |
+| `CheckInConfirmModal.prefab` | `Docs/Diagnostics/_capture/CheckInConfirmModal_lint.json` | **0** | 2 |
+| `RoundCompleteModal.prefab` | `Docs/Diagnostics/_capture/RoundCompleteModal_lint.json` | **0** | 2 |
+
+The linter earned its keep here: it caught the caret authored 22x14 on a 72x72
+sprite — 57% off native aspect, a flattened chevron — which the eye passed. Now
+22x22, and that warning is gone (6 warn → 5).
+
+Remaining warns are accounted for, not ignored:
+- `Backdrop ::flat-fill::` x3 — a modal scrim IS a flat #000000DD fill. Intended.
+- `PinIcon ::nonuniform-stretch::` x2 — false positive. The warning compares the
+  square 172x172 canvas; the pin's OPAQUE content is 122x158 (aspect 0.77) and it
+  is authored 40x53 (0.755), i.e. within 2% of native.
+- `SortToggle ::flat-fill::` — a transparent hit-area for the Button. Intended.
