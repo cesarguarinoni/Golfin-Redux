@@ -20,7 +20,7 @@
   `backend/pgrest.py` (Supabase's edge 500s on a bare `%` — venue nearby/search AND user search were
   down for every client until v68), `ApiEnvelope` DateParseHandling.None (ISO timestamps were shifted
   twice). Unity Recorder hard-locks the Mac on the Rounds screen — KNOWN_ISSUE, video waived.
-  **NEXT: resume the device pass (§1–§6 + the §3b Rounds rows), then `gps_standalone_shell`**
+  **NOW: Cesar runs the device pass (§1–§6 + §3b); Code starts `gps_standalone_shell` (SPEC_READY, kickoff below)**
   (decision 2026-09-02: Unity thin-shell, Flutter retired). Deferred scope lives in
   `Docs/GPS/GPS_BACKLOG.md` (Architect-maintained). Roadmap rows: Notion Orders 2104–2114, 2130.
 
@@ -170,6 +170,8 @@
 
 ## 📋 SPEC_READY POINTERS
 
+- **`gps_standalone_shell`: SPEC_READY (2026-09-03).** `Docs/Specs/Active/gps_standalone_shell/SPEC.md` — PLAYLIFE as a Unity thin-shell from this project ("punch it standalone"): build profile `iOS-Standalone` (defines `GOLFIN_GPS;GOLFIN_STANDALONE`, ShellScene-only scene list), `StandaloneGate` (allowlist = pre-auth + GPS screens; `Home` REWRITTEN to `GpsHub`), Splash boots to `InterceptHubEntry(GpsHub)` skipping the starter gate, game nav bar + ticket cluster hidden, hub BackPill hidden, Settings modal in shell layout, `golfingps://` scheme, `client_platform ios-playlife`, third fastlane lane `testflight_build_standalone` ("punch it standalone") through a `variant:` refactor of the shared lane. D1 read from ASC: existing app "GOLFIN GPS" `com.nextinnovation.golfingps` (Apple ID 6737145432, same team), ships as 1.0.0. Can start now.
+
 - **`design_consistency_audit`: SPEC_READY (2026-09-03, GAME polish track — Notion 2112).** `Docs/Specs/Active/design_consistency_audit/SPEC.md` — audit-only pass over every shell-canvas game screen, tab, submenu and result modal (Home, Mode Select, Hole/Mission/Tournament selection, Rankings, Roster, Inventory tabs, General/Stamina shop, Gacha History/Prizes, Settings, PersistentUI, the result + gate modals; auth screens Tier 2) against the Figma variables (`Docs/Design/DESIGN_TOKENS.md`, seeded) on six dimensions — fonts, colours, hierarchy, sizes, outlines, drop shadows — plus the linter's render-health rules. Instruments: `DesignAuditDumper` (rendered px, not serialized), `UIFidelityLinter.LintRoot` (extraction only), `figma_node_to_spec.py`, crop sheets. Output = `Docs/Reports/DESIGN_CONSISTENCY_AUDIT.md` + fix list grouped by shape (§22); the Architect writes the approved fixes as Quick specs. Changes NOTHING in production. **Run AFTER `gps_checkin`** (Code works one task at a time; GPS track first). `game_polish` (2111) follows the audit; its per-screen map is at `Docs/Specs/Queued/game_polish/MAP.md` pending Cesar's approval.
 
 - **`game_polish_a`: SPEC_READY (2026-09-03, GAME polish track — Notion 2111, slice a of three).** `Docs/Specs/Active/game_polish_a/SPEC.md` — navigation & structure motion: a screen-agnostic `LayeredPush` (`Assets/Scripts/UI/Polish/`) for same-pillar SAME-background pairs (Play `2e5476ee…` group, Tournaments/Rankings `0d425c0a…` group, Gacha `5ec22d10…` group), 16 px entry `Rise` on fade-path arrivals, cross-fades for Inventory/Rankings/GachaHistory tabs and the Settings overlay + accordion, `UiSelection` bumps on tabs, and the NEW bottom-nav selected state (§D7: gold halo + brighter ring replaces the cyan tint, on the game bar AND the GPS bar — the one authorised `Gps/` touch is `GpsNavBarHighlight.cs`); fade-to-black kept for Home, cross-pillar and background-changing moves (Cesar). Option (b) push-with-background-cross-fade only as a 5 s video behind an OFF flag. Gates as gps_polish (invariants JSON, 0 px parity vs first-commit baselines, chrome seam ≤ 2, GC ≤ 32 B). Map approved 2026-09-03: `Docs/Specs/Queued/game_polish/MAP.md` (b = content & modals, c = sweep — specs follow). **Run AFTER `design_consistency_audit` is DONE and its approved Quick fixes have landed.**
@@ -294,6 +296,47 @@ Docs/AI_CONTEXT.md.
   overlaid rates/pools (signup-modal rules shell), five-event telemetry funnel + Telemetry-panel
   card, Gold ticket placeholder icon + admin `iconUrl` upload, `TICKET_SHOP_BUILD` + the first
   `category=ticket` shop row (Cesar sets price/quantity) once the C archive exists.
+
+### Kickoff · gps_standalone_shell (issued 2026-09-03 — start now; device-pass quick specs may interleave)
+
+```
+Read Docs/Specs/Active/gps_standalone_shell/SPEC.md and implement it.
+
+Context:
+- PLAYLIFE as a Unity thin-shell from THIS project, one codebase: a third TestFlight
+  variant "punch it standalone" beside "Punch it" / "Punch it GPS". No golf gameplay,
+  no shop/gacha/tournaments/missions — PLAYLIFE features only, and NO change to any
+  GPS screen.
+- Build profile iOS-Standalone = clone of iOS-Full-GPS + GOLFIN_STANDALONE + a
+  ShellScene-only scene list (report the .ipa size vs the GPS variant). Identity via
+  a build preprocessor that sets AND restores bundle id / product name / icons.
+- StandaloneGate (fourth gate in ScreenManager.Navigate): allowlist = AuthGate's
+  pre-auth screens + GpsGate.GpsScreens; Home -> GpsHub is a REWRITE, not a refusal
+  (Welcome Skip, hub BackPill, GoBack fallbacks). Splash skips StarterGate and boots
+  GpsAuthExtrasFlow.InterceptHubEntry(GpsHub).
+- Chrome: game nav bar + ticket cluster + plus button hidden; RP pill, username,
+  Settings gear stay; hub BackPill hidden; Settings modal standalone layout (Account /
+  Language / legal only). playlife:// URL scheme; client_platform "ios-playlife";
+  telemetry app_variant.
+- Fastlane: shared lane takes variant: :standard|:gps|:standalone; new lane
+  testflight_build_standalone = Cesar's third phrase "punch it standalone" (third row in
+  Docs/PUNCH_IT_ROUTINE.md, its own upload-guard entry per app record, same preflight and
+  confirm-at-Apple); Tools/testflight.sh + TESTFLIGHT_RUNBOOK updated; prove the GPS lane
+  still archives after the refactor.
+- D1 DECIDED + READ FROM ASC: upload to the existing app "GOLFIN GPS" — Bundle ID
+  com.nextinnovation.golfingps, Apple ID 6737145432, SAME team as the game (TCUV4A9VTJ), last
+  TestFlight build 0.7.6 (12). standalone variant: app_identifier com.nextinnovation.golfingps,
+  bundleVersion 1.0.0, display name "GOLFIN GPS", URL scheme golfingps://. NOT
+  com.wonderwall.playlife (that is the Flutter project, not this record).
+  Placeholder icon/launch bakes (make_standalone_icon.py); real branding is a backlog row.
+- Editor proof with the profile ACTIVE (its defines apply), then INACTIVE to prove the
+  game boot is untouched. EditMode: StandaloneGateTests, flow + BannerPolicy cases.
+
+When done: list changed files with a 1-line summary each, run the acceptance
+tests in the spec, flag which need manual on-device verification, update
+STATUS.md + IMPLEMENTER_REPORT.md in the spec folder, and update
+Docs/AI_CONTEXT.md.
+```
 
 ### Kickoff · gps_checkin (issued 2026-09-03 — after gps_navbar_height_fix and gps_profile_prompt_on_entry)
 

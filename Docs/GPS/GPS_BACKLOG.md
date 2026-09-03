@@ -45,8 +45,6 @@
 | Background GPS trail during a round | `gps_checkin` D3 | Foreground-only in v1 (no "Always" entitlement); add the background location mode + entitlement if K4 counts prove too low on device |
 | Partner offers redemption / coupons | `gps_checkin` | `partner_offer` is display text only; redemption flow, QR, partner reporting are unspecced |
 | Unity Recorder hard-locks the Mac on the Rounds screen | `gps_checkin` (KNOWN_ISSUE_recorder_lockup.md) | Tooling only, video waived by Cesar; the encoder + Rounds screen together stall below the app (no crash report). Investigate with a smaller GameView / software encoder / capture outside Unity before the next Rounds video |
-| Two venues with drifted geohash (#1 東京ゴルフ倶楽部, #7 Lomond CC) | `gps_checkin` admin panel flags them | Pre-existing rows whose stored geohash ≠ encode(lat,lon); re-save each in the Partners panel (the API recomputes) |
-| Test rounds on the dev account | `gps_checkin` E2E + device pass | Several `activities` rows against TEST Office/Home (ids 41+ and the Editor runs) — delete them BEFORE the `test_fixture` venues (FK) |
 | Android GPS build variants | `punch_it_gps_variants` | One `Android-Full-GPS` profile clone + lane when Android builds resume |
 | Android mock-GPS detection plugin | decision 2026-09-01 | `IMockLocationDetector` seam exists; iOS first |
 | In-app build-variant watermark | `punch_it_gps_variants` | The Home **GPS pill** is the tell since `gps_pill_entry` (banner restored to plain admin behaviour); revisit only if Cesar asks |
