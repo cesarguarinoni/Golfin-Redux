@@ -766,7 +766,8 @@ namespace Golfin.Gps.UI
             // to FOOD & DRINK, which by definition does not contain the golf course being played,
             // so there is nothing on screen to read the address off and nothing was cached this
             // process. The round knows its venue id, so ask the server for that ONE venue. Once
-            // per round, and only when the list genuinely could not answer.
+            // per round while the request is in flight or has succeeded — a FAILURE clears the
+            // flag again, so a cold-start timeout cannot blank the address permanently.
             if (string.IsNullOrEmpty(_cardSubCached) && !_cardSubFetched && isActiveAndEnabled)
             {
                 _cardSubFetched = true;
@@ -777,7 +778,12 @@ namespace Golfin.Gps.UI
         }
 
         /// <summary>One <c>/venue/{id}</c> for the active round's address line. A failure is
-        /// silent: an empty sub-line is a missing detail, never a reason to interrupt a round.</summary>
+        /// silent: an empty sub-line is a missing detail, never a reason to interrupt a round.
+        ///
+        /// <para>A failure also RELEASES the once-per-round guard, so the next paint tries again.
+        /// Holding it would make one unlucky request — a cold start on a scale-to-zero backend is
+        /// enough — blank the address for the entire life of the round with no way back.</para>
+        /// </summary>
         private IEnumerator FetchCardSubtitle(int venueId)
         {
             ApiResult<VenueDto>? result = null;
@@ -785,7 +791,9 @@ namespace Golfin.Gps.UI
 
             if (result == null || !result.Success || result.Data == null)
             {
-                Debug.LogWarning($"{Tag} /venue/{venueId} failed — the card keeps an empty address.");
+                Debug.LogWarning($"{Tag} /venue/{venueId} failed — the card keeps an empty address " +
+                                 "and will retry on the next paint.");
+                if (_cardSubVenueId == venueId) _cardSubFetched = false;
                 yield break;
             }
 

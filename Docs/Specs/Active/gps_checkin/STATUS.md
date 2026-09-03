@@ -1,4 +1,4 @@
-READY_FOR_REDTEAM
+ARCHITECT_REVIEW_FAIL
 
 # STATUS — `gps_checkin`
 

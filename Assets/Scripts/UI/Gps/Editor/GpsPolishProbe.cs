@@ -608,6 +608,13 @@ namespace Golfin.Gps.EditorTools
                 yield return Shot("vote");
                 yield return GoBackReal(ScreenId.GpsHub, "vote back");
 
+                // ROUNDS — added by gps_checkin. The slot was inert when this probe was written,
+                // so the screen the task builds had never been through the motion measurement at
+                // all; its transition was asserted from the table rather than observed.
+                yield return Go(hub, "NavRoundsButton", ScreenId.GpsRounds, "hub nav ROUNDS");
+                yield return Shot("rounds");
+                yield return GoBackReal(ScreenId.GpsHub, "rounds back");
+
                 // ── ScoreUpload: proves the FADE is still what it gets ───────
                 yield return Go(hub, "NavCameraButton", ScreenId.ScoreUpload, "hub nav CAMERA");
                 yield return Shot("scoreupload");
@@ -929,6 +936,12 @@ namespace Golfin.Gps.EditorTools
                     case ScreenId.GpsWelcome:     name = "GpsWelcomeScreen"; break;
                     case ScreenId.GpsGift:        name = "GpsGiftScreen"; break;
                     case ScreenId.GpsVote:        name = "GpsVoteScreen"; break;
+                    // gps_checkin. Missing here made the probe BLIND to the Rounds push:
+                    // Obj() returned null, CanPush went false, expectPush went false, and
+                    // the leg ran without ever being measured — no record, no failure, no
+                    // sign anything was wrong. A screen absent from this switch is silently
+                    // unmeasured, not reported as unmeasurable.
+                    case ScreenId.GpsRounds:      name = "GpsRoundsScreen"; break;
                     default: return null;
                 }
                 // Inactive screens are not reachable with GameObject.Find, and the target of a

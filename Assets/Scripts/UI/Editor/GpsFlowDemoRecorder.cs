@@ -67,6 +67,11 @@ namespace Golfin.EditorTools
         [MenuItem("GOLFIN/Gps/Record — (f) a live cast", priority = 235)]
         public static void LaunchF() => LaunchDemo("f");
 
+        /// <summary>(g) — gps_checkin: the whole ROUNDS loop, driven through the real widgets.
+        /// Location is mocked at TEST Office so the check-in lands inside the radius.</summary>
+        [MenuItem("GOLFIN/Gps/Record — (g) Rounds check-in loop", priority = 236)]
+        public static void LaunchG() => LaunchDemo("g");
+
         public static void LaunchDemo(string scenario = "a")
         {
             EditorPrefs.SetString(ScenarioKey, scenario);
@@ -227,6 +232,7 @@ namespace Golfin.EditorTools
                 case "d2": StartCoroutine(SequenceD2()); break;
                 case "e":  StartCoroutine(SequenceE());  break;
                 case "f":  StartCoroutine(SequenceF());  break;
+                case "g":  StartCoroutine(SequenceG());  break;
                 default:   StartCoroutine(Sequence());   break;
             }
         }
@@ -252,6 +258,63 @@ namespace Golfin.EditorTools
         }
 
         // ═════════════════════════════════════════════════════════════════════
+        // ═════════════════════════════════════════════════════════════════════
+        // (g) — gps_checkin: the ROUNDS loop end to end
+        //
+        // Every step is a real widget tap on the real screen, in the order a player
+        // performs them: hub -> ROUNDS -> CHECK IN -> confirm -> the live card ->
+        // CHECK OUT -> confirm -> the receipt. Location is mocked at TEST Office
+        // (venue 1993) so the check-in is genuinely inside the radius and the
+        // server pays it — nothing here is a staged frame.
+        // ═════════════════════════════════════════════════════════════════════
+
+        IEnumerator SequenceG()
+        {
+            yield return Boot();
+
+            Golfin.Gps.UI.GpsRoundsScreenController.EditorFixOverride =
+                new Golfin.Gps.LocationFix { Lat = 35.654103, Lon = 139.779219, AccuracyM = 8f };
+            Cap("Rounds \u2014 the check-in loop, end to end");
+
+            yield return TapAnywhere("GpsPill", 20f);
+            yield return Until(() => ScreenManager.Instance.CurrentScreen == ScreenId.GpsHub, 20f);
+            yield return new WaitForSecondsRealtime(Hold);
+
+            GameObject hub = GameObject.Find("Canvas/ScreensRoot/GpsHubScreen");
+            Cap("Nav slot \u2014 ROUNDS");
+            yield return TapIn(hub, "NavSafeArea/GpsNavBar/NavRoundsButton");
+            yield return Until(() => ScreenManager.Instance.CurrentScreen == ScreenId.GpsRounds, 20f);
+            Cap("Nearby spots, live map \u2014 CHECK IN inside the radius, distance outside it");
+            yield return new WaitForSecondsRealtime(Hold + 2.5f);
+
+            Cap("CHECK IN");
+            yield return TapAnywhere("ActionButton", 15f);
+            yield return new WaitForSecondsRealtime(1.2f);
+            Cap("Confirm \u2014 points on check-in and check-out, live GPS accuracy");
+            yield return new WaitForSecondsRealtime(Hold);
+
+            yield return TapAnywhere("ConfirmButton", 15f);
+            yield return new WaitForSecondsRealtime(2.5f);
+            Cap("Live round \u2014 elapsed, points earned, GPS fixes. The list turns to FOOD & DRINK");
+            yield return new WaitForSecondsRealtime(Hold + 2f);
+
+            Cap("CHECK OUT");
+            yield return TapAnywhere("CheckOutButton", 15f);
+            yield return new WaitForSecondsRealtime(1.2f);
+            Cap("Confirm the check-out");
+            yield return new WaitForSecondsRealtime(Hold);
+
+            yield return TapAnywhere("PrimaryButton", 15f);
+            yield return new WaitForSecondsRealtime(2.5f);
+            Cap("Receipt \u2014 the server's own elapsed, points and GPS verdict");
+            yield return new WaitForSecondsRealtime(Hold + 2f);
+
+            yield return TapAnywhere("SecondaryButton", 15f);   // DONE
+            yield return new WaitForSecondsRealtime(2f);
+            Cap("Back to the list \u2014 the round is closed and the chip agrees with the rows");
+            yield return new WaitForSecondsRealtime(Hold);
+        }
+
         // (b) — the nav-bar sweep, COLD
         //
         // Re-recorded for the continuation. Nothing about the route changed; what

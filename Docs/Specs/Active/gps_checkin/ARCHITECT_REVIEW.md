@@ -326,3 +326,58 @@ clean. No white-box placeholders.
 Surfacing three procedural notes for the red-team (frame-06 sub-line drift,
 pre-fix frames 03/06 still cited in evidence, report's imprecise parse-site
 count) — none rise to a FAIL. Handing to `golfin-redteam-reviewer`.
+
+---
+
+# RED-TEAM ADDENDUM — `golfin-redteam-reviewer`
+
+**Timestamp:** 2026-09-03 15:30 JST
+**Verdict:** **ARCHITECT_REVIEW_FAIL** — one concrete, Cesar-mandated acceptance item is wholly undelivered. Everything else re-derived clean this pass.
+
+Code changed after BOTH prior gates (HEAD is `0bc73e28f`, after the reviewer's `READY_FOR_REDTEAM`). I re-derived against the current tree; nothing carried forward.
+
+## What I re-generated myself (not carried forward)
+
+- **Loc widths (live TMP `GetPreferredValues`, Rubik-SemiBold).** No overflow anywhere:
+  `● LIVE ROUND` **171.6** in the 180 pill (ink narrower still); `● GPS ON` 126.6, `● GPS OFF` 140.0, `● LIVE` 88.2 (all in 180); chips GOLF/RANGES/FOOD 199.7/222.6/183.7 in 311; `PARTNER` 103.3 in 112; row `CHECK IN` 132.9, `10.5 KM AWAY` 196.4, `4.6 KM AWAY` 182.6 in 230. The pill bug shape is GONE.
+- **LIVE ROUND deviation (180 vs node 150) — JUSTIFIED.** At 150 the string (advance 171.6) overflows by 21.6 px; `reference/rounds_active_14077-100447.png` confirms the node's own render wraps `● LIVE`/`ROUND` and "ROUND" collides with the venue name 霞ヶ関カンツリー倶楽部. The 180 build renders it on one line (frames 03/06/08). Correct call.
+- **UIFidelityLinter re-run in-editor (all 3 prefabs):** GpsRoundsScreen 0 FAIL/5 WARN, CheckInConfirmModal 0/2, RoundCompleteModal 0/2. Matches. WARNs classified (scrim/hit-area flat-fill; PinIcon nonuniform-stretch = ICO_GpsPin's non-square art, authored aspect 0.755 matches its content — false positive).
+- **e2e_activity_economy.py re-run this pass:** `=== ALL PASS ===`, invariant `total_points = activity_pts + gift_pts` 19 profiles 0 violations, auto-expire live (`auto_expired_rounds=1`, awarded 30), far check-in 0 + no ledger, expired 0 + no count bump, replay no-op, `already_active` refused, score post = one row.
+- **EditMode:** whole-mode run, Status Passed, **0 failures**. New suites exist with real methods (not vacuous): MapProjectionTests 9, RoundSessionTests 21, ActivityServiceJsonTests+ActivityTimestampFidelity 14, GpsGateTests 6.
+- **Char coverage:** `TMP_FontAsset.HasCharacter` is unreliable for these Dynamic fonts (returns False even for `●` which visibly renders), so coverage is judged empirically — frames 01/03/06 render `● ◎ 〜 · – —` and CJK correctly. No tofu on any rendered string.
+
+## Prior-rejection defects — GONE verdicts (re-derived, not read)
+
+| Defect | Verdict | Evidence |
+|---|---|---|
+| `▾` tofu caret | GONE | prefab caret sprite `S_Common_Icon_ArrowBottom` 22×22 gold; frames 01/03/06/07 render a chevron |
+| Resumed round missing venue address | GONE | frame 06 (re-shot 14:52) shows `東京都中央区晴海`; code caches `_cardSubCached` + `/venue/{id}` fallback |
+| GOLF chip over FOOD list | GONE (code-proven) | `FetchSpots` tail clears `_fetchInFlight` at :587 THEN re-runs at :608 if `builtForActive != Session.HasActive` — re-entrant, converges. Not the old `!_fetchInFlight` no-op |
+| `● LIVE ROUND` pill spill | GONE | 171.6 < 180 measured |
+
+## State-derivation audit — COMPLETE (verified, not trusted)
+
+`ApplyState` is the single funnel: on every round-state change it re-paints status row, active card, sort bar, chip/card/history visibility, and triggers `FetchSpots` (list + pins + status). `OnActiveRoundChanged`, check-in, check-out, `Session.Refresh` (entry + `OnApplicationFocus`), and score-close all call it. Only `_cardVenueSub` ever read transient `_spots`; now fixed. The report's "6 of 7 read the round/session" table is accurate.
+
+## BLOCKER — acceptance item #12 (motion parity) is entirely undelivered
+
+The SPEC's single most-emphasized acceptance item — its whole opening build-rules paragraph plus Cesar's own words 2026-09-03 ("make sure the new screens have polished transitions like the previous ones") — has **zero runtime evidence**:
+
+- `videos/` is **empty**. § Smoke evidence and acceptance #12 mandate a captioned play-mode video of `list → chip switch → check-in modal → active card → check-out modal → list` showing every transition (cross-fades, `Pop`, `Stagger`, `ShimmerBlock`, `CountUp`). None exists. The only gps motion mp4s on disk are `gps_polish`'s.
+- **No `gps_polish_invariants.json` re-run with `GpsRounds` in the transition table.** The on-disk file is dated Sep 2 (the `gps_polish` task's) and contains no `GpsRounds`. Acceptance #12 requires this at `fail=0`.
+- **No A13 GC/frame measurement** for this screen. The on-disk `gps_polish_perf.json` is the polish task's.
+
+The report marks item 12 `BLOCKED (Unity)`, but Unity was demonstrably free afterward — stills 01–08 were captured in play mode (15:08), the linter and tests were re-run. Items 1/2/5/9/11/13 got resolved that way; **item 12 alone fell through**. Rest-state geometry parity IS satisfied (`gps_rounds_geometry.json`, all deltas 0) — that is the only part of #12 done. The moving part — the transitions themselves — has never been observed at runtime by anyone. This trips the standing "video confirmation ALWAYS — stills never suffice alone" rule.
+
+**Fix required (Unity is free right now):**
+1. Record the captioned flow video into `videos/` (real navigation via widget `onClick`, `EditorFixOverride` = TEST Office 1993; `build_bot_video.py` `textfile=` idiom), showing chips→card cross-fade, list retitle, `Pop`, `Stagger`, `Shimmer`, and the +30 `CountUp`.
+2. Re-run the motion invariants with `GpsRounds` in the transition table → `gps_polish_invariants.json` (or a task-local copy) with `fail=0`, cited.
+3. Run the A13 GC/frame measurement on GpsRounds (both states) and quote it.
+
+## Secondary — non-blocking, fix while back in the code
+
+`CardSubtitleFor` sets `_cardSubFetched = true` **before** the `/venue/{id}` call. On a single failure (e.g. a cold-start timeout — the very environment note in the kickoff), `FetchCardSubtitle` returns silently and the flag stays true, so the resumed round's address is **permanently blank for that round** with no retry (re-entering the screen keeps the same `_cardSubVenueId`, so no reset). Mirror the idempotency-key pattern: on a network (non-4xx) failure, clear `_cardSubFetched` so the next paint retries. Not blocking (silent detail line), but it's the same "keep the key on a network failure" discipline used everywhere else in this controller.
+
+## Scene / attribution
+
+ShellScene `IsDirty:false`; I entered no play mode and created no persistent objects (temp width-measure canvas destroyed). The uncommitted `PersistentUIManager.cs`, `UiMotion.cs`, `GpsPolishBuilder.cs`, `GpsNavBarHighlight.cs`, `game_polish*`, `design_consistency_audit`, `CONTROL_SCHEMES_PLAN.md` are the parallel session's and are not this task's.
