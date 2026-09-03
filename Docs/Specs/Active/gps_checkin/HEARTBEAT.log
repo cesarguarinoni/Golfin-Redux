@@ -52,3 +52,12 @@ DIRTY (git status --porcelain --untracked-files=all):
 
 [01:51:02Z] Localization PUBLISHED: import PLAN 64 add/0 change/0 conflict -> --apply (min_build 2603) -> content_publish('texts') -> v32, 64 GPS_ROUNDS_* rows live -> export -> content_version.txt v32 -> --check CLEAN.
 [01:51:02Z] COMPILE CHECK (headless, Unity untouched): Unity's bundled Roslyn against Library/ScriptAssemblies. Golfin.Gps OK, Assembly-CSharp OK, Assembly-CSharp-Editor OK, Golfin.Gps.Tests OK, GolfinRedux.Tests.EditMode OK. One real error found+fixed: GpsRoundsBuilder needed 'using Golfin.Gps.EditorTools' for GpsPolishBuilder.
+
+[01:57:32Z] Committed + pushed. GolfinRedux 6426b3f2b (80 files), playlife 373bb2f (5 files). Read-only probe confirms the blocker: venues.category 42703, activities.checkin_key 42703, both RPCs PGRST202, demo spots []. STATUS held at IMPLEMENTER_WORKING.
+
+[02:22:20Z] MIGRATIONS APPLIED by Cesar. Verified: invariant 0/19 violations; 1997 venues (golf 1988 / range 4 / food 5), 5 partners; 9 demo rows; 霞ヶ関 partner; 2 geohash-drift rows (pre-existing).
+[02:22:20Z] e2e_activity_economy.py ALL PASS (38 assertions).
+[02:22:20Z] Fly deploy v67 -> /venue/nearby AND /venue/search 500. Root cause: a bare % in a PostgREST filter makes Supabase's Cloudflare edge throw Worker exception 1101. NOT my change — /venue/search is untouched and equally broken; supabase/httpx are both pinned. Audited all 7 like/ilike sites (Rule 15), added backend/pgrest.py (* wildcard, no % in the URL), routed all 7 through it. Redeploy v68: nearby + search 200.
+[02:22:20Z] Router-layer E2E over HTTPS: balance 7063 -> +30 -> 7108, replay awarded 0, 409 already_active naming the round, /active flips, history correct.
+[02:22:20Z] /venue/map: route live, 502 surfacing Google's 403 'This API is not activated' -> Cesar still needs to enable Maps Static API.
+[02:22:20Z] Admin deployed to Cloudflare (golfin-admin, version 61b9e03e). Three round-trips proven twice: live data layer (client /venue/nearby reflects create/edit/deactivate) AND through the real panel UI in mock mode. Found+fixed a real mock-mode bug: venue fixtures were module-level state, which Next dev does not share across route bundles -> a created row failed its next edit with 'not found'. Moved onto mockStore (globalThis), the pattern every other panel already uses.

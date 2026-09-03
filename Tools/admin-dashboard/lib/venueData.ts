@@ -1,6 +1,7 @@
 import "server-only";
 import { geohashEncode } from "./geohash";
 import { isMockMode } from "./mode";
+import { mockDb } from "./mockStore";
 import { getSupabaseAdmin } from "./supabaseAdmin";
 import type {
   VenueDrift,
@@ -78,27 +79,32 @@ export function mapVenue(r: Row): VenueRow {
   };
 }
 
-const MOCK_VENUES: VenueRow[] = [
-  mapVenue({
-    id: 1993, name: "TEST Office (WeWork Harumi)", category: "golf",
-    latitude: 35.654103, longitude: 139.779219, geohash: "xn76uf8h5",
-    gps_radius_m: 500, source: "test_fixture", is_active: true,
-  }),
-  mapVenue({
-    id: 9001, name: "焼肉 GREEN", category: "food", is_partner: true,
-    subtitle: "焼肉 · ゴルファー10%OFF", price_label: "¥3,000〜",
-    chip_extra: "10%OFF", partner_offer: "ゴルファー10%OFF",
-    latitude: 35.69, longitude: 139.625, geohash: "xn7711pv6",
-    gps_radius_m: 300, rating: 4.6, source: "demo", is_active: true,
-  }),
-  mapVenue({
-    id: 9002, name: "GOLF LAB", category: "range", is_partner: true,
-    subtitle: "東京都港区 · 高精度シミュ", price_label: "¥2,000/60分",
-    chip_extra: "プロ指導", latitude: 35.6585, longitude: 139.745,
-    geohash: "xn76ggrjy", gps_radius_m: 300, rating: 4.8,
-    source: "demo", is_active: true,
-  }),
-];
+/**
+ * Mock-mode helpers, backed by `mockStore` — NOT by a module-level array.
+ *
+ * The fixtures themselves live in `mockVenues.ts`; what matters here is WHERE the
+ * mutable copy lives. In Next's dev server the page bundle and each route-handler
+ * bundle get their own instance of a module, so `GET /api/venues` and
+ * `PATCH /api/venues/:id` were reading two different arrays: a row created through
+ * the panel appeared in the table and then failed its next edit with
+ * "Venue #9003 not found." `mockStore` exists precisely for this — it hangs the
+ * fixture db off `globalThis`, which every bundle shares — and every other mock
+ * entity in this dashboard already goes through it.
+ */
+
+/** Upsert into the shared mock db. */
+export function mockUpsertVenue(row: VenueRow): VenueRow {
+  const list = mockDb().venues;
+  const i = list.findIndex((v) => v.id === row.id);
+  if (i >= 0) list[i] = row;
+  else list.unshift(row);
+  return row;
+}
+
+/** The next free mock id — above every fixture, so it cannot collide. */
+export function mockNextVenueId(): number {
+  return mockDb().venues.reduce((max, v) => Math.max(max, v.id), 9000) + 1;
+}
 
 /**
  * A page of venues under the panel's filters.
@@ -108,7 +114,7 @@ const MOCK_VENUES: VenueRow[] = [
  */
 export async function fetchVenues(filters: VenueFilters = {}): Promise<VenuesResponse> {
   if (isMockMode()) {
-    return { venues: applyFilters(MOCK_VENUES, filters), mock: true, drift: [] };
+    return { venues: applyFilters(mockDb().venues, filters), mock: true, drift: [] };
   }
 
   let q = getSupabaseAdmin().from("venues").select("*");
@@ -130,7 +136,7 @@ export async function fetchVenues(filters: VenueFilters = {}): Promise<VenuesRes
 }
 
 export async function fetchVenue(id: number): Promise<VenueRow | null> {
-  if (isMockMode()) return MOCK_VENUES.find((v) => v.id === id) ?? null;
+  if (isMockMode()) return mockDb().venues.find((v) => v.id === id) ?? null;
 
   const res = await getSupabaseAdmin()
     .from("venues")
@@ -146,7 +152,7 @@ export async function fetchVenue(id: number): Promise<VenueRow | null> {
  *  ones (`places_auto_register`) without anyone editing this file. */
 export async function fetchVenueSources(): Promise<string[]> {
   if (isMockMode()) {
-    return [...new Set(MOCK_VENUES.map((v) => v.source).filter(Boolean))] as string[];
+    return [...new Set(mockDb().venues.map((v) => v.source).filter(Boolean))] as string[];
   }
   const res = await getSupabaseAdmin().from("venues").select("source");
   if (res.error) return [];

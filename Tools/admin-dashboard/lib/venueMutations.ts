@@ -3,7 +3,13 @@ import { writeAudit } from "./audit";
 import { geohashEncode } from "./geohash";
 import { isMockMode } from "./mode";
 import { getSupabaseAdmin } from "./supabaseAdmin";
-import { fetchVenue, isVenueCategory, mapVenue } from "./venueData";
+import {
+  fetchVenue,
+  isVenueCategory,
+  mapVenue,
+  mockNextVenueId,
+  mockUpsertVenue,
+} from "./venueData";
 import type { VenueInput, VenueRow } from "./types";
 
 /**
@@ -105,9 +111,11 @@ export async function createVenue(
   };
 
   if (isMockMode()) {
-    const venue = mapVenue({ ...row, id: Math.floor(Math.random() * 1e6) });
+    // Written INTO the fixture list, so the row the panel just said it created
+    // is the row the panel then shows (see MOCK_VENUES' comment).
+    const venue = mockUpsertVenue(mapVenue({ ...row, id: mockNextVenueId() }));
     await writeAudit(adminEmail, "venue.create", null, "venues", null, row);
-    return { ok: true, message: `Created ${venue.name}.`, venue };
+    return { ok: true, message: `Created ${venue.name} (#${venue.id}).`, venue };
   }
 
   const res = await getSupabaseAdmin().from("venues").insert(row).select().single();
@@ -143,7 +151,30 @@ export async function updateVenue(
   const row = toRow(merged);
 
   if (isMockMode()) {
-    const venue = mapVenue({ ...before, ...row, id });
+    // `before` is the panel's own camelCase row and `row` is the DB's snake_case
+    // patch, so they cannot simply be spread together — the merge goes through a
+    // snake_case projection of `before` first, or an edit would blank every
+    // field it did not touch.
+    const venue = mockUpsertVenue(mapVenue({
+      id,
+      name: before.name,
+      category: before.category,
+      is_partner: before.isPartner,
+      subtitle: before.subtitle,
+      price_label: before.priceLabel,
+      chip_extra: before.chipExtra,
+      partner_offer: before.partnerOffer,
+      latitude: before.latitude,
+      longitude: before.longitude,
+      geohash: before.geohash,
+      address: before.address,
+      image_url: before.imageUrl,
+      gps_radius_m: before.gpsRadiusM,
+      rating: before.rating,
+      is_active: before.isActive,
+      source: before.source,
+      ...row,
+    }));
     await writeAudit(adminEmail, "venue.update", null, "venues", before, row);
     return { ok: true, message: `Saved ${venue.name}.`, venue };
   }
