@@ -248,6 +248,24 @@ namespace GolfinRedux.UI
                 return;
             }
 
+            // gps_profile_prompt_on_entry §2 — the ONE post-signup intercept. The first entry into
+            // the GPS surface, from wherever (the Home pill, the home_promo banner's golfin://gps
+            // internal route, later the standalone shell), is diverted once into the Golf Profile
+            // capture. It sits here, after the gates, so the decision is only ever taken on a
+            // navigation that was actually going to happen — and it re-enters Navigate rather than
+            // rewriting screenId in place, so GpsGolfProfile is put through the three gates on its
+            // own account instead of inheriting GpsHub's verdict. Same shape as the AuthGate
+            // redirect above. No recursion risk: only GpsHub is ever intercepted.
+            ScreenId intercepted = Golfin.Gps.UI.GpsAuthExtrasFlow.InterceptHubEntry(screenId);
+            if (intercepted != screenId)
+            {
+                Debug.Log($"[ScreenManager] gps_profile_prompt_on_entry — first GPS entry, " +
+                          $"{screenId} -> {intercepted} (Golf Profile offered once).");
+                Golfin.Gps.UI.GpsAuthExtrasFlow.PendingHubEntry = true;
+                Navigate(intercepted, instant, push);
+                return;
+            }
+
             Debug.Log($"[ScreenManager] ShowScreen called: {screenId} (current: {_currentScreen}, instant: {instant})");
 
             if (_currentScreen == screenId && !instant)

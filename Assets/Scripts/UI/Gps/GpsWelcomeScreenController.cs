@@ -20,9 +20,16 @@ namespace Golfin.Gps.UI
     /// <para>
     /// TWO EXITS, TWO DESTINATIONS. GET STARTED is the intended one and lands in the GPS hub —
     /// the whole point of the tutorial is to hand the player to the surface it just described.
-    /// SKIP means "not now", so it returns to Home. Neither touches
-    /// <see cref="GpsAuthExtrasFlow"/>: the flag was already set by whichever exit of the Golf
-    /// Profile screen led here, so this screen cannot be reached with it unset.
+    /// SKIP means "not now", so it returns to Home. Neither touches the once-per-device flag
+    /// <see cref="GpsAuthExtrasFlow.PromptedKey"/>: it was already set by whichever exit of the
+    /// Golf Profile screen led here, so this screen cannot be reached with it unset.
+    /// </para>
+    /// <para>
+    /// gps_profile_prompt_on_entry §3 — both exits DO clear
+    /// <see cref="GpsAuthExtrasFlow.PendingHubEntry"/>. This screen is the end of the chain either
+    /// way, so leaving the marker set would say "a hub entry is still in flight" for the rest of
+    /// the session. GET STARTED clears it before navigating rather than after: the hub entry it
+    /// then makes is an ordinary one, not the intercepted one.
     /// </para>
     /// </summary>
     [DisallowMultipleComponent]
@@ -47,6 +54,7 @@ namespace Golfin.Gps.UI
                 _getStartedButton.onClick.AddListener(() =>
                 {
                     Debug.Log($"{Tag} GET STARTED -> GpsHub");
+                    GpsAuthExtrasFlow.PendingHubEntry = false;
                     ScreenManager.Instance?.ShowScreen(ScreenId.GpsHub);
                 });
 
@@ -54,6 +62,7 @@ namespace Golfin.Gps.UI
                 _skipButton.onClick.AddListener(() =>
                 {
                     Debug.Log($"{Tag} SKIP -> Home");
+                    GpsAuthExtrasFlow.PendingHubEntry = false;
                     ScreenManager.Instance?.ShowScreen(ScreenId.Home);
                 });
         }

@@ -15,7 +15,7 @@
 | 0.3 | Two seeded `GOLFIN AI` votes remain uncast on prod (`e47a04bc…` and `541bcde9…` were burned by the pipeline) | they are your Vote-tab fixtures; do not create more |
 | 0.4 | Second account ready and signed in on another device or the Flutter app: `cesar.guarinoni@gmail.com` is the dev account (RP ≈ 6 9xx); `…@wonderwall-g.com` is the other | needed for the 409 duplicate-nickname path and to receive a gift |
 | 0.5 | Build: `./Tools/testflight.sh testflight_build_gps` → TestFlight. Note the build number. | the GPS variant (pill visible, GPS screens open) |
-| 0.6 | On the phone: **DELETE** the app (not Offload) before installing the new build | resets `gps_profile_prompted` and the starter-restore gate — you must see the Golf Profile prompt exactly once |
+| 0.6 | On the phone: **DELETE** the app (not Offload) before installing the new build | resets `gps_profile_prompted` and the starter-restore gate — you must see the Golf Profile prompt exactly once, on your first GPS entry (row 1.3) |
 
 ## 1 · Install and first launch (iPhone 15 Pro Max, English first)
 
@@ -23,12 +23,13 @@
 |---|---|---|
 | 1.1 | Fresh install → Login with the dev account | no starter-character prompt (starter_restore_gate), Home |
 | 1.2 | Home | **GPS pill** top-right, gold capsule "GPS", podium moved left of the username ridge, the home_promo banner still shows |
-| 1.3 | First Home entry (GPS build, signed in) | **Golf Profile** screen offered by itself, once. Nickname prefilled with the account's display name, swatch initials show the first letter |
+| 1.3 | Sit on Home for ~10 s, then tap the **GPS pill** (gps_profile_prompt_on_entry — the trigger is the first entry into GPS, NOT Home) | Home comes up and **STAYS** — nothing offered on arrival, no flash of another screen. The pill tap then lands on the **Golf Profile** screen, once. Nickname prefilled with the account's display name, swatch initials show the first letter |
 | 1.4 | Golf Profile: tap the **handicap** field | numeric keypad; field scrolls above the keyboard (`R6`); "e.g. 18.4" hint; `abc` cannot be typed |
 | 1.5 | Golf Profile: set nickname to the OTHER account's display name → SAVE | red `AUTH_USERNAME_TAKEN` message, no crash, still on the screen |
 | 1.6 | Fix nickname, pick PINK + ADVANCED + handicap 18.4 → SAVE | Welcome tutorial; Profile later shows the pink hero disc |
 | 1.7 | Welcome → GET STARTED | lands on the GPS hub with the **push** (content slides, background/nav bar static) |
-| 1.8 | Kill the app, relaunch, go Home | Golf Profile NOT offered again |
+| 1.8 | Kill the app, relaunch, sit on Home, tap the pill again | Home stays Home; the pill goes **straight to the hub** — Golf Profile NOT offered again |
+| 1.9 | Still on that launch: tap the **home_promo banner** (its `golfin://gps` route) | the hub, no second offer. On a fresh install with the flag unset, this same tap is the OTHER way into the one-time Golf Profile offer — the intercept is in `ScreenManager.Navigate`, not on the pill |
 
 ## 2 · Navigation and motion (the gamble, on glass)
 
