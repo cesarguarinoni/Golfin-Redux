@@ -316,7 +316,7 @@ Context:
   GpsAuthExtrasFlow.InterceptHubEntry(GpsHub).
 - Chrome: game nav bar + ticket cluster + plus button hidden; RP pill, username,
   Settings gear stay; hub BackPill hidden; Settings modal standalone layout (Account /
-  Language / legal only). playlife:// URL scheme; client_platform "ios-playlife";
+  Language / legal only). golfingps:// URL scheme; client_platform "ios-playlife";
   telemetry app_variant.
 - Fastlane: shared lane takes variant: :standard|:gps|:standalone; new lane
   testflight_build_standalone = Cesar's third phrase "punch it standalone" (third row in
