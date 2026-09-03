@@ -282,10 +282,16 @@ namespace Golfin.Gps.UI.Editor
             Pin(card, 340);
             Set(so, "_activeCard", card);
 
-            // LIVE ROUND pill — node 14077:100704, 150x40 r100 #e5484d@0.9
-            GameObject live = Rect("LivePill", card.transform, 32, 24, 150, 40);
+            // LIVE ROUND pill — node 14077:100704 says 150x40 r100 #e5484d@0.9. It is 180 here,
+            // and that is a DELIBERATE deviation from the node: "● LIVE ROUND" measures 153.4px
+            // at this size, so it does not fit 150 with any padding at all. The node does not get
+            // away with it either — in its own render the string WRAPS to "● LIVE" / "ROUND" and
+            // the second line collides with the venue name beneath. The design intent is the full
+            // words, so the pill is widened to hold them: 153.4 + ~13px padding a side.
+            // (The JA string is 122.8px and fits either way, which is why only EN showed it.)
+            GameObject live = Rect("LivePill", card.transform, 32, 24, 180, 40);
             Img(live, SprPill, new Color(Live.r, Live.g, Live.b, 0.9f), Image.Type.Sliced, 20f);
-            TMP("Label", live.transform, 0, 7, 150, 28, "", SB(22), White, FontSemi,
+            TMP("Label", live.transform, 0, 7, 180, 28, "", SB(22), White, FontSemi,
                 TextAlignmentOptions.Top, "GPS_ROUNDS_LIVE_ROUND");
 
             Set(so, "_cardSince",

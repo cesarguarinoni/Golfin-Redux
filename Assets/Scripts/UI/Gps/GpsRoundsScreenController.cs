@@ -156,6 +156,15 @@ namespace Golfin.Gps.UI
         private int? _cardSubVenueId;
         private string _cardSubCached = string.Empty;
         private bool _cardSubFetched;
+
+        /// <summary>Whether the list currently on screen was fetched FOR a live round.
+        ///
+        /// <para>The category depends on the round — `Session.HasActive ? "food" : chip` — so the
+        /// list goes stale the moment that answer changes, and it changes on its own: the mirror
+        /// paints a round on frame one, then <c>/activity/active</c> says it is gone (checked out
+        /// on another device, or expired), and the FOOD list stays on screen under a GOLF COURSES
+        /// chip. Null until the first fetch lands.</para></summary>
+        private bool? _listBuiltForActive;
         private readonly List<GameObject> _pins = new List<GameObject>();
         private List<ActivityDto>? _history;
 
@@ -316,6 +325,17 @@ namespace Golfin.Gps.UI
             PaintStatusRow();
             PaintActiveCard();
             PaintSortBar();
+
+            // The list's CATEGORY is a function of the round (food while one is live), so a round
+            // appearing or ending makes what is on screen wrong — a GOLF COURSES chip over a food
+            // list, or the reverse.
+            //
+            // If a fetch is already running this call is a no-op (FetchSpots returns early), which
+            // is exactly the case that has to be caught: the fetch in flight was started for the
+            // OLD round state and its answer will be stale on arrival. FetchSpots re-checks when
+            // it lands, so the correction is never dropped — see its tail.
+            if (_listBuiltForActive.HasValue && _listBuiltForActive.Value != active)
+                ApiClient.Instance.Run(FetchSpots());
         }
 
         private void PaintStatusRow()
@@ -549,7 +569,8 @@ namespace Golfin.Gps.UI
 
             // While a round is live the list is FOOD first, exactly as the Flutter tab had it —
             // the player is at a course and what is useful next is where to eat.
-            string category = Session.HasActive ? "food" : Categories[_category];
+            bool builtForActive = Session.HasActive;
+            string category = builtForActive ? "food" : Categories[_category];
 
             double centreLat = _fix?.Lat ?? _mapLat;
             double centreLon = _fix?.Lon ?? _mapLon;
@@ -574,9 +595,21 @@ namespace Golfin.Gps.UI
             }
 
             _spots = result.Data ?? new List<VenueDto>();
+            _listBuiltForActive = builtForActive;
             ShowSpots(_spots, PaintKind.Fetch);
             PaintStatusRow();
             PaintPins();
+
+            // The round may have started or ended WHILE this request was in flight — which is the
+            // common case on entry, where the round refresh and this fetch race. The answer just
+            // painted was built for the other state, so fetch once more for the state that now
+            // holds. This converges: the re-run reads the CURRENT value, so it repeats only while
+            // the round is genuinely still changing.
+            if (builtForActive != Session.HasActive)
+            {
+                ApiClient.Instance.Run(FetchSpots());
+                yield break;
+            }
             // The card may have painted before this answer arrived, with no list to resolve the
             // address from. It gets a second chance now rather than staying blank until the
             // player navigates away and back.

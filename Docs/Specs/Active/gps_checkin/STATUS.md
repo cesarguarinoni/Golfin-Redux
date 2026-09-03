@@ -88,3 +88,58 @@ Also: frames 03 and 06 predated the caret sprite fix. 06 is re-captured above; 0
 still shows the old tofu caret in the list BEHIND the card and should be judged on
 the card, or re-shot.
 
+## CESAR REJECTED after the reviewer's PASS — two defects, both fixed
+
+Cesar: *"Live Round text is spilling out of the red pill."* He was right, and
+chasing it turned up a second, worse one.
+
+### 1. LIVE ROUND pill (what he reported)
+
+`● LIVE ROUND` measures **153.4px** at SemiBold 22; the pill was **150** wide, so
+the final D ran into the rounded edge with zero right padding. The JA string is
+122.8px and fits, which is why only English showed it.
+
+**The node has the same bug, worse.** In `reference/rounds_active_14077-100447.png`
+Figma's own render WRAPS the string to "● LIVE" / "ROUND" and the second line
+collides with the venue name beneath. Node 14077:100704 says 150x40, and that
+geometry cannot hold its own text. The pill is therefore **180** wide here — a
+deliberate, documented deviation honouring the design's intent (the full words)
+over its measurements. Verified in the rendered frame: glyphs 152..302 inside a
+pill at 138..317, **left pad 14 / right pad 15**.
+
+### 2. The list disagreed with the chip (found while verifying #1)
+
+The screen showed a **GOLF COURSES** chip over a **FOOD & DRINK** list. Cause:
+
+```csharp
+string category = Session.HasActive ? "food" : Categories[_category];
+```
+
+The PlayerPrefs mirror paints a round on frame one, so the entry fetch asks for
+FOOD. When `/activity/active` then says the round is gone — checked out on
+another device, or expired — `ApplyState` hid the card but **nothing re-fetched
+the list**, leaving food under a golf chip until the player manually switched
+category.
+
+This is the SAME SHAPE as the address bug the reviewer surfaced: state derived
+from the round is not re-derived when the round changes. Reproduced deliberately
+(check in, close the round server-side underneath the running app, leave and
+re-enter) and fixed.
+
+**My first fix was wrong and the test caught it.** I gated the re-fetch on
+`!_fetchInFlight` to avoid a loop — but the entry fetch is ALWAYS in flight at
+exactly that moment, so the guard silently dropped the correction every time. The
+re-fetch is now self-correcting: `FetchSpots` re-checks the round state when its
+answer LANDS and refetches if it changed while in flight. It converges because
+each run reads the current value.
+
+Proven end to end: `HasActive False`, `_listBuiltForActive False`, list flipped
+from 5 food rows to 50 golf with TEST Office first.
+
+Screenshots `01`, `03` re-captured; `08_live_pill_detail.png` added.
+
+An earlier attempt at this test was inconclusive for an environmental reason worth
+recording: `/activity/active` timed out because the Fly app had scaled to zero
+(`/health` took 17s, then 0.04s once warm), and `Session.Refresh` deliberately
+keeps the mirror on a failed fetch. The code was fine; the tunnel was cold.
+
