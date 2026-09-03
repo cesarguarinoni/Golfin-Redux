@@ -141,6 +141,21 @@ namespace Golfin.Gps.UI
         private int _category;                 // index into Categories
         private bool _sortByName;
         private List<VenueDto> _spots = new List<VenueDto>();
+
+        /// <summary>The active round's address line, REMEMBERED once resolved.
+        ///
+        /// <para><see cref="SpotSubtitleFor"/> can only answer from <see cref="_spots"/>,
+        /// which is the list currently on screen — so the answer disappears whenever that
+        /// list stops containing the round's venue. Two ways that happens, both seen:
+        /// the card paints on entry BEFORE /venue/nearby has answered (a resumed round
+        /// then shows no address at all), and opening a round flips the list to FOOD &amp;
+        /// DRINK, which does not contain the golf course being played.</para>
+        ///
+        /// <para>The round itself is the durable thing, so the last non-empty answer is
+        /// kept against its venue id and reused. Cleared when the round changes.</para>
+        private int? _cardSubVenueId;
+        private string _cardSubCached = string.Empty;
+        private bool _cardSubFetched;
         private readonly List<GameObject> _pins = new List<GameObject>();
         private List<ActivityDto>? _history;
 
@@ -344,7 +359,7 @@ namespace Golfin.Gps.UI
             if (_cardVenueSub != null)
                 _cardVenueSub.text = Session.IsExpired
                     ? LocalizationManager.Get("GPS_ROUNDS_EXPIRED")
-                    : SpotSubtitleFor(row.VenueId);
+                    : CardSubtitleFor(row.VenueId);
             if (_cardSince != null)
                 _cardSince.text = string.Format(LocalizationManager.Get("GPS_ROUNDS_SINCE"),
                                                 RoundSession.FormatClock(Session.CheckInAt));
@@ -562,6 +577,10 @@ namespace Golfin.Gps.UI
             ShowSpots(_spots, PaintKind.Fetch);
             PaintStatusRow();
             PaintPins();
+            // The card may have painted before this answer arrived, with no list to resolve the
+            // address from. It gets a second chance now rather than staying blank until the
+            // player navigates away and back.
+            PaintActiveCard();
         }
 
         private void OnHistoryResult(ApiResult<List<ActivityDto>> result)
@@ -693,6 +712,56 @@ namespace Golfin.Gps.UI
 
         private static Color DistanceColourFor(VenueDto v)
             => v.Category == "food" ? GpsUiColor.Food : GpsUiColor.Green;
+
+        /// <summary>The card's address line: the live lookup when the list can answer, the
+        /// remembered one when it cannot. See <see cref="_cardSubCached"/>.</summary>
+        private string CardSubtitleFor(int? venueId)
+        {
+            if (venueId == null) return string.Empty;
+
+            if (_cardSubVenueId != venueId)          // a different round — forget the old address
+            {
+                _cardSubVenueId = venueId;
+                _cardSubCached = string.Empty;
+                _cardSubFetched = false;
+            }
+
+            string live = SpotSubtitleFor(venueId);
+            if (!string.IsNullOrEmpty(live)) _cardSubCached = live;
+
+            // A RESUMED round can never be resolved from the list: opening a round flips the list
+            // to FOOD & DRINK, which by definition does not contain the golf course being played,
+            // so there is nothing on screen to read the address off and nothing was cached this
+            // process. The round knows its venue id, so ask the server for that ONE venue. Once
+            // per round, and only when the list genuinely could not answer.
+            if (string.IsNullOrEmpty(_cardSubCached) && !_cardSubFetched && isActiveAndEnabled)
+            {
+                _cardSubFetched = true;
+                StartCoroutine(FetchCardSubtitle(venueId.Value));
+            }
+
+            return _cardSubCached;
+        }
+
+        /// <summary>One <c>/venue/{id}</c> for the active round's address line. A failure is
+        /// silent: an empty sub-line is a missing detail, never a reason to interrupt a round.</summary>
+        private IEnumerator FetchCardSubtitle(int venueId)
+        {
+            ApiResult<VenueDto>? result = null;
+            yield return VenueService.Instance.ById(venueId, LanguageCode(), r => result = r);
+
+            if (result == null || !result.Success || result.Data == null)
+            {
+                Debug.LogWarning($"{Tag} /venue/{venueId} failed — the card keeps an empty address.");
+                yield break;
+            }
+
+            string sub = RoundSpotRowView.SubtitleOf(result.Data);
+            if (string.IsNullOrEmpty(sub) || _cardSubVenueId != venueId) yield break;
+
+            _cardSubCached = sub;
+            PaintActiveCard();
+        }
 
         private string SpotSubtitleFor(int? venueId)
         {
