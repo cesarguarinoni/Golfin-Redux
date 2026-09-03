@@ -58,6 +58,23 @@ namespace Golfin.Social
         [JsonProperty("golf_experience")]  public string GolfExperience;
         [JsonProperty("avatar_color")]     public string AvatarColor;
 
+        // ── gps_profile_prompt_server_flag — WHEN this account answered the Golf Profile
+        //    screen, saved or skipped, in ANY app on ANY device. NULL = never asked, and that
+        //    is the only state the client branches on. It is the account-wide replacement for
+        //    the per-device PlayerPrefs flag, which survives as a fast-path cache.
+        //
+        //    NOT derived from AvatarColor/GolfExperience: both are NULL for a player who tapped
+        //    "Skip for now", and skipping is a first-class answer — deriving would re-ask exactly
+        //    the people who already said no.
+        //
+        //    STRING, not DateTime, and deliberately so. Every timestamp on the wire is carried
+        //    verbatim and parsed once at the point of use; ApiEnvelope reads with
+        //    DateParseHandling.None precisely so a field like this arrives as the characters the
+        //    server sent ("2026-09-03T21:28:21.295827+00:00") rather than as a DateTime token
+        //    rewritten into the device's local zone. Nothing here needs the instant — only
+        //    null-vs-not — so it is never parsed at all.
+        [JsonProperty("golf_profile_prompted_at")] public string GolfProfilePromptedAt;
+
         // ── Social counters. ──
         [JsonProperty("followers_count")]  public int? FollowersCount;
         [JsonProperty("following_count")]  public int? FollowingCount;

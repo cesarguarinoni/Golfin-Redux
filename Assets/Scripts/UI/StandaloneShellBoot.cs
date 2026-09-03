@@ -29,37 +29,39 @@ namespace GolfinRedux.UI
     /// server-side for an account that also plays the game — the shell simply never looks.
     /// </para>
     /// <para>
-    /// It resolves through <see cref="Golfin.Gps.UI.GpsAuthExtrasFlow.InterceptHubEntry"/>, the
-    /// same seam <c>ScreenManager.Navigate</c> uses, so the once-per-device Golf Profile capture
-    /// is offered on a first run here exactly as it is when the game's Home pill opens the hub.
+    /// IT NAMES THE HUB AND NOTHING ELSE. It used to resolve the Golf Profile offer here, through
+    /// <c>GpsAuthExtrasFlow.InterceptHubEntry</c> — which looked like honesty (the boot saying
+    /// where it was really going) and became a bug the moment the offer turned into a once-per-
+    /// ACCOUNT decision (gps_profile_prompt_server_flag): that decision needs <c>/user/detail</c>,
+    /// and the bounded wait for it lives in <c>ScreenManager.Navigate</c>. Deciding here jumped
+    /// over the wait and re-offered the capture on a fresh install of an account that had already
+    /// answered in the game — exactly the defect this was supposed to fix. Caught by the round-2
+    /// first-run proof, not by a review.
+    /// </para>
+    /// <para>
+    /// So <c>Navigate</c> stays the single choke point: it resolves the account flag, applies the
+    /// gates, and applies the intercept — for the Home pill, for the banner deep link, and now for
+    /// this boot.
     /// </para>
     /// </summary>
     public static class StandaloneShellBoot
     {
         /// <summary>
-        /// True in the PLAYLIFE shell, with <paramref name="target"/> set to the screen the
-        /// player should land on — the hub, or the Golf Profile capture on a first run. False in
-        /// every other build, leaving the caller's own starter-gated routing untouched.
+        /// True in the PLAYLIFE shell, with <paramref name="target"/> set to <see cref="ScreenId.GpsHub"/>
+        /// — always. False in every other build, leaving the caller's own starter-gated routing
+        /// untouched.
         ///
-        /// <para>Reads the live once-per-device flag and the live session, so it must only be
-        /// called at runtime and only once the session is real — i.e. exactly where the four
-        /// callers already were.</para>
+        /// <para>The caller passes the result to <c>ShowScreen</c>, so the hub entry goes through
+        /// <c>Navigate</c> like any other and picks up the account check and the intercept there.
+        /// See the class docs for why this must not decide the offer itself.</para>
         /// </summary>
         public static bool TryGetPostAuthScreen(out ScreenId target)
         {
             target = ScreenId.GpsHub;
             if (!StandaloneGate.Enabled) return false;
 
-            target = Golfin.Gps.UI.GpsAuthExtrasFlow.InterceptHubEntry(ScreenId.GpsHub);
-
-            // The same bookkeeping ScreenManager.Navigate does when IT diverts a hub entry: the
-            // marker tells the Welcome tutorial it is closing a post-signup chain the player
-            // started by asking for the hub. Set here because the intercept has already been
-            // resolved by the time Navigate sees the screen.
-            if (target != ScreenId.GpsHub)
-                Golfin.Gps.UI.GpsAuthExtrasFlow.PendingHubEntry = true;
-
-            Debug.Log($"[StandaloneShellBoot] PLAYLIFE shell — StarterGate skipped, routing to {target}.");
+            Debug.Log("[StandaloneShellBoot] PLAYLIFE shell — StarterGate skipped, routing to GpsHub " +
+                      "(the Golf Profile offer is decided in Navigate, once the account flag resolves).");
             return true;
         }
     }

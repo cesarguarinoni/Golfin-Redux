@@ -65,6 +65,12 @@ namespace Golfin.EditorTools
         /// </summary>
         public static void BuildIOS()
         {
+            // R2 safety net. A standalone build that died between the stash and its finally leaves
+            // golf Resources moved aside, and THIS build — the game — would then ship without its
+            // holes. A missing Resources folder is not a build error, so nothing else would say a
+            // word. Free when there is nothing to repair.
+            StandaloneBuildPreprocessor.RestoreGolfResources();
+
             // BuildStampGenerator writes the git-derived build number into PlayerSettings during
             // OnPreprocessBuild and restores the pre-build values in OnPostprocessBuild — which
             // fires on SUCCESS only. Its failure safety net is an EditorApplication.delayCall,
@@ -114,6 +120,8 @@ namespace Golfin.EditorTools
         /// </summary>
         public static void BuildIOSDev()
         {
+            StandaloneBuildPreprocessor.RestoreGolfResources();   // see BuildIOS
+
             var prevIosBuildNumber = PlayerSettings.iOS.buildNumber;
             var prevAndroidVersionCode = PlayerSettings.Android.bundleVersionCode;
 
@@ -150,6 +158,8 @@ namespace Golfin.EditorTools
         /// </summary>
         public static void BuildIOSGps()
         {
+            StandaloneBuildPreprocessor.RestoreGolfResources();   // see BuildIOS
+
             var prevIosBuildNumber = PlayerSettings.iOS.buildNumber;
             var prevAndroidVersionCode = PlayerSettings.Android.bundleVersionCode;
 
@@ -191,6 +201,11 @@ namespace Golfin.EditorTools
         /// </summary>
         public static void BuildIOSStandalone()
         {
+            // Repair BEFORE the stash below, never after: BuildIOSCore runs inside the stashed
+            // window, so a repair placed there would un-stash the folders this build just moved
+            // and quietly ship the 427 MB binary again while the log claimed the diet had run.
+            StandaloneBuildPreprocessor.RestoreGolfResources();
+
             var prevIosBuildNumber = PlayerSettings.iOS.buildNumber;
             var prevAndroidVersionCode = PlayerSettings.Android.bundleVersionCode;
 
@@ -198,9 +213,26 @@ namespace Golfin.EditorTools
             try
             {
                 StandaloneBuildPreprocessor.ForceStandaloneIdentity = true;
+
                 error = AssertProfileDefine(StandaloneProfilePath, GpsDefine) ??
-                        AssertProfileDefine(StandaloneProfilePath, StandaloneDefine) ??
-                        BuildIOSCore(StandaloneProfilePath, OutputPath, BuildOptions.None);
+                        AssertProfileDefine(StandaloneProfilePath, StandaloneDefine);
+
+                if (error == null)
+                {
+                    // R2 — Resources/ ships whole, so the golf-only subfolders leave the tree for
+                    // the duration of this build. INSIDE the try, with the restore in the finally:
+                    // every exit from here, including a BuildFailedException from a preprocessor
+                    // and an unhandled throw, must put 545 MB of tracked assets back.
+                    StandaloneBuildPreprocessor.MoveGolfResourcesOut();
+
+                    // R4 — the refused game screens are still IN ShellScene, dragging their art
+                    // in with them. StandaloneSceneProcessor destroys them in the in-memory copy
+                    // during this build; the flag is how it knows the build is the standalone,
+                    // since profile defines never reach editor assemblies.
+                    StandaloneSceneProcessor.ForceStandaloneStrip = true;
+
+                    error = BuildIOSCore(StandaloneProfilePath, OutputPath, BuildOptions.None);
+                }
             }
             catch (Exception e)
             {
@@ -209,11 +241,14 @@ namespace Golfin.EditorTools
             finally
             {
                 StandaloneBuildPreprocessor.ForceStandaloneIdentity = false;
+                StandaloneSceneProcessor.ForceStandaloneStrip = false;
             }
 
             // MUST run before Fail(): Fail() exits the process, and the preprocessor's own
             // delayCall safety net never gets a frame in batchmode. Leaving the PLAYLIFE bundle
-            // id on disk would point the next "punch it" upload at the wrong App Store record.
+            // id on disk would point the next "punch it" upload at the wrong App Store record —
+            // and leaving the golf Resources stashed would make the next GAME build ship without
+            // its holes. RestoreNow puts both back and is idempotent.
             StandaloneBuildPreprocessor.RestoreNow();
             RestoreBuildNumbers(prevIosBuildNumber, prevAndroidVersionCode);
 

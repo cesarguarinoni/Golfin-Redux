@@ -334,8 +334,12 @@ namespace Golfin.Gps.UI
             string color = ColorIds[_colorIndex];
             string experience = ExperienceIds[_experienceIndex];
 
+            // gps_profile_prompt_server_flag §4 — the answer travels with the profile, in the SAME
+            // PUT. A separate write would have a window where the profile is saved and the account
+            // is not marked as answered, and that window ends with the player being asked again on
+            // their other install.
             ApiClient.Instance.Run(UserService.Instance.Update(
-                nickname, handicap, experience, color, result =>
+                nickname, handicap, experience, color, golfProfilePrompted: true, onResult: result =>
                 {
                     SetBusy(false);
 
@@ -380,14 +384,75 @@ namespace Golfin.Gps.UI
             return true;
         }
 
+        /// <summary>
+        /// gps_profile_prompt_server_flag §4 — Skip now WRITES.
+        ///
+        /// <para>
+        /// It used to issue no request at all, which is precisely why "and vice versa" did not
+        /// hold: a player who skipped in the game left no trace on the account, so the standalone
+        /// app asked them again. The one field it sends besides the required <c>display_name</c>
+        /// is the prompted flag — no profile value is written, because skipping means the player
+        /// declined to give any.
+        /// </para>
+        /// <para>
+        /// THE NAME COMES FROM THE ACCOUNT, not from the nickname field. The field is editable and
+        /// may hold something half-typed or already taken; SAVE validates it and Skip does not, so
+        /// sending the field's text here could 409 (or silently rename the player) on a path where
+        /// they explicitly declined to change anything.
+        /// </para>
+        /// <para>
+        /// ADVANCES REGARDLESS, and marks the local flag regardless. A failed write must not trap
+        /// the player on a screen they just dismissed, and must not re-ask them on this device
+        /// either — "never nag" outranks the cross-install guarantee in the one case where they
+        /// conflict. The failure is logged loudly, and the account simply gets one more offer on
+        /// its next fresh install.
+        /// </para>
+        /// </summary>
         private void OnSkipClicked()
         {
             if (_busy) return;
-            Debug.Log($"{Tag} skipped — no PUT /user/update issued.");
+
+            string accountName = CurrentAccountDisplayName();
+            if (string.IsNullOrEmpty(accountName))
+            {
+                // No name to send means the required field cannot be filled — the account has not
+                // finished sign-up. Nothing to write; the local flag still covers this device.
+                Debug.LogWarning($"{Tag} skipped — no account display name available, so the " +
+                                 $"once-per-account flag could NOT be written. This device will " +
+                                 $"not re-ask; another install may.");
+                Advance();
+                return;
+            }
+
+            Debug.Log($"{Tag} skipped — PUT /user/update {{display_name, golf_profile_prompted:true}}.");
+            ApiClient.Instance.Run(UserService.Instance.Update(
+                accountName, null, null, null, golfProfilePrompted: true, onResult: result =>
+                {
+                    if (result != null && result.Success)
+                        Debug.Log($"{Tag} skip recorded on the account — no other install will offer this again.");
+                    else
+                        Debug.LogWarning($"{Tag} skip flag NOT written ({(result == null ? "no result" : result.ErrorMessage)}) " +
+                                         $"— this device will not re-ask; another install may.");
+                }));
+
+            // Not gated on the write: the player asked to leave, so they leave now.
             Advance();
         }
 
-        /// <summary>Answer recorded, on to the tutorial. The ONLY place the flag is set.</summary>
+        /// <summary>
+        /// The account's CURRENT display name — the cached profile row first, the session second.
+        /// Never the nickname input; see <see cref="OnSkipClicked"/>.
+        /// </summary>
+        private static string CurrentAccountDisplayName()
+        {
+            string fromRow = UserService.Instance?.LastDetail?.DisplayName;
+            if (!string.IsNullOrEmpty(fromRow)) return fromRow;
+
+            var session = Golfin.Auth.AuthService.Instance?.Session;
+            return session != null ? session.DisplayName : null;
+        }
+
+        /// <summary>Answer recorded, on to the tutorial. The ONLY place the local flag is set.</summary>
         private void Advance()
         {
             GpsAuthExtrasFlow.MarkPrompted();

@@ -35,15 +35,19 @@ namespace GolfinRedux.Tests.EditMode
             _flow = FindType(FlowTypeName);
             Assert.IsNotNull(_flow, $"{FlowTypeName} not found — did Assembly-CSharp compile?");
 
+            // gps_profile_prompt_server_flag — the core took a FOURTH argument when the offer
+            // became once per ACCOUNT: the local PlayerPrefs cache and the server's
+            // golf_profile_prompted_at are now separate inputs, because either one alone means
+            // answered and the interesting cases are the ones where they disagree.
             _shouldOffer = _flow.GetMethod(
                 "ShouldOffer",
                 BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public,
                 null,
-                new[] { typeof(bool), typeof(bool), typeof(bool) },
+                new[] { typeof(bool), typeof(bool), typeof(bool), typeof(bool) },
                 null);
             Assert.IsNotNull(_shouldOffer,
-                "ShouldOffer(bool gpsEnabled, bool signedIn, bool alreadyPrompted) not found — " +
-                "without it the disabled-build branch cannot be tested at all.");
+                "ShouldOffer(bool gpsEnabled, bool signedIn, bool promptedLocally, bool promptedOnAccount) " +
+                "not found — without it neither the disabled-build branch nor the server flag can be tested.");
 
             _screenId = FindType("GolfinRedux.UI.ScreenId");
             Assert.IsNotNull(_screenId, "GolfinRedux.UI.ScreenId not found.");
@@ -69,8 +73,14 @@ namespace GolfinRedux.Tests.EditMode
             return null;
         }
 
+        /// <summary>The pre-server-flag shape: "prompted" means the LOCAL flag, server unknown.
+        /// Every test written before gps_profile_prompt_server_flag keeps meaning what it meant.</summary>
         bool Offer(bool gpsEnabled, bool signedIn, bool prompted)
-            => (bool)_shouldOffer.Invoke(null, new object[] { gpsEnabled, signedIn, prompted });
+            => Offer(gpsEnabled, signedIn, prompted, false);
+
+        bool Offer(bool gpsEnabled, bool signedIn, bool promptedLocally, bool promptedOnAccount)
+            => (bool)_shouldOffer.Invoke(null,
+                   new object[] { gpsEnabled, signedIn, promptedLocally, promptedOnAccount });
 
         object Screen(string name) => Enum.Parse(_screenId, name);
 
@@ -212,6 +222,164 @@ namespace GolfinRedux.Tests.EditMode
             finally { prop.SetValue(null, original); }
         }
 
+        // ── gps_profile_prompt_server_flag — once per ACCOUNT, not per device ───────────
+
+        /// <summary>
+        /// The whole local × server truth table, in one place.
+        ///
+        /// <para>Cesar, 2026-09-03: "if I log in for the first time to GPS but had already logged
+        /// in from Game and selected my user/colour, that screen should be skipped (and vice
+        /// versa)." The row that encodes that sentence is <c>local=false, server=true</c> — a
+        /// fresh install of either app on an account that has already answered — and it must NOT
+        /// offer.</para>
+        ///
+        /// <para>OR, never AND. The <c>local=true, server=false</c> row is the offline case and
+        /// the returning player: requiring both flags would re-ask everyone the moment the network
+        /// was down.</para>
+        /// </summary>
+        [Test]
+        public void ShouldOffer_TruthTable_LocalTimesServer()
+        {
+            //                                       gps   signedIn  local  server   expect
+            Assert.IsTrue (Offer(true,  true,  false, false), "never answered anywhere — the ONLY offer");
+            Assert.IsFalse(Offer(true,  true,  true,  false), "answered on this device (offline-safe)");
+            Assert.IsFalse(Offer(true,  true,  false, true ), "answered on the ACCOUNT — the fresh-install case");
+            Assert.IsFalse(Offer(true,  true,  true,  true ), "answered both ways");
+
+            // The two pre-existing reasons still dominate every column.
+            foreach (bool local in new[] { true, false })
+                foreach (bool server in new[] { true, false })
+                {
+                    Assert.IsFalse(Offer(false, true, local, server),
+                        $"a \"punch it\" build never offers (local={local}, server={server})");
+                    Assert.IsFalse(Offer(true, false, local, server),
+                        $"no session means nothing to write to (local={local}, server={server})");
+                }
+        }
+
+        /// <summary>
+        /// The server flag is read from the CACHED profile row, and "no row" is not "no flag":
+        /// an unfetched row must never be read as "never answered", because that is the reading
+        /// that re-asks a player who already answered on their other app.
+        ///
+        /// <para>Exercised through the live property with a row injected into
+        /// <c>UserService</c> — the flag's whole job is to translate one nullable column into one
+        /// bool, and the translation is where a null-vs-empty mistake would live.</para>
+        /// </summary>
+        [Test]
+        public void PromptedOnAccount_ReadsTheColumn_NullAndEmptyBothMeanNeverAsked()
+        {
+            var svcType = FindType("Golfin.Social.UserService");
+            var dtoType = FindType("Golfin.Social.UserDetailDto");
+            Assert.IsNotNull(svcType, "Golfin.Social.UserService not found.");
+            Assert.IsNotNull(dtoType, "Golfin.Social.UserDetailDto not found.");
+
+            var promptedOnAccount = _flow.GetProperty("PromptedOnAccount",
+                                                      BindingFlags.Static | BindingFlags.Public);
+            Assert.IsNotNull(promptedOnAccount, "GpsAuthExtrasFlow.PromptedOnAccount not found.");
+
+            var field = dtoType.GetField("GolfProfilePromptedAt");
+            Assert.IsNotNull(field, "UserDetailDto.GolfProfilePromptedAt not found.");
+            Assert.AreEqual(typeof(string), field.FieldType,
+                "The column is carried as a STRING and never parsed — ApiEnvelope reads with " +
+                "DateParseHandling.None precisely so it arrives verbatim.");
+
+            var reset = svcType.GetMethod("ResetForTest", BindingFlags.Static | BindingFlags.Public);
+            var configure = svcType.GetMethod("ConfigureForTest", BindingFlags.Static | BindingFlags.Public);
+            var setDetail = svcType.GetMethod("SetDetailForTest", BindingFlags.Instance | BindingFlags.Public);
+            Assert.IsNotNull(setDetail, "UserService.SetDetailForTest(UserDetailDto, bool) not found.");
+            Assert.IsNotNull(configure, "UserService.ConfigureForTest(UserService) not found.");
+
+            try
+            {
+                // INJECT the singleton rather than letting `Instance` construct one: the lazy path
+                // builds an ApiClient, whose coroutine runner calls DontDestroyOnLoad — legal only
+                // in play mode, so touching it here throws before a single assertion runs.
+                // A null transport is safe because nothing in this test issues a request.
+                object svc = Activator.CreateInstance(svcType, new object[] { null });
+                configure.Invoke(null, new[] { svc });
+
+                // No row at all — not fetched yet.
+                setDetail.Invoke(svc, new object[] { null, false });
+                Assert.IsFalse((bool)promptedOnAccount.GetValue(null),
+                    "An unfetched row must read as 'unknown', which here means 'do not claim answered'.");
+
+                // Row present, column NULL — genuinely never asked.
+                object row = Activator.CreateInstance(dtoType);
+                setDetail.Invoke(svc, new object[] { row, true });
+                Assert.IsFalse((bool)promptedOnAccount.GetValue(null), "NULL column = never asked.");
+
+                // Row present, column empty string — the same thing, and the reason this is
+                // IsNullOrEmpty rather than != null.
+                field.SetValue(row, "");
+                setDetail.Invoke(svc, new object[] { row, true });
+                Assert.IsFalse((bool)promptedOnAccount.GetValue(null), "Empty column = never asked.");
+
+                // Row present, column stamped — answered, on some device, at some point.
+                field.SetValue(row, "2026-09-03T21:28:21.295827+00:00");
+                setDetail.Invoke(svc, new object[] { row, true });
+                Assert.IsTrue((bool)promptedOnAccount.GetValue(null),
+                    "A stamped column is the account saying 'already answered' — the whole feature.");
+            }
+            finally
+            {
+                reset.Invoke(null, null);
+            }
+        }
+
+        /// <summary>
+        /// The third axis: FETCHED. <c>NeedsAccountCheck</c> is what makes the intercept wait for
+        /// <c>/user/detail</c> instead of guessing, and it must be true in exactly one situation —
+        /// a hub entry, on a device with no local flag, before the row has arrived.
+        ///
+        /// <para>Only the two states this test can reach without a live session are asserted here;
+        /// the session-dependent rows are covered by the play-mode proof in the report. What
+        /// matters and IS reachable: a device that already has the local flag must never wait,
+        /// because that is every returning player and every offline launch.</para>
+        /// </summary>
+        [Test]
+        public void NeedsAccountCheck_IsFalse_ForEveryScreenThatIsNotTheHub()
+        {
+            var m = _flow.GetMethod("NeedsAccountCheck", BindingFlags.Static | BindingFlags.Public);
+            Assert.IsNotNull(m, "GpsAuthExtrasFlow.NeedsAccountCheck(ScreenId) not found.");
+
+            foreach (string name in new[] { "Home", "GpsProfile", "GpsRounds", "GpsGolfProfile",
+                                            "GpsWelcome", "Login", "Splash" })
+                Assert.IsFalse((bool)m.Invoke(null, new[] { Screen(name) }),
+                    $"{name} is not a hub entry — it must never hold a navigation for a round trip.");
+        }
+
+        /// <summary>
+        /// Skip WRITES now, and the body it writes is the contract. Pinned on
+        /// <c>UserService.BuildUpdateJson</c>, the same seam the wire shape has always been pinned
+        /// on: a skip must carry the flag and MUST NOT carry a profile value, because skipping
+        /// means the player declined to give one.
+        /// </summary>
+        [Test]
+        public void SkipBody_CarriesTheFlagAndNothingElse()
+        {
+            var svcType = FindType("Golfin.Social.UserService");
+            var build = svcType.GetMethod("BuildUpdateJson", BindingFlags.Static | BindingFlags.Public);
+            Assert.IsNotNull(build, "UserService.BuildUpdateJson not found.");
+
+            string skip = (string)build.Invoke(null, new object[] { "Cratilo", null, null, null, true });
+            StringAssert.Contains("\"display_name\":\"Cratilo\"", skip, "display_name is required by the endpoint.");
+            StringAssert.Contains("\"golf_profile_prompted\":true", skip, "the whole point of the Skip write.");
+            Assert.IsFalse(skip.Contains("avatar_color"), "Skip must not write a colour the player declined to pick.");
+            Assert.IsFalse(skip.Contains("golf_experience"), "Skip must not write an experience band.");
+            Assert.IsFalse(skip.Contains("handicap"), "Skip must not write a handicap.");
+
+            // SAVE carries the flag in the SAME put as the profile — never a second write.
+            string save = (string)build.Invoke(null, new object[] { "Cratilo", 18.4, "advanced", "green", true });
+            StringAssert.Contains("\"golf_profile_prompted\":true", save);
+            StringAssert.Contains("\"avatar_color\":\"green\"", save);
+
+            // And every other caller sends a body byte-identical to the pre-feature one.
+            string untouched = (string)build.Invoke(null, new object[] { "Cratilo", null, null, null, null });
+            Assert.IsFalse(untouched.Contains("golf_profile_prompted"),
+                "A caller with no opinion about the prompt must not mention it at all.");
+        }
+
         // ── gps_standalone_shell §7 — the shell's boot goes through this same seam ──────
 
         /// <summary>
@@ -254,6 +422,19 @@ namespace GolfinRedux.Tests.EditMode
             Assert.AreEqual(1, ps.Length);
             Assert.IsTrue(ps[0].IsOut, "The screen must be an out parameter — callers branch on the bool.");
             Assert.AreEqual(_screenId, ps[0].ParameterType.GetElementType());
+
+            // gps_profile_prompt_server_flag — the boot must name the HUB and let Navigate decide
+            // the offer. It used to resolve GpsAuthExtrasFlow.InterceptHubEntry itself, which
+            // jumped over the account-flag wait and re-offered the capture on a fresh install of an
+            // account that had already answered in the game. StandaloneGate.Enabled is false in the
+            // Editor so the call returns false, but the out-param is still the boot's destination —
+            // and it must be the hub, never the capture.
+            object[] args = { null };
+            bool taken = (bool)m.Invoke(null, args);
+            Assert.IsFalse(taken, "The gate is off in the Editor, so the shell branch must not be taken.");
+            Assert.AreEqual("GpsHub", args[0].ToString(),
+                "The shell's post-auth destination is the hub. Resolving the Golf Profile offer here " +
+                "instead of in Navigate is the round-2 defect — do not put it back.");
         }
 
         /// <summary>

@@ -311,6 +311,21 @@ namespace GolfinRedux.UI
             // rewriting screenId in place, so GpsGolfProfile is put through the three gates on its
             // own account instead of inheriting GpsHub's verdict. Same shape as the AuthGate
             // redirect above. No recursion risk: only GpsHub is ever intercepted.
+            // gps_profile_prompt_server_flag §3 — the offer is once per ACCOUNT, so on a device
+            // that has never answered the decision needs the server's word. Hold this navigation
+            // for ONE /user/detail (bounded; see AccountFlagBudgetSeconds) and re-enter, rather
+            // than guessing — guessing wrong means asking a player who already answered on their
+            // other app, which is the whole defect. False for every other navigation in the game,
+            // and false the moment this device has a local flag, so it costs one branch.
+            if (Golfin.Gps.UI.GpsAuthExtrasFlow.NeedsAccountCheck(screenId))
+            {
+                Debug.Log($"[ScreenManager] {screenId} — first entry on this install, resolving the " +
+                          $"account's Golf Profile flag before deciding.");
+                Golfin.Gps.UI.GpsAuthExtrasFlow.EnsureAccountFlagThen(
+                    () => Navigate(screenId, instant, push));
+                return;
+            }
+
             ScreenId intercepted = Golfin.Gps.UI.GpsAuthExtrasFlow.InterceptHubEntry(screenId);
             if (intercepted != screenId)
             {

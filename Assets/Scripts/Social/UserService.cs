@@ -33,6 +33,16 @@ namespace Golfin.Social
 
         public static void ResetForTest() => _instance = null;
 
+        /// <summary>EditMode seam: inject a row (or null) without a transport, so the Golf Profile
+        /// truth table can be exercised for every combination of local flag × server flag ×
+        /// fetched. Also sets <see cref="DetailAttempted"/>, because "a row was injected" is the
+        /// test's way of saying the fetch already happened.</summary>
+        public void SetDetailForTest(UserDetailDto detail, bool attempted = true)
+        {
+            LastDetail = detail;
+            DetailAttempted = attempted;
+        }
+
         private readonly ApiClient _client;
 
         public UserService(ApiClient client)
@@ -61,6 +71,12 @@ namespace Golfin.Social
         {
             return _client.Get<UserDetailDto>(Endpoints.UserDetail, result =>
             {
+                // Marked here rather than only in EnsureDetail so that the hub's OWN fetch — which
+                // runs on every entry and is usually first — counts as the attempt. Otherwise a
+                // failed hub fetch would leave EnsureDetail thinking nobody had tried yet, and it
+                // would hold the next navigation for a second doomed round trip.
+                DetailAttempted = true;
+
                 if (result != null && result.Success && result.Data != null)
                 {
                     LastDetail = result.Data;
@@ -69,6 +85,43 @@ namespace Golfin.Social
 
                 onResult?.Invoke(result);
             });
+        }
+
+        /// <summary>
+        /// True once a <see cref="Detail"/> round trip has been ATTEMPTED this session, whatever
+        /// its outcome. Distinct from <c>LastDetail != null</c>, which cannot tell "not fetched
+        /// yet" from "fetched and it failed" — and those two must lead to different behaviour:
+        /// the first is worth waiting for, the second is not worth waiting for again.
+        /// </summary>
+        public bool DetailAttempted { get; private set; }
+
+        /// <summary>
+        /// gps_profile_prompt_server_flag §3 — "make sure the profile row is here, then continue".
+        ///
+        /// <para>
+        /// Calls back IMMEDIATELY (same frame, no round trip) when <see cref="LastDetail"/> is
+        /// already cached or a fetch has already been attempted and failed; otherwise issues one
+        /// <see cref="Detail"/> and calls back when it answers. The callback's bool is simply
+        /// "is there a row now" — a caller that must not guess (the Golf Profile intercept:
+        /// offering twice is worse than offering late) branches on it, and a caller that only
+        /// wants a warm cache can ignore it.
+        /// </para>
+        /// <para>
+        /// ONE ATTEMPT PER SESSION on the failure path, deliberately. This sits in front of a
+        /// navigation, and a network that is down would otherwise re-hold every single hub entry
+        /// for the client's full timeout. The next launch retries.
+        /// </para>
+        /// </summary>
+        public void EnsureDetail(Action<bool> onReady)
+        {
+            if (LastDetail != null || DetailAttempted)
+            {
+                onReady?.Invoke(LastDetail != null);
+                return;
+            }
+
+            DetailAttempted = true;
+            _client.Run(Detail(_ => onReady?.Invoke(LastDetail != null)));
         }
 
         /// <summary>The last discover page the server returned this session, or null.</summary>
@@ -130,13 +183,19 @@ namespace Golfin.Social
         /// <c>advanced</c>.</param>
         /// <param name="avatarColor">Optional. <c>pink</c> | <c>green</c> | <c>blue</c> |
         /// <c>gold</c>.</param>
+        /// <param name="golfProfilePrompted">gps_profile_prompt_server_flag. <c>true</c> stamps
+        /// <c>golf_profile_prompted_at = now()</c> server-side — a one-way latch the endpoint
+        /// never clears. <c>null</c> omits the field entirely, which is what every caller that is
+        /// not the Golf Profile screen's two exits passes.</param>
         public IEnumerator Update(string displayName,
                                   double? handicap,
                                   string golfExperience,
                                   string avatarColor,
+                                  bool? golfProfilePrompted,
                                   Action<ApiResult<UserDetailDto>> onResult)
         {
-            string body = BuildUpdateJson(displayName, handicap, golfExperience, avatarColor);
+            string body = BuildUpdateJson(displayName, handicap, golfExperience, avatarColor,
+                                          golfProfilePrompted);
             return _client.Put<UserDetailDto>(Endpoints.UserUpdate, body, result =>
             {
                 if (result != null && result.Success && result.Data != null)
@@ -159,14 +218,21 @@ namespace Golfin.Social
         /// <c>backend/routers/user.py::UpdateProfileRequest</c>.
         /// </summary>
         public static string BuildUpdateJson(string displayName, double? handicap,
-                                             string golfExperience, string avatarColor)
+                                             string golfExperience, string avatarColor,
+                                             bool? golfProfilePrompted = null)
             => Newtonsoft.Json.JsonConvert.SerializeObject(
                 new UpdateBody
                 {
                     display_name    = displayName,
                     handicap        = handicap,
                     golf_experience = string.IsNullOrEmpty(golfExperience) ? null : golfExperience,
-                    avatar_color    = string.IsNullOrEmpty(avatarColor)    ? null : avatarColor
+                    avatar_color    = string.IsNullOrEmpty(avatarColor)    ? null : avatarColor,
+                    // Sent ONLY as true, never as false: the server reads a falsy value as "no
+                    // opinion" rather than as "un-ask", and NullValueHandling.Ignore keeps a
+                    // null out of the body altogether. A caller with nothing to say about the
+                    // prompt therefore sends a body byte-identical to the one it sent before
+                    // this field existed.
+                    golf_profile_prompted = golfProfilePrompted
                 },
                 new Newtonsoft.Json.JsonSerializerSettings
                 {
@@ -182,6 +248,7 @@ namespace Golfin.Social
             public double? handicap;
             public string  golf_experience;
             public string  avatar_color;
+            public bool?   golf_profile_prompted;
         }
     }
 }

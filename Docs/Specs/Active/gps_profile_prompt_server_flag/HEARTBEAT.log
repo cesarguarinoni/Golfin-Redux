@@ -1,0 +1,14 @@
+=== iter-1 kickoff baseline 2026-09-04 06:29:20 +0900 ===
+HEAD 12b5895e0112bb7beec9c19b7eb9fe51eb4f3f09 (12b5895e0) count=2635
+DIRTY (git status --porcelain --untracked-files=all):
+ M Docs/GPS/GPS_BACKLOG.md
+ M Docs/Reports/content_art.txt
+ M Docs/Specs/Active/gps_standalone_shell/SPEC.md
+ M Docs/TellCode.md
+ M Docs/Versioning/last_uploaded_build.golfingps.txt
+?? Assets/Art/Standalone/AppIcon_GolfinGps_1024.png
+?? Assets/Art/Standalone/AppIcon_GolfinGps_1024_opaque.png
+?? Docs/Specs/Active/gps_profile_prompt_server_flag/HEARTBEAT.log
+?? Docs/Specs/Active/gps_profile_prompt_server_flag/SPEC.md
+?? Docs/Specs/Active/gps_profile_prompt_server_flag/STATUS.md
+=== end baseline ===

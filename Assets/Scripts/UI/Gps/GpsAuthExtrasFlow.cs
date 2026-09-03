@@ -48,8 +48,42 @@ namespace Golfin.Gps.UI
         /// </summary>
         public const string PromptedKey = "gps_profile_prompted";
 
-        /// <summary>True once the player has answered the Golf Profile screen on this device.</summary>
-        public static bool Prompted => PlayerPrefs.HasKey(PromptedKey);
+        /// <summary>True once the player has answered the Golf Profile screen on THIS DEVICE, in
+        /// THIS app. A cache in front of <see cref="PromptedOnAccount"/>, not the truth.</summary>
+        public static bool PromptedLocally => PlayerPrefs.HasKey(PromptedKey);
+
+        /// <summary>
+        /// gps_profile_prompt_server_flag — the account-wide answer.
+        ///
+        /// <para>
+        /// <c>profiles.golf_profile_prompted_at</c> is stamped when the screen is ANSWERED — saved
+        /// or skipped — in any app, on any device. Cesar, 2026-09-03: "if I log in for the first
+        /// time to GPS but had already logged in from Game and selected my user/colour, that
+        /// screen should be skipped (and vice versa)." With the standalone GOLFIN GPS app shipping
+        /// from this same codebase, one account routinely has two installs on one phone, and the
+        /// PlayerPrefs flag — per device AND per app — asked the second one all over again.
+        /// </para>
+        /// <para>
+        /// The local flag survives as a CACHE: it is what makes the common case (this device has
+        /// already answered) cost zero round trips. The server flag is what makes the answer
+        /// travel. Either one being set means answered — never both, never only the server.
+        /// </para>
+        /// <para>
+        /// Only null-vs-not is read. The timestamp is never parsed; see
+        /// <c>UserDetailDto.GolfProfilePromptedAt</c> for why it is carried as a string.
+        /// </para>
+        /// </summary>
+        public static bool PromptedOnAccount
+        {
+            get
+            {
+                var detail = Golfin.Social.UserService.Instance?.LastDetail;
+                return detail != null && !string.IsNullOrEmpty(detail.GolfProfilePromptedAt);
+            }
+        }
+
+        /// <summary>True once the player has answered the screen, on this device or any other.</summary>
+        public static bool Prompted => PromptedLocally || PromptedOnAccount;
 
         /// <summary>Record that the screen was answered. Idempotent.</summary>
         public static void MarkPrompted()
@@ -67,27 +101,137 @@ namespace Golfin.Gps.UI
 
         /// <summary>
         /// Should a GPS entry hand off to the Golf Profile capture right now? Reads the live gate,
-        /// the live session and the live flag.
+        /// the live session, the live local flag and the live server flag.
+        ///
+        /// <para>
+        /// SIDE EFFECT, and the only one in this class outside <see cref="MarkPrompted"/>: when
+        /// the SERVER says answered and this device does not know it yet, the local flag is
+        /// written here (§5). That is the new-install case — the shell's first launch on a phone
+        /// whose game already answered — and re-caching means the second launch decides for free
+        /// instead of waiting on <c>/user/detail</c> again.
+        /// </para>
         /// </summary>
         public static bool ShouldOffer()
-            => ShouldOffer(GpsGate.Enabled,
-                           Golfin.Auth.AuthService.Instance != null
-                           && Golfin.Auth.AuthService.Instance.Session.IsAuthenticated,
-                           Prompted);
+        {
+            bool signedIn = Golfin.Auth.AuthService.Instance != null
+                            && Golfin.Auth.AuthService.Instance.Session.IsAuthenticated;
+
+            // §5 — re-cache before deciding, so the write happens on the pass that LEARNS it.
+            if (signedIn && PromptedOnAccount && !PromptedLocally)
+            {
+                Debug.Log("[GpsAuthExtrasFlow] server says this account already answered the Golf " +
+                          "Profile — caching the local flag; this install will never offer it.");
+                MarkPrompted();
+            }
+
+            return ShouldOffer(GpsGate.Enabled, signedIn, PromptedLocally, PromptedOnAccount);
+        }
 
         /// <summary>
-        /// Testable core. All three inputs are parameters so an EditMode test can exercise the
+        /// Testable core. Every input is a parameter so an EditMode test can exercise the
         /// "punch it" build (<paramref name="gpsEnabled"/> false → always a no-op) without the
-        /// Editor's always-on <see cref="GpsGate.Enabled"/> hiding that branch.
+        /// Editor's always-on <see cref="GpsGate.Enabled"/> hiding that branch, and can walk the
+        /// whole local × server truth table without PlayerPrefs or a live row.
         ///
         /// <para>
         /// SIGNED IN, not merely "has a name": the screen writes to the caller's own
         /// <c>profiles</c> row over a bearer token, so with no session there is nothing to write
         /// to and the offer would end in a 403.
         /// </para>
+        /// <para>
+        /// The two flags are OR'd, never AND'd. Either one being set means the account has
+        /// answered: the local flag alone is the ordinary returning player (and the offline case,
+        /// where the server flag is simply unknowable), the server flag alone is a fresh install
+        /// of either app. Requiring both would re-ask every returning player the moment the
+        /// network was down.
+        /// </para>
         /// </summary>
-        internal static bool ShouldOffer(bool gpsEnabled, bool signedIn, bool alreadyPrompted)
-            => gpsEnabled && signedIn && !alreadyPrompted;
+        internal static bool ShouldOffer(bool gpsEnabled, bool signedIn,
+                                         bool promptedLocally, bool promptedOnAccount)
+            => gpsEnabled && signedIn && !promptedLocally && !promptedOnAccount;
+
+        // ── gps_profile_prompt_server_flag §3 — the one round trip the decision may need ──
+
+        /// <summary>
+        /// How long a hub entry may be held waiting for <c>/user/detail</c> before it gives up and
+        /// proceeds WITHOUT offering.
+        ///
+        /// <para>
+        /// There has to be a bound. <c>ApiClient.TimeoutSeconds</c> is 30, and this sits in front
+        /// of a navigation — on a bad network an unbounded wait would freeze the player on the
+        /// Splash for half a minute with no spinner, which is far worse than the thing being
+        /// prevented. 2.5 s is comfortably longer than the round trip actually takes (the same
+        /// call the hub makes on every entry) and shorter than the Splash fade is annoying.
+        /// </para>
+        /// <para>
+        /// Giving up resolves to "do not offer", never to "offer": the failure this exists to
+        /// prevent is asking a player who already answered, and a missed offer costs one more
+        /// chance on the next entry.
+        /// </para>
+        /// </summary>
+        private const float AccountFlagBudgetSeconds = 2.5f;
+
+        /// <summary>
+        /// True when this navigation's offer decision genuinely cannot be made yet: it is a hub
+        /// entry, the gate and the session say the offer is live, this device has no local flag —
+        /// and <c>/user/detail</c> has not answered, so the account flag is unknown.
+        ///
+        /// <para>
+        /// The local flag is checked FIRST and short-circuits, which is what keeps the common case
+        /// (a returning player on a device that has already answered) free of any round trip at
+        /// all. Only a device that has never answered can reach the fetch — i.e. a first launch,
+        /// which is exactly the case this feature exists for.
+        /// </para>
+        /// </summary>
+        public static bool NeedsAccountCheck(ScreenId requested)
+        {
+            if (requested != ScreenId.GpsHub) return false;
+            if (!GpsGate.Enabled) return false;
+            if (PromptedLocally) return false;
+            if (Golfin.Auth.AuthService.Instance == null
+                || !Golfin.Auth.AuthService.Instance.Session.IsAuthenticated) return false;
+
+            var svc = Golfin.Social.UserService.Instance;
+            return svc != null && svc.LastDetail == null && !svc.DetailAttempted;
+        }
+
+        /// <summary>
+        /// Fetch <c>/user/detail</c> (once), then run <paramref name="then"/> — whatever the
+        /// outcome, and never later than <see cref="AccountFlagBudgetSeconds"/>.
+        ///
+        /// <para>
+        /// <paramref name="then"/> is invoked EXACTLY ONCE on every path, because it is a resumed
+        /// navigation: dropping it strands the player on the screen they were leaving, and running
+        /// it twice would push the same screen twice. <c>UserService.EnsureDetail</c> marks the
+        /// attempt before it yields, so the resumed navigation cannot re-enter this wait.
+        /// </para>
+        /// </summary>
+        public static void EnsureAccountFlagThen(System.Action then)
+        {
+            Golfin.Net.ApiClient.Instance.Run(EnsureAccountFlagRoutine(then));
+        }
+
+        private static System.Collections.IEnumerator EnsureAccountFlagRoutine(System.Action then)
+        {
+            bool answered = false;
+            float startedAt = Time.realtimeSinceStartup;
+
+            Golfin.Social.UserService.Instance.EnsureDetail(_ => answered = true);
+
+            while (!answered && Time.realtimeSinceStartup - startedAt < AccountFlagBudgetSeconds)
+                yield return null;
+
+            if (answered)
+                Debug.Log($"[GpsAuthExtrasFlow] account flag resolved in " +
+                          $"{Time.realtimeSinceStartup - startedAt:0.00}s — prompted_at=" +
+                          (PromptedOnAccount ? "set" : "null"));
+            else
+                Debug.Log($"[GpsAuthExtrasFlow] /user/detail did not answer within " +
+                          $"{AccountFlagBudgetSeconds:0.0}s — continuing to the hub WITHOUT offering " +
+                          $"(never nag; the next entry retries).");
+
+            then?.Invoke();
+        }
 
         /// <summary>
         /// gps_profile_prompt_on_entry §2 — set when an intercept diverts a hub entry into the

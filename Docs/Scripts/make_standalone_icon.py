@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
-"""Bake the PLAYLIFE shell's PLACEHOLDER app icon and launch image.
+"""Bake the PLAYLIFE shell's PLACEHOLDER launch image.
+
+THE APP ICON IS NO LONGER BAKED HERE (round 2, R1). Cesar's real icon —
+`Assets/Art/Standalone/AppIcon_GolfinGps_1024_opaque.png`, green gradient with a white map pin —
+replaced the generated placeholder after he installed build 2635 and saw it. Do not re-add an icon
+baker: a generated icon that silently outranks the real artwork is exactly the failure this
+removal prevents.
 
 gps_standalone_shell §D6. Real branding comes from Ken and is a backlog row — this exists so
 the shell is distinguishable ON THE SPRINGBOARD from the game sitting next to it, which is the
@@ -10,12 +16,11 @@ exactly the question the whole third-variant exercise has to be able to answer.
     python3 Docs/Scripts/make_standalone_icon.py
 
 Writes (idempotent, deterministic — re-running produces byte-identical files):
-    Assets/Art/Standalone/S_StandaloneAppIcon.png    1024x1024, opaque, no alpha channel
     Assets/Art/Standalone/S_StandaloneLaunch.png     1170x2532, opaque
 
-NO ALPHA ON THE ICON, on purpose: App Store Connect rejects an icon with an alpha channel
-(ITMS-90717). Unity does flatten it while generating the icon set, but a source that never had
-one cannot be got wrong. Verified by reading the written file back at the bottom of this script.
+NO ALPHA, on purpose: App Store Connect rejects an alpha channel in the marketing icon
+(ITMS-90717), and the same discipline is kept here so the launch image can never introduce one.
+Verified by reading the written file back at the bottom of this script.
 
 The palette is the GPS surface's own navy (sampled from Assets/Art/UI/Gps/Backgrounds/*.png),
 so the placeholder at least looks like the product it launches rather than like a test asset.
@@ -34,10 +39,8 @@ except ImportError:                                        # pragma: no cover - 
 REPO = Path(__file__).resolve().parents[2]
 OUT_DIR = REPO / "Assets" / "Art" / "Standalone"
 
-ICON_PATH = OUT_DIR / "S_StandaloneAppIcon.png"
 LAUNCH_PATH = OUT_DIR / "S_StandaloneLaunch.png"
 
-ICON_SIZE = 1024
 LAUNCH_SIZE = (1170, 2532)          # iPhone 14, the project's capture resolution
 
 # Sampled from BG_PROF_Profile.png — the GPS surface's own gradient ends.
@@ -89,20 +92,6 @@ def centered(draw, text, font, cx, cy, fill):
     draw.text((cx - (right - left) / 2 - left, cy - (bottom - top) / 2 - top), text, font=font, fill=fill)
 
 
-def build_icon():
-    img = vertical_gradient((ICON_SIZE, ICON_SIZE), NAVY_TOP, NAVY_BOTTOM)
-    draw = ImageDraw.Draw(img)
-
-    # A green ring, the GPS surface's accent — reads at 60px on the springboard where text does not.
-    inset = ICON_SIZE * 0.16
-    draw.ellipse([inset, inset, ICON_SIZE - inset, ICON_SIZE - inset],
-                 outline=GPS_GREEN, width=int(ICON_SIZE * 0.045))
-
-    centered(draw, WORDMARK, load_font(int(ICON_SIZE * 0.30)), ICON_SIZE / 2, ICON_SIZE * 0.47, WHITE)
-    centered(draw, SUBMARK, load_font(int(ICON_SIZE * 0.070)), ICON_SIZE / 2, ICON_SIZE * 0.685, GPS_GREEN)
-    return img
-
-
 def build_launch():
     img = vertical_gradient(LAUNCH_SIZE, NAVY_TOP, NAVY_BOTTOM)
     draw = ImageDraw.Draw(img)
@@ -114,11 +103,10 @@ def build_launch():
 
 def main():
     OUT_DIR.mkdir(parents=True, exist_ok=True)
-    build_icon().save(ICON_PATH, "PNG", optimize=True)
     build_launch().save(LAUNCH_PATH, "PNG", optimize=True)
 
     # Read back rather than trust the write: the alpha rule is the one that costs an upload.
-    for path in (ICON_PATH, LAUNCH_PATH):
+    for path in (LAUNCH_PATH,):
         with Image.open(path) as check:
             assert check.mode == "RGB", f"{path.name} carries an alpha channel ({check.mode})"
             print(f"wrote {path.relative_to(REPO)}  {check.size[0]}x{check.size[1]}  mode={check.mode}")

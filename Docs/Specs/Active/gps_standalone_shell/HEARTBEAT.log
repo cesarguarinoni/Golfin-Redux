@@ -12,3 +12,46 @@ DIRTY (git status --porcelain --untracked-files=all):
        NOTE: GpsRoundsScreenController.cs + GpsPolishMotionTests.cs are dirty and are NOT mine —
        a chip pixelsPerUnitMultiplier fix from another session; left untouched, reported.
        Caught: Assets/Editor/Build/ is gitignored ([Bb]uild/) — preprocessor moved to Assets/Editor/.
+
+=== iter-2 kickoff baseline 2026-09-04 06:34:07 +0900 ===
+HEAD 12b5895e0112bb7beec9c19b7eb9fe51eb4f3f09 (12b5895e0) count=2635
+Round 2 = KICKOFF_ADDENDUM R1 (real icon) + R2 (Resources diet) + R3 (first-run re-proof).
+gps_profile_prompt_server_flag was in flight when round 2 arrived; R3 says it lands first, so it
+is finished here. In-flight at the interrupt: backend migration + user.py DONE; UserDetailDto,
+UserService DONE; GpsAuthExtrasFlow HALF (Prompted=local||server, no re-cache/wait yet);
+GpsGolfProfileScreenController NOT updated => the Update() signature change left the project
+NOT COMPILING. Finished first for that reason alone.
+DIRTY (git status --porcelain --untracked-files=all):
+ M Assets/Scripts/Social/UserDetailDto.cs
+ M Assets/Scripts/Social/UserService.cs
+ M Assets/Scripts/UI/Gps/GpsAuthExtrasFlow.cs
+ M Docs/GPS/GPS_BACKLOG.md
+ M Docs/Reports/content_art.txt
+ M Docs/Specs/Active/gps_standalone_shell/SPEC.md
+ M Docs/Specs/Active/gps_standalone_shell/STATUS.md
+ M Docs/TellCode.md
+ M Docs/Versioning/last_uploaded_build.golfingps.txt
+?? Assets/Art/Standalone/AppIcon_GolfinGps_1024.png
+?? Assets/Art/Standalone/AppIcon_GolfinGps_1024_opaque.png
+?? Docs/Specs/Active/gps_profile_prompt_server_flag/HEARTBEAT.log
+?? Docs/Specs/Active/gps_profile_prompt_server_flag/SPEC.md
+?? Docs/Specs/Active/gps_profile_prompt_server_flag/STATUS.md
+?? Docs/Specs/Active/gps_standalone_shell/KICKOFF_ADDENDUM.md
+=== end baseline ===
+
+06:51 — addendum updated mid-round: R4 (strip refused game screens from ShellScene at
+       build time) and R5 (texture compression) added. Plan: R1 done; R2 mechanism done+proven
+       (Resources 560.9MB -> 17.4MB -> 560.9MB, git clean); R3 proofs next; then R4, R5, then a
+       batchmode build for the Build Report numbers.
+       R4's "keep Characters/Homescreen" matches the R2 call-site enumeration already done:
+       GpsAvatarScreenController loads Characters/Homescreen/{name}, and Characters/ is ENTIRELY
+       Homescreen — so it stays whole.
+
+06:59 — R3 DONE, and it caught a real defect: StandaloneShellBoot resolved the Golf
+       Profile offer itself, jumping over the account-flag wait in Navigate, so a fresh shell
+       install of a server-stamped account STILL showed the capture. Fixed: the boot names GpsHub
+       and Navigate decides. Case A (server-stamped, local cleared) -> flag resolved in 0.20s,
+       local re-cached, lands on GpsHub. Case B (column cleared) -> capture offered once; Skip
+       advanced and set the local flag. The Skip PUT returns 200 but does NOT stamp: the DEPLOYED
+       Fly API has no golf_profile_prompted field (openapi confirms). Fly deploy is the remaining
+       outward step. Account column restored to its original timestamp.

@@ -175,7 +175,7 @@ namespace Golfin.Gps.UI.Editor
                 //       claiming to show pink. The colour has to be on the ROW.
                 var svcP = Golfin.Social.UserService.Instance;
                 string nameP = svcP.LastDetail?.DisplayName ?? "Player";
-                yield return svcP.Update(nameP, null, null, "pink", r =>
+                yield return svcP.Update(nameP, null, null, "pink", golfProfilePrompted: null, onResult: r =>
                     Log("avatar_color='pink' PUT -> HTTP " + r.StatusCode));
 
                 ScreenManager.Instance?.ShowScreen(ScreenId.GpsProfile);
@@ -215,7 +215,7 @@ namespace Golfin.Gps.UI.Editor
 
                 // (a) the happy path — all three new fields in one PUT.
                 long put = 0; string putErr = "";
-                yield return svc.Update(name, 18.4, "advanced", "pink", r =>
+                yield return svc.Update(name, 18.4, "advanced", "pink", golfProfilePrompted: null, onResult: r =>
                 { put = r.StatusCode; putErr = r.Success ? "" : (r.ErrorKind + ": " + r.ErrorMessage); });
                 Log("RT PUT /user/update (hc=18.4, exp=advanced, colour=pink) -> HTTP " + put + " " + putErr);
 
@@ -232,15 +232,15 @@ namespace Golfin.Gps.UI.Editor
                 // (c) the enum guard — a value outside the CHECK must be a 422 the client can
                 //     read, not a 500 from the database.
                 long bad = 0;
-                yield return svc.Update(name, null, "pro", null, r => { bad = r.StatusCode; });
+                yield return svc.Update(name, null, "pro", null, golfProfilePrompted: null, onResult: r => { bad = r.StatusCode; });
                 Log("RT PUT golf_experience='pro' -> HTTP " + bad + " (expect 422)");
 
                 long badColour = 0;
-                yield return svc.Update(name, null, null, "teal", r => { badColour = r.StatusCode; });
+                yield return svc.Update(name, null, null, "teal", golfProfilePrompted: null, onResult: r => { badColour = r.StatusCode; });
                 Log("RT PUT avatar_color='teal' -> HTTP " + badColour + " (expect 422)");
 
                 // (d) an OMITTED field must not blank a stored one.
-                yield return svc.Update(name, null, null, null, _ => { });
+                yield return svc.Update(name, null, null, null, golfProfilePrompted: null, onResult: _ => { });
                 Golfin.Social.UserDetailDto? kept = null;
                 yield return svc.Detail(r => { if (r.Success) kept = r.Data; });
                 Log("RT omit-all PUT then GET: exp=" + (kept?.GolfExperience ?? "null")
@@ -258,7 +258,7 @@ namespace Golfin.Gps.UI.Editor
                 // or a future explicit-null contract. Worth knowing before the Settings screen
                 // that "you can change all of this later" promises gets written.
                 yield return svc.Update(name, before.Handicap, before.GolfExperience,
-                                        before.AvatarColor, r =>
+                                        before.AvatarColor, golfProfilePrompted: null, onResult: r =>
                     Log("RT restore attempt -> HTTP " + r.StatusCode
                         + (before.GolfExperience == null
                            ? "  NOTE: the row started NULL, and PUT /user/update cannot write NULL"
