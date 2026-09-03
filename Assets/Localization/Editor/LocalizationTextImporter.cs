@@ -44,6 +44,17 @@ public static class LocalizationTextImporter
                 if (string.IsNullOrWhiteSpace(line))
                     continue;
 
+                // A `#` line is a comment, the way Tools/content's COMMENT_PREFIX already treats
+                // it. Without this the "fewer than 3 columns" guard below does NOT catch one:
+                // ParseCsvLine emits a trailing empty field, so a comment carrying a single comma
+                // parses as THREE columns and lands in the table as a row whose key is the prose
+                // before that comma. It shipped one — `# pipeline` — with an empty japanese, which
+                // is also the shape that renders blank in the other language. Nothing read it, so
+                // nothing looked broken; that is what makes it worth a hard skip rather than a
+                // convention.
+                if (line.TrimStart().StartsWith("#"))
+                    continue;
+
                 var cols = ParseCsvLine(line);
 
                 if (isHeader)

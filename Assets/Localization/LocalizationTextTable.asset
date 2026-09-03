@@ -2961,6 +2961,69 @@ MonoBehaviour:
   - key: GPS_GIFT_FAILED
     english: Something went wrong. Try again.
     japanese: "\u30A8\u30E9\u30FC\u304C\u767A\u751F\u3057\u307E\u3057\u305F\u3002\u3082\u3046\u4E00\u5EA6\u304A\u8A66\u3057\u304F\u3060\u3055\u3044\u3002"
+  - key: GIFT_ITEM_F8137DC1
+    english: Sunglasses
+    japanese: "\u30B5\u30F3\u30B0\u30E9\u30B9"
+  - key: GIFT_ITEM_61B09778
+    english: Wristband
+    japanese: "\u30EA\u30B9\u30C8\u30D0\u30F3\u30C9"
+  - key: GIFT_ITEM_DB99F9F0
+    english: Cheer Stamp
+    japanese: "\u5FDC\u63F4\u30B9\u30BF\u30F3\u30D7"
+  - key: GIFT_ITEM_E7F58D2F
+    english: Golf Ball
+    japanese: "\u30B4\u30EB\u30D5\u30DC\u30FC\u30EB"
+  - key: GIFT_ITEM_6FB9856D
+    english: Pants (Navy)
+    japanese: "\u30D1\u30F3\u30C4\uFF08\u30CD\u30A4\u30D3\u30FC\uFF09"
+  - key: GIFT_ITEM_C26D218F
+    english: Skirt
+    japanese: "\u30B9\u30AB\u30FC\u30C8"
+  - key: GIFT_ITEM_9052D274
+    english: Score Post Effect
+    japanese: "\u30B9\u30B3\u30A2\u6295\u7A3F\u30A8\u30D5\u30A7\u30AF\u30C8"
+  - key: GIFT_ITEM_DC1945D6
+    english: Seasonal Full Outfit
+    japanese: "\u30B7\u30FC\u30BA\u30F3\u9650\u5B9A\u30D5\u30EB\u30B3\u30FC\u30C7"
+  - key: GIFT_ITEM_85A68F02
+    english: Full Outfit + Title
+    japanese: "\u30D5\u30EB\u30B3\u30FC\u30C7 + \u79F0\u53F7"
+  - key: GIFT_ITEM_D4ED366E
+    english: Glove
+    japanese: "\u30B0\u30ED\u30FC\u30D6"
+  - key: GIFT_ITEM_8CBC1D6B
+    english: Basic Cap
+    japanese: "\u30D9\u30FC\u30B7\u30C3\u30AF\u30AD\u30E3\u30C3\u30D7"
+  - key: GIFT_ITEM_4AF0AE50
+    english: Sun Visor
+    japanese: "\u30B5\u30F3\u30D0\u30A4\u30B6\u30FC"
+  - key: GIFT_ITEM_FA79E47A
+    english: Gold Rim Cap
+    japanese: "\u30B4\u30FC\u30EB\u30C9\u30EA\u30E0\u30AD\u30E3\u30C3\u30D7"
+  - key: GIFT_ITEM_C3CCD8A3
+    english: Crown
+    japanese: "\u738B\u51A0"
+  - key: GIFT_ITEM_80CB3AAC
+    english: Glowing Profile Frame
+    japanese: "\u5149\u308B\u30D7\u30ED\u30D5\u30A3\u30FC\u30EB\u30D5\u30EC\u30FC\u30E0"
+  - key: GIFT_ITEM_51AA59B5
+    english: Spikeless Shoes (White)
+    japanese: "\u30B9\u30D1\u30A4\u30AF\u30EC\u30B9\uFF08\u767D\uFF09"
+  - key: GIFT_ITEM_CE366C56
+    english: Hologram Shoes
+    japanese: "\u30DB\u30ED\u30B0\u30E9\u30E0\u30B7\u30E5\u30FC\u30BA"
+  - key: GIFT_ITEM_860A7684
+    english: Polo Shirt (White)
+    japanese: "\u30DD\u30ED\u30B7\u30E3\u30C4\uFF08\u767D\uFF09"
+  - key: GIFT_ITEM_85EE1D03
+    english: Polo Shirt (Pink)
+    japanese: "\u30DD\u30ED\u30B7\u30E3\u30C4\uFF08\u30D4\u30F3\u30AF\uFF09"
+  - key: GIFT_ITEM_4A9A2CC6
+    english: Glowing Logo Polo
+    japanese: "\u5149\u308B\u30ED\u30B4\u30DD\u30ED"
+  - key: GIFT_ITEM_FC96A954
+    english: One Rare Wear Item
+    japanese: "\u30EC\u30A2\u30A6\u30A7\u30A21\u70B9"
   - key: GPS_VOTE_TITLE
     english: VOTES
     japanese: "\u6295\u7968"
@@ -3054,3 +3117,202 @@ MonoBehaviour:
   - key: GPS_VOTE_CREATED
     english: Vote created.
     japanese: "\u6295\u7968\u3092\u4F5C\u6210\u3057\u307E\u3057\u305F\u3002"
+  - key: GPS_ROUNDS_TITLE
+    english: ROUNDS
+    japanese: "\u30E9\u30A6\u30F3\u30C9"
+  - key: GPS_ROUNDS_NEARBY_COUNT
+    english: "NEARBY \xB7 {0} SPOTS"
+    japanese: "\u8FD1\u304F\u306E\u30B9\u30DD\u30C3\u30C8 \xB7 {0}\u4EF6"
+  - key: GPS_ROUNDS_GPS_ON
+    english: "\u25CF GPS ON"
+    japanese: "\u25CF GPS \u30AA\u30F3"
+  - key: GPS_ROUNDS_GPS_OFF
+    english: "\u25CF GPS OFF"
+    japanese: "\u25CF GPS \u30AA\u30D5"
+  - key: GPS_ROUNDS_LIVE
+    english: "\u25CF LIVE"
+    japanese: "\u25CF \u9032\u884C\u4E2D"
+  - key: GPS_ROUNDS_CHECKED_IN_SINCE
+    english: "CHECKED IN \xB7 {0}\u301C"
+    japanese: "\u30C1\u30A7\u30C3\u30AF\u30A4\u30F3\u4E2D \xB7 {0}\u301C"
+  - key: GPS_ROUNDS_CAT_GOLF
+    english: GOLF COURSES
+    japanese: "\u30B4\u30EB\u30D5\u5834"
+  - key: GPS_ROUNDS_CAT_RANGE
+    english: DRIVING RANGES
+    japanese: "\u7DF4\u7FD2\u5834"
+  - key: GPS_ROUNDS_CAT_FOOD
+    english: FOOD & DRINK
+    japanese: "\u98F2\u98DF\u5E97"
+  - key: GPS_ROUNDS_NEAR_ME
+    english: "\u25CE NEAR ME"
+    japanese: "\u25CE \u73FE\u5728\u5730"
+  - key: GPS_ROUNDS_LEGEND_PARTNER
+    english: PARTNER
+    japanese: "\u63D0\u643A"
+  - key: GPS_ROUNDS_LEGEND_REGISTERED
+    english: REGISTERED
+    japanese: "\u767B\u9332\u6E08\u307F"
+  - key: GPS_ROUNDS_LEGEND_FOOD
+    english: FOOD & DRINK
+    japanese: "\u98F2\u98DF\u5E97"
+  - key: GPS_ROUNDS_MAP_ATTRIBUTION
+    english: "Map \xB7 Google"
+    japanese: "\u5730\u56F3 \xB7 Google"
+  - key: GPS_ROUNDS_SORT_NEAREST
+    english: NEAREST FIRST
+    japanese: "\u8FD1\u3044\u9806"
+  - key: GPS_ROUNDS_SORT_NAME
+    english: BY NAME
+    japanese: "\u540D\u524D\u9806"
+  - key: GPS_ROUNDS_SORT_DISTANCE
+    english: "DISTANCE  \u25BE"
+    japanese: "\u8DDD\u96E2  \u25BE"
+  - key: GPS_ROUNDS_SORT_NAME_TOGGLE
+    english: "NAME  \u25BE"
+    japanese: "\u540D\u524D  \u25BE"
+  - key: GPS_ROUNDS_NEAR_YOU
+    english: NEAR YOU
+    japanese: "\u8FD1\u304F\u306E\u30B9\u30DD\u30C3\u30C8"
+  - key: GPS_ROUNDS_NEARBY_FOOD
+    english: NEARBY FOOD & DRINK
+    japanese: "\u8FD1\u304F\u306E\u98F2\u98DF\u5E97"
+  - key: GPS_ROUNDS_PARTNER
+    english: PARTNER
+    japanese: "\u63D0\u643A"
+  - key: GPS_ROUNDS_CHECK_IN
+    english: CHECK IN
+    japanese: "\u30C1\u30A7\u30C3\u30AF\u30A4\u30F3"
+  - key: GPS_ROUNDS_TOO_FAR
+    english: '{0} KM AWAY'
+    japanese: "{0} KM \u5148"
+  - key: GPS_ROUNDS_TOO_FAR_TOAST
+    english: "You need to be at {0} to check in \u2014 you're {1} km away"
+    japanese: "{0} \u3067\u306A\u3044\u3068\u30C1\u30A7\u30C3\u30AF\u30A4\u30F3\u3067\u304D\u307E\u305B\u3093\uFF08\u73FE\u5728
+      {1} km \u5148\uFF09"
+  - key: GPS_ROUNDS_NO_GPS_TOAST
+    english: Turn on location to check in
+    japanese: "\u30C1\u30A7\u30C3\u30AF\u30A4\u30F3\u3059\u308B\u306B\u306F\u4F4D\u7F6E\u60C5\u5831\u3092\u30AA\u30F3\u306B\u3057\u3066\u304F\u3060\u3055\u3044"
+  - key: GPS_ROUNDS_DETAILS
+    english: DETAILS
+    japanese: "\u8A73\u7D30"
+  - key: GPS_ROUNDS_EMPTY
+    english: No spots nearby right now.
+    japanese: "\u8FD1\u304F\u306B\u30B9\u30DD\u30C3\u30C8\u304C\u3042\u308A\u307E\u305B\u3093\u3002"
+  - key: GPS_ROUNDS_LIVE_ROUND
+    english: "\u25CF LIVE ROUND"
+    japanese: "\u25CF \u30E9\u30A6\u30F3\u30C9\u4E2D"
+  - key: GPS_ROUNDS_SINCE
+    english: Since {0}
+    japanese: "{0} \u958B\u59CB"
+  - key: GPS_ROUNDS_ELAPSED
+    english: ELAPSED
+    japanese: "\u7D4C\u904E\u6642\u9593"
+  - key: GPS_ROUNDS_PTS_EARNED
+    english: PTS EARNED
+    japanese: "\u7372\u5F97\u30DD\u30A4\u30F3\u30C8"
+  - key: GPS_ROUNDS_GPS
+    english: GPS
+    japanese: GPS
+  - key: GPS_ROUNDS_GPS_FIXES
+    english: GPS FIXES
+    japanese: "GPS \u8A18\u9332\u6570"
+  - key: GPS_ROUNDS_SCORE_UPLOAD
+    english: SCORE UPLOAD
+    japanese: "\u30B9\u30B3\u30A2\u6295\u7A3F"
+  - key: GPS_ROUNDS_CHECK_OUT
+    english: CHECK OUT
+    japanese: "\u30C1\u30A7\u30C3\u30AF\u30A2\u30A6\u30C8"
+  - key: GPS_ROUNDS_CONFIRM_TITLE
+    english: CHECK IN HERE?
+    japanese: "\u3053\u3053\u306B\u30C1\u30A7\u30C3\u30AF\u30A4\u30F3\u3057\u307E\u3059\u304B\uFF1F"
+  - key: GPS_ROUNDS_CONFIRM_SUB
+    english: "{0} km away \xB7 inside the course radius"
+    japanese: "{0} km \xB7 \u30B3\u30FC\u30B9\u306E\u7BC4\u56F2\u5185"
+  - key: GPS_ROUNDS_CONFIRM_SUB_OUTSIDE
+    english: "{0} km away \xB7 outside the course radius"
+    japanese: "{0} km \xB7 \u30B3\u30FC\u30B9\u306E\u7BC4\u56F2\u5916"
+  - key: GPS_ROUNDS_PTS_ON_CHECKIN
+    english: PTS ON CHECK-IN
+    japanese: "\u30C1\u30A7\u30C3\u30AF\u30A4\u30F3"
+  - key: GPS_ROUNDS_PTS_ON_CHECKIN_VALUE
+    english: +30
+    japanese: +30
+  - key: GPS_ROUNDS_PTS_ON_CHECKOUT
+    english: PTS ON CHECK-OUT
+    japanese: "\u30C1\u30A7\u30C3\u30AF\u30A2\u30A6\u30C8"
+  - key: GPS_ROUNDS_PTS_ON_CHECKOUT_VALUE
+    english: +10
+    japanese: +10
+  - key: GPS_ROUNDS_GPS_ACCURACY
+    english: GPS ACCURACY
+    japanese: "GPS \u7CBE\u5EA6"
+  - key: GPS_ROUNDS_ACCURACY_HIGH
+    english: "\u25CF HIGH"
+    japanese: "\u25CF \u9AD8"
+  - key: GPS_ROUNDS_ACCURACY_MED
+    english: "\u25CF MED"
+    japanese: "\u25CF \u4E2D"
+  - key: GPS_ROUNDS_ACCURACY_LOW
+    english: "\u25CF LOW"
+    japanese: "\u25CF \u4F4E"
+  - key: GPS_ROUNDS_CONFIRM_NOTE
+    english: Your round starts now. Check out when you finish to earn the rest, and
+      post your scorecard for the screenshot bonus.
+    japanese: "\u30E9\u30A6\u30F3\u30C9\u3092\u958B\u59CB\u3057\u307E\u3059\u3002\u7D42\u4E86\u6642\u306B\u30C1\u30A7\u30C3\u30AF\u30A2\u30A6\u30C8\u3059\u308B\u3068\u6B8B\u308A\u306E\u30DD\u30A4\u30F3\u30C8\u3092\u7372\u5F97\u3067\u304D\u3001\u30B9\u30B3\u30A2\u30AB\u30FC\u30C9\u3092\u6295\u7A3F\u3059\u308B\u3068\u30DC\u30FC\u30CA\u30B9\u3082\u4ED8\u304D\u307E\u3059\u3002"
+  - key: GPS_ROUNDS_CANCEL
+    english: CANCEL
+    japanese: "\u30AD\u30E3\u30F3\u30BB\u30EB"
+  - key: GPS_ROUNDS_COMPLETE_TITLE
+    english: ROUND COMPLETE
+    japanese: "\u30E9\u30A6\u30F3\u30C9\u7D42\u4E86"
+  - key: GPS_ROUNDS_COMPLETE_SUB
+    english: "{0} \u2013 {1} \xB7 GPS verified"
+    japanese: "{0}\u301C{1} \xB7 GPS \u8A8D\u8A3C\u6E08\u307F"
+  - key: GPS_ROUNDS_COMPLETE_SUB_UNVERIFIED
+    english: "{0} \u2013 {1} \xB7 GPS unverified"
+    japanese: "{0}\u301C{1} \xB7 GPS \u672A\u8A8D\u8A3C"
+  - key: GPS_ROUNDS_COMPLETE_NOTE
+    english: Post your scorecard now to add screenshot points (+50) and Trust +20
+      from this round's GPS.
+    japanese: "\u4ECA\u30B9\u30B3\u30A2\u30AB\u30FC\u30C9\u3092\u6295\u7A3F\u3059\u308B\u3068\u3001\u30B9\u30AF\u30EA\u30FC\u30F3\u30B7\u30E7\u30C3\u30C8\u306E
+      +50 pt \u3068\u3053\u306E\u30E9\u30A6\u30F3\u30C9\u306E GPS \u306B\u3088\u308B
+      Trust +20 \u304C\u52A0\u7B97\u3055\u308C\u307E\u3059\u3002"
+  - key: GPS_ROUNDS_POST_SCORE
+    english: POST SCORE
+    japanese: "\u30B9\u30B3\u30A2\u3092\u6295\u7A3F"
+  - key: GPS_ROUNDS_DONE
+    english: DONE
+    japanese: "\u5B8C\u4E86"
+  - key: GPS_ROUNDS_EXPIRED
+    english: ROUND EXPIRED
+    japanese: "\u30E9\u30A6\u30F3\u30C9\u671F\u9650\u5207\u308C"
+  - key: GPS_ROUNDS_EXPIRED_NOTE
+    english: "This round was open for more than 8 hours. Check out to clear it \u2014
+      no points are awarded."
+    japanese: "\u3053\u306E\u30E9\u30A6\u30F3\u30C9\u306F8\u6642\u9593\u4EE5\u4E0A\u958B\u3044\u305F\u307E\u307E\u3067\u3059\u3002\u30C1\u30A7\u30C3\u30AF\u30A2\u30A6\u30C8\u3067\u7D42\u4E86\u3067\u304D\u307E\u3059\u304C\u3001\u30DD\u30A4\u30F3\u30C8\u306F\u4ED8\u4E0E\u3055\u308C\u307E\u305B\u3093\u3002"
+  - key: GPS_ROUNDS_CHECKED_IN
+    english: Checked in at {0} (+{1} pts)
+    japanese: "{0} \u306B\u30C1\u30A7\u30C3\u30AF\u30A4\u30F3\u3057\u307E\u3057\u305F\uFF08+{1}
+      pt\uFF09"
+  - key: GPS_ROUNDS_CHECKED_IN_NO_PTS
+    english: Checked in at {0}
+    japanese: "{0} \u306B\u30C1\u30A7\u30C3\u30AF\u30A4\u30F3\u3057\u307E\u3057\u305F"
+  - key: GPS_ROUNDS_CHECKIN_FAILED
+    english: Could not check in. Try again.
+    japanese: "\u30C1\u30A7\u30C3\u30AF\u30A4\u30F3\u3067\u304D\u307E\u305B\u3093\u3067\u3057\u305F\u3002\u3082\u3046\u4E00\u5EA6\u304A\u8A66\u3057\u304F\u3060\u3055\u3044\u3002"
+  - key: GPS_ROUNDS_CHECKOUT_FAILED
+    english: Could not check out. Try again.
+    japanese: "\u30C1\u30A7\u30C3\u30AF\u30A2\u30A6\u30C8\u3067\u304D\u307E\u305B\u3093\u3067\u3057\u305F\u3002\u3082\u3046\u4E00\u5EA6\u304A\u8A66\u3057\u304F\u3060\u3055\u3044\u3002"
+  - key: GPS_ROUNDS_ALREADY_ACTIVE
+    english: You already have a round open.
+    japanese: "\u3059\u3067\u306B\u30E9\u30A6\u30F3\u30C9\u304C\u958B\u3044\u3066\u3044\u307E\u3059\u3002"
+  - key: GPS_ROUNDS_MY_RECENT_ROUNDS
+    english: MY RECENT ROUNDS
+    japanese: "\u6700\u8FD1\u306E\u30E9\u30A6\u30F3\u30C9"
+  - key: GPS_ROUNDS_ALL_ROUNDS
+    english: "ALL ROUNDS  \u203A"
+    japanese: "\u3059\u3079\u3066\u306E\u30E9\u30A6\u30F3\u30C9  \u203A"
+  - key: GPS_ROUNDS_NO_ROUNDS
+    english: No rounds yet.
+    japanese: "\u307E\u3060\u30E9\u30A6\u30F3\u30C9\u304C\u3042\u308A\u307E\u305B\u3093\u3002"
