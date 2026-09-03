@@ -1,4 +1,4 @@
-content_art — build 2627   (GOLFIN/Content/Validate Catalog Art)
+content_art — build 2629   (GOLFIN/Content/Validate Catalog Art)
 
 WARNING-ONLY REPORT. A row whose data is published and whose art ships in a later
 build is a legitimate state: content_two_way §4 withholds it from every visible list
