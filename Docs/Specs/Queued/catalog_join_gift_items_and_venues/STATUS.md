@@ -1,4 +1,4 @@
 QUEUED
 
-Blocked on: gps_checkin (Part B shares its partner columns). Part A is independently startable.
-DDL for both parts goes to Cesar.
+Part A (gift_items) is the only build work; it is independently startable. DDL goes to Cesar.
+Part B resolved to gps_checkin's Partners panel — venues stay on the live endpoint and never become a catalog.
