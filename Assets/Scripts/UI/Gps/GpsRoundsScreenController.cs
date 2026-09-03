@@ -45,6 +45,19 @@ namespace Golfin.Gps.UI
     {
         private const string Tag = "[GpsRounds]";
 
+        /// <summary>
+        /// `pixelsPerUnitMultiplier` for a chip fill: the sprite's 88 px 9-slice border over the
+        /// 30 u corner radius a 60 u tall chip needs to read as a capsule (radius = height / 2).
+        ///
+        /// <para>Written as `border / radius` because that is the only form that says which number
+        /// is which. The literal `30f` used to sit here, and 30 is the RADIUS — as a multiplier it
+        /// draws a corner of 88/30 = 2.9 u, so every chip squared off. It survived review because
+        /// the PREFAB is authored at 2.9333 (= 88/30) and looks right until `PaintChips` runs, and
+        /// `PaintChips` only runs when the selection changes: the chips were correct until the
+        /// player touched one. Same form as <c>RoundSpotRowView.PillPpum</c>.</para>
+        /// </summary>
+        private const float ChipPpum = 88f / 30f;
+
         /// <summary>The three chips, in the node's order, and the API's `category` values.</summary>
         private static readonly string[] Categories = { "golf", "range", "food" };
 
@@ -489,7 +502,7 @@ namespace Golfin.Gps.UI
 
                     _chipFills[i].color = on ? Color.white : GpsUiColor.ADark(Color.black, 0.35f);
                     _chipFills[i].type  = Image.Type.Sliced;
-                    _chipFills[i].pixelsPerUnitMultiplier = 30f;
+                    _chipFills[i].pixelsPerUnitMultiplier = ChipPpum;
 
                     // The rim rides a child of the fill and is part of the same state.
                     Transform? rim = _chipFills[i].transform.Find("Rim");

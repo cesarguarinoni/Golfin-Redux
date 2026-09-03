@@ -536,4 +536,59 @@ namespace Golfin.UI.Polish.Tests
             Assert.IsTrue(IsCold(g), "leaving and re-entering the screen did not re-arm the gate");
         }
     }
+    /// <summary>
+    /// A 9-sliced pill's corner radius is `spriteBorder / pixelsPerUnitMultiplier`, so the
+    /// multiplier is a RATIO and writing a radius into it silently squares the pill. That is a
+    /// units bug, not a layout one: the prefab stays correct and the shape only breaks once the
+    /// controller repaints — which for the category chips meant "correct until the player taps
+    /// one", the hardest kind of defect to see in a still.
+    ///
+    /// <para>These pin the RELATIONSHIP rather than the literal, so they fail for the reason the
+    /// bug happened (a radius in the multiplier slot) instead of merely restating the constant.</para>
+    /// </summary>
+    public class PillCornerRadiusTests
+    {
+        const float PillBorderPx = 88f;    // S_PillStadium / S_SU_GoldSegment / S_GV_ChipRing
+        const float ChipHeightU  = 60f;    // the authored chip rect
+
+        static float Const(string typeName, string field)
+        {
+            Type t = Probe.Type(typeName);
+            FieldInfo? f = t.GetField(field, BindingFlags.NonPublic | BindingFlags.Static);
+            Assert.NotNull(f, field + " not found on " + typeName);
+            return (float)f!.GetRawConstantValue();
+        }
+
+        [Test]
+        public void AChipRepaintsAsACapsule_NotASquare()
+        {
+            float ppum = Const("Golfin.Gps.UI.GpsRoundsScreenController", "ChipPpum");
+            float radius = PillBorderPx / ppum;
+            Assert.AreEqual(ChipHeightU / 2f, radius, 0.01f,
+                "a chip's drawn corner must be half its height or it is not a capsule; " +
+                "radius came out " + radius + " u from a multiplier of " + ppum);
+        }
+
+        [Test]
+        public void TheMultiplierIsARatio_NotARadius()
+        {
+            float ppum = Const("Golfin.Gps.UI.GpsRoundsScreenController", "ChipPpum");
+            // 30f — the radius — was the shipped value. Anything that large is a radius that
+            // wandered into the multiplier slot, and draws a ~3 u corner.
+            Assert.Less(ppum, 10f,
+                "pixelsPerUnitMultiplier is border/radius and lands near 1-6; " + ppum +
+                " is a radius in the multiplier slot");
+        }
+
+        [Test]
+        public void TheActionPillUsesTheSameForm()
+        {
+            float pill = Const("Golfin.Gps.UI.RoundSpotRowView", "PillPpum");
+            float gold = Const("Golfin.Gps.UI.RoundSpotRowView", "GoldPpum");
+            Assert.Less(pill, 10f, "PillPpum is a ratio");
+            Assert.Less(gold, 10f, "GoldPpum is a ratio");
+            Assert.AreEqual(20f, PillBorderPx / pill, 0.01f, "the action pill's 20 u radius");
+        }
+    }
+
 }
