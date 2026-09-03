@@ -1,4 +1,19 @@
-READY_FOR_REDTEAM
+ARCHITECT_REVIEW_PASS
+
+# RED-TEAM PASS — 2026-09-03 17:55 JST
+
+`golfin-redteam-reviewer` re-derived every gate (all prior verdicts treated as
+stale). RE-RAN by me: push-motion invariants (12 transitions, fail=0, GpsRounds
+measured both ways 0.254 s), perf (Rounds inside family envelope), UIFidelity
+linter (0 FAIL ×3), `e2e_activity_economy.py` (ALL PASS, invariant 0 violations),
+and the task's EditMode suites via a direct `TestRunnerApi.Execute` bypassing a
+stuck MCP lock (`Golfin.Gps.Tests` 113/0 + `GolfinRedux.Tests.EditMode` 198/0).
+Source-audited the two unverified fixes (`FetchSpots` tail + `FetchCardSubtitle`
+guard release — both fire, both bounded). All four prior-rejection defects GONE,
+verified on my own reads of frames 01/02/03/04/06/08. Three break-attempts
+(visual / numeric / spec-intent) all failed. See `ARCHITECT_REVIEW.md`
+§ RED-TEAM REVIEW. Tooling note: MCP `tests-run` holds a stale active-request
+lock (my doing) until the MCP server restarts; editor left clean.
 
 # STATUS — `gps_checkin`
 

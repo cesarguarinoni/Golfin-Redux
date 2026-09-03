@@ -1,27 +1,91 @@
 {
-  "task": "gps_polish", "pass": "perf",
-  "generated": "2026-09-03 06:44:00Z",
-  "note": "ProfilerRecorder sampled ONLY on the frames a push is running: 'GC Allocated In Frame' (Memory) and 'Main Thread' (Internal). No screenshots are taken on this pass. Editor play mode, profiler enabled, live server behind every screen — so these figures are an upper bound on the whole app during a push, not the tween alone. UiMotionAllocationTests measures the tween loops in isolation.",
-  "pushesSampled": 12,
-  "firstPushAllocBytes": 5592287,
-  "firstPushWorstFrameMs": 31.901,
-  "warmFrames": 167,
-  "warmTotalAllocBytes": 58250421,
-  "warmAllocBytesPerFrame": 348804.92,
-  "worstPushAllocBytes": 6840026, "worstPushAllocPair": "GpsHub->GpsGift",
-  "worstFrameMs": 45.581, "worstFramePair": "GpsHub->GpsVote",
-  "perPush": [
-    {"pair": "GpsHub->GpsProfile", "frames": 15, "allocBytes": 5592287, "worstFrameMs": 31.901},
-    {"pair": "GpsProfile->GpsBadges", "frames": 15, "allocBytes": 6109804, "worstFrameMs": 24.186},
-    {"pair": "GpsBadges->GpsProfile", "frames": 15, "allocBytes": 4913062, "worstFrameMs": 17.093},
-    {"pair": "GpsProfile->GpsAvatar", "frames": 13, "allocBytes": 2197587, "worstFrameMs": 34.168},
-    {"pair": "GpsAvatar->GpsProfile", "frames": 15, "allocBytes": 5145756, "worstFrameMs": 22.672},
-    {"pair": "GpsProfile->GpsHub", "frames": 16, "allocBytes": 5395510, "worstFrameMs": 21.412},
-    {"pair": "GpsHub->GpsGift", "frames": 16, "allocBytes": 6840026, "worstFrameMs": 17.556},
-    {"pair": "GpsGift->GpsHub", "frames": 16, "allocBytes": 5333557, "worstFrameMs": 17.136},
-    {"pair": "GpsHub->GpsVote", "frames": 14, "allocBytes": 6446112, "worstFrameMs": 45.581},
-    {"pair": "GpsVote->GpsHub", "frames": 16, "allocBytes": 5378635, "worstFrameMs": 22.15},
-    {"pair": "GpsHub->GpsRounds", "frames": 15, "allocBytes": 5283075, "worstFrameMs": 27.267},
-    {"pair": "GpsRounds->GpsHub", "frames": 16, "allocBytes": 5207297, "worstFrameMs": 21.233}
-  ]
+ "task": "gps_checkin (probe shared with gps_polish)",
+ "pass": "perf",
+ "generated": "2026-09-03 08:37:44Z",
+ "note": "ProfilerRecorder sampled ONLY on the frames a push is running: 'GC Allocated In Frame' (Memory) and 'Main Thread' (Internal). No screenshots are taken on this pass. Editor play mode, profiler enabled, live server behind every screen — so these figures are an upper bound on the whole app during a push, not the tween alone. UiMotionAllocationTests measures the tween loops in isolation.",
+ "pushesSampled": 12,
+ "firstPushAllocBytes": 5478701,
+ "firstPushWorstFrameMs": 22.553,
+ "warmFrames": 168,
+ "warmTotalAllocBytes": 58661496,
+ "warmAllocBytesPerFrame": 349175.57,
+ "worstPushAllocBytes": 6525616,
+ "worstPushAllocPair": "GpsProfile->GpsAvatar",
+ "worstFrameMs": 25.48,
+ "worstFramePair": "GpsVote->GpsHub",
+ "perPush": [
+  {
+   "pair": "GpsHub->GpsProfile",
+   "frames": 15,
+   "allocBytes": 5478701,
+   "worstFrameMs": 22.553
+  },
+  {
+   "pair": "GpsProfile->GpsBadges",
+   "frames": 15,
+   "allocBytes": 6429852,
+   "worstFrameMs": 17.459
+  },
+  {
+   "pair": "GpsBadges->GpsProfile",
+   "frames": 15,
+   "allocBytes": 4487556,
+   "worstFrameMs": 17.215
+  },
+  {
+   "pair": "GpsProfile->GpsAvatar",
+   "frames": 16,
+   "allocBytes": 6525616,
+   "worstFrameMs": 19.133
+  },
+  {
+   "pair": "GpsAvatar->GpsProfile",
+   "frames": 16,
+   "allocBytes": 5596821,
+   "worstFrameMs": 16.985
+  },
+  {
+   "pair": "GpsProfile->GpsHub",
+   "frames": 15,
+   "allocBytes": 5150517,
+   "worstFrameMs": 21.646
+  },
+  {
+   "pair": "GpsHub->GpsGift",
+   "frames": 15,
+   "allocBytes": 6074481,
+   "worstFrameMs": 18.583
+  },
+  {
+   "pair": "GpsGift->GpsHub",
+   "frames": 16,
+   "allocBytes": 5656779,
+   "worstFrameMs": 17.163
+  },
+  {
+   "pair": "GpsHub->GpsVote",
+   "frames": 15,
+   "allocBytes": 4958648,
+   "worstFrameMs": 17.713
+  },
+  {
+   "pair": "GpsVote->GpsHub",
+   "frames": 15,
+   "allocBytes": 3746784,
+   "worstFrameMs": 25.48
+  },
+  {
+   "pair": "GpsHub->GpsRounds",
+   "frames": 15,
+   "allocBytes": 5943928,
+   "worstFrameMs": 24.907
+  },
+  {
+   "pair": "GpsRounds->GpsHub",
+   "frames": 15,
+   "allocBytes": 4090514,
+   "worstFrameMs": 19.471
+  }
+ ],
+ "note_gps_checkin": "Produced by GpsPolishProbe, which covers the whole GPS surface. The 'transitions' count is 12 because GpsRounds was added to the probe route by gps_checkin; before that it was 10 and the Rounds screen was silently unmeasured (GpsPolishProbe.Obj had no case for it). Cited by gps_checkin acceptance item 12."
 }
