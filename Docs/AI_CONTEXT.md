@@ -4,6 +4,40 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
+## ✅ DONE — GPS nav bar, both halves (2026-09-03) · device-pass finding #1
+
+Two Quick tasks off the same screenshot, `Docs/Specs/Quick/gps_navbar_bottom_anchor.md` and
+`gps_navbar_selected_tab.md`.
+
+**It sits on the bottom now.** The bar was authored against a 0-inset Editor, so on glass it floated
+above the home indicator. `GpsNavBarSafeArea` GROWS the bar by `Screen.safeArea.y` and pushes the
+bottom-anchored child down by the same amount, rather than moving the whole bar up — moving it would
+have opened a gap under it. Deliberately NOT `[ExecuteAlways]`: an edit-mode run would bake the grown
+geometry into the prefab and the next device would grow it again. That is a test, not a comment.
+
+**The selected tab lights.** GPS carried the shell nav bar with no selected state at all.
+`GpsNavBarHighlight` reads `iconNormalColor` / `iconActiveColor` off the live `PersistentUIManager`
+instead of hardcoding a second palette, so GPS cannot drift from Game's colours. Hub→Home,
+Score Upload→Camera, Gift→Gift, Profile/Badges/Avatar→Profile; Vote lights nothing because it is not
+a nav destination, and Rounds waits on `gps_checkin`.
+
+One deviation, recorded rather than hidden: Game's `homeIcon` is a glyph-only Image inside a separate
+ring frame, so only the glyph goes cyan. Every GPS slot is a single Image whose sprite already
+contains ring + glyph and has no children (`kids=0` on all five), so the tint takes the whole badge.
+Same colour, larger area. Splitting the glyph out needs new art.
+
+**Gated on rendered colour, not on the mapping table.** A component whose `OnEnable` never ran, and a
+tint swallowed by the Button's own `ColorTint` transition, both look identical to success in a unit
+test. The `navtint` probe mode navigates the six reachable screens by real `onClick` and reads all
+five slots' `Image.color` off the LIVE bar: 6/6 exactly one `#00FFFF` and four `#FFFFFF`, zero fails.
+`Golfin.UI.Polish.Tests` 76 passed / 0 failed. Stills in `Docs/Specs/Completed/gps_polish/screenshots/`
+(`navtint_bar_sheet.png` is the crop sheet).
+
+**Still needs the phone:** the bottom inset itself. `Screen.safeArea.y` is 0 in the Editor, so the
+growth is unobservable there — device-pass rows 2.0 and 2.0b were added for it. The R6 keyboard
+offset from `gps_polish` is in the same boat.
+
+---
 ## ✅ DONE — `gps_profile_prompt_on_entry` **approved by Cesar** (2026-09-03) · a fresh install lands on the game and stays there
 
 Device-pass finding #2: the first thing a new player saw was a golf-profile form for a surface

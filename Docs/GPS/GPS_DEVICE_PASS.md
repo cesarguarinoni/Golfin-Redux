@@ -35,6 +35,8 @@
 
 | # | Check | Expect |
 |---|---|---|
+| 2.0 | On the hub, look at the **bottom nav bar** (gps_navbar_bottom_anchor) | it sits ON the bottom of the screen, not floating above it. The bar GREW downward by the home-indicator inset — the icon row did NOT move up, and the camera badge still overhangs the top edge by the same amount as in the Editor. This row is the whole reason the fix needs a phone: `Screen.safeArea.y` is 0 in the Editor, so the growth is unobservable there |
+| 2.0b | Now walk Hub → Score Upload → Gift → Profile → Badges (gps_navbar_selected_tab) | on each screen exactly ONE slot is cyan and the other four are white — Home, Camera, Gift, Profile, Profile. Vote lights **nothing** (it is not a nav destination) and Rounds never lights until `gps_checkin` gives it a screen. Both the glyph AND its ring take the tint — GPS slots are a single sprite, unlike Game's glyph-in-a-ring; flag it if the teal ring reads wrong on glass |
 | 2.1 | Home → pill → hub | fade-to-black (boundary), then content rises 16 px |
 | 2.2 | Hub → Profile → Badges → back → back | layered push both ways, ~0.25 s, no seam, no flash; nav bar reads static |
 | 2.3 | Nav-bar sweep: Score Upload → Gift → Vote → Profile → hub | push direction follows slot order; Score Upload arrives by fade (by design) |
