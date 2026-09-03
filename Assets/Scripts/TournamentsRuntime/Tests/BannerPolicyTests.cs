@@ -77,6 +77,10 @@ namespace Golfin.Tournaments.WireupTests
             (string)Policy.GetField("InternalScheme", BindingFlags.Public | BindingFlags.Static)!
                 .GetRawConstantValue()!;
 
+        internal static string StandaloneScheme =>
+            (string)Policy.GetField("StandaloneScheme", BindingFlags.Public | BindingFlags.Static)!
+                .GetRawConstantValue()!;
+
         /// <summary>The production ladder, called exactly as <c>TryGet</c> calls it.</summary>
         internal static string? Resolve(
             string? en, string? ja, bool japanese, DateTime? expiresAtUtc, DateTime nowUtc)
@@ -278,6 +282,40 @@ namespace Golfin.Tournaments.WireupTests
         {
             Assert.IsTrue(BannerProd.IsLinkAllowed("GOLFIN://GPS"));
             Assert.AreEqual((true, "GpsHub"), BannerProd.TryGetInternalRoute("GOLFIN://GPS"));
+        }
+
+        // ── gps_standalone_shell §D6 — the PLAYLIFE shell's own scheme ────────
+
+        /// <summary>
+        /// The shell is a SEPARATE app installed BESIDE the game, and two apps claiming one
+        /// custom scheme is undefined on iOS — so it claims <c>golfingps://</c> and the game keeps
+        /// <c>golfin://</c>. Both resolve HERE, in both variants, because a banner row is written
+        /// once in the dashboard and served to every app: the scheme decides which app opens, the
+        /// route names the same surface either way.
+        /// </summary>
+        [Test]
+        public void Accepts_the_standalone_scheme_for_the_same_hub_route()
+        {
+            Assert.AreEqual("golfingps", BannerProd.StandaloneScheme);
+            Assert.AreNotEqual(BannerProd.InternalScheme, BannerProd.StandaloneScheme);
+
+            Assert.IsTrue(BannerProd.IsLinkAllowed("golfingps://gps"));
+            Assert.AreEqual((true, "GpsHub"), BannerProd.TryGetInternalRoute("golfingps://gps"));
+            Assert.AreEqual((true, "GpsHub"), BannerProd.TryGetInternalRoute("GOLFINGPS://GPS"));
+        }
+
+        /// <summary>
+        /// The second scheme widens WHO may open the app, not WHAT a link may say: every refusal
+        /// the game's scheme gets, the shell's gets too.
+        /// </summary>
+        [Test]
+        public void The_standalone_scheme_is_held_to_the_same_enumerated_routes()
+        {
+            Assert.IsFalse(BannerProd.TryGetInternalRoute("golfingps://shop").Matched);
+            Assert.IsFalse(BannerProd.TryGetInternalRoute("golfingps://gps/checkin").Matched);
+            Assert.IsFalse(BannerProd.TryGetInternalRoute("golfingps://gps?tab=1").Matched);
+            Assert.IsFalse(BannerProd.TryGetInternalRoute("golfingps://a@gps").Matched);
+            Assert.IsFalse(BannerProd.TryGetInternalRoute("golfingpsx://gps").Matched);
         }
 
         [Test]

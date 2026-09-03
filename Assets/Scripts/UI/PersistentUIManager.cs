@@ -155,6 +155,10 @@ namespace Golfin.UI
             EnsureTicketPill();
             EnsureRewardPointsAlignment();
             EnsureTicketCountAlignment();
+
+            // gps_standalone_shell §D5 — EnsureTicketPill just CREATED an element of the cluster
+            // the shell hides, so trim once here as well as on every ShowBars. No-op in the game.
+            ApplyStandaloneChrome();
         }
 
         /// <summary>Padding kept between a counter's right edge and its pill's inner edge.</summary>
@@ -277,6 +281,7 @@ namespace Golfin.UI
             SetTopBarChromeVisible(true);
             ShowBottomNav(true);
             ApplyDemoTopBarTrim();
+            ApplyStandaloneChrome();
         }
 
         /// <summary>
@@ -297,6 +302,35 @@ namespace Golfin.UI
                 var pill = topBarPanel.transform.Find("RewardPointsBackground");
                 if (pill != null) pill.gameObject.SetActive(false);
             }
+        }
+
+        /// <summary>
+        /// gps_standalone_shell §D5 — the chrome the PLAYLIFE shell does not have.
+        ///
+        /// <para>KEPT: the RP pill (points are a PLAYLIFE currency — check-ins and score uploads
+        /// earn them), the username nameplate, and the Settings gear. HIDDEN: the whole centre
+        /// ticket cluster (TicketIcon / TicketCountText / ShopPlusButton / the runtime
+        /// TicketCountBackground pill), because gacha tickets and the shop they lead to are golf
+        /// content that does not exist in this product. The bottom nav is hidden by
+        /// <see cref="ShowBottomNav"/> itself rather than here — see the note there.</para>
+        ///
+        /// <para>Called AFTER <see cref="SetTopBarChromeVisible"/>(true), which re-shows every
+        /// top-bar child, so like <see cref="ApplyDemoTopBarTrim"/> this must re-hide. Idempotent.
+        /// Hides every child of <c>topBarContent</c> rather than the three named references,
+        /// because the pill is created at runtime by <see cref="EnsureTicketPill"/> and a fourth
+        /// element added to the cluster later would otherwise reappear alone. No-op in the game.</para>
+        /// </summary>
+        private void ApplyStandaloneChrome()
+        {
+            if (!GolfinRedux.UI.StandaloneGate.Enabled) return;
+
+            if (topBarContent != null)
+            {
+                foreach (Transform child in topBarContent.transform)
+                    child.gameObject.SetActive(false);
+            }
+
+            ShowBottomNav(false);
         }
 
         /// <summary>
@@ -362,6 +396,7 @@ namespace Golfin.UI
             SetTopBarChromeVisible(true);
             ShowBottomNav(false);
             ApplyDemoTopBarTrim();
+            ApplyStandaloneChrome();
         }
 
         private void InitializeButtons()
@@ -732,6 +767,14 @@ namespace Golfin.UI
 
         public void ShowBottomNav(bool show)
         {
+            // gps_standalone_shell §D5 — the game's bottom nav does not exist in the PLAYLIFE
+            // shell: four of its five slots (Gacha, Play, Inventory, Characters) open screens
+            // StandaloneGate refuses, and the GPS screens draw their OWN nav bar inside their
+            // prefabs. Forced off HERE rather than at each call site because "show the bars" is
+            // said from a dozen places (ShowBars, the gameplay loader, screen controllers), and
+            // one that forgot would put a dead golf nav bar under a PLAYLIFE screen.
+            if (show && GolfinRedux.UI.StandaloneGate.Enabled) show = false;
+
             if (bottomNavPanel != null)
                 bottomNavPanel.SetActive(show);
         }

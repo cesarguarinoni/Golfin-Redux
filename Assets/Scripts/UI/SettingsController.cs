@@ -57,6 +57,44 @@ namespace Golfin.UI
             Instance = this;
             InitializeAccordionItems();
             InitializeButtons();
+            ApplyStandaloneLayout();
+        }
+
+        /// <summary>
+        /// gps_standalone_shell §D5 — the shell's Settings layout, one flag rather than a second
+        /// prefab.
+        ///
+        /// <para>KEPT: User Profile (display name), Language, About, the legal links (Terms,
+        /// Privacy, FAQ, Contact) and Log Out — the whole account/legal half, which is exactly
+        /// what a PLAYLIFE-only product still owes its players.</para>
+        ///
+        /// <para>HIDDEN: Graphics (a quality tier that only ever describes the 3D golf renderer;
+        /// the shell ships no hole scenes to render) and Sound Settings (SFX/music mixers for
+        /// gameplay audio the shell never plays). Hiding the ROW, not just its submenu, so the
+        /// accordion has no dead entry — and de-registering it from the accordion group, because
+        /// a hidden item left registered would still be the "currently expanded" one and swallow
+        /// the one-open-at-a-time rule.</para>
+        ///
+        /// <para>Runs in Awake, after the two initializers, so it also covers the safety-net sweep
+        /// in <see cref="InitializeAccordionItems"/> that registers unassigned rows. No-op in the
+        /// game and in the demo.</para>
+        /// </summary>
+        private void ApplyStandaloneLayout()
+        {
+            if (!GolfinRedux.UI.StandaloneGate.Enabled) return;
+
+            HideSettingsRow(graphicsItem);
+            HideSettingsRow(soundSettingsItem);
+
+            Debug.Log("[SettingsController] standalone shell layout — Graphics and Sound rows hidden.");
+        }
+
+        /// <summary>Take one row out of the accordion group and off the screen. Null-safe.</summary>
+        private void HideSettingsRow(SettingsMenuItem item)
+        {
+            if (item == null) return;
+            if (_accordionItems.Remove(item)) item.OnExpanded -= OnMenuItemExpanded;
+            item.gameObject.SetActive(false);
         }
 
         private void Start()

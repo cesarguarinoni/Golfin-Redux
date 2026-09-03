@@ -64,6 +64,9 @@ namespace GolfinRedux.TelemetryRuntime
                 // the same baked Resources/Data/build_stamp.txt the About screen shows, so the
                 // telemetry rows and the on-device stamp can never disagree about the binary.
                 svc.BuildNumber = int.TryParse(AppVersion.BuildNumber, out int build) ? build : (int?)null;
+                // gps_standalone_shell §D6 — game / game-gps / ios-playlife, from the build
+                // defines. Set before the session_start below so the very first row carries it.
+                svc.AppVariant = GolfinRedux.AppVariantInfo.Current;
                 svc.CurrentScreenProvider = () =>
                     ScreenManager.Instance != null ? ScreenManager.Instance.CurrentScreen.ToString() : null;
 

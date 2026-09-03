@@ -4,6 +4,43 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
+## 2026-09-03 — gps_standalone_shell BUILT — PLAYLIFE ships from THIS project
+
+A **third TestFlight variant** beside "punch it" / "punch it GPS": **"punch it standalone"**
+(`./Tools/testflight.sh testflight_build_standalone`). One codebase, no fork — the PLAYLIFE app is
+this project with a build profile, a gate, a boot path, and the chrome that has to disappear.
+Awaiting Cesar's approval in `Docs/Specs/Active/gps_standalone_shell/`.
+
+- **`iOS-Standalone` profile** = `iOS-Full-GPS` plus `GOLFIN_STANDALONE` and a **ShellScene-only
+  scene list**. The diff between the two `.asset` files is literally those two things. No code is
+  stripped and no asmdef is split — the 18 hole scenes simply are not in the build (the global
+  list still has 21 entries and is untouched), and IL2CPP does the rest.
+- **`StandaloneGate`** is the fourth gate in `ScreenManager.Navigate` — an ALLOWLIST (pre-auth
+  screens + `GpsGate.GpsScreens`, read from GpsGate rather than copied), so a golf screen added
+  later cannot quietly appear in a golf-free product. **`Home` is REWRITTEN to `GpsHub`, not
+  refused**: it is the "sane default" of a dozen call sites (Welcome SKIP, the hub BackPill's
+  fallback, every empty-history `GoBack`) and refusing it would strand the player.
+- **The boot skips `StarterGate` entirely** (`StandaloneShellBoot`, shared by all FOUR post-auth
+  routers — the Splash was only one; the other three would have dead-ended a fresh account on
+  `StartingCharacterSelection`, which the gate refuses). First run still goes through the Golf
+  Profile capture via the same `InterceptHubEntry` seam.
+- **Identity is applied at build time and restored after** (`Assets/Editor/StandaloneBuildPreprocessor.cs`):
+  `com.nextinnovation.golfingps` / "GOLFIN GPS" / 1.0.0 / placeholder icon / `golfingps://`.
+  `ProjectSettings.asset` is byte-identical before and after — the game must never be left pointing
+  at the PLAYLIFE record. **The upload guard is now per App Store record**, because ASC's
+  build-number uniqueness rule is.
+- **Two things caught in passing:** `Assets/Editor/Build/` is silently gitignored by the blanket
+  `[Bb]uild/` rule (a build hook that works locally and is absent from the repo), and telemetry's
+  `app_variant` has to ride the event PAYLOAD, not the batch envelope — the FastAPI ingest binds
+  only its declared fields, so an envelope key would never reach a row.
+
+Verified in the Editor with the profile ACTIVE (Splash → hub, no Home, no nav bar, no ticket
+cluster, Settings in shell layout, golf screens refused, `GoBack` on the root a no-op) and again
+with it INACTIVE (Home, nav bar, tickets, `StarterGate` all back). EditMode 2394 / 2391 pass / 0
+fail. **The archive is the one thing not done** — that lane ends in an upload, which is Cesar's
+phrase to say.
+
+---
 ## 2026-09-03 — gps_checkin DONE (approved) — the ROUNDS tab is real
 
 Moved to `Docs/Specs/Completed/gps_checkin/`. The tab works end to end against

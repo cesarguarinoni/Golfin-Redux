@@ -78,6 +78,22 @@ namespace Golfin.Telemetry
         public string AppVersion = Application.version;
         public int?   BuildNumber;                       // set by the hooks layer (AppVersion.BuildNumber)
         public string Platform   = Application.platform.ToString();
+
+        /// <summary>
+        /// gps_standalone_shell §D6 — which shipped variant produced this session
+        /// (<c>game</c> | <c>game-gps</c> | <c>ios-playlife</c>). Set by the hooks layer, which
+        /// is the only assembly that can read the build defines.
+        ///
+        /// <para>Stamped into every event's PAYLOAD rather than added to the batch envelope: the
+        /// envelope's fields are columns on <c>telemetry_events</c> and the ingest model only
+        /// binds the ones it declares, so an envelope key the server does not know is dropped on
+        /// the floor and never reaches a row. <c>payload</c> is jsonb — it stores whatever it is
+        /// given and the admin explorer already renders it — so this is observable today,
+        /// without a migration and without a server deploy.</para>
+        ///
+        /// <para>Null leaves every payload untouched, which is what an EditMode test sees.</para>
+        /// </summary>
+        public string AppVariant;
         public string DeviceModel = SystemInfo.deviceModel;
         public string Os          = SystemInfo.operatingSystem;
 
@@ -115,12 +131,19 @@ namespace Golfin.Telemetry
             {
                 if (string.IsNullOrEmpty(name)) return;
 
+                payload = payload ?? new Dictionary<string, object>();
+
+                // §D6 — one key, every event. Never overwrites a payload that already carries it,
+                // so a caller that wants to say something more specific still can.
+                if (!string.IsNullOrEmpty(AppVariant) && !payload.ContainsKey("app_variant"))
+                    payload["app_variant"] = AppVariant;
+
                 _queue.Add(new TelemetryEvent
                 {
                     EventId = Guid.NewGuid().ToString(),
                     Name    = name,
                     Ts      = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"),
-                    Payload = payload ?? new Dictionary<string, object>(),
+                    Payload = payload,
                 });
 
                 // Drop-oldest: the tail of a session is worth more than its head.

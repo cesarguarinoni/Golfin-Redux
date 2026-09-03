@@ -3,39 +3,58 @@
 For the Architect. The mechanics of the lane live in `Docs/TESTFLIGHT_RUNBOOK.md` § One command;
 this is the *operating agreement* around it — what runs unattended, what stops and asks, and why.
 
-## Two variants, two phrases
+## Three variants, three phrases
 
-| Phrase | Command | Profile | GPS surface |
-|---|---|---|---|
-| **"punch it"** | `./Tools/testflight.sh` | `iOS-Full` (no define) | **Off** — the five GPS screens refuse to open (`GpsGate`), and the Home banner that routes to `golfin://gps` is hidden with its slot collapsed |
-| **"punch it GPS"** | `./Tools/testflight.sh testflight_build_gps` | `iOS-Full-GPS` (`GOLFIN_GPS`) | **On** — banner shows, tap routes to the hub, all GPS screens reachable |
+| Phrase | Command | Profile | What ships | Tell on device |
+|---|---|---|---|---|
+| **"punch it"** | `./Tools/testflight.sh` | `iOS-Full` (no define) | The game. GPS surface **off** — the GPS screens refuse to open (`GpsGate`) and the Home banner that routes to `golfin://gps` is hidden with its slot collapsed | Icon **Golfin**, no Home GPS banner |
+| **"punch it GPS"** | `./Tools/testflight.sh testflight_build_gps` | `iOS-Full-GPS` (`GOLFIN_GPS`) | The game + the GPS surface — banner shows, tap routes to the hub, all GPS screens reachable | Icon **Golfin**, Home GPS banner present |
+| **"punch it standalone"** | `./Tools/testflight.sh testflight_build_standalone` | `iOS-Standalone` (`GOLFIN_GPS;GOLFIN_STANDALONE`, ShellScene-only scene list) | PLAYLIFE only — boots past Splash/Login straight to the GPS hub. No Home, no golf, no bottom nav, no ticket cluster (`StandaloneGate`) | Icon **GPS/PLAYLIFE**, app name **GOLFIN GPS** |
 
-Both lanes share one body (`testflight_build_shared`); the only difference is the argument to the
-Unity step. The server banner row stays LIVE either way — the non-GPS build hides it client-side,
-it is not deactivated for everyone.
+All three lanes share one body (`testflight_build_shared`), which now takes a `variant:` symbol
+(`:standard | :gps | :standalone`); the difference between them is one row of the `variant_table`
+in the Fastfile. The server banner row stays LIVE for every variant — the non-GPS build hides it
+client-side, it is not deactivated for everyone.
 
-### Shipping BOTH variants of the same commit
+### Two App Store records, not three
 
-The build number is the commit count and App Store Connect requires it unique, so the two runs are
-**sequential with a commit between them**:
+| Variant | Bundle id | ASC app | Apple ID | Upload guard file |
+|---|---|---|---|---|
+| punch it / punch it GPS | `com.nextinnovation.golfingame` | GOLFIN | — | `Docs/Versioning/last_uploaded_build.txt` |
+| punch it standalone | `com.nextinnovation.golfingps` | GOLFIN GPS | 6737145432 | `Docs/Versioning/last_uploaded_build.golfingps.txt` |
 
-    punch it  →  mark-uploaded.sh dirties the guard file  →  commit it  →  punch it GPS
+Same team (`TCUV4A9VTJ`), so no new signing identity. The standalone's identity (bundle id,
+product name `GOLFIN GPS`, version `1.0.0`, icon, the `golfingps://` URL scheme) is applied at
+build time by `StandaloneBuildPreprocessor` and **restored afterwards** — `ProjectSettings.asset`
+is byte-identical before and after, exactly like the build-number stamp.
 
-The upload guard enforces that order anyway (a second build at the same commit is refused); the
-sequence above just makes it deliberate. Record which build number is which variant — **on device
-the tell is the Home banner**: present = GPS build, absent = standard.
+### Shipping several variants of the same commit
+
+App Store Connect requires the build number unique **per app**, and the build number is the commit
+count. So:
+
+- **punch it + punch it GPS** are the same record → **sequential with a commit between them**:
+
+      punch it  →  mark-uploaded.sh dirties the guard file  →  commit it  →  punch it GPS
+
+- **punch it standalone** is a different record with its own guard file → it never collides with
+  either of the other two, and can run at the same commit as a game build.
+
+The upload guard enforces this anyway (a second build at the same commit **on the same record** is
+refused); the sequence above just makes it deliberate.
 
 ## The routine
 
 Cesar says **"punch it"**. Claude Code then, in order:
 
 1. **Preflight** — `git status`, `git rev-list --count HEAD` (= the build number), the upload guard
-   (`Docs/Versioning/last_uploaded_build.txt`), whether Unity holds `Temp/UnityLockfile`, and the
-   content gate's **verdict line** (`export_content.py --check`).
+   **for the record being shipped** (`last_uploaded_build.txt`, or
+   `last_uploaded_build.golfingps.txt` for the standalone), whether Unity holds
+   `Temp/UnityLockfile`, and the content gate's **verdict line** (`export_content.py --check`).
 2. **Clear the two preconditions** the lane refuses to run without — a clean tree and a closed
    Editor — under the standing rules below.
-3. **Run `./Tools/testflight.sh`** (never bare `fastlane`: the wrapper exports the locale before
-   Ruby starts, without which gym dies ~3 s into the archive on `➜`).
+3. **Run `./Tools/testflight.sh [lane]`** (never bare `fastlane`: the wrapper exports the locale
+   before Ruby starts, without which gym dies ~3 s into the archive on `➜`).
 4. **Confirm at Apple**, not in fastlane's log: poll the App Store Connect API until the build
    reports `state=VALID`.
 5. **Report** — per-step timings, the build number, what was swept into the commit.
@@ -66,7 +85,8 @@ Apple to surface the build.
 - **Build number = commit count.** A dirty tree means the number doesn't describe the binary — that
   is why the lane refuses one, not fussiness.
 - **The guard file is dirty after every run, by design.** `mark-uploaded.sh` writes it and never
-  commits.
+  commits. It takes the record as its second argument (`game` | `standalone`) — the lane passes it,
+  and so does the Xcode archive post-action, resolved at build time.
 - **Read the `--check` *verdict* line, not the summary table.** The table prints "unchanged" per
   catalog while the verdict above it says FAILED. Claude reported a clean check once from the tail
   and was wrong.

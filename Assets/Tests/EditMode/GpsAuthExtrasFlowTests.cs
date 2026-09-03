@@ -212,6 +212,50 @@ namespace GolfinRedux.Tests.EditMode
             finally { prop.SetValue(null, original); }
         }
 
+        // ── gps_standalone_shell §7 — the shell's boot goes through this same seam ──────
+
+        /// <summary>
+        /// The shell boots to the hub, so its FIRST navigation of a fresh install is exactly the
+        /// one the intercept exists for: the capture is offered on the boot itself, not after the
+        /// player has found their way somewhere.
+        ///
+        /// <para>Asserted on the two-arg core rather than through StandaloneShellBoot, which reads
+        /// the live session and would need a MonoBehaviour singleton in EditMode. What is being
+        /// pinned here is the CONTRACT the shell's boot depends on: a hub entry with the offer
+        /// live becomes the capture, and once answered, the hub.</para>
+        /// </summary>
+        [Test]
+        public void ShellBoot_FirstRun_LandsOnTheCapture_ThenOnTheHubOnceAnswered()
+        {
+            Assert.AreEqual("GpsGolfProfile", Intercept("GpsHub", offer: true),
+                "The shell's boot asks for GpsHub; on a first run that must become the capture.");
+            Assert.AreEqual("GpsHub", Intercept("GpsHub", offer: false),
+                "Once answered, the shell's boot must land on the hub itself.");
+        }
+
+        /// <summary>
+        /// The shell reaches this seam through <c>StandaloneShellBoot</c>, which the four post-auth
+        /// routers call BEFORE StarterGate. Pinned by reflection because the class lives in
+        /// Assembly-CSharp: what matters is that the single entry point still exists with the
+        /// signature those call sites use — deleting it would silently restore the starter round
+        /// trip and the dead-end into a screen the shell refuses.
+        /// </summary>
+        [Test]
+        public void ShellBoot_HasTheSingleSharedEntryPoint()
+        {
+            var boot = FindType("GolfinRedux.UI.StandaloneShellBoot");
+            Assert.IsNotNull(boot, "GolfinRedux.UI.StandaloneShellBoot not found.");
+
+            var m = boot.GetMethod("TryGetPostAuthScreen", BindingFlags.Static | BindingFlags.Public);
+            Assert.IsNotNull(m, "StandaloneShellBoot.TryGetPostAuthScreen(out ScreenId) not found.");
+            Assert.AreEqual(typeof(bool), m.ReturnType);
+
+            var ps = m.GetParameters();
+            Assert.AreEqual(1, ps.Length);
+            Assert.IsTrue(ps[0].IsOut, "The screen must be an out parameter — callers branch on the bool.");
+            Assert.AreEqual(_screenId, ps[0].ParameterType.GetElementType());
+        }
+
         /// <summary>
         /// The removal, asserted rather than assumed. HomeScreenController used to hand off to the
         /// capture from a deferred coroutine on its OnEnable; the device-pass finding was that a

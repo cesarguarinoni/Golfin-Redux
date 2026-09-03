@@ -52,14 +52,39 @@ namespace Golfin.Gps
         public const string Editor = "editor";
         public const string Unknown = "unknown";
 
+        /// <summary>
+        /// gps_standalone_shell §D6 — the PLAYLIFE shell's label, so the backend and the admin
+        /// dashboard can tell the two iOS apps apart on rows they both write (`activities`,
+        /// `scores`). The server only ever branches on <see cref="IosSimulator"/>
+        /// (<c>score.py:189</c> treats it as mock) and stores the rest verbatim, so a new value
+        /// costs nothing there.
+        /// <para>Kept in step with <c>GolfinRedux.AppVariantInfo.PlayLife</c>, which is the same
+        /// string for telemetry. Two constants rather than one shared file because
+        /// <c>Golfin.Gps</c> is an asmdef and cannot see Assembly-CSharp — the define is what
+        /// they actually share.</para>
+        /// </summary>
+        public const string IosPlayLife = "ios-playlife";
+
         public string Label()
         {
             if (Application.platform == RuntimePlatform.IPhonePlayer)
-                return IsSimulator(EnvOrNull("SIMULATOR_UDID"),
-                                   EnvOrNull("SIMULATOR_MODEL_IDENTIFIER"),
-                                   SystemInfo.graphicsDeviceName,
-                                   SystemInfo.deviceModel)
-                       ? IosSimulator : Ios;
+            {
+                // The simulator test comes FIRST in every variant. A shell build running on the
+                // simulator must still report "ios-simulator" or it would hand an attacker a
+                // clean label just by choosing the other app — the trust penalty is the whole
+                // reason this probe exists.
+                if (IsSimulator(EnvOrNull("SIMULATOR_UDID"),
+                                EnvOrNull("SIMULATOR_MODEL_IDENTIFIER"),
+                                SystemInfo.graphicsDeviceName,
+                                SystemInfo.deviceModel))
+                    return IosSimulator;
+
+#if GOLFIN_STANDALONE
+                return IosPlayLife;
+#else
+                return Ios;
+#endif
+            }
 
             if (Application.platform == RuntimePlatform.Android) return Android;
             if (Application.isEditor) return Editor;

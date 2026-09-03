@@ -112,6 +112,15 @@ namespace Golfin.UI.Account
         /// </summary>
         private void RouteAfterAuth()
         {
+            // gps_standalone_shell §D3 — see LoginScreenController.RouteAfterAuth.
+            if (GolfinRedux.UI.StandaloneShellBoot.TryGetPostAuthScreen(out GolfinRedux.UI.ScreenId shellTarget))
+            {
+                SetBusy(false);
+                _starterRetryPending = false;
+                if (_screenManager != null) _screenManager.ShowScreen(shellTarget);
+                return;
+            }
+
             SetBusy(true);
             Golfin.UI.Account.StarterGate.Resolve(route =>
             {

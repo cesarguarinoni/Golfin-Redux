@@ -119,15 +119,38 @@
 |---|---|---|
 | 6.1 | `./Tools/testflight.sh testflight_build` (no `_gps`) | pill absent; the home_promo banner shows; tapping it does nothing (GpsGate refusal — backlog row: retarget the promo for no-GPS audiences) |
 
-## 7 · Known, not defects (don't report these)
+## 7 · PLAYLIFE standalone shell ("punch it standalone") — a separate app, installed beside the game
+
+Built from the same commit by `./Tools/testflight.sh testflight_build_standalone`. It arrives in
+TestFlight under the **GOLFIN GPS** app record (Apple ID 6737145432), not under GOLFIN — a
+different tester invite, a different app on the springboard. Install it **without removing the
+game**: two apps side by side is the state that has to work.
+
+| # | Check | Expect |
+|---|---|---|
+| 7.1 | Install beside the game; look at the springboard | TWO icons: **Golfin** (the game) and the **GPS/PLAYLIFE** placeholder, name "GOLFIN GPS". If you cannot tell them apart, that is a defect — the icon is the only tell |
+| 7.2 | Launch, tap the START/LOGIN gate, sign in with an account that has already answered the Golf Profile | lands straight on the **GPS hub**. No Home screen at any point, no starter-character picker, no wait on an inventory fetch |
+| 7.3 | Fresh account (or Settings → log out → sign up) | Login → Create Username → **Golf Profile** → **Welcome** → hub. SKIP on Welcome lands on the **hub**, never on a blank screen |
+| 7.4 | Look at the top and bottom of the hub | Top bar: RP pill, username, Settings gear — **present**. Ticket count + `+` button — **absent**. The game's five-slot bottom nav — **absent** (the hub draws its own). The hub's own BackPill — **absent** |
+| 7.5 | Walk the whole surface: hub → Rounds → check in → Score Upload → Gift → Vote → Profile → Avatar → Badges | every screen identical to the GPS build; nothing golf-shaped is reachable from anywhere |
+| 7.6 | Settings gear | Account (display name, log out), Language, About and the legal links only. **No Graphics tier, no Sound settings** |
+| 7.7 | Android/iOS back gesture from the hub | nothing happens (the hub is the root) — never a quit, never a blank screen |
+| 7.8 | Safari → type `golfingps://gps` → Open | opens the shell on the hub. With the shell **not** installed, Safari says it cannot open the address — it must NOT open the game |
+| 7.9 | Check in / upload a score from the shell, then open the admin dashboard | the row's `client_platform` reads **`ios-playlife`** (the game's rows still read `ios`) |
+| 7.10 | Play the GAME app once, same phone, same account | unchanged: Home, bottom nav, tickets, golf. The shell's existence must be invisible to it |
+
+## 8 · Known, not defects (don't report these)
 
 - Rubik Medium renders ~5 % narrow (variable face) — backlog, one font import later.
+- The standalone shell's icon and launch screen are a generated PLACEHOLDER
+  (`Docs/Scripts/make_standalone_icon.py`), not Ken's branding — backlog row.
 - `PUT /user/update` can't clear a field to NULL — matters only for the future Settings edit screen.
 - Only YES can be cast (single VOTE button in the design) — backlog.
 - Top Supporters shows "— followers" — no follower counts in the sources yet.
 
-## 8 · After the pass
+## 9 · After the pass
 
 - Send the row-by-row result to the Architect (chat). Defects become quick specs, ordered by you.
 - `delete from venues where source = 'test_fixture';` — after deleting any test rounds that reference 1992/1993 (reminder set for 9 Sep 10:00 JST).
-- Then: `gps_standalone_shell` (Unity thin-shell) is the next spec.
+- `gps_standalone_shell` (Unity thin-shell) is BUILT — its rows are §7 above. Real PLAYLIFE
+  branding (icon/launch/wordmark from Ken) is still a backlog row; §7.1 is checking a placeholder.

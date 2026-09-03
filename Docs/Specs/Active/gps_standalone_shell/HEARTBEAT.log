@@ -1,0 +1,14 @@
+=== iter-1 kickoff baseline 2026-09-03 21:12:56 +0900 ===
+HEAD 022e62ebeee1ce8850f948b6381a56803012da96 (022e62ebe) count=2632
+DIRTY (git status --porcelain --untracked-files=all):
+ M Docs/Reports/content_art.txt
+ M Docs/TellCode.md
+ M Docs/Versioning/last_uploaded_build.txt
+?? Docs/Specs/Active/gps_standalone_shell/HEARTBEAT.log
+=== end baseline ===
+
+21:38 — gate/boot/chrome/identity/fastlane written; compile clean (0 errors);
+       full EditMode sweep 2394/2391 pass 0 fail 3 skipped (documented Stage-C1 skips).
+       NOTE: GpsRoundsScreenController.cs + GpsPolishMotionTests.cs are dirty and are NOT mine —
+       a chip pixelsPerUnitMultiplier fix from another session; left untouched, reported.
+       Caught: Assets/Editor/Build/ is gitignored ([Bb]uild/) — preprocessor moved to Assets/Editor/.

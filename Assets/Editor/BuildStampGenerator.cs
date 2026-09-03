@@ -55,6 +55,14 @@ namespace GolfinRedux.BuildEditor
         // Root-relative, tracked. NOT under any *Build/* dir — .gitignore's "[Bb]uild/"
         // rule ignores every Build/ folder, which would silently untrack this guard.
         const string GuardFileRel = "Docs/Versioning/last_uploaded_build.txt";
+        /// <summary>
+        /// gps_standalone_shell §D8 — the guard is PER APP RECORD, because App Store Connect's
+        /// build-number uniqueness rule is. The game and the PLAYLIFE shell are two records
+        /// (com.nextinnovation.golfingame / com.nextinnovation.golfingps), so a standalone upload
+        /// at commit N must not refuse the game's upload at commit N: one shared file would make
+        /// shipping both variants of one commit impossible instead of merely sequential.
+        /// </summary>
+        const string StandaloneGuardFileRel = "Docs/Versioning/last_uploaded_build.golfingps.txt";
         const string Tag = "[BuildStamp]";
 
         public int callbackOrder => 0;
@@ -87,7 +95,7 @@ namespace GolfinRedux.BuildEditor
                         $"{Tag} REFUSING TO BUILD: computed build number {buildNumber} <= last-uploaded {lastUploaded}. " +
                         $"Build numbers must strictly increase or App Store Connect rejects the upload. " +
                         $"Commit at least one change (git rev-list --count HEAD must advance) before building again. " +
-                        $"(last-uploaded is recorded by GOLFIN/Build/Mark Current Commit As Uploaded in {GuardFileRel}.)");
+                        $"(last-uploaded is recorded by Tools/mark-uploaded.sh in {GuardFileForThisBuild()}.)");
                 }
             }
 
@@ -259,9 +267,20 @@ namespace GolfinRedux.BuildEditor
             AssetDatabase.ImportAsset(StampAssetPath, ImportAssetOptions.ForceUpdate);
         }
 
+        /// <summary>
+        /// Which guard file this build is judged against — the standalone's own when the build
+        /// being produced is the PLAYLIFE shell (see <see cref="StandaloneGuardFileRel"/>).
+        /// Detection is delegated to the identity preprocessor, which already has to answer the
+        /// same question and answers it from the ACTIVE PROFILE's defines rather than an #if
+        /// (profile defines never reach editor assemblies).
+        /// </summary>
+        static string GuardFileForThisBuild()
+            => Golfin.EditorTools.StandaloneBuildPreprocessor.IsStandaloneIdentityBuild()
+               ? StandaloneGuardFileRel : GuardFileRel;
+
         static int ReadLastUploaded()
         {
-            var full = Path.Combine(ProjectRoot, GuardFileRel);
+            var full = Path.Combine(ProjectRoot, GuardFileForThisBuild());
             if (!File.Exists(full)) return 0;
             var txt = File.ReadAllText(full).Trim();
             return int.TryParse(txt, NumberStyles.Integer, CultureInfo.InvariantCulture, out int n) ? n : 0;

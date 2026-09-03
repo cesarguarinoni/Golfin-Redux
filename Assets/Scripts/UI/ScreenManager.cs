@@ -197,11 +197,35 @@ namespace GolfinRedux.UI
             // the cold path is covered by LoginScreenController.OnEnable reading
             // AuthService.PendingRecovery / ConsumeRecoveryFailure instead.
             Golfin.Auth.AuthService.PasswordRecovery += OnPasswordRecovery;
+
+            // gps_standalone_shell §D6 — a WARM internal deep link (golfin://gps,
+            // golfingps://gps) opens the surface it names.
+            //
+            // WARM ONLY, and deliberately: subscribing after the initial ApplyScreen for the same
+            // reason the recovery hook does, and no Application.absoluteURL sweep, because a
+            // cold-start sweep would race the boot and could land the player past the title gate
+            // with no session. The cold case needs no handling in the shell — its boot
+            // destination already IS the hub — and in the game a cold golfin://gps simply boots
+            // normally, which is what an unauthenticated launch has to do anyway.
+            //
+            // The route is resolved by BannerPolicy, the one enumerated allowlist, so a URL a
+            // stranger can put in Safari gets exactly the grant a dashboard banner row gets —
+            // and Navigate still puts the result through every gate.
+            Application.deepLinkActivated += OnDeepLinkActivated;
         }
 
         private void OnDestroy()
         {
             Golfin.Auth.AuthService.PasswordRecovery -= OnPasswordRecovery;
+            Application.deepLinkActivated -= OnDeepLinkActivated;
+        }
+
+        // gps_standalone_shell §D6 — see the subscription note in Start().
+        private void OnDeepLinkActivated(string url)
+        {
+            if (!Golfin.Banners.BannerPolicy.TryGetInternalRoute(url, out ScreenId screen)) return;
+            Debug.Log($"[ScreenManager] deep link {url} -> {screen}");
+            ShowScreen(screen);
         }
 
         // auth_recovery_flow — see the subscription note in Start().
@@ -229,6 +253,20 @@ namespace GolfinRedux.UI
         /// </summary>
         private void Navigate(ScreenId screenId, bool instant, bool push)
         {
+            // gps_standalone_shell §D4 — the shell has no Home. REWRITE before the gates, so
+            // every gate below judges the screen that is actually going to open, and so the
+            // GPS first-entry intercept further down sees GpsHub rather than a screen that
+            // does not exist here. No-op in every build without GOLFIN_STANDALONE.
+            //
+            // A rewrite rather than a refusal because Home is the "sane default" of a dozen
+            // call sites — the Welcome tutorial's SKIP, the hub's BackPill fallback, every
+            // GoBack whose history ran dry. Refusing those strands the player; rewriting them
+            // makes the shell's root mean what the game's root meant.
+            ScreenId requested = screenId;
+            screenId = StandaloneGate.Rewrite(screenId);
+            if (screenId != requested)
+                Debug.Log($"[StandaloneGate] rewrote {requested} -> {screenId} (the shell has no Home).");
+
             // Demo gate (demo_build_slice §3.2): deny-by-default screen allowlist.
             // No-op outside a GOLFIN_DEMO build.
             if (!DemoGate.IsScreenAllowed(screenId))
@@ -242,6 +280,16 @@ namespace GolfinRedux.UI
             if (!Golfin.Gps.UI.GpsGate.IsScreenAllowed(screenId))
             {
                 Debug.Log($"[GpsGate] blocked {screenId}");
+                return;
+            }
+
+            // Standalone shell gate (gps_standalone_shell §D4): the PLAYLIFE variant carries the
+            // pre-auth screens and the GPS surface and nothing else. An ALLOWLIST, so a golf
+            // screen added later cannot quietly appear in a golf-free product. No-op in every
+            // build without GOLFIN_STANDALONE.
+            if (!StandaloneGate.IsScreenAllowed(screenId))
+            {
+                Debug.Log($"[StandaloneGate] blocked {screenId} — not part of the PLAYLIFE shell.");
                 return;
             }
 
@@ -456,6 +504,9 @@ namespace GolfinRedux.UI
                 if (candidate == _currentScreen) continue;
                 if (!DemoGate.IsScreenAllowed(candidate)) continue;
                 if (!Golfin.Gps.UI.GpsGate.IsScreenAllowed(candidate)) continue;
+                // gps_standalone_shell §D4 — a golf screen left on the stack by a shared code
+                // path is not somewhere BACK may land in the shell.
+                if (!StandaloneGate.IsScreenAllowed(candidate)) continue;
                 if (!AuthGate.IsScreenAllowed(candidate)) continue;
 
                 Navigate(candidate, instant, push: false);
@@ -474,6 +525,13 @@ namespace GolfinRedux.UI
                 // On a pillar root there is nothing above to fall back to except Home.
                 target = (root == _currentScreen) ? ScreenId.Home : root;
             }
+
+            // gps_standalone_shell §D4 — resolve the shell's rewrite HERE as well as in Navigate.
+            // Every fallback above can name Home, and the no-op test below compares against
+            // _currentScreen: on the hub, an unrewritten Home would compare unequal, reach
+            // Navigate, be rewritten to the screen we are already on, and report a BACK that
+            // never happened. Rewriting first makes "the hub root has nowhere to go" true.
+            target = StandaloneGate.Rewrite(target);
 
             if (target == _currentScreen) return false;   // Home root: BACK is a no-op, never a quit.
 

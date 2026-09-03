@@ -52,6 +52,13 @@ namespace Golfin.EditorTools
         const string GpsProfilePath = "Assets/Settings/Build Profiles/iOS-Full-GPS.asset";
         const string GpsDefine = "GOLFIN_GPS";
 
+        // gps_standalone_shell — "punch it standalone". The PLAYLIFE thin shell: the same
+        // codebase and the same OutputPath, with a ShellScene-only scene list and the
+        // GOLFIN_STANDALONE define on top of GOLFIN_GPS. StandaloneBuildPreprocessor gives it
+        // its own bundle id / name / version / icon during the build and takes them back after.
+        const string StandaloneProfilePath = "Assets/Settings/Build Profiles/iOS-Standalone.asset";
+        const string StandaloneDefine = "GOLFIN_STANDALONE";
+
         /// <summary>
         /// -executeMethod Golfin.EditorTools.CIBuild.BuildIOS
         /// Produces Builds/iOS-Full/Unity-iPhone.xcodeproj. Exits 1 on any failure.
@@ -167,32 +174,82 @@ namespace Golfin.EditorTools
         }
 
         /// <summary>
+        /// -executeMethod Golfin.EditorTools.CIBuild.BuildIOSStandalone
+        /// The "punch it standalone" variant — PLAYLIFE as a thin shell. Same output path, same
+        /// options, same guards as the other two; what differs is the profile, and with it the
+        /// ShellScene-only scene list and the GOLFIN_STANDALONE define StandaloneGate reads.
+        ///
+        /// BOTH defines are asserted, for the reason the GPS lane asserts one: a standalone build
+        /// whose profile silently lost GOLFIN_STANDALONE compiles, archives and uploads as an
+        /// ORDINARY GPS build — under the PLAYLIFE bundle id, to the PLAYLIFE App Store record,
+        /// carrying the whole golf game. That is worse than the stale-binary failure this
+        /// pipeline exists to prevent, so it fails loudly instead.
+        ///
+        /// ForceStandaloneIdentity is set around the build because a build profile's scripting
+        /// defines never reach the EDITOR's assemblies, so the preprocessor cannot answer
+        /// "is this the standalone?" from an #if — see StandaloneBuildPreprocessor.
+        /// </summary>
+        public static void BuildIOSStandalone()
+        {
+            var prevIosBuildNumber = PlayerSettings.iOS.buildNumber;
+            var prevAndroidVersionCode = PlayerSettings.Android.bundleVersionCode;
+
+            string error;
+            try
+            {
+                StandaloneBuildPreprocessor.ForceStandaloneIdentity = true;
+                error = AssertProfileDefine(StandaloneProfilePath, GpsDefine) ??
+                        AssertProfileDefine(StandaloneProfilePath, StandaloneDefine) ??
+                        BuildIOSCore(StandaloneProfilePath, OutputPath, BuildOptions.None);
+            }
+            catch (Exception e)
+            {
+                error = $"unhandled exception during build: {e.GetType().Name}: {e.Message}\n{e.StackTrace}";
+            }
+            finally
+            {
+                StandaloneBuildPreprocessor.ForceStandaloneIdentity = false;
+            }
+
+            // MUST run before Fail(): Fail() exits the process, and the preprocessor's own
+            // delayCall safety net never gets a frame in batchmode. Leaving the PLAYLIFE bundle
+            // id on disk would point the next "punch it" upload at the wrong App Store record.
+            StandaloneBuildPreprocessor.RestoreNow();
+            RestoreBuildNumbers(prevIosBuildNumber, prevAndroidVersionCode);
+
+            if (error != null) Fail(error);
+        }
+
+        /// <summary>
         /// Null when the profile at <paramref name="profilePath"/> carries GOLFIN_GPS; otherwise
         /// the failure message. Read through SerializedObject rather than a typed property:
         /// BuildProfile.scriptingDefines is not public API in 6000.3, and m_ScriptingDefines is
         /// what the .asset actually stores (see iOS-Demo.asset, which carries GOLFIN_DEMO the
         /// same way).
         /// </summary>
-        static string AssertGpsDefine(string profilePath)
+        static string AssertGpsDefine(string profilePath) => AssertProfileDefine(profilePath, GpsDefine);
+
+        /// <summary>Generalised for the standalone lane, which has two defines to assert.</summary>
+        static string AssertProfileDefine(string profilePath, string define)
         {
             var profile = AssetDatabase.LoadAssetAtPath<BuildProfile>(profilePath);
-            if (profile == null) return $"GPS build profile not found: {profilePath}";
+            if (profile == null) return $"build profile not found: {profilePath}";
 
             var so = new SerializedObject(profile);
             var defines = so.FindProperty("m_ScriptingDefines");
             if (defines == null || !defines.isArray)
-                return $"{profilePath} exposes no m_ScriptingDefines array — cannot verify {GpsDefine}.";
+                return $"{profilePath} exposes no m_ScriptingDefines array — cannot verify {define}.";
 
             for (int i = 0; i < defines.arraySize; i++)
             {
-                if (defines.GetArrayElementAtIndex(i).stringValue != GpsDefine) continue;
-                Debug.Log($"{Tag} GPS variant — {GpsDefine} defined on {profile.name}.");
+                if (defines.GetArrayElementAtIndex(i).stringValue != define) continue;
+                Debug.Log($"{Tag} variant define {define} present on {profile.name}.");
                 return null;
             }
 
-            return $"{profilePath} does NOT define {GpsDefine} — refusing to build a GPS variant " +
-                   $"that would ship with the GPS surface gated OFF and be indistinguishable from " +
-                   $"an ordinary build.";
+            return $"{profilePath} does NOT define {define} — refusing to build a variant that " +
+                   $"would ship with that surface gated OFF and be indistinguishable from an " +
+                   $"ordinary build.";
         }
 
         static void RestoreBuildNumbers(string iosBuildNumber, int androidVersionCode)

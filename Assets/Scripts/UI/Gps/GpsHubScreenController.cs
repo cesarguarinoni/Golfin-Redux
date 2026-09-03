@@ -185,7 +185,17 @@ namespace Golfin.Gps.UI
             _wiredOnce = true;
 
             if (_backButton != null)
-                _backButton.onClick.AddListener(OnBackClicked);
+            {
+                // gps_standalone_shell §D4 — the hub IS the root of the PLAYLIFE shell, so its
+                // BackPill has nowhere above it to go. Hidden rather than left inert: a pill that
+                // does nothing reads as a broken button, and StandaloneGate would rewrite its
+                // Home fallback back to this very screen. No-op in the game, where the pill
+                // returns to whatever opened the hub.
+                if (GolfinRedux.UI.StandaloneGate.Enabled)
+                    _backButton.gameObject.SetActive(false);
+                else
+                    _backButton.onClick.AddListener(OnBackClicked);
+            }
 
             // The tiles ARE the promise of the feature, so they keep full opacity and are simply
             // not interactable (SPEC § Figma Fidelity, Action tiles). The listener is still added

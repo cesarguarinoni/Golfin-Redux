@@ -34,11 +34,18 @@ PROJECT="$(cd "$SCRIPT_DIR/.." && pwd)"
 # iOS-Full-GPS profile, which carries the GOLFIN_GPS define GpsGate reads. Same OUT path, so
 # everything downstream (build_app, the archive, the upload) is unchanged; the only difference
 # is which profile Unity activated. No argument = the ordinary "punch it" build, unchanged.
+#
+# gps_standalone_shell — `./Tools/unity-build-ios.sh standalone` builds the PLAYLIFE thin shell:
+# the iOS-Standalone profile (GOLFIN_GPS;GOLFIN_STANDALONE, ShellScene-only scene list). Same OUT
+# path again, and a different bundle id / product name / icon applied at build time by
+# StandaloneBuildPreprocessor and restored after — so downstream is unchanged here too, but the
+# archive uploads to a DIFFERENT App Store record ("GOLFIN GPS", Apple ID 6737145432).
 VARIANT="${1:-}"
 case "$VARIANT" in
-  gps) METHOD="Golfin.EditorTools.CIBuild.BuildIOSGps" ;;
-  "")  METHOD="Golfin.EditorTools.CIBuild.BuildIOS" ;;
-  *)   echo "ERROR: unknown variant '$VARIANT' (expected: gps, or no argument)" >&2; exit 2 ;;
+  gps)        METHOD="Golfin.EditorTools.CIBuild.BuildIOSGps" ;;
+  standalone) METHOD="Golfin.EditorTools.CIBuild.BuildIOSStandalone" ;;
+  "")         METHOD="Golfin.EditorTools.CIBuild.BuildIOS" ;;
+  *)          echo "ERROR: unknown variant '$VARIANT' (expected: gps, standalone, or no argument)" >&2; exit 2 ;;
 esac
 
 OUT="$PROJECT/Builds/iOS-Full"

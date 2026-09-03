@@ -71,6 +71,32 @@ reachable. Without it the five GPS screens are blocked by `GpsGate` and the Home
 (the slot collapses). Both variants archive `Builds/iOS-Full`, so shipping both of one commit is
 sequential: punch it → commit the guard file → punch it GPS. See `Docs/PUNCH_IT_ROUTINE.md`.
 
+**Standalone variant** (`gps_standalone_shell`): `./Tools/testflight.sh testflight_build_standalone`
+runs the same lane body against the `iOS-Standalone` profile — `GOLFIN_GPS;GOLFIN_STANDALONE` and a
+**ShellScene-only scene list**, so the 18 `Hole_NN_Geo` scenes and `LabScaffold` are simply not in
+the build. It is PLAYLIFE as a thin shell: `StandaloneGate` refuses every golf screen, `Home` is
+rewritten to `GpsHub`, and the boot skips `StarterGate` entirely.
+
+Three things differ from the other two lanes, all of them handled inside the lane:
+
+- **A different App Store record.** `com.nextinnovation.golfingps` / app "GOLFIN GPS" /
+  Apple ID `6737145432`, same team (`TCUV4A9VTJ`) so no new signing identity. Bundle id, product
+  name, marketing version (`1.0.0`), the app icon and the `golfingps://` URL scheme are applied by
+  `Assets/Editor/StandaloneBuildPreprocessor.cs` during the build and **restored after** —
+  `ProjectSettings.asset` never enters the diff. A failed batchmode build restores too
+  (`CIBuild.BuildIOSStandalone` calls `RestoreNow()` before it exits), because leaving the PLAYLIFE
+  bundle id on disk would point the next "punch it" upload at the wrong record.
+- **Its own upload guard**, `Docs/Versioning/last_uploaded_build.golfingps.txt` — ASC's
+  build-number uniqueness rule is per app, so one shared file would refuse a game upload for a
+  collision that does not exist. `mark-uploaded.sh` takes the record as its second argument.
+- **The scene list is the size story.** No code is stripped out of the project; IL2CPP stripping
+  plus the absent hole scenes do the work. Compare the .ipa against the GPS variant's.
+
+`Golfin.EditorTools.CIBuild.BuildIOSStandalone` asserts BOTH defines on the profile before it
+builds, for the reason the GPS lane asserts one: a standalone build that silently lost
+`GOLFIN_STANDALONE` would archive the whole golf game and upload it, under the PLAYLIFE bundle id,
+to the PLAYLIFE record.
+
 That wrapper is one line of `exec fastlane ios testflight_build`, plus the two environment
 facts the run cannot survive without: `LC_ALL`/`LANG` set to UTF-8, and Homebrew's `bin` on
 `PATH`. `fastlane ios testflight_build` directly works too — **from a shell whose locale is
@@ -85,13 +111,14 @@ What the lane does, in order (`fastlane/Fastfile`):
 | 1 | `ensure_git_status_clean` | tree is dirty — the build number is `git rev-list --count HEAD` and would not describe the binary |
 | 2 | `Tools/assert-unity-closed.sh` | the Editor holds `Temp/UnityLockfile` (batchmode can't take it) |
 | 3 | `Tools/content/export_content.py --check` | the bundled CSVs are behind the PUBLISHED catalogs, or a CSV has drifted from its catalog by id or by value — see § "Step 3: the content gate" |
-| 4 | `Tools/unity-build-ios.sh` → `Golfin.EditorTools.CIBuild.BuildIOS` | Unity's exit code is non-zero, or `Builds/iOS-Full/Unity-iPhone.xcodeproj` is missing |
+| 4 | `Tools/unity-build-ios.sh [gps\|standalone]` → `CIBuild.BuildIOS` / `BuildIOSGps` / `BuildIOSStandalone` | Unity's exit code is non-zero, or `Builds/iOS-Full/Unity-iPhone.xcodeproj` is missing |
 | 5 | `build_app` (xcodebuild archive + export, `-allowProvisioningUpdates`) | signing/archive failure |
 | 6 | `upload_to_testflight` (App Store Connect API key) | upload rejected |
-| 7 | `Tools/mark-uploaded.sh` | never — always exits 0 by design |
+| 7 | `Tools/mark-uploaded.sh .. <record>` | never — always exits 0 by design |
 
-After it finishes, **commit `Docs/Versioning/last_uploaded_build.txt`** with your next change.
-It is the only file the run leaves dirty.
+After it finishes, **commit the guard file for the record you shipped** with your next change —
+`Docs/Versioning/last_uploaded_build.txt`, or `…/last_uploaded_build.golfingps.txt` for the
+standalone. It is the only file the run leaves dirty.
 
 ### Step 3: the content gate — run this BEFORE the lane
 
