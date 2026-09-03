@@ -174,6 +174,16 @@ def profile_counters(db: Db, uid: str):
     return (r.get("activity_pts") or 0), (r.get("activities_count") or 0)
 
 
+def ledger_for(db: Db, activity_id):
+    """Ledger rows attached to ONE activity — the way to ask whether a specific
+    round paid anything, independent of whatever else the run has earned."""
+    if activity_id is None:
+        return []
+    return db.select("points_transactions",
+                     "select=type,amount,related_activity_id"
+                     f"&related_activity_id=eq.{activity_id}")
+
+
 def ledger(db: Db, uid: str, key: str):
     return db.select("points_transactions",
                      "select=type,amount,currency,description,related_activity_id"
@@ -374,19 +384,27 @@ def main() -> int:
     # 2026_09_04_auto_expire_stale_round.sql. Before it, an abandoned round
     # refused every future check-in with `already_active` FOR EVER, because the
     # 8 h rule was only ever evaluated inside golfin_activity_checkout.
-    print("\n-- auto-expire: open a round, back-date it past 8 h, check in again")
+    #
+    # The stale round is opened FAR outside the radius on purpose: it then earns
+    # 0 and writes no ledger row of its own, so ANY ledger row or point movement
+    # attributable to it afterwards can only have come from the auto-expiry.
+    # (Opening it near the venue would earn a legitimate +30 and make the
+    # expiry's own contribution unmeasurable.)
+    print("\n-- auto-expire: open a FAR round, back-date it past 8 h, check in again")
     k_stale = str(uuid.uuid4())
-    stale = checkin(db, a.user, TEST_LAT, TEST_LON, k_stale)
+    stale = checkin(db, a.user, FAR_LAT, FAR_LON, k_stale)
     stale_id = (stale.get("activity") or {}).get("id")
     check("stale round opened", bool(stale.get("ok")) and stale_id is not None)
+    check("stale round earned nothing to begin with", stale.get("awarded") == 0)
     if stale_id:
         _CREATED.append(stale_id)
+
+    check("stale round has no ledger row of its own", not ledger_for(db, stale_id))
 
     pts_before, cnt_before = profile_counters(db, a.user)
 
     # Back-date it 9 h — past the cut-off, with no other change.
-    db.patch("activities", f"id=eq.{stale_id}",
-             {"check_in_at": iso_hours_ago(9)})
+    db.patch("activities", f"id=eq.{stale_id}", {"check_in_at": iso_hours_ago(9)})
 
     k_new = str(uuid.uuid4())
     out9 = checkin(db, a.user, TEST_LAT, TEST_LON, k_new)
@@ -401,11 +419,15 @@ def main() -> int:
           bool(gone) and gone[0].get("status") == "expired", str(gone))
     check("auto-expired round paid NOTHING",
           bool(gone) and (gone[0].get("points") or 0) == 0, str(gone))
-    check("auto-expiry wrote NO ledger row", not ledger(db, a.user, k_stale))
+    check("auto-expiry wrote NO ledger row", not ledger_for(db, stale_id),
+          str(ledger_for(db, stale_id)))
 
+    # The counters moved by EXACTLY the new check-in's own award, so the
+    # auto-expiry contributed zero.
     pts_after, cnt_after = profile_counters(db, a.user)
-    check("activity_pts did not move on auto-expiry", pts_after == pts_before,
-          f"{pts_before} -> {pts_after}")
+    check("points moved by the new check-in ONLY",
+          pts_after - pts_before == (out9.get("awarded") or 0),
+          f"{pts_before} -> {pts_after}, new check-in awarded {out9.get('awarded')}")
     check("activities_count did not move on auto-expiry", cnt_after == cnt_before,
           f"{cnt_before} -> {cnt_after}")
 
