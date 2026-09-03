@@ -34,11 +34,24 @@ panel raises them in red and a re-save fixes them.
 
 **Localization is live:** `texts` published at v32, 64 `GPS_ROUNDS_*` rows, `export --check` clean.
 
-**Blocked on two gates, in order.** (1) Cesar applies `2026_09_03_venue_partners.sql` then
-`2026_09_03_seed_demo_spots.sql`, and enables "Maps Static API" on the API's Google key — both
-deploys wait on that deliberately, since either one shipped first would call something that does
-not exist yet. (2) A free Unity for the prefab build, the play-mode capture, the fidelity lint and
-the motion video. Full state in `Docs/Specs/Active/gps_checkin/STATUS.md`.
+**The backend and admin halves are LIVE.** Cesar applied both migrations;
+`e2e_activity_economy.py` passes all 38 assertions with the points invariant at 0 violations
+before and after; Fly is on v68 and the same flow re-proves through the deployed routers
+(+30 → +15, replay awards 0, a second check-in is refused `409 already_active`); the admin
+Partners panel is deployed and all three § B1 round-trips were driven through the real UI.
+
+**A second production bug fell out of the deploy.** `/venue/nearby` 500'd — and so did
+`/venue/search`, which this task never touched. A bare `%` in a PostgREST filter value makes
+Supabase's Cloudflare edge throw error 1101, and `supabase-py` ships the value unencoded; both it
+and httpx are pinned, so the edge changed underneath us. That had broken venue nearby, venue search
+and **user search** for every user. All seven `like`/`ilike` call sites in the backend were
+enumerated and routed through a new `backend/pgrest.py` that uses PostgREST's `*` wildcard, so no
+`%` reaches the URL.
+
+**Left:** a free Unity for the prefab build, the play-mode capture, the fidelity lint and the
+motion video — and Cesar enabling "Maps Static API" on the API's Google key (`/venue/map` is
+deployed and returns Google's own `403 This API is not activated`; without it the panel falls back
+to the stylised placeholder, by design). Full state in `Docs/Specs/Active/gps_checkin/STATUS.md`.
 
 ---
 ## ✅ DONE — GPS nav bar, both halves (2026-09-03) · device-pass finding #1

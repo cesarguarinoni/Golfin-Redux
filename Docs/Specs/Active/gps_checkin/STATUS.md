@@ -2,32 +2,38 @@ IMPLEMENTER_WORKING
 
 # STATUS — `gps_checkin`
 
-**Current:** `IMPLEMENTER_WORKING` — iter-1, 2026-09-03. **Blocked on two external gates, in this
-order**, and everything that does not depend on them is done and compile-verified:
+**Current:** `IMPLEMENTER_WORKING` — iter-1, 2026-09-03. **The backend and admin halves are DONE,
+DEPLOYED AND PROVEN LIVE.** One gate remains, plus one small pre-req:
 
-1. **Cesar applies the two migrations** (`2026_09_03_venue_partners.sql`, then
-   `2026_09_03_seed_demo_spots.sql`) and **enables "Maps Static API"** on the Google key
-   `playlife-api` uses. Until then the Fly deploy would ship routers calling functions that do not
-   exist, and the admin Partners panel would query columns that do not exist — so BOTH deploys
-   wait, deliberately.
-2. **Unity is held by another session** (`gps_navbar_selected_tab` / `gps_profile_prompt_on_entry`).
-   Every Unity-side artefact — running `GpsRoundsBuilder`, the two prefabs, the ShellScene
-   `_gpsRoundsScreen` wire, play-mode capture, the geometry/invariants JSON, the UI-fidelity lint,
-   `tests-run`, and the motion-parity video — waits on Cesar's say-so.
+1. **Unity is held by another session.** Every Unity-side artefact — running `GpsRoundsBuilder`,
+   the two prefabs, the ShellScene `_gpsRoundsScreen` wire, play-mode capture, the
+   geometry/invariants JSON, the UI-fidelity lint, `tests-run`, and the motion-parity video —
+   waits on Cesar's say-so. All five affected assemblies compile clean.
+2. **"Maps Static API" is still not enabled** on the Google key `playlife-api` uses. `/venue/map`
+   is deployed and reachable; it returns Google's `403 This API is not activated`, surfaced
+   verbatim. Everything else works without it — the Rounds panel falls back to the stylised
+   placeholder with the attribution hidden, exactly as §C4 specifies.
 
-**Done and verified without Unity:** the whole backend (A1–A5) and its E2E script, the admin
-Partners panel (B1) and the demo seed (B2), every Unity C# file for C1–C4, the art bake, and the
-localization publish (C5). All five affected assemblies compile clean against Unity's own Roslyn
-(see `IMPLEMENTER_REPORT.md` § Compile verification); `texts` is published at **v32** with 64
-`GPS_ROUNDS_*` rows live and `export --check` clean.
+**Shipped and verified this session:** both migrations applied by Cesar; `e2e_activity_economy.py`
+**ALL PASS** (38 assertions, invariant 0 violations before and after); Fly **v68**; the same flow
+re-proven through the deployed routers over HTTPS (+30 → +15, replay 0, `409 already_active`);
+admin deployed (`golfin-admin` `e92cc304`) with all three § B1 round-trips driven through the real
+panel UI *and* against live data; `texts` v32 with 64 rows live and `--check` clean.
 
-**Deviations flagged:** D-1 (admin geocode is local, not via `/venue/geocode` — the dashboard has
-no bearer token for the API), D-2 (a modal shell is baked rather than reusing `S_SU_ModalPanel`,
-which is a different aspect ratio), D-3 (DETAILS raises a toast — there is NO venue-detail screen
-in the project), D-4 (one line added to another session's `GpsNavBarHighlight.cs`). Decisions
-D1–D6 are implemented as written.
+**Two real bugs found and fixed on the way, neither introduced by this task:**
+* a bare `%` in a PostgREST filter makes Supabase's Cloudflare edge throw error 1101 — this had
+  broken `/venue/nearby`, `/venue/search` and **user search** in production. All seven
+  `like`/`ilike` sites audited and routed through `backend/pgrest.py` (Rule 15).
+* the admin's mock mode reported writes it never performed, because venue fixtures were
+  module-level state that Next dev does not share across route bundles. Moved onto `mockStore`.
+
+**Deviations flagged:** D-1 (admin geocode is local — the dashboard has no bearer token for the
+API), D-2 (a modal shell is baked rather than reusing `S_SU_ModalPanel`, a different aspect ratio),
+D-3 (DETAILS raises a toast — there is NO venue-detail screen in the project), D-4 (one line added
+to another session's `GpsNavBarHighlight.cs`). Decisions D1–D6 are implemented as written.
 
 | Date | State | Note |
 |---|---|---|
 | 2026-09-03 | `SPEC_READY` | Backend A1–A6, admin B1–B2, Unity C1–C5; decisions D1–D6. |
 | 2026-09-03 | `IMPLEMENTER_WORKING` | Backend + admin + all Unity C# written and compile-clean; texts published v32. Awaiting Cesar's migrations and a free Unity. |
+| 2026-09-03 | `IMPLEMENTER_WORKING` | Migrations applied. E2E ALL PASS, Fly v68, admin deployed, all three panel round-trips proven. Two production bugs found + fixed. Only Unity (and the Maps key) left. |

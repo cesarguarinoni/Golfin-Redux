@@ -8,19 +8,53 @@ external and every remaining acceptance item sits behind one of them (§ What is
 
 ## What is DONE and independently verified
 
+Cesar applied both migrations at 02:0x on 2026-09-03, which unblocked the whole
+backend + admin half. It is now DEPLOYED AND PROVEN LIVE.
+
 | Area | State |
 |---|---|
-| A1–A3 migration + the two atomic RPCs | written, `pglast`-parsed, **not applied** (Cesar) |
-| A2 `/venue/nearby` category + server-side distance | written, `py_compile` clean |
-| A4 `/venue/map` Static Maps proxy (24 h cache, 60/min) | written, `py_compile` clean |
-| A5 `/score/submit` `activity_id` closes the live round | written, `py_compile` clean |
-| A6 `e2e_activity_economy.py` | written, `py_compile` clean, **not run** (needs the migration) |
-| B1 admin Partners panel | written; `tsc` clean, `vitest` 293/293, `next build` OK, **not deployed** |
-| B2 demo seed migration | written, `pglast`-parsed, **not applied** (Cesar) |
-| C1–C4 Unity runtime + builder + baker | written; **all five affected assemblies compile clean** |
-| C5 localization | **PUBLISHED** — `texts` v32, 64 rows live, `export --check` clean |
+| A1–A3 migration + the two atomic RPCs | **APPLIED + verified live** |
+| A2 `/venue/nearby` category + server-side distance | **DEPLOYED, 200, nearest-first** |
+| A4 `/venue/map` Static Maps proxy | **DEPLOYED**; 502 surfacing Google's `403 This API is not activated` — the one pre-req still on Cesar |
+| A5 `/score/submit` `activity_id` closes the live round | **DEPLOYED**, asserted by the E2E |
+| A6 `e2e_activity_economy.py` | **ALL PASS — 38 assertions** |
+| A6 Fly deploy | **v68**, `/health` ok |
+| B1 admin Partners panel | **DEPLOYED** (`golfin-admin`); all three round-trips driven through the real UI |
+| B2 demo seed | **APPLIED** — 4 range + 5 food, 霞ヶ関 partner |
+| C1–C4 Unity runtime + builder + baker | written; all five assemblies compile clean — **prefab build still needs Unity** |
+| C5 localization | **PUBLISHED** — `texts` v32, 64 rows live, `--check` clean |
 
----
+### The live numbers
+
+```
+invariant total_points = activity_pts + gift_pts   19 profiles, 0 violations (before AND after)
+venues 1997   by category {golf: 1988, range: 4, food: 5}   partners {range 1, food 3, golf 1}
+demo rows 9   霞ヶ関カンツリー倶楽部 #153 is_partner=true partner_offer='ゴルファー10%OFF'
+geohash drift 2  (#1 東京ゴルフ倶楽部, #7 Lomond CC — pre-existing, the panel flags them)
+```
+
+`e2e_activity_economy.py`, all 38 assertions, ending `=== ALL PASS ===`:
+check-in inside the radius +30 once (`distance_m=0`, one `gps_checkin` ledger row);
+replay `replayed:true awarded:0`, no second round; a fresh key refused
+`already_active` naming activity 38; check-out `awarded=15`, `activities_count 1→2`,
+one `activityComplete` row; a far check-in (`distance_m=3208.8`) `gps_verified:false
+awarded:0` and **no ledger row**; a backdated round `expired:true awarded:0` that did
+**not** bump `activities_count`; and a score post leaving ONE row for the round.
+
+Then the same flow through the deployed ROUTERS over HTTPS, which the E2E does not
+cover (it drives the RPCs directly):
+
+```
+balance before       : 7063
+POST /activity/checkin      -> 200 awarded=30 verified=True dist=0m id=41
+balance after check-in      : 7093
+REPLAY same key             -> 200 replayed=True awarded=0
+SECOND check-in, fresh key  -> 409 {"ok": false, "reason": "already_active", "activity_id": 41}
+GET /activity/active        -> 200 id=41 status=active
+POST /activity/41/checkout  -> 200 awarded=15 expired=False duration='0h 0m' count=3
+balance after check-out     : 7108
+GET /activity/active        -> 200 data=None
+```
 
 ## Compile verification (no Unity session was used)
 
@@ -301,22 +335,89 @@ position, because the field does not exist there.
 
 | # | Item | Verdict |
 |---|---|---|
-| 1 | Per-element A/B crops + ΔRGB table | **BLOCKED** (Unity) — node re-pulled (§9) and the geometry transcribed from `get_metadata`; the bake's own ΔRGB table is above |
+| 1 | Per-element A/B crops + ΔRGB table | **BLOCKED** (Unity) — nodes re-pulled per §9, geometry transcribed from `get_metadata`; the bake's own ΔRGB table is above |
 | 2 | Geometry JSON + invariants + lint `fail=0` | **BLOCKED** (Unity) |
-| 3 | Migration applied + `e2e_activity_economy.py` ALL PASS | **BLOCKED** (Cesar) — script written, `py_compile` clean, asserts all 9 required properties |
-| 4 | Static Maps 200 + cache hit + pin projection ≤2 px | **PARTIAL** — projection test written and pinned against independent values; the live 200 is BLOCKED (Cesar's key) |
+| 3 | Migration applied + `e2e_activity_economy.py` ALL PASS | **PASS** — applied by Cesar; 38 assertions, quoted above |
+| 4 | Static Maps 200 + cache hit + pin projection ≤2 px | **PARTIAL** — route deployed and reached; it returns Google's `403 This API is not activated`, so the 200 + cache-hit pair waits on the key. Projection test written against independently-computed values |
 | 5 | Editor play-mode, real navigation, live API | **BLOCKED** (Unity) |
-| 6 | `already_active` + force-quit replay | **PARTIAL** — pinned in `ActivityServiceJsonTests` / `RoundSessionTests`; the live quote is BLOCKED (Cesar) |
-| 7 | Admin panel deployed + 3 round-trips | **BLOCKED** (Cesar's migration) — panel builds clean |
-| 8 | Demo seed applied; 5 food / 4 range / 霞ヶ関 PARTNER | **BLOCKED** (Cesar) |
-| 9 | `GpsGate` includes `GpsRounds`; ROUNDS active-state; push pinned | **PASS (code)** — `GpsGateTests` list extended (and `GpsGift`/`GpsVote`, which were missing); `NavSlot(GpsRounds) = 1`; `GpsNavBarHighlight` lights it. Runtime proof BLOCKED (Unity) |
-| 10 | Importer PLAN/APPLY/publish/`--check` clean; zero hardcoded literals | **PASS** — quoted above |
+| 6 | `already_active` + force-quit replay | **PASS** — both at the RPC layer (E2E) and through the routers (`409 already_active`, `replayed:true awarded:0`) |
+| 7 | Admin panel deployed + 3 round-trips | **PASS** — deployed (`golfin-admin` version `e92cc304`); all three driven through the real UI AND proven against live data + the client's fetch |
+| 8 | Demo seed applied; 5 food / 4 range / 霞ヶ関 PARTNER | **PASS** — counts and the partner flag quoted above |
+| 9 | `GpsGate` includes `GpsRounds`; ROUNDS active-state; push pinned | **PASS (code)** — runtime proof BLOCKED (Unity) |
+| 10 | Importer PLAN/APPLY/publish/`--check` clean; no hardcoded literals | **PASS** — v32, 64 rows, `--check` clean (still clean after another session's v33) |
 | 11 | Full EditMode sweep + the three new suites by name | **BLOCKED** (Unity) — all three compile |
-| 12 | Motion parity with `gps_polish` + video + A13 | **BLOCKED** (Unity) — the code paths are in (push table, entry rise, `Stagger` on both lists, `ShimmerBlock` on both, cross-fade on chip change and on the list↔card flip, `animateShow` on both modals, `PendingSpend` on CHECK IN / CHECK OUT, `CountUp` via `PointsService`, fixed-width elapsed digits, pins fading with the tile) |
-| 13 | Too-far and no-GPS toasts | **PARTIAL** — both paths implemented and localized; the frame + log is BLOCKED (Unity) |
-| 14 | Deviations flagged; device-pass rows added | **PASS** — D-1…D-4 above; `GPS_DEVICE_PASS.md` § 3b, 20 rows |
+| 12 | Motion parity with `gps_polish` + video + A13 | **BLOCKED** (Unity) |
+| 13 | Too-far and no-GPS toasts | **PARTIAL** — implemented and localized; the frame + log is BLOCKED (Unity) |
+| 14 | Deviations flagged; device-pass rows added | **PASS** — D-1…D-4; `GPS_DEVICE_PASS.md` § 3b, 20 rows |
 
----
+## The production bug this deploy uncovered (and fixed)
+
+`/venue/nearby` 500'd immediately after the first deploy — and so did
+`/venue/search`, which this task never touched. That is what made it a platform
+bug rather than a regression. The logs named it: a Cloudflare **error 1101,
+"Worker threw exception"** from Supabase's own edge, returned as HTML that
+`postgrest-py` cannot parse.
+
+Reduced against production, it is the `%` alone:
+
+```
+/venues?select=*&geohash=like.xn77%   -> 500  error code: 1101
+/venues?select=*&geohash=like.xn77*   -> 200  15650 bytes
+/venues?select=*&name=ilike.%GOLF%    -> 500  error code: 1101
+/venues?select=*&name=ilike.*GOLF*    -> 200  23284 bytes
+```
+
+`supabase-py` puts a filter value into the query string RAW, so `.like("geohash",
+"xn77%")` ships a bare `%`. Both `supabase==2.10.0` and `httpx==0.27.0` are PINNED
+and did not move — the edge changed underneath us, which is why endpoints that had
+been working stopped without a deploy.
+
+Rule 15 applies (two defects of one shape ⇒ audit the shape). All **seven**
+`like`/`ilike` call sites in the backend were enumerated with grep, not sampled,
+and every one routed through a new `backend/pgrest.py` that expresses the pattern
+with PostgREST's `*` wildcard so no `%` reaches the URL. Three were broken for
+every user — venue nearby, venue search and **user search**; four were latent.
+Redeployed as v68; both endpoints 200.
+
+## The admin bug the UI pass uncovered (and fixed)
+
+Driving the real panel is the only thing that could have found it: mock mode's
+create answered *"Created パンチ・イット練習場."* and the row did not appear, and
+editing it answered *"Venue #9003 not found."* Two bugs, one cause — the fixtures
+were a module-level array that `venueMutations` never wrote to, and making it
+mutable then exposed that Next's dev server gives the page bundle and each
+route-handler bundle their own module instance. `lib/mockStore.ts` already solves
+that (`globalThis`) and every other mock entity already uses it; venues now do too.
+
+## The three § B1 round-trips, proven twice
+
+**Through the real panel UI** (mock mode, so the React form + route handlers are
+what is exercised):
+
+| # | Action | Result |
+|---|---|---|
+| 1 | Create | *"Created パンチ・イット練習場 (#9003)."* — row appears with the PARTNER badge, Driving ranges, `¥1,200/30分`, `深夜`, the offer, Active Yes |
+| 2 | Edit | *"Saved パンチ・イット練習場."* — offer becomes `GOLFIN プレイヤー 20%OFF（平日限定）` in the table |
+| 3 | Deactivate | leaves the `Active = Yes` filter; under `Active = No` it is there, amber **Inactive** — the row still exists, because there is no delete |
+
+**Find on map** was verified in the same pass: a pasted Maps link filled Latitude
+`35.6595`, Longitude `139.7005` and the DERIVED Geohash `xn76fgwg9` — matching the
+value computed independently in Python — in a field the DOM reports as
+`disabled: true, readOnly: true`.
+
+**Against live data**, the half mock mode cannot prove — the same three writes made
+with the exact column set `venueMutations.toRow` produces, then the CLIENT's own
+fetch:
+
+```
+RANGE near Shibuya      0.0 m  パンチ・イット練習場   src=admin partner=True  GOLFIN プレイヤー 15%OFF
+FOOD (5 -> 4 rows)      焼肉 GREEN  ゴルファー15%OFF（ラウンド当日）   ← edited offer visible
+                        ラウンジ BIRDIE ABSENT                        ← deactivated row gone
+```
+
+All three demo rows were then RESTORED to their seeded state, and the row this pass
+created was deactivated rather than deleted (the panel's own rule, applied to my own
+test row). Cesar can delete or re-activate `#2004 パンチ・イット練習場` in the panel.
 
 ## Files changed
 
