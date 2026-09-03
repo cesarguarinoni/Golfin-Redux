@@ -1,4 +1,4 @@
-ARCHITECT_REVIEW_PASS
+DONE
 
 # RED-TEAM PASS — 2026-09-03 17:55 JST
 
@@ -176,4 +176,25 @@ Also fixed, from the red-team's secondary finding: `FetchCardSubtitle` set its
 once-per-round guard BEFORE the request, so a single failed `/venue/{id}` — a
 cold start on a scale-to-zero backend is enough — blanked the resumed round's
 address for the life of the round with no retry. A failure now releases the guard.
+
+## DONE — Cesar approved 2026-09-03
+
+Approved after `ARCHITECT_REVIEW_PASS`. Shipped:
+
+- **Backend** — `2026_09_03_venue_partners.sql` and
+  `2026_09_04_auto_expire_stale_round.sql` applied; two atomic SECURITY DEFINER
+  RPCs; `/activity/active`, `/venue/nearby` category + distance, `/venue/map`,
+  `/venue/geocode`; score submit closes the round. `e2e_activity_economy.py`
+  ALL PASS, invariant 0 violations.
+- **Admin** — Partners panel with server-computed geohash, deactivate not delete.
+- **Unity** — the Rounds tab end to end, driven through real widgets: chips,
+  live Google map, nearby spots, CHECK IN → confirm → live card → CHECK OUT →
+  receipt, and round resume across an app restart. Real economy: 7,153 → 7,243
+  across two rounds.
+- **Texts** — v36 published, `export_content.py --check` clean.
+
+Carried forward, NOT part of this task:
+`KNOWN_ISSUE_recorder_lockup.md` — recording the Rounds screen hard-locks the
+Mac. Tooling only; the shipped screen does not encode video. Three
+investigations are written up there for whenever it is worth a look.
 

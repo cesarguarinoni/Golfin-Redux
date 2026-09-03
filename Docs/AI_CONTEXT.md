@@ -4,6 +4,41 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
+## 2026-09-03 — gps_checkin DONE (approved) — the ROUNDS tab is real
+
+Moved to `Docs/Specs/Completed/gps_checkin/`. The tab works end to end against
+the live backend: category chips, real Google map, nearby spots, CHECK IN →
+confirm → live round card → CHECK OUT → receipt, plus round resume across an app
+restart. Real economy, 7,153 → 7,243 RP over two rounds. Texts v36.
+
+Two backend migrations applied: `2026_09_03_venue_partners.sql` (partner columns
++ the two atomic check-in/check-out RPCs) and
+`2026_09_04_auto_expire_stale_round.sql` (an abandoned round used to block the
+player's next check-in FOR EVER, because the 8 h rule only ever ran inside
+check-out; it is now applied at check-in, pays nothing, and shares one constant
+with check-out so the two cannot drift).
+
+**The find worth keeping** is `Golfin.Net.ApiEnvelope`: it parsed with
+`JToken.Parse`, whose default `DateParseHandling` rewrites any ISO-8601-looking
+string into a `DateTime` in the DEVICE'S LOCAL ZONE, so a `string` DTO field got
+`"09/03/2026 12:26:19"` — local wall clock, US format, no offset — which was then
+parsed back as UTC and shifted again. It corrupted every timestamp string on the
+shared envelope, not just GPS. Fixed there plus the three read-back sites that
+carry string timestamps. It hid because `Elapsed` went NEGATIVE and a clamp
+printed a plausible `0:00` over it — the same reading feeds the 8 h expiry.
+
+**Known issue carried forward:** recording the Rounds screen with Unity Recorder
+HARD-LOCKS the Mac (twice, manual power-cycle both times). Scenario alone is
+safe, encoder alone is safe on the other six screens; only the combination.
+Leading suspect is the live Google Static Maps texture. Tooling only — the app
+does not encode video. See
+`Docs/Specs/Completed/gps_checkin/KNOWN_ISSUE_recorder_lockup.md`.
+
+**Method lesson, three misreports in one session:** a code path that silently
+does not execute is indistinguishable from one that passed — an untimed probe
+leg, a no-op `!_fetchInFlight` guard, and a dry run that never called
+`StartDemo()`. State the validity condition BEFORE running a diagnostic.
+
 ## 2026-09-03 — gps_checkin: Unity half built; a shared timestamp bug found under it
 
 The ROUNDS tab is real end to end — chips, live Google map, nearby spots, CHECK IN ->
