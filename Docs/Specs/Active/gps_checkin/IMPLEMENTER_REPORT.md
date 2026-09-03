@@ -590,3 +590,51 @@ Remaining warns are accounted for, not ignored:
   square 172x172 canvas; the pin's OPAQUE content is 122x158 (aspect 0.77) and it
   is authored 40x53 (0.755), i.e. within 2% of native.
 - `SortToggle ::flat-fill::` — a transparent hit-area for the Button. Intended.
+
+## Acceptance 12 — motion parity
+
+Red-team FAILed the task because this item had no runtime evidence. It was right.
+The report had marked it `BLOCKED (Unity)` and I never returned to it, though
+Unity was free for everything else afterwards.
+
+**The objective gates are now complete.**
+
+| Artifact | Result |
+|---|---|
+| `gps_rounds_motion_invariants.json` | **12 transitions, fail=0** |
+| `gps_rounds_motion_perf.json` | **A13 over 12 pushes** |
+
+```
+GpsHub    -> GpsRounds  Forward  15 frames  0.257s vs 0.250s expected
+GpsRounds -> GpsHub     Back      8 frames  0.264s vs 0.250s expected
+   ranToCompletion=True   blocksRaycastsRestored=True   tolerance 0.0533s
+
+A13:  GpsHub->GpsRounds   5.28 MB   worst frame 27.3 ms
+      GpsRounds->GpsHub   5.21 MB   worst frame 21.2 ms
+      family worst        6.84 MB (->GpsGift)   45.6 ms (->GpsVote)
+```
+
+Rounds sits INSIDE the existing envelope on both axes — it did not move the
+ceiling, which is the question A13 actually asks.
+
+**Why there was no evidence before.** `GpsPolishProbe.Obj()` — the probe's private
+`ScreenId -> GameObject` resolver — had no `GpsRounds` case. It returned null, so
+`CanPush()` evaluated false INSIDE the probe, so `expectPush` was false, so the leg
+was walked without ever being timed. No record, no failure, no sign anything was
+wrong: a screen missing from that switch is silently unmeasured rather than
+reported as unmeasurable.
+
+I then misread that silence as a product defect and reported that the Rounds
+screen "isn't getting the GPS push transition at all". It was. Measured directly:
+`CanPush(Hub -> Rounds) = True`, `HasSplit = True`. The transition always worked;
+nobody had ever observed it. The probe now carries the missing case with that
+failure written down at the call site.
+
+**The video is waived** (Cesar, 2026-09-03). Recording this screen hard-locks the
+Mac — twice, both needing a manual power-cycle. Full diagnosis, including the
+three hypotheses eliminated and the three ways to investigate later, is in
+`KNOWN_ISSUE_recorder_lockup.md`. The scenario itself is proven safe with the
+encoder off (real check-in, `POST /activity/checkin -> 200`, Unity stable); the
+lock needs the encoder AND the Rounds screen together. Tooling issue, not a
+defect in the shipped screen.
+

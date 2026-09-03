@@ -72,9 +72,13 @@ namespace Golfin.EditorTools
         [MenuItem("GOLFIN/Gps/Record — (g) Rounds check-in loop", priority = 236)]
         public static void LaunchG() => LaunchDemo("g");
 
-        public static void LaunchDemo(string scenario = "a")
+        public static void LaunchDemo(string scenario = "a", bool dryRun = false)
         {
             EditorPrefs.SetString(ScenarioKey, scenario);
+            // Written explicitly on EVERY launch — a normal Record can never inherit a stale
+            // dry-run flag from an earlier session, and the dry run cannot be cleared by its own
+            // launcher (which the first version of this did).
+            EditorPrefs.SetBool(DryRunKey, dryRun);
             if (EditorApplication.isPlaying)
             {
                 Debug.LogWarning("[GpsFlowDemo] Already in play mode — stop first.");
@@ -115,8 +119,29 @@ namespace Golfin.EditorTools
             catch { return false; }
         }
 
+        /// <summary>Set by the DRY-RUN menu item: walk the scenario with the Recorder OFF.
+        /// The point is to separate "the scenario is bad" from "the encoder is bad" — the flow
+        /// runs identically, nothing is encoded, and nothing touches VideoToolbox.</summary>
+        const string DryRunKey = "GpsFlowDemoRecorder.DryRun";
+
+        [MenuItem("GOLFIN/Gps/Record — DRY RUN (g), no encoder", priority = 237)]
+        public static void LaunchGDry() => LaunchDemo("g", dryRun: true);
+
         static void StartRecorderAndBot()
         {
+            if (EditorPrefs.GetBool(DryRunKey, false))
+            {
+                Debug.Log("[GpsFlowDemo] DRY RUN — Recorder NOT started; no MP4, no VideoToolbox.");
+                GpsFlowDemoRunner.RecordStart = Time.realtimeSinceStartup;
+                // IDENTICAL to the real path below, minus the Recorder. StartDemo() is what
+                // actually runs the scenario — the first version of this only added the component
+                // and never called it, so the "dry run" sat on Home and proved nothing.
+                var dryHost = new GameObject("[GpsFlowDemoBot]");
+                UnityEngine.Object.DontDestroyOnLoad(dryHost);
+                dryHost.AddComponent<GpsFlowDemoRunner>().StartDemo();
+                return;
+            }
+
             bool selected = TryEnsureIPhone14Selected();
             int w = 1170, h = 2532;
             if (!selected)

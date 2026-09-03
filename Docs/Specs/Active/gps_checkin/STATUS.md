@@ -1,4 +1,4 @@
-ARCHITECT_REVIEW_FAIL
+READY_FOR_REDTEAM
 
 # STATUS — `gps_checkin`
 
@@ -142,4 +142,23 @@ An earlier attempt at this test was inconclusive for an environmental reason wor
 recording: `/activity/active` timed out because the Fly app had scaled to zero
 (`/health` took 17s, then 0.04s once warm), and `Session.Refresh` deliberately
 keeps the mirror on a failed fetch. The code was fine; the tunnel was cold.
+
+## ARCHITECT_REVIEW_FAIL cleared — acceptance 12 delivered
+
+Red-team blocked on item 12 (motion parity) having zero runtime evidence. Correct
+call. Now delivered:
+
+- **Motion invariants:** `gps_rounds_motion_invariants.json` — 12 transitions,
+  `fail=0`, Rounds measured both directions (0.257 s / 0.264 s vs 0.250 s).
+- **A13:** `gps_rounds_motion_perf.json` — 12 pushes; Rounds 5.28 / 5.21 MB and
+  27.3 / 21.2 ms, inside the family envelope.
+- **Video: WAIVED by Cesar.** Recording the Rounds screen hard-locks the Mac
+  (twice, manual reset both times). See `KNOWN_ISSUE_recorder_lockup.md` — the
+  scenario is proven safe with the encoder off, so this is a tooling
+  incompatibility, not a defect in the screen. Ship on the objective gates.
+
+Also fixed, from the red-team's secondary finding: `FetchCardSubtitle` set its
+once-per-round guard BEFORE the request, so a single failed `/venue/{id}` — a
+cold start on a scale-to-zero backend is enough — blanked the resumed round's
+address for the life of the round with no retry. A failure now releases the guard.
 
