@@ -472,3 +472,55 @@ test row). Cesar can delete or re-activate `#2004 パンチ・イット練習場
 See § Files in the chat hand-off. Not this task's, and left alone: the
 `gps_profile_prompt_on_entry` / `gps_navbar_selected_tab` working set, and the
 `game_polish` / `design_consistency_audit` files that appeared mid-session from a third session.
+
+---
+
+## Unity pass — 2026-09-03 (Unity released by Cesar mid-session)
+
+Driven through REAL navigation every time: Home `GpsPill.onClick` -> hub
+`NavRoundsButton.onClick` -> row `ActionButton.onClick` -> modal
+`ConfirmButton.onClick`. No render harness, no synthetic entry point. Location
+mocked at TEST Office (venue 1993, 35.654103/139.779219, acc 8 m) via
+`GpsRoundsScreenController.EditorFixOverride`.
+
+**Live economy, read off the top bar across two full rounds:**
+7,153 -> 7,183 (+30 check-in) -> 7,198 (+15 check-out) -> 7,228 (+30) -> 7,243 (+15).
+
+### Defects found and fixed in this pass
+
+| # | Defect | Root cause | Fix |
+|---|---|---|---|
+| 1 | CHECK IN buttons rendered as white blobs (Cesar) | sprite swapped but colour/ppum left at the gold values | colour, ppum and rim now move together in `ApplyAction` |
+| 2 | Address and distance overlapped (Cesar) | Info had no clip; Name authored too wide | `RectMask2D` on Info (the node's `overflow-clip`) + Name 540/330 by partner tag |
+| 3 | Confirm modal read `● LOW` before any round | `RecordFix` is gated on an ACTIVE round, so `LastFix` was never set pre-check-in | `RoundSession.NoteFix` sets the readout without feeding the paid trail |
+| 4 | Confirm stat 1 gold, node is white | `statColours` | `{ White, Gold, Green }` |
+| 5 | Confirm note copy differed from node | authored copy | node wording; wrap width 830 -> 790 so line 1 ends at "finish —" |
+| 6 | **"Since 21:26" for a 12:26 round** | `ApiEnvelope`'s `JToken.Parse` — default `DateParseHandling` rewrote the ISO string to LOCAL wall-clock text, which was then parsed as UTC and shifted AGAIN | `ParseRaw` with `DateParseHandling.None`; same for the 3 read-back sites |
+| 7 | ROUND COMPLETE had no venue name; sub-line above the pin | modal never authored one | `_venueName` added; order is pin -> name -> sub at the node's measured bands |
+| 8 | Receipt end time came from the device clock | `DateTimeOffset.UtcNow` | server's `check_out_at` |
+
+**Defect 6 was not a GPS bug.** It corrupted every timestamp *string* passing
+through the shared envelope, so it is fixed there. All 11 JSON parse sites in
+`Assets/Scripts` were enumerated; the three carrying string timestamps
+(`ActivityDto`, `GachaHistoryPage`, `SaveData.lastHoleUtc`) were fixed with it and
+the other seven verified to carry none. `Elapsed` had been going NEGATIVE, with a
+clamp printing a plausible `0:00` over it — the same reading feeds the 8-hour
+expiry rule.
+
+### Evidence
+
+| Screenshot | State |
+|---|---|
+| `screenshots/01_rounds_list_nearby.png` | list, gold CHECK IN in radius, dark "N KM AWAY" outside it, real Google map |
+| `screenshots/02_checkin_confirm.png` | confirm modal — white `+30`, `● HIGH`, node copy |
+| `screenshots/03_live_round_card.png` | live card, `Since 12:41`, `0:00 ELAPSED`, `+30`, `3 GPS FIXES` |
+| `screenshots/04_checkout_confirm.png` | check-out confirm — venue name present, sub below pin |
+| `screenshots/05_receipt.png` | receipt — `12:41 – 12:41 · GPS verified`, `+15`, POST SCORE / DONE |
+| `screenshots/06_resumed_round_after_restart.png` | round resumed across a full domain reload: `Since 12:26`, `0:09 ELAPSED` |
+
+Tests: EditMode 2383 total, **2380 passed, 0 failed**, 3 pre-existing intentional
+skips. Two new timezone-independent regression tests
+(`ActivityTimestampFidelityTests`) confirmed present in the loaded assembly, so
+they were in that run.
+
+Texts published **v35**; `export_content.py --check` clean.

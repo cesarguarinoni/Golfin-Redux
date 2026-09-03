@@ -4,6 +4,26 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
+## 2026-09-03 — gps_checkin: Unity half built; a shared timestamp bug found under it
+
+The ROUNDS tab is real end to end — chips, live Google map, nearby spots, CHECK IN ->
+live round card -> CHECK OUT -> receipt — driven through the player's own widgets and
+paying real RP (7,153 -> 7,243 across two rounds). Backend (2 migrations, 2 atomic RPCs)
+and the admin Partners panel were already deployed and proven live.
+
+**The find worth remembering is not a GPS bug.** `Golfin.Net.ApiEnvelope` parsed responses
+with `JToken.Parse`, whose default `DateParseHandling` rewrites any ISO-8601-looking string
+into a `DateTime` **in the device's local zone**; a DTO field typed `string` then got
+`"09/03/2026 12:26:19"` — local wall clock, US format, no offset — which was parsed back as
+UTC and shifted a second time. It corrupted every timestamp string on the shared envelope,
+so it is fixed there (`ParseRaw`, `DateParseHandling.None`) plus the three read-back sites
+that carry string timestamps (`ActivityDto`, `GachaHistoryPage`, `SaveData.lastHoleUtc`);
+the other seven parse sites were enumerated and carry none.
+
+It hid because `Elapsed` went NEGATIVE and a clamp printed a plausible `0:00` over it. The
+same reading feeds the 8-hour round-expiry rule. Pinned by two timezone-independent
+regression tests. Texts at v35. STATUS: `READY_FOR_SELF_REVIEW`.
+
 ## 🟡 IN FLIGHT — `gps_checkin`: the Rounds tab, backend-first (2026-09-03) · device-pass finding #3
 
 The hub's inert ROUNDS slot becomes a real tab: category chips, a REAL map, nearby spots,
