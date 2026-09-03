@@ -103,6 +103,11 @@ namespace Golfin.Gps.UI
             switch (id)
             {
                 case ScreenId.GpsHub:      return 0;   // NavHome
+                // gps_checkin — the ROUNDS slot, second from the left on the bar and inert until
+                // this task. Its number is the bar's own order, which is what DirectionFor reads:
+                // hub -> Rounds pushes FORWARD, Rounds -> Gift pushes FORWARD, Rounds -> hub is
+                // BACK by rule 1.
+                case ScreenId.GpsRounds:   return 1;   // NavRounds
                 case ScreenId.ScoreUpload: return 2;   // NavCamera
                 case ScreenId.GpsGift:     return 3;   // NavGift
                 case ScreenId.GpsVote:     return 4;   // (no slot — sits right of Gift)

@@ -204,6 +204,18 @@ namespace Golfin.Gps.UI
             _draft.Source = ScoreSource.Camera;
             _postInFlight = false;
 
+            // gps_checkin §C4 — AFTER the reset, which would otherwise wipe it. When the player
+            // arrived from the Rounds screen's SCORE UPLOAD button the venue is already known and
+            // already GPS-verified by the check-in, and `activity_id` makes the post CLOSE that
+            // round rather than open a second history row beside it (D6).
+            ScoreUploadDraft.Prefill? prefill = ScoreUploadDraft.Take();
+            if (prefill != null)
+            {
+                _draft.Apply(prefill);
+                Debug.Log($"{Tag} prefilled from round #{prefill.ActivityId} at " +
+                          $"{prefill.VenueName} (venue {prefill.VenueId}).");
+            }
+
             GoTo(Step.Capture);
 
             TelemetryService.Instance.RecordSafe(TelemetryEventNames.ScoreUploadOpen,

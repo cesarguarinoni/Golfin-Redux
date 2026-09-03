@@ -58,6 +58,11 @@ namespace Golfin.Gps.UI
             // dead there, since the hub itself is already on this list.
             ScreenId.GpsGift,
             ScreenId.GpsVote,
+            // gps_checkin — the Rounds tab. On the list for the same two reasons as the rest: it
+            // is GPS surface (top-bar-only chrome), and in a "punch it" build it must not be
+            // reachable — which also makes the hub nav bar's ROUNDS slot dead there, since the
+            // hub itself is already on this list.
+            ScreenId.GpsRounds,
         };
 
         /// <summary>Membership of the GPS surface, independent of <see cref="Enabled"/>. Used by

@@ -172,6 +172,17 @@ namespace Golfin.Gps
 
         public string Visibility = "public";
 
+        /// <summary>
+        /// gps_checkin §A5 — the live round this score belongs to.
+        ///
+        /// <para>When it is the caller's own <c>active</c> row the server UPDATES that row instead
+        /// of inserting a second activity, so a round the player checked into and then posted a
+        /// score for is ONE row in history, not two (D6). Null on every other path, including a
+        /// score posted with no round open, and the server falls back to the historical insert.
+        /// </para>
+        /// </summary>
+        public long? ActivityId;
+
         /// <summary>The non-GPS body. <see cref="ScoreService.Submit"/> merges the attachment over
         /// this, so any key present in both resolves to the ATTACHMENT's value.</summary>
         public JObject ToJson()
@@ -198,6 +209,11 @@ namespace Golfin.Gps
 
             if (ScreenshotData != null) o["screenshot_data"] = ScreenshotData;
 
+            // Omitted rather than sent as null: the field is Optional[int] on the server and an
+            // explicit null costs a key on every score post that is not closing a round, which is
+            // most of them.
+            if (ActivityId.HasValue) o["activity_id"] = ActivityId.Value;
+
             return o;
         }
     }
@@ -223,6 +239,11 @@ namespace Golfin.Gps
         [JsonProperty("avatar_level")]        public int? AvatarLevel;
         [JsonProperty("leveled_up")]          public bool LeveledUp;
         [JsonProperty("newly_earned_badges")] public JArray NewlyEarnedBadges;
+
+        /// <summary>gps_checkin §A5 — the live round this post CLOSED, or null when it opened a
+        /// standalone history row. The Rounds screen reads it to drop its live card without
+        /// waiting for the next <c>/activity/active</c>.</summary>
+        [JsonProperty("closed_activity_id")]  public long? ClosedActivityId;
 
         public override string ToString()
             => $"ScoreSubmitResult(+{PointsEarned} pts, trust={Trust}, gps={GpsVerified})";

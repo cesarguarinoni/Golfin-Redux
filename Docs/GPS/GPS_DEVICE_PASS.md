@@ -59,6 +59,42 @@
 | 3.8 | Repeat 3.5 at HOME | TEST Home within 500 m; Office listed but far |
 | 3.9 | Post a round WITHOUT granting location (deny the prompt on a re-install, or toggle off in Settings) | still submits, lower trust — no dead end |
 
+## 3b · Rounds tab — real check-in (gps_checkin; do this twice: at the office, at home)
+
+> Added 2026-09-03 by `gps_checkin`. This is the row set the Editor genuinely cannot cover: a real
+> fix with real accuracy, the radius decided against it server-side, the app being backgrounded
+> mid-round, and a raster map on glass. Everything else on the Rounds tab was verified in the
+> Editor with the location mocked at **1993 TEST Office**.
+>
+> **Pre-req (Cesar, once):** both migrations applied (`2026_09_03_venue_partners.sql`, then
+> `2026_09_03_seed_demo_spots.sql`), the API deployed, and **"Maps Static API" enabled** on the
+> Google key `playlife-api` uses. Without the last one `/venue/map` answers 502 and every row
+> below still works — the panel just shows the stylised placeholder with no attribution, which is
+> row 3b.4's "fallback" outcome rather than a defect.
+
+| # | Check | Expect |
+|---|---|---|
+| 3b.1 | Hub → **ROUNDS** nav slot (second from the left) | the Rounds tab, arriving with the layered push; the ROUNDS slot lit; top bar reads **ROUNDS** |
+| 3b.2 | Cold open (kill the app first) | shimmer on NEAR YOU while the fix + fetch run, then rows stagger in; status row reads `NEARBY · N SPOTS` and the pill `● GPS ON` |
+| 3b.3 | Deny location (Settings → Golfin → Location → Never), re-enter | pill `● GPS OFF` in grey, rows still listed, every CHECK IN dark. **Tap one** → toast "Turn on location to check in". No dead button anywhere |
+| 3b.4 | The map panel | a REAL dark road map centred on you, a blue you-are-here dot, coloured pins that line up with the spot list, `Map · Google` bottom-right. If the Static Maps key is not enabled: the stylised placeholder and NO attribution — note which you got |
+| 3b.5 | Drag the map, then **◎ NEAR ME** | the tile re-fetches after the drag settles (~¼ s) and the pins move WITH it, not after it; NEAR ME snaps back to you |
+| 3b.6 | Chips: DRIVING RANGES → FOOD & DRINK → GOLF COURSES | the list cross-fades and the pins re-colour each time. FOOD & DRINK lists the 5 demo spots, DRIVING RANGES 4 |
+| 3b.7 | **At the office**: 霞ヶ関 or any far course row | button reads `N KM AWAY`, dark. Tap → toast "You need to be at … — you're N km away" |
+| 3b.8 | **At the office**: the TEST Office row | gold **CHECK IN**. Tap → the confirm modal pops; sub-line says "…km away · inside the course radius"; the three stats show +30 / +10 / `● HIGH` |
+| 3b.9 | CHECK IN → confirm | `…` on the button, then the modal closes, RP **counts up +30** in the Top UI, toast "Checked in at … (+30 pts)", and the screen flips: chips gone, gold **LIVE ROUND** card in their place, list retitled **NEARBY FOOD & DRINK** |
+| 3b.10 | Watch the card for ~90 s | ELAPSED ticks each minute with NO layout jitter; GPS shows `● HIGH`; GPS FIXES ≥ 1 |
+| 3b.11 | Background the app for 10+ min, come back | the round is still there, elapsed correct against the wall clock (not restarted), GPS FIXES has gone up. **This is the D3 foreground-trail row** — there is no background location entitlement, so the fix is taken on resume |
+| 3b.12 | Force-quit mid-check-in (start a check-in on a bad connection, kill the app, relaunch, retry) | ONE round, +30 paid ONCE. `/points/balance` before and after must differ by exactly 30 |
+| 3b.13 | With a round live, tap another spot's **DETAILS** | a toast with that spot's offer/price. (NOTE: there is no venue-detail screen in the project — see the report's deviation D-3) |
+| 3b.14 | **SCORE UPLOAD** from the card | the Score Upload flow opens with the venue ALREADY chosen and GPS-verified — no venue picker step |
+| 3b.15 | Post the score | Score Posted as usual, and back on Rounds the live card is GONE. `/activity/history` shows **ONE** row for the round, not two |
+| 3b.16 | Start a second round, then **CHECK OUT** | the Round Complete modal pops as a confirmation; confirm → it becomes a receipt with the SERVER's elapsed / `+15` / fix count; RP counts up +15; back on the list state |
+| 3b.17 | **At home**: repeat 3b.8–3b.9 against **1992 TEST Home** | same behaviour; TEST Office now reads `4.x KM AWAY` |
+| 3b.18 | Leave a round open overnight, check out the next day | card reads **ROUND EXPIRED**; CHECK OUT closes it and pays **0** — and says so rather than promising points |
+| 3b.19 | Japanese (Settings → 日本語, then re-enter Rounds) | every chip, panel title, button, toast and both modals in Japanese; no raw `GPS_ROUNDS_*` keys anywhere |
+| 3b.20 | Feel at 60 fps: the list↔card flip, the modal pops, the map fade | note any hitch — the first push after launch is the GC warm-up frame |
+
 ## 4 · Gift and Vote (real economy — small amounts)
 
 | # | Check | Expect |

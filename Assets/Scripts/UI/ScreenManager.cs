@@ -53,6 +53,10 @@ namespace GolfinRedux.UI
         // hub's VOTE tile and from a vote card's own GIFT button in the other direction.
         GpsGift,
         GpsVote,
+        // gps_checkin — the Rounds tab (Figma 14076:33800 / 14077:100447). Reached from the hub
+        // nav bar's ROUNDS slot, which was deliberately inert until this task: chips + a real map
+        // + nearby spots, CHECK IN -> a live round card -> SCORE UPLOAD or CHECK OUT.
+        GpsRounds,
         // Settings removed - it's an overlay, not a screen
 
         // Order: login_signup_screens — account auth gate (Phase 1 — UI only, no backend)
@@ -121,6 +125,9 @@ namespace GolfinRedux.UI
         // the hub's own GPS nav bar inside their prefab, so the shared bottom nav stays hidden.
         [SerializeField] private GameObject _gpsGiftScreen;
         [SerializeField] private GameObject _gpsVoteScreen;
+        // gps_checkin — the Rounds tab. Same top-bar-only chrome and the same in-prefab GPS nav
+        // bar as Gift/Vote.
+        [SerializeField] private GameObject _gpsRoundsScreen;
         // _settingsScreen removed - Settings is an overlay managed by SettingsController, not ScreenManager
 
         // Order: login_signup_screens — account auth gate screens
@@ -350,6 +357,7 @@ namespace GolfinRedux.UI
                 case ScreenId.GpsWelcome:     return _gpsWelcomeScreen;
                 case ScreenId.GpsGift:        return _gpsGiftScreen;
                 case ScreenId.GpsVote:        return _gpsVoteScreen;
+                case ScreenId.GpsRounds:      return _gpsRoundsScreen;
                 default:                      return null;
             }
         }
@@ -626,6 +634,8 @@ namespace GolfinRedux.UI
                 _gpsGiftScreen.SetActive(screenId == ScreenId.GpsGift);
             if (_gpsVoteScreen != null)
                 _gpsVoteScreen.SetActive(screenId == ScreenId.GpsVote);
+            if (_gpsRoundsScreen != null)
+                _gpsRoundsScreen.SetActive(screenId == ScreenId.GpsRounds);
 
 
             // Order: login_signup_screens — account auth gate (excluded from showBars)

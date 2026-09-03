@@ -4,6 +4,43 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
+## 🟡 IN FLIGHT — `gps_checkin`: the Rounds tab, backend-first (2026-09-03) · device-pass finding #3
+
+The hub's inert ROUNDS slot becomes a real tab: category chips, a REAL map, nearby spots,
+CHECK IN → a live round card → SCORE UPLOAD or CHECK OUT. PLAYLIFE's Flutter version of this
+screen never called `/activity/checkin` — CHECK IN set local state and showed a fake "+50 pts",
+and the ranges and restaurants were nine hardcoded literals. This task builds the look AND the
+mechanic.
+
+**Done and compile-verified, with Unity untouched.** Unity is held by another session, so the C#
+was compiled headlessly against Unity's own Roslyn: `Golfin.Gps`, `Assembly-CSharp`,
+`Assembly-CSharp-Editor`, `Golfin.Gps.Tests`, `GolfinRedux.Tests.EditMode` — all five OK. It found
+a real error (`GpsRoundsBuilder` missing `using Golfin.Gps.EditorTools`) before Unity ever saw the
+file, instead of by breaking the other session's editor.
+
+**Backend.** `venues` becomes the spots table (three categories, partner flag, price/chip/offer,
+`is_active`), and check-in/check-out become two atomic RPCs on the `golfin_gift_pts` pattern. The
+last un-migrated writer of `profiles.total_points` — `activity.py`'s check-out — is deleted; it
+broke the `total_points = activity_pts + gift_pts` invariant on every round. The idempotency key
+lives on the `activities` row rather than the ledger, because an unverified check-in and an
+expired check-out both award 0 and write no ledger row: keying replay off the ledger would make
+exactly those cases replayable, and a force-quit mid-check-in would open a second round.
+
+**A real finding, from writing the geohash port for the admin panel.** Two of the 1,988 venue rows
+(`#1 東京ゴルフ倶楽部`, `#7 Lomond Country Club`, both hand-seeded) carry a geohash that does not
+match their own coordinates. `/venue/nearby` searches by geohash prefix, so both rows exist, would
+draw on a map, and appear in NO player's nearby list — with no error anywhere. The new Partners
+panel raises them in red and a re-save fixes them.
+
+**Localization is live:** `texts` published at v32, 64 `GPS_ROUNDS_*` rows, `export --check` clean.
+
+**Blocked on two gates, in order.** (1) Cesar applies `2026_09_03_venue_partners.sql` then
+`2026_09_03_seed_demo_spots.sql`, and enables "Maps Static API" on the API's Google key — both
+deploys wait on that deliberately, since either one shipped first would call something that does
+not exist yet. (2) A free Unity for the prefab build, the play-mode capture, the fidelity lint and
+the motion video. Full state in `Docs/Specs/Active/gps_checkin/STATUS.md`.
+
+---
 ## ✅ DONE — GPS nav bar, both halves (2026-09-03) · device-pass finding #1
 
 Two Quick tasks off the same screenshot, `Docs/Specs/Quick/gps_navbar_bottom_anchor.md` and

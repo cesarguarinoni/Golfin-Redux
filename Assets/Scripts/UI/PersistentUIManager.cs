@@ -586,6 +586,8 @@ namespace Golfin.UI
                 // gps_gifts_votes
                 case GolfinRedux.UI.ScreenId.GpsGift:                  return "GPS_GIFT_TITLE";
                 case GolfinRedux.UI.ScreenId.GpsVote:                  return "GPS_VOTE_TITLE";
+                // gps_checkin — the Rounds tab
+                case GolfinRedux.UI.ScreenId.GpsRounds:                return "GPS_ROUNDS_TITLE";
                 default:                                               return null;
             }
         }

@@ -25,7 +25,13 @@ namespace GolfinRedux.Tests.EditMode
         static readonly string[] GpsScreenNames =
             { "GpsHub", "ScoreUpload", "GpsProfile", "GpsAvatar", "GpsBadges",
               // auth_golf_profile — the post-signup capture + welcome tutorial.
-              "GpsGolfProfile", "GpsWelcome" };
+              "GpsGolfProfile", "GpsWelcome",
+              // gps_gifts_votes — listed here for the first time. EveryGpsNamedScreenId_IsOnTheGpsList
+              // already covered them by name, but this array is what asserts the ALLOWED half and
+              // the IsGpsScreen half, and they were missing from both.
+              "GpsGift", "GpsVote",
+              // gps_checkin — the Rounds tab.
+              "GpsRounds" };
 
         // A sample of the rest of the app. These must be reachable in EVERY variant — the gate is
         // a deny-list, so anything not on the GPS list is allowed by construction, and a bug that

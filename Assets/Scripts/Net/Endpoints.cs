@@ -419,6 +419,47 @@ namespace Golfin.Net
             => BaseUrl + "/venue/nearby?prefixes=" + UnityWebRequest.EscapeURL(prefixes ?? "") +
                "&language_code=" + UnityWebRequest.EscapeURL(languageCode ?? "ja");
 
+        /// <summary>
+        /// gps_checkin §A2 — the same endpoint with the three parameters the Rounds tab needs:
+        /// a <paramref name="category"/> ("golf" | "range" | "food"), and the caller's position so
+        /// the SERVER computes <c>distance_m</c> and returns the page already sorted by it.
+        ///
+        /// <para>Omitting lat/lon is legal and is the no-GPS state: the rows come back unsorted
+        /// with <c>distance_m = null</c>, which the screen renders with CHECK IN disabled.
+        /// Invariant culture on the two doubles — a device in a comma-decimal locale would
+        /// otherwise send <c>lat=35,654103</c> and split the query string in half.</para>
+        /// </summary>
+        public static string VenueNearby(string prefixes, string category,
+                                         double? lat, double? lon, string languageCode = "ja")
+        {
+            string url = BaseUrl + "/venue/nearby?prefixes=" + UnityWebRequest.EscapeURL(prefixes ?? "") +
+                         "&language_code=" + UnityWebRequest.EscapeURL(languageCode ?? "ja") +
+                         "&category=" + UnityWebRequest.EscapeURL(string.IsNullOrEmpty(category) ? "golf" : category);
+            if (lat.HasValue && lon.HasValue)
+                url += "&lat=" + lat.Value.ToString("R", System.Globalization.CultureInfo.InvariantCulture) +
+                       "&lon=" + lon.Value.ToString("R", System.Globalization.CultureInfo.InvariantCulture);
+            return url;
+        }
+
+        /// <summary>
+        /// gps_checkin §A4 — <c>GET /venue/map</c> → an <c>image/png</c> dark roadmap tile centred
+        /// on (lat, lon). Fetched with <c>UnityWebRequestTexture</c>, NOT through
+        /// <see cref="ApiClient"/>'s JSON path, but with the SAME bearer token (see
+        /// <c>VenueService.MapTile</c>) — the route is authenticated and rate-limited per user.
+        ///
+        /// <para>No markers are requested: the pins, the player dot and the legend are ours and
+        /// are drawn over the tile by <c>MapProjection</c>. Re-fetching the tile every time a pin
+        /// moved would be absurd, and Google's own markers are not the design.</para>
+        /// </summary>
+        public static string VenueMap(double lat, double lon, int zoom, int w, int h)
+        {
+            var inv = System.Globalization.CultureInfo.InvariantCulture;
+            return BaseUrl + "/venue/map?lat=" + lat.ToString("R", inv) +
+                   "&lon=" + lon.ToString("R", inv) +
+                   "&zoom=" + zoom.ToString(inv) +
+                   "&w=" + w.ToString(inv) + "&h=" + h.ToString(inv);
+        }
+
         /// <summary>GET → <c>{data:[VenueDto]}</c> — every venue. The manual-selection fallback for
         /// when GPS resolves nothing.</summary>
         public static string VenueList(string languageCode = "ja")
@@ -449,6 +490,18 @@ namespace Golfin.Net
         /// <summary>GET → the caller's check-in history page.</summary>
         public static string ActivityHistory(int skip = 0, int limit = 20)
             => BaseUrl + "/activity/history?skip=" + skip + "&limit=" + limit;
+
+        /// <summary>
+        /// gps_checkin §A3 — <c>GET /activity/active</c> → <c>{data: ActivityDto}</c>, or
+        /// <c>{data: null}</c> when the player has no round open.
+        ///
+        /// <para>THE CLIENT'S SOURCE OF TRUTH on screen entry and app resume. <c>RoundSession</c>
+        /// mirrors the row in PlayerPrefs so the live card paints on frame one, but a mirror that
+        /// disagrees with the server loses: a round checked out on another device, or expired by
+        /// the 8 h rule, must not keep ticking here. A null is a SUCCESSFUL result with null Data,
+        /// exactly like <see cref="VenueAutoRegister"/> — branch on Data, never on Success.</para>
+        /// </summary>
+        public static string ActivityActive => BaseUrl + "/activity/active";
 
         /// <summary>
         /// GET → <c>{data: &lt;profiles row&gt;}</c> — the caller's own PLAYLIFE profile

@@ -22,12 +22,17 @@ namespace Golfin.Gps.UI
     [DisallowMultipleComponent]
     public sealed class ShimmerHost : MonoBehaviour
     {
-        /// <summary>The five sites, as the controllers name them.</summary>
+        /// <summary>The seven sites, as the controllers name them.</summary>
         public const string HubRounds   = "hub.rounds";
         public const string Badges      = "badges.grid";
         public const string Supporters  = "gift.supporters";
         public const string Golfers     = "gift.golfers";
         public const string VoteList    = "vote.list";
+        // gps_checkin — the Rounds tab's two lists. NEAR YOU is genuinely cold on a first entry
+        // (a nearby fetch needs a GPS fix first, so it is the slowest list in the GPS surface);
+        // MY RECENT ROUNDS is the hub's own list on a second screen.
+        public const string RoundsSpots   = "rounds.spots";
+        public const string RoundsHistory = "rounds.history";
 
         [Tooltip("Which cold-fetch site this group stands in for. One of the constants on this " +
                  "class; set by GpsPolishBuilder.")]

@@ -56,6 +56,47 @@ namespace Golfin.Gps
         [JsonProperty("place_id")]     public string PlaceId;
         [JsonProperty("source")]       public string Source;
 
+        // ── gps_checkin §A1 — venues became the SPOTS table ──
+        //
+        // Additive columns, so an old client keeps working and a new one sees three categories.
+        // `sport_type` above is UNCHANGED and still 'golf' on every row: it is the Flutter app's
+        // axis, and `Category` is the one the Rounds tab's chips browse by.
+
+        /// <summary>"golf" | "range" | "food". Defaults to golf on any row written before the
+        /// migration, and on any row a future server adds a fourth value to — the Rounds screen
+        /// only ever asks for one category at a time, so an unknown value simply never arrives.</summary>
+        [JsonProperty("category")]      public string Category;
+
+        /// <summary>Drives the gold PARTNER tag on the spot row.</summary>
+        [JsonProperty("is_partner")]    public bool IsPartner;
+
+        /// <summary>The grey line under the name ("Kawagoe, Saitama · East 18H · PAR 72").</summary>
+        [JsonProperty("subtitle")]      public string Subtitle;
+
+        /// <summary>"¥15,000〜" — free text, appended after the distance on the row's green line.</summary>
+        [JsonProperty("price_label")]   public string PriceLabel;
+
+        /// <summary>"24H" / "10%OFF" / "ナイター" — the small chip the admin panel calls Chip.</summary>
+        [JsonProperty("chip_extra")]    public string ChipExtra;
+
+        /// <summary>Display text only; nothing redeems it (SPEC § Out of scope).</summary>
+        [JsonProperty("partner_offer")] public string PartnerOffer;
+
+        /// <summary>The server already filters <c>/venue/nearby</c> on this; it is carried so the
+        /// venue-detail path can tell a deactivated spot from a missing one.</summary>
+        [JsonProperty("is_active")]     public bool? IsActive;
+
+        /// <summary>
+        /// Metres from the caller, computed SERVER-SIDE by <c>/venue/nearby</c> when the request
+        /// carried lat/lon, and the key the server already sorted the page by.
+        ///
+        /// <para>THE CLIENT SORTS NOTHING (§A2). It used to be impossible for it to sort
+        /// correctly: geohash-prefix order is not distance order, so the old "nearby" list was in
+        /// insertion order pretending to be near. Null means the fetch had no fix — the no-GPS
+        /// state, where CHECK IN is disabled and the row says why.</para>
+        /// </summary>
+        [JsonProperty("distance_m")]    public double? DistanceM;
+
         public override string ToString() => $"VenueDto #{Id} {Name}";
     }
 
@@ -89,6 +130,11 @@ namespace Golfin.Gps
         [JsonProperty("gps_is_mock")]     public bool? GpsIsMock;
         [JsonProperty("client_platform")] public string ClientPlatform;
         [JsonProperty("points")]          public int? Points;
+
+        /// <summary>gps_checkin §A3 — the server's own "1h 24m", written by the check-out RPC and
+        /// by a score post that closes a live round. Never re-derived on the client: the two
+        /// would disagree by whatever the request took.</summary>
+        [JsonProperty("duration")]        public string Duration;
 
         // ── Score columns, written by score.py:206-230 (gps_hub_entry §3) ──
         //

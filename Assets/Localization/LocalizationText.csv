@@ -966,3 +966,67 @@ GPS_VOTE_CREATE_SUBMIT,CREATE VOTE,投票を作成
 GPS_VOTE_CREATE_SENDING,Creating…,作成中…
 GPS_VOTE_CREATE_FAILED,Could not create the vote. Try again.,投票を作成できませんでした。もう一度お試しください。
 GPS_VOTE_CREATED,Vote created.,投票を作成しました。
+GPS_ROUNDS_TITLE,ROUNDS,ラウンド
+GPS_ROUNDS_NEARBY_COUNT,NEARBY · {0} SPOTS,近くのスポット · {0}件
+GPS_ROUNDS_GPS_ON,● GPS ON,● GPS オン
+GPS_ROUNDS_GPS_OFF,● GPS OFF,● GPS オフ
+GPS_ROUNDS_LIVE,● LIVE,● 進行中
+GPS_ROUNDS_CHECKED_IN_SINCE,CHECKED IN · {0}〜,チェックイン中 · {0}〜
+GPS_ROUNDS_CAT_GOLF,GOLF COURSES,ゴルフ場
+GPS_ROUNDS_CAT_RANGE,DRIVING RANGES,練習場
+GPS_ROUNDS_CAT_FOOD,FOOD & DRINK,飲食店
+GPS_ROUNDS_NEAR_ME,◎ NEAR ME,◎ 現在地
+GPS_ROUNDS_LEGEND_PARTNER,PARTNER,提携
+GPS_ROUNDS_LEGEND_REGISTERED,REGISTERED,登録済み
+GPS_ROUNDS_LEGEND_FOOD,FOOD & DRINK,飲食店
+GPS_ROUNDS_MAP_ATTRIBUTION,Map · Google,地図 · Google
+GPS_ROUNDS_SORT_NEAREST,NEAREST FIRST,近い順
+GPS_ROUNDS_SORT_NAME,BY NAME,名前順
+GPS_ROUNDS_SORT_DISTANCE,DISTANCE  ▾,距離  ▾
+GPS_ROUNDS_SORT_NAME_TOGGLE,NAME  ▾,名前  ▾
+GPS_ROUNDS_NEAR_YOU,NEAR YOU,近くのスポット
+GPS_ROUNDS_NEARBY_FOOD,NEARBY FOOD & DRINK,近くの飲食店
+GPS_ROUNDS_PARTNER,PARTNER,提携
+GPS_ROUNDS_CHECK_IN,CHECK IN,チェックイン
+GPS_ROUNDS_TOO_FAR,{0} KM AWAY,{0} KM 先
+GPS_ROUNDS_TOO_FAR_TOAST,"You need to be at {0} to check in — you're {1} km away","{0} でないとチェックインできません（現在 {1} km 先）"
+GPS_ROUNDS_NO_GPS_TOAST,Turn on location to check in,チェックインするには位置情報をオンにしてください
+GPS_ROUNDS_DETAILS,DETAILS,詳細
+GPS_ROUNDS_EMPTY,No spots nearby right now.,近くにスポットがありません。
+GPS_ROUNDS_LIVE_ROUND,● LIVE ROUND,● ラウンド中
+GPS_ROUNDS_SINCE,Since {0},{0} 開始
+GPS_ROUNDS_ELAPSED,ELAPSED,経過時間
+GPS_ROUNDS_PTS_EARNED,PTS EARNED,獲得ポイント
+GPS_ROUNDS_GPS,GPS,GPS
+GPS_ROUNDS_GPS_FIXES,GPS FIXES,GPS 記録数
+GPS_ROUNDS_SCORE_UPLOAD,SCORE UPLOAD,スコア投稿
+GPS_ROUNDS_CHECK_OUT,CHECK OUT,チェックアウト
+GPS_ROUNDS_CONFIRM_TITLE,CHECK IN HERE?,ここにチェックインしますか？
+GPS_ROUNDS_CONFIRM_SUB,{0} km away · inside the course radius,{0} km · コースの範囲内
+GPS_ROUNDS_CONFIRM_SUB_OUTSIDE,{0} km away · outside the course radius,{0} km · コースの範囲外
+GPS_ROUNDS_PTS_ON_CHECKIN,PTS ON CHECK-IN,チェックイン
+GPS_ROUNDS_PTS_ON_CHECKIN_VALUE,+30,+30
+GPS_ROUNDS_PTS_ON_CHECKOUT,PTS ON CHECK-OUT,チェックアウト
+GPS_ROUNDS_PTS_ON_CHECKOUT_VALUE,+10,+10
+GPS_ROUNDS_GPS_ACCURACY,GPS ACCURACY,GPS 精度
+GPS_ROUNDS_ACCURACY_HIGH,● HIGH,● 高
+GPS_ROUNDS_ACCURACY_MED,● MED,● 中
+GPS_ROUNDS_ACCURACY_LOW,● LOW,● 低
+GPS_ROUNDS_CONFIRM_NOTE,"Your round starts now. Check out when you finish to earn the rest, and post your scorecard for the screenshot bonus.","ラウンドを開始します。終了時にチェックアウトすると残りのポイントを獲得でき、スコアカードを投稿するとボーナスも付きます。"
+GPS_ROUNDS_CANCEL,CANCEL,キャンセル
+GPS_ROUNDS_COMPLETE_TITLE,ROUND COMPLETE,ラウンド終了
+GPS_ROUNDS_COMPLETE_SUB,{0} – {1} · GPS verified,{0}〜{1} · GPS 認証済み
+GPS_ROUNDS_COMPLETE_SUB_UNVERIFIED,{0} – {1} · GPS unverified,{0}〜{1} · GPS 未認証
+GPS_ROUNDS_COMPLETE_NOTE,"Post your scorecard now to add screenshot points (+50) and Trust +20 from this round's GPS.","今スコアカードを投稿すると、スクリーンショットの +50 pt とこのラウンドの GPS による Trust +20 が加算されます。"
+GPS_ROUNDS_POST_SCORE,POST SCORE,スコアを投稿
+GPS_ROUNDS_DONE,DONE,完了
+GPS_ROUNDS_EXPIRED,ROUND EXPIRED,ラウンド期限切れ
+GPS_ROUNDS_EXPIRED_NOTE,This round was open for more than 8 hours. Check out to clear it — no points are awarded.,このラウンドは8時間以上開いたままです。チェックアウトで終了できますが、ポイントは付与されません。
+GPS_ROUNDS_CHECKED_IN,Checked in at {0} (+{1} pts),{0} にチェックインしました（+{1} pt）
+GPS_ROUNDS_CHECKED_IN_NO_PTS,Checked in at {0},{0} にチェックインしました
+GPS_ROUNDS_CHECKIN_FAILED,Could not check in. Try again.,チェックインできませんでした。もう一度お試しください。
+GPS_ROUNDS_CHECKOUT_FAILED,Could not check out. Try again.,チェックアウトできませんでした。もう一度お試しください。
+GPS_ROUNDS_ALREADY_ACTIVE,You already have a round open.,すでにラウンドが開いています。
+GPS_ROUNDS_MY_RECENT_ROUNDS,MY RECENT ROUNDS,最近のラウンド
+GPS_ROUNDS_ALL_ROUNDS,ALL ROUNDS  ›,すべてのラウンド  ›
+GPS_ROUNDS_NO_ROUNDS,No rounds yet.,まだラウンドがありません。

@@ -58,19 +58,14 @@ namespace Golfin.Gps.UI
             if (bar == null) { Debug.LogWarning($"{Tag} {name}: no GpsNavBar to bind"); return; }
 
             Bind(bar, "NavHomeButton",    ScreenId.GpsHub);
+            // gps_checkin — ROUNDS is LIVE. It was inert here and on the hub because the Rounds
+            // screen "was never designed" (GPS_BACKLOG § "Rounds tab destination"); that backlog
+            // row is what this task closes, so the slot now goes somewhere and the two comments
+            // that said otherwise are gone rather than left to mislead.
+            Bind(bar, "NavRoundsButton",  ScreenId.GpsRounds);
             Bind(bar, "NavCameraButton",  ScreenId.ScoreUpload);
             Bind(bar, "NavGiftButton",    ScreenId.GpsGift);
             Bind(bar, "NavProfileButton", ScreenId.GpsProfile);
-
-            // ROUNDS stays inert, exactly as the hub leaves it: the Rounds screen was never
-            // designed (GPS_BACKLOG § "Rounds tab destination"). A slot that navigated nowhere
-            // would be worse than one that is honestly dead.
-            Transform? rounds = bar.Find("NavRoundsButton");
-            if (rounds != null)
-            {
-                var rb = rounds.GetComponent<Button>();
-                if (rb != null) rb.interactable = false;
-            }
         }
 
         private void Bind(Transform bar, string child, ScreenId target)

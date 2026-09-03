@@ -27,6 +27,27 @@ namespace Golfin.Gps.UI
         public static readonly Color RarityEpic    = Hex("#B48CF0");
         public static readonly Color RarityLegend  = Hex("#EEDC9A");
 
+        // ── gps_checkin — the Rounds tab (Figma 14076:33800 / 14077:100447) ──
+        /// <summary>The ink on a gold Main Buttons label — the same value every GPS builder uses
+        /// for it, hoisted here because RoundSpotRowView flips a label between gold and dark ink
+        /// at RUNTIME and so needs it outside the editor assembly.</summary>
+        public static readonly Color ButtonInk  = Hex("#321506");
+
+        /// <summary>Food & drink pins and their icon rings.</summary>
+        public static readonly Color Food       = Hex("#F0A050");
+
+        /// <summary>Registered (non-partner) course pins — a desaturated Green.</summary>
+        public static readonly Color Registered = Hex("#7B9B8A");
+
+        /// <summary>The player dot and its halo on the map surface.</summary>
+        public static readonly Color PlayerDot  = Hex("#4F86D6");
+
+        /// <summary>The LIVE ROUND pill on the active card.</summary>
+        public static readonly Color Live       = Hex("#E5484D");
+
+        /// <summary>Chip rim / dark-capsule stroke.</summary>
+        public static readonly Color ChipRim    = Hex("#818EA1");
+
         /// <summary>Convert sRGB hex string (with or without #) to Unity Color (linear).</summary>
         public static Color Hex(string hex)
         {

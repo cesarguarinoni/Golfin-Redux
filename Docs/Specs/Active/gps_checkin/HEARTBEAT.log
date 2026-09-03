@@ -1,0 +1,54 @@
+=== iter-1 kickoff baseline 2026-09-03T01:05:04Z ===
+HEAD: 9cf02a9be575e1473d0806701f166152282e4aab
+DIRTY (git status --porcelain --untracked-files=all):
+ M Assets/Prefabs/UI/Gps/GpsAvatarScreen.prefab
+ M Assets/Prefabs/UI/Gps/GpsBadgesScreen.prefab
+ M Assets/Prefabs/UI/Gps/GpsGiftScreen.prefab
+ M Assets/Prefabs/UI/Gps/GpsHubScreen.prefab
+ M Assets/Prefabs/UI/Gps/GpsProfileScreen.prefab
+ M Assets/Prefabs/UI/Gps/GpsVoteScreen.prefab
+ M Assets/Prefabs/UI/Gps/ScoreUploadScreen.prefab
+ M Assets/Scripts/UI/Gps/Editor/GpsPolishBuilder.cs
+ M Assets/Scripts/UI/Gps/Editor/GpsPolishProbe.cs
+ M Assets/Scripts/UI/Gps/GpsAuthExtrasFlow.cs
+ M Assets/Scripts/UI/Gps/GpsWelcomeScreenController.cs
+ M Assets/Scripts/UI/HomeScreenController.cs
+ M Assets/Scripts/UI/Polish/Tests/GpsPolishMotionTests.cs
+ M Assets/Scripts/UI/ScreenManager.cs
+ M Assets/Tests/EditMode/GpsAuthExtrasFlowTests.cs
+ M Docs/AI_CONTEXT.md
+ M Docs/GPS/GPS_BACKLOG.md
+ M Docs/GPS/GPS_DEVICE_PASS.md
+ M Docs/Reports/content_art.txt
+ M Docs/TellCode.md
+ M Docs/Versioning/last_uploaded_build.txt
+?? Assets/Scripts/UI/Gps/Editor/GpsProfilePromptOnEntryRun.cs
+?? Assets/Scripts/UI/Gps/Editor/GpsProfilePromptOnEntryRun.cs.meta
+?? Assets/Scripts/UI/Gps/GpsNavBarHighlight.cs
+?? Assets/Scripts/UI/Gps/GpsNavBarHighlight.cs.meta
+?? Docs/Specs/Active/gps_checkin/HEARTBEAT.log
+?? Docs/Specs/Active/gps_checkin/SPEC.md
+?? Docs/Specs/Active/gps_checkin/STATUS.md
+?? Docs/Specs/Active/gps_checkin/reference/checkin_confirm_14080-34097.png
+?? Docs/Specs/Active/gps_checkin/reference/checkout_modal_14078-33991.png
+?? Docs/Specs/Active/gps_checkin/reference/rounds_active_14077-100447.png
+?? Docs/Specs/Active/gps_checkin/reference/rounds_list_14076-33800.png
+?? Docs/Specs/Active/gps_profile_prompt_on_entry/HEARTBEAT.log
+?? Docs/Specs/Active/gps_profile_prompt_on_entry/IMPLEMENTER_REPORT.md
+?? Docs/Specs/Active/gps_profile_prompt_on_entry/SPEC.md
+?? Docs/Specs/Active/gps_profile_prompt_on_entry/STATUS.md
+?? Docs/Specs/Quick/gps_navbar_selected_tab.md
+=== end baseline ===
+
+[01:13:25Z] A1-A6 backend written: 2026_09_03_venue_partners.sql (+2 RPCs), 2026_09_03_seed_demo_spots.sql, activity.py thin wrappers + /active, venue.py nearby(category,distance)+/map+/geocode, score.py activity_id (A5), e2e_activity_economy.py. All py_compile + pglast clean. Migrations NOT applied, Fly NOT deployed (blocked on Cesar).
+
+[01:20:27Z] B1/B2 admin done: lib/geohash.ts(+tests), venueData.ts, venueMutations.ts, app/api/venues{,/[id],/geocode}, app/(panels)/venues/*, registry+pin icon, 59 i18n keys. tsc clean, vitest 293/293, next build OK. Deploy BLOCKED until migrations applied. Finding: venues #1 and #7 have geohashes inconsistent with their coords (invisible to /venue/nearby) -> panel drift banner.
+
+[01:27:52Z] Unity C# part 1: MapProjection, ActivityDtos, ActivityService, RoundSession, VenueService(+Nearby cat/dist, +MapTile), GpsDtos(+A1 cols), Endpoints(+VenueNearby/VenueMap/ActivityActive), ScreenId.GpsRounds + ScreenManager/PersistentUIManager/GpsGate/GpsScreenTransition/GpsNavBarBinder/GpsHubScreenController/GpsNavBarHighlight wiring, ScoreUploadDraft.Prefill + activity_id. NOT compiled yet — Unity is held by another session.
+
+[01:40:07Z] Baked Rounds art via new Docs/Scripts/make_gps_rounds_panels.py (12 PNGs). Background matched to Assets/Art/HomeScreen/Home Background.png (mean dRGB 0.002 vs next-best 34.3). Fit residuals: Map 8.6, SpotList 3.5, History 3.7 (borrows SpotList rect - own footprint ill-conditioned), ActiveCard 7.0, Modal fitted over 60% scrim. Shipped GPS cards baseline 5.1-7.8.
+
+[01:47:04Z] Unity C# part 2: GpsRoundsScreenController, RoundSpotRowView, CheckInConfirmModalController, RoundCompleteModalController, GpsRoundsBuilder (1080 lines), make_gps_rounds_panels.py + 13 baked PNGs, ShimmerHost + GpsPolishBuilder 2 new sites, 64 loc rows, MapProjectionTests/RoundSessionTests/ActivityServiceJsonTests, GpsGateTests += GpsRounds/GpsGift/GpsVote. NOTHING COMPILED OR RUN — Unity held by another session.
+
+[01:51:02Z] Localization PUBLISHED: import PLAN 64 add/0 change/0 conflict -> --apply (min_build 2603) -> content_publish('texts') -> v32, 64 GPS_ROUNDS_* rows live -> export -> content_version.txt v32 -> --check CLEAN.
+[01:51:02Z] COMPILE CHECK (headless, Unity untouched): Unity's bundled Roslyn against Library/ScriptAssemblies. Golfin.Gps OK, Assembly-CSharp OK, Assembly-CSharp-Editor OK, Golfin.Gps.Tests OK, GolfinRedux.Tests.EditMode OK. One real error found+fixed: GpsRoundsBuilder needed 'using Golfin.Gps.EditorTools' for GpsPolishBuilder.

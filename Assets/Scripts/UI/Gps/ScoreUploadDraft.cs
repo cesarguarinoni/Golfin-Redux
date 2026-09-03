@@ -69,6 +69,15 @@ namespace Golfin.Gps.UI
         public int? VenueOverrideId;
         public string? VenueOverrideName;
 
+        /// <summary>
+        /// gps_checkin §A5/§C4 — the live round this upload belongs to, when the player reached
+        /// Score Upload from the Rounds screen's SCORE UPLOAD button.
+        ///
+        /// <para>Sent as <c>activity_id</c>, which makes the server CLOSE that round rather than
+        /// insert a second activity beside it (D6). Null on every other entry into this screen.</para>
+        /// </summary>
+        public long? ActivityId;
+
         /// <summary>The server's answer. Null until the post succeeds.</summary>
         public ScoreSubmitResult? Result;
 
@@ -263,7 +272,8 @@ namespace Golfin.Gps.UI
             CourseName = CourseName,
             InputMethod = InputMethod,
             Holes = HoleScores(),
-            ScreenshotData = ScreenshotData()
+            ScreenshotData = ScreenshotData(),
+            ActivityId = ActivityId
         };
 
         /// <summary>Wipe everything the player can redo. Called by RETAKE and by re-entering the
@@ -278,7 +288,75 @@ namespace Golfin.Gps.UI
             Attachment = null;
             VenueOverrideId = null;
             VenueOverrideName = null;
+            ActivityId = null;
             Result = null;
+        }
+
+        // ═════════════════════════════════════════════════════════════════════
+        // gps_checkin §C4 — the prefill seam
+        // ═════════════════════════════════════════════════════════════════════
+
+        /// <summary>
+        /// What the NEXT entry into Score Upload should start from, or null for a normal cold
+        /// entry.
+        ///
+        /// <para>WHY A STATIC HANDOFF AND NOT A METHOD CALL. <c>ScreenManager.ShowScreen</c> takes
+        /// a <see cref="GolfinRedux.UI.ScreenId"/> and nothing else — there is no parameter to
+        /// carry a payload, and no reference from the Rounds screen to the Score Upload
+        /// controller, which lives on a different prefab that may not even be active yet. The
+        /// alternative is a serialized cross-prefab reference, which cannot exist between two
+        /// screen prefabs.</para>
+        ///
+        /// <para>CONSUMED EXACTLY ONCE, by <see cref="Take"/>, in the flow controller's
+        /// <c>OnEnable</c> — after <see cref="ResetForNewCapture"/>, which would otherwise wipe
+        /// it. A prefill left behind would attach the NEXT unrelated score post to a round that
+        /// has since been checked out.</para>
+        /// </summary>
+        private static Prefill? _pending;
+
+        /// <summary>Arm the next entry into Score Upload. Overwrites any unconsumed prefill:
+        /// two taps of SCORE UPLOAD without an intervening entry is one intent, not two.</summary>
+        public static void Arm(Prefill prefill) => _pending = prefill;
+
+        /// <summary>Take and clear the armed prefill. Returns null when there is none.</summary>
+        public static Prefill? Take()
+        {
+            Prefill? p = _pending;
+            _pending = null;
+            return p;
+        }
+
+        /// <summary>Drop an armed prefill without consuming it — used when the navigation that
+        /// armed it did not happen.</summary>
+        public static void ClearPending() => _pending = null;
+
+        /// <summary>Apply a prefill to this draft.</summary>
+        public void Apply(Prefill p)
+        {
+            if (p == null) return;
+            ActivityId = p.ActivityId;
+            VenueOverrideId = p.VenueId;
+            VenueOverrideName = p.VenueName;
+            if (p.VenueId.HasValue)
+            {
+                // The attachment is what actually goes UP (ScoreService.Submit merges it over the
+                // request), so a venue set only as an override would change the name on screen and
+                // send nothing. The round already proved this venue with a server-side radius
+                // check at check-in, which is a stronger claim than the picker's.
+                if (Attachment == null) Attachment = new GpsScoreAttachment();
+                Attachment.VenueId = p.VenueId;
+                Attachment.VenueName = p.VenueName;
+                Attachment.VenueDistanceM = p.DistanceM;
+            }
+        }
+
+        /// <summary>The payload <see cref="Arm"/> carries. Plain data — no scene, no service.</summary>
+        public sealed class Prefill
+        {
+            public long? ActivityId;
+            public int? VenueId;
+            public string? VenueName;
+            public double? DistanceM;
         }
     }
 }

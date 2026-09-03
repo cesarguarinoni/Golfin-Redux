@@ -112,6 +112,11 @@ namespace Golfin.Gps.UI
                  "Must NOT also appear in _tileButtons.")]
         [SerializeField] private Button? _tileVoteButton;
 
+        [Tooltip("gps_checkin — the hub's ROUNDS nav slot, inert until this task. Optional: when " +
+                 "it is null the slot is found by name under the nav bar instead, so the hub " +
+                 "prefab (which was hand-built, not generated) does not need a re-wire.")]
+        [SerializeField] private Button? _navRoundsButton;
+
         // ── Navigation ────────────────────────────────────────────────────────
         [Header("Navigation")]
         [SerializeField] private Button? _backButton;
@@ -254,6 +259,37 @@ namespace Golfin.Gps.UI
                 _tileVoteButton.interactable = true;
                 _tileVoteButton.onClick.AddListener(() => Open(ScreenId.GpsVote, "tile VOTE"));
             }
+
+            // gps_checkin — the last inert nav slot. It was dead because the Rounds screen did not
+            // exist (GPS_BACKLOG § "Rounds tab destination"); this task is what gives it a
+            // destination.
+            //
+            // ⚠️ THE LOOKUP BY NAME IS NOT A FALLBACK FOR A MISSING WIRE, it is the primary path
+            // for THIS prefab. The hub was hand-built over MCP in gps_hub_entry, so its
+            // `_navButtons` array already holds the ROUNDS slot and that loop sets
+            // interactable = false. Running AFTER it — and re-enabling the button it just
+            // disabled — is what makes the slot live without editing an array in the Inspector.
+            Button? rounds = _navRoundsButton ?? FindNavSlot("NavRoundsButton");
+            if (rounds != null)
+            {
+                rounds.interactable = true;
+                rounds.onClick.AddListener(() => Open(ScreenId.GpsRounds, "nav ROUNDS"));
+            }
+            else
+            {
+                Debug.LogWarning($"{Tag} no ROUNDS nav slot found — the Rounds tab is unreachable " +
+                                 "from the hub.");
+            }
+        }
+
+        /// <summary>One slot of the hub's own nav bar, by child name. Uses
+        /// <see cref="GpsScreenTransition.FindLayer"/> so the gps_polish NavSafeArea wrapper is
+        /// handled in the one place that knows about it.</summary>
+        private Button? FindNavSlot(string child)
+        {
+            Transform? bar = GpsScreenTransition.FindLayer(gameObject, "GpsNavBar");
+            Transform? t = bar != null ? bar.Find(child) : null;
+            return t != null ? t.GetComponent<Button>() : null;
         }
 
         private void Open(ScreenId id, string source)
