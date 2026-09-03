@@ -3418,3 +3418,61 @@ The close-out used `git add -A Docs/Specs/Active` and swept four files belonging
 session into my commit — thirty seconds after I ran the rule-12 drift check and correctly named
 those exact paths as not mine. Reverted in `0139fd261`. Running the check is worthless if the very
 next command ignores its answer. This is `project_k10_commit_swept_k11_edits` re-earned.
+
+---
+
+## Lesson AJ — the repair that ran inside the window it was repairing (2026-09-04, `gps_standalone_shell` R2)
+
+Excluding golf art from the standalone build means moving `Assets/Resources/*` subfolders aside for
+the duration of the build and putting them back after. Three ordering facts, each of which broke
+something before it was right:
+
+**1. `AssetDatabase.MoveAsset` is the mechanism, not `Directory.Move`.** Moving assets out of a
+`Resources/` folder but keeping them under `Assets/` preserves their GUIDs and import artifacts, so
+545 MB moves in a second and comes back without a re-import. Anything that takes the files out of
+`Assets/` entirely costs a full reimport on the way back — minutes, and it churns the Library for
+whoever builds the game next. Outside a `Resources/` folder an asset ships only if something
+references it, which is exactly the property wanted.
+
+**2. The repair-on-startup call must be at the build ENTRY points, never in the shared core.**
+I first put "restore anything a previous aborted build left stashed" at the top of `BuildIOSCore` —
+which the standalone lane calls *after* it stashes. It would have un-stashed the folders the build
+had just moved and shipped the full 427 MB again **while the log said the diet had run**. It belongs
+in `BuildIOS` / `BuildIOSGps` / `BuildIOSDev`, and in `BuildIOSStandalone` *before* the move.
+
+**3. A gate that reads the moved data will fail a correct build.** `ValidateTreeBake()` reads
+`Assets/Resources/HoleData/**/tree_obstacles.csv`; with `HoleData` stashed it reported 18/18 holes
+missing and killed the build. Skipped for the standalone alone — a variant whose scene list is
+ShellScene has no hole to disagree about — with the parameter named and one caller, not a global
+switch.
+
+**The failure was the best test.** That build died *inside* the moved window, and the `finally` put
+all 13 folders back, deleted the sentinel, removed the stash and left `git status` clean. Worth more
+than the simulation I would otherwise have written, because the dangerous state is real: a missing
+`Resources` folder is **not a build error**, so a stashed `HoleData` would make the next GAME build
+ship without its holes and nothing would say a word. Hence three independent repairs — the
+`finally`, `RestoreNow()` before `Fail()` exits (a batchmode `delayCall` never gets a frame), and an
+`[InitializeOnLoadMethod]` on the next editor load.
+
+### Sister lesson: enumerate the call sites, do not reason about the names
+
+The folder list came from grepping every `Resources.Load` / `LoadAll` in `Assets/Scripts` +
+`Assets/Editor` and reading the literal path prefixes. That is the only reason `Characters/` stayed:
+`GpsAvatarScreenController.BindCharacterFigure` loads `Characters/Homescreen/{name}` — a PLAYLIFE
+screen reaching into golf art. Every plausible line of reasoning about "which folders are golf" puts
+`Characters` in the move list and blanks the Avatar screen. The grep took two minutes.
+
+## Lesson AK — `UserService.Instance` (and any ApiClient-backed singleton) throws in EditMode
+
+An EditMode test that touched `UserService.Instance` failed with
+
+    InvalidOperationException: The following game object is invoking the DontDestroyOnLoad method:
+    [Golfin.Net]. Notice that DontDestroyOnLoad can only be used in play mode
+
+The lazy `Instance` builds an `ApiClient`, whose coroutine runner is a `MonoBehaviour` that calls
+`DontDestroyOnLoad` — legal only in play mode. The service itself is plain C# and perfectly testable;
+it is the *lazy construction path* that is not. **Inject it instead:**
+`UserService.ConfigureForTest(new UserService(null))` — a null transport is safe when the test issues
+no request — and `ResetForTest()` in the `finally`. Same shape for `PointsService` / `VenueService`.
+This is also why `GpsAuthExtrasFlow.InterceptHubEntry` tests the hub id *before* calling
+`ShouldOffer()`: the ordering keeps an ordinary screen change free of a session read.
