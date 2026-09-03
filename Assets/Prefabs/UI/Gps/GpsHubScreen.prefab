@@ -262,9 +262,9 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 3044292437805427615}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 319, y: -98}
+  m_AnchorMin: {x: 0.27860782, y: 1}
+  m_AnchorMax: {x: 0.27860782, y: 1}
+  m_AnchoredPosition: {x: 0, y: -98}
   m_SizeDelta: {x: 156, y: 156}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &5071961278963152879
@@ -4756,6 +4756,7 @@ MonoBehaviour:
   _navGiftButton: {fileID: 0}
   _tileGiftButton: {fileID: 0}
   _tileVoteButton: {fileID: 0}
+  _navRoundsButton: {fileID: 0}
   _backButton: {fileID: 4708290598059778152}
 --- !u!114 &2699071833735741746
 MonoBehaviour:
@@ -6012,9 +6013,9 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 3044292437805427615}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 859, y: -98}
+  m_AnchorMin: {x: 0.7196944, y: 1}
+  m_AnchorMax: {x: 0.7196944, y: 1}
+  m_AnchoredPosition: {x: 0, y: -98}
   m_SizeDelta: {x: 156, y: 156}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &8843622887960284474
@@ -6613,7 +6614,6 @@ GameObject:
   - component: {fileID: 4048000643486443863}
   - component: {fileID: 333237742721529577}
   - component: {fileID: 6300210460487321334}
-  - component: {fileID: 695146576282014184}
   m_Layer: 5
   m_Name: GpsNavBar
   m_TagString: Untagged
@@ -6640,10 +6640,10 @@ RectTransform:
   - {fileID: 8475630138050607815}
   m_Father: {fileID: 6120021483202548297}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0}
-  m_AnchorMax: {x: 0.5, y: 0}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 0}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 1178, y: 196}
+  m_SizeDelta: {x: 0, y: 196}
   m_Pivot: {x: 0.5, y: 0}
 --- !u!222 &4048000643486443863
 CanvasRenderer:
@@ -6695,18 +6695,6 @@ CanvasGroup:
   m_Interactable: 1
   m_BlocksRaycasts: 1
   m_IgnoreParentGroups: 0
---- !u!114 &695146576282014184
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4362002662827153971}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 59f882c2bf9a04379895561e8ecef578, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Golfin.Gps.UI.GpsNavBarSafeArea
 --- !u!1 &4375663921475326210
 GameObject:
   m_ObjectHideFlags: 0
@@ -9190,9 +9178,9 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 3044292437805427615}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 1050, y: -98}
+  m_AnchorMin: {x: 0.9062818, y: 1}
+  m_AnchorMax: {x: 0.9062818, y: 1}
+  m_AnchoredPosition: {x: 0, y: -98}
   m_SizeDelta: {x: 158, y: 158}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &119780386717912807
@@ -11831,9 +11819,9 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 3044292437805427615}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 128, y: -98}
+  m_AnchorMin: {x: 0.092869274, y: 1}
+  m_AnchorMax: {x: 0.092869274, y: 1}
+  m_AnchoredPosition: {x: 0, y: -98}
   m_SizeDelta: {x: 156, y: 156}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &5457334009483047821

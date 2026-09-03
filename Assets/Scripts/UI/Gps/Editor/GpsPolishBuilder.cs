@@ -430,10 +430,16 @@ namespace Golfin.Gps.EditorTools
                 wrapper.SetSiblingIndex(order);
             }
 
-            // The inset is handled ON THE BAR instead: it grows upward from a pinned bottom, so
-            // the background still reaches the screen edge and only the content clears the
-            // indicator. See GpsNavBarSafeArea's header.
-            Ensure<GpsNavBarSafeArea>(nav.gameObject);
+            // AND NOTHING REPLACES IT. The bar now carries the Game bar's own rule — anchors
+            // (0,0)-(1,0), sizeDelta (0,196), slots on fractional anchors — so it is screen-wide
+            // and uniformly scaled on every device, with no safe-area component of any kind.
+            //
+            // A first attempt grew the bar by the inset instead. That stretched
+            // `Bottom Bar Background.png` 52% vertically: the tray is a fixed-size asset
+            // (spriteBorder 0, Image.Type.Simple) with a soft alpha fade along its bottom edge, so
+            // it can be neither 9-sliced nor butted against a filler strip. Matching Game means
+            // accepting that the home indicator overlays the bar's lower band — which is what
+            // Game has always shipped.
         }
 
         /// <summary>

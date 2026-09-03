@@ -126,6 +126,17 @@ namespace Golfin.Gps.EditorTools
         [MenuItem("GOLFIN/Gps/Polish Probe — gift item names (EN vs JA)", priority = 247)]
         public static void ArmGift() => Arm("gift");
 
+        /// <summary>
+        /// The GPS nav bar measured against the GAME nav bar, in one run.
+        ///
+        /// <para>Both draw `Bottom Bar Background.png` at Image.Type.Simple, so the ONLY thing that
+        /// can make them look different is the rect they are drawn into. Cesar's report was
+        /// "stretched and does not match game"; this reads both rects rather than comparing two
+        /// screenshots by eye.</para>
+        /// </summary>
+        [MenuItem("GOLFIN/Gps/Polish Probe — nav bar vs the Game bar", priority = 248)]
+        public static void ArmNavBar() => Arm("navbar");
+
         public static void Arm(string mode)
         {
             Directory.CreateDirectory(Path.GetDirectoryName(LogPath)!);
@@ -264,6 +275,14 @@ namespace Golfin.Gps.EditorTools
             {
                 Line("=== gps_polish probe (" + _mode + ") " + DateTime.UtcNow.ToString("u") + " ===");
 
+                if (_mode == "navbar")
+                {
+                    yield return Boot();
+                    yield return SequenceNavBar();
+                    Line("=== done: navbar pass complete ===");
+                    yield break;
+                }
+
                 if (_mode == "gift")
                 {
                     yield return Boot();
@@ -323,6 +342,91 @@ namespace Golfin.Gps.EditorTools
                 if (_mode == "push") WriteJson();
                 if (_mode == "perf") WritePerfJson();
                 Line("=== done: " + _records.Count + " push(es) recorded ===");
+            }
+
+            // ═════════════════════════════════════════════════════════════════
+            // The GPS bar vs the Game bar
+            // ═════════════════════════════════════════════════════════════════
+
+            IEnumerator SequenceNavBar()
+            {
+                yield return new WaitForSecondsRealtime(1.5f);
+                yield return BarReport("GAME", GameObject.Find("Canvas/PersistentUI/BottomNavBar")
+                                            ?? FindAnywhere("BottomNavBar"));
+                yield return TopReport("GAME");
+                yield return Shot("navbar_game");
+
+                yield return TapNamed("GpsPill", "the Home GPS pill");
+                yield return Arrive(ScreenId.GpsHub, 2.5f);
+                yield return new WaitForSecondsRealtime(1.5f);
+
+                GameObject? cur = Obj(ScreenManager.Instance!.CurrentScreen);
+                Transform? bar = GpsScreenTransition.FindLayer(cur, "GpsNavBar");
+                yield return BarReport("GPS ", bar != null ? bar.gameObject : null);
+                yield return TopReport("GPS ");
+                yield return Shot("navbar_gps");
+            }
+
+            static GameObject? FindAnywhere(string name)
+            {
+                foreach (var t in Resources.FindObjectsOfTypeAll<RectTransform>())
+                    if (t.name == name && t.gameObject.scene.IsValid()) return t.gameObject;
+                return null;
+            }
+
+            /// <summary>
+            /// The TOP bar, reported with its instanceID.
+            ///
+            /// <para>The GPS screens do not own a top bar — `PersistentUIManager` supplies theirs,
+            /// which is why `GPS_HUB_TITLE` shows up there at all. So the honest check is not "do
+            /// two objects measure the same" but "is it the same object", and an instanceID says
+            /// that where a rect can only imply it.</para>
+            /// </summary>
+            IEnumerator TopReport(string tag)
+            {
+                GameObject? top = GameObject.Find("Canvas/PersistentUI/SafeArea/TopBar")
+                               ?? FindAnywhere("TopBar");
+                if (top == null) { Line("TOP " + tag + ": not found"); yield break; }
+                var rt = top.GetComponent<RectTransform>();
+                var c = new Vector3[4]; rt.GetWorldCorners(c);
+                Transform? sa = top.transform.parent;
+                var fitter = sa != null ? sa.GetComponent<GolfinRedux.UI.Core.SafeAreaFitter>() : null;
+                var sart = sa as RectTransform;
+                Line(string.Format(
+                    "TOP {0}  id={1}  active={2}  rect={3:F0}x{4:F0}px  topY={5:F0}  " +
+                    "wrapper={6} anchorMin={7} anchorMax={8}  safeArea={9}",
+                    tag, top.GetInstanceID(), top.activeInHierarchy,
+                    Vector3.Distance(c[0], c[3]), Vector3.Distance(c[0], c[1]), c[1].y,
+                    fitter != null ? "SafeAreaFitter" : (sa != null ? sa.name : "-"),
+                    sart != null ? sart.anchorMin.ToString() : "-",
+                    sart != null ? sart.anchorMax.ToString() : "-",
+                    Screen.safeArea));
+                yield return null;
+            }
+
+            /// <summary>The bar's RENDERED rect, in screen px, plus the sprite it draws.</summary>
+            IEnumerator BarReport(string tag, GameObject? go)
+            {
+                if (go == null) { Line("BAR " + tag + ": not found"); yield break; }
+                var rt = go.GetComponent<RectTransform>();
+                var im = go.GetComponent<UnityEngine.UI.Image>();
+                var c = new Vector3[4];
+                rt.GetWorldCorners(c);
+                var cam = go.GetComponentInParent<Canvas>()?.rootCanvas;
+                float scale = cam != null ? cam.scaleFactor : 1f;
+                float wpx = Vector3.Distance(c[0], c[3]);
+                float hpx = Vector3.Distance(c[0], c[1]);
+                float natW = im != null && im.sprite != null ? im.sprite.rect.width  : 0f;
+                float natH = im != null && im.sprite != null ? im.sprite.rect.height : 0f;
+                Line(string.Format(
+                    "BAR {0}  sizeDelta={1}  renderedPx={2:F0}x{3:F0}  canvasScale={4:F3}  " +
+                    "sprite={5} native={6:F0}x{7:F0}  type={8}  vStretch={9:F2}x  hStretch={10:F2}x",
+                    tag, rt.sizeDelta, wpx, hpx, scale,
+                    im != null && im.sprite != null ? im.sprite.name : "<none>", natW, natH,
+                    im != null ? im.type.ToString() : "-",
+                    natH > 0 ? (hpx / scale) / natH : 0f,
+                    natW > 0 ? (wpx / scale) / natW : 0f));
+                yield return null;
             }
 
             // ═════════════════════════════════════════════════════════════════
