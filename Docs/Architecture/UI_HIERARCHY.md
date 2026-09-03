@@ -500,8 +500,9 @@ is the tripwire.
 | `GpsWelcome` | `GpsWelcomeScreen.prefab` | `GpsWelcomeScreenController` | `GpsAuthExtrasBuilder` |
 | `GpsGift` | `GpsGiftScreen.prefab` | `GpsGiftScreenController` | `GpsGiftVoteBuilder` |
 | `GpsVote` | `GpsVoteScreen.prefab` | `GpsVoteScreenController` | `GpsGiftVoteBuilder` |
+| `GpsRounds` | `GpsRoundsScreen.prefab` | `GpsRoundsScreenController` | `GpsRoundsBuilder` |
 
-All nine take `ShowTopBarOnly()` chrome: the shared top bar carries the title (via
+All ten take `ShowTopBarOnly()` chrome: the shared top bar carries the title (via
 `PersistentUIManager.NavTitleKeyFor`) and the shared bottom nav is hidden — the hub and the score
 upload draw their OWN GPS nav bar inside their prefabs, and the two auth-extras frames hide it
 entirely (`GPS Nav Bar Container` is `hidden` on both Figma nodes). Gift and Vote draw the hub's
@@ -516,6 +517,19 @@ prefabs; the scene holds plain prefab instances stretched to full screen and ina
 
 ```
 ScreensRoot
+├── GpsRoundsScreen             (GpsRoundsScreenController)   ← gps_checkin
+│   ├── Background
+│   ├── ContentContainer        ← Background + ContentContainer is what makes it PUSHABLE
+│   │   ├── StatusRow           (NEARBY · N SPOTS / GPS ON / CHECKED IN · HH:MM〜 / LIVE)
+│   │   ├── ChipsRow            (GOLF COURSES / DRIVING RANGES / FOOD & DRINK) — hidden while a round is live
+│   │   ├── ActiveCard          (LIVE ROUND pill 180w, venue, address, ELAPSED/PTS/GPS/FIXES, SCORE UPLOAD + CHECK OUT)
+│   │   ├── MapCard             (Google Static Maps tile via /venue/map, NEAR ME, legend, player + spot pins)
+│   │   ├── SortBar             (NEAREST FIRST · DISTANCE + caret SPRITE — the font has no ▾)
+│   │   ├── SpotListPanel       (3 RoundSpotRowView; CHECK IN in radius, "N KM AWAY" outside)
+│   │   └── HistoryPanel        (MY RECENT ROUNDS) — hidden while a round is live
+│   ├── NavSafeArea/GpsNavBar
+│   ├── CheckInConfirmModal     (CheckInConfirmModalController)
+│   └── RoundCompleteModal      (RoundCompleteModalController — confirm AND receipt)
 ├── GpsGiftScreen               (GpsGiftScreenController)
 │   ├── Background              (Shop/Background - Rewards.png — the node's "Rewards" variant)
 │   ├── ContentContainer        (96,361, 978x1860)

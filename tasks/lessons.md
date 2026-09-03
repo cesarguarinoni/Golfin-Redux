@@ -3374,3 +3374,47 @@ enumerated with a per-site verdict *including the 13 that were fine*, both trans
 audited, every referenced key cross-checked. That is what turns "I fixed the title" into "no run
 on either screen has this problem", and it is cheaper than the second and third round-trip through
 the gates.
+
+---
+
+## Lesson BU — a path that silently does not execute looks exactly like one that passed
+
+`gps_checkin`, 2026-09-03. Three false reports in one session, all the same shape. Cesar caught
+every one.
+
+**1. The untimed probe leg.** I added a Rounds leg to `GpsPolishProbe` and ran it. The log showed
+`tapping hub nav ROUNDS ... ok GpsRounds` but no `push GpsHub->GpsRounds` line, where every other
+leg had one. I reported that the Rounds screen "isn't getting the GPS push transition at all."
+
+It was. `CanPush(Hub -> Rounds) = True`, measured directly, thirty seconds after I finally asked
+instead of inferred. The probe's own private `Obj()` resolver had no `GpsRounds` case → returned
+null → `CanPush` false *inside the probe* → `expectPush` false → the leg walked untimed. **A screen
+missing from that switch is silently unmeasured, not reported as unmeasurable.**
+
+**2. The no-op guard.** Fixing a stale-list bug, I gated a re-fetch on `!_fetchInFlight` "to avoid a
+loop". The entry fetch is ALWAYS in flight at that exact moment, so the guard dropped the very
+correction it guarded, every time. The end state looked plausible, so it read as working.
+
+**3. The idle dry run.** Testing whether a scenario or the video encoder was locking the Mac, I
+added a dry-run path that created the runner component but never called `StartDemo()`. It sat on
+Home. I watched Unity stay alive with flat RSS for six minutes and reported the scenario
+exonerated. I was watching an idle editor.
+
+### The rule
+
+**State the validity condition BEFORE running a diagnostic** — what the trace must show for a null
+result to mean anything — and check it before drawing any conclusion. For the dry run that was
+"must reach GpsRounds AND log a real check-in"; the second attempt met it
+(`POST /activity/checkin -> 200`) and only then was the result worth anything.
+
+Corollary, learned the hard way in the same session: **report at the moment the check demonstrably
+exercised the thing, not at the moment the check finished.** I also wrote up that dry run as
+covering the whole loop when I had killed play mode before check-out — a fourth instance, in the
+document a future investigation would rely on.
+
+### Sister scar, same session: stage by path, never by directory
+
+The close-out used `git add -A Docs/Specs/Active` and swept four files belonging to a parallel
+session into my commit — thirty seconds after I ran the rule-12 drift check and correctly named
+those exact paths as not mine. Reverted in `0139fd261`. Running the check is worthless if the very
+next command ignores its answer. This is `project_k10_commit_swept_k11_edits` re-earned.
