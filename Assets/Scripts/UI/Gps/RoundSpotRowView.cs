@@ -63,6 +63,24 @@ namespace Golfin.Gps.UI
         [Tooltip("The dark ADark(black,0.35) capsule for TOO FAR / NO GPS / DETAILS.")]
         [SerializeField] private Sprite? _darkSprite;
 
+        [Tooltip("The 1px #818ea1 rim the node draws around the DARK capsule only. Hidden on the " +
+                 "gold state, whose atom carries its own border.")]
+        [SerializeField] private Image? _actionRim;
+
+        /// <summary>Name width when the PARTNER tag shares the line (node 14077:34011).</summary>
+        private const float NameWidthWithTag = 330f;
+
+        /// <summary>…and when it does not — the full Info width (node 14077:34029).</summary>
+        private const float NameWidthFull = 540f;
+
+        /// <summary>9-slice calibration for the gold Main Buttons atom (border 18) at the node's
+        /// r20 corner.</summary>
+        private const float GoldPpum = 18f / 20f;
+
+        /// <summary>…and for S_PillStadium (border 88) at that same r20. The two differ by ~5x,
+        /// which is why swapping the sprite without swapping this collapses the capsule.</summary>
+        private const float PillPpum = 88f / 20f;
+
         /// <summary>The bound row, so the screen's click handler does not have to keep a parallel
         /// array. Null on an unbound (hidden) row.</summary>
         public VenueDto? Venue { get; private set; }
@@ -107,7 +125,20 @@ namespace Golfin.Gps.UI
                 _distance.color = distanceColour;
             }
             if (_iconRing != null) _iconRing.color = ringColour;
-            if (_partnerTag != null) _partnerTag.SetActive(venue != null && venue.IsPartner);
+            bool partner = venue != null && venue.IsPartner;
+            if (_partnerTag != null) _partnerTag.SetActive(partner);
+
+            // The node gives Name 330px on a row that shows the PARTNER tag and the full width on
+            // one that does not (14077:34011 vs :34029) — that is flex, and this is the same
+            // result stated explicitly. Without it a non-partner name is cut short for a tag that
+            // is not there.
+            if (_name != null)
+            {
+                var rt = (RectTransform)_name.transform;
+                float want = partner ? NameWidthWithTag : NameWidthFull;
+                if (!Mathf.Approximately(rt.sizeDelta.x, want))
+                    rt.sizeDelta = new Vector2(want, rt.sizeDelta.y);
+            }
 
             ApplyAction(state, venue);
         }
@@ -129,14 +160,40 @@ namespace Golfin.Gps.UI
                 _actionLabel.color = state == ActionState.CheckIn
                     ? GpsUiColor.ButtonInk
                     : Color.white;
+                // NoWrap + Overflow: "12.4 KM AWAY" is wider than "CHECK IN" and must not push the
+                // capsule or wrap onto a second line inside a 54px button.
+                _actionLabel.textWrappingMode = TextWrappingModes.NoWrap;
             }
+
+            bool gold = state == ActionState.CheckIn;
 
             if (_actionFill != null)
             {
-                Sprite? want = state == ActionState.CheckIn ? _goldSprite : _darkSprite;
+                // ⚠️ THREE THINGS CHANGE WITH THE SPRITE, NOT ONE. The first version swapped only
+                // `sprite` and left `color = white` and the gold atom's `pixelsPerUnitMultiplier`
+                // in place, which rendered every TOO FAR / NO GPS / DETAILS button as a WHITE
+                // ELLIPSE with an invisible white label:
+                //
+                //   colour  `Play Button.png` is a finished gold atom and wants white;
+                //           `S_PillStadium` is a WHITE capsule meant to be TINTED, so leaving it
+                //           white paints a white blob over the row.
+                //   ppum    9-slicing scales the corner by border/ppum. The gold atom's border is
+                //           18 (18/20 -> the node's r20); the pill's is 88, so the SAME 0.9 gave a
+                //           ~97px radius on a 54px-tall rect — a fully round ellipse. It needs
+                //           88/20 = 4.4 to land on the same r20.
+                //   rim     the node draws a #818ea1 stroke on the dark capsule and none on the
+                //           gold one, whose atom already has a border.
+                //
+                // This is the Rule 21 shape exactly (9-slice collapse + a tint left at white), so
+                // all three move together here rather than being set once at author time.
+                Sprite? want = gold ? _goldSprite : _darkSprite;
                 if (want != null) _actionFill.sprite = want;
-                _actionFill.color = Color.white;
+                _actionFill.color = gold ? Color.white : GpsUiColor.ADark(Color.black, 0.35f);
+                _actionFill.type = Image.Type.Sliced;
+                _actionFill.pixelsPerUnitMultiplier = gold ? GoldPpum : PillPpum;
             }
+
+            if (_actionRim != null) _actionRim.gameObject.SetActive(!gold);
 
             // NEVER interactable = false. See the header: a dead button cannot say why.
             if (_actionButton != null) _actionButton.interactable = true;

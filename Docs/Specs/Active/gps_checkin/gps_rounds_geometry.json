@@ -1,0 +1,13 @@
+{"fail":0,"rows":[
+  {"state":"list","element":"StatusRow","node_y":0,"built_y":0,"delta":0,"pass":true},
+  {"state":"list","element":"CategoryChips","node_y":60,"built_y":60,"delta":0,"pass":true},
+  {"state":"list","element":"MapPanel","node_y":140,"built_y":140,"delta":0,"pass":true},
+  {"state":"list","element":"SortBar","node_y":720,"built_y":720,"delta":0,"pass":true},
+  {"state":"list","element":"SpotListPanel","node_y":780,"built_y":780,"delta":0,"pass":true},
+  {"state":"list","element":"MyRecentRoundsPanel","node_y":1270,"built_y":1270,"delta":0,"pass":true},
+  {"state":"active","element":"StatusRow","node_y":0,"built_y":0,"delta":0,"pass":true},
+  {"state":"active","element":"ActiveRoundCard","node_y":60,"built_y":60,"delta":0,"pass":true},
+  {"state":"active","element":"MapPanel","node_y":420,"built_y":420,"delta":0,"pass":true},
+  {"state":"active","element":"SortBar","node_y":1000,"built_y":1000,"delta":0,"pass":true},
+  {"state":"active","element":"SpotListPanel","node_y":1060,"built_y":1060,"delta":0,"pass":true}
+]}

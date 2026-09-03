@@ -49,6 +49,10 @@ namespace Golfin.UI.Polish.Tests
         {
             "GpsHub", "ScoreUpload", "GpsProfile", "GpsAvatar", "GpsBadges",
             "GpsGolfProfile", "GpsWelcome", "GpsGift", "GpsVote",
+            // gps_checkin — the Rounds tab. Added because the size assertion below caught its
+            // absence, which is exactly what that assertion is for: it sits at NavSlot 1, so
+            // every ordered pair through it is now checked against the restated rule.
+            "GpsRounds",
         };
 
         static bool MotionEnabled

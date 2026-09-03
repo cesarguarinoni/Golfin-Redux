@@ -3257,9 +3257,9 @@ MonoBehaviour:
     english: "\u25CF LOW"
     japanese: "\u25CF \u4F4E"
   - key: GPS_ROUNDS_CONFIRM_NOTE
-    english: Your round starts now. Check out when you finish to earn the rest, and
-      post your scorecard for the screenshot bonus.
-    japanese: "\u30E9\u30A6\u30F3\u30C9\u3092\u958B\u59CB\u3057\u307E\u3059\u3002\u7D42\u4E86\u6642\u306B\u30C1\u30A7\u30C3\u30AF\u30A2\u30A6\u30C8\u3059\u308B\u3068\u6B8B\u308A\u306E\u30DD\u30A4\u30F3\u30C8\u3092\u7372\u5F97\u3067\u304D\u3001\u30B9\u30B3\u30A2\u30AB\u30FC\u30C9\u3092\u6295\u7A3F\u3059\u308B\u3068\u30DC\u30FC\u30CA\u30B9\u3082\u4ED8\u304D\u307E\u3059\u3002"
+    english: "GOLFIN keeps a GPS trail while you play. Check out when you finish
+      \u2014 your score post then carries the proof."
+    japanese: "\u30D7\u30EC\u30FC\u4E2D\u306FGOLFIN\u304CGPS\u8ECC\u8DE1\u3092\u8A18\u9332\u3057\u307E\u3059\u3002\u7D42\u4E86\u3057\u305F\u3089\u30C1\u30A7\u30C3\u30AF\u30A2\u30A6\u30C8\u3059\u308B\u3068\u3001\u30B9\u30B3\u30A2\u6295\u7A3F\u306B\u305D\u306E\u8A3C\u660E\u304C\u4ED8\u304D\u307E\u3059\u3002"
   - key: GPS_ROUNDS_CANCEL
     english: CANCEL
     japanese: "\u30AD\u30E3\u30F3\u30BB\u30EB"

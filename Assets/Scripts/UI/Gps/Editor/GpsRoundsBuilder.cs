@@ -483,9 +483,26 @@ namespace Golfin.Gps.UI.Editor
             Img(glyph, IcoPin, White);
 
             GameObject info = Rect("Info", row.transform, 132, 15, 540, 100);
-            Set(so, "_name",
-                TMP("Name", info.transform, 0, 0, 330, 36, "", SB(30), White, FontSemi,
-                    TextAlignmentOptions.TopLeft));
+            // The node's Info frame is `overflow-clip` (14077:34010), and that is the whole
+            // mechanism: a real OSM address is far longer than the design's sample string and must
+            // be CUT at 540px, not run under the button at 696.
+            //
+            // ⚠️ NOT TextOverflowModes.Ellipsis, which was tried first and is worse than the bug:
+            // combined with the NoWrap this builder sets, it renders ZERO glyphs on the variable
+            // font — the subtitle and distance lines disappeared entirely. RectMask2D clips at the
+            // rect regardless of font, fallback font or wrapping mode.
+            info.AddComponent<RectMask2D>();
+            // ⚠️ ELLIPSIS, NOT OVERFLOW, ON ALL THREE INFO RUNS. The node's own strings are short
+            // ("Kawagoe, Saitama · East 18H · PAR 72") and TMP's default here is Overflow, so with
+            // REAL data — an OSM address like "日本、〒104-0051 東京都中央区佃２丁目２０−５ 月島医療
+            // ステーション 4階" — the subtitle ran straight out of its 540px rect and underneath the
+            // action button at x=696. The design never showed that string; the venues table does.
+            // Authored at the FULL Info width; RoundSpotRowView narrows it to the node's 330 only
+            // when the PARTNER tag is actually shown and needs that space.
+            TextMeshProUGUI nameText =
+                TMP("Name", info.transform, 0, 0, 540, 36, "", SB(30), White, FontSemi,
+                    TextAlignmentOptions.TopLeft);
+            Set(so, "_name", nameText);
 
             GameObject tag = Rect("PartnerTag", info.transform, 344, 4, 112, 30);
             Img(tag, SprPill, T(Green, 0.18f, PanelBody), Image.Type.Sliced, 15f);
@@ -496,14 +513,25 @@ namespace Golfin.Gps.UI.Editor
                 TextAlignmentOptions.Top, "GPS_ROUNDS_PARTNER");
             Set(so, "_partnerTag", tag);
 
-            Set(so, "_subtitle",
+            TextMeshProUGUI subtitleText =
                 TMP("Subtitle", info.transform, 0, 40, 540, 28, "", 24f, Muted, FontMed,
-                    TextAlignmentOptions.TopLeft));
-            Set(so, "_distance",
+                    TextAlignmentOptions.TopLeft);
+            Set(so, "_subtitle", subtitleText);
+            TextMeshProUGUI distanceText =
                 TMP("Distance", info.transform, 0, 72, 540, 28, "", 24f, Green, FontMed,
-                    TextAlignmentOptions.TopLeft));
+                    TextAlignmentOptions.TopLeft);
+            Set(so, "_distance", distanceText);
+
 
             Button action = SmallButton(row.transform, "ActionButton", 696, 38, 230, true, null);
+            // The dark states' #818ea1 stroke. Authored ALWAYS and toggled by the view, because a
+            // row is rebound between gold and dark on every fetch and adding an Image at runtime
+            // would allocate per paint.
+            GameObject actionRim = Rect("Rim", action.transform, 0, 0, 230, 54);
+            Stretch((RectTransform)actionRim.transform);
+            Set(so, "_actionRim", Img(actionRim, SprPillRing, ChipRim, Image.Type.Sliced, 20f));
+            actionRim.transform.SetSiblingIndex(0);
+            actionRim.SetActive(false);
             Set(so, "_actionButton", action);
             Set(so, "_actionFill", action.GetComponent<Image>());
             Set(so, "_actionLabel", action.transform.Find("Label").GetComponent<TextMeshProUGUI>());
@@ -638,7 +666,7 @@ namespace Golfin.Gps.UI.Editor
                     "GPS_ROUNDS_PTS_ON_CHECKIN", "GPS_ROUNDS_PTS_ON_CHECKOUT",
                     "GPS_ROUNDS_GPS_ACCURACY",
                 };
-                Color[] statColours = { Gold, Gold, Green };
+                Color[] statColours = { White, Gold, Green };
                 string[] statFields = { "_statCheckInValue", "_statCheckOutValue", "_statAccuracyValue" };
                 for (int i = 0; i < 3; i++)
                 {
@@ -650,7 +678,10 @@ namespace Golfin.Gps.UI.Editor
                         TextAlignmentOptions.Top, statKeys[i]);
                 }
 
-                TMP("Note", panel.transform, 64, 506, 830, 76, "", 24f, Muted, FontMed,
+                // 790, not 830: at 830 the wrap pulls "your" up onto line 1 and the two
+                // lines stop matching the node, whose line 1 ends at "finish —".
+                // x=84 keeps it centred in the 958-wide panel.
+                TMP("Note", panel.transform, 84, 506, 790, 76, "", 24f, Muted, FontMed,
                     TextAlignmentOptions.Top, "GPS_ROUNDS_CONFIRM_NOTE").textWrappingMode =
                     TextWrappingModes.Normal;
 
@@ -696,14 +727,22 @@ namespace Golfin.Gps.UI.Editor
                 Set(so, "_title",
                     TMP("Title", panel.transform, 0, 40, 958, 56, "", SB(42), Gold, FontSemi,
                         TextAlignmentOptions.Top));
-                Set(so, "_sub",
-                    TMP("Sub", panel.transform, 32, 106, 894, 32, "", 24f, Muted, FontMed,
-                        TextAlignmentOptions.Top));
 
-                GameObject ring = Rect("IconRing", panel.transform, 419, 160, 120, 120);
+                // Node 14078-33991 order is pin -> NAME -> sub, and the y values below are the
+                // measured glyph bands of that render (panel-relative): ring 108, name 252,
+                // sub 302, stats 366, note 470, buttons 563 / 648. The modal previously had NO
+                // venue name at all and put the sub-line ABOVE the pin.
+                GameObject ring = Rect("IconRing", panel.transform, 419, 108, 120, 120);
                 Img(ring, SprModalRing, White);
                 GameObject glyph = Rect("PinIcon", ring.transform, 40, 33.5f, 40, 53);
                 Img(glyph, IcoPin, White);
+
+                Set(so, "_venueName",
+                    TMP("Venue", panel.transform, 32, 250, 894, 48, "", SB(36), White, FontSemi,
+                        TextAlignmentOptions.Top));
+                Set(so, "_sub",
+                    TMP("Sub", panel.transform, 32, 300, 894, 32, "", 24f, Muted, FontMed,
+                        TextAlignmentOptions.Top));
 
                 string[] statKeys =
                 {
@@ -713,7 +752,7 @@ namespace Golfin.Gps.UI.Editor
                 string[] statFields = { "_statElapsedValue", "_statPtsValue", "_statFixesValue" };
                 for (int i = 0; i < 3; i++)
                 {
-                    GameObject stat = Rect("Stat" + i, panel.transform, 32 + i * 298f, 320, 298, 110);
+                    GameObject stat = Rect("Stat" + i, panel.transform, 32 + i * 298f, 366, 298, 110);
                     Set(so, statFields[i],
                         TMP("Value", stat.transform, 0, 0, 298, 60, "—", SB(48), statColours[i],
                             FontSemi, TextAlignmentOptions.Top));
@@ -721,18 +760,18 @@ namespace Golfin.Gps.UI.Editor
                         TextAlignmentOptions.Top, statKeys[i]);
                 }
 
-                var note = TMP("Note", panel.transform, 64, 450, 830, 110, "", 24f, Muted, FontMed,
+                var note = TMP("Note", panel.transform, 64, 470, 830, 110, "", 24f, Muted, FontMed,
                                TextAlignmentOptions.Top);
                 note.textWrappingMode = TextWrappingModes.Normal;
                 Set(so, "_note", note);
 
-                Button primary = WideButton(panel.transform, "PrimaryButton", 32, 600, 894, true,
+                Button primary = WideButton(panel.transform, "PrimaryButton", 32, 563, 894, true,
                                             null, 64);
                 Set(so, "_primaryButton", primary);
                 Set(so, "_primaryLabel",
                     primary.transform.Find("Label").GetComponent<TextMeshProUGUI>());
 
-                Button secondary = DarkButton(panel.transform, "SecondaryButton", 32, 676, 894, null);
+                Button secondary = DarkButton(panel.transform, "SecondaryButton", 32, 648, 894, null);
                 Set(so, "_secondaryButton", secondary);
                 Set(so, "_secondaryLabel",
                     secondary.transform.Find("Label").GetComponent<TextMeshProUGUI>());

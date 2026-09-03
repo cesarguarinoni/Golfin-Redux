@@ -477,6 +477,9 @@ namespace Golfin.Gps.UI
                 _mapLon = _fix.Lon;
                 // The trail only advances while a round is live — a fix taken while browsing is
                 // not evidence of playing anything.
+                // The accuracy label is shown before a round exists (confirm modal), so the
+                // fix is always NOTED; only an ACTIVE round feeds the paid trail.
+                Session.NoteFix(_fix);
                 if (Session.HasActive) Session.RecordFix(_fix);
                 Debug.Log($"{Tag} fix {_fix}");
             }
@@ -959,6 +962,7 @@ namespace Golfin.Gps.UI
             if (row == null || _completeModal == null) return;
 
             _completeModal.OpenConfirm(
+                row.VenueName ?? string.Empty,
                 string.Format(LocalizationManager.Get("GPS_ROUNDS_SINCE"),
                               RoundSession.FormatClock(Session.CheckInAt)),
                 Session.Elapsed,
@@ -993,9 +997,16 @@ namespace Golfin.Gps.UI
             CheckOutResult data = result.Data;
 
             DateTimeOffset? start = Session.CheckInAt;
+            // The END time is the SERVER's check_out_at, not this device's clock: the receipt is a
+            // record of what the server recorded, and a device whose clock drifts must not print a
+            // different round than the one the backend paid for. Falls back to now only if the
+            // response carried no timestamp.
+            DateTimeOffset? end = RoundSession.ParseTimestamp(data?.Activity?.CheckOutAt)
+                                  ?? DateTimeOffset.UtcNow;
             _completeModal?.ShowReceipt(
                 data, Session.Elapsed, Math.Max(Session.FixCount, row.GpsCheckCount ?? 1),
-                RoundCompleteModalController.ReceiptSub(start, DateTimeOffset.UtcNow,
+                row.VenueName ?? string.Empty,
+                RoundCompleteModalController.ReceiptSub(start, end,
                                                         data?.GpsVerified ?? false));
 
             // The round is closed the moment the server says so, NOT when the modal is dismissed:

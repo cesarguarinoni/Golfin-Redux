@@ -245,4 +245,47 @@ namespace Golfin.Gps.Tests
             Assert.IsNull(result.Data[1].Duration, "a sparse row must parse, not throw");
         }
     }
+
+    /// <summary>
+    /// A timestamp must reach the DTO EXACTLY as the server wrote it.
+    ///
+    /// <para>Newtonsoft's default <c>DateParseHandling.DateTime</c> rewrites any ISO-8601-looking
+    /// string into a DateTime token in the DEVICE'S LOCAL ZONE, and a <c>string</c> field then
+    /// receives that token's <c>ToString()</c>. On a JST device the server's
+    /// <c>2026-09-03T03:26:19+00:00</c> arrived as <c>09/03/2026 12:26:19</c> — local wall clock,
+    /// US format, no offset — which <c>ParseTimestamp</c> then read as UTC and shifted a SECOND
+    /// time. A round checked in at 12:26 JST rendered "Since 21:26", and Elapsed went negative.</para>
+    ///
+    /// <para>These assertions are timezone-independent on purpose: they pin the verbatim string and
+    /// the absolute instant, so the test fails on a UTC build machine too.</para>
+    /// </summary>
+    public class ActivityTimestampFidelityTests
+    {
+        const string Iso = "2026-09-03T03:26:19.123456+00:00";
+
+        [Test]
+        public void CheckInAt_ReachesTheDto_Verbatim()
+        {
+            string body = "{\"data\":{\"id\":43,\"check_in_at\":\"" + Iso + "\",\"status\":\"active\"}}";
+
+            Assert.IsTrue(ApiEnvelope.TryUnwrap(body, out ActivityDto dto, out string err), err);
+            Assert.AreEqual(Iso, dto.CheckInAt,
+                "the envelope rewrote the timestamp — DateParseHandling.None has been lost");
+        }
+
+        [Test]
+        public void ElapsedIsMeasuredFromTheInstantTheServerMeant()
+        {
+            string body = "{\"data\":{\"id\":43,\"check_in_at\":\"" + Iso + "\",\"status\":\"active\"}}";
+            ApiEnvelope.TryUnwrap(body, out ActivityDto dto, out _);
+
+            // Ten minutes after the server's instant, through the PUBLIC surface the card reads.
+            var now = new System.DateTimeOffset(2026, 9, 3, 3, 36, 19, System.TimeSpan.Zero);
+            var session = new RoundSession(new InMemoryKeyValueStore(), () => now);
+            session.SetActive(dto);
+
+            Assert.AreEqual(10d, session.Elapsed.TotalMinutes, 0.01d,
+                "elapsed drifted — the timestamp was shifted by the device's UTC offset");
+        }
+    }
 }

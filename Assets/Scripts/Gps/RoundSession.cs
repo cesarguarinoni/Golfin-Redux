@@ -42,6 +42,12 @@ namespace Golfin.Gps
     {
         private const string Tag = "[Round]";
 
+        /// <summary>Deserialise WITHOUT Newtonsoft's date handling, so a `string` field holding an
+        /// ISO timestamp round-trips verbatim instead of becoming local wall-clock text.
+        /// See <c>Golfin.Net.ApiEnvelope.ParseRaw</c> for the full failure this prevents.</summary>
+        private static readonly JsonSerializerSettings RawDates =
+            new JsonSerializerSettings { DateParseHandling = DateParseHandling.None };
+
         /// <summary>The mirrored active round (an <see cref="ActivityDto"/> as JSON).</summary>
         public const string PrefsRound = "gps_active_round";
 
@@ -115,7 +121,10 @@ namespace Golfin.Gps
             if (string.IsNullOrEmpty(json)) return null;
             try
             {
-                var row = JsonConvert.DeserializeObject<ActivityDto>(json);
+                // Newtonsoft's default DateParseHandling rewrites an ISO timestamp into a LOCAL DateTime
+                // token, so a `string` field receives "09/03/2026 12:26:19" instead of the UTC
+                // text that was written. Settings keep the round-trip verbatim. See ApiEnvelope.ParseRaw.
+                var row = JsonConvert.DeserializeObject<ActivityDto>(json, RawDates);
                 // A mirror that is not `active` is stale by definition — it was written by an
                 // older build, or the round was closed on another device while this one was
                 // asleep. Dropping it here means the card never paints a round that is over.
@@ -209,6 +218,21 @@ namespace Golfin.Gps
         /// <c>gps_check_count</c> — which is exactly the anti-cheat property score.py pays Trust
         /// +20 for.</para>
         /// </summary>
+        /// <summary>
+        /// Remember a fix for the ACCURACY READOUT only, without feeding the trail.
+        ///
+        /// <para>The confirm modal shows "● HIGH / MED / LOW" BEFORE a round exists, so it cannot
+        /// wait for <see cref="RecordFix"/> — that one is gated on an active round because the
+        /// trail is what the check-out is paid on, and fixes taken while no round is open must not
+        /// count toward it. Splitting the two is the whole point: the label is honest from the
+        /// first fix, and the trail still only ever holds fixes taken during a round.</para>
+        /// </summary>
+        public void NoteFix(LocationFix? fix)
+        {
+            if (fix == null) return;
+            LastFix = fix;
+        }
+
         public void RecordFix(LocationFix? fix)
         {
             if (fix == null) return;
@@ -258,7 +282,7 @@ namespace Golfin.Gps
         /// a string carrying no offset is read as UTC rather than as the device's local time —
         /// which on a phone in JST would make every round read as nine hours old.
         /// </summary>
-        internal static DateTimeOffset? ParseTimestamp(string? iso)
+        public static DateTimeOffset? ParseTimestamp(string? iso)
         {
             if (string.IsNullOrEmpty(iso)) return null;
             if (DateTimeOffset.TryParse(iso, CultureInfo.InvariantCulture,

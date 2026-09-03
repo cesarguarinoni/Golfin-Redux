@@ -1037,7 +1037,7 @@ GPS_ROUNDS_GPS_ACCURACY,GPS ACCURACY,GPS 精度
 GPS_ROUNDS_ACCURACY_HIGH,● HIGH,● 高
 GPS_ROUNDS_ACCURACY_MED,● MED,● 中
 GPS_ROUNDS_ACCURACY_LOW,● LOW,● 低
-GPS_ROUNDS_CONFIRM_NOTE,"Your round starts now. Check out when you finish to earn the rest, and post your scorecard for the screenshot bonus.","ラウンドを開始します。終了時にチェックアウトすると残りのポイントを獲得でき、スコアカードを投稿するとボーナスも付きます。"
+GPS_ROUNDS_CONFIRM_NOTE,"GOLFIN keeps a GPS trail while you play. Check out when you finish — your score post then carries the proof.",プレー中はGOLFINがGPS軌跡を記録します。終了したらチェックアウトすると、スコア投稿にその証明が付きます。
 GPS_ROUNDS_CANCEL,CANCEL,キャンセル
 GPS_ROUNDS_COMPLETE_TITLE,ROUND COMPLETE,ラウンド終了
 GPS_ROUNDS_COMPLETE_SUB,{0} – {1} · GPS verified,{0}〜{1} · GPS 認証済み

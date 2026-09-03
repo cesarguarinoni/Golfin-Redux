@@ -32,6 +32,7 @@ namespace Golfin.Gps.UI
 
         [Header("Header")]
         [SerializeField] private TextMeshProUGUI? _title;
+        [SerializeField] private TextMeshProUGUI? _venueName;
         [SerializeField] private TextMeshProUGUI? _sub;
 
         [Header("Stats")]
@@ -66,7 +67,8 @@ namespace Golfin.Gps.UI
         /// are what the player has been watching tick on the card, and they are replaced by the
         /// server's the moment it answers.</para>
         /// </summary>
-        public void OpenConfirm(string venueSince, TimeSpan elapsed, int fixes, bool expired,
+        public void OpenConfirm(string venueName, string venueSince, TimeSpan elapsed,
+                                int fixes, bool expired,
                                 Action onConfirm, Action onPostScore)
         {
             WireOnce();
@@ -79,6 +81,7 @@ namespace Golfin.Gps.UI
             if (_title != null)
                 _title.text = LocalizationManager.Get(expired ? "GPS_ROUNDS_EXPIRED"
                                                               : "GPS_ROUNDS_COMPLETE_TITLE");
+            if (_venueName != null) _venueName.text = venueName;
             if (_sub != null) _sub.text = venueSince;
 
             SetStats(RoundSession.FormatElapsed(elapsed), null, fixes);
@@ -104,13 +107,15 @@ namespace Golfin.Gps.UI
         /// swap to POST SCORE / DONE.
         /// </summary>
         public void ShowReceipt(CheckOutResult result, TimeSpan clientElapsed, int fixes,
-                                string subLine)
+                                string venueName, string subLine)
         {
             _pending?.Dispose();
             _pending = null;
             IsReceipt = true;
 
             bool expired = result != null && result.Expired;
+
+            if (_venueName != null) _venueName.text = venueName;
 
             if (_title != null)
                 _title.text = LocalizationManager.Get(expired ? "GPS_ROUNDS_EXPIRED"

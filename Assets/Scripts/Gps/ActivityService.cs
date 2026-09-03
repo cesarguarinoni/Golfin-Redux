@@ -127,30 +127,44 @@ namespace Golfin.Gps
         /// </summary>
         public static string? ReasonOf(string? body)
         {
-            if (string.IsNullOrEmpty(body)) return null;
-            try
-            {
-                JObject o = JObject.Parse(body!);
-                JToken? detail = o["detail"] ?? o;
-                return detail?["reason"]?.ToString();
-            }
-            catch (JsonException)
-            {
-                return null;
-            }
+            JObject? detail = RefusalObject(body);
+            return detail?["reason"]?.ToString();
         }
 
         /// <summary>The <c>activity_id</c> an <c>already_active</c> refusal names, so the screen
         /// can show THAT round instead of asking the player to guess.</summary>
         public static long? ActiveIdOf(string? body)
         {
+            JToken? id = RefusalObject(body)?["activity_id"];
+            if (id == null || id.Type == JTokenType.Null) return null;
+            // A server that answers `"activity_id": "42"` — or anything unparseable — must not
+            // take the failure handler down with it.
+            return long.TryParse(id.ToString(), out long v) ? v : (long?)null;
+        }
+
+        /// <summary>
+        /// The refusal object inside an error body, or null when there isn't one.
+        ///
+        /// <para>⚠️ <c>detail</c> IS NOT ALWAYS AN OBJECT, and assuming it was is a real crash this
+        /// project's own routers can cause: FastAPI writes <c>{"detail": "..."}</c> with a PLAIN
+        /// STRING for every <c>HTTPException(400, detail="…")</c>, and <c>activity.py::_key</c>
+        /// raises exactly that for a malformed idempotency key. Indexing a
+        /// <see cref="JValue"/> throws <see cref="InvalidOperationException"/> — which is NOT a
+        /// <see cref="JsonException"/>, so the old catch missed it, the exception escaped into the
+        /// check-in coroutine, and the coroutine died with <c>PendingSpend</c> still holding the
+        /// button. A stuck "…" on CHECK IN, from an error path.</para>
+        ///
+        /// <para>So the type is CHECKED rather than assumed, and the catch is broad: this runs only
+        /// on a path that has already failed, where throwing again can only make things worse.</para>
+        /// </summary>
+        private static JObject? RefusalObject(string? body)
+        {
             if (string.IsNullOrEmpty(body)) return null;
             try
             {
-                JObject o = JObject.Parse(body!);
-                JToken? detail = o["detail"] ?? o;
-                JToken? id = detail?["activity_id"];
-                return id != null && id.Type != JTokenType.Null ? id.Value<long>() : (long?)null;
+                if (!(JToken.Parse(body!) is JObject root)) return null;
+                JToken? detail = root["detail"];
+                return detail as JObject ?? (detail == null ? root : null);
             }
             catch (JsonException)
             {

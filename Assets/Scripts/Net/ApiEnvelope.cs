@@ -1,5 +1,6 @@
 // Order: reward_points_backend Slice 1 — {data:…} envelope unwrapping + {detail:…} error extraction.
 using System;
+using System.IO;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -32,7 +33,7 @@ namespace Golfin.Net
 
             try
             {
-                JToken root = JToken.Parse(body);
+                JToken root = ParseRaw(body);
 
                 JToken payload = root;
                 if (root.Type == JTokenType.Object)
@@ -74,7 +75,7 @@ namespace Golfin.Net
 
             try
             {
-                JToken root = JToken.Parse(body);
+                JToken root = ParseRaw(body);
                 if (root.Type != JTokenType.Object) return Shorten(body);
 
                 var obj = (JObject)root;
@@ -89,6 +90,27 @@ namespace Golfin.Net
             {
                 return Shorten(body);
             }
+        }
+
+        /// <summary>
+        /// Parse a body WITHOUT Newtonsoft's date handling.
+        ///
+        /// <para>Newtonsoft's default <see cref="DateParseHandling.DateTime"/> rewrites any
+        /// ISO-8601-looking string into a <c>DateTime</c> token in the DEVICE'S LOCAL ZONE. A DTO
+        /// field typed <c>string</c> then receives that token's <c>ToString()</c> — so the server's
+        /// <c>"2026-09-03T03:26:19+00:00"</c> reaches the field as <c>"09/03/2026 12:26:19"</c>:
+        /// local wall-clock, US format, and NO offset. Anything that parses it back as UTC shifts a
+        /// second time. That is exactly how a round checked in at 12:26 JST rendered "Since 21:26".</para>
+        ///
+        /// <para>Timestamps here are carried as strings on purpose and parsed once, deliberately, at
+        /// the point of use (<c>RoundSession.ParseTimestamp</c>). This keeps them verbatim so that
+        /// parse is the ONLY one.</para>
+        /// </summary>
+        private static JToken ParseRaw(string body)
+        {
+            using (var sr = new StringReader(body))
+            using (var reader = new JsonTextReader(sr) { DateParseHandling = DateParseHandling.None })
+                return JToken.ReadFrom(reader);
         }
 
         private static string Shorten(string s, int max = 400)
