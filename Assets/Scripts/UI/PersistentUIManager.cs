@@ -153,6 +153,71 @@ namespace Golfin.UI
             }
 
             EnsureTicketPill();
+            EnsureRewardPointsAlignment();
+            EnsureTicketCountAlignment();
+        }
+
+        /// <summary>Padding kept between a counter's right edge and its pill's inner edge.</summary>
+        private const float CounterPillPadding = 12f;
+
+        /// <summary>
+        /// Right-align the top-bar RP label inside its pill (see <see cref="AlignCounterInPill"/>).
+        /// </summary>
+        private void EnsureRewardPointsAlignment()
+        {
+            if (rewardPointsText == null || topBarPanel == null) return;
+            AlignCounterInPill(rewardPointsText,
+                               topBarPanel.transform.Find("RewardPointsBackground") as RectTransform);
+        }
+
+        /// <summary>
+        /// Same treatment for the ticket counter, so both pills read with one right-hand gap.
+        /// Runs after <see cref="EnsureTicketPill"/>, which is what creates the pill it measures.
+        /// </summary>
+        private void EnsureTicketCountAlignment()
+        {
+            if (ticketCountText == null) return;
+            var host = ticketCountText.transform.parent;   // TopBarContent
+            if (host == null) return;
+            AlignCounterInPill(ticketCountText, host.Find("TicketCountBackground") as RectTransform);
+        }
+
+        /// <summary>
+        /// Right-align a top-bar counter and pull its rect's right edge
+        /// <see cref="CounterPillPadding"/> inside the pill behind it. Done at runtime, like
+        /// <see cref="EnsureTicketPill"/>: both labels are authored LEFT-aligned with a rect that
+        /// overhangs its pill (RP by 17px, tickets by 23px), so the digits drifted toward — and
+        /// with a wide enough value, past — the pill's right edge, and the gap moved with the
+        /// digit count. Right-aligning alone would not have been enough: the overhanging rect
+        /// would simply have parked the digits outside. Aligning AND insetting fixes the gap at
+        /// one value for both counters, whatever the balance. The left edge stays where it is
+        /// (clear of each cluster's icon), so a long value grows leftward inside the pill.
+        /// Idempotent: a second pass finds no overhang and changes nothing.
+        /// </summary>
+        private static void AlignCounterInPill(TMPro.TextMeshProUGUI label, RectTransform? pill)
+        {
+            if (label == null) return;
+            label.alignment = TMPro.TextAlignmentOptions.MidlineRight;
+
+            var rt     = label.rectTransform;
+            var parent = rt.parent as RectTransform;
+            if (parent == null || pill == null || pill.parent != parent) return;
+
+            var corners = new Vector3[4];
+            pill.GetWorldCorners(corners);
+            float pillRight = parent.InverseTransformPoint(corners[2]).x;   // top-right
+            rt.GetWorldCorners(corners);
+            float textRight = parent.InverseTransformPoint(corners[2]).x;
+
+            float overhang = textRight - (pillRight - CounterPillPadding);
+            if (overhang <= 0.5f) return;
+
+            // Shrink from the right only: narrowing by `overhang` moves the right edge in by
+            // (1 - pivot.x) * overhang and the left edge out by pivot.x * overhang, so the
+            // anchoredPosition shift cancels the left-edge drift for any pivot.
+            rt.sizeDelta        = new Vector2(rt.sizeDelta.x - overhang, rt.sizeDelta.y);
+            rt.anchoredPosition = new Vector2(rt.anchoredPosition.x - overhang * rt.pivot.x,
+                                              rt.anchoredPosition.y);
         }
 
         /// <summary>
@@ -380,24 +445,59 @@ namespace Golfin.UI
             _rpCountUpArmedUntil = Time.unscaledTime + RpCountUpArmSeconds;
         }
 
+        /// <summary>
+        /// Top-bar counter format: invariant "N0" grouping with a "." thousands separator, so
+        /// 9000 reads "9.000". Both counters share it — the RP pill used the invariant comma
+        /// while the ticket pill printed a bare int, which is two different numbers on one bar.
+        /// </summary>
+        private static readonly System.Globalization.NumberFormatInfo TopBarNumberFormat = BuildTopBarNumberFormat();
+
+        private static System.Globalization.NumberFormatInfo BuildTopBarNumberFormat()
+        {
+            var nfi = (System.Globalization.NumberFormatInfo)
+                      System.Globalization.CultureInfo.InvariantCulture.NumberFormat.Clone();
+            nfi.NumberGroupSeparator = ".";
+            return nfi;
+        }
+
+        /// <summary>
+        /// Read back a counter this class itself rendered. Digits only — "1.240" is NOT parseable
+        /// as an int by any culture-aware parse (the group separator reads as a decimal point and
+        /// int.TryParse rejects the fraction), and the count-up needs the previous value.
+        /// </summary>
+        private static bool TryParseTopBarNumber(string? text, out int value)
+        {
+            value = 0;
+            if (string.IsNullOrEmpty(text)) return false;
+            long acc = 0;
+            bool any = false;
+            foreach (char c in text!)
+            {
+                if (c >= '0' && c <= '9') { acc = acc * 10 + (c - '0'); any = true; if (acc > int.MaxValue) return false; }
+                else if (c != '.' && c != ',' && c != ' ') return false;
+            }
+            if (!any) return false;
+            value = (int)acc;
+            return true;
+        }
+
         public void SetRewardPoints(int points)
         {
             if (rewardPointsText == null) return;
 
             bool armed = Time.unscaledTime <= _rpCountUpArmedUntil;
             if (armed &&
-                int.TryParse(rewardPointsText.text,
-                             System.Globalization.NumberStyles.Number,
-                             System.Globalization.CultureInfo.InvariantCulture, out int from) &&
+                TryParseTopBarNumber(rewardPointsText.text, out int from) &&
                 points > from)
             {
                 _rpCountUpArmedUntil = -1f;
                 Golfin.UI.Polish.UiMotion.Run(this, ref _rpCountUp,
-                    Golfin.UI.Polish.UiMotion.CountUp(rewardPointsText, from, points));
+                    Golfin.UI.Polish.UiMotion.CountUp(rewardPointsText, from, points,
+                                                     culture: TopBarNumberFormat));
                 return;
             }
 
-            rewardPointsText.text = points.ToString("N0");
+            rewardPointsText.text = points.ToString("N0", TopBarNumberFormat);
         }
 
         /// <summary>
@@ -406,7 +506,7 @@ namespace Golfin.UI
         public void SetTickets(int count)
         {
             if (ticketCountText != null)
-                ticketCountText.text = count.ToString();
+                ticketCountText.text = count.ToString("N0", TopBarNumberFormat);
         }
 
         /// <summary>

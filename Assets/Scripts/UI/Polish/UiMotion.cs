@@ -385,18 +385,23 @@ namespace Golfin.UI.Polish
         /// count are all localized runs with the figure inside them, and counting up a label
         /// while dropping its surrounding words would be a worse bug than not counting at all.
         /// Null means the label IS the number.</param>
+        /// <param name="culture">Overrides the InvariantCulture default when the caller renders
+        /// its number with a different separator — the top bar counts RP with "." thousands, and
+        /// a tween that drew "1,240" before settling on "1.240" would flicker the separator.</param>
         public static IEnumerator CountUp(TMP_Text label, int from, int to,
                                           float dur = CountDur, string format = "N0",
-                                          string? wrap = null)
+                                          string? wrap = null,
+                                          System.IFormatProvider? culture = null)
         {
             if (label == null) return Register(Empty(), Noop);
-            string final = Render(to, format, wrap);
-            return Register(CountUpRoutine(label, from, to, dur, format, wrap),
+            string final = Render(to, format, wrap, culture);
+            return Register(CountUpRoutine(label, from, to, dur, format, wrap, culture),
                             () => { if (label != null) label.text = final; });
         }
 
         private static IEnumerator CountUpRoutine(TMP_Text label, int from, int to,
-                                                  float dur, string format, string? wrap)
+                                                  float dur, string format, string? wrap,
+                                                  System.IFormatProvider? culture)
         {
             float elapsed = 0f;
             int last = int.MinValue;
@@ -409,18 +414,19 @@ namespace Golfin.UI.Polish
                 // Only touch the mesh when the integer actually moved: a TMP_Text assignment
                 // rebuilds the mesh, and at 60 fps a 0.4 s count over 12 points would rebuild
                 // 24 times to draw 12 distinct values.
-                if (v != last) { label.text = Render(v, format, wrap); last = v; }
+                if (v != last) { label.text = Render(v, format, wrap, culture); last = v; }
                 yield return null;
             }
-            if (label != null) label.text = Render(to, format, wrap);
+            if (label != null) label.text = Render(to, format, wrap, culture);
         }
 
         /// <summary>One value, formatted and (optionally) dropped into its surrounding run.</summary>
-        public static string Render(int value, string format = "N0", string? wrap = null)
+        public static string Render(int value, string format = "N0", string? wrap = null,
+                                    System.IFormatProvider? culture = null)
         {
-            var culture = System.Globalization.CultureInfo.InvariantCulture;
-            string n = value.ToString(format, culture);
-            return string.IsNullOrEmpty(wrap) ? n : string.Format(culture, wrap!, n);
+            var provider = culture ?? System.Globalization.CultureInfo.InvariantCulture;
+            string n = value.ToString(format, provider);
+            return string.IsNullOrEmpty(wrap) ? n : string.Format(provider, wrap!, n);
         }
 
         /// <summary>
