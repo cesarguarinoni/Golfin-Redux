@@ -4,6 +4,38 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
+## ✅ DONE — `gps_profile_prompt_on_entry` **approved by Cesar** (2026-09-03) · a fresh install lands on the game and stays there
+
+Device-pass finding #2: the first thing a new player saw was a golf-profile form for a surface
+they had not asked for. The once-per-device Golf Profile → Welcome offer moved off **Home entry**
+and onto the **first entry into GPS**.
+
+`HomeScreenController` lost both `ShouldOffer()` call sites and the deferred coroutine.
+`ScreenManager.Navigate` gained ONE intercept, after the three gates: it routes `GpsHub` to
+`GpsGolfProfile` through the new pure seam `GpsAuthExtrasFlow.InterceptHubEntry(requested)`, and
+sets the one-shot `PendingHubEntry` that both Welcome exits clear. Because the intercept is in
+`Navigate` rather than on any one caller, every entry is covered by construction — the Home pill,
+the home_promo banner's `golfin://gps` route, and later the standalone shell, which will call the
+same function instead of re-deriving the rule. Exits are unchanged; `ShouldOffer()` keeps its
+three inputs.
+
+**Proven by real navigation, not a harness** (`GOLFIN/Gps/Run Profile Prompt On Entry
+Acceptance`): Home held for 8.0 s with `ShouldOffer=True` and declined it; the REAL pill — read
+off `HomeScreenController`'s own serialized field — diverted to Golf Profile; SAVE → Welcome →
+GET STARTED → hub; the second pill tap went straight to the hub; the Skip path returned Home and
+then went straight to the hub; and `golfin://gps` hit the same intercept. EditMode 2329 / 2326
+passed / 0 failed, with the four new fixtures proven to execute by a tripwire (the runner ignores
+class filters and hides passes). No prefab, scene, string or backend change.
+
+**One real regression, caught by the sweep.** The intercept first evaluated `ShouldOffer()` on
+EVERY navigation; that reads `AuthService.Instance`, whose getter creates a `DontDestroyOnLoad`
+host, which is illegal outside play mode — `NavBackMemoryTests.A15` died on it. `InterceptHubEntry`
+now tests `requested == GpsHub` before it reaches the session, which fixes the test and keeps an
+ordinary screen change free of a session read.
+
+Device-pass rows 1.3 / 1.8 rewritten to the new trigger, plus a new 1.9 for the banner route.
+
+---
 ## ✅ DONE — `gps_polish` **approved by Cesar** (2026-09-03) · the GPS surface moves like the rest of the game
 
 Inside the GPS surface, screens no longer go through black to move one room sideways: the
