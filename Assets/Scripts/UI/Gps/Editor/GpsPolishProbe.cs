@@ -116,6 +116,16 @@ namespace Golfin.Gps.EditorTools
         [MenuItem("GOLFIN/Gps/Polish Probe — nav tint (the lit slot, per screen)", priority = 246)]
         public static void ArmNavTint() => Arm("navtint");
 
+        /// <summary>
+        /// The BUY GIFT ITEMS strip, read as TEXT off the live screen.
+        ///
+        /// <para>gift_items carries one Japanese `name` column, so an English build rendered
+        /// Japanese. A screenshot can show the strip is populated; only the string can show WHICH
+        /// language it is in, which is why this asserts on the glyphs rather than on the frame.</para>
+        /// </summary>
+        [MenuItem("GOLFIN/Gps/Polish Probe — gift item names (EN vs JA)", priority = 247)]
+        public static void ArmGift() => Arm("gift");
+
         public static void Arm(string mode)
         {
             Directory.CreateDirectory(Path.GetDirectoryName(LogPath)!);
@@ -254,6 +264,14 @@ namespace Golfin.Gps.EditorTools
             {
                 Line("=== gps_polish probe (" + _mode + ") " + DateTime.UtcNow.ToString("u") + " ===");
 
+                if (_mode == "gift")
+                {
+                    yield return Boot();
+                    yield return SequenceGift();
+                    Line("=== done: gift pass complete ===");
+                    yield break;
+                }
+
                 if (_mode == "navtint")
                 {
                     yield return Boot();
@@ -305,6 +323,60 @@ namespace Golfin.Gps.EditorTools
                 if (_mode == "push") WriteJson();
                 if (_mode == "perf") WritePerfJson();
                 Line("=== done: " + _records.Count + " push(es) recorded ===");
+            }
+
+            // ═════════════════════════════════════════════════════════════════
+            // Gift item names, in both languages
+            // ═════════════════════════════════════════════════════════════════
+
+            IEnumerator SequenceGift()
+            {
+                yield return TapNamed("GpsPill", "the Home GPS pill");
+                yield return Arrive(ScreenId.GpsHub, 2.5f);
+                GameObject? hub = GameObject.Find("Canvas/ScreensRoot/GpsHubScreen");
+                if (hub == null) { Line("FATAL: no hub"); yield break; }
+
+                yield return Go(hub, "NavGiftButton", ScreenId.GpsGift, "hub nav GIFT");
+                yield return new WaitForSecondsRealtime(3f);   // let /gifts/items land
+
+                LocalizationManager.SetLanguage(Language.English);
+                yield return new WaitForSecondsRealtime(0.6f);
+                yield return StripReport("EN");
+
+                LocalizationManager.SetLanguage(Language.Japanese);
+                yield return new WaitForSecondsRealtime(0.6f);
+                yield return StripReport("JA");
+
+                LocalizationManager.SetLanguage(Language.English);
+                yield return new WaitForSecondsRealtime(0.6f);
+                yield return StripReport("EN-again");   // the round trip Cesar reported
+            }
+
+            /// <summary>Read the three ItemName labels off the LIVE strip.</summary>
+            IEnumerator StripReport(string label)
+            {
+                GameObject? cur = Obj(ScreenManager.Instance!.CurrentScreen);
+                Transform? strip = cur != null
+                    ? cur.transform.Find("ContentContainer/BuyGifts/GiftItems") : null;
+                if (strip == null) { Line("STRIP " + label + ": not found"); yield break; }
+
+                var sb = new StringBuilder("STRIP " + label + "  ");
+                bool anyCjk = false;
+                for (int i = 0; i < strip.childCount; i++)
+                {
+                    Transform cell = strip.GetChild(i);
+                    if (!cell.gameObject.activeSelf) continue;
+                    Transform? t = cell.Find("ItemName");
+                    var tmp = t != null ? t.GetComponent<TMPro.TextMeshProUGUI>() : null;
+                    if (tmp == null) continue;
+                    string v = tmp.text ?? "";
+                    foreach (char ch in v)
+                        if ((ch >= 0x3040 && ch <= 0x30FF) || (ch >= 0x4E00 && ch <= 0x9FFF)) anyCjk = true;
+                    sb.Append('[').Append(v).Append("] ");
+                }
+                sb.Append(" containsJapanese=").Append(anyCjk);
+                Line(sb.ToString());
+                yield return Shot("gift_strip_" + label);
             }
 
             // ═════════════════════════════════════════════════════════════════
