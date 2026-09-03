@@ -566,7 +566,17 @@ namespace Golfin.Gps.UI.Editor
                 var ringImg = Img(ringGo, SprIconRingTile, Muted);
                 Img(Rect("Icon", ringGo.transform, 18, 18, 32, 32), stageIcons[i], White);
 
-                var rankTmp = TMP("RankLabel", stageGo.transform, 0, 74, w, 21, "",
+                // The rank NAME is wider than the ring it sits under: "BEGINNER" measures 100.7px
+                // and "AMATEUR" 96.5 at F(18), against a stage of 92 (first) or 68 (rest) — every
+                // rank except the shortest spilled. Every GPS builder sets NoWrap + Overflow, so a
+                // label wider than its rect does not clip, it just runs out of the box.
+                //
+                // The label is therefore given its own width, CENTRED on the stage rather than
+                // matching it. 140 is safe: the tightest stage centre-to-centre spacing is 191.5px
+                // (255.5+34 -> 447+34), so two neighbouring 140s still leave ~51px between them.
+                const float RankLabelW = 140f;
+                var rankTmp = TMP("RankLabel", stageGo.transform, (w - RankLabelW) * 0.5f, 74,
+                                  RankLabelW, 21, "",
                                   F(18), White, FontSemi, TextAlignmentOptions.Top, stageKeys[i]);
                 var lvlTmp  = TMP("LevelLabel", stageGo.transform, 0, 101, w, 21,
                                   $"Lv.{stageLvls[i]}", F(18), Muted, FontMed, TextAlignmentOptions.Top);
@@ -634,7 +644,10 @@ namespace Golfin.Gps.UI.Editor
                     "0/0", F(28), White, FontSemi, TextAlignmentOptions.TopRight);
                 Set(so, statLabelFields[i], statLbl);
             }
-            var statusNote = TMP("StatusNote", statusPanel.transform, 696, 272, 230, 24, "",
+            // 345, not 230: "Your selected GOLFIN character stats" measures 338.8px at F(20) and
+            // ran 108.8px past the old rect. Grown LEFTWARD from the same right edge (696+230=926)
+            // so the note stays aligned with the stat values above it.
+            var statusNote = TMP("StatusNote", statusPanel.transform, 581, 272, 345, 24, "",
                 F(20), Muted, FontMed, TextAlignmentOptions.TopRight, "GPS_AVATAR_STATUS_NOTE");
             Set(so, "_statusNote", statusNote);
 

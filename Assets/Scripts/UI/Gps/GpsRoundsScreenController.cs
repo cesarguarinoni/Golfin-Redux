@@ -450,17 +450,54 @@ namespace Golfin.Gps.UI
             StartCoroutine(FetchSpots());
         }
 
+        /// <summary>
+        /// Paint the category chips for the current selection.
+        ///
+        /// <para>EVERY property of a chip moves together — sprite, fill TINT, rim and label. The
+        /// first version set the sprite and then forced <c>color = Color.white</c> on all three
+        /// chips, which threw away the <c>ADark(black, 0.35f)</c> tint the UNSELECTED state needs:
+        /// the capsule went solid white under a white label, so DRIVING RANGES and FOOD &amp; DRINK
+        /// read as blank white pills the moment the selection changed. It also never touched the
+        /// rims, so those kept their author-time colours for the life of the screen.</para>
+        ///
+        /// <para>This is the same defect as the CHECK IN action pill (<see cref="RoundSpotRowView"/>
+        /// § ApplyAction): a sprite swapped without the colour that belongs to it. Both are now
+        /// written so the state is applied as a unit rather than a sprite plus leftovers.</para>
+        /// </summary>
         private void PaintChips()
         {
             for (int i = 0; i < _chipFills.Length; i++)
             {
                 bool on = i == _category;
+
                 if (_chipFills[i] != null)
                 {
                     Sprite? want = on ? _chipSelectedSprite : _chipUnselectedSprite;
-                    if (want != null) _chipFills[i].sprite = want;
-                    _chipFills[i].color = Color.white;
+                    if (want != null)
+                    {
+                        _chipFills[i].sprite = want;
+                    }
+                    else
+                    {
+                        // A missing sprite is an AUTHORING failure. Saying so beats leaving the
+                        // previous state's sprite in place under the new state's tint, which is
+                        // how a white blob gets shipped.
+                        Debug.LogWarning($"{Tag} chip {i}: no "
+                                         + (on ? "selected" : "unselected")
+                                         + " sprite wired — the chip keeps its previous fill.");
+                    }
+
+                    _chipFills[i].color = on ? Color.white : GpsUiColor.ADark(Color.black, 0.35f);
+                    _chipFills[i].type  = Image.Type.Sliced;
+                    _chipFills[i].pixelsPerUnitMultiplier = 30f;
+
+                    // The rim rides a child of the fill and is part of the same state.
+                    Transform? rim = _chipFills[i].transform.Find("Rim");
+                    Image? rimImg = rim != null ? rim.GetComponent<Image>() : null;
+                    if (rimImg != null)
+                        rimImg.color = on ? GpsUiColor.Hex("#422100") : GpsUiColor.Hex("#818EA1");
                 }
+
                 if (i < _chipLabels.Length && _chipLabels[i] != null)
                     _chipLabels[i].color = on ? GpsUiColor.Hex("#2A1A00") : Color.white;
             }

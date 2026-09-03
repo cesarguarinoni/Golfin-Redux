@@ -70,6 +70,36 @@ namespace Golfin.Gps.UI
         /// <summary>Name width when the PARTNER tag shares the line (node 14077:34011).</summary>
         private const float NameWidthWithTag = 330f;
 
+        // ── The action pill's two widths ──────────────────────────────────────
+        // "CHECK IN" is 177.7px and "DETAILS" 158.7px, so the node's 230 holds them with room.
+        // The TOO FAR state does not fit and never did: "{0} KM AWAY" measures 239.5 at 0.0 km,
+        // 256.4 at 12.3 and 281.2 at 128.5 — EVERY English distance overflows 230, which is what
+        // Cesar saw spilling out of the capsule. (Japanese "{0} KM 先" is 168.6–210.9 and fits,
+        // which is why only EN showed it.) The pill therefore takes a second width in that state,
+        // grown LEFTWARD so its right edge stays on the node's 926.
+        private const float ActionWidthNormal = 230f;
+        private const float ActionWidthFar    = 320f;
+        private const float ActionRightEdge   = 926f;   // 696 + 230, the node's position
+        private const float ActionLabelInset  = 16f;    // keeps glyphs off the capsule's round ends
+
+        /// <summary>Info width when the wider TOO FAR pill is taking the space.
+        ///
+        /// <para>The Info frame is <c>overflow-clip</c> and its width IS the clip — the builder's
+        /// note is "a real OSM address must be CUT at 540px, not run under the button at 696". The
+        /// wider pill starts at 606, so 540 stops clipping in time and the address runs under the
+        /// capsule. Narrowing the CONTAINER (not just the name) keeps the same 24px gap the normal
+        /// state has, and the RectMask2D then cuts the subtitle and distance lines with it.</para>
+        ///
+        /// <para>The longest real venue name measures 419.9px ("TEST Office (WeWork Harumi)"), so
+        /// 450 truncates nothing that exists today.</para>
+        /// </summary>
+        private const float InfoWidthFar    = 450f;
+        private const float InfoWidthNormal = 540f;
+
+        /// <summary>The authored label size, and the floor auto-sizing may fall to.</summary>
+        private const float ActionLabelFontSize = 39f / 1.2f;   // SB(39) — the builder's convert
+        private const float ActionLabelFontMin  = 26f;
+
         /// <summary>…and when it does not — the full Info width (node 14077:34029).</summary>
         private const float NameWidthFull = 540f;
 
@@ -132,10 +162,19 @@ namespace Golfin.Gps.UI
             // one that does not (14077:34011 vs :34029) — that is flex, and this is the same
             // result stated explicitly. Without it a non-partner name is cut short for a tag that
             // is not there.
+            // The Info frame and the name resize TOGETHER with the action pill. Resizing only the
+            // name left the subtitle and distance at full width, so a long address kept running
+            // under the wider capsule — the exact thing the frame's clip exists to prevent.
+            float infoWidth = state == ActionState.TooFar ? InfoWidthFar : InfoWidthNormal;
+
             if (_name != null)
             {
+                var infoRt = _name.transform.parent as RectTransform;
+                if (infoRt != null && !Mathf.Approximately(infoRt.sizeDelta.x, infoWidth))
+                    infoRt.sizeDelta = new Vector2(infoWidth, infoRt.sizeDelta.y);
+
                 var rt = (RectTransform)_name.transform;
-                float want = partner ? NameWidthWithTag : NameWidthFull;
+                float want = partner ? NameWidthWithTag : infoWidth;
                 if (!Mathf.Approximately(rt.sizeDelta.x, want))
                     rt.sizeDelta = new Vector2(want, rt.sizeDelta.y);
             }
@@ -163,9 +202,40 @@ namespace Golfin.Gps.UI
                 // NoWrap + Overflow: "12.4 KM AWAY" is wider than "CHECK IN" and must not push the
                 // capsule or wrap onto a second line inside a 54px button.
                 _actionLabel.textWrappingMode = TextWrappingModes.NoWrap;
+                // Backstop for a distance wider than even the TOO FAR pill — the widths above are
+                // sized from measured strings, but a far-flung venue must shrink rather than spill.
+                _actionLabel.enableAutoSizing = true;
+                _actionLabel.fontSizeMax = ActionLabelFontSize;
+                _actionLabel.fontSizeMin = ActionLabelFontMin;
             }
 
             bool gold = state == ActionState.CheckIn;
+
+            // The pill is SIZED by its state, not authored once. Growing leftward from a fixed
+            // right edge keeps it aligned with every other row while the label gets the width it
+            // actually needs. NoWrap alone — which is what the first version relied on — stops the
+            // text wrapping but happily lets it spill past the capsule.
+            if (_actionButton != null)
+            {
+                var art = (RectTransform)_actionButton.transform;
+                float wantW = state == ActionState.TooFar ? ActionWidthFar : ActionWidthNormal;
+                if (!Mathf.Approximately(art.sizeDelta.x, wantW))
+                {
+                    art.sizeDelta        = new Vector2(wantW, art.sizeDelta.y);
+                    art.anchoredPosition = new Vector2(ActionRightEdge - wantW, art.anchoredPosition.y);
+                }
+
+                if (_actionLabel != null)
+                {
+                    var lrt = (RectTransform)_actionLabel.transform;
+                    float wantL = wantW - ActionLabelInset * 2f;
+                    if (!Mathf.Approximately(lrt.sizeDelta.x, wantL))
+                    {
+                        lrt.sizeDelta        = new Vector2(wantL, lrt.sizeDelta.y);
+                        lrt.anchoredPosition = new Vector2(ActionLabelInset, lrt.anchoredPosition.y);
+                    }
+                }
+            }
 
             if (_actionFill != null)
             {
