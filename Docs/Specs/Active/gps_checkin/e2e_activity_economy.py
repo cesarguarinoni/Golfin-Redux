@@ -43,6 +43,7 @@ history noise matters more than the audit trail.
 from __future__ import annotations
 
 import argparse
+import datetime as dt
 import json
 import ssl
 import sys
@@ -158,6 +159,19 @@ def checkout(db: Db, uid: str, act, lat, lon, key, count=3):
     return db.rpc("golfin_activity_checkout", {
         "p_user": uid, "p_activity": act, "p_lat": lat, "p_lon": lon,
         "p_check_count": count, "p_is_mock": False, "p_key": key})
+
+
+def iso_hours_ago(hours: float) -> str:
+    """A UTC ISO-8601 instant `hours` in the past, for back-dating a round."""
+    return (dt.datetime.now(dt.timezone.utc)
+            - dt.timedelta(hours=hours)).isoformat()
+
+
+def profile_counters(db: Db, uid: str):
+    """(activity_pts, activities_count) — the two an expired round must NOT move."""
+    row = db.select("profiles", f"select=activity_pts,activities_count&id=eq.{uid}")
+    r = row[0] if row else {}
+    return (r.get("activity_pts") or 0), (r.get("activities_count") or 0)
 
 
 def ledger(db: Db, uid: str, key: str):
@@ -355,6 +369,59 @@ def main() -> int:
           bool(closed) and (closed[0].get("screenshot_data") or {}).get("score") == 92)
     check("no round left open", not db.select(
         "activities", f"select=id&user_id=eq.{a.user}&status=eq.active"))
+
+    # ── 9. auto-expire: a stale round must NOT block the next check-in ───────
+    # 2026_09_04_auto_expire_stale_round.sql. Before it, an abandoned round
+    # refused every future check-in with `already_active` FOR EVER, because the
+    # 8 h rule was only ever evaluated inside golfin_activity_checkout.
+    print("\n-- auto-expire: open a round, back-date it past 8 h, check in again")
+    k_stale = str(uuid.uuid4())
+    stale = checkin(db, a.user, TEST_LAT, TEST_LON, k_stale)
+    stale_id = (stale.get("activity") or {}).get("id")
+    check("stale round opened", bool(stale.get("ok")) and stale_id is not None)
+    if stale_id:
+        _CREATED.append(stale_id)
+
+    pts_before, cnt_before = profile_counters(db, a.user)
+
+    # Back-date it 9 h — past the cut-off, with no other change.
+    db.patch("activities", f"id=eq.{stale_id}",
+             {"check_in_at": iso_hours_ago(9)})
+
+    k_new = str(uuid.uuid4())
+    out9 = checkin(db, a.user, TEST_LAT, TEST_LON, k_new)
+    print("   ->", json.dumps({k: v for k, v in out9.items() if k != "activity"}))
+
+    check("stale round did NOT block the check-in", bool(out9.get("ok")))
+    check("it reported the auto-expiry", out9.get("auto_expired_rounds") == 1,
+          f"auto_expired_rounds={out9.get('auto_expired_rounds')}")
+
+    gone = db.select("activities", f"select=id,status,points&id=eq.{stale_id}")
+    check("stale round is now status=expired",
+          bool(gone) and gone[0].get("status") == "expired", str(gone))
+    check("auto-expired round paid NOTHING",
+          bool(gone) and (gone[0].get("points") or 0) == 0, str(gone))
+    check("auto-expiry wrote NO ledger row", not ledger(db, a.user, k_stale))
+
+    pts_after, cnt_after = profile_counters(db, a.user)
+    check("activity_pts did not move on auto-expiry", pts_after == pts_before,
+          f"{pts_before} -> {pts_after}")
+    check("activities_count did not move on auto-expiry", cnt_after == cnt_before,
+          f"{cnt_before} -> {cnt_after}")
+
+    new_id = (out9.get("activity") or {}).get("id")
+    if new_id:
+        _CREATED.append(new_id)
+    check("exactly one round is open again", len(db.select(
+        "activities", f"select=id&user_id=eq.{a.user}&status=eq.active")) == 1)
+
+    # And a round that is NOT stale must still be refused.
+    out9b = checkin(db, a.user, TEST_LAT, TEST_LON, str(uuid.uuid4()))
+    check("a LIVE round is still refused already_active",
+          out9b.get("ok") is False and out9b.get("reason") == "already_active",
+          json.dumps({k: v for k, v in out9b.items() if k != "activity"}))
+
+    close_any_open(db, a.user)
 
     print()
     invariant(db, "after")
