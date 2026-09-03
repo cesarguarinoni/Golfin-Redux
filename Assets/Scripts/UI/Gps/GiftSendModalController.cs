@@ -186,7 +186,7 @@ namespace Golfin.Gps.UI
             if (_recipient != null)
                 _recipient.text = send
                     ? (_receiverName ?? "—")
-                    : (_item != null ? _item.Name : "—");
+                    : (_item != null ? GiftItemName.Of(_item) : "—");
 
             if (_balance != null)
             {
@@ -345,7 +345,7 @@ namespace Golfin.Gps.UI
                       $"(replayed={result.Data?.Replayed}, key={_key}).");
 
             Toast(string.Format(LocalizationManager.Get("GPS_GIFT_PURCHASED"),
-                                _item != null ? _item.Name : string.Empty));
+                                GiftItemName.Of(_item)));
             Committed();
         }
 

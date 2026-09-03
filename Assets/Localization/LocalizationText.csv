@@ -935,6 +935,31 @@ GPS_GIFT_SENT,Sent {0} pts to {1},{1}に{0} ptsを贈りました
 GPS_GIFT_PURCHASED,Purchased {0},{0}を購入しました
 GPS_GIFT_INSUFFICIENT,Not enough points.,ポイントが足りません。
 GPS_GIFT_FAILED,Something went wrong. Try again.,エラーが発生しました。もう一度お試しください。
+# --- gift catalog item names -----------------------------------------------
+# gift_items rows carry ONE Japanese `name` column and never pass through the content
+# pipeline, so an English build rendered them in Japanese. Keyed by the first 8 hex of
+# the row's uuid so a NEW catalog row is fixable by publishing a text row alone.
+GIFT_ITEM_F8137DC1,Sunglasses,サングラス
+GIFT_ITEM_61B09778,Wristband,リストバンド
+GIFT_ITEM_DB99F9F0,Cheer Stamp,応援スタンプ
+GIFT_ITEM_E7F58D2F,Golf Ball,ゴルフボール
+GIFT_ITEM_6FB9856D,Pants (Navy),パンツ（ネイビー）
+GIFT_ITEM_C26D218F,Skirt,スカート
+GIFT_ITEM_9052D274,Score Post Effect,スコア投稿エフェクト
+GIFT_ITEM_DC1945D6,Seasonal Full Outfit,シーズン限定フルコーデ
+GIFT_ITEM_85A68F02,Full Outfit + Title,フルコーデ + 称号
+GIFT_ITEM_D4ED366E,Glove,グローブ
+GIFT_ITEM_8CBC1D6B,Basic Cap,ベーシックキャップ
+GIFT_ITEM_4AF0AE50,Sun Visor,サンバイザー
+GIFT_ITEM_FA79E47A,Gold Rim Cap,ゴールドリムキャップ
+GIFT_ITEM_C3CCD8A3,Crown,王冠
+GIFT_ITEM_80CB3AAC,Glowing Profile Frame,光るプロフィールフレーム
+GIFT_ITEM_51AA59B5,Spikeless Shoes (White),スパイクレス（白）
+GIFT_ITEM_CE366C56,Hologram Shoes,ホログラムシューズ
+GIFT_ITEM_860A7684,Polo Shirt (White),ポロシャツ（白）
+GIFT_ITEM_85EE1D03,Polo Shirt (Pink),ポロシャツ（ピンク）
+GIFT_ITEM_4A9A2CC6,Glowing Logo Polo,光るロゴポロ
+GIFT_ITEM_FC96A954,One Rare Wear Item,レアウェア1点
 GPS_VOTE_TITLE,VOTES,投票
 GPS_VOTE_NEW,NEW,新規
 GPS_VOTE_TRENDING,TRENDING,人気

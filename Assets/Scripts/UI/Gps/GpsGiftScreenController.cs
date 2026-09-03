@@ -367,7 +367,7 @@ namespace Golfin.Gps.UI
 
                 GiftItemDto item = strip[i];
                 _items.Add(item);
-                SetText(_itemCells[i], "ItemName", (item.Name ?? string.Empty).ToUpperInvariant());
+                SetText(_itemCells[i], "ItemName", GiftItemName.Of(item).ToUpperInvariant());
                 SetText(_itemCells[i], "ItemPrice",
                         string.Format(LocalizationManager.Get("GPS_GIFT_PTS"),
                                       (item.PriceActivityPts ?? 0).ToString("N0", CultureInfo.InvariantCulture)));
