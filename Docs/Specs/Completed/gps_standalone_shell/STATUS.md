@@ -2,7 +2,8 @@ DONE
 
 # STATUS — `gps_standalone_shell`
 
-**Current:** `DONE` — Cesar approved 2026-09-04 after installing build 2637.
+**Current:** `DONE` — Cesar approved 2026-09-04. Round 3 (the avatar regression) closed on top:
+build **2662** is VALID and is the build to test.
 
 Round 1 shipped as build 2635 (1.0.0, 427 MB). Round 2 is the `KICKOFF_ADDENDUM.md` list:
 

@@ -264,3 +264,92 @@ See the § at the end of the round-1 list plus: `StandaloneSceneProcessor.cs` (n
 `StandaloneBuildPreprocessor.cs` (icon path, move/restore/sentinel/auto-repair),
 `make_standalone_icon.py` (icon baker removed), four `.png.meta` texture overrides, the
 `gps_profile_prompt_server_flag` set, and `GPS_DEVICE_PASS.md` §1b.
+
+---
+
+# ROUND 3 — the avatar regression (2026-09-04, after Cesar installed 2637)
+
+**Reported:** "My avatar in the standalone version is showing the placeholder avatar image instead
+of the one selected in the game." **Cause: round 2's own R2 change. Fixed in build 2662 (VALID).**
+
+## The chain
+
+R2 moved `Resources/Portraits` out of the standalone build. Nothing in the shell reads it directly
+— which is why the R2 call-site enumeration cleared it — but:
+
+```
+CharacterDatabaseCSV:377   Resources.Load<Sprite>($"{ThumbnailResourcesPath}/{name}")   // Portraits/Thumbnails
+CharacterDatabaseCSV:348   character.renderable = character.portraitSprite != null
+CharacterDatabaseCSV:421   GetAvailableCharacters() = allCharacters.Where(isActive && renderable)
+CharacterManager:86        ownedCharacters seeded from GetAvailableCharacters()
+GpsAvatarScreenController:160-163  selectedId -> csvChar -> Characters/Homescreen/{name} ?? Placeholder
+```
+
+Portraits stashed ⇒ every character unrenderable ⇒ **roster seeds EMPTY** ⇒ no selected id resolves
+⇒ `csvChar` null ⇒ the placeholder. The `Characters/Homescreen` art it wanted was in the build the
+whole time — R2 had correctly kept that folder.
+
+**Two properties made it hard to see.** The call site builds its path from a const plus a variable,
+so a grep for literal `Resources.Load` paths cannot see it; and what the folder feeds is a GATE, so
+the degradation was an empty catalog rather than a blank image.
+
+## What was eliminated first (each by measurement, not reasoning)
+
+| Theory | Killed by |
+|---|---|
+| Missing `Johan.png` | Real, and Cesar fixed it — but his account does not own Johan |
+| The shell never boots the inventory sync | `InventorySyncBehaviour` self-boots (`RuntimeInitializeOnLoadMethod` + `AuthService.SignedIn`); `RetryBoot` is only a retry. **A "fix" was written for this and reverted** — it was a no-op with a confident comment, which is worse than no change |
+| R4 stripped the managers | `CharacterManager` / `CharacterDatabaseCSV` are ROOT objects in ShellScene |
+| R4 stripped the restore hook | `InventoryCatalogAdapter` is self-bootstrapping `DontDestroyOnLoad` |
+| The catalog CSV did not ship | `char_olivia` appears 12× in the shipped `resources.assets` |
+| Character art did not ship | all 12 `Characters/Homescreen` sprites packed |
+| A restore race | Cesar confirmed the avatar disc (server-side) was correct while the figure was not, and re-entry did not fix it |
+
+**The Editor could not reproduce any of it**, because Editor `Resources.Load` resolves through the
+AssetDatabase regardless of the stash. Two theories died against "but it works in the Editor" before
+that was recognised as a fact about the Editor rather than about the bug. The evidence that worked
+came from the shipped artifact: `strings` over `Payload/*.app/Data/*.assets` in the `.ipa`, and the
+Build Report.
+
+## The audit Cesar asked for — all 13 stashed folders, including the ones that were fine
+
+| Folder | Read by | Reachable in the shell? |
+|---|---|---|
+| **Portraits** | `CharacterDatabaseCSV` → **gates `renderable`** → roster → GPS Avatar | **YES — the bug. Now kept.** |
+| Clubs, Balls, Items, Bags | their `*DatabaseCSV` (also gate art) | No — golf screens only |
+| HoleData | PhysicsLab, GreenTopology | No — no hole scenes ship |
+| Sprites, HoleImages, Art, TournamentImages, FX, Prefabs, Rarities | shop / hole cards / gacha / tournaments / inventory | No |
+
+Five catalogs gate on art; exactly one is read by the shell. Also checked, because it would have
+been far worse than a placeholder: an empty shell catalog **cannot** damage the account's server
+inventory — the snapshot is projected from the SAVE, not the catalog, and the merge is raise-only.
+
+## The fix, and what it cost
+
+`Portraits` off `GolfOnlyResourceFolders` (12 folders now, not 13), plus
+`StandaloneResourceStashTests` — it reads every `const string *Path` off every `*DatabaseCSV` by
+reflection, intersects with the stash list, and fails on any collision not recorded in
+`AcceptedCollisions` with a reason. Broadened mid-write after it initially matched only
+`CharacterDatabaseCSV`'s naming and would have missed the other four — the same too-narrow-pattern
+mistake that caused the bug.
+
+| | 2637 (broken) | 2662 |
+|---|---|---|
+| `.ipa` | 196.2 MB | **200.2 MB** |
+| App payload (what a tester downloads) | 75.0 MB | **79.0 MB** |
+| Total User Assets | 98.6 MB | **101.2 MB** |
+| `Portraits/Thumbnails` in the build | absent | **12 entries, one per character** |
+
+**A size claim of mine, corrected:** I told Cesar keeping `Portraits` cost ~11 MB with ~10 MB
+recoverable by stashing only `FullBody`. That was raw disk. In the build it is **4.72 MB**
+(FullBody 4.10, Thumbnails 0.32, InGame+Rankings 0.30) because the parallel `build_size_diet`
+texture budgets compress it — so the refinement is worth ~4 MB, not worth three changes to a
+mechanism that has now shipped two defects. Dropped.
+
+EditMode **2410 / 2407 passed / 0 failed**. Build 2662 VALID
+(`ad89fd88-1f6b-4b64-96bf-734e8eaf67cb`).
+
+## Not verified, and worth saying plainly
+
+The fix is evidenced by the shipped build's asset list, not by seeing the figure render. The Editor
+structurally cannot demonstrate it. Cesar's install of 2662 is the last link.

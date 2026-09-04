@@ -60,6 +60,37 @@ strips before a tester downloads. Nothing on this task is left open except the t
 above.
 
 ---
+## 2026-09-04 — standalone round 3: the avatar regression, and what "enumerate the call sites" missed
+
+Build 2637 shipped with the GPS Avatar screen showing the placeholder character. **Round 2 caused
+it.** The Resources diet stashed `Resources/Portraits`; nothing in the shell reads that folder
+directly, which is why the call-site enumeration cleared it — but `CharacterDatabaseCSV` reaches it
+as a const plus a variable (invisible to a literal grep), and what it feeds is a GATE:
+
+    renderable = portraitSprite != null  ->  GetAvailableCharacters()  ->  the roster seed
+
+So every character became unrenderable, the roster seeded EMPTY, no selected id resolved, and the
+Avatar screen fell through to `Placeholder`. The `Characters/Homescreen` art it wanted had been
+shipping all along. Fixed in build **2662** (VALID) — 12 `Portraits/Thumbnails` entries back in the
+build, +4 MB.
+
+**The generalisable bit:** ask what reads a folder AND what the reader gates. A folder that paints
+degrades to a blank image; a folder that gates degrades to an empty catalog, and empty catalogs
+propagate silently. The full audit found five catalogs gating on art (Character/Club/Ball/Item/Bag)
+of which only Character is shell-reachable; `StandaloneResourceStashTests` now fails on any
+stash-vs-catalog collision nobody has judged.
+
+**Two process misses worth remembering**, both written up as lesson AL: I shipped a fix for a cause
+I had already disproven (the shell *does* boot the inventory sync — `RetryBoot` is only a retry) and
+had to pull it; and I let "but it works in the Editor" kill two theories before recognising that
+Editor `Resources.Load` resolves through the AssetDatabase regardless of the stash, so the Editor
+structurally cannot reproduce this class of bug. The evidence that worked came from unpacking the
+shipped `.ipa` and reading the Build Report.
+
+Also corrected: keeping `Portraits` costs **4.72 MB** in the build, not the ~11 MB its raw disk size
+suggested — the parallel `build_size_diet` texture budgets compress it.
+
+---
 ## 2026-09-04 — standalone round 2 DONE (approved) — build 2637 on TestFlight
 
 Both specs moved to `Docs/Specs/Completed/`: `gps_standalone_shell` and
