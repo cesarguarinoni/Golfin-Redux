@@ -1,0 +1,89 @@
+# reference/font_options.txt — build_size_diet Phase 4 (MEASURED; the verdict is Cesar's)
+# 2026-09-04. Nothing in this phase has been applied — the font on disk is untouched.
+
+== The weight, MEASURED — this was the trap the SPEC warned about ==
+
+  NotoSansJP-VariableFont_wght.ttf has one axis: wght, min 100 / DEFAULT 100 / max 900.
+  The TMP asset's stored face info says   m_StyleName: Thin   — FreeType loaded the font at
+  its fvar default, so the game renders every Japanese string at wght 100 TODAY.
+
+  Instancing at 400 "because that is Regular" would have made every Japanese string in the
+  game heavier while the commit claimed to change nothing. The subset below is therefore
+  instanced at 100.
+
+  (Worth a separate look, not this task's call: Japanese UI text rendering at Thin is a
+  legibility question, and nobody appears to have chosen it — it is just the fvar default.)
+
+== The glyph set is bigger than the SPEC assumed ==
+
+  The SPEC says "the JA columns of the localization CSVs". SEVEN project CSVs carry Japanese,
+  not one:
+
+    694 distinct CJK  Assets/Localization/LocalizationText.csv
+    253 distinct CJK  Assets/Resources/Data/Clubs.csv
+    100 distinct CJK  Assets/Resources/Data/missions.csv
+     99 distinct CJK  Assets/Resources/Data/stamina_shop_items.csv
+     83 distinct CJK  Assets/Resources/Data/stamina_shops.csv
+     16 distinct CJK  Assets/Resources/Data/gacha_banners.csv
+      8 distinct CJK  Assets/Resources/Data/ticket_types.csv
+    ---
+    767 distinct CJK/kana, 876 distinct characters in total
+
+== The three options, measured ==
+
+  (a) KEEP DYNAMIC — what ships today
+        shipped bytes : 9,135,128 B = 8.71 MiB  (the whole TTF)
+        TTF ships?    : YES
+        cost          : the runtime atlas rebake at boot (the 7 KB -> 2.2 MiB churn recorded
+                        in auth_golf_profile); every character always available.
+
+  (b) STATIC ATLAS + small dynamic fallback
+        Baked for real rather than estimated (probe below): 1,148 characters — every character
+        in the seven CSVs, plus the FULL kana blocks, CJK punctuation, ASCII and halfwidth —
+        at the live asset's own 90 pt / padding 9 / SDFAA.
+
+== Option (b) probe — a STATIC atlas actually baked, not estimated ==
+live TMP asset: populationMode=Dynamic atlas=1024x1024 renderMode=SDFAA pointSize=90 padding=9 styleName=Thin fallbacks=0
+
+glyph set for the static atlas: 1148 characters (every char in the 7 project CSVs carrying Japanese + full kana + CJK punct + ASCII + halfwidth)
+  atlas 2048x2048: 1144 glyphs baked, 4 unresolved, 4 page(s) = 16.00 MiB of Alpha8 texels; serialized .asset on disk = 24.74 MiB
+  atlas 4096x4096: 1144 glyphs baked, 4 unresolved, 1 page(s) = 16.00 MiB of Alpha8 texels; serialized .asset on disk = 32.84 MiB
+
+        shipped bytes : ~16 MiB of Alpha8 atlas texels, PLUS the 8.71 MiB TTF, because the
+                        dynamic fallback the SPEC requires for user-typed names keeps it.
+                        = roughly 25 MiB against today's 8.71 MiB.
+        TTF ships?    : YES (the fallback needs it)
+        VERDICT       : this option is ~3x WORSE than doing nothing. The brief expected a
+                        static atlas to save the 9 MB; at 90 pt SDF, 1,148 CJK glyphs cost
+                        16 MiB of texels. Dropping the point size would shrink it and change
+                        how the text renders, which is not "zero visible change".
+
+  (c) SUBSET THE TTF  (Docs/Scripts/subset_jp_font.py — re-runnable, --apply to commit it)
+        instanced at wght 100 (measured), subset to JIS X 0208 levels 1+2 (enumerated from the
+        shift_jis codec) + full Hiragana/Katakana + CJK punctuation + halfwidth/fullwidth +
+        ASCII/Latin-1/currency/arrows/maths, union'd with every character in the seven CSVs.
+
+        glyphs        : 17,103 -> 8,721
+        shipped bytes : 9,135,128 -> 2,689,212 B  (8.71 -> 2.56 MiB, -6.15 MiB, -70.6%)
+        TTF ships?    : YES — it IS the TTF, just smaller. Same file name, same GUID, TMP asset
+                        stays Dynamic, no prefab/material/atlas change.
+        fidelity      : 4,010 shared characters sampled (including 齋 藤 あ ア ン 円 × → and
+                        ASCII): 0 outline differences, 0 advance differences. A covered
+                        character renders EXACTLY as it does today — checked on the outlines,
+                        not on a screenshot, because antialiasing can hide a shifted contour.
+        the trade     : 9,365 characters are dropped and would render as tofu if a player types
+                        one — 6,391 CJK Unified beyond JIS X 0208, 428 CJK Ext B+, 362 CJK
+                        Compatibility, 203 CJK Ext A, 1 Greek, 1,980 other.
+                        齋藤 is covered (齋 is JIS level 2). See
+                        screenshots/font_option_c_ja_pair.png — identical 齋藤, identical kana
+                        and 円/100/×, and a dropped kanji shown rendering as tofu.
+
+== Summary ==
+
+  option                         shipped   delta vs today   TTF ships   risk
+  (a) keep dynamic               8.71 MiB        0          yes         none (status quo)
+  (b) static atlas + fallback   ~25   MiB      +16 MiB      yes         none visual, costs size
+  (c) subset the TTF             2.56 MiB       -6.15 MiB   yes         rare kanji in a
+                                                                        user-typed name -> tofu
+
+  Cesar picks. Nothing is applied.
