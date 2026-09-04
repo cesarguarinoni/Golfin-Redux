@@ -537,6 +537,79 @@ the equivalent gate here and is what should be read in its place.
 
 ---
 
+### A4 · Videos — **2 of 6 produced**, including the one that matters
+
+One take: `videos/raw.mp4`, **1170×2532 @ 30 fps, 50.6 s, 1519 frames**, valid (moov present).
+Cut by `Docs/Scripts/cut_game_polish_clips.py` on the runner's own sidecar boundaries.
+
+| clip | length | size | flag | still |
+|---|---|---|---|---|
+| `videos/game_polish_a_a_play_pillar.mp4` | 17.9 s | 7.6 MB | off | `screenshots/a4_a_play_pillar.png` |
+| `videos/game_polish_a_f_option_b.mp4` | 24.9 s | 1.6 MB | **ON** | `screenshots/a4_f_option_b.png` |
+
+**Orientation verified on CONSECUTIVE decoded frames**, not `ffmpeg -ss` keyframe sampling — that
+skips exactly the frames a flip shows on (project memory: `video_flip_verification`). Top strip
+mean RGB (27, 76, 120) = the navy top bar, on both clips. Not flipped.
+
+**The option-(b) transition, frame by frame** (`screenshots/a4_option_b_transition_strip.png`):
+frames 634→642 of the clip show the outgoing content sliding out while the incoming content slides
+in **and the two backgrounds cross-fade through each other** — which is exactly the thing Cesar
+asked to judge. The top bar and the nav bar do not move across any of the five frames, which is A5
+visible rather than merely measured. The pair happens to be
+`TournamentLeaderboard → ModeSelection` (`0d425c0a` → `2e5476ee`) — different backgrounds, so on
+the shipped path it fades and only the flag makes it push.
+
+`screenshots/a4_shipped_path_strip.png` is the contrast: `Home → GeneralShop` on the shipped
+path, correctly going **through black** because it is cross-pillar.
+
+The caption wraps now. `drawtext` does not wrap, and the first cut ran a 78-character caption off
+BOTH edges of an 1170 px frame — which reads as a rendering bug, not a caption. Width is computed
+from the font size; the plate grows downward per line.
+
+**Clips (b) (c) (d) (e) are still owed.** The take that would have carried them wedged in segment
+(c); segments are now opt-in so a fragile one cannot cost the others, and
+`GOLFIN ▸ Game Polish ▸ Record the A4 demo` will take them.
+
+### A13 · Perf — **PASS**, and it found something worth acting on
+
+`perf` mode, profiler on, no captures. 48 pushes measured. Numbers are **in situ** — the whole
+app's frame, an upper bound on the tween, never the tween alone.
+
+**44 of 48 pushes (the ones that rendered ≥ 4 frames):**
+
+| | min | median | max |
+|---|---|---|---|
+| frames | 11 | — | 16 |
+| alloc B/frame | 160,042 | **458,769** | 1,922,120 |
+| worst frame ms | 16.9 | **22.5** | 78.4 |
+
+The tween's own contribution is **zero per-frame allocation** by construction: `LayeredPush.Push`
+allocates once at the start (one `Push_`, two `Layer`s and their lists) and nothing inside the
+`while` — no closures, no boxing, no `new`. Everything in the median 459 KB/frame is the arriving
+screen building itself.
+
+**THE FOUR OUTLIERS ARE ONE SCREEN, AND IT IS NOT THE TWEEN:**
+
+```
+GeneralShop  -> GachaHistory   123 MB over 2 frames, worst frame   606 ms
+GeneralShop  -> GachaHistory   290 MB over 2 frames, worst frame 1,232 ms
+GachaPrizes  -> GachaHistory   289 MB over 2 frames, worst frame 1,243 ms
+GachaPrizes  -> GachaHistory   289 MB over 2 frames, worst frame 1,266 ms
+```
+
+**Every arrival at `GachaHistory` allocates ~290 MB and stalls for over a second.** That is
+`GachaHistoryScreenController.RebuildList`, which `Destroy`s every child of the scroll content and
+respawns a row prefab per record, plus `GachaHistoryStore.Refresh` — all inside `OnEnable`. It is
+**pre-existing**: this task only wrapped the *store-change* repaint in a fade and left the OnEnable
+repaint direct, so no rebuild was added. It also explains the four `frameStarved` records in A1 —
+the starvation is this screen's activation, not a generally slow Editor.
+
+**Flagged for a separate task**, not fixed here: it is out of this slice's scope (§ Out of scope
+puts list work in `game_polish_b`/`c`), and a 290 MB allocation on a screen open is a bigger
+problem than anything this slice touches.
+
+---
+
 ## NOT DONE this iteration — stated plainly
 
 ### A4 · The six videos — **NOT PRODUCED**
