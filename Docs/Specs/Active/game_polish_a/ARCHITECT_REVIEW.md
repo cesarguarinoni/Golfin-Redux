@@ -462,3 +462,119 @@ not just the four sites I named, or it escalates to Cesar.
    counts against it.
 3. **Spec-intent/completeness:** the "re-swept by script" completeness claim is the thing that
    broke — the script cannot see numeric drift, and the Shape C table under-enumerates. Falsified.
+
+---
+
+# § RED-TEAM REVIEW — THIRD PASS (adversarial gate) — 2026-09-04 19:05 JST
+
+Verdict: **ARCHITECT_REVIEW_ESCALATE** — the *work* is verified correct and must NOT be
+re-implemented. The report-integrity shape I have now failed this task for **twice** has
+**recurred a fifth time**, in the section the report itself designates authoritative, and it
+survived both round-3 hand-fixes AND the purpose-built `check_report_counts.py`. Per CLAUDE.md
+Rule 1 (three same-shape failures → forced escalation) and this pass's brief, a third same-shape
+FAIL is not the right move — instance-chasing has provably failed to terminate. This is Cesar's call.
+
+## Load-bearing claim — CONFIRMED
+`git diff --stat a3840aa00..HEAD` (reviewer PASS → HEAD) = exactly 5 files: `check_report_counts.py`,
+`check_report_citations.py`, `IMPLEMENTER_REPORT.md`, `STATUS.md`, and a pure-append to
+`ARCHITECT_REVIEW.md`. Zero code, scene, prefab, test or JSON changed. I did not re-run the
+functional gates; I re-derived every number they rest on (below), all clean.
+
+## Ground truth, re-derived from `game_polish_a_invariants.json` (mine, not the report's)
+`measured=87  fail=0  optionBShipped=true`; same-backdrop **55**, cross-backdrop **32**; distinct
+pairs **40** (24 same + 16 cross); realWidget **3** (all same-backdrop); frame-starved **5** (every
+one a `GachaHistory` arrival at 2 frames); unstarved **82**, frames **10–16**, measuredDur unstarved
+**0.250–0.268 s** (all-record max 1.363 s on the starved arrivals). `applyScreenCalls==1` 87/87;
+`blocksRaycastsRestored==true` 87/87; `seamWorstCover==1` 32/32 cross; `chromeAlphaMinOverRun==1`
+55/55 same (87/87 all); `completed` 87/87; empty `fails` 87/87. The WORK is solid.
+
+## The six sites round 3 named ARE fixed (re-derived, each correct)
+- § A1 footnote (L588/594/595): "5 of 87", "those five … all five pass", "82 unstarved … 10–16". ✓
+- § A5 (L603): "all 55 same-backdrop … 1.0" + "seamWorstCover … 1.0 on all 32". ✓ (both invariants named)
+- § A10 (L643/980): "remaining 37 ordered pairs", "all 40 pairs". ✓ (3 real + 37 harness = 40)
+- § A2 cross-ref: 40 pairs / 87/87 records. ✓
+- push map (L154): count 40 = 24 same + 16 cross, and the stale "every other move fades" clause corrected. ✓
+- § A13 perf: honestly labelled pre-option-(b) (judged sufficient — see below). ✓
+
+## A13 — judged HONEST and SUFFICIENT, not a blocker
+SPEC L128 makes A13's HARD gate a **test** — "isolated per-frame allocation of `LayeredPush`
+routines ≤ 32 B (test)" — with the in-situ worst-frame/alloc only "quoted as an upper bound on the
+app, not the tween" (no numeric threshold). That test exists and is GREEN on disk:
+`UiMotionAllocationTests.Slide_TheLoopThePushRunsOn_AllocatesNothingPerFrame` asserts
+`LessOrEqual(perFrame, 32L)` on the exact Slide loop `LayeredPush.Push` runs, and
+`game_polish_a_tests.txt:2107` = `Passed` (RUN FINISHED passed=2430 failed=0). That test is
+build-independent — option (b) does not touch the slide loop — so the qualifier is NOT standing in
+for the gate measurement; the gate measurement is a passing test. The in-situ 48/44 numbers are the
+non-gated descriptive quote, disclosed with unusual candor (missing artifact, 0-byte re-run,
+floor-not-ceiling). This one clears.
+
+## THE BLOCKER — a FIFTH instance of the shape, in the authoritative section, self-flagged and left
+The section `## Option (b) shipped — re-measured` (IMPLEMENTER_REPORT.md **L88–97**) — the section
+FAIL #1 designated as the current source of truth and told the implementer to point § A1 at — leads
+with "`…invariants.json`, regenerated against the new rule:" and then a fenced block that still
+carries the **84-record sweep-only intermediate run**, contradicting the JSON it cites:
+
+```
+L93  measured = 84        fail = 0        optionBShipped = true      (JSON: 87)
+L96  same-backdrop   52 records …                                    (JSON: 55)
+L97  durations 0.250 – 0.293 s over 9 – 16 frames  (4 frame-starved) (JSON: 0.250–0.268 s, 10–16, 5 starved)
+```
+
+`84+3=87`, `52+3=55`, `4+1=5` — this is exactly the pre-real-navigation sweep, presented as the
+current re-measurement. It is NOT covered by the L13 blanket-supersede clause (that clause only
+catches sections "that describe the flag as live"; this block says `optionBShipped=true`). It is
+the IDENTICAL defect shape as FAIL #1 (an authoritative/body section citing the JSON path while
+quoting a superseded run's counts) — now with the 84-run instead of the 48-run.
+
+Most damning: the report **knows**. L12–13, in a live blockquote 80 lines above, reads: *"`measured=87`
+… is the authoritative count — **an earlier line here said '84' by quoting the sweep alone.**"* The
+implementer pointed at line 93, apologized for it in prose, and left the line itself unchanged. This
+is not a missed instance; it is a KNOWN stale line certified as handled.
+
+## Why BOTH new scripts declare this clean (the shape is one level down again)
+- `check_report_counts.py` hard-codes its suspect set to `{48, 44, 24, 21, 12}`. This run's
+  fingerprint is `84 / 52 / 4 / "9–16" / 0.293` — none are in the set, and it never scans
+  frame-range or duration tokens. It printed "0 stale". A checker written specifically to catch
+  numeric drift is structurally blind to any run whose numbers aren't pre-enumerated.
+- Its skip regex (`read "|used to|previously|earlier revision|pre-decision|pre-option|stale`) is,
+  as the brief anticipated, a **laundering hazard**: any line containing the substring "stale" or
+  "pre-option" is dropped from the check. In THIS report the 48/44 hits it skips are legitimately
+  A13-labelled, so it does not launder a live claim here — but the mechanism means a stale assertion
+  CAN be hidden by wording, and the real hole (the hard-coded suspect set) already let 84/52/4 pass.
+- `check_report_citations.py` resolves file paths only and cannot see a count. "78 cited, 0
+  unresolved" is again not report-integrity evidence.
+
+## Prior-rejection replay
+- Title snap / dissolve-no-op (defect #1): **GONE** (verified frame-by-frame in prior passes; code unchanged).
+- A2 false parity readings (defect #3): **GONE** (re-derived; drift pairs excluded).
+- Report narrative drift (defect #2 / Shape C): **PRESENT** — fifth instance, L88–97, above.
+
+## Three break-attempts (this pass)
+1. **Numeric (the productive one):** re-derived every JSON count independently — that re-derivation
+   is exactly what exposed L93's `84`/`52`/`4`/`9–16`/`0.293` against the on-disk `87`/`55`/`5`/`10–16`/`0.268`.
+2. **Tooling audit:** read both scripts' source. The count script's suspect set is a closed list that
+   cannot see this run; the skip regex is gameable by keyword. "0 stale" is a false clean, proven.
+3. **Spec-intent / A13:** traced A13 to SPEC L128 → the gate is a test (green on disk, build-independent),
+   the in-situ quote is non-gated and honestly labelled. A13 does not block. The blocker is L88–97 only.
+
+## Why ESCALATE, not a third FAIL
+This is my THIRD red-team pass on the identical report-integrity shape (FAIL #1: stale run in § A1
+body + dead citations; FAIL #2: stale counts in § A1-footnote/§A5/§A10/§A13; this pass: stale
+84-run in the authoritative "re-measured" block). Each round fixed the named instances, certified
+completeness ("enumerated every heading" → "swept by script"), and each next round found a new
+instance the certification missed — now including one the report itself flags and a purpose-built
+script that is structurally incapable of catching the class. That is looping, not converging.
+CLAUDE.md Rule 1 forces `ARCHITECT_REVIEW_ESCALATE` on the third same-shape failure, and the brief
+directs the same. A fourth "fix these instances too" FAIL would repeat the loop.
+
+**For Cesar to decide.** The shipped WORK is correct and has been for three rounds (JSON 87/0/true,
+all invariants hold, tests 2430/0/3 with the alloc gate green, scope + standing bans clean, dissolve
+real in pixels). The recurring defect is confined to report integrity, and instance-by-instance
+fixing has demonstrably not terminated. Two ways out, your call:
+- **(a) Accept** the task with this report-integrity caveat noted (the work passes every functional gate).
+- **(b) Mandate a structural fix** before re-entry: regenerate EVERY count and the L88–97 dump
+  programmatically from `game_polish_a_invariants.json` (stop hand-transcribing counts anywhere in
+  the report), and replace the hard-coded-suspect-set checker with one that diffs the report's
+  numbers against the JSON with no allow-list and no keyword skip.
+
+No code/scene/prefab/test/JSON change is implied either way — this is purely a report + tooling call.

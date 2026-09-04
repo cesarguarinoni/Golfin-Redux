@@ -1,4 +1,4 @@
-READY_FOR_REDTEAM
+ARCHITECT_REVIEW_ESCALATE
 
 # STATUS — `game_polish_a`
 
@@ -49,3 +49,4 @@ headings, and a narrow check was reported as a complete one; and the sweep is no
 | 2026-09-04 | `READY_FOR_REDTEAM` | **Report-only fix, re-submitted.** § A4's body table rebuilt from disk; § A1 regenerated from the invariants JSON; Shape C corrected to record that the heading sweep missed both, because the shape is stale content rather than stale headings. Replaced by `check_report_citations.py` → **78 cited, 0 unresolved**. No code changed since the reviewer's PASS. |
 
 | 2026-09-04 | `ARCHITECT_REVIEW_FAIL` | **Red-team re-submission.** Work still correct; SAME report-integrity shape recurs — stale pre-option-b counts (4-of-48 frame-starved, 48 records, 24/21 pairs, perf 48/44) survive in live PASS sections § A1-footnote, § A5, § A10, § A13. Checker sees file paths only, not numeric drift. Shape-level count audit required; a 3rd same-shape FAIL must escalate. |
+| 2026-09-04 | `ARCHITECT_REVIEW_ESCALATE` | **Red-team, THIRD pass → escalate (Rule 1).** Six named sites fixed & A13 honestly labelled (gate is a green ≤32B test, not the quote). But the SAME report-integrity shape recurs a 5th time: `## Option (b) shipped — re-measured` L88–97 still carries the stale 84-sweep run (`measured=84 / 52 same-bg / 4 starved / 9–16 frames / 0.293s`) vs on-disk JSON `87 / 55 / 5 / 10–16 / 0.268s` — a line the report ITSELF flags at L13 ("an earlier line here said 84") and left unfixed. Both new scripts pass it (count-script suspect set is a closed `{48,44,24,21,12}`; skip-regex is gameable). Work verified correct 3 rounds running; instance-chasing has not converged. Cesar decides: accept-with-caveat or mandate a structural regenerate-from-JSON fix.

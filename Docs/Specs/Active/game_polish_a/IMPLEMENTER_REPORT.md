@@ -90,11 +90,11 @@ worse failure than a misleading commit message. Split it yourself if you want it
 `Docs/Diagnostics/_capture/game_polish_a_invariants.json`, regenerated against the new rule:
 
 ```
-measured = 84        fail = 0        optionBShipped = true
+measured = 87        fail = 0        optionBShipped = true
 distinct ordered pairs = 40
 cross-backdrop  32 records   seam worst cover over EVERY frame = 1.0   (gate: >= 0.5)
-same-backdrop   52 records   chrome alpha min over EVERY frame = 1.0   (gate: == 1)
-durations 0.250 – 0.293 s over 9 – 16 frames   (4 frame-starved, duration not scored)
+same-backdrop   55 records   chrome alpha min over EVERY frame = 1.0   (gate: == 1)
+durations 0.250 – 0.268 s over 10 – 16 frames   (5 frame-starved, duration not scored)
 applyScreenCalls = 1 on every record; blocksRaycasts restored on every record
 ```
 
@@ -1261,6 +1261,48 @@ and each one described as complete. The lesson is not "sweep harder" — it is t
 has to be stated as precisely as its result. "0 unresolved" is only integrity proof for the thing
 the checker parses. If the sentence describing a check is broader than the check, the next reader
 stops looking, and that is worse than not having run it.
+
+
+#### Round 4 — the structural fix, after the red-team escalated
+
+`golfin-redteam-reviewer` set `ARCHITECT_REVIEW_ESCALATE` rather than a third FAIL, on the grounds
+that this was looping rather than converging. It found a **fifth** instance, and the worst-placed
+one: `## Option (b) shipped — re-measured` — the section a previous FAIL had designated
+AUTHORITATIVE — still carried the superseded 84-record sweep (`measured = 84`, `52 same-backdrop`,
+`4 frame-starved`, `9–16 frames`, `0.293 s`) directly under the path of the JSON that says
+87 / 55 / 5 / 10–16 / 0.268. The report even flagged the 84 in § 0 and left the block unchanged.
+
+**And my round-3 checker passed it.** Its suspect set was hard-coded to `{48,44,24,21,12}`; this
+run's fingerprint was 84/52/4, so it printed "0 stale" over a live defect. That is the same error
+a fourth time: *a checker with an allow-list can only find what its author already knew.*
+
+Both are fixed structurally rather than by another edit:
+
+* **The block is GENERATED** from the invariants JSON, like § A1's summary and § A4's table before
+  it. Every count in an authoritative section now has a machine origin.
+* **`check_report_counts.py` was rewritten with NO allow-list and no suspect set.** It derives the
+  values the cited JSON actually produces, then reports every integer next to a counting word that
+  is not one of them. Its exclusions are **syntactic only** — decimals, unit-suffixed numbers,
+  identifiers like `A13`/`f643`, ordinal references — never value-based, because a filter that
+  skips a number for *what it is* is precisely what hid 84/52/4, while one that skips it for *how
+  it is written* cannot hide `52 records`.
+
+It is deliberately noisy: 20 hits remain and every one is triaged below, because a checker that is
+silent unless told what to look for is the failure mode above.
+
+| Remaining hit | What it is | Verdict |
+|---|---|---|
+| L154 `6`, L643 `37` | the `12 + 6 + 6` split; `40 − 3` real-widget pairs | correct |
+| L592, L814–817 `2` | the frame count of the starved GachaHistory records | correct |
+| L778 / L795 / L798 `48`, `44` | § A13's pre-option-(b) numbers, labelled as such | correct, disclosed |
+| L748 `2532`, L860 `892` | a resolution and a pixel row | not counts |
+| L757 `634`, L1061 `683` | video frame indices | not counts |
+| L200 `37`, L889 `94` | scene objects; the `SkippedForPush` counter | different metrics |
+| L715 `2`, L749 `2` | "2 of 6" in a historical quote; "iteration-2" | not counts |
+
+**Zero stale count assertions remain**, and § A13 is the only item still carrying a qualifier
+rather than a measurement — for the reason given in that section, which is that no artifact exists
+to regenerate it from.
 
 
 ### Files this iteration touched
