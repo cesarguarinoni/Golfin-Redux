@@ -10,11 +10,22 @@
   BEFORE  (.ipa 2632)           1844.7 MiB           557.1 MiB          678.3 MiB
   BEFORE  (local build 2643)    1839.5 MiB           555.4 MiB
   AFTER   (local build 2655)    1009.1 MiB           304.6 MiB
-  delta                         -830.4 MiB           -250.8 MiB
-                                  (-45%)               (-45%)
+  AFTER   (.ipa 2658, SHIPPED)  1008.9 MiB           305.2 MiB          426.4 MiB
+  delta (.ipa to .ipa)          -835.8 MiB           -251.9 MiB         -251.9 MiB
+                                  (-45%)               (-45%)             (-37%)
 
-  INSTALL:            PASS, 14.9 MiB inside the gate.
-  PAYLOAD-COMPRESSED: PASS, 45.4 MiB inside the gate.
+  INSTALL:            PASS, 15.1 MiB inside the gate.
+  PAYLOAD-COMPRESSED: PASS, 44.8 MiB inside the gate.
+
+  Both gates are confirmed on the SHIPPED ARCHIVE, not only on the local model: build 2658 was
+  archived and uploaded to TestFlight on 2026-09-04 and `unzip -lv` on it gives the AFTER row
+  above. The model predicted 1009.1 / 304.6 and the real archive came back 1008.9 / 305.2 —
+  0.2 and 0.6 MiB out, which is what makes the per-phase numbers in this file trustworthy.
+  (2658 is the GPS variant: iOS-Full-GPS differs from iOS-Full by one scripting define and
+  carries identical assets, so every size line is the game's.)
+
+  The .ipa FILE is 678.3 -> 426.4 MiB. It is still not a gate, and 121.2 MiB of it is the
+  `Symbols/` payload Apple keeps and strips before a tester downloads anything.
 
   Build 2654 landed at 1035.9 MiB — 11.9 MiB OVER — with the bridge budget at
   albedo 2048 / normal 1024. Rather than round that off or call it close, the budget was

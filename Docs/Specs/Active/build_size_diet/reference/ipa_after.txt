@@ -1,0 +1,155 @@
+# reference/ipa_after.txt — the SHIPPED .ipa AFTER the diet, `unzip -lv Builds/ipa/Golfin.ipa`
+# Golfin 1.5.7 build 2658, archived and uploaded to TestFlight 2026-09-04 13:07 (GPS variant:
+# the iOS-Full-GPS profile differs from iOS-Full by ONE scripting define and carries the same
+# assets, so every size line here is the game's).
+# Pair with ipa_before.txt (build 2632). This is ground truth — data_after.txt is the same
+# content modelled off the local build, and the two agree to 0.2 MiB.
+
+Payload/ TOTAL         n= 133  raw  1,057,931,453 B =   1008.9 MiB   compressed  320,021,320 B =   305.2 MiB
+  .app/Data/           n= 104  raw    946,156,375 B =    902.3 MiB   compressed  284,493,387 B =   271.3 MiB
+  .app non-Data        n=  29  raw    111,775,078 B =    106.6 MiB   compressed   35,527,933 B =    33.9 MiB
+Symbols/               n=   3  raw    516,435,400 B =    492.5 MiB   compressed  127,051,083 B =   121.2 MiB
+
+                          BEFORE (2632)      AFTER (2658)      gate        verdict
+INSTALL       Payload raw    1844.7 MiB         1008.9 MiB    <= 1024 MiB   PASS (15.1 MiB inside)
+PAYLOAD-COMP  Payload comp    557.1 MiB          305.2 MiB    <=  350 MiB   PASS (44.8 MiB inside)
+.ipa FILE                     678.3 MiB          426.4 MiB    reported, not gated
+  of which Symbols/ zipped    121.1 MiB          121.2 MiB    Apple strips this before a tester downloads
+
+== Every entry, sorted by raw size ==
+   516432116    127049822  Symbols/F557690D-5FDB-3363-8773-29DD88B1AF93.symbols
+   110809568     34709965  Payload/Golfin.app/Frameworks/UnityFramework.framework/UnityFramework
+    71794592     23181796  Payload/Golfin.app/Data/sharedassets0.assets.resS
+    56641952     36306901  Payload/Golfin.app/Data/resources.assets.resS
+    49588472     45612450  Payload/Golfin.app/Data/resources.assets
+    30351872      5362651  Payload/Golfin.app/Data/sharedassets2.assets
+    30209512      5835672  Payload/Golfin.app/Data/sharedassets3.assets
+    30068728      5383638  Payload/Golfin.app/Data/sharedassets9.assets
+    29953016      6073146  Payload/Golfin.app/Data/sharedassets7.assets
+    29798384      6286736  Payload/Golfin.app/Data/sharedassets8.assets
+    29797344      4547204  Payload/Golfin.app/Data/sharedassets18.assets
+    29760436      6293855  Payload/Golfin.app/Data/sharedassets6.assets
+    29748092      5900945  Payload/Golfin.app/Data/sharedassets13.assets
+    29736476      5660090  Payload/Golfin.app/Data/sharedassets14.assets
+    29726180      6704948  Payload/Golfin.app/Data/sharedassets15.assets
+    29700512      4893329  Payload/Golfin.app/Data/sharedassets19.assets
+    29699228      5875508  Payload/Golfin.app/Data/sharedassets11.assets
+    29698652      4890408  Payload/Golfin.app/Data/sharedassets4.assets
+    29693224      5443521  Payload/Golfin.app/Data/sharedassets10.assets
+    29690288      4739538  Payload/Golfin.app/Data/sharedassets17.assets
+    29688464      5954716  Payload/Golfin.app/Data/sharedassets12.assets
+    29682056      4696882  Payload/Golfin.app/Data/sharedassets16.assets
+    29676368      4828400  Payload/Golfin.app/Data/sharedassets5.assets
+    16614944      7552154  Payload/Golfin.app/Data/sharedassets7.assets.resS
+    16362932      4739191  Payload/Golfin.app/Data/Managed/Metadata/global-metadata.dat
+    14720032      6325949  Payload/Golfin.app/Data/sharedassets8.assets.resS
+    13669744     10401488  Payload/Golfin.app/Data/sharedassets2.assets.resS
+    12816276      1859397  Payload/Golfin.app/Data/level9
+    12580336      6977179  Payload/Golfin.app/Data/sharedassets3.assets.resS
+    11538288      6336671  Payload/Golfin.app/Data/sharedassets0.assets
+    11258276      1744537  Payload/Golfin.app/Data/level14
+    10766964      1903006  Payload/Golfin.app/Data/level13
+    10747972      1466135  Payload/Golfin.app/Data/level6
+     9622868      1162255  Payload/Golfin.app/Data/level3
+     9305748      1393600  Payload/Golfin.app/Data/level15
+     7970048      4552479  Payload/Golfin.app/Data/sharedassets1.assets.resS
+     5743892       988860  Payload/Golfin.app/Data/level18
+     5592528      4926638  Payload/Golfin.app/Data/sharedassets6.assets.resS
+     5186468       996155  Payload/Golfin.app/Data/level19
+     5180160      1710300  Payload/Golfin.app/Data/level13.resS
+     5149684      1073512  Payload/Golfin.app/Data/level8
+     5122920       801154  Payload/Golfin.app/Data/level4
+     5064324       824093  Payload/Golfin.app/Data/level11
+     4490080      4446070  Payload/Golfin.app/Data/sharedassets0.resource
+     4169408      1400335  Payload/Golfin.app/Data/globalgamemanagers.assets.resS
+     3233460       472533  Payload/Golfin.app/Data/level12
+     3132596       383881  Payload/Golfin.app/Data/level0
+     3102500       601471  Payload/Golfin.app/Data/level17
+     3077300       766604  Payload/Golfin.app/Data/level10
+     2509200       774984  Payload/Golfin.app/Data/level8.resS
+     2349264       601046  Payload/Golfin.app/Data/sharedassets9.assets.resS
+     2066052       371753  Payload/Golfin.app/Data/level16
+     1708292       196992  Payload/Golfin.app/Data/Resources/unity default resources
+     1213512       303067  Payload/Golfin.app/Data/globalgamemanagers.assets
+     1035764       228736  Payload/Golfin.app/Data/level5
+      923580       608549  Payload/Golfin.app/Data/level2
+      772760       738978  Payload/Golfin.app/Assets.car
+      649076       227148  Payload/Golfin.app/Data/sharedassets20.assets
+      591808       148494  Payload/Golfin.app/Data/sharedassets18.assets.resS
+      457136       116222  Payload/Golfin.app/Data/Resources/unity_builtin_extra
+      378740       125749  Payload/Golfin.app/Data/globalgamemanagers
+      342996       202079  Payload/Golfin.app/Data/level7
+      337563       126076  Payload/Golfin.app/Data/Managed/Resources/mscorlib.dll-resources.dat
+      251816        36526  Payload/Golfin.app/Data/level1
+      180512        97295  Payload/Golfin.app/Data/sharedassets1.assets
+       93718         7957  Payload/Golfin.app/Data/Managed/Resources/System.Data.dll-resources.dat
+       84176         5688  Payload/Golfin.app/Golfin
+       33598         4461  Payload/Golfin.app/Data/Managed/mono/4.0/machine.config
+       33482        10518  Payload/Golfin.app/Data/Managed/Resources/System.Text.Json.dll-resources.dat
+       31027         7857  Payload/Golfin.app/_CodeSignature/CodeResources
+       30301        29859  Payload/Golfin.app/AppIcon76x76@2x~ipad.png
+       25453         9716  Payload/Golfin.app/Data/Managed/Resources/System.Drawing.dll-resources.dat
+       20658        20375  Payload/Golfin.app/AppIcon60x60@2x.png
+       12512         7848  Payload/Golfin.app/embedded.mobileprovision
+        9262         3136  Payload/Golfin.app/Data/Managed/Resources/System.ComponentModel.Annotations.dll-resources.dat
+        8623         1388  Payload/Golfin.app/Data/RuntimeInitializeOnLoads.json
+        7239         1611  Payload/Golfin.app/Data/ScriptingAssemblies.json
+        5524         2137  Payload/Golfin.app/Data/level20
+        4294         1748  Payload/Golfin.app/Data/Managed/Resources/Microsoft.Extensions.DependencyInjection.dll-resources.dat
+        3284         1261  Symbols/0E30A897-5506-36A3-93F3-D93E64877AA3.symbols
+        2599         1155  Payload/Golfin.app/Data/Managed/Resources/Microsoft.Extensions.DependencyInjection.Abstractions.dll-resources.dat
+        2425         1355  Payload/Golfin.app/LaunchScreen-iPhone.storyboardc/UnityLaunchScreen-ViewController-view-UnityLaunchScreen-RootView.nib
+        2415         1346  Payload/Golfin.app/LaunchScreen-iPad.storyboardc/UnityLaunchScreen-ViewController-view-UnityLaunchScreen-RootView.nib
+        2294         1116  Payload/Golfin.app/Data/Managed/Resources/System.IO.Pipelines.dll-resources.dat
+        2236         1150  Payload/Golfin.app/Data/Managed/Resources/System.Diagnostics.DiagnosticSource.dll-resources.dat
+        2173         1382  Payload/Golfin.app/Info.plist
+        2034          520  Payload/Golfin.app/Frameworks/UnityFramework.framework/_CodeSignature/CodeResources
+        1212          606  Payload/Golfin.app/Data/Managed/Resources/Microsoft.Extensions.Options.dll-resources.dat
+        1209          248  Payload/Golfin.app/Frameworks/UnityFramework.framework/PrivacyInfo.xcprivacy
+        1106          544  Payload/Golfin.app/Data/Managed/Resources/Microsoft.Bcl.TimeProvider.dll-resources.dat
+        1096          654  Payload/Golfin.app/Data/Managed/Resources/R3.dll-resources.dat
+        1084          573  Payload/Golfin.app/Data/Managed/Resources/Microsoft.Extensions.Primitives.dll-resources.dat
+         962          607  Payload/Golfin.app/LaunchScreen-iPad.storyboardc/UIViewController-UnityLaunchScreen-ViewController.nib
+         962          607  Payload/Golfin.app/LaunchScreen-iPhone.storyboardc/UIViewController-UnityLaunchScreen-ViewController.nib
+         900          321  Payload/Golfin.app/Data/Managed/Resources/Newtonsoft.Json.dll-resources.dat
+         808          583  Payload/Golfin.app/Frameworks/UnityFramework.framework/Info.plist
+         792          454  Payload/Golfin.app/Data/Managed/Resources/System.Threading.Channels.dll-resources.dat
+         478          339  Payload/Golfin.app/Data/Managed/Resources/Microsoft.Extensions.Logging.dll-resources.dat
+         476          321  Payload/Golfin.app/Data/Managed/Resources/Microsoft.Extensions.Logging.Abstractions.dll-resources.dat
+         435          292  Payload/Golfin.app/Data/Managed/Resources/System.Text.Encodings.Web.dll-resources.dat
+         360          259  Payload/Golfin.app/Data/Managed/Resources/Microsoft.Extensions.Configuration.Abstractions.dll-resources.dat
+         333          169  Payload/Golfin.app/LaunchScreen-iPad.storyboardc/Info.plist
+         333          169  Payload/Golfin.app/LaunchScreen-iPhone.storyboardc/Info.plist
+         138          123  Payload/Golfin.app/LaunchScreen-iPhonePortrait.png
+         138          123  Payload/Golfin.app/LaunchScreen-iPhoneLandscape.png
+         138          123  Payload/Golfin.app/LaunchScreen-iPad.png
+         134          112  Payload/Golfin.app/Data/boot.config
+          96           10  Payload/Golfin.app/Data/sharedassets4.assets.resS
+          96           10  Payload/Golfin.app/Data/sharedassets19.assets.resS
+          96           10  Payload/Golfin.app/Data/sharedassets10.assets.resS
+          96           10  Payload/Golfin.app/Data/sharedassets15.assets.resS
+          96           10  Payload/Golfin.app/Data/sharedassets16.assets.resS
+          96           10  Payload/Golfin.app/Data/sharedassets13.assets.resS
+          96           10  Payload/Golfin.app/Data/sharedassets14.assets.resS
+          96           10  Payload/Golfin.app/Data/sharedassets11.assets.resS
+          96           10  Payload/Golfin.app/Data/sharedassets5.assets.resS
+          96           10  Payload/Golfin.app/Data/sharedassets12.assets.resS
+          96           10  Payload/Golfin.app/Data/sharedassets17.assets.resS
+          17           12  Payload/Golfin.app/Data/Managed/Resources/Coffee.UIParticle.R.dll-resources.dat
+           8            8  Payload/Golfin.app/PkgInfo
+           0            0  Payload/
+           0            0  Payload/Golfin.app/
+           0            0  Payload/Golfin.app/_CodeSignature/
+           0            0  Payload/Golfin.app/LaunchScreen-iPad.storyboardc/
+           0            0  Payload/Golfin.app/LaunchScreen-iPhone.storyboardc/
+           0            0  Payload/Golfin.app/Frameworks/
+           0            0  Payload/Golfin.app/Frameworks/UnityFramework.framework/
+           0            0  Payload/Golfin.app/Frameworks/UnityFramework.framework/_CodeSignature/
+           0            0  Payload/Golfin.app/Data/
+           0            0  Payload/Golfin.app/Data/Managed/
+           0            0  Payload/Golfin.app/Data/Managed/Resources/
+           0            0  Payload/Golfin.app/Data/Managed/mono/
+           0            0  Payload/Golfin.app/Data/Managed/mono/4.0/
+           0            0  Payload/Golfin.app/Data/Managed/Metadata/
+           0            0  Payload/Golfin.app/Data/Resources/
+           0            0  Symbols/

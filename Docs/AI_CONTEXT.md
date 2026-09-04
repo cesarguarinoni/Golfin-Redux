@@ -7,14 +7,13 @@
 ## 2026-09-04 — `build_size_diet`: the install is 1839.5 → 1009.1 MiB, and three of the brief's headline numbers were wrong
 
 Cesar: *"app is like 700 MB, seems excessive."* The 711 MB was the `.ipa`; the number a player
-lives with is the **install**, and it was 1.80 GB. Both gates now pass on a real iOS-Full build
-(2655), measured with `Docs/Scripts/measure_ios_data.sh`, which reproduces the shipped `.ipa` to
-within 0.3%:
+lives with is the **install**, and it was 1.80 GB. Both gates pass, measured on the **shipped `.ipa`** — build **2658**, on TestFlight:
 
 | | before | after | gate |
 |---|---|---|---|
-| **Install** (Payload uncompressed) | 1839.5 MiB | **1009.1 MiB** | ≤ 1024 ✅ |
-| **Payload-compressed** (download) | 555.4 MiB | **304.6 MiB** | ≤ 350 ✅ |
+| **Install** (Payload uncompressed) | 1844.7 MiB | **1008.9 MiB** | ≤ 1024 ✅ |
+| **Payload-compressed** (download) | 557.1 MiB | **305.2 MiB** | ≤ 350 ✅ |
+| `.ipa` file (reported, not gated) | 678.3 MiB | **426.4 MiB** | — |
 
 −830 MiB, −45%, with no visible change that survives the scene's own frame-to-frame noise.
 Spec + evidence: `Docs/Specs/Active/build_size_diet/` (`STATUS.md` first).
@@ -51,7 +50,9 @@ raw Q32.32 longs, with matching terminal states and matching sample counts, so t
 agree shot for shot and not just at the endpoint. Harness is tracked
 (`Assets/Editor/BuildSize/HoleDataParityBot.cs`).
 
-**Still open:** the `.ipa` was not re-archived, so its file-size line is still 2632's.
+The `.ipa` file is 678.3 → **426.4 MB**, of which 121.2 MB is the `Symbols/` payload Apple
+strips before a tester downloads. Nothing on this task is left open except the three decisions
+above.
 
 ---
 ## 2026-09-04 — standalone round 2 DONE (approved) — build 2637 on TestFlight

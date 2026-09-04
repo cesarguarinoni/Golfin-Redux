@@ -9,10 +9,12 @@ Report: `IMPLEMENTER_REPORT.md`. Evidence: `reference/`, `screenshots/`.
 |---|---|---|---|---|
 | **Install** (Payload uncompressed) | 1839.5 MiB | **1009.1 MiB** | ≤ 1024 | PASS, 14.9 MiB inside |
 | **Payload-compressed** (download) | 555.4 MiB | **304.6 MiB** | ≤ 350 | PASS, 45.4 MiB inside |
-| `.ipa` file | 678.3 MiB | — | reported | not re-archived; see §Open |
+| `.ipa` file | 678.3 MiB | **426.4 MiB** | reported | of which `Symbols/` is 121.2 MiB Apple strips |
 
-−830.4 MiB install (−45%). Local iOS-Full build 2655, measured with
-`Docs/Scripts/measure_ios_data.sh`, which reproduces the shipped `.ipa` to within 0.3%.
+−835.8 MiB install (−45%). **Measured on the shipped `.ipa`** — build 2658, archived and
+uploaded to TestFlight 2026-09-04 (`reference/ipa_after.txt`), not only modelled: the local
+model (`Docs/Scripts/measure_ios_data.sh`) predicted 1009.1 / 304.6 and the real archive came
+back 1008.9 / 305.2.
 
 **Physics parity: 24/24 shots bit-identical.** The smoke-bot AtRest gate was run on Hole 1 and
 Hole 6 against BOTH datasets — 12 presets each, `fp.raw` Q32.32 longs compared with `==`, zero
@@ -42,8 +44,8 @@ differing values, matching terminal states and matching sample counts.
 
 ## Not done, and why — read this before signing off
 
-- **No device pass.** Everything here is measured off a real iOS player build; nothing needs
-  a phone to be checked. The `.ipa` was not re-archived, so the file-size line is the old one.
+- **No device pass.** Everything here is measured off a real archive; nothing needs a phone to
+  be checked. Build 2658 IS on TestFlight if you want to open it.
 - **The `.ipa` still packs `Symbols/`** (121.1 MiB zipped). Out of scope per the SPEC; it is
   why the `.ipa` FILE is reported and not gated.
 
