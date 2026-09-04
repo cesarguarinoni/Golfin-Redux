@@ -1,0 +1,16 @@
+# before vs after   |   noise floor: after vs after2
+frame                     mean|d|  max|d|   %moved   |    mean|d|  max|d|   %moved   verdict
+hole01_behindgreen          2.238     179   13.43%   |      1.586     178   12.41%   1.4x the noise floor
+hole01_tee                  4.248     177   24.26%   |      2.705     178   22.10%   1.6x the noise floor
+hole06_behindgreen          1.876     193   31.20%   |      2.474     194   33.76%   BELOW the scene's own noise
+hole06_tee                  3.067     190   30.23%   |      4.215     191   32.81%   BELOW the scene's own noise
+hole07_behindgreen          1.394     196    7.18%   |      0.065     175    1.78%   21.4x the noise floor
+hole07_bridgeClose          0.141      49    8.46%   |      0.003       5    0.27%   51.4x the noise floor
+hole07_bridgeWide           0.120      51    5.87%   |      0.000       2    0.04%   282.0x the noise floor
+hole07_tee                  1.409     197    6.33%   |      0.059     173    1.71%   24.0x the noise floor
+hole12_behindgreen          0.401     180    6.92%   |      0.399     180    6.90%   1.0x the noise floor
+hole12_bridgeClose1         2.208     184   48.62%   |      1.564     185   21.69%   1.4x the noise floor
+hole12_bridgeClose2         1.456     137   61.10%   |      1.369     137   44.87%   1.1x the noise floor
+hole12_bridgeWide1          2.689     168   39.83%   |      2.064     168   31.01%   1.3x the noise floor
+hole12_bridgeWide2          3.427     187   57.83%   |      4.176     187   55.50%   BELOW the scene's own noise
+hole12_tee                  2.791     187   44.10%   |      3.359     188   43.31%   BELOW the scene's own noise

@@ -215,6 +215,19 @@ namespace Golfin.EditorTools
         //   • Characters — `GpsAvatarScreenController.BindCharacterFigure` loads
         //     `Characters/Homescreen/{name}` for the avatar figure. A PLAYLIFE screen reaching
         //     into golf art; moving it would have blanked the Avatar screen.
+        //   • Portraits  — added back after build 2637 SHIPPED BROKEN. No GPS screen reads it
+        //     directly, which is exactly why the first enumeration missed it: the call site builds
+        //     its path from a const (`ThumbnailResourcesPath = "Portraits/Thumbnails"`) plus a
+        //     variable, so a grep for LITERAL Resources.Load paths cannot see it. And what it
+        //     feeds is a GATE, which is what made the failure total and silent:
+        //         CharacterDatabaseCSV:348   renderable = portraitSprite != null
+        //         CharacterDatabaseCSV:421   GetAvailableCharacters() = Where(isActive && renderable)
+        //         CharacterManager:86        ownedCharacters seeded from GetAvailableCharacters()
+        //     With Portraits stashed EVERY character is unrenderable, the roster seeds EMPTY, no
+        //     selected id resolves, and the GPS Avatar screen falls back to the placeholder —
+        //     which is what Cesar saw on build 2637. R2's lesson was "enumerate the call sites";
+        //     the correction is that enumerating LITERAL paths is not enumerating call sites.
+        //     Pinned by StandaloneResourceStashTests.
         //   • Data / UI  — texts, the content version, the build stamp, sfx, and the app-wide
         //     TapFeedback config+prefab. Shared by everything, and 700 KB between them.
 
@@ -241,7 +254,6 @@ namespace Golfin.EditorTools
             "HoleData",          // 388 MB — 18 heightmaps + zones.json + green.json. The whole story.
             "Clubs",             // 114 MB — club art, ClubDatabaseCSV
             "Balls",             //  16 MB — BallDatabaseCSV, the shot-UI ball widgets
-            "Portraits",         //  11 MB — in-game character portraits (HUD, matchmaking, rankings)
             "Sprites",           // 5.4 MB — Sprites/Shops, the stamina shop rows
             "HoleImages",        // 3.8 MB — hole cards, the result modal
             "Items",             // 2.6 MB — ItemDatabaseCSV
