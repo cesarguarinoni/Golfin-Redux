@@ -1,4 +1,4 @@
-READY_FOR_REDTEAM
+DONE
 
 # STATUS — `game_polish_a`
 
@@ -36,6 +36,7 @@ headings, and a narrow check was reported as a complete one; and the sweep is no
 
 | Date | State | Note |
 |---|---|---|
+| 2026-09-04 | **`DONE`** | **Cesar approved.** Code verified correct by three independent red-team passes; A13 re-measured on the shipped build at his request. The outstanding red-team objection was report-prose quality, which gates nothing — he called the loop and closed it. Folder moved to `Completed/`. |
 | 2026-09-04 | `READY_FOR_REDTEAM` | **Escalation resolved by Cesar: "Run perf".** § A13 re-measured on the SHIPPED build — **118 pushes**, median frame 19.7 ms, median 609 KB/frame; the qualifier is gone. The GachaHistory finding reproduces (297.7 MB / 1271 ms). Also this round: the authoritative § *Option (b) shipped* block regenerated from the JSON (was 84/52/4 → 87/55/5), and `check_report_counts.py` rewritten with **no allow-list** — its hard-coded suspect set was why the 84/52/4 fingerprint printed "0 stale". |
 | 2026-09-04 | `READY_FOR_REDTEAM` | **Round-3 report fix, re-submitted.** Red-team's four stale-count sites corrected (§ A1 footnote 4/48→5/87, § A5 48→55 same-bg + the 32 cross-bg `seamWorstCover` invariant it never named, § A10 21→37 / 24→40, § A13 labelled). Grep for the old run's fingerprint found two MORE it did not name (§ A2's "all 24 pairs" / "48/48 records", and the push-map clause "every other move fades"). § A13 could not be closed — no artifact exists and a `perf` re-run produced 0 bytes — so it is labelled pre-option-(b) rather than quoted as current. New `check_report_counts.py` reconciles counts against the JSON: **0 stale**; citations **78/0**. No code changed since the reviewer's PASS. |
 | 2026-09-03 | `SPEC_READY` | Map approved by Cesar (G1 = fade + option-(b) video behind an OFF flag). |
