@@ -1,0 +1,429 @@
+# reference/project_texture_budget.txt — build_size_diet Phase 2.7 + Phase 3
+# Tools > Golfin > Build Size > Apply Project Texture Budget   (APPLIED)
+# 2026-09-04 11:05:45
+# The .meta files these settings land in are TRACKED, so the diff is the real record;
+# this file exists so the reasoning and the exclusions are checkable without reading 200 metas.
+
+== Phase 2.7 — Assets/Resources/Clubs, iPhone max 512, ASTC 6x6 ==
+ src px    was    now    est MiB before -> after  path
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Driver_BOGEYB.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Driver_EAGLEZ.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Driver_FAIRLOFT.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Driver_FAIRWAY.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Driver_FAIRX.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Driver_FOREFIT.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Driver_FYLOE.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Driver_GF.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Driver_GOLFIN.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Driver_GOLFINIX.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Driver_GREENSWING.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Driver_KLYRO.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Driver_MIREO.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Driver_PARPERFECT.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Driver_PUTTACE.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Driver_ROYAL.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Driver_TEEPIT.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Driver_TIFTO.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Driver_VBOOOT.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Iron_BOGEYB.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Iron_EAGLEZ.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Iron_FAIRLOFT.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Iron_FAIRWAY.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Iron_FAIRX.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Iron_FOREFIT.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Iron_FYLOE.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Iron_GF.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Iron_GOLFIN.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Iron_GOLFINIX.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Iron_GREENSWING.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Iron_KLYRO.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Iron_MIREO.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Iron_PARPERFECT.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Iron_PUTTACE.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Iron_ROYAL.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Iron_TEEPIT.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Iron_TIFTO.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Iron_VBOOOT.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Putter_BOGEYB.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Putter_EAGLEZ.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Putter_FAIRLOFT.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Putter_FAIRWAY.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Putter_FAIRX.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Putter_FOREFIT.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Putter_FYLOE.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Putter_GF.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Putter_GOLFIN.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Putter_GOLFINIX.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Putter_GREENSWING.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Putter_KLYRO.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Putter_MIREO.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Putter_PARPERFECT.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Putter_PUTTACE.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Putter_ROYAL.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Putter_TEEPIT.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Putter_TIFTO.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Putter_VBOOOT.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Wedge_BOGEYB.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Wedge_EAGLEZ.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Wedge_FAIRLOFT.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Wedge_FAIRWAY.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Wedge_FAIRX.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Wedge_FOREFIT.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Wedge_FYLOE.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Wedge_GF.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Wedge_GOLFIN.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Wedge_GOLFINIX.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Wedge_GREENSWING.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Wedge_KLYRO.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Wedge_MIREO.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Wedge_PARPERFECT.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Wedge_PUTTACE.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Wedge_ROYAL.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Wedge_TEEPIT.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Wedge_TIFTO.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Wedge_VBOOOT.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Wood_BOGEYB.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Wood_EAGLEZ.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Wood_FAIRLOFT.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Wood_FAIRWAY.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Wood_FAIRX.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Wood_FOREFIT.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Wood_FYLOE.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Wood_GF.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Wood_GOLFIN.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Wood_GOLFINIX.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Wood_GREENSWING.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Wood_KLYRO.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Wood_MIREO.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Wood_PARPERFECT.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Wood_PUTTACE.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Wood_ROYAL.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Wood_TEEPIT.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Wood_TIFTO.png  (no-op)
+   1156    512    512        0.083 ->      0.083  Assets/Resources/Clubs/Controls/S_Controls_Wood_VBOOOT.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Driver-BogeyB.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Driver-Eaglez.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Driver-FairX.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Driver-Fairloft.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Driver-Fairway.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Driver-Forefit.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Driver-Fyloe.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Driver-G&F.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Driver-Golfin.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Driver-GolfinX.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Driver-GreenSwing.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Driver-Klyro.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Driver-Mireo.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Driver-ParPerfect.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Driver-PuttAce.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Driver-RoyalSwing.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Driver-TeePit.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Driver-Tifto.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Driver-VBOOOT.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Iron-BogeyB.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Iron-Eaglez.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Iron-FairX.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Iron-Fairloft.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Iron-Fairway.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Iron-Forefit.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Iron-Fyloe.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Iron-GandF.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Iron-Golfin.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Iron-GolfinX.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Iron-GreenSwing.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Iron-ParPerfect.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Iron-PuttAce.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Iron-RoyalSwing.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Iron-TeePit.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Iron-Tifto.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Iron-VBOOOT.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Iron7-Mireo.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Iron9-Klyro.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Placeholder.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Putter-BogeyB.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Putter-Eaglez.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Putter-FairX.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Putter-Fairloft.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Putter-Fairway.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Putter-Forefit.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Putter-Fyloe.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Putter-GandF.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Putter-Golfin.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Putter-GolfinX.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Putter-GreenSwing.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Putter-Klyro.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Putter-Mireo.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Putter-ParPerfect.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Putter-PuttAce.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Putter-RoyalSwing.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Putter-TeePit.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Putter-Tifto.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Putter-VBOOOT.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Wedge-BogeyB.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Wedge-Eaglez.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Wedge-FairX.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Wedge-Fairloft.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Wedge-Fairway.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Wedge-Forefit.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Wedge-GandF.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Wedge-Golfin.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Wedge-GolfinX.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Wedge-GreenSwing.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Wedge-Klyro.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Wedge-Mireo.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Wedge-ParPerfect.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Wedge-PuttAce.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Wedge-TeePit.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Wedge-Tifto.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Wedge-VBOOOT.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/WedgeA-Fyloe.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/WedgeP-RoyalSwing.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Wood-BogeyB.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Wood-Eaglez.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Wood-FairX.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Wood-Fairloft.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Wood-Fairway.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Wood-Forefit.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Wood-Fyloe.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Wood-GandF.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Wood-Golfin.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Wood-GolfinX.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Wood-GreenSwing.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Wood-Klyro.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Wood-Mireo.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Wood-ParPerfect.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Wood-PuttAce.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Wood-RoyalSwing.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Wood-TeePit.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Wood-Tifto.png  (no-op)
+    900    512    512        0.088 ->      0.088  Assets/Resources/Clubs/Full/Wood-VBOOOT.png  (no-op)
+    261    512    512        0.025 ->      0.025  Assets/Resources/Clubs/Portraits/Driver-G&F.png  (no-op)
+    261    512    512        0.025 ->      0.025  Assets/Resources/Clubs/Portraits/Iron7-Mireo.png  (no-op)
+    261    512    512        0.025 ->      0.025  Assets/Resources/Clubs/Portraits/Iron9-Klyro.png  (no-op)
+    261    512    512        0.025 ->      0.025  Assets/Resources/Clubs/Portraits/Putter-GolfinX.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Driver_BOGEYB.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Driver_EAGLEZ.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Driver_FAIRLOFT.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Driver_FAIRWAY.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Driver_FAIRX.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Driver_FOREFIT.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Driver_FYLOE.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Driver_GF.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Driver_GOLFIN.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Driver_GOLFINIX.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Driver_GREENSWING.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Driver_KLYRO.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Driver_MIREO.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Driver_PARPERFECT.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Driver_PUTTACE.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Driver_ROYAL.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Driver_TEEPIT.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Driver_TIFTO.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Driver_VBOOOT.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Iron_BOGEYB.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Iron_EAGLEZ.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Iron_FAIRLOFT.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Iron_FAIRWAY.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Iron_FAIRX.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Iron_FOREFIT.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Iron_FYLOE.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Iron_GF.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Iron_GOLFIN.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Iron_GOLFINIX.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Iron_GREENSWING.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Iron_KLYRO.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Iron_MIREO.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Iron_PARPERFECT.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Iron_PUTTACE.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Iron_ROYAL.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Iron_TEEPIT.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Iron_TIFTO.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Iron_VBOOOT.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Putter_BOGEYB.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Putter_EAGLEZ.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Putter_FAIRLOFT.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Putter_FAIRWAY.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Putter_FAIRX.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Putter_FOREFIT.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Putter_FYLOE.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Putter_GF.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Putter_GOLFIN.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Putter_GOLFINIX.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Putter_GREENSWING.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Putter_KLYRO.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Putter_MIREO.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Putter_PARPERFECT.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Putter_PUTTACE.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Putter_ROYAL.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Putter_TEEPIT.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Putter_TIFTO.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Putter_VBOOOT.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Wedge_BOGEYB.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Wedge_EAGLEZ.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Wedge_FAIRLOFT.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Wedge_FAIRWAY.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Wedge_FAIRX.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Wedge_FOREFIT.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Wedge_FYLOE.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Wedge_GF.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Wedge_GOLFIN.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Wedge_GOLFINIX.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Wedge_GREENSWING.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Wedge_KLYRO.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Wedge_MIREO.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Wedge_PARPERFECT.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Wedge_PUTTACE.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Wedge_ROYAL.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Wedge_TEEPIT.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Wedge_TIFTO.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Wedge_VBOOOT.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Wood_BOGEYB.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Wood_EAGLEZ.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Wood_FAIRLOFT.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Wood_FAIRWAY.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Wood_FAIRX.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Wood_FOREFIT.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Wood_FYLOE.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Wood_GF.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Wood_GOLFIN.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Wood_GOLFINIX.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Wood_GREENSWING.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Wood_KLYRO.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Wood_MIREO.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Wood_PARPERFECT.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Wood_PUTTACE.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Wood_ROYAL.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Wood_TEEPIT.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Wood_TIFTO.png  (no-op)
+    411    512    512        0.061 ->      0.061  Assets/Resources/Clubs/Portraits/S_Menu_Wood_VBOOOT.png  (no-op)
+    261    512    512        0.025 ->      0.025  Assets/Resources/Clubs/Portraits/WedgeA-Fyloe.png  (no-op)
+    261    512    512        0.025 ->      0.025  Assets/Resources/Clubs/Portraits/WedgeP-RoyalSwing.png  (no-op)
+
+== Phase 3 — textures that still import UNCOMPRESSED on iPhone ==
+ src px    was    now    est MiB before -> after  path
+   2680   1024   1024        0.133 ->      0.133  Assets/Art/UI/Account/S_SocialPillBordered.png  (no-op)
+
+== Deliberately left uncompressed, with the reason ==
+    Assets/Golf/Courses/lomond-country-club/Data/hole-01-flat/MatteMaskMap.png
+        SKIPPED: terrain matte MASK read per-texel by the hole shader — 0.2 KB each (3.6 KB for all 18 shipping holes), and block compression on a mask can shift a matte boundary. Zero bytes to win.
+    Assets/Golf/Courses/lomond-country-club/Data/hole-01-geo-flat/MatteMaskMap.png
+        SKIPPED: terrain matte MASK read per-texel by the hole shader — 0.2 KB each (3.6 KB for all 18 shipping holes), and block compression on a mask can shift a matte boundary. Zero bytes to win.
+    Assets/Golf/Courses/lomond-country-club/Data/hole-01-geo/MatteMaskMap.png
+        SKIPPED: terrain matte MASK read per-texel by the hole shader — 0.2 KB each (3.6 KB for all 18 shipping holes), and block compression on a mask can shift a matte boundary. Zero bytes to win.
+    Assets/Golf/Courses/lomond-country-club/Data/hole-01/MatteMaskMap.png
+        SKIPPED: terrain matte MASK read per-texel by the hole shader — 0.2 KB each (3.6 KB for all 18 shipping holes), and block compression on a mask can shift a matte boundary. Zero bytes to win.
+    Assets/Golf/Courses/lomond-country-club/Data/hole-02-flat/MatteMaskMap.png
+        SKIPPED: terrain matte MASK read per-texel by the hole shader — 0.2 KB each (3.6 KB for all 18 shipping holes), and block compression on a mask can shift a matte boundary. Zero bytes to win.
+    Assets/Golf/Courses/lomond-country-club/Data/hole-02-geo/MatteMaskMap.png
+        SKIPPED: terrain matte MASK read per-texel by the hole shader — 0.2 KB each (3.6 KB for all 18 shipping holes), and block compression on a mask can shift a matte boundary. Zero bytes to win.
+    Assets/Golf/Courses/lomond-country-club/Data/hole-02/MatteMaskMap.png
+        SKIPPED: terrain matte MASK read per-texel by the hole shader — 0.2 KB each (3.6 KB for all 18 shipping holes), and block compression on a mask can shift a matte boundary. Zero bytes to win.
+    Assets/Golf/Courses/lomond-country-club/Data/hole-03-flat/MatteMaskMap.png
+        SKIPPED: terrain matte MASK read per-texel by the hole shader — 0.2 KB each (3.6 KB for all 18 shipping holes), and block compression on a mask can shift a matte boundary. Zero bytes to win.
+    Assets/Golf/Courses/lomond-country-club/Data/hole-03-geo/MatteMaskMap.png
+        SKIPPED: terrain matte MASK read per-texel by the hole shader — 0.2 KB each (3.6 KB for all 18 shipping holes), and block compression on a mask can shift a matte boundary. Zero bytes to win.
+    Assets/Golf/Courses/lomond-country-club/Data/hole-03/MatteMaskMap.png
+        SKIPPED: terrain matte MASK read per-texel by the hole shader — 0.2 KB each (3.6 KB for all 18 shipping holes), and block compression on a mask can shift a matte boundary. Zero bytes to win.
+    Assets/Golf/Courses/lomond-country-club/Data/hole-04-flat/MatteMaskMap.png
+        SKIPPED: terrain matte MASK read per-texel by the hole shader — 0.2 KB each (3.6 KB for all 18 shipping holes), and block compression on a mask can shift a matte boundary. Zero bytes to win.
+    Assets/Golf/Courses/lomond-country-club/Data/hole-04-geo-flat/MatteMaskMap.png
+        SKIPPED: terrain matte MASK read per-texel by the hole shader — 0.2 KB each (3.6 KB for all 18 shipping holes), and block compression on a mask can shift a matte boundary. Zero bytes to win.
+    Assets/Golf/Courses/lomond-country-club/Data/hole-04-geo/MatteMaskMap.png
+        SKIPPED: terrain matte MASK read per-texel by the hole shader — 0.2 KB each (3.6 KB for all 18 shipping holes), and block compression on a mask can shift a matte boundary. Zero bytes to win.
+    Assets/Golf/Courses/lomond-country-club/Data/hole-04/MatteMaskMap.png
+        SKIPPED: terrain matte MASK read per-texel by the hole shader — 0.2 KB each (3.6 KB for all 18 shipping holes), and block compression on a mask can shift a matte boundary. Zero bytes to win.
+    Assets/Golf/Courses/lomond-country-club/Data/hole-05-flat/MatteMaskMap.png
+        SKIPPED: terrain matte MASK read per-texel by the hole shader — 0.2 KB each (3.6 KB for all 18 shipping holes), and block compression on a mask can shift a matte boundary. Zero bytes to win.
+    Assets/Golf/Courses/lomond-country-club/Data/hole-05-geo/MatteMaskMap.png
+        SKIPPED: terrain matte MASK read per-texel by the hole shader — 0.2 KB each (3.6 KB for all 18 shipping holes), and block compression on a mask can shift a matte boundary. Zero bytes to win.
+    Assets/Golf/Courses/lomond-country-club/Data/hole-05/MatteMaskMap.png
+        SKIPPED: terrain matte MASK read per-texel by the hole shader — 0.2 KB each (3.6 KB for all 18 shipping holes), and block compression on a mask can shift a matte boundary. Zero bytes to win.
+    Assets/Golf/Courses/lomond-country-club/Data/hole-06-flat/MatteMaskMap.png
+        SKIPPED: terrain matte MASK read per-texel by the hole shader — 0.2 KB each (3.6 KB for all 18 shipping holes), and block compression on a mask can shift a matte boundary. Zero bytes to win.
+    Assets/Golf/Courses/lomond-country-club/Data/hole-06-geo-flat/MatteMaskMap.png
+        SKIPPED: terrain matte MASK read per-texel by the hole shader — 0.2 KB each (3.6 KB for all 18 shipping holes), and block compression on a mask can shift a matte boundary. Zero bytes to win.
+    Assets/Golf/Courses/lomond-country-club/Data/hole-06-geo/MatteMaskMap.png
+        SKIPPED: terrain matte MASK read per-texel by the hole shader — 0.2 KB each (3.6 KB for all 18 shipping holes), and block compression on a mask can shift a matte boundary. Zero bytes to win.
+    Assets/Golf/Courses/lomond-country-club/Data/hole-06/MatteMaskMap.png
+        SKIPPED: terrain matte MASK read per-texel by the hole shader — 0.2 KB each (3.6 KB for all 18 shipping holes), and block compression on a mask can shift a matte boundary. Zero bytes to win.
+    Assets/Golf/Courses/lomond-country-club/Data/hole-07-flat/MatteMaskMap.png
+        SKIPPED: terrain matte MASK read per-texel by the hole shader — 0.2 KB each (3.6 KB for all 18 shipping holes), and block compression on a mask can shift a matte boundary. Zero bytes to win.
+    Assets/Golf/Courses/lomond-country-club/Data/hole-07-geo/MatteMaskMap.png
+        SKIPPED: terrain matte MASK read per-texel by the hole shader — 0.2 KB each (3.6 KB for all 18 shipping holes), and block compression on a mask can shift a matte boundary. Zero bytes to win.
+    Assets/Golf/Courses/lomond-country-club/Data/hole-07/MatteMaskMap.png
+        SKIPPED: terrain matte MASK read per-texel by the hole shader — 0.2 KB each (3.6 KB for all 18 shipping holes), and block compression on a mask can shift a matte boundary. Zero bytes to win.
+    Assets/Golf/Courses/lomond-country-club/Data/hole-08-flat/MatteMaskMap.png
+        SKIPPED: terrain matte MASK read per-texel by the hole shader — 0.2 KB each (3.6 KB for all 18 shipping holes), and block compression on a mask can shift a matte boundary. Zero bytes to win.
+    Assets/Golf/Courses/lomond-country-club/Data/hole-08-geo/MatteMaskMap.png
+        SKIPPED: terrain matte MASK read per-texel by the hole shader — 0.2 KB each (3.6 KB for all 18 shipping holes), and block compression on a mask can shift a matte boundary. Zero bytes to win.
+    Assets/Golf/Courses/lomond-country-club/Data/hole-08/MatteMaskMap.png
+        SKIPPED: terrain matte MASK read per-texel by the hole shader — 0.2 KB each (3.6 KB for all 18 shipping holes), and block compression on a mask can shift a matte boundary. Zero bytes to win.
+    Assets/Golf/Courses/lomond-country-club/Data/hole-09-flat/MatteMaskMap.png
+        SKIPPED: terrain matte MASK read per-texel by the hole shader — 0.2 KB each (3.6 KB for all 18 shipping holes), and block compression on a mask can shift a matte boundary. Zero bytes to win.
+    Assets/Golf/Courses/lomond-country-club/Data/hole-09-geo/MatteMaskMap.png
+        SKIPPED: terrain matte MASK read per-texel by the hole shader — 0.2 KB each (3.6 KB for all 18 shipping holes), and block compression on a mask can shift a matte boundary. Zero bytes to win.
+    Assets/Golf/Courses/lomond-country-club/Data/hole-09/MatteMaskMap.png
+        SKIPPED: terrain matte MASK read per-texel by the hole shader — 0.2 KB each (3.6 KB for all 18 shipping holes), and block compression on a mask can shift a matte boundary. Zero bytes to win.
+    Assets/Golf/Courses/lomond-country-club/Data/hole-10-flat/MatteMaskMap.png
+        SKIPPED: terrain matte MASK read per-texel by the hole shader — 0.2 KB each (3.6 KB for all 18 shipping holes), and block compression on a mask can shift a matte boundary. Zero bytes to win.
+    Assets/Golf/Courses/lomond-country-club/Data/hole-10-geo-flat/MatteMaskMap.png
+        SKIPPED: terrain matte MASK read per-texel by the hole shader — 0.2 KB each (3.6 KB for all 18 shipping holes), and block compression on a mask can shift a matte boundary. Zero bytes to win.
+    Assets/Golf/Courses/lomond-country-club/Data/hole-10-geo/MatteMaskMap.png
+        SKIPPED: terrain matte MASK read per-texel by the hole shader — 0.2 KB each (3.6 KB for all 18 shipping holes), and block compression on a mask can shift a matte boundary. Zero bytes to win.
+    Assets/Golf/Courses/lomond-country-club/Data/hole-10/MatteMaskMap.png
+        SKIPPED: terrain matte MASK read per-texel by the hole shader — 0.2 KB each (3.6 KB for all 18 shipping holes), and block compression on a mask can shift a matte boundary. Zero bytes to win.
+    Assets/Golf/Courses/lomond-country-club/Data/hole-11-flat/MatteMaskMap.png
+        SKIPPED: terrain matte MASK read per-texel by the hole shader — 0.2 KB each (3.6 KB for all 18 shipping holes), and block compression on a mask can shift a matte boundary. Zero bytes to win.
+    Assets/Golf/Courses/lomond-country-club/Data/hole-11-geo/MatteMaskMap.png
+        SKIPPED: terrain matte MASK read per-texel by the hole shader — 0.2 KB each (3.6 KB for all 18 shipping holes), and block compression on a mask can shift a matte boundary. Zero bytes to win.
+    Assets/Golf/Courses/lomond-country-club/Data/hole-12-flat/MatteMaskMap.png
+        SKIPPED: terrain matte MASK read per-texel by the hole shader — 0.2 KB each (3.6 KB for all 18 shipping holes), and block compression on a mask can shift a matte boundary. Zero bytes to win.
+    Assets/Golf/Courses/lomond-country-club/Data/hole-12-geo/MatteMaskMap.png
+        SKIPPED: terrain matte MASK read per-texel by the hole shader — 0.2 KB each (3.6 KB for all 18 shipping holes), and block compression on a mask can shift a matte boundary. Zero bytes to win.
+    Assets/Golf/Courses/lomond-country-club/Data/hole-12/MatteMaskMap.png
+        SKIPPED: terrain matte MASK read per-texel by the hole shader — 0.2 KB each (3.6 KB for all 18 shipping holes), and block compression on a mask can shift a matte boundary. Zero bytes to win.
+    Assets/Golf/Courses/lomond-country-club/Data/hole-13-flat/MatteMaskMap.png
+        SKIPPED: terrain matte MASK read per-texel by the hole shader — 0.2 KB each (3.6 KB for all 18 shipping holes), and block compression on a mask can shift a matte boundary. Zero bytes to win.
+    Assets/Golf/Courses/lomond-country-club/Data/hole-13-geo/MatteMaskMap.png
+        SKIPPED: terrain matte MASK read per-texel by the hole shader — 0.2 KB each (3.6 KB for all 18 shipping holes), and block compression on a mask can shift a matte boundary. Zero bytes to win.
+    Assets/Golf/Courses/lomond-country-club/Data/hole-13/MatteMaskMap.png
+        SKIPPED: terrain matte MASK read per-texel by the hole shader — 0.2 KB each (3.6 KB for all 18 shipping holes), and block compression on a mask can shift a matte boundary. Zero bytes to win.
+    Assets/Golf/Courses/lomond-country-club/Data/hole-14-flat/MatteMaskMap.png
+        SKIPPED: terrain matte MASK read per-texel by the hole shader — 0.2 KB each (3.6 KB for all 18 shipping holes), and block compression on a mask can shift a matte boundary. Zero bytes to win.
+    Assets/Golf/Courses/lomond-country-club/Data/hole-14-geo/MatteMaskMap.png
+        SKIPPED: terrain matte MASK read per-texel by the hole shader — 0.2 KB each (3.6 KB for all 18 shipping holes), and block compression on a mask can shift a matte boundary. Zero bytes to win.
+    Assets/Golf/Courses/lomond-country-club/Data/hole-14/MatteMaskMap.png
+        SKIPPED: terrain matte MASK read per-texel by the hole shader — 0.2 KB each (3.6 KB for all 18 shipping holes), and block compression on a mask can shift a matte boundary. Zero bytes to win.
+    Assets/Golf/Courses/lomond-country-club/Data/hole-15-flat/MatteMaskMap.png
+        SKIPPED: terrain matte MASK read per-texel by the hole shader — 0.2 KB each (3.6 KB for all 18 shipping holes), and block compression on a mask can shift a matte boundary. Zero bytes to win.
+    Assets/Golf/Courses/lomond-country-club/Data/hole-15-geo/MatteMaskMap.png
+        SKIPPED: terrain matte MASK read per-texel by the hole shader — 0.2 KB each (3.6 KB for all 18 shipping holes), and block compression on a mask can shift a matte boundary. Zero bytes to win.
+    Assets/Golf/Courses/lomond-country-club/Data/hole-15/MatteMaskMap.png
+        SKIPPED: terrain matte MASK read per-texel by the hole shader — 0.2 KB each (3.6 KB for all 18 shipping holes), and block compression on a mask can shift a matte boundary. Zero bytes to win.
+    Assets/Golf/Courses/lomond-country-club/Data/hole-16-flat/MatteMaskMap.png
+        SKIPPED: terrain matte MASK read per-texel by the hole shader — 0.2 KB each (3.6 KB for all 18 shipping holes), and block compression on a mask can shift a matte boundary. Zero bytes to win.
+    Assets/Golf/Courses/lomond-country-club/Data/hole-16-geo/MatteMaskMap.png
+        SKIPPED: terrain matte MASK read per-texel by the hole shader — 0.2 KB each (3.6 KB for all 18 shipping holes), and block compression on a mask can shift a matte boundary. Zero bytes to win.
+    Assets/Golf/Courses/lomond-country-club/Data/hole-16/MatteMaskMap.png
+        SKIPPED: terrain matte MASK read per-texel by the hole shader — 0.2 KB each (3.6 KB for all 18 shipping holes), and block compression on a mask can shift a matte boundary. Zero bytes to win.
+    Assets/Golf/Courses/lomond-country-club/Data/hole-17-flat/MatteMaskMap.png
+        SKIPPED: terrain matte MASK read per-texel by the hole shader — 0.2 KB each (3.6 KB for all 18 shipping holes), and block compression on a mask can shift a matte boundary. Zero bytes to win.
+    Assets/Golf/Courses/lomond-country-club/Data/hole-17-geo-flat/MatteMaskMap.png
+        SKIPPED: terrain matte MASK read per-texel by the hole shader — 0.2 KB each (3.6 KB for all 18 shipping holes), and block compression on a mask can shift a matte boundary. Zero bytes to win.
+    Assets/Golf/Courses/lomond-country-club/Data/hole-17-geo/MatteMaskMap.png
+        SKIPPED: terrain matte MASK read per-texel by the hole shader — 0.2 KB each (3.6 KB for all 18 shipping holes), and block compression on a mask can shift a matte boundary. Zero bytes to win.
+    Assets/Golf/Courses/lomond-country-club/Data/hole-17/MatteMaskMap.png
+        SKIPPED: terrain matte MASK read per-texel by the hole shader — 0.2 KB each (3.6 KB for all 18 shipping holes), and block compression on a mask can shift a matte boundary. Zero bytes to win.
+    Assets/Golf/Courses/lomond-country-club/Data/hole-18-flat/MatteMaskMap.png
+        SKIPPED: terrain matte MASK read per-texel by the hole shader — 0.2 KB each (3.6 KB for all 18 shipping holes), and block compression on a mask can shift a matte boundary. Zero bytes to win.
+    Assets/Golf/Courses/lomond-country-club/Data/hole-18-geo/MatteMaskMap.png
+        SKIPPED: terrain matte MASK read per-texel by the hole shader — 0.2 KB each (3.6 KB for all 18 shipping holes), and block compression on a mask can shift a matte boundary. Zero bytes to win.
+    Assets/Golf/Courses/lomond-country-club/Data/hole-18/MatteMaskMap.png
+        SKIPPED: terrain matte MASK read per-texel by the hole shader — 0.2 KB each (3.6 KB for all 18 shipping holes), and block compression on a mask can shift a matte boundary. Zero bytes to win.
+    Assets/Packs/TreePackVol.1/Textures/Leave_4K_.psd
+        SKIPPED: vendor pack — PackTextureBudget owns that root, and reimporting a 4096 source that reaches no scene would cost minutes to change nothing shipped.
+
+0 texture(s) reimported.
+Estimated built total for the rows above: 22.5 MiB -> 22.5 MiB (0.0 MiB saved)
+(Estimate is ASTC 6x6 + mips vs RGBA32 + mips where the texture was uncompressed;
+ the authoritative number is the Build Report / data_*.txt pair, not this line.)

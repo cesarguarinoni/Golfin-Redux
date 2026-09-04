@@ -1,0 +1,135 @@
+# reference/terrain_and_prototypes.txt — build_size_diet Phase 1.2 + Phase 5 (MEASUREMENT ONLY)
+# Read off the 18 shipping TerrainData assets (the -geo variants the hole scenes use).
+# NOTHING was modified to produce this file. SPEC Phase 5 forbids editing terrain
+# without Cesar's written go in STATUS.md, and the heightmap stays 2049 regardless
+# (physics fidelity rule, PERF_OPTIMIZATION_PLAN).
+
+== Phase 5 — TerrainData resolutions ==
+hole      height   alpha  baseMap  detail   holes  layers   treeInst  asset MiB
+hole-01     2049    1024      512       0    2048       9       1362       28.3
+hole-02     2049    1024      512       0    2048       9       1488       28.3
+hole-03     2049    1024      512       0    2048       9        753       28.3
+hole-04     2049    1024      512       0    2048       9        134       28.3
+hole-05     2049    1024      512       0    2048       9       1695       28.3
+hole-06     2049    1024      512       0    2048       9        434       28.3
+hole-07     2049    1024      512       0    2048       9        666       28.3
+hole-08     2049    1024      512       0    2048       9       1968       28.4
+hole-09     2049    1024      512       0    2048       9        340       28.3
+hole-10     2049    1024      512       0    2048       9        769       28.3
+hole-11     2049    1024      512       0    2048       9        470       28.3
+hole-12     2049    1024      512       0    2048       9       1505       28.3
+hole-13     2049    1024      512       0    2048       9       1709       28.3
+hole-14     2049    1024      512       0    2048       9       1423       28.3
+hole-15     2049    1024      512       0    2048       9        292       28.3
+hole-16     2049    1024      512       0    2048       9        426       28.3
+hole-17     2049    1024      512       0    2048       9        834       28.3
+hole-18     2049    1024      512       0    2048       9        710       28.3
+
+== Phase 1.2 — tree PROTOTYPE audit ==
+Only a prototype with ZERO instances on EVERY one of the 18 holes may leave the list.
+
+hole-01 — 1362 tree instance(s), 4 prototype(s) listed:
+    [0] MESH_JapaneseBlack_01  instances=75     Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_JapaneseBlack_01.prefab
+    [1] MESH_JapaneseBlack_01_Var1 instances=557    Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_JapaneseBlack_01_Var1.prefab
+    [2] MESH_ScottishPine_01   instances=366    Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_ScottishPine_01.prefab
+    [3] Mesh_Metasequoia       instances=364    Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/Mesh_Metasequoia.prefab
+hole-02 — 1488 tree instance(s), 4 prototype(s) listed:
+    [0] MESH_JapaneseBlack_01  instances=104    Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_JapaneseBlack_01.prefab
+    [1] MESH_JapaneseBlack_01_Var1 instances=563    Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_JapaneseBlack_01_Var1.prefab
+    [2] MESH_ScottishPine_01   instances=405    Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_ScottishPine_01.prefab
+    [3] Mesh_Metasequoia       instances=416    Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/Mesh_Metasequoia.prefab
+hole-03 — 753 tree instance(s), 4 prototype(s) listed:
+    [0] MESH_JapaneseBlack_01  instances=49     Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_JapaneseBlack_01.prefab
+    [1] MESH_JapaneseBlack_01_Var1 instances=284    Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_JapaneseBlack_01_Var1.prefab
+    [2] MESH_ScottishPine_01   instances=180    Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_ScottishPine_01.prefab
+    [3] Mesh_Metasequoia       instances=240    Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/Mesh_Metasequoia.prefab
+hole-04 — 134 tree instance(s), 4 prototype(s) listed:
+    [0] MESH_JapaneseBlack_01  instances=11     Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_JapaneseBlack_01.prefab
+    [1] MESH_JapaneseBlack_01_Var1 instances=47     Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_JapaneseBlack_01_Var1.prefab
+    [2] MESH_ScottishPine_01   instances=33     Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_ScottishPine_01.prefab
+    [3] Mesh_Metasequoia       instances=43     Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/Mesh_Metasequoia.prefab
+hole-05 — 1695 tree instance(s), 4 prototype(s) listed:
+    [0] MESH_JapaneseBlack_01  instances=114    Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_JapaneseBlack_01.prefab
+    [1] MESH_JapaneseBlack_01_Var1 instances=641    Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_JapaneseBlack_01_Var1.prefab
+    [2] MESH_ScottishPine_01   instances=454    Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_ScottishPine_01.prefab
+    [3] Mesh_Metasequoia       instances=486    Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/Mesh_Metasequoia.prefab
+hole-06 — 434 tree instance(s), 6 prototype(s) listed:
+    [0] Fir 01                 instances=75     Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/BPS/Fir 01.prefab
+    [1] Fir 02                 instances=65     Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/BPS/Fir 02.prefab
+    [2] Fir 03                 instances=81     Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/BPS/Fir 03.prefab
+    [3] Fir 04                 instances=66     Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/BPS/Fir 04.prefab
+    [4] Fir 05                 instances=63     Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/BPS/Fir 05.prefab
+    [5] Fir 06                 instances=84     Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/BPS/Fir 06.prefab
+hole-07 — 666 tree instance(s), 4 prototype(s) listed:
+    [0] MESH_JapaneseBlack_01  instances=42     Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_JapaneseBlack_01.prefab
+    [1] MESH_JapaneseBlack_01_Var1 instances=286    Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_JapaneseBlack_01_Var1.prefab
+    [2] MESH_ScottishPine_01   instances=157    Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_ScottishPine_01.prefab
+    [3] Mesh_Metasequoia       instances=181    Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/Mesh_Metasequoia.prefab
+hole-08 — 1968 tree instance(s), 4 prototype(s) listed:
+    [0] MESH_JapaneseBlack_01  instances=123    Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_JapaneseBlack_01.prefab
+    [1] MESH_JapaneseBlack_01_Var1 instances=754    Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_JapaneseBlack_01_Var1.prefab
+    [2] MESH_ScottishPine_01   instances=532    Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_ScottishPine_01.prefab
+    [3] Mesh_Metasequoia       instances=559    Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/Mesh_Metasequoia.prefab
+hole-09 — 340 tree instance(s), 4 prototype(s) listed:
+    [0] MESH_JapaneseBlack_01  instances=22     Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_JapaneseBlack_01.prefab
+    [1] MESH_JapaneseBlack_01_Var1 instances=130    Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_JapaneseBlack_01_Var1.prefab
+    [2] MESH_ScottishPine_01   instances=93     Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_ScottishPine_01.prefab
+    [3] Mesh_Metasequoia       instances=95     Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/Mesh_Metasequoia.prefab
+hole-10 — 769 tree instance(s), 4 prototype(s) listed:
+    [0] MESH_JapaneseBlack_01  instances=60     Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_JapaneseBlack_01.prefab
+    [1] MESH_JapaneseBlack_01_Var1 instances=294    Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_JapaneseBlack_01_Var1.prefab
+    [2] MESH_ScottishPine_01   instances=209    Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_ScottishPine_01.prefab
+    [3] Mesh_Metasequoia       instances=206    Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/Mesh_Metasequoia.prefab
+hole-11 — 470 tree instance(s), 4 prototype(s) listed:
+    [0] MESH_JapaneseBlack_01  instances=33     Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_JapaneseBlack_01.prefab
+    [1] MESH_JapaneseBlack_01_Var1 instances=181    Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_JapaneseBlack_01_Var1.prefab
+    [2] MESH_ScottishPine_01   instances=138    Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_ScottishPine_01.prefab
+    [3] Mesh_Metasequoia       instances=118    Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/Mesh_Metasequoia.prefab
+hole-12 — 1505 tree instance(s), 4 prototype(s) listed:
+    [0] MESH_JapaneseBlack_01  instances=90     Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_JapaneseBlack_01.prefab
+    [1] MESH_JapaneseBlack_01_Var1 instances=602    Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_JapaneseBlack_01_Var1.prefab
+    [2] MESH_ScottishPine_01   instances=382    Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_ScottishPine_01.prefab
+    [3] Mesh_Metasequoia       instances=431    Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/Mesh_Metasequoia.prefab
+hole-13 — 1709 tree instance(s), 4 prototype(s) listed:
+    [0] MESH_JapaneseBlack_01  instances=114    Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_JapaneseBlack_01.prefab
+    [1] MESH_JapaneseBlack_01_Var1 instances=721    Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_JapaneseBlack_01_Var1.prefab
+    [2] MESH_ScottishPine_01   instances=416    Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_ScottishPine_01.prefab
+    [3] Mesh_Metasequoia       instances=458    Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/Mesh_Metasequoia.prefab
+hole-14 — 1423 tree instance(s), 4 prototype(s) listed:
+    [0] MESH_JapaneseBlack_01  instances=90     Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_JapaneseBlack_01.prefab
+    [1] MESH_JapaneseBlack_01_Var1 instances=562    Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_JapaneseBlack_01_Var1.prefab
+    [2] MESH_ScottishPine_01   instances=375    Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_ScottishPine_01.prefab
+    [3] Mesh_Metasequoia       instances=396    Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/Mesh_Metasequoia.prefab
+hole-15 — 292 tree instance(s), 4 prototype(s) listed:
+    [0] MESH_JapaneseBlack_01  instances=24     Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_JapaneseBlack_01.prefab
+    [1] MESH_JapaneseBlack_01_Var1 instances=107    Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_JapaneseBlack_01_Var1.prefab
+    [2] MESH_ScottishPine_01   instances=82     Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_ScottishPine_01.prefab
+    [3] Mesh_Metasequoia       instances=79     Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/Mesh_Metasequoia.prefab
+hole-16 — 426 tree instance(s), 4 prototype(s) listed:
+    [0] MESH_JapaneseBlack_01  instances=25     Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_JapaneseBlack_01.prefab
+    [1] MESH_JapaneseBlack_01_Var1 instances=162    Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_JapaneseBlack_01_Var1.prefab
+    [2] MESH_ScottishPine_01   instances=120    Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_ScottishPine_01.prefab
+    [3] Mesh_Metasequoia       instances=119    Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/Mesh_Metasequoia.prefab
+hole-17 — 834 tree instance(s), 4 prototype(s) listed:
+    [0] MESH_JapaneseBlack_01  instances=64     Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_JapaneseBlack_01.prefab
+    [1] MESH_JapaneseBlack_01_Var1 instances=303    Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_JapaneseBlack_01_Var1.prefab
+    [2] MESH_ScottishPine_01   instances=218    Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_ScottishPine_01.prefab
+    [3] Mesh_Metasequoia       instances=249    Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/Mesh_Metasequoia.prefab
+hole-18 — 710 tree instance(s), 4 prototype(s) listed:
+    [0] MESH_JapaneseBlack_01  instances=30     Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_JapaneseBlack_01.prefab
+    [1] MESH_JapaneseBlack_01_Var1 instances=292    Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_JapaneseBlack_01_Var1.prefab
+    [2] MESH_ScottishPine_01   instances=198    Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/MESH_ScottishPine_01.prefab
+    [3] Mesh_Metasequoia       instances=190    Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Original/Mesh_Metasequoia.prefab
+
+== Totals across the 18 shipping holes ==
+prefab                      listed on holes    total instances
+MESH_JapaneseBlack_01_Var1               17               6486
+Mesh_Metasequoia                         17               4630
+MESH_ScottishPine_01                     17               4358
+MESH_JapaneseBlack_01                    17               1070
+Fir 06                                    1                 84
+Fir 03                                    1                 81
+Fir 01                                    1                 75
+Fir 04                                    1                 66
+Fir 02                                    1                 65
+Fir 05                                    1                 63
