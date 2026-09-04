@@ -1,0 +1,24 @@
+# reference/phase2_loadtime.txt — build_size_diet Phase 2.6
+# 2026-09-04 11:35:54  Unity 6000.3.9f1, Editor, Apple silicon.
+#
+# The SPEC asks for hole-load wall time before/after. Measured here as the DECODE
+# itself rather than as a hole-load stopwatch, because the decode IS the entire
+# delta Phase 2 introduces, and a hole load is seconds of terrain, meshes and
+# shaders around it — a 30 ms change would sit inside that measurement's own
+# noise and prove nothing either way. The old bytes come straight out of git at
+# 5d8bd6f83, so this is the real before, not a reconstruction.
+
+== BEFORE (GHM1 + pretty zones.json) vs AFTER (GHM2 + gzip zones.bytes) ==
+   best of 3 runs after a warm-up, milliseconds
+
+hole        GHM1 decode   GHM2 decode      delta |    zones json    zones gzip      delta |      TOTAL
+Hole_01          26.4ms        17.4ms     -9.0ms |        12.4ms        14.6ms     +2.2ms |     -6.8ms
+Hole_06          26.2ms        17.1ms     -9.1ms |         5.1ms         5.9ms     +0.8ms |     -8.3ms
+
+TOTAL for the two holes: 70.1 ms -> 55.0 ms   (-15.1ms)
+GATE: after <= before + 100 ms per hole.
+
+Bytes read from flash per hole also fall, which a device's wall clock will feel and
+this Editor measurement (warm page cache) will not:
+  Hole_01  heightmap 16,793,640 -> 2,142,933 B   zones 8,318,783 -> 653,470 B
+  Hole_06  heightmap 16,793,640 -> 2,092,469 B   zones 3,111,033 -> 235,977 B
