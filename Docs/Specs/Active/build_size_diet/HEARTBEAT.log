@@ -17,3 +17,9 @@ OTHER SESSION ACTIVE: Assets/Editor/StandaloneBuildPreprocessor.cs (M) +
   Assets/Tests/EditMode/StandaloneResourceStashTests.cs (??) are NOT mine — never staged.
 REMAINING: post-change build measurement (needs Unity CLOSED), hole-load timings,
   smoke-bot AtRest, Phase 4 fonts, Phase 5 A/B, standalone build, reports.
+
+=== 12:19:16 task complete, READY_FOR_ARCHITECT_REVIEW ===
+install 1839.5 -> 1009.1 MiB (gate 1024, PASS); download 555.4 -> 304.6 MiB (gate 350, PASS)
+iOS-Full rebuilt last so Builds/iOS-Full holds the GAME, not the standalone.
+NOT DONE: smoke-bot AtRest (Hole 1+6); .ipa not re-archived; LZ4HC load-time (player-only).
+OPEN ON CESAR: LZ4HC adoption, font option a/b/c, Phase 5 (argued against).

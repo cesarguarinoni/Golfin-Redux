@@ -4,6 +4,51 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
+## 2026-09-04 — `build_size_diet`: the install is 1839.5 → 1009.1 MiB, and three of the brief's headline numbers were wrong
+
+Cesar: *"app is like 700 MB, seems excessive."* The 711 MB was the `.ipa`; the number a player
+lives with is the **install**, and it was 1.80 GB. Both gates now pass on a real iOS-Full build
+(2655), measured with `Docs/Scripts/measure_ios_data.sh`, which reproduces the shipped `.ipa` to
+within 0.3%:
+
+| | before | after | gate |
+|---|---|---|---|
+| **Install** (Payload uncompressed) | 1839.5 MiB | **1009.1 MiB** | ≤ 1024 ✅ |
+| **Payload-compressed** (download) | 555.4 MiB | **304.6 MiB** | ≤ 350 ✅ |
+
+−830 MiB, −45%, with no visible change that survives the scene's own frame-to-frame noise.
+Spec + evidence: `Docs/Specs/Active/build_size_diet/` (`STATUS.md` first).
+
+**What actually cost the megabytes was not what the brief said.**
+- The 457 MiB `sharedassets8.assets.resS` is **PBR Bridge** — 53 PNGs at 4096 with no iPhone
+  override, for a decorative bridge on two holes. The tree packs the brief blamed
+  (TreePackVol.1, Simple Trees, Mobile_Tree_Bundle, Pine Trees, MicroVerse-Extras) ship **zero
+  bytes**; 2.9 GiB of them sit on disk referenced by nothing. Now 460.7 → 17.3 MiB.
+- The placed trees are not `Spruce 1/3` but `Trees(2025)` Japanese Black / Scottish Pine /
+  Metasequoia (16,544 instances) plus BSP Fir on hole 06. **Every prototype has instances, so
+  none could be removed** — the audit's answer is "no change", which is a result.
+- `HoleData` 385 → 43 MiB **losslessly**: heightmaps are int32 Q16.16 feeding an fp-deterministic
+  sim, so `GHM2` is the same ints as row deltas through Deflate (8×), and zones are gzip of
+  whitespace-minified JSON (13.5×). Proved by a SECOND decoder in Python reading the original
+  bytes out of git — 18/18 heightmaps SHA-identical, 19/19 zones field-identical — and by running
+  the full EditMode suite against BOTH datasets: 2406 / 2403 / 0 failed, identical. GHM2 also
+  decodes **faster** than GHM1 (17.4 vs 26.4 ms).
+
+**Three things are Cesar's call and nothing was applied to them.**
+1. **LZ4HC** (Phase 0b): −63% install on the pre-diet tree but only −4% download, because LZ4
+   output cannot be deflated again. Both gates pass without it; it is margin.
+2. **The JP font**: measured (a) 8.71 MiB · (b) static atlas **≈25 MiB, three times WORSE than
+   today** · (c) subset 2.56 MiB with covered glyphs byte-identical and rare kanji → tofu.
+   The render weight is **Thin** (`fvar` default 100), measured off the TMP asset, not assumed.
+3. **Phase 5 alphamaps — not recommended as specified.** It is not a −120 MiB texture saving:
+   `HoleGeoImporter` hardcodes 1024 (so the change un-does itself on the next import) and
+   `BakeZoneJsonTool` bit-packs the OB layer out of `GetAlphamaps` into `ZoneData.obMask`, so
+   512 puts 1.13 m of slop on Hole 1's out-of-bounds line.
+
+**Still open:** the smoke-bot AtRest run on Hole 1 + 6 was NOT done (see STATUS § Not done for
+what stands in its place); the `.ipa` was not re-archived, so its file-size line is still 2632's.
+
+---
 ## 2026-09-04 — standalone round 2 DONE (approved) — build 2637 on TestFlight
 
 Both specs moved to `Docs/Specs/Completed/`: `gps_standalone_shell` and
