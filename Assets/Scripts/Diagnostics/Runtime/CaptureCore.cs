@@ -126,6 +126,76 @@ namespace Golfin.Diagnostics.Runtime
             return Path.GetFullPath(path);
         }
 
+        // ── SnapCamera ─────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Renders <paramref name="cam"/> to a PNG at an exact pixel size, in EDIT MODE or play
+        /// mode, and returns the absolute path.
+        ///
+        /// WHY THIS EXISTS (build_size_diet Phase 1, 2026-09-04).
+        ///   Every other entry point here captures the GAME VIEW, which is the right instrument
+        ///   for anything a player navigates to. It is the wrong one for an A/B on a texture's
+        ///   resolution: that needs the SAME camera transform in two different states of the
+        ///   project, on a scene opened in the editor, at a fixed device resolution — and the
+        ///   Game View gives none of those. The alternative was a per-task hand-rolled
+        ///   camera+RT+ReadPixels, which CLAUDE.md § Screenshots rule 6 bans by name after the
+        ///   loop_v1 iter-12 scene corruption; so the case is added here instead.
+        ///
+        ///   The camera is rendered exactly as configured. Nothing is toggled, no GameObject is
+        ///   activated or deactivated, no scene state is touched — the whole failure mode rule 6
+        ///   exists to prevent.
+        ///
+        /// The caller owns <paramref name="cam"/> and must destroy it; that is deliberate, so a
+        /// capture rig can position one camera once and take several frames through it.
+        /// </summary>
+        /// <param name="label">File stem; the timestamp is appended as everywhere else here.</param>
+        /// <param name="outputPath">Optional exact path. When given, no timestamp is added — an
+        /// A/B pair wants stable, comparable file names, not two timestamps.</param>
+        public static string SnapCamera(Camera cam, int width, int height, string label,
+                                        string outputPath = null)
+        {
+            if (cam == null) { Debug.LogError("[CaptureCore] SnapCamera: camera is null."); return string.Empty; }
+            if (BlockDuringRecording("SnapCamera", label)) return string.Empty;
+            if (width <= 0 || height <= 0)
+            {
+                Debug.LogError($"[CaptureCore] SnapCamera: bad size {width}x{height}.");
+                return string.Empty;
+            }
+
+            string path = outputPath ?? $"{OutDir}/{label}_{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.png";
+            Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path)));
+
+            var rt = new RenderTexture(width, height, 24, RenderTextureFormat.ARGB32)
+            {
+                antiAliasing = 1,
+                useMipMap = false,
+            };
+            var prevTarget = cam.targetTexture;
+            var prevActive = RenderTexture.active;
+            Texture2D tex = null;
+            try
+            {
+                cam.targetTexture = rt;
+                cam.Render();
+                RenderTexture.active = rt;
+                tex = new Texture2D(width, height, TextureFormat.RGBA32, false, false);
+                tex.ReadPixels(new Rect(0, 0, width, height), 0, 0);
+                tex.Apply(false);
+                File.WriteAllBytes(path, tex.EncodeToPNG());
+            }
+            finally
+            {
+                cam.targetTexture = prevTarget;
+                RenderTexture.active = prevActive;
+                if (tex != null) UnityEngine.Object.DestroyImmediate(tex);
+                rt.Release();
+                UnityEngine.Object.DestroyImmediate(rt);
+            }
+
+            Debug.Log($"[CaptureCore] SnapCamera wrote {path} ({width}x{height})");
+            return Path.GetFullPath(path);
+        }
+
         // ── SnapPlayModeSafe ───────────────────────────────────────────────────
 
         /// <summary>
