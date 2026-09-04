@@ -133,3 +133,45 @@ Fir 01                                    1                 75
 Fir 04                                    1                 66
 Fir 02                                    1                 65
 Fir 05                                    1                 63
+
+== Phase 5 — WHY THE A/B PAIR WAS NOT PRODUCED (Cesar's question, 2026-09-04) ==
+
+Cesar asked how an alphamap change interacts with the HoleGeo import (which has its own
+resolution) and with the baked physics. Both answers are in the code, and together they
+change what Phase 5 IS.
+
+1. HOLEGEO OWNS THE RESOLUTION, SO THE CHANGE IS NOT DURABLE.
+   HoleGeoImporter.cs:864 and :1325 both hardcode `terrainData.alphamapResolution = 1024`,
+   and the whole splat build downstream — `resampledZones`, the layer weights, the OB border
+   distance field — is written in `alphaRes` units. HoleLiteImporter.cs:727/1194 does the
+   same. Editing a TerrainData to 512 therefore survives exactly until the next re-import of
+   that hole, which silently restores 1024. A durable Phase 5 has to change the IMPORTER
+   constant; anything else is a change that quietly un-does itself, on one hole at a time.
+
+2. IT REACHES THE BAKED PHYSICS, THROUGH THE OB MASK.
+   BakeZoneJsonTool.cs:542 reads `td.GetAlphamaps(0, 0, alphamapWidth, alphamapHeight)` and
+   bit-packs the OB-named layer into `ZoneData.obMask` — the mask BakedZoneClassifier answers
+   SurfaceType.OOB from. The shipped masks are exactly the alphamap resolution; verified on
+   the converted data:
+
+     Hole_01  obMask 1024x1024  world 576.2 x 261.2 m   1,048,576 bits
+     Hole_06  obMask 1024x1024  world 228.9 x 100.6 m   1,048,576 bits
+
+   At 512 the OB boundary is resampled at half resolution: on Hole 1 that is
+   576.2 m / 512 = 1.13 m of positional slop on the out-of-bounds line (0.45 m on Hole 6).
+   Existing zones.json keep their 1024 masks until re-baked, so the drift would appear later,
+   per hole, as holes are re-baked for unrelated reasons — the worst possible shape.
+   Hole 6's OB is that perimeter mask and not the lake (memory:
+   reference_hole6_ob_is_perimeter_mask_not_lake), so this is not a hypothetical path.
+
+CONCLUSION. Phase 5 is not a -120 MiB texture-memory saving with a visual A/B as its gate.
+It is a change to the resolution at which out-of-bounds is decided, and its gate would be an
+OB-boundary comparison, not a fairway render. An A/B render pair would have answered only the
+easy half of the question and implied the hard half was settled.
+
+If the size is still wanted, the clean order is: decouple the OB mask bake from
+alphamapResolution first (bake the mask at 1024 regardless of the splat resolution — it is a
+separate concern that happens to share a grid today), and only then drop the splat. That is a
+separate task, not a "go" on this one.
+
+STATUS: no terrain modified, no importer modified. The per-hole table above stands.
