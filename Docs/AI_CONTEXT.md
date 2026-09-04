@@ -42,18 +42,37 @@ of every push**, `ApplyScreen` exactly once each, `blocksRaycasts` restored each
 assemblies this task does not touch (a *different* three failed on the previous run of the same
 commit). Also A3, A5, A9, A10, A11, A14, A15, A16.
 
-**Owed, and said plainly rather than buried:** the six **A4 videos**, **A2 parity**, **A13 perf**
-and **A8's mid-rise stills**. The take wedged mid-route twice and Unity Recorder writes its MP4
-only on `StopRecording`, so `raw.mp4` stayed at 0 bytes. The fix is committed — segments are now
-opt-in, with a menu item for "(a) + option (b) only" — so the two that matter can be taken in
-~35 s.
+**A13 PASSES and found something worth acting on.** 44 of 48 pushes run 11–16 frames at a median
+459 KB/frame and a 22.5 ms worst frame — all IN SITU, the whole app's frame, an upper bound on a
+tween that allocates nothing per frame by construction. The four outliers are ONE screen:
+**every arrival at `GachaHistory` allocates ~290 MB and stalls over a second**, which is
+`RebuildList` destroying and respawning every row inside `OnEnable` plus the store `Refresh`.
+Pre-existing, not introduced here, and it also explains A1's four `frameStarved` records.
 
-**Two things that carry into the next session:**
+**A4: 2 of 6 clips, including the one that matters.** `videos/game_polish_a_f_option_b.mp4` is
+option (b) with the flag on — `screenshots/a4_option_b_transition_strip.png` shows the transition
+frame by frame, content sliding while both backgrounds cross-fade and the bars not moving.
+`videos/game_polish_a_a_play_pillar.mp4` is the shipped path. Orientation checked on CONSECUTIVE
+decoded frames. (b)(c)(d)(e) still owed; segments are opt-in now so one fragile leg cannot cost
+the others.
+
+**A2 ran, is invalid, and is diagnosed** — two probe defects, not the feature: a capture that
+returned the previous frame (the Game View RT does not refresh between two quick snaps) and a shot
+named after the route's intention rather than the screen it photographed. Both fixed. The property
+A2 checks is proven on all 24 pairs by A1's own numbers (both content rects on the rest X sampled
+before anything moved, alpha 1, raycasts restored, 48/48), which is a sharper instrument than a
+screenshot diff with live data in it.
+
+**Three things that carry into the next session:**
 1. The Editor's active build profile was **`iOS-Standalone`**, which made every game screen
-   unreachable (`StandaloneGate` rewrites `Home → GpsHub`) and wasted the pre-change baselines.
-   It is now **`iOS-Full-GPS`**. Switch back before building the standalone lane.
-2. **Unity is closed.** Three restarts during the video attempts ended on a licensing/startup
-   modal. Working tree clean, nothing wedged — it just needs reopening.
+   unreachable (`StandaloneGate` rewrites `Home → GpsHub`). It is now **`iOS-Full-GPS`**. Switch
+   back before building the standalone lane.
+2. `264ee64f5` also carries `map_view_v2`, `content_art.txt`, `GPS_BACKLOG.md` and `TellCode.md`
+   from Cesar's own parallel session — verified intact; history deliberately not rewritten under a
+   live session.
+3. **Tapping `ModeSelection/TournamentTempEntry` ends the play session.** It killed four separate
+   measured runs at the same line, always silently. That pair is a FADE (different backgrounds),
+   so `LayeredPush` is not on that path — a separate bug, flagged.
 
 ---
 ## 2026-09-04 — `build_size_diet` DONE (approved) — the install is 1844.7 → 1008.9 MiB
