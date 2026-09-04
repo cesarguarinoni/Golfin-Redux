@@ -46,7 +46,9 @@ namespace Golfin.Gameplay.Tests
 
         const string IgnoreReason = "Known-failing — see Docs/Specs/Queued/AIRBORNE_GROUND_LEVEL_DETECTION.md (M3.5).";
 
-        const string ZonesJsonPathFmt      = "Assets/Resources/HoleData/lomond-country-club/{0}/zones.json";
+        // build_size_diet Phase 2: the hole FOLDER, resolved to zones.bytes (gzip) or a legacy
+        // zones.json by HoleDataIO.ZonesDiskPath — the test must not hard-code the extension.
+        const string HoleFolderFmt         = "Assets/Resources/HoleData/lomond-country-club/{0}";
         const string HeightmapBytesPathFmt = "Assets/Resources/HoleData/lomond-country-club/{0}/heightmap.bytes";
 
         struct HoleProviders
@@ -123,11 +125,12 @@ namespace Golfin.Gameplay.Tests
         {
             if (s_HoleCache.TryGetValue(holeId, out var hp) && hp.valid) return hp;
 
-            string zonesPath = string.Format(ZonesJsonPathFmt, holeId);
+            string holeFolder = string.Format(HoleFolderFmt, holeId);
             // Both paths are relative to the project root (under Assets/Resources/).
+            string zonesPath = HoleDataIO.ZonesDiskPath(holeFolder);
             string hmPath = string.Format(HeightmapBytesPathFmt, holeId);
 
-            if (!File.Exists(zonesPath) || !File.Exists(hmPath))
+            if (zonesPath == null || !File.Exists(hmPath))
             {
                 hp = new HoleProviders { valid = false };
                 s_HoleCache[holeId] = hp;
@@ -150,7 +153,7 @@ namespace Golfin.Gameplay.Tests
             }
 
             var scene = EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Additive);
-            var data  = ZoneData.FromJson(File.ReadAllText(zonesPath));
+            var data  = ZoneData.FromJson(HoleDataIO.LoadZonesTextFromDisk(holeFolder));
             var clf   = new BakedZoneClassifier(data);
             var hm    = HeightmapLoader.LoadFromBytes(File.ReadAllBytes(hmPath));
             if (hm == null)

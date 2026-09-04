@@ -168,7 +168,9 @@ namespace Golfin.EditorTools.Missions
             var result = new HoleResult { hole = hole };
 
             string greenPath = $"Assets/Resources/HoleData/{CourseSlug}/Hole_{hole:D2}/green.json";
-            string zonesPath = $"Assets/Resources/HoleData/{CourseSlug}/Hole_{hole:D2}/zones.json";
+            string holeFolder = $"Assets/Resources/HoleData/{CourseSlug}/Hole_{hole:D2}";
+            // Phase 2: zones.bytes (gzip) if present, else a legacy zones.json.
+            string zonesPath = Golfin.Physics.Runtime.HoleDataIO.ZonesDiskPath(holeFolder);
 
             // LoadFromDisk, not LoadFromResources: the Resources cache is stale straight after
             // an AssetDatabase.Refresh, which is exactly when a bake tends to run.
@@ -181,18 +183,18 @@ namespace Golfin.EditorTools.Missions
             }
             result.pinCount = green.GetPinCandidates()?.Count ?? 0;
 
-            if (!File.Exists(zonesPath))
+            if (zonesPath == null)
             {
-                result.errors.Add($"no zones.json at {zonesPath}");
+                result.errors.Add($"no zones.bytes / zones.json in {holeFolder}");
                 foreach (var id in ShortAreaIds) result.areas.Add(new AreaResult { areaId = id });
                 return result;
             }
 
             ZoneData zones;
-            try { zones = ZoneData.FromJson(File.ReadAllText(zonesPath)); }
+            try { zones = ZoneData.FromJson(Golfin.Physics.Runtime.HoleDataIO.DecodeZonesText(File.ReadAllBytes(zonesPath))); }
             catch (Exception ex)
             {
-                result.errors.Add($"zones.json parse failed — {ex.Message}");
+                result.errors.Add($"zones parse failed ({zonesPath}) — {ex.Message}");
                 foreach (var id in ShortAreaIds) result.areas.Add(new AreaResult { areaId = id });
                 return result;
             }

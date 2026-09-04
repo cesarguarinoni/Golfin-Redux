@@ -1,0 +1,53 @@
+# reference/phase2_parity.txt — build_size_diet Phase 2 physics parity gate
+# Unity 6000.3.9f1, Editor EditMode runner via MCP tests-run, 2026-09-04.
+
+== The experiment ==
+The SAME code was run against BOTH data formats, by swapping only the bytes under
+Assets/Resources/HoleData:
+
+  AFTER  : the converted tree — GHM2 heightmaps + gzip zones.bytes
+  BEFORE : `git checkout 5d8bd6f83 -- Assets/Resources/HoleData` (the commit before the
+           conversion) — GHM1 heightmaps + pretty zones.json, zones.bytes removed so
+           Resources.Load had exactly one candidate
+  AFTER  : restored from a byte-for-byte copy taken before the swap, and re-run
+
+That ordering matters: running only "after" would show the suite is green, not that it is
+UNCHANGED. And the BEFORE run doubles as proof that the GHM1 / zones.json fallback paths in
+HeightmapLoader and HoleDataIO actually work rather than merely being written down.
+
+== Full EditMode suite (every assembly, no filter) ==
+
+  run                      total   passed   FAILED   skipped   duration
+  AFTER  (GHM2 + gzip)      2406     2403        0         3   00:02:14
+  BEFORE (GHM1 + json)      2406     2403        0         3   00:02:15
+  AFTER  (re-run)           2406     2403        0         3   00:02:11
+
+  Identical in every column. The 3 skips are the pre-existing HoleCompleteDriverTests
+  Stage-C1 ignores, unrelated to this task.
+
+  (2406 includes the 7 new HoleDataFormatTests added by this phase; the pre-task total
+   was 2399. Every one of the three runs above is on the post-change code, so the
+   comparison isolates the DATA, which is what Phase 2 changed.)
+
+== Named suites, AFTER ==
+
+  Golfin.Physics.Tests    391 selected — 388 passed, 0 failed, 3 skipped
+  Golfin.Gameplay.Tests   401 selected — 401 passed, 0 failed   (RealHoleTerrainTests,
+                                          BakedPivotRegressionTests, MapViewAimingTests)
+  Golfin.Course.Tests      26 selected —  26 passed, 0 failed   (GreenTopologyTests)
+
+  Golfin.Physics.Tests.HoleDataFormatTests.EveryShippedHeightmap_DecodesAndRoundTripsBitIdentically
+    ran on its own and PASSED in 37.5 s — the tripwire that proves the new suite is
+    discovered and executed, not silently filtered out (tests-run reports a project-wide
+    TotalTests of 2406 whatever the filter, so a green summary alone proves nothing).
+
+== Import > Bake Tree Obstacles > Validate All Holes ==
+
+  AllPass=True — 18/18 PASS across bake / standalone / start areas.
+  (Also run inside the build itself: CIBuild's tree-bake drift gate reported PASS.)
+
+== Byte-level parity ==
+
+  See holedata_conversion.txt: a second decoder, in Python, reading the ORIGINAL bytes out
+  of git, agrees sample-for-sample (SHA-256 of the decoded int32[] per hole) and
+  field-for-field (parsed JSON) with what now ships.

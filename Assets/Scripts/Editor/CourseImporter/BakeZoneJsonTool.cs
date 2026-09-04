@@ -71,6 +71,14 @@ namespace Golfin.Editor.CourseImporter
         private const string ResourcesRoot = "Assets/Resources/HoleData";
 
         /// <summary>
+        /// build_size_diet Phase 2 debugging aid: also write the old pretty-printed
+        /// <c>zones.json</c> next to <c>zones.bytes</c> so a human can read a bake. OFF, and it
+        /// must stay off in a commit — with both files present <c>Resources.Load(".../zones")</c>
+        /// has two candidates and picks one of them by luck.
+        /// </summary>
+        public static bool WritePrettyZonesJson = false;
+
+        /// <summary>
         /// §4.2 Completeness gate — minimum pixel count in the source raster for a zone type
         /// to be considered "meaningful" and required in the baked output.
         /// Types below this threshold produce a warning instead of a hard failure.
@@ -182,14 +190,43 @@ namespace Golfin.Editor.CourseImporter
 
             string outDir = Path.Combine(ResourcesRoot, courseSlug, holeId);
             Directory.CreateDirectory(outDir);
-            string outPath = Path.Combine(outDir, "zones.json");
-            File.WriteAllText(outPath, data.ToJson(pretty: true));
+
+            // build_size_diet Phase 2 — this now writes zones.bytes: gzip of the minified JSON.
+            // Pretty-printed zones.json was 96.9 MiB across the course and ALL of it shipped,
+            // because everything under Resources/ goes into the player whether it is reached or
+            // not; the same data as gzip is 7.1 MiB and parses faster. HoleDataIO reads both, so
+            // a hole re-baked here still loads on a tree that has not been converted.
+            //
+            // WritePrettyZonesJson is the escape hatch for a human who wants to read one — it
+            // writes the .json BESIDE the .bytes, and Resources.Load would then be ambiguous, so
+            // it is off by default and must never be left on in a commit.
+            string outPath = Path.Combine(outDir, "zones.bytes");
+            string json = data.ToJson(pretty: false);
+            File.WriteAllBytes(outPath, Golfin.Physics.Runtime.HoleDataIO.EncodeZones(json));
             AssetDatabase.ImportAsset(outPath);
+
+            // A hole re-baked after the conversion would otherwise keep its stale pre-conversion
+            // zones.json alongside the new .bytes, and Resources.Load(".../zones") would pick one
+            // of the two by luck.
+            string stale = Path.Combine(outDir, "zones.json");
+            if (!WritePrettyZonesJson && File.Exists(stale))
+            {
+                AssetDatabase.DeleteAsset(stale.Replace('\\', '/'));
+                Debug.Log($"[BakeZoneJsonTool] {holeId}: removed the superseded zones.json.");
+            }
+            else if (WritePrettyZonesJson)
+            {
+                File.WriteAllText(stale, data.ToJson(pretty: true));
+                AssetDatabase.ImportAsset(stale);
+                Debug.LogWarning($"[BakeZoneJsonTool] {holeId}: WritePrettyZonesJson is ON — a human-readable "
+                               + "zones.json was written next to zones.bytes. Resources.Load is AMBIGUOUS while "
+                               + "both exist; delete the .json before building.");
+            }
 
             int totalPolys = 0;
             foreach (var z in data.zones) totalPolys += z.polygons.Count;
             Debug.Log($"[BakeZoneJsonTool] {holeId}: {data.zones.Count} zone groups, "
-                    + $"{totalPolys} polygons → {outPath}");
+                    + $"{totalPolys} polygons → {outPath} ({new FileInfo(outPath).Length / 1024} KiB gzip)");
 
             if (weOpened)
                 EditorSceneManager.CloseScene(loaded, removeScene: true);

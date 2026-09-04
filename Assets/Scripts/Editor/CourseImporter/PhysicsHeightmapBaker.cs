@@ -174,28 +174,30 @@ namespace Golfin.CourseImport
                 return null;
             }
 
-            // Write binary file
-            using (var fs = File.Open(outPath, FileMode.Create, FileAccess.Write))
-            using (var bw = new BinaryWriter(fs))
-            {
-                // Magic "GHM1"
-                bw.Write((byte)'G');
-                bw.Write((byte)'H');
-                bw.Write((byte)'M');
-                bw.Write((byte)'1');
-                bw.Write((int)1);          // version
-                bw.Write((int)res);        // resolution
-                bw.Write((float)size.x);   // sizeX
-                bw.Write((float)size.z);   // sizeZ
-                bw.Write((float)pos.x);    // posX
-                bw.Write((float)pos.y);    // posY
-                bw.Write((float)pos.z);    // posZ
-                bw.Write((int)1);          // format = Q16.16
+            // Write binary file.
+            //
+            // build_size_diet Phase 2 — GHM2, not GHM1: the same header, then the same int32
+            // Q16.16 samples as row deltas through Deflate. LOSSLESS, and it has to be: these
+            // feed an fp-deterministic simulation, so a codec that "almost" reproduces a sample
+            // moves where the ball comes to rest. 16.0 MiB per hole becomes ~2.0 MiB, and
+            // Resources ships all 18 whether the player reaches them or not.
+            //
+            // HeightmapLoader still READS GHM1, so an un-rebaked hole on someone's tree keeps
+            // working; nothing WRITES it any more.
+            var flat = new int[res * res];
+            for (int y = 0; y < res; y++)
+                for (int x = 0; x < res; x++)
+                    flat[y * res + x] = buffer[y, x];
 
-                for (int y = 0; y < res; y++)
-                    for (int x = 0; x < res; x++)
-                        bw.Write(buffer[y, x]);
-            }
+            var encoded = Golfin.Physics.Runtime.HeightmapLoader.EncodeGhm2(
+                new Golfin.Physics.Runtime.HeightmapLoader.Decoded
+                {
+                    res = res,
+                    sizeX = size.x, sizeZ = size.z,
+                    posX = pos.x, posY = pos.y, posZ = pos.z,
+                    heights = flat,
+                });
+            File.WriteAllBytes(outPath, encoded);
 
             long fileSize = new FileInfo(outPath).Length;
             float fileMB = fileSize / (1024f * 1024f);
@@ -217,26 +219,27 @@ namespace Golfin.CourseImport
             int mismatches = 0;
             var rng = new System.Random(42);
 
-            using (var fs = File.OpenRead(path))
-            using (var br = new BinaryReader(fs))
+            // Reads through the real loader rather than skipping 36 bytes and pulling raw ints:
+            // since Phase 2 the payload is a Deflate stream, and a validator that decodes the
+            // file differently from the game is a validator that can pass a broken bake.
+            if (!Golfin.Physics.Runtime.HeightmapLoader.TryDecode(File.ReadAllBytes(path), out var decoded))
             {
-                // Skip header (36 bytes)
-                br.ReadBytes(36);
+                Debug.LogError($"[PhysicsHeightmapBaker] Round-trip validation could not decode {path}.");
+                return 100;
+            }
+            if (decoded.res != res)
+            {
+                Debug.LogError($"[PhysicsHeightmapBaker] Round-trip resolution {decoded.res} != {res}.");
+                return 100;
+            }
 
-                // Read all data into array
-                var readBack = new int[res, res];
-                for (int y = 0; y < res; y++)
-                    for (int x = 0; x < res; x++)
-                        readBack[y, x] = br.ReadInt32();
-
-                for (int i = 0; i < 100; i++)
-                {
-                    int y = rng.Next(res);
-                    int x = rng.Next(res);
-                    float orig = originalHeights[y, x] * elevRange;
-                    float round = FromQ16_16(readBack[y, x]);
-                    if (Math.Abs(orig - round) > 0.001f) mismatches++;
-                }
+            for (int i = 0; i < 100; i++)
+            {
+                int y = rng.Next(res);
+                int x = rng.Next(res);
+                float orig = originalHeights[y, x] * elevRange;
+                float round = FromQ16_16(decoded.heights[y * res + x]);
+                if (Math.Abs(orig - round) > 0.001f) mismatches++;
             }
 
             if (mismatches > 0)

@@ -1,5 +1,6 @@
 using UnityEngine;
 using Golfin.Physics.Runtime.Baked;
+using Golfin.Physics.Runtime;
 using Golfin.Gameplay.UI.HUD;
 
 // Keep in Golfin.Physics.Viewer (same asmdef as PutterGreenReader — needed for
@@ -52,7 +53,7 @@ namespace Golfin.Physics.Viewer
         public void LoadAndBake()
         {
             // Load zones.json for TestGreen (non-course fixture lives under _test/).
-            var zonesAsset = Resources.Load<TextAsset>("HoleData/_test/TestGreen/zones");
+            var zonesAsset = Resources.Load<TextAsset>(HoleDataIO.ZonesResourcePath("_test", "TestGreen"));
             if (zonesAsset == null)
             {
                 Debug.LogError("[TestGreenLabSetup] Resources/HoleData/_test/TestGreen/zones not found. " +
@@ -60,7 +61,8 @@ namespace Golfin.Physics.Viewer
                 return;
             }
 
-            ZoneData zoneData = ZoneData.FromJson(zonesAsset.text);
+            // Phase 2: zones ships gzipped; DecodeZonesText also passes a plain zones.json through.
+            ZoneData zoneData = ZoneData.FromJson(HoleDataIO.DecodeZonesText(zonesAsset));
             if (zoneData == null || zoneData.zones == null || zoneData.zones.Count == 0)
             {
                 Debug.LogError("[TestGreenLabSetup] ZoneData.FromJson returned empty or null data.");

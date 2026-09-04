@@ -225,7 +225,8 @@ namespace Golfin.Editor.GreenAuthoring
 
             try
             {
-                var zoneData = ZoneData.FromJson(ta.text);
+                // Phase 2: zones ships gzipped; DecodeZonesText also passes a plain zones.json through.
+                var zoneData = ZoneData.FromJson(Golfin.Physics.Runtime.HoleDataIO.DecodeZonesText(ta));
                 Resources.UnloadAsset(ta);
 
                 if (zoneData == null || zoneData.zones == null) return;

@@ -3,6 +3,7 @@ using UnityEngine;
 using Golfin.Physics;
 using Golfin.Physics.Math;
 using Golfin.Physics.Runtime.Baked;
+using Golfin.Physics.Runtime;
 using Golfin.Physics.Viewer;
 
 namespace Golfin.Physics.Tests
@@ -38,7 +39,7 @@ namespace Golfin.Physics.Tests
             var asset = Resources.Load<TextAsset>(ZonesPath);
             Assert.IsNotNull(asset, $"Baked zone data missing at Resources/{ZonesPath}");
 
-            _classifier = new BakedZoneClassifier(ZoneData.FromJson(asset.text));
+            _classifier = new BakedZoneClassifier(ZoneData.FromJson(HoleDataIO.DecodeZonesText(asset)));
 
             for (float x = -200f; x <= 200f; x += 2f)
             {

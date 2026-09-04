@@ -1,0 +1,66 @@
+# reference/holedata_conversion.txt — build_size_diet Phase 2
+#
+# The converter (Tools > Golfin > Build Size > Convert HoleData) ran on 2026-09-04 and
+# refused any hole whose round trip differed. What follows is NOT that tool's self-report:
+# it is a SECOND decoder, in Python, reading the ORIGINAL bytes out of git at 5d8bd6f83
+# (the commit before the conversion) and comparing them against what now ships. A tool
+# that verifies its own round trip proves only that it is self-consistent.
+#
+# Reproduce:  python3 Docs/Scripts/verify_ghm2.py
+#             python3 Docs/Scripts/verify_zones_gzip.py
+
+# Decoder: Docs/Scripts/verify_ghm2.py — no Unity, no C#.
+
+hole                                    GHM1 B     GHM2 B     x  sha256(decoded int32[]) GHM1 == GHM2                                  
+lomond-country-club/Hole_01/heightmap.bytes    16793640    2142933   7.8  2d0ab2566a73a4e00e3399b7b3a20eab07ff6e7619e27c86874d068e68e7d590  MATCH
+lomond-country-club/Hole_02/heightmap.bytes    16793640    2058381   8.2  f5a4a0dbaa9b1f4952a2d8b7175533774ec1f96a19a89e4c721e8eb1df8133a3  MATCH
+lomond-country-club/Hole_03/heightmap.bytes    16793640    1661373  10.1  da0c550122ec94515b6bec4597fe36dcdcbb39256c8c8474acafe9abf6bc2fc6  MATCH
+lomond-country-club/Hole_04/heightmap.bytes    16793640    1673458  10.0  0c90cdc4c70842feb39d4c29f9f17f24ebb43e863b1402cafcba2439921e2bdb  MATCH
+lomond-country-club/Hole_05/heightmap.bytes    16793640    2168310   7.7  88c9b7eb3f4b3cc900841b3c98f084cf7e211ce488026efe874a4ea461fd62d8  MATCH
+lomond-country-club/Hole_06/heightmap.bytes    16793640    2092469   8.0  a3b7d545446c941412d4c6b2f08a776f4f6d65a39ce26f4acf3ff424eb303cd4  MATCH
+lomond-country-club/Hole_07/heightmap.bytes    16793640    2985747   5.6  dbac9e68fc08fc067fade85bc0a7b9ebd22c18cd6888821e726e1f886b61b14c  MATCH
+lomond-country-club/Hole_08/heightmap.bytes    16793640    2126981   7.9  a2f4a47dbbc906caa87adb58d86aa9883d78c0bd08a95c2b342a487d4dc58bb1  MATCH
+lomond-country-club/Hole_09/heightmap.bytes    16793640    2134551   7.9  523d29fcc93bb0d228c0793cc9c7b9d5c128a216cb222095e802791c45b92f4c  MATCH
+lomond-country-club/Hole_10/heightmap.bytes    16793640    2229294   7.5  b7d72c3218014856d5f2f9840b2912604a259c3a858e0105f4fa2461c5dbfc71  MATCH
+lomond-country-club/Hole_11/heightmap.bytes    16793640    1913589   8.8  ba5f0988ab24eaab150f4c48439873ac12067a444c14505bbb293d1481c5d507  MATCH
+lomond-country-club/Hole_12/heightmap.bytes    16793640    2258960   7.4  e87476b90f976fbc3bf7b6800a17a0a1207f6db3e298db7db7a1aa8900b93347  MATCH
+lomond-country-club/Hole_13/heightmap.bytes    16793640    2328726   7.2  c9765325160dbc9c80bda401e71972a9ea596b6bfc2f3d9b4498942d27d466ce  MATCH
+lomond-country-club/Hole_14/heightmap.bytes    16793640    2385018   7.0  8de62f4b04d015ef2026b90fbd5e87d3986a2361ba2cb924dedd45b436e3107d  MATCH
+lomond-country-club/Hole_15/heightmap.bytes    16793640    1635242  10.3  e2bb5fcbc7dffafedd2f9777044377547d3d4e30213758d58a199b3e17be22ca  MATCH
+lomond-country-club/Hole_16/heightmap.bytes    16793640    1736042   9.7  b1d8ddb011fd6fc1c6c1d26e69529799b5fbd25708785743357be8ef3af7bf25  MATCH
+lomond-country-club/Hole_17/heightmap.bytes    16793640    1959302   8.6  2b16fbf0efadbe4fd7841e3298c1cb8bd36a9933c3e7f1d31e509d97ce658eaa  MATCH
+lomond-country-club/Hole_18/heightmap.bytes    16793640    2064680   8.1  a5fb3d79f082de0628ed93bd400f3913f2bf861351a9d3c171c356eae3969886  MATCH
+TOTAL                                302285520   37555056   8.0  (288.3 MiB -> 35.8 MiB)
+
+RESULT: every hole decodes to bit-identical Q16.16 samples.
+
+# Decoder: Docs/Scripts/verify_zones_gzip.py — no Unity, no C#.
+
+hole                                   json B    gzip B     x  parsed-JSON equality
+_test/TestGreen/zones.bytes            121691      9172  13.3  IDENTICAL
+lomond-country-club/Hole_01/zones.bytes    8318783    653470  12.7  IDENTICAL
+lomond-country-club/Hole_02/zones.bytes    5054855    362388  13.9  IDENTICAL
+lomond-country-club/Hole_03/zones.bytes    4275032    310059  13.8  IDENTICAL
+lomond-country-club/Hole_04/zones.bytes    2127651    157169  13.5  IDENTICAL
+lomond-country-club/Hole_05/zones.bytes    5594691    399246  14.0  IDENTICAL
+lomond-country-club/Hole_06/zones.bytes    3111033    235977  13.2  IDENTICAL
+lomond-country-club/Hole_07/zones.bytes    5940683    424361  14.0  IDENTICAL
+lomond-country-club/Hole_08/zones.bytes    8309434    608405  13.7  IDENTICAL
+lomond-country-club/Hole_09/zones.bytes    7176871    522735  13.7  IDENTICAL
+lomond-country-club/Hole_10/zones.bytes    4593294    330123  13.9  IDENTICAL
+lomond-country-club/Hole_11/zones.bytes    2409196    168668  14.3  IDENTICAL
+lomond-country-club/Hole_12/zones.bytes    7182420    532543  13.5  IDENTICAL
+lomond-country-club/Hole_13/zones.bytes    9892599    730329  13.5  IDENTICAL
+lomond-country-club/Hole_14/zones.bytes    6647168    500176  13.3  IDENTICAL
+lomond-country-club/Hole_15/zones.bytes    2700554    196587  13.7  IDENTICAL
+lomond-country-club/Hole_16/zones.bytes    4491774    342030  13.1  IDENTICAL
+lomond-country-club/Hole_17/zones.bytes    6506486    489515  13.3  IDENTICAL
+lomond-country-club/Hole_18/zones.bytes    7165561    535134  13.4  IDENTICAL
+TOTAL                               101619776   7508087  13.5  (96.9 MiB -> 7.2 MiB)
+
+RESULT: every hole's parsed zone data is identical.
+
+== Phase 2 total ==
+  Assets/Resources/HoleData on disk: 388 MiB -> 46 MiB
+  heightmaps 288.3 -> 35.8 MiB (8.0x), zones 96.9 -> 7.2 MiB (13.5x)
+  green.json (1.1 MiB) and tree_obstacles.csv (1.4 MiB) untouched — SPEC Phase 2.4.

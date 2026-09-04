@@ -41,7 +41,9 @@ namespace Golfin.Gameplay.Tests
         // the ball starts above the rim instead of behind it.
         const float BunkerEdgeOffsetMeters  = 1.5f;
 
-        const string ZonesJsonPath      = "Assets/Resources/HoleData/lomond-country-club/Hole_01/zones.json";
+        // build_size_diet Phase 2: the hole FOLDER — HoleDataIO picks zones.bytes (gzip) or a
+        // legacy zones.json, so this fixture is indifferent to which one the tree carries.
+        const string HoleFolder         = "Assets/Resources/HoleData/lomond-country-club/Hole_01";
         const string HeightmapBytesPath = "Assets/Resources/HoleData/lomond-country-club/Hole_01/heightmap.bytes";
 
         // Ignore reason linked from the 4 known-failing TestCases below.
@@ -99,9 +101,9 @@ namespace Golfin.Gameplay.Tests
             s_HoleScene = EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Additive);
             if (!s_HoleScene.IsValid()) Assert.Inconclusive("OpenScene returned invalid scene.");
 
-            if (!File.Exists(ZonesJsonPath))
+            if (HoleDataIO.ZonesDiskPath(HoleFolder) == null)
             {
-                Assert.Inconclusive($"zones.json not baked at {ZonesJsonPath}. "
+                Assert.Inconclusive($"no zones.bytes / zones.json in {HoleFolder}. "
                     + "Run GOLFIN > Tools > Bake Zone JSON (Active Hole) on Hole_01_Geo first.");
                 return;
             }
@@ -111,7 +113,7 @@ namespace Golfin.Gameplay.Tests
                 return;
             }
 
-            var data = ZoneData.FromJson(File.ReadAllText(ZonesJsonPath));
+            var data = ZoneData.FromJson(HoleDataIO.LoadZonesTextFromDisk(HoleFolder));
             s_Classifier = new BakedZoneClassifier(data);
             var hm = HeightmapLoader.LoadFromBytes(File.ReadAllBytes(HeightmapBytesPath));
             if (hm == null) Assert.Inconclusive($"Heightmap parse failed for {HeightmapBytesPath}.");

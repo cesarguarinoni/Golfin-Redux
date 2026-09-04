@@ -2086,7 +2086,8 @@ namespace Golfin.Physics.Viewer
             // is gitignored — heightmap MUST live in Resources, not the bake-tool's
             // staging folder).
             string courseSlug = ActiveCourseContext.CurrentCourseSlug;
-            var zonesAsset = Resources.Load<TextAsset>($"HoleData/{courseSlug}/{holeId}/zones");
+            var zonesAsset = Resources.Load<TextAsset>(
+                Golfin.Physics.Runtime.HoleDataIO.ZonesResourcePath(courseSlug, holeId));
             var hmAsset    = Resources.Load<TextAsset>($"HoleData/{courseSlug}/{holeId}/heightmap");
             if (zonesAsset == null)
             {
@@ -2101,7 +2102,9 @@ namespace Golfin.Physics.Viewer
 
             try
             {
-                var data = Golfin.Physics.Runtime.Baked.ZoneData.FromJson(zonesAsset.text);
+                // Phase 2: zones ships gzipped; DecodeZonesText also passes a plain zones.json through.
+                var data = Golfin.Physics.Runtime.Baked.ZoneData.FromJson(
+                    Golfin.Physics.Runtime.HoleDataIO.DecodeZonesText(zonesAsset));
                 _bakedClassifier = new Golfin.Physics.Runtime.Baked.BakedZoneClassifier(data);
 
                 var hm = Golfin.Physics.Runtime.HeightmapLoader.LoadFromBytes(hmAsset.bytes);

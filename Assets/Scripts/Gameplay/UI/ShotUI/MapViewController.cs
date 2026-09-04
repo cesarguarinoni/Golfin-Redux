@@ -952,7 +952,11 @@ namespace Golfin.Gameplay.UI.ShotUI
             // Terrain TREE colliders are reported against the TerrainCollider itself, so the first
             // hit under a canopy is the treetop and the ring vertex used to float ~10-30 m up.
             // Type/layer cannot tell tree from ground; only height above the heightmap can.
-            var hits = Physics.RaycastAll(origin, Vector3.down, 4000f, ~0, QueryTriggerInteraction.Ignore);
+            // UnityEngine.Physics spelled out, not bare `Physics`: this assembly now references
+            // Golfin.Physics.Runtime (build_size_diet Phase 2, for HoleDataIO), and inside
+            // namespace Golfin.Gameplay.UI.ShotUI C# walks the enclosing namespaces — so `Physics`
+            // finds the Golfin.Physics NAMESPACE before it finds UnityEngine's class.
+            var hits = UnityEngine.Physics.RaycastAll(origin, Vector3.down, 4000f, ~0, QueryTriggerInteraction.Ignore);
             System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
             for (int i = 0; i < hits.Length; i++)
             {
@@ -1388,13 +1392,21 @@ namespace Golfin.Gameplay.UI.ShotUI
                 center = new Vector2(v.x, v.y); half = new Vector2(v.z, v.w); return true;
             }
 
-            var asset = Resources.Load<TextAsset>($"HoleData/{courseSlug}/{holeId}/zones");
+            var asset = Resources.Load<TextAsset>(
+                Golfin.Physics.Runtime.HoleDataIO.ZonesResourcePath(courseSlug, holeId));
             if (asset == null) { s_obRectCache[key] = Vector4.zero; return false; }
             try
             {
+                // build_size_diet Phase 2: the shipped zones asset is a gzip of the minified JSON,
+                // so `asset.text` is mojibake now — HoleDataIO gunzips it (and passes a plain,
+                // un-migrated zones.json straight through).
+                //
                 // Extract only the small obMask object (avoid JsonUtility tokenising the multi-MB file —
                 // maskBase64 uses only [A-Za-z0-9+/=], so the first '}' after the object's '{' closes it).
-                string text = asset.text;
+                // Minifying does not disturb that: the object is still "obMask":{ … } and the first
+                // '}' after its '{' still closes it.
+                string text = Golfin.Physics.Runtime.HoleDataIO.DecodeZonesText(asset);
+                if (text == null) { s_obRectCache[key] = Vector4.zero; return false; }
                 int oi = text.IndexOf("\"obMask\"", StringComparison.Ordinal);
                 int ob = oi >= 0 ? text.IndexOf('{', oi) : -1;
                 int oe = ob >= 0 ? text.IndexOf('}', ob) : -1;
