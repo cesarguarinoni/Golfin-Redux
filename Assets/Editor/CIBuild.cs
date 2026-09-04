@@ -309,6 +309,49 @@ namespace Golfin.EditorTools
             }
         }
 
+        /// <summary>
+        /// -executeMethod Golfin.EditorTools.CIBuild.BuildIOSMeasureLz4HC
+        ///
+        /// build_size_diet Phase 0b — MEASUREMENT ONLY, NOT A LANE.
+        ///   Nothing calls this from fastlane and nothing should. It exists to answer one
+        ///   question with numbers instead of an assumption: iOS ships the Data folder
+        ///   UNCOMPRESSED under BuildOptions.None (what every lane above uses), and the 18
+        ///   TerrainData files are 511 MiB of that which no asset-side phase can reach without
+        ///   a fidelity trade. This builds the SAME tree with CompressWithLz4HC so the install /
+        ///   Payload-compressed / per-bucket deltas can be read off a real build.
+        ///
+        ///   The lane default is deliberately untouched: BuildIOS/BuildIOSGps/BuildIOSStandalone
+        ///   still pass BuildOptions.None. Adoption is Cesar's call from the numbers
+        ///   (SPEC.md § Phase 0b, STATUS.md § Open on Cesar) — do not promote this to a lane
+        ///   without that decision written down.
+        ///
+        ///   Writes to Builds/iOS-Full like the others, so measure and archive the Data folder
+        ///   before re-running an ordinary build over it.
+        /// </summary>
+        public static void BuildIOSMeasureLz4HC()
+        {
+            StandaloneBuildPreprocessor.RestoreGolfResources();   // see BuildIOS
+
+            var prevIosBuildNumber = PlayerSettings.iOS.buildNumber;
+            var prevAndroidVersionCode = PlayerSettings.Android.bundleVersionCode;
+
+            string error;
+            try
+            {
+                Debug.LogWarning($"{Tag} MEASUREMENT BUILD — BuildOptions.CompressWithLz4HC. " +
+                                 $"NOT the shipping configuration; do not upload this output.");
+                error = BuildIOSCore(ProfilePath, OutputPath, BuildOptions.CompressWithLz4HC);
+            }
+            catch (Exception e)
+            {
+                error = $"unhandled exception during build: {e.GetType().Name}: {e.Message}\n{e.StackTrace}";
+            }
+
+            RestoreBuildNumbers(prevIosBuildNumber, prevAndroidVersionCode);
+
+            if (error != null) Fail(error);
+        }
+
         /// <summary>Returns null on success, or the failure message. Never exits — the caller
         /// restores PlayerSettings first, then exits.</summary>
         static string BuildIOSCore() => BuildIOSCore(ProfilePath, OutputPath, BuildOptions.None);
