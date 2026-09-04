@@ -170,7 +170,7 @@
 
 ## 📋 SPEC_READY POINTERS
 
-- **`build_size_diet`: SPEC_READY (2026-09-03 evening, GAME track — Notion 2121, P1).** `Docs/Specs/Active/build_size_diet/SPEC.md` — the 1.9 GB install / 711 MB .ipa diet, brief in `Docs/BUILD_SIZE_AUDIT.md`. Five phases, each its own commit with Build Report numbers: (1) iPhone overrides on the vegetation-pack textures (leaves 1024 / bark 2048, ASTC, no `None`) + terrain tree-prototype audit (only `Spruce 1/3` are placed) + dead files off disk; (2) `HoleData` **lossless**: `heightmap.bytes` is int32 Q16.16 (`GHM1`) → `GHM2` = row-delta + Deflate, loader reads both, one-shot converter proves SHA-256 of decoded heights unchanged; `zones.json` → gzip-minified `zones.bytes` behind one `HoleDataIO.LoadZones` with a `ZoneData` equality test; smoke-bot AtRest positions must be bit-identical; `Resources/Clubs` → 512 ASTC; (3) the 93 `compression: None` textures → ASTC with before/after captures; (4) NotoSansJP static atlas from the CSV glyph set + kana — honest verdict on whether the TTF still ships (fallback for out-of-CSV names), Cesar picks; (5) terrain resolution table + Hole 6 alphamap A/B — **measurement only**, no terrain edit without Cesar's "go". Target install ≤ 1.0 GB, .ipa ≤ 350 MB, zero visible change.
+- **`build_size_diet`: SPEC_READY (2026-09-03 evening, GAME track — Notion 2121, P1).** `Docs/Specs/Active/build_size_diet/SPEC.md` — the 1.9 GB install / 711 MB .ipa diet, brief in `Docs/BUILD_SIZE_AUDIT.md`. Five phases, each its own commit with Build Report numbers: (1) iPhone overrides on the vegetation-pack textures (leaves 1024 / bark 2048, ASTC, no `None`) + terrain tree-prototype audit (only `Spruce 1/3` are placed) + dead files off disk; (2) `HoleData` **lossless**: `heightmap.bytes` is int32 Q16.16 (`GHM1`) → `GHM2` = row-delta + Deflate, loader reads both, one-shot converter proves SHA-256 of decoded heights unchanged; `zones.json` → gzip-minified `zones.bytes` behind one `HoleDataIO.LoadZones` with a `ZoneData` equality test; smoke-bot AtRest positions must be bit-identical; `Resources/Clubs` → 512 ASTC; (3) the 93 `compression: None` textures → ASTC with before/after captures; (4) NotoSansJP static atlas from the CSV glyph set + kana — honest verdict on whether the TTF still ships (fallback for out-of-CSV names), Cesar picks; (5) terrain resolution table + Hole 6 alphamap A/B — **measurement only**, no terrain edit without Cesar's "go". **Amended 2026-09-04 before kickoff (Cesar accepted):** gates are install ≤ 1.0 GB AND Payload-compressed ≤ 350 MB, the .ipa file is reported not gated (its `Symbols/` zips to 127 MB); new Phase 0b = one LZ4HC measurement build before Phase 2 (numbers only); Phase 4 gains option (c) subset the variable TTF with fontTools (weight measured off the atlas — `fvar` default is wght 100). Zero visible change.
 
 - ~~`gps_profile_prompt_server_flag`~~ **DONE 2026-09-04** (`b3506dba3`; folder in `Docs/Specs/Completed/`; Architect review PASS 2026-09-04 — standalone build 2637 on TestFlight, user assets 555 → 98.6 MB).
 
@@ -301,26 +301,31 @@ Docs/AI_CONTEXT.md.
   card, Gold ticket placeholder icon + admin `iconUrl` upload, `TICKET_SHOP_BUILD` + the first
   `category=ticket` shop row (Cesar sets price/quantity) once the C archive exists.
 
-### Kickoff · build_size_diet (issued 2026-09-03 evening — GAME track; runs after the GPS queue or in the game session)
+### Kickoff · build_size_diet (issued 2026-09-03 evening, RE-ISSUED 2026-09-04 with the accepted amendments — GAME track; GPS queue is empty, start now)
 
 ```
 Read Docs/Specs/Active/build_size_diet/SPEC.md and implement it.
 
 Context:
 - Cesar: "app is like 700 MB, seems excessive." The real number is the ~1.9 GB INSTALL
-  (Data folder 1.74 GB); the 711 MB .ipa is half symbols Apple strips. Brief with every
-  bucket and file: Docs/BUILD_SIZE_AUDIT.md. Target: install <= 1.0 GB, .ipa <= 350 MB,
-  ZERO visible change, byte-identical physics.
+  (Data folder 1.74 GB). Brief with every bucket and file: Docs/BUILD_SIZE_AUDIT.md.
+  GATES (SPEC §Goal table, amended 2026-09-04): install (Payload uncompressed) <= 1.0 GB
+  AND Payload-compressed (unzip -lv sum under Payload/) <= 350 MB; the .ipa FILE is
+  reported, not gated — its Symbols/ alone zips to 127 MB. Say which measure every
+  number is. ZERO visible change, byte-identical physics.
 - Phase 0 first: build once, keep the Build Report + per-file Data sizes as reference/
-  *_before.txt. Every "-N MB" you claim later cites them. Five phases, five commits, each
-  ending with the numbers.
+  *_before.txt. Every "-N MB" you claim later cites them.
+- Phase 0b (NEW): one more build of the SAME tree with BuildOptions.CompressWithLz4HC
+  (local arg on BuildIOSCore, lane default untouched) -> reference/*_lz4hc.txt + hole-load
+  timings Hole 1 + 6, 3 runs. Numbers only; Cesar decides adoption in STATUS.md. Run it
+  BEFORE writing Phase 2 code — it changes what GHM2 is worth; show it, don't assume it.
 - Phase 1: sharedassets8.assets.resS is 480 MB of tree-pack textures (Leave_4K_.psd
   4096 compression None; Simple Trees leaves at 8192; Mobile_Tree_Bundle). iPhone
   overrides: leaves 1024 / bark 2048, ASTC 6x6 (4x4 only where a cutout frays — capture
-  it). Then the terrain tree-PROTOTYPE audit: placed trees are Spruce 1/3 only, so a
-  prototype nothing places leaves the list — prove treeInstances count + index->prefab
-  map unchanged per hole. Delete HDRPversion.unitypackage (215 MB) and the Original~
-  EXRs from disk.
+  it). Then the terrain tree-PROTOTYPE audit: only a prototype with ZERO instances on all
+  18 holes leaves the list — prove treeInstances count unchanged and every instance still
+  maps to the same prefab NAME (index may shift). Delete HDRPversion.unitypackage
+  (215 MB) and the Original~ EXRs from disk.
 - Phase 2: HoleData is 389 MB on disk and ships whole. heightmap.bytes is GHM1 = int32
   Q16.16 (NOT float — the physics is fp-deterministic), so compress LOSSLESSLY: GHM2 =
   same header v2 + Deflate(row deltas). HeightmapLoader reads GHM1 and GHM2; a one-shot
@@ -334,17 +339,24 @@ Context:
   lives inside the hole-load, off the main thread if it shows). Resources/Clubs -> 512 ASTC.
 - Phase 3: the 93 compression-None textures -> ASTC 6x6 (4x4 where gradients band),
   max 2048; S_SocialPillBordered 2680x600 -> 1024. Captures of Home/Account/Gacha/Daily
-  pill before/after; UIFidelityLinter green.
-- Phase 4: NotoSansJP is Dynamic so the 9.1 MB TTF ships. Static atlas from the CSV JA
-  glyphs + ASCII + full kana; keep asset name+GUID; a small dynamic fallback for
-  out-of-CSV kanji in display names (test with a name like 齋藤). If the fallback means
-  the TTF still ships, SAY SO — Cesar picks (a) keep dynamic / (b) static+fallback.
+  pill before/after; UIFidelityLinter green. Check design_consistency_audit's STATUS
+  first — if its Quick fixes are touching UI textures, Phase 3 waits.
+- Phase 4: NotoSansJP is Dynamic so the 9.1 MB TTF ships. Measure THREE options and
+  report shipped bytes + a JA capture pair for each: (a) keep dynamic, (b) static atlas
+  from the CSV JA glyphs + kana with a small dynamic fallback (the TTF still ships — say
+  so), (c) NEW: subset the variable TTF with fontTools (instance at the weight the game
+  renders TODAY — measure it off the atlas, fvar default is wght 100, do not assume 400;
+  subset to JIS X 0208 + kana + Latin + CSV glyphs; same file name + GUID; asset stays
+  Dynamic). Test a name like 齋藤 on (b) and (c). Cesar picks — do not pick for him.
 - Phase 5: MEASURE ONLY — per-hole TerrainData resolution table + a Hole 6 alphamap
   1024-vs-512 A/B capture pair. No terrain is edited without Cesar's "go" in STATUS.md.
   The heightmap stays 2049 (perf-pass rule).
 - The standalone build (iOS-Standalone) must still build after Phase 2 — its
   preprocessor moves HoleData out; don't break the sentinel/restore. Build it once.
 - No re-serialized scenes in the diff except the Phase 1 prototype edits (list them).
+- Each phase is its own commit citing the reference/*_before.txt numbers. Also commit
+  the GPS session's staged docs first (Docs/BUILD_SIZE_KICKSTART.md, GPS_BACKLOG.md,
+  TellCode.md) — Cowork never commits.
 
 When done: list changed files with a 1-line summary each, run the acceptance
 tests in the spec, flag which need manual on-device verification, update

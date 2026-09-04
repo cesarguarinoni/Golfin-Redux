@@ -7,8 +7,24 @@
 
 ## Goal
 
-Install ≤ **1.0 GB**, `Golfin.ipa` ≤ **350 MB**, with **zero** visible change on device and
-**byte-identical physics** (the ball must land where it landed). Nothing in this task is allowed
+Install ≤ **1.0 GB**, with **zero** visible change on device and
+**byte-identical physics** (the ball must land where it landed).
+
+**Which number is the gate (amended 2026-09-04, Cesar's call).** Re-derived from `Builds/ipa/Golfin.ipa`
+with `unzip -lv`: `Symbols/` is 516 MB raw → **127 MB zipped**; the Payload is 1.85 GB raw →
+**584 MB zipped**. A 1.0 GB install whose remaining bulk is ASTC + Deflated data zips to roughly
+330–350 MB, so the .ipa FILE lands near 460–480 MB the day the install target is met — the old
+".ipa ≤ 350 MB" line contradicted the install target and is withdrawn. The gates are:
+
+| Measure | How to read it | Gate |
+|---|---|---|
+| **Install** = `Payload/Golfin.app` uncompressed (`du -sh`, or Xcode ▸ Devices "Size") | the number the user sees | **≤ 1.0 GB** |
+| **Payload-compressed** = sum of `unzip -lv` compressed sizes under `Payload/` | what a tester downloads | **≤ 350 MB** |
+| `.ipa` file size | includes `Symbols/` (127 MB zipped) that Apple strips | reported, **not gated** |
+
+Every size claim in the report names which of the three it is. Getting the .ipa FILE itself under
+350 MB is a fastlane/export decision (don't pack `Symbols/`; the dSYM zip already sits beside the
+.ipa in `Builds/ipa/`) — out of scope here, backlog row. Nothing in this task is allowed
 to alter a heightmap sample, a zone polygon, a green topology value, a tree obstacle, or what a
 hole looks like from the tee. Measured, not felt: every phase ends with a Build Report diff and a
 parity gate.
@@ -27,6 +43,19 @@ Build the current iOS-Full profile once (`./Tools/testflight.sh` up to the Xcode
 existing `CIBuild` entry with upload skipped) and keep the Build Report from `Editor.log` /
 `Builds/unity-build-ios.log` as `reference/build_report_before.txt`; keep `Payload/…/Data`
 per-file sizes (`du -a` sorted) as `reference/data_before.txt`. All later "−N MB" claims cite these.
+
+### Phase 0b — LZ4HC measurement build (added 2026-09-04; numbers only, no adoption without Cesar)
+
+`CIBuild` builds every lane with `BuildOptions.None`, and on iOS that means the Data folder is
+stored **uncompressed** on the phone. The 18 `TerrainData` (`sharedassetsN.assets`, 549 MB raw)
+deflate 81 % → 106 MB and no other phase reaches them without a fidelity trade (Phase 5). Build the
+same tree ONCE more with `BuildOptions.CompressWithLz4HC` (a local flag/arg on `BuildIOSCore`, not
+a default change) and file `reference/build_report_lz4hc.txt` + `data_lz4hc.txt` + the hole-load
+timings (Hole 1 + 6, 3 runs, same hooks as Phase 2.6) next to the `_before` files. Report install,
+Payload-compressed and per-bucket deltas, and the load-time delta. **Do not switch the lane** —
+Cesar decides from the numbers whether LZ4HC becomes a phase. Run this BEFORE writing Phase 2 code:
+it changes how much GHM2 is worth (LZ4 on raw GHM1 gets part of the way; row-delta + Deflate is
+expected to beat it ~3–5× — show it, don't assume it).
 
 ### Phase 1 — vegetation-pack textures (the 480 MB `sharedassets8.assets.resS`)
 
@@ -120,9 +149,22 @@ and the Golf Profile screen with a name containing a kanji outside the CSV (e.g.
 name must render via **fallback**, not tofu: keep a small **dynamic fallback** TMP asset (the
 same TTF, `m_AtlasPopulationMode` Dynamic, atlas 512) listed in the static asset's
 `fallbackFontAssetTable` — the TTF still ships in that case, so the saving is the 2.2 MB runtime
-atlas churn and the boot rebake, not the 9 MB. **Decide by measuring**: if the fallback keeps the
-TTF, report it honestly and Cesar picks (a) keep dynamic as today or (b) static + fallback. Do
-not pick for him.
+atlas churn and the boot rebake, not the 9 MB.
+
+**Option (c) — subset the TTF itself (added 2026-09-04).** `NotoSansJP-VariableFont_wght.ttf` is a
+variable font: 17,103 glyphs, `wght` axis 100–900 (fontTools on the Mac). Instance it at the ONE
+weight the game renders today and subset it to JIS X 0208 (levels 1+2) + Hiragana + Katakana +
+Latin/ASCII/punctuation/currency + every glyph in the JA CSV columns, with `fontTools`
+(`instancer` + `pyftsubset`, script under `Docs/Scripts/`, command quoted in the report). Overwrite
+the `.ttf` bytes under the SAME file name and GUID; the TMP asset stays **Dynamic**, no atlas or
+fallback change, user-typed names keep working (`齋` is JIS level 2 — test it). Expected 9.1 MB →
+~2–3 MB. ⚠️ Parity trap: the font's `fvar` default instance is **wght 100**, so "the weight the game
+renders today" must be MEASURED off the current atlas / a JA capture, not assumed to be 400 —
+the before/after JA captures must be pixel-comparable for the same string.
+
+**Decide by measuring**: report the shipped bytes for (a) keep dynamic as today, (b) static +
+fallback, (c) subset TTF, with the JA capture pair for (b) and (c) and the honest TTF-ships /
+does-not-ship line for each. Cesar picks. Do not pick for him.
 
 ### Phase 5 — TerrainData alphamaps (needs Cesar's A/B — do the measurement, NOT the change)
 
@@ -139,7 +181,12 @@ modified in this task without his written "go" in STATUS.md.
       final build; a table of the six buckets from the brief (resS / sharedassets / resources /
       levels / framework / metadata) before → after.
 - [ ] Install footprint (Xcode ▸ Window ▸ Devices "Size" or `du -sh Payload/Golfin.app`) ≤ 1.0 GB;
-      `Golfin.ipa` ≤ 350 MB. If a phase falls short, the number is reported, not rounded.
+      Payload-compressed (`unzip -lv` sum under `Payload/`) ≤ 350 MB; `.ipa` file size reported
+      alongside. Every number says which measure it is. If a phase falls short, the number is
+      reported, not rounded.
+- [ ] Phase 0b: `reference/build_report_lz4hc.txt` + `data_lz4hc.txt` + load-time table exist;
+      install / Payload-compressed / per-bucket deltas vs `_before` quoted; the lane's
+      `BuildOptions` unchanged in the diff (no adoption without Cesar's "go" in STATUS.md).
 - [ ] Phase 1: prototype table per hole (before/after count, instance count unchanged, index→name
       map unchanged); the six tee/green captures + spruce crops.
 - [ ] Phase 2: converter table (18 + test holes; SHA-256 decoded-heights match); `ZoneData`
@@ -150,8 +197,9 @@ modified in this task without his written "go" in STATUS.md.
 - [ ] Phase 2 load time: Hole 1 + Hole 6 hole-load wall time, 3 runs before/after, table; after ≤ before + 100 ms; shell boot time unchanged.
 - [ ] Phase 3: the exclusion list with reasons; before/after captures of the four screens; Rule 21
       linter green.
-- [ ] Phase 4: glyph-set source cited; JA captures incl. the out-of-CSV name; the honest TTF
-      ships / does-not-ship verdict for Cesar.
+- [ ] Phase 4: glyph-set source cited; JA captures incl. the out-of-CSV name for (b) and (c);
+      shipped-bytes + TTF ships / does-not-ship line for (a)/(b)/(c); the rendered weight measured,
+      not assumed; verdict left to Cesar.
 - [ ] Phase 5: the per-hole terrain resolution table + the Hole 6 A/B pair; **no terrain edited**.
 - [ ] Disk: `HDRPversion.unitypackage`, `Original~` EXRs and any other listed dead weight
       deleted; `git status` shows only intended files (no re-serialized scenes — if a scene
@@ -168,7 +216,9 @@ modified in this task without his written "go" in STATUS.md.
 
 Addressables / on-demand hole download (a later task if the store size still hurts); instanced
 tree rendering from `standalone_trees.csv` (perf task, not size); club-art sprite atlasing;
-touching the terrain heightmap resolution; the standalone app (round 2 of `gps_standalone_shell`).
+touching the terrain heightmap resolution; the standalone app (round 2 of `gps_standalone_shell`);
+leaving `Symbols/` out of the .ipa (fastlane export option — backlog); switching the build lane to
+LZ4HC (Phase 0b measures it; adoption is a separate decision).
 
 ## Reference
 
