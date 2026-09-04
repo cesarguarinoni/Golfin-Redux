@@ -167,13 +167,48 @@ namespace GolfinRedux.UI.Gacha
             // Ticket icon sprite — optional; loaded from Resources if needed
             if (_ticketIcon != null)
             {
-                var entry = TicketCatalog.Get(record.TicketType);
-                if (entry != null && !string.IsNullOrEmpty(entry.IconSprite))
-                {
-                    var spr = Resources.Load<Sprite>(entry.IconSprite);
-                    if (spr != null) _ticketIcon.sprite = spr;
-                }
+                var spr = TicketSprite(record.TicketType);
+                if (spr != null) _ticketIcon.sprite = spr;
             }
+        }
+
+        // ── Ticket sprite cache (gacha_history_rebuild_stall §3) ──────────────────
+        //
+        // `Resources.Load` was called once PER ROW, and the history list is up to ~1 000 rows drawn
+        // from a handful of ticket types — so the same few sprites were resolved hundreds of times
+        // while the screen built. Cached by ticket type, which is what the sprite actually varies
+        // on. A MISS is cached too (as null): a ticket type with no icon must not re-hit Resources
+        // on every row that uses it.
+        private static readonly System.Collections.Generic.Dictionary<int, Sprite?> _ticketSprites =
+            new System.Collections.Generic.Dictionary<int, Sprite?>();
+
+        /// <summary>Counts the Resources hits, so a test can prove the cache is doing its job
+        /// rather than assert that a dictionary exists.</summary>
+        internal static int TicketSpriteLoads { get; private set; }
+
+        /// <summary>Sprite loads and the counter both reset — for tests, and for a domain reload
+        /// leaving destroyed sprites behind in a static dictionary.</summary>
+        internal static void ClearTicketSpriteCache()
+        {
+            _ticketSprites.Clear();
+            TicketSpriteLoads = 0;
+        }
+
+        internal static Sprite? TicketSprite(TicketType ticketType)
+        {
+            int key = (int)ticketType;
+            if (_ticketSprites.TryGetValue(key, out var cached)) return cached;
+
+            Sprite? loaded = null;
+            var entry = TicketCatalog.Get(ticketType);
+            if (entry != null && !string.IsNullOrEmpty(entry.IconSprite))
+            {
+                loaded = Resources.Load<Sprite>(entry.IconSprite);
+                TicketSpriteLoads++;
+            }
+
+            _ticketSprites[key] = loaded;
+            return loaded;
         }
     }
 }
