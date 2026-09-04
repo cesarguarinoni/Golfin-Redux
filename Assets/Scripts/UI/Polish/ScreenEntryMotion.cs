@@ -44,11 +44,27 @@ namespace Golfin.UI.Polish
 
         private readonly List<Coroutine?> _motions = new List<Coroutine?>();
 
+        /// <summary>
+        /// How many times a screen has been enabled BY A PUSH and therefore skipped its rise, and
+        /// how many times it has risen. Diagnostic counters, not behaviour — A8 asks for proof
+        /// that a pushed arrival does not rise, and "the code has a return statement" is not
+        /// proof. The probe reads these across a real route.
+        /// </summary>
+        public static int SkippedForPush { get; private set; }
+        public static int Risen { get; private set; }
+
+        /// <summary>Test/probe seam — zero the counters before a measured stretch.</summary>
+        public static void ResetCounters() { SkippedForPush = 0; Risen = 0; }
+
         private void OnEnable()
         {
             // A screen that arrived on a push is already where it should be, at full alpha.
-            if (LayeredPush.EnteringViaPush) return;
+            if (LayeredPush.EnteringViaPush) { SkippedForPush++; return; }
             if (_content == null || _content.Length == 0) return;
+            // Counted HERE, not above the wiring check: a screen with nothing wired did not rise,
+            // and counting it as though it had would make the A8 numbers agree with a builder
+            // that had never been run.
+            Risen++;
 
             while (_motions.Count < _content.Length) _motions.Add(null);
 

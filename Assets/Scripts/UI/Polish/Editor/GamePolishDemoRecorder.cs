@@ -252,7 +252,11 @@ namespace Golfin.UI.Polish.EditorTools
         IEnumerator Tournaments()
         {
             yield return Ensure(ScreenId.ModeSelection);
-            yield return TapPath(ScreenId.ModeSelection, "TournamentTempEntry", ScreenId.TournamentSelection);
+            // NOT via TournamentTempEntry. That tap ends the play session — it killed this take in
+            // segment (b) and three probe runs besides, always silently. See GamePolishProbe.Route
+            // for the full note; it is not this task's code (that pair is a fade... was, before
+            // option (b); either way LayeredPush is not what breaks).
+            yield return Show(ScreenId.TournamentSelection);
             yield return Show(ScreenId.TournamentLeaderboard);  // PUSH — no player path in this session
             yield return Show(ScreenId.Leaderboard);            // PUSH
             yield return GoBack(ScreenId.TournamentLeaderboard);
@@ -281,13 +285,23 @@ namespace Golfin.UI.Polish.EditorTools
                 yield return TapNamed(tab, 1.0f);
         }
 
+        /// <summary>
+        /// THE WAITS HERE ARE LONG ON PURPOSE. The first take of this segment ran in 5.6 s and the
+        /// recorder captured SIXTEEN BYTE-IDENTICAL FRAMES of the screen underneath — the taps all
+        /// fired (the log proves it: SettingsButton, AboutRow, LanguageRow) but the Editor was
+        /// rendering at under 3 fps and the whole open/expand/close happened between two painted
+        /// frames. The clip was 5.6 s of a static Leaderboard labelled "Settings", which is worse
+        /// than no clip. A recorder can only record frames that were drawn, so every step now
+        /// waits long enough for several.
+        /// </summary>
         IEnumerator Settings()
         {
             Transform? gear = FindByName("SettingsButton");
             var b = gear != null ? gear.GetComponent<Button>() : null;
             if (b != null) { Line("tapping the real SettingsButton"); b.onClick.Invoke(); }
-            else SettingsController.Instance?.OpenSettings();
-            yield return new WaitForSecondsRealtime(1.2f);
+            else { Line("WARN no SettingsButton; OpenSettings() (NOT a tap)"); SettingsController.Instance?.OpenSettings(); }
+            yield return new WaitForSecondsRealtime(3f);
+            Line("settings open = " + (SettingsController.Instance != null && SettingsController.Instance.IsOpen));
 
             // two accordion rows, through their own row buttons
             int opened = 0;
@@ -299,13 +313,15 @@ namespace Golfin.UI.Polish.EditorTools
                 Line("tapping settings row '" + item.name + "'");
                 item.onClick.Invoke();
                 opened++;
-                yield return new WaitForSecondsRealtime(1.1f);
+                yield return new WaitForSecondsRealtime(2.5f);
             }
+            Line("settings rows expanded = " + opened);
 
             Transform? close = FindByName("CloseButton");
             var cb = close != null ? close.GetComponent<Button>() : null;
-            if (cb != null) cb.onClick.Invoke(); else SettingsController.Instance?.CloseSettings();
-            yield return new WaitForSecondsRealtime(1.2f);
+            if (cb != null) { Line("tapping the real '" + cb.name + "'"); cb.onClick.Invoke(); }
+            else SettingsController.Instance?.CloseSettings();
+            yield return new WaitForSecondsRealtime(3f);
         }
 
         IEnumerator OptionB()

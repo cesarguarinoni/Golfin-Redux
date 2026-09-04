@@ -382,6 +382,7 @@ namespace Golfin.UI.Polish.EditorTools
             IEnumerator PushSweep()
             {
                 Line("--- push sweep: every ordered pair of the direction table ---");
+                ScreenEntryMotion.ResetCounters();
 
                 // BY PILLAR, NOT BY BACKDROP. Before option (b) shipped these were three
                 // background groups and the sweep's 24 pairs were exactly the pushable set. Now
@@ -410,6 +411,11 @@ namespace Golfin.UI.Polish.EditorTools
                             yield return SweepOne(a, b, forward: true);
                             yield return SweepOne(b, a, forward: false);
                         }
+
+                Line($"A8: ScreenEntryMotion over the sweep — Risen={ScreenEntryMotion.Risen}, " +
+                     $"SkippedForPush={ScreenEntryMotion.SkippedForPush}. Every arrival in the sweep " +
+                     "is a push, so Risen must be 0: a pushed screen that also rose would play two " +
+                     "entrances in 0.25 s.");
 
                 // Written HERE as well as at the end of Run(): the gate must survive a capture
                 // tour that dies, which is exactly what kept happening. A13's rows go with it,
