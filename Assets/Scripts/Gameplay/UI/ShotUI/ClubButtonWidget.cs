@@ -11,34 +11,27 @@ namespace Golfin.Gameplay.UI.ShotUI
         [SerializeField] private Sprite _defaultPortrait;
 
         private DistanceUnit _unitMode = DistanceUnit.Yards;
-        private bool _shootMode; // iter-35: map view repurposes this button to "SHOOT" (close) — hide club name/yards
+        // iter-35's _shootMode is GONE (map_view_v2 §8): the map no longer relabels this button to SHOOT.
+        private bool _mapMode;   // map_view_v2: map open — button keeps its club content, only the router is off
 
         public void SetUnitMode(DistanceUnit mode) { _unitMode = mode; Refresh(); }
 
         /// <summary>
-        /// iter-35: map view turns this club button into the "SHOOT"/close control. While in shoot mode
-        /// the club label reads "SHOOT", the yards secondary is hidden, and ClubContext-driven Refresh is
-        /// suppressed (so a club/bag change can't repaint the label or re-show the yards). MapViewController
-        /// calls this from RepurposeShootButton.
+        /// map_view_v2 §8 — the map no longer relabels this button. B1 keeps the club button showing its
+        /// real content ("DRIVER / 215 yd") while the map is open and puts the close/return control in the
+        /// new bottom-LEFT SHOT VIEW button, so the player never loses sight of which club is loaded.
+        ///
+        /// All that is left of the retired iter-35 SetShootMode is the half that still matters: the
+        /// SelectorDragRouter (a pointer handler, independent of onClick) must be off while the map owns
+        /// the button, or a tap opens Club Selection on top of the map instead of closing it.
+        /// MapViewController.RepurposeShootButton rebinds onClick separately.
         /// </summary>
-        public void SetShootMode(bool on)
+        public void SetMapMode(bool on)
         {
-            _shootMode = on;
-            // iter-38 (Cesar): the SHOOT button was OPENING Club Selection — the DriverButton's
-            // SelectorDragRouter (pointer handler) opens the club selector on tap, independently of
-            // onClick. Disable it while in shoot mode so the button ONLY closes the map; re-enable on exit.
             var router = GetComponent<SelectorDragRouter>();
             if (router != null) router.enabled = !on;
-            if (on)
-            {
-                if (_primaryText   != null) _primaryText.text = LocalizationManager.Get("GAMEPLAY_SHOOT");
-                if (_secondaryText != null) _secondaryText.gameObject.SetActive(false);
-            }
-            else
-            {
-                if (_secondaryText != null) _secondaryText.gameObject.SetActive(true);
-                Refresh();
-            }
+            _mapMode = on;
+            if (!on) Refresh();
         }
 
         protected override void OnEnable()
@@ -57,7 +50,6 @@ namespace Golfin.Gameplay.UI.ShotUI
 
         protected override void Refresh()
         {
-            if (_shootMode) return; // map view owns the label + hides the yards while in SHOOT mode
             if (_iconImage != null)
                 _iconImage.sprite = ClubContext.SelectedPortrait != null
                     ? ClubContext.SelectedPortrait
@@ -80,7 +72,7 @@ namespace Golfin.Gameplay.UI.ShotUI
 
         protected override void OnClick()
         {
-            if (_shootMode) return; // map view: this button only closes the map, never opens club selection
+            if (_mapMode) return; // map view: this button only closes the map, never opens club selection
             // If SelectorDragRouter is present, it owns the open/close lifecycle.
             // The Button.onClick fires after OnPointerUp, so the router has already handled
             // the interaction. Suppress legacy direct open to avoid double-open.

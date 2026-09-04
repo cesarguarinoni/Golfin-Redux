@@ -14,7 +14,7 @@ Architect, 2026-09-03. Notion **2111**. Runs AFTER `design_consistency_audit` (2
 |---|---|---|---|
 | Play | `ModeSelectionScreen`, `HoleSelectionScreen`, `MissionSelectionScreen`, `TournamentHoleSelectionScreen` | **all `2e5476ee…`** | same → **push** |
 | Play | `TournamentSelectionScreen`, `TournamentLeaderboardScreen`, `RankingsScreen` (Leaderboard) | **all `0d425c0a…`** | same among themselves → **push** |
-| Play | ModeSelection → TournamentSelection; TournamentSelection → TournamentHoleSelection; TournamentHoleSelection → TournamentLeaderboard; HoleSelection → Leaderboard | `2e54…` ↔ `0d42…` | background CHANGES → **your call, see G1 option** |
+| Play | ModeSelection → TournamentSelection; TournamentSelection → TournamentHoleSelection; TournamentHoleSelection → TournamentLeaderboard; HoleSelection → Leaderboard | `2e54…` ↔ `0d42…` | background CHANGES → **push with chrome cross-fade (option (b), SHIPPED in `game_polish_a`)** |
 | Gacha | `GeneralShopScreen`, `GachaHistoryScreen`, `GachaPrizesScreen` | **all `5ec22d10…`** | same → **push** |
 | Characters | `RosterScreen` (no Background child — the stage renders behind it), `StaminaShopSelectionScreen`, `StaminaShopDetailScreen` (background inside a nested prefab, not readable from YAML) | ? | **fade stays** unless Code measures the same backdrop |
 | Inventory | `InventoryScreen` only (`BG` `44d64d73…` + `Rim`) | — | no screen-to-screen move; tabs cross-fade (see row) |
@@ -59,13 +59,13 @@ Columns: what moves today → what is proposed. "—" = nothing proposed.
 
 ## Proposed slicing (so each task is one reviewable video set)
 
-- **`game_polish_a` — navigation & structure:** G1 (`LayeredPush` + the branch + per-screen split map), G2, Inventory tabs + Settings overlay/submenus + Rankings/Gacha filters cross-fades, G9, G10 gates. Videos: one per pillar walk.
+- **`game_polish_a` — navigation & structure (DONE 2026-09-04, `b2496871d`; option (b) shipped; §D7 nav selected state shipped on both bars):** G1 (`LayeredPush` + the branch + per-screen split map), G2, Inventory tabs + Settings overlay/submenus + Rankings/Gacha filters cross-fades, G9, G10 gates. Videos: one per pillar walk.
 - **`game_polish_b` — content & modals:** G3, G4 (three retrofits, frame-diff gate), G5, G6, G7, G8, the result-modal choreography, Roster/Inventory level-up bars. Videos: one per modal family + one per list screen.
 - (optional) **`game_polish_c` — sweep:** scroll feel parity with Inventory's values on every ScrollRect, safe-area check on the screens `safe_area_top_bar` did not cover, `ButtonPressFeedback` coverage table, Rubik Medium sites list for the game (pairs with P-012).
 
 ## Open questions for you (answer inline or in chat)
 
-1. ~~G1 option~~ **DECIDED (Cesar, 2026-09-03): (a) fade-to-black for every background-changing move, plus ONE 5-second captioned video of (b) push-with-cross-fade on ModeSelection → TournamentSelection, built behind a flag that ships OFF, so (b) can be judged without being live.** Acceptance line in the spec: the (b) video exists, the flag default is pinned false by test, the shipped path is the fade.
+1. ~~G1 option~~ **DECIDED 2026-09-03: (a) + a video of (b). REVISED during `game_polish_a` (Cesar, 2026-09-04): option (b) SHIPPED** — every in-pillar move pushes, the chrome cross-fades when the backdrop differs (16 ordered pairs moved from fade to push; invariants `measured 87 / fail 0 / seam cover 1.0`). The `AllowBackgroundCrossFade` flag is gone. Fade-to-black remains ONLY for cross-pillar moves (Home ↔ anything, nav-bar pillar resets, Login/Loading/GPS boundaries).
 2. ~~G3~~ **DECIDED: pop ALL 12 game modals**; HoleComplete / TournamentResult keep their inner choreography on top of the pop.
 3. ~~G4~~ **DECIDED: add an optional `Ease` parameter to `UiMotion`** (default = today's ease-out cubic, GPS behaviour unchanged; `Docs/GPS/GPS_BACKLOG.md` row added).
 4. ~~G6~~ **DECIDED: move `ShimmerBlock.prefab` to `Assets/Prefabs/UI/Common/`** (GpsPolishBuilder path constant = the one GPS-folder line; GPS session informed via GPS_BACKLOG row).

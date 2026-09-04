@@ -1,0 +1,91 @@
+=== iter-1 kickoff baseline 2026-09-04 ===
+HEAD 91c88b4b638db3bdb023adbff2b525f9e4fff915
+DIRTY (git status --porcelain --untracked-files=all at kickoff):
+ M Docs/Specs/Active/map_view_v2/SPEC.md
+ M Docs/Specs/Active/map_view_v2/reference/B1_aiming.png
+ M Docs/Specs/Active/map_view_v2/reference/B1_over_range.png
+(No code or data file was dirty at kickoff — every Assets/ change below is this task's.)
+=== end baseline ===
+
+2026-09-04  Read SPEC.md, both reference renders, MapViewController (3725 lines), ClubButtonWidget,
+            HoleIndicatorWidget, WindIndicatorWidget, the content pipeline and the LabScaffold
+            hierarchy (DriverButton / GolfinButton / HoleIndicator / WindIndicator geometry pulled
+            straight out of the scene YAML rather than guessed).
+2026-09-04  §1 range model + §2 dotted flat aim line + §3 fan/arcs + §4 ticks + §5 landing
+            glow/ring/ghost/crosshair + §6 readout chip + §7 pin chip + §8 SHOT VIEW button written.
+2026-09-04  §9 strings: 4 rows EN+JA -> import_content.py plan (4 add / 0 change / 0 conflict) ->
+            --apply -> content_publish RPC -> texts v37 -> export_content.py --check CLEAN.
+2026-09-04  §10 tests: 4 added, suite now 47 (was 43).
+2026-09-04  Compile verification run OUT OF BAND (Unity Editor is owned by another session this
+            sitting — Cesar: "Unity is driven by another session so don't interrupt"). Unity's own
+            bundled Roslyn (Contents/Resources/Scripting/DotNetSdkRoslyn/csc.dll) was driven with the
+            reference set from the generated .csproj files:
+              Golfin.Gameplay.UI       60 files  0 errors
+              Golfin.Gameplay.Tests    26 files  0 errors  0 warnings
+              Assembly-CSharp-Editor  178 files  0 errors  (9 pre-existing warnings, unrelated files)
+2026-09-04  BLOCKED on the Unity-side half of acceptance (play-mode captures on Hole 01 / Hole 08,
+            EditMode run, invariants JSON). STATUS -> IMPLEMENTER_BLOCKED; see IMPLEMENTER_REPORT.md
+            § Blocked.
+
+2026-09-04 (Unity handed over by Cesar) — the whole Unity half of acceptance ran:
+  * Bundled localization table was STALE -> Tools/Localization/Import Text CSV; 1043 -> 1047 rows.
+    Without it the 4 new keys rendered as raw keys at runtime.
+  * EditMode 2437 total / 2434 passed / 0 failed / 3 pre-existing skips.
+    Tripwire: all 4 new assertions broken -> exactly 4 failures, correct "But was" values -> restored -> green.
+  * 6 play sessions, real entry path each time (entryViaRealHoleCardWidget=true in all 12 dumps).
+    Holes 01 (driver) / 08 (iron) / 04 (iron, par 3 — the only one whose pin is in frame).
+  * Defect: readout chip rendered as a stadium pill (9-slice, sprite pixelsPerUnit 1 -> 800px corner).
+    Fixed at pixelsPerUnit 100.
+  * Defect: aim line was world-width, not screen-constant (0.9 m floor won at every zoom).
+    Floor -> 0.20 m; dumps now show guideDotWorldWidth 0.8845 = 8px x m/px.
+  * Measured: fan fill = 36.94% of frame, mean dRGB (+7.94,+24.46,+0.31). Not eyeballed.
+  * Findings surfaced (out of scope to fix): over-range target off-frame; pin-chip flip
+    unphotographable; landing ring 31.27m vs the mock. Zoom-out AND pan both REFUSED by the
+    Order 353b strict crop on all three holes — measured through the pinch/drag's own clamp.
+  * Editor left clean: play mode exited, capture driver disarmed, ShellScene open and not dirty.
+2026-09-04  STATUS -> READY_FOR_SELF_REVIEW.
+
+2026-09-04 ROUND 2 (Cesar review: "Shot view icon is smaller than Figma. The rest is approved."):
+  * R2-1 icon: measured 43x30 vs the reference's 80x64. preserveAspect fits a SQUARE sprite to the
+    SHORT side of an 80x54 box, and the placeholder is 201x145 opaque inside 256^2. Box -> 102x102
+    square; now 80x57 (width exact; height short by the placeholder's own ink aspect).
+  * R2-2 label: cap-height 14px vs 21px — inherited one-line auto-size bottomed out at its 20 floor.
+    Auto-size off, fontSize pinned 30, block heightened. Now 20px vs 21px.
+  * R2-3 pin chip now owns the OFF-SCREEN pin too (PlaceAlong). The spec carved that out, which would
+    have left the old yellow flag on 14 of 18 holes — the exact complaint this task exists to fix.
+  * R2-4 trees are NOT impostors: 4 prototypes, 3-level LODGroups, billboardAsset=False, 0 scene
+    LODGroups. A/B/C over one pose: 2.33% / 2.46% / 2.84% px changed, indistinguishable at 3x.
+    Only treeDistance matters (gameplay's 150m CULLS the far half). LOD0 cap left alone.
+  * R2-5 shot view proven untouched: before/during/after terrain state logged, after == before,
+    PASS on all three holes.
+  * EditMode re-run after all round-2 edits: 2437 / 2434 passed / 0 failed / 3 pre-existing skips.
+  * Editor left clean: play mode exited, driver disarmed, ShellScene not dirty.
+
+2026-09-04 ROUND 3 (Cesar: "corners should not be curved... Trees still suck ass"):
+  * R3-1 chip seam: RoundedRectSprite now takes (roundTop, roundBottom); three baked variants.
+    Measured navy->white gap = 0 px on h01 and h04.
+  * R3-2 I deleted ~700 lines of MapViewController with a bad s.index() slice. Rebuilt from
+    `git show HEAD:` + re-authored this session's half. 0 dupes, 0 missing, 0 errors, suite green.
+  * R3-3 tree override REVERTED. A-vs-B change was uniform across FAR/MID/NEAR thirds
+    (3.88/4.31/3.39%) = LOD jitter, not un-culling; frames indistinguishable at 2x. My round-2
+    "puts trees back" claim was wrong. Map now touches NO terrain state; guard proves BEFORE ==
+    DURING == AFTER.
+  * Trees diagnosed at 4x: LOD1 real geometry, not impostors. The look is vertical leaf cards
+    authored for a side view, seen from a ~70-degree top-down camera. Art/angle, not a setting.
+  * EditMode after all round-3 edits: 2447 total / 2444 passed / 0 failed / 3 pre-existing skips.
+    (Total rose 2437 -> 2447 from Cesar's own concurrent work, not this task.)
+
+2026-09-04 ROUND 4 (Cesar: "You are using billboards or low level lods for trees because of distance"):
+  * He was RIGHT. Round 3's "already high LOD" conclusion came from a treeMaximumFullLODCount test,
+    which drives the BILLBOARD path; these prototypes are billboardAsset=False + plain LODGroups, so
+    that knob was INERT. The real driver is QualitySettings.lodBias, never touched.
+  * Triangle-count sweep (the instrument that can actually see it):
+      lodBias 1 -> 1,384,816 tris   2 -> 1,650,400   4 -> 2,546,182   8 -> 2,876,032   40 -> plateau
+    3.3x more geometry between 1 and 8. Live baseline is lodBias 1 (edit mode reads 2).
+  * Shipped _mapLodBias (serialized, default 8), map-lifetime only, raises-never-lowers.
+    Guard extended to QualitySettings; BEFORE == AFTER on all three holes; QualitySettings.asset
+    verified clean in git.
+  * Cost: ~1.4M -> ~2.9M tris while the map is open, released on close.
+  * EditMode: one run showed 2 failures in Golfin.UI.Polish.Tests (UiMotionAllocation / UiMotionNew
+    Primitive) — committed, unmodified files this task never touches; GREEN on re-run
+    (2447 / 2444 / 0 failed). Flaky under concurrent Editor load, not a regression.

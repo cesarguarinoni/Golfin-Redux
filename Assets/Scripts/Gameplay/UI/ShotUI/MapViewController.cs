@@ -153,6 +153,47 @@ namespace Golfin.Gameplay.UI.ShotUI
         /// <summary>Order 355 §5 — drop-in slot for Robin's styled arrow. Null → procedural triangle.</summary>
         [SerializeField] private Sprite            _indicatorArrowSprite;
 
+        [Header("B1 redesign (map_view_v2)")]
+        /// <summary>
+        /// §8 — the bottom-LEFT SHOT VIEW control. Wire a scene object here to own it explicitly;
+        /// leave it EMPTY and the map clones the club button into the GolfinButton slot at open time
+        /// (same prefab visuals, same gold outline, zero scene diff) and destroys the clone on close.
+        /// </summary>
+        [SerializeField] private GameObject        _shotViewButton;
+        /// <summary>
+        /// §2 — world-space FLOOR for the dotted aim line's width. The line is drawn at a constant
+        /// <c>kGuideDotPx</c> on screen (the fidelity table's "constant width on screen"), which is a
+        /// per-frame world width of px × metres-per-pixel; this floor stops it collapsing to nothing
+        /// when the player pinches all the way in. Raise it above ~3 m to force a fixed world width.
+        ///
+        /// MEASURED, not guessed: at the spec's suggested 0.9 m the floor WON at every live zoom
+        /// (metres-per-pixel is 0.078-0.13 on Holes 01/04/08, so 8 px is only 0.6-1.0 m of world), and
+        /// the dots rendered 7-12 px depending on the hole — i.e. the line was world-width after all
+        /// and the "constant width on screen" token was not actually being met. At 0.20 m the
+        /// screen-constant term governs at every realistic zoom and the floor only catches a full
+        /// pinch-in.
+        /// </summary>
+        [SerializeField] private float             _guideDotWorldWidth   = 0.20f;
+        /// <summary>§3 — half-angle of the lime range fan, in degrees, either side of the aim line.</summary>
+        [SerializeField] private float             _rangeFanHalfAngleDeg = 11f;
+        /// <summary>§7 — minimum screen gap (device px) between the pin and the pin chip, so the chip never covers the hole.</summary>
+        [SerializeField] private float             _pinTailMinPx         = 120f;
+        /// <summary>
+        /// map_view_v2 (Cesar, 2026-09-04) — <c>QualitySettings.lodBias</c> for the map's lifetime.
+        ///
+        /// The map camera is hundreds of metres from the course, so every LODGroup in frame — the
+        /// trees above all — resolves to a far LOD and the canopies render as flat smears. Cesar
+        /// called it, and the triangle counter proves it: at the live baseline of lodBias 1 the map
+        /// draws 778,901 triangles; at 8 it draws 2,604,509 (3.3x), and 40 adds only 0.3 % more, so 8
+        /// is the plateau. This is a MAP-ONLY override, saved and restored around the map session —
+        /// gameplay's LOD budget is untouched. Set to 0 to disable the override entirely.
+        ///
+        /// (The earlier attempt at this used <c>treeMaximumFullLODCount</c>, which drives Unity's
+        /// BILLBOARD path; these prototypes have <c>billboardAsset=False</c> and plain LODGroups, so
+        /// that knob was inert and the "trees are already high LOD" conclusion it produced was wrong.)
+        /// </summary>
+        [SerializeField] private float             _mapLodBias           = 8f;
+
         [Header("Zoom / pan")]
         [SerializeField] private float             _minZoom        = 30f;
         [SerializeField] private float             _maxZoom        = 90f;
@@ -184,6 +225,45 @@ namespace Golfin.Gameplay.UI.ShotUI
         private Transform           _ballMarker;
         private Transform           _landingZone;
         private LineRenderer        _guideLine;
+
+        // ── B1 redesign (map_view_v2) ────────────────────────────────────────────
+        // World-space: the red continuation of the aim line past max reach, the lime range fan, its
+        // outer "max" arc, the dashed nominal-carry arc, and the dashed ghost ring at P_max.
+        private LineRenderer        _overRangeLine;
+        private GameObject          _rangeFanGO;
+        private GameObject          _rangeFanEdgeGO;
+        private GameObject          _nominalArcGO;
+        private GameObject          _ghostRingGO;
+        // Screen-space (all on _indicatorCanvas): 50-yd ticks, target crosshair, the over-range ✕,
+        // the ghost dot at P_max, the readout chip and the cloned HUD pin chip.
+        private readonly List<RectTransform>   _tickMarks  = new List<RectTransform>();
+        private readonly List<TextMeshProUGUI> _tickLabels = new List<TextMeshProUGUI>();
+        private RectTransform       _crossVRT, _crossHRT, _centreDotRT, _crossX1RT, _crossX2RT, _ghostDotRT;
+        private MapTargetReadoutWidget _readout;
+        private MapPinIndicator     _pinIndicator;
+        private TMP_FontAsset       _hudFont;
+        // The SHOT VIEW button the map itself created (null when _shotViewButton is wired in the scene).
+        private GameObject          _runtimeShotViewGO;
+        private CanvasGroup         _shootButtonGroup;
+        // Generated art / materials, controller-lifetime (destroyed in OnDestroy, not per-open).
+        private Texture2D           _dotLineTex;
+        private Texture2D           _landingZoneTexOver;
+        // Generated 9-slice plates, indexed by (roundTop ? 1 : 0) | (roundBottom ? 2 : 0).
+        private readonly Sprite[]    _roundedSprites  = new Sprite[4];
+        private readonly Texture2D[] _roundedTextures = new Texture2D[4];
+        // Live over-range state, published into the invariant dump.
+        private bool                _overRange;
+        private float               _maxReachM;
+        // < 0 means "no LOD override is currently in force" — the restore is a no-op then.
+        private float               _savedLodBias = -1f;
+        private int                 _savedMaxLodLevel;
+        /// <summary>
+        /// The unit the HUD is showing. Read off the live HoleIndicatorWidget at open time — the same
+        /// value PhysicsLabController feeds it — so the map's ticks, pin chip and readout can never be
+        /// in yards while the HUD chip is in metres (§4's "find the caller and read the same value").
+        /// </summary>
+        private HoleIndicatorWidget.DistanceUnit _unitMode = HoleIndicatorWidget.DistanceUnit.Yards;
+        private float               _pinChipGapPx = -1f;
 
         // Terrain-conforming rings (vertex-height-sampled annulus meshes)
         private GameObject          _ring80GO;
@@ -247,6 +327,14 @@ namespace Golfin.Gameplay.UI.ShotUI
         // lifetime. Separate list from _hiddenBallRenderers because HideShotUIChrome() clears that
         // one and runs AFTER BuildRuntimeObjects().
         private List<Renderer>          _hiddenEnvRenderers = new List<Renderer>();
+
+        // map_view_v2 (Cesar, 2026-09-04): a map-lifetime tree-LOD override was BUILT, MEASURED and
+        // then REMOVED. Raising treeDistance/treeBillboardDistance to 2000 m and forcing LOD0 on all
+        // 1362 instances moved 2-4 % of pixels and is indistinguishable side by side
+        // (screenshots/h01_08a/08b/08c) — the map's trees already render at LOD1, and LOD2 (the only
+        // impostor) needs the tree under 1 % of screen height, which never happens here. The map
+        // therefore touches NO terrain state at all; what makes them read flat is a near-top-down
+        // camera over side-authored leaf cards, which is an art/angle problem, not a setting.
 
         // Order 354: the hole's OB rectangle (world XZ), captured when the show-region framing
         // succeeds. Drives the pan clamp (§4.4) and the hole-fitted far clip (§4.3).
@@ -349,6 +437,21 @@ namespace Golfin.Gameplay.UI.ShotUI
         public bool  IsOpen        => _isOpen;
         public float AimYawRadians => _aimYawRadians;
 
+        // ── map_view_v2 — read-only diagnostics seams ────────────────────────────
+        // Siblings of the existing ForceInvariantDump / SetAimYawDirectly capture seams. They exist
+        // so the capture driver AND a read-only reviewer can assert the range model against live
+        // state (e.g. "the fan edge sits at 1.2 x the club-button distance") without reflecting into
+        // private fields — and they cannot mutate anything.
+        public Camera  MapCamera        => _mapCam;
+        public Vector3 BallWorldPos     => _ballWorldPos;
+        public Vector3 PinWorldPos      => _flagWorldPos;
+        public float   ClubCarryMeters  => _carryYards * kYardsToMeters;
+        public float   MaxReachMeters   => _maxReachM;
+        public float   AimedCarryMeters => _aimedCarryM;
+        public bool    IsOverRangeNow   => _overRange;
+        public float   PinChipGapPx     => _pinChipGapPx;
+        public float   PinTailMinPx     => _pinTailMinPx;
+
         /// <summary>
         /// PrewarmRT — NO-OP in v2.  v1 pre-allocated a RenderTexture to avoid a Metal
         /// Y-flip on first recording frame.  v2 uses a direct-to-screen overlay camera
@@ -381,11 +484,22 @@ namespace Golfin.Gameplay.UI.ShotUI
             {
                 string assetsPath = Application.dataPath;       // .../GolfinRedux/Assets
                 string repoRoot   = Path.GetDirectoryName(assetsPath); // .../GolfinRedux
-                string candidate  = Path.Combine(repoRoot, "Docs", "Specs", "Active", "map_view_aiming");
-                if (Directory.Exists(candidate))
+                // map_view_v2: the ACTIVE task folder wins, so a dump lands next to the spec being
+                // reviewed rather than in the folder of whichever task happened to build this first.
+                // map_view_aiming stays as the fallback so nothing that reads it breaks.
+                string[] candidates =
+                {
+                    Path.Combine(repoRoot, "Docs", "Specs", "Active", "map_view_v2"),
+                    Path.Combine(repoRoot, "Docs", "Specs", "Active", "map_view_aiming"),
+                };
+                foreach (var candidate in candidates)
+                {
+                    if (!Directory.Exists(candidate)) continue;
                     _repoInvariantDir = candidate;
-                else
-                    Debug.LogWarning($"[MapView v2] Repo task folder not found at {candidate} — will write invariant to persistentDataPath only.");
+                    break;
+                }
+                if (string.IsNullOrEmpty(_repoInvariantDir))
+                    Debug.LogWarning($"[MapView v2] No repo task folder found under Docs/Specs/Active — will write invariant to persistentDataPath only.");
             }
             catch (Exception ex)
             {
@@ -418,6 +532,14 @@ namespace Golfin.Gameplay.UI.ShotUI
             if (_dotSpriteGen   != null) Destroy(_dotSpriteGen);
             if (_arrowTex       != null) Destroy(_arrowTex);
             if (_dotTex         != null) Destroy(_dotTex);
+            // map_view_v2 — the B1 generated art is controller-lifetime too.
+            if (_landingZoneTexOver != null) Destroy(_landingZoneTexOver);
+            if (_dotLineTex         != null) Destroy(_dotLineTex);
+            for (int i = 0; i < _roundedSprites.Length; i++)
+            {
+                if (_roundedSprites[i]  != null) Destroy(_roundedSprites[i]);
+                if (_roundedTextures[i] != null) Destroy(_roundedTextures[i]);
+            }
         }
 
         private void OnDisable()
@@ -512,9 +634,14 @@ namespace Golfin.Gameplay.UI.ShotUI
             _aimYawRadians = _savedAimYaw;
             _aimedCarryM   = -1f; // iter-32: reset so the landing defaults to the club carry on each open
 
+            var hudChip = FindObjectOfType<HoleIndicatorWidget>(true);
+            _unitMode   = hudChip != null ? hudChip.UnitMode : HoleIndicatorWidget.DistanceUnit.Yards;
+
             BuildRuntimeObjects();
             HideShotUIChrome();
             RepurposeShootButton(true);
+            // map_view_v2 §8 — AFTER HideShotUIChrome, which would otherwise hide the slot it lives in.
+            ShowShotViewButton(true);
             PositionMapCamera();  // uses _ballWorldPos + _flagWorldPos
             PlaceMarkers();
             UpdateGuideAndRings();
@@ -577,6 +704,7 @@ namespace Golfin.Gameplay.UI.ShotUI
             // Try PhysicsLab write-back as well (handles LabScaffold context).
             WriteBackAimToPhysicsLab(_aimYawRadians);
 
+            ShowShotViewButton(false);
             RestoreShotUIChrome();
             RepurposeShootButton(false);
             DestroyRuntimeObjects();
@@ -633,31 +761,35 @@ namespace Golfin.Gameplay.UI.ShotUI
             // applied via Unlit/Transparent shader — gives the "hot-spot" radial gradient look.
             BuildLandingZoneDecal(markerRoot.transform);
 
-            // Guide line: ball → carry target.
-            var glGO = new GameObject("MapView_GuideLine");
-            glGO.transform.SetParent(markerRoot.transform);
-            _guideLine = glGO.AddComponent<LineRenderer>();
-            var glMat  = new Material(Shader.Find("Sprites/Default") ?? Shader.Find("Unlit/Color"));
-            glMat.color = new Color(0.3f, 0.85f, 1f, 0.92f);
-            _guideLine.material          = glMat;
-            _guideLine.startWidth        = 1.8f;
-            _guideLine.endWidth          = 1.8f;
-            _guideLine.positionCount     = kGuideSegments + 1;
-            _guideLine.useWorldSpace     = true;
-            _guideLine.receiveShadows    = false;
-            _guideLine.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            _guideLine.sortingOrder      = 2;
+            // map_view_v2 §3 — the lime range fan and its arcs, drawn UNDER the landing glow (fill) and
+            // over it (edges). Built before the guide lines so the draw order reads bottom-up here.
+            _rangeFanGO     = BuildConformingRingGO("MapView_RangeFan",     WithAlpha(kLime, 0.10f), markerRoot.transform, 0);
+            _nominalArcGO   = BuildConformingRingGO("MapView_NominalArc",   WithAlpha(Color.white, 0.25f), markerRoot.transform, 2);
+            _rangeFanEdgeGO = BuildConformingRingGO("MapView_RangeFanEdge", WithAlpha(kLime, 0.90f), markerRoot.transform, 3);
 
-            // iter-28 Fix 3: Rings COMMENTED OUT (restorable — do NOT delete).
-            // The 80/100/120 ring GOs clutter the view; remove for this iteration.
-            // Ring radius CALCULATIONS (r80, r100, r120) in UpdateGuideAndRings are KEPT
-            // so DumpInvariants still reports ring values and ring EditMode tests still pass
-            // (RingCenterAtPct / RingRadiusAtPct are pure-math seams, no GO dependency).
-            // To restore: uncomment these 4 lines.
+            // iter-28 Fix 3 PARTIALLY REVERSED by map_view_v2 §5: the ONE landing ring at r100 is back
+            // (crisp white, 4 px on screen) because B1's target needs a readable centre. Rings 80/120
+            // and their labels stay off — explicitly out of scope. The radius CALCULATIONS for all
+            // three are still made in UpdateGuideAndRings so DumpInvariants and the ring EditMode
+            // tests (RingCenterAtPct / RingRadiusAtPct, pure-math seams) are untouched.
+            _ring100GO   = BuildConformingRingGO("LandingRing", WithAlpha(Color.white, 0.95f), markerRoot.transform, 4);
+            // §5 — the "this is where the ball ACTUALLY lands" ghost, dashed, only while over range.
+            _ghostRingGO = BuildConformingRingGO("MapView_GhostRing", WithAlpha(Color.white, 0.95f), markerRoot.transform, 4);
+            SetActiveIf(_ghostRingGO, false);
+            // To restore the other two rings: uncomment these 2 lines.
             // var ringColor = new Color(0.08f, 0.08f, 0.08f, 0.55f);
             // _ring80GO  = BuildConformingRingGO("Ring80",  ringColor, markerRoot.transform);
-            // _ring100GO = BuildConformingRingGO("Ring100", ringColor, markerRoot.transform);
             // _ring120GO = BuildConformingRingGO("Ring120", ringColor, markerRoot.transform);
+
+            // map_view_v2 §2 — the aim line is DOTTED and FLAT now: a tiled 22×8 dot strip on the
+            // always-on-top overlay shader, white from the ball to min(L, P_max)...
+            _guideLine     = BuildDottedLine("MapView_GuideLine",     markerRoot.transform, Color.white, 6);
+            // ...and a second, RED line carrying the over-range remainder from P_max to L. Two
+            // renderers rather than one two-coloured one: a LineRenderer's gradient is parameterised on
+            // normalised length, so a single line could not keep the colour break pinned to P_max as
+            // the player drags L (and B1's break is a hard edge, not a blend).
+            _overRangeLine = BuildDottedLine("MapView_OverRangeLine", markerRoot.transform, kOverRed, 7);
+            _overRangeLine.positionCount = 0;
 
             // Hole indicator: flag icon + world-space line.
             BuildHoleIndicator(markerRoot.transform);
@@ -695,8 +827,35 @@ namespace Golfin.Gameplay.UI.ShotUI
         /// re-entry, no scene mutation beyond a bool that <see cref="RestoreEnvironmentAfterMap"/>
         /// puts back. Name-matching beats a layer mask here: the shell shares layer 0 with the course.
         /// </summary>
+        /// <summary>
+        /// Raise <c>QualitySettings.lodBias</c> for the map's lifetime so LODGroups resolve to near
+        /// geometry at the map camera's distance. Never LOWERS it — if the active quality tier is
+        /// already more generous than <see cref="_mapLodBias"/>, the tier wins.
+        /// </summary>
+        private void PushMapLodBias()
+        {
+            if (_mapLodBias <= 0f) return;
+            _savedLodBias     = QualitySettings.lodBias;
+            _savedMaxLodLevel = QualitySettings.maximumLODLevel;
+            QualitySettings.lodBias         = Mathf.Max(_savedLodBias, _mapLodBias);
+            QualitySettings.maximumLODLevel = 0;
+            Debug.Log($"[MapView v2] Map LOD bias {_savedLodBias} -> {QualitySettings.lodBias} " +
+                      $"(maximumLODLevel {_savedMaxLodLevel} -> 0) for the map's lifetime.");
+        }
+
+        /// <summary>Put the global LOD budget back exactly as it was before the map opened.</summary>
+        private void RestoreLodBiasAfterMap()
+        {
+            if (_savedLodBias < 0f) return;
+            QualitySettings.lodBias         = _savedLodBias;
+            QualitySettings.maximumLODLevel = _savedMaxLodLevel;
+            Debug.Log($"[MapView v2] Map LOD bias restored to {QualitySettings.lodBias}.");
+            _savedLodBias = -1f;
+        }
+
         private void HideEnvironmentForMap()
         {
+            PushMapLodBias();
             _hiddenEnvRenderers.Clear();
             if (_environmentHideNames == null || _environmentHideNames.Length == 0) return;
 
@@ -739,6 +898,7 @@ namespace Golfin.Gameplay.UI.ShotUI
         /// <summary>Re-enable every Renderer disabled by <see cref="HideEnvironmentForMap"/>.</summary>
         private void RestoreEnvironmentAfterMap()
         {
+            RestoreLodBiasAfterMap();
             foreach (var rend in _hiddenEnvRenderers)
                 if (rend != null) rend.enabled = true;
             _hiddenEnvRenderers.Clear();
@@ -763,37 +923,14 @@ namespace Golfin.Gameplay.UI.ShotUI
         /// </summary>
         private void BuildLandingZoneDecal(Transform parent)
         {
-            // ── Build the radial gradient texture ────────────────────────────────
-            int res = 128;
-            _landingZoneTex = new Texture2D(res, res, TextureFormat.RGBA32, false);
-            _landingZoneTex.wrapMode = TextureWrapMode.Clamp;
-            _landingZoneTex.filterMode = FilterMode.Bilinear;
-
-            // Red/orange HOT CENTER → green edge gradient (kept from prior iters).
-            Color centerColor = new Color(1f, 0.05f, 0.02f, 1.0f);   // red center, full-alpha
-            Color midColor    = new Color(0.95f, 0.45f, 0.0f, 0.88f); // orange mid
-            Color edgeColor   = new Color(0.0f, 0.85f, 0.1f, 0.0f);  // green, transparent at edge
-
-            Color[] pixels = new Color[res * res];
-            Vector2 texCenter = new Vector2(res * 0.5f, res * 0.5f);
-            float halfRes  = res * 0.5f;
-
-            for (int y = 0; y < res; y++)
-            {
-                for (int x = 0; x < res; x++)
-                {
-                    float dist = Vector2.Distance(new Vector2(x, y), texCenter) / halfRes;
-                    dist = Mathf.Clamp01(dist);
-                    Color c;
-                    if (dist < 0.65f)
-                        c = Color.Lerp(centerColor, midColor, dist / 0.65f);
-                    else
-                        c = Color.Lerp(midColor, edgeColor, (dist - 0.65f) / 0.35f);
-                    pixels[y * res + x] = c;
-                }
-            }
-            _landingZoneTex.SetPixels(pixels);
-            _landingZoneTex.Apply();
+            // ── Build the radial gradient textures ───────────────────────────────
+            // map_view_v2 fidelity table: the glow is LIME, not the old red→orange→green ramp.
+            //   in range   #78E921  α 0.55 at the centre → α 0.22 at 55 % → α 0 at the edge
+            //   over range #F23A33  α 0.50 at the centre →            → α 0 at the edge
+            // Two textures are baked once and swapped on the material, so entering or leaving the
+            // over-range state costs a pointer write rather than a 128² SetPixels every frame.
+            _landingZoneTex     = BuildGlowTexture(kLime,    0.55f, 0.22f);
+            _landingZoneTexOver = BuildGlowTexture(kOverRed, 0.50f, 0.20f);
 
             // ── Compute landing zone radius ───────────────────────────────────────
             float carryM    = _carryValid ? (_carryYards * kYardsToMeters) : 80f;
@@ -843,9 +980,134 @@ namespace Golfin.Gameplay.UI.ShotUI
                       $"landRadius={landRadius:F2}m renderQueue={_landingZoneMat.renderQueue} (ZTest Always baked in shader pass)");
         }
 
-        // ── iter-32: rebuild the landing-zone mesh to CONFORM to terrain around L (world-space verts) ──
-        // Each rim vertex's Y is sampled from the terrain surface, so the disc drapes over slopes.
-        // The MapView/OverlayConform shader's ZTest=Always then keeps the whole disc on top of trees.
+        /// <summary>
+        /// map_view_v2 §5 — the landing glow's radial ramp: <paramref name="tint"/> at
+        /// <paramref name="centreAlpha"/> in the middle, <paramref name="midAlpha"/> at 55 % of the
+        /// radius, fully transparent at the rim. Colour is constant across the disc — only alpha
+        /// falls off, which is what makes it read as a glow rather than a coloured plate.
+        /// </summary>
+        private static Texture2D BuildGlowTexture(Color tint, float centreAlpha, float midAlpha)
+        {
+            const int res = 128;
+            var tex = new Texture2D(res, res, TextureFormat.RGBA32, false)
+            {
+                wrapMode   = TextureWrapMode.Clamp,
+                filterMode = FilterMode.Bilinear
+            };
+            var pixels    = new Color[res * res];
+            var texCentre = new Vector2(res * 0.5f, res * 0.5f);
+            float halfRes = res * 0.5f;
+            for (int y = 0; y < res; y++)
+            {
+                for (int x = 0; x < res; x++)
+                {
+                    float d = Mathf.Clamp01(Vector2.Distance(new Vector2(x, y), texCentre) / halfRes);
+                    float a = d < 0.55f
+                            ? Mathf.Lerp(centreAlpha, midAlpha, d / 0.55f)
+                            : Mathf.Lerp(midAlpha, 0f, (d - 0.55f) / 0.45f);
+                    pixels[y * res + x] = new Color(tint.r, tint.g, tint.b, a);
+                }
+            }
+            tex.SetPixels(pixels);
+            tex.Apply();
+            return tex;
+        }
+
+        /// <summary>
+        /// map_view_v2 §2 — the dotted aim line's tile: one soft white dot in the left 8×8 of a 22×8
+        /// strip, so a LineRenderer in <see cref="LineTextureMode.Tile"/> repeats it at the design's
+        /// 8 px dot / 22 px pitch. Generated in code exactly the way <see cref="DotSprite"/> is —
+        /// no import, no art dependency, and the pitch is a number in this file rather than a PNG.
+        /// </summary>
+        private Texture2D DotLineTexture()
+        {
+            if (_dotLineTex != null) return _dotLineTex;
+            const int w = 22, h = 8;
+            _dotLineTex = new Texture2D(w, h, TextureFormat.RGBA32, false)
+            {
+                wrapMode   = TextureWrapMode.Repeat,
+                filterMode = FilterMode.Bilinear
+            };
+            var px = new Color[w * h];
+            var c  = new Vector2(3.5f, 3.5f);
+            for (int y = 0; y < h; y++)
+                for (int x = 0; x < w; x++)
+                {
+                    float a = 0f;
+                    if (x < 8)
+                    {
+                        float d = Vector2.Distance(new Vector2(x, y), c) / 4f;
+                        a = Mathf.Clamp01((1f - d) * 3f);
+                    }
+                    px[y * w + x] = new Color(1f, 1f, 1f, a);
+                }
+            _dotLineTex.SetPixels(px);
+            _dotLineTex.Apply();
+            return _dotLineTex;
+        }
+
+        /// <summary>
+        /// map_view_v2 §6 — a white 9-sliced rounded rectangle (8 px radius) for the readout chip.
+        /// Baked at 1 pixel-per-unit with an 8 px border on every side, so the caller controls the
+        /// rendered corner radius purely through <c>Image.pixelsPerUnitMultiplier</c> and the corners
+        /// never collapse into an oval the way a stretched non-9-sliced sprite does (Rule 21).
+        /// </summary>
+        private Sprite RoundedRectSprite() => RoundedRectSprite(true, true);
+
+        /// <summary>
+        /// <paramref name="roundTop"/> / <paramref name="roundBottom"/> pick WHICH pair of corners is
+        /// rounded. The readout chip is TWO stacked plates: if both were rounded all round, the navy
+        /// header's bottom corners and the white body's top corners would each curve away and leave a
+        /// notch of map showing between them (Cesar, 2026-09-04: "blue and white parts should touch").
+        /// Header = top-rounded, body = bottom-rounded, so their junction is a straight seam and the
+        /// outside of the chip still reads as one 8 px-radius card.
+        ///
+        /// pixelsPerUnit MUST be the canvas's referencePixelsPerUnit (100), not 1. Unity renders a
+        /// sliced border as border_px x referencePPU / (sprite.pixelsPerUnit x pixelsPerUnitMultiplier);
+        /// at pixelsPerUnit 1 an 8 px corner asks for 800 px, which clamps the 9-slice and turns the
+        /// chip into a stadium pill — the Rule 21 failure mode, caught in the first Hole 01 capture.
+        /// </summary>
+        private Sprite RoundedRectSprite(bool roundTop, bool roundBottom)
+        {
+            int idx = (roundTop ? 1 : 0) | (roundBottom ? 2 : 0);
+            if (_roundedSprites[idx] != null) return _roundedSprites[idx];
+
+            const int r = 8;
+            const int size = r * 2 + 2;          // two corners + a 2 px centre the slicer stretches
+            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false)
+            {
+                wrapMode   = TextureWrapMode.Clamp,
+                filterMode = FilterMode.Bilinear
+            };
+            var px = new Color[size * size];
+            for (int y = 0; y < size; y++)
+                for (int x = 0; x < size; x++)
+                {
+                    // Texture row 0 is the BOTTOM of the sprite in Unity's UV space.
+                    bool nearBottom = y < r;
+                    bool nearTop    = y >= size - r;
+                    bool roundHere  = (nearTop && roundTop) || (nearBottom && roundBottom);
+
+                    float dx = x < r ? r - x - 0.5f : (x >= size - r ? x - (size - r) + 0.5f : 0f);
+                    float dy = nearBottom ? r - y - 0.5f : (nearTop ? y - (size - r) + 0.5f : 0f);
+
+                    // Rounded corner = distance to the corner disc. Square corner = the side edge only,
+                    // so the plate runs flat to the very last row and meets its neighbour with no gap.
+                    float a = roundHere
+                            ? Mathf.Clamp01(r - Mathf.Sqrt(dx * dx + dy * dy))
+                            : Mathf.Clamp01(r - Mathf.Abs(dx));
+                    px[y * size + x] = new Color(1f, 1f, 1f, a);
+                }
+            tex.SetPixels(px);
+            tex.Apply();
+
+            _roundedTextures[idx] = tex;
+            _roundedSprites[idx]  = Sprite.Create(tex, new Rect(0, 0, size, size),
+                                                  new Vector2(0.5f, 0.5f), 100f, 0,
+                                                  SpriteMeshType.FullRect, new Vector4(r, r, r, r));
+            return _roundedSprites[idx];
+        }
+
         private void RebuildLandingMesh(Vector3 center, float radius)
         {
             if (_landingMesh == null) return;
@@ -878,73 +1140,179 @@ namespace Golfin.Gameplay.UI.ShotUI
         }
 
         // ── Terrain-conforming ring ────────────────────────────────────────────────
-        private GameObject BuildConformingRingGO(string name, Color color, Transform parent)
+        /// <summary>
+        /// One terrain-conforming overlay mesh (ring, sector, arc). map_view_v2 swaps the material to
+        /// <c>MapView/OverlayConform</c>: §iter-26's <c>Sprites/Default</c> + <c>SetInt("_ZTest")</c> was
+        /// a NO-OP — Sprites/Default takes its ZTest from a global, not the material property, which is
+        /// the same trap BuildLandingZoneDecal documents. The overlay shader bakes ZTest Always into its
+        /// pass, so the fan, arcs and rings genuinely draw over terrain AND trees.
+        /// </summary>
+        private GameObject BuildConformingRingGO(string name, Color color, Transform parent, int queueOffset = 2)
         {
             var go = new GameObject(name);
             go.transform.SetParent(parent);
             go.layer = 0;
             go.AddComponent<MeshFilter>().mesh = new Mesh { name = name };
             var mr  = go.AddComponent<MeshRenderer>();
-            var mat = new Material(Shader.Find("Sprites/Default") ?? Shader.Find("Unlit/Color"));
-            mat.color = color;
-            // §iter-26 FIX #2: ZTest Always so rings draw over trees and terrain occluders.
-            mat.SetInt("_ZTest", (int)UnityEngine.Rendering.CompareFunction.Always);
-            mr.material = mat;
+            mr.material          = NewOverlayMaterial(color, null, queueOffset);
+            mr.receiveShadows    = false;
+            mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             return go;
         }
 
-        private void UpdateConformingRing(GameObject ringGO, Vector3 worldCenter, float radius)
+        /// <summary>
+        /// A material on the map's always-on-top unlit shader. <paramref name="queueOffset"/> is added to
+        /// <c>RenderQueue.Transparent</c> and is what layers the overlay: fan fill under the landing glow,
+        /// arcs over it, the dotted lines over everything.
+        /// </summary>
+        private Material NewOverlayMaterial(Color color, Texture tex, int queueOffset)
         {
-            if (ringGO == null) return;
-            var mf = ringGO.GetComponent<MeshFilter>();
+            Shader sh = Shader.Find("MapView/OverlayConform");
+            if (sh == null)
+            {
+                var resMat = Resources.Load<Material>("MapView/DecalLandingZone");
+                if (resMat != null) sh = resMat.shader;
+            }
+            if (sh == null) sh = Shader.Find("Sprites/Default");   // last-ditch (will occlude)
+
+            var mat = new Material(sh);
+            if (tex != null)
+            {
+                if (mat.HasProperty("_MainTex")) mat.SetTexture("_MainTex", tex);
+                mat.mainTexture = tex;
+            }
+            if (mat.HasProperty("_Color")) mat.SetColor("_Color", color);
+            mat.color       = color;
+            mat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent + queueOffset;
+            return mat;
+        }
+
+        private static Color WithAlpha(Color c, float a) => new Color(c.r, c.g, c.b, a);
+
+        /// <summary>
+        /// map_view_v2 §2 — a dotted world-space line on the always-on-top overlay shader. Width is
+        /// set per frame by <see cref="UpdateB1Overlay"/> so the dots stay a constant size on screen.
+        /// </summary>
+        private LineRenderer BuildDottedLine(string name, Transform parent, Color color, int queueOffset)
+        {
+            var go = new GameObject(name);
+            go.transform.SetParent(parent);
+            var lr = go.AddComponent<LineRenderer>();
+            lr.material          = NewOverlayMaterial(color, DotLineTexture(), queueOffset);
+            lr.textureMode       = LineTextureMode.Tile;
+            lr.numCapVertices    = 0;
+            lr.numCornerVertices = 0;
+            lr.startColor        = color;   // only read on the Sprites/Default fallback shader
+            lr.endColor          = color;
+            lr.startWidth        = _guideDotWorldWidth;
+            lr.endWidth          = _guideDotWorldWidth;
+            lr.positionCount     = kGuideSegments + 1;
+            lr.useWorldSpace     = true;
+            lr.receiveShadows    = false;
+            lr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            lr.alignment         = LineAlignment.View;
+            lr.sortingOrder      = 2;
+            return lr;
+        }
+
+        /// <summary>Recolour an overlay mesh in place — no new material, no allocation per frame.</summary>
+        private static void SetOverlayColor(GameObject go, Color color)
+        {
+            if (go == null) return;
+            var mr = go.GetComponent<MeshRenderer>();
+            // sharedMaterial IS the per-object instance NewOverlayMaterial handed to `mr.material`,
+            // so writing it here mutates only this object (and allocates nothing).
+            if (mr != null && mr.sharedMaterial != null)
+            {
+                mr.sharedMaterial.color = color;
+                if (mr.sharedMaterial.HasProperty("_Color")) mr.sharedMaterial.SetColor("_Color", color);
+            }
+        }
+
+        private static void SetActiveIf(GameObject go, bool on)
+        {
+            if (go != null && go.activeSelf != on) go.SetActive(on);
+        }
+
+        /// <summary>
+        /// Existing signature, preserved so every prior caller compiles unchanged (map_view_v2 §3):
+        /// a full-circle band around <paramref name="radius"/>, sized by <see cref="kRingBandFrac"/>.
+        /// </summary>
+        private void UpdateConformingRing(GameObject ringGO, Vector3 worldCenter, float radius)
+            => UpdateConformingSector(ringGO, worldCenter,
+                                      radius * (1f - kRingBandFrac), radius * (1f + kRingBandFrac * 0.5f),
+                                      0f, 2f * Mathf.PI, 0);
+
+        /// <summary>
+        /// map_view_v2 §3 — the generalised annulus builder the whole B1 overlay is drawn with: a
+        /// terrain-conforming band between <paramref name="innerR"/> and <paramref name="outerR"/>,
+        /// spanning <paramref name="a0"/>…<paramref name="a1"/> radians about <paramref name="worldCenter"/>.
+        ///
+        /// <paramref name="dashes"/> = 0 draws one solid span; N &gt; 0 splits the arc into
+        /// 2N−1 equal parts and emits the N even ones, i.e. N dashes with N−1 gaps. That is how the
+        /// dashed nominal-carry arc and the dashed ghost ring are drawn without any shader work.
+        ///
+        /// Every vertex's Y is sampled from the terrain, so fan, arcs and rings drape over slopes the
+        /// same way the landing disc does. Arc resolution is capped so a full circle costs the same
+        /// ~64 height samples the old fixed-segment ring did.
+        /// </summary>
+        private void UpdateConformingSector(GameObject go, Vector3 worldCenter,
+                                            float innerR, float outerR, float a0, float a1, int dashes)
+        {
+            if (go == null) return;
+            var mf = go.GetComponent<MeshFilter>();
             if (mf == null) return;
 
-            float innerR = radius * (1f - kRingBandFrac);
-            float outerR = radius * (1f + kRingBandFrac * 0.5f);
-            int   segs   = kRingSegments;
+            innerR = Mathf.Max(0f, innerR);
+            outerR = Mathf.Max(innerR + 0.01f, outerR);
 
-            var verts = new Vector3[segs * 2];
-            var tris  = new int[segs * 6];
-            var uvs   = new Vector2[segs * 2];
+            _sectorVerts.Clear(); _sectorTris.Clear(); _sectorUvs.Clear();
 
-            for (int i = 0; i < segs; i++)
+            int   spanCount = dashes > 0 ? dashes : 1;
+            float spanLen   = dashes > 0 ? (a1 - a0) / (dashes * 2f - 1f) : (a1 - a0);
+            const float kRadPerSeg = 6f * Mathf.Deg2Rad;
+
+            for (int sIdx = 0; sIdx < spanCount; sIdx++)
             {
-                float angle = (2f * Mathf.PI / segs) * i;
-                float cos   = Mathf.Cos(angle);
-                float sin   = Mathf.Sin(angle);
+                float s0 = a0 + (dashes > 0 ? sIdx * 2f * spanLen : 0f);
+                float s1 = s0 + spanLen;
+                int   segs = Mathf.Clamp(Mathf.CeilToInt(Mathf.Abs(s1 - s0) / kRadPerSeg), 1, kRingSegments);
+                int   baseIdx = _sectorVerts.Count;
 
-                Vector3 iXZ = worldCenter + new Vector3(cos * innerR, 0f, sin * innerR);
-                Vector3 oXZ = worldCenter + new Vector3(cos * outerR, 0f, sin * outerR);
+                for (int i = 0; i <= segs; i++)
+                {
+                    float t   = (float)i / segs;
+                    float ang = Mathf.Lerp(s0, s1, t);
+                    float cos = Mathf.Cos(ang), sin = Mathf.Sin(ang);
 
-                float iY = SampleTerrainHeight(iXZ) + kRingHeightOff;
-                float oY = SampleTerrainHeight(oXZ) + kRingHeightOff;
-
-                verts[i * 2]     = new Vector3(iXZ.x, iY, iXZ.z);
-                verts[i * 2 + 1] = new Vector3(oXZ.x, oY, oXZ.z);
-                uvs[i * 2]       = new Vector2((float)i / segs, 0f);
-                uvs[i * 2 + 1]   = new Vector2((float)i / segs, 1f);
-            }
-
-            for (int i = 0; i < segs; i++)
-            {
-                int next    = (i + 1) % segs;
-                int t       = i * 6;
-                tris[t + 0] = i * 2;
-                tris[t + 1] = next * 2;
-                tris[t + 2] = i * 2 + 1;
-                tris[t + 3] = next * 2;
-                tris[t + 4] = next * 2 + 1;
-                tris[t + 5] = i * 2 + 1;
+                    Vector3 iXZ = worldCenter + new Vector3(cos * innerR, 0f, sin * innerR);
+                    Vector3 oXZ = worldCenter + new Vector3(cos * outerR, 0f, sin * outerR);
+                    _sectorVerts.Add(new Vector3(iXZ.x, SampleTerrainHeight(iXZ) + kRingHeightOff, iXZ.z));
+                    _sectorVerts.Add(new Vector3(oXZ.x, SampleTerrainHeight(oXZ) + kRingHeightOff, oXZ.z));
+                    _sectorUvs.Add(new Vector2(t, 0f));
+                    _sectorUvs.Add(new Vector2(t, 1f));
+                }
+                for (int i = 0; i < segs; i++)
+                {
+                    int a = baseIdx + i * 2, b = baseIdx + (i + 1) * 2;
+                    _sectorTris.Add(a);     _sectorTris.Add(b);     _sectorTris.Add(a + 1);
+                    _sectorTris.Add(b);     _sectorTris.Add(b + 1); _sectorTris.Add(a + 1);
+                }
             }
 
             var mesh = mf.mesh;
             mesh.Clear();
-            mesh.vertices  = verts;
-            mesh.triangles = tris;
-            mesh.uv        = uvs;
-            mesh.RecalculateNormals();
+            mesh.SetVertices(_sectorVerts);
+            mesh.SetUVs(0, _sectorUvs);
+            mesh.SetTriangles(_sectorTris, 0);
             mesh.RecalculateBounds();
         }
+
+        // Reused scratch for UpdateConformingSector — the overlay is rebuilt every frame while the
+        // player drags, so allocating four lists per mesh per frame is not free.
+        private readonly List<Vector3> _sectorVerts = new List<Vector3>();
+        private readonly List<int>     _sectorTris  = new List<int>();
+        private readonly List<Vector2> _sectorUvs   = new List<Vector2>();
 
         private float SampleTerrainHeight(Vector3 worldXZ)
         {
@@ -1022,6 +1390,105 @@ namespace Golfin.Gameplay.UI.ShotUI
             _ballArrowRT = BuildIndicatorPart(iconCanvasGO.transform, "BallArrow",
                                               _indicatorArrowSprite ?? ArrowSprite(),
                                               new Color(1f, 1f, 1f, 0.95f), 30f);
+
+            BuildB1ScreenChrome(iconCanvasGO.transform);
+        }
+
+        /// <summary>
+        /// map_view_v2 §4/§5/§6/§7 — everything B1 draws in screen space, all on the one indicator
+        /// canvas the map already owns: the 50-yd ticks, the target crosshair (and its over-range ✕),
+        /// the ghost dot at P_max, the target readout chip, and the cloned HUD pin chip.
+        ///
+        /// The canvas is ScreenSpaceOverlay at scaleFactor 1, i.e. canvas units ARE surface pixels, so
+        /// every Figma number below is multiplied by <see cref="UiScale"/> (device px → surface px)
+        /// rather than being handed to a CanvasScaler. That keeps <see cref="SolveIndicatorPlacement"/>
+        /// and <c>WorldToScreenPoint</c> in the same coordinate space they already share.
+        /// </summary>
+        private void BuildB1ScreenChrome(Transform canvas)
+        {
+            // Rubik, lifted off a live HUD text so the map's type matches the HUD's rather than
+            // falling back to TMP's LiberationSans default.
+            _hudFont = ResolveHudFont();
+
+            // §4 — tick pool. Fixed size: 12 covers a 600 yd hero shot at 50 yd spacing, and a pool
+            // means dragging never allocates.
+            _tickMarks.Clear();
+            _tickLabels.Clear();
+            for (int i = 0; i < kTickPoolSize; i++)
+            {
+                var tick = BuildIndicatorPart(canvas, $"Tick{i}", null, Color.white, 1f);
+                tick.sizeDelta = new Vector2(Px(kTickLenPx), Px(kTickThickPx));
+                _tickMarks.Add(tick);
+
+                var label = BuildTickLabel(canvas, $"TickLabel{i}");
+                _tickLabels.Add(label);
+            }
+
+            // §5 — crosshair + centre dot, and the over-range ✕ that replaces the crosshair.
+            _crossVRT    = BuildIndicatorPart(canvas, "CrossV",   null, Color.white, 1f);
+            _crossVRT.sizeDelta   = new Vector2(Px(kCrossThickPx), Px(kCrossVPx));
+            _crossHRT    = BuildIndicatorPart(canvas, "CrossH",   null, Color.white, 1f);
+            _crossHRT.sizeDelta   = new Vector2(Px(kCrossHPx), Px(kCrossThickPx));
+            _centreDotRT = BuildIndicatorPart(canvas, "CentreDot", DotSprite(), kLime, Px(kCentreDotPx));
+            _crossX1RT   = BuildIndicatorPart(canvas, "CrossX1",  null, kOverRed, 1f);
+            _crossX1RT.sizeDelta  = new Vector2(Px(kOverXBarPx), Px(kOverXThickPx));
+            _crossX1RT.localRotation = Quaternion.Euler(0f, 0f, 45f);
+            _crossX2RT   = BuildIndicatorPart(canvas, "CrossX2",  null, kOverRed, 1f);
+            _crossX2RT.sizeDelta  = new Vector2(Px(kOverXBarPx), Px(kOverXThickPx));
+            _crossX2RT.localRotation = Quaternion.Euler(0f, 0f, -45f);
+            _ghostDotRT  = BuildIndicatorPart(canvas, "GhostDot", DotSprite(), Color.white, Px(kGhostDotPx));
+
+            // §6 — the target readout chip. Three DIFFERENT plates so the navy header and the white
+            // body meet on a square seam; only the card's outer corners are rounded.
+            _readout = MapTargetReadoutWidget.Build(canvas,
+                                                    RoundedRectSprite(true,  true),   // shadow: all four
+                                                    RoundedRectSprite(true,  false),  // header: top only
+                                                    RoundedRectSprite(false, true),   // body:   bottom only
+                                                    _hudFont, UiScale);
+            _readout.SetVisible(false);
+
+            // §7 — the pin chip: a clone of the LIVE HoleIndicator, not a rebuild of it.
+            _pinIndicator = MapPinIndicator.CloneFromScene(canvas, UiScale);
+            _pinIndicator?.SetActive(false);
+        }
+
+        /// <summary>Rubik (or whatever the HUD uses) from a live HUD text — never a hardcoded asset path.</summary>
+        private TMP_FontAsset ResolveHudFont()
+        {
+            var holeChip = FindObjectOfType<HoleIndicatorWidget>(true);
+            if (holeChip != null)
+            {
+                var t = holeChip.GetComponentInChildren<TMP_Text>(true);
+                if (t != null && t.font != null) return t.font;
+            }
+            var wind = FindObjectOfType<WindIndicatorWidget>(true);
+            if (wind != null)
+            {
+                var t = wind.GetComponentInChildren<TMP_Text>(true);
+                if (t != null && t.font != null) return t.font;
+            }
+            return null;   // TMP falls back to its default asset
+        }
+
+        /// <summary>map_view_v2 §4 — one yardage label: Rubik Medium 30, white, left-aligned, mid-height.</summary>
+        private TextMeshProUGUI BuildTickLabel(Transform parent, string name)
+        {
+            var go = new GameObject(name);
+            go.transform.SetParent(parent, false);
+            var tmp = go.AddComponent<TextMeshProUGUI>();
+            if (_hudFont != null) tmp.font = _hudFont;
+            tmp.fontSize         = Px(kTickFontPx);
+            tmp.color            = Color.white;
+            tmp.alignment        = TextAlignmentOptions.MidlineLeft;
+            tmp.textWrappingMode = TextWrappingModes.NoWrap;
+            tmp.overflowMode     = TextOverflowModes.Overflow;
+            tmp.raycastTarget    = false;
+            var rt = tmp.rectTransform;
+            rt.sizeDelta = new Vector2(Px(140f), Px(44f));
+            rt.anchorMin = rt.anchorMax = Vector2.zero;
+            rt.pivot     = new Vector2(0f, 0.5f);
+            go.SetActive(false);
+            return tmp;
         }
 
         /// <summary>Order 355 §5 — one screen-space indicator part (icon or arrow) on the shared canvas.</summary>
@@ -1977,17 +2444,114 @@ namespace Golfin.Gameplay.UI.ShotUI
             UpdateHoleIndicator();
         }
 
+        // ═══════════════════════════════════════════════════════════════════════
+        //  map_view_v2 §1 — RANGE MODEL
+        //  Pure math, no GameObject dependency, so the EditMode suite can assert it without a scene.
+        //  The 1.20 factor is NOT a magic number for the map: it is ShotController's overpower
+        //  ceiling (PowerNormalized is clamped to 1.2), so "max reach" is literally the furthest the
+        //  ball can be sent with this club. The map DRAWS that clamp; it never applies it —
+        //  _aimedCarryM stays free and MapTargetCarryM is written back unclamped (iter-32).
+        // ═══════════════════════════════════════════════════════════════════════
+
+        /// <summary>ShotController's overpower ceiling. Max reach = this × the club's carry.</summary>
+        public const float kMaxReachFactor = 1.20f;
+
+        /// <summary>Furthest the selected club can send the ball, in metres.</summary>
+        public static float MaxReachM(float clubCarryM) => clubCarryM * kMaxReachFactor;
+
+        /// <summary>
+        /// True when the placed landing distance is beyond what the club can reach. The 1 cm slack
+        /// keeps a target sitting exactly ON the max arc out of the red state (float noise otherwise
+        /// flickers the whole over-range treatment on and off while dragging along the arc).
+        /// </summary>
+        public static bool IsOverRange(float aimedCarryM, float clubCarryM)
+            => aimedCarryM > MaxReachM(clubCarryM) + 0.01f;
+
+        /// <summary>Where the ball ACTUALLY lands when the player aims past max reach.</summary>
+        public static Vector3 MaxReachPoint(Vector3 ball, Vector3 aimDir2D, float clubCarryM)
+            => ball + aimDir2D * MaxReachM(clubCarryM);
+
+        /// <summary>
+        /// How many yardage ticks fall strictly BETWEEN the ball and the landing point — ticks sit at
+        /// 1..N × spacing, and a tick landing exactly ON L is not drawn (it would collide with the
+        /// crosshair, and "150" printed on the target reads as the target's own label).
+        /// </summary>
+        public static int TickCount(float carryM, float tickSpacingM)
+        {
+            if (tickSpacingM <= 0.01f || carryM <= 0f) return 0;
+            int n = Mathf.FloorToInt(carryM / tickSpacingM);
+            if (n * tickSpacingM >= carryM - 0.0001f) n--;   // a tick AT L is not drawn
+            return Mathf.Max(0, n);
+        }
+
+        // ── Screen ⇄ world scale helpers (all "px" in this file are DEVICE px on the 1170×2532 frame) ──
+
+        /// <summary>Device px → live surface px. 1.0 on an iPhone 14; whatever the Game View is otherwise.</summary>
+        private float UiScale => (_mapCam != null && _mapCam.pixelWidth > 0)
+                               ? _mapCam.pixelWidth / (float)kDeviceW : 1f;
+
+        /// <summary>Design px (1170-wide frame) → surface px on the overlay canvas.</summary>
+        private float Px(float designPx) => designPx * UiScale;
+
+        /// <summary>
+        /// World metres per ONE surface pixel at a world point — the conversion that lets a 6 px arc
+        /// stay a 6 px arc at any zoom. Measured by projecting a 1 m step along the camera's right
+        /// axis, so it is exact for the actual projection rather than a small-angle approximation.
+        /// </summary>
+        private float MetresPerPixelAt(Vector3 worldPoint)
+        {
+            if (_mapCam == null) return 0.1f;
+            Vector3 a = _mapCam.WorldToScreenPoint(worldPoint);
+            Vector3 b = _mapCam.WorldToScreenPoint(worldPoint + _mapCam.transform.right);
+            float px  = Vector2.Distance(new Vector2(a.x, a.y), new Vector2(b.x, b.y));
+            return px > 0.01f ? 1f / px : 0.1f;
+        }
+
+        /// <summary>Design px → world metres at a world point.</summary>
+        private float PxToWorld(float designPx, Vector3 at) => Px(designPx) * MetresPerPixelAt(at);
+
+        // ── B1 design tokens (Figma px / colours; "do not invent" — spec § Design vocabulary) ────
+        private static readonly Color kLime    = new Color(120f / 255f, 233f / 255f, 33f / 255f, 1f); // #78E921
+        private static readonly Color kOverRed = new Color(242f / 255f,  58f / 255f, 51f / 255f, 1f); // #F23A33
+        private const float kGuideDotPx      = 8f;    // aim-line dot diameter on screen
+        private const float kFanEdgePx       = 6f;    // lime max arc
+        private const float kFanEdgeOverPx   = 8f;    // red max arc
+        private const float kNominalArcPx    = 2f;    // dashed white 1.0× carry arc
+        private const float kLandingRingPx   = 4f;    // crisp white ring at r100
+        private const float kGhostRingPx     = 4f;    // dashed ghost ring at P_max
+        private const float kTickLenPx       = 36f;
+        private const float kTickThickPx     = 3f;
+        private const float kTickLabelGapPx  = 34f;
+        private const float kTickFontPx      = 30f;
+        private const float kCrossVPx        = 80f;   // vertical crosshair bar length
+        private const float kCrossHPx        = 104f;  // horizontal crosshair bar length
+        private const float kCrossThickPx    = 3f;
+        private const float kCentreDotPx     = 12f;
+        private const float kOverXBarPx      = 48f;   // over-range ✕ bar length
+        private const float kOverXThickPx    = 6f;
+        private const float kGhostDotPx      = 12f;
+        private const float kReadoutGapPx    = 130f;  // chip offset from L
+        private const float kReadoutSafePx   = 24f;
+        private const int   kTickPoolSize    = 12;
+        private const float kTickSpacingYd   = 50f;
+        private const float kTickSpacingM    = 50f;
+        private const int   kNominalArcDashes = 24;
+
+        private const int   kGhostRingDashes  = 16;
+
         private void UpdateGuideAndRings()
         {
             if (!_carryValid) return;
 
-            // iter-32: carry = the player-placed (touch-follow) landing distance. The club carry is the
-            // 100%-power REFERENCE for the power-color: the guide line turns RED when the placed distance
-            // exceeds 120% of the club carry (over-power), else stays blue. Distance itself is FREE/unclamped.
-            float clubCarryM = _carryYards * kYardsToMeters;          // 100% reference
+            // iter-32: carry = the player-placed (touch-follow) landing distance; the club carry is the
+            // 100 %-power REFERENCE. map_view_v2 §1 replaces iter-32's silent `powerPct > 1.20` colour
+            // swap with ONE bool, IsOverRange, and drives every over-range visual from it. The distance
+            // itself is still FREE and unclamped — the ghost ring DRAWS the clamp, nothing applies it.
+            float clubCarryM = _carryYards * kYardsToMeters;          // 100 % reference
             if (_aimedCarryM < 0f) _aimedCarryM = clubCarryM;          // default to club carry on first open
             float carryM     = Mathf.Max(_aimedCarryM, 5f);           // free; floor so it never collapses
-            float powerPct   = clubCarryM > 0.01f ? carryM / clubCarryM : 1f;
+            _maxReachM       = MaxReachM(clubCarryM);
+            _overRange       = IsOverRange(carryM, clubCarryM);
 
             Vector3 aimDir2D = AimDirection2D();
             Vector3 right2D  = new Vector3(-aimDir2D.z, 0f, aimDir2D.x);
@@ -2005,74 +2569,288 @@ namespace Golfin.Gameplay.UI.ShotUI
             // clipped under). Rebuilt each update as L moves with the finger. GO stays at world origin.
             RebuildLandingMesh(L, _landingZoneRadiusM);
 
-            // Guide line: smooth arc from ball to L (arcBow = intentional vertical bow).
-            // §iter-26 FIX #1: pass STRAIGHT endpoint (ball + aimDir*carry, NO lateral) so the
-            // loop can add LateralAtT(t)*carryM at each t. At t=1: straight + right*(lat1*carry) == L exactly.
-            Vector3 straightEnd = _ballWorldPos + aimDir2D * carryM;
-            if (_guideLine != null)
-            {
-                UpdateGuideLine(_ballWorldPos, straightEnd, L, aimDir2D, carryM);
-                // iter-32: power-color — RED when the placed distance exceeds 120% of the club carry, else blue.
-                Color lineColor = powerPct > 1.20f
-                    ? new Color(1f, 0.18f, 0.12f, 0.95f)   // over-power red
-                    : new Color(0.30f, 0.85f, 1f, 0.92f);  // normal blue
-                _guideLine.startColor = lineColor;
-                _guideLine.endColor   = lineColor;
-                if (_guideLine.material != null) _guideLine.material.color = lineColor;
-            }
+            // §6-MODEL ring radii: r_p = carryM * _ringFrac * (p/100).
+            // Rings 80/120 stay OUT of scope (map_view_v2 § Out of scope); only r100 is drawn. Their
+            // radii are still REPORTED — DumpInvariants and the RingRadiusAtPct / RingCenterAtPct
+            // EditMode seams compute them from the same formula, untouched by this task — so computing
+            // dead locals here would only add compiler warnings, not coverage.
+            float r100 = Mathf.Max(carryM * _ringFrac * 1.00f, 3f);
 
-            // §6-MODEL ring radii: r_p = carryM * _ringFrac * (p/100)
-            //   p=80 → innermost, p=100 → middle, p=120 → outermost.
-            // ALL three rings share ONE center: L (single-endpoint model).
-            float r80  = carryM * _ringFrac * 0.80f;
-            float r100 = carryM * _ringFrac * 1.00f;
-            float r120 = carryM * _ringFrac * 1.20f;
-            // Minimum visible size so rings aren't invisible at close range.
-            r80  = Mathf.Max(r80,  2f);
-            r100 = Mathf.Max(r100, 3f);
-            r120 = Mathf.Max(r120, 4f);
-            // iter-28 Fix 3: Ring update calls COMMENTED OUT (restorable).
-            // Ring GO references (_ring80GO etc.) are null (not created); UpdateConformingRing
-            // has an early-out for null, but we skip the calls entirely for clarity.
-            // Ring RADIUS CALCULATIONS (r80/r100/r120) above are KEPT so DumpInvariants still
-            // reports correct ring values even without visible ring GOs.
-            // To restore: uncomment these 5 lines.
-            // UpdateConformingRing(_ring80GO,  Lground, r80);
-            // UpdateConformingRing(_ring100GO, Lground, r100);
-            // UpdateConformingRing(_ring120GO, Lground, r120);
-            Debug.Log($"[MapView v2] §6-MODEL L={L:F1} r80={r80:F1}m r100={r100:F1}m r120={r120:F1}m (ringFrac={_ringFrac}) [rings hidden - iter28]");
+            UpdateB1Overlay(L, Lground, aimDir2D, carryM, clubCarryM, r100);
+
+            // iter-28 Fix 3 (rings 80/120 only): to restore, uncomment these 3 lines.
+            // UpdateConformingRing(_ring80GO,  Lground, Mathf.Max(carryM * _ringFrac * 0.80f, 2f));
+            // UpdateConformingRing(_ring120GO, Lground, Mathf.Max(carryM * _ringFrac * 1.20f, 4f));
             // if (_mapCam != null) UpdateRingLabels(L, carryM, aimDir2D, r80, r100, r120);
         }
 
-        private const float kArcBow = 1.5f;  // §6-MODEL intentional arc bow in metres (keeps the guide line readable as trajectory)
+        // ── map_view_v2 §2-§6 — the B1 overlay, world + screen ───────────────────
+        // Rebuilding six terrain-conforming meshes costs one Physics.RaycastAll per vertex, so the
+        // WORLD half only rebuilds when something it depends on actually moved (aim, carry, camera
+        // pose, over-range state). The SCREEN half — ticks, crosshair, chips — is cheap and runs every
+        // frame, which is what keeps them glued to L while the camera eases.
+        private float      _lastBuiltAimYaw = float.NaN;
+        private float      _lastBuiltCarry  = -1f;
+        private float      _lastBuiltFov    = -1f;
+        private bool       _lastBuiltOver;
+        private Vector3    _lastBuiltCamPos = new Vector3(float.NaN, 0f, 0f);
+        private Quaternion _lastBuiltCamRot = Quaternion.identity;
+
+        private bool WorldOverlayDirty(float carryM)
+        {
+            if (_mapCam == null) return false;
+            bool dirty = !Mathf.Approximately(_lastBuiltAimYaw, _aimYawRadians)
+                      || Mathf.Abs(_lastBuiltCarry - carryM) > 0.01f
+                      || Mathf.Abs(_lastBuiltFov - _currentFov) > 0.01f
+                      || _lastBuiltOver != _overRange
+                      || (_lastBuiltCamPos - _mapCam.transform.position).sqrMagnitude > 0.0001f
+                      || Quaternion.Angle(_lastBuiltCamRot, _mapCam.transform.rotation) > 0.01f;
+            if (dirty)
+            {
+                _lastBuiltAimYaw = _aimYawRadians;
+                _lastBuiltCarry  = carryM;
+                _lastBuiltFov    = _currentFov;
+                _lastBuiltOver   = _overRange;
+                _lastBuiltCamPos = _mapCam.transform.position;
+                _lastBuiltCamRot = _mapCam.transform.rotation;
+            }
+            return dirty;
+        }
+
+        private void UpdateB1Overlay(Vector3 L, Vector3 Lground, Vector3 aimDir2D,
+                                     float carryM, float clubCarryM, float r100)
+        {
+            if (_mapCam == null) return;
+
+            float   whiteDist = Mathf.Min(carryM, _maxReachM);
+            Vector3 pMax      = MaxReachPoint(_ballWorldPos, aimDir2D, clubCarryM);
+            Vector3 pMaxGround = new Vector3(pMax.x, SampleTerrainHeight(pMax), pMax.z);
+
+            if (WorldOverlayDirty(carryM))
+            {
+                // ── §2 Aim line ───────────────────────────────────────────────────
+                // Flat (kArcBow is NOT applied on the map — Cesar: "seen from a weird angle"), terrain
+                // hugging, constant width on screen. The white line stops at P_max; the red line
+                // carries the remainder to L, so the break is exactly where the ball stops going.
+                Vector3 straightEnd = _ballWorldPos + aimDir2D * carryM;
+                float   tSplit      = carryM > 0.01f ? Mathf.Clamp01(whiteDist / carryM) : 1f;
+                float   dotWorldW   = Mathf.Max(_guideDotWorldWidth, PxToWorld(kGuideDotPx, L));
+                if (_guideLine != null)
+                {
+                    _guideLine.startWidth = _guideLine.endWidth = dotWorldW;
+                    _guideLine.startColor = _guideLine.endColor = Color.white;
+                    UpdateGuideLine(_guideLine, _ballWorldPos, straightEnd, aimDir2D, carryM, 0f, tSplit);
+                }
+                if (_overRangeLine != null)
+                {
+                    if (_overRange)
+                    {
+                        _overRangeLine.startWidth = _overRangeLine.endWidth = dotWorldW;
+                        UpdateGuideLine(_overRangeLine, _ballWorldPos, straightEnd, aimDir2D, carryM, tSplit, 1f);
+                    }
+                    else _overRangeLine.positionCount = 0;
+                }
+
+                // ── §3 Range fan + arcs ───────────────────────────────────────────
+                // The sector is centred on the CURRENT aim direction and its radius IS max reach, so
+                // the outer arc is literally the line the ball cannot cross.
+                float half = _rangeFanHalfAngleDeg * Mathf.Deg2Rad;
+                float a0   = _aimYawRadians - half;
+                float a1   = _aimYawRadians + half;
+
+                UpdateConformingSector(_rangeFanGO, _ballWorldPos, 0f, _maxReachM, a0, a1, 0);
+                SetOverlayColor(_rangeFanGO, WithAlpha(kLime, _overRange ? 0.07f : 0.10f));
+
+                float edgePx   = _overRange ? kFanEdgeOverPx : kFanEdgePx;
+                float edgeBand = PxToWorld(edgePx, pMax) * 0.5f;
+                UpdateConformingSector(_rangeFanEdgeGO, _ballWorldPos,
+                                       _maxReachM - edgeBand, _maxReachM + edgeBand, a0, a1, 0);
+                SetOverlayColor(_rangeFanEdgeGO, _overRange ? WithAlpha(kOverRed, 0.95f) : WithAlpha(kLime, 0.90f));
+
+                Vector3 nominalPt  = _ballWorldPos + aimDir2D * clubCarryM;
+                float   nominalBnd = PxToWorld(kNominalArcPx, nominalPt) * 0.5f;
+                UpdateConformingSector(_nominalArcGO, _ballWorldPos,
+                                       clubCarryM - nominalBnd, clubCarryM + nominalBnd,
+                                       a0, a1, kNominalArcDashes);
+
+                // ── §5 Landing ring + ghost ring ──────────────────────────────────
+                float ringBand = PxToWorld(kLandingRingPx, Lground) * 0.5f;
+                UpdateConformingSector(_ring100GO, Lground, r100 - ringBand, r100 + ringBand,
+                                       0f, 2f * Mathf.PI, 0);
+                SetOverlayColor(_ring100GO, _overRange ? WithAlpha(kOverRed, 0.95f) : WithAlpha(Color.white, 0.95f));
+
+                SetActiveIf(_ghostRingGO, _overRange);
+                if (_overRange)
+                {
+                    float ghostBand = PxToWorld(kGhostRingPx, pMaxGround) * 0.5f;
+                    UpdateConformingSector(_ghostRingGO, pMaxGround, r100 - ghostBand, r100 + ghostBand,
+                                           0f, 2f * Mathf.PI, kGhostRingDashes);
+                }
+
+                // ── §5 Landing glow — lime in range, red over ─────────────────────
+                if (_landingZoneMat != null)
+                {
+                    var glowTex = _overRange ? _landingZoneTexOver : _landingZoneTex;
+                    if (glowTex != null && _landingZoneMat.mainTexture != glowTex)
+                    {
+                        if (_landingZoneMat.HasProperty("_MainTex")) _landingZoneMat.SetTexture("_MainTex", glowTex);
+                        _landingZoneMat.mainTexture = glowTex;
+                    }
+                }
+            }
+
+            UpdateB1ScreenChrome(L, Lground, aimDir2D, carryM, clubCarryM, pMaxGround);
+        }
 
         /// <summary>
-        /// §iter-26 FIX #1: Guide-line endpoint == L exactly.
-        /// <paramref name="from"/> = ball world pos.
-        /// <paramref name="straightEnd"/> = ball + aimDir*carry (NO lateral baked in).
-        /// <paramref name="L"/> = true landing point (WITH lateral at t=1) — used ONLY for arc Y endpoint.
-        /// <paramref name="carryM"/> = carry in metres — used to scale LateralAtT(t) each vertex.
-        /// Inside the loop we add right*(LateralAtT(t)*carryM) so at t=1 the vertex equals exactly L.
+        /// map_view_v2 §4/§5/§6 — the screen-space half of the overlay, re-solved every frame from
+        /// <c>WorldToScreenPoint</c> so ticks, crosshair and chip stay welded to the world points they
+        /// annotate while the camera eases, pans or zooms.
         /// </summary>
-        private void UpdateGuideLine(Vector3 from, Vector3 straightEnd, Vector3 L, Vector3 aimDir2D, float carryM)
+        private void UpdateB1ScreenChrome(Vector3 L, Vector3 Lground, Vector3 aimDir2D,
+                                          float carryM, float clubCarryM, Vector3 pMaxGround)
         {
-            // §6-MODEL (iter-22): smooth arc Y = lerp(ballY, L.Y, t) + arcBow·sin(πt).
-            _guideLine.positionCount = kGuideSegments + 1;
+            float screenW = _mapCam.pixelWidth, screenH = _mapCam.pixelHeight;
+
+            Vector3 ballScrRaw = _mapCam.WorldToScreenPoint(_ballWorldPos);
+            Vector3 lScrRaw    = _mapCam.WorldToScreenPoint(Lground);
+            Vector3 pMaxScrRaw = _mapCam.WorldToScreenPoint(pMaxGround);
+            Vector2 ballScr    = new Vector2(ballScrRaw.x, ballScrRaw.y);
+            Vector2 lScr       = new Vector2(lScrRaw.x, lScrRaw.y);
+            Vector2 pMaxScr    = new Vector2(pMaxScrRaw.x, pMaxScrRaw.y);
+
+            // ── §4 Ticks every 50 yd (50 m in metres mode) along the aim direction ──
+            float spacingM  = _unitMode == HoleIndicatorWidget.DistanceUnit.Meters
+                            ? kTickSpacingM : kTickSpacingYd * kYardsToMeters;
+            int   tickCount = Mathf.Min(TickCount(carryM, spacingM), kTickPoolSize);
+            // Screen angle of the line, so the tick sits perpendicular to it and the label upright.
+            Vector2 lineDir  = lScr - ballScr;
+            float   lineAng  = lineDir.sqrMagnitude > 1f
+                             ? Mathf.Atan2(lineDir.y, lineDir.x) * Mathf.Rad2Deg : 90f;
+
+            for (int i = 0; i < kTickPoolSize; i++)
+            {
+                bool show = i < tickCount;
+                var mark  = _tickMarks[i];
+                var label = _tickLabels[i];
+                if (mark  != null && mark.gameObject.activeSelf  != show) mark.gameObject.SetActive(show);
+                if (label != null && label.gameObject.activeSelf != show) label.gameObject.SetActive(show);
+                if (!show) continue;
+
+                float   dist  = (i + 1) * spacingM;
+                Vector3 wp    = _ballWorldPos + aimDir2D * dist;
+                Vector3 wpG   = new Vector3(wp.x, SampleTerrainHeight(wp) + kRingHeightOff, wp.z);
+                Vector3 spRaw = _mapCam.WorldToScreenPoint(wpG);
+                Vector2 sp    = new Vector2(spRaw.x, spRaw.y);
+
+                if (mark != null)
+                {
+                    mark.anchoredPosition = sp;
+                    mark.localRotation    = Quaternion.Euler(0f, 0f, lineAng + 90f);
+                }
+                if (label != null)
+                {
+                    // Distances read in the ACTIVE unit — the tick is "150" because 150 is what the
+                    // player's HUD says, not because the world metres happen to be 137.16.
+                    float shown = _unitMode == HoleIndicatorWidget.DistanceUnit.Meters
+                                ? dist : dist * 1.0936133f;
+                    label.text = Mathf.RoundToInt(shown).ToString();
+                    label.rectTransform.anchoredPosition = sp + new Vector2(Px(kTickLabelGapPx), 0f);
+                }
+            }
+
+            // ── §5 Crosshair / ✕ / centre dot at L, ghost dot at P_max ────────────
+            SetRT(_crossVRT,    !_overRange, lScr);
+            SetRT(_crossHRT,    !_overRange, lScr);
+            SetRT(_centreDotRT, !_overRange, lScr);
+            SetRT(_crossX1RT,    _overRange, lScr);
+            SetRT(_crossX2RT,    _overRange, lScr);
+            SetRT(_ghostDotRT,   _overRange, pMaxScr);
+
+            // ── Club button dims while over range; SHOT VIEW stays at full alpha ──
+            if (_shootButtonGroup != null)
+            {
+                float wanted = _overRange ? 0.5f : 1f;
+                if (!Mathf.Approximately(_shootButtonGroup.alpha, wanted)) _shootButtonGroup.alpha = wanted;
+            }
+
+            // ── §6 Readout chip ───────────────────────────────────────────────────
+            if (_readout != null)
+            {
+                _readout.SetVisible(true);
+                float toPinM = Vector3.Distance(_ballWorldPos, _flagWorldPos) > 0.01f
+                             ? Vector3.Distance(L, _flagWorldPos) : 0f;
+                Vector2 size = _readout.Set(carryM, toPinM, _overRange,
+                                            Golfin.Gameplay.UI.HUD.ClubContext.SelectedTypeLabel,
+                                            _maxReachM, _unitMode, UiScale);
+                PlaceReadout(size, lScr, pMaxScr, screenW, screenH);
+            }
+        }
+
+        private static void SetRT(RectTransform rt, bool show, Vector2 pos)
+        {
+            if (rt == null) return;
+            if (rt.gameObject.activeSelf != show) rt.gameObject.SetActive(show);
+            if (show) rt.anchoredPosition = pos;
+        }
+
+        /// <summary>
+        /// map_view_v2 §6 — chip placement. Normally 130 px to the RIGHT of L and vertically centred on
+        /// it, flipping to the LEFT when the chip would cross the safe area. Over range with L near the
+        /// top of the screen it drops BELOW P_max instead (Figma: centred on x, top = P_max + 150), which
+        /// is the one case where the side-by-side position would push a much wider chip off-frame.
+        /// </summary>
+        private void PlaceReadout(Vector2 size, Vector2 lScr, Vector2 pMaxScr, float screenW, float screenH)
+        {
+            var rt   = _readout.Root;
+            float inset = Px(kReadoutSafePx);
+
+            if (_overRange && lScr.y > screenH * 0.72f)
+            {
+                rt.pivot = new Vector2(0.5f, 1f);
+                float x = Mathf.Clamp(pMaxScr.x, inset + size.x * 0.5f, screenW - inset - size.x * 0.5f);
+                float y = Mathf.Clamp(pMaxScr.y - Px(150f), inset + size.y, screenH - inset);
+                rt.anchoredPosition = new Vector2(x, y);
+                return;
+            }
+
+            float gap = Px(kReadoutGapPx);
+            bool  left = lScr.x + gap + size.x > screenW - inset;
+            rt.pivot = new Vector2(left ? 1f : 0f, 0.5f);
+            float px = left ? lScr.x - gap : lScr.x + gap;
+            px = left ? Mathf.Max(px, inset + size.x) : Mathf.Min(px, screenW - inset - size.x);
+            float py = Mathf.Clamp(lScr.y, inset + size.y * 0.5f, screenH - inset - size.y * 0.5f);
+            rt.anchoredPosition = new Vector2(px, py);
+        }
+
+        /// <summary>
+        /// map_view_v2 §2 — RETIRED on the map. The intentional vertical bow made the flat overhead line
+        /// read as a trajectory seen "from a weird angle" (Cesar, 2026-09-04); B1's line is flat and
+        /// hugs the terrain. Kept as a named constant because the shot-view aim line still wants one.
+        /// </summary>
+        private const float kArcBow = 1.5f;
+
+        /// <summary>
+        /// Draw one dotted line along the aim path between two fractions of the full carry.
+        /// <paramref name="straightEnd"/> = ball + aimDir·carry (NO lateral baked in) so the fade/draw
+        /// lateral can be re-added per vertex; at t=1 the vertex equals L exactly (§iter-26 FIX #1).
+        /// Every vertex's Y is the TERRAIN height (+ kRingHeightOff) — flat and ground-hugging, no bow.
+        /// </summary>
+        private void UpdateGuideLine(LineRenderer lr, Vector3 from, Vector3 straightEnd,
+                                     Vector3 aimDir2D, float carryM, float t0, float t1)
+        {
+            if (lr == null) return;
+            lr.positionCount = kGuideSegments + 1;
             Vector3 right = new Vector3(-aimDir2D.z, 0f, aimDir2D.x);
 
             for (int i = 0; i <= kGuideSegments; i++)
             {
-                float   t      = (float)i / kGuideSegments;
-                // §iter-26 FIX #1: lateral is applied to the STRAIGHT lerp (ball→straightEnd).
-                // At t=1: position = straightEnd + right*(LateralAtT(1)*carryM) = L exactly.
-                // (Before this fix: toL=L was lerped AND lateral was added again → double-offset at t=1.)
+                float   t      = Mathf.Lerp(t0, t1, (float)i / kGuideSegments);
                 float   lat    = _fadeDrawArmed ? LateralAtT(t) : 0f;
-                Vector3 str    = Vector3.Lerp(from, straightEnd, t);
+                Vector3 str    = Vector3.LerpUnclamped(from, straightEnd, t);
                 Vector3 bentXZ = str + right * (lat * carryM);
-                // Y: smooth arc — lerp ball.y → L.y + arcBow·sin(πt)
-                float   arcY   = Mathf.Lerp(from.y, L.y, t) + kArcBow * Mathf.Sin(Mathf.PI * t);
-                Vector3 pos    = new Vector3(bentXZ.x, arcY + kRingHeightOff, bentXZ.z);
-                _guideLine.SetPosition(i, pos);
+                float   y      = SampleTerrainHeight(bentXZ) + kRingHeightOff;
+                lr.SetPosition(i, new Vector3(bentXZ.x, y, bentXZ.z));
             }
         }
 
@@ -2324,6 +3102,55 @@ namespace Golfin.Gameplay.UI.ShotUI
             // it left the player with no orientation cue at all; it now floats at the edge with an
             // arrow and docks over the hole the moment the hole enters the frame.
             Rect avoid = ShootButtonScreenRect();
+
+            // map_view_v2 §7 — the real HUD chip clone owns the pin, ON screen AND off it.
+            //
+            // The spec carved the off-screen case out ("keeps its current sprites"), but the map camera
+            // frames ball + CLUB carry, so on every par 4 and par 5 the pin is outside the frame: that
+            // carve-out would have left the old yellow flag on 14 of 18 holes, i.e. exactly the thing
+            // Cesar asked to be replaced ("hole indicator is different from the one in game"). So the
+            // chip docks to the edge too, with its tail pointing off-frame at the pin — the Order 355
+            // SOLVER is still what decides WHERE (edge inset, SHOOT-button avoidance, behind-camera
+            // mirroring); only the art it drives changed.
+            Vector3 pinRaw   = _mapCam.WorldToScreenPoint(_flagWorldPos + Vector3.up * 2f);
+            float   sW = _mapCam.pixelWidth, sH = _mapCam.pixelHeight;
+            bool    pinOnScreen = pinRaw.z > 0f
+                               && pinRaw.x >= 0f && pinRaw.x <= sW
+                               && pinRaw.y >= 0f && pinRaw.y <= sH;
+            bool    useChip = _pinIndicator != null && _pinIndicator.IsValid;
+
+            if (useChip)
+            {
+                _pinIndicator.SetActive(true);
+                _pinIndicator.SetDistance(Vector3.Distance(_ballWorldPos, _flagWorldPos), _unitMode);
+
+                if (pinOnScreen)
+                {
+                    var pinScr = new Vector2(pinRaw.x, pinRaw.y);
+                    _pinIndicator.Place(pinScr, _pinTailMinPx, sW, sH, _indicatorEdgeInsetPx);
+                    _pinChipGapPx = _pinIndicator.GapToPinPx(pinScr);
+                }
+                else
+                {
+                    // Off-frame: the Order 355 solver gives the edge anchor and the angle back at the
+                    // pin; the chip hangs inboard of that anchor with the tail's fading tip on it.
+                    SolveIndicatorPlacement(pinRaw, sW, sH, _indicatorEdgeInsetPx, avoid,
+                                            out Vector2 edgePos, out float angDeg);
+                    var dir = new Vector2(Mathf.Cos(angDeg * Mathf.Deg2Rad), Mathf.Sin(angDeg * Mathf.Deg2Rad));
+                    _pinIndicator.PlaceAlong(edgePos, dir, _pinTailMinPx * UiScale,
+                                             sW, sH, _indicatorEdgeInsetPx);
+                    _pinChipGapPx = -1f;   // no on-screen pin point to measure a gap against
+                }
+
+                if (_flagIconRT  != null && _flagIconRT.gameObject.activeSelf)  _flagIconRT.gameObject.SetActive(false);
+                if (_flagArrowRT != null && _flagArrowRT.gameObject.activeSelf) _flagArrowRT.gameObject.SetActive(false);
+                PlaceIndicator(_ballIconRT, _ballArrowRT, _ballWorldPos, avoid, hideWhenDocked: true);
+                return;
+            }
+
+            // No HoleIndicatorWidget in the scene at all — keep the legacy flag rather than nothing.
+            if (_pinIndicator != null) _pinIndicator.SetActive(false);
+            _pinChipGapPx = -1f;
             PlaceIndicator(_flagIconRT, _flagArrowRT, _flagWorldPos, avoid, hideWhenDocked: false);
             // The ball's on-screen representation is the world-space marker sphere, so its indicator
             // exists ONLY while the ball is panned off-frame.
@@ -2650,6 +3477,42 @@ namespace Golfin.Gameplay.UI.ShotUI
             if (_isOpen) { UpdateGuideAndRings(); PositionMapCamera(); }
         }
 
+        /// <summary>
+        /// Capture seam (map_view_v2): zoom OUT by <paramref name="fovDelta"/> degrees through the exact
+        /// same clamp-and-refuse logic <see cref="HandleTouchInput"/>'s pinch uses — the Order 353b
+        /// zoom-out cap plus the strict-crop refusal — so a capture can never show a pose the player
+        /// cannot reach by pinching. Returns the FOV actually adopted; equal to the previous FOV means
+        /// the zoom was REFUSED, which is itself the finding worth reporting.
+        /// Sibling of <see cref="SetAimYawDirectly"/>; testing / invariant verification only.
+        /// </summary>
+        public float ZoomOutForCapture(float fovDelta)
+        {
+            if (!_isOpen || _mapCam == null) return _currentFov;
+            float candidateFov = Mathf.Clamp(_currentFov + fovDelta, _minZoom, _zoomOutCapFov);
+            if (candidateFov > _currentFov && !FootprintFitsAtFov(candidateFov))
+                candidateFov = _currentFov;
+            _currentFov = candidateFov;
+            _mapCam.fieldOfView = _currentFov;
+            ContainCameraFootprint("zoom-capture");
+            return _currentFov;
+        }
+
+        /// <summary>Capture/diagnostics: the Order 353b zoom-out ceiling and the live FOV.</summary>
+        public float CurrentFov     => _currentFov;
+        public float ZoomOutCapFov  => _zoomOutCapFov;
+
+        /// <summary>
+        /// Capture seam (map_view_v2): pan by a screen delta through <see cref="PanCamera"/> — the same
+        /// method the one- and two-finger drags call, including its strict-crop clamp. Used to force the
+        /// pin into the lower half of the frame so the pin chip's flip-above-the-pin branch can be
+        /// photographed, which is the acceptance list's "force it by pinching/panning".
+        /// </summary>
+        public void PanForCapture(Vector2 screenDelta)
+        {
+            if (!_isOpen || _mapCam == null) return;
+            PanCamera(screenDelta);
+        }
+
         // ── §11 Invariant JSON dump ───────────────────────────────────────────────
         /// <summary>
         /// Public overload used by script-execute to force a dump mid-session
@@ -2689,6 +3552,10 @@ namespace Golfin.Gameplay.UI.ShotUI
             float latAt1 = _fadeDrawArmed ? LateralAtT(1f) : 0f;
             Vector3 L     = _ballWorldPos + aim * cM + right2D * (latAt1 * cM);
             Vector3 aimEnd = _ballWorldPos + aim * (cM * 1.2f);  // kept for backward compat
+            // map_view_v2 §1 — the DRAWN clamp. aimEnd above happens to be the same point today, but it
+            // is documented as a back-compat artefact; P_max is derived from the range model itself so
+            // the validator asserts the model, not a coincidence.
+            Vector3 pMax = MaxReachPoint(_ballWorldPos, aim, cM);
 
             // Ring radii (§6-MODEL formula)
             float r80  = Mathf.Max(cM * _ringFrac * 0.80f, 2f);
@@ -2705,6 +3572,13 @@ namespace Golfin.Gameplay.UI.ShotUI
             float fSx  = fRaw.x  * scaleX;  float fSy  = fRaw.y  * scaleY;
             float lSx  = lRaw.x  * scaleX;  float lSy  = lRaw.y  * scaleY;
             float aeSx = aeRaw.x * scaleX;  float aeSy = aeRaw.y * scaleY;
+            Vector3 pmRaw = _mapCam.WorldToScreenPoint(pMax);
+            float pmSx = pmRaw.x * scaleX;  float pmSy = pmRaw.y * scaleY;
+            // Built outside the JSON literal: a verbatim interpolated string cannot carry a plain
+            // double quote inside an interpolation hole.
+            string shotViewSrc = _shotViewButton    != null ? "serialized"
+                               : _runtimeShotViewGO != null ? "runtime-clone-of-club-button"
+                               : "none";
 
             // Flag indicator screen pos (from icon RT, also scaled).
             float fiSx = 0f, fiSy = 0f;
@@ -2901,7 +3775,23 @@ namespace Golfin.Gameplay.UI.ShotUI
   ""lzScreenRect"": {{""minX"": {lzScrMinX:F1}, ""minY"": {lzScrMinY:F1}, ""maxX"": {lzScrMaxX:F1}, ""maxY"": {lzScrMaxY:F1} }},
   ""lzMatRenderQueue"": {lzMatRQ},
   ""lzMatZTest"": {lzMatZT},
-  ""ringFrac"": {_ringFrac:F4}
+  ""ringFrac"": {_ringFrac:F4},
+  ""clubCarryM"": {cM:F3},
+  ""aimedCarryM"": {(_aimedCarryM > 0f ? _aimedCarryM : cM):F3},
+  ""maxReachFactor"": {kMaxReachFactor:F3},
+  ""maxReachM"": {MaxReachM(cM):F3},
+  ""overRange"": {BoolStr(_overRange)},
+  ""pMax_world"": [{pMax.x:F3},{pMax.y:F3},{pMax.z:F3}],
+  ""pMax_screen"": [{pmSx:F1},{pmSy:F1}],
+  ""overRangeLineVertCount"": {(_overRangeLine != null ? _overRangeLine.positionCount : 0)},
+  ""rangeFanHalfAngleDeg"": {_rangeFanHalfAngleDeg:F2},
+  ""guideDotWorldWidth"": {(_guideLine != null ? _guideLine.startWidth : 0f):F4},
+  ""pinTailMinPx"": {_pinTailMinPx:F1},
+  ""pinChipGapPx"": {_pinChipGapPx:F1},
+  ""pinChipGapOk"": {BoolStr(_pinChipGapPx < 0f || _pinChipGapPx >= (_pinTailMinPx * UiScale) - 0.5f)},
+  ""shotViewButtonActive"": {BoolStr(ShotViewButtonActive())},
+  ""shotViewButtonSource"": ""{shotViewSrc}"",
+  ""unitMode"": ""{_unitMode}""
 }}";
 
             try
@@ -2929,6 +3819,14 @@ namespace Golfin.Gameplay.UI.ShotUI
         }
 
         private static string BoolStr(bool v) => v ? "true" : "false";
+
+        /// <summary>map_view_v2 §8 — whichever SHOT VIEW object is in play, is it on screen right now?</summary>
+        private bool ShotViewButtonActive()
+        {
+            if (_shotViewButton    != null) return _shotViewButton.activeInHierarchy;
+            if (_runtimeShotViewGO != null) return _runtimeShotViewGO.activeInHierarchy;
+            return false;
+        }
 
         // ── §iter-24 FIX #14: Frame-readback coroutine ────────────────────────────
 #if UNITY_EDITOR   // perf_phase1_free_wins §4: both call sites are editor-only now, so this
@@ -3371,6 +4269,7 @@ namespace Golfin.Gameplay.UI.ShotUI
                 foreach (var go in _hideOnMapOpen)
                 {
                     if (go == null || !go.activeSelf) continue;
+                    if (IsChromeExempt(go.transform)) continue;   // map_view_v2 §8 — SHOT VIEW is map chrome
                     _hiddenObjects.Add(go);
                     go.SetActive(false);
                 }
@@ -3453,6 +4352,10 @@ namespace Golfin.Gameplay.UI.ShotUI
             {
                 if (child == keepLeaf) continue;                                   // keep the SHOOT subtree
                 if (transform == child || transform.IsChildOf(child)) continue;    // keep this MVC's branch
+                // map_view_v2 §8 — the SHOT VIEW button is map chrome, not shot chrome. Exempting it
+                // here (exactly as _shootButton is exempted) keeps its show/hide in ONE place —
+                // ShowShotViewButton — instead of being fought over by RestoreShotUIChrome at close.
+                if (IsChromeExempt(child)) continue;
                 if (keepLeaf.IsChildOf(child))                                      // ancestor of SHOOT
                 {
                     HideCanvasChildrenExceptPath(child, keepLeaf);                  // keep it; hide its other children
@@ -3462,6 +4365,19 @@ namespace Golfin.Gameplay.UI.ShotUI
                 _hiddenObjects.Add(child.gameObject);
                 child.gameObject.SetActive(false);
             }
+        }
+
+        /// <summary>
+        /// map_view_v2 §8 — true for the serialized SHOT VIEW button or any ancestor of it, so the
+        /// chrome-hider walks PAST it rather than hiding (and later restoring) the map's own control.
+        /// The runtime clone needs no exemption: it is created after the hide pass and destroyed
+        /// before the restore one.
+        /// </summary>
+        private bool IsChromeExempt(Transform t)
+        {
+            if (_shotViewButton == null || t == null) return false;
+            var sv = _shotViewButton.transform;
+            return t == sv || sv.IsChildOf(t);
         }
 
         private void RestoreShotUIChrome()
@@ -3515,36 +4431,172 @@ namespace Golfin.Gameplay.UI.ShotUI
         private void RepurposeShootButton(bool mapMode)
         {
             if (_shootButton == null) return;
-            // iter-35: if the SHOOT button is a ClubButtonWidget (the repurposed DriverButton), let it own
-            // shoot mode — it sets the "SHOOT" label, HIDES the yards secondary, and suppresses its own
-            // ClubContext Refresh (so "0.00 yds" no longer shows under SHOOT in map view).
+            // map_view_v2 §8: the label swap is GONE. B1 keeps the club button reading "DRIVER / 215 yd"
+            // in map view — the player must be able to see which club the fan and arcs belong to — and
+            // moves the close control to the new bottom-LEFT SHOT VIEW button. What still has to happen
+            // is disabling the SelectorDragRouter (a pointer handler that opens Club Selection
+            // independently of onClick) and rebinding onClick to Close; the club button closes the map
+            // too, exactly as it did before.
             var clubWidget = _shootButton.GetComponent<ClubButtonWidget>();
+            if (clubWidget != null) clubWidget.SetMapMode(mapMode);
+
+            // §"Club button (over)": the button dims to 50 % while the target is past max reach and
+            // stays interactable. A CanvasGroup is added once and kept — DriverButton already has one
+            // in LabScaffold, so this is a no-op there and a safety net in any other scene.
+            _shootButtonGroup = _shootButton.GetComponent<CanvasGroup>();
+            if (_shootButtonGroup == null) _shootButtonGroup = _shootButton.gameObject.AddComponent<CanvasGroup>();
+
             if (mapMode)
             {
-                if (clubWidget != null)
-                {
-                    clubWidget.SetShootMode(true);
-                }
-                else if (_shootButtonLabel != null)
-                {
-                    _savedShootLabel       = _shootButtonLabel.text;
-                    _shootButtonLabel.text = LocalizationManager.Get("GAMEPLAY_SHOOT");
-                }
                 _shootButton.onClick.RemoveAllListeners();
                 _shootButton.onClick.AddListener(Close);
             }
             else
             {
-                if (clubWidget != null)
-                {
-                    clubWidget.SetShootMode(false);
-                }
-                else if (_shootButtonLabel != null && _savedShootLabel != null)
-                {
-                    _shootButtonLabel.text = _savedShootLabel;
-                }
                 _shootButton.onClick.RemoveAllListeners();
+                if (_shootButtonGroup != null) _shootButtonGroup.alpha = 1f;
             }
+        }
+
+        // ── map_view_v2 §8 — the SHOT VIEW button ────────────────────────────────
+        /// <summary>
+        /// Show or hide the bottom-LEFT SHOT VIEW control for the map's lifetime.
+        ///
+        /// Two sources, in order:
+        ///   1. <see cref="_shotViewButton"/> when a scene object is wired — the map only toggles it.
+        ///   2. Otherwise a RUNTIME CLONE of the club button, made at open and destroyed at close.
+        ///
+        /// The clone is the spec's "duplicate DriverButton" done without a scene edit, and it is a
+        /// genuine clone (Rule 19): CardBG's gold-gradient outline, the 145×240 card, the drop shadow
+        /// and the text styling all come from the live button rather than being re-authored. It is
+        /// parented to the club button's OWN parent (the ActionButtons_Cluster that also holds
+        /// GolfinButton) so <see cref="HideCanvasChildrenExceptPath"/>, which keeps that ancestor chain
+        /// alive for the club button, keeps the clone visible for free — and it takes GolfinButton's
+        /// anchors/pivot/offset, i.e. it lands in exactly the bottom-left slot the Figma shows.
+        /// </summary>
+        private void ShowShotViewButton(bool show)
+        {
+            if (!show)
+            {
+                if (_shotViewButton != null) _shotViewButton.SetActive(false);
+                if (_runtimeShotViewGO != null) { Destroy(_runtimeShotViewGO); _runtimeShotViewGO = null; }
+                return;
+            }
+
+            GameObject go = _shotViewButton;
+            if (go == null)
+            {
+                if (_runtimeShotViewGO == null) _runtimeShotViewGO = BuildShotViewClone();
+                go = _runtimeShotViewGO;
+            }
+            if (go == null) return;
+            go.SetActive(true);
+
+            var btn = go.GetComponent<Button>();
+            if (btn != null)
+            {
+                btn.onClick.RemoveAllListeners();
+                btn.onClick.AddListener(Close);
+            }
+        }
+
+        private GameObject BuildShotViewClone()
+        {
+            if (_shootButton == null) return null;
+            var srcGO = _shootButton.gameObject;
+            var srcRT = srcGO.transform as RectTransform;
+            if (srcRT == null || srcRT.parent == null) return null;
+
+            var clone = Instantiate(srcGO, srcRT.parent);
+            clone.name = "MapShotViewButton";
+
+            // Strip the club behaviour: this button is not a club selector and must never repaint its
+            // own label from ClubContext. The Button itself stays — it IS the control.
+            var cw = clone.GetComponent<ClubButtonWidget>();
+            if (cw != null) { cw.enabled = false; Destroy(cw); }
+            var router = clone.GetComponent<SelectorDragRouter>();
+            if (router != null) { router.enabled = false; Destroy(router); }
+
+            // Bottom-left slot: copy GolfinButton's rect wholesale rather than hardcoding 48/100, so the
+            // two bottom corners stay mirror images if the cluster is ever re-laid-out.
+            var rt   = clone.GetComponent<RectTransform>();
+            var slot = FindSlotRect(srcRT.parent, "GolfinButton");
+            if (slot != null)
+            {
+                rt.anchorMin        = slot.anchorMin;
+                rt.anchorMax        = slot.anchorMax;
+                rt.pivot            = slot.pivot;
+                rt.sizeDelta        = slot.sizeDelta;
+                rt.anchoredPosition = slot.anchoredPosition;
+            }
+            else
+            {
+                rt.anchorMin = rt.anchorMax = Vector2.zero;
+                rt.pivot     = Vector2.zero;
+                rt.anchoredPosition = new Vector2(48f, 100f);
+            }
+
+            // Portrait: the placeholder camera glyph, navy, aspect-preserved (Robin's art drops into the
+            // same Resources slot with zero code change — the sibling of "UI/Icon - Flag").
+            var icon = FindDescendantByName(clone.transform, "Icon");
+            var iconImg = icon != null ? icon.GetComponent<Image>() : null;
+            if (iconImg != null)
+            {
+                var sprite = Resources.Load<Sprite>("UI/Icon - ShotView") ?? Resources.Load<Sprite>("Icon - ShotView");
+                if (sprite != null) iconImg.sprite = sprite;
+                iconImg.color         = new Color(0f, 30f / 255f, 57f / 255f, 1f);   // #001E39
+                iconImg.preserveAspect = true;
+                var iconRT = iconImg.rectTransform;
+                iconRT.anchorMin = iconRT.anchorMax = new Vector2(0.5f, 0.5f);
+                iconRT.pivot     = new Vector2(0.5f, 0.5f);
+                // MEASURED against reference/B1_aiming.png, not taken from the spec's "~80x54 body":
+                // the Figma glyph is 80 x 64 px of ink. preserveAspect fits a SQUARE 256x256 sprite to
+                // the SHORTER side of this rect, and the placeholder PNG is only 201 x 145 opaque
+                // inside that square — so an 80x54 rect rendered 54 x (201/256) = 43 px of ink, half
+                // the design. A 102 px square fits to 102 x 0.785 = 80 px of ink, matching the
+                // reference's width exactly. RE-MEASURE when Robin's final icon lands: the number
+                // depends on that file's own transparent padding, not on the layout.
+                iconRT.sizeDelta = new Vector2(102f, 102f);
+                if (sprite == null)
+                    Debug.LogWarning("[MapView v2] Resources/UI/Icon - ShotView not found — SHOT VIEW keeps the club portrait.");
+            }
+
+            // Data: "SHOT VIEW" on two lines (the Figma shows two), secondary hidden.
+            var primary = FindTmp(clone.transform, "PrimaryText");
+            if (primary != null)
+            {
+                primary.text = LocalizationManager.Get("GAMEPLAY_SHOT_VIEW").Replace(" ", "\n");
+                // The source label is ONE line ("DRIVER") in a 35 px-tall rect with auto-sizing
+                // 20..30. Two lines do not fit, so auto-size silently shrank SHOT/VIEW to the 20 floor
+                // and it rendered at 14 px cap-height against the reference's 21 px — the standing
+                // "rendered size vs the reference is the gate, not the arithmetic" rule. Pin the size
+                // the Figma asks for and give the block the height two lines actually need; the
+                // secondary text is hidden just below, so the space is free.
+                primary.enableAutoSizing = false;
+                primary.fontSize         = 30f;
+                primary.alignment        = TextAlignmentOptions.Center;
+                var pr = primary.rectTransform;
+                pr.sizeDelta        = new Vector2(135f, 78f);
+                pr.anchoredPosition = new Vector2(0f, 21f);
+            }
+            var secondary = FindTmp(clone.transform, "SecondaryText");
+            if (secondary != null) secondary.gameObject.SetActive(false);
+
+            return clone;
+        }
+
+        private static RectTransform FindSlotRect(Transform parent, string name)
+        {
+            foreach (Transform child in parent)
+                if (child.name == name) return child as RectTransform;
+            return null;
+        }
+
+        private static TMP_Text FindTmp(Transform root, string name)
+        {
+            foreach (var t in root.GetComponentsInChildren<TMP_Text>(true))
+                if (t.name == name) return t;
+            return null;
         }
 
         // ── Aim write-back to PhysicsLabController ────────────────────────────────
@@ -3610,6 +4662,25 @@ namespace Golfin.Gameplay.UI.ShotUI
             _ring80GO        = null;
             _ring100GO       = null;
             _ring120GO       = null;
+            // map_view_v2 — every B1 object lives under _runtimeRoot (world) or _indicatorCanvas
+            // (screen), both of which were just destroyed; drop the references so a stale
+            // RectTransform / MeshFilter can never be written to after close.
+            _overRangeLine   = null;
+            _rangeFanGO      = null;
+            _rangeFanEdgeGO  = null;
+            _nominalArcGO    = null;
+            _ghostRingGO     = null;
+            _tickMarks.Clear();
+            _tickLabels.Clear();
+            _crossVRT = _crossHRT = _centreDotRT = _crossX1RT = _crossX2RT = _ghostDotRT = null;
+            _readout         = null;
+            _pinIndicator    = null;
+            _overRange       = false;
+            _maxReachM       = 0f;
+            _pinChipGapPx    = -1f;
+            _lastBuiltAimYaw = float.NaN;
+            _lastBuiltCarry  = -1f;
+            _lastBuiltFov    = -1f;
             // §iter-26 FIX #4: _flagLine removed
             _flagIconRT      = null;
             // Order 355 §5 — the indicator parts live under _indicatorCanvas (a child of _runtimeRoot),

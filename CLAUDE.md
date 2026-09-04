@@ -236,6 +236,9 @@ Before doing anything else:
 6. If working on UI: read `Docs/Architecture/UI_HIERARCHY.md` (scene UI paths) and `Docs/Architecture/PATTERNS.md` (recurring patterns)
 6b. **If the task builds a screen from a Figma node: READ `Docs/Architecture/FIGMA_SCREEN_BUILD_PLAYBOOK.md` FIRST and work its checklists.** It is the distilled cost of `gps_profile_pack`, where three full pipeline iterations passed every gate and Cesar rejected each on sight.7. If needed: read `Docs/Architecture/ARCHITECTURE_AUDIT.md` (file tree, singletons, events)
 8. Read `tasks/lessons.md` for relevant project lessons
+9. **Know the ship words before they are used:** `Docs/PUNCH_IT_ROUTINE.md` defines `punch it`,
+   `punch it GPS` and `punch it standalone` as TestFlight commands, and Cesar abbreviates them
+   ("Punch GPS"). A session that has not read it does not recognise the request as a build at all.
 
 ## Session End (EVERY SESSION)
 
@@ -623,6 +626,7 @@ Quick rules:
 | `Docs/Tasks.md` | Current checklist and backlog |
 | `Docs/Rules.md` | Design constraints, Figma specs, conventions |
 | `Docs/TellCode.md` | Architect instructions for Claude Code |
+| `Docs/PUNCH_IT_ROUTINE.md` | **What "punch it" means.** The three TestFlight ship phrases (`punch it` / `punch it GPS` / `punch it standalone`), their lanes and profiles, and the standing permissions around them — the phrase itself is the authorization. Mechanics: `Docs/TESTFLIGHT_RUNBOOK.md`. |
 | `Docs/Architecture/ARCHITECTURE_AUDIT.md` | Auto-generated — file tree, singletons, events |
 | `Docs/Architecture/PATTERNS.md` | Recurring patterns across the codebase |
 | `Docs/Architecture/FIGMA_SCREEN_BUILD_PLAYBOOK.md` | **Read before building any Figma-node screen.** Capture instrument, per-screen backgrounds, panels/fills/bars, text, controller-owned state, node-asset traps, and the self-diff to run before surfacing. |

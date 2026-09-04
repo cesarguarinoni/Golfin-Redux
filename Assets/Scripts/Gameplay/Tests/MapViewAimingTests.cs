@@ -1077,5 +1077,60 @@ namespace Golfin.Gameplay.Tests
             Assert.Less(Mathf.Sin(ang * Mathf.Deg2Rad), 0f,
                 $"The arrow must point downward toward the occluded ball (ang={ang:F1}°)");
         }
+
+        // ─────────────────────────────────────────────────────────────────────────
+        // map_view_v2 §10 — the range model.
+        //
+        // These four are the whole reason §1 is written as static, GO-free math: the over-range state
+        // is the feature Cesar asked for ("no indication when going over the club's possible
+        // distance") and it must be assertable without a scene, a camera or a play-mode frame.
+        // ─────────────────────────────────────────────────────────────────────────
+
+        [Test]
+        public void MaxReach_IsTwentyPercentPastTheClubCarry()
+        {
+            // 1.20 is not a map constant — it is ShotController's overpower ceiling, which is why the
+            // arc the map draws is the furthest the ball can physically be sent with this club.
+            Assert.AreEqual(120f, MapViewController.MaxReachM(100f), kEpsilon);
+            Assert.AreEqual(1.20f, MapViewController.kMaxReachFactor, kEpsilon);
+        }
+
+        [Test]
+        public void IsOverRange_TripsOnlyPastMaxReach()
+        {
+            Assert.IsFalse(MapViewController.IsOverRange(120.0f, 100f),
+                "A target sitting exactly ON the max arc is in range, not over it");
+            Assert.IsTrue(MapViewController.IsOverRange(120.2f, 100f),
+                "A target past max reach must trip the over-range state");
+        }
+
+        [Test]
+        public void MaxReachPoint_LiesOnTheAimDirectionAtExactlyMaxReach()
+        {
+            Vector3 ball   = new Vector3(10f, 3f, -20f);
+            Vector3 aimDir = new Vector3(0.6f, 0f, 0.8f);   // unit length, +X/+Z convention
+            const float clubCarryM = 175f;
+
+            Vector3 p = MapViewController.MaxReachPoint(ball, aimDir, clubCarryM);
+
+            Vector3 delta = p - ball;
+            Assert.AreEqual(clubCarryM * 1.20f, delta.magnitude, 0.01f,
+                "P_max must sit at exactly 1.2 x carry from the ball");
+            // Parallel to the aim direction: the cross product with it is zero.
+            Assert.AreEqual(0f, Vector3.Cross(delta.normalized, aimDir).magnitude, 0.001f,
+                "P_max must lie ON the aim direction, not merely at the right distance");
+        }
+
+        [Test]
+        public void TickCount_CountsTicksStrictlyShortOfTheLanding()
+        {
+            // 178.3 m at 50 yd (45.72 m) spacing → ticks at 50/100/150 yd, and nothing at the target.
+            Assert.AreEqual(3, MapViewController.TickCount(178.3f, 45.72f));
+            // A tick landing exactly ON L is not drawn — it would collide with the crosshair.
+            Assert.AreEqual(0, MapViewController.TickCount(45.72f, 45.72f));
+            // Degenerate inputs must not divide by zero or emit a negative count.
+            Assert.AreEqual(0, MapViewController.TickCount(178.3f, 0f));
+            Assert.AreEqual(0, MapViewController.TickCount(0f, 45.72f));
+        }
     }
 }

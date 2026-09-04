@@ -465,7 +465,7 @@ namespace Golfin.EditorTools
             ShotModeContext.Toggle();
             yield return new WaitForSecondsRealtime(2f);
 
-            // Open map — ClubButtonWidget.SetShootMode(true) calls Get("GAMEPLAY_SHOOT") → "打つ"
+            // Open map — map_view_v2: the bottom-LEFT SHOT VIEW button reads Get("GAMEPLAY_SHOT_VIEW") → "ショット画面"
             var holeCard2 = FindObjectOfType<HoleCardWidget>(false);
             if (holeCard2 != null && holeCard2.MapButton != null && holeCard2.MapButton.gameObject.activeInHierarchy)
             {
@@ -479,7 +479,7 @@ namespace Golfin.EditorTools
             }
             yield return new WaitForSecondsRealtime(0.5f); // map animation settle
 
-            Debug.Log("[GameplayLocalizationBot] Map open JP — SHOOT button should read '打つ'");
+            Debug.Log("[GameplayLocalizationBot] Map open JP — SHOT VIEW button should read 'ショット画面'");
             yield return new WaitForSecondsRealtime(2.5f);
 
             // Close map

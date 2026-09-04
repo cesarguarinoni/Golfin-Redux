@@ -1655,6 +1655,18 @@ MonoBehaviour:
   - key: GAMEPLAY_DRAW
     english: DRAW
     japanese: "\u30C9\u30ED\u30FC"
+  - key: GAMEPLAY_SHOT_VIEW
+    english: SHOT VIEW
+    japanese: "\u30B7\u30E7\u30C3\u30C8\u753B\u9762"
+  - key: MAPVIEW_TO_PIN
+    english: to pin {0}
+    japanese: "\u30D4\u30F3\u307E\u3067 {0}"
+  - key: MAPVIEW_OUT_OF_RANGE
+    english: OUT OF RANGE
+    japanese: "\u5C04\u7A0B\u5916"
+  - key: MAPVIEW_MAX_HINT
+    english: "{0} max {1} \u2014 ball lands at the red line"
+    japanese: "{0}\u306E\u6700\u5927 {1} \u2014 \u30DC\u30FC\u30EB\u306F\u8D64\u3044\u7DDA\u306B\u7740\u5730"
   - key: LANDING_FAIRWAY
     english: FAIRWAY
     japanese: "\u30D5\u30A7\u30A2\u30A6\u30A7\u30A4"

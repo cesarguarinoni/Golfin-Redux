@@ -4,6 +4,60 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
+## 2026-09-04 — `map_view_v2` — B1 overlay built and verified in Unity
+
+Spec: `Docs/Specs/Active/map_view_v2/` (`STATUS.md` = **READY_FOR_SELF_REVIEW**). The overhead map's
+presentation layer is rebuilt to Figma concept **B1**: a flat, dotted, terrain-hugging aim line with
+50-yd ticks; a lime range fan whose outer arc IS max reach; a lime landing glow with a white ring and
+crosshair; a HUD-style target readout chip; the REAL in-game hole indicator at the pin; and SHOT VIEW
+in the bottom-left corner. Aiming behaviour, the camera, the crop and the gestures are untouched.
+
+**The over-range state is drawn, never applied.** `MaxReachM = 1.20 × club carry` is ShotController's
+overpower ceiling, so the lime arc IS the furthest the ball can go — verified live at
+`maxReachM / clubCarryM = 1.2000` in all twelve invariant dumps. Past it the white line stops at
+`P_max`, a red one carries on to the finger, a dashed ghost ring marks where the ball actually lands,
+and the chip goes red. `MapTargetCarryM` was measured on close at exactly the dragged distance
+(177.2 m / 109.6 m) — **unclamped**. One `_overRange` bool drives all six visuals, so dragging back
+clears them in the same frame.
+
+**Two things are runtime clones rather than scene edits** (net scene diff: zero, both reversible by
+wiring `_shotViewButton`): the pin chip is `Instantiate`d from the LIVE `HoleIndicator`, and SHOT VIEW
+is a clone of `DriverButton` in `GolfinButton`'s slot. Proven by GUID rather than by eye — backplate
+`bd4e228a…`, tail `5abf6ed3…`, flag `6d8bcd08…`, card `4c82f744…` are identical on source and clone.
+
+**Verification found three real defects.** (1) Publishing to Supabase was NOT enough — the bundled
+`LocalizationTextTable.asset` was stale, so all four keys rendered as **raw keys** at runtime;
+rebuilt, 1043 → 1047 rows. (2) The readout chip rendered as a stadium pill: the generated 9-slice was
+baked at `pixelsPerUnit 1`, so an 8 px corner asked for 800 px — the textbook Rule 21 failure.
+(3) The aim line was world-width, not screen-constant: the spec's 0.9 m floor won at every live zoom.
+EditMode is 2437/2434 green with the 4 new tests **tripwire-proven** to execute.
+
+**Cesar's review round added three more changes.** The SHOT VIEW icon was **half** the Figma size
+(43×30 vs 80×64) — `preserveAspect` fits a square sprite to the *shorter* rect side, and the
+placeholder is only 201×145 opaque inside 256²; a 102 px square box now renders 80×57. Measuring that
+also caught the label at 14 px cap-height vs 21 (inherited one-line auto-size bottoming out), now 20.
+And the real hole chip now owns the **off-screen** pin too: §7 carved that case out, but the camera
+frames ball + club carry, so the carve-out would have shipped the old yellow flag on 14 of 18 holes.
+
+**The trees WERE drawing at a far LOD — Cesar called it and two of my measurements had missed it.**
+The first test raised `treeMaximumFullLODCount`, which drives Unity's terrain BILLBOARD path; these
+prototypes are `billboardAsset=False` with plain LODGroups, so the knob was inert and its null result
+meant nothing. The instrument that can see it is the triangle counter: at the map's live baseline of
+`QualitySettings.lodBias` **1** the frame draws **1.38 M** triangles, at 8 it draws **2.88 M** — 3.3×
+more geometry, and flat smears become trees with branches and canopy. Shipped as `_mapLodBias`
+(serialized, default 8), map-lifetime only, raises-never-lowers, with a before/during/after guard that
+now covers `QualitySettings` as well as the terrain — BEFORE == AFTER on all three holes, and
+`QualitySettings.asset` clean in git. Cost ~1.4 M → ~2.9 M triangles while the map is open.
+
+**Three findings the code cannot fix inside this spec.** The camera frames ball + *club* carry, so the
+top edge sits at almost exactly 1.20 × carry — meaning the over-range target itself is always just
+off-frame, and the pin chip's flip-above-the-pin branch cannot be photographed. Both were probed
+through the pinch's and drag's own clamp: **zoom-out and pan are BOTH refused by the Order 353b strict
+crop on all three holes** (`_zoomOutCapFov == _currentFov`). Separately the landing ring is
+`carryM × RingFrac` = 31.3 m on Hole 01, roughly 8× the crosshair where B1 shows ~1.5×. All three want
+an architect decision, not a patch.
+
+---
 ## 2026-09-04 — `game_polish_a` — code + gates done, videos owed
 
 Notion **2111**, slice **a** of three. Spec: `Docs/Specs/Active/game_polish_a/` (`STATUS.md`

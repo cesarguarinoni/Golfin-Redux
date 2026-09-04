@@ -52,6 +52,12 @@ namespace Golfin.Gameplay.UI.ShotUI
         // ── PlayerPrefs keys (survive domain reload, unlike SessionState) ─────
         public const string ArmedKey      = "MapViewCapture.Armed";
         public const string CaptureDirKey = "MapViewCapture.CaptureDir";
+        // map_view_v2: which scenario to run. "" / "aiming" keeps the iter-30 Order-352 run byte for
+        // byte; "v2" runs the B1 over-range scenario below. Two more keys parameterise it so one
+        // driver covers Hole 01 (driver) and Hole 08 (iron) without a second copy of the navigation.
+        public const string ScenarioKey   = "MapViewCapture.Scenario";
+        public const string HoleKey       = "MapViewCapture.Hole";
+        public const string ClubLabelKey  = "MapViewCapture.ClubLabel";
 
         public static bool Armed
         {
@@ -62,6 +68,22 @@ namespace Golfin.Gameplay.UI.ShotUI
         {
             get => PlayerPrefs.GetString(CaptureDirKey, "");
             set { PlayerPrefs.SetString(CaptureDirKey, value); PlayerPrefs.Save(); }
+        }
+        public static string Scenario
+        {
+            get => PlayerPrefs.GetString(ScenarioKey, "");
+            set { PlayerPrefs.SetString(ScenarioKey, value); PlayerPrefs.Save(); }
+        }
+        public static int HoleNumber
+        {
+            get => PlayerPrefs.GetInt(HoleKey, 1);
+            set { PlayerPrefs.SetInt(HoleKey, value); PlayerPrefs.Save(); }
+        }
+        /// <summary>Club TYPE label to select through the real selector path, e.g. "DRIVER" / "IRON".</summary>
+        public static string ClubLabel
+        {
+            get => PlayerPrefs.GetString(ClubLabelKey, "");
+            set { PlayerPrefs.SetString(ClubLabelKey, value); PlayerPrefs.Save(); }
         }
 
         // ── RuntimeInitializeOnLoad injection ────────────────────────────────
@@ -94,7 +116,12 @@ namespace Golfin.Gameplay.UI.ShotUI
             }
 
             Armed = false; // clear immediately
-            StartCoroutine(RunScenario());
+            // reference_playmode_capture_runinbackground: without this a capture taken while the
+            // Editor is not the focused app returns the splash/last-focused frame.
+            Application.runInBackground = true;
+            string scenario = Scenario;
+            Debug.Log($"[MapViewCaptureDriver] Scenario='{scenario}' Hole={HoleNumber} Club='{ClubLabel}'");
+            StartCoroutine(scenario == "v2" ? RunV2Scenario() : RunScenario());
         }
 
         // ── Scenario coroutine ────────────────────────────────────────────────
@@ -502,6 +529,375 @@ namespace Golfin.Gameplay.UI.ShotUI
 #endif
         }
 
+        // ═══════════════════════════════════════════════════════════════════════════════════════
+        //  map_view_v2 — B1 SCENARIO
+        //
+        //  Same real-entry navigation as the Order-352 run above (PIPELINE_HARDENING Rule 2: the map
+        //  is opened by the REAL HoleMap button's onClick, never a synthetic one), but the payload is
+        //  the three states the B1 spec is reviewed on:
+        //
+        //      aiming        target at the club's own carry, inside the fan
+        //      over_range    target dragged PAST max reach — red line, red edge, ghost ring, red chip
+        //      back_in_range dragged back inside — every over-range visual gone in one frame
+        //
+        //  Each state writes both a screenshot and an invariant JSON, so the gate is the JSON and the
+        //  image is the artefact for Cesar (Rule 3).
+        // ═══════════════════════════════════════════════════════════════════════════════════════
+        IEnumerator RunV2Scenario()
+        {
+            int   hole      = HoleNumber;
+            string wantClub = ClubLabel;
+            string captureDir = CaptureDir;
+            if (string.IsNullOrEmpty(captureDir))
+            {
+                string root = Path.GetDirectoryName(Application.dataPath);
+                captureDir = Path.GetFullPath(Path.Combine(root,
+                    "Docs/Specs/Active/map_view_v2/screenshots"));
+            }
+            Directory.CreateDirectory(captureDir);
+
+            void Log(string msg)
+            {
+                Debug.Log($"[MapViewV2Capture] {msg}");
+                File.AppendAllText(Path.Combine(captureDir, "history.log"),
+                    $"[t={Time.realtimeSinceStartup:F2}] {msg}\n");
+            }
+
+            IEnumerator Snap(string label)
+            {
+                yield return new WaitForEndOfFrame();
+                string lbl = $"h{hole:D2}_{label}";
+                string src = CaptureCore.SnapPlayModeSafe(lbl);
+                // reference_snapplaymodesafe_phantom_path: SnapPlayModeSafe can return a path for a
+                // file it never wrote, AND can hand back a byte-identical STALE frame. Assert the
+                // file exists and log its size + mtime so a duplicate is visible in the history.
+                if (!string.IsNullOrEmpty(src) && File.Exists(src))
+                {
+                    var fi  = new FileInfo(src);
+                    string dst = Path.Combine(captureDir, lbl + ".png");
+                    File.Copy(src, dst, overwrite: true);
+                    Log($"Snap: {lbl} -> {dst} ({fi.Length} bytes, src mtime {fi.LastWriteTimeUtc:HH:mm:ss.fff})");
+                }
+                else Log($"Snap FAIL: no file written for {lbl} (src='{src}')");
+            }
+
+            Log($"=== map_view_v2 B1 capture — hole {hole}, club '{wantClub}' ===");
+
+            yield return new WaitForSecondsRealtime(5f);
+
+            Log("Step 1: NavigateToHome");
+            yield return NavigateToHome(Log);
+            yield return new WaitForSecondsRealtime(2f);
+
+            Log("Step 2: ShowScreen(HoleSelection)");
+            yield return ShowHoleSelectionViaScreenManager(Log);
+            yield return WaitForScreen("HoleSelection", 15f, Log);
+            yield return new WaitForSecondsRealtime(3f);
+
+            Log($"Step 3: tap HoleCard action button for hole {hole}");
+            yield return ClickHoleCardActionButton(Log, hole);
+
+            yield return WaitForSceneLoaded("LabScaffold", 60f, Log);
+            {
+                float ge = 0f; bool gf = false;
+                while (ge < 90f)
+                {
+                    for (int si = 0; si < SceneManager.sceneCount; si++)
+                    {
+                        var sc = SceneManager.GetSceneAt(si);
+                        if (sc.isLoaded && sc.name.StartsWith("Hole_") && sc.name.EndsWith("_Geo"))
+                        { Log($"  Hole geo loaded: '{sc.name}' after {ge:F1}s"); gf = true; break; }
+                    }
+                    if (gf) break;
+                    yield return new WaitForSecondsRealtime(0.5f);
+                    ge += 0.5f;
+                }
+                if (!gf) { Log("FAIL: no Hole_NN_Geo loaded — abort"); yield break; }
+            }
+            yield return new WaitForSecondsRealtime(6f);
+
+            // ── Step 4: pick the club through the REAL selector path ──────────────
+            // ClubContext.RequestSelection(idx) is the widget -> populator call the club selector
+            // makes; the populator calls SelectByIndex. Nothing here writes SelectedDistance by hand
+            // (which is what the Order-352 driver did) — the number the map reads is the number the
+            // club button shows, which is exactly what the fan edge has to be 1.2x of.
+            Log($"Step 4: select club '{wantClub}' via ClubContext.RequestSelection (real selector path)");
+            {
+                var bag = ClubContext.EquippedBag;
+                Log($"  bag has {bag.Count} clubs; current='{ClubContext.SelectedTypeLabel}' dist={ClubContext.SelectedDistance}");
+                int found = -1;
+                for (int i = 0; i < bag.Count; i++)
+                {
+                    Log($"    [{i}] {bag[i].TypeLabel} {bag[i].Distance}yd driver={bag[i].IsDriver}");
+                    if (found < 0 && !string.IsNullOrEmpty(wantClub) &&
+                        bag[i].TypeLabel.IndexOf(wantClub, StringComparison.OrdinalIgnoreCase) >= 0)
+                        found = i;
+                }
+                if (found >= 0)
+                {
+                    ClubContext.RequestSelection(found);
+                    yield return new WaitForSecondsRealtime(1.0f);
+                    Log($"  RequestSelection({found}) -> '{ClubContext.SelectedTypeLabel}' {ClubContext.SelectedDistance}yd");
+                }
+                else Log($"  '{wantClub}' not in the bag — keeping '{ClubContext.SelectedTypeLabel}' {ClubContext.SelectedDistance}yd");
+            }
+            // Cesar 2026-09-04: "make sure your tree changes only affect map view and do not change
+            // draw distance in shot view." Snapshot the shot-view terrain state BEFORE the map opens
+            // so the post-close state can be compared field by field rather than asserted.
+            string treeBefore = TerrainTreeState();
+            Log($"Tree state BEFORE map: {treeBefore}");
+            yield return Snap("00_shot_view_before_map");
+
+            // ── Step 5: OPEN the map through the REAL button (Rule 2) ─────────────
+            Log("Step 5: OPEN map — real HoleMap button pointer-down/up + onClick");
+            {
+                var holeMapBtn = FindButtonByGoName("HoleMap", Log);
+                if (holeMapBtn == null) { Log("FAIL: HoleMap Button not found — abort"); yield break; }
+                var ped = new PointerEventData(EventSystem.current);
+                ExecuteEvents.Execute(holeMapBtn.gameObject, ped, ExecuteEvents.pointerDownHandler);
+                yield return new WaitForSecondsRealtime(0.1f);
+                ExecuteEvents.Execute(holeMapBtn.gameObject, ped, ExecuteEvents.pointerUpHandler);
+                holeMapBtn.onClick.Invoke();
+                Log($"  HoleMap.onClick fired on '{holeMapBtn.gameObject.name}'");
+            }
+            yield return new WaitForSecondsRealtime(2.5f);
+
+            var mvc = FindObjectOfType<MapViewController>();
+            if (mvc == null || !mvc.IsOpen) { Log($"FAIL: map not open (mvc={(mvc == null ? "null" : mvc.IsOpen.ToString())})"); yield break; }
+
+            void LogState(string tag)
+            {
+                Log($"  [{tag}] clubCarry={mvc.ClubCarryMeters:F1}m maxReach={mvc.MaxReachMeters:F1}m " +
+                    $"aimedCarry={mvc.AimedCarryMeters:F1}m over={mvc.IsOverRangeNow} " +
+                    $"pinChipGapPx={mvc.PinChipGapPx:F1} ratio={(mvc.ClubCarryMeters > 0.01f ? mvc.MaxReachMeters / mvc.ClubCarryMeters : 0f):F4}");
+            }
+
+            // Drive the target through the SAME entry point a finger uses.
+            bool AimAtFraction(float frac)
+            {
+                var cam = mvc.MapCamera;
+                if (cam == null) return false;
+                Vector3 aim = new Vector3(Mathf.Cos(mvc.AimYawRadians), 0f, Mathf.Sin(mvc.AimYawRadians));
+                Vector3 wp  = mvc.BallWorldPos + aim * (mvc.ClubCarryMeters * frac);
+                Vector3 sp  = cam.WorldToScreenPoint(wp);
+                bool ok = mvc.TrySetAimFromScreenPoint(new Vector2(sp.x, sp.y));
+                Log($"  TrySetAimFromScreenPoint(frac={frac:F2}) screen=({sp.x:F0},{sp.y:F0}) ok={ok}");
+                return ok;
+            }
+
+            Log($"Tree state DURING map: {TerrainTreeState()}");
+
+            // ── Clone provenance read-back (PIPELINE_HARDENING Rule 11) ───────────
+            // Not "it looks like the HUD chip" — the live Image.sprite of the map's chip is compared
+            // against the live Image.sprite of the HUD chip it was cloned from, by asset GUID. A flat
+            // fill where a sprite is required, or a different sprite, fails here rather than at review.
+            {
+                var hudChip = FindObjectOfType<HoleIndicatorWidget>(true);
+                var lines   = new System.Text.StringBuilder();
+                lines.AppendLine("element,source,spriteName,guid,localId,color");
+                void Dump(string element, string source, Transform root, string childName)
+                {
+                    if (root == null) { lines.AppendLine($"{element},{source},<no root>,,,"); return; }
+                    foreach (var img in root.GetComponentsInChildren<Image>(true))
+                    {
+                        if (img.name != childName) continue;
+                        string guid = "", lid = "";
+#if UNITY_EDITOR
+                        if (img.sprite != null)
+                            UnityEditor.AssetDatabase.TryGetGUIDAndLocalFileIdentifier(img.sprite, out guid, out long l);
+#endif
+                        lines.AppendLine($"{element},{source},{(img.sprite != null ? img.sprite.name : "<NONE>")},{guid},{lid},{ColorUtility.ToHtmlStringRGBA(img.color)}");
+                        return;
+                    }
+                    lines.AppendLine($"{element},{source},<child '{childName}' not found>,,,");
+                }
+                var mapChip = GameObject.Find("MapView_PinChip");
+                Dump("pinChip.Backplate", "HUD",  hudChip != null ? hudChip.transform : null, "Backplate");
+                Dump("pinChip.Backplate", "MAP",  mapChip != null ? mapChip.transform : null, "Backplate");
+                Dump("pinChip.ArrowLine", "HUD",  hudChip != null ? hudChip.transform : null, "ArrowLine");
+                Dump("pinChip.ArrowLine", "MAP",  mapChip != null ? mapChip.transform : null, "ArrowLine");
+                Dump("pinChip.FlagIcon",  "HUD",  hudChip != null ? hudChip.transform : null, "FlagIcon");
+                Dump("pinChip.FlagIcon",  "MAP",  mapChip != null ? mapChip.transform : null, "FlagIcon");
+                var clubBtn = FindObjectOfType<ClubButtonWidget>(true);
+                var shotView = GameObject.Find("MapShotViewButton");
+                Dump("selectButton.CardBG", "CLUB(DriverButton)", clubBtn != null ? clubBtn.transform : null, "CardBG");
+                Dump("selectButton.CardBG", "MAP(ShotView)",      shotView != null ? shotView.transform : null, "CardBG");
+                Dump("selectButton.Icon",   "MAP(ShotView)",      shotView != null ? shotView.transform : null, "Icon");
+                string provPath = Path.Combine(captureDir, $"clone_provenance_h{hole:D2}.csv");
+                File.WriteAllText(provPath, lines.ToString());
+                Log("Clone provenance ->" + System.Environment.NewLine + lines.ToString());
+            }
+
+            // ── State 1: AIMING ───────────────────────────────────────────────────
+            LogState("aiming (as opened)");
+            mvc.ForceInvariantDump("v2_h" + hole.ToString("D2") + "_aiming");
+            yield return new WaitForSecondsRealtime(0.5f);
+            yield return Snap("01_aiming");
+
+            // ── State 2: OVER RANGE — drag well past the fan edge ────────────────
+            Log("Step 6: drag the target PAST max reach (1.32x carry — the fan edge is at 1.20x)");
+            AimAtFraction(1.32f);
+            yield return new WaitForSecondsRealtime(0.5f);
+            // The camera frames ball + CLUB carry, so the top edge sits at almost exactly 1.20x carry —
+            // i.e. right on P_max. Any over-range target is therefore off the top of the frame unless the
+            // player zooms out. Try it through the pinch's own clamp/refuse path and log the verdict:
+            // a refusal is the finding, not a capture bug.
+            {
+                float before = mvc.CurrentFov;
+                float after  = before;
+                for (int z = 0; z < 6; z++)
+                {
+                    after = mvc.ZoomOutForCapture(4f);
+                    yield return null;
+                }
+                Log($"  zoom-out: fov {before:F1} -> {after:F1} (cap={mvc.ZoomOutCapFov:F1}) " +
+                    $"{(Mathf.Abs(after - before) < 0.01f ? "REFUSED by the strict crop" : "accepted")}");
+            }
+            yield return new WaitForSecondsRealtime(0.8f);
+            LogState("over_range");
+            if (!mvc.IsOverRangeNow) Log("  WARN: expected IsOverRangeNow=true after the 1.45x drag");
+            mvc.ForceInvariantDump("v2_h" + hole.ToString("D2") + "_over_range");
+            yield return Snap("02_over_range");
+
+            // ── State 3: BACK IN RANGE — one drag back inside ────────────────────
+            Log("Step 7: drag the target BACK inside range (0.85x carry)");
+            AimAtFraction(0.85f);
+            yield return new WaitForSecondsRealtime(1.0f);
+            LogState("back_in_range");
+            if (mvc.IsOverRangeNow) Log("  WARN: expected IsOverRangeNow=false after the 0.85x drag");
+            mvc.ForceInvariantDump("v2_h" + hole.ToString("D2") + "_back_in_range");
+            yield return Snap("03_back_in_range");
+
+            // ── Step 7a: TREE LOD, measured by TRIANGLE COUNT not by eye ─────────
+            // Round 3 concluded "the trees are already high LOD" from a treeMaximumFullLODCount test.
+            // That knob drives Unity's BILLBOARD path, and these prototypes have billboardAsset=False
+            // with plain LODGroups — so that test may have been a no-op and the conclusion unearned.
+            // LODGroup selection is driven by QualitySettings.lodBias. Sweep it and read the RENDERED
+            // TRIANGLE COUNT: if the geometry count climbs, the map really was drawing a lower LOD.
+            Log("Step 7a: tree LOD sweep by lodBias, measured with UnityStats.triangles");
+            {
+                float savedBias = QualitySettings.lodBias;
+                int   savedMax  = QualitySettings.maximumLODLevel;
+                Log($"  baseline: lodBias={savedBias} maximumLODLevel={savedMax}");
+                float[] biases = { 1f, 2f, 4f, 8f };
+                string[] tags  = { "09a_lodbias_1", "09b_lodbias_2", "09c_lodbias_4", "09d_lodbias_8" };
+                for (int i = 0; i < biases.Length; i++)
+                {
+                    QualitySettings.lodBias        = biases[i];
+                    QualitySettings.maximumLODLevel = 0;
+                    // Give the renderer a few frames to re-select LODs before reading the counters.
+                    for (int f = 0; f < 4; f++) yield return new WaitForEndOfFrame();
+#if UNITY_EDITOR
+                    Log($"  lodBias={biases[i],5}  triangles={UnityEditor.UnityStats.triangles,9}  " +
+                        $"verts={UnityEditor.UnityStats.vertices,9}  batches={UnityEditor.UnityStats.batches,5}  " +
+                        $"drawCalls={UnityEditor.UnityStats.drawCalls}");
+#endif
+                    yield return Snap(tags[i]);
+                }
+                QualitySettings.lodBias         = savedBias;
+                QualitySettings.maximumLODLevel = savedMax;
+                Log($"  lodBias restored to {QualitySettings.lodBias}");
+            }
+
+            // ── Step 7b: fan-fill A/B, measured rather than eyeballed ────────────
+            // "Is the 10% lime fan actually visible over green terrain?" is a pixel question, never a
+            // look at the frame (feedback_never_eyeball_brightness). Two frames, fan off and fan on,
+            // from the identical pose — the diff is computed offline from the PNGs.
+            Log("Step 7b: fan-fill A/B — one frame with MapView_RangeFan disabled, one with it enabled");
+            {
+                var fan = GameObject.Find("MapView_RangeFan");
+                if (fan != null)
+                {
+                    fan.SetActive(false);
+                    yield return new WaitForSecondsRealtime(0.4f);
+                    yield return Snap("06a_fanfill_off");
+                    fan.SetActive(true);
+                    yield return new WaitForSecondsRealtime(0.4f);
+                    yield return Snap("06b_fanfill_on");
+                    Log("  fan-fill A/B pair captured");
+                }
+                else Log("  WARN: MapView_RangeFan not found — fan A/B skipped");
+            }
+
+            // ── Step 7c: force the pin into the LOWER half, so the chip must FLIP above it ──
+            // The acceptance list's own suggestion. PanForCapture goes through PanCamera, i.e. the same
+            // clamp the finger drag obeys — so a refusal here is the strict crop refusing, not a bug.
+            Log("Step 7c: pan to drive the pin into the LOWER half — the chip must flip ABOVE it");
+            {
+                var cam = mvc.MapCamera;
+                bool flipped = false;
+                for (int step = 0; step < 12 && cam != null; step++)
+                {
+                    Vector3 ps = cam.WorldToScreenPoint(mvc.PinWorldPos + Vector3.up * 2f);
+                    bool onScreen = ps.z > 0f && ps.x >= 0f && ps.x <= cam.pixelWidth
+                                              && ps.y >= 0f && ps.y <= cam.pixelHeight;
+                    if (onScreen && ps.y < cam.pixelHeight * 0.5f)
+                    {
+                        Log($"  step {step}: pin at ({ps.x:F0},{ps.y:F0}) is in the BOTTOM half — " +
+                            $"pinChipGapPx={mvc.PinChipGapPx:F1} (floor={mvc.PinTailMinPx:F0})");
+                        flipped = true;
+                        break;
+                    }
+                    // Drag the map content DOWN, which walks the pin down the screen.
+                    mvc.PanForCapture(new Vector2(0f, -90f));
+                    yield return null;
+                    Vector3 after = cam.WorldToScreenPoint(mvc.PinWorldPos + Vector3.up * 2f);
+                    Log($"  step {step}: pin ({ps.x:F0},{ps.y:F0}) -> ({after.x:F0},{after.y:F0}) onScreen={onScreen}");
+                    if (Mathf.Abs(after.y - ps.y) < 0.5f && Mathf.Abs(after.x - ps.x) < 0.5f)
+                    { Log("  pan REFUSED by the strict crop — cannot force the flip on this hole"); break; }
+                    yield return new WaitForSecondsRealtime(0.15f);
+                }
+                Log($"  flip forced = {flipped}");
+                mvc.ForceInvariantDump("v2_h" + hole.ToString("D2") + "_pin_flip");
+            }
+            yield return new WaitForSecondsRealtime(0.6f);
+            yield return Snap("07_pin_flip");
+
+            // ── Step 8: close through the REAL SHOT VIEW button ──────────────────
+            Log("Step 8: CLOSE map — real SHOT VIEW button");
+            {
+                var sv = FindButtonByGoName("MapShotViewButton", Log);
+                if (sv == null)
+                {
+                    Log("  MapShotViewButton not found by name — falling back to the club button");
+                    var f = typeof(MapViewController).GetField("_shootButton",
+                        BindingFlags.NonPublic | BindingFlags.Instance);
+                    sv = f?.GetValue(mvc) as Button;
+                }
+                if (sv != null)
+                {
+                    Log($"  closing via '{sv.gameObject.name}' (active={sv.gameObject.activeInHierarchy})");
+                    var ped = new PointerEventData(EventSystem.current);
+                    ExecuteEvents.Execute(sv.gameObject, ped, ExecuteEvents.pointerDownHandler);
+                    yield return new WaitForSecondsRealtime(0.1f);
+                    ExecuteEvents.Execute(sv.gameObject, ped, ExecuteEvents.pointerUpHandler);
+                    sv.onClick.Invoke();
+                }
+                else Log("  FAIL: no close control found");
+            }
+            yield return new WaitForSecondsRealtime(1.5f);
+            {
+                var sc = FindObjectOfType<Golfin.Gameplay.Input.ShotController>();
+                Log($"  After close: mvc.IsOpen={mvc.IsOpen} " +
+                    $"MapTargetCarryM={(sc != null ? sc.MapTargetCarryM.ToString("F1") : "n/a")}m " +
+                    $"(UNCLAMPED write-back check: the 0.85x drag put the target at {mvc.AimedCarryMeters:F1}m)");
+            }
+            {
+                string treeAfter = TerrainTreeState();
+                bool restored = treeAfter == treeBefore;
+                Log($"Tree state AFTER close: {treeAfter}");
+                Log($"SHOT-VIEW TERRAIN UNCHANGED BY THE MAP: {(restored ? "PASS — identical to before the map opened" : "FAIL — shot view changed!")}");
+                if (!restored) Log($"   before: {treeBefore}\n   after : {treeAfter}");
+            }
+            yield return Snap("04_closed_back_in_shot_view");
+
+            Log("=== map_view_v2 B1 capture complete ===");
+            Destroy(gameObject);
+#if UNITY_EDITOR
+            EditorApplication.ExitPlaymode();
+#endif
+        }
+
         // ── §iter-26 FIX 0 GATE: Gameplay terrain luma sampling ─────────────────────────────────
         // Reads the composited framebuffer at a "terrain region" sample point (centre of screen),
         // computes mean luma, and appends the result to a JSON file for the §11 gate validator.
@@ -598,6 +994,25 @@ namespace Golfin.Gameplay.UI.ShotUI
             return null;
         }
 
+        /// <summary>
+        /// Every tree-LOD field the map is allowed to touch, on every active terrain, as one comparable
+        /// string. Used to prove the map's override is fully reverted at close and that SHOT VIEW draw
+        /// distance is exactly what it was.
+        /// </summary>
+        static string TerrainTreeState()
+        {
+            var sb = new System.Text.StringBuilder();
+            foreach (var t in Terrain.activeTerrains)
+            {
+                if (t == null) continue;
+                sb.Append($"[{t.name} draw={t.treeDistance:F1} billboard={t.treeBillboardDistance:F1} " +
+                          $"crossFade={t.treeCrossFadeLength:F1} maxFullLOD={t.treeMaximumFullLODCount} " +
+                          $"detailDist={t.detailObjectDistance:F1}]");
+            }
+            sb.Append($"[QualitySettings lodBias={QualitySettings.lodBias} maximumLODLevel={QualitySettings.maximumLODLevel}]");
+            return sb.ToString();
+        }
+
         // ── Navigation helpers ────────────────────────────────────────────────
         IEnumerator NavigateToHome(Action<string> log, float timeout = 60f)
         {
@@ -648,9 +1063,11 @@ namespace Golfin.Gameplay.UI.ShotUI
             yield return new WaitForSecondsRealtime(0.1f);
         }
 
-        IEnumerator ClickHoleCardActionButton(Action<string> log)
+        IEnumerator ClickHoleCardActionButton(Action<string> log) => ClickHoleCardActionButton(log, 1);
+
+        IEnumerator ClickHoleCardActionButton(Action<string> log, int wantHole)
         {
-            log("  ClickHoleCardActionButton: finding HoleCardController via FindObjectsOfType");
+            log($"  ClickHoleCardActionButton: finding HoleCardController for hole {wantHole}");
             var allMonos = FindObjectsOfType<MonoBehaviour>(includeInactive: false);
             MonoBehaviour targetCard = null;
             foreach (var m in allMonos)
@@ -667,9 +1084,9 @@ namespace Golfin.Gameplay.UI.ShotUI
                     if (holeNumProp != null) holeNum = (int)holeNumProp.GetValue(m);
                     else if (holeNumField != null) holeNum = (int)holeNumField.GetValue(m);
                     log($"  Found HoleCardController '{m.gameObject.name}' hole={holeNum}");
-                    if (targetCard == null || holeNum == 1)
+                    if (targetCard == null || holeNum == wantHole)
                         targetCard = m;
-                    if (holeNum == 1) break;
+                    if (holeNum == wantHole) break;
                 }
             }
 

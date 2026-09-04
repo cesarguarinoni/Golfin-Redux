@@ -29,6 +29,26 @@ namespace Golfin.Gameplay.UI.ShotUI
         public void SetBallTransform(Transform ball) => _ballTransform = ball;
         public void SetUnitMode(DistanceUnit u)      => _unitMode      = u;
 
+        /// <summary>
+        /// map_view_v2 §6 — the live unit mode, so the map view formats its ticks and readout in the
+        /// SAME unit the HUD chip is showing. PhysicsLabController is the only caller of
+        /// <see cref="SetUnitMode"/> (putter mode → Meters, everything else → Yards); the map reads
+        /// the value back off this widget rather than guessing or duplicating that switch.
+        /// </summary>
+        public DistanceUnit UnitMode => _unitMode;
+
+        /// <summary>
+        /// map_view_v2 §6 — the one distance formatter shared by the HUD chip, the map's pin chip and
+        /// the map's target readout. Extracted verbatim from <see cref="LateUpdate"/> so the three
+        /// surfaces cannot drift apart (and so "yds"/"mts" exist in exactly one place).
+        /// </summary>
+        public static string FormatDistance(float meters, DistanceUnit unit)
+        {
+            if (unit == DistanceUnit.Meters) return $"{meters:F0} mts";
+            float yards = meters * 1.0936133f;
+            return $"{yards:F0} yds";
+        }
+
         void Awake()
         {
             _canvasGroup = GetComponent<CanvasGroup>();
@@ -52,15 +72,7 @@ namespace Golfin.Gameplay.UI.ShotUI
             Transform ball = _ballTransform;
             float meters = ball != null ? Vector3.Distance(ball.position, HoleContext.PinWorld) : 0f;
             if (_distanceText != null)
-            {
-                if (_unitMode == DistanceUnit.Meters)
-                    _distanceText.text = $"{meters:F0} mts";
-                else
-                {
-                    float yards = meters * 1.0936133f;
-                    _distanceText.text = $"{yards:F0} yds";
-                }
-            }
+                _distanceText.text = FormatDistance(meters, _unitMode);
 
             // Project pin to canvas coords
             Vector3 pinScreen = _cam.WorldToScreenPoint(HoleContext.PinWorld);
