@@ -1,0 +1,109 @@
+# reference/data_after.txt — build_size_diet
+# Data folder: Builds/iOS-Full/Data   (97 files)
+# Columns: raw bytes (INSTALL contribution) | deflate bytes (Payload-compressed model) | path
+# Non-Data Payload constant added below: 111,741,942 B raw / 35,515,812 B compressed
+
+DATA raw           974,493,311 B =    929.3 MiB
+DATA compressed    293,767,497 B =    280.2 MiB
+
+INSTALL       = Data raw  + non-Data raw  =   1035.9 MiB   (gate <= 1024 MiB)
+PAYLOAD-COMP  = Data comp + non-Data comp =    314.0 MiB   (gate <=  350 MiB)
+
+== Per-file, sorted by raw size ==
+    71794592     23127106  sharedassets0.assets.resS
+    56641952     36260713  resources.assets.resS
+    49588472     45599679  resources.assets
+    42791392     16137825  sharedassets8.assets.resS
+    30351872      5352229  sharedassets2.assets
+    30209512      5826695  sharedassets3.assets
+    30068728      5375365  sharedassets9.assets
+    29953016      6059149  sharedassets7.assets
+    29798384      6272059  sharedassets8.assets
+    29797344      4536238  sharedassets18.assets
+    29760436      6284412  sharedassets6.assets
+    29748092      5890968  sharedassets13.assets
+    29736476      5650134  sharedassets14.assets
+    29726180      6697982  sharedassets15.assets
+    29700512      4880748  sharedassets19.assets
+    29699228      5864236  sharedassets11.assets
+    29698652      4876005  sharedassets4.assets
+    29693224      5432753  sharedassets10.assets
+    29690288      4732174  sharedassets17.assets
+    29688464      5946874  sharedassets12.assets
+    29682056      4684734  sharedassets16.assets
+    29676368      4820035  sharedassets5.assets
+    16614944      7538263  sharedassets7.assets.resS
+    16362748      4727580  Managed/Metadata/global-metadata.dat
+    13669744     10391794  sharedassets2.assets.resS
+    12816276      1841917  level9
+    12580336      6975593  sharedassets3.assets.resS
+    11804048      6352000  sharedassets0.assets
+    11258276      1731557  level14
+    10766964      1891775  level13
+    10747972      1452578  level6
+     9622868      1162411  level3
+     9305748      1383007  level15
+     7970048      4505634  sharedassets1.assets.resS
+     5743892       978328  level18
+     5592528      4926572  sharedassets6.assets.resS
+     5186468       991772  level19
+     5180160      1708136  level13.resS
+     5149684      1066445  level8
+     5122920       798715  level4
+     5064324       814780  level11
+     4490080      4446012  sharedassets0.resource
+     4169408      1394697  globalgamemanagers.assets.resS
+     3233460       468812  level12
+     3132596       368522  level0
+     3102500       601222  level17
+     3077300       762851  level10
+     2509200       773843  level8.resS
+     2349264       596254  sharedassets9.assets.resS
+     2066052       369575  level16
+     1708292       182576  Resources/unity default resources
+     1213512       298557  globalgamemanagers.assets
+     1035764       227521  level5
+      923580       608309  level2
+      649076       227722  sharedassets20.assets
+      591808       147258  sharedassets18.assets.resS
+      457136       114083  Resources/unity_builtin_extra
+      378740       124097  globalgamemanagers
+      342996       201734  level7
+      337563       125067  Managed/Resources/mscorlib.dll-resources.dat
+      251816        34689  level1
+      180512        96808  sharedassets1.assets
+       93718         7813  Managed/Resources/System.Data.dll-resources.dat
+       33598         4420  Managed/mono/4.0/machine.config
+       33482        10499  Managed/Resources/System.Text.Json.dll-resources.dat
+       25453         9625  Managed/Resources/System.Drawing.dll-resources.dat
+        9262         3135  Managed/Resources/System.ComponentModel.Annotations.dll-resources.dat
+        8623         1366  RuntimeInitializeOnLoads.json
+        7239         1599  ScriptingAssemblies.json
+        5524         2094  level20
+        4294         1748  Managed/Resources/Microsoft.Extensions.DependencyInjection.dll-resources.dat
+        2599         1155  Managed/Resources/Microsoft.Extensions.DependencyInjection.Abstractions.dll-resources.dat
+        2294         1116  Managed/Resources/System.IO.Pipelines.dll-resources.dat
+        2236         1150  Managed/Resources/System.Diagnostics.DiagnosticSource.dll-resources.dat
+        1212          606  Managed/Resources/Microsoft.Extensions.Options.dll-resources.dat
+        1106          544  Managed/Resources/Microsoft.Bcl.TimeProvider.dll-resources.dat
+        1096          654  Managed/Resources/R3.dll-resources.dat
+        1084          573  Managed/Resources/Microsoft.Extensions.Primitives.dll-resources.dat
+         900          321  Managed/Resources/Newtonsoft.Json.dll-resources.dat
+         792          454  Managed/Resources/System.Threading.Channels.dll-resources.dat
+         478          339  Managed/Resources/Microsoft.Extensions.Logging.dll-resources.dat
+         476          321  Managed/Resources/Microsoft.Extensions.Logging.Abstractions.dll-resources.dat
+         435          292  Managed/Resources/System.Text.Encodings.Web.dll-resources.dat
+         360          259  Managed/Resources/Microsoft.Extensions.Configuration.Abstractions.dll-resources.dat
+         134          113  boot.config
+          96           10  sharedassets4.assets.resS
+          96           10  sharedassets19.assets.resS
+          96           10  sharedassets10.assets.resS
+          96           10  sharedassets15.assets.resS
+          96           10  sharedassets16.assets.resS
+          96           10  sharedassets13.assets.resS
+          96           10  sharedassets14.assets.resS
+          96           10  sharedassets11.assets.resS
+          96           10  sharedassets5.assets.resS
+          96           10  sharedassets12.assets.resS
+          96           10  sharedassets17.assets.resS
+          17           12  Managed/Resources/Coffee.UIParticle.R.dll-resources.dat
