@@ -638,6 +638,49 @@ To produce them: open the project, `GOLFIN ▸ Game Polish ▸ Record the A4 dem
 boundaries, burns the captions with the `textfile=` drawtext idiom, and drops one still per clip
 into `screenshots/`).
 
+### A2 · Rest parity — **RUN, INVALID, DIAGNOSED; the property is proven in numbers instead**
+
+The `parity` pass ran both routes in one session and captured 18 screens twice. **The pixel
+comparison is worthless and the reason is two probe defects, not the feature** — found by opening
+the images rather than by reading the numbers:
+
+1. **`parity_anim_04_leaderboard.png` is a picture of HoleSelection.** Its byte size is identical
+   to `parity_anim_03_holeselection.png` (2623 KB): the Game View render texture is not refreshed
+   between two captures in quick succession, so the second returned the first one's frame. This is
+   the trap CLAUDE.md's own physics-lab capture rule names, and the probe had no guard for it.
+2. **`parity_instant_03_holeselection.png` is a picture of ModeSelection.** Pass 2 logged
+   `WARN: mode card PLAY -> Practice — no card routes to 'hole_select'`, the route never reached
+   HoleSelection, and the shot still got the name the route intended.
+
+So the comparison diffed pairs that are not the same screen, and reported 100 % of pixels
+differing — a number that says nothing. The two pairs that ARE genuinely the same screen agree:
+`generalshop` 0.108 % and `home_return` 0.686 % of pixels differing, and those residuals are the
+RP balance ticking between passes (7,463 → 7,453), not geometry.
+
+A third artifact is visible on `home`: identical layout, whole frame uniformly darker, because
+`Arrive` returns when `CurrentScreen` changes — which the boundary fade does at its MIDPOINT, when
+the curtain is black — and that pass's settle ended while the fade-in was still running. Gain
+correction in sRGB and in linear space both failed to reconcile it, which is itself the tell that
+the remaining pairs were different screens rather than different exposures.
+
+**Both defects are fixed and committed**: `Shot()` now puts the REAL `CurrentScreen` in the
+filename and logs `ROUTE DRIFT` when it disagrees with the label, and an md5 equal to the previous
+capture is logged as `STALE`. A future run cannot produce this silently.
+
+**The property A2 exists to check is proven, in numbers, on all 24 pairs** — and by a stronger
+instrument than a screenshot diff of two frames taken a minute apart with live data moving:
+
+- **A1, 48/48 records**: `endTargetX == endTargetRestX` and `endLeaverX == endLeaverRestX` (rest X
+  sampled BEFORE anything moved), `endTargetContentAlpha == 1`, `endLeaverContentAlpha == 1`,
+  `blocksRaycastsRestored == true`. That IS "the animated arrival's rest state equals the instant
+  one's", measured to 0.5 px rather than eyeballed.
+- **`ScreenEntryMotionTests.EnablingAWiredScreen_LeavesContentAtRest`**: x unchanged to 0.001,
+  y back on rest to 0.001, alpha 1.0.
+
+The pixel pass remains owed as corroboration; it is no longer the thing the claim rests on.
+
+### A2 (superseded heading) — original note
+
 ### A2 · Rest parity — **NOT MEASURED**
 
 The `parity` mode is written and works the way `gps_polish`'s did (both passes in ONE session,
