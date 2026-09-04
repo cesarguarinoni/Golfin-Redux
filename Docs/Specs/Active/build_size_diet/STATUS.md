@@ -14,6 +14,11 @@ Report: `IMPLEMENTER_REPORT.md`. Evidence: `reference/`, `screenshots/`.
 −830.4 MiB install (−45%). Local iOS-Full build 2655, measured with
 `Docs/Scripts/measure_ios_data.sh`, which reproduces the shipped `.ipa` to within 0.3%.
 
+**Physics parity: 24/24 shots bit-identical.** The smoke-bot AtRest gate was run on Hole 1 and
+Hole 6 against BOTH datasets — 12 presets each, `fp.raw` Q32.32 longs compared with `==`, zero
+differing values, matching terminal states and matching sample counts.
+`reference/phase2_atrest_parity.txt`.
+
 ## Open on Cesar
 
 1. **Phase 0b — LZ4HC adoption.** Measured on the PRE-diet tree: install −63%
@@ -37,12 +42,6 @@ Report: `IMPLEMENTER_REPORT.md`. Evidence: `reference/`, `screenshots/`.
 
 ## Not done, and why — read this before signing off
 
-- **Smoke-bot AtRest parity on Hole 1 + 6 was NOT run.** What stands in its place: an
-  independent Python decoder reading the ORIGINAL bytes out of git agrees with the shipped
-  GHM2 sample-for-sample (SHA-256 per hole, 18/18) and on parsed zones field-for-field
-  (19/19); and the full EditMode suite was run against BOTH datasets with identical code —
-  2406 / 2403 passed / 0 failed / 3 skipped, the same in all three runs. That is stronger on
-  the data and weaker end-to-end. Flag it if you want the bot run.
 - **No device pass.** Everything here is measured off a real iOS player build; nothing needs
   a phone to be checked. The `.ipa` was not re-archived, so the file-size line is the old one.
 - **The `.ipa` still packs `Symbols/`** (121.1 MiB zipped). Out of scope per the SPEC; it is
@@ -55,3 +54,4 @@ Report: `IMPLEMENTER_REPORT.md`. Evidence: `reference/`, `screenshots/`.
 | 2026-09-03 | `SPEC_READY` | 5 phases. |
 | 2026-09-04 | `SPEC_READY` (amended) | install + Payload-compressed gates; Phase 0b; Phase 4c. |
 | 2026-09-04 | `READY_FOR_ARCHITECT_REVIEW` | Phases 0, 0b, 1, 2, 2.7, 3 applied; 4 and 5 measured only. Both gates pass. |
+| 2026-09-04 | `READY_FOR_ARCHITECT_REVIEW` | Cesar: "run the bot". Smoke-bot AtRest parity run — 24/24 shots bit-identical on Hole 1 + 6. Last outstanding gate closed. |

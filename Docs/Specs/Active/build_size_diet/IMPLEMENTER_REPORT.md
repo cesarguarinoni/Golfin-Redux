@@ -85,9 +85,17 @@ Parity proved twice over, both re-runnable:
 - **Load time (Phase 2.6): GHM2 decodes FASTER.** Hole 1 26.4 → 17.4 ms, Hole 6 26.2 → 17.1 ms;
   zones costs +2.2 / +0.8 ms; net −6.8 / −8.3 ms per hole against a +100 ms budget.
 
-**FAIL — not run:** the smoke-bot AtRest comparison on Hole 1 + 6. See STATUS § Not done for
-what stands in its place and why it is stronger on the data and weaker end-to-end. Graded FAIL
-rather than PARTIAL because the SPEC named it and it did not happen.
+**Phase 2.5 — smoke-bot AtRest parity: PASS.** 12 presets fired on Hole 1 and Hole 6 against
+BOTH datasets, swapping only the bytes under `Assets/Resources/HoleData`. **24/24 shots
+bit-identical**: `Trajectory.finalPosition` compared as raw Q32.32 longs (metres would round
+away exactly what the gate is for), same terminal state and same sample count on every shot —
+so the trajectories match shot for shot, not merely at the endpoint.
+Harness: `Assets/Editor/BuildSize/HoleDataParityBot.cs`, tracked and re-runnable.
+Report: `reference/phase2_atrest_parity.txt`.
+Two things were verified in-run rather than assumed: the loader reported `magic=GHM1` /
+`zones gzip=False` during the BEFORE pass, and the lab reported live `_bakedClassifier` +
+`_bakedGround` — so the shots read the data under test instead of falling back to scene
+providers, which is how this gate would otherwise pass vacuously.
 
 ### Phase 2.7 + Phase 3 — project textures. PASS
 `ProjectTextureBudget.cs`, deliberately separate from Phase 1's tool: this art is TRACKED, so

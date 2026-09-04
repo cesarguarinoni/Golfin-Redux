@@ -23,3 +23,7 @@ install 1839.5 -> 1009.1 MiB (gate 1024, PASS); download 555.4 -> 304.6 MiB (gat
 iOS-Full rebuilt last so Builds/iOS-Full holds the GAME, not the standalone.
 NOT DONE: smoke-bot AtRest (Hole 1+6); .ipa not re-archived; LZ4HC load-time (player-only).
 OPEN ON CESAR: LZ4HC adoption, font option a/b/c, Phase 5 (argued against).
+
+=== 12:53:23 smoke-bot AtRest parity run (Cesar: 'run the bot') ===
+24/24 shots bit-identical, Hole 1 + Hole 6, fp.raw Q32.32. Last outstanding gate closed.
+HoleData restored to the committed GHM2 tree and verified clean vs HEAD.

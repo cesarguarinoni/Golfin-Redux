@@ -45,8 +45,13 @@ Spec + evidence: `Docs/Specs/Active/build_size_diet/` (`STATUS.md` first).
    `BakeZoneJsonTool` bit-packs the OB layer out of `GetAlphamaps` into `ZoneData.obMask`, so
    512 puts 1.13 m of slop on Hole 1's out-of-bounds line.
 
-**Still open:** the smoke-bot AtRest run on Hole 1 + 6 was NOT done (see STATUS § Not done for
-what stands in its place); the `.ipa` was not re-archived, so its file-size line is still 2632's.
+**The physics is provably untouched.** The smoke-bot AtRest gate ran 12 presets on Hole 1 and
+Hole 6 against BOTH datasets — **24/24 shots bit-identical** on `Trajectory.finalPosition` as
+raw Q32.32 longs, with matching terminal states and matching sample counts, so the trajectories
+agree shot for shot and not just at the endpoint. Harness is tracked
+(`Assets/Editor/BuildSize/HoleDataParityBot.cs`).
+
+**Still open:** the `.ipa` was not re-archived, so its file-size line is still 2632's.
 
 ---
 ## 2026-09-04 — standalone round 2 DONE (approved) — build 2637 on TestFlight
