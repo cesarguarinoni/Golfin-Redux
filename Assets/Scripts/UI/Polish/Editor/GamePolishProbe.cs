@@ -945,7 +945,10 @@ namespace Golfin.UI.Polish.EditorTools
                 j.AppendLine("  \"task\": \"game_polish_a\",");
                 j.AppendLine("  \"mode\": \"" + _mode + "\",");
                 j.AppendLine("  \"utc\": \"" + DateTime.UtcNow.ToString("u") + "\",");
-                j.AppendLine("  \"optionBShipped\": true,   // Cesar 2026-09-04 — different backdrops push and cross-fade");
+                // NO COMMENT IN THE JSON. The first version of this line carried a "// Cesar
+                // 2026-09-04" trailer, which is not JSON — every reader of the gate file failed to
+                // parse it, which is a spectacular way to make a green gate unreadable.
+                j.AppendLine("  \"optionBShipped\": true,");
                 j.AppendLine("  \"pushDur\": " + F(UiMotion.PushDur) + ",");
                 j.AppendLine("  \"durationToleranceSec\": " + F(DurationToleranceSec) + ",");
                 j.AppendLine("  \"measured\": " + _records.Count + ",");

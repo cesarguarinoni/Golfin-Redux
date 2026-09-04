@@ -49,6 +49,20 @@ tween that allocates nothing per frame by construction. The four outliers are ON
 `RebuildList` destroying and respawning every row inside `OnEnable` plus the store `Refresh`.
 Pre-existing, not introduced here, and it also explains A1's four `frameStarved` records.
 
+**OPTION (b) SHIPPED (Cesar, 2026-09-04).** He watched the clip and took it. Two screens of the
+same pillar now push even when their **backdrops differ**, and the backdrops cross-fade through
+each other; Home and cross-pillar still fade to black. The flag was **removed, not flipped** — it
+existed only for the video that made the decision possible. Re-measured against the widened rule:
+**84 pushes, `fail == 0`**, 32 of them cross-backdrop, across **16 ordered pairs that used to
+fade** (`ModeSelection`/`HoleSelection`/`MissionSelection`/`TournamentHoleSelection` ⇄
+`TournamentSelection`/`TournamentLeaderboard`). Polish suites 91 passed / 0 failed.
+
+Two things the change forced, both worth remembering: the sweep now enumerates by **pillar**
+rather than by backdrop (the old groups were exactly the pre-decision pushable set, so keeping
+them would have reported a green gate that never touched the new path), and the seam metric is now
+**sampled from the live CanvasGroups** instead of `Mathf.Max(fe, 1f)`, which was 1 by construction
+and measured nothing.
+
 **A4: 2 of 6 clips, including the one that matters.** `videos/game_polish_a_f_option_b.mp4` is
 option (b) with the flag on — `screenshots/a4_option_b_transition_strip.png` shows the transition
 frame by frame, content sliding while both backgrounds cross-fade and the bars not moving.

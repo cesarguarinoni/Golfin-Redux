@@ -1,5 +1,17 @@
 # IMPLEMENTER_REPORT — `game_polish_a`
 
+> **OPTION (b) SHIPPED — Cesar, 2026-09-04, after watching the clip.**
+> Two screens of the same pillar now push even when their backdrops DIFFER, and the backdrops
+> cross-fade through each other. Home and every cross-pillar move keep the fade to black; that was
+> a separate rule and it is unchanged. **The flag is removed, not flipped** — it existed for the
+> one video that made the decision possible, and a switch for a decision already made is a dead
+> branch. `LayeredPushTests.TheOptionBFlag_IsGone` pins that.
+>
+> **Re-measured against the widened rule: 84 pushes, `fail == 0`.** 32 of them are cross-backdrop
+> — the path that did not exist before this decision — across **16 ordered pairs that used to
+> fade**. Sections below marked "flag OFF" describe the pre-decision run and are superseded by
+> § *Option (b) shipped — re-measured*.
+
 **Iteration shape:** `navigation-motion:layered-push-and-nav-selected-state`
 **Iteration:** 1
 **Canonical screenshot:** `screenshots/push_18_home_return.png`
@@ -65,6 +77,57 @@ worse failure than a misleading commit message. Split it yourself if you want it
 | `Assets/Art/HomeScreen/S_NavSlot{Glow,Ring}_{156,238}.png` (+ `.meta`) | The four baked sprites. |
 | `Docs/Scripts/make_nav_selected.py` | **NEW.** The baker. |
 | `Docs/Scripts/cut_game_polish_clips.py` | **NEW.** The A4 clip cutter. |
+
+---
+
+## Option (b) shipped — re-measured
+
+`Docs/Diagnostics/_capture/game_polish_a_invariants.json`, regenerated against the new rule:
+
+```
+measured = 84        fail = 0        optionBShipped = true
+distinct ordered pairs = 40
+cross-backdrop  32 records   seam worst cover over EVERY frame = 1.0   (gate: >= 0.5)
+same-backdrop   52 records   chrome alpha min over EVERY frame = 1.0   (gate: == 1)
+durations 0.250 – 0.293 s over 9 – 16 frames   (4 frame-starved, duration not scored)
+applyScreenCalls = 1 on every record; blocksRaycasts restored on every record
+```
+
+**The 16 ordered pairs that used to fade and now push**, all measured clean:
+
+| | |
+|---|---|
+| `ModeSelection` ⇄ `TournamentSelection` | `ModeSelection` ⇄ `TournamentLeaderboard` |
+| `HoleSelection` ⇄ `TournamentSelection` | `HoleSelection` ⇄ `TournamentLeaderboard` |
+| `MissionSelection` ⇄ `TournamentSelection` | `MissionSelection` ⇄ `TournamentLeaderboard` |
+| `TournamentHoleSelection` ⇄ `TournamentSelection` | `TournamentHoleSelection` ⇄ `TournamentLeaderboard` |
+
+**On the seam reading 1.0.** That is not the metric failing to move — it is the compositing order
+working. The leaver's chrome is HELD at 1 and the incoming one is faded in on top of it, so
+`max(from, to)` is 1 on every frame by construction. What changed is that it is now *measured*
+from the live CanvasGroups instead of restated: the previous code computed `Mathf.Max(fe, 1f)`,
+which is 1 whatever happens and would have reported a clean seam even if the leaver had been
+faded out. Tolerable while this path sat behind an off-by-default flag; not tolerable now that it
+ships.
+
+**Three things the change had to touch, beyond deleting the flag:**
+
+1. **The sweep enumerates by PILLAR, not by backdrop.** The old three background groups were
+   *exactly* the pushable set before the decision. Keeping them would have kept reporting
+   `fail == 0` while never once exercising the newly-shipped path — a green gate measuring the
+   wrong thing. MainPlay is one group of six screens now.
+2. **Which chrome assertion applies is decided per pair**, by that pair's own backgrounds
+   (`sameBackground` in the JSON), because both paths are live at once. Same sprite ⇒ chrome alpha
+   must stay 1; different sprites ⇒ the incoming chrome is *supposed* to start at 0 and the seam
+   test applies instead. The old global rule would have failed the feature for working.
+3. **The A4 clip was relabelled and re-cut** from the same footage:
+   `videos/game_polish_a_f_cross_backdrop.mp4`. Its burnt-in caption used to read "FLAG OFF IN THE
+   BUILD", which stopped being true the moment the decision was made — a mislabelled artifact is
+   worse than none.
+
+**A9 is void and replaced.** There is no flag to grep for; `TheOptionBFlag_IsGone` and
+`SameBackground_IsNoLongerRequiredByTheGate` are the guards now. Polish suites: **91 passed,
+0 failed.**
 
 ---
 
