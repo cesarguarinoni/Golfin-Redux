@@ -12,7 +12,7 @@
 > way between groups. `measured=87` in the invariants JSON is the authoritative count — an earlier
 > line here said "84" by quoting the sweep alone.) 32 of them are cross-backdrop
 > — the path that did not exist before this decision — across **16 ordered pairs that used to
-> fade**. Sections below marked "flag OFF" describe the pre-decision run and are superseded by
+> fade**. Any section below that describes the flag as live is pre-decision history and is superseded by
 > § *Option (b) shipped — re-measured*.
 
 **Iteration shape:** `navigation-motion:layered-push-and-nav-selected-state`
@@ -604,7 +604,7 @@ added ButtonPressFeedback -> NavCharactersButton
 No other Button was added or re-parented by this task — the tab work rebinds existing buttons'
 visuals and adds no widgets — so there is nothing else in scope. See deviation D-7.
 
-### A7 · Cross-fade table (§D3) — **PASS on the code; mid-fade frames pending with A4**
+### A7 · Cross-fade table (§D3) — **PASS** (the mid-fade frames it was waiting on shipped with A4)
 
 | Site | Before | After | Duration |
 |---|---|---|---|
@@ -631,7 +631,19 @@ the equivalent gate here and is what should be read in its place.
 
 ---
 
-### A4 · Videos — **2 of 6 produced**, including the one that matters
+### A4 · Videos — **PASS, all six produced**
+
+> Written when 2 of 6 existed; all six are on disk and the counts below are current:
+>
+> | Clip | Duration |
+> |---|---|
+> | `game_polish_a_a_play_pillar.mp4` | 17.95 s |
+> | `game_polish_a_b_tournaments.mp4` | 10.21 s |
+> | `game_polish_a_c_gacha_pillar.mp4` | 14.04 s |
+> | `game_polish_a_d_tabs_and_filters.mp4` | 13.39 s |
+> | `game_polish_a_e_settings.mp4` | 11.28 s (re-recorded — the first take was 16 identical frames) |
+> | `game_polish_a_f_cross_backdrop.mp4` | 25.04 s (re-recorded at iter-2 to show the title dissolve) |
+
 
 One take: `videos/raw.mp4`, **1170×2532 @ 30 fps, 50.6 s, 1519 frames**, valid (moov present).
 Cut by `Docs/Scripts/cut_game_polish_clips.py` on the runner's own sidecar boundaries.
@@ -773,9 +785,26 @@ the line.
 
 ---
 
-## NOT DONE this iteration — stated plainly
+## SUPERSEDED — what was outstanding at the FIRST submission
 
-### A4 · The six videos — **NOT PRODUCED**
+> **⚠ Everything in this section is history, not current state.** It is kept because the honest
+> progression is worth reading, but every item below has since been closed, and the sections that
+> close them are the authority. A reader scanning headings would otherwise hit "NOT PRODUCED" /
+> "NOT MEASURED" / "NOT CAPTURED" and take them as live:
+>
+> | This section says | Current verdict | Where |
+> |---|---|---|
+> | A4 · The six videos — NOT PRODUCED | **PASS**, all six on disk | § A4 above |
+> | A2 · Rest parity — RUN, INVALID, DIAGNOSED | **PASS** — 16 states, worst 1.232 % | `## A2 · Rest parity — PASS` |
+> | A2 · Rest parity — NOT MEASURED | **PASS** (same) | `## A2 · Rest parity — PASS` |
+> | A13 · Perf — NOT MEASURED | **PASS** | § A13 above |
+> | A8 · Entry-rise frames — NOT CAPTURED | **PASS** — six mid-rise frames, `SkippedForPush=94` | `## A8 · Entry rise — PASS` |
+>
+> Found by a mechanical heading sweep at iteration 2, after § A12 turned out to be stale the same
+> way. That is the shape (PIPELINE_HARDENING §15): an append-only report leaves superseded verdicts
+> looking live. Every acceptance heading was enumerated and checked, not sampled.
+
+### (superseded) A4 · The six videos — **NOT PRODUCED** *— closed; see § A4 above*
 
 This is the gap, and it is the artifact Cesar judges the gamble from, so it should not be
 buried. What happened:
@@ -801,7 +830,7 @@ To produce them: open the project, `GOLFIN ▸ Game Polish ▸ Record the A4 dem
 boundaries, burns the captions with the `textfile=` drawtext idiom, and drops one still per clip
 into `screenshots/`).
 
-### A2 · Rest parity — **RUN, INVALID, DIAGNOSED; the property is proven in numbers instead**
+### (superseded) A2 · Rest parity — **RUN, INVALID, DIAGNOSED** *— closed; see `## A2 · Rest parity — PASS`*
 
 The `parity` pass ran both routes in one session and captured 18 screens twice. **The pixel
 comparison is worthless and the reason is two probe defects, not the feature** — found by opening
@@ -842,9 +871,9 @@ instrument than a screenshot diff of two frames taken a minute apart with live d
 
 The pixel pass remains owed as corroboration; it is no longer the thing the claim rests on.
 
-### A2 (superseded heading) — original note
+### (superseded) A2 — original note
 
-### A2 · Rest parity — **NOT MEASURED**
+### (superseded) A2 · Rest parity — **NOT MEASURED** *— closed; see `## A2 · Rest parity — PASS`*
 
 The `parity` mode is written and works the way `gps_polish`'s did (both passes in ONE session,
 so live data and relative time cannot drift between them), but it was not run — the Editor time
@@ -854,7 +883,7 @@ profile, so all four are pictures of the GPS hub (see §0). `parity` does not ne
 compares an animated arrival against an instant one inside a single run — which is why it is the
 right instrument here and what should be run next.
 
-### A13 · Perf — **NOT MEASURED**
+### (superseded) A13 · Perf — **NOT MEASURED** *— closed; see § A13 above*
 
 `perf` mode is written (profiler on, no captures — the `gps_polish` A13 lesson, where turning
 the profiler on inside the measured run stretched a 0.25 s tween to 0.41 s, and a 1170×2532
@@ -866,7 +895,7 @@ What CAN be said without it, because it is a property of the code rather than a 
 helpers take their one delegate allocation at creation. The in-situ number A13 wants is still
 owed.
 
-### A8 · Entry-rise frames — **NOT CAPTURED**
+### (superseded) A8 · Entry-rise frames — **NOT CAPTURED** *— closed; see `## A8 · Entry rise — PASS`*
 
 `ScreenEntryMotion` is wired on all 13 screens (the builder's report is quoted above) and
 `ScreenEntryMotionTests` pins that a pushed screen does **not** rise. The mid-rise stills per
@@ -994,6 +1023,31 @@ centre title                        45.94                  (the dissolve, f277-2
 
 The nav bar's Δ ramps smoothly with the backdrop cross-fade over f277-280 and is flat across
 Settle. The title was the only thing that snapped.
+
+### Shape C — superseded report sections still reading as live verdicts
+
+Found at iteration 2 after § A12 turned out to be stale (it claimed **PASS** while quoting a run
+that read `passed=2422 failed=3`, and listed two tests deleted when the option-(b) flag was
+removed). Two instances of one shape, so I stopped fixing instances and enumerated every heading in
+the file rather than sampling. This report is append-only — later sections supersede earlier ones —
+and nothing marked the earlier ones, so a reader scanning headings met `NOT PRODUCED`,
+`NOT MEASURED`, `NOT CAPTURED` and `INVALID` as though they were current.
+
+| Site | Was | Verdict |
+|---|---|---|
+| § A12 EditMode sweep | PASS over a `failed=3` quote; two deleted tests listed | **was stale** — regenerated from the cited file |
+| § A9 option-(b) flag | quoted the removed declaration | **was stale** — rewritten (iter-1 hygiene note) |
+| § A4 Videos | "2 of 6 produced" | **was stale** — all six on disk, durations listed |
+| § A7 cross-fade table | "mid-fade frames pending with A4" | **was stale** — those frames shipped |
+| `## NOT DONE this iteration` block (5 headings) | A4/A2/A2/A13/A8 as not done | **was stale** — retitled SUPERSEDED, banner maps each to its closing section, every heading prefixed |
+| § 0 pointer | said sections are marked "flag OFF" | **was stale** — no section carried that marker |
+| § A1, A5, A10, A3, A11, A6, A13, A14, A15, `## A2`, `## A8` | — | fine, no change needed |
+| Files-modified table | LayeredPush row advertised the removed flag | **was stale** — corrected |
+
+The reviewers' own gates cannot catch this shape: they re-run the acceptance list and check the
+CURRENT evidence, which was correct every time. What was wrong was the *narrative around it* — and
+two self-review passes read straight past it, as did I, until the headings were enumerated
+mechanically instead of read.
 
 ### Files this iteration touched
 
