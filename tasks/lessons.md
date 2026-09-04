@@ -3530,3 +3530,60 @@ first attempt diffed a batchmode "after" against an Editor "before" and hole 01 
 no bridge and whose art had not changed — moved by mean 59/255. That is what a renderer change
 looks like, not a texture change. Capture both halves in the same environment, and measure the
 noise floor in that environment too (capture the same state twice) before believing any delta.
+
+---
+
+## Lesson AL — "enumerate the call sites" is not "grep the literal paths" (2026-09-04, standalone build 2637)
+
+Round 2 of `gps_standalone_shell` moved golf-only `Resources` subfolders out of the standalone
+build, and I chose the list by grepping every `Resources.Load` call site. I wrote up that method as
+the lesson of the round — it is what saved `Resources/Characters`, which the GPS Avatar screen reads.
+
+The build shipped with an empty character roster anyway.
+
+`Resources/Portraits` was on the move list. Nothing in the shell reads it *directly*, which is why
+the grep cleared it. Two things made that wrong:
+
+1. **The call site was not a literal.** `CharacterDatabaseCSV` reaches `Resources.Load` as
+   `$"{ThumbnailResourcesPath}/{spriteName}"` — a const plus a variable. A grep for
+   `Resources.Load("…")` cannot see it. Enumerating call sites means enumerating the *constants* the
+   paths are built from, not the string literals that happen to be inlined.
+2. **What it fed was a GATE, not a picture.** That is what turned a cosmetic miss into a total one:
+
+       CharacterDatabaseCSV:348   renderable = portraitSprite != null     // the THUMBNAIL
+       CharacterDatabaseCSV:421   GetAvailableCharacters() = Where(isActive && renderable)
+       CharacterManager:86        ownedCharacters seeded from GetAvailableCharacters()
+
+   Portraits gone ⇒ every character unrenderable ⇒ roster seeds EMPTY ⇒ no selected id ⇒ the Avatar
+   screen falls back to `Characters/Homescreen/Placeholder`. The art it actually wanted was in the
+   build the whole time.
+
+### The rule
+
+When deciding whether removing an asset folder is safe, ask **what reads it and what does the
+reader gate**, in that order. A folder that only paints something degrades to a blank image. A
+folder that feeds a renderability/eligibility predicate degrades to an EMPTY CATALOG, and empty
+catalogs propagate silently into every consumer of the thing they seed.
+
+### The audit that should have run the first time
+
+Mechanical, and it takes two minutes: for every `*DatabaseCSV`, list every `const string *Path`, take
+the first path segment, and intersect with the folders being removed. Doing that afterwards found
+**five** catalogs gating on art (Character/Club/Ball/Item/Bag), of which exactly one — Character —
+is read by the shell. `StandaloneResourceStashTests` now does this by reflection and fails on any
+collision that has not been explicitly judged, so a new catalog or a new stashed folder cannot slip
+through the same hole.
+
+### Two process notes from the same hunt
+
+- **I shipped a "fix" for a disproven cause and had to pull it.** The first theory (the shell never
+  boots the inventory sync) was wrong — `InventorySyncBehaviour` self-boots via
+  `[RuntimeInitializeOnLoadMethod]` and on `AuthService.SignedIn`; `RetryBoot` is only a retry. The
+  edit was a no-op with a confident comment attached, which is worse than no edit. Check that the
+  path you are "fixing" is actually the path that runs, before writing the fix.
+- **The Editor could not reproduce it, and that was information, not an obstacle.** Editor
+  `Resources.Load` resolves through the AssetDatabase whatever the stash did, so the failure is
+  structurally invisible there. Two theories died against "but it works in the Editor" before I
+  treated that as a fact about the Editor rather than about the bug. Evidence came from unpacking
+  the shipped `.ipa` (`strings` over `Data/*.assets`) and from the Build Report — both of which
+  describe the artifact the player actually runs.
