@@ -1,6 +1,8 @@
 #nullable enable
+using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
+using Golfin.UI.Polish;
 using Golfin.Roster;
 using GolfinRedux.UI.Gacha;
 
@@ -687,6 +689,23 @@ namespace Golfin.UI
         {
             if (usernameText == null) return;
 
+            // game_polish_a §D3: this is the AUTHORITATIVE paint, and it is also the recovery path.
+            // A push that was interrupted mid-dissolve would otherwise leave the label parked at a
+            // fractional alpha forever, so the routine is stopped and the group forced back to 1
+            // here rather than trusted to have finished.
+            if (_centerTextRoutine != null) { StopCoroutine(_centerTextRoutine); _centerTextRoutine = null; }
+            if (_centerTextGroup != null) _centerTextGroup.alpha = 1f;
+
+            usernameText.text = CenterTextFor(screenId);
+        }
+
+        /// <summary>
+        /// The centre title a screen should show — the ONE resolver, shared by the instant paint
+        /// (<see cref="ApplyTopBarCenterText"/>) and the dissolve (<see cref="CrossFadeCenterTextTo"/>)
+        /// so the two can never disagree about what the title is.
+        /// </summary>
+        private string CenterTextFor(GolfinRedux.UI.ScreenId screenId)
+        {
             if (screenId == GolfinRedux.UI.ScreenId.Home)
             {
                 // Prefer the signed-in player's real name over whatever was cached.
@@ -697,12 +716,76 @@ namespace Golfin.UI
                 // showing the placeholder. Re-reading here makes Home self-correcting.
                 if (Golfin.Auth.PlayerIdentity.HasName)
                     _username = Golfin.Auth.PlayerIdentity.DisplayName;
-                usernameText.text = _username;
-                return;
+                return _username;
             }
 
             string key = NavTitleKeyFor(screenId);
-            usernameText.text = key != null ? LocalizationManager.Get(key) : string.Empty;
+            return key != null ? LocalizationManager.Get(key) : string.Empty;
+        }
+
+        // ── game_polish_a §D3 — the centre title dissolves; it does not snap ──────────────
+        private Coroutine? _centerTextRoutine;
+        private CanvasGroup? _centerTextGroup;
+
+        /// <summary>
+        /// Dissolve the top-bar centre title over to <paramref name="screenId"/>'s title.
+        ///
+        /// <para>WHY THIS EXISTS. The centre title is SHARED chrome — one label on the persistent
+        /// top bar — so it cannot travel with a pushing screen the way that screen's own content
+        /// does. It was therefore repainted by <c>ApplyScreen</c>, which <see cref="LayeredPush"/>
+        /// defers to the end of the push on purpose; the visible result was that the whole 0.25 s
+        /// push played with the LEAVER's name over the ARRIVER's content and then the text
+        /// hard-cut in a single frame. Under the old fade-to-black that repaint happened behind
+        /// the black and nobody could see it — the push is what exposed it.</para>
+        ///
+        /// <para>Called at push START, so the dissolve (<c>FadeDur</c> = 0.15 s) has settled the new
+        /// name well before the content finishes travelling (<c>PushDur</c> = 0.25 s) — the title
+        /// leads the arrival instead of trailing it.</para>
+        ///
+        /// <para>No motion when the text does not change: Rewards Center → Gacha History keeps one
+        /// title, and dissolving a label to the same string would be a flicker with no meaning.</para>
+        /// </summary>
+        public void CrossFadeCenterTextTo(GolfinRedux.UI.ScreenId screenId)
+        {
+            if (usernameText == null) return;
+            if (!UiMotion.Enabled) return;   // motion off ⇒ ApplyScreen's instant repaint stands
+
+            string next = CenterTextFor(screenId);
+            if (next == usernameText.text) return;
+
+            UiMotion.Run(this, ref _centerTextRoutine, DissolveCenterText(next));
+        }
+
+        private IEnumerator DissolveCenterText(string next)
+        {
+            CanvasGroup g = EnsureCenterTextGroup();
+            float half = UiMotion.FadeDur * 0.5f;
+            yield return UiMotion.Fade(g, g.alpha, 0f, half);
+            if (usernameText != null) usernameText.text = next;
+            yield return UiMotion.Fade(g, 0f, 1f, half);
+            _centerTextRoutine = null;
+        }
+
+        /// <summary>
+        /// The CanvasGroup the dissolve drives, added AT RUNTIME rather than authored.
+        /// Authoring one would be a scene edit on the persistent top bar, and A2's parity gate
+        /// measures the shell's rest pixels — a runtime group that rests at alpha 1 renders
+        /// identically to no group at all. Left at the default <c>blocksRaycasts = true</c>,
+        /// which is exactly how the label behaved before it had a group.
+        /// </summary>
+        private CanvasGroup EnsureCenterTextGroup()
+        {
+            if (_centerTextGroup == null)
+            {
+                // `== null`, never `??`: a Unity component compares equal to null through an
+                // overloaded operator that `??` does not consult, so `??` would hand back a
+                // fake-null component instead of adding a real one (CLAUDE.md, Basic Rules 4).
+                var existing = usernameText!.GetComponent<CanvasGroup>();
+                _centerTextGroup = existing == null
+                    ? usernameText!.gameObject.AddComponent<CanvasGroup>()
+                    : existing;
+            }
+            return _centerTextGroup;
         }
 
         /// <summary>

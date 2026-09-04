@@ -7,7 +7,10 @@
 > one video that made the decision possible, and a switch for a decision already made is a dead
 > branch. `LayeredPushTests.TheOptionBFlag_IsGone` pins that.
 >
-> **Re-measured against the widened rule: 84 pushes, `fail == 0`.** 32 of them are cross-backdrop
+> **Re-measured against the widened rule: 87 pushes measured, `fail == 0`.** (84 come from the
+> probe's ordered-pair sweep; the other 3 are the pushes the real-navigation tour performs on its
+> way between groups. `measured=87` in the invariants JSON is the authoritative count — an earlier
+> line here said "84" by quoting the sweep alone.) 32 of them are cross-backdrop
 > — the path that did not exist before this decision — across **16 ordered pairs that used to
 > fade**. Sections below marked "flag OFF" describe the pre-decision run and are superseded by
 > § *Option (b) shipped — re-measured*.
@@ -54,7 +57,8 @@ worse failure than a misleading commit message. Split it yourself if you want it
 
 | File | What |
 |---|---|
-| `Assets/Scripts/UI/Polish/LayeredPush.cs` | **NEW.** The game shell's push: layer table, `CanPush`, `SameBackground`, direction, the tween, rest-state restore, the `AllowBackgroundCrossFade` flag. |
+| `Assets/Scripts/UI/Polish/Tests/CenterTitleDissolveTests.cs` | **NEW (iter-2).** 5 tests pinning the centre-title dissolve: the fake-null CanvasGroup trap, idempotence, the opaque rest state, resolver parity with the instant paint, and recovery from an interrupted push. |
+| `Assets/Scripts/UI/Polish/LayeredPush.cs` | **NEW.** The game shell's push: layer table, `CanPush`, `SameBackground`, direction, the tween, rest-state restore, and the push-start hand-off that dissolves the shared top-bar title (iter-2). |
 | `Assets/Scripts/UI/Polish/ScreenEntryMotion.cs` | **NEW.** The 16 px entry rise on fade-path arrivals; skipped after a push. |
 | `Assets/Scripts/UI/Polish/NavSlotHighlight.cs` | **NEW.** §D7's gold halo + brighter ring, one component driving BOTH bars. |
 | `Assets/Scripts/UI/Polish/Editor/GamePolishBuilder.cs` | **NEW.** Adds `ScreenEntryMotion` to the 13 shell screens and wires each screen's content rects from `LayeredPush.LayerMap`. |
@@ -65,7 +69,7 @@ worse failure than a misleading commit message. Split it yourself if you want it
 | `Assets/Scripts/UI/Polish/Tests/ScreenEntryMotionTests.cs` | **NEW.** The `SkipEntry` bit and rest parity at component level. |
 | `Assets/Scripts/UI/Polish/UiSelection.cs` | `FadeSwap` + `Indicator` added for §D3. `UiMotion`'s public API untouched. |
 | `Assets/Scripts/UI/ScreenManager.cs` | The one new push branch, the second `IsPushing` guard, `ShellScreenObject`. |
-| `Assets/Scripts/UI/PersistentUIManager.cs` | `UpdateScreenHighlight` → `NavSlotHighlight`; `iconActiveColor` marked `[Obsolete]`; four halo/ring sprite fields. |
+| `Assets/Scripts/UI/PersistentUIManager.cs` | `UpdateScreenHighlight` → `NavSlotHighlight`; `iconActiveColor` marked `[Obsolete]`; four halo/ring sprite fields. **iter-2:** `CrossFadeCenterTextTo` / `DissolveCenterText` / `EnsureCenterTextGroup`, `CenterTextFor` split out of `ApplyTopBarCenterText`. |
 | `Assets/Scripts/UI/Gps/GpsNavBarHighlight.cs` | **The only `Gps/` change** (authorised). Full diff in A15. |
 | `Assets/Scripts/UI/Inventory/InventoryScreenController.cs` | §D3 tab cross-fade, §D6 bump, indicator cross-fade. |
 | `Assets/Scripts/UI/Rankings/RankingsScreenController.cs` | §D3 list fade around the repaint, §D6 bump, indicator cross-fade. |
@@ -128,7 +132,7 @@ ships.
 **A9 is void and replaced.** There is no flag to grep for; `TheOptionBFlag_IsGone` and
 `SameBackground_IsNoLongerRequiredByTheGate` are the guards now.
 
-**Final full EditMode sweep: `passed=2425 failed=0 skipped=3`** — all 18 of this task's tests, and
+**Full EditMode sweep at iteration 1: `passed=2425 failed=0 skipped=3`** (see iteration 2 below for the current `2430`) — all 18 of this task's tests, and
 the three terrain/raycast tests that flaked on earlier runs pass here too, which is what
 "intermittent, not a regression" looks like when it is right.
 
@@ -227,23 +231,32 @@ inconsistency this slice exists to remove. Five components, no behaviour change 
 
 ## Acceptance checklist
 
-### A9 · The option-(b) flag is pinned OFF — **PASS**
+### A9 · The option-(b) flag is pinned OFF — **VOID, replaced**
 
-`grep -rn AllowBackgroundCrossFade Assets`, every hit:
+This item asked for proof that `AllowBackgroundCrossFade` shipped `false`. Cesar shipped option (b)
+instead, so there is no flag to pin — a switch for a decision already made is a dead branch, and it
+was **removed**, not flipped. The acceptance item is therefore void rather than passed, and the two
+tests below replace it:
 
 ```
-LayeredPush.cs:93      public static bool AllowBackgroundCrossFade { get; set; } = false;   <- the declaration
-LayeredPush.cs:231     if (!AllowBackgroundCrossFade && !SameBackground(...)) return false; <- the only READ
-Tests/LayeredPushTests.cs:44,45,74,78,79,83,105,107                                        <- the pin
-Editor/GamePolishProbe.cs:237,241,251,257  (option_b mode; forced false for every other mode)
-Editor/GamePolishDemoRecorder.cs:183,187,193  (segment f only, on then off)
+$ grep -rn AllowBackgroundCrossFade Assets/ Docs/Scripts/
+Assets/Scripts/UI/Polish/Tests/LayeredPushTests.cs:77:            Assert.IsNull(T.GetProperty("AllowBackgroundCrossFade"),
+Assets/Scripts/UI/Polish/Tests/LayeredPushTests.cs:80:            Assert.IsNull(T.GetField("AllowBackgroundCrossFade"));
 ```
 
-**Zero production writers.** Every writer is a test or an Editor-only tool. The property has no
-public *field* form, so no prefab can serialize it on; `Flag_IsNotASerializedFieldAndHasNoProductionWriter`
-asserts that, and `AllowBackgroundCrossFade_DefaultsToFalse` reads the compiler-generated
-backing field rather than the live property so a same-session probe run cannot make it look
-green.
+Two hits, both in one test file, both asserting absence. Zero hits in production code, zero in the
+probe, zero in the recorder, zero in the scripts.
+
+* `TheOptionBFlag_IsGone` — reflects over `LayeredPush` for a member of that name, property or
+  field, public or private, and fails if one exists. A future re-introduction breaks the build's
+  test run rather than quietly restoring a branch nobody meant to keep.
+* `SameBackground_IsNoLongerRequiredByTheGate` — builds two screens with DIFFERENT backdrops from
+  the real `LayerMap` and asserts `CanPush` returns true. This is the behavioural half: it would
+  still pass if someone deleted the flag but left the background gate standing.
+
+*(An earlier revision of this section quoted `LayeredPush.cs:93 public static bool
+AllowBackgroundCrossFade …` as though the declaration were still there. It is not; that text
+described the pre-decision build and is corrected above.)*
 
 ### A14 · Scope — **PASS**
 
@@ -844,3 +857,137 @@ owed.
 `ScreenEntryMotionTests` pins that a pushed screen does **not** rise. The mid-rise stills per
 screen family come from the same play-mode pass that owes A4.
 
+---
+
+## Iteration 2 — the centre title was snapping after every push
+
+**Iteration shape:** `shell-chrome:repaint-deferred-past-the-transition`
+
+Found by me while rebuilding the A4 strip after self-review passed — not by a gate. Looking at the
+six frames properly showed the content settled on MODE SELECTION while the banner still read
+TOURNAMENT LEADERBOARD, so I measured it instead of moving on.
+
+### The defect
+
+The top-bar centre title is SHARED chrome — one label on the persistent bar — repainted by
+`HighlightScreen` ← `ApplyScreen`, which `LayeredPush` **defers to `Settle` on purpose** (a midpoint
+repaint would deactivate the leaver before its rest state is written). So the whole 0.25 s push
+played with the LEAVER's name over the ARRIVER's content and the text then hard-cut in a single
+frame. Frame-by-frame, before the fix:
+
+```
+f642  TOURNAMENT LEADERBOARD      <- contentfully settled on Mode Selection
+f643  MODE SELECTION              <- one-frame cut, no blend, no partial alpha
+```
+
+**This is a defect my own change exposed.** That pair used to fade to black, and `ApplyScreen` ran
+behind the black where nobody could see it. The push is what made the repaint visible.
+
+### The fix
+
+`PersistentUIManager.CrossFadeCenterTextTo(ScreenId)`, called from `LayeredPush.Push` at push
+START, dissolves the title over `FadeDur` (0.15 s) so the new name lands *before* the content
+settles at `PushDur` (0.25 s) — the title leads the arrival instead of trailing it. No motion when
+the text does not change (Rewards Center → Gacha History keeps one title). `ApplyTopBarCenterText`
+stays the authoritative paint and is now also the recovery path: it stops a running dissolve and
+forces alpha back to 1, so an interrupted push cannot strand the label translucent.
+
+Measured on the shipped clip, both title changes are multi-frame dissolves, not cuts:
+
+```
+title event f9-14    span=0.20s
+title event f680-683 span=0.13s      (a snap is 1 frame; FadeDur is 0.15s)
+```
+
+### It shipped broken once — and that is the part worth reading
+
+The first fix compiled, logged `[TitleDissolve] START …` on the real path, and **changed nothing on
+screen.** The group it animates was resolved with
+
+```csharp
+usernameText.GetComponent<CanvasGroup>() ?? usernameText.gameObject.AddComponent<CanvasGroup>()
+```
+
+`??` does not consult Unity's overloaded `== null`, so on a label with no group it returned a
+FAKE-NULL component instead of adding a real one. `UiMotion.Fade` returns an EMPTY routine when its
+group is null — so both halves of the dissolve silently did nothing while the log still reported the
+dissolve starting. No exception, no error, and the REST frame is pixel-identical either way. This is
+the project's own documented trap (CLAUDE.md Basic Rules 4) and I walked into it.
+
+Pinned by `CenterTitleDissolveTests`, and **proved to be a real tripwire** rather than decoration —
+I restored the `??` version, re-ran, and got the specific failure back:
+
+```
+Failed  CenterTitleDissolveTests.EnsureCenterTextGroup_AddsARealComponent_NotAFakeNull
+        EnsureCenterTextGroup returned a fake-null CanvasGroup | Expected: False | But was: True
+        (4 failed with the ?? version, 0 with the fix)
+```
+
+### Shape audit (PIPELINE_HARDENING §15) — enumerated, not sampled
+
+Two defects of one shape (a late repaint; a silently-null tween) so I stopped fixing instances and
+asked both questions mechanically, listing the sites that were FINE as well as the ones that were not.
+
+**Shape A — `??` on a Unity object lookup, in every file this task wrote or edited.**
+
+```
+$ grep -nE "(GetComponent|GetComponentInChildren|Find|AddComponent)[^;]*\?\?" <the 7 files>
+(no matches)
+```
+
+| File | Verdict |
+|---|---|
+| `LayeredPush.cs` | clean |
+| `ScreenEntryMotion.cs` | clean |
+| `NavSlotHighlight.cs` | clean |
+| `UiSelection.cs` | clean |
+| `PersistentUIManager.cs` | **was the defect** — fixed, test-pinned |
+| `ScreenManager.cs` | clean |
+| `GpsNavBarHighlight.cs` | clean |
+
+**Shape B — everything `ApplyScreen` paints that is VISIBLE during a push.** `ApplyScreen` is
+deferred to `Settle`, so anything it paints is late by construction. Three things it paints:
+
+| What `ApplyScreen` paints | Can it change across a pushable pair? | Verdict |
+|---|---|---|
+| centre title (`ApplyTopBarCenterText`) | yes — nearly every pair | **was the defect** — fixed |
+| nav slot highlight (`HighlightScreen`) | **no** — see below | fine, no change needed |
+| bar visibility (`ShowBars` / `ShowTopBarOnly` / `HideBars`) | **no** — see below | fine, no change needed |
+
+The nav highlight and bar visibility are fine *for a reason I checked rather than assumed*.
+`CanPush` requires the two screens to share a pillar, with one bypass: the three-screen Rankings
+group. Pillars of every screen `LayerMap` admits, read from the live `ScreenManager.PillarOf`:
+
+```
+Inventory=Inventory   HoleSelection/ModeSelection/MissionSelection=MainPlay
+TournamentHoleSelection/TournamentLeaderboard/TournamentSelection=MainPlay
+GeneralShop/GachaHistory/GachaPrizes=Gacha        Leaderboard=<none>
+```
+
+Every pushable pair therefore shares a pillar — the same slot stays lit, so there is nothing to
+repaint — except pairs involving `Leaderboard`, which has NO pillar, and `HighlightScreen` returns
+early on a pillar-less screen *after* applying the title, deliberately leaving the highlight alone.
+
+Corroborated from the pixels, not just the branch logic, across the whole push (Settle at ~f285):
+
+```
+region                       worst Δ during push      step at Settle
+top bar (RP/coins/gear)              3.29                  +0.01
+bottom nav bar                      10.18                  +0.01   <- tracks the backdrop cross-fade,
+centre title                        45.94                  (the dissolve, f277-281)   no step
+```
+
+The nav bar's Δ ramps smoothly with the backdrop cross-fade over f277-280 and is flat across
+Settle. The title was the only thing that snapped.
+
+### Files this iteration touched
+
+| File | What changed |
+|---|---|
+| `Assets/Scripts/UI/PersistentUIManager.cs` | `CrossFadeCenterTextTo` + `DissolveCenterText` + `EnsureCenterTextGroup`; `CenterTextFor` split out of `ApplyTopBarCenterText` so the dissolve and the instant paint share one resolver; `ApplyTopBarCenterText` now also cancels-and-restores. |
+| `Assets/Scripts/UI/Polish/LayeredPush.cs` | One call at push start, next to `_active = p`. |
+| `Assets/Scripts/UI/Polish/Tests/CenterTitleDissolveTests.cs` | **NEW.** 5 tests pinning the fake-null trap, idempotence, the opaque rest state, resolver parity, and interruption recovery. |
+| `Docs/Specs/Active/game_polish_a/videos/game_polish_a_f_cross_backdrop.mp4` | Re-recorded and re-cut so the shipped clip shows the dissolve. |
+| `Docs/Specs/Active/game_polish_a/screenshots/a4_option_b_transition_strip.png` | Rebuilt from the fixed clip; its caption had also gone stale (said the option was behind an off flag). |
+
+**Full EditMode sweep after the fix: `passed=2430 failed=0 skipped=3`** (2425 + the 5 new).

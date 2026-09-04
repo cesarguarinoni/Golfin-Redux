@@ -25,3 +25,21 @@ SnapshotTest_TempScene_0 open and the MCP transport unresponsive at 0.7% CPU.
 Killed and relaunched Unity; everything was committed, ShellScene clean on disk.
 GamePolishTestReport added so the sweep leaves a quotable file rather than a
 tool-timeout.
+
+=== iter-2 kickoff baseline 2026-09-04T08:32:27Z ===
+HEAD: 8e13d5d7fbe37f44540d7d1ac433f61086bf672f  (game_polish_a: final EditMode sweep 2425 passed / 0 failed)
+DIRTY (git status --porcelain --untracked-files=all):
+   M Assets/Scripts/UI/PersistentUIManager.cs
+   M Assets/Scripts/UI/Polish/LayeredPush.cs
+   M Docs/Specs/Active/game_polish_a/HEARTBEAT.log
+   M Docs/Specs/Active/game_polish_a/IMPLEMENTER_REPORT.md
+   M Docs/Specs/Active/game_polish_a/STATUS.md
+   M Docs/Specs/Active/map_view_v2/SPEC.md
+   M Docs/Specs/Active/map_view_v2/reference/B1_aiming.png
+   M Docs/Specs/Active/map_view_v2/reference/B1_over_range.png
+  ?? Assets/Scripts/UI/Polish/Tests/CenterTitleDissolveTests.cs
+  ?? Assets/Scripts/UI/Polish/Tests/CenterTitleDissolveTests.cs.meta
+  ?? Docs/Specs/Active/game_polish_a/SELF_REVIEW.md
+Attribution note: the three Docs/Specs/Active/map_view_v2/ paths are Cesar's parallel
+session (see report §0.3) and are NOT touched by this iteration.
+iter-2 scope: the centre-title snap found while rebuilding the A4 strip after SELF_REVIEW_PASS.

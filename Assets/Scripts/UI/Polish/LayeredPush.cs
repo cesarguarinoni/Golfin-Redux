@@ -412,6 +412,14 @@ namespace Golfin.UI.Polish
 
             _active = p;
 
+            // §D3 — the shared top-bar centre title. It is chrome (one label on the persistent
+            // bar), so it cannot travel with the screen; but it must not SNAP either. ApplyScreen
+            // is deferred to Settle by design, which meant the whole push played with the LEAVER's
+            // name over the ARRIVER's content and the text then hard-cut in one frame — invisible
+            // under the old fade-to-black, plainly visible now. Starting the dissolve HERE lands
+            // the new name at FadeDur (0.15 s), before the content settles at PushDur (0.25 s).
+            PersistentUIManager.Instance?.CrossFadeCenterTextTo(to);
+
             LastPushElapsed        = 0f;
             LastPushFrames         = 0;
             LastPushCompleted      = false;
