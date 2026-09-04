@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using Golfin.Utilities;
+using Golfin.UI.Polish;
 
 namespace Golfin.Inventory
 {
@@ -48,19 +49,56 @@ namespace Golfin.Inventory
 
         // ── Tab management ────────────────────────────────────────────────────
 
+        /// <summary>
+        /// game_polish_a §D3 — the four tab panels cross-fade instead of snapping.
+        ///
+        /// <para>The outgoing panel dissolves out while the incoming one dissolves in, over
+        /// <c>UiMotion.FadeDur</c>; the two overlap, which is what makes it read as one control
+        /// changing rather than two panels taking turns. The FIRST call (from Start) is not
+        /// animated — a screen opening should already be on its tab, not arrive and then change to
+        /// it (§D7's "no motion on a cold screen", same rule).</para>
+        ///
+        /// <para>§D6: the tab that was tapped bumps. The bump is on the BUTTON, not the panel, so
+        /// it is the control the finger touched that answers.</para>
+        /// </summary>
         public void ShowTab(int index)
         {
+            bool animate = !_firstTab && index != _activeTab;
+            int previous = _activeTab;
+            _firstTab = false;
             _activeTab = index;
 
             for (int i = 0; i < tabPanels.Length; i++)
-                if (tabPanels[i] != null)
-                    tabPanels[i].SetActive(i == index);
+            {
+                if (tabPanels[i] == null) continue;
+                bool show = i == index;
 
-            RefreshTabVisuals();
+                if (!animate)
+                {
+                    tabPanels[i].SetActive(show);
+                    continue;
+                }
+                // Only the two panels involved move; the other two were already hidden and
+                // fading them from 0 to 0 would start two pointless coroutines per tap.
+                if (i == index || i == previous)
+                    UiSelection.CrossFade(this, show ? tabPanels[i] : null,
+                                                show ? null : tabPanels[i], animate: true);
+                else
+                    tabPanels[i].SetActive(false);
+            }
+
+            RefreshTabVisuals(animate);
+
+            if (animate && index >= 0 && index < tabButtons.Length && tabButtons[index] != null)
+                UiSelection.Bump(this, tabButtons[index].transform);
+
             Debug.Log($"[InventoryScreen] Tab {index} active.");
         }
 
-        private void RefreshTabVisuals()
+        /// <summary>The first ShowTab (from Start) paints the rest state and must not animate.</summary>
+        private bool _firstTab = true;
+
+        private void RefreshTabVisuals(bool animate = false)
         {
             for (int i = 0; i < tabButtons.Length; i++)
             {
@@ -76,10 +114,13 @@ namespace Golfin.Inventory
                 }
             }
 
-            // Active indicator underlines (kept for scenes that still have them)
+            // Active indicator underlines (kept for scenes that still have them).
+            // game_polish_a §D3: cross-faded rather than replaced by one sliding indicator —
+            // sliding would mean deleting three authored Images and re-anchoring the fourth, which
+            // changes the tab bar's REST geometry and breaks A2's 0 px parity. UiSelection.Indicator
+            // drives alpha and leaves the Image enabled, which renders identically at rest.
             for (int i = 0; i < tabIndicators.Length; i++)
-                if (tabIndicators[i] != null)
-                    tabIndicators[i].enabled = (i == _activeTab);
+                UiSelection.Indicator(this, tabIndicators[i], i == _activeTab, animate);
         }
 
         // ── Accessors ─────────────────────────────────────────────────────────

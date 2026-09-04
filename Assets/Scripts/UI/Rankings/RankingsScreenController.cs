@@ -4,6 +4,7 @@ using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
+using Golfin.UI.Polish;
 using UnityEngine.UI;
 using GolfinRedux.UI;
 using Golfin.Utilities;
@@ -169,15 +170,57 @@ namespace Golfin.UI.Rankings
 
         // ── Tab switching ─────────────────────────────────────────────────────
 
+        /// <summary>
+        /// game_polish_a §D3 — the list fades out, repaints, and fades back in.
+        ///
+        /// <para>There is nothing to cross-fade WITH here: the four tabs rebuild the SAME list in
+        /// place, destroying and respawning every row, so the two states never coexist. The repaint
+        /// is therefore hidden at the midpoint of a fade rather than dissolved between — and it is
+        /// passed to <see cref="UiSelection.FadeSwap"/> as an Action precisely so it still runs
+        /// when motion is off or the screen is disabled mid-fade. A repaint that gets skipped is a
+        /// leaderboard that silently stops updating, which is worse than a snap.</para>
+        ///
+        /// <para>§D6: the tapped tab bumps, and its underline cross-fades with the outgoing one.</para>
+        /// </summary>
         private void OnTabClicked(LeaderboardPeriod period)
         {
             if (_activePeriod == period) return;
             _activePeriod = period;
-            RebuildList();
-            UpdateTabIndicators();
+
+            UiSelection.FadeSwap(this, ListGroup(), RebuildList);
+            UpdateTabIndicators(animate: true);
+            UiSelection.Bump(this, TabFor(period)?.transform);
+
             StartCountdown();
             RequestRefresh(period);
         }
+
+        /// <summary>
+        /// The rows' own CanvasGroup, made on first use.
+        ///
+        /// <para>On <c>RankingsArea</c> rather than on ContentArea: fading ContentArea would take
+        /// the TAB BAR down with the list, so the control the player just tapped would vanish
+        /// while it answered. The rows are what changed, and the rows are what fades.</para>
+        /// </summary>
+        private CanvasGroup? _listGroup;
+        private CanvasGroup? ListGroup()
+        {
+            if (_listGroup != null) return _listGroup;
+            Transform? area = transform.Find("ContentArea/BarsArea/RankingsArea");
+            if (area == null) return null;
+            _listGroup = area.GetComponent<CanvasGroup>();
+            if (_listGroup == null) _listGroup = area.gameObject.AddComponent<CanvasGroup>();
+            return _listGroup;
+        }
+
+        private Button? TabFor(LeaderboardPeriod p) => p switch
+        {
+            LeaderboardPeriod.Daily    => _dailyTab,
+            LeaderboardPeriod.Weekly   => _weeklyTab,
+            LeaderboardPeriod.Monthly  => _monthlyTab,
+            LeaderboardPeriod.Historic => _historyTab,
+            _                          => null,
+        };
 
         // ── Backend refresh (SPEC §4) ─────────────────────────────────────────
 
@@ -209,12 +252,12 @@ namespace Golfin.UI.Rankings
             });
         }
 
-        private void UpdateTabIndicators()
+        private void UpdateTabIndicators(bool animate = false)
         {
-            SetIndicatorActive(_dailyIndicator,   _activePeriod == LeaderboardPeriod.Daily);
-            SetIndicatorActive(_weeklyIndicator,  _activePeriod == LeaderboardPeriod.Weekly);
-            SetIndicatorActive(_monthlyIndicator, _activePeriod == LeaderboardPeriod.Monthly);
-            SetIndicatorActive(_historyIndicator, _activePeriod == LeaderboardPeriod.Historic);
+            SetIndicatorActive(_dailyIndicator,   _activePeriod == LeaderboardPeriod.Daily,    animate);
+            SetIndicatorActive(_weeklyIndicator,  _activePeriod == LeaderboardPeriod.Weekly,   animate);
+            SetIndicatorActive(_monthlyIndicator, _activePeriod == LeaderboardPeriod.Monthly,  animate);
+            SetIndicatorActive(_historyIndicator, _activePeriod == LeaderboardPeriod.Historic, animate);
 
             // R2-Fix F: active tab → gold gradient, inactive tabs → silver gradient
             ApplyTabGradient(_dailyTabLabel,   _activePeriod == LeaderboardPeriod.Daily);
@@ -223,9 +266,16 @@ namespace Golfin.UI.Rankings
             ApplyTabGradient(_historyTabLabel, _activePeriod == LeaderboardPeriod.Historic);
         }
 
-        private static void SetIndicatorActive(Image? indicator, bool active)
+        /// <summary>
+        /// game_polish_a §D3 — alpha, not SetActive.
+        ///
+        /// <para>The object stays ACTIVE and its CanvasGroup carries the state, because a fade
+        /// cannot run on a deactivated object. An active object at alpha 0 renders identically to
+        /// an inactive one, so rest parity is unaffected (A2).</para>
+        /// </summary>
+        private void SetIndicatorActive(Image? indicator, bool active, bool animate)
         {
-            if (indicator != null) indicator.gameObject.SetActive(active);
+            UiSelection.Indicator(this, indicator, active, animate);
         }
 
         private static void ApplyTabGradient(TextMeshProUGUI? label, bool isActive)

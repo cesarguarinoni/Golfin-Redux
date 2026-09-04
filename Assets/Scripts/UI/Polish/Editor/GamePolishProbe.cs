@@ -123,6 +123,11 @@ namespace Golfin.UI.Polish.EditorTools
         sealed class Record
         {
             public string From = "", To = "", Direction = "", Widget = "";
+            /// <summary>Whether this pair was reached by a player's own widget (A10) or driven by
+            /// the harness because the game has no path to it from here. The invariants are a
+            /// property of the MECHANISM and worth measuring either way; what must never happen is
+            /// a harness-driven pair being reported as a tap.</summary>
+            public bool RealWidget;
             public float  W, ExpectedDur, MeasuredDur;
             public float  TargetOffsetAtT0, EndTargetX, EndTargetRestX, EndLeaverX, EndLeaverRestX;
             public float  ChromeAlphaMinOverRun = 1f;      // same-background path: must stay 1
@@ -199,7 +204,81 @@ namespace Golfin.UI.Polish.EditorTools
                     yield break;
                 }
 
-                Line("FATAL: mode '" + _mode + "' is not implemented in this build of the probe.");
+                if (_mode == "parity")
+                {
+                    // A2, WITHIN ONE RUN — the gps_polish lesson. These screens render live data
+                    // and relative time; comparing a capture taken now against one taken an hour
+                    // ago diffs a moved RP balance and a ticking clock in the shared top bar and
+                    // reports tens of thousands of differing pixels that have nothing to do with
+                    // the animation. Forty seconds apart, in one session, none of that moves.
+                    UiMotion.Enabled = true;
+                    _shotPrefix = "parity_anim"; _shot = 0;
+                    Line("--- pass 1: UiMotion.Enabled = true (animated arrivals) ---");
+                    yield return Boot();
+                    yield return Route();
+
+                    UiMotion.Enabled = false;
+                    _shotPrefix = "parity_instant"; _shot = 0;
+                    Line("--- pass 2: UiMotion.Enabled = false (CanPush false everywhere => the " +
+                         "untouched fade, which is the instant arrival A2 compares against) ---");
+                    yield return Home();
+                    yield return Route();
+
+                    UiMotion.Enabled = true;
+                    Line("=== done: parity pass complete ===");
+                    yield break;
+                }
+
+                if (_mode == "option_b")
+                {
+                    // §D4 — the ONE run with the flag on, for Cesar's five-second clip. Turned on
+                    // here, turned off in the finally-shaped tail below, and asserted off again so
+                    // a crashed run cannot leave it armed for the next one.
+                    LayeredPush.AllowBackgroundCrossFade = true;
+                    Line("--- OPTION (b): LayeredPush.AllowBackgroundCrossFade = true (NEVER in a build) ---");
+                    yield return Boot();
+                    yield return OptionBRoute();
+                    LayeredPush.AllowBackgroundCrossFade = false;
+                    Line("--- flag restored: AllowBackgroundCrossFade = " +
+                         LayeredPush.AllowBackgroundCrossFade + " ---");
+                    WriteJson();
+                    Line("=== done: option_b pass complete ===");
+                    yield break;
+                }
+
+                // push / perf — motion ON, the direction table driven for real.
+                UiMotion.Enabled = true;
+                if (LayeredPush.AllowBackgroundCrossFade)
+                {
+                    // A1 is produced with the flag OFF. If anything left it armed, say so and fix
+                    // it rather than writing a JSON that measures the wrong feature.
+                    Line("WARN: AllowBackgroundCrossFade was true at the start of a '" + _mode +
+                         "' run — forcing it false; A1 must be measured on the shipped path.");
+                    LayeredPush.AllowBackgroundCrossFade = false;
+                }
+                Line("AllowBackgroundCrossFade = " + LayeredPush.AllowBackgroundCrossFade + " (A1 is the shipped path)");
+                yield return Boot();
+                yield return Route();
+                WriteJson();
+                if (_perf) WritePerf();
+                Line("=== done: " + _mode + " pass complete ===");
+            }
+
+            /// <summary>
+            /// §D4's clip: ModeSelection -> TournamentSelection -> back. The pair Cesar named, and
+            /// the one that shows the option at its most obvious — the two screens have DIFFERENT
+            /// backgrounds (2e5476ee vs 0d425c0a), which is exactly why the shipped path fades
+            /// them and this flag does not.
+            /// </summary>
+            IEnumerator OptionBRoute()
+            {
+                yield return NavSlot("NavTeeButton", ScreenId.ModeSelection, "bottom-nav TEE");
+                yield return new WaitForSecondsRealtime(1.2f);
+                yield return TapPath(ScreenId.ModeSelection, "TournamentTempEntry", ScreenId.TournamentSelection,
+                                     "ModeSelection TournamentTempEntry (option b)");
+                yield return new WaitForSecondsRealtime(1.5f);
+                yield return Back(ScreenId.ModeSelection, "option b back");
+                yield return new WaitForSecondsRealtime(1.2f);
             }
 
             // ═════════════════════════════════════════════════════════════════
@@ -302,6 +381,72 @@ namespace Golfin.UI.Polish.EditorTools
                 // ── back to Home, for the nav-bar selected state ─────────────
                 yield return NavSlot("NavHomeButton", ScreenId.Home, "bottom-nav HOME");
                 yield return Shot("home_return");
+
+                // ── A1's remaining coverage ──────────────────────────────────
+                if (_mode == "push" || _mode == "perf") yield return PushSweep();
+            }
+
+            /// <summary>
+            /// EVERY ordered pair of the direction table, measured.
+            ///
+            /// <para>Six of the twenty-four have a real widget a player can tap and Route() has
+            /// already measured them as taps. The other eighteen do not — TournamentHoleSelection
+            /// has no entry point in a session with no active tournament, TournamentLeaderboard
+            /// needs a FINISHED one, and GachaPrizes is only reached by completing a gacha PULL,
+            /// which spends currency. Those pairs are driven here by ShowScreen / GoBack and
+            /// recorded with <c>realWidget: false</c>.</para>
+            ///
+            /// <para>This is deliberately NOT dressed up as real navigation. The invariants —
+            /// travel width, duration, the t0 offset, the settle, chrome alpha, the single
+            /// ApplyScreen — are properties of the MECHANISM, and the mechanism is worth measuring
+            /// on all twenty-four. A10's "driven from the real widget's onClick" claim then
+            /// belongs to the six the JSON marks true, and no reader can mistake which is
+            /// which.</para>
+            /// </summary>
+            IEnumerator PushSweep()
+            {
+                Line("--- push sweep: every ordered pair of the direction table ---");
+                ScreenId[][] groups =
+                {
+                    new[] { ScreenId.ModeSelection, ScreenId.HoleSelection,
+                            ScreenId.MissionSelection, ScreenId.TournamentHoleSelection },
+                    new[] { ScreenId.TournamentSelection, ScreenId.TournamentLeaderboard,
+                            ScreenId.Leaderboard },
+                    new[] { ScreenId.GeneralShop, ScreenId.GachaHistory, ScreenId.GachaPrizes },
+                };
+
+                foreach (ScreenId[] g in groups)
+                    foreach (ScreenId a in g)
+                        foreach (ScreenId b in g)
+                        {
+                            if (a == b) continue;
+                            yield return SweepOne(a, b, forward: true);
+                            yield return SweepOne(b, a, forward: false);
+                        }
+            }
+
+            IEnumerator SweepOne(ScreenId from, ScreenId to, bool forward)
+            {
+                yield return Ensure(from);
+                if (ScreenManager.Instance!.CurrentScreen != from)
+                {
+                    Line("  sweep " + from + " -> " + to + ": could not seat on " + from + "; skipped");
+                    yield break;
+                }
+                if (!LayeredPush.CanPush(from, to, Obj(from), Obj(to)))
+                {
+                    Line("  sweep " + from + " -> " + to + ": CanPush false (not a push pair)");
+                    yield break;
+                }
+
+                _screenChanged = 0;
+                if (forward) ScreenManager.Instance.ShowScreen(to);
+                else         ScreenManager.Instance.GoBack(to);
+
+                if (LayeredPush.IsPushing)
+                    yield return Measure(from, to, forward ? "harness ShowScreen" : "harness GoBack",
+                                         realWidget: false, dirForward: forward);
+                yield return Arrive(to, 1f);
             }
 
             // ═════════════════════════════════════════════════════════════════
@@ -366,9 +511,17 @@ namespace Golfin.UI.Polish.EditorTools
                     }
 
                     ScreenId from = ScreenManager.Instance!.CurrentScreen;
+                    // A card can route anywhere, so whether this is a push is decided against the
+                    // TARGET we are hoping for — and Measure only runs if the tween really starts.
+                    bool expectPush = UiMotion.Enabled &&
+                                      LayeredPush.CanPush(from, target, Obj(from), Obj(target));
                     Line("tapping " + what + " on card '" + card.name + "' via the real '" +
-                         play.name + "' " + from + " -> ?");
+                         play.name + "' " + from + " -> ?" + (expectPush ? "  [PUSH expected]" : "  [fade]"));
+                    _screenChanged = 0;
                     play.onClick.Invoke();
+
+                    if (expectPush && LayeredPush.IsPushing)
+                        yield return Measure(from, target, what + " (card '" + play.name + "')", realWidget: true);
 
                     // The boundary fade is 0.5 s out + 0.5 s in; give it room, then read where we
                     // actually landed rather than assuming.
@@ -486,9 +639,144 @@ namespace Golfin.UI.Polish.EditorTools
                 if (b == null) { Line("WARN: no button for " + what); yield break; }
 
                 ScreenId from = ScreenManager.Instance!.CurrentScreen;
-                Line("tapping " + what + " (interactable=" + b.interactable + ") " + from + " -> " + target);
+                bool expectPush = UiMotion.Enabled &&
+                                  LayeredPush.CanPush(from, target, Obj(from), Obj(target));
+                Line("tapping " + what + " (interactable=" + b.interactable + ") " + from + " -> " + target +
+                     (expectPush ? "  [PUSH expected]" : "  [fade]"));
+
+                _screenChanged = 0;
                 b.onClick.Invoke();
-                yield return Arrive(target, 3f);
+
+                if (expectPush) yield return Measure(from, target, what, realWidget: true);
+                yield return Arrive(target, expectPush ? 1.5f : 3f);
+            }
+
+            /// <summary>
+            /// Sample every frame of the push. This is the ONLY place the invariants come from —
+            /// no assertion below is read off a still or off a video.
+            /// </summary>
+            IEnumerator Measure(ScreenId from, ScreenId to, string widget, bool realWidget, bool dirForward = true)
+            {
+                GameObject? fromGo = Obj(from), toGo = Obj(to);
+                var r = new Record
+                {
+                    From = from.ToString(), To = to.ToString(), Widget = widget,
+                    RealWidget = realWidget,
+                    Direction = LayeredPush.DirectionFor(from, to, push: dirForward).ToString(),
+                    ExpectedDur = UiMotion.PushDur,
+                };
+
+                RectTransform? toContent   = FirstContent(to,   toGo);
+                RectTransform? fromContent = FirstContent(from, fromGo);
+
+                long gc0 = 0; double worstMs = 0;
+                if (_perf && _gcRec.Valid) gc0 = 0;
+
+                // Wait for the tween to actually start, then follow it to completion.
+                float guard = Time.realtimeSinceStartup + 3f;
+                while (!LayeredPush.IsPushing && Time.realtimeSinceStartup < guard) yield return null;
+
+                while (LayeredPush.IsPushing)
+                {
+                    if (_perf)
+                    {
+                        if (_gcRec.Valid)    gc0 += _gcRec.LastValue;
+                        if (_frameRec.Valid) worstMs = System.Math.Max(worstMs, _frameRec.LastValue * 1e-6);
+                    }
+                    yield return null;
+                }
+
+                // Everything below is read from the tween's OWN published state, sampled before it
+                // moved anything — reading rest X here would read the already-staged off-screen
+                // position and call THAT rest, which is the bug that made every assertion in
+                // gps_polish's first run fire.
+                r.W                     = LayeredPush.LastPushWidth;
+                r.MeasuredDur           = LastPushElapsedSafe();
+                r.Frames                = LayeredPush.LastPushFrames;
+                r.Completed             = LayeredPush.LastPushCompleted;
+                r.TargetOffsetAtT0      = LayeredPush.LastPushEnterOffset;
+                r.EndTargetRestX        = LayeredPush.LastPushTargetRestX;
+                r.EndLeaverRestX        = LayeredPush.LastPushLeaverRestX;
+                r.ChromeAlphaMinOverRun = LayeredPush.LastPushChromeAlphaMin;
+                r.SeamWorstCover        = LayeredPush.LastPushSeamWorstCover;
+                r.EndTargetX            = toContent   != null ? toContent.anchoredPosition.x   : float.NaN;
+                r.EndLeaverX            = fromContent != null ? fromContent.anchoredPosition.x : float.NaN;
+                r.EndTargetContentAlpha = GroupAlpha(toContent);
+                r.EndLeaverContentAlpha = GroupAlpha(fromContent);
+                r.EndBlocksRaycasts     = Blocks(toContent) && Blocks(fromContent);
+                r.ApplyScreenCalls      = _screenChanged;
+
+                // ── the assertions ──────────────────────────────────────────
+                if (!r.Completed) r.Fails.Add("push did not complete (interrupted)");
+                if (Mathf.Abs(r.MeasuredDur - r.ExpectedDur) > DurationToleranceSec)
+                    r.Fails.Add($"duration {r.MeasuredDur:0.000}s outside {r.ExpectedDur:0.000}s ±{DurationToleranceSec:0.000}");
+                if (Mathf.Abs(Mathf.Abs(r.TargetOffsetAtT0) - r.W) > 1f)
+                    r.Fails.Add($"t0 offset {r.TargetOffsetAtT0:0.#} is not ±W ({r.W:0.#})");
+                if (r.Direction == "Forward" && r.TargetOffsetAtT0 <= 0f)
+                    r.Fails.Add("Forward must enter from +W");
+                if (r.Direction == "Back" && r.TargetOffsetAtT0 >= 0f)
+                    r.Fails.Add("Back must enter from -W");
+                if (Mathf.Abs(r.EndTargetX - r.EndTargetRestX) > 0.5f)
+                    r.Fails.Add($"target content settled at x={r.EndTargetX:0.##}, rest is {r.EndTargetRestX:0.##}");
+                if (Mathf.Abs(r.EndLeaverX - r.EndLeaverRestX) > 0.5f)
+                    r.Fails.Add($"leaver content settled at x={r.EndLeaverX:0.##}, rest is {r.EndLeaverRestX:0.##}");
+                if (r.EndTargetContentAlpha < 0.999f) r.Fails.Add($"target content alpha {r.EndTargetContentAlpha:0.###} != 1");
+                if (r.EndLeaverContentAlpha < 0.999f) r.Fails.Add($"leaver content alpha {r.EndLeaverContentAlpha:0.###} != 1");
+                if (!r.EndBlocksRaycasts)             r.Fails.Add("blocksRaycasts not restored");
+                if (r.ApplyScreenCalls != 1)          r.Fails.Add($"ApplyScreen ran {r.ApplyScreenCalls}x, expected exactly 1 (at the end)");
+
+                if (LayeredPush.AllowBackgroundCrossFade)
+                {
+                    // Option (b) only: the seam test. Never both chrome layers below 0.5.
+                    if (r.SeamWorstCover < 0.5f)
+                        r.Fails.Add($"seam: worst chrome cover {r.SeamWorstCover:0.###} < 0.5");
+                }
+                else
+                {
+                    // The shipped path: the two screens share a background sprite, so NOTHING
+                    // about the chrome may move on any frame. This is A5's assertion, taken from
+                    // inside the tween rather than off a video.
+                    if (r.ChromeAlphaMinOverRun < 0.999f)
+                        r.Fails.Add($"chrome alpha dropped to {r.ChromeAlphaMinOverRun:0.###} on the same-background path");
+                }
+
+                if (_perf) _perfRows.Add((r.From + "->" + r.To, gc0, worstMs, r.Frames));
+
+                _records.Add(r);
+                Line($"  measured {r.From} -> {r.To} dir={r.Direction} W={r.W:0.#} " +
+                     $"dur={r.MeasuredDur:0.000}s frames={r.Frames} chromeMin={r.ChromeAlphaMinOverRun:0.###} " +
+                     $"fails={r.Fails.Count}");
+                foreach (string f in r.Fails) Line("    FAIL " + f);
+            }
+
+            static float LastPushElapsedSafe() => LayeredPush.LastPushElapsed;
+
+            /// <summary>The screen's FIRST content rect — the one whose travel the invariants are
+            /// written against. Read from LayeredPush's own table so the probe cannot measure a
+            /// different rect than the push moved.</summary>
+            static RectTransform? FirstContent(ScreenId id, GameObject? go)
+            {
+                if (go == null) return null;
+                LayeredPush.Layers? m = LayeredPush.LayerMap(id);
+                if (m == null) return null;
+                foreach (string n in m.Value.Content)
+                {
+                    Transform? t = go.transform.Find(n);
+                    if (t is RectTransform rt) return rt;
+                }
+                return null;
+            }
+
+            static float GroupAlpha(RectTransform? rt)
+            {
+                var cg = rt != null ? rt.GetComponent<CanvasGroup>() : null;
+                return cg != null ? cg.alpha : 1f;
+            }
+
+            static bool Blocks(RectTransform? rt)
+            {
+                var cg = rt != null ? rt.GetComponent<CanvasGroup>() : null;
+                return cg == null || cg.blocksRaycasts;
             }
 
             // ═════════════════════════════════════════════════════════════════
@@ -579,6 +867,68 @@ namespace Golfin.UI.Polish.EditorTools
                 while (!done() && Time.realtimeSinceStartup < deadline) yield return null;
                 Line((done() ? "ok   " : "TIMEOUT ") + what);
             }
+
+            // ═════════════════════════════════════════════════════════════════
+            // A1 — the invariants file. fail == 0 is the gate.
+            // ═════════════════════════════════════════════════════════════════
+
+            void WriteJson()
+            {
+                int fail = 0;
+                foreach (Record r in _records) fail += r.Fails.Count;
+
+                var j = new StringBuilder();
+                j.AppendLine("{");
+                j.AppendLine("  \"task\": \"game_polish_a\",");
+                j.AppendLine("  \"mode\": \"" + _mode + "\",");
+                j.AppendLine("  \"utc\": \"" + DateTime.UtcNow.ToString("u") + "\",");
+                j.AppendLine("  \"allowBackgroundCrossFade\": " + (LayeredPush.AllowBackgroundCrossFade ? "true" : "false") + ",");
+                j.AppendLine("  \"pushDur\": " + F(UiMotion.PushDur) + ",");
+                j.AppendLine("  \"durationToleranceSec\": " + F(DurationToleranceSec) + ",");
+                j.AppendLine("  \"measured\": " + _records.Count + ",");
+                j.AppendLine("  \"fail\": " + fail + ",");
+                j.AppendLine("  \"pushes\": [");
+                for (int i = 0; i < _records.Count; i++)
+                {
+                    Record r = _records[i];
+                    j.AppendLine("    {");
+                    j.AppendLine("      \"from\": \"" + r.From + "\", \"to\": \"" + r.To + "\", \"direction\": \"" + r.Direction + "\",");
+                    j.AppendLine("      \"widget\": \"" + Esc(r.Widget) + "\", \"realWidget\": " + (r.RealWidget ? "true" : "false") + ",");
+                    j.AppendLine("      \"W\": " + F(r.W) + ", \"expectedDur\": " + F(r.ExpectedDur) + ", \"measuredDur\": " + F(r.MeasuredDur) + ", \"frames\": " + r.Frames + ",");
+                    j.AppendLine("      \"targetOffsetAtT0\": " + F(r.TargetOffsetAtT0) + ",");
+                    j.AppendLine("      \"endTargetX\": " + F(r.EndTargetX) + ", \"endTargetRestX\": " + F(r.EndTargetRestX) + ",");
+                    j.AppendLine("      \"endLeaverX\": " + F(r.EndLeaverX) + ", \"endLeaverRestX\": " + F(r.EndLeaverRestX) + ",");
+                    j.AppendLine("      \"endTargetContentAlpha\": " + F(r.EndTargetContentAlpha) + ", \"endLeaverContentAlpha\": " + F(r.EndLeaverContentAlpha) + ",");
+                    j.AppendLine("      \"chromeAlphaMinOverRun\": " + F(r.ChromeAlphaMinOverRun) + ", \"seamWorstCover\": " + F(r.SeamWorstCover) + ",");
+                    j.AppendLine("      \"blocksRaycastsRestored\": " + (r.EndBlocksRaycasts ? "true" : "false") + ",");
+                    j.AppendLine("      \"applyScreenCalls\": " + r.ApplyScreenCalls + ", \"completed\": " + (r.Completed ? "true" : "false") + ",");
+                    j.Append    ("      \"fails\": [");
+                    for (int k = 0; k < r.Fails.Count; k++)
+                        j.Append((k > 0 ? ", " : "") + "\"" + Esc(r.Fails[k]) + "\"");
+                    j.AppendLine("]");
+                    j.AppendLine("    }" + (i < _records.Count - 1 ? "," : ""));
+                }
+                j.AppendLine("  ]");
+                j.AppendLine("}");
+
+                Directory.CreateDirectory(Path.GetDirectoryName(JsonPath)!);
+                File.WriteAllText(JsonPath, j.ToString());
+                Line("A1 -> " + JsonPath + "  measured=" + _records.Count + " fail=" + fail);
+            }
+
+            void WritePerf()
+            {
+                Line("--- A13 ---");
+                foreach (var row in _perfRows)
+                    Line($"  {row.pair}: alloc={row.allocBytes} B over {row.frames} frames " +
+                         $"({(row.frames > 0 ? row.allocBytes / row.frames : 0)} B/frame, IN SITU — this is the " +
+                         $"whole app's frame, an UPPER BOUND on the tween), worst frame {row.worstMs:0.##} ms");
+            }
+
+            static string F(float v) => float.IsNaN(v) ? "null"
+                : v.ToString("0.####", System.Globalization.CultureInfo.InvariantCulture);
+
+            static string Esc(string s) => s == null ? "" : s.Replace("\\", "\\\\").Replace("\"", "\\\"");
 
             void Line(string s)
             {

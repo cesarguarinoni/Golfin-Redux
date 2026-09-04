@@ -171,6 +171,17 @@ namespace Golfin.UI
             Debug.Log($"[SettingsMenuItem] Collapsed: {gameObject.name}, _isExpanded now = {_isExpanded}");
         }
 
+        /// <summary>The submenu's CanvasGroup, made on first use. Alpha 1 at rest is a no-op, so
+        /// adding one cannot move a rest pixel.</summary>
+        private CanvasGroup _submenuGroup;
+        private CanvasGroup SubmenuGroup()
+        {
+            if (_submenuGroup != null) return _submenuGroup;
+            _submenuGroup = _submenuRect.GetComponent<CanvasGroup>();
+            if (_submenuGroup == null) _submenuGroup = _submenuRect.gameObject.AddComponent<CanvasGroup>();
+            return _submenuGroup;
+        }
+
         private void Update()
         {
             if (_submenuRect == null) return;
@@ -186,6 +197,17 @@ namespace Golfin.UI
                 float curveValue = expandCurve.Evaluate(_animationProgress);
                 _currentHeight = _targetHeight * curveValue;
                 _submenuRect.sizeDelta = new Vector2(_submenuRect.sizeDelta.x, _currentHeight);
+
+                // game_polish_a §D3 — the submenu FADES with the height it is given.
+                //
+                // §D3 lists this as a snap site. It is not: the height has always been tweened
+                // here, through expandCurve, and the LayoutElement is already what is driven (trap
+                // C3 — the rect is layout-owned, so the rect is never what you animate). What was
+                // missing is that the CONTENT appeared at full opacity from the first frame, so a
+                // half-open row showed half a crisply-drawn submenu clipped by its own rect. It now
+                // dissolves in step with the opening, on the SAME progress value — one animation
+                // rather than two that can disagree.
+                SubmenuGroup().alpha = curveValue;
                 
                 // Update LayoutElement height to notify layout system
                 if (_layoutElement != null)

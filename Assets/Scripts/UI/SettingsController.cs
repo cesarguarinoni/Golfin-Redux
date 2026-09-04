@@ -1,4 +1,5 @@
 using UnityEngine;
+using Golfin.UI.Polish;
 using UnityEngine.UI;
 using System.Collections.Generic;
 using Golfin.UI.Modals;
@@ -196,7 +197,21 @@ namespace Golfin.UI
         /// back handler (nav_back_memory §7) — Settings leaves the screen underneath enabled,
         /// so back has to close the overlay before it can mean "go back a screen".
         /// </summary>
-        public bool IsOpen => settingsPanel != null && settingsPanel.activeSelf;
+        /// <summary>
+        /// game_polish_a §D3 — STATE-DRIVEN, and it has to stay that way.
+        ///
+        /// <para>ScreenManager's Android back handler asks this to decide whether BACK means
+        /// "close the overlay" or "go back a screen". With the close now animated, the panel stays
+        /// active for <c>FadeDur</c> AFTER the player asked for it to go — so reading
+        /// <c>activeSelf</c> would report the overlay as open during its own exit and swallow the
+        /// next back press. It is true from the first frame of open and false from the first frame
+        /// of close, which is what the caller actually means.</para>
+        /// </summary>
+        public bool IsOpen => _open;
+
+        private bool _open;
+        private Coroutine? _panelMotion;
+        private Coroutine? _scrimMotion;
 
         /// <summary>
         /// Open the settings panel.
@@ -210,8 +225,17 @@ namespace Golfin.UI
             // keeps it raycast-blocking and canvas-sized.
             background = ModalScrim.Apply(transform, background, settingsPanel);
 
+            _open = true;
             if (background != null) background.SetActive(true);
             if (settingsPanel != null) settingsPanel.SetActive(true);
+
+            // game_polish_a §D3 — the scrim fades in and the panel pops (0.9 -> 1 with its own
+            // alpha), instead of both appearing between one frame and the next.
+            if (background != null)
+                UiMotion.Run(this, ref _scrimMotion, UiMotion.Fade(Group(background), 0f, 1f));
+            if (settingsPanel != null)
+                UiMotion.Run(this, ref _panelMotion,
+                             UiMotion.Pop(settingsPanel.transform as RectTransform, Group(settingsPanel)));
 
             Debug.Log("[SettingsController] Settings opened");
         }
@@ -231,11 +255,38 @@ namespace Golfin.UI
             }
 
             _currentlyExpandedItem = null;
+            _open = false;
 
-            if (settingsPanel != null) settingsPanel.SetActive(false);
-            if (background != null) background.SetActive(false);
+            // The reverse: the panel un-pops and the scrim fades, and BOTH deactivate only when
+            // their tween finishes. UiMotion.Then composes the tail into the routine's finalizer,
+            // so an interrupted or disabled close still deactivates — a scrim left active would
+            // eat every tap on the screen underneath.
+            if (settingsPanel != null)
+            {
+                GameObject panel = settingsPanel;
+                UiMotion.Run(this, ref _panelMotion,
+                    UiMotion.Then(UiMotion.Unpop(panel.transform as RectTransform, Group(panel)),
+                                  () => { if (panel != null) panel.SetActive(false); }));
+            }
+            if (background != null)
+            {
+                GameObject scrim = background;
+                UiMotion.Run(this, ref _scrimMotion,
+                    UiMotion.Then(UiMotion.Fade(Group(scrim), Group(scrim).alpha, 0f),
+                                  () => { if (scrim != null) scrim.SetActive(false); }));
+            }
 
             Debug.Log("[SettingsController] Settings closed");
+        }
+
+        /// <summary>The CanvasGroup a fade needs, made on first use. An alpha-1 group is a no-op,
+        /// so adding one cannot move a rest pixel — the same argument LayeredPush.EnsureGroup and
+        /// GpsScreenTransition.EnsureGroup make.</summary>
+        private static CanvasGroup Group(GameObject go)
+        {
+            var cg = go.GetComponent<CanvasGroup>();
+            if (cg == null) cg = go.AddComponent<CanvasGroup>();
+            return cg;
         }
 
         // Simple menu item handlers (Phase 3 features)

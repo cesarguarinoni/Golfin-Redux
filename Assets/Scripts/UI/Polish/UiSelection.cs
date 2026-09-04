@@ -47,6 +47,84 @@ namespace Golfin.UI.Polish
         }
 
         // ═════════════════════════════════════════════════════════════════════
+        // game_polish_a §D3 — a list that repaints
+        // ═════════════════════════════════════════════════════════════════════
+
+        /// <summary>
+        /// Fade a panel out, run <paramref name="repaint"/>, fade it back in.
+        ///
+        /// <para>The game's tab bars do not swap two authored panels the way the GPS pills swap two
+        /// authored states — the Rankings tabs and the gacha history rebuild the SAME list in
+        /// place, destroying and respawning rows. There is nothing to cross-fade WITH, so the
+        /// honest motion is to hide the swap rather than to dissolve between two things that never
+        /// coexist.</para>
+        ///
+        /// <para>The repaint runs at the MIDPOINT, while the panel is invisible — a repaint before
+        /// the fade would show the new list fading out, and one after would pop it in at full
+        /// alpha. And it runs UNCONDITIONALLY, on every exit path: a repaint skipped because motion
+        /// was off, or because the host was disabled mid-fade, is a list that silently stops
+        /// updating. That is why it is passed as an Action rather than being left to the caller
+        /// after the call.</para>
+        /// </summary>
+        public static void FadeSwap(MonoBehaviour? host, CanvasGroup? group, System.Action repaint)
+        {
+            if (repaint == null) return;
+
+            if (group == null || host == null || !host.isActiveAndEnabled || !UiMotion.Enabled
+                || !Application.isPlaying)
+            {
+                repaint();
+                if (group != null) group.alpha = 1f;
+                return;
+            }
+
+            UiMotion.Run(host, UiMotion.Then(UiMotion.Fade(group, group.alpha, 0f), () =>
+            {
+                repaint();
+                // The second half is started from the finalizer, so an interruption that settles
+                // the fade-out still repaints AND still leaves the panel visible rather than
+                // stranding it at alpha 0 — a stranded list looks like a screen that failed to load.
+                if (group == null) return;
+                if (host == null || !host.isActiveAndEnabled) { group.alpha = 1f; return; }
+                UiMotion.Run(host, UiMotion.Fade(group, 0f, 1f));
+            }));
+        }
+
+        /// <summary>
+        /// The tab bars' active indicator, which the game authors as one Image per tab toggled with
+        /// <c>enabled</c> or <c>SetActive</c>.
+        ///
+        /// <para>§D3 offers a choice: one sliding indicator, or cross-fade the four. Cross-fade,
+        /// and the reason is A2 — a single sliding indicator means deleting three authored Images
+        /// and re-anchoring the fourth, which changes the REST geometry of four tab bars. The spec
+        /// says to choose the one that keeps 0 px rest parity, and this is it. The object stays
+        /// active with a CanvasGroup at alpha 0, which renders identically to
+        /// <c>enabled = false</c>.</para>
+        /// </summary>
+        public static void Indicator(MonoBehaviour? host, Component? indicator, bool on, bool animate)
+        {
+            if (indicator == null) return;
+            GameObject go = indicator.gameObject;
+
+            var cg = go.GetComponent<CanvasGroup>();
+            if (cg == null) cg = go.AddComponent<CanvasGroup>();
+
+            // Whatever the prefab did before, the object is active from here on and the ALPHA is
+            // the state — otherwise a fade would be running on a deactivated object.
+            if (!go.activeSelf) go.SetActive(true);
+            var img = indicator as Image;
+            if (img != null && !img.enabled) img.enabled = true;
+
+            if (!animate || host == null || !host.isActiveAndEnabled || !UiMotion.Enabled
+                || !Application.isPlaying)
+            {
+                cg.alpha = on ? 1f : 0f;
+                return;
+            }
+            UiMotion.Run(host, UiMotion.Fade(cg, cg.alpha, on ? 1f : 0f));
+        }
+
+        // ═════════════════════════════════════════════════════════════════════
         // Two authored objects
         // ═════════════════════════════════════════════════════════════════════
 

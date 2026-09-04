@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using GolfinRedux.UI;
+using Golfin.UI.Polish;
 
 namespace GolfinRedux.UI.Gacha
 {
@@ -41,20 +42,47 @@ namespace GolfinRedux.UI.Gacha
             // Draw the disk mirror immediately, then re-draw when the server answers. The screen
             // never waits on a socket — an offline open shows the last log the server confirmed
             // rather than an empty list that reads as "you have never pulled".
-            GachaHistoryStore.OnChanged += RebuildList;
-            RebuildList();
+            GachaHistoryStore.OnChanged += RepaintAnimated;
+            RebuildList();                      // the FIRST paint is the rest state: no motion
             GachaHistoryStore.Refresh();
         }
 
         private void OnDisable()
         {
-            GachaHistoryStore.OnChanged -= RebuildList;
+            GachaHistoryStore.OnChanged -= RepaintAnimated;
         }
 
         private void OnDestroy()
         {
             if (_closeButton != null)
                 _closeButton.onClick.RemoveListener(OnClose);
+        }
+
+        /// <summary>
+        /// game_polish_a §D3 — the log fades out, repaints and fades back in when the server's
+        /// answer changes it.
+        ///
+        /// <para>§D3 names the <c>FiltersIconRow</c> filter change as the site. There is no filter
+        /// change to animate in this build: the chips under
+        /// <c>GameScreenContent/ContentContainer/FiltersBlock/CategoryRow</c> exist in the prefab
+        /// but nothing wires their onClick — this controller has no chip fields at all. The site
+        /// that DOES repaint the list is the store's OnChanged, when the server's log arrives over
+        /// the disk mirror, so that is what is animated. When the chips are wired they will route
+        /// through here and inherit the fade. (Flagged in IMPLEMENTER_REPORT as a finding, not
+        /// silently substituted.)</para>
+        /// </summary>
+        private void RepaintAnimated() => UiSelection.FadeSwap(this, ListGroup(), RebuildList);
+
+        /// <summary>The scroll content's own CanvasGroup, made on first use — never the whole
+        /// screen's, which would take the chrome down with the list.</summary>
+        private CanvasGroup? _listGroup;
+        private CanvasGroup? ListGroup()
+        {
+            if (_listGroup != null) return _listGroup;
+            if (_scrollContent == null) return null;
+            _listGroup = _scrollContent.GetComponent<CanvasGroup>();
+            if (_listGroup == null) _listGroup = _scrollContent.gameObject.AddComponent<CanvasGroup>();
+            return _listGroup;
         }
 
         // ── List population ────────────────────────────────────────────────────
