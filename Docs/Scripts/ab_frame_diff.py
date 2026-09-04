@@ -26,14 +26,25 @@ def stats(pa, pb):
     px = n // 3
     return tot/px, mx, 100.0*changed/px
 
+def find(d, name, label):
+    """Frames are archived as full-res JPEG q92 4:4:4 but produced as PNG, so a pair can
+    legitimately be one of each. Both are decoded to RGB before comparison, and q92 4:4:4 is
+    well below the deltas being measured — the noise-floor column is what keeps that honest."""
+    for ext in (".png", ".jpg"):
+        p = f"{d}/{name}_{label}{ext}"
+        if os.path.exists(p):
+            return p
+    return None
+
 def load(d, name, label):
-    p = f"{d}/{name}_{label}.png"
-    return Image.open(p).convert("RGB").tobytes() if os.path.exists(p) else None
+    p = find(d, name, label)
+    return Image.open(p).convert("RGB").tobytes() if p else None
 
 def main():
     d, a, b = sys.argv[1], sys.argv[2], sys.argv[3]
     noise = sys.argv[4] if len(sys.argv) > 4 else None
-    names = sorted(os.path.basename(p)[:-len(f"_{b}.png")] for p in glob.glob(f"{d}/*_{b}.png"))
+    names = sorted({os.path.basename(p)[:-len(f"_{b}") - 4]
+                    for ext in ("png", "jpg") for p in glob.glob(f"{d}/*_{b}.{ext}")})
     head = f"{'frame':<24} {'mean|d|':>8} {'max|d|':>7} {'%moved':>8}"
     if noise: head += f"   |   {'mean|d|':>8} {'max|d|':>7} {'%moved':>8}   verdict"
     print(f"# {a} vs {b}" + (f"   |   noise floor: {b} vs {noise}" if noise else ""))

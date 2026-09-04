@@ -3,22 +3,21 @@
 # Columns: raw bytes (INSTALL contribution) | deflate bytes (Payload-compressed model) | path
 # Non-Data Payload constant added below: 111,741,942 B raw / 35,515,812 B compressed
 
-DATA raw           974,493,311 B =    929.3 MiB
-DATA compressed    293,767,497 B =    280.2 MiB
+DATA raw           946,422,127 B =    902.6 MiB
+DATA compressed    283,932,298 B =    270.8 MiB
 
-INSTALL       = Data raw  + non-Data raw  =   1035.9 MiB   (gate <= 1024 MiB)
-PAYLOAD-COMP  = Data comp + non-Data comp =    314.0 MiB   (gate <=  350 MiB)
+INSTALL       = Data raw  + non-Data raw  =   1009.1 MiB   (gate <= 1024 MiB)
+PAYLOAD-COMP  = Data comp + non-Data comp =    304.6 MiB   (gate <=  350 MiB)
 
 == Per-file, sorted by raw size ==
     71794592     23127106  sharedassets0.assets.resS
     56641952     36260713  resources.assets.resS
-    49588472     45599679  resources.assets
-    42791392     16137825  sharedassets8.assets.resS
+    49588472     45600220  resources.assets
     30351872      5352229  sharedassets2.assets
     30209512      5826695  sharedassets3.assets
     30068728      5375365  sharedassets9.assets
     29953016      6059149  sharedassets7.assets
-    29798384      6272059  sharedassets8.assets
+    29798384      6272055  sharedassets8.assets
     29797344      4536238  sharedassets18.assets
     29760436      6284412  sharedassets6.assets
     29748092      5890968  sharedassets13.assets
@@ -33,7 +32,8 @@ PAYLOAD-COMP  = Data comp + non-Data comp =    314.0 MiB   (gate <=  350 MiB)
     29682056      4684734  sharedassets16.assets
     29676368      4820035  sharedassets5.assets
     16614944      7538263  sharedassets7.assets.resS
-    16362748      4727580  Managed/Metadata/global-metadata.dat
+    16362924      4727684  Managed/Metadata/global-metadata.dat
+    14720032      6301987  sharedassets8.assets.resS
     13669744     10391794  sharedassets2.assets.resS
     12816276      1841917  level9
     12580336      6975593  sharedassets3.assets.resS
@@ -94,7 +94,7 @@ PAYLOAD-COMP  = Data comp + non-Data comp =    314.0 MiB   (gate <=  350 MiB)
          476          321  Managed/Resources/Microsoft.Extensions.Logging.Abstractions.dll-resources.dat
          435          292  Managed/Resources/System.Text.Encodings.Web.dll-resources.dat
          360          259  Managed/Resources/Microsoft.Extensions.Configuration.Abstractions.dll-resources.dat
-         134          113  boot.config
+         134          111  boot.config
           96           10  sharedassets4.assets.resS
           96           10  sharedassets19.assets.resS
           96           10  sharedassets10.assets.resS

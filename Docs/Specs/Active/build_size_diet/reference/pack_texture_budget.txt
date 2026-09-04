@@ -5,58 +5,58 @@
 
    was    now      est. built MiB before -> after  path
    512    512          0.15 ->     0.15          Assets/Packs/PBR Bridge/3D Art/Textures/Beams_ao.png
-  2048   2048          2.37 ->     2.37          Assets/Packs/PBR Bridge/3D Art/Textures/Beams_d.png
+  2048   1024          2.37 ->     0.59          Assets/Packs/PBR Bridge/3D Art/Textures/Beams_d.png
    512    512          0.15 ->     0.15          Assets/Packs/PBR Bridge/3D Art/Textures/Beams_L_ao.png
-  2048   2048          2.37 ->     2.37          Assets/Packs/PBR Bridge/3D Art/Textures/Beams_L_d.png
+  2048   1024          2.37 ->     0.59          Assets/Packs/PBR Bridge/3D Art/Textures/Beams_L_d.png
    512    512          0.15 ->     0.15          Assets/Packs/PBR Bridge/3D Art/Textures/Beams_L_m.png
-  1024   1024          0.59 ->     0.59          Assets/Packs/PBR Bridge/3D Art/Textures/Beams_L_n.png
+  1024    512          0.59 ->     0.15          Assets/Packs/PBR Bridge/3D Art/Textures/Beams_L_n.png
    512    512          0.15 ->     0.15          Assets/Packs/PBR Bridge/3D Art/Textures/Beams_m.png
-  1024   1024          0.59 ->     0.59          Assets/Packs/PBR Bridge/3D Art/Textures/Beams_n.png
+  1024    512          0.59 ->     0.15          Assets/Packs/PBR Bridge/3D Art/Textures/Beams_n.png
    512    512          0.15 ->     0.15          Assets/Packs/PBR Bridge/3D Art/Textures/Beams_R_ao.png
-  2048   2048          2.37 ->     2.37          Assets/Packs/PBR Bridge/3D Art/Textures/Beams_R_d.png
+  2048   1024          2.37 ->     0.59          Assets/Packs/PBR Bridge/3D Art/Textures/Beams_R_d.png
    512    512          0.15 ->     0.15          Assets/Packs/PBR Bridge/3D Art/Textures/Beams_R_m.png
-  1024   1024          0.59 ->     0.59          Assets/Packs/PBR Bridge/3D Art/Textures/Beams_R_n.png
+  1024    512          0.59 ->     0.15          Assets/Packs/PBR Bridge/3D Art/Textures/Beams_R_n.png
    512    512          0.15 ->     0.15          Assets/Packs/PBR Bridge/3D Art/Textures/Bottom_L_ao.png
-  2048   2048          2.37 ->     2.37          Assets/Packs/PBR Bridge/3D Art/Textures/Bottom_L_d.png
+  2048   1024          2.37 ->     0.59          Assets/Packs/PBR Bridge/3D Art/Textures/Bottom_L_d.png
    512    512          0.15 ->     0.15          Assets/Packs/PBR Bridge/3D Art/Textures/Bottom_L_m.png
-  1024   1024          0.59 ->     0.59          Assets/Packs/PBR Bridge/3D Art/Textures/Bottom_L_n.png
+  1024    512          0.59 ->     0.15          Assets/Packs/PBR Bridge/3D Art/Textures/Bottom_L_n.png
    512    512          0.15 ->     0.15          Assets/Packs/PBR Bridge/3D Art/Textures/Bottom_R_ao.png
-  2048   2048          2.37 ->     2.37          Assets/Packs/PBR Bridge/3D Art/Textures/Bottom_R_d.png
+  2048   1024          2.37 ->     0.59          Assets/Packs/PBR Bridge/3D Art/Textures/Bottom_R_d.png
    512    512          0.15 ->     0.15          Assets/Packs/PBR Bridge/3D Art/Textures/Bottom_R_m.png
-  1024   1024          0.59 ->     0.59          Assets/Packs/PBR Bridge/3D Art/Textures/Bottom_R_n.png
-  2048   2048          0.52 ->     0.52          Assets/Packs/PBR Bridge/3D Art/Textures/fence_d.png
+  1024    512          0.59 ->     0.15          Assets/Packs/PBR Bridge/3D Art/Textures/Bottom_R_n.png
+  2048   1024          0.52 ->     0.52          Assets/Packs/PBR Bridge/3D Art/Textures/fence_d.png
    512    512          0.15 ->     0.15          Assets/Packs/PBR Bridge/3D Art/Textures/Light_ao.png
-  2048   2048          2.37 ->     2.37          Assets/Packs/PBR Bridge/3D Art/Textures/Light_d.png
+  2048   1024          2.37 ->     0.59          Assets/Packs/PBR Bridge/3D Art/Textures/Light_d.png
    512    512          0.15 ->     0.15          Assets/Packs/PBR Bridge/3D Art/Textures/Light_m.png
-  1024   1024          0.59 ->     0.59          Assets/Packs/PBR Bridge/3D Art/Textures/Light_n.png
+  1024    512          0.59 ->     0.15          Assets/Packs/PBR Bridge/3D Art/Textures/Light_n.png
    512    512          0.15 ->     0.15          Assets/Packs/PBR Bridge/3D Art/Textures/Line_ao.png
-  2048   2048          2.37 ->     2.37          Assets/Packs/PBR Bridge/3D Art/Textures/Line_d.png
+  2048   1024          2.37 ->     0.59          Assets/Packs/PBR Bridge/3D Art/Textures/Line_d.png
    512    512          0.15 ->     0.15          Assets/Packs/PBR Bridge/3D Art/Textures/Line_m.png
-  1024   1024          0.59 ->     0.59          Assets/Packs/PBR Bridge/3D Art/Textures/Line_n.png
+  1024    512          0.59 ->     0.15          Assets/Packs/PBR Bridge/3D Art/Textures/Line_n.png
    512    512          0.15 ->     0.15          Assets/Packs/PBR Bridge/3D Art/Textures/Main_ao.png
-  2048   2048          2.37 ->     2.37          Assets/Packs/PBR Bridge/3D Art/Textures/Main_d.png
+  2048   1024          2.37 ->     0.59          Assets/Packs/PBR Bridge/3D Art/Textures/Main_d.png
    512    512          0.15 ->     0.15          Assets/Packs/PBR Bridge/3D Art/Textures/Main_m.png
-  1024   1024          0.59 ->     0.59          Assets/Packs/PBR Bridge/3D Art/Textures/Main_n.png
+  1024    512          0.59 ->     0.15          Assets/Packs/PBR Bridge/3D Art/Textures/Main_n.png
    512    512          0.15 ->     0.15          Assets/Packs/PBR Bridge/3D Art/Textures/Pier_ao.png
-  2048   2048          2.37 ->     2.37          Assets/Packs/PBR Bridge/3D Art/Textures/Pier_d.png
+  2048   1024          2.37 ->     0.59          Assets/Packs/PBR Bridge/3D Art/Textures/Pier_d.png
    512    512          0.15 ->     0.15          Assets/Packs/PBR Bridge/3D Art/Textures/Pier_m.png
-  1024   1024          0.59 ->     0.59          Assets/Packs/PBR Bridge/3D Art/Textures/Pier_n.png
+  1024    512          0.59 ->     0.15          Assets/Packs/PBR Bridge/3D Art/Textures/Pier_n.png
    512    512          0.15 ->     0.15          Assets/Packs/PBR Bridge/3D Art/Textures/Railing_ao.png
-  2048   2048          0.15 ->     0.15          Assets/Packs/PBR Bridge/3D Art/Textures/Railing_d.png
+  2048   1024          0.15 ->     0.15          Assets/Packs/PBR Bridge/3D Art/Textures/Railing_d.png
    512    512          0.15 ->     0.15          Assets/Packs/PBR Bridge/3D Art/Textures/Railing_m.png
-  1024   1024          0.15 ->     0.15          Assets/Packs/PBR Bridge/3D Art/Textures/Railing_n.png
+  1024    512          0.15 ->     0.15          Assets/Packs/PBR Bridge/3D Art/Textures/Railing_n.png
    512    512          0.15 ->     0.15          Assets/Packs/PBR Bridge/3D Art/Textures/Streetlights_ao.png
-  2048   2048          2.37 ->     2.37          Assets/Packs/PBR Bridge/3D Art/Textures/Streetlights_d.png
+  2048   1024          2.37 ->     0.59          Assets/Packs/PBR Bridge/3D Art/Textures/Streetlights_d.png
    512    512          0.15 ->     0.15          Assets/Packs/PBR Bridge/3D Art/Textures/Streetlights_m.png
-  1024   1024          0.59 ->     0.59          Assets/Packs/PBR Bridge/3D Art/Textures/Streetlights_n.png
+  1024    512          0.59 ->     0.15          Assets/Packs/PBR Bridge/3D Art/Textures/Streetlights_n.png
    512    512          0.15 ->     0.15          Assets/Packs/PBR Bridge/3D Art/Textures/Top_L_ao.png
-  2048   2048          2.37 ->     2.37          Assets/Packs/PBR Bridge/3D Art/Textures/Top_L_d.png
+  2048   1024          2.37 ->     0.59          Assets/Packs/PBR Bridge/3D Art/Textures/Top_L_d.png
    512    512          0.15 ->     0.15          Assets/Packs/PBR Bridge/3D Art/Textures/Top_L_m.png
-  1024   1024          0.59 ->     0.59          Assets/Packs/PBR Bridge/3D Art/Textures/Top_L_n.png
+  1024    512          0.59 ->     0.15          Assets/Packs/PBR Bridge/3D Art/Textures/Top_L_n.png
    512    512          0.15 ->     0.15          Assets/Packs/PBR Bridge/3D Art/Textures/Top_R_ao.png
-  2048   2048          2.37 ->     2.37          Assets/Packs/PBR Bridge/3D Art/Textures/Top_R_d.png
+  2048   1024          2.37 ->     0.59          Assets/Packs/PBR Bridge/3D Art/Textures/Top_R_d.png
    512    512          0.15 ->     0.15          Assets/Packs/PBR Bridge/3D Art/Textures/Top_R_m.png
-  1024   1024          0.59 ->     0.59          Assets/Packs/PBR Bridge/3D Art/Textures/Top_R_n.png
+  1024    512          0.59 ->     0.15          Assets/Packs/PBR Bridge/3D Art/Textures/Top_R_n.png
   1024   1024          0.59 ->     0.59          Assets/Packs/PBR Bridge/Scenes/Bridge/Lightmap-0_comp_dir.png
   1024   1024          0.59 ->     0.59          Assets/Packs/PBR Bridge/Scenes/Bridge/Lightmap-0_comp_light.exr
   1024   1024          0.59 ->     0.59          Assets/Packs/PBR Bridge/Scenes/Bridge/Lightmap-1_comp_dir.png
@@ -79,7 +79,7 @@
   1024   1024          0.59 ->     0.59          Assets/Packs/PBR Bridge/Scenes/Bridge_withLODs/ReflectionProbe-0.exr
   1024   1024          0.33 ->     0.33          Assets/Packs/PBR Bridge/Scenes/Bridge_withLODs/ReflectionProbe-1.exr
 
-74 texture(s) under budget rules; 0 reimported.
-Estimated built total: 52.2 MiB -> 52.2 MiB  (0.0 MiB saved)
+74 texture(s) under budget rules; 27 reimported.
+Estimated built total: 52.2 MiB -> 25.5 MiB  (26.7 MiB saved)
 (Estimate is ASTC 6x6 + full mip chain; the authoritative number is the
  Build Report / data_*.txt pair, not this line.)

@@ -62,6 +62,20 @@ namespace Golfin.EditorTools.BuildSize
         /// <summary>-executeMethod … .BuildSizeCaptureRig.CaptureAfterBatch</summary>
         public static void CaptureAfterBatch() => Capture("after");
 
+        /// <summary>
+        /// -executeMethod … .BuildSizeCaptureRig.CaptureLabelledBatch  -captureLabel &lt;name&gt;
+        /// For a third state — a tighter budget being trialled against the pair already taken.
+        /// Same idiom as CIBuild's -skipTreeBakeCheck: a flag on the Unity command line, because
+        /// -executeMethod takes no arguments.
+        /// </summary>
+        public static void CaptureLabelledBatch()
+        {
+            var args = Environment.GetCommandLineArgs();
+            int i = Array.IndexOf(args, "-captureLabel");
+            string label = (i >= 0 && i + 1 < args.Length) ? args[i + 1] : "labelled";
+            Capture(label);
+        }
+
         public static void Capture(string label)
         {
             Directory.CreateDirectory(ShotDir);

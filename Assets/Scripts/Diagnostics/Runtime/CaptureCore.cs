@@ -156,6 +156,20 @@ namespace Golfin.Diagnostics.Runtime
         {
             if (cam == null) { Debug.LogError("[CaptureCore] SnapCamera: camera is null."); return string.Empty; }
             if (BlockDuringRecording("SnapCamera", label)) return string.Empty;
+
+            // REFUSE RATHER THAN RETURN FLAT GREY. Under `-batchmode -nographics` there is no
+            // graphics device, cam.Render() draws nothing, and ReadPixels hands back a uniform
+            // fill — a PNG of the right size, at the right path, with no scene in it. That is the
+            // worst possible failure for an A/B rig, because both halves look like data. Observed
+            // for real on 2026-09-04: a whole 14-frame capture pass came back flat grey and the
+            // pixel diff read 130-165/255 across 100% of pixels before anyone opened one.
+            if (SystemInfo.graphicsDeviceType == UnityEngine.Rendering.GraphicsDeviceType.Null)
+            {
+                Debug.LogError("[CaptureCore] SnapCamera REFUSED: no graphics device " +
+                               "(-nographics). A camera cannot be rendered here; run batchmode " +
+                               "WITHOUT -nographics, or capture from an open Editor.");
+                return string.Empty;
+            }
             if (width <= 0 || height <= 0)
             {
                 Debug.LogError($"[CaptureCore] SnapCamera: bad size {width}x{height}.");

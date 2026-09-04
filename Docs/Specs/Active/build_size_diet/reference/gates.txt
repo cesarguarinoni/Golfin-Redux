@@ -9,36 +9,52 @@
 
   BEFORE  (.ipa 2632)           1844.7 MiB           557.1 MiB          678.3 MiB
   BEFORE  (local build 2643)    1839.5 MiB           555.4 MiB
-  AFTER   (local build 2654)    1035.9 MiB           314.0 MiB
-  delta                         -803.6 MiB           -241.4 MiB
-                                  (-44%)               (-43%)
+  AFTER   (local build 2655)    1009.1 MiB           304.6 MiB
+  delta                         -830.4 MiB           -250.8 MiB
+                                  (-45%)               (-45%)
 
-  PAYLOAD-COMPRESSED: PASS, 36.0 MiB inside the gate.
-  INSTALL:            11.9 MiB OVER (1.2%). Reported, not rounded.
+  INSTALL:            PASS, 14.9 MiB inside the gate.
+  PAYLOAD-COMPRESSED: PASS, 45.4 MiB inside the gate.
+
+  Build 2654 landed at 1035.9 MiB — 11.9 MiB OVER — with the bridge budget at
+  albedo 2048 / normal 1024. Rather than round that off or call it close, the budget was
+  halved again to albedo 1024 / normal 512 and the A/B rig was asked whether that is
+  visible. It is not: see ab_frame_diff_tight.txt and
+  screenshots/bridge_cap_crop_2048_vs_1024.png. Build 2655 is that answer.
 
 == Where the -803 MiB came from (Unity Build Report, before -> after) ==
 
-  Assets/Packs/PBR Bridge     460.7 ->  44.3 MiB   -416.4   Phase 1 texture budget
+  Assets/Packs/PBR Bridge     460.7 ->  17.3 MiB   -443.4   Phase 1 texture budget
   Assets/Resources/HoleData   387.4 ->  45.7 MiB   -341.7   Phase 2 GHM2 + gzip zones
   Assets/Resources/Clubs       55.4 ->  17.3 MiB    -38.1   Phase 2.7 cap at 512
   Assets/Resources/Art          5.0 ->   0.6 MiB     -4.5   Phase 3 uncompressed sweep
   Assets/Art/UI                41.7 ->  39.5 MiB     -2.3   Phase 3
-  everything else                              ~     -0.8
-  total listed user assets   1610.5 -> 807.7 MiB   -802.8
+  everything else                              ~     -0.9
+  total listed user assets   1610.5 -> 780.7 MiB   -829.8
 
-== What is left, and why the last 11.9 MiB is not free ==
+== What is left ==
 
   509.7 MiB  Assets/Golf/Courses      the 18 TerrainData, 28.3 MiB each. 63% of everything
                                       that remains. The only lever is Phase 5, and Phase 5 is
                                       a change to the resolution at which OUT OF BOUNDS is
                                       decided — see terrain_and_prototypes.txt. Not taken.
    45.7 MiB  Assets/Resources/HoleData    already 8-13x compressed, losslessly
-   44.3 MiB  Assets/Packs/PBR Bridge      already capped once
+   17.3 MiB  Assets/Packs/PBR Bridge      capped twice, 4096 -> 1024 albedo
    39.5 MiB  Assets/Art/UI                the screens the Figma work is built on
    22.8 MiB  Assets/Art/3D                the trees that actually ship
     8.7 MiB  NotoSansJP TTF               Phase 4 option (c) would take this to 2.56 MiB
 
-  Two decisions Cesar already holds each close the 11.9 MiB on their own:
-    - Phase 0b LZ4HC          install 1035.9 -> well under 700 MiB (measured: -63% on the
-                              pre-diet tree). Costs nothing visible; it is a build option.
-    - Phase 4 option (c)      -6.15 MiB, plus one more texture pass, would also do it.
+  Both gates are met without any of the decisions still open with Cesar. Each of those
+  would add margin on top:
+    - Phase 0b LZ4HC          measured -63% on the PRE-diet tree; on this one it would take
+                              install far below the gate. A build option, nothing visible.
+    - Phase 4 option (c)      a further -6.15 MiB.
+    - Phase 5                 a further ~-120 MiB, but see terrain_and_prototypes.txt: as
+                              specified it changes the resolution at which OB is decided.
+
+== The standalone (iOS-Standalone), built to prove Phase 2 did not break the stash ==
+
+  INSTALL 226.5 MiB / PAYLOAD-COMPRESSED 78.8 MiB (reference/data_standalone_after.txt).
+  StandaloneBuildPreprocessor moves the HoleData FOLDER by name, so the zones.json ->
+  zones.bytes rename is invisible to it; verified after the build that the sentinel is gone
+  and Hole_01 came back with GHM2 heightmap.bytes and zones.bytes intact.

@@ -1,0 +1,28 @@
+# screenshots/_camera_manifest_tight.txt — build_size_diet A/B rig
+# 2026-09-04 11:53:53   1170x2532 (iPhone 14 portrait)
+# Poses are DERIVED from the scene, so the before and after runs use identical
+# transforms. If a row differs between the two manifests, the pair is not an A/B.
+
+hole 01   tee=(219.43,11.58,34.73) (TeeMarker_regular_L/R midpoint)   green=(-230.50,10.18,-72.48) (scene object 'Flag_1')
+          tee          eye=(219.43,13.28,34.73) look=(-230.50,10.18,-72.48) euler=(0.38,256.60,0.00) -> hole01_tee_tight.png
+          behindgreen  eye=(-249.96,16.18,-77.12) look=(-230.50,10.18,-72.48) euler=(16.70,76.60,0.00) -> hole01_behindgreen_tight.png
+          no PBR Bridge renderer in this scene — CONTROL hole, its frames must be identical before/after.
+hole 06   tee=(80.21,13.56,-24.54) (TeeMarker_regular_L/R midpoint)   green=(-72.53,10.37,-8.84) (scene object 'Flag_1')
+          tee          eye=(80.21,15.26,-24.54) look=(-72.53,10.37,-8.84) euler=(1.82,275.87,0.00) -> hole06_tee_tight.png
+          behindgreen  eye=(-92.42,16.37,-6.79) look=(-72.53,10.37,-8.84) euler=(16.70,95.87,0.00) -> hole06_behindgreen_tight.png
+          no PBR Bridge renderer in this scene — CONTROL hole, its frames must be identical before/after.
+hole 07   tee=(-190.52,33.79,29.13) (TeeMarker_regular_L/R midpoint)   green=(176.36,28.93,-30.42) (scene object 'Flag_1')
+          tee          eye=(-190.52,35.49,29.13) look=(176.36,28.93,-30.42) euler=(1.01,99.22,0.00) -> hole07_tee_tight.png
+          behindgreen  eye=(196.10,34.93,-33.63) look=(176.36,28.93,-30.42) euler=(16.70,279.22,0.00) -> hole07_behindgreen_tight.png
+          bridge centre=(76.37,6.97,-53.15) size=(93.85,48.77,16.33) span=93.9m
+          bridgeWide   eye=(76.37,53.35,31.32) look=(76.37,6.97,-53.15) euler=(28.77,180.00,0.00) -> hole07_bridgeWide_tight.png
+          bridgeClose  eye=(76.37,30.48,-25.00) look=(76.37,6.97,-53.15) euler=(39.86,180.00,0.00) -> hole07_bridgeClose_tight.png
+hole 12   tee=(-86.79,16.73,-80.01) (TeeMarker_regular_L/R midpoint)   green=(106.51,40.64,157.91) (scene object 'Flag_1')
+          tee          eye=(-86.79,18.43,-80.01) look=(106.51,40.64,157.91) euler=(355.86,39.09,0.00) -> hole12_tee_tight.png
+          behindgreen  eye=(119.09,46.64,173.38) look=(106.51,40.64,157.91) euler=(16.75,219.09,0.00) -> hole12_behindgreen_tight.png
+          bridge1 centre=(-71.40,11.15,-48.96) size=(43.19,19.48,35.51) span=43.2m
+          bridgeWide1  eye=(-71.40,42.89,-10.09) look=(-71.40,11.15,-48.96) euler=(39.23,180.00,0.00) -> hole12_bridgeWide1_tight.png
+          bridgeClose1 eye=(-71.40,22.94,-36.00) look=(-71.40,11.15,-48.96) euler=(42.30,180.00,0.00) -> hole12_bridgeClose1_tight.png
+          bridge2 centre=(-88.63,9.46,-149.76) size=(14.11,21.71,47.19) span=47.2m
+          bridgeWide2  eye=(-46.16,42.31,-149.76) look=(-88.63,9.46,-149.76) euler=(37.72,270.00,0.00) -> hole12_bridgeWide2_tight.png
+          bridgeClose2 eye=(-74.47,22.14,-149.76) look=(-88.63,9.46,-149.76) euler=(41.85,270.00,0.00) -> hole12_bridgeClose2_tight.png

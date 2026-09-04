@@ -1,35 +1,35 @@
-# reference/build_report_after.txt — build_size_diet AFTER (iOS-Full, build 2654, 2026-09-04)
+# reference/build_report_after.txt — build_size_diet AFTER (iOS-Full, build 2655, 2026-09-04)
 
 Build Report
 Uncompressed usage by category (Percentages based on user generated assets only):
-Textures               503.6 mb	 55.3% 
-Meshes                 17.6 mb	 1.9% 
+Textures               476.8 mb	 53.9% 
+Meshes                 17.6 mb	 2.0% 
 Animations             0.0 kb	 0.0% 
 Sounds                 4.3 mb	 0.5% 
 Shaders                1.4 mb	 0.2% 
-Other Assets           280.2 mb	 30.8% 
-Levels                 103.0 mb	 11.3% 
+Other Assets           280.2 mb	 31.7% 
+Levels                 103.0 mb	 11.6% 
 File headers           357.8 kb	 0.0% 
-Total User Assets      910.8 mb	 100.0% 
+Total User Assets      884.0 mb	 100.0% 
 Complete build size    2.4 gb
- 28.3 mb	 1.1% Assets/Golf/Courses/lomond-country-club/Data/hole-08-geo/TerrainData_Hole08Geo.asset
- 28.3 mb	 1.1% Assets/Golf/Courses/lomond-country-club/Data/hole-13-geo/TerrainData_Hole13Geo.asset
- 28.3 mb	 1.1% Assets/Golf/Courses/lomond-country-club/Data/hole-05-geo/TerrainData_Hole05Geo.asset
- 28.3 mb	 1.1% Assets/Golf/Courses/lomond-country-club/Data/hole-12-geo/TerrainData_Hole12Geo.asset
- 28.3 mb	 1.1% Assets/Golf/Courses/lomond-country-club/Data/hole-02-geo/TerrainData_Hole02Geo.asset
- 28.3 mb	 1.1% Assets/Golf/Courses/lomond-country-club/Data/hole-14-geo/TerrainData_Hole14Geo.asset
- 28.3 mb	 1.1% Assets/Golf/Courses/lomond-country-club/Data/hole-01-geo/TerrainData_Hole01Geo.asset
- 28.3 mb	 1.1% Assets/Golf/Courses/lomond-country-club/Data/hole-17-geo/TerrainData_Hole17Geo.asset
- 28.3 mb	 1.1% Assets/Golf/Courses/lomond-country-club/Data/hole-10-geo/TerrainData_Hole10Geo.asset
- 28.3 mb	 1.1% Assets/Golf/Courses/lomond-country-club/Data/hole-03-geo/TerrainData_Hole03Geo.asset
- 28.3 mb	 1.1% Assets/Golf/Courses/lomond-country-club/Data/hole-18-geo/TerrainData_Hole18Geo.asset
- 28.3 mb	 1.1% Assets/Golf/Courses/lomond-country-club/Data/hole-07-geo/TerrainData_Hole07Geo.asset
- 28.3 mb	 1.1% Assets/Golf/Courses/lomond-country-club/Data/hole-11-geo/TerrainData_Hole11Geo.asset
- 28.3 mb	 1.1% Assets/Golf/Courses/lomond-country-club/Data/hole-06-geo/TerrainData_Hole06Geo.asset
- 28.3 mb	 1.1% Assets/Golf/Courses/lomond-country-club/Data/hole-16-geo/TerrainData_Hole16Geo.asset
- 28.3 mb	 1.1% Assets/Golf/Courses/lomond-country-club/Data/hole-09-geo/TerrainData_Hole09Geo.asset
- 28.3 mb	 1.1% Assets/Golf/Courses/lomond-country-club/Data/hole-15-geo/TerrainData_Hole15Geo.asset
- 28.3 mb	 1.1% Assets/Golf/Courses/lomond-country-club/Data/hole-04-geo/TerrainData_Hole04Geo.asset
+ 28.3 mb	 1.2% Assets/Golf/Courses/lomond-country-club/Data/hole-08-geo/TerrainData_Hole08Geo.asset
+ 28.3 mb	 1.2% Assets/Golf/Courses/lomond-country-club/Data/hole-13-geo/TerrainData_Hole13Geo.asset
+ 28.3 mb	 1.2% Assets/Golf/Courses/lomond-country-club/Data/hole-05-geo/TerrainData_Hole05Geo.asset
+ 28.3 mb	 1.2% Assets/Golf/Courses/lomond-country-club/Data/hole-12-geo/TerrainData_Hole12Geo.asset
+ 28.3 mb	 1.2% Assets/Golf/Courses/lomond-country-club/Data/hole-02-geo/TerrainData_Hole02Geo.asset
+ 28.3 mb	 1.2% Assets/Golf/Courses/lomond-country-club/Data/hole-14-geo/TerrainData_Hole14Geo.asset
+ 28.3 mb	 1.2% Assets/Golf/Courses/lomond-country-club/Data/hole-01-geo/TerrainData_Hole01Geo.asset
+ 28.3 mb	 1.2% Assets/Golf/Courses/lomond-country-club/Data/hole-17-geo/TerrainData_Hole17Geo.asset
+ 28.3 mb	 1.2% Assets/Golf/Courses/lomond-country-club/Data/hole-10-geo/TerrainData_Hole10Geo.asset
+ 28.3 mb	 1.2% Assets/Golf/Courses/lomond-country-club/Data/hole-03-geo/TerrainData_Hole03Geo.asset
+ 28.3 mb	 1.2% Assets/Golf/Courses/lomond-country-club/Data/hole-18-geo/TerrainData_Hole18Geo.asset
+ 28.3 mb	 1.2% Assets/Golf/Courses/lomond-country-club/Data/hole-07-geo/TerrainData_Hole07Geo.asset
+ 28.3 mb	 1.2% Assets/Golf/Courses/lomond-country-club/Data/hole-11-geo/TerrainData_Hole11Geo.asset
+ 28.3 mb	 1.2% Assets/Golf/Courses/lomond-country-club/Data/hole-06-geo/TerrainData_Hole06Geo.asset
+ 28.3 mb	 1.2% Assets/Golf/Courses/lomond-country-club/Data/hole-16-geo/TerrainData_Hole16Geo.asset
+ 28.3 mb	 1.2% Assets/Golf/Courses/lomond-country-club/Data/hole-09-geo/TerrainData_Hole09Geo.asset
+ 28.3 mb	 1.2% Assets/Golf/Courses/lomond-country-club/Data/hole-15-geo/TerrainData_Hole15Geo.asset
+ 28.3 mb	 1.2% Assets/Golf/Courses/lomond-country-club/Data/hole-04-geo/TerrainData_Hole04Geo.asset
  8.7 mb	 0.4% Assets/Fonts/NotoSansJP-VariableFont_wght.ttf
  5.3 mb	 0.2% Assets/Art/3D/Props/URPWater/Demo/Textures/Water/T_Water_03_N.tga
  3.5 mb	 0.1% Assets/Music/Main Theme.mp3
@@ -42,23 +42,11 @@ Complete build size    2.4 gb
  2.4 mb	 0.1% Assets/Packs/BSP Trees Package/Textures/fir_leaves_02_Normal.png
  2.4 mb	 0.1% Assets/Packs/BSP Trees Package/Textures/fir_leaves_01_Normal.png
  2.4 mb	 0.1% Assets/Art/3D/Balls/Common/GOLFIN_Ball_Normal.png
- 2.4 mb	 0.1% Assets/Packs/PBR Bridge/3D Art/Textures/Streetlights_d.png
  2.4 mb	 0.1% Assets/Packs/BSP Trees Package/Textures/fir_bark_Normal.png
  2.4 mb	 0.1% Assets/Packs/BSP Trees Package/Textures/fir_bark_Diffuse.png
  2.4 mb	 0.1% Assets/Realistic Tree/Source/Textures/Spruce/Spruce_Bark.png
- 2.4 mb	 0.1% Assets/Packs/PBR Bridge/3D Art/Textures/Bottom_R_d.png
- 2.4 mb	 0.1% Assets/Packs/PBR Bridge/3D Art/Textures/Bottom_L_d.png
- 2.4 mb	 0.1% Assets/Packs/PBR Bridge/3D Art/Textures/Beams_R_d.png
- 2.4 mb	 0.1% Assets/Packs/PBR Bridge/3D Art/Textures/Beams_L_d.png
  2.4 mb	 0.1% Assets/Realistic Tree/Source/Textures/Spruce/Leaf_2.png
  2.4 mb	 0.1% Assets/Realistic Tree/Source/Textures/Spruce/Leaf_1.png
- 2.4 mb	 0.1% Assets/Packs/PBR Bridge/3D Art/Textures/Top_R_d.png
- 2.4 mb	 0.1% Assets/Packs/PBR Bridge/3D Art/Textures/Top_L_d.png
- 2.4 mb	 0.1% Assets/Packs/PBR Bridge/3D Art/Textures/Pier_d.png
- 2.4 mb	 0.1% Assets/Packs/PBR Bridge/3D Art/Textures/Main_d.png
- 2.4 mb	 0.1% Assets/Packs/PBR Bridge/3D Art/Textures/Line_d.png
- 2.4 mb	 0.1% Assets/Packs/PBR Bridge/3D Art/Textures/Light_d.png
- 2.4 mb	 0.1% Assets/Packs/PBR Bridge/3D Art/Textures/Beams_d.png
  2.3 mb	 0.1% Assets/Resources/HoleData/lomond-country-club/Hole_14/heightmap.bytes
  2.2 mb	 0.1% Assets/Resources/HoleData/lomond-country-club/Hole_13/heightmap.bytes
  2.2 mb	 0.1% Assets/Resources/HoleData/lomond-country-club/Hole_12/heightmap.bytes
@@ -171,22 +159,22 @@ Complete build size    2.4 gb
  611.8 kb	 0.0% Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Textures_Imposters/T_01ScottishImposter.png
  611.8 kb	 0.0% Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Textures/Metasequoia/T_MetaBark_normal.png
  611.8 kb	 0.0% Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Textures/Metasequoia/T_MetaBark_Albedo.png
- 611.8 kb	 0.0% Assets/Packs/PBR Bridge/3D Art/Textures/Streetlights_n.png
+ 611.8 kb	 0.0% Assets/Packs/PBR Bridge/3D Art/Textures/Streetlights_d.png
  611.8 kb	 0.0% Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Textures/Pines/T_Pine_Normal.png
  611.8 kb	 0.0% Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Textures/Pines/T_Pine_BaseColor.png
  611.8 kb	 0.0% Assets/Realistic Tree/Source/Textures/Moss/Moss_Normal.png
- 611.8 kb	 0.0% Assets/Packs/PBR Bridge/3D Art/Textures/Bottom_R_n.png
- 611.8 kb	 0.0% Assets/Packs/PBR Bridge/3D Art/Textures/Bottom_L_n.png
- 611.8 kb	 0.0% Assets/Packs/PBR Bridge/3D Art/Textures/Beams_R_n.png
- 611.8 kb	 0.0% Assets/Packs/PBR Bridge/3D Art/Textures/Beams_L_n.png
+ 611.8 kb	 0.0% Assets/Packs/PBR Bridge/3D Art/Textures/Bottom_R_d.png
+ 611.8 kb	 0.0% Assets/Packs/PBR Bridge/3D Art/Textures/Bottom_L_d.png
+ 611.8 kb	 0.0% Assets/Packs/PBR Bridge/3D Art/Textures/Beams_R_d.png
+ 611.8 kb	 0.0% Assets/Packs/PBR Bridge/3D Art/Textures/Beams_L_d.png
  611.8 kb	 0.0% Assets/Packs/PBR Bridge/3D Art/Textures/fence_d.png
- 611.8 kb	 0.0% Assets/Packs/PBR Bridge/3D Art/Textures/Top_R_n.png
- 611.8 kb	 0.0% Assets/Packs/PBR Bridge/3D Art/Textures/Top_L_n.png
- 611.8 kb	 0.0% Assets/Packs/PBR Bridge/3D Art/Textures/Pier_n.png
- 611.8 kb	 0.0% Assets/Packs/PBR Bridge/3D Art/Textures/Main_n.png
- 611.8 kb	 0.0% Assets/Packs/PBR Bridge/3D Art/Textures/Line_n.png
- 611.8 kb	 0.0% Assets/Packs/PBR Bridge/3D Art/Textures/Light_n.png
- 611.8 kb	 0.0% Assets/Packs/PBR Bridge/3D Art/Textures/Beams_n.png
+ 611.8 kb	 0.0% Assets/Packs/PBR Bridge/3D Art/Textures/Top_R_d.png
+ 611.8 kb	 0.0% Assets/Packs/PBR Bridge/3D Art/Textures/Top_L_d.png
+ 611.8 kb	 0.0% Assets/Packs/PBR Bridge/3D Art/Textures/Pier_d.png
+ 611.8 kb	 0.0% Assets/Packs/PBR Bridge/3D Art/Textures/Main_d.png
+ 611.8 kb	 0.0% Assets/Packs/PBR Bridge/3D Art/Textures/Line_d.png
+ 611.8 kb	 0.0% Assets/Packs/PBR Bridge/3D Art/Textures/Light_d.png
+ 611.8 kb	 0.0% Assets/Packs/PBR Bridge/3D Art/Textures/Beams_d.png
  611.8 kb	 0.0% Assets/Realistic Tree/Source/Materials/URP/Bark/Moss.png
  602.2 kb	 0.0% Assets/Art/RankingsScreen/BackgroundCardsContainer.png
  602.2 kb	 0.0% Assets/Art/UI/Gps/S_SU_GuideFrame.png
@@ -341,6 +329,7 @@ Complete build size    2.4 gb
  154.9 kb	 0.0% Assets/Courses/Textures_2025(JPG)/T_Semirough_Albedo.jpg
  154.9 kb	 0.0% Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Textures/Metasequoia/T_MetaLeaf_normal.png
  154.9 kb	 0.0% Assets/Art/3D/Trees(2025)/Trees2025_Prefabs/Textures/Metasequoia/T_MetaLeaf_Albedo.png
+ 154.9 kb	 0.0% Assets/Packs/PBR Bridge/3D Art/Textures/Streetlights_n.png
  154.9 kb	 0.0% Assets/Packs/PBR Bridge/3D Art/Textures/Streetlights_m.png
  154.9 kb	 0.0% Assets/Packs/PBR Bridge/3D Art/Textures/Streetlights_ao.png
  154.9 kb	 0.0% Assets/Courses/Textures_2025(JPG)/T_TeeDark_Normal.jpg
@@ -365,29 +354,40 @@ Complete build size    2.4 gb
  154.9 kb	 0.0% Assets/Packs/PBR Bridge/3D Art/Textures/Railing_m.png
  154.9 kb	 0.0% Assets/Packs/PBR Bridge/3D Art/Textures/Railing_d.png
  154.9 kb	 0.0% Assets/Packs/PBR Bridge/3D Art/Textures/Railing_ao.png
+ 154.9 kb	 0.0% Assets/Packs/PBR Bridge/3D Art/Textures/Bottom_R_n.png
  154.9 kb	 0.0% Assets/Packs/PBR Bridge/3D Art/Textures/Bottom_R_m.png
  154.9 kb	 0.0% Assets/Packs/PBR Bridge/3D Art/Textures/Bottom_R_ao.png
+ 154.9 kb	 0.0% Assets/Packs/PBR Bridge/3D Art/Textures/Bottom_L_n.png
  154.9 kb	 0.0% Assets/Packs/PBR Bridge/3D Art/Textures/Bottom_L_m.png
  154.9 kb	 0.0% Assets/Packs/PBR Bridge/3D Art/Textures/Bottom_L_ao.png
+ 154.9 kb	 0.0% Assets/Packs/PBR Bridge/3D Art/Textures/Beams_R_n.png
  154.9 kb	 0.0% Assets/Packs/PBR Bridge/3D Art/Textures/Beams_R_m.png
  154.9 kb	 0.0% Assets/Packs/PBR Bridge/3D Art/Textures/Beams_R_ao.png
+ 154.9 kb	 0.0% Assets/Packs/PBR Bridge/3D Art/Textures/Beams_L_n.png
  154.9 kb	 0.0% Assets/Packs/PBR Bridge/3D Art/Textures/Beams_L_m.png
  154.9 kb	 0.0% Assets/Packs/PBR Bridge/3D Art/Textures/Beams_L_ao.png
  154.9 kb	 0.0% Assets/Packs/BSP Trees Package/Textures/WindNoise.png
  154.9 kb	 0.0% Assets/Courses/Textures_2025(JPG)/T_Tee_Normal.jpg
  154.9 kb	 0.0% Assets/Courses/Textures_2025(JPG)/T_Tee_Albedo.jpg
+ 154.9 kb	 0.0% Assets/Packs/PBR Bridge/3D Art/Textures/Top_R_n.png
  154.9 kb	 0.0% Assets/Packs/PBR Bridge/3D Art/Textures/Top_R_m.png
  154.9 kb	 0.0% Assets/Packs/PBR Bridge/3D Art/Textures/Top_R_ao.png
+ 154.9 kb	 0.0% Assets/Packs/PBR Bridge/3D Art/Textures/Top_L_n.png
  154.9 kb	 0.0% Assets/Packs/PBR Bridge/3D Art/Textures/Top_L_m.png
  154.9 kb	 0.0% Assets/Packs/PBR Bridge/3D Art/Textures/Top_L_ao.png
+ 154.9 kb	 0.0% Assets/Packs/PBR Bridge/3D Art/Textures/Pier_n.png
  154.9 kb	 0.0% Assets/Packs/PBR Bridge/3D Art/Textures/Pier_m.png
  154.9 kb	 0.0% Assets/Packs/PBR Bridge/3D Art/Textures/Pier_ao.png
+ 154.9 kb	 0.0% Assets/Packs/PBR Bridge/3D Art/Textures/Main_n.png
  154.9 kb	 0.0% Assets/Packs/PBR Bridge/3D Art/Textures/Main_m.png
  154.9 kb	 0.0% Assets/Packs/PBR Bridge/3D Art/Textures/Main_ao.png
+ 154.9 kb	 0.0% Assets/Packs/PBR Bridge/3D Art/Textures/Line_n.png
  154.9 kb	 0.0% Assets/Packs/PBR Bridge/3D Art/Textures/Line_m.png
  154.9 kb	 0.0% Assets/Packs/PBR Bridge/3D Art/Textures/Line_ao.png
+ 154.9 kb	 0.0% Assets/Packs/PBR Bridge/3D Art/Textures/Light_n.png
  154.9 kb	 0.0% Assets/Packs/PBR Bridge/3D Art/Textures/Light_m.png
  154.9 kb	 0.0% Assets/Packs/PBR Bridge/3D Art/Textures/Light_ao.png
+ 154.9 kb	 0.0% Assets/Packs/PBR Bridge/3D Art/Textures/Beams_n.png
  154.9 kb	 0.0% Assets/Packs/PBR Bridge/3D Art/Textures/Beams_m.png
  154.9 kb	 0.0% Assets/Packs/PBR Bridge/3D Art/Textures/Beams_ao.png
  154.9 kb	 0.0% Assets/TextMesh Pro/Sprites/EmojiOne.png

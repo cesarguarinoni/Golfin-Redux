@@ -66,12 +66,18 @@ namespace Golfin.EditorTools.BuildSize
         /// </summary>
         public static readonly Rule[] Rules =
         {
-            new Rule(BridgeRoot, "_d",  2048),  // albedo — the channel the eye reads
-            new Rule(BridgeRoot, "_n",  1024),  // normal
+            new Rule(BridgeRoot, "_d",  1024),  // albedo — the channel the eye reads
+            new Rule(BridgeRoot, "_n",   512),  // normal
             new Rule(BridgeRoot, "_m",   512),  // metallic / smoothness mask
             new Rule(BridgeRoot, "_ao",  512),  // occlusion mask
             new Rule(BridgeRoot, null,  1024),  // anything else in the pack (fence_d etc. fall to _d above)
         };
+
+        // The first pass of this budget was albedo 2048 / normal 1024 / masks 512, which left the
+        // pack at 44.3 MiB and the install gate 11.9 MiB short. The A/B rig had already shown
+        // that cap sitting AT the scene's own frame-to-frame noise, so the question of whether a
+        // further halving is visible is empirical rather than a matter of taste — see
+        // reference/ab_frame_diff_tight.txt for the answer these numbers were chosen on.
 
         /// <summary>
         /// NOT APPLIED. The leaf-alpha option described in the class docs, kept here so the
@@ -102,9 +108,31 @@ namespace Golfin.EditorTools.BuildSize
             {
                 if (!assetPath.StartsWith(r.Root, StringComparison.Ordinal)) continue;
                 if (r.Suffix == null || name.EndsWith(r.Suffix, StringComparison.OrdinalIgnoreCase))
-                    return r.MaxSize;
+                    return Override(r.Suffix) ?? r.MaxSize;
             }
             return -1;
+        }
+
+        /// <summary>
+        /// Command-line override of one rule's cap, e.g. `-bridgeCap _d=2048 -bridgeCap _n=1024`.
+        ///
+        /// Exists so an A/B between two candidate budgets can be run without editing and
+        /// recompiling the table between the two halves — which would mean the two captures came
+        /// from two different builds of the editor assemblies rather than from two import
+        /// settings. Same idiom as CIBuild's -skipTreeBakeCheck. It never persists: the .meta the
+        /// import writes does, so re-run the plain menu item afterwards to land back on the table.
+        /// </summary>
+        static int? Override(string suffix)
+        {
+            if (suffix == null) return null;
+            var args = Environment.GetCommandLineArgs();
+            for (int i = 0; i + 1 < args.Length; i++)
+            {
+                if (args[i] != "-bridgeCap") continue;
+                var kv = args[i + 1].Split('=');
+                if (kv.Length == 2 && kv[0] == suffix && int.TryParse(kv[1], out int v)) return v;
+            }
+            return null;
         }
 
         /// <summary>
