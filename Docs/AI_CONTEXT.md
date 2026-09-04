@@ -4,6 +4,58 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
+## 2026-09-04 — `game_polish_a` — code + gates done, videos owed
+
+Notion **2111**, slice **a** of three. Spec: `Docs/Specs/Active/game_polish_a/` (`STATUS.md`
+first; the report's §0 carries two things that affect the next session).
+
+**The GAME shell now moves like the GPS surface.** `LayeredPush` (new,
+`Assets/Scripts/UI/Polish/`) is `GpsScreenTransition`'s shape made screen-agnostic — the GPS file
+can hardcode two child names because eight prefabs share one builder; the game shell is fourteen
+screens built by different tasks, so the layers are a **table**. Cesar's rule is the point: the
+push runs ONLY when the two screens draw the same background **sprite asset**, compared by
+reference. Everything else — every Home move, every cross-pillar move, every backdrop change —
+keeps the fade to black.
+
+**Measured live rather than assumed**, and three of these settle open questions in the spec:
+- Three push groups: **Play** (`2e5476ee`, 4 screens), **Rankings** (`0d425c0a`, 3), **Gacha**
+  (`5ec22d10`, 3) → **24 ordered pairs**.
+- `Inventory`'s background is a **different asset with the same name** (`44d64d73`
+  `ClubsInventory/Background.png` vs the Play screens' `HoleSelectScreen/Background.png`). This is
+  why the comparison is by reference and never by name.
+- `Roster` and both `StaminaShop` screens have **no chrome child at all**, so they fade — which
+  is the spec's "measure" row answered.
+
+**§D7: the cyan nav tint is gone.** A slot is ONE baked sprite (navy disc + gold ring + white
+glyph), so tinting it turned all three cyan — Cesar: it "looks ugly". The selected state is now a
+gold halo behind the slot and a brighter `#FCF195` ring over it, glyph left white, cross-faded
+with one pulse. **One component drives BOTH bars** (`NavSlotHighlight.Attach`), which is what
+Cesar asked for — and it builds its two children at RUNTIME precisely so
+`Assets/Prefabs/UI/Gps/**` stays byte-identical. `git diff` over `Gps/` is one file:
+`GpsNavBarHighlight.cs`. Sprites baked by `Docs/Scripts/make_nav_selected.py`; **+33 KB source,
+≈50 KB as iOS ASTC 6x6**, halos at half resolution, import settings per `build_size_diet` phase 3.
+
+**Gates green:** A1 `fail == 0` over **48 measurements** (24 pairs × both directions) + 3
+real-widget pushes — durations 0.250–0.267 s at 12–16 frames, chrome alpha **1.0 on every frame
+of every push**, `ApplyScreen` exactly once each, `blocksRaycasts` restored each. EditMode sweep
+**2422 passed / 3 failed**, all 18 new tests green; the 3 are flaky terrain/raycast tests in
+assemblies this task does not touch (a *different* three failed on the previous run of the same
+commit). Also A3, A5, A9, A10, A11, A14, A15, A16.
+
+**Owed, and said plainly rather than buried:** the six **A4 videos**, **A2 parity**, **A13 perf**
+and **A8's mid-rise stills**. The take wedged mid-route twice and Unity Recorder writes its MP4
+only on `StopRecording`, so `raw.mp4` stayed at 0 bytes. The fix is committed — segments are now
+opt-in, with a menu item for "(a) + option (b) only" — so the two that matter can be taken in
+~35 s.
+
+**Two things that carry into the next session:**
+1. The Editor's active build profile was **`iOS-Standalone`**, which made every game screen
+   unreachable (`StandaloneGate` rewrites `Home → GpsHub`) and wasted the pre-change baselines.
+   It is now **`iOS-Full-GPS`**. Switch back before building the standalone lane.
+2. **Unity is closed.** Three restarts during the video attempts ended on a licensing/startup
+   modal. Working tree clean, nothing wedged — it just needs reopening.
+
+---
 ## 2026-09-04 — `build_size_diet` DONE (approved) — the install is 1844.7 → 1008.9 MiB
 
 Cesar: *"app is like 700 MB, seems excessive."* The 711 MB was the `.ipa`; the number a player
