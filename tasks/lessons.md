@@ -3476,3 +3476,57 @@ it is the *lazy construction path* that is not. **Inject it instead:**
 no request — and `ResetForTest()` in the `finally`. Same shape for `PointsService` / `VenueService`.
 This is also why `GpsAuthExtrasFlow.InterceptHubEntry` tests the hub id *before* calling
 `ShouldOffer()`: the ordering keeps an ordinary screen change free of a session read.
+
+## Lesson AL — `git checkout <ref> -- <dir>` writes to the INDEX, so it can commit someone else's work and silently revert your own
+
+`build_size_diet`, 2026-09-04. To put ~320 texture `.meta` files back after an A/B "before"
+pass I ran
+
+    git checkout 2a802437d -- Assets
+
+It is too broad in two independent ways, and both bit.
+
+1. **`Assets` is not "the metas".** It reverted `Assets/Scripts/Diagnostics/Runtime/CaptureCore.cs`,
+   which was mine and UNCOMMITTED — removing the `SnapCamera` method I had just added. `git add`
+   a few minutes later staged nothing for it, so the commit went out with a long message
+   *describing* `SnapCamera` and no `SnapCamera` in it, while `BuildSizeCaptureRig` — which calls
+   it — WAS committed. The tree did not compile for twenty minutes and nothing said so, because
+   Unity kept serving the already-loaded assembly; the next batchmode build is what found it.
+
+2. **`git checkout <ref> -- <path>` writes to the index as well as the working tree.** Another
+   session had `Assets/Editor/StandaloneBuildPreprocessor.cs` open and dirty. My checkout staged
+   it, and my next `git commit` swept their in-flight work into a commit whose message is about
+   texture budgets. (Their content was *recorded*, not reverted — checked before touching
+   anything — so nothing was lost, and the history was left alone rather than rewritten under a
+   commit they had already built on top of.)
+
+This is `project_k10_commit_swept_k11_edits` in a new costume: the parallel-session hazard is not
+only `git add -A`, it is any command that stages a directory.
+
+**The rule:** never `git checkout <ref> -- <dir>`. Check out the exact file list —
+`git diff --name-only -z <a> <b> -- '*.meta' | xargs -0 git checkout <ref> --` — and run
+`git status` immediately after to see what you actually touched. When another session may be
+live, diff your staged set against your intended set before every commit.
+
+**Corollary, equally cheap:** re-run the console error check after the LAST code edit, not after
+the last one you thought was risky. A Unity Editor with a stale-but-working assembly is a
+convincing liar.
+
+## Lesson AM — `-batchmode -nographics` renders a camera as flat grey, and it looks exactly like data
+
+Same task. An A/B capture pass run headlessly produced FOURTEEN PNGs at the right resolution,
+with the right names, in the right folder — every one a uniform grey field. `cam.Render()` with
+no graphics device draws nothing and `ReadPixels` hands back the cleared target. The pixel diff
+then reported mean 130–165/255 across 100 % of pixels, which reads like a catastrophic
+regression rather than like an empty frame; I only knew which it was after opening one.
+
+`CaptureCore.SnapCamera` now refuses when `SystemInfo.graphicsDeviceType == GraphicsDeviceType.Null`
+and says to run batchmode WITHOUT `-nographics` or to capture from an open Editor. The
+CLAUDE.md § Screenshots rule "always look at the PNG before surfacing it" is what caught this;
+the guard is so nobody has to.
+
+**Second half of the same lesson:** Editor frames and batchmode frames are NOT comparable. The
+first attempt diffed a batchmode "after" against an Editor "before" and hole 01 — which contains
+no bridge and whose art had not changed — moved by mean 59/255. That is what a renderer change
+looks like, not a texture change. Capture both halves in the same environment, and measure the
+noise floor in that environment too (capture the same state twice) before believing any delta.

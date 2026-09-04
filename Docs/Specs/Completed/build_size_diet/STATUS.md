@@ -1,14 +1,15 @@
-READY_FOR_ARCHITECT_REVIEW
+DONE
 
 # STATUS — `build_size_diet` (GAME track — Notion 2121)
 
-**Current:** `READY_FOR_ARCHITECT_REVIEW` — Claude Code, 2026-09-04. Both gates PASS.
+**Current:** `DONE` — Cesar approved 2026-09-04 ("Nothing. We are done."). Both gates PASS on
+the shipped `.ipa` (build 2658, on TestFlight).
 Report: `IMPLEMENTER_REPORT.md`. Evidence: `reference/`, `screenshots/`.
 
 |  | before | after | gate | |
 |---|---|---|---|---|
-| **Install** (Payload uncompressed) | 1839.5 MiB | **1009.1 MiB** | ≤ 1024 | PASS, 14.9 MiB inside |
-| **Payload-compressed** (download) | 555.4 MiB | **304.6 MiB** | ≤ 350 | PASS, 45.4 MiB inside |
+| **Install** (Payload uncompressed) | 1844.7 MiB | **1008.9 MiB** | ≤ 1024 | PASS, 15.1 MiB inside |
+| **Payload-compressed** (download) | 557.1 MiB | **305.2 MiB** | ≤ 350 | PASS, 44.8 MiB inside |
 | `.ipa` file | 678.3 MiB | **426.4 MiB** | reported | of which `Symbols/` is 121.2 MiB Apple strips |
 
 −835.8 MiB install (−45%). **Measured on the shipped `.ipa`** — build 2658, archived and
@@ -21,17 +22,20 @@ Hole 6 against BOTH datasets — 12 presets each, `fp.raw` Q32.32 longs compared
 differing values, matching terminal states and matching sample counts.
 `reference/phase2_atrest_parity.txt`.
 
-## Open on Cesar
+## Decided
 
-1. **Phase 0b — LZ4HC adoption.** Measured on the PRE-diet tree: install −63%
+1. **Phase 0b — LZ4HC: not adopted, and not needed.** Measured on the PRE-diet tree: install −63%
    (1839.5 → 681.7 MiB) but Payload-compressed only −4% (555.4 → 531.7), because LZ4 output
    cannot be deflated again. Not adopted; the lane's `BuildOptions.None` is unchanged and
    visible in the diff. Both gates already pass without it — this is margin, not a fix.
    *Its load-time cost is a player-only property and was NOT measured; see §Not done.*
-2. **Phase 4 — font verdict (a/b/c).** All three measured, nothing applied.
-   (a) keep dynamic 8.71 MiB · (b) static atlas ≈ 25 MiB, **three times worse than today** ·
-   (c) subset the TTF 2.56 MiB, covered glyphs byte-identical, rare kanji outside JIS X 0208
-   become tofu. `reference/font_options.txt`, `screenshots/font_option_c_ja_pair.png`.
+2. **Phase 4 — font: CLOSED, option (a), keep dynamic.** Cesar, 2026-09-04: "Nothing."
+   Nothing was applied and the TTF is untouched. The measurement stands in
+   `reference/font_options.txt` if it is ever revisited: (a) 8.71 MiB · (b) static atlas
+   ≈25 MiB, three times WORSE than today · (c) JIS X 0208 subset 2.56 MiB but 髙 﨑 濵 德 瀨 曻 槗
+   — the variant kanji on real Japanese family registers — become tofu · (c4) whole CJK BMP
+   subset 4.75 MiB with NO surname kanji lost, which is the only version worth taking.
+   Not worth 4–6 MiB against 15.1 MiB of install margin.
 3. **Phase 5 — NOT recommended as specified.** Cesar asked how it interacts with the HoleGeo
    import and the baked physics. It is not a −120 MiB texture saving: `HoleGeoImporter`
    hardcodes `alphamapResolution = 1024` (so the change un-does itself on the next import) and
