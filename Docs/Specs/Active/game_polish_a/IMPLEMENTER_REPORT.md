@@ -126,8 +126,11 @@ ships.
    worse than none.
 
 **A9 is void and replaced.** There is no flag to grep for; `TheOptionBFlag_IsGone` and
-`SameBackground_IsNoLongerRequiredByTheGate` are the guards now. Polish suites: **91 passed,
-0 failed.**
+`SameBackground_IsNoLongerRequiredByTheGate` are the guards now.
+
+**Final full EditMode sweep: `passed=2425 failed=0 skipped=3`** — all 18 of this task's tests, and
+the three terrain/raycast tests that flaked on earlier runs pass here too, which is what
+"intermittent, not a regression" looks like when it is right.
 
 ---
 

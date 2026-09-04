@@ -10,7 +10,7 @@ READY_FOR_SELF_REVIEW
 | 2026-09-04 | `IMPLEMENTER_WORKING` | Kicked off by Cesar directly (`design_consistency_audit` is still `SPEC_READY` — flagged, not blocked on). |
 | 2026-09-04 | `READY_FOR_SELF_REVIEW` | Code + gates done. A4 2 of 6 clips. A2 run-invalid-diagnosed. A6 N/A. A8 owed. |
 | 2026-09-04 | **OPTION (b) SHIPPED** | Cesar approved the clip. The flag is REMOVED (not flipped); different backdrops now push and cross-fade within a pillar. Re-measured: **84 pushes, `fail == 0`**, 32 of them cross-backdrop across **16 ordered pairs that used to fade**. Polish suites 91/0. |
-| 2026-09-04 | **ALL GATES CLOSED** | A4 all six clips (e re-recorded — the first take was 16 identical frames). A2 **PASS**: 16 states, worst 1.232 %, residuals localised to the RP counter. A8 **PASS**: six mid-rise frames + SkippedForPush=94 over 84 pushes. A13 **PASS**. |
+| 2026-09-04 | **ALL GATES CLOSED** | A4 all six clips (e re-recorded — the first take was 16 identical frames). A2 **PASS**: 16 states, worst 1.232 %, residuals localised to the RP counter. A8 **PASS**: six mid-rise frames + SkippedForPush=94 over 84 pushes. A13 **PASS**. Full EditMode sweep **2425 passed / 0 failed**. |
 
 **Read the report's §0 first** — three things carry outside this task:
 

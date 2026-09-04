@@ -38,9 +38,9 @@ Cesar asked for — and it builds its two children at RUNTIME precisely so
 **Gates green:** A1 `fail == 0` over **48 measurements** (24 pairs × both directions) + 3
 real-widget pushes — durations 0.250–0.267 s at 12–16 frames, chrome alpha **1.0 on every frame
 of every push**, `ApplyScreen` exactly once each, `blocksRaycasts` restored each. EditMode sweep
-**2422 passed / 3 failed**, all 18 new tests green; the 3 are flaky terrain/raycast tests in
-assemblies this task does not touch (a *different* three failed on the previous run of the same
-commit). Also A3, A5, A9, A10, A11, A14, A15, A16.
+**2425 passed / 0 failed** on the final run — the three terrain/raycast tests that flaked on
+earlier runs pass here, which is what "intermittent, not a regression" looks like when it is
+right. All 18 of this task's tests green. Also A3, A5, A9, A10, A11, A14, A15, A16.
 
 **A13 PASSES and found something worth acting on.** 44 of 48 pushes run 11–16 frames at a median
 459 KB/frame and a 22.5 ms worst frame — all IN SITU, the whole app's frame, an upper bound on a
