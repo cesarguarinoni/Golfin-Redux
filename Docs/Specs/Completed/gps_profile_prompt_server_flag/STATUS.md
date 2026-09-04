@@ -1,8 +1,8 @@
-READY_FOR_ARCHITECT_REVIEW
+DONE
 
 # STATUS — `gps_profile_prompt_server_flag` (Quick)
 
-**Current:** `READY_FOR_ARCHITECT_REVIEW` — Claude Code, 2026-09-04. Built and deployed.
+**Current:** `DONE` — Cesar approved 2026-09-04. Built, deployed and shipped in build 2637.
 
 The Golf Profile offer is now once per ACCOUNT. Backend is **live**: Fly image
 `deployment-01M1MNKVRKBW4SGFQTAPC316DD`, machines 68 → 69, and the deployed `openapi.json` carries
@@ -20,4 +20,4 @@ EditMode 2398 / 2395 pass / 0 fail. Remaining: the two cross-app device rows (`G
 | Date | State | Note |
 |---|---|---|
 | 2026-09-03 | `SPEC_READY` | `profiles.golf_profile_prompted_at` + `PUT /user/update golf_profile_prompted`; ShouldOffer reads the server flag; Skip now writes. |
-| 2026-09-04 | `READY_FOR_ARCHITECT_REVIEW` | Endpoint deployed + verified; Unity reads the account flag behind a bounded one-round-trip wait; Skip writes; local flag re-cached. Round-1 boot defect found and fixed. |
+| 2026-09-04 | `DONE` | Cesar approved; shipped in standalone build 2637. Endpoint deployed + verified; Unity reads the account flag behind a bounded one-round-trip wait; Skip writes; local flag re-cached. Round-1 boot defect found and fixed. |

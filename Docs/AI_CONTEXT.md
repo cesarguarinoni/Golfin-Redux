@@ -4,6 +4,24 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
+## 2026-09-04 — standalone round 2 DONE (approved) — build 2637 on TestFlight
+
+Both specs moved to `Docs/Specs/Completed/`: `gps_standalone_shell` and
+`gps_profile_prompt_server_flag`. Build **2637** (1.0.0) is VALID on the GOLFIN GPS record —
+real icon, `.ipa` **427 → 196.2 MB** (app payload 75.0 MB; the other 121.1 MB is dSYM that Apple
+strips before a tester downloads), user assets **555 → 98.6 MB**.
+
+The one open question — whether "≤150 MB" meant the `.ipa` file — is **answered and parked**. The
+Architect measured it: `UnityFramework` is byte-identical between `Golfin.ipa` and `GOLFINGPS.ipa`
+(110.8 MB uncompressed) because IL2CPP strips nothing while every screen is reachable from
+`ScreenManager`. Carving it out needs `defineConstraints: ["!GOLFIN_STANDALONE"]` on the golf
+asmdefs plus splitting `Assembly-CSharp` behind interfaces, for ~4–7 MB of download — and explicitly
+NOT `managedStrippingLevel: High`, which breaks UnityEvent/JSON/reflection silently. Backlog row in
+`GPS_BACKLOG.md`; the loud path only.
+
+Still to run against 2637: device pass §7 (7.1–7.10) and the new §1b cross-app rows.
+
+---
 ## 2026-09-04 — standalone round 2: 427 MB → 98 MB of assets, and the Golf Profile is once per ACCOUNT
 
 Two things landed together, because the second is what the first's first launch needed.

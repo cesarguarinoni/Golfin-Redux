@@ -1,8 +1,8 @@
-READY_FOR_ARCHITECT_REVIEW
+DONE
 
 # STATUS — `gps_standalone_shell`
 
-**Current:** `READY_FOR_ARCHITECT_REVIEW` — Claude Code, 2026-09-04, **round 2 complete**.
+**Current:** `DONE` — Cesar approved 2026-09-04 after installing build 2637.
 
 Round 1 shipped as build 2635 (1.0.0, 427 MB). Round 2 is the `KICKOFF_ADDENDUM.md` list:
 
@@ -22,8 +22,13 @@ then the lane ran end to end: **build 2637 uploaded to GOLFIN GPS**, 1.0.0, 98.6
 the app it does not — `Payload/` is **75.0 MB** compressed and `Symbols/` is the other 121.1 MB, which
 Apple strips from what testers download. The assets landed exactly on the addendum's "≈100 MB"; the
 part that did not shrink is `UnityFramework` (106 MB uncompressed), i.e. the golf codebase still
-compiled in — deliberately out of scope here (§D2, and `build_size_diet` owns it). **If ≤150 MB meant
-the .ipa file, that is a scope call for Cesar.**
+compiled in — deliberately out of scope here (§D2, and `build_size_diet` owns it). **The scope call was answered: PARKED.** The Architect measured it and added the backlog row —
+`UnityFramework` is byte-identical between `Golfin.ipa` and `GOLFINGPS.ipa` (110.8 MB uncompressed)
+because IL2CPP strips nothing while every screen is reachable from `ScreenManager`. Carving it out
+means `defineConstraints: ["!GOLFIN_STANDALONE"]` on the golf asmdefs plus splitting
+`Assembly-CSharp` behind interfaces, for ~4–7 MB of download — and explicitly NOT
+`managedStrippingLevel: High`, which breaks UnityEvent/JSON/reflection silently. Parked until the
+store size hurts (`GPS_BACKLOG.md`).
 
 EditMode 2398 / 2395 pass / 0 fail. `ProjectSettings.asset`, `ShellScene.unity` and
 `Assets/Resources/**` are all byte-identical to HEAD after every build and proof.
