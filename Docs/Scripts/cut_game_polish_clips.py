@@ -22,6 +22,7 @@ frame is the TOP BAR (a dark navy band) and not the nav bar.
 """
 import json
 import os
+import textwrap
 import subprocess
 import sys
 
@@ -31,6 +32,11 @@ SIDE = os.path.join(VID, "segments.json")
 RAW = os.path.join(VID, "raw.mp4")
 
 FONT = "/System/Library/Fonts/Supplemental/Arial Bold.ttf"
+
+# 30 px Arial Bold is ~17 px per character, so ~62 characters fit inside an 1170 px
+# frame with the plate's border. Measured against the first cut rather than guessed.
+CAPTION_PX = 30
+CAPTION_COLS = 58
 
 
 def sh(cmd):
@@ -59,15 +65,24 @@ def main():
 
         # The caption goes in a FILE. Inline drawtext breaks on the first ' or :
         # and every one of these captions has both.
-        with open(capfile, "w") as f:
-            f.write(cap)
-
         # A translucent plate under the text so it stays readable over both the
         # bright Home art and the dark rankings backdrop, low enough on the frame
         # not to sit over the screen's own title.
+        #
+        # THE CAPTION IS WRAPPED HERE, NOT BY ffmpeg. drawtext does not wrap: the
+        # first cut ran a 78-character caption off BOTH edges of an 1170 px frame
+        # ("PTION (b) - push WITH ... FLAG OFF IN THE BUIL"), which is worse than
+        # no caption because it looks like a rendering bug. The width is computed
+        # from the font size rather than guessed, and the plate grows downward as
+        # lines are added.
+        wrapped = "\n".join(textwrap.wrap(cap, width=CAPTION_COLS))
+        with open(capfile, "w") as f:
+            f.write(wrapped)
+        lines = wrapped.count("\n") + 1
+
         draw = (f"drawtext=fontfile={FONT}:textfile={capfile}:"
-                f"x=(w-text_w)/2:y=h-190:fontsize=34:fontcolor=white:"
-                f"box=1:boxcolor=black@0.55:boxborderw=18:line_spacing=8")
+                f"x=(w-text_w)/2:y=h-{150 + 46 * lines}:fontsize={CAPTION_PX}:fontcolor=white:"
+                f"box=1:boxcolor=black@0.62:boxborderw=20:line_spacing=10")
 
         ok = sh(["ffmpeg", "-y", "-ss", f"{start:.3f}", "-t", f"{dur:.3f}", "-i", RAW,
                  "-vf", draw, "-c:v", "libx264", "-preset", "medium", "-crf", "20",

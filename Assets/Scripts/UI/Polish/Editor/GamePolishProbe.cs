@@ -347,9 +347,15 @@ namespace Golfin.UI.Polish.EditorTools
                 yield return Back(ScreenId.ModeSelection, "mission-selection back");
 
                 // ── Tournaments (the 0d42 background group) ──────────────────
-                yield return Ensure(ScreenId.ModeSelection);
-                yield return TapPath(ScreenId.ModeSelection, "TournamentTempEntry", ScreenId.TournamentSelection,
-                                     "ModeSelection TournamentTempEntry");
+                // NOT VIA TournamentTempEntry. That tap ends the play session: it has killed a
+                // run in four separate passes (push, demo, parity, perf), always at the same
+                // line, always silently — CurrentScreen never becomes TournamentSelection, the
+                // 25 s Arrive times out, and the coroutine is gone by the time it returns. It is
+                // NOT this task's code: ModeSelection -> TournamentSelection is a FADE (different
+                // backgrounds), so LayeredPush is not on that path at all. Reported as a finding;
+                // the route reaches the screen another way so one unrelated bug cannot keep
+                // costing every measured run.
+                yield return Force(ScreenId.TournamentSelection, "TournamentSelection");
                 yield return Shot("tournamentselection");
 
                 yield return Force(ScreenId.TournamentLeaderboard, "TournamentLeaderboard");
@@ -436,8 +442,11 @@ namespace Golfin.UI.Polish.EditorTools
                         }
 
                 // Written HERE as well as at the end of Run(): the gate must survive a capture
-                // tour that dies, which is exactly what kept happening.
+                // tour that dies, which is exactly what kept happening. A13's rows go with it,
+                // for the same reason and after the same lesson — the first perf run measured all
+                // 48 pushes and then lost every number because the tour never reached WritePerf.
                 WriteJson();
+                if (_perf) WritePerf();
                 Line("--- push sweep complete (" + _records.Count + " pairs measured) ---");
             }
 
@@ -859,12 +868,39 @@ namespace Golfin.UI.Polish.EditorTools
                 yield return new WaitForSecondsRealtime(settle);
             }
 
+            /// <summary>
+            /// The previous capture's md5, for the stale-frame guard below.
+            /// </summary>
+            string _lastShotHash = "";
+
+            /// <summary>
+            /// Capture, and REFUSE TO LIE ABOUT WHAT WAS CAPTURED.
+            ///
+            /// <para>Two defects made the first A2 run worthless, and both were silent:</para>
+            /// <list type="number">
+            /// <item>THE LABEL IS AN INTENTION, NOT AN OBSERVATION. When the route drifts — a card
+            /// that no longer routes, a screen that will not open — the shot still gets the name
+            /// the route meant. `parity_instant_03_holeselection.png` was a picture of
+            /// ModeSelection, and the A2 comparison then diffed two different screens and reported
+            /// 100 % of pixels differing. The REAL CurrentScreen now goes in the filename, so the
+            /// comparison keys on what was actually photographed.</item>
+            /// <item>THE GAME VIEW RT IS NOT REFRESHED BETWEEN TWO CAPTURES IN QUICK SUCCESSION, so
+            /// the second one returns the FIRST one's frame — byte-identical, with a plausible name
+            /// and a plausible size (project memory: snapplaymodesafe_phantom_path, and CLAUDE.md's
+            /// physics-lab capture rule says the same). `parity_anim_03_holeselection` and
+            /// `parity_anim_04_leaderboard` were both 2623 KB and both HoleSelection. An md5 equal
+            /// to the previous shot's is now logged as STALE rather than accepted.</item>
+            /// </list>
+            /// </summary>
             IEnumerator Shot(string label)
             {
                 if (_mode == "perf") { Line("SHOT " + label + " skipped (perf pass)"); yield break; }
 
+                string actual = ScreenManager.Instance != null
+                    ? ScreenManager.Instance.CurrentScreen.ToString() : "unknown";
+
                 _shot++;
-                string name = string.Format("{0}_{1:00}_{2}", _shotPrefix, _shot, label);
+                string name = string.Format("{0}_{1:00}_{2}__{3}", _shotPrefix, _shot, label, actual);
                 string path = Path.Combine(ShotDir, name + ".png");
                 Directory.CreateDirectory(ShotDir);
 
@@ -872,10 +908,28 @@ namespace Golfin.UI.Polish.EditorTools
                 while (snap.MoveNext()) yield return snap.Current;
 
                 // Assert the FILE, never the return value — SnapPlayModeSafe has logged a path for
-                // a file it never wrote (memory: reference_snapplaymodesafe_phantom_path).
-                Line("SHOT " + label + " -> " + (File.Exists(path)
-                    ? path + " (" + new FileInfo(path).Length / 1024 + " KB)"
-                    : "MISSING (" + path + ")"));
+                // a file it never wrote.
+                if (!File.Exists(path)) { Line("SHOT " + label + " -> MISSING (" + path + ")"); yield break; }
+
+                string hash = Md5(path);
+                bool stale = hash == _lastShotHash;
+                _lastShotHash = hash;
+
+                Line("SHOT " + label + " [screen=" + actual + "] -> " + path +
+                     " (" + new FileInfo(path).Length / 1024 + " KB)" +
+                     (stale ? "   *** STALE: byte-identical to the previous capture — the Game View " +
+                              "RT did not refresh; this frame is NOT of " + actual + " ***" : "") +
+                     (label.IndexOf(actual, StringComparison.OrdinalIgnoreCase) < 0 &&
+                      !actual.Equals("unknown", StringComparison.OrdinalIgnoreCase)
+                        ? "   *** ROUTE DRIFT: labelled '" + label + "' but the screen is " + actual + " ***"
+                        : ""));
+            }
+
+            static string Md5(string path)
+            {
+                using (var md5 = System.Security.Cryptography.MD5.Create())
+                using (var fs = File.OpenRead(path))
+                    return BitConverter.ToString(md5.ComputeHash(fs)).Replace("-", "");
             }
 
             IEnumerator TapStart()
