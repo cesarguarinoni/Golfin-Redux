@@ -78,21 +78,6 @@ namespace Golfin.UI.Polish
         public const float ParallaxFactor = 0.3f;
 
         // ═════════════════════════════════════════════════════════════════════
-        // §D4 — the option (b) flag
-        // ═════════════════════════════════════════════════════════════════════
-
-        /// <summary>
-        /// Option (b): allow a push whose two screens have DIFFERENT backgrounds, cross-fading the
-        /// chrome layers instead of leaving them alone.
-        ///
-        /// <para>SHIPS OFF, and is pinned off by <c>LayeredPushTests</c>. It exists for exactly one
-        /// thing: the five-second video in §D4 that lets Cesar judge the alternative he asked to
-        /// see. It is NOT a Settings entry and NOT a <c>[SerializeField]</c> — the only writers are
-        /// that test and <c>GamePolishProbe</c>'s `option_b` mode, and A9 greps to prove it.</para>
-        /// </summary>
-        public static bool AllowBackgroundCrossFade { get; set; } = false;
-
-        // ═════════════════════════════════════════════════════════════════════
         // §D1.1 — the layer table
         // ═════════════════════════════════════════════════════════════════════
 
@@ -227,9 +212,10 @@ namespace Golfin.UI.Polish
 
             if (!HasSplit(from, fromGo) || !HasSplit(to, toGo)) return false;
 
-            // The background rule. Skipped ONLY by the option-(b) flag, which ships off.
-            if (!AllowBackgroundCrossFade && !SameBackground(from, to, fromGo, toGo)) return false;
-
+            // NO BACKGROUND GATE. Option (b) shipped (Cesar, 2026-09-04): two screens of the same
+            // pillar push even when their backdrops differ, and the backdrops cross-fade through
+            // each other. SameBackground is still consulted — inside Push, to decide whether the
+            // chrome is animated at all — but it is no longer a reason to refuse.
             return true;
         }
 
@@ -470,12 +456,25 @@ namespace Golfin.UI.Polish
                     for (int i = 0; i < p.To.ChromeGroups.Count; i++) p.To.ChromeGroups[i].alpha = fe;
                     for (int i = 0; i < p.From.ContentGroups.Count; i++) p.From.ContentGroups[i].alpha = 1f - fe;
 
-                    float cover = Mathf.Max(fe, 1f);   // the leaver never leaves 1 — see above
+                    // The seam invariant, MEASURED rather than restated from the code above.
+                    // "Never both chrome layers below 0.5" means the max of the two must stay
+                    // >= 0.5, so that is what is sampled, from the live CanvasGroups, every frame.
+                    // (The first version wrote Mathf.Max(fe, 1f) — 1 by construction, measuring
+                    // nothing. It mattered little while this path was behind an off-by-default
+                    // flag; it is the shipped path now.)
+                    float cover = Mathf.Max(MinAlpha(p.To.ChromeGroups), MinAlpha(p.From.ChromeGroups));
                     if (cover < LastPushSeamWorstCover) LastPushSeamWorstCover = cover;
                 }
 
-                float minAlpha = Mathf.Min(MinAlpha(p.To.ChromeGroups), MinAlpha(p.From.ChromeGroups));
-                if (minAlpha < LastPushChromeAlphaMin) LastPushChromeAlphaMin = minAlpha;
+                // Only meaningful on the SAME-background path, where nothing should touch the
+                // chrome at all. On the cross-fade path the incoming chrome is SUPPOSED to start at
+                // 0, so a minimum of 0 there is the feature working — the seam cover above is the
+                // assertion that applies to that path.
+                if (!crossFadeChrome)
+                {
+                    float minAlpha = Mathf.Min(MinAlpha(p.To.ChromeGroups), MinAlpha(p.From.ChromeGroups));
+                    if (minAlpha < LastPushChromeAlphaMin) LastPushChromeAlphaMin = minAlpha;
+                }
 
                 yield return null;
             }

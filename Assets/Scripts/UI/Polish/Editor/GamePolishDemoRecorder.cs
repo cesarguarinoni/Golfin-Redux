@@ -200,24 +200,13 @@ namespace Golfin.UI.Polish.EditorTools
                     "(e) Settings — scrim fades, panel pops, two accordion rows open",
                     Settings);
 
-            if (!Want("f")) { Finish(); yield break; }
 
-            // ── (f) the option Cesar judges, and the ONLY place the flag moves ──
-            bool armed = false;
-            try
-            {
-                LayeredPush.AllowBackgroundCrossFade = true;
-                armed = true;
-                Line("OPTION (b): AllowBackgroundCrossFade = true");
-            }
-            finally { if (!armed) LayeredPush.AllowBackgroundCrossFade = false; }
-
-            yield return Segment("f_option_b",
-                "OPTION (b) — push WITH a background cross-fade. FLAG OFF IN THE BUILD.",
-                OptionB, flag: true);
-
-            LayeredPush.AllowBackgroundCrossFade = false;
-            Line("OPTION (b) restored: AllowBackgroundCrossFade = " + LayeredPush.AllowBackgroundCrossFade);
+            // (f) — the pair whose backdrops differ. No flag any more: Cesar shipped option (b)
+            // on 2026-09-04, so this is simply what that move does now.
+            if (Want("f"))
+                yield return Segment("f_cross_backdrop",
+                    "Cross-backdrop push — the backgrounds dissolve through each other (option (b), SHIPPED)",
+                    OptionB);
 
             Finish();
         }

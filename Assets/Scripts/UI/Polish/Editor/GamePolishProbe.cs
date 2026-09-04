@@ -6,7 +6,7 @@
 // fifteen-frame event. This probe drives the shell through the REAL widgets a
 // player taps, samples the two content rects and the chrome CanvasGroups on
 // EVERY frame of every push, and writes a per-assertion PASS/FAIL file.
-// fail == 0 with LayeredPush.AllowBackgroundCrossFade OFF is the gate (A1).
+// fail == 0 over every pushable ordered pair is the gate (A1).
 //
 // REAL NAVIGATION (PIPELINE_HARDENING rule 2). Boot -> tap the real StartButton
 // -> Home -> the real bottom-nav slots -> the real mode cards' PLAY -> the real
@@ -25,8 +25,9 @@
 //             1170x2532 ReadPixels allocates ~100 MB and swamps the push it
 //             lands beside; and turning the profiler on inside the measured run
 //             stretched a 0.25 s tween to 0.41 s).
-//   option_b  D4 — the ONE run with AllowBackgroundCrossFade true, for Cesar's
-//             five-second video. Turned on, recorded, turned off.
+// (There used to be an `option_b` mode that flipped a flag for one recorded run.
+// Cesar shipped option (b) on 2026-09-04, so the cross-fade IS the push now and
+// the mode had nothing left to switch.)
 // ─────────────────────────────────────────────────────────────────────────────
 #nullable enable
 using System;
@@ -68,9 +69,6 @@ namespace Golfin.UI.Polish.EditorTools
 
         [MenuItem("GOLFIN/Game Polish/Probe — perf (A13: GC + frame ms, no captures)", priority = 263)]
         public static void ArmPerf() => Arm("perf");
-
-        [MenuItem("GOLFIN/Game Polish/Probe — option (b) (D4: flag ON, for the video)", priority = 264)]
-        public static void ArmOptionB() => Arm("option_b");
 
         public static void Arm(string mode)
         {
@@ -131,12 +129,16 @@ namespace Golfin.UI.Polish.EditorTools
             public float  W, ExpectedDur, MeasuredDur;
             public float  TargetOffsetAtT0, EndTargetX, EndTargetRestX, EndLeaverX, EndLeaverRestX;
             public float  ChromeAlphaMinOverRun = 1f;      // same-background path: must stay 1
-            public float  SeamWorstCover = 1f;             // option_b: max(fromChrome, toChrome) per frame
+            public float  SeamWorstCover = 1f;             // cross-fade path: min over frames of max(fromChrome, toChrome)
             public float  EndTargetContentAlpha = 1f, EndLeaverContentAlpha = 1f;
             public bool   EndBlocksRaycasts;
             public bool   Completed;
             /// <summary>The Editor rendered too few frames for the duration to mean anything.</summary>
             public bool   FrameStarved;
+            /// <summary>Whether the two screens draw the same backdrop — which decides which
+            /// chrome assertion applies, now that option (b) has shipped and both paths are
+            /// live at once.</summary>
+            public bool   SameBackground;
             public int    Frames;
             public int    ApplyScreenCalls;                // the ScreenChanged event count
             public readonly List<string> Fails = new List<string>();
@@ -231,56 +233,13 @@ namespace Golfin.UI.Polish.EditorTools
                     yield break;
                 }
 
-                if (_mode == "option_b")
-                {
-                    // §D4 — the ONE run with the flag on, for Cesar's five-second clip. Turned on
-                    // here, turned off in the finally-shaped tail below, and asserted off again so
-                    // a crashed run cannot leave it armed for the next one.
-                    LayeredPush.AllowBackgroundCrossFade = true;
-                    Line("--- OPTION (b): LayeredPush.AllowBackgroundCrossFade = true (NEVER in a build) ---");
-                    yield return Boot();
-                    yield return OptionBRoute();
-                    LayeredPush.AllowBackgroundCrossFade = false;
-                    Line("--- flag restored: AllowBackgroundCrossFade = " +
-                         LayeredPush.AllowBackgroundCrossFade + " ---");
-                    WriteJson();
-                    Line("=== done: option_b pass complete ===");
-                    yield break;
-                }
-
                 // push / perf — motion ON, the direction table driven for real.
                 UiMotion.Enabled = true;
-                if (LayeredPush.AllowBackgroundCrossFade)
-                {
-                    // A1 is produced with the flag OFF. If anything left it armed, say so and fix
-                    // it rather than writing a JSON that measures the wrong feature.
-                    Line("WARN: AllowBackgroundCrossFade was true at the start of a '" + _mode +
-                         "' run — forcing it false; A1 must be measured on the shipped path.");
-                    LayeredPush.AllowBackgroundCrossFade = false;
-                }
-                Line("AllowBackgroundCrossFade = " + LayeredPush.AllowBackgroundCrossFade + " (A1 is the shipped path)");
                 yield return Boot();
                 yield return Route();
                 WriteJson();
                 if (_perf) WritePerf();
                 Line("=== done: " + _mode + " pass complete ===");
-            }
-
-            /// <summary>
-            /// §D4's clip: ModeSelection -> TournamentSelection -> back. The pair Cesar named, and
-            /// the one that shows the option at its most obvious — the two screens have DIFFERENT
-            /// backgrounds (2e5476ee vs 0d425c0a), which is exactly why the shipped path fades
-            /// them and this flag does not.
-            /// </summary>
-            IEnumerator OptionBRoute()
-            {
-                yield return NavSlot("NavTeeButton", ScreenId.ModeSelection, "bottom-nav TEE");
-                yield return new WaitForSecondsRealtime(1.2f);
-                yield return TapPath(ScreenId.ModeSelection, "TournamentTempEntry", ScreenId.TournamentSelection,
-                                     "ModeSelection TournamentTempEntry (option b)");
-                yield return new WaitForSecondsRealtime(1.5f);
-                yield return Back(ScreenId.ModeSelection, "option b back");
-                yield return new WaitForSecondsRealtime(1.2f);
             }
 
             // ═════════════════════════════════════════════════════════════════
@@ -423,10 +382,21 @@ namespace Golfin.UI.Polish.EditorTools
             IEnumerator PushSweep()
             {
                 Line("--- push sweep: every ordered pair of the direction table ---");
+
+                // BY PILLAR, NOT BY BACKDROP. Before option (b) shipped these were three
+                // background groups and the sweep's 24 pairs were exactly the pushable set. Now
+                // the backdrop no longer gates anything, so the MainPlay pillar is ONE group of
+                // six screens (36 ordered pairs, most of them cross-backdrop and therefore
+                // exercising the cross-fade the gate used to forbid). Enumerating the old groups
+                // would have kept reporting fail == 0 while never touching the newly-shipped path.
                 ScreenId[][] groups =
                 {
                     new[] { ScreenId.ModeSelection, ScreenId.HoleSelection,
-                            ScreenId.MissionSelection, ScreenId.TournamentHoleSelection },
+                            ScreenId.MissionSelection, ScreenId.TournamentHoleSelection,
+                            ScreenId.TournamentSelection, ScreenId.TournamentLeaderboard },
+                    // Leaderboard has no pillar of its own; it is pushable only with the two
+                    // tournament screens it shares the Rankings backdrop with (LayeredPush's
+                    // InRankingsGroup), so it gets its own trio rather than joining MainPlay.
                     new[] { ScreenId.TournamentSelection, ScreenId.TournamentLeaderboard,
                             ScreenId.Leaderboard },
                     new[] { ScreenId.GeneralShop, ScreenId.GachaHistory, ScreenId.GachaPrizes },
@@ -689,6 +659,7 @@ namespace Golfin.UI.Polish.EditorTools
                 {
                     From = from.ToString(), To = to.ToString(), Widget = widget,
                     RealWidget = realWidget,
+                    SameBackground = LayeredPush.SameBackground(from, to, fromGo, toGo),
                     Direction = LayeredPush.DirectionFor(from, to, push: dirForward).ToString(),
                     ExpectedDur = UiMotion.PushDur,
                 };
@@ -769,19 +740,22 @@ namespace Golfin.UI.Polish.EditorTools
                 if (!r.EndBlocksRaycasts)             r.Fails.Add("blocksRaycasts not restored");
                 if (r.ApplyScreenCalls != 1)          r.Fails.Add($"ApplyScreen ran {r.ApplyScreenCalls}x, expected exactly 1 (at the end)");
 
-                if (LayeredPush.AllowBackgroundCrossFade)
+                // WHICH chrome assertion applies is decided by the PAIR, not by a global flag —
+                // option (b) shipped, so both paths are live at once and each has its own rule.
+                if (r.SameBackground)
                 {
-                    // Option (b) only: the seam test. Never both chrome layers below 0.5.
-                    if (r.SeamWorstCover < 0.5f)
-                        r.Fails.Add($"seam: worst chrome cover {r.SeamWorstCover:0.###} < 0.5");
+                    // Same sprite: nothing may touch the chrome on any frame. A5's assertion,
+                    // taken from inside the tween rather than off a video.
+                    if (r.ChromeAlphaMinOverRun < 0.999f)
+                        r.Fails.Add($"chrome alpha dropped to {r.ChromeAlphaMinOverRun:0.###} on the same-background path");
                 }
                 else
                 {
-                    // The shipped path: the two screens share a background sprite, so NOTHING
-                    // about the chrome may move on any frame. This is A5's assertion, taken from
-                    // inside the tween rather than off a video.
-                    if (r.ChromeAlphaMinOverRun < 0.999f)
-                        r.Fails.Add($"chrome alpha dropped to {r.ChromeAlphaMinOverRun:0.###} on the same-background path");
+                    // Different sprites: the chrome cross-fades, and the seam test is that the two
+                    // never go below 0.5 together — i.e. some backdrop is always covering.
+                    if (r.SeamWorstCover < 0.5f)
+                        r.Fails.Add($"seam: worst chrome cover {r.SeamWorstCover:0.###} < 0.5 " +
+                                    "(a see-through frame mid cross-fade)");
                 }
 
                 if (_perf) _perfRows.Add((r.From + "->" + r.To, gc0, worstMs, r.Frames));
@@ -971,7 +945,7 @@ namespace Golfin.UI.Polish.EditorTools
                 j.AppendLine("  \"task\": \"game_polish_a\",");
                 j.AppendLine("  \"mode\": \"" + _mode + "\",");
                 j.AppendLine("  \"utc\": \"" + DateTime.UtcNow.ToString("u") + "\",");
-                j.AppendLine("  \"allowBackgroundCrossFade\": " + (LayeredPush.AllowBackgroundCrossFade ? "true" : "false") + ",");
+                j.AppendLine("  \"optionBShipped\": true,   // Cesar 2026-09-04 — different backdrops push and cross-fade");
                 j.AppendLine("  \"pushDur\": " + F(UiMotion.PushDur) + ",");
                 j.AppendLine("  \"durationToleranceSec\": " + F(DurationToleranceSec) + ",");
                 j.AppendLine("  \"measured\": " + _records.Count + ",");
@@ -990,7 +964,7 @@ namespace Golfin.UI.Polish.EditorTools
                     j.AppendLine("      \"endTargetContentAlpha\": " + F(r.EndTargetContentAlpha) + ", \"endLeaverContentAlpha\": " + F(r.EndLeaverContentAlpha) + ",");
                     j.AppendLine("      \"chromeAlphaMinOverRun\": " + F(r.ChromeAlphaMinOverRun) + ", \"seamWorstCover\": " + F(r.SeamWorstCover) + ",");
                     j.AppendLine("      \"blocksRaycastsRestored\": " + (r.EndBlocksRaycasts ? "true" : "false") + ",");
-                    j.AppendLine("      \"applyScreenCalls\": " + r.ApplyScreenCalls + ", \"completed\": " + (r.Completed ? "true" : "false") + ", \"frameStarved\": " + (r.FrameStarved ? "true" : "false") + ",");
+                    j.AppendLine("      \"applyScreenCalls\": " + r.ApplyScreenCalls + ", \"completed\": " + (r.Completed ? "true" : "false") + ", \"frameStarved\": " + (r.FrameStarved ? "true" : "false") + ", \"sameBackground\": " + (r.SameBackground ? "true" : "false") + ",");
                     j.Append    ("      \"fails\": [");
                     for (int k = 0; k < r.Fails.Count; k++)
                         j.Append((k > 0 ? ", " : "") + "\"" + Esc(r.Fails[k]) + "\"");

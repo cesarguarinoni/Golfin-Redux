@@ -12,9 +12,16 @@
 // ordered pair of the eleven pushable shell screens gets an asserted answer.
 //
 // AND WHY CanPush IS PINNED BOTH WAYS. The gate's false cases are the ones that
-// carry Cesar's decisions — Home always fades, a changing background always
-// fades, cross-pillar always fades — and a gate that has quietly gone permissive
-// does not look broken, it looks like a nicer app that ships the wrong thing.
+// carry Cesar's decisions — Home always fades, cross-pillar always fades — and a
+// gate that has quietly gone permissive does not look broken, it looks like a
+// nicer app that ships the wrong thing.
+//
+// THE BACKGROUND IS NO LONGER ONE OF THOSE CASES. Cesar shipped option (b) on
+// 2026-09-04 after watching the clip, so two screens of the same pillar push even
+// when their backdrops differ. The tests that used to pin the flag OFF now pin the
+// opposite: that such a pair really does push, and that the background still
+// decides whether the CHROME animates. Deleting them and leaving nothing would
+// have removed the only guard on the decision that changed.
 // ─────────────────────────────────────────────────────────────────────────────
 #nullable enable
 using System;
@@ -39,12 +46,6 @@ namespace Golfin.UI.Polish.Tests
         static bool CanPush(string from, string to, GameObject? a, GameObject? b)
             => (bool)T.GetMethod("CanPush")!.Invoke(null, new object?[] { Id(from), Id(to), a, b })!;
 
-        static bool Flag
-        {
-            get => (bool)T.GetProperty("AllowBackgroundCrossFade")!.GetValue(null)!;
-            set => T.GetProperty("AllowBackgroundCrossFade")!.SetValue(null, value);
-        }
-
         static bool MotionEnabled
         {
             get => (bool)Motion.GetProperty("Enabled")!.GetValue(null)!;
@@ -61,51 +62,56 @@ namespace Golfin.UI.Polish.Tests
         };
 
         // ═════════════════════════════════════════════════════════════════════
-        // §D4 — the flag
+        // Option (b), shipped — the background is not a gate any more
         // ═════════════════════════════════════════════════════════════════════
 
         /// <summary>
-        /// THE flag test. Option (b) exists only as a video; a build that shipped with this true
-        /// would push between screens whose backdrop changes, which is precisely the thing Cesar
-        /// ruled out. A default flip is a one-character change with no other symptom, so it is
-        /// pinned rather than trusted.
+        /// THE flag is gone, and it must stay gone. It existed for exactly one thing — the video
+        /// that let Cesar judge the alternative — and he shipped the alternative. A flag left
+        /// behind at default-true is a dead branch nobody exercises and everybody has to reason
+        /// about; a flag left behind at default-false would silently undo his decision.
         /// </summary>
         [Test]
-        public void AllowBackgroundCrossFade_DefaultsToFalse()
+        public void TheOptionBFlag_IsGone()
         {
-            // Read the FIELD's initializer, not the live property: another test (or a probe run in
-            // the same domain) may legitimately have set it, and what ships is the initializer.
-            PropertyInfo p = T.GetProperty("AllowBackgroundCrossFade")!;
-            Assert.IsNotNull(p, "AllowBackgroundCrossFade must exist");
-
-            // A fresh domain has it false. Assert that, then prove nothing but a test can move it:
-            // the property has a setter but no production caller (A9 greps for this too).
-            Assert.IsFalse(DefaultOf(T, "AllowBackgroundCrossFade"),
-                "game_polish_a §D4: option (b) ships OFF. If this is failing, a production caller " +
-                "or a changed initializer is about to ship a transition Cesar explicitly declined.");
+            Assert.IsNull(T.GetProperty("AllowBackgroundCrossFade"),
+                "game_polish_a: option (b) shipped 2026-09-04 — the flag was removed, not flipped. " +
+                "If this is failing, someone reintroduced a switch for a decision that is made.");
+            Assert.IsNull(T.GetField("AllowBackgroundCrossFade"));
         }
 
-        /// <summary>Re-read the declaring type's static initializer state in a way a same-domain
-        /// mutation cannot fake: reload the backing field's value from a fresh instance of the
-        /// static constructor is impossible, so instead assert the value at first touch is false by
-        /// checking the compiler-generated backing field's default when nothing has written it.</summary>
-        static bool DefaultOf(Type t, string prop)
-        {
-            FieldInfo? backing = t.GetField("<" + prop + ">k__BackingField",
-                                            BindingFlags.NonPublic | BindingFlags.Static);
-            Assert.IsNotNull(backing, prop + " must be an auto-property (its backing field is the ship default)");
-            // The initializer runs once per domain. Every test in this fixture restores it, and no
-            // production code writes it, so the live value IS the ship default.
-            return (bool)backing!.GetValue(null)!;
-        }
-
+        /// <summary>
+        /// The decision itself: a same-pillar pair whose BACKDROPS DIFFER is pushable.
+        ///
+        /// <para>This is the one assertion that would have caught the change being reverted by
+        /// accident. It uses the real screen objects' absence deliberately — CanPush's remaining
+        /// false cases are all decided before any layer lookup, so what is being pinned here is
+        /// that the background is no longer consulted at the gate at all.</para>
+        /// </summary>
         [Test]
-        public void Flag_IsNotASerializedFieldAndHasNoProductionWriter()
+        public void SameBackground_IsNoLongerRequiredByTheGate()
         {
-            Assert.IsNull(T.GetField("AllowBackgroundCrossFade"),
-                "§D4: must be a property, never a public field a prefab could serialize.");
-            Assert.IsTrue(T.GetProperty("AllowBackgroundCrossFade")!.GetSetMethod()!.IsPublic,
-                "the probe and this test need to set it; nothing else may.");
+            MethodInfo? m = T.GetMethod("SameBackground");
+            Assert.IsNotNull(m, "SameBackground still exists — it decides whether the CHROME animates");
+
+            // ModeSelection (Art/HoleSelectScreen/Background) and TournamentSelection
+            // (Art/RankingsScreen/BackgroundRangkings) are both MainPlay and draw DIFFERENT
+            // sprites. Before option (b) shipped this pair faded; it pushes now.
+            //
+            // The stand-ins carry the real chrome/content CHILD NAMES from LayerMap, because
+            // CanPush's true path really does look them up (HasSplit). A bare GameObject makes
+            // this test fail for the wrong reason — which is exactly what the first version of it
+            // did, and is why it is built from the table rather than hand-named.
+            GameObject a = ScreenWithLayers("ModeSelection");
+            GameObject b = ScreenWithLayers("TournamentSelection");
+            try
+            {
+                Assert.IsTrue(CanPush("ModeSelection", "TournamentSelection", a, b),
+                    "option (b) shipped: a same-pillar pair with different backdrops must push");
+                Assert.IsTrue(CanPush("TournamentSelection", "ModeSelection", b, a),
+                    "and in both directions");
+            }
+            finally { UnityEngine.Object.DestroyImmediate(a); UnityEngine.Object.DestroyImmediate(b); }
         }
 
         // ═════════════════════════════════════════════════════════════════════
@@ -254,5 +260,29 @@ namespace Golfin.UI.Polish.Tests
         /// probe's job (A1), against the real screens, in play mode.
         /// </summary>
         static GameObject Screen(string name) => new GameObject(name);
+
+        /// <summary>
+        /// A stand-in screen carrying the chrome and content children <c>LayerMap</c> names for
+        /// that id, so <c>HasSplit</c> is satisfied and the gate's TRUE path can be reached. Read
+        /// from the table rather than hand-written, so a rename of a layer cannot leave this test
+        /// quietly asserting nothing.
+        /// </summary>
+        static GameObject ScreenWithLayers(string id)
+        {
+            var go = new GameObject(id + "Screen", typeof(RectTransform));
+            object map = T.GetMethod("LayerMap")!.Invoke(null, new[] { Id(id) })!;
+            var chrome  = (string[])map.GetType().GetField("Chrome")!.GetValue(map)!;
+            var content = (string[])map.GetType().GetField("Content")!.GetValue(map)!;
+            foreach (string n in chrome)  Child(go, n).AddComponent<UnityEngine.UI.Image>();
+            foreach (string n in content) Child(go, n);
+            return go;
+        }
+
+        static GameObject Child(GameObject parent, string name)
+        {
+            var c = new GameObject(name, typeof(RectTransform));
+            c.transform.SetParent(parent.transform, false);
+            return c;
+        }
     }
 }
