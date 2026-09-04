@@ -1,8 +1,8 @@
-SELF_REVIEW_PASS
+READY_FOR_REDTEAM
 
 # STATUS — `game_polish_a`
 
-**Current:** `SELF_REVIEW_PASS` — **iteration 2**. Self-reviewer re-walked iter-2 and confirmed the centre-title dissolve in the shipped clip pixels; re-ran the full EditMode sweep (`2430/0/3`); re-enumerated both §15 shape audits. Notion 2111, slice a of three.
+**Current:** `READY_FOR_REDTEAM` — golfin-reviewer PASS on iter-2; hand-off to adversarial red-team gate. 87-push invariants JSON re-parsed (fail=0, apply=1 on all, blocksRaycasts restored on all, seamWorstCover=1 on 32 cross-backdrop, chromeAlphaMin=1 on 55 same-backdrop). A2 rest parity re-derived on 16 (label,real) pairs — chrome pixel-identical above y=147 and below y=1640. Title dissolve confirmed in shipped clip (frames 6-14 and 677-685). §D7 scope: exactly one file. Standing bans clean.
 
 | Date | State | Note |
 |---|---|---|
@@ -42,3 +42,5 @@ carry-over items in this file are environment and other people's code, not open 
 this task.
 
 | 2026-09-04 | `SELF_REVIEW_PASS` (iter-2) | Iter-2 fix re-walked. Dissolve confirmed in the pixels of `game_polish_a_f_cross_backdrop.mp4` (two multi-frame events, no single-frame cut). Full EditMode sweep independently re-run: `2430 passed / 0 failed / 3 skipped`. Both shape audits (§15) re-enumerated: (A) zero `??` on Unity lookups in the 7 touched files; (B) `ApplyScreen` paints centre title / nav highlight / bar visibility — the latter two provably don't change across any pushable pair (verified via `PillarOf` table + Leaderboard early-return). All three iter-1 hygiene items (stale caption, §A9 prose, 84/87 drift) cleared. Iter-2 diff touches zero scenes/prefabs. |
+
+| 2026-09-04 | `READY_FOR_REDTEAM` | golfin-reviewer PASS. Independently verified: invariants JSON (measured=87, fail=0), rest parity (16 valid (label,real) pairs; chrome pixel-identical above y=147 and below y=1640), title dissolve (two multi-frame events in `game_polish_a_f_cross_backdrop.mp4`), GPS scope (one file), standing bans clean, Shape A/B/C audits closed. Findings: no standalone GPS-hub-selected still (SPEC A15 asked for it), self-review cites 2 nav-crop files that don't exist as standalone PNGs (source clips do). Red-team gate is next. |

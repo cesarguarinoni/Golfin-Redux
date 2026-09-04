@@ -57,6 +57,7 @@ worse failure than a misleading commit message. Split it yourself if you want it
 
 | File | What |
 |---|---|
+| `Assets/Scripts/UI/Polish/Editor/GpsNavStillCapture.cs` | **NEW (iter-2).** Boots, drives the real `StartButton` → `GpsPill` → `NavProfileButton`, and captures the GPS bar's selected slot on two screens via `CaptureCore.SnapPlayModeSafe`, asserting the file exists and is not a stale frame. |
 | `Assets/Scripts/UI/Polish/Tests/CenterTitleDissolveTests.cs` | **NEW (iter-2).** 5 tests pinning the centre-title dissolve: the fake-null CanvasGroup trap, idempotence, the opaque rest state, resolver parity with the instant paint, and recovery from an interrupted push. |
 | `Assets/Scripts/UI/Polish/LayeredPush.cs` | **NEW.** The game shell's push: layer table, `CanPush`, `SameBackground`, direction, the tween, rest-state restore, and the push-start hand-off that dissolves the shared top-bar title (iter-2). |
 | `Assets/Scripts/UI/Polish/ScreenEntryMotion.cs` | **NEW.** The 16 px entry rise on fade-path arrivals; skipped after a push. |
@@ -277,7 +278,44 @@ sweeps of reimport churn were caught and reverted rather than committed: 11 tree
 **3 `M_Splash*.mat`** (`m_CustomRenderQueue: 3100 → 3000`) after the Editor restart — the
 `M_Splash*` files are under a standing ban and were `git checkout`-ed, not staged.
 
-### A15 · The nav selected state — **PASS on the mechanism, evidence below**
+### A15 · The nav selected state — **PASS, both bars photographed**
+
+> **iter-2 addendum.** `golfin-reviewer` passed this item but flagged the evidence as the weakest
+> in the set: the GAME bar was photographed, the GPS bar was verified **in code only** — and SPEC
+> A15 names "the GPS hub selected slot (1)" explicitly. Code-sharing is an argument, not a
+> photograph, and this task had already been bitten once by a fix that was provably correct in
+> source and did nothing on screen (§ "It shipped broken once"). So the still was taken.
+>
+> **`screenshots/a15_nav_selected_states_both_bars.png`** — five states, one sheet:
+>
+> | Bar | Screen | Lit slot |
+> |---|---|---|
+> | GAME | Play pillar | Tee |
+> | GAME | Home | Home |
+> | GAME | Gacha pillar | Cards |
+> | GPS | `GpsHub` | Home |
+> | GPS | `GpsProfile` | Profile |
+>
+> The GPS pair is `screenshots/d7_gps_bar_hub_selected.png` and
+> `d7_gps_bar_profile_selected.png`, captured through **real navigation** — boot → the real
+> `StartButton` → the real `GpsPill.onClick` → the real `NavProfileButton.onClick` (no
+> `ShowScreen`, which swaps behind the title gate and makes `CurrentScreen` a false positive). The
+> log records the live `CurrentScreen` for each (`GpsHub`, `GpsProfile`) and the two md5s differ,
+> so neither is a stale frame. Same treatment on both bars: gold halo behind the lit slot, brighter
+> ring over it, glyph stays white, unselected slots keep their plain rim.
+>
+> Tooling: `Assets/Scripts/UI/Polish/Editor/GpsNavStillCapture.cs` (new, iter-2). It cost two real
+> bugs worth recording, both of which fail SILENTLY and both of which this project has hit before:
+> **(1)** entering play mode domain-reloads, which wiped the `EditorApplication.update`
+> subscription the first version armed — nothing ran at all; re-armed through `SessionState` +
+> `[InitializeOnLoad]`, the shape `GamePolishDemoRecorder` already uses. **(2)**
+> `CaptureCore.SnapPlayModeSafe` returned a path for a file it **never wrote** — in play mode it
+> uses `ScreenCapture.CaptureScreenshotAsTexture`, which returns null unless called at END of
+> frame, and on null it warns, skips the write, and still returns the filename. `yield return new
+> WaitForEndOfFrame()` fixes it. The capture asserts existence AND an md5 differing from the
+> previous frame, which is why both failures were caught instead of shipped as evidence.
+
+The mechanism itself:
 
 `grep -rn "iconActiveColor" Assets/Scripts`, every hit:
 
