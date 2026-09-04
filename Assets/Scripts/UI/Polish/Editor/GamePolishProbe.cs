@@ -210,6 +210,25 @@ namespace Golfin.UI.Polish.EditorTools
             {
                 yield return Until(() => ScreenManager.Instance != null, 30f, "ScreenManager");
                 yield return TapStart();
+
+                // DO NOT ASSUME THE TITLE GATE LANDS ON HOME. A session that has already passed
+                // the gate resumes on whatever screen it left — this run came up on GpsHub, where
+                // the shared bottom nav is hidden (ShowTopBarOnly), so every nav-slot tap in the
+                // route found no widget and the whole pass cascaded into nonsense. Home is reached
+                // explicitly, through the BOUNDARY navigation this task does not touch, so nothing
+                // the probe measures is affected by how it got there.
+                yield return Home();
+            }
+
+            /// <summary>Normalise to Home. Used at boot and between passes.</summary>
+            IEnumerator Home()
+            {
+                if (ScreenManager.Instance!.CurrentScreen != ScreenId.Home)
+                {
+                    Line("note: normalising to Home from " + ScreenManager.Instance.CurrentScreen +
+                         " via ShowScreen (a BOUNDARY move, unchanged by this task; NOT a tap)");
+                    ScreenManager.Instance.ShowScreen(ScreenId.Home);
+                }
                 yield return Until(() => ScreenManager.Instance!.CurrentScreen == ScreenId.Home, 25f, "Home");
                 yield return new WaitForSecondsRealtime(2f);
             }
@@ -236,6 +255,7 @@ namespace Golfin.UI.Polish.EditorTools
                 yield return Back(ScreenId.ModeSelection, "mission-selection back");
 
                 // ── Tournaments (the 0d42 background group) ──────────────────
+                yield return Ensure(ScreenId.ModeSelection);
                 yield return TapPath(ScreenId.ModeSelection, "TournamentTempEntry", ScreenId.TournamentSelection,
                                      "ModeSelection TournamentTempEntry");
                 yield return Shot("tournamentselection");
@@ -247,6 +267,7 @@ namespace Golfin.UI.Polish.EditorTools
                 yield return Shot("tournamentholeselection");
 
                 // ── GACHA pillar ─────────────────────────────────────────────
+                yield return Ensure(ScreenId.Home);
                 yield return NavSlot("NavGachaButton", ScreenId.GeneralShop, "bottom-nav GACHA");
                 yield return Shot("generalshop");
 
@@ -258,6 +279,7 @@ namespace Golfin.UI.Polish.EditorTools
                 yield return Shot("gachaprizes");
 
                 // ── INVENTORY pillar (+ the four tabs) ───────────────────────
+                yield return Ensure(ScreenId.Home);
                 yield return NavSlot("NavInventoryButton", ScreenId.Inventory, "bottom-nav INVENTORY");
                 yield return Shot("inventory_tab0");
                 for (int t = 1; t < 4; t++)
@@ -268,6 +290,7 @@ namespace Golfin.UI.Polish.EditorTools
                 yield return InventoryTab(0);
 
                 // ── CHARACTERS pillar ────────────────────────────────────────
+                yield return Ensure(ScreenId.Home);
                 yield return NavSlot("NavCharactersButton", ScreenId.Roster, "bottom-nav CHARACTERS");
                 yield return Shot("roster");
 
@@ -302,49 +325,74 @@ namespace Golfin.UI.Polish.EditorTools
 
             /// <summary>
             /// The mode cards are spawned at runtime by ModeSelectScreenController, so they are
-            /// found by walking the live CardsScrollView rather than by a serialized path. The
-            /// player's sequence is TAP THE CARD (it expands) then TAP PLAY, and that is what
-            /// this does — HandlePlayClicked is the only thing that navigates.
+            /// found by walking the live ScrollRect content rather than by a serialized path. The
+            /// player's sequence is TAP THE CARD (it expands, revealing ExpandedContainer) then
+            /// TAP THE ACTION BUTTON — HandlePlayClicked is the only thing that navigates — and
+            /// that is exactly what this does.
+            ///
+            /// <para>Which card carries which route is CSV data (ModesDatabaseCSV `target`), not
+            /// something a name can be trusted for, so the cards are tried in order and the one
+            /// that actually lands on <paramref name="target"/> wins. A card that routes somewhere
+            /// else is not a failure — the run walks back and tries the next one.</para>
             /// </summary>
             IEnumerator ModeCardPlay(ScreenId target, string what)
             {
-                GameObject? modeGo = Obj(ScreenId.ModeSelection);
-                Transform? content = modeGo != null
-                    ? modeGo.transform.Find("CardsContainer/CardsScrollView/Viewport/Content")
-                    : null;
-                if (content == null)
-                {
-                    // The viewport's content child is spawned by the controller; find it by walking.
-                    Transform? vp = modeGo != null
-                        ? modeGo.transform.Find("CardsContainer/CardsScrollView/Viewport") : null;
-                    if (vp != null && vp.childCount > 0) content = vp.GetChild(0);
-                }
+                Transform? content = ModeCardsContent();
                 if (content == null) { Line("WARN: " + what + " — no mode-card content"); yield break; }
 
-                foreach (Transform card in content)
+                int n = content.childCount;
+                for (int i = 0; i < n; i++)
                 {
-                    if (!card.gameObject.activeInHierarchy) continue;
-                    Transform? tap = card.Find("CardTapButton") ?? card;
-                    var tb = tap.GetComponent<Button>();
-                    if (tb != null && tb.interactable) { tb.onClick.Invoke(); yield return new WaitForSecondsRealtime(0.6f); }
+                    yield return Ensure(ScreenId.ModeSelection);
+                    content = ModeCardsContent();
+                    if (content == null || i >= content.childCount) break;
 
-                    Button? play = null;
-                    foreach (Button b in card.GetComponentsInChildren<Button>(false))
-                        if (b.name.IndexOf("Play", StringComparison.OrdinalIgnoreCase) >= 0
-                            && b.gameObject.activeInHierarchy && b.interactable) { play = b; break; }
-                    if (play == null) continue;
+                    Transform card = content.GetChild(i);
+                    if (!card.gameObject.activeInHierarchy) continue;
+
+                    // 1. expand the card (the real CardTapButton)
+                    var tap = card.Find("CardTapButton")?.GetComponent<Button>()
+                              ?? card.GetComponent<Button>();
+                    if (tap != null && tap.interactable) tap.onClick.Invoke();
+                    yield return new WaitForSecondsRealtime(0.8f);
+
+                    // 2. the real PLAY affordance — ModeCard.prefab names it ActionButton and
+                    //    parks it under ExpandedContainer, which only exists once expanded.
+                    var play = card.Find("ExpandedContainer/ActionButton")?.GetComponent<Button>();
+                    if (play == null || !play.gameObject.activeInHierarchy || !play.interactable)
+                    {
+                        Line("  card '" + card.name + "': no active ActionButton (locked or collapsed) — next");
+                        continue;
+                    }
 
                     ScreenId from = ScreenManager.Instance!.CurrentScreen;
-                    Line("tapping " + what + " on card '" + card.name + "' via '" + play.name + "' " + from + " -> " + target);
+                    Line("tapping " + what + " on card '" + card.name + "' via the real '" +
+                         play.name + "' " + from + " -> ?");
                     play.onClick.Invoke();
-                    yield return new WaitForSecondsRealtime(0.6f);
-                    if (ScreenManager.Instance!.CurrentScreen == target || IsNavigating())
+
+                    // The boundary fade is 0.5 s out + 0.5 s in; give it room, then read where we
+                    // actually landed rather than assuming.
+                    yield return new WaitForSecondsRealtime(1.6f);
+                    ScreenId now = ScreenManager.Instance!.CurrentScreen;
+                    if (now == target)
                     {
-                        yield return Arrive(target, 2.5f);
+                        Line("  -> landed on " + target + " (real card route)");
+                        yield return Arrive(target, 2f);
                         yield break;
                     }
+                    Line("  -> card '" + card.name + "' routed to " + now + ", not " + target + "; next card");
                 }
                 Line("WARN: " + what + " — no card routed to " + target);
+            }
+
+            static Transform? ModeCardsContent()
+            {
+                GameObject? modeGo = Obj(ScreenId.ModeSelection);
+                if (modeGo == null) return null;
+                // The ScrollRect owns the content rect; asking IT is proof against the container
+                // being renamed or re-parented, which a hard-coded path is not.
+                var sr = modeGo.GetComponentInChildren<ScrollRect>(true);
+                return sr != null ? sr.content : null;
             }
 
             IEnumerator InventoryTab(int index)
@@ -418,6 +466,20 @@ namespace Golfin.UI.Polish.EditorTools
                 yield return Arrive(target, 2.5f);
             }
 
+            /// <summary>
+            /// Put the run back on <paramref name="id"/> when the previous leg did not land where
+            /// it meant to, so ONE missed widget cannot cascade into a route of wrong screens
+            /// captured under right names. Says so when it has to act.
+            /// </summary>
+            IEnumerator Ensure(ScreenId id)
+            {
+                if (ScreenManager.Instance!.CurrentScreen == id) yield break;
+                Line("note: route is on " + ScreenManager.Instance.CurrentScreen + ", expected " + id +
+                     " — re-seating via ShowScreen (NOT a tap)");
+                ScreenManager.Instance.ShowScreen(id);
+                yield return Arrive(id, 2f);
+            }
+
             IEnumerator Tap(Transform? t, ScreenId target, string what)
             {
                 var b = t != null ? t.GetComponent<Button>() : null;
@@ -428,8 +490,6 @@ namespace Golfin.UI.Polish.EditorTools
                 b.onClick.Invoke();
                 yield return Arrive(target, 3f);
             }
-
-            static bool IsNavigating() => true;
 
             // ═════════════════════════════════════════════════════════════════
             // Plumbing

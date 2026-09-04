@@ -367,6 +367,14 @@ namespace GolfinRedux.UI
             if (Golfin.Gps.UI.GpsScreenTransition.IsPushing)
                 Golfin.Gps.UI.GpsScreenTransition.CompleteActiveNow();
 
+            // game_polish_a §D1.5 — the same guard for the game shell's own push. Two independent
+            // transitions can never be in flight at once (a GPS screen and a game screen are never
+            // both the current screen), but each needs its own check because each owns its own
+            // rest state, and whichever one IS running has to be settled before the next
+            // navigation moves anything.
+            if (Golfin.UI.Polish.LayeredPush.IsPushing)
+                Golfin.UI.Polish.LayeredPush.CompleteActiveNow();
+
             // If no fade system, or caller requests instant, just swap
             if (instant || FadeController.Instance == null)
             {
@@ -389,6 +397,31 @@ namespace GolfinRedux.UI
                 ScreenId target = screenId;
                 StartCoroutine(Golfin.Gps.UI.GpsScreenTransition.Push(
                     fromGo, toGo, dir, () => ApplyScreen(target)));
+                return;
+            }
+
+            // game_polish_a §D1.5 — the ONE branch for the GAME shell, in the same shape as the
+            // GPS one above and immediately after it. Both ends are shell screens of the same
+            // pillar (or the three-screen Rankings group), both carry the chrome / content split,
+            // and — Cesar's rule — both draw the SAME background sprite: the screens push
+            // laterally instead of going through black.
+            //
+            // Everything else falls through to the untouched FadeController path below: every Home
+            // move, every cross-pillar move, and every in-pillar move whose backdrop changes
+            // (ModeSelection ↔ TournamentSelection, HoleSelection ↔ Leaderboard,
+            // TournamentHoleSelection ↔ TournamentLeaderboard). A fade to black is the game-wide
+            // "you have left where you were", and a push under a changing backdrop reads as the
+            // room being swapped out from under the furniture.
+            GameObject? shellFrom = ShellScreenObject(_currentScreen);
+            GameObject? shellTo   = ShellScreenObject(screenId);
+            if (Golfin.UI.Polish.LayeredPush.CanPush(_currentScreen, screenId, shellFrom, shellTo)
+                && isActiveAndEnabled && shellFrom != null && shellTo != null)
+            {
+                var gdir = Golfin.UI.Polish.LayeredPush.DirectionFor(_currentScreen, screenId, push);
+                ScreenId gtarget = screenId;
+                ScreenId gfrom   = _currentScreen;
+                StartCoroutine(Golfin.UI.Polish.LayeredPush.Push(
+                    gfrom, gtarget, shellFrom, shellTo, gdir, () => ApplyScreen(gtarget)));
                 return;
             }
 
@@ -422,6 +455,40 @@ namespace GolfinRedux.UI
                 case ScreenId.GpsVote:        return _gpsVoteScreen;
                 case ScreenId.GpsRounds:      return _gpsRoundsScreen;
                 default:                      return null;
+            }
+        }
+
+        /// <summary>
+        /// The screen GameObject for a pushable GAME shell <see cref="ScreenId"/>, or null for
+        /// anything else. The sibling of <see cref="GpsScreenObject"/>, and deliberately just as
+        /// narrow.
+        ///
+        /// <para>NOT a general id → GameObject map, for the reason GpsScreenObject gives:
+        /// <see cref="ApplyScreen"/> is a flat wall of <c>SetActive</c> calls, several of which do
+        /// more than toggle (Roster switches starter mode from the same branch), and a general
+        /// accessor would invite callers to reach past that logic. This one answers the single
+        /// question the push asks — "which two objects am I sliding?" — and returns null the
+        /// moment the id is one the push will not touch. Home and the two StaminaShop screens are
+        /// absent on purpose: Home always fades (Cesar's rule) and the shop screens have no chrome
+        /// layer to hold still (<see cref="Golfin.UI.Polish.LayeredPush.LayerMap"/> says the same,
+        /// so a mistake here fails closed to the fade rather than to a broken push).</para>
+        /// </summary>
+        private GameObject? ShellScreenObject(ScreenId id)
+        {
+            switch (id)
+            {
+                case ScreenId.ModeSelection:           return _modeSelectionScreen;
+                case ScreenId.HoleSelection:           return _holeSelectionScreen;
+                case ScreenId.MissionSelection:        return _missionSelectionScreen;
+                case ScreenId.TournamentHoleSelection: return _tournamentHoleSelectionScreen;
+                case ScreenId.TournamentSelection:     return _tournamentSelectionScreen;
+                case ScreenId.TournamentLeaderboard:   return _tournamentLeaderboardScreen;
+                case ScreenId.Leaderboard:             return _leaderboardScreen;
+                case ScreenId.GeneralShop:             return _generalShopScreen;
+                case ScreenId.GachaHistory:            return _gachaHistoryScreen;
+                case ScreenId.GachaPrizes:             return _gachaPrizesScreen;
+                case ScreenId.Inventory:               return _inventoryScreen;
+                default:                               return null;
             }
         }
 

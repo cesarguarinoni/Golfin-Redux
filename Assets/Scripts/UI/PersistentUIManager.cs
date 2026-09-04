@@ -55,7 +55,32 @@ namespace Golfin.UI
         public Image charactersIcon;
 
         public Color iconNormalColor = Color.white;
+
+        /// <summary>
+        /// DEAD, and kept only so existing prefabs deserialize without a warning.
+        ///
+        /// <para>game_polish_a §D7 replaced the tinted-slot selected state. Each nav slot is ONE
+        /// baked sprite carrying navy disc, gold ring and white glyph, so tinting it cyan turned
+        /// all three cyan — Cesar, 2026-09-03: it "looks ugly". The selected state is now a gold
+        /// halo plus a brighter ring, drawn by <see cref="Golfin.UI.Polish.NavSlotHighlight"/>,
+        /// and every slot's <c>Image.color</c> stays <see cref="iconNormalColor"/> (white) on
+        /// every screen. Nothing reads this at runtime any more —
+        /// <c>grep -rn "iconActiveColor" Assets/Scripts</c> is the A15 evidence.</para>
+        /// </summary>
+        [System.Obsolete("game_polish_a §D7 — the selected state is NavSlotHighlight (gold halo + " +
+                         "brighter ring). This field is unread; it survives only for prefab compatibility.")]
+        [Tooltip("UNUSED since game_polish_a §D7 — the selected state is NavSlotHighlight.")]
         public Color iconActiveColor = Color.cyan;
+
+        [Header("Bottom Nav Selected State (game_polish_a §D7)")]
+        [Tooltip("Gold halo behind a selected 156 px slot. Baked by Docs/Scripts/make_nav_selected.py.")]
+        public Sprite? navSlotGlowSmall;
+        [Tooltip("Gold halo behind the selected 238 px TEE / CAMERA slot.")]
+        public Sprite? navSlotGlowLarge;
+        [Tooltip("Brighter #FCF195 ring over a selected 156 px slot.")]
+        public Sprite? navSlotRingSmall;
+        [Tooltip("Brighter #FCF195 ring over the selected 238 px TEE / CAMERA slot.")]
+        public Sprite? navSlotRingLarge;
 
         public enum Screen
         {
@@ -746,13 +771,40 @@ namespace Golfin.UI
             UpdateScreenHighlight();
         }
 
+        /// <summary>
+        /// True until the first highlight has been painted. The very first paint after boot is
+        /// NOT animated — a cold screen should not cross-fade its chrome into place before the
+        /// player has touched anything (§D7.2, "animate:false on the first paint").
+        /// </summary>
+        private bool _firstHighlight = true;
+
+        /// <summary>
+        /// game_polish_a §D7 — the selected slot, said with LIGHT rather than with a tint.
+        ///
+        /// <para>Every slot's Image.color is now <see cref="iconNormalColor"/> unconditionally;
+        /// what marks the selection is <see cref="Golfin.UI.Polish.NavSlotHighlight"/>'s gold halo
+        /// and brighter ring, cross-faded in over <c>UiMotion.FadeDur</c> with one pulse on the
+        /// slot that just became current. The SAME component and the SAME Attach() call drive the
+        /// GPS bar from <c>GpsNavBarHighlight</c>, so the two bars cannot drift.</para>
+        /// </summary>
         private void UpdateScreenHighlight()
         {
-            if (homeIcon != null)       homeIcon.color       = (currentScreen == Screen.Home)       ? iconActiveColor : iconNormalColor;
-            if (gachaIcon != null)      gachaIcon.color      = (currentScreen == Screen.Gacha)      ? iconActiveColor : iconNormalColor;
-            if (mainPlayIcon != null)   mainPlayIcon.color   = (currentScreen == Screen.MainPlay)   ? iconActiveColor : iconNormalColor;
-            if (inventoryIcon != null)  inventoryIcon.color  = (currentScreen == Screen.Inventory)  ? iconActiveColor : iconNormalColor;
-            if (charactersIcon != null) charactersIcon.color = (currentScreen == Screen.Characters) ? iconActiveColor : iconNormalColor;
+            bool animate = !_firstHighlight;
+            _firstHighlight = false;
+
+            Paint(homeIcon,       Screen.Home,       animate);
+            Paint(gachaIcon,      Screen.Gacha,      animate);
+            Paint(mainPlayIcon,   Screen.MainPlay,   animate);
+            Paint(inventoryIcon,  Screen.Inventory,  animate);
+            Paint(charactersIcon, Screen.Characters, animate);
+        }
+
+        private void Paint(Image icon, Screen slot, bool animate)
+        {
+            if (icon == null) return;
+            // The glyph is white on every screen now — never tinted, selected or not.
+            icon.color = iconNormalColor;
+            Golfin.UI.Polish.NavSlotHighlight.Attach(icon)?.SetSelected(currentScreen == slot, animate);
         }
 
         public void ShowTopBar(bool show)

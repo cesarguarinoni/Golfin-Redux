@@ -17,9 +17,18 @@
 //     Image.color set here MULTIPLIES with the Selectable's CanvasRenderer tint
 //     instead of being overwritten by it. That is why it works in the Game.
 //
-// THE COLOURS ARE READ FROM PersistentUIManager, not copied. One source of
-// truth: retune the Game's highlight and GPS follows on the next frame it
-// paints. The white/cyan fallback only matters if the shell manager is missing.
+// game_polish_a §D7 — WHAT "the same way" MEANS CHANGED, AND SO DID THIS FILE.
+// The Game bar no longer tints the slot: a slot is one baked sprite carrying
+// navy disc, gold ring and white glyph, and tinting it turned all three cyan
+// (Cesar, 2026-09-03: it "looks ugly"). The selected state is now a gold halo
+// behind the slot and a brighter #FCF195 ring over it, and it is drawn by
+// Golfin.UI.Polish.NavSlotHighlight. This file follows the Game bar by calling
+// the SAME NavSlotHighlight.Attach() the Game bar calls — one component, one
+// definition of what a highlight is, so the two bars cannot drift. It is the
+// ONLY file under Assets/Scripts/UI/Gps this task touches.
+//
+// STILL READ FROM PersistentUIManager, not copied: the normal colour AND now the
+// two halo/ring sprites. One source of truth, the same property as before.
 //
 // WHICH SLOT LIGHTS IS DECIDED BY THE SCREEN'S OWN NAME, not by asking
 // ScreenManager what is current. The bar is cloned onto every GPS screen, so
@@ -73,18 +82,25 @@ namespace Golfin.Gps.UI
 
         private void OnEnable() => Apply();
 
+        /// <summary>
+        /// The first paint on a freshly enabled bar is NOT animated. Every GPS screen carries its
+        /// OWN clone of the bar, so arriving on a screen enables a bar that has never painted —
+        /// cross-fading its halo up at that moment would read as the selection arriving late,
+        /// after the screen it belongs to. Same rule as the Game bar's first paint.
+        /// </summary>
+        private bool _firstPaint = true;
+
         private void Apply()
         {
             Transform? bar = GpsScreenTransition.FindLayer(gameObject, "GpsNavBar");
             if (bar == null) return;
 
-            Color normal = Color.white, active = Color.cyan;   // only if the shell is absent
+            Color normal = Color.white;                        // only if the shell is absent
             var shell = Golfin.UI.PersistentUIManager.Instance;
-            if (shell != null)
-            {
-                normal = shell.iconNormalColor;
-                active = shell.iconActiveColor;
-            }
+            if (shell != null) normal = shell.iconNormalColor;
+
+            bool animate = !_firstPaint;
+            _firstPaint = false;
 
             string? lit = SlotFor(gameObject.name);
             foreach (string slot in Slots)
@@ -92,7 +108,9 @@ namespace Golfin.Gps.UI
                 Transform? t = bar.Find(slot);
                 var img = t != null ? t.GetComponent<Image>() : null;
                 if (img == null) continue;
-                img.color = slot == lit ? active : normal;
+                // The glyph stays white on every screen — the selection is the halo, not a tint.
+                img.color = normal;
+                Golfin.UI.Polish.NavSlotHighlight.Attach(img)?.SetSelected(slot == lit, animate);
             }
         }
     }
