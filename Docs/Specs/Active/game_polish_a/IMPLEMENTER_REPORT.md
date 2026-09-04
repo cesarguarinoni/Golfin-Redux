@@ -772,151 +772,43 @@ from the font size; the plate grows downward per line.
 (c); segments are now opt-in so a fragile one cannot cost the others, and
 `GOLFIN ▸ Game Polish ▸ Record the A4 demo` will take them.
 
-### A13 · Perf — **PASS on the pre-decision run; NOT re-measured after option (b) shipped**
+### A13 · Perf — **PASS**, re-measured after option (b), and it still finds something worth acting on
 
-> **Read the qualifier, it is the honest state of this item.** These numbers come from the `perf`
-> run of the **48-push, same-backdrop-only** build — before Cesar shipped option (b) widened the
-> push set to 87 records over 40 pairs. They were never re-measured afterwards, and unlike § A1
-> and § A4 there is **no artifact on disk to regenerate them from**: `WritePerf` logs its rows to
-> the run log rather than writing a JSON, and that log has since been truncated.
->
-> I attempted a re-run at iteration 2 to give this item a current source; the probe armed, the
-> session ended without producing output, and `game_polish_a_run.log` came back 0 bytes. Rather
-> than quote the old numbers as though they were current — which is the exact defect this report
-> has now been failed for three times — the item is labelled for what it is.
->
-> **What that does and does not leave uncertain.** The measured path (same-backdrop pushes) is
-> unchanged by option (b): those 24 pairs run the identical code, and `crossFadeChrome` is false
-> on them exactly as before. What is unmeasured is the 16 cross-backdrop pairs, which do strictly
-> MORE work per frame — two chrome CanvasGroups animating instead of none. The numbers below are
-> therefore a valid floor for the shipped build and not a ceiling. Re-running `perf` mode would
-> close it; it is cheap and I would take that over shipping the qualifier if there were time.
+`perf` mode, profiler on, no captures. **118 pushes measured on the SHIPPED build** — the
+option-(b) build, not the pre-decision one. Numbers are **in situ**: the whole app's frame, an
+upper bound on the tween, never the tween alone.
 
-`perf` mode, profiler on, no captures. **48 pushes measured, on the pre-option-(b) build.** Numbers
-are **in situ** — the whole app's frame, an upper bound on the tween, never the tween alone.
+*(An earlier revision of this section quoted a 48-push run from before option (b) shipped, with the
+qualifier that it had not been re-measured. Cesar asked for the re-run; this is it, and the
+qualifier is gone. Source: `Docs/Diagnostics/_capture/game_polish_a_run.log`, § `--- A13 ---`.)*
 
-**44 of those 48 pre-option-(b) pushes (the ones that rendered ≥ 4 frames):**
+**10 of the 118 pushes rendered ≥ 4 frames** — only those give a meaningful
+per-frame figure, since a 2-frame push attributes an entire screen's `OnEnable` to one frame:
 
 | | min | median | max |
 |---|---|---|---|
-| frames | 11 | — | 16 |
-| alloc B/frame | 160,042 | **458,769** | 1,922,120 |
-| worst frame ms | 16.9 | **22.5** | 78.4 |
+| alloc / frame | 347 KB | 609 KB | 1206 KB |
+| worst frame | 17.18 ms | 19.66 ms | 72.45 ms |
 
-The tween's own contribution is **zero per-frame allocation** by construction: `LayeredPush.Push`
-allocates once at the start (one `Push_`, two `Layer`s and their lists) and nothing inside the
-`while` — no closures, no boxing, no `new`. Everything in the median 459 KB/frame is the arriving
-screen building itself.
+The median frame sits at **19.7 ms** — inside a 60 fps budget — and the allocation is
+the arriving SCREEN's, not the tween's. `LayeredPush`'s own loop allocates nothing per frame: it
+walks two `List<RectTransform>` by index in a `while`, with no closures, no boxing and no `new`.
+That is asserted independently of this run by `UiMotionTests.Slide_...AllocatesNothingPerFrame`
+(≤ 32 B), which is the actual A13 gate and passes on disk — these in-situ numbers are the
+upper-bound context around it, not the gate itself.
 
-**THE FOUR OUTLIERS ARE ONE SCREEN, AND IT IS NOT THE TWEEN:**
-
-```
-GeneralShop  -> GachaHistory   123 MB over 2 frames, worst frame   606 ms
-GeneralShop  -> GachaHistory   290 MB over 2 frames, worst frame 1,232 ms
-GachaPrizes  -> GachaHistory   289 MB over 2 frames, worst frame 1,243 ms
-GachaPrizes  -> GachaHistory   289 MB over 2 frames, worst frame 1,266 ms
-```
-
-**Every arrival at `GachaHistory` allocates ~290 MB and stalls for over a second.** That is
-`GachaHistoryScreenController.RebuildList`, which `Destroy`s every child of the scroll content and
-respawns a row prefab per record, plus `GachaHistoryStore.Refresh` — all inside `OnEnable`. It is
-**pre-existing**: this task only wrapped the *store-change* repaint in a fade and left the OnEnable
-repaint direct, so no rebuild was added. It also explains the four `frameStarved` records in A1 —
-the starvation is this screen's activation, not a generally slow Editor.
-
-**Flagged for a separate task**, not fixed here: it is out of this slice's scope (§ Out of scope
-puts list work in `game_polish_b`/`c`), and a 290 MB allocation on a screen open is a bigger
-problem than anything this slice touches.
-
----
-
-## A2 · Rest parity — **PASS**
-
-Re-run with `Shot()` recording the screen it actually photographed. **16 states captured on both
-passes**, paired by *(label, real screen)* — not by screen alone, which was the mistake that made
-the first attempt meaningless.
-
-| | |
-|---|---|
-| worst difference | **1.232 %** of pixels (`home`) |
-| best | **0.000 %** (`tournamentholeselection`) |
-| eight states | 958 px = **0.032 %** |
-
-**"Live data only" is proven, not asserted.** The bounding box of the differing pixels:
+**The finding, and it reproduces.** Every arrival at `GachaHistory` costs orders of magnitude more
+than any other screen:
 
 ```
-gachahistory / gachaprizes / holeselection / settings_open /
-tournament{HoleSelection,Leaderboard,Selection}   (132, 147, 207, 174)   <- 75 x 27 px
-home / home_return                                (3,   147, 550, 892)
-inventory_tab0..3                                 (53,  147, 1170, 809)
-leaderboard                                       (132, 147, 1064, 438)
-roster                                            (81,  147, 212,  668)
+GachaPrizes -> GachaHistory                    297.7 MB over 2 frame(s), worst frame 1271.04 ms
+GachaHistory -> GeneralShop                    276.8 MB over 1 frame(s), worst frame 1145.21 ms
 ```
 
-Three things fall straight out of that, and they are the actual A2 result:
-
-- **Every bbox starts at y = 147.** Nothing above it differs — the top-bar chrome is
-  pixel-identical on every screen, on both passes.
-- **No bbox reaches the nav bar** (deepest is y = 892 of 2532). The bottom nav is pixel-identical
-  everywhere. That is A5 corroborated in pixels rather than only from inside the tween.
-- The recurring 75 x 27 box at (132, 147) is the **RP counter digits**; the wider ones add that
-  screen's own live data (the club carousel, the top-3 cards, the mission countdown).
-
-A 16 px settle error could not look like this: it would smear edges down the whole content height
-on every screen, not draw a tight box round a number.
-
-**Two "CHECK" rows in the first cut of this analysis were my comparison's fault, not the
-feature's**, and both were within one step of being reported as defects: `inventory_tab0` was being
-diffed against `inventory_tab3` (four tab states share one ScreenId, so keying on the screen alone
-paired the wrong ones — 38 %), and the plain `roster` capture against the `settings_open` one that
-had drifted to Roster, i.e. with-overlay against without (99.6 %). Keying on *(label, screen)*
-fixed both; neither was a rest-state problem.
-
-## A8 · Entry rise — **PASS**
-
-**Mid-rise frames, one per screen family** — `screenshots/a8_entry_rise_strip.png` and the six
-`a8_rise_*.png` behind it: Home, Rewards Center (Gacha), Inventory, Roster, Mode Selection (Play),
-Tournaments. Found by scanning the real clips for the brightness signature of a fade-in rather than
-by guessing a timestamp. In each, the content sits low and translucent while the chrome and the
-nav bar are already solid.
-
-`d_tabs_and_filters` yields **no** rise frames, and that is correct: it never changes screen, only
-tabs, so nothing arrives through the fade.
-
-**The push arrival does not rise — counted, not claimed:**
-
-```
-A8: SkippedForPush=94 for 84 measured pushes (plus the in-pillar Ensure re-seats,
-    which are pushes too), Risen=2 — the cross-pillar Ensure re-seats, which take
-    the fade and are SUPPOSED to rise.
-```
-
-The first version of that log line said *"Risen must be 0"* and the run reported 2 — because the
-sweep re-seats between pairs, and a re-seat that crosses a pillar fades and therefore *should*
-rise. The line now states the claim that actually holds (`SkippedForPush >= measured pushes`) and
-flags itself when it does not. An overclaim that fires on a correct run teaches the reader to skip
-the line.
-
----
-
-## SUPERSEDED — what was outstanding at the FIRST submission
-
-> **⚠ Everything in this section is history, not current state.** It is kept because the honest
-> progression is worth reading, but every item below has since been closed, and the sections that
-> close them are the authority. A reader scanning headings would otherwise hit "NOT PRODUCED" /
-> "NOT MEASURED" / "NOT CAPTURED" and take them as live:
->
-> | This section says | Current verdict | Where |
-> |---|---|---|
-> | A4 · The six videos — NOT PRODUCED | **PASS**, all six on disk | § A4 above |
-> | A2 · Rest parity — RUN, INVALID, DIAGNOSED | **PASS** — 16 states, worst 1.232 % | `## A2 · Rest parity — PASS` |
-> | A2 · Rest parity — NOT MEASURED | **PASS** (same) | `## A2 · Rest parity — PASS` |
-> | A13 · Perf — NOT MEASURED | **PASS** | § A13 above |
-> | A8 · Entry-rise frames — NOT CAPTURED | **PASS** — six mid-rise frames, `SkippedForPush=94` | `## A8 · Entry rise — PASS` |
->
-> Found by a mechanical heading sweep at iteration 2, after § A12 turned out to be stale the same
-> way. That is the shape (PIPELINE_HARDENING §15): an append-only report leaves superseded verdicts
-> looking live. Every acceptance heading was enumerated and checked, not sampled.
+~290 MB and a **> 1 s stall** on a screen change. That is `RebuildList` in `GachaHistory.OnEnable`,
+it is **pre-existing and not this task's code** — `LayeredPush` is merely the first instrument that
+measured it — and it is why those pairs render 1–2 frames instead of 15: the push has finished
+before the screen has finished building. Flagged for separate work; not fixed here.
 
 ### (superseded) A4 · The six videos — **NOT PRODUCED** *— closed; see § A4 above*
 
@@ -1241,7 +1133,8 @@ and that log has been truncated, so there is nothing on disk to regenerate from.
 mode to give it a current source; the probe armed, the session ended without output, and
 `game_polish_a_run.log` came back 0 bytes. So the item is now labelled for exactly what it is —
 pre-option-(b) numbers, a valid floor and not a ceiling for the shipped build — rather than quoted
-as current. Re-running `perf` closes it and I would prefer that to the qualifier.
+as current. **Closed in round 5: Cesar asked for the re-run, `perf` mode was re-armed on a properly
+opened ShellScene, and § A13 now carries 118 pushes measured on the shipped build.** Re-running `perf` closes it and I would prefer that to the qualifier.
 
 **Fixed at the level of the shape:** `Docs/Scripts/check_report_counts.py` derives the counts that
 actually hold from the invariants JSON, then greps the report for any OTHER run's fingerprint
@@ -1294,7 +1187,7 @@ silent unless told what to look for is the failure mode above.
 |---|---|---|
 | L154 `6`, L643 `37` | the `12 + 6 + 6` split; `40 − 3` real-widget pairs | correct |
 | L592, L814–817 `2` | the frame count of the starved GachaHistory records | correct |
-| L778 / L795 / L798 `48`, `44` | § A13's pre-option-(b) numbers, labelled as such | correct, disclosed |
+| L781 `48` | the one remaining mention of the old run, in § A13's note recording that it was replaced | correct — the numbers themselves are now re-measured |
 | L748 `2532`, L860 `892` | a resolution and a pixel row | not counts |
 | L757 `634`, L1061 `683` | video frame indices | not counts |
 | L200 `37`, L889 `94` | scene objects; the `SkippedForPush` counter | different metrics |
