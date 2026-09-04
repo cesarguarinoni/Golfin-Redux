@@ -42,6 +42,9 @@ namespace Golfin.UI.Polish.EditorTools
     {
         const string OutputDir = "Docs/Specs/Active/game_polish_a/videos";
         const string ArmedKey  = "GamePolishDemoRecorder.Armed";
+        /// <summary>Which segments this run records — "all", or a string containing the ids
+        /// wanted, e.g. "af". See the runner's Want().</summary>
+        public const string SegmentsKey = "GamePolishDemoRecorder.Segments";
         static RecorderController? _recorder;
 
         [InitializeOnLoadMethod]
@@ -52,8 +55,14 @@ namespace Golfin.UI.Polish.EditorTools
         }
 
         [MenuItem("GOLFIN/Game Polish/Record the A4 demo (six segments, one take)", priority = 265)]
-        public static void LaunchDemo()
+        public static void LaunchDemo() => LaunchDemo("all");
+
+        [MenuItem("GOLFIN/Game Polish/Record the A4 demo — (a) + option (b) only", priority = 266)]
+        public static void LaunchDemoAF() => LaunchDemo("af");
+
+        public static void LaunchDemo(string segments)
         {
+            EditorPrefs.SetString(SegmentsKey, segments);
             if (EditorApplication.isPlaying) { Debug.LogWarning("[GamePolishDemo] Already playing — stop first."); return; }
             Directory.CreateDirectory(OutputDir);
             SessionState.SetBool(ArmedKey, true);
@@ -136,6 +145,7 @@ namespace Golfin.UI.Polish.EditorTools
     public class GamePolishDemoRunner : MonoBehaviour
     {
         const string OutputDir = "Docs/Specs/Active/game_polish_a/videos";
+        const string SegmentsKey = GamePolishDemoRecorder.SegmentsKey;
 
         float _t0;
         readonly List<(string id, string caption, float start, float end, bool flag)> _segments
@@ -156,25 +166,41 @@ namespace Golfin.UI.Polish.EditorTools
             Line("=== A4 demo " + DateTime.UtcNow.ToString("u") + " ===");
             yield return Boot();
 
-            yield return Segment("a_play_pillar",
-                "(a) PLAY pillar — push between same-background screens, then the new nav selected state",
-                PlayPillar);
+            // SEGMENTS ARE OPT-IN, and this is scar tissue rather than caution. A single take of
+            // all six wedged twice: segment (b) waits on the tournament server (48 s of timeouts)
+            // and segment (c) never finished at all, so the recorder never reached StopRecording
+            // and raw.mp4 stayed at 0 bytes — a full-take failure loses the segments that DID
+            // record. The set is now chosen per run through EditorPrefs, so the fragile ones can
+            // be recorded separately and a failure costs only that run.
+            string only = EditorPrefs.GetString(SegmentsKey, "all");
+            bool Want(string id) => only == "all" || only.Contains(id);
 
-            yield return Segment("b_tournaments",
-                "(b) Tournaments / Rankings — the three screens that share a backdrop",
-                Tournaments);
+            if (Want("a"))
+                yield return Segment("a_play_pillar",
+                    "(a) PLAY pillar — push between same-background screens, then the new nav selected state",
+                    PlayPillar);
 
-            yield return Segment("c_gacha_pillar",
-                "(c) GACHA pillar — Rewards Center to History and back",
-                GachaPillar);
+            if (Want("b"))
+                yield return Segment("b_tournaments",
+                    "(b) Tournaments / Rankings — the three screens that share a backdrop",
+                    Tournaments);
 
-            yield return Segment("d_tabs_and_filters",
-                "(d) Tabs cross-fade — Inventory x4, Rankings x4, the gacha log",
-                TabsAndFilters);
+            if (Want("c"))
+                yield return Segment("c_gacha_pillar",
+                    "(c) GACHA pillar — Rewards Center to History and back",
+                    GachaPillar);
 
-            yield return Segment("e_settings",
-                "(e) Settings — scrim fades, panel pops, two accordion rows open",
-                Settings);
+            if (Want("d"))
+                yield return Segment("d_tabs_and_filters",
+                    "(d) Tabs cross-fade — Inventory x4, Rankings x4, the gacha log",
+                    TabsAndFilters);
+
+            if (Want("e"))
+                yield return Segment("e_settings",
+                    "(e) Settings — scrim fades, panel pops, two accordion rows open",
+                    Settings);
+
+            if (!Want("f")) { Finish(); yield break; }
 
             // ── (f) the option Cesar judges, and the ONLY place the flag moves ──
             bool armed = false;
@@ -193,8 +219,13 @@ namespace Golfin.UI.Polish.EditorTools
             LayeredPush.AllowBackgroundCrossFade = false;
             Line("OPTION (b) restored: AllowBackgroundCrossFade = " + LayeredPush.AllowBackgroundCrossFade);
 
+            Finish();
+        }
+
+        void Finish()
+        {
             WriteSidecar();
-            Line("=== done — stop play mode to flush the recording ===");
+            Line("=== done — stopping play mode to flush the recording ===");
             EditorApplication.ExitPlaymode();
         }
 

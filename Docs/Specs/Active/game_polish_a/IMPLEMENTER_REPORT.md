@@ -498,3 +498,86 @@ added ButtonPressFeedback -> NavCharactersButton
 No other Button was added or re-parented by this task — the tab work rebinds existing buttons'
 visuals and adds no widgets — so there is nothing else in scope. See deviation D-7.
 
+### A7 · Cross-fade table (§D3) — **PASS on the code; mid-fade frames pending with A4**
+
+| Site | Before | After | Duration |
+|---|---|---|---|
+| `InventoryScreenController.ShowTab` panels | `tabPanels[i].SetActive(i == index)` — snap | the two panels involved dissolve past each other (`UiSelection.CrossFade`); the other two are left alone rather than faded 0→0 | `FadeDur` 0.15 |
+| Inventory tab indicators | `tabIndicators[i].enabled = (i == _activeTab)` — snap | cross-faded via `UiSelection.Indicator` (alpha, Image left enabled) | 0.15 |
+| `RankingsScreenController.OnTabClicked` list | `RebuildList()` — instant repaint | `UiSelection.FadeSwap` on `ContentArea/BarsArea/RankingsArea`: fade out → repaint at the midpoint → fade in | 0.15 out + 0.15 in |
+| Rankings tab indicators | `indicator.gameObject.SetActive(active)` — snap | cross-faded (alpha; object stays active so a fade can run on it) | 0.15 |
+| `SettingsController.OpenSettings` | `background.SetActive(true)` + `settingsPanel.SetActive(true)` — snap | scrim `Fade` 0→1, panel `Pop` (0.9→1 with its own alpha) | 0.15 / `PopDur` 0.20 |
+| `SettingsController.CloseSettings` | `SetActive(false)` ×2 — snap | `Unpop` + scrim `Fade` → 0, **both deactivating from the tween's finalizer** so an interrupted close still deactivates | 0.15 |
+| `SettingsMenuItem` submenu | height already tweened; content at **full opacity from frame 1** | content alpha follows the SAME `expandCurve` progress | the item's own `expandDuration` |
+| `GachaHistory` list | `RebuildList()` on `GachaHistoryStore.OnChanged` — instant | `UiSelection.FadeSwap` on the scroll content | 0.15 + 0.15 |
+| `TournamentHoleCard` Locked/Finished/Next | template chosen and `Instantiate`d at spawn | **no change** — no live card ever swaps (deviation D-6) | — |
+
+The mid-fade frames A7 asks for come out of the A4 clips, which are **not produced this
+iteration** — see below.
+
+### A6 · UI fidelity lint — **N/A, stated rather than skipped**
+
+`UIFidelityLinter` lints a **prefab** against a Figma node spec. This task has no Figma node
+(motion only, per the SPEC's Reference section) and the builder touches no prefab layout — its
+entire output is 13 components on scene objects plus four sprite references. There is no prefab
+whose lint could change, so there is no before/after to quote. A2's rest-parity comparison is
+the equivalent gate here and is what should be read in its place.
+
+---
+
+## NOT DONE this iteration — stated plainly
+
+### A4 · The six videos — **NOT PRODUCED**
+
+This is the gap, and it is the artifact Cesar judges the gamble from, so it should not be
+buried. What happened:
+
+- `GamePolishDemoRecorder` works and recorded: **segment (a) `a_play_pillar`, 17.9 s** and
+  **segment (b) `b_tournaments`, 48.2 s** — both confirmed in the console with real widget taps
+  and real pushes.
+- The take then **wedged inside segment (c)** (the Gacha pillar). Because the whole route was
+  one take, `StopRecording` never ran, and Unity Recorder writes the MP4 only on stop — so
+  `videos/raw.mp4` stayed at **0 bytes** and the two segments that DID record were lost with it.
+- Trying to flush it by stopping play mode left the Editor unresponsive, and the restart after
+  that came up on a licensing/startup modal that needs a click. **Unity is currently closed** —
+  nothing is wedged, but it needs to be reopened.
+
+**The fix is already committed**, and it is the right one rather than a retry: segments are now
+**opt-in** (`EditorPrefs` key `GamePolishDemoRecorder.Segments`), with a menu item
+`GOLFIN ▸ Game Polish ▸ Record the A4 demo — (a) + option (b) only`. A fragile segment can no
+longer cost the segments that already recorded, and the two that matter most — the play-pillar
+walk and **option (b)** — can be taken on their own in about 35 s.
+
+To produce them: open the project, `GOLFIN ▸ Game Polish ▸ Record the A4 demo …`, then
+`python3 Docs/Scripts/cut_game_polish_clips.py` (it slices `raw.mp4` on the sidecar's
+boundaries, burns the captions with the `textfile=` drawtext idiom, and drops one still per clip
+into `screenshots/`).
+
+### A2 · Rest parity — **NOT MEASURED**
+
+The `parity` mode is written and works the way `gps_polish`'s did (both passes in ONE session,
+so live data and relative time cannot drift between them), but it was not run — the Editor time
+went to A1, and A1 is the gate. Note that the **pre-change baseline captures are void anyway**:
+they were taken on the first commit as the kickoff asked, but under the `iOS-Standalone` build
+profile, so all four are pictures of the GPS hub (see §0). `parity` does not need them — it
+compares an animated arrival against an instant one inside a single run — which is why it is the
+right instrument here and what should be run next.
+
+### A13 · Perf — **NOT MEASURED**
+
+`perf` mode is written (profiler on, no captures — the `gps_polish` A13 lesson, where turning
+the profiler on inside the measured run stretched a 0.25 s tween to 0.41 s, and a 1170×2532
+`ReadPixels` allocated ~100 MB into whichever push it landed beside). Not run, same reason.
+
+What CAN be said without it, because it is a property of the code rather than a measurement:
+`LayeredPush.Push` allocates once per push (one `Push_`, two `Layer`s and their lists) and
+**nothing inside the frame loop** — no closures, no boxing, no `new` in the `while`. `UiMotion`'s
+helpers take their one delegate allocation at creation. The in-situ number A13 wants is still
+owed.
+
+### A8 · Entry-rise frames — **NOT CAPTURED**
+
+`ScreenEntryMotion` is wired on all 13 screens (the builder's report is quoted above) and
+`ScreenEntryMotionTests` pins that a pushed screen does **not** rise. The mid-rise stills per
+screen family come from the same play-mode pass that owes A4.
+
