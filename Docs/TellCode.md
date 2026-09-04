@@ -20,7 +20,7 @@
   `backend/pgrest.py` (Supabase's edge 500s on a bare `%` — venue nearby/search AND user search were
   down for every client until v68), `ApiEnvelope` DateParseHandling.None (ISO timestamps were shifted
   twice). Unity Recorder hard-locks the Mac on the Rounds screen — KNOWN_ISSUE, video waived.
-  **NOW (2026-09-04): GPS queue EMPTY. `gps_standalone_shell` round 2 + `gps_profile_prompt_server_flag` DONE and reviewed PASS (`b3506dba3`): build 2637 (1.0.0) on the GOLFIN GPS TestFlight, real icon, user assets 555 → 98.6 MB, install ≈ 236 MB (UnityFramework 106 MB + Data 117 MB — the code is the floor now, backlog row). Cesar runs the device pass §1 (cross-app Golf Profile rows), §1–§6, §3b, §7. Open for Code: commit the playlife backend (`routers/user.py` + `migrations/2026_09_03_golf_profile_prompted.sql` are DEPLOYED to Fly but uncommitted); prove the refactored game lane with the next `punch it`. Next spec: `build_size_diet` (game track, SPEC_READY).**
+  **NOW (2026-09-04): GPS queue EMPTY. `gps_standalone_shell` round 2 + `gps_profile_prompt_server_flag` DONE and reviewed PASS (`b3506dba3`): build 2637 (1.0.0) on the GOLFIN GPS TestFlight, real icon, user assets 555 → 98.6 MB, install ≈ 236 MB (UnityFramework 106 MB + Data 117 MB — the code is the floor now, backlog row). Cesar runs the device pass §1 (cross-app Golf Profile rows), §1–§6, §3b, §7. Open for Code: commit the playlife backend (`routers/user.py` + `migrations/2026_09_03_golf_profile_prompted.sql` are DEPLOYED to Fly but uncommitted); prove the refactored game lane with the next `punch it`. **`build_size_diet` DONE 2026-09-04** (`4176e92aa`, Cesar approved; Architect re-derived the gates from the shipped `Golfin.ipa` build 2658 the same day: Payload raw 1007–1009 MiB ≤ 1024, Payload-compressed 305 MiB ≤ 350, .ipa file 426 MiB of which `Symbols/` 121 MiB; folder in `Docs/Specs/Completed/`). Three brief facts were wrong and are corrected in its report: the 457 MiB `.resS` was **PBR Bridge**, not tree packs; placed trees are Trees(2025)/BSP Fir, not Spruce; Phase 5 alphamaps drive the OB mask (`BakeZoneJsonTool`) — NOT a texture-only change, off the table as specced. Open on Cesar: eyeball Home / Account / Gacha / Daily pill AND the GPS nav icons on 2658 (Phase 3 changed 14 `Art/UI/Gps/*.meta` to ASTC with no UI capture — the one acceptance row not evidenced). Next game-track spec: `design_consistency_audit`.**
   (decision 2026-09-02: Unity thin-shell, Flutter retired). Deferred scope lives in
   `Docs/GPS/GPS_BACKLOG.md` (Architect-maintained). Roadmap rows: Notion Orders 2104–2114, 2130.
 
@@ -170,7 +170,7 @@
 
 ## 📋 SPEC_READY POINTERS
 
-- **`build_size_diet`: SPEC_READY (2026-09-03 evening, GAME track — Notion 2121, P1).** `Docs/Specs/Active/build_size_diet/SPEC.md` — the 1.9 GB install / 711 MB .ipa diet, brief in `Docs/BUILD_SIZE_AUDIT.md`. Five phases, each its own commit with Build Report numbers: (1) iPhone overrides on the vegetation-pack textures (leaves 1024 / bark 2048, ASTC, no `None`) + terrain tree-prototype audit (only `Spruce 1/3` are placed) + dead files off disk; (2) `HoleData` **lossless**: `heightmap.bytes` is int32 Q16.16 (`GHM1`) → `GHM2` = row-delta + Deflate, loader reads both, one-shot converter proves SHA-256 of decoded heights unchanged; `zones.json` → gzip-minified `zones.bytes` behind one `HoleDataIO.LoadZones` with a `ZoneData` equality test; smoke-bot AtRest positions must be bit-identical; `Resources/Clubs` → 512 ASTC; (3) the 93 `compression: None` textures → ASTC with before/after captures; (4) NotoSansJP static atlas from the CSV glyph set + kana — honest verdict on whether the TTF still ships (fallback for out-of-CSV names), Cesar picks; (5) terrain resolution table + Hole 6 alphamap A/B — **measurement only**, no terrain edit without Cesar's "go". **Amended 2026-09-04 before kickoff (Cesar accepted):** gates are install ≤ 1.0 GB AND Payload-compressed ≤ 350 MB, the .ipa file is reported not gated (its `Symbols/` zips to 127 MB); new Phase 0b = one LZ4HC measurement build before Phase 2 (numbers only); Phase 4 gains option (c) subset the variable TTF with fontTools (weight measured off the atlas — `fvar` default is wght 100). Zero visible change.
+- ~~`build_size_diet`~~ **DONE 2026-09-04** (`4176e92aa`; folder in `Docs/Specs/Completed/`; install 1844.7 → 1008.9 MiB, download 557.1 → 305.2 MiB on shipped build 2658; Architect re-derived both gates from the .ipa. LZ4HC / font subset / alphamaps measured and left unapplied — numbers in `reference/`.)
 
 - ~~`gps_profile_prompt_server_flag`~~ **DONE 2026-09-04** (`b3506dba3`; folder in `Docs/Specs/Completed/`; Architect review PASS 2026-09-04 — standalone build 2637 on TestFlight, user assets 555 → 98.6 MB).
 
@@ -301,7 +301,7 @@ Docs/AI_CONTEXT.md.
   card, Gold ticket placeholder icon + admin `iconUrl` upload, `TICKET_SHOP_BUILD` + the first
   `category=ticket` shop row (Cesar sets price/quantity) once the C archive exists.
 
-### Kickoff · build_size_diet (issued 2026-09-03 evening, RE-ISSUED 2026-09-04 with the accepted amendments — GAME track; GPS queue is empty, start now)
+### Kickoff · build_size_diet (issued 2026-09-03/04) — ✅ SPENT, task DONE 2026-09-04. Kept for history.
 
 ```
 Read Docs/Specs/Active/build_size_diet/SPEC.md and implement it.

@@ -16,7 +16,7 @@ lives with is the **install**, and it was 1.80 GB. Both gates pass, measured on 
 | `.ipa` file (reported, not gated) | 678.3 MiB | **426.4 MiB** | — |
 
 −830 MiB, −45%, with no visible change that survives the scene's own frame-to-frame noise.
-Spec + evidence: `Docs/Specs/Active/build_size_diet/` (`STATUS.md` first).
+Spec + evidence: `Docs/Specs/Completed/build_size_diet/` (`STATUS.md` first).
 
 **What actually cost the megabytes was not what the brief said.**
 - The 457 MiB `sharedassets8.assets.resS` is **PBR Bridge** — 53 PNGs at 4096 with no iPhone
