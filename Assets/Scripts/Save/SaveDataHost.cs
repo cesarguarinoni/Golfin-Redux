@@ -30,6 +30,12 @@ namespace Golfin.Save
 
         public static SaveDataHost Instance { get; private set; } = null!;
 
+        /// <summary>Deserialise WITHOUT Newtonsoft's date handling, so a `string` field holding an
+        /// ISO timestamp round-trips verbatim instead of becoming local wall-clock text.
+        /// See <c>Golfin.Net.ApiEnvelope.ParseRaw</c> for the full failure this prevents.</summary>
+        private static readonly JsonSerializerSettings RawDates =
+            new JsonSerializerSettings { DateParseHandling = DateParseHandling.None };
+
         // ── Events ────────────────────────────────────────────────────────────
 
         /// <summary>Fires after every successful disk write (post-File.Replace).</summary>
@@ -148,7 +154,10 @@ namespace Golfin.Save
             {
                 try
                 {
-                    var loaded = JsonConvert.DeserializeObject<SaveData>(json);
+                    // Newtonsoft's default DateParseHandling rewrites an ISO timestamp into a LOCAL DateTime
+                // token, so a `string` field receives "09/03/2026 12:26:19" instead of the UTC
+                // text that was written. Settings keep the round-trip verbatim. See ApiEnvelope.ParseRaw.
+                    var loaded = JsonConvert.DeserializeObject<SaveData>(json, RawDates);
                     if (loaded != null)
                     {
                         // Q2: fail-hard if schema version in file > code version

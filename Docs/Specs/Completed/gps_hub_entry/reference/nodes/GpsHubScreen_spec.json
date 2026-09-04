@@ -2,8 +2,8 @@
   "elements": [
     {
       "name": "HeroPanel",
-      "w": 989.3,
-      "h": 327.3,
+      "w": 958,
+      "h": 296,
       "radius": 50,
       "requireSprite": true,
       "color": "",
@@ -12,8 +12,8 @@
     },
     {
       "name": "HowItWorksStrip",
-      "w": 978,
-      "h": 138,
+      "w": 958,
+      "h": 118,
       "radius": 32,
       "requireSprite": true,
       "color": "",
@@ -32,8 +32,8 @@
     },
     {
       "name": "Tile_SCREENSHOT",
-      "w": 246,
-      "h": 173,
+      "w": 226,
+      "h": 153,
       "radius": 32,
       "requireSprite": true,
       "color": "",
@@ -42,8 +42,8 @@
     },
     {
       "name": "Tile_CHECKIN",
-      "w": 246,
-      "h": 173,
+      "w": 226,
+      "h": 153,
       "radius": 32,
       "requireSprite": true,
       "color": "",
@@ -52,8 +52,8 @@
     },
     {
       "name": "Tile_VOTE",
-      "w": 246,
-      "h": 173,
+      "w": 226,
+      "h": 153,
       "radius": 32,
       "requireSprite": true,
       "color": "",
@@ -62,8 +62,8 @@
     },
     {
       "name": "Tile_GIFT",
-      "w": 246,
-      "h": 173,
+      "w": 226,
+      "h": 153,
       "radius": 32,
       "requireSprite": true,
       "color": "",
@@ -72,8 +72,8 @@
     },
     {
       "name": "RecentGiftsPanel",
-      "w": 989.3,
-      "h": 365.3,
+      "w": 958,
+      "h": 334,
       "radius": 50,
       "requireSprite": true,
       "color": "",
@@ -82,8 +82,8 @@
     },
     {
       "name": "LiveVotesPanel",
-      "w": 989.3,
-      "h": 337.3,
+      "w": 958,
+      "h": 306,
       "radius": 50,
       "requireSprite": true,
       "color": "",
@@ -92,8 +92,8 @@
     },
     {
       "name": "RecentRoundsPanel",
-      "w": 989.3,
-      "h": 503.3,
+      "w": 958,
+      "h": 472,
       "radius": 50,
       "requireSprite": true,
       "color": "",
@@ -114,16 +114,6 @@
       "name": "RoundRows",
       "w": 958,
       "h": 392,
-      "radius": -1,
-      "requireSprite": false,
-      "color": "",
-      "fontSize": -1,
-      "fontWeight": ""
-    },
-    {
-      "name": "BackRow",
-      "w": 958,
-      "h": 45,
       "radius": -1,
       "requireSprite": false,
       "color": "",
@@ -271,16 +261,6 @@
       "fontWeight": "SemiBold"
     },
     {
-      "name": "BackLabel",
-      "w": -1,
-      "h": -1,
-      "radius": -1,
-      "requireSprite": false,
-      "color": "#B7C3D3",
-      "fontSize": 23.3,
-      "fontWeight": ""
-    },
-    {
       "name": "Venue",
       "w": -1,
       "h": -1,
@@ -319,7 +299,27 @@
       "color": "#B7C3D3",
       "fontSize": 20,
       "fontWeight": ""
+    },
+    {
+      "name": "BackPill",
+      "w": 140,
+      "h": 94,
+      "radius": -1,
+      "requireSprite": true,
+      "color": "",
+      "fontSize": -1,
+      "fontWeight": ""
+    },
+    {
+      "name": "Label",
+      "w": -1,
+      "h": -1,
+      "radius": -1,
+      "requireSprite": false,
+      "color": "#EEDC9A",
+      "fontSize": -1,
+      "fontWeight": "SemiBold"
     }
   ],
-  "_note": "w/h are RectTransform sizes. Panels use a 9-sliced sprite whose shadow lives inside the slice border, so rect = node box + drawn-body inset; the DRAWN body matches the node exactly. IconFill removed 2026-09-01: the icon rings are single gradient sprites baked by Docs/Scripts/make_gps_icon_ring.py, not two stacked discs."
+  "_note": "w/h are RectTransform sizes, and they now equal the Figma node boxes: the S_HUB_* panel sprites draw edge to edge, so there is no drawn-body inset to add. BackPill is 140x94 = the 138x92 node plus its 1px outer rule. Label fontSize is left unchecked because it AUTOSIZES (18..30) for localization."
 }

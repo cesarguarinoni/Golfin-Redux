@@ -10,3 +10,15 @@
 [2026-04-30 08:35:53] [8_5_a_csv_consolidation] ARCHITECT_REVIEW_PASS - Ready for your final approval
     Review Docs/Specs/Active/8_5_a_csv_consolidation/ARCHITECT_REVIEW.md
     Latest screenshot: Docs/Specs/Active/8_5_a_csv_consolidation/screenshots/
+[2026-09-02 00:43:39] [auth_email_redirect] IMPLEMENTER_BLOCKED - Implementer is blocked - manual help needed
+    Read Docs/Specs/Active/auth_email_redirect/IMPLEMENTER_REPORT.md (Open questions section)
+[2026-09-02 00:43:39] [publish_blocked_catalogs] ARCHITECT_REVIEW_PASS - Ready for your final approval (passed reviewer + red-team)
+    Review Docs/Specs/Active/publish_blocked_catalogs/ARCHITECT_REVIEW.md
+    Red-team verdict: Docs/Specs/Active/publish_blocked_catalogs/REDTEAM_REVIEW.md
+    Latest screenshot: Docs/Specs/Active/publish_blocked_catalogs/screenshots/
+[2026-09-02 00:43:43] [auth_email_redirect] IMPLEMENTER_BLOCKED - Implementer is blocked - manual help needed
+    Read Docs/Specs/Active/auth_email_redirect/IMPLEMENTER_REPORT.md (Open questions section)
+[2026-09-02 00:43:43] [publish_blocked_catalogs] ARCHITECT_REVIEW_PASS - Ready for your final approval (passed reviewer + red-team)
+    Review Docs/Specs/Active/publish_blocked_catalogs/ARCHITECT_REVIEW.md
+    Red-team verdict: Docs/Specs/Active/publish_blocked_catalogs/REDTEAM_REVIEW.md
+    Latest screenshot: Docs/Specs/Active/publish_blocked_catalogs/screenshots/

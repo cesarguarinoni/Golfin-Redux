@@ -43,7 +43,8 @@ export type PanelIcon =
   | "target"
   | "puzzle"
   | "calendar"
-  | "ticket";
+  | "ticket"
+  | "pin";
 
 export interface PanelDef {
   id: PanelId;
@@ -110,4 +111,11 @@ export const PANELS: readonly PanelDef[] = [
   { id: "texts", title: "Texts", icon: "text", route: "/texts" },
   { id: "tournaments", title: "Tournaments", icon: "flag", route: "/tournaments" },
   { id: "users", title: "Users", icon: "users", route: "/users" },
+  // ---- gps_checkin § B1 ---------------------------------------------------
+  // `venues` — the spots the PLAYLIFE Rounds tab browses in three categories.
+  // Its own entry rather than a tab under Shop: this is not a catalog an
+  // operator publishes, it is a LIVE table the game reads per request (the same
+  // kind of panel as Rewards), and its rows are places in the world rather than
+  // things a player buys.
+  { id: "venues", title: "Partners", icon: "pin", route: "/venues" },
 ] as const;

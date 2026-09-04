@@ -217,6 +217,10 @@ namespace Golfin.Gps.EditorTools
                 GameObject screen = BuildScreen(modal);
                 SceneManager.MoveGameObjectToScene(screen, staging);
 
+                // gps_polish — the shared polish pass. Runs LAST, on the finished root, so it sees
+                // every layer this builder authored (SPEC § Architecture: the additions go INTO
+                // the existing builders, which stay the prefab source of truth).
+                GpsPolishBuilder.Apply(screen);
                 PrefabUtility.SaveAsPrefabAsset(screen, ScreenPrefab);
                 Object.DestroyImmediate(screen);
             }
@@ -365,7 +369,7 @@ namespace Golfin.Gps.EditorTools
             GameObject hub = PrefabUtility.LoadPrefabContents(HubPrefab);
             try
             {
-                Transform nav = hub.transform.Find("GpsNavBar");
+                Transform nav = GpsPolishBuilder.FindNavBar(hub);
                 if (nav == null) { Debug.LogError("[ScoreUploadScreenBuilder] hub has no GpsNavBar"); return; }
 
                 GameObject clone = Object.Instantiate(nav.gameObject, parent);

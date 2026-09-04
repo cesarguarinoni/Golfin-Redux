@@ -1,0 +1,206 @@
+{
+  "elements": [
+    {
+      "name": "Background",
+      "requireSprite": true,
+      "w": -1,
+      "h": -1,
+      "radius": -1,
+      "fontSize": -1,
+      "color": "",
+      "fontWeight": ""
+    },
+    {
+      "name": "GolfProfilePanel",
+      "requireSprite": true,
+      "w": 958,
+      "h": 731,
+      "radius": -1,
+      "fontSize": -1,
+      "color": "",
+      "fontWeight": ""
+    },
+    {
+      "name": "IntroTitle",
+      "requireSprite": false,
+      "w": -1,
+      "h": -1,
+      "radius": -1,
+      "fontSize": 32.18,
+      "color": "#EEDC9A",
+      "fontWeight": "SemiBold",
+      "_nodeFontSize": 36,
+      "_note": "SemiBold: node px x 59/66. The project's Rubik SemiBold renders ~11% larger than the node's face; measured cap-height ratio was 1.10-1.12 at the nominal size. Same calibration Build rule 4 applies to Main Buttons (66 -> 59)."
+    },
+    {
+      "name": "IntroSub",
+      "requireSprite": false,
+      "w": -1,
+      "h": -1,
+      "radius": -1,
+      "fontSize": 24,
+      "color": "#B7C3D3",
+      "fontWeight": ""
+    },
+    {
+      "name": "ColourLabel",
+      "requireSprite": false,
+      "w": -1,
+      "h": -1,
+      "radius": -1,
+      "fontSize": 24,
+      "color": "#B7C3D3",
+      "fontWeight": ""
+    },
+    {
+      "name": "Colour0",
+      "requireSprite": true,
+      "w": 100,
+      "h": 100,
+      "radius": -1,
+      "fontSize": -1,
+      "color": "",
+      "fontWeight": ""
+    },
+    {
+      "name": "Colour1",
+      "requireSprite": true,
+      "w": 120,
+      "h": 120,
+      "radius": -1,
+      "fontSize": -1,
+      "color": "",
+      "fontWeight": ""
+    },
+    {
+      "name": "Colour2",
+      "requireSprite": true,
+      "w": 100,
+      "h": 100,
+      "radius": -1,
+      "fontSize": -1,
+      "color": "",
+      "fontWeight": ""
+    },
+    {
+      "name": "Colour3",
+      "requireSprite": true,
+      "w": 100,
+      "h": 100,
+      "radius": -1,
+      "fontSize": -1,
+      "color": "",
+      "fontWeight": ""
+    },
+    {
+      "name": "NicknameLabel",
+      "requireSprite": false,
+      "w": -1,
+      "h": -1,
+      "radius": -1,
+      "fontSize": 24,
+      "color": "#B7C3D3",
+      "fontWeight": ""
+    },
+    {
+      "name": "NicknameInput",
+      "requireSprite": true,
+      "w": 878,
+      "h": 80,
+      "radius": -1,
+      "fontSize": -1,
+      "color": "",
+      "fontWeight": ""
+    },
+    {
+      "name": "ExperienceLabel",
+      "requireSprite": false,
+      "w": -1,
+      "h": -1,
+      "radius": -1,
+      "fontSize": 24,
+      "color": "#B7C3D3",
+      "fontWeight": ""
+    },
+    {
+      "name": "Chip0",
+      "requireSprite": true,
+      "w": -1,
+      "h": 60,
+      "radius": -1,
+      "fontSize": -1,
+      "color": "",
+      "fontWeight": ""
+    },
+    {
+      "name": "Chip1",
+      "requireSprite": true,
+      "w": -1,
+      "h": 60,
+      "radius": -1,
+      "fontSize": -1,
+      "color": "",
+      "fontWeight": ""
+    },
+    {
+      "name": "Chip2",
+      "requireSprite": true,
+      "w": -1,
+      "h": 60,
+      "radius": -1,
+      "fontSize": -1,
+      "color": "",
+      "fontWeight": ""
+    },
+    {
+      "name": "HandicapLabel",
+      "requireSprite": false,
+      "w": -1,
+      "h": -1,
+      "radius": -1,
+      "fontSize": 24,
+      "color": "#B7C3D3",
+      "fontWeight": ""
+    },
+    {
+      "name": "HandicapInput",
+      "requireSprite": true,
+      "w": 878,
+      "h": 80,
+      "radius": -1,
+      "fontSize": -1,
+      "color": "",
+      "fontWeight": ""
+    },
+    {
+      "name": "SaveProfileButton",
+      "requireSprite": true,
+      "w": -1,
+      "h": 120,
+      "radius": -1,
+      "fontSize": -1,
+      "color": "",
+      "fontWeight": ""
+    },
+    {
+      "name": "SkipLabel",
+      "requireSprite": false,
+      "w": -1,
+      "h": -1,
+      "radius": -1,
+      "fontSize": 26,
+      "color": "#B7C3D3",
+      "fontWeight": ""
+    },
+    {
+      "name": "Placeholder",
+      "requireSprite": false,
+      "w": -1,
+      "h": -1,
+      "radius": -1,
+      "fontSize": 30,
+      "color": "#7D8A99",
+      "fontWeight": ""
+    }
+  ]
+}

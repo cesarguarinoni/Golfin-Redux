@@ -4,6 +4,533 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
+## 2026-09-04 — standalone round 2 DONE (approved) — build 2637 on TestFlight
+
+Both specs moved to `Docs/Specs/Completed/`: `gps_standalone_shell` and
+`gps_profile_prompt_server_flag`. Build **2637** (1.0.0) is VALID on the GOLFIN GPS record —
+real icon, `.ipa` **427 → 196.2 MB** (app payload 75.0 MB; the other 121.1 MB is dSYM that Apple
+strips before a tester downloads), user assets **555 → 98.6 MB**.
+
+The one open question — whether "≤150 MB" meant the `.ipa` file — is **answered and parked**. The
+Architect measured it: `UnityFramework` is byte-identical between `Golfin.ipa` and `GOLFINGPS.ipa`
+(110.8 MB uncompressed) because IL2CPP strips nothing while every screen is reachable from
+`ScreenManager`. Carving it out needs `defineConstraints: ["!GOLFIN_STANDALONE"]` on the golf
+asmdefs plus splitting `Assembly-CSharp` behind interfaces, for ~4–7 MB of download — and explicitly
+NOT `managedStrippingLevel: High`, which breaks UnityEvent/JSON/reflection silently. Backlog row in
+`GPS_BACKLOG.md`; the loud path only.
+
+Still to run against 2637: device pass §7 (7.1–7.10) and the new §1b cross-app rows.
+
+---
+## 2026-09-04 — standalone round 2: 427 MB → 98 MB of assets, and the Golf Profile is once per ACCOUNT
+
+Two things landed together, because the second is what the first's first launch needed.
+
+**`gps_profile_prompt_server_flag`.** The Golf Profile offer is now recorded on the ACCOUNT
+(`profiles.golf_profile_prompted_at`), not in PlayerPrefs — answer it (or skip it) in the game and
+the standalone never asks, and vice versa. The local flag survives as a cache. Backend deployed and
+verified (Fly 68 → 69; PUT stamps, fresh GET echoes, `false` does not clear — a one-way latch).
+Skip **writes** now; it used to issue nothing at all, which is exactly why "vice versa" did not hold.
+A device with no local flag holds ONE `/user/detail` before deciding, bounded at 2.5 s and failing
+to "do not offer" — a missed offer costs one entry, a wrong offer is the defect.
+
+**Building it found a defect in the shell's own boot.** `StandaloneShellBoot` resolved the offer
+itself, which looked like honesty and jumped straight over the wait — so a fresh shell install of an
+already-answered account *still* showed the capture. The boot now names `GpsHub` and `Navigate`
+decides. Found by running the proof, not by reading the diff.
+
+**The size.** Build 2635 was 427 MB because `Resources/` ships whole regardless of scene usage —
+385 MB of it was `HoleData` heightmaps in an app with one scene. The standalone build now moves the
+golf-only `Resources` subfolders out and back (`AssetDatabase.MoveAsset`, so it is a GUID-preserving
+rename, not a 545 MB re-import) and destroys the 15 refused game screens out of ShellScene's
+in-memory copy. **Total User Assets 555 MB → 98.3 MB.**
+
+Three things worth keeping from it:
+
+- **Enumerate, don't reason.** The folder list came from grepping every `Resources.Load` call site,
+  which is the only reason `Characters/` stayed: `GpsAvatarScreenController` loads
+  `Characters/Homescreen/{name}`, a PLAYLIFE screen reaching into golf art. No amount of thinking
+  about "golf folders" would have caught that.
+- **The repair has to run at the build ENTRY points**, not inside `BuildIOSCore` — that runs *inside*
+  the moved window, so a repair there would un-stash what the build just moved and ship 427 MB again
+  while the log claimed the diet had run. And a missing `Resources` folder is not a build error, so
+  an aborted standalone build would otherwise make the next GAME build ship without its holes,
+  silently. Hence: `finally`, plus `RestoreNow()` before `Fail()` exits, plus an
+  `[InitializeOnLoadMethod]` that repairs on the next editor load.
+- **The first build attempt failing was useful.** It died on the tree-bake gate (which reads
+  `Resources/HoleData`, now moved) *inside* the window — and the restore put all 13 folders back,
+  clean. The gate is now skipped for the standalone alone, because a variant that ships no hole has
+  no hole to disagree about.
+
+Icon is Cesar's real one now (the generated placeholder and its baker are deleted, so a generated
+icon can never outrank real artwork later). Four uncompressed textures the shell ships got an ASTC
+6x6 iPhone override. EditMode 2398 / 2395 pass / 0 fail.
+
+---
+## 2026-09-03 — gps_standalone_shell BUILT — PLAYLIFE ships from THIS project
+
+A **third TestFlight variant** beside "punch it" / "punch it GPS": **"punch it standalone"**
+(`./Tools/testflight.sh testflight_build_standalone`). One codebase, no fork — the PLAYLIFE app is
+this project with a build profile, a gate, a boot path, and the chrome that has to disappear.
+Awaiting Cesar's approval in `Docs/Specs/Active/gps_standalone_shell/`.
+
+- **`iOS-Standalone` profile** = `iOS-Full-GPS` plus `GOLFIN_STANDALONE` and a **ShellScene-only
+  scene list**. The diff between the two `.asset` files is literally those two things. No code is
+  stripped and no asmdef is split — the 18 hole scenes simply are not in the build (the global
+  list still has 21 entries and is untouched), and IL2CPP does the rest.
+- **`StandaloneGate`** is the fourth gate in `ScreenManager.Navigate` — an ALLOWLIST (pre-auth
+  screens + `GpsGate.GpsScreens`, read from GpsGate rather than copied), so a golf screen added
+  later cannot quietly appear in a golf-free product. **`Home` is REWRITTEN to `GpsHub`, not
+  refused**: it is the "sane default" of a dozen call sites (Welcome SKIP, the hub BackPill's
+  fallback, every empty-history `GoBack`) and refusing it would strand the player.
+- **The boot skips `StarterGate` entirely** (`StandaloneShellBoot`, shared by all FOUR post-auth
+  routers — the Splash was only one; the other three would have dead-ended a fresh account on
+  `StartingCharacterSelection`, which the gate refuses). First run still goes through the Golf
+  Profile capture via the same `InterceptHubEntry` seam.
+- **Identity is applied at build time and restored after** (`Assets/Editor/StandaloneBuildPreprocessor.cs`):
+  `com.nextinnovation.golfingps` / "GOLFIN GPS" / 1.0.0 / placeholder icon / `golfingps://`.
+  `ProjectSettings.asset` is byte-identical before and after — the game must never be left pointing
+  at the PLAYLIFE record. **The upload guard is now per App Store record**, because ASC's
+  build-number uniqueness rule is.
+- **Two things caught in passing:** `Assets/Editor/Build/` is silently gitignored by the blanket
+  `[Bb]uild/` rule (a build hook that works locally and is absent from the repo), and telemetry's
+  `app_variant` has to ride the event PAYLOAD, not the batch envelope — the FastAPI ingest binds
+  only its declared fields, so an envelope key would never reach a row.
+
+Verified in the Editor with the profile ACTIVE (Splash → hub, no Home, no nav bar, no ticket
+cluster, Settings in shell layout, golf screens refused, `GoBack` on the root a no-op) and again
+with it INACTIVE (Home, nav bar, tickets, `StarterGate` all back). EditMode 2394 / 2391 pass / 0
+fail. **The archive is the one thing not done** — that lane ends in an upload, which is Cesar's
+phrase to say.
+
+---
+## 2026-09-03 — gps_checkin DONE (approved) — the ROUNDS tab is real
+
+Moved to `Docs/Specs/Completed/gps_checkin/`. The tab works end to end against
+the live backend: category chips, real Google map, nearby spots, CHECK IN →
+confirm → live round card → CHECK OUT → receipt, plus round resume across an app
+restart. Real economy, 7,153 → 7,243 RP over two rounds. Texts v36.
+
+Two backend migrations applied: `2026_09_03_venue_partners.sql` (partner columns
++ the two atomic check-in/check-out RPCs) and
+`2026_09_04_auto_expire_stale_round.sql` (an abandoned round used to block the
+player's next check-in FOR EVER, because the 8 h rule only ever ran inside
+check-out; it is now applied at check-in, pays nothing, and shares one constant
+with check-out so the two cannot drift).
+
+**The find worth keeping** is `Golfin.Net.ApiEnvelope`: it parsed with
+`JToken.Parse`, whose default `DateParseHandling` rewrites any ISO-8601-looking
+string into a `DateTime` in the DEVICE'S LOCAL ZONE, so a `string` DTO field got
+`"09/03/2026 12:26:19"` — local wall clock, US format, no offset — which was then
+parsed back as UTC and shifted again. It corrupted every timestamp string on the
+shared envelope, not just GPS. Fixed there plus the three read-back sites that
+carry string timestamps. It hid because `Elapsed` went NEGATIVE and a clamp
+printed a plausible `0:00` over it — the same reading feeds the 8 h expiry.
+
+**Known issue carried forward:** recording the Rounds screen with Unity Recorder
+HARD-LOCKS the Mac (twice, manual power-cycle both times). Scenario alone is
+safe, encoder alone is safe on the other six screens; only the combination.
+Leading suspect is the live Google Static Maps texture. Tooling only — the app
+does not encode video. See
+`Docs/Specs/Completed/gps_checkin/KNOWN_ISSUE_recorder_lockup.md`.
+
+**Method lesson, three misreports in one session:** a code path that silently
+does not execute is indistinguishable from one that passed — an untimed probe
+leg, a no-op `!_fetchInFlight` guard, and a dry run that never called
+`StartDemo()`. State the validity condition BEFORE running a diagnostic.
+
+## 2026-09-03 — gps_checkin: Unity half built; a shared timestamp bug found under it
+
+The ROUNDS tab is real end to end — chips, live Google map, nearby spots, CHECK IN ->
+live round card -> CHECK OUT -> receipt — driven through the player's own widgets and
+paying real RP (7,153 -> 7,243 across two rounds). Backend (2 migrations, 2 atomic RPCs)
+and the admin Partners panel were already deployed and proven live.
+
+**The find worth remembering is not a GPS bug.** `Golfin.Net.ApiEnvelope` parsed responses
+with `JToken.Parse`, whose default `DateParseHandling` rewrites any ISO-8601-looking string
+into a `DateTime` **in the device's local zone**; a DTO field typed `string` then got
+`"09/03/2026 12:26:19"` — local wall clock, US format, no offset — which was parsed back as
+UTC and shifted a second time. It corrupted every timestamp string on the shared envelope,
+so it is fixed there (`ParseRaw`, `DateParseHandling.None`) plus the three read-back sites
+that carry string timestamps (`ActivityDto`, `GachaHistoryPage`, `SaveData.lastHoleUtc`);
+the other seven parse sites were enumerated and carry none.
+
+It hid because `Elapsed` went NEGATIVE and a clamp printed a plausible `0:00` over it. The
+same reading feeds the 8-hour round-expiry rule. Pinned by two timezone-independent
+regression tests. Texts at v35. STATUS: `READY_FOR_SELF_REVIEW`.
+
+## 🟡 IN FLIGHT — `gps_checkin`: the Rounds tab, backend-first (2026-09-03) · device-pass finding #3
+
+The hub's inert ROUNDS slot becomes a real tab: category chips, a REAL map, nearby spots,
+CHECK IN → a live round card → SCORE UPLOAD or CHECK OUT. PLAYLIFE's Flutter version of this
+screen never called `/activity/checkin` — CHECK IN set local state and showed a fake "+50 pts",
+and the ranges and restaurants were nine hardcoded literals. This task builds the look AND the
+mechanic.
+
+**Done and compile-verified, with Unity untouched.** Unity is held by another session, so the C#
+was compiled headlessly against Unity's own Roslyn: `Golfin.Gps`, `Assembly-CSharp`,
+`Assembly-CSharp-Editor`, `Golfin.Gps.Tests`, `GolfinRedux.Tests.EditMode` — all five OK. It found
+a real error (`GpsRoundsBuilder` missing `using Golfin.Gps.EditorTools`) before Unity ever saw the
+file, instead of by breaking the other session's editor.
+
+**Backend.** `venues` becomes the spots table (three categories, partner flag, price/chip/offer,
+`is_active`), and check-in/check-out become two atomic RPCs on the `golfin_gift_pts` pattern. The
+last un-migrated writer of `profiles.total_points` — `activity.py`'s check-out — is deleted; it
+broke the `total_points = activity_pts + gift_pts` invariant on every round. The idempotency key
+lives on the `activities` row rather than the ledger, because an unverified check-in and an
+expired check-out both award 0 and write no ledger row: keying replay off the ledger would make
+exactly those cases replayable, and a force-quit mid-check-in would open a second round.
+
+**A real finding, from writing the geohash port for the admin panel.** Two of the 1,988 venue rows
+(`#1 東京ゴルフ倶楽部`, `#7 Lomond Country Club`, both hand-seeded) carry a geohash that does not
+match their own coordinates. `/venue/nearby` searches by geohash prefix, so both rows exist, would
+draw on a map, and appear in NO player's nearby list — with no error anywhere. The new Partners
+panel raises them in red and a re-save fixes them.
+
+**Localization is live:** `texts` published at v32, 64 `GPS_ROUNDS_*` rows, `export --check` clean.
+
+**The backend and admin halves are LIVE.** Cesar applied both migrations;
+`e2e_activity_economy.py` passes all 38 assertions with the points invariant at 0 violations
+before and after; Fly is on v68 and the same flow re-proves through the deployed routers
+(+30 → +15, replay awards 0, a second check-in is refused `409 already_active`); the admin
+Partners panel is deployed and all three § B1 round-trips were driven through the real UI.
+
+**A second production bug fell out of the deploy.** `/venue/nearby` 500'd — and so did
+`/venue/search`, which this task never touched. A bare `%` in a PostgREST filter value makes
+Supabase's Cloudflare edge throw error 1101, and `supabase-py` ships the value unencoded; both it
+and httpx are pinned, so the edge changed underneath us. That had broken venue nearby, venue search
+and **user search** for every user. All seven `like`/`ilike` call sites in the backend were
+enumerated and routed through a new `backend/pgrest.py` that uses PostgREST's `*` wildcard, so no
+`%` reaches the URL.
+
+**The map is real now too.** Enabling Maps Static API turned out to be TWO gates, and the second
+is the one that would have eaten an afternoon: the API was not enabled on project **PLAYLIFE**
+(`playlife-app` — not either `wonderwall-g.com` project; the Places key predates GOLFIN), and
+`PLAYLIFE Backend Server Key` was *also* restricted to Places API (New) alone. Enabling the API
+only changed the error from "This API is not activated on your API project" to "This API key is
+not authorized to use this service or API". Both cleared: `/venue/map` returns a real dark-styled
+918×420 tile, `X-Map-Cache: MISS` then `HIT`, byte-identical.
+
+**Left: a free Unity** — the prefab build, the play-mode capture, the fidelity lint and the motion
+video. Nothing else. Full state in `Docs/Specs/Active/gps_checkin/STATUS.md`.
+
+---
+## ✅ DONE — GPS nav bar, both halves (2026-09-03) · device-pass finding #1
+
+Two Quick tasks off the same screenshot, `Docs/Specs/Quick/gps_navbar_bottom_anchor.md` and
+`gps_navbar_selected_tab.md`.
+
+**It sits on the bottom now.** The bar was authored against a 0-inset Editor, so on glass it floated
+above the home indicator. `GpsNavBarSafeArea` GROWS the bar by `Screen.safeArea.y` and pushes the
+bottom-anchored child down by the same amount, rather than moving the whole bar up — moving it would
+have opened a gap under it. Deliberately NOT `[ExecuteAlways]`: an edit-mode run would bake the grown
+geometry into the prefab and the next device would grow it again. That is a test, not a comment.
+
+**The selected tab lights.** GPS carried the shell nav bar with no selected state at all.
+`GpsNavBarHighlight` reads `iconNormalColor` / `iconActiveColor` off the live `PersistentUIManager`
+instead of hardcoding a second palette, so GPS cannot drift from Game's colours. Hub→Home,
+Score Upload→Camera, Gift→Gift, Profile/Badges/Avatar→Profile; Vote lights nothing because it is not
+a nav destination, and Rounds waits on `gps_checkin`.
+
+One deviation, recorded rather than hidden: Game's `homeIcon` is a glyph-only Image inside a separate
+ring frame, so only the glyph goes cyan. Every GPS slot is a single Image whose sprite already
+contains ring + glyph and has no children (`kids=0` on all five), so the tint takes the whole badge.
+Same colour, larger area. Splitting the glyph out needs new art.
+
+**Gated on rendered colour, not on the mapping table.** A component whose `OnEnable` never ran, and a
+tint swallowed by the Button's own `ColorTint` transition, both look identical to success in a unit
+test. The `navtint` probe mode navigates the six reachable screens by real `onClick` and reads all
+five slots' `Image.color` off the LIVE bar: 6/6 exactly one `#00FFFF` and four `#FFFFFF`, zero fails.
+`Golfin.UI.Polish.Tests` 76 passed / 0 failed. Stills in `Docs/Specs/Completed/gps_polish/screenshots/`
+(`navtint_bar_sheet.png` is the crop sheet).
+
+**Still needs the phone:** the bottom inset itself. `Screen.safeArea.y` is 0 in the Editor, so the
+growth is unobservable there — device-pass rows 2.0 and 2.0b were added for it. The R6 keyboard
+offset from `gps_polish` is in the same boat.
+
+---
+## ✅ DONE — `gps_profile_prompt_on_entry` **approved by Cesar** (2026-09-03) · a fresh install lands on the game and stays there
+
+Device-pass finding #2: the first thing a new player saw was a golf-profile form for a surface
+they had not asked for. The once-per-device Golf Profile → Welcome offer moved off **Home entry**
+and onto the **first entry into GPS**.
+
+`HomeScreenController` lost both `ShouldOffer()` call sites and the deferred coroutine.
+`ScreenManager.Navigate` gained ONE intercept, after the three gates: it routes `GpsHub` to
+`GpsGolfProfile` through the new pure seam `GpsAuthExtrasFlow.InterceptHubEntry(requested)`, and
+sets the one-shot `PendingHubEntry` that both Welcome exits clear. Because the intercept is in
+`Navigate` rather than on any one caller, every entry is covered by construction — the Home pill,
+the home_promo banner's `golfin://gps` route, and later the standalone shell, which will call the
+same function instead of re-deriving the rule. Exits are unchanged; `ShouldOffer()` keeps its
+three inputs.
+
+**Proven by real navigation, not a harness** (`GOLFIN/Gps/Run Profile Prompt On Entry
+Acceptance`): Home held for 8.0 s with `ShouldOffer=True` and declined it; the REAL pill — read
+off `HomeScreenController`'s own serialized field — diverted to Golf Profile; SAVE → Welcome →
+GET STARTED → hub; the second pill tap went straight to the hub; the Skip path returned Home and
+then went straight to the hub; and `golfin://gps` hit the same intercept. EditMode 2329 / 2326
+passed / 0 failed, with the four new fixtures proven to execute by a tripwire (the runner ignores
+class filters and hides passes). No prefab, scene, string or backend change.
+
+**One real regression, caught by the sweep.** The intercept first evaluated `ShouldOffer()` on
+EVERY navigation; that reads `AuthService.Instance`, whose getter creates a `DontDestroyOnLoad`
+host, which is illegal outside play mode — `NavBackMemoryTests.A15` died on it. `InterceptHubEntry`
+now tests `requested == GpsHub` before it reaches the session, which fixes the test and keeps an
+ordinary screen change free of a session read.
+
+Device-pass rows 1.3 / 1.8 rewritten to the new trigger, plus a new 1.9 for the banner route.
+
+---
+## ✅ DONE — `gps_polish` **approved by Cesar** (2026-09-03) · the GPS surface moves like the rest of the game
+
+Inside the GPS surface, screens no longer go through black to move one room sideways: the
+Background / GpsNavBar / BackPill cross-fade in place and only the two `ContentContainer`s slide
+(Forward from +W, Back mirrored, 0.3 parallax on the leaver). Home ↔ GpsHub and every GPS →
+non-GPS boundary keep the game-wide `FadeController` fade, untouched.
+
+One helper does all of it: `Golfin.UI.Polish.UiMotion` — nine primitives, one copy of every
+duration, unscaled time, interruption-safe, and settled on its final value when Unity kills the
+coroutine because the host was disabled (`UiMotionRunner`). The four existing tween loops (Versus,
+Daily pill, Gacha, Toast) are deliberately NOT retrofitted — that is `game_polish`.
+
+**The paint-state layer.** Every GPS list knows which of its three paints it is doing — from
+cache, from a fetch, or a repaint — and ONE `PaintGate` per site drives both the staggered first
+entrance and the cold-fetch placeholder, so the two can never disagree about what "cold" means.
+Around that: gift panel fades and the vote filter cross-fade, selection bumps as a two-Image alpha
+swap with no tinting, six count-ups plus the badge pulse and the vote bar animating old→new, and
+the iOS keyboard offset.
+
+**Gates.** A1 `fail=0` over 10 pushes (0.2527–0.2667 s vs 0.25, t0 ±1170, seam 1.000). A2 **0
+differing px on all seven screens** — as a within-ONE-RUN animated-vs-instant pair, because these
+screens render live data and relative time and captures an hour apart diff "2h ago" against "3h
+ago". A5 seam 0.920. A6 zero new lint findings. EditMode 2319 / 2316 / 0 failed. A13 measured
+twice: the whole app during a push (307 KB/frame, an upper bound) and the tween loops in isolation
+(≤32 B/frame, which is what the SPEC actually asks). Six captioned videos at 1170×2532.
+
+**Three things worth carrying forward.**
+
+*A placeholder found a real product defect.* `BadgeService.FetchBadges()` fires its change event
+only on success, and the badges screen called it with no callback — so a failed or empty answer
+repainted nothing. Invisible while the grid was merely empty; once a shimmer covered it, the
+screen had a loading state it could never leave. Fixed, pinned by a test, and the shape audited
+across all five fetch sites.
+
+*Iteration 1 was wrong about the scene copies.* The GPS screens in ShellScene **are** prefab
+instances — the earlier check ran in play mode, where `IsPartOfPrefabInstance` is false for every
+object. A prefab edit reaches the live scene; `GpsPolishBuilder.ApplyToScene` is unnecessary and
+its one run cost 1,296 lines of override churn. Its header comment now says so.
+
+*The red-team caught a false measurement in my own report.* A7 claimed as fact that no POST SCORE
+pending frame existed in the clip it cited. It did — 27 frames, 0.92 s. The cause was arithmetic
+on an assumed constant over an unverified screen region, written up as if it had been observed.
+Retracted in place; logged in `.claude/review_misses.log`. No code was wrong.
+
+**Open, deliberately:** the keyboard offset needs the device pass to be SEEN (the arithmetic is
+pinned in EditMode; whether `TouchScreenKeyboard.area` reports what iOS says is only visible on the
+phone). Two of the four seeded GOLFIN AI votes remain for it.
+
+**Backlog fed by this task:** 208 GPS labels render `Rubik-VariableFont_wght SDF` rather than a
+Medium face; 15 pre-existing UI-lint FAILs, all `9slice-collapse-x` on bars sized at runtime; and
+the POST SCORE pending capsule collapses ~496 → ~140 px where the vote button holds its width —
+flagged by both the implementer and the red-team, out of this task's scope.
+
+---
+## ✅ DONE — `gps_pill_entry` **approved by Cesar** (2026-09-02)
+
+The Home GPS pill is the GPS door (`e2db982c0`, texts v30); closed and archived to
+`Docs/Specs/Completed/` as the first commit of `gps_polish`.
+
+---
+## ✅ DONE — `gps_gifts_votes` **approved by Cesar** (2026-09-02) · the GPS surface is complete
+
+**Gift (Figma `14027:101843`) and Vote (`14028:33534`) — the GPS surface is complete.** Both are
+reached the way a player reaches them: the hub's GIFT nav slot and its GIFT / VOTE action tiles
+were the last inert affordances on that screen and are now live. Two new ScreenIds
+(`GpsGift`, `GpsVote`), both on `GpsGate`'s deny-list.
+
+Gift is live end to end — GIFTS RECEIVED from the profile's own `gift_pts`, POPULAR GOLFERS from
+`/user/discover`, a BUY GIFT ITEMS strip from the real 21-row catalog, and one modal that performs
+both economy writes under an idempotency key minted per open. Vote is live for its core —
+`/vote/list` drives five real cards, a cast repaints from the server's own answer and earns +10,
+CREATE prepends without a second fetch, MINE filters on `creator_id`.
+
+**The economy half is LIVE.** Cesar applied `2026_09_02_gift_atomic.sql` (both functions SECURITY
+DEFINER, EXECUTE to `service_role` only), its §1 reconciliation repaired the one out-of-balance
+profile (Cratilo `total_points` 6808 → 7158), and `playlife-api` deployed **v65 → v66**.
+
+E2E green through BOTH surfaces. Through the RPCs (`e2e_gift_economy.py`, ALL PASS) and through the
+deployed HTTP routers with a real JWT: a 50-pt send moves the sender's `activity_pts` **and**
+`total_points` down and the receiver's `gift_pts` **and** `total_points` up — the half the old
+router skipped on each side; a same-key replay returns `replayed:true` and moves nothing; self-gift
+is a 400; a purchase debits and writes one `user_inventory` row, and its replay writes none.
+**19 profiles / 0 invariant violations** before and after. `/gifts/send-pts` with NO
+`idempotency_key` still returns 200 — the Flutter path is untouched.
+
+### What was actually broken in the backend
+
+All three gift write paths updated `activity_pts` / `gift_pts` **without** `total_points` — the
+invariant every post-unification writer maintains. Under the one-value decision `total_points` IS
+the game's RP balance, so it was live in both directions: a SENDER's total never fell, leaving
+points the game would let them spend again, and a RECEIVER's total never rose, so a gift was
+invisible to GOLFIN. The fix is the house pattern (one SECURITY DEFINER function per flow, one
+transaction, idempotent on `points_transactions(user_id, idempotency_key)`, refusals as return
+values), not two extra columns in the router's UPDATE — the read-modify-write there is the same
+lost-update race ISSUE-05 removed from `points.py`, run across two profiles with no transaction
+around them.
+
+### Gates
+
+Geometry `97 sites 0 FAIL 0 GONE`; UI fidelity lint `fail=0` on both prefabs; EditMode sweep
+`2263 / 2260 passed / 0 failed` with a tripwire proving the 24 new `Golfin.Social.Tests` execute;
+53 localization keys published (`texts` v31), `export --check` clean; 18 non-text A/B regions
+against the node renders at mean |ΔRGB| **2.8** (gift) and **3.7** (vote), worst 6.1.
+
+### What the gates caught that the eye would not have
+
+A `??` on `GetComponent` that Unity's fake-null defeated — it threw on the Vote screen's first
+frame, took `OnEnable` down with it, and left `/vote/list` unrequested and the list empty. Every
+translucent overlay pre-composited against an assumed opaque backdrop and rendering up to **64
+units too dark**, with the opaque baked gradients at ΔRGB 1.0 as the control that made it a
+diagnosis. A pill whose opaque rim hid its own translucent fill (interior measured solid gold). An
+`Image` on a `ContentSizeFitter` root reporting its 176px native width as a preferred size, making
+every pill 60 % too wide. And TMP drawing story labels as *nothing*, because `Ellipsis` needs
+wrapping on and a wrapped 18px line does not fit the node's 21px box.
+
+**And one the eye caught that no gate did** (Cesar, 2026-09-02): the pill and chip rims were
+thinner top-and-bottom than left-and-right. Every 9-sliced atom in this project is 176x176 with an
+88px border — a middle band of exactly ZERO pixels. Harmless for a solid capsule, because the seam
+column Unity replicates is opaque; fatal for a RING, whose horizontal middle band is what supplies
+the top and bottom strokes. The two ring sprites are now 208x208 (88 + 32 straight run + 88), and
+the rim measures 1px on all four sides.
+
+### Known-unequal / open
+
+1. **TOP SUPPORTERS reads two sources.** `/gifts/received` reads the `gifts` table, which only the
+   out-of-scope item-gifting path writes and which holds **zero rows** in production; an RP gift is
+   recorded solely as a `points_transactions` row. The panel merges both, by NAME — the ledger has
+   no counterparty column.
+2. **The live cast found a real bug, which is why it was worth burning a seed for.** `voting.py`
+   re-emits its `vote_options` embed with **no `order` clause**, so the array order is arbitrary —
+   the same vote returned `[Yes, No]` and then `[No, Yes]` minutes apart. The card bound
+   `Options[0]` to the bar labelled YES and cast `Options[0]`, so it showed the wrong count under
+   the wrong label AND cast the wrong way, intermittently. Now matched by LABEL
+   (`VoteDto.YesOption`), with five EditMode tests, one built from the live payload. The cast
+   itself was correct: YES, one `user_votes` row, one `vote_cast` ledger row, +10 exactly once.
+3. **The BUY strip is the three CHEAPEST basic rows.** The SPEC's named trio is not the first three
+   under any ordering the live catalog supports.
+4. Full deviation list (11 items) in `Docs/Specs/Active/gps_gifts_votes/IMPLEMENTER_REPORT.md`.
+
+Shipped: GolfinRedux `b823510d5` + `d289ae399` + `f45b44425`, playlife `4206a56` (deployed v66).
+Spec archived at `Docs/Specs/Completed/gps_gifts_votes/`.
+
+---
+
+## ✅ DONE — `auth_golf_profile` **approved by Cesar** (2026-09-02) · the post-signup capture is live
+
+**The last two Auth-extras frames, from Figma `14029:33628` / `14029:33929`.** After a player first
+reaches Home signed in, GPS builds offer — once per device — a Golf Profile screen (avatar colour,
+nickname, experience band, optional handicap), then a one-page Welcome tutorial whose GET STARTED
+lands in the GPS hub. Two new ScreenIds (`GpsGolfProfile`, `GpsWelcome`), both on `GpsGate`'s
+deny-list, so in a "punch it" build neither is reachable and the Home trigger is a no-op.
+
+**This build's FIRST backend change.** `profiles` gained `golf_experience` and `avatar_color`
+(nullable, CHECK-constrained), and `PUT /user/update` gained optional `handicap` /
+`golf_experience` / `avatar_color` with 422 enum validation. Additive only — Flutter untouched.
+Deployed to Fly (`playlife-api` v64 → v65) and round-tripped against the live API.
+
+**Gates:** geometry `45 sites 0 FAIL 0 GONE`; UI fidelity lint `fail=0` on both prefabs; EditMode
+sweep `326 passed / 0 failed` with a tripwire proving this task's 11 tests actually executed; 28
+localization keys published (`texts` v29), `export --check` clean. Every non-text A/B region is
+≤ 11.3 mean |ΔRGB|.
+
+### What the gates did not catch — and what did
+
+All four defects came from measuring and then *looking at the whole captured frame*, not from the
+gates: a missing loc key rendering as a raw label; **every SemiBold run ~11 % oversize** (Build
+rule 4's 66→59 calibration applies to the whole face, not just Main Buttons — now one named
+constant `SemiBoldSize = 59/66` from which the button's 59 derives); pager dots far too bright
+(`GpsUiColor.A` is genuinely translucent, so Unity composited in linear where Figma composited in
+sRGB — the playbook §3 trap); and a hero avatar disc that was **invisible**, because
+`S_GpsIconRing_Tile` is a filled circle rather than an annulus and covered the colour disc behind
+it entirely. Each was then treated as a *shape*: every text site, every translucency site and
+every referenced loc key was enumerated with a per-site verdict before fixing.
+
+### Known-unequal / open
+
+1. **`PUT /user/update` cannot clear a field to NULL** — the flip side of "an omitted field is
+   preserved" (both proven in the round trip). The Settings screen that "you can change all of
+   this later" promises will need an explicit-null contract if a player may un-set a handicap.
+2. `Rubik:Medium` still resolves to the variable face (no Medium TMP asset in the project), so
+   Medium runs render ~5 % narrow and the Welcome sub wraps one word later than the node.
+3. Needs manual verification: the 409 duplicate-nickname path (wants a second account), on-device
+   keyboard behaviour, and a look at the Japanese strings in a JA build.
+
+Shipped: GolfinRedux `e5964a46f` + `0afbb32f5`, playlife `22e79b6`. Spec archived at
+`Docs/Specs/Completed/auth_golf_profile/`.
+
+---
+
+## ✅ DONE — `gps_profile_pack` **approved by Cesar** (2026-09-02) · the PROFILE tab is live
+
+**Three read-only GPS screens — Profile / My Avatar / Badges — from Figma `14025:33087` /
+`14026:33187` / `14027:33298`, reached through the hub's Profile nav slot and the Profile screen's
+own BADGES / MY AVATAR shortcuts.** `Golfin.Gps` gained `ScoreStatsService`, `BadgeService` and
+`ProfileDtos` (+ EditMode tests); three ScreenIds joined the `ShowTopBarOnly` group; the avatar
+screen is the first visible bridge between the PLAYLIFE avatar level and the player's GOLFIN
+character.
+
+**Final fidelity vs the node, captured through real navigation:** Profile **4.67%** mean |ΔRGB|,
+Avatar **7.30%**, Badges **18.88%** (that last is dominated by DATA — the node mocks four earned
+GOLF badges and a populated collection bar where this account has none — not by layout).
+
+### How it got there, and why that matters more than the numbers
+
+Three full pipeline iterations passed every gate and **Cesar rejected each on sight**; the
+circuit-breaker fired at iteration 3. It converged in one sitting once the work was driven by
+**real play-mode navigation plus a per-element crop diff against the node**, done directly rather
+than delegated. Two of Cesar's corrections mid-flight were the turning points: *"use normal
+navigation instead of a harness"* and *"stop waiting for my feedback and be proactive."*
+
+**Four rejections were REUSE failures, not design problems** — the fix already existed in the repo:
+- the bar-fill wedge is documented verbatim at `ScoreUploadScreenBuilder:844-847`
+  (`Image.Type.Filled` discards 9-slicing);
+- "Main Buttons Silver" is `ButtonCancel.png`, declared `SprSilver` in that same builder;
+- the rounds empty-state pattern already shipped on the hub (`GPS_HUB_NO_ROUNDS`);
+- the Badges background is **byte-identical** (mean |ΔRGB| 0.000, max 0) to a `BG_SU_GpsProof.png`
+  an earlier task had already imported.
+
+**The measuring instrument produced two false readings** before it was abandoned: a preview-scene
+renderer showed every label as a raw loc key (`LocalizationManager` is only `Initialize()`d at
+boot), then silently ignored the node's background plate because the screen prefab paints its own
+`Background` child on top. A wrong instrument costs more than a wrong build — it makes you confident.
+
+### Captured so the next screen does not repeat it
+
+- **`Docs/Architecture/FIGMA_SCREEN_BUILD_PLAYBOOK.md`** — 8-section checklist (instrument,
+  per-screen backgrounds, geometry, panels/fills/bars, text, controller-owned state, node-asset
+  traps, self-diff before surfacing).
+- Wired so a future session is *made* to check it: `CLAUDE.md` startup step 6b + docs table +
+  pipeline rule 16; a mandatory step-0 block in all four pipeline agents (reviewers must re-run the
+  crop diff — "matches Figma" is not a verdict); the spec template; `tasks/lessons.md` Lesson BS;
+  and six memory entries.
+
+### Known-unequal / still open
+
+1. ~~The 79 new localization rows are NOT published to the server.~~ **RESOLVED** — published in
+   `c5558a400` (`texts` v26 → v28). Verified 2026-09-02: `import_content.py` reports
+   `add 28 change 0 same 876` for `auth_golf_profile`'s own rows only, i.e. nothing of
+   `gps_profile_pack`'s was left behind.
+2. Badges' locked rings still read gold: `S_GpsIconRing_Tile` IS gold artwork, so a multiply-tint
+   cannot grey it (dimmed to 0.35 alpha as a stopgap). A white ring variant from the baker fixes it.
+3. `/badges/progress` returns nothing for this account, so the Collection panel shows `—` and the
+   seeded grid stands in for live cells.
+4. Approved SPEC deviations: AVG PUTTS and GIFTS SENT render `—` permanently (no source), equip
+   slots all "off", Status shows the character's four roster stats rather than the node's three
+   avatar stats, no remote badge icons, EDIT PROFILE inert.
+5. Cesar removed the `‹ BACK TO GAME` row from all three screens (hub only) and restored the
+   Unlocks panel the SPEC had hidden — both are now the node-accurate behaviour.
+
+---
 
 ## ✅ DONE — `publish_blocked_catalogs` (2026-09-01) · both blocked publishes unblocked
 
@@ -173,7 +700,7 @@ against what the build actually bundles" — is cheap enough to run in CI.
 ---
 
 
-## 🟡 IN REVIEW — `gps_hub_entry` (2026-09-01) — the GPS front door exists
+## ✅ DONE — `gps_hub_entry` (2026-09-01, extended 2026-09-02) — the GPS front door
 
 **The GPS / PLAYLIFE features have a way in from the game.** The Home promo banner stops opening a
 web URL and instead navigates to a new `ScreenId.GpsHub` — the Figma frame `14011:32819` built as
@@ -209,11 +736,27 @@ hardcoded), EN + JA, published as **`texts` v22**; `export_content.py --check` c
 (Architect + Cesar) and deploying the admin dashboard (Architect). Next GPS spec is
 `gps_checkin_screen` — the first tile to become real.
 
-**Scar worth keeping:** `Assets/Art/HomeScreen/Next Hole Panel.png` (the Figma `Pop-up` panel style,
-now a palette atom) bakes its drop shadow INSIDE the 9-slice border — its solid body is 980×430 of a
-1020×470 sprite. A plain RectTransform containment check says "inside" while the last row of content
-is crossed by the drawn bottom border. The rule and the fix are written up in
-`Docs/Architecture/UI_ELEMENT_PALETTE.md`.
+**Since shipped (2026-09-02).** The banner is no longer the door — `gps_pill_entry` moved that to a
+Home pill — and the hub's own `‹ BACK TO GAME` link became the pill from node `14060:4722`, sitting
+top-right at (1008,251). The frame dropped its Back Row, so every panel moved up exactly 65px. The
+pill is a FIXED 140×94 with the label autosized 18..30: `GAME` / `ゲーム` both render at the full 30
+and the pill never moves. `GPS_HUB_BACK` repointed and published as texts v30.
+
+**Two scars, both now palette rules.**
+
+1. *A 9-sliced sprite draws INSIDE its RectTransform.* `Next Hole Panel.png` hides its drop shadow in
+   its slice border — solid body 980×430 of a 1020×470 sprite — so a plain containment check says
+   "inside" while the last row of content is crossed by the drawn edge. **And the compensation
+   outlived the sprite:** when `score_upload_flow` re-skinned the hub with `S_HUB_*` sprites that draw
+   edge to edge, the rects were left at node+inset and every panel drew 31px too big, eating the
+   frame's 20px gaps (Gifts/Votes overlapped 11.3px). `rect == node box` now, and the retired inset
+   model is kept in the geometry expectations so nobody reintroduces it.
+
+2. *`get_design_context` reports only the FIRST stop of a gradient.* The gold pill rim is
+   `#FCF195 → #D6AB42 @0.6 → #BB7F1D`; the tool renders it as `border-[#fcf195]`. Three sprites
+   shipped flat because of it — the daily pill, the Home GPS pill and nearly this one. All three are
+   fixed and verified as RENDERED. **Read the node's SVG, never the CSS**
+   (`download_assets(nodeId, defaultFormat="svg")`; more than one `<stop>` means the CSS is lying).
 
 ---
 
@@ -2703,6 +3246,8 @@ rows). The repo is AHEAD, so it needs a re-seed of those two keys, not an export
 
 ## 🟢 PRIORITY QUEUED — pick up immediately
 
+> **▶ 2026-09-02 · `punch_it_gps_variants` — ✅ DONE (Cesar approved). Spec folder moved to `Docs/Specs/Completed/`; shipped in `042df2e9d`. Two TestFlight variants from one codebase: "punch it" ships WITHOUT the GPS surface, "punch it GPS" with it.** Spec + report: `Docs/Specs/Completed/punch_it_gps_variants/`. **That commit also REPAIRED MAIN:** a parallel commit (`b9c95f97e`) had swept the `ScreenManager` edits in while `GpsGate.cs` was still untracked, so `HEAD` referenced a type the repo did not contain and a fresh clone would not compile. **Mechanism** mirrors the demo builds: a `GOLFIN_GPS` define carried by a new `iOS-Full-GPS` profile, read by a new `GpsGate` (modeled on `DemoGate` but INVERTED — a deny-list, because the full game is the default and only the GPS surface is conditional). Nothing is stripped and no asmdef gained a `defineConstraint`: GPS code compiles and ships in both variants, and **the Editor is always GPS-on** regardless of active profile, so daily GPS development cannot be broken by whichever profile happens to be selected. Only *reachability* changes. **Three gate points:** `ScreenManager.Navigate` (logs `[GpsGate] blocked <id>`), the back-stack skip, and `isGpsScreen` — that last one now READS the gate's list instead of keeping its own five-way OR, so the chrome rule and the deny-list cannot drift. **The Home banner hides rather than sits dead:** `BannerSlotBinder.Apply` resolves the banner's internal route and, if that screen is gated, calls `Hide()` so the slot collapses and content moves up — written against ANY internal route, not `golfin://gps` specifically. `BannerPolicy` untouched, and the server row stays LIVE (GPS builds still show it). **`iOS-Full.asset` is byte-identical** — verified clean in git; the new profile was created through the Editor and differs by exactly the name and the define. `CIBuild.BuildIOSGps()` asserts the define is present before building, because a GPS build whose profile silently lost it is indistinguishable from an ordinary one. **EditMode 2234 tests, 2231 passed, 0 failed** — and the new tests were proven to run via a tripwire that turned the suite red by name before being reverted, since this runner ignores class filters. **✅ 2026-09-02 — the Editor was freed and all three blocked items ran, so 11 of 11 acceptance items PASS.** GPS ON: Home shows the banner, tapping it reaches GpsHub, all five screens navigate. GPS OFF (const flipped, reverted): all five refuse, the banner is hidden and inert while `BannerService` still holds the live row, and the slot collapses by a **measured 236 px** (banner 214 + 22 gap — `ModeCarouselSection` worldY 536→300, not eyeballed). `./Tools/unity-build-ios.sh gps` exit 0 in 2m40s with `[CIBuild] GPS variant — GOLFIN_GPS defined on iOS-Full-GPS`, build 2567. Trap caught en route: the GOLFIN capture menu item writes to `Docs/Diagnostics/_capture/`, NOT `Assets/Screenshots/` — the first before/after pair were the same file, found by md5-comparing rather than trusting names. Note `Builds/iOS-Full` currently holds the GPS variant; every lane run rebuilds it, but do not hand-archive it expecting a standard build. **⏭ Remaining: the device pass** is your punch-it runs, in order — **punch it → commit the guard file → punch it GPS** (the build number is the commit count and App Store Connect requires it unique). On device the tell is the Home banner: absent = standard, present = GPS.
+>
 > **▶ 2026-08-26 · ⚠️ VERIFIED PROD BUG — THE PER-CATALOG KILL SWITCH IS GLOBAL IN EFFECT.
 > Found by the Architect actually flipping it against prod (nobody had). Fix before any device
 > pass; it makes the kill switch unusable as designed.**

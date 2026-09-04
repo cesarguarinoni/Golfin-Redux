@@ -102,7 +102,12 @@ namespace Golfin.EditorTools
                            .ForEach(ea => ea.Remove());
             }
 
-            string scriptText = $"\"{repoExpr}/{ScriptRel}\" \"{repoExpr}\"\n";
+            // gps_standalone_shell §D8 — the guard is per App Store record, so the post-action
+            // has to name the record it is archiving. Resolved at BUILD time (the variant is
+            // known here) rather than left to the script's default, which would advance the
+            // GAME's guard on a PLAYLIFE archive and refuse the next game upload for nothing.
+            string record = StandaloneBuildPreprocessor.IsStandaloneIdentityBuild() ? "standalone" : "game";
+            string scriptText = $"\"{repoExpr}/{ScriptRel}\" \"{repoExpr}\" {record}\n";
 
             var actionContent = new XElement("ActionContent",
                 new XAttribute("title", ActionTitle),

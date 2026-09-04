@@ -38,6 +38,25 @@ namespace GolfinRedux.UI
         // score_upload_flow — Figma 14022:32576…14024:101792. ONE screen, six step roots toggled by
         // ScoreUploadFlowController; reached from the hub's camera centre button and SCREENSHOT tile.
         ScoreUpload,
+        // gps_profile_pack — three GPS sub-screens
+        GpsProfile,
+        GpsAvatar,
+        GpsBadges,
+        // auth_golf_profile — the post-signup Golf Profile capture (Figma 14029:33628) and the
+        // one-page Welcome tutorial (14029:33929). GPS surface, so both are on GpsGate's list:
+        // in a "punch it" build neither is reachable and the Home trigger that offers them is a
+        // no-op. Offered ONCE per device on the first Home entry after sign-in.
+        GpsGolfProfile,
+        GpsWelcome,
+        // gps_gifts_votes — the last two GPS screens (Figma 14027:101843 / 14028:33534).
+        // Gift is reached from the hub's GIFT nav slot and its GIFT action tile; Vote from the
+        // hub's VOTE tile and from a vote card's own GIFT button in the other direction.
+        GpsGift,
+        GpsVote,
+        // gps_checkin — the Rounds tab (Figma 14076:33800 / 14077:100447). Reached from the hub
+        // nav bar's ROUNDS slot, which was deliberately inert until this task: chips + a real map
+        // + nearby spots, CHECK IN -> a live round card -> SCORE UPLOAD or CHECK OUT.
+        GpsRounds,
         // Settings removed - it's an overlay, not a screen
 
         // Order: login_signup_screens — account auth gate (Phase 1 — UI only, no backend)
@@ -94,6 +113,21 @@ namespace GolfinRedux.UI
         // score_upload_flow — the six-step score upload. Same top-bar-only shape as the hub: it
         // carries the hub's own GPS nav bar inside its prefab, so the shared bottom nav stays hidden.
         [SerializeField] private GameObject _scoreUploadScreen;
+        [SerializeField] private GameObject _gpsProfileScreen;
+        [SerializeField] private GameObject _gpsAvatarScreen;
+        [SerializeField] private GameObject _gpsBadgesScreen;
+        // auth_golf_profile — post-signup Golf Profile capture + Welcome tutorial. Same
+        // top-bar-only chrome as the rest of the GPS surface (via GpsGate.IsGpsScreen), even
+        // though neither draws the GPS nav bar: the two frames hide it (SPEC § Reference).
+        [SerializeField] private GameObject _gpsGolfProfileScreen;
+        [SerializeField] private GameObject _gpsWelcomeScreen;
+        // gps_gifts_votes — same top-bar-only chrome as the rest of the GPS surface; both draw
+        // the hub's own GPS nav bar inside their prefab, so the shared bottom nav stays hidden.
+        [SerializeField] private GameObject _gpsGiftScreen;
+        [SerializeField] private GameObject _gpsVoteScreen;
+        // gps_checkin — the Rounds tab. Same top-bar-only chrome and the same in-prefab GPS nav
+        // bar as Gift/Vote.
+        [SerializeField] private GameObject _gpsRoundsScreen;
         // _settingsScreen removed - Settings is an overlay managed by SettingsController, not ScreenManager
 
         // Order: login_signup_screens — account auth gate screens
@@ -163,11 +197,35 @@ namespace GolfinRedux.UI
             // the cold path is covered by LoginScreenController.OnEnable reading
             // AuthService.PendingRecovery / ConsumeRecoveryFailure instead.
             Golfin.Auth.AuthService.PasswordRecovery += OnPasswordRecovery;
+
+            // gps_standalone_shell §D6 — a WARM internal deep link (golfin://gps,
+            // golfingps://gps) opens the surface it names.
+            //
+            // WARM ONLY, and deliberately: subscribing after the initial ApplyScreen for the same
+            // reason the recovery hook does, and no Application.absoluteURL sweep, because a
+            // cold-start sweep would race the boot and could land the player past the title gate
+            // with no session. The cold case needs no handling in the shell — its boot
+            // destination already IS the hub — and in the game a cold golfin://gps simply boots
+            // normally, which is what an unauthenticated launch has to do anyway.
+            //
+            // The route is resolved by BannerPolicy, the one enumerated allowlist, so a URL a
+            // stranger can put in Safari gets exactly the grant a dashboard banner row gets —
+            // and Navigate still puts the result through every gate.
+            Application.deepLinkActivated += OnDeepLinkActivated;
         }
 
         private void OnDestroy()
         {
             Golfin.Auth.AuthService.PasswordRecovery -= OnPasswordRecovery;
+            Application.deepLinkActivated -= OnDeepLinkActivated;
+        }
+
+        // gps_standalone_shell §D6 — see the subscription note in Start().
+        private void OnDeepLinkActivated(string url)
+        {
+            if (!Golfin.Banners.BannerPolicy.TryGetInternalRoute(url, out ScreenId screen)) return;
+            Debug.Log($"[ScreenManager] deep link {url} -> {screen}");
+            ShowScreen(screen);
         }
 
         // auth_recovery_flow — see the subscription note in Start().
@@ -195,11 +253,43 @@ namespace GolfinRedux.UI
         /// </summary>
         private void Navigate(ScreenId screenId, bool instant, bool push)
         {
+            // gps_standalone_shell §D4 — the shell has no Home. REWRITE before the gates, so
+            // every gate below judges the screen that is actually going to open, and so the
+            // GPS first-entry intercept further down sees GpsHub rather than a screen that
+            // does not exist here. No-op in every build without GOLFIN_STANDALONE.
+            //
+            // A rewrite rather than a refusal because Home is the "sane default" of a dozen
+            // call sites — the Welcome tutorial's SKIP, the hub's BackPill fallback, every
+            // GoBack whose history ran dry. Refusing those strands the player; rewriting them
+            // makes the shell's root mean what the game's root meant.
+            ScreenId requested = screenId;
+            screenId = StandaloneGate.Rewrite(screenId);
+            if (screenId != requested)
+                Debug.Log($"[StandaloneGate] rewrote {requested} -> {screenId} (the shell has no Home).");
+
             // Demo gate (demo_build_slice §3.2): deny-by-default screen allowlist.
             // No-op outside a GOLFIN_DEMO build.
             if (!DemoGate.IsScreenAllowed(screenId))
             {
                 Debug.Log($"[DemoGate] blocked {screenId}");
+                return;
+            }
+
+            // GPS gate (punch_it_gps_variants): the GPS surface is unreachable in a "punch it"
+            // build (no GOLFIN_GPS). No-op in the Editor and in "punch it GPS" builds.
+            if (!Golfin.Gps.UI.GpsGate.IsScreenAllowed(screenId))
+            {
+                Debug.Log($"[GpsGate] blocked {screenId}");
+                return;
+            }
+
+            // Standalone shell gate (gps_standalone_shell §D4): the PLAYLIFE variant carries the
+            // pre-auth screens and the GPS surface and nothing else. An ALLOWLIST, so a golf
+            // screen added later cannot quietly appear in a golf-free product. No-op in every
+            // build without GOLFIN_STANDALONE.
+            if (!StandaloneGate.IsScreenAllowed(screenId))
+            {
+                Debug.Log($"[StandaloneGate] blocked {screenId} — not part of the PLAYLIFE shell.");
                 return;
             }
 
@@ -210,6 +300,39 @@ namespace GolfinRedux.UI
             {
                 Debug.LogWarning($"[AuthGate] blocked {screenId} — not signed in. Routing to Login.");
                 Navigate(ScreenId.Login, instant, push);
+                return;
+            }
+
+            // gps_profile_prompt_on_entry §2 — the ONE post-signup intercept. The first entry into
+            // the GPS surface, from wherever (the Home pill, the home_promo banner's golfin://gps
+            // internal route, later the standalone shell), is diverted once into the Golf Profile
+            // capture. It sits here, after the gates, so the decision is only ever taken on a
+            // navigation that was actually going to happen — and it re-enters Navigate rather than
+            // rewriting screenId in place, so GpsGolfProfile is put through the three gates on its
+            // own account instead of inheriting GpsHub's verdict. Same shape as the AuthGate
+            // redirect above. No recursion risk: only GpsHub is ever intercepted.
+            // gps_profile_prompt_server_flag §3 — the offer is once per ACCOUNT, so on a device
+            // that has never answered the decision needs the server's word. Hold this navigation
+            // for ONE /user/detail (bounded; see AccountFlagBudgetSeconds) and re-enter, rather
+            // than guessing — guessing wrong means asking a player who already answered on their
+            // other app, which is the whole defect. False for every other navigation in the game,
+            // and false the moment this device has a local flag, so it costs one branch.
+            if (Golfin.Gps.UI.GpsAuthExtrasFlow.NeedsAccountCheck(screenId))
+            {
+                Debug.Log($"[ScreenManager] {screenId} — first entry on this install, resolving the " +
+                          $"account's Golf Profile flag before deciding.");
+                Golfin.Gps.UI.GpsAuthExtrasFlow.EnsureAccountFlagThen(
+                    () => Navigate(screenId, instant, push));
+                return;
+            }
+
+            ScreenId intercepted = Golfin.Gps.UI.GpsAuthExtrasFlow.InterceptHubEntry(screenId);
+            if (intercepted != screenId)
+            {
+                Debug.Log($"[ScreenManager] gps_profile_prompt_on_entry — first GPS entry, " +
+                          $"{screenId} -> {intercepted} (Golf Profile offered once).");
+                Golfin.Gps.UI.GpsAuthExtrasFlow.PendingHubEntry = true;
+                Navigate(intercepted, instant, push);
                 return;
             }
 
@@ -238,17 +361,67 @@ namespace GolfinRedux.UI
                 }
             }
 
+            // gps_polish §D2 — a push already in flight is finished INSTANTLY (rest state written,
+            // its deferred ApplyScreen run) before anything else starts. No queue: the player who
+            // taps two nav slots in 200 ms gets the second screen, not both animations in order.
+            if (Golfin.Gps.UI.GpsScreenTransition.IsPushing)
+                Golfin.Gps.UI.GpsScreenTransition.CompleteActiveNow();
+
             // If no fade system, or caller requests instant, just swap
             if (instant || FadeController.Instance == null)
             {
                 Debug.Log($"[ScreenManager] Applying screen immediately: {screenId}");
                 ApplyScreen(screenId);
+                return;
             }
-            else
+
+            // gps_polish §D2 — the ONE branch. Both ends inside the GPS surface, both prefabs
+            // carrying the Background / ContentContainer split, and motion on: the screens push
+            // laterally instead of going through black. Everything else — Home ↔ GpsHub, any GPS
+            // screen to Login or Loading, ScoreUpload in either direction — falls through to the
+            // untouched FadeController path below, which is the game-wide boundary convention.
+            GameObject? fromGo = GpsScreenObject(_currentScreen);
+            GameObject? toGo   = GpsScreenObject(screenId);
+            if (Golfin.Gps.UI.GpsScreenTransition.CanPush(_currentScreen, screenId, fromGo, toGo)
+                && isActiveAndEnabled && fromGo != null && toGo != null)
             {
-                Debug.Log($"[ScreenManager] Fading to {screenId}");
-                // Fade to black, swap at midpoint, fade back in
-                FadeController.Instance.FadeOutThenIn(() => ApplyScreen(screenId));
+                var dir = Golfin.Gps.UI.GpsScreenTransition.DirectionFor(_currentScreen, screenId, push);
+                ScreenId target = screenId;
+                StartCoroutine(Golfin.Gps.UI.GpsScreenTransition.Push(
+                    fromGo, toGo, dir, () => ApplyScreen(target)));
+                return;
+            }
+
+            Debug.Log($"[ScreenManager] Fading to {screenId}");
+            // Fade to black, swap at midpoint, fade back in
+            FadeController.Instance.FadeOutThenIn(() => ApplyScreen(screenId));
+        }
+
+        /// <summary>
+        /// The screen GameObject for a GPS <see cref="ScreenId"/>, or null for anything else.
+        ///
+        /// <para>Deliberately NOT a general id → GameObject map. <see cref="ApplyScreen"/> is a
+        /// flat wall of <c>SetActive</c> calls, several of which do more than toggle (Roster
+        /// switches starter mode from the same branch), and a general accessor would invite
+        /// callers to reach past that logic. This one answers the single question the GPS push
+        /// asks — "which two objects am I sliding?" — and returns null the moment the id leaves
+        /// the surface <see cref="Golfin.Gps.UI.GpsGate.IsGpsScreen"/> defines.</para>
+        /// </summary>
+        private GameObject? GpsScreenObject(ScreenId id)
+        {
+            switch (id)
+            {
+                case ScreenId.GpsHub:         return _gpsHubScreen;
+                case ScreenId.ScoreUpload:    return _scoreUploadScreen;
+                case ScreenId.GpsProfile:     return _gpsProfileScreen;
+                case ScreenId.GpsAvatar:      return _gpsAvatarScreen;
+                case ScreenId.GpsBadges:      return _gpsBadgesScreen;
+                case ScreenId.GpsGolfProfile: return _gpsGolfProfileScreen;
+                case ScreenId.GpsWelcome:     return _gpsWelcomeScreen;
+                case ScreenId.GpsGift:        return _gpsGiftScreen;
+                case ScreenId.GpsVote:        return _gpsVoteScreen;
+                case ScreenId.GpsRounds:      return _gpsRoundsScreen;
+                default:                      return null;
             }
         }
 
@@ -345,6 +518,10 @@ namespace GolfinRedux.UI
 
                 if (candidate == _currentScreen) continue;
                 if (!DemoGate.IsScreenAllowed(candidate)) continue;
+                if (!Golfin.Gps.UI.GpsGate.IsScreenAllowed(candidate)) continue;
+                // gps_standalone_shell §D4 — a golf screen left on the stack by a shared code
+                // path is not somewhere BACK may land in the shell.
+                if (!StandaloneGate.IsScreenAllowed(candidate)) continue;
                 if (!AuthGate.IsScreenAllowed(candidate)) continue;
 
                 Navigate(candidate, instant, push: false);
@@ -363,6 +540,13 @@ namespace GolfinRedux.UI
                 // On a pillar root there is nothing above to fall back to except Home.
                 target = (root == _currentScreen) ? ScreenId.Home : root;
             }
+
+            // gps_standalone_shell §D4 — resolve the shell's rewrite HERE as well as in Navigate.
+            // Every fallback above can name Home, and the no-op test below compares against
+            // _currentScreen: on the hub, an unrewritten Home would compare unequal, reach
+            // Navigate, be rewritten to the screen we are already on, and report a BACK that
+            // never happened. Rewriting first makes "the hub root has nowhere to go" true.
+            target = StandaloneGate.Rewrite(target);
 
             if (target == _currentScreen) return false;   // Home root: BACK is a no-op, never a quit.
 
@@ -506,6 +690,26 @@ namespace GolfinRedux.UI
             // score_upload_flow — the six-step score upload
             if (_scoreUploadScreen != null)
                 _scoreUploadScreen.SetActive(screenId == ScreenId.ScoreUpload);
+            // gps_profile_pack — three GPS sub-screens
+            if (_gpsProfileScreen != null)
+                _gpsProfileScreen.SetActive(screenId == ScreenId.GpsProfile);
+            if (_gpsAvatarScreen != null)
+                _gpsAvatarScreen.SetActive(screenId == ScreenId.GpsAvatar);
+            if (_gpsBadgesScreen != null)
+                _gpsBadgesScreen.SetActive(screenId == ScreenId.GpsBadges);
+            // auth_golf_profile — post-signup capture + welcome tutorial
+            if (_gpsGolfProfileScreen != null)
+                _gpsGolfProfileScreen.SetActive(screenId == ScreenId.GpsGolfProfile);
+            if (_gpsWelcomeScreen != null)
+                _gpsWelcomeScreen.SetActive(screenId == ScreenId.GpsWelcome);
+            // gps_gifts_votes — Gift + Vote
+            if (_gpsGiftScreen != null)
+                _gpsGiftScreen.SetActive(screenId == ScreenId.GpsGift);
+            if (_gpsVoteScreen != null)
+                _gpsVoteScreen.SetActive(screenId == ScreenId.GpsVote);
+            if (_gpsRoundsScreen != null)
+                _gpsRoundsScreen.SetActive(screenId == ScreenId.GpsRounds);
+
 
             // Order: login_signup_screens — account auth gate (excluded from showBars)
             if (_loginScreen != null)
@@ -573,7 +777,10 @@ namespace GolfinRedux.UI
             // hidden because the hub draws its own GPS nav bar inside its prefab. Showing both
             // would stack two nav bars at the bottom of one screen.
             // score_upload_flow joins it for the same reason — one group, not two rules.
-            bool isGpsScreen = screenId == ScreenId.GpsHub || screenId == ScreenId.ScoreUpload;
+            // punch_it_gps_variants — the five-way OR moved into GpsGate so the chrome rule and
+            // the reachability deny-list are the same list; a GPS screen added to one is added to
+            // both, and they cannot drift.
+            bool isGpsScreen = Golfin.Gps.UI.GpsGate.IsGpsScreen(screenId);
 
             if (Golfin.UI.PersistentUIManager.Instance != null)
             {

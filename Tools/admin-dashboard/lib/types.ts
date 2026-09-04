@@ -945,3 +945,89 @@ export interface PlayerGachaResponse {
   mock: boolean;
   notMigrated?: string;
 }
+
+// ---- gps_checkin § B1 — Partners panel (`public.venues`) -------------------
+
+/** The three axes the Rounds tab's category chips browse. */
+export type VenueCategory = "golf" | "range" | "food";
+
+/**
+ * One `venues` row, as the Partners panel reads it.
+ *
+ * `geohashOk` is COMPUTED on read, never stored: it is whether the row's own
+ * geohash agrees with its own coordinates. A row where it does not is invisible
+ * to `/venue/nearby` — it exists, the map shows it, and no player's nearby list
+ * ever contains it — so the panel raises it rather than letting it stay silent.
+ */
+export interface VenueRow {
+  id: number;
+  name: string;
+  category: VenueCategory;
+  isPartner: boolean;
+  subtitle: string | null;
+  priceLabel: string | null;
+  chipExtra: string | null;
+  partnerOffer: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  geohash: string | null;
+  address: string | null;
+  imageUrl: string | null;
+  gpsRadiusM: number;
+  rating: number | null;
+  isActive: boolean;
+  source: string | null;
+  updatedAt: string | null;
+  geohashOk: boolean;
+}
+
+/** What the editor drawer sends. `geohash` is deliberately ABSENT — it is
+ *  derived server-side from latitude/longitude on every save (§ B1). */
+export interface VenueInput {
+  name?: string;
+  category?: VenueCategory;
+  isPartner?: boolean;
+  subtitle?: string | null;
+  priceLabel?: string | null;
+  chipExtra?: string | null;
+  partnerOffer?: string | null;
+  latitude?: number;
+  longitude?: number;
+  address?: string | null;
+  imageUrl?: string | null;
+  gpsRadiusM?: number;
+  isActive?: boolean;
+}
+
+export interface VenueFilters {
+  category?: VenueCategory;
+  partner?: boolean;
+  active?: boolean;
+  source?: string;
+  search?: string;
+}
+
+/** A row whose geohash does not match its coordinates. */
+export interface VenueDrift {
+  id: number;
+  name: string;
+  stored: string;
+  computed: string;
+}
+
+export interface VenuesResponse {
+  venues: VenueRow[];
+  mock: boolean;
+  drift: VenueDrift[];
+  sources?: string[];
+}
+
+/** `/api/venues/geocode` — resolve a pasted link, a coordinate pair or a place
+ *  name to coordinates plus the geohash they imply. */
+export interface GeocodeResult {
+  latitude: number;
+  longitude: number;
+  geohash: string;
+  name: string | null;
+  address: string | null;
+}

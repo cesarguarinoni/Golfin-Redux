@@ -19,8 +19,60 @@
 default_platform(:ios)
 
 platform :ios do
-  desc "Unity build -> archive -> TestFlight"
+  # ── The three variants ────────────────────────────────────────────────────────────────────
+  # punch_it_gps_variants + gps_standalone_shell. All three lanes run the SAME body — clean-tree
+  # gate, unity-closed assert, content --check, build_app, upload, mark-uploaded — and differ in
+  # exactly one table entry each. Keeping one body is the point: a gate added for one variant
+  # cannot go missing from the others, which is precisely how near-identical lanes rot apart.
+  #
+  #   "punch it"            ./Tools/testflight.sh                             -> iOS-Full
+  #   "punch it GPS"        ./Tools/testflight.sh testflight_build_gps        -> iOS-Full-GPS
+  #   "punch it standalone" ./Tools/testflight.sh testflight_build_standalone -> iOS-Standalone
+  #
+  # All three write Builds/iOS-Full and upload from there, so the build number is the commit
+  # count in every case.
+  #
+  # TWO APP STORE RECORDS, NOT THREE. The first two are the same app
+  # (com.nextinnovation.golfingame); ASC requires the build number unique PER APP, so shipping
+  # both of one commit is sequential: punch it -> commit the guard file it dirties -> punch it
+  # GPS. The standalone is a DIFFERENT record (com.nextinnovation.golfingps, "GOLFIN GPS",
+  # Apple ID 6737145432) with its own guard file, so it never collides with either.
+
+  # The whole difference between the variants, in one table. Anything a lane needs that is not
+  # in here is shared by construction. A method rather than a constant: a Fastfile is `eval`ed,
+  # and a constant assigned inside this block lands on Object and warns on any re-load.
+  def variant_table
+    {
+      standard:   { unity_arg: nil,          record: "game",
+                    label: "standard (iOS-Full, GPS surface gated off)" },
+      gps:        { unity_arg: "gps",        record: "game",
+                    label: "GPS (iOS-Full-GPS, GOLFIN_GPS defined)" },
+      standalone: { unity_arg: "standalone", record: "standalone",
+                    label: "PLAYLIFE shell (iOS-Standalone, GOLFIN_GPS;GOLFIN_STANDALONE, " \
+                           "ShellScene only -> app \"GOLFIN GPS\", com.nextinnovation.golfingps)" },
+    }
+  end
+
+  desc "Unity build -> archive -> TestFlight (no GPS surface)"
   lane :testflight_build do
+    testflight_build_shared(variant: :standard)
+  end
+
+  desc "Unity build -> archive -> TestFlight (WITH the GPS surface)"
+  lane :testflight_build_gps do
+    testflight_build_shared(variant: :gps)
+  end
+
+  desc "Unity build -> archive -> TestFlight (the PLAYLIFE standalone shell, its own app record)"
+  lane :testflight_build_standalone do
+    testflight_build_shared(variant: :standalone)
+  end
+
+  private_lane :testflight_build_shared do |options|
+    variant = (options[:variant] || :standard).to_sym
+    config = variant_table[variant]
+    UI.user_error!("Unknown variant #{variant.inspect} (expected one of #{variant_table.keys.join(', ')})") if config.nil?
+    UI.message("Variant: #{config[:label]}")
     # BuildStampGenerator derives the build number from `git rev-list --count HEAD`. On a
     # dirty tree that number does not describe what is in the binary, and the number is the
     # only handle App Store Connect gives you on a build. Refuse rather than guess.
@@ -47,7 +99,12 @@ platform :ios do
     # Non-zero here MUST abort the lane: otherwise build_app would archive the Xcode project
     # left over from the PREVIOUS run and upload a stale binary. fastlane's sh raises on a
     # non-zero exit, and the script propagates Unity's exit code verbatim.
-    sh("../Tools/unity-build-ios.sh")
+    # The ONLY step that differs between the variants — and only by one argument.
+    if config[:unity_arg]
+      sh("../Tools/unity-build-ios.sh", config[:unity_arg])
+    else
+      sh("../Tools/unity-build-ios.sh")
+    end
 
     api_key = app_store_connect_api_key(
       key_id:       ENV.fetch("ASC_KEY_ID"),
@@ -86,8 +143,15 @@ platform :ios do
     # fires on archive, and does not reliably run under xcodebuild anyway. The script is
     # idempotent and never regresses, so both firing is harmless. The guard file is tracked;
     # commit it with your next change (the script deliberately does not commit).
-    sh("../Tools/mark-uploaded.sh", "..")
+    #
+    # gps_standalone_shell §D8: the record is an ARGUMENT now, because ASC's uniqueness rule is
+    # per app and the standalone is a second record. Passing the wrong one would advance the
+    # game's guard on a PLAYLIFE upload and refuse the next game build for a collision that does
+    # not exist.
+    sh("../Tools/mark-uploaded.sh", "..", config[:record])
 
-    UI.success("Uploaded to TestFlight. Commit Docs/Versioning/last_uploaded_build.txt.")
+    guard = config[:record] == "standalone" ? "Docs/Versioning/last_uploaded_build.golfingps.txt" \
+                                            : "Docs/Versioning/last_uploaded_build.txt"
+    UI.success("Uploaded the #{variant} variant to TestFlight. Commit #{guard}.")
   end
 end

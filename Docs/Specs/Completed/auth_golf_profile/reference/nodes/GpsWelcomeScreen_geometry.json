@@ -1,0 +1,31 @@
+{
+  "prefab": "Assets/Prefabs/UI/Gps/GpsWelcomeScreen.prefab",
+  "node": "14029:33929",
+  "pulled": "2026-09-02 via get_metadata",
+  "note": "Rule-15 shape sweep, same convention as the Golf Profile sheet.",
+  "sites": [
+    { "path": "ContentContainer", "node": "14029:33933", "figma": [96, 361, 978, 2111] },
+    { "path": "ContentContainer/SkipRow", "node": "14029:34186", "figma": [10, 0, 958, 31] },
+    { "path": "ContentContainer/SkipRow/SkipLabel", "node": "14029:34187", "figma": [0, 0, 958, 31], "note": "node run 59 @ x=899, i.e. RIGHT-aligned in the 958 row" },
+    { "path": "ContentContainer/WelcomePanel", "node": "14029:34188", "figma": [10, 55, 958, 385] },
+    { "path": "ContentContainer/WelcomePanel/IconRing", "node": "14029:34189", "figma": [404, 36, 150, 150] },
+    { "path": "ContentContainer/WelcomePanel/IconRing/RoundsIcon", "node": "14029:34191", "figma": [38, 38, 74, 74] },
+    { "path": "ContentContainer/WelcomePanel/WelcomeTitle", "node": "14029:34196", "figma": [40, 200, 878, 47], "note": "node run 500 @ x=229, centred" },
+    { "path": "ContentContainer/WelcomePanel/WelcomeSub", "node": "14029:34197", "figma": [49, 261, 860, 66], "note": "the only WRAPPING run on either screen — two lines at 28px" },
+    { "path": "ContentContainer/WelcomePanel/Dots", "node": "14029:34198", "figma": [420, 341, 118, 14] },
+    { "path": "ContentContainer/WelcomePanel/Dots/Dot0", "node": "14029:34199", "figma": [0, 0, 40, 14] },
+    { "path": "ContentContainer/WelcomePanel/Dots/Dot1", "node": "14029:34200", "figma": [52, 0, 14, 14] },
+    { "path": "ContentContainer/WelcomePanel/Dots/Dot2", "node": "14029:34201", "figma": [78, 0, 14, 14] },
+    { "path": "ContentContainer/WelcomePanel/Dots/Dot3", "node": "14029:34202", "figma": [104, 0, 14, 14] },
+    { "path": "ContentContainer/FeatureGrid", "node": "14029:34203", "figma": [10, 464, 958, 474] },
+    { "path": "ContentContainer/FeatureGrid/Feature0", "node": "14029:34205", "figma": [0, 0, 470, 228] },
+    { "path": "ContentContainer/FeatureGrid/Feature0/IconRing", "node": "14029:34206", "figma": [187, 26, 96, 96] },
+    { "path": "ContentContainer/FeatureGrid/Feature0/IconRing/Icon", "node": "14029:34208", "figma": [24, 24, 48, 48] },
+    { "path": "ContentContainer/FeatureGrid/Feature0/Name", "node": "14029:34213", "figma": [0, 132, 470, 36], "note": "node run 201 @ x=134.5, centred" },
+    { "path": "ContentContainer/FeatureGrid/Feature0/Desc", "node": "14029:34214", "figma": [35, 178, 400, 26] },
+    { "path": "ContentContainer/FeatureGrid/Feature1", "node": "14029:34215", "figma": [488, 0, 470, 228] },
+    { "path": "ContentContainer/FeatureGrid/Feature2", "node": "14029:34224", "figma": [0, 246, 470, 228] },
+    { "path": "ContentContainer/FeatureGrid/Feature3", "node": "14029:34232", "figma": [488, 246, 470, 228] },
+    { "path": "ContentContainer/GetStartedButtonRow", "node": "14029:34246", "figma": [10, 1991, 958, 120] }
+  ]
+}

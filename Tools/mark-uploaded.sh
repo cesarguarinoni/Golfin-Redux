@@ -35,14 +35,33 @@
 #   with his next change. A build post-action that writes to the index is a surprise
 #   nobody wants.
 #
+# ONE GUARD PER APP STORE RECORD (gps_standalone_shell §D8)
+#   App Store Connect's "build number must be unique" rule is per APP, and this project now
+#   ships to two records: the game (com.nextinnovation.golfingame) and the PLAYLIFE shell
+#   (com.nextinnovation.golfingps, ASC app "GOLFIN GPS"). One shared guard file would make a
+#   standalone upload at commit N refuse the GAME's upload at commit N — a collision that does
+#   not exist at Apple. So the record is an argument, and each gets its own file:
+#     game       -> Docs/Versioning/last_uploaded_build.txt          (unchanged; the default)
+#     standalone -> Docs/Versioning/last_uploaded_build.golfingps.txt
+#   Shipping BOTH variants of ONE commit is still sequential for the two GAME variants ("punch
+#   it" and "punch it GPS" share a record) — the standalone is the one that is now independent.
+#
 # USAGE
-#   Tools/mark-uploaded.sh [REPO_ROOT]
+#   Tools/mark-uploaded.sh [REPO_ROOT] [RECORD]
 #   REPO_ROOT defaults to this script's own parent directory (i.e. the repo root, since
-#   the script lives in Tools/). Run it by hand from anywhere for debugging.
+#   the script lives in Tools/). RECORD is `game` (default) or `standalone`.
+#   Run it by hand from anywhere for debugging.
 
 set -u
 
-GUARD_REL="Docs/Versioning/last_uploaded_build.txt"
+RECORD="${2:-game}"
+case "$RECORD" in
+  game)       GUARD_REL="Docs/Versioning/last_uploaded_build.txt" ;;
+  standalone) GUARD_REL="Docs/Versioning/last_uploaded_build.golfingps.txt" ;;
+  *)          echo "mark-uploaded.sh: unknown record '$RECORD' (expected: game, standalone)" >&2
+              # Never fail a post-action; fall back to the game guard and say so in the log.
+              GUARD_REL="Docs/Versioning/last_uploaded_build.txt" ;;
+esac
 LOG_REL="Docs/Versioning/.mark-uploaded.log"
 
 # Absolute path first: Xcode post-action environments do not reliably inherit a useful
@@ -70,8 +89,8 @@ mkdir -p "$(dirname -- "$LOG")" 2>/dev/null
 
 log() {
   # old / new / wrote / sha — every run, success or failure.
-  printf '%s\told=%s\tnew=%s\twrote=%s\tsha=%s\t%s\n' \
-    "$STAMP" "${OLD:-?}" "${NEW:-?}" "$1" "${SHA:-?}" "$2" >>"$LOG" 2>/dev/null
+  printf '%s\trecord=%s\told=%s\tnew=%s\twrote=%s\tsha=%s\t%s\n' \
+    "$STAMP" "${RECORD:-game}" "${OLD:-?}" "${NEW:-?}" "$1" "${SHA:-?}" "$2" >>"$LOG" 2>/dev/null
 }
 
 is_number() { case "${1:-}" in ''|*[!0-9]*) return 1 ;; *) return 0 ;; esac; }

@@ -18,6 +18,7 @@ using Golfin.Economy;
 using Golfin.Net;
 using Golfin.Social;
 using Golfin.Telemetry;
+using Golfin.UI.Polish;
 using GolfinRedux.UI;
 using TMPro;
 using UnityEngine;
@@ -91,10 +92,30 @@ namespace Golfin.Gps.UI
                  "entries non-interactable.")]
         [SerializeField] private Button? _navCameraButton;
 
+        [Tooltip("Hub Profile nav slot — wired outside the inert _navButtons loop (gps_profile_pack).")]
+        [SerializeField] private Button? _navProfileButton;
+
         [Tooltip("The SCREENSHOT action tile — the same destination as the camera button, and the " +
                  "reason the tile row is no longer entirely inert. Must NOT also appear in " +
                  "_tileButtons.")]
         [SerializeField] private Button? _tileScreenshotButton;
+
+        [Tooltip("gps_gifts_votes — the hub's GIFT nav slot. Lifted out of the inert _navButtons " +
+                 "loop, which sets interactable = false.")]
+        [SerializeField] private Button? _navGiftButton;
+
+        [Tooltip("gps_gifts_votes — the GIFT action tile. Same destination as the nav slot. Must " +
+                 "NOT also appear in _tileButtons.")]
+        [SerializeField] private Button? _tileGiftButton;
+
+        [Tooltip("gps_gifts_votes — the VOTE action tile (the frame's LIVE VOTES affordance). " +
+                 "Must NOT also appear in _tileButtons.")]
+        [SerializeField] private Button? _tileVoteButton;
+
+        [Tooltip("gps_checkin — the hub's ROUNDS nav slot, inert until this task. Optional: when " +
+                 "it is null the slot is found by name under the nav bar instead, so the hub " +
+                 "prefab (which was hand-built, not generated) does not need a re-wire.")]
+        [SerializeField] private Button? _navRoundsButton;
 
         // ── Navigation ────────────────────────────────────────────────────────
         [Header("Navigation")]
@@ -123,6 +144,14 @@ namespace Golfin.Gps.UI
             // flashes "—" over numbers that were correct a moment ago.
             ApplyIdentityFallback();
             ApplyDetail(UserService.Instance.LastDetail);
+
+            // gps_polish §D3/§D8 — the rounds list gets the same treatment. ScoreHistoryService
+            // caches NOTHING (it is a paged endpoint), so the paint cache here is this
+            // controller's own `_lastRows` from the previous visit: a second entry repaints the
+            // three rows instantly and the refetch lands without re-animating them, while a
+            // first-ever entry is genuinely cold and gets the shimmer.
+            _roundsGate.Rearm();
+            ShowRounds(_lastRows, PaintKind.Cache);
 
             PointsService.Instance.OnDisplayBalanceChanged += OnDisplayBalanceChanged;
             UserService.Instance.OnDetailChanged += ApplyDetail;
@@ -156,7 +185,17 @@ namespace Golfin.Gps.UI
             _wiredOnce = true;
 
             if (_backButton != null)
-                _backButton.onClick.AddListener(OnBackClicked);
+            {
+                // gps_standalone_shell §D4 — the hub IS the root of the PLAYLIFE shell, so its
+                // BackPill has nowhere above it to go. Hidden rather than left inert: a pill that
+                // does nothing reads as a broken button, and StandaloneGate would rewrite its
+                // Home fallback back to this very screen. No-op in the game, where the pill
+                // returns to whatever opened the hub.
+                if (GolfinRedux.UI.StandaloneGate.Enabled)
+                    _backButton.gameObject.SetActive(false);
+                else
+                    _backButton.onClick.AddListener(OnBackClicked);
+            }
 
             // The tiles ARE the promise of the feature, so they keep full opacity and are simply
             // not interactable (SPEC § Figma Fidelity, Action tiles). The listener is still added
@@ -197,11 +236,76 @@ namespace Golfin.Gps.UI
                 _navCameraButton.interactable = true;
                 _navCameraButton.onClick.AddListener(OpenScoreUpload);
             }
+
+            // gps_profile_pack — Profile nav slot (lifted out of the inert _navButtons loop)
+            if (_navProfileButton != null)
+            {
+                _navProfileButton.interactable = true;
+                _navProfileButton.onClick.AddListener(() =>
+                    GolfinRedux.UI.ScreenManager.Instance?.ShowScreen(GolfinRedux.UI.ScreenId.GpsProfile));
+            }
             if (_tileScreenshotButton != null)
             {
                 _tileScreenshotButton.interactable = true;
                 _tileScreenshotButton.onClick.AddListener(OpenScoreUpload);
             }
+
+            // gps_gifts_votes — the last two inert affordances on the hub. Both the nav slot and
+            // the tile go to the same screen, for the same reason the camera button and the
+            // SCREENSHOT tile do: the nav slot is what a player reaches for, the tile is what the
+            // frame has been promising since the hub shipped.
+            if (_navGiftButton != null)
+            {
+                _navGiftButton.interactable = true;
+                _navGiftButton.onClick.AddListener(() => Open(ScreenId.GpsGift, "nav GIFT"));
+            }
+            if (_tileGiftButton != null)
+            {
+                _tileGiftButton.interactable = true;
+                _tileGiftButton.onClick.AddListener(() => Open(ScreenId.GpsGift, "tile GIFT"));
+            }
+            if (_tileVoteButton != null)
+            {
+                _tileVoteButton.interactable = true;
+                _tileVoteButton.onClick.AddListener(() => Open(ScreenId.GpsVote, "tile VOTE"));
+            }
+
+            // gps_checkin — the last inert nav slot. It was dead because the Rounds screen did not
+            // exist (GPS_BACKLOG § "Rounds tab destination"); this task is what gives it a
+            // destination.
+            //
+            // ⚠️ THE LOOKUP BY NAME IS NOT A FALLBACK FOR A MISSING WIRE, it is the primary path
+            // for THIS prefab. The hub was hand-built over MCP in gps_hub_entry, so its
+            // `_navButtons` array already holds the ROUNDS slot and that loop sets
+            // interactable = false. Running AFTER it — and re-enabling the button it just
+            // disabled — is what makes the slot live without editing an array in the Inspector.
+            Button? rounds = _navRoundsButton ?? FindNavSlot("NavRoundsButton");
+            if (rounds != null)
+            {
+                rounds.interactable = true;
+                rounds.onClick.AddListener(() => Open(ScreenId.GpsRounds, "nav ROUNDS"));
+            }
+            else
+            {
+                Debug.LogWarning($"{Tag} no ROUNDS nav slot found — the Rounds tab is unreachable " +
+                                 "from the hub.");
+            }
+        }
+
+        /// <summary>One slot of the hub's own nav bar, by child name. Uses
+        /// <see cref="GpsScreenTransition.FindLayer"/> so the gps_polish NavSafeArea wrapper is
+        /// handled in the one place that knows about it.</summary>
+        private Button? FindNavSlot(string child)
+        {
+            Transform? bar = GpsScreenTransition.FindLayer(gameObject, "GpsNavBar");
+            Transform? t = bar != null ? bar.Find(child) : null;
+            return t != null ? t.GetComponent<Button>() : null;
+        }
+
+        private void Open(ScreenId id, string source)
+        {
+            Debug.Log($"{Tag} {source} -> {id}.");
+            ScreenManager.Instance?.ShowScreen(id);
         }
 
         private void OpenScoreUpload()
@@ -306,13 +410,43 @@ namespace Golfin.Gps.UI
             ApplyDetail(UserService.Instance.LastDetail);
             if (_playerSub != null && UserService.Instance.LastDetail == null)
                 _playerSub.text = FormatSub(null, null);
-            ShowRounds(_lastRows);
+            ShowRounds(_lastRows, PaintKind.Repaint);
         }
 
+        private Coroutine? _pointsCount;
+
+        /// <summary>
+        /// gps_polish §D7 — POINTS counts up to the new balance instead of swapping to it.
+        ///
+        /// <para>Only when there is a real previous number to count FROM. The first paint of the
+        /// screen goes from the em dash placeholder, and counting up from 0 there would show a
+        /// player a balance they do not have, climbing, every time they open the hub. Same for a
+        /// balance that went DOWN (a gift purchase): the count-up shape is a reward, so a spend
+        /// snaps.</para>
+        /// </summary>
         private void OnDisplayBalanceChanged(int display)
         {
-            if (_statPoints != null)
+            if (_statPoints == null) return;
+
+            if (!TryReadNumber(_statPoints.text, out int from) || display <= from)
+            {
                 _statPoints.text = display.ToString("N0", CultureInfo.InvariantCulture);
+                return;
+            }
+
+            UiMotion.Run(this, ref _pointsCount, UiMotion.CountUp(_statPoints, from, display));
+        }
+
+        /// <summary>
+        /// Read back a number this screen itself formatted with "N0". Returns false for the
+        /// em dash placeholder, for an empty label, and for anything else unparseable — every one
+        /// of which means "there is nothing to count up from".
+        /// </summary>
+        internal static bool TryReadNumber(string? text, out int value)
+        {
+            value = 0;
+            if (string.IsNullOrWhiteSpace(text)) return false;
+            return int.TryParse(text, NumberStyles.Number, CultureInfo.InvariantCulture, out value);
         }
 
         private void OnDetailResult(ApiResult<UserDetailDto> result)
@@ -334,11 +468,11 @@ namespace Golfin.Gps.UI
             {
                 if (result != null)
                     Debug.LogWarning($"{Tag} /score/history failed ({result.ErrorKind}) — rounds panel hidden.");
-                ShowRounds(null);
+                ShowRounds(null, PaintKind.Fetch);
                 return;
             }
 
-            ShowRounds(result.Data);
+            ShowRounds(result.Data, PaintKind.Fetch);
         }
 
         /// <summary>
@@ -346,10 +480,11 @@ namespace Golfin.Gps.UI
         /// state: hiding it made a brand-new player's hub look broken — a headline with nothing
         /// under it is better than a hole in the layout where a panel should be.
         /// </summary>
-        private void ShowRounds(List<ActivityDto>? rows)
+        private void ShowRounds(List<ActivityDto>? rows, PaintKind kind)
         {
             _lastRows = rows;
             int count = 0;
+            var painted = new List<Transform>(_roundRows.Length);
             if (rows != null)
             {
                 foreach (ActivityDto r in rows)
@@ -360,6 +495,7 @@ namespace Golfin.Gps.UI
                     if (row == null) continue;
                     row.gameObject.SetActive(true);
                     row.Bind(r, IsBest(r));
+                    painted.Add(row.transform);
                     count++;
                 }
             }
@@ -367,13 +503,32 @@ namespace Golfin.Gps.UI
             for (int i = count; i < _roundRows.Length; i++)
                 if (_roundRows[i] != null) _roundRows[i].gameObject.SetActive(false);
 
+            bool stagger = _roundsGate.Should(kind, count);
+            bool cold    = _roundsGate.IsCold;
+
+            // §D8 — the placeholder stands in for the rows, so it and the empty line are mutually
+            // exclusive: showing "no rounds yet" while still fetching would tell a player who HAS
+            // rounds that they have none, for as long as the request takes.
+            GpsPaintMotion.Shimmer(gameObject, ShimmerHost.HubRounds, cold);
+
             if (_roundsEmpty != null)
             {
-                _roundsEmpty.gameObject.SetActive(count == 0);
-                if (count == 0) _roundsEmpty.text = LocalizationManager.Get("GPS_HUB_NO_ROUNDS");
+                bool showEmpty = count == 0 && !cold;
+                bool wasEmpty  = _roundsEmpty.gameObject.activeSelf;
+                _roundsEmpty.gameObject.SetActive(showEmpty);
+                if (showEmpty) _roundsEmpty.text = LocalizationManager.Get("GPS_HUB_NO_ROUNDS");
+                // The empty label FADES in rather than appearing (§D8) — but only the first time
+                // it replaces a shimmer, not on every repaint of a list that is still empty.
+                if (showEmpty && !wasEmpty && kind == PaintKind.Fetch)
+                    GpsPaintMotion.FadeInPanel(this, _roundsEmpty.gameObject, true);
             }
             if (_roundsPanel != null) _roundsPanel.SetActive(true);
+
+            if (stagger) GpsPaintMotion.StaggerRise(this, painted);
         }
+
+        /// <summary>§D3/§D8 — cache-vs-fetch memory for MY RECENT ROUNDS.</summary>
+        private readonly PaintGate _roundsGate = new PaintGate(Tag, "rounds");
 
         /// <summary>
         /// The BEST tag marks the row whose score EQUALS the profile's <c>best_score</c> — the

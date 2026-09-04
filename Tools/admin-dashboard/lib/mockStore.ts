@@ -7,6 +7,7 @@ import {
   MOCK_CONTENT_VERSIONS,
 } from "./mockContent";
 import { MOCK_NOTICES } from "./mockNotices";
+import { MOCK_VENUES } from "./mockVenues";
 import { MOCK_REWARD_ACTIONS } from "./mockRewards";
 import { MOCK_ACTIVITIES, MOCK_TRANSACTIONS, MOCK_USERS } from "./mock";
 import { MOCK_TOURNAMENTS, MOCK_TOURNAMENT_ENTRIES } from "./mockTournaments";
@@ -21,6 +22,7 @@ import type {
   NoticeRow,
   PointsTransaction,
   RewardActionRow,
+  VenueRow,
   TournamentEntryRow,
   TournamentRow,
 } from "./types";
@@ -45,6 +47,10 @@ export interface MockDb {
   /** `game_point_actions` — the LIVE earn catalog (game_modes_admin §3). No
    *  draft/publish pair here, deliberately: there is none in prod either. */
   rewardActions: RewardActionRow[];
+  /** `venues` — the Partners panel's spots (gps_checkin §B1). Here rather than in
+   *  a module-level array because the panel's GET and its PATCH are different
+   *  route bundles in dev, and only globalThis is shared between them. */
+  venues: VenueRow[];
   /** Admin-managed content (SPEC content_catalog §D2). Fixtures are DELIBERATELY
    *  absurd — every price is 9999 — because §3.5 records mock fixtures being
    *  read as production facts. */
@@ -72,6 +78,7 @@ export function mockDb(): MockDb {
       banners: structuredClone(MOCK_BANNERS),
       notices: structuredClone(MOCK_NOTICES),
       rewardActions: structuredClone(MOCK_REWARD_ACTIONS),
+      venues: structuredClone(MOCK_VENUES),
       contentCatalogs: structuredClone(MOCK_CONTENT_CATALOGS),
       contentPublished: structuredClone(MOCK_CONTENT_PUBLISHED),
       contentDrafts: structuredClone(MOCK_CONTENT_DRAFTS),

@@ -168,3 +168,10 @@ You don't modify code or scenes; you review what was built.
 You do NOT have `mcp__ai-game-developer__tests-run` — only the implementer does. If SPEC.md requires unit/EditMode/PlayMode test results and the IMPLEMENTER_REPORT.md does NOT show test counts (Total/Passed/Failed/Skipped), the correct verdict is `ARCHITECT_REVIEW_FAIL` with the fail item: *"Run `mcp__ai-game-developer__tests-run` and append summary counts (Total/Passed/Failed/Skipped) to IMPLEMENTER_REPORT.md before resubmitting."*
 
 Do NOT escalate "Cesar should run the tests manually" — the implementer is the one with the test runner; route back to it. The only legitimate test-related escalation is when the test runner produced ambiguous results (e.g., flaky test, environment-dependent failure) that require Cesar's judgment on whether to ship.
+
+
+## Figma-node screens — MANDATORY step 0
+
+If `SPEC.md` references a Figma node, **read `Docs/Architecture/FIGMA_SCREEN_BUILD_PLAYBOOK.md` before touching anything** and work its checklists.
+
+**Re-run § 7 yourself**: crop MATCHED regions from the node render and the live capture, stack them, and ENUMERATE the differences. "Matches Figma" is not a verdict. On the task that produced this playbook, the first crop sheet found six defects the prose review had missed — including six of 24 rarity tags wrong and locked cells tinted as if earned. Distinguish DATA differences (the node mocks populated state) from real fidelity defects and say which is which.

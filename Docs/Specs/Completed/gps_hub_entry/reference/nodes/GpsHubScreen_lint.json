@@ -1,1 +1,1 @@
-{"prefab":"Assets/Prefabs/UI/Gps/GpsHubScreen.prefab","fail":0,"warn":1,"findings":[{"sev":"WARN","path":"ContentContainer/BackRow/BackButton","check":"flat-fill","detail":"Image has no sprite — flat #FFFFFF00 fill with sharp corners. Verify intended, not a fabricated placeholder."}]}
+{"prefab":"Assets/Prefabs/UI/Gps/GpsHubScreen.prefab","fail":0,"warn":0,"findings":[]}

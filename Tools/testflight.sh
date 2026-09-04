@@ -21,6 +21,13 @@
 #   Homebrew's bin is prepended for the same class of reason: `brew shellenv` is not in
 #   ~/.zprofile on this machine, so `fastlane` is not on PATH in a fresh shell.
 #
+# THE LANE IS THE ARGUMENT
+#   ./Tools/testflight.sh                             "punch it"            -> iOS-Full
+#   ./Tools/testflight.sh testflight_build_gps        "punch it GPS"        -> iOS-Full-GPS
+#   ./Tools/testflight.sh testflight_build_standalone "punch it standalone" -> iOS-Standalone
+#                                                     (the PLAYLIFE shell; uploads to the
+#                                                      SEPARATE ASC record "GOLFIN GPS")
+#
 # Everything else about the run is the Fastfile's business — see fastlane/Fastfile and
 # Docs/TESTFLIGHT_RUNBOOK.md § "One command".
 set -euo pipefail

@@ -1,0 +1,25 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "admin-dashboard",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
+      "cwd": "Tools/admin-dashboard",
+      "port": 3000
+    },
+    {
+      "name": "admin-dashboard-mock",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": [
+        "-lc",
+        "MOCK_MODE=1 npm run dev -- --port 3100"
+      ],
+      "cwd": "Tools/admin-dashboard",
+      "port": 3100
+    }
+  ]
+}

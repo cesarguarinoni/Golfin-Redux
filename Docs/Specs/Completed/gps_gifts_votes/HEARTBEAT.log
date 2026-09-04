@@ -1,0 +1,25 @@
+=== iter-1 kickoff baseline 2026-09-02T06:46:23Z ===
+HEAD f84ecff0f4bbec772bac9533c80bfc76189a6ef4
+DIRTY:
+ M .claude/alerts.log
+ M .claude/review_misses.log
+ M Docs/Reports/content_art.txt
+ M Docs/Specs/Completed/gps_profile_pack/ARCHITECT_REVIEW.md
+ M Docs/TellCode.md
+?? .claude/launch.json
+?? Docs/GPS/GPS_BACKLOG.md
+?? Docs/Specs/Active/gps_gifts_votes/HEARTBEAT.log
+?? Docs/Specs/Active/gps_gifts_votes/SPEC.md
+?? Docs/Specs/Active/gps_gifts_votes/STATUS.md
+?? Docs/Specs/Active/gps_gifts_votes/reference/gps_gift_14027-101843.png
+?? Docs/Specs/Active/gps_gifts_votes/reference/gps_vote_14028-33534.png
+?? Docs/Specs/Completed/ball_data_wiring/ARCHITECT_REVIEW.md
+=== end baseline ===
+
+=== 2026-09-02T07:15:24Z wiring done (scene isolated: 242+/6- , zero layout churn) ===
+
+=== 2026-09-02T07:36:31Z EditMode sweep: 2258 total / 2255 passed / 0 failed / 3 skipped (pre-existing HoleCompleteDriver). Tripwire: the prior run FAILED CreateJson_IsYesNoWithTwoOptions, proving the 19 new Golfin.Social.Tests actually execute. ===
+
+=== 2026-09-02T08:13:02Z DONE: client committed b823510d5, backend committed playlife 4206a56 (NOT applied, NOT deployed). STATUS=IMPLEMENTER_BLOCKED on the DDL. ===
+
+=== 2026-09-02T08:24:51Z APPLIED + DEPLOYED + E2E GREEN. playlife-api v66. 19 profiles / 0 invariant violations. ===

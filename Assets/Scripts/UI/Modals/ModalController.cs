@@ -1,3 +1,4 @@
+using Golfin.UI.Polish;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -22,9 +23,25 @@ namespace Golfin.UI.Modals
         [Header("Animation")]
         [SerializeField] private bool useAnimation = true;
         [SerializeField] private float animationDuration = 0.2f;
-        
+
+        // ── gps_polish §D5 — opt-in pop-in ───────────────────────────────────
+        [Tooltip("gps_polish §D5. When true, Show() pops the panel in (scale 0.9 -> 1 with an " +
+                 "independent alpha) and fades the backdrop, and Hide() reverses it. DEFAULT FALSE, " +
+                 "and that default is the point: every modal in the game inherits this class, and a " +
+                 "default of true would have put new motion on the level-up modal, the shop, the " +
+                 "tournament gates and the versus result in a task whose whole scope is the GPS " +
+                 "surface. Set by GpsPolishBuilder on the three GPS modals and nowhere else.")]
+        [SerializeField] private bool animateShow = false;
+
         private CanvasGroup _canvasGroup;
+        private CanvasGroup _backdropGroup;
+        private Coroutine _panelMotion;
+        private Coroutine _backdropMotion;
         private bool _isVisible = false;
+
+        /// <summary>Whether this modal pops in (gps_polish §D5). Read by tests, which pin the
+        /// default at false for every non-GPS modal prefab.</summary>
+        public bool AnimatesShow => animateShow;
 
         // ── S2 — global modal stack tracking ─────────────────────────────────
         /// <summary>
@@ -42,7 +59,7 @@ namespace Golfin.UI.Modals
         protected virtual void Awake()
         {
             // Setup canvas group for fade animation
-            if (modalPanel != null && useAnimation)
+            if (modalPanel != null && (useAnimation || animateShow))
             {
                 _canvasGroup = modalPanel.GetComponent<CanvasGroup>();
                 if (_canvasGroup == null)
@@ -102,9 +119,21 @@ namespace Golfin.UI.Modals
             if (modalPanel != null)
             {
                 modalPanel.SetActive(true);
-                
-                // Fade in animation
-                if (useAnimation && _canvasGroup != null)
+
+                if (animateShow)
+                {
+                    // gps_polish §D5 — pop in. The panel scale and the backdrop alpha are
+                    // independent on purpose: the scrim arriving at full speed under a panel that
+                    // is still growing is what makes the pop read as "on top of" rather than
+                    // "instead of". Both are UiMotion routines, so both settle on their final
+                    // value if this modal is closed or force-disabled mid-animation.
+                    var panelRect = modalPanel.transform as RectTransform;
+                    UiMotion.Run(this, ref _panelMotion, UiMotion.Pop(panelRect, _canvasGroup));
+                    var bg = EnsureBackdropGroup();
+                    if (bg != null)
+                        UiMotion.Run(this, ref _backdropMotion, UiMotion.Fade(bg, 0f, 1f));
+                }
+                else if (useAnimation && _canvasGroup != null)
                 {
                     _canvasGroup.alpha = 0f;
                     StartCoroutine(FadeIn());
@@ -131,7 +160,18 @@ namespace Golfin.UI.Modals
             if (OpenModalCount == 0) ModalStackEmptied?.Invoke();
 
             // Fade out animation
-            if (useAnimation && _canvasGroup != null)
+            if (animateShow && modalPanel != null)
+            {
+                // gps_polish §D5 — the reverse. HideImmediate is chained off the LONGER of the two
+                // routines rather than called here, so the panel is never deactivated out from
+                // under its own shrink.
+                var panelRect = modalPanel.transform as RectTransform;
+                var bg = EnsureBackdropGroup();
+                if (bg != null) UiMotion.Run(this, ref _backdropMotion, UiMotion.Fade(bg, bg.alpha, 0f));
+                UiMotion.Run(this, ref _panelMotion,
+                    UiMotion.Then(UiMotion.Unpop(panelRect, _canvasGroup), HideImmediate));
+            }
+            else if (useAnimation && _canvasGroup != null)
             {
                 StartCoroutine(FadeOut());
             }
@@ -228,6 +268,23 @@ namespace Golfin.UI.Modals
                 if (OpenModalCount == 0) ModalStackEmptied?.Invoke();
                 Debug.Log($"[Modal] {gameObject.name} force-disabled while visible; OpenModalCount={OpenModalCount}");
             }
+        }
+
+        /// <summary>
+        /// The backdrop's CanvasGroup, created on demand.
+        ///
+        /// <para>Resolved LAZILY rather than in Awake because the backdrop reference is not stable
+        /// across a Show: <see cref="ModalScrim.Apply"/> may CREATE the scrim (a modal authored
+        /// without one gets a full-screen scrim built for it) and reassign <see cref="backdrop"/>
+        /// every time. A group cached in Awake would belong to an object that no longer exists.</para>
+        /// </summary>
+        private CanvasGroup EnsureBackdropGroup()
+        {
+            if (backdrop == null) return null;
+            if (_backdropGroup != null && _backdropGroup.gameObject == backdrop) return _backdropGroup;
+            _backdropGroup = backdrop.GetComponent<CanvasGroup>();
+            if (_backdropGroup == null) _backdropGroup = backdrop.AddComponent<CanvasGroup>();
+            return _backdropGroup;
         }
 
         /// <summary>

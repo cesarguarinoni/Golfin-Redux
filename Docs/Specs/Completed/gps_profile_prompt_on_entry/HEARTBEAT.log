@@ -1,0 +1,34 @@
+=== iter-1 kickoff baseline 2026-09-03 09:20 JST ===
+HEAD 9cf02a9be575e1473d0806701f166152282e4aab
+  (9cf02a9be gps_navbar_bottom_anchor: the bar grows for the home indicator, it does not move)
+
+DIRTY (git status --porcelain --untracked-files=all) AT KICKOFF:
+ M Docs/Reports/content_art.txt
+ M Docs/TellCode.md
+ M Docs/Versioning/last_uploaded_build.txt
+?? Docs/Specs/Active/gps_profile_prompt_on_entry/SPEC.md
+?? Docs/Specs/Active/gps_profile_prompt_on_entry/STATUS.md
+
+Nothing under Assets/ was dirty at kickoff, so every Assets/ change below is mine.
+Docs/Specs/**/screenshots/ is gitignored (.gitignore:252), which is why this task's
+six captures never appear in porcelain.
+=== end baseline ===
+
+09:20 read SPEC + STATUS; traced both HomeScreenController call sites, ScreenManager.Navigate,
+      the pill onClick, BannerSlotBinder.OpenLink -> BannerPolicy.TryGetInternalRoute.
+09:24 added GpsAuthExtrasFlow.PendingHubEntry + InterceptHubEntry (pure seam + testable core).
+09:26 ScreenManager.Navigate intercept (after the gates, re-enters Navigate like the AuthGate
+      redirect so GpsGolfProfile is gated on its own account); removed both Home call sites and
+      the OfferGolfProfileNextFrame coroutine; both Welcome exits clear PendingHubEntry.
+09:28 EditMode suite updated (intercept table, PendingHubEntry seam, Home-no-longer-offers).
+09:29 FIRST full EditMode sweep: 1 FAILURE — NavBackMemoryTests.A15 died on
+      AuthService.Instance's DontDestroyOnLoad, because the intercept was calling ShouldOffer()
+      on EVERY navigation. Fixed by ordering the hub test first so ShouldOffer() is only reached
+      for a hub entry (also the right thing: no session read on an ordinary screen change).
+09:31 EditMode sweep GREEN: 2329 total / 2326 passed / 0 failed / 3 pre-existing skips.
+09:33 TRIPWIRE run (Assert.Fail in each of the 4 new tests): exactly those 4 failed by name,
+      proving the new fixtures execute. Tripwires reverted; sweep re-run green.
+09:36 wrote GpsProfilePromptOnEntryRun (real navigation: Splash gate -> Home hold -> the REAL
+      pill's own onClick -> SAVE/Skip/GET STARTED -> deep link).
+09:38 acceptance run: ALL ACCEPTANCE CHECKS PASS, 6 captures at 1170x2532.
+09:41 device-pass rows 1.3 / 1.8 rewritten (+ new 1.9 for the banner route, + 0.6 clarified).

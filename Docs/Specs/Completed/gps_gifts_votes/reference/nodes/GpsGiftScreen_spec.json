@@ -1,0 +1,264 @@
+{
+  "elements": [
+    {
+      "name": "Background",
+      "requireSprite": true,
+      "w": -1,
+      "h": -1,
+      "radius": -1,
+      "fontSize": -1,
+      "color": "",
+      "fontWeight": ""
+    },
+    {
+      "name": "GiftHero",
+      "requireSprite": true,
+      "w": 958,
+      "h": 288,
+      "radius": -1,
+      "fontSize": -1,
+      "color": "",
+      "fontWeight": ""
+    },
+    {
+      "name": "GiftIcon",
+      "requireSprite": true,
+      "w": 36,
+      "h": 36,
+      "radius": -1,
+      "fontSize": -1,
+      "color": "#F07F9C",
+      "fontWeight": ""
+    },
+    {
+      "name": "HeroTitle",
+      "requireSprite": false,
+      "w": -1,
+      "h": -1,
+      "radius": -1,
+      "fontSize": 32.18,
+      "color": "#F07F9C",
+      "fontWeight": "SemiBold"
+    },
+    {
+      "name": "HeroSub",
+      "requireSprite": false,
+      "w": -1,
+      "h": -1,
+      "radius": -1,
+      "fontSize": 26,
+      "color": "#F4B8C8",
+      "fontWeight": ""
+    },
+    {
+      "name": "HeroValue",
+      "requireSprite": false,
+      "w": -1,
+      "h": -1,
+      "radius": -1,
+      "fontSize": 85.82,
+      "color": "#FFFFFF",
+      "fontWeight": "SemiBold"
+    },
+    {
+      "name": "HeroNote",
+      "requireSprite": false,
+      "w": -1,
+      "h": -1,
+      "radius": -1,
+      "fontSize": 24,
+      "color": "#F4B8C8",
+      "fontWeight": ""
+    },
+    {
+      "name": "Supporters",
+      "requireSprite": true,
+      "w": 958,
+      "h": 376,
+      "radius": -1,
+      "fontSize": -1,
+      "color": "",
+      "fontWeight": ""
+    },
+    {
+      "name": "Golfers",
+      "requireSprite": true,
+      "w": 958,
+      "h": 568,
+      "radius": -1,
+      "fontSize": -1,
+      "color": "",
+      "fontWeight": ""
+    },
+    {
+      "name": "BuyGifts",
+      "requireSprite": true,
+      "w": 958,
+      "h": 312,
+      "radius": -1,
+      "fontSize": -1,
+      "color": "",
+      "fontWeight": ""
+    },
+    {
+      "name": "PanelTitle",
+      "requireSprite": false,
+      "w": -1,
+      "h": -1,
+      "radius": -1,
+      "fontSize": 37.55,
+      "color": "#EEDC9A",
+      "fontWeight": "SemiBold"
+    },
+    {
+      "name": "Separator",
+      "requireSprite": true,
+      "w": -1,
+      "h": -1,
+      "radius": -1,
+      "fontSize": -1,
+      "color": "",
+      "fontWeight": ""
+    },
+    {
+      "name": "Rank",
+      "requireSprite": false,
+      "w": -1,
+      "h": -1,
+      "radius": -1,
+      "fontSize": 26.82,
+      "color": "",
+      "fontWeight": "SemiBold"
+    },
+    {
+      "name": "Avatar",
+      "requireSprite": true,
+      "w": 72,
+      "h": 72,
+      "radius": -1,
+      "fontSize": -1,
+      "color": "",
+      "fontWeight": ""
+    },
+    {
+      "name": "Initial",
+      "requireSprite": false,
+      "w": -1,
+      "h": -1,
+      "radius": -1,
+      "fontSize": 26.82,
+      "color": "#FFFFFF",
+      "fontWeight": "SemiBold"
+    },
+    {
+      "name": "Name",
+      "requireSprite": false,
+      "w": -1,
+      "h": -1,
+      "radius": -1,
+      "fontSize": 26.82,
+      "color": "#FFFFFF",
+      "fontWeight": "SemiBold"
+    },
+    {
+      "name": "Followers",
+      "requireSprite": false,
+      "w": -1,
+      "h": -1,
+      "radius": -1,
+      "fontSize": 22,
+      "color": "#B7C3D3",
+      "fontWeight": ""
+    },
+    {
+      "name": "Pts",
+      "requireSprite": false,
+      "w": -1,
+      "h": -1,
+      "radius": -1,
+      "fontSize": 28.61,
+      "color": "#F07F9C",
+      "fontWeight": "SemiBold"
+    },
+    {
+      "name": "BuyTitle",
+      "requireSprite": false,
+      "w": -1,
+      "h": -1,
+      "radius": -1,
+      "fontSize": 30.39,
+      "color": "#EEDC9A",
+      "fontWeight": "SemiBold"
+    },
+    {
+      "name": "BuySub",
+      "requireSprite": false,
+      "w": -1,
+      "h": -1,
+      "radius": -1,
+      "fontSize": 24,
+      "color": "#B7C3D3",
+      "fontWeight": ""
+    },
+    {
+      "name": "Item0",
+      "requireSprite": true,
+      "w": 287.33,
+      "h": 168,
+      "radius": -1,
+      "fontSize": -1,
+      "color": "",
+      "fontWeight": ""
+    },
+    {
+      "name": "Item1",
+      "requireSprite": true,
+      "w": 287.33,
+      "h": 168,
+      "radius": -1,
+      "fontSize": -1,
+      "color": "",
+      "fontWeight": ""
+    },
+    {
+      "name": "Item2",
+      "requireSprite": true,
+      "w": 287.33,
+      "h": 168,
+      "radius": -1,
+      "fontSize": -1,
+      "color": "",
+      "fontWeight": ""
+    },
+    {
+      "name": "IconRing",
+      "requireSprite": true,
+      "w": 72,
+      "h": 72,
+      "radius": -1,
+      "fontSize": -1,
+      "color": "",
+      "fontWeight": ""
+    },
+    {
+      "name": "ItemName",
+      "requireSprite": false,
+      "w": -1,
+      "h": -1,
+      "radius": -1,
+      "fontSize": 19.67,
+      "color": "#FFFFFF",
+      "fontWeight": "SemiBold"
+    },
+    {
+      "name": "ItemPrice",
+      "requireSprite": false,
+      "w": -1,
+      "h": -1,
+      "radius": -1,
+      "fontSize": 21.45,
+      "color": "#EEDC9A",
+      "fontWeight": "SemiBold"
+    }
+  ]
+}

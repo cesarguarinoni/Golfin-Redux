@@ -207,3 +207,10 @@ skills, follow this embedded version.)
 - Don't review your own work — that's the self-reviewer's job.
 - Don't decide whether something is "good enough" — measure it against the spec; mark PASS or FAIL.
 - Don't escalate to Cesar directly — escalate to the architect, who escalates to Cesar if needed.
+
+
+## Figma-node screens — MANDATORY step 0
+
+If `SPEC.md` references a Figma node, **read `Docs/Architecture/FIGMA_SCREEN_BUILD_PLAYBOOK.md` before touching anything** and work its checklists.
+
+It exists because `gps_profile_pack` cleared three full rounds of gates and Cesar rejected each on sight. The four costliest: capturing through a render harness instead of real navigation, a ΔRGB measured against the wrong backdrop, `Image.Type.Filled` on 9-sliced bars (renders the cap as a thin wedge), and the pre-compositing `A(overlay,α,backdrop)` used where genuinely translucent alpha was needed. Also: a freshly baked PNG imports as a Texture, not a Sprite — **white box = null sprite**.

@@ -136,6 +136,12 @@ const PATHS: Record<PanelIconName, React.ReactNode> = {
     </>
   ),
   // A torn stub with a perforation — one pull, one ticket.
+  pin: (
+    <>
+      <path d="M12 21s7-5.686 7-11a7 7 0 1 0-14 0c0 5.314 7 11 7 11z" />
+      <circle cx="12" cy="10" r="2.5" />
+    </>
+  ),
   ticket: (
     <>
       <path d="M3 8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v1.5a2.5 2.5 0 0 0 0 5V16a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1.5a2.5 2.5 0 0 0 0-5z" />

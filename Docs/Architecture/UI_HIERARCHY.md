@@ -480,6 +480,147 @@ StaminaShopDetailScreen           (StaminaShopDetailScreenController)
 
 ---
 
+## GPS / PLAYLIFE screens (gps_hub_entry … auth_golf_profile)
+
+Seven screens under `Canvas > ScreensRoot`, all registered in `ScreenManager` and all listed in
+`Golfin.Gps.UI.GpsGate.GpsScreens` — that list is the single source of truth for BOTH reachability
+("punch it" builds refuse to open them) and shared chrome (`ScreenManager` reads
+`GpsGate.IsGpsScreen`, it does not keep a second copy). **A new GPS screen missing from that list
+ships REACHABLE in a non-GPS build, silently.** `GpsGateTests.EveryGpsNamedScreenId_IsOnTheGpsList`
+is the tripwire.
+
+| ScreenId | Prefab | Controller | Built by |
+|---|---|---|---|
+| `GpsHub` | `GpsHubScreen.prefab` | `GpsHubScreenController` | — |
+| `ScoreUpload` | `ScoreUploadScreen.prefab` | `ScoreUploadFlowController` (six step roots in ONE screen) | `ScoreUploadScreenBuilder` |
+| `GpsProfile` | `GpsProfileScreen.prefab` | `GpsProfileScreenController` | `GpsProfilePackBuilder` |
+| `GpsAvatar` | `GpsAvatarScreen.prefab` | `GpsAvatarScreenController` | `GpsProfilePackBuilder` |
+| `GpsBadges` | `GpsBadgesScreen.prefab` | `GpsBadgesScreenController` | `GpsProfilePackBuilder` |
+| `GpsGolfProfile` | `GpsGolfProfileScreen.prefab` | `GpsGolfProfileScreenController` | `GpsAuthExtrasBuilder` |
+| `GpsWelcome` | `GpsWelcomeScreen.prefab` | `GpsWelcomeScreenController` | `GpsAuthExtrasBuilder` |
+| `GpsGift` | `GpsGiftScreen.prefab` | `GpsGiftScreenController` | `GpsGiftVoteBuilder` |
+| `GpsVote` | `GpsVoteScreen.prefab` | `GpsVoteScreenController` | `GpsGiftVoteBuilder` |
+| `GpsRounds` | `GpsRoundsScreen.prefab` | `GpsRoundsScreenController` | `GpsRoundsBuilder` |
+
+All ten take `ShowTopBarOnly()` chrome: the shared top bar carries the title (via
+`PersistentUIManager.NavTitleKeyFor`) and the shared bottom nav is hidden — the hub and the score
+upload draw their OWN GPS nav bar inside their prefabs, and the two auth-extras frames hide it
+entirely (`GPS Nav Bar Container` is `hidden` on both Figma nodes). Gift and Vote draw the hub's
+nav bar too, cloned by the builder and made non-interactable. None of the nine has a
+bottom-nav pillar, so `ScreenManager.PillarOf` returns null for all of them and nav-back memory
+treats them uniformly.
+
+**The prefabs are builder OUTPUT, never hand-edited.** Re-running a builder overwrites its
+prefabs; the scene holds plain prefab instances stretched to full screen and inactive at rest.
+
+### gps_gifts_votes (2026-09-02) — the last two GPS screens
+
+```
+ScreensRoot
+├── GpsRoundsScreen             (GpsRoundsScreenController)   ← gps_checkin
+│   ├── Background
+│   ├── ContentContainer        ← Background + ContentContainer is what makes it PUSHABLE
+│   │   ├── StatusRow           (NEARBY · N SPOTS / GPS ON / CHECKED IN · HH:MM〜 / LIVE)
+│   │   ├── ChipsRow            (GOLF COURSES / DRIVING RANGES / FOOD & DRINK) — hidden while a round is live
+│   │   ├── ActiveCard          (LIVE ROUND pill 180w, venue, address, ELAPSED/PTS/GPS/FIXES, SCORE UPLOAD + CHECK OUT)
+│   │   ├── MapCard             (Google Static Maps tile via /venue/map, NEAR ME, legend, player + spot pins)
+│   │   ├── SortBar             (NEAREST FIRST · DISTANCE + caret SPRITE — the font has no ▾)
+│   │   ├── SpotListPanel       (3 RoundSpotRowView; CHECK IN in radius, "N KM AWAY" outside)
+│   │   └── HistoryPanel        (MY RECENT ROUNDS) — hidden while a round is live
+│   ├── NavSafeArea/GpsNavBar
+│   ├── CheckInConfirmModal     (CheckInConfirmModalController)
+│   └── RoundCompleteModal      (RoundCompleteModalController — confirm AND receipt)
+├── GpsGiftScreen               (GpsGiftScreenController)
+│   ├── Background              (Shop/Background - Rewards.png — the node's "Rewards" variant)
+│   ├── ContentContainer        (96,361, 978x1860)
+│   │   ├── GiftHero            (S_GV_GiftHero, 958x288 r50 — the ONE plum panel on the GPS
+│   │   │   │                    surface, #6b2140->#3a1226 and OPAQUE, so it takes no fit)
+│   │   │   ├── HH > GiftIcon + HeroTitle   (a centred HorizontalLayoutGroup, not two hard x's:
+│   │   │   │                                the JA title is a different width)
+│   │   │   └── HeroSub / HeroValue / HeroNote
+│   │   ├── Supporters          (S_GV_Supporters, 958x376)
+│   │   │   ├── PanelHeader > PanelTitle + SeeAll   (SeeAll INACTIVE — no destination in v1)
+│   │   │   ├── Separator       (S_GV_Separator — a white alpha ramp 0->0.9->0; no tint can
+│   │   │   │                    produce a horizontal gradient, so it is baked)
+│   │   │   └── Supporter0..2   (Divider on rows 1+, Rank, Avatar>Initial, Name, Followers, Pts)
+│   │   ├── Golfers             (S_GV_Golfers, 958x568; Golfer0..4, each + SendGiftButton)
+│   │   └── BuyGifts            (S_GV_BuyGifts, 958x312)
+│   │       └── GiftItems > Item0..2  (S_GV_ItemCell r28; IconRing>Icon, ItemName, ItemPrice)
+│   ├── GpsNavBar               (cloned from GpsHubScreen, all slots non-interactable)
+│   └── GiftSendModal           (GiftSendModalController — ONE modal, TWO modes: send RP and
+│                                confirm a purchase. Panel + Backdrop authored INACTIVE.)
+└── GpsVoteScreen               (GpsVoteScreenController)
+    ├── Background              (ClubsInventory/Background.png)
+    ├── ContentContainer
+    │   ├── StoriesRow          (S_GV_StoriesRow r32; StoryNew + Story0..5 — DECORATIVE, bound
+    │   │                        to /user/discover names so it is at least honest)
+    │   ├── ChipsRow            (S_GV_ChipsRow r100; Chip0..3 each with Off/On/Label + a
+    │   │                        CanvasGroup — the dead chips dim as a UNIT, which only a
+    │   │                        CanvasGroup does — plus CreateButton)
+    │   └── VoteList            (ScrollRect + RectMask2D)
+    │       └── Content
+    │           ├── CardPhotoTemplate    958x530   } authored INACTIVE and cloned per vote.
+    │           ├── CardPhoto2Template   958x450   } Shape comes from the DATA (>2 options =
+    │           ├── CardSimpleTemplate   958x232   } multi); the photo header is a POSITION
+    │           └── CardMultiTemplate    958x200   } rule (index 0 and 3), per SPEC.
+    ├── GpsNavBar
+    └── VoteCreateModal         (VoteCreateModalController)
+```
+
+**Two traps this pair paid for, both worth knowing before building another GPS screen.**
+
+*Rings need a straight run.* Every 9-sliced atom here is 176x176 with an 88px border — a middle
+band of exactly ZERO pixels. Harmless for a SOLID capsule (`S_PillStadium`, `S_SU_GoldSegment`):
+the seam column Unity replicates is opaque. Fatal for a RING, whose horizontal middle band is what
+supplies a wide pill's top and bottom strokes — the rim came out visibly thinner top-and-bottom.
+`S_GV_ChipRing` / `S_GV_PillRing` are 208x208 (88 + 32 straight + 88) for that reason.
+
+*Nothing with a `ContentSizeFitter` may carry an `Image` on the same object.* `Image` is an
+`ILayoutElement` and a 9-sliced sprite reports its NATIVE width as a preferred width, which beats
+the layout group's and makes the element far too wide. The pills put both their fill and their rim
+on ignore-layout children and leave the root bare.
+
+
+### auth_golf_profile (2026-09-02) — the post-signup pair
+
+```
+ScreensRoot
+├── GpsGolfProfileScreen        (GpsGolfProfileScreenController)
+│   ├── Background              (Splash - Background.png, full-screen)
+│   └── ContentContainer        (96,361, 978x2111 — NOTE 2111, not the 1860 the profile pack uses)
+│       ├── GolfProfilePanel    (S_AUTH_GolfProfilePanel, 958x731 r50)
+│       │   ├── IntroTitle / IntroSub
+│       │   ├── Colours         (492 wide, centred; Colour0..3 — the SELECTED slot is the 120px
+│       │   │                    disc, the rest 100px. Re-spaced at runtime by LayoutSwatches;
+│       │   │                    the row's total width is 492 whichever slot is selected.)
+│       │   ├── ColourLabel
+│       │   ├── NicknameLabel / NicknameInput   (TMP_InputField > TextArea > Placeholder + Text)
+│       │   ├── ExperienceLabel / Chips (Chip0..2, sprite swapped per selection)
+│       │   └── HandicapLabel / HandicapInput
+│       ├── ErrorLabel          (#E5484D, INACTIVE at rest; sits in the Spacer band BELOW the
+│       │                        panel so it can never disturb the panel's own layout)
+│       ├── SaveProfileButtonRow > SaveProfileButton   (Main Buttons Gold, content-hugging)
+│       └── SkipRow             (the whole row is the button; label centred)
+└── GpsWelcomeScreen            (GpsWelcomeScreenController)
+    ├── Background              (Splash - Background.png)
+    └── ContentContainer
+        ├── SkipRow             (label RIGHT-aligned; whole row is the button)
+        ├── WelcomePanel        (S_AUTH_WelcomePanel, 958x385 r50)
+        │   ├── IconRing > RoundsIcon
+        │   ├── WelcomeTitle / WelcomeSub  (the ONLY wrapping text on either screen)
+        │   └── Dots            (Dot0 active gold pill 40x14 + Dot1..3 — DECORATIVE, one page)
+        ├── FeatureGrid         (Feature0..3, 470x228, 2x2, gap 18)
+        │   └── Feature*        > IconRing > Icon, Name, Desc
+        └── GetStartedButtonRow > GetStartedButton
+```
+
+**Text sizes here are NOT the node's px.** Every SemiBold run is authored as
+`node_px * GpsAuthExtrasBuilder.SemiBoldSize` (= 59/66): the project's Rubik SemiBold renders ~11 %
+larger than the face the node draws with. Build rule 4's calibrated Main-Buttons 59 is the same
+constant, and now derives from it. Medium runs are NOT scaled — they measure correct.
+
+---
+
 ## Account / Auth Screens (login_signup_screens — 2026-07-21)
 
 Four screens under `Canvas > ScreensRoot`, registered in `ScreenManager` (ScreenId: Login, CreateUsername, SignUp, EmailConfirmation). Prefabs at `Assets/Prefabs/UI/Account/`. Controllers at `Assets/Scripts/UI/Account/` (namespace `Golfin.UI.Account`).

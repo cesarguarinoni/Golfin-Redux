@@ -97,7 +97,27 @@ namespace Golfin.Banners
         public const string InternalScheme = "golfin";
 
         /// <summary>
-        /// <c>golfin://gps</c> → <see cref="ScreenId.GpsHub"/>. The ONLY internal route today.
+        /// gps_standalone_shell §D1/§D6 — the PLAYLIFE shell's own scheme, registered beside
+        /// <see cref="InternalScheme"/> in <c>iOSURLSchemes</c>.
+        ///
+        /// <para>
+        /// It exists because the shell is a SEPARATE app record (<c>com.nextinnovation.golfingps</c>)
+        /// installed BESIDE the game on the same phone. iOS resolves a custom scheme to whichever
+        /// app claims it, and with both installed, two apps claiming <c>golfin://</c> is undefined —
+        /// so the shell claims its own and the game keeps the one it has always had.
+        /// </para>
+        /// <para>
+        /// BOTH are accepted HERE, in BOTH variants, on purpose: banner rows are written once in
+        /// the dashboard and served to every app, so a row saying <c>golfin://gps</c> has to work
+        /// in the shell and a row saying <c>golfingps://gps</c> has to work in the game. The
+        /// scheme decides which app OPENS; the route it names is the same surface either way.
+        /// </para>
+        /// </summary>
+        public const string StandaloneScheme = "golfingps";
+
+        /// <summary>
+        /// <c>golfin://gps</c> (and <c>golfingps://gps</c>) → <see cref="ScreenId.GpsHub"/>. The
+        /// ONLY internal route today.
         ///
         /// <para>
         /// Add routes HERE and nowhere else. A second ad-hoc parse at a call site is how the two
@@ -121,7 +141,8 @@ namespace Golfin.Banners
 
             if (string.IsNullOrWhiteSpace(url)) return false;
             if (!Uri.TryCreate(url, UriKind.Absolute, out Uri? uri) || uri == null) return false;
-            if (!string.Equals(uri.Scheme, InternalScheme, StringComparison.Ordinal)) return false;
+            if (!string.Equals(uri.Scheme, InternalScheme, StringComparison.Ordinal) &&
+                !string.Equals(uri.Scheme, StandaloneScheme, StringComparison.Ordinal)) return false;
             if (!string.IsNullOrEmpty(uri.UserInfo)) return false;
 
             // `golfin://gps` parses with an EMPTY path in .NET, `golfin://gps/x` with "/x".

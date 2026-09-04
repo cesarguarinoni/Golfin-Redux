@@ -381,6 +381,162 @@ export const DICT = {
 
   // ---- notices -----------------------------------------------------------
   "nav.notices": { en: "Notices", ja: "お知らせ" },
+
+  // ---- gps_checkin § B1 — the Partners panel (`venues`) -------------------
+  "nav.venues": { en: "Partners", ja: "提携スポット" },
+
+  "vn.title": { en: "Partners", ja: "提携スポット" },
+  "vn.new": { en: "+ New spot", ja: "＋ スポット追加" },
+  "vn.edit": { en: "Edit", ja: "編集" },
+  "vn.save": { en: "Save", ja: "保存" },
+  "vn.saving": { en: "Saving…", ja: "保存中…" },
+  "vn.saved": { en: "Saved.", ja: "保存しました。" },
+  "vn.loadFailed": { en: "Failed to load venues", ja: "スポットの読み込みに失敗しました" },
+  "vn.count": { en: "{n} shown", ja: "{n} 件表示" },
+  "vn.yes": { en: "Yes", ja: "はい" },
+  "vn.no": { en: "No", ja: "いいえ" },
+  "vn.inactive": { en: "Inactive", ja: "無効" },
+  "vn.partnerTag": { en: "PARTNER", ja: "提携" },
+
+  "vn.live.headline": {
+    en: "Live table — there is no publish step.",
+    ja: "本番テーブル — 公開操作はありません。",
+  },
+  "vn.live.body": {
+    en:
+      "The game reads `venues` per request through /venue/nearby, so a save here " +
+      "is visible on the player's NEXT fetch. There is no draft and nothing to " +
+      "publish afterwards.",
+    ja:
+      "ゲームは /venue/nearby でリクエストごとに venues を読むため、ここでの保存は " +
+      "プレイヤーの次回取得時にそのまま反映されます。下書きも公開操作もありません。",
+  },
+
+  "vn.drift.headline": {
+    en: "Rows invisible to /venue/nearby",
+    ja: "/venue/nearby から見えない行",
+  },
+  "vn.drift.body": {
+    en:
+      "These rows' stored geohash does not match their own coordinates. " +
+      "/venue/nearby finds a venue by `geohash like 'prefix%'`, so they exist, " +
+      "show on a map, and never appear in any player's nearby list. Open each " +
+      "row and press Save — the geohash is recomputed on every save.",
+    ja:
+      "これらの行は保存された geohash が座標と一致していません。/venue/nearby は " +
+      "`geohash like 'prefix%'` で検索するため、行は存在しても近くのスポット一覧に " +
+      "決して出ません。各行を開いて保存すると geohash が再計算されます。",
+  },
+
+  "vn.filter.any": { en: "Any", ja: "すべて" },
+  "vn.filter.category": { en: "Category", ja: "カテゴリ" },
+  "vn.filter.partner": { en: "Partner", ja: "提携" },
+  "vn.filter.active": { en: "Active", ja: "有効" },
+  "vn.filter.source": { en: "Source", ja: "登録元" },
+  "vn.filter.search": { en: "Search name", ja: "名称検索" },
+  "vn.filter.searchPlaceholder": { en: "e.g. 霞ヶ関", ja: "例: 霞ヶ関" },
+
+  "vn.cat.golf": { en: "Golf courses", ja: "ゴルフ場" },
+  "vn.cat.range": { en: "Driving ranges", ja: "練習場" },
+  "vn.cat.food": { en: "Food & drink", ja: "飲食店" },
+
+  "vn.col.name": { en: "Name", ja: "名称" },
+  "vn.col.category": { en: "Category", ja: "カテゴリ" },
+  "vn.col.partner": { en: "Partner", ja: "提携スポット" },
+  "vn.col.subtitle": { en: "Subtitle", ja: "サブタイトル" },
+  "vn.col.price": { en: "Price label", ja: "価格表示" },
+  "vn.col.chip": { en: "Chip", ja: "チップ" },
+  "vn.col.offer": { en: "Partner offer", ja: "提携特典" },
+  "vn.col.coords": { en: "Lat, Lon", ja: "緯度・経度" },
+  "vn.col.latitude": { en: "Latitude", ja: "緯度" },
+  "vn.col.longitude": { en: "Longitude", ja: "経度" },
+  "vn.col.geohash": { en: "Geohash (derived)", ja: "Geohash (自動計算)" },
+  "vn.col.radius": { en: "Check-in radius", ja: "チェックイン半径" },
+  "vn.col.active": { en: "Active", ja: "有効" },
+  "vn.col.source": { en: "Source", ja: "登録元" },
+  "vn.col.updated": { en: "Updated", ja: "更新日" },
+  "vn.col.address": { en: "Address", ja: "住所" },
+  "vn.col.imageUrl": { en: "Image URL", ja: "画像 URL" },
+
+  "vn.find.label": { en: "Find on map", ja: "地図から取得" },
+  "vn.find.button": { en: "Find", ja: "取得" },
+  "vn.find.working": { en: "Finding…", ja: "取得中…" },
+  "vn.find.placeholder": {
+    en: "Google Maps link, or 35.6541, 139.7792",
+    ja: "Google マップのリンク、または 35.6541, 139.7792",
+  },
+  "vn.find.hint": {
+    en:
+      "Paste the Google Maps link for the spot, or a `lat, lon` pair. Never type " +
+      "coordinates from memory: a course 200 m off is a course a player standing " +
+      "at the gate cannot check into.",
+    ja:
+      "スポットの Google マップのリンク、または「緯度, 経度」を貼り付けてください。" +
+      "座標を記憶で入力しないこと: 200m ずれるとゲート前にいるプレイヤーが" +
+      "チェックインできません。",
+  },
+  "vn.find.noMatch": { en: "No place matched that query.", ja: "該当する場所が見つかりません。" },
+
+  "vn.geohashHint": {
+    en:
+      "Derived from the coordinates on every save, never typed. /venue/nearby " +
+      "finds a venue by geohash prefix, so a value that disagrees with the " +
+      "coordinates makes the row invisible to players with no error anywhere.",
+    ja:
+      "保存のたびに座標から自動計算されます (手入力不可)。/venue/nearby は " +
+      "geohash の前方一致で検索するため、座標と食い違う値はエラーも出さずに " +
+      "その行をプレイヤーから見えなくします。",
+  },
+  "vn.partnerHint": {
+    en: "Shows the gold PARTNER tag on the spot row in the app's Rounds tab.",
+    ja: "アプリのラウンドタブのスポット行に「提携」タグを表示します。",
+  },
+  "vn.subtitleHint": {
+    en: "The grey line under the name, e.g. \"Kawagoe, Saitama · East 18H · PAR 72\".",
+    ja: "名称の下のグレー行。例: 「埼玉県川越市 · 東 18H · PAR 72」",
+  },
+  "vn.offerHint": {
+    en: "Display text only — nothing redeems it. e.g. \"ゴルファー10%OFF\".",
+    ja: "表示専用のテキストです (引き換え機能はありません)。例: 「ゴルファー10%OFF」",
+  },
+  "vn.radiusHint": {
+    en:
+      "Metres. A player must be inside this to check in, and the server awards " +
+      "the +30 only when they are. 50–5000.",
+    ja:
+      "メートル。この範囲内でないとチェックインできず、+30 pt もサーバー側で" +
+      "付与されません。50〜5000。",
+  },
+  "vn.activeHint": {
+    en:
+      "Unchecking removes the spot from /venue/nearby on the player's next fetch. " +
+      "This is the removal — there is no delete.",
+    ja:
+      "オフにすると、プレイヤーの次回取得時に /venue/nearby から消えます。" +
+      "これが削除の代わりです。",
+  },
+  "vn.noDelete": {
+    en:
+      "There is no delete. activities.venue_id is a foreign key, so removing a " +
+      "venue a player checked into would fail or orphan their round. Deactivate " +
+      "instead — it takes the spot out of the app on the next fetch and is " +
+      "reversible.",
+    ja:
+      "削除機能はありません。activities.venue_id は外部キーのため、チェックイン" +
+      "履歴のあるスポットを削除すると失敗するか履歴が孤立します。代わりに無効化" +
+      "してください (次回取得時にアプリから消え、元に戻せます)。",
+  },
+
+  "vn.err.name": { en: "Name is required.", ja: "名称は必須です。" },
+  "vn.err.coords": {
+    en: "Latitude and longitude must both be numbers — use Find on map.",
+    ja: "緯度・経度は数値で入力してください (「地図から取得」を使用)。",
+  },
+  "vn.err.radius": {
+    en: "Check-in radius must be a whole number between 50 and 5000 metres.",
+    ja: "チェックイン半径は 50〜5000 メートルの整数で入力してください。",
+  },
+
   "notice.title": { en: "Home notices", ja: "ホームのお知らせ" },
   "notice.loading": { en: "Loading notices…", ja: "お知らせを読み込み中…" },
   "notice.loadFailed": { en: "Failed to load notices", ja: "お知らせの読み込みに失敗しました" },

@@ -7,6 +7,34 @@
 
 ## ▶ CURRENT STATE — update this block at every session boundary
 
+- **GPS→Unity build, status 2026-09-03 (Architect, Cowork session).** DONE and on main:
+  `gps_trust_core`, `gps_hub_entry`, `score_upload_flow`, `gps_profile_pack`,
+  `punch_it_gps_variants`, `auth_golf_profile` (API v65, texts v29), `gps_gifts_votes` (API v66,
+  texts v31, gift economy atomic via `golfin_gift_pts` / `golfin_gift_purchase`), `gps_pill_entry`
+  (Home GPS pill is the GPS door, banner restored; `96d60fab4`), `gps_polish` (`5506d2c67`; layered
+  push approved; full two-gate chain ran — one red-team FAIL on a false A7 measurement, retracted
+  and repaired). Device pass STARTED 2026-09-03 (checklist `Docs/GPS/GPS_DEVICE_PASS.md`; venues
+  1992/1993 live). Findings closed the same day: nav-bar height (`464e3c90a`), `gps_profile_prompt_on_entry`
+  DONE, `gps_checkin` DONE (`2d7b19228`; API v68, texts v36, admin Partners panel live, demo spots
+  seeded; full two-gate chain; Architect review PASS 2026-09-03). Side fixes worth knowing:
+  `backend/pgrest.py` (Supabase's edge 500s on a bare `%` — venue nearby/search AND user search were
+  down for every client until v68), `ApiEnvelope` DateParseHandling.None (ISO timestamps were shifted
+  twice). Unity Recorder hard-locks the Mac on the Rounds screen — KNOWN_ISSUE, video waived.
+  **NOW (2026-09-04): GPS queue EMPTY. `gps_standalone_shell` round 2 + `gps_profile_prompt_server_flag` DONE and reviewed PASS (`b3506dba3`): build 2637 (1.0.0) on the GOLFIN GPS TestFlight, real icon, user assets 555 → 98.6 MB, install ≈ 236 MB (UnityFramework 106 MB + Data 117 MB — the code is the floor now, backlog row). Cesar runs the device pass §1 (cross-app Golf Profile rows), §1–§6, §3b, §7. Open for Code: commit the playlife backend (`routers/user.py` + `migrations/2026_09_03_golf_profile_prompted.sql` are DEPLOYED to Fly but uncommitted); prove the refactored game lane with the next `punch it`. Next spec: `build_size_diet` (game track, SPEC_READY).**
+  (decision 2026-09-02: Unity thin-shell, Flutter retired). Deferred scope lives in
+  `Docs/GPS/GPS_BACKLOG.md` (Architect-maintained). Roadmap rows: Notion Orders 2104–2114, 2130.
+
+- **`publish_blocked_catalogs`: DONE — approved by Cesar 2026-09-02, folder in
+  `Docs/Specs/Completed/`.** Both admin publishes unblocked (impl `bbf9996e3`, Worker
+  `33d07d75`): the loadout grammar now lives once per language (`LoadoutTokens.cs` /
+  `loadoutTokens.ts`, shared fixture `Tools/content/tests/loadout_tokens_fixture.csv` —
+  tripwire-proven), `ban:` masks are validated, and the gacha_pools ref/default-ball rules
+  skip deactivated rows. Real bug fixed and LIVE: `OWN_NO_IRONS` → `ban:Iron`
+  (`mission_loadouts` v2) — mission 24 "No Irons Allowed" now bans all 114 irons, not just
+  Iron 7/9. `gacha_pools` needed no publish (report D2: rule 21 postdated Cesar's v2
+  deactivation publish); next gacha_pools publish is what the fix unblocks. Do NOT
+  re-dispatch.
+
 - **`gacha_client_real_pull` (C): DONE — approved by Cesar 2026-08-31, folder in
   `Docs/Specs/Completed/`. THE GAME NOW PULLS THE SERVER.** `POST /gacha/pull` rolls the banner;
   the mock pool, the client-side ticket spend and the mock history are DELETED. Four gacha catalogs
@@ -142,6 +170,105 @@
 
 ## 📋 SPEC_READY POINTERS
 
+- **`build_size_diet`: SPEC_READY (2026-09-03 evening, GAME track — Notion 2121, P1).** `Docs/Specs/Active/build_size_diet/SPEC.md` — the 1.9 GB install / 711 MB .ipa diet, brief in `Docs/BUILD_SIZE_AUDIT.md`. Five phases, each its own commit with Build Report numbers: (1) iPhone overrides on the vegetation-pack textures (leaves 1024 / bark 2048, ASTC, no `None`) + terrain tree-prototype audit (only `Spruce 1/3` are placed) + dead files off disk; (2) `HoleData` **lossless**: `heightmap.bytes` is int32 Q16.16 (`GHM1`) → `GHM2` = row-delta + Deflate, loader reads both, one-shot converter proves SHA-256 of decoded heights unchanged; `zones.json` → gzip-minified `zones.bytes` behind one `HoleDataIO.LoadZones` with a `ZoneData` equality test; smoke-bot AtRest positions must be bit-identical; `Resources/Clubs` → 512 ASTC; (3) the 93 `compression: None` textures → ASTC with before/after captures; (4) NotoSansJP static atlas from the CSV glyph set + kana — honest verdict on whether the TTF still ships (fallback for out-of-CSV names), Cesar picks; (5) terrain resolution table + Hole 6 alphamap A/B — **measurement only**, no terrain edit without Cesar's "go". **Amended 2026-09-04 before kickoff (Cesar accepted):** gates are install ≤ 1.0 GB AND Payload-compressed ≤ 350 MB, the .ipa file is reported not gated (its `Symbols/` zips to 127 MB); new Phase 0b = one LZ4HC measurement build before Phase 2 (numbers only); Phase 4 gains option (c) subset the variable TTF with fontTools (weight measured off the atlas — `fvar` default is wght 100). Zero visible change.
+
+- ~~`gps_profile_prompt_server_flag`~~ **DONE 2026-09-04** (`b3506dba3`; folder in `Docs/Specs/Completed/`; Architect review PASS 2026-09-04 — standalone build 2637 on TestFlight, user assets 555 → 98.6 MB).
+
+- ~~`gps_standalone_shell`~~ **DONE 2026-09-04** (`b3506dba3`; folder in `Docs/Specs/Completed/`; Architect review PASS 2026-09-04 — standalone build 2637 on TestFlight, user assets 555 → 98.6 MB).
+
+- **`design_consistency_audit`: SPEC_READY (2026-09-03, GAME polish track — Notion 2112).** `Docs/Specs/Active/design_consistency_audit/SPEC.md` — audit-only pass over every shell-canvas game screen, tab, submenu and result modal (Home, Mode Select, Hole/Mission/Tournament selection, Rankings, Roster, Inventory tabs, General/Stamina shop, Gacha History/Prizes, Settings, PersistentUI, the result + gate modals; auth screens Tier 2) against the Figma variables (`Docs/Design/DESIGN_TOKENS.md`, seeded) on six dimensions — fonts, colours, hierarchy, sizes, outlines, drop shadows — plus the linter's render-health rules. Instruments: `DesignAuditDumper` (rendered px, not serialized), `UIFidelityLinter.LintRoot` (extraction only), `figma_node_to_spec.py`, crop sheets. Output = `Docs/Reports/DESIGN_CONSISTENCY_AUDIT.md` + fix list grouped by shape (§22); the Architect writes the approved fixes as Quick specs. Changes NOTHING in production. **Run AFTER `gps_checkin`** (Code works one task at a time; GPS track first). `game_polish` (2111) follows the audit; its per-screen map is at `Docs/Specs/Queued/game_polish/MAP.md` pending Cesar's approval.
+
+- **`game_polish_a`: SPEC_READY (2026-09-03, GAME polish track — Notion 2111, slice a of three).** `Docs/Specs/Active/game_polish_a/SPEC.md` — navigation & structure motion: a screen-agnostic `LayeredPush` (`Assets/Scripts/UI/Polish/`) for same-pillar SAME-background pairs (Play `2e5476ee…` group, Tournaments/Rankings `0d425c0a…` group, Gacha `5ec22d10…` group), 16 px entry `Rise` on fade-path arrivals, cross-fades for Inventory/Rankings/GachaHistory tabs and the Settings overlay + accordion, `UiSelection` bumps on tabs, and the NEW bottom-nav selected state (§D7: gold halo + brighter ring replaces the cyan tint, on the game bar AND the GPS bar — the one authorised `Gps/` touch is `GpsNavBarHighlight.cs`); fade-to-black kept for Home, cross-pillar and background-changing moves (Cesar). Option (b) push-with-background-cross-fade only as a 5 s video behind an OFF flag. Gates as gps_polish (invariants JSON, 0 px parity vs first-commit baselines, chrome seam ≤ 2, GC ≤ 32 B). Map approved 2026-09-03: `Docs/Specs/Queued/game_polish/MAP.md` (b = content & modals, c = sweep — specs follow). **Run AFTER `design_consistency_audit` is DONE and its approved Quick fixes have landed.**
+
+### Kickoff · game_polish_a (issued 2026-09-03 — after design_consistency_audit + its Quick fixes)
+
+```
+Read Docs/Specs/Active/game_polish_a/SPEC.md and implement it.
+
+Context:
+- Slice a of game_polish (Notion 2111): the GAME shell moves like the GPS surface —
+  LayeredPush (new, Assets/Scripts/UI/Polish/, screen-agnostic; GpsScreenTransition is
+  the model, read-only) for same-pillar, SAME-BACKGROUND pairs only; 16 px entry Rise on
+  fade-path arrivals; cross-fades where tabs / filters / Settings snap today; UiSelection
+  bumps on tabs. Fade-to-black stays for Home, cross-pillar and every background-changing
+  move (Cesar's rule).
+- Option (b) — push with background cross-fade — exists ONLY as a ~5 s captioned video
+  behind LayeredPush.AllowBackgroundCrossFade, default false, pinned by test, never set
+  in production. Cesar judges it from the clip.
+- Take the `baseline` captures on the FIRST commit, before any change (A2 parity is
+  measured against them and against instant navigation). Probe = GamePolishProbe
+  (GpsPolishProbe shape): baseline / push / parity / perf / option_b, real onClick.Invoke()
+  navigation, invariants JSON fail=0 with the flag OFF.
+- §D7 bottom-nav selected state (Cesar: the cyan tint "looks ugly"): gold halo behind
+  the selected disc + a #FCF195 ring overlay, glyph white, cross-faded + one pulse; baked
+  by Docs/Scripts/make_nav_selected.py (pill-glow pattern); one shared NavSlotHighlight
+  drives BOTH bars. The ONLY Gps/ file you may edit is GpsNavBarHighlight.cs (+ the GPS
+  bar builder hook it needs) — quote that diff in full.
+- Otherwise untouched: Assets/Scripts/UI/Gps/**, Assets/Prefabs/UI/Gps/**,
+  FadeController, UiMotion's public API, ModalController.
+- Out of scope: modals/retrofits/count-ups/shimmer/PendingSpend (game_polish_b),
+  scroll/safe-area/font sweep (game_polish_c), haptics.
+
+When done: list changed files with a 1-line summary each, run the acceptance
+tests in the spec, flag which need manual on-device verification, update
+STATUS.md + IMPLEMENTER_REPORT.md in the spec folder, and update
+Docs/AI_CONTEXT.md.
+```
+
+### Kickoff · design_consistency_audit (issued 2026-09-03 — after gps_checkin)
+
+```
+Read Docs/Specs/Active/design_consistency_audit/SPEC.md and implement it.
+
+Context:
+- AUDIT ONLY — no production change. Output = Docs/Reports/DESIGN_CONSISTENCY_AUDIT.md
+  (findings + per-screen fix list grouped by SHAPE, PIPELINE_HARDENING §22) + the
+  machine evidence: DesignAuditDumper JSON per screen/tab/modal (EN + JA, real
+  navigation), UIFidelityLinter on every prefab AND live root (new LintRoot overload —
+  pure extraction, LintPrefab output byte-identical), figma_node_to_spec.py node specs,
+  one crop sheet per Tier-1 screen. Fixes are NOT yours: the Architect turns approved
+  groups into Quick specs.
+- Phase 0 first: complete Docs/Design/DESIGN_TOKENS.md from get_variable_defs (+ SVG
+  stops for the EMPTY gradient variables), pull one node render per row of the SPEC's
+  node table into reference/, tripwire the dumper (§20) before the first real dump.
+- Baseline to reproduce or correct: 46 in-scope LiberationSans sites (Inventory 27,
+  Roster 8, Settings 1, CharacterThumbnailCard 3, StatBar 4); ÷1.2-era and 59/66
+  serialized sizes — RENDERED px vs node px decides, never the serialized number.
+- Do not touch: UIFidelityLinter rules/thresholds, Assets/Prefabs/UI/Gps/**,
+  Assets/Scripts/UI/Gps/**, any prefab/scene/CSV/font. git status must show only
+  Assets/Editor/UIFidelity/* and Docs/** (A10).
+- Out of scope: fixing anything, in-game HUD, auth screens beyond Tier 2, motion.
+
+When done: list changed files with a 1-line summary each, run the acceptance
+tests in the spec, flag which need manual on-device verification, update
+STATUS.md + IMPLEMENTER_REPORT.md in the spec folder, and update
+Docs/AI_CONTEXT.md.
+```
+
+- **`gps_checkin`: SPEC_READY (2026-09-03).** `Docs/Specs/Active/gps_checkin/SPEC.md` — the Rounds nav slot becomes PLAYLIFE's Rounds tab (Figma 14076:33800 list, 14077:100447 active round, 14080:34097 check-in confirm, 14078:33991 round complete; renders in reference/), wired for REAL: `golfin_activity_checkin` (+30 iff inside the venue radius, server-verified) / `golfin_activity_checkout` (+10/+5, atomic, replaces the invariant-breaking path), one active round per player, foreground GPS trail feeding K4, score submit with `activity_id` updates the round's row, Static-Maps proxy `/venue/map` + Mercator pins, `venues` gains category/partner/offer columns, admin **Partners** panel (§23 deploy proofs), demo range/food spots seeded from the Flutter mocks. Migrations to Cesar via the Architect BEFORE deploy; Cesar enables Maps Static API on the key. Start after `gps_navbar_height_fix` + `gps_profile_prompt_on_entry`.
+
+- **`gps_profile_prompt_on_entry`: SPEC_READY (2026-09-03, Quick).** `Docs/Specs/Active/gps_profile_prompt_on_entry/SPEC.md` — device-pass finding #2: first run defaults to the GAME; the Golf Profile + Welcome intercept moves from Home entry to the first `ShowScreen(GpsHub)` (pill, banner deep link, later the standalone boot) via a pure `GpsAuthExtrasFlow.InterceptHubEntry` seam in `ScreenManager.Navigate`. No prefab/string/backend change. Run right after the nav-bar height fix.
+
+- **`gps_polish`: SPEC_READY (2026-09-02).** `Docs/Specs/Active/gps_polish/SPEC.md` — transitions, button effects and general polish for the whole GPS surface. One `UiMotion` helper (coroutines only, no packages); a LAYERED PUSH between GPS screens inside `ScreenManager.Navigate` (backgrounds + nav bar cross-fade in place, only `ContentContainer` slides — Cesar's "let's gamble it"); fade-to-black kept at the game↔GPS boundary; Score Upload steps and vote filters cross-fade; modals pop via an opt-in `ModalController.animateShow`; `PendingSpend` on every GPS network CTA; count-ups, one-shot badge pulse, shimmer placeholders on five cold-fetch sites; safe-area / scroll / keyboard sweep. No Figma nodes — gates are a motion-invariants JSON + rest-state pixel parity; six captioned videos are the artifact Cesar judges the push on. No haptics (Notion 2130). Start NOW; first commit closes `gps_pill_entry`.
+
+- **`gps_gifts_votes`: SPEC_READY (2026-09-02).** `Docs/Specs/Active/gps_gifts_votes/SPEC.md` — the last two GPS screens (Figma Gift 14027:101843, Vote 14028:33534; renders in reference/). Cesar's scope calls: gift RP sends LIVE (server fix — /gifts/send-pts and /gifts/purchase break the total_points = activity_pts + gift_pts invariant on both sides; new atomic idempotent RPCs `golfin_gift_pts` + `golfin_gift_purchase`, migration + Fly deploy), Buy Gifts strip LIVE from the real /gifts/items basic catalog, Top Supporters aggregated client-side from /gifts/received, Popular Golfers from /user/discover; Vote = live list/cast(+10 via /points/earn)/create, stories + photo areas static, filters PUBLIC/MINE only. New GpsGift/GpsVote ScreenIds join GpsGate. ~34 loc keys via importer + publish. Start AFTER auth_golf_profile (queue: punch_it → auth_golf_profile → this).
+
+- **`auth_golf_profile`: SPEC_READY (2026-09-02).** `Docs/Specs/Active/auth_golf_profile/SPEC.md` — the two Auth-extras frames: post-signup Golf Profile capture (avatar colour, nickname, experience, optional handicap) + Welcome tutorial, offered once per device on Home entry in GPS builds (`gps_profile_prompted` PlayerPrefs flag; both new ScreenIds join GpsGate's list). Requires a small additive backend change — migration adds `profiles.golf_experience` + `avatar_color`, `PUT /user/update` gains three optional fields (nothing writes handicap today, not even Flutter) — plus a Fly deploy. GET STARTED lands on GpsHub. ~23 loc keys via importer + publish. Profile hero disc colours by avatar_color. Node values pulled fresh 2026-09-02; renders in reference/. Start AFTER punch_it_gps_variants.
+
+- **`punch_it_gps_variants`: SPEC_READY (2026-09-02).** `Docs/Specs/Active/punch_it_gps_variants/SPEC.md` — "Punch it" / "Punch it GPS" dual TestFlight variants. New `GOLFIN_GPS` define carried by a new `iOS-Full-GPS` build profile (mirror of the GOLFIN_DEMO pattern); new `GpsGate` (DemoGate-shaped, Editor always enabled) blocks the five GPS ScreenIds in ShowScreen + back-stack and owns the single GPS-screen list (:591 reuses it); `BannerSlotBinder.Apply()` hides+collapses any banner whose internal route targets a gated screen — so "Punch it" builds show no GPS banner while the server row stays LIVE; `CIBuild.BuildIOSGps` + `unity-build-ios.sh gps` + Fastfile lane `testflight_build_gps` (testflight.sh already forwards the lane name). Both-variant uploads are sequential — guard-file commit between them bumps the build number. iOS-Full untouched.
+
+- **`gps_profile_pack`** — **SPEC_READY 2026-09-01.** `Docs/Specs/Active/gps_profile_pack/SPEC.md`.
+  The hub's PROFILE tab: three read-only screens from the approved frames — Profile
+  (14025:33087), My Avatar (14026:33187), Badges (14027:33298) — over `/user/detail`,
+  `/score/stats`, `/badges/progress`. New `ScoreStatsService` + `BadgeService` in `Golfin.Gps`,
+  three ScreenIds, hub Profile slot wired. The avatar stage shows the player's SELECTED GAME
+  CHARACTER (Home's sprite resolution) and its four roster stats replace Ken's POWER/TECHNIQUE/
+  MENTAL — the first visible PLAYLIFE↔GOLFIN link. XP rule of record = `points_atomic.sql:47-49`
+  (remainder-within-level, `500 × level`). 24 `BADGE_{id}_NAME` keys (JA = DB seed, EN authored).
+  **The spec opens with the nine build rules from Cesar's rejections on the hub and upload screens**
+  (baked gradients, linear-alpha `A()`, navy-disc-in-gold-ring, label 59, geometry+lint gates,
+  publish-not-just-CSV, builder scripts, atom reuse) — each is an acceptance line.
+
 - ~~**`gacha_admin_catalogs`**~~ — **DONE 2026-08-31**, approved by Cesar, folder in
   `Docs/Specs/Completed/gacha_admin_catalogs/`. Do NOT re-dispatch.
   `Docs/Specs/Active/gacha_admin_catalogs/SPEC.md`. Spec A of `Docs/GACHA_ADMIN_PLAN.md`: four
@@ -173,6 +300,296 @@
   overlaid rates/pools (signup-modal rules shell), five-event telemetry funnel + Telemetry-panel
   card, Gold ticket placeholder icon + admin `iconUrl` upload, `TICKET_SHOP_BUILD` + the first
   `category=ticket` shop row (Cesar sets price/quantity) once the C archive exists.
+
+### Kickoff · build_size_diet (issued 2026-09-03 evening, RE-ISSUED 2026-09-04 with the accepted amendments — GAME track; GPS queue is empty, start now)
+
+```
+Read Docs/Specs/Active/build_size_diet/SPEC.md and implement it.
+
+Context:
+- Cesar: "app is like 700 MB, seems excessive." The real number is the ~1.9 GB INSTALL
+  (Data folder 1.74 GB). Brief with every bucket and file: Docs/BUILD_SIZE_AUDIT.md.
+  GATES (SPEC §Goal table, amended 2026-09-04): install (Payload uncompressed) <= 1.0 GB
+  AND Payload-compressed (unzip -lv sum under Payload/) <= 350 MB; the .ipa FILE is
+  reported, not gated — its Symbols/ alone zips to 127 MB. Say which measure every
+  number is. ZERO visible change, byte-identical physics.
+- Phase 0 first: build once, keep the Build Report + per-file Data sizes as reference/
+  *_before.txt. Every "-N MB" you claim later cites them.
+- Phase 0b (NEW): one more build of the SAME tree with BuildOptions.CompressWithLz4HC
+  (local arg on BuildIOSCore, lane default untouched) -> reference/*_lz4hc.txt + hole-load
+  timings Hole 1 + 6, 3 runs. Numbers only; Cesar decides adoption in STATUS.md. Run it
+  BEFORE writing Phase 2 code — it changes what GHM2 is worth; show it, don't assume it.
+- Phase 1: sharedassets8.assets.resS is 480 MB of tree-pack textures (Leave_4K_.psd
+  4096 compression None; Simple Trees leaves at 8192; Mobile_Tree_Bundle). iPhone
+  overrides: leaves 1024 / bark 2048, ASTC 6x6 (4x4 only where a cutout frays — capture
+  it). Then the terrain tree-PROTOTYPE audit: only a prototype with ZERO instances on all
+  18 holes leaves the list — prove treeInstances count unchanged and every instance still
+  maps to the same prefab NAME (index may shift). Delete HDRPversion.unitypackage
+  (215 MB) and the Original~ EXRs from disk.
+- Phase 2: HoleData is 389 MB on disk and ships whole. heightmap.bytes is GHM1 = int32
+  Q16.16 (NOT float — the physics is fp-deterministic), so compress LOSSLESSLY: GHM2 =
+  same header v2 + Deflate(row deltas). HeightmapLoader reads GHM1 and GHM2; a one-shot
+  converter decodes -> encodes -> decodes and asserts the int[] is identical (SHA-256
+  table in the report). zones.json (2-10 MB pretty JSON each) -> gzip-minified
+  zones.bytes behind HoleDataIO.LoadZones (fallback to .json), ZoneData equality test
+  over all 18 holes + _test. Keep every Resources.Load PATH; only the bytes change.
+  Gate: all physics suites same pass count, Validate All Holes green, smoke-bot AtRest
+  positions on Hole 1 + 6 bit-identical before/after (quote the fp values). Load time:
+  hole-load wall time Hole 1 + 6, 3 runs before/after, after <= before + 100 ms (decode
+  lives inside the hole-load, off the main thread if it shows). Resources/Clubs -> 512 ASTC.
+- Phase 3: the 93 compression-None textures -> ASTC 6x6 (4x4 where gradients band),
+  max 2048; S_SocialPillBordered 2680x600 -> 1024. Captures of Home/Account/Gacha/Daily
+  pill before/after; UIFidelityLinter green. Check design_consistency_audit's STATUS
+  first — if its Quick fixes are touching UI textures, Phase 3 waits.
+- Phase 4: NotoSansJP is Dynamic so the 9.1 MB TTF ships. Measure THREE options and
+  report shipped bytes + a JA capture pair for each: (a) keep dynamic, (b) static atlas
+  from the CSV JA glyphs + kana with a small dynamic fallback (the TTF still ships — say
+  so), (c) NEW: subset the variable TTF with fontTools (instance at the weight the game
+  renders TODAY — measure it off the atlas, fvar default is wght 100, do not assume 400;
+  subset to JIS X 0208 + kana + Latin + CSV glyphs; same file name + GUID; asset stays
+  Dynamic). Test a name like 齋藤 on (b) and (c). Cesar picks — do not pick for him.
+- Phase 5: MEASURE ONLY — per-hole TerrainData resolution table + a Hole 6 alphamap
+  1024-vs-512 A/B capture pair. No terrain is edited without Cesar's "go" in STATUS.md.
+  The heightmap stays 2049 (perf-pass rule).
+- The standalone build (iOS-Standalone) must still build after Phase 2 — its
+  preprocessor moves HoleData out; don't break the sentinel/restore. Build it once.
+- No re-serialized scenes in the diff except the Phase 1 prototype edits (list them).
+- Each phase is its own commit citing the reference/*_before.txt numbers. Also commit
+  the GPS session's staged docs first (Docs/BUILD_SIZE_KICKSTART.md, GPS_BACKLOG.md,
+  TellCode.md) — Cowork never commits.
+
+When done: list changed files with a 1-line summary each, run the acceptance
+tests in the spec, flag which need manual on-device verification, update
+STATUS.md + IMPLEMENTER_REPORT.md in the spec folder, and update
+Docs/AI_CONTEXT.md.
+```
+
+### Kickoff · gps_checkin (issued 2026-09-03 — after gps_navbar_height_fix and gps_profile_prompt_on_entry)
+
+```
+Read Docs/Specs/Active/gps_checkin/SPEC.md and implement it.
+
+Context:
+- The hub's Rounds nav slot becomes the Rounds tab: chips / REAL map / nearby spots /
+  CHECK IN -> live round card -> SCORE UPLOAD or CHECK OUT, four Figma frames in
+  reference/ (Rule 18 table in the spec). PLAYLIFE's Flutter tab was a facade —
+  build the look AND the mechanic.
+- Backend first: migration 2026_09_03_venue_partners.sql (additive venues columns) +
+  the two atomic RPCs modelled on golfin_gift_pts (SECURITY DEFINER, service_role
+  only, locks, idempotency, invariant) + /activity/active + /venue/nearby category &
+  distance + /venue/map Static-Maps proxy + /venue/geocode + score submit activity_id.
+  Hand BOTH migrations (partners + demo seed) to the Architect for Cesar BEFORE the Fly
+  deploy. e2e_activity_economy.py ALL PASS quoted.
+- Admin: Partners panel (app/(panels)/venues) with §23 proofs; geohash computed by the
+  API on save, never typed; deactivate not delete.
+- Unity: ScreenId.GpsRounds + two modals, ActivityService, RoundSession (one active
+  round, foreground GpsSessionTracker trail, persisted idempotency keys), MapProjection
+  (EditMode-tested), ScoreUploadDraft prefill with activity_id, GpsGate/NavBarBinder/
+  transition-table wiring, ~30 loc keys via importer + publish, gps_polish motion applied.
+- D1 approved by Cesar: check-in only inside the radius — but the button stays tappable
+  and TOASTS why (too far / no GPS). Motion parity with gps_polish is an acceptance
+  item: push, rise, staggers, shimmer, cross-fades on chip change and list<->active
+  flip, modal pops, PendingSpend, count-ups, invariants JSON + parity + video.
+- Decisions D1–D6 are baked in (inside-radius check-in, one active round, foreground
+  only, PLAYLIFE points, static-map proxy, score post updates the round row) — flag any
+  deviation with its reason.
+- Editor evidence with the location mocked at TEST Office (venue 1993); add the real
+  on-device rows to Docs/GPS/GPS_DEVICE_PASS.md §3.
+
+When done: list changed files with a 1-line summary each, run the acceptance
+tests in the spec, flag which need manual on-device verification, update
+STATUS.md + IMPLEMENTER_REPORT.md in the spec folder, and update
+Docs/AI_CONTEXT.md.
+```
+
+### Kickoff · gps_profile_prompt_on_entry (issued 2026-09-03 — Quick; after the nav-bar height fix)
+
+```
+Read Docs/Specs/Active/gps_profile_prompt_on_entry/SPEC.md and implement it.
+
+Context:
+- Cesar's device pass: a fresh install must land on Home and STAY there. The Golf
+  Profile -> Welcome flow is offered once, on the FIRST entry into GPS (pill tap,
+  home_promo deep link, later the standalone shell's boot), not on Home entry.
+- Remove both HomeScreenController call sites; add ONE intercept in
+  ScreenManager.Navigate for ScreenId.GpsHub through the pure
+  GpsAuthExtrasFlow.InterceptHubEntry(requested) seam; exits unchanged
+  (GET STARTED -> GpsHub is now a push).
+- No prefab, string or backend change (PLAN verdict add 0; git status Assets/Prefabs empty).
+- Update GpsAuthExtrasFlowTests (Home never offers; intercept table pinned) and the
+  device-pass checklist rows 1.3 / 1.8 in Docs/GPS/GPS_DEVICE_PASS.md.
+
+When done: list changed files with a 1-line summary each, run the acceptance
+tests in the spec, flag which need manual on-device verification, update
+STATUS.md + IMPLEMENTER_REPORT.md in the spec folder, and update
+Docs/AI_CONTEXT.md.
+```
+
+### Kickoff · gps_polish — CONTINUATION (issued 2026-09-02 evening; the push is approved, finish the rest before the device pass)
+
+```
+Read Docs/Specs/Active/gps_polish/KICKOFF_ADDENDUM.md and finish gps_polish.
+
+Context:
+- The push is approved by Cesar and stays; deviations D-1..D-7 accepted (the nav-bar
+  wiring off the hub is welcome). SPEC.md is unchanged; the addendum's R1-R9 table
+  (= your own report's "Not done" table) is the checklist.
+- R1 staggers on fetch-paint (never cache-paint), R2 gift/vote panel fades + filter
+  cross-fade, R3 selection bumps (two-Image alpha, no tinting), R4 count-ups + badge
+  pulse + vote-bar fill, R5 ShimmerBlock placed at the five cold-fetch sites with the
+  cache-hit gate, R6 keyboard offset (device-only; EditMode the math), R7 videos
+  (c)(e)(f) + a short (d') and re-record (b), R8 a pending "..." frame, R9 a REAL
+  profiler measurement of the push (GC alloc/frame, worst ms).
+- Burn ONE of the four seeded GOLFIN AI votes for video (f); name its id.
+- Re-run A1 (fail=0) and A2 (0 px on all 7 screens) at the end; FadeController and
+  non-GPS prefabs untouched (quote git status).
+
+When done: STATUS -> READY_FOR_SELF_REVIEW with every A-item filled, list changed
+files with a 1-line summary each, flag which items need the on-device pass, update
+IMPLEMENTER_REPORT.md, and update Docs/AI_CONTEXT.md.
+```
+
+### Kickoff · gps_polish (issued 2026-09-02 — start now; gps_gifts_votes is DONE)
+
+```
+Read Docs/Specs/Active/gps_polish/SPEC.md and implement it.
+
+Context:
+- First commit: close gps_pill_entry (STATUS -> DONE, folder -> Docs/Specs/Completed/).
+- One shared UiMotion helper (Assets/Scripts/UI/Polish/, coroutines, unscaled time,
+  interruption-safe, UiMotion.Enabled flag). Do NOT retrofit the Versus / Daily-pill /
+  Gacha motion onto it — that is game_polish.
+- Layered push between GPS screens: ONE branch in ScreenManager.Navigate when both ends
+  are GpsGate.IsGpsScreen; Background + GpsNavBar (+ BackPill) cross-fade IN PLACE,
+  only ContentContainer slides (Forward from +W, Back mirrored, 0.3 parallax on the
+  leaver). ApplyScreen at the END; rest state byte-identical to instant:true.
+  ScoreUpload stays on the fade (its step roots own their backgrounds). Home<->GpsHub
+  and any GPS->non-GPS keep FadeController untouched.
+- Cross-fade the Score Upload steps + sliding step indicator; opt-in animateShow on
+  ModalController (default false, GPS modals only); PendingSpend on every GPS network
+  CTA (table); CountUp / badge Pulse / vote-bar fill; ShimmerBlock on the five cold-fetch
+  sites (never on a paint-cache hit); safe-area / scroll / keyboard sweep (table).
+- Gates: gps_polish_invariants.json fail==0 (durations, +-W at t0, rest at end, the
+  background-seam test), rest-state pixel parity per screen, lint fail=0 on every GPS
+  prefab after re-running the builders, EditMode green with the new suites executed by
+  name, GC-alloc check on the push. Six captioned videos (a)-(f) in videos/ + one still
+  each — (a) and (b) are what Cesar judges the push on.
+- Out of scope: haptics, FadeController changes, non-GPS screens/modals, Rubik Medium
+  import (list the sites only), any new screen or feature, DOTween/Animator/Lottie.
+
+When done: list changed files with a 1-line summary each, run the acceptance
+tests in the spec, flag which need manual on-device verification, update
+STATUS.md + IMPLEMENTER_REPORT.md in the spec folder, and update
+Docs/AI_CONTEXT.md.
+```
+
+### Kickoff · gps_gifts_votes (start after auth_golf_profile)
+
+```
+Read Docs/Specs/Active/gps_gifts_votes/SPEC.md and implement it.
+
+Context:
+- Last two GPS screens: Gift + Vote (Figma renders in the spec's reference/), wired to
+  the hub's Gift tab and Vote affordance. New GiftService/VoteService in Golfin.Social.
+- Economy paths go LIVE and the legacy endpoints are broken: /gifts/send-pts and
+  /gifts/purchase skip total_points on both sides. Write the atomic idempotent RPCs
+  (model on points_atomic.sql / golfin_gacha_pull), thin-wrap the routers, hand the
+  migration to the Architect for Cesar to apply BEFORE the Fly deploy.
+- Vote v1: list/cast/create live (+10 RP via /points/earn?action=vote_cast, once);
+  stories + photo areas static per Figma; TRENDING/FRIENDS chips disabled.
+- The nine gps_profile_pack build rules apply verbatim; builder GpsGiftVoteBuilder,
+  publish all ~34 loc keys, live E2E evidence quoted (ledger rows, invariant query).
+- Out of scope: item gifts (/gifts/send), IAP, inventory UI, photo upload, vote pools,
+  vote_hit resolution, SEE ALL, /vote/* router changes, Flutter.
+
+When done: list changed files with a 1-line summary each, run the acceptance
+tests in the spec, flag which need manual on-device verification, update
+STATUS.md + IMPLEMENTER_REPORT.md in the spec folder, and update
+Docs/AI_CONTEXT.md.
+```
+
+### Kickoff · auth_golf_profile (start after punch_it_gps_variants)
+
+```
+Read Docs/Specs/Active/auth_golf_profile/SPEC.md and implement it.
+
+Context:
+- Post-signup Golf Profile capture + Welcome tutorial (Figma 14029:33628 / 14029:33929,
+  renders in the spec's reference/). Offered once per device on Home entry, GPS builds
+  only; SAVE persists to the PLAYLIFE profiles row; GET STARTED lands on GpsHub.
+- Includes the build's first backend change: migration (Cesar applies the SQL) +
+  PUT /user/update gains optional handicap/golf_experience/avatar_color + Fly deploy.
+  Additive only — Flutter untouched.
+- The nine gps_profile_pack build rules apply verbatim; new builder
+  GpsAuthExtrasBuilder follows GpsProfilePackBuilder (geometry JSON + lint gates,
+  panel atoms, translucency via GpsUiColor.A/ADark, publish all ~23 loc keys).
+- Both new ScreenIds go into GpsGate's list (from punch_it_gps_variants — hence order).
+- Out of scope: Settings editing, the four existing auth screens, avatar photo upload,
+  Flutter, gifts/votes.
+
+When done: list changed files with a 1-line summary each, run the acceptance
+tests in the spec, flag which need manual on-device verification, update
+STATUS.md + IMPLEMENTER_REPORT.md in the spec folder, and update
+Docs/AI_CONTEXT.md.
+```
+
+### Kickoff · punch_it_gps_variants
+
+```
+Read Docs/Specs/Active/punch_it_gps_variants/SPEC.md and implement it.
+
+Context:
+- "Punch it" must now produce a TestFlight build WITHOUT the GPS surface (five GPS
+  screens unreachable, Home GPS banner hidden with the slot collapsed); new phrase
+  "Punch it GPS" produces the WITH-GPS build via ./Tools/testflight.sh testflight_build_gps.
+- Mechanism mirrors the demo builds: GOLFIN_GPS define on a new iOS-Full-GPS profile
+  (clone of iOS-Full), read by a new DemoGate-shaped GpsGate (Editor always enabled).
+  Copy the existing patterns: DemoGate.cs, iOS-Demo.asset defines, CIBuild's
+  BuildIOS/BuildIOSDev pair, the Fastfile testflight_build lane.
+- Minimal diff. No asmdef defineConstraints, no scene stripping, no BannerPolicy or
+  server changes — reachability only. iOS-Full.asset must be byte-identical after.
+- Out of scope: Android profiles/lanes, in-app variant watermark, any change to what
+  "punch it" commits or asks.
+
+When done: list changed files with a 1-line summary each, run the acceptance
+tests in the spec, flag which need manual on-device verification, update
+STATUS.md + IMPLEMENTER_REPORT.md in the spec folder, and update
+Docs/AI_CONTEXT.md.
+```
+
+### Kickoff · gps_profile_pack (issued 2026-09-01)
+
+```
+Read Docs/Specs/Active/gps_profile_pack/SPEC.md and implement it.
+
+Context:
+- Three read-only GPS screens (Profile / My Avatar / Badges) from Figma
+  5gEAHjl6xAtW8iYY7NMvWd nodes 14025:33087 / 14026:33187 / 14027:33298; new
+  ScreenIds GpsProfile / GpsAvatar / GpsBadges in the ShowTopBarOnly group; the hub
+  nav Profile slot and the Profile screen's BADGES / MY AVATAR shortcuts wired.
+- READ THE "BUILD RULES" SECTION FIRST. It is the list of things Cesar rejected on
+  the hub and score-upload screens: bake gradients from tokens (never tint), solve
+  translucency with A()/ADark() against the real backdrop, navy-disc-in-gold-ring
+  badges, Main Buttons label 59, geometry JSON + invariants + fidelity lint gates,
+  publish every new text key, an Editor builder script per screen, reuse the
+  S_HUB_* / S_GpsIconRing_* / GPS Icons atoms. Each rule is an acceptance line.
+- Module: Golfin.Gps gains ScoreStatsService (/score/stats) and BadgeService
+  (/badges/progress) + DTOs, PointsService shape, EditMode tests. XP rule =
+  points_atomic.sql:47-49 (avatar_xp is the remainder within the level; next =
+  500 × level) — pin it. UserService / ScoreHistoryService / GpsHubRoundRow reused.
+- Avatar stage = the selected game character via the same sprite resolution as
+  HomeScreenController.UpdateHomeCharacterImage; status bars = its four roster
+  stats (CharacterManager + RarityStatCaps), documented as a deviation.
+- Strings: ~75 rows incl. BADGE_{id}_NAME × 24 (ids listed in the spec; JA = the
+  seed name, EN authored) → CSV → import PLAN/APPLY → PUBLISH → --check clean.
+- Minimal diff. Out of scope: profile editing, follow, other users' profiles,
+  ranking, equip/inventory, unlocks, gift shop, remote badge icons, check-in.
+
+When done: list changed files with a 1-line summary each, run the acceptance
+tests in the spec, flag which need manual on-device verification, update
+STATUS.md + IMPLEMENTER_REPORT.md in the spec folder, and update
+Docs/AI_CONTEXT.md.
+```
 
 ### Kickoff · gacha_ops_polish (issued 2026-08-31 — start ONLY when gacha_client_real_pull is DONE)
 

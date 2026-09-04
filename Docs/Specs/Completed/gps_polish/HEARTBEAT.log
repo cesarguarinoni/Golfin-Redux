@@ -1,0 +1,57 @@
+=== iter-1 kickoff baseline 2026-09-02T09:56:23Z ===
+HEAD: 96d60fab4b310fe166c66932e9087c3174e17e15
+DIRTY (git status --porcelain --untracked-files=all):
+   M .claude/alerts.log
+   M .claude/review_misses.log
+   M Docs/Reports/content_art.txt
+  ?? .claude/launch.json
+  ?? Docs/Specs/Active/gps_polish/HEARTBEAT.log
+=== end baseline ===
+=== iter-1 progress 10:08:00Z — UiMotion + UiMotionRunner + GpsScreenTransition + ScreenManager branch + ModalController.animateShow written and compiling clean in the loaded assembly.
+=== iter-1 progress 10:17:47Z — GpsPolishBuilder + ShimmerBlock + GpsPolishProbe written; all compile. Next: baseline probe run (pre-polish rest captures).
+=== iter-2 kickoff baseline 2026-09-02T20:30:00Z ===
+HEAD: 1cc4fe6e1
+DIRTY (git status --porcelain --untracked-files=all):
+   M .claude/alerts.log
+   M .claude/review_misses.log
+   M Docs/Reports/content_art.txt
+   M Docs/TellCode.md
+  ?? .claude/launch.json
+  ?? Docs/Specs/Active/gps_polish/KICKOFF_ADDENDUM.md
+=== end baseline ===
+=== iter-2 progress 20:50Z — R1..R6 code written and compiling. Builder placed all 5 shimmer hosts.
+    CORRECTION to iter-1's D-7/A6 note: the GPS screens in ShellScene ARE prefab instances.
+    Verified in EDIT mode: IsPartOfPrefabInstance=True for all 9, each resolving to its own
+    Assets/Prefabs/UI/Gps/*.prefab. iter-1 measured this in PLAY mode, where the flag is false for
+    EVERY object (reference_playmode_hides_prefab_instance). Consequence: the prefab pass alone
+    reaches the live scene — after reverting the scene and reloading from disk, all 5 hosts are
+    present with a ZERO scene diff. GpsPolishBuilder.ApplyToScene is unnecessary and its save
+    produced 1296 lines of prefab-override churn, which was discarded.
+    Also discarded: a 7756 -> 2105970 byte NotoSansJP SDF atlas bake (known JA-preview scar).
+=== iter-2 close 2026-09-02T13:00Z — R1..R9 complete.
+    A1 fail=0 (10 pushes) · A2 0 px on 7/7 (within-run parity pairs) · A5 0.920 · A6 identical
+    prefab-for-prefab · A11 --check clean · A12 2319/2316/0/3 · A13 measured in situ AND isolated.
+    Videos b/c/d2/e/f recorded + captioned; 4 shimmer stills + the pending-ellipsis frame captured.
+    Vote burned for (f): 541bcde9-9979-400b-ad35-93bb205c092f (+10 RP -> 6968).
+    Defect found and fixed by §D8's own placeholder: BadgeService.FetchBadges() was called with no
+    callback, so a failed/empty answer repainted nothing and the badges placeholder never came down.
+=== iter-2 post-self-review 2026-09-03 — two of the self-reviewer's four non-blocking observations
+    acted on rather than forwarded:
+    (1) canonical switched shimmer_03 -> shimmer_01_hub_rounds.png (the boundary fade is slower
+        than the push, so it is the only settled/legible cold frame);
+    (2) video_c_still_post_pending.png was MISLABELLED — it shows step 4 GPS PROOF. Renamed to
+        video_c_still_step4_gps_proof.png. Measured afterwards: decoding (c) consecutively across
+        the POST SCORE tap, Confirm occupies frames 001-004 and Posted is up from 005 — under 5
+        frames at 30 fps, no ellipsis in the window. A7's frame is and remains
+        pending_ellipsis_vote_button.png.
+    Observations (3) ApplyToScene header comment and (4) frame-sampling (f) for the count-up are
+    left for the architect as flagged.
+=== iter-2 redo 2026-09-03 — red-team ARCHITECT_REVIEW_FAIL, one blocker, fixed.
+    A7's "no POST SCORE pending frame exists" was FALSE. Re-measured consecutively on the real
+    window: 28 frames, t=33.40-34.30s, 0.93s; capsule collapses 497px -> 139px while pending.
+    Root cause of my wrong answer: (1) tap time taken from a caption timestamp, which
+    build_bot_video.py shifts by RECORDER_LEAD, so I scanned a window that had already closed;
+    (2) sample box placed by arithmetic landed on BACK TO HOME on the Posted screen. I reported
+    the conclusion as a measurement without looking at a frame. Frame now captured; claim retracted
+    in A7 with both mistakes named. No code change. New non-blocking observation flagged: the
+    POST SCORE capsule shrinks while pending where VOTE keeps its width.

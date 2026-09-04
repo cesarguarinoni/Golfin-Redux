@@ -419,6 +419,47 @@ namespace Golfin.Net
             => BaseUrl + "/venue/nearby?prefixes=" + UnityWebRequest.EscapeURL(prefixes ?? "") +
                "&language_code=" + UnityWebRequest.EscapeURL(languageCode ?? "ja");
 
+        /// <summary>
+        /// gps_checkin §A2 — the same endpoint with the three parameters the Rounds tab needs:
+        /// a <paramref name="category"/> ("golf" | "range" | "food"), and the caller's position so
+        /// the SERVER computes <c>distance_m</c> and returns the page already sorted by it.
+        ///
+        /// <para>Omitting lat/lon is legal and is the no-GPS state: the rows come back unsorted
+        /// with <c>distance_m = null</c>, which the screen renders with CHECK IN disabled.
+        /// Invariant culture on the two doubles — a device in a comma-decimal locale would
+        /// otherwise send <c>lat=35,654103</c> and split the query string in half.</para>
+        /// </summary>
+        public static string VenueNearby(string prefixes, string category,
+                                         double? lat, double? lon, string languageCode = "ja")
+        {
+            string url = BaseUrl + "/venue/nearby?prefixes=" + UnityWebRequest.EscapeURL(prefixes ?? "") +
+                         "&language_code=" + UnityWebRequest.EscapeURL(languageCode ?? "ja") +
+                         "&category=" + UnityWebRequest.EscapeURL(string.IsNullOrEmpty(category) ? "golf" : category);
+            if (lat.HasValue && lon.HasValue)
+                url += "&lat=" + lat.Value.ToString("R", System.Globalization.CultureInfo.InvariantCulture) +
+                       "&lon=" + lon.Value.ToString("R", System.Globalization.CultureInfo.InvariantCulture);
+            return url;
+        }
+
+        /// <summary>
+        /// gps_checkin §A4 — <c>GET /venue/map</c> → an <c>image/png</c> dark roadmap tile centred
+        /// on (lat, lon). Fetched with <c>UnityWebRequestTexture</c>, NOT through
+        /// <see cref="ApiClient"/>'s JSON path, but with the SAME bearer token (see
+        /// <c>VenueService.MapTile</c>) — the route is authenticated and rate-limited per user.
+        ///
+        /// <para>No markers are requested: the pins, the player dot and the legend are ours and
+        /// are drawn over the tile by <c>MapProjection</c>. Re-fetching the tile every time a pin
+        /// moved would be absurd, and Google's own markers are not the design.</para>
+        /// </summary>
+        public static string VenueMap(double lat, double lon, int zoom, int w, int h)
+        {
+            var inv = System.Globalization.CultureInfo.InvariantCulture;
+            return BaseUrl + "/venue/map?lat=" + lat.ToString("R", inv) +
+                   "&lon=" + lon.ToString("R", inv) +
+                   "&zoom=" + zoom.ToString(inv) +
+                   "&w=" + w.ToString(inv) + "&h=" + h.ToString(inv);
+        }
+
         /// <summary>GET → <c>{data:[VenueDto]}</c> — every venue. The manual-selection fallback for
         /// when GPS resolves nothing.</summary>
         public static string VenueList(string languageCode = "ja")
@@ -451,6 +492,18 @@ namespace Golfin.Net
             => BaseUrl + "/activity/history?skip=" + skip + "&limit=" + limit;
 
         /// <summary>
+        /// gps_checkin §A3 — <c>GET /activity/active</c> → <c>{data: ActivityDto}</c>, or
+        /// <c>{data: null}</c> when the player has no round open.
+        ///
+        /// <para>THE CLIENT'S SOURCE OF TRUTH on screen entry and app resume. <c>RoundSession</c>
+        /// mirrors the row in PlayerPrefs so the live card paints on frame one, but a mirror that
+        /// disagrees with the server loses: a round checked out on another device, or expired by
+        /// the 8 h rule, must not keep ticking here. A null is a SUCCESSFUL result with null Data,
+        /// exactly like <see cref="VenueAutoRegister"/> — branch on Data, never on Success.</para>
+        /// </summary>
+        public static string ActivityActive => BaseUrl + "/activity/active";
+
+        /// <summary>
         /// GET → <c>{data: &lt;profiles row&gt;}</c> — the caller's own PLAYLIFE profile
         /// (user.py:78-86, a <c>select("*")</c>). AUTH REQUIRED; the row is chosen by the
         /// bearer token's user id, never by anything in the request.
@@ -463,6 +516,21 @@ namespace Golfin.Net
         public static string UserDetail => BaseUrl + "/user/detail";
 
         /// <summary>
+        /// PUT → <c>{data: &lt;profiles row&gt;}</c> — writes the caller's own profile
+        /// (user.py <c>update_profile</c>). AUTH REQUIRED; the row is chosen by the bearer token.
+        ///
+        /// <c>display_name</c> is REQUIRED in the body; <c>bio</c>, <c>avatar_url</c>,
+        /// <c>handicap</c>, <c>golf_experience</c> and <c>avatar_color</c> are optional and are
+        /// written only when present, so a partial body never blanks a field it omits.
+        ///
+        /// <c>409</c> means the display name is already taken (the
+        /// <c>profiles_display_name_lower_key</c> unique index); <c>422</c> means
+        /// <c>golf_experience</c> / <c>avatar_color</c> was outside its enum. Written by the
+        /// post-signup Golf Profile screen (auth_golf_profile §3).
+        /// </summary>
+        public static string UserUpdate => BaseUrl + "/user/update";
+
+        /// <summary>
         /// GET → <c>{data: [&lt;activities row&gt;]}</c> — the caller's own posted scores, newest
         /// first by <c>check_in_at</c> (score.py:419-436). AUTH REQUIRED, same posture as
         /// <see cref="UserDetail"/>.
@@ -473,6 +541,113 @@ namespace Golfin.Net
         /// </summary>
         public static string ScoreHistory(int skip = 0, int limit = 20)
             => BaseUrl + "/score/history?skip=" + skip + "&limit=" + limit;
+
+        /// <summary>
+        /// GET → <c>{data: &lt;stats row&gt;}</c> — caller's aggregate score stats (handicap,
+        /// rounds played, birdies, pars, bogeys, etc.). AUTH REQUIRED, same posture as
+        /// <see cref="UserDetail"/>. Read by the GPS Profile screen (gps_profile_pack §5.1).
+        /// </summary>
+        public static string ScoreStats => BaseUrl + "/score/stats";
+
+        /// <summary>
+        /// GET → <c>{data: &lt;progress array&gt;}</c> — caller's badge progress (all badge
+        /// definitions + per-badge earned state / count). AUTH REQUIRED. Read by the GPS Badges
+        /// screen (gps_profile_pack §5.3).
+        /// </summary>
+        public static string BadgesProgress => BaseUrl + "/badges/progress";
+
+        // ── Gifts + Votes (gps_gifts_votes) ───────────────────────────────────
+        //
+        // NOTE THE PLURALS. The routers are mounted at `/api/v1/gifts` (plural) and
+        // `/api/v1/vote` (SINGULAR) in backend/main.py:24,28. They do not match each other and
+        // neither is a typo here — getting one wrong is a 404 that looks like an auth problem.
+
+        /// <summary>
+        /// GET → <c>{data: [&lt;gift_items row&gt;]}</c> — the gift catalog, ordered by
+        /// <c>category</c> server-side. AUTH REQUIRED. Rows carry <c>tier</c>
+        /// (<c>basic</c>|<c>premium</c>), <c>price_activity_pts</c> and <c>price_gift_pts</c>;
+        /// a premium row has a null activity price and vice versa.
+        /// </summary>
+        public static string GiftsItems => BaseUrl + "/gifts/items";
+
+        /// <summary>
+        /// POST <c>{receiver_id, amount, message?, idempotency_key}</c> → the send outcome.
+        /// AUTH REQUIRED. Since <c>2026_09_02_gift_atomic.sql</c> this is a thin wrapper over
+        /// <c>golfin_gift_pts</c>: atomic across both profiles, idempotent on
+        /// <c>(user_id, idempotency_key)</c>, and it keeps
+        /// <c>total_points = activity_pts + gift_pts</c> on BOTH sides — which the pre-fix
+        /// endpoint did not, on either.
+        ///
+        /// <para>
+        /// <c>400</c> = self-gift / non-positive amount / insufficient <c>activity_pts</c>
+        /// (gift_pts are earnings and are NOT sendable); <c>404</c> = no such receiver.
+        /// </para>
+        /// </summary>
+        public static string GiftsSendPts => BaseUrl + "/gifts/send-pts";
+
+        /// <summary>
+        /// POST <c>{item_id, currency, idempotency_key}</c> → the purchase outcome.
+        /// AUTH REQUIRED. Thin wrapper over <c>golfin_gift_purchase</c> — debit, ledger row and
+        /// the <c>user_inventory</c> insert in ONE transaction. <c>currency</c> is
+        /// <c>"activity"</c> or <c>"gift"</c>; <c>"gift"</c> is premium-tier only.
+        /// </summary>
+        public static string GiftsPurchase => BaseUrl + "/gifts/purchase";
+
+        /// <summary>
+        /// GET → <c>{data: [&lt;gifts row&gt;]}</c> — gifts RECEIVED by the caller, newest first,
+        /// each embedding <c>gift_items(...)</c> and the SENDER's
+        /// <c>profiles!gifts_sender_id_fkey(display_name, avatar_url)</c>. AUTH REQUIRED.
+        /// The Gift screen's TOP SUPPORTERS panel aggregates these client-side.
+        /// </summary>
+        public static string GiftsReceived(int skip = 0, int limit = 50)
+            => BaseUrl + "/gifts/received?skip=" + skip + "&limit=" + limit;
+
+        /// <summary>
+        /// GET → <c>{data: [&lt;profiles subset&gt;]}</c> — up to 20 suggested players, ordered by
+        /// <c>followers_count</c> desc, EXCLUDING the caller and everyone they already follow
+        /// (user.py <c>discover_users</c>). AUTH REQUIRED. Feeds POPULAR GOLFERS.
+        /// </summary>
+        public static string UserDiscover => BaseUrl + "/user/discover";
+
+        /// <summary>
+        /// GET → <c>{data: [&lt;vote + options&gt;]}</c> — ACTIVE votes, newest first. NO AUTH on
+        /// the router (voting.py <c>list_votes</c> takes no user), but the call still carries the
+        /// bearer like every other one — the token is what makes MINE filterable client-side.
+        /// </summary>
+        public static string VoteList(int skip = 0, int limit = 20)
+            => BaseUrl + "/vote/list?skip=" + skip + "&limit=" + limit;
+
+        /// <summary>
+        /// POST <c>{option_id}</c> → the repainted vote. AUTH REQUIRED.
+        /// <c>400 "Already voted"</c> is the SECOND-cast answer and is a STATE, not an error:
+        /// the card flips to its voted form on it rather than showing a failure.
+        /// </summary>
+        public static string VoteCast(string voteId)
+            => BaseUrl + "/vote/" + UnityWebRequest.EscapeURL(voteId ?? "") + "/cast";
+
+        /// <summary>
+        /// POST <c>{question, vote_type, options[], expires_at?}</c> → the created vote with its
+        /// options. AUTH REQUIRED; <c>creator_id</c> comes from the bearer.
+        /// </summary>
+        public static string VoteCreate => BaseUrl + "/vote/create";
+
+        /// <summary>
+        /// POST <c>?action=&lt;name&gt;</c> → <c>{data:{awarded, activity_pts, total_points, …}}</c>.
+        /// AUTH REQUIRED. The PLAYLIFE earn path — the amount is SERVER-side
+        /// (<c>ACTIVITY_PTS_REWARDS</c> in points.py: <c>vote_cast</c> = 10), so nothing about the
+        /// reward travels in the request.
+        ///
+        /// <para>
+        /// ⚠️ NOT IDEMPOTENT — it calls <c>earn_activity_pts</c>, which takes no key, unlike
+        /// <see cref="PointsEarnGame"/>'s <c>earn_pts_v2</c>. The only thing stopping a double
+        /// credit is that the CAST that precedes it can only succeed once (<c>user_votes</c>
+        /// rejects the second with 400). Callers must therefore award ONLY on a successful cast,
+        /// never on the already-voted branch. Changing that means a keyed earn action, which is a
+        /// server change and is out of scope here (gps_gifts_votes § Out of scope).
+        /// </para>
+        /// </summary>
+        public static string PointsEarn(string action)
+            => BaseUrl + "/points/earn?action=" + UnityWebRequest.EscapeURL(action ?? "");
 
         /// <summary>Restore the shipping host (used by tests that retarget <see cref="RootUrl"/>).</summary>
         public static void ResetToDefault() => RootUrl = DefaultRootUrl;

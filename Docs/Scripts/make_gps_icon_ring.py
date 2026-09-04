@@ -74,6 +74,17 @@ RINGS = [
     # name,                       size, radius, stroke, fill top, fill bottom, stroke top, stroke bottom
     ("S_GpsIconRing_Step", 64, 30.5, 3, "#204B76", "#0B203D", "#F3ECC2", "#F3ECC2"),
     ("S_GpsIconRing_Tile", 88, 41.5, 5, "#204B76", "#0B203D", "#F3ECC2", "#98855B"),
+
+    # auth_golf_profile — the Welcome tutorial draws the SAME atom at two more sizes.
+    #   Hero ring     node 14029:34190  150x150  r=70.8333  stroke 8.33333
+    #   Feature ring  node 14029:34207   96x96   r=45.3333  stroke 5.33333
+    # Both carry the Tile ring's exact token pair (fill #204B76->#0B203D, stroke
+    # #F3ECC2->#98855B), so they are the atom at a new size, not a new atom. They are baked
+    # rather than achieved by scaling S_GpsIconRing_Tile because a scaled 88px sprite lands its
+    # stroke at 8.52 / 5.45 instead of 8.33 / 5.33 — small, but there is no reason to carry an
+    # approximation when the token is known.
+    ("S_GpsIconRing_Welcome", 150, 70.8333, 8.33333, "#204B76", "#0B203D", "#F3ECC2", "#98855B"),
+    ("S_GpsIconRing_Feature",  96, 45.3333, 5.33333, "#204B76", "#0B203D", "#F3ECC2", "#98855B"),
 ]
 
 OUT = "Assets/Art/UI/Gps"

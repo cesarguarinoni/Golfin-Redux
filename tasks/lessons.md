@@ -3232,3 +3232,247 @@ mirroring `standalone_trees.csv`.
 Vendor art folders and generated scenes are per-machine by design; project data derived from them
 belongs in a tracked location (`Data/hole-NN-geo/`, `Resources/HoleData/`), derived by a repeatable
 tool rather than placed by hand.
+
+## Lesson BS — Figma→Unity screen builds: fourteen defects that all cost a rejection round
+
+`gps_profile_pack` (2026-09-02, Profile / My Avatar / Badges). Three iterations of the subagent
+pipeline all passed their gates and Cesar rejected each on sight; the work only converged once it
+was driven by real navigation with a per-element diff against the node. Every item below is a
+defect that actually shipped to his screen at least once.
+
+### The instrument
+
+1. **Use real play-mode navigation, never a render harness.** A purpose-built preview-scene
+   renderer produced TWO false readings in twenty minutes: every label came back as a raw
+   `GPS_*` key (LocalizationManager is only `Initialize()`d at boot, so `Get()` returns the key in
+   edit mode), and then the node background plate silently did nothing because **the screen prefab
+   paints its own `Background` child on top of anything the harness puts behind it**. Both bugs
+   were in the instrument, not the product. Boot the app, tap PLAY, drive the real widget
+   `onClick`, screenshot. It cannot drift.
+2. **A ΔRGB number against the node is meaningless until the backdrop matches.** Profile measured
+   23.03% with the shipped hub background and **8.17%** over the node's own plate — same UI. At
+   0.6 panel alpha the photo dominates every translucent surface.
+3. **Per-frame backgrounds are real and are worth measuring.** `ScoreUploadScreenBuilder:82-86`
+   maps each of its six steps to a real project asset. Diff the node's `Backgrounds` node render
+   against every candidate before importing a new one — the Badges plate turned out
+   **byte-identical (mean |ΔRGB| 0.000, max 0)** to a `BG_SU_GpsProof.png` an earlier task had
+   already added.
+4. **Sample colours at 1:1, never off a downscaled crop.** A section title read as white at 0.42
+   scale and is gold at full size; the "fix" was a regression.
+
+### The recurring authoring traps
+
+5. **Never copy a sibling node's dimensions.** The hero panel was built 958x296 — the *hub's* hero
+   height — where this node's is 449. That one wrong number vertically centred the 170px avatar
+   disc at y=63 with the name at y=66, i.e. stacked on top of each other, and read as "the image
+   renders behind the name".
+6. **Progress bars are driven by WIDTH, never `Image.Type.Filled`.** Filled discards 9-slicing
+   outright — it squashes the capsule into the bar's height and clips, so the cap arrives as a thin
+   wedge. Already documented at `ScoreUploadScreenBuilder:844-847`; six bars shipped wrong anyway
+   because nobody reused it. There is now a shared `Bar()` builder + `GpsUiColor.SetBarFill()`.
+7. **Two different `A()` helpers, and picking the wrong one makes panels opaque.** The builder's
+   local `A(overlay, alpha, backdrop)` *pre-composites* against an assumed surface and returns an
+   OPAQUE colour — correct for a chip on a known panel, wrong for anything over a photo.
+   `GpsUiColor.A(c, alpha)` / `ADark()` are genuinely translucent. Badge cells used the former and
+   every earned cell rendered as a solid navy box.
+8. **A freshly baked PNG imports as a plain texture, not a Sprite** → `LoadAssetAtPath<Sprite>`
+   returns null → Unity draws a **white box**. Force `TextureImporterType.Sprite` after every bake.
+   This bit three times in one session.
+9. **Never bake `LocalizationManager.Get()` into a prefab at build time.** Pass a `localizeKey` and
+   let `LocalizedText.Refresh()` resolve at runtime; a build-time `Get()` stamps the raw key.
+10. **Check the localized VALUE before adding a decorative glyph.** `GPS_PROFILE_TRUST` is already
+    `"✓ TRUST LEVEL"`, so a separate mark rendered `✓ ✓`. And confirm the font HAS the glyph —
+    Rubik has no U+1F512, so the node's padlock rendered as tofu (`TMP_FontAsset.HasCharacters`).
+11. **Unity's default `disabledColor` is alpha 128.** `interactable = false` on a button the design
+    draws solid makes it translucent. Set an opaque `disabledColor` — the hub already did this on
+    its nav slots.
+12. **Don't bake runtime state into the prefab.** The evolution "current stage" size (88/44 vs
+    68/32) was decided at build time, so the emphasis sat on whatever stage was seeded rather than
+    the player's actual level. State the runtime owns belongs in the controller.
+13. **A `Populate()` that destroys only what it created leaves builder-seeded children on screen.**
+    Clear every child of the container. This is why the live Badges grid showed raw keys and a fake
+    "first two earned" state underneath the real cells.
+14. **Fixed-width text boxes overflow in the other language or with a longer string.** The node's
+    own mock is often the short case. Centre/right-align with a `HorizontalLayoutGroup` that sizes
+    to content — needed on the gift tiles, the level row, and the XP CTA.
+
+### Process
+
+15. **Do the region-by-region diff yourself; do not let the reviewer be the human.** Crop matched
+    regions from the node render and the live capture, stack them, and enumerate. Cesar named four
+    defects; the same crop sheet then yielded six more in one pass, including the rarity table
+    being wrong on six of 24 badges.
+16. **Image-instance offsets in a node are authored for FIGMA's art.** The avatar's
+    `(-82.7,-400) 725.4x1569.84` crop is correct for Figma's "Main Menu Character"; our
+    `Characters/Homescreen` sprite is 1090x1907, so those numbers stretched it and framed the
+    torso. Compute a cover-crop from the real sprite's dimensions instead.
+
+---
+
+## Lesson BT — `auth_golf_profile` (2026-09-02): three traps that pass every gate
+
+Four defects on this task. **All four gates were green while all four were present**, and every
+one was found by capturing through real navigation and then *measuring* the frame. Three of them
+generalise well past this task.
+
+### 1. A calibration constant that was scoped too narrowly
+
+Build rule 4 says "`Main Buttons` labels are size 59" — the node says 66, and Rubik SemiBold
+renders ~12 % wider than the face Figma draws with. That correction was written as a fact about
+*buttons*. It is actually a fact about **the font**. Every SemiBold run on both screens, authored
+at the node's nominal px, came out 10–12 % oversize:
+
+| run | node px | width ratio | cap-height ratio |
+|---|---|---|---|
+| Intro Title | 36 | 1.109 | 1.120 |
+| Welcome Title | 40 | 1.103 | 1.107 |
+| Feature Name | 30 | 1.106 | 1.095 |
+| Chip Label | 24 | 1.101 | 1.059 |
+| Main Button **(at the calibrated 59)** | 66 | **1.014** | **0.978** |
+
+The fix is one named constant, `SemiBoldSize = 59f/66f`, applied to every SemiBold site — and the
+button's own 59 now *derives* from it (`66 * 0.8939 = 59.0`), so the number cannot drift and a
+new SemiBold run cannot forget it. **When you find yourself writing a magic number with a
+one-element scope, ask what it is really a property of.**
+
+### 2. `GpsUiColor.A()` is the wrong helper for anything on a known panel
+
+The node's `fill-opacity="0.35"` white pager dots were authored with `GpsUiColor.A(White, 0.35f)`
+and rendered at (161,170,180) against the node's (103,137,158) — 45 per channel, plainly visible.
+`A()` stays genuinely translucent, so Unity composites it in LINEAR light while Figma composited
+in sRGB, and a **white** overlay lands far too bright (a dark one lands too dark; the direction
+flips with the overlay, which is why one blanket rule never worked).
+
+On a known backdrop the honest authoring is the composite the node actually renders, as an OPAQUE
+colour sampled at 1:1 — here `#67899E`, which measured Δ 0.3. Keep `A()` for things that must
+genuinely see through, like a text selection highlight. This is `FIGMA_SCREEN_BUILD_PLAYBOOK` §3
+and it cost a round anyway; the playbook entry now has a measured example.
+
+### 3. `S_GpsIconRing_Tile` is a FILLED circle, not an annulus
+
+The GPS Profile hero avatar was a navy `AvatarBg` capsule with a `GoldRing` overlay on top.
+Swapping the disc's sprite for a coloured one produced **no visible change in any of the four
+colours** — `make_gps_icon_ring.bake()` paints its fill out to the OUTER radius and then draws the
+stroke over it, so the ring sprite covered the disc completely. The wiring read as correct at
+every level: right sprite on the right Image, right serialized array, no prefab overrides.
+
+Two things follow. **Read the whole captured frame, not the property you changed** — the
+diagnostic that found this was looking at the screenshot, not at four consecutive correct
+inspections. And **collapse the pair**: the colour now lives on the ring's own fill
+(`S_AUTH_AvatarRing_*` — the same atom geometry with the swatch gradient), one Image instead of
+two, so the invisible-layer failure mode is gone rather than fixed.
+
+### 4. The cheap one: a key referenced by the builder but absent from the CSV
+
+Renders as the raw key on device and in the Editor. `grep` every `localizeKey` the task's files
+reference against the CSV — it is one command and it caught the only miss.
+
+### The process point
+
+Each of the four was then treated as a **shape**, per PIPELINE_HARDENING §15: all 19 text sites
+enumerated with a per-site verdict *including the 13 that were fine*, both translucency sites
+audited, every referenced key cross-checked. That is what turns "I fixed the title" into "no run
+on either screen has this problem", and it is cheaper than the second and third round-trip through
+the gates.
+
+---
+
+## Lesson BU — a path that silently does not execute looks exactly like one that passed
+
+`gps_checkin`, 2026-09-03. Three false reports in one session, all the same shape. Cesar caught
+every one.
+
+**1. The untimed probe leg.** I added a Rounds leg to `GpsPolishProbe` and ran it. The log showed
+`tapping hub nav ROUNDS ... ok GpsRounds` but no `push GpsHub->GpsRounds` line, where every other
+leg had one. I reported that the Rounds screen "isn't getting the GPS push transition at all."
+
+It was. `CanPush(Hub -> Rounds) = True`, measured directly, thirty seconds after I finally asked
+instead of inferred. The probe's own private `Obj()` resolver had no `GpsRounds` case → returned
+null → `CanPush` false *inside the probe* → `expectPush` false → the leg walked untimed. **A screen
+missing from that switch is silently unmeasured, not reported as unmeasurable.**
+
+**2. The no-op guard.** Fixing a stale-list bug, I gated a re-fetch on `!_fetchInFlight` "to avoid a
+loop". The entry fetch is ALWAYS in flight at that exact moment, so the guard dropped the very
+correction it guarded, every time. The end state looked plausible, so it read as working.
+
+**3. The idle dry run.** Testing whether a scenario or the video encoder was locking the Mac, I
+added a dry-run path that created the runner component but never called `StartDemo()`. It sat on
+Home. I watched Unity stay alive with flat RSS for six minutes and reported the scenario
+exonerated. I was watching an idle editor.
+
+### The rule
+
+**State the validity condition BEFORE running a diagnostic** — what the trace must show for a null
+result to mean anything — and check it before drawing any conclusion. For the dry run that was
+"must reach GpsRounds AND log a real check-in"; the second attempt met it
+(`POST /activity/checkin -> 200`) and only then was the result worth anything.
+
+Corollary, learned the hard way in the same session: **report at the moment the check demonstrably
+exercised the thing, not at the moment the check finished.** I also wrote up that dry run as
+covering the whole loop when I had killed play mode before check-out — a fourth instance, in the
+document a future investigation would rely on.
+
+### Sister scar, same session: stage by path, never by directory
+
+The close-out used `git add -A Docs/Specs/Active` and swept four files belonging to a parallel
+session into my commit — thirty seconds after I ran the rule-12 drift check and correctly named
+those exact paths as not mine. Reverted in `0139fd261`. Running the check is worthless if the very
+next command ignores its answer. This is `project_k10_commit_swept_k11_edits` re-earned.
+
+---
+
+## Lesson AJ — the repair that ran inside the window it was repairing (2026-09-04, `gps_standalone_shell` R2)
+
+Excluding golf art from the standalone build means moving `Assets/Resources/*` subfolders aside for
+the duration of the build and putting them back after. Three ordering facts, each of which broke
+something before it was right:
+
+**1. `AssetDatabase.MoveAsset` is the mechanism, not `Directory.Move`.** Moving assets out of a
+`Resources/` folder but keeping them under `Assets/` preserves their GUIDs and import artifacts, so
+545 MB moves in a second and comes back without a re-import. Anything that takes the files out of
+`Assets/` entirely costs a full reimport on the way back — minutes, and it churns the Library for
+whoever builds the game next. Outside a `Resources/` folder an asset ships only if something
+references it, which is exactly the property wanted.
+
+**2. The repair-on-startup call must be at the build ENTRY points, never in the shared core.**
+I first put "restore anything a previous aborted build left stashed" at the top of `BuildIOSCore` —
+which the standalone lane calls *after* it stashes. It would have un-stashed the folders the build
+had just moved and shipped the full 427 MB again **while the log said the diet had run**. It belongs
+in `BuildIOS` / `BuildIOSGps` / `BuildIOSDev`, and in `BuildIOSStandalone` *before* the move.
+
+**3. A gate that reads the moved data will fail a correct build.** `ValidateTreeBake()` reads
+`Assets/Resources/HoleData/**/tree_obstacles.csv`; with `HoleData` stashed it reported 18/18 holes
+missing and killed the build. Skipped for the standalone alone — a variant whose scene list is
+ShellScene has no hole to disagree about — with the parameter named and one caller, not a global
+switch.
+
+**The failure was the best test.** That build died *inside* the moved window, and the `finally` put
+all 13 folders back, deleted the sentinel, removed the stash and left `git status` clean. Worth more
+than the simulation I would otherwise have written, because the dangerous state is real: a missing
+`Resources` folder is **not a build error**, so a stashed `HoleData` would make the next GAME build
+ship without its holes and nothing would say a word. Hence three independent repairs — the
+`finally`, `RestoreNow()` before `Fail()` exits (a batchmode `delayCall` never gets a frame), and an
+`[InitializeOnLoadMethod]` on the next editor load.
+
+### Sister lesson: enumerate the call sites, do not reason about the names
+
+The folder list came from grepping every `Resources.Load` / `LoadAll` in `Assets/Scripts` +
+`Assets/Editor` and reading the literal path prefixes. That is the only reason `Characters/` stayed:
+`GpsAvatarScreenController.BindCharacterFigure` loads `Characters/Homescreen/{name}` — a PLAYLIFE
+screen reaching into golf art. Every plausible line of reasoning about "which folders are golf" puts
+`Characters` in the move list and blanks the Avatar screen. The grep took two minutes.
+
+## Lesson AK — `UserService.Instance` (and any ApiClient-backed singleton) throws in EditMode
+
+An EditMode test that touched `UserService.Instance` failed with
+
+    InvalidOperationException: The following game object is invoking the DontDestroyOnLoad method:
+    [Golfin.Net]. Notice that DontDestroyOnLoad can only be used in play mode
+
+The lazy `Instance` builds an `ApiClient`, whose coroutine runner is a `MonoBehaviour` that calls
+`DontDestroyOnLoad` — legal only in play mode. The service itself is plain C# and perfectly testable;
+it is the *lazy construction path* that is not. **Inject it instead:**
+`UserService.ConfigureForTest(new UserService(null))` — a null transport is safe when the test issues
+no request — and `ResetForTest()` in the `finally`. Same shape for `PointsService` / `VenueService`.
+This is also why `GpsAuthExtrasFlow.InterceptHubEntry` tests the hub id *before* calling
+`ShouldOffer()`: the ordering keeps an ordinary screen change free of a session read.

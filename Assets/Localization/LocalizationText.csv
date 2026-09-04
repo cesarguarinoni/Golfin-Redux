@@ -15,6 +15,7 @@ TIP_VIEW,<color=#EEDC9A>TAP THE MAP</color> TO SWITCH BETWEEN SHOT VIEW AND MAP 
 HOME_CURRENCY_LABEL,COINS,コイン
 HOME_USERNAME,USERNAME,ユーザー名
 HOME_DAILY_PILL,NEW DAILY MISSION!,新しいデイリーミッション！
+HOME_GPS_PILL,GPS,GPS
 # unused since home_notices — the two HOME_MAINTENANCE_* rows below are no longer read by HomeScreenController; the Home notice comes from GET /api/v1/notices. Kept only to avoid CSV churn. (No commas: LocalizationTextImporter skips any line with fewer than 3 columns.)
 HOME_MAINTENANCE_TITLE,MAINTENANCE NOTICE,メンテナンス情報
 HOME_MAINTENANCE_BODY,Scheduled server maintenance: 2025/12/31\nThe game will not be available for a short time\nduring maintenance.,定期サーバーメンテナンス: 2025/12/31\nメンテナンス中はゲームをご利用いただけません。
@@ -691,7 +692,7 @@ MISSION_NAME_L_EAGLE_FIVE,Eagle on Eighteen,18番でイーグル
 MISSION_NAME_L_PERFECT_ROUND,Perfect Hole,パーフェクトホール
 MISSION_NAME_L_LEGEND_FINAL,Legend Final,レジェンドファイナル
 GPS_HUB_TITLE,GOLFIN GPS,GOLFIN GPS
-GPS_HUB_BACK,‹ BACK TO GAME,‹ ゲームに戻る
+GPS_HUB_BACK,GAME,ゲーム
 GPS_HUB_SUB_FORMAT,HC {0} · {1} followers,HC {0} · フォロワー {1}
 GPS_HUB_STAT_POINTS,POINTS,ポイント
 GPS_HUB_STAT_BEST,BEST,ベスト
@@ -805,3 +806,252 @@ GPS_HUB_RECENT_GIFTS,RECENT GIFTS,最近のギフト
 GPS_HUB_LIVE_VOTES,LIVE VOTES,開催中の投票
 GPS_HUB_NO_GIFTS,No gifts yet,まだギフトはありません
 GPS_HUB_NO_VOTES,No votes yet,まだ投票はありません
+GPS_PROFILE_TITLE,PROFILE,プロフィール
+GPS_AVATAR_TITLE,MY AVATAR,マイアバター
+GPS_BADGES_TITLE,BADGES,バッジ
+GPS_PROFILE_SUB_FMT,HC {0} · {1} rounds,HC {0} · {1}ラウンド
+GPS_PROFILE_STAT_FOLLOWERS,FOLLOWERS,フォロワー
+GPS_PROFILE_STAT_ROUNDS,ROUNDS,ラウンド
+GPS_PROFILE_STAT_AVATAR,AVATAR,アバター
+GPS_PROFILE_STAT_POINTS,POINTS,ポイント
+GPS_PROFILE_TRUST,✓ TRUST LEVEL,✓ 信頼度
+GPS_PROFILE_TRUST_NOTE,Verified by GPS · post scores to increase,GPSで認証済み · スコアを投稿して信頼度アップ
+GPS_PROFILE_BEST,BEST,ベスト
+GPS_PROFILE_AVERAGE,AVERAGE,平均
+GPS_PROFILE_AVG_PUTTS,AVG PUTTS,平均パット数
+GPS_PROFILE_GIFTS_IN,GIFTS RECEIVED,受け取ったギフト
+GPS_PROFILE_GIFTS_OUT,GIFTS SENT,送ったギフト
+GPS_PROFILE_SHORTCUT_BADGES,BADGES,バッジ
+GPS_PROFILE_SHORTCUT_SHOP,GIFT SHOP,ギフトショップ
+GPS_PROFILE_SHORTCUT_AVATAR,MY AVATAR,マイアバター
+GPS_PROFILE_SHOP_SUB,Browse & send gifts,ギフトを見て送る
+GPS_PROFILE_BADGES_SUB_FMT,{0} / {1} earned,{0} / {1} 獲得済み
+GPS_PROFILE_AVATAR_SUB_FMT,Lv.{0} · {1}/{2} XP,Lv.{0} · {1}/{2} XP
+GPS_PROFILE_RECENT,MY RECENT ROUNDS,最近のラウンド
+GPS_PROFILE_EDIT,EDIT PROFILE,プロフィール編集
+GPS_AVATAR_SLOT_CAP,CAP,キャップ
+GPS_AVATAR_SLOT_SHIRT,SHIRT,シャツ
+GPS_AVATAR_SLOT_GLOVE,GLOVE,グローブ
+GPS_AVATAR_SLOT_SHOES,SHOES,シューズ
+GPS_AVATAR_SLOT_CLUB,CLUB,クラブ
+GPS_AVATAR_RANK_BEGINNER,BEGINNER,ビギナー
+GPS_AVATAR_RANK_ROOKIE,ROOKIE,ルーキー
+GPS_AVATAR_RANK_AMATEUR,AMATEUR,アマチュア
+GPS_AVATAR_RANK_SINGLE,SINGLE,シングル
+GPS_AVATAR_RANK_PRO,PRO,プロ
+GPS_AVATAR_LEVEL_FMT,Lv.{0},Lv.{0}
+GPS_AVATAR_NEXT_FMT,Lv.{0},Lv.{0}
+GPS_AVATAR_XP_HINT_FMT,{0} more rounds (est.),あと{0}ラウンド（目安）
+GPS_AVATAR_XP_FMT,{0} / {1} XP,{0} / {1} XP
+GPS_AVATAR_XP_CTA,Keep posting scores to level up!,スコアを投稿してレベルアップ！
+GPS_AVATAR_EVOLUTION,AVATAR EVOLUTION,進化
+GPS_AVATAR_STATUS,STATUS,キャラクター ステータス
+GPS_AVATAR_STATUS_NOTE,Your selected GOLFIN character stats,選択中のGOLFINキャラクターのステータス
+GPS_BADGES_COLLECTION,BADGE COLLECTION,バッジコレクション
+GPS_BADGES_EARNED_FMT,{0} / {1} badges earned,{0} / {1} バッジ獲得済み
+GPS_BADGES_SEC_GOLF,GOLF,ゴルフ
+GPS_BADGES_SEC_SOCIAL,SOCIAL,ソーシャル
+GPS_BADGES_SEC_TRUST,TRUST,信頼度
+GPS_BADGES_SEC_SPECIAL,SPECIAL,スペシャル
+GPS_BADGES_RARITY_COMMON,COMMON,コモン
+GPS_BADGES_RARITY_RARE,RARE,レア
+GPS_BADGES_RARITY_EPIC,EPIC,エピック
+GPS_BADGES_RARITY_LEGEND,LEGEND,レジェンド
+BADGE_first_round_NAME,First Round,初ラウンド
+BADGE_break_110_NAME,Break 110,110切り
+BADGE_break_100_NAME,Break 100,100切り
+BADGE_break_90_NAME,Break 90,90切り
+BADGE_break_80_NAME,Break 80,80切り
+BADGE_streak_5_NAME,5 in a Row,5連続
+BADGE_streak_10_NAME,10 in a Row,10連続
+BADGE_courses_10_NAME,10 Courses,10コース
+BADGE_first_gift_recv_NAME,First Gift In,初ギフト受取
+BADGE_first_gift_send_NAME,First Gift Out,初ギフト送信
+BADGE_gifts_100_NAME,100 Gifts In,ギフト100受取
+BADGE_followers_100_NAME,100 Followers,フォロワー100
+BADGE_followers_1000_NAME,1K Followers,フォロワー1000
+BADGE_followers_10000_NAME,10K Followers,フォロワー10000
+BADGE_first_vote_NAME,First Vote,初投票
+BADGE_vote_hits_10_NAME,10 Vote Hits,投票10ヒット
+BADGE_first_gps_NAME,First GPS Proof,初GPS証明
+BADGE_trust_80_NAME,Trust 80%,信頼度80%
+BADGE_trust_100_NAME,Trust 100%,信頼度100%
+BADGE_social_verify_5_NAME,5 Friend Confirms,5人確認
+BADGE_monthly_mvp_NAME,Monthly MVP,月間MVP
+BADGE_tournament_win_NAME,Tournament Win,トーナメント優勝
+BADGE_gift_king_NAME,Gift Top 10,ギフトTOP10
+BADGE_all_badges_NAME,All Badges,全バッジ
+GPS_AVATAR_UNLOCKS_FMT,UNLOCKS AT Lv.{0},Lv.{0}で解放
+GPS_AVATAR_UNLOCK_CAP,CAMO CAP,カモキャップ
+GPS_AVATAR_UNLOCK_AURA,GOLD AURA,ゴールドオーラ
+GPS_AVATAR_UNLOCK_FX,FLAME FX,フレイムFX
+GPS_GOLFPROF_TITLE,GOLF PROFILE,ゴルフプロフィール
+GPS_GOLFPROF_TITLE_INTRO,SET UP YOUR GOLF PROFILE,ゴルフプロフィールを設定
+GPS_GOLFPROF_SUB,You can change all of this later in Settings,これらはすべて後から設定で変更できます
+GPS_GOLFPROF_COLOUR_LABEL,Pick your avatar colour,アバターの色を選択
+GPS_GOLFPROF_NICKNAME,NICKNAME,ニックネーム
+GPS_GOLFPROF_NICKNAME_HINT,Your nickname,ニックネームを入力
+GPS_GOLFPROF_EXPERIENCE,GOLF EXPERIENCE,ゴルフ歴
+GPS_GOLFPROF_EXP_BEGINNER,BEGINNER,初心者
+GPS_GOLFPROF_EXP_INTERMEDIATE,INTERMEDIATE,中級者
+GPS_GOLFPROF_EXP_ADVANCED,ADVANCED,上級者
+GPS_GOLFPROF_HANDICAP,HANDICAP (OPTIONAL),ハンディキャップ（任意）
+GPS_GOLFPROF_HANDICAP_HINT,e.g. 18.4,例：18.4
+GPS_GOLFPROF_HANDICAP_BAD,"Enter a handicap between -10 and 60, or leave it blank.",ハンディキャップは-10〜60の範囲で入力するか、空欄にしてください。
+GPS_GOLFPROF_SAVE,SAVE PROFILE,プロフィールを保存
+GPS_GOLFPROF_SKIP,Skip for now,後で設定する
+GPS_WELCOME_TITLE,WELCOME,ようこそ
+GPS_WELCOME_TITLE_HEAD,WELCOME TO GOLFIN GPS,GOLFIN GPS へようこそ
+GPS_WELCOME_SUB,"Earn points just by playing golf. Prove your rounds with GPS, get gifts from fans, and grow your avatar.",ゴルフをプレイするだけでポイントが貯まります。GPSでラウンドを証明し、ファンからギフトを受け取り、アバターを育てましょう。
+GPS_WELCOME_SKIP,SKIP,スキップ
+GPS_WELCOME_GET_STARTED,GET STARTED,はじめる
+GPS_WELCOME_FEAT_SS,SCREENSHOT,スクリーンショット
+GPS_WELCOME_FEAT_SS_DESC,AI reads your scorecard,AIがスコアカードを読み取ります
+GPS_WELCOME_FEAT_CHECKIN,CHECK IN,チェックイン
+GPS_WELCOME_FEAT_CHECKIN_DESC,Prove it with GPS,GPSでラウンドを証明
+GPS_WELCOME_FEAT_VOTE,VOTE,投票
+GPS_WELCOME_FEAT_VOTE_DESC,Predict and win points,予想してポイントを獲得
+GPS_WELCOME_FEAT_GIFT,GIFT,ギフト
+GPS_WELCOME_FEAT_GIFT_DESC,Support your favourite golfers,好きなゴルファーを応援
+GPS_GIFT_TITLE,GIFTS,ギフト
+GPS_GIFT_HERO_TITLE,GIFTS RECEIVED,受け取ったギフト
+GPS_GIFT_HERO_SUB,from {0} supporters,{0}人のサポーターから
+GPS_GIFT_HERO_VALUE,{0} pts,{0} pts
+GPS_GIFT_HERO_NOTE,total gift earnings,ギフト獲得ポイント合計
+GPS_GIFT_SUPPORTERS,TOP SUPPORTERS,トップサポーター
+GPS_GIFT_POPULAR,POPULAR GOLFERS,人気のゴルファー
+GPS_GIFT_SEE_ALL,SEE ALL ›,すべて見る ›
+GPS_GIFT_SEND_GIFT,SEND GIFT,ギフトを贈る
+GPS_GIFT_FOLLOWERS,{0} followers,フォロワー{0}人
+GPS_GIFT_PTS,{0} pts,{0} pts
+GPS_GIFT_BUY_TITLE,BUY GIFT ITEMS,ギフトアイテムを買う
+GPS_GIFT_BUY_SUB,Support your favourite golfer,好きなゴルファーを応援しよう
+GPS_GIFT_MODAL_TITLE,SEND A GIFT,ギフトを贈る
+GPS_GIFT_MODAL_BALANCE,Your balance: {0} pts,残高：{0} pts
+GPS_GIFT_MODAL_CONFIRM,CONFIRM,確定する
+GPS_GIFT_MODAL_CANCEL,CANCEL,キャンセル
+GPS_GIFT_MODAL_SENDING,Sending…,送信中…
+GPS_GIFT_SENT,Sent {0} pts to {1},{1}に{0} ptsを贈りました
+GPS_GIFT_PURCHASED,Purchased {0},{0}を購入しました
+GPS_GIFT_INSUFFICIENT,Not enough points.,ポイントが足りません。
+GPS_GIFT_FAILED,Something went wrong. Try again.,エラーが発生しました。もう一度お試しください。
+# --- gift catalog item names -----------------------------------------------
+# gift_items rows carry ONE Japanese `name` column and never pass through the content
+# pipeline, so an English build rendered them in Japanese. Keyed by the first 8 hex of
+# the row's uuid so a NEW catalog row is fixable by publishing a text row alone.
+GIFT_ITEM_F8137DC1,Sunglasses,サングラス
+GIFT_ITEM_61B09778,Wristband,リストバンド
+GIFT_ITEM_DB99F9F0,Cheer Stamp,応援スタンプ
+GIFT_ITEM_E7F58D2F,Golf Ball,ゴルフボール
+GIFT_ITEM_6FB9856D,Pants (Navy),パンツ（ネイビー）
+GIFT_ITEM_C26D218F,Skirt,スカート
+GIFT_ITEM_9052D274,Score Post Effect,スコア投稿エフェクト
+GIFT_ITEM_DC1945D6,Seasonal Full Outfit,シーズン限定フルコーデ
+GIFT_ITEM_85A68F02,Full Outfit + Title,フルコーデ + 称号
+GIFT_ITEM_D4ED366E,Glove,グローブ
+GIFT_ITEM_8CBC1D6B,Basic Cap,ベーシックキャップ
+GIFT_ITEM_4AF0AE50,Sun Visor,サンバイザー
+GIFT_ITEM_FA79E47A,Gold Rim Cap,ゴールドリムキャップ
+GIFT_ITEM_C3CCD8A3,Crown,王冠
+GIFT_ITEM_80CB3AAC,Glowing Profile Frame,光るプロフィールフレーム
+GIFT_ITEM_51AA59B5,Spikeless Shoes (White),スパイクレス（白）
+GIFT_ITEM_CE366C56,Hologram Shoes,ホログラムシューズ
+GIFT_ITEM_860A7684,Polo Shirt (White),ポロシャツ（白）
+GIFT_ITEM_85EE1D03,Polo Shirt (Pink),ポロシャツ（ピンク）
+GIFT_ITEM_4A9A2CC6,Glowing Logo Polo,光るロゴポロ
+GIFT_ITEM_FC96A954,One Rare Wear Item,レアウェア1点
+GPS_VOTE_TITLE,VOTES,投票
+GPS_VOTE_NEW,NEW,新規
+GPS_VOTE_TRENDING,TRENDING,人気
+GPS_VOTE_FRIENDS,FRIENDS,フレンド
+GPS_VOTE_PUBLIC,PUBLIC,公開
+GPS_VOTE_MINE,MINE,自分
+GPS_VOTE_CREATE,+ CREATE,＋作成
+GPS_VOTE_VOTE,VOTE,投票する
+GPS_VOTE_GIFT,GIFT,ギフト
+GPS_VOTE_YES,YES,はい
+GPS_VOTE_NO,NO,いいえ
+GPS_VOTE_META,{0} votes · {1} days left,{0}票・残り{1}日
+GPS_VOTE_REWARD_PILL,+10 pts,+10 pts
+GPS_VOTE_ALREADY,You have already voted on this.,この投票にはすでに参加しています。
+GPS_VOTE_CAST_TOAST,+{0} pts for voting,投票で+{0} pts
+GPS_VOTE_CAST_FAILED,Could not cast your vote. Try again.,投票できませんでした。もう一度お試しください。
+GPS_VOTE_EMPTY,No votes right now.,現在、投票はありません。
+GPS_VOTE_EMPTY_MINE,You have not created a vote yet.,まだ投票を作成していません。
+GPS_VOTE_AGO_MIN,{0}m ago,{0}分前
+GPS_VOTE_AGO_HOUR,{0}h ago,{0}時間前
+GPS_VOTE_AGO_DAY,{0}d ago,{0}日前
+GPS_VOTE_CREATE_TITLE,CREATE A VOTE,投票を作成
+GPS_VOTE_CREATE_HINT,Ask something about your round,ラウンドについて質問してみよう
+GPS_VOTE_CREATE_OPTIONS,Answers are YES and NO.,選択肢は「はい」と「いいえ」です。
+GPS_VOTE_EXPIRY_24H,24 HOURS,24時間
+GPS_VOTE_EXPIRY_3D,3 DAYS,3日間
+GPS_VOTE_EXPIRY_7D,7 DAYS,7日間
+GPS_VOTE_CREATE_SUBMIT,CREATE VOTE,投票を作成
+GPS_VOTE_CREATE_SENDING,Creating…,作成中…
+GPS_VOTE_CREATE_FAILED,Could not create the vote. Try again.,投票を作成できませんでした。もう一度お試しください。
+GPS_VOTE_CREATED,Vote created.,投票を作成しました。
+GPS_ROUNDS_TITLE,ROUNDS,ラウンド
+GPS_ROUNDS_NEARBY_COUNT,NEARBY · {0} SPOTS,近くのスポット · {0}件
+GPS_ROUNDS_GPS_ON,● GPS ON,● GPS オン
+GPS_ROUNDS_GPS_OFF,● GPS OFF,● GPS オフ
+GPS_ROUNDS_LIVE,● LIVE,● 進行中
+GPS_ROUNDS_CHECKED_IN_SINCE,CHECKED IN · {0}〜,チェックイン中 · {0}〜
+GPS_ROUNDS_CAT_GOLF,GOLF COURSES,ゴルフ場
+GPS_ROUNDS_CAT_RANGE,DRIVING RANGES,練習場
+GPS_ROUNDS_CAT_FOOD,FOOD & DRINK,飲食店
+GPS_ROUNDS_NEAR_ME,◎ NEAR ME,◎ 現在地
+GPS_ROUNDS_LEGEND_PARTNER,PARTNER,提携
+GPS_ROUNDS_LEGEND_REGISTERED,REGISTERED,登録済み
+GPS_ROUNDS_LEGEND_FOOD,FOOD & DRINK,飲食店
+GPS_ROUNDS_MAP_ATTRIBUTION,Map · Google,地図 · Google
+GPS_ROUNDS_SORT_NEAREST,NEAREST FIRST,近い順
+GPS_ROUNDS_SORT_NAME,BY NAME,名前順
+GPS_ROUNDS_SORT_DISTANCE,DISTANCE,距離
+GPS_ROUNDS_SORT_NAME_TOGGLE,NAME,名前
+GPS_ROUNDS_NEAR_YOU,NEAR YOU,近くのスポット
+GPS_ROUNDS_NEARBY_FOOD,NEARBY FOOD & DRINK,近くの飲食店
+GPS_ROUNDS_PARTNER,PARTNER,提携
+GPS_ROUNDS_CHECK_IN,CHECK IN,チェックイン
+GPS_ROUNDS_TOO_FAR,{0} KM AWAY,{0} KM 先
+GPS_ROUNDS_TOO_FAR_TOAST,"You need to be at {0} to check in — you're {1} km away","{0} でないとチェックインできません（現在 {1} km 先）"
+GPS_ROUNDS_NO_GPS_TOAST,Turn on location to check in,チェックインするには位置情報をオンにしてください
+GPS_ROUNDS_DETAILS,DETAILS,詳細
+GPS_ROUNDS_EMPTY,No spots nearby right now.,近くにスポットがありません。
+GPS_ROUNDS_LIVE_ROUND,● LIVE ROUND,● ラウンド中
+GPS_ROUNDS_SINCE,Since {0},{0} 開始
+GPS_ROUNDS_ELAPSED,ELAPSED,経過時間
+GPS_ROUNDS_PTS_EARNED,PTS EARNED,獲得ポイント
+GPS_ROUNDS_GPS,GPS,GPS
+GPS_ROUNDS_GPS_FIXES,GPS FIXES,GPS 記録数
+GPS_ROUNDS_SCORE_UPLOAD,SCORE UPLOAD,スコア投稿
+GPS_ROUNDS_CHECK_OUT,CHECK OUT,チェックアウト
+GPS_ROUNDS_CONFIRM_TITLE,CHECK IN HERE?,ここにチェックインしますか？
+GPS_ROUNDS_CONFIRM_SUB,{0} km away · inside the course radius,{0} km · コースの範囲内
+GPS_ROUNDS_CONFIRM_SUB_OUTSIDE,{0} km away · outside the course radius,{0} km · コースの範囲外
+GPS_ROUNDS_PTS_ON_CHECKIN,PTS ON CHECK-IN,チェックイン
+GPS_ROUNDS_PTS_ON_CHECKIN_VALUE,+30,+30
+GPS_ROUNDS_PTS_ON_CHECKOUT,PTS ON CHECK-OUT,チェックアウト
+GPS_ROUNDS_PTS_ON_CHECKOUT_VALUE,+10,+10
+GPS_ROUNDS_GPS_ACCURACY,GPS ACCURACY,GPS 精度
+GPS_ROUNDS_ACCURACY_HIGH,● HIGH,● 高
+GPS_ROUNDS_ACCURACY_MED,● MED,● 中
+GPS_ROUNDS_ACCURACY_LOW,● LOW,● 低
+GPS_ROUNDS_CONFIRM_NOTE,"GOLFIN keeps a GPS trail while you play. Check out when you finish — your score post then carries the proof.",プレー中はGOLFINがGPS軌跡を記録します。終了したらチェックアウトすると、スコア投稿にその証明が付きます。
+GPS_ROUNDS_CANCEL,CANCEL,キャンセル
+GPS_ROUNDS_COMPLETE_TITLE,ROUND COMPLETE,ラウンド終了
+GPS_ROUNDS_COMPLETE_SUB,{0} – {1} · GPS verified,{0}〜{1} · GPS 認証済み
+GPS_ROUNDS_COMPLETE_SUB_UNVERIFIED,{0} – {1} · GPS unverified,{0}〜{1} · GPS 未認証
+GPS_ROUNDS_COMPLETE_NOTE,"Post your scorecard now to add screenshot points (+50) and Trust +20 from this round's GPS.","今スコアカードを投稿すると、スクリーンショットの +50 pt とこのラウンドの GPS による Trust +20 が加算されます。"
+GPS_ROUNDS_POST_SCORE,POST SCORE,スコアを投稿
+GPS_ROUNDS_DONE,DONE,完了
+GPS_ROUNDS_EXPIRED,ROUND EXPIRED,ラウンド期限切れ
+GPS_ROUNDS_EXPIRED_NOTE,This round was open for more than 8 hours. Check out to clear it — no points are awarded.,このラウンドは8時間以上開いたままです。チェックアウトで終了できますが、ポイントは付与されません。
+GPS_ROUNDS_CHECKED_IN,Checked in at {0} (+{1} pts),{0} にチェックインしました（+{1} pt）
+GPS_ROUNDS_CHECKED_IN_NO_PTS,Checked in at {0},{0} にチェックインしました
+GPS_ROUNDS_CHECKIN_FAILED,Could not check in. Try again.,チェックインできませんでした。もう一度お試しください。
+GPS_ROUNDS_CHECKOUT_FAILED,Could not check out. Try again.,チェックアウトできませんでした。もう一度お試しください。
+GPS_ROUNDS_ALREADY_ACTIVE,You already have a round open.,すでにラウンドが開いています。
+GPS_ROUNDS_MY_RECENT_ROUNDS,MY RECENT ROUNDS,最近のラウンド
+GPS_ROUNDS_ALL_ROUNDS,ALL ROUNDS  ›,すべてのラウンド  ›
+GPS_ROUNDS_NO_ROUNDS,No rounds yet.,まだラウンドがありません。

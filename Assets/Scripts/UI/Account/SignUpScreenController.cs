@@ -177,6 +177,12 @@ namespace Golfin.UI.Account
                 if (result.Success)
                 {
                     AccountUiBridge.SyncUsername();
+                    // gps_standalone_shell §D3 — see LoginScreenController.RouteAfterAuth.
+                    if (StandaloneShellBoot.TryGetPostAuthScreen(out ScreenId shellTarget))
+                    {
+                        if (_screenManager != null) _screenManager.ShowScreen(shellTarget);
+                        return;
+                    }
                     // starting_character_selection: check NeedsStarter before landing on Home.
                     if (CharacterManager.Instance != null && CharacterManager.Instance.NeedsStarter)
                     {

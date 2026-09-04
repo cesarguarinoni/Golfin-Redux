@@ -153,6 +153,75 @@ namespace Golfin.UI
             }
 
             EnsureTicketPill();
+            EnsureRewardPointsAlignment();
+            EnsureTicketCountAlignment();
+
+            // gps_standalone_shell §D5 — EnsureTicketPill just CREATED an element of the cluster
+            // the shell hides, so trim once here as well as on every ShowBars. No-op in the game.
+            ApplyStandaloneChrome();
+        }
+
+        /// <summary>Padding kept between a counter's right edge and its pill's inner edge.</summary>
+        private const float CounterPillPadding = 12f;
+
+        /// <summary>
+        /// Right-align the top-bar RP label inside its pill (see <see cref="AlignCounterInPill"/>).
+        /// </summary>
+        private void EnsureRewardPointsAlignment()
+        {
+            if (rewardPointsText == null || topBarPanel == null) return;
+            AlignCounterInPill(rewardPointsText,
+                               topBarPanel.transform.Find("RewardPointsBackground") as RectTransform);
+        }
+
+        /// <summary>
+        /// Same treatment for the ticket counter, so both pills read with one right-hand gap.
+        /// Runs after <see cref="EnsureTicketPill"/>, which is what creates the pill it measures.
+        /// </summary>
+        private void EnsureTicketCountAlignment()
+        {
+            if (ticketCountText == null) return;
+            var host = ticketCountText.transform.parent;   // TopBarContent
+            if (host == null) return;
+            AlignCounterInPill(ticketCountText, host.Find("TicketCountBackground") as RectTransform);
+        }
+
+        /// <summary>
+        /// Right-align a top-bar counter and pull its rect's right edge
+        /// <see cref="CounterPillPadding"/> inside the pill behind it. Done at runtime, like
+        /// <see cref="EnsureTicketPill"/>: both labels are authored LEFT-aligned with a rect that
+        /// overhangs its pill (RP by 17px, tickets by 23px), so the digits drifted toward — and
+        /// with a wide enough value, past — the pill's right edge, and the gap moved with the
+        /// digit count. Right-aligning alone would not have been enough: the overhanging rect
+        /// would simply have parked the digits outside. Aligning AND insetting fixes the gap at
+        /// one value for both counters, whatever the balance. The left edge stays where it is
+        /// (clear of each cluster's icon), so a long value grows leftward inside the pill.
+        /// Idempotent: a second pass finds no overhang and changes nothing.
+        /// </summary>
+        private static void AlignCounterInPill(TMPro.TextMeshProUGUI label, RectTransform? pill)
+        {
+            if (label == null) return;
+            label.alignment = TMPro.TextAlignmentOptions.MidlineRight;
+
+            var rt     = label.rectTransform;
+            var parent = rt.parent as RectTransform;
+            if (parent == null || pill == null || pill.parent != parent) return;
+
+            var corners = new Vector3[4];
+            pill.GetWorldCorners(corners);
+            float pillRight = parent.InverseTransformPoint(corners[2]).x;   // top-right
+            rt.GetWorldCorners(corners);
+            float textRight = parent.InverseTransformPoint(corners[2]).x;
+
+            float overhang = textRight - (pillRight - CounterPillPadding);
+            if (overhang <= 0.5f) return;
+
+            // Shrink from the right only: narrowing by `overhang` moves the right edge in by
+            // (1 - pivot.x) * overhang and the left edge out by pivot.x * overhang, so the
+            // anchoredPosition shift cancels the left-edge drift for any pivot.
+            rt.sizeDelta        = new Vector2(rt.sizeDelta.x - overhang, rt.sizeDelta.y);
+            rt.anchoredPosition = new Vector2(rt.anchoredPosition.x - overhang * rt.pivot.x,
+                                              rt.anchoredPosition.y);
         }
 
         /// <summary>
@@ -212,6 +281,7 @@ namespace Golfin.UI
             SetTopBarChromeVisible(true);
             ShowBottomNav(true);
             ApplyDemoTopBarTrim();
+            ApplyStandaloneChrome();
         }
 
         /// <summary>
@@ -232,6 +302,35 @@ namespace Golfin.UI
                 var pill = topBarPanel.transform.Find("RewardPointsBackground");
                 if (pill != null) pill.gameObject.SetActive(false);
             }
+        }
+
+        /// <summary>
+        /// gps_standalone_shell §D5 — the chrome the PLAYLIFE shell does not have.
+        ///
+        /// <para>KEPT: the RP pill (points are a PLAYLIFE currency — check-ins and score uploads
+        /// earn them), the username nameplate, and the Settings gear. HIDDEN: the whole centre
+        /// ticket cluster (TicketIcon / TicketCountText / ShopPlusButton / the runtime
+        /// TicketCountBackground pill), because gacha tickets and the shop they lead to are golf
+        /// content that does not exist in this product. The bottom nav is hidden by
+        /// <see cref="ShowBottomNav"/> itself rather than here — see the note there.</para>
+        ///
+        /// <para>Called AFTER <see cref="SetTopBarChromeVisible"/>(true), which re-shows every
+        /// top-bar child, so like <see cref="ApplyDemoTopBarTrim"/> this must re-hide. Idempotent.
+        /// Hides every child of <c>topBarContent</c> rather than the three named references,
+        /// because the pill is created at runtime by <see cref="EnsureTicketPill"/> and a fourth
+        /// element added to the cluster later would otherwise reappear alone. No-op in the game.</para>
+        /// </summary>
+        private void ApplyStandaloneChrome()
+        {
+            if (!GolfinRedux.UI.StandaloneGate.Enabled) return;
+
+            if (topBarContent != null)
+            {
+                foreach (Transform child in topBarContent.transform)
+                    child.gameObject.SetActive(false);
+            }
+
+            ShowBottomNav(false);
         }
 
         /// <summary>
@@ -297,6 +396,7 @@ namespace Golfin.UI
             SetTopBarChromeVisible(true);
             ShowBottomNav(false);
             ApplyDemoTopBarTrim();
+            ApplyStandaloneChrome();
         }
 
         private void InitializeButtons()
@@ -353,12 +453,86 @@ namespace Golfin.UI
                 button.gameObject.SetActive(false);
         }
 
+        // ── gps_polish §D7 — GPS-originated RP deltas count up ────────────────
+
+        /// <summary>
+        /// How long an armed count-up stays armed. The GPS earn is a round trip
+        /// (/points/earn, then a balance refresh), so the arm cannot be consumed on the same
+        /// frame — but an arm that never fired must not sit waiting to animate the NEXT RP change,
+        /// which would be a level-up or a shop refund and belongs to `game_polish`.
+        /// </summary>
+        private const float RpCountUpArmSeconds = 5f;
+
+        private float _rpCountUpArmedUntil = -1f;
+        private Coroutine _rpCountUp;
+
+        /// <summary>
+        /// gps_polish §D7 — make the NEXT upward RP change count up rather than snap.
+        ///
+        /// <para>The top bar is shared with the whole game, and the SPEC is explicit that only a
+        /// delta a GPS action caused may animate: the game's own RP updates are `game_polish`.
+        /// So this is a one-shot ARM, set by the GPS call site immediately before it spends or
+        /// earns, consumed by the first <see cref="SetRewardPoints"/> that follows and expiring on
+        /// its own if none does.</para>
+        /// </summary>
+        public void ArmRewardPointsCountUp()
+        {
+            _rpCountUpArmedUntil = Time.unscaledTime + RpCountUpArmSeconds;
+        }
+
+        /// <summary>
+        /// Top-bar counter format: invariant "N0" grouping with a "." thousands separator, so
+        /// 9000 reads "9.000". Both counters share it — the RP pill used the invariant comma
+        /// while the ticket pill printed a bare int, which is two different numbers on one bar.
+        /// </summary>
+        private static readonly System.Globalization.NumberFormatInfo TopBarNumberFormat = BuildTopBarNumberFormat();
+
+        private static System.Globalization.NumberFormatInfo BuildTopBarNumberFormat()
+        {
+            var nfi = (System.Globalization.NumberFormatInfo)
+                      System.Globalization.CultureInfo.InvariantCulture.NumberFormat.Clone();
+            nfi.NumberGroupSeparator = ".";
+            return nfi;
+        }
+
+        /// <summary>
+        /// Read back a counter this class itself rendered. Digits only — "1.240" is NOT parseable
+        /// as an int by any culture-aware parse (the group separator reads as a decimal point and
+        /// int.TryParse rejects the fraction), and the count-up needs the previous value.
+        /// </summary>
+        private static bool TryParseTopBarNumber(string? text, out int value)
+        {
+            value = 0;
+            if (string.IsNullOrEmpty(text)) return false;
+            long acc = 0;
+            bool any = false;
+            foreach (char c in text!)
+            {
+                if (c >= '0' && c <= '9') { acc = acc * 10 + (c - '0'); any = true; if (acc > int.MaxValue) return false; }
+                else if (c != '.' && c != ',' && c != ' ') return false;
+            }
+            if (!any) return false;
+            value = (int)acc;
+            return true;
+        }
+
         public void SetRewardPoints(int points)
         {
-            if (rewardPointsText != null)
+            if (rewardPointsText == null) return;
+
+            bool armed = Time.unscaledTime <= _rpCountUpArmedUntil;
+            if (armed &&
+                TryParseTopBarNumber(rewardPointsText.text, out int from) &&
+                points > from)
             {
-                rewardPointsText.text = points.ToString("N0");
+                _rpCountUpArmedUntil = -1f;
+                Golfin.UI.Polish.UiMotion.Run(this, ref _rpCountUp,
+                    Golfin.UI.Polish.UiMotion.CountUp(rewardPointsText, from, points,
+                                                     culture: TopBarNumberFormat));
+                return;
             }
+
+            rewardPointsText.text = points.ToString("N0", TopBarNumberFormat);
         }
 
         /// <summary>
@@ -367,7 +541,7 @@ namespace Golfin.UI
         public void SetTickets(int count)
         {
             if (ticketCountText != null)
-                ticketCountText.text = count.ToString();
+                ticketCountText.text = count.ToString("N0", TopBarNumberFormat);
         }
 
         /// <summary>
@@ -537,6 +711,18 @@ namespace Golfin.UI
                 // score_upload_flow — the Posted step (6/6) overrides this to SCORE_POSTED_TITLE
                 // through the existing transient SetUsername path, and restores it on the way out.
                 case GolfinRedux.UI.ScreenId.ScoreUpload:              return "SCORE_UPLOAD_TITLE";
+                // gps_profile_pack
+                case GolfinRedux.UI.ScreenId.GpsProfile:               return "GPS_PROFILE_TITLE";
+                case GolfinRedux.UI.ScreenId.GpsAvatar:                return "GPS_AVATAR_TITLE";
+                case GolfinRedux.UI.ScreenId.GpsBadges:                return "GPS_BADGES_TITLE";
+                // auth_golf_profile — post-signup capture + welcome tutorial
+                case GolfinRedux.UI.ScreenId.GpsGolfProfile:           return "GPS_GOLFPROF_TITLE";
+                case GolfinRedux.UI.ScreenId.GpsWelcome:               return "GPS_WELCOME_TITLE";
+                // gps_gifts_votes
+                case GolfinRedux.UI.ScreenId.GpsGift:                  return "GPS_GIFT_TITLE";
+                case GolfinRedux.UI.ScreenId.GpsVote:                  return "GPS_VOTE_TITLE";
+                // gps_checkin — the Rounds tab
+                case GolfinRedux.UI.ScreenId.GpsRounds:                return "GPS_ROUNDS_TITLE";
                 default:                                               return null;
             }
         }
@@ -581,6 +767,14 @@ namespace Golfin.UI
 
         public void ShowBottomNav(bool show)
         {
+            // gps_standalone_shell §D5 — the game's bottom nav does not exist in the PLAYLIFE
+            // shell: four of its five slots (Gacha, Play, Inventory, Characters) open screens
+            // StandaloneGate refuses, and the GPS screens draw their OWN nav bar inside their
+            // prefabs. Forced off HERE rather than at each call site because "show the bars" is
+            // said from a dozen places (ShowBars, the gameplay loader, screen controllers), and
+            // one that forgot would put a dead golf nav bar under a PLAYLIFE screen.
+            if (show && GolfinRedux.UI.StandaloneGate.Enabled) show = false;
+
             if (bottomNavPanel != null)
                 bottomNavPanel.SetActive(show);
         }

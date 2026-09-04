@@ -21,6 +21,12 @@ See `STATUS.md` for current pipeline state. Possible values:
 
 <one-paragraph statement of what this task accomplishes and why>
 
+## Build playbook (Figma-node screens)
+
+If this task builds a screen from a Figma node, the implementer and EVERY reviewer work
+`Docs/Architecture/FIGMA_SCREEN_BUILD_PLAYBOOK.md`. Its § 7 self-diff (crop matched
+node/built regions and enumerate) is an acceptance line, not a suggestion.
+
 ## Reference
 
 - **Figma frame:** <page name> / <frame name> / id `<node id>` in file `<file key>`

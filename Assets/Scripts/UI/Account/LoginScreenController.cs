@@ -179,6 +179,15 @@ namespace Golfin.UI.Account
         /// </summary>
         private void RouteAfterAuth()
         {
+            // gps_standalone_shell §D3 — the PLAYLIFE shell has no starter and no picker; take
+            // the shell's landing BEFORE the gate is resolved, so the round trip is never issued.
+            if (StandaloneShellBoot.TryGetPostAuthScreen(out ScreenId shellTarget))
+            {
+                _starterRetryPending = false;
+                if (_screenManager != null) _screenManager.ShowScreen(shellTarget);
+                return;
+            }
+
             SetBusy(true);
             StarterGate.Resolve(route =>
             {

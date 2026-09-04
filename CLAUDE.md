@@ -99,6 +99,15 @@ These rules convert previously-advisory lessons into hard stops. Full spec: `Doc
     six were found while *writing the brief for the next reviewer*, which is a free review. Full
     spec: `Docs/PIPELINE_HARDENING.md` §22.
 
+16. **Figma-node screens follow `Docs/Architecture/FIGMA_SCREEN_BUILD_PLAYBOOK.md`** (added
+    2026-09-02, after `gps_profile_pack` cleared three rounds of gates and was rejected on sight
+    each time — then converged in one sitting once it was driven by real navigation plus a
+    per-element crop diff). The implementer works its checklists; every reviewer re-runs § 7
+    (crop matched node/built regions and ENUMERATE the differences) rather than asserting
+    "matches Figma". The four that cost the most rounds: a render harness instead of real
+    navigation, a ΔRGB measured against the wrong backdrop, `Image.Type.Filled` on 9-sliced bars,
+    and the pre-compositing `A()` used where real alpha was needed.
+
 ### Hard rules (these are enforced by hooks, not just convention)
 
 1. **Implementer cannot mark itself done.** The `enforce_implementer_done.py` hook blocks any STATUS write to `READY_FOR_SELF_REVIEW` or `READY_FOR_ARCHITECT_REVIEW` unless `IMPLEMENTER_REPORT.md` has every checklist item filled with PASS/FAIL + non-trivial justification + a real screenshot path that points to an actual file. No placeholder text allowed. FAIL items also block the SELF_REVIEW transition (must use ARCHITECT_REVIEW path). **Since 2026-05-26** (green_authoring scar tissue), the hook also blocks the transition unless: (a) HEARTBEAT.log contains an `=== iter-N kickoff baseline … ===` block (HEAD SHA + DIRTY porcelain) for the current iteration, (b) every "pre-existing"/"from previous session"/"not introduced by"/"predates this"/"was already in" claim in IMPLEMENTER_REPORT.md has a backticked or fenced citation within ±5 lines that quotes a path from that DIRTY block, and (c) no PNG/JPG referenced under `screenshots/` has variance < 5.0 on a sampled patch (catches fabricated flat-colour frames). **Since 2026-05-26 21:25 CEST** (spin_and_shape scar tissue — Lesson AA), the hook additionally enforces Rule 13: every uncommitted path reported by `git status --porcelain --untracked-files=all` that lives OUTSIDE the task's `Docs/Specs/Active/<task>/` folder must appear in `IMPLEMENTER_REPORT.md`'s 'Files modified or created' table — implementer either reports the file or restores/discards it before transitioning. Rationale in `feedback_preflight_baseline_attribution.md` (user memory) and `.claude/hooks/test_enforce_implementer_done.py`.
@@ -224,7 +233,8 @@ Before doing anything else:
 3. Read `Docs/Tasks.md` (current checklist — what to do)
 4. Read `Docs/TellCode.md` for any pending architect instructions
 5. If working on UI/design: read `Docs/Rules.md` (design constraints, Figma specs, conventions)
-6. If working on UI: read `Docs/Architecture/UI_HIERARCHY.md` (scene UI paths) and `Docs/Architecture/PATTERNS.md` (recurring patterns)7. If needed: read `Docs/Architecture/ARCHITECTURE_AUDIT.md` (file tree, singletons, events)
+6. If working on UI: read `Docs/Architecture/UI_HIERARCHY.md` (scene UI paths) and `Docs/Architecture/PATTERNS.md` (recurring patterns)
+6b. **If the task builds a screen from a Figma node: READ `Docs/Architecture/FIGMA_SCREEN_BUILD_PLAYBOOK.md` FIRST and work its checklists.** It is the distilled cost of `gps_profile_pack`, where three full pipeline iterations passed every gate and Cesar rejected each on sight.7. If needed: read `Docs/Architecture/ARCHITECTURE_AUDIT.md` (file tree, singletons, events)
 8. Read `tasks/lessons.md` for relevant project lessons
 
 ## Session End (EVERY SESSION)
@@ -615,6 +625,7 @@ Quick rules:
 | `Docs/TellCode.md` | Architect instructions for Claude Code |
 | `Docs/Architecture/ARCHITECTURE_AUDIT.md` | Auto-generated — file tree, singletons, events |
 | `Docs/Architecture/PATTERNS.md` | Recurring patterns across the codebase |
+| `Docs/Architecture/FIGMA_SCREEN_BUILD_PLAYBOOK.md` | **Read before building any Figma-node screen.** Capture instrument, per-screen backgrounds, panels/fills/bars, text, controller-owned state, node-asset traps, and the self-diff to run before surfacing. |
 | `Docs/Architecture/UI_HIERARCHY.md` | Scene UI paths reference |
 | `Docs/Architecture/INVENTORY_REFERENCE.md` | Inventory system patterns + APIs |
 | `Docs/Scripts/generate_audit.ps1` / `Docs/Scripts/generate_audit.sh` | Script to regenerate the audit (PowerShell on Windows, bash on Mac/Linux) |

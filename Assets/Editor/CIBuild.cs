@@ -46,12 +46,31 @@ namespace Golfin.EditorTools
         const string DevProfilePath = "Assets/Settings/Build Profiles/Dev-iOS.asset";
         const string DevOutputPath = "Builds/iOS-Dev";
 
+        // punch_it_gps_variants — "punch it GPS". Identical to iOS-Full except for the
+        // GOLFIN_GPS scripting define, and it writes to the SAME OutputPath: the Fastfile's
+        // build_app archives Builds/iOS-Full whichever variant Unity just produced.
+        const string GpsProfilePath = "Assets/Settings/Build Profiles/iOS-Full-GPS.asset";
+        const string GpsDefine = "GOLFIN_GPS";
+
+        // gps_standalone_shell — "punch it standalone". The PLAYLIFE thin shell: the same
+        // codebase and the same OutputPath, with a ShellScene-only scene list and the
+        // GOLFIN_STANDALONE define on top of GOLFIN_GPS. StandaloneBuildPreprocessor gives it
+        // its own bundle id / name / version / icon during the build and takes them back after.
+        const string StandaloneProfilePath = "Assets/Settings/Build Profiles/iOS-Standalone.asset";
+        const string StandaloneDefine = "GOLFIN_STANDALONE";
+
         /// <summary>
         /// -executeMethod Golfin.EditorTools.CIBuild.BuildIOS
         /// Produces Builds/iOS-Full/Unity-iPhone.xcodeproj. Exits 1 on any failure.
         /// </summary>
         public static void BuildIOS()
         {
+            // R2 safety net. A standalone build that died between the stash and its finally leaves
+            // golf Resources moved aside, and THIS build — the game — would then ship without its
+            // holes. A missing Resources folder is not a build error, so nothing else would say a
+            // word. Free when there is nothing to repair.
+            StandaloneBuildPreprocessor.RestoreGolfResources();
+
             // BuildStampGenerator writes the git-derived build number into PlayerSettings during
             // OnPreprocessBuild and restores the pre-build values in OnPostprocessBuild — which
             // fires on SUCCESS only. Its failure safety net is an EditorApplication.delayCall,
@@ -101,6 +120,8 @@ namespace Golfin.EditorTools
         /// </summary>
         public static void BuildIOSDev()
         {
+            StandaloneBuildPreprocessor.RestoreGolfResources();   // see BuildIOS
+
             var prevIosBuildNumber = PlayerSettings.iOS.buildNumber;
             var prevAndroidVersionCode = PlayerSettings.Android.bundleVersionCode;
 
@@ -121,6 +142,150 @@ namespace Golfin.EditorTools
             RestoreBuildNumbers(prevIosBuildNumber, prevAndroidVersionCode);
 
             if (error != null) Fail(error);
+        }
+
+        /// <summary>
+        /// -executeMethod Golfin.EditorTools.CIBuild.BuildIOSGps
+        /// The "punch it GPS" variant: same output, same options, same guard — only the profile
+        /// differs, and with it the GOLFIN_GPS define that GpsGate reads.
+        ///
+        /// BuildOptions.None, NOT Development: the upload-regression guard must stay armed for
+        /// GPS uploads exactly as it is for ordinary ones (BuildStampGenerator.GuardApplies skips
+        /// the refusal for development builds).
+        ///
+        /// Same PlayerSettings snapshot/restore as BuildIOS() — a failed batchmode build must not
+        /// leave ProjectSettings.asset dirty and strand the next lane at ensure_git_status_clean.
+        /// </summary>
+        public static void BuildIOSGps()
+        {
+            StandaloneBuildPreprocessor.RestoreGolfResources();   // see BuildIOS
+
+            var prevIosBuildNumber = PlayerSettings.iOS.buildNumber;
+            var prevAndroidVersionCode = PlayerSettings.Android.bundleVersionCode;
+
+            string error;
+            try
+            {
+                // Assert the define BEFORE building. A GPS build whose profile silently lost the
+                // define compiles, archives and uploads as an ordinary build — indistinguishable
+                // from "punch it" output except by opening the app. That is the stale-binary class
+                // of failure this pipeline exists to make impossible, so it fails loudly instead.
+                error = AssertGpsDefine(GpsProfilePath) ??
+                        BuildIOSCore(GpsProfilePath, OutputPath, BuildOptions.None);
+            }
+            catch (Exception e)
+            {
+                error = $"unhandled exception during build: {e.GetType().Name}: {e.Message}\n{e.StackTrace}";
+            }
+
+            RestoreBuildNumbers(prevIosBuildNumber, prevAndroidVersionCode);
+
+            if (error != null) Fail(error);
+        }
+
+        /// <summary>
+        /// -executeMethod Golfin.EditorTools.CIBuild.BuildIOSStandalone
+        /// The "punch it standalone" variant — PLAYLIFE as a thin shell. Same output path, same
+        /// options, same guards as the other two; what differs is the profile, and with it the
+        /// ShellScene-only scene list and the GOLFIN_STANDALONE define StandaloneGate reads.
+        ///
+        /// BOTH defines are asserted, for the reason the GPS lane asserts one: a standalone build
+        /// whose profile silently lost GOLFIN_STANDALONE compiles, archives and uploads as an
+        /// ORDINARY GPS build — under the PLAYLIFE bundle id, to the PLAYLIFE App Store record,
+        /// carrying the whole golf game. That is worse than the stale-binary failure this
+        /// pipeline exists to prevent, so it fails loudly instead.
+        ///
+        /// ForceStandaloneIdentity is set around the build because a build profile's scripting
+        /// defines never reach the EDITOR's assemblies, so the preprocessor cannot answer
+        /// "is this the standalone?" from an #if — see StandaloneBuildPreprocessor.
+        /// </summary>
+        public static void BuildIOSStandalone()
+        {
+            // Repair BEFORE the stash below, never after: BuildIOSCore runs inside the stashed
+            // window, so a repair placed there would un-stash the folders this build just moved
+            // and quietly ship the 427 MB binary again while the log claimed the diet had run.
+            StandaloneBuildPreprocessor.RestoreGolfResources();
+
+            var prevIosBuildNumber = PlayerSettings.iOS.buildNumber;
+            var prevAndroidVersionCode = PlayerSettings.Android.bundleVersionCode;
+
+            string error;
+            try
+            {
+                StandaloneBuildPreprocessor.ForceStandaloneIdentity = true;
+
+                error = AssertProfileDefine(StandaloneProfilePath, GpsDefine) ??
+                        AssertProfileDefine(StandaloneProfilePath, StandaloneDefine);
+
+                if (error == null)
+                {
+                    // R2 — Resources/ ships whole, so the golf-only subfolders leave the tree for
+                    // the duration of this build. INSIDE the try, with the restore in the finally:
+                    // every exit from here, including a BuildFailedException from a preprocessor
+                    // and an unhandled throw, must put 545 MB of tracked assets back.
+                    StandaloneBuildPreprocessor.MoveGolfResourcesOut();
+
+                    // R4 — the refused game screens are still IN ShellScene, dragging their art
+                    // in with them. StandaloneSceneProcessor destroys them in the in-memory copy
+                    // during this build; the flag is how it knows the build is the standalone,
+                    // since profile defines never reach editor assemblies.
+                    StandaloneSceneProcessor.ForceStandaloneStrip = true;
+
+                    error = BuildIOSCore(StandaloneProfilePath, OutputPath, BuildOptions.None,
+                                         validateTreeBake: false);
+                }
+            }
+            catch (Exception e)
+            {
+                error = $"unhandled exception during build: {e.GetType().Name}: {e.Message}\n{e.StackTrace}";
+            }
+            finally
+            {
+                StandaloneBuildPreprocessor.ForceStandaloneIdentity = false;
+                StandaloneSceneProcessor.ForceStandaloneStrip = false;
+            }
+
+            // MUST run before Fail(): Fail() exits the process, and the preprocessor's own
+            // delayCall safety net never gets a frame in batchmode. Leaving the PLAYLIFE bundle
+            // id on disk would point the next "punch it" upload at the wrong App Store record —
+            // and leaving the golf Resources stashed would make the next GAME build ship without
+            // its holes. RestoreNow puts both back and is idempotent.
+            StandaloneBuildPreprocessor.RestoreNow();
+            RestoreBuildNumbers(prevIosBuildNumber, prevAndroidVersionCode);
+
+            if (error != null) Fail(error);
+        }
+
+        /// <summary>
+        /// Null when the profile at <paramref name="profilePath"/> carries GOLFIN_GPS; otherwise
+        /// the failure message. Read through SerializedObject rather than a typed property:
+        /// BuildProfile.scriptingDefines is not public API in 6000.3, and m_ScriptingDefines is
+        /// what the .asset actually stores (see iOS-Demo.asset, which carries GOLFIN_DEMO the
+        /// same way).
+        /// </summary>
+        static string AssertGpsDefine(string profilePath) => AssertProfileDefine(profilePath, GpsDefine);
+
+        /// <summary>Generalised for the standalone lane, which has two defines to assert.</summary>
+        static string AssertProfileDefine(string profilePath, string define)
+        {
+            var profile = AssetDatabase.LoadAssetAtPath<BuildProfile>(profilePath);
+            if (profile == null) return $"build profile not found: {profilePath}";
+
+            var so = new SerializedObject(profile);
+            var defines = so.FindProperty("m_ScriptingDefines");
+            if (defines == null || !defines.isArray)
+                return $"{profilePath} exposes no m_ScriptingDefines array — cannot verify {define}.";
+
+            for (int i = 0; i < defines.arraySize; i++)
+            {
+                if (defines.GetArrayElementAtIndex(i).stringValue != define) continue;
+                Debug.Log($"{Tag} variant define {define} present on {profile.name}.");
+                return null;
+            }
+
+            return $"{profilePath} does NOT define {define} — refusing to build a variant that " +
+                   $"would ship with that surface gated OFF and be indistinguishable from an " +
+                   $"ordinary build.";
         }
 
         static void RestoreBuildNumbers(string iosBuildNumber, int androidVersionCode)
@@ -144,14 +309,79 @@ namespace Golfin.EditorTools
             }
         }
 
+        /// <summary>
+        /// -executeMethod Golfin.EditorTools.CIBuild.BuildIOSMeasureLz4HC
+        ///
+        /// build_size_diet Phase 0b — MEASUREMENT ONLY, NOT A LANE.
+        ///   Nothing calls this from fastlane and nothing should. It exists to answer one
+        ///   question with numbers instead of an assumption: iOS ships the Data folder
+        ///   UNCOMPRESSED under BuildOptions.None (what every lane above uses), and the 18
+        ///   TerrainData files are 511 MiB of that which no asset-side phase can reach without
+        ///   a fidelity trade. This builds the SAME tree with CompressWithLz4HC so the install /
+        ///   Payload-compressed / per-bucket deltas can be read off a real build.
+        ///
+        ///   The lane default is deliberately untouched: BuildIOS/BuildIOSGps/BuildIOSStandalone
+        ///   still pass BuildOptions.None. Adoption is Cesar's call from the numbers
+        ///   (SPEC.md § Phase 0b, STATUS.md § Open on Cesar) — do not promote this to a lane
+        ///   without that decision written down.
+        ///
+        ///   Writes to Builds/iOS-Full like the others, so measure and archive the Data folder
+        ///   before re-running an ordinary build over it.
+        /// </summary>
+        public static void BuildIOSMeasureLz4HC()
+        {
+            StandaloneBuildPreprocessor.RestoreGolfResources();   // see BuildIOS
+
+            var prevIosBuildNumber = PlayerSettings.iOS.buildNumber;
+            var prevAndroidVersionCode = PlayerSettings.Android.bundleVersionCode;
+
+            string error;
+            try
+            {
+                Debug.LogWarning($"{Tag} MEASUREMENT BUILD — BuildOptions.CompressWithLz4HC. " +
+                                 $"NOT the shipping configuration; do not upload this output.");
+                error = BuildIOSCore(ProfilePath, OutputPath, BuildOptions.CompressWithLz4HC);
+            }
+            catch (Exception e)
+            {
+                error = $"unhandled exception during build: {e.GetType().Name}: {e.Message}\n{e.StackTrace}";
+            }
+
+            RestoreBuildNumbers(prevIosBuildNumber, prevAndroidVersionCode);
+
+            if (error != null) Fail(error);
+        }
+
         /// <summary>Returns null on success, or the failure message. Never exits — the caller
         /// restores PlayerSettings first, then exits.</summary>
         static string BuildIOSCore() => BuildIOSCore(ProfilePath, OutputPath, BuildOptions.None);
 
-        static string BuildIOSCore(string profilePath, string outputPath, BuildOptions buildOptions)
+        /// <param name="validateTreeBake">
+        /// gps_standalone_shell R2. The tree-bake drift gate reads
+        /// <c>Assets/Resources/HoleData/**/tree_obstacles.csv</c>, and the standalone build has
+        /// deliberately moved <c>HoleData</c> out of the tree by the time it gets here — so the
+        /// gate reported 18/18 holes missing and failed a build that is CORRECT.
+        ///
+        /// <para>Skipped for the standalone rather than reordered, because for that variant the
+        /// gate protects nothing: it exists to stop shipping holes whose invisible tree colliders
+        /// disagree with what the hole renders, and the standalone's scene list is ShellScene
+        /// alone — it ships no hole to disagree about. Every other lane keeps the gate armed;
+        /// this is a parameter with one caller, not a global switch.</para>
+        /// </param>
+        static string BuildIOSCore(string profilePath, string outputPath, BuildOptions buildOptions,
+                                   bool validateTreeBake = true)
         {
-            var treeError = ValidateTreeBake();
-            if (treeError != null) return treeError;
+            if (validateTreeBake)
+            {
+                var treeError = ValidateTreeBake();
+                if (treeError != null) return treeError;
+            }
+            else
+            {
+                Debug.Log($"{Tag} tree bake drift gate SKIPPED — this variant ships no hole scenes " +
+                          $"(scene list is ShellScene only), so there is no baked hole data for it " +
+                          $"to disagree with. Every other lane still runs it.");
+            }
 
             // content_two_way §5 — a REPORT, not a gate. Deliberately has no failure path and no
             // -skip flag: data published ahead of its art is a legitimate state that §4 makes safe,

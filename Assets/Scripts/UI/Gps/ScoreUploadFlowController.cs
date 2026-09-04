@@ -20,6 +20,7 @@ using Golfin.Economy;
 using Golfin.Net;
 using Golfin.Social;
 using Golfin.Telemetry;
+using Golfin.UI.Polish;
 using GolfinRedux.UI;
 using TMPro;
 using UnityEngine;
@@ -203,6 +204,18 @@ namespace Golfin.Gps.UI
             _draft.Source = ScoreSource.Camera;
             _postInFlight = false;
 
+            // gps_checkin §C4 — AFTER the reset, which would otherwise wipe it. When the player
+            // arrived from the Rounds screen's SCORE UPLOAD button the venue is already known and
+            // already GPS-verified by the check-in, and `activity_id` makes the post CLOSE that
+            // round rather than open a second history row beside it (D6).
+            ScoreUploadDraft.Prefill? prefill = ScoreUploadDraft.Take();
+            if (prefill != null)
+            {
+                _draft.Apply(prefill);
+                Debug.Log($"{Tag} prefilled from round #{prefill.ActivityId} at " +
+                          $"{prefill.VenueName} (venue {prefill.VenueId}).");
+            }
+
             GoTo(Step.Capture);
 
             TelemetryService.Instance.RecordSafe(TelemetryEventNames.ScoreUploadOpen,
@@ -274,12 +287,12 @@ namespace Golfin.Gps.UI
             if (_step == Step.Capture && step != Step.Capture) StopPreview();
             if (step != Step.Reading) StopSpinner();
 
+            int previous = _shownStep;
             _step = step;
 
-            for (int i = 0; i < _stepRoots.Length; i++)
-                if (_stepRoots[i] != null) _stepRoots[i].SetActive(i == (int)step);
-
+            SwapStepRoots((int)step);
             ApplyStrip();
+            SlideStepIndicator(previous, (int)step);
             ApplyTopBarTitle();
 
             switch (step)
@@ -292,6 +305,102 @@ namespace Golfin.Gps.UI
                 case Step.Posted:  EnterPosted();  break;
             }
         }
+
+        // ═════════════════════════════════════════════════════════════════════
+        // gps_polish §D4 — the step swap
+        // ═════════════════════════════════════════════════════════════════════
+
+        /// <summary>Which root is currently shown. −1 before the first GoTo, which is what makes
+        /// the FIRST step appear rather than cross-fade from nothing.</summary>
+        private int _shownStep = -1;
+
+        private Coroutine? _stepIn, _stepOut, _indicatorMotion;
+
+        /// <summary>The scope that draws the wait on POST SCORE (gps_polish §D6).</summary>
+        private PendingSpend? _postPending;
+
+        /// <summary>
+        /// Cross-fade one step root to the next instead of snapping both with SetActive.
+        ///
+        /// <para>The two roots overlap for <see cref="UiMotion.FadeDur"/>. Every OTHER root is
+        /// deactivated immediately — only the pair actually changing is animated, so a GoTo that
+        /// jumps two steps (Reading → Edit skips nothing, but BACK from Confirm can) still ends
+        /// with exactly one root active.</para>
+        ///
+        /// <para>The outgoing root's alpha is restored to 1 as it is deactivated. A root left at
+        /// alpha 0 would come back invisible on the next visit, and the incoming fade would be
+        /// fighting a value it did not set.</para>
+        /// </summary>
+        private void SwapStepRoots(int index)
+        {
+            GameObject? outgoing = _shownStep >= 0 && _shownStep < _stepRoots.Length
+                ? _stepRoots[_shownStep] : null;
+            GameObject? incoming = index >= 0 && index < _stepRoots.Length
+                ? _stepRoots[index] : null;
+
+            for (int i = 0; i < _stepRoots.Length; i++)
+            {
+                GameObject? r = _stepRoots[i];
+                if (r == null || r == outgoing || r == incoming) continue;
+                r.SetActive(false);
+            }
+
+            if (incoming != null)
+            {
+                incoming.SetActive(true);
+                CanvasGroup? cg = incoming.GetComponent<CanvasGroup>();
+                if (cg != null) UiMotion.Run(this, ref _stepIn, UiMotion.Fade(cg, 0f, 1f));
+            }
+
+            if (outgoing != null && outgoing != incoming)
+            {
+                CanvasGroup? cg = outgoing.GetComponent<CanvasGroup>();
+                GameObject leaving = outgoing;
+                if (cg != null)
+                {
+                    UiMotion.Run(this, ref _stepOut, UiMotion.Then(
+                        UiMotion.Fade(cg, cg.alpha, 0f),
+                        () => { cg.alpha = 1f; leaving.SetActive(false); }));
+                }
+                else leaving.SetActive(false);
+            }
+
+            _shownStep = index;
+        }
+
+        /// <summary>
+        /// §D4 — the step indicator slides instead of jumping.
+        ///
+        /// <para>Deviation D-4, in one sentence: the strip has no single "active indicator" to
+        /// move — it is five fixed segments with a CUMULATIVE gold fill — so a travelling marker
+        /// REPLACING that fill would delete the progress reading and change the screen at rest.
+        /// The marker <c>GpsPolishBuilder</c> adds is a sixth, segment-shaped object that lives at
+        /// <b>alpha 0</b> and is only visible while it travels from the old active segment to the
+        /// new one. Rest pixels are untouched; the jump is gone.</para>
+        /// </summary>
+        private void SlideStepIndicator(int fromIndex, int toIndex)
+        {
+            if (_stepStrip == null || fromIndex < 0 || fromIndex == toIndex) return;
+
+            Transform? segments = _stepStrip.transform.Find("Segments");
+            if (segments == null) return;
+            var marker = segments.Find("StepIndicator") as RectTransform;
+            if (marker == null) return;
+
+            var from = SegmentRect(segments, fromIndex);
+            var to   = SegmentRect(segments, toIndex);
+            if (from == null || to == null) return;
+
+            CanvasGroup? cg = marker.GetComponent<CanvasGroup>();
+            if (cg != null) cg.alpha = 1f;
+
+            UiMotion.Run(this, ref _indicatorMotion, UiMotion.Then(
+                UiMotion.Slide(marker, from.anchoredPosition.x, to.anchoredPosition.x, UiMotion.PushDur),
+                () => { if (cg != null) cg.alpha = 0f; }));
+        }
+
+        private static RectTransform? SegmentRect(Transform segments, int index)
+            => segments.Find("Seg" + (index + 1)) as RectTransform;
 
         /// <summary>
         /// The strip's left control is CLOSE on step 1 (it leaves the flow) and BACK everywhere
@@ -988,6 +1097,10 @@ namespace Golfin.Gps.UI
 
             _postInFlight = true;
             SetInteractable(_postScoreButton, false);
+            // gps_polish §D6 — /score/submit uploads a photo, so this is the LONGEST wait on the
+            // GPS surface and the one most likely to read as "nothing happened".
+            _postPending?.Dispose();
+            _postPending = PendingSpend.BeginOn(_postScoreButton);
             if (_postErrorStrip != null) _postErrorStrip.SetActive(false);
 
             ApiClient.Instance.Run(
@@ -1001,6 +1114,8 @@ namespace Golfin.Gps.UI
             if (result != null && result.ErrorKind == ApiErrorKind.Disabled) return;
 
             _postInFlight = false;
+            _postPending?.Dispose();
+            _postPending = null;
 
             if (result == null || !result.Success || result.Data == null)
             {
@@ -1025,6 +1140,9 @@ namespace Golfin.Gps.UI
         // 6 · Posted
         // ═════════════════════════════════════════════════════════════════════
 
+        /// <summary>gps_polish §D7 — the Posted total's pop.</summary>
+        private Coroutine? _postedScorePop;
+
         private void EnterPosted()
         {
             ScoreSubmitResult? r = _draft.Result;
@@ -1039,6 +1157,18 @@ namespace Golfin.Gps.UI
 
             int? total = _draft.Total;
             SetText(_shareScore, total.HasValue ? total.Value.ToString() : Unknown);
+
+            // gps_polish §D7 — the number the whole flow was about POPS in (scale 0.9 -> 1 with
+            // its own alpha), so the Posted step lands on the score rather than merely displaying
+            // it. The CanvasGroup is added at runtime and settles at alpha 1: nothing is authored
+            // and the rest frame is unchanged.
+            if (_shareScore != null && total.HasValue)
+            {
+                var scoreRect = _shareScore.rectTransform;
+                var scoreGroup = scoreRect.GetComponent<CanvasGroup>();
+                if (scoreGroup == null) scoreGroup = scoreRect.gameObject.AddComponent<CanvasGroup>();
+                UiMotion.Run(this, ref _postedScorePop, UiMotion.Pop(scoreRect, scoreGroup));
+            }
 
             int? vsPar = _draft.VsPar;
             if (_shareVsPar != null)

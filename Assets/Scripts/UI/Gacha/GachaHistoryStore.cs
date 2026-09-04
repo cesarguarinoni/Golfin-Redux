@@ -29,6 +29,13 @@ namespace GolfinRedux.UI.Gacha
         /// <c>RemoteContentSource.WriteCache</c>.</summary>
         private const string CacheFileName = "gacha_history.json";
 
+        /// <summary>Deserialise WITHOUT Newtonsoft's date handling, so a `string` field holding an
+        /// ISO timestamp round-trips verbatim instead of becoming local wall-clock text.
+        /// See <c>Golfin.Net.ApiEnvelope.ParseRaw</c> for the full failure this prevents.</summary>
+        private static readonly Newtonsoft.Json.JsonSerializerSettings RawDates =
+            new Newtonsoft.Json.JsonSerializerSettings
+            { DateParseHandling = Newtonsoft.Json.DateParseHandling.None };
+
         private static List<GachaHistoryRecord>? _records;
 
         /// <summary>
@@ -172,8 +179,11 @@ namespace GolfinRedux.UI.Gacha
                 string path = CachePath;
                 if (!File.Exists(path)) return new List<GachaHistoryRecord>();
 
+                // Newtonsoft's default DateParseHandling rewrites an ISO timestamp into a LOCAL DateTime
+                // token, so a `string` field receives "09/03/2026 12:26:19" instead of the UTC
+                // text that was written. Settings keep the round-trip verbatim. See ApiEnvelope.ParseRaw.
                 var page = Newtonsoft.Json.JsonConvert.DeserializeObject<GachaHistoryPage>(
-                    File.ReadAllText(path));
+                    File.ReadAllText(path), RawDates);
                 return page != null ? Map(page) : new List<GachaHistoryRecord>();
             }
             catch (Exception ex)

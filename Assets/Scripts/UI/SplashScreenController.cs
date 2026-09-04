@@ -98,6 +98,23 @@ namespace GolfinRedux.UI
                 return;
             }
 
+            // gps_standalone_shell §D3 — the PLAYLIFE shell boots to the hub.
+            //
+            // BEFORE the starter gate, not instead of a branch inside it: the shell has no
+            // roster, no StartingCharacterSelection screen and no golf inventory to wait on, so
+            // asking the server "does this account own a starter?" would hold the START button
+            // on a question the product never asks. The starter still exists server-side for an
+            // account that also plays the game — the shell simply never looks.
+            //
+            // Shared with the three account screens through StandaloneShellBoot, so the shell's
+            // landing rule exists once. Show() re-enters Navigate, which puts the resulting
+            // screen through every gate on its own account.
+            if (StandaloneShellBoot.TryGetPostAuthScreen(out ScreenId shellTarget))
+            {
+                Show(shellTarget);
+                return;
+            }
+
             // starter_restore_gate: hold the button until the server has answered "does this
             // account own a starter?". A previous tap may have failed — this is also the retry.
             _busy = true;

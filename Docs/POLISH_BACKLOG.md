@@ -105,3 +105,17 @@ Items consciously deferred to the polish phase (Roadmap item 9: UI/UX Polish). N
 **When resumed:** compute the bounds-fit framing BEFORE the first rendered frame (set the map cam position/zoom in `Open()` prior to enabling the overlay) so frame 1 is already centered — no post-open recenter.
 
 - **Mode entry fee is charged on PLAY, before hole selection** (surfaced 2026-08-13 during `rp_balance_sync` acceptance — a 10 RP practice fee was debited, then the player returned to Home). If backing out of hole select forfeits the fee, decide refund-on-abandon before players see it: refund on cancel, or charge at hole-start instead of at PLAY. Cheap now; a review complaint later. Undecided — Cesar's call.
+
+---
+
+## Game polish track (Architect, 2026-09-03) — deferred from `design_consistency_audit` / `game_polish`
+
+Rows added when the spec that deferred them was delivered (WORKFLOW_NOTES rule). When taken up, move the row into the new spec and delete it here.
+
+| Id | Item | Deferred from | Needs |
+|---|---|---|---|
+| P-011 | **In-game HUD / shot UI consistency audit** (power gauge, club selector, spin selector, map overlay, hole-complete widget, in-game settings modal are audited only as modals). The shell-canvas screens are the audit's scope; the 1080×1920 `ShotUI_Canvas` has its own divisor history (`FIGMA_UNITY_SIZE_MISMATCH.md`). | `design_consistency_audit` scope | its own audit pass with the same dumper, on the gameplay scene, after the shell audit's fix list lands |
+| P-012 | **Rubik Medium static font import** — the variable face renders Medium ~5 % narrow; 208 GPS sites listed in `Completed/gps_polish` IMPLEMENTER_REPORT (iteration 1, A10); the game's `Rubik-VariableFont_wght` sites (525 serialized) are the other half | `gps_polish` D9 → `design_consistency_audit` out-of-scope | one import + a font-asset swap spec, after the audit says which sites are Medium by design |
+| P-013 | **New linter rules the audit will want** (candidates: `UnityEngine.UI.Shadow` present; `Image.Type.Filled` on a 9-sliced sprite; serialized size not on the type scale; font asset is `LiberationSans`) — the audit reports these by hand, the rule makes them a gate | `design_consistency_audit` out-of-scope (Rule 21 gates every task on the linter) | a `UIFidelityLinter` spec with a tripwire per rule (§20) and a re-run of every `_lint.json` baseline |
+| P-014 | **Auth / Loading / Splash screens** — Tier 2 in the audit (inventory + lint only, no crop sheet) | `design_consistency_audit` | crop sheets against Splash `2032:327` / Loading `4096:1181` / login `4062:4971` if the Tier-2 dump shows S1 findings |
+| P-015 | **Haptics** — game + GPS together behind a Settings toggle | Cesar, 2026-09-03 (Notion 2130, parked) | its own spec after `game_polish`; `UiMotion` stays haptics-free |

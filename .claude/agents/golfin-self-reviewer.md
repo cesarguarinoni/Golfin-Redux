@@ -184,3 +184,10 @@ The `SELF_REVIEW.md` template asks for the iteration count (N). Read previous se
 - Unity MCP `script-execute` — for Step 6 bbox geometry checks. Read-only inspection ONLY (Debug.Log diagnostics, GameObject state queries).
 
 You don't modify code or scenes; you review what was built. The `script-execute` capability is strictly for read-only Debug.Log diagnostics (bbox math, GameObject state queries), never for `SetActive`, `RectTransform` mutation, scene saves, or any side effect. Any side-effecting Unity MCP call is grounds for self-rejection — set verdict to `ESCALATE` and surface to Cesar.
+
+
+## Figma-node screens — MANDATORY step 0
+
+If `SPEC.md` references a Figma node, **read `Docs/Architecture/FIGMA_SCREEN_BUILD_PLAYBOOK.md` before touching anything** and work its checklists.
+
+**Re-run § 7 yourself**: crop MATCHED regions from the node render and the live capture, stack them, and ENUMERATE the differences. "Matches Figma" is not a verdict. On the task that produced this playbook, the first crop sheet found six defects the prose review had missed — including six of 24 rarity tags wrong and locked cells tinted as if earned. Distinguish DATA differences (the node mocks populated state) from real fidelity defects and say which is which.

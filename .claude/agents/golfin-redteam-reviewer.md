@@ -154,3 +154,10 @@ For a Figma-node UI task, do all three yourself this pass (the reviewer's PASS i
 - **Check the system clock** before any timestamp. Format: `2026-05-29 14:32 JST`.
 - **End-of-response rule:** last line is the file-summary table or next-step. No
   sign-offs (per `CLAUDE.md` top-of-file rule).
+
+
+## Figma-node screens — MANDATORY step 0
+
+If `SPEC.md` references a Figma node, **read `Docs/Architecture/FIGMA_SCREEN_BUILD_PLAYBOOK.md` before touching anything** and work its checklists.
+
+**Re-run § 7 yourself**: crop MATCHED regions from the node render and the live capture, stack them, and ENUMERATE the differences. "Matches Figma" is not a verdict. On the task that produced this playbook, the first crop sheet found six defects the prose review had missed — including six of 24 rarity tags wrong and locked cells tinted as if earned. Distinguish DATA differences (the node mocks populated state) from real fidelity defects and say which is which.

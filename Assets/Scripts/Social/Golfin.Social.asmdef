@@ -2,7 +2,8 @@
     "name": "Golfin.Social",
     "rootNamespace": "Golfin.Social",
     "references": [
-        "Golfin.Net"
+        "Golfin.Net",
+        "Golfin.Localization"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

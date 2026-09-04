@@ -47,6 +47,33 @@ SCRIPT, never the PNG.
 | `Docs/Scripts/make_daily_pill_panel.py` | `S_DailyPillPanel` + `S_DailyPillGlow` | gold border, navy gradient, radius |
 | `Docs/Scripts/make_gps_hub_panels.py` | the six `S_HUB_*` GPS-hub panels | size, radius, fill + stroke gradients |
 | `Docs/Scripts/make_gps_icon_ring.py` | `S_GpsIconRing_Step` / `_Tile` | circle r, stroke width, fill gradient `#204B76→#0B203D`, stroke (solid `#F3ECC2` on the 64, gradient `#F3ECC2→#98855B` on the 88) |
+| `Docs/Scripts/make_gps_back_pill.py` | `S_GpsBackPill` (the hub's BACK pill, node 14060:4722) | stadium 138x92 + 1px rule; fill `#133453→#091B33`; stroke **3 stops** `#FCF195→#D6AB42`@0.6`→#BB7F1D` |
+
+> ## ⚠️ `get_design_context` REPORTS ONLY THE FIRST STOP OF A GRADIENT STROKE
+>
+> Three sprites in this repo bake a **flat** `#FCF195` rim for the Figma component
+> `Mission Card Container` / `Pop-Up`, whose stroke is actually a three-stop vertical gradient
+> `#FCF195 → #D6AB42 (0.6) → #BB7F1D`. All three came from trusting the tool's Tailwind output,
+> which renders that stroke as `border-[#fcf195]` — the first stop, silently.
+>
+> | sprite | baker | node | rim |
+> |---|---|---|---|
+> | `S_DailyPillPanel.png` (Home daily pill) | `make_daily_pill_panel.py` | `13994:1963` | 3-stop gradient ✓ |
+> | `S_GpsPill.png` (Home GPS entry pill) | `make_gps_pill.py` | `14060:4638` | 3-stop gradient ✓ |
+> | `S_GpsBackPill.png` (GPS hub back pill) | `make_gps_back_pill.py` | `14060:4722` | 3-stop gradient ✓ |
+>
+> **All three were flat until 2026-09-02**, and each was one `GOLD = ...` line from correct. Every
+> one of the three instances carries the identical stroke, verified from its own SVG export. Fixed
+> together; measured as RENDERED on Home afterwards, not just in the PNGs — the GPS pill's rim reads
+> `#FBEF95` at the top and `#BB801E` at the bottom, the daily pill's `#FCF095` → `#BB801E`.
+>
+> `S_DailyPillGlow.png` deliberately stays FLAT. It is an additive halo, not a rim, and its baker
+> already documents why the colour is held flat while alpha carries the falloff.
+>
+> **Rule: before baking any stroke or fill, read the node's SVG, not the CSS.**
+> `download_assets(nodeId, defaultFormat="svg")` and look for `stroke="url(#paint…)"` /
+> `fill="url(#paint…)"` — the `<linearGradient>` defs carry every stop. A `<stop>` count above one
+> means the CSS is lying to you by omission. Same failure as the GPS icon rings a day earlier.
 
 > **The GPS hub is the worked example** (2026-09-01). Its panels and icon rings were first built by
 > tinting `Next Hole Panel.png` and `S_PillStadium.png`; both shipped as flat colour where the node
@@ -59,7 +86,7 @@ SCRIPT, never the PNG.
 |---|---|---|---|---|
 | RP value pill (navy) | `Assets/Art/RankingsScreen/RPContainer.png` | `9106f5ea13a81ca4c8dc7b2671c853bf` | dark rounded RP-cost/amount container (coin + number) | Rankings, stamina-shop RP chips |
 | Stadium pill (badge base) | `Assets/Art/Tournaments/S_PillStadium.png` | `bb07d102185aa4f1ca51da13de9eeac6` | outer rim of tier / entry-fee / status badges | Tournaments `PaidEntryBadge`, shop tier badges |
-| Gold-bordered navy pill | `Assets/Art/HomeScreen/S_DailyPillPanel.png` | `448cb5f34eebb4b38962e7959d0a11ed` | navy pill with the Figma 3px `#FCF195` gold border + `#133453→#091B33` gradient, r=50. Baked at 2× and **9-sliced**: border 100 sprite-px with `pixelsPerUnitMultiplier = 2` → 50 UI px, which fits any width ≥ 101 at the authored 122 height | Home daily-mission pill (549 with the streak flame, 481 without) |
+| Gold-bordered navy pill | `Assets/Art/HomeScreen/S_DailyPillPanel.png` | `448cb5f34eebb4b38962e7959d0a11ed` | navy pill with the Figma 3px gold border (a **3-stop gradient** — see the warning below) + `#133453→#091B33` gradient, r=50. Baked at 2× and **9-sliced**: border 100 sprite-px with `pixelsPerUnitMultiplier = 2` → 50 UI px, which fits any width ≥ 101 at the authored 122 height | Home daily-mission pill (549 with the streak flame, 481 without) |
 | Soft gold halo for the above | `Assets/Art/HomeScreen/S_DailyPillGlow.png` | `086acc78ed8a34ce090a7cec8d2d5aea` | the pulsing glow behind that pill — the silhouette in border-gold, Gaussian-blurred, 36px bleed. Additive (`TapSparkle_Additive.mat`), 9-sliced at border 172 sprite-px / ppum 2 → 86 UI px | Home daily-mission pill |
 
 > **Why the pill is baked, not 9-sliced** (`daily_mission_home_pill`, 2026-08-30). A whole-project

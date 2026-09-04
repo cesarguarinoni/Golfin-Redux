@@ -1,0 +1,40 @@
+# reference/data_lz4hc.txt — build_size_diet
+# Data folder: Builds/iOS-Full/Data   (28 files)
+# Columns: raw bytes (INSTALL contribution) | deflate bytes (Payload-compressed model) | path
+# Non-Data Payload constant added below: 111,741,942 B raw / 35,515,812 B compressed
+
+DATA raw           603,098,138 B =    575.2 MiB
+DATA compressed    522,015,671 B =    497.8 MiB
+
+INSTALL       = Data raw  + non-Data raw  =    681.7 MiB   (gate <= 1024 MiB)
+PAYLOAD-COMP  = Data comp + non-Data comp =    531.7 MiB   (gate <=  350 MiB)
+
+== Per-file, sorted by raw size ==
+   579972359    512487703  data.unity3d
+    16358956      4726200  Managed/Metadata/global-metadata.dat
+     4490080      4446012  sharedassets0.resource
+     1708292       182576  Resources/unity default resources
+      337563       125067  Managed/Resources/mscorlib.dll-resources.dat
+       93718         7813  Managed/Resources/System.Data.dll-resources.dat
+       33598         4420  Managed/mono/4.0/machine.config
+       33482        10499  Managed/Resources/System.Text.Json.dll-resources.dat
+       25453         9625  Managed/Resources/System.Drawing.dll-resources.dat
+        9262         3135  Managed/Resources/System.ComponentModel.Annotations.dll-resources.dat
+        8623         1366  RuntimeInitializeOnLoads.json
+        7239         1599  ScriptingAssemblies.json
+        4294         1748  Managed/Resources/Microsoft.Extensions.DependencyInjection.dll-resources.dat
+        2599         1155  Managed/Resources/Microsoft.Extensions.DependencyInjection.Abstractions.dll-resources.dat
+        2294         1116  Managed/Resources/System.IO.Pipelines.dll-resources.dat
+        2236         1150  Managed/Resources/System.Diagnostics.DiagnosticSource.dll-resources.dat
+        1212          606  Managed/Resources/Microsoft.Extensions.Options.dll-resources.dat
+        1106          544  Managed/Resources/Microsoft.Bcl.TimeProvider.dll-resources.dat
+        1096          654  Managed/Resources/R3.dll-resources.dat
+        1084          573  Managed/Resources/Microsoft.Extensions.Primitives.dll-resources.dat
+         900          321  Managed/Resources/Newtonsoft.Json.dll-resources.dat
+         792          454  Managed/Resources/System.Threading.Channels.dll-resources.dat
+         478          339  Managed/Resources/Microsoft.Extensions.Logging.dll-resources.dat
+         476          321  Managed/Resources/Microsoft.Extensions.Logging.Abstractions.dll-resources.dat
+         435          292  Managed/Resources/System.Text.Encodings.Web.dll-resources.dat
+         360          259  Managed/Resources/Microsoft.Extensions.Configuration.Abstractions.dll-resources.dat
+         134          112  boot.config
+          17           12  Managed/Resources/Coffee.UIParticle.R.dll-resources.dat
