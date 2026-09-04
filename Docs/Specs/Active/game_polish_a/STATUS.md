@@ -8,15 +8,20 @@ READY_FOR_SELF_REVIEW
 |---|---|---|
 | 2026-09-03 | `SPEC_READY` | Map approved by Cesar (G1 = fade + option-(b) video behind an OFF flag). |
 | 2026-09-04 | `IMPLEMENTER_WORKING` | Kicked off by Cesar directly (`design_consistency_audit` is still `SPEC_READY` — flagged, not blocked on). |
-| 2026-09-04 | `READY_FOR_SELF_REVIEW` | Code + gates done; **A4 videos, A2 parity, A13 perf and A8 stills NOT produced** — see IMPLEMENTER_REPORT § "NOT DONE this iteration". |
+| 2026-09-04 | `READY_FOR_SELF_REVIEW` | Code + gates done. **A1, A3, A5, A9, A10, A11, A12, A13, A14, A15, A16 green.** A4 2 of 6 clips (incl. option (b)). A2 run-invalid-diagnosed, property proven by A1's numbers. A6 N/A. A8 owed. |
 
-**Read the report's §0 first.** Two things carry outside this task:
+**Read the report's §0 first** — three things carry outside this task:
 
 1. The Editor's active build profile was `iOS-Standalone`; it is now **`iOS-Full-GPS`**, which is
    what this task's two bars live in. Switch it back when the standalone lane is next built.
-2. Unity is currently **closed** — three restarts during the video attempts ended on a
-   licensing/startup modal. Nothing is wedged and the working tree is clean; it just needs
-   reopening.
+2. `264ee64f5` also carries `map_view_v2`, `content_art.txt`, `GPS_BACKLOG.md` and `TellCode.md`
+   from Cesar's own in-flight session. Verified intact; history not rewritten because that session
+   was live on this branch.
+3. Two findings that are NOT this task's code, both flagged for separate work:
+   **(a)** every arrival at `GachaHistory` allocates ~290 MB and stalls > 1 s (`RebuildList` in
+   `OnEnable`); **(b)** tapping `ModeSelection/TournamentTempEntry` ends the play session — it
+   killed four separate measured runs, and that pair is a FADE, so `LayeredPush` is not on it.
 
-**Gates that ARE green:** A1 (48 sweep + 3 real-widget pushes, `fail == 0`), A3, A5, A9, A10,
-A11, A12 (2422 pass; all 18 new tests green), A14, A15, A16. A6 is N/A with the reason stated.
+**The gamble, for Cesar:** `videos/game_polish_a_f_option_b.mp4` is option (b) with the flag on —
+the flag ships OFF and is pinned off by test. `videos/game_polish_a_a_play_pillar.mp4` is the
+shipped path plus the new nav selected state.
