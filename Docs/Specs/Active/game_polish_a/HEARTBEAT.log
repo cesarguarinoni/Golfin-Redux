@@ -1,0 +1,6 @@
+=== iter-1 kickoff baseline 2026-09-04 ===
+HEAD: 1e7f97504 chore(build): standalone guard records 1.0.0 (2662)
+DIRTY (git status --porcelain --untracked-files=all):
+ M Docs/Reports/content_art.txt
+(no other uncommitted path; the content_art.txt edit predates this task and is not touched by it)
+=== iter-1 start: probe (baseline mode) written, compiles clean, baselines next ===
