@@ -63,7 +63,26 @@ them would have reported a green gate that never touched the new path), and the 
 **sampled from the live CanvasGroups** instead of `Mathf.Max(fe, 1f)`, which was 1 by construction
 and measured nothing.
 
-**A4: 2 of 6 clips, including the one that matters.** `videos/game_polish_a_f_option_b.mp4` is
+**EVERY ACCEPTANCE ITEM IS NOW CLOSED.** A4 has all six clips; A2 and A8 pass; A13 passes. A6 is
+N/A with its reason. What each of the last three cost is worth knowing, because in all three cases
+the first answer was wrong in a way that looked right:
+
+- **A4 (e)** shipped as 5.6 s of a STATIC Leaderboard captioned "Settings". Every tap fired — the
+  log has SettingsButton, AboutRow, LanguageRow — but the Editor was painting under 3 fps and the
+  whole open/expand/close happened between two drawn frames. A recorder can only record frames
+  that were drawn. Caught by counting changing frames per clip (a=108, b=52, c=71, d=66, **e=0**),
+  not by watching. Re-recorded with 3 s waits: 339 frames, 24 changing.
+- **A2** first reported 100 % of pixels differing on most screens. That was the comparison, not the
+  feature: it paired `inventory_tab0` with `inventory_tab3` (four tab states share one ScreenId)
+  and the plain `roster` capture with a `settings_open` one that had drifted to Roster. Keyed on
+  *(label, real screen)* it passes at worst 1.232 %, and the residuals are **localised**: a 75x27
+  box at (132,147) — the RP counter. Every bbox starts at y=147 and none reaches the nav bar, so
+  the top bar and the bottom nav are pixel-identical, which corroborates A5 in pixels.
+- **A8**'s log line said "Risen must be 0" and the run said 2 — the sweep's cross-pillar re-seats
+  fade and are *supposed* to rise. The line now states the claim that holds
+  (`SkippedForPush >= measured pushes`; 94 over 84) and flags itself when it does not.
+
+**A4: all six clips.** `videos/game_polish_a_f_option_b.mp4` is
 option (b) with the flag on — `screenshots/a4_option_b_transition_strip.png` shows the transition
 frame by frame, content sliding while both backgrounds cross-fade and the bars not moving.
 `videos/game_polish_a_a_play_pillar.mp4` is the shipped path. Orientation checked on CONSECUTIVE
