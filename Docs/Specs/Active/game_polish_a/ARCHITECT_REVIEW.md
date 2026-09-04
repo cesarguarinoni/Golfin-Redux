@@ -373,3 +373,92 @@ verdict section quoting a superseded record count as its evidence.
 
 No re-shoot, no re-measure, no code change. Everything functional re-derived clean above; this is a
 pure report-integrity turnaround.
+
+---
+
+# § RED-TEAM REVIEW — RE-SUBMISSION (adversarial gate) — 2026-09-04 18:52 JST
+
+Verdict: **ARCHITECT_REVIEW_FAIL** — again report-integrity only. The *work* is verified
+correct and must NOT be re-implemented. But the shape I failed this task for last time
+(stale pre-option-b counts quoted as current evidence) is STILL PRESENT — in four more live
+PASS sections the "fix" and its new script both walked straight past. Report-only fix again.
+
+## Load-bearing claim — CONFIRMED
+`git diff --stat a3840aa00..HEAD` (reviewer PASS → HEAD) = exactly 4 files:
+`check_report_citations.py`, `IMPLEMENTER_REPORT.md`, `STATUS.md`, and a **pure-append** (+122/−0)
+to `ARCHITECT_REVIEW.md` (my own prior FAIL section; reviewer body untouched). Zero code, scene,
+prefab, test or JSON changed. I did NOT re-run the functional gates from scratch — but I re-derived
+the ones the report claims are regenerated, and they are clean at the top level:
+- JSON re-parsed: `measured=87 fail=0 optionBShipped=true`; 55 same-bg / 32 cross-bg; 40 distinct
+  pairs (3 realWidget-distinct / 37 harness-distinct); applyScreenCalls==1 and blocksRaycasts==true
+  on all 87; seam=1 on all 32; chromeAlphaMinOverRun=1 on all 87; failedAsserts=0; **5 frame-starved**.
+- § A4 lower table vs disk: all six clips present, durations 17.9/10.2/14.0/13.4/11.3/25.0 s match;
+  sizes match **when read as MiB** (7.47/3.17/5.55/4.49/1.62/2.11 → 7.5/3.2/5.6/4.5/1.6/2.1);
+  `raw.mp4` = 33.96 s / 1033 frames ≈ 34.0; all 8 stills exist. **§ A4 is clean.**
+- The four unresolved names the checker flags in SELF/ARCHITECT are all benign (reviewer shorthand
+  `f_cross_backdrop.mp4` for the real prefixed clip; `event1_stack.png` = my own uncommitted
+  scratch; two `…_f_option_b` = my quotes of the defect). Not implementer evidence claims.
+
+## THE BLOCKER — the 48-record run's numbers survive in FOUR live PASS sections
+
+The implementer regenerated the § A1 **summary block** and its **87-row table** from the JSON, and
+fixed the § A4 lower table. But every *hand-written* count that references the run — footnotes and
+prose a file-path checker cannot see — still carries the superseded **48-record / 24-pair** run:
+
+1. **§ A1 table footnote (line 588), inside the section certified "all 87 rows GENERATED from the
+   JSON":** the `*`-legend for the 87-row table reads **"frame-starved (4 of 48)"**, "those
+   **four**", "all **four** pass", "**44 unstarved** records", "12–16 frames". On disk: **5**
+   frame-starved of **87** (every one is a `GachaHistory` arrival at 2 frames), **82** unstarved,
+   10–16 frames. This contradicts the section's **own summary block 15 lines above it** ("5
+   frame-starved records") and the JSON. The generation covered summary + rows and left the human
+   footnote stale — so the Shape C certification of § A1 is again falsified.
+2. **§ A5 · Chrome static — PASS (line 603):** "Across all **48 records** it is exactly 1.0."
+   On disk chromeAlphaMinOverRun=1 on all **87** (55 same-bg). 48 is the pre-option-b total.
+3. **§ A10 · Real entry — PASS (lines 643, 648):** "The remaining **21 ordered pairs**" and "worth
+   measuring on **all 24**" (3 reachable + 21 harness = 24). On disk: **40** distinct pairs = 3
+   realWidget-distinct + **37** harness-distinct. The whole A10 accounting is the old pair set.
+4. **§ A13 · Perf — PASS (lines 777, 780):** "**48 pushes** measured", "**44 of 48** pushes." The
+   invariants JSON is `mode=push` (87), so this perf run has no on-disk JSON to check — but it is
+   the identical **48 / 44** signature of the superseded run and is almost certainly its fourth
+   carrier. Must be re-quoted from a current perf run or explicitly marked as the pre-option-b pass.
+
+Line 154's "**24 ordered push pairs (12+6+6)**" is NOT stale — I checked: the JSON has exactly 24
+distinct same-backdrop pairs. Line 495 is the legitimate historical correction note. Those are fine
+and I say so, per Rule 15 (publish the sites that were fine too).
+
+## Why the "fix" and its new script both missed it (the real lesson)
+`Docs/Scripts/check_report_citations.py` resolves **file paths only**. Its own docstring claims it
+exists to catch "a metrics block quoting a superseded run … that contradicted the JSON" — but it
+**parses no numbers and cannot see a stale count**. "78 cited, 0 unresolved" is true for file
+paths (I re-ran it; § A4's files do all exist) and was then treated as report-integrity proof. It
+is not. The Shape C table lists only § A1-body and § A4 as missed sites and certifies the rest
+clean; it never enumerates § A1-footnote, § A5, § A10 or § A13. Third "complete sweep," third
+miss of the same shape — because each sweep chased the named instances, not the shape.
+
+## Required fix (report only — DO NOT touch code, scenes, prefabs, tests, or the JSON)
+Do this at the SHAPE level (PIPELINE_HARDENING §22 / CLAUDE.md Rule 15), not instance by instance:
+1. Grep the ENTIRE report for the superseded run's fingerprint — `48`, `44`, `24`, `21`, "four",
+   "frame-starved (4" — and at EVERY hit either regenerate the number from
+   `game_polish_a_invariants.json` or move the line under a `(superseded)` heading. Correct § A1's
+   footnote to **5 of 87 / 82 unstarved / 10–16 frames / all five pass**; § A5 to **87** (55 same-bg);
+   § A10 to **40 pairs = 3 + 37**; § A13 perf to its current run's counts (or mark it pre-option-b).
+2. Publish a per-site verdict table covering every count-claim site in the report **including the
+   ones that are correct** (line 154's 24 same-bg pairs; line 495's history note), so the
+   completeness claim is checkable rather than asserted.
+3. Either extend `check_report_citations.py` to actually diff the counts it claims to guard against
+   the JSON, or stop citing "0 unresolved" as evidence of report integrity — it is not.
+
+## Escalation watch
+This is my **second** red-team FAIL of this identical report-integrity shape on this task. Per the
+iteration circuit-breaker (CLAUDE.md Rule 1), a third same-shape failure must force
+`ARCHITECT_REVIEW_ESCALATE`. The next re-submission must fix the SHAPE (a report-wide count audit),
+not just the four sites I named, or it escalates to Cesar.
+
+## Three break-attempts (this pass)
+1. **Visual/disk:** § A4 clips, durations, frames, MiB sizes, stills — all match disk. No file
+   defect. (No re-shoot needed; clips unchanged since the pass I already decoded frame-by-frame.)
+2. **Numeric:** re-derived every JSON count — 87/0/true, 55/32, 40 pairs, 3/37, seam=1, chrome=1,
+   5 frame-starved — clean, and that re-derivation is exactly what exposed the four stale prose
+   counts against it.
+3. **Spec-intent/completeness:** the "re-swept by script" completeness claim is the thing that
+   broke — the script cannot see numeric drift, and the Shape C table under-enumerates. Falsified.

@@ -36,6 +36,7 @@ headings, and a narrow check was reported as a complete one; and the sweep is no
 
 | Date | State | Note |
 |---|---|---|
+| 2026-09-04 | `READY_FOR_REDTEAM` | **Round-3 report fix, re-submitted.** Red-team's four stale-count sites corrected (§ A1 footnote 4/48→5/87, § A5 48→55 same-bg + the 32 cross-bg `seamWorstCover` invariant it never named, § A10 21→37 / 24→40, § A13 labelled). Grep for the old run's fingerprint found two MORE it did not name (§ A2's "all 24 pairs" / "48/48 records", and the push-map clause "every other move fades"). § A13 could not be closed — no artifact exists and a `perf` re-run produced 0 bytes — so it is labelled pre-option-(b) rather than quoted as current. New `check_report_counts.py` reconciles counts against the JSON: **0 stale**; citations **78/0**. No code changed since the reviewer's PASS. |
 | 2026-09-03 | `SPEC_READY` | Map approved by Cesar (G1 = fade + option-(b) video behind an OFF flag). |
 | 2026-09-04 | `IMPLEMENTER_WORKING` | Kicked off by Cesar directly. |
 | 2026-09-04 | `READY_FOR_SELF_REVIEW` | Code + gates done. |
@@ -46,3 +47,5 @@ headings, and a narrow check was reported as a complete one; and the sweep is no
 | 2026-09-04 | `READY_FOR_REDTEAM` | golfin-reviewer PASS. |
 | 2026-09-04 | `ARCHITECT_REVIEW_FAIL` | **Red-team.** Work verified correct; report-integrity blocker (dead file citations in § A4 + stale § A1 numbers, both mis-certified by the Shape C sweep). Report-only fix. |
 | 2026-09-04 | `READY_FOR_REDTEAM` | **Report-only fix, re-submitted.** § A4's body table rebuilt from disk; § A1 regenerated from the invariants JSON; Shape C corrected to record that the heading sweep missed both, because the shape is stale content rather than stale headings. Replaced by `check_report_citations.py` → **78 cited, 0 unresolved**. No code changed since the reviewer's PASS. |
+
+| 2026-09-04 | `ARCHITECT_REVIEW_FAIL` | **Red-team re-submission.** Work still correct; SAME report-integrity shape recurs — stale pre-option-b counts (4-of-48 frame-starved, 48 records, 24/21 pairs, perf 48/44) survive in live PASS sections § A1-footnote, § A5, § A10, § A13. Checker sees file paths only, not numeric drift. Shape-level count audit required; a 3rd same-shape FAIL must escalate. |

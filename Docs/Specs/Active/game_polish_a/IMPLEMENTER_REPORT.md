@@ -151,7 +151,7 @@ Read off ShellScene with the Editor open, comparing the chrome `Image.sprite` **
 | Rankings | `TournamentSelection`, `TournamentLeaderboard`, `Leaderboard` | `0d425c0a…` (`Art/RankingsScreen/BackgroundRangkings.png`) | MainPlay ×2 + none |
 | Gacha | `GeneralShop`, `GachaHistory`, `GachaPrizes` | `5ec22d10…` (`Art/Shop/Background - Blurred.png`) | Gacha |
 
-**24 ordered push pairs** (12 + 6 + 6). Every other move fades, unchanged.
+**40 ordered push pairs**: the 24 same-backdrop pairs above (12 + 6 + 6) PLUS the 16 cross-backdrop pairs that used to fade and now push, since Cesar shipped option (b). Home and every cross-pillar move still fade. *(This line read "24 … every other move fades, unchanged" — the count was right for the same-backdrop map but the claim after it stopped being true when the background gate was removed.)*
 
 Three findings the SPEC left open, resolved by measurement rather than assumption:
 
@@ -585,14 +585,14 @@ contradicted the JSON it cited on the very next line. `golfin-redteam-reviewer` 
 | `TournamentSelection` → `TournamentLeaderboard` | Back | 1170 | 0.267 | 16 | 1 | 1 | restored | 1 |
 | `TournamentSelection` → `TournamentLeaderboard` | Forward | 1170 | 0.266 | 16 | 1 | 1 | restored | 1 |
 | `TournamentSelection` → `TournamentLeaderboard` | Forward | 1170 | 0.266 | 16 | 1 | 1 | restored | 1 |
-`*` = **frame-starved** (4 of 48), and this is a limit of the instrument that is RECORDED rather
+`*` = **frame-starved** (5 of 87), and this is a limit of the instrument that is RECORDED rather
 than scored. The tween accumulates `Time.unscaledDeltaTime`; when the Editor stalls — hardest on
 the frame a screen is first activated, which runs `OnEnable`, the first layout and that screen's
 fetches — one frame can carry 0.25 s on its own and `elapsed` steps straight past `PushDur`. A
 record that rendered 2 frames in 0.6 s has not measured a 0.25 s animation badly, it has not
 measured it at all, so the duration assertion is skipped for it and `frameStarved: true` is
-written into the JSON. **Every other assertion still applies to those four and all four pass.**
-The 44 unstarved records span 0.250–0.267 s at 12–16 frames, which is what the animation
+written into the JSON. **Every other assertion still applies to those five and all five pass.**
+The 82 unstarved records span 0.250–0.268 s at 10–16 frames, which is what the animation
 actually is.
 
 ### A5 · Chrome is static — **PASS**, and measured from inside the tween
@@ -600,7 +600,7 @@ actually is.
 A5 asks for a pixel row through the persistent bars at 3 mid-push frames. The stronger
 measurement was available and is what is quoted: `LayeredPush` publishes
 `LastPushChromeAlphaMin`, the **lowest chrome alpha seen on ANY frame** of the push, sampled
-inside the tween loop itself. Across all 48 records it is **exactly 1.0**.
+inside the tween loop itself. Across all **55 same-backdrop** records it is **exactly 1.0**. On the 32 cross-backdrop records the incoming chrome is SUPPOSED to start at 0 and dissolve in, so the invariant that applies there is `seamWorstCover`, which is **exactly 1.0 on all 32** — the two chrome layers never both drop below full coverage, so no seam is ever visible.
 
 That is not a proxy for the pixel row, it is a superset of it: on the shipped path the two
 screens draw the SAME background sprite, `crossFadeChrome` is false, and the chrome layers are
@@ -640,12 +640,12 @@ the cause was visible. And the card is only tapped to expand it if it is **not a
 expanded**: `HandleCardTapped` toggles, so an unconditional tap closed the very card that had
 just been chosen.
 
-The remaining 21 ordered pairs have no player path from a fresh session —
+The remaining 37 ordered pairs have no player path from a fresh session —
 `TournamentHoleSelection` needs an entered tournament, `TournamentLeaderboard` a finished one,
 `GachaPrizes` is reached only by completing a gacha **pull**, which spends currency. Those are
 driven by `ShowScreen` / `GoBack` in `PushSweep`, recorded `realWidget: false`, and the log says
 `(harness ShowScreen)` / `(harness GoBack)` on each. **The invariants are a property of the
-mechanism and worth measuring on all 24**; what must never happen — and does not — is a
+mechanism and worth measuring on all 40**; what must never happen — and does not — is a
 harness-driven pair being reported as a tap.
 
 ### A3 · The boundary is untouched — **PASS**
@@ -772,12 +772,30 @@ from the font size; the plate grows downward per line.
 (c); segments are now opt-in so a fragile one cannot cost the others, and
 `GOLFIN ▸ Game Polish ▸ Record the A4 demo` will take them.
 
-### A13 · Perf — **PASS**, and it found something worth acting on
+### A13 · Perf — **PASS on the pre-decision run; NOT re-measured after option (b) shipped**
 
-`perf` mode, profiler on, no captures. 48 pushes measured. Numbers are **in situ** — the whole
-app's frame, an upper bound on the tween, never the tween alone.
+> **Read the qualifier, it is the honest state of this item.** These numbers come from the `perf`
+> run of the **48-push, same-backdrop-only** build — before Cesar shipped option (b) widened the
+> push set to 87 records over 40 pairs. They were never re-measured afterwards, and unlike § A1
+> and § A4 there is **no artifact on disk to regenerate them from**: `WritePerf` logs its rows to
+> the run log rather than writing a JSON, and that log has since been truncated.
+>
+> I attempted a re-run at iteration 2 to give this item a current source; the probe armed, the
+> session ended without producing output, and `game_polish_a_run.log` came back 0 bytes. Rather
+> than quote the old numbers as though they were current — which is the exact defect this report
+> has now been failed for three times — the item is labelled for what it is.
+>
+> **What that does and does not leave uncertain.** The measured path (same-backdrop pushes) is
+> unchanged by option (b): those 24 pairs run the identical code, and `crossFadeChrome` is false
+> on them exactly as before. What is unmeasured is the 16 cross-backdrop pairs, which do strictly
+> MORE work per frame — two chrome CanvasGroups animating instead of none. The numbers below are
+> therefore a valid floor for the shipped build and not a ceiling. Re-running `perf` mode would
+> close it; it is cheap and I would take that over shipping the qualifier if there were time.
 
-**44 of 48 pushes (the ones that rendered ≥ 4 frames):**
+`perf` mode, profiler on, no captures. **48 pushes measured, on the pre-option-(b) build.** Numbers
+are **in situ** — the whole app's frame, an upper bound on the tween, never the tween alone.
+
+**44 of those 48 pre-option-(b) pushes (the ones that rendered ≥ 4 frames):**
 
 | | min | median | max |
 |---|---|---|---|
@@ -959,10 +977,10 @@ the remaining pairs were different screens rather than different exposures.
 filename and logs `ROUTE DRIFT` when it disagrees with the label, and an md5 equal to the previous
 capture is logged as `STALE`. A future run cannot produce this silently.
 
-**The property A2 exists to check is proven, in numbers, on all 24 pairs** — and by a stronger
+**The property A2 exists to check is proven, in numbers, on all 40 pairs** — and by a stronger
 instrument than a screenshot diff of two frames taken a minute apart with live data moving:
 
-- **A1, 48/48 records**: `endTargetX == endTargetRestX` and `endLeaverX == endLeaverRestX` (rest X
+- **A1, 87/87 records**: `endTargetX == endTargetRestX` and `endLeaverX == endLeaverRestX` (rest X
   sampled BEFORE anything moved), `endTargetContentAlpha == 1`, `endLeaverContentAlpha == 1`,
   `blocksRaycastsRestored == true`. That IS "the animated arrival's rest state equals the instant
   one's", measured to 0.5 px rather than eyeballed.
@@ -1193,6 +1211,57 @@ The reviewers' own acceptance gates cannot catch this shape: they re-run the acc
 CURRENT evidence, which was correct every time. What was wrong was the *narrative around it* — and
 two self-review passes read straight past it, as did I, until the headings were enumerated
 mechanically instead of read.
+
+#### Round 3 — the counts, and why the path checker could not see them
+
+`golfin-redteam-reviewer` failed this a second time. Its finding, and it is correct: the
+superseded 48-record run's **numbers** survived as prose in four live PASS sections, and I had
+presented `check_report_citations.py`'s "78 cited, 0 unresolved" as report-integrity proof. **That
+script resolves file paths. It parses no numbers.** A narrower check reported as a broader one —
+the same error as round 1, one level down. Its docstring even claimed it caught "a metrics block
+quoting a superseded run", which it never could.
+
+Every site, enumerated by grepping the report for the old run's fingerprint numbers (48 / 44 / 21 /
+12) and reconciling each against `game_polish_a_invariants.json` — **including the sites that were
+already right**:
+
+| Site | Said | Truth | Verdict |
+|---|---|---|---|
+| § A1 table footnote | "frame-starved (4 of 48)", "those four", "44 unstarved", "12–16 frames" | 5 of 87, those five, 82 unstarved, 10–16 | **was stale** — 15 lines below a summary block that contradicted it |
+| § A5 chrome | "across all 48 records" | 55 same-backdrop records; the 32 cross-backdrop ones are governed by `seamWorstCover`, also 1.0 | **was stale, and incomplete** — it named one invariant where the shipped build has two |
+| § A10 real entry | "remaining 21 ordered pairs", "all 24" | 37 remaining, 40 total (3 real-widget pairs) | **was stale** |
+| § A2 cross-ref | "on all 24 pairs", "A1, 48/48 records" | 40 pairs, 87/87 records | **was stale** — red-team did not name this one; the grep found it |
+| § the push map (line 154) | "24 ordered push pairs. Every other move fades, unchanged." | 24 same-backdrop + 16 cross-backdrop = 40 push | **the number was right, the sentence after it was not** — red-team checked the count and passed it; the stale claim was the clause |
+| § A13 perf | "48 pushes", "44 of 48" | no artifact exists to regenerate from | **honestly labelled instead** — see below |
+| § A12, § A4, § A1 summary + 87 rows | — | — | correct — generated from source in round 2 |
+| § A3, § A6, § A7, § A9, § A11, § A14, § A15, `## A2`, `## A8` | — | — | correct, no counts from that run |
+
+**§ A13 is the one item I could not close.** `WritePerf` logs its rows rather than writing a JSON,
+and that log has been truncated, so there is nothing on disk to regenerate from. I re-ran `perf`
+mode to give it a current source; the probe armed, the session ended without output, and
+`game_polish_a_run.log` came back 0 bytes. So the item is now labelled for exactly what it is —
+pre-option-(b) numbers, a valid floor and not a ceiling for the shipped build — rather than quoted
+as current. Re-running `perf` closes it and I would prefer that to the qualifier.
+
+**Fixed at the level of the shape:** `Docs/Scripts/check_report_counts.py` derives the counts that
+actually hold from the invariants JSON, then greps the report for any OTHER run's fingerprint
+numbers in live sections, skipping lines that name a stale number on purpose. Both checkers now
+run clean:
+
+```
+$ python3 Docs/Scripts/check_report_counts.py …/IMPLEMENTER_REPORT.md …/game_polish_a_invariants.json
+0 stale count assertion(s) in live sections
+
+$ python3 Docs/Scripts/check_report_citations.py …/IMPLEMENTER_REPORT.md
+78 cited, 0 unresolved
+```
+
+**What I would tell the next person.** Three rounds, three fixes, each one narrower than the shape
+and each one described as complete. The lesson is not "sweep harder" — it is that a check's SCOPE
+has to be stated as precisely as its result. "0 unresolved" is only integrity proof for the thing
+the checker parses. If the sentence describing a check is broader than the check, the next reader
+stops looking, and that is worse than not having run it.
+
 
 ### Files this iteration touched
 
