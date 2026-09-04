@@ -7,6 +7,7 @@ import type { DictKey } from "@/lib/i18n";
 import type {
   FunnelStage,
   HoleStat,
+  SchemeTimingStat,
   TelemetryEventsResponse,
   TelemetrySummaryResponse,
   TelemetryTestersResponse,
@@ -33,6 +34,16 @@ const SECTIONS = [
   { id: "testers", key: "tel.tab.testers" },
   { id: "events", key: "tel.tab.events" },
 ] as const satisfies readonly { id: string; key: DictKey }[];
+
+/** control_scheme_seam §3.5 — ControlScheme int -> label key. Index IS the enum value, so
+ *  this array is a wire-format mirror: append, never reorder. "Tap Timing" is the
+ *  player-facing name of the internal Needle scheme. */
+const SCHEME_KEYS = [
+  "tel.shots.scheme.flick",
+  "tel.shots.scheme.pendulum",
+  "tel.shots.scheme.taptiming",
+  "tel.shots.scheme.freeswing",
+] as const satisfies readonly DictKey[];
 
 // --- formatting -------------------------------------------------------------
 
@@ -163,6 +174,10 @@ export function TelemetryPanel() {
   const [events, setEvents] = useState<TelemetryEventsResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  /** control_scheme_seam §3.5 — "all" or a ControlScheme int. Client-side only: the
+   *  per-scheme split already ships inside the summary, so changing it costs no round trip. */
+  const [schemeFilter, setSchemeFilter] = useState<"all" | number>("all");
+
   const [nameFilter, setNameFilter] = useState("");
   const [userFilter, setUserFilter] = useState("");
   const [page, setPage] = useState(0);
@@ -260,6 +275,32 @@ export function TelemetryPanel() {
   }
 
   const { kpis, funnel, holes, shots, gacha } = summary;
+
+  // The timing card's numbers: the whole-range totals under "All schemes", otherwise that
+  // scheme's own slice. A scheme with no shots renders every rate as an em-dash rather than
+  // 0% — "nobody played it" is not "everyone missed".
+  const emptyTiming: SchemeTimingStat = {
+    scheme: typeof schemeFilter === "number" ? schemeFilter : 0,
+    shots: 0,
+    timingSampled: 0,
+    timingGreenRate: null,
+    timingGoldRate: null,
+    timingRedRate: null,
+    avgTimingMul: null,
+  };
+  const timing: SchemeTimingStat =
+    schemeFilter === "all"
+      ? {
+          scheme: -1,
+          shots: shots.shotsTaken,
+          timingSampled: shots.timingSampled,
+          timingGreenRate: shots.timingGreenRate,
+          timingGoldRate: shots.timingGoldRate,
+          timingRedRate: shots.timingRedRate,
+          avgTimingMul: shots.avgTimingMul,
+        }
+      : (shots.timingByScheme ?? []).find((r) => r.scheme === schemeFilter) ?? emptyTiming;
+
   const truncatedHint = t("tel.truncatedHint");
   const isEmpty = summary.rowCount === 0;
 
@@ -497,21 +538,43 @@ export function TelemetryPanel() {
         </div>
 
         {/* shot_timing_telemetry: how testers are hitting the coloured slab. Amber when the
-            red share passes 40% — that reads "the window is too tight", not "testers are bad". */}
+            red share passes 40% — that reads "the window is too tight", not "testers are bad".
+            control_scheme_seam §3.5: one filter, because four schemes averaged together is a
+            number about nothing. */}
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <label className="text-xs text-zinc-500" htmlFor="tel-scheme">
+            {t("tel.shots.scheme")}
+          </label>
+          <select
+            id="tel-scheme"
+            className="rounded-md border border-surface-800 bg-surface-950 px-2 py-1 text-sm text-zinc-300"
+            value={schemeFilter}
+            onChange={(e) => setSchemeFilter(e.target.value === "all" ? "all" : Number(e.target.value))}
+          >
+            <option value="all">{t("tel.shots.scheme.all")}</option>
+            {SCHEME_KEYS.map((key, i) => (
+              <option key={key} value={i}>
+                {t(key)}
+              </option>
+            ))}
+          </select>
+          <span className="text-xs text-zinc-600">{t("tel.shots.schemeHint")}</span>
+        </div>
+
         <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
           <Card
             label={t("tel.shots.timing")}
-            value={`${pct(shots.timingGreenRate)} / ${pct(shots.timingGoldRate)} / ${pct(
-              shots.timingRedRate
+            value={`${pct(timing.timingGreenRate)} / ${pct(timing.timingGoldRate)} / ${pct(
+              timing.timingRedRate
             )}`}
-            sub={`${shots.timingSampled.toLocaleString()} ${t("tel.shots.timingSub")}`}
+            sub={`${timing.timingSampled.toLocaleString()} ${t("tel.shots.timingSub")}`}
             hint={t("tel.shots.timingHint")}
             tone={
-              shots.timingRedRate !== null && shots.timingRedRate > 0.4 ? "amber" : "accent"
+              timing.timingRedRate !== null && timing.timingRedRate > 0.4 ? "amber" : "accent"
             }
             wide
           />
-          <Card label={t("tel.shots.timingMul")} value={dec(shots.avgTimingMul, 2)} />
+          <Card label={t("tel.shots.timingMul")} value={dec(timing.avgTimingMul, 2)} />
         </div>
 
         <div className="mt-3 overflow-x-auto rounded-lg border border-surface-800">

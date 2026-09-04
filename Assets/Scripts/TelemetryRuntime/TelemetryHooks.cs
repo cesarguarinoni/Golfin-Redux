@@ -6,6 +6,7 @@ using Golfin.InventorySync;
 using Golfin.Roster;
 using Golfin.Gameplay.UI;
 using Golfin.Gameplay.UI.HUD;
+using Golfin.Gameplay.UI.Controls;
 using Golfin.Gameplay.UI.Quality;
 using Golfin.Telemetry;
 using GolfinRedux.UI;
@@ -81,6 +82,7 @@ namespace GolfinRedux.TelemetryRuntime
                 GameSession.OnHoleComplete    += OnHoleComplete;
                 ShotTelemetryRelay.FlickRejected += OnFlickRejected;
                 ShotTelemetryRelay.ShotCancelled += OnShotCancelled;
+                ControlSchemeService.OnSchemeChangedDetailed += OnControlSchemeChanged;
                 Golfin.Auth.AuthService.SignedIn += OnSignedIn;
 
                 // The refundable-spend path, counted (CONTENT_PIPELINE_PLAN §6.5 decision 1).
@@ -316,7 +318,12 @@ namespace GolfinRedux.TelemetryRuntime
                     // cannot, Golfin.Gameplay.Config is not auto-referenced). timing01 and
                     // timing_band are null, never 0/"red", for a sampleless swing — same
                     // nullable path ob_reason already uses.
-                    GameSession.AppendShotTimingKeys(payload, shot);
+                    // ...and the control scheme it was played with (control_scheme_seam §3.5).
+                    // Read HERE rather than inside GameSession because this is the only assembly
+                    // that can see both ControlSchemeService and the session record. The host
+                    // defers a scheme swap to the next Idle, so the scheme cannot have moved
+                    // between the flick and the ball coming to rest.
+                    GameSession.AppendShotTimingKeys(payload, shot, (int)ControlSchemeService.Current);
                     return payload;
                 });
             });
@@ -346,6 +353,27 @@ namespace GolfinRedux.TelemetryRuntime
                     // HoleContext.Par is the same value the result modal and the hole card read.
                     ["par"]             = HoleContext.Par,
                 });
+            });
+        }
+
+        /// <summary>
+        /// controls_scheme_changed. Fired from <c>ControlSchemeService.Set</c> via its detailed
+        /// relay event, because the service lives in Golfin.Gameplay.UI, which does not
+        /// reference Golfin.Telemetry — the same relay shape ShotTelemetryRelay uses for the
+        /// flick signals.
+        /// </summary>
+        private static void OnControlSchemeChanged(ControlScheme from, ControlScheme to, string where)
+        {
+            Guard("OnControlSchemeChanged", () =>
+            {
+                TelemetryService.Instance.RecordSafe(TelemetryEventNames.ControlsSchemeChanged, () =>
+                    new Dictionary<string, object>
+                    {
+                        ["from"]  = (int)from,
+                        ["to"]    = (int)to,
+                        ["where"] = where,
+                        ["hole"]  = GameSession.CurrentHoleNumber,
+                    });
             });
         }
 

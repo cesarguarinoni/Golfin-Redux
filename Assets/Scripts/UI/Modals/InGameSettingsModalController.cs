@@ -5,6 +5,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using Golfin.Audio;
 using Golfin.Gameplay.Session;
+using Golfin.Gameplay.UI.Controls;
 using Golfin.Gameplay.UI.HUD;
 using Golfin.Gameplay.UI.ShotUI;
 using Golfin.UI.GameplayTransition;
@@ -48,6 +49,32 @@ namespace Golfin.UI.Modals
                  "so the wedge always ends exactly under the knob instead of being squashed.")]
         [SerializeField] private Image sfxFillBar;
         [SerializeField] private Image musicFillBar;
+
+        // ── CONTROLS card (control_scheme_seam §3.4, Figma 14090:101896) ──────
+        //
+        // A 2x2 grid of segment buttons under the sound sliders. Same value as
+        // Settings > Controls: both surfaces write ControlSchemeService and repaint from its
+        // OnSchemeChanged, so they can never disagree.
+        [Header("Controls card")]
+        [SerializeField] private GameObject controlsCard;
+
+        [Tooltip("Segment buttons in ControlScheme order: Flick, Pendulum, Tap Timing, Free Swing.")]
+        [SerializeField] private Button[] schemeButtons = new Button[4];
+
+        [Tooltip("Each segment's own background Image, same order. Left null the button's own " +
+                 "Image is used, which is the normal authoring.")]
+        [SerializeField] private Image[] schemeFills = new Image[4];
+
+        [Tooltip("Each segment's label, same order.")]
+        [SerializeField] private TextMeshProUGUI[] schemeLabels = new TextMeshProUGUI[4];
+
+        [Header("Controls card — segment look")]
+        [Tooltip("Selected segment fill: the RETURN button's gold gradient sprite (Figma 14090:101896).")]
+        [SerializeField] private Sprite segmentSelectedSprite;
+        [Tooltip("Unselected segment fill: 10% white, 55% white 3px stroke, radius 20.")]
+        [SerializeField] private Sprite segmentUnselectedSprite;
+        [SerializeField] private Color segmentSelectedTextColor   = new Color32(0x0E, 0x2A, 0x47, 0xFF);
+        [SerializeField] private Color segmentUnselectedTextColor = Color.white;
 
         // ── PLAYING card ──────────────────────────────────────────────────────
         [Header("PLAYING card")]
@@ -97,6 +124,9 @@ namespace Golfin.UI.Modals
 
             if (sfxSlider != null)   sfxSlider.onValueChanged.AddListener(OnSfxChanged);
             if (musicSlider != null) musicSlider.onValueChanged.AddListener(OnMusicChanged);
+
+            WireSchemeButtons();
+            ControlSchemeService.OnSchemeChanged += OnSchemeChangedExternally;
         }
 
         protected override void OnDisable()
@@ -109,6 +139,9 @@ namespace Golfin.UI.Modals
 
             if (sfxSlider != null)   sfxSlider.onValueChanged.RemoveListener(OnSfxChanged);
             if (musicSlider != null) musicSlider.onValueChanged.RemoveListener(OnMusicChanged);
+
+            UnwireSchemeButtons();
+            ControlSchemeService.OnSchemeChanged -= OnSchemeChangedExternally;
 
             // Base clears the OpenModalCount leak guard.
             base.OnDisable();
@@ -151,6 +184,7 @@ namespace Golfin.UI.Modals
             if (confirmDialog != null) confirmDialog.SetActive(false);
 
             BindVolumes();
+            BindControlsCard();
             BindPlayingCard();
             ApplyModeGating();
         }
@@ -213,6 +247,78 @@ namespace Golfin.UI.Modals
         {
             SetBarFill(musicFillBar, value);
             if (AudioManager.Instance != null) AudioManager.Instance.SetMusicVolume(value * 100f);
+        }
+
+        // ── CONTROLS card ─────────────────────────────────────────────────────
+        //
+        // The same four options as Settings > Controls, reachable without leaving the hole.
+        // Switching mid-swing is safe by construction: ShotSchemeHost defers the root swap to
+        // the next Idle, so the shot already in the air keeps the scheme it was hit with.
+
+        private readonly UnityEngine.Events.UnityAction[] _schemeHandlers =
+            new UnityEngine.Events.UnityAction[4];
+
+        private void WireSchemeButtons()
+        {
+            if (schemeButtons == null) return;
+            for (int i = 0; i < schemeButtons.Length && i < 4; i++)
+            {
+                if (schemeButtons[i] == null) continue;
+                var scheme = (ControlScheme)i;
+                _schemeHandlers[i] = () => OnSchemeSegmentTapped(scheme);
+                schemeButtons[i].onClick.AddListener(_schemeHandlers[i]);
+            }
+        }
+
+        private void UnwireSchemeButtons()
+        {
+            if (schemeButtons == null) return;
+            for (int i = 0; i < schemeButtons.Length && i < 4; i++)
+            {
+                if (schemeButtons[i] == null || _schemeHandlers[i] == null) continue;
+                schemeButtons[i].onClick.RemoveListener(_schemeHandlers[i]);
+                _schemeHandlers[i] = null;
+            }
+        }
+
+        private void OnSchemeSegmentTapped(ControlScheme scheme)
+        {
+            ControlSchemeService.Set(scheme, "ingame");
+            BindControlsCard();   // Set() is silent when the value did not move; repaint regardless.
+        }
+
+        private void OnSchemeChangedExternally(ControlScheme scheme) => BindControlsCard();
+
+        private void BindControlsCard()
+        {
+            if (controlsCard != null && !controlsCard.activeSelf) controlsCard.SetActive(true);
+
+            ControlScheme current = ControlSchemeService.Current;
+
+            for (int i = 0; i < 4; i++)
+            {
+                bool selected = (int)current == i;
+
+                Image fill = (schemeFills != null && schemeFills.Length > i) ? schemeFills[i] : null;
+                if (fill == null && schemeButtons != null && schemeButtons.Length > i && schemeButtons[i] != null)
+                    fill = schemeButtons[i].GetComponent<Image>();
+
+                if (fill != null)
+                {
+                    Sprite wanted = selected ? segmentSelectedSprite : segmentUnselectedSprite;
+                    // Only assign when a sprite was authored: a null here would blank the segment
+                    // into the flat-fill fabrication the UI-fidelity linter exists to catch.
+                    if (wanted != null) fill.sprite = wanted;
+                    fill.color = Color.white;
+                }
+
+                if (schemeLabels != null && schemeLabels.Length > i && schemeLabels[i] != null)
+                {
+                    var label = schemeLabels[i];
+                    label.text  = LocalizationManager.Get(ControlSchemeService.LabelKey((ControlScheme)i));
+                    label.color = selected ? segmentSelectedTextColor : segmentUnselectedTextColor;
+                }
+            }
         }
 
         // ── PLAYING card ──────────────────────────────────────────────────────

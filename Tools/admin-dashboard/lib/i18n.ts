@@ -967,6 +967,20 @@ export const DICT = {
     ja: "タッチフリックが色付きスラブの各バンドに入った割合。ショットに適用されたのと同じ境界値でクライアントが判定する。ボット・キャプチャ・デバッグショットはタイミングを持たないため除外。赤が40%を超えると警告色：テスターがウィンドウに合わせられていない → TimingBandGreenY01 を広げる。",
   },
   "tel.shots.timingMul": { en: "Avg power multiplier", ja: "平均パワー倍率" },
+
+  // control_scheme_seam §3.5 — the timing card reads per control scheme. The scheme
+  // names match the in-game Settings > Controls labels, including "Tap Timing" for the
+  // internal Needle scheme.
+  "tel.shots.scheme": { en: "Scheme", ja: "操作方法" },
+  "tel.shots.scheme.all": { en: "All schemes", ja: "すべて" },
+  "tel.shots.scheme.flick": { en: "Flick", ja: "フリック" },
+  "tel.shots.scheme.pendulum": { en: "Pendulum", ja: "振り子" },
+  "tel.shots.scheme.taptiming": { en: "Tap Timing", ja: "タップタイミング" },
+  "tel.shots.scheme.freeswing": { en: "Free Swing", ja: "フリースイング" },
+  "tel.shots.schemeHint": {
+    en: "Rows sent before control schemes existed carry no scheme and are counted as Flick — that is what those testers actually played, not a fallback.",
+    ja: "操作方法の導入前に送信された行には scheme がないため、フリックとして集計される（フォールバックではなく、実際にプレイされた操作方法）。",
+  },
   "tel.shots.none": { en: "No shots recorded in this range.", ja: "この期間に記録されたショットはありません。" },
 
   // gacha_ops_polish §3 — the behaviour view. The pull LOG says what was won; this

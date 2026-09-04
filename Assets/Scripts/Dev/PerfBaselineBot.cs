@@ -551,7 +551,11 @@ namespace Golfin.Dev
             if (sc == null) { Mark("WARN no ShotController — mid-flight sample will be a TEE sample"); yield break; }
 
             var stateProp = scType.GetProperty("State", BindingFlags.Public | BindingFlags.Instance);
-            var begin = scType.GetMethod("BeginExternalDrag", BindingFlags.Public | BindingFlags.Instance);
+            // Type.EmptyTypes, not a bare name lookup: BeginExternalDrag is overloaded
+            // (control_scheme_seam added BeginExternalDrag(bool ownsTiming)), and a bare
+            // lookup throws AmbiguousMatchException. This bot wants the zero-arg flick entry.
+            var begin = scType.GetMethod("BeginExternalDrag", BindingFlags.Public | BindingFlags.Instance,
+                                         null, Type.EmptyTypes, null);
             var setP  = scType.GetMethod("SetExternalPower",  BindingFlags.Public | BindingFlags.Instance);
             var end   = scType.GetMethod("EndExternalDrag",   BindingFlags.Public | BindingFlags.Instance);
             if (begin == null || setP == null || end == null)

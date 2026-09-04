@@ -631,7 +631,25 @@ export interface ShotQuality {
   timingRedRate: number | null;
   /** Mean timing_mul over the sampled rows. 1.0 = nobody is paying for their timing. */
   avgTimingMul: number | null;
+  /** control_scheme_seam §3.5 — the same five timing numbers, split by the control scheme
+   *  the shot was played with, so the timing card reads per scheme instead of averaging
+   *  four different games together. Always four entries, in ControlScheme order, even when
+   *  a scheme has zero shots — a missing row and a zero row mean different things. */
+  timingByScheme: SchemeTimingStat[];
   clubs: ClubStat[];
+}
+
+/** One control scheme's slice of the timing card. */
+export interface SchemeTimingStat {
+  /** ControlScheme int: 0 Flick, 1 Pendulum, 2 Needle ("Tap Timing"), 3 FreeSwing. */
+  scheme: number;
+  /** shot_taken rows attributed to this scheme (sampled or not). */
+  shots: number;
+  timingSampled: number;
+  timingGreenRate: number | null;
+  timingGoldRate: number | null;
+  timingRedRate: number | null;
+  avgTimingMul: number | null;
 }
 
 export interface TelemetrySummaryResponse extends TelemetryReadMeta {

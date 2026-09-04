@@ -289,6 +289,10 @@ function buildRows(): MockEventRow[] {
           timing01: shot.timing,
           timing_mul: timingMul(shot.timing),
           timing_band: timingBand(shot.timing),
+          // control_scheme_seam §3.5. Spread across the four schemes rather than pinned to
+          // Flick so the per-scheme timing split has something to render in mock mode —
+          // an all-Flick mock would make the new filter look broken.
+          scheme: (i + hole) % 4,
         });
       });
 

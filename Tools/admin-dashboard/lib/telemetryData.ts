@@ -390,19 +390,52 @@ function buildShotQuality(rows: Row[]): ShotQuality {
   let timingGold = 0;
   let timingRed = 0;
   const timingMuls: number[] = [];
+
+  // control_scheme_seam §3.5 — the same tally, per control scheme. A row with no `scheme`
+  // key predates schemes and was therefore played on Flick; that is a fact about the build,
+  // not a default, so it is bucketed as Flick rather than dropped.
+  const schemeAcc = [0, 1, 2, 3].map(() => ({
+    shots: 0,
+    sampled: 0,
+    green: 0,
+    gold: 0,
+    red: 0,
+    muls: [] as number[],
+  }));
+
   const clubs = new Map<string, { shots: number; distances: number[] }>();
   for (const r of taken) {
     const p = payloadOf(r);
     if (str(p.terminal)?.toUpperCase() === "OB") obShots += 1;
 
+    const rawScheme = num(p.scheme);
+    const schemeIdx =
+      rawScheme !== null && Number.isInteger(rawScheme) && rawScheme >= 0 && rawScheme <= 3
+        ? rawScheme
+        : 0;
+    // Non-null: schemeIdx is clamped to 0..3 above and schemeAcc has exactly four entries.
+    const sa = schemeAcc[schemeIdx]!;
+    sa.shots += 1;
+
     const band = str(p.timing_band)?.toLowerCase() ?? null;
     if (band === "green" || band === "gold" || band === "red") {
       timingSampled += 1;
-      if (band === "green") timingGreen += 1;
-      else if (band === "gold") timingGold += 1;
-      else timingRed += 1;
+      sa.sampled += 1;
+      if (band === "green") {
+        timingGreen += 1;
+        sa.green += 1;
+      } else if (band === "gold") {
+        timingGold += 1;
+        sa.gold += 1;
+      } else {
+        timingRed += 1;
+        sa.red += 1;
+      }
       const mul = num(p.timing_mul);
-      if (mul !== null) timingMuls.push(mul);
+      if (mul !== null) {
+        timingMuls.push(mul);
+        sa.muls.push(mul);
+      }
     }
 
     const club = str(p.club) ?? "(unknown)";
@@ -433,6 +466,15 @@ function buildShotQuality(rows: Row[]): ShotQuality {
     timingGoldRate: rate(timingGold, timingSampled),
     timingRedRate: rate(timingRed, timingSampled),
     avgTimingMul: mean(timingMuls),
+    timingByScheme: schemeAcc.map((a, scheme) => ({
+      scheme,
+      shots: a.shots,
+      timingSampled: a.sampled,
+      timingGreenRate: rate(a.green, a.sampled),
+      timingGoldRate: rate(a.gold, a.sampled),
+      timingRedRate: rate(a.red, a.sampled),
+      avgTimingMul: mean(a.muls),
+    })),
     clubs: clubStats,
   };
 }

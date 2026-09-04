@@ -393,7 +393,15 @@ public static class ActionButtonsBuilder
         SpinPanelWidget spinPanelWidget = spinPanelGo.AddComponent<SpinPanelWidget>();
 
         // ── Find ConeRoot ──────────────────────────────────────────────────
+        // Depth-search, not a direct child lookup: control_scheme_seam re-parented the whole
+        // flick UI under SchemeRoot_Flick, so ConeRoot is a grandchild of the canvas now. The
+        // fallback keeps working whichever scheme root it ends up under.
         var coneRootT = canvasGo.transform.Find("ConeRoot");
+        if (coneRootT == null)
+        {
+            foreach (var t in canvasGo.GetComponentsInChildren<Transform>(true))
+                if (t.name == "ConeRoot") { coneRootT = t; break; }
+        }
         var coneRoot  = coneRootT != null ? coneRootT.gameObject : null;
         if (coneRoot == null) Debug.LogWarning("[ActionButtonsBuilder] ConeRoot not found — _aimingCone will be null on SpinPanelWidget.");
 

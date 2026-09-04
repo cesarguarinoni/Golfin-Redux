@@ -89,11 +89,12 @@ Figma's alpha maths**: the 10 % white segment fill rendered (91,95,105) against 
 Localization published end to end: PLAN 5 add / 0 conflict → apply → `content_publish` **texts v37
 → v38** → `export --check` clean, `content_version.txt` stamped.
 
-**Open:** the in-game modal has NOT been re-shot since the colour fix — the sprites are opaque so
-the colour is deterministic, but that is arithmetic, not an on-surface check. The Unity Editor was
-shared with an active parallel `map_view_v2` session and play mode kept being killed by domain
-reloads, so I stopped rather than keep power-cycling it. To close: PLAY → any hole → gear, confirm
-the three unselected segments read navy.
+**Verified end to end in Lomond 2** (Home → PLAY → hole card → gear): Pendulum picked in Settings
+shows as selected in the in-game modal; the segment border measures **(156,165,175)** and the fill
+**(36,55,77)**, the node's values exactly; with Pendulum selected `SchemeRoot_Flick` stays live and
+the placeholder logged once (`_warned` read off the component, not scraped from a rolled log
+buffer); a real shot stamped `scheme=1`; and switching to Needle mid-`Timing` held at Pendulum with
+`pending=True` and landed on the next Idle. Only the on-device 1170×2532 / 16:9 pass is left.
 
 ---
 ## 2026-09-04 — `map_view_v2` — B1 overlay built and verified in Unity

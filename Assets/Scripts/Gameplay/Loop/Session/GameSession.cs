@@ -261,7 +261,19 @@ namespace Golfin.Gameplay.Session
         /// then reachable from Golfin.Gameplay.Tests — the production shaping is what the tests
         /// assert, not a copy of it.
         /// </summary>
-        public static void AppendShotTimingKeys(IDictionary<string, object> payload, in ShotRecord shot)
+        /// <param name="schemeId">The <c>ControlScheme</c> this shot was played with
+        /// (control_scheme_seam §3.5), as an int. Defaults to 0 = Flick, which is also what an
+        /// older row with no <c>scheme</c> key means to the dashboard — so the default is the
+        /// truth for every caller that predates schemes, not a placeholder.
+        ///
+        /// <para>PASSED IN rather than read here: <c>ControlSchemeService</c> lives in
+        /// <c>Golfin.Gameplay.UI</c> (the only assembly Assembly-CSharp can see it from — see
+        /// the note above about Config not being auto-referenced), and
+        /// <c>Golfin.Gameplay.Loop</c> cannot reference the UI assembly without a cycle. The
+        /// caller that HAS the value hands it over; the shaping still lives here where the
+        /// tests can reach it.</para></param>
+        public static void AppendShotTimingKeys(IDictionary<string, object> payload, in ShotRecord shot,
+                                                int schemeId = 0)
         {
             if (payload == null) return;
             payload["timing01"]   = float.IsNaN(shot.Timing01)
@@ -269,6 +281,7 @@ namespace Golfin.Gameplay.Session
                                         : (object)System.Math.Round(shot.Timing01, 2);
             payload["timing_mul"] = System.Math.Round(shot.TimingPowerMul, 2);
             payload["timing_band"] = TimingBand(shot.Timing01);
+            payload["scheme"]      = schemeId;
         }
     }
 

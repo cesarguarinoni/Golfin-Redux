@@ -345,10 +345,29 @@ namespace Golfin.Gameplay.Input
         public bool IsExternalDragActive => _externalDragActive;
         private bool _externalDragActive;
 
-        public void BeginExternalDrag()
+        /// <summary>True when the active external driver is the timing authority for this swing
+        /// (control_scheme_seam §3.1). Flick leaves it false and is untouched.</summary>
+        private bool _ownsTiming;
+
+        /// <summary>
+        /// The parameterless overload is PRESERVED deliberately rather than folded into an
+        /// optional parameter: Editor bots and capture drivers resolve this method reflectively
+        /// with <c>Type.EmptyTypes</c> (ClubControlArrowDemoRecorder, PowerGaugeMarkerDemoRecorder,
+        /// PowerGaugeMarkerVerifyBot, PracticeMapDuringShotDemoRecorder). One method with a
+        /// default argument returns null at every one of those lookup sites.
+        /// </summary>
+        public void BeginExternalDrag() => BeginExternalDrag(false);
+
+        /// <param name="ownsTiming">control_scheme_seam §3.1 — the driver is the timing authority.
+        /// <see cref="Tick"/> then skips <see cref="TickArrow"/> in <c>Timing</c>: no arrow, no
+        /// per-pass degradation, no <c>MaxTotalPasses</c> auto-cancel, <c>_arrowProgress</c> stays
+        /// 0. Such a driver calls <see cref="CommitExternal"/> or <see cref="CancelExternalDrag"/>
+        /// itself and never <see cref="EndExternalDrag"/>.</param>
+        public void BeginExternalDrag(bool ownsTiming)
         {
             if (State != ShotState.Idle) return;
             _externalDragActive = true;
+            _ownsTiming         = ownsTiming;
             ResetSwingSamples();
             TransitionToAiming();
             PublishState();
@@ -442,7 +461,9 @@ namespace Golfin.Gameplay.Input
             // External drag path: arrow still ticks even with no input source.
             if (_externalDragActive)
             {
-                if (State == ShotState.Timing) TickArrow(dt);
+                // A driver that owns its own timing gets no arrow: no _arrowProgress, no
+                // per-pass degradation and no MaxTotalPasses auto-cancel (control_scheme_seam §3.1).
+                if (State == ShotState.Timing && !_ownsTiming) TickArrow(dt);
                 PublishState();
                 return;
             }
@@ -528,6 +549,7 @@ namespace Golfin.Gameplay.Input
             _arrowProgress     = 0f;
             _passIndex         = 0;
             _degradationYawRad = 0f;
+            _ownsTiming        = false;
             _coneFinetune      = 0f;
             _aimFinetune       = 0f;
             _aimYawRadians     = 0f;
@@ -566,59 +588,132 @@ namespace Golfin.Gameplay.Input
             // shot_aim_parity D1/D2: ONE formula, shared with PublishState (the targeting line).
             // Straight + putt map the handle to ±halfCone; FadeDraw uses the aim locked at arming
             // time and spends the handle on the curve instead. Degradation is the only extra term.
-            _aimYawRadians = AimYawFor(finetune) + degradYaw;
+            float aimYaw = AimYawFor(finetune) + degradYaw;
 
             // F15 D6: the timing multiplier lands AFTER the overpower clamp, so a 120% pull
             // flicked on red is 84% — overpowering does not buy you out of bad timing.
             float timingMul = TimingPowerMultiplier();
-            LastTimingPowerMul = timingMul;
-            // Snapshot for telemetry: _timingAtLatch dies with ResetSwingSamples at CompleteShot.
-            LastCommittedTiming01 = _timingAtLatch;
 
             float flickMag = PowerNormalized;
             if (IsPutt || DebugFlags.DisableOverpower) flickMag = Mathf.Min(flickMag, 1f);
             flickMag *= timingMul;
+
+            // Spin input: read PendingSpinInput (set by HUD layer before CommitFlick).
+            // Putts always use zero spin (design lock §Out of scope).
+            Vector2 spinInput = IsPutt ? Vector2.zero : PendingSpinInput;
+
+            // Phase B (fade_draw_core_wiring Order 356):
+            // FadeDraw armed + not putt: finetune (re-centered after arm) drives fade/draw curve.
+            // Straight mode or putt: fadeDrawInput = 0 (no curve).
+            // NOTE the max-tilt term is gated on the MODE, not on the input value: an armed
+            // FadeDraw with the handle dead-centre still passes FadeDrawMaxTiltRad today, and
+            // deriving it from "input != 0" would quietly change that.
+            bool  fadeDrawOn      = !IsPutt && FadeDrawActive;
+            float fadeDrawInput   = fadeDrawOn ? finetune : 0f;
+            float fadeDrawMaxTilt = fadeDrawOn ? _config.FadeDrawMaxTiltRad : 0f;
+
+#if UNITY_EDITOR
+            if (LogResolution)
+            {
+                var logBundle = GetStatBundle();
+                fp logBaseVel = IsPutt ? fp.FromFloat(_config.PuttBaseVelocityMps) : fp.Zero;
+                string clubVel    = logBundle.Club.HasValue   ? logBundle.Club.Value.BaseVelocityMps.ToFloat().ToString("F2")   : "n/a";
+                string putterVel  = logBundle.Putter.HasValue ? logBundle.Putter.Value.BaseVelocityMps.ToFloat().ToString("F2") : "n/a";
+                UnityEngine.Debug.Log(
+                    $"[CommitFlick] IsPutt={IsPutt} bundle.IsPutt={logBundle.IsPutt} " +
+                    $"bundle.Club.HasValue={logBundle.Club.HasValue} clubVel={clubVel}m/s " +
+                    $"bundle.Putter.HasValue={logBundle.Putter.HasValue} putterVel={putterVel}m/s " +
+                    $"PowerNormalized={PowerNormalized:F3} flickMag={flickMag:F3} " +
+                    $"PuttBaseVelocityMps={_config.PuttBaseVelocityMps:F2} " +
+                    $"baseVelOverride={logBaseVel.ToFloat():F2}m/s " +
+                    $"halfCone={HalfConeAngleRad() * Mathf.Rad2Deg:F1}deg finetune={finetune:F3} " +
+                    $"timing01={_timingAtLatch:F2} timingMul={timingMul:F2} " +
+                    $"aimYawRadians={aimYaw:F3}rad");
+            }
+#endif
+            ResolveAndPublish(flickMag, aimYaw, timingMul, _timingAtLatch,
+                              spinInput, fadeDrawInput, fadeDrawMaxTilt);
+        }
+
+        /// <summary>
+        /// Commit a shot a NON-FLICK control scheme has already judged (control_scheme_seam §3.1).
+        ///
+        /// <para>Everything scheme-specific is already inside <paramref name="i"/>; this method
+        /// only applies the rules that belong to the shot pipeline rather than to any one scheme:
+        /// the debug flags, the putt/overpower clamp, the putt spin lock, and the single
+        /// <see cref="AimYawFor"/> formula the live targeting line also uses.</para>
+        ///
+        /// <para>Flick does NOT come through here — <see cref="CommitFlick"/> keeps its own maths
+        /// and calls the same <c>ResolveAndPublish</c> tail, which is what keeps the shipping
+        /// scheme byte-identical.</para>
+        /// </summary>
+        public void CommitExternal(in ShotIntent i)
+        {
+            // Pulling is legal as well as Timing: a driver may have no arrow phase at all.
+            if (!_externalDragActive || (State != ShotState.Timing && State != ShotState.Pulling))
+            {
+                Debug.LogWarning(
+                    $"[ShotController] CommitExternal ignored — externalDrag={_externalDragActive} state={State}. " +
+                    "A scheme driver must BeginExternalDrag and reach Pulling/Timing first.");
+                return;
+            }
+
+            State = ShotState.Flicking;
+            _externalDragActive = false;
+
+            // Same one-marker-per-mapped-shot rule as CommitFlick, and for the same reason.
+            MapTargetCarryM = -1f;
+
+            // Order 350: SFX first, before any of the resolve maths — as in CommitFlick.
+            PublishShotSfx();
+
+            float finetune = DebugFlags.DisableConeFineTune ? 0f : i.AimOffset01;
+            float errorYaw = DebugFlags.ForcePerfectAim    ? 0f : i.ErrorYawRad;
+            float aimYaw   = AimYawFor(finetune) + errorYaw;
+
+            LastShotWasClean = !IsPutt && Mathf.Approximately(errorYaw, 0f);
+
+            float timingMul = DebugFlags.ForcePerfectTiming ? 1f : i.TimingMul;
+
+            float mag = i.PowerNormalized;
+            if (IsPutt || DebugFlags.DisableOverpower) mag = Mathf.Min(mag, 1f);
+            mag *= timingMul;
+
+            Vector2 spinInput     = IsPutt ? Vector2.zero : PendingSpinInput;
+            float   fadeDrawInput = IsPutt ? 0f : i.FadeDraw01;
+            float   fadeDrawTilt  = IsPutt ? 0f : _config.FadeDrawMaxTiltRad;
+
+            ResolveAndPublish(mag, aimYaw, timingMul, i.Timing01,
+                              spinInput, fadeDrawInput, fadeDrawTilt);
+        }
+
+        /// <summary>
+        /// The scheme-agnostic tail of every shot: latch the telemetry snapshots, build the
+        /// <c>ShotInput</c> and raise <see cref="OnShotResolved"/>. Physics, telemetry, SFX
+        /// consumers, the tournament <c>ShotCommand</c> and stamina all hang off this one call,
+        /// so a new control scheme adds a driver and changes NOTHING below this line.
+        /// </summary>
+        private void ResolveAndPublish(float flickMag, float aimYawRad, float timingMul, float timing01,
+                                       Vector2 spinInput, float fadeDrawInput, float fadeDrawMaxTiltRad)
+        {
+            _aimYawRadians     = aimYawRad;
+            LastTimingPowerMul = timingMul;
+            // Snapshot for telemetry: _timingAtLatch dies with ResetSwingSamples at CompleteShot.
+            LastCommittedTiming01 = timing01;
 
             // Putt mode: pass PuttBaseVelocityMps as explicit override so ControlsConfig
             // drives the velocity, not whatever is in the StatBundle.
             fp baseVelOverride = IsPutt ? fp.FromFloat(_config.PuttBaseVelocityMps) : fp.Zero;
 
             var bundle = GetStatBundle();
-#if UNITY_EDITOR
-            if (LogResolution)
-            {
-                string clubVel    = bundle.Club.HasValue   ? bundle.Club.Value.BaseVelocityMps.ToFloat().ToString("F2")   : "n/a";
-                string putterVel  = bundle.Putter.HasValue ? bundle.Putter.Value.BaseVelocityMps.ToFloat().ToString("F2") : "n/a";
-                UnityEngine.Debug.Log(
-                    $"[CommitFlick] IsPutt={IsPutt} bundle.IsPutt={bundle.IsPutt} " +
-                    $"bundle.Club.HasValue={bundle.Club.HasValue} clubVel={clubVel}m/s " +
-                    $"bundle.Putter.HasValue={bundle.Putter.HasValue} putterVel={putterVel}m/s " +
-                    $"PowerNormalized={PowerNormalized:F3} flickMag={flickMag:F3} " +
-                    $"PuttBaseVelocityMps={_config.PuttBaseVelocityMps:F2} " +
-                    $"baseVelOverride={baseVelOverride.ToFloat():F2}m/s " +
-                    $"halfCone={HalfConeAngleRad() * Mathf.Rad2Deg:F1}deg finetune={finetune:F3} " +
-                    $"timing01={_timingAtLatch:F2} timingMul={timingMul:F2} " +
-                    $"aimYawRadians={_aimYawRadians:F3}rad");
-            }
-#endif
-            // Spin input: read PendingSpinInput (set by HUD layer before CommitFlick).
-            // Putts always use zero spin (design lock §Out of scope).
-            Vector2 spinInput = IsPutt ? Vector2.zero : PendingSpinInput;
+
             fp spinInputX   = fp.FromFloat(spinInput.x);
             fp spinInputY   = fp.FromFloat(spinInput.y);
             fp spinMagSlope = fp.FromFloat(_config.SpinMagScaleSlope);
             fp spinTiltRad  = fp.FromFloat(_config.SpinMaxTiltRad);
 
-            // Phase B (fade_draw_core_wiring Order 356):
-            // FadeDraw armed + not putt: finetune (re-centered after arm) drives fade/draw curve.
-            // Straight mode or putt: fadeDrawInput = 0 (no curve).
-            fp fadeDrawInputFp    = fp.Zero;
-            fp fadeDrawMaxTiltFp  = fp.Zero;
-            if (!IsPutt && FadeDrawActive)
-            {
-                fadeDrawInputFp   = fp.FromFloat(finetune);
-                fadeDrawMaxTiltFp = fp.FromFloat(_config.FadeDrawMaxTiltRad);
-            }
+            fp fadeDrawInputFp   = fp.FromFloat(fadeDrawInput);
+            fp fadeDrawMaxTiltFp = fp.FromFloat(fadeDrawMaxTiltRad);
 
             var (input, ballMods) = ShotInputBuilder.Build(
                 bundle,

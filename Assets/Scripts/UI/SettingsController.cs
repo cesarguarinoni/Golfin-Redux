@@ -24,6 +24,7 @@ namespace Golfin.UI
         public SettingsMenuItem userProfileItem;
         public SettingsMenuItem soundSettingsItem;
         public SettingsMenuItem graphicsItem;
+        public SettingsMenuItem controlsItem;
         public SettingsMenuItem languageItem;
         public SettingsMenuItem aboutItem;
 
@@ -38,6 +39,7 @@ namespace Golfin.UI
         public UserProfileSubmenu userProfileSubmenu;
         public SoundSettingsSubmenu soundSettingsSubmenu;
         public GraphicsSubmenu graphicsSubmenu;
+        public ControlsSubmenu controlsSubmenu;
         public LanguageSubmenu languageSubmenu;
         public AboutSubmenu aboutSubmenu;
         
@@ -86,8 +88,11 @@ namespace Golfin.UI
 
             HideSettingsRow(graphicsItem);
             HideSettingsRow(soundSettingsItem);
+            // Controls joins them for the same reason: it only ever describes the shot pipeline,
+            // and the shell ships no hole to take a shot on.
+            HideSettingsRow(controlsItem);
 
-            Debug.Log("[SettingsController] standalone shell layout — Graphics and Sound rows hidden.");
+            Debug.Log("[SettingsController] standalone shell layout — Graphics, Sound and Controls rows hidden.");
         }
 
         /// <summary>Take one row out of the accordion group and off the screen. Null-safe.</summary>
@@ -119,6 +124,7 @@ namespace Golfin.UI
             RegisterAccordionItem(userProfileItem);
             RegisterAccordionItem(soundSettingsItem);
             RegisterAccordionItem(graphicsItem);
+            RegisterAccordionItem(controlsItem);
             RegisterAccordionItem(languageItem);
             RegisterAccordionItem(aboutItem);
 

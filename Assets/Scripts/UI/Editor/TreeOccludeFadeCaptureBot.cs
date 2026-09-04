@@ -342,7 +342,11 @@ namespace Golfin.EditorTools
                 yield break;
             }
 
-            var begin = shotType.GetMethod("BeginExternalDrag", BindingFlags.Public | BindingFlags.Instance);
+            // Type.EmptyTypes, not a bare name lookup: BeginExternalDrag is overloaded
+            // (control_scheme_seam added BeginExternalDrag(bool ownsTiming)), and a bare
+            // lookup throws AmbiguousMatchException. This bot wants the zero-arg flick entry.
+            var begin = shotType.GetMethod("BeginExternalDrag", BindingFlags.Public | BindingFlags.Instance,
+                                           null, Type.EmptyTypes, null);
             var setP  = shotType.GetMethod("SetExternalPower",  BindingFlags.Public | BindingFlags.Instance);
             var end   = shotType.GetMethod("EndExternalDrag",   BindingFlags.Public | BindingFlags.Instance);
 

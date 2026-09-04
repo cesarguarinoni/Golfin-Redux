@@ -319,13 +319,18 @@ namespace Golfin.EditorTools
 
             var shot = GameSession.ShotHistory[GameSession.ShotHistory.Count - 1];
             var payload = new Dictionary<string, object>();
-            GameSession.AppendShotTimingKeys(payload, shot);
+            // Same call TelemetryHooks makes, scheme included (control_scheme_seam §3.5) — this
+            // tool exists to prove the SHIPPING payload on a real hole, so it must not build a
+            // simpler one than production does.
+            GameSession.AppendShotTimingKeys(payload, shot,
+                (int)Golfin.Gameplay.UI.Controls.ControlSchemeService.Current);
             Note($"{tag}_record", $"club={shot.ClubLabel} terminal={shot.TerminalState} " +
                                   $"dist={shot.DistanceXZMeters:F1}m Timing01={shot.Timing01:F3} " +
                                   $"TimingPowerMul={shot.TimingPowerMul:F3}");
             Note($"{tag}_payload", $"timing01={(payload["timing01"] ?? "null")} " +
                                    $"timing_mul={payload["timing_mul"]} " +
-                                   $"timing_band={(payload["timing_band"] ?? "null")}");
+                                   $"timing_band={(payload["timing_band"] ?? "null")} " +
+                                   $"scheme={payload["scheme"]}");
         }
 
         /// <summary>

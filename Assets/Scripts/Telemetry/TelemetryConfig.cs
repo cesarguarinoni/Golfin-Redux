@@ -63,6 +63,19 @@ namespace Golfin.Telemetry
         public const string LevelUp        = "level_up";
 
         /// <summary>
+        /// The player switched shot-control scheme (control_scheme_seam §3.5).
+        /// Payload: <c>from</c>, <c>to</c> (ControlScheme ints) and <c>where</c>
+        /// ("settings" | "ingame").
+        ///
+        /// <para>It exists because the four schemes are being A/B'd and the interesting
+        /// question is not only which one wins on strokes, but whether players find the switch
+        /// at all — and, if they do, whether they change it in the menu before a round or bail
+        /// out of one mid-hole. A high "ingame" count on one scheme is a rejection signal that
+        /// strokes-per-hole alone would not show.</para>
+        /// </summary>
+        public const string ControlsSchemeChanged = "controls_scheme_changed";
+
+        /// <summary>
         /// The Home "NEW DAILY MISSION!" pill was tapped (daily_mission_home_pill §2).
         ///
         /// It exists to answer whether the Home surface is what actually drives daily

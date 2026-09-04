@@ -236,6 +236,21 @@ MonoBehaviour:
   - key: SETTINGS_QUALITY_HIGH
     english: High
     japanese: "\u9AD8"
+  - key: SETTINGS_CONTROLS
+    english: Controls
+    japanese: "\u64CD\u4F5C\u65B9\u6CD5"
+  - key: SETTINGS_CONTROLS_FLICK
+    english: Flick
+    japanese: "\u30D5\u30EA\u30C3\u30AF"
+  - key: SETTINGS_CONTROLS_PENDULUM
+    english: Pendulum
+    japanese: "\u632F\u308A\u5B50"
+  - key: SETTINGS_CONTROLS_TAPTIMING
+    english: Tap Timing
+    japanese: "\u30BF\u30C3\u30D7\u30BF\u30A4\u30DF\u30F3\u30B0"
+  - key: SETTINGS_CONTROLS_FREESWING
+    english: Free Swing
+    japanese: "\u30D5\u30EA\u30FC\u30B9\u30A4\u30F3\u30B0"
   - key: SETTINGS_LANG
     english: Language
     japanese: "\u8A00\u8A9E"
