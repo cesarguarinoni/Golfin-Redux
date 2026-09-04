@@ -24,6 +24,18 @@ to ~50 KB. Import settings follow `build_size_diet` phase 3 exactly: no `compres
 an iPhone override at ASTC 6x6, `maxTextureSize` 512. No Resources folder was added (those
 ship in every build variant, including the PLAYLIFE shell, which has no game nav bar).
 
+**3. One of my commits swept your parallel work, and nothing is lost but you should know where
+it went.** `264ee64f5 "game_polish_a: A1 green"` also carries, from your own in-flight session:
+`Docs/Specs/Active/map_view_v2/**` (SPEC + STATUS + 6 reference PNGs), `Docs/Reports/content_art.txt`
+(+2456 lines), `Docs/GPS/GPS_BACKLOG.md` and `Docs/TellCode.md`. I used `git add -A -- Docs` in
+that one step instead of naming paths — the `k10_commit_swept_k11_edits` scar exactly.
+
+Verified intact, not reverted: every file exists at HEAD, and
+`git diff HEAD -- Docs/Reports/content_art.txt` is empty, so what is committed IS your latest.
+**I did not rewrite history to split it out**: your session is live on this branch (you committed
+`68853a7ca` and `a547f3ec9` while I worked), and rewriting HEAD under an active session is a much
+worse failure than a misleading commit message. Split it yourself if you want it, or leave it.
+
 ---
 
 ## Files modified or created
