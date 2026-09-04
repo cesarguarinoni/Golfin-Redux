@@ -231,9 +231,11 @@ namespace Golfin.UI.Polish.Tests
         {
             foreach (string id in Pushable)
             {
-                object map = T.GetMethod("LayerMap")!.Invoke(null, new[] { Id(id) })!;
-                object val = map.GetType().GetProperty("Value")!.GetValue(map)!;
-                var chrome = (string[])val.GetType().GetField("Chrome")!.GetValue(val)!;
+                // LayerMap returns Layers?, but BOXING a Nullable<T> yields the underlying T (or
+                // null) — there is no boxed Nullable to ask for .Value, which is what the first
+                // version of this test did and why it threw an NRE rather than failing an assert.
+                object val = T.GetMethod("LayerMap")!.Invoke(null, new[] { Id(id) })!;
+                var chrome  = (string[])val.GetType().GetField("Chrome")!.GetValue(val)!;
                 var content = (string[])val.GetType().GetField("Content")!.GetValue(val)!;
 
                 Assert.IsNotEmpty(chrome,  id + " needs at least one chrome layer");

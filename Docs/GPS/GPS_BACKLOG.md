@@ -2,7 +2,7 @@
 
 > Everything consciously left OUT of the 2026-09 GPS build, in one place, with where it was
 > deferred and what it needs. Maintained by the Architect — every future GPS spec that defers
-> something adds a row here in the same session. Last updated: 2026-09-03 (gps_checkin DONE).
+> something adds a row here in the same session. Last updated: 2026-09-04 (map_view_v2 deferrals added).
 
 ## Player-visible promises (highest priority — the UI already implies them)
 
@@ -70,6 +70,15 @@
 | Standalone still ships the nine `Assets/Skybox/*.hdr` (8.4 MB) although ShellScene uses `Default-Skybox`, plus `Fonts/NotoSansJP-VariableFont_wght.ttf` (8.7 MB, dynamic TMP atlas) and 12 × 920 KB `Resources/Characters/Homescreen/*.png` (all selectable on the Avatar screen — legitimate) | `gps_standalone_shell` round 2 report (2026-09-04) | Chase the skybox reference; the font is `build_size_diet` Phase 4 and lands in the shell for free |
 | `testflight_build_standalone` uploads but the build is not offered to In-House Testers automatically on the GOLFIN GPS record (Cesar adds it by hand each time); the Fastfile comment assumes internal groups auto-distribute | Cesar 2026-09-04 | Fix = the group's "Enable automatic distribution" toggle in ASC (per record), or `groups:` + a processing wait in the lane |
 | `Golfin.ipa` FILE under 350 MB: only reachable by not packing `Symbols/` into the .ipa (they zip to 127 MB; the dSYM zip already sits beside the .ipa in `Builds/ipa/`) — a fastlane/Xcode export option, not an asset change. Also parked: switching the iOS lane to `CompressWithLz4HC` if `build_size_diet` Phase 0b's numbers justify it (Cesar's call from the measurement). | `build_size_diet` (Architect 2026-09-04) | Export-option change in `Tools/testflight.sh` / fastlane; verify crash symbolication still works via the separate dSYM upload |
+
+## Map view (game side) — deferred in `map_view_v2` (2026-09-04)
+
+| Item | Deferred in | Notes |
+|---|---|---|
+| Wind ruler on the landing target (concentric rings = 1–2 mph each, Golf Clash / Golf Rival pattern) | `map_view_v2` | Wind is not shown on the map at all today; needs the wind vector exposed to `MapViewController` and a ring-spacing rule. Cesar left it out of B1 on purpose — ask before adding |
+| Final SHOT VIEW icon art | `map_view_v2` | Placeholder camera glyph ships (`Assets/Resources/UI/Icon - ShotView.png`); Robin's icon drops into the same slot, zero code |
+| Distance rings 80/120 + labels | `map_view_v2` (kept commented out since iter-28) | Delete or revive; B1 only uses the r100 landing ring |
+| Hazard / OB markers on the map | competitor sweep 2026-09-04 (Golf Clash red signs) | Nothing designed; would need OB-mask → marker placement |
 
 ## How this file is used
 When a spec defers something: add the row in the same session (Architect). When an item is taken up: move its row into the new spec's Goal and delete it here. Cesar prunes anything he decides is never-do.

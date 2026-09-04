@@ -330,34 +330,53 @@ namespace Golfin.UI.Polish.EditorTools
             yield return Arrive(target, 1.3f);
         }
 
+        /// <summary>
+        /// The card is chosen by its CSV ROUTE, never by trying cards in turn: the 1v1 card's
+        /// PLAY opens matchmaking and starts a REAL HOLE, which unloads ShellScene underneath the
+        /// take. See GamePolishProbe.ModeCardPlay for the full scar.
+        /// </summary>
         IEnumerator ModeCard(ScreenId target)
         {
+            string want = target == ScreenId.HoleSelection
+                ? GolfinRedux.UI.ModeSelect.ModeSelectScreenController.TargetHoleSelect
+                : GolfinRedux.UI.ModeSelect.ModeSelectScreenController.TargetMissionSelect;
+
             GameObject? go = Obj(ScreenId.ModeSelection);
             var sr = go != null ? go.GetComponentInChildren<ScrollRect>(true) : null;
             Transform? content = sr != null ? sr.content : null;
             if (content == null) { Line("WARN no mode cards"); yield break; }
 
+            Transform? chosen = null;
             for (int i = 0; i < content.childCount; i++)
             {
-                yield return Ensure(ScreenId.ModeSelection);
-                content = sr!.content;
-                if (i >= content.childCount) break;
                 Transform card = content.GetChild(i);
                 if (!card.gameObject.activeInHierarchy) continue;
-
-                var tap = card.Find("CardTapButton")?.GetComponent<Button>() ?? card.GetComponent<Button>();
-                if (tap != null && tap.interactable) tap.onClick.Invoke();
-                yield return new WaitForSecondsRealtime(0.7f);
-
-                var play = card.Find("ExpandedContainer/ActionButton")?.GetComponent<Button>();
-                if (play == null || !play.gameObject.activeInHierarchy || !play.interactable) continue;
-
-                Line("tap mode card '" + card.name + "' PLAY -> ?");
-                play.onClick.Invoke();
-                yield return new WaitForSecondsRealtime(1.5f);
-                if (ScreenManager.Instance!.CurrentScreen == target) { yield return Arrive(target, 1.2f); yield break; }
+                var ctrl = card.GetComponent<GolfinRedux.UI.ModeSelect.ModeCardController>();
+                if (ctrl == null || string.IsNullOrEmpty(ctrl.ModeId)) continue;
+                var db = GolfinRedux.UI.ModeSelect.ModesDatabaseCSV.Instance;
+                var mode = db != null ? db.GetMode(ctrl.ModeId) : null;
+                if (mode != null && mode.target == want) { chosen = card; break; }
             }
-            Line("WARN no card routed to " + target);
+            if (chosen == null) { Line("WARN no card routes to '" + want + "'"); yield break; }
+
+            // Expand only if it is not already expanded — HandleCardTapped toggles, so an
+            // unconditional tap CLOSES the card we just chose (the practice card opens by default).
+            var chosenCtrl = chosen.GetComponent<GolfinRedux.UI.ModeSelect.ModeCardController>();
+            if (chosenCtrl != null &&
+                chosenCtrl.State != GolfinRedux.UI.ModeSelect.ModeCardState.Expanded)
+            {
+                var tap = chosen.Find("CardTapButton")?.GetComponent<Button>() ?? chosen.GetComponent<Button>();
+                if (tap != null && tap.interactable) tap.onClick.Invoke();
+                yield return new WaitForSecondsRealtime(0.9f);
+            }
+
+            var play = chosen.Find("ExpandedContainer/ActionButton")?.GetComponent<Button>();
+            if (play == null || !play.gameObject.activeInHierarchy || !play.interactable)
+            { Line("WARN chosen card has no active ActionButton"); yield break; }
+
+            Line("tap mode card '" + chosen.name + "' PLAY -> " + target);
+            play.onClick.Invoke();
+            yield return Arrive(target, 1.3f);
         }
 
         IEnumerator InventoryTab(int index)

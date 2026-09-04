@@ -170,6 +170,41 @@
 
 ## 📋 SPEC_READY POINTERS
 
+- **`map_view_v2`: SPEC_READY (2026-09-04, Cesar picked Figma concept B1 — "we have a winner").** `Docs/Specs/Active/map_view_v2/SPEC.md` — presentation rebuild of the overhead map (`MapViewController`): flat constant-width DOTTED aim line with 50-yd ticks (no arc bow), lime RANGE FAN ±11° around the aim with the edge at max reach = 1.2 × club carry (the overpower ceiling) + dashed nominal-carry arc, landing zone = lime glow + restored white r100 ring + crosshair, HUD-chip TARGET READOUT ("195 yd / to pin 123 yd"), the in-game `HoleIndicator` chip AT the pin, and the bottom corners = new SHOT VIEW Select Button (bottom-left, `GolfinButton` slot, prefab outline) + the DriverButton keeping "DRIVER / carry" (no more SHOOT label swap). Explicit OVER-RANGE state: red segment past the fan edge, red edge, white dashed ghost ring at `P_max` ("lands here"), red-header chip "OUT OF RANGE", DriverButton at 50 %. Aiming maths, `MapTargetCarryM`, camera, strict-crop, gestures untouched. 4 CSV strings (EN+JA) via the importer. 4 EditMode tests on the new pure-math seams. Figma: file `5gEAHjl6xAtW8iYY7NMvWd` page "Map View Redesign — Proposals" nodes `14123:32469` / `14125:32540`; renders in `reference/`.
+
+### Kickoff · map_view_v2 (issued 2026-09-04)
+
+```
+Read Docs/Specs/Active/map_view_v2/SPEC.md and implement it.
+
+Context:
+- Visual rebuild of the overhead map view to Figma concept B1 (reference/B1_aiming.png,
+  B1_over_range.png). Everything lives in MapViewController.cs + ClubButtonWidget +
+  HoleIndicatorWidget (Assets/Scripts/Gameplay/UI/ShotUI) and one LabScaffold edit
+  (MapShotViewButton = duplicate of DriverButton in the GolfinButton slot).
+- Max reach = 1.2 x club carry (ShotController's overpower ceiling). The placed target
+  stays FREE/unclamped and MapTargetCarryM write-back is untouched — the over-range
+  state only DRAWS the clamp (ghost ring at P_max), it never applies it.
+- Minimal diff. Reuse: the iter-28 commented-out BuildConformingRingGO/UpdateConformingRing
+  path (extend it with start/end angles for the fan), BuildIndicatorPart for ticks/
+  crosshair, HoleIndicator prefab visuals for the pin chip, WindIndicator look for the
+  readout chip, the In-Game Select Button prefab for SHOT VIEW. New serialized fields:
+  _shotViewButton, _guideDotWorldWidth, _rangeFanHalfAngleDeg.
+- Strings: GAMEPLAY_SHOT_VIEW, MAPVIEW_TO_PIN, MAPVIEW_OUT_OF_RANGE, MAPVIEW_MAX_HINT —
+  LocalizationText.csv EN+JA -> import_content.py --catalogs texts (plan, apply) ->
+  publish -> export_content.py --check clean. Never code-only.
+- Out of scope: wind rings, aiming maths/camera/crop/gesture changes, rings 80/120,
+  final SHOT VIEW icon art (placeholder in reference/Icon - ShotView.png ships).
+
+When done: list changed files with a 1-line summary each, run the acceptance
+tests in the spec (EditMode count quoted, importer --check quoted, hardcoded-.text
+grep quoted), attach the MapViewCaptureDriver crops for aiming / over-range /
+back-in-range on Hole 01 + Hole 08, flag which checks need manual on-device
+verification, update STATUS.md + IMPLEMENTER_REPORT.md in the spec folder, and update
+Docs/AI_CONTEXT.md.
+```
+
+
 - **`demo_build_removal`: QUICK, ready (2026-09-04, Cesar: "scrub its existence forever").** `Docs/Specs/Quick/demo_build_removal.md` — delete the `GOLFIN_DEMO` slice: iOS-Demo/Android-Demo profiles, `DemoBuild`/`DemoSceneProcessor`/`DemoShowcaseRecorder`, `Assets/Scripts/Demo/`, `demo_config.csv`, `build-demo.sh`, `DEMO_BUILD_PLAN.md`, and ~25 `DemoGate.IsDemo` branches unwound to their (already shipping) non-demo path. Gate: repo-wide grep empty, EditMode same count minus the deleted demo test, both lanes compile, no scene re-serialized. `*DemoRecorder.cs` and vendor `Demo/` folders are NOT the demo build — untouched.
 
 ### Kickoff · demo_build_removal (issued 2026-09-04 — Quick)

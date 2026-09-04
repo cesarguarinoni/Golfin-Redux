@@ -33,15 +33,30 @@ namespace Golfin.UI.Polish.EditorTools
         const string ReportPath = "Docs/Diagnostics/_capture/game_polish_a_tests.txt";
 
         [MenuItem("GOLFIN/Game Polish/Run EditMode sweep -> report file", priority = 266)]
-        public static void Run()
+        public static void Run() => Run(null);
+
+        /// <summary>
+        /// The Polish assembly on its own — seconds rather than the twenty minutes the full sweep
+        /// takes, because that sweep also loads every real hole. Used to re-confirm THIS task's
+        /// two suites after a fix without re-running the terrain tests that have nothing to do
+        /// with it. The full sweep is still what A12 quotes.
+        /// </summary>
+        [MenuItem("GOLFIN/Game Polish/Run the Polish suites only -> report file", priority = 267)]
+        public static void RunPolishOnly() => Run("Golfin.UI.Polish.Tests");
+
+        public static void Run(string? assembly)
         {
             Directory.CreateDirectory(Path.GetDirectoryName(ReportPath)!);
-            File.WriteAllText(ReportPath, "RUN REQUESTED " + System.DateTime.Now.ToString("u") + "\n");
+            File.WriteAllText(ReportPath, "RUN REQUESTED " + System.DateTime.Now.ToString("u") +
+                                          (assembly == null ? " (full EditMode)" : " (" + assembly + ")") + "\n");
+
+            var filter = new Filter { testMode = TestMode.EditMode };
+            if (assembly != null) filter.assemblyNames = new[] { assembly };
 
             var api = ScriptableObject.CreateInstance<TestRunnerApi>();
             api.RegisterCallbacks(new Callbacks());
-            api.Execute(new ExecutionSettings(new Filter { testMode = TestMode.EditMode }));
-            Debug.Log("[GamePolishTests] EditMode sweep requested -> " + ReportPath);
+            api.Execute(new ExecutionSettings(filter));
+            Debug.Log("[GamePolishTests] sweep requested -> " + ReportPath);
         }
 
         /// <summary>

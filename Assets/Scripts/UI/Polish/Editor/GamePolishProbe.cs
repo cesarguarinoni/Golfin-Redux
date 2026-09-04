@@ -135,6 +135,8 @@ namespace Golfin.UI.Polish.EditorTools
             public float  EndTargetContentAlpha = 1f, EndLeaverContentAlpha = 1f;
             public bool   EndBlocksRaycasts;
             public bool   Completed;
+            /// <summary>The Editor rendered too few frames for the duration to mean anything.</summary>
+            public bool   FrameStarved;
             public int    Frames;
             public int    ApplyScreenCalls;                // the ScreenChanged event count
             public readonly List<string> Fails = new List<string>();
@@ -314,6 +316,17 @@ namespace Golfin.UI.Polish.EditorTools
 
             IEnumerator Route()
             {
+                // A1 FIRST, CAPTURES SECOND, and the order is a scar. The screen tour visits
+                // fourteen screens through real widgets, and any ONE of them can end the play
+                // session — the 1v1 mode card starts a real hole and unloads ShellScene; the
+                // tournament screen waits on the server. Three runs died partway through the tour
+                // and the sweep, which is the actual GATE, never executed at all. The sweep is
+                // deterministic, needs nothing but ScreenManager, and takes seconds; it now runs
+                // while the session is certain to be alive, and the tour that follows is best
+                // effort for the stills.
+                if (_mode == "push" || _mode == "perf") yield return PushSweep();
+
+                yield return Ensure(ScreenId.Home);
                 yield return Shot("home");
 
                 // ── PLAY pillar ──────────────────────────────────────────────
@@ -382,8 +395,6 @@ namespace Golfin.UI.Polish.EditorTools
                 yield return NavSlot("NavHomeButton", ScreenId.Home, "bottom-nav HOME");
                 yield return Shot("home_return");
 
-                // ── A1's remaining coverage ──────────────────────────────────
-                if (_mode == "push" || _mode == "perf") yield return PushSweep();
             }
 
             /// <summary>
@@ -423,6 +434,11 @@ namespace Golfin.UI.Polish.EditorTools
                             yield return SweepOne(a, b, forward: true);
                             yield return SweepOne(b, a, forward: false);
                         }
+
+                // Written HERE as well as at the end of Run(): the gate must survive a capture
+                // tour that dies, which is exactly what kept happening.
+                WriteJson();
+                Line("--- push sweep complete (" + _records.Count + " pairs measured) ---");
             }
 
             IEnumerator SweepOne(ScreenId from, ScreenId to, bool forward)
@@ -470,72 +486,74 @@ namespace Golfin.UI.Polish.EditorTools
 
             /// <summary>
             /// The mode cards are spawned at runtime by ModeSelectScreenController, so they are
-            /// found by walking the live ScrollRect content rather than by a serialized path. The
-            /// player's sequence is TAP THE CARD (it expands, revealing ExpandedContainer) then
-            /// TAP THE ACTION BUTTON — HandlePlayClicked is the only thing that navigates — and
-            /// that is exactly what this does.
+            /// found by walking the live ScrollRect content. The player's sequence is TAP THE CARD
+            /// (it expands, revealing ExpandedContainer) then TAP THE ACTION BUTTON — and that is
+            /// exactly what this does.
             ///
-            /// <para>Which card carries which route is CSV data (ModesDatabaseCSV `target`), not
-            /// something a name can be trusted for, so the cards are tried in order and the one
-            /// that actually lands on <paramref name="target"/> wins. A card that routes somewhere
-            /// else is not a failure — the run walks back and tries the next one.</para>
+            /// <para>WHICH card is chosen by its CSV ROUTE, not by trying them in turn, and that
+            /// is a scar rather than tidiness. The 1v1 card's PLAY opens the matchmaking modal,
+            /// which starts a real hole: the run then went ModeSelection -> Loading ->
+            /// GameplayScene, ShellScene was unloaded underneath the probe, ScreenManager.Instance
+            /// became null and the whole route died mid-pass with no error — twice. Reading
+            /// <c>ModeCardController.ModeId</c> and asking <c>ModesDatabaseCSV</c> for that mode's
+            /// <c>target</c> means only the card that goes where we are going is ever tapped.</para>
             /// </summary>
             IEnumerator ModeCardPlay(ScreenId target, string what)
             {
+                string wantTarget = target == ScreenId.HoleSelection
+                    ? GolfinRedux.UI.ModeSelect.ModeSelectScreenController.TargetHoleSelect
+                    : target == ScreenId.MissionSelection
+                        ? GolfinRedux.UI.ModeSelect.ModeSelectScreenController.TargetMissionSelect
+                        : GolfinRedux.UI.ModeSelect.ModeSelectScreenController.TargetTournaments;
+
+                yield return Ensure(ScreenId.ModeSelection);
                 Transform? content = ModeCardsContent();
                 if (content == null) { Line("WARN: " + what + " — no mode-card content"); yield break; }
 
-                int n = content.childCount;
-                for (int i = 0; i < n; i++)
+                Transform? chosen = null;
+                for (int i = 0; i < content.childCount; i++)
                 {
-                    yield return Ensure(ScreenId.ModeSelection);
-                    content = ModeCardsContent();
-                    if (content == null || i >= content.childCount) break;
-
                     Transform card = content.GetChild(i);
                     if (!card.gameObject.activeInHierarchy) continue;
+                    var ctrl = card.GetComponent<GolfinRedux.UI.ModeSelect.ModeCardController>();
+                    if (ctrl == null || string.IsNullOrEmpty(ctrl.ModeId)) continue;
+                    var db = GolfinRedux.UI.ModeSelect.ModesDatabaseCSV.Instance;
+                    var mode = db != null ? db.GetMode(ctrl.ModeId) : null;
+                    string route = mode != null ? mode.target : "?";
+                    Line("  card '" + card.name + "' mode='" + ctrl.ModeId + "' route='" + route + "'");
+                    if (route == wantTarget) { chosen = card; break; }
+                }
+                if (chosen == null) { Line("WARN: " + what + " — no card routes to '" + wantTarget + "'"); yield break; }
 
-                    // 1. expand the card (the real CardTapButton)
-                    var tap = card.Find("CardTapButton")?.GetComponent<Button>()
-                              ?? card.GetComponent<Button>();
+                // EXPAND ONLY IF IT IS NOT ALREADY EXPANDED. HandleCardTapped TOGGLES, so tapping
+                // a card that is already open COLLAPSES it and takes ExpandedContainer — and with
+                // it the ActionButton — out of the hierarchy. The practice card is open by
+                // default on this screen, so the unconditional tap closed the very card we had
+                // just chosen.
+                var chosenCtrl = chosen.GetComponent<GolfinRedux.UI.ModeSelect.ModeCardController>();
+                if (chosenCtrl != null &&
+                    chosenCtrl.State != GolfinRedux.UI.ModeSelect.ModeCardState.Expanded)
+                {
+                    var tap = chosen.Find("CardTapButton")?.GetComponent<Button>() ?? chosen.GetComponent<Button>();
                     if (tap != null && tap.interactable) tap.onClick.Invoke();
                     yield return new WaitForSecondsRealtime(0.8f);
-
-                    // 2. the real PLAY affordance — ModeCard.prefab names it ActionButton and
-                    //    parks it under ExpandedContainer, which only exists once expanded.
-                    var play = card.Find("ExpandedContainer/ActionButton")?.GetComponent<Button>();
-                    if (play == null || !play.gameObject.activeInHierarchy || !play.interactable)
-                    {
-                        Line("  card '" + card.name + "': no active ActionButton (locked or collapsed) — next");
-                        continue;
-                    }
-
-                    ScreenId from = ScreenManager.Instance!.CurrentScreen;
-                    // A card can route anywhere, so whether this is a push is decided against the
-                    // TARGET we are hoping for — and Measure only runs if the tween really starts.
-                    bool expectPush = UiMotion.Enabled &&
-                                      LayeredPush.CanPush(from, target, Obj(from), Obj(target));
-                    Line("tapping " + what + " on card '" + card.name + "' via the real '" +
-                         play.name + "' " + from + " -> ?" + (expectPush ? "  [PUSH expected]" : "  [fade]"));
-                    _screenChanged = 0;
-                    play.onClick.Invoke();
-
-                    if (expectPush && LayeredPush.IsPushing)
-                        yield return Measure(from, target, what + " (card '" + play.name + "')", realWidget: true);
-
-                    // The boundary fade is 0.5 s out + 0.5 s in; give it room, then read where we
-                    // actually landed rather than assuming.
-                    yield return new WaitForSecondsRealtime(1.6f);
-                    ScreenId now = ScreenManager.Instance!.CurrentScreen;
-                    if (now == target)
-                    {
-                        Line("  -> landed on " + target + " (real card route)");
-                        yield return Arrive(target, 2f);
-                        yield break;
-                    }
-                    Line("  -> card '" + card.name + "' routed to " + now + ", not " + target + "; next card");
                 }
-                Line("WARN: " + what + " — no card routed to " + target);
+                Line("  card state = " + (chosenCtrl != null ? chosenCtrl.State.ToString() : "?"));
+
+                var play = chosen.Find("ExpandedContainer/ActionButton")?.GetComponent<Button>();
+                if (play == null || !play.gameObject.activeInHierarchy || !play.interactable)
+                { Line("WARN: " + what + " — chosen card has no active ActionButton"); yield break; }
+
+                ScreenId from = ScreenManager.Instance!.CurrentScreen;
+                bool expectPush = UiMotion.Enabled &&
+                                  LayeredPush.CanPush(from, target, Obj(from), Obj(target));
+                Line("tapping " + what + " on '" + chosen.name + "' via the real '" + play.name + "' " +
+                     from + " -> " + target + (expectPush ? "  [PUSH expected]" : "  [fade]"));
+                _screenChanged = 0;
+                play.onClick.Invoke();
+
+                if (expectPush) yield return Measure(from, target, what + " (mode card ActionButton)", realWidget: true);
+                yield return Arrive(target, expectPush ? 1.5f : 2.5f);
             }
 
             static Transform? ModeCardsContent()
@@ -708,7 +726,24 @@ namespace Golfin.UI.Polish.EditorTools
 
                 // ── the assertions ──────────────────────────────────────────
                 if (!r.Completed) r.Fails.Add("push did not complete (interrupted)");
-                if (Mathf.Abs(r.MeasuredDur - r.ExpectedDur) > DurationToleranceSec)
+
+                // THE DURATION ASSERTION NEEDS FRAMES TO BE MEANINGFUL, and this is a limit of the
+                // instrument, not a relaxed gate. The tween accumulates Time.unscaledDeltaTime, so
+                // when the EDITOR stalls — and it does, hardest on the frame a screen is first
+                // activated, which runs OnEnable, the first layout and the screen's fetches — one
+                // frame can carry 0.25 s on its own and `elapsed` steps straight past PushDur.
+                // A run that rendered 2 frames in half a second has not measured a 0.25 s
+                // animation badly; it has not measured it at all. The observation is RECORDED
+                // (frames, measuredDur and frameStarved are all in the JSON) rather than scored,
+                // and every other assertion — the t0 offset, the settle, chrome alpha,
+                // blocksRaycasts, the single ApplyScreen — still applies to a starved frame and is
+                // where a real defect would show. On device this cannot arise: gps_polish's
+                // equivalent pushes ran 14-16 frames.
+                r.FrameStarved = r.Frames < 4;
+                if (r.FrameStarved)
+                    Line($"    note: {r.Frames} frame(s) in {r.MeasuredDur:0.000}s — Editor frame-starved, " +
+                         "duration NOT asserted (every other invariant still is)");
+                else if (Mathf.Abs(r.MeasuredDur - r.ExpectedDur) > DurationToleranceSec)
                     r.Fails.Add($"duration {r.MeasuredDur:0.000}s outside {r.ExpectedDur:0.000}s ±{DurationToleranceSec:0.000}");
                 if (Mathf.Abs(Mathf.Abs(r.TargetOffsetAtT0) - r.W) > 1f)
                     r.Fails.Add($"t0 offset {r.TargetOffsetAtT0:0.#} is not ±W ({r.W:0.#})");
@@ -901,7 +936,7 @@ namespace Golfin.UI.Polish.EditorTools
                     j.AppendLine("      \"endTargetContentAlpha\": " + F(r.EndTargetContentAlpha) + ", \"endLeaverContentAlpha\": " + F(r.EndLeaverContentAlpha) + ",");
                     j.AppendLine("      \"chromeAlphaMinOverRun\": " + F(r.ChromeAlphaMinOverRun) + ", \"seamWorstCover\": " + F(r.SeamWorstCover) + ",");
                     j.AppendLine("      \"blocksRaycastsRestored\": " + (r.EndBlocksRaycasts ? "true" : "false") + ",");
-                    j.AppendLine("      \"applyScreenCalls\": " + r.ApplyScreenCalls + ", \"completed\": " + (r.Completed ? "true" : "false") + ",");
+                    j.AppendLine("      \"applyScreenCalls\": " + r.ApplyScreenCalls + ", \"completed\": " + (r.Completed ? "true" : "false") + ", \"frameStarved\": " + (r.FrameStarved ? "true" : "false") + ",");
                     j.Append    ("      \"fails\": [");
                     for (int k = 0; k < r.Fails.Count; k++)
                         j.Append((k > 0 ? ", " : "") + "\"" + Esc(r.Fails[k]) + "\"");
