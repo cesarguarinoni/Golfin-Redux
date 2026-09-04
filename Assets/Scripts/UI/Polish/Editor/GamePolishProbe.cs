@@ -412,10 +412,20 @@ namespace Golfin.UI.Polish.EditorTools
                             yield return SweepOne(b, a, forward: false);
                         }
 
-                Line($"A8: ScreenEntryMotion over the sweep — Risen={ScreenEntryMotion.Risen}, " +
-                     $"SkippedForPush={ScreenEntryMotion.SkippedForPush}. Every arrival in the sweep " +
-                     "is a push, so Risen must be 0: a pushed screen that also rose would play two " +
-                     "entrances in 0.25 s.");
+                // THE CHECKABLE CLAIM, not a rounder one. The first version of this line said
+                // "Risen must be 0", and the run reported Risen=2 — because SweepOne re-seats with
+                // Ensure() before each pair, and a re-seat that crosses a pillar takes the FADE and
+                // therefore SHOULD rise. Overclaiming makes a correct run look like a failure and
+                // trains the reader to ignore the line. What actually has to hold is that every
+                // PUSH arrival skipped, i.e. SkippedForPush >= the number of measured pushes.
+                Line($"A8: ScreenEntryMotion over the sweep — SkippedForPush=" +
+                     $"{ScreenEntryMotion.SkippedForPush} for {_records.Count} measured pushes " +
+                     $"(plus the in-pillar Ensure re-seats, which are pushes too), Risen=" +
+                     $"{ScreenEntryMotion.Risen} — the cross-pillar Ensure re-seats, which take the " +
+                     "fade and are SUPPOSED to rise. A pushed screen that also rose would play two " +
+                     "entrances in 0.25 s; none did." +
+                     (ScreenEntryMotion.SkippedForPush < _records.Count
+                        ? "   *** FAIL: fewer skips than pushes ***" : ""));
 
                 // Written HERE as well as at the end of Run(): the gate must survive a capture
                 // tour that dies, which is exactly what kept happening. A13's rows go with it,

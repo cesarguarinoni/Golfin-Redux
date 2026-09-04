@@ -673,6 +673,75 @@ problem than anything this slice touches.
 
 ---
 
+## A2 · Rest parity — **PASS**
+
+Re-run with `Shot()` recording the screen it actually photographed. **16 states captured on both
+passes**, paired by *(label, real screen)* — not by screen alone, which was the mistake that made
+the first attempt meaningless.
+
+| | |
+|---|---|
+| worst difference | **1.232 %** of pixels (`home`) |
+| best | **0.000 %** (`tournamentholeselection`) |
+| eight states | 958 px = **0.032 %** |
+
+**"Live data only" is proven, not asserted.** The bounding box of the differing pixels:
+
+```
+gachahistory / gachaprizes / holeselection / settings_open /
+tournament{HoleSelection,Leaderboard,Selection}   (132, 147, 207, 174)   <- 75 x 27 px
+home / home_return                                (3,   147, 550, 892)
+inventory_tab0..3                                 (53,  147, 1170, 809)
+leaderboard                                       (132, 147, 1064, 438)
+roster                                            (81,  147, 212,  668)
+```
+
+Three things fall straight out of that, and they are the actual A2 result:
+
+- **Every bbox starts at y = 147.** Nothing above it differs — the top-bar chrome is
+  pixel-identical on every screen, on both passes.
+- **No bbox reaches the nav bar** (deepest is y = 892 of 2532). The bottom nav is pixel-identical
+  everywhere. That is A5 corroborated in pixels rather than only from inside the tween.
+- The recurring 75 x 27 box at (132, 147) is the **RP counter digits**; the wider ones add that
+  screen's own live data (the club carousel, the top-3 cards, the mission countdown).
+
+A 16 px settle error could not look like this: it would smear edges down the whole content height
+on every screen, not draw a tight box round a number.
+
+**Two "CHECK" rows in the first cut of this analysis were my comparison's fault, not the
+feature's**, and both were within one step of being reported as defects: `inventory_tab0` was being
+diffed against `inventory_tab3` (four tab states share one ScreenId, so keying on the screen alone
+paired the wrong ones — 38 %), and the plain `roster` capture against the `settings_open` one that
+had drifted to Roster, i.e. with-overlay against without (99.6 %). Keying on *(label, screen)*
+fixed both; neither was a rest-state problem.
+
+## A8 · Entry rise — **PASS**
+
+**Mid-rise frames, one per screen family** — `screenshots/a8_entry_rise_strip.png` and the six
+`a8_rise_*.png` behind it: Home, Rewards Center (Gacha), Inventory, Roster, Mode Selection (Play),
+Tournaments. Found by scanning the real clips for the brightness signature of a fade-in rather than
+by guessing a timestamp. In each, the content sits low and translucent while the chrome and the
+nav bar are already solid.
+
+`d_tabs_and_filters` yields **no** rise frames, and that is correct: it never changes screen, only
+tabs, so nothing arrives through the fade.
+
+**The push arrival does not rise — counted, not claimed:**
+
+```
+A8: SkippedForPush=94 for 84 measured pushes (plus the in-pillar Ensure re-seats,
+    which are pushes too), Risen=2 — the cross-pillar Ensure re-seats, which take
+    the fade and are SUPPOSED to rise.
+```
+
+The first version of that log line said *"Risen must be 0"* and the run reported 2 — because the
+sweep re-seats between pairs, and a re-seat that crosses a pillar fades and therefore *should*
+rise. The line now states the claim that actually holds (`SkippedForPush >= measured pushes`) and
+flags itself when it does not. An overclaim that fires on a correct run teaches the reader to skip
+the line.
+
+---
+
 ## NOT DONE this iteration — stated plainly
 
 ### A4 · The six videos — **NOT PRODUCED**
