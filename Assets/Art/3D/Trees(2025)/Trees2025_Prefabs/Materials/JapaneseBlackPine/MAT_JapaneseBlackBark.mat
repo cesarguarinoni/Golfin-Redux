@@ -115,7 +115,7 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - WindSpeedFloat1: 0.23272727
+    - WindSpeedFloat1: 0.5
     - WindTurbulence: 0.5
     - _AddPrecomputedVelocity: 0
     - _AlphaClip: 0
