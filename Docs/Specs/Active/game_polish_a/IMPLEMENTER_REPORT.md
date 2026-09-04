@@ -79,7 +79,7 @@ worse failure than a misleading commit message. Split it yourself if you want it
 | `Assets/Scripts/UI/SettingsMenuItem.cs` | §D3 submenu fade in step with the existing height tween. |
 | `Assets/Scenes/ShellScene.unity` | 13 × `ScreenEntryMotion` + the four sprite references. **263 insertions, 3 deletions, zero anchor/sizeDelta lines.** |
 | `Assets/Prefabs/UI/PersistentUI.prefab` | Sprite fields + `ButtonPressFeedback` on the five nav slots. |
-| `Assets/Art/HomeScreen/S_NavSlot{Glow,Ring}_{156,238}.png` (+ `.meta`) | The four baked sprites. |
+| `Assets/Art/HomeScreen/S_NavSlotGlow_156.png`, `S_NavSlotRing_156.png`, `S_NavSlotGlow_238.png`, `S_NavSlotRing_238.png` (+ `.meta`) | The four baked sprites. (Written out rather than brace-globbed, so every cited path resolves literally.) |
 | `Docs/Scripts/make_nav_selected.py` | **NEW.** The baker. |
 | `Docs/Scripts/cut_game_polish_clips.py` | **NEW.** The A4 clip cutter. |
 
@@ -479,71 +479,112 @@ flag, which was removed when Cesar shipped option (b); `TheOptionBFlag_IsGone` a
 `Docs/Diagnostics/_capture/game_polish_a_invariants.json`
 
 ```
-measured = 48        fail = 0        allowBackgroundCrossFade = false
-distinct ordered pairs = 24   (Play 12 + Rankings 6 + Gacha 6 — the direction table's count)
-each pair measured in BOTH directions => 48 records
-durations  0.250 – 0.267 s   (PushDur 0.250, tolerance ±0.053)
-frames     12 – 16
-chromeAlphaMinOverRun = 1 on EVERY record
-applyScreenCalls      = 1 on EVERY record
-blocksRaycastsRestored = true on EVERY record
+measured = 87        fail = 0        optionBShipped = true
+distinct ordered pairs = 40
+same-backdrop records  = 55     cross-backdrop records = 32
+driven by a REAL widget's onClick = 3   (the rest are the ordered-pair sweep)
+durations  0.250 – 0.268 s   (PushDur 0.250, tolerance ±0.053)
+frames     10 – 16          (5 frame-starved records excluded from the range and NOT scored)
+chromeAlphaMinOverRun  = 1 on every SAME-backdrop record (55)
+seamWorstCover         = 1 on every CROSS-backdrop record (32)
+applyScreenCalls       = 1 on EVERY record (87)
+blocksRaycastsRestored = true on EVERY record (87)
 ```
 
-Every assertion §D5 names, on every record: duration within ±2 frames; target content at ±W at
-t=0; both content rects at rest X and alpha 1 at completion; `blocksRaycasts` restored; chrome
-alpha 1 on every frame (the same-background path); `ApplyScreen` ran **exactly once**, at the
-end, counted from the real `ScreenManager.ScreenChanged` event rather than inferred.
+*Regenerated from the file at iteration 2. An earlier revision of this block quoted the
+pre-decision run — `measured = 48`, `allowBackgroundCrossFade = false`, 24 ordered pairs — which
+contradicted the JSON it cited on the very next line. `golfin-redteam-reviewer` caught it; see
+§ "Shape C".*
 
-| from → to | dir | W | dur (s) | frames | chrome α min | blocksRaycasts | ApplyScreen |
-|---|---|---|---|---|---|---|---|
-| `GachaHistory` → `GachaPrizes` | Back | 1170 | 0.251 | 14 | 1 | restored | 1 |
-| `GachaHistory` → `GachaPrizes` | Forward | 1170 | 0.265 | 15 | 1 | restored | 1 |
-| `GachaHistory` → `GeneralShop` | Back | 1170 | 0.265 | 14 | 1 | restored | 1 |
-| `GachaHistory` → `GeneralShop` | Forward | 1170 | 0.257 | 14 | 1 | restored | 1 |
-| `GachaPrizes` → `GachaHistory` | Back | 1170 | 1.175 * | 2 | 1 | restored | 1 |
-| `GachaPrizes` → `GachaHistory` | Forward | 1170 | 1.252 * | 2 | 1 | restored | 1 |
-| `GachaPrizes` → `GeneralShop` | Back | 1170 | 0.250 | 15 | 1 | restored | 1 |
-| `GachaPrizes` → `GeneralShop` | Forward | 1170 | 0.250 | 15 | 1 | restored | 1 |
-| `GeneralShop` → `GachaHistory` | Back | 1170 | 1.522 * | 2 | 1 | restored | 1 |
-| `GeneralShop` → `GachaHistory` | Forward | 1170 | 0.719 * | 2 | 1 | restored | 1 |
-| `GeneralShop` → `GachaPrizes` | Back | 1170 | 0.250 | 15 | 1 | restored | 1 |
-| `GeneralShop` → `GachaPrizes` | Forward | 1170 | 0.253 | 15 | 1 | restored | 1 |
-| `HoleSelection` → `MissionSelection` | Back | 1170 | 0.265 | 14 | 1 | restored | 1 |
-| `HoleSelection` → `MissionSelection` | Forward | 1170 | 0.264 | 14 | 1 | restored | 1 |
-| `HoleSelection` → `ModeSelection` | Back | 1170 | 0.252 | 15 | 1 | restored | 1 |
-| `HoleSelection` → `ModeSelection` | Forward | 1170 | 0.251 | 15 | 1 | restored | 1 |
-| `HoleSelection` → `TournamentHoleSelection` | Back | 1170 | 0.250 | 15 | 1 | restored | 1 |
-| `HoleSelection` → `TournamentHoleSelection` | Forward | 1170 | 0.251 | 15 | 1 | restored | 1 |
-| `Leaderboard` → `TournamentLeaderboard` | Back | 1170 | 0.250 | 15 | 1 | restored | 1 |
-| `Leaderboard` → `TournamentLeaderboard` | Forward | 1170 | 0.250 | 15 | 1 | restored | 1 |
-| `Leaderboard` → `TournamentSelection` | Back | 1170 | 0.250 | 15 | 1 | restored | 1 |
-| `Leaderboard` → `TournamentSelection` | Forward | 1170 | 0.251 | 15 | 1 | restored | 1 |
-| `MissionSelection` → `HoleSelection` | Back | 1170 | 0.253 | 12 | 1 | restored | 1 |
-| `MissionSelection` → `HoleSelection` | Forward | 1170 | 0.250 | 12 | 1 | restored | 1 |
-| `MissionSelection` → `ModeSelection` | Back | 1170 | 0.267 | 16 | 1 | restored | 1 |
-| `MissionSelection` → `ModeSelection` | Forward | 1170 | 0.252 | 15 | 1 | restored | 1 |
-| `MissionSelection` → `TournamentHoleSelection` | Back | 1170 | 0.267 | 16 | 1 | restored | 1 |
-| `MissionSelection` → `TournamentHoleSelection` | Forward | 1170 | 0.250 | 15 | 1 | restored | 1 |
-| `ModeSelection` → `HoleSelection` | Back | 1170 | 0.251 | 12 | 1 | restored | 1 |
-| `ModeSelection` → `HoleSelection` | Forward | 1170 | 0.259 | 12 | 1 | restored | 1 |
-| `ModeSelection` → `MissionSelection` | Back | 1170 | 0.263 | 14 | 1 | restored | 1 |
-| `ModeSelection` → `MissionSelection` | Forward | 1170 | 0.255 | 13 | 1 | restored | 1 |
-| `ModeSelection` → `TournamentHoleSelection` | Back | 1170 | 0.250 | 15 | 1 | restored | 1 |
-| `ModeSelection` → `TournamentHoleSelection` | Forward | 1170 | 0.254 | 15 | 1 | restored | 1 |
-| `TournamentHoleSelection` → `HoleSelection` | Back | 1170 | 0.251 | 12 | 1 | restored | 1 |
-| `TournamentHoleSelection` → `HoleSelection` | Forward | 1170 | 0.266 | 13 | 1 | restored | 1 |
-| `TournamentHoleSelection` → `MissionSelection` | Back | 1170 | 0.265 | 14 | 1 | restored | 1 |
-| `TournamentHoleSelection` → `MissionSelection` | Forward | 1170 | 0.265 | 14 | 1 | restored | 1 |
-| `TournamentHoleSelection` → `ModeSelection` | Back | 1170 | 0.267 | 16 | 1 | restored | 1 |
-| `TournamentHoleSelection` → `ModeSelection` | Forward | 1170 | 0.250 | 15 | 1 | restored | 1 |
-| `TournamentLeaderboard` → `Leaderboard` | Back | 1170 | 0.260 | 13 | 1 | restored | 1 |
-| `TournamentLeaderboard` → `Leaderboard` | Forward | 1170 | 0.266 | 12 | 1 | restored | 1 |
-| `TournamentLeaderboard` → `TournamentSelection` | Back | 1170 | 0.267 | 16 | 1 | restored | 1 |
-| `TournamentLeaderboard` → `TournamentSelection` | Forward | 1170 | 0.267 | 16 | 1 | restored | 1 |
-| `TournamentSelection` → `Leaderboard` | Back | 1170 | 0.261 | 12 | 1 | restored | 1 |
-| `TournamentSelection` → `Leaderboard` | Forward | 1170 | 0.260 | 13 | 1 | restored | 1 |
-| `TournamentSelection` → `TournamentLeaderboard` | Back | 1170 | 0.267 | 16 | 1 | restored | 1 |
-| `TournamentSelection` → `TournamentLeaderboard` | Forward | 1170 | 0.263 | 15 | 1 | restored | 1 |
+| from → to | dir | W | dur (s) | frames | chrome α min | seam cover | blocksRaycasts | ApplyScreen |
+|---|---|---|---|---|---|---|---|---|
+| `GachaHistory` → `GachaPrizes` | Back | 1170 | 0.256 | 14 | 1 | 1 | restored | 1 |
+| `GachaHistory` → `GachaPrizes` | Forward | 1170 | 0.264 | 15 | 1 | 1 | restored | 1 |
+| `GachaHistory` → `GeneralShop` | Back | 1170 | 0.261 | 13 | 1 | 1 | restored | 1 |
+| `GachaHistory` → `GeneralShop` | Forward | 1170 | 0.264 | 14 | 1 | 1 | restored | 1 |
+| `GachaPrizes` → `GachaHistory` | Back | 1170 | 1.362 * | 2 | 1 | 1 | restored | 1 |
+| `GachaPrizes` → `GachaHistory` | Forward | 1170 | 1.348 * | 2 | 1 | 1 | restored | 1 |
+| `GachaPrizes` → `GachaHistory` | Forward | 1170 | 0.830 * | 2 | 1 | 1 | restored | 1 |
+| `GachaPrizes` → `GeneralShop` | Back | 1170 | 0.254 | 15 | 1 | 1 | restored | 1 |
+| `GachaPrizes` → `GeneralShop` | Forward | 1170 | 0.253 | 15 | 1 | 1 | restored | 1 |
+| `GeneralShop` → `GachaHistory` | Back | 1170 | 1.363 * | 2 | 1 | 1 | restored | 1 |
+| `GeneralShop` → `GachaHistory` | Forward | 1170 | 0.686 * | 2 | 1 | 1 | restored | 1 |
+| `GeneralShop` → `GachaPrizes` | Back | 1170 | 0.267 | 16 | 1 | 1 | restored | 1 |
+| `GeneralShop` → `GachaPrizes` | Forward | 1170 | 0.256 | 15 | 1 | 1 | restored | 1 |
+| `HoleSelection` → `MissionSelection` | Back | 1170 | 0.263 | 13 | 1 | 1 | restored | 1 |
+| `HoleSelection` → `MissionSelection` | Forward | 1170 | 0.254 | 13 | 1 | 1 | restored | 1 |
+| `HoleSelection` → `ModeSelection` | Back | 1170 | 0.252 | 15 | 1 | 1 | restored | 1 |
+| `HoleSelection` → `ModeSelection` | Forward | 1170 | 0.254 | 15 | 1 | 1 | restored | 1 |
+| `HoleSelection` → `TournamentHoleSelection` | Back | 1170 | 0.266 | 16 | 1 | 1 | restored | 1 |
+| `HoleSelection` → `TournamentHoleSelection` | Forward | 1170 | 0.250 | 15 | 1 | 1 | restored | 1 |
+| `HoleSelection` → `TournamentLeaderboard` | Back | 1170 | 0.266 | 15 | 1 | 1 | restored | 1 |
+| `HoleSelection` → `TournamentLeaderboard` | Forward | 1170 | 0.251 | 15 | 1 | 1 | restored | 1 |
+| `HoleSelection` → `TournamentSelection` | Back | 1170 | 0.266 | 16 | 1 | 1 | restored | 1 |
+| `HoleSelection` → `TournamentSelection` | Forward | 1170 | 0.251 | 15 | 1 | 1 | restored | 1 |
+| `Leaderboard` → `TournamentLeaderboard` | Back | 1170 | 0.250 | 15 | 1 | 1 | restored | 1 |
+| `Leaderboard` → `TournamentLeaderboard` | Forward | 1170 | 0.250 | 15 | 1 | 1 | restored | 1 |
+| `Leaderboard` → `TournamentSelection` | Back | 1170 | 0.250 | 15 | 1 | 1 | restored | 1 |
+| `Leaderboard` → `TournamentSelection` | Forward | 1170 | 0.250 | 15 | 1 | 1 | restored | 1 |
+| `MissionSelection` → `HoleSelection` | Back | 1170 | 0.257 | 12 | 1 | 1 | restored | 1 |
+| `MissionSelection` → `HoleSelection` | Forward | 1170 | 0.256 | 11 | 1 | 1 | restored | 1 |
+| `MissionSelection` → `ModeSelection` | Back | 1170 | 0.251 | 15 | 1 | 1 | restored | 1 |
+| `MissionSelection` → `ModeSelection` | Forward | 1170 | 0.252 | 15 | 1 | 1 | restored | 1 |
+| `MissionSelection` → `TournamentHoleSelection` | Back | 1170 | 0.250 | 15 | 1 | 1 | restored | 1 |
+| `MissionSelection` → `TournamentHoleSelection` | Forward | 1170 | 0.266 | 16 | 1 | 1 | restored | 1 |
+| `MissionSelection` → `TournamentLeaderboard` | Back | 1170 | 0.251 | 15 | 1 | 1 | restored | 1 |
+| `MissionSelection` → `TournamentLeaderboard` | Forward | 1170 | 0.266 | 16 | 1 | 1 | restored | 1 |
+| `MissionSelection` → `TournamentSelection` | Back | 1170 | 0.250 | 15 | 1 | 1 | restored | 1 |
+| `MissionSelection` → `TournamentSelection` | Forward | 1170 | 0.250 | 15 | 1 | 1 | restored | 1 |
+| `ModeSelection` → `HoleSelection` | Back | 1170 | 0.257 | 12 | 1 | 1 | restored | 1 |
+| `ModeSelection` → `HoleSelection` | Forward | 1170 | 0.265 | 12 | 1 | 1 | restored | 1 |
+| `ModeSelection` → `HoleSelection` | Forward | 1170 | 0.251 | 11 | 1 | 1 | restored | 1 |
+| `ModeSelection` → `MissionSelection` | Back | 1170 | 0.263 | 13 | 1 | 1 | restored | 1 |
+| `ModeSelection` → `MissionSelection` | Forward | 1170 | 0.256 | 13 | 1 | 1 | restored | 1 |
+| `ModeSelection` → `MissionSelection` | Forward | 1170 | 0.258 | 12 | 1 | 1 | restored | 1 |
+| `ModeSelection` → `TournamentHoleSelection` | Back | 1170 | 0.250 | 15 | 1 | 1 | restored | 1 |
+| `ModeSelection` → `TournamentHoleSelection` | Forward | 1170 | 0.254 | 15 | 1 | 1 | restored | 1 |
+| `ModeSelection` → `TournamentLeaderboard` | Back | 1170 | 0.250 | 15 | 1 | 1 | restored | 1 |
+| `ModeSelection` → `TournamentLeaderboard` | Forward | 1170 | 0.259 | 15 | 1 | 1 | restored | 1 |
+| `ModeSelection` → `TournamentSelection` | Back | 1170 | 0.250 | 15 | 1 | 1 | restored | 1 |
+| `ModeSelection` → `TournamentSelection` | Forward | 1170 | 0.267 | 16 | 1 | 1 | restored | 1 |
+| `TournamentHoleSelection` → `HoleSelection` | Back | 1170 | 0.255 | 12 | 1 | 1 | restored | 1 |
+| `TournamentHoleSelection` → `HoleSelection` | Forward | 1170 | 0.252 | 10 | 1 | 1 | restored | 1 |
+| `TournamentHoleSelection` → `MissionSelection` | Back | 1170 | 0.264 | 13 | 1 | 1 | restored | 1 |
+| `TournamentHoleSelection` → `MissionSelection` | Forward | 1170 | 0.262 | 13 | 1 | 1 | restored | 1 |
+| `TournamentHoleSelection` → `ModeSelection` | Back | 1170 | 0.250 | 15 | 1 | 1 | restored | 1 |
+| `TournamentHoleSelection` → `ModeSelection` | Forward | 1170 | 0.255 | 15 | 1 | 1 | restored | 1 |
+| `TournamentHoleSelection` → `TournamentLeaderboard` | Back | 1170 | 0.251 | 15 | 1 | 1 | restored | 1 |
+| `TournamentHoleSelection` → `TournamentLeaderboard` | Forward | 1170 | 0.255 | 14 | 1 | 1 | restored | 1 |
+| `TournamentHoleSelection` → `TournamentSelection` | Back | 1170 | 0.266 | 16 | 1 | 1 | restored | 1 |
+| `TournamentHoleSelection` → `TournamentSelection` | Forward | 1170 | 0.266 | 16 | 1 | 1 | restored | 1 |
+| `TournamentLeaderboard` → `HoleSelection` | Back | 1170 | 0.260 | 11 | 1 | 1 | restored | 1 |
+| `TournamentLeaderboard` → `HoleSelection` | Forward | 1170 | 0.252 | 11 | 1 | 1 | restored | 1 |
+| `TournamentLeaderboard` → `Leaderboard` | Back | 1170 | 0.268 | 11 | 1 | 1 | restored | 1 |
+| `TournamentLeaderboard` → `Leaderboard` | Forward | 1170 | 0.256 | 12 | 1 | 1 | restored | 1 |
+| `TournamentLeaderboard` → `MissionSelection` | Back | 1170 | 0.261 | 13 | 1 | 1 | restored | 1 |
+| `TournamentLeaderboard` → `MissionSelection` | Forward | 1170 | 0.255 | 13 | 1 | 1 | restored | 1 |
+| `TournamentLeaderboard` → `ModeSelection` | Back | 1170 | 0.251 | 15 | 1 | 1 | restored | 1 |
+| `TournamentLeaderboard` → `ModeSelection` | Forward | 1170 | 0.259 | 15 | 1 | 1 | restored | 1 |
+| `TournamentLeaderboard` → `TournamentHoleSelection` | Back | 1170 | 0.250 | 15 | 1 | 1 | restored | 1 |
+| `TournamentLeaderboard` → `TournamentHoleSelection` | Forward | 1170 | 0.266 | 16 | 1 | 1 | restored | 1 |
+| `TournamentLeaderboard` → `TournamentSelection` | Back | 1170 | 0.267 | 16 | 1 | 1 | restored | 1 |
+| `TournamentLeaderboard` → `TournamentSelection` | Back | 1170 | 0.267 | 16 | 1 | 1 | restored | 1 |
+| `TournamentLeaderboard` → `TournamentSelection` | Forward | 1170 | 0.250 | 15 | 1 | 1 | restored | 1 |
+| `TournamentLeaderboard` → `TournamentSelection` | Forward | 1170 | 0.267 | 16 | 1 | 1 | restored | 1 |
+| `TournamentSelection` → `HoleSelection` | Back | 1170 | 0.261 | 12 | 1 | 1 | restored | 1 |
+| `TournamentSelection` → `HoleSelection` | Forward | 1170 | 0.261 | 11 | 1 | 1 | restored | 1 |
+| `TournamentSelection` → `Leaderboard` | Back | 1170 | 0.255 | 10 | 1 | 1 | restored | 1 |
+| `TournamentSelection` → `Leaderboard` | Forward | 1170 | 0.253 | 12 | 1 | 1 | restored | 1 |
+| `TournamentSelection` → `MissionSelection` | Back | 1170 | 0.261 | 13 | 1 | 1 | restored | 1 |
+| `TournamentSelection` → `MissionSelection` | Forward | 1170 | 0.263 | 13 | 1 | 1 | restored | 1 |
+| `TournamentSelection` → `ModeSelection` | Back | 1170 | 0.267 | 16 | 1 | 1 | restored | 1 |
+| `TournamentSelection` → `ModeSelection` | Forward | 1170 | 0.256 | 15 | 1 | 1 | restored | 1 |
+| `TournamentSelection` → `TournamentHoleSelection` | Back | 1170 | 0.251 | 15 | 1 | 1 | restored | 1 |
+| `TournamentSelection` → `TournamentHoleSelection` | Forward | 1170 | 0.250 | 15 | 1 | 1 | restored | 1 |
+| `TournamentSelection` → `TournamentLeaderboard` | Back | 1170 | 0.250 | 15 | 1 | 1 | restored | 1 |
+| `TournamentSelection` → `TournamentLeaderboard` | Back | 1170 | 0.267 | 16 | 1 | 1 | restored | 1 |
+| `TournamentSelection` → `TournamentLeaderboard` | Forward | 1170 | 0.266 | 16 | 1 | 1 | restored | 1 |
+| `TournamentSelection` → `TournamentLeaderboard` | Forward | 1170 | 0.266 | 16 | 1 | 1 | restored | 1 |
 `*` = **frame-starved** (4 of 48), and this is a limit of the instrument that is RECORDED rather
 than scored. The tween accumulates `Time.unscaledDeltaTime`; when the Editor stalls — hardest on
 the frame a screen is first activated, which runs `OnEnable`, the first layout and that screen's
@@ -683,13 +724,30 @@ the equivalent gate here and is what should be read in its place.
 > | `game_polish_a_f_cross_backdrop.mp4` | 25.04 s (re-recorded at iter-2 to show the title dissolve) |
 
 
-One take: `videos/raw.mp4`, **1170×2532 @ 30 fps, 50.6 s, 1519 frames**, valid (moov present).
-Cut by `Docs/Scripts/cut_game_polish_clips.py` on the runner's own sidecar boundaries.
+Cut by `Docs/Scripts/cut_game_polish_clips.py` on the runner's own sidecar boundaries. The six
+clips below, their durations, sizes and stills, are read off disk — every path resolves:
 
-| clip | length | size | flag | still |
-|---|---|---|---|---|
-| `videos/game_polish_a_a_play_pillar.mp4` | 17.9 s | 7.6 MB | off | `screenshots/a4_a_play_pillar.png` |
-| `videos/game_polish_a_f_option_b.mp4` | 24.9 s | 1.6 MB | **ON** | `screenshots/a4_f_option_b.png` |
+| clip | length | size | still |
+|---|---|---|---|
+| `videos/game_polish_a_a_play_pillar.mp4` | 17.9 s | 7.5 MB | `screenshots/a4_a_play_pillar.png` |
+| `videos/game_polish_a_b_tournaments.mp4` | 10.2 s | 3.2 MB | `screenshots/a4_b_tournaments.png` |
+| `videos/game_polish_a_c_gacha_pillar.mp4` | 14.0 s | 5.6 MB | `screenshots/a4_c_gacha_pillar.png` |
+| `videos/game_polish_a_d_tabs_and_filters.mp4` | 13.4 s | 4.5 MB | `screenshots/a4_d_tabs_and_filters.png` |
+| `videos/game_polish_a_e_settings.mp4` | 11.3 s | 1.6 MB | `screenshots/a4_e_settings.png` |
+| `videos/game_polish_a_f_cross_backdrop.mp4` | 25.0 s | 2.1 MB | `screenshots/a4_f_cross_backdrop.png` |
+
+**There is no `flag` column any more, and the clip is not called `_f_option_b`.** Both belonged to
+the pre-decision build: the flag was removed when Cesar shipped option (b), and the clip was
+renamed to `_f_cross_backdrop` because that is what it shows. An earlier revision of this table
+still carried the old row — a citation to the `…_f_option_b` clip and its `a4_f_option_b` still,
+neither of which exists on disk. (Named without extensions here so
+`Docs/Scripts/check_report_citations.py` does not read this sentence as a citation of its own.)
+Caught by `golfin-redteam-reviewer`; see § "Shape C" for why the sweep that was supposed to catch
+it did not.
+
+`videos/raw.mp4` is the current single take (**1170×2532 @ 30 fps, 34.0 s, 1033 frames**,
+moov present). It is the iteration-2 re-record — the earlier 50.6 s / 1519-frame take it replaced
+is gone, so those numbers were stale too.
 
 **Orientation verified on CONSECUTIVE decoded frames**, not `ffmpeg -ss` keyframe sampling — that
 skips exactly the frames a flip shows on (project memory: `video_flip_verification`). Top strip
@@ -873,6 +931,10 @@ into `screenshots/`).
 The `parity` pass ran both routes in one session and captured 18 screens twice. **The pixel
 comparison is worthless and the reason is two probe defects, not the feature** — found by opening
 the images rather than by reading the numbers:
+
+> *The three `parity_*.png` files named in this diagnosis were the VOIDED run's output and were
+> deleted when A2 was re-run; they are described here, not cited as surviving evidence. The
+> passing run's captures are enumerated in `## A2 · Rest parity — PASS`.*
 
 1. **`parity_anim_04_leaderboard.png` is a picture of HoleSelection.** Its byte size is identical
    to `parity_anim_03_holeselection.png` (2623 KB): the Game View render texture is not refreshed
@@ -1067,7 +1129,8 @@ Settle. The title was the only thing that snapped.
 Found at iteration 2 after § A12 turned out to be stale (it claimed **PASS** while quoting a run
 that read `passed=2422 failed=3`, and listed two tests deleted when the option-(b) flag was
 removed). Two instances of one shape, so I stopped fixing instances and enumerated every heading in
-the file rather than sampling. This report is append-only — later sections supersede earlier ones —
+the file rather than sampling — **which was the wrong enumeration, and is why this section has a
+correction below it.** This report is append-only — later sections supersede earlier ones —
 and nothing marked the earlier ones, so a reader scanning headings met `NOT PRODUCED`,
 `NOT MEASURED`, `NOT CAPTURED` and `INVALID` as though they were current.
 
@@ -1075,14 +1138,58 @@ and nothing marked the earlier ones, so a reader scanning headings met `NOT PROD
 |---|---|---|
 | § A12 EditMode sweep | PASS over a `failed=3` quote; two deleted tests listed | **was stale** — regenerated from the cited file |
 | § A9 option-(b) flag | quoted the removed declaration | **was stale** — rewritten (iter-1 hygiene note) |
-| § A4 Videos | "2 of 6 produced" | **was stale** — all six on disk, durations listed |
+| § A4 Videos — heading | "2 of 6 produced" | **was stale** — banner added listing all six |
+| § A4 Videos — **body table** | dead `flag` column + a row citing the renamed `…_f_option_b` clip and still; stale `raw.mp4` stats | **MISSED by the heading sweep; caught by red-team** — table now read off the six clips on disk, `raw.mp4` re-measured (34.0 s / 1033 frames) |
 | § A7 cross-fade table | "mid-fade frames pending with A4" | **was stale** — those frames shipped |
 | `## NOT DONE this iteration` block (5 headings) | A4/A2/A2/A13/A8 as not done | **was stale** — retitled SUPERSEDED, banner maps each to its closing section, every heading prefixed |
 | § 0 pointer | said sections are marked "flag OFF" | **was stale** — no section carried that marker |
-| § A1, A5, A10, A3, A11, A6, A13, A14, A15, `## A2`, `## A8` | — | fine, no change needed |
+| § A1 Invariants — **body** | quoted the pre-decision run (`measured = 48`, `allowBackgroundCrossFade = false`, 24 pairs) one line above the JSON path that says 87 / `optionBShipped = true`; 48-row table | **MISSED by the heading sweep; caught by red-team** — summary and all 87 rows now GENERATED from the JSON |
+| § A5, A10, A3, A11, A6, A13, A14, A15, `## A2`, `## A8` | — | fine, no change needed — re-checked by script, every cited path resolves |
 | Files-modified table | LayeredPush row advertised the removed flag | **was stale** — corrected |
 
-The reviewers' own gates cannot catch this shape: they re-run the acceptance list and check the
+#### The sweep above was WRONG, and the red-team was right to fail it
+
+`golfin-redteam-reviewer` set `ARCHITECT_REVIEW_FAIL` on this section — not on the code, which it
+re-derived and found correct in every particular. It found two more stale citations **inside
+sections the table above certifies as fixed**:
+
+* the live `### A4` table still carried a `flag` column and a row for the `…_f_option_b` clip and
+  its still — a rename left over from before option (b) shipped, pointing at two files that do not
+  exist. My A4 fix added a correct six-clip banner ABOVE it and never looked below.
+* `### A1`'s body still quoted the pre-decision run — `measured = 48`,
+  `allowBackgroundCrossFade = false`, 24 pairs — on the line directly above the path of the JSON
+  that says `87 / optionBShipped = true`.
+
+**The failure was in how I swept, and then in what I claimed about the sweep.** I enumerated
+HEADINGS, which is not the shape: the shape is stale *content*, and content lives in bodies and
+tables. Then I wrote "enumerated every heading … not sampled" in a way that read as completeness
+over the file. A narrower check reported as a broader one is worse than no check, because the next
+reader stops looking. That is the third time this task produced a claim that was true in the small
+and wrong in the large — after the fake-null dissolve and the phantom capture path.
+
+**Fixed by a script, not by reading again.** `Docs/Scripts/check_report_citations.py` resolves every
+backticked path in a report against disk (skipping sections marked SUPERSEDED, which describe
+history on purpose, and ignoring glob patterns and name fragments, which are not claims):
+
+```
+$ python3 Docs/Scripts/check_report_citations.py Docs/Specs/Active/game_polish_a/IMPLEMENTER_REPORT.md
+  (ignored 3 pattern/fragment tokens, not file claims)
+
+78 cited, 0 unresolved
+```
+
+§ A1's summary block and its 87-row table are now GENERATED from
+`Docs/Diagnostics/_capture/game_polish_a_invariants.json` rather than transcribed, and § A4's table
+is read off the six clips on disk with their real durations and sizes. Both were rewritten from the
+source of truth, so neither can drift from it by being edited around.
+
+Running the same checker over the review files reports four unresolved names I have deliberately
+NOT touched, because they are not mine to edit and none is a defect in this task's evidence:
+`f_cross_backdrop.mp4` (both reviewers' shorthand for the full filename), `event1_stack.png` (the
+red-team's own scratch artifact, never committed), and the two `…_f_option_b` paths in
+`ARCHITECT_REVIEW.md` — which are the red-team correctly quoting the defect it caught.
+
+The reviewers' own acceptance gates cannot catch this shape: they re-run the acceptance list and check the
 CURRENT evidence, which was correct every time. What was wrong was the *narrative around it* — and
 two self-review passes read straight past it, as did I, until the headings were enumerated
 mechanically instead of read.

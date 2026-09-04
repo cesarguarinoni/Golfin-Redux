@@ -251,3 +251,125 @@ The task delivers option (b) as Cesar shipped it: 87 measured pushes with `fail 
 
 The red-team should press on Finding 1 (missing GPS-hub still) if it wants an artifact-level gate rather than a code-level one, and may also want to spot-check the game-bar selected state across all five pillars from the A4 clips (only Home is captured as a standalone still).
 
+
+---
+
+# § RED-TEAM REVIEW (adversarial gate) — 2026-09-04 18:35 JST
+
+Verdict: **ARCHITECT_REVIEW_FAIL** — the *work* is verified correct and must NOT be
+re-implemented; the blocker is a report-integrity defect of the exact recurring shape
+(defect #2 / Shape C) that this task keeps shipping, sitting in a section the
+implementer's own Shape C table certifies as fixed. Cheap markdown-only fix.
+
+## What I re-derived from primary sources (all clean — the shipped work is solid)
+
+**A1 invariants — re-parsed the on-disk JSON myself** (`Docs/Diagnostics/_capture/game_polish_a_invariants.json`, mtime Sep 4 16:40):
+`measured=87, fail=0, optionBShipped=true`. Per-record, independently recomputed over all 87:
+`applyScreenCalls==1` on every record (0 exceptions); `blocksRaycastsRestored==true` on every
+record; `seamWorstCover==1` on all **32** cross-backdrop (`sameBackground=false`) records;
+`chromeAlphaMinOverRun==1` on all **55** same-backdrop records; rest-parity
+(`endTargetX==endTargetRestX`, `endLeaverX==endLeaverRestX`, both content α==1) — 0 violations;
+`targetOffsetAtT0==±W` — 0 violations; all 87 `completed`; 5 `frameStarved` (duration-skip
+documented). Matches STATUS. **NOTE the report's `### A1` body still quotes the stale
+pre-decision run `measured=48 / allowBackgroundCrossFade=false / 24 pairs`** — see blocker below.
+
+**Title dissolve (defect #1) — GONE, confirmed from the shipped clip's pixels, not the tests.**
+Decoded `videos/game_polish_a_f_cross_backdrop.mp4` (1170×2532, 750 frames) frame-by-frame.
+The title band is at full-res y≈212–272 (my first 220px band clipped it at the bottom edge — the
+exact crop trap the brief warned about; I re-cropped). Two and only two title changes in the whole
+clip, both multi-frame fades with intermediate-alpha frames — NOT single-frame snaps:
+- Event 1 (MODE SELECTION → TOURNAMENT LEADERBOARD): band mean luma f8=64.9 (full) → **f9=47.8
+  (old text at partial alpha)** → f10–11=39.3 (blank) → f12=73.1 (new, dim) → f14=78.2 → f16=82.0
+  (settle). Visually confirmed in `event1_stack.png`: MODE SELECTION greys out, blanks, TOURNAMENT
+  LEADERBOARD fades in.
+- Event 2 (→ MODE SELECTION): f689=82.5 → **f690=55.2 (partial)** → f691=39.2 (blank) → f692=63.8
+  (new). A hard cut would step 82→64 in one frame with no dip through background (39); both events
+  dip through background with partial frames on both sides. Dissolve is real.
+  `CenterTitleDissolveTests.EnsureCenterTextGroup_AddsARealComponent_NotAFakeNull` uses Unity's
+  overloaded `== null` (not ReferenceEquals) — a genuine tripwire for the `??` fake-null, not gamed.
+
+**A2 rest parity (defect #3) — re-derived myself, keyed on `(label, real screen)`.** Diffed the 18
+`parity_anim_*__<Real>.png` vs `parity_instant_*__<Real>.png` pairs (max-channel Δ>25). The two
+screen-drift pairs are correctly excluded, not reported as defects: `modeselection`
+(anim=ModeSelection vs instant=TournamentHoleSelection) and `generalshop` (anim=GeneralShop vs
+instant=GachaPrizes). 16 valid pairs. Every differing-pixel bbox starts at **y=147** (top-bar chrome
+pixel-identical above it) and none reach the nav bar (deepest y=791); worst is a tiny box, no
+full-height geometry smear. Residuals localise to the 74×26 RP-counter box and live-data regions.
+The false 38% (tab0-vs-tab3) / 99.6% (roster-vs-settings) keying bug is provably avoided.
+
+**A15/§D7 — genuine.** `a15_nav_selected_states_both_bars.png` shows the gold-halo+brighter-ring
+selected state on the GAME bar (Tee/Home/Cards lit) and the GPS bar (Home/Profile lit), white glyphs
+preserved. `d7_gps_bar_hub_selected.png` / `d7_gps_bar_profile_selected.png` are full 1170×2532,
+distinct md5s (not stale dupes); I viewed the Profile one — a real GPS Profile screen with the
+Profile slot haloed. `GpsNavStillCapture` creates only a runtime `~GpsNavStillCapture`
+(`DontDestroyOnLoad`) host, auto-discarded on play-exit; grep confirms no such object baked into
+ShellScene or any GPS prefab; it never saves a scene.
+
+**Scope & standing bans — clean.** `git diff --stat 1e7f97504..HEAD -- Assets/Scripts/UI/Gps
+Assets/Prefabs/UI/Gps` = exactly one file (`GpsNavBarHighlight.cs`, 0 prefabs). `FadeController.cs`,
+`GpsScreenTransition.cs`, `UiMotion.cs` — not in the diff at all. Zero edits under
+`Assets/Scripts/Physics/`; no `*Gate` scenario in `Scenarios.cs` (unchanged in range); no
+`M_Splash*.mat`. ShellScene diff is +263/−3 = adding `ScreenEntryMotion` components only; the lone
+`m_AnchoredPosition` grep hit is an unchanged context line, zero active-state/size/position
+mutations. Working tree carries only Cesar's 3 `map_view_v2` files. `AllowBackgroundCrossFade`
+exists only in the two absence-asserting test lines (A9 correctly void). On-disk
+`game_polish_a_tests.txt`: `passed=2430 failed=0 skipped=3`, 23 task-suite tests, 0 `Failed` lines.
+
+## Prior-rejection replay
+- Title snap/dissolve-no-op (defect #1): **GONE** (video pixels, above).
+- A2 false parity readings (defect #3): **GONE** (re-derived, drift pairs excluded, above).
+- Report narrative drift (defect #2 / Shape C): **PRESENT** — see blocker.
+
+## Three break-attempts
+1. **Visual (harshest angle):** frame-by-frame title band + selected-state stills — dissolve real,
+   halo real, glyphs white, GPS capture genuine. No feature-pixel defect found.
+2. **Geometric:** every A1 threshold clean with margin (durations 0.250–0.267 vs tol ±0.053; seam=1;
+   chromeα=1); A2 bboxes tiny and chrome-identical. Nothing within 20% of a fail line except the 4
+   documented frame-starved duration-skips. No fragile metric.
+3. **Spec-intent:** push/rise/cross-fade/selected-state/0px-rest-parity all satisfied; option (b)
+   shipped as decided; A9 void is correct; scope honoured. Intent met.
+
+## THE BLOCKER (report integrity — Shape C, third recurrence)
+
+The live `### A4 · Videos — PASS, all six produced` section contains a SECOND (non-quoted) table
+that still reads as live evidence and cites files that **do not exist on disk**:
+
+```
+| `videos/game_polish_a_f_option_b.mp4` | 24.9 s | 1.6 MB | **ON** | `screenshots/a4_f_option_b.png` |
+```
+
+`videos/game_polish_a_f_option_b.mp4` — MISSING. `screenshots/a4_f_option_b.png` — MISSING. Both
+were renamed to `…_f_cross_backdrop.mp4` when the flag was removed; the "flag **ON**" column is a
+pre-decision concept that no longer exists. The prose beneath it ("Not flipped … on both clips")
+also references the non-existent option_b clip. I verified absence by enumerating every
+`screenshots/…` and `videos/…` citation across IMPLEMENTER_REPORT/SELF_REVIEW/ARCHITECT_REVIEW and
+stat-checking each: these two are the only misses — and they are in IMPLEMENTER_REPORT.md:692.
+
+This is the exact defect the brief flagged as #2 and told me to hunt ("check every claim that cites
+a file against what is on disk … assume I did not find them all"). The prior reviewer already caught
+two dead-PNG citations; these are two MORE that survived. They sit inside a section the implementer's
+own Shape C table certifies as **"was stale — all six on disk, durations listed"** (i.e. FIXED) — the
+fix only updated the top blockquote table and left the lower table dead. The completeness claim
+("enumerated every heading … not sampled") is therefore falsified.
+
+Compounding (same shape, same falsified certification): the `### A1` body quotes `measured=48 /
+allowBackgroundCrossFade=false / 24 distinct pairs` with a 48-row table — the pre-option-b run,
+contradicting the on-disk JSON (87 / optionBShipped=true / 40 pairs). The Shape C table lists
+`§ A1 … fine, no change needed`. The top-of-report banner blanket-supersedes "any section describing
+the flag as live," but a banner does not rescue a citation to a file that returns nothing, nor a
+verdict section quoting a superseded record count as its evidence.
+
+## Required fix (report only — DO NOT touch code, scenes, prefabs, tests, or the JSON)
+
+1. In `IMPLEMENTER_REPORT.md` § A4, delete or correct the lower table so it cites the shipped
+   `videos/game_polish_a_f_cross_backdrop.mp4` + a still that actually exists, and drop the
+   dead "flag ON / off" column and the "on both clips" prose that names the non-existent option_b clip.
+2. In § A1, replace the stale `measured=48 / flag=false / 24-pair` block+table with the on-disk
+   authoritative values (`measured=87, fail=0, optionBShipped=true`, 40 distinct pairs, 32
+   cross-backdrop / 55 same-backdrop) — or prefix the section `(superseded)` and point to
+   § *Option (b) shipped — re-measured*, consistent with how the other stale sections are marked.
+3. Re-run the Shape C heading sweep for real and correct its own verdict rows for § A4 and § A1
+   (both are currently mis-certified as clean).
+
+No re-shoot, no re-measure, no code change. Everything functional re-derived clean above; this is a
+pure report-integrity turnaround.

@@ -2,45 +2,47 @@ READY_FOR_REDTEAM
 
 # STATUS — `game_polish_a`
 
-**Current:** `READY_FOR_REDTEAM` — golfin-reviewer PASS on iter-2; hand-off to adversarial red-team gate. 87-push invariants JSON re-parsed (fail=0, apply=1 on all, blocksRaycasts restored on all, seamWorstCover=1 on 32 cross-backdrop, chromeAlphaMin=1 on 55 same-backdrop). A2 rest parity re-derived on 16 (label,real) pairs — chrome pixel-identical above y=147 and below y=1640. Title dissolve confirmed in shipped clip (frames 6-14 and 677-685). §D7 scope: exactly one file. Standing bans clean.
+**Current:** `READY_FOR_REDTEAM` — the red-team's four report-only fixes are done and it is re-submitted
+to the same gate. **No code, scene, prefab, test or JSON has changed since `golfin-reviewer` passed**,
+which is why this returns straight to red-team rather than re-running the reviewer on identical code.
+Citation check: `python3 Docs/Scripts/check_report_citations.py …/IMPLEMENTER_REPORT.md` → **78 cited,
+0 unresolved**.
+
+<details><summary>The FAIL this replaces</summary>
+
+**Was:** `ARCHITECT_REVIEW_FAIL` — red-team gate. The **work is verified correct** (all
+functional gates re-derived clean by the red-team; see `ARCHITECT_REVIEW.md` § RED-TEAM REVIEW) and
+must NOT be re-implemented. The blocker is a **report-integrity defect only** (Shape C / defect #2,
+third recurrence): `IMPLEMENTER_REPORT.md` § A4's lower table cites two files absent from disk
+(`videos/game_polish_a_f_option_b.mp4`, `screenshots/a4_f_option_b.png` — renamed to
+`…_f_cross_backdrop.mp4` when the flag was removed) with a dead "flag ON" column, and § A1's body
+still quotes the stale pre-option-b run (`measured=48 / flag=false`) contradicting the on-disk JSON
+(`measured=87 / optionBShipped=true`). Both sit in sections the implementer's own Shape C table
+certifies as fixed, so the completeness claim is falsified.
+
+**Fix was report-only** (no code/scene/prefab/test/JSON changes): correct the § A4 lower table to the
+shipped clip + an existing still and drop the dead flag column/prose; replace or `(superseded)`-mark
+the § A1 stale numbers with the on-disk 87/0/optionB values; re-run the Shape C heading sweep for
+real and correct its § A4 / § A1 verdict rows. Then re-submit.
+
+**All four done:** § A4's body table rebuilt from the six clips on disk (dead `flag` column and the
+renamed `…_f_option_b` row gone, `raw.mp4` re-measured at 34.0 s / 1033 frames); § A1's summary and
+all 87 rows GENERATED from the invariants JSON rather than transcribed; Shape C's verdict rows
+corrected to record that the heading sweep MISSED both — the shape is stale *content*, not stale
+headings, and a narrow check was reported as a complete one; and the sweep is now a script
+(`Docs/Scripts/check_report_citations.py`) rather than another reading.
+
+</details>
 
 | Date | State | Note |
 |---|---|---|
 | 2026-09-03 | `SPEC_READY` | Map approved by Cesar (G1 = fade + option-(b) video behind an OFF flag). |
-| 2026-09-04 | `IMPLEMENTER_WORKING` | Kicked off by Cesar directly (`design_consistency_audit` is still `SPEC_READY` — flagged, not blocked on). |
-| 2026-09-04 | `READY_FOR_SELF_REVIEW` | Code + gates done. A4 2 of 6 clips. A2 run-invalid-diagnosed. A6 N/A. A8 owed. |
-| 2026-09-04 | **OPTION (b) SHIPPED** | Cesar approved the clip. The flag is REMOVED (not flipped); different backdrops now push and cross-fade within a pillar. Re-measured: **84 pushes, `fail == 0`**, 32 of them cross-backdrop across **16 ordered pairs that used to fade**. Polish suites 91/0. |
-| 2026-09-04 | **ALL GATES CLOSED** | A4 all six clips (e re-recorded — the first take was 16 identical frames). A2 **PASS**: 16 states, worst 1.232 %, residuals localised to the RP counter. A8 **PASS**: six mid-rise frames + SkippedForPush=94 over 84 pushes. A13 **PASS**. Full EditMode sweep **2425 passed / 0 failed**. |
-| 2026-09-04 | `SELF_REVIEW_PASS` | Full acceptance re-walked (Rule 5); A1 JSON re-parsed (87 pushes, fail=0); A2 confirmed via independent pixel-bbox on 8 pairs (all bboxes anchor at y=147, deepest y=892, five identical RP-counter rectangles); scene mutation audit clean (263+/3-, zero anchor/isActive lines); GPS scope = exactly one authorised file; standing bans clean; option-b flag verified removed by grep. Three hygiene notes (stale caption on `a4_option_b_transition_strip.png`, §A9 prose drift, 84↔87 count drift) surfaced but not blocking. |
-
-| 2026-09-04 | `READY_FOR_SELF_REVIEW` | **iter-2.** Found while rebuilding the A4 strip after the pass, not by a gate: the shared top-bar centre title carried the LEAVER's name for the whole 0.25 s push and then hard-cut in one frame (`ApplyScreen` is deferred to `Settle` by design; that pair used to fade to black, which hid it). Fixed — the title now dissolves over `FadeDur` from push START, landing before the content settles. It shipped broken once via `??` on a `GetComponent` returning a fake-null, so both fades silently no-oped; `CenterTitleDissolveTests` (5, tripwire-verified) pins it. Shape audit per §15 done for both shapes, sites-that-were-fine included. Also cleared the self-review's three hygiene notes. Sweep **2430 passed / 0 failed**. |
-
-**Read the report's §0 first** — three things carry outside this task:
-
-1. The Editor's active build profile was `iOS-Standalone`; it is now **`iOS-Full-GPS`**, which is
-   what this task's two bars live in. Switch it back when the standalone lane is next built.
-2. `264ee64f5` also carries `map_view_v2`, `content_art.txt`, `GPS_BACKLOG.md` and `TellCode.md`
-   from Cesar's own in-flight session. Verified intact; history not rewritten because that session
-   was live on this branch.
-3. Two findings that are NOT this task's code, both flagged for separate work:
-   **(a)** every arrival at `GachaHistory` allocates ~290 MB and stalls > 1 s (`RebuildList` in
-   `OnEnable`); **(b)** tapping `ModeSelection/TournamentTempEntry` ends the play session — it
-   killed four separate measured runs, and that pair is a FADE, so `LayeredPush` is not on it.
-
-**Shipped behaviour:** `videos/game_polish_a_f_cross_backdrop.mp4` is the cross-backdrop push —
-this is what the app does now. `videos/game_polish_a_a_play_pillar.mp4` is the same-backdrop push
-plus the new nav selected state. Home and cross-pillar still fade to black.
-
-**A9 is void** — there is no flag left to pin off. (The report's §A9 body has been rewritten to say so; it previously still quoted the removed declaration.) Its replacements are
-`LayeredPushTests.TheOptionBFlag_IsGone` and `SameBackground_IsNoLongerRequiredByTheGate` (both
-pass; source-grep confirms `AllowBackgroundCrossFade` exists ONLY inside those tests, asserting
-absence).
-
-**Every acceptance item is now closed**: A1 A2 A3 A4 A5 A7 A8 A9(void) A10 A11 A12 A13 A14 A15 A16
-pass; **A6 is N/A** with the reason stated (no Figma node, no prefab layout touched). The three
-carry-over items in this file are environment and other people's code, not open work on
-this task.
-
-| 2026-09-04 | `SELF_REVIEW_PASS` (iter-2) | Iter-2 fix re-walked. Dissolve confirmed in the pixels of `game_polish_a_f_cross_backdrop.mp4` (two multi-frame events, no single-frame cut). Full EditMode sweep independently re-run: `2430 passed / 0 failed / 3 skipped`. Both shape audits (§15) re-enumerated: (A) zero `??` on Unity lookups in the 7 touched files; (B) `ApplyScreen` paints centre title / nav highlight / bar visibility — the latter two provably don't change across any pushable pair (verified via `PillarOf` table + Leaderboard early-return). All three iter-1 hygiene items (stale caption, §A9 prose, 84/87 drift) cleared. Iter-2 diff touches zero scenes/prefabs. |
-
-| 2026-09-04 | `READY_FOR_REDTEAM` | golfin-reviewer PASS. Independently verified: invariants JSON (measured=87, fail=0), rest parity (16 valid (label,real) pairs; chrome pixel-identical above y=147 and below y=1640), title dissolve (two multi-frame events in `game_polish_a_f_cross_backdrop.mp4`), GPS scope (one file), standing bans clean, Shape A/B/C audits closed. Findings: no standalone GPS-hub-selected still (SPEC A15 asked for it), self-review cites 2 nav-crop files that don't exist as standalone PNGs (source clips do). Red-team gate is next. |
+| 2026-09-04 | `IMPLEMENTER_WORKING` | Kicked off by Cesar directly. |
+| 2026-09-04 | `READY_FOR_SELF_REVIEW` | Code + gates done. |
+| 2026-09-04 | **OPTION (b) SHIPPED** | Cesar approved the clip; flag REMOVED. Re-measured 87 pushes, fail=0. |
+| 2026-09-04 | `SELF_REVIEW_PASS` | Full acceptance re-walked (Rule 5). |
+| 2026-09-04 | `READY_FOR_SELF_REVIEW` | **iter-2.** Centre-title dissolve fix (had shipped broken once via `??` fake-null). |
+| 2026-09-04 | `SELF_REVIEW_PASS` (iter-2) | Iter-2 fix re-walked; dissolve confirmed in pixels; sweep 2430/0/3. |
+| 2026-09-04 | `READY_FOR_REDTEAM` | golfin-reviewer PASS. |
+| 2026-09-04 | `ARCHITECT_REVIEW_FAIL` | **Red-team.** Work verified correct; report-integrity blocker (dead file citations in § A4 + stale § A1 numbers, both mis-certified by the Shape C sweep). Report-only fix. |
+| 2026-09-04 | `READY_FOR_REDTEAM` | **Report-only fix, re-submitted.** § A4's body table rebuilt from disk; § A1 regenerated from the invariants JSON; Shape C corrected to record that the heading sweep missed both, because the shape is stale content rather than stale headings. Replaced by `check_report_citations.py` → **78 cited, 0 unresolved**. No code changed since the reviewer's PASS. |
