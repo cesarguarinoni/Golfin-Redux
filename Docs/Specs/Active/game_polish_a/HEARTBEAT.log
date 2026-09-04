@@ -13,3 +13,15 @@ bars live in). FLAG TO CESAR at close-out.
 Scene-save guardrail: first builder run baked 154 anchor + 70 sizeDelta changes of
 layout churn (save after a play session). Reverted, re-ran on a freshly opened scene:
 263 insertions / 3 deletions, zero anchor lines.
+=== iter-1 +3h ===
+Runtime + D7 + D3/D6 + tests committed and compiling clean.
+A1 (push mode) ran green on its first real pair: GeneralShop -> GachaHistory,
+fail=0, chrome alpha 1.0 every frame, blocksRaycasts restored, ApplyScreen once.
+Route rebuilt since: the mode-card path bypassed Measure(), and a PushSweep was
+added so every ordered pair of the direction table is measured with realWidget
+true/false recorded per pair rather than the harness pretending to be a tap.
+BLOCKER (cleared by restart): the full EditMode sweep wedged the Editor with
+SnapshotTest_TempScene_0 open and the MCP transport unresponsive at 0.7% CPU.
+Killed and relaunched Unity; everything was committed, ShellScene clean on disk.
+GamePolishTestReport added so the sweep leaves a quotable file rather than a
+tool-timeout.
