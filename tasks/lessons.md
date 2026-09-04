@@ -3587,3 +3587,66 @@ through the same hole.
   treated that as a fact about the Editor rather than about the bug. Evidence came from unpacking
   the shipped `.ipa` (`strings` over `Data/*.assets`) and from the Build Report — both of which
   describe the artifact the player actually runs.
+
+## Lesson AN — "real" is not "intended": a swept file that is someone else's edit needs its author, not a diff read (2026-09-04, build 2699)
+
+**Symptom.** Cesar said "sweep it" to clear the tree for a TestFlight build. Among the 51 files were
+11 tree materials with `WindSpeedFloat1` changed from a mix of 0.25/0.5 to 0.23272727. I checked
+whether the diff was REAL or Unity re-serialisation churn, concluded it was real, and swept it into
+the build commit. Cesar: *"Wind changes were never asked for. It was just for UI checks, kill it."*
+
+**Root cause.** I answered the wrong question. "Is this a genuine value change or serialisation
+noise?" and "is this change wanted in a shipping build?" are different, and only the first is
+answerable from a diff. The second belongs to whoever made the edit. "Sweep it" authorised clearing
+the tree, not deciding on someone else's behalf that an incidental edit is a feature.
+
+**Rules.**
+1. When a sweep touches files that are NOT the work of the task at hand, list them by owner and ask
+   before staging — especially art/material/data values, which look identical whether they were
+   tuned deliberately or nudged while testing something else.
+2. Checking for churn is necessary, not sufficient. The churn test tells you the bytes changed on
+   purpose; it says nothing about whose purpose.
+3. When reverting, restore to the recorded pre-change content and PROVE it (`git diff <pre> HEAD --
+   <paths>` empty). I first wrote "restored to 0.5" — the prior values were a mix of 0.25 and 0.5,
+   so the claim was wrong even though the restore was right.
+
+## Lesson AO — a check's stated scope must be as narrow as the check; a narrow check described broadly stops the next reader looking (2026-09-04, `game_polish_a`)
+
+**Symptom.** The red-team gate failed `game_polish_a` THREE times, every time on report integrity
+and never on the code, which it re-derived clean on every pass. Each fix was narrower than the
+defect shape and was then reported as complete:
+
+| round | what I did | what I claimed | what it missed |
+|---|---|---|---|
+| 1 | swept the report's HEADINGS | "enumerated every heading … not sampled" | the shape is stale CONTENT, which lives in bodies and tables |
+| 2 | wrote a checker that resolves FILE PATHS | quoted "78 cited, 0 unresolved" as report-integrity proof | it parses no numbers; four sections still quoted a superseded run |
+| 3 | gave that checker a suspect set `{48,44,24,21,12}` | "0 stale" | a later run's fingerprint was 84/52/4 — not in the set, so it passed a live defect in the section a prior FAIL had called authoritative |
+
+**Root cause.** Each round the *sentence describing the check* was broader than the check. That is
+worse than not running it, because the next reader — reviewer or me — stops looking.
+
+**Rules.**
+1. State a check's scope as precisely as its result. "0 unresolved" is proof only for what the
+   checker parses; say which.
+2. A checker with an allow-list can only find what its author already knew. Filter by SYNTAX (this
+   token is a decimal / a unit / an identifier), never by VALUE (this number is not suspicious).
+3. Prefer generating a claim from its source over checking it: § A1's table and § A4's clip list are
+   now emitted from the invariants JSON and from disk, so they cannot drift by being edited around.
+4. Two failures of one shape ⇒ stop fixing instances (PIPELINE_HARDENING §15) — and the enumeration
+   you choose IS the fix. Enumerating the wrong axis is indistinguishable from not enumerating.
+
+## Lesson AP — `SnapPlayModeSafe` returns a path for a file it never wrote unless you are at END of frame (2026-09-04)
+
+**Symptom.** A capture tool logged two successful navigations and two file paths; neither file
+existed. `CaptureCore.SnapPlayModeSafe` in play mode uses `ScreenCapture.CaptureScreenshotAsTexture`,
+which returns **null** unless the backbuffer is readable — and on null it warns, skips the write,
+and **still returns the filename**.
+
+**Rules.** `yield return new WaitForEndOfFrame()` before the call, not `yield return null`. And
+assert BOTH that the file exists AND that its md5 differs from the previous capture — the same
+function has been caught returning byte-identical stale frames for different states
+(`reference_snapplaymodesafe_phantom_path`).
+
+**Sister trap, same session:** an editor tool armed on `EditorApplication.update` before entering
+play mode never runs — entering play mode domain-reloads and the subscription ceases to exist.
+Arm through `SessionState` + `[InitializeOnLoad]`, the shape `GamePolishDemoRecorder` uses.

@@ -4,6 +4,98 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
+## 2026-09-04/05 — `game_polish_a` DONE, `gacha_history_rebuild_stall`, build 2699 (GPS)
+
+**`game_polish_a` is DONE** (`Docs/Specs/Completed/game_polish_a/`). Slice (a) of Notion 2111:
+`LayeredPush` between same-pillar screens — cross-backdrop included, since Cesar shipped option (b)
+and the flag was REMOVED rather than flipped; the 16 px `ScreenEntryMotion` rise on fade arrivals;
+§D7's gold-halo nav selected state driven by ONE `NavSlotHighlight` across both the game and GPS
+bars (`GpsNavBarHighlight.cs` is the only Gps/ file touched, as scoped); and cross-fades where
+tabs/filters/Settings used to snap. Gates: invariants 87 records / fail 0, A2 rest parity worst
+1.232 % localised to the RP counter, EditMode 2430 → 2444.
+
+**Two defects the gates could not see, both found by measuring rather than looking.** (1) The shared
+top-bar title HARD-CUT one frame after every push — `ApplyScreen` is deferred to `Settle` by
+design, so the whole 0.25 s push played with the leaver's name over the arriver's content. It was
+invisible under the old fade-to-black; the push is what exposed it. It now dissolves from push
+start over `FadeDur`. (2) **That fix shipped broken once**: `??` on a `GetComponent` returned a
+FAKE-NULL CanvasGroup, and `UiMotion.Fade` silently returns an EMPTY routine on a null group — so
+both halves no-oped while the log still printed "dissolve START". No exception, no failing test,
+pixel-identical rest frame. `CenterTitleDissolveTests` pins it, tripwire-verified by restoring the
+`??` and getting 4 failures back.
+
+**The red-team failed the task three times, every time on report integrity and never on the code** —
+it re-derived every functional gate clean on each pass. Each of my fixes was narrower than the
+shape and then described as complete: round 1 swept HEADINGS when the shape is stale CONTENT; round
+2 wrote a citation checker that resolves PATHS and reported "0 unresolved" as integrity proof
+though it parses no numbers; round 3 gave that checker a HARD-CODED suspect set, so a later run's
+84/52/4 fingerprint printed "0 stale" over a live defect. Fixed structurally: § A1 and § A4 are now
+GENERATED from the invariants JSON and from disk, and `Docs/Scripts/check_report_citations.py` +
+`check_report_counts.py` (no allow-list, syntactic exclusions only) replace the reading.
+
+**`gacha_history_rebuild_stall`** (Quick, done): Gacha History froze >1 s on every arrival —
+`OnEnable` rebuilt one row per prize record, up to ~1 000, each instantiating a whole `BagClubCard`.
+Now a 12-row page built 3 rows/frame, appended on scroll-end, with the store's `OnChanged`
+PREPENDING new rows instead of rebuilding (reference identity is the discriminator, and it is exact:
+`Prepend` keeps the record objects, `Refresh` replaces them all). Ticket sprite cached per type.
+**297.7 MB / 1271 ms / 2 frames → 12.9 MB / 34.5 ms / 14 frames.** The spec's own `PageSize = 40`
+was incompatible with its < 20 MB / < 50 ms gate at the measured 0.81 MB and 12.6 ms per row;
+chunking ALONE did not close it, because A13 measures the PUSH window so a slower fill just moves
+cost out of the window.
+
+**Build 2699 on TestFlight (GPS)** — `iOS-Full-GPS`, VALID at Apple 23:12. Unity 101 s, archive
+356 s, upload 89 s; content gate clean at texts v37. Carries the above plus Cesar's `map_view_v2`
+(swept at his instruction, **unreviewed by that session**, STATUS still `READY_FOR_SELF_REVIEW`).
+A tree-wind change (`WindSpeedFloat1` → 0.2327 on 11 materials) was swept in and then reverted: it
+was made while checking UI and never meant to ship.
+
+---
+## 2026-09-05 — `control_scheme_seam` — the shot pipeline is scheme-agnostic
+
+Spec: `Docs/Specs/Active/control_scheme_seam/` (`STATUS.md` = **READY_FOR_SELF_REVIEW**). Spec 0 of
+the control-schemes track (`Docs/CONTROL_SCHEMES_PLAN.md`): the seam, the persisted 4-way setting,
+the telemetry stamp — and **no new scheme behaviour**.
+
+**Flick is unchanged, and that is the only thing here that could really fail.** `CommitFlick()`'s
+tail is now `ResolveAndPublish(...)`; `CommitExternal(in ShotIntent)` is the door for the three
+schemes to come. Parity is asserted on **raw `fp` values with no delta** — a tolerance would hide
+exactly the bug class a refactor like this introduces. Full EditMode: **2467 pass, 0 fail, 3
+pre-existing skips**. The re-parent is proven by dumping every `Graphic`'s world rect before and
+after (`evidence/canvas_geometry_*.txt`): every flick-UI row identical.
+
+**Three API decisions worth remembering.** `BeginExternalDrag` is an OVERLOAD PAIR, not a default
+argument — four Editor bots reflect on it with `Type.EmptyTypes` and a default-arg version returns
+null at every one. `ControlSchemeService` lives in `Golfin.Gameplay.UI` (the `QualityTierService`
+precedent) because `Golfin.Gameplay.Config` and `.Input` are both `autoReferenced:false` and the
+Settings UI and TelemetryHooks are Assembly-CSharp. And `shot_taken.scheme` is a parameter on
+`AppendShotTimingKeys`, not a `ShotRecord` field, because the only site that builds a ShotRecord is
+under the `Assets/Scripts/Physics/` zero-edit ban.
+
+**Verification found four real defects, all by measuring rather than looking.** (1) The Figma MCP
+PNG export returns **fully opaque** images on this file — proven by exporting the known-transparent
+Language icon the same way — so the Controls icon shipped a grey plate; it is now rasterised from
+the node's SVG (`make_controls_settings_icon.py`, 1.8/255 mean error). (2) Submenu rows were built to node
+`14089:101955` (radio on the right, text left 120, font 48) — **and Cesar rejected it on sight**:
+the Figma frame was right about the component and wrong about its context, because every other
+submenu in that screen selects with a blue rectangle. Rebuilt from the LIVE Language row instead.
+Worth generalising: the fidelity gates compare against the node and have no internal-consistency
+check against the neighbouring UI. (3) Writing the localization CSV was **again** not enough — the
+generated `LocalizationTextTable.asset` is the runtime source and the labels rendered as raw keys
+until re-imported (same scar as `map_view_v2` the day before). (4) **Linear colour space breaks
+Figma's alpha maths**: the 10 % white segment fill rendered (91,95,105) against a target of
+(36,55,77), and no single alpha can fix it — solving per channel gives three different alphas
+(0.0144 / 0.0241 / 0.0333). The sprites are baked pre-composited instead.
+
+Localization published end to end: PLAN 5 add / 0 conflict → apply → `content_publish` **texts v37
+→ v38** → `export --check` clean, `content_version.txt` stamped.
+
+**Open:** the in-game modal has NOT been re-shot since the colour fix — the sprites are opaque so
+the colour is deterministic, but that is arithmetic, not an on-surface check. The Unity Editor was
+shared with an active parallel `map_view_v2` session and play mode kept being killed by domain
+reloads, so I stopped rather than keep power-cycling it. To close: PLAY → any hole → gear, confirm
+the three unselected segments read navy.
+
+---
 ## 2026-09-04 — `map_view_v2` — B1 overlay built and verified in Unity
 
 Spec: `Docs/Specs/Active/map_view_v2/` (`STATUS.md` = **READY_FOR_SELF_REVIEW**). The overhead map's
@@ -48,6 +140,14 @@ more geometry, and flat smears become trees with branches and canopy. Shipped as
 (serialized, default 8), map-lifetime only, raises-never-lowers, with a before/during/after guard that
 now covers `QualitySettings` as well as the terrain — BEFORE == AFTER on all three holes, and
 `QualitySettings.asset` clean in git. Cost ~1.4 M → ~2.9 M triangles while the map is open.
+
+**The pin chip stands on the hole** (Cesar, 2026-09-05): chip ABOVE the pin with the tail dropping
+straight onto it — a deliberate departure from B1's mock, which hangs it below — and the tail is 200 px
+rather than 120, because the cloned HUD tail sprite is a gradient whose far half renders as nothing.
+Two traps on the way: a scene save made by ANOTHER task (four `SchemeRoot_*` objects from
+`ShotSchemeHost.cs`) had frozen `_pinTailMinPx: 120` into `LabScaffold.unity`, so the C# default change
+was inert until that line was edited; and standing the chip made it collide with the readout, which now
+dodges the indicator's full chip-plus-tail rect rather than just the chip.
 
 **Three findings the code cannot fix inside this spec.** The camera frames ball + *club* carry, so the
 top edge sits at almost exactly 1.20 × carry — meaning the over-range target itself is always just
