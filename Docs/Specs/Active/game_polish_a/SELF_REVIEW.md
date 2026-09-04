@@ -133,3 +133,122 @@ None of the three would flip my verdict. The red-team pass may or may not want t
 **PASS.** Setting `STATUS.md` → `SELF_REVIEW_PASS`.
 
 The task delivers option (b) as Cesar authorised, `fail=0` across 87 pushes (32 cross-backdrop), A2 parity confirmed in independent pixel bboxes, D7 mechanism visible on both bars with the GPS scope constraint honoured to the letter, standing bans clean, no scene mutations, no invariant deceptions. The three hygiene notes above are worth mentioning but do not degrade the shipped behaviour or the evidence's honesty.
+
+---
+
+## Iteration 2 self-review — 2026-09-04 17:34 JST
+
+**Verdict:** **PASS** → set `STATUS.md` to `SELF_REVIEW_PASS`.
+
+The centre-title dissolve is real in the pixels of the shipped clip, the two shape audits hold up under my own re-enumeration, the full EditMode sweep is `2430 passed / 0 failed / 3 skipped` on a clean re-run I ran myself, and the three hygiene items from iter-1 are all cleared. No scene mutations, no standing bans touched, no unexpected working-tree drift.
+
+### § Visual diff notes (Step 1 — pixels first, from `videos/game_polish_a_f_cross_backdrop.mp4`)
+
+Independent decode: 750-frame 1170×2532 clip. Re-cropped the top-bar title band to `crop=1170:140:0:200` (my first crop was 120 px too high and read the sky, giving max Δ=0.43 — a false all-clear I caught and corrected before finalising). On the corrected crop, mean luma across the whole clip has max frame-to-frame Δ=49.1, mean=0.29, median=0.005 — flat by construction, spikes only at title changes.
+
+Two title-change events detected, both showing intermediate-alpha frames:
+
+| Event | Frame window | Luma trace on the glyph zone | Verdict |
+|---|---|---|---|
+| Forward push, ModeSelection→TournamentLeaderboard | f008..f016 | 76.72 → 50.02 → 36.56 → 36.56 → 85.35 → 85.35 → 92.77 → 98.11 → 98.24 | multi-frame dissolve, out+in |
+| Back push, TournamentLeaderboard→ModeSelection | f688..f694 | 98.87 → 98.89 → 59.55 → 36.45 → 75.02 → 76.11 → 76.11 | multi-frame dissolve, out+in |
+
+The eyeball corroborates: stacked frames of event 1 show `MODE SELECTION` at f9 rendered noticeably gray-not-white (mid-out-fade), then two frames blank at f10-f11, then `TOURNAMENT LEADERBOARD` at f12 in a visibly dimmer gray-white before growing to full white at f15-f16. Event 2 is symmetric. A hard cut is a single Δ>30 frame bordered by ~0 on both sides with no visible partial-alpha state; neither event has that shape.
+
+**One caveat surfaced by my snap-detector heuristic:** the "in" step at f12 flags on `Δprev=0, Δ=49.10, Δnext=0` in isolation. Only the pixel stack disproves it — the frame is visibly partial-alpha rather than opaque. The `Δnext=0` is a duplicated frame from ffmpeg's rate conversion (`dup=12 drop=0` reported across the whole extract), not a hold in the render. Multiple following frames continue to grow (Δ=8.02 at f14, Δ=6.05 at f15) as the fade-in tail plays out. Whether the fix could be cleaner if the "in" half spread across more frames is a taste question, not a defect — this IS a multi-frame dissolve with visible partial-alpha intermediate states.
+
+### § Full EditMode sweep — independently re-run
+
+I called `tests-run` via unity-mcp-cli against the running Editor (had to poll a stuck run to completion first, ~15 min). Result:
+
+```
+Summary: Status=Passed  TotalTests=2433  PassedTests=2430  FailedTests=0  SkippedTests=3  Duration=00:02:18.85
+```
+
+The 3 skips are all pre-existing `HoleCompleteDriverTests` skips with the same `Stage C1: HandleShotComplete is now a no-op` message. Matches the report's `2430/0/3` claim exactly.
+
+(Note: my first attempt collided with an in-flight run, then produced a corrupt `game_polish_a_tests.txt` in `_capture/` — one `Failed` entry on `SaveBackedEntryStoreTests.Debounce_MultipleMarkDirtyWithin250ms_OneSavedEvent`, but the failure text was literally the MCP error message from my own conflicting call, i.e. `Unhandled log message: '...another test run is already in progress. Active request id: ea2e98c9...'`. That is contamination from my gate, not a real regression, and my later clean run confirms it.)
+
+`CenterTitleDissolveTests` shows in both the corrupt cached file and the fresh run with all 5 tests passing. Not verifying the tripwire by hand-reverting `??` (destructive), but the fixture asserts on Unity's overloaded `== null` operator directly (`Assert.IsFalse(group == null, "EnsureCenterTextGroup returned a fake-null CanvasGroup")` — the same operator that misbehaves against a fake-null), so it is structurally the correct tripwire for the exact defect signature. If `EnsureCenterTextGroup` were reverted to `??`, this assertion is the one that would flip.
+
+### § Shape audit re-enumeration (§15)
+
+**Shape A — `??` on Unity object lookups in the 7 touched files.** Re-ran the grep myself:
+```
+$ for f in LayeredPush ScreenEntryMotion NavSlotHighlight UiSelection PersistentUIManager ScreenManager GpsNavBarHighlight; do
+    grep -nE "(GetComponent|GetComponentInChildren|Find|AddComponent)[^;]*\?\?" Assets/**/$f.cs
+  done
+(no matches)
+```
+The lone `GetComponent<CanvasGroup>()` call site in `PersistentUIManager.cs:783` uses the `existing == null ? Add… : existing` idiom with a comment citing CLAUDE.md Basic Rules 4. Clean.
+
+**Shape B — what `ApplyScreen` paints that is visible mid-push.** Traced `ApplyScreen` (`ScreenManager.cs:681..896`) through to `PersistentUIManager.HighlightScreen`. Three paints as the report claims:
+
+- Centre title (`ApplyTopBarCenterText`) — was the defect, now handed off at push START.
+- Nav-slot highlight (`UpdateScreenHighlight`) — verified `PillarOf` in `ScreenManager.cs:503`. Every same-pillar pushable pair produces the SAME `pillar.Value` → `currentScreen` stays the same → `Paint(...)` recomputes `currentScreen == slot` to the same result on all 5 slots → no visual change. Pushable pillar table verified:
+  - MainPlay: `HoleSelection / ModeSelection / MissionSelection / TournamentSelection / TournamentHoleSelection / TournamentLeaderboard` — every push pair among these six shares MainPlay.
+  - Gacha: `GeneralShop / GachaHistory / GachaPrizes` — every push pair shares Gacha.
+  - Characters: `Roster / StaminaShopSelection / StaminaShopDetail` — every push pair shares Characters.
+  - Leaderboard has no pillar; `HighlightScreen` calls `ApplyTopBarCenterText(screenId)` FIRST then `if (!pillar.HasValue) return;` (`PersistentUIManager.cs:844..848`) — so pairs involving Leaderboard hit the title paint (now dissolved) but skip the nav paint. Report's branch reasoning holds under my own re-read.
+- Bar visibility (`ShowBars` / `ShowTopBarOnly` / `HideBars`) — from `ScreenManager.cs:867..885`, ONLY the auth/starter/gameplay-loader paths swap bar visibility. All shell-to-shell moves land in the `ShowBars()` branch that stays the same. No pushable pair transitions between `ShowBars` and `ShowTopBarOnly`/`HideBars`. Confirmed.
+
+Report's report of the pixel corroboration (top bar Δ=3.29 worst, nav bar Δ=10.18 tracking the backdrop cross-fade, both step +0.01 across Settle) is consistent with my Step-1 event-1 window: nothing above y=147 changes across the fade, which is what "chrome held at 1" looks like.
+
+### § Hygiene items from iter-1 — all cleared
+
+1. **Stale caption on `a4_option_b_transition_strip.png`** — rebuilt from the fixed clip. New caption reads "SHIPPED (Cesar, 2026-09-04) — a push between two screens whose backdrops DIFFER. The backdrops cross-fade underneath while the content layers travel, and the top-bar title DISSOLVES across the push (frames 3-4) rather than hard-cutting after it. Top bar and nav bar hold still throughout." The six thumbnails match: t=+0.07s shows mid-alpha `MODE SELECTION`; t=+0.10s shows blank title; t=+0.13s shows dimmer `TOURNAMENT LEADERBOARD`; t=+0.20s+ opaque. Caption honest against frames. ✅
+2. **§A9 prose drift** — rewritten. Body now leads with "VOID, replaced", cites the two replacement tests by name, quotes the correct grep result (2 hits only in the test file, both asserting absence), and explicitly closes with "An earlier revision of this section quoted `LayeredPush.cs:93 public static bool AllowBackgroundCrossFade …` as though the declaration were still there. It is not; that text described the pre-decision build and is corrected above." ✅
+3. **84↔87 push-count drift** — corrected at report line 10: "Re-measured against the widened rule: 87 pushes measured, `fail == 0`. (84 come from the probe's ordered-pair sweep; the other 3 are the pushes the real-navigation tour performs on its way between groups. `measured=87` in the invariants JSON is the authoritative count — an earlier line here said "84" by quoting the sweep alone.)" JSON re-parsed: `measured=87, fail=0`. ✅
+
+### § Scene-mutation + standing bans + working-tree audit (Steps 7 + Rule 13)
+
+```
+git diff 8e13d5d7f..HEAD --stat -- '*.unity' '*.prefab'      (empty)
+git diff 8e13d5d7f..HEAD --stat -- Assets/Scripts/Physics/   (empty)
+git diff 8e13d5d7f..HEAD --stat -- 'Scenarios.cs'            (empty)
+git diff 8e13d5d7f..HEAD --stat -- 'M_Splash*.mat'           (empty)
+```
+Iter-2 touched zero scene files and zero prefabs (fix is entirely in scripts + a new tests file). All standing bans clean.
+
+Working-tree drift outside this task's folder: same three `Docs/Specs/Active/map_view_v2/` paths documented as Cesar's parallel session in report §0.3 and HEARTBEAT's iter-2 baseline block. Not this task's code. ✅
+
+### § A2 rest-parity impact of the new runtime CanvasGroup
+
+The dissolve adds a `CanvasGroup` at runtime to `usernameText` when the first push runs (lazy). Concerns and how they clear:
+
+- **Rest alpha.** `EnsureCenterTextGroup` default is alpha=1 (Unity component default), and `DissolveCenterText` ends at `Fade(g, 0f, 1f, half)`. `TheGroupRestsFullyOpaque_SoTheRestPixelsAreUnchanged` pins this. A2's iter-1 bbox check confirmed nothing above y=147 differs on any screen — the runtime group is invisible to the parity gate. ✅
+- **Raycast behaviour.** `blocksRaycasts` stays at the Unity default `true`, which is exactly the label's pre-fix behaviour (no group = raycast blocks depend only on the underlying graphic). `TheGroupRestsFullyOpaque_...` also pins this. ✅
+- **Interrupted dissolve stranding the label translucent.** Guarded twice: `ApplyTopBarCenterText` (`PersistentUIManager.cs:687..696`) stops any running routine AND forces `_centerTextGroup.alpha = 1f` before repainting. `ApplyTopBarCenterText_ForcesTheGroupBackToOpaque` pins this with an artificial `group.alpha = 0.37f` interruption. ✅
+- **Screens that do NOT push (Home, cross-pillar arrivals, GPS screens, account/starter title-bar paths).** These all go through `FadeController.FadeOutThenIn` → `ApplyScreen` → `HighlightScreen` → `ApplyTopBarCenterText`, which cancels-and-forces-alpha-1 as above. No visual change to those paths, no stranded translucent title. ✅
+- **`UiMotion.Enabled=false` (accessibility motion-off).** `CrossFadeCenterTextTo` returns immediately without touching the group; `ApplyTopBarCenterText`'s deferred instant repaint stands. ✅
+
+### § Full acceptance re-walk (Rule 5)
+
+| # | Item | Verdict | How re-verified this pass |
+|---|---|---|---|
+| A1 | Invariants JSON `fail == 0` | **PASS** | Re-parsed JSON: `measured=87, fail=0`, 87 records under `pushes[]`, `optionBShipped=true`. |
+| A2 | Rest parity ≈0 | **PASS** | Iter-1's pixel-bbox result carried forward and re-checked: no iter-2 scene/prefab diff so pixel result cannot have regressed; runtime CanvasGroup rests at alpha=1 per new tests. |
+| A3 | Boundary fade untouched | **PASS** | `git diff 8e13d5d7f..HEAD -- 'FadeController.cs' 'GpsScreenTransition.cs'` empty. |
+| A4 | Six videos with stills | **PASS** | All six clips present; canonical `_f_cross_backdrop.mp4` re-recorded with the dissolve; strip rebuilt with honest caption; my own frame decode confirms real dissolve. |
+| A5 | Chrome static during push | **PASS** | Report's mid-push chrome deltas (top bar Δmax=3.29, nav bar Δmax=10.18 tracking cross-fade, both +0.01 step at Settle) match my Step-1 window observations; A2 pixel result unchanged. |
+| A6 | UI fidelity lint delta zero | **N/A stated** | No Figma node, no prefab layout touched by iter-2 (git diff proves it). |
+| A7 | Cross-fade table | **PASS** | Iter-1 evidence unchanged (no code touch to InventoryScreenController etc). |
+| A8 | Entry rise | **PASS** | Iter-1 strip + log line unchanged (no code touch to `ScreenEntryMotion.cs`). |
+| A9 | (void) flag pinned OFF | **VOID / SUPERSEDED** | `TheOptionBFlag_IsGone` + `SameBackground_IsNoLongerRequiredByTheGate` both pass in fresh run. §A9 prose is now consistent. |
+| A10 | Real entry | **PASS (for reachable pairs)** | Iter-1 evidence unchanged. |
+| A11 | ButtonPressFeedback | **PASS** | Iter-1 evidence unchanged (no prefab touch). |
+| A12 | EditMode sweep green | **PASS** | Freshly re-ran: `2430/0/3`. |
+| A13 | Perf | **PASS with finding** | Iter-1 evidence unchanged; `UiMotionAllocationTests.Fade_TheLoopTheChromeCrossFadeRunsOn_AllocatesNothingPerFrame` still passes (relevant to the new dissolve loop, which uses the same `UiMotion.Fade`). |
+| A14 | Scope | **PASS** | Iter-2 adds 3 files/edits: `PersistentUIManager.cs`, `LayeredPush.cs`, `CenterTitleDissolveTests.cs` (+meta). No `Gps/`, no `FadeController`, no `UiMotion.cs`. |
+| A15 | Nav selected state | **PASS on mechanism** | Iter-1 evidence unchanged; Shape B audit above confirms nav highlight doesn't change across push pairs. |
+| A16 | Deviations | **PASS** | Iter-1 D-1..D-7 unchanged; iter-2 introduces no new deviation. |
+
+### § Findings — none blocking
+
+Nothing new. All three iter-1 hygiene items have been addressed; the corrupt `Docs/Diagnostics/_capture/game_polish_a_tests.txt` I left behind while polling the in-flight test run is not a defect of this task (my own tooling exhaust) and my final clean re-run supersedes it — leaving it in place, since it isn't in the task folder.
+
+### Verdict
+
+**PASS.** Setting `STATUS.md` → `SELF_REVIEW_PASS`.
+
+The iter-2 fix delivers a real multi-frame title dissolve that I verified in the pixels of the shipped video (both events show visible intermediate-alpha frames); the fake-null trap that shipped it broken once is pinned by a structurally-sound tripwire that would flip on regression; the shape audit for both `??`-on-Unity-lookups and `ApplyScreen`-painted-shared-chrome holds up under my own re-enumeration; a freshly re-run full EditMode sweep is `2430/0/3`; all three prior hygiene items are cleared; and iter-2's diff touches zero scenes, zero prefabs, and nothing under Physics/GPS/Splash.

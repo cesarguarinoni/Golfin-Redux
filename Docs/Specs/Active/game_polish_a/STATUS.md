@@ -1,10 +1,8 @@
-READY_FOR_SELF_REVIEW
+SELF_REVIEW_PASS
 
 # STATUS — `game_polish_a`
 
-**Current:** `READY_FOR_SELF_REVIEW` — **iteration 2**. The self-reviewer passed iteration 1; I then
-found and fixed a real defect (the shared top-bar title snapped after every push), so the code has
-changed and the gates must re-run on it. Notion 2111, slice a of three.
+**Current:** `SELF_REVIEW_PASS` — **iteration 2**. Self-reviewer re-walked iter-2 and confirmed the centre-title dissolve in the shipped clip pixels; re-ran the full EditMode sweep (`2430/0/3`); re-enumerated both §15 shape audits. Notion 2111, slice a of three.
 
 | Date | State | Note |
 |---|---|---|
@@ -42,3 +40,5 @@ absence).
 pass; **A6 is N/A** with the reason stated (no Figma node, no prefab layout touched). The three
 carry-over items in this file are environment and other people's code, not open work on
 this task.
+
+| 2026-09-04 | `SELF_REVIEW_PASS` (iter-2) | Iter-2 fix re-walked. Dissolve confirmed in the pixels of `game_polish_a_f_cross_backdrop.mp4` (two multi-frame events, no single-frame cut). Full EditMode sweep independently re-run: `2430 passed / 0 failed / 3 skipped`. Both shape audits (§15) re-enumerated: (A) zero `??` on Unity lookups in the 7 touched files; (B) `ApplyScreen` paints centre title / nav highlight / bar visibility — the latter two provably don't change across any pushable pair (verified via `PillarOf` table + Leaderboard early-return). All three iter-1 hygiene items (stale caption, §A9 prose, 84/87 drift) cleared. Iter-2 diff touches zero scenes/prefabs. |

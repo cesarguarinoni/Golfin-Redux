@@ -132,9 +132,11 @@ ships.
 **A9 is void and replaced.** There is no flag to grep for; `TheOptionBFlag_IsGone` and
 `SameBackground_IsNoLongerRequiredByTheGate` are the guards now.
 
-**Full EditMode sweep at iteration 1: `passed=2425 failed=0 skipped=3`** (see iteration 2 below for the current `2430`) — all 18 of this task's tests, and
-the three terrain/raycast tests that flaked on earlier runs pass here too, which is what
-"intermittent, not a regression" looks like when it is right.
+**Current full EditMode sweep: `passed=2430 failed=0 skipped=3`** — all 23 of this task's tests
+(18 from iteration 1 plus the 5 new `CenterTitleDissolveTests`), and the three terrain/raycast
+tests that flaked on earlier runs pass here too, which is what "intermittent, not a regression"
+looks like when it is right. Iteration 1's own sweep was `2425 / 0 / 3`; § A12 carries the current
+run and the full per-test list.
 
 ---
 
@@ -368,56 +370,69 @@ uses — read off the live pill, not guessed.
 
 ### A12 · EditMode sweep — **PASS**
 
-Full report: `Docs/Diagnostics/_capture/game_polish_a_tests.txt`.
+Full report: `Docs/Diagnostics/_capture/game_polish_a_tests.txt`. **Re-run at iteration 2** — the
+numbers below are that file's current contents, not a quote of an earlier run:
 
 ```
-RUN STARTED — 2428 cases
-RUN FINISHED passed=2422 failed=3 skipped=3 inconclusive=0 duration=133.4s
+RUN STARTED — 2433 cases
+RUN FINISHED passed=2430 failed=0 skipped=3 inconclusive=0 duration=138.2s
 ```
 
-**Both new suites, all 18 tests, green:**
+**All three of this task's suites, 23 tests, green:**
 
 ```
-Passed  LayeredPushTests.AllowBackgroundCrossFade_DefaultsToFalse
-Passed  LayeredPushTests.Flag_IsNotASerializedFieldAndHasNoProductionWriter
-Passed  LayeredPushTests.DirectionTable_EveryOrderedPair_ForwardOnPush_BackOnGoBack   (110 pairs)
-Passed  LayeredPushTests.DirectionTable_IsIndependentOfTheScreens
-Passed  LayeredPushTests.CanPush_IsFalseWhenMotionIsOff
-Passed  LayeredPushTests.CanPush_IsFalseForEveryHomeMove
+Passed  CenterTitleDissolveTests.ApplyTopBarCenterText_ForcesTheGroupBackToOpaque
+Passed  CenterTitleDissolveTests.CenterTextFor_IsTheOneResolver_SharedWithTheInstantPaint
+Passed  CenterTitleDissolveTests.EnsureCenterTextGroup_AddsARealComponent_NotAFakeNull
+Passed  CenterTitleDissolveTests.EnsureCenterTextGroup_IsIdempotent_AndNeverStacksGroups
+Passed  CenterTitleDissolveTests.TheGroupRestsFullyOpaque_SoTheRestPixelsAreUnchanged
 Passed  LayeredPushTests.CanPush_IsFalseAcrossPillars
+Passed  LayeredPushTests.CanPush_IsFalseForEveryHomeMove
 Passed  LayeredPushTests.CanPush_IsFalseForGpsIds
 Passed  LayeredPushTests.CanPush_IsFalseForScreensWithNoChromeChild
+Passed  LayeredPushTests.CanPush_IsFalseWhenMotionIsOff
 Passed  LayeredPushTests.CanPush_IsFalseWithNullScreenObjects
-Passed  LayeredPushTests.LayerMap_KnowsEveryPushableScreen_AndNothingElse
+Passed  LayeredPushTests.DirectionTable_EveryOrderedPair_ForwardOnPush_BackOnGoBack
+Passed  LayeredPushTests.DirectionTable_IsIndependentOfTheScreens
 Passed  LayeredPushTests.LayerMap_ChromeAndContentNeverOverlap
-Passed  ScreenEntryMotionTests.SkipEntry_IsFalseByDefault
-Passed  ScreenEntryMotionTests.SkipEntry_IsConsumedExactlyOnce
-Passed  ScreenEntryMotionTests.EnteringViaPush_DoesNotConsume
-Passed  ScreenEntryMotionTests.ScreenEntryMotion_WithNoContent_DoesNothingAndDoesNotThrow
+Passed  LayeredPushTests.LayerMap_KnowsEveryPushableScreen_AndNothingElse
+Passed  LayeredPushTests.SameBackground_IsNoLongerRequiredByTheGate
+Passed  LayeredPushTests.TheOptionBFlag_IsGone
 Passed  ScreenEntryMotionTests.EnablingAWiredScreen_LeavesContentAtRest
+Passed  ScreenEntryMotionTests.EnteringViaPush_DoesNotConsume
 Passed  ScreenEntryMotionTests.PushedScreen_DoesNotRise
+Passed  ScreenEntryMotionTests.ScreenEntryMotion_WithNoContent_DoesNothingAndDoesNotThrow
+Passed  ScreenEntryMotionTests.SkipEntry_IsConsumedExactlyOnce
+Passed  ScreenEntryMotionTests.SkipEntry_IsFalseByDefault
 ```
 
-`LayerMap_ChromeAndContentNeverOverlap` failed on its first run with an NRE and was FIXED, not
-weakened: it reflected `LayerMap(...)` into `.Value`, but **boxing a `Nullable<T>` yields the
+`LayerMap_ChromeAndContentNeverOverlap` failed on its FIRST ever run with an NRE and was FIXED,
+not weakened: it reflected `LayerMap(...)` into `.Value`, but **boxing a `Nullable<T>` yields the
 underlying `T`** — there is no boxed `Nullable` to ask. It now reads the fields off the boxed
 `Layers` directly and still asserts the thing it was written to assert.
 
-**The 3 failures are pre-existing and flaky, in assemblies this task does not touch:**
+#### The 3 failures an earlier revision of this section reported are GONE
 
-| Test | Why it is not this task |
+For the record, because this section previously read `passed=2422 failed=3` while claiming PASS:
+those three were pre-existing flaky tests in assemblies this task does not touch —
+
+| Test | Why it was not this task |
 |---|---|
 | `Golfin.Gameplay.Tests.RealHoleTerrainTests.Hole01_Bunkers_WedgeFromEdge_DoesNotFallThrough` | terrain raycasts |
 | `Golfin.Physics.Tests.HoleDataFormatTests.EveryShippedHeightmap_DecodesAndRoundTripsBitIdentically` | the `build_size_diet` heightmap parity gate |
 | `Golfin.Physics.Tests.PlacementSnapTests.SurfaceSnap_WithPreferredType_AndNoMatch_FallsBackToFirstHit` | `RaycastAll` hit ORDER, which Unity does not define (project memory: `raycast_ground_snap_traps`) |
 
-`git diff --stat 1e7f97504..HEAD --name-only` matches **zero** files under
-`Physics/ Gameplay/ Course/` or anything terrain- or heightmap-related. And the set is not
-stable between runs — an earlier full sweep of the same commit failed
-`RealHoleTerrainTests…("Hole_05")` and passed the other two, while this one fails a different
-bunker and two Physics tests. Three different terrain/raycast tests failing on two runs of the
-same code is flakiness, not a regression. **Flagged for someone who owns that area; not fixed
-here, and not silently ignored.**
+`git diff --stat 1e7f97504..HEAD --name-only` matches **zero** files under `Physics/ Gameplay/
+Course/` or anything terrain- or heightmap-related, and the set was never stable between runs —
+an earlier sweep of the same commit failed `RealHoleTerrainTests…("Hole_05")` and passed the other
+two. Three different terrain/raycast tests failing across runs of identical code is flakiness, not
+a regression. **The current sweep passes all three**, which is consistent with that diagnosis and
+is why this item now reports `failed=0`. Still flagged for whoever owns that area.
+
+*(Two tests this section used to list — `AllowBackgroundCrossFade_DefaultsToFalse` and
+`Flag_IsNotASerializedFieldAndHasNoProductionWriter` — no longer exist. They pinned the option-(b)
+flag, which was removed when Cesar shipped option (b); `TheOptionBFlag_IsGone` and
+`SameBackground_IsNoLongerRequiredByTheGate` replace them. See § A9.)*
 
 ---
 
