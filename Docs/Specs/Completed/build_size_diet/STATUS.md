@@ -61,3 +61,4 @@ differing values, matching terminal states and matching sample counts.
 | 2026-09-04 | `SPEC_READY` (amended) | install + Payload-compressed gates; Phase 0b; Phase 4c. |
 | 2026-09-04 | `READY_FOR_ARCHITECT_REVIEW` | Phases 0, 0b, 1, 2, 2.7, 3 applied; 4 and 5 measured only. Both gates pass. |
 | 2026-09-04 | `READY_FOR_ARCHITECT_REVIEW` | Cesar: "run the bot". Smoke-bot AtRest parity run — 24/24 shots bit-identical on Hole 1 + 6. Last outstanding gate closed. |
+| 2026-09-04 | `DONE` (verified) | Architect re-derived both gates from the shipped `Golfin.ipa` 2658 (Payload raw 1007–1009 MiB, Payload-compressed 305 MiB, file 426 MiB). Phase 3's un-evidenced row closed by Cesar on device: Home / Account / Gacha / Daily pill and the GPS nav icons on 2658 look right. |
