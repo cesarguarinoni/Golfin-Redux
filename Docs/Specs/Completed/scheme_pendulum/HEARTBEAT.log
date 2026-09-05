@@ -1,0 +1,40 @@
+=== iter-1 kickoff baseline 2026-09-05 ===
+HEAD 8913901a736e99b0f01356fd4a63df70c6c78cab
+DIRTY (git status --porcelain --untracked-files=all at kickoff):
+ M Assets/Scripts/Gameplay/UI/ShotUI/MapPinIndicator.cs
+ M Assets/Scripts/Gameplay/UI/ShotUI/MapViewController.cs
+ M Docs/GPS/GPS_BACKLOG.md
+ M Docs/Specs/Active/control_scheme_seam/STATUS.md
+ M Docs/Specs/Active/map_view_v2/HEARTBEAT.log
+ M Docs/Specs/Active/map_view_v2/IMPLEMENTER_REPORT.md
+ M Docs/Specs/Active/map_view_v2/map_view_invariants_aimed.json
+ M Docs/Specs/Active/map_view_v2/map_view_invariants_open.json
+ M Docs/Specs/Active/map_view_v2/map_view_invariants_v2_h01_aiming.json
+ M Docs/Specs/Active/map_view_v2/map_view_invariants_v2_h01_back_in_range.json
+ M Docs/Specs/Active/map_view_v2/map_view_invariants_v2_h01_over_range.json
+ M Docs/Specs/Active/map_view_v2/map_view_invariants_v2_h01_pin_flip.json
+ M Docs/Specs/Active/map_view_v2/map_view_invariants_v2_h04_aiming.json
+ M Docs/Specs/Active/map_view_v2/map_view_invariants_v2_h04_back_in_range.json
+ M Docs/Specs/Active/map_view_v2/map_view_invariants_v2_h04_over_range.json
+ M Docs/Specs/Active/map_view_v2/map_view_invariants_v2_h04_pin_flip.json
+ M Docs/Specs/Active/map_view_v2/map_view_invariants_v2_h08_aiming.json
+ M Docs/Specs/Active/map_view_v2/map_view_invariants_v2_h08_back_in_range.json
+ M Docs/Specs/Active/map_view_v2/map_view_invariants_v2_h08_over_range.json
+ M Docs/Specs/Active/map_view_v2/map_view_invariants_v2_h08_pin_flip.json
+ M Docs/TellCode.md
+?? Docs/Specs/Active/control_scheme_seam/ARCHITECT_REVIEW.md
+?? Docs/Specs/Active/scheme_pendulum/
+=== end baseline ===
+
+seam additions (ShotController clamp / RejectExternalDrag / stat getters), IsImplemented on the interface
+PendulumMath + driver + three views written; EditMode suites added
+config: 10 Pendulum keys in controls.csv + ControlsConfig.Default + loader
+strings: import PLAN 3 add/0 conflict -> apply -> content_publish texts v38 -> v39 -> export --check clean -> Tools/Localization/Import Text CSV (table 1052 -> 1055 rows)
+scene: PendulumSchemeBuilder authored SchemeRoot_Pendulum (71 objects); placeholder replaced
+play-mode acceptance run 1: FOUND A REAL BUG - the up-flick zeroes pullPx, power collapses, no shot
+fix: peak-power latch + marker frozen at the upswing reversal (the F15/D1 argument); 3 regression tests
+play-mode run 4: 36/37, run 5: 37/37 at 1170x2532 with a genuine JUST (m=0.010)
+fidelity fix: baked S_PendulumLane / S_PendulumTrack (the two-tinted-stadium stroke idiom washed both shapes)
+play-mode run 6 after the sprite fix: 37/37
+EditMode: 2520 tests, 0 failures (3 pre-existing skips)
+scene drift stripped: 6 no-op prefab anchor overrides removed; diff is now 71 added / 0 removed / 3 changed
