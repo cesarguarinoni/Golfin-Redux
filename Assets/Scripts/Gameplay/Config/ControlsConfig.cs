@@ -135,6 +135,42 @@ namespace Golfin.Gameplay.Config
         public float PendulumWindowScaleAtZeroPower;   // multiplier at power 0
         public float PendulumWindowScaleAtMaxPower;    // multiplier at MaxOverpowerNormalized
 
+        // ── Needle scheme / "Tap Timing" (scheme_needle §3.5) ───────────────────
+        // A THIRD set of pull thresholds, seeded to the Pendulum's own numbers. The three
+        // schemes are being A/B'd against each other, so a retune of one must never move the
+        // others — the same argument that gave Pendulum its own copy of the flick's thresholds.
+        // NeedlePull80Px is the one with no counterpart: this scheme draws a ring at 80% as well,
+        // and NeedlePowerCircleView places all three rings at HandleRestBelowBall + these, i.e.
+        // where the club head LANDS at that power.
+        public float NeedleMinUsefulPullPx;
+        public float NeedlePull80Px;
+        public float NeedlePull100Px;
+        public float NeedlePull120Px;
+        public float NeedleOverpowerGain;
+
+        // The accuracy windows, as fractions of the arc's 90 degree half-sweep. |n| <= Perfect is
+        // a PERFECT; |n| <= Good is a small HOOK/SLICE; past that is a big one.
+        public float NeedlePerfectZoneAtAcc0_01;
+        public float NeedlePerfectZoneAtAcc120_01;
+        public float NeedleGoodZone01;
+        public float NeedleYawGain;
+        public float NeedleMissYawGain;
+        public float NeedleCurveHalfWidthPx;
+
+        // Needle speed, in SECONDS PER SWEEP rather than Hz. The needle crosses the arc ONCE and
+        // then the swing is over, so "how long do I have to react" is the question the number
+        // answers, and stating it in seconds is what makes "trackable by eye" checkable. Its own
+        // line, never the flick's arrow or the Pendulum's Hz: sharing meant one scheme could not
+        // be retuned without moving another, which is the whole point of the A/B.
+        public float NeedleSweepSecAtCC0;
+        public float NeedleSweepSecPerCC;      // positive: higher Club Control = slower, easier
+        public float NeedleMinSweepSec;        // floor, so a retune to a negative slope cannot invert the sweep
+
+        // Power shrinks the target, from the PEAK pull and on the DRAWN zones too, so the player
+        // watches the blue zone close as they pull (the Pendulum carry-over Cesar asked for).
+        public float NeedleWindowScaleAtZeroPower;
+        public float NeedleWindowScaleAtMaxPower;
+
         public static readonly ControlsConfig Default = new ControlsConfig
         {
             PullStartThresholdPx           = 30f,
@@ -190,6 +226,24 @@ namespace Golfin.Gameplay.Config
             PendulumMinHz                  = 0.35f,
             PendulumWindowScaleAtZeroPower = 1.35f,
             PendulumWindowScaleAtMaxPower  = 0.55f,
+
+            // scheme_needle §3.5 seed values — mirror controls.csv (F13 two-mirror rule).
+            NeedleMinUsefulPullPx        = 40f,
+            NeedlePull80Px               = 304f,   // 0.8 x Pull100Px — the 80% ring
+            NeedlePull100Px              = 380f,   // seeded equal to PendulumPull100Px: the pull
+            NeedlePull120Px              = 456f,   // must feel the same in both schemes on day one
+            NeedleOverpowerGain          = 1.0f,
+            NeedlePerfectZoneAtAcc0_01   = 0.08f,
+            NeedlePerfectZoneAtAcc120_01 = 0.20f,
+            NeedleGoodZone01             = 0.40f,  // Figma ZoneGood measures 37.82 deg = 0.420 of 90
+            NeedleYawGain                = 1.0f,
+            NeedleMissYawGain            = 1.5f,
+            NeedleCurveHalfWidthPx       = 150f,
+            NeedleSweepSecAtCC0          = 1.2f,
+            NeedleSweepSecPerCC          = 0.006f,
+            NeedleMinSweepSec            = 0.8f,
+            NeedleWindowScaleAtZeroPower = 1.35f,
+            NeedleWindowScaleAtMaxPower  = 0.55f,
         };
     }
 }

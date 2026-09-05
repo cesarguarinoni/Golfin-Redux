@@ -1,0 +1,91 @@
+=== iter-1 kickoff baseline 2026-09-05T05:26:52Z ===
+HEAD 8d14301c56ac716c71a30032b7237ee1f58ace72
+DIRTY (git status --porcelain --untracked-files=all):
+ M Assets/Scripts/Gameplay/UI/ShotUI/MapPinIndicator.cs
+ M Assets/Scripts/Gameplay/UI/ShotUI/MapViewController.cs
+ M Docs/GPS/GPS_BACKLOG.md
+ M Docs/Specs/Active/control_scheme_seam/STATUS.md
+ M Docs/Specs/Active/map_view_v2/HEARTBEAT.log
+ M Docs/Specs/Active/map_view_v2/IMPLEMENTER_REPORT.md
+ M Docs/Specs/Active/map_view_v2/map_view_invariants_aimed.json
+ M Docs/Specs/Active/map_view_v2/map_view_invariants_open.json
+ M Docs/Specs/Active/map_view_v2/map_view_invariants_v2_h01_aiming.json
+ M Docs/Specs/Active/map_view_v2/map_view_invariants_v2_h01_back_in_range.json
+ M Docs/Specs/Active/map_view_v2/map_view_invariants_v2_h01_over_range.json
+ M Docs/Specs/Active/map_view_v2/map_view_invariants_v2_h01_pin_flip.json
+ M Docs/Specs/Active/map_view_v2/map_view_invariants_v2_h04_aiming.json
+ M Docs/Specs/Active/map_view_v2/map_view_invariants_v2_h04_back_in_range.json
+ M Docs/Specs/Active/map_view_v2/map_view_invariants_v2_h04_over_range.json
+ M Docs/Specs/Active/map_view_v2/map_view_invariants_v2_h04_pin_flip.json
+ M Docs/Specs/Active/map_view_v2/map_view_invariants_v2_h08_aiming.json
+ M Docs/Specs/Active/map_view_v2/map_view_invariants_v2_h08_back_in_range.json
+ M Docs/Specs/Active/map_view_v2/map_view_invariants_v2_h08_over_range.json
+ M Docs/Specs/Active/map_view_v2/map_view_invariants_v2_h08_pin_flip.json
+ M Docs/TellCode.md
+?? Docs/Specs/Active/bot_scheme_parity/SPEC.md
+?? Docs/Specs/Active/bot_scheme_parity/STATUS.md
+?? Docs/Specs/Active/control_scheme_seam/ARCHITECT_REVIEW.md
+?? Docs/Specs/Active/scheme_needle/HEARTBEAT.log
+?? Docs/Specs/Active/scheme_needle/SPEC.md
+?? Docs/Specs/Active/scheme_needle/STATUS.md
+?? Docs/Specs/Active/scheme_needle/reference/needle_pull.png
+?? Docs/Specs/Active/scheme_needle/reference/needle_putt.png
+?? Docs/Specs/Active/scheme_needle/reference/needle_result_perfect.png
+?? Docs/Specs/Active/scheme_needle/reference/needle_timing.png
+=== end baseline ===
+
+--- 06:00Z iter-1 progress ---
+Config: 16 Needle* keys in ControlsConfig + Default + loader + controls.csv (notes per key).
+Code: NeedleMath, NeedleColors, NeedleArcGraphic, NeedlePowerCircleView, NeedleArcView,
+      NeedleTapCatcher, NeedleSchemeDriver. PendulumGradePop -> SchemeGradePop (git mv, meta GUID
+      1024cf6ccd3624b9f8f5352c502eadbc preserved, so LabScaffold's reference survives).
+Tests: NeedleMathTests 25/25, NeedleSchemeDriverTests 31/31. Full EditMode 2586 tests,
+      2583 passed / 0 failed / 3 skipped (the 3 pre-existing HoleCompleteDriver skips).
+      Baseline before this task was 2530 -> +56 = the two new suites; Flick + Pendulum green.
+Strings: PLAN 5 add / 0 conflict -> --apply -> content_publish texts v39 -> v40 -> export
+      --check clean -> Import Text CSV, table 1055 -> 1060. Read back EN + JA through
+      LocalizationManager.Get. No NotoSansJP atlas churn (git status clean for fonts).
+Next: sprite bake (ball ghost reuse + result chip), NeedleSchemeBuilder, scene build, acceptance.
+
+--- 06:40Z iter-1 progress ---
+Art: ONE baked sprite (S_NeedleResultChip, Docs/Scripts/make_needle_sprites.py). Everything curved
+     is a NeedleArcGraphic mesh; the flat rounded shapes are S_PillStadium tinted; the ball ghost
+     is the Pendulum's.
+Scene: NeedleSchemeBuilder built SchemeRoot_Needle in LabScaffold (25 new objects, zero removals,
+     zero active-state flips on existing objects, zero fileIDs gone — verified by a name/fileID
+     set-diff against HEAD, not by eye).
+Acceptance run 1: 115/126. Eleven FAILs, ALL real:
+     - 4x measurement bugs in the bot (world corners of a ROTATED needle and a SCALED pop);
+     - 1x the needle jumped 43% of the arc on a 0.21s hitch frame -> Advance now clamps dt to 1/30;
+     - 4x the pop assertions resolved the PENDULUM's "GradeText" (name collision across two
+       inactive scheme roots) -> renamed NeedleGradeText / NeedleLabel100 / NeedleBallRestGhost.
+Acceptance run 2: 127/127.
+Pixel diff off the saved PNGs then found a defect no live-colour assert could see: the arc was
+     FADING OUT ~2 frames after the tap (CommitExternal reaches Resolving synchronously, and the
+     shared fading view drops its target there). Measured arc navy (34,55,53) vs its own (10,38,55)
+     and (70,93,42) — grass — one shot later. The arc is the result readout; only Idle puts it away
+     now. Gated by a new EditMode test + 6 new invariants.
+Acceptance run 3: 132/132. Re-measured: zones 0 RGB off, arc navy 3 RGB, rings/crescent within
+     1 RGB of Figma's own sRGB composite over the SAME turf.
+UI fidelity lint (render-health, via a throwaway prefab snapshot of the live subtree): 0 FAIL,
+     3 WARN. One WARN was a real defect — TapHint was rendering the builder's literal "TAP!"
+     instead of SHOT_TAP_HINT. Fixed, tested, and gated by an invariant.
+Video: 1170x2532, 36.9 s, captioned — idle -> 120% pull (blue zone 11.4 -> 5.0 deg) -> SHANK ->
+     PERFECT -> HOOK. The recorder's session guard was reset once (documented override).
+EditMode after every change: 2588 tests, 2585 pass / 0 fail / 3 pre-existing skips (2530 + 58).
+
+--- 06:50Z iter-1 close ---
+Acceptance run 4 (final): 133/133 PASS, 0 FAIL @ 1170x2532.
+  entry.scheme_picked_through_the_real_widget = InGameSettingsModalController.schemeButtons[2].onClick
+  release.needle_step_is_frame_rate_clamped   = -0.936 (one 1/30s step from -1)
+  release.tap_hint_reads_the_localised_key    = TAP!
+  6x *.arc_is_still_fully_up_at_the_result    = alpha 1.000 (incl. half a second into the flight)
+Rendered-colour re-measure on the final captures: ZoneGood 0/0/0, ZonePerfect 0/0/0, arc navy
+  +3/0/+1; veils within 6 RGB of Figma's own composite over the SAME turf (crescent 0/-1/0 clear
+  of its edges).
+UI fidelity lint after the TapHint fix: fail 0, warn 3 (all three explained in the report).
+EditMode final: 2588 / 2585 pass / 0 fail / 3 pre-existing skips.
+Scene: 25 objects added, 0 removed, 0 fileIDs gone, 0 active-state flips on existing objects.
+Editor left clean: not playing, ShellScene loaded, no dirty scene, control-scheme pref absent
+  (reads as Flick).
+STATUS -> READY_FOR_ARCHITECT_REVIEW.

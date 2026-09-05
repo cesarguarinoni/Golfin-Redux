@@ -3352,3 +3352,18 @@ MonoBehaviour:
   - key: SHOT_GRADE_MISS
     english: MISS
     japanese: "\u30DF\u30B9"
+  - key: SHOT_GRADE_PERFECT
+    english: PERFECT
+    japanese: "\u30D1\u30FC\u30D5\u30A7\u30AF\u30C8"
+  - key: SHOT_GRADE_HOOK
+    english: HOOK
+    japanese: "\u30D5\u30C3\u30AF"
+  - key: SHOT_GRADE_SLICE
+    english: SLICE
+    japanese: "\u30B9\u30E9\u30A4\u30B9"
+  - key: SHOT_GRADE_SHANK
+    english: SHANK
+    japanese: "\u30B7\u30E3\u30F3\u30AF"
+  - key: SHOT_TAP_HINT
+    english: TAP!
+    japanese: "\u30BF\u30C3\u30D7!"

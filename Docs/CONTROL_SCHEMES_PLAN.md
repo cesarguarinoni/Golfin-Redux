@@ -221,6 +221,21 @@ New drawn elements (vectors only, no art needed): pull/swing lane, pendulum trac
 **Gaps to source:** a CONTROLS icon for the Settings row (no fitting variant in `Settings Icons` — placeholder uses the globe/sound glyph). Stylised JUST!/PERFECT lettering only if Cesar wants more than Rubik Bold.
 
 ## 9. Deferred (to `GPS_BACKLOG.md` when the specs are filed)
+
+**Filed by `scheme_needle` (2026-09-05, SPEC § 7 — out of scope for that spec):**
+- **Grade SFX.** PERFECT / HOOK / SLICE / SHANK have no sound. `ShotController.PublishShotSfx`
+  already fires at commit for the shot itself; a per-grade cue is a second event and wants the
+  Settings on/off that the haptics row above is already parked behind.
+- **`needle_grade` telemetry key.** `shot_taken` currently carries `scheme=2`, `timing01` and
+  `timing_mul`, which is enough to reconstruct the band (`timing01 = 1 − |n|`, and a SHANK is the
+  only row with `timing01 == 0` at `timing_mul == TimingPowerMulRed`). An explicit grade column
+  would remove that inference; it is a telemetry-schema change, so it moves with the next one.
+- **Bot executor.** `bot_scheme_parity` Stage B adds `DriveBot` for this scheme after the
+  Pendulum's; until then a bot plays every scheme through Flick.
+- **Golf-Clash-style drag-the-landing-marker aiming.** Map view already covers placing a target
+  (`MapTargetCarryM` + the power-gauge notch), so this is a second way to do a thing that exists.
+
+
 - Haptics per grade (already parked with the Settings on/off requirement, 2026-09-02).
 - TW 3-click meter as a fifth scheme (accessibility option) — cheap once Spec 0 exists.
 - Per-scheme tutorial / first-shot hint.

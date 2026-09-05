@@ -4,6 +4,79 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
+## 2026-09-05 — `scheme_needle` / **Tap Timing** built (spec 2 of the control-schemes track)
+
+**The second real scheme is playable**, on `control_scheme_seam` (`8913901a7`) and reusing
+`scheme_pendulum` (`501bf5881`) wherever the two share a phase. **Two touches:** pull the same
+`ClubHandle` clone down inside a power circle and RELEASE (that commits the power), then a needle
+sweeps a 180° accuracy arc ONCE and a TAP anywhere in the shot area grades it —
+**PERFECT / HOOK / SLICE**, or **SHANK** if nobody taps. No flick gate: the release is the end of
+the power gesture, not the shot, so gating it on thumb speed would reject exactly the gentle lay-up
+the gesture asks for.
+
+**`ShotController.cs` has ZERO diff, and no seam addition was needed.** `Tick` already returns
+early for an owns-timing external drag, so the swing waits between the two touches with no arrow
+and no auto-cancel; `ShotInProgressUiGate` only closes at `Flicking`, i.e. after the tap. Flick and
+Pendulum are unchanged in behaviour — the only Pendulum diff is a **type name**, twice, from the
+`PendulumGradePop` → `SchemeGradePop` rename (`git mv` carrying the `.meta`, so the script GUID and
+every scene reference survive).
+
+**All seven Pendulum carry-overs applied from the first build, not after a review round.** The
+needle has its own line, stated in **seconds per sweep** rather than Hz because it makes exactly
+one pass — which turns "trackable by eye" into an assertion (1.236 s live, 1.200 s at CC 0). The
+zones shrink with power from the PEAK and the **drawn** zone is the graded one (blue half-angle
+**11.4° → 5.05°** as the pull deepens, asserted by comparing the drawn angle to the graded window).
+Geometry is derived, not authored: a ring is drawn where the club head LANDS at that power, so the
+radii are 374/450/526 rather than the node's 240/300/360, and they are asserted against the
+**config**.
+
+**Almost nothing in this scheme is a sprite.** Every curved element — three rings, the overpower
+crescent, the arc, both zones — is one `NeedleArcGraphic` **mesh**, because its radius comes from
+the pull thresholds and its angle from the accuracy windows, and both move at runtime.
+`PowerGaugeGraphic` / `ConeMeshGraphic` / `PutterTrackGraphic` are the same call already. Exactly
+**one** new PNG is baked (`make_needle_sprites.py` → the result chip: a vertical gradient inside a
+translucent border, which no tinted stadium can draw).
+
+**Colour: the Pendulum's problem, solved a better way.** Figma composites in sRGB and Unity blends
+in LINEAR. Elements over a known parent are pre-composited opaque (zones: **0 RGB** off the target
+on the built render). The three veils over turf keep the node's **alpha** and have their **RGB
+corrected** so the linear blend lands on Figma's sRGB composite — exact on all three channels,
+where Pendulum's fitted single alpha had to accept a per-channel residual and its track could not
+be fitted at all. Measured against Figma's own composite over the same turf: within **6 RGB** at a
+3 px stroke, **(0, −1, 0)** on the wide crescent.
+
+**Three defects found and fixed inside the iteration, every one by a measurement rather than by
+eye, and every one now gated:** (1) the needle jumped **43 % of the arc** on a single 0.21 s hitch
+frame — `Advance` clamps dt to 1/30 s; (2) four pop assertions were resolving the **Pendulum's**
+`GradeText` (find-by-name walks inactive objects and both scheme roots are inactive most of the
+time) and had been passing against the wrong object — the Needle's objects are uniquely named now;
+(3) the arc **faded out ~2 frames after the tap**, because `CommitExternal` reaches `Resolving`
+synchronously and the shared fading view drops its target there — but the arc IS the result
+readout. Measured navy (34,55,53) against its own (10,38,55), then (70,93,42), which is grass. Only
+`Idle` reaches the arc now.
+
+**The UI fidelity linter caught the fourth**, which nothing else did: `TapHint` was rendering the
+builder's authored `"TAP!"` literal, so the published `SHOT_TAP_HINT` key was never read. It
+resolves at show time now, the builder's placeholder is `(SHOT_TAP_HINT)` so a regression is
+obvious, and it is gated twice. Lint over the built subtree: **`fail: 0`**.
+
+Strings `SHOT_GRADE_PERFECT/HOOK/SLICE/SHANK` + `SHOT_TAP_HINT` went the full two-way path (PLAN
+5 add / 0 conflict → apply → `content_publish` **texts v39 → v40** → `--check` clean → Import Text
+CSV with a forced CSV reimport, table 1055 → 1060, read back EN **and** JA).
+
+**EditMode 2588 / 2585 pass / 0 fail / 3 pre-existing skips** (2530 + 58 new). **Acceptance
+133/133** at 1170×2532 through the player's own entry points: boot → PLAY → hole card → the real
+`InGameSettingsModalController.schemeButtons[2]` (`TapTimingSegment`) → real pointer events on the
+real handle → a real pointer-down on the real tap catcher. Nothing about the grade is forced: the
+bot polls the LIVE needle offset and reacts. Video at
+`Docs/Reports/Media/2026-09-05_scheme_needle.mp4` (1170×2532, 36.9 s) — idle → 120 % pull →
+SHANK → PERFECT → HOOK. **Not verified:** putt mode was entered by setting `IsPutt` (the property
+the loop itself sets) rather than by playing to a green with a putter; the club-change sprite swap
+is argued from the live binder plus a read-back, not shown across two clubs; the Strength half of
+the overpower trade is EditMode only; nothing ran on device. **Next:** Free Swing (spec 3), or
+`bot_scheme_parity` Stage B for this scheme's `DriveBot`.
+
+---
 ## 2026-09-05 — `scheme_pendulum` built (spec 1 of the control-schemes track)
 
 **Pendulum is a real, playable scheme**, on top of `control_scheme_seam` (`8913901a7`). Picking it

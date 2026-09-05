@@ -82,6 +82,23 @@ namespace Golfin.Gameplay.Config
                     case "PendulumMinHz":                  cfg.PendulumMinHz                  = val; break;
                     case "PendulumWindowScaleAtZeroPower": cfg.PendulumWindowScaleAtZeroPower = val; break;
                     case "PendulumWindowScaleAtMaxPower":  cfg.PendulumWindowScaleAtMaxPower  = val; break;
+                    // scheme_needle §3.5
+                    case "NeedleMinUsefulPullPx":          cfg.NeedleMinUsefulPullPx          = val; break;
+                    case "NeedlePull80Px":                 cfg.NeedlePull80Px                 = val; break;
+                    case "NeedlePull100Px":                cfg.NeedlePull100Px                = val; break;
+                    case "NeedlePull120Px":                cfg.NeedlePull120Px                = val; break;
+                    case "NeedleOverpowerGain":            cfg.NeedleOverpowerGain            = val; break;
+                    case "NeedlePerfectZoneAtAcc0_01":     cfg.NeedlePerfectZoneAtAcc0_01     = val; break;
+                    case "NeedlePerfectZoneAtAcc120_01":   cfg.NeedlePerfectZoneAtAcc120_01   = val; break;
+                    case "NeedleGoodZone01":               cfg.NeedleGoodZone01               = val; break;
+                    case "NeedleYawGain":                  cfg.NeedleYawGain                  = val; break;
+                    case "NeedleMissYawGain":              cfg.NeedleMissYawGain              = val; break;
+                    case "NeedleCurveHalfWidthPx":         cfg.NeedleCurveHalfWidthPx         = val; break;
+                    case "NeedleSweepSecAtCC0":            cfg.NeedleSweepSecAtCC0            = val; break;
+                    case "NeedleSweepSecPerCC":            cfg.NeedleSweepSecPerCC            = val; break;
+                    case "NeedleMinSweepSec":              cfg.NeedleMinSweepSec              = val; break;
+                    case "NeedleWindowScaleAtZeroPower":   cfg.NeedleWindowScaleAtZeroPower   = val; break;
+                    case "NeedleWindowScaleAtMaxPower":    cfg.NeedleWindowScaleAtMaxPower    = val; break;
                     default: matched = false; break;
                 }
 

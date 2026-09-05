@@ -223,7 +223,7 @@ namespace Golfin.EditorTools.ShotUI
             var popRoot = MakeRoot(rootRt, "PendulumGradePop");
             popRoot.anchoredPosition = new Vector2(0f, PopAboveBall);
             popRoot.sizeDelta = new Vector2(PopWidth, PopHeight);
-            var pop = popRoot.gameObject.AddComponent<PendulumGradePop>();
+            var pop = popRoot.gameObject.AddComponent<SchemeGradePop>();
             var popText = MakeText(popRoot, "GradeText", "JUST!", PopFontNodePx, Hex(0xADEBAD), FontStyles.Bold);
             Stretch(popText, 0f);
             popText.GetComponent<TextMeshProUGUI>().alignment = TextAlignmentOptions.Center;

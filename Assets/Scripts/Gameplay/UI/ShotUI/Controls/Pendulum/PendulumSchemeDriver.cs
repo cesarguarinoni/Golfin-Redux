@@ -37,7 +37,7 @@ namespace Golfin.Gameplay.UI.Controls.Pendulum
 
         [SerializeField] private PendulumLaneView  _laneView;
         [SerializeField] private PendulumBarView   _barView;
-        [SerializeField] private PendulumGradePop  _gradePop;
+        [SerializeField] private SchemeGradePop    _gradePop;
 
         [Header("Debug")]
         [Tooltip("One line per committed swing: marker offset, grade, Hz, power. Tuning aid.")]
@@ -406,7 +406,7 @@ namespace Golfin.Gameplay.UI.Controls.Pendulum
         /// </summary>
         public void ConfigureForTests(RectTransform schemeRoot, RectTransform handle,
                                       PendulumLaneView lane, PendulumBarView bar,
-                                      PendulumGradePop pop, in ControlsConfig cfg)
+                                      SchemeGradePop pop, in ControlsConfig cfg)
         {
             _schemeRoot = schemeRoot;
             _handle     = handle;
