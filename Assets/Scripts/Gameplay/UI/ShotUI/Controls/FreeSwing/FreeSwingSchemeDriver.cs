@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -239,10 +240,22 @@ namespace Golfin.Gameplay.UI.Controls.FreeSwing
             if (_controller == null || _schemeRoot == null) return;
             if (_controller.State != ShotState.Idle) return;
 
+            BeginSwingLocal(ToLocal(e));
+        }
+
+        /// <summary>
+        /// Open a swing at a point in the scheme root's LOCAL space. Split out of
+        /// <see cref="OnPointerDown"/> so <see cref="DriveBot"/> can start the identical swing
+        /// without a <c>PointerEventData</c> — a bot has no camera and no press position for
+        /// <c>RectTransformUtility</c> to project, but it needs every field this method resets,
+        /// in the order it resets them, and it needs the clock zeroed at the same instant.
+        /// </summary>
+        private void BeginSwingLocal(Vector2 origin)
+        {
             _dragging     = true;
             _committed    = false;
             _phase        = Phase.Back;
-            _origin       = ToLocal(e);
+            _origin       = origin;
             _prevPos      = _origin;
             _reversalPos  = _origin;
             _peakPull     = 0f;
@@ -559,6 +572,150 @@ namespace Golfin.Gameplay.UI.Controls.FreeSwing
             _traceView?.HideImmediate();
             _analyzerChip?.HideImmediate();
         }
+
+        // ── Bot seam (bot_scheme_parity §3.2) ────────────────────────────────────
+
+        /// <summary>
+        /// Swing this scheme for a BOT by feeding SYNTHETIC SAMPLES into the driver's own buffer
+        /// in real time: straight back to the depth <paramref name="power01"/> asks for, then
+        /// straight up, crossing the impact line at <paramref name="impactOffsetPx"/> at the
+        /// sampled <paramref name="tempoRatio"/>.
+        ///
+        /// <para>SYNTHETIC SAMPLES, NOT A SYNTHETIC RESULT. Every point goes through the public
+        /// <see cref="ProcessDrag"/> — the same method the pointer events call — so the trace
+        /// draws, the reversal is detected the normal way, the tempo is measured off the real
+        /// clock and the shot fires on the driver's own impact-line crossing. The analyzer chip
+        /// the player reads afterwards is the driver's own verdict on a swing it genuinely
+        /// watched happen.</para>
+        ///
+        /// <para>THE PATH IS A STRAIGHT CHORD from the reversal to the crossing, so
+        /// <c>FreeSwingMath.PathDeg</c> measures zero bow and <c>FadeDraw01</c> is 0: bots never
+        /// shape a shot. The lateral information they DO carry is the impact offset, which is the
+        /// scheme's aim error.</para>
+        ///
+        /// <para>AND THEY NEVER DUFF. The upstroke duration is derived from
+        /// <paramref name="upSpeedPxPerSec"/> and the path's own length rather than being an
+        /// independent knob, so the speed the driver measures is the speed asked for. A duff is a
+        /// thumb failing to move, not a golfer lacking skill, and putting one in the difficulty
+        /// model would make low-level bots fail in a way no human ever fails on purpose.</para>
+        /// </summary>
+        public IEnumerator DriveBot(float power01, float impactOffsetPx, float tempoRatio,
+                                    float upSpeedPxPerSec)
+        {
+            if (_controller == null) yield break;
+            if (_controller.State != ShotState.Idle)
+            {
+                Debug.LogWarning($"[FreeSwing] DriveBot: shot is {_controller.State}, not Idle — swing skipped.");
+                yield break;
+            }
+
+            bool  isPutt = _controller.IsPutt;
+            float pullPx = PullPxForPower(power01, isPutt);
+
+            Vector2 reversal = new Vector2(0f, -pullPx);
+            Vector2 crossing = new Vector2(impactOffsetPx, ImpactCrossOffsetPx);
+            float   lengthPx = (crossing - reversal).magnitude;
+
+            // Solve the two durations from the two things the error model actually sampled: the
+            // up-speed fixes how long the upstroke takes, and the tempo ratio then fixes the
+            // backswing. Driving them the other way round would let a long pull silently turn
+            // into a duff.
+            float upSeconds   = lengthPx / Mathf.Max(upSpeedPxPerSec, 1f);
+            float backSeconds = upSeconds / Mathf.Max(tempoRatio, 1e-3f);
+
+            BeginSwingLocal(Vector2.zero);
+
+            // 1. Straight back. Accumulated with the SAME per-frame clamp the driver applies to
+            //    its own dt, so the seconds this loop counts are the seconds the driver counts.
+            float acc  = 0f;
+            float prev = Time.unscaledTime;
+            while (acc < backSeconds && _dragging && !_committed)
+            {
+                yield return null;
+                float now = Time.unscaledTime;
+                acc  += Mathf.Clamp(now - prev, 0f, FreeSwingMath.MaxStepSeconds);
+                prev  = now;
+                ProcessDrag(new Vector2(0f, -pullPx * Mathf.Clamp01(acc / backSeconds)));
+            }
+            if (_committed || !_dragging) yield break;
+
+            // 2. Arm the upswing at (essentially) the reversal itself, in the same frame, so the
+            //    upstroke's measured seconds start at 0 rather than one frame in — a frame of
+            //    upswing charged to the backswing is a few percent off the tempo the model asked
+            //    for, and tempo is half this scheme's verdict.
+            ProcessDrag(Vector2.Lerp(reversal, crossing, 0.002f));
+
+            // 3. Straight up along the chord, through the impact line. ProcessDrag commits the
+            //    frame it crosses, interpolating the crossing between the two straddling samples
+            //    — both of which are ON the chord, so the impact it reads is exactly the offset
+            //    that was sampled.
+            acc  = 0f;
+            prev = Time.unscaledTime;
+            while (!_committed && _dragging)
+            {
+                yield return null;
+                float now = Time.unscaledTime;
+                acc  += Mathf.Clamp(now - prev, 0f, FreeSwingMath.MaxStepSeconds);
+                prev  = now;
+                float u = acc / Mathf.Max(upSeconds, 1e-3f);
+                ProcessDrag(Vector2.LerpUnclamped(reversal, crossing, u));
+                if (u > 1.5f)
+                {
+                    Debug.LogWarning("[FreeSwing] DriveBot: the impact line was never crossed — cancelling.");
+                    _controller.CancelExternalDrag();
+                    _dragging = false;
+                    yield break;
+                }
+            }
+        }
+
+        /// <summary>
+        /// The inverse of <c>FreeSwingMath.Power</c>: how deep the backswing has to go to ask for
+        /// <paramref name="power01"/>. A bot decides a POWER, but the driver — like the thumb —
+        /// only understands pixels, and inverting here keeps the two curves one curve.
+        /// </summary>
+        private float PullPxForPower(float power01, bool isPutt)
+        {
+            float minPull = _cfg.FreeSwingMinUsefulPullPx;
+            float p100    = _cfg.FreeSwingPull100Px;
+            float p120    = _cfg.FreeSwingPull120Px;
+
+            float p = Mathf.Clamp(power01, 0f, ShotController.MaxOverpowerNormalized);
+            // Never shallower than the reversal floor: below FreeSwingMinUsefulPullPx the upswing
+            // is not armed at all and the "swing" would sit on the glass until it timed out.
+            if (isPutt || p <= 1f)
+                return Mathf.Max(minPull, minPull + Mathf.Clamp01(p) * (p100 - minPull));
+            return p100 + ((p - 1f) / 0.2f) * (p120 - p100);
+        }
+
+        /// <summary>
+        /// Map a candidate impact offset to the yaw it would produce, with THIS driver's live
+        /// config and stats. The bot executor needs it so the tree probe can reject the samples
+        /// that fly into a trunk — and it must be the same call <see cref="Commit"/> reaches
+        /// through <c>FreeSwingMath.Grade</c>, or the sampler would be clearing a different shot
+        /// from the one that gets fired.
+        /// </summary>
+        public float ImpactYawRadForBot(float impactPx, float power01)
+        {
+            float acc      = _controller != null ? _controller.ClubAccuracyNorm01 : 0.5f;
+            float halfCone = (_controller != null ? _controller.ConeHalfAngleDeg : 0f) * Mathf.Deg2Rad;
+            return FreeSwingMath.ImpactYawRad(impactPx, acc, power01, halfCone, _cfg);
+        }
+
+        /// <summary>The error model's two scales, straight off the config this driver is using:
+        /// the impact miss range the sigma is expressed in, the ideal tempo it is centred on, and
+        /// the duff speed a bot doubles to stay clear of.</summary>
+        public float ImpactMissPx => _cfg.FreeSwingImpactMissPx;
+        public float IdealTempo   => _cfg.FreeSwingIdealTempo;
+
+        /// <summary>The tempo tolerance for a power the bot has not swung yet. The public
+        /// <see cref="TempoWindow"/> reads <c>_peakPower</c>, which is 0 between swings — asking
+        /// it before the pull would size the window for a shot nobody is taking.</summary>
+        public float TempoWindowForBot(float power01)
+            => FreeSwingMath.TempoWindow(ClubControlNorm01, power01, _cfg);
+
+        /// <summary>The duff floor the bot doubles. See <see cref="DriveBot"/>.</summary>
+        public float DuffSpeedForBot => _cfg.FreeSwingDuffSpeedPxPerSec;
 
         // ── Test / acceptance seams ──────────────────────────────────────────────
 

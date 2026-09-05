@@ -5,9 +5,14 @@
 // H3: PutterGreenReader.TryGetSlopeAt slope-break aim offset + power nudge (CSV-gain).
 // 2b: post-decision error injection from bot_difficulty.csv bracket (level-mapped bands).
 //
+// bot_scheme_parity: the 2b aim/power injection and the drag ramp moved OUT of this file into
+// IBotSchemeExecutor (Golfin.Gameplay.UI.Controls.Bot). What is left here is the DECISION
+// pipeline — H1/H2/H3 plus club noise — which builds a BotSwingPlan and hands it to
+// BotSwing.Play. The bot therefore swings whatever control scheme the player has selected.
+//
 // Constraints:
 //   - No #if UNITY_EDITOR, no ForceShotCompleteForBot.
-//   - Drives production ShotController external-drag path.
+//   - Swings through BotSwing.Play — NEVER BeginExternalDrag/EndExternalDrag/CommitFlick directly.
 //   - Bot lives in Golfin.Physics.Viewer (internal BallSM / SetCameraYawRadians access).
 using System.Collections;
 using System.Collections.Generic;
@@ -15,6 +20,8 @@ using UnityEngine;
 using Golfin.Gameplay.Input;
 using Golfin.Gameplay.Loop;
 using Golfin.Gameplay.UI.HUD;
+using Golfin.Gameplay.UI.Controls;
+using Golfin.Gameplay.UI.Controls.Bot;
 using Golfin.Physics;
 using Golfin.Physics.Math;
 
@@ -90,6 +97,18 @@ namespace Golfin.Physics.Viewer
             public float aimErrorDegMax;
             public float powerErrorMax;
             public float clubNoiseChance;
+
+            // bot_scheme_parity §5: one timing-axis sigma per GRADED scheme. Three and not one
+            // because the three graders have different shapes — a marker with two bands, a needle
+            // with two zones, and a lateral impact window in pixels — and a single sigma that
+            // matched Flick's expected miss on one of them would be wrong on the other two.
+            public float execSigmaPendulum01;
+            public float execSigmaNeedle01;
+            public float execSigmaFreeSwing01;
+
+            /// <summary>True when the row came with its sigmas, false when they were derived at
+            /// load. Surfaced on the warning so a stale CSV is visible rather than silent.</summary>
+            public bool  sigmasFromCsv;
         }
         private static List<DifficultyBracket> _difficultyTable;
         private static bool                    _difficultyLoaded;
@@ -166,17 +185,84 @@ namespace Golfin.Physics.Viewer
                         System.Globalization.CultureInfo.InvariantCulture, out float powErr)) continue;
                 if (!float.TryParse(p[3].Trim(), System.Globalization.NumberStyles.Float,
                         System.Globalization.CultureInfo.InvariantCulture, out float clubNoise)) continue;
+
+                // bot_scheme_parity §5: the three sigma columns are OPTIONAL. A row without them
+                // (or with an unparseable one) gets them derived below rather than falling back to
+                // zero — a zero sigma is a bot that never misses, which is a far worse failure
+                // than a slightly noisy sigma, and it would be invisible in play.
+                bool haveSigmas =
+                    TryColumn(p, 4, out float sPend) &
+                    TryColumn(p, 5, out float sNeedle) &
+                    TryColumn(p, 6, out float sFree);
+
                 _difficultyTable.Add(new DifficultyBracket
                 {
                     minLevel       = minLevel,
                     aimErrorDegMax = aimErr,
                     powerErrorMax  = powErr,
-                    clubNoiseChance = clubNoise
+                    clubNoiseChance = clubNoise,
+                    execSigmaPendulum01  = sPend,
+                    execSigmaNeedle01    = sNeedle,
+                    execSigmaFreeSwing01 = sFree,
+                    sigmasFromCsv        = haveSigmas
                 });
             }
             // Sort ascending by minLevel so bracket lookup is correct.
             _difficultyTable.Sort((a, b) => a.minLevel.CompareTo(b.minLevel));
+            DeriveMissingSigmas();
             Debug.Log($"[VersusBot] Difficulty table loaded: {_difficultyTable.Count} brackets.");
+        }
+
+        /// <summary>Parse an optional CSV column. Missing column or unparseable text → 0 + false,
+        /// which is what arms the derive-and-warn path.</summary>
+        private static bool TryColumn(string[] parts, int index, out float value)
+        {
+            value = 0f;
+            if (parts == null || index >= parts.Length) return false;
+            return float.TryParse(parts[index].Trim(), System.Globalization.NumberStyles.Float,
+                                  System.Globalization.CultureInfo.InvariantCulture, out value)
+                   && value > 0f;
+        }
+
+        /// <summary>
+        /// bot_scheme_parity §5: derive any missing per-scheme sigma with the SAME bisection the
+        /// Editor harness uses, at a fraction of the samples, and say so loudly.
+        ///
+        /// <para>The warning is the point. A committed CSV is meant to carry harness-produced
+        /// numbers; deriving them at load keeps a bot playable on a build whose CSV predates this
+        /// task, but at 1 500 samples instead of 20 000 the numbers are noisier than the 3 %
+        /// calibration guard promises, and nobody should discover that from a strokes-vs-par
+        /// regression.</para>
+        /// </summary>
+        private static void DeriveMissingSigmas()
+        {
+            if (_difficultyTable == null) return;
+            int derived = 0;
+
+            for (int i = 0; i < _difficultyTable.Count; i++)
+            {
+                var b = _difficultyTable[i];
+                if (b.sigmasFromCsv) continue;
+
+                float target = b.aimErrorDegMax * 0.5f;   // E|Δaim| under Flick
+                b.execSigmaPendulum01 = BotSchemeSigmaCalibrator.CalibrateDefault(
+                    ControlScheme.Pendulum, target,
+                    BotSchemeSigmaCalibrator.FallbackSamples, BotSchemeSigmaCalibrator.DefaultSeed, out _);
+                b.execSigmaNeedle01 = BotSchemeSigmaCalibrator.CalibrateDefault(
+                    ControlScheme.Needle, target,
+                    BotSchemeSigmaCalibrator.FallbackSamples, BotSchemeSigmaCalibrator.DefaultSeed, out _);
+                b.execSigmaFreeSwing01 = BotSchemeSigmaCalibrator.CalibrateDefault(
+                    ControlScheme.FreeSwing, target,
+                    BotSchemeSigmaCalibrator.FallbackSamples, BotSchemeSigmaCalibrator.DefaultSeed, out _);
+                _difficultyTable[i] = b;
+                derived++;
+            }
+
+            if (derived > 0)
+                Debug.LogWarning($"[VersusBot] bot_difficulty.csv is missing execSigma* columns for " +
+                                 $"{derived} bracket(s) — derived at load with " +
+                                 $"{BotSchemeSigmaCalibrator.FallbackSamples} samples. Re-run " +
+                                 "Tools ▸ Golfin ▸ Bots ▸ Calibrate Scheme Sigma and commit the CSV.");
         }
 
         /// <summary>
@@ -219,7 +305,10 @@ namespace Golfin.Physics.Viewer
             _resolvedBracket = bracket;
             Debug.Log($"[VersusBot] Difficulty: level={level} bracket(minLevel={bracket.minLevel}) " +
                       $"aim=±{bracket.aimErrorDegMax:F1}° pow=±{bracket.powerErrorMax:F3} " +
-                      $"clubNoise={bracket.clubNoiseChance:F2}");
+                      $"clubNoise={bracket.clubNoiseChance:F2} " +
+                      $"σ(pend/needle/free)={bracket.execSigmaPendulum01:F3}/" +
+                      $"{bracket.execSigmaNeedle01:F3}/{bracket.execSigmaFreeSwing01:F3}" +
+                      $"{(bracket.sigmasFromCsv ? "" : " [derived]")}");
             return _resolvedBracket;
         }
 
@@ -704,12 +793,15 @@ namespace Golfin.Physics.Viewer
                 }
             }
 
-            // ── 2b: POST-DECISION ERROR INJECTION (D1: after H1/H2/H3, before commit) ──
-            // Inject per-shot execution error based on the opponent's level bracket.
-            // No safety re-check runs on the perturbed values — they fire straight to commit.
+            // ── 2b: CLUB NOISE (a DECISION error — stays here, before the plan) ──────
+            // bot_scheme_parity §3.1: the aim/power injection and the drag ramp moved into
+            // IBotSchemeExecutor, but club noise did NOT. Picking the wrong club is not a
+            // hand-shake on a timing widget — it happens before any scheme is on screen, it
+            // changes the plan itself, and it must be drawn BEFORE the executor so a seeded run
+            // reproduces the pre-refactor sequence draw for draw.
+            var bkt = ResolveBracket();
+            string clubNoiseNote = "none";
             {
-                var bkt = ResolveBracket();
-
                 // Remember the safe target distance before any club noise changes it.
                 // This is the distance already in scope after H1/H2 selection (dist for normal
                 // shots, safeDist for laid-up shots — both are captured in power01+club by this
@@ -718,19 +810,10 @@ namespace Golfin.Physics.Viewer
                 // carry was either dist (full shot) or the safeDist (layup). Rather than tracking
                 // both paths, we reconstruct it from the current club+power01 by reading the
                 // carry table: find the carry that matches current power01 for current clubName.
-                // Simpler: cache the distance that was passed to SelectShotCalibrated — that is
-                // the "safe target distance" for re-inversion purposes.
-                // Since we no longer have a named local (layup paths shadow `dist`), use a helper:
-                // invert InterpolateClubPower(clubName, targetDist) → re-derive targetDist from
-                // the current power01 reading. The spec says "re-invert to the SAME safe target
-                // distance" — meaning we pass the same targetDist to InterpolateClubPower(noisyClub, targetDist).
-                // We can recover targetDist because the carry table is monotone: find the carry
-                // corresponding to current power01 for current club name.
                 string origClubName = ClubNames[Mathf.Clamp(club, 0, ClubNames.Length - 1)];
                 float  safeTargetDist = InvertClubPower(origClubName, power01);
 
                 // D3: club noise (suppressed when club is putter — D4).
-                string clubNoiseNote = "none";
                 if (!isPutt && bkt.clubNoiseChance > 0f && Random.value < bkt.clubNoiseChance)
                 {
                     // ±1 band shift: 0=driver, 1=iron7, 2=wedge, 3=putter.
@@ -752,118 +835,106 @@ namespace Golfin.Physics.Viewer
                         label  += $" [clubNoise:{origClubName}→{noisyClubName}]";
                     }
                 }
-
-                // D2: aim/power error (applies to all shots including putts after H3).
-                float deltaAimDeg    = 0f;
-                float deltaPow       = 0f;
-                int   treeChecked    = 0;
-                int   canopyContacts = 0;
-                if (bkt.aimErrorDegMax > 0f || bkt.powerErrorMax > 0f)
-                {
-                    // canopy_avoidance_v2: route through scored sampler (TrySampleTreeAwareAimError).
-                    // Trunk = hard reject (unchanged from Order 352). Canopy = soft preference:
-                    // among trunk-clear samples prefer fewest canopy contacts, tie-break |delta|.
-                    // Power error unchanged (re-check uses pre-error carry — accepted approximation,
-                    // see spec §2 Out: power changes carry, not aim direction).
-                    bool clamped = false;
-                    if (!isPutt && trees != null && !DebugDisableTreeRecheck)
-                    {
-                        treeChecked = 1;
-                        float apex = BotTreeProbe.ApexForCarry(club, probeCarry);
-                        if (!BotTreeProbe.TrySampleTreeAwareAimError(
-                                trees, ball, aimYaw, probeCarry, apex, bkt.aimErrorDegMax,
-                                MaxAimErrorResamples, Random.Range,
-                                DebugDisableCanopyPreference,
-                                out deltaAimDeg, out canopyContacts))
-                        {
-                            clamped = true;   // deltaAimDeg == 0 → fire the validated pre-2b line
-                            canopyContacts = -1;
-                        }
-                    }
-                    else
-                    {
-                        deltaAimDeg = Random.Range(-bkt.aimErrorDegMax, bkt.aimErrorDegMax);
-                    }
-                    deltaPow = Random.Range(-bkt.powerErrorMax, bkt.powerErrorMax);
-                    aimYaw  += deltaAimDeg * Mathf.Deg2Rad;
-                    power01  = Mathf.Clamp01(power01 + deltaPow);
-                    if (clamped)
-                        Debug.Log("[VersusBot] 2b tree re-check: all aim samples trunk-blocked — clamped to pre-2b line");
-                }
-
-                Debug.Log($"[VersusBot] 2b error: Δaim={deltaAimDeg:+0.0;-0.0}° Δpow={deltaPow:+0.000;-0.000} clubNoise={clubNoiseNote} treeChecked={treeChecked} canopyContacts={canopyContacts}");
             }
-            // ── END 2b error injection ──────────────────────────────────────
+            // ── END 2b club noise ───────────────────────────────────────────
 
-            Debug.Log($"[VersusBot] TakeShot: ball={ball:F1} cup={cup:F1} dist={dist:F1}m aimYaw={aimYaw*Mathf.Rad2Deg:F1}° — {label}");
+            // aimYaw here is the INTENT: the executor samples this scheme's execution error and
+            // folds it in itself, then points the camera at the result (ctx.ApplySwing).
+            Debug.Log($"[VersusBot] TakeShot: ball={ball:F1} cup={cup:F1} dist={dist:F1}m aimYaw(intent)={aimYaw*Mathf.Rad2Deg:F1}° — {label}");
 
-            // ── 4. Set club; sync ClubContext; clear override so LIVE path fires intended club ──
-            // Order 762: SetClub only updates the LAB index + putter UI. On the LIVE stat path
-            // LiveStatProviderHost resolves the swing club from ClubContext.SelectedClubId (line 188),
-            // which SetClub never touches — so without the sync the equipped driver fires every stroke.
-            // BotClubSync pushes the nearest available bag entry for the selected lab index into
-            // ClubContext so the provider fires the club the bot actually chose.
-            _controller.SetClub(club);
+            // ── 3.4: which scheme is LIVE right now ─────────────────────────
+            // Read per TakeShot, never cached: a player who switches from the gear modal
+            // mid-match changes the bot's NEXT swing, exactly as they change their own. The host
+            // defers its own swap to Idle, so a swing already in flight is never split.
+            var executor = BotSwing.ResolveExecutor();
+            var band     = BandFor(bkt, executor.Scheme);
+
+            // The tree-aware sampler, wired to the SAME BotTreeProbe call the bot has always
+            // made. Null on a putt, a treeless hole or the debug suppression, which is the
+            // pre-cut else-branch: one unchecked draw, no probe.
+            float apex = BotTreeProbe.ApexForCarry(club, probeCarry);
+            float probeYaw = aimYaw, probeCarryM = probeCarry;
+            bool  useTreeSampler = !isPutt && trees != null && !DebugDisableTreeRecheck;
+
+            // HARD REJECTION FOR EVERYONE; SOFT PREFERENCES FOR FLICK ONLY.
+            //
+            // The probe does three things: it hard-rejects lines through a TRUNK (safety — every
+            // scheme wants that, and it is why this sampler exists), it softly prefers lines with
+            // fewer CANOPY contacts, and it tie-breaks on the straightest survivor. The last two
+            // are preferences over LINE QUALITY, and on a banded grader line quality and SWING
+            // quality are the same axis: a bigger mistime is a bigger yaw is a longer flight
+            // through more leaves. So both preferences silently re-roll the bot's timing until it
+            // finds a good one, which is a skill upgrade the difficulty model never granted.
+            //
+            // Measured on hole 2, mean |Delta aim| at level 1, against Flick's 2.02 deg:
+            //   both preferences on   -> Pendulum 0.10 deg, Needle 0.00 deg   (difficulty deleted)
+            //   canopy preference on  -> Pendulum 0.69 deg, Needle 0.65 deg   (still 3x too good)
+            //   both off (this)       -> the sampled distribution survives intact
+            // The fingerprint of the middle row is canopyContacts=0 on EVERY accepted sample: out
+            // of five candidates the probe could always find a canopy-free one, and canopy-free
+            // means small miss.
+            //
+            // Flick keeps both, unchanged: its sampled value IS the aim error in absolute degrees,
+            // its miss distribution is flat rather than bimodal, and the shipped 1v1 difficulty
+            // was calibrated with both preferences live.
+            bool isFlick           = executor.Scheme == ControlScheme.Flick;
+            bool preferStraightest = isFlick;
+            bool noCanopyPref      = DebugDisableCanopyPreference || !isFlick;
+
+            bool SampleTreeAware(System.Func<float> sample, System.Func<float, float> yawDegFor,
+                                 out float accepted, out int canopyContacts)
+                => BotTreeProbe.TrySampleTreeAwareAimError(
+                       trees, ball, probeYaw, probeCarryM, apex, MaxAimErrorResamples,
+                       sample, yawDegFor, noCanopyPref,
+                       preferStraightest,
+                       out accepted, out canopyContacts);
+
+            int labClubForSwing = club;
+            var ctx = new BotExecutionContext
             {
-                int resolvedLab = BotClubSync.SyncToClubContext(club, "VersusBot");
-                if (resolvedLab != club)
+                Shot        = _shotController,
+                TreeSampler = useTreeSampler ? (BotTreeAwareSampler)SampleTreeAware : null,
+                BallReady   = () => _controller.BallSM == null ||
+                                    _controller.BallSM.State == BallState.Aiming,
+
+                // Steps 4 + 5, moved behind a delegate so the executor can run them AFTER the
+                // error is sampled — the order VersusBot used before the cut, and the order the
+                // camera has to see, or the chase camera would be looking down the pre-error line.
+                ApplySwing = (labClub, finalAimYaw) =>
                 {
-                    _controller.SetClub(resolvedLab);
-                    club = resolvedLab;
+                    // Order 762: SetClub only updates the LAB index + putter UI. On the LIVE stat
+                    // path LiveStatProviderHost resolves the swing club from
+                    // ClubContext.SelectedClubId, which SetClub never touches — so without the
+                    // sync the equipped driver fires every stroke.
+                    _controller.SetClub(labClub);
+                    int resolvedLab = BotClubSync.SyncToClubContext(labClub, "VersusBot");
+                    if (resolvedLab != labClub) _controller.SetClub(resolvedLab);
+                    _shotController.ClearStatBundleOverride();
+                    _controller.SetCameraYawRadians(finalAimYaw);
+                    return resolvedLab;
                 }
-            }
-            _shotController.ClearStatBundleOverride();
+            };
 
-            // ── 5. Orient camera yaw ────────────────────────────────────────
-            _controller.SetCameraYawRadians(aimYaw);
+            var plan = new BotSwingPlan(labClubForSwing, power01, aimYaw, isPutt, probeCarry, clubNoiseNote);
+            yield return BotSwing.Play(plan, band, ctx);
+        }
 
-            // ── 6. Gate on ShotController.State == Idle ──────────────────────
+        /// <summary>
+        /// The bracket, narrowed to the scheme that is actually on screen (bot_scheme_parity §5).
+        /// Flick reads the two uniform half-widths and no sigma; each graded scheme reads its own
+        /// calibrated column, because one sigma cannot calibrate three different graders.
+        /// </summary>
+        private static BotExecutionBand BandFor(DifficultyBracket b, ControlScheme scheme)
+        {
+            float sigma;
+            switch (scheme)
             {
-                float gateElapsed = 0f;
-                while (_shotController.State != ShotState.Idle && gateElapsed < 4f)
-                {
-                    gateElapsed += Time.unscaledDeltaTime;
-                    yield return null;
-                }
-                if (_shotController.State != ShotState.Idle)
-                {
-                    Debug.LogWarning($"[VersusBot] TakeShot: ShotController never reached Idle (state={_shotController.State})");
-                    yield break;
-                }
+                case ControlScheme.Pendulum:  sigma = b.execSigmaPendulum01;  break;
+                case ControlScheme.Needle:    sigma = b.execSigmaNeedle01;    break;
+                case ControlScheme.FreeSwing: sigma = b.execSigmaFreeSwing01; break;
+                default:                      sigma = 0f;                     break;   // Flick
             }
-
-            // ── 7. Gate on BallStateMachine.State == Aiming ─────────────────
-            var sm = _controller.BallSM;
-            if (sm != null)
-            {
-                float gateElapsed = 0f;
-                while (sm.State != BallState.Aiming && gateElapsed < 4f)
-                {
-                    gateElapsed += Time.unscaledDeltaTime;
-                    yield return null;
-                }
-                if (sm.State != BallState.Aiming)
-                    Debug.LogWarning($"[VersusBot] TakeShot: BallSM never reached Aiming (state={sm.State})");
-            }
-
-            // ── 8. Drive the shot via BeginExternalDrag → ramp → EndExternalDrag ──
-            _shotController.BeginExternalDrag();
-
-            const float rampSeconds = 0.85f;
-            float rt = 0f;
-            while (rt < rampSeconds)
-            {
-                rt += Time.unscaledDeltaTime;
-                _shotController.SetExternalPower(Mathf.Lerp(0f, power01, rt / rampSeconds), 0f);
-                yield return null;
-            }
-            _shotController.SetExternalPower(power01, 0f);
-
-            yield return new WaitForSecondsRealtime(0.18f);
-
-            _shotController.EndExternalDrag();
-
-            Debug.Log($"[VersusBot] TakeShot: shot fired — club={club} power={power01:F2}");
+            return new BotExecutionBand(b.aimErrorDegMax, b.powerErrorMax, sigma);
         }
 
         // ── 2b: helpers ────────────────────────────────────────────────────

@@ -14,6 +14,7 @@ import json
 import os
 import struct
 import sys
+import shutil
 import tempfile
 import textwrap
 import time
@@ -2178,6 +2179,61 @@ class TestLiveEditorIntegration(unittest.TestCase):
             str(self.SHOP_CARD), self.TOURNAMENT_CARD_GUID, "CardBorder", self.REPO_ROOT
         )
         self.assertEqual(verdict, "INSUFFICIENT", f"bare leaf should be INSUFFICIENT; got {verdict!r}")
+
+
+class TestBotSwingDoor(unittest.TestCase):
+    """Rule 23 (bot_scheme_parity §3.5) — bots swing through BotSwing, never the
+    raw external-drag API."""
+
+    def _tree(self, files: dict) -> Path:
+        root = Path(tempfile.mkdtemp())
+        for rel, body in files.items():
+            p = root / "Assets" / "Scripts" / rel
+            p.parent.mkdir(parents=True, exist_ok=True)
+            p.write_text(body, encoding="utf-8")
+        self.addCleanup(shutil.rmtree, root, ignore_errors=True)
+        return root
+
+    def test_direct_call_in_a_bot_file_blocks(self):
+        root = self._tree({"Feature/MyFeatureBot.cs": "void Go(){ _sc.BeginExternalDrag(); }"})
+        errors = eid.validate_bot_swing_door(root)
+        self.assertEqual(len(errors), 1, errors)
+        self.assertIn("MyFeatureBot.cs", errors[0])
+
+    def test_reflection_form_in_a_bot_file_blocks(self):
+        # Half these bots live in assemblies that cannot name ShotController and
+        # reach it by reflection; a `BeginExternalDrag(` grep alone misses them.
+        root = self._tree({
+            "Dev/SomeCaptureRig.cs": 'var m = t.GetMethod("EndExternalDrag", F);'
+        })
+        errors = eid.validate_bot_swing_door(root)
+        self.assertEqual(len(errors), 1, errors)
+        self.assertIn("SomeCaptureRig.cs", errors[0])
+
+    def test_files_under_a_bot_directory_are_covered(self):
+        root = self._tree({"Physics/Bot/Helper.cs": "sc.CommitFlick();"})
+        self.assertEqual(len(eid.validate_bot_swing_door(root)), 1)
+
+    def test_allowlisted_files_pass(self):
+        root = self._tree({
+            "Physics/Bot/Scenarios.cs": "sc.BeginExternalDrag();",
+            "Physics/Bot/BotDriver.cs": "sc.EndExternalDrag();",
+        })
+        self.assertEqual(eid.validate_bot_swing_door(root), [])
+
+    def test_a_bot_that_uses_the_door_passes(self):
+        root = self._tree({
+            "Physics/Viewer/VersusBot.cs": "yield return BotSwing.Play(plan, band, ctx);"
+        })
+        self.assertEqual(eid.validate_bot_swing_door(root), [])
+
+    def test_non_bot_files_are_not_scanned(self):
+        root = self._tree({"Gameplay/UI/SomeWidget.cs": "sc.BeginExternalDrag();"})
+        self.assertEqual(eid.validate_bot_swing_door(root), [])
+
+    def test_the_real_repo_is_clean(self):
+        errors = eid.validate_bot_swing_door(REPO_ROOT)
+        self.assertEqual(errors, [], "\n".join(errors))
 
 
 if __name__ == "__main__":

@@ -4,6 +4,17 @@ using UnityEngine;
 using Golfin.Gameplay.Input;
 using Golfin.Gameplay.UI.HUD;
 
+// bot_scheme_parity §3.5 — THE ONE FILE THAT KEEPS THE RAW EXTERNAL-DRAG API.
+//
+// Every bot in the project now swings through BotSwing.Play / BotSwing.PlayPerfect, and the
+// done-hook greps for BeginExternalDrag / EndExternalDrag / CommitFlick in bot files to keep it
+// that way. This file is the allow-listed exception, and it is not an oversight: these call sites
+// are FLICK REGRESSION SCENARIOS. The in-flight ClubHandle guard, the putter-aim entries and the
+// spin/fade-draw clips all exist to assert that the SHIPPING scheme's own drag path still behaves
+// — routing them through BotSwing would mean they stopped testing Flick the moment a tester left
+// another scheme selected, which is precisely the bug they were written to catch.
+//
+// A NEW scenario that just wants to hit a ball is not covered by this exception: use BotSwing.
 namespace Golfin.Physics.Viewer.Bot
 {
     /// <summary>

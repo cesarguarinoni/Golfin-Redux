@@ -135,6 +135,15 @@ namespace Golfin.Gameplay.Config
         public float PendulumWindowScaleAtZeroPower;   // multiplier at power 0
         public float PendulumWindowScaleAtMaxPower;    // multiplier at MaxOverpowerNormalized
 
+        // Bot commit precision (bot_scheme_parity §3.2). A bot releases the frame the live marker
+        // reaches its sampled offset; the tolerance is how close "reaches" has to be, and the
+        // sweep budget is how many full passes it will wait before taking the nearest pass rather
+        // than sweeping forever. Config keys and not literals because the difficulty calibration
+        // in §5 is a sigma on this same offset — a tolerance loose enough to matter would show up
+        // as brackets that no longer hit their target E|ErrorYaw|.
+        public float PendulumBotCommitTol01;
+        public float PendulumBotMaxWaitSweeps;   // treat as int at use site, as MaxTotalPasses is
+
         // ── Needle scheme / "Tap Timing" (scheme_needle §3.5) ───────────────────
         // A THIRD set of pull thresholds, seeded to the Pendulum's own numbers. The three
         // schemes are being A/B'd against each other, so a retune of one must never move the
@@ -170,6 +179,11 @@ namespace Golfin.Gameplay.Config
         // watches the blue zone close as they pull (the Pendulum carry-over Cesar asked for).
         public float NeedleWindowScaleAtZeroPower;
         public float NeedleWindowScaleAtMaxPower;
+
+        /// <summary>Bot tap precision — the Needle counterpart of
+        /// <see cref="PendulumBotCommitTol01"/>. No sweep budget: this needle crosses ONCE, so a
+        /// bot that missed its offset has already shanked and there is nothing to wait for.</summary>
+        public float NeedleBotCommitTol01;
 
         // ── Free Swing scheme (scheme_freeswing §3.5) ───────────────────────────
         // A FOURTH set of pull thresholds, seeded to the Pendulum's and the Needle's own numbers
@@ -273,6 +287,8 @@ namespace Golfin.Gameplay.Config
             PendulumMinHz                  = 0.35f,
             PendulumWindowScaleAtZeroPower = 1.35f,
             PendulumWindowScaleAtMaxPower  = 0.55f,
+            PendulumBotCommitTol01         = 0.03f,  // bot_scheme_parity §3.2
+            PendulumBotMaxWaitSweeps       = 2f,
 
             // scheme_needle §3.5 seed values — mirror controls.csv (F13 two-mirror rule).
             NeedleMinUsefulPullPx        = 40f,
@@ -291,6 +307,7 @@ namespace Golfin.Gameplay.Config
             NeedleMinSweepSec            = 0.8f,
             NeedleWindowScaleAtZeroPower = 1.35f,
             NeedleWindowScaleAtMaxPower  = 0.55f,
+            NeedleBotCommitTol01         = 0.03f,  // bot_scheme_parity §3.2
 
             // scheme_freeswing §3.5 seed values — mirror controls.csv (F13 two-mirror rule).
             FreeSwingMinUsefulPullPx        = 40f,

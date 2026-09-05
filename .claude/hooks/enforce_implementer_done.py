@@ -2004,6 +2004,99 @@ public static class Script {{
     return None
 
 
+# ── Rule 23 — bots swing through BotSwing, never the raw external-drag API ────
+#
+# bot_scheme_parity §3.5 (Cesar 2026-09-05: "this should include any test bots we
+# use in the future when developing features"). Five bots each hand-rolled
+# BeginExternalDrag -> SetExternalPower -> EndExternalDrag, which is FLICK's
+# gesture spelled out longhand. With another control scheme selected the flick
+# root is OFF, so those swings animated nothing: the ball simply left while the
+# pendulum bar sat idle. BotSwing.Play resolves the ACTIVE scheme's executor, so
+# a bot written next year swings whatever the player picked without ever having
+# heard of schemes.
+#
+# The grep is deliberately BOTH forms. Half these bots live in assemblies that do
+# not reference Golfin.Gameplay.Input and reach the controller by reflection, so
+# a check for `BeginExternalDrag(` alone would have missed PerfBaselineBot and
+# every editor capture rig — i.e. most of what the rule exists to catch.
+
+BOT_SWING_BAN_PATTERNS = [
+    re.compile(r"\bBeginExternalDrag\s*\("),
+    re.compile(r"\bEndExternalDrag\s*\("),
+    re.compile(r"\bCommitFlick\s*\("),
+    re.compile(r'"(?:Begin|End)ExternalDrag"'),
+    re.compile(r'"CommitFlick"'),
+]
+
+# Files allowed to keep the raw API, each for a stated reason.
+BOT_SWING_ALLOWLIST = {
+    # The FLICK regression scenarios themselves. Routing them through BotSwing
+    # would mean they stopped testing the shipping scheme the moment a tester
+    # left another one selected — which is the bug they exist to catch.
+    "Scenarios.cs",
+    # The scheme drivers ARE the UI; they are what BotSwing drives.
+    "ClubHandleDragger.cs",
+    "PendulumSchemeDriver.cs",
+    "NeedleSchemeDriver.cs",
+    "FreeSwingSchemeDriver.cs",
+    "FlickSchemeDriver.cs",
+    "PlaceholderSchemeDriver.cs",
+    # The seam itself.
+    "FlickBotExecutor.cs",
+    "BotSwing.cs",
+    "BotSwingGates.cs",
+    "BotExecutionContext.cs",
+    # GRANDFATHERED (bot_scheme_parity §2 put it out of scope): the loop-v2 smoke
+    # harness. Its determinism is load-bearing for a lot of other acceptance runs,
+    # so it is migrated deliberately, not in passing. Tracked in GPS_BACKLOG.
+    "BotDriver.cs",
+    # A FLICK-SPECIFIC instrument, same category as Scenarios.cs: it exists to put
+    # the flick's own power gauge on screen and photograph it. Under another
+    # scheme there is no cone and no gauge to verify, so a BotSwing.Play here
+    # would silently stop testing the thing it was written for.
+    "PowerGaugeMarkerVerifyBot.cs",
+}
+
+
+def _bot_swing_candidate_files(repo_root: Path) -> list[Path]:
+    """Files the rule applies to: anything named *Bot.cs / *CaptureRig.cs, or
+    living under a Bot*/ directory, inside Assets/Scripts."""
+    root = repo_root / "Assets" / "Scripts"
+    if not root.is_dir():
+        return []
+    out: list[Path] = []
+    for p in root.rglob("*.cs"):
+        name = p.name
+        in_bot_dir = any(part.startswith("Bot") for part in p.relative_to(root).parts[:-1])
+        if name.endswith("Bot.cs") or name.endswith("CaptureRig.cs") or in_bot_dir:
+            out.append(p)
+    return out
+
+
+def validate_bot_swing_door(repo_root: Path) -> list[str]:
+    """Rule 23: no bot file may call the raw external-drag API. See above."""
+    errors: list[str] = []
+    for path in _bot_swing_candidate_files(repo_root):
+        if path.name in BOT_SWING_ALLOWLIST:
+            continue
+        try:
+            text = path.read_text(encoding="utf-8", errors="ignore")
+        except OSError:
+            continue
+        hits = sorted({m.group(0) for pat in BOT_SWING_BAN_PATTERNS for m in pat.finditer(text)})
+        if hits:
+            rel = path.relative_to(repo_root)
+            errors.append(
+                f"Rule 23 (bot_scheme_parity §3.5): {rel} calls the raw external-drag API "
+                f"({', '.join(hits)}). Bots swing through BotSwing.Play / BotSwing.PlayPerfect, "
+                "never BeginExternalDrag / EndExternalDrag / CommitFlick directly — with another "
+                "control scheme selected the flick root is off and a hand-rolled drag animates "
+                "nothing. BotSwingOptions.ForceFlick exists for deterministic captures and "
+                "requires a comment saying why."
+            )
+    return errors
+
+
 def validate_ui_lint(report_path: Path, repo_root: Path) -> list[str]:
     """Rule 21: a Figma-node UI task's IMPLEMENTER_REPORT.md must carry a
     `## UI fidelity lint` section citing lint JSON artifact(s), and each cited
@@ -3188,6 +3281,12 @@ def main() -> int:
     # as a prefab GUID.
     if not is_backend and spec_requires_clone_provenance(spec_path):
         errors.extend(validate_clone_provenance(report_path))
+
+    # Rule 23: every bot swings through BotSwing. Unconditional — it is a
+    # repo-wide invariant, not a property of this task's spec, and the whole
+    # point is that a NEW bot written for some unrelated feature cannot quietly
+    # reintroduce a hand-rolled Flick drag.
+    errors.extend(validate_bot_swing_door(REPO_ROOT))
 
     # ── Phase 1 (P1 + P3): YAML-based clone-provenance VERIFIER ──────────────
     # Supersedes the table-shape check for tasks that provide a reuse_map.json.

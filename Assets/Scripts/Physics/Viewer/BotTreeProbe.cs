@@ -268,6 +268,10 @@ namespace Golfin.Physics.Viewer
         /// <param name="disableCanopyPreference">
         /// When true, behaves identically to TrySampleTrunkClearAimError (Order 352).
         /// </param>
+        /// <param name="preferStraightestSurvivor">
+        /// Flick only. See the tie-break comment in the scored loop: on a banded grader this
+        /// preference deletes the difficulty model rather than trimming it.
+        /// </param>
         /// <param name="deltaAimDeg">Output: accepted aim-error delta in degrees (0 on false).</param>
         /// <param name="canopyContacts">Output: canopy contacts on the accepted line (-1 on false).</param>
         /// <returns>true if a trunk-clear sample found; false if all were trunk-blocked.</returns>
@@ -277,11 +281,46 @@ namespace Golfin.Physics.Viewer
             System.Func<float, float, float> sampleRange,
             bool disableCanopyPreference,
             out float deltaAimDeg, out int canopyContacts)
+            // bot_scheme_parity §3.3: Flick's raw draw IS the aim delta in degrees, so the
+            // uniform-range signature is the generic one with an identity mapping. Kept as the
+            // primary entry point because every existing caller and test uses it, and the
+            // rejection sequence a seeded RNG produces through here must not change.
+            => TrySampleTreeAwareAimError(
+                   trees, ball, safeYaw, carry, apex, maxTries,
+                   () => sampleRange(-aimErrorDegMax, aimErrorDegMax),
+                   raw => raw,
+                   disableCanopyPreference,
+                   preferStraightestSurvivor: true,
+                   out deltaAimDeg, out canopyContacts);
+
+        /// <summary>
+        /// The generic form (bot_scheme_parity §3.3): rejection-sample ANY scheme's execution
+        /// error until the aim it produces is trunk-clear.
+        ///
+        /// <para><paramref name="sampleRaw"/> draws one value on that scheme's own timing axis —
+        /// degrees for Flick, a marker offset for Pendulum, a needle offset for Needle, impact
+        /// pixels for Free Swing — and <paramref name="yawDegFor"/> turns a candidate into the
+        /// degrees of aim error the scheme's grader would produce from it. The ACCEPTED RAW VALUE
+        /// is returned, because that is what gets handed to <c>DriveBot</c>: the shot the player
+        /// watches has to be the shot the sampler cleared, not a second unchecked draw.</para>
+        ///
+        /// <para>Everything else — trunk = hard reject, canopy = soft preference, tie-break on
+        /// smaller |delta|, all-blocked returns false with 0 and −1 — is the canopy_avoidance_v2
+        /// behaviour unchanged.</para>
+        /// </summary>
+        public static bool TrySampleTreeAwareAimError(
+            ITreeObstacleProvider trees, Vector3 ball, float safeYaw, float carry, float apex,
+            int maxTries,
+            System.Func<float> sampleRaw,
+            System.Func<float, float> yawDegFor,
+            bool disableCanopyPreference,
+            bool preferStraightestSurvivor,
+            out float acceptedRaw, out int canopyContacts)
         {
             // Fast path: treeless hole — identical to null-path of TrySampleTrunkClearAimError.
             if (trees == null)
             {
-                deltaAimDeg   = sampleRange(-aimErrorDegMax, aimErrorDegMax);
+                acceptedRaw    = sampleRaw();
                 canopyContacts = 0;
                 return true;
             }
@@ -289,22 +328,31 @@ namespace Golfin.Physics.Viewer
             // DebugDisableCanopyPreference: reproduce Order 352 exactly.
             if (disableCanopyPreference)
             {
-                bool ok = TrySampleTrunkClearAimError(
-                    trees, ball, safeYaw, carry, aimErrorDegMax, maxTries, sampleRange,
-                    out deltaAimDeg);
-                canopyContacts = ok ? 0 : -1;
-                return ok;
+                for (int i = 0; i < maxTries; i++)
+                {
+                    float raw = sampleRaw();
+                    if (!LineHasTrunkInWindows(trees, ball, safeYaw + yawDegFor(raw) * Mathf.Deg2Rad, carry))
+                    {
+                        acceptedRaw    = raw;
+                        canopyContacts = 0;
+                        return true;
+                    }
+                }
+                acceptedRaw    = 0f;
+                canopyContacts = -1;
+                return false;
             }
 
             // Scored sampler: collect all trunk-clear survivors, pick lowest canopy cost.
             // Storage: small fixed arrays (maxTries ≤ 5 in production; no heap alloc).
-            float bestDelta        = 0f;
+            float bestRaw          = 0f;
             int   bestCanopy       = int.MaxValue;
             bool  foundSurvivor    = false;
 
             for (int i = 0; i < maxTries; i++)
             {
-                float delta = sampleRange(-aimErrorDegMax, aimErrorDegMax);
+                float raw   = sampleRaw();
+                float delta = yawDegFor(raw);
                 float yaw   = safeYaw + delta * Mathf.Deg2Rad;
 
                 // Hard reject: trunk hit.
@@ -314,12 +362,33 @@ namespace Golfin.Physics.Viewer
                 // Soft cost: count canopy contacts on the FULL line at modelled height.
                 int contacts = CountCanopyContacts(trees, ball, yaw, carry, apex);
 
-                // Accept if: fewer canopy contacts, OR same contacts + smaller |delta|.
-                if (!foundSurvivor ||
-                    contacts < bestCanopy ||
-                    (contacts == bestCanopy && Mathf.Abs(delta) < Mathf.Abs(bestDelta)))
+                // Accept if: fewer canopy contacts, OR — for Flick only — same contacts and a
+                // straighter line.
+                //
+                // THE TIE-BREAK IS FLICK-ONLY, AND THAT IS THE WHOLE POINT (bot_scheme_parity).
+                // It is a tertiary nicety — "among equally clear lines, take the straightest" —
+                // and under Flick, where the sampled value IS the aim error in degrees, it does
+                // no more than scale the miss down by a fixed factor. The shipped 1v1 difficulty
+                // was calibrated with it live, so it stays, byte for byte.
+                //
+                // Under a GRADED scheme it is not a tie-break at all: those graders are BANDED,
+                // so "the straightest of five" is "the best-timed of five swings", and because
+                // E[min of 5 |N(0,sigma)|] lands INSIDE the JUST window at every shipped sigma,
+                // it does not merely shrink the miss — it deletes it. Measured on hole 2 before
+                // this flag existed: level-1 bots posted a mean |Delta aim| of 0.10 deg under
+                // Pendulum and 0.00 deg under Needle against Flick's 1.72 deg. Selecting on the
+                // raw axis instead of the mapped yaw does NOT fix it — min-of-5 falls inside the
+                // band either way. The band is the problem, not the axis.
+                //
+                // So for a graded scheme the FIRST surviving draw wins: trunks are still hard-
+                // rejected and canopy is still preferred (both are about the flight line), while
+                // how well the bot swung stays where it belongs — in the difficulty model.
+                bool better = contacts < bestCanopy ||
+                              (preferStraightestSurvivor && contacts == bestCanopy &&
+                               Mathf.Abs(raw) < Mathf.Abs(bestRaw));
+                if (!foundSurvivor || better)
                 {
-                    bestDelta     = delta;
+                    bestRaw       = raw;
                     bestCanopy    = contacts;
                     foundSurvivor = true;
                 }
@@ -327,13 +396,13 @@ namespace Golfin.Physics.Viewer
 
             if (foundSurvivor)
             {
-                deltaAimDeg   = bestDelta;
+                acceptedRaw    = bestRaw;
                 canopyContacts = bestCanopy;
                 return true;
             }
 
             // All samples trunk-blocked.
-            deltaAimDeg   = 0f;
+            acceptedRaw    = 0f;
             canopyContacts = -1;
             return false;
         }

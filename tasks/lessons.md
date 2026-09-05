@@ -3700,3 +3700,61 @@ as the control that rules out a pipeline difference.
 **Corollary, and the cheapest lesson here.** A green gate on a generated asset means the GENERATOR
 was happy. It says nothing about whether the game can load it. Before believing any "N assets
 written" line, load one the way the game will.
+
+## Lesson AR — a filter tuned on one distribution silently deletes a different-shaped one; name the SHAPE at the first instance, not the third (2026-09-06, `bot_scheme_parity`)
+
+**What happened.** `BotTreeProbe.TrySampleTreeAwareAimError` draws up to 5 candidate aim errors,
+hard-rejects any line through a trunk, softly prefers lines with fewer canopy contacts, and
+tie-breaks on the straightest survivor. Under Flick that is unremarkable: the sampled value IS the
+aim error in absolute degrees, the distribution is flat, and the preferences shave a fixed fraction
+off the miss. The shipped 1v1 difficulty was calibrated with them live.
+
+Point three graded control schemes at the same probe and it deletes the difficulty model. A graded
+scheme's error is a **banded** map from a timing offset to a yaw — everything inside the JUST window
+is exactly 0° — and its miss distribution is **bimodal with a far tail** (a MISS is thrown
+1.5 cone-half-angles). Both properties defeat a "prefer the better line" filter:
+
+- The tie-break on |yaw| cannot distinguish two JUSTs, so "straightest" collapses to "any JUST",
+  and `E[min of 5 |N(0,sigma)|]` lands *inside* the JUST window at every shipped sigma.
+- The canopy preference is worse and less obvious: a bigger mistime is a bigger yaw is a longer
+  flight through more leaves, so "fewest canopy contacts" IS "smallest mistime" on a treed hole.
+
+Measured on hole 2, mean |Δaim| at level 1, against Flick's 2.02°: **0.10° / 0.00°** with both
+preferences on. A level-1 bot was outplaying a level-100 one.
+
+**The three passes, and why that is the actual lesson.** I fixed this three times.
+1. Moved the tie-break from the mapped yaw onto the raw sample. Arithmetically defensible
+   (`E[min of 5 |N|]/E|N| = 0.29` vs `E[min of 5 |U|]/E|U| = 0.33`) and **useless** — min-of-five is
+   still inside the band. *The band is the problem, not the axis.* Caught before it shipped only
+   because I stopped an in-flight verification run rather than let it validate the fix.
+2. Made the tie-break Flick-only. 0.10° → 0.69°. Better, still 3× too good.
+3. Made the canopy preference Flick-only too.
+
+PIPELINE_HARDENING rule 15 exists for exactly this and I applied it too late: I audited the *sites*
+that shared the mechanism I had already found, which is not the same as naming the shape. The shape
+here is **"a preference over line quality is a preference over swing quality whenever the grader is
+banded"**, and stating it in that form makes the canopy preference an obvious member of the set
+before measuring it a second time.
+
+**The rule now in the code:** hard rejection (trunk = safety) applies to every scheme; **soft
+preferences are Flick-only**. Both `BotTreeProbe` and `VersusBot` carry the reasoning and the
+measured numbers so the next person does not re-derive them.
+
+**Transferable:** whenever an existing filter, sampler or heuristic is pointed at a NEW distribution,
+the question is not "does it still run" but "what shape was it tuned against, and does the new one
+share that shape". Flat vs banded, unimodal vs bimodal, thin-tailed vs fat-tailed — a filter that is
+a mild trim on one is a deletion on the other. And it will not throw: it returns a plausible number.
+
+**How it was caught at all:** a live acceptance harness that measured a NUMBER (mean |Δaim| per
+bracket per scheme) against a reference, not a human watching a video. Every unit test passed
+throughout — the sampler was correct in isolation (`E|ClampedNormal(0.2109)| = 0.168`, verified),
+the grader was correct in isolation, and the composition was broken. Compose-and-measure was the
+only thing that could see it.
+
+**Coda (same task, same day).** Chasing the *residual* gap after the fix above turned up a worse bug than
+the one being chased: `BotClubSync` reads `ClubContext.EquippedBag` — **the local player's bag** — because a
+1v1 opponent owns no clubs. Graded yaw is `m × halfConeRad` and Flick's is absolute, so a single baked sigma
+made **the opponent's difficulty a function of the player's equipment** (a Supreme driver made the bot miss
+~2.6× wider than a Common one at the same level). Fixed by solving sigma per swing against the live grader.
+The lesson on top of the lesson: *the number that will not converge is worth one more question.* Both times,
+stopping at "close enough, documented as a known deviation" would have shipped a real defect.

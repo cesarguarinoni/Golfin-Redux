@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using Golfin.Gameplay.Input;
@@ -182,6 +183,20 @@ namespace Golfin.Gameplay.UI.Controls.Pendulum
             if (_controller == null || _schemeRoot == null) return;
             if (_controller.State != ShotState.Idle) return;
 
+            BeginSwingLocal(ToLocal(e));
+            _controller.PushTouchSample(e.position);
+            ProcessDragLocal(ToLocal(e));
+        }
+
+        /// <summary>
+        /// Open a swing at a point in the scheme root's LOCAL space. Split out of
+        /// <see cref="OnPointerDown"/> so <see cref="DriveBot"/> can start the identical swing
+        /// without a <c>PointerEventData</c> — a bot has no camera, no press position and nothing
+        /// for <c>RectTransformUtility</c> to project, but it does need every field this method
+        /// resets, in the order it resets them.
+        /// </summary>
+        private void BeginSwingLocal(Vector2 originLocal)
+        {
             _dragging = true;
             _phase    = 0f;
             _sweeps   = 0;
@@ -193,32 +208,41 @@ namespace Golfin.Gameplay.UI.Controls.Pendulum
 
             ApplyLayout();
             _gradePop?.HideImmediate();
-            _originLocal = ToLocal(e);
+            _originLocal = originLocal;
 
             // Same order ClubHandleDragger uses, and for the same reason: BeginExternalDrag resets
             // the swing (which clears PendingSpinInput), so the HUD's spin must be pushed after it.
             _controller.BeginExternalDrag(ownsTiming: true);
             _controller.PendingSpinInput = SpinContext.Spin;
-            _controller.PushTouchSample(e.position);
-            ProcessDrag(e);
         }
 
         public void OnDrag(PointerEventData e)
         {
             if (!_dragging) return;
             _controller.PushTouchSample(e.position);
-            ProcessDrag(e);
+            ProcessDragLocal(ToLocal(e));
         }
 
         public void OnPointerUp(PointerEventData e)
         {
             if (!_dragging) return;
-            _dragging = false;
             _controller.PushTouchSample(e.position);   // the release closes the gate's window
+            ReleaseSwing(requireFlickGate: true);
+        }
+
+        /// <summary>
+        /// The release, gate and all. <paramref name="requireFlickGate"/> is false for exactly one
+        /// caller — <see cref="DriveBot"/>, which never pushed a touch sample and so has no flick
+        /// to measure. Everything AFTER the gate (the grade, the pop, the commit) is shared, which
+        /// is what makes the grade over a bot's ball the same grade a human would have earned.
+        /// </summary>
+        private void ReleaseSwing(bool requireFlickGate)
+        {
+            _dragging = false;
 
             // §3.2: the gate is asked FIRST. A driver that owns its timing has no arrow to fall
             // back on, so a release that was not a flick is not a weak shot — it is not a shot.
-            if (!_controller.EvaluateFlickGate())
+            if (requireFlickGate && !_controller.EvaluateFlickGate())
             {
                 _controller.RejectExternalDrag();
                 ResetSwing();
@@ -277,9 +301,8 @@ namespace Golfin.Gameplay.UI.Controls.Pendulum
             ResetSwing();
         }
 
-        private void ProcessDrag(PointerEventData e)
+        private void ProcessDragLocal(Vector2 local)
         {
-            Vector2 local  = ToLocal(e);
             float   pullPx = Mathf.Max(0f, _originLocal.y - local.y);
 
             bool isPutt = _controller.IsPutt;
@@ -336,7 +359,12 @@ namespace Golfin.Gameplay.UI.Controls.Pendulum
 
         // ── Marker ───────────────────────────────────────────────────────────────
 
-        private void Update() => Advance(Time.deltaTime);
+        // A bot advances the marker itself, with a dt it chooses so the commit lands ON its
+        // sampled offset instead of wherever the next frame boundary fell (see DriveBot). Update
+        // must not then advance it a second time in the same frame.
+        private bool _botDriving;
+
+        private void Update() { if (!_botDriving) Advance(Time.deltaTime); }
 
         /// <summary>
         /// Swing the marker one frame. The marker only moves while a finger is DOWN and power has
@@ -395,6 +423,181 @@ namespace Golfin.Gameplay.UI.Controls.Pendulum
             if (_handle != null) _handle.anchoredPosition = _handleRest;
             _barView?.SetMarker(0f);
         }
+
+        // ── Bot seam (bot_scheme_parity §3.2) ────────────────────────────────────
+
+        /// <summary>
+        /// Swing this scheme for a BOT: pull the club down the lane, let the bar sweep, and
+        /// release the instant the live marker reaches <paramref name="targetMarker01"/>.
+        ///
+        /// <para>IT PLAYS THE REAL UI, IT DOES NOT FAKE A RESULT. Every frame goes through the
+        /// same <c>ProcessDragLocal</c> a thumb goes through and the same <c>Advance</c> the
+        /// marker always uses, and the release lands in <c>ReleaseSwing</c>, so the JUST/GOOD/MISS
+        /// the player watches pop over the bot's ball is the honest grade of the marker position
+        /// they just watched it commit at. Nothing is injected after the commit.</para>
+        ///
+        /// <para>THE BOT OWNS THE CLOCK WHILE IT SWINGS. It advances the marker with a dt it
+        /// chooses — capped at the real frame's dt, but shortened to land EXACTLY on the target
+        /// when the target is closer than one frame away. Waiting for a frame boundary instead
+        /// would quantise the commit by up to ~0.2 of the bar at 1 Hz on a 60 Hz screen, which is
+        /// most of a JUST window: the difficulty calibration in §5 is a sigma on this offset, and
+        /// frame noise that large would swamp it. The marker the bar DRAWS is the marker the shot
+        /// is graded on either way — this only decides which instant gets drawn.</para>
+        /// </summary>
+        /// <param name="power01">Intended power, 0..1.2. Converted to the pull depth that
+        /// produces it through this scheme's own <c>PendulumMath.Power</c> curve.</param>
+        /// <param name="targetMarker01">Marker offset to commit at, −1..+1. 0 = dead on the pip
+        /// (a JUST), which is what <c>BotExecutionBand.Perfect</c> asks for.</param>
+        /// <param name="curve01">Fade/draw amount, −1..+1. Bots never shape a shot, so this is 0
+        /// from every executor; the parameter exists because the lane can carry it.</param>
+        public IEnumerator DriveBot(float power01, float targetMarker01, float curve01,
+                                    float rampSeconds, float commitTol01, int maxWaitSweeps)
+        {
+            if (_controller == null) yield break;
+            if (_controller.State != ShotState.Idle)
+            {
+                Debug.LogWarning($"[Pendulum] DriveBot: shot is {_controller.State}, not Idle — swing skipped.");
+                yield break;
+            }
+
+            bool  isPutt    = _controller.IsPutt;
+            float pullPx    = PullPxForPower(power01, isPutt);
+            float lateralPx = Mathf.Clamp(curve01, -1f, 1f) * _cfg.PendulumCurveHalfWidthPx;
+            float target    = Mathf.Clamp(targetMarker01, -1f, 1f);
+            float ramp      = Mathf.Max(1e-3f, rampSeconds);
+            float tol       = Mathf.Max(1e-4f, commitTol01);
+
+            BeginSwingLocal(Vector2.zero);
+            _botDriving = true;
+
+            // 1. The pull. The marker starts sweeping as soon as there is power to time, exactly
+            //    as it does under a thumb, so the bar is already alive during the ramp.
+            float t = 0f;
+            while (t < ramp)
+            {
+                float dt = Time.unscaledDeltaTime;
+                t += dt;
+                float k = Mathf.Clamp01(t / ramp);
+                ProcessDragLocal(new Vector2(lateralPx * k, -pullPx * k));
+                Advance(dt);
+                yield return null;
+                if (!_dragging) { _botDriving = false; yield break; }   // MaxSweeps cancelled it
+            }
+            ProcessDragLocal(new Vector2(lateralPx, -pullPx));
+
+            // 2. Wait for the marker to reach the sampled offset, stepping exactly onto it when
+            //    it is less than a frame away.
+            int   sweepsAtStart = _sweeps;
+            int   maxSweeps     = Mathf.Max(1, maxWaitSweeps);
+            float bestErr       = Mathf.Abs(MarkerOffset - target);
+            // Wall-clock backstop. The sweep budget above is the real limit, but it counts
+            // MARKER sweeps: a config that somehow stalled the marker would leave this loop
+            // spinning forever and hang the opponent's turn, and a bot must never be the thing
+            // that ends a match.
+            float waited = 0f;
+            const float MaxWaitSeconds = 20f;
+            while (_dragging)
+            {
+                waited += Time.unscaledDeltaTime;
+                if (waited > MaxWaitSeconds)
+                {
+                    Debug.LogWarning($"[Pendulum] DriveBot: marker never reached {target:F3} in " +
+                                     $"{MaxWaitSeconds:F0}s (hz={_hz:F2}) — committing at m={MarkerOffset:F3}.");
+                    break;
+                }
+                float need = DtToMarker(target);
+                float step = Mathf.Min(Time.unscaledDeltaTime, need);
+                Advance(step);
+                if (!_dragging) break;
+
+                float err = Mathf.Abs(MarkerOffset - target);
+                if (err < bestErr) bestErr = err;
+                if (err <= tol) break;
+
+                // Nearest-pass fallback: the marker has swept past the target as many times as we
+                // agreed to wait, so take the offset it is on now rather than sweeping forever.
+                if (_sweeps - sweepsAtStart >= maxSweeps)
+                {
+                    Debug.Log($"[Pendulum] DriveBot: target {target:F3} not hit within {maxSweeps} sweeps " +
+                              $"(closest {bestErr:F3}) — committing at m={MarkerOffset:F3}.");
+                    break;
+                }
+                yield return null;
+            }
+
+            _botDriving = false;
+            if (!_dragging) yield break;    // cancelled mid-wait; nothing to commit
+
+            // 3. The release. No flick gate: the bot pushed no touch samples, so there is no
+            //    flick to measure — and _markerAtLatch is left NaN, so ReleaseSwing grades the
+            //    LIVE marker, i.e. exactly the one the bar is drawing this frame.
+            ReleaseSwing(requireFlickGate: false);
+        }
+
+        /// <summary>
+        /// Seconds until the marker next reaches <paramref name="target"/>, or +inf when it never
+        /// will (a stopped marker). Solves <c>sin(theta) == target</c> for the smallest positive
+        /// step forward, which is what lets a bot commit ON its sampled offset rather than on the
+        /// nearest frame boundary.
+        /// </summary>
+        private float DtToMarker(float target)
+        {
+            if (_hz <= 1e-4f) return float.PositiveInfinity;
+
+            float twoPi = 2f * Mathf.PI;
+            float theta = Mathf.Repeat(_phase * twoPi, twoPi);
+            float a     = Mathf.Asin(Mathf.Clamp(target, -1f, 1f));      // [-pi/2, pi/2]
+
+            float best = float.PositiveInfinity;
+            for (int k = 0; k <= 1; k++)
+            {
+                // The two families of solutions to sin(x) = target, one period ahead each.
+                float c1 = a + twoPi * k;
+                float c2 = Mathf.PI - a + twoPi * k;
+                float d1 = c1 - theta;
+                float d2 = c2 - theta;
+                if (d1 > 1e-6f && d1 < best) best = d1;
+                if (d2 > 1e-6f && d2 < best) best = d2;
+            }
+            if (float.IsPositiveInfinity(best)) return float.PositiveInfinity;
+            return (best / twoPi) / _hz;
+        }
+
+        /// <summary>
+        /// The inverse of <c>PendulumMath.Power</c>: how far down the lane a pull has to go to
+        /// ask for <paramref name="power01"/>. A bot decides a POWER, but the driver — like the
+        /// thumb — only understands pixels, and inverting here keeps the two curves one curve.
+        /// </summary>
+        private float PullPxForPower(float power01, bool isPutt)
+        {
+            float minPull = _cfg.PendulumMinUsefulPullPx;
+            float p100    = _cfg.PendulumPull100Px;
+            float p120    = _cfg.PendulumPull120Px;
+
+            float p = Mathf.Clamp(power01, 0f, ShotController.MaxOverpowerNormalized);
+            if (p <= 0f) return 0f;
+            if (isPutt || p <= 1f) return minPull + Mathf.Clamp01(p) * (p100 - minPull);
+            return p100 + ((p - 1f) / 0.2f) * (p120 - p100);
+        }
+
+        /// <summary>
+        /// Grade a marker offset with THIS driver's live config and stats, without swinging.
+        /// The bot executor needs it to map a candidate offset to the yaw it would produce so the
+        /// tree probe can reject the ones that fly into a trunk — and it must be the same call
+        /// <see cref="ReleaseSwing"/> makes, or the sampler would be clearing a different shot
+        /// from the one that gets fired.
+        /// </summary>
+        public PendulumMath.Verdict GradeForBot(float m, float power01)
+        {
+            float acc      = _controller != null ? _controller.ClubAccuracyNorm01 : 0.5f;
+            float halfCone = (_controller != null ? _controller.ConeHalfAngleDeg : 0f) * Mathf.Deg2Rad;
+            return PendulumMath.Grade(m, acc, power01, halfCone, _cfg);
+        }
+
+        /// <summary>The bot commit tolerance and sweep budget, straight off the config this driver
+        /// is using — so the executor cannot pass numbers the driver disagrees with.</summary>
+        public float BotCommitTol01   => _cfg.PendulumBotCommitTol01;
+        public int   BotMaxWaitSweeps => Mathf.RoundToInt(_cfg.PendulumBotMaxWaitSweeps);
 
         // ── Test seam ────────────────────────────────────────────────────────────
 

@@ -1,5 +1,6 @@
 using UnityEngine;
 using Golfin.Gameplay.Input;
+using Golfin.Gameplay.UI.Controls.Bot;
 
 namespace Golfin.Gameplay.UI.Controls
 {
@@ -37,6 +38,26 @@ namespace Golfin.Gameplay.UI.Controls
 
         /// <summary>True while a scheme change is waiting for the shot to return to Idle.</summary>
         public bool HasPendingSwap => _hasPending;
+
+        /// <summary>
+        /// The bot side of whatever scheme is LIVE (bot_scheme_parity §3.1) — the answer
+        /// <c>BotSwing.Play</c> resolves for every bot in the game.
+        ///
+        /// <para>It follows the INPUT root, not the selected scheme, which matters for exactly the
+        /// case this host already special-cases: an unimplemented scheme keeps the flick root
+        /// live underneath it, and a bot that swung Pendulum while the player's own finger was
+        /// still on the flick cone would be playing a different game from them.</para>
+        ///
+        /// <para>DERIVED FROM THE DRIVER, NOT AUTHORED ON THE ROOT. A component per root would be
+        /// four more Inspector references to wire and to keep wired through every prefab revision,
+        /// and a missing one would silently degrade a scheme's bots to Flick — the exact failure
+        /// this task exists to remove. A scene-authored <see cref="IBotSchemeExecutor"/> still
+        /// wins if one is present, so an experiment can override a scheme's bot behaviour without
+        /// touching this file.</para>
+        /// </summary>
+        public IBotSchemeExecutor ActiveExecutor => _activeExecutor ?? FlickBotExecutor.Instance;
+
+        private IBotSchemeExecutor _activeExecutor;
 
         private bool          _hasPending;
         private ControlScheme _pending;
@@ -143,8 +164,25 @@ namespace Golfin.Gameplay.UI.Controls
                 inputDriver.Activate();
             }
 
-            _activeDriver = inputDriver;
-            ActiveScheme  = scheme;
+            _activeDriver   = inputDriver;
+            _activeExecutor = ResolveExecutor(inputRoot, inputDriver);
+            ActiveScheme    = scheme;
+        }
+
+        /// <summary>See <see cref="ActiveExecutor"/>. A driver that has not shipped (or none at
+        /// all) resolves to Flick, which is also the root the player's finger is on.</summary>
+        private static IBotSchemeExecutor ResolveExecutor(GameObject inputRoot, IShotSchemeDriver driver)
+        {
+            var authored = inputRoot != null ? inputRoot.GetComponent<IBotSchemeExecutor>() : null;
+            if (authored != null) return authored;
+
+            switch (driver)
+            {
+                case Pendulum.PendulumSchemeDriver p:   return new PendulumBotExecutor(p);
+                case Needle.NeedleSchemeDriver n:       return new NeedleBotExecutor(n);
+                case FreeSwing.FreeSwingSchemeDriver f: return new FreeSwingBotExecutor(f);
+                default:                                return FlickBotExecutor.Instance;
+            }
         }
 
         private GameObject RootFor(ControlScheme scheme)

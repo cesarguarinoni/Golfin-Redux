@@ -99,6 +99,32 @@ These rules convert previously-advisory lessons into hard stops. Full spec: `Doc
     six were found while *writing the brief for the next reviewer*, which is a free review. Full
     spec: `Docs/PIPELINE_HARDENING.md` §22.
 
+17. **Bots swing through `BotSwing.Play` / `BotSwing.PlayPerfect` — never `BeginExternalDrag`,
+    `EndExternalDrag` or `CommitFlick` directly** (added 2026-09-05, `bot_scheme_parity` §3.5;
+    Cesar: *"this should include any test bots we use in the future when developing features"*).
+    Five bots each hand-rolled `BeginExternalDrag → SetExternalPower → EndExternalDrag`, which is
+    **Flick's gesture spelled out longhand**. With any other control scheme selected the flick
+    root is OFF, so those swings animated nothing — the ball left while the pendulum bar sat
+    idle. `BotSwing.Play` resolves `ShotSchemeHost.ActiveExecutor`, so a bot written for some
+    unrelated feature next year swings whatever scheme the player picked without ever having
+    heard of schemes. `BotSwingOptions.ForceFlick` exists for deterministic captures and frozen
+    baselines only and **requires a comment at the call site saying why**. A new bot that
+    bypasses `BotSwing` fails review. Gate-enforced: **Rule 23** in
+    `.claude/hooks/enforce_implementer_done.py` greps every `*Bot.cs` / `*CaptureRig.cs` / file
+    under a `Bot*/` directory for BOTH the direct call and the reflection form
+    (`GetMethod("BeginExternalDrag")` — half these bots live in assemblies that cannot name
+    `ShotController`). Allow-list, each with a stated reason in the hook: `Scenarios.cs` and
+    `PowerGaugeMarkerVerifyBot.cs` (Flick-specific regression instruments — routing them through
+    `BotSwing` would mean they stopped testing Flick the moment a tester left another scheme
+    selected), the scheme drivers and the seam itself, and `BotDriver.cs` (grandfathered; the
+    loop-v2 smoke harness is migrated deliberately, not in passing). Coverage:
+    `TestBotSwingDoor` in `.claude/hooks/test_enforce_implementer_done.py`.
+    **Sister rule (`bot_scheme_parity` §5):** the three `execSigma*` columns in
+    `Assets/Resources/Data/bot_difficulty.csv` come from `Tools ▸ Golfin ▸ Bots ▸ Calibrate
+    Scheme Sigma`, never from a hand edit — re-run it after touching any grader tuning key
+    (`Pendulum*Window*`, `*MissYawGain`, `Needle*Zone*`, `FreeSwingImpact*`, `ConeHalfAngle*`),
+    or a bot's difficulty silently drifts away from its Flick bracket.
+
 16. **Figma-node screens follow `Docs/Architecture/FIGMA_SCREEN_BUILD_PLAYBOOK.md`** (added
     2026-09-02, after `gps_profile_pack` cleared three rounds of gates and was rejected on sight
     each time — then converged in one sitting once it was driven by real navigation plus a

@@ -2,10 +2,10 @@
 # aimErrorDegMax: per-shot yaw error, uniform ±[0..max] degrees.
 # powerErrorMax: per-shot power01 error, uniform ±[0..max].
 # clubNoiseChance: per-shot probability of ±1 club-band shift (power re-inverted; suppressed on putts).
-minLevel,aimErrorDegMax,powerErrorMax,clubNoiseChance
-1,6.0,0.12,0.25
-10,4.5,0.09,0.18
-25,3.0,0.06,0.12
-50,2.0,0.04,0.08
-100,1.0,0.02,0.04
-180,0.4,0.01,0.0
+minLevel,aimErrorDegMax,powerErrorMax,clubNoiseChance,execSigmaPendulum01,execSigmaNeedle01,execSigmaFreeSwing01
+1,6.0,0.12,0.25,0.2109,0.1934,0.3633
+10,4.5,0.09,0.18,0.1816,0.1699,0.3047
+25,3.0,0.06,0.12,0.1523,0.1436,0.2402
+50,2.0,0.04,0.08,0.1289,0.123,0.1992
+100,1.0,0.02,0.04,0.0967,0.0952,0.1523
+180,0.4,0.01,0.0,0.0703,0.0703,0.1201

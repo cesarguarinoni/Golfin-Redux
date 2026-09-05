@@ -4,6 +4,69 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
+## 2026-09-06 — `bot_scheme_parity` / **bots swing the scheme the player picked**
+
+**One door for every bot.** `BotSwing.Play` / `BotSwing.PlayPerfect` resolves
+`ShotSchemeHost.ActiveExecutor` and swings whatever control scheme is live, so a bot written next year for
+some unrelated feature follows the player without ever having heard of schemes. `VersusBot`'s "2b error
+injection" and step 8 moved out verbatim into `FlickBotExecutor` — same draws, same order, same log line,
+because every number in `bot_difficulty.csv` was calibrated against that exact sequence. `VersusBot`,
+`PerfBaselineBot` (`ForceFlick`, its numbers must not move) and `TreeOccludeFadeCaptureBot` migrated;
+`Scenarios.cs` and `PowerGaugeMarkerVerifyBot.cs` keep the raw API as Flick-specific regression instruments,
+with the reason written down. **Hook-enforced as Rule 23** (greps the direct call AND the reflection form —
+half these bots cannot name `ShotController`), and as PIPELINE_HARDENING rule 17.
+
+**The three schemes play the REAL UI.** `PendulumSchemeDriver.DriveBot` pulls the club down the lane and
+releases the frame the live marker reaches its sampled offset; `NeedleSchemeDriver.DriveBot` taps through
+the real `NeedleTapCatcher`; `FreeSwingSchemeDriver.DriveBot` feeds synthetic samples into the driver's own
+buffer in real time so the trace draws and the tempo is measured off the real clock. Each driver grades its
+own swing — nothing is injected after commit, and the grade that pops over the bot's ball is the honest
+grade of what you just watched. Bots step the marker/needle with a dt they choose so the commit lands ON
+the sampled offset rather than up to a frame past it, which matters because the difficulty model is a sigma
+on that offset. Three new `controls.csv` keys; `bot_difficulty.csv` gained `execSigmaPendulum01` /
+`execSigmaNeedle01` / `execSigmaFreeSwing01`, bisected at 20 000 samples by
+`Tools ▸ Golfin ▸ Bots ▸ Calibrate Scheme Sigma`, every bracket × scheme within 3 %.
+
+**The finding worth remembering: a filter tuned on one distribution silently deletes a different-shaped
+one.** `BotTreeProbe` hard-rejects lines through a trunk, then softly prefers fewer canopy contacts and
+tie-breaks on the straightest survivor. Harmless under Flick, whose sampled value IS the aim error in
+absolute degrees. Under a **banded** grader those preferences are not about the line at all — a bigger
+mistime is a bigger yaw is a longer flight through more leaves, so "best line" IS "best-timed swing", and
+the probe re-rolled until it found one. Level-1 bots posted a mean |Δaim| of **0.10° (Pendulum) / 0.00°
+(Needle)** against Flick's ~2° — outplaying level-100 bots. Rule now: **hard rejection for every scheme,
+soft preferences Flick-only.** After the fix: 2.11° / 2.01° / 3.46°, matching the analytic prediction
+(Pendulum L1 predicted 2.2°, measured 2.108°).
+
+I fixed it three times — the first attempt moved the tie-break onto the raw axis, which is arithmetically
+defensible and useless because min-of-five is still inside the band. PIPELINE_HARDENING rule 15 exists for
+this and I applied it too narrowly: auditing the sites that share a mechanism is not the same as naming the
+shape. **Lesson AR** in `tasks/lessons.md`. Every EditMode test passed the whole way through — the sampler
+was right in isolation, the graders were right in isolation, and only measuring a number end-to-end on a
+real hole could see the composition break.
+
+**The second finding, worse than the first: bot difficulty was scaling with the PLAYER'S club.**
+`BotClubSync` reads `ClubContext.EquippedBag` — the local player's bag. A 1v1 opponent owns no clubs; it
+swings yours. Graded yaw is `m x halfConeRad` and Flick's is absolute, so one baked sigma per bracket made
+the opponent's difficulty a function of your equipment: a Supreme driver (20° cone) made the bot miss
+~2.6× wider than a Common one (7.75°) at the same level. **Sigma is now solved per swing** against the live
+grader (`BotSchemeSigmaCalibrator.CalibrateForLiveShot`), so the bracket target holds whatever is in the
+bag — 2.99° / 3.06° / 3.09° against a 3.00° target at cones of 7.75° / 12.5° / 20°. Deterministic (fixed
+512-sample population, so difficulty cannot shimmer between swings), 0.7 ms per stroke. The CSV columns
+stay as the offline artifact, audit trail and no-driver fallback.
+
+**The acceptance gate was itself invalid and was replaced.** Runs 1-3 compared each graded mean against
+Flick's own 12-shot mean, which measured 1.72 / 2.02 / 0.71 across three runs on unchanged code —
+`min of 5 |U|` is heavily skewed and wanders more than the effect at n=12. Now gated on the bracket's
+deterministic target plus a monotone-ladder assertion; the tight 3 % guard lives in EditMode at 512-5000
+samples. Reasoning is in the harness source, not just here.
+
+**Status: `READY_FOR_ARCHITECT_REVIEW` — 52/52 live acceptance, 2694/2694 EditMode, Rule 23 clean.**
+Final per-bracket means (target 3.00° / 0.50°): Pendulum 3.55 / 0.55, Needle 3.17 / 0.42, Free Swing
+1.86 / 0.28, every ladder monotone. Flick reads 1.40 / 0.22 because it alone keeps the probe's soft
+preferences — the documented, safe-direction residual. Optional follow-ups only: a `PerfBaselineBot`
+re-baseline and the SPEC §7 9-hole stroke runs.
+
+---
 ## 2026-09-05 — `scheme_confirm_popup` / **the control-scheme confirm pop-up** built
 
 **Selecting a control scheme no longer changes it.** In Settings › Controls and in the in-game gear

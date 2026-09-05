@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using Golfin.Gameplay.Input;
@@ -217,6 +218,19 @@ namespace Golfin.Gameplay.UI.Controls.Needle
             if (_controller == null || _schemeRoot == null) return;
             if (_controller.State != ShotState.Idle) return;
 
+            BeginSwingLocal(ToLocal(e));
+            ProcessDragLocal(ToLocal(e));
+        }
+
+        /// <summary>
+        /// Open a swing at a point in the scheme root's LOCAL space. Split out of
+        /// <see cref="OnPointerDown"/> so <see cref="DriveBot"/> can start the identical swing
+        /// without a <c>PointerEventData</c> — a bot has no camera and no press position for
+        /// <c>RectTransformUtility</c> to project, but it needs every field this method resets,
+        /// in the order it resets them.
+        /// </summary>
+        private void BeginSwingLocal(Vector2 originLocal)
+        {
             _dragging  = true;
             _phase     = Phase.Pull;
             _power     = 0f;
@@ -230,24 +244,22 @@ namespace Golfin.Gameplay.UI.Controls.Needle
             _gradePop?.HideImmediate();
             _arcView?.HideImmediate();
             _circleView?.SetDimmed(false);
-            _originLocal = ToLocal(e);
+            _originLocal = originLocal;
 
             // Same order ClubHandleDragger uses, and for the same reason: BeginExternalDrag resets
             // the swing (which clears PendingSpinInput), so the HUD's spin must be pushed after it.
             _controller.BeginExternalDrag(ownsTiming: true);
             _controller.PendingSpinInput = SpinContext.Spin;
-            ProcessDrag(e);
         }
 
         public void OnDrag(PointerEventData e)
         {
             if (!_dragging) return;
-            ProcessDrag(e);
+            ProcessDragLocal(ToLocal(e));
         }
 
-        private void ProcessDrag(PointerEventData e)
+        private void ProcessDragLocal(Vector2 local)
         {
-            Vector2 local  = ToLocal(e);
             float   pullPx = Mathf.Max(0f, _originLocal.y - local.y);
 
             bool isPutt = _controller.IsPutt;
@@ -278,6 +290,17 @@ namespace Golfin.Gameplay.UI.Controls.Needle
         public void OnPointerUp(PointerEventData e)
         {
             if (!_dragging) return;
+            ReleasePower();
+        }
+
+        /// <summary>
+        /// End the power gesture and start the needle. Split out of <see cref="OnPointerUp"/> so
+        /// <see cref="DriveBot"/> reaches the needle phase down the same path a thumb does —
+        /// including the republish-at-peak, the sweep-seconds resolve and the arming of the real
+        /// tap catcher, which is what the bot's tap then goes through.
+        /// </summary>
+        private void ReleasePower()
+        {
             _dragging = false;
 
             // A touch that never became a pull is not a shot. This subsumes the flick's
@@ -375,7 +398,12 @@ namespace Golfin.Gameplay.UI.Controls.Needle
 
         // ── The sweep ────────────────────────────────────────────────────────────
 
-        private void Update() => Advance(Time.deltaTime);
+        // A bot advances the needle itself, with a dt it chooses so the tap lands ON its sampled
+        // offset instead of wherever the next frame boundary fell (see DriveBot). Update must not
+        // then advance it a second time in the same frame.
+        private bool _botDriving;
+
+        private void Update() { if (!_botDriving) Advance(Time.deltaTime); }
 
         /// <summary>
         /// Move the needle one frame, and ease the club head home.
@@ -471,6 +499,150 @@ namespace Golfin.Gameplay.UI.Controls.Needle
             _arcView?.HideImmediate();
             _circleView?.SetDimmed(false);
         }
+
+        // ── Bot seam (bot_scheme_parity §3.2) ────────────────────────────────────
+
+        /// <summary>
+        /// Swing this scheme for a BOT: pull the club back inside the circle, release at
+        /// <paramref name="power01"/>, then TAP the frame the live needle reaches
+        /// <paramref name="targetNeedle01"/>.
+        ///
+        /// <para>THE TAP GOES THROUGH THE REAL <see cref="NeedleTapCatcher"/>. Not
+        /// <see cref="OnTap"/> directly: the catcher is the object a thumb hits, it is armed and
+        /// disarmed by the phase, and routing the bot around it would leave the one piece of this
+        /// scheme that only ever runs under a real finger untested by every bot run. The direct
+        /// call is kept only as a fallback for a driver whose catcher was never wired (EditMode),
+        /// and it says so on the log when it fires.</para>
+        ///
+        /// <para>A BOT NEVER CHOOSES TO SHANK. The executor clamps its sample to ±0.98, so the
+        /// needle is always tapped before it runs off the end — a shank is a player failing to
+        /// act, not a skill level.</para>
+        ///
+        /// <para>The sub-frame stepping is the Pendulum's argument verbatim: the needle is
+        /// advanced with a dt the bot chooses so the tap lands ON the sampled offset instead of
+        /// up to a frame past it, because the difficulty calibration is a sigma on that offset.</para>
+        /// </summary>
+        public IEnumerator DriveBot(float power01, float targetNeedle01, float curve01,
+                                    float rampSeconds, float commitTol01)
+        {
+            if (_controller == null) yield break;
+            if (_controller.State != ShotState.Idle)
+            {
+                Debug.LogWarning($"[Needle] DriveBot: shot is {_controller.State}, not Idle — swing skipped.");
+                yield break;
+            }
+
+            bool  isPutt    = _controller.IsPutt;
+            float pullPx    = PullPxForPower(power01, isPutt);
+            float lateralPx = Mathf.Clamp(curve01, -1f, 1f) * _cfg.NeedleCurveHalfWidthPx;
+            float target    = Mathf.Clamp(targetNeedle01, -0.98f, 0.98f);
+            float ramp      = Mathf.Max(1e-3f, rampSeconds);
+            float tol       = Mathf.Max(1e-4f, commitTol01);
+
+            BeginSwingLocal(Vector2.zero);
+            _botDriving = true;
+
+            // 1. The pull, inside the power circle. The needle does not exist yet — this scheme's
+            //    first touch is power only, which is exactly what makes it two touches.
+            float t = 0f;
+            while (t < ramp)
+            {
+                float dt = Time.unscaledDeltaTime;
+                t += dt;
+                float k = Mathf.Clamp01(t / ramp);
+                ProcessDragLocal(new Vector2(lateralPx * k, -pullPx * k));
+                Advance(dt);
+                yield return null;
+            }
+            ProcessDragLocal(new Vector2(lateralPx, -pullPx));
+
+            // 2. The release: power is committed, the arc comes up and the needle starts.
+            ReleasePower();
+            if (_phase != Phase.Needle) { _botDriving = false; yield break; }   // pull too shallow
+
+            // 3. Wait for the needle to reach the sampled offset, stepping exactly onto it when it
+            //    is less than a frame away.
+            // Wall-clock backstop, for the reason the Pendulum's has one: the needle reaching the
+            // end of the arc is the real limit, but a bot must never be the thing that hangs a turn.
+            float waited = 0f;
+            const float MaxWaitSeconds = 20f;
+            while (_phase == Phase.Needle)
+            {
+                waited += Time.unscaledDeltaTime;
+                if (waited > MaxWaitSeconds)
+                {
+                    Debug.LogWarning($"[Needle] DriveBot: needle never reached {target:F3} in " +
+                                     $"{MaxWaitSeconds:F0}s (sweepSec={_sweepSec:F2}) — tapping at n={_needle:F3}.");
+                    break;
+                }
+                float need = DtToNeedle(target);
+                float step = Mathf.Min(Time.unscaledDeltaTime, need);
+                Advance(step);
+                if (_phase != Phase.Needle) break;              // ran off the end: a SHANK
+                if (Mathf.Abs(_needle - target) <= tol) break;
+                yield return null;
+            }
+
+            _botDriving = false;
+            if (_phase != Phase.Needle) yield break;            // already committed (shank)
+
+            // 4. The tap, through the object a thumb would have hit.
+            if (_tapCatcher != null && _tapCatcher.IsArmed) _tapCatcher.OnPointerDown(null);
+            if (_phase == Phase.Needle)
+            {
+                if (_tapCatcher != null && _tapCatcher.IsArmed)
+                    Debug.LogWarning("[Needle] DriveBot: the tap catcher swallowed the tap (no subscriber) " +
+                                     "— falling back to the driver's own OnTap.");
+                OnTap();
+            }
+        }
+
+        /// <summary>
+        /// Seconds until the needle reaches <paramref name="target"/>, or +inf once it is already
+        /// past. The needle is linear in time — <c>_needle += 2·dt/sweepSec</c> — so this is the
+        /// exact inverse of <see cref="Advance"/>'s step.
+        /// </summary>
+        private float DtToNeedle(float target)
+        {
+            float remaining = target - _needle;
+            if (remaining <= 0f) return float.PositiveInfinity;
+            return remaining * Mathf.Max(_sweepSec, 1e-3f) * 0.5f;
+        }
+
+        /// <summary>
+        /// The inverse of <c>NeedleMath.Power</c>: how far back a pull has to go to ask for
+        /// <paramref name="power01"/>. A bot decides a POWER, but the driver — like the thumb —
+        /// only understands pixels, and inverting here keeps the two curves one curve.
+        /// </summary>
+        private float PullPxForPower(float power01, bool isPutt)
+        {
+            float minPull = _cfg.NeedleMinUsefulPullPx;
+            float p100    = _cfg.NeedlePull100Px;
+            float p120    = _cfg.NeedlePull120Px;
+
+            float p = Mathf.Clamp(power01, 0f, ShotController.MaxOverpowerNormalized);
+            if (p <= 0f) return 0f;
+            if (isPutt || p <= 1f) return minPull + Mathf.Clamp01(p) * (p100 - minPull);
+            return p100 + ((p - 1f) / 0.2f) * (p120 - p100);
+        }
+
+        /// <summary>
+        /// Grade a needle offset with THIS driver's live config and stats, without swinging. The
+        /// bot executor needs it to map a candidate offset to the yaw it would produce so the tree
+        /// probe can reject the ones that fly into a trunk — and it must be the same call
+        /// <see cref="OnTap"/> makes, or the sampler would be clearing a different shot from the
+        /// one that gets fired.
+        /// </summary>
+        public NeedleMath.Verdict GradeForBot(float n, float power01)
+        {
+            float acc      = _controller != null ? _controller.ClubAccuracyNorm01 : 0.5f;
+            float halfCone = (_controller != null ? _controller.ConeHalfAngleDeg : 0f) * Mathf.Deg2Rad;
+            return NeedleMath.Grade(n, acc, power01, halfCone, _cfg);
+        }
+
+        /// <summary>The bot tap tolerance, straight off the config this driver is using — so the
+        /// executor cannot pass a number the driver disagrees with.</summary>
+        public float BotCommitTol01 => _cfg.NeedleBotCommitTol01;
 
         // ── Test seam ────────────────────────────────────────────────────────────
 

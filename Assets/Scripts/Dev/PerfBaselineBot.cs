@@ -44,6 +44,8 @@ using UnityEngine;
 using UnityEngine.UI;
 using Golfin.Gameplay.UI.Quality;
 
+using Golfin.Gameplay.UI.Controls.Bot;
+
 namespace Golfin.Dev
 {
     public class PerfBaselineBot : MonoBehaviour
@@ -531,10 +533,14 @@ namespace Golfin.Dev
             catch (Exception e) { Mark("WARN yaw pin failed: " + e.Message); }
         }
 
-        /// Fires through the PRODUCTION drag path — BeginExternalDrag → ramp SetExternalPower →
-        /// EndExternalDrag → CommitFlick — NOT PhysicsLabController.Fire(ShotPreset), which is a
-        /// lab test seam. Same sequence BotDriver.FireDriverShot uses, reached by reflection
-        /// because Golfin.DevHarness does not reference Golfin.Gameplay.Input.
+        /// Fires through THE ONE DOOR EVERY BOT SWINGS THROUGH — BotSwing.PlayPerfect
+        /// (bot_scheme_parity §3.5) — NOT PhysicsLabController.Fire(ShotPreset), which is a lab
+        /// test seam, and no longer a hand-rolled BeginExternalDrag→ramp→EndExternalDrag either.
+        ///
+        /// ForceFlick, deliberately: perf baseline compares against build 2699 numbers; scheme UI
+        /// cost is measured by scheme_evaluation. A baseline whose swing changed shape because a
+        /// control-scheme preference moved would be comparing two different workloads and calling
+        /// the difference a regression.
         IEnumerator FireDriverShot(float power01)
         {
             var labType = FindType("Golfin.Physics.Viewer.PhysicsLabController");
@@ -544,68 +550,18 @@ namespace Golfin.Dev
                 try { labType.GetMethod("SetClub", BindingFlags.Public | BindingFlags.Instance)?.Invoke(lab, new object[] { 0 }); }
                 catch (Exception e) { Mark("WARN SetClub failed: " + e.Message); }
             }
-            else Mark("WARN no PhysicsLabController — firing anyway via ShotController");
+            else Mark("WARN no PhysicsLabController — firing anyway via BotSwing");
 
-            var scType = FindType("Golfin.Gameplay.Input.ShotController");
-            var sc = scType != null ? UnityEngine.Object.FindFirstObjectByType(scType) as MonoBehaviour : null;
-            if (sc == null) { Mark("WARN no ShotController — mid-flight sample will be a TEE sample"); yield break; }
+            // Resolve() finds the ShotController for us: Golfin.DevHarness does not reference
+            // Golfin.Gameplay.Input and so cannot name that type at all, which is why every step
+            // of this shot used to be a reflection call.
+            var ctx = BotExecutionContext.Resolve();
+            if (!ctx.HasShot) { Mark("WARN no ShotController — mid-flight sample will be a TEE sample"); yield break; }
 
-            var stateProp = scType.GetProperty("State", BindingFlags.Public | BindingFlags.Instance);
-            // Type.EmptyTypes, not a bare name lookup: BeginExternalDrag is overloaded
-            // (control_scheme_seam added BeginExternalDrag(bool ownsTiming)), and a bare
-            // lookup throws AmbiguousMatchException. This bot wants the zero-arg flick entry.
-            var begin = scType.GetMethod("BeginExternalDrag", BindingFlags.Public | BindingFlags.Instance,
-                                         null, Type.EmptyTypes, null);
-            var setP  = scType.GetMethod("SetExternalPower",  BindingFlags.Public | BindingFlags.Instance);
-            var end   = scType.GetMethod("EndExternalDrag",   BindingFlags.Public | BindingFlags.Instance);
-            if (begin == null || setP == null || end == null)
-            { Mark("WARN ShotController drag API not found — mid-flight sample will be a TEE sample"); yield break; }
+            yield return BotSwing.PlayPerfect(power01, aimYawRad: 0f, isPutt: false, ctx,
+                                              new BotSwingOptions { ForceFlick = true });
 
-            // Idle gate: firing before the controller is ready silently no-ops.
-            float w = 0f;
-            while (w < 4f)
-            {
-                var s = stateProp?.GetValue(sc)?.ToString();
-                if (s == null || s == "Idle") break;
-                yield return null; w += Time.unscaledDeltaTime;
-            }
-
-            // Reflection does NOT apply C# default arguments: EndExternalDrag(bool bypassFlickGate
-            // = false) has ONE parameter, so a zero-arg Invoke throws TargetParameterCountException
-            // — which killed the coroutine before sampling on the first attempt. Build every args
-            // array from the real parameter count, and never let an Invoke abort the run: a failed
-            // shot should degrade to a tee sample, not lose the whole measurement.
-            object[] EndArgs() => end.GetParameters().Length == 0 ? null : new object[] { false };
-
-            bool ok = true;
-            try { begin.Invoke(sc, null); }
-            catch (Exception e) { Mark("WARN BeginExternalDrag failed: " + e.Message); ok = false; }
-
-            if (ok)
-            {
-                const float ramp = 0.85f;
-                float t = 0f;
-                while (t < ramp)
-                {
-                    t += Time.unscaledDeltaTime;
-                    try { setP.Invoke(sc, new object[] { Mathf.Lerp(0f, power01, t / ramp), 0f }); }
-                    catch (Exception e) { Mark("WARN SetExternalPower failed: " + e.Message); ok = false; break; }
-                    yield return null;
-                }
-            }
-
-            if (ok)
-            {
-                try { setP.Invoke(sc, new object[] { power01, 0f }); }
-                catch (Exception e) { Mark("WARN SetExternalPower(final) failed: " + e.Message); ok = false; }
-            }
-            yield return new WaitForSecondsRealtime(0.18f);
-            if (ok)
-            {
-                try { end.Invoke(sc, EndArgs()); Mark($"SHOT fired via production drag path (power={power01:F2})"); }
-                catch (Exception e) { Mark("WARN EndExternalDrag failed: " + e.Message); ok = false; }
-            }
-            if (!ok) Mark("SHOT FAILED — this run's sample is a TEE sample, not mid-flight. Label accordingly.");
+            Mark($"SHOT fired via BotSwing.PlayPerfect(ForceFlick) (power={power01:F2})");
         }
 
         // ── Experiments (runtime only — never an asset edit) ────────────────────────────

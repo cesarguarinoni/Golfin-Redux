@@ -13,6 +13,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using Golfin.Diagnostics.Runtime;
 using Golfin.Physics.Viewer;
+using Golfin.Gameplay.UI.Controls.Bot;
 
 namespace Golfin.EditorTools
 {
@@ -331,9 +332,11 @@ namespace Golfin.EditorTools
 
             yield return new WaitForSecondsRealtime(1.5f);
 
-            var shotType = FindType("Golfin.Gameplay.Input.ShotController");
-            var shot = shotType != null ? UnityEngine.Object.FindFirstObjectByType(shotType) as MonoBehaviour : null;
-            if (shot == null)
+            // bot_scheme_parity §3.5: one door for every bot. No ForceFlick — a capture of the
+            // occlusion fade does not care which handle moved, so this rig follows whatever
+            // control scheme is selected, exactly as a player's own shot would.
+            var ctx = BotExecutionContext.Resolve();
+            if (!ctx.HasShot)
             {
                 L("ShotController NOT FOUND — cannot play a shot; flight/at-rest captures skipped.");
                 Flush();
@@ -342,27 +345,13 @@ namespace Golfin.EditorTools
                 yield break;
             }
 
-            // Type.EmptyTypes, not a bare name lookup: BeginExternalDrag is overloaded
-            // (control_scheme_seam added BeginExternalDrag(bool ownsTiming)), and a bare
-            // lookup throws AmbiguousMatchException. This bot wants the zero-arg flick entry.
-            var begin = shotType.GetMethod("BeginExternalDrag", BindingFlags.Public | BindingFlags.Instance,
-                                           null, Type.EmptyTypes, null);
-            var setP  = shotType.GetMethod("SetExternalPower",  BindingFlags.Public | BindingFlags.Instance);
-            var end   = shotType.GetMethod("EndExternalDrag",   BindingFlags.Public | BindingFlags.Instance);
-
             const float power = 0.62f;   // mid power — lands in the tree line rather than past it
-            begin?.Invoke(shot, null);
-            float rt = 0f;
-            while (rt < 0.85f)
-            {
-                rt += Time.unscaledDeltaTime;
-                setP?.Invoke(shot, new object[] { Mathf.Lerp(0f, power, rt / 0.85f), 0f });
-                yield return null;
-            }
-            setP?.Invoke(shot, new object[] { power, 0f });
-            yield return new WaitForSecondsRealtime(0.18f);
-            end?.Invoke(shot, new object[] { true });   // bypassFlickGate: guarantee the release fires
-            L($"FIRED via production ShotController drag path, power={power:F2}");
+            // bypassFlickGate: this rig never gestured, so a gate it cannot pass would silently
+            // cost the take. Flick-only; the graded schemes have no flick gate to bypass.
+            ctx.BypassFlickGate = true;
+            ctx.LogTag = "[TreeOccludeFadeCaptureBot]";
+            yield return BotSwing.PlayPerfect(power, aimYawRad: 0f, isPutt: false, ctx);
+            L($"FIRED via BotSwing.PlayPerfect, power={power:F2}");
 
             // ── 4. §5.1 / §5.2 / §5.4 — consecutive flight frames ────────────────
             // Consecutive (not sampled) frames are what proves the edge is a gradient and not a cut.
