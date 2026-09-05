@@ -1,0 +1,54 @@
+=== iter-1 kickoff baseline 2026-09-05T06:59:05Z ===
+HEAD: 7369ecb18f6b141785e635f544be61e274a00260
+DIRTY:
+ M Assets/Scripts/Gameplay/UI/ShotUI/MapPinIndicator.cs
+ M Assets/Scripts/Gameplay/UI/ShotUI/MapViewController.cs
+ M Docs/GPS/GPS_BACKLOG.md
+ M Docs/Specs/Active/control_scheme_seam/STATUS.md
+ M Docs/Specs/Active/map_view_v2/HEARTBEAT.log
+ M Docs/Specs/Active/map_view_v2/IMPLEMENTER_REPORT.md
+ M Docs/Specs/Active/map_view_v2/map_view_invariants_aimed.json
+ M Docs/Specs/Active/map_view_v2/map_view_invariants_open.json
+ M Docs/Specs/Active/map_view_v2/map_view_invariants_v2_h01_aiming.json
+ M Docs/Specs/Active/map_view_v2/map_view_invariants_v2_h01_back_in_range.json
+ M Docs/Specs/Active/map_view_v2/map_view_invariants_v2_h01_over_range.json
+ M Docs/Specs/Active/map_view_v2/map_view_invariants_v2_h01_pin_flip.json
+ M Docs/Specs/Active/map_view_v2/map_view_invariants_v2_h04_aiming.json
+ M Docs/Specs/Active/map_view_v2/map_view_invariants_v2_h04_back_in_range.json
+ M Docs/Specs/Active/map_view_v2/map_view_invariants_v2_h04_over_range.json
+ M Docs/Specs/Active/map_view_v2/map_view_invariants_v2_h04_pin_flip.json
+ M Docs/Specs/Active/map_view_v2/map_view_invariants_v2_h08_aiming.json
+ M Docs/Specs/Active/map_view_v2/map_view_invariants_v2_h08_back_in_range.json
+ M Docs/Specs/Active/map_view_v2/map_view_invariants_v2_h08_over_range.json
+ M Docs/Specs/Active/map_view_v2/map_view_invariants_v2_h08_pin_flip.json
+ M Docs/Specs/Completed/scheme_needle/STATUS.md
+ M Docs/TellCode.md
+?? Docs/Specs/Active/bot_scheme_parity/SPEC.md
+?? Docs/Specs/Active/bot_scheme_parity/STATUS.md
+?? Docs/Specs/Active/control_scheme_seam/ARCHITECT_REVIEW.md
+?? Docs/Specs/Active/scheme_freeswing/HEARTBEAT.log
+?? Docs/Specs/Active/scheme_freeswing/SPEC.md
+?? Docs/Specs/Active/scheme_freeswing/STATUS.md
+?? Docs/Specs/Active/scheme_freeswing/reference/freeswing_backswing.png
+?? Docs/Specs/Active/scheme_freeswing/reference/freeswing_downswing.png
+?? Docs/Specs/Active/scheme_freeswing/reference/freeswing_putt.png
+?? Docs/Specs/Active/scheme_freeswing/reference/freeswing_result.png
+?? Docs/Specs/Completed/scheme_needle/ARCHITECT_REVIEW.md
+=== END baseline ===
+
+=== iter-1 work log 2026-09-05T08:08:17Z ===
+maths + driver + views written; EditMode 619/619 green (Flick/Pendulum/Needle unchanged)
+scene built via FreeSwingSchemeBuilder; lane derived 756px (160 follow-through + 70 rest + 456 pull + 50 club half + 20 tail)
+acceptance: 110/110 PASS -> freeswing_invariants.json (real entry: schemeButtons[3].onClick)
+video: scheme_freeswing_freeswing.mp4 1170x2532 45.9s captioned
+strings: 13 keys imported + published (texts v40 -> v41), export --check clean
+=== end iter-1 ===
+
+=== iter-1 follow-up 2026-09-05T08:34:41Z ===
+Cesar: trace line must disappear when the ball is in flight.
+FreeSwingTraceView.SetResult now snaps the group to 0 (was the node's 0.6 hold).
+TRAP: the scene had _resultAlpha serialized at 0.6 from AddComponent; changing the C# default
+  did nothing until the live value was patched. Verified 0.6 -> 0 in LabScaffold.unity.
+EditMode 619/619; acceptance re-run 110/110 (result.trace_is_gone_once_the_ball_is_away = 0.000)
+video re-recorded; in-flight frames 9.3/9.6/10.2s carry chip + PURE pop and no line
+=== end follow-up ===
