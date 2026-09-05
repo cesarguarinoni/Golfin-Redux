@@ -56,7 +56,27 @@ namespace Golfin.EditorTools.ShotUI
         const string ShellScenePath = "Assets/Scenes/ShellScene.unity";
         const string ArmedKey       = "SchemeConfirmTilesCapture.Armed";
 
-        public const string TaskDir   = "Docs/Specs/Active/scheme_confirm_popup";
+        /// <summary>
+        /// The task folder, wherever it currently lives. Resolved rather than pinned so a re-run
+        /// after close-out writes into the real folder instead of resurrecting an empty
+        /// <c>Active/</c> sibling.
+        /// </summary>
+        public static readonly string TaskDir = ResolveTaskDir("scheme_confirm_popup");
+
+        /// <summary>
+        /// Resolve a spec task folder across the <c>Active/</c> -&gt; <c>Completed/</c> move every
+        /// task folder eventually undergoes. Active wins when both exist (in-flight beats
+        /// archived); when neither exists the Active path is returned so a fresh run creates it
+        /// where a new task belongs.
+        /// </summary>
+        public static string ResolveTaskDir(string slug)
+        {
+            string active = "Docs/Specs/Active/" + slug;
+            if (Directory.Exists(active)) return active;
+            string completed = "Docs/Specs/Completed/" + slug;
+            return Directory.Exists(completed) ? completed : active;
+        }
+
         public const string TilesDir  = "Assets/Resources/UI/Controls/Tiles";
         public static string ShotsDir => TaskDir + "/screenshots";
 

@@ -227,13 +227,25 @@ namespace Golfin.Gameplay.Tests
     /// </summary>
     public class SchemeConfirmTileManifestTests
     {
-        const string ManifestPath = "Docs/Specs/Active/scheme_confirm_popup/tiles_manifest.json";
+        /// <summary>
+        /// Where the manifest may live. A task folder starts under <c>Docs/Specs/Active/</c> and is
+        /// moved to <c>Docs/Specs/Completed/</c> at close-out, so pinning either one makes the
+        /// close-out commit break this suite — which is exactly what <c>b8ef37ec0</c> did.
+        /// Active is probed first so an in-flight re-run of the task wins over the archived copy.
+        /// </summary>
+        static readonly string[] ManifestCandidates =
+        {
+            "Docs/Specs/Active/scheme_confirm_popup/tiles_manifest.json",
+            "Docs/Specs/Completed/scheme_confirm_popup/tiles_manifest.json",
+        };
 
         static string Manifest()
         {
-            Assert.IsTrue(File.Exists(ManifestPath),
-                ManifestPath + " is missing — run GOLFIN > Capture > Scheme Confirm Tiles");
-            return File.ReadAllText(ManifestPath);
+            string path = ManifestCandidates.FirstOrDefault(File.Exists);
+            Assert.IsNotNull(path,
+                "tiles_manifest.json is missing from both " + string.Join(" and ", ManifestCandidates)
+                + " — run GOLFIN > Capture > Scheme Confirm Tiles");
+            return File.ReadAllText(path);
         }
 
         [Test]

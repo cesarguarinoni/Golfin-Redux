@@ -39,7 +39,8 @@ namespace Golfin.EditorTools.ShotUI
         const string ShellScenePath = "Assets/Scenes/ShellScene.unity";
         const string ArmedKey       = "SchemeConfirmVerify.Armed";
 
-        public const string TaskDir  = "Docs/Specs/Active/scheme_confirm_popup";
+        /// <summary>The task folder, resolved across the Active -&gt; Completed close-out move.</summary>
+        public static readonly string TaskDir = SchemeConfirmTilesCapture.ResolveTaskDir("scheme_confirm_popup");
         public static string ShotsDir => TaskDir + "/screenshots";
 
         [InitializeOnLoadMethod]
