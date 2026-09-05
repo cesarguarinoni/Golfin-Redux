@@ -17,6 +17,10 @@ namespace Golfin.Gameplay.UI.Controls
     {
         public ControlScheme Scheme => ControlScheme.Flick;
 
+        /// <summary>True — Flick is the SHIPPING scheme. Its driver is empty because
+        /// <c>ClubHandleDragger</c> does the work, not because the scheme is a stub.</summary>
+        public bool IsImplemented => true;
+
         public void Bind(ShotController controller) { }
         public void Activate()   { }
         public void Deactivate() { }

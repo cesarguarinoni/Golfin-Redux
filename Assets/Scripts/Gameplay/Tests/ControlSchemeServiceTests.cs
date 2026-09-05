@@ -213,6 +213,47 @@ namespace Golfin.Gameplay.Tests
             Assert.IsFalse(_host.HasPendingSwap);
             Assert.AreEqual(ControlScheme.Needle, _host.ActiveScheme, "swap fires on the next Idle");
         }
+
+        // ── scheme_pendulum §3.1 / §5.3: an IMPLEMENTED driver takes the flick root away ──
+
+        [Test]
+        public void ImplementedScheme_TurnsTheFlickRootOff()
+        {
+            // Swap the Pendulum placeholder for the real driver, exactly as the scene does.
+            Object.DestroyImmediate(_roots[1].GetComponent<PlaceholderSchemeDriver>());
+            _roots[1].AddComponent<RectTransform>();
+            _roots[1].AddComponent<Golfin.Gameplay.UI.Controls.Pendulum.PendulumSchemeDriver>();
+
+            ControlSchemeService.Set(ControlScheme.Pendulum, "settings");
+
+            Assert.AreEqual(ControlScheme.Pendulum, _host.ActiveScheme);
+            Assert.IsTrue(_roots[1].activeSelf, "the Pendulum root is the live one");
+            Assert.IsFalse(_roots[0].activeSelf,
+                "two live pointer handlers over one ball would be two shots per swing");
+        }
+
+        [Test]
+        public void SwitchingBackToFlick_RestoresTheFlickRoot()
+        {
+            Object.DestroyImmediate(_roots[1].GetComponent<PlaceholderSchemeDriver>());
+            _roots[1].AddComponent<RectTransform>();
+            _roots[1].AddComponent<Golfin.Gameplay.UI.Controls.Pendulum.PendulumSchemeDriver>();
+
+            ControlSchemeService.Set(ControlScheme.Pendulum, "settings");
+            ControlSchemeService.Set(ControlScheme.Flick,    "settings");
+
+            Assert.IsTrue(_roots[0].activeSelf,  "Flick must come back on");
+            Assert.IsFalse(_roots[1].activeSelf, "and Pendulum must go away");
+        }
+
+        [Test]
+        public void FlickDriver_ReportsItselfImplemented()
+        {
+            // The shipping scheme's driver is empty because ClubHandleDragger does the work, not
+            // because the scheme is a stub — and the host must not confuse the two.
+            Assert.IsTrue(_roots[0].GetComponent<FlickSchemeDriver>().IsImplemented);
+            Assert.IsFalse(_roots[2].GetComponent<PlaceholderSchemeDriver>().IsImplemented);
+        }
     }
 
     /// <summary>control_scheme_seam §6.6 — every <c>shot_taken</c> row is stamped with the

@@ -100,6 +100,41 @@ namespace Golfin.Gameplay.Config
         /// </summary>
         public float BallSpriteVisualRadiusFrac;   // 0.957 = visible ball edge / RT half-width
 
+        // ── Pendulum scheme (scheme_pendulum §3.6) ──────────────────────────────
+        // Deliberately a SEPARATE set from the flick's MinUsefulPullPx / Max100PercentPullPx /
+        // MaxOverpowerPullPx even though three of them seed to the same numbers: the two schemes
+        // are being A/B'd against each other, so a retune of one that silently moved the other
+        // would invalidate the comparison. They are also different UNITS in practice — the flick
+        // measures a pull against the drawn cone's height, the pendulum against its own lane.
+        public float PendulumMinUsefulPullPx;
+        public float PendulumPull100Px;
+        public float PendulumPull120Px;
+        public float PendulumOverpowerGain;
+        public float PendulumJustWindowAtAcc0_01;
+        public float PendulumJustWindowAtAcc120_01;
+        public float PendulumGoodWindow01;
+        public float PendulumMissYawGain;
+        public float PendulumCurveHalfWidthPx;
+        public float PendulumMaxSweeps;          // treat as int at use site, as MaxTotalPasses is
+
+        // Marker speed. Originally the Pendulum REUSED the flick's arrow line
+        // (BaseArrowSpeedHzAtCC0 / ArrowSpeedHzPerCC / MinArrowSpeedHz) on the argument that both
+        // schemes ask the same question. Cesar watching the first clip: "the horizontal ball is
+        // moving way too fast" — a full sweep at 1.82 Hz is 0.55 s, which is not readable. The two
+        // schemes turn out NOT to want the same number: the flick's arrow crosses a slab once per
+        // pass, the pendulum's marker crosses the pip TWICE per cycle and has to be trackable by
+        // eye the whole way. Its own line, so slowing it can never move the flick.
+        public float PendulumBaseHzAtCC0;
+        public float PendulumHzPerCC;            // negative: higher Club Control = slower marker
+        public float PendulumMinHz;              // floor, same guard MinArrowSpeedHz gives the arrow
+
+        // Power shrinks the target (Cesar, 2026-09-05: "the hitting area should shrink the further
+        // the player pulls"). This is the scheme's risk/reward: a soft lay-up is forgiving, a
+        // 120% pull is a needle. Applied to BOTH accuracy windows and to the drawn bands, from the
+        // same number, so the green band the player is watching narrows as they pull.
+        public float PendulumWindowScaleAtZeroPower;   // multiplier at power 0
+        public float PendulumWindowScaleAtMaxPower;    // multiplier at MaxOverpowerNormalized
+
         public static readonly ControlsConfig Default = new ControlsConfig
         {
             PullStartThresholdPx           = 30f,
@@ -136,6 +171,25 @@ namespace Golfin.Gameplay.Config
             AimLineDefaultReachPx          = 500f,   // canvas px at rest (iter-2: increased from 400 for readability)
             AimLineCurveScale              = 0.55f,  // k: full finetune → tip lateral ≈ 0.55 × reachPx (iter-4: increased from 0.35 — Cesar wants a more pronounced, readable bend)
             RingFrac                       = 0.15f,  // map-view ring radius fraction: r_p = carry * RingFrac * (p/100) for p∈{80,100,120}
+
+            // scheme_pendulum §3.6 seed values — mirror controls.csv (F13 two-mirror rule).
+            PendulumMinUsefulPullPx        = 40f,
+            PendulumPull100Px              = 380f,   // 300 -> 380 (2026-09-05): the longer pill needs the
+                                                     // ticks LOW in it, and a tick only moves down honestly
+                                                     // if the pull it represents gets longer
+            PendulumPull120Px              = 456f,   // 360 -> 456, keeping the node's 1.2x tick spacing
+            PendulumOverpowerGain          = 1.0f,
+            PendulumJustWindowAtAcc0_01    = 0.08f,
+            PendulumJustWindowAtAcc120_01  = 0.20f,
+            PendulumGoodWindow01           = 0.45f,  // Figma BandGood is 0.40 (288px); see csv note
+            PendulumMissYawGain            = 1.5f,
+            PendulumCurveHalfWidthPx       = 150f,
+            PendulumMaxSweeps              = 10f,
+            PendulumBaseHzAtCC0            = 1.0f,    // was the flick's 2.0 — halved after Cesar's first-clip review
+            PendulumHzPerCC                = -0.015f, // half the flick's slope, so the CC ladder keeps the same shape
+            PendulumMinHz                  = 0.35f,
+            PendulumWindowScaleAtZeroPower = 1.35f,
+            PendulumWindowScaleAtMaxPower  = 0.55f,
         };
     }
 }

@@ -373,10 +373,25 @@ namespace Golfin.Gameplay.Input
             PublishState();
         }
 
+        /// <summary>
+        /// Ceiling on <see cref="PowerNormalized"/>. 1.2 = the 120% overpower pull, the same
+        /// number <see cref="ComputePower"/> has always capped the flick at and the same one
+        /// <see cref="FireDebugShot"/> clamps to. Named here because the pendulum's lane reads it
+        /// as geometry (the 120% tick) rather than inferring it from a literal.
+        /// </summary>
+        public const float MaxOverpowerNormalized = 1.2f;
+
+        /// <param name="powerNormalized">0..<see cref="MaxOverpowerNormalized"/>. Was Clamp01 until
+        /// scheme_pendulum §3.1: the flick's own <c>ClubHandleDragger</c> derives power as
+        /// <c>1 - handleY/coneHeight</c> and so can never exceed 1.0, which is why widening the
+        /// ceiling leaves Flick byte-identical. Putts are still clamped to 1.0, but at
+        /// <see cref="CommitExternal"/>/<see cref="CommitFlick"/> where they always were — a
+        /// driver that publishes 1.2 on a putt sees the gauge read 120% and the shot fly 100%,
+        /// exactly as the flick does today.</param>
         public void SetExternalPower(float powerNormalized, float coneFinetune)
         {
             if (!_externalDragActive) return;
-            PowerNormalized = Mathf.Clamp01(powerNormalized);
+            PowerNormalized = Mathf.Clamp(powerNormalized, 0f, MaxOverpowerNormalized);
             // Aim latched at the upswing reversal: lateral finger movement stops steering the
             // line, which just freezes at its last value (SHOT_FLICK_FIX_SPEC Bug 2).
             SetLiveFinetune(Mathf.Clamp(coneFinetune, -1f, 1f));
@@ -412,6 +427,50 @@ namespace Golfin.Gameplay.Input
             ShotCancelled?.Invoke();
             TransitionToIdle();
         }
+
+        /// <summary>
+        /// Reject the release that just happened: the player let go too slowly to be a flick, so
+        /// the swing resets and no shot is taken (scheme_pendulum §3.1).
+        ///
+        /// <para>This is the failed-gate branch of <see cref="EndExternalDrag"/>, and nothing
+        /// more. A driver that owns its own timing never calls EndExternalDrag — it decides for
+        /// itself whether the release counted, because only it knows where its marker was — but
+        /// the CONSEQUENCE of a failed release has to stay one implementation, or the toast and
+        /// the reset drift apart between schemes.</para>
+        /// </summary>
+        public void RejectExternalDrag()
+        {
+            if (!_externalDragActive) return;
+            _externalDragActive = false;
+            FlickRejected?.Invoke(LastFlickSpeedScreenHeights);
+            TransitionToIdle();
+        }
+
+        // ── Read-only stat seams for scheme drivers (scheme_pendulum §3.1) ───────
+        // A driver grades a swing against the same stats the shot pipeline resolves it with.
+        // Exposing the three it needs READ-ONLY keeps StatProviderBus/StatModifierResolver
+        // plumbing out of every future driver, and keeps the numbers single-sourced: a driver
+        // that resolved its own bundle could grade against stats the shot never used.
+
+        /// <summary>Club (or putter) Accuracy as 0..1 — the same value <see cref="HalfConeAngleRad"/>
+        /// lerps the cone with, so a scheme's accuracy windows and the cone cannot disagree.</summary>
+        public float ClubAccuracyNorm01 => GetClubAccuracyNorm();
+
+        /// <summary>Character Club Control, raw points. Drives arrow/marker speed.</summary>
+        public int CharacterClubControl => GetStatBundle().Character.ClubControl;
+
+        /// <summary>
+        /// Overpower forgiveness 0..1 — how much of an over-100% pull the character absorbs.
+        ///
+        /// <para>Mirrors <c>StatModifierResolver</c> step 6 (<c>effStrength * CharStrengthPerPoint</c>).
+        /// The resolver caps at <c>StatCaps.Default.OverpowerForgivenessMax</c> = 0.75, which
+        /// 120 Strength reaches exactly; this clamp is Clamp01 per spec §3.1 and so only differs
+        /// above 160 Strength, which no rarity cap reaches. It reads the bundle's raw Strength
+        /// rather than the stamina-scaled <c>effStrength</c> for the same reason
+        /// <c>StatResolverTests</c> asserts forgiveness is stamina-invariant.</para>
+        /// </summary>
+        public float OverpowerForgiveness01 => Mathf.Clamp01(
+            GetStatBundle().Character.Strength * StatCoefficients.Default.CharStrengthPerPoint.ToFloat());
 
         // ── Telemetry signals (beta_telemetry SPEC §1 #6/#7) ──────────────────────
         // STATIC because the subscriber is the telemetry layer, which comes up at boot and

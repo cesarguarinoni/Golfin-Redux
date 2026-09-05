@@ -3343,3 +3343,12 @@ MonoBehaviour:
   - key: GPS_ROUNDS_NO_ROUNDS
     english: No rounds yet.
     japanese: "\u307E\u3060\u30E9\u30A6\u30F3\u30C9\u304C\u3042\u308A\u307E\u305B\u3093\u3002"
+  - key: SHOT_GRADE_JUST
+    english: JUST!
+    japanese: "\u30B8\u30E3\u30B9\u30C8!"
+  - key: SHOT_GRADE_GOOD
+    english: GOOD
+    japanese: "\u30B0\u30C3\u30C9"
+  - key: SHOT_GRADE_MISS
+    english: MISS
+    japanese: "\u30DF\u30B9"

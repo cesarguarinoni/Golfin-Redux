@@ -4,6 +4,92 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
+## 2026-09-05 — `scheme_pendulum` built (spec 1 of the control-schemes track)
+
+**Pendulum is a real, playable scheme**, on top of `control_scheme_seam` (`8913901a7`). Picking it
+in the in-game gear turns `SchemeRoot_Flick` OFF; a copy of `ClubHandle` (same `Image`, same
+`ClubHandleSpriteBinder`) is pulled DOWN a 400 px lane for power while a sinusoidal marker sweeps a
+720 px bar; the marker offset at the flick grades JUST / GOOD / MISS through the seam's
+`CommitExternal(ShotIntent)`. Flick never enters the new code path. `STATUS = READY_FOR_SELF_REVIEW`,
+report + `pendulum_invariants.json` (**37/37 PASS at 1170×2532**) in
+`Docs/Specs/Active/scheme_pendulum/`.
+
+**The real-entry rule earned its keep: every EditMode test passed and the scheme still did not
+fire a single shot.** Driven through actual pointer events on Lomond 2, the up-flick travels back
+past the touch origin, so at `OnPointerUp` the live `pullPx` is 0, the live power is 0, and the
+driver cancelled the swing silently. The EditMode tests missed it because they release with one
+sample instead of dragging through the upswing. Fixed the way Flick already solves it — commit
+`_peakPower`, not the live value — plus a second latch the spec did not ask for: the **marker
+freezes at the upswing reversal**, not at release, because the thumb takes 50–150 ms to leave the
+glass and at 1.8 Hz that is a whole band. That is the identical argument `_timingAtLatch` makes for
+the flick's arrow (F15 D1). Three regression tests pin it.
+
+**The two-tinted-stadium border idiom does not work for a translucent fill.** `S_PillStadium` is a
+SOLID stadium, so a 50 %-white "stroke" layer paints the whole shape and a 14 %-alpha fill on top
+cannot hide it — the lane shipped once as a ~57 %-white slab and the navy track as grey. The five
+flat shapes stay tinted `S_PillStadium` (with `pixelsPerUnitMultiplier = 88 / radius`, or the caps
+collapse to an oval); the lane and track are now baked from the node's tokens by
+`Docs/Scripts/make_pendulum_sprites.py`.
+
+**Seam additions were four lines of behaviour**, all proven inert for Flick: `SetExternalPower`
+clamps to 1.2 instead of `Clamp01` (audited every caller — `ClubHandleDragger` is 0..1 by
+construction and `bot_clubs.csv` maxes at exactly 1.0), `RejectExternalDrag()`, three read-only stat
+getters, and `IsImplemented` moved onto `IShotSchemeDriver`. `ShotControllerSeamParityTests` is
+unchanged and green; `ClubHandleDragger` / `ShotConeView` have zero diff.
+
+Strings `SHOT_GRADE_JUST/GOOD/MISS` went the full two-way path (PLAN 3 add / 0 conflict → apply →
+`content_publish` **texts v38 → v39** → `--check` clean → `Import Text CSV`, table 1052 → 1055).
+The first import silently produced 1052 rows with none of the keys: Unity was holding a stale
+`TextAsset`, and the importer's success log is not evidence it read the edit.
+
+**Cesar reviewed the first clip and named four things; all four are fixed and gated** (invariants
+now **44/44**, EditMode 2530/0). (1) The marker was reusing the FLICK'S arrow line at 1.82 Hz — a
+0.55 s round trip, "way too fast". It has its own Hz line now at **0.91 Hz**; the reuse was wrong on
+the merits, since sharing meant Pendulum could not be slowed without slowing the shipping scheme.
+(2) The accuracy windows now SHRINK with power (×1.35 at 0 → ×0.55 at 120 %), driving the drawn
+bands from the same number so the green band visibly closes **90 px → 40 px** as you pull — the
+scheme's risk/reward, and the cost is visible before you commit to it. (3) The club head hides at
+commit — NOT on a `Flicking` state event, because `ShotController` does not `PublishState` on that
+transition and the first implementation therefore left the handle under a departed ball (the test
+caught it). (4) The pull pill is 400 → **520**: the club head's bottom at full pull is 480 below the
+ball, so it had been hanging 80 px out of its own pill; the ticks are unmoved, so the pull feel is
+untouched.
+
+**Second review round — three more, all gated** (invariants **47/47**, EditMode 2530/0). (a) The
+target GREW BACK during the up-flick: `ResetSwing` redrew the bands right after the commit, so the
+narrowed target popped open in the same frame as the release. They now hold through the flick and
+reopen on the next touch. (b) **The band colours did not match Figma — because Figma composites in
+sRGB and Unity blends in LINEAR.** Every translucent element rendered too light (the amber was +28
+RGB). Elements that sit on a KNOWN parent (both bands, the track fill) are now pre-composited
+opaque at the reference's own pixels — exact and backdrop-independent, and read back off the live
+`Image` by the gate; the lane stays a translucent veil with a SOLVED alpha, refitted to turf
+because a single alpha cannot match an sRGB composite across backdrops. All now within a few RGB of
+the reference. (c) The 100 %/120 % lines had not moved with the longer pill: a tick is now drawn
+where the club head LANDS at that power (club pivot moved to its centre), the pull grew 300→380 /
+360→456 so the lines still mean what they say, and the **lane derives its own height** so pill and
+lines can never drift apart again — 596 tall, ticks 76 %/88 % down vs the node's 75 %/90 %.
+
+Every hard-coded pull distance in the tests, the acceptance bot and the video runner is now derived
+from config: the first re-record silently shot a "full power" swing at 76 % because a literal 300
+had stopped meaning 100 %.
+
+**Video:** `Docs/Specs/Active/scheme_pendulum/videos/scheme_pendulum_pendulum_scheme.mp4` — 30 s at
+1170×2532 through the real entry path: idle → a pull from lay-up to 120 % with the band closing on
+camera, 93→40 px (and a MISS to pay for it) → a JUST at exactly 100 % → a slow lift the flick gate
+rejects. Captions are generated from the committed values, so they cannot claim a grade
+the scheme did not award.
+New scar tissue for the caption tool, now in memory: a bare `%` makes ffmpeg `drawtext` print
+`Stray %` and render NOTHING for that caption while the encode still reports success, and the
+default 79px font overflows a 1170-wide portrait frame — pre-wrap to 40 chars and escape `\%`.
+
+**Open for Cesar:** the on-device feel pass (SPEC § 6), the putt path on a real green (EditMode-only
+here), and one number worth taking into tuning — at Accuracy 22/120 the JUST window is 0.102 of
+half-travel while the marker moves 0.183 per frame through the centre, so JUST is a sub-frame
+target at low Accuracy. Intended 白猫GOLF difficulty, or a `PendulumJustWindowAtAcc0_01` raise —
+a design call. Also flagged: `BandGood` draws 324 px against the node's 288 because SPEC § 3.6 seeds
+`PendulumGoodWindow01 = 0.45` while the node is 0.40; shipped at the spec's value, one CSV edit either way.
+
+---
 ## 2026-09-04/05 — `game_polish_a` DONE, `gacha_history_rebuild_stall`, build 2699 (GPS)
 
 **`game_polish_a` is DONE** (`Docs/Specs/Completed/game_polish_a/`). Slice (a) of Notion 2111:

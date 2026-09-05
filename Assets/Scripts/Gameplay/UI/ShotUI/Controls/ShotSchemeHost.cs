@@ -17,10 +17,11 @@ namespace Golfin.Gameplay.UI.Controls
     /// half-pulled shot would strand <c>ShotController</c> in an external drag with no driver
     /// left to release it.</para>
     ///
-    /// <para>UNIMPLEMENTED SCHEMES KEEP FLICK LIVE. Picking Pendulum on this build persists the
-    /// preference and stamps it on the telemetry row, but the input still comes from the flick
-    /// root — a tester who picks it gets a playable game rather than a dead screen. The first
-    /// scheme spec deletes this fallback.</para>
+    /// <para>UNIMPLEMENTED SCHEMES KEEP FLICK LIVE. Picking Needle or Free Swing on this build
+    /// persists the preference and stamps it on the telemetry row, but the input still comes from
+    /// the flick root — a tester who picks one gets a playable game rather than a dead screen.
+    /// A scheme whose driver reports <c>IsImplemented</c> gets the flick root turned OFF instead:
+    /// two live pointer handlers over one ball is two shots per swing.</para>
     /// </summary>
     public class ShotSchemeHost : MonoBehaviour
     {
@@ -111,8 +112,10 @@ namespace Golfin.Gameplay.UI.Controls
             GameObject wanted = RootFor(scheme);
             IShotSchemeDriver driver = wanted != null ? wanted.GetComponent<IShotSchemeDriver>() : null;
 
-            // A scheme whose driver has not shipped yet borrows the flick root's input.
-            bool implemented = driver != null && !(driver is PlaceholderSchemeDriver);
+            // A scheme whose driver has not shipped yet borrows the flick root's input. The
+            // driver answers for itself (scheme_pendulum §3.1) — a type test against the
+            // placeholder would need a new case for every real driver that lands.
+            bool implemented = driver != null && driver.IsImplemented;
             GameObject inputRoot = implemented ? wanted : RootFor(ControlScheme.Flick);
 
             if (_activeDriver != null) _activeDriver.Deactivate();

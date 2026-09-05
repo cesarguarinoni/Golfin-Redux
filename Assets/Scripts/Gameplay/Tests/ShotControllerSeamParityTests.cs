@@ -155,11 +155,12 @@ namespace Golfin.Gameplay.Tests
         [Test]
         public void CommitExternal_MatchesTheDebugPath_UnderOverpower()
         {
-            // NOT via FireFlick: SetExternalPower is Clamp01, so 1.2 is unreachable through the
-            // drag API — overpower only ever arrives as a pull past Max100PercentPullPx or via
-            // FireDebugShot. FireDebugShot is therefore the flick-side reference for a 1.2 shot,
-            // and it goes through the very same CommitFlick tail. It also starts with its own
-            // reset, so it can never carry spin — this case is power only.
+            // NOT via FireFlick: the flick's own ClubHandleDragger derives power as
+            // 1 - handleY/coneHeight and so never asks for more than 1.0, no matter what the
+            // clamp allows (scheme_pendulum §3.1 widened it to MaxOverpowerNormalized).
+            // FireDebugShot is therefore the flick-side reference for a 1.2 shot, and it goes
+            // through the very same CommitFlick tail. It also starts with its own reset, so it
+            // can never carry spin — this case is power only.
             _sc.CompleteShot();
             PinRandom();
             _sc.FireDebugShot(1.2f, DebugShotAccuracy.Green);
@@ -261,6 +262,67 @@ namespace Golfin.Gameplay.Tests
 
             Assert.AreEqual(0, _shotCount, "Aiming is too early to commit");
             Assert.AreEqual(ShotState.Aiming, _sc.State);
+        }
+
+        // ── 2b. The overpower ceiling (scheme_pendulum §3.1) ────────────────────
+
+        [Test]
+        public void SetExternalPower_PublishesOverpowerInsteadOfClampingItToOne()
+        {
+            _sc.CompleteShot();
+            _sc.BeginExternalDrag(true);
+            _sc.SetExternalPower(1.2f, 0f);
+
+            Assert.AreEqual(1.2f, _sc.PowerNormalized, 1e-6f,
+                "a scheme that reads its own pull lane must be able to publish 120%");
+        }
+
+        [Test]
+        public void SetExternalPower_StillCeilingsAtTheOverpowerMaximum()
+        {
+            _sc.CompleteShot();
+            _sc.BeginExternalDrag(true);
+            _sc.SetExternalPower(5f, 0f);
+
+            Assert.AreEqual(ShotController.MaxOverpowerNormalized, _sc.PowerNormalized, 1e-6f);
+
+            _sc.SetExternalPower(-3f, 0f);
+            Assert.AreEqual(0f, _sc.PowerNormalized, 1e-6f, "and floors at 0");
+        }
+
+        [Test]
+        public void SetExternalPower_LeavesTheFlickPathUntouched()
+        {
+            // The widened ceiling can only be REACHED by a driver that asks for >1. Flick's own
+            // ClubHandleDragger derives power as 1 - handleY/coneHeight, which is 0..1 by
+            // construction — this is the whole reason widening the clamp is parity-safe.
+            _sc.CompleteShot();
+            _sc.BeginExternalDrag();
+            _sc.SetExternalPower(1f, 0f);
+            Assert.AreEqual(1f, _sc.PowerNormalized, 1e-6f);
+        }
+
+        [Test]
+        public void PuttStillClampsAtCommit_NotAtPublish()
+        {
+            // The gauge may read 120% on a putt (the driver is free to publish it) but the SHOT
+            // must be a 100% putt — the clamp lives in CommitExternal/CommitFlick, where it has
+            // always lived, and this is the test that says so.
+            _sc.IsPutt = true;
+            _sc.CompleteShot();
+            PinRandom();
+            _sc.BeginExternalDrag(true);
+            _sc.SetExternalPower(1.2f, 0f);
+            Assert.AreEqual(1.2f, _sc.PowerNormalized, 1e-6f, "published as pulled");
+            _sc.CommitExternal(new ShotIntent(1.2f, 0f, 0f, 1f, float.NaN, 0f));
+            var over = _lastShotInput;
+            _shotCount = 0;
+
+            var exactlyOne = FireIntent(new ShotIntent(1f, 0f, 0f, 1f, float.NaN, 0f),
+                                        ownsTiming: true);
+
+            AssertSameShot(over, exactlyOne, "a 120% putt is a 100% putt");
+            _sc.IsPutt = false;
         }
 
         // ── 3. ownsTiming takes the arrow away ──────────────────────────────────

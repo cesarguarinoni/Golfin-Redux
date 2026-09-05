@@ -66,6 +66,22 @@ namespace Golfin.Gameplay.Config
                     case "BallSpriteVisualRadiusFrac":     cfg.BallSpriteVisualRadiusFrac     = val; break;
                     case "AimLineDefaultReachPx":          cfg.AimLineDefaultReachPx          = val; break;
                     case "AimLineCurveScale":              cfg.AimLineCurveScale              = val; break;
+                    // scheme_pendulum §3.6
+                    case "PendulumMinUsefulPullPx":        cfg.PendulumMinUsefulPullPx        = val; break;
+                    case "PendulumPull100Px":              cfg.PendulumPull100Px              = val; break;
+                    case "PendulumPull120Px":              cfg.PendulumPull120Px              = val; break;
+                    case "PendulumOverpowerGain":          cfg.PendulumOverpowerGain          = val; break;
+                    case "PendulumJustWindowAtAcc0_01":    cfg.PendulumJustWindowAtAcc0_01    = val; break;
+                    case "PendulumJustWindowAtAcc120_01":  cfg.PendulumJustWindowAtAcc120_01  = val; break;
+                    case "PendulumGoodWindow01":           cfg.PendulumGoodWindow01           = val; break;
+                    case "PendulumMissYawGain":            cfg.PendulumMissYawGain            = val; break;
+                    case "PendulumCurveHalfWidthPx":       cfg.PendulumCurveHalfWidthPx       = val; break;
+                    case "PendulumMaxSweeps":              cfg.PendulumMaxSweeps              = val; break;
+                    case "PendulumBaseHzAtCC0":            cfg.PendulumBaseHzAtCC0            = val; break;
+                    case "PendulumHzPerCC":                cfg.PendulumHzPerCC                = val; break;
+                    case "PendulumMinHz":                  cfg.PendulumMinHz                  = val; break;
+                    case "PendulumWindowScaleAtZeroPower": cfg.PendulumWindowScaleAtZeroPower = val; break;
+                    case "PendulumWindowScaleAtMaxPower":  cfg.PendulumWindowScaleAtMaxPower  = val; break;
                     default: matched = false; break;
                 }
 
