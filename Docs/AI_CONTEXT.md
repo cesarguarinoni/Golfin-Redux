@@ -4,6 +4,61 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
+## 2026-09-05 — `scheme_confirm_popup` / **the control-scheme confirm pop-up** built
+
+**Selecting a control scheme no longer changes it.** In Settings › Controls and in the in-game gear
+modal, tapping a scheme that is not the current one opens a pop-up that explains it — the scheme's
+name, three step tiles, a numbered HOW IT WORKS list, a muted footer — and asks.
+`ControlSchemeService.Set` is now called on CONFIRM and nowhere else, with
+`where = settings_popup | ingame_popup`. CANCEL, the scrim and the close path change nothing, the
+row/segment highlight stays on the CURRENT scheme while the pop-up is open, and tapping the scheme
+already in use opens nothing at all. Proved end-to-end through the real widgets:
+**167/167 invariants** in `scheme_confirm_invariants.json`, plus 636/0 EditMode.
+
+**The twelve step tiles are photographs of the game, not exports from Figma** — which is the whole
+point of § 3.2: the node's Flick tiles are one static pose that shows neither a pull, nor the
+arrows, nor the flick. A new menu (`GOLFIN ▸ Capture ▸ Scheme Confirm Tiles`) boots through PLAY →
+hole card, switches scheme through the real gear segment **and this task's own CONFIRM**, drives
+each scheme's three states with real pointer events on the real driver, and crops on a subject box
+measured off live `RectTransform`s. `tiles_manifest.json` is the gate: 12 tiles, `fails: []`,
+`no_hud_chrome: true` on all twelve. **Re-run it whenever a scheme's UI changes** — noted in
+`controls.csv` next to the scheme keys.
+
+**Rule 19 with nothing hand-rolled.** The prefab is an `AssetDatabase.CopyAsset` of
+`StartingCharacterConfirmModal.prefab`, so the scrim, the navy `Background - HoleCard` plate, the
+`Divider` and the silver/gold `Main Buttons` pair are the shipping objects. CONFIRM keeps the gold
+`Button - Retry`, read back off the live `Image.sprite`. The plate was CHECKED rather than assumed:
+sampled at 1:1 it matches the node render within 1 per channel, so no new art was imported.
+
+**The one fidelity fix worth remembering: the project's variable Rubik renders at REGULAR.** With
+the node render and the built capture cropped to the same panel-local regions, the SemiBold runs
+matched at 0.98/0.99 ink but the node's *Medium* runs came in at **0.67 and 0.65** — a real,
+visible weight deficit that four approved GPS screens had recorded as a permanent known-unequal.
+The SemiBold face is not the fix (2.04× the ink and 18 % wider, which moves every line break);
+`_FaceDilate` thickens without changing advance width. Calibrated against the node's own sentence
+and shipped as `Assets/Fonts/Rubik-VariableFont_wght Medium SDF.mat` at 0.18 → **0.977 / 1.023**.
+It has to be a material ASSET: a runtime `fontMaterial` instance does not survive into a prefab and
+changed nothing at all.
+
+**Three traps found the hard way, all now gated.** (1) The tile PNGs were written without forcing
+`TextureImporterType.Sprite`, so `Resources.Load<Sprite>` returned null and every tile was hidden —
+Cesar caught that one live. (2) A `LayoutElement` left at `preferredWidth -1` makes a
+HorizontalLayoutGroup ask TMP for the width the *sentence* wants, so all three HOW IT WORKS lines
+ran off the panel while a rect-width check read a clean 990; there is now a `contain.*` invariant
+that measures `TMP.textBounds` — the glyphs — against the panel. (3) Rebuilding the prefab minted a
+new GUID (`DeleteAsset` takes the `.meta`) and silently orphaned the instance in **both** scenes
+with no error; the builder now saves over the target and the sorting order lives in `Awake`, not as
+a scene override.
+
+**Open for Cesar:** Flick step 3 is the flick *upstroke*, not the post-launch frame the spec asks
+for — the chase camera cuts away the instant the shot resolves, so that frame cannot be
+photographed in a 520 px tile (four framings all came back as grass). And 16:9 is *derived* from
+the measured 1086×1217 panel against a match-width canvas, not rendered.
+
+**Strings:** 26 keys EN+JA, `texts v41 → v42`, read back live at `min_build 2709`, `--check` clean,
+Unity table 1073 → 1099.
+
+---
 ## 2026-09-05 — `scheme_freeswing` / **Free Swing** built (spec 3 of the control-schemes track)
 
 **The third real scheme is playable**, on `control_scheme_seam` (`8913901a7`), `scheme_pendulum`

@@ -1,0 +1,99 @@
+=== iter-1 kickoff baseline 2026-09-05T08:47:20Z ===
+HEAD: 9ce9d0bb9ed08b65a30f3b449c521a6e9ee9afac
+--- DIRTY (git status --porcelain --untracked-files=all) ---
+ M Assets/Scripts/Gameplay/UI/ShotUI/MapPinIndicator.cs
+ M Assets/Scripts/Gameplay/UI/ShotUI/MapViewController.cs
+ M Docs/GPS/GPS_BACKLOG.md
+ M Docs/Specs/Active/control_scheme_seam/STATUS.md
+ M Docs/Specs/Active/map_view_v2/HEARTBEAT.log
+ M Docs/Specs/Active/map_view_v2/IMPLEMENTER_REPORT.md
+ M Docs/Specs/Active/map_view_v2/map_view_invariants_aimed.json
+ M Docs/Specs/Active/map_view_v2/map_view_invariants_open.json
+ M Docs/Specs/Active/map_view_v2/map_view_invariants_v2_h01_aiming.json
+ M Docs/Specs/Active/map_view_v2/map_view_invariants_v2_h01_back_in_range.json
+ M Docs/Specs/Active/map_view_v2/map_view_invariants_v2_h01_over_range.json
+ M Docs/Specs/Active/map_view_v2/map_view_invariants_v2_h01_pin_flip.json
+ M Docs/Specs/Active/map_view_v2/map_view_invariants_v2_h04_aiming.json
+ M Docs/Specs/Active/map_view_v2/map_view_invariants_v2_h04_back_in_range.json
+ M Docs/Specs/Active/map_view_v2/map_view_invariants_v2_h04_over_range.json
+ M Docs/Specs/Active/map_view_v2/map_view_invariants_v2_h04_pin_flip.json
+ M Docs/Specs/Active/map_view_v2/map_view_invariants_v2_h08_aiming.json
+ M Docs/Specs/Active/map_view_v2/map_view_invariants_v2_h08_back_in_range.json
+ M Docs/Specs/Active/map_view_v2/map_view_invariants_v2_h08_over_range.json
+ M Docs/Specs/Active/map_view_v2/map_view_invariants_v2_h08_pin_flip.json
+ M Docs/Specs/Completed/scheme_needle/STATUS.md
+ M Docs/TellCode.md
+?? Docs/Specs/Active/bot_scheme_parity/SPEC.md
+?? Docs/Specs/Active/bot_scheme_parity/STATUS.md
+?? Docs/Specs/Active/control_scheme_seam/ARCHITECT_REVIEW.md
+?? Docs/Specs/Active/scheme_confirm_popup/HEARTBEAT.log
+?? Docs/Specs/Active/scheme_confirm_popup/SPEC.md
+?? Docs/Specs/Active/scheme_confirm_popup/STATUS.md
+?? Docs/Specs/Active/scheme_confirm_popup/reference/popup_flick.png
+?? Docs/Specs/Active/scheme_confirm_popup/reference/popup_freeswing.png
+?? Docs/Specs/Active/scheme_confirm_popup/reference/popup_pendulum.png
+?? Docs/Specs/Active/scheme_confirm_popup/reference/popup_taptiming.png
+?? Docs/Specs/Completed/scheme_needle/ARCHITECT_REVIEW.md
+--- end baseline ---
+
+=== iter-1 progress 09:54Z ===
+- 26 strings appended to LocalizationText.csv, imported (26 add / 0 conflict), published texts v41 -> v42,
+  read back live (26 rows, version 42, min_build 2709, is_active true), export --check clean, cursor texts=42.
+- SchemeConfirmContent + SchemeConfirmDecision (Golfin.Gameplay.UI), SchemeConfirmModalController +
+  ModalBackdropDismiss (Assembly-CSharp), both callers routed.
+- SchemeConfirmModal.prefab built by CopyAsset from StartingCharacterConfirmModal.prefab; instances in
+  ShellScene (SettingsScreen) and LabScaffold (ShotUI_Canvas), canvas overrideSorting order 600.
+- Tile capture: 3 runs. Run 1 framed on empty fairway (PowerHUD mis-classified as bottom chrome) and never
+  imported the PNGs as sprites -> "all pop ups are lacking images" (Cesar, mid-run). Run 2 fixed the
+  gestures and the sprite import; every crop still overlapped chrome. Run 3 hides the HUD for the capture.
+- Unity Editor process exited mid-session (MCP hub lost its connection, auto-reconnect disabled);
+  relaunched, MCP recovered, no work lost.
+
+=== iter-1 progress 10:08Z ===
+Tile capture converged over 6 runs. Defects found and fixed, in order:
+  1. PNGs never forced to TextureImporterType.Sprite -> Resources.Load<Sprite> null -> every tile
+     hidden. This is the one Cesar saw ("all pop ups are lacking images").
+  2. Shot area computed as a band between "top chrome" and "bottom chrome"; PowerHUD sits at the
+     BALL's height on the right and was classified as bottom chrome, collapsing the band to
+     y 100..704 and framing all 12 tiles on empty fairway 600 px above the tee.
+  3. FreeSwing driven with ProcessDrag(screenPos) - it takes a LOCAL point, so pull measured 0 and
+     steps 1 and 2 were byte-identical. Switched to ExecuteEvents drag, same path a finger takes.
+  4. Flick's timing arrow read from a non-existent ShotController.ArrowProgress01 (it lives on
+     ShotInputState) -> NaN. Now read off TimingSlabGraphic.CurrentY01, the drawn value.
+  5. Subject box = "every graphic under the scheme root" pulled in the 1200x1200 arc and the
+     2600x2600 trace. Replaced with explicit per-state subject lists.
+  6. Crops still overlapped chrome at any useful size (the 840px analyzer chip cannot clear the
+     power gauge). HUD now hidden for the capture; the gate became "no chrome was ACTIVE".
+  7. The separation solver kept dodging chrome that was already hidden, cutting the chip in half.
+  8. Step-3 tiles taken 0.35s after commit showed the pop alone on grass - the chase camera had
+     already swung. Now taken on the FIRST frame the pop/chip appears.
+
+=== iter-1: defects found by the crop sheet and the containment gate ===
+9.  HOW IT WORKS bodies did not WRAP. A LayoutElement left at preferredWidth -1 makes the
+    HorizontalLayoutGroup ask TMP for the width the SENTENCE wants, not the width left in the row,
+    so all three lines ran off the right edge of the panel in play mode - while the edit-mode probe
+    measured "990 wide" against the short placeholder key and the fits.* invariants passed, because
+    they only asserted the PANEL was on screen. Fixed with preferredWidth 0 + flexibleWidth 1, and
+    a new contain.* invariant that measures TMP.textBounds (the GLYPHS) against the panel width.
+10. Rebuilding the prefab minted a NEW GUID (DeleteAsset takes the .meta with it), silently
+    orphaning the instance in BOTH scenes - no error, the pop-up simply stopped existing. The
+    builder now copies to a scratch path and SaveAsPrefabAsset's over the target, which preserves
+    the GUID; proven by rebuilding twice and diffing the meta.
+11. The re-wire left the orphan behind (it carries a MISSING script, so a
+    GetComponentsInChildren<SchemeConfirmModalController> sweep walks past it) - two instances in
+    LabScaffold. Cleanup is now by name as well.
+12. Saving ShellScene after that baked 2699 lines of anchor churn. Recovered with the documented
+    idiom: split the diff into hunks, git apply --cached only the two that are mine (the
+    PrefabInstance + the one m_Children line), git checkout the rest. Both scenes are now +107.
+13. The node's letter-spacing (-0.78px on EN/Title_2, -1.29px on the footer) was not applied.
+
+=== iter-1 close-out ===
+Rule 13 sweep of `git status --porcelain --untracked-files=all`:
+- 11 files under Assets/Art/3D/Trees(2025)/**/Materials/ showed ` M` with a single changed float,
+  `WindSpeedFloat1: 0.5 -> 0.23272727` — the live wind animation written back into the material by
+  the play-mode runs. NOT in the iter-1 baseline block above, NOT mine to keep. Reverted with
+  `git checkout --`, re-checked clean.
+- Assets/Scripts/Gameplay/UI/ShotUI/MapPinIndicator.cs and MapViewController.cs are ` M` in the
+  iter-1 baseline block above (map_view_v2) and are left alone.
+Everything else in the working tree is this task's, and is listed in IMPLEMENTER_REPORT § 1.
+Editor left clean: isPlaying=False, ShellScene open and not dirty, no additive scenes.

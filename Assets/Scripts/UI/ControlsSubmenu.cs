@@ -60,6 +60,12 @@ namespace Golfin.UI
             Debug.Log($"[ControlsSubmenu] Scheme changed externally to: {scheme}");
         }
 
+        /// <summary>
+        /// SELECTING IS NOT COMMITTING (scheme_confirm_popup §1). A tap opens the confirm pop-up,
+        /// which explains the scheme and only calls <c>ControlSchemeService.Set</c> on CONFIRM —
+        /// so the row highlight deliberately stays on the CURRENT scheme while it is open, and a
+        /// cancelled selection leaves no trace. Tapping the current scheme still does nothing.
+        /// </summary>
         private void OnSchemeSelected(Gameplay.UI.Controls.ControlScheme scheme)
         {
             if (Gameplay.UI.Controls.ControlSchemeService.Current == scheme)
@@ -68,6 +74,17 @@ namespace Golfin.UI
                 return;
             }
 
+            var popup = Modals.SchemeConfirmModalController.Instance;
+            if (popup != null)
+            {
+                popup.Show(scheme, "settings_popup");
+                Debug.Log($"[ControlsSubmenu] Confirm pop-up opened for {scheme}.");
+                return;
+            }
+
+            // No pop-up in this scene: commit rather than swallowing the tap. A missing prefab
+            // instance must never leave the player unable to change scheme at all.
+            Debug.LogWarning("[ControlsSubmenu] SchemeConfirmModal not found — committing directly.");
             Gameplay.UI.Controls.ControlSchemeService.Set(scheme, "settings");
 
             UpdateUI();   // Set() is silent when the value did not move; repaint regardless.

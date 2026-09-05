@@ -281,8 +281,25 @@ namespace Golfin.UI.Modals
             }
         }
 
+        /// <summary>
+        /// SELECTING IS NOT COMMITTING (scheme_confirm_popup §1). The pop-up stacks above this
+        /// modal — this one stays open underneath and repaints from
+        /// <see cref="OnSchemeChangedExternally"/> when CONFIRM actually moves the value, so the
+        /// segment highlight stays on the CURRENT scheme for as long as the pop-up is open.
+        /// </summary>
         private void OnSchemeSegmentTapped(ControlScheme scheme)
         {
+            if (ControlSchemeService.Current == scheme) return;   // no pop-up for the live scheme
+
+            var popup = SchemeConfirmModalController.Instance;
+            if (popup != null)
+            {
+                popup.Show(scheme, "ingame_popup");
+                return;
+            }
+
+            // No pop-up in this scene: commit rather than swallowing the tap.
+            Debug.LogWarning("[InGameSettings] SchemeConfirmModal not found — committing directly.");
             ControlSchemeService.Set(scheme, "ingame");
             BindControlsCard();   // Set() is silent when the value did not move; repaint regardless.
         }

@@ -3650,3 +3650,53 @@ function has been caught returning byte-identical stale frames for different sta
 **Sister trap, same session:** an editor tool armed on `EditorApplication.update` before entering
 play mode never runs — entering play mode domain-reloads and the subscription ceases to exist.
 Arm through `SessionState` + `[InitializeOnLoad]`, the shape `GamePolishDemoRecorder` uses.
+
+---
+
+## Lesson AQ — a new PNG that a screen loads at runtime is not done when it is written; it is done when it is IMPORTED AS A SPRITE (2026-09-05, `scheme_confirm_popup`)
+
+**Cesar, mid-run: "All pop ups are lacking images."**
+
+The tile capture wrote twelve PNGs into `Assets/Resources/UI/Controls/Tiles/`, logged
+`wrote 12 tiles, 0 fails`, and the manifest gate was green. Every tile was invisible in the game.
+`File.WriteAllBytes` puts a file on disk; Unity imports it with the project's DEFAULT importer,
+which is `TextureImporterType.Default` — a Texture, not a Sprite. `Resources.Load<Sprite>` then
+returns **null**, and the controller did exactly what it was told to do with a null sprite: hid the
+Image. No error, no warning, nothing red anywhere.
+
+`reference_new_png_imports_as_texture_not_sprite` already records this trap. I had even written
+`ImportAsSprite()` in the same file, with a doc comment explaining why it was needed — **and never
+called it.** Writing the guard is not applying the guard.
+
+**The rule.** Any tool that generates an asset a runtime `Resources.Load<T>` will ask for must, in
+the same run, (a) force the importer to the type `T` needs, and (b) prove the load: a test that
+calls `Resources.Load<Sprite>(path)` and asserts non-null. `SchemeConfirmContentTests
+.EveryScheme_HasThreeTileSpritesThatResolveFromResources` is that test, and it fails on the exact
+condition Cesar reported.
+
+**The wider shape, which cost more than the sprite import did.** Five of this task's thirteen
+defects were the same kind: a check that measured the wrong thing and passed.
+
+* The tile crops were clamped into a "shot area" computed as the band between top and bottom HUD
+  chrome. `PowerHUD` sits at the BALL's height on the right, was classed as bottom chrome, and
+  collapsed the band to 604 px — so all twelve tiles were framed on empty fairway 600 px above the
+  tee, and the containment assertion passed, because they were indeed inside the (wrong) band.
+* Free Swing was driven with `driver.ProcessDrag(screenPos)`. That method takes a LOCAL point —
+  `OnDrag` calls `ToLocal(e)` first — so the measured pull was 0, steps 1 and 2 were byte-identical,
+  and nothing complained. Caught by md5, not by an assertion.
+* The three HOW IT WORKS lines ran off the right edge of the panel while a rect-width check read a
+  clean 990, because a `LayoutElement` at `preferredWidth -1` makes a HorizontalLayoutGroup ask TMP
+  for the width the *sentence* wants. The `fits.*` invariant passed too — it only asserted the
+  PANEL was on screen.
+* The node's Medium body copy was rendered a third light (ink 0.671 vs the node) because the
+  project's variable Rubik is Regular. Every geometric invariant was green.
+
+Each was found by **changing the instrument, not by looking harder**: measure `TMP.textBounds` (the
+glyphs) rather than the RectTransform; md5 the outputs and fail on duplicates; assert the chrome was
+INACTIVE at capture time rather than that the crop missed it; crop the node render and the built
+capture to the same panel-local regions and compare ink, with a run that uses the SAME face in both
+as the control that rules out a pipeline difference.
+
+**Corollary, and the cheapest lesson here.** A green gate on a generated asset means the GENERATOR
+was happy. It says nothing about whether the game can load it. Before believing any "N assets
+written" line, load one the way the game will.

@@ -1,0 +1,4 @@
+TIMEOUT: waiting for button StartButton
+capture: ingame_popup_pendulum -> Docs/Specs/Active/scheme_confirm_popup/screenshots/ingame_popup_pendulum.png (2209537 bytes)
+capture: ingame_popup_freeswing -> Docs/Specs/Active/scheme_confirm_popup/screenshots/ingame_popup_freeswing.png (2095123 bytes)
+capture: settings_popup_needle -> Docs/Specs/Active/scheme_confirm_popup/screenshots/settings_popup_needle.png (1983572 bytes)

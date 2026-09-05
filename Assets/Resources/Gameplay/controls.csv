@@ -1,4 +1,5 @@
 key,value,notes
+# scheme_confirm_popup (2026-09-05): the confirm pop-up's twelve step tiles are CAPTURED FROM THE RUNNING GAME, not exported from Figma. Any change to a scheme's UI below — a lane length, a band width, a ring radius, an arc, a grade pop — makes the shipped tiles explain the OLD controls. Re-run GOLFIN > Capture > Scheme Confirm Tiles after touching any Pendulum*/Needle*/FreeSwing*/cone key here.
 PullStartThresholdPx,30,minimum drag to enter Pulling
 MinUsefulPullPx,40,below this power is 0%
 Max100PercentPullPx,300,pull distance for full 100% power

@@ -410,6 +410,54 @@ Singleton; `ToastController.Show(message, seconds)`. Fired by the modal on Hole 
 
 ---
 
+### SchemeConfirmModal (SchemeConfirmModalController : ModalController — `Golfin.UI.Modals`)
+
+**Two instances of one prefab** (`Assets/Prefabs/UI/Modals/SchemeConfirmModal.prefab`,
+`5938b387de1da42d992bf0226a45d141`):
+
+| Scene | Parent | Why there |
+|---|---|---|
+| `ShellScene` | `Canvas` (last sibling) | **NOT `SettingsScreen`** — that canvas is `ConstantPixelSize`, so its children are authored in DEVICE px and a 1086-wide panel would clip on any device narrower than 1086 physical px. `Canvas` is `ScaleWithScreenSize` 1170×2532 match=width, where every other full-screen modal already lives. |
+| `LabScaffold` | `LabRoot/ShotUI_Canvas` (last sibling) | Stacks over `InGameSettingsModal`, which stays open underneath. |
+
+```
+SchemeConfirmModal                               (root ACTIVE — Canvas overrideSorting=true, order 600, set in Awake)
+├── DimBackground                                (Image scrim + ModalBackdropDismiss — tap to close)
+└── Panel                                        (INACTIVE at rest; VerticalLayoutGroup + ContentSizeFitter vertical, width 1086, HUGS height)
+    ├── Background                               (Image `Background - HoleCard`, LayoutElement.ignoreLayout)
+    ├── TitleRow          h 119                  └── TitleText      (gold #F5D66E, Rubik-SemiBold 59, UpperCase)
+    ├── SeparatorRow      h 2                    └── ModalSeparator (Image `Divider`, 978×2)
+    ├── StepsRow          HLG pad 48/48/35/12    ├── Step1..3       (VLG, 314 wide, spacing 12)
+    │                                            │   ├── TileN      (Image — sprite bound at Show() from SchemeConfirmContent)
+    │                                            │   └── CaptionN   (HLG centred, gap 17) → IndexN ("1") + LabelN (LocalizedText)
+    ├── HowItWorksRow     VLG pad 48/48/24/0     ├── HowHeader      (gold, SCHEME_POPUP_HOW)
+    │                     spacing 14             └── Line1..3       (HLG gap 16) → LineIndexN (gold "1") + LineTextN (Medium, wraps)
+    ├── FooterRow         VLG pad 48/48/24/0     └── FooterText     (#C1C7CD, SCHEME_POPUP_FOOTER)
+    └── ButtonsRow        HLG pad 0/0/24/0       ├── CancelButton   (450×120, `ButtonCancel` silver)  → MODAL_CANCEL
+                          spacing 48             └── ConfirmButton  (391×120, `Button - Retry` GOLD)  → MODAL_CONFIRM
+```
+
+Opened by `ControlsSubmenu.OnSchemeSelected` and
+`InGameSettingsModalController.OnSchemeSegmentTapped`; **neither calls
+`ControlSchemeService.Set` any more** — only CONFIRM does, with
+`where = "settings_popup" | "ingame_popup"`. Tapping the current scheme opens nothing.
+
+⚠️ **The sorting order is set in `Awake`, not authored.** `overrideSorting` cannot live on the
+prefab (a prefab root Canvas is a ROOT canvas and Unity forces the flag off), and as a per-scene
+override it is silently lost the next time the prefab is rebuilt.
+
+⚠️ **The three body lines carry `LayoutElement.preferredWidth = 0` + `flexibleWidth = 1`.** Left at
+−1 the HLG asks TMP for the width the *sentence* wants and the copy runs off the panel.
+
+⚠️ **`LineTextN` / `FooterText` use `Rubik-VariableFont_wght Medium SDF.mat`** — the variable face
+renders at Regular, and this material is it dilated (`_FaceDilate 0.18`) to the node's Medium.
+
+Tiles come from `Assets/Resources/UI/Controls/Tiles/T_<Scheme>_<1|2|3>.png`, captured from the
+running game by `GOLFIN ▸ Capture ▸ Scheme Confirm Tiles`. **Re-run that menu whenever a scheme's
+UI changes.**
+
+---
+
 ### Shot-input visibility gate (LabScaffold.unity — `ShotUI_Canvas`)
 
 `ShotInProgressUiGate` (on `ShotUI_Canvas`) is the single owner of "hide the shot controls while the

@@ -1,0 +1,34 @@
+TIMEOUT: waiting for button StartButton
+hole: 2
+resolution: 1170x2532
+hid: DebugShotPanelController
+chrome: PlayerCard x[-537,-59] y[928,1108]
+chrome: HoleCard x[59,537] y[928,1108]
+chrome: WindIndicator x[-537,-437] y[804,904]
+chrome: HoleIndicator x[-48,52] y[704,904]
+chrome: PowerHUD x[337,537] y[-100,100]
+chrome: SpinButton x[-527,-382] y[-906,-666]
+chrome: FadeDrawButton x[382,527] y[-906,-666]
+chrome: GolfinButton x[-527,-382] y[-1170,-930]
+chrome: DriverButton x[382,527] y[-1170,-930]
+chrome_hidden: PlayerCard, HoleCard, SettingsButton, WindIndicator, HoleIndicator, PowerHUD, SpinButton, FadeDrawButton, GolfinButton, DriverButton
+scheme_entry: Flick via segment + pop-up CONFIRM
+tile: Flick 1 -> Assets/Resources/UI/Controls/Tiles/T_Flick_1.png (628x680) crop 900x975 @ (135,1194)
+tile: Flick 2 -> Assets/Resources/UI/Controls/Tiles/T_Flick_2.png (628x680) crop 900x975 @ (135,1321)
+tile: Flick 3 -> Assets/Resources/UI/Controls/Tiles/T_Flick_3.png (628x680) crop 529x573 @ (321,1143)
+flick_fired_via: ReleaseToFire fallback -> state Resolving
+scheme_entry: Pendulum via segment + pop-up CONFIRM
+tile: Pendulum 1 -> Assets/Resources/UI/Controls/Tiles/T_Pendulum_1.png (628x680) crop 744x805 @ (213,1124)
+tile: Pendulum 2 -> Assets/Resources/UI/Controls/Tiles/T_Pendulum_2.png (628x680) crop 864x936 @ (153,1021)
+tile: Pendulum 3 -> Assets/Resources/UI/Controls/Tiles/T_Pendulum_3.png (628x680) crop 864x936 @ (153,678)
+scheme_entry: Needle via segment + pop-up CONFIRM
+tile: Needle 1 -> Assets/Resources/UI/Controls/Tiles/T_Needle_1.png (628x680) crop 637x690 @ (266,1134)
+tile: Needle 2 -> Assets/Resources/UI/Controls/Tiles/T_Needle_2.png (628x680) crop 520x563 @ (325,941)
+subject_missing: Needle 3: CentralBall
+tile: Needle 3 -> Assets/Resources/UI/Controls/Tiles/T_Needle_3.png (628x680) crop 520x563 @ (325,677)
+scheme_entry: FreeSwing via segment + pop-up CONFIRM
+tile: FreeSwing 1 -> Assets/Resources/UI/Controls/Tiles/T_FreeSwing_1.png (628x680) crop 838x907 @ (166,1030)
+tile: FreeSwing 2 -> Assets/Resources/UI/Controls/Tiles/T_FreeSwing_2.png (628x680) crop 838x907 @ (166,1030)
+subject_missing: FreeSwing 3: CentralBall
+tile: FreeSwing 3 -> Assets/Resources/UI/Controls/Tiles/T_FreeSwing_3.png (628x680) crop 900x975 @ (135,414)
+imported_as_sprite: 12 tiles

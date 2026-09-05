@@ -1085,3 +1085,29 @@ SWING_TEMPO_GOOD,GOOD,グッド
 SWING_TEMPO_FAST,FAST,速い
 SWING_TEMPO_SLOW,SLOW,遅い
 SWING_IMPACT_LINE,IMPACT,インパクト
+SCHEME_POPUP_HOW,HOW IT WORKS,操作方法
+SCHEME_POPUP_FOOTER,Works with every club. You can switch back any time in Settings.,どのクラブでも使えます。設定からいつでも戻せます。
+SCHEME_POPUP_FLICK_STEP1,PULL,引く
+SCHEME_POPUP_FLICK_STEP2,AIM & TIME,狙い＆タイミング
+SCHEME_POPUP_FLICK_STEP3,FLICK UP,フリック
+SCHEME_POPUP_FLICK_LINE1,"Pull the club back down the cone for power — the further, the harder.",コーンに沿ってクラブを引くほどパワーが上がります。
+SCHEME_POPUP_FLICK_LINE2,Slide left or right inside the cone to fine-tune your aim. Arrows run up the cone: green is perfect timing.,コーン内で左右に動かして狙いを微調整。矢印が上がり、緑がベストタイミングです。
+SCHEME_POPUP_FLICK_LINE3,Flick up to hit. Wait too long and your aim starts to wander.,上にフリックで打ちます。待ちすぎると狙いがブレます。
+SCHEME_POPUP_PENDULUM_STEP1,PULL,引く
+SCHEME_POPUP_PENDULUM_STEP2,TIME IT,タイミング
+SCHEME_POPUP_PENDULUM_STEP3,FLICK UP,フリック
+SCHEME_POPUP_PENDULUM_LINE1,"Pull the club straight back — further is more power, past the gold line is overpower.",クラブをまっすぐ引くほどパワーが上がり、金線を越えるとオーバーパワーです。
+SCHEME_POPUP_PENDULUM_LINE2,A marker swings across the bar. Better Club Control makes it slower.,マーカーがバーを往復します。クラブコントロールが高いほど遅くなります。
+SCHEME_POPUP_PENDULUM_LINE3,"Flick up when it hits the red centre. Green = JUST, amber = GOOD, outside = MISS.",赤い中心に来た瞬間に上へフリック。緑＝ジャスト、黄＝グッド、外＝ミス。
+SCHEME_POPUP_NEEDLE_STEP1,PULL,引く
+SCHEME_POPUP_NEEDLE_STEP2,TAP,タップ
+SCHEME_POPUP_NEEDLE_STEP3,RESULT,結果
+SCHEME_POPUP_NEEDLE_LINE1,Pull the club back inside the circle for power and let go — past the gold ring is overpower.,円の中でクラブを引いて離します。金の輪を越えるとオーバーパワーです。
+SCHEME_POPUP_NEEDLE_LINE2,A needle sweeps across the arc. Tap anywhere to stop it; higher Club Control makes it slower.,針がアークを一度だけ動きます。どこでもタップで止めます。クラブコントロールが高いほど遅くなります。
+SCHEME_POPUP_NEEDLE_LINE3,"Blue zone = PERFECT. Early hooks left, late slices right. No tap before the end = shank.",青＝パーフェクト。早いとフック、遅いとスライス。止めないとシャンクです。
+SCHEME_POPUP_FREESWING_STEP1,BACKSWING,バックスイング
+SCHEME_POPUP_FREESWING_STEP2,SWING UP,振り上げ
+SCHEME_POPUP_FREESWING_STEP3,RESULT,結果
+SCHEME_POPUP_FREESWING_LINE1,"Drag the club straight down — deeper is more power, past the gold line is overswing.",クラブをまっすぐ下へ。深いほどパワーが上がり、金線を越えるとオーバースイングです。
+SCHEME_POPUP_FREESWING_LINE2,"Drag back up through the IMPACT line; the shot fires as you cross it. A straight path flies straight, an angled one shapes a draw or fade.",インパクト線を上へ通過した瞬間に打ちます。まっすぐならストレート、斜めならドローやフェードになります。
+SCHEME_POPUP_FREESWING_LINE3,"Tempo counts: a smooth, quick upswing keeps full power. Slow or wobbly costs distance and accuracy.",テンポが大事。速く滑らかに振り上げればフルパワー。遅い・ブレると飛距離と精度が落ちます。
