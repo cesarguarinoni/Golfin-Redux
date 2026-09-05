@@ -1,6 +1,7 @@
 using System.Collections;
 using UnityEngine;
 using TMPro;
+using Golfin.Gameplay.UI.Controls.FreeSwing;
 using Golfin.Gameplay.UI.Controls.Needle;
 using Golfin.Gameplay.UI.Controls.Pendulum;
 
@@ -73,6 +74,28 @@ namespace Golfin.Gameplay.UI.Controls
             NeedleGrade.Shank   => _shankColor,
             _                   => _nearMissColor,
         });
+
+        /// <summary>
+        /// The Free Swing entry point (scheme_freeswing §3.3).
+        ///
+        /// <para>Returns without showing anything for <see cref="FreeSwingGrade.None"/>, which is
+        /// the COMMON case in that scheme and not an error: an ordinary swing gets the analyzer
+        /// chip and no banner, and the pop is reserved for PURE / DUFF / HOOK / SLICE. Guarded
+        /// here as well as at the call site so a future caller cannot resolve a null key into a
+        /// blank word hanging over the ball.</para>
+        /// </summary>
+        public void Show(FreeSwingGrade grade)
+        {
+            if (grade == FreeSwingGrade.None) return;
+            Show(FreeSwingMath.GradeKey(grade), grade switch
+            {
+                // PURE reuses the JUST green and DUFF the MISS red — the same three-step ladder
+                // the other two schemes pop, so a player who has learned one has learned this one.
+                FreeSwingGrade.Pure => _justColor,
+                FreeSwingGrade.Duff => _missColor,
+                _                   => _nearMissColor,   // HOOK and SLICE: the same near-miss amber
+            });
+        }
 
         /// <summary>The one that does the work: a localisation KEY and a colour. Public so a
         /// future scheme adds a grade enum and a mapping, not another copy of this animation.</summary>

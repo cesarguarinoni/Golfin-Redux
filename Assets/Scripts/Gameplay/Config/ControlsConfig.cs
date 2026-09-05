@@ -171,6 +171,53 @@ namespace Golfin.Gameplay.Config
         public float NeedleWindowScaleAtZeroPower;
         public float NeedleWindowScaleAtMaxPower;
 
+        // ── Free Swing scheme (scheme_freeswing §3.5) ───────────────────────────
+        // A FOURTH set of pull thresholds, seeded to the Pendulum's and the Needle's own numbers
+        // so the pull feels the same in all three on day one. Its own keys for the third time and
+        // the same reason: the schemes are being A/B'd, and a retune of one must never move
+        // another. FollowThroughPx and ReversalSlopPx have no counterpart anywhere — this is the
+        // only scheme whose gesture continues PAST the impact line, and the only one that has to
+        // tell a genuine second backswing from a thumb wobbling at the bottom of the first.
+        public float FreeSwingMinUsefulPullPx;
+        public float FreeSwingPull100Px;
+        public float FreeSwingPull120Px;
+        public float FreeSwingFollowThroughPx;
+        public float FreeSwingReversalSlopPx;
+
+        // Impact: HALF the clean window in canvas px either side of the lane centre, lerped by
+        // Club Accuracy and shrunk by power. FreeSwingLaneView draws the green bar at twice this,
+        // from the PEAK pull, so the target the player watched close is the graded one.
+        public float FreeSwingImpactWindowAtAcc0Px;
+        public float FreeSwingImpactWindowAtAcc120Px;
+        public float FreeSwingImpactMissPx;
+        public float FreeSwingYawGain;
+        public float FreeSwingMissYawGain;
+
+        // Path: how bowed the upstroke has to be before it shapes the shot at all, and how bowed
+        // it has to be for a full fade/draw. Club Control WIDENS the dead zone — here the stat
+        // buys forgiveness of thumb noise, not precision of aim.
+        public float FreeSwingPathDeadzoneAtCC0Deg;
+        public float FreeSwingPathDeadzoneAtCC120Deg;
+        public float FreeSwingPathFullDeg;
+
+        // Tempo: the upswing:backswing seconds ratio the swing is graded against, its tolerance,
+        // and the upstroke speed below which the swing is a DUFF rather than a swing.
+        public float FreeSwingIdealTempo;
+        public float FreeSwingTempoWindowAtCC0;
+        public float FreeSwingTempoWindowAtCC120;
+        public float FreeSwingDuffSpeedPxPerSec;
+
+        // Power shrinks BOTH windows, from the PEAK pull and on the DRAWN bar too. Free Swing has
+        // no timing widget to speed up, so this is the ONLY cost a 120% pull carries.
+        public float FreeSwingWindowScaleAtZeroPower;
+        public float FreeSwingWindowScaleAtMaxPower;
+
+        // How long the analyzer chip stays up after the shot, and how many finger samples the
+        // driver's OWN ring buffer keeps (never ShotController.PushTouchSample — that ring is
+        // Flick's gate).
+        public float FreeSwingAnalyzerSeconds;
+        public float FreeSwingSampleWindow;      // treat as int at use site, as MaxTotalPasses is
+
         public static readonly ControlsConfig Default = new ControlsConfig
         {
             PullStartThresholdPx           = 30f,
@@ -244,6 +291,29 @@ namespace Golfin.Gameplay.Config
             NeedleMinSweepSec            = 0.8f,
             NeedleWindowScaleAtZeroPower = 1.35f,
             NeedleWindowScaleAtMaxPower  = 0.55f,
+
+            // scheme_freeswing §3.5 seed values — mirror controls.csv (F13 two-mirror rule).
+            FreeSwingMinUsefulPullPx        = 40f,
+            FreeSwingPull100Px              = 380f,  // seeded equal to Pendulum/Needle: the pull
+            FreeSwingPull120Px              = 456f,  // must feel the same in all three on day one
+            FreeSwingFollowThroughPx        = 160f,  // node: the lane's top edge, 160px above the ball
+            FreeSwingReversalSlopPx         = 24f,
+            FreeSwingImpactWindowAtAcc0Px   = 22f,
+            FreeSwingImpactWindowAtAcc120Px = 60f,
+            FreeSwingImpactMissPx           = 140f,
+            FreeSwingYawGain                = 1.0f,
+            FreeSwingMissYawGain            = 1.5f,
+            FreeSwingPathDeadzoneAtCC0Deg   = 6f,
+            FreeSwingPathDeadzoneAtCC120Deg = 12f,
+            FreeSwingPathFullDeg            = 30f,
+            FreeSwingIdealTempo             = 0.5f,  // an upswing half as long as the backswing
+            FreeSwingTempoWindowAtCC0       = 0.25f,
+            FreeSwingTempoWindowAtCC120     = 0.45f,
+            FreeSwingDuffSpeedPxPerSec      = 900f,
+            FreeSwingWindowScaleAtZeroPower = 1.35f,
+            FreeSwingWindowScaleAtMaxPower  = 0.55f,
+            FreeSwingAnalyzerSeconds        = 1.5f,
+            FreeSwingSampleWindow           = 90f,
         };
     }
 }

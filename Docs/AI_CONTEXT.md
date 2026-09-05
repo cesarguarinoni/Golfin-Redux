@@ -4,6 +4,67 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
+## 2026-09-05 — `scheme_freeswing` / **Free Swing** built (spec 3 of the control-schemes track)
+
+**The third real scheme is playable**, on `control_scheme_seam` (`8913901a7`), `scheme_pendulum`
+(`501bf5881`) and `scheme_needle` (`d54468b6c`). **One continuous touch:** pull the same
+`ClubHandle` clone down the lane for power, then drag back up — and **the shot fires the frame the
+club head crosses the impact line**, with the finger still on the glass. Where it crosses is the
+impact (HOOK / SLICE), how bowed the upstroke was is the shape (DRAW / FADE), how quick and even it
+was is the tempo. The release is not an event: firing on the lift would put the shot after the
+swing has visibly finished, at a moment the player cannot see. Crossing a drawn line is a moment
+they can.
+
+**`ShotController.cs` has ZERO diff.** The one seam addition is in the UI —
+`ActionButtonsRoot.SetFadeDrawVisible(bool)`, by CanvasGroup **opacity**, never `SetActive`: the
+row is a layout group and deactivating the object recentres SPIN (measured: SPIN x −454.5 →
+−454.5, unmoved). The Fade/Draw toggle is hidden because in this scheme the upstroke's own path IS
+the curve, and an armed FadeDraw is disarmed through `ShotModeContext.Toggle()` so
+`ShotConeView` clears the aim lock too. Flick, Pendulum and Tap Timing are unchanged — their
+EditMode suites are byte-identical and green.
+
+**All nine carry-overs applied from the first build.** The driver keeps its OWN timestamped sample
+buffer rather than widening `ShotController.PushTouchSample` (that ring is Flick's gate), and every
+time-based measure is dt-clamped to 1/30 s — this is the first scheme that grades in SECONDS, so a
+hitch frame could otherwise turn a good swing into a duff.
+
+**The pill is longer, per Cesar's instruction to imitate the Pendulum fix.** The lane height is
+DERIVED, not read off the node: `160 (follow-through above the ball) + 70 (club rest) + 456
+(Pull120Px) + 50 (club half) + 20 = 756`, against the node's 560. The follow-through term is unique
+to this scheme — it is the only one whose gesture continues PAST the impact line. Ticks sit where
+the club head LANDS (−450 / −526), and the green impact window is driven from the PEAK pull every
+drag frame: **78.2 → 39.6 → 31.9 px** across 0 / 100 / 120 %, with the drawn half-width asserted
+equal to the graded window (15.93 vs 15.93). Free Swing has no timing widget to speed up, so that
+shrink is the ONLY cost a 120 % pull carries.
+
+**One deliberate deviation from the spec, stated in the report.** SPEC §3.2 writes the crossing as
+`pos.y ≥ origin.y`; the build uses `pos.y − origin.y ≥ HandleRestBelowBall` (70 px). Those are the
+same statement for a scheme whose club rests ON the ball — this one reuses the shared 70 px rest,
+and at that offset a finger back at its own origin leaves the club head 70 px short of the drawn
+line. Firing there would fire at a line the club visibly never reached.
+
+**Acceptance: 110 / 110 invariants PASS**, driven through the player's own entry point
+(`InGameSettingsModalController.schemeButtons[3].onClick` → real pointer events on the real
+`FreeSwingHandle`; the shot resolves from inside the drag). **EditMode 619 / 619.** UI fidelity lint
+`fail: 0`. 13 new localisation keys imported AND published (texts **v40 → v41**, export `--check`
+clean). One captioned 45.9 s clip at 1170×2532: idle → backswing → PURE → SLICE → bowed DRAW → DUFF,
+every caption written from the driver's committed verdict.
+
+**Open, and deliberately not fixed unilaterally:** during the backswing the opaque `CentralBall`
+covers the impact line and its green window — `CentralBall` is sibling 11 under `ShotUI_Canvas` and
+every scheme root is 0–3. The geometry is node-faithful (the node draws both centred on the ball);
+Free Swing is simply the first scheme to draw a target *at* the ball. The fix is a design choice,
+and it belongs with the on-device feel pass.
+
+**STATUS: `READY_FOR_ARCHITECT_REVIEW`.** One acceptance line an implementer cannot close — SPEC §6's
+on-device feel pass. `FreeSwingIdealTempo` 0.5, the 900 px/s duff floor and the 6°/12° path dead
+zone are all seeded, not tuned, and thumb noise on glass is the one thing a synthetic gesture cannot
+measure. The spec allows ±2 retunes of §3.5 before a re-spec.
+
+**Next:** `bot_scheme_parity` Stage B (bot `DriveBot` support for schemes 1–3), then the 3-click
+variant if the A/B wants a fifth.
+
+---
 ## 2026-09-05 — `scheme_needle` / **Tap Timing** built (spec 2 of the control-schemes track)
 
 **The second real scheme is playable**, on `control_scheme_seam` (`8913901a7`) and reusing

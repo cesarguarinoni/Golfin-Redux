@@ -3367,3 +3367,42 @@ MonoBehaviour:
   - key: SHOT_TAP_HINT
     english: TAP!
     japanese: "\u30BF\u30C3\u30D7!"
+  - key: SHOT_GRADE_PURE
+    english: PURE
+    japanese: "\u30D4\u30E5\u30A2"
+  - key: SHOT_GRADE_DUFF
+    english: DUFF
+    japanese: "\u30C0\u30D5\u30EA"
+  - key: SWING_POWER
+    english: POWER
+    japanese: "\u30D1\u30EF\u30FC"
+  - key: SWING_IMPACT
+    english: IMPACT
+    japanese: "\u30A4\u30F3\u30D1\u30AF\u30C8"
+  - key: SWING_PATH
+    english: PATH
+    japanese: "\u8ECC\u9053"
+  - key: SWING_TEMPO
+    english: TEMPO
+    japanese: "\u30C6\u30F3\u30DD"
+  - key: SWING_PATH_STRAIGHT
+    english: STRAIGHT
+    japanese: "\u30B9\u30C8\u30EC\u30FC\u30C8"
+  - key: SWING_PATH_DRAW
+    english: DRAW
+    japanese: "\u30C9\u30ED\u30FC"
+  - key: SWING_PATH_FADE
+    english: FADE
+    japanese: "\u30D5\u30A7\u30FC\u30C9"
+  - key: SWING_TEMPO_GOOD
+    english: GOOD
+    japanese: "\u30B0\u30C3\u30C9"
+  - key: SWING_TEMPO_FAST
+    english: FAST
+    japanese: "\u901F\u3044"
+  - key: SWING_TEMPO_SLOW
+    english: SLOW
+    japanese: "\u9045\u3044"
+  - key: SWING_IMPACT_LINE
+    english: IMPACT
+    japanese: "\u30A4\u30F3\u30D1\u30AF\u30C8"

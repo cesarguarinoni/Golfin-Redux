@@ -99,6 +99,28 @@ namespace Golfin.Gameplay.Config
                     case "NeedleMinSweepSec":              cfg.NeedleMinSweepSec              = val; break;
                     case "NeedleWindowScaleAtZeroPower":   cfg.NeedleWindowScaleAtZeroPower   = val; break;
                     case "NeedleWindowScaleAtMaxPower":    cfg.NeedleWindowScaleAtMaxPower    = val; break;
+                    // scheme_freeswing §3.5
+                    case "FreeSwingMinUsefulPullPx":        cfg.FreeSwingMinUsefulPullPx        = val; break;
+                    case "FreeSwingPull100Px":              cfg.FreeSwingPull100Px              = val; break;
+                    case "FreeSwingPull120Px":              cfg.FreeSwingPull120Px              = val; break;
+                    case "FreeSwingFollowThroughPx":        cfg.FreeSwingFollowThroughPx        = val; break;
+                    case "FreeSwingReversalSlopPx":         cfg.FreeSwingReversalSlopPx         = val; break;
+                    case "FreeSwingImpactWindowAtAcc0Px":   cfg.FreeSwingImpactWindowAtAcc0Px   = val; break;
+                    case "FreeSwingImpactWindowAtAcc120Px": cfg.FreeSwingImpactWindowAtAcc120Px = val; break;
+                    case "FreeSwingImpactMissPx":           cfg.FreeSwingImpactMissPx           = val; break;
+                    case "FreeSwingYawGain":                cfg.FreeSwingYawGain                = val; break;
+                    case "FreeSwingMissYawGain":            cfg.FreeSwingMissYawGain            = val; break;
+                    case "FreeSwingPathDeadzoneAtCC0Deg":   cfg.FreeSwingPathDeadzoneAtCC0Deg   = val; break;
+                    case "FreeSwingPathDeadzoneAtCC120Deg": cfg.FreeSwingPathDeadzoneAtCC120Deg = val; break;
+                    case "FreeSwingPathFullDeg":            cfg.FreeSwingPathFullDeg            = val; break;
+                    case "FreeSwingIdealTempo":             cfg.FreeSwingIdealTempo             = val; break;
+                    case "FreeSwingTempoWindowAtCC0":       cfg.FreeSwingTempoWindowAtCC0       = val; break;
+                    case "FreeSwingTempoWindowAtCC120":     cfg.FreeSwingTempoWindowAtCC120     = val; break;
+                    case "FreeSwingDuffSpeedPxPerSec":      cfg.FreeSwingDuffSpeedPxPerSec      = val; break;
+                    case "FreeSwingWindowScaleAtZeroPower": cfg.FreeSwingWindowScaleAtZeroPower = val; break;
+                    case "FreeSwingWindowScaleAtMaxPower":  cfg.FreeSwingWindowScaleAtMaxPower  = val; break;
+                    case "FreeSwingAnalyzerSeconds":        cfg.FreeSwingAnalyzerSeconds        = val; break;
+                    case "FreeSwingSampleWindow":           cfg.FreeSwingSampleWindow           = val; break;
                     default: matched = false; break;
                 }
 

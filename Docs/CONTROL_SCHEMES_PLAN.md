@@ -222,6 +222,26 @@ New drawn elements (vectors only, no art needed): pull/swing lane, pendulum trac
 
 ## 9. Deferred (to `GPS_BACKLOG.md` when the specs are filed)
 
+**Filed by `scheme_freeswing` (2026-09-05, SPEC § 7 — out of scope for that spec):**
+- **Grade SFX.** PURE / DUFF / HOOK / SLICE have no sound. Same shape as the Needle's entry above
+  and wants the same Settings on/off — file them together.
+- **`freeswing_path` / `freeswing_tempo` telemetry keys.** `shot_taken` carries `scheme=3`,
+  `timing01` (the tempo score) and `timing_mul`, which is enough to separate a DUFF (`timing01 == 0`
+  at `timing_mul == TimingPowerMulRed`) from an off-tempo swing, but NOT enough to see the two
+  things this scheme adds over the other three: where the club crossed, and how bowed the path was.
+  If the A/B wants to know whether players can actually shape a shot on purpose, those are the two
+  columns to add — and it is a telemetry-schema change, so it moves with the next one.
+- **Bot executor.** `bot_scheme_parity` Stage B, alongside the Pendulum's and the Needle's.
+- **The ball occludes the impact target.** Free Swing is the first scheme to draw its target AT the
+  ball, and `CentralBall` renders above every scheme root (sibling 11 vs 0–3), so the green impact
+  window is hidden behind the ball for the whole backswing — exactly while the player is aiming at
+  it. Node-faithful (the node draws both centred on the ball) but wrong in motion. The fix is a
+  design choice — reorder the root above the ball, fade the ball during the swing, or move the
+  line — so it belongs with the on-device feel pass rather than with the build.
+- **On-device tuning of § 3.5.** `FreeSwingIdealTempo` 0.5, the 900 px/s duff floor and the 6°/12°
+  path dead zone shipped seeded, not tuned. The spec allows ±2 retunes before a re-spec; thumb
+  noise on glass is the one thing a synthetic gesture cannot measure.
+
 **Filed by `scheme_needle` (2026-09-05, SPEC § 7 — out of scope for that spec):**
 - **Grade SFX.** PERFECT / HOOK / SLICE / SHANK have no sound. `ShotController.PublishShotSfx`
   already fires at commit for the shot itself; a per-grade cue is a second event and wants the
