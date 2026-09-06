@@ -2,7 +2,7 @@
 
 > Everything consciously left OUT of the 2026-09 GPS build, in one place, with where it was
 > deferred and what it needs. Maintained by the Architect — every future GPS spec that defers
-> something adds a row here in the same session. Last updated: 2026-09-04 (map_view_v2 deferrals added).
+> something adds a row here in the same session. Last updated: 2026-09-05 (golfer_3d_test deferrals added).
 
 ## Player-visible promises (highest priority — the UI already implies them)
 
@@ -65,6 +65,7 @@
 |---|---|---|
 | `UiMotion` gains an optional `Ease` parameter (Pop / Tween / Slide; default = today's ease-out cubic) | `game_polish_b` (Cesar decision 2026-09-03) | GPS call sites unchanged; `UiMotionTests` easing-endpoint cases must still pass with the default. The gacha reveal's ease-out-back is the consumer. GPS session: no action, FYI. |
 | Bottom-nav SELECTED state changes on both bars: cyan tint → gold halo + `#FCF195` ring overlay via a shared `NavSlotHighlight` (`Assets/Scripts/UI/Polish/`) | `game_polish_a` §D7 (Cesar 2026-09-03: "this should also be done in GPS when changed") | The game task edits `GpsNavBarHighlight.cs` (stops reading `iconActiveColor`, calls `NavSlotHighlight.SetSelected`) and adds the Glow/Ring children to the GPS bar through the builder hook — the ONE authorised game-track touch under `Gps/`. GPS session: do not re-tint; if `gps_checkin`'s Rounds slot lands first, its selected state comes for free once §D7 ships. |
+| `GpsPaintMotion.cs` (`PaintGate`, `PanelReveal`, `StaggerRise`, `Shimmer`) and `ShimmerHost.cs` `git mv`'d to `Assets/Scripts/UI/Polish/` — GUIDs and the `Golfin.Gps.UI` namespace KEPT | `game_polish_b` §D0 | Zero GPS source edits; the classes now sit in `Polish/` under a GPS namespace. The rename to `Golfin.UI.Polish` (touches every GPS caller) is the GPS session's, whenever convenient. |
 | `ShimmerBlock.prefab` moves `Assets/Prefabs/UI/Gps/` → `Assets/Prefabs/UI/Common/` | `game_polish_b` (Cesar decision 2026-09-03) | ONE line in `GpsPolishBuilder` (the prefab path constant) changes — the only GPS-folder touch the game track will make; GUID preserved by `git mv`, so scene/prefab references survive. GPS session: expect that diff. |
 | Standalone shell still compiles the whole golf codebase (`UnityFramework` is byte-identical between `Golfin.ipa` and `GOLFINGPS.ipa`, 110.8 MB uncompressed — IL2CPP stripping removes nothing because every screen is reachable from `ScreenManager`). Carving it out = `defineConstraints: ["!GOLFIN_STANDALONE"]` on golf asmdefs + splitting the 6.7 MB `Assembly-CSharp` (ScreenManager, golf screens) behind interfaces. NOT `managedStrippingLevel: High` (silent UnityEvent/JSON/reflection breakage). Expected gain ~4–7 MB of download — parked until the store size hurts. | `gps_standalone_shell` round 2 (Architect 2026-09-04) | Loud path only (compile errors), never the silent one |
 | Standalone still ships the nine `Assets/Skybox/*.hdr` (8.4 MB) although ShellScene uses `Default-Skybox`, plus `Fonts/NotoSansJP-VariableFont_wght.ttf` (8.7 MB, dynamic TMP atlas) and 12 × 920 KB `Resources/Characters/Homescreen/*.png` (all selectable on the Avatar screen — legitimate) | `gps_standalone_shell` round 2 report (2026-09-04) | Chase the skybox reference; the font is `build_size_diet` Phase 4 and lands in the shell for free |
@@ -82,3 +83,23 @@
 
 ## How this file is used
 When a spec defers something: add the row in the same session (Architect). When an item is taken up: move its row into the new spec's Goal and delete it here. Cesar prunes anything he decides is never-do.
+
+## Control schemes (deferred in `control_scheme_seam` / `CONTROL_SCHEMES_PLAN.md`, 2026-09-04)
+
+| Item | Deferred in | Notes |
+|---|---|---|
+| Haptics per timing grade (JUST / PERFECT / MISS) | `control_scheme_seam` §8 | Rides on `haptics_option` (Notion 2130) — one HapticService seam, Settings on/off first |
+| TW 3-click meter as a fifth scheme | `control_scheme_seam` §8 | Accessibility option; cheap once the seam exists (tap-tap-tap on a vertical meter, no gesture) |
+| Per-scheme first-shot hint / tutorial | `control_scheme_seam` §8 | One overlay per scheme on the first swing after a switch |
+| Converging-circle timing (Confluence 2024/9/17) | `CONTROL_SCHEMES_PLAN.md` §9 | Unconfirmed in 白猫GOLF; only if the pendulum does not feel right |
+| Grade SFX (JUST / GOOD / MISS chimes) | `scheme_pendulum` §7 | CC0 placeholders sourced by the Architect when taken up; one `SfxId` per grade through `SfxBus` |
+| `pendulum_grade` telemetry key | `scheme_pendulum` §7 | `timing01` = 1 − |marker| already ships; add the string key only if the dashboard needs the grade, not the distribution |
+| Bot personality per scheme (sweeps waited, pull tempo by level) | `bot_scheme_parity` §8 | Cosmetic pacing on top of `BotSwing`; no fairness impact |
+| `BotDriver` (loop-v2 smoke harness) migrated to `BotSwing.Play` | `bot_scheme_parity` review | GRANDFATHERED on the Rule 23 allow-list; its determinism backs other acceptance runs, so migrate deliberately with a golden-file diff. Also widen the Rule 23 candidate glob to `*CaptureDriver.cs` / `*Capture.cs` / `*Recorder.cs` (`MapViewCaptureDriver` swings raw today) |
+| Scheme comparison CSV export | `scheme_evaluation` §8 | One button on the new dashboard section; same shape as any existing export |
+| Per-scheme retention curve (switched and stayed) | `scheme_evaluation` §8 | Needs per-player ordering of `shot_taken.scheme` over time; only if the switched-to counts are ambiguous |
+| `needle_grade` telemetry key + Tap Timing grade SFX | `scheme_needle` §7 | Same shape as the Pendulum rows above |
+| Free Swing grade SFX + `freeswing_path`/`tempo` telemetry keys | `scheme_freeswing` §7 | Same shape as the Pendulum / Needle rows |
+| Ball launch delayed to the swing impact frame | `golfer_3d_test` §8 | Needs the Drive/Putt impact-frame seconds from the test report; then `ShotController` commit → delayed physics launch (or clip time-scaled to the launch) |
+| `Characters.csv` `modelPrefab` column + per-character `PfGolfer_<Name>` | `golfer_3d_test` §8 | The real-roster spec; loader falls back to the starter model when a prefab is missing (same shape as `renderable`) |
+| Golfer camera framing, club trail on `ClubStart/ClubEnd`, reactions/celebrations, cloth/hair, bot golfers | `golfer_3d_test` §8 | Polish once the stand-in proves the pipeline on device |

@@ -189,6 +189,8 @@ Vertical swing lane (rounded rail, left of the ball or through it — Figma deci
 | 3 | `scheme_freeswing` | §4 | 0, Figma; widened sample buffer | 2 days + on-device tuning |
 | 4 | `scheme_evaluation` (Quick) | dashboard card per scheme, tester instructions in the beta notes, decision checklist | 1–3 | ½ day |
 
+> Status 2026-09-06: 0–3, the confirm pop-up and `bot_scheme_parity` are DONE (Architect reviews PASS). `scheme_evaluation` is SPEC_READY — `Docs/Specs/Active/scheme_evaluation/` (spec, `TESTER_NOTES.md` EN+JA, decision checklist in §6 of the spec).
+
 Order 1 → 2 → 3 is by reuse and risk; 3 can be pulled forward if Cesar wants the TW feel first. Every scheme ships behind the Settings toggle with **Flick as the default** until §5 metrics say otherwise, so the beta build is never worse than today.
 
 ---

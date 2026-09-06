@@ -169,6 +169,317 @@
 ---
 
 ## 📋 SPEC_READY POINTERS
+- **`golfer_3d_test` — SPEC_READY (2026-09-05), assets DONE, pasteable NOW. EXPERIMENT: opt-in only via `GOLFIN_GOLFER_TEST`, default OFF — must not reach normal builds.** Free-asset proof of the golfer pipeline: Quaternius Universal Base Characters (CC0) + 11 Mixamo golf clips on Y Bot, both already in `Assets/Art/3D/Characters/_Test/` → `PfGolfer_Test` + shared `AnimatorController_Golfer` + `GolferPresenter` driven by `ShotController.OnShotResolved` / `BallStateMachine.OnShotComplete` / `ClubSelectionBroadcast.OnPutterModeChanged`. Only the FBX changes when the real roster models land (`Docs/Design/CHARACTER_3D_REMAKE_OPTIONS.md`). Kickoff:
+
+```
+Read Docs/Specs/Active/golfer_3d_test/SPEC.md and implement it.
+
+Context:
+- EXPERIMENT, OPT-IN ONLY: everything gated on the scripting define GOLFIN_GOLFER_TEST (SPEC §5.5–5.6). Default OFF. Without the define: code compiled out, GameplayScene holds no asset reference, and the build gate excludes Assets/Art/3D/Characters/_Test/. Prove both builds (§6 gate proof).
+- Assets are already in Assets/Art/3D/Characters/_Test/ (Quaternius Superhero_Male_FullBody + 11 Mixamo ANIM_*.fbx on Y Bot). Import both as Humanoid; Humanoid retargets the Y Bot clips onto the Quaternius avatar (§5.1).
+- New: AnimatorController_Golfer, GolferPresenter.cs, GolferTestBootstrap.cs, Editor/GolferTestBuildGate.cs, PfGolfer_Test under _Test/Resources/GolferTest/.
+- 4th build variant "punch it golfer" (SPEC §5.7): iOS-Full-Golfer profile (GOLFIN_GPS;GOLFIN_GOLFER_TEST), CIBuild.BuildIOSGolferTest mirroring BuildIOSGps with the IncludeTestAssets flag in try/finally, unity-build-ios.sh `golfer`, Fastfile variant_table row + lane testflight_build_golfer, one row in PUNCH_IT_ROUTINE.md + TESTFLIGHT_RUNBOOK.md. Reuse StandaloneBuildPreprocessor's move-out/restore for the _Test stash. Consume the EXISTING events named in SPEC §4 — no polling except the heading in LateUpdate while idle.
+- Copy the socket transforms from Assets/Prefabs/Original/Characters/PfYoungMale.prefab (§5.3); its UnplayableChecker script guid is unresolved — keep the empties, drop the component, flag it.
+- Drive the Editor through the Unity MCP tools per SPEC §5.8 (script-execute for the 13 importers, animator-create/-modify/-get-data for the controller, assets-prefab-* for the prefab, profiler-* + tests-run for acceptance). Re-read with *-get-data after every write batch.
+- Minimal diff. No new asmdef, no localisation, no settings UI.
+- Out of scope: impact-frame launch delay, per-character model column, camera, trails, reactions, cloth/hair.
+
+When done: list changed files with a 1-line summary each, run the acceptance
+checklist in SPEC §6 (write the Drive/Putt impact-frame times in the report),
+flag which items need manual on-device verification, update STATUS.md +
+IMPLEMENTER_REPORT.md in the spec folder, and update Docs/AI_CONTEXT.md.
+```
+
+
+- **`scheme_evaluation`: SPEC_READY (2026-09-06, Quick).** `Docs/Specs/Active/scheme_evaluation/SPEC.md`. Per-scheme decision data: `scheme` on hole_complete/flick_rejected/shot_cancelled, `err_yaw_deg` + `overpower` on shot_taken, one Scheme-comparison section in the admin dashboard (players, strokes over par, miss rate, cancel/reject, switched-to). Tester notes (EN+JA) and the decision checklist are Architect files in the same folder.
+
+### Kickoff · scheme_evaluation (issued 2026-09-06)
+
+```
+Read Docs/Specs/Active/scheme_evaluation/SPEC.md and implement it.
+
+Context:
+- Closes the telemetry gaps that stop us picking a default control scheme: `scheme` on
+  hole_complete (+ scheme_mixed), flick_rejected and shot_cancelled (TelemetryHooks.cs);
+  err_yaw_deg + overpower on shot_taken via two latched snapshots in
+  ShotController.ResolveAndPublish -> ShotRecord -> GameSession.AppendShotTimingKeys.
+- Dashboard: one "Scheme comparison" section under Shots in the telemetry panel — four rows,
+  columns in SPEC §4; aggregate next to timingByScheme in lib/telemetryData.ts, strings in
+  lib/i18n.ts DICT en+ja, mock rows in mockTelemetry.ts.
+- Minimal diff. Reuse timingByScheme / SCHEME_LABEL_KEYS / cancelRate helpers and the
+  "no scheme = Flick" bucketing already in telemetryData.ts. Flick physics byte-identical
+  (ShotControllerSeamParityTests). Do not touch TESTER_NOTES.md.
+- Check that ALL new player text from the schemes track (seam Settings strings, grade pops,
+  SCHEME_CONFIRM_* pop-up strings) is imported and PUBLISHED in the admin: run
+  export_content.py --check for texts; fix any gap through the importer (SPEC §7).
+- Out of scope: CSV export, retention curve, any tuning or default change.
+
+When done: list changed files with a 1-line summary each, run the acceptance
+tests in the spec, flag which need manual on-device verification, update
+STATUS.md + IMPLEMENTER_REPORT.md in the spec folder, and update
+Docs/AI_CONTEXT.md.
+```
+
+- **`bot_scheme_parity`: DONE `7dd90064d` — ARCHITECT_REVIEW PASS (`Docs/Specs/Completed/bot_scheme_parity/ARCHITECT_REVIEW.md`). Pointer and kickoff below are HISTORICAL.** Was: RE-ISSUED 2026-09-06 AS ONE STAGE (supersedes the Stage A kickoff, also HISTORICAL). `Docs/Specs/Active/bot_scheme_parity/SPEC.md`. All three schemes and the confirm pop-up are DONE, so this task builds everything: `BotSwingPlan` / `IBotSchemeExecutor` / `FlickBotExecutor` cut out of VersusBot (byte-identical), the `BotSwing.Play/PlayPerfect` door every bot must use (VersusBot, PerfBaselineBot with ForceFlick, TreeOccludeFadeCaptureBot migrated; CLAUDE.md rule + done-hook grep), `ShotSchemeHost.ActiveExecutor`, `DriveBot` on the Pendulum / Needle / Free Swing drivers (bots play the scheme's UI for real and are graded by the driver at commit), three `execSigma*01` columns in `bot_difficulty.csv` bisected by the calibration harness so E|ErrorYaw| per bracket equals today's `aimErrorDegMax/2` under every scheme, tree-aware rejection sampling on the scheme's own sample. Decision D1 (error is execution, never intent) preserved.
+
+### Kickoff · bot_scheme_parity (issued 2026-09-06 — single stage)
+
+```
+Read Docs/Specs/Active/bot_scheme_parity/SPEC.md and implement it as ONE task (the Stage A/B
+split in the text is obsolete — all three schemes are DONE).
+
+Context:
+- Bots must swing the scheme the player selected, visibly, with scheme-shaped error, without
+  moving the 1v1 difficulty. Cut VersusBot's "2b error injection" + step 8 into FlickBotExecutor
+  VERBATIM (golden-file regression on a seeded RNG; versus_bot_difficulty tests unchanged).
+  Add BotSwingPlan / IBotSchemeExecutor / BotExecutionBand / BotExecutionContext and
+  ShotSchemeHost.ActiveExecutor.
+- ONE door for every bot: static BotSwing.Play / PlayPerfect (+ BotSwingOptions.ForceFlick with
+  a mandatory comment). Migrate VersusBot, PerfBaselineBot (ForceFlick — its numbers must not
+  move) and TreeOccludeFadeCaptureBot. Scenarios.cs ClubHandle guard stays raw with a comment;
+  ShotPreset rigs via PhysicsLabController.Fire() are not swings. Rule into CLAUDE.md
+  (PIPELINE_HARDENING) + Docs/AI_CONTEXT.md + a done-hook grep: bots never call
+  BeginExternalDrag / EndExternalDrag / CommitFlick directly.
+- Scheme executors play the REAL UI: PendulumSchemeDriver.DriveBot commits the frame the live
+  marker passes the sampled offset; NeedleSchemeDriver.DriveBot taps through the real
+  NeedleTapCatcher when the needle passes the sample; FreeSwingSchemeDriver.DriveBot feeds
+  synthetic samples into the driver's own buffer in real time (straight back, straight up,
+  crossing at the sampled impact offset, at the sampled tempo, never a duff). The grade the
+  player sees is the driver's own; nothing is injected after commit. Putt rules and the bot's
+  injected stat bundle apply.
+- Error model: m / n ~ N(0, sigma) clamped; Free Swing impact ~ N(0, sigma x ImpactMissPx),
+  tempo ~ Ideal + N(0, sigma x 2 x TempoWindow). Three columns execSigmaPendulum01 /
+  execSigmaNeedle01 / execSigmaFreeSwing01 in bot_difficulty.csv, produced by the Editor
+  calibration harness (bisect per bracket x scheme, 20k samples, E|ErrorYaw| = aimErrorDegMax/2
+  within 3%). Loader tolerates a missing column (derives + warns).
+- BotTreeProbe.TrySampleTreeAwareAimError takes a Func<float> delta sampler; the accepted
+  sample is the one handed to DriveBot. Same seed, same Flick deltas.
+- Bot reads ShotSchemeHost.ActiveScheme per TakeShot; a mid-match switch changes the NEXT swing.
+  Log line gains scheme= and the sampled value/grade.
+- Physics/ ban reading: Viewer/VersusBot.cs has post-rule commits; keep its diff to the cut and
+  note the reading. If the hook blocks, surface — do not route around it.
+- Acceptance: 1v1 vs level-1 and level-100 bots under each of the four schemes; Flick run
+  indistinguishable from main (log diff); per bracket the 9-hole strokes-vs-par under each scheme
+  within 1 stroke of its Flick run (3 runs); switching mid-match changes the next swing only;
+  every migrated bot swings through BotSwing (grep passes); PerfBaselineBot baseline unchanged.
+- Out of scope: bot personality/pacing, tournament bots, capture rigs firing presets.
+
+When done: list changed files with a 1-line summary each, run the acceptance
+tests in the spec, flag which need manual on-device verification, update
+STATUS.md + IMPLEMENTER_REPORT.md in the spec folder, and update
+Docs/AI_CONTEXT.md.
+```
+
+- **`scheme_confirm_popup`: DONE (Cesar 2026-09-06). Kickoff below is HISTORICAL — do not re-paste.** Original pointer: `Docs/Specs/Active/scheme_confirm_popup/SPEC.md` — tapping a scheme that is not the current one (Settings › Controls or the in-game gear modal) opens a pop-up: gold title, three step tiles with captions, HOW IT WORKS list, footer, silver CANCEL + GOLD CONFIRM. Only CONFIRM calls `ControlSchemeService.Set` (source `settings_popup` / `ingame_popup`); the highlight stays on the current scheme until then. Cloned from `StartingCharacterConfirmModal.prefab`, one instance per scene. The 12 tiles are CAPTURED FROM THE RUNNING GAME by a new Editor menu (subject-bbox crops, 628×680 @2×, no HUD chrome) — not Figma exports. 26 strings EN+JA. Figma section 5: D `14140:35361` (Pendulum), `14145:36487`, `14145:37377`, `14145:39195`; renders in `reference/`. All three schemes are DONE (`scheme_freeswing` `4ae3307d9` / `9ce9d0bb9`).
+
+### Kickoff · scheme_confirm_popup (issued 2026-09-05)
+
+```
+Read Docs/Specs/Active/scheme_confirm_popup/SPEC.md and implement it.
+
+Context:
+- Confirm/Cancel pop-up explaining a control scheme when the player selects it, in BOTH
+  Settings > Controls (ControlsSubmenu.OnSchemeSelected) and the in-game gear modal
+  (InGameSettingsModalController.OnSchemeSegmentTapped). Only CONFIRM calls
+  ControlSchemeService.Set(scheme, "settings_popup"|"ingame_popup"); CANCEL/backdrop/close
+  change nothing; tapping the current scheme is a no-op. Highlight stays on the current scheme.
+- Clone StartingCharacterConfirmModal.prefab (Rule 19 provenance) -> SchemeConfirmModal.prefab,
+  re-skinned to the Figma Pop-up node; CONFIRM = Main Buttons GOLD variant, never Copper. One
+  instance in ShellScene (Settings modal layer) and one in LabScaffold above InGameSettingsModal.
+- Content from a static SchemeConfirmContent table: title = SETTINGS_CONTROLS_* key, 3 tile
+  sprites from Resources/UI/Controls/Tiles, 3 caption keys, 3 line keys. Zero hardcoded .text.
+- TILES ARE CAPTURED IN-GAME, not exported from Figma: new Editor menu
+  GOLFIN > Capture > Scheme Confirm Tiles drives each scheme's verify-bot states (add Flick's
+  three via ClubHandleDragger's external-drag path), crops on the subject bbox measured off live
+  RectTransforms with a 10% margin, writes 12 PNGs (628x680 @2x) + tiles_manifest.json. No HUD
+  chrome in any tile (assert on crop bounds). Figma frames are the layout reference only.
+- 26 strings via the two-way importer (PLAN -> apply -> publish -> --check) AND Import Text CSV
+  with a forced CSV reimport. MODAL_CANCEL / MODAL_CONFIRM already exist.
+- Fidelity measured off live RectTransforms vs reference/*.png: panel 1086 wide, tile row centred
+  48/48, 36 px under the title separator, gold CONFIRM tint read off the Image. Check 16:9 with
+  the Free Swing copy (longest).
+- Minimal diff. No driver / ShotController / ShotSchemeHost changes.
+- Out of scope: per-scheme tutorial, "don't show again", bot parity.
+
+When done: list changed files with a 1-line summary each, run the acceptance
+tests in the spec, flag which need manual on-device verification, update
+STATUS.md + IMPLEMENTER_REPORT.md in the spec folder, and update
+Docs/AI_CONTEXT.md.
+```
+
+- **`scheme_freeswing` (Free Swing): DONE (`4ae3307d9`, `9ce9d0bb9`, Cesar approved 2026-09-05). Kickoff below is HISTORICAL — do not re-paste.** Original pointer: `Docs/Specs/Active/scheme_freeswing/SPEC.md` — Spec 3, last of the three schemes, after `scheme_needle` DONE (`d54468b6c` / `7369ecb18`, Architect review PASS in the Completed folder). TrueSwing-style, one continuous drag: pull the club head straight DOWN for power (lane with 100/120 ticks where the club lands, green IMPACT window on the impact line that narrows with the pull), then drag back UP — the shot FIRES the frame the finger crosses the impact line (decision 5). Impact offset = HOOK/SLICE yaw (Club Accuracy window), upstroke bow = draw/fade curve fed to `FadeDraw01` (Club Control deadzone; the Fade-Draw toggle is HIDDEN in this scheme, decision 3), tempo (down/back ratio vs `FreeSwingIdealTempo`) = power multiplier, a slow upswing = DUFF. Analyzer chip POWER / IMPACT / PATH / TEMPO for 1.5 s (never hidden by `Resolving` — Needle's arc lesson), PURE/DUFF/HOOK/SLICE pops. Driver keeps its OWN sample buffer (`ShotController.PushTouchSample` stays Flick's). One small seam expected: `ActionButtonsRoot.SetFadeDrawVisible` (opacity, not SetActive — the row is a layout group). 21 `controls.csv` keys, 13 strings EN+JA. Figma section 3b (`14091:102934`), renders in `reference/`. Highest feel risk of the three — Cesar's device pass is part of acceptance.
+
+### Kickoff · scheme_freeswing (issued 2026-09-05)
+
+```
+Read Docs/Specs/Active/scheme_freeswing/SPEC.md and implement it.
+
+Context:
+- Spec 3 of the control-schemes track ("Free Swing"), on control_scheme_seam + the Pendulum and
+  Needle builds. One continuous drag: DOWN for power, then UP — the shot fires the frame the
+  finger crosses the impact line (never on release). Impact offset -> HOOK/SLICE yaw; upstroke bow
+  -> FadeDraw01 (the Fade-Draw toggle is hidden in this scheme); tempo -> power multiplier; slow
+  upswing -> DUFF. Analyzer chip + PURE/DUFF/HOOK/SLICE pops through SchemeGradePop.
+- Apply the nine carry-overs in the SPEC header from the first build (own constants, windows
+  shrink from the peak and the drawn window is the graded one, club hidden in flight, derived
+  geometry, linear colours, config-derived distances, result readout NEVER hidden by Resolving,
+  unique FreeSwing* names, dt clamp on every time-based measure).
+- The driver keeps its OWN sample buffer (FreeSwingSampleWindow); do not widen
+  ShotController.PushTouchSample. ShotController: no change expected. The one seam:
+  ActionButtonsRoot.SetFadeDrawVisible(bool) by CanvasGroup alpha (not SetActive — layout group).
+- Reuse: ClubHandle clone + ClubHandleSpriteBinder, SchemeGradePop, PendulumFadingView (lane
+  only), S_PendulumBallGhost, the NeedleArcGraphic pattern for the trace mesh, the Needle
+  builder/verify/video Editor pattern. New: FreeSwingMath (pure, tested), FreeSwingSchemeDriver,
+  FreeSwingLaneView, FreeSwingTraceView, FreeSwingAnalyzerChip.
+- Config: 21 FreeSwing* keys in BOTH mirrors + loader cases with notes. Strings (13) via the
+  importer AND Import Text CSV with a forced CSV reimport. Zero hardcoded .text; the chip's
+  numbers are formatted values, not strings.
+- Figma section 3b club-handle frames (reference/*.png); geometry measured off live RectTransforms.
+- Flick, Pendulum and Tap Timing byte-identical: their suites unchanged and green. Real-entry
+  acceptance with freeswing_invariants.json and one captioned clip
+  (idle -> backswing -> PURE -> SLICE -> bowed DRAW -> DUFF).
+- Out of scope: grade SFX, extra telemetry keys, bot DriveBot (bot_scheme_parity Stage B), 3-click.
+
+When done: list changed files with a 1-line summary each, run the acceptance
+tests in the spec, flag which need manual on-device verification, update
+STATUS.md + IMPLEMENTER_REPORT.md in the spec folder, and update
+Docs/AI_CONTEXT.md.
+```
+
+- **`scheme_needle` (Tap Timing): DONE (`d54468b6c`, `7369ecb18`, Completed/, Architect review PASS). Kickoff below is HISTORICAL — do not re-paste.** Original pointer: `Docs/Specs/Active/scheme_needle/SPEC.md` — Spec 2 of the control-schemes track, after `scheme_pendulum` DONE (`501bf5881` / `8d14301c5`). Golf-Clash-style: pull the club head back inside a power circle (80/100/120 rings + red overpower crescent, radii derived from where the club head lands) and RELEASE; the club snaps back, an accuracy arc appears above the ball and a needle sweeps it ONCE; TAP anywhere to stop it. Blue = PERFECT, early = HOOK (left), late = SLICE (right), no tap = SHANK. Pendulum's review lessons are baked in up front (own speed constants trackable by eye, zones shrink with power and the drawn zone is the graded one, club hides in flight, derived geometry, linear-space colours, peak power). Reuses the Pendulum handle clone, grade pop, fading view, ball ghost. 16 `controls.csv` keys, 5 strings EN+JA. Figma section 2b (`14091:102411`), renders in `reference/`.
+
+### Kickoff · scheme_needle (issued 2026-09-05)
+
+```
+Read Docs/Specs/Active/scheme_needle/SPEC.md and implement it.
+
+Context:
+- Spec 2 of the control-schemes track ("Tap Timing"), on control_scheme_seam + scheme_pendulum.
+  Two touches: pull inside a power circle and RELEASE (peak power), then a needle sweeps the arc
+  once and a TAP anywhere grades it — PERFECT / HOOK / SLICE / SHANK (timeout). No flick gate.
+- Apply the seven Pendulum carry-overs from the first build (SPEC header): own Needle* speed
+  constants, zones shrink with power from the PEAK and the drawn zone is the graded one, club
+  head hidden in flight, ring radii derived from where the club lands, linear-space colour
+  treatment, peak-power commit, config-derived distances everywhere.
+- Reuse from Pendulum: the ClubHandle clone + ClubHandleSpriteBinder, PendulumGradePop (rename to
+  SchemeGradePop if you touch it), PendulumFadingView, S_PendulumBallGhost. New: NeedleMath (pure,
+  tested), NeedleSchemeDriver, NeedlePowerCircleView, NeedleArcView, NeedleTapCatcher.
+- ShotController: ideally NO change. If a seam gap appears (e.g. the tap area during the needle
+  phase), add the smallest public seam + NOTE — never special-case inside the driver.
+- Config: 16 Needle* keys in BOTH mirrors + loader cases, with notes like Pendulum's. Strings
+  SHOT_GRADE_PERFECT/HOOK/SLICE/SHANK + SHOT_TAP_HINT via the importer AND Import Text CSV with a
+  forced CSV reimport. Zero hardcoded .text.
+- Figma section 2b club-handle frames (reference/*.png); geometry measured off live
+  RectTransforms; zone angular widths driven from the windows, not hardcoded.
+- Flick and Pendulum byte-identical: their suites unchanged and green. Real-entry acceptance with
+  a needle_invariants.json and one video clip (idle -> 120% pull -> PERFECT -> HOOK -> SHANK).
+- Out of scope: Free Swing, grade SFX, needle_grade telemetry key, bot DriveBot (bot_scheme_parity).
+
+When done: list changed files with a 1-line summary each, run the acceptance
+tests in the spec, flag which need manual on-device verification, update
+STATUS.md + IMPLEMENTER_REPORT.md in the spec folder, and update
+Docs/AI_CONTEXT.md.
+```
+
+- **`bot_scheme_parity` — the Stage A pointer/kickoff below is SUPERSEDED by the single-stage one above. HISTORICAL.** Original: `Docs/Specs/Active/bot_scheme_parity/SPEC.md`. Every bot — `VersusBot` and any future smoke/capture/perf/feature-test bot — swings through ONE door, `BotSwing.Play/PlayPerfect`, which resolves the player's active scheme (`ShotSchemeHost.ActiveExecutor`) and plays that scheme's UI for real. Stage A: `BotSwingPlan` / `IBotSchemeExecutor` / `FlickBotExecutor` cut out of VersusBot's 2b + step 8 (byte-identical, golden-file regression), `BotSwing` facade + `ForceFlick` option, `PerfBaselineBot` + `TreeOccludeFadeCaptureBot` migrated, `bot_difficulty.csv` `execSigma01` column + calibration harness, CLAUDE.md rule + done-hook grep ("bots never call the external-drag API directly"). Stage B: `PendulumSchemeDriver.DriveBot` + `PendulumBotExecutor` — the bot's marker offset is sampled N(0, σ) and graded by `PendulumMath` at commit, calibrated so E|ErrorYaw| equals today's `aimErrorDegMax/2` per bracket. Decision D1 of `versus_bot_difficulty` (error is execution, never intent) preserved.
+
+### Kickoff · bot_scheme_parity Stage A (issued 2026-09-05)
+
+```
+Read Docs/Specs/Active/bot_scheme_parity/SPEC.md and implement STAGE A only.
+
+Context:
+- Bots must swing the scheme the player selected (control_scheme_seam, 8913901a7). Stage A is
+  the seam: cut VersusBot's "2b error injection" + step 8 into FlickBotExecutor (verbatim —
+  golden-file regression on a seeded RNG, versus_bot_difficulty tests unchanged), add
+  BotSwingPlan / IBotSchemeExecutor / BotExecutionBand / BotExecutionContext, and
+  ShotSchemeHost.ActiveExecutor (falls back to the Flick executor).
+- ONE door for every bot: static BotSwing.Play / PlayPerfect (+ BotSwingOptions.ForceFlick with a
+  mandatory comment). Migrate VersusBot, PerfBaselineBot (ForceFlick — its numbers must not move)
+  and TreeOccludeFadeCaptureBot. Scenarios.cs ClubHandle guard stays raw with a comment;
+  ShotPreset rigs via PhysicsLabController.Fire() are not swings.
+- BotTreeProbe.TrySampleTreeAwareAimError takes a Func<float> delta sampler (Flick passes the
+  uniform range) — same seed, same deltas.
+- bot_difficulty.csv gains execSigma01 (loader tolerates absence); add the Editor calibration
+  harness (bisect sigma vs PendulumMath.Grade) — it can only produce numbers once
+  scheme_pendulum's PendulumMath exists, so ship the harness, leave the column derived.
+- Rule to CLAUDE.md (PIPELINE_HARDENING) + Docs/AI_CONTEXT.md + a done-hook grep: bots never call
+  BeginExternalDrag/EndExternalDrag/CommitFlick directly.
+- Physics/ ban reading: Viewer/VersusBot.cs has three post-rule commits; keep its diff to the cut
+  only and note the reading in the report. If the hook blocks, surface — do not route around it.
+- Out of scope: Stage B (PendulumBotExecutor / DriveBot), Needle / Free Swing executors, bot
+  personality, tournament bots.
+
+When done: list changed files with a 1-line summary each, run the acceptance
+tests in the spec, flag which need manual on-device verification, update
+STATUS.md + IMPLEMENTER_REPORT.md in the spec folder, and update
+Docs/AI_CONTEXT.md.
+```
+
+- **`scheme_pendulum`: DONE (`501bf5881`, `8d14301c5`, folder in Completed/). Kickoff below is HISTORICAL — do not re-paste.** Original pointer: `Docs/Specs/Active/scheme_pendulum/SPEC.md` — Spec 1 of the control-schemes track, on the `control_scheme_seam` seam (Architect review PASS 2026-09-05, folder still in Active pending Cesar's device pass). Neko-style: pull the **selected club's head** straight back (lane, 100/120 % ticks), a marker swings sinusoidally on a bar above the ball, flick up on the red pip; marker offset → JUST / GOOD / MISS (windows from Club Accuracy, yaw error × half-cone, power × 1 / Gold / Red); slow release = reset + toast; overpower speeds the marker minus Strength forgiveness; Fade/Draw toggle shared (lateral pull = curve); putt variant. Tiny seam additions: `SetExternalPower` clamp 1.2, `RejectExternalDrag()`, three read-only stat getters, `IsImplemented` turns Flick's root off. 10 `controls.csv` keys, 3 grade strings EN+JA. Figma section 1b (`14091:33667`), renders in `reference/`.
+
+### Kickoff · scheme_pendulum (issued 2026-09-05)
+
+```
+Read Docs/Specs/Active/scheme_pendulum/SPEC.md and implement it.
+
+Context:
+- Spec 1 of the control-schemes track, on top of control_scheme_seam (8913901a7). The driver
+  plugs into BeginExternalDrag(ownsTiming:true) / SetExternalPower / CommitExternal(ShotIntent);
+  it never calls EndExternalDrag. Flick stays byte-identical (parity suite unchanged + green).
+- Handle = a copy of ClubHandle (Image + ClubHandleSpriteBinder) under SchemeRoot_Pendulum;
+  pull DOWN for power; sinusoidal marker on PendulumBarView; JUST/GOOD/MISS from PendulumMath
+  (pure, tested); putt variant; Fade/Draw toggle shared (lateral pull = FadeDraw01).
+- Seam additions are in SPEC 3.1 only: SetExternalPower clamp to 1.2, RejectExternalDrag(),
+  ClubAccuracyNorm01 / CharacterClubControl / OverpowerForgiveness01 getters, IsImplemented on
+  the driver interface + ShotSchemeHost turning SchemeRoot_Flick off for an implemented driver.
+- Config: 10 Pendulum* keys in BOTH mirrors (controls.csv + ControlsConfig.Default) + loader
+  cases. Reuse Flick's arrow-speed constants for the marker Hz.
+- Strings SHOT_GRADE_JUST/GOOD/MISS via the two-way importer (PLAN -> apply -> publish -> --check)
+  AND Tools/Localization/Import Text CSV (the seam report's lesson). Zero hardcoded .text.
+- Figma: section 1b, club-handle frames (reference/*.png). Geometry 1:1; band widths driven from
+  the accuracy windows, not hardcoded. Match the live ShotUI atoms before the node.
+- Minimal diff. Reuse: ClubHandle object, ClubHandleSpriteBinder, PowerGaugeWidget, ConeAlpha
+  fade constants, EvaluateFlickGate, FlickRejected toast, ConeBandPalette colours.
+- Out of scope: Needle / Free Swing, grade SFX, pendulum_grade telemetry key, bot parity.
+
+When done: list changed files with a 1-line summary each, run the acceptance
+tests in the spec, flag which need manual on-device verification, update
+STATUS.md + IMPLEMENTER_REPORT.md in the spec folder, and update
+Docs/AI_CONTEXT.md.
+```
+
+- **`control_scheme_seam`: ARCHITECT_REVIEW_PASS (2026-09-05) — built in `8913901a7`, awaiting Cesar's device pass, then → Completed. Kickoff below is HISTORICAL, do not re-paste.** Original pointer: `Docs/Specs/Active/control_scheme_seam/SPEC.md` — Spec 0 of the control-schemes track (`Docs/CONTROL_SCHEMES_PLAN.md`, Notion 2131–2135). Extracts the `CommitFlick()` tail into `ResolveAndPublish`, adds `ShotIntent` + `ShotController.CommitExternal` + `BeginExternalDrag(ownsTiming)`, `ControlSchemeService` (PlayerPrefs, `QualityTierService` pattern; Flick/Pendulum/Needle/FreeSwing), `ShotSchemeHost` with four scheme roots (existing cone UI re-parented under `SchemeRoot_Flick`, zero rendering change; the other three are placeholders that fall back to Flick), Settings › CONTROLS accordion (Language radio pattern) + a 2×2 segment row in the in-game gear modal, 5 strings EN+JA via the importer, `shot_taken.scheme` + `controls_scheme_changed` + a Scheme filter on the dashboard Flick-timing card. **Flick must stay byte-identical** (parity test + pixel-identical Lab screenshots). Figma page "Shot Controls — Schemes" §4, nodes `14089:101926` / `14090:101896`; icon variant `Settings Icons/Controls` in `4060:7534`. The three scheme specs follow.
+
+### Kickoff · control_scheme_seam (issued 2026-09-04)
+
+```
+Read Docs/Specs/Active/control_scheme_seam/SPEC.md and implement it.
+
+Context:
+- Spec 0 of the control-schemes track (Docs/CONTROL_SCHEMES_PLAN.md): make the shot pipeline
+  scheme-agnostic and add the persisted 4-way Control Scheme setting. NO new scheme behaviour.
+- ShotController.CommitFlick() tail -> ResolveAndPublish(); new ShotIntent + CommitExternal();
+  BeginExternalDrag(ownsTiming). Flick stays BYTE-IDENTICAL — existing shot tests unchanged +
+  a new seam parity test (fp-equal ShotInput) + pixel-identical Lab screenshots at Idle/Timing.
+- ControlSchemeService = QualityTierService pattern (PlayerPrefs). ShotSchemeHost on ShotUI_Canvas
+  (LabScaffold) with SchemeRoot_Flick (re-parent the existing cone UI only) + 3 placeholder roots
+  that fall back to Flick. Settings: ControlsSubmenu cloned from GraphicsSubmenu/LanguageSubmenu
+  (Figma 14089:101926); in-game gear modal 2x2 segments (Figma 14090:101896); reference/ renders.
+- Strings via the two-way importer (LocalizationText.csv EN+JA -> import_content.py PLAN -> apply
+  -> publish texts -> export --check clean). Dashboard labels in lib/i18n.ts DICT.
+- Telemetry: shot_taken.scheme in GameSession.AppendShotTimingKeys; controls_scheme_changed;
+  dashboard Scheme filter (rows without scheme = Flick).
+- Minimal diff. Reuse: external-drag API, StatProviderBus, SettingsMenuItem accordion sweep,
+  S_Common_RadioButton, RETURN-button gold gradient. New params/toggles as specced.
+- Out of scope: Pendulum / Needle / Free Swing drivers and UI (their own specs), any change to
+  controls.csv values, resolver, cone geometry, arrow speed, timing bands, flick gate.
+
+When done: list changed files with a 1-line summary each, run the acceptance
+tests in the spec, flag which need manual on-device verification, update
+STATUS.md + IMPLEMENTER_REPORT.md in the spec folder, and update
+Docs/AI_CONTEXT.md.
+```
 
 - **`map_view_v2`: SPEC_READY (2026-09-04, Cesar picked Figma concept B1 — "we have a winner").** `Docs/Specs/Active/map_view_v2/SPEC.md` — presentation rebuild of the overhead map (`MapViewController`): flat constant-width DOTTED aim line with 50-yd ticks (no arc bow), lime RANGE FAN ±11° around the aim with the edge at max reach = 1.2 × club carry (the overpower ceiling) + dashed nominal-carry arc, landing zone = lime glow + restored white r100 ring + crosshair, HUD-chip TARGET READOUT ("195 yd / to pin 123 yd"), the in-game `HoleIndicator` chip AT the pin, and the bottom corners = new SHOT VIEW Select Button (bottom-left, `GolfinButton` slot, prefab outline) + the DriverButton keeping "DRIVER / carry" (no more SHOOT label swap). Explicit OVER-RANGE state: red segment past the fan edge, red edge, white dashed ghost ring at `P_max` ("lands here"), red-header chip "OUT OF RANGE", DriverButton at 50 %. Aiming maths, `MapTargetCarryM`, camera, strict-crop, gestures untouched. 4 CSV strings (EN+JA) via the importer. 4 EditMode tests on the new pure-math seams. Figma: file `5gEAHjl6xAtW8iYY7NMvWd` page "Map View Redesign — Proposals" nodes `14123:32469` / `14125:32540`; renders in `reference/`.
 
@@ -241,12 +552,63 @@ the EditMode count, and flag anything that needed a judgment call.
 
 - ~~`gps_standalone_shell`~~ **DONE 2026-09-04** (`b3506dba3`; folder in `Docs/Specs/Completed/`; Architect review PASS 2026-09-04 — standalone build 2637 on TestFlight, user assets 555 → 98.6 MB).
 
-- **`design_consistency_audit`: SPEC_READY (2026-09-03, GAME polish track — Notion 2112).** `Docs/Specs/Active/design_consistency_audit/SPEC.md` — audit-only pass over every shell-canvas game screen, tab, submenu and result modal (Home, Mode Select, Hole/Mission/Tournament selection, Rankings, Roster, Inventory tabs, General/Stamina shop, Gacha History/Prizes, Settings, PersistentUI, the result + gate modals; auth screens Tier 2) against the Figma variables (`Docs/Design/DESIGN_TOKENS.md`, seeded) on six dimensions — fonts, colours, hierarchy, sizes, outlines, drop shadows — plus the linter's render-health rules. Instruments: `DesignAuditDumper` (rendered px, not serialized), `UIFidelityLinter.LintRoot` (extraction only), `figma_node_to_spec.py`, crop sheets. Output = `Docs/Reports/DESIGN_CONSISTENCY_AUDIT.md` + fix list grouped by shape (§22); the Architect writes the approved fixes as Quick specs. Changes NOTHING in production. **Run AFTER `gps_checkin`** (Code works one task at a time; GPS track first). `game_polish` (2111) follows the audit; its per-screen map is at `Docs/Specs/Queued/game_polish/MAP.md` pending Cesar's approval.
+- **Audit Quick fixes (approved by Cesar 2026-09-06, from `Docs/Reports/DESIGN_CONSISTENCY_AUDIT.md` § 5) — run in this order, one at a time, BEFORE `game_polish_b`:** `Docs/Specs/Quick/da_q9_missions_card_reward_copy.md` (XS, data + 1 string via importer) → `da_q2_default_font_readouts.md` (S, 41 LiberationSans readouts → Rubik) → `da_q3_modecard_outline_to_rim.md` (S, 20 `Outline`s → baked rim) → `da_q4_oval_pills_and_rims.md` (S, every lint FAIL: badge pills, 120 px button rims, shop `HDiv`). Deferred groups → `Docs/POLISH_BACKLOG.md` P-016…P-021 (JA font binding, Filled bars, ÷1.4 / ÷1.2 / unexplained sizes, flat fills, audit gaps).
+
+### Kickoffs · audit Quick fixes (issued 2026-09-06 — paste one at a time, in order)
+
+```
+Read Docs/Specs/Quick/da_q9_missions_card_reward_copy.md and implement.
+```
+```
+Read Docs/Specs/Quick/da_q2_default_font_readouts.md and implement.
+```
+```
+Read Docs/Specs/Quick/da_q3_modecard_outline_to_rim.md and implement.
+```
+```
+Read Docs/Specs/Quick/da_q4_oval_pills_and_rims.md and implement.
+```
+
+- ~~**`design_consistency_audit`**~~ — **ARCHITECT_REVIEW_PASS 2026-09-06 (`1a582bba8`), verified by the Architect against HEAD (A10 diff, linter extraction, 74/12/919 lint, 41 LiberationSans, `audit_numbers.py` reproduces every § 1 number, 15 sheets ≥ 900 px). Awaiting Cesar's DONE + move to Completed.** Original pointer:
+  **`design_consistency_audit`: SPEC_READY (2026-09-03, GAME polish track — Notion 2112).** `Docs/Specs/Active/design_consistency_audit/SPEC.md` — audit-only pass over every shell-canvas game screen, tab, submenu and result modal (Home, Mode Select, Hole/Mission/Tournament selection, Rankings, Roster, Inventory tabs, General/Stamina shop, Gacha History/Prizes, Settings, PersistentUI, the result + gate modals; auth screens Tier 2) against the Figma variables (`Docs/Design/DESIGN_TOKENS.md`, seeded) on six dimensions — fonts, colours, hierarchy, sizes, outlines, drop shadows — plus the linter's render-health rules. Instruments: `DesignAuditDumper` (rendered px, not serialized), `UIFidelityLinter.LintRoot` (extraction only), `figma_node_to_spec.py`, crop sheets. Output = `Docs/Reports/DESIGN_CONSISTENCY_AUDIT.md` + fix list grouped by shape (§22); the Architect writes the approved fixes as Quick specs. Changes NOTHING in production. **Run AFTER `gps_checkin`** (Code works one task at a time; GPS track first). `game_polish` (2111) follows the audit; its per-screen map is at `Docs/Specs/Queued/game_polish/MAP.md` pending Cesar's approval.
 
 - ~~**`game_polish_a`**~~ — **DONE 2026-09-04**, approved by Cesar, folder in `Docs/Specs/Completed/game_polish_a/` (`b2496871d`). Do NOT re-dispatch. Option (b) push-with-cross-fade SHIPPED (Cesar's call mid-task); §D7 nav selected state live on both bars. Perf finding → `Docs/Specs/Quick/gacha_history_rebuild_stall.md` (kickoff below). Original pointer:
   **`game_polish_a`: SPEC_READY (2026-09-03, GAME polish track — Notion 2111, slice a of three).** `Docs/Specs/Active/game_polish_a/SPEC.md` — navigation & structure motion: a screen-agnostic `LayeredPush` (`Assets/Scripts/UI/Polish/`) for same-pillar SAME-background pairs (Play `2e5476ee…` group, Tournaments/Rankings `0d425c0a…` group, Gacha `5ec22d10…` group), 16 px entry `Rise` on fade-path arrivals, cross-fades for Inventory/Rankings/GachaHistory tabs and the Settings overlay + accordion, `UiSelection` bumps on tabs, and the NEW bottom-nav selected state (§D7: gold halo + brighter ring replaces the cyan tint, on the game bar AND the GPS bar — the one authorised `Gps/` touch is `GpsNavBarHighlight.cs`); fade-to-black kept for Home, cross-pillar and background-changing moves (Cesar). Option (b) push-with-background-cross-fade only as a 5 s video behind an OFF flag. Gates as gps_polish (invariants JSON, 0 px parity vs first-commit baselines, chrome seam ≤ 2, GC ≤ 32 B). Map approved 2026-09-03: `Docs/Specs/Queued/game_polish/MAP.md` (b = content & modals, c = sweep — specs follow). **Run AFTER `design_consistency_audit` is DONE and its approved Quick fixes have landed.**
 
-### Kickoff · gacha_history_rebuild_stall (Quick, issued 2026-09-04 — next: before the audit)
+- **`game_polish_b`: SPEC_READY (2026-09-05, GAME polish track — Notion 2111, slice b of three).** `Docs/Specs/Active/game_polish_b/SPEC.md` — content & modal motion: all 13 game modals pop (`animateShow` via the builder; HoleComplete pops in its widget), result-modal choreography, the three `UiMotion` retrofits with a frame-identical gate (Versus / Daily pill / Gacha reveal — `UiMotion.Ease` is the one API change), RP count-ups on game deltas (up AND down), shimmer on cold fetches (helpers `git mv`'d out of `Gps/` with GUIDs + namespaces kept), `PendingSpend` audit, fetch-paint staggers, Mode Select front-door stagger, Rankings Top-3 3→2→1. **Run AFTER `design_consistency_audit` is DONE and its approved Quick fixes have landed.**
+
+### Kickoff · game_polish_b (issued 2026-09-05 — after the audit + its Quick fixes)
+
+```
+Read Docs/Specs/Active/game_polish_b/SPEC.md and implement it.
+
+Context:
+- Slice b of game_polish (Notion 2111): content & modal motion. All 13 game modals
+  pop via animateShow (prefab/scene flag set by GamePolishBuilder; code default stays
+  false, pinned) — HoleComplete needs its own pop in HoleCompleteWidget because its
+  controller overrides Show() as a no-op. Result modals get a small choreography on top.
+- The three retrofits (Versus pop-in, Daily pill slide+glow, Gacha reveal) are
+  primitive swaps with a FRAME-IDENTICAL gate: record the OLD per-frame logs on the
+  first commit, before any change. UiMotion gains ONE API change — an optional
+  `Ease` (OutCubic default / OutBack / Linear); every GPS call site compiles unchanged.
+- D0 first: git mv GpsPaintMotion.cs + ShimmerHost.cs to Polish/ and ShimmerBlock.prefab
+  to Common/ with GUIDs kept and namespaces UNCHANGED; the only Gps/ source edit is the
+  prefab path constant in GpsPolishBuilder.cs.
+- Then: RP count-ups armed at every game delta (incl. counting DOWN on spends),
+  shimmer on cold fetches (Rankings, Tournaments, Gacha History, Shop, Missions),
+  PendingSpend audit table, staggers on fetch paints (+ Mode Select on every paint),
+  Rankings Top-3 reveal 3→2→1.
+- Gates as game_polish_a: 0 px rest parity, invariants/perf JSON, captioned videos
+  (a)–(g), check_report_counts.py / check_report_citations.py before every submit.
+- Out of scope: game_polish_c sweep, haptics, any other Gps/ edit, namespace renames.
+
+When done: list changed files with a 1-line summary each, run the acceptance
+tests in the spec, flag which need manual on-device verification, update
+STATUS.md + IMPLEMENTER_REPORT.md in the spec folder, and update
+Docs/AI_CONTEXT.md.
+```
+
+### Kickoff · gacha_history_rebuild_stall — DONE 2026-09-05 (`87d99e2ae`), do not paste
 
 ```
 Read Docs/Specs/Quick/gacha_history_rebuild_stall.md and implement.
@@ -287,7 +649,7 @@ STATUS.md + IMPLEMENTER_REPORT.md in the spec folder, and update
 Docs/AI_CONTEXT.md.
 ```
 
-### Kickoff · design_consistency_audit (issued 2026-09-03 — after gps_checkin)
+### Kickoff · design_consistency_audit — SUPERSEDED (ran 2026-09-06, do not paste)
 
 ```
 Read Docs/Specs/Active/design_consistency_audit/SPEC.md and implement it.

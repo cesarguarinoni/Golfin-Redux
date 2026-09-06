@@ -368,6 +368,37 @@ evidence carried. The lesson is not "measure" — I did measure — it is *verif
 thing you think it moves before trusting a null result*. The triangle counter was the instrument that
 could tell the difference, and it should have been the first one reached for.
 
+## Round 5 — the pin chip stands on the hole
+
+> *"The tail of the flag indicator is too short. The flag indicator should reaccommodate to 'stand'
+> over the hole (the tail pointing directly down to the hole) when moving close to the hole."*
+
+**R5-1. The chip now stands ABOVE the pin with the tail dropping straight onto it.** `MapPinIndicator`
+preferred `Vector2.up` — chip BELOW the pin, tail rising to it — because that is what B1's mock shows.
+The preference is now `Vector2.down`: chip above, tail down into the hole, like a marker planted in it.
+It still flips below when there is no room above (pin near the top edge), and it matches the in-game
+HUD chip's own posture. **Deliberate departure from the Figma, on Cesar's instruction.**
+
+**R5-2. Tail length 120 → 200 px.** The number is not the visible length: the cloned HUD tail sprite is
+a gradient that fades toward its tip, so roughly the far half of the rect renders as nothing. At 120 it
+read as a stub barely clear of the chip; at 200 it reads as a tail in the same proportion the Figma's
+does against its 100 px chip. `pinChipGapPx = 200.0` in the dumps, still exactly equal to
+`_pinTailMinPx`, so the never-covers-the-hole invariant is unchanged.
+
+**R5-3. A scene save I did not make had frozen the old value.** `LabScaffold.unity` came back modified
+with four new `SchemeRoot_*` objects from `ShotSchemeHost.cs` — someone else's control-schemes work —
+and that save also serialised this task's `[SerializeField]`s at their then-current defaults, including
+`_pinTailMinPx: 120`. A C# default cannot override a serialised value, so the first run after the
+change still measured 120. Fixed by setting that one line in the scene to 200. **The rest of the scene
+diff is not mine and was left untouched** (see § Files).
+
+**R5-4. Standing the chip on the hole made it collide with the readout**, which sits 130 px from L and
+L is near the green on a par 3 — the two chips overlapped on Hole 04. `PlaceReadout` now takes an
+avoid-rect and prefers the side clear of the pin indicator, dropping below it when both sides collide.
+The rect is the indicator's FULL extent (`IndicatorScreenRect` = chip ∪ tail), not just the chip:
+dodging the chip alone still left the readout under the tail, which then drew across its header.
+Sibling order alone did not fix that, so the geometry does.
+
 ## Findings the code cannot fix inside this spec's scope
 
 **A. The over-range target is off-frame, always.** `PositionMapCamera` frames ball + **club** carry,

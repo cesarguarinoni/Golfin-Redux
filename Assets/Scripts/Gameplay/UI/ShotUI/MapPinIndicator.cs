@@ -36,6 +36,12 @@ namespace Golfin.Gameplay.UI.ShotUI
 
         /// <summary>Screen-space rect the chip occupied on the last <see cref="Place"/>. Empty until then.</summary>
         public Rect ChipScreenRect { get; private set; }
+
+        /// <summary>
+        /// Chip AND tail together. This is what other UI has to keep out of: dodging only the chip
+        /// still let the readout sit under the tail, which then drew across its header.
+        /// </summary>
+        public Rect IndicatorScreenRect { get; private set; }
         public bool IsValid => _root != null;
 
         private MapPinIndicator(RectTransform root, RectTransform chip, RectTransform tail,
@@ -119,9 +125,16 @@ namespace Golfin.Gameplay.UI.ShotUI
             float tailPx    = Mathf.Max(tailMinPx, 0f) * _uiScale;
             float reach     = chipHalf + tailPx;
 
-            // dirToPin points from the CHIP toward the PIN. Preferred: the chip hangs BELOW the pin
-            // while the pin is in the top half of the screen (the normal map case, and the Figma).
-            Vector2 dirToPin = pinScreen.y > screenH * 0.5f ? Vector2.up : Vector2.down;
+            // dirToPin points from the CHIP toward the PIN, so Vector2.down means the chip sits ABOVE
+            // the pin with its tail dropping straight onto it.
+            //
+            // That is the preferred pose, and it is a deliberate departure from the Figma (Cesar,
+            // 2026-09-05: "the flag indicator should reaccommodate to 'stand' over the hole, the tail
+            // pointing directly down to the hole, when moving close to the hole"). B1's mock hangs the
+            // chip BELOW the pin, which reads as a label dangling off the flag; standing it on the hole
+            // reads as a marker planted in it, and it matches the in-game HUD chip's own posture.
+            // The chip only flips below when there is no room above — near the top edge of the frame.
+            Vector2 dirToPin = Vector2.down;
 
             bool FitsWith(Vector2 d)
             {
@@ -160,6 +173,10 @@ namespace Golfin.Gameplay.UI.ShotUI
             _root.anchoredPosition = new Vector2(chipCentre.x - chipHalf, chipCentre.y + chipHalf);
             ChipScreenRect = new Rect(chipCentre.x - chipHalf, chipCentre.y - chipHalf,
                                       chipHalf * 2f, chipHalf * 2f);
+            // Union of the chip and the tail's run out to the tip.
+            IndicatorScreenRect = Rect.MinMaxRect(
+                Mathf.Min(ChipScreenRect.xMin, tipScreen.x), Mathf.Min(ChipScreenRect.yMin, tipScreen.y),
+                Mathf.Max(ChipScreenRect.xMax, tipScreen.x), Mathf.Max(ChipScreenRect.yMax, tipScreen.y));
 
             if (_tail == null) return;
             _tail.gameObject.SetActive(true);

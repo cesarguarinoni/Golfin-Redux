@@ -176,8 +176,17 @@ namespace Golfin.Gameplay.UI.ShotUI
         [SerializeField] private float             _guideDotWorldWidth   = 0.20f;
         /// <summary>§3 — half-angle of the lime range fan, in degrees, either side of the aim line.</summary>
         [SerializeField] private float             _rangeFanHalfAngleDeg = 11f;
-        /// <summary>§7 — minimum screen gap (device px) between the pin and the pin chip, so the chip never covers the hole.</summary>
-        [SerializeField] private float             _pinTailMinPx         = 120f;
+        /// <summary>
+        /// §7 — minimum screen gap (device px) between the pin and the pin chip, so the chip never
+        /// covers the hole. Also the tail's length, and the two are the same number by construction.
+        ///
+        /// Raised 120 → 200 (Cesar, 2026-09-05: "the tail of the flag indicator is too short"). The
+        /// number is not the VISIBLE length: the cloned HUD tail sprite is a gradient that fades to
+        /// transparent toward its tip, so roughly the far half of the rect renders as nothing. 200 px
+        /// of rect reads as a tail in the same proportion the Figma's does against its 100 px chip;
+        /// 120 rendered as a stub barely clear of the chip edge.
+        /// </summary>
+        [SerializeField] private float             _pinTailMinPx         = 200f;
         /// <summary>
         /// map_view_v2 (Cesar, 2026-09-04) — <c>QualitySettings.lodBias</c> for the map's lifetime.
         ///
@@ -1450,6 +1459,11 @@ namespace Golfin.Gameplay.UI.ShotUI
             // §7 — the pin chip: a clone of the LIVE HoleIndicator, not a rebuild of it.
             _pinIndicator = MapPinIndicator.CloneFromScene(canvas, UiScale);
             _pinIndicator?.SetActive(false);
+
+            // Draw the readout last as a belt-and-braces measure; the real guarantee is that
+            // PlaceReadout dodges the pin indicator's FULL rect (chip + tail), because sibling order
+            // alone did not stop the tail crossing the readout's header.
+            _readout.Root.SetAsLastSibling();
         }
 
         /// <summary>Rubik (or whatever the HUD uses) from a live HUD text — never a hardcoded asset path.</summary>
@@ -2783,7 +2797,14 @@ namespace Golfin.Gameplay.UI.ShotUI
                 Vector2 size = _readout.Set(carryM, toPinM, _overRange,
                                             Golfin.Gameplay.UI.HUD.ClubContext.SelectedTypeLabel,
                                             _maxReachM, _unitMode, UiScale);
-                PlaceReadout(size, lScr, pMaxScr, screenW, screenH);
+                // Avoid the pin chip. Now that the pin chip STANDS on the hole it occupies real estate
+                // right where the readout wants to sit whenever the target is near the green, and the
+                // two chips overlapped on Hole 04. The rect is last frame's (UpdateHoleIndicator runs
+                // after this), which converges in one frame and never oscillates because the readout
+                // only ever moves AWAY from it.
+                Rect pinRect = (_pinIndicator != null && _pinIndicator.IsValid)
+                             ? _pinIndicator.IndicatorScreenRect : default;
+                PlaceReadout(size, lScr, pMaxScr, screenW, screenH, pinRect);
             }
         }
 
@@ -2800,7 +2821,8 @@ namespace Golfin.Gameplay.UI.ShotUI
         /// top of the screen it drops BELOW P_max instead (Figma: centred on x, top = P_max + 150), which
         /// is the one case where the side-by-side position would push a much wider chip off-frame.
         /// </summary>
-        private void PlaceReadout(Vector2 size, Vector2 lScr, Vector2 pMaxScr, float screenW, float screenH)
+        private void PlaceReadout(Vector2 size, Vector2 lScr, Vector2 pMaxScr,
+                                  float screenW, float screenH, Rect avoidRect)
         {
             var rt   = _readout.Root;
             float inset = Px(kReadoutSafePx);
@@ -2815,11 +2837,37 @@ namespace Golfin.Gameplay.UI.ShotUI
             }
 
             float gap = Px(kReadoutGapPx);
-            bool  left = lScr.x + gap + size.x > screenW - inset;
+
+            // Rect the chip would occupy on a given side, with the pivot that side implies.
+            Rect RectOn(bool onLeft)
+            {
+                float x = onLeft ? Mathf.Max(lScr.x - gap, inset + size.x)
+                                 : Mathf.Min(lScr.x + gap, screenW - inset - size.x);
+                float cy = Mathf.Clamp(lScr.y, inset + size.y * 0.5f, screenH - inset - size.y * 0.5f);
+                return new Rect(onLeft ? x - size.x : x, cy - size.y * 0.5f, size.x, size.y);
+            }
+
+            bool left = lScr.x + gap + size.x > screenW - inset;
+            bool Blocked(bool onLeft) => avoidRect.width > 0f && RectOn(onLeft).Overlaps(avoidRect);
+            // Prefer the side that is clear of the pin chip; if both collide, keep the safe-area choice
+            // and drop BELOW the collision instead of sitting on top of it.
+            if (Blocked(left) && !Blocked(!left)) left = !left;
+
             rt.pivot = new Vector2(left ? 1f : 0f, 0.5f);
-            float px = left ? lScr.x - gap : lScr.x + gap;
-            px = left ? Mathf.Max(px, inset + size.x) : Mathf.Min(px, screenW - inset - size.x);
+            float px = left ? Mathf.Max(lScr.x - gap, inset + size.x)
+                            : Mathf.Min(lScr.x + gap, screenW - inset - size.x);
             float py = Mathf.Clamp(lScr.y, inset + size.y * 0.5f, screenH - inset - size.y * 0.5f);
+
+            if (Blocked(left))
+            {
+                float below = avoidRect.yMin - size.y * 0.5f - Px(16f);
+                float above = avoidRect.yMax + size.y * 0.5f + Px(16f);
+                // Whichever of below/above stays inside the safe area; below first (the chip reads as
+                // hanging off the target rather than floating above the pin).
+                py = below - size.y * 0.5f >= inset ? below
+                   : (above + size.y * 0.5f <= screenH - inset ? above : py);
+                py = Mathf.Clamp(py, inset + size.y * 0.5f, screenH - inset - size.y * 0.5f);
+            }
             rt.anchoredPosition = new Vector2(px, py);
         }
 

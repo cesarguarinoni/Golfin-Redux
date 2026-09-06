@@ -89,3 +89,18 @@ DIRTY (git status --porcelain --untracked-files=all at kickoff):
   * EditMode: one run showed 2 failures in Golfin.UI.Polish.Tests (UiMotionAllocation / UiMotionNew
     Primitive) — committed, unmodified files this task never touches; GREEN on re-run
     (2447 / 2444 / 0 failed). Flaky under concurrent Editor load, not a regression.
+
+2026-09-05 ROUND 5 (Cesar: "tail too short; the flag indicator should stand over the hole"):
+  * R5-1 MapPinIndicator now prefers Vector2.down — chip ABOVE the pin, tail dropping onto it.
+    Deliberate departure from B1's mock, which hangs the chip below. Still flips when no room above.
+  * R5-2 _pinTailMinPx 120 -> 200. The tail sprite is a gradient, so ~half the rect renders as
+    nothing; 120 read as a stub. pinChipGapPx = 200.0, invariant unchanged.
+  * R5-3 LabScaffold.unity had been saved by SOMEONE ELSE (four SchemeRoot_* objects from
+    ShotSchemeHost.cs). That save froze _pinTailMinPx: 120 into the scene, so the C# default change
+    did nothing until I set that one line to 200. Rest of the scene diff left alone and disclosed.
+  * R5-4 standing the chip collided with the readout on the par 3. PlaceReadout now dodges
+    IndicatorScreenRect (chip UNION tail); sibling order alone did not stop the tail crossing it.
+  * EditMode 2470 total / 2465 passed / 3 pre-existing skips / 2 failures — the SAME flaky
+    Golfin.UI.Polish UiMotion pair as Round 4, committed files this task never touches, which
+    alternate pass/fail across runs (green on the Round-4 re-run). All 47 map-view tests pass.
+  * Editor left clean: play mode exited, driver disarmed, ShellScene not dirty.
