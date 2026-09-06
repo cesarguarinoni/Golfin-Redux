@@ -134,3 +134,72 @@ genuinely inside the 2709.
 **Needs manual on-device verification:** none. This task ships no runtime code — the deliverable is
 a document plus editor-only instruments, and every number in it is regenerable from the committed
 JSON dumps by `python3 Docs/Scripts/audit_numbers.py`.
+
+
+---
+
+## Red-team round 3 — four blockers, all confirmed against my own extraction
+
+I re-derived each before touching it; all four were real.
+
+| # | Blocker | Verified how | Fix |
+|---|---|---|---|
+| 1 | §3.5 carried a fifth row `` `GhostBar` / `Fill` \| 3 `` and summed to **228** vs its 225 header | Searched all 21 EN dumps: Filled leaf names are `Bar` 402 / `BarContainer` 133 / `BarPending` 24 / `GhostBar` 2. **No leaf named `Fill` exists.** The row matched ZERO data | Row deleted; table sums to 225 |
+| 2 | Q7b cited ÷1.2 = **144** | Independent bucket derivation: 139 | → 139 |
+| 3 | Q8 cited unexplained = **275** | → 274 | → 274 |
+| 4 | §3.8 prose "plus 275 labels" | → 274 | → 274 |
+
+Blocker 1 is the serious one: a fabricated table row is worse than a stale number, because nothing
+in the corpus can ever produce it.
+
+### Why the gate reported "none" over all four
+
+Two independent blind spots, both now closed and both tripwired:
+
+1. **The SUM check parsed only 4 of the 5 rows.** Its regex wanted `` | `Word` | digits ``; the
+   malformed first column `` `GhostBar` / `Fill` `` didn't match, so it summed the 4 rows it could
+   see, got 225, and passed — while a human reading the table gets 228. Replaced with a cell-based
+   parse that reads every row, plus a **fabrication check**: every object named in §3.5 must occur
+   in the corpus with exactly that count. That check catches B1 directly, with no knowledge of the
+   right answer.
+2. **The size buckets had no coverage at all** — the gate only ever checked four shape labels, so
+   B2/B3/B4 were invisible to it. Buckets are now checked wherever they are named, including inside
+   a `§ 3.8 (N)` citation (how Q7b and Q8 quote theirs), with the citation bound to the row's
+   *subject* so Q7 (the ÷1.4 row, whose prose says "not to the ÷1.2 target") isn't flagged.
+   Matching runs on whitespace-normalised **paragraphs**, because §3.8 states the unexplained bucket
+   as "plus 274 labels no conversion explains" — wrapped across a line break, and not using the word
+   "unexplained" at all. My first attempt at this rule caught B2 and B3 but still missed B4.
+
+**All six tripwires fire; the real report is clean:**
+
+| Planted defect | Caught |
+|---|---|
+| B1 fabricated `GhostBar / Fill` row | ✅ `matches NO image in the corpus` + SUM 228≠225 |
+| B2 Q7b → 144 | ✅ `bucket ÷1.2 states 144` |
+| B3 Q8 → 275 | ✅ `bucket unexplained states 275` |
+| B4 prose → 275 labels | ✅ `line 247: bucket unexplained states 275` |
+| A real row name with a wrong count (`Bar` 190) | ✅ row + SUM |
+| The round-2 header defect (442/26) | ✅ still caught |
+
+## Two things I found that the red-team logged as secondary — both were larger
+
+**The modal evidence did not exist.** The report claimed 13 modals dumped; `design_audit/` held
+exactly 42 files = 21 EN + 21 JA screens and **zero `MODAL_*`**. The round-1 corpus rebuild wiped
+them and `modals:en` was never re-run, so the report cited evidence that had ceased to exist.
+Re-ran the pass: 13 modals regenerated, A13 clean (no GPS modal present — `VoteCreate`,
+`RoundComplete`, `VenuePicker`, `CheckInConfirm`, `GiftSend` all absent), all `locale:"en"`.
+
+**Regenerating it silently moved the audit's own numbers.** The modal pass also dumps the six
+Tier-2 auth screens, which carry no `MODAL_` prefix — so they entered the corpus, took it from 17
+screens to 23, and moved **÷1.2 139 → 194** and **unexplained 274 → 279**, while `Filled` 225 and
+the flat fills 701/291 stayed identical. Had I re-run the pass and not re-checked the corpus size, I
+would have shipped a report whose buckets disagreed with its own stated rule for the third time.
+`audit_numbers.py` now excludes the six by name with the reason at the exclusion site. **Corpus back
+to 17; every number back to canonical.**
+
+**The evidence was not shipping at all.** All 61 dumps lived only under
+`Docs/Diagnostics/_capture/`, which `.gitignore` excludes — zero tracked. Every JSON citation in the
+report pointed at a file no other machine could open, including the Architect's. Copied to the
+tracked `Docs/Reports/DesignAudit/` (9.4 MB raw, ~0.3 MB packed) and `audit_numbers.py` now computes
+from that copy, so the numbers are reproducible by anyone with the repo. This is under `Docs/**` and
+therefore inside A10; `.gitignore` was NOT touched.

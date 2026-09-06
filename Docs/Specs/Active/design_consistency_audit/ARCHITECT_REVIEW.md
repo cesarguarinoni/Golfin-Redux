@@ -223,3 +223,83 @@ is not pinned in the report, so the number is ~1 % unverifiable. State the rule.
 1 is closed; Blocker 2's top-lines are correct but its breakdown tables / Q-refs / §3.6 header /
 JA-corpus are not — the "one corpus, no contradictions" claim does not hold. STATUS →
 `ARCHITECT_REVIEW_FAIL`.
+
+---
+
+# RED-TEAM ROUND 3 — 2026-09-06 11:20 JST (commit 93ad252a1)
+
+**Verdict: `ARCHITECT_REVIEW_FAIL`.** The same failure shape survives a third time — top-lines were
+regenerated, but a sub-table and three fix-list rows still carry older-corpus numbers. Every
+headline I re-derived independently (my own extraction, NOT `audit_numbers.py`) matched the report
+EXCEPT the four items below. The `--check` gate reporting "none" is not evidence — I show below why
+it is blind to all four.
+
+## What I re-derived and CONFIRMED correct (independent extraction from `*__{en,ja}.json`, 17-corpus)
+- Image.Type.Filled **total = 225** (Bar 182 / BarContainer 33 / BarPending 8 / GhostBar 2). ✅
+- Flat fill **701 visible / 291 panel-sized** at α>0.2; sensitivity table reproduces EXACTLY
+  (709/295, 708/295, 704/291, 701/291, 690/291); **8 fills** in 0.02<α≤0.20; **3** `VerticalDivider`
+  fills at exactly α=0.20 (`#FFFFFF33`, InventoryScreen) excluded by strict `>`. ✅ (item d passes)
+- CJK bound to Latin **660** / NotoSansJP **7** / Noto-holding-no-CJK **6**. ✅
+- LiberationSans **36 in-screen** (Inv 27 / Roster 8 / Settings 1) +5 prefab = 41. ✅
+- Outline **20** (Home 15 / ModeSelection 5); Shadow **0**. ✅
+- Size buckets: on-scale 1389 / ÷1.4 **209** / ÷1.2 **139** / 59/66 **46** / unexplained **274**, total 2057. ✅
+- Commit 93ad252a1 touches only `Assets/Editor/UIFidelity/*` + `Docs/**`. ✅ (item f)
+- Every out-of-surface dirty CODE path (`MapPinIndicator.cs`, `MapViewController.cs`, bot csvs, etc.)
+  IS in the iter-1 kickoff baseline in `HEARTBEAT.log`. No path dirtied by this task hides behind
+  "pre-existing". ✅ (item f)
+- `IsGps` namespace filter is present in `DesignAuditRunner.cs` (excludes ns `.Gps` / name `Gps*`). ✅ (item g, code)
+
+## BLOCKERS (report-only edits; all four are the "stale number in a sub-location" shape)
+
+**B1 — §3.5 Filled breakdown table sums to 228, not 225 (fabricated row).**
+Lines 158-166 list a FIFTH row `` `GhostBar` / `Fill` | 3 ``. I searched all 21 EN dumps: there is
+NO Filled image with a `GhostBar/Fill` path or a leaf `Fill` of type Filled — zero. The real
+breakdown is Bar 182 / BarContainer 33 / BarPending 8 / GhostBar 2 = **225**, matching the header,
+§1, Q5 and STATUS. **Fix:** delete the `` `GhostBar` / `Fill` | 3 `` row. The table must sum to 225.
+
+**B2 — Q7b (line 305) cites ÷1.2 = "144"; canonical is 139.**
+The ÷1.2 population is **139** (§1 line 49, §3.8 table line 228, and my re-derivation). Q7b's 144 is
+stale. **Fix:** `§ 3.8 (144)` → `§ 3.8 (139)`.
+
+**B3 — Q8 (line 306) cites unexplained = "275"; canonical is 274.**
+Unexplained-by-any-divisor is **274** (§1 line 49, §3.8 table line 230, my re-derivation). **Fix:**
+`§ 3.8 (275)` → `§ 3.8 (274)`.
+
+**B4 — §3.8 prose (line 250) says "plus 275 labels no conversion explains"; canonical is 274.**
+Same stale figure as B3, in prose. **Fix:** `275` → `274`.
+
+## Why `audit_numbers.py --check` reported "none" while all four stand (item c — the checker is NOT trustworthy)
+- **B1 dodges the SUM regex.** The sum check parses breakdown rows with
+  `^\|\s*` + backtick-word + backtick + `\s*\|\s*` + digits. The fabricated row's first column is
+  `` `GhostBar` / `Fill` `` — the ` / ` + second backtick group breaks the pattern, so the row is
+  NOT parsed. The checker therefore sums only the 4 clean rows = 225 and passes, while a human reads
+  5 rows = 228. A stale number CAN hide behind row formatting.
+- **B2/B3/B4 are outside the checker's coverage entirely.** `--check` only validates the labels
+  `Image.Type.Filled`, `panel-sized`, `visible flat fill`, `CJK label`. It has NO rule for the size
+  buckets (÷1.2, ÷1.4, unexplained), so 144 and 275 are never examined. The `declares_scope`
+  exemptions currently firing (134/1007, 561, 866) are each genuinely a different-scope/superseded
+  figure — those are fine — but the gate's silence is not proof of consistency; it is blind here.
+
+## Secondary (not blocking the FAIL, flag for implementer)
+- §6.4 and the top-of-report evidence line cite `MODAL_*.json` (13 modals) and `PREFAB_*` dumps as
+  evidence, but NONE exist on disk in `design_audit/` — only the 21 EN + 21 JA screen dumps remain
+  (all re-dumped Sep 6 10:26-10:30; the modal pass was not re-run into the folder). No shape count
+  depends on modals, so this is not a count defect, but the report references evidence that a reader
+  cannot open. GPS exclusion is therefore verifiable only in code (`IsGps`), not in an artifact.
+- Not independently re-run this round (Unity-required, secondary; do not change the verdict since the
+  deliverable already fails): A9 `LintRoot` byte-identical to `LintPrefab`, and the EditMode suite /
+  tripwire. Re-run these after the four edits.
+
+## Numbered fix list for the implementer
+1. Delete the `` `GhostBar` / `Fill` | 3 `` row from the §3.5 table so it sums to 225.
+2. Q7b: `§ 3.8 (144)` → `§ 3.8 (139)`.
+3. Q8: `§ 3.8 (275)` → `§ 3.8 (274)`.
+4. §3.8 prose line 250: "plus 275 labels" → "plus 274 labels".
+5. Then extend `audit_numbers.py --check` so it would have caught all four: (a) parse breakdown
+   rows regardless of first-column formatting (or sum ALL numeric table rows under a header), and
+   (b) add the size-bucket counts (÷1.2=139, ÷1.4=209, 59/66=46, unexplained=274) to the checked
+   labels including their Q-row references. Tripwire both new branches.
+6. Optional: either re-dump `MODAL_*`/`PREFAB_*` into `design_audit/` so §6.4 evidence resolves, or
+   soften the report's evidence citation to what is on disk.
+
+Re-derivation scripts: `scratchpad/redderive.py` (mine, independent of `audit_numbers.py`).

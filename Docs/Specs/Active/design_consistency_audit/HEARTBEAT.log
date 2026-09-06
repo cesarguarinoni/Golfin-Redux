@@ -155,3 +155,4 @@ permitted A10 surface. All pre-existing, none touched by this task. Full list:
   ?? Docs/Specs/Active/golfer_3d_test/STATUS.md
   ?? Docs/Specs/Completed/scheme_needle/ARCHITECT_REVIEW.md
 2026-09-06T02:18:22Z round-3: 4 red-team blockers closed + 2 self-found; checker rewritten & tripwired; EditMode 2709/0 failed (suite proven live via 20->999)
+2026-09-06T02:33:06Z round-4: 4 red-team blockers closed (incl fabricated row); gate blind spots closed + 6 tripwires; modals restored; Tier-2 corpus guard; dumps tracked

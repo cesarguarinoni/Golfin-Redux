@@ -22,8 +22,13 @@ CORPUS RULE (the one the report states, applied here and nowhere else):
 from __future__ import annotations
 import collections, glob, json, os, re, sys
 
-D = 'Docs/Diagnostics/_capture/design_audit'
+# The TRACKED copy is the corpus. `Docs/Diagnostics/_capture/` is gitignored, so while the dumps
+# lived only there, every citation in the report pointed at a file no other machine could open —
+# and the audit's whole evidence base was per-machine. This path is committed.
+D = 'Docs/Reports/DesignAudit'
 SCALE = [20, 30, 33, 39, 45, 48, 51, 66]
+TIER2 = {'LoginScreen', 'SignUpScreen', 'SplashScreen', 'CreateUsernameScreen',
+         'EmailConfirmationScreen', 'ResetPasswordScreen'}
 CJK = re.compile(r'[぀-ヿ一-鿿ｦ-ﾟ]')
 
 
@@ -34,6 +39,13 @@ def corpus(locale: str) -> dict:
         if n.startswith(('TRIPWIRE', 'UNITTEST', 'MODAL_', 'PREFAB')):
             continue
         if n.startswith('Inventory_tab'):
+            continue
+        # Tier-2 AUTH screens are dumped as evidence (the spec asks for them) but are NOT part of
+        # the 17-screen corpus the shape counts are computed on. They carry no `MODAL_` prefix, so
+        # when the modal pass was re-run they walked silently into the corpus and moved the size
+        # buckets (÷1.2 139 -> 194, unexplained 274 -> 279) without touching any other number.
+        # Regenerating evidence must not be able to change the audit's findings; this is the guard.
+        if n in TIER2:
             continue
         out[n] = json.load(open(f))
     return out
@@ -107,27 +119,24 @@ def main():
         lines = open(path, encoding='utf-8').read().split('\n')
         bad, info = [], []
 
-        # A line may legitimately quote a number from a DIFFERENT scope, but only if it says so
-        # on that same line. The exemption is SYNTACTIC (the line declares its own scope, or marks
-        # itself as a superseded figure) — never a list of blessed numbers, which is how the last
-        # two checkers passed straight over real defects.
+        # A line may legitimately quote a number from a DIFFERENT scope, but only if it says so on
+        # that same line. The exemption is SYNTACTIC (the line declares its own scope, or marks
+        # itself as a superseded figure) — never a list of blessed numbers, which is how three
+        # successive checkers passed straight over real defects.
         def declares_scope(ln):
             return ('across all' in ln and 'dump' in ln) or 'has been wrong' in ln \
                 or 'The first revision' in ln or 'The second said' in ln \
                 or 'read 134 in one folder' in ln
 
-        # Numbers that are not counts: section refs (§ 3.5, "§ 1"), list markers, years, and the
-        # ÷ divisors. Stripped BEFORE the rule runs so they cannot mask a real count.
         def counts_on(ln):
             ln = re.sub(r'§\s*[\d.]+', ' ', ln)
             ln = re.sub(r'÷\s*[\d.]+', ' ', ln)
             ln = re.sub(r'\b20\d\d-\d\d-\d\d\b', ' ', ln)
             return {int(x) for x in re.findall(r'\b(\d{2,})\b', ln)}
 
-        # THE RULE: any line that names a shape AND states counts must state that shape's
-        # canonical value. It does not care how the number is formatted, bolded or punctuated —
-        # the previous checker required `**N**` as its own span and was therefore blind to
-        # `**S2/S3 - 442 visible, 26 panel-sized**`, which is the defect it existed to catch.
+        # RULE 1 — any line naming a shape AND stating counts must state that shape's canonical
+        # value. Formatting-independent: the previous version required `**N**` as its own span and
+        # was blind to `**S2/S3 - 442 visible, 26 panel-sized**`.
         for label, val in (('Image.Type.Filled', n['filled']),
                            ('panel-sized', n['panel']),
                            ('visible flat fill', n['visfill']),
@@ -136,26 +145,93 @@ def main():
                 if label not in ln:
                     continue
                 nums = counts_on(ln)
-                if not nums:
-                    continue                      # prose mention, states no count
-                if val in nums:
-                    continue                      # states the canonical value
+                if not nums or val in nums:
+                    continue
                 (info if declares_scope(ln) else bad).append((i, label, sorted(nums), val))
 
-        # Every breakdown table must sum to the header it sits under. This check would have caught
-        # the 447-vs-225 defect on its own, knowing nothing about the right answer.
-        rows = {m.group(1): int(m.group(2))
-                for m in re.finditer(r"^\|\s*`(\w+)`\s*\|\s*(\d+)", '\n'.join(lines), re.M)}
+        # RULE 2 — the SIZE BUCKETS. Red-team round 3 found three stale bucket citations (Q7b 144,
+        # Q8 275, prose 275) that this gate could not see because it only ever checked four shape
+        # labels. Each bucket is now checked wherever it is named, including inside a `§ 3.8 (N)`
+        # citation, which is how Q7b and Q8 quote theirs.
+        # Each bucket is matched by SEVERAL surface forms, because prose does not always use the
+        # bucket's name: §3.8 says "plus 274 labels no conversion explains", which is the
+        # unexplained bucket spelled out. A line-based, single-alias rule missed exactly that on
+        # round 3 even while catching the same number in the Q8 table row two sections later.
+        BUCKETS = (('÷1.4', n['sizes'].get('div14', 0), ('÷1.4',)),
+                   ('÷1.2', n['sizes'].get('div12', 0), ('÷1.2',)),
+                   ('59/66', n['sizes'].get('semi5966', 0), ('59/66',)),
+                   ('unexplained', n['sizes'].get('unexplained', 0),
+                    ('nexplained', 'conversion explains', 'convention explains')))
+        # Matched on PARAGRAPHS, whitespace-normalised, so a claim that wraps across a line break
+        # is still one claim. `units` is (first line number, text).
+        units, buf, first = [], [], 1
+        for i, ln in enumerate(lines, 1):
+            if ln.strip() == '':
+                if buf: units.append((first, ' '.join(buf))); buf = []
+                first = i + 1
+            else:
+                if not buf: first = i
+                buf.append(ln.strip())
+        if buf: units.append((first, ' '.join(buf)))
+        # table rows stay individually addressable so a stale cell reports its own line
+        units += [(i, ln) for i, ln in enumerate(lines, 1) if ln.startswith('|')]
+
+        for label, val, aliases in BUCKETS:
+            for i, ln in units:
+                if not any(a in ln for a in aliases):
+                    continue
+                stated = set()
+                for a in aliases:
+                    stated |= {int(x) for x in re.findall(rf"(\d+)\s*(?:labels?\s+)?(?:no\s+)?{re.escape(a)}", ln)}
+                    stated |= {int(x) for x in re.findall(rf"{re.escape(a)}[^|]*\|\s*\**(\d+)", ln)}
+                # A `§ 3.8 (N)` citation belongs to the bucket the ROW IS ABOUT — its action cell —
+                # not to any bucket merely mentioned in passing. Q7 is the ÷1.4 row and its prose
+                # says "not to the ÷1.2 target"; binding the citation to that mention flagged a
+                # correct row.
+                if ln.startswith('|'):
+                    cells = [c.strip() for c in ln.strip('|').split('|')]
+                    subject = cells[1] if len(cells) > 1 else ''
+                else:
+                    subject = ln
+                if any(a in subject for a in aliases):
+                    stated |= {int(x) for x in re.findall(r"§\s*3\.8\s*\((\d+)\)", ln)}
+                stated.discard(0)
+                for got in stated:
+                    if got != val:
+                        (info if declares_scope(ln) else bad).append((i, f'bucket {label}', got, val))
+
+        # RULE 3 — FABRICATION. Every object named in the §3.5 breakdown must actually occur in the
+        # corpus with exactly that count. Round 3 shipped a `GhostBar / Fill | 3` row matching ZERO
+        # images in any of the 21 dumps; a sum check alone could never see that, and the malformed
+        # first column also dodged the sum regex, so the gate reported "none" over both.
+        truth = n['filled_by']
+        rows, in35 = {}, False
+        for ln in lines:
+            if ln.startswith('### 3.5'): in35 = True; continue
+            if in35 and ln.startswith('###'):        break
+            if not in35 or not ln.startswith('|'):   continue
+            cells = [c.strip() for c in ln.strip('|').split('|')]
+            if len(cells) < 2 or not cells[1].strip('*').isdigit():
+                continue
+            name = cells[0].replace('`', '').replace('*', '').strip()
+            if not name or name.lower() in ('object', 'count'):
+                continue
+            rows[name] = int(cells[1].strip('*'))
         if not rows:
-            bad.append(('SUM', 'breakdown table not found - check is blind', 0, n['filled']))
-        elif sum(rows.values()) != n['filled']:
-            bad.append(('SUM', f'{rows}', sum(rows.values()), n['filled']))
+            bad.append(('FAB', '§3.5 breakdown table not parsed - check is blind', 0, n['filled']))
+        else:
+            for name, cnt in rows.items():
+                if name not in truth:
+                    bad.append(('FAB', f'§3.5 row `{name}` matches NO image in the corpus', cnt, 0))
+                elif truth[name] != cnt:
+                    bad.append(('FAB', f'§3.5 row `{name}`', cnt, truth[name]))
+            if sum(rows.values()) != n['filled']:
+                bad.append(('SUM', f'§3.5 rows {rows}', sum(rows.values()), n['filled']))
 
         for i, lab, got, want in info:
             print(f"  scope-declared (OK)  line {i}: {lab} states {got} (corpus = {want})")
-        if bad:
-            for b in bad:
-                print(f"  STALE  line {b[0]}: {b[1]} states {b[2]}, corpus = {b[3]}")
+        for b in bad:
+            print(f"  STALE  line {b[0]}: {b[1]} states {b[2]}, corpus = {b[3]}")
         print("\ncontradictions vs this corpus:", len(bad) if bad else "none")
         return 1 if bad else 0
     return 0

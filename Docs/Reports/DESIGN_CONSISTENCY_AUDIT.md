@@ -6,8 +6,13 @@ individually; the Architect writes those from § 5.
 
 **Coverage: 17 surfaces dumped in EN and JA** via real navigation where a player path exists, `ShowScreen` re-seat where none does (recorded per dump as `reachedVia`).
 
-**Evidence under every row:** `Docs/Diagnostics/_capture/design_audit/*.json` (live dumps, EN + JA,
-via real navigation), `Docs/Diagnostics/_capture/*_lint.json` (74 prefabs + 5 live roots),
+**Evidence under every row:** `Docs/Reports/DesignAudit/*.json` — 61 live dumps (17 screens × EN+JA,
+4 Inventory tab states × EN+JA, 13 modals EN, 6 Tier-2 auth screens EN), all via real navigation.
+**These are COMMITTED.** They were originally written only to `Docs/Diagnostics/_capture/`, which is
+gitignored — so every citation in earlier revisions of this report pointed at a file no other machine
+could open, and the audit's evidence base did not ship with the audit. `Docs/Diagnostics/_capture/`
+remains the tool's working output; `Docs/Reports/DesignAudit/` is the tracked copy the numbers are
+computed from. Also `Docs/Diagnostics/_capture/*_lint.json` (74 prefabs + 5 live roots),
 `Docs/Design/DESIGN_TOKENS.md` (the "expected" column), and
 `Docs/Specs/Active/design_consistency_audit/reference/` (29 node renders).
 
@@ -162,7 +167,6 @@ so the next audit does not re-derive it.
 | `BarContainer` | 33 |
 | `BarPending` | 8 |
 | `GhostBar` | 2 |
-| `GhostBar` / `Fill` | 3 |
 
 `Image.Type.Filled` discards 9-slicing, so a rounded bar renders with wedge caps
 (`reference_ui_bar_fill_width_not_fillamount`: drive **width**, not `fillAmount`). Concentrated in Inventory (84) and Roster (26) — the StatBar / durability-bar family.
@@ -247,7 +251,7 @@ different divisor, and the card mixes them with a correct 66 on the very same bu
 
 **Cesar's shape-(iii) decision, reframed.** The question was "which convention does the game keep?"
 The answer is that **no single convention is in force**: 67 % of labels are already on-scale and the
-remaining third is split across three mutually incompatible conversions plus 275 labels no
+remaining third is split across three mutually incompatible conversions plus 274 labels no
 conversion explains. Recommendation: the **nine scale steps are the ruler**, every off-scale value
 is a defect regardless of which divisor produced it, and each population is fixed against **the
 node**, never against another divisor.
@@ -302,8 +306,8 @@ WARN distribution (prefabs): `unlocalized-text` 412, `flat-fill` 270, `nonunifor
 | **Q6** | Triage the panel-sized flat fills | § 3.6 (291) | per site | Node check each; scrims are correct, missing art is not | M | mixed |
 | **Q9** | MISSIONS card shows tournament copy | § 3.10 | `ModeCard` missions binding | `Reward2Amount` reads "Varies by tournament" on the MISSIONS card, in both collapsed and expanded containers, and has **no locKey** | **XS** | ModeSelection + Home carousel |
 | **Q7** | Retire the ÷1.4 sizes | § 3.8 (209) | ModeCard / ModeHomeCard family first (27.86 / 32.14) | Re-set to the NODE value (39 / 45) — **not** to the ÷1.2 target | S | Home carousel + ModeSelection |
-| **Q7b** | Retire the ÷1.2 sizes | § 3.8 (144) | screens carrying 25 / 40 / 42.5 / 55 | Re-set to the node value per site | **M** | wide |
-| **Q8** | Triage the unexplained sizes | § 3.8 (275) | per site | Compare rendered px to the node; neither convention explains these | **M** | wide |
+| **Q7b** | Retire the ÷1.2 sizes | § 3.8 (139) | screens carrying 25 / 40 / 42.5 / 55 | Re-set to the node value per site | **M** | wide |
+| **Q8** | Triage the unexplained sizes | § 3.8 (274) | per site | Compare rendered px to the node; neither convention explains these | **M** | wide |
 
 ---
 
@@ -361,5 +365,21 @@ WARN distribution (prefabs): `unlocalized-text` 412, `flat-fill` 270, `nonunifor
    **225** (§ 3.5). There is a single legitimate difference (RosterScreen 104 vs 103 non-autosized labels — one label flips to
    auto-sizing under longer Japanese text). **Every count in this report now comes from one
    corpus**, stated at the top of § 1.
-5. **The headline finding's severity was wrong and was corrected by the gate, not by the author.**
+5. **Re-running the modal pass silently moved the size buckets — and that is now guarded.** The
+   modal pass dumps modals AND the six Tier-2 auth screens. Modals carry a `MODAL_` prefix and were
+   excluded by name; the Tier-2 screens carry no prefix, so when the pass was re-run to restore the
+   missing modal evidence they walked straight into the corpus, taking it from 17 screens to 23 and
+   moving **÷1.2 from 139 to 194 and unexplained from 274 to 279** — while every other number
+   (`Filled` 225, flat fills 701/291, LiberationSans 36) stayed put, which is exactly what makes this
+   kind of drift hard to see. **Regenerating evidence must never be able to change a finding.**
+   `audit_numbers.py` now excludes the six Tier-2 screens by name, with the reason written at the
+   exclusion. The buckets above are the 17-screen figures.
+
+6. **The evidence was not shipping with the audit.** All 61 dumps were written only to
+   `Docs/Diagnostics/_capture/`, which `.gitignore` excludes — so every JSON this report cites was
+   per-machine, and no reader, including the Architect who turns these groups into Quick specs,
+   could open one. They are now copied to the tracked `Docs/Reports/DesignAudit/` (9.4 MB raw,
+   ~0.3 MB packed) and the numbers are computed from that copy.
+
+7. **The headline finding's severity was wrong and was corrected by the gate, not by the author.**
    § 3.1 was S1 on the strength of `font.name` alone; the render was never looked at. It is S3.
