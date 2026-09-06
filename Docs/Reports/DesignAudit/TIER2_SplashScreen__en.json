@@ -1,5 +1,5 @@
 {
-  "screen":"SplashScreen",
+  "screen":"TIER2_SplashScreen",
   "locale":"en",
   "reachedVia":"harness ShowScreen (Tier 2)",
   "rootPath":"SplashScreen",

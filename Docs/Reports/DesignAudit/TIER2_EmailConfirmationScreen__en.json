@@ -1,5 +1,5 @@
 {
-  "screen":"EmailConfirmationScreen",
+  "screen":"TIER2_EmailConfirmationScreen",
   "locale":"en",
   "reachedVia":"harness ShowScreen (Tier 2)",
   "rootPath":"EmailConfirmationScreen",
@@ -21,11 +21,11 @@
     {"path":"CardBorder/CardBody","active":true,"sprite":"S_Common_BGCorner20","spriteGuid":"dd96a2f1280ec46459c4e10fbaf32c92","type":"Sliced","ppuMultiplier":1,"color":"#133453FF","width":1074,"height":2117,"spriteBorder":"25,25,25,25","preserveAspect":false,"raycastTarget":true,"outlineComponent":false,"shadowComponent":false},
     {"path":"CardBorder/CardBody/ResendButton","active":true,"sprite":"ButtonCancel","spriteGuid":"6021c639e9c124b44a06c8ccd977896f","type":"Sliced","ppuMultiplier":1,"color":"#FFFFFFFF","width":445,"height":120,"spriteBorder":"25,25,25,25","preserveAspect":false,"raycastTarget":true,"outlineComponent":false,"shadowComponent":false},
     {"path":"CardBorder/CardBody/Separator2","active":true,"sprite":"Divider","spriteGuid":"36b5ccd887d78864b9d3f0b36a18f339","type":"Simple","ppuMultiplier":1,"color":"#FFFFFFFF","width":978,"height":4,"spriteBorder":"0,0,0,0","preserveAspect":false,"raycastTarget":true,"outlineComponent":false,"shadowComponent":false},
-    {"path":"CardBorder/CardBody/BackToLoginButton","active":true,"sprite":"Green Button","spriteGuid":"091a45d11621e7745b879424b7b278a5","type":"Sliced","ppuMultiplier":1,"color":"#FFFFFFFF","width":389.89,"height":120,"spriteBorder":"30,30,30,30","preserveAspect":false,"raycastTarget":true,"outlineComponent":false,"shadowComponent":false},
+    {"path":"CardBorder/CardBody/BackToLoginButton","active":true,"sprite":"Green Button","spriteGuid":"091a45d11621e7745b879424b7b278a5","type":"Sliced","ppuMultiplier":1,"color":"#FFFFFFFF","width":390.44,"height":120,"spriteBorder":"30,30,30,30","preserveAspect":false,"raycastTarget":true,"outlineComponent":false,"shadowComponent":false},
     {"path":"CardBorder/CardBody/Separator1","active":false,"sprite":"Divider","spriteGuid":"36b5ccd887d78864b9d3f0b36a18f339","type":"Simple","ppuMultiplier":1,"color":"#FFFFFFFF","width":1174,"height":4,"spriteBorder":"0,0,0,0","preserveAspect":false,"raycastTarget":true,"outlineComponent":false,"shadowComponent":false}
   ],
   "buttons":[
     {"path":"CardBorder/CardBody/ResendButton","active":true,"width":445,"height":120,"buttonPressFeedback":true},
-    {"path":"CardBorder/CardBody/BackToLoginButton","active":true,"width":389.89,"height":120,"buttonPressFeedback":true}
+    {"path":"CardBorder/CardBody/BackToLoginButton","active":true,"width":390.44,"height":120,"buttonPressFeedback":true}
   ]
 }

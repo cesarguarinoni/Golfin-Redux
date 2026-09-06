@@ -203,3 +203,55 @@ report pointed at a file no other machine could open, including the Architect's.
 tracked `Docs/Reports/DesignAudit/` (9.4 MB raw, ~0.3 MB packed) and `audit_numbers.py` now computes
 from that copy, so the numbers are reproducible by anyone with the repo. This is under `Docs/**` and
 therefore inside A10; `.gitignore` was NOT touched.
+
+
+---
+
+## Round 4 — red-team PASSED, and the two nits it handed over turned out to hide a real defect
+
+The round-4 red-team could not break the deliverable: it re-derived every headline with its own
+extractor (all exact), confirmed the tracked evidence is byte-identical to the tool's output, verified
+A9 empirically, and set `ARCHITECT_REVIEW_PASS`. It also handed over two non-blocking nits. Chasing
+the second one found a defect neither of us had seen.
+
+**Nit 1 — "nine scale steps" lists 33 twice.** Real: **nine type STYLES over eight distinct SIZES**.
+`EN/Caption_2` (Regular 400) and `EN/Caption_2_Medium` (Medium 500) are both 33 px and differ by
+weight, not size. The matcher always used the eight distinct sizes, so no count was ever affected —
+only the prose was wrong. Corrected in the report (3 places) and in `DESIGN_TOKENS.md`.
+
+**Nit 2 — "the Tier-2 exclusion is by name, harmless today."** It was not harmless, and the name list
+was a symptom. Tracing why those six screens needed excluding at all:
+
+> `HomeScreen__en.json` carried `reachedVia:"harness ShowScreen (Tier 2)"`.
+
+The Tier-2 loop calls `Force(id)` and then dumps `CurrentScreenRoot()` under `r.name` **without
+checking the re-seat landed**. For an id that resolves nowhere, `Force` returns true, the screen does
+not change, and the loop dumps whatever IS active — HomeScreen — under its own filename, overwriting
+the Tier-1 dump. The measurements were identical (131 texts / 219 images / 35 auto-sized, matching
+its untouched JA sibling), so no count moved and every gate passed. Only the provenance was
+corrupted — on the single field this report uses to admit which surfaces were re-seated rather than
+tapped.
+
+Fixed structurally, both halves:
+1. **Verify before dumping.** If the active root's name doesn't match the requested id, log and skip
+   rather than overwrite another screen's dump.
+2. **`TIER2_` prefix**, exactly as modals carry `MODAL_`. This is why the corpus filter can now
+   exclude by prefix instead of a hand-kept name list — closing nit 2 at the cause rather than the
+   symptom.
+
+Re-ran `modals:en` and `dump:en`. **Zero measurement changes across the whole corpus**; the only
+diffs are the six Tier-2 files renamed to `TIER2_*` and two `reachedVia` strings. Every headline is
+byte-for-byte what it was: 17/17 screens, LiberationSans 36 (+5), Outline 20, Shadow 0, Filled 225
+{182/33/8/2}, 701/291, CJK 660/7, buckets 1389/209/139/46/274 over n=2057.
+
+**A third finding, from the same thread.** `DumpCurrent` never passed a `via`, so every TAPPED screen
+recorded `reachedVia:"unspecified"` — read literally, 11 of 17 corpus dumps claim no provenance at
+all, on a report whose §7 leans on that field. The navigation was always real (`Tap(slot)` drives the
+bottom-nav button's own `onClick`); only the record was missing, so the field understates real
+navigation rather than overstating a harness as a tap. The runner now records it. **The committed
+dumps deliberately predate that fix and are labelled in the report instead of regenerated** — because
+re-running a pass to improve a label is precisely how the Tier-2 contamination got in, and no
+finding is worth risking the corpus for a better string.
+
+**Tests after the runner change:** EditMode 2709 total / 2706 passed / **0 failed** / 3 pre-existing
+skips.

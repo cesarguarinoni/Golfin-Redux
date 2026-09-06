@@ -1,7 +1,7 @@
 {
   "screen":"HomeScreen",
   "locale":"en",
-  "reachedVia":"harness ShowScreen (Tier 2)",
+  "reachedVia":"unspecified",
   "rootPath":"HomeScreen",
   "canvasScaleFactor":1,
   "renderedPxFormula":"fontSize * rectTransform.lossyScale.y / canvas.scaleFactor",
@@ -147,7 +147,7 @@
     {"path":"PageDots/Dot2","active":false,"sprite":"Dot Inactive","spriteGuid":"07efbbbe8206c04439e7a986f3909d49","type":"Simple","ppuMultiplier":1,"color":"#FFFFFFFF","width":12,"height":12,"spriteBorder":"0,0,0,0","preserveAspect":false,"raycastTarget":true,"outlineComponent":false,"shadowComponent":false},
     {"path":"PageDots/Dot3","active":false,"sprite":"Dot Inactive","spriteGuid":"07efbbbe8206c04439e7a986f3909d49","type":"Simple","ppuMultiplier":1,"color":"#FFFFFFFF","width":12,"height":12,"spriteBorder":"0,0,0,0","preserveAspect":false,"raycastTarget":true,"outlineComponent":false,"shadowComponent":false},
     {"path":"CharacterRoot/CharacterImage","active":true,"sprite":"James","spriteGuid":"c571be88041757949b31657cb28853c0","type":"Simple","ppuMultiplier":1,"color":"#FFFFFFFF","width":1090,"height":1907,"spriteBorder":"0,0,0,0","preserveAspect":true,"raycastTarget":true,"outlineComponent":false,"shadowComponent":false},
-    {"path":"DailyMissionPill/Glow","active":true,"sprite":"S_DailyPillGlow","spriteGuid":"086acc78ed8a34ce090a7cec8d2d5aea","type":"Sliced","ppuMultiplier":2,"color":"#FFFFFF63","width":553,"height":194,"spriteBorder":"172,172,172,172","preserveAspect":false,"raycastTarget":false,"outlineComponent":false,"shadowComponent":false},
+    {"path":"DailyMissionPill/Glow","active":true,"sprite":"S_DailyPillGlow","spriteGuid":"086acc78ed8a34ce090a7cec8d2d5aea","type":"Sliced","ppuMultiplier":2,"color":"#FFFFFF44","width":553,"height":194,"spriteBorder":"172,172,172,172","preserveAspect":false,"raycastTarget":false,"outlineComponent":false,"shadowComponent":false},
     {"path":"DailyMissionPill/Panel","active":true,"sprite":"S_DailyPillPanel","spriteGuid":"448cb5f34eebb4b38962e7959d0a11ed","type":"Sliced","ppuMultiplier":2,"color":"#FFFFFFFF","width":481,"height":122,"spriteBorder":"100,100,100,100","preserveAspect":false,"raycastTarget":true,"outlineComponent":false,"shadowComponent":false},
     {"path":"DailyMissionPill/StreakFlame/Flame","active":false,"sprite":"flame","spriteGuid":"39c3a317ce00c43d491ded917847febf","type":"Simple","ppuMultiplier":1,"color":"#FFFFFFFF","width":58,"height":90,"spriteBorder":"0,0,0,0","preserveAspect":true,"raycastTarget":false,"outlineComponent":false,"shadowComponent":false},
     {"path":"PromoBanner","active":true,"sprite":"GPS Banner","spriteGuid":"b7734074df6a8cf47bd3d0b112cfc5f6","type":"Simple","ppuMultiplier":1,"color":"#FFFFFFFF","width":970,"height":214,"spriteBorder":"0,0,0,0","preserveAspect":false,"raycastTarget":false,"outlineComponent":false,"shadowComponent":false},

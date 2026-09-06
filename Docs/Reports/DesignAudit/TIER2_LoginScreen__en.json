@@ -1,5 +1,5 @@
 {
-  "screen":"LoginScreen",
+  "screen":"TIER2_LoginScreen",
   "locale":"en",
   "reachedVia":"harness ShowScreen (Tier 2)",
   "rootPath":"LoginScreen",
@@ -45,7 +45,7 @@
   ],
   "buttons":[
     {"path":"CardBorder/CardBody/ScrollView/Viewport/Content/PasswordRow/PasswordInput/EyeButton","active":true,"width":72,"height":72,"buttonPressFeedback":true},
-    {"path":"CardBorder/CardBody/ScrollView/Viewport/Content/ForgotPassword","active":true,"width":317.15,"height":40,"buttonPressFeedback":true},
+    {"path":"CardBorder/CardBody/ScrollView/Viewport/Content/ForgotPassword","active":true,"width":318.97,"height":40,"buttonPressFeedback":true},
     {"path":"CardBorder/CardBody/ScrollView/Viewport/Content/LoginButton","active":true,"width":388,"height":120,"buttonPressFeedback":true},
     {"path":"CardBorder/CardBody/ScrollView/Viewport/Content/GooglePill","active":true,"width":670,"height":150,"buttonPressFeedback":true},
     {"path":"CardBorder/CardBody/ScrollView/Viewport/Content/ApplePill","active":true,"width":670,"height":150,"buttonPressFeedback":true},

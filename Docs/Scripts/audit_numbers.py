@@ -27,8 +27,6 @@ import collections, glob, json, os, re, sys
 # and the audit's whole evidence base was per-machine. This path is committed.
 D = 'Docs/Reports/DesignAudit'
 SCALE = [20, 30, 33, 39, 45, 48, 51, 66]
-TIER2 = {'LoginScreen', 'SignUpScreen', 'SplashScreen', 'CreateUsernameScreen',
-         'EmailConfirmationScreen', 'ResetPasswordScreen'}
 CJK = re.compile(r'[぀-ヿ一-鿿ｦ-ﾟ]')
 
 
@@ -36,17 +34,16 @@ def corpus(locale: str) -> dict:
     out = {}
     for f in glob.glob(f'{D}/*__{locale}.json'):
         n = os.path.basename(f).replace(f'__{locale}.json', '')
-        if n.startswith(('TRIPWIRE', 'UNITTEST', 'MODAL_', 'PREFAB')):
+        if n.startswith(('TRIPWIRE', 'UNITTEST', 'MODAL_', 'PREFAB', 'TIER2_')):
             continue
         if n.startswith('Inventory_tab'):
             continue
-        # Tier-2 AUTH screens are dumped as evidence (the spec asks for them) but are NOT part of
-        # the 17-screen corpus the shape counts are computed on. They carry no `MODAL_` prefix, so
-        # when the modal pass was re-run they walked silently into the corpus and moved the size
-        # buckets (÷1.2 139 -> 194, unexplained 274 -> 279) without touching any other number.
-        # Regenerating evidence must not be able to change the audit's findings; this is the guard.
-        if n in TIER2:
-            continue
+        # Tier-2 AUTH screens are evidence, not corpus. They used to carry NO prefix, so re-running
+        # the modal pass walked them into the corpus (17 screens -> 23) and moved the size buckets
+        # (÷1.2 139 -> 194, unexplained 274 -> 279) while every other number held — drift that is
+        # nearly invisible. The dumper now writes them as `TIER2_*`, so this excludes by PREFIX like
+        # every other non-corpus dump, rather than by a hand-kept name list that a new Tier-2 screen
+        # would silently defeat.
         out[n] = json.load(open(f))
     return out
 

@@ -303,3 +303,91 @@ Same stale figure as B3, in prose. **Fix:** `275` → `274`.
    soften the report's evidence citation to what is on disk.
 
 Re-derivation scripts: `scratchpad/redderive.py` (mine, independent of `audit_numbers.py`).
+
+---
+
+# RED-TEAM ROUND 4 — 2026-09-06 11:45 JST — `ARCHITECT_REVIEW_PASS`
+
+Fourth adversarial pass. I re-derived every headline with my OWN extractor
+(`scratchpad/redteam_extract.py`, no shared code with `audit_numbers.py`), diffed the evidence
+byte-for-byte, ran the linter parity and the full EditMode sweep myself, and actively tried to break
+the report on numbers, evidence integrity, gate coverage, scope and behaviour. It holds.
+
+## Prior red-team-3 blockers — all GONE (re-verified against the corpus, not the report)
+1. **Fabricated `GhostBar / Fill | 3` row** → GONE. §3.5 now shows `GhostBar | 2`, and GhostBar
+   genuinely occurs **twice** in the corpus (`RosterScreen …/CharacterStats1|2/…/GhostBar`). Table
+   sums 182+33+8+2 = **225** = corpus Filled. Not a fabrication.
+2. **Q7b 144 → 139** → GONE. My div12 bucket = **139**; Q7b cell = 139.
+3. **Q8 275 → 274** → GONE. My unexplained bucket = **274**; Q8 cell = 274.
+4. **§3.8 prose 275 → 274** → GONE. No live `275`/`144`/`228`(count)/`866` claim survives anywhere
+   (the only `866`/`860` are inside the "has been wrong twice" history note, scope-declared).
+
+## Independent re-derivation (my extractor vs report — every headline EXACT)
+Corpus = exactly **17 EN / 17 JA** distinct screens (Inventory tabs collapsed; MODAL_/PREFAB/
+TRIPWIRE/UNITTEST/Tier-2 excluded). LiberationSans **36 (+5 = 41)** · Outline **20** · Shadow **0**
+· Filled **225** {Bar 182, BarContainer 33, BarPending 8, GhostBar 2} · visible flat **701** /
+panel **291** · CJK **660** Latin / **7** NotoSansJP · sizes n=**2057** {on-scale 1389, ÷1.4 209,
+÷1.2 139, 59/66 46, unexplained 274}. §3.6 alpha-sensitivity table re-derived at all five floors
+(709/295, 708/295, 704/291, **701/291**, 690/291) — exact. §7 dev-4 parity re-derived: EN all-21
+Filled **561** = JA all-21 **561**. §4/§3.7 in-scope prefab FAIL = **12 across 5 prefabs**
+(badge pills 8, rims 4), live GeneralShopScreen **30** — exact (GPS/ScoreUpload `_lint.json` on disk
+are stale artifacts of other tasks, correctly NOT counted).
+
+## The three structural changes this round — attacked hardest
+- **(A) Evidence moved + committed.** `diff -rq` of `Docs/Reports/DesignAudit/` vs the tool's
+  `Docs/Diagnostics/_capture/design_audit/` = **IDENTICAL**; all **61** files MD5-identical; all 61
+  tracked and committed in `666c198a0`; `.gitignore` NOT modified. No fabrication.
+- **(B) Modal pass restored.** All **13** `MODAL_*.json` present, every one `locale:"en"`. A13: none
+  is a GPS modal; grep for `Gps` across all dumps returns only HomeScreen's `GpsPill`/`PromoBanner`
+  launcher elements (legitimate in-scope HomeScreen children, not a GPS screen/prefab).
+- **(C) Tier-2 exclusion is LEGITIMATE, not number-fitting.** The SPEC node table itself carves
+  Tier-2 auth screens out as "inventory + lint only, no crop sheet"; the report's 17-screen corpus
+  is exactly the SPEC's Tier-1 set. I confirmed the claimed drift is real (adding the 6 Tier-2
+  screens moves ÷1.2 139→194 and unexplained 274→279, other numbers steady) — so the exclusion
+  RESTORES the intended corpus rather than inventing one to recover old numbers. Corpus is exactly
+  17; no other dump silently in or out (classified every `*__en.json`).
+
+## Standing attacks
+- **(d) A10.** `git show --name-only 666c198a0` = only `Docs/**` (67 files, zero outside
+  `Docs/`/`Assets/Editor/UIFidelity/`). Every out-of-surface dirty path now in the tree (74) is a
+  subset of the 121 recorded in `HEARTBEAT.log`'s iter-1 kickoff baseline — no new production drift.
+- **(e) A9 — verified EMPIRICALLY, not by reading the comment.** Ran `LintPrefab` and `LintRoot` on
+  `GeneralShopCard.prefab` via `script-execute`: return string identical, JSON **byte-identical**,
+  md5 **`78c23b5b237c2842ecf94c24811a48bd`** for both (matches the commit's claimed md5). Diff of
+  `UIFidelityLinter.cs` is a pure `LintInstance` extraction — no rule/threshold change. ShellScene
+  left `IsDirty:false`.
+- **Tests.** `tests-run` EditMode = **2709 total / 2706 passed / 0 failed / 3 skipped**
+  (`HoleCompleteDriverTests`, pre-existing Stage-C1). 12 `[Test]` methods in
+  `Assets/Editor/UIFidelity/Tests/DesignAuditToolingTests.cs` (committed, compiled — the whole
+  assembly set ran green).
+
+## (c) `--check` gate — robustness tested with MY OWN planted defects
+- CATCHES: a stale §1 `Image.Type.Filled` headline (299→flag, RULE1) and a stale §3.5 row
+  (`Bar` 182→181 fires both FAB and SUM, RULE3).
+- **Two blind spots (reported, per instruction; neither currently hides a defect):**
+  (1) the gate checks only Filled/panel/visible/CJK + the four size buckets + the §3.5 table — it
+  does **not** cover the LiberationSans, Outline, Shadow or on-scale counts (planted Outline 20→44
+  passed clean); (2) the syntactic `declares_scope` exemption can hide an arbitrary stale bucket
+  behind a trigger phrase (planted `÷1.2 = 9999` behind "The first revision" was classed
+  scope-declared, exit 0). I independently verified the real values in every uncovered/scope-declared
+  location are correct, so no live defect is concealed. The gate is the implementer's convenience;
+  I am the gate of record and re-derived everything from the dumps.
+
+## Break-attempts (Step 3) — why each failed
+- **Numeric:** re-derived all 12 headlines + the sensitivity table + the parity independently; every
+  one exact. No sub-table, fix-row (§5), or §1 cell disagrees with the corpus. The failure shape of
+  the last three rounds (top-line fixed, a cell left stale) does not recur.
+- **Evidence integrity:** tried to find a tracked/tool byte mismatch, a missing/extra dump, a
+  gamed exclusion, a touched `.gitignore`, GPS contamination — none.
+- **Behaviour/spec-intent:** A9 byte-identical, tests green, scope clean; the audit's intent
+  (trustworthy findings + fix list + shippable evidence) is met — evidence now ships committed and
+  every number is machine-reproducible.
+
+## Non-blocking nits (for the Architect, not fixes for this task)
+- §2 prose says the EN scale is "nine steps" then lists `20·30·33·33·39·45·48·51·66` — 8 distinct
+  values with `33` duplicated. Cosmetic; the on-scale bucket (1389) is computed from the 8 distinct
+  steps and matches, so no count is affected.
+- The Tier-2 exclusion is by NAME; harmless today (LoadingScreen isn't dumped) but would need a
+  matching entry if a future pass dumps another prefix-less screen.
+
+**Verdict:** I tried to break it four ways and could not. Advancing to Cesar.

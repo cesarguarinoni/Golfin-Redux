@@ -1,7 +1,7 @@
 {
   "screen":"ModeSelectionScreen",
   "locale":"en",
-  "reachedVia":"real nav: bottom-nav TEE",
+  "reachedVia":"unspecified",
   "rootPath":"ModeSelectionScreen",
   "canvasScaleFactor":1,
   "renderedPxFormula":"fontSize * rectTransform.lossyScale.y / canvas.scaleFactor",

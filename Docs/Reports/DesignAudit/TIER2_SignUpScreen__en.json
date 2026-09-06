@@ -1,5 +1,5 @@
 {
-  "screen":"SignUpScreen",
+  "screen":"TIER2_SignUpScreen",
   "locale":"en",
   "reachedVia":"harness ShowScreen (Tier 2)",
   "rootPath":"SignUpScreen",
@@ -42,7 +42,7 @@
     {"path":"CardBorder/CardBody/ScrollView/Viewport/Content/PasswordRules/RuleLower/RuleIcon","active":true,"sprite":"ICO_RuleCross","spriteGuid":"26f319a60dba4437aa888670489d4c12","type":"Simple","ppuMultiplier":1,"color":"#FFFFFFFF","width":48,"height":63.7143,"spriteBorder":"0,0,0,0","preserveAspect":true,"raycastTarget":true,"outlineComponent":false,"shadowComponent":false},
     {"path":"CardBorder/CardBody/ScrollView/Viewport/Content/PasswordRules/RuleDigit/RuleIcon","active":true,"sprite":"ICO_RuleCross","spriteGuid":"26f319a60dba4437aa888670489d4c12","type":"Simple","ppuMultiplier":1,"color":"#FFFFFFFF","width":48,"height":63.7143,"spriteBorder":"0,0,0,0","preserveAspect":true,"raycastTarget":true,"outlineComponent":false,"shadowComponent":false},
     {"path":"CardBorder/CardBody/ScrollView/Viewport/Content/PasswordRules/RuleSpecial/RuleIcon","active":true,"sprite":"ICO_RuleCross","spriteGuid":"26f319a60dba4437aa888670489d4c12","type":"Simple","ppuMultiplier":1,"color":"#FFFFFFFF","width":48,"height":63.7143,"spriteBorder":"0,0,0,0","preserveAspect":true,"raycastTarget":true,"outlineComponent":false,"shadowComponent":false},
-    {"path":"CardBorder/CardBody/ScrollView/Viewport/Content/CreateButton","active":true,"sprite":"Green Button","spriteGuid":"091a45d11621e7745b879424b7b278a5","type":"Sliced","ppuMultiplier":1,"color":"#FFFFFFFF","width":426.95,"height":120,"spriteBorder":"30,30,30,30","preserveAspect":false,"raycastTarget":true,"outlineComponent":false,"shadowComponent":false},
+    {"path":"CardBorder/CardBody/ScrollView/Viewport/Content/CreateButton","active":true,"sprite":"Green Button","spriteGuid":"091a45d11621e7745b879424b7b278a5","type":"Sliced","ppuMultiplier":1,"color":"#FFFFFFFF","width":431.3,"height":120,"spriteBorder":"30,30,30,30","preserveAspect":false,"raycastTarget":true,"outlineComponent":false,"shadowComponent":false},
     {"path":"CardBorder/CardBody/ScrollView/Viewport/Content/Separator1","active":true,"sprite":"Divider","spriteGuid":"36b5ccd887d78864b9d3f0b36a18f339","type":"Simple","ppuMultiplier":1,"color":"#FFFFFFFF","width":978,"height":4,"spriteBorder":"0,0,0,0","preserveAspect":false,"raycastTarget":true,"outlineComponent":false,"shadowComponent":false},
     {"path":"CardBorder/CardBody/ScrollView/Viewport/Content/GooglePill","active":true,"sprite":"S_SocialPillBordered","spriteGuid":"a3db9e01836e14c3aae6459a2795e854","type":"Simple","ppuMultiplier":1,"color":"#FFFFFFFF","width":670,"height":150,"spriteBorder":"28.65672,28.625,28.65672,28.625","preserveAspect":false,"raycastTarget":true,"outlineComponent":false,"shadowComponent":false},
     {"path":"CardBorder/CardBody/ScrollView/Viewport/Content/GooglePill/Inner","active":true,"sprite":"S_PillStadium","spriteGuid":"bb07d102185aa4f1ca51da13de9eeac6","type":"Sliced","ppuMultiplier":4,"color":"#FFFFFFFF","width":664,"height":144,"spriteBorder":"88,88,88,88","preserveAspect":false,"raycastTarget":true,"outlineComponent":false,"shadowComponent":false},
@@ -55,7 +55,7 @@
   ],
   "buttons":[
     {"path":"CardBorder/CardBody/ScrollView/Viewport/Content/PasswordRow/PasswordInput/EyeButton","active":true,"width":72,"height":72,"buttonPressFeedback":true},
-    {"path":"CardBorder/CardBody/ScrollView/Viewport/Content/CreateButton","active":true,"width":426.95,"height":120,"buttonPressFeedback":true},
+    {"path":"CardBorder/CardBody/ScrollView/Viewport/Content/CreateButton","active":true,"width":431.3,"height":120,"buttonPressFeedback":true},
     {"path":"CardBorder/CardBody/ScrollView/Viewport/Content/GooglePill","active":true,"width":670,"height":150,"buttonPressFeedback":true},
     {"path":"CardBorder/CardBody/ScrollView/Viewport/Content/ApplePill","active":true,"width":670,"height":150,"buttonPressFeedback":true},
     {"path":"CardBorder/CardBody/ScrollView/Viewport/Content/CancelButton","active":true,"width":445,"height":120,"buttonPressFeedback":true},

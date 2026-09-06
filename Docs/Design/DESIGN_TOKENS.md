@@ -25,7 +25,7 @@ Read from `13994:1935`, `4065:14998`, `4065:9071`, `4065:16939`, `4079:1726`.
 | `EN/Headline (en)` | SemiBold 600 | 51 | 66 | −1.29 | 13994:1935 |
 | `EN/Title_2 (en)` | SemiBold 600 | 66 | 84 | −0.78 | 13994:1935 |
 
-**The type scale in use is nine steps: 20 · 30 · 33 · 33 · 39 · 45 · 48 · 51 · 66.**
+**The type scale in use is nine styles over EIGHT distinct sizes: 20 · 30 · 33 · 39 · 45 · 48 · 51 · 66.** (`EN/Caption_2` and `EN/Caption_2_Medium` are both 33 px and differ by weight, not size — nine variables, eight sizes.)
 `Title_1`, `Large Title`, `Body` and `Caption_1` were named in the seed as expected members but are
 **used by no in-scope frame** — see § Unresolved. That absence is itself an audit input: a rendered
 size that matches none of the nine steps above cannot be excused as "some other scale step".

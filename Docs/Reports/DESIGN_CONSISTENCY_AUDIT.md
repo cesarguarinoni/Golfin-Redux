@@ -64,9 +64,12 @@ same shape in §1 and §3 — see § 7 deviation 4.
 
 `Docs/Design/DESIGN_TOKENS.md` is complete for what the file actually uses. Two gaps matter:
 
-- **The EN scale in use is nine steps** — 20 · 30 · 33 · 33 · 39 · 45 · 48 · 51 · 66. `Title_1`,
+- **The EN scale in use is nine type styles over EIGHT distinct sizes** — 20 · 30 · 33 · 39 · 45 ·
+  48 · 51 · 66. (Earlier revisions called this "nine steps" and listed 33 twice: `EN/Caption_2` and
+  `EN/Caption_2_Medium` are two styles at the same 33 px, differing in weight, not size. The
+  matcher has always used the eight distinct sizes; only the prose said nine.) `Title_1`,
   `Large Title`, `Body`, `Caption_1` are referenced by **no in-scope frame**. A rendered size
-  matching none of the nine cannot be excused as "another step".
+  matching none of the eight cannot be excused as "another step".
 - **Only ONE `JP/*` variable exists in any in-scope frame** (`JP/Footnote (jp)`, 39/54/−0.24).
   Every other JA size therefore has **no node-side token to be measured against**, which is why
   § 3.1 reports the JA *font binding* rather than JA size defects.
@@ -227,7 +230,7 @@ value.
 
 | Convention | labels | share | the values it explains |
 |---|---|---|---|
-| On one of the nine scale steps | **1389** | 67.5 % | — |
+| On one of the eight scale sizes | **1389** | 67.5 % | — |
 | **÷1.4** | **209** | 10.2 % | 21.6 · 27.86 · 28 · 28.05 · 32 · 32.14 · 47.1 |
 | **÷1.2** | **139** | 6.8 % | 16.7 · 17 · 25 · 27.5 · 37.4 · 40 · 42.5 · 55 |
 | **59/66** SemiBold | **46** | 2.2 % | 18 · 26.7 · 26.99 · 34.6 · 35 |
@@ -252,7 +255,7 @@ different divisor, and the card mixes them with a correct 66 on the very same bu
 **Cesar's shape-(iii) decision, reframed.** The question was "which convention does the game keep?"
 The answer is that **no single convention is in force**: 67 % of labels are already on-scale and the
 remaining third is split across three mutually incompatible conversions plus 274 labels no
-conversion explains. Recommendation: the **nine scale steps are the ruler**, every off-scale value
+conversion explains. Recommendation: the **eight scale sizes are the ruler**, every off-scale value
 is a defect regardless of which divisor produced it, and each population is fixed against **the
 node**, never against another divisor.
 
@@ -334,6 +337,16 @@ WARN distribution (prefabs): `unlocalized-text` 412, `flat-fill` 270, `nonunifor
    them exists from a fresh session (a tournament needs an entered tournament; GachaPrizes needs a
    completed pull). Each such dump records `reachedVia:"harness ShowScreen (no player path)"`. Their
    findings are real, but their *layout* is a re-seated state, not one a player produced.
+
+   **The converse is not recorded in the dumps that shipped.** The TAPPED surfaces read
+   `reachedVia:"unspecified"`, because `DumpCurrent` did not pass a `via` on the tap path. Those
+   screens WERE reached by real navigation — `Tap(slot)` drives the bottom-nav button's own
+   `onClick` — so the field understates real navigation as unknown rather than overstating a
+   harness as a tap. Read literally, 11 of 17 corpus dumps claim no provenance at all. The runner
+   now records it (`real nav: bottom-nav <slot>.onClick`, the Inventory tab's own
+   `tabButtons[i].onClick`, `SettingsButton.onClick`); the committed dumps predate that fix and are
+   labelled here rather than regenerated, because re-running a pass to improve a label is exactly
+   how the Tier-2 contamination in § 7 got in.
 6. **`TournamentSignupModal`'s reference render is 1020 px**, 4 px under A0's floor. Figma will not
    render above 1:1 (verified: requesting 2040 returns 1020), so the floor is unreachable for that
    node without fabricating resolution.
@@ -375,11 +388,21 @@ WARN distribution (prefabs): `unlocalized-text` 412, `flat-fill` 270, `nonunifor
    `audit_numbers.py` now excludes the six Tier-2 screens by name, with the reason written at the
    exclusion. The buckets above are the 17-screen figures.
 
-6. **The evidence was not shipping with the audit.** All 61 dumps were written only to
+6. **The corpus is reproducible in its MEASUREMENTS, not in its BYTES.** Re-running a pass and
+   diffing showed four screens changing with zero effect on any count: `GeneralShopScreen`'s banner
+   countdowns tick (`ENDS IN: 116d 22h 33m` → `116d 21h 8m`), `HomeScreen`'s `DailyMissionPill/Glow`
+   is an ANIMATING alpha sampled at whatever phase the frame caught (`#FFFFFF63` → `#FFFFFF44`), and
+   `SettingsOverlay` carries the build number (2715 → 2718). Every font, size, type, sprite and
+   geometry field was identical. So: compare two corpora by their measurements, never by an md5 —
+   a byte diff of this evidence will always show noise, and reading that noise as drift (or a
+   matching md5 as proof of nothing having changed within one run) would be a mistake in both
+   directions.
+
+7. **The evidence was not shipping with the audit.** All 61 dumps were written only to
    `Docs/Diagnostics/_capture/`, which `.gitignore` excludes — so every JSON this report cites was
    per-machine, and no reader, including the Architect who turns these groups into Quick specs,
    could open one. They are now copied to the tracked `Docs/Reports/DesignAudit/` (9.4 MB raw,
    ~0.3 MB packed) and the numbers are computed from that copy.
 
-7. **The headline finding's severity was wrong and was corrected by the gate, not by the author.**
+8. **The headline finding's severity was wrong and was corrected by the gate, not by the author.**
    § 3.1 was S1 on the strength of `font.name` alone; the render was never looked at. It is S3.

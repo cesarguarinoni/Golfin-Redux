@@ -200,7 +200,7 @@ namespace Golfin.EditorTools.UIFidelity
                 {
                     yield return Tap(slot, 20f);
                     yield return new WaitForSecondsRealtime(3.5f);
-                    yield return DumpCurrent(label, locale);
+                    yield return DumpCurrent(label, locale, $"real nav: bottom-nav {slot}.onClick");
                 }
 
                 // The Inventory tabs are hidden states reachable only through their own toggles.
@@ -230,7 +230,8 @@ namespace Golfin.EditorTools.UIFidelity
                     {
                         tabs[i].onClick.Invoke();
                         yield return new WaitForSecondsRealtime(2.5f);
-                        DesignAuditDumper.Dump(inv, $"Inventory_tab{i}_{tabs[i].name}", locale);
+                        DesignAuditDumper.Dump(inv, $"Inventory_tab{i}_{tabs[i].name}", locale,
+                                               $"real nav: InventoryScreenController.tabButtons[{i}].onClick");
                     }
                 }
 
@@ -240,7 +241,8 @@ namespace Golfin.EditorTools.UIFidelity
                 yield return new WaitForSecondsRealtime(3f);
                 var settings = GameObject.Find("SettingsScreen");
                 if (settings != null && settings.activeInHierarchy)
-                    DesignAuditDumper.Dump(settings, "SettingsOverlay", locale);
+                    DesignAuditDumper.Dump(settings, "SettingsOverlay", locale,
+                                           "real nav: SettingsButton.onClick");
                 else Line("WARN: SettingsScreen overlay not open after tapping SettingsButton");
             }
 
@@ -362,13 +364,35 @@ namespace Golfin.EditorTools.UIFidelity
                 }
 
                 // Tier 2 — real ScreenIds, so the same re-seat the deep pass uses.
+                //
+                // TWO GUARDS, both bought with real damage. `Force(id)` can report success while the
+                // screen does NOT change (a ScreenId that maps nowhere, a re-seat the manager
+                // ignores). This loop then dumped whatever WAS active — HomeScreen — under its own
+                // name, overwriting the Tier-1 dump and stamping it `reachedVia:"… (Tier 2)"`. The
+                // measurements happened to be identical, so no count moved and every gate passed;
+                // only the provenance was corrupted, on the one field this report uses to admit
+                // which surfaces were re-seated rather than tapped.
+                //
+                // 1. VERIFY THE RE-SEAT LANDED. Never dump a screen we did not ask for.
+                // 2. PREFIX THE OUTPUT. Tier-2 screens are evidence, not corpus. Modals carry
+                //    `MODAL_` for exactly this reason; Tier-2 carried nothing, so it both collided
+                //    with Tier-1 filenames and walked into the corpus (17 screens -> 23, moving
+                //    ÷1.2 139 -> 194 and unexplained 274 -> 279). The prefix fixes both, and lets
+                //    the corpus filter exclude by prefix instead of by a hand-kept name list.
                 foreach (var id in new[] { "Login", "SignUp", "CreateUsername",
                                            "EmailConfirmation", "ResetPassword", "Loading", "Splash" })
                 {
                     if (!Force(id)) { Line($"note: no ScreenId '{id}' — skipped"); continue; }
                     yield return new WaitForSecondsRealtime(2.5f);
                     var r = CurrentScreenRoot();
-                    if (r != null) DesignAuditDumper.Dump(r, r.name, locale, "harness ShowScreen (Tier 2)");
+                    if (r == null) { Line($"note: '{id}' re-seat left no active root — skipped"); continue; }
+                    if (!r.name.StartsWith(id))
+                    {
+                        Line($"SKIP Tier-2 '{id}': re-seat did not land (active root is '{r.name}'). " +
+                             "Dumping it here would overwrite that screen's own dump.");
+                        continue;
+                    }
+                    DesignAuditDumper.Dump(r, "TIER2_" + r.name, locale, "harness ShowScreen (Tier 2)");
                 }
 
                 // Modals — every ModalController in the scene, opened through its own Show().
@@ -474,7 +498,17 @@ namespace Golfin.EditorTools.UIFidelity
                 }
             }
 
-            IEnumerator DumpCurrent(string intended, string locale)
+            /// <summary>
+            /// Dumps the screen that is currently seated, recording HOW it was reached.
+            ///
+            /// <para>`via` used to be omitted here, so every screen reached by a genuine `Tap()`
+            /// wrote `reachedVia:"unspecified"` — understating real navigation as unknown on the one
+            /// field this audit uses to admit which surfaces were re-seated rather than tapped.
+            /// A reader checking provenance found "unspecified" on most of the corpus and could
+            /// reasonably conclude the navigation claim was unsupported. The navigation was always
+            /// real; only the record was missing.</para>
+            /// </summary>
+            IEnumerator DumpCurrent(string intended, string locale, string via = null)
             {
                 yield return null;
                 var root = CurrentScreenRoot();
@@ -482,7 +516,7 @@ namespace Golfin.EditorTools.UIFidelity
                 if (!root.name.Contains(intended.Replace("Return", "")) && intended != "HomeReturn")
                     Line($"ROUTE NOTE: intended '{intended}' but ScreenManager says '{root.name}' — " +
                          "dumping under the REAL name");
-                DesignAuditDumper.Dump(root, root.name, locale);
+                DesignAuditDumper.Dump(root, root.name, locale, via);
             }
 
             // ── real navigation ─────────────────────────────────────────────
