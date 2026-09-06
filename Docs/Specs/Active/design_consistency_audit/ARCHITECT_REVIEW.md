@@ -391,3 +391,95 @@ are stale artifacts of other tasks, correctly NOT counted).
   matching entry if a future pass dumps another prefix-less screen.
 
 **Verdict:** I tried to break it four ways and could not. Advancing to Cesar.
+
+---
+
+# ROUND 5 — confirmation pass on the post-PASS delta `666c198a0..ca8706432`
+
+**Reviewer:** golfin-redteam-reviewer (adversarial). **Timestamp:** 2026-09-06 12:00 JST
+**Verdict:** **ARCHITECT_REVIEW_PASS** — the delta genuinely holds. Scoped to the delta plus a
+full independent re-derivation of the headlines; not a re-run of the round-4 sweep.
+
+Round 4 passed `666c198a0` and handed over two nits. Chasing nit 2 exposed a real defect (a Tier-2
+pass overwriting HomeScreen's Tier-1 dump), so the artifact changed after the gate and the PASS no
+longer covered disk. This pass re-verifies the fix and confirms nothing else moved.
+
+## Delta scope (`git show --name-only ca8706432`)
+Only `Assets/Editor/UIFidelity/DesignAuditRunner.cs` + `Docs/**` (report, DESIGN_TOKENS, audit_numbers.py,
+6 corpus-JSON renames, 4 corpus-JSON edits, spec folder). **No `.gitignore`, no gameplay/production
+`.cs`.** A10 clean — re-derived, not trusted.
+
+## Point-by-point
+
+1. **Nit 1 (prose).** `DESIGN_TOKENS.md` rows 20–21 confirm `EN/Caption_2` (Regular 400, 33 px) and
+   `EN/Caption_2_Medium` (Medium 500, 33 px) — two styles, same size, differ by weight. Report and
+   token sheet now both say "nine styles over EIGHT distinct sizes: 20·30·33·39·45·48·51·66" (no
+   double 33). Matcher `SCALE=[20,30,33,39,45,48,51,66]` = 8. On-scale 1389 independently re-derived,
+   unaffected. GONE.
+
+2. **The real defect + fix.** Mechanism is real: the old loop did `Force(id)` → `Dump(r, r.name, …,
+   "… (Tier 2)")` with no landing check, so a non-resolving id dumped whatever was active (HomeScreen)
+   under its own filename. The fix adds (a) `if (!r.name.StartsWith(id)) skip` and (b) a `TIER2_`
+   output prefix. **Guard-defeat attempts failed:** no id in
+   {Login,SignUp,CreateUsername,EmailConfirmation,ResetPassword,Loading,Splash} is a prefix of a
+   *different* screen's root name, so `StartsWith` cannot pass for the wrong screen; the original bug
+   (HomeScreen active during a non-landing Force) is now caught because `"HomeScreen".StartsWith("Login")`
+   is false. No legit Tier-2 screen is wrongly skipped — all 6 that land are dumped as `TIER2_*`;
+   `Loading` is absent, exactly as in round 4 (it never re-seats). GONE.
+
+3. **Corpus filter → prefix.** All 6 auth dumps renamed to `TIER2_*` (1:1 with round 4's hand-kept
+   name set) and excluded by prefix. Independent glob: EN corpus = **17**, JA corpus = **17**, exact
+   round-4 membership. Verified the removed name-list cannot leak into JA — **zero** un-prefixed or
+   `TIER2_` JA auth dumps exist on disk (the Tier-2 pass is EN-only). No dump silently in/out vs r4.
+
+4. **Provenance / Rule 2.** `Tap(name)` finds the real active `Button` by name and calls
+   `b.onClick.Invoke()` — a genuine widget onClick, no synthetic ShowScreen path. Rule 2 satisfied.
+   The report (§7, finding 5) now states honestly that tapped surfaces recorded
+   `reachedVia:"unspecified"` (11 of 17), that navigation was nonetheless real via the bottom-nav
+   onClick, and that the committed dumps predate the recording fix and are labelled not regenerated.
+   Honest, not overstated.
+
+5. **"No measurement changed."** Diffed all four changed corpus dumps line-by-line. Every changed
+   line is one of: `reachedVia` label (HomeScreen "(Tier 2)"→"unspecified"; ModeSelection
+   "real nav: bottom-nav TEE"→"unspecified" — a label downgrade, disclosed by finding 5, not a
+   measurement), the `DailyMissionPill/Glow` alpha `#FFFFFF63`→`#FFFFFF44` (an animating alpha on a
+   **sprite-backed Sliced** image — counted in neither Filled nor the flat-fill/panel tallies), the
+   SettingsOverlay build number `2715`→`2718` inside a text string, and three GeneralShop countdown
+   strings. **No font, fontSize, renderedPx, type, sprite, spriteGuid, width, height, autoSize or
+   any geometry field moved.** No measurement hidden in the volatile noise.
+
+6. **Headlines re-derived with my own extractor** (independent code, not `audit_numbers.py`):
+   corpus **17 EN / 17 JA**, LiberationSans **36** (+5 = 41), Outline **20**, Shadow **0**,
+   Filled **225** {Bar 182 / BarContainer 33 / BarPending 8 / GhostBar 2}, visible **701** / panel
+   **291**, CJK **660 / 7**, buckets on-scale **1389** / ÷1.4 **209** / ÷1.2 **139** / 59-66 **46** /
+   unexplained **274** over n=**2057**. **Every value exact.** `audit_numbers.py --check` on the
+   report: exit 0, contradictions = none (3 scope-declared lines OK).
+
+7. **A10** re-derived above — clean.
+
+8. **Tests.** The delta touches only an Editor tool + docs; no gameplay/production `.cs`. The 12
+   `DesignAuditToolingTests` (unchanged since `84174e914`) cover `Dump`/`RenderedPx`/`IsDefaultFont`/
+   linter — **none** exercise the Tier-2 loop, `Force`, the `StartsWith` guard or the `TIER2_` prefix;
+   the sole signature change (`DumpCurrent`'s `via=null`) is a coroutine-local function tests never
+   call. So the delta is provably test-neutral. Compilation is confirmed: the implementer's own
+   EditMode run executed at 11:58 (only expected error-path assertion logs, no CS errors) immediately
+   before the 11:59 commit, and the editor now reports `IsCompiling=false` with no compile errors in
+   console. I did **not** re-run the full EditMode suite: the working tree is dirty with unrelated
+   in-flight tasks (`control_scheme_seam`, `map_view_v2`, `bot_scheme_parity`), so a full run would
+   test that other work and could not cleanly reproduce the 2709/2706/0/3 count — code-scope analysis
+   is the stronger evidence for this delta. Implementer's 2709 / 2706 passed / 0 failed / 3
+   pre-existing skips is credible.
+
+9. **§7.6 caveat.** Stated as an instrument property (measurements reproduce, bytes do not) and it
+   matches the four volatile diffs exactly; it is not used to excuse a real difference — it warns in
+   both directions (don't read byte-noise as drift, don't read a matching md5 as proof).
+
+## Three break-attempts (all failed)
+- **Visual/JSON:** hunted for a measurement smuggled inside "volatile noise" — every changed line is
+  a label, a sprite-backed glow alpha (uncounted), a build number, or a countdown. None move a count.
+- **Geometric/count:** re-derived all headlines with my own code (exact) and proved the JA corpus
+  cannot silently grow from the dropped name-list (no JA auth dumps exist).
+- **Guard-defeat:** no id is a prefix of another screen's name, so `StartsWith` neither false-passes
+  the wrong screen nor false-skips a legit one; the exact original overwrite is now caught.
+
+**Verdict:** tried to break the delta three ways and could not. **ARCHITECT_REVIEW_PASS.**
