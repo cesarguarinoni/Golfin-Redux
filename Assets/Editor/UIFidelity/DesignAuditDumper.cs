@@ -233,7 +233,14 @@ namespace Golfin.EditorTools.UIFidelity
             sb.AppendLine("}");
 
             Directory.CreateDirectory(OutDir);
-            string outPath = System.IO.Path.Combine(OutDir, screenName + ".json");
+            // LOCALE IS PART OF THE FILENAME. Both passes used to write `<Screen>.json`, so an EN
+            // run silently overwrote the JA dump of the same screen and vice versa. The corpus then
+            // held a MIX of locales, and locale-INVARIANT properties (Image.Type.Filled, the
+            // non-autosized TMP count) came out different per locale — which is impossible, and is
+            // how the red-team caught it. Suffixing makes the two corpora physically incapable of
+            // clobbering each other.
+            string suffix = string.IsNullOrEmpty(locale) ? "" : "__" + locale;
+            string outPath = System.IO.Path.Combine(OutDir, screenName + suffix + ".json");
             File.WriteAllText(outPath, sb.ToString());
             Debug.Log($"[DesignAuditDumper] {screenName}: tmp={nTmp} img={nImg} btn={nBtn} " +
                       $"liberationSans={nLib} outline={nOutline} shadow={nShadow} -> {outPath}");

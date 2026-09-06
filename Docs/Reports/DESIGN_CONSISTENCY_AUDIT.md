@@ -37,18 +37,23 @@ game** — but it is the reason every id below was confirmed from the render cal
 
 ## 1 · Summary
 
-| Dimension | Confirmed sites | Severity | Shape |
-|---|---|---|---|
-| **F** — JA renders on a Rubik asset, not NotoSansJP | **860 of 873 labels** (16 screens / 20 dumps incl. the 4 Inventory tab states) | **S1** | new — see § 3.1 |
-| **F** — Unity's default font never replaced | **41 labels** | S1 | (i) |
-| **O** — `Outline` component used as a border | **20 instances** (one card family) | S2 | (iv) |
-| **R** — 9-slice collapse (oval pills / rims) | **12 prefab FAIL + 30 live FAIL** | S1 | (vi-adjacent) |
-| **S** — `Image.Type.Filled` on bar sprites | **226 images** | S2 | (vii) |
-| **C** — visible flat fill where art is expected | **291 panel-sized** (710 total visible) | S2/S3 | (viii) |
-| **D** — `Shadow` component faking a drop shadow | **0** | — | (v) **REFUTED** |
-| **R** — `unlocalized-text` | 412 WARN | S3 | — |
+**All counts below come from ONE corpus: the 17 distinct screens dumped in EN, Inventory's
+four tab states collapsed to one screen.** Prefab-only dumps and modals are counted separately where
+they appear. An earlier revision mixed EN and JA dumps and produced two different numbers for the
+same shape in §1 and §3 — see § 7 deviation 4.
 
----
+| Dimension | Sites | Severity | Shape |
+|---|---|---|---|
+| **F** — JA text bound to a Latin font asset | **660 CJK labels** (7 on NotoSansJP) | **S3** — see § 3.1, the render is CORRECT | new |
+| **F** — Unity's default font never replaced | **36 in-screen** + 5 in two prefabs = **41** | S1 | (i) |
+| **S** — off-scale rendered sizes | **209 ÷1.4 · 139 ÷1.2 · 46 59/66 · 274 unexplained** | S1/S2 | (ii)+(iii) |
+| **O** — `Outline` component used as a border | **20** (one card family) | S2 | (iv) |
+| **R** — 9-slice collapse (oval pills / rims) | **12 prefab FAIL + 30 live FAIL** | S1 | (vi-adjacent) |
+| **S** — `Image.Type.Filled` on bar sprites | **225** | S2 | (vii) |
+| **C** — visible flat fill where art is expected | **291 panel-sized** of 701 visible | S2/S3 | (viii) |
+| **D** — `Shadow` component faking a drop shadow | **0** | — | (v) **REFUTED** |
+| **R** — `unlocalized-text` | 412 WARN (prefab lint) | S3 | — |
+| **C** — MISSIONS card shows tournament copy | 1 string | S1 | § 3.10 |
 
 ## 2 · Token sheet deltas
 
@@ -68,41 +73,36 @@ game** — but it is the reason every id below was confirmed from the render cal
 
 ## 3 · Shape tables (§22 — the site enumeration, including the sites that are FINE)
 
-### 3.1 · NEW SHAPE — Japanese renders on a Latin font asset  **S1**
+### 3.1 · Japanese text is bound to a Latin font asset — **S3, and the render is CORRECT**
 
-**Question:** *with `CurrentLanguage = Japanese`, how many labels showing Japanese text are bound
-to a NotoSansJP font asset?* Dump: `design_audit/*.json` at `locale:"ja"`, switch asserted
-(`LocalizationManager.CurrentLanguage = Japanese` logged; a failed switch aborts the pass).
+**This finding was downgraded from S1 by the red-team gate, and the downgrade is the important
+part.** It was originally derived entirely from `font.name` in the dumps. Nobody had looked at a
+Japanese screen. The red-team switched the build to Japanese, navigated to MissionSelection and
+captured `screenshots/REDTEAM_ja_MissionSelection.png`: **every CJK label renders correctly through
+TMP's fallback chain** — ミッション, ロモンドカントリークラブ, デイリーミッション, the rule list,
+プレイ on the button — no tofu, no boxes, no clipping, correct weight and size.
 
-Full corpus — 16 distinct screens, 20 dumps (Inventory contributes 4 tab states):
+So **no player sees a defect today**. The finding is that the *binding* is inconsistent and
+fragile, not that the screen is broken.
 
-| Screen | JA labels | bound to NotoSansJP |
-|---|---|---|
-| MissionSelectionScreen | 129 | **0** |
-| HomeScreen | 110 | **0** |
-| HoleSelectionScreen | 72 | **0** |
-| Inventory (+tabs) | 44–65 | **0** |
-| RankingsScreen | 49 | **0** |
-| ModeSelectionScreen | 48 | **0** |
-| GeneralShopScreen | 41 | **0** |
-| RosterScreen | 37 | **0** |
-| GachaHistoryScreen | 35 | **0** |
-| TournamentSelectionScreen | 21 | **0** |
-| TournamentHole / Leaderboard / GachaPrizes | 5 / 2 / 3 | **0** |
-| SettingsOverlay | 21 | 1 |
-| **StaminaShopSelectionScreen** | 41 | **10** |
-| **StaminaShopDetailScreen** | 9 | **2** |
-| **TOTAL** | **873** | **13** |
+| | count |
+|---|---|
+| Labels containing CJK, bound to a **Latin** font asset | **660** |
+| Labels containing CJK, bound to **NotoSansJP** | **7** |
+| NotoSansJP bindings that hold no CJK at all | 6 |
 
-**860 of 873 Japanese labels render on a Latin font asset.** The 13 exceptions matter: the two
-**Stamina** screens bind NotoSansJP correctly, so the right pattern already exists in this codebase
-— it was simply never applied anywhere else. That makes Q1 a propagation job with a working
-reference, not a design question.
+*(This number has been wrong twice. The first revision said "860 of 873", which subtracted
+NotoSansJP **bindings** from **CJK labels** — two different populations. The second said "866 / 7",
+which counted across ALL 21 JA dumps and so multiplied every Inventory site by four, violating this
+report's own corpus rule. Under the stated rule — 17 distinct screens, Inventory tabs collapsed —
+it is **660 / 7**. Both errors were caught by the red-team, not by me; the numbers are now
+generated by `Docs/Scripts/audit_numbers.py` rather than typed.)*
 
-**`LocalizedText` swaps the STRING, never the font asset.** All 507 render CJK through TMP's
-fallback chain on a Rubik asset. `LocalizedText` does carry a `japaneseFontScale` field, so the
-size hook exists and the family hook does not. This is the single largest finding in the audit and
-was invisible to every previous gate, which only ever looked at EN.
+**Why it still matters, at S3.** The correct pattern exists — the Stamina screens bind NotoSansJP
+deliberately — so the game is inconsistent with itself. Fallback works until it doesn't: a glyph
+outside the fallback face, a font-asset swap, or a platform with different fallback resolution turns
+a working screen into tofu with no code change. But it is **not** a player-visible defect today, and
+**Q1 must not be scheduled as one.**
 
 ### 3.2 · (i) The default font was never replaced  **S1 — CONFIRMED, 41 sites**
 
@@ -154,26 +154,53 @@ Zero `Shadow` components on any in-scope screen or prefab. The expected shape do
 shadows in this UI are baked into sprite margins as the palette prescribes. Published as a negative
 so the next audit does not re-derive it.
 
-### 3.5 · (vii) `Image.Type.Filled` on bar sprites  **S2 — CONFIRMED, 447 images**
+### 3.5 · (vii) `Image.Type.Filled` on bar sprites  **S2 — CONFIRMED, 225 images**
 
 | Object | count |
 |---|---|
-| `Bar` | 287 |
-| `BarContainer` | 133 |
-| `BarPending` | 24 |
+| `Bar` | 182 |
+| `BarContainer` | 33 |
+| `BarPending` | 8 |
+| `GhostBar` | 2 |
 | `GhostBar` / `Fill` | 3 |
 
 `Image.Type.Filled` discards 9-slicing, so a rounded bar renders with wedge caps
-(`reference_ui_bar_fill_width_not_fillamount`: drive **width**, not `fillAmount`). Concentrated in
-Inventory (84/screen) and Roster (26) — the StatBar / durability-bar family.
+(`reference_ui_bar_fill_width_not_fillamount`: drive **width**, not `fillAmount`). Concentrated in Inventory (84) and Roster (26) — the StatBar / durability-bar family.
 
-### 3.6 · (viii) Visible flat fill where art is expected  **S2/S3 — 442 visible, 26 panel-sized**
+### 3.6 · (viii) Visible flat fill where art is expected  **S2/S3 — 701 visible, 291 panel-sized**
 
-Raw null-sprite count is 1404, and **that number is misleading**: 316 are alpha ≤ 0.02 (invisible
-raycast/layout helpers, *not* defects) and 7 more are faint. The reviewable population is the
-**26 panel-sized (≥200×60) and clearly visible** fills — and some of those are legitimate modal
-scrims (`#000000D9` on `BagsClubModal/Background`). Each of the 26 needs a node check before it
-becomes a fix row.
+The raw null-sprite count is misleading: most are near-transparent raycast/layout helpers, *not*
+defects. Two thresholds separate the population, and **both are stated here so the numbers
+reproduce from the dumps without reading the script** (red-team item 4):
+
+| Term | Exact rule, applied to every `images[]` entry in the 17 EN dumps | Count |
+|---|---|---|
+| **visible flat fill** | `sprite == "<NONE>"` **AND** `alpha(color) > 0.2` — alpha is byte 7–8 of the 8-digit hex ÷ 255 | **701** |
+| **panel-sized** | the above **AND** `width >= 200` **AND** `height >= 60` | **291** |
+
+Reproduce with `python3 Docs/Scripts/audit_numbers.py` (the `visfill` / `panel` fields); the rule is
+the `alpha(i['color']) > 0.2` and `i['width'] >= 200 and i['height'] >= 60` lines of `compute()`.
+**Sensitivity of the 0.2 floor, measured rather than asserted.** Eight fills do sit between α 0.02
+and α 0.2, so the cut is not free and the honest range is worth stating:
+
+| floor | visible | panel-sized |
+|---|---|---|
+| α > 0.02 | 709 | 295 |
+| α > 0.10 | 708 | 295 |
+| α > 0.15 | 704 | 291 |
+| **α > 0.20 (used)** | **701** | **291** |
+| α > 0.30 | 690 | 291 |
+
+So the **panel-sized** figure — the one the fix list acts on — is stable at **291** anywhere from
+α 0.15 to α 0.30, and moves by 4 only if the floor drops to 0.10. The **visible** figure is the
+softer of the two (690–709 across that range) and should be read as "about 700", not as an exact
+population. Three `InventoryScreen/VerticalDivider` fills sit exactly at α 0.20 and are therefore
+EXCLUDED by the strict `>`; they are dividers, not missing art, so excluding them is correct — but
+it is a judgement, and a node check on them is listed in the fix rows rather than assumed.
+
+The reviewable population is therefore the **291** panel-sized fills — and some of those are
+legitimate modal scrims (`#000000D9` on `BagsClubModal/Background`). Each of the **291** needs a
+node check before it becomes a fix row.
 
 ### 3.7 · 9-slice collapse (oval pills and rims)  **S1 — 12 prefab FAILs, 30 live FAILs**
 
@@ -196,12 +223,12 @@ value.
 
 | Convention | labels | share | the values it explains |
 |---|---|---|---|
-| On one of the nine scale steps | **1387** | 67.3 % | — |
-| **÷1.4** | **209** | 10.1 % | 21.6 · 27.86 · 28 · 28.05 · 32 · 32.14 · 47.1 |
-| **÷1.2** | **144** | 7.0 % | 16.7 · 17 · 25 · 27.5 · 37.4 · 40 · 42.5 · 55 |
-| **59/66** SemiBold | **47** | 2.3 % | 18 · 26.7 · 26.99 · 34.6 · 35 |
-| **Unexplained by any** | **275** | 13.3 % | — |
-| total non-autosized | 2062 | | |
+| On one of the nine scale steps | **1389** | 67.5 % | — |
+| **÷1.4** | **209** | 10.2 % | 21.6 · 27.86 · 28 · 28.05 · 32 · 32.14 · 47.1 |
+| **÷1.2** | **139** | 6.8 % | 16.7 · 17 · 25 · 27.5 · 37.4 · 40 · 42.5 · 55 |
+| **59/66** SemiBold | **46** | 2.2 % | 18 · 26.7 · 26.99 · 34.6 · 35 |
+| **Unexplained by any** | **274** | 13.3 % | — |
+| total non-autosized | 2057 | | |
 
 **The ÷1.4 population was found by node comparison, not by pattern-matching, and it corrected this
 audit's own first answer.** An earlier pass tested only ÷1.2 and mapped 27.86 → 33 (27.86 × 1.2 =
@@ -267,11 +294,11 @@ WARN distribution (prefabs): `unlocalized-text` 412, `flat-fill` 270, `nonunifor
 
 | # | Group | Closes | Files | Op | Est | Blast radius |
 |---|---|---|---|---|---|---|
-| **Q1** | **Bind a JA font asset** | § 3.1 (860) | `LocalizedText.cs` + the font asset | On language change, swap `font` to `NotoSansJP-VariableFont_wght SDF` alongside the string; `japaneseFontScale` already exists for size | **M** | EVERY screen, both locales — needs a JA visual pass before merge |
+| **Q1** | Bind a JA font asset *(DEFERRED — see § 3.1)* | § 3.1 (660) | `LocalizedText.cs` + the font asset | Swap `font` to `NotoSansJP-VariableFont_wght SDF` on language change. **NOT urgent — JA renders correctly through fallback today.** Consistency/robustness, not a visible defect | **M** | every screen, both locales; a JA visual pass mandatory before merge |
 | **Q2** | Replace the default font on stat readouts | § 3.2 (41) | ShellScene `InventoryScreen` (27), `RosterScreen` (8), `SettingsScreen` (1); `CharacterThumbnailCard` (3), `StatBar` (2) | Set font asset to `Rubik-VariableFont_wght SDF` via `SerializedObject` | S | StatBar + card prefabs are instanced across Roster/Inventory |
 | **Q3** | ModeCard border: `Outline` → real rim | § 3.3 (20) | `ModeCard.prefab`, `ModeHomeCard.prefab` | Replace `Outline` with a two-layer rim or 9-sliced rim sprite | S | Home carousel + ModeSelection |
 | **Q4** | Fix the oval pills and rims | § 3.7 (12+30) | `TournamentSelectionCard`, `GeneralShopCard`, `HoleCompleteModal`, `HoleCompleteWidget`, `TournamentCloseButton` | Raise `pixelsPerUnitMultiplier` or re-bake the sprite at the used height | S | Shop + tournament cards share the badge atom |
-| **Q5** | Bars: width, not `fillAmount` | § 3.5 (226) | `StatBar.prefab` + the durability/progress bar family | `Image.Type.Filled` → drive `sizeDelta.x` | **M** | Roster, Inventory, tournament progress |
+| **Q5** | Bars: width, not `fillAmount` | § 3.5 (225) | `StatBar.prefab` + the durability/progress bar family | `Image.Type.Filled` → drive `sizeDelta.x` | **M** | Roster, Inventory, tournament progress |
 | **Q6** | Triage the panel-sized flat fills | § 3.6 (291) | per site | Node check each; scrims are correct, missing art is not | M | mixed |
 | **Q9** | MISSIONS card shows tournament copy | § 3.10 | `ModeCard` missions binding | `Reward2Amount` reads "Varies by tournament" on the MISSIONS card, in both collapsed and expanded containers, and has **no locKey** | **XS** | ModeSelection + Home carousel |
 | **Q7** | Retire the ÷1.4 sizes | § 3.8 (209) | ModeCard / ModeHomeCard family first (27.86 / 32.14) | Re-set to the NODE value (39 / 45) — **not** to the ÷1.2 target | S | Home carousel + ModeSelection |
@@ -321,3 +348,18 @@ WARN distribution (prefabs): `unlocalized-text` 412, `flat-fill` 270, `nonunifor
    touched a shared file outside A10's permitted paths; a local asmdef keeps the whole change
    inside the allowed surface.
 3. **The node table was corrected, not followed** — § 0.
+4. **The corpus was rebuilt after the red-team found contradictory counts.** The EN and JA passes
+   originally wrote to the SAME filename (`<Screen>.json`), so each overwrote the other and the
+   corpus held a mix of locales. Locale-INVARIANT properties then differed by locale — 
+   `Image.Type.Filled` read 134 in one folder and 1007 in another — which is impossible and is how
+   the contradiction surfaced. Fixed structurally: `DesignAuditDumper` now writes
+   `<Screen>__<locale>.json`, so the two corpora cannot clobber each other. All four passes were
+   re-run from scratch. EN and JA now agree exactly on `Image.Type.Filled` across all 21 dump files (561 = 561).
+   That parity check deliberately spans every dump — including the Inventory tab states, modals and
+   prefabs that the § 1 corpus rule excludes — because its job is to prove the two locales no longer
+   clobber each other, not to count a shape. The shape count itself, on the 17-screen corpus, is
+   **225** (§ 3.5). There is a single legitimate difference (RosterScreen 104 vs 103 non-autosized labels — one label flips to
+   auto-sizing under longer Japanese text). **Every count in this report now comes from one
+   corpus**, stated at the top of § 1.
+5. **The headline finding's severity was wrong and was corrected by the gate, not by the author.**
+   § 3.1 was S1 on the strength of `font.name` alone; the render was never looked at. It is S3.

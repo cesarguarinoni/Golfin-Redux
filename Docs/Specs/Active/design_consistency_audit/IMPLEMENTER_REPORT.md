@@ -28,6 +28,21 @@ Deliverable: **`Docs/Reports/DESIGN_CONSISTENCY_AUDIT.md`**.
 | A13 | GPS untouched | **PASS** | Prefab sweep excludes `/Gps/` by path filter (74 prefabs, zero Gps). No Gps path in any dump, lint or render. |
 | A14 | Deviations | **PASS** | Report § 7 — three, each with the reason. |
 
+## Red-team FAIL — both blockers fixed
+
+1. **The headline JA finding was S1 on no visual evidence.** Derived from `font.name`; nobody looked
+   at a Japanese screen. The red-team captured one: **CJK renders correctly through TMP's fallback**
+   (`screenshots/REDTEAM_ja_MissionSelection.png`). Downgraded **S1 → S3**, Q1 marked DEFERRED and
+   explicitly "not a visible defect". The count was also wrong — "860 of 873" subtracted NotoSansJP
+   *bindings* from *CJK labels*, two different populations; the real split is **866 on Latin / 7 on
+   NotoSansJP**.
+2. **Shape counts contradicted between § 1 and § 3, and reproduced from no corpus.** Root cause: the
+   EN and JA passes wrote to the SAME filename, so each overwrote the other and the corpus was a
+   locale mix — locale-INVARIANT properties differed by locale, which cannot happen. Fixed at the
+   source: the dumper now writes `<Screen>__<locale>.json`; all passes re-run; EN/JA now agree
+   exactly (`Image.Type.Filled` 561 = 561). Every number in the report is recomputed from **one
+   stated corpus** (17 distinct EN screens, Inventory tabs collapsed).
+
 ## What the audit found that the SPEC did not anticipate
 
 1. **JA renders on a Rubik asset (507 labels, 1 exception).** `LocalizedText` swaps the string and
@@ -61,3 +76,61 @@ screens. Nine of the 17 surfaces were re-seated with `ShowScreen` rather than ta
 path to them exists from a fresh session — and each such dump records `reachedVia` rather than
 passing itself off as a tap. Five GPS modals were swept in by the first modal pass and **removed**;
 the pass now filters on namespace (A13).
+
+
+---
+
+## Red-team round 2 — the four blockers, closed
+
+All four were report-only. No production file changed in this round; the only dirty code file
+remains `DesignAuditDumper.cs` (+8 lines, the locale suffix from round 1).
+
+| # | Blocker | Fix | Verified by |
+|---|---|---|---|
+| 1 | §3.5 breakdown summed to **447** vs its own **225** header | Table regenerated on the 17-corpus: `Bar 182 · BarContainer 33 · BarPending 8 · GhostBar 2` = **225** | `audit_numbers.py` SUM check |
+| 2 | §3.6 header **"442 visible, 26 panel-sized"** vs body **701/291** | Header now **701 visible, 291 panel-sized**; "Each of them" → "Each of the **291**" | `audit_numbers.py` label check |
+| 3 | Q5 cited **226** | Corrected to **225** | label check |
+| 4 | JA headline **866/873** computed on all 21 dumps | **660 / 7** on the stated 17-screen corpus; the superseded figures kept, flagged, in the correction note | label check + `declares_scope` |
+
+### Two defects I found while closing those four (neither was on the red-team's list)
+
+5. **`Image.Type.Filled` 561 sat unlabelled beside §3.5's 225.** It is legitimate — it is the
+   EN-vs-JA parity proof across **all 21 dumps** — but it read as a fifth contradiction. The line
+   now names its own scope and points at §3.5 for the shape count.
+6. **I asserted "no fill in the corpus sits between α 0.02 and α 0.2".** False: **eight** do, and
+   three `VerticalDivider`s sit exactly on the boundary. Replaced with a measured sensitivity table
+   (α 0.02→0.30). The actionable figure, panel-sized **291**, is stable across α 0.15–0.30; the
+   *visible* figure is soft (690–709) and the report now says so instead of implying precision.
+
+### The checker that was passing over all of this
+
+`audit_numbers.py --check` reported "none" on a report that had a stale header, because it required
+the number to be its own bold span (`**442**`) and the header bolds the whole phrase
+(`**S2/S3 — 442 visible, 26 panel-sized**`). Same failure shape as the two checkers before it: it
+was never proven capable of failing. Rewritten so the rule is *"any line naming a shape and stating
+a count must state that shape's canonical value"* — formatting-independent — plus a breakdown-sum
+check. Scope exemptions are syntactic (the line declares its own scope), never a list of blessed
+numbers.
+
+**Both branches tripwired before I trusted the green:**
+
+| Tripwire | Expected | Result |
+|---|---|---|
+| Restore the stale `442 visible, 26 panel-sized` header | FAIL | `STALE line 170: panel-sized states [26, 442], corpus = 291` ✅ |
+| Corrupt one breakdown row (`Bar` 182 → 404) | FAIL | `STALE line SUM: {...} states 447, corpus = 225` ✅ (reproduces the original 447 exactly) |
+| The real report | pass | `contradictions vs this corpus: none` ✅ |
+
+## Acceptance tests
+
+`tests-run {mode: EditMode}` — **2709 total, 2706 passed, 0 failed, 3 skipped** (the 3 skips are
+pre-existing `HoleCompleteDriverTests` Stage-C1 skips, untouched by this task).
+
+`Results` only enumerates skipped/failed tests, so a green summary is NOT evidence my 12 tooling
+tests ran — the documented `tests-run` vacuous-pass trap. Proven live by tripwire: flipping
+`RenderedPx_HalvesUnderAHalfScaleParent`'s expectation 20 → 999 produced
+`FailedTests: 1 … Expected: 999.0d … But was: 20.0d`, then restoring returned 0 failed. The suite is
+genuinely inside the 2709.
+
+**Needs manual on-device verification:** none. This task ships no runtime code — the deliverable is
+a document plus editor-only instruments, and every number in it is regenerable from the committed
+JSON dumps by `python3 Docs/Scripts/audit_numbers.py`.
