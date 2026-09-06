@@ -342,6 +342,53 @@ a design call. Also flagged: `BandGood` draws 324 px against the node's 288 beca
 `PendulumGoodWindow01 = 0.45` while the node is 0.40; shipped at the spec's value, one CSV edit either way.
 
 ---
+## 2026-09-06 — `design_consistency_audit` — instruments built, first findings
+
+Spec: `Docs/Specs/Active/design_consistency_audit/` (`IMPLEMENTER_WORKING`). Notion 2112. **Audit
+only — no production change.** Deliverable: `Docs/Reports/DESIGN_CONSISTENCY_AUDIT.md`.
+
+**Four findings the spec did not anticipate, in order of size.**
+
+**(1) Japanese renders on a Latin font asset.** With `CurrentLanguage = Japanese`, **507 labels show
+Japanese text and exactly ONE is bound to a NotoSansJP asset.** `LocalizedText` swaps the STRING and
+never the font — all 507 render CJK through TMP's fallback chain on Rubik. It carries a
+`japaneseFontScale` field, so the size hook exists and the family hook does not. Invisible to every
+prior gate because they only ever looked at EN.
+
+**(2) The SPEC's own node table is wrong in 7 rows** — a 30×60 carousel ARROW asset in the
+ModeSelection slot, a 3846×8343 CANVAS for HoleSelection, the screen frame filed as a "card", a
+978×164 LOCKED CARD for TournamentLeaderboard, a `Rankings Card` component for GachaHistory, and two
+page ids for Inventory tabs. Followed blindly, A5 would have generated node specs for card subtrees
+and A6 would have diffed live screens against a locked card. Corrections in
+`reference/NODE_RESOLUTION.md`; every id is now confirmed from the render call's own
+`original_width/height`.
+
+**(3) The 46-site LiberationSans baseline double-counts.** Every TMP writes the font GUID TWICE —
+`m_fontAsset` and `m_sharedMaterial` — so a YAML grep sees 2× the labels. Real total **41**
+(Inventory 27, Roster 8, Settings 1, Card 3, StatBar **2** not 4); the headline "×77 across
+scenes+prefabs" is ~38. All 41 are stat readouts, one coherent fix.
+
+**(4) 35 of HomeScreen's 131 labels are auto-sized**, so `fontSize` is a RESULT, not an authored
+value — the tripwire moved it 49.05 → 51 from a font swap alone. Any "wrong size" finding taken from
+the serialized number on those sites would have been fiction. The dumper now records
+`autoSize`/`min`/`max` and those sites are judged on bounds.
+
+**Also measured:** `Outline`-as-border 20 instances (one ModeCard family); `Shadow`-as-drop-shadow
+**0 — shape refuted**; `Image.Type.Filled` on 447 bar images; 9-slice collapse is the ONLY FAIL rule
+in the whole 74-prefab sweep (12 prefab + 30 live, same oval-pill defect Cesar caught by eye on
+`stamina_boost_shop`); 442 visible null-sprite fills of which only **26** are panel-sized (the raw
+1404 is 316 alpha-0 raycast helpers plus hairlines — the crude number would have been a fiction).
+
+**Instruments (Editor-only, `Assets/Editor/UIFidelity/`):** `DesignAuditDumper` (rendered px =
+`fontSize × lossyScale.y ÷ canvas.scaleFactor`, stated in every JSON header), `DesignAuditRunner`
+(real-navigation driver: tripwire / dump EN / dump JA / lint), and a `LintRoot` overload proven
+**byte-identical** to `LintPrefab` (md5 `78c23b5b…`). `DesignAuditToolingTests` 12/12; full sweep
+**2706 passed / 0 failed**.
+
+**Still open:** A5 node specs, A6 crop sheets, shapes (ii)(iii)(ix), and the deeper screens
+(Tournament ×3, Rankings, Gacha ×2, Stamina ×2, HoleSelection, Mission, all modals, Tier 2).
+
+---
 ## 2026-09-04/05 — `game_polish_a` DONE, `gacha_history_rebuild_stall`, build 2699 (GPS)
 
 **`game_polish_a` is DONE** (`Docs/Specs/Completed/game_polish_a/`). Slice (a) of Notion 2111:

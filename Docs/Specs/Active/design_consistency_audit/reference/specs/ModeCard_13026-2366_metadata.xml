@@ -1,0 +1,31 @@
+<frame id="13026:2366" name="Mission Card Container" x="48" y="274" width="978" height="968">
+  <frame id="13026:2367" name="Pop-Up" x="0" y="0" width="978" height="968">
+    <frame id="13026:2368" name="Mission Title" x="0" y="24" width="978" height="140">
+      <text id="13026:2369" name="MULTIPLAYER" x="16" y="0" width="946" height="60" />
+      <frame id="13027:2986" name="Frame 2610870" x="16" y="70" width="946" height="54">
+        <text id="13027:2987" name="1 vs 1 Match" x="361.5" y="0" width="223" height="54" />
+      </frame>
+    </frame>
+    <line id="13026:2375" name="Separator" x="0" y="164" width="978" height="0" />
+    <frame id="13026:2376" name="Mission Content Container" x="0" y="164" width="978" height="660">
+      <frame id="13026:2377" name="Tutorial" x="32" y="24" width="914" height="356">
+        <frame id="13026:2385" name="Goals Container" x="0" y="16" width="914" height="324">
+          <frame id="13026:2386" name="Frame 2610520" x="48" y="12" width="818" height="312">
+            <text id="13026:2387" name="Face off in fast-paced 1v1 golf matches" x="0" y="12" width="818" height="300" />
+          </frame>
+        </frame>
+      </frame>
+      <frame id="13027:3662" name="Mission Content Container" x="0" y="428" width="978" height="184">
+        <frame id="13027:3773" name="ENTRY FEE" x="0" y="1" width="207" height="54" />
+        <frame id="13027:3790" name="x100" x="48" y="1" width="93" height="54" />
+        <frame id="13027:3825" name="REWARDS" x="0" y="1" width="188" height="54" />
+        <frame id="13027:3842" name="x200" x="48" y="1" width="99" height="54" />
+      </frame>
+    </frame>
+    <frame id="13026:2416" name="Frame 2610865" x="309.5" y="824" width="359" height="144">
+      <frame id="13026:2417" name="Buttons Container" x="0" y="0" width="359" height="120">
+        <instance id="13026:2418" name="Main Buttons" x="0" y="0" width="359" height="120" />
+      </frame>
+    </frame>
+  </frame>
+</frame>

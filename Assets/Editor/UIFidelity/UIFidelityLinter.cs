@@ -55,6 +55,38 @@ namespace Golfin.EditorTools.UIFidelity
             var inst = (GameObject)PrefabUtility.InstantiatePrefab(prefab, canvasGO.transform);
             Canvas.ForceUpdateCanvases();
 
+            var report = LintInstance(inst, prefabPath, specJsonPath);
+
+            UnityEngine.Object.DestroyImmediate(holder);
+            return report;
+        }
+
+        /// <summary>
+        /// Lint a LIVE root — a screen that exists only as a scene object, never as a prefab
+        /// (`design_consistency_audit` 1.1: the ShellScene-hosted screens have no prefab path, so
+        /// <see cref="LintPrefab"/> cannot reach them).
+        ///
+        /// <para>This runs the SAME three layers on the SAME code path and writes the same JSON
+        /// shape; the only difference is that the caller owns the object's lifetime, so nothing is
+        /// instantiated and nothing is destroyed. <paramref name="reportName"/> takes the place of
+        /// the prefab path — it is what the report is titled and what names the JSON
+        /// (`&lt;reportName&gt;_lint.json`), so pass a bare screen name like "InventoryScreen".</para>
+        ///
+        /// <para>The extraction that made this possible changed NO rule and NO threshold:
+        /// `LintPrefab`'s body became (instantiate → <see cref="LintInstance"/> → destroy), and
+        /// `LintInstance` holds the three lines that were already there. Pinned by
+        /// `LintRootParityTests` and by the byte-identical JSON check in the audit's A9.</para>
+        /// </summary>
+        public static string LintRoot(GameObject root, string reportName, string specJsonPath = null)
+        {
+            if (root == null) return "ROOT IS NULL: " + reportName;
+            return LintInstance(root, reportName, specJsonPath);
+        }
+
+        /// <summary>The three layers, in the order they have always run. Shared verbatim by
+        /// <see cref="LintPrefab"/> and <see cref="LintRoot"/> so the two cannot drift.</summary>
+        static string LintInstance(GameObject inst, string reportName, string specJsonPath)
+        {
             var findings = new List<Finding>();
             findings.AddRange(RenderHealth(inst));
             findings.AddRange(LocalizationHealth(inst));
@@ -63,9 +95,7 @@ namespace Golfin.EditorTools.UIFidelity
                 var spec = JsonUtility.FromJson<UISpec>(File.ReadAllText(specJsonPath));
                 findings.AddRange(SpecCheck(inst, spec));
             }
-
-            UnityEngine.Object.DestroyImmediate(holder);
-            return Report(prefabPath, findings);
+            return Report(reportName, findings);
         }
 
         // ---- Layer 1: universal render-health ----
