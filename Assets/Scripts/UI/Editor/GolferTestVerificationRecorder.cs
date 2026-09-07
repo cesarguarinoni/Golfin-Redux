@@ -254,6 +254,20 @@ namespace Golfin.EditorTools
                 yield return Hold(0.8f);
                 Assert("club.driverSwapBack", drv.activeSelf && !ptr.activeSelf,
                        "after OnPutterModeChanged(false): driver=" + drv.activeSelf + " putter=" + ptr.activeSelf);
+
+                // ── SPEC §9.4 — the putter fingertip, measured ONCE, on a green ────────
+                //
+                // Recorded as a measurement, NOT a pass/fail gate. §9.3 declares the grip
+                // numbers final for the stand-in, so promoting this to an assertion would
+                // hard-wire a red board for a defect nobody intends to fix. The number is
+                // what §9.4 asked for; the decision to gate on it is Cesar's.
+                //
+                // ON A GREEN, and that is the point. Grip geometry is bone-space and does not
+                // care where the golfer stands — but the PUTT ADDRESS POSE does. Address_Putt
+                // is a different clip at a different cycleOffset from Address_Drive, so the
+                // hands sit differently on a shorter shaft. Measuring it at the tee with the
+                // driver pose blended in is what produced the ambiguous 0.0429 m.
+                yield return PuttGripOnGreen(golfer, shot, anim);
             }
 
             // ── does the hand actually WRAP the shaft, or just sit beside it? ──
@@ -505,6 +519,102 @@ namespace Golfin.EditorTools
             for (int i = 0; i < frames; i++) { yield return null; samples.Add(Time.unscaledDeltaTime * 1000f); }
             samples.Sort();
             result(samples[samples.Count / 2]);
+        }
+
+        /// <summary>
+        /// SPEC §9.4. Puts the ball on the hole's green, switches to the putter, waits for the
+        /// golfer to settle into Address_Putt, and measures the worst fingertip against the
+        /// PUTTER's shaft axis. Logged as a measurement (see the call site for why it is not an
+        /// assertion) and restored to driver-at-the-original-lie afterwards so nothing downstream
+        /// sees a mutated world.
+        /// </summary>
+        IEnumerator PuttGripOnGreen(GameObject golfer, Component shot, Animator anim)
+        {
+            var labType = FindType("Golfin.Physics.Viewer.PhysicsLabController");
+            var lab = labType == null ? null : UnityEngine.Object.FindFirstObjectByType(labType) as Component;
+            var placeBallAt = labType?.GetMethod("PlaceBallAt");
+            var ballT0 = BallTransform();
+            Vector3 lie0 = ballT0 != null ? ballT0.position : Vector3.zero;
+
+            Vector3 target = Golfin.Gameplay.UI.HUD.HoleContext.PinWorld;
+            if (target == Vector3.zero) target = Golfin.Gameplay.UI.HUD.HoleContext.GreenCentroidWorld;
+            if (lab == null || placeBallAt == null || target == Vector3.zero)
+            {
+                Mark("putt-grip §9.4 SKIPPED: lab=" + (lab != null) + " PlaceBallAt=" + (placeBallAt != null) +
+                     " pin/green=" + V(target) + " — cannot reach a green, so no number is reported " +
+                     "(a guessed one would be worse than none)");
+                yield break;
+            }
+
+            // 1 == Golfin.Course.SurfaceType.Green, per PlaceBallAt's own doc comment.
+            placeBallAt.Invoke(lab, new object[] { target + new Vector3(1.5f, 0f, 0f), (int?)1 });
+            SetIsPutt(shot, true);
+            Golfin.Gameplay.UI.ShotUI.ClubSelectionBroadcast.SetPutterMode(true, 0);
+            yield return Hold(1.5f);
+
+            // RESTAGE THROUGH IDLE, and note WHY this is needed — it is a finding in its own
+            // right. Setting putter mode while the golfer is already at address leaves him in
+            // Address_Drive holding a putter: Address_Drive's only transitions are Swing and
+            // Cancel, so there is no Address_Drive -> Address_Putt edge and the IsPutt bool has
+            // nothing to act on. The first run of this measurement read animator=Address_Drive
+            // and produced numbers against the wrong pose AND a shorter shaft.
+            //
+            // In a real round this does not bite: the ball comes to rest on the green, auto club
+            // selection sets IsPutt, and only THEN does re-arm fire the Address trigger — so the
+            // Idle -> Address_Putt edge is picked correctly. It bites only when the club changes
+            // while he is already standing over the ball, which is a real thing a player can do
+            // from the club widget. Reported, not fixed here (§9.3 froze the grip work).
+            //
+            // The nudge below is measurement-only scaffolding and is disclosed as such: it drives
+            // the animator through Idle so the Address trigger re-evaluates with IsPutt true.
+            if (anim != null && CurrentState(anim) == "Address_Drive")
+            {
+                Mark("putt-grip §9.4 NOTE: club swapped at address left him in Address_Drive with a " +
+                     "putter (no Address_Drive->Address_Putt edge). Restaging through Idle to measure " +
+                     "the real putt pose. See comment at GolferTestVerificationRecorder.PuttGripOnGreen.");
+                anim.SetTrigger("Cancel");
+                yield return Hold(0.8f);
+                anim.SetTrigger("Address");
+                yield return Hold(1.2f);
+            }
+
+            string st = CurrentState(anim);
+            var all = golfer.GetComponentsInChildren<Transform>(true);
+            Transform Fb(string n) => all.FirstOrDefault(x => x.name == n);
+            var slot = Fb("ClubSlot");
+
+            if (slot == null || st != "Address_Putt")
+            {
+                Mark("putt-grip §9.4 SKIPPED: animator='" + st + "' (wanted Address_Putt) slot=" +
+                     (slot != null) + " — a fingertip measured against the driver pose or a " +
+                     "non-address pose is not the number §9.4 asked for, so none is reported");
+            }
+            else
+            {
+                const float contact = 0.012f + 0.009f;   // 24 mm grip + 9 mm finger, as § grip
+                var sb = new StringBuilder("putt-grip §9.4 on green (animator=" + st + "): ");
+                foreach (var side in new[] { "r", "l" })
+                {
+                    float worst = 0f; string worstFinger = "?";
+                    foreach (var fng in new[] { "index", "middle", "ring", "pinky" })
+                    {
+                        var tip = Fb(fng + "_04_leaf_" + side) ?? Fb(fng + "_03_" + side);
+                        if (tip == null) continue;
+                        float d = Vector3.Cross(slot.up, tip.position - slot.position).magnitude;
+                        if (d > worst) { worst = d; worstFinger = fng; }
+                    }
+                    sb.Append(side).Append("-hand worst=").Append(worstFinger).Append(' ').Append(F(worst))
+                      .Append(" m (contact ").Append(F(contact)).Append(", gate ").Append(F(contact * 2f)).Append("); ");
+                }
+                Mark(sb.ToString());
+                yield return Snap("golfer_h" + _hole.ToString("00") + "_putt_green");
+            }
+
+            // Restore: driver, original lie. A measurement must not leave the world changed.
+            Golfin.Gameplay.UI.ShotUI.ClubSelectionBroadcast.SetPutterMode(false, 0);
+            SetIsPutt(shot, false);
+            if (lie0 != Vector3.zero) placeBallAt.Invoke(lab, new object[] { lie0, (int?)null });
+            yield return Hold(1.5f);
         }
 
         static string CurrentState(Animator a)

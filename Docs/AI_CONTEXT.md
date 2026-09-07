@@ -4,6 +4,53 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
+## 2026-09-07 — golfer_3d_test: **Address fixed, then closed out to 36/0**
+
+**In a real round the golfer never entered Address.** He stood bolt upright, back to camera, arms at
+his sides, club dangling. Two independent causes, both proven on real Hole 06 play-mode renders:
+
+1. **Address was keyed on the wrong signal.** `GolferPresenter` drove it off `ShotInputState` —
+   "anything but `ShotState.Idle` means address". But `ShotController.State` is `Idle` whenever the
+   player is not touching the screen; `Aiming` does not begin until `justTouched`. The entire window
+   in which a golfer stands at address IS a window in which `ShotState` is Idle, so the presenter
+   fired `Cancel` through all of it and addressed only for the fraction of a second the finger was
+   down. Address now derives from `BallState.Aiming` ("no shot in flight; player can input") via one
+   idempotent `RefreshStance()` that every handler funnels into.
+2. **A stale `Reset` trigger.** `Reset` is an **AnyState → Idle** transition with
+   `canTransitionToSelf: 0`. `HandleShotComplete` set it while the animator was ALREADY in Idle, so
+   it was not taken and not consumed — it sat armed, then dragged him out of `Address_Drive` one
+   frame after he got there. This hit every shot after the first. `RefreshStance` now disarms every
+   competing trigger, not just the opposite one.
+
+**All four grip failures cleared with zero grip changes** (`fingersClosed` 0.0873→0.0276,
+`leadHandOnGrip` −0.0036→0.0531, `wrapped_r` 0.0573→0.0324, `wrapped_l` 0.5724→0.0309). The reported
+"`ApplyGripPose` does not take effect" was never a bug: the numbers were frozen across solver
+rewrites because the golfer was in Idle, where the lead arm hangs at his side and there is no grip.
+
+**The assertion that lied, and the lesson.** `shot.addressBeforeSwing` PASSed on a frame that
+visibly showed Idle, because it samples states seen while the harness drives a synthetic drag — the
+one moment the old rule held. **No assertion was checking the thing the picture showed.** Added
+`shot.addressAtRest` (live animator state on the captured frame, no shot in progress) and replaced
+`shot.backToIdle` — which accepted `"Idle" OR "Address"`, exactly the looseness that let it through —
+with `shot.addressAfterShot`, which REQUIRES Address once the ball has re-armed.
+
+**Close-out (partial — §9.1 / §9.3 / §9.4 / §9.5):** dropped the `Eyebrows` mesh (984 tris) from
+`PfGolfer_Test` → `budget.tris` 15,632 → **14,648**, taking the board to **36 pass / 0 fail**.
+Putter fingertip re-measured on a green in `Address_Putt`: trail hand 0.0389 m (inside the 0.042
+gate), **lead hand 0.0633 m (over by 51%)** — this supersedes the "0.0429 marginal" note in
+`KICKOFF_PC.md`; recorded as a measurement, not a gate, because §9.3 froze the grip. The golfer
+renders naked (CC0 base body, no garment mesh). Found in passing: changing club **while already at
+address** leaves him in `Address_Drive` holding a putter — there is no `Address_Drive →
+Address_Putt` edge, so `IsPutt` has nothing to act on.
+
+**Still open:** §9.2 (defer ball launch to impact) is blocked — its seam is
+`PhysicsLabController.HandleShotResolved`, under `Assets/Scripts/Physics/`, which CLAUDE.md rule 7
+bans and a hook enforces. §9.6 (three iOS builds) is a Mac task; `unity-build-ios.sh` emits an Xcode
+project for fastlane. **`SPEC.md` has no §9** — it ends at §8 and the close-out scope still needs
+writing into it. **This PC stays on the `iOS-Full-Golfer` build profile** (Cesar, 2026-09-07),
+because it is the machine for testing these animations.
+
+---
 ## 2026-09-07 — control schemes / **four polish fixes: ball, club head, cancel, map view**
 
 **The 2D centre ball was SOLID on the first shot of a hole.** `BallConeAlphaMirror` mirrored the

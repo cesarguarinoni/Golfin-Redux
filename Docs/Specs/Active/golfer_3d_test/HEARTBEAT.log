@@ -223,3 +223,18 @@ DIRTY (git status --porcelain --untracked-files=all):
      re-armed, after a bounded 3s wait.
    - shot.addressBeforeSwing kept but its detail now states plainly that it samples across the
      drag and is NOT a render check.
+
+=== iter-16 kickoff baseline 2026-09-07T10:30:00Z ===
+HEAD 9c3da7e3ddea0767fbb4a27fe3fdf6d2be00fe02
+DIRTY:
+?? Assets/Animations.meta
+(end DIRTY — the only uncommitted path is the untracked Assets/Animations.meta, which predates
+this session: it is present in the session-start git status snapshot, before any edit of mine.)
+Scope this iteration: SPEC §9.1 / §9.3 / §9.4 / §9.5 ONLY, per Cesar 2026-09-07.
+ §9.2 (defer ball launch to impact) NOT attempted: its seam is PhysicsLabController.HandleShotResolved,
+   under Assets/Scripts/Physics/, which CLAUDE.md rule 7 bans outright and a hook enforces.
+   Needs the Architect to state how it clears the ban. Also still listed out-of-scope in SPEC §8.
+ §9.6 (three iOS builds) NOT attempted: unity-build-ios.sh emits an Xcode project for fastlane
+   build_app — macOS only. This is a Windows machine. Mac-side task.
+ NOTE: SPEC.md has no §9. It is 147 lines ending at §8 and the tree is level with origin/main.
+   Working from Cesar's message text for these four items; §9 still needs to be pushed.

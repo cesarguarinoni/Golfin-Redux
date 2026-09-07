@@ -491,3 +491,98 @@ Five takes; the earlier four are not kept.
    above the soles and `GOLFIN_Putter.fbx` is 0.75 m grip-to-head, so the head cannot reach the
    ground at 1:1. Scaling the socket was the least-bad of a floating putter head, a longer putter
    mesh, or a different putt clip. Recorded here so the real spec can size the mesh instead.
+
+---
+
+## 10. Iteration 16 (PC session, 2026-09-07) — SPEC §9.1 / §9.3 / §9.4 / §9.5
+
+**Iteration shape:** `golfer:close-out-partial`
+
+**Scope actually delivered: §9.1, §9.3, §9.4, §9.5 only.** §9.2 and §9.6 were NOT attempted; see
+§10.5. This is a partial iteration by Cesar's instruction ("do 9.1, 9.3, 9.4 and 9.5 now"), so
+STATUS stays `IMPLEMENTER_WORKING` rather than advancing to review — marking it ready would claim
+a close-out scope that is two items short.
+
+**A note on the spec.** `SPEC.md` has no §9. It is 147 lines ending at §8, and the working tree is
+level with `origin/main`. The four items below were implemented from Cesar's message text. §9 still
+needs to be written into `SPEC.md` before any review gate can check this work against a contract.
+Related: current §8 still lists "Delaying ball launch to the swing's impact frame" as out of scope,
+which §9.2 would reverse.
+
+### 10.1 §9.1 — tri budget — **PASS**
+
+Dropped the `Eyebrows` SkinnedMeshRenderer (984 tris) from `PfGolfer_Test.prefab` only.
+
+| | before | after |
+|---|---|---|
+| `budget.tris` | **FAIL** 15,632 / 15,000 | **PASS 14,648 / 15,000** |
+
+Live breakdown from the run: `Grip=192 ClubHead=1058 Shaft=64 Eyes=768 SuperHero_Male=12566`.
+`Eyes` (768) was left in place — §9.1 says Eyebrows only, and 14,648 clears the limit without it.
+
+The presenter's serialized `skins` array was compacted to the two surviving renderers
+(`Eyes,SuperHero_Male`) rather than left holding a null slot. `ApplyTier` null-guards, so this is
+not a crash fix; a missing reference in a shipped prefab is something a reviewer should reject.
+
+### 10.2 §9.3 — grip — **no change, as instructed**
+
+No grip tuning. `ApplyGripPose`, the contact solve and every tuning constant are byte-identical to
+`9c3da7e3d`. The `grip.*` numbers in `golfer_invariants.json` are the final stand-in values.
+
+### 10.3 §9.4 — putter fingertip, re-measured once, on a green — **measured**
+
+Ball placed at the pin +1.5 m with `PhysicsLabController.PlaceBallAt(pos, 1 /*Green*/)`, putter
+equipped, golfer in `Address_Putt`:
+
+| hand | worst finger | distance from shaft axis | gate |
+|---|---|---|---|
+| trail (r) | pinky | **0.0389 m** | 0.0420 — under |
+| lead (l)  | ring  | **0.0633 m** | 0.0420 — **over by 51%** |
+
+This supersedes the "0.0429 m marginal fail" carried in `KICKOFF_PC.md`. The trail hand is
+comfortably inside the gate; the problem is the **lead** hand, and it is not marginal. Reported,
+not fixed — §9.3 froze the grip.
+
+Recorded as a **measurement, not an assertion**. Promoting it to a gate would hard-wire a red board
+for a defect §9.3 has declared out of bounds. Making it a gate is Cesar's call.
+
+The measurement discriminates, so these are real numbers and not a frozen readout: in the same run
+the driver reads `grip.wrapped_r` 0.0291 / `grip.wrapped_l` 0.0210 against the putter's 0.0389 /
+0.0633.
+
+**No corroborating frame.** `golfer_h06_putt_green_*.png` shows the ball on the green with the
+putter selected, 2 m from the pin — but the putt camera frames the ball and excludes the golfer.
+Rather than invent a capture path (CAPTURE RULE 0), the numbers stand on the bone transforms, which
+is the gate mechanism per PIPELINE_HARDENING §3.
+
+**Defect found while doing this.** Switching club **while already at address** leaves the golfer in
+`Address_Drive` holding a putter: `Address_Drive`'s only transitions are `Swing` and `Cancel`, so
+there is no `Address_Drive → Address_Putt` edge and the `IsPutt` bool has nothing to act on. The
+first take of this measurement read `animator=Address_Drive` and produced numbers against the wrong
+pose and a shorter shaft. In a real round it does not bite — the ball rests, auto club selection
+sets `IsPutt`, and only then does re-arm fire `Address`, so the `Idle → Address_Putt` edge is picked
+correctly. It bites when a player changes club from the widget while standing over the ball. Not
+fixed here (grip/pose work is frozen); the harness discloses its restage-through-Idle scaffolding
+in a comment at `PuttGripOnGreen`.
+
+### 10.4 §9.5 — clothes — one line
+
+The golfer renders naked — bare skin and grey underwear — in every frame, because `SuperHero_Male`
+is the CC0 base body with no garment mesh and no clothing was ever part of this stand-in's scope.
+
+### 10.5 Not attempted, with reasons
+
+- **§9.2 (defer ball launch to impact).** The seam where the resolved `ShotInput` reaches the ball
+  state machine is `PhysicsLabController.HandleShotResolved`
+  (`Assets/Scripts/Physics/Viewer/PhysicsLabController.cs:259`), which is under
+  `Assets/Scripts/Physics/`. CLAUDE.md rule 7 bans edits there outright and a hook enforces it.
+  The presenter already receives `OnShotResolved`, but deferring the **launch** means intervening
+  before the SM sees it — that file. Needs the Architect to state how it clears the ban.
+- **§9.6 (three iOS builds, Editor closed).** `Tools/unity-build-ios.sh` emits
+  `Builds/iOS-Full/Unity-iPhone.xcodeproj` for fastlane `build_app` — Xcode, macOS only. This is a
+  Windows machine. Mac-side task, and the "restore the profile to `iOS-Full-GPS`" step belongs with
+  it (Cesar's 2026-09-07 ruling is that this PC stays on `iOS-Full-Golfer` for animation testing).
+
+### 10.6 Result
+
+`Docs/Diagnostics/_capture/golfer_invariants.json` — **36 pass / 0 fail**, zero FAIL entries.
