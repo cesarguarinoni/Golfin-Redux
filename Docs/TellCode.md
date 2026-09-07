@@ -169,25 +169,101 @@
 ---
 
 ## 📋 SPEC_READY POINTERS
-- **`golfer_3d_test` — SPEC_READY (2026-09-05), assets DONE, pasteable NOW. EXPERIMENT: opt-in only via `GOLFIN_GOLFER_TEST`, default OFF — must not reach normal builds.** Free-asset proof of the golfer pipeline: Quaternius Universal Base Characters (CC0) + 11 Mixamo golf clips on Y Bot, both already in `Assets/Art/3D/Characters/_Test/` → `PfGolfer_Test` + shared `AnimatorController_Golfer` + `GolferPresenter` driven by `ShotController.OnShotResolved` / `BallStateMachine.OnShotComplete` / `ClubSelectionBroadcast.OnPutterModeChanged`. Only the FBX changes when the real roster models land (`Docs/Design/CHARACTER_3D_REMAKE_OPTIONS.md`). Kickoff:
+- **`shot_view_layout_followup` — SPEC_READY (2026-09-07, Quick), pasteable NOW; may run alongside `miss_grade_duff`.** `Docs/Specs/Active/shot_view_layout_followup/SPEC.md`. Two Cesar decisions from the `shot_view_layout` review: (1) cap the drawn Pendulum/Free Swing pill at the bottom baseline (`SetLaneEndCapY` on both lane views, called from `ShotLayoutController`; pull clamp untouched, 3× head overhangs the rounded end); (2) `SchemeConfirmTilesCapture.FitCrop` becomes height-driven with letterboxing into the 314×340 tile, then recapture the nine Pendulum/Needle/Free Swing tiles (Flick tiles byte-identical). `shot_view_layout` itself is ARCHITECT_REVIEW_PASS awaiting Cesar's device check → DONE.
 
 ```
-Read Docs/Specs/Active/golfer_3d_test/SPEC.md and implement it.
+Read Docs/Specs/Active/shot_view_layout_followup/SPEC.md and implement it.
 
 Context:
-- EXPERIMENT, OPT-IN ONLY: everything gated on the scripting define GOLFIN_GOLFER_TEST (SPEC §5.5–5.6). Default OFF. Without the define: code compiled out, GameplayScene holds no asset reference, and the build gate excludes Assets/Art/3D/Characters/_Test/. Prove both builds (§6 gate proof).
-- Assets are already in Assets/Art/3D/Characters/_Test/ (Quaternius Superhero_Male_FullBody + 11 Mixamo ANIM_*.fbx on Y Bot). Import both as Humanoid; Humanoid retargets the Y Bot clips onto the Quaternius avatar (§5.1).
-- New: AnimatorController_Golfer, GolferPresenter.cs, GolferTestBootstrap.cs, Editor/GolferTestBuildGate.cs, PfGolfer_Test under _Test/Resources/GolferTest/.
-- 4th build variant "punch it golfer" (SPEC §5.7): iOS-Full-Golfer profile (GOLFIN_GPS;GOLFIN_GOLFER_TEST), CIBuild.BuildIOSGolferTest mirroring BuildIOSGps with the IncludeTestAssets flag in try/finally, unity-build-ios.sh `golfer`, Fastfile variant_table row + lane testflight_build_golfer, one row in PUNCH_IT_ROUTINE.md + TESTFLIGHT_RUNBOOK.md. Reuse StandaloneBuildPreprocessor's move-out/restore for the _Test stash. Consume the EXISTING events named in SPEC §4 — no polling except the heading in LateUpdate while idle.
-- Copy the socket transforms from Assets/Prefabs/Original/Characters/PfYoungMale.prefab (§5.3); its UnplayableChecker script guid is unresolved — keep the empties, drop the component, flag it.
-- Drive the Editor through the Unity MCP tools per SPEC §5.8 (script-execute for the 13 importers, animator-create/-modify/-get-data for the controller, assets-prefab-* for the prefab, profiler-* + tests-run for acceptance). Re-read with *-get-data after every write batch.
-- Minimal diff. No new asmdef, no localisation, no settings UI.
-- Out of scope: impact-frame launch delay, per-character model column, camera, trails, reactions, cloth/hair.
+- Follow-up to shot_view_layout (28904bac8). Item 1: PendulumLaneView + FreeSwingLaneView get SetLaneEndCapY(canvasY); LaneHeight = min(derived, laneTop − cap) with a floor of deepestTick + 8; ShotLayoutController.Apply passes −H/2 + baseline. The pull clamp (cfg.*Pull120Px in the drivers) is NOT touched — add a test proving 120 % is still reachable with the capped pill. Expected: 1170×2532 lane end = −1096, LaneHeight 792.
+- Item 2: Assets/Editor/ShotUI/SchemeConfirmTilesCapture.FitCrop → height-driven (new MaxCropH = 1300, width still clamped to MaxCropW 900), WriteTile letterboxes the crop inside TileW×TileH·Scale using the pop-up's existing tile background colour. Chrome-exclusion loop unchanged. Then run GOLFIN ▸ Capture ▸ Scheme Confirm Tiles AFTER item 1 and commit the nine Pendulum/Needle/Free Swing tiles; Flick tiles must be byte-identical (git diff --stat).
+- Minimal diff. No csv changes, no strings, no scene edits (capture is read-only — if LabScaffold.unity gets dirtied by the capture, do not commit it).
+- Out of scope: Pull*Px / ball anchor changes, Figma frames, anything in miss_grade_duff.
 
 When done: list changed files with a 1-line summary each, run the acceptance
-checklist in SPEC §6 (write the Drive/Putt impact-frame times in the report),
-flag which items need manual on-device verification, update STATUS.md +
+items in the spec (lane-end y per aspect, per-tile crop rects, old-vs-new tile
+PNGs, pop-up screenshots for all four schemes), update STATUS.md +
 IMPLEMENTER_REPORT.md in the spec folder, and update Docs/AI_CONTEXT.md.
+```
+
+- **`miss_grade_duff` — SPEC_READY (2026-09-07), run AFTER `shot_view_layout` (adds `FlickGradePop` to `SchemeRoot_Flick` in `LabScaffold.unity`).** `Docs/Specs/Active/miss_grade_duff/SPEC.md`. Every miss becomes a DUFF: Pendulum MISS / Needle SHANK / Free Swing DUFF / Flick below a new `TimingBandRedY01` (0.15) → `MissPowerMul` 0.20 (`PuttMissPowerMul` 0.30, never whiff) + `MissLaunchPitchScale` 0.35 through a new optional `ShotInputBuilder.Build` param; yaw unchanged so bot sigma calibration is untouched. Red flash on the power gauge. Grade vocabulary unified in real golf terms across all four schemes — PURE / GOOD / HOOK / SLICE / THIN / DUFF (JP ピュア / グッド / フック / スライス / トップ / ダフリ), JUST / PERFECT / SHANK / MISS retired via the importer; Flick gets its own grade pop (PURE/GOOD/THIN/DUFF by slab band); one colour set from `ConeBandPalette`, Needle blue zone → PURE green (Cesar may veto).
+
+```
+Read Docs/Specs/Active/miss_grade_duff/SPEC.md and implement it.
+
+Context:
+- Gameplay feel: a graded miss must be a DUFF, not a 70 % shot. New controls.csv keys MissPowerMul=0.20, PuttMissPowerMul=0.30, MissLaunchPitchScale=0.35, TimingBandRedY01=0.15 (ControlsConfig + Loader + csv). TimingPowerMulRed keeps its job as the bottom of the Flick ramp, re-based to start at the red line.
+- Carrier: ShotIntent.IsMiss (default false) → ShotController.CommitExternal / CommitFlick → ResolveAndPublish(launchPitchScale) → ShotInputBuilder.Build gains ONE trailing optional fp launchPitchScale (0 = legacy 1.0; clamp pitch to [2°, loft]). Answer the ShotCommand replay NOTE in SPEC §3.2 explicitly.
+- Graders: PendulumMath.Grade MISS branch, NeedleMath.Shank, FreeSwingMath DUFF exit → MissPowerMul (putt → PuttMissPowerMul) + Verdict.IsMiss. Big HOOK/SLICE in Needle and Free Swing UNCHANGED. Miss yaw UNCHANGED → run the sigma harness and prove bot_difficulty.csv has zero diff.
+- ConeBandPalette.BandRedY01 const → fed from cfg.TimingBandRedY01 (same F15 pattern as Gold/Green). PowerGaugeWidget: red flash with the resolved % for the grade-pop duration when LastShotWasMiss (hook on the existing OnStateChanged → Resolving).
+- Unified grades (SPEC §3.6): GradeKey() maps to SHOT_GRADE_PURE/GOOD/HOOK/SLICE/THIN/DUFF; enums unchanged. New FlickMath.Grade(t, cfg) + FlickGradePop (clone of PendulumGradePop, under SchemeRoot_Flick/BallSpace) + FlickGradePopBinder. SchemeGradePop colours collapse to pure/near/duff from ConeBandPalette; NeedleColors perfect zone → PURE green (flag as one-constant veto).
+- Strings THROUGH THE IMPORTER, EN+JA same commit: add SHOT_GRADE_THIN,THIN,トップ; fix SCHEME_POPUP_PENDULUM_LINE3 / SCHEME_POPUP_NEEDLE_LINE3 and any other SCHEME_POPUP_*/TIP_* row carrying JUST/PERFECT/SHANK/MISS; delete SHOT_GRADE_JUST/PERFECT/SHANK/MISS once unreferenced. PLAN → --apply → publish texts → export_content.py --check clean. Zero new hardcoded .text literals.
+- Tests: update MISS/SHANK/DUFF cases in PendulumMathTests / NeedleMathTests / FreeSwingMathTests; ShotTimingPowerTests red-zone cases; ShotInputBuilderTests default-param byte-identity + 0.35 case; new FlickMathTests. ShotAimParityTests + ShotControllerFlickGateTests unmodified.
+- Minimal diff. No confirm-tile recapture (no geometry change). No new settings UI.
+- Out of scope: whiff, duff SFX, duff camera cut, grade telemetry column, Figma frame word updates.
+
+When done: list changed files with a 1-line summary each, run the acceptance
+checklist in SPEC §4 (write intended vs landed yards per scheme and the Flick
+band results in the report), flag which items need manual on-device
+verification (feel of the 20 %/0.35 duff), update STATUS.md +
+IMPLEMENTER_REPORT.md in the spec folder, and update Docs/AI_CONTEXT.md.
+```
+
+- **`shot_view_layout` — SPEC_READY (2026-09-07), pasteable NOW — but NOT concurrently with `selector_carousel` (both edit `ActionButtonsBuilder.cs` + `LabScaffold.unity`; run after it closes or before it starts).** `Docs/Specs/Active/shot_view_layout/SPEC.md`. Shot-view framing back to Figma 14153:4602: `CentralBall` anchor per scheme (`BallAnchorViewportY_*` in controls.csv — Pendulum/Needle/FreeSwing 0.38 = 62 % from the top, Flick stays 0.5 → camera pitches up on its own via `GetAimBallViewportY`), one `BottomBaselinePx = 170` shared by the four action buttons, both selector overlays and the lane end, Pendulum/FreeSwing `Pull100/120Px` 380/456 → 540/648, `PowerHUD` to top-right at viewport 0.70, `BallSpace` RectTransform per scheme root, new `ShotLayoutController` + `ShotLayoutMath` (+ EditMode tests, incl. the 16:9 clamp), confirm tiles re-captured for the three moved schemes. Flick byte-identical (parity tests untouched).
+
+```
+Read Docs/Specs/Active/shot_view_layout/SPEC.md and implement it.
+
+Context:
+- Shot-view layout, not gameplay: CentralBall (Assets/Scenes/Physics/LabScaffold.unity) gets a per-scheme anchor from new controls.csv keys BallAnchorViewportY_<Flick|Pendulum|Needle|FreeSwing> (0.5 / 0.38 / 0.38 / 0.38). The camera already pins to that widget (PhysicsLabController.GetAimBallViewportY → SolveAimCameraPose) — do NOT touch camera code.
+- New ShotLayoutController + static ShotLayoutMath (Assets/Scripts/Gameplay/UI/ShotUI/): applies ball anchor, the shared BottomBaselinePx=170 (action buttons cluster offset, SelectorOverlayWidget open y, safe-area max), PowerHUD at PowerGaugeViewportY=0.70 top-right, and the D6 clamp that raises the ball on short aspects so the lane never runs under the buttons. Called from ShotSchemeHost.Apply before driver.Activate() — reuse its Idle deferral, no second gate.
+- One BallSpace RectTransform per SchemeRoot_*; re-parent the ball-relative children listed in SPEC §3.2 preserving anchoredPosition. Flick must be byte-identical: dump ConeMesh/ClubHandle/TimingSlab/PutterTrack world corners before/after and quote them.
+- controls.csv: PendulumPull100/120Px and FreeSwingPull100/120Px 380/456 → 540/648 (exact 1.2×). Needle pull constants UNCHANGED (D5). Lane views already draw from cfg — verify the 120 % tick lands at canvas y −1022 ± 2 and the lane end at −1092 ± 2 and write the numbers.
+- Update 380f/456f FIXTURE literals in PendulumMathTests / FreeSwingMathTests / *SchemeDriverTests only; ShotAimParityTests, ShotTimingPowerTests, ShotControllerFlickGateTests, MapViewAimingTests, AimCameraFramingTests stay green UNMODIFIED. New ShotLayoutMathTests per SPEC §3.6.
+- Re-capture the scheme confirm tiles for Pendulum / Needle / Free Swing (controls.csv header rule). Re-run GOLFIN/Build/Build Action Buttons (8.5) once; commit LabScaffold.unity with this task and say so.
+- Minimal diff. No new strings, no localisation, no settings UI, no debug sliders.
+- Out of scope: Flick at the 0.38 anchor / shorter cone / cone 120 %, tablet anchor table, Figma scheme-frame redraw, putt camera.
+
+When done: list changed files with a 1-line summary each, run the acceptance
+checklist in SPEC §4 (write the ball y, tick y, lane-end y, button y and the
+before/after camera pitch in the report), flag which items need manual on-device
+verification (home-gesture clearance, framing by eye), update STATUS.md +
+IMPLEMENTER_REPORT.md in the spec folder, and update Docs/AI_CONTEXT.md.
+```
+
+- **`selector_carousel` — SPEC_READY (2026-09-06), pasteable NOW.** `Docs/Specs/Active/selector_carousel/SPEC.md`. In-game club + ball selector (`SelectorOverlayWidget`) → 4-slot vertical carousel: focus slot (bottom) with a gold halo IS the selection, finger-slide to scroll in modal mode, wraps when ≥5 items, eased snap, 6-card pool (no more destroy/instantiate per step). Hold-mode + `SelectorDragRouter` untouched. Halo placeholder already in `Assets/Art/In-Game UI/Halo - Selector.png`. Kickoff:
+
+```
+Read Docs/Specs/Active/selector_carousel/SPEC.md and implement it.
+
+Context:
+- Club + ball selector overlays (Assets/Scripts/Gameplay/UI/ShotUI/SelectorOverlayWidget.cs, built by Assets/Scripts/Editor/CanvasScalerMigration/ActionButtonsBuilder.cs into LabScaffold.unity) become a 4-slot vertical carousel: fixed viewport + RectMask2D, 6-card pool rebound per frame (SPEC §2), focus slot at the bottom carries the FocusHalo (Assets/Art/In-Game UI/Halo - Selector.png, tint #FCF195), finger-slide via new SelectorCarouselDrag on CardsContainer (modal mode only, §4), wrap when N>=5, eased snap with selection committed at snap start (§3).
+- Pure math in new SelectorCarouselMath.cs + EditMode SelectorCarouselMathTests (K11 putter-skip cases are the important ones). ClubSelectionGreenGateTests must stay green and unmodified.
+- Hold-mode is UNCHANGED: SelectorDragRouter.cs is not edited; UpdateHoldHover/EvaluateRelease/CommitHighlighted keep working over the visible pool cards. Chevron mapping unchanged (ScrollUp = +1).
+- UiMotion is unreachable from Golfin.Gameplay.UI (asmdef) — local coroutine, unscaled time, interruption-safe, ease-out cubic. Do NOT add an asmdef reference.
+- Re-run GOLFIN/Build/Build Action Buttons (8.5) once for both overlays; LabScaffold.unity is already dirty from control-scheme work — commit the scene with this task and say so.
+- Minimal diff. No new strings, no localisation, no settings UI.
+- Out of scope: hold-drag scrolling, open/close animation, scale/alpha falloff on non-focus cards, reduced-motion switch, chevron flip, inventory-screen carousels, any edit to ClubContext/BallContext/ClubSelectionBroadcast.
+
+When done: list changed files with a 1-line summary each, run the acceptance
+checklist in the spec (write the bottom-card vs DriverButton y numbers and the
+Profiler alloc reading in the report), flag which items need manual on-device
+verification (the feel constants), update STATUS.md + IMPLEMENTER_REPORT.md in
+the spec folder, and update Docs/AI_CONTEXT.md.
+```
+
+- **`golfer_3d_test` — UNBLOCKED 2026-09-07 by Cesar (Address fix at `9c3da7e3d` reviewed PASS, 35/1). Close-out scope is SPEC §9; kickoff below SUPERSEDES the original one.** Original: SPEC_READY (2026-09-05), assets DONE. EXPERIMENT: opt-in only via `GOLFIN_GOLFER_TEST`, default OFF — must not reach normal builds.** Free-asset proof of the golfer pipeline: Quaternius Universal Base Characters (CC0) + 11 Mixamo golf clips on Y Bot, both already in `Assets/Art/3D/Characters/_Test/` → `PfGolfer_Test` + shared `AnimatorController_Golfer` + `GolferPresenter` driven by `ShotController.OnShotResolved` / `BallStateMachine.OnShotComplete` / `ClubSelectionBroadcast.OnPutterModeChanged`. Only the FBX changes when the real roster models land (`Docs/Design/CHARACTER_3D_REMAKE_OPTIONS.md`). Kickoff:
+
+```
+Read Docs/Specs/Active/golfer_3d_test/SPEC.md §9 as AMENDED 2026-09-07 ("1+2") and finish it.
+
+Context:
+- STOP all visual tuning. 9.2, 9.3, 9.4 are CANCELLED — no grip, no swing-visibility, no fingertip work. If 9.2 is already in, keep it only if the define-off path is byte-identical and tests are green; otherwise revert it.
+- Remaining: 9.1 (drop Eyebrows mesh), 9.5 (one line), 9.6 (Editor-only gate proof: EditMode sweep with the define off + the GolferTestBuildGate EditMode test + grep of the guarded bodies; NO iOS builds), 9.7 (remove .git/objects/maintenance.lock; do not sweep the uncommitted control-scheme edits).
+- 9.8 Mixamo-native check: the Architect is dropping Assets/Art/3D/Characters/_Test/MixamoNative/ (character T-pose + 4 clips With Skin). Import per §9.8 (clips copy the character's avatar), duplicate PfGolfer_Test -> PfGolfer_MixamoNative with mesh + avatar swapped and NO grip/finger/forearm code, capture the same three Hole 06 frames side by side with the Quaternius ones + foot-slide numbers. No tuning. Write the retarget-vs-clips conclusion in the report Findings.
+- Restore the active build profile to iOS-Full-GPS before the final commit.
+
+When done: list changed files with a 1-line summary each, the 9.8 side-by-side, the gate test result, update STATUS.md (READY_FOR_SELF_REVIEW) + IMPLEMENTER_REPORT.md, and update Docs/AI_CONTEXT.md.
 ```
 
 

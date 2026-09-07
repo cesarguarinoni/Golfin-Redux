@@ -2,7 +2,7 @@
 
 > Everything consciously left OUT of the 2026-09 GPS build, in one place, with where it was
 > deferred and what it needs. Maintained by the Architect — every future GPS spec that defers
-> something adds a row here in the same session. Last updated: 2026-09-05 (golfer_3d_test deferrals added).
+> something adds a row here in the same session. Last updated: 2026-09-07 (shot_view_layout + miss_grade_duff deferrals added).
 
 ## Player-visible promises (highest priority — the UI already implies them)
 
@@ -81,6 +81,17 @@
 | Distance rings 80/120 + labels | `map_view_v2` (kept commented out since iter-28) | Delete or revive; B1 only uses the r100 landing ring |
 | Hazard / OB markers on the map | competitor sweep 2026-09-04 (Golf Clash red signs) | Nothing designed; would need OB-mask → marker placement |
 
+## In-game selector (game side) — deferred in `selector_carousel` (2026-09-06)
+
+| Item | Deferred in | Notes |
+|---|---|---|
+| Hold-mode drag scrolls the club/ball stack (rubber-band past the visible 4, replacing arrow auto-scroll) | `selector_carousel` (Cesar chose "hold-mode unchanged", 2026-09-06) | Would live in `SelectorDragRouter.OnDrag` → `SelectorOverlayWidget.SetScroll`; the arrows already cover the need |
+| Selector overlay open/close entrance animation | `selector_carousel` | Overlay still appears instantly; a slide-in from the trigger button is the obvious shape |
+| Distance-based scale/alpha falloff on non-focus selector cards (Gacha-carousel style) | `selector_carousel` | Cards stay 1.0 / full alpha; K11 greying is the only alpha rule today |
+| Reduced-motion switch for in-game UI motion | `selector_carousel` (and `gps_polish` §D1 note) | `UiMotion.Enabled` is in `Assembly-CSharp`, unreachable from `Golfin.Gameplay.UI` — needs a shared motion asmdef or a duplicated flag |
+| Chevron direction on the selector (top chevron currently pulls the stack DOWN, = `Scroll(+1)`) | `selector_carousel` NOTE | Kept as-is; one-line flip in `WireArrows` if it reads wrong on device |
+| Final halo art for the selector focus slot | `selector_carousel` | Placeholder white glow + ring ships (`Assets/Art/In-Game UI/Halo - Selector.png`, tinted `#FCF195` by the builder); Robin's asset drops into the same path, zero code |
+
 ## How this file is used
 When a spec defers something: add the row in the same session (Architect). When an item is taken up: move its row into the new spec's Goal and delete it here. Cesar prunes anything he decides is never-do.
 
@@ -103,3 +114,13 @@ When a spec defers something: add the row in the same session (Architect). When 
 | Ball launch delayed to the swing impact frame | `golfer_3d_test` §8 | Needs the Drive/Putt impact-frame seconds from the test report; then `ShotController` commit → delayed physics launch (or clip time-scaled to the launch) |
 | `Characters.csv` `modelPrefab` column + per-character `PfGolfer_<Name>` | `golfer_3d_test` §8 | The real-roster spec; loader falls back to the starter model when a prefab is missing (same shape as `renderable`) |
 | Golfer camera framing, club trail on `ClubStart/ClubEnd`, reactions/celebrations, cloth/hair, bot golfers | `golfer_3d_test` §8 | Polish once the stand-in proves the pipeline on device |
+| Debug sliders for ball anchor / bottom baseline / gauge Y | `shot_view_layout` §5 (D8) | Cesar tunes via `controls.csv` + relaunch for now; a `DebugShotPanel` row with three sliders if the csv loop gets slow |
+| Flick at the shared 0.38 ball anchor: shorter cone + 120 % overpower on the cone | `shot_view_layout` §5 (D1) | Flick has no 120 % today (`ClubHandleDragger` clamps at the cone base); cone height 1009 → ~600 if the ball drops; only after the three lane schemes are judged |
+| Cone base vs the new bottom baseline (base −1160 sits 64 px below the button bottoms while Flick stays at 0.5) | `shot_view_layout` §5 | Accepted; realign only if Flick's anchor moves |
+| Tablet / 16:9 shot-view framing (D6 clamp raises the ball above centre on 4:3) | `shot_view_layout` §5 | A per-aspect anchor table, or a shorter lane on short canvases |
+| Figma "Shot Controls — Schemes" frames redrawn at the new lane geometry (540/648, ball at 62 %) | `shot_view_layout` §5 | Architect; `CONTROL_SCHEMES_PLAN` §8 carries a stale-geometry note until then |
+| Whiff (air shot, ball untouched) as the far-outside miss outcome | `miss_grade_duff` §5 (D1) | Wants a golfer swing animation first so a motionless ball reads as a miss, not a bug; then a second threshold past the DUFF band |
+| Duff SFX (thud / topped-ball click) | `miss_grade_duff` §5 | Rides with the parked grade-SFX rows; Architect sources a CC0 placeholder when taken up |
+| Duff camera: short "watch it dribble" cut instead of the flight cameras | `miss_grade_duff` §5 | `LoopCameraDirector` picks by predicted carry today; a duff falls into the short-distance camera — check that first |
+| Figma scheme + confirm pop-up frames still say JUST / PERFECT / SHANK | `miss_grade_duff` §5 | Architect; fold into the geometry redraw row above |
+| Real club grip for the golfer — club-in-hand mocap (CMU subject 64, free, ships-in-product licence; or Motion Cast #05, $35) + one authored hand pose | `golfer_3d_test` §9.3 | Mixamo golf clips are empty-hand mocap; seven tuning rounds hit the wrist-roll limit. Decide with the roster models, not on the stand-in |
