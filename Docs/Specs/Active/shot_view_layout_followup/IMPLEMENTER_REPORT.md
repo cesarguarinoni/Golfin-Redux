@@ -301,22 +301,54 @@ stale grab; and `_label`/`_group`/`_gradePop` are identically wired on all three
 (`1396204410` / `2043148095` / `1123222000`). Needle and Free Swing are unaffected because neither
 commits through a flick gate — Needle commits on a tap, Free Swing on crossing the impact line.
 
-**Still open: WHICH of the three exits it takes.** `ReleaseSwing` has two early returns before the
-commit — the flick gate (`RejectExternalDrag`) and `_peakPower <= 0.02f` (`CancelExternalDrag`) —
-and `Advance`'s `HandleReverseCancel` can end the swing before `OnPointerUp` runs at all. That last
-one is the suspicious newcomer: it landed this morning, step 3's gesture is three upward drag
-frames, the first alone clears the 60 px arming threshold, and this capture's frames are slow
-enough that the rest can exceed the 0.12 s hold.
+**WHICH exit: A, then B.** Cesar approved a log line inside `PendulumSchemeDriver`, so I put one at
+every outcome — the reverse-cancel, `OnPointerUp`'s `!_dragging` guard, the flick gate, the
+no-power cancel and the commit. One run:
 
-I tried two gesture rewrites on that theory — one frame plus a later `Up()`, then two frames
-releasing on the second — and **neither changed the outcome**, so the gesture shape is not the cause
-and both were reverted rather than left in the tree on an unproven theory. (The first was wrong for
-its own reason worth recording: `Up()` reuses `_ped.position`, so releasing a frame after the last
-`Drag` pushes two touch samples at the same point, and the gate then measures zero velocity.)
+```
+[PendulumExit] A reverse-cancel  held=0.333s deepest=540 peak=1.00
+[PendulumExit] B pointer-up with no live drag — the swing was already ended
+```
 
-The next step is driver-side, not gesture-side: log which of the three exits is taken and
-`_peakPower` at release. That needs a line inside `PendulumSchemeDriver`, which is a production
-file, so it is a decision rather than something to slip in.
+`Advance`'s `HandleReverseCancel` fires at **held = 0.333 s**, nearly 3x the 0.12 s threshold, on a
+full 100 % pull (`deepest=540 peak=1.00`). It sets `_dragging = false`, cancels the drag and resets
+the swing. `OnPointerUp` then arrives, hits its own `if (!_dragging) return`, and `ReleaseSwing` is
+**never called at all** — no gate, no commit, no `Show`. That is the whole chain.
+
+**Why 0.333 s: the capture's frames are ~111 ms.** It screenshots and writes files between frames.
+Step 3 drags up over three of them; the first alone clears the 60 px arming threshold and the other
+two are three times the hold.
+
+**And the obvious fix does not work, for a second reason.** Shortening the gesture just moves the
+failure to the flick gate, because `ShotController.EvaluateFlickGate` cannot pass at this frame rate
+either:
+
+- `_flickSampleWindow` is 0.08 s, so at 111 ms frames no two samples are ever inside the window;
+- line 280 then falls back to the immediately-previous sample;
+- line 284 is `if (dt > _stutterFrameThreshold) return false;` with the threshold at **0.1 s**.
+
+dt is always ~0.111 s, so the gate returns false every time, whatever the gesture. That is exactly
+what my two earlier rewrites ran into. **The rig cannot produce a committing Pendulum flick through
+synthetic pointer events at its own frame rate** — not a tuning problem, a structural one.
+
+**The fix is the one the codebase already prescribes.** `EvaluateFlickGate` line 261 is
+`if (_sampleCount == 0) return true; // programmatic driver — not a touch swing`, and
+`ReleaseSwing(requireFlickGate: false)` has exactly one caller: `DriveBot`. The tile capture is a
+bot in all but name, and CLAUDE.md rule 17 already says bots swing through `BotSwing.Play`, never
+hand-rolled pointer events. Routing step 3's swing through the bot path would clear both the
+reverse-cancel and the gate at once, and would produce a real graded commit instead of a synthetic
+one. That is a change to the capture rig rather than a log line, so it is scoped and left for a
+decision.
+
+**Worth a second look beyond the capture:** `HandleReverseCancel` landed this morning, and it fires
+here on a genuine full-power pull followed by an upward move. On a device that hitches for a third
+of a second mid-flick, a real player's shot would die the same way. The 0.12 s hold is measured in
+wall-clock time with no guard against a stutter frame — unlike the flick gate right next to it,
+which explicitly refuses to trust a frame longer than 0.1 s.
+
+**The probes are kept, behind `_logSwings`** — the driver's existing flag, which is 0 in the shipped
+scene, so they are silent. They took this from "the pop is broken" to "the swing never fired" in one
+run, and they are the instrument for the next person.
 
 ## Known FAIL items
 

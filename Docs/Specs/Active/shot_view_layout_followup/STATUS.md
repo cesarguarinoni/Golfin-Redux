@@ -27,14 +27,18 @@ Two things remain open, neither introduced by this task and neither fixable in a
   the loop was photographing each scheme from wherever the PREVIOUS scheme's ball landed — which
   walked the set into tree shadow. ResetLie() puts the ball back on the tee between SelectScheme and
   Capture (reset_to_tee: ok x4 in the heartbeat), so all four are now shot from the same lit lie.
-  2. T_Pendulum_3: TRACED (see IMPLEMENTER_REPORT §5). Not a pop bug and not a crop bug — the
-     Pendulum flick never commits. Instrumented: alpha is 0.00 from the first frame after Up() and
-     never rises, so SchemeGradePop.Show is never called; the driver's LastCommittedMarker is still
-     float.NaN and LastCommittedGrade is default(PendulumGrade), so ReleaseSwing returns before its
-     commit block. The tile is an accurate photograph of a swing that did not fire. WHICH of its
-     three exits it takes (flick gate / _peakPower<=0.02 / Advance's new HandleReverseCancel) is
-     open, and answering it needs a log line inside PendulumSchemeDriver — a production file, so
-     Cesar's call.
+  2. T_Pendulum_3: FULLY TRACED (IMPLEMENTER_REPORT §5). Advance's HandleReverseCancel fires at
+     held=0.333s — the capture's frames are ~111ms and step 3 drags up over three of them — so
+     _dragging is already false when OnPointerUp arrives and ReleaseSwing never runs. Shortening
+     the gesture only moves the failure to the flick gate, which refuses any sample pair longer
+     than _stutterFrameThreshold (0.1s) and so can never pass at this frame rate either. The rig
+     cannot produce a committing Pendulum flick through synthetic pointer events. FIX (scoped, not
+     done): route step 3's swing through the bot path, which is requireFlickGate:false and is what
+     CLAUDE.md rule 17 already mandates. Exit probes kept behind the driver's _logSwings flag.
+
+     Worth a look beyond the capture: HandleReverseCancel measures its 0.12s hold in wall clock
+     with no stutter guard, unlike the flick gate beside it. A device that hitches mid-flick would
+     kill a real player's shot the same way.
 
 Also worth a look: this run's Pendulum / Needle / Free Swing frames are darker than Flick's because
 the bot's ball ended in shade. One-click re-run if you want a brighter set.

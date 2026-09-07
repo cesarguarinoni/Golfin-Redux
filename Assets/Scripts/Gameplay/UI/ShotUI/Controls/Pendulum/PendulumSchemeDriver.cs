@@ -272,7 +272,13 @@ namespace Golfin.Gameplay.UI.Controls.Pendulum
 
         public void OnPointerUp(PointerEventData e)
         {
-            if (!_dragging) return;
+            if (!_dragging)
+            {
+                if (_logSwings)
+                    Debug.Log($"[PendulumExit] B pointer-up with no live drag — the swing was already " +
+                              $"ended (armed={_reverseArmed} held={_reverseHeldSec:F3}s peak={_peakPower:F2})");
+                return;
+            }
             _controller.PushTouchSample(e.position);   // the release closes the gate's window
             ReleaseSwing(requireFlickGate: true);
         }
@@ -291,6 +297,9 @@ namespace Golfin.Gameplay.UI.Controls.Pendulum
             // back on, so a release that was not a flick is not a weak shot — it is not a shot.
             if (requireFlickGate && !_controller.EvaluateFlickGate())
             {
+                if (_logSwings)
+                    Debug.Log($"[PendulumExit] C flick gate rejected  peak={_peakPower:F2} " +
+                              $"deepest={_deepestPullPx:F0} speed={_controller.LastFlickSpeedScreenHeights:F2}");
                 _controller.RejectExternalDrag();
                 ResetSwing();
                 return;
@@ -298,6 +307,8 @@ namespace Golfin.Gameplay.UI.Controls.Pendulum
 
             if (_peakPower <= 0.02f)
             {
+                if (_logSwings)
+                    Debug.Log($"[PendulumExit] D no power  peak={_peakPower:F4} deepest={_deepestPullPx:F0}");
                 _controller.CancelExternalDrag();
                 ResetSwing();
                 return;
@@ -336,6 +347,8 @@ namespace Golfin.Gameplay.UI.Controls.Pendulum
             LastCommittedTimingMul = verdict.TimingMul;
             LastCommittedTiming01  = verdict.Timing01;
 
+            if (_logSwings)
+                Debug.Log($"[PendulumExit] E COMMITTED  grade={verdict.Grade} marker={m:F3} peak={_peakPower:F2}");
             _gradePop?.Show(verdict.Grade);
             _controller.CommitExternal(new ShotIntent(
                 powerNormalized: _peakPower,
@@ -461,6 +474,12 @@ namespace Golfin.Gameplay.UI.Controls.Pendulum
                 _reverseHeldSec += dt;
                 if (_reverseHeldSec >= _cfg.HandleReverseCancelHoldSec)
                 {
+                    // Which way a swing left, behind the flag that already gates this driver's swing log.
+                    // Silent in the shipped scene (_logSwings is 0); the one time it was turned on it
+                    // took T_Pendulum_3 from "the pop is broken" to "the swing never fired" in one run.
+                    if (_logSwings)
+                        Debug.Log($"[PendulumExit] A reverse-cancel  held={_reverseHeldSec:F3}s " +
+                                  $"deepest={_deepestPullPx:F0} peak={_peakPower:F2}");
                     _dragging = false;
                     _controller.CancelExternalDrag();
                     ResetSwing();
