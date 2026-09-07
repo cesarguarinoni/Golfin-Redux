@@ -26,7 +26,10 @@ namespace Golfin.Gameplay.Tests
 
         private ControlsConfig _cfg;
 
-        // The lane's own three geometry terms, as authored on PendulumLaneView / FreeSwingLaneView.
+        // The lane's own geometry terms. HandleRest is what the CLAMP uses — the finger's offset
+        // below the ball. ClubHalfHeight / LaneTail only describe how far the drawn pill extends
+        // past the finger, and 50 here is the SPEC's value; the live scene ships 150 because the
+        // club head scales to 3x, which is exactly why the clamp must not depend on it.
         private const float HandleRest     = 70f;
         private const float ClubHalfHeight = 50f;
         private const float LaneTail       = 20f;
@@ -40,10 +43,15 @@ namespace Golfin.Gameplay.Tests
 
         private float PendulumBallY(float h) => ShotLayoutMath.ResolveBallY(
             _cfg.BallAnchorViewportY_Pendulum, h, BaselinePx, true,
-            _cfg.PendulumPull120Px, HandleRest, ClubHalfHeight, LaneTail);
+            _cfg.PendulumPull120Px, HandleRest);
 
         private float PendulumLaneEnd(float h) => ShotLayoutMath.LaneEndY(
             PendulumBallY(h), _cfg.PendulumPull120Px, HandleRest, ClubHalfHeight, LaneTail);
+
+        /// <summary>Where the club head's centre — the finger — ends up at a 120% pull. THIS is
+        /// what the baseline guards (D3), not the lane's rounded end.</summary>
+        private float PendulumHandleY(float h) => ShotLayoutMath.HandleYAtFullPull(
+            PendulumBallY(h), _cfg.PendulumPull120Px, HandleRest);
 
         /// <summary>Canvas y of the shared bottom baseline for a given height.</summary>
         private float BaselineY(float h) => -h * 0.5f + BaselinePx;
@@ -75,16 +83,39 @@ namespace Golfin.Gameplay.Tests
         // ── The reference device: the anchor wins ────────────────────────────────
 
         [Test]
-        public void OnTheReferenceDevice_TheAuthoredAnchorWins_AndTheLaneStillClearsTheBaseline()
+        public void OnTheReferenceDevice_TheAuthoredAnchorWins_AndTheFlickStillClearsTheBaseline()
         {
             Assert.AreEqual(-304f, PendulumBallY(H_2532), 0.5f,
-                "2532 is tall enough for the whole lane, so D6 must not clamp.");
+                "2532 is tall enough for the whole pull, so the clamp must not fire.");
 
-            // The lane end is the thing D6 protects; on this device it lands just ABOVE the
-            // baseline rather than exactly on it (D4: the constraint is >=, not equality).
-            Assert.GreaterOrEqual(PendulumLaneEnd(H_2532), BaselineY(H_2532),
-                "the pull lane must never end below the action buttons' baseline");
+            // The 120% handle is what the baseline protects; on this device it lands 74px ABOVE
+            // it rather than exactly on it (the constraint is >=, not equality).
+            Assert.GreaterOrEqual(PendulumHandleY(H_2532), BaselineY(H_2532),
+                "a 120% flick must never be released below the action buttons' baseline");
+            Assert.AreEqual(74f, PendulumHandleY(H_2532) - BaselineY(H_2532), 1f);
+
+            // And with the lane geometry the SPEC was written against, the pill's own end still
+            // lands where §2 predicted. It only hangs lower once the club head is scaled up.
             Assert.AreEqual(-1092f, PendulumLaneEnd(H_2532), 0.5f);
+        }
+
+        [Test]
+        public void TheClampIgnoresTheClubHeadSize_SoScalingTheHeadCannotCostFraming()
+        {
+            // The whole of shot_view_layout D3 in one assertion. `ClubHalfHeight` went 50 -> 150
+            // when the club head started scaling to 3x; a clamp that guarded the lane's END would
+            // have read that as 100px less room and raised the ball to viewport 0.418, four points
+            // of horizon short of the Figma frame. The finger is at the head's CENTRE, so the head
+            // growing below it changes nothing about where the flick is released.
+            float ball = PendulumBallY(H_2532);
+            Assert.AreEqual(ShotLayoutMath.AnchorY(_cfg.BallAnchorViewportY_Pendulum, H_2532), ball, 1e-3f);
+
+            // The pill's tail does now hang below the baseline at the live club size — accepted:
+            // it is 120px wide down the centre and the action buttons are at x +/-382..527.
+            float laneEndAtLiveClub = ShotLayoutMath.LaneEndY(ball, _cfg.PendulumPull120Px, HandleRest, 150f, LaneTail);
+            Assert.Less(laneEndAtLiveClub, BaselineY(H_2532));
+            Assert.Greater(laneEndAtLiveClub, -H_2532 * 0.5f,
+                "however far the tail hangs, it must still be ON the screen");
         }
 
         [Test]
@@ -99,26 +130,26 @@ namespace Golfin.Gameplay.Tests
         // ── Short screens: D6 raises the ball instead of burying the lane ────────
 
         [Test]
-        public void OnSixteenByNine_TheBallIsRaisedSoTheLaneEndsExactlyOnTheBaseline()
+        public void OnSixteenByNine_TheBallIsRaisedSoTheFlickLandsExactlyOnTheBaseline()
         {
             Assert.Greater(PendulumBallY(H_16x9),
                            ShotLayoutMath.AnchorY(_cfg.BallAnchorViewportY_Pendulum, H_16x9),
-                           "16:9 has no room for a 648px pull below 0.38, so D6 must clamp upward.");
+                           "16:9 has no room for a 648px pull below 0.38, so the clamp must fire.");
 
-            Assert.AreEqual(BaselineY(H_16x9), PendulumLaneEnd(H_16x9), 1e-3f,
-                "when the clamp is what wins, the lane end sits ON the baseline, not above it.");
-            Assert.AreEqual(-1040f + 170f, PendulumLaneEnd(H_16x9), 1e-3f);
+            Assert.AreEqual(BaselineY(H_16x9), PendulumHandleY(H_16x9), 1e-3f,
+                "when the clamp is what wins, the 120% handle sits ON the baseline, not above it.");
+            Assert.AreEqual(-1040f + 170f, PendulumHandleY(H_16x9), 1e-3f);
         }
 
         [Test]
         public void OnFourByThree_TheInvariantHolds_AndTheBallEndsUpAboveTheCanvasCentre()
         {
-            Assert.AreEqual(BaselineY(H_4x3), PendulumLaneEnd(H_4x3), 1e-3f);
+            Assert.AreEqual(BaselineY(H_4x3), PendulumHandleY(H_4x3), 1e-3f);
 
-            // Documented, expected, and ugly: a tablet is short enough that a full-length lane
-            // pushes the ball above the middle of the screen. D6 chooses a playable lane over
-            // the Figma framing on purpose; a per-aspect anchor table is the follow-up (§5).
-            Assert.AreEqual(178f, PendulumBallY(H_4x3), 0.5f);
+            // Documented, expected, and ugly: a tablet is short enough that a full-length pull
+            // pushes the ball above the middle of the screen. The clamp chooses a reachable flick
+            // over the Figma framing on purpose; a per-aspect anchor table is the follow-up (§5).
+            Assert.AreEqual(108f, PendulumBallY(H_4x3), 0.5f);
             Assert.Greater(PendulumBallY(H_4x3), 0f);
         }
 
@@ -131,12 +162,12 @@ namespace Golfin.Gameplay.Tests
             {
                 Assert.AreEqual(ShotLayoutMath.AnchorY(_cfg.BallAnchorViewportY_Flick, h),
                     ShotLayoutMath.ResolveBallY(_cfg.BallAnchorViewportY_Flick, h, BaselinePx,
-                                                false, 0f, HandleRest, ClubHalfHeight, LaneTail),
+                                                false, 0f, HandleRest),
                     1e-4f, $"Flick must be untouched at canvas height {h} (control_scheme_seam parity)");
 
                 Assert.AreEqual(ShotLayoutMath.AnchorY(_cfg.BallAnchorViewportY_Needle, h),
                     ShotLayoutMath.ResolveBallY(_cfg.BallAnchorViewportY_Needle, h, BaselinePx,
-                                                false, _cfg.NeedlePull120Px, HandleRest, ClubHalfHeight, LaneTail),
+                                                false, _cfg.NeedlePull120Px, HandleRest),
                     1e-4f, $"Needle's ring is drawn around the ball, so no clamp at height {h}");
             }
         }
@@ -146,8 +177,7 @@ namespace Golfin.Gameplay.Tests
         {
             Assert.AreEqual(0.5f, _cfg.BallAnchorViewportY_Flick, 1e-6f);
             Assert.AreEqual(0f, ShotLayoutMath.ResolveBallY(_cfg.BallAnchorViewportY_Flick, H_2532,
-                                                            BaselinePx, false, 0f,
-                                                            HandleRest, ClubHalfHeight, LaneTail), 1e-4f);
+                                                            BaselinePx, false, 0f, HandleRest), 1e-4f);
         }
 
         // ── Free Swing shares the Pendulum's lane numbers ────────────────────────
@@ -157,10 +187,10 @@ namespace Golfin.Gameplay.Tests
         {
             float fsBall = ShotLayoutMath.ResolveBallY(_cfg.BallAnchorViewportY_FreeSwing, H_2532,
                                                        BaselinePx, true, _cfg.FreeSwingPull120Px,
-                                                       HandleRest, ClubHalfHeight, LaneTail);
+                                                       HandleRest);
             Assert.AreEqual(PendulumBallY(H_2532), fsBall, 1e-4f);
-            Assert.AreEqual(-1092f, ShotLayoutMath.LaneEndY(fsBall, _cfg.FreeSwingPull120Px,
-                                                            HandleRest, ClubHalfHeight, LaneTail), 0.5f);
+            Assert.AreEqual(-1022f, ShotLayoutMath.HandleYAtFullPull(fsBall, _cfg.FreeSwingPull120Px,
+                                                                     HandleRest), 0.5f);
         }
 
         // ── The power gauge ──────────────────────────────────────────────────────

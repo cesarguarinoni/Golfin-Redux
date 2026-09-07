@@ -77,10 +77,13 @@ namespace Golfin.Gameplay.UI.ShotUI
         public static ShotLayoutController Active { get; private set; }
 
         /// <summary>Last values applied — surfaced for the acceptance run and the reviewers'
-        /// bbox checks rather than re-derived from the rects.</summary>
-        public float LastBallY    { get; private set; }
-        public float LastBaseline { get; private set; }
-        public float LastLaneEndY { get; private set; }
+        /// bbox checks rather than re-derived from the rects. <see cref="LastHandleYAtFullPull"/>
+        /// is the one the baseline guard is actually about (D3); the lane end is reported beside
+        /// it because it is the thing that visibly hangs lower.</summary>
+        public float LastBallY            { get; private set; }
+        public float LastBaseline         { get; private set; }
+        public float LastLaneEndY         { get; private set; }
+        public float LastHandleYAtFullPull { get; private set; }
 
         private ControlScheme _lastScheme = ControlScheme.Flick;
         private bool _hasApplied;
@@ -147,9 +150,10 @@ namespace Golfin.Gameplay.UI.ShotUI
 
             ApplyPowerHud(cfg, height);
 
-            LastBallY    = ballY;
-            LastBaseline = baseline;
-            LastLaneEndY = LaneEndFor(scheme, cfg, ballY);
+            LastBallY            = ballY;
+            LastBaseline         = baseline;
+            LastLaneEndY         = LaneEndFor(scheme, cfg, ballY);
+            LastHandleYAtFullPull = HandleYFor(scheme, cfg, ballY);
             _hasApplied  = true;
             _applying    = false;
 
@@ -174,11 +178,11 @@ namespace Golfin.Gameplay.UI.ShotUI
 
         private float ResolveBallY(ControlScheme scheme, in ControlsConfig cfg, float height, float baseline)
         {
-            if (!TryLaneGeometry(scheme, cfg, out float pull120, out float rest, out float half, out float tail))
+            if (!TryLaneGeometry(scheme, cfg, out float pull120, out float rest, out float _, out float _))
                 return ShotLayoutMath.AnchorY(AnchorViewportY(scheme, cfg), height);
 
             return ShotLayoutMath.ResolveBallY(AnchorViewportY(scheme, cfg), height, baseline,
-                                               true, pull120, rest, half, tail);
+                                               true, pull120, rest);
         }
 
         private float LaneEndFor(ControlScheme scheme, in ControlsConfig cfg, float ballY)
@@ -186,6 +190,13 @@ namespace Golfin.Gameplay.UI.ShotUI
             if (!TryLaneGeometry(scheme, cfg, out float pull120, out float rest, out float half, out float tail))
                 return float.NaN;
             return ShotLayoutMath.LaneEndY(ballY, pull120, rest, half, tail);
+        }
+
+        private float HandleYFor(ControlScheme scheme, in ControlsConfig cfg, float ballY)
+        {
+            if (!TryLaneGeometry(scheme, cfg, out float pull120, out float rest, out float _, out float _))
+                return float.NaN;
+            return ShotLayoutMath.HandleYAtFullPull(ballY, pull120, rest);
         }
 
         /// <summary>The four numbers the lane derives its own height from — false for the two

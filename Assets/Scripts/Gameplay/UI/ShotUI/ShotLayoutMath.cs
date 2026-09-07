@@ -40,40 +40,62 @@ namespace Golfin.Gameplay.UI.ShotUI
 
         /// <summary>How far below the ball centre a pull lane's bottom edge sits at full pull —
         /// the same derivation <c>PendulumLaneView</c>/<c>FreeSwingLaneView</c> use for
-        /// <c>LaneHeight</c>, so the clamp below can never disagree with the drawn pill.</summary>
+        /// <c>LaneHeight</c>. Reported, and used by <see cref="LaneEndY"/>; NOT what the clamp
+        /// guards — see <see cref="BallYForLane"/>.</summary>
         public static float LaneDepthBelowBall(float pull120Px, float handleRestBelowBall,
                                                float clubHalfHeight, float laneTailPx)
             => handleRestBelowBall + pull120Px + clubHalfHeight + laneTailPx;
 
-        /// <summary>The LOWEST ball y whose lane still ends on the baseline (shot_view_layout D6).
-        /// On a short screen this is above the authored anchor and wins.</summary>
+        /// <summary>How far below the ball centre the club head's CENTRE sits at a 120% pull —
+        /// which is where the finger is, and therefore the thing the home-gesture zone is about.
+        /// </summary>
+        public static float HandleDepthAtFullPull(float pull120Px, float handleRestBelowBall)
+            => handleRestBelowBall + pull120Px;
+
+        /// <summary>
+        /// The LOWEST ball y that still keeps the 120% HANDLE on the baseline
+        /// (shot_view_layout D3 + D6). On a short screen this is above the authored anchor and
+        /// wins.
+        ///
+        /// <para>THE HANDLE, NOT THE LANE'S END. D3 says it plainly — "the 120% handle position
+        /// is the thing that must clear the home-gesture zone (the flick starts there), not the
+        /// lane's rounded end" — and D6's formula, written before that was settled, guarded the
+        /// end instead. The difference is the club's lower half plus the pill's tail: ~170px on
+        /// the current 3x club head, which is enough to push the ball 96px above the Figma anchor
+        /// and cost ~4 points of horizon. The tail that now hangs below the baseline is 120px
+        /// wide down the centre of the screen; the action buttons live at x +/-382..527, so it
+        /// reaches nothing.</para>
+        /// </summary>
         public static float BallYForLane(float canvasHeight, float baseline, float pull120Px,
-                                         float handleRestBelowBall, float clubHalfHeight, float laneTailPx)
+                                         float handleRestBelowBall)
             => -canvasHeight * 0.5f + baseline
-               + LaneDepthBelowBall(pull120Px, handleRestBelowBall, clubHalfHeight, laneTailPx);
+               + HandleDepthAtFullPull(pull120Px, handleRestBelowBall);
 
         /// <summary>
         /// The ball anchor actually applied, in canvas y.
         ///
-        /// <para>D6: framing degrades gracefully rather than the lane running under the action
-        /// buttons. On a 16:9 phone or a tablet there is not enough screen below 0.38 for a
-        /// 648px pull, so the ball is RAISED until the lane end sits back on the baseline. The
-        /// authored anchor is therefore a floor on tall screens and ignored on short ones —
-        /// never the other way round, which would put the 120% handle in the home gesture.</para>
+        /// <para>Framing degrades gracefully rather than the flick release landing in the home
+        /// gesture. On a 16:9 phone or a tablet there is not enough screen below 0.38 for a 648px
+        /// pull, so the ball is RAISED until the 120% handle sits back on the baseline. The
+        /// authored anchor is therefore a floor on tall screens and ignored on short ones — never
+        /// the other way round.</para>
         ///
         /// <para>Flick and Needle have no lane (a cone and a ring, both drawn around the ball)
         /// and take the anchor unconditionally.</para>
         /// </summary>
         public static float ResolveBallY(float anchorViewportY, float canvasHeight, float baseline,
-                                         bool schemeHasLane, float pull120Px,
-                                         float handleRestBelowBall, float clubHalfHeight, float laneTailPx)
+                                         bool schemeHasLane, float pull120Px, float handleRestBelowBall)
         {
             float anchor = AnchorY(anchorViewportY, canvasHeight);
             if (!schemeHasLane) return anchor;
 
-            return Mathf.Max(anchor, BallYForLane(canvasHeight, baseline, pull120Px,
-                                                  handleRestBelowBall, clubHalfHeight, laneTailPx));
+            return Mathf.Max(anchor, BallYForLane(canvasHeight, baseline, pull120Px, handleRestBelowBall));
         }
+
+        /// <summary>Canvas y of the club head's centre at a 120% pull — the point the baseline
+        /// guard is about, and the one the acceptance run measures.</summary>
+        public static float HandleYAtFullPull(float ballY, float pull120Px, float handleRestBelowBall)
+            => ballY - HandleDepthAtFullPull(pull120Px, handleRestBelowBall);
 
         /// <summary>Canvas y of the lane's bottom edge for a ball at <paramref name="ballY"/>.</summary>
         public static float LaneEndY(float ballY, float pull120Px, float handleRestBelowBall,

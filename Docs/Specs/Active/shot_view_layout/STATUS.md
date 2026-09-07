@@ -2,11 +2,15 @@ READY_FOR_ARCHITECT_REVIEW
 
 Implemented 2026-09-07 by Claude Code (direct, no subagent chain — Cesar dispatched it in-thread).
 
-One open decision for Cesar before this can go to DONE: the same day's control-scheme polish pass
-took `ClubHalfHeight` 50 → 150 (the club head now scales to 3x), which makes the pull lane 100 px
-deeper than SPEC §2's arithmetic assumed. The D6 clamp therefore raises the ball to viewport 0.418
-instead of the Figma 0.38 to keep the lane end on the shared baseline. See § "The one thing that
-needs your call" in IMPLEMENTER_REPORT.md.
+The ball anchor question is RESOLVED: Cesar picked option 4 on 2026-09-07, so the baseline clamp
+now guards the 120% HANDLE (where the finger is, per SPEC D3) rather than the lane's rounded end
+(D6's formula). Ball sits at viewport 0.3800 exactly, the 120% handle 244 px above the screen edge
+— D3's own figure — and the horizon measures 37.8% from the top against a Figma target of ~38%.
 
-Confirm tiles (§3.7) were re-captured and then REVERTED: the new crops clip the marker bar and the
-100%/120% labels. Evidence and the reasoning are in the report.
+One item remains open, and it is not a blocker for the layout itself:
+
+- Confirm tiles (§3.7) were re-captured and then REVERTED. The new crops clip the timing marker bar
+  and the 100%/120% labels — the auto-crop is width-driven and clamped at MaxCropW 900 (a guard that
+  keeps the HUD columns out of the tile), and an 888 px lane no longer fits inside it. Shipping
+  those would explain the control worse than the tiles on disk. Evidence and the three ways out are
+  in IMPLEMENTER_REPORT.md.

@@ -32,10 +32,21 @@ builders. Flick's world corners are byte-identical through the migration (`ConeM
 `TimingSlab`, `PutterTrack`, `TargetingLine` all verified). The power gauge moved to a top-right
 anchor with its centre at viewport 0.70, off the aim-bar row it used to share.
 
-**Open, for Cesar:** the same day's polish pass took `ClubHalfHeight` 50 → **150** (the club head now
-scales to 3×), which makes the lane 100 px deeper than the spec's arithmetic assumed. D6 therefore
-raises the ball to viewport **0.418** instead of 0.38 to keep the lane end on the baseline — the
-guard working as designed, but not the Figma number. Either is a one-line change; see
+**The baseline guards the HANDLE, not the lane's end.** The spec's D6 clamped on the lane's rounded
+tail, and when the same day's polish pass took `ClubHalfHeight` 50 → 150 (the club head now scales
+to 3×) that read as 100 px less room and pushed the ball up to viewport 0.418 — four points of
+horizon short. D3 had already said which end matters: *"the 120 % handle position is the thing that
+must clear the home-gesture zone (the flick starts there), not the lane's rounded end."* The clamp
+now takes that reading, so the club head growing below the finger cannot cost framing. Measured on
+Lomond hole 2: ball back on viewport **0.3800**, 120 % handle at **−1021.84** = 244 px above the
+screen edge (D3's own figure), camera pitch 12.500° → **4.612°**, horizon **25.5 % → 37.8 %** from
+the top against a Figma target of ~38 %. The pill's tail hangs 96 px below the baseline at the live
+club size, 120 px wide down the centre where the buttons (x ±382…527) never reach.
+`ShotLayoutMathTests.TheClampIgnoresTheClubHeadSize_SoScalingTheHeadCannotCostFraming` pins it.
+
+**Still open:** the scheme confirm tiles. Re-captured per the csv header rule, then reverted — the
+auto-crop is clamped at `MaxCropW` 900 to keep the HUD columns out, and an 888 px lane no longer
+fits, so the new tiles clip the timing bar and the 100 %/120 % labels. See
 `Docs/Specs/Active/shot_view_layout/IMPLEMENTER_REPORT.md`.
 
 ---
