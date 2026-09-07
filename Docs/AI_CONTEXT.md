@@ -4,6 +4,48 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
+## 2026-09-07 (close-out) — golfer_3d_test: define-OFF proof, profile restored, §9.8 blocked
+
+**The active build profile is back on `iOS-Full-GPS`**, and restoring it was also the way to get the
+proof §9.6 actually wanted. With GPS active the feature is genuinely compiled out: reflection over
+the loaded assemblies reports `ShotController.OnShotResolvedImmediate` **does not exist** and
+`GolferTestBootstrap.Boot` **does not exist**. That is the §9.2 keep-condition satisfied by
+measurement rather than by reading the source — the members are not unused, they are not compiled.
+
+**EditMode sweep with the define OFF: 2711 / 2718 pass.** All four failures accounted for, none
+mine: `RemoteContentSource` is Windows path separators; `PendulumSchemeDriver` was PROVEN
+pre-existing by stashing the §9.2 edits and re-running (it arrived with `392539899`); and the two
+`UiMotion` failures are flaky under full-suite load — all 96 `Golfin.UI.Polish.Tests` pass in
+isolation. `GolferTestBuildGateTests` 5/5, and this run is the stronger one: under GPS the profile
+carries no define, so `WithoutTheOverride_TheDecisionComesFromTheActiveProfile` exercises the
+**exclusion** branch — what §9.6 wanted a build to prove, proven without a build.
+
+**§9.8 is blocked and nothing was substituted.** `Assets/Art/3D/Characters/_Test/MixamoNative/`
+does not exist; `_Test/` holds only CMU, Grip, Mixamo, Quaternius and Resources, and a project-wide
+search for `*MixamoNative*` returns nothing. No T-pose, no "With Skin" clips, so no prefab to
+duplicate, no side-by-side, no foot-slide numbers. Per Rule 19's "surface, don't rebuild" the
+retarget-vs-clips conclusion is deliberately NOT written — writing it without the comparison would
+be fabricating a finding.
+
+**§9.7 was a no-op, verified rather than assumed:** `.git/objects/maintenance.lock` does not exist,
+and there are no uncommitted control-scheme edits to avoid sweeping. The whole dirty tree is two
+`Docs/Diag/baked-pivot/M0-regression-*.md` files that the EditMode suite REGENERATES when it runs,
+plus an untracked `Assets/Animations.meta` predating the session. Left uncommitted and reported.
+
+**Unity exited mid-session and was relaunched.** It shut down cleanly (not a crash) and left no
+damage — `_Test/Resources` intact, no `_GolferTestStash` left behind, tree clean. Worth knowing that
+the gate test's stash/restore survives an editor quit.
+
+**A trap for next time:** `tests-run` refused with "ShellScene has unsaved changes". The scene was
+dirty in memory only (git showed the file unmodified), so it was RELOADED FROM DISK rather than
+saved — PIPELINE_HARDENING rule 14 forbids writing back a scene dirtied by probes without a diff,
+and boot-critical containers live in ShellScene.
+
+**Still open:** `SPEC.md` has no §9 (147 lines, ends at §8, and §8 still lists §9.2's work as out of
+scope) — all three close-out iterations were implemented from chat text. The hit-SFX now plays
+~1.17 s before the ball leaves, flagged not fixed.
+
+---
 ## 2026-09-07 (later) — golfer_3d_test close-out: **the ball now waits for impact**
 
 **The swing was never visible in play.** The ball left on the COMMIT frame, so the existing

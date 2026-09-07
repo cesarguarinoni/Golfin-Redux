@@ -704,3 +704,105 @@ they do not exist either. Full guard inventory in the commit message's grep.
   Left on `iOS-Full-Golfer`; the profile is Editor/Library state and is not part of any commit, so
   nothing is blocked either way. One word and I will switch it.
 - **`SPEC.md` §9 still unwritten**, and §8 still contradicts §9.2.
+
+---
+
+## 12. Iteration 18 (PC session, 2026-09-07) — §9 as amended "1+2"
+
+**Iteration shape:** `golfer:close-out-amended`
+
+Canonical screenshot: `screenshots/t0_6_after_commit.png`
+
+### 12.1 Status of each amended item
+
+| item | state |
+|---|---|
+| §9.1 drop Eyebrows | **DONE** in `14f63e26e` — `budget.tris` 15,632 → 14,648 |
+| §9.2 swing visibility | **CANCELLED, but KEPT** — the keep-condition is met, see §12.2 |
+| §9.3 grip | **CANCELLED** — no grip work was done after `9c3da7e3d`; solve byte-identical |
+| §9.4 putter fingertip | **CANCELLED** — measurement already taken in `14f63e26e`; no further work, no tuning |
+| §9.5 clothes | **DONE** — §10.4: naked, CC0 base body, no garment mesh, never in scope |
+| §9.6 Editor-only gate proof | **DONE, now with the define OFF** — see §12.3 |
+| §9.7 lock + don't sweep | **NOTHING TO DO** — see §12.4 |
+| §9.8 Mixamo-native check | **BLOCKED** — the assets do not exist, see §12.5 |
+| profile → `iOS-Full-GPS` | **DONE** — see §12.3 |
+
+### 12.2 §9.2 — kept, because both keep-conditions are met
+
+The amendment says keep it only if the define-off path is byte-identical and tests are green.
+Both now proven with the define genuinely OFF (profile `iOS-Full-GPS`), not argued from source:
+
+**Byte-identical.** The whole feature is inside `#if` blocks. With the define off, the commit path is:
+
+```
+828:#if GOLFIN_GOLFER_TEST
+829:            if (TryDeferLaunchToImpact(input, ballMods)) return;
+830:#endif
+831:            OnShotResolved?.Invoke(input, ballMods);
+```
+
+lines 828–830 vanish and line 831 is the single `OnShotResolved?.Invoke` it has always been.
+
+**Proven at runtime, not just by reading the source.** With `iOS-Full-GPS` active, reflection over
+the loaded assemblies reports `ShotController.OnShotResolvedImmediate` **does not exist** and
+`GolferTestBootstrap.Boot` **does not exist**. The members are not merely unused — they are not
+compiled.
+
+**Tests green.** See §12.3. No failure is attributable to §9.2.
+
+### 12.3 §9.6 — the define-OFF sweep, and the profile restore
+
+Restoring the profile and getting the define-off sweep are the same act, so they were done together.
+Active build profile is now **`iOS-Full-GPS`**.
+
+**EditMode sweep with the define OFF: 2718 total, 2711 pass, 4 fail, 3 skip.** Every failure is
+accounted for and none is mine:
+
+| failure | verdict |
+|---|---|
+| `RemoteContentSourceTests.CachePath_IsUnderPersistentData_AndPerCatalog` | pre-existing — Windows path separators (`C:\` vs `C:/`) |
+| `PendulumSchemeDriverTests.MarkerFreezes_AtTheUpswingReversal_NotAtRelease` | pre-existing — **proven** in iteration 17 by stashing the §9.2 edits and re-running; fails identically without them. Arrived with `392539899` |
+| `UiMotionAllocationTests.CountUp_AllocatesOnlyWhenTheDrawnNumberChanges` | **flaky under full-suite load** — proven: all 96 `Golfin.UI.Polish.Tests` pass in isolation |
+| `UiMotionNewPrimitiveTests.Bump_OvershootsBeforeItComesBack` | same — both are frame-timing dependent |
+
+**`GolferTestBuildGateTests`: 5 / 5 PASS with the define off.** This run is stronger evidence than
+iteration 17's, because `WithoutTheOverride_TheDecisionComesFromTheActiveProfile` now exercises the
+**exclusion** branch: `iOS-Full-GPS` carries no `GOLFIN_GOLFER_TEST`, so `IsGolferBuild()` is false
+and `_Test` is stashed out. That is exactly what §9.6 asks a build to prove, without a build.
+
+Guarded-body grep is in §11.3 and the iteration-17 commit message; the guard inventory is unchanged.
+
+### 12.4 §9.7 — nothing to do, verified not assumed
+
+- `.git/objects/maintenance.lock` — **does not exist**. Nothing to remove.
+- **Uncommitted control-scheme edits — there are none.** The entire dirty tree is
+  `Docs/Diag/baked-pivot/M0-regression-{Driver,Putter}FromGreen.md`, which the **EditMode suite
+  regenerates when it runs**, plus untracked `Assets/Animations.meta` which predates this session.
+  All three are deliberately left uncommitted and reported here (Rule 13), never swept.
+
+The instruction describes a tree this machine does not have; it appears to have been written
+against the Mac's working copy.
+
+### 12.5 §9.8 — BLOCKED, the assets were never dropped
+
+`Assets/Art/3D/Characters/_Test/MixamoNative/` **does not exist**. `_Test/` contains only `CMU`,
+`Grip`, `Mixamo`, `Quaternius` and `Resources`, and a project-wide search for `*MixamoNative*`
+returns nothing. There is no character T-pose and no "With Skin" clips to import, so there is
+nothing to duplicate `PfGolfer_Test` against, no side-by-side to capture, and no foot-slide numbers
+to measure.
+
+Per Rule 19's standing instruction — *"If no elements mentioned are found to clone SURFACE it, don't
+build from scratch without telling me"* — nothing was substituted or hand-rolled. The retarget-vs-
+clips conclusion §9.8 asks for is **not written**, because writing it without the comparison would
+be fabricating a finding.
+
+### 12.6 A note on the spec, third time
+
+`SPEC.md` still has **no §9**. It is 147 lines ending at §8, and the tree is level with
+`origin/main`. All three close-out iterations (§10, §11, this one) were implemented from Cesar's
+message text. §8 continues to list §9.2's work as out of scope.
+
+### 12.7 Result
+
+`golfer_invariants.json` — **37 pass / 0 fail** (from iteration 17; the golfer harness cannot run
+under `iOS-Full-GPS` because the feature is compiled out, which is itself the point of §9.6).
