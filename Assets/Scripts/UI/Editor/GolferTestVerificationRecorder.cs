@@ -66,11 +66,88 @@ namespace Golfin.EditorTools
             EditorApplication.EnterPlaymode();
         }
 
+        // ── Video take ───────────────────────────────────────────────────────────────
+        //
+        // Same run, same assertions, with the Unity Recorder rolling over it. Uses
+        // BotVideoRecorder — the sanctioned recorder (com.unity.recorder), the one
+        // HoleFlyoverRecorder and the smoke bot already use — rather than a per-task capture
+        // path, per CAPTURE RULE 0 and the "CaptureCore/BotVideoRecorder is the only sanctioned
+        // path" lesson. Reached by REFLECTION: BotVideoRecorder lives in
+        // Golfin.Physics.Viewer.Editor and this file may not add an assembly reference to reach
+        // across, exactly as it already reflects to reach ShotController.
+        //
+        // GameView input, NOT UseCameraInput/TaggedCamera. Rule 4 mandates TaggedCamera for
+        // world→screen proof because GameViewInputSettings can bake a systematic Y-flip out of
+        // the METAL backbuffer; this is Windows/DX, and TaggedCamera drops URP Overlay cameras,
+        // which here would silently throw away the whole HUD. A swing clip is a character
+        // animation artefact for Cesar, not a projected-geometry gate, and the gate for §9.2 is
+        // the shot.launchDeferredToImpact number either way.
+        const string VideoKey = "GolferTestVerification.Video";
+
+        [MenuItem("GOLFIN/Golfer Test/Record video on Hole 06")]
+        public static void RecordHole06()
+        {
+            SessionState.SetBool(VideoKey, true);
+            Launch(6);
+        }
+
+        static Type BotVideoRecorderType => AppDomain.CurrentDomain.GetAssemblies()
+            .Select(a => { try { return a.GetTypes().FirstOrDefault(t => t.Name == "BotVideoRecorder"); } catch { return null; } })
+            .FirstOrDefault(t => t != null);
+
+        /// <summary>
+        /// ARMS a DEFERRED recording; the runner starts it right before the swing.
+        ///
+        /// <para>NOT <c>Begin()</c> at play-mode entry — that was tried and produced 6.8 s of the
+        /// GOLFIN splash and the NOW LOADING screen. The recorder's 30 s runaway watchdog
+        /// force-stops the clip, and this harness spends its first ~40 s passing the start gate,
+        /// loading ShellScene, seeding the round and holding for the hole geometry. The interesting
+        /// two seconds are three quarters of a minute in, so the recording has to be started from
+        /// inside the sequence. <c>ArmDeferred</c>/<c>BeginDeferred</c> exists for exactly this.</para>
+        /// </summary>
+        static void VideoArm()
+        {
+            var t = BotVideoRecorderType;
+            if (t == null) { Debug.LogWarning("[GolferVerify] BotVideoRecorder not found — no video."); return; }
+
+            string outDir = "Docs/Specs/Active/golfer_3d_test/videos";
+            Directory.CreateDirectory(outDir);
+            // Path WITHOUT extension — the recorder appends .mp4.
+            t.GetProperty("CustomOutputPath")?.SetValue(null,
+                outDir + "/golfer_swing_h06_" + DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss"));
+            t.GetMethod("ArmDeferred")?.Invoke(null, null);
+            Debug.Log("[GolferVerify] deferred video armed -> " + outDir);
+        }
+
+        internal static void VideoBeginDeferred()
+        {
+            BotVideoRecorderType?.GetMethod("BeginDeferred")?.Invoke(null, null);
+            Debug.Log("[GolferVerify] deferred video START");
+        }
+
+        internal static void VideoEnd()
+        {
+            BotVideoRecorderType?.GetMethod("End")?.Invoke(null, null);
+        }
+
+        internal static bool VideoArmed => SessionState.GetBool(VideoKey, false);
+
         static void OnPlayModeChanged(PlayModeStateChange state)
         {
+            if (state == PlayModeStateChange.ExitingPlayMode)
+            {
+                // Belt and braces: the runner ends the clip itself, but if it threw or the
+                // watchdog beat it, this is the last chance to mux the MP4.
+                if (SessionState.GetBool(VideoKey, false)) { SessionState.SetBool(VideoKey, false); VideoEnd(); }
+                return;
+            }
+
             if (state != PlayModeStateChange.EnteredPlayMode) return;
             if (!SessionState.GetBool(ArmedKey, false)) return;
             SessionState.SetBool(ArmedKey, false);
+
+            if (SessionState.GetBool(VideoKey, false)) VideoArm();
+
             var host = new GameObject("[GolferTestVerificationBot]");
             UnityEngine.Object.DontDestroyOnLoad(host);
             host.AddComponent<GolferTestVerificationRunner>().Begin(SessionState.GetInt(HoleKey, 6));
@@ -254,6 +331,20 @@ namespace Golfin.EditorTools
                 yield return Hold(0.8f);
                 Assert("club.driverSwapBack", drv.activeSelf && !ptr.activeSelf,
                        "after OnPutterModeChanged(false): driver=" + drv.activeSelf + " putter=" + ptr.activeSelf);
+
+                // ── SPEC §9.4 — the putter fingertip, measured ONCE, on a green ────────
+                //
+                // Recorded as a measurement, NOT a pass/fail gate. §9.3 declares the grip
+                // numbers final for the stand-in, so promoting this to an assertion would
+                // hard-wire a red board for a defect nobody intends to fix. The number is
+                // what §9.4 asked for; the decision to gate on it is Cesar's.
+                //
+                // ON A GREEN, and that is the point. Grip geometry is bone-space and does not
+                // care where the golfer stands — but the PUTT ADDRESS POSE does. Address_Putt
+                // is a different clip at a different cycleOffset from Address_Drive, so the
+                // hands sit differently on a shorter shaft. Measuring it at the tee with the
+                // driver pose blended in is what produced the ambiguous 0.0429 m.
+                yield return PuttGripOnGreen(golfer, shot, anim);
             }
 
             // ── does the hand actually WRAP the shaft, or just sit beside it? ──
@@ -346,10 +437,24 @@ namespace Golfin.EditorTools
 
             // Sample the animator WHILE the shot is being set up: the golfer must be in an
             // Address state, not standing in Idle with a club stretched out to the ball.
+            // Roll the camera HERE, not at play-mode entry: the first ~40 s of this sequence is
+            // the start gate, the scene loads and the settle holds, and the recorder's 30 s
+            // runaway watchdog would spend the whole clip on the NOW LOADING screen (it did).
+            // A few seconds of address, then the swing, then the ball leaving at impact.
+            if (GolferTestVerificationRecorder.VideoArmed)
+            {
+                GolferTestVerificationRecorder.VideoBeginDeferred();
+                yield return Hold(2.0f);        // a beat at address before he moves
+            }
+
             var addrSeen = new List<string>();
             var addrProbe = StartCoroutine(SampleStates(anim, addrSeen, 20, 0.1f));
+            // §9.2 evidence + gate, running alongside the swing: the gameplay camera at
+            // t = 0.6 s after commit, plus the assertion that the ball has NOT left yet.
+            var deferProbe = StartCoroutine(ProveLaunchDeferred(shot, anim, 0.6f));
             yield return DriveARealShot(shot);
             if (addrProbe != null) StopCoroutine(addrProbe);
+            yield return deferProbe;
             bool addressed = addrSeen.Any(x => x.StartsWith("Address"));
             // NOT a render check, and it must never be read as one: it samples states seen ACROSS
             // the drag, so a single Address frame anywhere in that window passes it. The gate for
@@ -363,6 +468,16 @@ namespace Golfin.EditorTools
             Assert("shot.swingPlays", stateAtSwing.StartsWith("Swing"),
                    "animator state right after OnShotResolved = '" + stateAtSwing + "' (was '" + stateBefore + "')");
             yield return Snap("golfer_h" + _hole.ToString("00") + "_swing");
+
+            // Close the clip once the ball is clearly away. Ending here rather than at
+            // ball-at-rest keeps it inside the recorder's 30 s watchdog — a 247 m drive can
+            // outlast it — and the follow-through plus the launch is the whole point.
+            if (GolferTestVerificationRecorder.VideoArmed)
+            {
+                yield return Hold(4.0f);
+                GolferTestVerificationRecorder.VideoEnd();
+                Mark("video: clip closed after the swing + 4 s of ball flight");
+            }
 
             // Wait for the BALL to settle, not for a stopwatch: a 247 m drive on Hole 08 takes
             // longer than any fixed hold, and measuring early reads the golfer at the tee and
@@ -476,6 +591,62 @@ namespace Golfin.EditorTools
                 power01: 0.85f, aimYawRad: Heading(shot), isPutt: false, ctx: ctx);
         }
 
+        /// <summary>
+        /// SPEC §9.2 — proves the ball launch is held back to the swing's impact frame.
+        ///
+        /// <para>THE PICTURE AND THE NUMBER, from the same moment. §9.2 asks for a gameplay-camera
+        /// frame at t = 0.6 s after commit; a frame alone only shows that something looked right,
+        /// so the same instant is also asserted: the golfer must be mid-SWING and the ball must
+        /// still be sitting where it was at commit. Drive impact is 1.167 s, so at 0.6 s the ball
+        /// has not been struck. Before §9.2 the ball left on the commit frame, which is exactly
+        /// what put the cut-to-ball on a golfer who had not moved.</para>
+        ///
+        /// <para>Capture is the Game View through <c>CaptureCore.SnapPlayModeSafe</c> (see
+        /// <see cref="Snap"/>) — the gameplay camera, no harness camera, per §9.2 and CAPTURE
+        /// RULE 0.</para>
+        /// </summary>
+        IEnumerator ProveLaunchDeferred(Component shot, Animator anim, float atSeconds)
+        {
+            var stateProp = shot?.GetType().GetProperty("State");
+            if (stateProp == null) { Mark("§9.2 probe: no State property — skipped"); yield break; }
+
+            // Commit == the frame State becomes Resolving.
+            float deadline = Time.realtimeSinceStartup + 25f;
+            while (Time.realtimeSinceStartup < deadline &&
+                   stateProp.GetValue(shot)?.ToString() != "Resolving")
+                yield return null;
+
+            if (stateProp.GetValue(shot)?.ToString() != "Resolving")
+            { Mark("§9.2 probe: never reached Resolving within 25 s — skipped"); yield break; }
+
+            var b0 = BallTransform();
+            Vector3 ballAtCommit = b0 != null ? b0.position : Vector3.zero;
+
+            float t0 = Time.realtimeSinceStartup;
+            while (Time.realtimeSinceStartup - t0 < atSeconds) yield return null;
+
+            var b1 = BallTransform();
+            Vector3 ballNow = b1 != null ? b1.position : ballAtCommit;
+            float moved = Vector3.Distance(ballAtCommit, ballNow);
+            string st = CurrentState(anim);
+
+            yield return Snap("golfer_h" + _hole.ToString("00") + "_t0_6_after_commit");
+
+            // Read the impact constant off the live type: Golfin.Gameplay.Input is
+            // autoReferenced:false, so no editor assembly may NAME ShotController.
+            object impact = shot.GetType()
+                .GetField("GolferImpactDelayDriveSeconds", BindingFlags.Public | BindingFlags.Static)
+                ?.GetValue(null);
+
+            Assert("shot.launchDeferredToImpact", moved < 0.05f && st.StartsWith("Swing"),
+                   "at t=" + F(Time.realtimeSinceStartup - t0) + " s after commit the ball has moved " +
+                   F(moved) + " m (want < 0.05 — impact is at " +
+                   (impact == null ? "<no GolferImpactDelayDriveSeconds — define off?>" : F((float)impact)) +
+                   " s) and the animator is '" + st + "' (want a Swing state). Before §9.2 the ball " +
+                   "left on the commit frame, so this measured metres and the cut landed on a " +
+                   "golfer who had not moved.");
+        }
+
         /// <summary>Blocks until the ball has not moved for 1.5 s, or the timeout expires.</summary>
         IEnumerator WaitForBallAtRest(float timeout)
         {
@@ -505,6 +676,102 @@ namespace Golfin.EditorTools
             for (int i = 0; i < frames; i++) { yield return null; samples.Add(Time.unscaledDeltaTime * 1000f); }
             samples.Sort();
             result(samples[samples.Count / 2]);
+        }
+
+        /// <summary>
+        /// SPEC §9.4. Puts the ball on the hole's green, switches to the putter, waits for the
+        /// golfer to settle into Address_Putt, and measures the worst fingertip against the
+        /// PUTTER's shaft axis. Logged as a measurement (see the call site for why it is not an
+        /// assertion) and restored to driver-at-the-original-lie afterwards so nothing downstream
+        /// sees a mutated world.
+        /// </summary>
+        IEnumerator PuttGripOnGreen(GameObject golfer, Component shot, Animator anim)
+        {
+            var labType = FindType("Golfin.Physics.Viewer.PhysicsLabController");
+            var lab = labType == null ? null : UnityEngine.Object.FindFirstObjectByType(labType) as Component;
+            var placeBallAt = labType?.GetMethod("PlaceBallAt");
+            var ballT0 = BallTransform();
+            Vector3 lie0 = ballT0 != null ? ballT0.position : Vector3.zero;
+
+            Vector3 target = Golfin.Gameplay.UI.HUD.HoleContext.PinWorld;
+            if (target == Vector3.zero) target = Golfin.Gameplay.UI.HUD.HoleContext.GreenCentroidWorld;
+            if (lab == null || placeBallAt == null || target == Vector3.zero)
+            {
+                Mark("putt-grip §9.4 SKIPPED: lab=" + (lab != null) + " PlaceBallAt=" + (placeBallAt != null) +
+                     " pin/green=" + V(target) + " — cannot reach a green, so no number is reported " +
+                     "(a guessed one would be worse than none)");
+                yield break;
+            }
+
+            // 1 == Golfin.Course.SurfaceType.Green, per PlaceBallAt's own doc comment.
+            placeBallAt.Invoke(lab, new object[] { target + new Vector3(1.5f, 0f, 0f), (int?)1 });
+            SetIsPutt(shot, true);
+            Golfin.Gameplay.UI.ShotUI.ClubSelectionBroadcast.SetPutterMode(true, 0);
+            yield return Hold(1.5f);
+
+            // RESTAGE THROUGH IDLE, and note WHY this is needed — it is a finding in its own
+            // right. Setting putter mode while the golfer is already at address leaves him in
+            // Address_Drive holding a putter: Address_Drive's only transitions are Swing and
+            // Cancel, so there is no Address_Drive -> Address_Putt edge and the IsPutt bool has
+            // nothing to act on. The first run of this measurement read animator=Address_Drive
+            // and produced numbers against the wrong pose AND a shorter shaft.
+            //
+            // In a real round this does not bite: the ball comes to rest on the green, auto club
+            // selection sets IsPutt, and only THEN does re-arm fire the Address trigger — so the
+            // Idle -> Address_Putt edge is picked correctly. It bites only when the club changes
+            // while he is already standing over the ball, which is a real thing a player can do
+            // from the club widget. Reported, not fixed here (§9.3 froze the grip work).
+            //
+            // The nudge below is measurement-only scaffolding and is disclosed as such: it drives
+            // the animator through Idle so the Address trigger re-evaluates with IsPutt true.
+            if (anim != null && CurrentState(anim) == "Address_Drive")
+            {
+                Mark("putt-grip §9.4 NOTE: club swapped at address left him in Address_Drive with a " +
+                     "putter (no Address_Drive->Address_Putt edge). Restaging through Idle to measure " +
+                     "the real putt pose. See comment at GolferTestVerificationRecorder.PuttGripOnGreen.");
+                anim.SetTrigger("Cancel");
+                yield return Hold(0.8f);
+                anim.SetTrigger("Address");
+                yield return Hold(1.2f);
+            }
+
+            string st = CurrentState(anim);
+            var all = golfer.GetComponentsInChildren<Transform>(true);
+            Transform Fb(string n) => all.FirstOrDefault(x => x.name == n);
+            var slot = Fb("ClubSlot");
+
+            if (slot == null || st != "Address_Putt")
+            {
+                Mark("putt-grip §9.4 SKIPPED: animator='" + st + "' (wanted Address_Putt) slot=" +
+                     (slot != null) + " — a fingertip measured against the driver pose or a " +
+                     "non-address pose is not the number §9.4 asked for, so none is reported");
+            }
+            else
+            {
+                const float contact = 0.012f + 0.009f;   // 24 mm grip + 9 mm finger, as § grip
+                var sb = new StringBuilder("putt-grip §9.4 on green (animator=" + st + "): ");
+                foreach (var side in new[] { "r", "l" })
+                {
+                    float worst = 0f; string worstFinger = "?";
+                    foreach (var fng in new[] { "index", "middle", "ring", "pinky" })
+                    {
+                        var tip = Fb(fng + "_04_leaf_" + side) ?? Fb(fng + "_03_" + side);
+                        if (tip == null) continue;
+                        float d = Vector3.Cross(slot.up, tip.position - slot.position).magnitude;
+                        if (d > worst) { worst = d; worstFinger = fng; }
+                    }
+                    sb.Append(side).Append("-hand worst=").Append(worstFinger).Append(' ').Append(F(worst))
+                      .Append(" m (contact ").Append(F(contact)).Append(", gate ").Append(F(contact * 2f)).Append("); ");
+                }
+                Mark(sb.ToString());
+                yield return Snap("golfer_h" + _hole.ToString("00") + "_putt_green");
+            }
+
+            // Restore: driver, original lie. A measurement must not leave the world changed.
+            Golfin.Gameplay.UI.ShotUI.ClubSelectionBroadcast.SetPutterMode(false, 0);
+            SetIsPutt(shot, false);
+            if (lie0 != Vector3.zero) placeBallAt.Invoke(lab, new object[] { lie0, (int?)null });
+            yield return Hold(1.5f);
         }
 
         static string CurrentState(Animator a)

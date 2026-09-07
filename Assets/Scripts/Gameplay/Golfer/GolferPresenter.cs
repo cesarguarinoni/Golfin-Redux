@@ -528,7 +528,11 @@ namespace Golfin.Gameplay.Golfer
             _sm   = _lab.BallSM;
             if (_shot == null || _sm == null) return;
 
-            _shot.OnShotResolved += HandleShotResolved;
+            // §9.2: the IMMEDIATE event, not OnShotResolved. The swing must start on the commit
+            // frame; OnShotResolved is now what carries the ball, and it is held back to the
+            // swing's impact frame. Subscribing here is also what ARMS the deferral — the
+            // controller defers only while something is listening on the immediate event.
+            _shot.OnShotResolvedImmediate += HandleShotResolved;
             _shot.OnStateChanged += HandleShotState;
             _sm.OnShotComplete   += HandleShotComplete;
             _sm.OnStateChanged   += HandleBallState;
@@ -544,7 +548,7 @@ namespace Golfin.Gameplay.Golfer
         void Unbind()
         {
             if (!_bound) return;
-            if (_shot != null) { _shot.OnShotResolved -= HandleShotResolved; _shot.OnStateChanged -= HandleShotState; }
+            if (_shot != null) { _shot.OnShotResolvedImmediate -= HandleShotResolved; _shot.OnStateChanged -= HandleShotState; }
             if (_sm   != null) { _sm.OnShotComplete -= HandleShotComplete; _sm.OnStateChanged -= HandleBallState; }
             _shot = null; _sm = null; _lab = null; _bound = false;
             _stanceKnown = false;

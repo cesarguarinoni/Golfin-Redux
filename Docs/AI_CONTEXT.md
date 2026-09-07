@@ -4,6 +4,7 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
+<<<<<<< HEAD
 ## 2026-09-07 — **shot view followup: cap the pill, and let the tile crop grow**
 
 **The pill stops at the baseline; the pull does not.** With `ClubHalfHeight` at 150 the drawn lane
@@ -95,6 +96,138 @@ club size, 120 px wide down the centre where the buttons (x ±382…527) never r
 auto-crop is clamped at `MaxCropW` 900 to keep the HUD columns out, and an 888 px lane no longer
 fits, so the new tiles clip the timing bar and the 100 %/120 % labels. See
 `Docs/Specs/Active/shot_view_layout/IMPLEMENTER_REPORT.md`.
+=======
+## 2026-09-07 (close-out) — golfer_3d_test: define-OFF proof, profile restored, §9.8 blocked
+
+**The active build profile is back on `iOS-Full-GPS`**, and restoring it was also the way to get the
+proof §9.6 actually wanted. With GPS active the feature is genuinely compiled out: reflection over
+the loaded assemblies reports `ShotController.OnShotResolvedImmediate` **does not exist** and
+`GolferTestBootstrap.Boot` **does not exist**. That is the §9.2 keep-condition satisfied by
+measurement rather than by reading the source — the members are not unused, they are not compiled.
+
+**EditMode sweep with the define OFF: 2711 / 2718 pass.** All four failures accounted for, none
+mine: `RemoteContentSource` is Windows path separators; `PendulumSchemeDriver` was PROVEN
+pre-existing by stashing the §9.2 edits and re-running (it arrived with `392539899`); and the two
+`UiMotion` failures are flaky under full-suite load — all 96 `Golfin.UI.Polish.Tests` pass in
+isolation. `GolferTestBuildGateTests` 5/5, and this run is the stronger one: under GPS the profile
+carries no define, so `WithoutTheOverride_TheDecisionComesFromTheActiveProfile` exercises the
+**exclusion** branch — what §9.6 wanted a build to prove, proven without a build.
+
+**§9.8 is blocked and nothing was substituted.** `Assets/Art/3D/Characters/_Test/MixamoNative/`
+does not exist; `_Test/` holds only CMU, Grip, Mixamo, Quaternius and Resources, and a project-wide
+search for `*MixamoNative*` returns nothing. No T-pose, no "With Skin" clips, so no prefab to
+duplicate, no side-by-side, no foot-slide numbers. Per Rule 19's "surface, don't rebuild" the
+retarget-vs-clips conclusion is deliberately NOT written — writing it without the comparison would
+be fabricating a finding.
+
+**§9.7 was a no-op, verified rather than assumed:** `.git/objects/maintenance.lock` does not exist,
+and there are no uncommitted control-scheme edits to avoid sweeping. The whole dirty tree is two
+`Docs/Diag/baked-pivot/M0-regression-*.md` files that the EditMode suite REGENERATES when it runs,
+plus an untracked `Assets/Animations.meta` predating the session. Left uncommitted and reported.
+
+**Unity exited mid-session and was relaunched.** It shut down cleanly (not a crash) and left no
+damage — `_Test/Resources` intact, no `_GolferTestStash` left behind, tree clean. Worth knowing that
+the gate test's stash/restore survives an editor quit.
+
+**A trap for next time:** `tests-run` refused with "ShellScene has unsaved changes". The scene was
+dirty in memory only (git showed the file unmodified), so it was RELOADED FROM DISK rather than
+saved — PIPELINE_HARDENING rule 14 forbids writing back a scene dirtied by probes without a diff,
+and boot-critical containers live in ShellScene.
+
+**Still open:** `SPEC.md` has no §9 (147 lines, ends at §8, and §8 still lists §9.2's work as out of
+scope) — all three close-out iterations were implemented from chat text. The hit-SFX now plays
+~1.17 s before the ball leaves, flagged not fixed.
+
+---
+## 2026-09-07 (later) — golfer_3d_test close-out: **the ball now waits for impact**
+
+**The swing was never visible in play.** The ball left on the COMMIT frame, so the existing
+cut-to-ball fired while the golfer had not started moving — you saw a ball in flight and no swing.
+
+**The seam, and the wall around it.** The launch is `ballAnimator.Play(trajectory)` plus
+`BallSM.OnTrajectoryComputed`, and with them the Director's `ArmChaseForShot`, all inside
+`PhysicsLabController.HandleShotResolved` — under `Assets/Scripts/Physics/`, which CLAUDE.md rule 7
+bans and a hook enforces. The only other seam reaching that whole block is the invoke site of
+`ShotController.OnShotResolved`, which is NOT banned. That is where the deferral went; no file under
+`Assets/Scripts/Physics/` was touched.
+
+**Why a second event.** `GolferPresenter` starts the swing off `OnShotResolved` too, so delaying it
+wholesale would delay the swing — deferring the very thing the delay exists to reveal. New
+define-gated `OnShotResolvedImmediate` fires at commit and carries the golfer; `OnShotResolved` now
+carries the ball, held to `GolferImpactDelayDriveSeconds` 1.167 s / `GolferImpactDelayPuttSeconds`
+1.333 s. Guarded three ways: the `#if`, "is a golfer actually listening" (self-disabling), and
+`Application.isPlaying` — the last is what keeps the EditMode suite green with the define ON, since
+those tests drive `CommitFlick` synchronously and a coroutine would never run.
+
+**Proof is a number, not a vibe.** `shot.launchDeferredToImpact`: at 0.6 s after commit the ball has
+moved **0.0000 m** and the animator is `Swing_Drive`. The frame at that instant — gameplay camera,
+no harness camera — shows him mid-backswing with the ball still at his feet. **37 pass / 0 fail.**
+
+**Gate proof went Editor-only (§9.6 amended — no iOS builds).** New EditMode suite
+`GolferTestBuildGateTests` (5 tests, all green) exercises the stash/restore against the real folder:
+`_Test/Resources` leaves the tree for an ordinary build and comes back, the stash path carries no
+`/Resources` segment, restore is idempotent. It reaches the gate by REFLECTION because
+`GolferTestBuildGate` compiles into the predefined `Assembly-CSharp-Editor`, which no asmdef can
+reference. Full sweep 2713/2718 with the define ON; the 2 failures are pre-existing and were PROVEN
+so by stashing the §9.2 edits and re-running (`RemoteContentSource` = Windows path separators;
+`PendulumSchemeDriver` marker-freeze arrived with `392539899`).
+
+**Define off is byte-identical**: `#if` at 828–830 vanishes and `OnShotResolved?.Invoke(...)` at 831
+is the entire commit path, as it always was.
+
+**Needs a ruling:** `PublishShotSfx` plays the swing AND the hit sound at commit, so the HIT sound
+now lands ~1.17 s early — flagged rather than silently moved, since it is shared by three call sites
+including a test seam. Also `SPEC.md` still has no §9 (it ends at §8, which still lists this work as
+out of scope), and the active profile was left on `iOS-Full-Golfer` rather than restored to
+`iOS-Full-GPS`, because GPS compiles the feature out and this is the animation-testing machine.
+
+---
+## 2026-09-07 — golfer_3d_test: **Address fixed, then closed out to 36/0**
+
+**In a real round the golfer never entered Address.** He stood bolt upright, back to camera, arms at
+his sides, club dangling. Two independent causes, both proven on real Hole 06 play-mode renders:
+
+1. **Address was keyed on the wrong signal.** `GolferPresenter` drove it off `ShotInputState` —
+   "anything but `ShotState.Idle` means address". But `ShotController.State` is `Idle` whenever the
+   player is not touching the screen; `Aiming` does not begin until `justTouched`. The entire window
+   in which a golfer stands at address IS a window in which `ShotState` is Idle, so the presenter
+   fired `Cancel` through all of it and addressed only for the fraction of a second the finger was
+   down. Address now derives from `BallState.Aiming` ("no shot in flight; player can input") via one
+   idempotent `RefreshStance()` that every handler funnels into.
+2. **A stale `Reset` trigger.** `Reset` is an **AnyState → Idle** transition with
+   `canTransitionToSelf: 0`. `HandleShotComplete` set it while the animator was ALREADY in Idle, so
+   it was not taken and not consumed — it sat armed, then dragged him out of `Address_Drive` one
+   frame after he got there. This hit every shot after the first. `RefreshStance` now disarms every
+   competing trigger, not just the opposite one.
+
+**All four grip failures cleared with zero grip changes** (`fingersClosed` 0.0873→0.0276,
+`leadHandOnGrip` −0.0036→0.0531, `wrapped_r` 0.0573→0.0324, `wrapped_l` 0.5724→0.0309). The reported
+"`ApplyGripPose` does not take effect" was never a bug: the numbers were frozen across solver
+rewrites because the golfer was in Idle, where the lead arm hangs at his side and there is no grip.
+
+**The assertion that lied, and the lesson.** `shot.addressBeforeSwing` PASSed on a frame that
+visibly showed Idle, because it samples states seen while the harness drives a synthetic drag — the
+one moment the old rule held. **No assertion was checking the thing the picture showed.** Added
+`shot.addressAtRest` (live animator state on the captured frame, no shot in progress) and replaced
+`shot.backToIdle` — which accepted `"Idle" OR "Address"`, exactly the looseness that let it through —
+with `shot.addressAfterShot`, which REQUIRES Address once the ball has re-armed.
+
+**Close-out (partial — §9.1 / §9.3 / §9.4 / §9.5):** dropped the `Eyebrows` mesh (984 tris) from
+`PfGolfer_Test` → `budget.tris` 15,632 → **14,648**, taking the board to **36 pass / 0 fail**.
+Putter fingertip re-measured on a green in `Address_Putt`: trail hand 0.0389 m (inside the 0.042
+gate), **lead hand 0.0633 m (over by 51%)** — this supersedes the "0.0429 marginal" note in
+`KICKOFF_PC.md`; recorded as a measurement, not a gate, because §9.3 froze the grip. The golfer
+renders naked (CC0 base body, no garment mesh). Found in passing: changing club **while already at
+address** leaves him in `Address_Drive` holding a putter — there is no `Address_Drive →
+Address_Putt` edge, so `IsPutt` has nothing to act on.
+
+**Still open:** §9.2 (defer ball launch to impact) is blocked — its seam is
+`PhysicsLabController.HandleShotResolved`, under `Assets/Scripts/Physics/`, which CLAUDE.md rule 7
+bans and a hook enforces. §9.6 (three iOS builds) is a Mac task; `unity-build-ios.sh` emits an Xcode
+project for fastlane. **`SPEC.md` has no §9** — it ends at §8 and the close-out scope still needs
+writing into it. **This PC stays on the `iOS-Full-Golfer` build profile** (Cesar, 2026-09-07),
+because it is the machine for testing these animations.
+>>>>>>> origin/main
 
 ---
 ## 2026-09-07 — control schemes / **four polish fixes: ball, club head, cancel, map view**

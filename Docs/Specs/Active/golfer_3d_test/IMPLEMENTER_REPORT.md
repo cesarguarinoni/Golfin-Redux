@@ -491,3 +491,318 @@ Five takes; the earlier four are not kept.
    above the soles and `GOLFIN_Putter.fbx` is 0.75 m grip-to-head, so the head cannot reach the
    ground at 1:1. Scaling the socket was the least-bad of a floating putter head, a longer putter
    mesh, or a different putt clip. Recorded here so the real spec can size the mesh instead.
+
+---
+
+## 10. Iteration 16 (PC session, 2026-09-07) — SPEC §9.1 / §9.3 / §9.4 / §9.5
+
+**Iteration shape:** `golfer:close-out-partial`
+
+**Scope actually delivered: §9.1, §9.3, §9.4, §9.5 only.** §9.2 and §9.6 were NOT attempted; see
+§10.5. This is a partial iteration by Cesar's instruction ("do 9.1, 9.3, 9.4 and 9.5 now"), so
+STATUS stays `IMPLEMENTER_WORKING` rather than advancing to review — marking it ready would claim
+a close-out scope that is two items short.
+
+**A note on the spec.** `SPEC.md` has no §9. It is 147 lines ending at §8, and the working tree is
+level with `origin/main`. The four items below were implemented from Cesar's message text. §9 still
+needs to be written into `SPEC.md` before any review gate can check this work against a contract.
+Related: current §8 still lists "Delaying ball launch to the swing's impact frame" as out of scope,
+which §9.2 would reverse.
+
+### 10.1 §9.1 — tri budget — **PASS**
+
+Dropped the `Eyebrows` SkinnedMeshRenderer (984 tris) from `PfGolfer_Test.prefab` only.
+
+| | before | after |
+|---|---|---|
+| `budget.tris` | **FAIL** 15,632 / 15,000 | **PASS 14,648 / 15,000** |
+
+Live breakdown from the run: `Grip=192 ClubHead=1058 Shaft=64 Eyes=768 SuperHero_Male=12566`.
+`Eyes` (768) was left in place — §9.1 says Eyebrows only, and 14,648 clears the limit without it.
+
+The presenter's serialized `skins` array was compacted to the two surviving renderers
+(`Eyes,SuperHero_Male`) rather than left holding a null slot. `ApplyTier` null-guards, so this is
+not a crash fix; a missing reference in a shipped prefab is something a reviewer should reject.
+
+### 10.2 §9.3 — grip — **no change, as instructed**
+
+No grip tuning. `ApplyGripPose`, the contact solve and every tuning constant are byte-identical to
+`9c3da7e3d`. The `grip.*` numbers in `golfer_invariants.json` are the final stand-in values.
+
+### 10.3 §9.4 — putter fingertip, re-measured once, on a green — **measured**
+
+Ball placed at the pin +1.5 m with `PhysicsLabController.PlaceBallAt(pos, 1 /*Green*/)`, putter
+equipped, golfer in `Address_Putt`:
+
+| hand | worst finger | distance from shaft axis | gate |
+|---|---|---|---|
+| trail (r) | pinky | **0.0389 m** | 0.0420 — under |
+| lead (l)  | ring  | **0.0633 m** | 0.0420 — **over by 51%** |
+
+This supersedes the "0.0429 m marginal fail" carried in `KICKOFF_PC.md`. The trail hand is
+comfortably inside the gate; the problem is the **lead** hand, and it is not marginal. Reported,
+not fixed — §9.3 froze the grip.
+
+Recorded as a **measurement, not an assertion**. Promoting it to a gate would hard-wire a red board
+for a defect §9.3 has declared out of bounds. Making it a gate is Cesar's call.
+
+The measurement discriminates, so these are real numbers and not a frozen readout: in the same run
+the driver reads `grip.wrapped_r` 0.0291 / `grip.wrapped_l` 0.0210 against the putter's 0.0389 /
+0.0633.
+
+**No corroborating frame.** `golfer_h06_putt_green_*.png` shows the ball on the green with the
+putter selected, 2 m from the pin — but the putt camera frames the ball and excludes the golfer.
+Rather than invent a capture path (CAPTURE RULE 0), the numbers stand on the bone transforms, which
+is the gate mechanism per PIPELINE_HARDENING §3.
+
+**Defect found while doing this.** Switching club **while already at address** leaves the golfer in
+`Address_Drive` holding a putter: `Address_Drive`'s only transitions are `Swing` and `Cancel`, so
+there is no `Address_Drive → Address_Putt` edge and the `IsPutt` bool has nothing to act on. The
+first take of this measurement read `animator=Address_Drive` and produced numbers against the wrong
+pose and a shorter shaft. In a real round it does not bite — the ball rests, auto club selection
+sets `IsPutt`, and only then does re-arm fire `Address`, so the `Idle → Address_Putt` edge is picked
+correctly. It bites when a player changes club from the widget while standing over the ball. Not
+fixed here (grip/pose work is frozen); the harness discloses its restage-through-Idle scaffolding
+in a comment at `PuttGripOnGreen`.
+
+### 10.4 §9.5 — clothes — one line
+
+The golfer renders naked — bare skin and grey underwear — in every frame, because `SuperHero_Male`
+is the CC0 base body with no garment mesh and no clothing was ever part of this stand-in's scope.
+
+### 10.5 Not attempted, with reasons
+
+- **§9.2 (defer ball launch to impact).** The seam where the resolved `ShotInput` reaches the ball
+  state machine is `PhysicsLabController.HandleShotResolved`
+  (`Assets/Scripts/Physics/Viewer/PhysicsLabController.cs:259`), which is under
+  `Assets/Scripts/Physics/`. CLAUDE.md rule 7 bans edits there outright and a hook enforces it.
+  The presenter already receives `OnShotResolved`, but deferring the **launch** means intervening
+  before the SM sees it — that file. Needs the Architect to state how it clears the ban.
+- **§9.6 (three iOS builds, Editor closed).** `Tools/unity-build-ios.sh` emits
+  `Builds/iOS-Full/Unity-iPhone.xcodeproj` for fastlane `build_app` — Xcode, macOS only. This is a
+  Windows machine. Mac-side task, and the "restore the profile to `iOS-Full-GPS`" step belongs with
+  it (Cesar's 2026-09-07 ruling is that this PC stays on `iOS-Full-Golfer` for animation testing).
+
+### 10.6 Result
+
+`Docs/Diagnostics/_capture/golfer_invariants.json` — **36 pass / 0 fail**, zero FAIL entries.
+
+---
+
+## 11. Iteration 17 (PC session, 2026-09-07) — SPEC §9.2 + §9.6 (amended)
+
+**Iteration shape:** `golfer:close-out-launch-deferral`
+
+Canonical screenshot: `screenshots/t0_6_after_commit.png`
+
+Completes the close-out started in §10. §9.1/§9.3/§9.4/§9.5 landed in `14f63e26e`; this iteration
+does §9.2 and the amended §9.6 (Editor-only gate proof, no iOS builds).
+
+**`SPEC.md` still has no §9.** It is 147 lines ending at §8, tree level with `origin/main`. Both
+iterations were implemented from Cesar's message text. §8 still lists "Delaying ball launch to the
+swing's impact frame" as OUT of scope — §9.2 reverses that and the file does not yet say so.
+
+### 11.1 §9.2 — the launch waits for impact — **PASS**
+
+| assertion | result |
+|---|---|
+| `shot.launchDeferredToImpact` | **PASS** — at 0.6 s after commit the ball has moved **0.0000 m** (gate < 0.05) and the animator is `Swing_Drive` |
+
+Evidence: `screenshots/t0_6_after_commit.png` — gameplay camera, mid-backswing, club up and behind,
+ball still on the ground at his feet. No harness camera: the frame is the Game View through
+`CaptureCore.SnapPlayModeSafe`, per CAPTURE RULE 0.
+
+**THE SEAM, as §9.2 asked to have flagged.** The launch is
+`ballAnimator.Play(trajectory)` + `BallSM.OnTrajectoryComputed(...)`, and with them the Director's
+`ArmChaseForShot` (the cut-to-ball) — all of it inside `PhysicsLabController.HandleShotResolved`
+(`Assets/Scripts/Physics/Viewer/PhysicsLabController.cs:259`). **That file may not be edited**:
+CLAUDE.md rule 7 bans `Assets/Scripts/Physics/` outright and a hook enforces it. The only other
+seam that reaches the whole block is the invoke site of `ShotController.OnShotResolved`
+(`Assets/Scripts/Gameplay/Input/ShotController.cs:831`), which is under
+`Assets/Scripts/Gameplay/Input/` and is **not** banned. That is where the deferral went. No file
+under `Assets/Scripts/Physics/` was touched — `git diff --stat` confirms.
+
+**Why a second event rather than just delaying the existing one.** `GolferPresenter` starts the
+swing from `OnShotResolved` too, so delaying it wholesale would delay the swing — deferring the very
+thing the delay exists to show. Added `OnShotResolvedImmediate` (define-gated), which fires at
+commit; the golfer moved to it and keeps swinging on the commit frame while physics waits.
+
+**Three conditions guard the deferral, and each earns its place:**
+
+1. `#if GOLFIN_GOLFER_TEST` at the call site — see §11.3 for the byte-identical proof.
+2. `OnShotResolvedImmediate != null` — no golfer listening means nothing to wait for, so the ball
+   leaves on the commit frame exactly as today. Self-disabling rather than something to remember.
+3. `Application.isPlaying` — EditMode tests drive `CommitFlick` synchronously and assert on
+   `OnShotResolved` in the same call; a coroutine would never run and every one of those assertions
+   would fail. This keeps the suite green with the define **ON** as well as off, which matters
+   because this machine's active profile has it on.
+
+Delays are `GolferImpactDelayDriveSeconds = 1.167f` / `GolferImpactDelayPuttSeconds = 1.333f`,
+named constants on `ShotController`, read back by the harness via reflection (no editor assembly may
+NAME `ShotController` — `Golfin.Gameplay.Input` is `autoReferenced:false`).
+
+**KNOWN CONSEQUENCE, NOT FIXED — flagged rather than silently changed.** `PublishShotSfx` plays the
+swing **and the hit** sound at commit (order 350, before the resolve maths). The swing sound stays
+correct; the **hit** sound now lands ~1.17 s before the ball actually leaves. Moving it means
+changing SFX behaviour shared by three call sites including a test seam, which is past what §9.2
+asked for. Needs a ruling.
+
+### 11.2 §9.6 (amended) — Editor-only gate proof — **PASS**
+
+**New EditMode test:** `Assets/Scripts/Editor/GolferGate/Tests/GolferTestBuildGateTests.cs` —
+5 tests, **all passing**, exercising stash/restore directly against the real folder:
+
+| test | proves |
+|---|---|
+| `IncludeTestAssets_ForcesAGolferBuild` | the `CIBuild` override includes `_Test` regardless of profile |
+| `WithoutTheOverride_TheDecisionComesFromTheActiveProfile` | with no override the gate follows the active profile's defines |
+| `MoveOut_StashesTheResourcesFolder_AndRestorePutsItBack` | `_Test/Resources` really leaves the tree and really comes back; the stash path contains no `/Resources` segment |
+| `RestoreIsIdempotent_AndSafeWhenNothingMoved` | every build entry point can call `RestoreNow` unconditionally |
+| `TheGolferPrefabIsUnderAResourcesFolder` | the premise the gate exists for still holds |
+
+It reaches the gate by **reflection**: `GolferTestBuildGate` compiles into the predefined
+`Assembly-CSharp-Editor`, and an asmdef cannot reference a predefined assembly at all. Moving the
+gate under an asmdef would ripple through every file in `Assets/Editor/`. Same pattern the harness
+already uses for `ShotController`.
+
+**EditMode sweep:** 2718 tests, **2713 pass, 2 fail, 3 skipped**. Both failures are **pre-existing
+and not mine**, proven by stashing the §9.2 edits and re-running:
+
+- `RemoteContentSourceTests.CachePath_IsUnderPersistentData_AndPerCatalog` — Windows path
+  separators (`C:\...` vs `C:/...`). Platform issue, untouched by this work.
+- `PendulumSchemeDriverTests.MarkerFreezes_AtTheUpswingReversal_NotAtRelease` — **fails identically
+  with my changes stashed**. It arrived with `392539899` (control schemes / reverse-to-cancel).
+  Verified by direct experiment, not assertion.
+
+Note this is stronger than §9.6 required: it asked for green with the define **off**, and the suite
+is green (bar those two) with the define **on**.
+
+### 11.3 Define-off = byte-identical — **PASS**
+
+```
+828:#if GOLFIN_GOLFER_TEST
+829:            if (TryDeferLaunchToImpact(input, ballMods)) return;
+830:#endif
+831:            OnShotResolved?.Invoke(input, ballMods);
+```
+
+With the define off, lines 828–830 vanish and line 831 is the entire commit path — the single
+`OnShotResolved?.Invoke` line it has always been. The event, both constants and both methods
+(`TryDeferLaunchToImpact`, `ReleaseAtImpact`) sit inside `#if` blocks at 185–212 and 834–881, so
+they do not exist either. Full guard inventory in the commit message's grep.
+
+### 11.4 Result
+
+`golfer_invariants.json` — **37 pass / 0 fail**, zero FAIL entries.
+
+### 11.5 Open / needs a ruling
+
+- **Hit-SFX timing** (§11.1) — plays ~1.17 s before the ball leaves.
+- **Active build profile NOT restored to `iOS-Full-GPS`.** §9.6 asks for it, but Cesar's ruling of
+  the same day is that this PC stays on `iOS-Full-Golfer` because it is the machine for testing
+  these animations, and `iOS-Full-GPS` compiles the feature out. The two instructions conflict.
+  Left on `iOS-Full-Golfer`; the profile is Editor/Library state and is not part of any commit, so
+  nothing is blocked either way. One word and I will switch it.
+- **`SPEC.md` §9 still unwritten**, and §8 still contradicts §9.2.
+
+---
+
+## 12. Iteration 18 (PC session, 2026-09-07) — §9 as amended "1+2"
+
+**Iteration shape:** `golfer:close-out-amended`
+
+Canonical screenshot: `screenshots/t0_6_after_commit.png`
+
+### 12.1 Status of each amended item
+
+| item | state |
+|---|---|
+| §9.1 drop Eyebrows | **DONE** in `14f63e26e` — `budget.tris` 15,632 → 14,648 |
+| §9.2 swing visibility | **CANCELLED, but KEPT** — the keep-condition is met, see §12.2 |
+| §9.3 grip | **CANCELLED** — no grip work was done after `9c3da7e3d`; solve byte-identical |
+| §9.4 putter fingertip | **CANCELLED** — measurement already taken in `14f63e26e`; no further work, no tuning |
+| §9.5 clothes | **DONE** — §10.4: naked, CC0 base body, no garment mesh, never in scope |
+| §9.6 Editor-only gate proof | **DONE, now with the define OFF** — see §12.3 |
+| §9.7 lock + don't sweep | **NOTHING TO DO** — see §12.4 |
+| §9.8 Mixamo-native check | **BLOCKED** — the assets do not exist, see §12.5 |
+| profile → `iOS-Full-GPS` | **DONE** — see §12.3 |
+
+### 12.2 §9.2 — kept, because both keep-conditions are met
+
+The amendment says keep it only if the define-off path is byte-identical and tests are green.
+Both now proven with the define genuinely OFF (profile `iOS-Full-GPS`), not argued from source:
+
+**Byte-identical.** The whole feature is inside `#if` blocks. With the define off, the commit path is:
+
+```
+828:#if GOLFIN_GOLFER_TEST
+829:            if (TryDeferLaunchToImpact(input, ballMods)) return;
+830:#endif
+831:            OnShotResolved?.Invoke(input, ballMods);
+```
+
+lines 828–830 vanish and line 831 is the single `OnShotResolved?.Invoke` it has always been.
+
+**Proven at runtime, not just by reading the source.** With `iOS-Full-GPS` active, reflection over
+the loaded assemblies reports `ShotController.OnShotResolvedImmediate` **does not exist** and
+`GolferTestBootstrap.Boot` **does not exist**. The members are not merely unused — they are not
+compiled.
+
+**Tests green.** See §12.3. No failure is attributable to §9.2.
+
+### 12.3 §9.6 — the define-OFF sweep, and the profile restore
+
+Restoring the profile and getting the define-off sweep are the same act, so they were done together.
+Active build profile is now **`iOS-Full-GPS`**.
+
+**EditMode sweep with the define OFF: 2718 total, 2711 pass, 4 fail, 3 skip.** Every failure is
+accounted for and none is mine:
+
+| failure | verdict |
+|---|---|
+| `RemoteContentSourceTests.CachePath_IsUnderPersistentData_AndPerCatalog` | pre-existing — Windows path separators (`C:\` vs `C:/`) |
+| `PendulumSchemeDriverTests.MarkerFreezes_AtTheUpswingReversal_NotAtRelease` | pre-existing — **proven** in iteration 17 by stashing the §9.2 edits and re-running; fails identically without them. Arrived with `392539899` |
+| `UiMotionAllocationTests.CountUp_AllocatesOnlyWhenTheDrawnNumberChanges` | **flaky under full-suite load** — proven: all 96 `Golfin.UI.Polish.Tests` pass in isolation |
+| `UiMotionNewPrimitiveTests.Bump_OvershootsBeforeItComesBack` | same — both are frame-timing dependent |
+
+**`GolferTestBuildGateTests`: 5 / 5 PASS with the define off.** This run is stronger evidence than
+iteration 17's, because `WithoutTheOverride_TheDecisionComesFromTheActiveProfile` now exercises the
+**exclusion** branch: `iOS-Full-GPS` carries no `GOLFIN_GOLFER_TEST`, so `IsGolferBuild()` is false
+and `_Test` is stashed out. That is exactly what §9.6 asks a build to prove, without a build.
+
+Guarded-body grep is in §11.3 and the iteration-17 commit message; the guard inventory is unchanged.
+
+### 12.4 §9.7 — nothing to do, verified not assumed
+
+- `.git/objects/maintenance.lock` — **does not exist**. Nothing to remove.
+- **Uncommitted control-scheme edits — there are none.** The entire dirty tree is
+  `Docs/Diag/baked-pivot/M0-regression-{Driver,Putter}FromGreen.md`, which the **EditMode suite
+  regenerates when it runs**, plus untracked `Assets/Animations.meta` which predates this session.
+  All three are deliberately left uncommitted and reported here (Rule 13), never swept.
+
+The instruction describes a tree this machine does not have; it appears to have been written
+against the Mac's working copy.
+
+### 12.5 §9.8 — BLOCKED, the assets were never dropped
+
+`Assets/Art/3D/Characters/_Test/MixamoNative/` **does not exist**. `_Test/` contains only `CMU`,
+`Grip`, `Mixamo`, `Quaternius` and `Resources`, and a project-wide search for `*MixamoNative*`
+returns nothing. There is no character T-pose and no "With Skin" clips to import, so there is
+nothing to duplicate `PfGolfer_Test` against, no side-by-side to capture, and no foot-slide numbers
+to measure.
+
+Per Rule 19's standing instruction — *"If no elements mentioned are found to clone SURFACE it, don't
+build from scratch without telling me"* — nothing was substituted or hand-rolled. The retarget-vs-
+clips conclusion §9.8 asks for is **not written**, because writing it without the comparison would
+be fabricating a finding.
+
+### 12.6 A note on the spec, third time
+
+`SPEC.md` still has **no §9**. It is 147 lines ending at §8, and the tree is level with
+`origin/main`. All three close-out iterations (§10, §11, this one) were implemented from Cesar's
+message text. §8 continues to list §9.2's work as out of scope.
+
+### 12.7 Result
+
+`golfer_invariants.json` — **37 pass / 0 fail** (from iteration 17; the golfer harness cannot run
+under `iOS-Full-GPS` because the feature is compiled out, which is itself the point of §9.6).
