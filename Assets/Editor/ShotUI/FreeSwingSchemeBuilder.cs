@@ -59,7 +59,12 @@ namespace Golfin.EditorTools.ShotUI
         /// lands. It is ALSO the crossing offset: see
         /// <see cref="FreeSwingLaneView.ImpactCrossOffsetPx"/>.</summary>
         private const float HandleRestBelowBall = 70f;
-        private const float ClubHalfHeight      = 50f;   // the 178x100 ClubHandle sprite
+        // Half the club-head sprite's RENDERED height at its LARGEST — 100 px of sprite at the
+        // 3x max handle scale ShotConeView uses (see the driver's _handleScaleAtFullPower). The
+        // lane derives its own length from this, so it has to be the club at its biggest or the
+        // head hangs out of the pill again at full pull — the exact defect the derived lane was
+        // introduced to make impossible.
+        private const float ClubHalfHeight      = 150f;
         private const float LaneTailPx          = 20f;
         /// <summary>Lane above the ball on a PUTT. The node halves the follow-through as well as
         /// the depth: SwingLane top 861 on the Putt frame against 801 on the others, ball at 961.</summary>

@@ -2146,7 +2146,7 @@ MonoBehaviour:
   _label120: {fileID: 956801904}
   _impactLabel: {fileID: 226889507}
   _handleRestBelowBall: 70
-  _clubHalfHeight: 50
+  _clubHalfHeight: 150
   _laneTailPx: 20
   _puttFollowThroughPx: 100
   _impactWindowHeight: 16
@@ -3876,6 +3876,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Golfin.Gameplay.UI::Golfin.Gameplay.UI.Controls.Needle.NeedleSchemeDriver
   _schemeRoot: {fileID: 228214873}
   _handle: {fileID: 1408373080}
+  _handleScaleAtRest: 2
+  _handleScaleAtFullPower: 3
   _circleView: {fileID: 2052234743}
   _arcView: {fileID: 234443743}
   _tapCatcher: {fileID: 2103263149}
@@ -27756,6 +27758,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Golfin.Gameplay.UI::Golfin.Gameplay.UI.Controls.Pendulum.PendulumSchemeDriver
   _schemeRoot: {fileID: 1733178569}
   _handle: {fileID: 1509306673}
+  _handleScaleAtRest: 2
+  _handleScaleAtFullPower: 3
   _laneView: {fileID: 1813078876}
   _barView: {fileID: 684889924}
   _gradePop: {fileID: 1396204410}
@@ -28957,7 +28961,7 @@ MonoBehaviour:
   _label100: {fileID: 712291062}
   _label120: {fileID: 299285578}
   _handleRestBelowBall: 70
-  _clubHalfHeight: 50
+  _clubHalfHeight: 150
   _laneTailPx: 20
 --- !u!225 &1813078877
 CanvasGroup:
@@ -30378,6 +30382,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Golfin.Gameplay.UI::Golfin.Gameplay.UI.Controls.FreeSwing.FreeSwingSchemeDriver
   _schemeRoot: {fileID: 1920197874}
   _handle: {fileID: 1547412677}
+  _handleScaleAtRest: 2
+  _handleScaleAtFullPower: 3
   _laneView: {fileID: 135480014}
   _traceView: {fileID: 623646411}
   _analyzerChip: {fileID: 1883978374}
@@ -31880,7 +31886,7 @@ MonoBehaviour:
   _label100: {fileID: 672891159}
   _ballGhost: {fileID: 1432962270}
   _handleRestBelowBall: 70
-  _clubHalfHeight: 50
+  _clubHalfHeight: 150
   _dimGroup: {fileID: 797503516}
   _dimmedAlpha: 0.25
   _stroke80: 3

@@ -36,6 +36,15 @@ namespace Golfin.Gameplay.UI.Controls.Pendulum
         [Tooltip("The club-head Image (a copy of ClubHandle, carrying ClubHandleSpriteBinder).")]
         [SerializeField] private RectTransform _handle;
 
+        [Header("Club-head scale — parity with Flick")]
+        [Tooltip("Handle localScale at rest. MIRRORS ShotConeView's _minHandleScale, which is " +
+                 "serialized in LabScaffold as 2 (NOT the 1 in its C# default). Flick renders its " +
+                 "club head at 2x/356x200 px and grows it to 3x under full power; leaving these " +
+                 "schemes at scale 1 made every new club head half the size of Flick's.")]
+        [SerializeField] private float _handleScaleAtRest = 2f;
+        [Tooltip("Handle localScale at 100% power. Mirrors ShotConeView's _maxHandleScale (3).")]
+        [SerializeField] private float _handleScaleAtFullPower = 3f;
+
         [SerializeField] private PendulumLaneView  _laneView;
         [SerializeField] private PendulumBarView   _barView;
         [SerializeField] private SchemeGradePop    _gradePop;
@@ -66,6 +75,14 @@ namespace Golfin.Gameplay.UI.Controls.Pendulum
         // perfectly, and nothing happens. (Found by driving the real pointer path end to end;
         // every EditMode test passed because a test releases without a real upswing.)
         private float _peakPower;
+
+        // ── Reversing the pull cancels the swing ────────────────────────────────────
+        // The deepest pull this swing reached, and when the finger first came back up past
+        // HandleReverseCancelPx from it. A flick rises and RELEASES within ~100 ms, so it never
+        // survives HandleReverseCancelHoldSec; a deliberate pull-back does, and dies.
+        private float _deepestPullPx;
+        private bool  _reverseArmed;
+        private float _reverseHeldSec;
         private float _peakCurve;
 
         /// <summary>Marker offset snapshotted at the upswing REVERSAL, or NaN if none happened.
@@ -110,12 +127,39 @@ namespace Golfin.Gameplay.UI.Controls.Pendulum
             if (_handleGroup != null) _handleGroup.alpha = visible ? 1f : 0f;
         }
 
+
+        /// <summary>
+        /// Grow the club head with power exactly as Flick does — Lerp(rest, full, power) on
+        /// localScale. Flick's numbers live in the SCENE (ShotConeView 2 -> 3), not in its C#
+        /// defaults, which is why these schemes shipped at scale 1 and read half-size next to it.
+        /// </summary>
+        private void ApplyHandleScale()
+        {
+            if (_handle == null) return;
+            float power = _controller != null ? _controller.PowerNormalized : 0f;
+            float s = Mathf.Lerp(_handleScaleAtRest, _handleScaleAtFullPower, Mathf.Clamp01(power));
+            _handle.localScale = Vector3.one * s;
+        }
+
+        /// <summary>
+        /// Put the club head back to its rest SIZE. Explicit, not a re-read of
+        /// <c>PowerNormalized</c>: a swing that ends by lifting the finger resets through paths
+        /// where the controller has not necessarily zeroed power yet, and the club stayed blown up
+        /// at its pulled size into the next shot (Cesar, 2026-09-07). "The swing is over" is the
+        /// fact here, so the rest scale is written, not inferred.
+        /// </summary>
+        private void ResetHandleScale()
+        {
+            if (_handle != null) _handle.localScale = Vector3.one * _handleScaleAtRest;
+        }
+
         private void BindHandle()
         {
             if (_handle == null) return;
             _handleRest  = _handle.anchoredPosition;
             _handleGroup = _handle.GetComponent<CanvasGroup>();
             if (_handleGroup == null) _handleGroup = _handle.gameObject.AddComponent<CanvasGroup>();
+            ApplyHandleScale();   // rest scale before the first touch
         }
 
         // OnDisable, not only Deactivate: the host turns the ROOT off when the player switches
@@ -203,6 +247,9 @@ namespace Golfin.Gameplay.UI.Controls.Pendulum
             _power    = 0f;
             _curve    = 0f;
             _peakPower = 0f;
+            _deepestPullPx = 0f;
+            _reverseArmed = false;
+            _reverseHeldSec = 0f;
             _peakCurve = 0f;
             _markerAtLatch = float.NaN;
 
@@ -305,6 +352,8 @@ namespace Golfin.Gameplay.UI.Controls.Pendulum
         {
             float   pullPx = Mathf.Max(0f, _originLocal.y - local.y);
 
+            if (TrackReversal(pullPx)) return;   // pulled back up — the swing is over
+
             bool isPutt = _controller.IsPutt;
             _power = PendulumMath.Power(pullPx, _cfg, isPutt);
 
@@ -330,6 +379,38 @@ namespace Golfin.Gameplay.UI.Controls.Pendulum
             MoveHandle(pullPx, local.x - _originLocal.x, fadeDraw);
         }
 
+
+        /// <summary>
+        /// True when this drag has just been cancelled by the player pulling the club back UP.
+        ///
+        /// <para>Deliberately time-based, not speed-based. The flick gate measures a WINDOWED
+        /// average, so on the first frame of a real flick that window is still mostly the
+        /// stationary hold and reads slow — cancelling on "not fast enough" would kill genuine
+        /// flicks. What actually separates the two gestures is what happens next: a flick
+        /// RELEASES almost immediately, a pull-back keeps the finger down. So arm on the reversal
+        /// and let the clock decide.</para>
+        /// </summary>
+        private bool TrackReversal(float pullPx)
+        {
+            if (pullPx > _deepestPullPx)
+            {
+                _deepestPullPx  = pullPx;
+                _reverseArmed   = false;        // still going down; nothing to answer for
+                _reverseHeldSec = 0f;
+                return false;
+            }
+
+            bool risenEnough = _deepestPullPx - pullPx >= _cfg.HandleReverseCancelPx;
+            if (!risenEnough) return false;
+
+            // Arm here; the HOLD is counted per frame in Advance, not read off the wall clock.
+            // Time.unscaledTime does not move inside a single EditMode test method, so a
+            // clock-based hold is untestable — and a frame-counted one is also the honest
+            // measure of "the finger stayed down", since that is what frames observe.
+            if (!_reverseArmed) { _reverseArmed = true; _reverseHeldSec = 0f; }
+            return false;
+        }
+
         private void MoveHandle(float pullPx, float lateralPx, bool fadeDraw)
         {
             if (_handle == null) return;
@@ -348,6 +429,7 @@ namespace Golfin.Gameplay.UI.Controls.Pendulum
                                                           _cfg.PendulumCurveHalfWidthPx)
                 : _handleRest.x;
             _handle.anchoredPosition = new Vector2(x, y);
+            ApplyHandleScale();
         }
 
         private Vector2 ToLocal(PointerEventData e)
@@ -372,6 +454,20 @@ namespace Golfin.Gameplay.UI.Controls.Pendulum
         /// </summary>
         private void Advance(float dt)
         {
+            // The reversal hold ticks FIRST and unconditionally: every early-return below is about
+            // the marker, and a swing the player has walked back up must die regardless of them.
+            if (_dragging && _reverseArmed)
+            {
+                _reverseHeldSec += dt;
+                if (_reverseHeldSec >= _cfg.HandleReverseCancelHoldSec)
+                {
+                    _dragging = false;
+                    _controller.CancelExternalDrag();
+                    ResetSwing();
+                    return;
+                }
+            }
+
             if (_controller == null) return;
             if (!_dragging || _peakPower <= 0f) return;
 
@@ -415,12 +511,16 @@ namespace Golfin.Gameplay.UI.Controls.Pendulum
             _power    = 0f;
             _curve    = 0f;
             _peakPower = 0f;
+            _deepestPullPx = 0f;
+            _reverseArmed = false;
+            _reverseHeldSec = 0f;
             _peakCurve = 0f;
             _markerAtLatch = float.NaN;
             RedrawBands();          // next swing starts from the full-width target again
             // Deliberately does NOT touch the handle's alpha: ResetSwing runs immediately after a
             // commit, and showing it again here would undo the hide in the same frame.
             if (_handle != null) _handle.anchoredPosition = _handleRest;
+            ResetHandleScale();
             _barView?.SetMarker(0f);
         }
 
@@ -669,6 +769,12 @@ namespace Golfin.Gameplay.UI.Controls.Pendulum
         /// deriving the threshold from the tick and asserting a tautology.</summary>
         public float Pull100Px => _cfg.PendulumPull100Px;
         public float Pull120Px => _cfg.PendulumPull120Px;
+
+        /// <summary>The reverse-to-cancel rule's live thresholds. Public for the same reason the
+        /// pull thresholds are: a harness that hard-codes 60 px stops testing the rule the moment
+        /// the config moves, and quietly reports a pass for a gesture that no longer arms it.</summary>
+        public float ReverseCancelPx     => _cfg.HandleReverseCancelPx;
+        public float ReverseCancelHoldSec => _cfg.HandleReverseCancelHoldSec;
 
         /// <summary>The live accuracy windows, as fractions of the bar's half-travel. Public so a
         /// verification run can state how wide the target actually was for the equipped club

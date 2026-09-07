@@ -73,7 +73,12 @@ namespace Golfin.EditorTools.ShotUI
         /// travels — with a top-edge pivot the sprite hung a full 100px below every line it was
         /// supposed to be sitting on, and the pill had to be absurdly long to contain it.</summary>
         private const float HandleRestBelowBall = 70f;
-        private const float ClubHalfHeight      = 50f;   // the 178x100 ClubHandle sprite
+        // Half the club-head sprite's RENDERED height at its LARGEST — 100 px of sprite at the
+        // 3x max handle scale ShotConeView uses (see the driver's _handleScaleAtFullPower). The
+        // lane derives its own length from this, so it has to be the club at its biggest or the
+        // head hangs out of the pill again at full pull — the exact defect the derived lane was
+        // introduced to make impossible.
+        private const float ClubHalfHeight      = 150f;
         private const float LaneTailPx          = 20f;
 
         // ── Colours (straight from get_design_context on 14091:33885) ────────────────────

@@ -483,6 +483,86 @@ namespace Golfin.Gameplay.Tests
             Assert.AreEqual(1f, group.alpha, 1e-6f, "and back for the next shot");
         }
 
+        // ── 4c. Pulling the club back up is a cancel, not a power adjustment ─────
+
+        [Test]
+        public void PullingBackUpAndHolding_CancelsTheSwing()
+        {
+            // Cesar, 2026-09-07: reversing the pull was a free re-roll — the gauge fell while the
+            // COMMITTED power stayed at the peak, so it lied AND let the marker be re-timed.
+            DisableFlickGate();
+            _driver.OnPointerDown(At(OriginX, OriginY));
+            _driver.OnDrag(At(OriginX, OriginY - _cfg.PendulumPull100Px));
+            Assert.AreEqual(ShotState.Timing, _sc.State, "harness: the pull registered");
+
+            // Back up past the arming distance, then keep the finger down past the flick window.
+            float up = _cfg.PendulumPull100Px - _cfg.HandleReverseCancelPx - 10f;
+            _driver.OnDrag(At(OriginX, OriginY - up));      // arms
+            TickPast(_cfg.HandleReverseCancelHoldSec);     // finger stays down -> cancel
+
+            Assert.AreEqual(ShotState.Idle, _sc.State, "a held reversal ends the swing");
+            Assert.AreEqual(1, _cancelCount, "and cancels rather than firing");
+            Assert.AreEqual(0, _shotCount);
+        }
+
+        [Test]
+        public void SmallJitterUpward_DoesNotCancel()
+        {
+            DisableFlickGate();
+            _driver.OnPointerDown(At(OriginX, OriginY));
+            _driver.OnDrag(At(OriginX, OriginY - _cfg.PendulumPull100Px));
+
+            // Half the arming distance, held well past the hold window: must survive.
+            float jitter = _cfg.PendulumPull100Px - (_cfg.HandleReverseCancelPx * 0.5f);
+            _driver.OnDrag(At(OriginX, OriginY - jitter));
+            TickPast(_cfg.HandleReverseCancelHoldSec);
+
+            Assert.AreEqual(ShotState.Timing, _sc.State, "thumb jitter must not kill a swing");
+            Assert.AreEqual(0, _cancelCount);
+        }
+
+        [Test]
+        public void AFlickStillFires_EvenThoughItRisesPastTheArmingDistance()
+        {
+            // The flick rises far further than HandleReverseCancelPx — it must not be read as a
+            // reversal. What saves it is that it RELEASES inside the hold window.
+            DisableFlickGate();
+            _driver.OnPointerDown(At(OriginX, OriginY));
+            _driver.OnDrag(At(OriginX, OriginY - _cfg.PendulumPull100Px));
+            _driver.SetPhaseForTests(0f);
+            for (int i = 1; i <= 4; i++) _driver.OnDrag(At(OriginX, OriginY + 250f * i));
+            _driver.OnPointerUp(At(OriginX, OriginY + 1000f));
+
+            Assert.AreEqual(1, _shotCount, "a real flick must still fire");
+            Assert.AreEqual(0, _cancelCount);
+        }
+
+        [Test]
+        public void ClubHeadSize_ResetsWhenTheSwingEnds()
+        {
+            // Cesar, 2026-09-07: the club stayed blown up at its pulled size into the next shot.
+            var rt = (RectTransform)_handleGo.transform;
+            float rest = rt.localScale.x;
+            Assert.Greater(rest, 1f, "harness: the handle rests scaled up, matching Flick");
+
+            _driver.OnPointerDown(At(OriginX, OriginY));
+            _driver.OnDrag(At(OriginX, OriginY - _cfg.PendulumPull120Px));
+            Assert.Greater(rt.localScale.x, rest, "the club grows with power, as Flick's does");
+
+            // End the swing by lifting with no flick — the path that was leaving it big.
+            _driver.OnPointerUp(At(OriginX, OriginY - _cfg.PendulumPull120Px));
+            Assert.AreEqual(rest, rt.localScale.x, 1e-4f, "and it must be back at rest size");
+        }
+
+        /// <summary>Drive frames past a duration. The reversal hold is counted per FRAME, not off
+        /// the wall clock, precisely so it is drivable here — Time.unscaledTime does not advance
+        /// inside one EditMode test method.</summary>
+        private void TickPast(float seconds)
+        {
+            int frames = Mathf.CeilToInt(seconds / 0.016f) + 2;
+            for (int i = 0; i < frames; i++) _driver.TickForTests(0.016f);
+        }
+
         // ── 5. Scheme identity ───────────────────────────────────────────────────
 
         [Test]

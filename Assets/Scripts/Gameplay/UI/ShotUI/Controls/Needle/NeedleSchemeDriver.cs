@@ -53,6 +53,15 @@ namespace Golfin.Gameplay.UI.Controls.Needle
         [Tooltip("The club-head Image (a copy of ClubHandle, carrying ClubHandleSpriteBinder).")]
         [SerializeField] private RectTransform _handle;
 
+        [Header("Club-head scale — parity with Flick")]
+        [Tooltip("Handle localScale at rest. MIRRORS ShotConeView's _minHandleScale, which is " +
+                 "serialized in LabScaffold as 2 (NOT the 1 in its C# default). Flick renders its " +
+                 "club head at 2x/356x200 px and grows it to 3x under full power; leaving these " +
+                 "schemes at scale 1 made every new club head half the size of Flick's.")]
+        [SerializeField] private float _handleScaleAtRest = 2f;
+        [Tooltip("Handle localScale at 100% power. Mirrors ShotConeView's _maxHandleScale (3).")]
+        [SerializeField] private float _handleScaleAtFullPower = 3f;
+
         [SerializeField] private NeedlePowerCircleView _circleView;
         [SerializeField] private NeedleArcView         _arcView;
         [SerializeField] private NeedleTapCatcher      _tapCatcher;
@@ -90,6 +99,14 @@ namespace Golfin.Gameplay.UI.Controls.Needle
         // zones are drawn from this same number, so the target the player watched close is the
         // target they are graded against.
         private float _peakPower;
+
+        // ── Reversing the pull cancels the swing ────────────────────────────────────
+        // The deepest pull this swing reached, and when the finger first came back up past
+        // HandleReverseCancelPx from it. A flick rises and RELEASES within ~100 ms, so it never
+        // survives HandleReverseCancelHoldSec; a deliberate pull-back does, and dies.
+        private float _deepestPullPx;
+        private bool  _reverseArmed;
+        private float _reverseHeldSec;
         private float _peakCurve;
 
         // ── IShotSchemeDriver ────────────────────────────────────────────────────
@@ -130,12 +147,39 @@ namespace Golfin.Gameplay.UI.Controls.Needle
             ResetSwing();
         }
 
+
+        /// <summary>
+        /// Grow the club head with power exactly as Flick does — Lerp(rest, full, power) on
+        /// localScale. Flick's numbers live in the SCENE (ShotConeView 2 -> 3), not in its C#
+        /// defaults, which is why these schemes shipped at scale 1 and read half-size next to it.
+        /// </summary>
+        private void ApplyHandleScale()
+        {
+            if (_handle == null) return;
+            float power = _controller != null ? _controller.PowerNormalized : 0f;
+            float s = Mathf.Lerp(_handleScaleAtRest, _handleScaleAtFullPower, Mathf.Clamp01(power));
+            _handle.localScale = Vector3.one * s;
+        }
+
+        /// <summary>
+        /// Put the club head back to its rest SIZE. Explicit, not a re-read of
+        /// <c>PowerNormalized</c>: a swing that ends by lifting the finger resets through paths
+        /// where the controller has not necessarily zeroed power yet, and the club stayed blown up
+        /// at its pulled size into the next shot (Cesar, 2026-09-07). "The swing is over" is the
+        /// fact here, so the rest scale is written, not inferred.
+        /// </summary>
+        private void ResetHandleScale()
+        {
+            if (_handle != null) _handle.localScale = Vector3.one * _handleScaleAtRest;
+        }
+
         private void BindHandle()
         {
             if (_handle == null) return;
             _handleRest  = _handle.anchoredPosition;
             _handleGroup = _handle.GetComponent<CanvasGroup>();
             if (_handleGroup == null) _handleGroup = _handle.gameObject.AddComponent<CanvasGroup>();
+            ApplyHandleScale();   // rest scale before the first touch
         }
 
         private void ShowHandle(bool visible)
@@ -236,6 +280,9 @@ namespace Golfin.Gameplay.UI.Controls.Needle
             _power     = 0f;
             _curve     = 0f;
             _peakPower = 0f;
+            _deepestPullPx = 0f;
+            _reverseArmed = false;
+            _reverseHeldSec = 0f;
             _peakCurve = 0f;
             _needle    = -1f;
             _handleReturnT = 1f;
@@ -261,6 +308,8 @@ namespace Golfin.Gameplay.UI.Controls.Needle
         private void ProcessDragLocal(Vector2 local)
         {
             float   pullPx = Mathf.Max(0f, _originLocal.y - local.y);
+
+            if (TrackReversal(pullPx)) return;   // pulled back up — the swing is over
 
             bool isPutt = _controller.IsPutt;
             _power = NeedleMath.Power(pullPx, _cfg, isPutt);
@@ -393,6 +442,9 @@ namespace Golfin.Gameplay.UI.Controls.Needle
             // Deliberately NOT ResetSwing: the pip, the frozen needle and the pop are the result
             // display, and they stay up until the shot resolves back to Idle.
             _peakPower = 0f;
+            _deepestPullPx = 0f;
+            _reverseArmed = false;
+            _reverseHeldSec = 0f;
             _peakCurve = 0f;
         }
 
@@ -415,6 +467,20 @@ namespace Golfin.Gameplay.UI.Controls.Needle
         /// </summary>
         private void Advance(float dt)
         {
+            // The reversal hold ticks FIRST and unconditionally: every early-return below is about
+            // the marker, and a swing the player has walked back up must die regardless of them.
+            if (_dragging && _reverseArmed)
+            {
+                _reverseHeldSec += dt;
+                if (_reverseHeldSec >= _cfg.HandleReverseCancelHoldSec)
+                {
+                    _dragging = false;
+                    _controller.CancelExternalDrag();
+                    ResetSwing();
+                    return;
+                }
+            }
+
             if (_controller == null) return;
 
             // Ease the club head back to the ball across the needle phase's opening frames.
@@ -447,6 +513,38 @@ namespace Golfin.Gameplay.UI.Controls.Needle
 
         // ── Handle ───────────────────────────────────────────────────────────────
 
+
+        /// <summary>
+        /// True when this drag has just been cancelled by the player pulling the club back UP.
+        ///
+        /// <para>Deliberately time-based, not speed-based. The flick gate measures a WINDOWED
+        /// average, so on the first frame of a real flick that window is still mostly the
+        /// stationary hold and reads slow — cancelling on "not fast enough" would kill genuine
+        /// flicks. What actually separates the two gestures is what happens next: a flick
+        /// RELEASES almost immediately, a pull-back keeps the finger down. So arm on the reversal
+        /// and let the clock decide.</para>
+        /// </summary>
+        private bool TrackReversal(float pullPx)
+        {
+            if (pullPx > _deepestPullPx)
+            {
+                _deepestPullPx  = pullPx;
+                _reverseArmed   = false;        // still going down; nothing to answer for
+                _reverseHeldSec = 0f;
+                return false;
+            }
+
+            bool risenEnough = _deepestPullPx - pullPx >= _cfg.HandleReverseCancelPx;
+            if (!risenEnough) return false;
+
+            // Arm here; the HOLD is counted per frame in Advance, not read off the wall clock.
+            // Time.unscaledTime does not move inside a single EditMode test method, so a
+            // clock-based hold is untestable — and a frame-counted one is also the honest
+            // measure of "the finger stayed down", since that is what frames observe.
+            if (!_reverseArmed) { _reverseArmed = true; _reverseHeldSec = 0f; }
+            return false;
+        }
+
         private void MoveHandle(float pullPx, float lateralPx, bool fadeDraw)
         {
             if (_handle == null) return;
@@ -464,6 +562,7 @@ namespace Golfin.Gameplay.UI.Controls.Needle
                                                           _cfg.NeedleCurveHalfWidthPx)
                 : _handleRest.x;
             _handle.anchoredPosition = new Vector2(x, y);
+            ApplyHandleScale();
         }
 
         private Vector2 ToLocal(PointerEventData e)
@@ -482,6 +581,9 @@ namespace Golfin.Gameplay.UI.Controls.Needle
             _power     = 0f;
             _curve     = 0f;
             _peakPower = 0f;
+            _deepestPullPx = 0f;
+            _reverseArmed = false;
+            _reverseHeldSec = 0f;
             _peakCurve = 0f;
             _needle    = -1f;
             _handleReturnT = 1f;
@@ -490,6 +592,7 @@ namespace Golfin.Gameplay.UI.Controls.Needle
             // Deliberately does NOT touch the handle's alpha: this runs immediately after a commit
             // on the cancel paths too, and showing it again here would undo the hide in-frame.
             if (_handle != null) _handle.anchoredPosition = _handleRest;
+            ResetHandleScale();
         }
 
         /// <summary>The Idle half of the reset: put the chrome away once the ball has settled.</summary>

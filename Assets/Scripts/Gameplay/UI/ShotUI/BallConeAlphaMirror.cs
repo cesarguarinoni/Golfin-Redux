@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using Golfin.Gameplay.Config;
 
 namespace Golfin.Gameplay.UI.ShotUI
 {
@@ -56,9 +57,23 @@ namespace Golfin.Gameplay.UI.ShotUI
             if (_handleCanvasGroup != null)
                 _handleCanvasGroup.ignoreParentGroups = true;
 
-            if (_image == null || _coneGroup == null) return;
+            if (_image == null) return;
+
+            // THE CONE IS FLICK'S, AND ONLY FLICK'S. Under Pendulum / Needle / Free Swing the
+            // whole SchemeRoot_Flick is inactive, so ConeAlphaController's Update never runs and
+            // this was mirroring a FROZEN alpha — whatever the group happened to hold when the
+            // root went off. On the first shot of a hole that is the authored 1.0, so the 2D ball
+            // sat SOLID over the real 3D ball and its rest ghost and you could not see either
+            // (Cesar, 2026-09-07); a later shot happened to leave it dimmed, so it came right on
+            // its own and looked like an intermittent bug.
+            //
+            // With no live cone the ball simply takes the same translucency Flick gives it at
+            // rest, so every scheme shows the ghost and the real ball through it, on every shot.
+            bool coneLive = _coneGroup != null && _coneGroup.gameObject.activeInHierarchy;
+            float a = coneLive ? _coneGroup.alpha : ControlsConfig.Default.ConeIdleAlpha;
+
             var c = _image.color;
-            _image.color = new Color(c.r, c.g, c.b, _coneGroup.alpha * _baseAlpha);
+            _image.color = new Color(c.r, c.g, c.b, a * _baseAlpha);
         }
     }
 }

@@ -43,7 +43,12 @@ namespace Golfin.EditorTools.ShotUI
         /// because it is the same <c>ClubHandle</c> clone at the same size — and because the power
         /// rings are drawn at this PLUS the pull thresholds, i.e. where the club head lands.</summary>
         private const float HandleRestBelowBall = 70f;
-        private const float ClubHalfHeight      = 50f;   // the 178x100 ClubHandle sprite
+        // Half the club-head sprite's RENDERED height at its LARGEST — 100 px of sprite at the
+        // 3x max handle scale ShotConeView uses (see the driver's _handleScaleAtFullPower). The
+        // lane derives its own length from this, so it has to be the club at its biggest or the
+        // head hangs out of the pill again at full pull — the exact defect the derived lane was
+        // introduced to make impossible.
+        private const float ClubHalfHeight      = 150f;
 
         // Ring strokes and the crescent's angular width: the node fixes these (Ring80 r=238.5
         // stroke 3, Ring100 r=298 stroke 4, Ring120 r=358.5 stroke 3; the crescent spans the

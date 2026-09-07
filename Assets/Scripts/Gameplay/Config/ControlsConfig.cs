@@ -135,6 +135,15 @@ namespace Golfin.Gameplay.Config
         public float PendulumWindowScaleAtZeroPower;   // multiplier at power 0
         public float PendulumWindowScaleAtMaxPower;    // multiplier at MaxOverpowerNormalized
 
+        // ── Reversing the pull cancels the swing (shared by the handle-pull schemes) ──────
+        // Cesar, 2026-09-07: "moving the handle up but not flicking should cancel the shot, not
+        // allowing to adjust power that way." Pulling back up was a free re-roll — the gauge fell
+        // while the COMMITTED power stayed at the peak, so it both lied and let the player re-time
+        // the marker for free. A reversal is now a decision: flick and it fires, hold and it dies.
+        // Not scheme-prefixed because it is one gesture rule the player learns once.
+        public float HandleReverseCancelPx;        // upward travel from the deepest pull that arms it
+        public float HandleReverseCancelHoldSec;   // held that long after arming = cancel, not a flick
+
         // Bot commit precision (bot_scheme_parity §3.2). A bot releases the frame the live marker
         // reaches its sampled offset; the tolerance is how close "reaches" has to be, and the
         // sweep budget is how many full passes it will wait before taking the nearest pass rather
@@ -287,6 +296,8 @@ namespace Golfin.Gameplay.Config
             PendulumMinHz                  = 0.35f,
             PendulumWindowScaleAtZeroPower = 1.35f,
             PendulumWindowScaleAtMaxPower  = 0.55f,
+            HandleReverseCancelPx          = 60f,
+            HandleReverseCancelHoldSec     = 0.12f,
             PendulumBotCommitTol01         = 0.03f,  // bot_scheme_parity §3.2
             PendulumBotMaxWaitSweeps       = 2f,
 

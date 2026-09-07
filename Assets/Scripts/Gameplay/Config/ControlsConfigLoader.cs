@@ -82,6 +82,8 @@ namespace Golfin.Gameplay.Config
                     case "PendulumMinHz":                  cfg.PendulumMinHz                  = val; break;
                     case "PendulumWindowScaleAtZeroPower": cfg.PendulumWindowScaleAtZeroPower = val; break;
                     case "PendulumWindowScaleAtMaxPower":  cfg.PendulumWindowScaleAtMaxPower  = val; break;
+                    case "HandleReverseCancelPx":          cfg.HandleReverseCancelPx          = val; break;
+                    case "HandleReverseCancelHoldSec":     cfg.HandleReverseCancelHoldSec     = val; break;
                     // scheme_needle §3.5
                     case "NeedleMinUsefulPullPx":          cfg.NeedleMinUsefulPullPx          = val; break;
                     case "NeedlePull80Px":                 cfg.NeedlePull80Px                 = val; break;

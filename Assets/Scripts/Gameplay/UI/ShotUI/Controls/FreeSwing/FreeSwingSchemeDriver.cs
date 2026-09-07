@@ -57,6 +57,15 @@ namespace Golfin.Gameplay.UI.Controls.FreeSwing
         [Tooltip("The club-head Image (a copy of ClubHandle, carrying ClubHandleSpriteBinder).")]
         [SerializeField] private RectTransform _handle;
 
+        [Header("Club-head scale — parity with Flick")]
+        [Tooltip("Handle localScale at rest. MIRRORS ShotConeView's _minHandleScale, which is " +
+                 "serialized in LabScaffold as 2 (NOT the 1 in its C# default). Flick renders its " +
+                 "club head at 2x/356x200 px and grows it to 3x under full power; leaving these " +
+                 "schemes at scale 1 made every new club head half the size of Flick's.")]
+        [SerializeField] private float _handleScaleAtRest = 2f;
+        [Tooltip("Handle localScale at 100% power. Mirrors ShotConeView's _maxHandleScale (3).")]
+        [SerializeField] private float _handleScaleAtFullPower = 3f;
+
         [SerializeField] private FreeSwingLaneView     _laneView;
         [SerializeField] private FreeSwingTraceView    _traceView;
         [SerializeField] private FreeSwingAnalyzerChip _analyzerChip;
@@ -154,12 +163,39 @@ namespace Golfin.Gameplay.UI.Controls.FreeSwing
             ResetSwing();
         }
 
+
+        /// <summary>
+        /// Grow the club head with power exactly as Flick does — Lerp(rest, full, power) on
+        /// localScale. Flick's numbers live in the SCENE (ShotConeView 2 -> 3), not in its C#
+        /// defaults, which is why these schemes shipped at scale 1 and read half-size next to it.
+        /// </summary>
+        private void ApplyHandleScale()
+        {
+            if (_handle == null) return;
+            float power = _controller != null ? _controller.PowerNormalized : 0f;
+            float s = Mathf.Lerp(_handleScaleAtRest, _handleScaleAtFullPower, Mathf.Clamp01(power));
+            _handle.localScale = Vector3.one * s;
+        }
+
+        /// <summary>
+        /// Put the club head back to its rest SIZE. Explicit, not a re-read of
+        /// <c>PowerNormalized</c>: a swing that ends by lifting the finger resets through paths
+        /// where the controller has not necessarily zeroed power yet, and the club stayed blown up
+        /// at its pulled size into the next shot (Cesar, 2026-09-07). "The swing is over" is the
+        /// fact here, so the rest scale is written, not inferred.
+        /// </summary>
+        private void ResetHandleScale()
+        {
+            if (_handle != null) _handle.localScale = Vector3.one * _handleScaleAtRest;
+        }
+
         private void BindHandle()
         {
             if (_handle == null) return;
             _handleRest  = _handle.anchoredPosition;
             _handleGroup = _handle.GetComponent<CanvasGroup>();
             if (_handleGroup == null) _handleGroup = _handle.gameObject.AddComponent<CanvasGroup>();
+            ApplyHandleScale();   // rest scale before the first touch
         }
 
         private void ShowHandle(bool visible)
@@ -517,6 +553,7 @@ namespace Golfin.Gameplay.UI.Controls.FreeSwing
             float y = _handleRest.y - Mathf.Clamp(pullPx, minPull, maxPull);
             float x = _handleRest.x + Mathf.Clamp(lateralPx, -_handleLateralClampPx, _handleLateralClampPx);
             _handle.anchoredPosition = new Vector2(x, y);
+            ApplyHandleScale();
         }
 
         private void Update() => Tick(Time.deltaTime);
@@ -562,6 +599,7 @@ namespace Golfin.Gameplay.UI.Controls.FreeSwing
             // Deliberately does NOT touch the handle's alpha: this runs immediately after a
             // commit on some paths, and showing it again here would undo the hide in-frame.
             if (_handle != null) _handle.anchoredPosition = _handleRest;
+            ResetHandleScale();
         }
 
         /// <summary>The Idle half of the reset: put the chrome away once the ball has settled.</summary>

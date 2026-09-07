@@ -715,6 +715,15 @@ namespace Golfin.Gameplay.UI.ShotUI
 
             ShowShotViewButton(false);
             RestoreShotUIChrome();
+
+            // The map hides every ShotUI_Canvas child, which includes the control-scheme roots —
+            // objects whose activation belongs to ShotSchemeHost, not to this list. Restoring them
+            // from a captured snapshot makes the map the sole authority on state it does not own,
+            // and any path that loses that snapshot leaves the player with NO shot UI. Ask the
+            // owner to re-state it instead; idempotent, and it costs one SetActive comparison.
+            var schemeHost = FindObjectOfType<Golfin.Gameplay.UI.Controls.ShotSchemeHost>(
+                                 includeInactive: true);
+            if (schemeHost != null) schemeHost.ReapplyActiveScheme();
             RepurposeShootButton(false);
             DestroyRuntimeObjects();
         }

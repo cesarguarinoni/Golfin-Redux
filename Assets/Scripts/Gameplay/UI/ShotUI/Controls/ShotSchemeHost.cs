@@ -185,6 +185,22 @@ namespace Golfin.Gameplay.UI.Controls
             }
         }
 
+        /// <summary>
+        /// Re-assert the live scheme's root activation. Idempotent, and safe to call at any time.
+        ///
+        /// <para>WHY THIS IS PUBLIC. <see cref="Apply"/> is the only code in the project that
+        /// switches a scheme root back ON, so any other system that hides the shot UI wholesale —
+        /// today that is <c>MapViewController.HideShotUIChrome</c>, which deactivates every
+        /// <c>ShotUI_Canvas</c> child — becomes the SOLE restorer of state it does not own. If its
+        /// captured list is ever lost (a second hide before a restore, the controller re-created,
+        /// an early-out on some close path), every root stays off and the player has no shot UI at
+        /// all, with changing control scheme the only way back. Cesar hit exactly that on
+        /// 2026-09-07. Rather than trust every future hider to be perfectly balanced, the host
+        /// re-states the invariant it owns: after someone else has finished restoring chrome, ask
+        /// the authority which root should be live.</para>
+        /// </summary>
+        public void ReapplyActiveScheme() => Apply(ActiveScheme);
+
         private GameObject RootFor(ControlScheme scheme)
         {
             int idx = (int)scheme;

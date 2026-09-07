@@ -4,6 +4,67 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
+## 2026-09-07 — control schemes / **four polish fixes: ball, club head, cancel, map view**
+
+**The 2D centre ball was SOLID on the first shot of a hole.** `BallConeAlphaMirror` mirrored the
+`ConeRoot` CanvasGroup's alpha — but the cone is FLICK'S, and under Pendulum / Needle / Free Swing the
+whole `SchemeRoot_Flick` is inactive, so `ConeAlphaController.Update` never runs and the mirror was
+copying a FROZEN value: whatever the group happened to hold when the root went off. On the first shot
+that is the authored 1.0, so the 2D ball sat opaque over the rest ghost and the real 3D ball; a later
+shot happened to leave it dimmed, which is why it looked intermittent and "came back on the next shot".
+Fix: no live cone ⇒ fall back to `ControlsConfig.Default.ConeIdleAlpha`, so every scheme shows the ghost
+through the ball on every shot.
+
+**The new schemes' club handles were smaller than Flick's.** Flick's sizes live in the SCENE
+(`ShotConeView` 2 → 3), not in its C#, so the copied handles inherited nothing. The three drivers now
+lerp `localScale` from `_handleScaleAtRest` to `_handleScaleAtFullPower` (2 → 3, serialized), and each
+builder's `ClubHalfHeight` went 50 → **150** so the derived lane still contains the club at its 3× max.
+
+**Pulling the handle back up was a free re-roll.** Committed power latches at the PEAK, so lifting made
+the gauge fall while the shot kept the peak — the player could trim the gauge without paying for it.
+Now an upward move of `HandleReverseCancelPx` (60) **arms**, and holding for `HandleReverseCancelHoldSec`
+(0.12 s) **cancels**. No speed measurement is involved, which is what keeps it from eating the first slow
+frame of a real flick; a genuine flick rises and releases inside ~100 ms. Handle scale resets with the
+swing, which also fixes the size not resetting on a lift-cancel. Deliberately NOT applied to Free Swing:
+its gesture *is* an upward trace and it already treats a lift as cancel.
+
+**Map view: hardening, not a reproduction — say so.** The reported symptom (shot UI gone after the map,
+back only via Options → change scheme) could not be reproduced across six scenarios (Flick + Pendulum,
+first and second cycles, both close controls, with and without a shot) with full recursive state diffs —
+every run restored cleanly. What IS true by inspection: `MapViewController` deactivates every
+`ShotUI_Canvas` child, which includes the scheme roots, and then restores them from a captured snapshot —
+making the map the sole authority on state it does not own, while `ShotSchemeHost.Apply` is the only code
+in the project that turns a scheme root back ON. `CloseImmediate` now calls the new
+`ShotSchemeHost.ReapplyActiveScheme()` after `RestoreShotUIChrome()`, so the owner re-states its own
+invariant and the symptom is impossible by construction whatever the snapshot did. **Also flagged, not
+fixed:** `ShotInProgressUiGate`'s hide lists are still Flick-only (`PutterTrack`, `PuttPathRoot`,
+`HoleMapContainer`, `ActionButtons_Cluster`, `ClubHandle`).
+
+**Two probe lessons.** The first repro left the scheme pref dirty and tested Pendulum while reporting
+Flick. The second was worse and more general: **a diff cannot see a fault present in both samples** —
+comparing before/after states says nothing when both are broken. Fixed by pinning the scheme and
+reporting the absolute ancestor-activation chain, not only the delta.
+
+**Video:** `Docs/Reports/Media/2026-09-07_control_scheme_polish_fixes.mp4` (1170×2532, 33.9 s, Hole 2
+through the real path: PLAY → hole card → the real PENDULUM segment → CONFIRM → real pointer events).
+Every caption number is read off the live objects at the moment it is claimed — ball alpha **0.25**,
+handle **2.00× → 3.00×** against Flick's own **2.00×** measured before the swap, cancel with `State` still
+**Idle** and handle **2.83× → 2.00×**, scheme root and handle **active** after the map, then a real flick
+at power 1.00 reaching **Resolving**. New recorder `Assets/Editor/ShotUI/SchemePolishFixesVideo.cs`.
+**Two takes were binned first:** (1) the scheme-confirm pop-up now gates the segment tap — nothing is
+written until CONFIRM, so the run aborted on "driver not live"; (2) the title card is drawn CENTRED over
+0 → `--title-seconds`, i.e. exactly across the ball, so the clip captioned the translucency fix over a
+frame that hid it, and one map caption asserted "back from the map view" while the map was still open.
+Both are fixed in the recorder source, not just in the sidecar — a caption whose frame contradicts it is
+worse than no caption.
+
+**Tests:** EditMode **2713 / 0 fail** (3 pre-existing skips), incl. 4 new `PendulumSchemeDriverTests`
+covering arm-and-hold cancel, jitter tolerance, a flick that rises past the arming distance still firing,
+and handle size resetting when the swing ends. `LabScaffold.unity` diff is **9 insertions, 3 deletions,
+zero objects added or removed** — three `_clubHalfHeight` and three handle-scale pairs, edited through
+`SerializedObject` rather than a rebuild (a full rebuild churned 30,000 lines and was reverted).
+
+---
 ## 2026-09-06 — `bot_scheme_parity` / **bots swing the scheme the player picked**
 
 **One door for every bot.** `BotSwing.Play` / `BotSwing.PlayPerfect` resolves
