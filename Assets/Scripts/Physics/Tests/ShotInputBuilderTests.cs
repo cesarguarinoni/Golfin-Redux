@@ -192,4 +192,116 @@ namespace Golfin.Physics.Tests
             }
         }
     }
+
+    /// <summary>
+    /// miss_grade_duff §3.2 — the DUFF launch flattener, the one new parameter on
+    /// <see cref="ShotInputBuilder.Build"/>.
+    ///
+    /// <para>The load-bearing test is the first one: EVERY caller that does not pass the new
+    /// parameter must produce a BIT-IDENTICAL <c>ShotInput</c>. The whole tournament replay path,
+    /// every bot, every capture rig and the physics regression baselines run through this
+    /// function, and "close enough in Q16.16" is not the same claim.</para>
+    /// </summary>
+    public class ShotInputBuilderLaunchPitchTests
+    {
+        static StatBundle DriverBundle() => new StatBundle(
+            ClubStats.DefaultDriver, BallStats.Neutral, CharacterStats.Neutral,
+            fp.FromInt(100), fp.FromInt(100));
+
+        static StatBundle PutterBundle() => new StatBundle(
+            PutterStats.DefaultPutter, BallStats.Neutral, CharacterStats.Neutral,
+            fp.FromInt(100), fp.FromInt(100));
+
+        /// <summary>Build at full power, straight, with an explicit launch-pitch scale.</summary>
+        static ShotInput Build(StatBundle bundle, fp launchPitchScale)
+        {
+            var (input, _) = ShotInputBuilder.Build(
+                bundle, StatCoefficients.Default, StatCaps.Default,
+                fp.One, fp.Zero,
+                fp.Zero, fp.Zero, fp.Zero,
+                42u,
+                // The SEVEN optionals before launchPitchScale: baseVelocityOverrideMps,
+                // spinInputX, spinInputY, spinMagScaleSlope, spinMaxTiltRad, fadeDrawInput,
+                // fadeDrawMaxTiltRad. Counted out here because getting it wrong silently lands
+                // the scale on fadeDrawMaxTiltRad and the test passes against an unchanged pitch.
+                default, default, default, default, default, default, default,
+                launchPitchScale);
+            return input;
+        }
+
+        /// <summary>Build the way every pre-miss_grade_duff caller does: without the parameter.</summary>
+        static ShotInput BuildLegacy(StatBundle bundle)
+        {
+            var (input, _) = ShotInputBuilder.Build(
+                bundle, StatCoefficients.Default, StatCaps.Default,
+                fp.One, fp.Zero,
+                fp.Zero, fp.Zero, fp.Zero,
+                42u);
+            return input;
+        }
+
+        static float PitchDeg(ShotInput s)
+        {
+            var v = new Vector3(s.velocity.x.ToFloat(), s.velocity.y.ToFloat(), s.velocity.z.ToFloat());
+            return Mathf.Atan2(v.y, new Vector2(v.x, v.z).magnitude) * Mathf.Rad2Deg;
+        }
+
+        static void AssertVelocityBitIdentical(ShotInput a, ShotInput b, string because)
+        {
+            Assert.AreEqual(a.velocity.x.raw, b.velocity.x.raw, because + " (x)");
+            Assert.AreEqual(a.velocity.y.raw, b.velocity.y.raw, because + " (y)");
+            Assert.AreEqual(a.velocity.z.raw, b.velocity.z.raw, because + " (z)");
+        }
+
+        [Test]
+        public void DefaultAndExplicitOne_AreBitIdenticalToTheLegacyCall()
+        {
+            var legacy = BuildLegacy(DriverBundle());
+
+            AssertVelocityBitIdentical(legacy, Build(DriverBundle(), default),
+                "the fp.Zero default is the legacy no-op every other optional here uses");
+            AssertVelocityBitIdentical(legacy, Build(DriverBundle(), fp.One),
+                "an explicit 1.0 must skip the branch, not multiply by one");
+        }
+
+        [Test]
+        public void Scale035_FlattensThePitchToLoftTimesTheScale()
+        {
+            float loftPitch = PitchDeg(BuildLegacy(DriverBundle()));
+            float duffPitch = PitchDeg(Build(DriverBundle(), fp.FromFloat(0.35f)));
+
+            Assert.Greater(loftPitch, 2f / 0.35f,
+                "fixture: the driver's loft must be high enough that 0.35x clears the 2 deg floor, " +
+                "or this test would only be exercising the clamp");
+            Assert.AreEqual(loftPitch * 0.35f, duffPitch, 0.15f);
+            Assert.Less(duffPitch, loftPitch);
+        }
+
+        [Test]
+        public void TheScaleNeverDropsBelowTwoDegrees()
+        {
+            // A pitch at or below zero is a shot the simulation has never been asked to run.
+            float pitch = PitchDeg(Build(DriverBundle(), fp.FromFloat(0.001f)));
+            Assert.AreEqual(2f, pitch, 0.15f);
+        }
+
+        [Test]
+        public void TheScaleNeverRaisesThePitchAboveTheClubsOwnLoft()
+        {
+            float loftPitch = PitchDeg(BuildLegacy(DriverBundle()));
+            float scaledUp  = PitchDeg(Build(DriverBundle(), fp.FromFloat(3f)));
+            Assert.AreEqual(loftPitch, scaledUp, 0.15f,
+                "a duff tops the ball; it can never launch it HIGHER than the club could");
+        }
+
+        [Test]
+        public void APuttIgnoresTheScaleEntirely()
+        {
+            // D3: a putter's ~3 degrees of loft has nothing to top, and the 2-degree floor would
+            // RAISE a scaled putt rather than flatten it. Bit-identical, not merely close.
+            var legacy = BuildLegacy(PutterBundle());
+            AssertVelocityBitIdentical(legacy, Build(PutterBundle(), fp.FromFloat(0.35f)),
+                "putts are unaffected by MissLaunchPitchScale");
+        }
+    }
 }

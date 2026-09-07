@@ -437,7 +437,8 @@ namespace Golfin.Gameplay.UI.Controls.Needle
                 errorYawRad:     verdict.ErrorYawRad,
                 timingMul:       verdict.TimingMul,
                 timing01:        verdict.Timing01,
-                fadeDraw01:      _peakCurve));
+                fadeDraw01:      _peakCurve,
+                isMiss:          verdict.IsMiss));
 
             // Deliberately NOT ResetSwing: the pip, the frozen needle and the pop are the result
             // display, and they stay up until the shot resolves back to Idle.
@@ -513,7 +514,7 @@ namespace Golfin.Gameplay.UI.Controls.Needle
             if (_needle >= 1f)
             {
                 float halfCone = _controller.ConeHalfAngleDeg * Mathf.Deg2Rad;
-                Commit(NeedleMath.Shank(halfCone, _cfg), 1f);
+                Commit(NeedleMath.Shank(halfCone, _cfg, _controller.IsPutt), 1f);
                 return;
             }
 

@@ -20,16 +20,24 @@ namespace Golfin.Gameplay.UI.Controls.Pendulum
     /// </summary>
     public static class PendulumMath
     {
-        /// <summary>Localisation KEYS — never literals. Published by the two-way content importer.</summary>
-        public const string KeyJust = "SHOT_GRADE_JUST";
+        /// <summary>
+        /// Localisation KEYS — never literals. Published by the two-way content importer.
+        ///
+        /// <para>miss_grade_duff §3.6 (D7): ONE grade vocabulary in real golf terms across all
+        /// four schemes. JUST was a 白猫GOLF word, not a golf one, and MISS said nothing about
+        /// what went wrong. The ENUM members keep their names — renaming
+        /// <c>PendulumGrade.Just</c> would churn telemetry-adjacent code for no player value —
+        /// so this map is the only place the old vocabulary survived, and it is now gone.</para>
+        /// </summary>
+        public const string KeyPure = "SHOT_GRADE_PURE";
         public const string KeyGood = "SHOT_GRADE_GOOD";
-        public const string KeyMiss = "SHOT_GRADE_MISS";
+        public const string KeyDuff = "SHOT_GRADE_DUFF";
 
         public static string GradeKey(PendulumGrade g) => g switch
         {
-            PendulumGrade.Just => KeyJust,
+            PendulumGrade.Just => KeyPure,
             PendulumGrade.Good => KeyGood,
-            _                  => KeyMiss,
+            _                  => KeyDuff,
         };
 
         // ── Power ───────────────────────────────────────────────────────────────
@@ -150,12 +158,18 @@ namespace Golfin.Gameplay.UI.Controls.Pendulum
             public readonly float TimingMul;
             public readonly float Timing01;
 
-            public Verdict(PendulumGrade grade, float errorYawRad, float timingMul, float timing01)
+            /// <summary>True on the MISS branch only (miss_grade_duff §3.3) — the swing was a
+            /// DUFF, not a weak shot. Carried into <c>ShotIntent.IsMiss</c> by the driver.</summary>
+            public readonly bool IsMiss;
+
+            public Verdict(PendulumGrade grade, float errorYawRad, float timingMul, float timing01,
+                           bool isMiss = false)
             {
                 Grade       = grade;
                 ErrorYawRad = errorYawRad;
                 TimingMul   = timingMul;
                 Timing01    = timing01;
+                IsMiss      = isMiss;
             }
         }
 
@@ -177,7 +191,7 @@ namespace Golfin.Gameplay.UI.Controls.Pendulum
         /// very worst release land in the same place every time, which reads as scripted.</para>
         /// </summary>
         public static Verdict Grade(float m, float clubAccuracyNorm01, float power,
-                                    float halfConeRad, in ControlsConfig cfg)
+                                    float halfConeRad, in ControlsConfig cfg, bool isPutt = false)
         {
             m = Mathf.Clamp(m, -1f, 1f);
             float just    = JustWindow01(clubAccuracyNorm01, power, cfg);
@@ -191,9 +205,14 @@ namespace Golfin.Gameplay.UI.Controls.Pendulum
                 return new Verdict(PendulumGrade.Good, m * halfConeRad,
                                    cfg.TimingPowerMulGold, timing01);
 
+            // miss_grade_duff §3.3: a MISS is a DUFF. It pays the flat MissPowerMul (0.20) rather
+            // than the Flick ramp's TimingPowerMulRed (0.70) — 70% of a drive is a bad shot, not
+            // a missed one. The YAW is untouched (D4), which is what keeps the bot sigma
+            // calibration in bot_difficulty.csv valid: the calibrator bisects on MeanAbsYawDeg.
             return new Verdict(PendulumGrade.Miss,
                                Mathf.Sign(m) * halfConeRad * cfg.PendulumMissYawGain,
-                               cfg.TimingPowerMulRed, timing01);
+                               isPutt ? cfg.PuttMissPowerMul : cfg.MissPowerMul, timing01,
+                               isMiss: true);
         }
 
         // ── Marker position ─────────────────────────────────────────────────────

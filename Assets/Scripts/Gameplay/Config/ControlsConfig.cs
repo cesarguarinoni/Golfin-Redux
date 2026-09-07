@@ -55,8 +55,35 @@ namespace Golfin.Gameplay.Config
         public float TimingBandGreenY01;   // slab progress at the green band line; at/above it = full power
 
         // Power multiplier at the two band edges (D2). timing01 >= green always yields 1.0.
-        public float TimingPowerMulRed;    // multiplier at timing01 = 0 (bottom of the cone)
+        //
+        // miss_grade_duff (2026-09-07): TimingPowerMulRed is now the multiplier AT
+        // TimingBandRedY01, not at 0 — the ramp is RE-BASED to start at the drawn red line.
+        // Below that line the flick is not a weak shot, it is a DUFF, and it pays
+        // MissPowerMul instead. Nothing at or above the red line changed.
+        public float TimingPowerMulRed;    // multiplier at timing01 = TimingBandRedY01
         public float TimingPowerMulGold;   // multiplier at timing01 = TimingBandGoldY01
+
+        // ── The duff (miss_grade_duff §2) ───────────────────────────────────────
+        // ONE flat penalty shared by every scheme's miss grade — Pendulum MISS, Needle SHANK,
+        // Free Swing DUFF and a Flick latched below TimingBandRedY01 — because "a missed swing
+        // tops the ball" is a rule about this game's shot economy, not about any one scheme.
+        // Deliberately NOT TimingPowerMulRed: that number keeps its own job as the bottom of the
+        // Flick ramp, and a miss has to be able to move without dragging a mistimed-but-real
+        // flick down with it.
+        // A VELOCITY multiplier, not a distance fraction: carry is super-linear in launch speed,
+        // so the number here is nowhere near the fraction of carry it produces. Measured on the
+        // shipped driver (329 yd at 100%): 0.20 gave 6.0 yd (1.8%) and 0.40 gives the distance
+        // recorded in miss_grade_duff's acceptance run. Cesar took 0.20 -> 0.40 after seeing it.
+        public float MissPowerMul;           // flat multiplier on a DUFF (full swing)
+        public float PuttMissPowerMul;       // same on the green (D3) — never so low the ball stalls
+        public float MissLaunchPitchScale;   // launch pitch = club loft x this on a DUFF; putts unaffected
+
+        /// <summary>Slab progress (0 = cone base, 1 = apex) at the RED band line of the Flick
+        /// cone. At or below it the flick is a DUFF. Drawn by <c>ConeBandPalette.BandRedY01</c>
+        /// and consumed by <c>ShotController.TimingPowerMultiplier</c> — the same F15 D3 pattern
+        /// as the gold and green edges, so the line the player reads and the penalty they pay are
+        /// one number.</summary>
+        public float TimingBandRedY01;
 
         // Putt mode
         public float PuttArrowSpeedMultiplier;
@@ -290,8 +317,12 @@ namespace Golfin.Gameplay.Config
             DegradationYawDegPerPass       = 2f,
             TimingBandGoldY01              = 0.45f,   // F15: was ConeBandPalette.BandGoldY01 (same value)
             TimingBandGreenY01             = 0.85f,   // F15: was ConeBandPalette.BandGreenY01 (same value)
-            TimingPowerMulRed              = 0.70f,   // F15: flick at the very bottom of the cone = 70% power
+            TimingPowerMulRed              = 0.70f,   // F15: flick ON THE RED LINE = 70% power (re-based by miss_grade_duff)
             TimingPowerMulGold             = 0.90f,   // F15: flick on the gold line = 90% power
+            TimingBandRedY01               = 0.15f,   // miss_grade_duff: below this the flick is a DUFF
+            MissPowerMul                   = 0.40f,   // miss_grade_duff: 0.20 -> 0.40 (Cesar, 2026-09-07) after seeing the 6 yd duff
+            PuttMissPowerMul               = 0.30f,   // miss_grade_duff D3
+            MissLaunchPitchScale           = 0.35f,   // miss_grade_duff: a topped ball flies low and flat
             PuttArrowSpeedMultiplier       = 0.8f,     // Order 732: 0.5 → 0.8 (mirror controls.csv); avoids compounding into 4 s putt cycles
             PuttBaseVelocityMps            = 5f,
             SpinMagScaleSlope              = 1.5f,

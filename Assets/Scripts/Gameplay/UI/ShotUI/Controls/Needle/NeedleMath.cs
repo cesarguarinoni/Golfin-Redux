@@ -28,20 +28,27 @@ namespace Golfin.Gameplay.UI.Controls.Needle
     /// </summary>
     public static class NeedleMath
     {
-        /// <summary>Localisation KEYS — never literals. Published by the two-way content importer.</summary>
-        public const string KeyPerfect = "SHOT_GRADE_PERFECT";
+        /// <summary>
+        /// Localisation KEYS — never literals. Published by the two-way content importer.
+        ///
+        /// <para>miss_grade_duff §3.6 (D7): one grade vocabulary across all four schemes. PERFECT
+        /// becomes PURE and SHANK becomes DUFF — a shank is a specific mishit off the hosel, and
+        /// what this grade actually describes (never tapped, worst possible contact) is a duff.
+        /// The ENUM members keep their names; only this map changed.</para>
+        /// </summary>
+        public const string KeyPure    = "SHOT_GRADE_PURE";
         public const string KeyHook    = "SHOT_GRADE_HOOK";
         public const string KeySlice   = "SHOT_GRADE_SLICE";
-        public const string KeyShank   = "SHOT_GRADE_SHANK";
+        public const string KeyDuff    = "SHOT_GRADE_DUFF";
         /// <summary>The "TAP!" prompt under the arc. Also a key, for the same reason.</summary>
         public const string KeyTapHint = "SHOT_TAP_HINT";
 
         public static string GradeKey(NeedleGrade g) => g switch
         {
-            NeedleGrade.Perfect => KeyPerfect,
+            NeedleGrade.Perfect => KeyPure,
             NeedleGrade.Hook    => KeyHook,
             NeedleGrade.Slice   => KeySlice,
-            _                   => KeyShank,
+            _                   => KeyDuff,
         };
 
         /// <summary>
@@ -169,12 +176,19 @@ namespace Golfin.Gameplay.UI.Controls.Needle
             public readonly float TimingMul;
             public readonly float Timing01;
 
-            public Verdict(NeedleGrade grade, float errorYawRad, float timingMul, float timing01)
+            /// <summary>True on the SHANK branch only (miss_grade_duff §3.3) — the swing was a
+            /// DUFF. The big HOOK/SLICE is deliberately NOT a miss: it is a shaped miss that still
+            /// made real contact (D2), and it keeps its GOLD multiplier.</summary>
+            public readonly bool IsMiss;
+
+            public Verdict(NeedleGrade grade, float errorYawRad, float timingMul, float timing01,
+                           bool isMiss = false)
             {
                 Grade       = grade;
                 ErrorYawRad = errorYawRad;
                 TimingMul   = timingMul;
                 Timing01    = timing01;
+                IsMiss      = isMiss;
             }
         }
 
@@ -223,13 +237,18 @@ namespace Golfin.Gameplay.UI.Controls.Needle
         /// <summary>
         /// The verdict for a swing nobody tapped: the needle ran off the right end.
         ///
-        /// <para>A SHANK is thrown the same width as a big slice but pays the RED power multiplier
-        /// and scores <c>timing01 = 0</c> — the worst outcome the scheme can produce, which is what
-        /// makes "just do not tap" a losing strategy rather than a safe one. It is +yaw (right) by
-        /// construction, because the needle was at the right end when the swing timed out.</para>
+        /// <para>A SHANK is thrown the same width as a big slice but pays the DUFF multiplier
+        /// (<c>MissPowerMul</c>, or <c>PuttMissPowerMul</c> on the green) and scores
+        /// <c>timing01 = 0</c> — the worst outcome the scheme can produce, which is what makes
+        /// "just do not tap" a losing strategy rather than a safe one. It is +yaw (right) by
+        /// construction, because the needle was at the right end when the swing timed out.
+        /// miss_grade_duff §3.3: this was <c>TimingPowerMulRed</c> (0.70) — a 70% shot, which is
+        /// a bad shot rather than a missed one. The YAW is unchanged (D4), so the bot sigma
+        /// calibration that bisects on MeanAbsYawDeg is untouched.</para>
         /// </summary>
-        public static Verdict Shank(float halfConeRad, in ControlsConfig cfg)
+        public static Verdict Shank(float halfConeRad, in ControlsConfig cfg, bool isPutt = false)
             => new Verdict(NeedleGrade.Shank, halfConeRad * cfg.NeedleMissYawGain,
-                           cfg.TimingPowerMulRed, 0f);
+                           isPutt ? cfg.PuttMissPowerMul : cfg.MissPowerMul, 0f,
+                           isMiss: true);
     }
 }

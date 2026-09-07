@@ -3166,6 +3166,7 @@ RectTransform:
   m_Children:
   - {fileID: 2300000002}
   - {fileID: 1838493590}
+  - {fileID: 939374948}
   m_Father: {fileID: 633397654}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -10762,6 +10763,7 @@ GameObject:
   m_Component:
   - component: {fileID: 633397654}
   - component: {fileID: 633397655}
+  - component: {fileID: 633397656}
   m_Layer: 0
   m_Name: SchemeRoot_Flick
   m_TagString: Untagged
@@ -10801,6 +10803,20 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fb4b0ca4f4b164165ae8a606a6f007c5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Golfin.Gameplay.UI::Golfin.Gameplay.UI.Controls.FlickSchemeDriver
+--- !u!114 &633397656
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 633397653}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c2420def1313f4abe8ee08fdd57f4cff, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Golfin.Gameplay.UI::Golfin.Gameplay.UI.Controls.FlickGradePopBinder
+  _shotController: {fileID: 1483952040}
+  _gradePop: {fileID: 939374949}
 --- !u!1 &637864660
 GameObject:
   m_ObjectHideFlags: 0
@@ -14375,6 +14391,77 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 927427032}
   m_CullTransparentMesh: 1
+--- !u!1 &939374947
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 939374948}
+  - component: {fileID: 939374950}
+  - component: {fileID: 939374949}
+  m_Layer: 0
+  m_Name: FlickGradePop
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &939374948
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 939374947}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 1285952162}
+  m_Father: {fileID: 172734776}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 0, y: 289}
+  m_SizeDelta: {x: 360, y: 142}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &939374949
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 939374947}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1024cf6ccd3624b9f8f5352c502eadbc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Golfin.Gameplay.UI::Golfin.Gameplay.UI.Controls.Pendulum.PendulumGradePop
+  _label: {fileID: 1285952163}
+  _group: {fileID: 939374950}
+  _pureColor: {r: 0.6784314, g: 0.92156863, b: 0.6784314, a: 1}
+  _nearColor: {r: 1, g: 0.92156863, b: 0.6509804, a: 1}
+  _duffColor: {r: 1, g: 0.3529412, b: 0.3529412, a: 1}
+  _scaleInSeconds: 0.12
+  _holdSeconds: 0.6
+  _fadeSeconds: 0.25
+  _startScale: 0.6
+--- !u!225 &939374950
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 939374947}
+  m_Enabled: 1
+  m_Alpha: 0
+  m_Interactable: 1
+  m_BlocksRaycasts: 0
+  m_IgnoreParentGroups: 0
 --- !u!1 &940828880
 GameObject:
   m_ObjectHideFlags: 0
@@ -18014,12 +18101,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Golfin.Gameplay.UI::Golfin.Gameplay.UI.Controls.SchemeGradePop
   _label: {fileID: 1001654570}
   _group: {fileID: 1123222001}
-  _justColor: {r: 0.6784314, g: 0.92156863, b: 0.6784314, a: 1}
-  _goodColor: {r: 1, g: 0.92156863, b: 0.6509804, a: 1}
-  _missColor: {r: 1, g: 0.3529412, b: 0.3529412, a: 1}
-  _perfectColor: {r: 0.3019608, g: 0.6392157, b: 1, a: 1}
-  _nearMissColor: {r: 1, g: 0.92156863, b: 0.6509804, a: 1}
-  _shankColor: {r: 1, g: 0.3529412, b: 0.3529412, a: 1}
+  _pureColor: {r: 0.6784314, g: 0.92156863, b: 0.6784314, a: 1}
+  _nearColor: {r: 1, g: 0.92156863, b: 0.6509804, a: 1}
+  _duffColor: {r: 1, g: 0.3529412, b: 0.3529412, a: 1}
   _scaleInSeconds: 0.12
   _holdSeconds: 0.6
   _fadeSeconds: 0.25
@@ -19483,7 +19567,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: PERFECT
+  m_text: PURE
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 39fb7824ee463ab408c7f2e76c362562, type: 2}
   m_sharedMaterial: {fileID: 124182857207560636, guid: 39fb7824ee463ab408c7f2e76c362562, type: 2}
@@ -20576,6 +20660,143 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1285952161
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1285952162}
+  - component: {fileID: 1285952164}
+  - component: {fileID: 1285952163}
+  m_Layer: 0
+  m_Name: GradeText
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &1285952162
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1285952161}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 939374948}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 1}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &1285952163
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1285952161}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
+  m_Material: {fileID: 0}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_RaycastTarget: 0
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_text: PURE
+  m_isRightToLeft: 0
+  m_fontAsset: {fileID: 11400000, guid: 39fb7824ee463ab408c7f2e76c362562, type: 2}
+  m_sharedMaterial: {fileID: 124182857207560636, guid: 39fb7824ee463ab408c7f2e76c362562, type: 2}
+  m_fontSharedMaterials: []
+  m_fontMaterial: {fileID: 0}
+  m_fontMaterials: []
+  m_fontColor32:
+    serializedVersion: 2
+    rgba: 4294967295
+  m_fontColor: {r: 0.6784314, g: 0.92156863, b: 0.6784314, a: 1}
+  m_enableVertexGradient: 0
+  m_colorMode: 3
+  m_fontColorGradient:
+    topLeft: {r: 1, g: 1, b: 1, a: 1}
+    topRight: {r: 1, g: 1, b: 1, a: 1}
+    bottomLeft: {r: 1, g: 1, b: 1, a: 1}
+    bottomRight: {r: 1, g: 1, b: 1, a: 1}
+  m_fontColorGradientPreset: {fileID: 0}
+  m_spriteAsset: {fileID: 0}
+  m_tintAllSprites: 0
+  m_StyleSheet: {fileID: 0}
+  m_TextStyleHashCode: 0
+  m_overrideHtmlColors: 0
+  m_faceColor:
+    serializedVersion: 2
+    rgba: 4294967295
+  m_fontSize: 99.99999
+  m_fontSizeBase: 99.99999
+  m_fontWeight: 400
+  m_enableAutoSizing: 0
+  m_fontSizeMin: 0
+  m_fontSizeMax: 0
+  m_fontStyle: 1
+  m_HorizontalAlignment: 2
+  m_VerticalAlignment: 512
+  m_textAlignment: 65535
+  m_characterSpacing: 0
+  m_characterHorizontalScale: 1
+  m_wordSpacing: 0
+  m_lineSpacing: 0
+  m_lineSpacingMax: 0
+  m_paragraphSpacing: 0
+  m_charWidthMaxAdj: 0
+  m_TextWrappingMode: 0
+  m_wordWrappingRatios: 0.4
+  m_overflowMode: 0
+  m_linkedTextComponent: {fileID: 0}
+  parentLinkedComponent: {fileID: 0}
+  m_enableKerning: 0
+  m_ActiveFontFeatures: 
+  m_enableExtraPadding: 0
+  checkPaddingRequired: 0
+  m_isRichText: 1
+  m_EmojiFallbackSupport: 1
+  m_parseCtrlCharacters: 1
+  m_isOrthographic: 1
+  m_isCullingEnabled: 0
+  m_horizontalMapping: 0
+  m_verticalMapping: 0
+  m_uvLineOffset: 0
+  m_geometrySortingOrder: 0
+  m_IsTextObjectScaleStatic: 0
+  m_VertexBufferAutoSizeReduction: 0
+  m_useMaxVisibleDescender: 1
+  m_pageToDisplay: 1
+  m_margin: {x: 0, y: 0, z: 0, w: 0}
+  m_isUsingLegacyAnimationComponent: 0
+  m_isVolumetricText: 0
+  m_hasFontAssetChanged: 0
+  m_baseMaterial: {fileID: 0}
+  m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+--- !u!222 &1285952164
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1285952161}
+  m_CullTransparentMesh: 1
 --- !u!1 &1286964992
 GameObject:
   m_ObjectHideFlags: 0
@@ -22611,7 +22832,7 @@ MonoBehaviour:
   _fillColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 0.3529412}
   _centerDarkFraction: 0
   _edgeFadePx: 2
-  _bandRedY01: 0
+  _bandRedY01: 0.15
   _bandGoldY01: 0.45
   _bandGreenY01: 0.85
   _bandRedColor: {r: 0.54509807, g: 0.16470589, b: 0.16470589, a: 1}
@@ -22948,12 +23169,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Golfin.Gameplay.UI::Golfin.Gameplay.UI.Controls.Pendulum.PendulumGradePop
   _label: {fileID: 1545463190}
   _group: {fileID: 1396204411}
-  _justColor: {r: 0.6784314, g: 0.92156863, b: 0.6784314, a: 1}
-  _goodColor: {r: 1, g: 0.92156863, b: 0.6509804, a: 1}
-  _missColor: {r: 1, g: 0.3529412, b: 0.3529412, a: 1}
-  _perfectColor: {r: 0.3019608, g: 0.6392157, b: 1, a: 1}
-  _nearMissColor: {r: 1, g: 0.92156863, b: 0.6509804, a: 1}
-  _shankColor: {r: 1, g: 0.3529412, b: 0.3529412, a: 1}
+  _pureColor: {r: 0.6784314, g: 0.92156863, b: 0.6784314, a: 1}
+  _nearColor: {r: 1, g: 0.92156863, b: 0.6509804, a: 1}
+  _duffColor: {r: 1, g: 0.3529412, b: 0.3529412, a: 1}
   _scaleInSeconds: 0.12
   _holdSeconds: 0.6
   _fadeSeconds: 0.25
@@ -25940,7 +26158,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: JUST!
+  m_text: PURE
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 39fb7824ee463ab408c7f2e76c362562, type: 2}
   m_sharedMaterial: {fileID: 124182857207560636, guid: 39fb7824ee463ab408c7f2e76c362562, type: 2}
@@ -32498,12 +32716,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Golfin.Gameplay.UI::Golfin.Gameplay.UI.Controls.SchemeGradePop
   _label: {fileID: 1204215015}
   _group: {fileID: 2043148096}
-  _justColor: {r: 0.6784314, g: 0.92156863, b: 0.6784314, a: 1}
-  _goodColor: {r: 1, g: 0.92156863, b: 0.6509804, a: 1}
-  _missColor: {r: 1, g: 0.3529412, b: 0.3529412, a: 1}
-  _perfectColor: {r: 0.3019608, g: 0.6392157, b: 1, a: 1}
-  _nearMissColor: {r: 1, g: 0.92156863, b: 0.6509804, a: 1}
-  _shankColor: {r: 1, g: 0.3529412, b: 0.3529412, a: 1}
+  _pureColor: {r: 0.6784314, g: 0.92156863, b: 0.6784314, a: 1}
+  _nearColor: {r: 1, g: 0.92156863, b: 0.6509804, a: 1}
+  _duffColor: {r: 1, g: 0.3529412, b: 0.3529412, a: 1}
   _scaleInSeconds: 0.12
   _holdSeconds: 0.6
   _fadeSeconds: 0.25

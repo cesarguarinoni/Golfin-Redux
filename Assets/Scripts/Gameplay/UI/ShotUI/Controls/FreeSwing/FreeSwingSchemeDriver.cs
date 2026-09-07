@@ -504,7 +504,8 @@ namespace Golfin.Gameplay.UI.Controls.FreeSwing
                 errorYawRad:     v.ErrorYawRad,
                 timingMul:       v.TimingMul,
                 timing01:        v.Timing01,
-                fadeDraw01:      v.FadeDraw01));
+                fadeDraw01:      v.FadeDraw01,
+                isMiss:          v.IsMiss));
 
             // Deliberately NOT ResetSwing: the trace, the chip and the pop ARE the result
             // display, and they stay up until the shot resolves back to Idle.

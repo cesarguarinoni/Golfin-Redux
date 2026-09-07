@@ -56,14 +56,18 @@ namespace Golfin.Gameplay.UI.Controls.Needle
         public static Color ZoneGood => PreComposite(new Color32(0xFF, 0xEB, 0xA6, 255), 0.75f, ArcFill);
 
         /// <summary>
-        /// The blue PERFECT zone: node <c>#4DA3FF</c> at 95% over <see cref="ZoneGood"/> — the
-        /// AMBER, not the arc, because the blue segment is nested inside the amber one and Figma
-        /// composites it on top of that. Getting the backdrop wrong here is a 9 RGB error and it
-        /// is how the reference caught it: over the arc this solves to (74, 157, 245) and the
-        /// render's own pixel is (83, 165, 249); over the amber it solves to (83, 164, 249).
+        /// The PERFECT zone, at 95% over <see cref="ZoneGood"/> — the AMBER, not the arc, because
+        /// the segment is nested inside the amber one and Figma composites it on top of that.
+        /// Getting the backdrop wrong here is a 9 RGB error, which is how the reference caught it.
+        ///
+        /// <para>miss_grade_duff §3.6 (D8) — ONE CONSTANT CHANGED, and it is the one Cesar may
+        /// veto: the node's blue <c>#4DA3FF</c> became the PURE green <c>#ADEBAD</c>. The pop
+        /// above the ball now says PURE in green for every scheme, so a blue zone would be the
+        /// only place in the game where "you nailed it" is not green. The Figma node still shows
+        /// blue; the Architect updates it with the geometry redraw already parked.</para>
         /// </summary>
         public static Color ZonePerfect =>
-            PreComposite(new Color32(0x4D, 0xA3, 0xFF, 255), 0.95f, ToColor32(ZoneGood));
+            PreComposite(new Color32(0xAD, 0xEB, 0xAD, 255), 0.95f, ToColor32(ZoneGood));
 
         private static Color32 ToColor32(Color c) => new Color32(
             (byte)Mathf.RoundToInt(Mathf.Clamp01(c.r) * 255f),

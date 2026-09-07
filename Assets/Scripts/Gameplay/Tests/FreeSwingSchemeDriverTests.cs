@@ -468,7 +468,9 @@ namespace Golfin.Gameplay.Tests
 
             Assert.AreEqual(FreeSwingGrade.Duff, _driver.LastVerdict.Grade);
             Assert.AreEqual(FreeSwingMath.KeyDuff, _pop.LastKeyShown);
-            Assert.AreEqual(_cfg.TimingPowerMulRed, _driver.LastVerdict.TimingMul, 1e-4f);
+            // miss_grade_duff §3.3: the DUFF exit pays MissPowerMul, not TimingPowerMulRed.
+            Assert.AreEqual(_cfg.MissPowerMul, _driver.LastVerdict.TimingMul, 1e-4f);
+            Assert.IsTrue(_driver.LastVerdict.IsMiss);
             Assert.Less(_driver.LastVerdict.UpSpeedPxPerSec, _cfg.FreeSwingDuffSpeedPxPerSec);
         }
 

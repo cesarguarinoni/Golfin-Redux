@@ -279,13 +279,49 @@ namespace Golfin.Gameplay.Tests
         }
 
         [Test]
-        public void Grade_Miss_IsThrownPastTheConeAndCostsTheRedMultiplier()
+        public void Grade_Miss_IsThrownPastTheConeAndIsADuff()
         {
+            // miss_grade_duff §3.3: was TimingPowerMulRed (0.70) until 2026-09-07. A MISS is now
+            // a DUFF — the ball is topped, not merely mistimed.
             var v = PendulumMath.Grade(1f, 0.5f, UnityPower1, HalfCone, _cfg);
             Assert.AreEqual(PendulumGrade.Miss, v.Grade);
             Assert.AreEqual(HalfCone * _cfg.PendulumMissYawGain, v.ErrorYawRad, 1e-6f);
-            Assert.AreEqual(_cfg.TimingPowerMulRed, v.TimingMul, 1e-6f);
+            Assert.AreEqual(_cfg.MissPowerMul, v.TimingMul, 1e-6f);
+            Assert.IsTrue(v.IsMiss, "the MISS branch is the one that carries the duff flag");
             Assert.AreEqual(0f, v.Timing01, 1e-6f);
+        }
+
+        [Test]
+        public void Grade_Miss_OnAPuttPaysThePuttDuffMultiplier()
+        {
+            // D3: a putt duff must still visibly roll, so it keeps a higher floor than a swing's.
+            var putt = PendulumMath.Grade(1f, 0.5f, UnityPower1, HalfCone, _cfg, isPutt: true);
+            Assert.AreEqual(PendulumGrade.Miss, putt.Grade);
+            Assert.AreEqual(_cfg.PuttMissPowerMul, putt.TimingMul, 1e-6f);
+            Assert.IsTrue(putt.IsMiss);
+
+            // What D3 actually asks for is "never stationary", so that is what is asserted —
+            // an ABSOLUTE floor, not a comparison with the swing's knob. This used to read
+            // `Greater(PuttMissPowerMul, MissPowerMul)`, which held only by accident at 0.30
+            // vs 0.20 and broke the moment Cesar raised the swing duff to 0.40. The two are
+            // independent feel knobs on different clubs; ordering them was never the rule.
+            Assert.Greater(_cfg.PuttMissPowerMul, 0.1f,
+                "a putt that never visibly rolls reads as a bug, not as a miss (D3)");
+        }
+
+        [Test]
+        public void Grade_JustAndGood_AreNotMisses_AndKeepTheirMultipliers()
+        {
+            // The half of §3.3 that is a NON-change: only the MISS branch moved.
+            var just = PendulumMath.Grade(0f, 0.5f, UnityPower1, HalfCone, _cfg);
+            Assert.IsFalse(just.IsMiss);
+            Assert.AreEqual(1f, just.TimingMul, 1e-6f);
+
+            float good = PendulumMath.GoodWindow01(0.5f, UnityPower1, _cfg);
+            var   g    = PendulumMath.Grade(good, 0.5f, UnityPower1, HalfCone, _cfg);
+            Assert.AreEqual(PendulumGrade.Good, g.Grade);
+            Assert.IsFalse(g.IsMiss);
+            Assert.AreEqual(_cfg.TimingPowerMulGold, g.TimingMul, 1e-6f);
         }
 
         [Test]
@@ -347,9 +383,10 @@ namespace Golfin.Gameplay.Tests
         [Test]
         public void GradeKey_IsAlwaysALocalisationKey_NeverALiteral()
         {
-            Assert.AreEqual("SHOT_GRADE_JUST", PendulumMath.GradeKey(PendulumGrade.Just));
+            // miss_grade_duff §3.6 (D7): one vocabulary, real golf terms. JUST and MISS are gone.
+            Assert.AreEqual("SHOT_GRADE_PURE", PendulumMath.GradeKey(PendulumGrade.Just));
             Assert.AreEqual("SHOT_GRADE_GOOD", PendulumMath.GradeKey(PendulumGrade.Good));
-            Assert.AreEqual("SHOT_GRADE_MISS", PendulumMath.GradeKey(PendulumGrade.Miss));
+            Assert.AreEqual("SHOT_GRADE_DUFF", PendulumMath.GradeKey(PendulumGrade.Miss));
         }
     }
 }

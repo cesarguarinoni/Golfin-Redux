@@ -37,8 +37,22 @@ namespace Golfin.Gameplay.Input
         /// <summary>-1..+1 curve request. 0 unless the scheme derives fade/draw itself.</summary>
         public readonly float FadeDraw01;
 
+        /// <summary>
+        /// True when the scheme graded this swing a MISS — Pendulum MISS, Needle SHANK, Free
+        /// Swing DUFF (miss_grade_duff §3.1). It is the ONE carrier for "this is a duff, not a
+        /// weak shot": the power penalty already rides in <see cref="TimingMul"/>, and this flag
+        /// is what the seam reads to flatten the launch pitch and flash the gauge red.
+        ///
+        /// <para>Deliberately NOT inferred from <c>TimingMul == MissPowerMul</c> downstream: a
+        /// scheme is free to tune its way onto that number by accident, and a numeric coincidence
+        /// is not a verdict. Defaults to <c>false</c> so every pre-existing call site — and every
+        /// driver that has no miss grade — compiles and behaves exactly as it did.</para>
+        /// </summary>
+        public readonly bool IsMiss;
+
         public ShotIntent(float powerNormalized, float aimOffset01, float errorYawRad,
-                          float timingMul, float timing01, float fadeDraw01)
+                          float timingMul, float timing01, float fadeDraw01,
+                          bool isMiss = false)
         {
             PowerNormalized = powerNormalized;
             AimOffset01     = aimOffset01;
@@ -46,6 +60,7 @@ namespace Golfin.Gameplay.Input
             TimingMul       = timingMul;
             Timing01        = timing01;
             FadeDraw01      = fadeDraw01;
+            IsMiss          = isMiss;
         }
     }
 }

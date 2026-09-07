@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -29,6 +30,29 @@ namespace Golfin.Gameplay.UI.ShotUI
         private float _progress01;
         private float _markerFrac01 = -1f;
         private bool  _markerUnreachable;
+        private Color? _arcColorOverride;
+
+        /// <summary>
+        /// Paint the whole arc ONE colour instead of the green→yellow→red gradient, or null for
+        /// the gradient. Added for the DUFF flash (miss_grade_duff §3.5, D5): the gradient
+        /// already ends in red at 100%, so a duffed shot at 24% would otherwise flash GREEN —
+        /// the arc has to stop meaning "how hard" for the moment it means "you missed".
+        ///
+        /// <para>An explicit override rather than <c>Graphic.color</c> or
+        /// <c>canvasRenderer.SetColor</c>: this graphic writes per-vertex colours in
+        /// <see cref="OnPopulateMesh"/> and ignores <c>Graphic.color</c> entirely, so tinting
+        /// through either of those would depend on uGUI internals rather than on this file.</para>
+        /// </summary>
+        public Color? ArcColorOverride
+        {
+            get => _arcColorOverride;
+            set
+            {
+                if (Nullable.Equals(_arcColorOverride, value)) return;
+                _arcColorOverride = value;
+                SetVerticesDirty();
+            }
+        }
 
         public float Progress01
         {
@@ -138,6 +162,7 @@ namespace Golfin.Gameplay.UI.ShotUI
         // Past 360° (overpower wrap) = maroon.
         private Color ArcColor(float angleDeg)
         {
+            if (_arcColorOverride.HasValue) return _arcColorOverride.Value;
             if (angleDeg >= 360f) return _colorMaroon;
             float t = angleDeg / 360f;
             return t <= 0.5f

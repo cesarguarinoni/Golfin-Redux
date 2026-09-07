@@ -39,7 +39,8 @@ namespace Golfin.Physics.Stats
             fp spinMagScaleSlope = default,                 // 0 → no scaling (legacy behavior)
             fp spinMaxTiltRad = default,                    // 0 → no tilt (legacy behavior); demoted to TRIM (D3)
             fp fadeDrawInput = default,                     // fade/draw handle offset -1..+1, 0=no curve (D1; default=0 legacy no-op)
-            fp fadeDrawMaxTiltRad = default)                // max fade/draw curve angle in radians (D1; default=0 legacy no-op)
+            fp fadeDrawMaxTiltRad = default,                // max fade/draw curve angle in radians (D1; default=0 legacy no-op)
+            fp launchPitchScale = default)                  // DUFF launch flattener (miss_grade_duff §3.2); 0 or 1 = legacy no-op
         {
             var resolved = StatModifierResolver.Resolve(bundle, coeffs, caps);
 
@@ -72,6 +73,28 @@ namespace Golfin.Physics.Stats
                 ? bundle.Putter.Value.LoftDegrees
                 : bundle.Club.Value.LoftDegrees;
             fp launchPitchRadians = loftDeg * fpMath.DegToRad;
+
+            // miss_grade_duff §3.2 — a DUFF is TOPPED: the ball leaves low and flat instead of on
+            // the club's own loft. The scale arrives from ShotController, which is the only place
+            // that knows the swing was a miss; the builder stays a pure function of its inputs.
+            //
+            // TWO no-ops, both load-bearing. `default` (fp.Zero) is the legacy convention every
+            // other optional here uses, and an explicit 1.0 is the same thing said out loud — both
+            // skip the branch ENTIRELY rather than multiplying by one, so a legacy call is
+            // bit-identical rather than merely equal-to-tolerance in Q16.16. Putts skip it too
+            // (D3): a putter's ~3 degrees of loft has nothing to top, and the [2 deg, loft] clamp
+            // below would raise a scaled putt back up and quietly change putting.
+            if (!bundle.IsPutt && launchPitchScale != fp.Zero && launchPitchScale != fp.One)
+            {
+                // Clamped to [2 deg, loft]: a duff still has to LEAVE THE GROUND on a
+                // deterministic path — a pitch at or below zero is a shot the simulation has
+                // never been asked to run — and it can never fly HIGHER than the club could.
+                fp minPitch = fp.FromFloat(2f) * fpMath.DegToRad;
+                fp scaled   = launchPitchRadians * launchPitchScale;
+                if (scaled < minPitch)           scaled = minPitch;
+                if (scaled > launchPitchRadians) scaled = launchPitchRadians;
+                launchPitchRadians = scaled;
+            }
 
             // Velocity vector: +X forward at aimYaw=0, +Y up, +Z right.
             fp cosPitch = fpMath.Cos(launchPitchRadians);

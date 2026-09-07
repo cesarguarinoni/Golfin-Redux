@@ -321,7 +321,7 @@ namespace Golfin.Gameplay.UI.Controls.Pendulum
             // _peakPower, the same number RedrawBands used — the window graded against is exactly
             // the one the player was looking at.
             var   verdict = PendulumMath.Grade(m, _controller.ClubAccuracyNorm01, _peakPower,
-                                               halfCone, _cfg);
+                                               halfCone, _cfg, _controller.IsPutt);
 
             if (_logSwings)
                 Debug.Log($"[Pendulum] m={m:F3} (latched={!float.IsNaN(_markerAtLatch)}) " +
@@ -356,7 +356,8 @@ namespace Golfin.Gameplay.UI.Controls.Pendulum
                 errorYawRad:     verdict.ErrorYawRad,
                 timingMul:       verdict.TimingMul,
                 timing01:        verdict.Timing01,
-                fadeDraw01:      _peakCurve));
+                fadeDraw01:      _peakCurve,
+                isMiss:          verdict.IsMiss));
 
             ResetSwing();
         }

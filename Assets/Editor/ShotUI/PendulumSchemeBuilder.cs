@@ -237,7 +237,10 @@ namespace Golfin.EditorTools.ShotUI
             popRoot.anchoredPosition = new Vector2(0f, PopAboveBall);
             popRoot.sizeDelta = new Vector2(PopWidth, PopHeight);
             var pop = popRoot.gameObject.AddComponent<SchemeGradePop>();
-            var popText = MakeText(popRoot, "GradeText", "JUST!", PopFontNodePx, Hex(0xADEBAD), FontStyles.Bold);
+            // The AUTHORING placeholder only — Show() overwrites it from a localisation key and
+            // Awake() hides the pop before the first frame. Says PURE since miss_grade_duff §3.6
+            // retired JUST, so no scene this builder writes carries the old vocabulary.
+            var popText = MakeText(popRoot, "GradeText", "PURE", PopFontNodePx, Hex(0xADEBAD), FontStyles.Bold);
             Stretch(popText, 0f);
             popText.GetComponent<TextMeshProUGUI>().alignment = TextAlignmentOptions.Center;
             WireObj(pop, "_label", popText.GetComponent<TextMeshProUGUI>());

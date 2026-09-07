@@ -296,9 +296,34 @@ namespace Golfin.Gameplay.Tests
             Assert.AreEqual(worst.ErrorYawRad, shank.ErrorYawRad, 1e-6f, "as wide as a big slice");
             Assert.Less(shank.TimingMul, worst.TimingMul,
                 "and shorter than one — 'do not tap' must never be the safe play");
-            Assert.AreEqual(_cfg.TimingPowerMulRed, shank.TimingMul, 1e-6f);
+            // miss_grade_duff §3.3: was TimingPowerMulRed (0.70) until 2026-09-07.
+            Assert.AreEqual(_cfg.MissPowerMul, shank.TimingMul, 1e-6f);
+            Assert.IsTrue(shank.IsMiss, "a SHANK is the scheme's duff");
             Assert.AreEqual(0f, shank.Timing01, 1e-6f);
             Assert.Greater(shank.ErrorYawRad, 0f, "the needle was at the RIGHT end when it timed out");
+        }
+
+        [Test]
+        public void Shank_OnAPuttPaysThePuttDuffMultiplier()
+        {
+            var putt = NeedleMath.Shank(HalfCone, _cfg, isPutt: true);
+            Assert.AreEqual(_cfg.PuttMissPowerMul, putt.TimingMul, 1e-6f);
+            Assert.IsTrue(putt.IsMiss);
+        }
+
+        [Test]
+        public void BigHookSlice_IsNotAMiss_AndKeepsTheGoldMultiplier()
+        {
+            // D2: a big HOOK/SLICE is a SHAPED miss that still made real contact — Golf Clash /
+            // TrueSwing behaviour, deliberately untouched by miss_grade_duff.
+            var worst = NeedleMath.Grade(1f, 0.5f, 1f, HalfCone, _cfg);
+            Assert.AreEqual(NeedleGrade.Slice, worst.Grade);
+            Assert.AreEqual(_cfg.TimingPowerMulGold, worst.TimingMul, 1e-6f);
+            Assert.IsFalse(worst.IsMiss);
+
+            var perfect = NeedleMath.Grade(0f, 0.5f, 1f, HalfCone, _cfg);
+            Assert.IsFalse(perfect.IsMiss);
+            Assert.AreEqual(1f, perfect.TimingMul, 1e-6f);
         }
 
         [Test]
@@ -306,10 +331,11 @@ namespace Golfin.Gameplay.Tests
         {
             // Zero hardcoded text: what the pop shows is resolved from these, so the test asserts
             // KEYS. A word here would be the bug the rule exists to prevent.
-            Assert.AreEqual("SHOT_GRADE_PERFECT", NeedleMath.GradeKey(NeedleGrade.Perfect));
+            // miss_grade_duff §3.6 (D7): PERFECT -> PURE, SHANK -> DUFF. The ENUM is unchanged.
+            Assert.AreEqual("SHOT_GRADE_PURE",    NeedleMath.GradeKey(NeedleGrade.Perfect));
             Assert.AreEqual("SHOT_GRADE_HOOK",    NeedleMath.GradeKey(NeedleGrade.Hook));
             Assert.AreEqual("SHOT_GRADE_SLICE",   NeedleMath.GradeKey(NeedleGrade.Slice));
-            Assert.AreEqual("SHOT_GRADE_SHANK",   NeedleMath.GradeKey(NeedleGrade.Shank));
+            Assert.AreEqual("SHOT_GRADE_DUFF",    NeedleMath.GradeKey(NeedleGrade.Shank));
             Assert.AreEqual("SHOT_TAP_HINT",      NeedleMath.KeyTapHint);
         }
 

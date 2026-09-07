@@ -405,6 +405,10 @@ namespace Golfin.Gameplay.UI.Controls.FreeSwing
             public readonly float Timing01;
             public readonly float FadeDraw01;
 
+            /// <summary>True on the DUFF exit only (miss_grade_duff §3.3). The big HOOK/SLICE is
+            /// deliberately NOT a miss: it is a shaped miss that still made real contact (D2).</summary>
+            public readonly bool IsMiss;
+
             // ── What the chip reads, kept because the chip must show the GRADED numbers ──
             public readonly float PowerNormalized;
             public readonly float ImpactPx;
@@ -419,8 +423,9 @@ namespace Golfin.Gameplay.UI.Controls.FreeSwing
                            float errorYawRad, float timingMul, float timing01, float fadeDraw01,
                            float powerNormalized, float impactPx, float impactWindowPx,
                            float pathDeg, float tempoRatio, float tempoError, float tempoWindow,
-                           float upSpeedPxPerSec)
+                           float upSpeedPxPerSec, bool isMiss = false)
             {
+                IsMiss = isMiss;
                 Grade = grade; Path = path; Tempo = tempo;
                 ErrorYawRad = errorYawRad; TimingMul = timingMul; Timing01 = timing01;
                 FadeDraw01 = fadeDraw01;
@@ -465,12 +470,17 @@ namespace Golfin.Gameplay.UI.Controls.FreeSwing
             if (upSpeedPxPerSec < cfg.FreeSwingDuffSpeedPxPerSec)
             {
                 float cap = Mathf.Abs(halfConeRad * cfg.FreeSwingMissYawGain);
+                // miss_grade_duff §3.3: the DUFF pays the flat MissPowerMul (0.20) instead of the
+                // Flick ramp's TimingPowerMulRed (0.70) — an upstroke this slow topped the ball,
+                // and 70% of a drive does not read as a miss. TempoMul still ramps to
+                // TimingPowerMulRed for a badly-timed but REAL swing, which is that number's own
+                // job and is untouched. The doubled yaw and its cap are unchanged (D4).
                 return new Verdict(FreeSwingGrade.Duff, FreeSwingPath.Straight,
                                    TempoFor(tempoRatio, e, w, cfg),
                                    Mathf.Clamp(2f * yaw, -cap, cap),
-                                   cfg.TimingPowerMulRed, 0f, 0f,
+                                   isPutt ? cfg.PuttMissPowerMul : cfg.MissPowerMul, 0f, 0f,
                                    power, impactPx, window, pathDeg, tempoRatio, e, w,
-                                   upSpeedPxPerSec);
+                                   upSpeedPxPerSec, isMiss: true);
             }
 
             var  path  = PathFor(pathDeg, clubControlNorm01, isPutt, cfg);

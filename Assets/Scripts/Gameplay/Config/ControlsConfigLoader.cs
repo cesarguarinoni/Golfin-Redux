@@ -57,6 +57,11 @@ namespace Golfin.Gameplay.Config
                     case "TimingBandGreenY01":             cfg.TimingBandGreenY01             = val; break;
                     case "TimingPowerMulRed":              cfg.TimingPowerMulRed              = val; break;
                     case "TimingPowerMulGold":             cfg.TimingPowerMulGold             = val; break;
+                    // miss_grade_duff §2
+                    case "TimingBandRedY01":               cfg.TimingBandRedY01               = val; break;
+                    case "MissPowerMul":                   cfg.MissPowerMul                   = val; break;
+                    case "PuttMissPowerMul":               cfg.PuttMissPowerMul               = val; break;
+                    case "MissLaunchPitchScale":           cfg.MissLaunchPitchScale           = val; break;
                     case "PuttArrowSpeedMultiplier":       cfg.PuttArrowSpeedMultiplier       = val; break;
                     case "PuttBaseVelocityMps":            cfg.PuttBaseVelocityMps            = val; break;
                     case "SpinMagScaleSlope":              cfg.SpinMagScaleSlope              = val; break;

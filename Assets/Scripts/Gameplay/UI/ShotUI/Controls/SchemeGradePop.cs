@@ -1,6 +1,8 @@
 using System.Collections;
 using UnityEngine;
 using TMPro;
+using Golfin.Gameplay.Input;
+using Golfin.Gameplay.UI.ShotUI;
 using Golfin.Gameplay.UI.Controls.FreeSwing;
 using Golfin.Gameplay.UI.Controls.Needle;
 using Golfin.Gameplay.UI.Controls.Pendulum;
@@ -8,15 +10,16 @@ using Golfin.Gameplay.UI.Controls.Pendulum;
 namespace Golfin.Gameplay.UI.Controls
 {
     /// <summary>
-    /// The grade pop above the ball — JUST! / GOOD / MISS under Pendulum (Figma 14091:33996),
-    /// PERFECT / HOOK / SLICE / SHANK under Needle (Figma <c>ResultChip</c> 14091:102737).
+    /// The grade pop above the ball (Figma 14091:33996 / <c>ResultChip</c> 14091:102737) — one
+    /// vocabulary in all four schemes since miss_grade_duff §3.6: PURE / GOOD / HOOK / SLICE /
+    /// THIN / DUFF, and one three-step colour ladder taken from <see cref="ConeBandPalette"/>.
     ///
     /// <para>SHARED, WHICH IS WHY IT IS NO LONGER CALLED <c>PendulumGradePop</c>. It was renamed
     /// (file moved with its .meta, so every scene reference is untouched) when the second scheme
     /// needed the identical component: a word, a colour, a spring, a hold, a fade. Two copies
-    /// would have been two places to fix the language-switch bug below. Pendulum's behaviour is
-    /// unchanged — <c>Show(PendulumGrade)</c> still exists and still resolves the same three keys
-    /// and the same three serialized colours.</para>
+    /// would have been two places to fix the language-switch bug below. Every scheme's entry
+    /// point still exists and still takes that scheme's own grade enum; what miss_grade_duff
+    /// changed underneath them is the KEYS they resolve and the colours they resolve to.</para>
     ///
     /// <para>ZERO HARDCODED TEXT. Every word comes from <see cref="LocalizationManager"/> through a
     /// key, read at SHOW time rather than cached at Awake: the language can change under a live
@@ -33,21 +36,34 @@ namespace Golfin.Gameplay.UI.Controls
         [SerializeField] private TextMeshProUGUI _label;
         [SerializeField] private CanvasGroup     _group;
 
-        [Header("Figma colours (Scheme — Pendulum / GradePop)")]
-        [SerializeField] private Color _justColor = new Color(0xAD / 255f, 0xEB / 255f, 0xAD / 255f);
-        [SerializeField] private Color _goodColor = new Color(0xFF / 255f, 0xEB / 255f, 0xA6 / 255f);
-        [SerializeField] private Color _missColor = new Color(0xFF / 255f, 0x5A / 255f, 0x5A / 255f);
-
-        [Header("Figma colours (Scheme — Needle / ResultChip 14091:102737)")]
-        [SerializeField] private Color _perfectColor = new Color(0x4D / 255f, 0xA3 / 255f, 0xFF / 255f);
-        [Tooltip("HOOK and SLICE share the amber; they are the same near-miss on opposite sides.")]
-        [SerializeField] private Color _nearMissColor = new Color(0xFF / 255f, 0xEB / 255f, 0xA6 / 255f);
-        [SerializeField] private Color _shankColor    = new Color(0xFF / 255f, 0x5A / 255f, 0x5A / 255f);
+        // miss_grade_duff §3.6 (D8) — ONE three-step ladder, seeded from ConeBandPalette, which
+        // is the same palette the Flick cone's bands and the Pendulum bar's bands are drawn in.
+        // There used to be two groups here (JUST/GOOD/MISS and PERFECT/HOOK/SLICE/SHANK) whose
+        // greens and reds were already identical literals and whose PERFECT was a blue that
+        // agreed with nothing; a scheme cannot pop a colour the cone does not use any more.
+        // Still [SerializeField] so a scene can override, but the DEFAULT is now derived.
+        [Header("Grade colours (ConeBandPalette — one ladder for all four schemes)")]
+        [SerializeField] private Color _pureColor = new Color(0xAD / 255f, 0xEB / 255f, 0xAD / 255f);
+        [Tooltip("GOOD, HOOK, SLICE and THIN share the amber: every near-miss reads the same.")]
+        [SerializeField] private Color _nearColor = new Color(0xFF / 255f, 0xEB / 255f, 0xA6 / 255f);
+        [SerializeField] private Color _duffColor = new Color(0xFF / 255f, 0x5A / 255f, 0x5A / 255f);
 
         [Header("Timing (seconds — scheme_pendulum §3.3)")]
         [SerializeField] private float _scaleInSeconds = 0.12f;
         [SerializeField] private float _holdSeconds    = 0.60f;
         [SerializeField] private float _fadeSeconds    = 0.25f;
+
+        /// <summary>
+        /// How long a pop is on screen, end to end (spring + hold + fade). Named here because
+        /// the power gauge's DUFF flash (miss_grade_duff §3.5) has to last exactly as long as the
+        /// DUFF word it appears with — one number, not a second constant that drifts. The three
+        /// fields above are serialized per-scene; this is the AUTHORED default, which is what a
+        /// widget with no pop reference can ask for.
+        /// </summary>
+        public const float DisplaySeconds = 0.12f + 0.60f + 0.25f;
+
+        /// <summary>This instance's actual on-screen time, in case a scene overrode the timings.</summary>
+        public float InstanceDisplaySeconds => _scaleInSeconds + _holdSeconds + _fadeSeconds;
         [Tooltip("Scale the pop starts at before springing to 1.")]
         [SerializeField] private float _startScale     = 0.6f;
 
@@ -56,23 +72,45 @@ namespace Golfin.Gameplay.UI.Controls
         private void Awake()
         {
             if (_group == null) _group = GetComponent<CanvasGroup>();
+
+            // Re-seed from the palette before the first pop, the same way ConeMeshGraphic
+            // re-syncs its band edges (F15 D3): these three are serialized, so a pop authored
+            // before the ladder collapsed would keep the old blue PERFECT while the cone next to
+            // it drew green. Only overwrite what has actually drifted, so a deliberate per-scene
+            // override of ONE colour is not silently reverted by the other two.
+            if (_pureColor != ConeBandPalette.GradePure) _pureColor = ConeBandPalette.GradePure;
+            if (_nearColor != ConeBandPalette.GradeNear) _nearColor = ConeBandPalette.GradeNear;
+            if (_duffColor != ConeBandPalette.GradeDuff) _duffColor = ConeBandPalette.GradeDuff;
+
             HideImmediate();
         }
 
         /// <summary>The Pendulum entry point. Unchanged from <c>PendulumGradePop</c>.</summary>
         public void Show(PendulumGrade grade) => Show(PendulumMath.GradeKey(grade), grade switch
         {
-            PendulumGrade.Just => _justColor,
-            PendulumGrade.Good => _goodColor,
-            _                  => _missColor,
+            PendulumGrade.Just => _pureColor,
+            PendulumGrade.Good => _nearColor,
+            _                  => _duffColor,
         });
 
         /// <summary>The Needle entry point (scheme_needle §3.3).</summary>
         public void Show(NeedleGrade grade) => Show(NeedleMath.GradeKey(grade), grade switch
         {
-            NeedleGrade.Perfect => _perfectColor,
-            NeedleGrade.Shank   => _shankColor,
-            _                   => _nearMissColor,
+            NeedleGrade.Perfect => _pureColor,
+            NeedleGrade.Shank   => _duffColor,
+            _                   => _nearColor,
+        });
+
+        /// <summary>
+        /// The Flick entry point (miss_grade_duff §3.6). The shipping scheme had no pop at all
+        /// until this task: its grade comes from the band the aim latched in, not from a driver,
+        /// so <c>FlickGradePopBinder</c> raises it off <c>ShotController.LastFlickGrade</c>.
+        /// </summary>
+        public void Show(FlickGrade grade) => Show(FlickMath.GradeKey(grade), grade switch
+        {
+            FlickGrade.Pure => _pureColor,
+            FlickGrade.Duff => _duffColor,
+            _               => _nearColor,   // GOOD and THIN: the same near-miss amber
         });
 
         /// <summary>
@@ -89,11 +127,10 @@ namespace Golfin.Gameplay.UI.Controls
             if (grade == FreeSwingGrade.None) return;
             Show(FreeSwingMath.GradeKey(grade), grade switch
             {
-                // PURE reuses the JUST green and DUFF the MISS red — the same three-step ladder
-                // the other two schemes pop, so a player who has learned one has learned this one.
-                FreeSwingGrade.Pure => _justColor,
-                FreeSwingGrade.Duff => _missColor,
-                _                   => _nearMissColor,   // HOOK and SLICE: the same near-miss amber
+                // This scheme's words were already the unified ones; now the colours are too.
+                FreeSwingGrade.Pure => _pureColor,
+                FreeSwingGrade.Duff => _duffColor,
+                _                   => _nearColor,   // HOOK and SLICE: the same near-miss amber
             });
         }
 

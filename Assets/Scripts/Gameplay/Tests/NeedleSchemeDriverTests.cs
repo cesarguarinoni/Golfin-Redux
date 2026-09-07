@@ -385,7 +385,9 @@ namespace Golfin.Gameplay.Tests
 
             Assert.AreEqual(1, _shotCount, "not tapping is a SHANK, not an escape");
             Assert.AreEqual(NeedleGrade.Shank, _driver.LastCommittedGrade);
-            Assert.AreEqual(_cfg.TimingPowerMulRed, _sc.LastTimingPowerMul, 1e-6f);
+            // miss_grade_duff §3.3: a SHANK is a DUFF (MissPowerMul), not TimingPowerMulRed.
+            Assert.AreEqual(_cfg.MissPowerMul, _sc.LastTimingPowerMul, 1e-6f);
+            Assert.IsTrue(_sc.LastShotWasMiss, "the duff flag must reach the controller");
             Assert.AreEqual(0f, _sc.LastCommittedTiming01, 1e-6f);
             Assert.Greater(_driver.LastCommittedErrorYawRad, 0f, "and it goes right");
             Assert.IsFalse(_catcher.IsArmed);

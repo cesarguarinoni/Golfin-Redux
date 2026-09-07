@@ -20,7 +20,8 @@ namespace Golfin.Gameplay.Tests
     /// Covers:
     ///   1. Sampleless drivers (bots, capture, tests) pay nothing — mul is exactly 1.
     ///   2. A latch at or above the green band is full power.
-    ///   3. A latch at the cone base pays TimingPowerMulRed, and the speed really scales.
+    ///   3. A latch on the RED LINE pays TimingPowerMulRed, and the speed really scales;
+    ///      below it (miss_grade_duff) the shot is a DUFF — MissPowerMul and a flattened launch.
     ///   4. Mid-gold interpolates through the band edges.
     ///   5. ForcePerfectTiming buys out of the penalty (the flag finally does what it says).
     ///   6. Unlatching (thumb dips below the swing's low) discards the sample; the re-latch wins.
@@ -79,6 +80,14 @@ namespace Golfin.Gameplay.Tests
 
         private static float Speed(ShotInput s) => new Vector3(
             s.velocity.x.ToFloat(), s.velocity.y.ToFloat(), s.velocity.z.ToFloat()).magnitude;
+
+        /// <summary>Launch pitch recovered from the resolved velocity, in degrees — the shot's
+        /// own answer rather than the config's (miss_grade_duff §3.2).</summary>
+        private static float PitchDeg(ShotInput s)
+        {
+            var v = new Vector3(s.velocity.x.ToFloat(), s.velocity.y.ToFloat(), s.velocity.z.ToFloat());
+            return Mathf.Atan2(v.y, new Vector2(v.x, v.z).magnitude) * Mathf.Rad2Deg;
+        }
 
         /// <summary>Open a swing at full pull and advance the arrow to <paramref name="timing01"/>.</summary>
         private void BeginSwingAt(float timing01)
@@ -140,6 +149,8 @@ namespace Golfin.Gameplay.Tests
             var inRedBand = Release();
 
             Assert.AreEqual(1f, _sc.LastTimingPowerMul, 1e-5f);
+            Assert.IsFalse(_sc.LastShotWasMiss, "a bot must never duff by accident (D4)");
+            Assert.IsNull(_sc.LastFlickGrade, "and must never pop a word for a swing nobody timed");
             Assert.AreEqual(Speed(baseline), Speed(inRedBand), Speed(baseline) * SpeedTolerance01,
                 "Arrow position must not touch a sampleless shot's speed");
         }
@@ -163,23 +174,84 @@ namespace Golfin.Gameplay.Tests
                 "A green flick is exactly a full-power shot");
         }
 
-        // ── 3. Red base pays TimingPowerMulRed, and the ball really goes shorter ──
+        // ── 3. The RED LINE pays TimingPowerMulRed, and the ball really goes shorter ──
 
         [Test]
-        public void LatchOnRedBase_RedMultiplier()
+        public void LatchOnRedLine_RedMultiplier()
         {
+            // miss_grade_duff §3.1 RE-BASED this case. It used to sample timing01 = 0 (the cone
+            // BASE) and expect TimingPowerMulRed, because the ramp started there. The ramp now
+            // starts at the drawn red LINE, and the base is a DUFF — so the shot that pays
+            // TimingPowerMulRed is the one latched exactly on the line. Nothing about the number
+            // moved; the x it is measured at did (D6).
             var baseline = BaselineShot();
 
-            BeginSwingAt(0f);                 // arrow still at the cone base
+            BeginSwingAt(_cfg.TimingBandRedY01);
             PushLatchingSwing();
             var onRed = Release();
 
-            Assert.AreEqual(0f, _sc.LastTimingAtLatch, 1e-3f);
+            Assert.AreEqual(_cfg.TimingBandRedY01, _sc.LastTimingAtLatch, 1e-3f);
             Assert.AreEqual(_cfg.TimingPowerMulRed, _sc.LastTimingPowerMul, 1e-5f,
-                "timing01 = 0 is exactly TimingPowerMulRed");
+                "timing01 = TimingBandRedY01 is exactly TimingPowerMulRed");
+            Assert.IsFalse(_sc.LastShotWasMiss, "ON the line is the ramp, not the duff");
             Assert.AreEqual(Speed(baseline) * _cfg.TimingPowerMulRed, Speed(onRed),
                 Speed(baseline) * SpeedTolerance01,
                 "The multiplier must reach the resolved velocity, not just the log line");
+        }
+
+        // ── 3b. Below the red line is a DUFF (miss_grade_duff §3.1) ──────────────
+
+        [Test]
+        public void LatchBelowRedLine_IsADuff()
+        {
+            var baseline = BaselineShot();
+
+            BeginSwingAt(0f);                 // arrow still at the cone base — under the red line
+            PushLatchingSwing();
+            var duffed = Release();
+
+            Assert.AreEqual(0f, _sc.LastTimingAtLatch, 1e-3f);
+            Assert.AreEqual(_cfg.MissPowerMul, _sc.LastTimingPowerMul, 1e-5f,
+                "below the red line the flick is a DUFF at the flat MissPowerMul, not a ramp");
+            Assert.IsTrue(_sc.LastShotWasMiss);
+            Assert.AreEqual(FlickGrade.Duff, _sc.LastFlickGrade,
+                "the grade the pop shows and the multiplier the shot pays are one classification");
+            Assert.AreEqual(Speed(baseline) * _cfg.MissPowerMul, Speed(duffed),
+                Speed(baseline) * SpeedTolerance01,
+                "a duff really is a fifth of the shot, in the resolved velocity");
+        }
+
+        [Test]
+        public void Duff_LaunchesLowAndFlat()
+        {
+            // §3.2: the topped ball leaves on loft x MissLaunchPitchScale, clamped to >= 2 deg.
+            // Read back as the velocity's PITCH, not as a config echo.
+            BeginSwingAt(_cfg.TimingBandRedY01);
+            PushLatchingSwing();
+            float cleanPitch = PitchDeg(Release());
+
+            BeginSwingAt(0f);
+            PushLatchingSwing();
+            float duffPitch = PitchDeg(Release());
+
+            float expected = Mathf.Max(2f, cleanPitch * _cfg.MissLaunchPitchScale);
+            Assert.AreEqual(expected, duffPitch, 0.2f,
+                $"a duff must leave at loft x {_cfg.MissLaunchPitchScale}, clamped at 2 deg");
+            Assert.Less(duffPitch, cleanPitch, "and it must be FLATTER than the clean shot");
+        }
+
+        [Test]
+        public void AboveTheGoldLine_IsUnchangedByTheRebase()
+        {
+            // The re-base must not move anything above the red line. Mid gold->green is checked
+            // by test 4; this pins the GOLD LINE itself, which is the edge the two ramps share.
+            BeginSwingAt(_cfg.TimingBandGoldY01);
+            PushLatchingSwing();
+            Release();
+
+            Assert.AreEqual(_cfg.TimingPowerMulGold, _sc.LastTimingPowerMul, 1e-4f);
+            Assert.IsFalse(_sc.LastShotWasMiss);
+            Assert.AreEqual(FlickGrade.Good, _sc.LastFlickGrade);
         }
 
         // ── 4. Between the gold and green lines it interpolates ───────────────────
@@ -217,6 +289,8 @@ namespace Golfin.Gameplay.Tests
 
             Assert.AreEqual(1f, _sc.LastTimingPowerMul, 1e-5f,
                 "ForcePerfectTiming must waive the penalty entirely");
+            Assert.IsFalse(_sc.LastShotWasMiss, "and the duff with it");
+            Assert.IsNull(_sc.LastFlickGrade, "no timing judged means no word, not PURE");
             Assert.AreEqual(Speed(baseline), Speed(forced), Speed(baseline) * SpeedTolerance01);
         }
 
@@ -276,8 +350,11 @@ namespace Golfin.Gameplay.Tests
                 "The gold line the player sees must be the gold edge the multiplier uses");
             Assert.AreEqual(ControlsConfig.Default.TimingBandGreenY01, ConeBandPalette.BandGreenY01, 1e-6f,
                 "The green line the player sees must be the green edge the multiplier uses");
-            Assert.AreEqual(0f, ConeBandPalette.BandRedY01, 1e-6f,
-                "The red edge is the cone base by construction");
+            Assert.AreEqual(ControlsConfig.Default.TimingBandRedY01, ConeBandPalette.BandRedY01, 1e-6f,
+                "miss_grade_duff §3.4: the red line the player sees must be the duff edge the " +
+                "multiplier uses — it is no longer the cone base");
+            Assert.Greater(ConeBandPalette.BandRedY01, 0f,
+                "and it must actually be OFF the base, or there is no duff zone to land in");
         }
     }
 }

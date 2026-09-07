@@ -268,7 +268,8 @@ namespace Golfin.EditorTools.ShotUI
                                     ChipWidth + ChipShadowPad * 2f, ChipHeight + ChipShadowPad * 2f);
             chipImg.GetComponent<Image>().type = Image.Type.Simple;
 
-            var popText = MakeText(popRoot, "NeedleGradeText", "PERFECT", ChipFontNodePx, ChipTextC, FontStyles.Bold);
+            // Authoring placeholder only; PURE since miss_grade_duff §3.6 retired PERFECT.
+            var popText = MakeText(popRoot, "NeedleGradeText", "PURE", ChipFontNodePx, ChipTextC, FontStyles.Bold);
             Stretch(popText, 0f);
             popText.GetComponent<TextMeshProUGUI>().alignment = TextAlignmentOptions.Center;
             WireObj(pop, "_label", popText.GetComponent<TextMeshProUGUI>());

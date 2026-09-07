@@ -1,1113 +1,1114 @@
-key,English,Japanese
-BTN_LOADING,NOW LOADING,読み込み中
-BTN_START,PLAY,プレイ
-BTN_CREATE,CREATE ACCOUNT,アカウント作成
-BTN_LOGIN,LOGIN,ログイン
-TIP_HEADER,PRO TIP,プロのヒント
-TIP_NEXT,TAP FOR NEXT TIP,タップして次へ
-TIP_CLUB,<color=#EEDC9A>HOLD THE CLUB/BALL BUTTONS</color> TO CHANGE EQUIPPED GEAR,クラブ/ボールボタンを長押しして装備を変更
-TIP_FORECAST,LANDING <color=#EEDC9A>FORECAST</color> DOES NOT FACTOR THE BALL'S RUN OR WIND. COMPENSATE ACCORDINGLY,着地予測にはボールの転がりと風は含まれません
-TIP_RARITIES,DIFFERENT <color=#EEDC9A>RARITIES</color> BESTOW DIFFERENT INITIAL STATS  AND MAX</color> LEVEL,レア度によって初期ステータスと最大レベルが異なります
-TIP_SWING,<color=#EEDC9A>PULL</color> THE CLUB BACK THEN FLICK  IT FORWARD TO SWING,クラブを引いて前に弾いてスイング
-TIP_ACCURACY,<color=#EEDC9A>FLICKER</color> THROUGH THE BALL FOR <color=#EEDC9A>PERFECT</color> ACCURACY,ボールを通過させると完璧な精度
-TIP_TIMING,HIT THE BALL WHEN <color=#EEDC9A>HIGHLIGHTED</color> FOR A PERFECT SHOT,ハイライト時にボールを打つと完璧なショット
-TIP_VIEW,<color=#EEDC9A>TAP THE MAP</color> TO SWITCH BETWEEN SHOT VIEW AND MAP VIEW,マップをタップしてショットビューとマップビューを切り替え
-HOME_CURRENCY_LABEL,COINS,コイン
-HOME_USERNAME,USERNAME,ユーザー名
-HOME_DAILY_PILL,NEW DAILY MISSION!,新しいデイリーミッション！
-HOME_GPS_PILL,GPS,GPS
+key,English,Japanese,is_active
+BTN_LOADING,NOW LOADING,読み込み中,true
+BTN_START,PLAY,プレイ,true
+BTN_CREATE,CREATE ACCOUNT,アカウント作成,true
+BTN_LOGIN,LOGIN,ログイン,true
+TIP_HEADER,PRO TIP,プロのヒント,true
+TIP_NEXT,TAP FOR NEXT TIP,タップして次へ,true
+TIP_CLUB,<color=#EEDC9A>HOLD THE CLUB/BALL BUTTONS</color> TO CHANGE EQUIPPED GEAR,クラブ/ボールボタンを長押しして装備を変更,true
+TIP_FORECAST,LANDING <color=#EEDC9A>FORECAST</color> DOES NOT FACTOR THE BALL'S RUN OR WIND. COMPENSATE ACCORDINGLY,着地予測にはボールの転がりと風は含まれません,true
+TIP_RARITIES,DIFFERENT <color=#EEDC9A>RARITIES</color> BESTOW DIFFERENT INITIAL STATS  AND MAX</color> LEVEL,レア度によって初期ステータスと最大レベルが異なります,true
+TIP_SWING,<color=#EEDC9A>PULL</color> THE CLUB BACK THEN FLICK  IT FORWARD TO SWING,クラブを引いて前に弾いてスイング,true
+TIP_ACCURACY,<color=#EEDC9A>FLICKER</color> THROUGH THE BALL FOR <color=#EEDC9A>FULL</color> ACCURACY,ボールを通過させると完璧な精度,true
+TIP_TIMING,HIT THE BALL WHEN <color=#EEDC9A>HIGHLIGHTED</color> FOR A <color=#EEDC9A>PURE</color> SHOT,ハイライト時にボールを打つとピュアなショット,true
+TIP_VIEW,<color=#EEDC9A>TAP THE MAP</color> TO SWITCH BETWEEN SHOT VIEW AND MAP VIEW,マップをタップしてショットビューとマップビューを切り替え,true
+HOME_CURRENCY_LABEL,COINS,コイン,true
+HOME_USERNAME,USERNAME,ユーザー名,true
+HOME_DAILY_PILL,NEW DAILY MISSION!,新しいデイリーミッション！,true
+HOME_GPS_PILL,GPS,GPS,true
 # unused since home_notices — the two HOME_MAINTENANCE_* rows below are no longer read by HomeScreenController; the Home notice comes from GET /api/v1/notices. Kept only to avoid CSV churn. (No commas: LocalizationTextImporter skips any line with fewer than 3 columns.)
-HOME_MAINTENANCE_TITLE,MAINTENANCE NOTICE,メンテナンス情報
-HOME_MAINTENANCE_BODY,Scheduled server maintenance: 2025/12/31\nThe game will not be available for a short time\nduring maintenance.,定期サーバーメンテナンス: 2025/12/31\nメンテナンス中はゲームをご利用いただけません。
-HOME_DEMO_WELCOME_TITLE,WELCOME TO THE DEMO,デモ版へようこそ
-HOME_DEMO_WELCOME_BODY,Thanks for trying this early GOLFIN preview!\nMuch more is on the way.\nStay tuned for great things to come.,GOLFINデモ版をお試しいただき\nありがとうございます。\n今後の展開にご期待ください！
-HOME_GPS_TITLE,GOLFIN·GPS,ゴルフィン・GPS
-HOME_GPS_SUBTITLE,CHECK-IN WITH GPS,GPSでチェックイン
-HOME_GPS_DESC,EARN MORE POINTS TO POWER UP!,ポイントを稼いでパワーアップ！
-HOME_NEXT_HOLE,NEXT HOLE,次のホール
-HOME_COURSE_NAME,Lomond Country Club  - Hole 5,ロモンドカントリークラブ - ホール5
-HOME_PLAY,PLAY,プレイ
-HOME_NAV_HOME,HOME,ホーム
-HOME_NAV_SHOP,SHOP,ショップ
-HOME_NAV_PLAY,PLAY,プレイ
-HOME_NAV_BAG,BAG,バッグ
-HOME_NAV_MORE,MORE,その他
-HOME_SETTINGS,SETTINGS,設定
-HOLE_LOMOND_1,Lomond Country Club  - Hole 1,ロモンドカントリークラブ  - ホール1
-HOLE_LOMOND_2,Lomond Country Club  - Hole 2,ロモンドカントリークラブ  - ホール2
-HOLE_LOMOND_3,Lomond Country Club  - Hole 3,ロモンドカントリークラブ  - ホール3
-HOLE_LOMOND_4,Lomond Country Club  - Hole 4,ロモンドカントリークラブ  - ホール4
-HOLE_LOMOND_5,Lomond Country Club  - Hole 5,ロモンドカントリークラブ  - ホール5
-HOLE_LOMOND_6,Lomond Country Club  - Hole 6,ロモンドカントリークラブ  - ホール6
-HOLE_LOMOND_7,Lomond Country Club  - Hole 7,ロモンドカントリークラブ  - ホール7
-HOLE_LOMOND_8,Lomond Country Club  - Hole 8,ロモンドカントリークラブ  - ホール8
-HOLE_LOMOND_9,Lomond Country Club  - Hole 9,ロモンドカントリークラブ  - ホール9
-HOLE_LOMOND_10,Lomond Country Club  - Hole 10,ロモンドカントリークラブ  - ホール10
-HOLE_LOMOND_11,Lomond Country Club  - Hole 11,ロモンドカントリークラブ  - ホール11
-HOLE_LOMOND_12,Lomond Country Club  - Hole 12,ロモンドカントリークラブ  - ホール12
-HOLE_LOMOND_13,Lomond Country Club  - Hole 13,ロモンドカントリークラブ  - ホール13
-HOLE_LOMOND_14,Lomond Country Club  - Hole 14,ロモンドカントリークラブ  - ホール14
-HOLE_LOMOND_15,Lomond Country Club  - Hole 15,ロモンドカントリークラブ  - ホール15
-HOLE_LOMOND_16,Lomond Country Club  - Hole 16,ロモンドカントリークラブ  - ホール16
-HOLE_LOMOND_17,Lomond Country Club  - Hole 17,ロモンドカントリークラブ  - ホール17
-HOLE_LOMOND_18,Lomond Country Club  - Hole 18,ロモンドカントリークラブ  - ホール18
-SETTINGS_PROFILE,User Profile,ユーザープロフィール
-SETTINGS_USERNAME,Username,ユーザー名
-SETTINGS_NAME,Name,名前
-SETTINGS_CHANGE,CHANGE,変更
-SETTINGS_SOUND,Sound Settings,サウンド設定
-SETTINGS_MUSIC,Music,ミュージック
-SETTINGS_MUSICVOLUME,80,80
-SETTINGS_SFX,SFX,効果音
-SETTINGS_SFXVOLUME,80,80
-SETTINGS_GRAPHICS,Graphics,グラフィック
-SETTINGS_QUALITY_AUTO,Auto,自動
-SETTINGS_QUALITY_LOW,Low,低
-SETTINGS_QUALITY_MID,Medium,中
-SETTINGS_QUALITY_HIGH,High,高
-SETTINGS_CONTROLS,Controls,操作方法
-SETTINGS_CONTROLS_FLICK,Flick,フリック
-SETTINGS_CONTROLS_PENDULUM,Pendulum,振り子
-SETTINGS_CONTROLS_TAPTIMING,Tap Timing,タップタイミング
-SETTINGS_CONTROLS_FREESWING,Free Swing,フリースイング
-SETTINGS_LANG,Language,言語
-SETTINGS_ENG,English,English
-SETTINGS_JAP,日本語,日本語
-SETTINGS_TERMS,Terms of Use,利用規約
-SETTINGS_PRIVACY,Privacy Policy,プライバシーポリシー
-SETTINGS_FAQ,FAQ,よくある質問
-SETTINGS_ABOUT,About,アバウト
-SETTINGS_CONTACT,Contact Form,お問い合わせ
-SETTINGS_LOGOUT,Log Out,ログアウト
-SETTINGS_CLOSE,CLOSE,閉じる
-SETTINGS_ABOUT_APP_VERSION,APP VERSION,アプリバージョン
-SETTINGS_ABOUT_LICENCES,LICENCES,ライセンス
-ROSTER_TITLE,ROSTER,ロスター
-ROSTER_STRENGTH,STRENGTH,ストレングス
-ROSTER_CLUB_CONTROL,CLUB CONTROL,クラブコントロール
-ROSTER_RECOVERY,RECOVERY,リカバリー
-ROSTER_STAMINA,STAMINA,スタミナ
-ROSTER_LEVEL_UP,LEVEL UP,レベルアップ
-ROSTER_BOOST,BOOST,ブースト
-ROSTER_BIO,BIO,バイオ
-ROSTER_COMPARE,COMPARE,比較
-ROSTER_SELECT,SELECT,選択
-ROSTER_SELECTED,SELECTED,選択済み
-ROSTER_SWAP,SWAP,交換
-MODAL_NEXT_LEVEL,NEXT LEVEL,次のレベル
-MODAL_COST,COST,コスト
-MODAL_REWARD,REWARD,報酬
-MODAL_LEVEL_UP,LEVEL UP,レベルアップ
-MODAL_AVAILABLE_SP,AVAILABLE SP,利用可能SP
-MODAL_RESET,RESET,リセット
-MODAL_CANCEL,CANCEL,キャンセル
-MODAL_CONFIRM,CONFIRM,確認
-MODAL_SP_SUFFIX,SP,SP
-COMPARE_EMPTY_PROMPT,TAP ON ANY OTHER CHARACTER TO COMPARE STATS,他のキャラクターをタップしてステータスを比較
-COMPARE_CLOSE,CLOSE COMPARE,比較を閉じる
-RARITY_COMMON,COMMON,コモン
-RARITY_UNCOMMON,UNCOMMON,アンコモン
-RARITY_RARE,RARE,レア
-RARITY_MYTHIC,MYTHIC,ミシック
-RARITY_LEGENDARY,LEGENDARY,レジェンダリー
-RARITY_SUPREME,SUPREME,スプリーム
-CLUB_POWER,POWER,パワー
-CLUB_ACCURACY,ACCURACY,アキュラシー
-CLUB_LIE_RESISTANCE,LIE RESIST.,ライ耐性
-CLUB_LOFT,LOFT,ロフト
-CLUB_DURABILITY,DURABILITY,耐久性
-CLUB_DISTANCE,DISTANCE,飛距離
-CLUB_LEVEL_UP,LEVEL UP,レベルアップ
-CLUB_REPAIR,REPAIR,修理
-CLUB_COMPARE,COMPARE,比較
-CLUB_EQUIP,EQUIP,装備
-CLUB_EQUIPPED,EQUIPPED,装備済み
-CLUB_INFO,INFO,情報
-CLUB_IN_BAG,IN BAG,バッグ
-CLUB_COMPARE_EMPTY_PROMPT,TAP ON ANY OTHER CLUB TO COMPARE STATS,他のクラブをタップしてステータスを比較
-CLUB_CLOSE_COMPARE,CLOSE COMPARE,比較を閉じる
-CLUB_SWAP,SWAP,交換
-CLUB_MODAL_LEVEL_UP,Level Up,レベルアップ
-CLUB_MODAL_NEXT_LEVEL,Next Level,次のレベル
-CLUB_MODAL_COST,Cost,コスト
-CLUB_MODAL_REWARD,Reward,報酬
-CLUB_MODAL_SP_SUFFIX,SP,SP
-CLUB_MODAL_AVAILABLE_SP,Available SP,利用可能SP
-CLUB_MODAL_RESET,Reset,リセット
-CLUB_MODAL_CANCEL,Cancel,キャンセル
-CLUB_MODAL_CONFIRM,Confirm,確認
-CLUB_STAT_POWER,Power,パワー
-CLUB_STAT_ACCURACY,Accuracy,精度
-CLUB_STAT_LIE_RES,Lie Res.,ライ抵抗
-CLUB_STAT_LOFT_FIXED,Loft (Fixed),ロフト（固定）
-CLUB_STAT_DURABILITY,Durability,耐久性
-CLUB_MODAL_MAX,MAX,MAX
-CLUB_REPAIR_NO_KITS,You don't own any Repair Kits.,修理キットを持っていません。
-CLUB_REPAIR_FULL,This club is at full durability.,このクラブは最大耐久性です。
-CLUB_REPAIR_TOAST,{0} was repaired. Durability {1} → {2}.,{0}が修理されました。耐久性 {1} → {2}。
-BAG_CHOOSE_TITLE,Choose a Bag,バッグを選択
-BAG_LOCKED,Locked,ロック
-BAG_FULL_TOAST,Bag {0} is full ({1}/{1}). Remove a club first.,バッグ{0}は満杯です（{1}/{1}）。先にクラブを外してください。
-BAG_EQUIPPED_TOAST,{0} equipped to Bag {1}.,{0}をバッグ{1}に装備しました。
-BAG_UNEQUIPPED_TOAST,{0} removed from Bag {1}.,{0}をバッグ{1}から外しました。
-BALL_OWNED,OWNED,所持
-BALL_INFO,INFO,情報
-BALL_POWER,POWER,パワー
-BALL_REBOUND,REBOUND,リバウンド
-BALL_WIND_RESISTANCE,WIND RES.,耐風
-BALL_ROLL,ROLL,ロール
-BALL_SPIN,SPIN,スピン
-BALL_COMPARE_EMPTY_PROMPT,Select a ball to compare,比較するボールを選んでください
-ITEM_RESTORES,RESTORES,回復
-ITEM_PRO_TIP,*PRO TIP,*プロのコツ
-ITEM_INFO,INFO,情報
-ITEM_USE,USE,使う
-ITEM_COMPARE,COMPARE,比較
-ITEM_OWNED,OWNED,所持数
-ITEM_DURABILITY,DURABILITY,耐久度
-ITEM_SELECT_CLUB,SELECT CLUB,クラブを選択
-ITEM_USE_REPAIR_KIT,USE REPAIR KIT,修理キットを使う
-ITEM_CANCEL,CANCEL,キャンセル
-BAG_EQUIPPED,EQUIPPED,装備中
-BAG_EQUIP,EQUIP,装備
-BAG_SWAP,SWAP,交換
-BAG_SWAP_CLUB,SWAP CLUB,クラブを交換
-BAG_EQUIP_CLUB,EQUIP CLUB,クラブを装備
-BAG_EQUIP_ACTION,EQUIP,装備
-BAG_CANCEL,CANCEL,キャンセル
-HOLE_LOMOND_1_DESC,"The right side is wide; aim the <color=#EEDC9A>tee shot</color> at the <color=#EEDC9A>sloping area in the centre</color> of the <color=#EEDC9A>two-tiered fairway</color>. The landing spot of the <color=#EEDC9A>second shot</color> is crucial.",ティーショットは右側が広く、二段のフェアウェイセンターの傾斜部が狙い目です。2打目の落とし所が重要。
-HOLE_LOMOND_2_DESC,"A nearly straight hole. The <color=#EEDC9A>fairway is tight on both sides</color> — play the <color=#EEDC9A>tee shot</color> carefully. The area <color=#EEDC9A>behind the green</color> is also tight, so beware.",ほぼストレートなホール。左右が狭いのでティーショットは慎重に。グリーン奥は狭いので注意。
-HOLE_LOMOND_3_DESC,"A short par-4. <color=#EEDC9A>Both sides of the fairway are tight</color>, so a reliable <color=#EEDC9A>tee shot</color> is essential. Watch the area <color=#EEDC9A>behind the green</color>, which also narrows.",距離の短いミドルホール。左右ともに狭いので確実なティーショットが必要とされるホール。グリーン奥も狭いので注意。
-HOLE_LOMOND_4_DESC,"The shortest par-3 on the course. The green slopes from <color=#EEDC9A>right to left</color>, so attacking from the <color=#EEDC9A>right side</color> is best. Missing into the <color=#EEDC9A>slope below the green's left edge</color> spells trouble.",最も短いショートホール。グリーン右から傾斜の為、右サイドから攻めるのがベスト。グリーン左斜面下に落ちると苦戦します。
-HOLE_LOMOND_5_DESC,"A long par-4. Aim the <color=#EEDC9A>tee shot</color> at the <color=#EEDC9A>left hillside</color>. The fairway is wide — swing freely. From the <color=#EEDC9A>approach</color>, beware the <color=#EEDC9A>pond left of the green</color>.",距離の長いミドルホール。ティーショットは左山側狙い。フェアウェイは広いので思い切って飛ばして下さい。セカンドからはグリーン左側の池に注意。
-HOLE_LOMOND_6_DESC,"A par-3 over water. Don't force it — aim for the <color=#EEDC9A>centre of the green</color>. The <color=#EEDC9A>pond</color> is a <color=#EEDC9A>lateral water hazard</color>.",池越えのショートホール。無理をせずグリーン中央狙いです。池はラテラルウォーターハザード。
-HOLE_LOMOND_7_DESC,"The signature <color=#EEDC9A>valley</color>-carry hole. With the valley waiting ahead, longer hitters should choose their <color=#EEDC9A>club carefully</color>. The green is split into <color=#EEDC9A>two tiers left and right</color> — landing on the <color=#EEDC9A>same level as the pin</color> is the key.",名物谷越えホール。前方に谷がある為、距離の出る人はクラブ選択を慎重に。グリーンも左右で二段になっている為、ピン位置と同じ面に乗せるのがカギ。
-HOLE_LOMOND_8_DESC,"A par-5 <color=#EEDC9A>dogleg right</color>. Aim the <color=#EEDC9A>tee shot</color> just <color=#EEDC9A>left of fairway centre</color>. The <color=#EEDC9A>fairway narrows on both sides</color> from the second shot on, so playing it safe is wise. Long hitters can <color=#EEDC9A>reach the green in two</color>.",右ドッグレッグのロングホール。ティーショットはフェアウェイセンターやや左狙い。セカンド以降は左右が狭いので手堅くきざむのが無難。距離の出る人はオン可能なホール。
-HOLE_LOMOND_9_DESC,"A par-4 with a <color=#EEDC9A>wide fairway</color>. The <color=#EEDC9A>approach plays uphill</color>, so choose your <color=#EEDC9A>club carefully</color>.",フェアウェイの広いミドルホール。セカンドショットから打ち上げとなるのでクラブ選択を慎重に。
-HOLE_LOMOND_10_DESC,"A par-4 <color=#EEDC9A>dogleg left</color>. Aim the <color=#EEDC9A>tee shot</color> at the <color=#EEDC9A>left hillside</color>. The <color=#EEDC9A>approach plays downhill</color> — judge the distance and club choice carefully.",左ドッグレッグのミドルホール。ティーショットは左山側狙い。セカンドからは打ち下ろしとなるので距離感とクラブ選択は慎重に。
-HOLE_LOMOND_11_DESC,"A <color=#EEDC9A>downhill</color> par-3. Both sides of the green and the area behind it are <color=#EEDC9A>tight</color> — attacking from <color=#EEDC9A>short of the green</color> is the play.",打ち下ろしのショートホール。左右とグリーン奥が狭く、手前から攻めて行くのがポイント。
-HOLE_LOMOND_12_DESC,"An <color=#EEDC9A>uphill</color> par-4. The <color=#EEDC9A>tee shot</color> from the front tee isn't difficult, but the approach plays uphill — choose your <color=#EEDC9A>club carefully</color>.",打ち上げのミドルホール。フロントティからのティーショットは難しくないが、セカンドから打ち上げとなっているのでクラブ選択は慎重に。
-HOLE_LOMOND_13_DESC,"A par-5 <color=#EEDC9A>dogleg left</color>. The entire <color=#EEDC9A>left side is OB</color>, so aim the <color=#EEDC9A>tee shot</color> at the centre. A <color=#EEDC9A>pond guards the left of the green</color>, so play the second shot safely down the centre and decide the hole on your <color=#EEDC9A>third</color>.",左ドッグレッグのロングホール。左は全てOBとなっている為、ティーショットはセンター狙いで行くと良い。セカンドからはグリーン左が池になっている為、セカンドもセンター狙いに確実にきざんで3打目勝負。
-HOLE_LOMOND_14_DESC,"A downhill par-4. The <color=#EEDC9A>valley sits left</color> and a <color=#EEDC9A>pond sits right</color>, so aim at the <color=#EEDC9A>right side</color> of the <color=#EEDC9A>two-tiered fairway</color>. Take <color=#EEDC9A>one extra club</color> for the approach.",打ち下ろしのミドルホール。左が谷、右は池になっている為、二段フェアウェイの右狙い。セカンドは1クラブ大きいクラブ選択を。
-HOLE_LOMOND_15_DESC,"An <color=#EEDC9A>uphill</color> par-3. The green is hidden from the tee, making distance tough to judge. Aiming at the <color=#EEDC9A>left side</color> works well. Beware the <color=#EEDC9A>large bunker fronting the green</color>.",打ち上げのショートホール。グリーン面が見えない為、距離感が難しい。左サイド狙いで行くと良い。手前の大きなバンカーは要注意。
-HOLE_LOMOND_16_DESC,"A short par-4. <color=#EEDC9A>Both sides of the fairway are tight</color>, so a reliable <color=#EEDC9A>tee shot</color> is essential. The area <color=#EEDC9A>behind the green</color> is also tight, so beware.",距離の短いミドルホール。左右ともに狭いので確実なティーショットが必要とされる。グリーン奥も狭いので注意。
-HOLE_LOMOND_17_DESC,"Beware the <color=#EEDC9A>pond right of the tee shot landing area</color>. Aiming just <color=#EEDC9A>left of centre</color> works well. The approach plays <color=#EEDC9A>uphill</color>, so choose your <color=#EEDC9A>club carefully</color>.",ティーショットは右に池があるので注意。センターより左狙いで行くと良い。セカンドからは打ち上げになっている為、クラブ選択を慎重に。
-HOLE_LOMOND_18_DESC,"A par-5 <color=#EEDC9A>dogleg right</color>. Aim the <color=#EEDC9A>tee shot</color> just <color=#EEDC9A>left of fairway centre</color>. Before your <color=#EEDC9A>second shot</color>, check the position of the group ahead to avoid hitting into them. With a <color=#EEDC9A>pond on the right</color>, aiming a touch left is the play.",右ドッグレッグのロングホール。ティーショットはセンター左狙い。セカンドショットの際、前の組の位置を確認し、打ち込みの無いよう注意して下さい。右サイドに池がある為、左目狙いが良い。
-tourn.kasumigaseki,Kasumigaseki Open,霞ヶ関オープン
-tourn.hirono,Hirono Invitational,廣野インビテーショナル
-tourn.lomond,Lomond Championship,ロモンドチャンピオンシップ
-tourn.gotemba,Gotemba Masters,御殿場マスターズ
-tourn.kisarazu,Kisarazu Cup,木更津カップ
-tourn.kawana,Kawana Fuji Open,川奈富士オープン
-tourn.venue.kasumigaseki,Kasumigaseki Country Club · 18 Holes,霞ヶ関カントリー倶楽部 · 18ホール
-tourn.venue.hirono,Hirono Golf Club · 18 Holes,廣野ゴルフ倶楽部 · 18ホール
-tourn.venue.lomond,Lomond Country Club · 18 Holes,ロモンドカントリークラブ · 18ホール
-tourn.venue.gotemba,Taiheyo Club Gotemba · 18 Holes,太平洋クラブ御殿場 · 18ホール
-tourn.venue.kisarazu,Kisarazu Higashi CC · 18 Holes,木更津東カントリークラブ · 18ホール
-tourn.venue.kawana,Kawana Hotel Golf Course · 18 Holes,川奈ホテルゴルフコース · 18ホール
-tourn.venue.holes_suffix,Holes,ホール
-tourn.rules.label,RULES,ルール
-tourn.rules.max_players,MAX PLAYERS: Unlimited,最大参加人数：無制限
-tourn.rules.divisions,DIVISIONS: Level based,ディビジョン：レベル別
-tourn.rules.per_division,PLAYERS PER DIVISION: 100,1ディビジョン：100人
-tourn.rules.gear,GEAR :  Supplied by GOLFIN,ギア：GOLFIN提供
-tourn.rules.characters,CHARACTERS:  Unrestricted,キャラクター：制限なし
-tourn.rules.max_players_n,MAX PLAYERS: {0},最大参加人数：{0}人
-tourn.rules.divisions_open,DIVISIONS: Open,ディビジョン：オープン
-tourn.rules.divisions_level,DIVISIONS: Level based,ディビジョン：レベル別
-tourn.rules.divisions_rarity,DIVISIONS: Rarity band,ディビジョン：レアリティ別
-tourn.rules.per_division_n,PLAYERS PER DIVISION: {0},1ディビジョン：{0}人
-tourn.rules.gear_own,GEAR: Own clubs,ギア：自分のクラブ
-tourn.rules.gear_own_max,GEAR: Own clubs (up to {0}),ギア：自分のクラブ（{0}まで）
-tourn.rules.gear_supplied,GEAR: Supplied by GOLFIN,ギア：GOLFIN提供
-tourn.rules.chars_rarity_band,CHARACTERS: {0},キャラクター：{0}
-tourn.rules.chars_level_band,CHARACTERS: {0},キャラクター：{0}
-tourn.rules.chars_rarity_level_band,CHARACTERS: {0} · {1},キャラクター：{0}・{1}
-tourn.entry.denied.char_rarity,Your character is outside this tournament’s rarity range ({0}),このトーナメントのレアリティ条件（{0}）を満たしていません
-tourn.entry.denied.char_level,Your character is outside this tournament’s level range ({0}),このトーナメントのレベル条件（{0}）を満たしていません
-tourn.entry.denied.club_rarity,Your bag has a club above the {0} limit,バッグに{0}を超えるクラブがあります
-tourn.entry.denied.full,This tournament is full ({0} players),このトーナメントは満員です（{0}人）
-tourn.entry.denied.generic,You cannot enter this tournament,このトーナメントには参加できません
-tourn.denied.head.char_rarity,YOUR CHARACTER IS OUTSIDE THIS TOURNAMENT’S RARITY RANGE.,このトーナメントのレアリティ条件を満たしていません。
-tourn.denied.head.char_level,YOUR CHARACTER IS OUTSIDE THIS TOURNAMENT’S LEVEL RANGE.,このトーナメントのレベル条件を満たしていません。
-tourn.denied.head.club_rarity,YOUR BAG HAS A CLUB ABOVE THIS TOURNAMENT’S LIMIT.,バッグに制限を超えるクラブがあります。
-tourn.denied.head.multiple,YOU DO NOT MEET THIS TOURNAMENT’S REQUIREMENTS.,このトーナメントの参加条件を満たしていません。
-tourn.denied.head.full,THIS TOURNAMENT IS FULL.,このトーナメントは満員です。
-tourn.denied.head.generic,YOU CANNOT ENTER THIS TOURNAMENT.,このトーナメントには参加できません。
-tourn.denied.req.rarity_min,MINIMUM REQUIREMENT:,最低条件：
-tourn.denied.req.rarity_max,MAXIMUM ALLOWED:,上限：
-tourn.denied.req.level_min,MINIMUM LEVEL:,最低レベル：
-tourn.denied.req.level_max,MAXIMUM LEVEL:,最高レベル：
-tourn.denied.req.club_max,MAXIMUM CLUB RARITY:,クラブレアリティ上限：
-tourn.denied.req.full_cap,MAXIMUM PLAYERS:,最大参加人数：
-tourn.denied.back,BACK,戻る
-tourn.denied.head.insufficient,YOU DO NOT HAVE ENOUGH REWARD POINTS.,リワードポイントが足りません。
-tourn.denied.head.offline,A CONNECTION IS REQUIRED TO ENTER.,参加にはインターネット接続が必要です。
-tourn.denied.head.unavailable,THIS TOURNAMENT IS NO LONGER AVAILABLE.,このトーナメントは終了しました。
-tourn.denied.head.failed,ENTRY COULD NOT BE COMPLETED.,参加手続きを完了できませんでした。
-tourn.denied.req.entry_fee,ENTRY FEE:,参加費：
-tourn.denied.req.your_balance,YOUR BALANCE:,所持ポイント：
-AUTH_LOGIN_TITLE,LOGIN WITH EMAIL,メールアドレスでログイン
-AUTH_LOGIN_EMAIL_LABEL,EMAIL,メールアドレス
-AUTH_LOGIN_PASSWORD_LABEL,PASSWORD,パスワード
-AUTH_LOGIN_SERVICE_HEADER,LOGIN WITH A SERVICE,他のサービスでログイン
-AUTH_LOGIN_EMAIL_PLACEHOLDER,Email,メール
-AUTH_LOGIN_PASSWORD_PLACEHOLDER,Password,パスワード
-AUTH_LOGIN_FORGOT,Forgot Password?,パスワードを忘れた方
-AUTH_LOGIN_BUTTON,LOGIN,ログイン
-AUTH_LOGIN_GOOGLE,Login with Google,Googleでログイン
-AUTH_LOGIN_APPLE,Login with Apple,Appleでログイン
-AUTH_LOGIN_OR,Or,または
-AUTH_LOGIN_NO_ACCOUNT,No account?  <color=#22B800><b>Create an account</b></color>,アカウントをお持ちでないですか？  <color=#22B800><b>アカウントを作成</b></color>
-AUTH_LOGIN_CREATE,Create Account,アカウント作成
-AUTH_LOGIN_CANCEL,CANCEL,キャンセル
-AUTH_CREATE_USERNAME_TITLE,CREATE USERNAME,ユーザー名を作成
-AUTH_CREATE_USERNAME_LABEL,USERNAME,ユーザー名
-AUTH_CREATE_USERNAME_HINT,"3–20 characters, letters/numbers/underscore",3〜20文字、英数字とアンダースコアが使えます
-AUTH_CREATE_USERNAME_BODY,Please choose a username.\n\nYour username is public and used across all Golfin services to interact with the community.\n\nYour username can only contain letters and numbers.,ユーザー名を決めてください。\n\nユーザー名は公開され、Golfinのすべてのサービスでコミュニティとの交流に使用されます。\n\nユーザー名には英数字のみ使用できます。
-AUTH_CREATE_USERNAME_PLACEHOLDER,Username,ユーザー名
-AUTH_CREATE_USERNAME_BUTTON,CREATE,作成
-AUTH_CREATE_USERNAME_CANCEL,CANCEL,キャンセル
-AUTH_SIGNUP_TITLE,SIGN UP WITH EMAIL,メールアドレスで登録
-AUTH_SIGNUP_EMAIL_LABEL,EMAIL,メールアドレス
-AUTH_SIGNUP_PASSWORD_LABEL,PASSWORD,パスワード
-AUTH_SIGNUP_SERVICE_HEADER,SIGN UP WITH  A SERVICE,他のサービスで登録
-AUTH_SIGNUP_EMAIL_PLACEHOLDER,Email,メール
-AUTH_SIGNUP_PASSWORD_PLACEHOLDER,Password,パスワード
-AUTH_SIGNUP_BUTTON,CREATE,作成
-AUTH_SIGNUP_GOOGLE,Sign up with Google,Googleで登録
-AUTH_SIGNUP_APPLE,Sign up with Apple,Appleで登録
-AUTH_SIGNUP_OR,Or,または
-AUTH_SIGNUP_HAVE_ACCOUNT,"If you already have an account, <color=#22b800><b>login here</b></color>",すでにアカウントをお持ちの方は、<color=#22b800><b>こちらからログイン</b></color>
-AUTH_SIGNUP_LOGIN,Login Here,こちらからログイン
-AUTH_SIGNUP_CANCEL,CANCEL,キャンセル
-AUTH_SIGNUP_RULE_LEN8,Must contain 8 characters,8文字以上必要です
-AUTH_SIGNUP_RULE_LOWER,Must contain one lowercase letter,小文字を1文字以上含めてください
-AUTH_SIGNUP_RULE_UPPER,Must contain one uppercase letter,大文字を1文字以上含めてください
-AUTH_SIGNUP_RULE_DIGIT,Must contain one number,数字を1文字以上含めてください
-AUTH_SIGNUP_RULE_SPECIAL,Must contain one special character,記号を1文字以上含めてください
-AUTH_EMAIL_CONF_TITLE,EMAIL CONFIRMATION,メール確認
-AUTH_EMAIL_CONF_BODY,"A confirmation email has been sent to your inbox.\n\nPlease check your email and click the confirmation link to verify your account.\n\nRemember to check your spam folder.\n\nIf you didn't receive the email, please click the button below.",確認メールを受信トレイに送信しました。\n\nメールを確認し、記載されたリンクをクリックしてアカウントを認証してください。\n\n迷惑メールフォルダもご確認ください。\n\nメールが届かない場合は、下のボタンをクリックしてください。
-AUTH_EMAIL_CONF_INSTRUCTION,"Once you have confirmed your email, please go back to the login screen.",メールの確認が完了したら、ログイン画面に戻ってください。
-AUTH_EMAIL_CONF_OPEN,Open Email App,メールアプリを開く
-AUTH_EMAIL_CONF_RESEND,RESEND,再送
-AUTH_EMAIL_CONF_BACK,LOGIN,ログイン
-AUTH_USERNAME_TAKEN,Username already taken,このユーザー名は既に使用されています
-AUTH_LOGIN_ERR_MISSING_FIELDS,Enter your email and password.,メールアドレスとパスワードを入力してください。
-AUTH_LOGIN_ERR_MISSING_EMAIL,Enter your email first.,先にメールアドレスを入力してください。
-AUTH_LOGIN_RESET_SENT,Password reset email sent.,パスワード再設定メールを送信しました。
-AUTH_SIGNUP_ERR_MISSING_EMAIL,Enter your email address.,メールアドレスを入力してください。
-AUTH_SIGNUP_ERR_PASSWORD_RULES,Your password does not meet all the requirements.,パスワードが要件を満たしていません。
-AUTH_EMAIL_CONF_RESENT,Confirmation email re-sent.,確認メールを再送しました。
-AUTH_USERNAME_REQUIREMENT,"3–20 characters, letters/numbers/underscore only.",3〜20文字、英数字とアンダースコアのみ使用できます。
-AUTH_USERNAME_EMPTY,Username cannot be empty,ユーザー名を入力してください
-AUTH_ERR_OFFLINE,No internet connection. Please try again.,インターネット接続がありません。もう一度お試しください。
-AUTH_RESET_TITLE,Set New Password,新しいパスワードを設定
-AUTH_RESET_NEW_PLACEHOLDER,New Password,新しいパスワード
-AUTH_RESET_CONFIRM_PLACEHOLDER,Confirm New Password,新しいパスワード（確認）
-AUTH_RESET_BUTTON,SET PASSWORD,パスワードを設定
-AUTH_RESET_MISMATCH,Passwords do not match.,パスワードが一致しません
-AUTH_RESET_TOO_SHORT,Password does not meet the requirements.,パスワードが要件を満たしていません
-AUTH_RESET_LINK_EXPIRED,This reset link has expired or was already used. Please request a new one from the login screen.,このリセットリンクは期限切れか、すでに使用されています。ログイン画面からもう一度お試しください。
-AUTH_RESET_SUCCESS,Password updated!,パスワードを更新しました！
-AUTH_RESET_BACK,Back to Login,ログインに戻る
-NAV_LEADERBOARD,LEADERBOARD,リーダーボード
-NAV_MODE_SELECTION,MODE SELECTION,モード選択
-NAV_SELECT_HOLE,SELECT HOLE,ホール選択
-NAV_TOURNAMENT_LEADERBOARD,TOURNAMENT LEADERBOARD,トーナメントリーダーボード
-RANK_LEAGUE_DIAMOND,DIAMOND LEAGUE,ダイヤモンドリーグ
-RANK_RESETS_IN,RESETS IN: {0},リセットまで: {0}
-RANK_LEVEL,LVL {0},Lv {0}
-RANK_TIME_D,d,日
-RANK_TIME_H,h,時間
-RANK_TIME_M,m,分
-RANK_TIME_S,s,秒
-NAV_TOURNAMENTS,TOURNAMENTS,トーナメント
-NAV_GOLFIN_ACCOUNT,GOLFIN ACCOUNT,GOLFINアカウント
-NAV_SIGN_UP,SIGN UP,新規登録
-NAV_BOOST_STAMINA,BOOST STAMINA,スタミナブースト
-NAV_REWARDS_CENTER,REWARDS CENTER,報酬センター
-NAV_ROSTER,ROSTER,ロスター
-NAV_INVENTORY,INVENTORY,インベントリ
-BAG_EMPTY,EMPTY,空き
-CLUB_DIST,DIST,飛距離
-RESULT_SUCCESS,SUCCESS,成功
-RESULT_FAILED,FAILED,失敗
-RESULT_NEXT,NEXT,次へ
-RESULT_REPLAY,REPLAY,リプレイ
-RESULT_RETRY,RETRY,リトライ
-RESULT_RESULTS,RESULTS,リザルト
-RESULT_WINNER,WINNER,勝者
-RESULT_LOSER,LOSER,敗者
-RESULT_NEW_MATCH,NEW MATCH,新しい試合
-MATCH_VS,Vs.,VS
-MATCH_HOLE,HOLE,ホール
-MATCH_FINDING_OPPONENT,FINDING OPPONENT,対戦相手を検索中
-MATCH_DIAMOND_LEAGUE,DIAMOND LEAGE,ダイヤモンドリーグ
-MATCH_YOU,You,あなた
-MODE_ENTRY_FEE,ENTRY FEE,参加費
-MODE_REWARDS,REWARDS,報酬
-MODE_PRACTICE,PRACTICE,練習
-MODE_TOURNAMENTS,TOURNAMENTS,トーナメント
-MODE_TOURNAMENTS_TAGLINE,Be the best and earn rewards,頂点に立って報酬を手に入れよう
-MODE_TOURNAMENTS_DESC,"Enter live tournaments, play the featured holes, and climb the leaderboard before time runs out. Finish high to claim your share of the prizes — every stroke counts.",開催中のトーナメントに参加して対象ホールをプレイし、期間内にリーダーボードを駆け上がろう。上位でフィニッシュして賞品を手に入れよう。一打一打が勝負を決める。
-MODE_REWARDS_VARY,Varies by tournament,トーナメントごとに異なります
-MODE_NO_ENTRY_FEE,NO ENTRY FEE,参加費無料
-MODE_MULTIPLAYER,Multiplayer,マルチプレイ
-MODE_DRIVING_RANGE,DRIVING RANGE,ドライビングレンジ
-MODE_MISSIONS,MISSIONS,ミッション
-MODE_PRACTICE_TAGLINE,Sharpen your skills on any hole.,好きなホールで腕を磨こう。
-MODE_PRACTICE_DESC,Practice your golf skills on any course. Choose a hole and tee off at your own pace — no pressure.,好きなコースでゴルフの腕を磨こう。ホールを選んで、自分のペースでティーオフ。プレッシャーはありません。
-MODE_VERSUS_1V1_TAGLINE,1v1,1v1
-MODE_VERSUS_1V1_DESC,"Face off in fast-paced 1v1 golf matches where every shot matters. Master the course, outplay your opponent, and sink clutch putts to claim victory.",一打が勝負を分けるスピーディーな1v1マッチで対戦しよう。コースを攻略し、相手を出し抜き、勝負どころのパットを沈めて勝利をつかもう。
-MODE_DRIVING_RANGE_TAGLINE,Coming Soon — practice your drives.,近日公開 — ドライバーショットを練習しよう。
-MODE_DRIVING_RANGE_DESC,A dedicated driving range mode where you can practice long shots and experiment with different clubs.,ロングショットの練習や、さまざまなクラブを試せる専用のドライビングレンジモード。
-MODE_MISSIONS_TAGLINE,Take on 40 hole challenges.,40のホールチャレンジに挑戦しよう。
-MODE_MISSIONS_DESC,Complete special challenges and objectives to earn bonus rewards and exclusive items.,特別なチャレンジや目標を達成して、ボーナス報酬や限定アイテムを手に入れよう。
-UI_LOCKED,LOCKED,ロック
-RESULT_REPLAY_HOLE,REPLAY HOLE,ホールをリプレイ
-RANK_DAILY,DAILY,デイリー
-RANK_WEEKLY,WEEKLY,ウィークリー
-RANK_MONTHLY,MONTHLY,マンスリー
-RANK_HISTORY,HISTORY,履歴
-TOURN_FILTER_ALL,ALL,すべて
-TOURN_OPEN,OPEN,開催中
-TOURN_FILTER_PLAYING,PLAYING,プレイ中
-TOURN_FILTER_CLOSED,CLOSED,終了
-TOURN_FINISHED,FINISHED,完了
-TOURN_LIVE,LIVE,ライブ
-TOURN_CLAIM,CLAIM,受け取る
-TOURN_ENTRY,ENTRY,エントリー
-TOURN_ENTERED,ENTERED,参加済み
-TOURN_FREE_ENTRY,FREE ENTRY,参加無料
-TOURN_GOLFIN_PRESENTS,GOLFIN PRESENTS,GOLFIN提供
-TOURN_SPONSORED_BY,SPONSORED BY,スポンサー：
-TOURN_SPONSOR_PRESENTS,{0} PRESENTS,{0}提供
-TOURN_CTA_SIGN_UP,SIGN UP,エントリー
-TOURN_CTA_CONTINUE,CONTINUE,続ける
-TOURN_UPCOMING,UPCOMING,開催予定
-TOURN_ENDING,ENDING,まもなく終了
-TOURN_ENDED,ENDED,終了
-TOURN_ENDS_IN,ENDS IN: {0},終了まで: {0}
-TOURN_ENDED_PILL,ENDED,終了
-BALL_INFO_GOLFIN,"The standard Golfin ball. Perfectly balanced with no stat bonuses or penalties—reliable in any situation.",標準的なGolfinボール。ステータス補正がなく完璧にバランスが取れており、どんな状況でも安定した性能を発揮します。
-BALL_INFO_PUTT_ACE,"Designed by PUTT ACE, a name synonymous with short-game mastery, this ball delivers exceptional spin, subtle roll, and balanced power—tailored for precision play in any condition.",ショートゲームの名手として知られるPUTT ACEが設計したボール。優れたスピン、控えめなロール、バランスの取れたパワーを備え、あらゆる状況で精密なプレーを支えます。
-BALL_INFO_PAR_PERFECT,"PAR PERFECT builds the metronome of golf balls—predictable above everything else. A steady bounce and a little wind resistance, but it checks up short and won't spin much for you either.",PAR PERFECTはメトロノームのような安定性を追求するブランド。跳ね方は読みやすく風にも少し強いが、ランは短めでスピンも控えめ。
-BALL_INFO_FYLOE_SOFT,"FYLOE's Soft line is all about feel—a soft cover that grabs the face and spins hard. It checks up fast on the green, but you give away distance and a little liveliness off the bounce to get it.",FYLOEのSoftシリーズはフィーリング重視。柔らかいカバーがフェースに食いつき、強烈なスピンを生む。グリーンでは素早く止まるが、飛距離と跳ねの勢いは犠牲になる。
-BALL_INFO_ACE_ATTIRE,"ACE ATTIRE is a fashion house first and a ball maker second—this one is all swagger. Long and lively with plenty of run-out, but it gets shoved around in the wind and barely spins at all.",ACE ATTIREは本業がファッションブランドで、このボールも見た目通りの派手さ。よく飛びよく跳ねよく転がるが、風にはめっぽう弱く、スピンはほとんどかからない。
-BALL_INFO_BIRDIE_V1,"BIRDIE's V1 is the entry-level distance ball found in every pro-shop basket. It goes a little farther and holds its line in a breeze, but there is almost no feel—don't expect it to check or shape.",BIRDIE V1はどのプロショップにも並ぶ入門用のディスタンスボール。少し飛び、そよ風程度なら直進性も保つが、フィーリングは皆無で、止めることも曲げることも苦手。
-BALL_INFO_GOLFIN_MK2,"Golfin's MK2 is the house ball's distance evolution. More power, a livelier bounce and a touch more roll than the standard Golfin—paid for almost entirely in spin.",Golfin MK2は標準Golfinボールのディスタンス進化版。パワーと跳ねが増し、ランも少し伸びるが、その代償はほぼすべてスピンで支払っている。
-BALL_INFO_GF,"G&F has been making tour balls since before most of these brands existed. Rock-solid off the bounce and unbothered by wind, with modest power; it settles where it lands rather than running out, and it isn't a big spinner.",G&Fは他のブランドが生まれる前からツアーボールを作り続けてきた老舗。跳ねは安定し風にも強く、パワーは控えめ。落ちた場所に収まるタイプで、スピンは多くない。
-BALL_INFO_TIFTO,"TIFTO makes golf balls the way it makes tools—hard, functional, no frills. This one is lively off the bounce and runs a long way after landing, but it will not stop for anybody and has almost no spin.",TIFTOは工具を作るようにゴルフボールを作るブランド。硬く機能的で飾り気がない。跳ねは強くランも長いが、止まってはくれず、スピンもほとんどかからない。
-BALL_INFO_FAIRLOFT,"FAIRLOFT's Japanese engineers chase a high, soft ball flight. It cuts through the wind, lands quietly and checks hard with plenty of spin—at the cost of a little power and a dead bounce.",日本のFAIRLOFTが追い求めるのは高くて柔らかい弾道。風を切り裂き、静かに着地して強いスピンでピタリと止まるが、パワーと跳ねの勢いは少し失われる。
-BALL_INFO_FYLOE_AIM,FYLOE's Aim is a point-and-shoot ball: it holds its line through the wind better than almost anything at this price. The flip side is that it refuses to curve—spin is not on the menu.,FYLOE Aimは狙って打つだけのボール。この価格帯では随一の耐風性能で、狙った線を保つ。その裏返しとしてほとんど曲がらず、スピンは期待できない。
-BALL_INFO_CLOVER_PRO,"CLOVER PRO is the pro-shop staple with the lucky four-leaf mark. Mildly better than the default at power, bounce, wind and roll, and mildly worse at the one thing that makes a ball talk: spin.",CLOVER PROは幸運の四つ葉マークでおなじみのプロショップ定番。パワー・跳ね・耐風・ランのすべてが標準をわずかに上回り、唯一スピンだけがはっきり劣る。
-BALL_INFO_GOLFINIX,"GolfinIX is Golfin's boutique touch ball, built for scoring rather than showing off. It sits down where it lands and spins hard, with a little help in the wind; you give up the roll and a touch of bounce to get it.",GolfinIXはGolfinのブティックライン。飛ばすためではなく、スコアを作るためのボール。落ちた場所に座り込むほどのスピンと少しの耐風性を持つ代わりに、ランと跳ねの勢いを手放している。
-BALL_INFO_KLYRO,KLYRO makes technical gear for people who read wind charts for fun. This is the controlled wind ball—it holds its line in a gale with a steady bounce and checks up slightly; the price is a little spin.,KLYROは風向図を読むのが趣味という人向けのテクニカルブランド。強風でも狙った線を保ち、跳ねも安定、ランは少し短め。その代わりスピンは少し犠牲になる。
-BALL_INFO_ROYAL_SWING,"ROYAL SWING sells aggression, and this ball is the loudest thing in its catalogue. It hits hard, bounces lively and runs out after landing—but it will not shape a shot or stop on a green.",ROYAL SWINGが売るのは攻撃性で、このボールはそのカタログで最も騒がしい一品。強く飛び、よく跳ね、着地後も転がるが、球筋を曲げることもグリーンで止めることもできない。
-BALL_INFO_FAIRWAY_THREADS,"Fairway THREADS is a lifestyle label that happens to make a very good ball. Long, lively and a little steadier in wind, with a touch more run—every stat but bite, because it barely spins.",Fairway THREADSはライフスタイル系ブランドだが、ボールの出来は本物。飛んで、跳ねて、風にもやや強く、ランも少し伸びる。足りないのは食いつきだけで、スピンはほとんどかからない。
-BALL_INFO_MIREO,"MireO is the craftsman's brand, and this is its masterpiece spin ball. Maximum spin, a quiet landing and a bit of help in the wind—bought with distance, a softer bounce and a short roll.",MireOは職人のブランド。その最高傑作がこのスピンボールだ。最大スピンと静かな着地、少しの耐風性を、飛距離と跳ねの勢い、そして短いランと引き換えに手に入れている。
-BALL_INFO_CIRQ,"CIRQ builds balls for showmen—explosive off the face and just as explosive off the bounce. It runs out hard, gets genuinely wild once the wind picks up, and offers little spin control.",CIRQはショーマンのためのボールを作る。フェースを離れた瞬間も跳ねた瞬間も爆発的で、ランも長い。ただし風が出ると本当に暴れ、スピンで抑えることも難しい。
-BALL_INFO_SORALIS,"SORALIS is the eclipse brand, and this is the wind ball. It goes where you aimed no matter what the flag is doing, with a little extra power—but it cannot be shaped at all.",SORALISは日食をシンボルにしたブランド。そしてこれは風のためのボール。旗がどう揺れていようと狙った場所へ飛び、パワーも少し上乗せ。ただし球筋を曲げることはまったくできない。
-BALL_INFO_SHIMMER_G,"Shimmer G is the trophy ball—an oil-slick finish that exists to be noticed. Long, lively, steady in wind and it keeps rolling; it does everything a ball can do except stop or curve.",Shimmer Gはトロフィーのようなボール。オイルスリックの輝きは見せびらかすためにある。飛んで、跳ねて、風に強く、よく転がる。止まることと曲がること以外、ボールにできることはすべてこなす。
-ITEM_PROTIP_REPAIRKIT,Clubs will automatically use the best repair kit available when you repair them from the Clubs tab.,クラブタブから修理すると、所持している中で最も効果の高いリペアキットが自動的に使用されます。
-ITEM_INFO_REPAIRKIT_COMMON,"Essential and efficient, this Repair Kit restores up to 50% of any club's durability. Designed for quick fixes and reliable performance, it's a must have for keeping your equipment in solid shape round after round.",必需品にして効率的なリペアキット。あらゆるクラブの耐久度を最大50%回復します。手早い修理と安定した性能を追求した設計で、ラウンドを重ねても装備を万全に保つために欠かせません。
-ITEM_INFO_REPAIRKIT_RARE,"A step above the standard kit, this Rare Repair Kit restores up to 75% of any club's durability. Ideal for mid-range repairs when you need your gear back in top form.",標準キットを一段上回るレアリペアキット。あらゆるクラブの耐久度を最大75%回復します。装備を万全の状態に戻したいときの中位修理に最適です。
-ITEM_INFO_REPAIRKIT_MYTHIC,"The ultimate repair solution. This Mythic Repair Kit fully restores any club's durability to 100%. Save it for when your best gear needs a complete overhaul.",究極の修理手段。ミシックリペアキットはあらゆるクラブの耐久度を100%まで完全に回復します。とっておきの装備を万全に整えたいときのために取っておきましょう。
-TOURN_EMPTY_HEADER,No finishers yet,まだ完走者がいません
-TOURN_EMPTY_BODY,Be the first to complete every hole and top the board.,全ホールを完走して、ランキングのトップを目指しましょう。
-TOURN_NEXT_SECTION,Next,次へ
-GACHA_TICKET,TICKET,チケット
-GACHA_HISTORY,GACHA HISTORY,ガチャ履歴
-GACHA_PRIZES_TITLE,PRIZES,景品
-GACHA_TICKETS,TICKETS,チケット
-GACHA_CLUBS,CLUBS,クラブ
-GACHA_CHARACTERS,CHARACTERS,キャラクター
-GACHA_BALLS,BALLS,ボール
-GACHA_ITEMS,ITEMS,アイテム
-GACHA_BACK,BACK,戻る
-GACHA_PITY_A_RANK,Guaranteed A-rank or higher in at most,Aランク以上確定・最大
-GACHA_PITY_S_RANK,Guaranteed S-rank signal in at most,Sランク確定・最大
-GACHA_PRIZE_PREVIEW,Common/Uncommon characters or clubs may also be obtained.,コモン／アンコモンのキャラクターやクラブが排出されることもあります。
-GACHA_PULL_X1,PULL x1,1回引く
-GACHA_PULL_X10,PULL x10,10回引く
-GACHA_RULES_RATES,RULES & RATES,ルールと確率
-GACHA_SKIP,SKIP,スキップ
-GACHA_BUY,BUY,購入
-GACHA_INSUFFICIENT_TICKETS,Not enough tickets,チケットが足りません
-GACHA_COST_CHANGED,Price updated — tap again to pull,価格が更新されました。もう一度タップしてください
-GACHA_PULL_CAP,Pull limit reached for this banner,このバナーの上限に達しました
-GACHA_PAUSED,Gacha is paused. Please try again later,ガチャは一時停止中です。しばらくしてからお試しください
-GACHA_UNAVAILABLE,This banner is no longer available,このバナーは終了しました
-GACHA_DUPE_RP,+{0} RP,+{0} RP
-GACHA_CARD_PITY,Guaranteed {0} or higher within,{0}以上が確定・最大
-GACHA_CARD_PULLS,{0} pulls,{0}回
-GACHA_CARD_GUARANTEE_X10,Every 10-pull includes at least one {0},10連ごとに{0}以上が1枚確定
-GACHA_RATES_TITLE,RATES & RULES,確率とルール
-GACHA_RATES_FEATURED,FEATURED,ピックアップ
-GACHA_RATES_FULL_RULES,Full rules,詳細ルール
-GACHA_RATES_PITY,Guaranteed {0} or higher within {1} pulls,{1}回以内に{0}以上が確定
-GACHA_RATES_GUARANTEE_X10,Every 10-pull includes at least one {0},10連ごとに{0}以上が1枚確定
-GACHA_RATES_DUPE,Duplicate clubs and characters are converted to Reward Points,重複したクラブとキャラクターはリワードポイントに変換されます
-GACHA_RATES_FOOTER,Rates apply to every pull on this banner.,確率はこのバナーのすべての排出に適用されます。
-SHOP_TAB_GACHA,GACHA,ガチャ
-SHOP_TAB_STORE,STORE,ストア
-SHOP_TAB_GIFTS,GIFTS,ギフト
-SHOP_FILTER_POPULAR,POPULAR,人気
-SHOP_FILTER_OFFERS,OFFERS,オファー
-SHOP_HISTORY_COMING_SOON,Store history is coming soon.,ストア履歴は近日公開です。
-STAMINA_BUY,BUY,購入
-STAMINA_VIEW_ON_MAPS,View on Maps,マップで見る
-STAMINA_FEATURED,FEATURED,注目
-STAMINA_OPEN_NOW,OPEN NOW,営業中
-STAMINA_LOCATION,LOCATION,所在地
-STAMINA_HOURS,HOURS,営業時間
-STAMINA_SIGNATURE,SIGNATURE,シグネチャー
-STAMINA_MENU,MENU,メニュー
-STAMINA_HOUSE_SPECIAL,House special,ハウススペシャル
-STAMINA_REGION_HOKKAIDO,HOKKAIDO,北海道
-STAMINA_REGION_TOHOKU,TOHOKU,東北
-STAMINA_REGION_KANTO,KANTO,関東
-STAMINA_REGION_CHUBU,CHUBU,中部
-STAMINA_REGION_KANSAI,KANSAI,関西
-STAMINA_REGION_CHUGOKU,CHUGOKU,中国
-STAMINA_REGION_SHIKOKU,SHIKOKU,四国
-STAMINA_REGION_KYUSHU,KYUSHU,九州
-STAMINA_PREF_ALL,ALL,すべて
-STAMINA_PREF_MIE,MIE,三重
-STAMINA_PREF_SHIGA,SHIGA,滋賀
-STAMINA_PREF_KYOTO,KYOTO,京都
-STAMINA_PREF_OSAKA,OSAKA,大阪
-STAMINA_PREF_HYOGO,HYOGO,兵庫
-STAMINA_PREF_NARA,NARA,奈良
-STAMINA_PREF_WAKAYAMA,WAKAYAMA,和歌山
-RESULT_PLAY_NEXT,PLAY NEXT,次をプレイ
-TOAST_COURSE_CLEARED,COURSE CLEARED!,コースクリア！
-CHAR_BIO_JAMES,"Out of the amateur ranks, Cartwright arrives with driving distance that already turns heads at this level. The short game is still maturing, but scouts agree the foundations are tour-calibre.","アマチュア出身の新鋭カートライト。この階級では際立つ飛距離が持ち味。ショートゲームには課題を残すが、その素質はツアー級と評される。"
-CHAR_BIO_OLIVIA,"A product of long hours on the practice range, Guarinoni brings a compact, repeatable swing and exceptional tempo. Modest off the tee, but her ball-striking consistency is well beyond her years.","練習場で腕を磨いたグアリノーニ。コンパクトで再現性の高いスイングと抜群のテンポが武器。飛距離は控えめだが、ミートの安定感は年齢以上と評価が高い。"
-CHAR_BIO_RICHARD,"Twenty seasons at the top level and the power numbers have barely declined. Brenson compensates for an aging short game with course knowledge and shot selection few active players can match.","トップレベルで20シーズンを戦うブレンソン。パワーは今なお健在で、円熟のコース戦略とショット選択は現役屈指。経験が生きるベテランの代表格だ。"
-CHAR_BIO_ELIZABETH,"Schooled on championship links, Blackwood plays a tactician's game. Elite club control, disciplined course management, and a willingness to sacrifice distance for position define her rounds.","名門リンクスで研鑽を積んだブラックウッド。卓越したクラブコントロールと緻密なコースマネジメントを軸に、距離よりポジションを取る知的なゴルフを展開する。"
-CHAR_BIO_SHAE,"O'Connell's recovery statistics are simply in a category of their own. From deep rough or broken ground, she routinely salvages pars that keep rounds alive — trouble is where she does her best work.","オコンネルのリカバリー成績は他の追随を許さない。深いラフや荒れたライからも当然のようにパーを拾い、窮地でこそ真価を発揮する稀有な存在。"
-CHAR_BIO_CAMILA,"Perez plays the most aggressive tee-to-green game in her bracket. Exceptional carry distance and fearless target lines produce low rounds in bunches when the execution holds up.","同クラス屈指のアグレッシブなプレースタイルを貫くペレス。傑出したキャリーと果敢な攻めのラインが噛み合えば、爆発的なスコアメイクを見せる。"
-CHAR_BIO_GUILLERMO,"A gallery favourite, Abravanel attempts — and lands — shot shapes most professionals decline. Behind the showmanship sits an elite short game and touch regarded among the finest on tour.","ギャラリーを魅了するアブラバネル。プロでも避ける曲球を涼しい顔で決める技巧派で、その華やかさの裏にはツアー最高峰と称されるタッチがある。"
-CHAR_BIO_EAN,"Analysts struggle to name a weakness in McCormick's game — and that is precisely the point. Even numbers across the board make him the most complete development platform in his class.","マコーミックのプレーに弱点を挙げるのは難しい。全項目で均整の取れた数字を残し、同クラス随一の完成された育成素材と評される。"
-CHAR_BIO_FREDA,"The world number one by a distance. Faarlund's combination of power, touch and stamina presents no exploitable weakness, and her tournament record reads less like results than inevitability.","文句なしの世界ランキング1位、ファーランド。パワー、タッチ、スタミナの全てに付け入る隙がなく、その戦績はもはや必然と呼ぶべき水準にある。"
-CHAR_BIO_JOHAN,"Developed on wind-swept northern courses, Christofferson pairs precise iron play with remarkable endurance. Adverse conditions barely move his scoring average — a genuine bad-weather specialist.","北欧の強風コースで育ったクリストファーソン。正確なアイアンと驚異的な持久力を併せ持ち、悪天候でもスコアが崩れない悪条件のスペシャリスト。"
-CHAR_BIO_MIKE,"A former caddie who learned the game from inside the ropes, Millar is renowned for his conditioning and composure. Rarely spectacular, never rattled — and statistically strongest late in the round.","元キャディーという異色の経歴を持つミラー。豊富な運動量と冷静さに定評があり、派手さはないが終盤ほど数字を残すタイプとして知られる。"
-CHAR_BIO_ROSHANA,"Smith combines top-tier driving power with the durability to grind through brutal conditions. When tournaments turn into wars of attrition, her name is invariably on the final leaderboard.","トップクラスの飛距離と、過酷な条件を耐え抜くタフさを兼備するスミス。消耗戦となった大会では、最終リーダーボードに必ず名を残す実力者だ。"
-GAMEPLAY_SHOOT,SHOOT,打つ
-GAMEPLAY_STRAIGHT,STRAIGHT,ストレート
-GAMEPLAY_FADE,FADE,フェード
-GAMEPLAY_DRAW,DRAW,ドロー
-GAMEPLAY_SHOT_VIEW,SHOT VIEW,ショット画面
-MAPVIEW_TO_PIN,to pin {0},ピンまで {0}
-MAPVIEW_OUT_OF_RANGE,OUT OF RANGE,射程外
-MAPVIEW_MAX_HINT,{0} max {1} — ball lands at the red line,{0}の最大 {1} — ボールは赤い線に着地
-LANDING_FAIRWAY,FAIRWAY,フェアウェイ
-LANDING_GREEN,GREEN,グリーン
-LANDING_FRINGE,FRINGE,カラー
-LANDING_SEMIROUGH,SEMI-ROUGH,セミラフ
-LANDING_ROUGH,ROUGH,ラフ
-LANDING_BUNKER,BUNKER,バンカー
-LANDING_WATER,WATER,ウォーター
-LANDING_OB,OB,OB
-INGAME_SFX_LABEL,SOUND,サウンド
-INGAME_PLAYING,PLAYING,プレイ中
-INGAME_BACK,BACK,戻る
-INGAME_QUIT,QUIT,やめる
-INGAME_QUIT_CONFIRM_TITLE,ARE YOU SURE?,本当によろしいですか？
-INGAME_QUIT_CONFIRM_BODY,YOU WILL NOT GET ANY REWARDS WHEN QUITTING.,途中で終了すると報酬は獲得できません。
-INV_TAB_CLUBS,CLUBS,クラブ
-INV_TAB_BAGS,BAGS,バッグ
-INV_TAB_BALLS,BALLS,ボール
-INV_TAB_ITEMS,ITEMS,アイテム
-CLUB_FILTER_DRIVERS,DRIVERS,ドライバー
-CLUB_FILTER_WOODS,WOODS,ウッド
-CLUB_FILTER_IRONS,IRONS,アイアン
-CLUB_FILTER_WEDGES,WEDGES,ウェッジ
-CLUB_FILTER_PUTTERS,PUTTERS,パター
-ROSTER_STARTER_INSTRUCTION,"CHOOSE YOUR STARTING CHARACTER. YOU WILL BE ABLE TO ACQUIRE NEW CHARACTERS THROUGHOUT THE GAME.",スタートキャラクターを選んでください。新しいキャラクターはゲームを進めながら獲得できます。
-ROSTER_STARTER_CONFIRM_TITLE,YOU ARE STARTING THE GAME WITH:,このキャラクターでゲームを開始します:
-ROSTER_STARTER_BACK,BACK,戻る
-ROSTER_LOCKED_ACQUIRE,"ACQUIRE THIS CHARACTER IN THE STORE OR AS A PRIZE TO UNLOCK IT.",このキャラクターはショップまたは報酬で獲得するとアンロックされます。
-CHAR_NAME_JAMES,James,ジェームズ
-CHAR_LASTNAME_JAMES,Cartwright,カートライト
-CHAR_NAME_OLIVIA,Olivia,オリビア
-CHAR_LASTNAME_OLIVIA,Guarinoni,グアリノーニ
-CHAR_NAME_RICHARD,Richard,リチャード
-CHAR_LASTNAME_RICHARD,Brenson,ブレンソン
-CHAR_NAME_ELIZABETH,Elizabeth,エリザベス
-CHAR_LASTNAME_ELIZABETH,Blackwood,ブラックウッド
-CHAR_NAME_SHAE,Shae,シェイ
-CHAR_LASTNAME_SHAE,O'Connell,オコンネル
-CHAR_NAME_CAMILA,Camila,カミラ
-CHAR_LASTNAME_CAMILA,Perez,ペレス
-CHAR_NAME_GUILLERMO,Guillermo,ギジェルモ
-CHAR_LASTNAME_GUILLERMO,Abravanel,アブラバネル
-CHAR_NAME_EAN,Ean,イアン
-CHAR_LASTNAME_EAN,McCormick,マコーミック
-CHAR_NAME_FREDA,Freda,フレーダ
-CHAR_LASTNAME_FREDA,Faarlund,ファールンド
-CHAR_NAME_JOHAN,Johan,ヨハン
-CHAR_LASTNAME_JOHAN,Christofferson,クリストファーソン
-CHAR_NAME_MIKE,Mike,マイク
-CHAR_LASTNAME_MIKE,Millar,ミラー
-CHAR_NAME_ROSHANA,Roshana,ロシャーナ
-CHAR_LASTNAME_ROSHANA,Smith,スミス
+HOME_MAINTENANCE_TITLE,MAINTENANCE NOTICE,メンテナンス情報,true
+HOME_MAINTENANCE_BODY,Scheduled server maintenance: 2025/12/31\nThe game will not be available for a short time\nduring maintenance.,定期サーバーメンテナンス: 2025/12/31\nメンテナンス中はゲームをご利用いただけません。,true
+HOME_DEMO_WELCOME_TITLE,WELCOME TO THE DEMO,デモ版へようこそ,true
+HOME_DEMO_WELCOME_BODY,Thanks for trying this early GOLFIN preview!\nMuch more is on the way.\nStay tuned for great things to come.,GOLFINデモ版をお試しいただき\nありがとうございます。\n今後の展開にご期待ください！,true
+HOME_GPS_TITLE,GOLFIN·GPS,ゴルフィン・GPS,true
+HOME_GPS_SUBTITLE,CHECK-IN WITH GPS,GPSでチェックイン,true
+HOME_GPS_DESC,EARN MORE POINTS TO POWER UP!,ポイントを稼いでパワーアップ！,true
+HOME_NEXT_HOLE,NEXT HOLE,次のホール,true
+HOME_COURSE_NAME,Lomond Country Club  - Hole 5,ロモンドカントリークラブ - ホール5,true
+HOME_PLAY,PLAY,プレイ,true
+HOME_NAV_HOME,HOME,ホーム,true
+HOME_NAV_SHOP,SHOP,ショップ,true
+HOME_NAV_PLAY,PLAY,プレイ,true
+HOME_NAV_BAG,BAG,バッグ,true
+HOME_NAV_MORE,MORE,その他,true
+HOME_SETTINGS,SETTINGS,設定,true
+HOLE_LOMOND_1,Lomond Country Club  - Hole 1,ロモンドカントリークラブ  - ホール1,true
+HOLE_LOMOND_2,Lomond Country Club  - Hole 2,ロモンドカントリークラブ  - ホール2,true
+HOLE_LOMOND_3,Lomond Country Club  - Hole 3,ロモンドカントリークラブ  - ホール3,true
+HOLE_LOMOND_4,Lomond Country Club  - Hole 4,ロモンドカントリークラブ  - ホール4,true
+HOLE_LOMOND_5,Lomond Country Club  - Hole 5,ロモンドカントリークラブ  - ホール5,true
+HOLE_LOMOND_6,Lomond Country Club  - Hole 6,ロモンドカントリークラブ  - ホール6,true
+HOLE_LOMOND_7,Lomond Country Club  - Hole 7,ロモンドカントリークラブ  - ホール7,true
+HOLE_LOMOND_8,Lomond Country Club  - Hole 8,ロモンドカントリークラブ  - ホール8,true
+HOLE_LOMOND_9,Lomond Country Club  - Hole 9,ロモンドカントリークラブ  - ホール9,true
+HOLE_LOMOND_10,Lomond Country Club  - Hole 10,ロモンドカントリークラブ  - ホール10,true
+HOLE_LOMOND_11,Lomond Country Club  - Hole 11,ロモンドカントリークラブ  - ホール11,true
+HOLE_LOMOND_12,Lomond Country Club  - Hole 12,ロモンドカントリークラブ  - ホール12,true
+HOLE_LOMOND_13,Lomond Country Club  - Hole 13,ロモンドカントリークラブ  - ホール13,true
+HOLE_LOMOND_14,Lomond Country Club  - Hole 14,ロモンドカントリークラブ  - ホール14,true
+HOLE_LOMOND_15,Lomond Country Club  - Hole 15,ロモンドカントリークラブ  - ホール15,true
+HOLE_LOMOND_16,Lomond Country Club  - Hole 16,ロモンドカントリークラブ  - ホール16,true
+HOLE_LOMOND_17,Lomond Country Club  - Hole 17,ロモンドカントリークラブ  - ホール17,true
+HOLE_LOMOND_18,Lomond Country Club  - Hole 18,ロモンドカントリークラブ  - ホール18,true
+SETTINGS_PROFILE,User Profile,ユーザープロフィール,true
+SETTINGS_USERNAME,Username,ユーザー名,true
+SETTINGS_NAME,Name,名前,true
+SETTINGS_CHANGE,CHANGE,変更,true
+SETTINGS_SOUND,Sound Settings,サウンド設定,true
+SETTINGS_MUSIC,Music,ミュージック,true
+SETTINGS_MUSICVOLUME,80,80,true
+SETTINGS_SFX,SFX,効果音,true
+SETTINGS_SFXVOLUME,80,80,true
+SETTINGS_GRAPHICS,Graphics,グラフィック,true
+SETTINGS_QUALITY_AUTO,Auto,自動,true
+SETTINGS_QUALITY_LOW,Low,低,true
+SETTINGS_QUALITY_MID,Medium,中,true
+SETTINGS_QUALITY_HIGH,High,高,true
+SETTINGS_CONTROLS,Controls,操作方法,true
+SETTINGS_CONTROLS_FLICK,Flick,フリック,true
+SETTINGS_CONTROLS_PENDULUM,Pendulum,振り子,true
+SETTINGS_CONTROLS_TAPTIMING,Tap Timing,タップタイミング,true
+SETTINGS_CONTROLS_FREESWING,Free Swing,フリースイング,true
+SETTINGS_LANG,Language,言語,true
+SETTINGS_ENG,English,English,true
+SETTINGS_JAP,日本語,日本語,true
+SETTINGS_TERMS,Terms of Use,利用規約,true
+SETTINGS_PRIVACY,Privacy Policy,プライバシーポリシー,true
+SETTINGS_FAQ,FAQ,よくある質問,true
+SETTINGS_ABOUT,About,アバウト,true
+SETTINGS_CONTACT,Contact Form,お問い合わせ,true
+SETTINGS_LOGOUT,Log Out,ログアウト,true
+SETTINGS_CLOSE,CLOSE,閉じる,true
+SETTINGS_ABOUT_APP_VERSION,APP VERSION,アプリバージョン,true
+SETTINGS_ABOUT_LICENCES,LICENCES,ライセンス,true
+ROSTER_TITLE,ROSTER,ロスター,true
+ROSTER_STRENGTH,STRENGTH,ストレングス,true
+ROSTER_CLUB_CONTROL,CLUB CONTROL,クラブコントロール,true
+ROSTER_RECOVERY,RECOVERY,リカバリー,true
+ROSTER_STAMINA,STAMINA,スタミナ,true
+ROSTER_LEVEL_UP,LEVEL UP,レベルアップ,true
+ROSTER_BOOST,BOOST,ブースト,true
+ROSTER_BIO,BIO,バイオ,true
+ROSTER_COMPARE,COMPARE,比較,true
+ROSTER_SELECT,SELECT,選択,true
+ROSTER_SELECTED,SELECTED,選択済み,true
+ROSTER_SWAP,SWAP,交換,true
+MODAL_NEXT_LEVEL,NEXT LEVEL,次のレベル,true
+MODAL_COST,COST,コスト,true
+MODAL_REWARD,REWARD,報酬,true
+MODAL_LEVEL_UP,LEVEL UP,レベルアップ,true
+MODAL_AVAILABLE_SP,AVAILABLE SP,利用可能SP,true
+MODAL_RESET,RESET,リセット,true
+MODAL_CANCEL,CANCEL,キャンセル,true
+MODAL_CONFIRM,CONFIRM,確認,true
+MODAL_SP_SUFFIX,SP,SP,true
+COMPARE_EMPTY_PROMPT,TAP ON ANY OTHER CHARACTER TO COMPARE STATS,他のキャラクターをタップしてステータスを比較,true
+COMPARE_CLOSE,CLOSE COMPARE,比較を閉じる,true
+RARITY_COMMON,COMMON,コモン,true
+RARITY_UNCOMMON,UNCOMMON,アンコモン,true
+RARITY_RARE,RARE,レア,true
+RARITY_MYTHIC,MYTHIC,ミシック,true
+RARITY_LEGENDARY,LEGENDARY,レジェンダリー,true
+RARITY_SUPREME,SUPREME,スプリーム,true
+CLUB_POWER,POWER,パワー,true
+CLUB_ACCURACY,ACCURACY,アキュラシー,true
+CLUB_LIE_RESISTANCE,LIE RESIST.,ライ耐性,true
+CLUB_LOFT,LOFT,ロフト,true
+CLUB_DURABILITY,DURABILITY,耐久性,true
+CLUB_DISTANCE,DISTANCE,飛距離,true
+CLUB_LEVEL_UP,LEVEL UP,レベルアップ,true
+CLUB_REPAIR,REPAIR,修理,true
+CLUB_COMPARE,COMPARE,比較,true
+CLUB_EQUIP,EQUIP,装備,true
+CLUB_EQUIPPED,EQUIPPED,装備済み,true
+CLUB_INFO,INFO,情報,true
+CLUB_IN_BAG,IN BAG,バッグ,true
+CLUB_COMPARE_EMPTY_PROMPT,TAP ON ANY OTHER CLUB TO COMPARE STATS,他のクラブをタップしてステータスを比較,true
+CLUB_CLOSE_COMPARE,CLOSE COMPARE,比較を閉じる,true
+CLUB_SWAP,SWAP,交換,true
+CLUB_MODAL_LEVEL_UP,Level Up,レベルアップ,true
+CLUB_MODAL_NEXT_LEVEL,Next Level,次のレベル,true
+CLUB_MODAL_COST,Cost,コスト,true
+CLUB_MODAL_REWARD,Reward,報酬,true
+CLUB_MODAL_SP_SUFFIX,SP,SP,true
+CLUB_MODAL_AVAILABLE_SP,Available SP,利用可能SP,true
+CLUB_MODAL_RESET,Reset,リセット,true
+CLUB_MODAL_CANCEL,Cancel,キャンセル,true
+CLUB_MODAL_CONFIRM,Confirm,確認,true
+CLUB_STAT_POWER,Power,パワー,true
+CLUB_STAT_ACCURACY,Accuracy,精度,true
+CLUB_STAT_LIE_RES,Lie Res.,ライ抵抗,true
+CLUB_STAT_LOFT_FIXED,Loft (Fixed),ロフト（固定）,true
+CLUB_STAT_DURABILITY,Durability,耐久性,true
+CLUB_MODAL_MAX,MAX,MAX,true
+CLUB_REPAIR_NO_KITS,You don't own any Repair Kits.,修理キットを持っていません。,true
+CLUB_REPAIR_FULL,This club is at full durability.,このクラブは最大耐久性です。,true
+CLUB_REPAIR_TOAST,{0} was repaired. Durability {1} → {2}.,{0}が修理されました。耐久性 {1} → {2}。,true
+BAG_CHOOSE_TITLE,Choose a Bag,バッグを選択,true
+BAG_LOCKED,Locked,ロック,true
+BAG_FULL_TOAST,Bag {0} is full ({1}/{1}). Remove a club first.,バッグ{0}は満杯です（{1}/{1}）。先にクラブを外してください。,true
+BAG_EQUIPPED_TOAST,{0} equipped to Bag {1}.,{0}をバッグ{1}に装備しました。,true
+BAG_UNEQUIPPED_TOAST,{0} removed from Bag {1}.,{0}をバッグ{1}から外しました。,true
+BALL_OWNED,OWNED,所持,true
+BALL_INFO,INFO,情報,true
+BALL_POWER,POWER,パワー,true
+BALL_REBOUND,REBOUND,リバウンド,true
+BALL_WIND_RESISTANCE,WIND RES.,耐風,true
+BALL_ROLL,ROLL,ロール,true
+BALL_SPIN,SPIN,スピン,true
+BALL_COMPARE_EMPTY_PROMPT,Select a ball to compare,比較するボールを選んでください,true
+ITEM_RESTORES,RESTORES,回復,true
+ITEM_PRO_TIP,*PRO TIP,*プロのコツ,true
+ITEM_INFO,INFO,情報,true
+ITEM_USE,USE,使う,true
+ITEM_COMPARE,COMPARE,比較,true
+ITEM_OWNED,OWNED,所持数,true
+ITEM_DURABILITY,DURABILITY,耐久度,true
+ITEM_SELECT_CLUB,SELECT CLUB,クラブを選択,true
+ITEM_USE_REPAIR_KIT,USE REPAIR KIT,修理キットを使う,true
+ITEM_CANCEL,CANCEL,キャンセル,true
+BAG_EQUIPPED,EQUIPPED,装備中,true
+BAG_EQUIP,EQUIP,装備,true
+BAG_SWAP,SWAP,交換,true
+BAG_SWAP_CLUB,SWAP CLUB,クラブを交換,true
+BAG_EQUIP_CLUB,EQUIP CLUB,クラブを装備,true
+BAG_EQUIP_ACTION,EQUIP,装備,true
+BAG_CANCEL,CANCEL,キャンセル,true
+HOLE_LOMOND_1_DESC,The right side is wide; aim the <color=#EEDC9A>tee shot</color> at the <color=#EEDC9A>sloping area in the centre</color> of the <color=#EEDC9A>two-tiered fairway</color>. The landing spot of the <color=#EEDC9A>second shot</color> is crucial.,ティーショットは右側が広く、二段のフェアウェイセンターの傾斜部が狙い目です。2打目の落とし所が重要。,true
+HOLE_LOMOND_2_DESC,"A nearly straight hole. The <color=#EEDC9A>fairway is tight on both sides</color> — play the <color=#EEDC9A>tee shot</color> carefully. The area <color=#EEDC9A>behind the green</color> is also tight, so beware.",ほぼストレートなホール。左右が狭いのでティーショットは慎重に。グリーン奥は狭いので注意。,true
+HOLE_LOMOND_3_DESC,"A short par-4. <color=#EEDC9A>Both sides of the fairway are tight</color>, so a reliable <color=#EEDC9A>tee shot</color> is essential. Watch the area <color=#EEDC9A>behind the green</color>, which also narrows.",距離の短いミドルホール。左右ともに狭いので確実なティーショットが必要とされるホール。グリーン奥も狭いので注意。,true
+HOLE_LOMOND_4_DESC,"The shortest par-3 on the course. The green slopes from <color=#EEDC9A>right to left</color>, so attacking from the <color=#EEDC9A>right side</color> is best. Missing into the <color=#EEDC9A>slope below the green's left edge</color> spells trouble.",最も短いショートホール。グリーン右から傾斜の為、右サイドから攻めるのがベスト。グリーン左斜面下に落ちると苦戦します。,true
+HOLE_LOMOND_5_DESC,"A long par-4. Aim the <color=#EEDC9A>tee shot</color> at the <color=#EEDC9A>left hillside</color>. The fairway is wide — swing freely. From the <color=#EEDC9A>approach</color>, beware the <color=#EEDC9A>pond left of the green</color>.",距離の長いミドルホール。ティーショットは左山側狙い。フェアウェイは広いので思い切って飛ばして下さい。セカンドからはグリーン左側の池に注意。,true
+HOLE_LOMOND_6_DESC,A par-3 over water. Don't force it — aim for the <color=#EEDC9A>centre of the green</color>. The <color=#EEDC9A>pond</color> is a <color=#EEDC9A>lateral water hazard</color>.,池越えのショートホール。無理をせずグリーン中央狙いです。池はラテラルウォーターハザード。,true
+HOLE_LOMOND_7_DESC,"The signature <color=#EEDC9A>valley</color>-carry hole. With the valley waiting ahead, longer hitters should choose their <color=#EEDC9A>club carefully</color>. The green is split into <color=#EEDC9A>two tiers left and right</color> — landing on the <color=#EEDC9A>same level as the pin</color> is the key.",名物谷越えホール。前方に谷がある為、距離の出る人はクラブ選択を慎重に。グリーンも左右で二段になっている為、ピン位置と同じ面に乗せるのがカギ。,true
+HOLE_LOMOND_8_DESC,"A par-5 <color=#EEDC9A>dogleg right</color>. Aim the <color=#EEDC9A>tee shot</color> just <color=#EEDC9A>left of fairway centre</color>. The <color=#EEDC9A>fairway narrows on both sides</color> from the second shot on, so playing it safe is wise. Long hitters can <color=#EEDC9A>reach the green in two</color>.",右ドッグレッグのロングホール。ティーショットはフェアウェイセンターやや左狙い。セカンド以降は左右が狭いので手堅くきざむのが無難。距離の出る人はオン可能なホール。,true
+HOLE_LOMOND_9_DESC,"A par-4 with a <color=#EEDC9A>wide fairway</color>. The <color=#EEDC9A>approach plays uphill</color>, so choose your <color=#EEDC9A>club carefully</color>.",フェアウェイの広いミドルホール。セカンドショットから打ち上げとなるのでクラブ選択を慎重に。,true
+HOLE_LOMOND_10_DESC,A par-4 <color=#EEDC9A>dogleg left</color>. Aim the <color=#EEDC9A>tee shot</color> at the <color=#EEDC9A>left hillside</color>. The <color=#EEDC9A>approach plays downhill</color> — judge the distance and club choice carefully.,左ドッグレッグのミドルホール。ティーショットは左山側狙い。セカンドからは打ち下ろしとなるので距離感とクラブ選択は慎重に。,true
+HOLE_LOMOND_11_DESC,A <color=#EEDC9A>downhill</color> par-3. Both sides of the green and the area behind it are <color=#EEDC9A>tight</color> — attacking from <color=#EEDC9A>short of the green</color> is the play.,打ち下ろしのショートホール。左右とグリーン奥が狭く、手前から攻めて行くのがポイント。,true
+HOLE_LOMOND_12_DESC,"An <color=#EEDC9A>uphill</color> par-4. The <color=#EEDC9A>tee shot</color> from the front tee isn't difficult, but the approach plays uphill — choose your <color=#EEDC9A>club carefully</color>.",打ち上げのミドルホール。フロントティからのティーショットは難しくないが、セカンドから打ち上げとなっているのでクラブ選択は慎重に。,true
+HOLE_LOMOND_13_DESC,"A par-5 <color=#EEDC9A>dogleg left</color>. The entire <color=#EEDC9A>left side is OB</color>, so aim the <color=#EEDC9A>tee shot</color> at the centre. A <color=#EEDC9A>pond guards the left of the green</color>, so play the second shot safely down the centre and decide the hole on your <color=#EEDC9A>third</color>.",左ドッグレッグのロングホール。左は全てOBとなっている為、ティーショットはセンター狙いで行くと良い。セカンドからはグリーン左が池になっている為、セカンドもセンター狙いに確実にきざんで3打目勝負。,true
+HOLE_LOMOND_14_DESC,"A downhill par-4. The <color=#EEDC9A>valley sits left</color> and a <color=#EEDC9A>pond sits right</color>, so aim at the <color=#EEDC9A>right side</color> of the <color=#EEDC9A>two-tiered fairway</color>. Take <color=#EEDC9A>one extra club</color> for the approach.",打ち下ろしのミドルホール。左が谷、右は池になっている為、二段フェアウェイの右狙い。セカンドは1クラブ大きいクラブ選択を。,true
+HOLE_LOMOND_15_DESC,"An <color=#EEDC9A>uphill</color> par-3. The green is hidden from the tee, making distance tough to judge. Aiming at the <color=#EEDC9A>left side</color> works well. Beware the <color=#EEDC9A>large bunker fronting the green</color>.",打ち上げのショートホール。グリーン面が見えない為、距離感が難しい。左サイド狙いで行くと良い。手前の大きなバンカーは要注意。,true
+HOLE_LOMOND_16_DESC,"A short par-4. <color=#EEDC9A>Both sides of the fairway are tight</color>, so a reliable <color=#EEDC9A>tee shot</color> is essential. The area <color=#EEDC9A>behind the green</color> is also tight, so beware.",距離の短いミドルホール。左右ともに狭いので確実なティーショットが必要とされる。グリーン奥も狭いので注意。,true
+HOLE_LOMOND_17_DESC,"Beware the <color=#EEDC9A>pond right of the tee shot landing area</color>. Aiming just <color=#EEDC9A>left of centre</color> works well. The approach plays <color=#EEDC9A>uphill</color>, so choose your <color=#EEDC9A>club carefully</color>.",ティーショットは右に池があるので注意。センターより左狙いで行くと良い。セカンドからは打ち上げになっている為、クラブ選択を慎重に。,true
+HOLE_LOMOND_18_DESC,"A par-5 <color=#EEDC9A>dogleg right</color>. Aim the <color=#EEDC9A>tee shot</color> just <color=#EEDC9A>left of fairway centre</color>. Before your <color=#EEDC9A>second shot</color>, check the position of the group ahead to avoid hitting into them. With a <color=#EEDC9A>pond on the right</color>, aiming a touch left is the play.",右ドッグレッグのロングホール。ティーショットはセンター左狙い。セカンドショットの際、前の組の位置を確認し、打ち込みの無いよう注意して下さい。右サイドに池がある為、左目狙いが良い。,true
+tourn.kasumigaseki,Kasumigaseki Open,霞ヶ関オープン,true
+tourn.hirono,Hirono Invitational,廣野インビテーショナル,true
+tourn.lomond,Lomond Championship,ロモンドチャンピオンシップ,true
+tourn.gotemba,Gotemba Masters,御殿場マスターズ,true
+tourn.kisarazu,Kisarazu Cup,木更津カップ,true
+tourn.kawana,Kawana Fuji Open,川奈富士オープン,true
+tourn.venue.kasumigaseki,Kasumigaseki Country Club · 18 Holes,霞ヶ関カントリー倶楽部 · 18ホール,true
+tourn.venue.hirono,Hirono Golf Club · 18 Holes,廣野ゴルフ倶楽部 · 18ホール,true
+tourn.venue.lomond,Lomond Country Club · 18 Holes,ロモンドカントリークラブ · 18ホール,true
+tourn.venue.gotemba,Taiheyo Club Gotemba · 18 Holes,太平洋クラブ御殿場 · 18ホール,true
+tourn.venue.kisarazu,Kisarazu Higashi CC · 18 Holes,木更津東カントリークラブ · 18ホール,true
+tourn.venue.kawana,Kawana Hotel Golf Course · 18 Holes,川奈ホテルゴルフコース · 18ホール,true
+tourn.venue.holes_suffix,Holes,ホール,true
+tourn.rules.label,RULES,ルール,true
+tourn.rules.max_players,MAX PLAYERS: Unlimited,最大参加人数：無制限,true
+tourn.rules.divisions,DIVISIONS: Level based,ディビジョン：レベル別,true
+tourn.rules.per_division,PLAYERS PER DIVISION: 100,1ディビジョン：100人,true
+tourn.rules.gear,GEAR :  Supplied by GOLFIN,ギア：GOLFIN提供,true
+tourn.rules.characters,CHARACTERS:  Unrestricted,キャラクター：制限なし,true
+tourn.rules.max_players_n,MAX PLAYERS: {0},最大参加人数：{0}人,true
+tourn.rules.divisions_open,DIVISIONS: Open,ディビジョン：オープン,true
+tourn.rules.divisions_level,DIVISIONS: Level based,ディビジョン：レベル別,true
+tourn.rules.divisions_rarity,DIVISIONS: Rarity band,ディビジョン：レアリティ別,true
+tourn.rules.per_division_n,PLAYERS PER DIVISION: {0},1ディビジョン：{0}人,true
+tourn.rules.gear_own,GEAR: Own clubs,ギア：自分のクラブ,true
+tourn.rules.gear_own_max,GEAR: Own clubs (up to {0}),ギア：自分のクラブ（{0}まで）,true
+tourn.rules.gear_supplied,GEAR: Supplied by GOLFIN,ギア：GOLFIN提供,true
+tourn.rules.chars_rarity_band,CHARACTERS: {0},キャラクター：{0},true
+tourn.rules.chars_level_band,CHARACTERS: {0},キャラクター：{0},true
+tourn.rules.chars_rarity_level_band,CHARACTERS: {0} · {1},キャラクター：{0}・{1},true
+tourn.entry.denied.char_rarity,Your character is outside this tournament’s rarity range ({0}),このトーナメントのレアリティ条件（{0}）を満たしていません,true
+tourn.entry.denied.char_level,Your character is outside this tournament’s level range ({0}),このトーナメントのレベル条件（{0}）を満たしていません,true
+tourn.entry.denied.club_rarity,Your bag has a club above the {0} limit,バッグに{0}を超えるクラブがあります,true
+tourn.entry.denied.full,This tournament is full ({0} players),このトーナメントは満員です（{0}人）,true
+tourn.entry.denied.generic,You cannot enter this tournament,このトーナメントには参加できません,true
+tourn.denied.head.char_rarity,YOUR CHARACTER IS OUTSIDE THIS TOURNAMENT’S RARITY RANGE.,このトーナメントのレアリティ条件を満たしていません。,true
+tourn.denied.head.char_level,YOUR CHARACTER IS OUTSIDE THIS TOURNAMENT’S LEVEL RANGE.,このトーナメントのレベル条件を満たしていません。,true
+tourn.denied.head.club_rarity,YOUR BAG HAS A CLUB ABOVE THIS TOURNAMENT’S LIMIT.,バッグに制限を超えるクラブがあります。,true
+tourn.denied.head.multiple,YOU DO NOT MEET THIS TOURNAMENT’S REQUIREMENTS.,このトーナメントの参加条件を満たしていません。,true
+tourn.denied.head.full,THIS TOURNAMENT IS FULL.,このトーナメントは満員です。,true
+tourn.denied.head.generic,YOU CANNOT ENTER THIS TOURNAMENT.,このトーナメントには参加できません。,true
+tourn.denied.req.rarity_min,MINIMUM REQUIREMENT:,最低条件：,true
+tourn.denied.req.rarity_max,MAXIMUM ALLOWED:,上限：,true
+tourn.denied.req.level_min,MINIMUM LEVEL:,最低レベル：,true
+tourn.denied.req.level_max,MAXIMUM LEVEL:,最高レベル：,true
+tourn.denied.req.club_max,MAXIMUM CLUB RARITY:,クラブレアリティ上限：,true
+tourn.denied.req.full_cap,MAXIMUM PLAYERS:,最大参加人数：,true
+tourn.denied.back,BACK,戻る,true
+tourn.denied.head.insufficient,YOU DO NOT HAVE ENOUGH REWARD POINTS.,リワードポイントが足りません。,true
+tourn.denied.head.offline,A CONNECTION IS REQUIRED TO ENTER.,参加にはインターネット接続が必要です。,true
+tourn.denied.head.unavailable,THIS TOURNAMENT IS NO LONGER AVAILABLE.,このトーナメントは終了しました。,true
+tourn.denied.head.failed,ENTRY COULD NOT BE COMPLETED.,参加手続きを完了できませんでした。,true
+tourn.denied.req.entry_fee,ENTRY FEE:,参加費：,true
+tourn.denied.req.your_balance,YOUR BALANCE:,所持ポイント：,true
+AUTH_LOGIN_TITLE,LOGIN WITH EMAIL,メールアドレスでログイン,true
+AUTH_LOGIN_EMAIL_LABEL,EMAIL,メールアドレス,true
+AUTH_LOGIN_PASSWORD_LABEL,PASSWORD,パスワード,true
+AUTH_LOGIN_SERVICE_HEADER,LOGIN WITH A SERVICE,他のサービスでログイン,true
+AUTH_LOGIN_EMAIL_PLACEHOLDER,Email,メール,true
+AUTH_LOGIN_PASSWORD_PLACEHOLDER,Password,パスワード,true
+AUTH_LOGIN_FORGOT,Forgot Password?,パスワードを忘れた方,true
+AUTH_LOGIN_BUTTON,LOGIN,ログイン,true
+AUTH_LOGIN_GOOGLE,Login with Google,Googleでログイン,true
+AUTH_LOGIN_APPLE,Login with Apple,Appleでログイン,true
+AUTH_LOGIN_OR,Or,または,true
+AUTH_LOGIN_NO_ACCOUNT,No account?  <color=#22B800><b>Create an account</b></color>,アカウントをお持ちでないですか？  <color=#22B800><b>アカウントを作成</b></color>,true
+AUTH_LOGIN_CREATE,Create Account,アカウント作成,true
+AUTH_LOGIN_CANCEL,CANCEL,キャンセル,true
+AUTH_CREATE_USERNAME_TITLE,CREATE USERNAME,ユーザー名を作成,true
+AUTH_CREATE_USERNAME_LABEL,USERNAME,ユーザー名,true
+AUTH_CREATE_USERNAME_HINT,"3–20 characters, letters/numbers/underscore",3〜20文字、英数字とアンダースコアが使えます,true
+AUTH_CREATE_USERNAME_BODY,Please choose a username.\n\nYour username is public and used across all Golfin services to interact with the community.\n\nYour username can only contain letters and numbers.,ユーザー名を決めてください。\n\nユーザー名は公開され、Golfinのすべてのサービスでコミュニティとの交流に使用されます。\n\nユーザー名には英数字のみ使用できます。,true
+AUTH_CREATE_USERNAME_PLACEHOLDER,Username,ユーザー名,true
+AUTH_CREATE_USERNAME_BUTTON,CREATE,作成,true
+AUTH_CREATE_USERNAME_CANCEL,CANCEL,キャンセル,true
+AUTH_SIGNUP_TITLE,SIGN UP WITH EMAIL,メールアドレスで登録,true
+AUTH_SIGNUP_EMAIL_LABEL,EMAIL,メールアドレス,true
+AUTH_SIGNUP_PASSWORD_LABEL,PASSWORD,パスワード,true
+AUTH_SIGNUP_SERVICE_HEADER,SIGN UP WITH  A SERVICE,他のサービスで登録,true
+AUTH_SIGNUP_EMAIL_PLACEHOLDER,Email,メール,true
+AUTH_SIGNUP_PASSWORD_PLACEHOLDER,Password,パスワード,true
+AUTH_SIGNUP_BUTTON,CREATE,作成,true
+AUTH_SIGNUP_GOOGLE,Sign up with Google,Googleで登録,true
+AUTH_SIGNUP_APPLE,Sign up with Apple,Appleで登録,true
+AUTH_SIGNUP_OR,Or,または,true
+AUTH_SIGNUP_HAVE_ACCOUNT,"If you already have an account, <color=#22b800><b>login here</b></color>",すでにアカウントをお持ちの方は、<color=#22b800><b>こちらからログイン</b></color>,true
+AUTH_SIGNUP_LOGIN,Login Here,こちらからログイン,true
+AUTH_SIGNUP_CANCEL,CANCEL,キャンセル,true
+AUTH_SIGNUP_RULE_LEN8,Must contain 8 characters,8文字以上必要です,true
+AUTH_SIGNUP_RULE_LOWER,Must contain one lowercase letter,小文字を1文字以上含めてください,true
+AUTH_SIGNUP_RULE_UPPER,Must contain one uppercase letter,大文字を1文字以上含めてください,true
+AUTH_SIGNUP_RULE_DIGIT,Must contain one number,数字を1文字以上含めてください,true
+AUTH_SIGNUP_RULE_SPECIAL,Must contain one special character,記号を1文字以上含めてください,true
+AUTH_EMAIL_CONF_TITLE,EMAIL CONFIRMATION,メール確認,true
+AUTH_EMAIL_CONF_BODY,"A confirmation email has been sent to your inbox.\n\nPlease check your email and click the confirmation link to verify your account.\n\nRemember to check your spam folder.\n\nIf you didn't receive the email, please click the button below.",確認メールを受信トレイに送信しました。\n\nメールを確認し、記載されたリンクをクリックしてアカウントを認証してください。\n\n迷惑メールフォルダもご確認ください。\n\nメールが届かない場合は、下のボタンをクリックしてください。,true
+AUTH_EMAIL_CONF_INSTRUCTION,"Once you have confirmed your email, please go back to the login screen.",メールの確認が完了したら、ログイン画面に戻ってください。,true
+AUTH_EMAIL_CONF_OPEN,Open Email App,メールアプリを開く,true
+AUTH_EMAIL_CONF_RESEND,RESEND,再送,true
+AUTH_EMAIL_CONF_BACK,LOGIN,ログイン,true
+AUTH_USERNAME_TAKEN,Username already taken,このユーザー名は既に使用されています,true
+AUTH_LOGIN_ERR_MISSING_FIELDS,Enter your email and password.,メールアドレスとパスワードを入力してください。,true
+AUTH_LOGIN_ERR_MISSING_EMAIL,Enter your email first.,先にメールアドレスを入力してください。,true
+AUTH_LOGIN_RESET_SENT,Password reset email sent.,パスワード再設定メールを送信しました。,true
+AUTH_SIGNUP_ERR_MISSING_EMAIL,Enter your email address.,メールアドレスを入力してください。,true
+AUTH_SIGNUP_ERR_PASSWORD_RULES,Your password does not meet all the requirements.,パスワードが要件を満たしていません。,true
+AUTH_EMAIL_CONF_RESENT,Confirmation email re-sent.,確認メールを再送しました。,true
+AUTH_USERNAME_REQUIREMENT,"3–20 characters, letters/numbers/underscore only.",3〜20文字、英数字とアンダースコアのみ使用できます。,true
+AUTH_USERNAME_EMPTY,Username cannot be empty,ユーザー名を入力してください,true
+AUTH_ERR_OFFLINE,No internet connection. Please try again.,インターネット接続がありません。もう一度お試しください。,true
+AUTH_RESET_TITLE,Set New Password,新しいパスワードを設定,true
+AUTH_RESET_NEW_PLACEHOLDER,New Password,新しいパスワード,true
+AUTH_RESET_CONFIRM_PLACEHOLDER,Confirm New Password,新しいパスワード（確認）,true
+AUTH_RESET_BUTTON,SET PASSWORD,パスワードを設定,true
+AUTH_RESET_MISMATCH,Passwords do not match.,パスワードが一致しません,true
+AUTH_RESET_TOO_SHORT,Password does not meet the requirements.,パスワードが要件を満たしていません,true
+AUTH_RESET_LINK_EXPIRED,This reset link has expired or was already used. Please request a new one from the login screen.,このリセットリンクは期限切れか、すでに使用されています。ログイン画面からもう一度お試しください。,true
+AUTH_RESET_SUCCESS,Password updated!,パスワードを更新しました！,true
+AUTH_RESET_BACK,Back to Login,ログインに戻る,true
+NAV_LEADERBOARD,LEADERBOARD,リーダーボード,true
+NAV_MODE_SELECTION,MODE SELECTION,モード選択,true
+NAV_SELECT_HOLE,SELECT HOLE,ホール選択,true
+NAV_TOURNAMENT_LEADERBOARD,TOURNAMENT LEADERBOARD,トーナメントリーダーボード,true
+RANK_LEAGUE_DIAMOND,DIAMOND LEAGUE,ダイヤモンドリーグ,true
+RANK_RESETS_IN,RESETS IN: {0},リセットまで: {0},true
+RANK_LEVEL,LVL {0},Lv {0},true
+RANK_TIME_D,d,日,true
+RANK_TIME_H,h,時間,true
+RANK_TIME_M,m,分,true
+RANK_TIME_S,s,秒,true
+NAV_TOURNAMENTS,TOURNAMENTS,トーナメント,true
+NAV_GOLFIN_ACCOUNT,GOLFIN ACCOUNT,GOLFINアカウント,true
+NAV_SIGN_UP,SIGN UP,新規登録,true
+NAV_BOOST_STAMINA,BOOST STAMINA,スタミナブースト,true
+NAV_REWARDS_CENTER,REWARDS CENTER,報酬センター,true
+NAV_ROSTER,ROSTER,ロスター,true
+NAV_INVENTORY,INVENTORY,インベントリ,true
+BAG_EMPTY,EMPTY,空き,true
+CLUB_DIST,DIST,飛距離,true
+RESULT_SUCCESS,SUCCESS,成功,true
+RESULT_FAILED,FAILED,失敗,true
+RESULT_NEXT,NEXT,次へ,true
+RESULT_REPLAY,REPLAY,リプレイ,true
+RESULT_RETRY,RETRY,リトライ,true
+RESULT_RESULTS,RESULTS,リザルト,true
+RESULT_WINNER,WINNER,勝者,true
+RESULT_LOSER,LOSER,敗者,true
+RESULT_NEW_MATCH,NEW MATCH,新しい試合,true
+MATCH_VS,Vs.,VS,true
+MATCH_HOLE,HOLE,ホール,true
+MATCH_FINDING_OPPONENT,FINDING OPPONENT,対戦相手を検索中,true
+MATCH_DIAMOND_LEAGUE,DIAMOND LEAGE,ダイヤモンドリーグ,true
+MATCH_YOU,You,あなた,true
+MODE_ENTRY_FEE,ENTRY FEE,参加費,true
+MODE_REWARDS,REWARDS,報酬,true
+MODE_PRACTICE,PRACTICE,練習,true
+MODE_TOURNAMENTS,TOURNAMENTS,トーナメント,true
+MODE_TOURNAMENTS_TAGLINE,Be the best and earn rewards,頂点に立って報酬を手に入れよう,true
+MODE_TOURNAMENTS_DESC,"Enter live tournaments, play the featured holes, and climb the leaderboard before time runs out. Finish high to claim your share of the prizes — every stroke counts.",開催中のトーナメントに参加して対象ホールをプレイし、期間内にリーダーボードを駆け上がろう。上位でフィニッシュして賞品を手に入れよう。一打一打が勝負を決める。,true
+MODE_REWARDS_VARY,Varies by tournament,トーナメントごとに異なります,true
+MODE_NO_ENTRY_FEE,NO ENTRY FEE,参加費無料,true
+MODE_MULTIPLAYER,Multiplayer,マルチプレイ,true
+MODE_DRIVING_RANGE,DRIVING RANGE,ドライビングレンジ,true
+MODE_MISSIONS,MISSIONS,ミッション,true
+MODE_PRACTICE_TAGLINE,Sharpen your skills on any hole.,好きなホールで腕を磨こう。,true
+MODE_PRACTICE_DESC,Practice your golf skills on any course. Choose a hole and tee off at your own pace — no pressure.,好きなコースでゴルフの腕を磨こう。ホールを選んで、自分のペースでティーオフ。プレッシャーはありません。,true
+MODE_VERSUS_1V1_TAGLINE,1v1,1v1,true
+MODE_VERSUS_1V1_DESC,"Face off in fast-paced 1v1 golf matches where every shot matters. Master the course, outplay your opponent, and sink clutch putts to claim victory.",一打が勝負を分けるスピーディーな1v1マッチで対戦しよう。コースを攻略し、相手を出し抜き、勝負どころのパットを沈めて勝利をつかもう。,true
+MODE_DRIVING_RANGE_TAGLINE,Coming Soon — practice your drives.,近日公開 — ドライバーショットを練習しよう。,true
+MODE_DRIVING_RANGE_DESC,A dedicated driving range mode where you can practice long shots and experiment with different clubs.,ロングショットの練習や、さまざまなクラブを試せる専用のドライビングレンジモード。,true
+MODE_MISSIONS_TAGLINE,Take on 40 hole challenges.,40のホールチャレンジに挑戦しよう。,true
+MODE_MISSIONS_DESC,Complete special challenges and objectives to earn bonus rewards and exclusive items.,特別なチャレンジや目標を達成して、ボーナス報酬や限定アイテムを手に入れよう。,true
+UI_LOCKED,LOCKED,ロック,true
+RESULT_REPLAY_HOLE,REPLAY HOLE,ホールをリプレイ,true
+RANK_DAILY,DAILY,デイリー,true
+RANK_WEEKLY,WEEKLY,ウィークリー,true
+RANK_MONTHLY,MONTHLY,マンスリー,true
+RANK_HISTORY,HISTORY,履歴,true
+TOURN_FILTER_ALL,ALL,すべて,true
+TOURN_OPEN,OPEN,開催中,true
+TOURN_FILTER_PLAYING,PLAYING,プレイ中,true
+TOURN_FILTER_CLOSED,CLOSED,終了,true
+TOURN_FINISHED,FINISHED,完了,true
+TOURN_LIVE,LIVE,ライブ,true
+TOURN_CLAIM,CLAIM,受け取る,true
+TOURN_ENTRY,ENTRY,エントリー,true
+TOURN_ENTERED,ENTERED,参加済み,true
+TOURN_FREE_ENTRY,FREE ENTRY,参加無料,true
+TOURN_GOLFIN_PRESENTS,GOLFIN PRESENTS,GOLFIN提供,true
+TOURN_SPONSORED_BY,SPONSORED BY,スポンサー：,true
+TOURN_SPONSOR_PRESENTS,{0} PRESENTS,{0}提供,true
+TOURN_CTA_SIGN_UP,SIGN UP,エントリー,true
+TOURN_CTA_CONTINUE,CONTINUE,続ける,true
+TOURN_UPCOMING,UPCOMING,開催予定,true
+TOURN_ENDING,ENDING,まもなく終了,true
+TOURN_ENDED,ENDED,終了,true
+TOURN_ENDS_IN,ENDS IN: {0},終了まで: {0},true
+TOURN_ENDED_PILL,ENDED,終了,true
+BALL_INFO_GOLFIN,The standard Golfin ball. Perfectly balanced with no stat bonuses or penalties—reliable in any situation.,標準的なGolfinボール。ステータス補正がなく完璧にバランスが取れており、どんな状況でも安定した性能を発揮します。,true
+BALL_INFO_PUTT_ACE,"Designed by PUTT ACE, a name synonymous with short-game mastery, this ball delivers exceptional spin, subtle roll, and balanced power—tailored for precision play in any condition.",ショートゲームの名手として知られるPUTT ACEが設計したボール。優れたスピン、控えめなロール、バランスの取れたパワーを備え、あらゆる状況で精密なプレーを支えます。,true
+BALL_INFO_PAR_PERFECT,"PAR PERFECT builds the metronome of golf balls—predictable above everything else. A steady bounce and a little wind resistance, but it checks up short and won't spin much for you either.",PAR PERFECTはメトロノームのような安定性を追求するブランド。跳ね方は読みやすく風にも少し強いが、ランは短めでスピンも控えめ。,true
+BALL_INFO_FYLOE_SOFT,"FYLOE's Soft line is all about feel—a soft cover that grabs the face and spins hard. It checks up fast on the green, but you give away distance and a little liveliness off the bounce to get it.",FYLOEのSoftシリーズはフィーリング重視。柔らかいカバーがフェースに食いつき、強烈なスピンを生む。グリーンでは素早く止まるが、飛距離と跳ねの勢いは犠牲になる。,true
+BALL_INFO_ACE_ATTIRE,"ACE ATTIRE is a fashion house first and a ball maker second—this one is all swagger. Long and lively with plenty of run-out, but it gets shoved around in the wind and barely spins at all.",ACE ATTIREは本業がファッションブランドで、このボールも見た目通りの派手さ。よく飛びよく跳ねよく転がるが、風にはめっぽう弱く、スピンはほとんどかからない。,true
+BALL_INFO_BIRDIE_V1,"BIRDIE's V1 is the entry-level distance ball found in every pro-shop basket. It goes a little farther and holds its line in a breeze, but there is almost no feel—don't expect it to check or shape.",BIRDIE V1はどのプロショップにも並ぶ入門用のディスタンスボール。少し飛び、そよ風程度なら直進性も保つが、フィーリングは皆無で、止めることも曲げることも苦手。,true
+BALL_INFO_GOLFIN_MK2,"Golfin's MK2 is the house ball's distance evolution. More power, a livelier bounce and a touch more roll than the standard Golfin—paid for almost entirely in spin.",Golfin MK2は標準Golfinボールのディスタンス進化版。パワーと跳ねが増し、ランも少し伸びるが、その代償はほぼすべてスピンで支払っている。,true
+BALL_INFO_GF,"G&F has been making tour balls since before most of these brands existed. Rock-solid off the bounce and unbothered by wind, with modest power; it settles where it lands rather than running out, and it isn't a big spinner.",G&Fは他のブランドが生まれる前からツアーボールを作り続けてきた老舗。跳ねは安定し風にも強く、パワーは控えめ。落ちた場所に収まるタイプで、スピンは多くない。,true
+BALL_INFO_TIFTO,"TIFTO makes golf balls the way it makes tools—hard, functional, no frills. This one is lively off the bounce and runs a long way after landing, but it will not stop for anybody and has almost no spin.",TIFTOは工具を作るようにゴルフボールを作るブランド。硬く機能的で飾り気がない。跳ねは強くランも長いが、止まってはくれず、スピンもほとんどかからない。,true
+BALL_INFO_FAIRLOFT,"FAIRLOFT's Japanese engineers chase a high, soft ball flight. It cuts through the wind, lands quietly and checks hard with plenty of spin—at the cost of a little power and a dead bounce.",日本のFAIRLOFTが追い求めるのは高くて柔らかい弾道。風を切り裂き、静かに着地して強いスピンでピタリと止まるが、パワーと跳ねの勢いは少し失われる。,true
+BALL_INFO_FYLOE_AIM,FYLOE's Aim is a point-and-shoot ball: it holds its line through the wind better than almost anything at this price. The flip side is that it refuses to curve—spin is not on the menu.,FYLOE Aimは狙って打つだけのボール。この価格帯では随一の耐風性能で、狙った線を保つ。その裏返しとしてほとんど曲がらず、スピンは期待できない。,true
+BALL_INFO_CLOVER_PRO,"CLOVER PRO is the pro-shop staple with the lucky four-leaf mark. Mildly better than the default at power, bounce, wind and roll, and mildly worse at the one thing that makes a ball talk: spin.",CLOVER PROは幸運の四つ葉マークでおなじみのプロショップ定番。パワー・跳ね・耐風・ランのすべてが標準をわずかに上回り、唯一スピンだけがはっきり劣る。,true
+BALL_INFO_GOLFINIX,"GolfinIX is Golfin's boutique touch ball, built for scoring rather than showing off. It sits down where it lands and spins hard, with a little help in the wind; you give up the roll and a touch of bounce to get it.",GolfinIXはGolfinのブティックライン。飛ばすためではなく、スコアを作るためのボール。落ちた場所に座り込むほどのスピンと少しの耐風性を持つ代わりに、ランと跳ねの勢いを手放している。,true
+BALL_INFO_KLYRO,KLYRO makes technical gear for people who read wind charts for fun. This is the controlled wind ball—it holds its line in a gale with a steady bounce and checks up slightly; the price is a little spin.,KLYROは風向図を読むのが趣味という人向けのテクニカルブランド。強風でも狙った線を保ち、跳ねも安定、ランは少し短め。その代わりスピンは少し犠牲になる。,true
+BALL_INFO_ROYAL_SWING,"ROYAL SWING sells aggression, and this ball is the loudest thing in its catalogue. It hits hard, bounces lively and runs out after landing—but it will not shape a shot or stop on a green.",ROYAL SWINGが売るのは攻撃性で、このボールはそのカタログで最も騒がしい一品。強く飛び、よく跳ね、着地後も転がるが、球筋を曲げることもグリーンで止めることもできない。,true
+BALL_INFO_FAIRWAY_THREADS,"Fairway THREADS is a lifestyle label that happens to make a very good ball. Long, lively and a little steadier in wind, with a touch more run—every stat but bite, because it barely spins.",Fairway THREADSはライフスタイル系ブランドだが、ボールの出来は本物。飛んで、跳ねて、風にもやや強く、ランも少し伸びる。足りないのは食いつきだけで、スピンはほとんどかからない。,true
+BALL_INFO_MIREO,"MireO is the craftsman's brand, and this is its masterpiece spin ball. Maximum spin, a quiet landing and a bit of help in the wind—bought with distance, a softer bounce and a short roll.",MireOは職人のブランド。その最高傑作がこのスピンボールだ。最大スピンと静かな着地、少しの耐風性を、飛距離と跳ねの勢い、そして短いランと引き換えに手に入れている。,true
+BALL_INFO_CIRQ,"CIRQ builds balls for showmen—explosive off the face and just as explosive off the bounce. It runs out hard, gets genuinely wild once the wind picks up, and offers little spin control.",CIRQはショーマンのためのボールを作る。フェースを離れた瞬間も跳ねた瞬間も爆発的で、ランも長い。ただし風が出ると本当に暴れ、スピンで抑えることも難しい。,true
+BALL_INFO_SORALIS,"SORALIS is the eclipse brand, and this is the wind ball. It goes where you aimed no matter what the flag is doing, with a little extra power—but it cannot be shaped at all.",SORALISは日食をシンボルにしたブランド。そしてこれは風のためのボール。旗がどう揺れていようと狙った場所へ飛び、パワーも少し上乗せ。ただし球筋を曲げることはまったくできない。,true
+BALL_INFO_SHIMMER_G,"Shimmer G is the trophy ball—an oil-slick finish that exists to be noticed. Long, lively, steady in wind and it keeps rolling; it does everything a ball can do except stop or curve.",Shimmer Gはトロフィーのようなボール。オイルスリックの輝きは見せびらかすためにある。飛んで、跳ねて、風に強く、よく転がる。止まることと曲がること以外、ボールにできることはすべてこなす。,true
+ITEM_PROTIP_REPAIRKIT,Clubs will automatically use the best repair kit available when you repair them from the Clubs tab.,クラブタブから修理すると、所持している中で最も効果の高いリペアキットが自動的に使用されます。,true
+ITEM_INFO_REPAIRKIT_COMMON,"Essential and efficient, this Repair Kit restores up to 50% of any club's durability. Designed for quick fixes and reliable performance, it's a must have for keeping your equipment in solid shape round after round.",必需品にして効率的なリペアキット。あらゆるクラブの耐久度を最大50%回復します。手早い修理と安定した性能を追求した設計で、ラウンドを重ねても装備を万全に保つために欠かせません。,true
+ITEM_INFO_REPAIRKIT_RARE,"A step above the standard kit, this Rare Repair Kit restores up to 75% of any club's durability. Ideal for mid-range repairs when you need your gear back in top form.",標準キットを一段上回るレアリペアキット。あらゆるクラブの耐久度を最大75%回復します。装備を万全の状態に戻したいときの中位修理に最適です。,true
+ITEM_INFO_REPAIRKIT_MYTHIC,The ultimate repair solution. This Mythic Repair Kit fully restores any club's durability to 100%. Save it for when your best gear needs a complete overhaul.,究極の修理手段。ミシックリペアキットはあらゆるクラブの耐久度を100%まで完全に回復します。とっておきの装備を万全に整えたいときのために取っておきましょう。,true
+TOURN_EMPTY_HEADER,No finishers yet,まだ完走者がいません,true
+TOURN_EMPTY_BODY,Be the first to complete every hole and top the board.,全ホールを完走して、ランキングのトップを目指しましょう。,true
+TOURN_NEXT_SECTION,Next,次へ,true
+GACHA_TICKET,TICKET,チケット,true
+GACHA_HISTORY,GACHA HISTORY,ガチャ履歴,true
+GACHA_PRIZES_TITLE,PRIZES,景品,true
+GACHA_TICKETS,TICKETS,チケット,true
+GACHA_CLUBS,CLUBS,クラブ,true
+GACHA_CHARACTERS,CHARACTERS,キャラクター,true
+GACHA_BALLS,BALLS,ボール,true
+GACHA_ITEMS,ITEMS,アイテム,true
+GACHA_BACK,BACK,戻る,true
+GACHA_PITY_A_RANK,Guaranteed A-rank or higher in at most,Aランク以上確定・最大,true
+GACHA_PITY_S_RANK,Guaranteed S-rank signal in at most,Sランク確定・最大,true
+GACHA_PRIZE_PREVIEW,Common/Uncommon characters or clubs may also be obtained.,コモン／アンコモンのキャラクターやクラブが排出されることもあります。,true
+GACHA_PULL_X1,PULL x1,1回引く,true
+GACHA_PULL_X10,PULL x10,10回引く,true
+GACHA_RULES_RATES,RULES & RATES,ルールと確率,true
+GACHA_SKIP,SKIP,スキップ,true
+GACHA_BUY,BUY,購入,true
+GACHA_INSUFFICIENT_TICKETS,Not enough tickets,チケットが足りません,true
+GACHA_COST_CHANGED,Price updated — tap again to pull,価格が更新されました。もう一度タップしてください,true
+GACHA_PULL_CAP,Pull limit reached for this banner,このバナーの上限に達しました,true
+GACHA_PAUSED,Gacha is paused. Please try again later,ガチャは一時停止中です。しばらくしてからお試しください,true
+GACHA_UNAVAILABLE,This banner is no longer available,このバナーは終了しました,true
+GACHA_DUPE_RP,+{0} RP,+{0} RP,true
+GACHA_CARD_PITY,Guaranteed {0} or higher within,{0}以上が確定・最大,true
+GACHA_CARD_PULLS,{0} pulls,{0}回,true
+GACHA_CARD_GUARANTEE_X10,Every 10-pull includes at least one {0},10連ごとに{0}以上が1枚確定,true
+GACHA_RATES_TITLE,RATES & RULES,確率とルール,true
+GACHA_RATES_FEATURED,FEATURED,ピックアップ,true
+GACHA_RATES_FULL_RULES,Full rules,詳細ルール,true
+GACHA_RATES_PITY,Guaranteed {0} or higher within {1} pulls,{1}回以内に{0}以上が確定,true
+GACHA_RATES_GUARANTEE_X10,Every 10-pull includes at least one {0},10連ごとに{0}以上が1枚確定,true
+GACHA_RATES_DUPE,Duplicate clubs and characters are converted to Reward Points,重複したクラブとキャラクターはリワードポイントに変換されます,true
+GACHA_RATES_FOOTER,Rates apply to every pull on this banner.,確率はこのバナーのすべての排出に適用されます。,true
+SHOP_TAB_GACHA,GACHA,ガチャ,true
+SHOP_TAB_STORE,STORE,ストア,true
+SHOP_TAB_GIFTS,GIFTS,ギフト,true
+SHOP_FILTER_POPULAR,POPULAR,人気,true
+SHOP_FILTER_OFFERS,OFFERS,オファー,true
+SHOP_HISTORY_COMING_SOON,Store history is coming soon.,ストア履歴は近日公開です。,true
+STAMINA_BUY,BUY,購入,true
+STAMINA_VIEW_ON_MAPS,View on Maps,マップで見る,true
+STAMINA_FEATURED,FEATURED,注目,true
+STAMINA_OPEN_NOW,OPEN NOW,営業中,true
+STAMINA_LOCATION,LOCATION,所在地,true
+STAMINA_HOURS,HOURS,営業時間,true
+STAMINA_SIGNATURE,SIGNATURE,シグネチャー,true
+STAMINA_MENU,MENU,メニュー,true
+STAMINA_HOUSE_SPECIAL,House special,ハウススペシャル,true
+STAMINA_REGION_HOKKAIDO,HOKKAIDO,北海道,true
+STAMINA_REGION_TOHOKU,TOHOKU,東北,true
+STAMINA_REGION_KANTO,KANTO,関東,true
+STAMINA_REGION_CHUBU,CHUBU,中部,true
+STAMINA_REGION_KANSAI,KANSAI,関西,true
+STAMINA_REGION_CHUGOKU,CHUGOKU,中国,true
+STAMINA_REGION_SHIKOKU,SHIKOKU,四国,true
+STAMINA_REGION_KYUSHU,KYUSHU,九州,true
+STAMINA_PREF_ALL,ALL,すべて,true
+STAMINA_PREF_MIE,MIE,三重,true
+STAMINA_PREF_SHIGA,SHIGA,滋賀,true
+STAMINA_PREF_KYOTO,KYOTO,京都,true
+STAMINA_PREF_OSAKA,OSAKA,大阪,true
+STAMINA_PREF_HYOGO,HYOGO,兵庫,true
+STAMINA_PREF_NARA,NARA,奈良,true
+STAMINA_PREF_WAKAYAMA,WAKAYAMA,和歌山,true
+RESULT_PLAY_NEXT,PLAY NEXT,次をプレイ,true
+TOAST_COURSE_CLEARED,COURSE CLEARED!,コースクリア！,true
+CHAR_BIO_JAMES,"Out of the amateur ranks, Cartwright arrives with driving distance that already turns heads at this level. The short game is still maturing, but scouts agree the foundations are tour-calibre.",アマチュア出身の新鋭カートライト。この階級では際立つ飛距離が持ち味。ショートゲームには課題を残すが、その素質はツアー級と評される。,true
+CHAR_BIO_OLIVIA,"A product of long hours on the practice range, Guarinoni brings a compact, repeatable swing and exceptional tempo. Modest off the tee, but her ball-striking consistency is well beyond her years.",練習場で腕を磨いたグアリノーニ。コンパクトで再現性の高いスイングと抜群のテンポが武器。飛距離は控えめだが、ミートの安定感は年齢以上と評価が高い。,true
+CHAR_BIO_RICHARD,Twenty seasons at the top level and the power numbers have barely declined. Brenson compensates for an aging short game with course knowledge and shot selection few active players can match.,トップレベルで20シーズンを戦うブレンソン。パワーは今なお健在で、円熟のコース戦略とショット選択は現役屈指。経験が生きるベテランの代表格だ。,true
+CHAR_BIO_ELIZABETH,"Schooled on championship links, Blackwood plays a tactician's game. Elite club control, disciplined course management, and a willingness to sacrifice distance for position define her rounds.",名門リンクスで研鑽を積んだブラックウッド。卓越したクラブコントロールと緻密なコースマネジメントを軸に、距離よりポジションを取る知的なゴルフを展開する。,true
+CHAR_BIO_SHAE,"O'Connell's recovery statistics are simply in a category of their own. From deep rough or broken ground, she routinely salvages pars that keep rounds alive — trouble is where she does her best work.",オコンネルのリカバリー成績は他の追随を許さない。深いラフや荒れたライからも当然のようにパーを拾い、窮地でこそ真価を発揮する稀有な存在。,true
+CHAR_BIO_CAMILA,Perez plays the most aggressive tee-to-green game in her bracket. Exceptional carry distance and fearless target lines produce low rounds in bunches when the execution holds up.,同クラス屈指のアグレッシブなプレースタイルを貫くペレス。傑出したキャリーと果敢な攻めのラインが噛み合えば、爆発的なスコアメイクを見せる。,true
+CHAR_BIO_GUILLERMO,"A gallery favourite, Abravanel attempts — and lands — shot shapes most professionals decline. Behind the showmanship sits an elite short game and touch regarded among the finest on tour.",ギャラリーを魅了するアブラバネル。プロでも避ける曲球を涼しい顔で決める技巧派で、その華やかさの裏にはツアー最高峰と称されるタッチがある。,true
+CHAR_BIO_EAN,Analysts struggle to name a weakness in McCormick's game — and that is precisely the point. Even numbers across the board make him the most complete development platform in his class.,マコーミックのプレーに弱点を挙げるのは難しい。全項目で均整の取れた数字を残し、同クラス随一の完成された育成素材と評される。,true
+CHAR_BIO_FREDA,"The world number one by a distance. Faarlund's combination of power, touch and stamina presents no exploitable weakness, and her tournament record reads less like results than inevitability.",文句なしの世界ランキング1位、ファーランド。パワー、タッチ、スタミナの全てに付け入る隙がなく、その戦績はもはや必然と呼ぶべき水準にある。,true
+CHAR_BIO_JOHAN,"Developed on wind-swept northern courses, Christofferson pairs precise iron play with remarkable endurance. Adverse conditions barely move his scoring average — a genuine bad-weather specialist.",北欧の強風コースで育ったクリストファーソン。正確なアイアンと驚異的な持久力を併せ持ち、悪天候でもスコアが崩れない悪条件のスペシャリスト。,true
+CHAR_BIO_MIKE,"A former caddie who learned the game from inside the ropes, Millar is renowned for his conditioning and composure. Rarely spectacular, never rattled — and statistically strongest late in the round.",元キャディーという異色の経歴を持つミラー。豊富な運動量と冷静さに定評があり、派手さはないが終盤ほど数字を残すタイプとして知られる。,true
+CHAR_BIO_ROSHANA,"Smith combines top-tier driving power with the durability to grind through brutal conditions. When tournaments turn into wars of attrition, her name is invariably on the final leaderboard.",トップクラスの飛距離と、過酷な条件を耐え抜くタフさを兼備するスミス。消耗戦となった大会では、最終リーダーボードに必ず名を残す実力者だ。,true
+GAMEPLAY_SHOOT,SHOOT,打つ,true
+GAMEPLAY_STRAIGHT,STRAIGHT,ストレート,true
+GAMEPLAY_FADE,FADE,フェード,true
+GAMEPLAY_DRAW,DRAW,ドロー,true
+GAMEPLAY_SHOT_VIEW,SHOT VIEW,ショット画面,true
+MAPVIEW_TO_PIN,to pin {0},ピンまで {0},true
+MAPVIEW_OUT_OF_RANGE,OUT OF RANGE,射程外,true
+MAPVIEW_MAX_HINT,{0} max {1} — ball lands at the red line,{0}の最大 {1} — ボールは赤い線に着地,true
+LANDING_FAIRWAY,FAIRWAY,フェアウェイ,true
+LANDING_GREEN,GREEN,グリーン,true
+LANDING_FRINGE,FRINGE,カラー,true
+LANDING_SEMIROUGH,SEMI-ROUGH,セミラフ,true
+LANDING_ROUGH,ROUGH,ラフ,true
+LANDING_BUNKER,BUNKER,バンカー,true
+LANDING_WATER,WATER,ウォーター,true
+LANDING_OB,OB,OB,true
+INGAME_SFX_LABEL,SOUND,サウンド,true
+INGAME_PLAYING,PLAYING,プレイ中,true
+INGAME_BACK,BACK,戻る,true
+INGAME_QUIT,QUIT,やめる,true
+INGAME_QUIT_CONFIRM_TITLE,ARE YOU SURE?,本当によろしいですか？,true
+INGAME_QUIT_CONFIRM_BODY,YOU WILL NOT GET ANY REWARDS WHEN QUITTING.,途中で終了すると報酬は獲得できません。,true
+INV_TAB_CLUBS,CLUBS,クラブ,true
+INV_TAB_BAGS,BAGS,バッグ,true
+INV_TAB_BALLS,BALLS,ボール,true
+INV_TAB_ITEMS,ITEMS,アイテム,true
+CLUB_FILTER_DRIVERS,DRIVERS,ドライバー,true
+CLUB_FILTER_WOODS,WOODS,ウッド,true
+CLUB_FILTER_IRONS,IRONS,アイアン,true
+CLUB_FILTER_WEDGES,WEDGES,ウェッジ,true
+CLUB_FILTER_PUTTERS,PUTTERS,パター,true
+ROSTER_STARTER_INSTRUCTION,CHOOSE YOUR STARTING CHARACTER. YOU WILL BE ABLE TO ACQUIRE NEW CHARACTERS THROUGHOUT THE GAME.,スタートキャラクターを選んでください。新しいキャラクターはゲームを進めながら獲得できます。,true
+ROSTER_STARTER_CONFIRM_TITLE,YOU ARE STARTING THE GAME WITH:,このキャラクターでゲームを開始します:,true
+ROSTER_STARTER_BACK,BACK,戻る,true
+ROSTER_LOCKED_ACQUIRE,ACQUIRE THIS CHARACTER IN THE STORE OR AS A PRIZE TO UNLOCK IT.,このキャラクターはショップまたは報酬で獲得するとアンロックされます。,true
+CHAR_NAME_JAMES,James,ジェームズ,true
+CHAR_LASTNAME_JAMES,Cartwright,カートライト,true
+CHAR_NAME_OLIVIA,Olivia,オリビア,true
+CHAR_LASTNAME_OLIVIA,Guarinoni,グアリノーニ,true
+CHAR_NAME_RICHARD,Richard,リチャード,true
+CHAR_LASTNAME_RICHARD,Brenson,ブレンソン,true
+CHAR_NAME_ELIZABETH,Elizabeth,エリザベス,true
+CHAR_LASTNAME_ELIZABETH,Blackwood,ブラックウッド,true
+CHAR_NAME_SHAE,Shae,シェイ,true
+CHAR_LASTNAME_SHAE,O'Connell,オコンネル,true
+CHAR_NAME_CAMILA,Camila,カミラ,true
+CHAR_LASTNAME_CAMILA,Perez,ペレス,true
+CHAR_NAME_GUILLERMO,Guillermo,ギジェルモ,true
+CHAR_LASTNAME_GUILLERMO,Abravanel,アブラバネル,true
+CHAR_NAME_EAN,Ean,イアン,true
+CHAR_LASTNAME_EAN,McCormick,マコーミック,true
+CHAR_NAME_FREDA,Freda,フレーダ,true
+CHAR_LASTNAME_FREDA,Faarlund,ファールンド,true
+CHAR_NAME_JOHAN,Johan,ヨハン,true
+CHAR_LASTNAME_JOHAN,Christofferson,クリストファーソン,true
+CHAR_NAME_MIKE,Mike,マイク,true
+CHAR_LASTNAME_MIKE,Millar,ミラー,true
+CHAR_NAME_ROSHANA,Roshana,ロシャーナ,true
+CHAR_LASTNAME_ROSHANA,Smith,スミス,true
 # --- missions_v1: screen chrome -------------------------------------------
-MISSIONS_TITLE,MISSIONS,ミッション
-MISSION_COURSE_LOMOND,Lomond Country Club,ロモンドカントリークラブ
-MISSION_HOLE,Hole,ホール
-MISSION_TIER_BEGINNER,BEGINNER,ビギナー
-MISSION_TIER_AMATEUR,AMATEUR,アマチュア
-MISSION_TIER_PRO,PRO,プロ
-MISSION_TIER_LEGEND,LEGEND,レジェンド
-MISSION_TIER_LOCKED,Clear {0} of {1} to unlock,{1}個中{0}個クリアで解放
-MISSION_PILL_NEXT,NEXT MISSION,次のミッション
-MISSION_PILL_REPLAY,REPLAY MISSION,再挑戦
-MISSION_PILL_LOCKED,LOCKED,ロック中
-MISSION_PILL_SUCCESS,SUCCESS,成功
-MISSION_PILL_FAILED,FAILED,失敗
-MISSION_PILL_DAILY,DAILY MISSION,デイリーミッション
-MISSION_PLAY,PLAY,プレイ
-MISSION_REPLAY,REPLAY,リプレイ
-MISSION_GOALS,GOALS,目標
-MISSION_WIND,Wind,風
-MISSION_CLUBS,Clubs,クラブ
-MISSION_START,Start,スタート地点
-MISSION_FIRST_CLEAR,First clear,初回クリア
-MISSION_REPLAY_REWARD,Replay,再挑戦報酬
-MISSION_DAILY_RESETS,Resets in {0},リセットまで {0}
-MISSION_RULES,RULES,ルール
-MISSION_LABEL_START,Start,スタート
-MISSION_LABEL_WIND,Wind,風
-MISSION_LABEL_GEAR,Gear,クラブ
-MISSION_DAILY_STREAK,{0} day streak,{0}日連続
-MISSION_DAILY_CLEARED,CLEARED,クリア済み
-MISSION_TIER_BONUS,Tier bonus,ティアボーナス
-MISSION_WARN_NO_CLUBS,Your bag has no club this mission allows.,このミッションで使えるクラブがバッグにありません。
-MISSION_WARN_UNAVAILABLE,This mission is not available yet.,このミッションはまだプレイできません。
-MISSION_RESULT_CLEARED,MISSION CLEARED,ミッションクリア
-MISSION_RESULT_FAILED,MISSION FAILED,ミッション失敗
+MISSIONS_TITLE,MISSIONS,ミッション,true
+MISSION_COURSE_LOMOND,Lomond Country Club,ロモンドカントリークラブ,true
+MISSION_HOLE,Hole,ホール,true
+MISSION_TIER_BEGINNER,BEGINNER,ビギナー,true
+MISSION_TIER_AMATEUR,AMATEUR,アマチュア,true
+MISSION_TIER_PRO,PRO,プロ,true
+MISSION_TIER_LEGEND,LEGEND,レジェンド,true
+MISSION_TIER_LOCKED,Clear {0} of {1} to unlock,{1}個中{0}個クリアで解放,true
+MISSION_PILL_NEXT,NEXT MISSION,次のミッション,true
+MISSION_PILL_REPLAY,REPLAY MISSION,再挑戦,true
+MISSION_PILL_LOCKED,LOCKED,ロック中,true
+MISSION_PILL_SUCCESS,SUCCESS,成功,true
+MISSION_PILL_FAILED,FAILED,失敗,true
+MISSION_PILL_DAILY,DAILY MISSION,デイリーミッション,true
+MISSION_PLAY,PLAY,プレイ,true
+MISSION_REPLAY,REPLAY,リプレイ,true
+MISSION_GOALS,GOALS,目標,true
+MISSION_WIND,Wind,風,true
+MISSION_CLUBS,Clubs,クラブ,true
+MISSION_START,Start,スタート地点,true
+MISSION_FIRST_CLEAR,First clear,初回クリア,true
+MISSION_REPLAY_REWARD,Replay,再挑戦報酬,true
+MISSION_DAILY_RESETS,Resets in {0},リセットまで {0},true
+MISSION_RULES,RULES,ルール,true
+MISSION_LABEL_START,Start,スタート,true
+MISSION_LABEL_WIND,Wind,風,true
+MISSION_LABEL_GEAR,Gear,クラブ,true
+MISSION_DAILY_STREAK,{0} day streak,{0}日連続,true
+MISSION_DAILY_CLEARED,CLEARED,クリア済み,true
+MISSION_TIER_BONUS,Tier bonus,ティアボーナス,true
+MISSION_WARN_NO_CLUBS,Your bag has no club this mission allows.,このミッションで使えるクラブがバッグにありません。,true
+MISSION_WARN_UNAVAILABLE,This mission is not available yet.,このミッションはまだプレイできません。,true
+MISSION_RESULT_CLEARED,MISSION CLEARED,ミッションクリア,true
+MISSION_RESULT_FAILED,MISSION FAILED,ミッション失敗,true
 # --- missions_v1: goal line templates ({0} = the goal's param) ------------
-GOAL_SCORE_M2,Score eagle or better,イーグル以上であがる
-GOAL_SCORE_M1,Score birdie or better,バーディー以上であがる
-GOAL_SCORE_0,Score par or better,パー以上であがる
-GOAL_SCORE_1,Score bogey or better,ボギー以上であがる
-GOAL_SCORE_2,Score double bogey or better,ダブルボギー以上であがる
-GOAL_SHOTS,Hole out in {0} strokes or fewer,{0}打以内でホールアウト
-GOAL_PUTTS,Take {0} putts or fewer,{0}パット以内であがる
-GOAL_NO_HAZARD,No water and no out of bounds,池・OBなし
-GOAL_AVOID,Never land in the {0},{0}に入れない
-GOAL_LAND_TEE,Land the tee shot on the {0},ティーショットを{0}に乗せる
-GOAL_LAND_ANY,Land a shot on the {0},いずれかのショットを{0}に乗せる
-GOAL_GIR,Hit the green in regulation,パーオンする
-GOAL_DIST,Hit one shot {0} yd or further,1打で{0}ヤード以上飛ばす
-GOAL_CARRY,Carry one shot {0} yd or further,1打で{0}ヤード以上キャリーさせる
-GOAL_NEAR_PIN,Reach the green within {0} yd of the pin,グリーンオン時にピンまで{0}ヤード以内につける
-GOAL_USE_CLUB,Tee off with the {0},ティーショットは{0}で打つ
-GOAL_AVOID_CLUB,Never use the {0},{0}を使わない
-GOAL_UP_DOWN,Get up and down in two,2打以内で寄せてワンパット
+GOAL_SCORE_M2,Score eagle or better,イーグル以上であがる,true
+GOAL_SCORE_M1,Score birdie or better,バーディー以上であがる,true
+GOAL_SCORE_0,Score par or better,パー以上であがる,true
+GOAL_SCORE_1,Score bogey or better,ボギー以上であがる,true
+GOAL_SCORE_2,Score double bogey or better,ダブルボギー以上であがる,true
+GOAL_SHOTS,Hole out in {0} strokes or fewer,{0}打以内でホールアウト,true
+GOAL_PUTTS,Take {0} putts or fewer,{0}パット以内であがる,true
+GOAL_NO_HAZARD,No water and no out of bounds,池・OBなし,true
+GOAL_AVOID,Never land in the {0},{0}に入れない,true
+GOAL_LAND_TEE,Land the tee shot on the {0},ティーショットを{0}に乗せる,true
+GOAL_LAND_ANY,Land a shot on the {0},いずれかのショットを{0}に乗せる,true
+GOAL_GIR,Hit the green in regulation,パーオンする,true
+GOAL_DIST,Hit one shot {0} yd or further,1打で{0}ヤード以上飛ばす,true
+GOAL_CARRY,Carry one shot {0} yd or further,1打で{0}ヤード以上キャリーさせる,true
+GOAL_NEAR_PIN,Reach the green within {0} yd of the pin,グリーンオン時にピンまで{0}ヤード以内につける,true
+GOAL_USE_CLUB,Tee off with the {0},ティーショットは{0}で打つ,true
+GOAL_AVOID_CLUB,Never use the {0},{0}を使わない,true
+GOAL_UP_DOWN,Get up and down in two,2打以内で寄せてワンパット,true
 # --- missions_v1: surface names (goal params) -----------------------------
-SURFACE_FAIRWAY,fairway,フェアウェイ
-SURFACE_GREEN,green,グリーン
-SURFACE_ROUGH,rough,ラフ
-SURFACE_S_ROUGH,semi-rough,セミラフ
-SURFACE_ROUGH_AND_SEMI,rough or semi-rough,ラフ・セミラフ
-SURFACE_BUNKER,bunker,バンカー
-SURFACE_WATER,water,池
+SURFACE_FAIRWAY,fairway,フェアウェイ,true
+SURFACE_GREEN,green,グリーン,true
+SURFACE_ROUGH,rough,ラフ,true
+SURFACE_S_ROUGH,semi-rough,セミラフ,true
+SURFACE_ROUGH_AND_SEMI,rough or semi-rough,ラフ・セミラフ,true
+SURFACE_BUNKER,bunker,バンカー,true
+SURFACE_WATER,water,池,true
 # --- missions_v1: club-type names (goal params) ---------------------------
-CLUBTYPE_DRIVER,Driver,ドライバー
-CLUBTYPE_WOOD,Wood,ウッド
-CLUBTYPE_IRON7,7-iron,7番アイアン
-CLUBTYPE_IRON9,9-iron,9番アイアン
-CLUBTYPE_AW,Approach wedge,アプローチウェッジ
-CLUBTYPE_PW,Pitching wedge,ピッチングウェッジ
-CLUBTYPE_SW,Sand wedge,サンドウェッジ
-CLUBTYPE_PUTTER,Putter,パター
+CLUBTYPE_DRIVER,Driver,ドライバー,true
+CLUBTYPE_WOOD,Wood,ウッド,true
+CLUBTYPE_IRON7,7-iron,7番アイアン,true
+CLUBTYPE_IRON9,9-iron,9番アイアン,true
+CLUBTYPE_AW,Approach wedge,アプローチウェッジ,true
+CLUBTYPE_PW,Pitching wedge,ピッチングウェッジ,true
+CLUBTYPE_SW,Sand wedge,サンドウェッジ,true
+CLUBTYPE_PUTTER,Putter,パター,true
 # --- missions_v1: wind preset lines (wind.<id>) ---------------------------
-WIND_CALM,Calm,無風
-WIND_TAIL_L,Light tailwind,弱い追い風
-WIND_CROSS_L,Light crosswind,弱い横風
-WIND_HEAD_L,Light headwind,弱い向かい風
-WIND_TAIL_S,Strong tailwind,強い追い風
-WIND_CROSS_S,Strong crosswind,強い横風
-WIND_HEAD_S,Strong headwind,強い向かい風
-WIND_QUARTER_S,Strong quartering headwind,強い斜め向かい風
-WIND_GUSTY,Gusty — changes every shot,突風 — 1打ごとに変化
+WIND_CALM,Calm,無風,true
+WIND_TAIL_L,Light tailwind,弱い追い風,true
+WIND_CROSS_L,Light crosswind,弱い横風,true
+WIND_HEAD_L,Light headwind,弱い向かい風,true
+WIND_TAIL_S,Strong tailwind,強い追い風,true
+WIND_CROSS_S,Strong crosswind,強い横風,true
+WIND_HEAD_S,Strong headwind,強い向かい風,true
+WIND_QUARTER_S,Strong quartering headwind,強い斜め向かい風,true
+WIND_GUSTY,Gusty — changes every shot,突風 — 1打ごとに変化,true
 # --- missions_v1: loadout lines (loadout.<id>) ----------------------------
-LOADOUT_OWN,Your own bag,自分のバッグ
-LOADOUT_OWN_NO_WOODS,Your bag — no Driver or Wood,自分のバッグ — ドライバー・ウッド禁止
-LOADOUT_OWN_NO_IRONS,Your bag — no irons,自分のバッグ — アイアン禁止
-LOADOUT_OWN_NO_WEDGES,Your bag — no wedges,自分のバッグ — ウェッジ禁止
-LOADOUT_SUP_FULL,full bag,フルセット
-LOADOUT_SUP_FULL_RARE,full bag (Rare),フルセット（レア）
-LOADOUT_SUP_NO_DRIVER,"full bag, no Driver",ドライバーなしのフルセット
-LOADOUT_SUP_IRONS,irons and putter,アイアンとパター
-LOADOUT_SUP_WEDGE_PUTTER,wedges and putter,ウェッジとパター
-LOADOUT_SUP_PUTTER,putter only,パターのみ
-LOADOUT_SUP_DRIVER_PUTTER,Driver and putter,ドライバーとパター
-LOADOUT_SUP_ONE_IRON,7-iron and putter,7番アイアンとパター
-LOADOUT_SUP_WOOD_ONLY,Wood and putter,ウッドとパター
+LOADOUT_OWN,Your own bag,自分のバッグ,true
+LOADOUT_OWN_NO_WOODS,Your bag — no Driver or Wood,自分のバッグ — ドライバー・ウッド禁止,true
+LOADOUT_OWN_NO_IRONS,Your bag — no irons,自分のバッグ — アイアン禁止,true
+LOADOUT_OWN_NO_WEDGES,Your bag — no wedges,自分のバッグ — ウェッジ禁止,true
+LOADOUT_SUP_FULL,full bag,フルセット,true
+LOADOUT_SUP_FULL_RARE,full bag (Rare),フルセット（レア）,true
+LOADOUT_SUP_NO_DRIVER,"full bag, no Driver",ドライバーなしのフルセット,true
+LOADOUT_SUP_IRONS,irons and putter,アイアンとパター,true
+LOADOUT_SUP_WEDGE_PUTTER,wedges and putter,ウェッジとパター,true
+LOADOUT_SUP_PUTTER,putter only,パターのみ,true
+LOADOUT_SUP_DRIVER_PUTTER,Driver and putter,ドライバーとパター,true
+LOADOUT_SUP_ONE_IRON,7-iron and putter,7番アイアンとパター,true
+LOADOUT_SUP_WOOD_ONLY,Wood and putter,ウッドとパター,true
 # --- missions_v1: start-area lines ----------------------------------------
-START_AREA_GREEN,On the green,グリーン上
-START_AREA_FRINGE,Fringe,カラー
-START_AREA_FAIRWAY,Fairway approach,フェアウェイからのアプローチ
-START_AREA_ROUGH,Rough,ラフ
-START_AREA_SAND,Greenside bunker,グリーンサイドバンカー
-START_AREA_TEE_LADIES,Ladies tee,レディースティー
-START_AREA_TEE_FRONT,Front tee,フロントティー
-START_AREA_TEE_REGULAR,Regular tee,レギュラーティー
-START_AREA_TEE_BACK,Back tee,バックティー
+START_AREA_GREEN,On the green,グリーン上,true
+START_AREA_FRINGE,Fringe,カラー,true
+START_AREA_FAIRWAY,Fairway approach,フェアウェイからのアプローチ,true
+START_AREA_ROUGH,Rough,ラフ,true
+START_AREA_SAND,Greenside bunker,グリーンサイドバンカー,true
+START_AREA_TEE_LADIES,Ladies tee,レディースティー,true
+START_AREA_TEE_FRONT,Front tee,フロントティー,true
+START_AREA_TEE_REGULAR,Regular tee,レギュラーティー,true
+START_AREA_TEE_BACK,Back tee,バックティー,true
 # --- missions_v1: the 40 campaign mission names ---------------------------
-MISSION_NAME_B_FIRST_PUTT,First Putt,はじめてのパット
-MISSION_NAME_B_SHORT_HOLE,The Short Hole,ショートホール
-MISSION_NAME_B_CHIP_AND_RUN,Chip and Run,チップ＆ラン
-MISSION_NAME_B_FAIRWAY_FINDER,Fairway Finder,フェアウェイキープ
-MISSION_NAME_B_FIRST_150,The First 150,初めての150ヤード
-MISSION_NAME_B_BOGEY_GOLF,Bogey Golf,ボギーゴルフ
-MISSION_NAME_B_SAND_ESCAPE,Sand Escape,バンカー脱出
-MISSION_NAME_B_KEEP_IT_DRY,Keep It Dry,池ポチャ禁止
-MISSION_NAME_B_GRADUATION,Graduation Day,卒業試験
-MISSION_NAME_B_IRON_MAN,Iron Man,アイアンだけで
-MISSION_NAME_A_YOUR_OWN_CLUBS,Your Own Clubs,マイクラブで
-MISSION_NAME_A_PAR_3_PAR,"Par Three, Par",ショートでパー
-MISSION_NAME_A_ROUGH_RECOVERY,Out of the Rough,ラフからのリカバリー
-MISSION_NAME_A_TWO_PUTT,Two-Putt Territory,2パット圏内
-MISSION_NAME_A_APPROACH,The Approach,アプローチ勝負
-MISSION_NAME_A_NO_WOODS,Leave the Woods,ウッド封印
-MISSION_NAME_A_DRIVER_PUTTER,Driver & Putter,ドライバーとパターだけ
-MISSION_NAME_A_CLEAN_CARD,Clean Card,ノーミスで
-MISSION_NAME_A_BIG_DRIVE,Big Drive,ビッグドライブ
-MISSION_NAME_A_AMATEUR_FINAL,Amateur Open,アマチュアオープン
-MISSION_NAME_P_ONE_IRON,One Iron,7番一本勝負
-MISSION_NAME_P_STICK_IT,Stick It,ピンそば
-MISSION_NAME_P_INTO_THE_WIND,Into the Wind,向かい風
-MISSION_NAME_P_NO_IRONS,No Irons Allowed,アイアン禁止
-MISSION_NAME_P_BIRDIE_HUNT,Birdie Hunt,バーディー狙い
-MISSION_NAME_P_PRECISION,Precision Round,精密ラウンド
-MISSION_NAME_P_GUSTS,Reading the Gusts,突風を読め
-MISSION_NAME_P_CROSSWIND_PAR3,Crosswind Par 3,横風のパー3
-MISSION_NAME_P_LONG_PAR5,The Long Eighth,8番ロング攻略
-MISSION_NAME_P_PRO_FINAL,Pro Championship,プロ選手権
-MISSION_NAME_L_TOURNEY_PAR,"Back Tee, Par",バックティーでパー
-MISSION_NAME_L_WOOD_ONLY,Wood & Putter,ウッドとパターのみ
-MISSION_NAME_L_BIRDIE_PAR3,Birdie on Eleven,11番でバーディー
-MISSION_NAME_L_NO_WEDGES,Hands Off the Wedges,ウェッジ禁止
-MISSION_NAME_L_DRIVER_PUTTER_PAR,"Two Clubs, Par",2本でパー
-MISSION_NAME_L_BIRDIE_GUSTS,Birdie in the Gusts,突風の中のバーディー
-MISSION_NAME_L_SAND_UP_DOWN,Sand Save,サンドセーブ
-MISSION_NAME_L_EAGLE_FIVE,Eagle on Eighteen,18番でイーグル
-MISSION_NAME_L_PERFECT_ROUND,Perfect Hole,パーフェクトホール
-MISSION_NAME_L_LEGEND_FINAL,Legend Final,レジェンドファイナル
-GPS_HUB_TITLE,GOLFIN GPS,GOLFIN GPS
-GPS_HUB_BACK,GAME,ゲーム
-GPS_HUB_SUB_FORMAT,HC {0} · {1} followers,HC {0} · フォロワー {1}
-GPS_HUB_STAT_POINTS,POINTS,ポイント
-GPS_HUB_STAT_BEST,BEST,ベスト
-GPS_HUB_STAT_TRUST,TRUST,信頼度
-GPS_HUB_STAT_AVATAR,AVATAR,アバター
-GPS_HUB_HOW_1,SCREENSHOT,スクショを貼る
-GPS_HUB_HOW_2,AI READS IT,AIが認識
-GPS_HUB_HOW_3,GPS PROOF,GPSで証明
-GPS_HUB_HOW_4,EARN PTS,ポイントGET
-GPS_HUB_TILE_SCREENSHOT,SCREENSHOT,スクショ
-GPS_HUB_TILE_CHECKIN,CHECK-IN,チェックイン
-GPS_HUB_TILE_VOTE,VOTE,Vote
-GPS_HUB_TILE_GIFT,GIFT,Gift
-GPS_HUB_RECENT_ROUNDS,MY RECENT ROUNDS,最近のラウンド
-GPS_HUB_TRUST_FORMAT,● Trust {0}%,● 信頼度 {0}%
-GPS_HUB_HOLES_FORMAT,({0} holes),({0}ホール)
-GPS_HUB_BEST_TAG,BEST,ベスト
-GPS_HUB_NAV_HOME,HOME,ホーム
-GPS_HUB_NAV_ROUNDS,ROUNDS,ラウンド
-GPS_HUB_NAV_GIFT,GIFT,Gift
-GPS_HUB_NAV_PROFILE,PROFILE,プロフィール
-GPS_HUB_DATE_TODAY,today,今日
-GPS_HUB_DATE_YESTERDAY,yesterday,昨日
-GPS_HUB_DATE_DAYS_AGO,{0} days ago,{0}日前
-GPS_HUB_DATE_WEEKS_AGO,{0} weeks ago,{0}週間前
-SCORE_UPLOAD_TITLE,SCORE UPLOAD,スコアアップロード
-SCORE_POSTED_TITLE,SCORE POSTED,スコア投稿完了
-SU_STEP_CAPTURE,CAPTURE,撮影
-SU_STEP_READING,AI READING,AI認識
-SU_STEP_EDIT,EDIT SCORE,スコア編集
-SU_STEP_GPS,GPS PROOF,GPS証明
-SU_STEP_CONFIRM,CONFIRM,確認
-SU_BACK,‹ BACK,‹ 戻る
-SU_CLOSE,× CLOSE,× 閉じる
-SU_ALIGN_HINT,Align the scorecard inside the frame,枠内にスコアカードを合わせてください
-SU_SRC_CAMERA,CAMERA,カメラ
-SU_SRC_LIBRARY,LIBRARY,ライブラリ
-SU_SRC_MANUAL,MANUAL ENTRY,手入力
-SU_READING,Reading your scorecard...,スコアカードを読み取っています…
-SU_READING_SUB,Usually takes a few seconds,通常は数秒で完了します
-SU_READ_FAIL,Could not read the scorecard,スコアが認識できませんでした
-SU_ROW_TOTAL,TOTAL SCORE,合計スコア
-SU_SUM_TOTAL,TOTAL,合計
-SU_ROW_OUT,OUT,アウト
-SU_ROW_IN,IN,イン
-SU_ROW_PUTTS,PUTTS,パット
-SU_ROW_COURSE,COURSE,コース
-SU_ROW_CONFIDENCE,CONFIDENCE,認識精度
-SU_CONF_HIGH,✓ HIGH,✓ 高
-SU_CONF_MED,MEDIUM,中
-SU_CONF_LOW,LOW,低
-SU_BTN_CONFIRM_SCORE,CONFIRM SCORE,スコアを確認
-SU_BTN_RETAKE,RETAKE,撮り直す
-SU_BTN_RETRY,RETRY,再試行
-SU_BTN_ENTER_MANUALLY,ENTER MANUALLY,手入力する
-SU_HOLES_18,18 HOLES,18ホール
-SU_HOLES_9,9 HOLES,9ホール
-SU_SECTION_OUT,OUT,アウト
-SU_SECTION_IN,IN,イン
-SU_TOTAL_FROM_HOLES,Total is the sum of the holes you entered,合計は入力したホールの合算です
-SU_BTN_VERIFY_GPS,VERIFY WITH GPS,GPSで証明する
-SU_GPS_ON,● GPS ON,● GPS ON
-SU_GPS_OFF,● GPS OFF,● GPS OFF
-SU_LOCATING,Locating you...,現在地を取得しています…
-SU_ACCURACY_FMT,Locating you… accuracy ±{0} m,現在地を取得中… 精度 ±{0} m
-SU_COURSE_FOUND,Golf course detected,ゴルフ場を検出しました
-SU_COURSE_NONE,No golf course nearby,近くにゴルフ場が見つかりません
-SU_ADDRESS_UNKNOWN,Address unavailable,住所は取得できません
-SU_WITHIN_FMT,Within {0} m of your position,現在地から {0} m 以内
-GPS_HUB_NO_ROUNDS,No rounds yet — upload a scorecard to start,まだラウンドがありません — スコアカードをアップロードしましょう
-SU_HOLE_PAR_FMT,Par {0},パー {0}
-SU_FACT_PAR,PAR,パー
-SU_FACT_YARDS,YARDS,ヤード
-SU_FACT_HOLES,HOLES,ホール
-SU_BTN_CONFIRM_COURSE,CONFIRM THIS COURSE,このコースで確定
-SU_BTN_CHOOSE_MANUAL,CHOOSE MANUALLY,手動で選ぶ
-SU_RETRY_GPS,Retry GPS,GPSを再試行
-SU_PICK_COURSE,PICK A COURSE,コースを選択
-SU_SEARCH_COURSE,Search courses,コース名で検索
-SU_NO_COURSE,Post without a course,コースなしで投稿
-SU_TRUST_LEVEL,TRUST LEVEL,信頼度
-SU_CHK_SCREENSHOT,Scorecard verified by AI,AIがスコアカードを認証
-SU_CHK_GPS,GPS proof recorded,GPS証明を記録
-SU_CHK_FRIEND,Friend confirmation (pending),友達の確認（未実装）
-SU_POINTS_EARNED,POINTS EARNED,獲得ポイント
-SU_POINTS_FMT,+{0} pts,+{0} pts
-SU_BTN_POST_SCORE,POST SCORE,スコアを投稿
-SU_POSTED,SCORE POSTED!,スコアを投稿しました！
-SU_POSTED_PTS_FMT,+{0} activity pts earned,Activity pts +{0} を獲得
-SU_SHARE_BRAND,GOLFIN GPS,GOLFIN GPS
-SU_SHARE_TRUST_FMT,TRUST {0}%,信頼度 {0}%
-SU_ROUND_N_FMT,★ {0}{1} round,★ {0}ラウンド目
-SU_VOTE_PROMPT,Create a VOTE about this round?,このラウンドでVOTEを作成しますか？
-SU_VOTE_QUESTION_DEFAULT,"""Will I break 90 next round?""",「次のラウンドで90を切れる？」
-SU_BTN_CREATE_VOTE,CREATE VOTE,VOTEを作成
-SU_BTN_SKIP,SKIP,スキップ
-SU_SHARE_TO,SHARE TO,シェア
-SU_SHARE_COPY,Copy link,リンクをコピー
-SU_BTN_BACK_HOME,BACK TO HOME,ホームに戻る
-SU_ERR_SCORE_RANGE,That score is outside the allowed range.,スコアが入力可能な範囲外です。
-SU_ERR_RATE_LIMIT,You have posted too many scores in the last 24 hours.,24時間以内の投稿数が上限に達しました。
-SU_ERR_GENERIC,Could not post the score. Check your connection and try again.,スコアの投稿に失敗しました。通信環境を確認して、もう一度お試しください。
-SU_ERR_CAMERA_PERM,Camera access is needed to photograph a scorecard.,スコアカードの撮影にはカメラの許可が必要です。
-SU_ERR_LIBRARY_PERM,Photo library access is needed to pick a screenshot.,スクリーンショットの選択には写真へのアクセス許可が必要です。
-GPS_ERR_SERVICE_DISABLED,Location Services are off. Turn them on in Settings.,端末の位置情報サービスがOFFです。設定アプリからONにしてください。
-GPS_ERR_PERMISSION_DENIED,Location permission is required.,位置情報の許可が必要です。
-GPS_ERR_PERMISSION_DENIED_FOREVER,"Location is denied. Set GOLFIN's location to ""While Using the App"" in Settings.",位置情報が拒否されています。設定アプリから GOLFIN の位置情報を「このAppの使用中のみ」に設定してください。
-GPS_ERR_TIMEOUT,Getting your location is taking a while. Try again where the signal is better.,位置情報の取得に時間がかかっています。電波の良い場所で再度お試しください。
-GPS_ERR_UNKNOWN,Could not get your location.,位置情報の取得に失敗しました。
-GPS_HUB_RECENT_GIFTS,RECENT GIFTS,最近のギフト
-GPS_HUB_LIVE_VOTES,LIVE VOTES,開催中の投票
-GPS_HUB_NO_GIFTS,No gifts yet,まだギフトはありません
-GPS_HUB_NO_VOTES,No votes yet,まだ投票はありません
-GPS_PROFILE_TITLE,PROFILE,プロフィール
-GPS_AVATAR_TITLE,MY AVATAR,マイアバター
-GPS_BADGES_TITLE,BADGES,バッジ
-GPS_PROFILE_SUB_FMT,HC {0} · {1} rounds,HC {0} · {1}ラウンド
-GPS_PROFILE_STAT_FOLLOWERS,FOLLOWERS,フォロワー
-GPS_PROFILE_STAT_ROUNDS,ROUNDS,ラウンド
-GPS_PROFILE_STAT_AVATAR,AVATAR,アバター
-GPS_PROFILE_STAT_POINTS,POINTS,ポイント
-GPS_PROFILE_TRUST,✓ TRUST LEVEL,✓ 信頼度
-GPS_PROFILE_TRUST_NOTE,Verified by GPS · post scores to increase,GPSで認証済み · スコアを投稿して信頼度アップ
-GPS_PROFILE_BEST,BEST,ベスト
-GPS_PROFILE_AVERAGE,AVERAGE,平均
-GPS_PROFILE_AVG_PUTTS,AVG PUTTS,平均パット数
-GPS_PROFILE_GIFTS_IN,GIFTS RECEIVED,受け取ったギフト
-GPS_PROFILE_GIFTS_OUT,GIFTS SENT,送ったギフト
-GPS_PROFILE_SHORTCUT_BADGES,BADGES,バッジ
-GPS_PROFILE_SHORTCUT_SHOP,GIFT SHOP,ギフトショップ
-GPS_PROFILE_SHORTCUT_AVATAR,MY AVATAR,マイアバター
-GPS_PROFILE_SHOP_SUB,Browse & send gifts,ギフトを見て送る
-GPS_PROFILE_BADGES_SUB_FMT,{0} / {1} earned,{0} / {1} 獲得済み
-GPS_PROFILE_AVATAR_SUB_FMT,Lv.{0} · {1}/{2} XP,Lv.{0} · {1}/{2} XP
-GPS_PROFILE_RECENT,MY RECENT ROUNDS,最近のラウンド
-GPS_PROFILE_EDIT,EDIT PROFILE,プロフィール編集
-GPS_AVATAR_SLOT_CAP,CAP,キャップ
-GPS_AVATAR_SLOT_SHIRT,SHIRT,シャツ
-GPS_AVATAR_SLOT_GLOVE,GLOVE,グローブ
-GPS_AVATAR_SLOT_SHOES,SHOES,シューズ
-GPS_AVATAR_SLOT_CLUB,CLUB,クラブ
-GPS_AVATAR_RANK_BEGINNER,BEGINNER,ビギナー
-GPS_AVATAR_RANK_ROOKIE,ROOKIE,ルーキー
-GPS_AVATAR_RANK_AMATEUR,AMATEUR,アマチュア
-GPS_AVATAR_RANK_SINGLE,SINGLE,シングル
-GPS_AVATAR_RANK_PRO,PRO,プロ
-GPS_AVATAR_LEVEL_FMT,Lv.{0},Lv.{0}
-GPS_AVATAR_NEXT_FMT,Lv.{0},Lv.{0}
-GPS_AVATAR_XP_HINT_FMT,{0} more rounds (est.),あと{0}ラウンド（目安）
-GPS_AVATAR_XP_FMT,{0} / {1} XP,{0} / {1} XP
-GPS_AVATAR_XP_CTA,Keep posting scores to level up!,スコアを投稿してレベルアップ！
-GPS_AVATAR_EVOLUTION,AVATAR EVOLUTION,進化
-GPS_AVATAR_STATUS,STATUS,キャラクター ステータス
-GPS_AVATAR_STATUS_NOTE,Your selected GOLFIN character stats,選択中のGOLFINキャラクターのステータス
-GPS_BADGES_COLLECTION,BADGE COLLECTION,バッジコレクション
-GPS_BADGES_EARNED_FMT,{0} / {1} badges earned,{0} / {1} バッジ獲得済み
-GPS_BADGES_SEC_GOLF,GOLF,ゴルフ
-GPS_BADGES_SEC_SOCIAL,SOCIAL,ソーシャル
-GPS_BADGES_SEC_TRUST,TRUST,信頼度
-GPS_BADGES_SEC_SPECIAL,SPECIAL,スペシャル
-GPS_BADGES_RARITY_COMMON,COMMON,コモン
-GPS_BADGES_RARITY_RARE,RARE,レア
-GPS_BADGES_RARITY_EPIC,EPIC,エピック
-GPS_BADGES_RARITY_LEGEND,LEGEND,レジェンド
-BADGE_first_round_NAME,First Round,初ラウンド
-BADGE_break_110_NAME,Break 110,110切り
-BADGE_break_100_NAME,Break 100,100切り
-BADGE_break_90_NAME,Break 90,90切り
-BADGE_break_80_NAME,Break 80,80切り
-BADGE_streak_5_NAME,5 in a Row,5連続
-BADGE_streak_10_NAME,10 in a Row,10連続
-BADGE_courses_10_NAME,10 Courses,10コース
-BADGE_first_gift_recv_NAME,First Gift In,初ギフト受取
-BADGE_first_gift_send_NAME,First Gift Out,初ギフト送信
-BADGE_gifts_100_NAME,100 Gifts In,ギフト100受取
-BADGE_followers_100_NAME,100 Followers,フォロワー100
-BADGE_followers_1000_NAME,1K Followers,フォロワー1000
-BADGE_followers_10000_NAME,10K Followers,フォロワー10000
-BADGE_first_vote_NAME,First Vote,初投票
-BADGE_vote_hits_10_NAME,10 Vote Hits,投票10ヒット
-BADGE_first_gps_NAME,First GPS Proof,初GPS証明
-BADGE_trust_80_NAME,Trust 80%,信頼度80%
-BADGE_trust_100_NAME,Trust 100%,信頼度100%
-BADGE_social_verify_5_NAME,5 Friend Confirms,5人確認
-BADGE_monthly_mvp_NAME,Monthly MVP,月間MVP
-BADGE_tournament_win_NAME,Tournament Win,トーナメント優勝
-BADGE_gift_king_NAME,Gift Top 10,ギフトTOP10
-BADGE_all_badges_NAME,All Badges,全バッジ
-GPS_AVATAR_UNLOCKS_FMT,UNLOCKS AT Lv.{0},Lv.{0}で解放
-GPS_AVATAR_UNLOCK_CAP,CAMO CAP,カモキャップ
-GPS_AVATAR_UNLOCK_AURA,GOLD AURA,ゴールドオーラ
-GPS_AVATAR_UNLOCK_FX,FLAME FX,フレイムFX
-GPS_GOLFPROF_TITLE,GOLF PROFILE,ゴルフプロフィール
-GPS_GOLFPROF_TITLE_INTRO,SET UP YOUR GOLF PROFILE,ゴルフプロフィールを設定
-GPS_GOLFPROF_SUB,You can change all of this later in Settings,これらはすべて後から設定で変更できます
-GPS_GOLFPROF_COLOUR_LABEL,Pick your avatar colour,アバターの色を選択
-GPS_GOLFPROF_NICKNAME,NICKNAME,ニックネーム
-GPS_GOLFPROF_NICKNAME_HINT,Your nickname,ニックネームを入力
-GPS_GOLFPROF_EXPERIENCE,GOLF EXPERIENCE,ゴルフ歴
-GPS_GOLFPROF_EXP_BEGINNER,BEGINNER,初心者
-GPS_GOLFPROF_EXP_INTERMEDIATE,INTERMEDIATE,中級者
-GPS_GOLFPROF_EXP_ADVANCED,ADVANCED,上級者
-GPS_GOLFPROF_HANDICAP,HANDICAP (OPTIONAL),ハンディキャップ（任意）
-GPS_GOLFPROF_HANDICAP_HINT,e.g. 18.4,例：18.4
-GPS_GOLFPROF_HANDICAP_BAD,"Enter a handicap between -10 and 60, or leave it blank.",ハンディキャップは-10〜60の範囲で入力するか、空欄にしてください。
-GPS_GOLFPROF_SAVE,SAVE PROFILE,プロフィールを保存
-GPS_GOLFPROF_SKIP,Skip for now,後で設定する
-GPS_WELCOME_TITLE,WELCOME,ようこそ
-GPS_WELCOME_TITLE_HEAD,WELCOME TO GOLFIN GPS,GOLFIN GPS へようこそ
-GPS_WELCOME_SUB,"Earn points just by playing golf. Prove your rounds with GPS, get gifts from fans, and grow your avatar.",ゴルフをプレイするだけでポイントが貯まります。GPSでラウンドを証明し、ファンからギフトを受け取り、アバターを育てましょう。
-GPS_WELCOME_SKIP,SKIP,スキップ
-GPS_WELCOME_GET_STARTED,GET STARTED,はじめる
-GPS_WELCOME_FEAT_SS,SCREENSHOT,スクリーンショット
-GPS_WELCOME_FEAT_SS_DESC,AI reads your scorecard,AIがスコアカードを読み取ります
-GPS_WELCOME_FEAT_CHECKIN,CHECK IN,チェックイン
-GPS_WELCOME_FEAT_CHECKIN_DESC,Prove it with GPS,GPSでラウンドを証明
-GPS_WELCOME_FEAT_VOTE,VOTE,投票
-GPS_WELCOME_FEAT_VOTE_DESC,Predict and win points,予想してポイントを獲得
-GPS_WELCOME_FEAT_GIFT,GIFT,ギフト
-GPS_WELCOME_FEAT_GIFT_DESC,Support your favourite golfers,好きなゴルファーを応援
-GPS_GIFT_TITLE,GIFTS,ギフト
-GPS_GIFT_HERO_TITLE,GIFTS RECEIVED,受け取ったギフト
-GPS_GIFT_HERO_SUB,from {0} supporters,{0}人のサポーターから
-GPS_GIFT_HERO_VALUE,{0} pts,{0} pts
-GPS_GIFT_HERO_NOTE,total gift earnings,ギフト獲得ポイント合計
-GPS_GIFT_SUPPORTERS,TOP SUPPORTERS,トップサポーター
-GPS_GIFT_POPULAR,POPULAR GOLFERS,人気のゴルファー
-GPS_GIFT_SEE_ALL,SEE ALL ›,すべて見る ›
-GPS_GIFT_SEND_GIFT,SEND GIFT,ギフトを贈る
-GPS_GIFT_FOLLOWERS,{0} followers,フォロワー{0}人
-GPS_GIFT_PTS,{0} pts,{0} pts
-GPS_GIFT_BUY_TITLE,BUY GIFT ITEMS,ギフトアイテムを買う
-GPS_GIFT_BUY_SUB,Support your favourite golfer,好きなゴルファーを応援しよう
-GPS_GIFT_MODAL_TITLE,SEND A GIFT,ギフトを贈る
-GPS_GIFT_MODAL_BALANCE,Your balance: {0} pts,残高：{0} pts
-GPS_GIFT_MODAL_CONFIRM,CONFIRM,確定する
-GPS_GIFT_MODAL_CANCEL,CANCEL,キャンセル
-GPS_GIFT_MODAL_SENDING,Sending…,送信中…
-GPS_GIFT_SENT,Sent {0} pts to {1},{1}に{0} ptsを贈りました
-GPS_GIFT_PURCHASED,Purchased {0},{0}を購入しました
-GPS_GIFT_INSUFFICIENT,Not enough points.,ポイントが足りません。
-GPS_GIFT_FAILED,Something went wrong. Try again.,エラーが発生しました。もう一度お試しください。
+MISSION_NAME_B_FIRST_PUTT,First Putt,はじめてのパット,true
+MISSION_NAME_B_SHORT_HOLE,The Short Hole,ショートホール,true
+MISSION_NAME_B_CHIP_AND_RUN,Chip and Run,チップ＆ラン,true
+MISSION_NAME_B_FAIRWAY_FINDER,Fairway Finder,フェアウェイキープ,true
+MISSION_NAME_B_FIRST_150,The First 150,初めての150ヤード,true
+MISSION_NAME_B_BOGEY_GOLF,Bogey Golf,ボギーゴルフ,true
+MISSION_NAME_B_SAND_ESCAPE,Sand Escape,バンカー脱出,true
+MISSION_NAME_B_KEEP_IT_DRY,Keep It Dry,池ポチャ禁止,true
+MISSION_NAME_B_GRADUATION,Graduation Day,卒業試験,true
+MISSION_NAME_B_IRON_MAN,Iron Man,アイアンだけで,true
+MISSION_NAME_A_YOUR_OWN_CLUBS,Your Own Clubs,マイクラブで,true
+MISSION_NAME_A_PAR_3_PAR,"Par Three, Par",ショートでパー,true
+MISSION_NAME_A_ROUGH_RECOVERY,Out of the Rough,ラフからのリカバリー,true
+MISSION_NAME_A_TWO_PUTT,Two-Putt Territory,2パット圏内,true
+MISSION_NAME_A_APPROACH,The Approach,アプローチ勝負,true
+MISSION_NAME_A_NO_WOODS,Leave the Woods,ウッド封印,true
+MISSION_NAME_A_DRIVER_PUTTER,Driver & Putter,ドライバーとパターだけ,true
+MISSION_NAME_A_CLEAN_CARD,Clean Card,ノーミスで,true
+MISSION_NAME_A_BIG_DRIVE,Big Drive,ビッグドライブ,true
+MISSION_NAME_A_AMATEUR_FINAL,Amateur Open,アマチュアオープン,true
+MISSION_NAME_P_ONE_IRON,One Iron,7番一本勝負,true
+MISSION_NAME_P_STICK_IT,Stick It,ピンそば,true
+MISSION_NAME_P_INTO_THE_WIND,Into the Wind,向かい風,true
+MISSION_NAME_P_NO_IRONS,No Irons Allowed,アイアン禁止,true
+MISSION_NAME_P_BIRDIE_HUNT,Birdie Hunt,バーディー狙い,true
+MISSION_NAME_P_PRECISION,Precision Round,精密ラウンド,true
+MISSION_NAME_P_GUSTS,Reading the Gusts,突風を読め,true
+MISSION_NAME_P_CROSSWIND_PAR3,Crosswind Par 3,横風のパー3,true
+MISSION_NAME_P_LONG_PAR5,The Long Eighth,8番ロング攻略,true
+MISSION_NAME_P_PRO_FINAL,Pro Championship,プロ選手権,true
+MISSION_NAME_L_TOURNEY_PAR,"Back Tee, Par",バックティーでパー,true
+MISSION_NAME_L_WOOD_ONLY,Wood & Putter,ウッドとパターのみ,true
+MISSION_NAME_L_BIRDIE_PAR3,Birdie on Eleven,11番でバーディー,true
+MISSION_NAME_L_NO_WEDGES,Hands Off the Wedges,ウェッジ禁止,true
+MISSION_NAME_L_DRIVER_PUTTER_PAR,"Two Clubs, Par",2本でパー,true
+MISSION_NAME_L_BIRDIE_GUSTS,Birdie in the Gusts,突風の中のバーディー,true
+MISSION_NAME_L_SAND_UP_DOWN,Sand Save,サンドセーブ,true
+MISSION_NAME_L_EAGLE_FIVE,Eagle on Eighteen,18番でイーグル,true
+MISSION_NAME_L_PERFECT_ROUND,Perfect Hole,パーフェクトホール,true
+MISSION_NAME_L_LEGEND_FINAL,Legend Final,レジェンドファイナル,true
+GPS_HUB_TITLE,GOLFIN GPS,GOLFIN GPS,true
+GPS_HUB_BACK,GAME,ゲーム,true
+GPS_HUB_SUB_FORMAT,HC {0} · {1} followers,HC {0} · フォロワー {1},true
+GPS_HUB_STAT_POINTS,POINTS,ポイント,true
+GPS_HUB_STAT_BEST,BEST,ベスト,true
+GPS_HUB_STAT_TRUST,TRUST,信頼度,true
+GPS_HUB_STAT_AVATAR,AVATAR,アバター,true
+GPS_HUB_HOW_1,SCREENSHOT,スクショを貼る,true
+GPS_HUB_HOW_2,AI READS IT,AIが認識,true
+GPS_HUB_HOW_3,GPS PROOF,GPSで証明,true
+GPS_HUB_HOW_4,EARN PTS,ポイントGET,true
+GPS_HUB_TILE_SCREENSHOT,SCREENSHOT,スクショ,true
+GPS_HUB_TILE_CHECKIN,CHECK-IN,チェックイン,true
+GPS_HUB_TILE_VOTE,VOTE,Vote,true
+GPS_HUB_TILE_GIFT,GIFT,Gift,true
+GPS_HUB_RECENT_ROUNDS,MY RECENT ROUNDS,最近のラウンド,true
+GPS_HUB_TRUST_FORMAT,● Trust {0}%,● 信頼度 {0}%,true
+GPS_HUB_HOLES_FORMAT,({0} holes),({0}ホール),true
+GPS_HUB_BEST_TAG,BEST,ベスト,true
+GPS_HUB_NAV_HOME,HOME,ホーム,true
+GPS_HUB_NAV_ROUNDS,ROUNDS,ラウンド,true
+GPS_HUB_NAV_GIFT,GIFT,Gift,true
+GPS_HUB_NAV_PROFILE,PROFILE,プロフィール,true
+GPS_HUB_DATE_TODAY,today,今日,true
+GPS_HUB_DATE_YESTERDAY,yesterday,昨日,true
+GPS_HUB_DATE_DAYS_AGO,{0} days ago,{0}日前,true
+GPS_HUB_DATE_WEEKS_AGO,{0} weeks ago,{0}週間前,true
+SCORE_UPLOAD_TITLE,SCORE UPLOAD,スコアアップロード,true
+SCORE_POSTED_TITLE,SCORE POSTED,スコア投稿完了,true
+SU_STEP_CAPTURE,CAPTURE,撮影,true
+SU_STEP_READING,AI READING,AI認識,true
+SU_STEP_EDIT,EDIT SCORE,スコア編集,true
+SU_STEP_GPS,GPS PROOF,GPS証明,true
+SU_STEP_CONFIRM,CONFIRM,確認,true
+SU_BACK,‹ BACK,‹ 戻る,true
+SU_CLOSE,× CLOSE,× 閉じる,true
+SU_ALIGN_HINT,Align the scorecard inside the frame,枠内にスコアカードを合わせてください,true
+SU_SRC_CAMERA,CAMERA,カメラ,true
+SU_SRC_LIBRARY,LIBRARY,ライブラリ,true
+SU_SRC_MANUAL,MANUAL ENTRY,手入力,true
+SU_READING,Reading your scorecard...,スコアカードを読み取っています…,true
+SU_READING_SUB,Usually takes a few seconds,通常は数秒で完了します,true
+SU_READ_FAIL,Could not read the scorecard,スコアが認識できませんでした,true
+SU_ROW_TOTAL,TOTAL SCORE,合計スコア,true
+SU_SUM_TOTAL,TOTAL,合計,true
+SU_ROW_OUT,OUT,アウト,true
+SU_ROW_IN,IN,イン,true
+SU_ROW_PUTTS,PUTTS,パット,true
+SU_ROW_COURSE,COURSE,コース,true
+SU_ROW_CONFIDENCE,CONFIDENCE,認識精度,true
+SU_CONF_HIGH,✓ HIGH,✓ 高,true
+SU_CONF_MED,MEDIUM,中,true
+SU_CONF_LOW,LOW,低,true
+SU_BTN_CONFIRM_SCORE,CONFIRM SCORE,スコアを確認,true
+SU_BTN_RETAKE,RETAKE,撮り直す,true
+SU_BTN_RETRY,RETRY,再試行,true
+SU_BTN_ENTER_MANUALLY,ENTER MANUALLY,手入力する,true
+SU_HOLES_18,18 HOLES,18ホール,true
+SU_HOLES_9,9 HOLES,9ホール,true
+SU_SECTION_OUT,OUT,アウト,true
+SU_SECTION_IN,IN,イン,true
+SU_TOTAL_FROM_HOLES,Total is the sum of the holes you entered,合計は入力したホールの合算です,true
+SU_BTN_VERIFY_GPS,VERIFY WITH GPS,GPSで証明する,true
+SU_GPS_ON,● GPS ON,● GPS ON,true
+SU_GPS_OFF,● GPS OFF,● GPS OFF,true
+SU_LOCATING,Locating you...,現在地を取得しています…,true
+SU_ACCURACY_FMT,Locating you… accuracy ±{0} m,現在地を取得中… 精度 ±{0} m,true
+SU_COURSE_FOUND,Golf course detected,ゴルフ場を検出しました,true
+SU_COURSE_NONE,No golf course nearby,近くにゴルフ場が見つかりません,true
+SU_ADDRESS_UNKNOWN,Address unavailable,住所は取得できません,true
+SU_WITHIN_FMT,Within {0} m of your position,現在地から {0} m 以内,true
+GPS_HUB_NO_ROUNDS,No rounds yet — upload a scorecard to start,まだラウンドがありません — スコアカードをアップロードしましょう,true
+SU_HOLE_PAR_FMT,Par {0},パー {0},true
+SU_FACT_PAR,PAR,パー,true
+SU_FACT_YARDS,YARDS,ヤード,true
+SU_FACT_HOLES,HOLES,ホール,true
+SU_BTN_CONFIRM_COURSE,CONFIRM THIS COURSE,このコースで確定,true
+SU_BTN_CHOOSE_MANUAL,CHOOSE MANUALLY,手動で選ぶ,true
+SU_RETRY_GPS,Retry GPS,GPSを再試行,true
+SU_PICK_COURSE,PICK A COURSE,コースを選択,true
+SU_SEARCH_COURSE,Search courses,コース名で検索,true
+SU_NO_COURSE,Post without a course,コースなしで投稿,true
+SU_TRUST_LEVEL,TRUST LEVEL,信頼度,true
+SU_CHK_SCREENSHOT,Scorecard verified by AI,AIがスコアカードを認証,true
+SU_CHK_GPS,GPS proof recorded,GPS証明を記録,true
+SU_CHK_FRIEND,Friend confirmation (pending),友達の確認（未実装）,true
+SU_POINTS_EARNED,POINTS EARNED,獲得ポイント,true
+SU_POINTS_FMT,+{0} pts,+{0} pts,true
+SU_BTN_POST_SCORE,POST SCORE,スコアを投稿,true
+SU_POSTED,SCORE POSTED!,スコアを投稿しました！,true
+SU_POSTED_PTS_FMT,+{0} activity pts earned,Activity pts +{0} を獲得,true
+SU_SHARE_BRAND,GOLFIN GPS,GOLFIN GPS,true
+SU_SHARE_TRUST_FMT,TRUST {0}%,信頼度 {0}%,true
+SU_ROUND_N_FMT,★ {0}{1} round,★ {0}ラウンド目,true
+SU_VOTE_PROMPT,Create a VOTE about this round?,このラウンドでVOTEを作成しますか？,true
+SU_VOTE_QUESTION_DEFAULT,"""Will I break 90 next round?""",「次のラウンドで90を切れる？」,true
+SU_BTN_CREATE_VOTE,CREATE VOTE,VOTEを作成,true
+SU_BTN_SKIP,SKIP,スキップ,true
+SU_SHARE_TO,SHARE TO,シェア,true
+SU_SHARE_COPY,Copy link,リンクをコピー,true
+SU_BTN_BACK_HOME,BACK TO HOME,ホームに戻る,true
+SU_ERR_SCORE_RANGE,That score is outside the allowed range.,スコアが入力可能な範囲外です。,true
+SU_ERR_RATE_LIMIT,You have posted too many scores in the last 24 hours.,24時間以内の投稿数が上限に達しました。,true
+SU_ERR_GENERIC,Could not post the score. Check your connection and try again.,スコアの投稿に失敗しました。通信環境を確認して、もう一度お試しください。,true
+SU_ERR_CAMERA_PERM,Camera access is needed to photograph a scorecard.,スコアカードの撮影にはカメラの許可が必要です。,true
+SU_ERR_LIBRARY_PERM,Photo library access is needed to pick a screenshot.,スクリーンショットの選択には写真へのアクセス許可が必要です。,true
+GPS_ERR_SERVICE_DISABLED,Location Services are off. Turn them on in Settings.,端末の位置情報サービスがOFFです。設定アプリからONにしてください。,true
+GPS_ERR_PERMISSION_DENIED,Location permission is required.,位置情報の許可が必要です。,true
+GPS_ERR_PERMISSION_DENIED_FOREVER,"Location is denied. Set GOLFIN's location to ""While Using the App"" in Settings.",位置情報が拒否されています。設定アプリから GOLFIN の位置情報を「このAppの使用中のみ」に設定してください。,true
+GPS_ERR_TIMEOUT,Getting your location is taking a while. Try again where the signal is better.,位置情報の取得に時間がかかっています。電波の良い場所で再度お試しください。,true
+GPS_ERR_UNKNOWN,Could not get your location.,位置情報の取得に失敗しました。,true
+GPS_HUB_RECENT_GIFTS,RECENT GIFTS,最近のギフト,true
+GPS_HUB_LIVE_VOTES,LIVE VOTES,開催中の投票,true
+GPS_HUB_NO_GIFTS,No gifts yet,まだギフトはありません,true
+GPS_HUB_NO_VOTES,No votes yet,まだ投票はありません,true
+GPS_PROFILE_TITLE,PROFILE,プロフィール,true
+GPS_AVATAR_TITLE,MY AVATAR,マイアバター,true
+GPS_BADGES_TITLE,BADGES,バッジ,true
+GPS_PROFILE_SUB_FMT,HC {0} · {1} rounds,HC {0} · {1}ラウンド,true
+GPS_PROFILE_STAT_FOLLOWERS,FOLLOWERS,フォロワー,true
+GPS_PROFILE_STAT_ROUNDS,ROUNDS,ラウンド,true
+GPS_PROFILE_STAT_AVATAR,AVATAR,アバター,true
+GPS_PROFILE_STAT_POINTS,POINTS,ポイント,true
+GPS_PROFILE_TRUST,✓ TRUST LEVEL,✓ 信頼度,true
+GPS_PROFILE_TRUST_NOTE,Verified by GPS · post scores to increase,GPSで認証済み · スコアを投稿して信頼度アップ,true
+GPS_PROFILE_BEST,BEST,ベスト,true
+GPS_PROFILE_AVERAGE,AVERAGE,平均,true
+GPS_PROFILE_AVG_PUTTS,AVG PUTTS,平均パット数,true
+GPS_PROFILE_GIFTS_IN,GIFTS RECEIVED,受け取ったギフト,true
+GPS_PROFILE_GIFTS_OUT,GIFTS SENT,送ったギフト,true
+GPS_PROFILE_SHORTCUT_BADGES,BADGES,バッジ,true
+GPS_PROFILE_SHORTCUT_SHOP,GIFT SHOP,ギフトショップ,true
+GPS_PROFILE_SHORTCUT_AVATAR,MY AVATAR,マイアバター,true
+GPS_PROFILE_SHOP_SUB,Browse & send gifts,ギフトを見て送る,true
+GPS_PROFILE_BADGES_SUB_FMT,{0} / {1} earned,{0} / {1} 獲得済み,true
+GPS_PROFILE_AVATAR_SUB_FMT,Lv.{0} · {1}/{2} XP,Lv.{0} · {1}/{2} XP,true
+GPS_PROFILE_RECENT,MY RECENT ROUNDS,最近のラウンド,true
+GPS_PROFILE_EDIT,EDIT PROFILE,プロフィール編集,true
+GPS_AVATAR_SLOT_CAP,CAP,キャップ,true
+GPS_AVATAR_SLOT_SHIRT,SHIRT,シャツ,true
+GPS_AVATAR_SLOT_GLOVE,GLOVE,グローブ,true
+GPS_AVATAR_SLOT_SHOES,SHOES,シューズ,true
+GPS_AVATAR_SLOT_CLUB,CLUB,クラブ,true
+GPS_AVATAR_RANK_BEGINNER,BEGINNER,ビギナー,true
+GPS_AVATAR_RANK_ROOKIE,ROOKIE,ルーキー,true
+GPS_AVATAR_RANK_AMATEUR,AMATEUR,アマチュア,true
+GPS_AVATAR_RANK_SINGLE,SINGLE,シングル,true
+GPS_AVATAR_RANK_PRO,PRO,プロ,true
+GPS_AVATAR_LEVEL_FMT,Lv.{0},Lv.{0},true
+GPS_AVATAR_NEXT_FMT,Lv.{0},Lv.{0},true
+GPS_AVATAR_XP_HINT_FMT,{0} more rounds (est.),あと{0}ラウンド（目安）,true
+GPS_AVATAR_XP_FMT,{0} / {1} XP,{0} / {1} XP,true
+GPS_AVATAR_XP_CTA,Keep posting scores to level up!,スコアを投稿してレベルアップ！,true
+GPS_AVATAR_EVOLUTION,AVATAR EVOLUTION,進化,true
+GPS_AVATAR_STATUS,STATUS,キャラクター ステータス,true
+GPS_AVATAR_STATUS_NOTE,Your selected GOLFIN character stats,選択中のGOLFINキャラクターのステータス,true
+GPS_BADGES_COLLECTION,BADGE COLLECTION,バッジコレクション,true
+GPS_BADGES_EARNED_FMT,{0} / {1} badges earned,{0} / {1} バッジ獲得済み,true
+GPS_BADGES_SEC_GOLF,GOLF,ゴルフ,true
+GPS_BADGES_SEC_SOCIAL,SOCIAL,ソーシャル,true
+GPS_BADGES_SEC_TRUST,TRUST,信頼度,true
+GPS_BADGES_SEC_SPECIAL,SPECIAL,スペシャル,true
+GPS_BADGES_RARITY_COMMON,COMMON,コモン,true
+GPS_BADGES_RARITY_RARE,RARE,レア,true
+GPS_BADGES_RARITY_EPIC,EPIC,エピック,true
+GPS_BADGES_RARITY_LEGEND,LEGEND,レジェンド,true
+BADGE_first_round_NAME,First Round,初ラウンド,true
+BADGE_break_110_NAME,Break 110,110切り,true
+BADGE_break_100_NAME,Break 100,100切り,true
+BADGE_break_90_NAME,Break 90,90切り,true
+BADGE_break_80_NAME,Break 80,80切り,true
+BADGE_streak_5_NAME,5 in a Row,5連続,true
+BADGE_streak_10_NAME,10 in a Row,10連続,true
+BADGE_courses_10_NAME,10 Courses,10コース,true
+BADGE_first_gift_recv_NAME,First Gift In,初ギフト受取,true
+BADGE_first_gift_send_NAME,First Gift Out,初ギフト送信,true
+BADGE_gifts_100_NAME,100 Gifts In,ギフト100受取,true
+BADGE_followers_100_NAME,100 Followers,フォロワー100,true
+BADGE_followers_1000_NAME,1K Followers,フォロワー1000,true
+BADGE_followers_10000_NAME,10K Followers,フォロワー10000,true
+BADGE_first_vote_NAME,First Vote,初投票,true
+BADGE_vote_hits_10_NAME,10 Vote Hits,投票10ヒット,true
+BADGE_first_gps_NAME,First GPS Proof,初GPS証明,true
+BADGE_trust_80_NAME,Trust 80%,信頼度80%,true
+BADGE_trust_100_NAME,Trust 100%,信頼度100%,true
+BADGE_social_verify_5_NAME,5 Friend Confirms,5人確認,true
+BADGE_monthly_mvp_NAME,Monthly MVP,月間MVP,true
+BADGE_tournament_win_NAME,Tournament Win,トーナメント優勝,true
+BADGE_gift_king_NAME,Gift Top 10,ギフトTOP10,true
+BADGE_all_badges_NAME,All Badges,全バッジ,true
+GPS_AVATAR_UNLOCKS_FMT,UNLOCKS AT Lv.{0},Lv.{0}で解放,true
+GPS_AVATAR_UNLOCK_CAP,CAMO CAP,カモキャップ,true
+GPS_AVATAR_UNLOCK_AURA,GOLD AURA,ゴールドオーラ,true
+GPS_AVATAR_UNLOCK_FX,FLAME FX,フレイムFX,true
+GPS_GOLFPROF_TITLE,GOLF PROFILE,ゴルフプロフィール,true
+GPS_GOLFPROF_TITLE_INTRO,SET UP YOUR GOLF PROFILE,ゴルフプロフィールを設定,true
+GPS_GOLFPROF_SUB,You can change all of this later in Settings,これらはすべて後から設定で変更できます,true
+GPS_GOLFPROF_COLOUR_LABEL,Pick your avatar colour,アバターの色を選択,true
+GPS_GOLFPROF_NICKNAME,NICKNAME,ニックネーム,true
+GPS_GOLFPROF_NICKNAME_HINT,Your nickname,ニックネームを入力,true
+GPS_GOLFPROF_EXPERIENCE,GOLF EXPERIENCE,ゴルフ歴,true
+GPS_GOLFPROF_EXP_BEGINNER,BEGINNER,初心者,true
+GPS_GOLFPROF_EXP_INTERMEDIATE,INTERMEDIATE,中級者,true
+GPS_GOLFPROF_EXP_ADVANCED,ADVANCED,上級者,true
+GPS_GOLFPROF_HANDICAP,HANDICAP (OPTIONAL),ハンディキャップ（任意）,true
+GPS_GOLFPROF_HANDICAP_HINT,e.g. 18.4,例：18.4,true
+GPS_GOLFPROF_HANDICAP_BAD,"Enter a handicap between -10 and 60, or leave it blank.",ハンディキャップは-10〜60の範囲で入力するか、空欄にしてください。,true
+GPS_GOLFPROF_SAVE,SAVE PROFILE,プロフィールを保存,true
+GPS_GOLFPROF_SKIP,Skip for now,後で設定する,true
+GPS_WELCOME_TITLE,WELCOME,ようこそ,true
+GPS_WELCOME_TITLE_HEAD,WELCOME TO GOLFIN GPS,GOLFIN GPS へようこそ,true
+GPS_WELCOME_SUB,"Earn points just by playing golf. Prove your rounds with GPS, get gifts from fans, and grow your avatar.",ゴルフをプレイするだけでポイントが貯まります。GPSでラウンドを証明し、ファンからギフトを受け取り、アバターを育てましょう。,true
+GPS_WELCOME_SKIP,SKIP,スキップ,true
+GPS_WELCOME_GET_STARTED,GET STARTED,はじめる,true
+GPS_WELCOME_FEAT_SS,SCREENSHOT,スクリーンショット,true
+GPS_WELCOME_FEAT_SS_DESC,AI reads your scorecard,AIがスコアカードを読み取ります,true
+GPS_WELCOME_FEAT_CHECKIN,CHECK IN,チェックイン,true
+GPS_WELCOME_FEAT_CHECKIN_DESC,Prove it with GPS,GPSでラウンドを証明,true
+GPS_WELCOME_FEAT_VOTE,VOTE,投票,true
+GPS_WELCOME_FEAT_VOTE_DESC,Predict and win points,予想してポイントを獲得,true
+GPS_WELCOME_FEAT_GIFT,GIFT,ギフト,true
+GPS_WELCOME_FEAT_GIFT_DESC,Support your favourite golfers,好きなゴルファーを応援,true
+GPS_GIFT_TITLE,GIFTS,ギフト,true
+GPS_GIFT_HERO_TITLE,GIFTS RECEIVED,受け取ったギフト,true
+GPS_GIFT_HERO_SUB,from {0} supporters,{0}人のサポーターから,true
+GPS_GIFT_HERO_VALUE,{0} pts,{0} pts,true
+GPS_GIFT_HERO_NOTE,total gift earnings,ギフト獲得ポイント合計,true
+GPS_GIFT_SUPPORTERS,TOP SUPPORTERS,トップサポーター,true
+GPS_GIFT_POPULAR,POPULAR GOLFERS,人気のゴルファー,true
+GPS_GIFT_SEE_ALL,SEE ALL ›,すべて見る ›,true
+GPS_GIFT_SEND_GIFT,SEND GIFT,ギフトを贈る,true
+GPS_GIFT_FOLLOWERS,{0} followers,フォロワー{0}人,true
+GPS_GIFT_PTS,{0} pts,{0} pts,true
+GPS_GIFT_BUY_TITLE,BUY GIFT ITEMS,ギフトアイテムを買う,true
+GPS_GIFT_BUY_SUB,Support your favourite golfer,好きなゴルファーを応援しよう,true
+GPS_GIFT_MODAL_TITLE,SEND A GIFT,ギフトを贈る,true
+GPS_GIFT_MODAL_BALANCE,Your balance: {0} pts,残高：{0} pts,true
+GPS_GIFT_MODAL_CONFIRM,CONFIRM,確定する,true
+GPS_GIFT_MODAL_CANCEL,CANCEL,キャンセル,true
+GPS_GIFT_MODAL_SENDING,Sending…,送信中…,true
+GPS_GIFT_SENT,Sent {0} pts to {1},{1}に{0} ptsを贈りました,true
+GPS_GIFT_PURCHASED,Purchased {0},{0}を購入しました,true
+GPS_GIFT_INSUFFICIENT,Not enough points.,ポイントが足りません。,true
+GPS_GIFT_FAILED,Something went wrong. Try again.,エラーが発生しました。もう一度お試しください。,true
 # --- gift catalog item names -----------------------------------------------
 # gift_items rows carry ONE Japanese `name` column and never pass through the content
 # pipeline, so an English build rendered them in Japanese. Keyed by the first 8 hex of
 # the row's uuid so a NEW catalog row is fixable by publishing a text row alone.
-GIFT_ITEM_F8137DC1,Sunglasses,サングラス
-GIFT_ITEM_61B09778,Wristband,リストバンド
-GIFT_ITEM_DB99F9F0,Cheer Stamp,応援スタンプ
-GIFT_ITEM_E7F58D2F,Golf Ball,ゴルフボール
-GIFT_ITEM_6FB9856D,Pants (Navy),パンツ（ネイビー）
-GIFT_ITEM_C26D218F,Skirt,スカート
-GIFT_ITEM_9052D274,Score Post Effect,スコア投稿エフェクト
-GIFT_ITEM_DC1945D6,Seasonal Full Outfit,シーズン限定フルコーデ
-GIFT_ITEM_85A68F02,Full Outfit + Title,フルコーデ + 称号
-GIFT_ITEM_D4ED366E,Glove,グローブ
-GIFT_ITEM_8CBC1D6B,Basic Cap,ベーシックキャップ
-GIFT_ITEM_4AF0AE50,Sun Visor,サンバイザー
-GIFT_ITEM_FA79E47A,Gold Rim Cap,ゴールドリムキャップ
-GIFT_ITEM_C3CCD8A3,Crown,王冠
-GIFT_ITEM_80CB3AAC,Glowing Profile Frame,光るプロフィールフレーム
-GIFT_ITEM_51AA59B5,Spikeless Shoes (White),スパイクレス（白）
-GIFT_ITEM_CE366C56,Hologram Shoes,ホログラムシューズ
-GIFT_ITEM_860A7684,Polo Shirt (White),ポロシャツ（白）
-GIFT_ITEM_85EE1D03,Polo Shirt (Pink),ポロシャツ（ピンク）
-GIFT_ITEM_4A9A2CC6,Glowing Logo Polo,光るロゴポロ
-GIFT_ITEM_FC96A954,One Rare Wear Item,レアウェア1点
-GPS_VOTE_TITLE,VOTES,投票
-GPS_VOTE_NEW,NEW,新規
-GPS_VOTE_TRENDING,TRENDING,人気
-GPS_VOTE_FRIENDS,FRIENDS,フレンド
-GPS_VOTE_PUBLIC,PUBLIC,公開
-GPS_VOTE_MINE,MINE,自分
-GPS_VOTE_CREATE,+ CREATE,＋作成
-GPS_VOTE_VOTE,VOTE,投票する
-GPS_VOTE_GIFT,GIFT,ギフト
-GPS_VOTE_YES,YES,はい
-GPS_VOTE_NO,NO,いいえ
-GPS_VOTE_META,{0} votes · {1} days left,{0}票・残り{1}日
-GPS_VOTE_REWARD_PILL,+10 pts,+10 pts
-GPS_VOTE_ALREADY,You have already voted on this.,この投票にはすでに参加しています。
-GPS_VOTE_CAST_TOAST,+{0} pts for voting,投票で+{0} pts
-GPS_VOTE_CAST_FAILED,Could not cast your vote. Try again.,投票できませんでした。もう一度お試しください。
-GPS_VOTE_EMPTY,No votes right now.,現在、投票はありません。
-GPS_VOTE_EMPTY_MINE,You have not created a vote yet.,まだ投票を作成していません。
-GPS_VOTE_AGO_MIN,{0}m ago,{0}分前
-GPS_VOTE_AGO_HOUR,{0}h ago,{0}時間前
-GPS_VOTE_AGO_DAY,{0}d ago,{0}日前
-GPS_VOTE_CREATE_TITLE,CREATE A VOTE,投票を作成
-GPS_VOTE_CREATE_HINT,Ask something about your round,ラウンドについて質問してみよう
-GPS_VOTE_CREATE_OPTIONS,Answers are YES and NO.,選択肢は「はい」と「いいえ」です。
-GPS_VOTE_EXPIRY_24H,24 HOURS,24時間
-GPS_VOTE_EXPIRY_3D,3 DAYS,3日間
-GPS_VOTE_EXPIRY_7D,7 DAYS,7日間
-GPS_VOTE_CREATE_SUBMIT,CREATE VOTE,投票を作成
-GPS_VOTE_CREATE_SENDING,Creating…,作成中…
-GPS_VOTE_CREATE_FAILED,Could not create the vote. Try again.,投票を作成できませんでした。もう一度お試しください。
-GPS_VOTE_CREATED,Vote created.,投票を作成しました。
-GPS_ROUNDS_TITLE,ROUNDS,ラウンド
-GPS_ROUNDS_NEARBY_COUNT,NEARBY · {0} SPOTS,近くのスポット · {0}件
-GPS_ROUNDS_GPS_ON,● GPS ON,● GPS オン
-GPS_ROUNDS_GPS_OFF,● GPS OFF,● GPS オフ
-GPS_ROUNDS_LIVE,● LIVE,● 進行中
-GPS_ROUNDS_CHECKED_IN_SINCE,CHECKED IN · {0}〜,チェックイン中 · {0}〜
-GPS_ROUNDS_CAT_GOLF,GOLF COURSES,ゴルフ場
-GPS_ROUNDS_CAT_RANGE,DRIVING RANGES,練習場
-GPS_ROUNDS_CAT_FOOD,FOOD & DRINK,飲食店
-GPS_ROUNDS_NEAR_ME,◎ NEAR ME,◎ 現在地
-GPS_ROUNDS_LEGEND_PARTNER,PARTNER,提携
-GPS_ROUNDS_LEGEND_REGISTERED,REGISTERED,登録済み
-GPS_ROUNDS_LEGEND_FOOD,FOOD & DRINK,飲食店
-GPS_ROUNDS_MAP_ATTRIBUTION,Map · Google,地図 · Google
-GPS_ROUNDS_SORT_NEAREST,NEAREST FIRST,近い順
-GPS_ROUNDS_SORT_NAME,BY NAME,名前順
-GPS_ROUNDS_SORT_DISTANCE,DISTANCE,距離
-GPS_ROUNDS_SORT_NAME_TOGGLE,NAME,名前
-GPS_ROUNDS_NEAR_YOU,NEAR YOU,近くのスポット
-GPS_ROUNDS_NEARBY_FOOD,NEARBY FOOD & DRINK,近くの飲食店
-GPS_ROUNDS_PARTNER,PARTNER,提携
-GPS_ROUNDS_CHECK_IN,CHECK IN,チェックイン
-GPS_ROUNDS_TOO_FAR,{0} KM AWAY,{0} KM 先
-GPS_ROUNDS_TOO_FAR_TOAST,"You need to be at {0} to check in — you're {1} km away","{0} でないとチェックインできません（現在 {1} km 先）"
-GPS_ROUNDS_NO_GPS_TOAST,Turn on location to check in,チェックインするには位置情報をオンにしてください
-GPS_ROUNDS_DETAILS,DETAILS,詳細
-GPS_ROUNDS_EMPTY,No spots nearby right now.,近くにスポットがありません。
-GPS_ROUNDS_LIVE_ROUND,● LIVE ROUND,● ラウンド中
-GPS_ROUNDS_SINCE,Since {0},{0} 開始
-GPS_ROUNDS_ELAPSED,ELAPSED,経過時間
-GPS_ROUNDS_PTS_EARNED,PTS EARNED,獲得ポイント
-GPS_ROUNDS_GPS,GPS,GPS
-GPS_ROUNDS_GPS_FIXES,GPS FIXES,GPS 記録数
-GPS_ROUNDS_SCORE_UPLOAD,SCORE UPLOAD,スコア投稿
-GPS_ROUNDS_CHECK_OUT,CHECK OUT,チェックアウト
-GPS_ROUNDS_CONFIRM_TITLE,CHECK IN HERE?,ここにチェックインしますか？
-GPS_ROUNDS_CONFIRM_SUB,{0} km away · inside the course radius,{0} km · コースの範囲内
-GPS_ROUNDS_CONFIRM_SUB_OUTSIDE,{0} km away · outside the course radius,{0} km · コースの範囲外
-GPS_ROUNDS_PTS_ON_CHECKIN,PTS ON CHECK-IN,チェックイン
-GPS_ROUNDS_PTS_ON_CHECKIN_VALUE,+30,+30
-GPS_ROUNDS_PTS_ON_CHECKOUT,PTS ON CHECK-OUT,チェックアウト
-GPS_ROUNDS_PTS_ON_CHECKOUT_VALUE,+10,+10
-GPS_ROUNDS_GPS_ACCURACY,GPS ACCURACY,GPS 精度
-GPS_ROUNDS_ACCURACY_HIGH,● HIGH,● 高
-GPS_ROUNDS_ACCURACY_MED,● MED,● 中
-GPS_ROUNDS_ACCURACY_LOW,● LOW,● 低
-GPS_ROUNDS_CONFIRM_NOTE,"GOLFIN keeps a GPS trail while you play. Check out when you finish — your score post then carries the proof.",プレー中はGOLFINがGPS軌跡を記録します。終了したらチェックアウトすると、スコア投稿にその証明が付きます。
-GPS_ROUNDS_CANCEL,CANCEL,キャンセル
-GPS_ROUNDS_COMPLETE_TITLE,ROUND COMPLETE,ラウンド終了
-GPS_ROUNDS_COMPLETE_SUB,{0} – {1} · GPS verified,{0}〜{1} · GPS 認証済み
-GPS_ROUNDS_COMPLETE_SUB_UNVERIFIED,{0} – {1} · GPS unverified,{0}〜{1} · GPS 未認証
-GPS_ROUNDS_COMPLETE_NOTE,"Post your scorecard now to add screenshot points (+50) and Trust +20 from this round's GPS.","今スコアカードを投稿すると、スクリーンショットの +50 pt とこのラウンドの GPS による Trust +20 が加算されます。"
-GPS_ROUNDS_POST_SCORE,POST SCORE,スコアを投稿
-GPS_ROUNDS_DONE,DONE,完了
-GPS_ROUNDS_EXPIRED,ROUND EXPIRED,ラウンド期限切れ
-GPS_ROUNDS_EXPIRED_NOTE,This round was open for more than 8 hours. Check out to clear it — no points are awarded.,このラウンドは8時間以上開いたままです。チェックアウトで終了できますが、ポイントは付与されません。
-GPS_ROUNDS_CHECKED_IN,Checked in at {0} (+{1} pts),{0} にチェックインしました（+{1} pt）
-GPS_ROUNDS_CHECKED_IN_NO_PTS,Checked in at {0},{0} にチェックインしました
-GPS_ROUNDS_CHECKIN_FAILED,Could not check in. Try again.,チェックインできませんでした。もう一度お試しください。
-GPS_ROUNDS_CHECKOUT_FAILED,Could not check out. Try again.,チェックアウトできませんでした。もう一度お試しください。
-GPS_ROUNDS_ALREADY_ACTIVE,You already have a round open.,すでにラウンドが開いています。
-GPS_ROUNDS_MY_RECENT_ROUNDS,MY RECENT ROUNDS,最近のラウンド
-GPS_ROUNDS_ALL_ROUNDS,ALL ROUNDS  ›,すべてのラウンド  ›
-GPS_ROUNDS_NO_ROUNDS,No rounds yet.,まだラウンドがありません。
-SHOT_GRADE_JUST,JUST!,ジャスト!
-SHOT_GRADE_GOOD,GOOD,グッド
-SHOT_GRADE_MISS,MISS,ミス
-SHOT_GRADE_PERFECT,PERFECT,パーフェクト
-SHOT_GRADE_HOOK,HOOK,フック
-SHOT_GRADE_SLICE,SLICE,スライス
-SHOT_GRADE_SHANK,SHANK,シャンク
-SHOT_TAP_HINT,TAP!,タップ!
-SHOT_GRADE_PURE,PURE,ピュア
-SHOT_GRADE_DUFF,DUFF,ダフリ
-SWING_POWER,POWER,パワー
-SWING_IMPACT,IMPACT,インパクト
-SWING_PATH,PATH,軌道
-SWING_TEMPO,TEMPO,テンポ
-SWING_PATH_STRAIGHT,STRAIGHT,ストレート
-SWING_PATH_DRAW,DRAW,ドロー
-SWING_PATH_FADE,FADE,フェード
-SWING_TEMPO_GOOD,GOOD,グッド
-SWING_TEMPO_FAST,FAST,速い
-SWING_TEMPO_SLOW,SLOW,遅い
-SWING_IMPACT_LINE,IMPACT,インパクト
-SCHEME_POPUP_HOW,HOW IT WORKS,操作方法
-SCHEME_POPUP_FOOTER,Works with every club. You can switch back any time in Settings.,どのクラブでも使えます。設定からいつでも戻せます。
-SCHEME_POPUP_FLICK_STEP1,PULL,引く
-SCHEME_POPUP_FLICK_STEP2,AIM & TIME,狙い＆タイミング
-SCHEME_POPUP_FLICK_STEP3,FLICK UP,フリック
-SCHEME_POPUP_FLICK_LINE1,"Pull the club back down the cone for power — the further, the harder.",コーンに沿ってクラブを引くほどパワーが上がります。
-SCHEME_POPUP_FLICK_LINE2,Slide left or right inside the cone to fine-tune your aim. Arrows run up the cone: green is perfect timing.,コーン内で左右に動かして狙いを微調整。矢印が上がり、緑がベストタイミングです。
-SCHEME_POPUP_FLICK_LINE3,Flick up to hit. Wait too long and your aim starts to wander.,上にフリックで打ちます。待ちすぎると狙いがブレます。
-SCHEME_POPUP_PENDULUM_STEP1,PULL,引く
-SCHEME_POPUP_PENDULUM_STEP2,TIME IT,タイミング
-SCHEME_POPUP_PENDULUM_STEP3,FLICK UP,フリック
-SCHEME_POPUP_PENDULUM_LINE1,"Pull the club straight back — further is more power, past the gold line is overpower.",クラブをまっすぐ引くほどパワーが上がり、金線を越えるとオーバーパワーです。
-SCHEME_POPUP_PENDULUM_LINE2,A marker swings across the bar. Better Club Control makes it slower.,マーカーがバーを往復します。クラブコントロールが高いほど遅くなります。
-SCHEME_POPUP_PENDULUM_LINE3,"Flick up when it hits the red centre. Green = JUST, amber = GOOD, outside = MISS.",赤い中心に来た瞬間に上へフリック。緑＝ジャスト、黄＝グッド、外＝ミス。
-SCHEME_POPUP_NEEDLE_STEP1,PULL,引く
-SCHEME_POPUP_NEEDLE_STEP2,TAP,タップ
-SCHEME_POPUP_NEEDLE_STEP3,RESULT,結果
-SCHEME_POPUP_NEEDLE_LINE1,Pull the club back inside the circle for power and let go — past the gold ring is overpower.,円の中でクラブを引いて離します。金の輪を越えるとオーバーパワーです。
-SCHEME_POPUP_NEEDLE_LINE2,A needle sweeps across the arc. Tap anywhere to stop it; higher Club Control makes it slower.,針がアークを一度だけ動きます。どこでもタップで止めます。クラブコントロールが高いほど遅くなります。
-SCHEME_POPUP_NEEDLE_LINE3,"Blue zone = PERFECT. Early hooks left, late slices right. No tap before the end = shank.",青＝パーフェクト。早いとフック、遅いとスライス。止めないとシャンクです。
-SCHEME_POPUP_FREESWING_STEP1,BACKSWING,バックスイング
-SCHEME_POPUP_FREESWING_STEP2,SWING UP,振り上げ
-SCHEME_POPUP_FREESWING_STEP3,RESULT,結果
-SCHEME_POPUP_FREESWING_LINE1,"Drag the club straight down — deeper is more power, past the gold line is overswing.",クラブをまっすぐ下へ。深いほどパワーが上がり、金線を越えるとオーバースイングです。
-SCHEME_POPUP_FREESWING_LINE2,"Drag back up through the IMPACT line; the shot fires as you cross it. A straight path flies straight, an angled one shapes a draw or fade.",インパクト線を上へ通過した瞬間に打ちます。まっすぐならストレート、斜めならドローやフェードになります。
-SCHEME_POPUP_FREESWING_LINE3,"Tempo counts: a smooth, quick upswing keeps full power. Slow or wobbly costs distance and accuracy.",テンポが大事。速く滑らかに振り上げればフルパワー。遅い・ブレると飛距離と精度が落ちます。
+GIFT_ITEM_F8137DC1,Sunglasses,サングラス,true
+GIFT_ITEM_61B09778,Wristband,リストバンド,true
+GIFT_ITEM_DB99F9F0,Cheer Stamp,応援スタンプ,true
+GIFT_ITEM_E7F58D2F,Golf Ball,ゴルフボール,true
+GIFT_ITEM_6FB9856D,Pants (Navy),パンツ（ネイビー）,true
+GIFT_ITEM_C26D218F,Skirt,スカート,true
+GIFT_ITEM_9052D274,Score Post Effect,スコア投稿エフェクト,true
+GIFT_ITEM_DC1945D6,Seasonal Full Outfit,シーズン限定フルコーデ,true
+GIFT_ITEM_85A68F02,Full Outfit + Title,フルコーデ + 称号,true
+GIFT_ITEM_D4ED366E,Glove,グローブ,true
+GIFT_ITEM_8CBC1D6B,Basic Cap,ベーシックキャップ,true
+GIFT_ITEM_4AF0AE50,Sun Visor,サンバイザー,true
+GIFT_ITEM_FA79E47A,Gold Rim Cap,ゴールドリムキャップ,true
+GIFT_ITEM_C3CCD8A3,Crown,王冠,true
+GIFT_ITEM_80CB3AAC,Glowing Profile Frame,光るプロフィールフレーム,true
+GIFT_ITEM_51AA59B5,Spikeless Shoes (White),スパイクレス（白）,true
+GIFT_ITEM_CE366C56,Hologram Shoes,ホログラムシューズ,true
+GIFT_ITEM_860A7684,Polo Shirt (White),ポロシャツ（白）,true
+GIFT_ITEM_85EE1D03,Polo Shirt (Pink),ポロシャツ（ピンク）,true
+GIFT_ITEM_4A9A2CC6,Glowing Logo Polo,光るロゴポロ,true
+GIFT_ITEM_FC96A954,One Rare Wear Item,レアウェア1点,true
+GPS_VOTE_TITLE,VOTES,投票,true
+GPS_VOTE_NEW,NEW,新規,true
+GPS_VOTE_TRENDING,TRENDING,人気,true
+GPS_VOTE_FRIENDS,FRIENDS,フレンド,true
+GPS_VOTE_PUBLIC,PUBLIC,公開,true
+GPS_VOTE_MINE,MINE,自分,true
+GPS_VOTE_CREATE,+ CREATE,＋作成,true
+GPS_VOTE_VOTE,VOTE,投票する,true
+GPS_VOTE_GIFT,GIFT,ギフト,true
+GPS_VOTE_YES,YES,はい,true
+GPS_VOTE_NO,NO,いいえ,true
+GPS_VOTE_META,{0} votes · {1} days left,{0}票・残り{1}日,true
+GPS_VOTE_REWARD_PILL,+10 pts,+10 pts,true
+GPS_VOTE_ALREADY,You have already voted on this.,この投票にはすでに参加しています。,true
+GPS_VOTE_CAST_TOAST,+{0} pts for voting,投票で+{0} pts,true
+GPS_VOTE_CAST_FAILED,Could not cast your vote. Try again.,投票できませんでした。もう一度お試しください。,true
+GPS_VOTE_EMPTY,No votes right now.,現在、投票はありません。,true
+GPS_VOTE_EMPTY_MINE,You have not created a vote yet.,まだ投票を作成していません。,true
+GPS_VOTE_AGO_MIN,{0}m ago,{0}分前,true
+GPS_VOTE_AGO_HOUR,{0}h ago,{0}時間前,true
+GPS_VOTE_AGO_DAY,{0}d ago,{0}日前,true
+GPS_VOTE_CREATE_TITLE,CREATE A VOTE,投票を作成,true
+GPS_VOTE_CREATE_HINT,Ask something about your round,ラウンドについて質問してみよう,true
+GPS_VOTE_CREATE_OPTIONS,Answers are YES and NO.,選択肢は「はい」と「いいえ」です。,true
+GPS_VOTE_EXPIRY_24H,24 HOURS,24時間,true
+GPS_VOTE_EXPIRY_3D,3 DAYS,3日間,true
+GPS_VOTE_EXPIRY_7D,7 DAYS,7日間,true
+GPS_VOTE_CREATE_SUBMIT,CREATE VOTE,投票を作成,true
+GPS_VOTE_CREATE_SENDING,Creating…,作成中…,true
+GPS_VOTE_CREATE_FAILED,Could not create the vote. Try again.,投票を作成できませんでした。もう一度お試しください。,true
+GPS_VOTE_CREATED,Vote created.,投票を作成しました。,true
+GPS_ROUNDS_TITLE,ROUNDS,ラウンド,true
+GPS_ROUNDS_NEARBY_COUNT,NEARBY · {0} SPOTS,近くのスポット · {0}件,true
+GPS_ROUNDS_GPS_ON,● GPS ON,● GPS オン,true
+GPS_ROUNDS_GPS_OFF,● GPS OFF,● GPS オフ,true
+GPS_ROUNDS_LIVE,● LIVE,● 進行中,true
+GPS_ROUNDS_CHECKED_IN_SINCE,CHECKED IN · {0}〜,チェックイン中 · {0}〜,true
+GPS_ROUNDS_CAT_GOLF,GOLF COURSES,ゴルフ場,true
+GPS_ROUNDS_CAT_RANGE,DRIVING RANGES,練習場,true
+GPS_ROUNDS_CAT_FOOD,FOOD & DRINK,飲食店,true
+GPS_ROUNDS_NEAR_ME,◎ NEAR ME,◎ 現在地,true
+GPS_ROUNDS_LEGEND_PARTNER,PARTNER,提携,true
+GPS_ROUNDS_LEGEND_REGISTERED,REGISTERED,登録済み,true
+GPS_ROUNDS_LEGEND_FOOD,FOOD & DRINK,飲食店,true
+GPS_ROUNDS_MAP_ATTRIBUTION,Map · Google,地図 · Google,true
+GPS_ROUNDS_SORT_NEAREST,NEAREST FIRST,近い順,true
+GPS_ROUNDS_SORT_NAME,BY NAME,名前順,true
+GPS_ROUNDS_SORT_DISTANCE,DISTANCE,距離,true
+GPS_ROUNDS_SORT_NAME_TOGGLE,NAME,名前,true
+GPS_ROUNDS_NEAR_YOU,NEAR YOU,近くのスポット,true
+GPS_ROUNDS_NEARBY_FOOD,NEARBY FOOD & DRINK,近くの飲食店,true
+GPS_ROUNDS_PARTNER,PARTNER,提携,true
+GPS_ROUNDS_CHECK_IN,CHECK IN,チェックイン,true
+GPS_ROUNDS_TOO_FAR,{0} KM AWAY,{0} KM 先,true
+GPS_ROUNDS_TOO_FAR_TOAST,You need to be at {0} to check in — you're {1} km away,{0} でないとチェックインできません（現在 {1} km 先）,true
+GPS_ROUNDS_NO_GPS_TOAST,Turn on location to check in,チェックインするには位置情報をオンにしてください,true
+GPS_ROUNDS_DETAILS,DETAILS,詳細,true
+GPS_ROUNDS_EMPTY,No spots nearby right now.,近くにスポットがありません。,true
+GPS_ROUNDS_LIVE_ROUND,● LIVE ROUND,● ラウンド中,true
+GPS_ROUNDS_SINCE,Since {0},{0} 開始,true
+GPS_ROUNDS_ELAPSED,ELAPSED,経過時間,true
+GPS_ROUNDS_PTS_EARNED,PTS EARNED,獲得ポイント,true
+GPS_ROUNDS_GPS,GPS,GPS,true
+GPS_ROUNDS_GPS_FIXES,GPS FIXES,GPS 記録数,true
+GPS_ROUNDS_SCORE_UPLOAD,SCORE UPLOAD,スコア投稿,true
+GPS_ROUNDS_CHECK_OUT,CHECK OUT,チェックアウト,true
+GPS_ROUNDS_CONFIRM_TITLE,CHECK IN HERE?,ここにチェックインしますか？,true
+GPS_ROUNDS_CONFIRM_SUB,{0} km away · inside the course radius,{0} km · コースの範囲内,true
+GPS_ROUNDS_CONFIRM_SUB_OUTSIDE,{0} km away · outside the course radius,{0} km · コースの範囲外,true
+GPS_ROUNDS_PTS_ON_CHECKIN,PTS ON CHECK-IN,チェックイン,true
+GPS_ROUNDS_PTS_ON_CHECKIN_VALUE,+30,+30,true
+GPS_ROUNDS_PTS_ON_CHECKOUT,PTS ON CHECK-OUT,チェックアウト,true
+GPS_ROUNDS_PTS_ON_CHECKOUT_VALUE,+10,+10,true
+GPS_ROUNDS_GPS_ACCURACY,GPS ACCURACY,GPS 精度,true
+GPS_ROUNDS_ACCURACY_HIGH,● HIGH,● 高,true
+GPS_ROUNDS_ACCURACY_MED,● MED,● 中,true
+GPS_ROUNDS_ACCURACY_LOW,● LOW,● 低,true
+GPS_ROUNDS_CONFIRM_NOTE,GOLFIN keeps a GPS trail while you play. Check out when you finish — your score post then carries the proof.,プレー中はGOLFINがGPS軌跡を記録します。終了したらチェックアウトすると、スコア投稿にその証明が付きます。,true
+GPS_ROUNDS_CANCEL,CANCEL,キャンセル,true
+GPS_ROUNDS_COMPLETE_TITLE,ROUND COMPLETE,ラウンド終了,true
+GPS_ROUNDS_COMPLETE_SUB,{0} – {1} · GPS verified,{0}〜{1} · GPS 認証済み,true
+GPS_ROUNDS_COMPLETE_SUB_UNVERIFIED,{0} – {1} · GPS unverified,{0}〜{1} · GPS 未認証,true
+GPS_ROUNDS_COMPLETE_NOTE,Post your scorecard now to add screenshot points (+50) and Trust +20 from this round's GPS.,今スコアカードを投稿すると、スクリーンショットの +50 pt とこのラウンドの GPS による Trust +20 が加算されます。,true
+GPS_ROUNDS_POST_SCORE,POST SCORE,スコアを投稿,true
+GPS_ROUNDS_DONE,DONE,完了,true
+GPS_ROUNDS_EXPIRED,ROUND EXPIRED,ラウンド期限切れ,true
+GPS_ROUNDS_EXPIRED_NOTE,This round was open for more than 8 hours. Check out to clear it — no points are awarded.,このラウンドは8時間以上開いたままです。チェックアウトで終了できますが、ポイントは付与されません。,true
+GPS_ROUNDS_CHECKED_IN,Checked in at {0} (+{1} pts),{0} にチェックインしました（+{1} pt）,true
+GPS_ROUNDS_CHECKED_IN_NO_PTS,Checked in at {0},{0} にチェックインしました,true
+GPS_ROUNDS_CHECKIN_FAILED,Could not check in. Try again.,チェックインできませんでした。もう一度お試しください。,true
+GPS_ROUNDS_CHECKOUT_FAILED,Could not check out. Try again.,チェックアウトできませんでした。もう一度お試しください。,true
+GPS_ROUNDS_ALREADY_ACTIVE,You already have a round open.,すでにラウンドが開いています。,true
+GPS_ROUNDS_MY_RECENT_ROUNDS,MY RECENT ROUNDS,最近のラウンド,true
+GPS_ROUNDS_ALL_ROUNDS,ALL ROUNDS  ›,すべてのラウンド  ›,true
+GPS_ROUNDS_NO_ROUNDS,No rounds yet.,まだラウンドがありません。,true
+SHOT_GRADE_GOOD,GOOD,グッド,true
+SHOT_GRADE_HOOK,HOOK,フック,true
+SHOT_GRADE_SLICE,SLICE,スライス,true
+SHOT_TAP_HINT,TAP!,タップ!,true
+SHOT_GRADE_PURE,PURE,ピュア,true
+SHOT_GRADE_THIN,THIN,トップ,true
+SHOT_GRADE_DUFF,DUFF,ダフリ,true
+SWING_POWER,POWER,パワー,true
+SWING_IMPACT,IMPACT,インパクト,true
+SWING_PATH,PATH,軌道,true
+SWING_TEMPO,TEMPO,テンポ,true
+SWING_PATH_STRAIGHT,STRAIGHT,ストレート,true
+SWING_PATH_DRAW,DRAW,ドロー,true
+SWING_PATH_FADE,FADE,フェード,true
+SWING_TEMPO_GOOD,GOOD,グッド,true
+SWING_TEMPO_FAST,FAST,速い,true
+SWING_TEMPO_SLOW,SLOW,遅い,true
+SWING_IMPACT_LINE,IMPACT,インパクト,true
+SCHEME_POPUP_HOW,HOW IT WORKS,操作方法,true
+SCHEME_POPUP_FOOTER,Works with every club. You can switch back any time in Settings.,どのクラブでも使えます。設定からいつでも戻せます。,true
+SCHEME_POPUP_FLICK_STEP1,PULL,引く,true
+SCHEME_POPUP_FLICK_STEP2,AIM & TIME,狙い＆タイミング,true
+SCHEME_POPUP_FLICK_STEP3,FLICK UP,フリック,true
+SCHEME_POPUP_FLICK_LINE1,"Pull the club back down the cone for power — the further, the harder.",コーンに沿ってクラブを引くほどパワーが上がります。,true
+SCHEME_POPUP_FLICK_LINE2,"Slide left or right inside the cone to fine-tune your aim. Arrows run up the cone: green is PURE, below the red line is a DUFF.",コーン内で左右に動かして狙いを微調整。矢印が上がり、緑＝ピュア、赤線より下＝ダフリです。,true
+SCHEME_POPUP_FLICK_LINE3,Flick up to hit. Wait too long and your aim starts to wander.,上にフリックで打ちます。待ちすぎると狙いがブレます。,true
+SCHEME_POPUP_PENDULUM_STEP1,PULL,引く,true
+SCHEME_POPUP_PENDULUM_STEP2,TIME IT,タイミング,true
+SCHEME_POPUP_PENDULUM_STEP3,FLICK UP,フリック,true
+SCHEME_POPUP_PENDULUM_LINE1,"Pull the club straight back — further is more power, past the gold line is overpower.",クラブをまっすぐ引くほどパワーが上がり、金線を越えるとオーバーパワーです。,true
+SCHEME_POPUP_PENDULUM_LINE2,A marker swings across the bar. Better Club Control makes it slower.,マーカーがバーを往復します。クラブコントロールが高いほど遅くなります。,true
+SCHEME_POPUP_PENDULUM_LINE3,"Flick up when it hits the red centre. Green = PURE, amber = GOOD, outside = DUFF.",赤い中心に来た瞬間に上へフリック。緑＝ピュア、黄＝グッド、外＝ダフリ。,true
+SCHEME_POPUP_NEEDLE_STEP1,PULL,引く,true
+SCHEME_POPUP_NEEDLE_STEP2,TAP,タップ,true
+SCHEME_POPUP_NEEDLE_STEP3,RESULT,結果,true
+SCHEME_POPUP_NEEDLE_LINE1,Pull the club back inside the circle for power and let go — past the gold ring is overpower.,円の中でクラブを引いて離します。金の輪を越えるとオーバーパワーです。,true
+SCHEME_POPUP_NEEDLE_LINE2,A needle sweeps across the arc. Tap anywhere to stop it; higher Club Control makes it slower.,針がアークを一度だけ動きます。どこでもタップで止めます。クラブコントロールが高いほど遅くなります。,true
+SCHEME_POPUP_NEEDLE_LINE3,"Green zone = PURE. Early hooks left, late slices right. No tap before the end = DUFF.",緑＝ピュア。早いとフック、遅いとスライス。止めないとダフリです。,true
+SCHEME_POPUP_FREESWING_STEP1,BACKSWING,バックスイング,true
+SCHEME_POPUP_FREESWING_STEP2,SWING UP,振り上げ,true
+SCHEME_POPUP_FREESWING_STEP3,RESULT,結果,true
+SCHEME_POPUP_FREESWING_LINE1,"Drag the club straight down — deeper is more power, past the gold line is overswing.",クラブをまっすぐ下へ。深いほどパワーが上がり、金線を越えるとオーバースイングです。,true
+SCHEME_POPUP_FREESWING_LINE2,"Drag back up through the IMPACT line; the shot fires as you cross it. A straight path flies straight, an angled one shapes a draw or fade.",インパクト線を上へ通過した瞬間に打ちます。まっすぐならストレート、斜めならドローやフェードになります。,true
+SCHEME_POPUP_FREESWING_LINE3,"Tempo counts: a smooth, quick upswing keeps full power. Slow or wobbly costs distance and accuracy.",テンポが大事。速く滑らかに振り上げればフルパワー。遅い・ブレると飛距離と精度が落ちます。,true
+SHOT_GRADE_JUST,JUST!,ジャスト!,false
+SHOT_GRADE_MISS,MISS,ミス,false
+SHOT_GRADE_PERFECT,PERFECT,パーフェクト,false
+SHOT_GRADE_SHANK,SHANK,シャンク,false

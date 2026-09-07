@@ -217,7 +217,9 @@ namespace Golfin.Gameplay.Tests
             _driver.OnPointerUp(At(OriginX, OriginY + 200f));
             float missSpeed = Speed(_lastShot);
 
-            Assert.AreEqual(_cfg.TimingPowerMulRed, _sc.LastTimingPowerMul, 1e-6f);
+            // miss_grade_duff §3.3: a MISS is a DUFF (MissPowerMul), not TimingPowerMulRed.
+            Assert.AreEqual(_cfg.MissPowerMul, _sc.LastTimingPowerMul, 1e-6f);
+            Assert.IsTrue(_sc.LastShotWasMiss, "the duff flag must reach the controller");
             Assert.AreEqual(0f, _sc.LastCommittedTiming01, 1e-6f);
             Assert.Less(missSpeed, justSpeed, "a MISS must cost real distance");
         }

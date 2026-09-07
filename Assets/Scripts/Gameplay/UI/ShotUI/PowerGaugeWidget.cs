@@ -1,7 +1,9 @@
+using System.Collections;
 using UnityEngine;
 using TMPro;
 using UnityEngine.Serialization;
 using Golfin.Gameplay.Input;
+using Golfin.Gameplay.UI.Controls;
 using Golfin.Gameplay.UI.HUD;
 
 namespace Golfin.Gameplay.UI.ShotUI
@@ -34,6 +36,18 @@ namespace Golfin.Gameplay.UI.ShotUI
 
         private CanvasGroup _group;
         private float       _maxCarryYards = 250f;
+
+        // ── DUFF flash (miss_grade_duff §3.5, D5) ────────────────────────────────
+        // The gauge normally HIDES from flick-commit onward — it is a control readout, not a
+        // flight HUD (Cesar, 2026-08-06). A duff is the one exception: the whole point of D5 is
+        // that the player is told, in the number they were watching, what the miss actually cost
+        // them. So the flash borrows the widget for exactly as long as the DUFF word above the
+        // ball is up, and then hands it straight back to the hide rule.
+        private bool      _missFlashActive;
+        private bool      _missFlashArmed = true;   // one flash per shot, re-armed on leaving Resolving
+        private Coroutine _missFlashRoutine;
+        private Color     _pctIdleColor = Color.white;
+        private bool      _pctIdleColorCaptured;
 
         public void SetMaxCarryYards(float yards)              => _maxCarryYards         = yards;
         public void SetUnitMode(DistanceUnit u)                => _unitMode              = u;
@@ -90,10 +104,32 @@ namespace Golfin.Gameplay.UI.ShotUI
         {
             if (_shotController != null)
                 _shotController.OnStateChanged -= HandleStateChanged;
+
+            // A coroutine cannot survive the disable, so end the flash HERE rather than leaving
+            // the arc stuck red for whatever the next shot does with this widget.
+            EndMissFlash();
         }
 
         private void HandleStateChanged(ShotInputState state)
         {
+            // ── The DUFF flash (miss_grade_duff §3.5) ────────────────────────────
+            // Resolving is the moment: this widget never subscribed to OnShotResolved, and the
+            // state feed is the only seam it already has. PublishState fires every Tick, so the
+            // flash is armed once per shot and re-armed the moment the state leaves Resolving.
+            if (state.State != ShotState.Resolving)
+            {
+                _missFlashArmed = true;
+            }
+            else if (_missFlashArmed && _shotController != null && _shotController.LastShotWasMiss)
+            {
+                _missFlashArmed = false;
+                BeginMissFlash(state.PowerNormalized);
+            }
+
+            // While the flash is up it OWNS the widget — the hide rule below would zero the alpha
+            // on the very frame the flash was raised.
+            if (_missFlashActive) return;
+
             // Visible only while the shot is being set up. Hidden at Idle (nothing to show yet)
             // and hidden again from flick-commit onward — the gauge is a control readout, not a
             // flight HUD (Cesar, 2026-08-06).
@@ -109,7 +145,11 @@ namespace Golfin.Gameplay.UI.ShotUI
             }
 
             int   pct = Mathf.RoundToInt(state.PowerNormalized * 100f);
-            if (_pctText != null) _pctText.text = $"{pct}%";
+            if (_pctText != null)
+            {
+                CapturePctIdleColour();
+                _pctText.text = $"{pct}%";
+            }
 
             if (_distanceText != null)
             {
@@ -126,6 +166,92 @@ namespace Golfin.Gameplay.UI.ShotUI
                     suffix   = "yd";
                 }
                 _distanceText.text = $"{distance:F1} {suffix}";
+            }
+        }
+
+        // ── DUFF flash ───────────────────────────────────────────────────────────
+
+        private void CapturePctIdleColour()
+        {
+            if (_pctIdleColorCaptured || _pctText == null) return;
+            _pctIdleColor         = _pctText.color;
+            _pctIdleColorCaptured = true;
+        }
+
+        /// <summary>
+        /// Raise the red flash: the arc, the percentage and the distance all switch from what the
+        /// player ASKED for to what the swing actually produced.
+        ///
+        /// <para>The resolved power is <c>PowerNormalized x LastTimingPowerMul</c> — the same
+        /// product <c>ShotController</c> hands the physics — so "24%" on the gauge and the
+        /// distance the ball travels are the same statement. The map-target notch is cleared for
+        /// the duration: it marks a target this shot is no longer going to reach, and leaving it
+        /// beside a 24% arc reads as a gauge that has broken rather than a shot that has.</para>
+        /// </summary>
+        private void BeginMissFlash(float powerNormalized)
+        {
+            if (_missFlashActive || _group == null) return;
+            _missFlashActive = true;
+
+            float resolved = powerNormalized * (_shotController != null
+                ? _shotController.LastTimingPowerMul
+                : 1f);
+
+            _group.alpha          = 1f;
+            _group.blocksRaycasts = false;   // nothing to touch: the shot is already gone
+
+            if (_gauge != null)
+            {
+                _gauge.MarkerUnreachable = false;
+                _gauge.MarkerFrac01      = MarkerNone;
+                _gauge.Progress01        = resolved;
+                _gauge.ArcColorOverride  = ConeBandPalette.GaugeMissFlash;
+            }
+
+            if (_pctText != null)
+            {
+                CapturePctIdleColour();
+                _pctText.text  = $"{Mathf.RoundToInt(resolved * 100f)}%";
+                _pctText.color = ConeBandPalette.GaugeMissFlash;
+            }
+
+            if (_distanceText != null)
+            {
+                float distance = _unitMode == DistanceUnit.Meters
+                    ? _maxPuttRangeMeters * resolved
+                    : ResolveCarryYards() * resolved;
+                _distanceText.text = $"{distance:F1} {(_unitMode == DistanceUnit.Meters ? "mts" : "yd")}";
+            }
+
+            // Exactly as long as the DUFF word above the ball, from that component's own number.
+            if (isActiveAndEnabled)
+                _missFlashRoutine = StartCoroutine(MissFlashRoutine(SchemeGradePop.DisplaySeconds));
+            else
+                EndMissFlash();
+        }
+
+        private IEnumerator MissFlashRoutine(float seconds)
+        {
+            yield return new WaitForSeconds(seconds);
+            _missFlashRoutine = null;
+            EndMissFlash();
+        }
+
+        /// <summary>Hand the widget back to the ordinary hide rule. Idempotent — called from the
+        /// routine, from <c>OnDisable</c>, and safe to call when no flash is up.</summary>
+        private void EndMissFlash()
+        {
+            if (_missFlashRoutine != null) { StopCoroutine(_missFlashRoutine); _missFlashRoutine = null; }
+            if (!_missFlashActive) return;
+            _missFlashActive = false;
+
+            if (_gauge != null) _gauge.ArcColorOverride = null;
+            if (_pctText != null && _pctIdleColorCaptured) _pctText.color = _pctIdleColor;
+            if (_group != null)
+            {
+                // Back to the hide rule's answer for "after the flick": invisible.
+                _group.alpha          = 0f;
+                _group.blocksRaycasts = false;
             }
         }
 

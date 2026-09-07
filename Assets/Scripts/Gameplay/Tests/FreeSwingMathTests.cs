@@ -377,10 +377,47 @@ namespace Golfin.Gameplay.Tests
                                         slow, 1f, 0.5f, 0.5f, HalfCone, false, _cfg);
 
             Assert.AreEqual(FreeSwingGrade.Duff, v.Grade);
-            Assert.AreEqual(_cfg.TimingPowerMulRed, v.TimingMul, 1e-5f);
+            // miss_grade_duff §3.3: was TimingPowerMulRed (0.70) until 2026-09-07.
+            Assert.AreEqual(_cfg.MissPowerMul, v.TimingMul, 1e-5f);
+            Assert.IsTrue(v.IsMiss);
             Assert.AreEqual(0f, v.FadeDraw01, 1e-6f, "a swing that slow shaped nothing");
             Assert.AreEqual(FreeSwingPath.Straight, v.Path);
             Assert.AreEqual(0f, v.Timing01, 1e-6f);
+        }
+
+        [Test]
+        public void Duff_OnAPuttPaysThePuttDuffMultiplier()
+        {
+            float slow = _cfg.FreeSwingDuffSpeedPxPerSec - 1f;
+            var v = FreeSwingMath.Grade(0f, 0f, _cfg.FreeSwingIdealTempo, slow, 1f,
+                                        0.5f, 0.5f, HalfCone, true, _cfg);
+            Assert.AreEqual(FreeSwingGrade.Duff, v.Grade);
+            Assert.AreEqual(_cfg.PuttMissPowerMul, v.TimingMul, 1e-5f);
+            Assert.IsTrue(v.IsMiss);
+        }
+
+        [Test]
+        public void BigHookSlice_IsNotAMiss_AndItsMultiplierIsUnchanged()
+        {
+            // D2: a big HOOK/SLICE still made real contact. It pays the TEMPO multiplier it
+            // always did — here a perfect tempo, so 1.0 — and never the duff.
+            var slice = FreeSwingMath.Grade(_cfg.FreeSwingImpactMissPx + 1f, 0f,
+                                            _cfg.FreeSwingIdealTempo, 3000f, 1f,
+                                            0.5f, 0.5f, HalfCone, false, _cfg);
+            Assert.AreEqual(FreeSwingGrade.Slice, slice.Grade);
+            Assert.AreEqual(1f, slice.TimingMul, 1e-5f);
+            Assert.IsFalse(slice.IsMiss);
+        }
+
+        [Test]
+        public void TempoMul_StillBottomsOutAtTimingPowerMulRed_NotAtTheDuff()
+        {
+            // TimingPowerMulRed keeps its own job (D6): a badly-timed but REAL swing is 70%.
+            // Only the DUFF exit moved to MissPowerMul.
+            float w = FreeSwingMath.TempoWindow(0.5f, 1f, _cfg);
+            Assert.AreEqual(_cfg.TimingPowerMulRed, FreeSwingMath.TempoMul(3f * w, w, _cfg), 1e-5f);
+            Assert.AreNotEqual(_cfg.MissPowerMul, _cfg.TimingPowerMulRed,
+                "the fixture would be vacuous if the two numbers were equal");
         }
 
         [Test]

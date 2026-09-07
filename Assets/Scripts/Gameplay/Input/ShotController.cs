@@ -156,6 +156,19 @@ namespace Golfin.Gameplay.Input
         /// 1.0 for every sampleless driver and whenever ForcePerfectTiming is on.</summary>
         public float LastTimingPowerMul { get; private set; } = 1f;
 
+        /// <summary>True when the shot just committed was a DUFF (miss_grade_duff §3.1) — a
+        /// scheme's miss grade, or a Flick latched below <c>TimingBandRedY01</c>. Latched next to
+        /// <see cref="LastTimingPowerMul"/> and read by <c>PowerGaugeWidget</c> for the red flash
+        /// and by the tests. False for every sampleless driver (bots, capture, EditMode).</summary>
+        public bool LastShotWasMiss { get; private set; }
+
+        /// <summary>The Flick band the last committed flick landed in (miss_grade_duff §3.6), or
+        /// null when this shot had no timing to judge — a bot, a capture driver, an EditMode
+        /// swing, or <c>ForcePerfectTiming</c>. Null is the signal <c>FlickGradePopBinder</c>
+        /// reads as "show nothing", which is how the other three schemes already behave for a
+        /// bot swing: their pops are raised by the DRIVER, and a bot never runs one.</summary>
+        public FlickGrade? LastFlickGrade { get; private set; }
+
         /// <summary>Arrow progress the LAST COMMITTED flick was judged on (shot_timing_telemetry D1).
         /// NaN when that flick had no touch sample (bots, capture drivers, EditMode tests).
         ///
@@ -690,7 +703,14 @@ namespace Golfin.Gameplay.Input
 
             // F15 D6: the timing multiplier lands AFTER the overpower clamp, so a 120% pull
             // flicked on red is 84% — overpowering does not buy you out of bad timing.
-            float timingMul = TimingPowerMultiplier();
+            float timingMul = TimingPowerMultiplier(out bool isMiss);
+            LastShotWasMiss = isMiss;
+            // miss_grade_duff §3.6: Flick finally has grades of its own. NaN latch / forced
+            // perfect timing = "no timing to judge", which is null rather than PURE — a bot must
+            // not pop a word for a swing nobody timed.
+            LastFlickGrade  = (DebugFlags.ForcePerfectTiming || float.IsNaN(_timingAtLatch))
+                ? (FlickGrade?)null
+                : FlickMath.Grade(_timingAtLatch, _config);
 
             float flickMag = PowerNormalized;
             if (IsPutt || DebugFlags.DisableOverpower) flickMag = Mathf.Min(flickMag, 1f);
@@ -730,7 +750,8 @@ namespace Golfin.Gameplay.Input
             }
 #endif
             ResolveAndPublish(flickMag, aimYaw, timingMul, _timingAtLatch,
-                              spinInput, fadeDrawInput, fadeDrawMaxTilt);
+                              spinInput, fadeDrawInput, fadeDrawMaxTilt,
+                              isMiss && !IsPutt ? _config.MissLaunchPitchScale : 1f);
         }
 
         /// <summary>
@@ -773,6 +794,15 @@ namespace Golfin.Gameplay.Input
 
             float timingMul = DebugFlags.ForcePerfectTiming ? 1f : i.TimingMul;
 
+            // miss_grade_duff §3.1. The multiplier itself is ALREADY in i.TimingMul — the scheme
+            // graded the swing and picked MissPowerMul / PuttMissPowerMul itself — so nothing is
+            // recomputed here; the flag only decides the launch pitch and the gauge flash.
+            // ForcePerfectTiming waives the duff for the same reason it waives the multiplier:
+            // a driver that opted out of timing must stay byte-identical.
+            bool isMiss = i.IsMiss && !DebugFlags.ForcePerfectTiming;
+            LastShotWasMiss = isMiss;
+            LastFlickGrade  = null;   // this is not a flick; the driver raises its own pop
+
             float mag = i.PowerNormalized;
             if (IsPutt || DebugFlags.DisableOverpower) mag = Mathf.Min(mag, 1f);
             mag *= timingMul;
@@ -782,7 +812,8 @@ namespace Golfin.Gameplay.Input
             float   fadeDrawTilt  = IsPutt ? 0f : _config.FadeDrawMaxTiltRad;
 
             ResolveAndPublish(mag, aimYaw, timingMul, i.Timing01,
-                              spinInput, fadeDrawInput, fadeDrawTilt);
+                              spinInput, fadeDrawInput, fadeDrawTilt,
+                              isMiss && !IsPutt ? _config.MissLaunchPitchScale : 1f);
         }
 
         /// <summary>
@@ -792,7 +823,8 @@ namespace Golfin.Gameplay.Input
         /// so a new control scheme adds a driver and changes NOTHING below this line.
         /// </summary>
         private void ResolveAndPublish(float flickMag, float aimYawRad, float timingMul, float timing01,
-                                       Vector2 spinInput, float fadeDrawInput, float fadeDrawMaxTiltRad)
+                                       Vector2 spinInput, float fadeDrawInput, float fadeDrawMaxTiltRad,
+                                       float launchPitchScale = 1f)
         {
             _aimYawRadians     = aimYawRad;
             LastTimingPowerMul = timingMul;
@@ -827,7 +859,8 @@ namespace Golfin.Gameplay.Input
                 spinMagSlope,
                 spinTiltRad,
                 fadeDrawInputFp,
-                fadeDrawMaxTiltFp);
+                fadeDrawMaxTiltFp,
+                fp.FromFloat(launchPitchScale));
 
             // Phase 3 (stamina_tournament_wiring, D4): per-shot drain REMOVED.
             // Tournament pool is drained once per hole in LocalTournamentBackend.SubmitHoleResult,
@@ -903,11 +936,20 @@ namespace Golfin.Gameplay.Input
         /// capture drivers, FireDebugShot, the legacy IInputSource path and EditMode tests push
         /// no touch samples so they never latch, and ForcePerfectTiming opts out explicitly.
         /// </summary>
-        private float TimingPowerMultiplier()
+        private float TimingPowerMultiplier() => TimingPowerMultiplier(out _);
+
+        /// <summary>
+        /// The same multiplier, plus the one bit the live targeting line does not care about and
+        /// the commit path does: whether this flick fell BELOW the red line and is therefore a
+        /// DUFF rather than a weak shot (miss_grade_duff §3.1).
+        /// </summary>
+        private float TimingPowerMultiplier(out bool isMiss)
         {
+            isMiss = false;
             if (DebugFlags.ForcePerfectTiming || float.IsNaN(_timingAtLatch)) return 1f;
 
             float t     = Mathf.Clamp01(_timingAtLatch);
+            float red   = _config.TimingBandRedY01;
             float gold  = _config.TimingBandGoldY01;
             float green = _config.TimingBandGreenY01;
 
@@ -915,8 +957,19 @@ namespace Golfin.Gameplay.Input
             if (t >= gold)
                 return Mathf.Lerp(_config.TimingPowerMulGold, 1f,
                                   (t - gold) / Mathf.Max(1e-4f, green - gold));
-            return Mathf.Lerp(_config.TimingPowerMulRed, _config.TimingPowerMulGold,
-                              t / Mathf.Max(1e-4f, gold));
+            // miss_grade_duff: the ramp is RE-BASED onto the red LINE. Above it nothing moved —
+            // the gold end is still TimingPowerMulGold and the red end is still TimingPowerMulRed;
+            // only the x it is measured from did.
+            if (t >= red)
+                return Mathf.Lerp(_config.TimingPowerMulRed, _config.TimingPowerMulGold,
+                                  (t - red) / Mathf.Max(1e-4f, gold - red));
+
+            // Below the drawn red line the flick is a DUFF: a flat multiplier, not the bottom of
+            // a ramp, because "topped" is a different OUTCOME rather than a worse version of a
+            // mistimed shot. Asked of FlickMath rather than re-tested here, so the band the pop
+            // names and the penalty this returns are one classification.
+            isMiss = FlickMath.Grade(t, _config) == FlickGrade.Duff;
+            return IsPutt ? _config.PuttMissPowerMul : _config.MissPowerMul;
         }
 
         private void TickArrow(float dt)
