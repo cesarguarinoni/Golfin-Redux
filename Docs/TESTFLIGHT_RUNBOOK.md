@@ -71,13 +71,28 @@ reachable. Without it the five GPS screens are blocked by `GpsGate` and the Home
 (the slot collapses). Both variants archive `Builds/iOS-Full`, so shipping both of one commit is
 sequential: punch it → commit the guard file → punch it GPS. See `Docs/PUNCH_IT_ROUTINE.md`.
 
+**Golfer variant** (`golfer_3d_test`): `./Tools/testflight.sh testflight_build_golfer` runs the same
+lane body against the `iOS-Full-Golfer` profile — `GOLFIN_GPS;GOLFIN_GOLFER_TEST`, i.e. the GPS
+build plus the stand-in 3D golfer. Same bundle id, same App Store record and same guard file as
+punch it / punch it GPS, so it is sequential with them (commit between uploads).
+
+It is an **experiment, opt-in only**. Two independent gates keep it out of every other lane:
+`GOLFIN_GOLFER_TEST` compiles `GolferPresenter` / `GolferTestBootstrap` down to empty
+MonoBehaviours, and `Assets/Editor/GolferTestBuildGate.cs` moves
+`Assets/Art/3D/Characters/_Test/` out of the tree for the duration of any build that did not ask
+for it — necessary because the prefab lives under a `Resources/` folder and Resources ship whether
+or not anything references them. The gate restores the folder from its postprocess hook, from
+`CIBuild`'s explicit `RestoreNow()` before any exit, and from an `[InitializeOnLoadMethod]` repair
+when the editor next comes up. Every build writes `Builds/golfer-gate-report.txt` saying which way
+it went and how many `_Test` paths the build report actually contains.
+
 **Standalone variant** (`gps_standalone_shell`): `./Tools/testflight.sh testflight_build_standalone`
 runs the same lane body against the `iOS-Standalone` profile — `GOLFIN_GPS;GOLFIN_STANDALONE` and a
 **ShellScene-only scene list**, so the 18 `Hole_NN_Geo` scenes and `LabScaffold` are simply not in
 the build. It is PLAYLIFE as a thin shell: `StandaloneGate` refuses every golf screen, `Home` is
 rewritten to `GpsHub`, and the boot skips `StarterGate` entirely.
 
-Three things differ from the other two lanes, all of them handled inside the lane:
+Three things differ from the other three lanes, all of them handled inside the lane:
 
 - **A different App Store record.** `com.nextinnovation.golfingps` / app "GOLFIN GPS" /
   Apple ID `6737145432`, same team (`TCUV4A9VTJ`) so no new signing identity. Bundle id, product

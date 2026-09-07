@@ -19,8 +19,9 @@
 default_platform(:ios)
 
 platform :ios do
-  # ── The three variants ────────────────────────────────────────────────────────────────────
-  # punch_it_gps_variants + gps_standalone_shell. All three lanes run the SAME body — clean-tree
+  # ── The four variants ─────────────────────────────────────────────────────────────────────
+  # punch_it_gps_variants + gps_standalone_shell + golfer_3d_test. All four lanes run the SAME
+  # body — clean-tree
   # gate, unity-closed assert, content --check, build_app, upload, mark-uploaded — and differ in
   # exactly one table entry each. Keeping one body is the point: a gate added for one variant
   # cannot go missing from the others, which is precisely how near-identical lanes rot apart.
@@ -28,14 +29,16 @@ platform :ios do
   #   "punch it"            ./Tools/testflight.sh                             -> iOS-Full
   #   "punch it GPS"        ./Tools/testflight.sh testflight_build_gps        -> iOS-Full-GPS
   #   "punch it standalone" ./Tools/testflight.sh testflight_build_standalone -> iOS-Standalone
+  #   "punch it golfer"     ./Tools/testflight.sh testflight_build_golfer     -> iOS-Full-Golfer
   #
-  # All three write Builds/iOS-Full and upload from there, so the build number is the commit
+  # All four write Builds/iOS-Full and upload from there, so the build number is the commit
   # count in every case.
   #
-  # TWO APP STORE RECORDS, NOT THREE. The first two are the same app
+  # TWO APP STORE RECORDS, NOT FOUR. Three of the four are the same app
   # (com.nextinnovation.golfingame); ASC requires the build number unique PER APP, so shipping
-  # both of one commit is sequential: punch it -> commit the guard file it dirties -> punch it
-  # GPS. The standalone is a DIFFERENT record (com.nextinnovation.golfingps, "GOLFIN GPS",
+  # more than one of a commit is sequential: punch it -> commit the guard file it dirties -> punch
+  # it GPS -> commit -> punch it golfer. The standalone is a DIFFERENT record
+  # (com.nextinnovation.golfingps, "GOLFIN GPS",
   # Apple ID 6737145432) with its own guard file, so it never collides with either.
 
   # The whole difference between the variants, in one table. Anything a lane needs that is not
@@ -50,6 +53,8 @@ platform :ios do
       standalone: { unity_arg: "standalone", record: "standalone",
                     label: "PLAYLIFE shell (iOS-Standalone, GOLFIN_GPS;GOLFIN_STANDALONE, " \
                            "ShellScene only -> app \"GOLFIN GPS\", com.nextinnovation.golfingps)" },
+      golfer:     { unity_arg: "golfer",     record: "game",
+                    label: "Golfer test (iOS-Full-Golfer, GOLFIN_GPS;GOLFIN_GOLFER_TEST)" },
     }
   end
 
@@ -66,6 +71,11 @@ platform :ios do
   desc "Unity build -> archive -> TestFlight (the PLAYLIFE standalone shell, its own app record)"
   lane :testflight_build_standalone do
     testflight_build_shared(variant: :standalone)
+  end
+
+  desc "Unity build -> archive -> TestFlight (the GPS game PLUS the stand-in 3D golfer)"
+  lane :testflight_build_golfer do
+    testflight_build_shared(variant: :golfer)
   end
 
   private_lane :testflight_build_shared do |options|

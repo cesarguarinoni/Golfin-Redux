@@ -10,8 +10,9 @@ this is the *operating agreement* around it — what runs unattended, what stops
 | **"punch it"** | `./Tools/testflight.sh` | `iOS-Full` (no define) | The game. GPS surface **off** — the GPS screens refuse to open (`GpsGate`) and the Home banner that routes to `golfin://gps` is hidden with its slot collapsed | Icon **Golfin**, no Home GPS banner |
 | **"punch it GPS"** | `./Tools/testflight.sh testflight_build_gps` | `iOS-Full-GPS` (`GOLFIN_GPS`) | The game + the GPS surface — banner shows, tap routes to the hub, all GPS screens reachable | Icon **Golfin**, Home GPS banner present |
 | **"punch it standalone"** | `./Tools/testflight.sh testflight_build_standalone` | `iOS-Standalone` (`GOLFIN_GPS;GOLFIN_STANDALONE`, ShellScene-only scene list) | PLAYLIFE only — boots past Splash/Login straight to the GPS hub. No Home, no golf, no bottom nav, no ticket cluster (`StandaloneGate`) | Icon **GPS/PLAYLIFE**, app name **GOLFIN GPS** |
+| **"punch it golfer"** | `./Tools/testflight.sh testflight_build_golfer` | `iOS-Full-Golfer` (`GOLFIN_GPS;GOLFIN_GOLFER_TEST`) | The **punch it GPS** build plus the stand-in 3D golfer (`golfer_3d_test`): a bare Quaternius figure stands beside the ball, addresses on aim, swings on shot commit, putts in putter mode. EXPERIMENT — every other lane compiles it out AND excludes `Assets/Art/3D/Characters/_Test/` (`GolferTestBuildGate`) | Icon **Golfin**, Home GPS banner present, **a golfer beside the ball on every hole** |
 
-All three lanes share one body (`testflight_build_shared`), which now takes a `variant:` symbol
+All four lanes share one body (`testflight_build_shared`), which now takes a `variant:` symbol
 (`:standard | :gps | :standalone`); the difference between them is one row of the `variant_table`
 in the Fastfile. The server banner row stays LIVE for every variant — the non-GPS build hides it
 client-side, it is not deactivated for everyone.
@@ -20,7 +21,7 @@ client-side, it is not deactivated for everyone.
 
 | Variant | Bundle id | ASC app | Apple ID | Upload guard file |
 |---|---|---|---|---|
-| punch it / punch it GPS | `com.nextinnovation.golfingame` | GOLFIN | — | `Docs/Versioning/last_uploaded_build.txt` |
+| punch it / punch it GPS / punch it golfer | `com.nextinnovation.golfingame` | GOLFIN | — | `Docs/Versioning/last_uploaded_build.txt` |
 | punch it standalone | `com.nextinnovation.golfingps` | GOLFIN GPS | 6737145432 | `Docs/Versioning/last_uploaded_build.golfingps.txt` |
 
 Same team (`TCUV4A9VTJ`), so no new signing identity. The standalone's identity (bundle id,
@@ -33,9 +34,10 @@ is byte-identical before and after, exactly like the build-number stamp.
 App Store Connect requires the build number unique **per app**, and the build number is the commit
 count. So:
 
-- **punch it + punch it GPS** are the same record → **sequential with a commit between them**:
+- **punch it + punch it GPS + punch it golfer** are the same record → **sequential with a commit between them**:
 
       punch it  →  mark-uploaded.sh dirties the guard file  →  commit it  →  punch it GPS
+      →  commit  →  punch it golfer
 
 - **punch it standalone** is a different record with its own guard file → it never collides with
   either of the other two, and can run at the same commit as a game build.

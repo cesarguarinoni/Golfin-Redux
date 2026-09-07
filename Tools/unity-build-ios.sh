@@ -40,12 +40,19 @@ PROJECT="$(cd "$SCRIPT_DIR/.." && pwd)"
 # path again, and a different bundle id / product name / icon applied at build time by
 # StandaloneBuildPreprocessor and restored after — so downstream is unchanged here too, but the
 # archive uploads to a DIFFERENT App Store record ("GOLFIN GPS", Apple ID 6737145432).
+#
+# golfer_3d_test — `./Tools/unity-build-ios.sh golfer` builds the GPS game plus the stand-in 3D
+# golfer: the iOS-Full-Golfer profile (GOLFIN_GPS;GOLFIN_GOLFER_TEST). Same OUT path, same bundle
+# id and same App Store record as `gps`, so downstream is unchanged; what differs is that
+# GolferTestBuildGate lets Assets/Art/3D/Characters/_Test into this build and stashes it out of
+# every other one. On device: a bare figure standing beside the ball, swinging on each shot.
 VARIANT="${1:-}"
 case "$VARIANT" in
   gps)        METHOD="Golfin.EditorTools.CIBuild.BuildIOSGps" ;;
   standalone) METHOD="Golfin.EditorTools.CIBuild.BuildIOSStandalone" ;;
+  golfer)     METHOD="Golfin.EditorTools.CIBuild.BuildIOSGolferTest" ;;
   "")         METHOD="Golfin.EditorTools.CIBuild.BuildIOS" ;;
-  *)          echo "ERROR: unknown variant '$VARIANT' (expected: gps, standalone, or no argument)" >&2; exit 2 ;;
+  *)          echo "ERROR: unknown variant '$VARIANT' (expected: gps, standalone, golfer, or no argument)" >&2; exit 2 ;;
 esac
 
 OUT="$PROJECT/Builds/iOS-Full"

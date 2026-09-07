@@ -1,0 +1,25 @@
+CMU Graphics Lab Motion Capture Database — subject 64 (golf) and 63_01.
+    http://mocap.cs.cmu.edu
+
+TERMS (as published by CMU):
+    "This data is free for use in research and commercial projects worldwide.
+     ... you may include this data in commercially-sold products, but you may
+     not resell this data directly, even in converted form."
+    The data may be copied, modified or redistributed without permission.
+    Created with funding from NSF EIA-0196217.
+
+WHAT WE SHIP: these clips retargeted onto our own character, inside the game.
+We do not redistribute the motion data as data. That is what the licence allows.
+
+PROVENANCE OF THESE FILES: BVH-to-FBX conversion by RancidMilk
+(https://rancidmilk.itch.io/free-character-animations) from the cgspeed
+MotionBuilder-friendly BVH release, mirrored at
+https://huggingface.co/datasets/gbionics/cmu-fbx (licence: cmu-mocap).
+Bones-only armatures, root motion included, NO finger animation.
+
+WHY THIS SET: the actor demonstrably held real equipment — the session includes
+Placing Tee, Placing Ball and Picking Up Ball — so the WRISTS are rolled onto a
+club. That is the one thing the Mixamo clips lack: measured at address, their
+knuckle line is 58.4 deg (lead) / 69.4 deg (trail) away from the shaft a club
+needs, which no finger pose can correct. CMU capturing no fingers is a benefit
+here: the authored grip pose has nothing to fight.

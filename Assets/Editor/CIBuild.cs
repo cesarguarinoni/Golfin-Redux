@@ -59,6 +59,14 @@ namespace Golfin.EditorTools
         const string StandaloneProfilePath = "Assets/Settings/Build Profiles/iOS-Standalone.asset";
         const string StandaloneDefine = "GOLFIN_STANDALONE";
 
+        // golfer_3d_test — "punch it golfer". The GPS game plus the stand-in 3D golfer: the
+        // iOS-Full-GPS profile with GOLFIN_GOLFER_TEST added, same bundle id and same ASC record
+        // as "punch it" / "punch it GPS", same OutputPath. The ONLY thing that reaches the player
+        // beyond a GPS build is Assets/Art/3D/Characters/_Test, which GolferTestBuildGate stashes
+        // for every other lane.
+        const string GolferProfilePath = "Assets/Settings/Build Profiles/iOS-Full-Golfer.asset";
+        const string GolferDefine = "GOLFIN_GOLFER_TEST";
+
         /// <summary>
         /// -executeMethod Golfin.EditorTools.CIBuild.BuildIOS
         /// Produces Builds/iOS-Full/Unity-iPhone.xcodeproj. Exits 1 on any failure.
@@ -184,6 +192,57 @@ namespace Golfin.EditorTools
         }
 
         /// <summary>
+        /// -executeMethod Golfin.EditorTools.CIBuild.BuildIOSGolferTest
+        /// The "punch it golfer" variant (golfer_3d_test §5.7): the GPS build plus the stand-in
+        /// 3D golfer. Same output, same options, same guards as BuildIOSGps — the profile differs,
+        /// and with it the GOLFIN_GOLFER_TEST define that compiles GolferPresenter in.
+        ///
+        /// BOTH defines are asserted, for the reason the GPS lane asserts one: a golfer build whose
+        /// profile silently lost GOLFIN_GOLFER_TEST compiles, archives and uploads as an ordinary
+        /// GPS build — indistinguishable from "punch it GPS" output except by looking for a golfer
+        /// beside the ball. It fails loudly instead.
+        ///
+        /// IncludeTestAssets is set around the build, not read from an #if, because a build
+        /// profile's scripting defines never reach editor assemblies — the exact reason
+        /// StandaloneBuildPreprocessor.ForceStandaloneIdentity exists. Without it the gate would
+        /// stash the _Test folder and this lane would ship a golfer-less "golfer" build.
+        /// </summary>
+        public static void BuildIOSGolferTest()
+        {
+            StandaloneBuildPreprocessor.RestoreGolfResources();   // see BuildIOS
+            GolferTestBuildGate.RestoreNow();                    // and any _Test left stashed
+
+            var prevIosBuildNumber = PlayerSettings.iOS.buildNumber;
+            var prevAndroidVersionCode = PlayerSettings.Android.bundleVersionCode;
+
+            string error;
+            try
+            {
+                GolferTestBuildGate.IncludeTestAssets = true;
+
+                error = AssertProfileDefine(GolferProfilePath, GpsDefine) ??
+                        AssertProfileDefine(GolferProfilePath, GolferDefine) ??
+                        BuildIOSCore(GolferProfilePath, OutputPath, BuildOptions.None);
+            }
+            catch (Exception e)
+            {
+                error = $"unhandled exception during build: {e.GetType().Name}: {e.Message}\n{e.StackTrace}";
+            }
+            finally
+            {
+                GolferTestBuildGate.IncludeTestAssets = false;
+            }
+
+            // MUST run before Fail(): Fail() exits the process and no delayCall ever gets a frame
+            // in batchmode, so a build that died mid-flight would leave _Test stashed and the next
+            // golfer build would ship without the golfer. RestoreNow is idempotent.
+            GolferTestBuildGate.RestoreNow();
+            RestoreBuildNumbers(prevIosBuildNumber, prevAndroidVersionCode);
+
+            if (error != null) Fail(error);
+        }
+
+        /// <summary>
         /// -executeMethod Golfin.EditorTools.CIBuild.BuildIOSStandalone
         /// The "punch it standalone" variant — PLAYLIFE as a thin shell. Same output path, same
         /// options, same guards as the other two; what differs is the profile, and with it the
@@ -251,6 +310,7 @@ namespace Golfin.EditorTools
             // and leaving the golf Resources stashed would make the next GAME build ship without
             // its holes. RestoreNow puts both back and is idempotent.
             StandaloneBuildPreprocessor.RestoreNow();
+            GolferTestBuildGate.RestoreNow();
             RestoreBuildNumbers(prevIosBuildNumber, prevAndroidVersionCode);
 
             if (error != null) Fail(error);

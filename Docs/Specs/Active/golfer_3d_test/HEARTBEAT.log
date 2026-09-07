@@ -1,0 +1,176 @@
+=== iter-1 kickoff baseline 2026-09-06T05:41:41Z ===
+HEAD: 7c33ac22c9e10bbed29ec3333d4fde8e2eff85a8
+DIRTY (git status --porcelain --untracked-files=all):
+?? Assets/Art/3D/Characters.meta
+?? Assets/Art/3D/Characters/_Test.meta
+?? Assets/Art/3D/Characters/_Test/Mixamo.meta
+?? Assets/Art/3D/Characters/_Test/Mixamo/ANIM_Golf_BadShot.fbx
+?? Assets/Art/3D/Characters/_Test/Mixamo/ANIM_Golf_BadShot.fbx.meta
+?? Assets/Art/3D/Characters/_Test/Mixamo/ANIM_Golf_Chip.fbx
+?? Assets/Art/3D/Characters/_Test/Mixamo/ANIM_Golf_Chip.fbx.meta
+?? Assets/Art/3D/Characters/_Test/Mixamo/ANIM_Golf_Drive.fbx
+?? Assets/Art/3D/Characters/_Test/Mixamo/ANIM_Golf_Drive.fbx.meta
+?? Assets/Art/3D/Characters/_Test/Mixamo/ANIM_Golf_DriveSetup.fbx
+?? Assets/Art/3D/Characters/_Test/Mixamo/ANIM_Golf_DriveSetup.fbx.meta
+?? Assets/Art/3D/Characters/_Test/Mixamo/ANIM_Golf_PostSwing.fbx
+?? Assets/Art/3D/Characters/_Test/Mixamo/ANIM_Golf_PostSwing.fbx.meta
+?? Assets/Art/3D/Characters/_Test/Mixamo/ANIM_Golf_PrePutt.fbx
+?? Assets/Art/3D/Characters/_Test/Mixamo/ANIM_Golf_PrePutt.fbx.meta
+?? Assets/Art/3D/Characters/_Test/Mixamo/ANIM_Golf_Putt.fbx
+?? Assets/Art/3D/Characters/_Test/Mixamo/ANIM_Golf_Putt.fbx.meta
+?? Assets/Art/3D/Characters/_Test/Mixamo/ANIM_Golf_PuttFailure.fbx
+?? Assets/Art/3D/Characters/_Test/Mixamo/ANIM_Golf_PuttFailure.fbx.meta
+?? Assets/Art/3D/Characters/_Test/Mixamo/ANIM_Golf_PuttVictory.fbx
+?? Assets/Art/3D/Characters/_Test/Mixamo/ANIM_Golf_PuttVictory.fbx.meta
+?? Assets/Art/3D/Characters/_Test/Mixamo/ANIM_Golf_TeeUp.fbx
+?? Assets/Art/3D/Characters/_Test/Mixamo/ANIM_Golf_TeeUp.fbx.meta
+?? Assets/Art/3D/Characters/_Test/Mixamo/ANIM_Idle.fbx
+?? Assets/Art/3D/Characters/_Test/Mixamo/ANIM_Idle.fbx.meta
+?? Assets/Art/3D/Characters/_Test/Mixamo/LICENSE_Mixamo.txt
+?? Assets/Art/3D/Characters/_Test/Mixamo/LICENSE_Mixamo.txt.meta
+?? Assets/Art/3D/Characters/_Test/Mixamo/YBot_TPose.fbx
+?? Assets/Art/3D/Characters/_Test/Mixamo/YBot_TPose.fbx.meta
+?? Assets/Art/3D/Characters/_Test/Quaternius.meta
+?? Assets/Art/3D/Characters/_Test/Quaternius/Hair.meta
+?? Assets/Art/3D/Characters/_Test/Quaternius/Hair/Eyebrows_Female.fbx
+?? Assets/Art/3D/Characters/_Test/Quaternius/Hair/Eyebrows_Female.fbx.meta
+?? Assets/Art/3D/Characters/_Test/Quaternius/Hair/Eyebrows_Regular.fbx
+?? Assets/Art/3D/Characters/_Test/Quaternius/Hair/Eyebrows_Regular.fbx.meta
+?? Assets/Art/3D/Characters/_Test/Quaternius/Hair/Hair_Long.fbx
+?? Assets/Art/3D/Characters/_Test/Quaternius/Hair/Hair_Long.fbx.meta
+?? Assets/Art/3D/Characters/_Test/Quaternius/Hair/Hair_SimpleParted.fbx
+?? Assets/Art/3D/Characters/_Test/Quaternius/Hair/Hair_SimpleParted.fbx.meta
+?? Assets/Art/3D/Characters/_Test/Quaternius/LICENSE_CC0.txt
+?? Assets/Art/3D/Characters/_Test/Quaternius/LICENSE_CC0.txt.meta
+?? Assets/Art/3D/Characters/_Test/Quaternius/Superhero_Female_FullBody.fbx
+?? Assets/Art/3D/Characters/_Test/Quaternius/Superhero_Female_FullBody.fbx.meta
+?? Assets/Art/3D/Characters/_Test/Quaternius/Superhero_Male_FullBody.fbx
+?? Assets/Art/3D/Characters/_Test/Quaternius/Superhero_Male_FullBody.fbx.meta
+?? Assets/Art/3D/Characters/_Test/Quaternius/Textures.meta
+?? Assets/Art/3D/Characters/_Test/Quaternius/Textures/T_Eye_Brown.png
+?? Assets/Art/3D/Characters/_Test/Quaternius/Textures/T_Eye_Brown.png.meta
+?? Assets/Art/3D/Characters/_Test/Quaternius/Textures/T_Eye_Normal.png
+?? Assets/Art/3D/Characters/_Test/Quaternius/Textures/T_Eye_Normal.png.meta
+?? Assets/Art/3D/Characters/_Test/Quaternius/Textures/T_Hair_1_BaseColor.png
+?? Assets/Art/3D/Characters/_Test/Quaternius/Textures/T_Hair_1_BaseColor.png.meta
+?? Assets/Art/3D/Characters/_Test/Quaternius/Textures/T_Hair_1_Normal.png
+?? Assets/Art/3D/Characters/_Test/Quaternius/Textures/T_Hair_1_Normal.png.meta
+?? Assets/Art/3D/Characters/_Test/Quaternius/Textures/T_Hair_2_BaseColor.png
+?? Assets/Art/3D/Characters/_Test/Quaternius/Textures/T_Hair_2_BaseColor.png.meta
+?? Assets/Art/3D/Characters/_Test/Quaternius/Textures/T_Superhero_Female_Dark_BaseColor.png
+?? Assets/Art/3D/Characters/_Test/Quaternius/Textures/T_Superhero_Female_Dark_BaseColor.png.meta
+?? Assets/Art/3D/Characters/_Test/Quaternius/Textures/T_Superhero_Female_Light_BaseColor.png
+?? Assets/Art/3D/Characters/_Test/Quaternius/Textures/T_Superhero_Female_Light_BaseColor.png.meta
+?? Assets/Art/3D/Characters/_Test/Quaternius/Textures/T_Superhero_Female_Normal.png
+?? Assets/Art/3D/Characters/_Test/Quaternius/Textures/T_Superhero_Female_Normal.png.meta
+?? Assets/Art/3D/Characters/_Test/Quaternius/Textures/T_Superhero_Female_Roughness.png
+?? Assets/Art/3D/Characters/_Test/Quaternius/Textures/T_Superhero_Female_Roughness.png.meta
+?? Assets/Art/3D/Characters/_Test/Quaternius/Textures/T_Superhero_Male_Dark.png
+?? Assets/Art/3D/Characters/_Test/Quaternius/Textures/T_Superhero_Male_Dark.png.meta
+?? Assets/Art/3D/Characters/_Test/Quaternius/Textures/T_Superhero_Male_Ligh.png
+?? Assets/Art/3D/Characters/_Test/Quaternius/Textures/T_Superhero_Male_Ligh.png.meta
+?? Assets/Art/3D/Characters/_Test/Quaternius/Textures/T_Superhero_Male_Normal.png
+?? Assets/Art/3D/Characters/_Test/Quaternius/Textures/T_Superhero_Male_Normal.png.meta
+?? Assets/Art/3D/Characters/_Test/Quaternius/Textures/T_Superhero_Male_Roughness.png
+?? Assets/Art/3D/Characters/_Test/Quaternius/Textures/T_Superhero_Male_Roughness.png.meta
+?? Docs/Specs/Active/golfer_3d_test/HEARTBEAT.log
+=== end baseline ===
+
+2026-09-06T06:11:46Z  13 importers done (Humanoid, all avatars valid+human). AnimatorController_Golfer
+  built + read back. PfGolfer_Test created with 6 sockets + both clubs. ROOT CAUSE FOUND:
+  ModelImporter.bakeAxisConversion=true (SPEC §5.1) CORRUPTS the Humanoid avatar — HumanPose
+  bodyRotation went to (73.8,0,0) and muscle values to |6.67| (valid range +/-1). Set to false:
+  bodyRotation (355.6,180,0), maxAbs 1.83, and the retarget renders correctly. Impact frames
+  measured on the socketed club: Drive t=1.167s, Putt t=1.333s.
+
+2026-09-06T06:43:43Z  iter-1 complete. Real-gameplay verification on Hole 08: 27 PASS / 1 FAIL
+  (tri budget 15,632 > 15,000). Golfer spawns via GameSession.OnRoundStarted, stands 0.7500 m from
+  the ball at 90.0000 deg to the aim with the target on his left, feet on the ground (0.0000 m),
+  turns 34.3775 deg for a 34.4 deg heading change, swaps to the putter and back, swings on commit
+  (Idle -> Swing_Drive) and follows the ball 247.27 m to the fairway. EditMode 655/655 with and
+  without the define — the sweep caught a real regression (static OnRoundStarted subscription
+  calling Destroy from edit mode), fixed with an Application.isPlaying guard.
+  Active build profile restored to iOS-Full-GPS (the kickoff state).
+
+2026-09-06T07:12:08Z  Video deliverable recorded in-Editor (no build): 
+  videos/golfer_3d_test_golfer_hole08.mp4 — 1170x2532, 35.7s, 20.5MB, real play on Hole 08 via
+  BotVideoRecorder (deferred start, iPhone-14 device preset). No Y-flip (consecutive frames
+  120-123 checked). Take 1 discarded: it drove ShotController.IsPutt as well as the club
+  broadcast, which put the lab camera into its aerial putt framing for 8s. Take 2 raises only
+  ClubSelectionBroadcast — the club swaps in his hands and the camera stays on him.
+  Active build profile restored to iOS-Full-GPS; editor clean, no dirty scenes, no stash.
+
+2026-09-06T07:31:32Z  Three defects fixed after review of the first video:
+  (1) swing was gutted by the camera cut — AnimatorCullingMode.CullUpdateTransforms stops transform
+      writes off-frustum, so the swing froze at the cut. Culling now suspended for the swing;
+      proven by sampling Swing_Drive 0.07->0.35 at vis=False, then Idle.
+  (2) club was not held — socket origin sat at the two-hand midpoint, 0.104 m ACROSS the grip from
+      hand_r. Re-solved through the right fist: fist-to-shaft-line 0.0000 m, driver 69.7deg, scale 1.000.
+  (3) found while fixing (2): every serialized reference on the prefab was NULL. A compile with the
+      define OFF makes the guarded class fieldless and Unity drops the data; re-enabling does not
+      restore it. Prefab re-wired AND Awake now resolves both club roots by name.
+  Invariants re-run after the rewire: 27 PASS / 1 FAIL (tri budget) — unchanged.
+  Final video is take 5; the putter beat was dropped because the game refuses putter mode at a tee.
+
+2026-09-06T07:58:40Z  Round 2 (Cesar: "video still skips shot, hands are not holding the club"):
+  (4) golfer addressed empty grass — club head is at local +X 0.735 while PlaceAtBall put the ball
+      at local +Z; 1.05 m apart, and the old angle invariants passed anyway. Placement now derived
+      from the pose; club head 0.0000 m from the ball at the tee and at the new lie.
+  (5) Address fired only on ShotState.Aiming, so the IDLE pose shipped with a club stretched out.
+  (6) widening it fired Cancel every idle frame -> permanently pending trigger yanked him out of
+      Address. Both triggers now edge-triggered. New assert shot.addressBeforeSwing PASSES.
+  (7) FINDING, not a defect I can fix in scope: the loop camera cuts to the ball at commit, so the
+      swing is never on screen in normal play. Camera changes are out of scope per SPEC §8.
+  Invariants 26 PASS / 1 FAIL (tri budget). Second clip added: the swing rendered offscreen with a
+  held camera, clearly labelled as not gameplay.
+
+2026-09-06T08:21:38Z  Round 3 (Cesar: "wrong side, swing never shown, club still not held"):
+  ROOT ERROR: swing direction was derived from the address->impact difference (near-zero, noisy,
+  points local -Z). Measured properly as club-head velocity AT impact: 26.75 m/s along local +Z,
+  agreeing with the grip (left hand on top = right-handed). Golfer had been rotated 180 deg.
+  LookRotation(-d) -> LookRotation(d); the stale harness assertion corrected with it.
+  Verified with a top-down + behind-ball diagram: golfer LEFT of the target line, club head
+  0.0005 m from the ball. In game 0.0000 m and swing 0.0000 deg off the aim. 26 PASS / 1 FAIL.
+  Swing now visible in the clip via a second camera spawned by the capture harness for the swing
+  window only (additive, destroyed after, gameplay untouched). Shipping it = a camera change,
+  SPEC §8, Cesar's call.
+
+2026-09-06T08:56:27Z  Round 4 (Cesar: "not gripping the club properly, even less so while idle"):
+  Measured: idle finger curl 0.0961 (straight) vs address 0.0412 (fist) — open hand in idle.
+  Animator mask layer is a dead end (in-editor muscle clip => humanMotion=false, layer inert);
+  HumanPoseHandler.SetHumanPose on finger muscles is also inert (set -0.9, curl unchanged).
+  What works: bake finger bone rotations from the address frame, re-apply after the Animator.
+  Idle 0.0961 -> 0.0412. Separately, the club was not INSIDE the fists — re-anchored on the fist
+  centre (right fist to shaft 0.0000) and a one-bone forearm aim brings the left hand on
+  (address 0.057 -> 0.017, impact 0.085 -> 0.010); declines in Idle so he carries one-handed.
+  New asserts grip.rightFistOnShaft + grip.fingersClosed. 28 PASS / 1 FAIL (tri budget).
+  NOTE: lost one take to my own error — two caption encodes raced on the same output and one
+  deleted the raw mid-read, producing a corrupt mp4. Re-recorded serially.
+
+2026-09-06T09:21:39Z  Round 5 (Cesar: "that is not a real golf club grip" — correct).
+  Researched the real grip. Fixed two measurable defects: lead fist was -0.0057 m ABOVE the butt
+  (off the end of the club) -> 0.0371 m below it; fist separation 0.058 -> 0.110 m vs one hand
+  width 0.117; lead thumb was curled into a fist -> taken from the rest pose so it runs down the
+  shaft. New asserts grip.leadHandOnGrip + grip.handsJoined (the in-game run CAUGHT the lead-hand
+  defect at -0.0169 m, which is the harness finally measuring what Cesar can see).
+  STRUCTURAL LIMIT: fingers close as a fist rather than wrapping, trail palm does not cover the
+  lead thumb, no pinky overlap/interlock. Those need a hand pose AUTHORED for a club; the Mixamo
+  clips are mocap with an empty hand so there is no correct grip in the data to copy.
+  This is SPEC §1's anticipated fallback point. Recommendation: author one grip hand pose.
+
+2026-09-06T09:40:54Z  Round 6: built the authored grip pose (option 1) and it CANNOT work here.
+  A grip needs the wrist rolled so the knuckle line lies along the shaft. Measured at address the
+  lead wrist is 58.4 deg off and the trail 69.4 deg off. The trail wrist cannot be rolled (the club
+  is parented to hand_r, so it rolls with it); rolling the lead wrist swings the hand off the grip
+  (fingers 0.017-0.035 -> 0.05-0.12 m short); uncapping the curl gives claws. Reverted to the best
+  state. Remaining options: club-held mocap (SPEC §1 fallback, now recommended), a full arm IK
+  pass, or ship the stand-in. My last-round recommendation was wrong — I scoped it as fingers when
+  the wrist-to-shaft angle says wrists.
+
+2026-09-06T09:47:49Z  Round 7: searched free mocap for club-in-hand golf.
+  CMU Graphics Lab subject 64 = 30 golf trials (10 swing, 5 putt, 5 placing tee, 5 placing ball,
+  5 picking up ball). Licence explicitly allows shipping inside a commercial product (no reselling
+  the data). Actor demonstrably had props. CMU captures NO finger data (placeholders only) which
+  is a BENEFIT here — the authored grip pose has nothing to fight, so the Mixamo failure mode
+  (empty-hand fingers over un-rolled wrists) cannot recur. Bandai Namco ruled out: CC BY-NC.
+  Recommendation: retarget CMU 64 + keep the authored finger pose. Motion Cast #05 is the fallback.

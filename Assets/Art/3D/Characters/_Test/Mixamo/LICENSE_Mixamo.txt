@@ -1,0 +1,4 @@
+Adobe Mixamo animation clips (downloaded 2026-09-05 by Cesar Guarinoni's Adobe account, applied to the stock Y Bot, exported "FBX for Unity", Without Skin, 30 fps, no keyframe reduction).
+License: Mixamo content is royalty-free for commercial and non-commercial use including video games; no attribution required (Adobe Mixamo FAQ, community.adobe.com/questions-696/...-589400).
+Restriction: the raw animation/character files may not be redistributed or sold as assets outside the team. They ship only baked inside GOLFIN builds.
+Clips: Golf Drive (Standard), Golf Putt, Golf Chip (Medium), Golf Drive Setup, Golf Pre-Putt, Golf Tee Up, Golf Post-Swing, Golf Bad Shot (Var 1), Golf Putt Victory (Var 1), Golf Putt Failure (Var 1), Idle (Standing). YBot_TPose.fbx = the source skeleton in T-pose (reference only, do not ship).
