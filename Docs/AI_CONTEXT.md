@@ -4,99 +4,6 @@
 **Team:** Cesar (solo dev), Ken (stakeholder, daily JP+EN Telegram reports)  
 
 ---
-<<<<<<< HEAD
-## 2026-09-07 — **shot view followup: cap the pill, and let the tile crop grow**
-
-**The pill stops at the baseline; the pull does not.** With `ClubHalfHeight` at 150 the drawn lane
-ended 96 px below the row the buttons sit on. Both lane views now take
-`SetLaneEndCapY(canvasY)` from `ShotLayoutController` and run their derived height through
-`ShotLayoutMath.CappedLaneHeight` — `min(derived, laneTop − cap)`, floored at `deepestTick + 8` so a
-tick is never drawn on the rounded end. On 1170×2532 that is 888 → **792.16**, lane end **−1096.00**
-for both Pendulum and Free Swing. The drivers still clamp on `cfg.*Pull120Px` and never read
-`LaneHeight`, so 120 % is exactly as reachable as before and the 3× club head simply overhangs the
-pill at full pull — a live fixture asserts the capped height and `PowerNormalized == 1.2` in the same
-test. On 16:9 and 4:3 the 8 px floor beats the cap (the ball clamp has already put the 120 % tick ON
-the baseline there) and the pill ends 8 px below the line, deliberately.
-
-**The confirm tiles were being cropped by a hidden height cap.** `FitCrop` re-derived
-`h = w / aspect` from the width it had just clamped, so `MaxCropW = 900` was silently a ~975 px
-height cap too — invisible until the ball dropped to 0.38 and the Pendulum subject grew to ~1100 px.
-Height now clamps independently (`MaxCropH = 1300`) and `WriteTile` FITS the crop inside the tile
-instead of stretching it, padding with alpha so the panel's own gradient shows through. Needle ×3 and
-Free Swing ×3 recaptured and shipped; Flick ×3 byte-identical. Zero HUD-chrome nudges, and the
-pop-up verify is 167/167 at 1170×2532.
-
-**The tile's frame came off the node, and the radius was already wrong.** Cesar, mid-task: *"the
-images should have rounded corners and a white outline like in figma."* Re-pulled `Tile`
-14145:37494 — `rounded-[20px]` against the 32 the code had, and `border-2 border-[rgba(255,255,255,0.35)]`
-against no border at all. Both are baked into the PNG (signed-distance stroke, so the arcs and the
-straight runs come from one expression) and the tile stays a plain `Image`. The node's tile is
-full-bleed, so `FitCrop` also grows a crop back to the tile aspect on whichever axis is short — all
-twelve now fill their tile, and the node's white `Crop` background is the mat for the one that
-cannot (Flick 2 needs 1201 px of a 1170-wide canvas).
-
-**The club head covering the tick labels was a DRAW-ORDER bug, not a size one.** The head lerps to
-3× to match Flick's own scene values and Flick has no labels to cover; the labels sit exactly where
-the node puts them. They were just children of the lane root while the handle is a later sibling of
-that root, so the club drew over them — worst at a 100 % pull, when the head is on the very tick the
-label names. Both builders now author them under `BallSpace` and `SetAsLastSibling()` after the
-handle; the five live objects were lifted at 0.000000 corner delta rather than rebuilding the roots.
-
-**And the tiles were photographing four different lies.** Every `Capture` commits a shot, so each
-scheme was shot from wherever the previous one's ball landed, walking the set downrange into tree
-shadow. `SchemeConfirmTilesCapture.ResetLie()` calls `PhysicsLabController.ResetToTee()` between
-`SelectScheme` and `Capture`, so all four now come off the same lit tee.
-
-**Still open:** `T_Pendulum_3` captures an invisible grade pop across every run. Not wiring —
-`_gradePop` is wired on all three drivers and Needle/Free Swing photograph theirs fine from the same
-code path. See `Docs/Specs/Active/shot_view_layout_followup/IMPLEMENTER_REPORT.md`.
-
----
-## 2026-09-07 — **shot view layout: the ball drops, one bottom baseline, the gauge moves up**
-
-The shot view is framed by WHERE THE 2D BALL WIDGET IS. The aim camera pins the 3D ball to
-`CentralBall` (`PhysicsLabController.GetAimBallViewportY` → `SolveAimCameraPose`), so moving the
-widget IS the camera change and no camera code was touched. New `ShotLayoutController` +
-`ShotLayoutMath` (`Assets/Scripts/Gameplay/UI/ShotUI/`) run from `ShotSchemeHost.Apply`, just before
-`driver.Activate()`, reusing the host's existing never-mid-swing deferral rather than adding a second
-Idle gate.
-
-**Ball anchor is per scheme** (`BallAnchorViewportY_<scheme>`): Pendulum / Needle / Free Swing drop to
-viewport 0.38, **Flick stays at 0.5** — its cone is scene-authored 1009 px tall with its base at
-ball −1160 and a lower ball would push that base off the screen. On Lomond hole 2 the aim camera
-pitches 12.50° → 7.08° across that switch: more sky, more fairway in front of the ball.
-
-**One bottom baseline** (`BottomBaselinePx = 170`, raised to `safeAreaBottom + 60` on a deeper
-device inset) now carries the four action buttons' bottom edge, both selector overlays and the pull
-lane's end. The cluster is full-stretch so the controller applies one delta; the builder keeps
-authoring 96/360 and `BottomBaselinePx` stays the single source of the number. Pendulum and Free
-Swing pulls grew 380/456 → **540/648** (exact 1.2× kept) so the lane reaches the baseline; **Needle
-deliberately kept 380/456** — its pull is a ring around the ball, and at 648 the 120 % ring would
-run off both edges of a 1170-wide canvas.
-
-**Every scheme root gained a `BallSpace`** — one full-stretch rect between `SchemeRoot_*` and its
-ball-relative children, so moving a scheme is one write instead of re-deriving every offset in four
-builders. Flick's world corners are byte-identical through the migration (`ConeMesh`, `ClubHandle`,
-`TimingSlab`, `PutterTrack`, `TargetingLine` all verified). The power gauge moved to a top-right
-anchor with its centre at viewport 0.70, off the aim-bar row it used to share.
-
-**The baseline guards the HANDLE, not the lane's end.** The spec's D6 clamped on the lane's rounded
-tail, and when the same day's polish pass took `ClubHalfHeight` 50 → 150 (the club head now scales
-to 3×) that read as 100 px less room and pushed the ball up to viewport 0.418 — four points of
-horizon short. D3 had already said which end matters: *"the 120 % handle position is the thing that
-must clear the home-gesture zone (the flick starts there), not the lane's rounded end."* The clamp
-now takes that reading, so the club head growing below the finger cannot cost framing. Measured on
-Lomond hole 2: ball back on viewport **0.3800**, 120 % handle at **−1021.84** = 244 px above the
-screen edge (D3's own figure), camera pitch 12.500° → **4.612°**, horizon **25.5 % → 37.8 %** from
-the top against a Figma target of ~38 %. The pill's tail hangs 96 px below the baseline at the live
-club size, 120 px wide down the centre where the buttons (x ±382…527) never reach.
-`ShotLayoutMathTests.TheClampIgnoresTheClubHeadSize_SoScalingTheHeadCannotCostFraming` pins it.
-
-**Still open:** the scheme confirm tiles. Re-captured per the csv header rule, then reverted — the
-auto-crop is clamped at `MaxCropW` 900 to keep the HUD columns out, and an 888 px lane no longer
-fits, so the new tiles clip the timing bar and the 100 %/120 % labels. See
-`Docs/Specs/Active/shot_view_layout/IMPLEMENTER_REPORT.md`.
-=======
 ## 2026-09-07 (close-out) — golfer_3d_test: define-OFF proof, profile restored, §9.8 blocked
 
 **The active build profile is back on `iOS-Full-GPS`**, and restoring it was also the way to get the
@@ -227,7 +134,98 @@ bans and a hook enforces. §9.6 (three iOS builds) is a Mac task; `unity-build-i
 project for fastlane. **`SPEC.md` has no §9** — it ends at §8 and the close-out scope still needs
 writing into it. **This PC stays on the `iOS-Full-Golfer` build profile** (Cesar, 2026-09-07),
 because it is the machine for testing these animations.
->>>>>>> origin/main
+
+## 2026-09-07 — **shot view followup: cap the pill, and let the tile crop grow**
+
+**The pill stops at the baseline; the pull does not.** With `ClubHalfHeight` at 150 the drawn lane
+ended 96 px below the row the buttons sit on. Both lane views now take
+`SetLaneEndCapY(canvasY)` from `ShotLayoutController` and run their derived height through
+`ShotLayoutMath.CappedLaneHeight` — `min(derived, laneTop − cap)`, floored at `deepestTick + 8` so a
+tick is never drawn on the rounded end. On 1170×2532 that is 888 → **792.16**, lane end **−1096.00**
+for both Pendulum and Free Swing. The drivers still clamp on `cfg.*Pull120Px` and never read
+`LaneHeight`, so 120 % is exactly as reachable as before and the 3× club head simply overhangs the
+pill at full pull — a live fixture asserts the capped height and `PowerNormalized == 1.2` in the same
+test. On 16:9 and 4:3 the 8 px floor beats the cap (the ball clamp has already put the 120 % tick ON
+the baseline there) and the pill ends 8 px below the line, deliberately.
+
+**The confirm tiles were being cropped by a hidden height cap.** `FitCrop` re-derived
+`h = w / aspect` from the width it had just clamped, so `MaxCropW = 900` was silently a ~975 px
+height cap too — invisible until the ball dropped to 0.38 and the Pendulum subject grew to ~1100 px.
+Height now clamps independently (`MaxCropH = 1300`) and `WriteTile` FITS the crop inside the tile
+instead of stretching it, padding with alpha so the panel's own gradient shows through. Needle ×3 and
+Free Swing ×3 recaptured and shipped; Flick ×3 byte-identical. Zero HUD-chrome nudges, and the
+pop-up verify is 167/167 at 1170×2532.
+
+**The tile's frame came off the node, and the radius was already wrong.** Cesar, mid-task: *"the
+images should have rounded corners and a white outline like in figma."* Re-pulled `Tile`
+14145:37494 — `rounded-[20px]` against the 32 the code had, and `border-2 border-[rgba(255,255,255,0.35)]`
+against no border at all. Both are baked into the PNG (signed-distance stroke, so the arcs and the
+straight runs come from one expression) and the tile stays a plain `Image`. The node's tile is
+full-bleed, so `FitCrop` also grows a crop back to the tile aspect on whichever axis is short — all
+twelve now fill their tile, and the node's white `Crop` background is the mat for the one that
+cannot (Flick 2 needs 1201 px of a 1170-wide canvas).
+
+**The club head covering the tick labels was a DRAW-ORDER bug, not a size one.** The head lerps to
+3× to match Flick's own scene values and Flick has no labels to cover; the labels sit exactly where
+the node puts them. They were just children of the lane root while the handle is a later sibling of
+that root, so the club drew over them — worst at a 100 % pull, when the head is on the very tick the
+label names. Both builders now author them under `BallSpace` and `SetAsLastSibling()` after the
+handle; the five live objects were lifted at 0.000000 corner delta rather than rebuilding the roots.
+
+**And the tiles were photographing four different lies.** Every `Capture` commits a shot, so each
+scheme was shot from wherever the previous one's ball landed, walking the set downrange into tree
+shadow. `SchemeConfirmTilesCapture.ResetLie()` calls `PhysicsLabController.ResetToTee()` between
+`SelectScheme` and `Capture`, so all four now come off the same lit tee.
+
+**Still open:** `T_Pendulum_3` captures an invisible grade pop across every run. Not wiring —
+`_gradePop` is wired on all three drivers and Needle/Free Swing photograph theirs fine from the same
+code path. See `Docs/Specs/Active/shot_view_layout_followup/IMPLEMENTER_REPORT.md`.
+
+---
+## 2026-09-07 — **shot view layout: the ball drops, one bottom baseline, the gauge moves up**
+
+The shot view is framed by WHERE THE 2D BALL WIDGET IS. The aim camera pins the 3D ball to
+`CentralBall` (`PhysicsLabController.GetAimBallViewportY` → `SolveAimCameraPose`), so moving the
+widget IS the camera change and no camera code was touched. New `ShotLayoutController` +
+`ShotLayoutMath` (`Assets/Scripts/Gameplay/UI/ShotUI/`) run from `ShotSchemeHost.Apply`, just before
+`driver.Activate()`, reusing the host's existing never-mid-swing deferral rather than adding a second
+Idle gate.
+
+**Ball anchor is per scheme** (`BallAnchorViewportY_<scheme>`): Pendulum / Needle / Free Swing drop to
+viewport 0.38, **Flick stays at 0.5** — its cone is scene-authored 1009 px tall with its base at
+ball −1160 and a lower ball would push that base off the screen. On Lomond hole 2 the aim camera
+pitches 12.50° → 7.08° across that switch: more sky, more fairway in front of the ball.
+
+**One bottom baseline** (`BottomBaselinePx = 170`, raised to `safeAreaBottom + 60` on a deeper
+device inset) now carries the four action buttons' bottom edge, both selector overlays and the pull
+lane's end. The cluster is full-stretch so the controller applies one delta; the builder keeps
+authoring 96/360 and `BottomBaselinePx` stays the single source of the number. Pendulum and Free
+Swing pulls grew 380/456 → **540/648** (exact 1.2× kept) so the lane reaches the baseline; **Needle
+deliberately kept 380/456** — its pull is a ring around the ball, and at 648 the 120 % ring would
+run off both edges of a 1170-wide canvas.
+
+**Every scheme root gained a `BallSpace`** — one full-stretch rect between `SchemeRoot_*` and its
+ball-relative children, so moving a scheme is one write instead of re-deriving every offset in four
+builders. Flick's world corners are byte-identical through the migration (`ConeMesh`, `ClubHandle`,
+`TimingSlab`, `PutterTrack`, `TargetingLine` all verified). The power gauge moved to a top-right
+anchor with its centre at viewport 0.70, off the aim-bar row it used to share.
+
+**The baseline guards the HANDLE, not the lane's end.** The spec's D6 clamped on the lane's rounded
+tail, and when the same day's polish pass took `ClubHalfHeight` 50 → 150 (the club head now scales
+to 3×) that read as 100 px less room and pushed the ball up to viewport 0.418 — four points of
+horizon short. D3 had already said which end matters: *"the 120 % handle position is the thing that
+must clear the home-gesture zone (the flick starts there), not the lane's rounded end."* The clamp
+now takes that reading, so the club head growing below the finger cannot cost framing. Measured on
+Lomond hole 2: ball back on viewport **0.3800**, 120 % handle at **−1021.84** = 244 px above the
+screen edge (D3's own figure), camera pitch 12.500° → **4.612°**, horizon **25.5 % → 37.8 %** from
+the top against a Figma target of ~38 %. The pill's tail hangs 96 px below the baseline at the live
+club size, 120 px wide down the centre where the buttons (x ±382…527) never reach.
+`ShotLayoutMathTests.TheClampIgnoresTheClubHeadSize_SoScalingTheHeadCannotCostFraming` pins it.
+
+**Still open:** the scheme confirm tiles. Re-captured per the csv header rule, then reverted — the
+auto-crop is clamped at `MaxCropW` 900 to keep the HUD columns out, and an 888 px lane no longer
+fits, so the new tiles clip the timing bar and the 100 %/120 % labels. See
+`Docs/Specs/Active/shot_view_layout/IMPLEMENTER_REPORT.md`.
 
 ---
 ## 2026-09-07 — control schemes / **four polish fixes: ball, club head, cancel, map view**
