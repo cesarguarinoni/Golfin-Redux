@@ -720,6 +720,9 @@ public static class ActionButtonsBuilder
         // ── Wire ShotLayoutController (shot_view_layout §3.4) ──────────────────
         WireShotLayoutController(canvasGo, cluster, overlayWidget, overlayWidgetBall);
 
+        // ── Re-wire ShotInProgressUiGate (same reason as the controller above) ────
+        WireShotInProgressUiGate(canvasGo, clusterCg, fader, overlayWidget, overlayWidgetBall, spinPanelWidget);
+
         // ── Mark scene dirty and save ──────────────────────────────────────────
         EditorSceneManager.MarkSceneDirty(SceneManager.GetActiveScene());
         EditorSceneManager.SaveScene(SceneManager.GetActiveScene());
@@ -788,6 +791,62 @@ public static class ActionButtonsBuilder
         so.ApplyModifiedProperties();
 
         Debug.Log("[ActionButtonsBuilder] ShotLayoutController wired (canvas, ball, 4 BallSpaces, cluster, 2 selectors, PowerHUD, 2 lanes).");
+    }
+
+    /// <summary>
+    /// Re-point <c>ShotInProgressUiGate</c> at the objects this builder just re-created.
+    ///
+    /// <para>THIS IS NOT OPTIONAL BOOKKEEPING. The gate is what hides the shot UI while the ball
+    /// is in the air, and five of its references — the cluster's CanvasGroup, both selector
+    /// overlays, the spin panel and the fader — are objects this builder DELETES and rebuilds.
+    /// A run that did not re-wire them left every one at <c>fileID: 0</c>, and the gate then
+    /// silently did nothing: the action buttons stayed visible AND tappable for the whole flight.
+    /// That is precisely what selector_carousel shipped in build 2758, and Cesar found it by
+    /// playing the game. <c>WireShotLayoutController</c> exists for the identical reason and
+    /// carries the identical warning; the gate was simply missed when that one was written.</para>
+    ///
+    /// <para>The GameObject list (<c>_hideDuringShot</c>: PutterTrack, PuttPathRoot,
+    /// HoleMapContainer) is deliberately NOT touched — none of those are this builder's to create,
+    /// and overwriting the list would drop whatever else has been authored into it.</para>
+    /// </summary>
+    static void WireShotInProgressUiGate(GameObject canvasGo,
+                                         CanvasGroup clusterGroup,
+                                         OtherButtonsFader fader,
+                                         SelectorOverlayWidget clubSelector,
+                                         SelectorOverlayWidget ballSelector,
+                                         SpinPanelWidget spinPanel)
+    {
+        var gate = Object.FindFirstObjectByType<ShotInProgressUiGate>(FindObjectsInactive.Include);
+        if (gate == null)
+        {
+            Debug.LogWarning("[ActionButtonsBuilder] No ShotInProgressUiGate in the scene — the shot UI " +
+                             "will NOT be hidden while the ball is in flight.");
+            return;
+        }
+
+        var so = new SerializedObject(gate);
+
+        // _hideGroupsDuringShot: replace the cluster's CanvasGroup in place, keeping any other
+        // entry. Slot 0 is the cluster by convention; a null slot is the symptom being fixed.
+        var groups = so.FindProperty("_hideGroupsDuringShot");
+        int clusterSlot = -1;
+        for (int i = 0; i < groups.arraySize; i++)
+        {
+            var el = groups.GetArrayElementAtIndex(i).objectReferenceValue;
+            if (el == null || el is CanvasGroup cg && cg.gameObject.name == "ActionButtons_Cluster")
+            { clusterSlot = i; break; }
+        }
+        if (clusterSlot < 0) { groups.arraySize++; clusterSlot = groups.arraySize - 1; }
+        groups.GetArrayElementAtIndex(clusterSlot).objectReferenceValue = clusterGroup;
+
+        so.FindProperty("_clubSelector").objectReferenceValue      = clubSelector;
+        so.FindProperty("_ballSelector").objectReferenceValue      = ballSelector;
+        so.FindProperty("_spinPanel").objectReferenceValue         = spinPanel;
+        so.FindProperty("_actionButtonsFader").objectReferenceValue = fader;
+        so.ApplyModifiedProperties();
+
+        Debug.Log("[ActionButtonsBuilder] ShotInProgressUiGate re-wired (cluster CanvasGroup, both " +
+                  "selectors, spin panel, fader) — the shot UI hides again while the ball is in flight.");
     }
 
     /// <summary>Depth-first find by name, inactive included — the scheme roots ship inactive and

@@ -90,6 +90,27 @@ namespace Golfin.Gameplay.UI.Controls.Needle
         private float   _handleReturnT = 1f;
         private CanvasGroup _handleGroup;
 
+        // ── Putting the rig away while the ball is in the air ────────────────────
+        //
+        // Cesar, 2026-09-07: "part of the tap timing interface is also present while the ball is
+        // in flight (the needle part)". It was: the whole scheme root — needle, hub, handle,
+        // rings, crescent, arc, zones — stayed at alpha 1 for the entire flight AND after the ball
+        // settled. Pendulum has always dropped its bar at Resolving (PendulumFadingView); Needle
+        // deliberately opted out so the frozen needle, tap pip and zone could act as the RESULT
+        // READOUT, and fading them instantly once measured the navy at (34,55,53) against grass.
+        //
+        // Both are satisfied by holding the readout briefly and then fading: the player still
+        // reads where the tap landed, and the rig is gone for the rest of the flight. Input dies
+        // IMMEDIATELY at commit regardless of the hold — a readout must not be tappable.
+        [Tooltip("Seconds the frozen needle/pip/zone stay up after the tap so the player can read " +
+                 "the result, before the rig fades out for the rest of the ball's flight.")]
+        [SerializeField] private float _resultReadoutHoldSec = 0.6f;
+        [Tooltip("Fade-out duration once the readout hold expires.")]
+        [SerializeField] private float _inFlightFadeSec = 0.25f;
+
+        private CanvasGroup _rootGroup;
+        private Coroutine   _inFlightFade;
+
         // ── What the swing is JUDGED on (not what the finger is doing at release) ────
         //
         // The identical argument ClubHandleDragger's _peakPower and PendulumSchemeDriver's make:
@@ -179,6 +200,7 @@ namespace Golfin.Gameplay.UI.Controls.Needle
             _handleRest  = _handle.anchoredPosition;
             _handleGroup = _handle.GetComponent<CanvasGroup>();
             if (_handleGroup == null) _handleGroup = _handle.gameObject.AddComponent<CanvasGroup>();
+            EnsureRootGroup();
             ApplyHandleScale();   // rest scale before the first touch
         }
 
@@ -253,6 +275,60 @@ namespace Golfin.Gameplay.UI.Controls.Needle
             // under a ball that has already gone (the scar the Pendulum test now pins).
             if (state.State != ShotState.Flicking && state.State != ShotState.Resolving)
                 ShowHandle(true);
+
+            bool inFlight = state.State is ShotState.Flicking or ShotState.Resolving;
+            if (inFlight) BeginInFlightFade();
+            else          RestoreRigVisible();
+        }
+
+        private void EnsureRootGroup()
+        {
+            if (_rootGroup != null || _schemeRoot == null) return;
+            _rootGroup = _schemeRoot.GetComponent<CanvasGroup>();
+            if (_rootGroup == null) _rootGroup = _schemeRoot.gameObject.AddComponent<CanvasGroup>();
+        }
+
+        /// <summary>Kill input now, hold the readout, then fade the rig out for the flight.</summary>
+        private void BeginInFlightFade()
+        {
+            EnsureRootGroup();
+            if (_rootGroup == null) return;
+            if (_inFlightFade != null) return;   // edge-triggered; Resolving follows Flicking
+
+            // Immediate, before any hold: nothing here is a control once the ball has gone.
+            _rootGroup.interactable   = false;
+            _rootGroup.blocksRaycasts = false;
+
+            if (!isActiveAndEnabled) { _rootGroup.alpha = 0f; return; }
+            _inFlightFade = StartCoroutine(InFlightFadeRoutine());
+        }
+
+        private System.Collections.IEnumerator InFlightFadeRoutine()
+        {
+            float hold = Mathf.Max(0f, _resultReadoutHoldSec);
+            if (hold > 0f) yield return new WaitForSeconds(hold);
+
+            float dur = Mathf.Max(0.01f, _inFlightFadeSec);
+            float from = _rootGroup.alpha, t = 0f;
+            while (t < dur)
+            {
+                t += Time.deltaTime;
+                _rootGroup.alpha = Mathf.Lerp(from, 0f, Mathf.Clamp01(t / dur));
+                yield return null;
+            }
+            _rootGroup.alpha = 0f;
+            _inFlightFade = null;
+        }
+
+        /// <summary>Bring the rig back for the next swing (Idle, or any non-flight state).</summary>
+        private void RestoreRigVisible()
+        {
+            if (_inFlightFade != null) { StopCoroutine(_inFlightFade); _inFlightFade = null; }
+            EnsureRootGroup();
+            if (_rootGroup == null) return;
+            _rootGroup.alpha          = 1f;
+            _rootGroup.interactable   = true;
+            _rootGroup.blocksRaycasts = true;
         }
 
         // ── Touch 1: the pull ────────────────────────────────────────────────────
@@ -608,6 +684,7 @@ namespace Golfin.Gameplay.UI.Controls.Needle
         /// <summary>The Idle half of the reset: put the chrome away once the ball has settled.</summary>
         private void ResetVisualsForNextSwing()
         {
+            RestoreRigVisible();
             ResetSwing();
             _arcView?.HideImmediate();
             _circleView?.SetDimmed(false);
