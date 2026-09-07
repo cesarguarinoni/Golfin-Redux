@@ -18,8 +18,12 @@ be visibly inconsistent. Reversible in one line if you disagree.
 
 Two things remain open, neither introduced by this task and neither fixable in a crop:
 
-  1. At a 100% pull the 3x club head covers the Pendulum lane's own 100%/120% labels. That is the
-     live game — a tile is a photograph. It belongs with the club-head scale.
+  1. FIXED (Cesar asked mid-task): the tick labels now draw AFTER the club head instead of being
+     children of the lane root under it. Five labels lifted in the scene at 0.000000 corner delta,
+     and both scheme builders author them that way. NOT yet seen on screen and NOT yet in the
+     shipped tiles — the Editor's main thread stopped servicing MCP right after the edit (0.8% CPU,
+     no log for 18 min, menu lines last: it reads as a modal dialog waiting on a click). Re-run
+     GOLFIN > Capture > Scheme Confirm Tiles once it is free.
   2. T_Pendulum_3 photographs an invisible grade pop, across all three of today's runs. Diagnosed
      (activeInHierarchy is true for a pop that has already faded); the opacity fix I added did NOT
      resolve it, so the capture appears to grab a frame later than the wait returns.

@@ -209,14 +209,19 @@ namespace Golfin.EditorTools.ShotUI
                                       LaneWidth, TickHeight, TickHeight * 0.5f);
             foreach (var rt in new[] { tick100, tick120, window, impact }) AnchorToLaneTop(rt);
 
-            var label100 = MakeText(laneRoot, "FreeSwingLabel100", "100%", LabelFontNodePx,
+            // SIBLINGS OF THE LANE ROOT, NOT CHILDREN OF IT — and drawn after the club head
+            // (see handle.SetAsLastSibling below). The head lerps to 3x at full pull, which is
+            // ~500px wide against labels that sit 76px off centre, so as children of the lane the
+            // "100%"/"120%"/IMPACT text disappeared behind the club exactly when the player was
+            // reading it. Both roots sit at the ball, so the offsets below are unchanged.
+            var label100 = MakeText(rootRt, "FreeSwingLabel100", "100%", LabelFontNodePx,
                                     Color.white, FontStyles.Normal);
-            var label120 = MakeText(laneRoot, "FreeSwingLabel120", "120%", LabelFontNodePx,
+            var label120 = MakeText(rootRt, "FreeSwingLabel120", "120%", LabelFontNodePx,
                                     FreeSwingColors.Tick120, FontStyles.Normal);
             // A LAYOUT PLACEHOLDER only — FreeSwingLaneView.RefreshLabels resolves
             // SWING_IMPACT_LINE at Activate. Authoring the real word here is how a hardcoded
             // literal ships, and the UI fidelity linter flags exactly that.
-            var labelImp = MakeText(laneRoot, "FreeSwingImpactLabel", "(SWING_IMPACT_LINE)",
+            var labelImp = MakeText(rootRt, "FreeSwingImpactLabel", "(SWING_IMPACT_LINE)",
                                     LabelFontNodePx, Color.white, FontStyles.Normal);
             foreach (var t in new[] { label100, label120, labelImp }) SideLabel(t);
 
@@ -348,6 +353,9 @@ namespace Golfin.EditorTools.ShotUI
             handle.anchoredPosition = new Vector2(0f, -HandleRestBelowBall);
             handle.localScale = Vector3.one;
             handle.SetAsLastSibling();     // the club head reads on top of its own lane
+            label100.SetAsLastSibling();   // ...but the tick labels read on top of the club head
+            label120.SetAsLastSibling();
+            labelImp.SetAsLastSibling();
 
             // ...but the chip and the pop read on top of the club, as the node's Result frame
             // draws them.

@@ -179,9 +179,14 @@ namespace Golfin.EditorTools.ShotUI
             var tick120 = MakeStadium(lane, "Tick120", pill, Tick120C, LaneWidth, TickHeight, TickHeight * 0.5f);
             AnchorToTop(tick120, -Tick120Offset);
 
-            var label100 = MakeText(laneRoot, "Label100", "100%", LabelFontNodePx, Color.white, FontStyles.Normal);
+            // SIBLINGS OF THE LANE ROOT, NOT CHILDREN OF IT — and drawn after the club head
+            // (see handle.SetAsLastSibling below). The head lerps to 3x at full pull, which is
+            // ~500px wide against labels that sit 76px off centre, so as a child of the lane the
+            // "100%"/"120%" text disappeared behind the club exactly when the player was reading
+            // it. Both roots sit at the ball, so the offsets below are unchanged by the move.
+            var label100 = MakeText(rootRt, "Label100", "100%", LabelFontNodePx, Color.white, FontStyles.Normal);
             SideLabel(label100, -Tick100Offset);
-            var label120 = MakeText(laneRoot, "Label120", "120%", LabelFontNodePx, Tick120C, FontStyles.Normal);
+            var label120 = MakeText(rootRt, "Label120", "120%", LabelFontNodePx, Tick120C, FontStyles.Normal);
             SideLabel(label120, -Tick120Offset);
 
             Wire(laneView, ("_lane", lane), ("_tick100", tick100), ("_tick120", tick120));
@@ -267,6 +272,8 @@ namespace Golfin.EditorTools.ShotUI
             handle.anchoredPosition = new Vector2(0f, -HandleRestBelowBall);
             handle.localScale = Vector3.one;
             handle.SetAsLastSibling();     // the club head reads on top of its own lane
+            label100.SetAsLastSibling();   // ...but the tick labels read on top of the club head
+            label120.SetAsLastSibling();
 
             Wire(driver, ("_schemeRoot", schemeRoot), ("_handle", handle));
             WireObj(driver, "_laneView", laneView);

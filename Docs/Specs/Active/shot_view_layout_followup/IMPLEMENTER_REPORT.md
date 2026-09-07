@@ -26,6 +26,8 @@ tiles recaptured and committed.
 | `Assets/Scripts/Gameplay/Tests/LaneEndCapTests.cs` | **new** — 7 tests, §1 |
 | `Assets/Editor/ShotUI/SchemeConfirmTilesCapture.cs` | `MaxCropH`; independent height clamp; crop grown back to the tile aspect on whichever axis is short; shrink loop scales both axes; `FitInside` replaces the stretch; `TileRadius` 32 → **20** and a new 2px `rgba(255,255,255,0.35)` border, both off the node; `WaitUntilActive` waits for opacity |
 | `Assets/Resources/UI/Controls/Tiles/T_*_{1,2,3}.png` (12) | recaptured on the new layout, with the node's rounded corners and white outline |
+| `Assets/Editor/ShotUI/PendulumSchemeBuilder.cs` / `FreeSwingSchemeBuilder.cs` | tick labels authored under `BallSpace` and drawn AFTER the club head |
+| `Assets/Scenes/Physics/LabScaffold.unity` | the same five labels lifted out of their lane root, 0.000000 corner delta each |
 | `Docs/AI_CONTEXT.md` | followup paragraph |
 
 ## §1 — lane-end y per aspect
@@ -198,11 +200,49 @@ path. There is no Flick pop-up — Flick is the default, so confirming it is not
   six were shipped would be a lie in the repo. The two useful artifacts are kept in this task's
   `screenshots/` as `tiles_manifest_run.json` and `popup_invariants_run.json`.
 
+## §3 — the club head no longer covers the tick labels
+
+Cesar: *"fix the club head covering the labels."* The head is not the problem to solve — it lerps to
+3× to match Flick's own scene values, and Flick has no labels to cover. The labels are already where
+the node puts them (76 px off centre, just outside the 120-wide lane). What was wrong is the DRAW
+ORDER: they were children of the lane root, and the handle is a later sibling of that root, so the
+club drew over them — worst exactly at a 100 % pull, when the head is sitting on the tick the label
+names.
+
+Both scheme builders now author the labels under `BallSpace` and `SetAsLastSibling()` them after the
+handle, and the five live objects were lifted the same way rather than rebuilding the scheme roots:
+
+```
+SchemeRoot_Pendulum/Label100:            maxCornerDelta=0.000000
+SchemeRoot_Pendulum/Label120:            maxCornerDelta=0.000000
+SchemeRoot_FreeSwing/FreeSwingLabel100:  maxCornerDelta=0.000000
+SchemeRoot_FreeSwing/FreeSwingLabel120:  maxCornerDelta=0.000000
+SchemeRoot_FreeSwing/FreeSwingImpactLabel: maxCornerDelta=0.000000
+
+SchemeRoot_Pendulum  BallSpace: PendulumLaneRoot > PendulumBarRoot > PendulumGradePop >
+                                PendulumHandle > Label100 > Label120
+SchemeRoot_FreeSwing BallSpace: FreeSwingLaneRoot > FreeSwingTraceRoot > FreeSwingHandle >
+                                FreeSwingAnalyzerChip > FreeSwingGradePop >
+                                FreeSwingLabel100 > FreeSwingLabel120 > FreeSwingImpactLabel
+```
+
+The position is untouched — both lane roots sit at the ball, so the offsets the views write are
+unchanged by the move, which the zero corner deltas confirm. Free Swing's IMPACT label was lifted
+too: it sits at the ball, and the club head AT REST spans ball −170…+30, so it had the same problem
+one pull earlier.
+
+**Not yet seen on screen.** The Editor's main thread stopped servicing MCP right after this edit —
+0.8 % CPU and no log output for 18 minutes, with menu-construction lines as the last entry, which
+reads as a modal dialog waiting on a click. So the draw-order change is verified geometrically (the
+sibling order above is what uGUI draw order IS) but NOT visually, and the twelve committed tiles
+still show the labels behind the club head. Re-run `GOLFIN ▸ Capture ▸ Scheme Confirm Tiles` once
+the Editor is free and they will pick it up.
+
 ## Known FAIL items
 
-1. **The 3× club head covers the Pendulum lane's 100%/120% labels at full pull.** Live UI, not a
-   tile problem. Options: shrink `_handleScaleAtFullPower`, move the labels outboard, or draw them
-   above the head. Needs Cesar; it is the same club-head change that forced the pill cap.
+1. ~~The 3× club head covers the Pendulum lane's 100%/120% labels at full pull.~~ **Fixed** — the
+   labels now draw above the head (§3). Pending a visual confirmation and a tile re-capture, both
+   blocked on the Editor.
 2. **`T_Pendulum_3` captures an invisible grade pop**, and the manifest reports `marker NaN` for that
    step. Opacity-waiting did not fix it. Next thing I would try is holding the pop open explicitly
    for the capture rather than racing its lifetime.
