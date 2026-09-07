@@ -429,12 +429,51 @@ namespace Golfin.EditorTools.ShotUI
                                            ControlScheme.Needle, ControlScheme.FreeSwing })
             {
                 yield return SelectScheme(scheme);
+                yield return ResetLie();
                 yield return Capture(scheme);
                 yield return WaitForIdle();
                 yield return new WaitForSecondsRealtime(1.0f);
             }
 
             yield return Finish();
+        }
+
+        /// <summary>
+        /// Put the ball back on the tee before every scheme.
+        ///
+        /// <para>Each <see cref="Capture"/> COMMITS a shot, so without this the second scheme is
+        /// photographed from wherever the first one's ball landed, the third from the second's,
+        /// and so on. On Lomond 2 that walked the set downrange into tree shadow: Flick came back
+        /// off a bright tee and the other three came back murky, which is not a scheme difference
+        /// at all — it is four different lies. A tile illustrates a CONTROL, not a round, so all
+        /// four have to be shot from the same place or they do not read as one set.</para>
+        ///
+        /// <para>Reflection because <c>PhysicsLabController</c> lives in its own assembly and
+        /// <c>Assets/Scripts/Physics/</c> is frozen — <c>ResetToTee</c> is already public, so this
+        /// is a call, not a reach-in.</para>
+        /// </summary>
+        IEnumerator ResetLie()
+        {
+            bool reset = false;
+            foreach (var mb in UnityEngine.Object.FindObjectsByType<MonoBehaviour>(
+                                   FindObjectsInactive.Exclude, FindObjectsSortMode.None))
+            {
+                if (mb.GetType().Name != "PhysicsLabController") continue;
+                var m = mb.GetType().GetMethod("ResetToTee",
+                            BindingFlags.Public | BindingFlags.Instance);
+                if (m == null) break;
+                m.Invoke(mb, null);
+                reset = true;
+                break;
+            }
+            Note("reset_to_tee", reset ? "ok" : "PhysicsLabController.ResetToTee not reachable");
+
+            // The tee setup re-enables HUD it owns, and MeasureChrome already ran — so re-hide
+            // rather than let a restored card wander into the next crop.
+            yield return new WaitForSecondsRealtime(1.5f);
+            HideChrome();
+            yield return WaitForIdle();
+            yield return null;
         }
 
         // ── HUD chrome (§3.2: "No HUD chrome may appear in a tile — assert on the crop bounds") ──

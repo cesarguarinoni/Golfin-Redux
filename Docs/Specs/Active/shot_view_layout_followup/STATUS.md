@@ -18,12 +18,15 @@ be visibly inconsistent. Reversible in one line if you disagree.
 
 Two things remain open, neither introduced by this task and neither fixable in a crop:
 
-  1. FIXED (Cesar asked mid-task): the tick labels now draw AFTER the club head instead of being
-     children of the lane root under it. Five labels lifted in the scene at 0.000000 corner delta,
-     and both scheme builders author them that way. NOT yet seen on screen and NOT yet in the
-     shipped tiles — the Editor's main thread stopped servicing MCP right after the edit (0.8% CPU,
-     no log for 18 min, menu lines last: it reads as a modal dialog waiting on a click). Re-run
-     GOLFIN > Capture > Scheme Confirm Tiles once it is free.
+  1. FIXED and confirmed on screen: the tick labels draw AFTER the club head instead of being
+     children of the lane root under it, so "100%" reads over the club where before there was
+     nothing but club. Five labels lifted in the scene at 0.000000 corner delta, both scheme
+     builders author them that way, and the shipped tiles show it.
+
+  ALSO FIXED (Cesar: "plan the shot so they are not in the shade"): every Capture commits a shot, so
+  the loop was photographing each scheme from wherever the PREVIOUS scheme's ball landed — which
+  walked the set into tree shadow. ResetLie() puts the ball back on the tee between SelectScheme and
+  Capture (reset_to_tee: ok x4 in the heartbeat), so all four are now shot from the same lit lie.
   2. T_Pendulum_3 photographs an invisible grade pop, across all three of today's runs. Diagnosed
      (activeInHierarchy is true for a pop that has already faded); the opacity fix I added did NOT
      resolve it, so the capture appears to grab a frame later than the wait returns.

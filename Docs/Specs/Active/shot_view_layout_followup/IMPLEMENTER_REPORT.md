@@ -27,6 +27,7 @@ tiles recaptured and committed.
 | `Assets/Editor/ShotUI/SchemeConfirmTilesCapture.cs` | `MaxCropH`; independent height clamp; crop grown back to the tile aspect on whichever axis is short; shrink loop scales both axes; `FitInside` replaces the stretch; `TileRadius` 32 → **20** and a new 2px `rgba(255,255,255,0.35)` border, both off the node; `WaitUntilActive` waits for opacity |
 | `Assets/Resources/UI/Controls/Tiles/T_*_{1,2,3}.png` (12) | recaptured on the new layout, with the node's rounded corners and white outline |
 | `Assets/Editor/ShotUI/PendulumSchemeBuilder.cs` / `FreeSwingSchemeBuilder.cs` | tick labels authored under `BallSpace` and drawn AFTER the club head |
+| `Assets/Editor/ShotUI/SchemeConfirmTilesCapture.cs` | `ResetLie()` — the ball goes back on the tee before every scheme |
 | `Assets/Scenes/Physics/LabScaffold.unity` | the same five labels lifted out of their lane root, 0.000000 corner delta each |
 | `Docs/AI_CONTEXT.md` | followup paragraph |
 
@@ -130,15 +131,18 @@ Two things are still wrong, neither introduced here and neither fixable in a cro
    178×100 at ~2.8× ⇒ ~500px wide, spanning x ±250; the labels sit at x = +76, so they are behind
    it. That is the LIVE game — a tile is a photograph, and re-framing cannot uncover something the
    game draws over. It belongs with the club-head scale, which is another task's.
-2. **`T_Pendulum_3` photographs an invisible grade pop**, across all three of today's runs. The
+2. **`T_Pendulum_3` photographs an invisible grade pop**, across all five of today's runs. The
    uncropped source frame has bare fairway where "JUST!" should be, so it is not a crop artifact,
    and the manifest reports `marker NaN` for that step. `WaitUntilActive` returned on
    `activeInHierarchy`, which a `SchemeGradePop` answers true to through its hold, its fade AND
    afterwards at alpha 0; I tightened it to require `CanvasGroup.alpha > 0.9` and **it did not
    resolve it** — the capture appears to grab a frame later than the wait returns. The tightened
    wait is kept (it is correct on its own terms; the previous behaviour was luck-of-the-frame-count)
-   but the cause is open. The tile is not blank — it reads as "the club has swung past the ball",
-   which with its "3 FLICK UP" caption is weak rather than wrong.
+   but the cause is open. Not a wiring bug — `_gradePop` is wired on all three drivers
+   (`1396204410`, `2043148095`, `1123222000`), and Needle 3 and Free Swing 3 photograph THEIR pops
+   fine from the same code path, so it is specific to what the Pendulum commit does to its own root.
+   The tile is not blank — it reads as "the club has swung past the ball", which with its
+   "3 FLICK UP" caption is weak rather than wrong.
 
 One thing to know rather than fix: this run's Pendulum / Needle / Free Swing frames are noticeably
 DARKER than Flick's, because the bot's ball ended in shade by the time those schemes were played.
@@ -231,12 +235,28 @@ unchanged by the move, which the zero corner deltas confirm. Free Swing's IMPACT
 too: it sits at the ball, and the club head AT REST spans ball −170…+30, so it had the same problem
 one pull earlier.
 
-**Not yet seen on screen.** The Editor's main thread stopped servicing MCP right after this edit —
-0.8 % CPU and no log output for 18 minutes, with menu-construction lines as the last entry, which
-reads as a modal dialog waiting on a click. So the draw-order change is verified geometrically (the
-sibling order above is what uGUI draw order IS) but NOT visually, and the twelve committed tiles
-still show the labels behind the club head. Re-run `GOLFIN ▸ Capture ▸ Scheme Confirm Tiles` once
-the Editor is free and they will pick it up.
+**Confirmed on screen.** `T_Pendulum_1` and `T_Pendulum_2` now read "100%" over the club head where
+before there was nothing but club, and the same on Free Swing 1/2. See
+`screenshots/tiles_final_all12.png`.
+
+## §4 — all four schemes shot from the same lit tee
+
+Cesar: *"plan the shot so they are not in the shade."* Every `Capture` COMMITS a shot, so the loop
+photographed Flick from the tee, Pendulum from wherever Flick's ball landed, Needle from Pendulum's,
+and Free Swing from Needle's. On Lomond 2 that walks the set downrange into tree shadow — Flick came
+back off a bright tee and the other three came back murky, which is not a scheme difference at all,
+it is four different lies.
+
+`SchemeConfirmTilesCapture.ResetLie()` now calls `PhysicsLabController.ResetToTee()` between
+`SelectScheme` and `Capture` (reflection — `Assets/Scripts/Physics/` is frozen and `ResetToTee` is
+already public, so this is a call, not a reach-in), waits for Idle and re-runs `HideChrome` in case
+the tee setup restored a card. The heartbeat logs `reset_to_tee: ok` four times.
+
+Result: every scheme's first two tiles are on bright, identical fairway, and the set reads as one
+thing. The RESULT tiles (step 3) are still shot after the ball is struck, so their backdrop is
+wherever the chase camera followed it — Needle 3 has trees behind "PERFECT", Free Swing 3 a cart
+path behind "PURE". Both grade chips are bright on a darker backdrop and read fine; making those
+identical too would mean not photographing a real result.
 
 ## Known FAIL items
 

@@ -34,10 +34,21 @@ full-bleed, so `FitCrop` also grows a crop back to the tile aspect on whichever 
 twelve now fill their tile, and the node's white `Crop` background is the mat for the one that
 cannot (Flick 2 needs 1201 px of a 1170-wide canvas).
 
-**Still open, neither fixable in a crop:** at a 100 % pull the 3× club head covers the Pendulum
-lane's own 100 %/120 % labels (that is the live game — a tile is a photograph), and `T_Pendulum_3`
-captures an invisible grade pop across all three runs. See
-`Docs/Specs/Active/shot_view_layout_followup/IMPLEMENTER_REPORT.md`.
+**The club head covering the tick labels was a DRAW-ORDER bug, not a size one.** The head lerps to
+3× to match Flick's own scene values and Flick has no labels to cover; the labels sit exactly where
+the node puts them. They were just children of the lane root while the handle is a later sibling of
+that root, so the club drew over them — worst at a 100 % pull, when the head is on the very tick the
+label names. Both builders now author them under `BallSpace` and `SetAsLastSibling()` after the
+handle; the five live objects were lifted at 0.000000 corner delta rather than rebuilding the roots.
+
+**And the tiles were photographing four different lies.** Every `Capture` commits a shot, so each
+scheme was shot from wherever the previous one's ball landed, walking the set downrange into tree
+shadow. `SchemeConfirmTilesCapture.ResetLie()` calls `PhysicsLabController.ResetToTee()` between
+`SelectScheme` and `Capture`, so all four now come off the same lit tee.
+
+**Still open:** `T_Pendulum_3` captures an invisible grade pop across every run. Not wiring —
+`_gradePop` is wired on all three drivers and Needle/Free Swing photograph theirs fine from the same
+code path. See `Docs/Specs/Active/shot_view_layout_followup/IMPLEMENTER_REPORT.md`.
 
 ---
 ## 2026-09-07 — **shot view layout: the ball drops, one bottom baseline, the gauge moves up**
